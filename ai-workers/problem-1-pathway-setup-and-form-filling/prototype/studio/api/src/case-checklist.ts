@@ -4,7 +4,7 @@
 // only in this slice: other combinations answer "not derived yet". Sample until the immigration expert confirms. US$0.
 import { Controller, Get, Headers, HttpStatus, Inject, Injectable, Param } from "@nestjs/common";
 import { caseChecklist } from "../../engine/runtime/case-checklist.ts";
-import { knownOf } from "../../engine/runtime/case.ts";
+import { checkValue, knownOf } from "../../engine/runtime/case.ts";
 import { actorOf, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { Runtime } from "./runtime.ts";
 
@@ -22,7 +22,9 @@ export class CaseChecklists {
     if (!own || s?.combination?.key !== own.combinationKey) fail("This case's release does not describe the case's own combination; no checklist was worked out. Ask the Lead.", HttpStatus.CONFLICT);
     const people = this.r.peopleOf(c), today = new Date();
     const { answers, rows } = await this.r.state(c);
-    const { known } = knownOf(s, people, answers, rows, today);
+    // B-M2: an answer its own checks reject (a date that is not real, 1900 or 2200 as the application date) never decides
+    // a line: only answers without problems are read, so the line asks for the answer again instead.
+    const { known } = knownOf(s, people, answers.filter((x) => checkValue(s, x.field, x.value, today).length === 0), rows, today);
     return { case_id: c.id, reference: c.reference, release_version: pin.release.version, today: today.toISOString().slice(0, 10), ...caseChecklist(s, own!.combinationKey, people, known, today) };
   }
 }

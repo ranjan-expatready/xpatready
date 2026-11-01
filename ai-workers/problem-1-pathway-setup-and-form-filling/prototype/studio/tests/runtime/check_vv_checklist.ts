@@ -2,7 +2,9 @@
 // person from a small synthetic release and the case's answers. Each rule has a passing and a failing case. No database,
 // no server, no model call (US$0). Requirements and values are Sample until the immigration expert confirms (P-171).
 //   tsx studio/tests/runtime/check_vv_checklist.ts
-import { caseChecklist, policeCertificateFresh, POLICE_AGE_SOURCE, type CaseChecklist } from "../../engine/runtime/case-checklist.ts";
+import { caseChecklist, issuedWithin, validityRules, type CaseChecklist } from "../../engine/runtime/case-checklist.ts";
+import { checkValue } from "../../engine/runtime/case.ts";
+import { validate } from "../../engine/validate.ts";
 import type { Known } from "../../engine/render.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
 import type { Participant } from "../../engine/runtime/case.ts";
@@ -13,9 +15,13 @@ const TODAY = new Date("2026-11-01T12:00:00Z");
 const req = (lineage: string, type: string, who: string, extra: Record<string, unknown> = {}) => ({ lineage, document_type: type, document_type_key: type, who, provided_by: "client", base_or_conditional: "base", condition: null, condition_plain: null, source_quote: null, ...extra });
 const S = {
   combination: { key: "vv.single" },
-  canonical_fields: [{ id: "person.date_of_birth", value_type: "date" }, { id: "person.has_criminal_record", value_type: "yes_no" }, { id: "case.purpose", value_type: "code" }],
-  derived_fields: [],
-  document_types: [{ key: "passport", name: "Passport" }, { key: "police_certificate", name: "Police certificate" }, { key: "invitation_letter", name: "Invitation letter" }, { key: "birth_certificate", name: "Birth certificate" }, { key: "photo", name: "Photo" }, { key: "marriage_certificate", name: "Marriage certificate" }],
+  canonical_fields: [{ id: "person.date_of_birth", value_type: "date" }, { id: "person.has_criminal_record", value_type: "yes_no" }, { id: "case.purpose", value_type: "code" }, { id: "case.application_date", value_type: "date" }, { id: "case.travel_insurance", value_type: "yes_no" }, { id: "person.employed", value_type: "yes_no" }, { id: "person.age_years", value_type: "number" }],
+  field_maps: [],
+  derived_fields: [{ id: "person.age_years", calculation: "age_in_years", inputs: ["person.date_of_birth"], reference: "case.application_date", executable: true }],
+  placements: [{ fact: "person.date_of_birth", question_text: "Date of birth" }, { fact: "case.application_date", question_text: "Date the application is submitted" }],
+  checks: [{ id: "VV_POLICE_6_MONTHS", group: "document_validity", applies_to: "police_certificate", severity: "warn", message: "For the country where the person lives now: issued no more than 6 months before the application is submitted.",
+    source_quote: "no more than 6 months before the date you submit your application", condition: { op: "issued_within_months", months: 6, before: "case.application_date", cite: { page: "Police certificates: when you need them", url: "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/medical-police/police-certificates/when.html", read: "2026-10-29" } } }],
+  document_types: [{ key: "passport", name: "Passport" }, { key: "police_certificate", name: "Police certificate" }, { key: "invitation_letter", name: "Invitation letter" }, { key: "birth_certificate", name: "Birth certificate" }, { key: "photo", name: "Photo" }, { key: "marriage_certificate", name: "Marriage certificate" }, { key: "insurance", name: "Travel insurance" }, { key: "employment_letter", name: "Employment letter" }, { key: "consent", name: "Consent letter" }, { key: "senior_letter", name: "Senior letter" }],
   document_requirements: [
     req("passport:each_applicant", "passport", "each_applicant", { alternatives: ["photo"], source_quote: "Sample quote" }),
     req("police:each_adult_18_plus", "police_certificate", "each_adult_18_plus"),
@@ -47,9 +53,9 @@ const adults = { "A|person.date_of_birth": "1980-05-01", "B|person.date_of_birth
 {
   const r = run(known(adults));
   ok("C6.4 adults: the principal and spouse (18+) need a police certificate", line(r, "A", "police_certificate")?.state === "needed" && line(r, "B", "police_certificate")?.state === "needed");
-  ok("C6.4 adults (fail): the 11-year-old child does not, and the reason names the age", line(r, "C", "police_certificate")?.state === "not_needed" && /this person is 11/.test(line(r, "C", "police_certificate")!.why));
+  ok("C6.4 adults (fail): the 11-year-old child does not, and the reason names the age", line(r, "C", "police_certificate")?.state === "not_needed" && /this person is 11 on 2026-11-01/.test(line(r, "C", "police_certificate")!.why));
   const unknown = run(known({ "A|person.date_of_birth": "1980-05-01" }));
-  ok("C6.4 adults (fail): with no birth date the line says answer the birth date first", line(unknown, "B", "police_certificate")?.state === "answer_first" && line(unknown, "B", "police_certificate")!.missing.includes("person.date_of_birth"));
+  ok("C6.4 adults (fail): with no birth date the line says answer the birth date first", line(unknown, "B", "police_certificate")?.state === "answer_first" && line(unknown, "B", "police_certificate")!.missing.some((m) => m.key === "person.date_of_birth"));
   const birthday = run(known({ ...adults, "C|person.date_of_birth": "2008-11-01" }));
   ok("C6.4 adults: turning 18 today counts as 18", line(birthday, "C", "police_certificate")?.state === "needed");
   const eve = run(known({ ...adults, "C|person.date_of_birth": "2008-11-02" }));
@@ -61,7 +67,7 @@ const adults = { "A|person.date_of_birth": "1980-05-01", "B|person.date_of_birth
   const tourism = line(run(known({ ...adults, "case|case.purpose": "tourism" })), "A", "invitation_letter")!;
   ok("C6.4 condition (fail): a tourism visit does not, and says which answer decided it", tourism.state === "not_needed" && /the visit is to see family/.test(tourism.why));
   const open = line(run(known(adults)), "A", "invitation_letter")!;
-  ok("C6.4 condition: unanswered → answer first, naming the fact", open.state === "answer_first" && open.missing.includes("case.purpose"), open);
+  ok("C6.4 condition: unanswered → answer first, naming the fact", open.state === "answer_first" && open.missing.some((m) => m.key === "case.purpose"), open);
   ok("C6.4 condition: the list changes when the answer changes (dynamic)", line(run(known({ ...adults, "case|case.purpose": "family" })), "A", "invitation_letter")!.state !== tourism.state);
 }
 // qa G23: a line for a role appears once that person is added to the case.
@@ -76,16 +82,74 @@ const adults = { "A|person.date_of_birth": "1980-05-01", "B|person.date_of_birth
   ok("C6.4 order: needed lines come first, not needed last", a.lines.map((l) => l.state).join() === ["needed", "needed", "answer_first"].join(), a.lines.map((l) => `${l.document.key}:${l.state}`));
   ok("C6.4 counts: needed and answer-first are counted per person", a.needed === 2 && a.answer_first === 1 && of(r, "C").needed === 2);
 }
-// Police certificate age rule (P-171): no more than 6 months before the date the application is submitted.
+// Police certificate age rule (P-171), carried as release data (a document_validity check), matched on the document type key.
 {
   const pc = line(run(known(adults)), "A", "police_certificate")!;
-  ok("C6.4 police: the police line carries the 6-month rule with IRCC's words, page and date", pc.rule?.kind === "police_age" && pc.rule.months === 6 && pc.rule.source === POLICE_AGE_SOURCE && /no more than 6 months before the date you submit/.test(POLICE_AGE_SOURCE.quote) && POLICE_AGE_SOURCE.read === "2026-10-29");
-  ok("C6.4 police (fail): other lines carry no such rule", line(run(known(adults)), "A", "passport")!.rule === null);
-  ok("C6.4 police: issued 1 May, submitted 1 Nov → good (exactly 6 months)", policeCertificateFresh("2026-05-01", "2026-11-01").fresh === true);
-  const old = policeCertificateFresh("2026-04-30", "2026-11-01");
+  ok("C6.4 R4: the police line carries the release's 6-month rule with IRCC's words, page and date", pc.rule?.kind === "issued_within_months" && pc.rule.months === 6 && pc.rule.check === "VV_POLICE_6_MONTHS" && /no more than 6 months before the date you submit/.test(pc.rule.source.quote) && pc.rule.source.read === "2026-10-29" && /canada\.ca/.test(pc.rule.source.url), pc.rule);
+  ok("C6.4 R4 (fail): other lines carry no such rule", line(run(known(adults)), "A", "passport")!.rule === null);
+  const renamed = { ...S, document_types: (S.document_types as { key: string; name: string }[]).map((t) => t.key === "police_certificate" ? { ...t, name: "Certificate of good conduct" } : t) } as Snapshot;
+  ok("C6.4 R4: matched on the document type key, not on the word \"police\" in its name", (caseChecklist(renamed, "vv.single", people, known(adults), TODAY) as D).people[0].lines.find((l) => l.document.key === "police_certificate")?.rule?.months === 6);
+  const none = { ...S, checks: [] } as Snapshot;
+  ok("C6.4 R4 (fail): a release without the rule puts no rule on the police line (nothing is coded in the engine)", (caseChecklist(none, "vv.single", people, known(adults), TODAY) as D).people[0].lines.find((l) => l.document.key === "police_certificate")?.rule === null);
+  const eight = { ...S, checks: [{ ...(S.checks[0] as object), condition: { ...(S.checks[0] as { condition: object }).condition, months: 8 } }] } as Snapshot;
+  ok("C6.4 R4: the months come from the release (8 in the release → 8 on the line)", validityRules(eight).get("police_certificate")?.months === 8);
+  const bad = { ...S, checks: [{ ...(S.checks[0] as object), source_quote: null }] } as Snapshot;
+  ok("C6.4 R4 (fail): a rule without its source quote is not used (P-170)", validityRules(bad).size === 0);
+  const rule = { months: 6 };
+  ok("C6.4 police: issued 1 May, submitted 1 Nov → good (exactly 6 months)", issuedWithin(rule, "2026-05-01", "2026-11-01").fresh === true);
+  const old = issuedWithin(rule, "2026-04-30", "2026-11-01");
   ok("C6.4 police (fail): issued 30 Apr, submitted 1 Nov → too old, ask for a new one", old.fresh === false && /more than 6 months/.test(old.why));
-  ok("C6.4 police: month ends: issued 31 Aug is good until 28 Feb", policeCertificateFresh("2026-08-31", "2027-02-28").fresh && !policeCertificateFresh("2026-08-31", "2027-03-01").fresh);
-  ok("C6.4 police (fail): a certificate dated after submission, or a bad date, is refused with a reason", !policeCertificateFresh("2026-11-02", "2026-11-01").fresh && !policeCertificateFresh("2026-02-30", "2026-11-01").fresh);
+  ok("C6.4 police: month ends: issued 31 Aug is good until 28 Feb", issuedWithin(rule, "2026-08-31", "2027-02-28").fresh && !issuedWithin(rule, "2026-08-31", "2027-03-01").fresh);
+  ok("C6.4 police (fail): a document dated after submission, or a bad date, is refused with a reason", !issuedWithin(rule, "2026-11-02", "2026-11-01").fresh && !issuedWithin(rule, "2026-02-30", "2026-11-01").fresh);
+  const lib = (S.canonical_fields as { id: string; value_type: string }[]).map((f) => ({ key: f.id, valueType: f.value_type }));
+  const v = (x: Snapshot) => validate({ placements: [], forms: [], field_maps: [], rules: [], document_requirements: [], sections: [], ...x } as Snapshot, lib, []).filter((p) => p.where === "Checks");
+  ok("C6.4 R4: a well-formed rule raises no release warning", v(S).length === 0, v(S));
+  ok("C6.4 R4 (fail): a rule with no citation raises a release warning saying why", v(bad).some((p) => /not used: .*P-170/.test(p.message)), v(bad));
+}
+// R3 / B-M1: whose list a line goes on is its own "whose document"; the condition's subject decides whose answers count.
+{
+  const S3 = { ...S, document_requirements: [
+    req("insurance:each", "insurance", "each_applicant", { base_or_conditional: "conditional", condition: { subjectKind: "CASE", op: "eq", field: "case.travel_insurance", value: true }, condition_plain: "the family buys travel insurance" }),
+    req("employment:principal", "employment_letter", "principal_applicant", { base_or_conditional: "conditional", condition: { subjectKind: "SPOUSE", op: "eq", field: "person.employed", value: false }, condition_plain: "the spouse is not employed" }),
+    req("consent:child", "consent", "each_dependent_child", { base_or_conditional: "conditional", condition: { subjectKind: "PRINCIPAL", op: "eq", field: "person.employed", value: true }, condition_plain: "the principal is employed" }),
+  ] } as Snapshot;
+  const r = caseChecklist(S3, "vv.single", people, known({ ...adults, "case|case.travel_insurance": true, "B|person.employed": false, "A|person.employed": true }), TODAY) as D;
+  const has = (who: string, k: string) => of(r, who).lines.find((l) => l.document.key === k);
+  ok("C6.4 R3: a case-level condition on an each-applicant line puts the line on every applicant's list", ["A", "B", "C"].every((w) => has(w, "insurance")?.state === "needed"), r.people.map((p) => p.lines.map((l) => l.document.key)));
+  ok("C6.4 R3 (fail): it is not only on the principal's list (the earlier fault)", !!has("B", "insurance") && !!has("C", "insurance"));
+  ok("C6.4 R3: a line about the spouse's answers stays on the principal's list, decided by the spouse's answer", has("A", "employment_letter")?.state === "needed" && !has("B", "employment_letter"));
+  const working = caseChecklist(S3, "vv.single", people, known({ ...adults, "B|person.employed": true }), TODAY) as D;
+  ok("C6.4 R3 (fail): the spouse employed → the principal's employment letter is not needed", of(working, "A").lines.find((l) => l.document.key === "employment_letter")?.state === "not_needed");
+  ok("C6.4 R3: a child's line decided by the principal's answer is on the child's list only", has("C", "consent")?.state === "needed" && !has("A", "consent"));
+  const noSpouse = caseChecklist(S3, "vv.single", [P("case", "case"), P("A", "principal")], known(adults), TODAY) as D;
+  ok("C6.4 R3 (fail): with no spouse on the case, a line about the spouse is not needed and says so", /no.*spouse|none on the case/.test(of(noSpouse, "A").lines.find((l) => l.document.key === "employment_letter")?.why ?? ""));
+}
+// B-M3: a calculated field is never asked; its input questions are, in words. Ages use the application date.
+{
+  const S4 = { ...S, document_requirements: [req("senior:each", "senior_letter", "each_applicant", { base_or_conditional: "conditional", condition: { subjectKind: "EACH_APPLICANT", op: "gte", field: "person.age_years", value: 60 }, condition_plain: "the person is 60 or older" })] } as Snapshot;
+  const open = (caseChecklist(S4, "vv.single", people, known(adults), TODAY) as D).people[0].lines[0];
+  ok("C6.4 B-M3: answer first names the input question (the application date), never person.age_years", open.state === "answer_first" && open.missing.some((m) => m.key === "case.application_date" && m.question === '"Date the application is submitted"') && !open.missing.some((m) => m.key === "person.age_years"), open);
+  ok("C6.4 B-M3 (fail): the reason shows question words, not keys", /"Date the application is submitted"/.test(open.why) && !/case\.application_date/.test(open.why), open.why);
+  const turning = run(known({ ...adults, "C|person.date_of_birth": "2008-12-01", "case|case.application_date": "2026-12-15" }));
+  ok("C6.4 ages: 18 by the application date counts (both age paths use the same date)", line(turning, "C", "police_certificate")?.state === "needed" && turning.ages_on === "2026-12-15", line(turning, "C", "police_certificate"));
+  ok("C6.4 ages (fail): with no application date the ages are on today and the answer says so", run(known(adults)).ages_on === "2026-11-01" && /today/.test(run(known(adults)).ages_on_why));
+  ok("C6.4 B-M3: an application date in 1900 or 2200 has a problem (so it is not used)", checkValue(S, "case.application_date", "1900-01-01", TODAY).length > 0 && checkValue(S, "case.application_date", "2200-01-01", TODAY).length > 0);
+  ok("C6.4 B-M3 (fail): a near application date has none", checkValue(S, "case.application_date", "2026-12-15", TODAY).length === 0 && checkValue(S, "case.application_date", "2024-11-01", TODAY).length === 0);
+}
+// Minors: a document condition shows answer first; duplicate lines merge; an empty release says it is empty.
+{
+  const S5 = { ...S, document_requirements: [
+    req("marriage:doc", "marriage_certificate", "principal_applicant", { base_or_conditional: "conditional", condition: { subjectKind: "DOCUMENT", op: "exists", field: "document.marriage_date" }, condition_plain: "the passport shows a married name" }),
+    req("passport:case", "passport", "case"), req("passport:principal", "passport", "principal_applicant", { base_or_conditional: "conditional", condition: { subjectKind: "CASE", op: "eq", field: "case.purpose", value: "family" }, condition_plain: "family visit" }),
+  ] } as Snapshot;
+  const a = of(caseChecklist(S5, "vv.single", people, known(adults), TODAY) as D, "A");
+  const m = a.lines.find((l) => l.document.key === "marriage_certificate");
+  ok("C6.4 minor: a line with a condition about a document is shown as answer first, not dropped", m?.state === "answer_first" && /document/.test(m.why), a.lines);
+  const pp = a.lines.filter((l) => l.document.key === "passport");
+  ok("C6.4 minor (fail): the case's passport line and the principal's own are one line, the other named in also_from", pp.length === 1 && pp[0].state === "needed" && pp[0].also_from.length === 1, pp);
+  const empty = caseChecklist({ ...S, document_requirements: [] } as Snapshot, "vv.single", people, known(adults), TODAY) as D;
+  ok("C6.4 minor: an empty release says so rather than looking like nothing is needed", empty.empty_release === true && /does not mean nothing is needed/.test(empty.basis));
+  ok("C6.4 minor (fail): a release with lines is not marked empty", run(known(adults)).empty_release === false);
 }
 // Only the Visitor visa in this slice.
 {

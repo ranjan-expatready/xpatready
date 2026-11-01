@@ -285,7 +285,8 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   questions.sort((a, b) => (sectionOrder.get(a.section) ?? 99) - (sectionOrder.get(b.section) ?? 99) || a.about.localeCompare(b.about) || placed(a.fact) - placed(b.fact) || a.label.localeCompare(b.label));
 
   // ------------------------------------------------------------ checks that the known facts trigger
-  const checks = (s.checks ?? []).filter((c) => c.condition && c.group !== "form_native").flatMap((c) => {
+  // A document_validity check is a rule about a document's dates (engine/runtime/case-checklist.ts), not a predicate.
+  const checks = (s.checks ?? []).filter((c) => c.condition && c.group !== "form_native" && c.group !== "document_validity").flatMap((c) => {
     const kind = c.condition?.subjectKind;
     const subjects = kind === "CASE" ? ["case"] : people.filter((p) => p.applies).map((p) => p.id);
     return subjects.map((person) => ({ c, person, r: evalCondition(s, known, c.condition, person) })).filter((x) => x.r.applies === true)

@@ -87,7 +87,18 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
     if (d.base_or_conditional === "conditional" && !d.condition) out.push({ level: "error", where: "Documents", item: d.document_type, message: "A conditional requirement needs a condition." });
   }
   for (const r of s.rules) for (const e of checkCondition(r.when, types, derived)) out.push({ level: "error", where: "Rules", item: r.id, message: `Condition ${e}.` });
-  for (const c of s.checks.filter((x) => x.condition && typeof x.condition === "object")) for (const e of checkCondition(c.condition, types, derived)) out.push({ level: "warning", where: "Checks", item: c.id, message: `Condition ${e}; the check is not evaluated.` });
+  for (const c of s.checks.filter((x) => x.condition && typeof x.condition === "object" && x.group !== "document_validity")) for (const e of checkCondition(c.condition, types, derived)) out.push({ level: "warning", where: "Checks", item: c.id, message: `Condition ${e}; the check is not evaluated.` });
+  // C6.4: a document validity rule (engine/runtime/case-checklist.ts) names a document type, whole months, the date it
+  // is measured to and its citation (P-170); one that does not is never used, so the release says why.
+  for (const c of s.checks.filter((x) => x.group === "document_validity")) {
+    const k = c.condition ?? {}, why: string[] = [];
+    if (k.op !== "issued_within_months") why.push("it is not an \"issued within months\" rule");
+    if (!Number.isInteger(k.months) || k.months < 1) why.push("its months are not a whole number of 1 or more");
+    if (typeof k.before !== "string" || !types.has(k.before)) why.push("the date it is measured to is not a field in the library");
+    if (!c.applies_to || !(s.document_types ?? []).some((t) => t.key === c.applies_to)) why.push("it names no document type in this release");
+    if (!c.source_quote || !k.cite?.url || !k.cite?.read) why.push("it has no source quote, page and date read (P-170)");
+    if (why.length) out.push({ level: "warning", where: "Checks", item: c.id, message: `Document validity rule not used: ${why.join("; ")}.` });
+  }
   out.push(...reachability(s, placed, docFacts, derived, (f) => `"${(meaningOf.get(f) ?? (s.derived_fields as { id: string; plain?: string | null }[]).find((d) => d.id === f)?.plain ?? f).trim().replace(/\.$/, "")}"`));
   // Only the derived definitions this combination reads (Lead check item 3): the library holds every definition, and
   // one nobody here uses is not this combination's warning.
