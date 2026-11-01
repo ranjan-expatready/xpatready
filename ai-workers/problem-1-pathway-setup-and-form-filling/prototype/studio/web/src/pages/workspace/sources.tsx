@@ -27,7 +27,8 @@ export const SAY = {
   clientNotPlaced: "No question asks it, so the client cannot give it. Add the question first.",
   pqAgent: "Not offered: the case officer enters it.",
   pqNoQuestion: "The prospect needs a question to answer. Add a fallback question first.",
-  order: (section: string) => `The order is set in the library section ${section}. Change it there.`,
+  // C4.1 (P-216): inside a section the library sets the questions' order; the sections move on this tab.
+  order: (section: string) => `Questions keep the library's order inside ${section}. To move the whole section, use Move up or Move down on its header.`,
   retire: "A question line is not retired here. Retire the question in the library.",
   library: "Wording, answer and options are shared by every combination that asks it; a second person approves.",
   atDefault: "Already as the rules say.",

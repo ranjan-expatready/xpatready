@@ -180,6 +180,19 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
       }
     for (const [key, x] of a) if (!b.has(key)) out.push({ kind: label, key, change: "removed", needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? key });
   }
+  // C4.1 (P-216): the combination's own section order is part of its release. A move changes no section, so the lines
+  // above miss it; it is named once, in words, with each moved section's new place among the sections kept.
+  if (prev) {
+    const ids = (x: Snapshot) => ((x.sections as { id: string }[]) ?? []).map((y) => y.id);
+    const kept = new Set(ids(prev).filter((k) => ids(next).includes(k)));
+    const was = ids(prev).filter((k) => kept.has(k)), now = ids(next).filter((k) => kept.has(k));
+    const moved = now.map((k, i) => ({ k, i })).filter(({ k, i }) => was[i] !== k);
+    if (moved.length) {
+      const title = (k: string) => (next.sections as { id: string; title?: string }[]).find((y) => y.id === k)?.title ?? k;
+      const nth = (n: number) => { const t = n % 100, u = n % 10; return `${n}${t >= 11 && t <= 13 ? "th" : u === 1 ? "st" : u === 2 ? "nd" : u === 3 ? "rd" : "th"}`; };
+      out.push({ kind: "Section order", key: String((next.combination as any)?.key ?? "sections"), change: "changed", needs_sme: false, label: `Sections reordered: ${moved.map(({ k, i }) => `"${title(k)}" now ${nth(i + 1)}`).join(", ")}` });
+    }
+  }
   const boxes = (s: Snapshot | null) => new Map<string, any>((s?.field_maps ?? []).flatMap((m: any) => m.entries.map((e: any) => [`${m.form_edition}|${e.data_path}`, e] as [string, any])));
   const a = boxes(prev), b = boxes(next);
   const byForm = new Map<string, { added: number; changed: number; removed: number; ai: number }>();

@@ -495,6 +495,43 @@ export class Studio {
     return { ok: true, sectionOrder };
   }
 
+  /** C4.1 (P-216): the combination's sections in its own order, with the library title of each (one title everywhere). */
+  async sectionOrder(combinationId: string) {
+    const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
+    const rows = await this.db.sqrSectionSelection.findMany({ where: { combinationId }, orderBy: [{ sectionOrder: "asc" }, { sectionKey: "asc" }] });
+    const lib = await this.db.logicalSection.findMany({ where: { workspaceId: c.workspaceId, sectionKey: { in: rows.map((r) => r.sectionKey) } }, orderBy: { version: "desc" } });
+    const title = (k: string) => lib.find((x) => x.sectionKey === k)?.title ?? k;
+    return { order: rows.map((r) => ({ key: r.sectionKey, title: title(r.sectionKey) })) };
+  }
+
+  /** C4.1 (P-216 answer 1): Move up / Move down on a section header. One move is one draft change of this combination,
+   *  released with it (C4.8); the order is the same for every person. `seen` is the order the author was looking at: a
+   *  move from an older order is refused (409), so two authors never undo each other's move without knowing. */
+  async moveSection(actor: Actor, combinationId: string, sectionKey: string, b: unknown) {
+    need(actor, "author");
+    const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
+    if (c.retiredAt) fail(`"${c.label}" is retired: its questionnaire is not changed. Restore it on Structure first; open cases keep their release.`, HttpStatus.CONFLICT);
+    const body = (b ?? {}) as { direction?: unknown; seen?: unknown };
+    if (body.direction !== "up" && body.direction !== "down") fail('Say which way to move the section: "up" or "down".', HttpStatus.BAD_REQUEST);
+    if (!Array.isArray(body.seen) || !body.seen.every((x) => typeof x === "string")) fail("The order you were looking at was not sent. Reload the tab, then move the section again.", HttpStatus.BAD_REQUEST);
+    const up = body.direction === "up";
+    const { order } = await this.sectionOrder(combinationId);
+    const keys = order.map((x) => x.key);
+    const at = keys.indexOf(sectionKey);
+    if (at < 0) fail("That section is not one this combination chose, so it has no place of its own to move. Its questions follow the sections chosen here; add the section first.", HttpStatus.CONFLICT);
+    const title = order[at].title;
+    const seen = (body.seen as string[]).filter((k) => keys.includes(k));
+    if (seen.length !== keys.length || seen.some((k, i) => k !== keys[i])) fail("The sections were reordered since you opened this tab. Reload to see the order now, then move it again.", HttpStatus.CONFLICT);
+    if (up && at === 0) fail(`"${title}" is already the first section.`, HttpStatus.CONFLICT);
+    if (!up && at === keys.length - 1) fail(`"${title}" is already the last section.`, HttpStatus.CONFLICT);
+    const to = up ? at - 1 : at + 1;
+    [keys[at], keys[to]] = [keys[to], keys[at]];
+    await this.db.$transaction(keys.map((k, i) => this.db.sqrSectionSelection.update({ where: { combinationId_sectionKey: { combinationId, sectionKey: k } }, data: { sectionOrder: i } })));
+    const nth = ordinal(to + 1);
+    await this.audit.log(c.workspaceId, actor.id, "updated", "section selection", sectionKey, `${actor.name} moved the section "${title}" ${body.direction} in the questionnaire of "${c.label}": now ${nth} of ${keys.length}`, undefined, c.id);
+    return { ok: true, position: to + 1, of: keys.length, order: keys.map((k) => ({ key: k, title: order.find((x) => x.key === k)!.title })) };
+  }
+
   async documentTypes() {
     const workspaceId = await this.ws.id();
     const rows = await this.db.documentType.findMany({ where: { workspaceId }, orderBy: [{ name: "asc" }, { version: "desc" }] });
@@ -845,3 +882,6 @@ export class Studio {
 /** QA-74: the simulated people's names for stored ids (one id, or several joined by commas), never "user-A" on screen. */
 const PEOPLE: readonly { id: string; name: string }[] = [...ACTORS, ...RUNTIME_ACTORS];
 export const peopleNames = (ids: string | null) => (ids ?? "").split(",").filter(Boolean).map((id) => PEOPLE.find((p) => p.id === id.trim())?.name ?? id).join(", ");
+
+/** "1st", "2nd", "3rd", "11th": a section's place said in words (C4.1). */
+export function ordinal(n: number) { const t = n % 100, u = n % 10; return `${n}${t >= 11 && t <= 13 ? "th" : u === 1 ? "st" : u === 2 ? "nd" : u === 3 ? "rd" : "th"}`; }
