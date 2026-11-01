@@ -59,7 +59,7 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   const filers: Participant[] = [];
   for (const p of persons) {
     if (!rules.modes.has(p.role)) notFiling.push({ subject: p.subjectId, label: p.label, role: p.role, why: `The ${rules.label} has no filing for the role "${p.role}".` });
-    else if (!p.applies) notFiling.push({ subject: p.subjectId, label: p.label, role: p.role, why: "Not applying on this case: no filing and no fee." });
+    else if (!p.applies) notFiling.push({ subject: p.subjectId, label: p.label, role: p.role, why: "Not travelling (not applying on this case): no filing and no fee." });
     else filers.push(p);
   }
   const groupId = "group-family";

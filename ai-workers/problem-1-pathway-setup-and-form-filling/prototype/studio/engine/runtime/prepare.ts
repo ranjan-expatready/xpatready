@@ -75,7 +75,7 @@ export function prepareView(o: { derived: Extract<CaseFilings, { derived: true }
   const body = { filings, groups, items: items.map((i) => [i.id, i.channel, i.version, i.state]), fees: fees.map((f) => [f.filing, f.line, f.amount_cents, f.exempt]) };
   return { derived: true, combination: o.derived.combination, portal: o.portal, portal_read_only: true, version: hash(JSON.stringify(body)), stage1: [], readiness: [],
     filings, groups, items, fees, not_filing: o.derived.not_filing, basis: o.derived.basis,
-    not_built: ["splitting a group (BR-16)", "biometrics age exemptions (VV-R15)", "document and step items (C6.4 storage, C7.7)", "stage 1 and readiness (C7.6)", "filing modes from configuration (M3-0)"] };
+    not_built: ["splitting a group (BR-16)", "biometrics age exemptions (VV-R15), and a biometrics line waiting for a date of birth (G15)", "document and step items (C6.4 storage, C7.7)", "stage 1 and readiness (C7.6)", "filing modes from configuration (M3-0)"] };
 }
 
 /** A short, stable fingerprint (FNV-1a, 64 bits as hex): the view's version for "changed since you looked" (409). */

@@ -52,6 +52,9 @@ type P = { derived: boolean; version: string; portal: string | null; filings: { 
   const first = p!;
   ({ p } = await prep(c.id));
   ok("C6.12 pass: a second read keeps every filing, group and item id and the version", JSON.stringify(p?.filings.map((f) => f.id)) === JSON.stringify(first.filings.map((f) => f.id)) && p?.groups[0].id === first.groups[0].id && JSON.stringify(p?.items.map((i) => i.id)) === JSON.stringify(first.items.map((i) => i.id)) && p?.version === first.version);
+  const xmins = () => sql(`select string_agg(x, ',' order by x) from (select xmin::text || id::text x from filing where case_id='${c.id}' union all select i.xmin::text || i.id::text from filing_item i join filing f on f.id=i.filing_id where f.case_id='${c.id}') t`);
+  const before = xmins(); await prep(c.id);
+  ok("C6.12 review M1: a read with nothing new writes nothing (no row rewritten: xmin unchanged)", !!before && xmins() === before);
   ok("C6.12 fail (data): the second read stored nothing twice", sql(`select count(*) from filing where case_id='${c.id}'`) === "3" && sql(`select count(*) from filing_item i join filing f on f.id=i.filing_id where f.case_id='${c.id}'`) === String(first.items.length));
 
   // Items: each filing's forms, the combination line's channel, what IRCC accepts, the signature, the reason.
@@ -65,12 +68,24 @@ type P = { derived: boolean; version: string; portal: string | null; filings: { 
   const fileK = filingOf(p, K)!.id, itemsK = its(K).map((i) => i.id).sort();
   await call("PATCH", `/runtime/cases/${c.id}/people/${K}`, { applies: false }, OFFICER);
   ({ p } = await prep(c.id));
-  ok("C6.12 fail: a child not travelling has no filing, item or fee, and is listed with the reason", p?.filings.length === 2 && !filingOf(p, K) && !its(K).length && !(p?.fees ?? []).some((f) => f.subject === K) && (p?.not_filing ?? []).some((n) => n.subject === K));
+  ok("C6.12 fail: a child not travelling has no filing, item or fee, and is listed with the reason", p?.filings.length === 2 && !filingOf(p, K) && !its(K).length && !(p?.fees ?? []).some((f) => f.subject === K) && (p?.not_filing ?? []).some((n) => n.subject === K && /not travelling/i.test((n as { why?: string }).why ?? "")));
   ok("C6.12 pass (data): the filing is kept inactive, not deleted", sql(`select active from filing where id='${fileK}'`) === "f");
   await call("PATCH", `/runtime/cases/${c.id}/people/${K}`, { applies: true }, OFFICER);
   ({ p } = await prep(c.id));
   ok("C6.12 pass: travelling again, the child gets the same filing and the same items back", filingOf(p, K)?.id === fileK && JSON.stringify(its(K).map((i) => i.id).sort()) === JSON.stringify(itemsK));
   ok("C6.12 pass: the other filings kept their ids throughout", [A, S].every((s) => filingOf(p, s)?.id === first.filings.find((f) => f.applicants[0].subject === s)?.id));
+
+  // Review m1: a form that stops applying keeps its item (inactive) and gets it back with the same id and channel.
+  const relC = sql(`select r.id from config_release r join pack_work_pin w on w.config_release_id = r.id where w.case_id = '${c.id}'`);
+  const snap = sql(`select snapshot->'forms' from config_release where id='${relC}'`);
+  const item5707 = its(A).find((i) => i.form === "IMM 5707")?.id;
+  sql(`update config_release set snapshot = jsonb_set(snapshot, '{forms}', (select jsonb_agg(x) from jsonb_array_elements(snapshot->'forms') x where x->>'form_number' <> 'IMM 5707')) where id='${relC}'`);
+  try {
+    ({ p } = await prep(c.id));
+    ok("C6.12 review m1 (fail): a form that no longer applies is not listed; its item is kept inactive, not deleted", !!item5707 && !(p?.items ?? []).some((i) => i.form === "IMM 5707") && sql(`select active from filing_item where id='${item5707}'`) === "f");
+  } finally { sql(`update config_release set snapshot = jsonb_set(snapshot, '{forms}', '${snap.replace(/'/g, "''")}'::jsonb) where id='${relC}'`); }
+  ({ p } = await prep(c.id));
+  ok("C6.12 review m1 pass: when it applies again the same item comes back", its(A).find((i) => i.form === "IMM 5707")?.id === item5707);
 
   // Fees: what the lines add up to is what is paid; six people reach the family maximum, on the principal's filing.
   ok("C6.12 BR-18 pass: three people: visitor visa CAD 300, biometrics CAD 170 (the family maximum from 2), each line cites the fee list", sum(p, /visitor visa/i) === 300 && sum(p, /biometrics/i) === 170 && (p?.fees ?? []).every((f) => /ircc\.canada\.ca/.test(f.source) && !!f.reason));
