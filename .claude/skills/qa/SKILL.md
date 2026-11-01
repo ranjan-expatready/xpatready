@@ -44,3 +44,4 @@ Screenshot each decision point and every defect (`P/qa/reports/<date>-<mode>/`).
 ## 5. Hand back
 Commit your report and `qa/BUGS.md` rows on a branch `claude/qa-<word>` from main (`qa: <mode> — <summary>` + attribution line), push, open a PR (`gh pr create --base main`) and label it `review: approved` (records only; it merges by itself on green CI). Reply once, briefly: the run (mode, main commit), verdict (ready or not, one line), bugs (n Blocker · n Critical · n Major · n Minor, new QA-…), coverage, questions.
 A Blocker or Critical goes to the top of the backlog: the tech lead holds merges in that area until it is fixed and retested.
+**Finish the round, then hand over (P-218):** from 60% context start no new round, finish the one in hand, write a Handover comment on your records PR and stop; hard stop at 80%. Commit your own checks with the records PR, never in a stash (cloud copies are lost).
