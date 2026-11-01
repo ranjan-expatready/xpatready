@@ -22,6 +22,9 @@ ok("Lead 1 Nov pass: on a GitHub-hosted machine the budget is not judged, said s
 const selfHosted = machine({ RUNNER_ENVIRONMENT: "self-hosted" });
 ok("Lead 1 Nov fail: the Mac runner (self-hosted) and a lane copy are judged by load as before, with no CI reason", !selfHosted.reason && selfHosted.busy === selfHosted.load > selfHosted.cores && !machine({}).reason, selfHosted);
 const m = machine();
-ok("P-184: the machine reading is the one-minute load against the core count", typeof m.load === "number" && m.cores > 0 && m.busy === m.load > m.cores, m);
+// P-215: speed budgets are judged on the Mac nightly only. On a GitHub-hosted machine this check reports the reading and
+// that it is not judged (busy, with the CI reason); everywhere else the reading is the load against the cores, as before.
+if (m.reason) ok("P-215 (GitHub-hosted machine): the reading is reported and not judged (busy, with the CI reason); the Mac nightly judges the budgets", typeof m.load === "number" && m.cores > 0 && m.busy === true && /nightly run on the Mac/.test(m.reason), m);
+else ok("P-184: the machine reading is the one-minute load against the core count", typeof m.load === "number" && m.cores > 0 && m.busy === (m.load > m.cores), m);
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
