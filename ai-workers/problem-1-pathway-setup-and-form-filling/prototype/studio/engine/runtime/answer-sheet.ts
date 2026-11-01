@@ -10,7 +10,7 @@ import { sectionGroupOf } from "../twin.ts";
 
 export type SheetAnswer = { label: string; fact: string; subject: string; person: string; row: number | null; value: unknown; copy_text: string; source: "Document" | "Client" | "Case officer" };
 /** `version`: the section's fingerprint now; a tick sends the one it read, so it freezes what the officer saw. */
-export type SheetSection = { key: string; title: string; version: string; entered: { at: string; by: string } | null; out_of_date: boolean; answers: SheetAnswer[]; waiting: { fact: string; subject: string; label: string }[] };
+export type SheetSection = { key: string; title: string; version: string; entered: { at: string; by: string } | null; out_of_date: boolean; answers: SheetAnswer[]; waiting: { fact: string; subject: string; person: string; label: string }[] };
 export type Sheet = { order_basis: "pdf_twin"; order_note: string; sections: SheetSection[] };
 /** Where an answer came from, by the channel that first gave it. */
 export type Origin = (subject: string, fact: string) => string | null | undefined;
@@ -41,12 +41,14 @@ export function answerSheet(sections: Record<string, string>, boxes: BoxRow[], o
     if (!b.fact) continue;
     const sec = byKey.get(sectionGroupOf(b.box.split(".").slice(1).join(".")) ?? "");
     if (!sec) continue;
-    const subject = (b.about ?? "").split("/")[0], label = labels.get(b.fact) ?? b.meaning ?? b.caption ?? b.fact;
-    if (!subject) continue; // a box about nobody on this case (for example the spouse's, with no spouse) is not asked for
+    // Review N1: keyed by the whole "about" (a person, or a person's relation such as "<id>/parent_1"), so a parent's
+    // answers are never folded into the applicant's.
+    const subject = b.about ?? "", label = labels.get(b.fact) ?? b.meaning ?? b.caption ?? b.fact;
+    if (!subject.split("/")[0]) continue; // a box about nobody on this case (for example the spouse's, with no spouse) is not asked for
     if (b.coverage === "confirmed fact") {
       if (sec.answers.some((a) => a.subject === subject && a.fact === b.fact && a.row === b.row)) continue;
-      sec.answers.push({ label, fact: b.fact, subject, person: b.about_label, row: b.row, value: b.value, copy_text: copyText(b.value), source: sourceOf(origin(subject, b.fact)) });
-    } else if (!sec.waiting.some((w) => w.subject === subject && w.fact === b.fact)) sec.waiting.push({ fact: b.fact, subject, label });
+      sec.answers.push({ label, fact: b.fact, subject, person: b.about_label, row: b.row, value: b.value, copy_text: copyText(b.value), source: sourceOf(origin(subject.split("/")[0], b.fact)) });
+    } else if (!sec.waiting.some((w) => w.subject === subject && w.fact === b.fact)) sec.waiting.push({ fact: b.fact, subject, person: b.about_label, label });
   }
   for (const sec of out) {
     sec.version = sectionHash(sec.answers);

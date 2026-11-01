@@ -20,6 +20,9 @@ const boxes = [
   box("Other[0].Note[0]", "person.note", "p", "x"),
   box("SectionC[0].Sign[0]", null, "p", null, "unresolved"),
   box("SectionB[0].Spouse[0].Name[0]", "person.given_names", "", null, "unresolved"),
+  box("SectionA[0].Father[0].Name[0]", "person.family_name", "p/parent_1", null, "unresolved"),
+  box("SectionA[0].Mother[0].Name[0]", "person.family_name", "p/parent_2", null, "unresolved"),
+  box("SectionA[0].Mother[0].DOB[0]", "person.date_of_birth", "p/parent_2", "1950-02-02"),
 ];
 const origin = (subject: string) => (subject === "p" ? "questionnaire" : "agent_view");
 const labels = new Map([["person.family_name", "Family name"]]);
@@ -28,7 +31,9 @@ const labels = new Map([["person.family_name", "Family name"]]);
   const s = answerSheet(SECTIONS, boxes, origin, labels, new Map());
   ok("C7.3: the sheet follows the PDF twin's sections, in order (Section A, B, C)", s.order_basis === "pdf_twin" && s.sections.map((x) => x.title).join("|") === Object.values(SECTIONS).join("|"));
   const a = s.sections[0].answers;
-  ok("C7.3: Section A lists each confirmed answer once per person, with its label, person and source", a.length === 3 && a.filter((x) => x.fact === "person.family_name").length === 2 && a.find((x) => x.subject === "p" && x.fact === "person.family_name")?.source === "Client" && a.find((x) => x.subject === "s")?.source === "Case officer" && a[0].label === "Family name");
+  ok("C7.3: Section A lists each confirmed answer once per person, with its label, person and source", a.filter((x) => !x.subject.includes("/")).length === 3 && a.filter((x) => x.fact === "person.family_name" && !x.subject.includes("/")).length === 2 && a.find((x) => x.subject === "p" && x.fact === "person.family_name")?.source === "Client" && a.find((x) => x.subject === "s")?.source === "Case officer" && a[0].label === "Family name");
+  ok("C7.3 (review N1): each parent is their own line: two parents waiting give two entries, neither the applicant's", s.sections[0].waiting.filter((w) => w.fact === "person.family_name").map((w) => w.subject).sort().join() === "p/parent_1,p/parent_2");
+  ok("C7.3 (review N1, fail): a parent's confirmed answer is never dropped as a copy of the applicant's", a.some((x) => x.subject === "p/parent_2" && x.fact === "person.date_of_birth") && a.some((x) => x.subject === "p" && x.fact === "person.date_of_birth"));
   ok("C7.3 (fail): an answer not confirmed is never shown as a value, only as waited for (P-72); a box about nobody on the case is not waited for", s.sections[1].answers.length === 0 && s.sections[1].waiting.length === 1 && s.sections[1].waiting[0]?.subject === "s");
   ok("C7.3 (fail): a form field outside the twin's sections, and a box with no fact, are left out", !s.sections.some((x) => x.answers.some((y) => y.fact === "person.note")) && s.sections[2].answers.length === 0 && s.sections[2].waiting.length === 0);
 }

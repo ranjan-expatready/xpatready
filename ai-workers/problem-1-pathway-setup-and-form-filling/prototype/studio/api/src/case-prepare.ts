@@ -255,7 +255,8 @@ export class CasePrepare {
     const sec = now.sections.find((x) => x.key === key);
     if (!sec) fail(`${item.itemKey}'s answer sheet has no such section.`, HttpStatus.NOT_FOUND);
     const b = parse(EnteredBody, body);
-    if (b.version !== sec!.version) stale();
+    // Review n1: a stale tick says what changed: this section's answers.
+    if (b.version !== sec!.version) throw new HttpException({ type: "https://expatready.local/problems/stale", title: "Changed since you read it", status: 409, detail: `The answers in "${sec!.title}" changed since you read the sheet. Reload it, check them against the portal, then tick again.` }, HttpStatus.CONFLICT);
     const made = await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
       const was = await tx.enteredSection.findFirst({ where: { itemId: item.id, sectionKey: key, supersededAt: null }, include: { snapshot: { select: { inputHash: true } } } });
