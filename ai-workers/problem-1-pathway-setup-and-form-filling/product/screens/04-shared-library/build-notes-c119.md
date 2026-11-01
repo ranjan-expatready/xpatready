@@ -13,6 +13,18 @@ A different person approves on To review (BR-8, 403 for the maker); the approval
 
 **Shared files (named in the PR's first line).** `contracts/structure.ts` (Use kind `form_field`, additive), `contracts/lifecycle.ts` (WHY.usedBy, usedByDelete, draftVersion), `api/src/studio.ts` (list rows carry `retired`, `released`, `row_action`, `change`; additive), `api/src/library-sources.ts` (`usedInIds`, the same read by combination id; `usedIn` maps it to labels as before).
 
-**Tests.** `tests/check_c119_library_items.ts` (API, 32 checks, a pass and a fail per rule), `tests/check_c119_library_items_browser.cjs` (19 checks, 1440 px, axe on each state, keyboard return to the row). Screenshots: `screenshots/c119/`.
+**Tests.** `tests/check_c119_library_items.ts` (API, 51 checks, a pass and a fail per rule), `tests/check_c119_library_items_browser.cjs` (22 checks, 1440 px and 1024 px, axe on each state, keyboard return to the row, Escape). Screenshots: `screenshots/c119/`.
 
 **Not in this PR.** Checks: a check lives on its combination (`check.combination_id`), so its retire probably belongs on the combination's Checks tab, not the library list (question to the tech lead). Reorder: only sections have an order that matters (`displayOrder`); scope question to the tech lead. Sections: delete, retire and restore not built yet (same guard, a follow-up).
+
+## Round 2 (builder B5c, 1 Nov): fixes for B5b's review (Block 7.5) and break report
+* **B1 / Ma4:** `PATCH /library/fields/:key {retire}` now answers 410 "Use Retire". Retiring goes only through the guard.
+* **Retired takes no new use (Ma2, Ma3, M1, M5):** `refuseRetired` (library-items.ts) answers 409 in words for a field edit, a placement, a document line's type, its alternatives, and a new type name that is a retired type. Rename answers 409 "Retired". `libraryTypes` leaves retired fields out, so a new condition cannot read one. The default `GET /library/fields` (the one pickers read) leaves retired fields out; `?retired=all` and `?retired=only` list them.
+* **M2 (approve and withdraw at once):** `applyItem` first moves the change APPROVED → RELEASED with a guarded write (only one of the two wins). It then checks the rule again inside the same transaction. If a use was added meanwhile, the change goes back to RETURNED and History says so.
+* **M3:** a retired combination that still names the item blocks a delete, never a retire.
+* **M4:** a document type named as another line's alternative, or as the document a fact is read from (`fact_source`), counts as used.
+* **Ma1:** on Document types the first button is View. It opens where used and history only (`data-item-view`).
+* **1024 px:** the row action sits in the Status cell, so the Fields table no longer scrolls sideways.
+* **Minors:** a Retired pill (it used to read "Removed in draft"). The Restore tip says "when a second person approves it". Escape closes the panel. A failed Undo says "Not undone: …". A new field still waiting offers Withdraw, never Delete. A delete names the draft question it removes. For a released field, a draft question stops a retire (pack 3).
+* **Routes:** `POST /library/{fields,document-types}/:key/delete`, as Screen 04 concept §6 names it, next to `DELETE`.
+* **Pack 3 (`acceptance/C11.9.test.ts`):** 15 of 23 pass. It stays in `acceptance/` until the rest is built (README: a test moves when it is green). The 8 that fail: Sections (4, not built), filing order of forms (2, needs a decision), and deleting your own draft at once with `/library/changes/:id/undo` (2). This PR sends every delete to a second person, as structure names do for anyone else's item; the pack expects the author's own draft deleted at once. Question for the tech lead.
