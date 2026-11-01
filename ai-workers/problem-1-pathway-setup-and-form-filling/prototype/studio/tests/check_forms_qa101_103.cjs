@@ -28,9 +28,9 @@ const finish = async (id) => {
   for (let i = 0; i < 180; i++) { r = await call("GET", `/form-finder/runs/${id}`); if (!["QUEUED", "RUNNING"].includes(r.body?.status)) return r.body; await sleep(500); }
   throw new Error(`the find did not end in 90 s: ${JSON.stringify(r?.body?.steps).slice(0, 300)}`);
 };
-const find = async (combo, mode, key) => {
-  const plan = (await call("POST", `/combinations/${combo}/forms/find/plan`, { mode })).body;
-  const run = await call("POST", `/combinations/${combo}/forms/find`, { mode, planSha256: plan.plan_sha256, idempotencyKey: key });
+const find = async (combo, mode, key, only) => {
+  const plan = (await call("POST", `/combinations/${combo}/forms/find/plan`, { mode, ...(only ? { only } : {}) })).body;
+  const run = await call("POST", `/combinations/${combo}/forms/find`, { mode, ...(only ? { only } : {}), planSha256: plan.plan_sha256, idempotencyKey: key });
   if (run.status >= 300) throw new Error(`find: ${JSON.stringify(run.body).slice(0, 300)}`);
   return finish(run.body.id);
 };
@@ -104,11 +104,28 @@ const lineOf = (combo, code) => sql(`select coalesce((select status::text from c
     const l1294 = p.locator('[data-line="IMM 1294"]');
     const t1294 = await l1294.innerText();
     step("QA-103 fail (page): the line the finder attached never says 'Not attached' or 'No edition read yet'", !/Not attached|No edition read yet/.test(t1294), t1294);
-    step("QA-103 pass (page): it names the library edition, says the file is in the library and gives the next step with a link", /IMM 1294 \(/.test(t1294) && /File in the library/.test(t1294) && /Next: read its form fields/.test(t1294) && (await l1294.locator('[data-line-next="read"] a[href="/library/forms"]').count()) === 1, t1294);
+    step("QA-103 pass (page): it names the library edition, says the file is in the library, and its one next step is its own step chip (Field map)", /IMM 1294 \(/.test(t1294) && /File in the library/.test(t1294) && (await l1294.locator('[data-line-next="library"]').count()) === 1 && (await l1294.locator('[data-step-chip="IMM 1294"]').count()) === 1 && !/Next: read its form fields/.test(t1294), t1294);
+    // #274 review M1: the line's own record says it, so a later find (Rules only, which attaches nothing) does not take it away.
+    await find(sp, "rules", "qa101-rules-2");
+    await p.reload(); await p.locator('[data-line="IMM 1294"]').waitFor({ timeout: 15_000 });
+    const after = await p.locator('[data-line="IMM 1294"]').innerText();
+    step("QA-103 fail (page, review M1): after a Rules-only find the line still names its library edition and 'File in the library'", /IMM 1294 \(/.test(after) && /File in the library/.test(after) && !/No edition read yet|No file yet|Not attached/.test(after), after);
     const ax = await new AxeBuilder({ page: p }).include("main").withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
     step("axe (WCAG 2.2 AA): the Forms tab with the finder rows and lines", ax.violations.length === 0, ax.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`).join(" ; "));
     step("no page errors", errs.length === 0, errs.join(" | "));
   } finally { await b.close(); }
+  // #274 review M2: the finder uses the library's own type rule. A row stored as "document" whose title says form is a
+  // filed form (IMM 5802's case); without "form" it is a checklist. Find again on IMM 1294 alone, its row changed so.
+  const title1294 = sql("select display_name from gov_form_def where form_key='IMM 1294'");
+  sql("update gov_form_def set form_kind='document', display_name='Application form for a study permit (QA-101 check)' where form_key='IMM 1294'");
+  let again = await find(sp, "live", "qa101-m2-form-1", ["IMM 1294"]);
+  step("QA-101 review M2 fail (API): a 'document' row whose title says form is filed, not kept as a checklist", codes(again.result?.attach) === "IMM 1294" && !(again.result?.checklists ?? []).some((c) => c.code === "IMM 1294"), { attach: codes(again.result?.attach), checklists: again.result?.checklists });
+  sql("update gov_form_def set display_name='Instructions for a study permit (QA-101 check)' where form_key='IMM 1294'");
+  again = await find(sp, "live", "qa101-m2-doc-1", ["IMM 1294"]);
+  step("QA-101 review M2 pass (API): a 'document' row whose title does not say form is kept as a checklist, never attached", (again.result?.checklists ?? []).some((c) => c.code === "IMM 1294") && !codes(again.result?.attach).includes("IMM 1294"), { attach: codes(again.result?.attach), checklists: again.result?.checklists });
+  sql(`update gov_form_def set form_kind='data_form', display_name='${title1294.replace(/'/g, "''")}' where form_key='IMM 1294'`);
+  await find(sp, "live", "qa101-m2-back-1", ["IMM 1294"]);
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

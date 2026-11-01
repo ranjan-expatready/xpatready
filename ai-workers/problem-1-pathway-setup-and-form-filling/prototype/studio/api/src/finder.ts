@@ -89,8 +89,10 @@ const AI_SETTINGS: Record<"find_guide" | "find_forms", AiStep> = {
 };
 type AiKind = keyof typeof AI_SETTINGS;
 const ATTACHABLE = new Set(["always", "condition", "alternative"]);
-/** QA-101: library kinds that are read as sources and never become a filed line. */
-const NOT_FILED = new Set(["checklist", "guide", "document"]);
+/** Library type, one rule for the library and the finder (#274 review M2). Rows made before S4 say only "document": a filed
+ *  form when its title says so (IMM 5802, an employer's offer of employment form; review major 9), otherwise a checklist
+ *  or instructions, read by AI and never filed (IMM 5881, IMM 5905; round 2 major 4). */
+export const libraryType = (kind: string, title = "") => (kind === "guide" ? "guide" : kind === "checklist" || (kind === "document" && !(/\bform\b/i.test(title) && !/checklist/i.test(title))) ? "checklist" : "form");
 const STOPWORDS = new Set(["and", "or", "the", "a", "an", "of", "for", "to", "in", "with", "your", "retail", "corporate", "employers", "temporary", "residence", "permanent", "canada", "application", "apply"]);
 const words = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter((w) => w.length > 1 && !STOPWORDS.has(w)).map((w) => w.replace(/s$/, ""));
 const sameText = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, "-").replace(/\s+/g, " ").trim();
@@ -458,8 +460,9 @@ export class Finder implements OnModuleInit {
     // QA-101 (P-118, P-156: checklists are read, never filed): a checklist, guide or document the rounds named is kept in
     // the library as a source and listed as such; only filed forms go on to be lines.
     const got = fetched?.value ?? [];
-    const kinds = got.length ? await this.db.govFormDef.findMany({ where: { workspaceId: b.workspaceId, formKey: { in: got.map((f) => f.code) } }, select: { formKey: true, formKind: true } }) : [];
-    const notFiled = new Map(kinds.filter((k) => NOT_FILED.has(k.formKind)).map((k) => [k.formKey, k.formKind]));
+    const kinds = got.length ? await this.db.govFormDef.findMany({ where: { workspaceId: b.workspaceId, formKey: { in: got.map((f) => f.code) } }, select: { formKey: true, formKind: true, displayName: true } }) : [];
+    // QA-101: what the library types checklist or guide is read, never filed (QA-101 review M2: the library's own rule).
+    const notFiled = new Map(kinds.filter((k) => libraryType(k.formKind, k.displayName) !== "form").map((k) => [k.formKey, libraryType(k.formKind, k.displayName)]));
     result.checklists = got.filter((f) => notFiled.has(f.code)).map((f) => ({ code: f.code, title: f.title, quote: f.quote, kind: notFiled.get(f.code)!, source: f.source, edition: f.edition ?? null }));
     const found = got.filter((f) => !notFiled.has(f.code));
 
