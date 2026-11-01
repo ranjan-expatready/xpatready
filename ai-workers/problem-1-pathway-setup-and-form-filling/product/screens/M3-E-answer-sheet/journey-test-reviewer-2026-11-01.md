@@ -46,3 +46,31 @@ Fixes that would raise the score, most valuable first:
 
 ## Not tested
 No browser or real screen reader (no screen). No unaided walk by an intended user: D17 and D20 stay with the founder.
+
+---
+
+# Round 2: commit acb1ee93 (2 Nov 2026)
+
+Same method, on a fresh copy on :4433, now stopped. US$0.
+* **J4 (recovery after a change): now held.** A re-tick freezes the new answers and the section is current again. 6 parallel re-ticks gave 201 + 5 × 200, with 1 current tick and 2 in total.
+* **J6 (tick from a stale read): now held.** A stale, superseded or pre-fill version gives 409. A missing or wrong-type version gives 400.
+* **J10 (to readiness): no false Done now.** But IMM 5707 can never reach Done: the parents' boxes are listed as waited for under the applicant, and the two parents are folded into one (review N1). The item meanwhile says "Every fact it reads is confirmed."
+* **J7, J8, J9 held again.** Wrong role 403/404, hostile keys 404, channel switched away gives 409. No values in any audit line.
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | J1–J6 complete |
+| Next step obvious | ½ | Out-of-date reason now works; IMM 5707 reason and sheet disagree (N1) |
+| Plain words | ½ | Stale tick 409 talks of "filings or items" (n1) |
+| Feedback and state | 1 | No false Done; Out of date clears on re-tick |
+| Correct data | ½ | Ticks, history and snapshots right; parents shown as the applicant (N1) |
+| Error recovery | 1 | 400/403/404/409 all recoverable; re-tick works |
+| Accessibility and screen sizes | n/a → 1 | No screen |
+| Speed | 1 | 15–74 ms |
+| Visual quality | n/a → 1 | No screen |
+| Trust and sources | ½ | The waiting list names the wrong person for parent facts (N1) |
+| **Total** | **8 / 10** | Passes (8+, no 0); the review still blocks on N1 (Major) |
+
+Fixes that would raise the score:
+1. Key the sheet by the full `about` and label waiting entries by person (N1).
+2. Use the section's own words in the stale 409 (n1).
