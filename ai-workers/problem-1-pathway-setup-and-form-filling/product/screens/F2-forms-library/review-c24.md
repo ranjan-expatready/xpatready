@@ -81,3 +81,53 @@ Reviewer, fresh context, 1 Nov 2026. Branch `claude/forms-c24-editions` from mai
 ## To fix before Approve
 1. Add a newer-edition-on-a-combination case asserting not attached (finding 1); M4 must go red.
 2. Fix (or formally split out and keep C2.4 "Partial" for) the upload card's wrong next step for new and older editions (finding 2).
+
+## Round 922b0af4
+
+Re-review, 1 Nov 2026, exact commit 922b0af4 (same branch). Diff since 6c940174: the test (+49), `api/src/upload-run.ts`
+(`HELD_WORDS`, `held_outcome` in the run's plan), `api/src/runs.ts` (`nextOf` for new and older editions), and this
+folder's two review files. Fresh copy `forms_rv4` on :4457 (`isolated.sh … start`, web built from the commit), US$0,
+stopped afterwards; every mutation reverted with `git checkout` (`git status` clean apart from the untracked `node_modules`).
+
+**Verdict: Approve**
+
+### What I ran
+* The test: **15/15, twice.** With a database name the server does not use (`xr_studio_forms_c24`) it stops at once
+  with "STOP the database … is not the one the server on port 4457 uses" (Minor 5 closed).
+* Mutations (server restarted on each):
+
+| Mutation | Result |
+|---|---|
+| M4 a held newer edition still attached (`intake.ts`, `return newer ? attach(r) : r`) | **red**, 1 FAIL ("not attached to the combination": attached 2) |
+| M2 newer treated as older (`intake.ts`) | red, 4 FAIL (incl. the card check) |
+| M6 card words back to the source-verification sentence (`upload-run.ts`, drop `HELD_WORDS[outcome] ??`) | red, 3 FAIL |
+| M7 newer card link back to "Record the IRCC page" (`runs.ts`) | red, 2 FAIL |
+| M8 older card link back to "Record the IRCC page" (`runs.ts`) | red, 1 FAIL |
+
+* Browser (Chrome headless, Forms library › Upload PDF: 2021, then 11-2025): the card ends "Waiting for you · Held as a new
+  edition: nothing changes until a person reviews its impact on To review." with the link **Review impact**; Enter on it
+  opens `/review/edition/<id>`, "New edition: review impact". axe 0 violations; 0 px sideways at 400 and 1024 px; no page errors.
+
+### Findings from round 1
+1. Major 1 (not attached on a combination unproven): **closed.** Part 1 builds its own combination through the product's
+   API, attaches 2021, uploads 11-2025 on it and checks `attached(combo)` unchanged and no 11-2025 row; M4 now red.
+2. Major 2 (card's wrong next step): **closed.** New edition: words and "Review impact" → `/review/edition/<id>`; older:
+   "Kept aside as an older edition…" and "See it on To review" → `/review`. Source-verification and unreadable holds keep
+   their old words and links (the `HELD_WORDS[outcome] ??` fallback; unchanged branch in `nextOf`). Three checks through the
+   real Upload PDF run, each shown red by M6–M8.
+3. Minor 3 (older edition filed under kind `new_edition` on To review): **open, Minor**, noted in the test header and the
+   PR; the test still matches on the sentence "A newer edition" (l.~56).
+4. Minor 4 (second reset unchecked): **closed.**
+5. Minor 5 (served database guard): **closed.**
+6. Minor 6 (weak BR-1 negative): **accepted as noted** in the header (needs a non-official file; covered by `check_screen01_*`).
+
+### New, Minor
+7. The older edition's link goes to the whole To review list (`/review`), while To review's own row offers "See the older
+   edition" to its place. Acceptable (no wrong claim, one more click); align them when Minor 3 is fixed.
+8. `upload-run.ts` finds the held item by checksum and `status: "HELD"` without the workspace (pre-existing, l.~154); one
+   workspace today, so no effect.
+
+### Could not check
+A real screen reader; 200 % zoom on the card; an intended user's walk (D17/D20). Journey score for this round: the round-1
+low criteria "next step obvious", "error recovery" and "trust and sources" rise to 1 on the newer-edition path; "plain
+words" stays ½ (Minor 3) and accessibility ½ (keyboard partial, zoom unchecked): **9/10, pass.**
