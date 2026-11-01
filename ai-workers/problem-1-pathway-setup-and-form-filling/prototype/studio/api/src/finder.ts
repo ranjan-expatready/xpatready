@@ -100,7 +100,8 @@ export type FinderResult = {
   pages: { url: string; title: string; kind: string; read_by_ai: boolean }[];
   printed: string[];
   attach: { code: string; title: string | null; applies: string; condition: string | null; who: string; quote: string; filed_note: string | null; source: "library" | "downloaded" | "newer_file" ; edition?: string | null; line?: "added" | "already" | "removed_by_person" }[];
-  missing: { code: string; title: string | null; why: string; quote: string }[];
+  /** C11.15 (P-156 (4)): `link`, where the file is on canada.ca when the download failed or was refused, for "Download from this link and upload". */
+  missing: { code: string; title: string | null; why: string; quote: string; link?: string | null }[];
   decide: { code: string; draft: Proposal | null; check: Proposal | null; why: string }[];
   not_for: { code: string; applies: string; quote: string }[];
   dropped: { code: string; why: string }[];
@@ -442,8 +443,8 @@ export class Finder implements OnModuleInit {
         if (!(await wanted())) break;
         n++;
         await set(`Form ${n} of ${toFetch.length}: ${p.code}`, { detail: { done: n - 1, total: toFetch.length } });
-        const got = await this.formFor(b.workspaceId, p, rows, actor.id, batchId).catch((e) => ({ missing: e instanceof CanadaError ? e.message : `Could not get ${p.code}: ${(e as Error).message.slice(0, 200)}` }));
-        if ("missing" in got) result.missing.push({ code: p.code, title: p.title, why: got.missing, quote: p.quote });
+        const got = await this.formFor(b.workspaceId, p, rows, actor.id, batchId).catch((e): { missing: string; link?: string } => ({ missing: e instanceof CanadaError ? e.message : `Could not get ${p.code}: ${(e as Error).message.slice(0, 200)}` }));
+        if ("missing" in got) result.missing.push({ code: p.code, title: p.title, why: got.missing, quote: p.quote, link: got.link ?? null });
         else out.push({ ...p, source: got.source, edition: got.edition });
       }
       const dl = out.filter((x) => x.source === "downloaded").length;
@@ -564,7 +565,7 @@ export class Finder implements OnModuleInit {
   }
 
   /** One form for the combination: the library's current edition, or its PDF downloaded from canada.ca (M2, M6). */
-  private async formFor(workspaceId: string, p: Proposal, rows: { code: string; title: string; pageUrl: string; kind: string }[], by: string, batchId: string): Promise<{ source: "library" | "downloaded" | "newer_file"; edition: string | null } | { missing: string }> {
+  private async formFor(workspaceId: string, p: Proposal, rows: { code: string; title: string; pageUrl: string; kind: string }[], by: string, batchId: string): Promise<{ source: "library" | "downloaded" | "newer_file"; edition: string | null } | { missing: string; link?: string }> {
     const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: p.code } }, include: { editions: true } });
     if (def?.retiredAt) return { missing: `${p.code} is retired in the library: restore it there, or upload a newer edition.` };
     const usable = await this.usableEditions(workspaceId, def?.editions ?? []);
@@ -594,11 +595,22 @@ export class Finder implements OnModuleInit {
       } catch (e) { if (e instanceof CanadaError) return mine; throw e; }
     }
     if (!row) return { missing: `${p.code} is not on canada.ca's list of forms. It may be a visa-office document: upload its PDF.` };
-    const page = await this.canada.get(row.pageUrl, "html");
-    const fp = parseFormPage(page.bytes.toString("utf8"));
-    const pdfUrl = fp.pdfUrls.find((u) => officialUrl(u).ok);
-    if (!pdfUrl) return { missing: `${p.code}'s canada.ca page has no PDF to download (it may be online only). Upload its PDF if IRCC publishes one.` };
-    const pdf = await this.canada.get(pdfUrl, "pdf");
+    // C11.15 (P-156 (4)): a download that fails says where the file is: "Download from this link and upload" (the PDF's
+    // link once the page named one, else the form's canada.ca page).
+    let pdfUrl: string | undefined;
+    const got = async () => {
+      const fp = parseFormPage((await this.canada.get(row.pageUrl, "html")).bytes.toString("utf8"));
+      pdfUrl = fp.pdfUrls.find((u) => officialUrl(u).ok);
+      if (!pdfUrl) return { fp, pdf: null };
+      return { fp, pdf: await this.canada.get(pdfUrl, "pdf") };
+    };
+    let fetched: Awaited<ReturnType<typeof got>>;
+    try { fetched = await got(); } catch (e) {
+      if (!(e instanceof CanadaError)) throw e;
+      return { missing: `${p.code} could not be downloaded from canada.ca. ${e.message}`, link: pdfUrl ?? row.pageUrl };
+    }
+    const { fp, pdf } = fetched;
+    if (!pdf || !pdfUrl) return { missing: `${p.code}'s canada.ca page has no PDF to download (it may be online only). Upload its PDF if IRCC publishes one.`, link: row.pageUrl };
     return this.storeDownloaded(workspaceId, p, row, fp, pdfUrl, pdf.bytes, by, batchId, def?.indexDateModified ?? null);
   }
 
@@ -611,16 +623,16 @@ export class Finder implements OnModuleInit {
   }
 
   /** Reads the downloaded file's identity (rules, no AI), checks it is the form asked for, and stores it once. */
-  private async storeDownloaded(workspaceId: string, p: Proposal, row: { code: string; title: string; pageUrl: string; kind: string }, page: { lastUpdated: string | null }, pdfUrl: string, bytes: Buffer, by: string, batchId: string, indexAtStart: string | null): Promise<{ source: "library" | "downloaded" | "newer_file"; edition: string | null } | { missing: string }> {
+  private async storeDownloaded(workspaceId: string, p: Proposal, row: { code: string; title: string; pageUrl: string; kind: string }, page: { lastUpdated: string | null }, pdfUrl: string, bytes: Buffer, by: string, batchId: string, indexAtStart: string | null): Promise<{ source: "library" | "downloaded" | "newer_file"; edition: string | null } | { missing: string; link?: string }> {
     const fileSha = sha(bytes);
     const name = basename(new URL(pdfUrl).pathname).replace(/[^A-Za-z0-9._-]/g, "_").slice(-80);
     const stored = join(this.libDir(), `${fileSha.slice(0, 12)}-${name}`);
     if (!existsSync(stored)) writeFileSync(stored, bytes);
     const { stdout } = await run(PY, ["-I", join(STUDIO, "tools", "read_form_identity.py"), stored], { cwd: ROOT, timeout: 60_000 });
     const id = JSON.parse(stdout.trim().split("\n").pop()!);
-    if (!id.ok || !id.code || !id.edition_label) return { missing: `${p.code} was downloaded from canada.ca, but its form number and edition could not be read from the file. Upload it by hand for a person to check.` };
-    if (normaliseCode(id.code) !== p.code) return { missing: `canada.ca's file for ${p.code} reads as ${id.code}: not stored. Upload the right PDF by hand.` };
-    if (id.language === "fr") return { missing: `canada.ca's file for ${p.code} is the French version: not stored.` };
+    if (!id.ok || !id.code || !id.edition_label) return { missing: `${p.code} was downloaded from canada.ca, but its form number and edition could not be read from the file. Upload it by hand for a person to check.`, link: pdfUrl };
+    if (normaliseCode(id.code) !== p.code) return { missing: `canada.ca's file for ${p.code} reads as ${id.code}: not stored. Upload the right PDF by hand.`, link: pdfUrl };
+    if (id.language === "fr") return { missing: `canada.ca's file for ${p.code} is the French version: not stored.`, link: pdfUrl };
     const kind = row.kind === "checklist" || id.kind === "checklist" ? "checklist" : "form";
     const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: p.code } }, include: { editions: true } });
     const same = def?.editions.find((e) => e.sha256 === fileSha);
@@ -824,7 +836,7 @@ export class Finder implements OnModuleInit {
     const stateOf = (c: string, base: string) => { const l = line(c); if (l?.status === "RETIRED") return "REMOVED_BY_PERSON"; if (base === "NOT_FOUND" && l) return "ATTACHED"; if (base === "NOT_FOUND" && held.some((h) => h.forCode === c)) return "UPLOAD_WAITING_SECOND_PERSON"; return base; };
     const forms = [
       ...(r?.attach ?? []).map((a) => ({ code: a.code, title: a.title, quote: a.quote, conditionPlain: a.applies === "always" ? null : a.condition ?? a.quote, who: a.who, state: stateOf(a.code, a.source === "downloaded" ? "DOWNLOADED_ATTACHED" : a.source === "newer_file" ? "NEWER_FILE_SAME_EDITION" : "ATTACHED") })),
-      ...(r?.missing ?? []).map((m) => ({ code: m.code, title: m.title, quote: m.quote, conditionPlain: null, who: null, state: stateOf(m.code, "NOT_FOUND"), why: m.why })),
+      ...(r?.missing ?? []).map((m) => ({ code: m.code, title: m.title, quote: m.quote, conditionPlain: null, who: null, state: stateOf(m.code, "NOT_FOUND"), why: m.why, link: m.link ?? null })),
       ...(r?.decide ?? []).map((d) => ({ code: d.code, title: (d.draft ?? d.check)?.title ?? null, quote: (d.draft ?? d.check)?.quote ?? null, conditionPlain: (d.draft ?? d.check)?.condition ?? null, who: (d.draft ?? d.check)?.who ?? null, state: stateOf(d.code, "TO_DECIDE"), why: d.why })),
       ...(r?.not_for ?? []).map((n) => ({ code: n.code, title: null, quote: n.quote, conditionPlain: null, who: null, state: "NOT_FOR_THIS_APPLICATION" })),
     ].map((f) => ({ ...f, lineId: line(f.code)?.id ?? null, lineVersion: line(f.code)?.version ?? null, runId: run.id }));
