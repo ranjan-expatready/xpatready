@@ -108,3 +108,20 @@ Journeys:
 1. **M1 (part 3):** add one check that a case holder with an EACH_APPLICANT condition, or one with no subject kind, is decided on the principal's answers, with a pass and a fail. Confirm it fails with the `render.ts:63` mutation.
 2. Optional: m1 (the TS2783 errors in `check_vv_checklist.ts:109`), the Q2 round-1 Minors, and /prepare B2–B5.
 3. Environment, before trusting the API suites on the shared tree: run `prisma generate` there.
+
+## Round 2 (7911f488)
+1 Nov 2026, reviewer role. `git diff 756acc11 7911f488` has two changes: one new check in `tests/check_line_holders.ts:63-64`, and this report. Nothing else changed. No push, no servers, US$0.
+* **The new check:** holder `"case"` with an EACH_APPLICANT condition on `person.employed`. It asserts `conditionSubjects(two, "case", "EACH_APPLICANT")` is `["A"]`. It passes with `A|person.employed: true`. It fails with `A: false`, even when the case row says `true`, so it also catches a read of the case row.
+* **The removal, repeated in a throwaway copy** (`git archive 7911f488` of `prototype/` under `/tmp/mut7911`, with the shared tree's node_modules linked and read-only):
+  * As built: `check_line_holders` **19/19**.
+  * With `render.ts:63` `holder === "case" ? principal : holder` → `holder`: **18/19, FAIL** "Q2 (i) review round 2: a case-level holder's own-person condition is decided on the principal's answers, never on the case row".
+  * With the file restored: **19/19** again.
+* **M1 is closed.** D16 goes from 3 to 5.
+
+| Part | Range | Verdict |
+|---|---|---|
+| 3. Shared holders fix (Q2) | d66d9fdf..7911f488 | **Approve.** Round-1 Major 1 is fixed for a, h, i, g and the nobody words. Each rule now has a check that fails when the rule is removed |
+
+Parts 1, 2 and 4 are unchanged from above (Approve). m1, the Q2 round-1 Minors and /prepare B2–B5 are still open Minors. None of them blocks.
+
+**Verdict: Approve** (7911f488). No Blocker or Major is open.
