@@ -20,7 +20,7 @@ import { ProposePeopleBody, type PeoplePlan, type PeopleProposal, type ProposedP
 import { Audit, Db, need, PROTOTYPE, SOLUTION, type Actor } from "./core.ts";
 import { inventoryFor, trailOf } from "./finder.ts";
 import { GUIDE_SOURCE_KIND } from "./guide-sources.ts";
-import { Sources, usesFakeLauncher } from "./sources.ts";
+import { Sources, aiLive, usesFakeLauncher } from "./sources.ts";
 import { Studio } from "./studio.ts";
 
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
@@ -31,9 +31,12 @@ const RUNS = join(PROTOTYPE, "p2", "runs"), JOBS = join(PROTOTYPE, "p2", "jobs")
 const ROUTE = "anthropic-api/aiw-d261-prototype-exception-aiw-d260", MODEL = "claude-opus-5-5";
 const AI = { template: "who-can-be.v1.md", check: "who-can-be-check.v1.md", schema: "who-can-be-output.v1.schema.json", effort: "low", max_output_tokens: 3000 } as const;
 /** Lead check L2: on only when the founder approved a live trial for Who can be (set by the Lead for that trial). */
-// Lead 30 Oct (after the US$0.17 incident): a check copy never starts with a live switch; AI now is open there only
-// while its launches go to the fake launcher, so the run path is tested with no model call.
-const LIVE_APPROVED = () => process.env.STUDIO_PEOPLE_AI_LIVE === "approved" || usesFakeLauncher();
+// Lead 30 Oct (after the US$0.17 incident) and 31 Oct (PR #113 review M1): the server's live switch (P-175,
+// STUDIO_AI_LIVE) is the one door and comes first. Behind it, AI now opens for the founder's approved trial, or on a
+// check copy whose launches go to the fake launcher (its usage line pairs the switch with the fixture, P-192), so the run
+// path is tested with no model call. The fake launcher alone never opens it.
+export const whoCanBeLiveOpen = (env: NodeJS.ProcessEnv, fakeLauncher: boolean) => env.STUDIO_AI_LIVE === "approved" && (env.STUDIO_PEOPLE_AI_LIVE === "approved" || fakeLauncher);
+const LIVE_APPROVED = () => aiLive() && whoCanBeLiveOpen(process.env, usesFakeLauncher());
 export const LIVE_WAITING = "AI now waits for the founder's Go for a live trial (P-110). Use rules only, or saved AI answers, meanwhile.";
 const LIVE_RUN = /-live-\d{8}t\d{9}z-[a-z0-9]+\.json$/;
 const sameText = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, "-").replace(/\s+/g, " ").trim();
