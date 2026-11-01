@@ -10,11 +10,13 @@ import * as React from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { MoreHorizontal, Pencil, Plus, RefreshCw, Trash2, Undo2 } from "lucide-react";
+import { Copy, MoreHorizontal, Pencil, Plus, RefreshCw, Trash2, Undo2 } from "lucide-react";
 import { CHANNEL_WORDS, CHANNELS, SIGNATURE_FITS, SIGNATURE_WORDS, throughAccount, type Channel, type Signature } from "../../../../contracts/forms";
 import { changeWords, COPIES_WORDS, copiesWords, SIGNED_BY, type LastFormChange, type RemovedForm, type WorkspaceFormLine } from "../../../../contracts/workspace";
 import { api, ApiError, useAction, useSessionView, useToast } from "@/lib/api";
 import { useUndoToast } from "@/components/lifecycle";
+import { useBulkLines } from "@/components/bulk-lines";
+import { APPROVER_WORDS } from "../../../../contracts/lines-bulk";
 import { FindDialog, FinderPanel, formsKeys, useFinderLatest } from "./finder";
 import { Button, Dialog, Field, Input, Notice, Panel, Pill, Select, Table } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
@@ -67,6 +69,8 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
   const d = useApi<CombinationView>(["combination", id], `/combinations/${id}`);
   const latest = useFinderLatest(id);
   const toast = useUndoToast();
+  // X2b (C1.5): copy a line to other combinations, remove it from them, or copy lines here from another combination.
+  const bulk = useBulkLines(id);
   const qc = useQueryClient();
   const undoLast = async (changeId?: string) => { await api(`/combinations/${id}/forms/undo`, { method: "POST", json: changeId ? { changeId } : {} }); for (const k of [...formsKeys(id), ["combination", id, "finder"]]) void qc.invalidateQueries({ queryKey: k }); };
   const redo = (codes?: string[]) => { setChoosingPage(false); setFinding(codes ?? []); };
@@ -81,7 +85,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
   }, [asked, latest.data]); // eslint-disable-line react-hooks/exhaustive-deps
   const onRemoved = (code: string) => toast.show(`${code} removed from this combination; it stays in the Form library`, () => undoLast());
   const noRule = lines.filter((l) => l.onlyIf.kind === "words_only");
-  const add = canAuthor ? <Button size="sm" variant="secondary" onClick={() => setAdding(true)}><Plus /> Add a form from the library</Button> : null;
+  const add = canAuthor ? <><Button size="sm" variant="secondary" onClick={() => setAdding(true)}><Plus /> Add a form from the library</Button><Button size="sm" variant="secondary" onClick={bulk.openFrom} data-copy-from-open><Copy /> Copy a line from another combination</Button></> : null;
   const picker = adding ? <Panel open onOpenChange={(o) => !o && setAdding(false)} title="Add a form from the library" description="Only forms already in the Form library. A new form enters there first (upload, or the form finder)." footer={<><Button variant="ghost" onClick={() => setAdding(false)}>Close</Button><Link className="text-sm text-text-link underline" to="/library/forms">Open the Form library</Link></>}><FormPicker combinationId={id} have={lines.map((l) => l.code)} /></Panel> : null;
   const combo = d.data as unknown as Combo | undefined;
   const codes = lines.map((l) => l.code);
@@ -102,7 +106,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
         <div className="flex flex-wrap items-start justify-between gap-3"><h2 className="font-semibold">No forms yet</h2>{add}</div>
         <p className="mt-1 text-sm text-text-muted">Find them with AI above, or add one from the <Link className="text-text-link underline" to="/library/forms">Form library</Link>.</p>
       </div>
-      <SourcesLine d={combo} lineCodes={codes} />{picker}{rail}{toast.node}
+      <SourcesLine d={combo} lineCodes={codes} />{picker}{rail}{toast.node}{bulk.node}
     </div>
   );
   // Drift check 5: forms attached but not set up are counted with the lines, so the header never says "No forms yet ·
@@ -132,7 +136,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
             <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <SignatureCell id={id} code={l.code} channel={l.channel as Channel} signature={l.signatureKind as Signature} signatures={l.signatures} canAuthor={canAuthor} />}</td>
             <td className="text-xs">{l.document ? "—" : l.signedBy ? l.signedByLabel : <span className="text-text-muted">Not set</span>}</td>
             <td className="text-xs"><span className="block">{l.edition ?? <span className="text-text-muted">No edition read yet</span>}{l.document ? null : <span className="text-text-muted"> · {l.boxes} form fields matched</span>}</span>{l.document ? null : <LineReading combo={combo} l={l} fromLibrary={fromLibrary} />}{l.document ? null : <span className="mt-1 block"><StepChip code={l.code} chip={progress[l.code]} onOpen={() => openSetup(l.code)} /></span>}</td>
-            <td className="whitespace-nowrap">{canAuthor ? <><Button size="sm" variant="ghost" aria-label={`Change ${l.code}`} onClick={() => setOpen(l)}><Pencil /> Change</Button><LineMenu id={id} l={l} onRedo={() => redo([l.code])} onRemove={() => setRemoving(l)} /></> : null}</td>
+            <td className="whitespace-nowrap">{canAuthor ? <><Button size="sm" variant="ghost" aria-label={`Change ${l.code}`} onClick={() => setOpen(l)}><Pencil /> Change</Button><LineMenu id={id} l={l} onRedo={() => redo([l.code])} onRemove={() => setRemoving(l)} onBulk={(op) => bulk.open({ kind: "form", key: l.code, short: l.code }, op)} /></> : null}</td>
           </tr>
         ))}
         {pending.map((a) => (
@@ -144,11 +148,12 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
           </tr>
         ))}
       </Table></div>
+      {!canAuthor ? <p className="text-xs text-text-muted" data-approver-copies>{APPROVER_WORDS}</p> : null}
       <FormsProblems id={id} filing={problems} />
       <SourcesLine d={combo} lineCodes={codes} />
       {open ? <LineDrawer id={id} l={open} d={combo} onClose={() => setOpen(null)} onRemoved={onRemoved} /> : null}
       {removing ? <RemoveDialog id={id} l={removing} onClose={() => setRemoving(null)} onRemoved={onRemoved} /> : null}
-      {picker}{rail}{toast.node}
+      {picker}{rail}{toast.node}{bulk.node}
     </div>
   );
 }
@@ -194,8 +199,9 @@ function RemovedNotice({ id, removed }: { id: string; removed: RemovedForm[] }) 
   );
 }
 
-/** The row's ⋯ menu: Redo with AI (find, read, match for this form), Replace edition, Remove from this combination. */
-function LineMenu({ id, l, onRedo, onRemove }: { id: string; l: WorkspaceFormLine; onRedo: () => void; onRemove: () => void }) {
+/** The row's ⋯ menu: Redo with AI (find, read, match for this form), Replace edition, Copy to other combinations… and
+ *  Remove from other combinations… (X2b, C1.5), Remove from this combination. */
+function LineMenu({ id, l, onRedo, onRemove, onBulk }: { id: string; l: WorkspaceFormLine; onRedo: () => void; onRemove: () => void; onBulk: (op: "add" | "remove") => void }) {
   const toast = useToast();
   const item = "flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 outline-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[highlighted]:bg-surface";
   const replace = async () => {
@@ -203,12 +209,15 @@ function LineMenu({ id, l, onRedo, onRemove }: { id: string; l: WorkspaceFormLin
     catch (e) { toast.push({ tone: "danger", text: (e as Error).message }); }
   };
   return (
-    <DropdownMenu.Root>
+    // Not modal (as RowMenu): a modal menu hides the page header from screen readers while it stays focusable (axe).
+    <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger asChild><Button size="sm" variant="ghost" aria-label={`Actions for ${l.code}`}><MoreHorizontal /></Button></DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content align="end" sideOffset={4} className="z-50 min-w-[280px] rounded-lg border border-border bg-surface-raised p-1 text-sm shadow-lg">
           <DropdownMenu.Item className={item} disabled={l.document} onSelect={onRedo}><RefreshCw className="size-4" /> Redo with AI (find, read, match)</DropdownMenu.Item>
           <DropdownMenu.Item className={item} disabled={l.document} onSelect={() => void replace()}>Replace edition… (checks canada.ca)</DropdownMenu.Item>
+          <DropdownMenu.Item className={item} onSelect={() => onBulk("add")} data-bulk-menu="add"><Copy className="size-4" /> Copy to other combinations…</DropdownMenu.Item>
+          <DropdownMenu.Item className={item} onSelect={() => onBulk("remove")} data-bulk-menu="remove">Remove from other combinations…</DropdownMenu.Item>
           <DropdownMenu.Item className={`${item} text-text-danger`} onSelect={onRemove}><Trash2 className="size-4" /> Remove from this combination</DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
