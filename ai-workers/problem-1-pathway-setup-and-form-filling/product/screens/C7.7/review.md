@@ -1,100 +1,102 @@
-# Review: C7.7 part 1, last two fixes (commit 26964195, PR #357, branch claude/runtime-deliverables)
+# Review: C7.7 part 1, last two fixes (PR #357, branch claude/runtime-deliverables)
 
-I did not build this commit. I reviewed only `git show 26964195`:
-* IMM 5476's representative block from the firm record (`samples/firms.json`, `engine/runtime/team.ts`, `api/src/runtime.ts state()`).
-* `person.has_children` worked out from the case (`engine/runtime/case.ts`).
-* `derive_inverse` in `prototype/p5/transforms.ts`.
-* Its tests.
+**Round 2: commit 7a07e52b. Verdict: Approve.** Round 1 was commit 26964195, verdict Changes needed (summary below; full text in git history).
 
-Copy: my own isolated copy on :4438 (`xr_studio_review_c77`). The builder's :4440 was reset while I read it, and I did not touch it. :4400 was not touched. Live AI stayed off (US$0). Journey test: `journey-test-reviewer-2026-11-01.md`, **5/10, Fail**.
+I did not build this. In round 2 I reviewed `git show 7a07e52b` on my own isolated copy on :4438 (`xr_studio_review_c77`, fresh start, now stopped). The builder's :4440 and the demo :4400 were not touched. Live AI stayed off (US$0). Journey test: `journey-test-reviewer-2026-11-01.md`, round 2 **8/10, Pass**.
 
-## Re-run
-* `check_vv_prepare_api.ts 4438`: 26/26 (C7.7 18/18, C6.12 24/24, C11.6 14/14).
+## Round 2 re-run (fresh copy, 7a07e52b)
+* `check_vv_prepare_api.ts 4438`: **30/30**. C7.7 18/18, plus the new lines for m1, M1, and B1+M2 (both lines).
 * `check_case_engine.ts`: 57/57.
-* `check_p5_engine.ts`: 31/31.
-* Graph: G1 0, G3 2. Neither is from this commit (`pdf-copy` is reached only by acceptance).
+* `check_p5_engine.ts`: 33/33.
+* `check_c611_team.ts`: not re-run here; the builder reports 59/59. The m5 change in `state()` is exercised by the 30/30 above.
 
-## Every consumer of `state().answers` (the brief's question)
-* **Case view, readiness, prepare stage 1.** These work: `knownOf` keys the answers by "representative", which is the renderer's `aboutOf` key, and VERIFIED status makes them confirmed. IMM 5476 is now Ready for the principal and the spouse.
-* **fill-case.ts generate.** The stored facts carry about=`representative` with the firm values (I checked `answer_snapshot.facts_json`). The `subjectId` checks only cover the form's person, so they are unaffected.
-* **case-filings.ts, case-checklist.ts, case-prepare.ts.** They filter ages by participant, so the extra answers are ignored. Safe.
-* **Answer and confirm routes.** The server writes nothing, but the refusals are the wrong ones (see M1). The ids are not DB ids, so the zod uuid checks answer before the "not on this case" check.
-* **Audit.** Nothing is stored, so there is no audit line. That is correct for derived values.
-* **Change detection between copies.** It is broken for object values (B1). A change of representative is detected correctly: e-mail and given names are named.
+## Round 1 findings, re-checked
+**B1 · closed.** `inStoredOrder` (`engine/runtime/team.ts`) sorts keys the way jsonb does: shorter keys first, then bytewise.
+* A new IMM 5476 copy on a fully confirmed case is `out_of_date: false, changed: []`.
+* Lock as filed is now refused only by the "filling is not proven yet" gate, which existed before; there is no "out of date" loop.
+* The new API line fails without the fix (I saw that failure myself in round 1).
+* `changedFacts` and `inputHash` still depend on key order. That is safe today because every other value is read back from jsonb. A future non-stored source must also use `inStoredOrder` (see n4).
 
-## Issues
+**M1 · closed.** Firm-record values now show "From the firm record", with tooltip "Filled from the representative of record's firm record (Sample)…". The line reads "firm record · Representative · time", and "Change it in the firm record" replaces Edit.
+* The three Confirm section buttons on the representative tab are disabled. The firm ids are never sent as seen.
+* The client's questionnaire has no representative block, in both the API (`sqr` subjects) and the browser (screenshot `r2-client-1024.png`).
+* axe found 0 violations. There is no sideways scroll at 1024 or 400 px.
 
-**B1 · Blocker. Every IMM 5476 copy is "out of date" from birth and can never be locked.**
-* Evidence: a fresh copy on :4438 showed `out_of_date: true, changed: ["Person's telephone number including country code"]`. `POST /form-copies/:id/lock {kind:"filed"}` returned 409 "This copy is out of date (1 change since it was made); generate a new copy and lock that one". A new copy behaves the same.
-* Control: IMM 5257 on the same case is `out_of_date: false`.
-* Cause: the snapshot's jsonb stores the phone as `{"number","country_code"}`, because jsonb reorders keys. `firms.json` and `representativeContact` give `{country_code, number}`. `changedFacts` (`engine/runtime/forms.ts:60–66`) and `inputHash` (`:54`) use `JSON.stringify`, which depends on key order. `inputHash` also feeds the validated-file check (`api/src/fill-case.ts:353`).
-* Fix:
-  * Compare with a stringify that sorts keys, at least in `changedFacts`. For `inputHash`, mind existing `validated_copy.facts_hash` values.
-  * Or build the firm-record values in jsonb order (round-trip them).
-  * Add a pass/fail line: generate IMM 5476 → `out_of_date === false` → lock as filed returns 200.
-* C7.7 acceptance does not lock IMM 5476, so it missed this.
+**M2 · closed.** The PDF read back holds the firm-record values in Section B:
+* phone `1` / `4165550100`, e-mail
+* address 200 / 100 / Example Street / Toronto / ON / M5V 1A1
+* `by_hand` now lists only the form action and the kind of representative. Those are not in this commit's scope; the licence fields are listed under "Not built".
+* The country is written as `canada` (n1).
 
-**M1 · Major. Firm-record answers look like ordinary, editable answers, and their source is misstated (D18, EXPERIENCE trust and sources).**
-* On the officer's "representative" tab, each line shows a "Confirmed" pill with the tooltip "Confirmed by the officer" (`CONFIRM_WORDS.officer`, because status is VERIFIED). The line reads "answered · Representative · 1 Nov, 19:44" (`CHANNEL` in `web/src/runtime/questionnaire.tsx:487` has no `firm_record`).
-* Edit on the e-mail → Save returns 400 "Send the id of the answer you saw, or null when there was none."
-* "Confirm section" is enabled because `seen` holds the `firm_record:…` ids. Pressing it gives the toast "Choose whose section to confirm." (400).
-* The client's SQR view shows the same representative parts, prefilled and "Confirmed". The tab and its unanswerable questions were there before this commit; the misleading state is new.
-* Fix:
-  * Mark these answers as from the firm record in the view: their own `why` (for example "From the firm record: the representative of record"), and channel words "firm record".
-  * Show them read-only: no Edit, no Confirm, and leave them out of `seen`.
-  * Keep the representative's parts out of SQR mode.
+**m1 · closed.** An API pass/fail line checks that the question is asked before a child is added and not asked once one is.
 
-**M2 · Major. The record claims the phone is filled, but the copy still asks for it by hand (G25 bar: never by hand for a fact the case holds).**
-* The copy's `by_hand` list includes the representative's phone country code and number and the country of the mailing address. The steps `phone:country_code_digits`, `phone:area_code_and_number` and `country_name_text (max 255 characters)` are not executable.
-* `qa/built/C7.7.md` and the commit message say "(name, e-mail, office address, phone) is filled".
-* Fix: make these three steps executable (`phone_part` already exists), or correct the built note and commit claim and put phone and country under "Not built".
+**m5 · closed.** `state()` uses `c.firmKey` and maps the team rows to `Member` without the cast.
 
-**m1 · Minor ([M] "a rule's test fails when the rule is removed").** In `caseView` (`case.ts`, `derivedYes` filter), the rule that a worked-out Yes is not asked has no test that fails without it. I removed the filter in a scratch copy and `check_case_engine` still passed 57/57. The `knownOf` derivation and the spouse branch are covered: removing either makes the suite fail. Fix: add one caseView line saying no `person.has_children` question for p and s when a child is on the case.
+**m2, m3, m4, m6 · open, Minor.** They go to the PR's Questions for the Lead, as agreed:
+* m2: `derive_inverse` reads its codes by position.
+* m3: overriding a client's No is silent.
+* m4: the spouse's Yes for step-children; the immigration expert should confirm.
+* m6: older IMM 5476 copies now show as out of date.
 
-**m2 · Minor. `derive_inverse` is positional.** The regex ignores the clause text: the first code is always used for No. A map written "0 when any child exists, 1 when … no child records" is silently inverted (probed: true → "1"). A comma in the first clause sends the box to hand-writing, which is safe. Today there is one string in use (IMM 5707 `hideChildren`, 12 copies, correct). Fix: require the first clause to describe absence (`\bno\b|none`), otherwise send it by hand. Add the swapped-order case as a fail line.
+## New in round 2 (all Minor, none blocking)
+* **n1 · Minor. The country is written in lower case on IRCC's form.**
+  * The PDF shows `question7.country = "canada"`.
+  * `samples/firms.json` gives `"country": "canada"`, but `person.mailing_address_country` has no answer list. The filler therefore cannot map a key to a label, and `country_name_text` passes the value through (`ISO3` knows only codes).
+  * A person picking from the country list would enter "Canada".
+  * Fix: use "Canada" in `firms.json` (both firms), and make the B1/M2 line assert the written value, not only `result = written`.
+* **n2 · Minor. The representative's fax can still be "added", and it fails.**
+  * The fax is the only representative line without a firm value. It still has an "Add" button, and Save fails with "That person is not on this case." (404, screenshot `r2-fax-add-1024.png`).
+  * The tab's intro still says "Click Edit on any answer to change it…".
+  * This existed before the commit.
+  * Fix: for subject `representative`, show "Not in the firm record" with no Add, and drop or adapt the intro on that tab.
+* **n3 · Minor. Wrong tooltip on the disabled Confirm buttons.** The disabled Confirm section buttons on the representative tab keep the title "Nothing answered yet in this section", although every line is answered. Fix: say that these come from the firm record and are not confirmed on the case.
+* **n4 · Minor, note for the Lead.** `country_name_text (max 30 chars)` (IMM 5257) is now executable too, through the new regex. That is a behaviour change beyond IMM 5476: those boxes are now written instead of going by hand. It is covered only by the "(max 255 characters)" and "(max 3 characters)" unit lines. Key-order dependence in `changedFacts` stays a trap for any future non-stored value (see B1).
 
-**m3 · Minor. Deriving only Yes is right; the override is silent.** With no child on the case, No cannot be worked out, because children who are not on the application exist. That is correct. But a client's No is overridden and the line disappears, so the officer never sees the disagreement. Fix: show the line read-only as "Yes (worked out: the case holds this family's children)", or add a note when a stored No is overridden.
+## Consumers of `state().answers` (re-checked)
+* Case view, readiness, prepare stage 1 and the filler read the firm values; the copy holds them.
+* `case-filings`, `case-checklist` and `case-prepare` filter by participant.
+* Answer and confirm routes: the UI no longer offers Edit or Confirm on firm values, except n2's Add on the empty fax.
+* Audit: nothing is stored, so there is no line.
+* Change detection: correct after B1. A change of representative names the e-mail and given names.
 
-**m4 · Minor. Spouse Yes needs expert confirmation.** The spouse's Yes assumes a child on the case counts as the spouse's child too (step-children). Unconfirmed: the immigration expert should confirm against IMM 5707's instructions.
-
-**m5 · Minor. Extra queries in `state()`.** `state()` re-reads `firmKey` with `case.findUnique`, although `c.firmKey` already comes from `reach()`. It also uses `team as unknown as Member[]`. These are two extra queries per `state()`, which runs up to 3 times per write. Fix: use `c.firmKey`, and map the rows to `Member`.
-
-**m6 · Minor, for the Lead.** IMM 5476 copies made before this commit will show as out of date, because they gain new confirmed boxes. This is expected; mention it for the demo.
-
-## D1–D20 (1–5, this commit)
+## D1–D20 (1–5, round 2)
 | Dimension | Score | Evidence |
 |---|---|---|
-| D1 Requirement fit | 3 | The block fills, but phone and country do not (M2). |
-| D2 Data integrity | 3 | Nothing stored, but false change detection (B1). |
-| D3 Reuse | 4 | Library person facts are reused. |
-| D4 Rule integrity | 4 | Yes-only derivation is right. |
-| D5 Stability and recovery | 2 | The lock loop (B1). |
+| D1 Requirement fit | 4 | n1 |
+| D2 Data integrity | 4 | B1 fixed; key-order trap noted |
+| D3 Reuse | 4 | |
+| D4 Rule integrity | 4 | |
+| D5 Stability and recovery | 4 | no lock loop |
 | D6 Freshness and governance | 4 | |
 | D7 AI trust | n/a | |
-| D8 Orientation | 3 | The lower-case "representative" tab opens first (pre-existing). |
-| D9 Flow of information | 3 | |
-| D10 Language and guidance | 3 | Wrong refusal words. |
-| D11 Feedback and state | 2 | "Out of date" from birth; "Confirmed by the officer". |
+| D8 Orientation | 3 | the lower-case "representative" tab opens first (existed before) |
+| D9 Flow of information | 4 | n2 |
+| D10 Language and guidance | 3 | n1, n2 intro, n3 |
+| D11 Feedback and state | 4 | |
 | D12 Visual quality | 4 | |
-| D13 Accessibility and responsive | 4 | axe 0. 400/1024 px fine. Keyboard and zoom not walked. |
+| D13 Accessibility and responsive | 4 | axe 0, 400/1024 px fine, keyboard reaches the panel, no dead controls except n2 |
 | D14 Looks like the team's product | 4 | |
-| D15 Speed | 5 | View in 70–80 ms. |
-| D16 Testability | 3 | m1, and no IMM 5476 lock test. |
+| D15 Speed | 5 | |
+| D16 Testability | 4 | pass/fail lines for B1, M1, M2 and m1 |
 | D17 First-use intuitiveness | simulated only | |
-| D18 Information provenance | 2 | M1. |
-| D19 End-to-end capability closure | 3 | IMM 5476 cannot reach "filed". |
+| D18 Information provenance | 4 | "From the firm record" |
+| D19 End-to-end capability closure | 4 | |
 | D20 User pain solved | simulated only | |
 
+## Round 1 (commit 26964195), in short
+Verdict: Changes needed.
+* B1: IMM 5476 copies were out of date from birth and could not be locked.
+* M1: firm values looked like editable answers "Confirmed by the officer"; Edit and Confirm failed with 400s; the client saw them.
+* M2: the phone and country were still by hand, although the record said they were filled.
+* Minors m1–m6.
+
 ## Not checked
-* A keyboard-only walk and 200 % zoom (no new controls).
-* The SQR part in the browser (checked through the API only).
-* IMM 5707's own instructions on step-children (m4).
+* A real screen reader, and 200 % zoom.
+* `check_c611_team.ts` on my copy.
+* IMM 5707's instructions on step-children (m4).
 * Coverage.
 * The demo database.
 
-**Verdict: Changes needed** for commit 26964195.
-* Blocker: B1.
-* Majors: M1, M2.
-* Minors: m1–m6. m6 is for the Lead.
-
-The `review: approved` label should not be applied to this commit.
+**Verdict: Approve** for commit 7a07e52b.
+* No Blocker or Major is open.
+* Minors: n1, n2, n3, n4 (new), and m2, m3, m4, m6 (to the PR's Questions for the Lead).
