@@ -9,7 +9,6 @@
 //   * a changed check_* file runs itself (the three runtime R1 suites run together: they share one copy, in order);
 //   * a web page or component: the routes it serves (App.tsx's router, through whatever imports it) and its own names,
 //     looked up in the browser suites; no match, or a file the shell itself uses, runs every browser suite;
-//   * a feature registration (api/src/features/<x>.ts, P-214): what the modules it registers would pick, plus its check;
 //   * an API module (api/src/<x>.ts): the endpoint paths of the module and of every module that imports it (in main.ts,
 //     only the controllers that use it), looked up in the suites, plus the suites that import it; no match runs everything;
 //     a web file that calls one of those endpoints adds its own browser suites (the web rule above);
@@ -205,15 +204,6 @@ function pick(f) {
     return { all: `${s}: a test helper, not check_* (shared)` };
   }
   if (/^api\/src\/[^/]+\.ts$/.test(s)) return apiPick(f);
-  // P-214: a feature registration (api/src/features/<x>.ts) affects what the modules it registers serve, plus the registry check.
-  if (/^api\/src\/features\/[^/]+\.ts$/.test(s)) {
-    if (!existsSync(join(ROOT, f))) return { all: `${s}: removed or renamed` };
-    const mods = [...read(f).matchAll(/from\s+"\.\.\/([^"/]+\.ts)"/g)].map((m) => `${S}/api/src/${m[1]}`).filter((m) => !m.endsWith("/features.ts"));
-    if (!mods.length) return { all: `${s}: registers no module of api/src` };
-    const out = new Map([["check_features_registry.ts", `${s}: a feature registration`]]); let browser;
-    for (const m of mods) { const p = apiPick(m); if (p.all) return { all: `${s}: ${p.all}` }; for (const [n, r] of p.picks ?? []) if (!out.has(n)) out.set(n, r); browser ??= p.browser; }
-    return { picks: out, browser };
-  }
   if (s.startsWith("web/")) return webPick(f);
   return { all: `${s}: no rule covers it` };
 }
