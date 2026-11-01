@@ -113,7 +113,7 @@ export class CaseForms implements OnModuleInit {
       form: f.form_number, title: f.title ?? f.form_number,
       people: [...new Set(view.forms.filter((x) => x.form === f.form_number && x.applies !== false).map((x) => x.person))],
       pdf_copy: copyOnlyForms(s).has(f.form_number),
-      why_no_copy: copyOnlyForms(s).has(f.form_number) ? null : answerSheetOnly(f.form_number, s.combination.portal) ? "Express Entry: the answer sheet only, no PDF copy (P-171)." : "IRCC's PDF of this form is not in this case's release.",
+      why_no_copy: copyOnlyForms(s).has(f.form_number) ? null : answerSheetOnly(f.form_number, s.combination.portal) ? "Express Entry: the answer sheet only, no PDF copy." : "IRCC's PDF of this form is not in this case's release.",
     })).filter((f) => f.people.length);
     return { forms, online };
   }
@@ -144,7 +144,7 @@ export class CaseForms implements OnModuleInit {
     const s = this.runtime.snapshotOf(c), people = this.runtime.peopleOf(c);
     const { answers, rows, groups } = await this.runtime.state(c);
     if (channelIn(s, form) === "NOT_NEEDED") fail(`${form} is Not needed in this case's release: the IRCC account asks it itself, so nothing is filled.`, HttpStatus.UNPROCESSABLE_ENTITY);
-    if (answerSheetOnly(form, s.combination.portal)) fail(`${form} is filed Online through the IRCC secure account: its answers go on the answer sheet only, with no PDF copy (P-171).`, HttpStatus.UNPROCESSABLE_ENTITY);
+    if (answerSheetOnly(form, s.combination.portal)) fail(`${form} is filed Online through the IRCC secure account: its answers go on the answer sheet only, with no PDF copy.`, HttpStatus.UNPROCESSABLE_ENTITY);
     if (!pdfForms(s).has(form) && !copyOnlyForms(s).has(form)) fail(channelIn(s, form) === "ONLINE" ? `${form} is filed Online and IRCC's PDF of it is not in this case's release: its answers go on the answer sheet.` : `${form} has no PDF to fill in this case's release.`, channelIn(s, form) === "ONLINE" ? HttpStatus.UNPROCESSABLE_ENTITY : HttpStatus.NOT_FOUND);
     const cov = formCoverage(s, people, answers, rows, form, subjectId);
     if (!cov || cov.applies === false) fail(`${form} does not apply to that person on this case.`, HttpStatus.UNPROCESSABLE_ENTITY);
@@ -244,7 +244,7 @@ export class CaseForms implements OnModuleInit {
     // P-71 (Lead, R1d early look): a copy is filed or uploaded back only when its form is ready to file.
     const ready = readiness(lockView, x.formNumber, x.subjectId);
     if (!ready.ready) conflict(notReady(ready.missing.length));
-    if (!trialPassed(x.formNumber)) conflict(`${x.formNumber}'s fill trial has not passed yet: this is a checked copy, not for filing (P-65).`);
+    if (!trialPassed(x.formNumber)) conflict(`${x.formNumber}: this form's filling is not proven yet, so this copy is for checking only, not for filing.`);
     // Only the file that was made is ever locked: it must still be there with the bytes recorded (PR #12 review 2), since
     // a locked copy can never be corrected afterwards.
     this.checkedFile(x, HttpStatus.CONFLICT);
@@ -309,7 +309,7 @@ export class CaseForms implements OnModuleInit {
 
   /** The copy's bytes, checked against the hash recorded when it was made, and those same bytes are what is sent (break
    *  M1: one read). The file must lie in the working files (break m5) and still exist (break m1).
-   *  C-9 (P-144, Devin on PR #121): a barcode form with a current validated copy downloads that validated file (the one
+   *  C-9 (P-144, a reviewer on PR #121): a barcode form with a current validated copy downloads that validated file (the one
    *  with Adobe's barcode, the one that is filed), checked the same way against its own recorded checksum; a failed
    *  check is refused, never answered with the unbarcoded copy. `original` asks for the copy as the product made it. */
   async file(actor: Actor, id: string, original = false) {
