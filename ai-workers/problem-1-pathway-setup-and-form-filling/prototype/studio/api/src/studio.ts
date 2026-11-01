@@ -940,7 +940,7 @@ export class Studio {
 }
 
 /** The audit entities written by case work (runtime.ts, fill-case.ts, team.ts). */
-const CASE_ENTITIES = new Set(["case", "person", "case fact", "row", "group", "section", "form copy"]);
+const CASE_ENTITIES = new Set(["case", "person", "case fact", "row", "group", "section", "form copy", "item", "submission group"]);
 
 /** QA-74: the simulated people's names for stored ids (one id, or several joined by commas), never "user-A" on screen. */
 const PEOPLE: readonly { id: string; name: string }[] = [...ACTORS, ...RUNTIME_ACTORS];
