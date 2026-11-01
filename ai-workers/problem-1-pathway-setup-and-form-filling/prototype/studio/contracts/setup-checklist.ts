@@ -115,3 +115,20 @@ export function tabCounts(setup: { steps: { tab?: string; open: { focus: string;
   for (const s of setup?.steps ?? []) for (const i of s.open) { const t = tabOfFocus(i.focus, s.tab); if (t) out[t] += i.count; }
   return out;
 }
+/** X1 slice C3: where an open item's link goes, one definition for the engine's `next.href` and the Overview strip.
+ *  A proposal opens the review queue filtered to the combination and step (F4), AI progress the jobs page, anything
+ *  else lands on its place (`?focus=`) on the tab that holds it (`tabOfFocus`; the step's own tab otherwise). */
+export function itemHref(id: string, step: StepKey, stepTab: string, i: Pick<OpenItem, "kind" | "focus">): string {
+  if (i.kind === "review_proposals" && i.focus.startsWith("review:")) return `/review/proposals?c=${id}&step=${STEP_KEYS.indexOf(step) + 1}`;
+  if (i.kind === "view_ai") return `/c/${id}/jobs`;
+  return `/c/${id}/${tabOfFocus(i.focus, stepTab) ?? stepTab}?focus=${encodeURIComponent(i.focus)}`;
+}
+/** QA-119: the focus keys a tab has a landing place for (an element with `data-focus` or `data-focus-also` there). The
+ *  header's "Next step" takes the checklist's next item now, before forms F2; an item with no landing place yet
+ *  (forms:sources, forms:lines, forms:problems, forms:held, forms:finder, the review keys) opens its tab, without a
+ *  `?focus=` that nothing would answer. Add a key here when its tab draws the place. */
+export const LANDED_FOCUS: readonly string[] = ["pages:record", "people:card", "documents:lines", "documents:problems", "questionnaires:problems", "questionnaires:gaps", "questions_documents:problems"];
+export function nextStepHref(id: string, next: { item: Pick<OpenItem, "kind" | "focus">; step: StepKey }, stepTab: string): string {
+  const h = itemHref(id, next.step, stepTab, next.item);
+  return h.includes("?focus=") && !LANDED_FOCUS.includes(next.item.focus) ? h.slice(0, h.indexOf("?")) : h;
+}

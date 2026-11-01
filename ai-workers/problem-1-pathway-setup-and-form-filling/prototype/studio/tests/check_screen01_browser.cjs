@@ -210,12 +210,14 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   await row("Visitor visa").click(); await onCombination("Visitor visa");
   const crumbs = await p.getByRole("navigation", { name: "Path" }).getByRole("link").allTextContents();
   step("P-50: the page header carries the full path, every level a link (Immigration programs › Temporary residence › Visitors › Visitor visa)", crumbs.join(" › ") === "Immigration programs › Temporary residence › Visitors › Visitor visa", crumbs.join(" › "));
-  // Lead check item 1: one next step on the page — the row, the header and the first missing line say the same thing.
-  await p.getByRole("region", { name: /Missing before firms can use it/ }).locator("li").first().waitFor();
+  // Lead check item 1: one next step on the page. X1 slice C3: the setup strip replaced the missing list; the header's step
+  // and the strip's Forms row name the same one form found.
+  await p.locator('[data-step-row="forms"] [data-open-item="forms:sources"]').waitFor();
   const vvHeadStep = (await p.locator("main [data-next-step]").first().textContent()).trim();
-  const vvMiss = await p.getByRole("region", { name: /Missing before firms can use it/ }).locator("li").allTextContents();
-  const sharedStep = (await p.locator("[data-shared-step]").textContent().catch(() => "")) ?? "";
-  step("item 1 P-180: Visitor visa — the row says Resume setup; header step = the missing list's one shared step (said once); sources and set-up forms counted apart", vvRowStep === "Resume setup" && vvHeadStep === "Add 1 form from the library" && vvMiss[0]?.trim() === "2 forms attached as sources, 0 set up." && sharedStep === `Next step for all of these: ${vvHeadStep}.` && !vvMiss.some((x) => /Next step/.test(x)) && !vvMiss.some((x) => /No forms yet|Add sources/.test(x)), `${vvRowStep} | ${vvHeadStep} | ${sharedStep} |${vvMiss.join(" | ")}`);
+  const vvForms = (await p.locator('[data-step-row="forms"]').innerText()).replace(/\s+/g, " ");
+  // QA-119: the header's step is the checklist's next item, the strip's ● Next row (Official pages first on Visitor visa).
+  const vvNextRow = (await p.locator('[data-step-row][data-mark="next"]').first().innerText()).replace(/\s+/g, " ");
+  step("item 1 P-180 (X1 C3, QA-119): Visitor visa — the row says Resume setup; the header's step is the strip's ● Next item; the Forms row names the one form found; no missing list", vvRowStep === "Resume setup" && vvHeadStep === "Confirm the checklist page" && vvNextRow.includes(vvHeadStep) && /Add 1 form found/.test(vvForms) && await p.getByRole("region", { name: /Missing before firms can use it/ }).count() === 0, `${vvRowStep} | ${vvHeadStep} | ${vvNextRow} | ${vvForms}`);
   // Lead check items 3 and 5: no warnings on a combination with no setup; the Questions tile says what it counts.
   const vvTiles = await p.locator("main").textContent();
   step("item 3: a combination with no setup shows no warnings (\"no problems\")", !/\d+ warnings?/.test(vvTiles) && /no problems/.test(vvTiles));
@@ -230,7 +232,10 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   const vvId = p.url().split("/c/")[1].split("/")[0];
   const vvList = (await cat("pathway=INDIVIDUAL&filter=all")).rows.find((x) => x.nodeKey === "individual.visitors.visitor_visa").nextAction;
   const vvPage = (await p.locator("[data-next-step]").first().textContent())?.trim();
-  step("review #1: the page's next step is the row's (same words, same action)", vvList && vvPage === vvList.label && (await p.locator("[data-next-step]").first().getAttribute("data-next-step")) === vvList.kind, `${vvList?.label} / ${vvPage}`);
+  // QA-119 (replaces review #1's "the row's nextAction"): the page's one next step is the setup checklist's next item,
+  // the same one the Programs card's Resume setup lands on; never the catalogue's older step when they differ.
+  const vvChecklist = (await (await p.request.fetch(`${BASE}/api/combinations/${vvId}/summary`, { headers: { "x-actor": "user-A" } })).json()).setup.next;
+  step("QA-119: the page's next step is the setup checklist's next item (its words and kind), not the catalogue's older step", vvChecklist && vvPage === vvChecklist.item.text && (await p.locator("[data-next-step]").first().getAttribute("data-next-step")) === vvChecklist.item.kind && vvPage !== vvList?.label, `${vvChecklist?.item.text} / ${vvPage} / old ${vvList?.label}`);
   step("review #1: a form already mapped in the library is not called unmapped", !/IMM 5707[^\n]*not mapped yet/.test(await p.locator("main").textContent()));
   await state("combination-page-overview");
 
@@ -302,15 +307,14 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   step("item 3: the warnings on a Live row are this combination's own and link to Review and release", warnCount === ownWarnings && (warnCount === 0 || (await warnLink.getAttribute("href")).endsWith("/review")), `${warnCount} shown, ${ownWarnings} own`);
   await state("combination-page-live-unverified-source-held");
 
-  // The combination page with the missing list (card v4, P-180: the card's one button no longer says "See N missing"; the
-  // list lives on the combination's page, reached at its address).
-  const ssId = (await cat("pathway=INDIVIDUAL&filter=all")).rows.find((x) => x.label === "Spouse of a student").combinationId;
+  // The combination page at its old "missing" address (card v4, P-180; X1 slice C3: the setup strip replaced the list):
+  // it lands on the strip, five steps, each with what is open.
+  const ssId = (await cat("pathway=INDIVIDUAL&filter=all")).rows.find((x) => x.label === "Visitor visa").combinationId;
   await p.goto(`${BASE}/c/${ssId}?show=missing`); await idle();
-  await p.getByRole("region", { name: /Missing before firms can use it|Why firms cannot use it/ }).locator("li").first().waitFor(); // the list arrives with the page summary
-  const miss = await p.getByRole("region", { name: /Missing before firms can use it|Why firms cannot use it/ }).locator("li").allTextContents();
-  step("See N missing opens the combination page with each missing item", miss.length >= 1, miss.join(" | "));
-  const shared = await p.locator("[data-shared-step]").count();
-  step("F2: one cause, one line; the next step said once (under the list when shared, else on each line); no line per person role", (shared ? miss.length > 1 && !miss.some((x) => /Next step/.test(x)) : miss.every((x) => /Next step: /.test(x))) && !miss.some((x) => /has no questions/.test(x)) && miss.filter((x) => /No questions yet for/.test(x)).length <= 1, miss.join(" | "));
+  await p.locator("[data-setup-strip]").waitFor(); // the strip arrives with the page summary
+  const stepRows = await p.locator("[data-step-row]").allInnerTexts();
+  step("?show=missing opens the combination page on the setup strip, five steps", stepRows.length === 5 && await p.evaluate(() => !!document.activeElement?.hasAttribute("data-setup-strip")), stepRows.map((x) => x.replace(/\s+/g, " ")).join(" | "));
+  step("F2 (X1 C3): one line per step, never a line per person role", !stepRows.some((x) => /has no questions|No questions yet for/.test(x)));
   await state("combination-page-show-missing");
 
   // A not-started row opens no page and creates nothing (S2 fix 3; S3: no New combination page, P-125): it says Start setup

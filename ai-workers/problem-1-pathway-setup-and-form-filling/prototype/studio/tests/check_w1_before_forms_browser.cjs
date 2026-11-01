@@ -136,7 +136,8 @@ const MARK = { done: "✓", next: "●", todo: "○", ai: "◐", waiting: "⧗" 
   await p.waitForURL(/\/forms/); await p.locator('[data-step="people"][data-focused]').waitFor({ timeout: 8000 }).catch(() => {});
   step("P-161 (2) pass: following it lands on the people line on Forms", await p.locator('[data-step="people"][data-focused]').count() === 1);
   await go(`/c/${sv.combinationId}/overview`);
-  step("P-161 (2) pass: the Overview's people line says Change on Forms (C3 removes it there)", await p.getByRole("link", { name: "Change on Forms" }).count() === 1 && await p.getByRole("link", { name: "Change in Questionnaires" }).count() === 0);
+  await p.locator("[data-setup-strip]").waitFor();
+  step("P-161 (2) pass (X1 C3): the Overview has no people card any more; its strip's people step links to Forms", await p.locator("[data-overview-people]").count() === 0 && await p.getByRole("link", { name: "Change in Questionnaires" }).count() === 0 && /\/forms(\?focus=people%3Acard)?$/.test(await p.locator('[data-step-row="people"] a').first().getAttribute("href")));
 
   // ======================================================== read only, and save from Forms
   await as("user-B"); await go(`/c/${sv.combinationId}/forms`);
