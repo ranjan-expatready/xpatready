@@ -18,6 +18,18 @@ updated: 2026-11-01 11:30 UTC (Lead handover at 57% context) · milestone: **M2 
 4. **Old sessions to archive (the founder, from the sidebar):** the Mac session "Runtime lane: transaction timeout fix…" (`local_3b02c2d2`; Remote Control blocks `archive_session`; nothing unpushed) and every cloud session whose PRs are merged and Handover written (all except the four above).
 5. **Watch:** `check_w1_structure_browser.cjs` C11.3 R3-5 failed once at random (07:54); a second random fail quarantines it (P-205). Spend: about US$3 of US$30 by 08:08 UTC from run minutes (the Lead cannot read billing; ask the founder for the figure on 3 Nov).
 
+## First three jobs for the new Lead (the founder's ask, 1 Nov 11:40 UTC: "no new feature is being built")
+**What we found:** 39 product PRs merged on 1 Nov, but the scoreboard barely moved. Only C1.8 went to Works; C2.12 and C4.8 went to Partial; C11.10 went down to Partial. Super Admin setup stays at 21 of 56. Why:
+* qa re-tests merged PRs and bugs, but does not re-score the capability rows those PRs touch (C2.12's three slices are on the demo, yet the row still says "API only").
+* About 15 of the 39 product PRs were new capability work; about 13 fixed bugs qa found, 6 fixed tests and 5 were qa records.
+* Lost hours: each lane stopped two or three times waiting for a new session, the queue was blocked about 2 hours by #113, and 8 batches failed.
+* Features are sliced, and a row counts only when the whole capability works.
+
+**Do, in order (the founder agreed; fixes to how progress is measured, inside the P-204 freeze):**
+1. **qa re-scoring pass:** send the qa session one full pass over all 56 M2 rows of `qa/CAPABILITIES.md` against main (walk each row, set Works / Partial / Not built with evidence), before more after-merge rounds. Expect several rows to move (C2.12, C1.6, C4.2, C11.12 look close).
+2. **Builders target "Not built" capabilities first** (16 rows: `tools/progress.sh`), one builder per feature. A bug jumps the queue only when it's a Blocker or Major; Minors are batched into one PR per area per day.
+3. **Two qa rule changes:** (a) every builder PR names the capability IDs it moves (title or first line), and qa's after-merge re-scores exactly those rows in the same round; (b) a new status **"Built, awaiting qa"** in `qa/CAPABILITIES.md` and `tools/progress.sh`, set by the builder when its PR merges, so finished work shows before qa walks it. Record both as one decision (P-219), and put them in the next and qa skills.
+
 ## Progress (from `qa/CAPABILITIES.md` by `tools/progress.sh`; moves only after qa tests)
 * M2 Super Admin setup: 21 of 57 work (36%) at the last count; about 20 product PRs merged 1 Nov await qa's retest.
 * R1 thin runtime slice: 6 of 8 work (75%)
