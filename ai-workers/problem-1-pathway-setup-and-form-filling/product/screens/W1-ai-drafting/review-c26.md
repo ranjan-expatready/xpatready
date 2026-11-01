@@ -2,9 +2,37 @@
 
 Reviewer: a fresh agent that did not build it. Branch `claude/forms-c26-checklist`.
 
-**Current: commit 8ec21dfb (re-review of the fixes for the f30a7a7f Block). Verdict: Block.** One new Major is open. The four earlier Majors are fixed, but the M1 fix made checklist proposals disappear from the To review inbox.
+**Current: commit 758aba4d. Verdict: Approve.** No Blocker or Major is open.
 
-I ran isolated copy `rev_c26b` on :4425, with this commit's web build on :4426. No `*_LIVE` variable, no paid call, US$0. Journey report: `journey-test-reviewer-2026-11-01-8ec21dfb.md`.
+## 758aba4d: records only (P-221)
+`git diff --stat f5d56afe 758aba4d` shows two files: `product/qa/CAPABILITIES.md` and the new `product/qa/built/C2.6.md`. `CAPABILITIES.md` now matches the merge base. Nothing under `prototype/` changes, so the f5d56afe review below stands.
+
+`qa/built/C2.6.md` matches what I saw except for two Minor records points. They are worth correcting so qa's hand test works:
+1. "Replay again: nothing new is proposed" is not accurate. The second replay proposes again the 2 lines that apply could not write, because their conditions read fields the library lacks. On my copy it proposed 2 and dropped 11, 10 of them as "already on this combination". Suggested wording: "Replay again: only the 2 lines not yet on the combination are proposed again; the rest are listed as already there."
+2. "attach `imm5488e.pdf` to a combination (Sources), open Draft setup" leaves out a condition. The Checklists panel is inside Draft setup, which opens only while the combination's next step is "Map n forms": an unmapped form attached, and steps 1–2 (official page, people) done. I reached it on a new LMIA-exempt (employer offer) combination with IMM 5488 and IMM 5406 attached, uploaded through the Add form panel or `/intake`.
+
+## f5d56afe: Approve (`git diff 8ec21dfb f5d56afe`)
+I ran a quick check, as asked, on isolated copy `rev_c26c` (:4425, with this commit's web build on :4426). No `*_LIVE` variable, US$0.
+
+- **Builder suite:** `check_forms_c26_checklist.ts` gave **35 passed, 0 failed**, including the new To review step. The builder reports that step fails on 8ec21dfb (34/35).
+- **The inbox is fixed (8ec21dfb Major 1).** `review-queue.ts` now leaves out only `LISTED_AS_JOBS` (`field_map`).
+  - After a UI replay on LMIA-exempt (employer offer), `/review` as user-C reads "Needs you · 1". The row reads "Proposals · …› LMIA-exempt (employer offer) · 12 proposals waiting: 0 ready to accept, 12 to check, 0 to decide · Needs you · Review 12 proposals". The badge reads 1.
+  - The link goes to `/review/proposals?group=combination%3A<id>`, which lists 12 rows with "Decide on its checklist page". The first opens the right `/c/<combo>/jobs/<job>`.
+  - axe is clean, the keyboard reaches the row, and there is no sideways scroll at 400 px.
+- **Minors fixed:**
+  - The queue's 409 names the line by its label ("Copy of IMM 5802 … · principal applicant" is decided on its checklist page).
+  - An empty replay's notice says why (job.tsx:253).
+  - `have.add` happens only once a line is planned (checklist.ts:203).
+- **Carried Minors (for the PR):**
+  - the source is shown as the inventory path, and the PDF checksum is not compared;
+  - applied rows read "Edited by a person";
+  - the replay writes with `createMany`, not `insertProposals`;
+  - no browser check covers the Replay button;
+  - the apply loop is not one transaction.
+- **Journey score (reviewer): 9/10.** This is the 8ec21dfb table with "next step obvious" and "feedback and state" raised to 1. "Trust and sources" stays at ½.
+
+## Earlier round: 8ec21dfb (Block, one Major, fixed in f5d56afe)
+I ran isolated copy `rev_c26b`. Journey report: `journey-test-reviewer-2026-11-01-8ec21dfb.md`.
 
 ## Re-review of 8ec21dfb (`git diff f30a7a7f 8ec21dfb`)
 Builder suite on my copy: `check_forms_c26_checklist.ts 4425 xr_studio_rev_c26b` gave **34 passed, 0 failed**. I did not re-run `check_s6_p149.ts` (the builder reports 73/73).
@@ -60,7 +88,7 @@ Builder suite on my copy: `check_forms_c26_checklist.ts 4425 xr_studio_rev_c26b`
 | D19 | 3 | Closes only if the reviewer finds the queue. |
 | D20 | — | Simulated only. |
 
-**Journey score (reviewer) on 8ec21dfb: 8.5/10.** That passes, but issue 1 is open, so the verdict stays Block.
+**Journey score (reviewer) on 8ec21dfb: 8.5/10.** That passed, but issue 1 was open, so the verdict was Block. Issue 1 is fixed in f5d56afe.
 
 ## Earlier round (f30a7a7f, Block)
 Four Majors:
