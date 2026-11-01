@@ -219,6 +219,25 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   r = await call("POST", "/lines/bulk", { line: form("IMM 5476"), op: "add", combinationIds: [VV, SP], include: [VV, SP], idempotencyKey: key });
   ok("C1.5 BR-C3 retry of an undone batch: says it was undone, changes nothing", r.status === 200 && r.body.replayed && /and undone by Configuration author at/.test(r.body.message), r.body?.message);
 
+  // ------------------------------------------------------------ break report (04bac96f) minors
+  r = await call("POST", "/lines/bulk", { line: form("IMM 5476"), op: "add", combinationIds: [VV, SV], include: [VV, SV], idempotencyKey: key });
+  ok("C1.5 break m3: the same key with other ticked combinations is refused (409), not answered as a retry", r.status === 409 && /already used for another change/.test(words(r)), words(r));
+  sql(`delete from combination_form where combination_id in ('${VV}','${SV}') and lineage_key='IMM 5488'`);
+  r = await apply(form("IMM 5488"), "add", [VV, SV]);
+  const b8 = r.body?.batchId as string;
+  sql(`update combination set retired_at=now() where id='${SV}'`);
+  r = await undo(b8);
+  ok("C1.5 break m7: the batch Undo never changes a retired combination (409), nothing undone", r.status === 409 && /is retired/.test(words(r)) && lines(VV, "IMM 5488") === "1:DRAFT", words(r));
+  sql(`update combination set retired_at=null where id='${SV}'`);
+  const e1 = await call("PATCH", `/combinations/${SV}/forms/${encodeURIComponent("IMM 5488")}`, { minAge: 21 });
+  const e2 = await call("PATCH", `/combinations/${SV}/forms/${encodeURIComponent("IMM 5488")}`, { minAge: null });
+  r = await undo(b8);
+  ok("C1.5 break m6: edits that cancelled out after the batch are spent with its Undo, so the combination's own Undo is not stuck", e1.status < 300 && e2.status < 300 && r.status === 200 && sql(`select count(*) from form_line_action where combination_id='${SV}' and undone_at is null and detail->'codes' ? 'IMM 5488'`) === "0", { e1: e1.status, e2: e2.status, u: r.status, w: words(r) });
+  const relAt = sql(`select updated_at from combination_form where combination_id='${WP}' and lineage_key='IMM 1295' and status='PUBLISHED'`);
+  const rm8 = await apply(form("IMM 1295", VV), "remove", [WP]);
+  r = await undo(rm8.body?.batchId);
+  ok("C1.5 break m8: undoing a removal leaves the released row it never touched as it was, its save time too", rm8.status === 200 && r.status === 200 && lines(WP, "IMM 1295") === "1:PUBLISHED" && sql(`select updated_at from combination_form where combination_id='${WP}' and lineage_key='IMM 1295' and status='PUBLISHED'`) === relAt, { rm: rm8.status, u: r.status, w: words(r) });
+
   // ------------------------------------------------------------ review M2: a bulk add racing the Forms tab's own Add never answers 500
   let five = 0; const seen = new Set<string>();
   for (let i = 0; i < 4; i++) {

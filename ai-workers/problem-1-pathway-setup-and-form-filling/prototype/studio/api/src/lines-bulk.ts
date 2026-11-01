@@ -210,7 +210,7 @@ export class LinesBulk {
       }
       // Review M2, m4: a deadlock, a lock wait, a write conflict or a line another request wrote at the same moment is
       // answered in words, never a 500; nothing was written (the transaction rolled back).
-      if (e instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2034", "P2010"].includes(e.code) || /40P01|55P03|deadlock|lock timeout/i.test(String((e as Error)?.message ?? "")))
+      if (e instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2025", "P2034", "P2010"].includes(e.code) || /40P01|55P03|deadlock|lock timeout/i.test(String((e as Error)?.message ?? "")))
         throw problem(409, "Busy", "These combinations were being changed by another request at the same moment. Nothing was changed. Preview again, then try once more.");
       throw e;
     }
@@ -264,8 +264,10 @@ export class LinesBulk {
 
   /** The same key again: the first request's answer, never a second change. Another change under the same key is refused. */
   private async replay(prior: { id: string; actor: string; undoneAt: Date | null; undoneBy: string | null; op: string; kind: string; lineKey: string; sourceCombinationId: string; workspaceId: string; targets: Prisma.JsonValue }, actor: Actor, b: BulkApply): Promise<ApplyResult> {
-    if (prior.actor !== actor.id || prior.op !== b.op || prior.kind !== b.line.kind || prior.lineKey !== b.line.key || prior.sourceCombinationId !== b.line.combinationId) throw problem(409, "Key used", "That request key was already used for another change. Reload the page.");
     const targets = prior.targets as unknown as BatchTarget[];
+    // Break m3: the same key with other ticked combinations is another change, not a retry.
+    const sameTargets = [...new Set(b.include)].sort().join() === targets.map((t) => t.combinationId).sort().join();
+    if (prior.actor !== actor.id || prior.op !== b.op || prior.kind !== b.line.kind || prior.lineKey !== b.line.key || prior.sourceCombinationId !== b.line.combinationId || !sameTargets) throw problem(409, "Key used", "That request key was already used for another change. Reload the page.");
     const trails = await this.trails(this.db, prior.workspaceId);
     const combos = await this.db.combination.findMany({ where: { id: { in: targets.map((t) => t.combinationId) } }, select: { id: true, label: true, programDefId: true } });
     const short = targets[0]?.short ?? b.line.key;
@@ -285,6 +287,9 @@ export class LinesBulk {
     const kind = bt.kind as "form" | "document";
     const ids = targets.map((t) => t.combinationId);
     const label = (id: string) => targets.find((t) => t.combinationId === id)?.label ?? "A combination";
+    // Break m7: a retired combination is never changed (as everywhere else); restore it on Structure first.
+    const retired = await this.db.combination.findFirst({ where: { id: { in: ids }, retiredAt: { not: null } }, select: { label: true } });
+    if (retired) throw problem(409, "Retired", `"${retired.label}" is retired: nothing in it changes. Restore it on Structure first. Nothing was undone.`);
     const released = await this.db.configRelease.findFirst({ where: { combinationId: { in: ids }, releasedAt: { gt: bt.at } }, orderBy: { releasedAt: "asc" } });
     if (released) throw problem(409, "Released since", `${label(released.combinationId)} was released after the change (release ${released.version} at ${hhmm(released.releasedAt)}): a release is never undone. Nothing was undone. Change it in a new draft.`, { combinationId: released.combinationId });
     // Undo never brings back a form or document type that is retired, or whose retire or delete is open (P-116).
@@ -330,6 +335,10 @@ export class LinesBulk {
         if (kind === "form") await tx.combinationForm.deleteMany({ where: { id: { in: drop } } });
         else await tx.documentRequirement.deleteMany({ where: { id: { in: drop } } });
         for (const r of t.before) {
+          // Break m8: a row that is still exactly as it was (a released or superseded row the batch never touched) is left
+          // alone, its save time too.
+          const cur = now.get(t.combinationId)!.find((x) => x.id === r.id);
+          if (cur && cur.status === r.status && cur.version === r.version && sigOf(kind, cur) === sigOf(kind, r as unknown as LineRow | DocRow)) continue;
           const { updatedAt, id, ...row } = r; void updatedAt;
           const put = Object.fromEntries(Object.entries(row).map(([k, v]) => [k, v === null && (k === "predicateJson" || k === "alternatives") ? Prisma.DbNull : v]));
           if (kind === "form") await tx.combinationForm.upsert({ where: { id: String(id) }, update: put as Prisma.CombinationFormUncheckedUpdateInput, create: { id: String(id), ...put } as Prisma.CombinationFormUncheckedCreateInput });
@@ -339,6 +348,9 @@ export class LinesBulk {
       await tx.lineBatch.update({ where: { id: bt.id }, data: { undoneAt: new Date(), undoneBy: actor.id } });
       // The combinations' own Undo steps for this batch are spent with it.
       await tx.$executeRaw`UPDATE form_line_action SET undone_at = now(), undone_by = ${actor.id} WHERE combination_id = ANY(${ids}::uuid[]) AND undone_at IS NULL AND detail->>'batch_id' = ${bt.id}`;
+      // Break m6: edits made on these lines after the batch that cancelled out (so the Undo was allowed) point at rows the
+      // Undo removed; they are spent too, so the combination's own Undo reaches its earlier steps again.
+      if (kind === "form") await tx.$executeRaw`UPDATE form_line_action SET undone_at = now(), undone_by = ${actor.id} WHERE combination_id = ANY(${ids}::uuid[]) AND undone_at IS NULL AND at > ${bt.at} AND detail->'codes' ? ${bt.lineKey}`;
       const audit = new Audit(tx as unknown as Db);
       await audit.log(bt.workspaceId, actor.id, "undone", "line batch", `bulk:${bt.id}`, `${actor.name} undid the ${bt.op === "add" ? "copy" : "removal"} of ${targets[0]?.short ?? bt.lineKey} on ${targets.length} combination${targets.length === 1 ? "" : "s"} (one batch)`, { batchId: bt.id, targets: ids });
       for (const t of targets) await audit.log(bt.workspaceId, actor.id, "undone", kind === "form" ? "form" : "document requirement", t.keys.join(", ").slice(0, 120), `${actor.name} undid the ${bt.op === "add" ? "copy" : "removal"} of ${t.short} on "${t.label}" (one batch of ${targets.length})`, { batchId: bt.id }, t.combinationId);

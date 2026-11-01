@@ -3,7 +3,9 @@
 -- target, the line rows before and after (what one Undo puts back). New table only (expand); nothing else changes and
 -- nothing is carried over (no batch existed before). No foreign key: a batch outlives a reset's removed combinations
 -- only until the reset deletes it with the workspace's other rows.
--- Rollback (STANDARDS §5): DROP TABLE "line_batch" (no other table refers to it; the line rows it wrote stay as drafts).
+-- No foreign keys, as library_form_deletion: a reset deletes a workspace's batches with its combinations (demo.ts).
+-- Rollback (STANDARDS §5): DROP TABLE "line_batch" (no other table refers to it; the line rows it wrote stay as drafts,
+-- and the "batch_id" inside form_line_action.detail of their Undo steps is then only a label, read by nothing else).
 CREATE TABLE "line_batch" (
     "id" UUID NOT NULL,
     "workspace_id" UUID NOT NULL,
