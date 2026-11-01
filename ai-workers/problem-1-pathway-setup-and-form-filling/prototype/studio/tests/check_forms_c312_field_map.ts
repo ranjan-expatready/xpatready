@@ -34,7 +34,7 @@ type Row = { code: string; type: string; edition: string | null; field_map: Fm }
   ok("C3.12 rule fail: an unresolved form field carried in a published map still keeps the map from Complete", fieldMapState("form", true, [m("mapped"), m("unresolved")]).kind === "undecided");
   // Review (b6d8b50b) M1: where an open form field is decided: To review only for one still in a draft.
   const carried = fieldMapState("form", true, [m("mapped"), m("unresolved"), m("unresolved")]);
-  ok("C3.12 review M1 pass: form fields carried from an earlier release are said to be decided when the edition is drafted again, not on To review", /2 form fields come from an earlier release/.test(carried.tip) && /drafted again/.test(carried.tip) && !/To review/.test(carried.tip), carried.tip);
+  ok("C3.12 review M1 pass: form fields carried from an earlier release are said to be decided when the edition is drafted again, not on To review", /2 form fields come from an earlier release/.test(carried.tip) && /drafted again \(Redo with AI in the form's ⋯ menu/.test(carried.tip) && !/Draft with AI/.test(carried.tip) && !/To review/.test(carried.tip) && /^Each form field needs a decision/.test(carried.tip), carried.tip);
   const onRev = fieldMapState("form", true, [m("mapped"), m("unresolved", "DRAFT")]);
   ok("C3.12 review M1 pass: a form field still in a draft waits on To review", /1 form field waits for a decision on To review\./.test(onRev.tip) && !/earlier release/.test(onRev.tip), onRev.tip);
   const both = fieldMapState("form", true, [m("unresolved", "DRAFT"), m("unresolved")]);
