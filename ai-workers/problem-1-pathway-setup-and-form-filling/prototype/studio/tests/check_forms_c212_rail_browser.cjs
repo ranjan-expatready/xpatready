@@ -106,6 +106,28 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await p.evaluate(() => { Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true }); window.dispatchEvent(new Event("visibilitychange")); Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true }); window.dispatchEvent(new Event("visibilitychange")); window.dispatchEvent(new Event("focus")); });
     const reread = await (async () => { for (let i = 0; i < 25; i++) { if (asked.some((u) => /\/workspace\?tab=forms/.test(u))) return true; await p.waitForTimeout(200); } return false; })(); // 5 s, then the step fails
     step("C2.12 pass (concept m6): the chips are read again when the page regains focus", reread, asked.join(" "));
+    // Review (ed2516cf) Major A: a running AI draft moves the row's chip on when it ends, without a reload (test input: the
+    // draft step written straight to the table, US$0; no worker picks up a RUNNING row).
+    const focusPage = () => p.evaluate(() => { Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true }); window.dispatchEvent(new Event("visibilitychange")); Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true }); window.dispatchEvent(new Event("visibilitychange")); });
+    const until = async (fn, arg, ms) => { try { await p.waitForFunction(fn, arg, { timeout: ms }); return true; } catch { return false; } };
+    const att5257 = sql(`select id from source_attachment where combination_id = '${sv}' and edition like 'IMM 5257 (%' limit 1`);
+    const job = sql(`insert into drafting_job (id, workspace_id, combination_id, attachment_id, kind, mode, status, started_by) select gen_random_uuid(), workspace_id, combination_id, id, 'field_map', 'REPLAY', 'RUNNING', 'user-A' from source_attachment where id = '${att5257}' returning id`).split("\n")[0];
+    await p.waitForTimeout(2_500); await focusPage();
+    const runningChip = await until(() => /· Running$/.test(document.querySelector('[data-step-chip="IMM 5257"]')?.textContent ?? ""), null, 8_000);
+    step("C2.12 pass (review N1, Minor 7): the chip's words follow the path (Step 2 of 6 · Field map · Running)", runningChip, await p.locator('[data-step-chip="IMM 5257"]').textContent());
+    await p.locator('[data-step-chip="IMM 5257"]').click(); await wait('[data-setup-rail="IMM 5257"]', "the running rail");
+    step("C2.12 pass (review Minor 3, N1): while the AI draft runs, the rail says so (not 'someone else acts')", /AI draft of the field map is running/.test(await p.locator('[data-next-for-you="running"]').textContent().catch(() => "")));
+    await axe("a rail with its AI draft running");
+    await p.keyboard.press("Escape");
+    sql(`update drafting_job set status = 'COMPLETED', finished_at = now() where id = '${job}'`);
+    const ended = await until(() => { const t = document.querySelector('[data-step-chip="IMM 5257"]')?.textContent ?? ""; return !!t && !/Running/.test(t); }, null, 12_000);
+    step("C2.12 fail (review Major A): when the AI draft ends, the chip moves on without a reload", ended, await p.locator('[data-step-chip="IMM 5257"]').textContent());
+    // Review N1: the rail is read again when the page regains focus (a change made elsewhere: the draft marked failed).
+    await p.locator('[data-step-chip="IMM 5257"]').click(); await wait('[data-setup-rail="IMM 5257"] [data-step="map"][data-state="done"]', "the rail with step 2 done");
+    sql(`update drafting_job set status = 'FAILED' where id = '${job}'`);
+    await p.waitForTimeout(2_500); await focusPage();
+    step("C2.12 pass (concept m6, review N1): the open rail is read again when the page regains focus", await until(() => document.querySelector('[data-setup-rail="IMM 5257"] [data-step="map"]')?.getAttribute("data-state") === "needs_you", null, 5_000));
+    await p.keyboard.press("Escape");
     step("no page errors", errs.length === 0, errs.join(" | "));
   } catch (e) { fail++; console.log(`FAIL  the check stopped: ${e.stack}`); } finally { await b.close(); }
   console.log(`\n${pass} passed, ${fail} failed`);

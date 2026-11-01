@@ -1,3 +1,102 @@
+# F2 C2.12 slice 3: the guided path on the Forms tab (step chip and rail) · independent reviewer · round 2 · 1 Nov 2026
+
+Commit reviewed: **`ed2516cf`** on `claude/forms-c212c-hfb2om` (stacked on #186, cd8a023d). I read `git diff 9a8aac8e ed2516cf` (this round's fix) and `git diff cd8a023d ed2516cf` (the slice). I did not build it. Read against the board `design/draft-wizard.html` (PDF views only, P-102), `concept.md` §3–§6 (BR-1, BR-4, BR-5, BR-7, K1, M5, m6, m9), STANDARDS and EXPERIENCE, and round 1 below.
+Ports 4454–4457 only; every copy stopped and its database dropped. Web build current (a rebuild gave the same hash, `index-DdGWOg-h.js`). US$0: replay only, no `*_LIVE`. Tracked screenshots the suite rewrote were restored; the tree is clean.
+
+## Verdict: **Ship after fixes** (0 Blocker, 1 Major, 3 Minor new; carried Minors as declared). For the PR: **Block**, fix list at the end
+The five round-1 Majors are fixed and hold in the running app. One new Major comes from Major 1's fix: the chip now comes from the workspace response, and nothing reads that response again when an AI draft finishes, so the chip keeps saying "Running" after the run has ended.
+
+## Round-1 fix list, item by item
+| Item | Result | Evidence |
+|---|---|---|
+| Major 1: one request per tab view | **Fixed** | Super visa Forms tab as A: one `workspace?tab=forms` read, 0 `/progress` reads. With an LMIA after `fill-from-index` (221 more forms): `tab=forms` 138–180 ms over 5 runs, chips included. Round 1 measured 6 progress calls at 340–550 ms each |
+| Major 2: other combination's work | **Fixed** | Saved AI answer on Super visa IMM 5257, then Visitor visa as A and C: chip "Step 2 of 6 · Field map · Waiting on someone else". Step 2: "Being mapped in Super visa: 84 proposals left · a content publisher…". Its only link is "Open it in Super visa" → Super visa's job. Step 3 not started, no Draft offered. Mutations m1, m3, m4 caught |
+| Major 3: chip after row actions, focus | **Fixed for actions and focus**; new Major below | Use saved AI answer on the row: chip "Step 3 of 6 · Review · Your step" after 1.0 s, no reload. Add from library: suite step 24. Focus re-read: m7 caught. The rail key move (m6) and the rail's focus refetch (m9) survive mutation (Minor N1) |
+| Major 4: "no PDF → upload it" | **Fixed** | m2 (`f.edition ?` → `true ?`) fails 2 checks (unit and API, CIT 0001). In the UI, `?setup=CIT 0001` → "Upload its PDF in the Form library" → `/library/forms` |
+| Major 5: axe at 390 | **Fixed** | My run, 0 violations at 1440/1024/390 on: author step 2 and step 3, elsewhere (A), running (A and C). Suite: reviewer, error, waiting, done. m8 (bodyLabel off) caught at 390 |
+| Minor 1 what's left | Fixed | Only open steps, with who and link ("· Being mapped in Super visa."). m5 caught |
+| Minor 3 running words | Fixed, untested | "Nothing for you to do here now: The AI draft of the field map is running; this page follows it." m10 survives (N1) |
+| Minor 5 tooltip | Fixed | Shown on hover and on keyboard focus |
+| Minor 6 edge words | Fixed | IMM 9999: words, no Try again. `?setup=imm5257` titled "IMM 5257"; Escape finds the chip |
+| Minor 7 tests | **Partly** | Step links (m12) and the who line (m13) are now caught. **A frozen chip label (m11) still passes 26/26** (N1) |
+| #186 Minor B | Fixed | API check of a "what IRCC accepts" change |
+| Declared not done | Accepted as PR items | Minors 2, 4, 8, 9; #186 Minors C–F |
+
+## What I checked
+| Check | Result |
+|---|---|
+| Suites at ed2516cf (fresh copies) | `check_forms_c212_progress` **54/54** (:4454). `check_forms_c212_rail_browser` **26/26** (:4455). The /tmp `git archive` gave the same results (:4456) |
+| Mutations (/tmp archive, fresh copy each; web rebuilt for web mutations) | **9 of 13 caught.** Caught: m1 engine combination filter · m2 no-PDF branch · m3 elsewhere null · m4 queue job combination null · m5 what's left unfiltered · m7 workspace focus refetch · m8 bodyLabel · m12 step links · m13 who line. **Missed:** m6 rail key back to `["form-progress",…]` · m9 rail focus refetch off · m10 running words off · m11 chip label frozen |
+| Keyboard, 200 % (720 px at 2×) | 29 Tabs to the first chip. Tooltip on focus. Enter opens the rail. Tab: Close → named region "Where IMM 5257 stands" → links. Step 3 link → the job "AI-proposed field map"; Back reopens `?setup=`. No sideways scroll with the rail open or closed |
+| Roles | Workspace forms read as O: 403; as Z: 401; no actor: 401. C sees "who acts", with no Draft |
+| Graph (P-86), tsc | G1 0 · G2 0 · G3 2 (old attachment routes, not this slice) · G4–G6 0. tsc (web, api): no error in the touched files |
+| Not run | `run-suites.sh --changed`: it uses ports 164xx, outside my 4454–4459. I rely on the builder's 100 PASS for it |
+
+## Issues, ranked
+**Major A (Must): after an AI draft ends, the chip keeps saying "Running" until a reload or a focus change.**
+- Repro (my run, :4457): on Visitor visa IMM 5257, set the job to RUNNING (SQL test input, as round 1 did). The Forms tab chip reads "Step 2 of 6 · Field map · Running".
+- Set the job to COMPLETED. **12 s later the chip still reads "Running"**; a reload shows "Step 3 of 6 · Review · Your step".
+- With the rail open, the rail moved on 4 s after the change (its 4 s poll, `setup-rail.tsx:33`). After Escape, the chip under it still read "Running" 3 s later. The same page shows two answers.
+- Cause: the chip now comes only from `["combination", id, "workspace", qs]` (`combination.tsx:118`). That query has no poll. The draft dialog invalidates it once, at launch (`sources.tsx:142`). The overview's 3 s poll while a job runs (`combination.tsx:57`) refreshes only its own key.
+- A live draft takes minutes, so the author who launches one from the row is left with a stale "Running" chip. Round 1 found this state working: the chip shared the rail's poll. It is the same stale-chip defect as Major 3, in the running state.
+- The bar: concept m6 says the chip follows the step. EXPERIENCE §2 [M] says running shows real progress.
+- The closed-rail case is the main one: the person sees the run end only by reopening the rail or by leaving the page and coming back.
+- Fix: poll the forms workspace read while any chip is `running`, the way the overview polls. Or invalidate it when the rail's or the overview's poll sees a run end. Add a browser check: running → done moves the chip without a reload.
+
+**Minor N1 (Should): four claimed fixes have no failing test.**
+- Frozen chip label (m11; the Minor 7 item still open). The label check at `check_forms_c212_rail_browser.cjs` step 1 matches the frozen text, and step 24 checks only `data-current`.
+- Running words (m10, Minor 3).
+- The rail's focus refetch (m9).
+- The rail key under `["combination", id]` (m6).
+- STANDARDS §3.10 and §7 [M] ask for a failing test for each.
+
+**Minor N2 (Should): elsewhere words repeat.**
+- Step 2 says "Being mapped in Super visa" three times: in its words, in its who line and in its link.
+- The next-step line reads "Nothing for you to do here now: Being mapped in Super visa.". That names a place, not who acts; the words already say "a content publisher".
+- Source: `engine/form-progress.ts:80`, where `who` is the place.
+
+**Minor N3 (Should): two API checks are ORed and cannot fail on the rule they name.**
+- `check_forms_c212_progress.ts:130` passes whenever Super visa's step 3 has started.
+- `:127` passes whenever step 2 waits.
+- Lines 128–129 carry the rule, so this is a test-quality point only.
+
+Carried and declared for the PR, not re-scored: Minor 2 (board fit; step 5 "Done · Nothing waits here" before step 2), Minor 4 (steps 1–2 land on the bare tab), Minor 8, Minor 9, #186 Minors C–F.
+
+## D1–D20
+- D1 4: K1, BR-1, BR-4, BR-5 and BR-7 met.
+- D2 4: read only; scoped to the combination.
+- D3, D4, D6, D8 n/a.
+- D5 4: 403/401/404 in words.
+- D7 4: US$0, replay only.
+- D9 4: the next step can always be taken.
+- D10 3: N2.
+- D11 3: Major A.
+- D12 3: Minors 2 and 8 carried.
+- D13 4: axe 0 at 3 widths, keyboard, 200 %.
+- D14 4: team Panel, Tip, Button.
+- D15 4: one request, 138–180 ms.
+- D16 3: 4 of 13 mutations survive.
+- D17 simulated only.
+- D18 4: the elsewhere link is labelled with its combination.
+- D19 4: hands off to the job, the library and Review and release.
+- D20 simulated only.
+
+## Could not check
+- A real screen reader.
+- An intended user's unaided walk (D17, D20).
+- A visible browser (headless Chrome only).
+- Live AI. The running state came from SQL test input.
+- `run-suites.sh` (ports outside my range).
+
+Journey test: `journey-test-reviewer-2026-11-01-c212-ed2516cf.md`. **Score 8.5/10 (pass by score; the open Major blocks).**
+
+## Fix list for ed2516cf
+**Verdict: Block** (1 Major open). Fix before `review: approved`:
+1. Major A: the chip follows a run to its end without a reload (poll the forms read while a chip is running, or invalidate it when a run ends), with a browser check.
+Should, in this PR or listed in it: N1 (tests for the frozen label, running words, rail focus and rail key), N2, N3.
+
+---
+
 # F2 C2.12 slice 3: the guided path on the Forms tab (step chip and rail) · independent reviewer · 1 Nov 2026
 
 Commit reviewed: **`28b3bba3`** on `claude/forms-c212c-hfb2om`. It is stacked on #186 (cd8a023d), and I read `git diff cd8a023d 28b3bba3`. I did not build it. I read it against the board `design/draft-wizard.html` (PDF views only, P-102), `concept.md` §3–§6 (BR-1, BR-4, BR-5, K1, M5, m5, m6, m9), `plan.md` D3 and D5, `STANDARDS.md` and `EXPERIENCE.md`.

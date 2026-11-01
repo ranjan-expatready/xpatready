@@ -115,7 +115,9 @@ function WorkspaceTab({ id, tab, hasRelease }: { id: string; tab: "forms" | "que
   const pp = usePreviewParams();
   const [sp] = useSearchParams();
   const qs = new URLSearchParams({ tab, ...(tab === "preview" ? Object.fromEntries(Object.entries(pp).filter(([, v]) => v)) : {}), ...(tab === "questionnaires" && sp.get("role") ? { role: sp.get("role")! } : {}) }).toString();
-  const w = useApi<WorkspaceView>(["combination", id, "workspace", qs], `/combinations/${id}/workspace?${qs}`, { placeholderData: (prev) => (prev?.tab === tab ? prev : undefined), refetchOnWindowFocus: tab === "forms" }); // C2.12 m6: the step chips follow work done elsewhere
+  const w = useApi<WorkspaceView>(["combination", id, "workspace", qs], `/combinations/${id}/workspace?${qs}`, { placeholderData: (prev) => (prev?.tab === tab ? prev : undefined), refetchOnWindowFocus: tab === "forms",
+    // C2.12 slice 3 (review ed2516cf Major A): while a form's step runs (an AI draft), the chips follow it as the rail does.
+    refetchInterval: (q) => (q.state.data?.tab === "forms" && Object.values(q.state.data.progress ?? {}).some((c) => c.state === "running") ? 4000 : false) }); // m6: the step chips follow work done elsewhere
   if (w.isLoading) return <Spinner label={`Loading ${tab}`} />;
   if (w.isError || !w.data) return <ErrorState title="This tab could not be loaded" description={(w.error as Error | null)?.message ?? "No answer from the studio."} action={<button className="text-text-link underline" onClick={() => void w.refetch()}>Try again</button>} />;
   const v = w.data;

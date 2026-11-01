@@ -77,7 +77,7 @@ export function formProgress(given: ProgressFacts): FormProgress {
     : f.draft === "running" ? { state: "running", words: "The AI draft of the field map is running; this page follows it.", next: null, who: null, count: 1 }
     // Slice 3 review Major 2 (BR-7, F3 D4: one draft per file): the same file is being mapped in another combination: its
     // decisions are reused here once added there, so this step waits there (its link, never a Draft that would be refused).
-    : f.elsewhere ? { state: "waiting_others", words: f.elsewhere.why, next: { label: `Open it in ${f.elsewhere.combination}`, href: f.elsewhere.href }, who: `Being mapped in ${f.elsewhere.combination}.`, count: 1 }
+    : f.elsewhere ? { state: "waiting_others", words: f.elsewhere.why, next: { label: `Open it in ${f.elsewhere.combination}`, href: f.elsewhere.href }, who: "The people working on it there finish it; nothing to do here until then.", count: 1 }
     : { state: attached ? "needs_you" : "not_started", words: !f.canAuthor ? (f.draft === "stopped" ? "The last AI draft stopped before it finished." : "No field map yet.") : f.draft === "stopped" ? "The last AI draft stopped before it finished: draft again, or add the field map from the library." : "No field map yet: draft it with AI, or add it from the library (no AI, US$0).", next: attached ? { label: "Draft with AI or add from the library", href: forms } : null, who: null, count: 1 })));
   const mapped = steps[1].state === "done";
   // Review (514f0d8d) M2b, plan §7 / BR-14: until the form is on the combination with a usable PDF, nothing after step 1
