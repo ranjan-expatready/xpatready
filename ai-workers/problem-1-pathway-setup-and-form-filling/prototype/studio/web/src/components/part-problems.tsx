@@ -17,9 +17,9 @@ export function PartProblems({ id, part }: { id: string; part: "documents" | "qu
   const key = part === "documents" ? "documents:problems" : "questionnaires:problems";
   // Review M1: a Not ready item (a problem of the released version) whose draft is already clean still lands here and
   // says what is left to do: release the corrected draft.
-  const released = ((sum.data?.setup as any)?.steps ?? []).flatMap((st: any) => st.open).find((i: any) => i.focus === key && i.fromRelease);
+  const released = (sum.data?.setup?.steps ?? []).flatMap((st) => st.open).find((i) => i.focus === key && i.fromRelease);
   if (!mine.length && !released) return null;
-  if (!mine.length) return (
+  if (!mine.length && released) return (
     <div className={cn(FOCUS_RING)} data-focus={key} data-focus-also="questions_documents:problems" data-part-problems={part} data-from-release>
       <Notice tone="danger" title={`The released version has ${released.count} problem${released.count === 1 ? "" : "s"} in the ${part === "documents" ? "documents" : "questions"}: firms cannot open cases`}>
         <p className="mt-1">This draft no longer has {released.count === 1 ? "it" : "them"}. Send the draft for review and release it to put it right. <Link className="font-medium text-text-link underline" to={`/c/${id}/review`}>Review and release</Link></p>
