@@ -32,3 +32,26 @@ Not checked: a real screen reader, an intended user's unaided walk (D17/D20 stay
 No open Blocker or Major.
 
 **Verdict: Approve** — commit d77a984e.
+
+## Re-review after merge of main (643a72d7 + b793d13e)
+Narrow scope: the merge of origin/main (which brought #139, "Who can be in this application" moved into Before forms on Forms), its one conflict in `questionnaires.tsx`, and the test-only commit b793d13e. Run from the worktree on the builder's ports: web built with vite, fresh copy `isolated.sh screens_rev6 4448`. The checks were copied to /tmp so no tracked screenshots were rewritten. US$0.
+
+- **Conflict resolution is right.** `git diff 143a2301 643a72d7 -- questionnaires.tsx` (main against the merge) contains only the QA-77 hunks: `nameOf`, the table's Person cell with its `role: <library>` note, and the edit-mode aria-labels. Main's new folded line keeps its exact wording and markup (`data-people-words`, `plainWords(…, l)`, "(always)"/"(optional)", the `max > 0` filter). Only the name passed in changes, from `role(l.role)?.label ?? l.label` to `nameOf(l)`. The QA-77 decision and #139's wording both hold.
+- **Changing #139's assertion is legitimate. It does not hide a regression.** The old literal "Principal applicant (always)" only passed because the folded line used the library name. That is the exact split QA-77 removes (approved on L7: a typed label is kept, the same as the header). The new step still checks the plain-words form on every item and the "no exact counts" fail case, and it now discriminates. On Super visa the principal is typed "Parent or grandparent", and the line reads `· Parent or grandparent (always) · Spouse or partner (also visiting) (optional)`. That would fail under the old library naming. The fallback (no typed label, so the library name) stays covered by the QA-77 check on wp.family.
+- **No other place main added names people the library way.** These are main's new or changed naming sites:
+  - The Questionnaires pointer line (`data-who-can-be-moved`) uses `people.lines[].label`. The API's `people()` fills that as `p.label ?? r?.label`, the combination's label. On vv.single the API returns Applicant / Spouse or partner (travelling) / Child (travelling).
+  - The Overview list uses `p.label` (combination).
+  - The setup checklist's people step gives only counts ("n person roles, n applicant roles").
+  - `before-forms.tsx` only wraps `WhoCanBe`.
+- **Results on 4448 / xr_studio_screens_rev6:**
+  - `check_qa77_names_browser.cjs`: **11/11**. Header, folded line and table agree on vv.single (typed) and wp.family (library). axe shows 0 A/AA violations. No page errors.
+  - `check_w1_before_forms_browser.cjs` (copy patched to `executablePath: /opt/pw-browsers/chromium`): **23/23**.
+  - The screenshot `/tmp/rev6/product/screens/F1-setup/screenshots/qa77/01-visitor-visa-who-can-be-1440.png` shows the card inside Before forms on Forms. Its rows read Applicant, Spouse or partner (travelling), Child (travelling), each with its "role:" note.
+- **Nit (test hygiene, b793d13e):** `check_qa77_names_browser.cjs:32`. The new `// #139: …` comment was put in the middle of the line, so it now comments out `await p.getByRole("tablist", …).waitFor(); await settle();`. The added `waitForFunction(/people:/)` covers the header, and the locators auto-wait, so the check is still valid. Move the comment to the end of the line, or onto its own line, so the tablist wait and `settle()` run again.
+- **Nit:** the new #139 step would report `undefined (always)` if a principal ever had no stored label. That cannot happen with today's data, and the QA-77 check covers the fallback.
+
+Journey score unchanged at 9.5 / 10. This change moves the card and keeps the names; the walk above re-confirms them in the card's new place.
+
+No open Blocker or Major.
+
+**Verdict: Approve** — commit b793d13e.
