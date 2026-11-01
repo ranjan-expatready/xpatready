@@ -55,6 +55,18 @@ export class FormLibrary {
   useCanada(c: CanadaSource) { this.canada = c; }
 
   /** The approved editions (manifest, a second person, or an official download), as one set of checksums. */
+  /** C2.12 slice 2 (review 514f0d8d M4): one form's current approved edition, the same rule as the Forms list (currentEdition),
+   *  read for that form alone (the guided path needs no other row). */
+  async currentOf(code: string): Promise<{ edition: string; sha256: string } | null | undefined> {
+    const workspaceId = await this.ws.id();
+    const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: code } }, include: { editions: true } });
+    if (!def) return undefined;
+    const shas = def.editions.map((e) => e.sha256).filter((x): x is string => !!x);
+    const ok = new Set([...manifest().map((i) => i.sha256), ...(shas.length ? (await this.db.approvedSource.findMany({ where: { workspaceId, sha256: { in: shas } }, select: { sha256: true } })).map((x) => x.sha256) : []), ...(shas.length ? (await this.db.officialDownload.findMany({ where: { workspaceId, sha256: { in: shas } }, select: { sha256: true } })).map((x) => x.sha256) : [])]);
+    const cur = this.currentEdition(def.editions, ok);
+    return cur?.sha256 ? { edition: cur.editionLabel, sha256: cur.sha256 } : null;
+  }
+
   private async approvedShas(workspaceId: string) {
     const [a, d] = await Promise.all([this.db.approvedSource.findMany({ where: { workspaceId }, select: { sha256: true } }), this.db.officialDownload.findMany({ where: { workspaceId }, select: { sha256: true } })]);
     return { all: new Set([...manifest().map((i) => i.sha256), ...a.map((x) => x.sha256), ...d.map((x) => x.sha256)]), downloaded: new Set(d.map((x) => x.sha256)) };
