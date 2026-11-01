@@ -74,3 +74,27 @@ Same method, on a fresh copy on :4433, now stopped. US$0.
 Fixes that would raise the score:
 1. Key the sheet by the full `about` and label waiting entries by person (N1).
 2. Use the section's own words in the stale 409 (n1).
+
+---
+
+# Round 3: commit 732d4241 (2 Nov 2026)
+
+Fresh copy on :4433, now stopped. US$0.
+* **J10 (to readiness):** the waiting list now names each parent ("…: parent 1" and "…: parent 2", 8 entries each). The applicant's own facts no longer appear as waited for. Done still cannot be reached until the parents are collected, which is correct and will be stated in the PR. The item's reason still reads "Every fact it reads is confirmed." (review n3).
+* **J4–J9** held again, with the same results as round 2. A stale tick now says which section's answers changed.
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | J1–J6 complete |
+| Next step obvious | ½ | Item reason and sheet still disagree for IMM 5707 (n3) |
+| Plain words | 1 | Stale tick names the section |
+| Feedback and state | 1 | No false Done; Out of date clears on re-tick |
+| Correct data | 1 | Each parent is their own line; ticks and history right |
+| Error recovery | 1 | 400/403/404/409, recoverable |
+| Accessibility and screen sizes | n/a → 1 | No screen |
+| Speed | 1 | 13–80 ms |
+| Visual quality | n/a → 1 | No screen |
+| Trust and sources | 1 | Person and source on every line (n2 latent only) |
+| **Total** | **9.5 / 10** | Passes |
+
+Fix that would raise the score: give an Online item the sheet's waiting count as its reason (n3).
