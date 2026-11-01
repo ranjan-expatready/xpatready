@@ -13,8 +13,11 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { costUsd, inputTokenBound } from "../../../p2/ledger.ts";
-import { MAX_ATTEMPTS, RUN_CAP_USD } from "../../../p2/policy.ts";
+import { MAX_ATTEMPTS } from "../../../p2/policy.ts";
+import { runWorstUsd } from "../../engine/cost-check.ts";
 import { slug } from "../../engine/import.ts";
+import { admitInput } from "../../../p2/guard.ts";
+import { buildRequest } from "../../../p2/prompt.ts";
 import { AI_FAILED, checkCounts } from "../../engine/people.ts";
 import { ProposePeopleBody, type PeoplePlan, type PeopleProposal, type ProposedPerson } from "../../contracts/workspace.ts";
 import { Audit, Db, need, PROTOTYPE, SOLUTION, type Actor } from "./core.ts";
@@ -25,10 +28,23 @@ import { Studio } from "./studio.ts";
 
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
 const round2 = (n: number) => Math.round(n * 100) / 100;
+/** Each round (draft, then check) runs as its own job with this budget: the ledger refuses an attempt past it. */
+const ROUND_BUDGET_USD = 1;
+/** Runtime Minors 1 Nov (#113 review; reviewer M1): one round's worst case, priced from the request the runner sends
+ *  (p2/draft.ts: buildRequest of the round's prompt, the output schema, the admitted guide and the trail), as the runner
+ *  prices it (inputTokenBound of the whole request), for every attempt, held to the round's budget, rounded UP to the
+ *  cent. Pricing the guide text alone left out the prompt, schema and wrapper: US$0.05–0.07 too low on every guide. */
+export function peopleRoundWorstUsd(template: string, input: { file: string; sha256: string }, trail: string): number {
+  const req = buildRequest(readFileSync(join(PROMPTS, template), "utf8"), JSON.parse(readFileSync(join(PROMPTS, AI.schema), "utf8")), [admitInput(input.file, input.sha256)], { combination_trail: trail });
+  return runWorstUsd(costUsd(MODEL, inputTokenBound(JSON.stringify(req)), AI.max_output_tokens), MAX_ATTEMPTS, ROUND_BUDGET_USD);
+}
+/** The two rounds together: what the plan shows and the cost check compares with the caps. */
+export const peopleWorstUsd = (input: { file: string; sha256: string }, trail: string) => round2(peopleRoundWorstUsd(AI.template, input, trail) + peopleRoundWorstUsd(AI.check, input, trail));
 const problem = (status: number, title: string, detail: string, extra: Record<string, unknown> = {}) =>
   new HttpException({ type: `https://expatready.local/problems/${title.toLowerCase().replace(/[^a-z]+/g, "-")}`, title, status, detail, ...extra }, status);
 const RUNS = join(PROTOTYPE, "p2", "runs"), JOBS = join(PROTOTYPE, "p2", "jobs"), PROMPTS = join(PROTOTYPE, "p2", "prompts");
 const ROUTE = "anthropic-api/aiw-d261-prototype-exception-aiw-d260", MODEL = "claude-opus-5-5";
+export const PEOPLE_MODEL = MODEL;
 const AI = { template: "who-can-be.v1.md", check: "who-can-be-check.v1.md", schema: "who-can-be-output.v1.schema.json", effort: "low", max_output_tokens: 3000 } as const;
 /** Lead check L2: on only when the founder approved a live trial for Who can be (set by the Lead for that trial). */
 // Lead 30 Oct (after the US$0.17 incident) and 31 Oct (PR #113 review M1): the server's live switch (P-175,
@@ -116,7 +132,7 @@ export class PeopleFromGuide implements OnModuleInit {
     // Lead check L2: AI now was not in the slice 3 Go; it stays off until the founder approves a live trial (P-110 plan).
     if (b.data.mode === "live" && !LIVE_APPROVED()) throw problem(409, "AI now is not approved yet", LIVE_WAITING);
     const g = await this.guide(combinationId);
-    const worst = b.data.mode === "live" ? round2(2 * Math.min(RUN_CAP_USD, costUsd(MODEL, inputTokenBound(g.text), AI.max_output_tokens) * 2)) : 0;
+    const worst = b.data.mode === "live" && g.input ? peopleWorstUsd(g.input, g.trail) : 0;
     const steps = b.data.mode === "rules" ? STEPS_RULES : STEPS_AI;
     const note = b.data.mode === "replay" ? "Uses the answers AI gave for this exact guide and prompt before (US$0); with none saved yet, it says so and nothing changes." : b.data.mode === "rules" ? "No AI: rules find the sentences that name each person. How many is a Sample default you check." : "Two AI rounds read the guide; only lines both agree on, with their sentence in the guide, are proposed.";
     const ledger = this.sources.ledger();
@@ -263,7 +279,7 @@ export class PeopleFromGuide implements OnModuleInit {
     }
     const jobId = `${base}-${slug(combinationKey).slice(0, 30).replace(/_/g, "-")}-${sha(`${combinationKey}|${g.input.sha256}|${Date.now()}`).slice(0, 8)}`;
     const job = { job_id: jobId, kind: "who_can_be", combination: combinationKey, configuration_version: "s5-who-can-be", template, output_schema: AI.schema, inputs,
-      settings: { provider_route: ROUTE, model: MODEL, effort: AI.effort, timeout_ms: 300_000, max_attempts: MAX_ATTEMPTS, budget_usd: 1, max_output_tokens: AI.max_output_tokens }, known: { combination_trail: g.trail } };
+      settings: { provider_route: ROUTE, model: MODEL, effort: AI.effort, timeout_ms: 300_000, max_attempts: MAX_ATTEMPTS, budget_usd: ROUND_BUDGET_USD, max_output_tokens: AI.max_output_tokens }, known: { combination_trail: g.trail } };
     mkdirSync(JOBS, { recursive: true });
     writeFileSync(join(JOBS, `${jobId}.json`), JSON.stringify(job, null, 1) + "\n");
     try {
