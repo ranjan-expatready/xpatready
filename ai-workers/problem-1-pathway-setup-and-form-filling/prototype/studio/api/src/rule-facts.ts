@@ -90,7 +90,8 @@ const wordsOf = (s: string) => s.normalize("NFKC").toLocaleLowerCase("en-CA").sp
 export function nearLabels(label: string, live: string[]): string[] {
   const a = wordsOf(label).join(" ");
   const inside = (x: string, y: string) => ` ${y} `.includes(` ${x} `);
-  return live.filter((l) => { const b = wordsOf(l).join(" "); return !!b && !!a && a !== b && (inside(b, a) || inside(a, b)); });
+  // m1 (review c36 r2): a one-word library name ("Name", "Email") is inside too many names to count as close.
+  return live.filter((l) => { const w = wordsOf(l), b = w.join(" "); return w.length > 1 && !!a && a !== b && (inside(b, a) || (wordsOf(label).length > 1 && inside(a, b))); });
 }
 
 @Injectable()
@@ -184,13 +185,21 @@ export class RuleFacts {
       const used = (await this.sources.usedIn("field", c.workspaceId)).get(same.canonicalFieldKey) ?? [];
       fail(`"${b.label}" is already the library field ${same.canonicalFieldKey}, used in ${used.length ? used.join(", ") : "no combination yet"}: the rule can read it as it is.`, HttpStatus.CONFLICT);
     }
+    // MA1 (review c36 r2): a retired field keeps its name (canonical_field_name, per group), so the name is refused now,
+    // in words, rather than at accept with the database's duplicate error.
+    const retired = (await this.db.canonicalField.findMany({ where: { workspaceId: c.workspaceId, status: "RETIRED", mergedIntoKey: null, label: { not: null } }, select: { canonicalFieldKey: true, label: true } }))
+      .find((f) => normalizeLabel(f.label!) === normalizeLabel(b.label) && !fields.some((x) => x.canonicalFieldKey === f.canonicalFieldKey));
+    if (retired) fail(`"${b.label}" is the name of the retired library field ${retired.canonicalFieldKey}: restore it in Library › Fields, or choose another name.`, HttpStatus.CONFLICT);
     const near = nearLabels(b.label, fields.map((f) => f.label ?? "").filter(Boolean)).slice(0, 5);
     if (near.length && !b.nearReason) fail(`"${b.label}" is close to the library's ${near.map((n) => `"${n}"`).join(", ")}: say why it is not the same (a one-line reason the second person reads), or use the existing field.`);
-    const key = keyFor(b.subject, b.label, new Set(fields.map((f) => f.canonicalFieldKey)));
+    // MA1 (review c36 r2): the key shown here is a preview against every key, retired ones included; the lander builds
+    // it again from the item as decided (name and subject may be edited at accept), so it never freezes.
+    const all = await this.db.canonicalField.findMany({ where: { workspaceId: c.workspaceId }, select: { canonicalFieldKey: true } });
+    const key = keyFor(b.subject, b.label, new Set(all.map((f) => f.canonicalFieldKey)));
     const sha256 = createHash("sha256").update(canonical((rule!.tree ?? {}) as Json)).digest("hex");
     const name = rule!.sentence.split(":")[0];
     const { proposalId } = await this.db.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`rule-fact:${c.id}:${normalizeLabel(b.label)}`}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`rule-fact:${c.workspaceId}:${normalizeLabel(b.label)}`}))`;
       if (await tx.proposalItem.findFirst({ where: { workspaceId: c.workspaceId, kind: "field", status: "waiting", identityKey: normalizeLabel(b.label) }, select: { id: true } }))
         fail(`A proposal to add "${b.label}" is already waiting on To review › Proposals: decide it there.`, HttpStatus.CONFLICT);
       const job = await tx.draftingJob.create({ data: { workspaceId: c.workspaceId, combinationId: c.id, kind: "rule_fact", mode: "LOCAL", status: "COMPLETED", costUsd: 0, startedBy: actor.id, finishedAt: new Date(),
@@ -203,12 +212,12 @@ export class RuleFacts {
         rules: [{ rule: "named_rule_exists", passed: true, why: null }, { rule: "not_in_library", passed: true, why: null }, ...(near.length ? [{ rule: "near_duplicate_reason", passed: true, why: b.nearReason ?? null }] : [])],
         agreement: "rules_only", confidence: "check", reason: "Added for a rule, with a meaning a person wrote; not meaning-checked (P-95): a second person checks the name and meaning.",
         origin: "rules", identity: { key: normalizeLabel(b.label), near, nearReason: b.nearReason ?? null }, relatesTo: null, revision: null, basis: "SAMPLE",
-        work: { ruleFact: key, ruleKind: rule!.kind },
+        work: { forRule: rule!.key, ruleKind: rule!.kind, keyPreview: key },
       }]);
       return { proposalId };
     }, { timeout: 30_000, maxWait: 10_000 });
     await this.audit.log(c.workspaceId, actor.id, "proposed", "rule fact", key, `${actor.name} proposed the fact ${key} ("${b.label}") for ${name} (Sample; not meaning-checked; a second person approves it)`, undefined, c.id);
-    return { proposalId, key, meaningChecked: false, rule: { key: rule!.key, sentence: rule!.sentence } };
+    return { proposalId, key, keyIsPreview: true, meaningChecked: false, rule: { key: rule!.key, sentence: rule!.sentence } };
   }
 }
 

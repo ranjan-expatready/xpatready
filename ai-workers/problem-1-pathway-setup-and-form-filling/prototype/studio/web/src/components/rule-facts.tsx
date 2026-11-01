@@ -69,9 +69,11 @@ function NewFact({ combinationId, rules, types, subjects }: { combinationId: str
     setBusy(true); setErr(null);
     try {
       const r = await api<{ key: string }>(`/combinations/${combinationId}/rules/${encodeURIComponent(rule)}/fact`, { method: "POST", json: { label, meaning, valueType, subject, ...(near && nearReason.trim() ? { nearReason } : {}) } });
-      setDone(`Proposed as ${r.key}: it waits on To review › Proposals (not meaning-checked; a second person approves it).`); setOpen(false); setLabel(""); setMeaning(""); setNear(""); setNearAsked(false);
+      setDone(`Proposed (key ${r.key} when accepted as it stands): it waits on To review › Proposals (not meaning-checked; a second person approves it).`); setOpen(false); setLabel(""); setMeaning(""); setNear(""); setNearAsked(false);
       requestAnimationFrame(() => document.querySelector<HTMLElement>("[data-new-fact-done] a")?.focus());
-    } catch (e) { const m = (e as Error).message; setErr(m); if (/is close to/.test(m)) setNearAsked(true); } finally { setBusy(false); }
+    } catch (e) { const m = (e as Error).message; setErr(m); const isNear = /is close to/.test(m); if (isNear) setNearAsked(true);
+      // m2 (review c36 r2): focus goes to the reason field when it is asked for, else to the message.
+      requestAnimationFrame(() => (isNear ? document.querySelector<HTMLElement>("[data-near-reason]") : document.getElementById("rf-new-err"))?.focus()); } finally { setBusy(false); }
   };
   return (
     <div className="space-y-2 border-t border-border pt-2 text-sm" data-new-fact>
@@ -87,9 +89,9 @@ function NewFact({ combinationId, rules, types, subjects }: { combinationId: str
           <Field label="About whom"><Select value={subject} onChange={(e) => setSubject(e.target.value)}>{subjects.map((s) => <option key={s} value={s}>{SUBJECT_WORDS[s] ?? s}</option>)}</Select></Field>
           <Field label="Answer type"><Select value={valueType} onChange={(e) => setType(e.target.value)}><option value="">Choose…</option>{types.map((t) => <option key={t} value={t}>{TYPE_WORDS[t] ?? t}</option>)}</Select></Field>
           <Field label="What it means"><Input value={meaning} maxLength={500} onChange={(e) => setMeaning(e.target.value)} /></Field>
-          {near ? <Field label="Why it is not the same as the close field" className="sm:col-span-2"><Input value={nearReason} maxLength={300} onChange={(e) => setNear(e.target.value)} /></Field> : null}
+          {near ? <Field label="Why it is not the same as the close field" className="sm:col-span-2"><Input data-near-reason value={nearReason} maxLength={300} onChange={(e) => setNear(e.target.value)} /></Field> : null}
           <div className="sm:col-span-2"><Button size="sm" busy={busy} onClick={() => void add()}>Propose it · US$0</Button></div>
-          {err ? <p role="alert" className="text-sm text-text-danger sm:col-span-2">{err}</p> : null}
+          {err ? <p id="rf-new-err" tabIndex={-1} role="alert" className="text-sm text-text-danger sm:col-span-2">{err}</p> : null}
         </div>
       ) : null}
     </div>

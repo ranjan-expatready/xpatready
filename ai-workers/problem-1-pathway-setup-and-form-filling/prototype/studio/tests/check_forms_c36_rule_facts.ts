@@ -103,6 +103,42 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? r.body);
   r = await call("POST", `/combinations/${combo}/rule-facts`, { ...good, label: "Refused a visa (third)" });
   ok("C3.6 fail: adding it again is refused: it is in the library (409)", r.status === 409 && /already in the library/.test(msg(r)), [r.status, msg(r)]);
 
+  // ─────────────────── P-223 option (a): a draft rule saved through the product may read a fact the library lacks
+  r = await call("POST", `/combinations/${combo}/rules`, { condition: { subjectKind: "EACH_APPLICANT", op: "and", args: [{ field: "person.c36_new_fact", op: "eq", value: true }] }, whenPlain: "the person has the new fact", thenPlain: "ask for its proof", forWhom: "principal_applicant" });
+  ok("C3.6 pass (P-223 a): a draft rule reading a fact the library lacks saves through the product (no SQL)", r.status < 300, [r.status, msg(r)]);
+  r = await call("GET", `/combinations/${combo}/rule-facts`);
+  ok("C3.6 pass (P-223 a): that fact is then listed under Facts a rule needs", (r.body?.facts ?? []).some((x: { fact: string }) => x.fact === "person.c36_new_fact"));
+  r = await call("GET", `/combinations/${combo}`);
+  const flagged = (r.body?.draft?.problems ?? []).find((x: { level: string; message: string }) => /person\.c36_new_fact, which is not in the library/.test(x.message));
+  ok("C3.6 pass (P-223 a): release validation still flags it as an error that blocks release", flagged?.level === "error", flagged ?? r.status);
+  r = await call("POST", `/combinations/${combo}/rules`, { condition: { subjectKind: "EACH_APPLICANT", op: "and", args: [{ field: "person.family_name", op: "gt", value: 3 }] }, whenPlain: "x", thenPlain: "y", forWhom: "principal_applicant" });
+  ok("C3.6 fail (P-223 a): any other condition error still refuses the save (a text field compared with >)", r.status === 400 && /compares person\.family_name/.test(msg(r)), [r.status, msg(r)]);
+
+  // ─────────────────── review c36 r2 MA1: the Day-0 add builds its key at landing, from the item as decided
+  const rk = sql(`select predicate_key from predicate where combination_id='${combo}' and status <> 'RETIRED' order by predicate_key limit 1`);
+  const F = { meaning: "A fact a test needs, in a sentence (Sample).", valueType: "text", subject: "person" };
+  const retired = sql(`select canonical_field_key || '|' || label from canonical_field where status in ('DRAFT','PUBLISHED') and label is not null and canonical_field_key like 'person.%' and canonical_field_key <> 'person.family_name' order by canonical_field_key limit 1`).split("|");
+  sql(`update canonical_field set status='RETIRED' where canonical_field_key='${retired[0]}'`);
+  r = await call("POST", `/combinations/${combo}/rules/${encodeURIComponent(rk)}/fact`, { ...F, label: retired[1] });
+  ok("C3.6 fail (MA1): a retired field's name is refused now, in words, naming the field to restore (409)", r.status === 409 && msg(r).includes(retired[0]) && /restore/i.test(msg(r)), [r.status, msg(r)]);
+  const a1 = await call("POST", `/combinations/${combo}/rules/${encodeURIComponent(rk)}/fact`, { ...F, label: "Résumé gap" });
+  const a2 = await call("POST", `/combinations/${combo}/rules/${encodeURIComponent(rk)}/fact`, { ...F, label: "Resume gap" });
+  const d2 = [await call("POST", "/review/proposals/decide", { ids: [a1.body?.proposalId], action: "accept" }, "user-C"), await call("POST", "/review/proposals/decide", { ids: [a2.body?.proposalId], action: "accept" }, "user-C")];
+  const keys = d2.map((d) => d.body?.items?.[0]?.landedAs);
+  ok("C3.6 pass (MA1): two names that build one key both land, under two keys", d2.every((d) => d.status === 201) && keys[0] && keys[1] && keys[0] !== keys[1], [d2.map((d) => d.status), keys, d2.map(msg)]);
+  const e = await call("POST", `/combinations/${combo}/rules/${encodeURIComponent(rk)}/fact`, { ...F, label: "Visa refused before" });
+  const ep = sql(`select payload from proposal_item where id='${e.body?.proposalId}'`);
+  r = await call("POST", "/review/proposals/decide", { ids: [e.body?.proposalId], action: "edit", payload: { ...JSON.parse(ep), label: "Sponsor earlier refusal", subject: "sponsor" } }, "user-C");
+  ok("C3.6 pass (MA1): an edit at accept lands under the edited name and subject", r.status === 201 && /^sponsor\.sponsor_earlier_refusal/.test(r.body?.items?.[0]?.landedAs ?? ""), [r.status, r.body?.items?.[0]?.landedAs ?? msg(r)]);
+
+  // ─────────────────── review c36 r2 MA2: one waiting item per name across the workspace, even in parallel
+  const other = sql(`select id from combination where id <> '${combo}' order by label limit 1`);
+  const made = await call("POST", `/combinations/${other}/rules`, { condition: { subjectKind: "EACH_APPLICANT", op: "and", args: [{ field: "person.family_name", op: "exists" }] }, whenPlain: "a family name is given", thenPlain: "nothing new", forWhom: "principal_applicant" });
+  ok("setup (MA2): a second combination has a rule, saved through the product", made.status < 300, [made.status, msg(made)]);
+  const ok2 = sql(`select predicate_key from predicate where combination_id='${other}' and status <> 'RETIRED' order by predicate_key limit 1`);
+  const par = await Promise.all([call("POST", `/combinations/${combo}/rules/${encodeURIComponent(rk)}/fact`, { ...F, label: "Parallel fact c36" }), call("POST", `/combinations/${other}/rules/${encodeURIComponent(ok2)}/fact`, { ...F, label: "Parallel fact c36" })]);
+  ok("C3.6 fail (MA2): the same name added at once on two combinations makes one waiting item (201 + 409)", !!other && par.map((x) => x.status).sort().join(",") === "201,409" && sql(`select count(*) from proposal_item where status='waiting' and payload->>'label'='Parallel fact c36'`) === "1", [other, par.map((x) => x.status)]);
+
   console.log(`\n${pass} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

@@ -66,7 +66,7 @@ const step = (name, c, detail) => { c ? pass++ : failed++; console.log(`${c ? "P
   await nf.getByRole("button", { name: /Propose it/ }).click();
   const done = nf.locator("[data-new-fact-done]");
   await done.waitFor({ timeout: 10000 });
-  step("C3.6 pass: the new fact is proposed under a built key, resting on the named rule", /Proposed as person\.date_the_visit_ends/.test(await done.innerText()) && sql("select source->'rule'->>'key' from proposal_item where payload->>'label'='Date the visit ends'") === "r_c36_browser", await done.innerText());
+  step("C3.6 pass: the new fact is proposed under a built key, resting on the named rule", /key person\.date_the_visit_ends when accepted/.test(await done.innerText()) && sql("select source->'rule'->>'key' from proposal_item where payload->>'label'='Date the visit ends'") === "r_c36_browser", await done.innerText());
   step("C3.6 pass: focus lands on the Proposals link", await p.evaluate(() => document.activeElement?.tagName === "A" && /Open Proposals/.test(document.activeElement.textContent ?? "")));
 
   await p.setViewportSize({ width: 400, height: 900 }); await p.goto(`${BASE}/c/${combo}/questionnaires`); await sec.waitFor({ timeout: 20000 });
