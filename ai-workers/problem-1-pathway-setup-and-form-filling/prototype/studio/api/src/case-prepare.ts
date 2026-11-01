@@ -5,7 +5,9 @@
 // (engine/runtime/filings.ts). The case officer reads and changes it; a client and configuration people do not. Visitor
 // visa only in this slice; other combinations answer "not derived yet". No model call (US$0). Readiness is C7.6's
 // (engine/runtime/readiness.ts, M3-A3): the view leaves its slot and never decides it here.
-import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Res } from "@nestjs/common";
+import type { Response } from "express";
+import PDF_SECTIONS from "../../contracts/pdf-sections.json" with { type: "json" };
 import { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { CHANNEL_WORDS } from "../../contracts/forms.ts";
@@ -14,7 +16,8 @@ import { acceptsOf } from "../../engine/channels.ts";
 import { caseChecklist } from "../../engine/runtime/case-checklist.ts";
 import { caseView, checkValue, knownOf } from "../../engine/runtime/case.ts";
 import { ageOn, cad, deriveFilings, FAMILY_GROUP, feeRule } from "../../engine/runtime/filings.ts";
-import { readiness as formReadiness } from "../../engine/runtime/forms.ts";
+import { formCoverage, readiness as formReadiness } from "../../engine/runtime/forms.ts";
+import { answerSheet, sectionHash, type Sheet } from "../../engine/runtime/answer-sheet.ts";
 import { BIOMETRICS_STEP, channelChange, channelOf, prepareVersion, wantedItems, type FormLine } from "../../engine/runtime/prepare.ts";
 import { render, type Role } from "../../engine/render.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
@@ -115,6 +118,9 @@ export class CasePrepare {
     const accepts = await acceptsOf(this.db, c.workspaceId);
     const lines = new Map((s.forms as FormLine[]).map((l) => [l.form_number, l]));
     const label = new Map(people.map((p) => [p.subjectId, p.label]));
+    const enteredRows = await this.db.enteredSection.findMany({ where: { caseId: c.id }, include: { snapshot: { select: { inputHash: true } } } });
+    const enteredBy = new Map<string, typeof enteredRows>();
+    for (const e of enteredRows) enteredBy.set(e.itemId, [...(enteredBy.get(e.itemId) ?? []), e]);
     const wantedOf = (i: Item) => wanted.find((w) => w.subject === i.subjectId && w.kind === i.kind && w.key === i.itemKey);
     const items = stored.items.map((i) => {
       const w = wantedOf(i), base = { id: i.id, kind: i.kind as "form" | "document" | "step", filing: i.filingId, subject: i.subjectId, person: label.get(i.subjectId) ?? "", version: i.version };
@@ -122,9 +128,16 @@ export class CasePrepare {
         const ch = channelOf(lines.get(i.itemKey), accepts.get(i.itemKey), own!.portalKey, i.channel);
         const rd = formReadiness(view, i.itemKey, i.subjectId);
         const waits = w?.applies === "cannot_tell";
+        // C7.3: an Online form's answer sheet: Out of date when a section entered in the portal changed since (warns only,
+        // FQ-6, P-168), Done when every section is entered and current.
+        const sheet = ch.channel === "ONLINE" ? sheetOf(i, s, people, answers, rows, view, enteredBy.get(i.id) ?? []) : null;
+        const stale = sheet?.sections.filter((x) => x.out_of_date) ?? [];
+        if (sheet && stale.length) return { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null, channel_changed: i.channel ? { by: i.channelBy, at: i.channelAt?.toISOString() ?? null, reason: i.channelReason } : null,
+          state: "out_of_date", reason: `Out of date: ${stale.map((x) => x.title).join(", ")} changed after it was entered in the portal. Enter the new answers, then tick it again.` };
+        const allEntered = !!sheet && sheet.sections.length > 0 && sheet.sections.every((x) => x.entered);
         return { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null,
           channel_changed: i.channel ? { by: i.channelBy, at: i.channelAt?.toISOString() ?? null, reason: i.channelReason } : null,
-          state: waits ? "cannot_start" : "to_do", reason: waits ? `Cannot start yet: waits for ${(w?.missing ?? []).length || "an"} answer${(w?.missing ?? []).length === 1 ? "" : "s"} that decide${(w?.missing ?? []).length === 1 ? "s" : ""} whether it applies.` : rd.missing.length ? `Waiting for ${rd.missing.length} fact${rd.missing.length === 1 ? "" : "s"} to answer or confirm.` : "Every fact it reads is confirmed." };
+          state: waits ? "cannot_start" : allEntered ? "done" : "to_do", reason: allEntered && !waits ? "Every section is entered in the portal." : waits ? `Cannot start yet: waits for ${(w?.missing ?? []).length || "an"} answer${(w?.missing ?? []).length === 1 ? "" : "s"} that decide${(w?.missing ?? []).length === 1 ? "s" : ""} whether it applies.` : rd.missing.length ? `Waiting for ${rd.missing.length} fact${rd.missing.length === 1 ? "" : "s"} to answer or confirm.` : "Every fact it reads is confirmed." };
       }
       if (i.kind === "document") return { ...base, document_type: w?.document_type ?? i.itemKey, label: w?.label ?? i.itemKey, state: "to_do", reason: "Not requested yet (the checklist, C6.4)." };
       return { ...base, step: BIOMETRICS_STEP.label, neededBefore: "after_filing" as const, state: "cannot_start", reason: w?.applies === "cannot_tell" ? "Waits for the date of birth: no biometrics under 14 or over 79 (VV-R15)." : BIOMETRICS_STEP.after };
@@ -187,6 +200,50 @@ export class CasePrepare {
     return this.forms.generate(actor, c.id, item!.itemKey, item!.subjectId, typeof b.idempotencyKey === "string" ? { idempotencyKey: b.idempotencyKey } : {});
   }
 
+  /** C7.3: the answer sheet of an Online form item, for the case officer (a client never reads it). */
+  async sheet(actor: Actor, itemId: string): Promise<Sheet & { item: string; form: string; subject: string }> {
+    const { c, item } = await this.onlineItem(actor, itemId);
+    const s = this.r.snapshotOf(c), people = this.r.peopleOf(c);
+    const { answers, rows, groups } = await this.r.state(c);
+    const view = caseView(s, people, answers, rows, "agent", new Date(), groups);
+    const entered = await this.db.enteredSection.findMany({ where: { itemId: item.id }, include: { snapshot: { select: { inputHash: true } } } });
+    return { item: item.id, form: item.itemKey, subject: item.subjectId, ...sheetOf(item, s, people, answers, rows, view, entered) };
+  }
+
+  /** C7.3: "Entered in the portal" for one section: freezes the answers it shows now (an answer snapshot). Once per
+   *  section: ticking again changes nothing (200). */
+  async entered(actor: Actor, itemId: string, key: string) {
+    const { c, item } = await this.onlineItem(actor, itemId);
+    const now = await this.sheet(actor, itemId);
+    const sec = now.sections.find((x) => x.key === key);
+    if (!sec) fail(`${item.itemKey}'s answer sheet has no such section.`, HttpStatus.NOT_FOUND);
+    const made = await this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
+      const was = await tx.enteredSection.findUnique({ where: { itemId_sectionKey: { itemId: item.id, sectionKey: key } } });
+      if (was) return { row: was, created: false };
+      const snap = await tx.answerSnapshot.create({ data: { workspaceId: c.workspaceId, caseId: c.id, subjectId: item.subjectId, formNumber: item.itemKey, inputHash: sectionHash(sec!.answers), factsJson: { section: key, answers: sec!.answers } as object } });
+      return { row: await tx.enteredSection.create({ data: { workspaceId: c.workspaceId, caseId: c.id, itemId: item.id, sectionKey: key, snapshotId: snap.id, enteredBy: actor.id } }), created: true };
+    });
+    if (made.created) {
+      const who = c.participants.find((p) => p.subjectId === item.subjectId);
+      await this.audit.log(c.workspaceId, actor.id, "entered", "item", item.id, `${actor.name} ticked "${sec!.title}" of ${item.itemKey} as entered in the portal for the ${ROLE[who?.role ?? ""] ?? "person"} on case ${short(c.id)} (${sec!.answers.length} answers frozen)`);
+    }
+    return { created: made.created, section: key, entered: { at: made.row.enteredAt.toISOString(), by: made.row.enteredBy } };
+  }
+
+  /** An item of this case that is a form filed Online now (its own channel, else its line's), reached by the officer. */
+  private async onlineItem(actor: Actor, itemId: string) {
+    const item = await this.db.filingItem.findUnique({ where: { id: idOf(itemId, "item") } });
+    if (!item) fail("No such item.", HttpStatus.NOT_FOUND);
+    const c = await this.r.reach(actor, item!.caseId, "officer");
+    if (item!.kind !== "form" || item!.removedAt) refuse(422, "item", "Only a form on this application has an answer sheet.");
+    const line = (this.r.snapshotOf(c).forms as FormLine[]).find((l) => l.form_number === item!.itemKey);
+    const channel = item!.channel ?? channelOf(line, undefined, null, null).line_channel;
+    if (channel !== "ONLINE") refuse(409, "item", `${item!.itemKey} is filed as ${CHANNEL_WORDS[channel as keyof typeof CHANNEL_WORDS]}: its PDF is the deliverable, so it has no answer sheet.`);
+    if (!(PDF_SECTIONS as unknown as Record<string, Record<string, string>>)[item!.itemKey]) refuse(409, "item", `${item!.itemKey} has no section list yet (contracts/pdf-sections.json), so its answer sheet cannot be laid out.`);
+    return { c, item: item! };
+  }
+
   /** C11.6: a form item's channel, inside what IRCC accepts for it on the combination's IRCC account. The same channel
    *  again changes nothing (break m1); the version is checked under the case's row lock. */
   async channel(actor: Actor, itemId: string, body: unknown) {
@@ -222,6 +279,16 @@ export class CasePrepare {
   }
 }
 
+/** C7.3: one Online form item's answer sheet: the person's boxes for that form (confirmed facts only, P-72), in the PDF
+ *  twin's sections, with each entered tick compared against the answers it froze. */
+function sheetOf(item: { itemKey: string; subjectId: string }, s: ReturnType<Runtime["snapshotOf"]>, people: ReturnType<Runtime["peopleOf"]>, answers: Awaited<ReturnType<Runtime["state"]>>["answers"], rows: Awaited<ReturnType<Runtime["state"]>>["rows"], view: ReturnType<typeof caseView>, entered: { sectionKey: string; enteredAt: Date; enteredBy: string; snapshot: { inputHash: string } }[]): Sheet {
+  const cov = formCoverage(s, people, answers, rows, item.itemKey, item.subjectId);
+  const labels = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
+  const origin = (subject: string, fact: string) => { const a = answers.find((x) => x.subjectId === subject && x.field === fact); return a?.origin?.channel ?? a?.channel; };
+  const sections = (PDF_SECTIONS as unknown as Record<string, Record<string, string>>)[item.itemKey] ?? {};
+  return answerSheet(sections, cov?.boxes ?? [], origin, labels, new Map(entered.map((e) => [e.sectionKey, { at: e.enteredAt.toISOString(), by: e.enteredBy, hash: e.snapshot.inputHash }])));
+}
+
 type Tx = Parameters<Parameters<Db["$transaction"]>[0]>[0];
 /** The view's version from the stored rows (the groups holding a current filing, and the current items), so a write
  *  checks it under the case's row lock exactly as the view computed it. */
@@ -241,6 +308,8 @@ export class CasePrepareController {
   @Get("cases/:id/prepare") view(@Headers("x-actor") a: H, @Param("id") id: string) { return this.p.view(actorOf(a), id); }
   @Post("groups/:gid/split") @HttpCode(HttpStatus.OK) split(@Headers("x-actor") a: H, @Param("gid") gid: string, @Body() b: unknown) { return this.p.split(actorOf(a), gid, b); }
   @Post("items/:id/pdf-copy") @HttpCode(HttpStatus.ACCEPTED) pdfCopy(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.p.pdfCopy(actorOf(a), id, b); }
+  @Get("items/:id/answer-sheet") sheet(@Headers("x-actor") a: H, @Param("id") id: string) { return this.p.sheet(actorOf(a), id); }
+  @Post("items/:id/screens/:key/entered") async entered(@Headers("x-actor") a: H, @Param("id") id: string, @Param("key") key: string, @Res({ passthrough: true }) res: Response) { const r = await this.p.entered(actorOf(a), id, key); res.status(r.created ? HttpStatus.CREATED : HttpStatus.OK); return r; }
   @Patch("items/:id/channel") channel(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.p.channel(actorOf(a), id, b); }
 }
 

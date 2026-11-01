@@ -1367,12 +1367,34 @@ model FilingItem {
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
   removedAt     DateTime? @map("removed_at") @db.Timestamptz
 
-  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  filing Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
+  case    Case             @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  filing  Filing           @relation(fields: [filingId], references: [id], onDelete: Cascade)
+  entered EnteredSection[]
 
   @@unique([filingId, kind, itemKey])
   @@index([caseId])
   @@map("filing_item")
+}
+
+/// C7.3 (r5c §6, P-62 §6): "Entered in the portal" for one section of an Online form item's answer sheet: who ticked it,
+/// when, and the answers it showed, frozen in an answer snapshot. One tick per item and section; a fact changed after it
+/// marks the section out of date (P-65), the frozen answers never change.
+model EnteredSection {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  caseId      String   @map("case_id") @db.Uuid
+  itemId      String   @map("item_id") @db.Uuid
+  /// The PDF twin's section group (contracts/pdf-sections.json), e.g. SectionA, until the portal's own screens (W6).
+  sectionKey  String   @map("section_key")
+  snapshotId  String   @unique @map("snapshot_id") @db.Uuid
+  enteredBy   String   @map("entered_by")
+  enteredAt   DateTime @default(now()) @map("entered_at") @db.Timestamptz
+
+  item     FilingItem     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  snapshot AnswerSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, sectionKey])
+  @@map("entered_section")
 }
 
 /// The release a case works from (team PackWorkPin, pinned per case and combination here). Insert-only.
@@ -1572,8 +1594,9 @@ model AnswerSnapshot {
   factsJson   Json     @map("facts_json")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  case Case          @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  form FormInstance?
+  case    Case            @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  form    FormInstance?
+  entered EnteredSection?
 
   @@map("answer_snapshot")
 }
