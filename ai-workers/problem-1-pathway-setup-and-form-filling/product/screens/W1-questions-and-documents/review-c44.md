@@ -87,3 +87,28 @@ Keyboard check: Space ticks a check box and the focus ring is 2 px. At 512 px th
 - D1–D20 are not scored one by one: this is a capability PR with no screen concept of its own. The journey table above is the score.
 
 **Verdict: Block.** Fix M1 (an officer cannot make or change a client's declaration, with a pass and a fail test). Then re-request review on the new commit. The Minors may follow in part 2.
+
+## Round 2: commit 80b631fa (`git diff 987c1041..80b631fa`)
+
+**What I ran:** web rebuilt; a fresh `rev_c44` copy on :4439, stopped afterwards.
+- `check_c44_question_types.ts`: **44/44**.
+- Browser check, run from a temp copy so the repo screenshots stayed untouched: **32/32**. It includes the step "officer: the declaration reads "Declared" with no Edit".
+- `acceptance/C4.4.test.ts`: 22/28. The same 6 part-2 checks are still red on purpose.
+
+**Fixes:**
+- **M1, closed.** `api/src/runtime.ts:223-224`: an officer save to a `declaration` field returns 403 with "Only the client makes this declaration…".
+  - The test confirms the stored answer stays the client's own (`false|user-P`), and a client save returns 200.
+  - The officer view replaces Edit with "Only the client makes this declaration" (questionnaire.tsx:708).
+  - There is one other answer write: section confirmation (runtime.ts:367). It only re-stamps the client's own value as VERIFIED, so it cannot make a declaration.
+  - Without the guard, the 403 test would fail.
+- **m1, m2, closed.** case.ts:169-173 adds "the start is in the future" and "before 1900; check the year". Each has a failing-input test.
+- **m4, m6, closed.** The acceptance test's comments match the code, and the name reads "Sampled (no given name)".
+- **m3, m5, m7, m8: accepted as follow-ups listed in the PR.** None blocks:
+  - m3: the hint should say "to today".
+  - m5: the library type list is the screens lane's, for part 2. C4.4 must not read Works until an author can pick the type on screen.
+  - m7: the period-row accessibility points (P-71 behaviour is intact).
+  - m8: the 4,000-character cap is the contract's.
+
+**Journey score, round 2: 9 / 10, Pass.** Trust and sources rises to 1 because only the client can make the declaration. Plain words and speed stay at ½ (m3 is open; speed was not timed against §9).
+
+**Verdict: Approve** for commit 80b631fa. There is no open Blocker or Major.
