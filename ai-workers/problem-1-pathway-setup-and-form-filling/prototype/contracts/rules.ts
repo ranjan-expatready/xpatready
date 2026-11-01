@@ -1,6 +1,7 @@
 // Domain rules the contracts cannot express in JSON Schema. Plain functions, no framework,
 // so the team can lift them into its services (CountryPackDraft already carries the same ideas).
 import { createHash } from "node:crypto";
+import { historyGaps } from "./history.ts";
 
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
@@ -88,10 +89,13 @@ export function daysUntil(targetDate: unknown, referenceDate: unknown): number |
   return Math.round((a.t - r.t) / 86_400_000);
 }
 
-/** Calculations with a tested helper (executable). Any other calculation is a recorded dependency. */
+/** Calculations with a tested helper (executable). Any other calculation is a recorded dependency.
+ *  `months_uncovered_10y` (C4.4): the months of the 10 years before the reference date a period history leaves out, so a
+ *  section check "history covers 10 years" stays a rule of the closed vocabulary (`gt 0`), held as data. */
 export const CALCULATIONS: Record<string, (inputs: unknown[], reference: unknown) => number | undefined> = {
   age_in_years: ([dob], ref) => ageInYears(dob, ref),
   days_until: ([date], ref) => daysUntil(date, ref),
+  months_uncovered_10y: ([history], ref) => { const d = parseDate(ref); return d ? historyGaps(history, ref as string, 10)?.reduce((n, g) => n + g.months, 0) : undefined; },
 };
 
 export type DerivedField = { id: string; calculation: string; inputs: string[]; reference: string };
