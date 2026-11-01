@@ -52,3 +52,16 @@ Reviewer (fresh context, did not build it), 1 Nov 2026. Branch `claude/elegant-p
 * Mutation runs on `main`: the official PDFs are not in git, so I did not export a separate tree. The proof that the checks fail without the change is the builder's recorded main run (4 fail) plus my reading of the code.
 * A real screen reader.
 * An unaided walk by an intended user (D17 and D20 stay with the founder).
+
+## Re-check on 14257c2c (merge of origin/main 4ffb5e80; read only, no copy started)
+**Verdict: Approve stands for 14257c2c.** The merge adds nothing to this PR's own code beyond what main brought.
+* `git diff baf42aa2 14257c2c` on the six files of this PR: only `web/src/pages/job.tsx` changes. Its changed lines are identical to main's own change, be8c79fe..4ffb5e80: `roleKeysInWords` and the checklist job's applied section. `ItemCard`'s format line (`boxFormatWords`, `data-box-format`) is intact.
+* `sources.ts`, `field-format.ts`, `runtime/case.ts` and both tests are byte-identical to baf42aa2. The other parent, 7594a070, is baf42aa2 plus the two record files only.
+* **Main's changes do not conflict in meaning:**
+  * main did not change `api/src/sources.ts`, so `read()`'s edition link and `job()`'s box formats are as reviewed;
+  * `api/src/ai.ts` changes the capability note's words only;
+  * `api/src/proposals.ts` adds the pqr_pick lander and puts `checklist_draft` on its own page. `field_map` stays decided on the job page, so `job()` and `decide` are not affected;
+  * `engine/sources.ts` changes a comment only;
+  * main did not change `field-format.ts`, `snapshot.ts`, `prisma/`, `p1/` inventories or formats, or `contracts/runtime.ts`;
+  * main's change to `questionnaire.tsx` (employer link type) does not touch `shape.maxLength`.
+* Not re-run here: the builder is running the 32 touched suites on this commit.
