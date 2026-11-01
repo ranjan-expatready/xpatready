@@ -33,7 +33,7 @@ export class Team {
     const f = firmOfActor(actor);
     if (!f) fail(`${actor.name} (simulated) is not staff of a firm.`, HttpStatus.FORBIDDEN);
     const you = userIn(f!, actor.id)!;
-    return { key: f!.key, name: f!.name, solo: f!.solo, stand_in: STAND_IN, you: { id: you.id, duties: you.duties },
+    return { key: f!.key, name: f!.name, solo: f!.solo, default_representative: f!.defaultRepresentative ?? null, stand_in: STAND_IN, you: { id: you.id, duties: you.duties },
       users: f!.users.map((u) => ({ id: u.id, name: u.name, duties: u.duties, licence: u.licence, may_represent: !cannotRepresent(f!, u.id), may_be_officer: !cannotBeOfficer(f!, u.id) })) };
   }
 
