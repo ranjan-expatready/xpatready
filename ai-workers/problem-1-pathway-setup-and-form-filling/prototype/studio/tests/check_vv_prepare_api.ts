@@ -1,7 +1,7 @@
-// C6.12, C11.6 API checks (M3-B, runtime lane): a Visitor visa case's "Prepare application" view on an isolated copy.
+// C6.12, C11.6, C7.7 API checks (M3-B, runtime lane): a Visitor visa case's "Prepare application" view on an isolated copy.
 // It releases the Visitor visa twice through the screens' own routes when its copy has none (setup_visitor_visa.ts, then
 // pack 4's acceptance/lib/setup_vv_m3.ts: IRCC account, IMM 5476, channels, filing modes, documents), runs pack 4's
-// acceptance tests C6.12 and C11.6 (moved into the suites by the PR that makes them pass, acceptance/README.md), and adds
+// acceptance tests C6.12, C11.6 and C7.7 (moved into the suites by the PR that makes them pass, acceptance/README.md), and adds
 // the edges they leave out: who may split, ids that are not ids, a document has no channel, two reads at once make one
 // family group, and the older /filings view prices the same ages. Each rule has a passing and a failing case. No model
 // call (US$0). Values Sample until the immigration expert confirms. Setup lines owned by other rows (S2w G8, S7 M3-8,
@@ -27,7 +27,7 @@ const releases = () => Number(sql("select count(*) from config_release r join co
     ok("setup: release 2 (pack 4 setup_vv_m3.ts) with every role's filing mode (S5, M3-0) and the three form channels (S4)", releases() === 2 && line("S5").startsWith("PASS") && r.stdout.split("\n").filter((l) => / S4 /.test(l)).every((l) => l.startsWith("PASS")), r.stdout.split("\n").filter((l) => l.startsWith("FAIL")).map((l) => l.slice(6, 60)));
   }
   // Pack 4's acceptance tests, each line shown here; the test's exit code is the verdict.
-  for (const t of ["C6.12", "C11.6"]) {
+  for (const t of ["C6.12", "C11.6", "C7.7"]) {
     const r = tsx(`acceptance/${t}.test.ts`);
     for (const l of r.stdout.split("\n").filter((x) => x.startsWith("FAIL"))) console.log(`  ${t}: ${l}`);
     ok(`${t}: pack 4's acceptance test passes in full (${(r.stdout.trim().split("\n").pop() ?? "").trim()})`, r.status === 0, r.stderr.slice(-300) || undefined);

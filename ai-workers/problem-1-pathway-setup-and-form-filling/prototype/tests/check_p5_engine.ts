@@ -82,5 +82,11 @@ ok("maker text naming a key value is refused", throws(() => screenText([{ name: 
 ok("maker text without values passes", !throws(() => screenText([{ name: "t", text: readFileSync(join(P, "p5", "reader", "prompts", "reader.v1.md"), "utf8") }], can)));
 const direct = spawnSync(process.execPath, [join(P, "p5", "reader", "read.ts"), "--job", "reader-c1-comparison", "--run-id", "x", "--caller", "live"], { encoding: "utf8" });
 ok("the reader process refuses to start outside the guarded launch path", direct.status === 2 && /not an isolated reader process/.test(direct.stdout), direct.stdout.trim().slice(0, 120));
+// C7.7 (G25): an inverted yes/no box ("has any children" written as "hide child rows").
+const INV = "derive_inverse:1 when the subject has no child records (hides child rows), 0 when any child exists";
+{ const y = runTransform(INV, true, {}), n = runTransform(INV, false, {}), w = runTransform(INV, "No", {});
+  ok("C7.7 pass: derive_inverse writes 0 when the fact is Yes and 1 when it is No (yes/no words too)", y.ok && y.value === "0" && n.ok && n.value === "1" && w.ok && w.value === "1"); }
+{ const x = runTransform(INV, "two", {}), e = runTransform(INV, undefined, {});
+  ok("C7.7 fail: derive_inverse on a value that is not yes/no goes by hand with its reason; a missing fact stays blank", !x.ok && "hand" in x && /yes\/no/.test(x.reason) && !e.ok && "blank" in e); }
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);
