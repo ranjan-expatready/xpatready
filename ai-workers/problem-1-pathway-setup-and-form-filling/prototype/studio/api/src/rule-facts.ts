@@ -139,6 +139,12 @@ export class RuleFacts {
     if (!rule) fail(`No condition, rule or check "${b.rule}" in this combination: a fact no form asks is added only for a rule that reads it.`);
     if (!factsRead(rule!.tree).includes(b.fact)) fail(`${rule!.sentence.split(":")[0]} does not read ${b.fact}: name the rule that needs it.`);
     if (library.has(b.fact)) fail(`${b.fact} is already in the library: the rule can use it as it is.`, HttpStatus.CONFLICT);
+    // MA3 (review c36 r3): a retired field keeps its key, so it cannot be added again: it is restored.
+    if (await this.db.canonicalField.findFirst({ where: { workspaceId: c.workspaceId, canonicalFieldKey: b.fact, status: "RETIRED", mergedIntoKey: null }, select: { id: true } }))
+      fail(`${b.fact} is a retired library field: restore it in Library › Fields, and the rule can read it again.`, HttpStatus.CONFLICT);
+    // m7 (review c36 r3): one waiting item per name across the workspace, as on the add by a rule's key.
+    if (await this.db.proposalItem.findFirst({ where: { workspaceId: c.workspaceId, kind: "field", status: "waiting", identityKey: normalizeLabel(b.label) }, select: { id: true } }))
+      fail(`A proposal to add "${b.label}" is already waiting on To review › Proposals: decide it there.`, HttpStatus.CONFLICT);
     if (!missing.some((m) => m.fact === b.fact)) fail(`${b.fact} is a derived fact, worked out from others: it is not asked.`, HttpStatus.CONFLICT);
     if (!FACT_KEY.test(b.fact)) fail(`The rule reads "${b.fact}", which is not a fact key (group.name): correct the rule first.`);
     if (waitingFor.has(b.fact)) fail(`A proposal to add ${b.fact} is already waiting on To review › Proposals: decide it there.`, HttpStatus.CONFLICT);
@@ -187,7 +193,7 @@ export class RuleFacts {
     }
     // MA1 (review c36 r2): a retired field keeps its name (canonical_field_name, per group), so the name is refused now,
     // in words, rather than at accept with the database's duplicate error.
-    const retired = (await this.db.canonicalField.findMany({ where: { workspaceId: c.workspaceId, status: "RETIRED", mergedIntoKey: null, label: { not: null } }, select: { canonicalFieldKey: true, label: true } }))
+    const retired = (await this.db.canonicalField.findMany({ where: { workspaceId: c.workspaceId, status: "RETIRED", mergedIntoKey: null, label: { not: null }, groupKey: b.subject }, select: { canonicalFieldKey: true, label: true } }))
       .find((f) => normalizeLabel(f.label!) === normalizeLabel(b.label) && !fields.some((x) => x.canonicalFieldKey === f.canonicalFieldKey));
     if (retired) fail(`"${b.label}" is the name of the retired library field ${retired.canonicalFieldKey}: restore it in Library › Fields, or choose another name.`, HttpStatus.CONFLICT);
     const near = nearLabels(b.label, fields.map((f) => f.label ?? "").filter(Boolean)).slice(0, 5);

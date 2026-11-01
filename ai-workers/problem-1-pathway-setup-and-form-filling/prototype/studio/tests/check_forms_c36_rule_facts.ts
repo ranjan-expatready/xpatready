@@ -131,6 +131,15 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? r.body);
   r = await call("POST", "/review/proposals/decide", { ids: [e.body?.proposalId], action: "edit", payload: { ...JSON.parse(ep), label: "Sponsor earlier refusal", subject: "sponsor" } }, "user-C");
   ok("C3.6 pass (MA1): an edit at accept lands under the edited name and subject", r.status === 201 && /^sponsor\.sponsor_earlier_refusal/.test(r.body?.items?.[0]?.landedAs ?? ""), [r.status, r.body?.items?.[0]?.landedAs ?? msg(r)]);
 
+  // ─────────────────── review c36 r3 MA3: a rule reading a retired field is offered no add that can never land
+  const ret = sql(`select canonical_field_key from canonical_field where status in ('DRAFT','PUBLISHED') and canonical_field_key like 'person.%' and canonical_field_key not in ('person.family_name') order by canonical_field_key desc limit 1`);
+  r = await call("POST", `/combinations/${combo}/rules`, { condition: { subjectKind: "EACH_APPLICANT", op: "and", args: [{ field: ret, op: "exists" }] }, whenPlain: "the retired fact is given", thenPlain: "a test", forWhom: "principal_applicant" });
+  const rkRet = r.body?.key ?? r.body?.predicate_key ?? sql(`select predicate_key from predicate where combination_id='${combo}' and then_plain='a test' limit 1`);
+  sql(`update canonical_field set status='RETIRED' where canonical_field_key='${ret}'`);
+  r = await call("POST", `/combinations/${combo}/rule-facts`, { fact: ret, rule: rkRet, label: "A retired fact c36", meaning: "A fact that was retired, for a test (Sample).", valueType: "text" });
+  ok("C3.6 fail (MA3): adding a retired field a rule reads is refused, saying to restore it (409)", r.status === 409 && /retired/.test(msg(r)) && /restore/i.test(msg(r)), [r.status, msg(r)]);
+  sql(`update canonical_field set status='DRAFT' where canonical_field_key='${ret}'`);
+
   // ─────────────────── review c36 r2 MA2: one waiting item per name across the workspace, even in parallel
   const other = sql(`select id from combination where id <> '${combo}' order by label limit 1`);
   const made = await call("POST", `/combinations/${other}/rules`, { condition: { subjectKind: "EACH_APPLICANT", op: "and", args: [{ field: "person.family_name", op: "exists" }] }, whenPlain: "a family name is given", thenPlain: "nothing new", forWhom: "principal_applicant" });
