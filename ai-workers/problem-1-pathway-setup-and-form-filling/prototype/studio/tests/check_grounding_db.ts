@@ -2,7 +2,7 @@
 // started by tools/isolated.sh (its own database and files; the demo is never touched). No browser, no model call.
 //   zsh studio/tools/isolated.sh grounding 4402 start && tsx studio/tests/check_grounding_db.ts 4402 [xr_studio_grounding]
 import { execFileSync } from "node:child_process";
-import { writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 
 const PORT = Number(process.argv[2] ?? 4402), DB = process.argv[3] ?? "xr_studio_grounding";
@@ -13,7 +13,8 @@ const call = async (method: string, path: string, body?: unknown, actor = "user-
   const t = await r.text(); let j: any = null; try { j = JSON.parse(t); } catch { j = t; }
   return { status: r.status, body: j };
 };
-const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
+const PSQL = ["/opt/homebrew/opt/postgresql@18/bin/psql", "/usr/lib/postgresql/18/bin/psql"].find((p) => existsSync(p)) ?? "psql";
+const sql = (q: string) => execFileSync(PSQL, [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 
 (async () => {
   // The database this check reads by SQL must be the server's own (Lead check L1: a run whose database argument named
@@ -87,16 +88,19 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
   const rel2 = await call("GET", `/releases?combination=${id}`);
   const r2 = rel2.body.find((x: any) => x.version === 2);
   ok("the people-only release records its author (from the change events, not only draft rows)", String(r2?.authorId ?? r2?.author ?? "").includes("user-A"), r2 && { author: r2.authorId ?? r2.author, approver: r2.approverId ?? r2.approver });
+  // C11.16 (P-125 (1)(3)): the name comes from Program structure only; the setup's rename is refused, nothing changes.
+  const nameBefore = sql(`select label from combination where id='${id}'`);
   r = await call("PATCH", `/combinations/${id}`, { label: "Visitor visa (renamed)", expectedLabel: row.label });
+  ok("C11.16: a rename in the setup is refused in plain words (rename it on Program structure); the name is unchanged", r.status === 400 && /Program structure/.test(r.body.message) && sql(`select label from combination where id='${id}'`) === nameBefore, { status: r.status, message: r.body.message });
+  // A people change after submission makes the submission stale (the draft moved on).
+  r = await call("PATCH", `/combinations/${id}`, { participants: [{ role: "principal", label: "Applicant", min: 1, max: 1 }, { role: "spouse_or_partner", label: "Spouse or partner", min: 0, max: 1, preview: 1 }, { role: "child", label: "Child", min: 0, max: 3, preview: 0 }] });
   const sub3 = await call("POST", `/combinations/${id}/submit`, {});
-  const review3 = await call("GET", `/combinations/${id}/review`);
-  const ch3 = review3.body.submission?.changeSummary ?? [];
-  ok("a name-only change is listed as row details and does not need the SME duty", sub3.status === 201 && ch3.length === 1 && ch3[0].kind === "Row details" && !ch3[0].needs_sme, ch3);
-  r = await call("PATCH", `/combinations/${id}`, { label: "Changed again", expectedLabel: "Visitor visa (renamed)" });
+  ok("setup: a people change is submitted for release", sub3.status === 201, sub3.body?.message);
+  r = await call("PATCH", `/combinations/${id}`, { participants: [{ role: "principal", label: "Applicant", min: 1, max: 1 }, { role: "spouse_or_partner", label: "Spouse or partner", min: 0, max: 1, preview: 1 }] });
   r = await call("POST", `/combinations/${id}/approve`, {}, "user-B");
   ok("a draft changed after submission cannot be released (stale submission)", r.status === 409 && /hash|changed/.test(r.body.message), r.body.message);
-  r = await call("PATCH", `/combinations/${id}`, { label: "Conflicting", expectedLabel: "Visitor visa (renamed)" });
-  ok("a concurrent rename from an out-of-date screen is refused, not overwritten", r.status === 409, r.body.message);
+  r = await call("PATCH", `/combinations/${id}`, { description: "Changed from an old screen", expectedLabel: "Visitor visa (renamed)" });
+  ok("a change from an out-of-date screen (it expects another name) is refused, not overwritten", r.status === 409, r.body.message);
   // Renaming a program is not built on Screen 01 (P-26: the team has it); the combination keeps its key through its own rename above.
 
   // ------------------------------------------------------------ finding 1: publishing blocks a row above a full combination
