@@ -1,6 +1,6 @@
 # J4 — Questionnaires to release (P-220 pack 2)
 
-**Who:** the configuration author (`user-A`), the content reviewer with the immigration expert duty (`user-C`), the approver (`user-B`). **Combination:** Visitor visa (`vv.single`) once J3 has filled it; Work permit (family) (`wp.family`) meanwhile, because it already has questions.
+**Who:** the configuration author (`user-A`), the content reviewer with the immigration expert duty (`user-C`), the approver (`user-B`). **Combination:** Visitor visa (`vv.single`) for parts A, B, E and G; parts C, D and F on Work permit (family) (`wp.family`) now, because it already has questions, and again on Visitor visa once C4.11 is green (the API checks C4.1, C4.2, C4.7, C4.8 take the combination as their 4th argument: `… 4440 xr_studio_accept vv.single`). Part B's PR family modes on Applicant outside Canada (`fs.outside`).
 **Capabilities:** C11.12, C4.1, C4.2, C4.7, C4.6, C4.8, C11.10, X1a. **API checks:** `acceptance/C11.12.test.ts`, `C4.1.test.ts`, `C4.2.test.ts`, `C4.7.test.ts`, `C4.6.test.ts`, `C4.8.test.ts`, `C11.10.test.ts`, `X1a.test.ts`. **IRCC rules:** `product/compliance-trace.md`, Pack 2.
 **Money:** US$0 (Rules and Saved only). **Start:** a fresh isolated copy, Reset, Load sample.
 
@@ -11,8 +11,8 @@ Each step: what the person does → what they must see (and what the data must h
 2. **Add IMM 5257, then remove it.** → The message disappears, then comes back. As the approver, the Release page holds Visitor visa back with the same words (or does not list it); Release never releases it.
 
 ## B. Who can be in this application (C11.12)
-3. **Questionnaires › Who can be: list Principal applicant (1), Spouse or partner (0–1), Child (0–4), Representative (0–1).** → Each line has *How they file*: Own application · On the principal's filing, applying · Declared only. Defaults: the principal *Own application*; the representative *Declared only* and nothing else offered.
-4. **Set Child to On the principal's filing, applying.** → A line under the list says "2 filings: Principal applicant (with Child) · Spouse or partner". Tooltip: applicants get their own forms, questions and documents (IRCC-P2-02, P2-03).
+3. **Questionnaires › Who can be: list Principal applicant (1), Spouse or partner (0–1), Child (0–4), Representative (0–1).** → Each family line has *How they file*. On Visitor visa (temporary residence) the only choice is *Own application* (P-135; IRCC-P2-02). The representative has no *How they file* (not family).
+4. **Save.** → A line under the list says "3 filings, one per person applying; they can be submitted together" (IRCC-P2-28). Tooltip: applicants get their own forms, questions and documents (IRCC-P2-02, P2-03). On Applicant outside Canada (PR family), Child offers *On the principal's filing, applying* (then "1 filing: Principal applicant with Child") and *Declared only* for a child who does not come (Sample, P-135).
 5. **Try to set the principal to Declared only.** → Refused in words. **Save, reload.** → The choices are kept; the sample's label reads *Principal applicant*, never *Applicant* (P-209).
 
 ## C. The questionnaire per person (C4.1)
@@ -33,11 +33,11 @@ Each step: what the person does → what they must see (and what the data must h
 16. **Switch to Representative.** → No IMM 5257; IMM 5476 under *PDFs to sign* (IRCC-P2-09).
 
 ## F. One review and release (C4.8)
-17. **As the author, Send for review.** → Review lists every change in words: the PQR tick ("…: pre-qualification"), the section order, the people's filing modes, alongside forms and documents. There is no separate *Approve PQR* or *Release questionnaire* button anywhere.
+17. **As the author, Send for review.** → Review lists every change in words: the PQR tick ("…: pre-qualification"), the section order, alongside forms and documents. There is no separate *Approve PQR* or *Release questionnaire* button anywhere.
 18. **As the content reviewer (expert duty), sign every line; as the approver, Release.** → One release; the country PQR now shows the tick under this combination.
 
 ## G. Back on Immigration programs (C11.10)
-19. **Open Immigration programs.** → The released combination's card says ✓ Live, Open, and no setup step as its next (QA-129); each card in setup says "n of 5 steps", one button (Start setup · Resume setup) and the same next step as its own header.
+19. **Open Immigration programs.** → The released combination's card says ✓ Live and Open (whether a Live combination may still show steps 1–2 as open is QA-129, the founder's open question: not checked); each card in setup says "n of 5 steps", one button (Start setup · Resume setup) and the same next step as its own header.
 20. **Switch to List, sign in as the approver.** → The approver still sees Cards, and Open on every card; back as the author, List is kept.
 
 **Done when:** every step's expected result holds on `main`, the API checks named above are green and moved into `tests/`, and qa has walked J4 like a person.

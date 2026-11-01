@@ -34,6 +34,9 @@ export function pack2(id: string) {
     if (!served || !inDb) { console.error(`STOP  the database ${DB} is not the one the server on port ${PORT} uses. Pass the copy's database: tsx <test> ${PORT} xr_studio_<name>.`); process.exit(2); }
     if (!(await call("GET", "/demo/status")).body?.loaded) { const l = await call("POST", "/demo/load", {}); if (l.status >= 300) { console.error("STOP  the sample did not load", l.body); process.exit(2); } }
   }
+  /** The combination a test runs on: its default, or the 4th argument (J4 reruns C4.1, C4.2, C4.7, C4.8 on vv.single once
+   *  C4.11 has given Visitor visa its questions). */
+  const key = (fallback: string) => process.argv[4] ?? fallback;
   const combo = (key: string) => sql(`select id from combination where combination_key='${key}'`);
   const attachment = (comboId: string, file: string) => sql(`select id from source_attachment where combination_id='${comboId}' and lower(file_name) like lower('%${file}') order by created_at limit 1`);
   /** Every waiting proposal of a combination's own group in the one review queue (all three bands). */
@@ -58,7 +61,7 @@ export function pack2(id: string) {
     summary();
     process.exit(fail ? 1 : 0);
   }
-  return { PORT, DB, call, sql, until, ok, words, ready, combo, attachment, queued, people, spent, done };
+  return { PORT, DB, call, sql, until, ok, words, ready, key, combo, attachment, queued, people, spent, done };
 }
 
 /** Runs a test body, turning an unexpected throw into a failure (exit 1) rather than a pass. */

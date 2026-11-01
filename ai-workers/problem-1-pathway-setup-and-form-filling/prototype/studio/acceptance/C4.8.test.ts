@@ -10,7 +10,7 @@ const { call, sql, ok, words } = T;
 
 run(async () => {
   await T.ready();
-  const wp = T.combo("wp.family");
+  const wp = T.combo(T.key("wp.family"));
   const releases = () => Number(sql(`select count(*) from config_release where combination_id='${wp}'`));
   const r0 = releases();
   const fs = (await call("GET", `/combinations/${wp}/fact-sources`)).body?.facts ?? [];

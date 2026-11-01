@@ -13,7 +13,7 @@ const { call, sql, ok, words } = T;
 
 run(async () => {
   await T.ready();
-  const wp = T.combo("wp.family");
+  const wp = T.combo(T.key("wp.family"));
   const q = (await call("GET", `/combinations/${wp}/workspace?tab=questionnaires`)).body;
   const roles = q?.questionnaire?.roles ?? [];
   const applying = (q?.people?.lines ?? []).filter((l: any) => l.applies).map((l: any) => l.role);
@@ -21,8 +21,8 @@ run(async () => {
   ok("C4.1 pass: no role has a gap (every fact a form needs is asked or comes from a document or the case officer)", roles.every((r: any) => r.gaps === 0));
   const pv = (await call("GET", `/combinations/${wp}/workspace?tab=preview&person=principal`)).body?.preview;
   const fromDocs = (pv?.sets?.sqr?.fromDocuments ?? []).flatMap((d: any) => d.facts);
-  const askedLabels = new Set((pv?.questionnaire?.sections ?? []).flatMap((s: any) => (s.questions ?? []).map((x: any) => x.wording ?? x.label)));
-  ok("C4.1 pass: a fact the passport supplies is not asked of the principal in the SQR", fromDocs.length > 0 && !fromDocs.some((f: string) => askedLabels.has(f)), fromDocs.slice(0, 3));
+  const askedLabels = new Set((pv?.questionnaire?.sections ?? []).flatMap((s: any) => (s.questions ?? []).flatMap((x: any) => [x.label, x.meaning])));
+  ok("C4.1 pass: a fact the passport supplies is not asked of the principal in the SQR", fromDocs.length > 0 && askedLabels.size > 0 && !fromDocs.some((f: string) => askedLabels.has(f)), fromDocs.slice(0, 3));
 
   // ---------------------------------------------------------------- section order per combination (P-216 (1))
   const order = () => sql(`select string_agg(section_key, ',' order by section_order) from sqr_section_selection where combination_id='${wp}'`).split(",").filter(Boolean);
@@ -45,6 +45,7 @@ run(async () => {
   ok("C4.1 pass: the section keeps the library's one title (P-216 (2))", sections[0]?.title === lib, { tab: sections[0]?.title, library: lib });
   const review = (await call("GET", `/combinations/${wp}/review`)).body;
   ok("C4.1 pass: the new order is a change of the combination's draft, in words, for its next review (C4.8)", /order|moved/i.test(JSON.stringify(review?.draft?.changes ?? review?.changes ?? review ?? {})));
-  ok("C4.1 data: the released snapshot still has the old order until the next release", (() => { const s = (sql(`select snapshot::text from config_release where combination_id='${wp}' order by version desc limit 1`) || ""); const i = s.indexOf(`"${o0[0]}"`), j = s.indexOf(`"${second}"`); return i >= 0 && j >= 0 && i < j; })());
+  const released = sql(`select (select string_agg(x->>'id', ',' order by n) from jsonb_array_elements(snapshot->'sections') with ordinality as t(x, n)) from config_release where combination_id='${wp}' order by version desc limit 1`).split(",");
+  ok("C4.1 data: the released snapshot still has the old order until the next release", released.indexOf(o0[0]) >= 0 && released.indexOf(o0[0]) < released.indexOf(second), released.slice(0, 3));
   T.done();
 });

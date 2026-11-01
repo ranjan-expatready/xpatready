@@ -14,7 +14,7 @@ const { call, sql, ok, words } = T;
 
 run(async () => {
   await T.ready();
-  const wp = T.combo("wp.family");
+  const wp = T.combo(T.key("wp.family"));
   const before = T.spent();
   const ticks = () => Number(sql(`select count(*) from fact_source f where f.combination_id='${wp}' and f.prequalification and f.status <> 'RETIRED' and f.version = (select max(version) from fact_source g where g.combination_id=f.combination_id and g.lineage_key=f.lineage_key)`));
   const t0 = ticks();

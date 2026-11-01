@@ -41,7 +41,7 @@ run(async () => {
   ok("X1a fail: on the Release page the empty combination is either absent or held back saying 'Nothing to release yet'", !row || (row.held === true && EMPTY.test(String(row.why ?? ""))), row);
   if (d?.changes) {
     r = await call("POST", "/pack/release", { expectedChanges: d.changes }, APPROVER);
-    ok("X1a fail: releasing the shared draft never releases the empty combination", r.status >= 200);
+    ok("X1a fail: releasing the shared draft never releases the empty combination (the release answers, in words, without it)", r.status < 500 && !JSON.stringify(r.body ?? {}).includes(vv), r.status);
   }
   ok("X1a data: no configuration release row exists for it", sql(`select count(*) from config_release where combination_id='${vv}'`) === "0");
   T.done();

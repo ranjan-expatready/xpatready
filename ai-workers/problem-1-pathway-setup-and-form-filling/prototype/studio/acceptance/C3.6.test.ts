@@ -41,7 +41,7 @@ run(async () => {
   ok("C3.6 pass: nothing is in the library yet (a second person approves after acceptance)", r.status === 201 && sql(`select count(*) from canonical_field where label='${fact.label}'`) === "0");
   // Same duplicate rules as an AI item (P-149 (2)): the exact name of a live field is refused, saying which.
   r = await call("POST", ROUTE, { ...fact, label: sql("select label from canonical_field where canonical_field_key='person.family_name'") }, AUTHOR);
-  ok("C3.6 fail: a fact whose name is a live library field is refused (409, naming person.family_name)", r.status === 409 && /person\.family_name/.test(words(r)), words(r));
+  ok("C3.6 fail: a fact whose name is a live library field is refused (409, naming person.family_name and where it is used)", r.status === 409 && /person\.family_name/.test(words(r)) && /used (by|in|on)|combination|IMM \d{4}/i.test(words(r)), words(r));
   r = await call("POST", ROUTE, fact, AUTHOR);
   ok("C3.6 fail: the same fact twice is one item (409)", r.status === 409, words(r));
   ok("C3.6 pass: US$0", T.spent() === before);

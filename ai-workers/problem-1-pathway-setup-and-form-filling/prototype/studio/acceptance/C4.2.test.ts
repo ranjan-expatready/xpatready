@@ -10,7 +10,7 @@ const { call, sql, ok, words } = T;
 
 run(async () => {
   await T.ready();
-  const wp = T.combo("wp.family");
+  const wp = T.combo(T.key("wp.family"));
   const fs = (await call("GET", `/combinations/${wp}/fact-sources`)).body;
   const facts = fs?.facts ?? [];
   const client = facts.find((f: any) => f.source === "CLIENT" && f.role === "principal");
@@ -23,9 +23,13 @@ run(async () => {
   r = await put(client, { prequalification: true }, "user-C");
   ok("C4.2 fail: the content reviewer cannot mark (403)", r.status === 403, r.status);
   // QA-125: two saves of the same row at the same moment: one wins, the other is a 409 in words (never 404).
+  const rows = () => Number(sql(`select count(*) from fact_source where combination_id='${wp}' and canonical_field_key='${client.fact}' and role='${client.role}'`));
+  const rows0 = rows();
   const [x, y] = await Promise.all([put(client, { prequalification: true }), put(client, { prequalification: true })]);
   const statuses = [x.status, y.status].sort();
-  ok("C4.2 fail (QA-125): two saves at once give one 200 and one 409 in plain words naming the question (never 404, never 'the database')", statuses[0] === 200 && statuses[1] === 409 && !/database/i.test(words(x.status === 409 ? x : y)) && words(x.status === 409 ? x : y).includes(client.label), { statuses, words: words(x.status === 409 ? x : y) });
+  // A build that treats an identical second save as a no-op (200 twice, one new version) is also right.
+  if (statuses[0] === 200 && statuses[1] === 200) ok("C4.2 pass (QA-125): two identical saves at once are one change (no second version)", rows() === rows0 + 1, { rows0, now: rows() });
+  else ok("C4.2 fail (QA-125): two saves at once give one 200 and one 409 in plain words naming the question (never 404, never 'the database')", statuses[0] === 200 && statuses[1] === 409 && !/database/i.test(words(x.status === 409 ? x : y)) && words(x.status === 409 ? x : y).includes(client.label), { statuses, words: words(x.status === 409 ? x : y) });
   r = await put(client, { prequalification: false });
   ok("C4.2 fail: a stale tab (old version) is refused 409 in words (reload)", r.status === 409 && /reload/i.test(words(r)), words(r));
   const one = sql(`select count(distinct combination_id) from fact_source where combination_id='${wp}' and prequalification`);

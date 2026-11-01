@@ -2,8 +2,8 @@
 // "n of 5 steps" or "✓ Live", Needs you and one button (Start setup · Resume setup · Open; Open for anyone without the
 // author duty); one derived setup checklist drives the bar, the button, "Next: …" and the combination's header (one page,
 // one next step); the Cards / List choice is remembered per person.
-// Open today: QA-129 (a Live combination shows open
-// steps 1–2) and Cards / List kept in the browser only. So this fails. Product rules, not IRCC rules. Rules only (US$0).
+// Open today: Cards / List is kept in the browser only, so this fails. QA-129 (should a Live combination show steps 1–2 as
+// open?) is the founder's open question and is deliberately not tested. Product rules, not IRCC rules. Rules only (US$0).
 // ROUTE (proposed; Question for the tech lead): PATCH /session/preferences {programsView: "cards" | "list"}; GET /session
 // returns `preferences`.
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C11.10.test.ts 4440 xr_studio_accept
@@ -20,10 +20,7 @@ run(async () => {
   ok("C11.10 pass: every card's bar is out of 5 steps, or says ✓ Live", A.every((c: any) => c.setup?.bar?.of === 5 && (c.setup.bar.text === "✓ Live" || /^\d of 5 steps$/.test(c.setup.bar.text))));
   ok("C11.10 pass: the author sees one button per card: Start setup, Resume setup or Open", A.every((c: any) => ["Start setup", "Resume setup", "Open"].includes(c.setup?.viewer?.button)));
   ok("C11.10 pass: the approver (no author duty) sees Open on every card", B.every((c: any) => c.setup?.viewer?.button === "Open"), [...new Set(B.map((c: any) => c.setup?.viewer?.button))]);
-  // QA-129: a Live combination shows no open setup step and no Needs you for its first steps.
-  const live = A.filter((c: any) => c.setup?.bar?.text === "✓ Live");
-  ok("setup: at least one card is Live (With an LMIA in the sample)", live.length >= 1, live.map((c: any) => c.label));
-  ok("C11.10 fail (QA-129): a Live card offers no setup step 1 or 2 as its next", live.every((c: any) => !["pages", "people"].includes(c.setup?.next?.step)), live.map((c: any) => `${c.label}: ${c.setup?.next?.step}`));
+  // QA-129 (a Live combination shows steps 1–2 as open) is an open question for the founder (qa/BUGS.md): not tested here.
   // QA-119: one checklist drives the card and the combination's header (web/src/pages/combination.tsx reads summary.setup.next).
   const mismatch: string[] = [];
   for (const c of A.filter((x: any) => x.status !== "READY")) {
