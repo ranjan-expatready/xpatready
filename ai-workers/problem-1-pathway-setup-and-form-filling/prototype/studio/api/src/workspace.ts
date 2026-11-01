@@ -11,7 +11,9 @@ import { wordsOnly } from "../../engine/render.ts";
 import { acceptsOf, allowedChannels, channelProblems, filingKind, filingMethod, lineOf, notAcceptedWords, notNeededWords, signatureOf } from "../../engine/channels.ts";
 import { ACCOUNT_WORDS, CHANNEL_WORDS, throughAccount, CHANNELS, SIGNATURE_FITS, SIGNATURE_WORDS, type Channel } from "../../contracts/forms.ts";
 import { answeredBy, irccWords, ourWords, signedByLabel, tabOf, type LastFormChange, type RemovedForm, type FamilyKey, type OnlyIf, type PeopleView, type QuestionnairesView, type WorkspaceFormLine, type WorkspaceView } from "../../contracts/workspace.ts";
-import { actorOf, Db, fail, readerOf } from "./core.ts";
+import { actorOf, Db, fail, readerOf, type Actor } from "./core.ts";
+import { FormProgressService } from "./form-progress.ts";
+import { chipOf, type FormStepChip } from "../../contracts/form-progress.ts";
 import { Studio } from "./studio.ts";
 import { PeopleFromGuide } from "./people-ai.ts";
 
@@ -21,12 +23,13 @@ type SnapForm = { form_number: string; title: string; form_kind?: string; who: s
 
 @Injectable()
 export class WorkspaceViews {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Studio) private readonly studio: Studio) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Studio) private readonly studio: Studio, @Inject(FormProgressService) private readonly progress: FormProgressService) {}
 
-  async view(id: string, q: Q): Promise<WorkspaceView> {
+  async view(id: string, q: Q, actor?: Actor): Promise<WorkspaceView> {
     const c = await this.combination(id);
     const asked = String(q.tab ?? "overview").slice(0, 40), tab = tabOf(asked);
-    if (tab === "forms") return { tab, asked, people: await this.people(id, c.workspaceId), ...(await this.forms(id, c.workspaceId)) }; // C1: Before forms holds the people card (P-161 (2))
+    // C1: Before forms holds the people card (P-161 (2)); C2.12 slice 3: each form's step chip (one read for the tab).
+    if (tab === "forms") { const f = await this.forms(id, c.workspaceId); return { tab, asked, people: await this.people(id, c.workspaceId), ...f, ...(actor ? { progress: await this.chips(actor, id, c.workspaceId, f.lines) } : {}) }; }
     if (tab === "questionnaires") return { tab, asked, people: await this.people(id, c.workspaceId), ...(await this.questionnaires(id, c.workspaceId, q.role)) };
     if (tab === "preview") return { tab, asked, ...(await this.preview(id, c.workspaceId, q)) };
     return { tab, asked };
@@ -37,6 +40,15 @@ export class WorkspaceViews {
     const c = await this.db.combination.findUnique({ where: { id } });
     if (!c) fail("That combination does not exist (it may have been removed by a reset).", HttpStatus.NOT_FOUND);
     return c!;
+  }
+
+  /** F2 C2.12 slice 3 (forms lane, review 28b3bba3 Major 1): every form's step chip, worked out once for the tab view
+   *  (FormProgressService.forCombination): the data-form lines and the forms attached but not set up yet. */
+  private async chips(actor: Actor, id: string, workspaceId: string, lines: WorkspaceFormLine[]): Promise<Record<string, FormStepChip>> {
+    const files = await this.db.sourceAttachment.findMany({ where: { combinationId: id, kind: "Form" }, select: { sha256: true } });
+    const attached = files.length ? (await this.db.formEdition.findMany({ where: { workspaceId, sha256: { in: files.map((f) => f.sha256) } }, select: { form: { select: { formKey: true, formKind: true } } } })).filter((e) => e.form.formKind !== "document").map((e) => e.form.formKey) : [];
+    const codes = [...lines.filter((l) => !l.document).map((l) => l.code), ...attached];
+    return Object.fromEntries([...(await this.progress.forCombination(actor, id, codes))].map(([code, p]) => [code, chipOf(p)]));
   }
 
   /** The Forms tab: each line of the draft with its settings, what IRCC accepts and its revision token. */
@@ -142,7 +154,7 @@ export class WorkspaceController {
   @Post("combinations/:id/people/propose/plan") peoplePlan(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { readerOf(a); return this.g.plan(id, b); }
   @Post("combinations/:id/people/propose") propose(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.g.propose(actorOf(a), id, b); }
   // Break m8: reads need a configuration person in x-actor (readerOf), like the catalogue.
-  @Get("combinations/:id/workspace") view(@Headers("x-actor") a: H, @Param("id") id: string, @Query() q: Q) { readerOf(a); return this.w.view(id, q); }
+  @Get("combinations/:id/workspace") view(@Headers("x-actor") a: H, @Param("id") id: string, @Query() q: Q) { return this.w.view(id, q, readerOf(a)); }
   @Patch("combinations/:id/people") savePeople(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.savePeople(actorOf(a), id, b); }
   @Post("combinations/:id/people/undo") undoPeople(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.undoPeople(actorOf(a), id, b); }
   @Get("library/roles") roles(@Headers("x-actor") a: H) { readerOf(a); return this.s.personRoles(); }

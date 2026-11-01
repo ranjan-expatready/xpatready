@@ -10,6 +10,7 @@ import { StatusChip, TipProvider } from "@/components/status";
 import { useActorId, useApi } from "@/lib/api";
 import { Button, Notice, Pill } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
+import { peopleWords } from "@/lib/people";
 import { ErrorState } from "@/components/ui/error-state";
 import { cn } from "@/lib/utils";
 import { PreviewTab as StudioPreview } from "@/pages/preview";
@@ -25,8 +26,6 @@ import { LEVEL_TEXT } from "@/components/levels";
 /** Where it sits, read-only here (P-125 (3)), in the level colours of the shared Trail (S3 m6). */
 const PLACE_TEXT: Record<string, string> = { Pathway: LEVEL_TEXT.pathway, Program: LEVEL_TEXT.program, Category: LEVEL_TEXT.category, "Sub-category": LEVEL_TEXT.subCategory };
 
-/** "Principal applicant, Spouse or partner (optional), Child (0–6)": who can be in the application, in one line. */
-const peopleWords = (ps: { label: string; min: number; max: number }[]) => (ps ?? []).filter((p) => p.max > 0).map((p) => `${p.label}${p.max > 1 ? ` (${p.min}–${p.max})` : p.min === 0 ? " (optional)" : ""}`).join(", ");
 
 /** The combination workspace (S5, W1-08; P-50: a Programs row opens it). Its header carries the full path with every
  *  level a link back to the list filtered to it, the status, the facts in one muted line and the one next step; one row
@@ -84,7 +83,8 @@ export function CombinationPage() {
     // filed, from its form lines; said only once a form that is actually filed is on it (not a checklist, not a line
     // marked Not needed: review c16 m1).
     sum.data?.forms?.some((f) => !f.document && f.channel !== "NOT_NEEDED") ? `filing: ${sum.data.filing}` : null,
-    `people: ${peopleWords(c.participants)}`,
+    // QA-77: the same words per person as Who can be on Forms; "; " because a person's words may hold a comma.
+    `people: ${peopleWords(c.participants, (p) => p.label, "; ")}`,
     c.source_basis === "ILLUSTRATIVE" ? "Sample" : null, // SC-5: no "source-backed" jargon in the subtitle
   ].filter(Boolean).join(" · ");
   return (
@@ -123,11 +123,13 @@ function WorkspaceTab({ id, tab, hasRelease }: { id: string; tab: "forms" | "que
   const pp = usePreviewParams();
   const [sp] = useSearchParams();
   const qs = new URLSearchParams({ tab, ...(tab === "preview" ? Object.fromEntries(Object.entries(pp).filter(([, v]) => v)) : {}), ...(tab === "questionnaires" && sp.get("role") ? { role: sp.get("role")! } : {}) }).toString();
-  const w = useApi<WorkspaceView>(["combination", id, "workspace", qs], `/combinations/${id}/workspace?${qs}`, { placeholderData: (prev) => (prev?.tab === tab ? prev : undefined) });
+  const w = useApi<WorkspaceView>(["combination", id, "workspace", qs], `/combinations/${id}/workspace?${qs}`, { placeholderData: (prev) => (prev?.tab === tab ? prev : undefined), refetchOnWindowFocus: tab === "forms",
+    // C2.12 slice 3 (review ed2516cf Major A): while a form's step runs (an AI draft), the chips follow it as the rail does.
+    refetchInterval: (q) => (q.state.data?.tab === "forms" && Object.values(q.state.data.progress ?? {}).some((c) => c.state === "running") ? 4000 : false) }); // m6: the step chips follow work done elsewhere
   if (w.isLoading) return <Spinner label={`Loading ${tab}`} />;
   if (w.isError || !w.data) return <ErrorState title="This tab could not be loaded" description={(w.error as Error | null)?.message ?? "No answer from the studio."} action={<button className="text-text-link underline" onClick={() => void w.refetch()}>Try again</button>} />;
   const v = w.data;
-  if (v.tab === "forms") return <div className="space-y-6"><BeforeForms id={id} people={v.people} /><FormsTab id={id} lines={v.lines} filing={v.filing} filingDetail={v.filingDetail} account={v.account ?? null} accountKey={v.accountKey ?? null} problems={v.problems} removed={v.removed} fromLibrary={v.fromLibrary} lastChange={v.lastChange} /></div>;
+  if (v.tab === "forms") return <div className="space-y-6"><BeforeForms id={id} people={v.people} /><FormsTab id={id} lines={v.lines} filing={v.filing} filingDetail={v.filingDetail} account={v.account ?? null} accountKey={v.accountKey ?? null} problems={v.problems} removed={v.removed} fromLibrary={v.fromLibrary} lastChange={v.lastChange} progress={v.progress} /></div>;
   if (v.tab === "questionnaires") return <QuestionnairesTab id={id} people={v.people} questionnaire={v.questionnaire} available={v.available} />;
   if (v.tab === "preview") return <PreviewTab id={id} p={v.preview} empty={v.empty} fetching={w.isFetching} hasRelease={hasRelease} />;
   return null;
