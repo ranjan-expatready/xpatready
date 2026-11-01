@@ -1,5 +1,6 @@
 // C3.2 — The reviewer accepts, edits or rejects each field-mapping proposal; bulk accept only for clean reuse; Undo.
-// Status (qa/CAPABILITIES.md, 1 Nov): Not tested. Missing (found writing this): the form-field page's bulk accept also
+// Status (qa/CAPABILITIES.md, 1 Nov): Not tested. AT-14 checks P-149's "an edit is a new version" at the library (after
+// apply a change is made there, AT-12). Missing (found writing this): the form-field page's bulk accept also
 // takes new definitions (accept-clean with outcome NEW), and a bulk accept there has no one Undo (no batch id, no route).
 // Decisions: P-121 (bulk for High only, one Undo for the batch, each item re-checked), P-149 (one door; an edit is a
 // new version), BR-7 (a new field next to a near library field needs a reason), P-63 (form field / shared field words).
@@ -9,13 +10,14 @@
 // POST /review/proposals/undo/:batchId (the queue's one Undo), with the batch id returned by accept-clean.
 // Run (from prototype/studio):
 //   zsh tools/isolated.sh acc_c2 4570 start && ./node_modules/.bin/tsx acceptance/C3.2.test.ts 4570 xr_studio_acc_c2 ; zsh tools/isolated.sh acc_c2 4570 stop
-// Expected today (main 25cefb67): 17 pass, 3 fail — failing: AT-7 (accept-clean with outcome NEW accepts 22 new
-// definitions together; C3.2 allows bulk only for clean reuse) and AT-9 twice (accept-clean returns no batch id, so
-// there is no one Undo for a bulk accept) because the form-field page predates P-121's batch Undo.
-// Exit: 0 all pass · 1 a check failed · 2 setup missing (copy not reachable or sample not loaded).
-import { execFileSync } from "node:child_process";
-
+// Expected today (main 931cb99a, run 1 Nov 2026 on an isolated copy, US$0): 19 pass, 3 fail — failing: AT-7
+// (accept-clean with outcome NEW accepts 22 new definitions together; C3.2 allows bulk only for clean reuse) and AT-9
+// twice (accept-clean returns no batch id, so there is no one Undo for a bulk accept) because the form-field page
+// predates P-121's batch Undo. AT-14 (P-149: an edit of a shared field is a new version) passes.
+// Exit: 0 all pass · 1 a check failed · 2 setup missing or refused (demo port or database, copy not reachable, sample).
+import { checkCopy, guard, needCombo, sqlFor, stop } from "./lib/pack1.ts";
 const PORT = Number(process.argv[2] ?? 4570), DB = process.argv[3] ?? "xr_studio_acc_c2";
+guard(PORT, DB); // before anything reads the database or calls the copy (never the demo)
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${!c && detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
 type Res = { status: number; body: any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- test responses are read loosely, as in the other API checks
@@ -25,18 +27,18 @@ const call = async (method: string, path: string, body?: unknown, actor: string 
   const r = await send(`http://localhost:${PORT}/api${path}`, { method, headers: { ...(actor ? { "x-actor": actor } : {}), "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
   const t = await r.text(); let j: unknown = t; try { j = JSON.parse(t); } catch { /* not JSON */ } return { status: r.status, body: j };
 };
-const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
+const sql = sqlFor(DB);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const until = async (fn: () => Promise<boolean>, ms = 120_000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await fn()) return true; await sleep(500); } return false; };
 const words = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
 const ledger = async () => { const l = (await call("GET", "/ledger")).body; return JSON.stringify([l?.committed_usd, l?.wave?.spent_usd]); };
-const setupMissing = (why: string) => { console.log(`SETUP MISSING  ${why}`); process.exit(2); };
+const setupMissing = stop;
 
 (async () => {
-  if ((await fetch(`http://localhost:${PORT}/api/session`, { headers: { "x-actor": "user-A" } }).catch(() => null))?.status !== 200) setupMissing(`no copy answers on port ${PORT}`);
+  await checkCopy(PORT, DB);
   await call("POST", "/demo/reset", { confirm: "RESET" });
   const loaded = await call("POST", "/demo/load");
-  const vv = sql("select id from combination where combination_key='vv.single'");
+  const vv = await needCombo(PORT, DB, "visitor_visa");
   const att = vv && sql(`select id from source_attachment where combination_id='${vv}' and file_name='imm5257e.pdf'`);
   if (loaded.status >= 300 || !vv || !att) setupMissing("the sample (Visitor visa with IMM 5257) did not load");
   const ledger0 = await ledger();
@@ -121,6 +123,17 @@ const setupMissing = (why: string) => { console.log(`SETUP MISSING  ${why}`); pr
   const decidedBefore = sql(`select string_agg(coalesce(choice,'-'), ',' order by id) from proposal_item where run_id='${jobId}'`);
   r = await decide(reuseB.id, { decision: "PENDING" });
   ok("C3.2 AT-12 stale: after apply, Undo or a new decision is refused (409, says to change it in the library); no decision changes", r.status === 409 && /already applied/.test(words(r)) && sql(`select string_agg(coalesce(choice,'-'), ',' order by id) from proposal_item where run_id='${jobId}'`) === decidedBefore, r.body);
+  // ── AT-14 (P-149 (3)): after apply, a change goes to the library, where an approved item is versioned, never edited in place
+  const FK = "person.family_name";
+  const versions = () => sql(`select string_agg(version || ':' || status || ':' || md5(coalesce(meaning,'')), ',' order by version) from canonical_field where canonical_field_key='${FK}'`);
+  const v0 = versions(), top0 = Number(sql(`select max(version) from canonical_field where canonical_field_key='${FK}'`));
+  if (!top0) setupMissing(`the library has no ${FK}`);
+  r = await call("PATCH", `/library/fields/${FK}`, { meaning: "Acceptance check: an edited meaning of the family name (Sample)." }, "user-C");
+  ok("C3.2 AT-14 refusal: a reviewer without the author duty cannot edit a shared field (403); no version is added", r.status === 403 && versions() === v0, { status: r.status, m: words(r).slice(0, 120) });
+  r = await call("PATCH", `/library/fields/${FK}`, { meaning: "Acceptance check: an edited meaning of the family name (Sample)." });
+  const v1 = versions();
+  ok("C3.2 AT-14 [P-149] an edit of a shared field the applied map uses is a new version: every earlier version is kept exactly as it was, and the new one is a draft above them",
+    r.status < 300 && v1.startsWith(v0) && Number(sql(`select max(version) from canonical_field where canonical_field_key='${FK}'`)) === top0 + 1 && sql(`select status from canonical_field where canonical_field_key='${FK}' and version=${top0 + 1}`) !== "APPROVED", { status: r.status, before: v0, after: v1 });
   ok("C3.2 AT-13 the whole check spent nothing (ledger unchanged)", (await ledger()) === ledger0, { ledger0, now: await ledger() });
 
   console.log(`\n${pass} passed, ${fail} failed`);

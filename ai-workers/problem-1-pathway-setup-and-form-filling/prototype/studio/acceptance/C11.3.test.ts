@@ -6,16 +6,18 @@
 // the live switch like every AI step (P-175); the full five-part trail is not on every list (library "Used by", the
 // finder's run and plan show Pathway › Program › Category without the Pathway type); Load sample still uses the earlier
 // names, not P-112's.
-// Decisions: P-104, P-112, P-125, P-128, P-95 (meaning check off until W1-07), P-175, P-116.
+// Decisions: P-104, P-112, P-125, P-128, P-95 (the meaning check "sits behind the same paid-run switch", off by default),
+// P-175, P-116, P-148 (Load sample shows only the six P-112 combinations).
 // US$0: no model, no canada.ca; the AI check is only asked on a copy without the live switch.
 //   zsh tools/isolated.sh acc_a3 4563 start && ./node_modules/.bin/tsx acceptance/C11.3.test.ts 4563 xr_studio_acc_a3
-// Expected today (main 25cefb67): 19 pass, 8 fail — failing: AT-5 (second) because the meaning check is hard-off (P-95
-// words "The AI meaning check is off", footer on:false), not behind the live switch; AT-9.2–9.6 because Load sample still
-// has Study permit › No sub-category, "With an LMIA", no Provincial nominees › Express Entry stream, Spouse or partner ›
-// Applicant outside/in Canada and "LMIA" instead of P-112's names (AT-9.1 Visitor visa passes); AT-10 Used by and AT-10
-// finder plan because their trails start at the Program / Pathway, without the Pathway type.
-// Exit: 0 all pass · 1 a check failed · 2 setup missing (copy not reachable, wrong database, sample not loaded).
-import { execFileSync } from "node:child_process";
+// Expected today (main 931cb99a, run 1 Nov 2026 on an isolated copy, US$0): 19 pass, 8 fail — failing: AT-5 (second)
+// because the meaning check answers "The AI meaning check is off" (footer on:false) instead of sitting behind the live
+// switch (P-95, P-175); AT-9.2–9.6 because Load sample still has Study permit › No sub-category, "With an LMIA", no
+// Provincial nominees › Express Entry stream, Spouse or partner › Applicant outside/in Canada and "LMIA" instead of
+// P-112's names (AT-9.1 Visitor visa passes); AT-10 Used by and AT-10 finder plan because their trails start at the
+// Program / Pathway, without the Pathway type.
+// Exit: 0 all pass · 1 a check failed · 2 setup missing or refused (demo port or database, copy not reachable, sample).
+import { checkCopy, sqlFor } from "./lib/pack1.ts";
 
 const PORT = Number(process.argv[2] ?? 4563), DB = process.argv[3] ?? "xr_studio_acc_a3";
 let pass = 0, fail = 0;
@@ -28,7 +30,7 @@ const call = async (method: string, path: string, body?: unknown, actor = "user-
     return { status: r.status, body: j ?? {} };
   } catch (e) { return { status: 0, body: { detail: String(e) } }; }
 };
-const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+const sql = sqlFor(DB);
 const TECH = /ENOENT|errno|syscall|\/Users\/|node:|Prisma|at [A-Za-z.]+ \(|Error:/;
 const plain = (b: any) => typeof b?.detail === "string" && b.detail.length > 10 && !TECH.test(b.detail); // eslint-disable-line @typescript-eslint/no-explicit-any
 const node = (pathwayType: string, level: string, label: string, parentKey: string | null = null, extra: Record<string, unknown> = {}, actor = "user-A") => call("POST", "/structure/nodes", { pathwayType, level, label, parentKey, ...extra }, actor);
@@ -37,9 +39,7 @@ const T = (...p: string[]) => p.join(" › ");
 const FIVE = /^(Retail|Corporate and employers) › [^›]+ › [^›]+ › [^›]+/; // type › pathway › program › category (› sub-category)
 
 (async () => {
-  const served = (await call("GET", "/session")).body?.workspace?.id;
-  const inDb = (() => { try { return sql(`select id from workspace where id='${served}'`); } catch { return ""; } })();
-  if (!served || !inDb) { console.error(`STOP  setup missing: the copy on port ${PORT} is not reachable or does not use ${DB}. Start it: zsh tools/isolated.sh acc_a3 ${PORT} start`); process.exit(2); }
+  await checkCopy(PORT, DB);
   await call("POST", "/demo/reset", { confirm: "RESET" });
   const usd0 = await committed();
 

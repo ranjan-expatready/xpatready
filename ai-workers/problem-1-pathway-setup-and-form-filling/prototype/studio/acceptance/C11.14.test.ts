@@ -16,14 +16,17 @@
 // POST /review/proposals/undo/:batch.
 // Run (from prototype/studio):
 //   zsh tools/isolated.sh acc_c1114 4574 start && ./node_modules/.bin/tsx --tsconfig api/tsconfig.json acceptance/C11.14.test.ts 4574 xr_studio_acc_c1114 ; zsh tools/isolated.sh acc_c1114 4574 stop
-// Expected today (main 25cefb67): 9 pass, 4 fail — failing: AT-1 (Load sample writes no proposals), AT-2 (the 84
-// IMM 5257 proposals have one round, agreement "one_round"), AT-3 (56 are Ready with no checker round and no rules),
-// AT-4 (on To review they cannot be ticked: "It is decided on its form-field page.") because P-121's rounds are not built
-// for field mapping. AT-5..AT-10 guard the queue's bulk rules that work.
-// Exit: 0 all pass · 1 a check failed · 2 setup missing (copy not reachable or sample not loaded).
-import { execFileSync } from "node:child_process";
+// Sample combinations are found by their structure trail (acceptance/lib/pack1.ts), so the file runs on today's sample
+// and on P-112's six; the demo guard refuses port 4400 and any database but an isolated copy's.
+// Expected today (main 931cb99a, run 1 Nov 2026 on an isolated copy, US$0): 9 pass, 4 fail — failing: AT-1 (Load sample
+// writes no proposals), AT-2 (the 84 IMM 5257 proposals have one round, agreement "one_round"), AT-3 (56 are Ready with
+// no checker round and no rules), AT-4 (on To review they cannot be ticked: "It is decided on its form-field page.")
+// because P-121's rounds are not built for field mapping. AT-5..AT-10 guard the queue's bulk rules that work.
+// Exit: 0 all pass · 1 a check failed · 2 setup missing or refused (demo port or database, copy not reachable, sample).
 
+import { checkCopy, guard, needCombo, sqlFor, stop } from "./lib/pack1.ts";
 const PORT = Number(process.argv[2] ?? 4574), DB = process.argv[3] ?? "xr_studio_acc_c1114";
+guard(PORT, DB); // before anything reads the database or calls the copy (never the demo)
 process.env.DATABASE_URL = `postgresql://xr_studio@127.0.0.1:54329/${DB}`;
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${!c && detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
@@ -34,19 +37,19 @@ const call = async (method: string, path: string, body?: unknown, actor: string 
   const r = await send(`http://localhost:${PORT}/api${path}`, { method, headers: { ...(actor ? { "x-actor": actor } : {}), "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
   const t = await r.text(); let j: unknown = t; try { j = JSON.parse(t); } catch { /* not JSON */ } return { status: r.status, body: j };
 };
-const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
+const sql = sqlFor(DB);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const until = async (fn: () => Promise<boolean>, ms = 120_000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await fn()) return true; await sleep(500); } return false; };
 const words = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
 const ledger = async () => { const l = (await call("GET", "/ledger")).body; return JSON.stringify([l?.committed_usd, l?.wave?.spent_usd]); };
-const setupMissing = (why: string) => { console.log(`SETUP MISSING  ${why}`); process.exit(2); };
+const setupMissing = stop;
 const statusOf = (ids: string[]) => sql(`select string_agg(status, ',' order by status) from proposal_item where id in (${ids.map((i) => `'${i}'`).join(",")})`);
 
 (async () => {
-  if ((await fetch(`http://localhost:${PORT}/api/session`, { headers: { "x-actor": "user-A" } }).catch(() => null))?.status !== 200) setupMissing(`no copy answers on port ${PORT}`);
+  await checkCopy(PORT, DB);
   await call("POST", "/demo/reset", { confirm: "RESET" });
   const loaded = await call("POST", "/demo/load");
-  const vv = sql("select id from combination where combination_key='vv.single'");
+  const vv = await needCombo(PORT, DB, "visitor_visa");
   const att = vv && sql(`select id from source_attachment where combination_id='${vv}' and file_name='imm5257e.pdf'`);
   if (loaded.status >= 300 || !att) setupMissing("the sample (Visitor visa with IMM 5257) did not load");
   const ledger0 = await ledger();
@@ -102,8 +105,10 @@ const statusOf = (ids: string[]) => sql(`select string_agg(status, ',' order by 
   r = await call("POST", "/review/proposals/decide", { ids: [r2, r3], action: "accept" }, "user-C");
   const batch = r.body?.batchId;
   ok("C11.14 AT-8 two High items are accepted together as one batch; each lands on the library waiting for a second person", r.status === 201 && r.body.items?.length === 2 && sql(`select count(*) from library_change where batch_id='${batch}' and status='WAITING'`) === "2", r.body);
-  r = await call("POST", `/review/proposals/undo/${batch}`, undefined, "user-B");
-  ok("C11.14 AT-9 refusal: only the person who decided can Undo the batch (403); it stays accepted", r.status === 403 && statusOf([r2, r3]) === "accepted,accepted", r.status);
+  // Another person who holds the review duty (the configuration author also reviews), so the refusal is about who decided,
+  // not about the role.
+  r = await call("POST", `/review/proposals/undo/${batch}`, undefined, "user-A");
+  ok("C11.14 AT-9 refusal: only the person who decided can Undo the batch: another reviewer (the configuration author, who holds the review duty) is refused (403); it stays accepted", r.status === 403 && statusOf([r2, r3]) === "accepted,accepted", { status: r.status, m: words(r).slice(0, 160) });
   r = await call("POST", `/review/proposals/undo/${batch}`, undefined, "user-C");
   const again = await call("POST", `/review/proposals/undo/${batch}`, undefined, "user-C");
   ok("C11.14 AT-9 one Undo puts the whole batch back on the queue as proposed, and its library rows are removed; the same Undo again is refused (404 or 409, in words)", r.status < 300 && statusOf([r2, r3]) === "waiting,waiting" && sql(`select count(*) from library_change where batch_id='${batch}' and status='WAITING'`) === "0" && [404, 409].includes(again.status) && words(again).length > 5, [r.status, again.status, words(again)]);

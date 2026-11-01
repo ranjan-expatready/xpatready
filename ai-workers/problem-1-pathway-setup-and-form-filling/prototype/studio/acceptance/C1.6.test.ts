@@ -2,20 +2,29 @@
 // upload · Paper · Not needed, the signature as its own value, what IRCC accepts recorded per form edition and per IRCC
 // account; the channel is proposed by the form finder's two AI rounds with IRCC's quoted line and confirmed by a second
 // person as a "What IRCC accepts" change; the Programs card shows the filing method as a tag (PDF only · Online only ·
-// Mixed). Decisions: P-61, P-62, P-140, P-143, P-208 (P-144 barcode forms, P-145 copies are C1.8's, not here).
+// Mixed, P-208). Decisions: P-61, P-62, P-140, P-143, P-208 (P-144 barcode forms, P-145 copies are C1.8's, not here).
 // CAPABILITIES says "the contract still has three channels": out of date — contracts/forms.ts has the four and the
-// signature. Missing: the finder's channel proposal cannot be shown at US$0 — every saved finder answer predates channels
-// ("Saved before channels: channel not proposed"), so no proposal ever reaches a second person.
+// signature. The rule "a Paper line is signed in pen" (AT-3) is P-143's, Sample until the immigration expert confirms.
+// AT-10's US$0 route (proposal, named here): every saved real finder answer predates channels, so the check plants a
+// Sample two-round finder answer for Visitor visa made with today's prompts (find-forms.v2 and its checker), each form
+// carrying the channel Online through the IRCC secure account with Guide 5256's line "Most people must apply online."
+// (canada.ca, recorded copy 27 Oct; IRCC-F04) — the same mechanism as C11.16 (a saved answer under the combination's
+// key in p2/runs, removed at the end and on Ctrl-C). The channel values are Sample, not IRCC's word on each form.
+// Sample combinations are found by their structure trail (acceptance/lib/pack1.ts): P-112's names, else today's keys.
 // API and data level only (the screen parts are journeys J1/J2). US$0: the finder runs on saved answers (replay).
 //   zsh tools/isolated.sh acc_b4 4567 start && ./node_modules/.bin/tsx acceptance/C1.6.test.ts 4567 xr_studio_acc_b4
-// Expected today (main 25cefb67): 22 pass, 1 fail — failing: AT-10 (after the finder runs on Visitor visa, 4 of its 7
-// forms (IMM 5257, IMM 5645, IMM 5707, IRM 0002) have neither a recorded "What IRCC accepts" nor a channel proposal
-// waiting for a second person: the saved answers were recorded before channels), because P-140's
-// proposal has no saved two-round answer to replay.
-import { execFileSync } from "node:child_process";
+// Expected today (main 931cb99a, run 1 Nov 2026 on an isolated copy, US$0): 23 pass, 0 fail — AT-10 passes on the
+// planted Sample two-round answer: the finder's channel proposal is built. What is missing is a real saved two-round
+// answer with channels (a founder-approved live run); until then the capability rests on Sample input.
+// Exit: 0 all pass · 1 a check failed · 2 setup missing or refused (demo port or database, copy not reachable, sample).
 import { channelProposal } from "../api/src/filing.ts";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { checkCopy, guard, needCombo, PLANT_MARK, plantRun, RUNS, sqlFor, stop } from "./lib/pack1.ts";
 
 const PORT = Number(process.argv[2] ?? 4567), DB = process.argv[3] ?? "xr_studio_acc_b4";
+guard(PORT, DB); // before anything reads the database or calls the copy (never the demo)
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${!c && detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
 type R = { status: number; body: any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- test responses are read loosely
@@ -24,8 +33,7 @@ const call = async (method: string, path: string, body?: unknown, actor: string 
   const t = await r.text(); let j: unknown = t; try { j = JSON.parse(t); } catch { /* not JSON */ }
   return { status: r.status, body: j };
 };
-const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
-const stop = (why: string) => { console.error(`STOP  ${why}`); process.exit(2); };
+const sql = sqlFor(DB);
 const words = (b: any) => `${b?.detail ?? ""} ${b?.message ?? ""}`; // eslint-disable-line @typescript-eslint/no-explicit-any
 const spend = () => sql("select coalesce(sum(cost_usd),0) from drafting_job");
 type Line = { form: string; channel: string; signature_kind: string; channel_words: string };
@@ -43,13 +51,10 @@ const cardFiling = async (label: string) => { let f: string | null | undefined; 
   ok("C1.6 AT-1 [IRCC-F04] fail case: a quote that is not on IRCC's page proposes nothing (listed for a person)", offPage.outcome === "listed", offPage);
 
   // ── The copy and the sample.
-  const served = (await call("GET", "/session").catch(() => ({ status: 0, body: null }))).body?.workspace?.id;
-  if (!served) stop(`no copy answers on port ${PORT}: start it with zsh tools/isolated.sh acc_b4 ${PORT} start`);
-  try { if (!sql(`select id from workspace where id='${served}'`)) throw new Error(); } catch { stop(`the database ${DB} is not the one the server on port ${PORT} uses`); }
+  await checkCopy(PORT, DB);
   if ((await call("POST", "/demo/reset", { confirm: "RESET" })).status >= 300) stop("demo reset refused");
   if ((await call("POST", "/demo/load")).status !== 201) stop("the sample did not load");
-  const wp = sql("select id from combination where combination_key='wp.family'"), vv = sql("select id from combination where combination_key='vv.single'");
-  if (!wp || !vv) stop("the sample has no With an LMIA or Visitor visa");
+  const wp = await needCombo(PORT, DB, "lmia_work_permit"), vv = await needCombo(PORT, DB, "visitor_visa");
   const spend0 = spend();
 
   // ── Four channels and the signature per line (P-143).
@@ -80,7 +85,7 @@ const cardFiling = async (label: string) => { let f: string | null | undefined; 
   const tagPdf = await cardFiling("With an LMIA");
   ok("C1.6 AT-8 fail case: back to PDF upload only, the card tag is 'PDF only', not Mixed", tagPdf === "PDF only", tagPdf);
   const tags = new Set<string>(); const walk = (o: any) => { if (o && typeof o === "object") { if ("filing" in o && typeof o.filing === "string") tags.add(o.filing); for (const v of Object.values(o)) walk(v); } }; walk((await call("GET", "/catalogue")).body); // eslint-disable-line @typescript-eslint/no-explicit-any
-  ok("C1.6 AT-8 pass: every card's tag is one of PDF only · Online only · Paper only · Mixed… (or none when there are no forms)", [...tags].every((t) => /^(PDF only|Online only|Paper only|Mixed\b)/.test(t)), [...tags]);
+  ok("C1.6 AT-8 pass: every card's tag is one of P-208's PDF only · Online only · Mixed… (or none when there are no forms)", [...tags].every((t) => /^(PDF only|Online only|Mixed\b)/.test(t)), [...tags]);
 
   // ── What IRCC accepts, per edition and per IRCC account, confirmed by a second person (P-140, P-143).
   const notNeededAny = await call("POST", `/library/forms/${encodeURIComponent("IMM 5409")}/accepts`, { account: "ANY", channels: ["NOT_NEEDED"], reason: "Acceptance test (Sample)." });
@@ -106,6 +111,20 @@ const cardFiling = async (label: string) => { let f: string | null | undefined; 
   ok("C1.6 AT-9 [IRCC-F04] fail case: through the IRCC secure account, a channel IRCC does not accept for IMM 5409 (Paper) is refused in words", setAcc.status < 300 && notAccepted.status === 400 && (await lineOf(wp, "IMM 5409"))?.channel === "PDF_UPLOAD", { setAcc: setAcc.status, notAccepted });
 
   // ── The finder proposes each form's channel from its two AI rounds (P-140), replayed at US$0.
+  // Test input (Sample, see the header): a two-round finder answer for Visitor visa with today's prompts and a channel per form.
+  const vvKey = sql(`select combination_key from combination where id='${vv}'`); // the key a saved finder answer is replayed for
+  if (!vvKey) stop("Visitor visa has no combination key");
+  const PROMPTS = join(RUNS, "..", "prompts"), shaOf = (f: string) => createHash("sha256").update(readFileSync(join(PROMPTS, f))).digest("hex");
+  const QUOTE = "Most people must apply online.";
+  const SAVED = ["studio-finder-forms-individual-visitors-visitor-visa-live-20261027t072426546z-4d8a0d.json", "studio-finder-forms-check-individual-visitors-visitor-visa-live-20261027t072500006z-a569fb.json"];
+  SAVED.forEach((f, i) => {
+    const r = JSON.parse(readFileSync(join(RUNS, f), "utf8"));
+    const out = JSON.parse(r.raw_output);
+    for (const form of out.forms) form.channel = /^IMM 5256$|^Guide/.test(form.code) ? null : { value: "ONLINE", account: "IRCC_SECURE_ACCOUNT", quote: QUOTE };
+    r.raw_output = JSON.stringify(out); r.drafting_run.inputs.combination = vvKey;
+    r.launch_evidence = { ...r.launch_evidence, template_sha256: shaOf(i ? "find-forms-check.v2.md" : "find-forms.v2.md"), schema_file: "find-forms-output.v2.schema.json", schema_sha256: shaOf("find-forms-output.v2.schema.json") };
+    plantRun(`studio-finder-forms${i ? "-check" : ""}-pk1c16-live-20261101t00000000${i}z-${PLANT_MARK}.json`, r);
+  });
   const plan = await call("POST", `/combinations/${vv}/forms/find/plan`, { mode: "replay" });
   if (plan.status >= 300 || !plan.body?.plan_sha256) stop(`the finder plan (replay) failed: ${plan.status}`);
   const run = await call("POST", `/combinations/${vv}/forms/find`, { mode: "replay", planSha256: plan.body.plan_sha256, idempotencyKey: `acc-c16-${Date.now()}` });
@@ -115,7 +134,7 @@ const cardFiling = async (label: string) => { let f: string | null | undefined; 
   ok("setup: the finder (saved answers, US$0) attached Visitor visa's forms", found.length >= 3 && Number(spend()) === Number(spend0), { status: view?.status, found });
   const waitingOrRecorded = found.filter((code) => sql(`select count(*) from library_change where kind='form_accepts' and key='${code}' and status in ('WAITING','APPROVED') and (matches->>'source')='finder'`) !== "0"
     || sql(`select count(*) from form_edition_accept a join form_edition e on e.id=a.form_edition_id join gov_form_def d on d.id=e.gov_form_def_id where d.form_key='${code}'`) !== "0");
-  ok("C1.6 AT-10 [IRCC-F04] pass: each form the finder attached has a channel proposed from both AI rounds with IRCC's line, waiting for a second person (or already recorded in the library)", found.length > 0 && waitingOrRecorded.length === found.length, { found, proposed: waitingOrRecorded, finder_says: (view?.result?.channels ?? view?.channels ?? []).slice?.(0, 2) });
+  ok("C1.6 AT-10 [IRCC-F04] pass: each form the finder attached (planted two-round answer, Sample) has a channel proposed from both AI rounds with IRCC's line, waiting for a second person (or already recorded in the library)", found.length > 0 && waitingOrRecorded.length === found.length, { found, proposed: waitingOrRecorded, finder_says: (view?.result?.channels ?? view?.channels ?? []).slice?.(0, 2) });
   ok("C1.6 AT-11 US$0: nothing in this file spent money", Number(spend()) === Number(spend0), [spend0, spend()]);
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

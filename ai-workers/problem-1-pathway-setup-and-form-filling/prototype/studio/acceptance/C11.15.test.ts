@@ -10,17 +10,26 @@
 // US$0: replay of the saved Visitor visa answer and rules only; canada.ca is the recorded copies; no live switch.
 // Scaffolding (P-33, said here): to make one form "missing" the check marks IMM 5475 retired in the library by SQL before
 // the find, and clears that mark before Find again.
-// The Redo endpoint is this file's proposal (POST /combinations/:id/forms/:code/redo {stage}); the builder may name it
-// otherwise and change the call, not the rule.
+// The Redo endpoint is this file's proposal (POST /combinations/:id/forms/:code/redo {stage}: answers the plan; the same
+// call with the plan's planSha256 starts it; its run is stopped with POST /runs/:id/stop); the builder may name it
+// otherwise and change the call, not the rule. Delete needs a reason (AT-16): that is the app's rule today, not a
+// decision (P-116 asks for a confirmation). P-116 also says Delete only what is used nowhere (AT-21, a form listed by
+// IRCC with no file, planted by SQL as Sample) and Retire is refused while a current draft or the latest release still
+// uses it, listing each use (AT-22); AT-17 retires a form nobody uses (IMM 1294, uploaded here as canada.ca's file).
+// Sample combinations are found by their structure trail (acceptance/lib/pack1.ts): P-112's names, else today's keys.
 //   zsh tools/isolated.sh acc_a2 4562 start && ./node_modules/.bin/tsx acceptance/C11.15.test.ts 4562 xr_studio_acc_a2
-// Expected today (main 25cefb67): 30 pass, 3 fail — failing: AT-1 because Load sample attaches Visitor visa's forms as
-// sources and never replays the finder (no run, no Picked by AI line); AT-12 (both) because there is no Redo with AI
-// endpoint (404). QA-101/102/104 guards pass on Visitor visa's saved answer (they showed on a live Study permit find).
-// The first find on a fresh copy downloads from the recorded canada.ca copies and can take over a minute.
-// Exit: 0 all pass · 1 a check failed · 2 setup missing (copy not reachable, wrong database, sample not loaded).
-import { execFileSync } from "node:child_process";
+// Expected today (main 931cb99a, run 1 Nov 2026 on an isolated copy, US$0): 33 pass, 4 fail — failing: AT-1 (Load
+// sample attaches Visitor visa's forms as sources and never replays the finder: no run, no Picked by AI line); AT-12
+// twice and AT-24 (no Redo with AI endpoint: 404, so no stage can be redone or stopped). QA-101/102/104 guards, Delete
+// of an unused form (AT-21), Retire refused while in use (AT-22) and Upload PDF of a readable official file (AT-23)
+// pass. The first find on a fresh copy downloads from the recorded canada.ca copies and can take over a minute.
+// Exit: 0 all pass · 1 a check failed · 2 setup missing or refused (demo port or database, copy not reachable, sample).
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { checkCopy, guard, needCombo, sqlFor, stop } from "./lib/pack1.ts";
 const PORT = Number(process.argv[2] ?? 4562), DB = process.argv[3] ?? "xr_studio_acc_a2";
+guard(PORT, DB); // before anything reads the database or calls the copy (never the demo)
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 260)}` : ""}`); };
 type Res = { status: number; body: any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- responses are read loosely, as in tests/check_*.ts
@@ -31,7 +40,7 @@ const call = async (method: string, path: string, body?: unknown, actor = "user-
     return { status: r.status, body: j ?? {} };
   } catch (e) { return { status: 0, body: { detail: String(e) } }; }
 };
-const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+const sql = sqlFor(DB);
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const ended = async (path: string) => { for (let i = 0; i < 360; i++) { const v = (await call("GET", path)).body; if (!["QUEUED", "RUNNING", "queued", "running"].includes(v?.status)) return v; await wait(500); } return null; };
 const TECH = /ENOENT|errno|syscall|\/Users\/|node:|Prisma|at [A-Za-z.]+ \(|Error:/;
@@ -57,6 +66,7 @@ function letterPdf(): Buffer {
   out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n${offs.map((o) => `${String(o).padStart(10, "0")} 00000 n \n`).join("")}trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${x}\n%%EOF\n`;
   return Buffer.from(out, "latin1");
 }
+const IRCC = join(import.meta.dirname, "..", "..", "..", "official-sources", "ircc", "forms");
 const upload = async (name: string, bytes: Buffer, extra: Record<string, string>, actor = "user-A"): Promise<Res> => {
   const fd = new FormData(); fd.append("files", new Blob([new Uint8Array(bytes)], { type: "application/pdf" }), name);
   for (const [k, v] of Object.entries(extra)) fd.append(k, v);
@@ -64,13 +74,11 @@ const upload = async (name: string, bytes: Buffer, extra: Record<string, string>
 };
 
 (async () => {
-  const served = (await call("GET", "/session")).body?.workspace?.id;
-  const inDb = (() => { try { return sql(`select id from workspace where id='${served}'`); } catch { return ""; } })();
-  if (!served || !inDb) { console.error(`STOP  setup missing: the copy on port ${PORT} is not reachable or does not use ${DB}. Start it: zsh tools/isolated.sh acc_a2 ${PORT} start`); process.exit(2); }
+  await checkCopy(PORT, DB);
   await call("POST", "/demo/reset", { confirm: "RESET" });
   const load = await call("POST", "/demo/load");
-  const vv = ((await call("GET", "/catalogue?pathway=INDIVIDUAL&filter=all")).body?.rows ?? []).find((r: any) => r.nodeKey === "individual.visitors.visitor_visa")?.combinationId; // eslint-disable-line @typescript-eslint/no-explicit-any
-  if (load.status >= 300 || !vv) { console.error("STOP  setup missing: Load sample failed or has no Visitor visa", load.status); process.exit(2); }
+  if (load.status >= 300) stop(`Load sample failed (${load.status})`);
+  const vv = await needCombo(PORT, DB, "visitor_visa");
   const usd0 = await committed();
 
   // ------------------------------------------------ Load sample replays the finder (P-123)
@@ -122,6 +130,12 @@ const upload = async (name: string, bytes: Buffer, extra: Record<string, string>
   ok("C11.15 AT-11 Find again attaches the form that was missing; forms already attached are not attached twice; US$0",
     /IMM 5475:DRAFT/.test(lines(vv)) && n5475 === "1" && (again?.result?.attach ?? []).filter((a: any) => a.code !== "IMM 5475").every((a: any) => a.line === "already") && again?.usd?.spent === 0, { lines: lines(vv), usd: again?.usd }); // eslint-disable-line @typescript-eslint/no-explicit-any
 
+  const okUp = await upload("imm5710e.pdf", readFileSync(join(IRCC, "imm5710e.pdf")), { forCombination: vv, forCode: "IMM 5710" });
+  const okRun = okUp.body?.runId ? await ended(`/runs/${okUp.body.runId}`) : null;
+  const okSaid = JSON.stringify((okRun?.steps ?? []).map((x: any) => x.message)); // eslint-disable-line @typescript-eslint/no-explicit-any
+  ok("C11.15 AT-23 [IRCC-F01] Upload PDF pass: a readable official file (canada.ca's own IMM 5710) is read by the rules (no AI call, US$0), joins the library with the edition printed on it and is attached to the combination",
+    okRun?.status === "done" && (okRun?.steps ?? []).every((x: any) => x.uses === "rules" && !x.usd) && /No AI call was made/.test(okSaid) && /Attached to/.test(okSaid) && /^IMM 5710 \(\d\d-\d{4}\)$/.test(sql("select e.edition_label from form_edition e join gov_form_def d on d.id=e.gov_form_def_id where d.form_key='IMM 5710'")), { status: okRun?.status, said: okSaid.slice(0, 300) }); // eslint-disable-line @typescript-eslint/no-explicit-any
+
   // ------------------------------------------------ Redo with AI per stage (missing today)
   const C5257 = enc("IMM 5257"), v5257 = Number(lineOf(vv, "IMM 5257").split("|")[1]);
   const jb = jobs();
@@ -132,6 +146,13 @@ const upload = async (name: string, bytes: Buffer, extra: Record<string, string>
   const redoB = await call("POST", `/combinations/${vv}/forms/${C5257}/redo`, { stage: "read" }, "user-B");
   ok("C11.15 AT-12 refusal: an unknown stage is refused in plain words (400) and only an author may redo (approver 403); nothing runs",
     redoBad.status === 400 && plain(redoBad.body) && redoB.status === 403 && jobs() === jb, [redoBad.status, redoB.status]);
+
+  const redoStart = await call("POST", `/combinations/${vv}/forms/${C5257}/redo`, { stage: "find", mode: "replay", planSha256: redo.body?.planSha256 ?? redo.body?.plan_sha256 });
+  const redoRun = redoStart.body?.id ?? redoStart.body?.runId;
+  const redoStop = redoRun ? await call("POST", `/runs/${redoRun}/stop`) : { status: 0, body: null };
+  const redoEnd = redoRun ? (await call("GET", `/runs/${redoRun}`)).body : null;
+  ok("C11.15 AT-24 [P-123] each AI stage can be stopped: a Redo started (find, replay at US$0) is stopped with Stop; the run ends Stopped (or already ended), nothing spent, and the form's line is unchanged",
+    redoStart.status < 300 && !!redoRun && redoStop.status < 500 && ["stopped", "done", "cancelled"].includes(String(redoEnd?.status)) && (redoEnd?.usd?.spent ?? 0) === 0 && lineOf(vv, "IMM 5257") === `DRAFT|${v5257}`, { start: redoStart.status, run: redoRun, stop: redoStop.status, end: redoEnd?.status });
 
   // ------------------------------------------------ Replace, Remove, Undo
   let r = await call("POST", `/combinations/${vv}/forms/${C5257}/replace`, { version: v5257 + 5 });
@@ -157,14 +178,29 @@ const upload = async (name: string, bytes: Buffer, extra: Record<string, string>
   ok("C11.15 AT-16 refusal: Delete of a form in use is refused in plain words (409); it stays in the library", r.status === 409 && plain(r.body) && sql(`select count(*) from gov_form_def where form_key='IMM 5257'`) === "1", r.body?.detail);
   r = await call("DELETE", `/library/forms/${enc("IMM 5802")}`, { reason: "x" });
   ok("C11.15 AT-16 refusal: a delete without a reason is refused (400)", r.status === 400);
-  const C5881 = enc("IMM 5881");
-  r = await call("POST", `/library/forms/${C5881}/retire`, { reason: "Replaced by the portal checklist (Sample)" });
+  const up1294 = await upload("imm1294e.pdf", readFileSync(join(IRCC, "imm1294e.pdf")), {});
+  if (up1294.body?.runId) await ended(`/runs/${up1294.body.runId}`);
+  if (sql("select count(*) from gov_form_def where form_key='IMM 1294'") !== "1") stop("the official IMM 1294 did not join the library");
+  const C1294 = enc("IMM 1294");
+  r = await call("POST", `/library/forms/${C1294}/retire`, { reason: "Not used by any combination (Sample)" });
   const change = r.body?.id;
-  ok("C11.15 AT-17 Retire of a library form waits for a second person; nothing changes before", r.status < 300 && r.body?.status === "WAITING" && sql(`select retired_at is null from gov_form_def where form_key='IMM 5881'`) === "t", r.body);
+  ok("C11.15 AT-17 Retire of a library form waits for a second person; nothing changes before", r.status < 300 && r.body?.status === "WAITING" && sql(`select retired_at is null from gov_form_def where form_key='IMM 1294'`) === "t", r.body);
   r = await call("POST", `/library/changes/${change}/approve`, { note: "mine" }, "user-A");
-  ok("C11.15 AT-17 refusal: the author cannot approve their own retire", r.status >= 400 && r.status < 500 && sql(`select retired_at is null from gov_form_def where form_key='IMM 5881'`) === "t", r.status);
+  ok("C11.15 AT-17 refusal: the author cannot approve their own retire", r.status >= 400 && r.status < 500 && sql(`select retired_at is null from gov_form_def where form_key='IMM 1294'`) === "t", r.status);
   r = await call("POST", `/library/changes/${change}/approve`, { note: "Checked (Sample)" }, "user-B");
-  ok("C11.15 AT-17 a second person approves: the form is retired and no longer offered to attach", r.status < 300 && sql(`select retired_at is not null from gov_form_def where form_key='IMM 5881'`) === "t" && (await call("POST", `/combinations/${vv}/forms`, { formKey: "IMM 5881" })).status === 409, r.status);
+  ok("C11.15 AT-17 a second person approves: the form is retired and no longer offered to attach", r.status < 300 && sql(`select retired_at is not null from gov_form_def where form_key='IMM 1294'`) === "t" && (await call("POST", `/combinations/${vv}/forms`, { formKey: "IMM 1294" })).status === 409, r.status);
+  // P-116: Delete only what is used nowhere (pass case), with the second person when it was listed by IRCC.
+  sql(`insert into gov_form_def (id, workspace_id, form_key, display_name, form_kind) select gen_random_uuid(), workspace_id, 'IMM 0102', 'Acceptance test form, listed only (Sample)', 'data_form' from gov_form_def where form_key='IMM 5409'`);
+  const del = await call("DELETE", `/library/forms/${enc("IMM 0102")}`, { reason: "Acceptance test: used nowhere (Sample)" });
+  const delOk = del.body?.status === "WAITING" ? await call("POST", `/library/changes/${del.body.id}/approve`, { note: "Checked (Sample)" }, "user-B") : del;
+  ok("C11.15 AT-21 [P-116] Delete of a library form used nowhere is done (at once, or once a second person approves): it is gone from the library", del.status < 300 && delOk.status < 300 && sql("select count(*) from gov_form_def where form_key='IMM 0102' and retired_at is null") === "0", { del: [del.status, del.body?.status], approve: delOk.status });
+  // P-116: Retire is refused while a current draft still uses the form, listing each use (here: Visitor visa's draft).
+  const ret = await call("POST", `/library/forms/${C5257}/retire`, { reason: "Acceptance test: still in use (Sample)" });
+  const retOk = ret.status < 300 && ret.body?.status === "WAITING" ? await call("POST", `/library/changes/${ret.body.id}/approve`, { note: "Checked (Sample)" }, "user-B") : null;
+  const refusal = retOk ?? ret;
+  ok("C11.15 AT-22 [P-116] refusal: Retire of a form a current draft still uses (IMM 5257 on Visitor visa) is refused, when proposed or when approved, naming the use in words; the form is not retired",
+    refusal.status >= 400 && refusal.status < 500 && /Visitor visa/.test(JSON.stringify(refusal.body)) && sql(`select retired_at is null from gov_form_def where form_key='IMM 5257'`) === "t", { propose: [ret.status, ret.body?.status], approve: retOk?.status, words: String(refusal.body?.detail ?? "").slice(0, 160), retired: sql(`select retired_at is not null from gov_form_def where form_key='IMM 5257'`) });
+  if (sql(`select retired_at is not null from gov_form_def where form_key='IMM 5257'`) === "t") sql(`update gov_form_def set retired_at = null, retired_by = null where form_key='IMM 5257'`); // put it back for the checks below
 
   // ------------------------------------------------ Who can be in this application: editable, rules on Save
   const ppl = (await call("GET", `/combinations/${vv}/workspace?tab=forms`)).body?.people;

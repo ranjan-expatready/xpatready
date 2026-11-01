@@ -1,7 +1,10 @@
 // C3.3 — An AI failure gives a plain message and keeps the good entries; a paid repeat of a failed run is refused.
-// Status (qa/CAPABILITIES.md, 1 Nov): Partial ("no person walk yet"). Missing: nothing found at API level beyond the walk;
-// the paid-repeat refusal is reachable through the API only with a saved failed answer made with today's prompt and
-// settings, which no saved record is, so AT-7 proves the rule on the four saved real IMM 1344 refusals (22–23 Oct).
+// Status (qa/CAPABILITIES.md, 1 Nov): Partial ("no person walk yet"). This file is a guard file: at API level it found
+// nothing missing (the person walk is J2 step 9). The paid-repeat refusal is checked through the API (AT-12): the check
+// plants a Sample failed answer for IMM 1344 made with today's prompt, schema and settings (copied from a saved real
+// IMM 1344 refusal of 22–23 Oct, its inputs set to today's job file; test input, removed at the end) and asks the plan
+// for a live draft again: it must refuse the paid call at US$0; the same record with a changed prompt must not be
+// refused (it would ask something new). AT-7..AT-9 keep the rule on the four saved real refusals (pure functions).
 // Decisions: P-110 (plain errors with the next step), P-139 (each step once live, fixed before repeating), P-175 (live
 // off), P-179/P-194 (limits stop before spending), Lead check A1–A3 (23 Oct: one bad entry goes to a person, the rest
 // kept; a failed answer is re-checked at US$0, never paid for again).
@@ -10,13 +13,16 @@
 // Run (from prototype/studio):
 //   zsh tools/isolated.sh acc_c3 4571 start STUDIO_FAULT_SOURCE=imm5707e.pdf STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs
 //   ./node_modules/.bin/tsx acceptance/C3.3.test.ts 4571 xr_studio_acc_c3 ; zsh tools/isolated.sh acc_c3 4571 stop
-// Expected today (main 25cefb67): 12 pass, 0 fail — guards what works; the person walk is J2 step 9 in the journeys.
-// Exit: 0 all pass · 1 a check failed · 2 setup missing (copy not reachable, sample not loaded, or started without the fault switch).
-import { execFileSync } from "node:child_process";
+// Expected today (main 931cb99a, run 1 Nov 2026 on an isolated copy, US$0): 14 pass, 0 fail — a guard file: it guards
+// what works. The paid repeat of a failed run is refused through the API (AT-12, the plan answers not_eligible "A new
+// paid call is refused … failed our own check"); the person walk is J2 step 9.
+// Exit: 0 all pass · 1 a check failed · 2 setup missing or refused (demo port or database, copy, sample, fault switch).
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { checkedOutput, explainRun, failedOurCheck, sameDraftInputs, type RunEnvelope } from "../engine/ai-run.ts";
 import { convertFieldMap } from "../../p2/convert.ts";
+import { checkCopy, needCombo, PLANT_MARK, plantRun, sqlFor, stop } from "./lib/pack1.ts";
 
 const PORT = Number(process.argv[2] ?? 4571), DB = process.argv[3] ?? "xr_studio_acc_c3", NAME = DB.replace(/^xr_studio_/, "");
 const STUDIO = join(import.meta.dirname, ".."), PROTOTYPE = join(STUDIO, ".."), RUNS = join(PROTOTYPE, "p2", "runs");
@@ -30,20 +36,21 @@ const call = async (method: string, path: string, body?: unknown, actor: string 
   const r = await send(`http://localhost:${PORT}/api${path}`, { method, headers: { ...(actor ? { "x-actor": actor } : {}), "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
   const t = await r.text(); let j: unknown = t; try { j = JSON.parse(t); } catch { /* not JSON */ } return { status: r.status, body: j };
 };
-const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
+const sql = sqlFor(DB);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const until = async (fn: () => Promise<boolean>, ms = 120_000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await fn()) return true; await sleep(500); } return false; };
 const words = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
 const ledger = async () => { const l = (await call("GET", "/ledger")).body; return JSON.stringify([l?.committed_usd, l?.wave?.spent_usd]); };
 const liveCalls = () => (existsSync(FAKE_LOG) ? readFileSync(FAKE_LOG, "utf8").split("\n").filter((l) => l.includes('"mode":"live"')).length : 0);
-const setupMissing = (why: string) => { console.log(`SETUP MISSING  ${why}`); process.exit(2); };
+const setupMissing = stop;
 const TECH = /\b(ENOENT|EACCES|errno|syscall|stack)\b|\/(Users|home|private|tmp)\/|\.(m?[jt]s):\d+/;
 
 (async () => {
-  if ((await fetch(`http://localhost:${PORT}/api/session`, { headers: { "x-actor": "user-A" } }).catch(() => null))?.status !== 200) setupMissing(`no copy answers on port ${PORT}`);
+  await checkCopy(PORT, DB);
   await call("POST", "/demo/reset", { confirm: "RESET" });
   const loaded = await call("POST", "/demo/load");
-  const vv = sql("select id from combination where combination_key='vv.single'");
+  if (loaded.status >= 300) setupMissing("the sample did not load");
+  const vv = await needCombo(PORT, DB, "visitor_visa");
   const a5257 = vv && sql(`select id from source_attachment where combination_id='${vv}' and file_name='imm5257e.pdf'`);
   const a5707 = vv && sql(`select id from source_attachment where combination_id='${vv}' and file_name='imm5707e.pdf'`);
   if (loaded.status >= 300 || !a5257 || !a5707) setupMissing("the sample (Visitor visa with IMM 5257 and IMM 5707) did not load");
@@ -102,13 +109,29 @@ const TECH = /\b(ENOENT|EACCES|errno|syscall|stack)\b|\/(Users|home|private|tmp)
       failedOurCheck(env) && sameDraftInputs(env, asked) && !sameDraftInputs(env, { ...asked, templateSha: "changed" }), asked);
   }
   // ── the IMM 1344 form through the API: a saved answer before any paid call; live refused at US$0
-  const wp = sql("select id from combination where combination_key='wp.family'");
+  const wp = await needCombo(PORT, DB, "lmia_work_permit");
   await call("POST", `/combinations/${wp}/attachments/sample`, { officialFile: "imm1344e.pdf" });
   const a1344 = sql(`select id from source_attachment where combination_id='${wp}' and file_name='imm1344e.pdf'`);
   const p1344 = a1344 ? (await call("POST", "/ai/plan", { scope: { kind: "source", ids: [a1344] }, mode: "LIVE" })).body : null;
   ok("C3.3 AT-10 asked for a live draft of IMM 1344, the plan uses the saved answer first (no model call, US$0) instead of paying again", p1344?.targets?.[0]?.action === "reuse_saved_output" && p1344.totals?.worst_usd === 0, p1344?.targets?.[0]);
   const l1344 = a1344 ? await call("POST", `/attachments/${a1344}/draft`, { mode: "live", idempotencyKey: `acc-c33-live-${Date.now()}` }) : { status: 0, body: null };
   await until(async () => sql(`select count(*) from drafting_job where attachment_id='${a1344}' and status in ('QUEUED','RUNNING')`) === "0", 30_000);
+
+  // ── a paid repeat of a failed run is refused through the API (planted Sample record with today's inputs)
+  const JOB = join(PROTOTYPE, "p2", "jobs", "studio-fieldmap-imm1344e.json"), PROMPTS = join(PROTOTYPE, "p2", "prompts");
+  if (!a1344 || !env || !existsSync(JOB)) setupMissing("IMM 1344 could not be added to the work permit, a saved refusal is missing, or its job file was not written by the plan");
+  const job = JSON.parse(readFileSync(JOB, "utf8"));
+  const shaOf = (f: string) => createHash("sha256").update(readFileSync(join(PROMPTS, f))).digest("hex");
+  const today = (templateSha: string) => { const e = JSON.parse(JSON.stringify(env)); e.drafting_run.inputs.official_files = job.inputs; e.drafting_run.settings = { ...e.drafting_run.settings, model: job.settings.model, effort: job.settings.effort, max_output_tokens: job.settings.max_output_tokens }; e.launch_evidence = { ...e.launch_evidence, template_sha256: templateSha, schema_sha256: shaOf(job.output_schema), known: job.known ?? null }; e.drafting_run.ended_at = "2026-11-01T00:00:00.000Z"; return e; };
+  const livePlan = async () => (await call("POST", "/ai/plan", { scope: { kind: "source", ids: [a1344] }, mode: "LIVE", draftAgain: true })).body?.targets?.[0];
+  plantRun(`studio-fieldmap-imm1344e-live-20261101t000000001z-${PLANT_MARK}.json`, today("0".repeat(64)));
+  const changed = await livePlan();
+  ok("C3.3 AT-12 pass: a failed answer made with another prompt is not a repeat: drafting again live is offered and priced (not refused)", changed?.action !== "not_eligible" && !/refused/i.test(changed?.why ?? ""), changed);
+  plantRun(`studio-fieldmap-imm1344e-live-20261101t000000002z-${PLANT_MARK}.json`, today(shaOf(job.template)));
+  const q0 = sql("select count(*) from ai_batch") + "/" + sql("select count(*) from drafting_job");
+  const repeat = await livePlan();
+  ok("C3.3 AT-12 refusal through the API: drafting IMM 1344 live again with the same form, prompt, schema and settings as an answer that failed our own check is refused in words before anything starts (US$0, nothing queued)",
+    repeat?.action === "not_eligible" && /refused/.test(repeat?.why ?? "") && /failed our own check/.test(repeat?.why ?? "") && sql("select count(*) from ai_batch") + "/" + sql("select count(*) from drafting_job") === q0, repeat);
   ok("C3.3 AT-11 the whole check spent nothing: no live call reached the launcher, the ledger is unchanged", liveCalls() === live0 && (await ledger()) === ledger0, { live: liveCalls() - live0, l1344: [l1344.status, words(l1344 as Res).slice(0, 120)], ledger0, now: await ledger() });
 
   console.log(`\n${pass} passed, ${fail} failed`);

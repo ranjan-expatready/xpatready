@@ -1,7 +1,8 @@
 // C3.1 — AI maps form fields to shared fields (reuse / new / ambiguous / conflict) beside the source; each field's type
 // and format come from the form itself and are enforced in code.
 // Status (qa/CAPABILITIES.md, 1 Nov): Partial. Missing: the format part of P-162 (a proposal and the applied field map
-// carry no maximum length, choices or date pattern read from the PDF box; the runtime's limit comes from words the AI
+// carry no maximum length, choices or date pattern read from the PDF box (AT-8, AT-9, AT-9b; the field name of the
+// format beside each form field is this file's proposal: `format: { maxLength, choices, datePattern }`); the runtime's limit comes from words the AI
 // wrote in the transform, else 500 characters).
 // Decisions: P-162 (formats from the form, enforced in code), P-149 (one door, identity), P-158 (every item from a
 // source), P-175 (live AI off by default), P-38 (analysed once). IRCC rule: [IRCC-F07] a form field's type and format
@@ -11,17 +12,19 @@
 // Run (from prototype/studio):
 //   zsh tools/isolated.sh acc_c1 4569 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs
 //   ./node_modules/.bin/tsx acceptance/C3.1.test.ts 4569 xr_studio_acc_c1 ; zsh tools/isolated.sh acc_c1 4569 stop
-// Expected today (main 25cefb67): 13 pass, 3 fail — failing: AT-8, AT-9 (a proposal's form field shows no maximum
-// length or choices read from the PDF box) and AT-10 (after apply the runtime limit for family name is 500 characters,
-// not the form's 100) because P-162's formats are not built. (AT-10 runs after AT-15: it needs the applied map.)
-// Exit: 0 all pass · 1 a check failed · 2 setup missing (copy not reachable or sample not loaded).
-import { execFileSync } from "node:child_process";
+// Expected today (main 931cb99a, run 1 Nov 2026 on an isolated copy, US$0): 13 pass, 4 fail — failing: AT-8, AT-9,
+// AT-9b (a proposal's form field shows no maximum length, choices or date pattern read from the PDF box) and AT-10
+// (after apply the runtime limit for family name is 500 characters, not the form's 100) because P-162's formats are not
+// built. (AT-10 runs after AT-15: it needs the applied map.)
+// Exit: 0 all pass · 1 a check failed · 2 setup missing or refused (demo port or database, copy not reachable, sample).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { shapeOf } from "../engine/runtime/case.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
+import { checkCopy, guard, needCombo, sqlFor, stop } from "./lib/pack1.ts";
 
 const PORT = Number(process.argv[2] ?? 4569), DB = process.argv[3] ?? "xr_studio_acc_c1", NAME = DB.replace(/^xr_studio_/, "");
+guard(PORT, DB); // before anything reads the database or calls the copy (never the demo)
 const STUDIO = join(import.meta.dirname, ".."), PROTOTYPE = join(STUDIO, "..");
 const VAR = join(STUDIO, "var", `isolated-${NAME}`), FAKE_LOG = join(VAR, "fake-launch.log");
 let pass = 0, fail = 0;
@@ -33,22 +36,22 @@ const call = async (method: string, path: string, body?: unknown, actor: string 
   const r = await send(`http://localhost:${PORT}/api${path}`, { method, headers: { ...(actor ? { "x-actor": actor } : {}), "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
   const t = await r.text(); let j: unknown = t; try { j = JSON.parse(t); } catch { /* not JSON */ } return { status: r.status, body: j };
 };
-const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
+const sql = sqlFor(DB);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const until = async (fn: () => Promise<boolean>, ms = 120_000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await fn()) return true; await sleep(500); } return false; };
 const words = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
 const ledger = async () => { const l = (await call("GET", "/ledger")).body; return JSON.stringify([l?.committed_usd, l?.wave?.spent_usd]); };
 const liveCalls = () => (existsSync(FAKE_LOG) ? readFileSync(FAKE_LOG, "utf8").split("\n").filter((l) => l.includes('"mode":"live"')).length : 0);
-const setupMissing = (why: string) => { console.log(`SETUP MISSING  ${why}`); process.exit(2); };
+const setupMissing = stop;
 const norm = (s: string) => s.toLowerCase().replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/\s+/g, " ").trim();
 
 (async () => {
-  if ((await fetch(`http://localhost:${PORT}/api/session`, { headers: { "x-actor": "user-A" } }).catch(() => null))?.status !== 200) setupMissing(`no copy answers on port ${PORT}`);
+  await checkCopy(PORT, DB);
   mkdirSync(VAR, { recursive: true });
   writeFileSync(join(VAR, "fake-launch.json"), JSON.stringify({ stub: { exit: 0, out: { ok: true } }, live: { exit: 1, err: "the stand-in launcher was asked for a live call" } }));
   await call("POST", "/demo/reset", { confirm: "RESET" });
   const loaded = await call("POST", "/demo/load");
-  const vv = sql("select id from combination where combination_key='vv.single'");
+  const vv = await needCombo(PORT, DB, "visitor_visa");
   const att = vv && sql(`select id from source_attachment where combination_id='${vv}' and file_name='imm5257e.pdf'`);
   if (loaded.status >= 300 || !vv || !att) setupMissing("the sample (Visitor visa with IMM 5257) did not load");
   const inv = JSON.parse(readFileSync(join(PROTOTYPE, "p1", "inventory", "imm5257e.inventory.json"), "utf8"));
@@ -109,6 +112,12 @@ const norm = (s: string) => s.toLowerCase().replace(/[“”]/g, '"').replace(/[
   const choicesOf = (b: any) => fmt(b)?.choices ?? b?.choices ?? b?.options ?? null; // eslint-disable-line @typescript-eslint/no-explicit-any
   ok("C3.1 AT-9 [IRCC-F07] a choice form field's proposal shows the PDF's own choices (codes and words), not a list the AI made up", !!choiceBox && Array.isArray(choicesOf(choiceBox)) && choicesOf(choiceBox).length === box.get(choiceBox.data_path).options_resolved.length,
     choiceBox && { path: choiceBox.data_path, shown: choicesOf(choiceBox), pdf: box.get(choiceBox.data_path).options_resolved.length });
+  // P-162 names three formats from the PDF box: maximum length (AT-8), choices (AT-9) and the date pattern (AT-9b).
+  const dateBoxes = boxes.filter((b) => box.get(b.data_path)?.ui === "dateTimeEdit");
+  const patternOf = (b: any) => fmt(b)?.datePattern ?? fmt(b)?.date_pattern ?? fmt(b)?.pattern ?? b?.datePattern ?? b?.date_pattern ?? null; // eslint-disable-line @typescript-eslint/no-explicit-any
+  if (!dateBoxes.length) setupMissing("the replayed IMM 5257 draft proposes no date form field");
+  ok("C3.1 AT-9b [IRCC-F07] a date form field's proposal shows the date pattern read from the PDF box (P-162: \"date pattern\"), every date form field with one",
+    dateBoxes.every((b) => typeof patternOf(b) === "string" && /Y/i.test(patternOf(b)) && /M/.test(patternOf(b))), dateBoxes.slice(0, 3).map((b) => ({ path: b.data_path, shown: patternOf(b) })));
   const codedTypes = items.filter((i) => i.boxes?.length && i.boxes.every((b: any) => (box.get(b.data_path)?.options_resolved ?? []).length > 1)).map((i) => i.proposedType); // eslint-disable-line @typescript-eslint/no-explicit-any
   ok("C3.1 AT-11 [IRCC-F07] a shared field fed only by choice form fields is never proposed as free text (its type follows the PDF box)", codedTypes.length > 0 && !codedTypes.includes("text"), codedTypes);
 

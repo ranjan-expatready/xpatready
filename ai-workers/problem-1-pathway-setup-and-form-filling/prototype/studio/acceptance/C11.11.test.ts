@@ -1,16 +1,23 @@
 // C11.11 (Partial) — Forms enter only through Shared library › Forms; guides and checklists are stored there as "Read by
 // AI", never filled; a combination only picks approved forms from the library; no add or attach controls in the
-// combination; Overview only reports. Decisions: P-118 (Q2, Q3, Q5), P-152, P-156, P-103, P-123.
+// combination; Overview only reports; online-only forms are flagged at intake (P-152); each combination keeps its IRCC
+// checklist page, proposed by the rules and confirmed once by a person (P-156). Decisions: P-118 (Q2, Q3, Q5), P-152,
+// P-156, P-176, P-103, P-123.
 // Missing today: a checklist can still become a filed form line on a combination (QA-101: the finder attached IMM 5483 to
 // Study permit; the same hole is open through POST /combinations/:id/forms, and the released sample With an LMIA carries
-// the checklists IMM 5488 and IMM 5905 as "PDF upload" form lines, so its filing lines count them as filed).
+// the checklists IMM 5488 and IMM 5905 as "PDF upload" form lines, so its filing lines count them as filed); a form held
+// only online is listed as "no file" (asked for a PDF) instead of "Online only · no official PDF" (P-152).
+// Sample combinations are found by their structure trail (acceptance/lib/pack1.ts: P-112's names, else today's keys), so
+// the file runs on today's sample and on P-148's six. Test input planted by SQL is marked Sample.
 // API and data level only (the screen parts are journey J1 in acceptance/journeys/). US$0: no model, no canada.ca.
 //   zsh tools/isolated.sh acc_b1 4564 start && ./node_modules/.bin/tsx acceptance/C11.11.test.ts 4564 xr_studio_acc_b1
-// Expected today (main 25cefb67): 17 pass, 3 fail — failing: AT-5 (POST /combinations/:id/forms makes the checklist
-// IMM 5484 a filed form line, 201 {"added":"IMM 5484"}), AT-6 (the released sample With an LMIA has the checklists
-// IMM 5488 and IMM 5905 as filed lines) and AT-7 (With an LMIA's channels list counts those two as filing lines), all
-// because nothing stops a checklist from being a form line (QA-101). POST …/lines already refuses it (AT-5 second check).
-import { execFileSync } from "node:child_process";
+// Expected today (main 931cb99a, run 1 Nov 2026 on an isolated copy, US$0): 21 pass, 5 fail — failing: AT-5 (POST
+// /combinations/:id/forms makes the checklist IMM 5484 a filed form line, 201), AT-6 and AT-7 (the released With an
+// LMIA has the checklists IMM 5488 and IMM 5905 as filed lines, and its filing lines count them), all because nothing
+// stops a checklist from being a form line (QA-101); AT-12 twice (a form held only online is listed as "no file", not
+// "Online only · no official PDF", P-152). AT-13 (P-156 checklist page confirmed once) guards what works.
+// Exit: 0 all pass · 1 a check failed · 2 setup missing or refused (demo port or database, copy not reachable, sample).
+import { checkCopy, needCombo, sqlFor, stop } from "./lib/pack1.ts";
 
 const PORT = Number(process.argv[2] ?? 4564), DB = process.argv[3] ?? "xr_studio_acc_b1";
 let pass = 0, fail = 0;
@@ -21,22 +28,18 @@ const call = async (method: string, path: string, body?: unknown, actor: string 
   const t = await r.text(); let j: unknown = t; try { j = JSON.parse(t); } catch { /* not JSON */ }
   return { status: r.status, body: j };
 };
-const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
+const sql = sqlFor(DB);
 const words = (b: any) => `${b?.detail ?? ""} ${b?.message ?? ""}`; // eslint-disable-line @typescript-eslint/no-explicit-any
-const stop = (why: string) => { console.error(`STOP  ${why}`); process.exit(2); };
 /** The newest version of each form line of a combination that is not removed (as effective() reads them). */
 const liveLines = (combo: string) => sql(`select cf.lineage_key from combination_form cf where cf.combination_id='${combo}' and cf.version=(select max(v.version) from combination_form v where v.combination_id=cf.combination_id and v.lineage_key=cf.lineage_key) and cf.status<>'RETIRED' order by 1`).split("\n").filter(Boolean);
 const spend = () => sql("select coalesce(sum(cost_usd),0) from drafting_job");
 type Row = { code: string; type: string; accepts: string | null; field_map: { kind: string }; used_by: { id: string; as_source?: boolean }[] };
 
 (async () => {
-  const served = (await call("GET", "/session").catch(() => ({ status: 0, body: null }))).body?.workspace?.id;
-  if (!served) stop(`no copy answers on port ${PORT}: start it with zsh tools/isolated.sh acc_b1 ${PORT} start`);
-  try { if (!sql(`select id from workspace where id='${served}'`)) throw new Error(); } catch { stop(`the database ${DB} is not the one the server on port ${PORT} uses`); }
+  await checkCopy(PORT, DB);
   if ((await call("POST", "/demo/reset", { confirm: "RESET" })).status >= 300) stop("demo reset refused");
   if ((await call("POST", "/demo/load")).status !== 201) stop("the sample did not load");
-  const vv = sql("select id from combination where combination_key='vv.single'"), wp = sql("select id from combination where combination_key='wp.family'");
-  if (!vv || !wp) stop("the sample has no Visitor visa (vv.single) or With an LMIA (wp.family)");
+  const vv = await needCombo(PORT, DB, "visitor_visa"), wp = await needCombo(PORT, DB, "lmia_work_permit");
   const spend0 = spend();
   const lib = (await call("GET", "/library/forms/list")).body.rows as Row[];
   const kind = (code: string) => lib.find((r) => r.code === code)?.type;
@@ -68,15 +71,16 @@ type Row = { code: string; type: string; accepts: string | null; field_map: { ki
   ok("setup: IMM 5484 is a checklist and Guide 5256 a guide in the library", kind("IMM 5484") === "checklist" && kind("Guide 5256") === "guide", [kind("IMM 5484"), kind("Guide 5256")]);
   const chk = await call("POST", `/combinations/${vv}/forms`, { formKey: "IMM 5484" });
   ok("C11.11 AT-5 [IRCC-F06] a checklist (IMM 5484) is never added as a filed form line: refused in words (4xx), no line made", chk.status >= 400 && chk.status < 500 && /checklist/i.test(words(chk.body)) && !liveLines(vv).includes("IMM 5484"), { status: chk.status, body: chk.body, lines: liveLines(vv) });
-  const sv = sql("select id from combination where combination_key='sv.super_visa'");
-  const viaLines = await call("POST", `/combinations/${sv}/lines`, { formKey: "IMM 5881", kind: "FORM" });
-  ok("C11.11 AT-5 [IRCC-F06] the other route (POST …/lines, Super visa, checklist IMM 5881) does not make it a form line either", !liveLines(sv).includes("IMM 5881"), { status: viaLines.status, body: viaLines.body, lines: liveLines(sv) });
+  // The other route, on the same real target (Visitor visa exists in today's sample and in P-112's): another checklist.
+  if (kind("IMM 5881") !== "checklist") stop("IMM 5881 is not a checklist in the library");
+  const viaLines = await call("POST", `/combinations/${vv}/lines`, { formKey: "IMM 5881", kind: "FORM" });
+  ok("C11.11 AT-5 [IRCC-F06] the other route (POST …/lines, Visitor visa, checklist IMM 5881) makes no form line and says so: refused in words (4xx), or kept as a source read by AI (added: source) with words", ((viaLines.status >= 400 && viaLines.status < 500) || (viaLines.status < 300 && viaLines.body?.added === "source")) && words(viaLines.body).trim().length > 10 && !liveLines(vv).includes("IMM 5881"), { status: viaLines.status, body: viaLines.body, lines: liveLines(vv) });
   const guide = await call("POST", `/combinations/${vv}/forms`, { formKey: "Guide 5256" });
   ok("C11.11 AT-5 [IRCC-F06] a guide is never a form line: refused (4xx), no line", guide.status >= 400 && guide.status < 500 && !liveLines(vv).includes("Guide 5256"), guide.status);
   const readOnly = lib.filter((r) => r.type !== "form").map((r) => r.code);
   const offenders = sql(`select c.combination_key || ' ' || cf.lineage_key from combination_form cf join combination c on c.id=cf.combination_id where cf.version=(select max(v.version) from combination_form v where v.combination_id=cf.combination_id and v.lineage_key=cf.lineage_key) and cf.status<>'RETIRED' and cf.lineage_key in (${readOnly.map((c) => `'${c}'`).join(",")})`).split("\n").filter(Boolean).filter((x) => !x.endsWith("IMM 5484"));
   ok("C11.11 AT-6 [IRCC-F06] the loaded sample has no guide or checklist as a filed form line on any combination (draft or released)", offenders.length === 0, offenders);
-  // The checklist stays a source read by AI: Visitor visa and Super visa use Guide 5256 as a source, not as a line.
+  // The guide stays a source read by AI: Visitor visa uses Guide 5256 as a source, not as a line.
   ok("C11.11 AT-6 pass: a guide is used by combinations as a source read by AI (used by, as source)", (lib.find((r) => r.code === "Guide 5256")?.used_by ?? []).some((u) => u.as_source === true), lib.find((r) => r.code === "Guide 5256")?.used_by);
   const ch = (await call("GET", `/combinations/${wp}/channels`)).body as { filing_method: string; lines: { form: string }[] };
   const cat = JSON.stringify((await call("GET", "/catalogue")).body);
@@ -97,6 +101,31 @@ type Row = { code: string; type: string; accepts: string | null; field_map: { ki
   // A file brought in on a combination is still a library form first (same intake: number + edition + checksum).
   const viaCombo = await call("POST", `/combinations/${vv}/attachments/sample`, { officialFile: "imm5409e.pdf" });
   ok("C11.11 AT-10 [IRCC-F03] a file brought in on a combination goes through the library intake first (in the library, by number and edition)", viaCombo.status < 300 && viaCombo.body?.outcome === "in_library" && viaCombo.body?.code === "IMM 5409" && /IMM 5409 \(01-2023\)/.test(viaCombo.body?.edition ?? ""), viaCombo.body);
+
+  // ── P-152: an online-only form (no public PDF) is flagged at intake, never asked for a PDF. Test input (SQL, Sample):
+  // a library form held only as its online version, with P-152's system code.
+  const ONLINE = "ONLINE-IRCC-EE-PROFILE";
+  sql(`insert into gov_form_def (id, workspace_id, form_key, display_name, form_kind) select gen_random_uuid(), workspace_id, '${ONLINE}', 'Express Entry profile (online only, Sample)', 'data_form' from gov_form_def where form_key='IMM 5409'`);
+  sql(`insert into form_edition select (jsonb_populate_record(null::form_edition, to_jsonb(e) || jsonb_build_object('id', gen_random_uuid(), 'gov_form_def_id', (select id from gov_form_def where form_key='${ONLINE}'), 'edition_label', '${ONLINE} (online)', 'channel', 'ONLINE', 'sha256', null, 'official_file', null, 'stored_path', null, 'inventory_file', null, 'form_page_url', null, 'source_url', null, 'canada_updated', null, 'portal_key', 'ee-profile', 'content_sha256', repeat('cd', 32)))).* from form_edition e join gov_form_def d on d.id=e.gov_form_def_id where d.form_key='IMM 5409' limit 1`);
+  const onl = ((await call("GET", "/library/forms/list")).body.rows as (Row & { status: string; edition: string | null })[]).find((r) => r.code === ONLINE);
+  const onlText = JSON.stringify(onl ?? {});
+  ok("C11.11 AT-12 [P-152] pass: a form held only online is in the Forms list flagged \"Online only · no official PDF\" with its system code", !!onl && /Online only · no official PDF/.test(onlText), onl);
+  ok("C11.11 AT-12 [P-152] refusal: it is never asked for a PDF: not counted as \"no file\", no upload-its-PDF next step, no PDF edition", !!onl && onl.status !== "no_file" && !/upload its PDF|Upload PDF/i.test(onlText) && sql(`select count(*) from form_edition e join gov_form_def d on d.id=e.gov_form_def_id where d.form_key='${ONLINE}' and e.channel<>'ONLINE'`) === "0", { status: onl?.status, words: onlText.slice(0, 200) });
+
+  // ── P-156 (2): each combination keeps its IRCC apply/checklist page: the rules propose, a person confirms once.
+  const pages = (await call("GET", `/combinations/${vv}/official-pages`)).body as { pages: { state: string; matches?: number }; candidates: { id: string; match: boolean; title: string }[] };
+  const proposed = pages?.candidates?.find((c) => c.match), other = pages?.candidates?.find((c) => !c.match);
+  if (!proposed || !other) stop("Visitor visa has no rules-proposed official page and another page to choose from");
+  const stored = () => sql(`select count(*) from combination_official_pages where combination_id='${vv}'`);
+  ok("C11.11 AT-13 [P-156] the rules propose exactly one page for Visitor visa before anyone confirms; nothing is stored yet", pages.pages.state === "proposed" && pages.candidates.filter((c) => c.match).length === 1 && stored() === "0", pages.pages);
+  const asClientPg = await call("POST", `/combinations/${vv}/official-pages/confirm`, { attachmentId: proposed!.id }, "user-P");
+  const otherPg = await call("POST", `/combinations/${vv}/official-pages/confirm`, { attachmentId: other!.id });
+  ok("C11.11 AT-13 [P-156] refusal: a client cannot confirm (403), and the author cannot confirm a page the rules did not propose (403, it is the immigration expert's call, in words); nothing stored", asClientPg.status === 403 && otherPg.status === 403 && /immigration expert/.test(words(otherPg.body)) && stored() === "0", [asClientPg.status, otherPg.status, words(otherPg.body).slice(0, 120)]);
+  const conf = await call("POST", `/combinations/${vv}/official-pages/confirm`, { attachmentId: proposed!.id });
+  const conf2 = await call("POST", `/combinations/${vv}/official-pages/confirm`, { attachmentId: proposed!.id });
+  const after = (await call("GET", `/combinations/${vv}/official-pages`)).body;
+  ok("C11.11 AT-13 [P-156] pass: the author confirms the proposed page once: stored for this combination with who and the tier; the same confirm again writes nothing", conf.status < 300 && after?.pages?.state === "confirmed" && after?.record?.confirmedBy === "user-A" && after?.record?.confirmedAs === "author" && conf2.body?.again === true && sql(`select count(*) from audit_event where action='confirmed' and entity='official page' and entity_key='${vv}'`) === "1" && stored() === "1", { conf: conf.status, state: after?.pages?.state, again: conf2.body?.again });
+  ok("C11.11 AT-13 [P-156] each combination keeps its own: With an LMIA's page is not confirmed by Visitor visa's", sql(`select count(*) from combination_official_pages where combination_id='${wp}'`) === "0", sql(`select count(*) from combination_official_pages where combination_id='${wp}'`));
 
   ok("C11.11 AT-11 US$0: nothing in this file spent money", spend() === spend0, { before: spend0, after: spend() });
   console.log(`\n${pass} passed, ${fail} failed`);

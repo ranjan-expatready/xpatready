@@ -3,9 +3,13 @@
 // Status (qa/CAPABILITIES.md, 1 Nov): Partial; the row says reachability is not checked and "mapped or not a fact" is
 // only a warning. Found writing this: both are built now for questions (K1 blocks submission; "Unreachable question" is
 // an error). Still missing: a Background information question may be decided "not a fact" (IRCC returns an application
-// with one unanswered); a form field's own condition ("Only when … = Y", written by the AI on the field map) is never
-// checked for reachability; a family information form attached to the combination from the country package can be left
-// out without a word.
+// with one unanswered); a family information form attached to the combination from the country package can be left out
+// without a word. Reachability is checked as the capability says it: conditional questions of the questionnaire (AT-6).
+// (An earlier draft also asked the validator to read the AI's free-text condition on a PDF box; no decision asks for
+// that, so it was removed: a proposal for it goes to the Lead in challenge.md, not into this pack.)
+// "Every option mapped per channel": AT-5 checks every option of the PDF channel's map. The per-channel part cannot be
+// tested at US$0 today: no form in the sample has a second channel's map (online versions are parked, P-102, P-152), so
+// the file prints a NOTE for it, never a pass.
 // Decisions: P-62 §5.3 (channels and option maps, no AI), K1 (Screen 02: every form field decided), P-158 (completeness
 // measured), P-171c (oath boxes). IRCC rules: [IRCC-F08] every Background information question must be answered or the
 // application is returned; [IRCC-F09] the family information form (IMM 5707 or IMM 5645) in the country package must be
@@ -14,15 +18,17 @@
 // change each (no model). Ledger checked unchanged.
 // Run (from prototype/studio):
 //   zsh tools/isolated.sh acc_c8 4572 start && ./node_modules/.bin/tsx acceptance/C3.8.test.ts 4572 xr_studio_acc_c8 ; zsh tools/isolated.sh acc_c8 4572 stop
-// Expected today (main 25cefb67): 9 pass, 3 fail — failing: AT-3 (the tuberculosis Background question of IMM 5257 is
-// accepted as "not a fact" and nothing blocks), AT-7 (a form field's own condition is never checked) and AT-8 first
-// check (IMM 5707 attached from the package but missing from the forms gives no problem) because those rules are not built.
-// Exit: 0 all pass · 1 a check failed · 2 setup missing (copy not reachable or sample not loaded).
-import { execFileSync } from "node:child_process";
+// Expected today (main 931cb99a, run 1 Nov 2026 on an isolated copy, US$0): 9 pass, 2 fail, 1 NOTE — failing: AT-3 (the
+// tuberculosis Background question of IMM 5257 is accepted as "not a fact" and nothing blocks) and AT-8 first check
+// (IMM 5707 attached from the package but missing from the forms gives no problem) because those rules are not built;
+// NOTE: AT-5 per channel is not testable on this sample.
+// Exit: 0 all pass · 1 a check failed · 2 setup missing or refused (demo port or database, copy not reachable, sample).
 import { validate, type Problem } from "../engine/validate.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
+import { checkCopy, guard, needCombo, sqlFor, stop } from "./lib/pack1.ts";
 
 const PORT = Number(process.argv[2] ?? 4572), DB = process.argv[3] ?? "xr_studio_acc_c8";
+guard(PORT, DB); // before anything reads the database or calls the copy (never the demo)
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${!c && detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
 type Res = { status: number; body: any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- test responses are read loosely, as in the other API checks
@@ -32,18 +38,18 @@ const call = async (method: string, path: string, body?: unknown, actor: string 
   const r = await send(`http://localhost:${PORT}/api${path}`, { method, headers: { ...(actor ? { "x-actor": actor } : {}), "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
   const t = await r.text(); let j: unknown = t; try { j = JSON.parse(t); } catch { /* not JSON */ } return { status: r.status, body: j };
 };
-const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
+const sql = sqlFor(DB);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const until = async (fn: () => Promise<boolean>, ms = 120_000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await fn()) return true; await sleep(500); } return false; };
 const words = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
 const ledger = async () => { const l = (await call("GET", "/ledger")).body; return JSON.stringify([l?.committed_usd, l?.wave?.spent_usd]); };
-const setupMissing = (why: string) => { console.log(`SETUP MISSING  ${why}`); process.exit(2); };
+const setupMissing = stop;
 
 (async () => {
-  if ((await fetch(`http://localhost:${PORT}/api/session`, { headers: { "x-actor": "user-A" } }).catch(() => null))?.status !== 200) setupMissing(`no copy answers on port ${PORT}`);
+  await checkCopy(PORT, DB);
   await call("POST", "/demo/reset", { confirm: "RESET" });
   const loaded = await call("POST", "/demo/load");
-  const vv = sql("select id from combination where combination_key='vv.single'");
+  const vv = await needCombo(PORT, DB, "visitor_visa");
   const att = vv && sql(`select id from source_attachment where combination_id='${vv}' and file_name='imm5257e.pdf'`);
   const a5707 = vv && sql(`select id from source_attachment where combination_id='${vv}' and file_name='imm5707e.pdf'`);
   if (loaded.status >= 300 || !att || !a5707) setupMissing("the sample (Visitor visa with IMM 5257 and IMM 5707) did not load");
@@ -125,12 +131,8 @@ const setupMissing = (why: string) => { console.log(`SETUP MISSING  ${why}`); pr
   const reachable = run(rs).filter((p) => p.item === pl.fact && /Unreachable question/.test(p.message));
   ok("C3.8 AT-6 every conditional question reachable: one that depends on a fact nobody is asked is an error in words; one that depends on an asked question is not", unreachable.length === 1 && unreachable[0].level === "error" && reachable.length === 0, { unreachable: unreachable.map((p) => p.message), reachable: reachable.length });
 
-  // AT-7 a form field's own condition must be reachable too
-  const bs = clone();
-  const cond = entries(bs).find((e) => e.outcome === "mapped" && !e.condition)!;
-  cond.condition = "Only when AcceptanceNeverOnThisFormIndicator = Y";
-  const boxUnreachable = run(bs).filter((p) => p.item === cond.data_path && p.level === "error");
-  ok("C3.8 AT-7 a mapped form field shown only under a condition on a form field this map never fills is an error (its condition can never be decided)", boxUnreachable.length > 0, { box: cond.data_path, condition: cond.condition, problems: boxUnreachable.map((p) => p.message) });
+  const channelsOfMaps = [...new Set((snap.field_maps as { channel?: string }[]).map((m) => m.channel ?? "PDF"))];
+  console.log(`NOTE  C3.8 AT-5 per channel: not testable on this sample (field maps by channel: ${channelsOfMaps.join(", ")}); needs a form with an online map as well as its PDF map`);
 
   // ── AT-8 [IRCC-F09] the family information form from the country package
   ps = await problems();

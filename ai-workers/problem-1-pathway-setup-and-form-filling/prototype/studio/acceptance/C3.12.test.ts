@@ -2,17 +2,27 @@
 // sees the Forms list: code, title, edition as printed, published, field map, used by, status, with every edition.
 // Decisions: P-123 (one lean list, filters not groups), P-32 (editions), P-103 (number + edition + checksum), P-116.
 // Missing per CAPABILITIES: "field map not in the list" — out of date: GET /library/forms/list now carries field_map.
-// Still missing: a "published" value per row (the date IRCC printed or published the edition: the intake reads it, e.g.
-// IMM 5476 11-2025 → 2025-12-15, but the list does not return it).
+// "Published" is IRCC's date, never the PDF file's own creation date (AGENTS rule 4: values from official sources): the
+// "Last updated" month on the form's canada.ca page where the recorded copy has one (official-sources/ircc/canada/pages,
+// recorded 27 Oct; e.g. IMM 5476: "Last updated: November 2025"), else the edition date printed on the form (MM-YYYY).
+// The field name `published` (YYYY-MM) is this file's proposal; the list's existing `canada_updated` is read when it is
+// absent. Still missing: the forms whose page copy has no "Last updated" (the checklists IMM 5488, IMM 5881, IMM 5905)
+// have no published date, although their printed edition gives one.
+// [IRCC-F01]: a file whose checksum is not canada.ca's is held for a second person, never added, attached or sent to AI
+// (AT-10, an official PDF changed by one appended line, Sample test input).
 // API and data level only (the screen is journey J1). Official IRCC PDFs only. US$0: rules read official files, no model.
 //   zsh tools/isolated.sh acc_b3 4566 start && ./node_modules/.bin/tsx acceptance/C3.12.test.ts 4566 xr_studio_acc_b3
-// Expected today (main 25cefb67): 14 pass, 1 fail — failing: AT-3 (no row of GET /library/forms/list has a "published"
-// value; the intake knows it, the list drops it), because the Forms list has no Published column yet.
-import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+// Expected today (main 931cb99a, run 1 Nov 2026 on an isolated copy, US$0): 16 pass, 1 fail — failing: AT-3 (IMM 5488,
+// IMM 5881 and IMM 5905 show no published date: their recorded page copy has no "Last updated", and the printed edition
+// date 10-2024, 05-2026, 03-2026 is not used). AT-10 ([IRCC-F01] held when the checksum is not canada.ca's) guards what
+// works.
+// Exit: 0 all pass · 1 a check failed · 2 setup missing or refused (demo port or database, copy not reachable, sample).
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { checkCopy, guard, sqlFor, stop } from "./lib/pack1.ts";
 
 const PORT = Number(process.argv[2] ?? 4566), DB = process.argv[3] ?? "xr_studio_acc_b3";
+guard(PORT, DB); // before anything reads the database or calls the copy (never the demo)
 const IRCC = join(import.meta.dirname, "..", "..", "..", "official-sources", "ircc");
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${!c && detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
@@ -22,11 +32,10 @@ const call = async (method: string, path: string, body?: unknown, actor: string 
   const t = await r.text(); let j: unknown = t; try { j = JSON.parse(t); } catch { /* not JSON */ }
   return { status: r.status, body: j };
 };
-const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
-const stop = (why: string) => { console.error(`STOP  ${why}`); process.exit(2); };
+const sql = sqlFor(DB);
 const words = (b: any) => `${b?.detail ?? ""} ${b?.message ?? ""}`; // eslint-disable-line @typescript-eslint/no-explicit-any
 const spend = () => sql("select coalesce(sum(cost_usd),0) from drafting_job");
-type Row = { code: string; title: string; type: string; edition: string | null; published?: string | null; field_map: { kind: string; decided: number; total: number; words: string }; used_by: { id: string; label: string }[]; status: string; older_editions: unknown[] };
+type Row = { code: string; title: string; type: string; edition: string | null; published?: string | null; canada_updated?: string | null; form_page_url?: string | null; field_map: { kind: string; decided: number; total: number; words: string }; used_by: { id: string; label: string }[]; status: string; older_editions: unknown[] };
 const list = async (qs = "") => (await call("GET", `/library/forms/list${qs}`)).body as { rows: Row[]; counts: Record<string, number> };
 /** Upload PDF in the Form library (no combination): one run per file, each followed to its end. */
 const upload = async (names: string[], actor: string | null = "user-A") => {
@@ -42,9 +51,7 @@ const upload = async (names: string[], actor: string | null = "user-A") => {
 };
 
 (async () => {
-  const served = (await call("GET", "/session").catch(() => ({ status: 0, body: null }))).body?.workspace?.id;
-  if (!served) stop(`no copy answers on port ${PORT}: start it with zsh tools/isolated.sh acc_b3 ${PORT} start`);
-  try { if (!sql(`select id from workspace where id='${served}'`)) throw new Error(); } catch { stop(`the database ${DB} is not the one the server on port ${PORT} uses`); }
+  await checkCopy(PORT, DB);
   if ((await call("POST", "/demo/reset", { confirm: "RESET" })).status >= 300) stop("demo reset refused");
   if ((await call("POST", "/demo/load")).status !== 201) stop("the sample did not load");
   const spend0 = spend();
@@ -56,8 +63,20 @@ const upload = async (names: string[], actor: string | null = "user-A") => {
   ok("C3.12 AT-1 pass: every row has code, title, type, edition, field map (kind and words), used by, status and its older editions", all.rows.every((r) => r.code && r.title && ["form", "guide", "checklist"].includes(r.type) && "edition" in r && r.field_map?.kind && typeof r.field_map.words === "string" && Array.isArray(r.used_by) && r.status && Array.isArray(r.older_editions)), all.rows.filter((r) => !r.field_map || !Array.isArray(r.older_editions)).map((r) => r.code));
   ok("C3.12 AT-2 [IRCC-F03] pass: each IRCC form's edition is shown as printed on it: its number and (MM-YYYY)", forms.length >= 6 && forms.every((r) => new RegExp(`^${r.code} \\(\\d\\d-\\d{4}\\)$`).test(r.edition!)), forms.map((r) => r.edition));
   ok("C3.12 AT-2 [IRCC-F03] fail case: a form listed by IRCC with no file has no edition (never guessed) and status no_file", all.rows.filter((r) => r.status === "no_file").every((r) => r.edition === null && r.field_map.kind === "no_edition") && all.rows.some((r) => r.status === "no_file"), all.rows.filter((r) => r.status === "no_file"));
-  const pubRow = forms.find((r) => r.code === "IMM 5476");
-  ok("C3.12 AT-3 pass: each IRCC form row says when its edition was published (IMM 5476 11-2025: 2025-12-15, as the intake reads it)", forms.every((r) => typeof r.published === "string" && /\d{4}-\d\d(-\d\d)?/.test(r.published)) && /^2025-12/.test(pubRow?.published ?? ""), forms.map((r) => [r.code, r.published]));
+  // Published (proposal `published`, else today's `canada_updated`): the page's "Last updated" month, else the printed edition.
+  const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const PAGES = join(IRCC, "canada", "pages");
+  const pageUpdated = (url?: string | null) => {
+    const f = url ? join(PAGES, url.split("/").pop()!.replace(/\?.*$/, "")) : "";
+    if (!f.endsWith(".html") || !existsSync(f)) return null;
+    const m = /Last updated: (\w+) (\d{4})/.exec(readFileSync(f, "utf8"));
+    return m && MONTHS.includes(m[1]) ? `${m[2]}-${String(MONTHS.indexOf(m[1]) + 1).padStart(2, "0")}` : null;
+  };
+  const printed = (ed: string | null) => { const m = /\((\d\d)-(\d{4})\)$/.exec(ed ?? ""); return m ? `${m[2]}-${m[1]}` : null; };
+  const dated = all.rows.filter((r) => r.type !== "guide" && r.edition);
+  const want = dated.map((r) => ({ code: r.code, want: pageUpdated(r.form_page_url) ?? printed(r.edition), shown: r.published ?? r.canada_updated ?? null }));
+  ok("C3.12 AT-3 pass: each IRCC form and checklist row says when IRCC published its edition: the canada.ca page's \"Last updated\" month (IMM 5476: 2025-11), else the edition date printed on it — never the PDF file's own date",
+    want.length >= 8 && want.every((w) => !!w.want && (w.shown ?? "").startsWith(w.want!)) && want.find((w) => w.code === "IMM 5476")?.shown?.startsWith("2025-11"), want.filter((w) => !w.want || !(w.shown ?? "").startsWith(w.want!)));
 
   // ── Field map column agrees with the records underneath.
   const fm = (code: string) => sql(`select count(*) || '|' || count(*) filter (where m.outcome <> 'unresolved') from form_field_map m join form_edition e on e.id=m.form_edition_id join gov_form_def d on d.id=e.gov_form_def_id where d.form_key='${code}' and e.edition_label=(select edition from (select '${all.rows.find((r) => r.code === code)?.edition}' as edition) x) and m.version=(select max(v.version) from form_field_map v where v.form_edition_id=m.form_edition_id and v.data_path=m.data_path)`).split("|").map(Number);
@@ -94,6 +113,24 @@ const upload = async (names: string[], actor: string | null = "user-A") => {
   let txtEnd: any = null; // eslint-disable-line @typescript-eslint/no-explicit-any
   for (let i = 0; txtRun && i < 120 && !txtEnd; i++) { const r = await call("GET", `/runs/${txtRun}`); if (!["queued", "running", "stopping"].includes(r.body?.status)) txtEnd = r.body; else await new Promise((res) => setTimeout(res, 250)); }
   ok("C3.12 AT-8 fail case: a file that is not a PDF is refused by the rules in words ('This is not a PDF file'), US$0; nothing added", (txt.status === 400 || (txtEnd?.status === "failed" && (txtEnd.steps ?? []).some((s: { message?: string; usd?: number }) => /not a PDF/.test(s.message ?? "")) && (txtEnd.steps ?? []).every((s: { usd?: number }) => !s.usd))) && Number(sql("select count(*) from form_edition")) === n1, { status: txt.status, end: txtEnd?.status, steps: txtEnd?.steps?.map((s: { message?: string }) => s.message) });
+  // ── [IRCC-F01] a readable form whose checksum is not canada.ca's file is held for a second person (Sample test input:
+  // the official IMM 5710 with one line appended).
+  const n2 = Number(sql("select count(*) from form_edition"));
+  const changedPdf = Buffer.concat([readFileSync(join(IRCC, "forms", "imm5710e.pdf")), Buffer.from("\n% acceptance test: one line more (Sample)\n")]);
+  const fd2 = new FormData(); fd2.append("files", new Blob([new Uint8Array(changedPdf)], { type: "application/pdf" }), "imm5710e.pdf");
+  const up2 = await fetch(`http://localhost:${PORT}/api/library/forms/upload`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd2 });
+  const run2 = ((await up2.json().catch(() => ({}))) as { runId?: string }).runId;
+  let end2: any = null; // eslint-disable-line @typescript-eslint/no-explicit-any
+  for (let i = 0; run2 && i < 240 && !end2; i++) { const v = await call("GET", `/runs/${run2}`); if (!["queued", "running", "stopping"].includes(v.body?.status)) end2 = v.body; else await new Promise((res) => setTimeout(res, 250)); }
+  const said2 = JSON.stringify(end2?.steps?.map((x: { message?: string }) => x.message) ?? []);
+  ok("C3.12 AT-10 [IRCC-F01] refusal: a readable IMM 5710 whose checksum is not canada.ca's file is held for source verification (a second person), in words: not added to the library, attached or sent to AI; US$0",
+    end2?.status === "needs_person" && /Held for source verification/.test(said2) && /not added to the library, attached, or sent to AI/.test(said2) && Number(sql("select count(*) from form_edition")) === n2 && sql("select count(*) from intake_item where code='IMM 5710' and status='HELD'") !== "0" && (end2?.steps ?? []).every((x: { usd?: number }) => !x.usd), { status: end2?.status, said: said2.slice(0, 300) });
+  const fd3 = new FormData(); fd3.append("files", new Blob([new Uint8Array(readFileSync(join(IRCC, "forms", "imm5710e.pdf")))], { type: "application/pdf" }), "imm5710e.pdf");
+  const up3 = await fetch(`http://localhost:${PORT}/api/library/forms/upload`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd3 });
+  const run3 = ((await up3.json().catch(() => ({}))) as { runId?: string }).runId;
+  let end3: any = null; // eslint-disable-line @typescript-eslint/no-explicit-any
+  for (let i = 0; run3 && i < 240 && !end3; i++) { const v = await call("GET", `/runs/${run3}`); if (!["queued", "running", "stopping"].includes(v.body?.status)) end3 = v.body; else await new Promise((res) => setTimeout(res, 250)); }
+  ok("C3.12 AT-10 [IRCC-F01] pass: the very file canada.ca's page links (same checksum) joins the library with no second person", end3?.status === "done" && /^IMM 5710 \(\d\d-\d{4}\)$/.test(sql("select e.edition_label from form_edition e join gov_form_def d on d.id=e.gov_form_def_id where d.form_key='IMM 5710'")), { status: end3?.status, said: JSON.stringify(end3?.steps?.map((x: { message?: string }) => x.message) ?? []).slice(0, 300) });
   ok("C3.12 AT-9 US$0: no spend in this file", spend() === spend0, [spend0, spend()]);
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

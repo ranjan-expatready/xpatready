@@ -4,14 +4,14 @@ Numbered steps with the expected result at each step; the builder turns them int
 
 **Every run:** an isolated copy (`zsh tools/isolated.sh j2 4581 start`; Part C also needs `STUDIO_FAULT_SOURCE=imm5707e.pdf`, a test-only fault switch), Reset then Load sample, **no live switch**: saved AI answers only, US$0, the AI ledger must not move. People: Configuration author (user-A), Approver (user-B), Content reviewer (user-C), Case officer (user-O), Client A (user-P). Widths 400, 1024 and 1440 px, axe clean, keyboard only possible.
 
-**One file is mapped once (P-38):** IMM 5257 (09-2023) is shared by Visitor visa and Super visa and its saved field-map draft lives on Super visa. Visitor visa's guided path (Part A) links to that job; Part B's steps are done on that job, reached from Visitor visa.
+**One file is mapped once (P-38):** IMM 5257 (09-2023) has one field-map job wherever it is used. Today's sample keeps its saved draft on Super visa (not one of P-112's six); once Load sample holds P-112's six (P-148, C11.3 AT-9) the job is on Visitor visa itself. Either way Visitor visa's guided path (Part A, step 2) opens the job where the file is mapped, and Part B is done on that job, reached from Visitor visa. The tests find combinations by their structure trail (`acceptance/lib/pack1.ts`), so they work on both samples.
 
 ## Part A — one guided path per form (Visitor visa)
 
 1. As the author, Visitor visa › Forms tab. **Expected:** each form line has a step chip ("Step 2 of 6 · AI maps" etc.)
    that agrees with GET …/forms/:code/progress.
 2. Click IMM 5257's chip. **Expected:** the guided path with six steps (Read and add · AI maps · Review · New shared fields
-   · Second person · Field map complete), "your next step" and "What's left"; step 2 says "Being mapped in Super visa" with a
+   · Second person · Field map complete), "your next step" and "What's left"; step 2 says "Being mapped in Super visa" (today's sample; with P-112's six the job is Visitor visa's own) with a
    link there and no Draft button (the same file is mapped once).
 3. Reload with `?setup=IMM 5257`. **Expected:** the same step is open (resume); Escape returns focus to the chip.
 4. Follow the link to Super visa's job; decide two proposals; go back. **Expected:** step 3 now names the same next step
@@ -28,7 +28,7 @@ Numbered steps with the expected result at each step; the builder turns them int
 
 ## Part B — AI maps form fields, a person reviews (IMM 5257, reached from Visitor visa)
 
-10. Configuration author opens Visitor visa › Forms › IMM 5257 (09-2023), follows step 2 of its guided path to the form's mapping job (on Super visa) and clicks Draft field map there.
+10. Configuration author opens Visitor visa › Forms › IMM 5257 (09-2023), follows step 2 of its guided path to the form's mapping job (on Super visa today, on Visitor visa with P-112's six) and clicks Draft field map there.
    Expected: before anything starts, a cost line: "Saved AI answer for this same form: no model call, US$0." With live AI off on this copy, no live button is offered, and the dialog says AI now is switched off and what to use instead (C11.8 AT-1, today: missing).
 11. Starts the saved answer. Expected: a run card follows the person (top-bar chip): steps listed, each marked AI or rules, status in words, Stop button; when done "Done", spent US$0.00 (C11.8 AT-4/5).
 12. Opens the draft's form-field page. Expected: a summary "242 form fields: 161 mapped, 65 not a fact, 2 never filled, 14 open; 84 shared fields: 34 reuse, 23 new, 27 ambiguous, 0 conflicting"; items ordered conflict, ambiguous, new, reuse (C3.1 AT-5, AT-7).
@@ -54,7 +54,14 @@ Numbered steps with the expected result at each step; the builder turns them int
 29. Start a draft for IMM 5257 and IMM 5707 together where IMM 5707 fails (test copy with the induced fault). Expected: run card "Done with problems", IMM 5257's draft complete and reviewable, IMM 5707's step says what went wrong in plain words and one next step; spent US$0 (C3.3 AT-3, AT-4; C11.8 AT-3: today the run's line is a count with "See the details").
 30. Retry. Expected: only IMM 5707 runs again; after three attempts Retry is refused "needs a person" (C3.3 AT-5, AT-6).
 31. While a run is queued, click Stop as Content reviewer (no button / refused), then as author. Expected: "Stopped", each step "nothing was sent", spent US$0; Stop again says the run has already ended (C11.8 AT-6).
-32. With spend near the cap, ask for a live draft. Expected: a dialog with expected and worst cost in words, Continue and Cancel; Cancel starts nothing; Continue (author only) records who and the amount, starts exactly that run; Retry of that run needs no new Continue; past US$132 no Continue is offered (C11.8 AT-7..AT-10).
+32. With spend near the cap (setup: restart the copy with a scratch spend ledger seeded near the cap and the queue held, as `acceptance/C11.8.test.ts` does; never the machine's shared ledger), ask for a live draft. Expected: a dialog with expected and worst cost in words, Continue and Cancel; Cancel starts nothing; Continue (author only) records who and the amount, starts exactly that run; Retry of that run needs no new Continue; past US$132 no Continue is offered (C11.8 AT-7..AT-10).
+
+## Live gate (needs the founder's Go; not part of the US$0 run)
+
+These two checks need a real live AI run (P-110: every AI run is proven live once), so they are not in `acceptance/C11.8.test.ts`. They run once, with the founder's Go and a stated budget, on an isolated copy with the live switch, and their evidence goes in the PR that makes C11.8 Works.
+
+L1. Start one live field-map draft of IMM 5257. **Expected:** the run card shows each part's progress while its AI call runs (done of total, step n of m); Stop during the call ends it, with no charge after Stop beyond calls already made.
+L2. Run it to the end. **Expected:** the ledger reserves the worst case first and settles the actual cost; the run card shows about / at most / spent, and the three agree with the ledger.
 
 ## The other five sample combinations
 
@@ -69,8 +76,8 @@ Today's sample still uses the older names and keys (`sv.super_visa`, `wp.family`
   no PDF path (P-152: drafted from ESDC's help pages, its own system code).
 
 ### Mapping and review (Parts B and C)
-* Super visa (sv.super_visa): same IMM 5257 file as Visitor visa: after step 12, its draft button says the form is already mapped and adds it from the library (no second AI draft, P-38); IMM 5707 is listed in its package, so step 16 applies.
-* Work permit, family (wp.family): forms already in the library (IMM 1295, 5409, 5476, 5475, 5257 SCH1, 5707) are added from the library with their reviewed maps (no AI); IMM 5257 SCH1 is conditional (background answers yes, [IRCC-F05]); IMM 5476 only with a representative; step 15's Background rule applies to IMM 1295's background questions too.
+* Super visa (sv.super_visa): same IMM 5257 file as Visitor visa: after step 12, its draft button says the form is already mapped and adds it from the library (no second AI draft, P-38); IMM 5707 is listed in its package, so step 25 applies.
+* Work permit, family (wp.family): forms already in the library (IMM 1295, 5409, 5476, 5475, 5257 SCH1, 5707) are added from the library with their reviewed maps (no AI); IMM 5257 SCH1 is conditional (background answers yes, [IRCC-F05]); IMM 5476 only with a representative; step 24's Background rule applies to IMM 1295's background questions too.
 * Family sponsorship, outside Canada (fs.outside): IMM 5475 and IMM 5476 only; the family information form there is IMM 5645 or IMM 5406 per the package ([IRCC-F09]: confirm which with the Lead before writing the check).
-* Study permit (sp.student): IMM 5475, 5476, 5707 from the library; IMM 5707 present, so step 16 passes.
+* Study permit (sp.student): IMM 5475, 5476, 5707 from the library; IMM 5707 present, so step 25 passes.
 * A new combination with no forms: the Draft field map button is absent until a form is added; Review shows the missing-forms line once (BR-8).

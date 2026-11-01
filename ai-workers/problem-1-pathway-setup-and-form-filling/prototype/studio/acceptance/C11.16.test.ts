@@ -9,16 +9,22 @@
 // Program structure pop-up in place), P-123, P-110, P-175 (live AI off on every copy without the switch), P-104.
 // US$0: the copy runs without any live switch; the saved answer is replayed; nothing calls a model or canada.ca.
 // Scaffolding (P-33, said here): the only saved finder answer is the sample's Visitor visa; to prove Start setup loads a
-// saved answer by itself, the check copies it under its own combination's key in p2/runs, and removes the copies at the end.
+// saved answer by itself, the check copies it under its own combination's key in p2/runs (the only folder the finder
+// reads saved answers from; no per-copy folder exists) with names marked "-pk1<process id>", and removes the copies at
+// the end, on an error, on Ctrl-C and SIGTERM, and any left by an earlier run whose process is gone
+// (acceptance/lib/pack1.ts plantRun). p2/runs/.gitignore does not cover these names: proposal for the Lead, add
+// "*-pk1*.json" to it. The "i" tooltip on Start setup (P-125 (3)) is screen-only: journey J1.
 //   zsh tools/isolated.sh acc_a1 4561 start && ./node_modules/.bin/tsx acceptance/C11.16.test.ts 4561 xr_studio_acc_a1
-// Expected today (main 25cefb67): 24 pass, 1 fail — failing: AT-9 (refusal) because PATCH /combinations/:id renames the combination
-// (200) outside Program structure, so the place is not read-only in its workspace (P-125 (3)).
-// Exit: 0 all pass · 1 a check failed · 2 setup missing (copy not reachable, wrong database).
-import { execFileSync } from "node:child_process";
-import { readFileSync, rmSync, writeFileSync } from "node:fs";
+// Expected today (main 931cb99a, run 1 Nov 2026 on an isolated copy, US$0): 23 pass, 2 fail — failing: AT-9 (PATCH
+// /combinations/:id renames the combination, 200) and AT-10 (the same PATCH with a move answers 200 instead of a
+// refusal in words), so the place is not read-only in its workspace (P-125 (3)).
+// Exit: 0 all pass · 1 a check failed · 2 setup missing or refused (demo port or database, copy not reachable, sample).
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { checkCopy, cleanupRuns, guard, PLANT_MARK, plantRun, RUNS, sqlFor } from "./lib/pack1.ts";
 
 const PORT = Number(process.argv[2] ?? 4561), DB = process.argv[3] ?? "xr_studio_acc_a1";
+guard(PORT, DB); // before anything reads the database or calls the copy (never the demo)
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 260)}` : ""}`); };
 type Res = { status: number; body: any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- responses are read loosely, as in tests/check_*.ts
@@ -29,7 +35,7 @@ const call = async (method: string, path: string, body?: unknown, actor = "user-
     return { status: r.status, body: j ?? {} };
   } catch (e) { return { status: 0, body: { detail: String(e) } }; }
 };
-const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+const sql = sqlFor(DB);
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const ended = async (runId: string) => { for (let i = 0; i < 120; i++) { const v = (await call("GET", `/form-finder/runs/${runId}`)).body; if (!["QUEUED", "RUNNING"].includes(v?.status)) return v; await wait(500); } return null; };
 const TECH = /ENOENT|errno|syscall|\/Users\/|node:|Prisma|at [A-Za-z.]+ \(|Error:/;
@@ -39,20 +45,15 @@ const card = async (key: string) => (await cards()).find((r) => r.nodeKey === ke
 const committed = async () => (await call("GET", "/ledger")).body?.committed_usd;
 const combosOf = (key: string) => sql(`select count(*) from combination c join program_def p on p.id=c.program_def_id where p.program_node_key='${key}'`);
 
-const RUNS = join(import.meta.dirname, "..", "..", "p2", "runs");
 const SAVED = ["studio-finder-forms-individual-visitors-visitor-visa-live-20261027t072426546z-4d8a0d.json", "studio-finder-forms-check-individual-visitors-visitor-visa-live-20261027t072500006z-a569fb.json"];
-const copies: string[] = [];
 const saveFor = (key: string) => SAVED.forEach((f, i) => {
   const r = JSON.parse(readFileSync(join(RUNS, f), "utf8")); r.drafting_run.inputs.combination = key;
-  const name = `${i ? "studio-finder-forms-check" : "studio-finder-forms"}-acc1116-live-20261101t00000000${i}z-acc${process.pid}.json`;
-  writeFileSync(join(RUNS, name), JSON.stringify(r)); copies.push(name);
+  plantRun(`${i ? "studio-finder-forms-check" : "studio-finder-forms"}-pk1c1116-live-20261101t00000000${i}z-${PLANT_MARK}.json`, r);
 });
-const cleanup = () => { for (const f of copies) rmSync(join(RUNS, f), { force: true }); };
+const cleanup = cleanupRuns;
 
 (async () => {
-  const served = (await call("GET", "/session")).body?.workspace?.id;
-  const inDb = (() => { try { return sql(`select id from workspace where id='${served}'`); } catch { return ""; } })();
-  if (!served || !inDb) { console.error(`STOP  setup missing: the copy on port ${PORT} is not reachable or does not use ${DB}. Start it: zsh tools/isolated.sh acc_a1 ${PORT} start`); process.exit(2); }
+  await checkCopy(PORT, DB);
   const reset = await call("POST", "/demo/reset", { confirm: "RESET" });
   if (reset.status >= 300) { console.error("STOP  setup missing: the demo reset failed", reset.status); process.exit(2); }
   const usd0 = await committed();
@@ -137,7 +138,7 @@ const cleanup = () => { for (const f of copies) rmSync(join(RUNS, f), { force: t
     r.status >= 400 && r.status < 500 && plain(r.body) && labelAfter === labelBefore, { status: r.status, detail: r.body?.detail, before: labelBefore, after: labelAfter });
   const progBefore = sql(`select program_def_id from combination where id='${vvId}'`);
   r = await call("PATCH", `/combinations/${vvId}`, { programKey: tv, nodeKey: tv, programDefId: sql(`select id from program_def where program_node_key='${tv}'`) });
-  ok("C11.16 AT-10 refusal: the setup cannot be moved to another place (a move in the request changes nothing underneath)", sql(`select program_def_id from combination where id='${vvId}'`) === progBefore && r.status < 500, { status: r.status });
+  ok("C11.16 AT-10 refusal: the setup cannot be moved to another place: refused in plain words (4xx, as AT-9), nothing changes underneath", sql(`select program_def_id from combination where id='${vvId}'`) === progBefore && r.status >= 400 && r.status < 500 && plain(r.body), { status: r.status, detail: r.body?.detail });
 
   // ------------------------------------------------ the one start guard, the same words on card and API
   r = await call("POST", "/structure/path", { pathwayType: "INDIVIDUAL", pathway: { key: tr }, program: { key: vis }, category: { label: "Old visit (test)" }, subCategory: null });

@@ -6,16 +6,19 @@
 // Official IRCC files only: IMM 5476 11-2021 (previous-editions/) and the current IMM 5476 11-2025 (forms/). No model
 // call (US$0); the comparison is field by field without AI. Builds on tests/check_forms_c24_same_and_new.ts.
 //   zsh tools/isolated.sh acc_b2 4565 start && ./node_modules/.bin/tsx acceptance/C2.4.test.ts 4565 xr_studio_acc_b2
-// Expected today (main 25cefb67): 21 pass, 1 fail — failing: AT-9 fail case (after the newer edition is accepted, the
-// 11-2021 file sent again says "Already in the library: IMM 5476 (11-2021). Nothing duplicated" instead of saying it is
-// an older edition that is not used), because the intake matches the old file's checksum before it compares editions.
-// The rest of the approved-newer-edition path (accept, 409 race and stale count, roles, older edition kept, combination
-// draft moves, published config unchanged) already works: CAPABILITIES' "not producible" note is out of date.
-import { execFileSync } from "node:child_process";
+// Expected today (main 931cb99a, run 1 Nov 2026 on an isolated copy, US$0): 21 pass, 1 fail — failing: AT-9 fail case
+// (after the newer edition is accepted, the 11-2021 file sent again says "Already in the library: IMM 5476 (11-2021).
+// Nothing duplicated" instead of saying it is an older edition that is not used), because the intake matches the old
+// file's checksum before it compares editions. The rest of the approved-newer-edition path (accept, 409 race and stale
+// count, roles, older edition kept, combination draft moves, published config unchanged) already works: CAPABILITIES'
+// "not producible" note is out of date.
+// Exit: 0 all pass · 1 a check failed · 2 setup missing or refused (demo port or database, copy not reachable, sample).
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { checkCopy, guard, sqlFor, stop } from "./lib/pack1.ts";
 
 const PORT = Number(process.argv[2] ?? 4565), DB = process.argv[3] ?? "xr_studio_acc_b2";
+guard(PORT, DB); // before anything reads the database or calls the copy (never the demo)
 const IRCC = join(import.meta.dirname, "..", "..", "..", "official-sources", "ircc");
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${!c && detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
@@ -25,8 +28,7 @@ const call = async (method: string, path: string, body?: unknown, actor: string 
   const t = await r.text(); let j: unknown = t; try { j = JSON.parse(t); } catch { /* not JSON */ }
   return { status: r.status, body: j };
 };
-const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
-const stop = (why: string) => { console.error(`STOP  ${why}`); process.exit(2); };
+const sql = sqlFor(DB);
 const words = (b: any) => `${b?.detail ?? ""} ${b?.message ?? ""}`; // eslint-disable-line @typescript-eslint/no-explicit-any
 type Out = { outcome: string; message: string; code: string | null; edition: string | null };
 const intake = async (dir: string, name: string, combinationId?: string): Promise<Out> => {
@@ -45,9 +47,7 @@ const node = async (level: string, label: string, parentKey: string | null, extr
 };
 
 (async () => {
-  const served = (await call("GET", "/session").catch(() => ({ status: 0, body: null }))).body?.workspace?.id;
-  if (!served) stop(`no copy answers on port ${PORT}: start it with zsh tools/isolated.sh acc_b2 ${PORT} start`);
-  try { if (!sql(`select id from workspace where id='${served}'`)) throw new Error(); } catch { stop(`the database ${DB} is not the one the server on port ${PORT} uses`); }
+  await checkCopy(PORT, DB);
   if ((await call("POST", "/demo/reset", { confirm: "RESET" })).status >= 300) stop("demo reset refused");
   const jobs0 = jobs(), spend0 = spend();
 

@@ -15,9 +15,9 @@ Numbered steps with the expected result at each step; the builder turns them int
 5. Type "visitor  VISA" as a new category. **Expect:** refused at once "already exists … choose it instead"; nothing saved.
 6. Look for the AI "did you mean". **Expect:** on this copy, words that AI is switched off on this copy (no cost, nothing sent); the spelling check still runs. Never a dead button.
 7. As Approver (user-B), open Program structure. **Expect:** no Add, Edit or Delete controls; the page still reads.
-8. Open Immigration programs, Retail. **Expect:** Visitor visa is a card with its full trail; one "Add combination" opening the same Add pop-up in place, and the "Program structure" button (P-128 (5)) — see question 1 on the one-link wording.
+8. Open Immigration programs, Retail. **Expect:** Visitor visa is a card with its full trail; one "Add combination" opening the same Add pop-up in place, and the "Program structure" button (P-128 (5)) (P-128 (5) replaced the C11.16 row's one link "Add a program or combination in Program structure"; question for the tech lead in the PR). Start setup on a Not started card has an "i" tooltip saying what it does, with an example and how cases use it once Live (P-125 (3)).
 9. Click the Visitor visa card. **Expect:** its workspace opens (never Program structure); the header shows the place Retail › Temporary residence › Visitors › Visitor visa as read-only text with a hint "Change it on Program structure"; no field there edits the name or level.
-10. Forms tab of Visitor visa. **Expect (today fails, C11.15 AT-1):** the saved finder answer was loaded by Load sample: its run card says saved answer, US$0, and the lines IMM 5257, IMM 5645, IMM 5707, IMM 5409, IMM 5476, IMM 5475, IRM 0002 show "Picked by AI · Sample" with no confirm step; IMM 5484 shows "AI's two rounds disagree · you decide"; IMM 5782 "Not for this application"; Guide 5256 is read, never a line.
+10. Forms tab of Visitor visa. **Expect (today fails, C11.15 AT-1):** the saved finder answer was loaded by Load sample: its run card says saved answer, US$0, and the lines IMM 5257, IMM 5645, IMM 5707, IMM 5409, IMM 5476, IMM 5475, IRM 0002 show "Picked by AI · Sample" with no confirm step; IMM 5484 shows "AI's two rounds disagree · you decide"; IMM 5782 "Not for this application"; Guide 5256 is read, never a line. **Sample:** which of these forms Visitor visa needs is Sample until the immigration expert confirms; IMM 5476 is conditional ("only if you are appointing a representative", IRCC-F05a) and the Family Information form is the one the country package lists (IMM 5707 for New Delhi, IRCC-F09), so the line for IMM 5476 says "Only when a representative is appointed" and only one of IMM 5645 / IMM 5707 is expected once the expert confirms the package.
 11. On IMM 5257, open ⋯. **Expect:** Redo with AI (Find, Read, Match, each with its cost first and Stop), Replace edition, Remove; one Undo for the tab.
 12. Replace on IMM 5257. **Expect:** "IMM 5257 (09-2023) is canada.ca's current file", nothing changes, US$0.
 13. Remove IMM 5409 (asks first), then Find again with the saved answer. **Expect:** IMM 5409 stays under "Removed in this draft" with Add back; Find again does not bring it back; Undo restores the last step only.
@@ -43,7 +43,7 @@ Numbered steps with the expected result at each step; the builder turns them int
 23. Look at the attached lines. **Expected:** no checklist or guide appears as a form line (IMM 5484 stays a source read by
    AI). (QA-101; C11.11 AT-5/AT-6 fail today.)
 24. Open "Add a form from the library" (picker). **Expected:** only IRCC forms that are ready; checklists and guides are not
-   offered as form lines (today the picker lists them: question 1 to the tech lead).
+   offered as form lines (today the picker lists them; question for the tech lead in the PR).
 25. Pick IMM 5257 again. **Expected:** "IMM 5257 is already one of this combination's forms." in words, nothing added.
 26. Pick IMM 5802 (listed by IRCC, no file). **Expected:** "listed by IRCC but has no file in the library yet: upload its
    PDF in the Form library, or let the form finder download it", with a link to the Form library.
@@ -72,6 +72,8 @@ Numbered steps with the expected result at each step; the builder turns them int
 
 ## The other five sample combinations
 
+Part A uses P-112's names; Part B's notes use today's sample keys (`sv.super_visa`, `sp.student`, `wp.family`, `lm.high_wage`, `fs.outside`): With an LMIA = Employer-specific work permit › With an LMIA – inside Canada; High-wage position = Corporate LMIA › High-wage position; Applicant outside Canada = Spouse or common-law partner sponsorship. Super visa is not one of P-112's six; its notes apply only while today's sample is loaded. The tests find combinations by their structure trail (`acceptance/lib/pack1.ts`).
+
 ### Setup and finder (Part A)
 * Study permit › Outside Canada: same steps 9–17, but no saved finder answer: the Forms tab offers one "Find forms with AI (about US$… · at most US$…)" and, on this copy, says AI is switched off with "Find form numbers by rules (free)"; nothing runs before a click. Today the sample has Study permit › No sub-category (C11.3 AT-9.2 fails).
 * Employer-specific work permit › With an LMIA – inside Canada: released (Live) in the sample; its card opens the workspace with Release 1; Remove/Replace work in a new draft; Undo refuses "Released since". Today named "With an LMIA" (AT-9.3).
@@ -80,7 +82,7 @@ Numbered steps with the expected result at each step; the builder turns them int
 * Corporate and employers › Temporary residence › Labour market impact assessment › High-wage position: on the Corporate tab only; same Start setup steps. Today the Program is named "LMIA" (AT-9.6).
 
 ### Library, editions and channels (Part B)
-* **Super visa (sv.super_visa):** shares IMM 5257 with Visitor visa; step 15's impact review lists both combinations; the
+* **Super visa (sv.super_visa):** shares IMM 5257 with Visitor visa; step 32's impact review lists both combinations; the
   saved IMM 5257 field-map draft lives here (J2 starts here for IMM 5257).
 * **Study permit (sp.student):** the QA-101 case: after Find, IMM 5483 (Document Checklist) must not be a form line; Guide
   5269 shows as a source read by AI.
