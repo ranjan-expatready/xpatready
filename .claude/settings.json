@@ -55,26 +55,11 @@
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/session-start.sh 2>/dev/null || true",
             "timeout": 30,
             "statusMessage": "Loading Pathway Configurator state"
-          },
-          {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/ai-workers/tools/snapshot.sh 2>/dev/null || true",
-            "timeout": 20
           }
         ]
       }
     ],
     "PreToolUse": [
-      {
-        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/ai-workers/tools/snapshot.sh 2>/dev/null || true",
-            "timeout": 20
-          }
-        ]
-      },
       {
         "matcher": "Bash",
         "hooks": [
@@ -115,11 +100,6 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/stop-check.sh",
-            "timeout": 20
-          },
-          {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/ai-workers/tools/snapshot.sh 2>/dev/null || true",
             "timeout": 20
           }
         ]
