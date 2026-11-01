@@ -46,6 +46,7 @@ import { Runs, RunsController } from "./runs.ts";
 import { UploadRuns } from "./upload-run.ts";
 import { StartSetup, StartSetupController } from "./start-setup.ts";
 import { LibrarySources, LibrarySourcesController, noFreeAdd } from "./library-sources.ts";
+import { registerFeatures } from "./features.ts";
 
 type H = string | undefined;
 
@@ -201,6 +202,8 @@ class AppModule {}
 
 async function main() {
   const port = Number(process.env.STUDIO_PORT ?? 4400);
+  // P-214: a new feature registers itself in api/src/features/<feature>.ts, not in the @Module list above.
+  await registerFeatures(AppModule);
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: ["error", "warn"] });
   app.useBodyParser("json", { limit: "5mb" });
   app.useGlobalFilters(new ProblemErrors());
