@@ -24,6 +24,12 @@ export type CostCheckInput = {
 };
 
 const usd = (n: number) => `US$${n.toFixed(2)}`;
+/** #131 review M1: a worst case is shown and accepted in whole cents rounded UP, never down. The runner reserves the exact
+ *  amount, so a worst case rounded down refused a Continue run's own second attempt by up to half a cent. */
+export const ceilCents = (n: number) => Math.ceil(n * 100 - 1e-7) / 100;
+/** #131 review: a run's worst case, the one place a plan computes it (Ai.estimate for a whole form, Sources.draftSplit for
+ *  each A4 part): its attempts at the per-attempt worst case, held to the run cap, rounded UP to the cent. */
+export const runWorstUsd = (perAttemptUsd: number, attempts: number, runCap = RUN_CAP_USD) => ceilCents(Math.min(runCap, perAttemptUsd * attempts));
 
 export function costCheck(i: CostCheckInput): CostCheck {
   const cap = i.caps?.experiment ?? EXPERIMENT_CAP_USD, waveCap = i.caps?.wave ?? WAVE1_CAP_USD, runCap = i.caps?.run ?? RUN_CAP_USD, ceiling = i.caps?.ceiling ?? OVERRIDE_CEILING_USD;
