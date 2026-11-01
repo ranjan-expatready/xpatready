@@ -1,14 +1,14 @@
 // C6.4 checks (M3-B, runtime lane): engine/runtime/case-checklist.ts builds a Visitor visa case's document checklist per
 // person from a small synthetic release and the case's answers. Each rule has a passing and a failing case. No database,
 // no server, no model call (US$0). Requirements and values are Sample until the immigration expert confirms (P-171).
-//   tsx studio/tests/runtime/check_vv_checklist.ts
-import { caseChecklist, issuedWithin, validityRules, type CaseChecklist } from "../../engine/runtime/case-checklist.ts";
-import { checkValue } from "../../engine/runtime/case.ts";
-import { validate } from "../../engine/validate.ts";
-import type { Known } from "../../engine/render.ts";
-import type { Snapshot } from "../../engine/snapshot.ts";
-import type { Participant } from "../../engine/runtime/case.ts";
-import { recorder } from "./api.ts";
+//   tsx studio/tests/check_vv_checklist.ts
+import { caseChecklist, duplicateValidity, issuedWithin, validityProblems, validityRules, type CaseChecklist } from "../engine/runtime/case-checklist.ts";
+import { checkValue } from "../engine/runtime/case.ts";
+import { validate } from "../engine/validate.ts";
+import type { Known } from "../engine/render.ts";
+import type { Snapshot } from "../engine/snapshot.ts";
+import type { Participant } from "../engine/runtime/case.ts";
+import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
 const TODAY = new Date("2026-11-01T12:00:00Z");
@@ -36,50 +36,54 @@ const known = (pairs: Record<string, unknown>): Known => new Map(Object.entries(
 type D = Extract<CaseChecklist, { derived: true }>;
 const run = (k: Known, ps = people, key = "vv.single") => caseChecklist(S, key, ps, k, TODAY) as D;
 const of = (r: D, who: string) => r.people.find((p) => p.subject === who)!;
-const line = (r: D, who: string, doc: string) => of(r, who).lines.find((l) => l.document.key === doc);
+const ALL = (p: D["people"][number]) => [...p.lines, ...p.waiting, ...p.not_needed];
+const line = (r: D, who: string, doc: string) => ALL(of(r, who)).find((l) => l.document.key === doc);
 const adults = { "A|person.date_of_birth": "1980-05-01", "B|person.date_of_birth": "1982-02-02", "C|person.date_of_birth": "2015-03-03" };
 
 // One list per person on the case (never the case row); each line only for the people it concerns.
 {
   const r = run(known(adults));
   ok("C6.4 per person: one checklist for each person on the case, none for the case row", r.people.length === 3 && !r.people.some((p) => p.role === "case"), r.people.map((p) => p.label));
-  ok("C6.4 per person: every applicant gets their own passport line", ["A", "B", "C"].every((w) => line(r, w, "passport")?.state === "needed"));
+  ok("C6.4 per person: every applicant gets their own passport line", ["A", "B", "C"].every((w) => line(r, w, "passport")?.need === "needed"));
   ok("C6.4 per person (fail): a child's line is never on an adult's list", !!line(r, "C", "birth_certificate") && !line(r, "A", "birth_certificate") && !line(r, "B", "birth_certificate"));
   const out = run(known(adults), [P("case", "case"), P("A", "principal"), P("B", "spouse_or_partner", false)]);
-  ok("C6.4 per person (fail): a person not applying gets no applicant lines", of(out, "B").lines.length === 0 && of(out, "B").applies === false);
+  ok("C6.4 per person (fail): a person not applying gets no applicant lines", ALL(of(out, "B")).length === 0 && of(out, "B").applies === false);
   ok("C6.4: the alternatives and the source quote travel with the line", line(r, "A", "passport")!.alternatives[0]?.name === "Photo" && line(r, "A", "passport")!.quote === "Sample quote");
 }
 // 18 and over: from the person's birth date on the case; unknown → answer first.
 {
   const r = run(known(adults));
-  ok("C6.4 adults: the principal and spouse (18+) need a police certificate", line(r, "A", "police_certificate")?.state === "needed" && line(r, "B", "police_certificate")?.state === "needed");
-  ok("C6.4 adults (fail): the 11-year-old child does not, and the reason names the age", line(r, "C", "police_certificate")?.state === "not_needed" && /this person is 11 on 2026-11-01/.test(line(r, "C", "police_certificate")!.why));
+  ok("C6.4 adults: the principal and spouse (18+) need a police certificate", line(r, "A", "police_certificate")?.need === "needed" && line(r, "B", "police_certificate")?.need === "needed");
+  ok("C6.4 adults (fail): the 11-year-old child does not, and the reason names the age", line(r, "C", "police_certificate")?.need === "not_needed" && /this person is 11 on 2026-11-01/.test(line(r, "C", "police_certificate")!.reason));
   const unknown = run(known({ "A|person.date_of_birth": "1980-05-01" }));
-  ok("C6.4 adults (fail): with no birth date the line says answer the birth date first", line(unknown, "B", "police_certificate")?.state === "answer_first" && line(unknown, "B", "police_certificate")!.missing.some((m) => m.key === "person.date_of_birth"));
+  ok("C6.4 adults (fail): with no birth date the line says answer the birth date first", line(unknown, "B", "police_certificate")?.need === "answer_first" && line(unknown, "B", "police_certificate")!.missing.some((m) => m.key === "person.date_of_birth"));
   const birthday = run(known({ ...adults, "C|person.date_of_birth": "2008-11-01" }));
-  ok("C6.4 adults: turning 18 today counts as 18", line(birthday, "C", "police_certificate")?.state === "needed");
+  ok("C6.4 adults: turning 18 today counts as 18", line(birthday, "C", "police_certificate")?.need === "needed");
   const eve = run(known({ ...adults, "C|person.date_of_birth": "2008-11-02" }));
-  ok("C6.4 adults (fail): 18 tomorrow is still 17 today", line(eve, "C", "police_certificate")?.state === "not_needed");
+  ok("C6.4 adults (fail): 18 tomorrow is still 17 today", line(eve, "C", "police_certificate")?.need === "not_needed");
 }
 // A conditional line follows the case's answers: needed, not needed, or answer first.
 {
-  ok("C6.4 condition: a family visit needs the invitation letter on the principal's list", line(run(known({ ...adults, "case|case.purpose": "family" })), "A", "invitation_letter")?.state === "needed");
+  ok("C6.4 condition: a family visit needs the invitation letter on the principal's list", line(run(known({ ...adults, "case|case.purpose": "family" })), "A", "invitation_letter")?.need === "needed");
   const tourism = line(run(known({ ...adults, "case|case.purpose": "tourism" })), "A", "invitation_letter")!;
-  ok("C6.4 condition (fail): a tourism visit does not, and says which answer decided it", tourism.state === "not_needed" && /the visit is to see family/.test(tourism.why));
+  ok("C6.4 condition (fail): a tourism visit does not, and says which answer decided it", tourism.need === "not_needed" && /the visit is to see family/.test(tourism.reason));
   const open = line(run(known(adults)), "A", "invitation_letter")!;
-  ok("C6.4 condition: unanswered → answer first, naming the fact", open.state === "answer_first" && open.missing.some((m) => m.key === "case.purpose"), open);
-  ok("C6.4 condition: the list changes when the answer changes (dynamic)", line(run(known({ ...adults, "case|case.purpose": "family" })), "A", "invitation_letter")!.state !== tourism.state);
+  ok("C6.4 condition: unanswered → answer first, naming the fact", open.need === "answer_first" && open.missing.some((m) => m.key === "case.purpose"), open);
+  ok("C6.4 condition: the list changes when the answer changes (dynamic)", line(run(known({ ...adults, "case|case.purpose": "family" })), "A", "invitation_letter")!.need !== tourism.need);
 }
 // qa G23: a line for a role appears once that person is added to the case.
 {
   const alone = run(known(adults), [P("case", "case"), P("A", "principal")]);
-  ok("C6.4 G23 (fail): with no spouse on the case nobody has a marriage certificate line", alone.people.every((p) => !p.lines.some((l) => l.document.key === "marriage_certificate")));
-  ok("C6.4 G23: once a spouse is added, the marriage certificate is on the spouse's list", line(run(known(adults)), "B", "marriage_certificate")?.state === "needed");
+  ok("C6.4 G23 (fail): with no spouse on the case nobody has a marriage certificate line", alone.people.every((p) => !ALL(p).some((l) => l.document.key === "marriage_certificate")));
+  ok("C6.4 G23: once a spouse is added, the marriage certificate is on the spouse's list", line(run(known(adults)), "B", "marriage_certificate")?.need === "needed");
 }
 // Order and counts: needed first, then answer first, then not needed.
 {
   const r = run(known(adults)), a = of(r, "A");
-  ok("C6.4 order: needed lines come first, not needed last", a.lines.map((l) => l.state).join() === ["needed", "needed", "answer_first"].join(), a.lines.map((l) => `${l.document.key}:${l.state}`));
+  ok("C6.4 lists: lines holds what the person needs, waiting what an answer decides first", a.lines.every((l) => l.need === "needed") && a.waiting.every((l) => l.need === "answer_first") && a.lines.length === 2 && a.waiting.length === 1, ALL(a).map((l) => `${l.document.key}:${l.need}`));
+  const all = r.people.flatMap(ALL);
+  ok("C6.4 pack 4 shape: every line has an id, document type, label, the team's state Not requested, a reason and required; storage is Stand-in SI-14", r.stand_in === "SI-14" && all.every((l) => l.id === `${r.people.find((p) => ALL(p).includes(l))!.subject}:${l.lineage}` && l.document_type === l.document.key && l.label === l.document.name && l.state === "not_requested" && l.reason.length > 5 && l.required === (l.need === "needed") && l.documents.length === 0));
+  ok("C6.4 pack 4 shape (fail): a line not needed is not in lines (pack C6.4-7, C6.4-9)", !of(r, "C").lines.some((l) => l.document.key === "police_certificate") && of(r, "C").not_needed.some((l) => l.document.key === "police_certificate"));
   ok("C6.4 counts: needed and answer-first are counted per person", a.needed === 2 && a.answer_first === 1 && of(r, "C").needed === 2);
 }
 // Police certificate age rule (P-171), carried as release data (a document_validity check), matched on the document type key.
@@ -114,24 +118,24 @@ const adults = { "A|person.date_of_birth": "1980-05-01", "B|person.date_of_birth
     req("consent:child", "consent", "each_dependent_child", { base_or_conditional: "conditional", condition: { subjectKind: "PRINCIPAL", op: "eq", field: "person.employed", value: true }, condition_plain: "the principal is employed" }),
   ] } as Snapshot;
   const r = caseChecklist(S3, "vv.single", people, known({ ...adults, "case|case.travel_insurance": true, "B|person.employed": false, "A|person.employed": true }), TODAY) as D;
-  const has = (who: string, k: string) => of(r, who).lines.find((l) => l.document.key === k);
-  ok("C6.4 R3: a case-level condition on an each-applicant line puts the line on every applicant's list", ["A", "B", "C"].every((w) => has(w, "insurance")?.state === "needed"), r.people.map((p) => p.lines.map((l) => l.document.key)));
+  const has = (who: string, k: string) => ALL(of(r, who)).find((l) => l.document.key === k);
+  ok("C6.4 R3: a case-level condition on an each-applicant line puts the line on every applicant's list", ["A", "B", "C"].every((w) => has(w, "insurance")?.need === "needed"), r.people.map((p) => p.lines.map((l) => l.document.key)));
   ok("C6.4 R3 (fail): it is not only on the principal's list (the earlier fault)", !!has("B", "insurance") && !!has("C", "insurance"));
-  ok("C6.4 R3: a line about the spouse's answers stays on the principal's list, decided by the spouse's answer", has("A", "employment_letter")?.state === "needed" && !has("B", "employment_letter"));
+  ok("C6.4 R3: a line about the spouse's answers stays on the principal's list, decided by the spouse's answer", has("A", "employment_letter")?.need === "needed" && !has("B", "employment_letter"));
   const working = caseChecklist(S3, "vv.single", people, known({ ...adults, "B|person.employed": true }), TODAY) as D;
-  ok("C6.4 R3 (fail): the spouse employed → the principal's employment letter is not needed", of(working, "A").lines.find((l) => l.document.key === "employment_letter")?.state === "not_needed");
-  ok("C6.4 R3: a child's line decided by the principal's answer is on the child's list only", has("C", "consent")?.state === "needed" && !has("A", "consent"));
+  ok("C6.4 R3 (fail): the spouse employed → the principal's employment letter is not needed", ALL(of(working, "A")).find((l) => l.document.key === "employment_letter")?.need === "not_needed");
+  ok("C6.4 R3: a child's line decided by the principal's answer is on the child's list only", has("C", "consent")?.need === "needed" && !has("A", "consent"));
   const noSpouse = caseChecklist(S3, "vv.single", [P("case", "case"), P("A", "principal")], known(adults), TODAY) as D;
-  ok("C6.4 R3 (fail): with no spouse on the case, a line about the spouse is not needed and says so", /no.*spouse|none on the case/.test(of(noSpouse, "A").lines.find((l) => l.document.key === "employment_letter")?.why ?? ""));
+  ok("C6.4 R3 (fail): with no spouse on the case, a line about the spouse is not needed and says so", /no.*spouse|none on the case/.test(ALL(of(noSpouse, "A")).find((l) => l.document.key === "employment_letter")?.reason ?? ""));
 }
 // B-M3: a calculated field is never asked; its input questions are, in words. Ages use the application date.
 {
   const S4 = { ...S, document_requirements: [req("senior:each", "senior_letter", "each_applicant", { base_or_conditional: "conditional", condition: { subjectKind: "EACH_APPLICANT", op: "gte", field: "person.age_years", value: 60 }, condition_plain: "the person is 60 or older" })] } as Snapshot;
-  const open = (caseChecklist(S4, "vv.single", people, known(adults), TODAY) as D).people[0].lines[0];
-  ok("C6.4 B-M3: answer first names the input question (the application date), never person.age_years", open.state === "answer_first" && open.missing.some((m) => m.key === "case.application_date" && m.question === '"Date the application is submitted"') && !open.missing.some((m) => m.key === "person.age_years"), open);
-  ok("C6.4 B-M3 (fail): the reason shows question words, not keys", /"Date the application is submitted"/.test(open.why) && !/case\.application_date/.test(open.why), open.why);
+  const open = (caseChecklist(S4, "vv.single", people, known(adults), TODAY) as D).people[0].waiting[0];
+  ok("C6.4 B-M3: answer first names the input question (the application date), never person.age_years", open.need === "answer_first" && open.missing.some((m) => m.key === "case.application_date" && m.question === '"Date the application is submitted"') && !open.missing.some((m) => m.key === "person.age_years"), open);
+  ok("C6.4 B-M3 (fail): the reason shows question words, not keys", /"Date the application is submitted"/.test(open.reason) && !/case\.application_date/.test(open.reason), open.reason);
   const turning = run(known({ ...adults, "C|person.date_of_birth": "2008-12-01", "case|case.application_date": "2026-12-15" }));
-  ok("C6.4 ages: 18 by the application date counts (both age paths use the same date)", line(turning, "C", "police_certificate")?.state === "needed" && turning.ages_on === "2026-12-15", line(turning, "C", "police_certificate"));
+  ok("C6.4 ages: 18 by the application date counts (both age paths use the same date)", line(turning, "C", "police_certificate")?.need === "needed" && turning.ages_on === "2026-12-15", line(turning, "C", "police_certificate"));
   ok("C6.4 ages (fail): with no application date the ages are on today and the answer says so", run(known(adults)).ages_on === "2026-11-01" && /today/.test(run(known(adults)).ages_on_why));
   ok("C6.4 B-M3: an application date in 1900 or 2200 has a problem (so it is not used)", checkValue(S, "case.application_date", "1900-01-01", TODAY).length > 0 && checkValue(S, "case.application_date", "2200-01-01", TODAY).length > 0);
   ok("C6.4 B-M3 (fail): a near application date has none", checkValue(S, "case.application_date", "2026-12-15", TODAY).length === 0 && checkValue(S, "case.application_date", "2024-11-01", TODAY).length === 0);
@@ -143,13 +147,40 @@ const adults = { "A|person.date_of_birth": "1980-05-01", "B|person.date_of_birth
     req("passport:case", "passport", "case"), req("passport:principal", "passport", "principal_applicant", { base_or_conditional: "conditional", condition: { subjectKind: "CASE", op: "eq", field: "case.purpose", value: "family" }, condition_plain: "family visit" }),
   ] } as Snapshot;
   const a = of(caseChecklist(S5, "vv.single", people, known(adults), TODAY) as D, "A");
-  const m = a.lines.find((l) => l.document.key === "marriage_certificate");
-  ok("C6.4 minor: a line with a condition about a document is shown as answer first, not dropped", m?.state === "answer_first" && /document/.test(m.why), a.lines);
-  const pp = a.lines.filter((l) => l.document.key === "passport");
-  ok("C6.4 minor (fail): the case's passport line and the principal's own are one line, the other named in also_from", pp.length === 1 && pp[0].state === "needed" && pp[0].also_from.length === 1, pp);
+  const m = ALL(a).find((l) => l.document.key === "marriage_certificate");
+  ok("C6.4 minor: a line with a condition about a document is shown as answer first, not dropped", m?.need === "answer_first" && /document/.test(m.reason), a.lines);
+  const pp = ALL(a).filter((l) => l.document.key === "passport");
+  ok("C6.4 minor (fail): the case's passport line and the principal's own are one line, the other named in also_from", pp.length === 1 && pp[0].need === "needed" && pp[0].also_from.length === 1, pp);
   const empty = caseChecklist({ ...S, document_requirements: [] } as Snapshot, "vv.single", people, known(adults), TODAY) as D;
   ok("C6.4 minor: an empty release says so rather than looking like nothing is needed", empty.empty_release === true && /does not mean nothing is needed/.test(empty.basis));
   ok("C6.4 minor (fail): a release with lines is not marked empty", run(known(adults)).empty_release === false);
+}
+// Second breaker round (fa2fab91): M1 spaces around a date, M2 a rule the release check refuses, and the Minors.
+{
+  const padded = run(known({ ...adults, "A|person.date_of_birth": " 1980-05-01 ", "case|case.application_date": " 2026-11-01" }));
+  ok("C6.4 break M1: a birth date saved with spaces is read (its checks trim): the police line is needed, not stuck on answer first", line(padded, "A", "police_certificate")?.need === "needed" && padded.ages_on === "2026-11-01", line(padded, "A", "police_certificate"));
+  ok("C6.4 break M1 (fail): a date with spaces has no problem in its own check, so nothing would ask for it again", checkValue(S, "person.date_of_birth", " 1980-05-01 ", TODAY).length === 0);
+  const after = run(known({ ...adults, "B|person.date_of_birth": "2027-01-01", "case|case.application_date": "2026-12-01" }));
+  const pb = line(after, "B", "police_certificate")!;
+  ok("C6.4 break m6: a birth date after the application date says check both, not answer the birth date again", pb.need === "answer_first" && pb.missing.every((m) => m.answered) && /check .*Date of birth.* and .*Date the application is submitted/.test(pb.reason), pb.reason);
+  const c0 = S.checks[0] as { condition: { cite: object } } & Record<string, unknown>;
+  const lib = new Set((S.canonical_fields as { id: string }[]).map((f) => f.id)), docs = new Set((S.document_types as { key: string }[]).map((t) => t.key));
+  const noCite = { ...S, checks: [{ ...c0, condition: { ...c0.condition, cite: undefined } }] } as Snapshot;
+  ok("C6.4 break M2: a rule with no page, address or date read is not used (as the release check says)", validityRules(noCite).size === 0 && validityProblems(noCite.checks[0], (f) => lib.has(f), docs).some((w) => /P-170/.test(w)));
+  const otherBefore = { ...S, checks: [{ ...c0, condition: { ...c0.condition, before: "case.not_a_field" } }] } as Snapshot;
+  const blank = { ...S, checks: [{ ...c0, source_quote: "   " }] } as Snapshot;
+  ok("C6.4 break M2 (fail): a rule measured to an unknown field, or with a blank quote, is not used either", validityRules(otherBefore).size === 0 && validityRules(blank).size === 0 && validityRules(S).size === 1);
+  const twice = { ...S, checks: [c0, { ...c0, id: "VV_POLICE_AGAIN", condition: { ...c0.condition, months: 3 } }] } as Snapshot;
+  ok("C6.4 break m1: two rules for one document type: neither is used, and duplicateValidity names it for the release check", validityRules(twice).size === 0 && duplicateValidity(twice.checks).join() === "police_certificate");
+  const huge = { ...S, checks: [{ ...c0, condition: { ...c0.condition, months: 100000 } }] } as Snapshot;
+  const js = { ...S, checks: [{ ...c0, condition: { ...c0.condition, cite: { ...(c0.condition.cite as object), url: "javascript:alert(1)" } } }] } as Snapshot;
+  const tag = { ...S, checks: [{ ...c0, condition: { ...c0.condition, cite: { ...(c0.condition.cite as object), page: "<script>x</script>" } } }] } as Snapshot;
+  ok("C6.4 break m2: 100000 months, a javascript: address or markup in the page name is refused", validityRules(huge).size === 0 && validityRules(js).size === 0 && validityRules(tag).size === 0);
+  ok("C6.4 break m10: the rule on the line says it is Sample", /Sample/.test(line(run(known(adults)), "A", "police_certificate")!.rule!.status));
+  const S7 = { ...S, document_requirements: [req("passport:case", "passport", "case", { base_or_conditional: "conditional", condition: { subjectKind: "CASE", op: "eq", field: "case.purpose", value: "family" }, condition_plain: "family visit" }), req("passport:principal", "passport", "principal_applicant")] } as Snapshot;
+  const merged = ALL(of(caseChecklist(S7, "vv.single", people, known({ ...adults, "case|case.purpose": "family" }), TODAY) as D, "A")).filter((l) => l.document.key === "passport");
+  ok("C6.4 break m7: merged lines are Always when either requirement is", merged.length === 1 && merged[0].base === true, merged);
+  ok("C6.4 break m8: the 5-year bound is by date: 2031-11-01 has no problem, 2031-11-02 has one", checkValue(S, "case.application_date", "2031-11-01", TODAY).length === 0 && checkValue(S, "case.application_date", "2031-11-02", TODAY).length > 0 && checkValue(S, "case.application_date", "2021-10-31", TODAY).length > 0);
 }
 // Only the Visitor visa in this slice.
 {

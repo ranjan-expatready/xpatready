@@ -6,19 +6,28 @@
 // authors checks yet); answers with problems are not used; who may read it; 409 and "not derived" at API level.
 // Each rule has a passing and a failing case. No model call (US$0). Lines and values Sample until the expert confirms.
 // Run by run-suites.sh on its own copy (runtime_vv), after setup_visitor_visa.ts:
-//   zsh studio/tools/isolated.sh runtime_vv 4431 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4431 xr_studio_runtime_vv
-//   tsx studio/tests/runtime/check_vv_checklist_api.ts 4431 xr_studio_runtime_vv
-import { client, recorder } from "./api.ts";
+// The check releases the Visitor visa itself (setup_visitor_visa.ts) when its copy has none, so run-suites.sh runs it
+// from this usage line like any other suite (C6.4 review R2):
+//   zsh studio/tools/isolated.sh runtime_vv 4431 start && tsx studio/tests/check_vv_checklist_api.ts 4431 xr_studio_runtime_vv
+import { execFileSync } from "node:child_process";
+import { join } from "node:path";
+import { client, recorder } from "./runtime/api.ts";
 
 const PORT = Number(process.argv[2] ?? 4431), DB = process.argv[3] ?? "xr_studio_runtime_vv";
 const { call, sql } = client(PORT, DB);
 const { ok, summary } = recorder();
 const OFFICER = "user-O", CLIENT = "user-P", AUTHOR = "user-A", REVIEWER = "user-C", APPROVER = "user-B";
 const run = Date.now().toString(36);
-type Line = { document: { key: string; name: string }; state: string; why: string; missing: { key: string; question: string }[]; rule: null | { kind: string; months: number; source: { quote: string; url: string; read: string } } };
-type Person = { subject: string; role: string; lines: Line[] };
+type Line = { id: string; document_type: string; label: string; state: string; reason: string; required: boolean; need: string; document: { key: string; name: string }; missing: { key: string; question: string }[]; rule: null | { kind: string; months: number; source: { quote: string; url: string; read: string } } };
+type Person = { subject: string; role: string; lines: Line[]; waiting: Line[]; not_needed: Line[] };
+const ALL = (p: Person) => [...p.lines, ...p.waiting, ...p.not_needed];
 
 (async () => {
+  if (sql("select count(*) from config_release r join combination k on k.id = r.combination_id where k.combination_key='vv.single'") === "0") {
+    const studio = join(import.meta.dirname, "..");
+    execFileSync(join(studio, "node_modules", ".bin", "tsx"), ["--tsconfig", join(studio, "api", "tsconfig.json"), join(studio, "tests", "runtime", "setup_visitor_visa.ts"), String(PORT), DB], { stdio: ["ignore", "ignore", "inherit"], timeout: 600_000 });
+    ok("setup: the Visitor visa released on this copy by setup_visitor_visa.ts", sql("select count(*) from config_release r join combination k on k.id = r.combination_id where k.combination_key='vv.single'") !== "0");
+  }
   const vv = sql("select id from combination where combination_key='vv.single'");
   // Sample document lines, released through the screens' own routes (scaffolding for this check, P-33).
   if (sql(`select count(*) from document_requirement where combination_id='${vv}' and status <> 'RETIRED'`) === "0") {
@@ -56,28 +65,28 @@ type Person = { subject: string; role: string; lines: Line[] };
   const birth = (subject: string, value: string) => call("PUT", `/runtime/cases/${caseId}/answers/${subject}/person.date_of_birth`, { value, expectedId: null }, OFFICER);
   const list = (who = OFFICER) => call("GET", `/runtime/cases/${caseId}/checklist`, undefined, who);
   const of = (b: { people: Person[] }, s: string) => b.people.find((p) => p.subject === s)!;
-  const police = (p: Person) => p.lines.find((l) => /police/i.test(l.document.name));
+  const police = (p: Person) => ALL(p).find((l) => /police/i.test(l.document.name));
 
   r = await list();
   ok("C6.4 pass: one checklist per person on the case (three), none for the case row", r.status === 200 && r.body.derived === true && r.body.people.length === 3 && !r.body.people.some((p: Person) => p.role === "case"), r.body);
-  ok("C6.4 pass: each applicant has their own passport and photographs lines", [principal, spouse, child].every((s) => of(r.body, s).lines.some((l) => /passport/i.test(l.document.key)) && of(r.body, s).lines.some((l) => /photograph/i.test(l.document.key))));
-  ok("C6.4 fail: the child's birth certificate is only on the child's list", of(r.body, child).lines.some((l) => /birth_certificate/.test(l.document.key)) && !of(r.body, principal).lines.some((l) => /birth_certificate/.test(l.document.key)));
-  ok("C6.4 fail: with no birth dates yet, each police line says answer first, naming the birth date", [principal, spouse, child].every((s) => police(of(r.body, s))?.state === "answer_first" && police(of(r.body, s))!.missing.some((m) => m.key === "person.date_of_birth")), police(of(r.body, principal)));
+  ok("C6.4 pass: each applicant has their own passport and photographs lines", [principal, spouse, child].every((s) => ALL(of(r.body, s)).some((l) => /passport/i.test(l.document.key)) && ALL(of(r.body, s)).some((l) => /photograph/i.test(l.document.key))));
+  ok("C6.4 fail: the child's birth certificate is only on the child's list", ALL(of(r.body, child)).some((l) => /birth_certificate/.test(l.document.key)) && !ALL(of(r.body, principal)).some((l) => /birth_certificate/.test(l.document.key)));
+  ok("C6.4 fail: with no birth dates yet, each police line says answer first, naming the birth date", [principal, spouse, child].every((s) => police(of(r.body, s))?.need === "answer_first" && police(of(r.body, s))!.missing.some((m) => m.key === "person.date_of_birth")), police(of(r.body, principal)));
   r = await call("PUT", `/runtime/cases/${caseId}/answers/${theCase}/case.application_date`, { value: "2026-11-01", expectedId: null }, OFFICER);
   ok("setup: the application date answered (the age is worked out on it)", r.status < 300, r.body);
 
   await birth(principal, "1980-05-01"); await birth(spouse, "1982-02-02"); r = await birth(child, "2015-03-03");
   ok("setup: birth dates answered by the officer", r.status < 300, r.body);
   r = await list();
-  ok("C6.4 pass: the adults need a police certificate, with IRCC's 6-month rule on the line", [principal, spouse].every((s) => police(of(r.body, s))?.state === "needed" && police(of(r.body, s))!.rule?.kind === "issued_within_months" && police(of(r.body, s))!.rule!.months === 6 && /no more than 6 months before the date you submit/.test(police(of(r.body, s))!.rule!.source.quote) && police(of(r.body, s))!.rule!.source.read === "2026-10-29"));
-  ok("C6.4 R4 (fail): the passport line carries no validity rule", of(r.body, principal).lines.find((l) => /passport/i.test(l.document.key))?.rule === null);
-  ok("C6.4 fail: the 11-year-old child needs none, and the reason names the condition", police(of(r.body, child))?.state === "not_needed" && /18 or older/.test(police(of(r.body, child))!.why), police(of(r.body, child)));
+  ok("C6.4 pass: the adults need a police certificate, with IRCC's 6-month rule on the line", [principal, spouse].every((s) => police(of(r.body, s))?.need === "needed" && police(of(r.body, s))!.rule?.kind === "issued_within_months" && police(of(r.body, s))!.rule!.months === 6 && /no more than 6 months before the date you submit/.test(police(of(r.body, s))!.rule!.source.quote) && police(of(r.body, s))!.rule!.source.read === "2026-10-29"));
+  ok("C6.4 R4 (fail): the passport line carries no validity rule", ALL(of(r.body, principal)).find((l) => /passport/i.test(l.document.key))?.rule === null);
+  ok("C6.4 fail: the 11-year-old child needs none, and the reason names the condition", police(of(r.body, child))?.need === "not_needed" && /18 or older/.test(police(of(r.body, child))!.reason), police(of(r.body, child)));
 
   // Dynamic: the child's birth date is corrected to an adult's: the police line becomes needed on the next read.
   const prior = sql(`select a.id from client_canonical_answer a join answer_subject s on s.id = a.subject_id where s.id='${child}' and a.canonical_field_key='person.date_of_birth' and a.superseded_by_id is null`);
   r = await call("PUT", `/runtime/cases/${caseId}/answers/${child}/person.date_of_birth`, { value: "2000-03-03", expectedId: prior || null }, OFFICER);
   r = await list();
-  ok("C6.4 pass: the list follows the answers: a corrected birth date makes the police line needed", police(of(r.body, child))?.state === "needed", police(of(r.body, child)));
+  ok("C6.4 pass: the list follows the answers: a corrected birth date makes the police line needed", police(of(r.body, child))?.need === "needed", police(of(r.body, child)));
 
   // B-M2: an application date its own check rejects (2200) is not used: no age of 191, the line asks for the date again.
   const appPrior = () => sql(`select a.id from client_canonical_answer a where a.subject_id='${theCase}' and a.canonical_field_key='case.application_date' and a.superseded_by_id is null`);
@@ -85,11 +94,11 @@ type Person = { subject: string; role: string; lines: Line[] };
   ok("setup: an application date of 2200 is stored (answers are never blocked, P-47)", r.status < 300, r.body);
   r = await list();
   const p2200 = police(of(r.body, principal))!;
-  ok("C6.4 B-M2 (fail): an application date with a problem is not used: answer first, naming the application date in words", p2200.state === "answer_first" && p2200.missing.some((m) => m.key === "case.application_date") && !/191/.test(p2200.why), p2200);
+  ok("C6.4 B-M2 (fail): an application date with a problem is not used: answer first, naming the application date in words", p2200.need === "answer_first" && p2200.missing.some((m) => m.key === "case.application_date") && !/191/.test(p2200.reason), p2200);
   ok("C6.4 B-M3 (fail): the calculated age is never asked for; its input questions are", !p2200.missing.some((m) => m.key === "person.age_years") && p2200.missing.every((m) => m.question.startsWith('"')), p2200.missing);
   r = await call("PUT", `/runtime/cases/${caseId}/answers/${theCase}/case.application_date`, { value: "2026-11-01", expectedId: appPrior() || null }, OFFICER);
   r = await list();
-  ok("C6.4 B-M2 pass: a good application date is used again: the adults' police lines are needed", police(of(r.body, principal))?.state === "needed", police(of(r.body, principal)));
+  ok("C6.4 B-M2 pass: a good application date is used again: the adults' police lines are needed", police(of(r.body, principal))?.need === "needed", police(of(r.body, principal)));
 
   // 409: a release that no longer names the case's combination is refused; it reads again once it is as released.
   const rel = sql(`select r.id from config_release r join pack_work_pin p on p.config_release_id = r.id where p.case_id = '${caseId}'`);
@@ -111,7 +120,8 @@ type Person = { subject: string; role: string; lines: Line[] };
   // A person who stops travelling has no applicant lines.
   await call("PATCH", `/runtime/cases/${caseId}/people/${spouse}`, { applies: false }, OFFICER);
   r = await list();
-  ok("C6.4 fail: a person not applying has an empty list", of(r.body, spouse).lines.length === 0 && of(r.body, principal).lines.length > 0);
+  ok("C6.4 fail: a person not applying has an empty list", ALL(of(r.body, spouse)).length === 0 && of(r.body, principal).lines.length > 0);
+  ok("C6.4 pack 4 shape: storage marked Stand-in SI-14; each line has an id, document type, label, Not requested, a reason and required", r.body.stand_in === "SI-14" && (r.body.people as Person[]).flatMap(ALL).every((l) => !!l.id && !!l.document_type && !!l.label && l.state === "not_requested" && l.reason.length > 5 && typeof l.required === "boolean"));
 
   // Who may read it.
   ok("C6.4 fail: the client cannot read the checklist here (403)", (await list(CLIENT)).status === 403);

@@ -126,7 +126,10 @@ function checkType(s: Snapshot, field: string, value: unknown, today: Date): str
       if (field === MINOR.birthDateField && str! > today.toISOString().slice(0, 10)) return ["A date of birth cannot be in the future."];
       // C6.4 B-M3: an application is submitted near today; a date years away (1900, 2200) is a typing mistake, and ages
       // worked out on it would be impossible. Within 5 years either side (Sample bound, not an IRCC rule).
-      if (field === "case.application_date" && Math.abs(Date.UTC(+m[1], +m[2] - 1, +m[3]) - today.getTime()) > 5 * 366 * 86_400_000) return ["Enter the date the application is submitted: within 5 years of today."];
+      if (field === "case.application_date") {
+        const y = today.getUTCFullYear(), md = today.toISOString().slice(4, 10), from = `${y - 5}${md}`, to = `${y + 5}${md}`;
+        if (str! < from || str! > to) return ["Enter the date the application is submitted: within 5 years of today."];
+      }
       return [];
     }
     case "code": case "country":
