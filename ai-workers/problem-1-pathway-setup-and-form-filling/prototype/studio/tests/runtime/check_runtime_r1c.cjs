@@ -301,6 +301,16 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await edu.getByRole("button", { name: /Confirm section/ }).click(); await idle(o);
   step("M3 agent pass: Confirm section confirms it", await shows(edu.getByText("Confirmed", { exact: true })));
   await state(o, "case-view-group-none-apply", [1440]);
+  // C4.4 part 2 (P-47 tier 2): the visit still ends before it starts, and a fired section check keeps IMM 5257 from being
+  // ready to file, in its words; the officer puts the dates in order (saving was never blocked, P-71).
+  {
+    const av = (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, "user-O")).body;
+    const fl = (await call("GET", `/runtime/cases/${caseId}/forms`, undefined, "user-O")).body.forms.find((f) => f.form === "IMM 5257" && f.person === "Sample Applicant C");
+    step("C4.4 tier 2 fail: while the visit ends before it starts, IMM 5257 lists that check under what blocks filing", fl.readiness.ready === false && fl.readiness.missing.some((m) => m.reason === "a check fired" && /ends before it starts/.test(m.label)), fl.readiness.missing.filter((m) => m.reason === "a check fired"));
+    for (const [fact, value] of [["case.intended_stay_from", "2027-03-01"], ["case.intended_stay_to", "2027-03-15"]]) { const q = qOf(av, "The application", fact); await call("PUT", `/runtime/cases/${caseId}/answers/${q.subjectId}/${fact}`, { value, expectedId: q.answer?.id ?? null }, "user-O"); }
+    const after = (await call("GET", `/runtime/cases/${caseId}/forms`, undefined, "user-O")).body.forms.find((f) => f.form === "IMM 5257" && f.person === "Sample Applicant C");
+    step("C4.4 tier 2 pass: with the dates in order, no fired check blocks IMM 5257", !after.readiness.missing.some((m) => m.reason === "a check fired"), after.readiness.missing.filter((m) => m.reason === "a check fired"));
+  }
   // Confirm every required fact IMM 5257 reads for the principal (Sample values by type), as the officer would.
   const sample = (q) => q.options?.length ? q.options[0].key : q.shape.phone ? { country_code: "1", number: "5550100" } : q.value_type === "yes_no" ? false
     : q.value_type === "date" ? (q.shape.datePrecision === "month" ? "1990-01" : "1990-01-01") : q.value_type === "number" ? "1000"

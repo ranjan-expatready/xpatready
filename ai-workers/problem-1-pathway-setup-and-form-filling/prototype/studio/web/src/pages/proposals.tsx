@@ -116,7 +116,7 @@ function BandTable({ band, items, onOpen, picked, setPicked, bulk, max }: { band
                 : <input type="checkbox" className="size-4 accent-[var(--color-primary)]" aria-label={`Choose ${p.title}`} checked={picked.has(p.id)} onChange={() => toggle(p.id)} />) : null}</td>
               <td className="max-w-[22rem]"><span className="font-medium">{p.title}</span>{p.meaning ? <span className="block truncate text-xs text-text-muted">{p.meaning}</span> : null}</td>
               <td><Pill>{p.kind_word}</Pill>{p.origin === "rules" ? <Pill className="ml-1" tone="info">Rules</Pill> : <Pill className="ml-1" tone="ai">AI</Pill>}</td>
-              <td className="text-xs">{p.lands_on === "combination" ? "This combination" : p.reuse.match === "reuse" ? `Reuses ${p.reuse.existing_key}` : "New library item"}</td>
+              <td className="text-xs">{p.lands_on === "combination" ? "This combination" : p.reuse.match === "reuse" ? (p.reuse.existing_key ? `Reuses ${p.reuse.existing_key}` : "Same item as drafted for another form (the first accepted adds it)") : "New library item"}</td>
               <td className="max-w-[20rem] text-xs text-text-muted">{band === "ready" ? p.agreement_word : p.reason ?? p.agreement_word}</td>
               <td className="text-right">{p.decide_on ? <Link className="whitespace-nowrap text-sm text-text-link underline" to={p.decide_on}>Decide on its {p.step === "checklist_draft" ? "checklist" : "form-field"} page</Link>
                 : <Button size="sm" variant="secondary" onClick={() => onOpen(p)} aria-label={`Open ${p.title}`}>Open<ChevronRight className="size-4" aria-hidden /></Button>}</td>
@@ -141,10 +141,11 @@ function UndoBar({ batchId, n, until, onGone }: { batchId: string; n: number; un
   );
 }
 
-function Reading({ label, r }: { label: string; r: QueueProposal["readings"]["draft"] }) {
+// A rules item's reading is the rules' own reading of the file, never an AI run (C3.4 review Minor 2).
+function Reading({ label, r, rules = false }: { label: string; r: QueueProposal["readings"]["draft"]; rules?: boolean }) {
   return (
     <div className="rounded-lg border border-border bg-surface px-3 py-2">
-      <p className="text-xs font-medium text-text-muted">{label}{r ? ` · ${r.from === "live" ? "live" : "saved run"}` : ""}</p>
+      <p className="text-xs font-medium text-text-muted">{label}{r ? ` · ${rules ? "rules, US$0" : r.from === "live" ? "live" : "saved run"}` : ""}</p>
       <p className="mt-0.5 text-sm">{r ? r.text || "No words given." : "No reading."}</p>
     </div>
   );
@@ -172,8 +173,8 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
         <section aria-label="Both readings">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted"><Tip tip="AI reads the source twice: a first reading, then a checker that has not seen it. Items from the rules have no AI reading." focusable><span>Both readings</span></Tip> · {p.agreement_word}</h3>
           <div className="mt-1 grid gap-2">
-            <Reading label="First reading" r={p.readings.draft} />
-            <Reading label="Checker's reading" r={p.readings.check} />
+            <Reading label="First reading" r={p.readings.draft} rules={p.origin === "rules"} />
+            <Reading label="Checker's reading" r={p.readings.check} rules={p.origin === "rules"} />
           </div>
         </section>
         <section aria-label="IRCC's words">

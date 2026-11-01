@@ -3,7 +3,7 @@
 // the plan's fingerprint and a launch key: the server re-plans and refuses if the work changed, and the same key sent
 // twice (double click, retry after a network error) returns the same work instead of starting it again.
 import * as React from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { api, ApiError, useToast } from "@/lib/api";
@@ -101,6 +101,8 @@ export function AiLaunchDialog({ scope, onClose, initialMode = "LIVE" }: { scope
           </>
         ) : null}
         {scope.kind === "combination" && scope.ids.length === 1 ? <Checklists combinationId={scope.ids[0]} onOpen={(jobId) => { onClose(); nav(`/c/${scope.ids[0]}/jobs/${jobId}`); }} /> : null}
+        {scope.kind === "combination" && scope.ids.length === 1 ? <FormMasters combinationId={scope.ids[0]} /> : null}
+        {scope.kind === "source" && scope.ids.length === 1 ? <FormMasters source={{ id: scope.ids[0], edition: scope.label ?? null, fileName: ".pdf", recognised: true, kind: "form" }} /> : null}
         {err ? <Notice tone="danger" title="Not started">{err}</Notice> : null}
         {cost.dialog}
         <p className="text-xs text-text-muted">AI output is a proposal: a person decides each item on To review, applies it to the draft, and release stays a separate approval. A sent AI call cannot be recalled by Cancel.</p>
@@ -132,6 +134,30 @@ function Checklists({ combinationId, onOpen }: { combinationId: string; onOpen: 
         <li key={a.id} className="flex flex-wrap items-center justify-between gap-2" data-checklist-row={a.edition ?? a.fileName}><span>{a.edition ?? a.fileName}{saved ? <span className="ml-2 text-xs text-text-muted">saved AI reading: {saved.lines} line{saved.lines === 1 ? "" : "s"}</span> : null}</span>
           <span className="flex gap-2">{saved ? <Button size="sm" busy={busy === `${a.id}:replay`} onClick={() => void run(a.id, "replay")}>Replay the saved reading · US$0</Button> : null}
             <Button size="sm" variant="secondary" busy={busy === `${a.id}:stub`} onClick={() => void run(a.id, "stub")}>Stub pass · US$0</Button></span></li>); })}</ul>
+      {err ? <p role="alert" className="text-sm text-text-danger">{err}</p> : null}
+    </section>
+  );
+}
+
+/** C3.4 (P-158): a form's sections and answer lists drafted by the rules from the official file (no AI, US$0). */
+type Att = { id: string; recognised: boolean; kind: string; edition: string | null; fileName: string };
+function FormMasters({ combinationId, source }: { combinationId?: string; source?: Att }) {
+  const list = useQuery<Att[]>({ queryKey: ["attachments", combinationId], queryFn: () => api(`/combinations/${combinationId}/attachments`), enabled: !!combinationId, initialData: source ? [source] : undefined });
+  const [busy, setBusy] = React.useState<string | null>(null), [err, setErr] = React.useState<string | null>(null), [done, setDone] = React.useState<Record<string, { text: string; group: string }>>({});
+  const forms = (list.data ?? []).filter((a) => a.recognised && a.kind !== "Document checklist" && /\.pdf$/i.test(a.fileName));
+  if (!forms.length) return null;
+  const run = async (a: { id: string; edition: string | null; fileName: string }) => {
+    setBusy(a.id); setErr(null);
+    try { const j = await api<{ proposals: number; message: string; group: string }>(`/attachments/${a.id}/draft-masters`, { method: "POST", json: { mode: "rules" } }); setDone((d) => ({ ...d, [a.id]: { text: j.proposals ? `${j.proposals} proposals wait on To review.` : `Already drafted for this edition: ${j.message}`, group: j.group } })); }
+    catch (e) { setErr((e as Error).message); } finally { setBusy(null); }
+  };
+  return (
+    <section aria-labelledby="fm-h" className="space-y-2 rounded-lg border border-border p-3" data-form-masters>
+      <h3 id="fm-h" className="text-sm font-semibold">Forms: sections and answer lists</h3>
+      <p className="text-xs text-text-muted">The rules read each form's own parts and drop-down lists into library proposals, once per edition (no AI, US$0). A person checks each name on To review and a second person approves it. Form checks and rules from the guide need the AI step, which waits for the founder's OK on its cost.</p>
+      <ul className="space-y-1 text-sm">{forms.map((a) => (
+        <li key={a.id} className="flex flex-wrap items-center justify-between gap-2" data-form-masters-row={a.edition ?? a.fileName}><span className="min-w-0 break-words">{a.edition ?? a.fileName}{done[a.id] ? <span className="block text-xs" role="status">{done[a.id].text} <Link className="text-text-link underline" to={`/review/proposals?group=${encodeURIComponent(done[a.id].group)}`}>Open Proposals</Link></span> : null}</span>
+          <Button size="sm" variant="secondary" busy={busy === a.id} onClick={() => void run(a)}>Draft sections and lists · US$0</Button></li>))}</ul>
       {err ? <p role="alert" className="text-sm text-text-danger">{err}</p> : null}
     </section>
   );

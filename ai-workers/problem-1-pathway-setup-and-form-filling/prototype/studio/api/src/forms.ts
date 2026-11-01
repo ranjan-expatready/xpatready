@@ -190,7 +190,7 @@ export class Forms {
     if (!newest || newest.status === "RETIRED") fail(`${key} is not in the library.`, HttpStatus.NOT_FOUND);
     if (newest.mergedIntoKey) conflict(`${key} was merged into ${newest.mergedIntoKey}: give the list to that field.`);
     // A free-text field stays free text (break m10): only a choice field takes an answer list.
-    if (!["code", "country", "yes_no"].includes(newest.valueType)) fail(`${key} holds ${newest.valueType === "text" ? "free text" : `a ${newest.valueType}`}; only a choice field (a code, a country or yes/no) takes an answer list.`);
+    if (!["code", "country", "yes_no", "multi_choice"].includes(newest.valueType)) fail(`${key} holds ${newest.valueType === "text" ? "free text" : `a ${newest.valueType}`}; only a choice field (a code, a country, yes/no or multi choice) takes an answer list.`);
     await revise(this.db.canonicalField, rows, { answerListKey: b.list, dataType: "ENUM" }, actor.id, strip);
     await this.audit.log(workspaceId, actor.id, "changed", "field", key, `${actor.name} gave ${key} the answer list ${b.list}`);
     return { key, answer_list: b.list };

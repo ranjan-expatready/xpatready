@@ -71,13 +71,17 @@ export function changedFacts(then: FormFact[], now: FormFact[]): string[] {
  *  person (matched by the person's id) with an answer that is missing, not confirmed, or confirmed with a problem (it
  *  would be written wrong: review and break report M2). A required repeating group the form reads with no entries
  *  blocks too, until "none apply" is answered and confirmed for it (Lead, break M3). Optional facts left empty, or answered
- *  validly and not confirmed (never written, P-72), do not; an optional fact answered with a problem does (QA-122). */
+ *  validly and not confirmed (never written, P-72), do not; an optional fact answered with a problem does (QA-122).
+ *  A section check that fired on a fact the form reads blocks it as well (P-47 tier 2). */
+/** Whether a fired check blocks "ready to file": only a section check at severity warn or block. */
+export const blocksFiling = (c: { group?: string; severity: string }) => c.group === "section_check" && (c.severity === "warn" || c.severity === "block");
+
 export function readiness(view: QuestionnaireView, form: string, subjectId: string): Readiness {
   const reads = view.sections.flatMap((s) => s.questions).filter((q) => q.fills.some((f) => f.form === form && f.subject === subjectId) && !q.hidden);
   const reason = (a: { confirmed: boolean; problems: string[] } | null | undefined) => (!a ? "not answered" as const : a.problems.length ? "needs a fix" as const : !a.confirmed ? "not confirmed" as const : null);
   // QA-122: an optional fact counts only when it is answered with a problem (it would be written wrong, P-71).
   const optional = (a: { problems: string[] } | null | undefined) => (a && a.problems.length ? "needs a fix" as const : null);
-  const missing = reads.flatMap((q) => {
+  const missing: Readiness["missing"] = reads.flatMap((q) => {
     const why = q.required ? reason : optional;
     const r = q.group ? q.rows.map((x) => why(x.answer)).find(Boolean) ?? null : why(q.answer);
     return r ? [{ fact: q.fact, label: q.label, about: q.about_label, reason: r }] : [];
@@ -88,6 +92,12 @@ export function readiness(view: QuestionnaireView, form: string, subjectId: stri
     const na = sec.group.none_apply, r = !na || !na.value ? "not answered" as const : !na.confirmed ? "not confirmed" as const : null;
     if (r) missing.push({ fact: `group:${sec.section}`, label: groupLabel(sec.title), about: sec.about_label, reason: r });
   }
+  // P-47 tier 2 (C4.4 part 2): a section check (a conflict in the answers) that fired on a fact this form reads for this
+  // person blocks filing too, named by its own words (it never blocks saving, P-71). Advice, readiness warnings, official
+  // rules and checks still waiting for the expert only warn (P-168, P-136; review c44-part2 M1).
+  const readFacts = new Set(reads.map((q) => `${q.subjectId}|${q.fact}`));
+  for (const c of view.checks) if (blocksFiling(c) && c.fact && readFacts.has(`${c.subjectId}|${c.fact}`) && !missing.some((m) => m.fact === `check:${c.id}` && m.about === c.about_label))
+    missing.push({ fact: `check:${c.id}`, label: c.message, about: c.about_label, reason: "a check fired" });
   return { ready: missing.length === 0, missing };
 }
 

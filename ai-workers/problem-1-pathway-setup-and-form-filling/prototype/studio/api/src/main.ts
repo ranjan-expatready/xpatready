@@ -26,6 +26,7 @@ import { Screen02, Screen02Controller } from "./screen02.ts";
 import { ReviewProposals, ReviewProposalsController } from "./review-proposals.ts";
 import { Impact } from "./impact.ts";
 import { Checklists, ChecklistsController } from "./checklist.ts";
+import { FormMasters, FormMastersController } from "./form-masters.ts";
 import { RuleFacts, RuleFactsController } from "./rule-facts.ts";
 import { Runtime, RuntimeController } from "./runtime.ts";
 import { Team, TeamController } from "./team.ts";
@@ -38,6 +39,7 @@ import { Studio } from "./studio.ts";
 import { WorkspaceController, WorkspaceViews } from "./workspace.ts";
 import { PeopleFromGuide } from "./people-ai.ts";
 import { PqrDrafts, PqrDraftsController } from "./pqr-drafts.ts";
+import { DraftQd, DraftQdController } from "./draft-qd.ts";
 import { Finder } from "./finder.ts";
 import { normaliseCode } from "../../contracts/form-library.ts";
 import { FormLibrary, FormLibraryController } from "./form-library.ts";
@@ -45,7 +47,7 @@ import { Runs, RunsController } from "./runs.ts";
 import { UploadRuns } from "./upload-run.ts";
 import { StartSetup, StartSetupController } from "./start-setup.ts";
 import { LibrarySources, LibrarySourcesController, noFreeAdd } from "./library-sources.ts";
-import { LibraryItemsController } from "./library-items-routes.ts";
+import { registerFeatures } from "./features.ts";
 
 type H = string | undefined;
 
@@ -61,6 +63,7 @@ class StudioController {
   @Get("combinations/:id/preview") preview(@Param("id") id: string, @Query() q: any) { return this.s.preview(id, q); }
   @Post("combinations/:id/requirements") addReq(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.s.saveRequirement(actorOf(a), id, null, b); }
   @Patch("combinations/:id/requirements/:lineage") updReq(@Headers("x-actor") a: H, @Param("id") id: string, @Param("lineage") l: string, @Body() b: any) { return this.s.saveRequirement(actorOf(a), id, l, b); }
+  @Post("combinations/:id/checks") addCheck(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.saveCheck(actorOf(a), id, b); }
   @Post("combinations/:id/rules") addRule(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.s.saveRule(actorOf(a), id, null, b); }
   @Patch("combinations/:id/rules/:key") updRule(@Headers("x-actor") a: H, @Param("id") id: string, @Param("key") k: string, @Body() b: any) { return this.s.saveRule(actorOf(a), id, k, b); }
   @Patch("combinations/:id/forms/:form") updForm(@Headers("x-actor") a: H, @Param("id") id: string, @Param("form") f: string, @Body() b: any) { return oneAtATime(id, () => this.s.saveForm(actorOf(a), id, normaliseCode(f), b)); } // S4 round 2 N6: one change at a time
@@ -195,11 +198,13 @@ class ProblemErrors implements ExceptionFilter {
   }
 }
 
-@Module({ controllers: [TeamController, StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, FormProgressController, Screen02Controller, ReviewProposalsController, ChecklistsController, RuleFactsController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController, WhoFillsController, LibrarySourcesController, LibraryItemsController, OfficialPagesController, LinesBulkController, PqrDraftsController], providers: [LinesBulk, PqrDrafts, FormProgressService, OfficialPagesService, FactSources, PersonChecklists, RuleFacts, WhoFills, LibrarySources, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, Team, CaseForms, ReviewQueueService, Screen02, ReviewProposals, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs] })
+@Module({ controllers: [TeamController, StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, FormProgressController, Screen02Controller, ReviewProposalsController, ChecklistsController, FormMastersController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController, WhoFillsController, LibrarySourcesController, OfficialPagesController, LinesBulkController, PqrDraftsController, DraftQdController, RuleFactsController], providers: [LinesBulk, PqrDrafts, DraftQd, FormProgressService, OfficialPagesService, FactSources, PersonChecklists, FormMasters, WhoFills, LibrarySources, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, Team, CaseForms, ReviewQueueService, Screen02, ReviewProposals, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs, RuleFacts] })
 class AppModule {}
 
 async function main() {
   const port = Number(process.env.STUDIO_PORT ?? 4400);
+  // P-214: a new feature registers itself in api/src/features/<feature>.ts, not in the @Module list above.
+  await registerFeatures(AppModule);
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: ["error", "warn"] });
   app.useBodyParser("json", { limit: "5mb" });
   app.useGlobalFilters(new ProblemErrors());

@@ -29,6 +29,7 @@ type A4 = { total: number; reused: number; leftover: number };
 const a4Of = (detail: unknown): A4 | null => { const a = (detail as { a4?: A4 } | null)?.a4; return a ? { total: a.total, reused: a.reused, leftover: a.leftover } : null; };
 const partsLine = (all: ReturnType<typeof partsOf>) => { if (!all.length) return null; const n = (s: string) => all.filter((p) => p.status === s).length; return `${all.length} part${all.length === 1 ? "" : "s"} · ${[n("done") && `${n("done")} done`, n("failed") && `${n("failed")} failed`, n("running") && `${n("running")} running`, n("queued") && `${n("queued")} queued`, n("not started") && `${n("not started")} not started`].filter(Boolean).join(", ")}`; };
 import { overrideOf, Sources } from "./sources.ts";
+import { plainRunText } from "./plain-run-text.ts";
 import { runWorstUsd } from "../../engine/cost-check.ts";
 import { checkOverride, costPlanNow, endedOverrides, ledgerRead, overrideAllowed, recordOverride, spendOverride } from "./cost-gate.ts";
 import { SpendLedger } from "../../../p2/ledger.ts";
@@ -372,7 +373,7 @@ export class Ai implements OnModuleInit {
     if (j.batchId) await this.db.aiBatch.updateMany({ where: { id: j.batchId, status: "QUEUED" }, data: { status: "RUNNING" } });
     try {
       const fault = process.env.STUDIO_FAULT_SOURCE; // induced test fault, only in an isolated test server started with this variable
-      if (fault) { const a = await this.db.sourceAttachment.findUnique({ where: { id: j.attachmentId! } }); if (a && a.fileName === fault) throw new Error(`Induced test fault for ${fault} (STUDIO_FAULT_SOURCE, test server only)`); }
+      if (fault) { const a = await this.db.sourceAttachment.findUnique({ where: { id: j.attachmentId! } }); if (a && a.fileName === fault) throw new Error("Induced test fault: this form was stopped on purpose on this test copy. Retry the failed step; after three attempts it needs a person."); }
       const actor = ACTORS.find((a) => a.id === j.startedBy) ?? ACTORS[0];
       if (j.kind === "reuse_map") {
         const r = await this.sources.reuseForm(actor, j.attachmentId!, {});
@@ -410,7 +411,7 @@ export class Ai implements OnModuleInit {
     const atts = await this.db.sourceAttachment.findMany({ where: { id: { in: b!.jobs.map((j) => j.attachmentId!).filter(Boolean) } }, select: { id: true, edition: true, fileName: true } });
     const plan = b!.plan as any;
     return { ...b, scopeLabel: scopeWords(b!), started_by_name: personName(b!.startedBy), plan: undefined, plan_targets: plan.targets, totals: plan.totals, operation_label: plan.operation_label, capability_note: plan.capability_note,
-      spent_usd: round(b!.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), jobs: b!.jobs.map((j) => ({ retryable: b!.operation !== "screen_map" && retryable(j), parts: partsOf(j.detail), a4: a4Of(j.detail), id: j.id, combinationId: j.combinationId, combination: j.combination?.label ?? "Library", program: j.combination?.program.label ?? null, source: atts.find((a) => a.id === j.attachmentId)?.edition ?? atts.find((a) => a.id === j.attachmentId)?.fileName, kind: j.kind, mode: j.mode, status: j.status, message: j.message, costUsd: j.costUsd, runId: j.runId, attempt: j.attempt, attachmentId: j.attachmentId, detail: undefined })) };
+      spent_usd: round(b!.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), jobs: b!.jobs.map((j) => ({ retryable: b!.operation !== "screen_map" && retryable(j) && j.attempt < MAX_ATTEMPTS_PER_SOURCE, needs_person: b!.operation !== "screen_map" && retryable(j) && j.attempt >= MAX_ATTEMPTS_PER_SOURCE, said: plainRunText(j.message), parts: partsOf(j.detail), a4: a4Of(j.detail), id: j.id, combinationId: j.combinationId, combination: j.combination?.label ?? "Library", program: j.combination?.program.label ?? null, source: atts.find((a) => a.id === j.attachmentId)?.edition ?? atts.find((a) => a.id === j.attachmentId)?.fileName, kind: j.kind, mode: j.mode, status: j.status, message: j.message, costUsd: j.costUsd, runId: j.runId, attempt: j.attempt, attachmentId: j.attachmentId, detail: undefined })) };
   }
 
   async batches() {

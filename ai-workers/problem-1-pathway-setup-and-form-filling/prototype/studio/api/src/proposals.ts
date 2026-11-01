@@ -5,7 +5,8 @@
 // LibraryChange carrying the batch id and the item id, so a second person still approves every new library item (BR-7).
 // The free-add scan (tests/check_s6_p149.ts) refuses a library .create anywhere else.
 import { HttpStatus } from "@nestjs/common";
-import { randomUUID } from "node:crypto";
+import { proposeConditionChange } from "./question-condition.ts";
+import { createHash, randomUUID } from "node:crypto";
 import type { Prisma, ProposalItem as Row } from "@prisma/client";
 import { ProposalItem, ProposalPayload, type ProposalKind } from "../../contracts/proposal-item.ts";
 import { normalizeLabel } from "../../contracts/programs.ts";
@@ -13,6 +14,7 @@ import { subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts
 import { fail, need, type Actor, type Audit, type Db } from "./core.ts";
 import { keyFor } from "./library-changes.ts";
 import { acceptPqrPick } from "./fact-sources.ts";
+import { LibrarySources } from "./library-sources.ts";
 
 type Tx = Prisma.TransactionClient;
 type Client = Db | Tx;
@@ -28,10 +30,23 @@ const isLibraryKind = (k: string) => (LIBRARY_PROPOSAL_KINDS as readonly string[
 /** The identity key of a library kind under its rule (P-149 (2), Lead 29 Oct): a field, section or person role by its
  *  name, an answer list by its set of value codes (order ignored), a document type by its name and what it proves.
  *  The combination kinds keep the producer's key. */
+/** An answer list's identity: its codes, sorted. A long list (a country list has 200 codes) is named by its count and a
+ *  hash of the codes, so the key stays within the contract's 300 characters (C3.4); the library side uses the same rule. */
+export function listIdentity(codes: string[]): string {
+  const all = [...new Set(codes)].sort().join(",");
+  return all.length <= 300 ? all : `codes:${new Set(codes).size}:${createHash("sha256").update(all).digest("hex").slice(0, 40)}`;
+}
+
+/** The words a person reads for an item: its name, never an answer list's code list or hash (C3.4 review Minor 5). */
+export function nameOf(p: ProposalPayload, given: string): string {
+  const named = (p as { label?: unknown; name?: unknown }).label ?? (p as { name?: unknown }).name;
+  return typeof named === "string" && named.trim() ? named : identityKeyOf(p, given);
+}
+
 export function identityKeyOf(p: ProposalPayload, given: string): string {
   switch (p.kind) {
     case "field": case "section": case "person_role": return normalizeLabel(p.label);
-    case "answer_list": return [...new Set(p.values.map((v) => v.code))].sort().join(",");
+    case "answer_list": return listIdentity(p.values.map((v) => v.code));
     case "document_type": return `${normalizeLabel(p.name)}|${normalizeLabel(p.proves)}`;
     default: return given;
   }
@@ -51,7 +66,7 @@ export async function sameInLibrary(db: Client, workspaceId: string, p: Proposal
   }
   if (p.kind === "answer_list") {
     const rows = await db.answerList.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] } }, include: { values: { select: { valueKey: true } } } });
-    return rows.find((r) => [...new Set(r.values.map((v) => v.valueKey))].sort().join(",") === want)?.answerListKey ?? null;
+    return rows.find((r) => listIdentity(r.values.map((v) => v.valueKey)) === want)?.answerListKey ?? null;
   }
   if (p.kind === "document_type") {
     // The same identity as identityKeyOf: a name and what it proves (two proofs under one name are two items).
@@ -80,12 +95,26 @@ const plainIssues = (e: { issues: { path: PropertyKey[]; message: string }[] }) 
 /** The one door: parses each item against contract v2, checks its identity, and writes them together (all or none).
  *  Refused: a malformed item (400), two items of one batch with the same identity, or a new library item that already
  *  exists in the library (409: reuse it instead). A waiting item of another run is caught again at approval. */
+/** C11.13 (P-120 "with where used"): the combinations a library item is used in, in words, for a duplicate refusal.
+ *  The same answer as Library › Where used (LibrarySources.usedIn reads only the database). */
+export async function whereUsedWords(db: Client, workspaceId: string, kind: string, key: string): Promise<string> {
+  const k = (["field", "section", "document_type", "answer_list"] as const).find((x) => x === kind);
+  if (!k) return "";
+  const used = (await new LibrarySources(db as unknown as Db, undefined as never, undefined as never).usedIn(k, workspaceId)).get(key) ?? [];
+  return used.length ? `, used in ${used.slice(0, 5).join(", ")}${used.length > 5 ? ` and ${used.length - 5} more` : ""}` : ", used in no combination yet";
+}
+
 export async function insertProposals(db: Client, workspaceId: string, items: (NewProposal & Work)[]): Promise<string[]> {
   if (!items.length) return [];
   const rows: Prisma.ProposalItemCreateManyInput[] = [];
   const seen = new Set<string>();
+  // C11.13 (P-120: drafted once, reused): a library item drafted "new" for one form edition is the one "new" item; the
+  // same identity drafted for another edition waits as a reuse of it, resolved when the first is accepted. One lock per
+  // workspace inside a transaction, so two editions read at once still make one "new" item.
+  await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`proposal-door:${workspaceId}`}))`;
+  const firstNew = new Map<string, { id: string; edition: string | null }>();
   for (const [n, it] of items.entries()) {
-    const { choice, decidedKey, work, ...item } = it;
+    const { choice, decidedKey, work: given, ...item } = it; let work = given;
     const parsed = ProposalItem.safeParse({ ...item, id: randomUUID(), status: "waiting", decision: null });
     if (!parsed.success) fail(`Proposal ${n + 1} (${item.kind ?? "no kind"}) does not follow the queue's contract: ${plainIssues(parsed.error)}.`);
     const x = parsed.data!;
@@ -96,8 +125,18 @@ export async function insertProposals(db: Client, workspaceId: string, items: (N
     seen.add(one);
     if (x.landsOn === "library" && x.reuse.match === "new") {
       const twin = await sameInLibrary(db, workspaceId, x.payload);
-      if (twin) fail(`Proposal ${n + 1} (${x.kind}) is already in the library as ${twin}: propose reusing it instead.`, HttpStatus.CONFLICT);
+      if (twin) fail(`Proposal ${n + 1} (${x.kind}) is already in the library as ${twin}${await whereUsedWords(db, workspaceId, x.kind, twin)}: propose reusing it instead.`, HttpStatus.CONFLICT);
+      const ident = `${x.kind}|${key}`;
+      const first = firstNew.get(ident) ?? await db.proposalItem.findFirst({ where: { workspaceId, kind: x.kind, identityKey: key, landsOn: "library", status: "waiting", reuse: { path: ["match"], equals: "new" }, NOT: { formEdition: x.scope.formEdition } }, select: { id: true, formEdition: true }, orderBy: { createdAt: "asc" } })
+        .then((r) => (r ? { id: r.id, edition: r.formEdition } : null));
+      if (first && first.edition !== x.scope.formEdition) {
+        x.reuse = { match: "reuse", existingKey: null }; x.relatesTo = first.id; work = { ...((work ?? {}) as object), twinOf: first.id };
+        if (x.confidence === "ready") x.confidence = "check";
+        x.reason = `The same item is drafted for ${(first.edition ?? "another form").trim()}. Whichever is accepted first adds it to the library; this one then reuses it.${x.reason ? ` ${x.reason}` : ""}`.slice(0, 500);
+      } else if (!firstNew.has(ident)) firstNew.set(ident, { id: x.id, edition: x.scope.formEdition });
     }
+    // C11.13 (BAND_TIPS): an item close to a library item is never Ready: a person reads the near match and its reason.
+    if (x.identity.near.length && x.confidence === "ready") { x.confidence = "check"; x.reason = `Close to ${x.identity.near.slice(0, 3).join(", ")}: ${x.identity.nearReason}${x.reason ? ` ${x.reason}` : ""}`.slice(0, 500); }
     rows.push({ id: x.id, workspaceId, kind: x.kind, runId: x.runId, step: x.step, formEdition: x.scope.formEdition, combinationId: x.scope.combinationId, landsOn: x.landsOn,
       reuse: x.reuse, payload: x.payload as Prisma.InputJsonValue, source: (x.source ?? undefined) as Prisma.InputJsonValue | undefined, rounds: x.rounds as Prisma.InputJsonValue,
       rules: x.rules, agreement: x.agreement, confidence: x.confidence, reason: x.reason, origin: x.origin, identity: x.identity, identityKey: key,
@@ -152,8 +191,21 @@ const taken = async (tx: Tx, ws: string) => new Set((await tx.canonicalField.fin
 const slugKey = (label: string, used: Set<string>) => keyFor("x", label, used).slice(2);
 const sourceRef = (r: Row, actor: Actor) => `${r.origin === "rules" ? "rules" : "AI"} run ${r.runId}; accepted by ${actor.id} on the review queue (item ${r.id})`;
 
+/** C11.13 (P-120: a near duplicate's one-line reason is shown to the second person and at release): the library change
+ *  a lander writes carries it beside the decider's reason, once. */
+export function withNearReason(reason: string | null, identity: unknown): string | null {
+  const id = identity as { near?: string[]; nearReason?: string | null } | null;
+  if (!id?.near?.length || !id.nearReason || reason?.includes(id.nearReason)) return reason;
+  return `${reason ? `${reason} ` : ""}Close to ${id.near.slice(0, 3).join(", ")}: ${id.nearReason}`.slice(0, 1000);
+}
+
 /** LANDERS[kind]: what accepting an item writes, inside decide's transaction. A kind with no lander yet is refused. */
 export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalPayload, l: Landing) => Promise<string>>> = {
+  /** C4.11 part 3 (forms lane): a waiting library change for a second person (question-condition.ts), never a direct edit. */
+  async condition(tx, _r, p, l) {
+    if (p.kind !== "condition") fail("Wrong payload.");
+    return proposeConditionChange(tx, l, p as Extract<ProposalPayload, { kind: "condition" }>);
+  },
   async field(tx, r, p, l) {
     if (p.kind !== "field") fail("Wrong payload.");
     const f = p as Extract<ProposalPayload, { kind: "field" }>;
@@ -282,7 +334,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
     // P-121: several at once is for Ready items only, and never a rules item that adds to the library (1b).
     if (d.action === "accept" && rows.length > 1) {
       const no = rows.map((r) => [r, bulkWhy(r)] as const).filter(([, why]) => why);
-      if (no.length) fail(`Only Ready items are accepted together. ${no.length === 1 ? "One item" : `${no.length} items`} cannot be: "${identityKeyOf(no[0][0].payload as ProposalPayload, no[0][0].identityKey)}" (${no[0][1]}). Nothing was accepted.`, HttpStatus.CONFLICT);
+      if (no.length) fail(`Only Ready items are accepted together. ${no.length === 1 ? "One item" : `${no.length} items`} cannot be: "${nameOf(no[0][0].payload as ProposalPayload, no[0][0].identityKey)}" (${no[0][1]}). Nothing was accepted.`, HttpStatus.CONFLICT);
     }
     const out: { id: string; landedAs: string | null }[] = [];
     for (const r of rows) {
@@ -294,15 +346,24 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         payload = p.data!;
       }
       let landedAs: string | null = null, reused = false, pqr: (PqrWork & { stamp: string }) | null = null;
+      let resolved: { match: string; existingKey: string | null } | null = null;
       if (d.action !== "reject") {
         if (r.landsOn === "library" && (r.reuse as { match: string }).match === "new") {
           const twin = await sameInLibrary(tx, workspaceId, payload);
-          if (twin) fail(`"${identityKeyOf(payload, r.identityKey)}" is already in the library as ${twin} (added since it was proposed): reject this one, or reuse that item.`, HttpStatus.CONFLICT);
+          if (twin) fail(`"${nameOf(payload, r.identityKey)}" is already in the library as ${twin} (added since it was proposed): reject this one, or reuse that item.`, HttpStatus.CONFLICT);
         }
         const reuse = r.reuse as { match: string; existingKey: string | null };
         // P-120: a reuse adds nothing to the library; it records the existing item it uses, if that is still there.
+        // C11.13 (review M1–M2): a twin drafted for another edition reuses the item its first copy added; when that one
+        // is not in the library (waiting, rejected or undone), the twin adds it itself, unless the library already has it.
+        if (r.landsOn === "library" && reuse.match === "reuse" && !reuse.existingKey && r.relatesTo && (r.work as { twinOf?: string } | null)?.twinOf) {
+          const first = await tx.proposalItem.findUnique({ where: { id: r.relatesTo }, select: { status: true, decidedKey: true } });
+          const key = first?.decidedKey && ["accepted", "edited"].includes(first.status) && (await usableInLibrary(tx, workspaceId, r.kind, first.decidedKey)) ? first.decidedKey : await sameInLibrary(tx, workspaceId, payload);
+          resolved = key ? { match: "reuse", existingKey: key } : { match: "new", existingKey: null };
+          reuse.match = resolved.match; reuse.existingKey = resolved.existingKey;
+        }
         if (r.landsOn === "library" && reuse.match === "reuse" && d.action === "accept") {
-          if (!(await usableInLibrary(tx, workspaceId, r.kind, reuse.existingKey))) fail(`"${identityKeyOf(payload, r.identityKey)}" reuses ${reuse.existingKey ?? "no item"}, which is not in the library (retired, merged or never added): reject this proposal, or edit it into a new item.`, HttpStatus.CONFLICT);
+          if (!(await usableInLibrary(tx, workspaceId, r.kind, reuse.existingKey))) fail(`"${nameOf(payload, r.identityKey)}" reuses ${reuse.existingKey ?? "no item"}, which is not in the library (retired, merged or never added): reject this proposal, or edit it into a new item.`, HttpStatus.CONFLICT);
           landedAs = reuse.existingKey; reused = true;
         } else if (r.kind === "pqr_pick") {
           const got = await landPqrPick(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: reason ?? r.reason });
@@ -310,14 +371,14 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         } else {
           const land = LANDERS[r.kind as ProposalKind];
           if (!land) fail(`A ${r.kind.replace(/_/g, " ")} proposal is accepted with its own step, not yet on this queue.`, HttpStatus.CONFLICT);
-          landedAs = await land!(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: reason ?? r.reason, proposedBy: actor.id, combinationId: r.combinationId, sourceJobId: r.runId });
+          landedAs = await land!(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: withNearReason(reason ?? r.reason, r.identity), proposedBy: actor.id, combinationId: r.combinationId, sourceJobId: r.runId });
         }
       }
       // What a library lander wrote, as it stands now: Undo refuses once it has changed (PR #96 review (1)).
       const landedStamp = landedAs && !reused ?await stampOf(tx, workspaceId, r.kind, landedAs) : null;
       const work = { ...((r.work ?? {}) as object), ...(d.action === "edit" ? { beforeEdit: r.payload } : {}), ...(landedStamp ? { landedStamp } : {}), ...(pqr ? { pqr } : {}) };
       await tx.proposalItem.update({ where: { id: r.id }, data: { status: d.action === "accept" ? "accepted" : d.action === "edit" ? "edited" : "rejected", decidedBy: actor.id, decidedAt: new Date(),
-        decisionReason: reason, batchId, decidedKey: landedAs,
+        decisionReason: reason, batchId, decidedKey: landedAs, ...(resolved && d.action !== "reject" ? { reuse: resolved } : {}),
         ...(d.action === "edit" || landedStamp || pqr ? { work: work as Prisma.InputJsonValue } : {}),
         // An edit keeps the item's own reading beside it, so Undo puts the item back as it was proposed (1b).
         ...(d.action === "edit" ? { payload: payload as Prisma.InputJsonValue, identityKey: identityKeyOf(payload, r.identityKey) } : {}) } });
@@ -345,11 +406,17 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     if (Date.now() - at > UNDO_SECONDS * 1000) fail(`Undo is offered for ${UNDO_SECONDS} seconds; after that, retire or delete the item in the library.`, HttpStatus.CONFLICT);
     const adds = await tx.libraryChange.findMany({ where: { workspaceId, batchId } });
     if (adds.some((c) => c.status !== "WAITING")) fail("A second person has already decided one of these items: it cannot be undone here.", HttpStatus.CONFLICT);
+    // C11.13 (review M3): an item this batch added that another accepted item now reuses is not taken away under it.
+    const added = rows.filter((r) => r.decidedKey && (r.reuse as { match?: string } | null)?.match !== "reuse");
+    const keys = added.map((r) => r.decidedKey!);
+    const users = keys.length ? await tx.proposalItem.findMany({ where: { workspaceId, status: { in: ["accepted", "edited"] }, decidedKey: { in: keys }, reuse: { path: ["match"], equals: "reuse" }, NOT: { batchId } }, select: { kind: true, decidedKey: true, formEdition: true } }) : [];
+    const user = users.find((u) => added.some((r) => r.kind === u.kind && r.decidedKey === u.decidedKey));
+    if (user) fail(`${user.decidedKey} is now reused by an item accepted for ${user.formEdition ?? "another source"}, so Undo would take it away under that item. Nothing was undone: undo that decision first, or retire the item in the shared library.`, HttpStatus.CONFLICT);
     // PR #96 review (1): an item edited after the accept is not erased by Undo; the library keeps the person's edit.
     for (const r of rows) {
       const { landedStamp } = (r.work ?? {}) as { landedStamp?: string };
       if (landedStamp && r.decidedKey && (await stampOf(tx, workspaceId, r.kind, r.decidedKey)) !== landedStamp)
-        fail(`"${identityKeyOf(r.payload as ProposalPayload, r.identityKey)}" was changed after it was accepted, so Undo would erase that change. Nothing was undone: retire or delete it in the shared library instead.`, HttpStatus.CONFLICT);
+        fail(`"${nameOf(r.payload as ProposalPayload, r.identityKey)}" was changed after it was accepted, so Undo would erase that change. Nothing was undone: retire or delete it in the shared library instead.`, HttpStatus.CONFLICT);
     }
     // C4.7: an accepted pick's tick is taken back only while it is the draft the accept wrote (not changed or released
     // since); the draft it replaced comes back as it was.
@@ -366,6 +433,7 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     for (const r of rows) {
       const { beforeEdit, landedStamp, pqr, ...work } = (r.work ?? {}) as { beforeEdit?: ProposalPayload; landedStamp?: string; pqr?: unknown };
       await tx.proposalItem.update({ where: { id: r.id }, data: { status: "waiting", decidedBy: null, decidedAt: null, decisionReason: null, batchId: null, decidedKey: null,
+        ...((r.work as { twinOf?: string } | null)?.twinOf ? { reuse: { match: "reuse", existingKey: null } } : {}),
         ...(beforeEdit || landedStamp || pqr ? { work: work as Prisma.InputJsonValue } : {}),
         ...(beforeEdit ? { payload: beforeEdit as Prisma.InputJsonValue, identityKey: identityKeyOf(beforeEdit, r.identityKey) } : {}) } });
     }
