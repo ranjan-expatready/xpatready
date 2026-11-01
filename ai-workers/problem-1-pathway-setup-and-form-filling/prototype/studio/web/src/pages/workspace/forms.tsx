@@ -23,6 +23,8 @@ import { fmtWhen, Tip } from "@/components/status";
 import { useLibraryFields, WHO, whoLabel } from "@/pages/configuration";
 import { attachmentFor, pendingForms, ReadingCell, ReadingSteps, SourcesLine, StepNotices } from "@/pages/sources";
 import { FormPicker } from "@/components/forms";
+import { FOCUS_RING, useFocusItem } from "@/components/focus-item";
+import { cn } from "@/lib/utils";
 import { useApi } from "@/lib/api";
 import { SetupRail, StepChip } from "./setup-rail";
 import type { FormStepChip } from "../../../../contracts/form-progress";
@@ -85,6 +87,10 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
   const codes = lines.map((l) => l.code);
   // A form removed in this draft is under "Removed in this draft" (Undo), not a form waiting to be set up.
   const pending = combo ? pendingForms(combo, [...codes, ...removed.map((r) => r.code)]) : [];
+  // X1 / #206 finding 6: the setup checklist's forms items land here (?focus=forms:sources, forms:lines, forms:problems,
+  // forms:held): scrolled to, focused, outlined 2 s, the address cleared (components/focus-item). Nothing lands while the
+  // tab loads.
+  useFocusItem(known && combo ? [] : undefined);
   const finder = <><FinderPanel id={id} latest={latest.data} onRedo={redo} onChoosePage={choosePage} removed={removed.map((r) => r.code)} lineCount={lines.length + pending.length} />{finding ? <FindDialog id={id} only={finding.length ? finding : undefined} page={choosingPage ? latest.data?.page_choice ?? { candidates: [], why: "" } : null} onClose={() => { setFinding(null); setChoosingPage(false); }} onStarted={(runId) => window.dispatchEvent(new CustomEvent("s5-find-started", { detail: runId }))} /> : null}</>;
   // Break m4 (Screen 01): an author never sees the channels as read-only words while the session loads.
   if (!known || !combo) return <Spinner label="Loading forms" />;
@@ -111,10 +117,11 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
         <p className="min-w-0 text-sm" data-filing>{/* P-143, review M2: the IRCC account, chosen here by an author; min-w-0 (QA-20): the line shrinks to 390 px and the picker with it */}<span className="mr-3" data-account><span className="text-text-muted">IRCC account: </span>{canAuthor ? <AccountPicker id={id} saved={accountKey} /> : account ? `Filed ${accountKey ? throughAccount(accountKey) : `through the ${account}`}` : <span className="text-text-muted">Not set (every way IRCC may accept is offered, Sample)</span>}</span><span className="text-text-muted">Filing: </span>{lines.length ? <><b className="font-semibold" title={filingDetail !== filing ? filingDetail : undefined}>{filing}</b>{filingDetail !== filing ? <span className="sr-only"> ({filingDetail})</span> : null}</> : <b className="font-semibold">not known until a form is set up</b>} <span className="text-text-muted">· {count} · Sample until the immigration expert confirms</span></p>
         <span className="flex items-center gap-3">{add}<Link className="text-sm text-text-link underline" to="/library/forms">Open the Form library</Link></span>
       </div>
-      {pending.length ? <p className="text-sm" data-pending-summary><span className="font-medium">Not set up yet: </span>{[ready ? `${plural(ready, "form")} can be added from the library now (${ready === 1 ? "its" : "their"} form fields are already matched, no AI needed)` : "", toDraft ? `${plural(toDraft, "form")} ${toDraft === 1 ? "needs" : "need"} reading and drafting with AI` : ""].filter(Boolean).join("; ")}. Each row has its step.</p> : null}
+      {pending.length ? <p className={cn("text-sm", FOCUS_RING)} data-pending-summary data-focus="forms:sources"><span className="font-medium">Not set up yet: </span>{[ready ? `${plural(ready, "form")} can be added from the library now (${ready === 1 ? "its" : "their"} form fields are already matched, no AI needed)` : "", toDraft ? `${plural(toDraft, "form")} ${toDraft === 1 ? "needs" : "need"} reading and drafting with AI` : ""].filter(Boolean).join("; ")}. Each row has its step.</p> : null}
       <StepNotices d={combo} />
+      <HeldEditions id={id} />
       {noRule.length ? <Notice tone="warn" title={`${noRule.length} condition${noRule.length === 1 ? " is" : "s are"} in words only`}>A case cannot tell whom {noRule.map((l) => l.code).join(", ")} {noRule.length === 1 ? "applies" : "apply"} to until the words are turned into a rule. Release waits for it. Open the form to build the rule.</Notice> : null}
-      <Table head={["Form", "Why it is here (IRCC's words)", <Head key="w" tip={TIPS.who}>Who fills it</Head>, <Head key="o" tip={TIPS.onlyIf}>Only if</Head>, <Head key="f" tip={TIPS.filed}>Filed as by default</Head>, <Head key="g" tip={TIPS.signature}>Signature</Head>, <Head key="s" tip={TIPS.signed}>Signed by</Head>, <Head key="l" tip={TIPS.library}>Read and matched</Head>, ""]}>
+      <div className={FOCUS_RING} data-focus="forms:lines"><Table head={["Form", "Why it is here (IRCC's words)", <Head key="w" tip={TIPS.who}>Who fills it</Head>, <Head key="o" tip={TIPS.onlyIf}>Only if</Head>, <Head key="f" tip={TIPS.filed}>Filed as by default</Head>, <Head key="g" tip={TIPS.signature}>Signature</Head>, <Head key="s" tip={TIPS.signed}>Signed by</Head>, <Head key="l" tip={TIPS.library}>Read and matched</Head>, ""]}>
         {lines.map((l) => (
           <tr key={l.line} data-line={l.code} data-line-not-needed={l.channel === "NOT_NEEDED" || undefined} className={l.channel === "NOT_NEEDED" ? "bg-surface text-text-muted" : undefined}>{/* C-4: kept visible, greyed, never filled */}
             <td><span className="mono font-medium">{l.code}</span><br /><span className="text-xs text-text-muted">{l.title}</span>{l.origin === "AI_FOUND" || l.origin === "AI_PROPOSAL" ? <><br /><Pill tone="ai">Picked by AI · Sample</Pill></> : null}</td>
@@ -136,8 +143,8 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
             <td />
           </tr>
         ))}
-      </Table>
-      {problems.length ? <ul className="space-y-1 text-sm" aria-label="Filing problems">{problems.map((x, i) => <li key={i} className="flex gap-2"><Pill tone={x.level === "error" ? "danger" : "warn"}>{x.level === "error" ? "Blocks release" : "Warning"}</Pill>{x.message}</li>)}</ul> : null}
+      </Table></div>
+      <FormsProblems id={id} filing={problems} />
       <SourcesLine d={combo} lineCodes={codes} />
       {open ? <LineDrawer id={id} l={open} d={combo} onClose={() => setOpen(null)} onRemoved={onRemoved} /> : null}
       {removing ? <RemoveDialog id={id} l={removing} onClose={() => setRemoving(null)} onRemoved={onRemoved} /> : null}
@@ -329,5 +336,45 @@ function LineDrawer({ id, l, d, onClose, onRemoved }: { id: string; l: Workspace
         {!l.document ? <section aria-labelledby="drawer-reading" className="space-y-2 border-t border-border pt-4"><h3 id="drawer-reading" className="text-xs font-medium">Reading and matching</h3><ReadingSteps d={d} a={attachmentFor(d, l.code)} /></section> : null}
       </div>
     </Panel>
+  );
+}
+
+/** X1 (#206 finding 6): where the setup checklist's "Fix n form problems" lands (?focus=forms:problems). The filing
+ *  problems of this answer, then any other error the checklist counts for step 3 (the draft's validator problems in
+ *  Forms, engine/setup-checklist.ts WHERE_STEP: conditions, ages), never a recount by other words; a problem only of the
+ *  released version says to release the corrected draft. */
+function FormsProblems({ id, filing }: { id: string; filing: { level: "error" | "warning"; item: string; message: string }[] }) {
+  const o = useApi<CombinationView>(["combination", id], `/combinations/${id}`);
+  const sum = useApi<CombinationSummary>(["combination-summary", id], `/combinations/${id}/summary`);
+  const shown = new Set(filing.map((x) => x.message));
+  const more = (o.data?.draft.problems ?? []).filter((p) => p.level === "error" && p.where === "Forms" && !shown.has(p.message));
+  const released = (sum.data?.setup?.steps ?? []).flatMap((st) => st.open).find((i) => i.focus === "forms:problems" && i.fromRelease);
+  if (!filing.length && !more.length && !released) return null;
+  // Warnings alone are not something to fix: the block is the landing only when it holds what the checklist counts.
+  const counted = filing.some((x) => x.level === "error") || more.length > 0 || !!released;
+  return (
+    <div className={cn("space-y-2", FOCUS_RING)} data-focus={counted ? "forms:problems" : undefined} data-forms-problems>
+      {filing.length ? <ul className="space-y-1 text-sm" aria-label="Filing problems">{filing.map((x, i) => <li key={i} className="flex gap-2"><Pill tone={x.level === "error" ? "danger" : "warn"}>{x.level === "error" ? "Blocks release" : "Warning"}</Pill>{x.message}</li>)}</ul> : null}
+      {more.length ? <ul className="space-y-1 text-sm" aria-label="Other form problems" data-forms-problems-more>{more.map((x, i) => <li key={i} className="flex gap-2"><Pill tone="danger">Blocks release</Pill>{x.message}</li>)}</ul> : null}
+      {released && !filing.some((x) => x.level === "error") && !more.length ? <Notice tone="danger" title={`The released version has ${released.count} form problem${released.count === 1 ? "" : "s"}: firms cannot open cases`}>
+        <p className="mt-1">This draft no longer has {released.count === 1 ? "it" : "them"}. Send the draft for review and release it to put it right. <Link className="font-medium text-text-link underline" to={`/c/${id}/review`}>Review and release</Link></p>
+      </Notice> : null}
+    </div>
+  );
+}
+
+/** X1 (#206 finding 6): where the setup checklist's "Review new edition" lands (?focus=forms:held). The same held new
+ *  editions the checklist counts (the row's `held`, P-32): never used until a person reviews their impact on To review. */
+function HeldEditions({ id }: { id: string }) {
+  const sum = useApi<CombinationSummary>(["combination-summary", id], `/combinations/${id}/summary`);
+  const held = sum.data?.row?.held ?? [];
+  if (!held.length) return null;
+  return (
+    <div className={FOCUS_RING} data-focus="forms:held" data-held-editions>
+      <Notice tone="warn" title={held.length === 1 ? `A new edition is waiting for its impact review: ${held[0].edition}` : `${held.length} new editions are waiting for their impact review`}>
+        {held.length > 1 ? <p className="mt-1">{held.map((h) => h.edition).join(", ")}.</p> : null}
+        <p className="mt-1">This combination keeps using the edition in the library until a person reviews what changed. <Link className="font-medium text-text-link underline" to="/review">Review it on To review</Link></p>
+      </Notice>
+    </div>
   );
 }
