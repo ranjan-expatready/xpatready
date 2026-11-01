@@ -16,10 +16,19 @@ import { cleanLabel, normalizeLabel, problemFromZod, problemWords } from "../../
 import { DocumentLineEdit, FormLineEdit, PeopleBody, UndoBody, type PersonRoleView } from "../../contracts/workspace.ts";
 import { checkPeople, linesNamingRemoved } from "../../engine/people.ts";
 import { LibrarySources, type SourceLine } from "./library-sources.ts";
+import { checkFormat, fieldFormat, formatWords, type MappedBox } from "../../engine/field-format.ts";
 
 const VALUE_TYPES = Object.keys(VALUE_TYPE_TO_DATA_TYPE);
 /** S6 (2a), P-158 item 6: a list row's first source and how many more; an item with none is flagged, never blank. */
 const SHORT: Partial<Record<SourceLine["kind"], string>> = { release: "From a reviewed release", ai_run: "From an AI run a person decided" };
+/** P-162: a field's format in one line, or why there is none ("Format: not read yet" when no form field of it has
+ *  been read; a field on no form says so). */
+const formatLine = (boxes: MappedBox[] | undefined, valueType?: string | null) => {
+  if (!boxes?.length) return { text: null, state: "no_form" as const };
+  const f = fieldFormat(boxes, valueType);
+  const text = formatWords(f);
+  return text ? { text, state: "read" as const } : { text: null, state: f.read ? "none_on_form" as const : "not_read" as const };
+};
 const sourceSummary = (lines: SourceLine[] | undefined) => {
   const best = lines?.find((l) => !SHORT[l.kind]) ?? lines?.[0]; // a form box or checklist line before a release note
   return { source: best ? SHORT[best.kind] ?? best.text : null, more_sources: Math.max(0, (lines?.length ?? 0) - 1), unsourced: !lines?.length };
@@ -386,12 +395,46 @@ export class Studio {
     for (const r of rows) if (!latest.has(r.canonicalFieldKey)) latest.set(r.canonicalFieldKey, r);
     const needle = (q.q ?? "").toLowerCase();
     const [src, used] = await Promise.all([this.lib.all("field", workspaceId), this.lib.usedIn("field", workspaceId)]);
+    const fmt = await this.fieldBoxes(workspaceId);
     return [...latest.values()].filter((f) => !needle || f.canonicalFieldKey.includes(needle) || f.meaning.toLowerCase().includes(needle)).map((f) => {
       const u = usage.filter((x) => x.canonicalFieldKey === f.canonicalFieldKey);
       const forms = [...new Set(u.map((x) => editions.get(x.formEditionId)))].filter(Boolean);
       const p = placements.get(f.canonicalFieldKey);
-      return { key: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, scope: f.scope, version: f.version, status: f.status, origin: f.origin, has_draft: f.status === "DRAFT", boxes: u.reduce((a, x) => a + x._count._all, 0), forms, placement: p ? { section: p.sectionKey, collected_from: p.collectedFrom } : null, name: (f.labelChecked && f.label) || null, ...sourceSummary(src.get(f.canonicalFieldKey)), used_in: used.get(f.canonicalFieldKey) ?? [] };
+      return { key: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, scope: f.scope, version: f.version, status: f.status, origin: f.origin, has_draft: f.status === "DRAFT", boxes: u.reduce((a, x) => a + x._count._all, 0), forms, placement: p ? { section: p.sectionKey, collected_from: p.collectedFrom } : null, name: (f.labelChecked && f.label) || null, ...sourceSummary(src.get(f.canonicalFieldKey)), used_in: used.get(f.canonicalFieldKey) ?? [], format: formatLine(fmt.get(f.canonicalFieldKey), f.valueType) };
     });
+  }
+
+  /** P-162 (C3.1): each field's current mapped form fields with their edition's inventory, for its format. Only the
+   *  newest version per edition and form field counts, while it maps this field. */
+  private async fieldBoxes(workspaceId: string, key?: string): Promise<Map<string, MappedBox[]>> {
+    const rows = await this.db.formFieldMap.findMany({ where: { workspaceId, ...(key ? { canonicalFieldKey: key } : {}), status: { in: ["PUBLISHED", "DRAFT"] } }, include: { edition: { include: { form: true } } }, orderBy: { version: "desc" } });
+    const seen = new Set<string>(), out = new Map<string, MappedBox[]>();
+    for (const r of rows) {
+      const id = `${r.formEditionId}|${r.dataPath}`;
+      if (seen.has(id)) continue; seen.add(id);
+      if (r.outcome !== "mapped" || !r.canonicalFieldKey) continue;
+      out.set(r.canonicalFieldKey, [...(out.get(r.canonicalFieldKey) ?? []), { form: r.edition.editionLabel, inventoryFile: r.edition.inventoryFile, dataPath: r.dataPath, caption: r.caption, transform: r.transform }]);
+    }
+    return out;
+  }
+
+  /** P-162: a shared field's format, read from its form fields (`GET /library/fields/:key/format`). */
+  async fieldFormatOf(key: string) {
+    const workspaceId = await this.ws.id();
+    const field = await this.db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: key }, orderBy: { version: "desc" }, select: { valueType: true } });
+    if (!field) fail(`${key} is not in the shared library.`, HttpStatus.NOT_FOUND);
+    const boxes = (await this.fieldBoxes(workspaceId, key)).get(key) ?? [];
+    const f = fieldFormat(boxes, field!.valueType);
+    return { key, ...f, line: formatLine(boxes, field!.valueType), forms: [...new Set(boxes.map((b) => b.form))] };
+  }
+
+  /** P-162: the fixed format checks run on a value, as a case would (`POST /library/fields/:key/format-check`). */
+  async checkFieldFormat(key: string, body: unknown) {
+    const b = (body ?? {}) as { value?: unknown; country?: unknown; other_date?: unknown };
+    if (!("value" in (b as object))) fail("Give the value to check.", HttpStatus.BAD_REQUEST);
+    const f = await this.fieldFormatOf(key);
+    const problems = checkFormat(f, b.value, { country: typeof b.country === "string" ? b.country : null, otherDate: typeof b.other_date === "string" ? b.other_date : null });
+    return { key, value: b.value, ok: !problems.length, problems, format: f.line };
   }
 
   async field(key: string) {
@@ -406,7 +449,9 @@ export class Studio {
     const [forms, reqs, rules, checks, comps] = await Promise.all([this.db.combinationForm.findMany({ where: { workspaceId }, include: { form: true } }), this.db.documentRequirement.findMany({ where: { workspaceId } }), this.db.predicate.findMany({ where: { workspaceId } }), this.db.check.findMany({ where: { workspaceId } }), this.db.combination.findMany({ where: { workspaceId } })]);
     const compLabel = new Map(comps.map((c) => [c.id, c.label]));
     const types = await this.db.documentType.findMany({ where: { workspaceId } });
+    const format = fieldFormat((await this.fieldBoxes(workspaceId, key)).get(key) ?? [], versions[0].valueType);
     return {
+      format,
       versions: versions.map((v) => ({ ...v })), current: versions[0],
       used_by: Object.values(boxes.reduce((a: any, b) => { const k = b.edition.editionLabel; a[k] ??= { form: b.edition.form.formKey, edition: k, boxes: [] as any[] }; a[k].boxes.push({ data_path: b.dataPath, caption: b.caption, person: b.person, row: b.row, transform: b.transform, status: b.status, origin: b.origin }); return a; }, {})),
       placements: placements.map((p) => ({ ...p, section_title: sections.find((s) => s.sectionKey === p.sectionKey)?.title ?? p.sectionKey })),
