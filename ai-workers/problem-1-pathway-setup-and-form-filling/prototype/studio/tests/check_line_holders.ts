@@ -7,7 +7,7 @@ import { conditionSubjects, lineCondition, lineHolders, render, type Known, type
 import { caseChecklist } from "../engine/runtime/case-checklist.ts";
 import type { Participant } from "../engine/runtime/case.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
-import { checklist } from "../engine/sources.ts";
+import { checklist, documentFacts } from "../engine/sources.ts";
 import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
@@ -52,5 +52,20 @@ const P = (id: string, role: Participant["role"]): Participant => ({ subjectId: 
 const cc = caseChecklist(S, "vv.single", [P("case", "case"), P("A", "principal"), P("B", "spouse_or_partner"), P("C", "child")], k, new Date("2026-11-01T12:00:00Z"));
 const caseAt = (lineage: string) => cc.derived ? cc.people.filter((p) => [...p.lines, ...p.waiting, ...p.not_needed].some((l) => l.lineage === lineage)).map((p) => p.subject).sort().join() : "";
 ok("Q2 case checklist pass: every line is on the same people's lists as in Preview", ["employment:principal", "insurance:each", "marriage:principal", "consent:child"].every((l) => caseAt(l) === at(l)), ["employment:principal", "insurance:each", "marriage:principal", "consent:child"].map((l) => `${l}: ${caseAt(l)} / ${at(l)}`));
+
+// Review round 1 (Q2-line-holders/review.md Major 1): each rule has a check that fails when the rule is removed.
+const two: Person[] = [...persons, { id: "D", role: "child", label: "D", applies: true }];
+const dep = { subjectKind: "DEPENDENT", op: "eq", field: "person.employed", value: true };
+ok("Q2 (a) DEPENDENT on a child holder is decided on that child's own answers, not on another child's", lineCondition(S, known({ "D|person.employed": true }), two, "C", dep).applies !== true && lineCondition(S, known({ "C|person.employed": true }), two, "C", dep).applies === true);
+ok("Q2 (h) a non-child holder's DEPENDENT condition holds when any one child holds (the second child here)", lineCondition(S, known({ "C|person.employed": false, "D|person.employed": true }), two, "A", dep).applies === true && lineCondition(S, known({ "C|person.employed": false, "D|person.employed": false }), two, "A", dep).applies === false);
+const pri = { subjectKind: "PRINCIPAL", op: "eq", field: "person.employed", value: true };
+ok("Q2 (i) a case-level line with a principal condition is decided on the principal's answers", (conditionSubjects(two, "case", "PRINCIPAL") as string[]).join() === "A" && lineCondition(S, known({ "A|person.employed": true }), two, "case", pri).applies === true && lineCondition(S, known({ "A|person.employed": false }), two, "case", pri).applies === false);
+const Sdf = { ...S, document_types: [{ key: "employment_letter", name: "Employment letter", supplies_facts: ["person.employed"] }, { key: "marriage_certificate", name: "Marriage certificate", supplies_facts: ["person.marriage_date"] }],
+  document_requirements: [S.document_requirements[0], S.document_requirements[2]] } as unknown as Snapshot;
+const df = documentFacts(Sdf, persons);
+ok("Q2 (g) documentFacts: the principal's spouse-condition line supplies the principal's facts, not the spouse's", !!df.get("A")?.get("person.employed")?.length && !df.get("B")?.get("person.employed"));
+ok("Q2 (g) documentFacts (fail): a line whose condition is about a document still supplies its facts", !!df.get("A")?.get("person.marriage_date")?.length);
+const noSp = lineCondition(S, known({}), persons.filter((p) => p.id !== "B"), "A", S.document_requirements[0].condition);
+ok("Q2 nobody words: with no spouse the result names who is missing (\"spouse or partner\"), and the case checklist says it", noSp.nobody === "spouse or partner" && (() => { const x = caseChecklist(S, "vv.single", [P("case", "case"), P("A", "principal")], known({}), new Date("2026-11-01T12:00:00Z")); return x.derived && /spouse or partner, and there is none on the case/.test(x.people[0].not_needed.find((l) => l.lineage === "employment:principal")?.reason ?? ""); })());
 
 process.exitCode = summary() ? 1 : 0;
