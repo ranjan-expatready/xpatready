@@ -96,3 +96,17 @@ export const ViewerChecklist = SetupChecklist.extend({ viewer: ViewerOverlay });
 export type ViewerChecklist = z.infer<typeof ViewerChecklist>;
 /** GET /catalogue cards: the steps without their open items (the summary carries the full checklist). */
 export type CardSetup = Pick<ViewerChecklist, "chip" | "bar" | "next" | "current" | "viewer"> & { steps: Omit<Step, "open">[] };
+
+/** W1 setup checklist slice C2 (X1): the tab each open item lands on, from its focus key (Before forms' official pages
+ *  and people sit on Forms, P-161 (2)). The tab headers count from this, never recount (concept §8: one counts object). */
+export type BadgeTab = "forms" | "documents" | "questionnaires";
+export const tabOfFocus = (focus: string): BadgeTab | null => {
+  const head = focus.split(/[:\s]/)[0];
+  return head === "forms" || head === "pages" || head === "people" ? "forms" : head === "documents" ? "documents" : head === "questionnaires" ? "questionnaires" : null;
+};
+/** Open items per tab, from the setup checklist's steps (an item that lands nowhere on these tabs is not counted). */
+export function tabCounts(setup: { steps: { open: { focus: string }[] }[] } | null | undefined): Record<BadgeTab, number> {
+  const out: Record<BadgeTab, number> = { forms: 0, documents: 0, questionnaires: 0 };
+  for (const s of setup?.steps ?? []) for (const i of s.open) { const t = tabOfFocus(i.focus); if (t) out[t]++; }
+  return out;
+}
