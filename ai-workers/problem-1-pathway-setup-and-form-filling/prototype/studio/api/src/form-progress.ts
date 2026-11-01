@@ -35,7 +35,7 @@ export class FormProgressService {
     const history = await this.db.combinationForm.findMany({ where: { workspaceId, combinationId, lineageKey: code }, select: { lineageKey: true, version: true, status: true } });
     const shas = (await this.db.formEdition.findMany({ where: { workspaceId, form: { formKey: code }, sha256: { not: null } }, select: { sha256: true } })).map((e) => e.sha256!);
     const attached = shas.length ? await this.db.sourceAttachment.findFirst({ where: { combinationId, sha256: { in: shas } }, select: { id: true } }) : null;
-    const line = history.length ? (effective(history, (l) => l.lineageKey, "draft").some((l) => l.status !== "RETIRED") ? "present" as const : "none" as const) : attached ? "present" as const : "none" as const;
+    const line = history.length ? (effective(history, (l) => l.lineageKey, "draft").some((l) => l.status !== "RETIRED") ? "present" as const : "none" as const) : attached ? "attached" as const : "none" as const;
     const ed = current ? await this.db.formEdition.findUnique({ where: { workspaceId_editionLabel: { workspaceId, editionLabel: current.edition } }, select: { id: true } }) : null;
     const maps = ed ? effective(await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id }, select: { dataPath: true, version: true, status: true, outcome: true } }), (m) => m.dataPath, "draft").filter((m) => m.status !== "RETIRED") : [];
     // The newest field-map draft of this combination's copy of that file (a stub pass proves the path only: not a draft).

@@ -7,8 +7,9 @@ import type { QueueItem } from "../contracts/review-queue.ts";
 
 export type ProgressFacts = {
   form: string; combinationId: string;
-  /** The combination's line for this form, as the draft has it now. */
-  line: "present" | "none";
+  /** The combination's line for this form, as the draft has it now: a line; only its PDF attached (before its setup, as the
+   *  Forms tab's "Not set up yet" rows); or neither. */
+  line: "present" | "attached" | "none";
   /** The library's current approved edition of the form (a usable PDF), or null. */
   edition: string | null;
   /** The form fields of that edition with a stored field map (any outcome), and those still with no decision. */
@@ -54,15 +55,19 @@ export function formProgress(f: ProgressFacts): FormProgress {
   // 1. Read and added: the combination has the form (a line, or its PDF attached) and the library a usable PDF of it.
   const held = f.items.some((i) => (i.kind === "held_file" || i.kind === "new_edition") && i.state !== "running");
   steps.push(step("attach", author(
-    f.line === "present" && f.edition ? { state: "done", words: `${f.edition} is in the library and on this combination.`, next: null, who: null, count: 0 }
-    : f.line === "present" && held ? { state: "waiting_others", words: `${f.form} is on this combination, but its PDF waits for a person before it joins the library.`, next: null, who: "A second person checks the held PDF on To review.", count: 1 }
-    : f.line === "present" ? { state: "needs_you", words: `${f.form} is on this combination, but the library has no usable PDF of it yet.`, next: { label: "Find again or upload its PDF", href: forms }, who: null, count: 1 }
-    : { state: "not_started", words: `${f.form} is not on this combination.`, next: { label: "Add it from the library", href: forms }, who: null, count: 1 })));
+    f.line !== "none" && f.edition ? { state: "done", words: `${f.edition} is in the library and on this combination.`, next: null, who: null, count: 0 }
+    : f.line !== "none" && held ? { state: "waiting_others", words: `${f.form} is on this combination, but its PDF waits for a person before it joins the library.`, next: null, who: "A second person checks the held PDF on To review.", count: 1 }
+    : f.line !== "none" ? { state: "needs_you", words: `${f.form} is on this combination, but the library has no usable PDF of it yet.`, next: { label: "Find again or upload its PDF", href: forms }, who: null, count: 1 }
+    // Review (cd8a023d) Minor A: a form with no usable PDF yet cannot be added (the library says "No file yet"): its PDF first.
+    : f.edition ? { state: "not_started", words: `${f.form} is not on this combination.`, next: { label: "Add it from the library", href: forms }, who: null, count: 1 }
+    : { state: "not_started", words: `${f.form} is not on this combination, and the library has no PDF of it yet.`, next: { label: "Upload its PDF in the Form library", href: "/library/forms" }, who: null, count: 1 })));
   const attached = steps[0].state === "done";
 
   // 2. Field map drafted: a stored field map, or a finished AI draft of this file.
   steps.push(step("map", author(
-    f.mapped > 0 || f.draft === "done" ? { state: "done", words: f.mapped > 0 ? `${plural(f.mapped, "form field")} of ${f.edition ?? f.form} ${f.mapped === 1 ? "has" : "have"} a field map.` : "The AI draft of the field map has finished.", next: null, who: null, count: 0 }
+    // Attached only, with the library's field map: not this combination's yet: Add from library joins it (no AI, US$0).
+    f.line === "attached" && f.mapped > 0 && f.draft !== "done" ? { state: "needs_you", words: `Its form fields are already matched in the library: Add from library joins it to this combination (no AI, US$0).`, next: { label: "Add from library", href: forms }, who: null, count: 1 }
+    : f.mapped > 0 || f.draft === "done" ? { state: "done", words: f.mapped > 0 ? `${plural(f.mapped, "form field")} of ${f.edition ?? f.form} ${f.mapped === 1 ? "has" : "have"} a field map.` : "The AI draft of the field map has finished.", next: null, who: null, count: 0 }
     : f.draft === "running" ? { state: "running", words: "The AI draft of the field map is running; this page follows it.", next: null, who: null, count: 1 }
     : { state: attached ? "needs_you" : "not_started", words: !f.canAuthor ? (f.draft === "stopped" ? "The last AI draft stopped before it finished." : "No field map yet.") : f.draft === "stopped" ? "The last AI draft stopped before it finished: draft again, or add the field map from the library." : "No field map yet: draft it with AI, or add it from the library (no AI, US$0).", next: attached ? { label: "Draft with AI or add from the library", href: forms } : null, who: null, count: 1 })));
   const mapped = steps[1].state === "done";

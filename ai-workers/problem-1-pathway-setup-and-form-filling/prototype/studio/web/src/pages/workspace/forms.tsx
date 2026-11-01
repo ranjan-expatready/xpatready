@@ -24,6 +24,7 @@ import { useLibraryFields, WHO, whoLabel } from "@/pages/configuration";
 import { attachmentFor, pendingForms, ReadingCell, ReadingSteps, SourcesLine, StepNotices } from "@/pages/sources";
 import { FormPicker } from "@/components/forms";
 import { useApi } from "@/lib/api";
+import { SetupRail, StepChip } from "./setup-rail";
 import { AccountPicker, ChannelCell, SignatureCell } from "@/components/channels";
 import type { CombinationSummary, CombinationView } from "../../../../contracts/programs";
 /** The fields of a summary line that ChannelCell reads. */
@@ -51,6 +52,14 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
   const [choosingPage, setChoosingPage] = React.useState(false);
   const [sp, setSp] = useSearchParams();
   const [removing, setRemoving] = React.useState<WorkspaceFormLine | null>(null);
+  // C2.12 slice 3: one form's guided path, addressable as ?setup=<form number> (a reload lands on the same form).
+  const setup = sp.get("setup");
+  const openSetup = (code: string) => setSp((x) => { const n = new URLSearchParams(x); n.set("setup", code); return n; });
+  const closeSetup = () => { const code = setup; setSp((x) => { const n = new URLSearchParams(x); n.delete("setup"); return n; }, { replace: true }); refocusChip(code); };
+  // WCAG 2.4.3: focus goes back to the form's chip; the dialog hands focus back to what was focused before it opened (the
+  // page, when the rail opened from the address), so the chip is focused again for a few frames until it holds.
+  const refocusChip = (code: string | null, tries = 20) => { const el = document.querySelector<HTMLElement>(`[data-step-chip="${CSS.escape(code ?? "")}"]`); if (el && document.activeElement !== el) el.focus(); if (tries > 0) requestAnimationFrame(() => refocusChip(code, tries - 1)); };
+  const rail = setup ? <SetupRail id={id} code={setup} onClose={closeSetup} /> : null;
   const d = useApi<CombinationView>(["combination", id], `/combinations/${id}`);
   const latest = useFinderLatest(id);
   const toast = useUndoToast();
@@ -85,7 +94,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
         <div className="flex flex-wrap items-start justify-between gap-3"><h2 className="font-semibold">No forms yet</h2>{add}</div>
         <p className="mt-1 text-sm text-text-muted">Find them with AI above, or add one from the <Link className="text-text-link underline" to="/library/forms">Form library</Link>.</p>
       </div>
-      <SourcesLine d={combo} lineCodes={codes} />{picker}{toast.node}
+      <SourcesLine d={combo} lineCodes={codes} />{picker}{rail}{toast.node}
     </div>
   );
   // Drift check 5: forms attached but not set up are counted with the lines, so the header never says "No forms yet ·
@@ -113,7 +122,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
             <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <><ChannelCell id={id} line={{ code: l.code, channel: l.channel as Channel, channelWords: l.channelWords, signature: l.signature, document: l.document } as ChannelLine} canAuthor={canAuthor} options={l.channelOptions} />{l.channel === "ONLINE" ? <p className="text-xs text-text-muted" data-online-words>Answer sheet in portal order (P-113)</p> : null}</>}</td>
             <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <SignatureCell id={id} code={l.code} channel={l.channel as Channel} signature={l.signatureKind as Signature} signatures={l.signatures} canAuthor={canAuthor} />}</td>
             <td className="text-xs">{l.document ? "—" : l.signedBy ? l.signedByLabel : <span className="text-text-muted">Not set</span>}</td>
-            <td className="text-xs"><span className="block">{l.edition ?? <span className="text-text-muted">No edition read yet</span>}{l.document ? null : <span className="text-text-muted"> · {l.boxes} form fields matched</span>}</span>{l.document ? null : <LineReading combo={combo} l={l} fromLibrary={fromLibrary} />}</td>
+            <td className="text-xs"><span className="block">{l.edition ?? <span className="text-text-muted">No edition read yet</span>}{l.document ? null : <span className="text-text-muted"> · {l.boxes} form fields matched</span>}</span>{l.document ? null : <LineReading combo={combo} l={l} fromLibrary={fromLibrary} />}{l.document ? null : <span className="mt-1 block"><StepChip id={id} code={l.code} onOpen={() => openSetup(l.code)} /></span>}</td>
             <td className="whitespace-nowrap">{canAuthor ? <><Button size="sm" variant="ghost" aria-label={`Change ${l.code}`} onClick={() => setOpen(l)}><Pencil /> Change</Button><LineMenu id={id} l={l} onRedo={() => redo([l.code])} onRemove={() => setRemoving(l)} /></> : null}</td>
           </tr>
         ))}
@@ -121,7 +130,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
           <tr key={a.id} data-pending={a.edition ?? a.fileName}>
             <td><span className="mono font-medium">{(a.edition ?? a.fileName).split(" (")[0]}</span><br /><span className="text-xs text-text-muted">{a.edition} · {a.fileName}</span></td>
             <td colSpan={5} className="text-xs text-text-muted">Attached from the Form library: not set up as a line yet. It is read, then its form fields are matched to shared fields; it joins the lines when the matches are applied.</td>
-            <td className="text-xs"><ReadingCell d={combo} a={a} inLibrary={inLibrary(a)} /></td>
+            <td className="text-xs"><ReadingCell d={combo} a={a} inLibrary={inLibrary(a)} />{a.edition ? <span className="mt-1 block"><StepChip id={id} code={a.edition.split(" (")[0]} onOpen={() => openSetup(a.edition!.split(" (")[0])} /></span> : null}</td>
             <td />
           </tr>
         ))}
@@ -130,7 +139,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
       <SourcesLine d={combo} lineCodes={codes} />
       {open ? <LineDrawer id={id} l={open} d={combo} onClose={() => setOpen(null)} onRemoved={onRemoved} /> : null}
       {removing ? <RemoveDialog id={id} l={removing} onClose={() => setRemoving(null)} onRemoved={onRemoved} /> : null}
-      {picker}{toast.node}
+      {picker}{rail}{toast.node}
     </div>
   );
 }

@@ -106,6 +106,9 @@ const st = (p: ReturnType<typeof formProgress>, k: string) => p.steps.find((s) =
   const afterRm = (await call("GET", `/combinations/${lmia}/forms/${encodeURIComponent(gone)}/progress`)).body;
   ok("C2.12 BR-3 fail (review M2a, API): a form removed from the combination reads not on it (before: its attached PDF kept it there)", afterRm.steps?.[0]?.state === "not_started" && afterRm.steps.slice(1).every((x: { state: string }) => x.state === "not_started"), afterRm.steps?.[0]);
   ok("C2.12 API (review m5): a combination id in capitals is the same combination", (await call("GET", `/combinations/${sv.toUpperCase()}/forms/${encodeURIComponent("IMM 5257")}/progress`)).status === 200);
+  // A form only attached (not yet a line) whose field map the library already has: step 2 is Add from library, never "set up".
+  const p5707b = (await call("GET", `/combinations/${sv}/forms/${encodeURIComponent("IMM 5707")}/progress`)).body;
+  ok("C2.12 BR-3 fail (attached, not a line): a library field map is not this combination's: step 2 is Add from library and the form is not 'all done'", p5707b.steps?.[1]?.state === "needs_you" && p5707b.steps[1].next?.label === "Add from library" && p5707b.current === "map", p5707b.steps?.[1]);
   // ── refusals
   ok("C2.12 API fail: a form not in the library is 404 in words", (await call("GET", `/combinations/${sv}/forms/${encodeURIComponent("IMM 9999")}/progress`)).status === 404);
   ok("C2.12 API fail: an unknown combination is 404 in words", (await call("GET", `/combinations/00000000-0000-0000-0000-000000000000/forms/${encodeURIComponent("IMM 5257")}/progress`)).status === 404 && (await call("GET", `/combinations/not-an-id/forms/${encodeURIComponent("IMM 5257")}/progress`)).status === 404);
