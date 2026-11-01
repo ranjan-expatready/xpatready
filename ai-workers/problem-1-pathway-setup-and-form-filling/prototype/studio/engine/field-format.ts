@@ -132,6 +132,29 @@ export function formatsFor(inventoryFile: string | null | undefined): FormatsFil
   return files.get(f) ?? null;
 }
 
+/** What the PDF box itself says, shown beside a proposal's form field (C3.1 AT-8/9/9b, IRCC-F07, P-162): its maximum
+ *  length, its own list of choices (label and code, as the form lists them) and its date pattern. Null where the box
+ *  says none; read from the inventory and the formats file beside it, never from the AI. */
+export type PdfBoxFormat = { maxLength: number | null; choices: { label: string; code: string }[] | null; datePattern: string | null };
+type InvBox = { data_path?: string; ui?: string | null; max_chars?: number | null; options_resolved?: [string, string][] | null; caption?: string | null };
+const inventories = new Map<string, Map<string, InvBox> | null>();
+export function pdfBoxFormats(inventoryFile: string | null | undefined): (dataPath: string) => PdfBoxFormat | null {
+  if (!inventoryFile) return () => null;
+  if (!inventories.has(inventoryFile)) {
+    try { inventories.set(inventoryFile, new Map((JSON.parse(readFileSync(join(SOLUTION, inventoryFile), "utf8")).fields as InvBox[]).filter((f) => f.data_path).map((f) => [f.data_path!, f]))); } catch { inventories.set(inventoryFile, null); }
+  }
+  const inv = inventories.get(inventoryFile), fmt = formatsFor(inventoryFile);
+  return (dataPath) => {
+    const b = inv?.get(dataPath);
+    if (!b) return null;
+    const f = fmt?.boxes[dataPath];
+    const picture = (f?.format_picture ?? f?.ui_picture ?? "").split("|")[0];
+    const datePattern = /^date\{([^}]+)\}$/.exec(picture)?.[1] ?? (b.ui === "dateTimeEdit" ? /\b(YYYY[-/]?MM(?:[-/]?DD)?)\b/.exec(b.caption ?? "")?.[1] ?? null : null);
+    const list = b.options_resolved ?? null;
+    return { maxLength: b.max_chars ?? f?.max_chars ?? null, choices: list && list.length > 1 ? list.map(([label, code]) => ({ label, code })) : null, datePattern };
+  };
+}
+
 /** One mapped form field of a shared field: the edition's label, its inventory, the box and the map's transform. */
 export type MappedBox = { form: string; inventoryFile: string | null; dataPath: string; caption?: string | null; transform?: string | null };
 

@@ -24,7 +24,9 @@ jobs:
   shard:
     # P-213: only merge-queue batches, only while BATCH_RUNNER is not "mac". A fresh machine each, so the browser suite
     # runs on its :4400 demo (--demo), as on 31 Oct. GitHub's 2-core Linux machine: US$0.006 a minute.
-    if: startsWith(github.event.pull_request.head.ref, 'mergify/') && vars.BATCH_RUNNER != 'mac'
+    # P-223 (2), founder 1 Nov night: every pull request now runs its suites here too, not only batches (fallback: repository
+    # variable PR_RUNNER=mac puts builders' own PRs back on the Mac). A pull request from a fork never reaches the Mac.
+    if: ${{ (vars.BATCH_RUNNER != 'mac' && (startsWith(github.event.pull_request.head.ref, 'mergify/') || vars.PR_RUNNER != 'mac' || !(github.event.pull_request.head.repo.full_name == github.repository))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions: { contents: read }
@@ -78,14 +80,14 @@ jobs:
     # P-213: for a batch checked by the shards, this job runs on a GitHub machine and only reports the shards' result.
     needs: shard
     if: ${{ !cancelled() }}
-    runs-on: ${{ fromJSON(startsWith(github.event.pull_request.head.ref, 'mergify/') && vars.BATCH_RUNNER != 'mac' && '["ubuntu-latest"]' || '["self-hosted","macOS","xr-mac"]') }}
+    runs-on: ${{ fromJSON(((vars.BATCH_RUNNER != 'mac' && (startsWith(github.event.pull_request.head.ref, 'mergify/') || vars.PR_RUNNER != 'mac' || !(github.event.pull_request.head.repo.full_name == github.repository))) || !(github.event.pull_request.head.repo.full_name == github.repository)) && '["ubuntu-latest"]' || '["self-hosted","macOS","xr-mac"]') }}
     timeout-minutes: 90   # P-183: a busy Mac never stops a check halfway
     permissions: { contents: read }
     concurrency: { group: "ci-${{ github.event.pull_request.number }}", cancel-in-progress: true }
     env:
       P: ai-workers/problem-1-pathway-setup-and-form-filling/product
       S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
-      SHARDED: ${{ startsWith(github.event.pull_request.head.ref, 'mergify/') && vars.BATCH_RUNNER != 'mac' }}
+      SHARDED: ${{ (vars.BATCH_RUNNER != 'mac' && (startsWith(github.event.pull_request.head.ref, 'mergify/') || vars.PR_RUNNER != 'mac' || !(github.event.pull_request.head.repo.full_name == github.repository))) }}
     steps:
       - name: the four shards' result (P-213)
         if: env.SHARDED == 'true'

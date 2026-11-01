@@ -146,8 +146,10 @@ export class Intake {
       if (body.note!.length > 300) fail("Keep the reason under 300 characters.");
       const done = await this.db.intakeItem.updateMany({ where: { id, status: "HELD" }, data: { status: "DONE", outcome: "refused", reason: `${h.outcome === "held" ? "Rejected" : "Set aside"} by ${actor.name}: ${body.note!.trim()}` } });
       if (!done.count) fail("Someone decided this file at the same moment. Refresh to see it.", HttpStatus.CONFLICT);
-      await this.audit.log(h.workspaceId, actor.id, "rejected", "held file", h.code ?? h.fileName, `${actor.name} rejected ${h.editionLabel ?? h.fileName} as a source: ${body.note!.trim()}`, undefined, h.combinationId ?? undefined);
-      return { outcome: "rejected" };
+      // #300 m4: an approved older or new edition is set aside, not rejected as a source (its approval stays on record).
+      const setAside = h.outcome !== "held";
+      await this.audit.log(h.workspaceId, actor.id, setAside ? "set aside" : "rejected", "held file", h.code ?? h.fileName, setAside ? `${actor.name} set aside ${h.editionLabel ?? h.fileName} (an edition not used): ${body.note!.trim()}` : `${actor.name} rejected ${h.editionLabel ?? h.fileName} as a source: ${body.note!.trim()}`, undefined, h.combinationId ?? undefined);
+      return { outcome: setAside ? "set aside" : "rejected" };
     }
     if (!h.irccPage) fail("The uploader records the IRCC page the file came from first; then compare and approve.", HttpStatus.CONFLICT);
     // Break m5: what is approved is the page the second person saw, not one changed after they opened it.
@@ -352,7 +354,7 @@ export class Intake {
       const d = def ?? (await tx.govFormDef.create({ data: { workspaceId, formKey: id.code, displayName: id.title || id.code, formKind: read.kind === "form" ? "data_form" : "document" } }));
       await forgetDeletion(tx, workspaceId, id.code); // X5 slice c: a person added it back
       // S4 round 6 (D18): where it came from (a person's upload, or the sample load) and the canada.ca page it matched.
-      await tx.formEdition.create({ data: { workspaceId, govFormDefId: d.id, editionLabel: id.edition_label, officialFile: item?.file ?? null, sha256: hash, storedPath: stored.replace(`${ROOT}/`, ""), origin: via === "SAMPLE" ? "SAMPLE" : "UPLOADED", formPageUrl: page?.formPageUrl ?? null, sourceUrl: page?.sourceUrl ?? null, checkedAt: page ? new Date() : null } });
+      await tx.formEdition.create({ data: { workspaceId, govFormDefId: d.id, editionLabel: id.edition_label, published: file.buffer.subarray(0, 5).toString("latin1") === "%PDF-" ? id.published ?? "" : "", officialFile: item?.file ?? null, sha256: hash, storedPath: stored.replace(`${ROOT}/`, ""), origin: via === "SAMPLE" ? "SAMPLE" : "UPLOADED", formPageUrl: page?.formPageUrl ?? null, sourceUrl: page?.sourceUrl ?? null, checkedAt: page ? new Date() : null } });
       if (page?.formPageUrl && !d.formPageUrl) await tx.govFormDef.update({ where: { id: d.id }, data: { formPageUrl: page.formPageUrl } });
     });
     await this.audit.log(workspaceId, actor.id, "created", "form", id.code, `${actor.name} added ${id.edition_label} (${KIND_WORD[read.kind]}) to the library; code, title, edition and kind read from the file`, { sha256: hash, approved_source: item?.approval ?? null, via }, combination?.id);
