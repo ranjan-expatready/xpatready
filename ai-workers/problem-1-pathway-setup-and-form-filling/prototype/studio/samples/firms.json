@@ -1,0 +1,24 @@
+{
+  "_note": "C6.11 (M3-11, BR-20, P-164 (3), stand-in SI-9): the Sample firm and the Sample solo firm, seeded; no sign-up, invitations or user screens. The team's AG-01 owns firm setup and users and AG-07 CaseTeamMember the case team; this file stands in until they plug in. Every name, licence body and number is Sample (not a real licence). The Sample firm has a second representative so that changing the representative of record can be shown (BR-20 names two users; tech lead asked on the PR). defaultRepresentative is the one Open a case offers first. Duties: represent (licensed, may be the representative of record, named on IMM 5476), case (works on the firm's cases), firm_admin (assigns and reassigns the case team). Legal points: Unconfirmed: no counsel. The simulated people in api/src/core.ts RUNTIME_ACTORS must agree (tests/runtime/check_c611_team.ts checks).",
+  "firms": [
+    {
+      "key": "sample-firm",
+      "name": "Sample immigration firm",
+      "solo": false,
+      "defaultRepresentative": "user-R",
+      "users": [
+        { "id": "user-R", "name": "Representative (Sample)", "duties": ["case", "represent", "firm_admin"], "licence": { "body": "CICC", "category": "rcic", "number": "R000000" } },
+        { "id": "user-O", "name": "Case officer (Sample)", "duties": ["case"], "licence": null },
+        { "id": "user-T", "name": "Second representative (Sample)", "duties": ["case", "represent"], "licence": { "body": "CICC", "category": "rcic", "number": "R000002" } }
+      ]
+    },
+    {
+      "key": "sample-solo",
+      "name": "Sample solo practice",
+      "solo": true,
+      "users": [
+        { "id": "user-S", "name": "Solo representative (Sample)", "duties": ["case", "represent", "firm_admin"], "licence": { "body": "CICC", "category": "rcic", "number": "R000001" } }
+      ]
+    }
+  ]
+}
