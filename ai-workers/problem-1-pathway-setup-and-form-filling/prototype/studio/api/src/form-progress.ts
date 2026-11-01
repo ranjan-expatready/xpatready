@@ -87,7 +87,7 @@ export class FormProgressService {
       const problems = combo.draft.problems.filter((p) => p.where === "Forms" && p.item === code).map((p) => ({ level: p.level, message: p.message }));
       // Review M1: form fields with no decision count only while they are in a draft (To review lists those, K1).
       out.set(code, formProgress({ form: code, combinationId, line, edition: cur?.edition ?? null, mapped: maps.filter((m) => m.outcome !== "unresolved").length,
-        unresolved: maps.filter((m) => m.outcome === "unresolved" && m.status === "DRAFT").length, draft, items: items.filter((i) => i.forms.includes(code)), problems, canAuthor,
+        unresolved: maps.filter((m) => m.outcome === "unresolved" && m.status === "DRAFT").length, carried: maps.filter((m) => m.outcome === "unresolved" && m.status !== "DRAFT").length, draft, items: items.filter((i) => i.forms.includes(code)), problems, canAuthor,
         elsewhere: att ? elsewhere(att.sha256, att.id) : null }));
     }
     return out;

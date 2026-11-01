@@ -14,6 +14,8 @@ export type ProgressFacts = {
   edition: string | null;
   /** The form fields of that edition with a stored field map (any outcome), and those still with no decision. */
   mapped: number; unresolved: number;
+  /** IRCC-F08: form fields carried from an earlier release that are still undecided (not in To review, which lists drafts). Absent counts as 0. */
+  carried?: number;
   /** The newest field-map draft of this file: none, queued or running, finished, or stopped (failed, blocked, cancelled). */
   draft: "none" | "running" | "done" | "stopped";
   /** To review items of this form for the asking person (QueueItem.forms includes it). Only those about this combination,
@@ -105,6 +107,13 @@ export function formProgress(given: ProgressFacts): FormProgress {
   const open = f.problems.filter((p) => p.level === "error");
   const warns = f.problems.filter((p) => p.level === "warning");
   const before = steps.slice(0, 5).every((s) => s.state === "done");
+  // IRCC-F08: every form field is mapped, not a fact or filled by hand before the map is complete, so a carried undecided one keeps it open.
+  const carried = f.carried ?? 0;
+  const carriedWords = `${plural(carried, "form field")} not decided yet (from an earlier release). Decide ${carried === 1 ? "it" : "them"} when this edition is drafted again.`;
+  if (before && !open.length && carried) {
+    steps.push(step("complete", { state: "needs_you", words: carriedWords, next: { label: "Decide the form fields", href: forms }, who: null, count: carried }));
+    return finish(f, steps);
+  }
   steps.push(before && !open.length
     ? step("complete", { state: "done", words: `The field map is complete for this combination: it goes out with the next release.${warns.length ? ` To note: ${warns.map((p) => p.message).slice(0, 2).join(" ")}` : ""}`, next: null, who: null, count: 0 })
     : step("complete", { state: before ? "needs_you" : "not_started", words: open.length ? open.map((p) => p.message).slice(0, 2).join(" ") : "Comes after the steps above.", next: before && open.length ? { label: "See what is left on Review and release", href: `/c/${f.combinationId}/review` } : null, who: null, count: open.length || (before ? 0 : 1) }));
