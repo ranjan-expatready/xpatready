@@ -30,3 +30,6 @@ qa-1: after-merge rounds, re-score the rows each merged PR names · qa-2: Visito
 
 ## Every PR
 Capability IDs in the title; the row set to "Built, awaiting qa"; suites of the touched files green (P-217); the reviewer approves the current commit; then the label (it queues itself). Never wait for a merge: start the next row. Stuck for 10 minutes: write "Question for the tech lead" with your recommendation and carry on with the next row.
+
+## Spend tokens like money (founder, 1 Nov)
+Same quality, fewer tokens: read only the files and line ranges you need (no whole-file dumps of big files); run only the suites your files touch (P-217), never ALL by hand; one reviewer run per commit, rerun only after a fix; helper agents only for real parallel work, with a short exact brief; cheaper models for read-only searches; no repeated status reports (one PR comment per change of state); stop and ask when stuck for 10 minutes rather than retrying blindly. The tech lead keeps its own checks silent when nothing changed and reviews spend each hour.
