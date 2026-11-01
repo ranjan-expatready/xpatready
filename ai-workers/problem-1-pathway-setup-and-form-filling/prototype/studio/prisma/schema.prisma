@@ -1233,7 +1233,7 @@ model Case {
 /// C6.11 (BR-20, SI-15): who works a case, shaped like the team's AG-07 CaseTeamMember (LEAD_REPRESENTATIVE · OFFICER).
 /// One row per assignment; a reassignment ends the row (ended_at, by, reason) and inserts the next, so the history stays.
 /// The database refuses two current representatives of record on one case and the same person twice in one role
-/// (partial unique indexes in the migration 20261101120000_c611_case_team). userId names a seeded Sample user.
+/// (partial unique indexes in the migration 20261101130000_c611_case_team). userId names a seeded Sample user.
 model CaseTeamMember {
   id          String    @id @default(uuid()) @db.Uuid
   workspaceId String    @map("workspace_id") @db.Uuid

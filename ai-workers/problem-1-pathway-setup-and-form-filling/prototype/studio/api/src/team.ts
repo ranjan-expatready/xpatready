@@ -1,7 +1,7 @@
 // Firm, users and case team (C6.11, M3-11, BR-20; stand-ins SI-9 and SI-15). The Sample firm and the Sample solo firm
 // are seeded from samples/firms.json (no sign-up, invitations or user screens); the firm admin's only action is to
 // assign and reassign a case's team, with history. One representative of record per case (the database refuses a
-// second, migration 20261101120000_c611_case_team); a new representative asks for a new IMM 5476 (BR-12). Staff of
+// second, migration 20261101130000_c611_case_team); a new representative asks for a new IMM 5476 (BR-12). Staff of
 // one firm reach none of another firm's cases. Audit lines name people by their Sample user id, never by a typed value.
 import { Body, Controller, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Post, Put } from "@nestjs/common";
 import type { z } from "zod";
