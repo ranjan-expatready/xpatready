@@ -1,5 +1,5 @@
 // QA-77 (C11.12, L7) walked in a real browser: a combination names each person one way on its page. The header, the
-// folded "Who can be in this application" line and its table all use the combination's own label (kept when typed on
+// folded "Who can be in this application" line (Before forms on Forms since #139) and its table all use the combination's own label (kept when typed on
 // purpose, L7), else the shared library's name; when they differ the table adds the library role underneath. axe (WCAG
 // 2.2 AA) on the table. No model call (US$0).
 //   zsh studio/tools/isolated.sh screens_qa77 4443 start && node studio/tests/check_qa77_names_browser.cjs 4443 xr_studio_screens_qa77
@@ -29,7 +29,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   for (const [key, typed] of [["vv.single", true], ["wp.family", false]]) {
     const id = sql(`select id from combination where combination_key='${key}'`);
     const names = expected(key);
-    await p.goto(`${BASE}/c/${id}/questionnaires`); await p.getByRole("tablist", { name: "Combination" }).waitFor(); await settle();
+    await p.goto(`${BASE}/c/${id}/forms`); // #139: Who can be sits in Before forms on Forms await p.getByRole("tablist", { name: "Combination" }).waitFor(); await settle();
+    await p.waitForFunction(() => /people:/.test(document.querySelector("main")?.innerText ?? ""), null, { timeout: 15000 });
     const header = await p.locator("main").innerText();
     const peopleLine = header.split("\n").find((l) => /people:/.test(l)) ?? "";
     const who = p.locator("[data-who-can-be]");
