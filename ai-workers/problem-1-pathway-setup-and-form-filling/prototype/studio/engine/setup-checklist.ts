@@ -1,7 +1,7 @@
 // W1 setup checklist (P-157, P-161, P-176, P-180; concept v4 §4–§8), pure (no I/O): one checklist per combination,
 // worked out from data on every read, never stored. setupChecklistOf is the same for every viewer (the API caches it per
 // combination); forViewer adds who must act (the duty and tier table of §5), which the server's 403s read too.
-import { STEP_KEYS, STEP_LABEL, STEP_TAB, type ChipStatus, type Counts, type ItemKind, type OpenItem, type SetupChecklist, type Step, type StepKey, type Tier, type ViewerOverlay } from "../contracts/setup-checklist.ts";
+import { itemHref, STEP_KEYS, STEP_LABEL, STEP_TAB, type ChipStatus, type Counts, type ItemKind, type OpenItem, type SetupChecklist, type Step, type StepKey, type Tier, type ViewerOverlay } from "../contracts/setup-checklist.ts";
 import { PROPOSAL_KINDS, type ProposalKind } from "../contracts/proposal-item.ts";
 
 /** Validator `where` → the step whose open item it is (concept §6). Every `where` literal in engine/ has a row; any other
@@ -174,8 +174,7 @@ export function setupChecklistOf(s: SetupInput, key = ""): SetupChecklist {
   const chipStatus: ChipStatus = s.retired ? "RETIRED" : !s.combinationId ? "NOT_STARTED" : notReady ? "NOT_READY" : s.release ? "LIVE" : "IN_PROGRESS";
   const first = nextStep ? open[nextStep][0] : null;
   const id = s.combinationId ?? "";
-  const hrefOf = (st: StepKey, i: OpenItem) => i.focus.startsWith("review:") && i.kind === "review_proposals" ? `/review/proposals?c=${id}&step=${STEP_KEYS.indexOf(st) + 1}`
-    : i.kind === "view_ai" ? `/c/${id}/jobs` : `/c/${id}/${steps[STEP_KEYS.indexOf(st)].tab}?focus=${encodeURIComponent(i.focus)}`;
+  const hrefOf = (st: StepKey, i: OpenItem) => itemHref(id, st, steps[STEP_KEYS.indexOf(st)].tab, i);
   return {
     combinationId: s.combinationId,
     chip: { status: chipStatus, release: s.release?.number ?? null },

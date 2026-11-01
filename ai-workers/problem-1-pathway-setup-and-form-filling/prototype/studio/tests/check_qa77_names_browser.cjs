@@ -63,10 +63,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await p.goto(`${BASE}/c/${id}/questionnaires`); await p.locator("[data-who-can-be-moved]").waitFor({ timeout: 15000 });
     const note = await p.locator("[data-who-can-be-moved]").innerText();
     step("QA-77 #113 pass (wp.family): the Questionnaires note says each person in the same words as Who can be on Forms", folded.length > 1 && note.includes(`(${folded.join(" · ")})`), `${note} vs ${folded.join(" · ")}`);
-    // Overview's people chips (QA-77 names "header and Overview"): the same words, " · applicant" after an applicant.
-    await p.goto(`${BASE}/c/${id}/overview`); await p.locator("[data-overview-people] li").first().waitFor({ timeout: 15000 });
-    const chips = (await p.locator("[data-overview-people] li").allInnerTexts()).map((x) => x.replace(/ · applicant$/, "").trim());
-    step("QA-77 #113 pass (wp.family): Overview's people chips say each person in the same words as Who can be on Forms", JSON.stringify(chips) === JSON.stringify(folded), `${chips.join(" | ")} vs ${folded.join(" | ")}`);
+    // Overview: since #210 (P-161 (2)) it has no people list of its own, so it cannot say a person another way.
+    await p.goto(`${BASE}/c/${id}/overview`); await p.locator("[data-overview]").waitFor({ timeout: 15000 });
+    step("QA-77 #113 pass (wp.family): Overview keeps no second list of people (P-161 (2)), so no other words for them", (await p.locator("[data-overview-people]").count()) === 0);
     // Real fail guard: the stored people written the way the header and Overview wrote them before (#113) do not pass
     // the same comparison, and the live header has none of the old "(0–4)" form.
     const stored = JSON.parse(sql(`select coalesce(json_agg(json_build_object('label', p->>'label', 'min', (p->>'min')::int, 'max', (p->>'max')::int) order by o), '[]') from combination c cross join lateral jsonb_array_elements(c.participants) with ordinality as x(p, o) where c.combination_key='wp.family'`)).filter((x) => x.max > 0);
