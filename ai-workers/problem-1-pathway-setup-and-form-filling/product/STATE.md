@@ -1,33 +1,53 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-01 13:45 UTC (Lead handover at 48% context) · milestone: **M2 — Super Admin configuration**, plus the Visitor visa M3 path (P-220) · plan: `design/delivery-plan-2026-11-01.md` · who owns what: `TEAM.md` · work list: `BACKLOG.md`
+updated: 2026-11-01 19:05 UTC (overnight Lead hand-over to a fresh Lead, founder's ask) · milestone: **M2 — Super Admin configuration**, plus the Visitor visa M3 path · how we work: **`WAY-OF-WORKING.md` (lean model, P-224)** · row owners: top of `BACKLOG.md`
 
-## Goals (P-202, reset by P-220)
-* **Today (1 Nov):** M2 built and queued; Visitor visa set up end to end on the demo; Day-0 acceptance packs merged.
-* **This week:** M2 done for all six combinations (target 6 Nov); Visitor visa case to application ready (target 5 Nov).
-* **3 Nov:** verdict on the GitHub shard trial (P-213) and measured swarm numbers against the plan's targets.
+## Start here (fresh `/lead`)
+1. Founder's first message: "Resume from STATE. Run builders and qa in the cloud, one fresh session per row. Process frozen until 15 Nov."
+2. Read `WAY-OF-WORKING.md` (merged in #347), then this page. Run `/usage` in the first hour to see where the plan goes (token analysis: session notes, factory-recommendation-2026-11-01).
+3. Start builders **in the cloud**, one fresh session per row, under yourself; size by the measures (add while batch failures < 10% and approved→merged < 1 h). One qa in the cloud. The Mac runs only the Lead and the :4400 demo.
+4. Watch with event monitors and one 20-minute check; no minute-level sweeps. Hand over at about 250k tokens.
 
-## Resume here (a fresh `/lead` chat)
-1. **Watches first (founder 1 Nov):** 4-minute idle sweep (`ListAgents`; idle without Handover → exact next step; Handover → replacement card); 20-minute check (merges, queue, red, demo, usage %); 90-second alarm (merges, "Question for the tech lead", Handover, Blocker, migration, red main, demo down); PR alarm (red check, dequeued); Mac alarm (memory under 15% or load over 40); 2-hourly ops review on a cheap model writing the ops lessons file (product, ops folder, created on its first run).
-2. **Starting sessions:** the founder works over Remote Control, so the app lets the Lead start sessions only on a message typed in the desktop app; otherwise the Lead proposes cards. Ask the founder once to type "start all waiting builder cards" in the desktop app.
-3. **Cards waiting for the founder (replacements for builders that handed over):** Forms builder 3 (label #277, then C3.4, C3.6, C11.13, C11.14) · Swarm B1b (C3.12 with a migration, C11.1) · Screens builder 7 (resolve #281's code conflict first, then C11.16, C11.10, C11.3, C11.12) · Swarm B4b (C4.11) · Swarm M3-A2 (C11.5, then the case) · Swarm B5b (C11.9, C3.15) · Swarm B3b (C4.5, C4.4) · Runtime builder 3 (X9 #300, #116, built files C10.1, C3.11, C11.7).
-4. **Running now:** Swarm B2 (#291 C3.1, then C3.3, C11.8 incl. job.tsx m2 one-liner, C9.1) · Swarm M3-B (#283 C6.12 approved; C6.4 built locally, opens after #283 merges; then C11.6) · Flaky-checks fixer (P-214) · qa-2 (after-merge rounds; re-score C10.1, C11.7, C1.5) · Day-0 packs on the Mac (#295 pack 3 awaiting its fixes for the Lead's answers, #298 pack 2, #296 pack 4, pack 1 still finishing).
-5. **Old sessions for the founder to archive:** every session with a Handover comment (QA after-merge 6b424941, both old Screens builders, both old Forms builders, both old Runtime builders, Swarm B1, B3, B4, B5, M3-A, qa first session).
+## Progress (from `progress.sh` on main, 1 Nov 19:00 UTC; qa has not yet scored tonight's merges)
+M2 30/56 Works · R1 6/8 · M3 1/16. qa-2's #353 (queued) moves C1.5, C3.1, C3.13, C11.16 to Works. Merged tonight and awaiting qa: C3.12 (#313), C3.6 (#329), C6.11 (#330), C11.1 (#339), C3.1 (#316), C3.13 (#318), C11.16 (#326).
 
-## The three open risks
-1. **Credits:** weekly plan 48% used at 13:40 UTC, about 5–7 points an hour with the swarm; extra usage still OFF. Ask the founder; if it stays off, cut to about 6 builders.
-2. **Mac check line:** each builder PR's own `ci` runs on the one Mac runner (`xr-mac`); 6–7 PRs wait in line, and a cloud builder can push to only one branch, so it cannot open its next PR until the first merges. Founder decision pending: move PR `ci` to GitHub Linux (about US$1 a day, estimate, inside the US$30 trial cap).
-3. **Builders burn context in about an hour** (60–80%), so lanes stop often; replacements wait on the founder's clicks (risk 2 of "Starting sessions").
+## Open PRs and their next step (every branch pushed; Handover comments on each)
+| PR | Row | State | Next step |
+|---|---|---|---|
+| #353 | qa after-merge | queued | merges itself |
+| #340 | C11.10 | queued | merges itself |
+| #349 | C2.12 | approved | re-label once its GitHub check is green |
+| #319 | C4.11 part 1 | approved; main merged in | check green → re-label; then parts 2a/2b/3 (local commits listed in its Handover) as one PR; part 3 = option (a) on #319 |
+| #325 | C6.4 (+ holders fix) | needs reviewer on current head | reviewer → label. Carries old #283 (C6.12 filings and fees) |
+| #356 | C6.12 /prepare + C11.6 | draft, approved r2, **migration read: OK**, DIRTY | after #325 merges: merge main, run-suites --changed, ready, label |
+| #358 | C7.3 answer sheet | draft, approved r3, **migration read: OK** | merges **after #356** (one migration at a time) |
+| #357 | C7.7 part 1 | draft, 15/18 | build the two agreed fixes: IMM 5476 representative block from the firm record; `person.has_children` derived + `derive_inverse` in `p5/transforms.ts`; 18th check waits on C7.6 readiness |
+| #350 | C7.6 part 1 readiness engine | open | review → label; #357's last check needs it |
+| #336 | C4.4 parts 1+2 (carries #321) | approved, DIRTY | merge main (likely `api/src/main.ts` module list), checks, label; then C6.9 |
+| #331 | C11.9 | round-3 fixes, no Approve yet | reviewer → label |
+| #351 | C3.3 | open | review → label |
+| #344 | C11.13 | open | review → label |
+| #345 | C3.4 (part, draft) | draft | finish the row (one PR) |
+| #348 | C4.1 (replaces #195) | draft | reviewer → label (section order already on main via #284) |
+| #347 | lean rules (P-224) | **merged** | — |
 
-## Progress (`tools/progress.sh`, 13:45 UTC)
-* M2: 25 of 56 work · 2 built, awaiting qa · 25 partial · 4 not built. R1: 6 of 8. M3: 0 of 16 (Visitor visa path in flight: C6.11 #288, C6.12 #283, C6.4 built).
-* Merged since 11:40: #269, #271, #272, #273, #275, #278, #113, #287 (plus the queue batch in flight: #285, #294, #284, #292, #288, #289, #290, #280).
+## Visitor visa path order
+C6.11 ✓ merged → C6.12 + C6.4 (#325) → /prepare + C11.6 (#356) → C7.3 (#358) · C7.6 (#350) → C7.7 (#357) → C8.1 signing → C8.2 filing record → C9.2 → C10.2 demo story. Parallel: C6.5 (reads documents; after #325), C6.9 (eligibility; B3c's next).
 
-## Decisions today (in `DECISIONS.md`)
-P-219 (capability IDs per PR, re-score what merges) · P-220 (tests first, swarm, Visitor visa first) · P-221 (`qa/built/<ID>.md`, never edit `qa/CAPABILITIES.md` in builder PRs). Not yet a row (record next): the name-free requirements copy on GitHub (`domain/requirements-2026-10-19/`, #290; AGENTS rule 3; founder 1 Nov) and Merge Protections switched on in Mergify (approved PRs queue themselves, 1 Nov).
+## Known issues to fix first
+* **`api/src/main.ts` module list** conflicts whenever two PRs add a controller (4 conflicts on 1 Nov). Fix: each feature registers its module in its own file (or a generated list) so PRs stop touching one line.
+* **GitHub job slots:** every PR now runs 4 shards; a free account runs about 20 jobs at once, so batches can wait behind PR checks. With fewer builders it is fine; if not, run PR checks on 2 shards.
+* **Schema drift on main** (`DROP canonical_field_name`), raised in #356's Questions.
+* `check_forms_c31_formats.ts` is quarantined (#333): take it out of `QUARANTINE` now that #316 is merged.
+* **Batch b489cc2d79 (#353 + #340) failed** on `check_forms_c36_rule_facts_browser.cjs` "after Propose, focus lands on the row's To review link" (C3.6, merged in #329): either #340 (C11.10) changes that page's focus, or the check is timing-sensitive. Mergify is splitting the batch; if #340 alone fails it, #340's owner fixes it; if it fails on main too, quarantine with a fix row.
+* Measure batch failures for 24 h after #337 (was 37% of finished batches since 31 Oct).
 
-## Lessons today
-* Approved PRs never queued themselves until Merge Protections was on; every earlier merge was a typed command.
-* A shared scoreboard edited by every PR collides; one file per item (P-221).
-* Check a new suite on Linux before it joins the batch (#113's speed check broke a batch).
-* Migration folders need distinct timestamps; read every migration again when it changes.
+## Decisions waiting for the founder
+* Sonnet 5.5 trial (two builders): both reached a PR; slower to a finished PR than Opus builders; small sample — decide after more rows.
+* Moving the nightly full run to GitHub (free now).
+
+## Resources (1 Nov 19:00 UTC)
+Disk 11 GB free (alarm under 10 GB; 1.9 GB of old snapshots moved to `~/Archive`); weekly plan about 64% (resets 5 Nov). Repository is public; Mergify Open Source plan; 3 batches at once (#341); every PR runs its suites on GitHub (#337).
+
+## Lessons of the night (detail: the session notes folder, files overnight-lead-log and factory-recommendation-2026-11-01)
+Verify numbers before advising (a fresh verifier found 5 wrong claims) · archive sessions by exact name, never by position · a long, often-woken Lead session is the biggest token sink · the queue, not building, was the bottleneck (81–85% of PR time) · builders run in the cloud, never on the Mac.

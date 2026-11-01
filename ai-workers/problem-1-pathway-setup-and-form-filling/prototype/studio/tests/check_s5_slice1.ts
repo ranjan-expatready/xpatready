@@ -159,7 +159,11 @@ const P = (extra: any[] = [], child = false) => [{ role: "principal", min: 1, ma
   r = await call("POST", `/runtime/cases/${K}/people`, { role: "sponsor", displayName: "Sponsor T", applies: false }, "user-O");
   ok("C11.12 fail: a second Sponsor is over the release's maximum (1)", r.status === 422 && /at most 1/.test(r.body.detail), r.body.detail);
   r = await call("POST", `/runtime/cases/${K}/people`, { role: "parent", displayName: "Parent P", applies: false }, "user-O");
-  ok("C11.12 fail: a role the release does not list (Parent) is refused", r.status === 422 && /does not list/.test(r.body.detail), r.body.detail);
+  ok("C11.12 fail: a role the release does not list (Parent) is refused, in a whole sentence (review m1: \"does not list a parent\")", r.status === 422 && /does not list a parent in who can be/.test(r.body.detail), r.body.detail);
+  r = await call("POST", `/runtime/cases/${K}/people`, { role: "case", displayName: "The application again" }, "user-O");
+  const kNow = await call("GET", `/runtime/cases/${K}`, undefined, "user-O");
+  ok("C6.2 QA-135 fail: the application itself as a person is refused in words, never the internal role name 'case', and nothing is added", r.status === 422 && /application itself is not a person/.test(r.body.detail) && /can add: .*sponsor/i.test(r.body.detail) && !/\ba case\b/.test(r.body.detail) && kNow.body.people.filter((p: { role: string }) => p.role === "case").length === 1, { detail: r.body.detail, people: kNow.body?.people?.length });
+  ok("C6.2 QA-135 pass: a listed role still adds (the Sponsor above), so only the application is refused", kNow.body.people.some((p: { role: string }) => p.role === "sponsor"), kNow.body?.people);
   r = await call("GET", `/runtime/cases/${K}/forms`, undefined, "user-O");
   // P-145 (forms slice 1, plan-slice1-channels.md §10): an Online form whose IRCC PDF is in the release keeps a PDF row,
   // but only as a "Copy, not for filing" (for_filing false); it is never offered as a copy to file.

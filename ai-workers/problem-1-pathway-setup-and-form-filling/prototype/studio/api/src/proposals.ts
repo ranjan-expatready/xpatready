@@ -190,8 +190,16 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
   async field(tx, r, p, l) {
     if (p.kind !== "field") fail("Wrong payload.");
     const f = p as Extract<ProposalPayload, { kind: "field" }>;
-    const key = keyFor(f.subject ?? "case", f.label, await taken(tx, l.ws));
-    await landField(tx, l, { key, meaning: f.meaning, valueType: f.valueType, label: f.label, sourceRef: sourceRef(r, l.actor) });
+    const used = await taken(tx, l.ws);
+    // C3.6 (P-158 (5)): a fact added for a rule keeps the key that rule already reads (never typed), and names the rule.
+    const ruleFact = (r.work as { ruleFact?: unknown } | null)?.ruleFact;
+    const rule = (r.source as { rule?: { key: string; sentence: string } | null } | null)?.rule;
+    if (typeof ruleFact === "string" && used.has(ruleFact)) {
+      const retired = await tx.canonicalField.findFirst({ where: { workspaceId: l.ws, canonicalFieldKey: ruleFact, status: "RETIRED", mergedIntoKey: null }, select: { id: true } });
+      fail(retired ? `${ruleFact} is a retired library field: reject this one and restore it in Library › Fields.` : `${ruleFact} is already in the library (added since it was proposed): reject this one; the rule can use it as it is.`, HttpStatus.CONFLICT);
+    }
+    const key = typeof ruleFact === "string" ? ruleFact : keyFor(f.subject ?? "case", f.label, used);
+    await landField(tx, l, { key, meaning: f.meaning, valueType: f.valueType, label: f.label, sourceRef: rule ? `Needed by ${rule.sentence}; ${sourceRef(r, l.actor)}` : sourceRef(r, l.actor) });
     return key;
   },
   async section(tx, r, p, l) {
