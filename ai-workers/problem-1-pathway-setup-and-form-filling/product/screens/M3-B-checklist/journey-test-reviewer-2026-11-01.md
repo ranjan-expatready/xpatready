@@ -1,51 +1,58 @@
 # Journey test (reviewer): C6.4 document checklist per person, Visitor visa (backend only)
 
-Reviewer role, fresh agent, did not build it. 1 Nov 2026. Commit **fa2fab91** (branch `claude/serene-euler-vp7ar1`).
-Copy: isolated `rev64` on :4466 (`xr_studio_rev64`), released with `setup_visitor_visa.ts` (13/13). Never :4400. US$0, no AI calls.
+Reviewer role, fresh agent, did not build it. 1 Nov 2026.
+* **Scored commit: 9cf262bd** (`git diff 9a03fa6c 9cf262bd`). d70d86a4 only merges main and touches no C6.4 file.
+* First walked at fa2fab91. Every journey below was walked again at 9cf262bd.
+* Copy: isolated `rev64` on :4466 (`xr_studio_rev64`), fresh database. The API suite released the Visitor visa itself (R2). Stopped after use. Never :4400. US$0, no AI calls.
 
-**No screen.** C6.4 is `GET /api/runtime/cases/:id/checklist` with no page (the case-view screen is "Not built"). So steps 2 and 3 of the skill (visible browser, axe, widths, keyboard) do not apply. I walked the journeys as the case officer through the API, reading only what the response says. Visual quality, accessibility and screen sizes are scored "n/a, ½" below; the screen that shows this list will be scored when it is built.
+**No screen.** C6.4 is `GET /api/runtime/cases/:id/checklist`; the case-view screen is "Not built". So the skill's browser, axe, widths and keyboard steps do not apply. I walked the journeys as the case officer through the API, reading only the response. Accessibility and visual quality are scored ½ as "n/a" until the screen exists.
 
 ## Journeys (persona: case officer, Visitor visa family case)
-1. **Main path.** Open a case, add a spouse and a child, answer the application date and birth dates, then read the checklist. Expected: one list per person; passport and photographs for everyone; birth certificate on the child's list only; police certificate Needed for the adults and Not needed for the 11-year-old, with the 6-month rule and IRCC's words. **Held** (`check_vv_checklist_api.ts` 26/26, my own read).
-2. **Alternate: answers change.** Correct the child's birth date to an adult's. Expected: the police line turns Needed on the next read. **Held.**
-3. **Empty: nothing answered yet.** The principal alone. Expected: base lines Needed; the police line is Answer first and names the questions in words. **Held.** It names "Date of birth" and "Date the application is (or will be) submitted; reference date for calculated values". The second is the field's library meaning, which adds jargon ("reference date for calculated values").
-4. **Error: bad answers.** Application date 2040 or 2200, a birth date in 2030. Expected: the answer is saved with a problem and never decides a line. **Held.** 2040 gets "within 5 years of today" (the new bound). 2200 gets the older "Enter a real date" (rejected by `realDate`'s year 2100 limit before the new bound applies). 2030 birth date gets "cannot be in the future". The police line goes back to Answer first. The wording still says "answer … first" for a question that *has* an answer with a problem.
-5. **Wrong role.** Client user-P → 403. Author user-A → 403. No actor → 403. An officer outside the case's firm (user-S) → 404. Unknown case or bad id → 404. **Held.**
-6. **Recovery.** Two reads in a row give identical bodies. Nothing is stored by a read. A tampered release → 409 with a plain reason, then the case reads again once the release is restored. **Held.**
-7. **Not derived.** A Work permit family case → `derived:false` with "not derived yet. Nothing is guessed." **Held.**
-8. **Boundary to the next item (C6.5 uploads).** The police line carries `rule` {months 6, before `case.application_date`, quote, URL, read 2026-10-29}, and `issuedWithin` is ready for uploads. **Held** in unit tests (exactly 6 months, 30 Apr too old, month ends). Nothing calls it yet, as planned.
+1. **Main path.** Open a case, add a spouse and a child, answer the application date and birth dates, then read the checklist. Expected: one list per person; passport and photographs for everyone; birth certificate on the child's list only; police certificate Needed for the adults and Not needed for the 11-year-old; the 6-month rule with IRCC's words and "Sample". **Held:** `check_vv_checklist_api.ts` 28/28 and my own read. Lines come as `lines` / `waiting` / `not_needed` with team state `not_requested` and `stand_in: SI-14`.
+2. **Alternate: answers change.** Correct the child's birth date to an adult's. Expected: the police line moves to `lines` on the next read. **Held.**
+3. **Empty: nothing answered yet.** Principal alone. Expected: base lines in `lines`; the police line in `waiting`, naming its questions in words. **Held.** One of the two questions is worded "Date the application is (or will be) submitted; reference date for calculated values": that is the library meaning, and it includes jargon.
+4. **Error: bad answers.** Application date 2040, birth date 2030. Expected: the answer is saved with a problem and never decides a line. **Held.**
+   * 2040 gets "within 5 years of today".
+   * 2030 gets "cannot be in the future".
+   * The police line goes back to `waiting`, but says "answer … first" for a question that has an answer with a problem.
+   * 2200 still gets the older "Enter a real date" message (breaker m9).
+5. **Wrong role.** Client → 403. Author → 403. No actor → 403. An officer from another firm (user-S) → 404. Unknown or malformed id → 404. **Held.**
+6. **Recovery.** Two reads in a row give identical bodies, and a read stores nothing. A tampered release gets 409 with a plain reason, then the case reads again once the release is restored. **Held** (suite).
+7. **Not derived.** A Work permit family case → `derived:false`, "not derived yet. Nothing is guessed." **Held.**
+8. **Boundary to C6.5 (uploads).** The police line's `rule` carries months, `before`, quote, https URL, date read and `status: Sample…`. `issuedWithin` handles exactly 6 months, too old and month ends. **Held** (unit 60/60).
 
 ## Break it
-* Non-English and very long names (a child labelled "Enfant 子供 " × 10): fine, 4 lines on the child's list.
-* Adding a representative is refused by the release (422), so it cannot reach the checklist. I could not test a representative holder on the Visitor visa.
-* A person stops applying → empty list (checked).
-* A released snapshot pointing at another combination → 409 (checked).
-* Mutation spot-checks: 8 of 10 removed rules make a test fail (see `review.md`). Two do not: the `render.ts` skip and the calculated-field-to-inputs mapping.
-* Timings: a read takes 38 ms; opening a case takes 93 ms (budget: under 1 s for a first view).
+* Non-English and very long names: fine.
+* A representative is refused by the release (422), so the representative holder is untestable on this combination.
+* A person not applying gets an empty list.
+* Mutation spot-checks at 9cf262bd: 14 of 17 removed rules make a test fail.
+  * Three do not: the `render.ts` skip of `document_validity`, the calculated-field-to-inputs mapping, and https-only (http is not tested).
+  * See `review.md`.
+* Timings: a read takes 43 ms; opening a case takes 125 ms.
 
-## Findings (none Blocker or Major)
-* Minor: question words for the application date come from the library meaning and include "reference date for calculated values" (journey 3).
-* Minor: "Not needed: the answers show it is not the case that the person is 18 or older" is a double negative. It names the condition, not the answer or the age that decided it, unlike the `each_adult_18_plus` path ("this person is 11 on 2026-11-01").
-* Minor: an answer with a problem gives "answer X first" instead of "the answer to X has a problem" (journey 4).
+## Findings (no Blocker, no Major)
+* Minor: the application-date question words come from the library meaning (journey 3).
+* Minor: "Not needed: the answers show it is not the case that the person is 18 or older" is a double negative, and it does not name the age or answer that decided it.
+* Minor: an answer with a problem gets "answer X first" instead of "the answer to X has a problem" (journey 4). The "check both" wording now covers conflicting dates.
 
 ## Score (each 0, ½ or 1)
 | Criterion | Score | Evidence |
 |---|---|---|
-| Task completed | 1 | Journeys 1–8 completed; API suite 26/26, unit suite 48/48 |
-| Next step obvious | 1 | Every line has a state and a "why"; Answer first names the questions to answer |
-| Plain words | ½ | Mostly plain. Jargon in one question's words, a double negative, "answer first" for a question already answered |
-| Feedback and state | 1 | Needed / Answer first / Not needed per line, counts per person, `ages_on` and `ages_on_why`, empty release flagged |
-| Correct data | 1 | Lines on the right person (R3), rejected answers unused (B-M2), ages on the application date, nothing stored |
-| Error recovery | 1 | 409 then recovery; a bad answer goes back to Answer first; a corrected answer is used again |
-| Accessibility and screen sizes | ½ | n/a: no screen in this item. Problem Details with plain detail text |
-| Speed | 1 | 38 ms per read, one read per view, no request per row |
+| Task completed | 1 | Journeys 1–8; API 28/28, unit 60/60 |
+| Next step obvious | 1 | Each line sits in lines / waiting / not_needed with a reason; waiting names its questions |
+| Plain words | ½ | Jargon in one question's words, a double negative, "answer first" for an answer with a problem |
+| Feedback and state | 1 | `need`, `required`, team `state`, counts, `ages_on_why`, empty release flagged, SI-14 marked |
+| Correct data | 1 | Right holder (R3), rejected answers unused (B-M2), trimmed answers read, nothing stored |
+| Error recovery | 1 | 409 then recovery; a corrected answer is used on the next read |
+| Accessibility and screen sizes | ½ | n/a: no screen in this item; Problem Details errors |
+| Speed | 1 | 43 ms per read, one read per view, no request per row |
 | Visual quality | ½ | n/a: no screen |
-| Trust and sources | 1 | The rule carries the IRCC quote, URL and date read; Sample stated in `basis`; the rule is release data, not code |
+| Trust and sources | 1 | The rule is release data with quote, https URL, date read and Sample status; malformed or duplicate rules are not used |
 | **Total** | **8.5 / 10** | **Pass** (8 or more, no 0) |
 
-Fixes that would raise it, most valuable first:
-1. Use the placement's question words, or a short field label, for `case.application_date`.
-2. Say which answer or age decided a Not needed line.
+Fixes that would raise the score, most valuable first:
+1. A short question label for `case.application_date`.
+2. Name the age or answer that decided a Not needed line.
 3. Say "has a problem" for answers that were dropped.
 
-Not tested: a real screen reader, a browser or an intended user's unaided walk (no screen; D17 and D20 stay with the founder), and representative or sponsor holders (the Visitor visa release refuses them).
+Not tested: a screen reader, a browser, an intended user's unaided walk (no screen; D17 and D20 stay with the founder), and representative or sponsor holders.
