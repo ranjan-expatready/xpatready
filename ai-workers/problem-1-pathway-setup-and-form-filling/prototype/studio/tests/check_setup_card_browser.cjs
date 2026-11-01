@@ -9,6 +9,7 @@
 const path = require("node:path"); const fs = require("node:fs");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
+const { speed } = require("./speed_budget.cjs"); // P-184, P-215: speed budgets judged on the Mac, not on GitHub's machines
 const PORT = Number(process.argv[2] ?? 4441);
 const BASE = `http://localhost:${PORT}`;
 const ROOT = path.resolve(__dirname, "..", "..", "..");
@@ -189,9 +190,10 @@ const rgb = (hex) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 1
   for (const v of ["cards", "list"]) {
     const t = Date.now();
     await p.goto(`${BASE}/?v=${v}`);
-    await p.waitForFunction((want) => document.querySelectorAll("[data-node]").length === want, big.rows.length, { timeout: 30000 }).catch(() => {});
+    await p.waitForFunction((want) => document.querySelectorAll("[data-node]").length === want, big.rows.length, { timeout: 30000 }).catch((e) => step(`wait: the ${v} view shows all ${big.rows.length} combinations`, false, String(e?.message ?? e).split("\n")[0]));
     const ms = Date.now() - t, shown = await p.locator("[data-node]").count();
-    step(`C11.10: ${big.counts.all} combinations: the ${v} view shows every one within 2000 ms (server ${big.timing_ms.total} ms)`, big.counts.all >= 150 && shown === big.rows.length && ms < 2000, `${shown} shown in ${ms} ms`);
+    step(`C11.10: ${big.counts.all} combinations: the ${v} view shows every one`, big.counts.all >= 150 && shown === big.rows.length, `${shown} of ${big.rows.length} shown`);
+    { const s = speed(`C11.10: ${big.counts.all} combinations: the ${v} view shows them within 2000 ms (server ${big.timing_ms.total} ms)`, ms < 2000, `${shown} shown in ${ms} ms`); step(s.label, s.ok, s.detail); }
   }
 
   step("no script error on any page", errs.length === 0, errs.join(" | "));
