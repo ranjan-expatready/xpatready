@@ -27,7 +27,9 @@ import { ReviewProposals, ReviewProposalsController } from "./review-proposals.t
 import { Impact } from "./impact.ts";
 import { Checklists, ChecklistsController } from "./checklist.ts";
 import { Runtime, RuntimeController } from "./runtime.ts";
-import { CaseForms, CaseFormsController } from "./fill-case.ts";
+import { Team, TeamController } from "./team.ts";
+import { firmOfActor } from "./firms.ts";
+import { CaseForms, CaseFormsController, MAX_VALIDATED_MB } from "./fill-case.ts";
 import { Sources } from "./sources.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { Structure, StructureController } from "./structure.ts";
@@ -58,6 +60,9 @@ class StudioController {
   @Patch("combinations/:id/rules/:key") updRule(@Headers("x-actor") a: H, @Param("id") id: string, @Param("key") k: string, @Body() b: any) { return this.s.saveRule(actorOf(a), id, k, b); }
   @Patch("combinations/:id/forms/:form") updForm(@Headers("x-actor") a: H, @Param("id") id: string, @Param("form") f: string, @Body() b: any) { return oneAtATime(id, () => this.s.saveForm(actorOf(a), id, normaliseCode(f), b)); } // S4 round 2 N6: one change at a time
   @Post("combinations/:id/sections/:key") selOn(@Headers("x-actor") a: H, @Param("id") id: string, @Param("key") k: string, @Body() b: any) { return this.s.selectSection(actorOf(a), id, k, true, b); }
+  // C4.1 (P-216): the combination's own section order; Move up / Move down, one move at a time per combination.
+  @Get("combinations/:id/section-order") secOrder(@Headers("x-actor") a: H, @Param("id") id: string) { readerOf(a); return this.s.sectionOrder(id); }
+  @Post("combinations/:id/sections/:key/move") secMove(@Headers("x-actor") a: H, @Param("id") id: string, @Param("key") k: string, @Body() b: unknown) { return oneAtATime(id, () => this.s.moveSection(actorOf(a), id, k, b)); }
   @Delete("combinations/:id/sections/:key") selOff(@Headers("x-actor") a: H, @Param("id") id: string, @Param("key") k: string) { return this.s.selectSection(actorOf(a), id, k, false); }
   @Get("combinations/:id/review") review(@Param("id") id: string) { return this.s.review(id); }
   @Post("combinations/:id/submit") submit(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.s.submit(actorOf(a), id, b?.note); }
@@ -65,6 +70,8 @@ class StudioController {
   @Post("combinations/:id/approve") approve(@Headers("x-actor") a: H, @Param("id") id: string) { return this.s.approve(actorOf(a), id); }
   @Get("library/fields") fields(@Query() q: any) { return this.s.fields(q); }
   @Get("library/fields/:key") field(@Param("key") k: string) { return this.s.field(k); }
+  @Get("library/fields/:key/format") fieldFormat(@Param("key") k: string) { return this.s.fieldFormatOf(k); } // P-162 (C3.1)
+  @Post("library/fields/:key/format-check") formatCheck(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: unknown) { actorOf(a); return this.s.checkFieldFormat(k, b); } // P-162 (C3.1)
   @Post("library/fields") addField(@Headers("x-actor") a: H) { actorOf(a); return noFreeAdd("field"); } // P-158: no free add (410)
   @Patch("library/fields/:key") updField(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: any) { return this.s.updateField(actorOf(a), k, b); }
   @Post("library/fields/:key/placement") place(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: any) { return this.s.placeField(actorOf(a), k, b); }
@@ -75,7 +82,7 @@ class StudioController {
   @CaseRead() @Get("releases") releases(@Query("combination") c?: string) { return this.s.releases(c); }
   // Runtime R1a FIX (review Must 1): the activity feed holds case events, so only configuration people and the case
   // officer read it; a client or an unknown caller is refused (STANDARDS §6 deny by default).
-  @CaseRead() @Get("activity") activity(@Headers("x-actor") a: H) { const actor = actorOf(a); if (!(actor.duties as readonly string[]).some((d) => d === "review" || d === "case")) throw new HttpException("Activity is for staff.", 403); return this.s.activity(); }
+  @CaseRead() @Get("activity") activity(@Headers("x-actor") a: H) { const actor = actorOf(a); if (!(actor.duties as readonly string[]).some((d) => d === "review" || d === "case")) throw new HttpException("Activity is for staff.", 403); return this.s.activity(200, (actor.duties as readonly string[]).includes("review") ? null : firmOfActor(actor)?.key ?? "none"); }
 }
 
 @Controller("api")
@@ -107,7 +114,7 @@ class SourcesController {
 class DemoController {
   constructor(@Inject(Demo) private readonly d: Demo) {}
   @Get("status") status() { return this.d.status(); }
-  @Post("load") load(@Headers("x-actor") a: H) { return this.d.load(actorOf(a)); }
+  @Post("load") load(@Headers("x-actor") a: H, @Body() b: { sample?: string } | null) { return this.d.load(actorOf(a), b); }
   @Post("reset") reset(@Headers("x-actor") a: H, @Body() b: any) { return this.d.reset(actorOf(a), b?.confirm); }
 }
 
@@ -158,8 +165,12 @@ class ProblemErrors implements ExceptionFilter {
       const body = e.getResponse() as any, status = e.getStatus();
       // Upload limits fire before the intake sees the files (break m9): say which limit, in plain words.
       if (status === 413 || /^(File too large|Too many files)$/.test(String(body?.message ?? ""))) {
+        const many = /files/i.test(String(body?.message));
+        // QA-126: a validated copy (C-9) takes one PDF of up to 20 MB, so it is worded with its own limits, not the intake's.
+        if (/\/form-copies\/[^/]+\/validated\/?$/.test(String(host.switchToHttp().getRequest()?.path ?? "")))
+          return send(413, "Too large", many ? "Send only the one validated PDF you saved from Adobe. Nothing was recorded." : `The file is larger than ${MAX_VALIDATED_MB} MB: send the validated PDF of this form. Nothing was recorded.`);
         const files = MAX_FILES, mb = MAX_BYTES / 1024 / 1024;
-        return send(413, "Too large", /files/i.test(String(body?.message)) ? `Add at most ${files} files at a time. Nothing was added.` : `A file is larger than ${mb} MB. Nothing was added; add files up to ${mb} MB each.`);
+        return send(413, "Too large", many ? `Add at most ${files} files at a time. Nothing was added.` : `A file is larger than ${mb} MB. Nothing was added; add files up to ${mb} MB each.`);
       }
       if (typeof body === "object" && body.detail) return send(status, body.title ?? "Request refused", body.detail, body);
       const detail = typeof body === "object" ? (Array.isArray(body.message) ? body.message.join("; ") : body.message ?? e.message) : String(body);
@@ -179,7 +190,7 @@ class ProblemErrors implements ExceptionFilter {
   }
 }
 
-@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, FormProgressController, Screen02Controller, ReviewProposalsController, ChecklistsController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController, WhoFillsController, LibrarySourcesController, OfficialPagesController, LinesBulkController], providers: [LinesBulk, FormProgressService, OfficialPagesService, FactSources, PersonChecklists, WhoFills, LibrarySources, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, CaseForms, ReviewQueueService, Screen02, ReviewProposals, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs] })
+@Module({ controllers: [TeamController, StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, FormProgressController, Screen02Controller, ReviewProposalsController, ChecklistsController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController, WhoFillsController, LibrarySourcesController, OfficialPagesController, LinesBulkController], providers: [LinesBulk, FormProgressService, OfficialPagesService, FactSources, PersonChecklists, WhoFills, LibrarySources, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, Team, CaseForms, ReviewQueueService, Screen02, ReviewProposals, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs] })
 class AppModule {}
 
 async function main() {

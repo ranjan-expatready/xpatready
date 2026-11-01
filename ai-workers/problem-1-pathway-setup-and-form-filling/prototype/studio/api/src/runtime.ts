@@ -12,6 +12,8 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { caseView, checkValue, isClientField, type Answer, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, need, Workspace, type Actor } from "./core.ts";
+import { firmByKey, firmOfActor, STAND_IN } from "./firms.ts";
+import { openingTeam } from "../../engine/runtime/team.ts";
 
 type H = string | undefined;
 function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
@@ -27,6 +29,7 @@ const RELATIONSHIP: Record<string, string> = { spouse_or_partner: "SPOUSE_OR_PAR
 const isOfficer = (a: Actor) => (a.duties as readonly string[]).includes("case");
 const FIELD_KEY = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/;
 const short = (id: string) => id.slice(0, 8);
+const nameIn = (f: { users: { id: string; name: string }[] }, id: string) => f.users.find((u) => u.id === id)?.name ?? id;
 const unique = (e: unknown) => (e as { code?: string }).code === "P2002";
 
 export type Reached = Awaited<ReturnType<Runtime["reach"]>>;
@@ -44,7 +47,8 @@ export class Runtime {
     if (!officer && !client) fail(`${actor.name} (simulated) works on configuration, not on cases.`, HttpStatus.FORBIDDEN);
     if (want === "officer" && !officer) fail("Only the case officer can do this.", HttpStatus.FORBIDDEN);
     const c = await this.db.case.findFirst({ where: { id: caseId, workspaceId }, include: { pins: { include: { release: true } }, participants: { orderBy: { order: "asc" }, include: { subject: { include: { party: { include: { profile: true } } } } } } } });
-    if (!c || (!officer && c.clientActorId !== actor.id)) fail("No such case.", HttpStatus.NOT_FOUND);
+    // C6.11 (BR-20): staff reach only their own firm's cases; another firm's case is "not found", as for a client.
+    if (!c || (!officer && c.clientActorId !== actor.id) || (officer && c.firmKey !== firmOfActor(actor)?.key)) fail("No such case.", HttpStatus.NOT_FOUND);
     const pin = c!.pins[0];
     if (!pin || c!.pins.length !== 1 || pin.contentHash !== pin.release.sha256 || pin.release.combinationId !== c!.combinationId) fail("This case's pin to its release does not match the release; nothing was read or changed. Ask the Lead.", HttpStatus.CONFLICT);
     return c!;
@@ -59,10 +63,13 @@ export class Runtime {
     need(actor, "case");
     const b = parse(NewCase, body);
     const workspaceId = await this.ws.id();
+    // C6.11 (BR-20): the case belongs to the opener's firm; its reference and idempotency key are the firm's own (break M2, M3).
+    const firm = firmOfActor(actor);
+    if (!firm) fail(`${actor.name} (simulated) is not staff of a firm, so cannot open a case.`, HttpStatus.FORBIDDEN);
     const { idempotencyKey: _k, ...request } = b;
     const fingerprint = createHash("sha256").update(JSON.stringify(request)).digest("hex");
     const replay = async () => {
-      const again = b.idempotencyKey ? await this.db.case.findFirst({ where: { workspaceId, idempotencyKey: b.idempotencyKey } }) : null;
+      const again = b.idempotencyKey ? await this.db.case.findFirst({ where: { workspaceId, firmKey: firm!.key, idempotencyKey: b.idempotencyKey } }) : null;
       if (!again) return null;
       if (again.idempotencyFingerprint !== fingerprint) fail("This idempotency key was already used for a different case request; nothing was created. Use a new key.", HttpStatus.CONFLICT);
       return { ...(await this.get(actor, again.id)), created: false };
@@ -79,14 +86,19 @@ export class Runtime {
     let client: Actor | null = null;
     try { client = actorOf(b.clientActor); } catch { /* reported below as a field error */ }
     if (!client || !(client.duties as readonly string[]).includes("answer")) fieldError("clientActor", "Choose a client login (the client who answers the questionnaire).");
+    // C6.11 (BR-20): the case opens with the firm's representative of record and case officers.
+    const team = openingTeam(firm!, { representative: b.representative, caseOfficers: b.caseOfficers });
+    if ("field" in team) fieldError(team.field, team.message);
+    const { representative, officers } = team as { representative: string; officers: string[] };
     let id: string;
     try {
       id = await this.db.$transaction(async (tx) => {
         const party = await tx.party.create({ data: { workspaceId, profile: { create: { workspaceId, displayName: b.principal.displayName } } } });
-        const c = await tx.case.create({ data: { workspaceId, combinationId: b.combinationId, reference: b.reference, clientActorId: client!.id, createdBy: actor.id, idempotencyKey: b.idempotencyKey ?? null, idempotencyFingerprint: b.idempotencyKey ? fingerprint : null } });
+        const c = await tx.case.create({ data: { workspaceId, firmKey: firm!.key, combinationId: b.combinationId, reference: b.reference, clientActorId: client!.id, createdBy: actor.id, idempotencyKey: b.idempotencyKey ?? null, idempotencyFingerprint: b.idempotencyKey ? fingerprint : null } });
         const caseSubject = await tx.answerSubject.create({ data: { workspaceId, partyId: party.id, subjectKind: "case", label: "The application" } });
         const principal = await tx.answerSubject.create({ data: { workspaceId, partyId: party.id, subjectKind: "principal", label: b.principal.displayName } });
         await tx.caseParticipant.createMany({ data: [{ workspaceId, caseId: c.id, subjectId: caseSubject.id, role: "case", order: 0 }, { workspaceId, caseId: c.id, subjectId: principal.id, role: "principal", order: 1 }] });
+        await tx.caseTeamMember.createMany({ data: [{ workspaceId, caseId: c.id, userId: representative, role: "LEAD_REPRESENTATIVE", assignedBy: actor.id }, ...officers.map((u) => ({ workspaceId, caseId: c.id, userId: u, role: "OFFICER", assignedBy: actor.id }))] });
         await tx.packWorkPin.create({ data: { workspaceId, caseId: c.id, combinationId: b.combinationId, partyId: party.id, packVersionId: release!.packVersionId, configReleaseId: release!.id, contentHash: release!.sha256, actorId: actor.id } });
         return c.id;
       });
@@ -96,16 +108,27 @@ export class Runtime {
       if (same) return same;
       fail("A case with this reference already exists; give the new case its own reference.", HttpStatus.CONFLICT);
     }
-    await this.audit.log(workspaceId, actor.id, "opened", "case", id!, `${actor.name} opened case ${short(id!)} on "${combination!.label}" released version ${release!.version} (${release!.sha256.slice(0, 12)})`, undefined, b.combinationId);
+    await this.audit.log(workspaceId, actor.id, "opened", "case", id!, `${actor.name} opened case ${short(id!)} on "${combination!.label}" released version ${release!.version} (${release!.sha256.slice(0, 12)}); representative of record ${nameIn(firm!, representative)}, case officers ${officers.map((o) => nameIn(firm!, o)).join(", ")}`, undefined, b.combinationId);
     return { ...(await this.get(actor, id!)), created: true };
   }
 
   async get(actor: Actor, caseId: string) {
     const c = await this.reach(actor, caseId, "read");
     const pin = c.pins[0];
-    return { id: c.id, reference: c.reference, status: c.status, combination_id: c.combinationId, client: c.clientActorId,
+    // C6.11: staff see the case team in the header (the client's screens come after M3, P-129).
+    const team = isOfficer(actor) ? await this.teamLine(c.id) : undefined;
+    return { id: c.id, ...(team ? { team } : {}), reference: c.reference, status: c.status, combination_id: c.combinationId, client: c.clientActorId,
       pin: { release_version: pin.release.version, sha256: pin.contentHash, pinned_at: pin.pinnedAt, revision: pin.revision },
       people: c.participants.map((p) => ({ subject_id: p.subjectId, role: p.role, label: p.subject.label, applies: p.applies })) };
+  }
+
+  /** The header's team chip: the representative of record and the case officers now (names from the Sample firm). */
+  private async teamLine(caseId: string) {
+    const rows = await this.db.caseTeamMember.findMany({ where: { caseId, endedAt: null }, orderBy: { assignedAt: "asc" } });
+    const firm = (await this.db.case.findUnique({ where: { id: caseId }, select: { firmKey: true } }))!.firmKey;
+    const f = firmByKey(firm), name = (id: string) => f?.users.find((u) => u.id === id)?.name ?? id;
+    const rep = rows.find((r) => r.role === "LEAD_REPRESENTATIVE");
+    return { firm: f ? { key: f.key, name: f.name, solo: f.solo } : null, stand_in: STAND_IN, representative: rep ? { id: rep.userId, name: name(rep.userId), licence: f?.users.find((u) => u.id === rep.userId)?.licence ?? null } : null, officers: rows.filter((r) => r.role === "OFFICER").map((r) => ({ id: r.userId, name: name(r.userId) })) };
   }
 
   /** Adds a spouse or child within the pinned release's limits. The case row is locked while counting, so simultaneous
@@ -360,7 +383,7 @@ export class Runtime {
     need(actor, "case");
     const workspaceId = await this.ws.id();
     const take = Math.min(Math.max(Number(q.take ?? 50) || 50, 1), 100);
-    const rows = await this.db.case.findMany({ where: { workspaceId }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: take + 1, ...(q.after ? { cursor: { id: q.after }, skip: 1 } : {}), include: { combination: { select: { label: true } } } });
+    const rows = await this.db.case.findMany({ where: { workspaceId, firmKey: firmOfActor(actor)?.key ?? "" }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: take + 1, ...(q.after ? { cursor: { id: q.after }, skip: 1 } : {}), include: { combination: { select: { label: true } } } });
     return { cases: rows.slice(0, take).map((c) => ({ id: c.id, reference: c.reference, combination: c.combination.label, status: c.status, created_at: c.createdAt })), next: rows.length > take ? rows[take - 1].id : null };
   }
 }

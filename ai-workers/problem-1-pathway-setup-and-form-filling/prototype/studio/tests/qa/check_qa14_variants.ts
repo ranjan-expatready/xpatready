@@ -13,7 +13,10 @@ const curl = (body: unknown) => new Promise<{ status: number; text: string }>((r
   let o = ""; c.stdout.on("data", (d) => (o += d)); c.on("close", () => { const i = o.lastIndexOf("\n"); res({ status: Number(o.slice(i + 1)), text: o.slice(0, i) }); });
 });
 const stamp = Date.now().toString(36);
-await curl({ kind: "PROGRAM", label: `Variant ${stamp}`, parentKey: "individual" });
+// A fresh copy now starts empty and the pathways are per workspace (retail.*, corporate.*): load the sample through the
+// product's own endpoint and add the program under the Temporary residence pathway (drift fixed 1 Nov; was "individual").
+execFileSync("curl", ["-s", "-o", "/dev/null", "-X", "POST", "-H", "x-actor: user-A", `http://localhost:${PORT}/api/demo/load`]);
+await curl({ kind: "PROGRAM", label: `Variant ${stamp}`, parentKey: "retail.temporary_residence" });
 const programKey = sql(`select program_node_key from program_def where label='Variant ${stamp}'`);
 await curl({ kind: "STREAM", label: "Parent category", parentKey: programKey });
 const catKey = sql(`select program_node_key from program_def where parent_node_key='${programKey}' and label='Parent category'`);

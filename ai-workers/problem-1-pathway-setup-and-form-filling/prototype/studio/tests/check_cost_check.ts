@@ -8,10 +8,13 @@ import { join } from "node:path";
 import { seedShared } from "../../p2/tools/seed-shared-ledger.ts";
 import { ceilCents, costCheck, runWorstUsd } from "../engine/cost-check.ts";
 import { COST_WORDS } from "../contracts/cost-check.ts";
-import { BudgetExceeded, costUsd, LedgerBusy, OverrideRefused, SpendLedger } from "../../p2/ledger.ts";
+import { BudgetExceeded, costUsd, inputTokenBound, LedgerBusy, OverrideRefused, SpendLedger } from "../../p2/ledger.ts";
 import { runDrafting } from "../../p2/runner.ts";
+import { peopleWorstUsd, PEOPLE_MODEL } from "../api/src/people-ai.ts";
+import { admitInput } from "../../p2/guard.ts";
+import { buildRequest } from "../../p2/prompt.ts";
 import { createHash } from "node:crypto";
-import { EXPERIMENT_CAP_USD, OVERRIDE_CEILING_USD, WAVE1_START } from "../../p2/policy.ts";
+import { EXPERIMENT_CAP_USD, MAX_ATTEMPTS, OVERRIDE_CEILING_USD, RUN_CAP_USD, WAVE1_START } from "../../p2/policy.ts";
 
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${!c && detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
@@ -312,6 +315,28 @@ holder.kill();
 
 ok("C11.8 P-179 pass: the dialog shows spend so far against the cap, the worst case and what Continue allows", COST_WORDS.spent(exp) === "Spent so far US$116.00 of US$120.00" && COST_WORDS.worst(exp) === "At most US$5.00" && /allows this one run, up to US\$5\.00\. Total spend stays within US\$132\.00/.test(COST_WORDS.continueNote(exp)));
 ok("C11.8 P-179 fail: an unknown expected cost is said as such, never as US$0", COST_WORDS.expected(exp) === "Expected not known yet");
+
+// Runtime Minors 1 Nov (#113 review; reviewer M1 on fb1dd7ff): "Who fills it" AI now shows a worst case that is never
+// below what the runner may reserve. The runner (p2/draft.ts) prices the whole request it sends: the round's prompt,
+// the output schema, the admitted guide and the trail; each round runs MAX_ATTEMPTS attempts within a US$1 budget.
+{
+  const SOL = join(import.meta.dirname, "..", "..", ".."), PR = join(import.meta.dirname, "..", "..", "p2", "prompts");
+  const guides = readdirSync(join(SOL, "prototype", "p1", "inventory")).filter((f) => /^guide-\d+\.text\.inventory\.json$/.test(f)).map((f) => `prototype/p1/inventory/${f}`);
+  const trail = "Temporary residence › Visitor visa › Sample trail";
+  const runnerRound = (tpl: string, file: string, sha256: string) => {
+    const req = buildRequest(readFileSync(join(PR, tpl), "utf8"), JSON.parse(readFileSync(join(PR, "who-can-be-output.v1.schema.json"), "utf8")), [admitInput(file, sha256)], { combination_trail: trail });
+    return Math.min(1, costUsd(PEOPLE_MODEL, inputTokenBound(JSON.stringify(req)), 3000) * MAX_ATTEMPTS);
+  };
+  const rows = guides.map((file) => {
+    const bytes = readFileSync(join(SOL, file)), sha256 = createHash("sha256").update(bytes).digest("hex");
+    const may = runnerRound("who-can-be.v1.md", file, sha256) + runnerRound("who-can-be-check.v1.md", file, sha256);
+    const textOnly = Math.round(2 * Math.min(RUN_CAP_USD, costUsd(PEOPLE_MODEL, inputTokenBound(String(JSON.parse(bytes.toString("utf8")).text ?? "")), 3000) * 2) * 100) / 100;
+    return { file: file.split("/").pop(), shown: peopleWorstUsd({ file, sha256 }, trail), may: Math.round(may * 10000) / 10000, textOnly };
+  });
+  ok(`C11.12 pass: on every guide (${rows.length}) the AI now worst case shown is at or above what the runner may reserve for both rounds`, rows.length >= 3 && rows.every((r) => r.shown + 1e-9 >= r.may), rows);
+  ok("C11.12 fail-guard: pricing the guide text alone (the old way) shows less than the runner may reserve on every guide", rows.every((r) => r.textOnly < r.may), rows.map((r) => `${r.file} ${r.textOnly} < ${r.may}`));
+  ok("C11.12 pass: the margin is the rounding up only (under a cent a round), never a guess", rows.every((r) => r.shown - r.may < 0.02 + 1e-9), rows);
+}
 
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

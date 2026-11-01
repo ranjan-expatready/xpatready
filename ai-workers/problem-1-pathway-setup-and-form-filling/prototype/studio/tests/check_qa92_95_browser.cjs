@@ -88,13 +88,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // ======================================================== QA-93: Remove from questionnaire asks first, then Undo
   // A question the shared library places in a section is asked whether or not the section is chosen, so removing is
   // offered only for a section that asks this person nothing; elsewhere the reason is written where the button was.
-  let who = null, target = null;
-  for (const r of ["child", "spouse_or_partner", "principal"]) {
-    const w = (await api(`/combinations/${wp}/workspace?tab=questionnaires&role=${r}`)).body;
-    const empty = (w?.questionnaire?.sections ?? []).find((x) => !x.questions.length);
-    if (empty && w.questionnaire.role === r) { who = r; target = empty.id; break; }
-  }
-  step("setup: a section asks one person nothing", !!target, `${who} ${target}`);
+  // QA-117: a person no longer sees another person's section as an empty one of theirs, so the empty section is a chosen
+  // section that asks nobody. Neither sample has one and the library takes no free add (P-158): the test places one
+  // library section with no questions and chooses it.
+  const who = "spouse_or_partner", target = "qa93_empty";
+  sql(`insert into logical_section (id, workspace_id, section_key, version, status, title, meaning, display_order, client_only, origin, updated_by, updated_at) select gen_random_uuid(), workspace_id, '${target}', 1, 'PUBLISHED', 'Sample: a section with no questions', 'Test only (QA-93).', 99, false, 'HUMAN', 'user-A', now() from combination where id='${wp}'`);
+  const chosen = await api(`/combinations/${wp}/sections/${target}`, { method: "POST", data: {} });
+  const qv = (await api(`/combinations/${wp}/workspace?tab=questionnaires&role=${who}`)).body?.questionnaire;
+  step("setup: a chosen section asks nobody", chosen.status < 300 && !!qv?.sections.some((s) => s.id === target && !s.questions.length), `${chosen.status} ${say(chosen)}`);
   await p.goto(`${BASE}/c/${wp}/questionnaires?role=${who}`); await p.locator("[data-source-strip]").waitFor(); await settle();
   const ids = async () => p.locator("[data-questions] [data-section]:not([data-section='unasked'])").evaluateAll((xs) => xs.map((x) => x.getAttribute("data-section")));
   const before = await ids();

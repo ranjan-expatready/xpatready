@@ -1,0 +1,82 @@
+// Firm, users and case team (C6.11, M3-11, BR-20; stand-ins SI-9 and SI-15): pure rules, no database. The firms and
+// their users are seeded Sample data (samples/firms.json); the team's AG-01 owns firm setup and users and AG-07
+// CaseTeamMember the case team, and plug in here later in the same shape. Words (P-154): the representative is licensed
+// and named on IMM 5476; a case officer prepares the case; firm admin is a duty (assignment). Every name, licence body
+// and number is Sample. Legal points: Unconfirmed: no counsel.
+
+export type Duty = "case" | "represent" | "firm_admin";
+export type Licence = { body: string; category: string; number: string };
+export type FirmUser = { id: string; name: string; duties: Duty[]; licence: Licence | null };
+export type Firm = { key: string; name: string; solo: boolean; defaultRepresentative?: string; users: FirmUser[] };
+export type TeamRole = "LEAD_REPRESENTATIVE" | "OFFICER";
+export type Member = { userId: string; role: TeamRole; assignedBy: string; assignedAt: Date; endedAt: Date | null; endedBy: string | null; endReason: string | null };
+
+export const firmOf = (firms: Firm[], userId: string) => firms.find((f) => f.users.some((u) => u.id === userId)) ?? null;
+export const userIn = (firm: Firm, userId: string) => firm.users.find((u) => u.id === userId) ?? null;
+
+/** Why this user cannot be the representative of record (null: they can). Licensed means the represent duty and a
+ *  licence with a body and number (IMM 5476 names both). */
+export function cannotRepresent(firm: Firm, userId: string): string | null {
+  const u = userIn(firm, userId);
+  if (!u) return "That person is not in your firm.";
+  if (!u.duties.includes("represent") || !u.licence?.number || !u.licence.body) return `${u.name} is not a licensed representative, so cannot be the representative of record.`;
+  return null;
+}
+
+/** Why this user cannot be a case officer on the firm's case (null: they can). */
+export function cannotBeOfficer(firm: Firm, userId: string): string | null {
+  const u = userIn(firm, userId);
+  if (!u) return "That person is not in your firm.";
+  if (!u.duties.includes("case")) return `${u.name} does not work on cases.`;
+  return null;
+}
+
+/** The team a new case opens with. Asked for: each must pass the rules. Not asked: the firm's default representative (else its only one), and the firm's case officers who are not representatives (a solo firm: its one person is both). */
+export function openingTeam(firm: Firm, asked: { representative?: string; caseOfficers?: string[] }): { representative: string; officers: string[] } | { field: "representative" | "caseOfficers"; message: string } {
+  let representative = asked.representative ?? firm.defaultRepresentative;
+  if (!representative) {
+    const licensed = firm.users.filter((u) => !cannotRepresent(firm, u.id));
+    if (licensed.length !== 1) return { field: "representative", message: licensed.length ? "Choose the representative of record: your firm has more than one representative." : "Your firm has no licensed representative, so a case cannot open yet." };
+    representative = licensed[0].id;
+  }
+  const notRep = cannotRepresent(firm, representative);
+  if (notRep) return { field: "representative", message: notRep };
+  let officers = asked.caseOfficers ? [...new Set(asked.caseOfficers)] : firm.users.filter((u) => u.duties.includes("case") && !u.duties.includes("represent")).map((u) => u.id);
+  if (!officers.length) officers = [representative];
+  for (const o of officers) { const why = cannotBeOfficer(firm, o); if (why) return { field: "caseOfficers", message: why }; }
+  return { representative, officers };
+}
+
+/** Who may assign and reassign the case team: a firm admin of the case's own firm. */
+export function cannotAssign(firm: Firm, actorId: string): string | null {
+  const u = userIn(firm, actorId);
+  if (!u) return "Only your own firm's cases can be changed.";
+  if (!u.duties.includes("firm_admin")) return `Only the firm admin assigns the case team; ${u.name} works on the case.`;
+  return null;
+}
+
+export const current = (members: Member[]) => members.filter((m) => !m.endedAt);
+export const representativeOf = (members: Member[]) => current(members).find((m) => m.role === "LEAD_REPRESENTATIVE") ?? null;
+
+/** IMM 5476's representative part, filled from the representative of record (the shared library's canonical facts).
+ *  The category key is the library's; the licensing province applies to lawyers and notaries only. Sample values. */
+export function representativeFacts(firm: Firm, members: Member[]): Record<string, string | null> | null {
+  const rep = representativeOf(members), u = rep ? userIn(firm, rep.userId) : null;
+  if (!u?.licence) return null;
+  return {
+    "representative.representative_category": u.licence.category,
+    "representative.membership_id": u.licence.number,
+    "representative.licensing_province": null,
+  };
+}
+
+/** BR-20: a change of representative of record asks for a new IMM 5476, and the one signed with the earlier
+ *  representative is out of date (BR-12). Until IMM 5476 copies follow the case team (rest of C6.11), the case says so
+ *  from the change onwards. */
+export function imm5476(members: Member[]): { new_needed: boolean; since: Date | null; earlier: string | null } {
+  const reps = members.filter((m) => m.role === "LEAD_REPRESENTATIVE").sort((a, b) => a.assignedAt.getTime() - b.assignedAt.getTime());
+  const now = representativeOf(members);
+  if (!now || reps.length < 2) return { new_needed: false, since: null, earlier: null };
+  const earlier = [...reps].reverse().find((m) => m.endedAt && m.userId !== now.userId) ?? null;
+  return earlier ? { new_needed: true, since: now.assignedAt, earlier: earlier.userId } : { new_needed: false, since: null, earlier: null };
+}
