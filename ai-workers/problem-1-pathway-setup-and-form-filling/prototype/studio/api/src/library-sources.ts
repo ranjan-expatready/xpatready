@@ -3,11 +3,11 @@
 // where it is used, read from the rows that already hold them (form field maps, checklist requirement quotes, the
 // imported release); a direct, versioned rename of a field's name or a section's title with the exact-duplicate check.
 // The one door (every item a ProposalItem, a rule as a source) comes in S6 slice 1, on the forms lane's contract v2.
-import { Body, Controller, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Query } from "@nestjs/common";
 import { z } from "zod";
 import { normalizeLabel, problemFromZod } from "../../contracts/programs.ts";
 import { newestEdition } from "../../engine/programs.ts";
-import { actorOf, Audit, Db, need, revise, strip, Workspace, type Actor } from "./core.ts";
+import { actorOf, Audit, Db, need, readerOf, revise, strip, Workspace, type Actor } from "./core.ts";
 
 type H = string | undefined;
 const problem = (status: number, title: string, detail: string) =>
@@ -97,8 +97,14 @@ export class LibrarySources {
   /** Combinations each item is used in, by label (C3.13 where used). */
   async usedIn(kind: Kind, workspaceId: string): Promise<Map<string, string[]>> {
     const label = new Map((await this.db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true } })).map((c) => [c.id, c.label]));
+    const ids = await this.usedInIds(kind, workspaceId);
+    return new Map([...ids].map(([k, s]) => [k, [...new Set([...s].map((id) => label.get(id)).filter((l): l is string => !!l))].sort()]));
+  }
+
+  /** Combinations each item is used in, by id (where used, and reuse per combination). */
+  private async usedInIds(kind: Kind, workspaceId: string): Promise<Map<string, Set<string>>> {
     const out = new Map<string, Set<string>>();
-    const add = (key: string, combinationId: string) => { const l = label.get(combinationId); if (!l) return; const s = out.get(key) ?? new Set(); s.add(l); out.set(key, s); };
+    const add = (key: string, combinationId: string) => { const s = out.get(key) ?? new Set(); s.add(combinationId); out.set(key, s); };
     if (kind === "section") for (const s of await this.db.sqrSectionSelection.findMany({ where: { workspaceId } })) add(s.sectionKey, s.combinationId);
     else if (kind === "document_type") for (const r of current(await this.db.documentRequirement.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }), (r) => `${r.combinationId}|${r.lineageKey}`)) add(r.documentTypeKey, r.combinationId);
     else {
@@ -133,7 +139,42 @@ export class LibrarySources {
       if (kind === "answer_list") for (const f of await this.db.canonicalField.findMany({ where: { workspaceId }, orderBy: { version: "asc" } })) listOf.set(f.canonicalFieldKey, f.answerListKey);
       for (const [f, c] of uses) { const key = kind === "field" ? f : listOf.get(f); if (key) add(key, c); }
     }
-    return new Map([...out].map(([k, s]) => [k, [...s].sort()]));
+    return out;
+  }
+
+  /** C3.13 (Screen 04 BR-4, P-37): with a combination chosen, each item it uses is "Reused" (another combination brought
+   *  it into the library first) or "New here" (this combination brought it in), with the totals. The combination that
+   *  brought an item in is, of the combinations using it, the one whose setup started first: its earliest setup line
+   *  (a form, checklist, rule or check line); a combination with none yet comes after every one that has, then by the
+   *  time it was created. Without a combination: the combinations to choose from, each with how many items it uses. */
+  async reuse(kindWord: string, combination: string | undefined) {
+    const kind = (KINDS as Record<string, Kind>)[kindWord];
+    if (!kind) throw problem(404, "Not found", `There is no library list "${kindWord}": use fields, sections, document-types or answer-lists.`);
+    const workspaceId = await this.ws.id();
+    const [combos, used] = await Promise.all([this.db.combination.findMany({ where: { workspaceId }, select: { id: true, combinationKey: true, label: true, createdAt: true } }), this.usedInIds(kind, workspaceId)]);
+    const uses = (id: string) => [...used.values()].filter((s) => s.has(id)).length;
+    const combinations = combos.map((c) => ({ id: c.id, key: c.combinationKey, label: c.label, uses: uses(c.id) })).sort((a, b) => a.label.localeCompare(b.label));
+    if (combination === undefined || combination === "") return { combinations, combination: null };
+    const chosen = combos.find((c) => c.id === combination || c.combinationKey === combination);
+    if (!chosen) throw problem(404, "Not found", "That combination is not in this workspace. Choose one from the list.");
+    const firsts = await Promise.all([
+      this.db.combinationForm.groupBy({ by: ["combinationId"], where: { workspaceId }, _min: { updatedAt: true } }),
+      this.db.documentRequirement.groupBy({ by: ["combinationId"], where: { workspaceId }, _min: { updatedAt: true } }),
+      this.db.predicate.groupBy({ by: ["combinationId"], where: { workspaceId }, _min: { updatedAt: true } }),
+      this.db.check.groupBy({ by: ["combinationId"], where: { workspaceId }, _min: { updatedAt: true } }),
+    ]);
+    const started = new Map<string, number>();
+    for (const g of firsts.flat()) { const t = g._min.updatedAt?.getTime(); if (t !== undefined && t < (started.get(g.combinationId) ?? Infinity)) started.set(g.combinationId, t); }
+    const order = (id: string) => { const c = combos.find((x) => x.id === id)!; return [started.get(id) ?? Infinity, c.createdAt.getTime(), c.combinationKey] as const; };
+    const before = (a: string, b: string) => { const [x, y] = [order(a), order(b)]; return x[0] !== y[0] ? x[0] < y[0] : x[1] !== y[1] ? x[1] < y[1] : x[2] < y[2]; };
+    const items: Record<string, { in_combination: "REUSED" | "NEW"; brought_in_by: string }> = {};
+    for (const [key, s] of used) {
+      if (!s.has(chosen.id)) continue;
+      const first = [...s].reduce((a, b) => (before(b, a) ? b : a));
+      items[key] = { in_combination: first === chosen.id ? "NEW" : "REUSED", brought_in_by: combos.find((c) => c.id === first)!.label };
+    }
+    const all = Object.values(items), reused = all.filter((x) => x.in_combination === "REUSED").length;
+    return { combinations, combination: { id: chosen.id, key: chosen.combinationKey, label: chosen.label }, total: all.length, reused, new: all.length - reused, items };
   }
 
   async sources(kindWord: string, key: string): Promise<SourcesView> {
@@ -202,6 +243,7 @@ const parseName = (body: unknown) => { const r = NameBody.safeParse(body); if (!
 @Controller("api")
 export class LibrarySourcesController {
   constructor(@Inject(LibrarySources) private readonly s: LibrarySources) {}
+  @Get("library/reuse/:kind") reuse(@Headers("x-actor") a: H, @Param("kind") kind: string, @Query("combination") combination?: string) { readerOf(a); return this.s.reuse(kind, combination); }
   @Get("library/:kind/:key/sources") sources(@Param("kind") kind: string, @Param("key") key: string) { return this.s.sources(kind, key); }
   @Patch("library/fields/:key/name") renameField(@Headers("x-actor") a: H, @Param("key") key: string, @Body() b: unknown) { return this.s.renameField(actorOf(a), key, b); }
   @Patch("library/sections/:key") renameSection(@Headers("x-actor") a: H, @Param("key") key: string, @Body() b: unknown) { return this.s.renameSection(actorOf(a), key, b); }
