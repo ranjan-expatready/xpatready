@@ -60,6 +60,28 @@ export type Package = { title: string; url: string };
  *  is the page's date, not the edition) and the "Select an application package" links. A row whose number cannot be read
  *  or whose link is not an official address is left out. Guides are not rows of this table; they are linked from the
  *  package pages (pageLinks, guideLinks). */
+/** Review (dc93b60f) / break m22: a title the library can show: not blank once invisible characters (zero-width spaces, soft
+ *  hyphens, byte-order marks, blank letters) are taken out, and at most 300 visible characters (not UTF-16 units). */
+export function indexTitleOk(title: string): boolean {
+  // Break (e466adb1) m22: every invisible character counts as none: format and control characters, private use, separators,
+  // and the blank letters (Hangul fillers, the braille blank, the combining grapheme joiner).
+  // Break (89cccd71) m22: also lone marks and variation selectors, unpaired surrogates and the Khmer inherent vowels; the
+  // 300 limit counts what is seen (a letter with its accents is one).
+  const shown = title.replace(/[\p{Cf}\p{Cc}\p{Co}\p{Cs}\u034F\u115F\u1160\u17B4\u17B5\u2800\u3164\uFE00-\uFE0F\uFFA0]/gu, "");
+  const letters = shown.replace(/\p{M}/gu, "");
+  return letters.replace(/\p{Z}/gu, "").length > 0 && [...letters].length <= 300;
+}
+
+/** A date canada.ca writes (YYYY-MM or YYYY-MM-DD) that is a real calendar date: month 01-12, the day within the month. */
+export function realDate(d: string): boolean {
+  const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(d);
+  if (!m) return false;
+  const y = Number(m[1]), mo = Number(m[2]), day = m[3] ? Number(m[3]) : 1;
+  // Break (dc93b60f) m25: a year IRCC could have written (1990 to next year): 0000 or 9999 would mark a form no edition answers.
+  if (y < 1990 || y > new Date().getUTCFullYear() + 1) return false;
+  return mo >= 1 && mo <= 12 && day >= 1 && day <= new Date(Date.UTC(y, mo, 0)).getUTCDate();
+}
+
 export function parseFormsIndex(html: string): { rows: IndexRow[]; packages: Package[]; noPage: string[]; unreadable: string[] } {
   const rows: IndexRow[] = [], noPage: string[] = [], unreadable: string[] = [];
   const body = /<tbody\b[^>]*>([\s\S]*?)<\/tbody>/i.exec(html)?.[1] ?? "";
@@ -73,8 +95,10 @@ export function parseFormsIndex(html: string): { rows: IndexRow[]; packages: Pac
     if (!a) { noPage.push(code); continue; }
     const u = officialUrl(a.href);
     if (!u.ok) { noPage.push(code); continue; }
-    const title = a.text, date = tds[2] ? strip(tds[2]) : "";
-    rows.push({ code, title, pageUrl: u.url, dateModified: /^\d{4}-\d{2}(-\d{2})?$/.test(date) ? date : null, kind: /^document checklist/i.test(title) ? "checklist" : "form" });
+    const title = a.text.trim(), date = tds[2] ? strip(tds[2]) : "";
+    // X5 break m15 / the outside check on #145: a date that is not a real calendar date (2024-02-30) is kept as no date. (Titles are
+    // judged by the library fill only, indexTitleOk: the finder and the check still find a row by its number.)
+    rows.push({ code, title, pageUrl: u.url, dateModified: realDate(date) ? date : null, kind: /^document checklist/i.test(title) ? "checklist" : "form" });
   }
   const packages: Package[] = [], seen = new Set<string>();
   const ff = /<form\b[^>]*id\s*=\s*["']applications-ff["'][^>]*>([\s\S]*?)<\/form>/i.exec(html)?.[1] ?? "";

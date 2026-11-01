@@ -1,10 +1,11 @@
-// S5 Questionnaires tab (W1-08, P-119, walkthrough v2 S5): "Who can be in this application" edited at the top (it decides
-// each person's questions; challenge M3, M4), then slice 2's questions per person: wording, who fills it, only if, the
+// S5 Questionnaires tab (W1-08, P-119, walkthrough v2 S5): "Who can be in this application" (it decides each person's
+// questions; challenge M3, M4) is edited in Before forms on the Forms tab since slice C1 (P-161 (2)); this file keeps
+// its card (WhoCanBe) and the tab links to it. Then slice 2's questions per person: wording, who fills it, only if, the
 // forms that need it, coverage (a gap blocks release), field codes only in a question's side panel (early-look fix 3);
 // the rules and checks used here fold below (m4). People pick from the shared library's person roles; a new kind of
 // person is added there (S6), never here.
 import * as React from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { BookOpen, ChevronDown, Plus, Undo2, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -29,7 +30,7 @@ const TIPS = {
 export function QuestionnairesTab({ id, people, questionnaire, available }: { id: string; people: PeopleView; questionnaire: QuestionnairesView | null; available: { key: string; title: string }[] }) {
   return (
     <div className="space-y-6">
-      <WhoCanBe id={id} v={people} />
+      <p className="text-sm text-text-muted" data-who-can-be-moved>Who can be in this application ({people.lines.filter((l) => l.max > 0).map((l) => l.label).join(", ") || "nobody yet"}) is set before the forms. <Link className="text-text-link underline" to={`/c/${id}/forms?focus=people%3Acard`}>Change on Forms</Link></p>
       <QuestionsByPerson id={id} q={questionnaire} available={available} />
       <ConfigArea id={id} areas={["rules", "checks"]} />
     </div>
@@ -38,9 +39,13 @@ export function QuestionnairesTab({ id, people, questionnaire, available }: { id
 
 type Line = PeopleLine & { label: string };
 const toLines = (v: PeopleView): Line[] => v.lines.map((l) => ({ role: l.role, label: l.label, min: l.min, max: l.max, applies: l.applies, preview: l.preview, quote: l.quote ?? null, origin: l.origin }));
+/** The folded line's plain words (board P-161 (2), Lead C1 decision 4): "Principal applicant (always) · Dependent child,
+ *  0–5 (optional)"; exact counts and who files their own application stay in Show and edit. A role whose most is 0
+ *  cannot be in the application, so the folded line leaves it out (#139 review). */
+const plainWords = (label: string, l: { min: number; max: number }) => `${label}${l.max > 1 ? `, ${l.min}–${l.max}` : ""} (${l.min > 0 ? "always" : "optional"})`;
 const howMany = (l: { min: number; max: number }) => (l.min === l.max ? (l.min === 1 ? "exactly 1" : `exactly ${l.min}`) : `${l.min} to ${l.max}`);
 
-function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
+export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
   const qc = useQueryClient(); const toast = useToast();
   const { canAuthor } = useSessionView();
   const [editing, setEditing] = React.useState(false);
@@ -86,7 +91,7 @@ function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
   const shown = editing ? lines : toLines(v);
   if (!unfolded && !editing && !filling) return (
     <section aria-labelledby="who-can-be" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-surface-raised px-5 py-3 shadow-sm" data-who-can-be data-folded>
-      <p className="min-w-0 text-sm"><span id="who-can-be" className="font-semibold">Who can be in this application</span> <span className="text-text-muted">· {shown.map((l) => `${role(l.role)?.label ?? l.label} ${howMany(l)}`).join(" · ")}{shown.filter((l) => l.applies).length > 1 ? " · each applicant files their own application" : ""}</span></p>
+      <p className="min-w-0 text-sm"><span id="who-can-be" className="font-semibold">Who can be in this application</span> <span className="text-text-muted" data-people-words>· {shown.filter((l) => l.max > 0).map((l) => plainWords(role(l.role)?.label ?? l.label, l)).join(" · ")}</span></p>
       <Button size="sm" variant="ghost" onClick={() => setUnfolded(true)} aria-expanded={false}><ChevronDown /> {canAuthor ? "Show and edit" : "Show"}</Button>
     </section>
   );
