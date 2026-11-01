@@ -32,3 +32,20 @@ No demo step depends on scaffolding: the lists read the live tables. `graph.mjs`
 A real screen reader. An intended user's unaided walk. Whether each rule's test fails when the rule is removed: no files may be edited here, so no code was mutated. That is judged by reading the tests instead; the retired-copy and no-condition tests would catch their rules. Question rules on real data: the sample has none, so they were seen only through the builder's test.
 
 **Verdict: Block.** Fix Majors 1 and 2 (or record a Lead amendment for 2 in the concept), then re-review. Minors 3–5 should come in the same PR.
+
+## Re-review on 1a41d982 (the head of #294): Approve, journey 9.5/10
+Recorded here from the reviewer's comment on #294 (kept off that branch so its approved head stayed unchanged). Both Majors are fixed and were retested on the reviewer's own copy:
+* M1, values per combination: a differing copy shows each combination's own effect and source.
+* M2, kinds from the accepted M8 mapping: Consistency 24 · Document validity 14 · Other 26 · Field validation 0 · AI review 0, and "When it runs: not built".
+
+The suites passed on the reviewer's fresh copies, API 23/23 and browser 31/31, run twice.
+
+Minors left for a follow-up (none blocking):
+* m6: no anchor per check on the Questionnaires tab.
+* m8: no zod contract.
+* (a) When copies differ, "Reads" is the union across combinations; move `reads` into `per_combination`.
+* (b) A differing row hides a per-combination Draft status; add an `OriginPill` per combination.
+* (c) `fieldWord()` in the API repeats the web's `fieldName()`.
+* (d) The search box does not resync when Back changes the address.
+
+Note: the browser suite takes the database name as its second argument, as its usage line says.
