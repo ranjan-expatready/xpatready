@@ -12,7 +12,8 @@ the title ("IMM 5257 F : Demande …"); a French version has the same code and e
 as "fr" for the intake to hold rather than taken for the English edition. A password-protected file is said to be one.
   .tools/solution-1-prototype/.venv/bin/python -I studio/tools/read_form_identity.py <file>
 C3.12 (FormEdition.published): "--dates <file> ..." reads only the published date of each file (no text extraction) and
-prints one JSON object {path: "YYYY-MM-DD" | null}; a file that cannot be read is null, the same as a file with no date.
+prints one JSON object {path: "YYYY-MM-DD" | null | "?"}: null when the PDF names no date (a saved web page is not a
+PDF, so it has none here), "?" when the file could not be read (break M2/m2: never taken for "no date").
   .tools/solution-1-prototype/.venv/bin/python -I studio/tools/read_form_identity.py --dates <file> [<file> ...]
 """
 import html
@@ -129,18 +130,18 @@ def main(path):
 
 
 def published_only(path):
-    """C3.12: the published date alone, as main() reads it (ModDate, else CreationDate; a saved page's date modified)."""
+    """C3.12: the published date alone, as main() reads it (the PDF's ModDate, else CreationDate)."""
     try:
         with open(path, "rb") as f:
-            raw = f.read()
-        if raw[:5] != b"%PDF-":
-            return read_html(raw).get("published") if re.match(rb"\s*(<!doctype html|<html)", raw[:512], re.I) else None
+            head = f.read(5)
+        if head != b"%PDF-":
+            return None  # break m5: a saved web page's "date modified" is not a published date of a file
         reader = PdfReader(path)
         if reader.is_encrypted:
             reader.decrypt("")
         return pdf_date(reader.metadata)
-    except Exception:  # unreadable or damaged: no date, never a crash
-        return None
+    except Exception:  # unreadable or damaged: said as such, never a crash and never "no date"
+        return "?"
 
 
 if __name__ == "__main__" and sys.argv[1:2] == ["--dates"]:

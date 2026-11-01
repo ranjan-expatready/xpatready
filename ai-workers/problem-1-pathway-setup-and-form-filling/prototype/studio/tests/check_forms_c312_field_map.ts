@@ -7,10 +7,11 @@
 // was published (not the printed edition), a file with no date says so, an older edition keeps its own date, and editions
 // made before the column are read once and kept. A pass and a fail per rule, against the database's own column.
 //   zsh studio/tools/isolated.sh forms_c312 4450 start && tsx studio/tests/check_forms_c312_field_map.ts 4450 xr_studio_forms_c312
-import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { execFileSync, execSync } from "node:child_process";
+import { mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { fieldMapState } from "../contracts/form-library.ts";
+import { publishedOf } from "../engine/published-date.ts";
 
 const PORT = Number(process.argv[2] ?? 4450), DB = process.argv[3] ?? "xr_studio_forms_c312";
 let pass = 0, fail = 0;
@@ -53,6 +54,13 @@ type Row = { code: string; type: string; edition: string | null; field_map: Fm }
   ok("C3.12 rule fail: a decided, approved map with one AI proposal waiting is not 'Complete'", fieldMapState("form", true, [m("mapped"), m("not_a_fact")], 1).kind === "waiting");
   ok("C3.12 rule fail: AI proposals never make a guide 'proposed'", fieldMapState("guide", true, [], 4).kind === "not_filled");
   ok("C3.12 rule fail: one form field is said in the singular", fieldMapState("form", true, [m("mapped")]).words === "Complete · 1 form field");
+
+  // ── C3.12 published: the pure rule for what the column says (break 456fb7d0 M2, m1)
+  ok("C3.12 published rule pass: a real date is shown as the date", publishedOf("2022-12-06").published === "2022-12-06" && publishedOf("2022-12-06").published_state === "date");
+  ok("C3.12 break M2 fail: not read yet (null) says 'unread', never 'no date in the file'", publishedOf(null).published === null && publishedOf(null).published_state === "unread");
+  ok("C3.12 break M2 fail: a file that could not be read ('?') says 'unreadable'", publishedOf("?").published_state === "unreadable");
+  ok("C3.12 published rule pass: a PDF that names no date ('') says 'none'", publishedOf("").published_state === "none");
+  ok("C3.12 break m1 fail: impossible or far dates are never shown (2023-02-30, 0000-00-00, 2099-12-31)", ["2023-02-30", "0000-00-00", "2099-12-31", "9999-13-99"].every((v) => publishedOf(v).published === null));
 
   // ── the API on the sample (US$0)
   await call("POST", "/demo/reset", { confirm: "RESET" });
@@ -102,7 +110,7 @@ type Row = { code: string; type: string; edition: string | null; field_map: Fm }
   }
 
   // ── C3.12 published date: the date the file says it was published (FormEdition.published), US$0 (rules, no AI)
-  type Pub = Row & { published: string | null; older_editions: { label: string; published: string | null }[] };
+  type Pub = Row & { published: string | null; published_state: string; older_editions: { label: string; published: string | null; published_state: string }[] };
   const pubRows = async () => (await call("GET", "/library/forms/list")).body.rows as Pub[];
   let pr = await pubRows();
   const r1295 = pr.find((r) => r.code === "IMM 1295")!, r5707 = pr.find((r) => r.code === "IMM 5707")!;
@@ -125,6 +133,12 @@ type Row = { code: string; type: string; edition: string | null; field_map: Fm }
   ok("C3.12 published fail: a file read once with no date is not read again on every list (stays '')", sql("select published from form_edition where edition_label = 'IMM 5409 (01-2023)'") === "");
   sql("update form_edition set published = 'not a date' where edition_label = 'IMM 5475 (05-2021)'");
   ok("C3.12 published fail: anything but a YYYY-MM-DD date is never shown as a date", (await pubRows()).find((r) => r.code === "IMM 5475")?.published === null);
+  sql("update form_edition set published = '9999-13-99' where edition_label = 'IMM 5475 (05-2021)'");
+  ok("C3.12 break m1 fail: an impossible date (9999-13-99) from a file's clock is never shown as a date", (await pubRows()).find((r) => r.code === "IMM 5475")?.published === null);
+  sql("update form_edition set published = '?' where edition_label = 'IMM 5475 (05-2021)'");
+  const unreadable = (await pubRows()).find((r) => r.code === "IMM 5475")!;
+  ok("C3.12 break M2 fail: a file that could not be read says so ('unreadable'), never 'no date in the file'", unreadable.published === null && unreadable.published_state === "unreadable" && sql("select published from form_edition where edition_label = 'IMM 5475 (05-2021)'") === "?", unreadable.published_state);
+  ok("C3.12 break M2 pass: a file with no date says 'none', one with a date 'date'", pr.find((r) => r.code === "IMM 5409")?.published_state === "none" && pr.find((r) => r.code === "IMM 1295")?.published_state === "date");
   // An older edition keeps its own date (test input: IMM 5257's committed previous edition joins as an earlier edition,
   // unread, the way rows made before the column are).
   const ws = sql("select workspace_id from form_edition where edition_label = 'IMM 5257 (09-2023)'"), def = sql("select gov_form_def_id from form_edition where edition_label = 'IMM 5257 (09-2023)'");
@@ -137,6 +151,17 @@ type Row = { code: string; type: string; edition: string | null; field_map: Fm }
   sql(`insert into form_edition (id, workspace_id, gov_form_def_id, edition_label, stored_path) values (gen_random_uuid(), '${ws}', '${def}', 'IMM 5257 (01-2017)', 'var/nowhere/missing.pdf')`);
   await pubRows();
   ok("C3.12 published fail: a file missing from disk stays unread (null, tried again later), never '' (no date)", sql("select coalesce(published, 'NULL') from form_edition where edition_label = 'IMM 5257 (01-2017)'") === "NULL");
+  // Break M1: a stored file that never answers (a pipe) is not read at all, the list answers at once, and the other
+  // unread files are still read (test input: a FIFO under this copy's own var folder, and an unread edition beside it).
+  const fifoDir = join(import.meta.dirname, "..", "var", "c312-fifo"); rmSync(fifoDir, { recursive: true, force: true }); mkdirSync(fifoDir, { recursive: true });
+  execSync(`mkfifo ${join(fifoDir, "never.pdf")}`);
+  const rel = join(fifoDir, "never.pdf").replace(join(import.meta.dirname, "..", "..", "..", "..", "..") + "/", "");
+  sql(`insert into form_edition (id, workspace_id, gov_form_def_id, edition_label, stored_path, sha256) values (gen_random_uuid(), '${ws}', '${def}', 'IMM 5257 (02-2016)', '${rel}', 'fifo')`);
+  sql("update form_edition set published = null where edition_label = 'IMM 5257 (06-2018)'");
+  const t0 = Date.now(); await pubRows(); const took = Date.now() - t0;
+  ok("C3.12 break M1 fail: a stored file that never answers (a pipe) does not stall the Forms list (under 4 s)", took < 4000, `${took} ms`);
+  ok("C3.12 break M1 fail: the pipe is left unread (null) and the edition beside it is still read (2019-04-18)", sql("select coalesce(published, 'NULL') from form_edition where edition_label = 'IMM 5257 (02-2016)'") === "NULL" && sql("select published from form_edition where edition_label = 'IMM 5257 (06-2018)'") === "2019-04-18");
+  rmSync(fifoDir, { recursive: true, force: true });
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

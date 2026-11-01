@@ -130,15 +130,20 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     sql("update form_edition set published = '' where edition_label = 'IMM 5409 (01-2023)'");
     await open(); await p.getByLabel("Search number or title").fill("5409"); await sleep(600);
     step("C3.12 published fail: a file that names no date says 'Date not in the file' (never a guess)", /^Date not in the file$/.test((await p.locator('tr[data-form="IMM 5409"] [data-published]').innerText()).trim()));
+    sql("update form_edition set published = '?' where edition_label = 'IMM 5409 (01-2023)'");
+    await open(); await p.getByLabel("Search number or title").fill("5409"); await sleep(600);
+    step("C3.12 break M2 fail: a file that could not be read says so, never 'Date not in the file'", /^Date could not be read from the file$/.test((await p.locator('tr[data-form="IMM 5409"] [data-published]').innerText()).trim()));
     await p.getByLabel("Search number or title").fill(""); await sleep(500);
     for (const w of [1440, 1024, 400]) {
       await p.setViewportSize({ width: w, height: 900 }); await sleep(300);
       const sh = w < 1280 ? (await p.locator('tr[data-form="IMM 1295"] [data-published-short]').innerText().catch(() => "")).trim() : "wide";
       const wide = await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+      if (w < 1280) { const lines = await p.locator('tr[data-form="IMM 1295"] [data-published-short] [data-published-date]').evaluate((e) => e.getClientRects().length); step(`C3.12 review m1 fail: at ${w} px the date never breaks in the middle (one line box)`, lines === 1, lines); }
       step(`C3.12 published: at ${w} px the date is shown${w < 1280 ? " in the row's short line" : ""} and the page has no sideways scroll`, (w >= 1280 || /Published 2026-06-04/.test(sh)) && !wide, `${sh} · wide=${wide}`);
       if (w === 400) { await axe("Forms list at 400 px with published dates"); await p.screenshot({ path: path.join(SHOTS, "c312-published-400.png"), fullPage: true }); }
     }
     await p.setViewportSize({ width: 1440, height: 900 }); await sleep(200);
+    await p.locator('tr[data-form="IMM 1295"]').scrollIntoViewIfNeeded(); // review m3: the evidence shows the dates, not the upload cards
     await p.screenshot({ path: path.join(SHOTS, "c312-published-1440.png") });
     await p.getByLabel("Search number or title").fill(""); await sleep(500);
     await p.setViewportSize({ width: 1024, height: 900 }); await sleep(300);
