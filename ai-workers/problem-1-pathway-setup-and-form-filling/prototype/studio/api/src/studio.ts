@@ -294,9 +294,13 @@ export class Studio {
       await this.db.programDef.update({ where: { id: c.programDefId }, data: { allowedLocations: locations } });
       await this.audit.log(c.workspaceId, actor.id, "updated", "combination", c.combinationKey, `${actor.name} set where a case for "${c.label}" can be opened: ${locations.map((l) => l.replace("_", " ")).join(" or ")}`, { allowedLocations: locations }, c.id);
     }
+    // C11.16 (P-125 (1)(3)): the name and the place come from Program structure only. The setup cannot rename the
+    // combination nor move it to another Pathway, Program, Category or Sub-category; nothing is written.
+    const PLACE = ["label", "programKey", "nodeKey", "programDefId", "pathwayType", "pathway", "program", "category", "subCategory", "combinationKey"];
+    const asked = PLACE.filter((k) => (b as Record<string, unknown>)[k] !== undefined && !(k === "label" && b.label === c.label));
+    if (asked.length) fail(asked.includes("label") ? `The name "${c.label}" comes from Program structure: rename it there. Nothing was changed.` : `Where "${c.label}" sits comes from Program structure: a setup cannot move to another place. Nothing was changed.`);
     if (b.expectedLabel !== undefined && b.expectedLabel !== c.label) fail(`Someone renamed this combination to "${c.label}" while you were editing. Your change was not saved.`, HttpStatus.CONFLICT);
     const data: any = {};
-    if (b.label !== undefined) data.label = b.label.trim() || fail("The name cannot be empty.");
     if (b.description !== undefined) data.description = b.description;
     // S5 (M4): people saved here too move the version on, so the editor's guard holds.
     if (b.participants) { data.participants = await this.checkParticipants(c.workspaceId, b.participants); data.participantsVersion = c.participantsVersion + 1; data.participantsBy = actor.id; }
