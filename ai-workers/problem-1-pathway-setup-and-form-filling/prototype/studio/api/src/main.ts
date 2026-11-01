@@ -52,6 +52,8 @@ type H = string | undefined;
 class StudioController {
   constructor(@Inject(Studio) private readonly s: Studio) {}
   @OpenRead("who-am-I before a person is chosen; the copies' health check") @Get("session") session(@Headers("x-actor") a: H) { return this.s.session(actorOf(a)); }
+  /** C11.10 (P-115): Cards / List per person, on the server. Any known person keeps their own choice. */
+  @Patch("session/preferences") preferences(@Headers("x-actor") a: H, @Body() b: unknown) { return this.s.setPreferences(actorOf(a), b); }
   @Get("combinations/:id") overview(@Param("id") id: string) { return this.s.combination(id); }
   @Patch("combinations/:id") updateComp(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.s.updateCombination(actorOf(a), id, b); }
   @Get("combinations/:id/config") config(@Param("id") id: string, @Query("mode") mode: any) { return this.s.config(id, mode === "published" ? "published" : "draft"); }
