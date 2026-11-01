@@ -7,6 +7,7 @@ Full text of each row (steps, expected, actual, evidence and check): `reports/bu
 
 | # | Type · Severity | Capability · Req./decision | Found · last seen | What happens (short) | Lane | Status |
 |---|---|---|---|---|---|---|
+| QA-137 | UX · Minor | C3.10 shared field page · STANDARDS (fits a phone, no sideways scroll; QA-39 regression) | 25cefb67 (qa C1.6 + checks) | On a 390 px phone the shared field page (/library/fields/person.uci) scrolls sideways by 5 px: the Definition box (Name field with the Rename button beside it) is 395 px wide. QA-39 had fixed this. … | screens | Open |
 | QA-136 | UX · Minor | C3.2 · PRODUCT §4 | 25cefb67 (re-score) | After Reject on To review › Proposals the notice says "Decided 1 proposal · New library items wait for a second person on To review." — words for an accept, not a rejection. … | screens | Open |
 | QA-134 | UX · Minor | C11.18 · STANDARDS (no decision ids on screen) | 25cefb67 (re-score) | Forms drawer › What IRCC accepts: the account hint says "Any account, or the one account this applies to (P-143)." — a decision id on screen. … | forms | Open |
 | QA-135 | UX · Minor | C6.2, C11.12 · STANDARDS (Problem Details in plain words) | 25cefb67 (re-score) | Adding a second "case" subject to a case is refused 422 "This case's release does not list a case in who can be in this application …": the internal role name "case" in the words. … | runtime | Open |
