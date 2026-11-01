@@ -32,6 +32,13 @@ type Row = { code: string; type: string; edition: string | null; field_map: Fm }
   const und = fieldMapState("form", true, [m("mapped"), m("not_a_fact", "DRAFT"), m("unresolved", "DRAFT")]);
   ok("C3.12 rule pass: a form field with no decision: '2 of 3 form fields decided'", und.kind === "undecided" && und.words === "2 of 3 form fields decided" && und.decided === 2 && und.total === 3, und);
   ok("C3.12 rule fail: an unresolved form field carried in a published map still keeps the map from Complete", fieldMapState("form", true, [m("mapped"), m("unresolved")]).kind === "undecided");
+  // Review (b6d8b50b) M1: where an open form field is decided: To review only for one still in a draft.
+  const carried = fieldMapState("form", true, [m("mapped"), m("unresolved"), m("unresolved")]);
+  ok("C3.12 review M1 pass: form fields carried from an earlier release are said to be decided when the edition is drafted again, not on To review", /2 form fields come from an earlier release/.test(carried.tip) && /drafted again/.test(carried.tip) && !/To review/.test(carried.tip), carried.tip);
+  const onRev = fieldMapState("form", true, [m("mapped"), m("unresolved", "DRAFT")]);
+  ok("C3.12 review M1 pass: a form field still in a draft waits on To review", /1 form field waits for a decision on To review\./.test(onRev.tip) && !/earlier release/.test(onRev.tip), onRev.tip);
+  const both = fieldMapState("form", true, [m("unresolved", "DRAFT"), m("unresolved")]);
+  ok("C3.12 review M1 fail: a mix names both places, each with its own count", /1 form field waits for a decision on To review/.test(both.tip) && /1 form field comes from an earlier release/.test(both.tip), both.tip);
   const wait = fieldMapState("form", true, [m("mapped"), m("not_a_fact", "DRAFT")]);
   ok("C3.12 rule pass: every form field decided but a draft waits: '2 of 2 form fields · waits for review'", wait.kind === "waiting" && wait.words === "2 of 2 form fields · waits for review", wait);
   const done = fieldMapState("form", true, [m("mapped"), m("not_a_fact")]);

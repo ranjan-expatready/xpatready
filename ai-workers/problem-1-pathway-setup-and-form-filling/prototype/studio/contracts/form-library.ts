@@ -87,7 +87,12 @@ export function fieldMapState(type: (typeof LIBRARY_TYPES)[number], hasEdition: 
   if (!total && proposed) return say("proposed", `AI draft · ${proposed} to review`, `${ai} for this edition's form fields wait on To review; nothing is mapped until a person accepts them.`);
   if (!total) return say("none", "Not mapped yet", "No form field of this edition is mapped yet: add the form to a combination and map it from its Forms tab.");
   const of = `${decided} of ${total} form field${total === 1 ? "" : "s"}`;
-  if (decided < total) return say("undecided", `${of} decided`, `${total - decided} form field${total - decided === 1 ? " has" : "s have"} no decision yet (mapped, or not a fact). They wait on To review.`);
+  // Review (b6d8b50b) M1: only form fields still in a draft wait on To review; ones carried from an earlier release are
+  // not listed there (review-queue.ts), so the tip says where each kind is decided (job.tsx words).
+  const open = total - decided, onReview = live.filter((r) => r.outcome === "unresolved" && r.status === "DRAFT").length, carried = open - onReview;
+  const many = (n: number, one: string, more: string) => `${n} form field${n === 1 ? ` ${one}` : `s ${more}`}`;
+  const where = [onReview ? `${many(onReview, "waits", "wait")} for a decision on To review.` : "", carried ? `${many(carried, "comes", "come")} from an earlier release, not decided yet: decide ${carried === 1 ? "it" : "them"} when this edition is drafted again (Draft with AI on the combination's Forms tab).` : ""].filter(Boolean).join(" ");
+  if (decided < total) return say("undecided", `${of} decided`, `Each form field is mapped, marked not a fact or filled by hand. ${where}`);
   if (drafts || proposed) return say("waiting", `${of} · waits for review`, `Every form field has a decision; ${proposed ? `${ai} also wait` : "some are a draft that waits for a second person"} on To review.`);
   return say("complete", `Complete · ${total} form field${total === 1 ? "" : "s"}`, "Every form field of this edition is mapped or marked not a fact, and approved.");
 }

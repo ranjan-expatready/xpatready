@@ -150,7 +150,7 @@ export function FormsPage() {
                 <tr data-form={r.code} tabIndex={-1} className={`focus-visible:outline-2! focus-visible:outline-solid! focus-visible:-outline-offset-2! focus-visible:outline-ring! ${r.status === "retired" ? "text-text-muted" : ""}`}>
                   <td className="whitespace-nowrap text-xs tabular-nums"><button type="button" className="rounded text-text-link underline-offset-2 hover:underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" onClick={() => setOpen(r)}>{r.code}</button></td>
                   <td className="min-w-32 max-w-56 break-words xl:max-w-80"><span className="line-clamp-2" title={r.title}>{r.title}</span>
-                    <span className="mt-0.5 block text-xs text-text-muted xl:hidden">{TYPE_WORD[r.type]} · {editionText(r) ?? "no usable edition yet"}{r.type === "form" && r.edition ? <> · <span data-field-map-short={r.field_map.kind}>Field map: {r.field_map.words}</span></> : null}</span></td>
+                    <span className="mt-0.5 block text-xs text-text-muted xl:hidden">{TYPE_WORD[r.type]} · {editionText(r) ?? "no usable edition yet"}{r.type === "form" && r.edition ? <> · <Tip tip={r.field_map.tip}><span tabIndex={0} data-field-map-short={r.field_map.kind} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">Field map: {r.field_map.words}</span></Tip></> : null}</span></td>
                   <td className="hidden xl:table-cell">{TYPE_WORD[r.type]}</td>
                   <td className="hidden xl:table-cell">{editionText(r) ?? <span className="text-text-muted">no usable edition yet</span>}</td>
                   <td className="hidden xl:table-cell"><FieldMapCell fm={r.field_map} /></td>
