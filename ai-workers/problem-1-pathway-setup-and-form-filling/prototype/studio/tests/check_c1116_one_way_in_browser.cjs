@@ -87,7 +87,7 @@ const saveFor = (key) => SAVED.forEach((f, i) => {
     step("C11.16: a Not started card says 0 of 5 steps and offers Start setup", (await card(tvKey).getAttribute("data-state")) === "NOT_STARTED" && /0 of 5 steps/.test(await card(tvKey).innerText()) && await card(tvKey).locator("[data-start-setup]").count() === 1);
     await shot("01-cards"); await axe("Immigration programs with two Not started cards");
     await card(tvKey).locator("h3, [data-card-title], p").first().click({ force: true });
-    await p.locator("[data-toast], [role='status']").first().waitFor({ timeout: 5000 }).catch(() => { throw new Error("C11.16: a Not started card's click said nothing"); });
+    await p.waitForURL(/[?&]sel=/, { timeout: 5000 }).catch(() => { throw new Error("C11.16: a Not started card's click did nothing"); });
     step("C11.16 fail: clicking a Not started card (not its button) never goes to Program structure and makes nothing", new URL(p.url()).pathname === "/" && combos() === 0, p.url());
 
     // ---------------------------------------------------------------- Add combination: the same pop-up, in place (P-128 (5))
@@ -121,6 +121,10 @@ const saveFor = (key) => SAVED.forEach((f, i) => {
     const mv = await api(`/combinations/${tvId}`, { method: "PATCH", data: { nodeKey: vvKey, programKey: vvKey } });
     step("C11.16 fail: a rename in the setup is refused in plain words (rename it on Program structure); nothing changes", rn.status === 400 && /Program structure/.test(rn.body?.detail ?? rn.body?.message ?? "") && sql(`select label||'|'||program_def_id from combination where id='${tvId}'`) === before, { status: rn.status, detail: rn.body?.detail });
     step("C11.16 fail: a move to another place from the setup is refused in plain words; nothing changes", mv.status === 400 && /Program structure/.test(mv.body?.detail ?? mv.body?.message ?? "") && sql(`select label||'|'||program_def_id from combination where id='${tvId}'`) === before, { status: mv.status, detail: mv.body?.detail });
+    const locs = () => sql(`select array_to_string(allowed_locations, ',') from program_def p join combination c on c.program_def_id=p.id where c.id='${tvId}'`);
+    const locsBefore = locs();
+    const both = await api(`/combinations/${tvId}`, { method: "PATCH", data: { allowedLocations: ["inside_canada"], label: "Sneaky rename (C11.16)" } });
+    step("C11.16 fail (review M1): a rename sent with another change is refused before anything is saved (where cases open unchanged)", both.status === 400 && locs() === locsBefore && sql(`select label||'|'||program_def_id from combination where id='${tvId}'`) === before, { status: both.status, before: locsBefore, after: locs() });
     const find = p.locator("[data-find-forms]").first();
     await find.waitFor({ timeout: 15000 });
     const findText = (await find.innerText()).trim();
