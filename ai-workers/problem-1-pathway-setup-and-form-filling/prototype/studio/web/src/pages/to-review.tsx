@@ -6,7 +6,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import { Search, X } from "lucide-react";
 import { KIND_WORDS, QUEUE_KINDS, type QueueItem, type QueueKind, type ReviewQueue } from "../../../contracts/review-queue";
-import { useActorId, useApi, useSessionView } from "@/lib/api";
+import { ApiError, useActorId, useApi, useSessionView } from "@/lib/api";
 import { Button, Input, Notice, Pill } from "@/components/ui/controls";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,10 +24,14 @@ export function ToReviewPage() {
   const filter = (VIEWS.find(([k]) => k === sp.get("f"))?.[0] ?? "needs") as (typeof VIEWS)[number][0];
   const kind = (QUEUE_KINDS as readonly string[]).includes(sp.get("kind") ?? "") ? (sp.get("kind") as QueueKind) : null;
   const q = sp.get("q") ?? "";
+  // C2.12 (concept m2, K1): opened from a form's guided path, the list is that form's items (?form=), on that combination
+  // (?c=) as the path counts them; "Show every form" clears both. The API checks the number (400 in words).
+  const form = sp.get("form")?.trim() || null;
+  const combo = form ? sp.get("c")?.trim() || null : null;
   const [typed, setTyped] = React.useState(q);
   React.useEffect(() => setTyped(q), [q]);
   React.useEffect(() => { const t = setTimeout(() => { if (typed !== q) set({ q: typed || null }); }, 150); return () => clearTimeout(t); }, [typed]);
-  const list = useApi<ReviewQueue>(["review-queue", actor, filter, kind, q], `/review-queue?filter=${filter}${kind ? `&kind=${kind}` : ""}${q ? `&q=${encodeURIComponent(q)}` : ""}`,
+  const list = useApi<ReviewQueue>(["review-queue", actor, filter, kind, q, form, combo], `/review-queue?filter=${filter}${kind ? `&kind=${kind}` : ""}${q ? `&q=${encodeURIComponent(q)}` : ""}${form ? `&form=${encodeURIComponent(form)}` : ""}${combo ? `&combination=${encodeURIComponent(combo)}` : ""}`,
     { placeholderData: keepPreviousData, refetchInterval: (x) => ((x.state.data?.counts.running ?? 0) > 0 ? 3000 : false) });
   function set(p: Record<string, string | null>) {
     setSp((prev) => { const n = new URLSearchParams(prev); for (const [k, v] of Object.entries(p)) { if (v === null || v === "") n.delete(k); else n.set(k, v); } return n; }, { replace: true });
@@ -48,6 +52,12 @@ export function ToReviewPage() {
           </div>
         </div>
         <p className="-mt-2 text-sm text-text-muted">Everything that waits for a person: AI proposals, combinations to review and release, new editions, held files and merges. Nothing reaches a release until a person decides.</p>
+
+        {form ? <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/40 bg-primary/5 px-3 py-2 text-sm" data-form-filter={form}>
+          <span>Only <b className="font-semibold">{form.length > 40 ? `${form.slice(0, 40)}…` : form}</b>{combo ? " on this combination, and the shared library's items for it" : ", on every combination"}.</span>
+          <span className="flex-1" />
+          <Button size="sm" variant="secondary" onClick={() => set({ form: null, c: null })}>Show every form</Button>
+        </div> : null}
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Show items">
@@ -70,10 +80,14 @@ export function ToReviewPage() {
           </label>
         </div>
 
-        {list.isError ? <Notice tone="danger" title="The list could not be loaded" action={<Button size="sm" variant="secondary" onClick={() => void list.refetch()}>Try again</Button>}>{(list.error as Error).message} Your decisions so far are saved.</Notice>
+        {list.isError ? (form && list.error instanceof ApiError && list.error.status === 400
+            // C2.12: a form number the studio refuses (too long, empty) is said in its words, with the way out, not "Try again".
+            ? <Notice tone="danger" title="This form number is not one the studio reads" action={<Button size="sm" variant="secondary" onClick={() => set({ form: null, c: null })}>Show every form</Button>}>{list.error.message}</Notice>
+            : <Notice tone="danger" title="The list could not be loaded" action={<Button size="sm" variant="secondary" onClick={() => void list.refetch()}>Try again</Button>}>{(list.error as Error).message} Your decisions so far are saved.</Notice>)
           : list.isLoading || !known ? <div className="space-y-2 rounded-lg border border-border bg-surface-raised p-4" aria-busy="true" aria-label="Loading items to review">{Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-12 w-full" />)}<span className="sr-only" role="status">Loading items to review</span></div>
           : !d!.items.length ? (
-            q || kind ? <EmptyState title="Nothing matches" description={`No item ${q ? `matches "${q}"` : ""}${q && kind ? " and " : ""}${kind ? `is a ${KIND_WORDS[kind].toLowerCase()}` : ""} in ${VIEWS.find(([k]) => k === filter)![1]}.`} action={<Button variant="secondary" onClick={() => { setTyped(""); set({ q: null, kind: null, f: "all" }); }}>Show all</Button>} />
+            form && !q && !kind ? <EmptyState title={`Nothing for ${form.length > 40 ? `${form.slice(0, 40)}…` : form} in ${VIEWS.find(([k]) => k === filter)![1]}`} description={`${filter !== "all" && d!.counts.all ? `${d!.counts.all} other item${d!.counts.all === 1 ? "" : "s"} of this form ${d!.counts.all === 1 ? "is" : "are"} under All. ` : ""}Items of other forms are not shown.`} action={<Button variant="secondary" onClick={() => set({ form: null, c: null })}>Show every form</Button>} />
+            : q || kind ? <EmptyState title="Nothing matches" description={`No item ${q ? `matches "${q}"` : ""}${q && kind ? " and " : ""}${kind ? `is a ${KIND_WORDS[kind].toLowerCase()}` : ""} in ${VIEWS.find(([k]) => k === filter)![1]}.`} action={<Button variant="secondary" onClick={() => { setTyped(""); set({ q: null, kind: null, f: "all" }); }}>Show all</Button>} />
               : filter === "needs" ? <EmptyState title="Nothing waits for you" description={`When you add sources to a combination, its AI draft, new editions and approvals appear here.${d!.counts.waiting ? ` ${d!.counts.waiting} item${d!.counts.waiting === 1 ? " waits" : "s wait"} for someone else.` : ""}`} action={<Button asChild variant="secondary"><Link to="/">Open Immigration programs</Link></Button>} />
               : <EmptyState title={filter === "running" ? "No AI work is running" : filter === "waiting" ? "Nothing waits for someone else" : "Nothing to review"} description="Items appear here as sources are added, drafted and submitted." />
           ) : <Rows items={d!.items} />}

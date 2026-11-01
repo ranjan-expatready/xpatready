@@ -27,10 +27,12 @@ export class ReviewQueueService {
   async list(actor: Actor, query: unknown): Promise<ReviewQueue> {
     const p = ReviewQueueQuery.safeParse(query ?? {});
     if (!p.success) throw new HttpException(problemFromZod(p.error), HttpStatus.BAD_REQUEST);
-    const { filter, kind, q, form } = p.data;
+    const { filter, kind, q, form, combination } = p.data;
     // F2 C2.12 (F3 plan D2, BR-5): under ?form= the list, its counts and its kinds are this form's items only.
     const code = form ? normaliseCode(form) : null;
-    const all = (await this.items(actor)).filter((i) => !code || i.forms.includes(code));
+    // C2.12 (concept K1): with ?combination= too, as the form's guided path counts them (engine/form-progress.ts): this
+    // combination's items and the library-wide ones (no combination), never another combination's.
+    const all = (await this.items(actor)).filter((i) => (!code || i.forms.includes(code)) && (!combination || i.combination == null || i.combination === combination));
     const needle = q?.toLocaleLowerCase("en-CA");
     const found = all.filter((i) => (!kind || i.kind === kind) && (!needle || `${i.title} ${i.what} ${KIND_WORDS[i.kind]}`.toLocaleLowerCase("en-CA").includes(needle)));
     const counts: Record<QueueFilter, number> = { needs: 0, waiting: 0, running: 0, all: found.length };
