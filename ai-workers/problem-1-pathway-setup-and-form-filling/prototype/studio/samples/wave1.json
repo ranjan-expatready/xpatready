@@ -1,0 +1,64 @@
+{
+  "basis": "S7 (P-148, P-112, P-108): the six agreed sample combinations, five Retail and one Corporate, with the official files IRCC names for each (screens/W1-form-library/forms-for-5-combinations.md and the coverage check in design/walkthrough-s3-s7.html §S7 v2). Every name, person and file choice is Sample until the immigration expert confirms. 'page' is the combination's canada.ca application page the form finder starts from (recorded copy, US$0); 'missing' lists files IRCC names that have no saved copy (shown as Not found · Upload PDF).",
+  "pathways": [
+    { "key": "retail.temporary_residence", "label": "Temporary residence", "type": "INDIVIDUAL", "description": "Sample pathway (P-112): visits, study and work in Canada for a limited time." },
+    { "key": "retail.permanent_residence", "label": "Permanent residence", "type": "INDIVIDUAL", "description": "Sample pathway (P-112): applications that lead to permanent residence, and the documents that go with it." },
+    { "key": "corporate.temporary_residence", "label": "Temporary residence", "type": "CORPORATE", "description": "Sample pathway (P-112): what an employer files so a worker can come for a limited time." }
+  ],
+  "programs": [
+    { "pathway": "retail.temporary_residence", "key": "visitors", "label": "Visitors", "description": "Sample: visiting Canada as a tourist or to see family.",
+      "categories": [
+        { "key": "visitors.visitor_visa", "label": "Visitor visa", "locations": ["outside_canada"],
+          "setup": { "key": "vv.single", "page": "https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada/apply-visitor-visa.html",
+            "participants": [{ "role": "principal", "label": "Applicant", "min": 1, "max": 1 }, { "role": "spouse_or_partner", "label": "Spouse or partner (travelling)", "min": 0, "max": 1, "preview": 0 }, { "role": "child", "label": "Child (travelling)", "min": 0, "max": 4, "preview": 0 }, { "role": "representative", "label": "Representative", "min": 0, "max": 1, "preview": 0 }],
+            "sources": ["imm5257e.pdf", "imm5257_1e.pdf", "imm5707e.pdf", "imm5645e.pdf", "imm5409e.pdf", "imm5476e.pdf", "imm5475e.pdf", "imm5484e.pdf", "guide-5256.html"], "missing": [],
+            "note": "Sample: IRCC's visitor visa application from outside Canada (guide 5256)." } }
+      ] },
+    { "pathway": "retail.temporary_residence", "key": "study_permits", "label": "Study permits", "description": "Sample: studying in Canada.",
+      "categories": [
+        { "key": "study_permits.study_permit", "label": "Study permit", "locations": ["outside_canada"],
+          "subcategories": [
+            { "key": "study_permits.study_permit.outside", "label": "Outside Canada", "locations": ["outside_canada"],
+              "setup": { "key": "sp.outside", "page": "https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada/study-permit/apply.html",
+                "participants": [{ "role": "principal", "label": "Student", "min": 1, "max": 1 }, { "role": "representative", "label": "Representative", "min": 0, "max": 1, "preview": 0 }],
+                "sources": ["imm1294e.pdf", "imm5707e.pdf", "imm5646e.pdf", "imm5409e.pdf", "imm5476e.pdf", "imm5475e.pdf", "imm5483e.pdf", "guide-5269.html"], "missing": [],
+                "note": "Sample: IRCC's study permit application from outside Canada (guide 5269)." } }
+          ] }
+      ] },
+    { "pathway": "retail.temporary_residence", "key": "work_permits", "label": "Work permits", "description": "Sample: working in Canada.",
+      "categories": [
+        { "key": "work_permits.employer_specific", "label": "Employer-specific work permit", "locations": ["inside_canada", "outside_canada"],
+          "subcategories": [
+            { "key": "work_permits.employer_specific.lmia_inside", "label": "With an LMIA – inside Canada", "locations": ["inside_canada"],
+              "setup": { "key": "wp.lmia_inside", "page": "https://www.canada.ca/en/immigration-refugees-citizenship/services/work-canada/permit-inside/forms-documents.html",
+                "participants": [{ "role": "principal", "label": "Worker", "min": 1, "max": 1 }, { "role": "spouse_or_partner", "label": "Spouse or partner", "min": 0, "max": 1, "preview": 0 }, { "role": "representative", "label": "Representative", "min": 0, "max": 1, "preview": 0 }],
+                "sources": ["imm5710e.pdf", "imm5707e.pdf", "imm5409e.pdf", "imm5476e.pdf", "imm5475e.pdf", "imm5556e.pdf", "guide-5553.html"], "missing": [],
+                "note": "Sample: IRCC's employer-specific work permit with an LMIA, applied for inside Canada (guide 5553)." } }
+          ] }
+      ] },
+    { "pathway": "retail.permanent_residence", "key": "provincial_nominees", "label": "Provincial nominees", "description": "Sample: permanent residence after a province's nomination.",
+      "categories": [
+        { "key": "provincial_nominees.express_entry", "label": "Express Entry stream", "locations": ["inside_canada", "outside_canada"],
+          "setup": { "key": "pnp.express_entry", "page": "https://www.canada.ca/en/immigration-refugees-citizenship/services/immigrate-canada/provincial-nominees/express-entry/apply-permanent-residence.html",
+            "participants": [{ "role": "principal", "label": "Principal applicant", "min": 1, "max": 1 }, { "role": "spouse_or_partner", "label": "Spouse or partner", "min": 0, "max": 1, "preview": 0 }, { "role": "child", "label": "Child", "min": 0, "max": 5, "preview": 0 }, { "role": "representative", "label": "Representative", "min": 0, "max": 1, "preview": 0 }],
+            "sources": ["imm0008e.pdf", "imm5669e.pdf", "imm5406e.pdf", "imm0008depe.pdf", "imm5562e.pdf", "imm5409e.pdf", "imm5476e.pdf", "imm5475e.pdf"], "missing": [],
+            "note": "Sample (P-112): IRCC's permanent residence application from the paper forms, after a provincial nomination in the Express Entry stream; the province is a fact on the case." } }
+      ] },
+    { "pathway": "retail.permanent_residence", "key": "family_sponsorship", "label": "Family sponsorship", "description": "Sample: sponsoring a family member.",
+      "categories": [
+        { "key": "family_sponsorship.spouse_partner", "label": "Spouse or common-law partner", "locations": ["inside_canada", "outside_canada"],
+          "setup": { "key": "fs.spouse", "page": "https://www.canada.ca/en/immigration-refugees-citizenship/services/immigrate-canada/family-sponsorship/spouse-partner-children/apply.html",
+            "participants": [{ "role": "principal", "label": "Sponsored spouse or partner", "min": 1, "max": 1 }, { "role": "child", "label": "Child", "min": 0, "max": 4, "preview": 0 }, { "role": "representative", "label": "Representative", "min": 0, "max": 1, "preview": 0 }],
+            "sources": ["imm1344e.pdf", "imm5532e.pdf", "imm0008e.pdf", "imm5669e.pdf", "imm5406e.pdf", "imm5562e.pdf", "imm5409e.pdf", "imm5604e.pdf", "imm5476e.pdf", "imm5475e.pdf", "imm5533e.pdf", "imm5589e.pdf", "guide-5289.html"], "missing": [],
+            "note": "Sample: IRCC's spouse or common-law partner sponsorship (guide 5289)." } }
+      ] },
+    { "pathway": "corporate.temporary_residence", "key": "lmia", "label": "Labour market impact assessment", "description": "Sample: an employer's application to ESDC before hiring a foreign worker.",
+      "categories": [
+        { "key": "lmia.high_wage", "label": "High-wage position", "locations": ["inside_canada"],
+          "setup": { "key": "lm.high_wage", "page": null,
+            "participants": [{ "role": "principal", "label": "Employer (applicant)", "min": 1, "max": 1 }, { "role": "representative", "label": "Representative", "min": 0, "max": 1, "preview": 0 }],
+            "sources": [], "missing": [{ "code": "EMP5626", "title": "LMIA application – high-wage positions", "why": "Filled online in LMIA Online; ESDC publishes no PDF of it, so no saved copy (P-113: an answer sheet)." }],
+            "note": "Sample: an employer's LMIA for a high-wage position (ESDC, LMIA Online)." } }
+      ] }
+  ]
+}

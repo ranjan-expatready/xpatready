@@ -13,10 +13,11 @@ import { Ai } from "./ai.ts";
 import { detailsOf, Finder, FINDER_OPERATION, FINDER_STEPS } from "./finder.ts";
 import { UPLOAD_OPERATION, UPLOAD_STEPS, UploadRuns } from "./upload-run.ts";
 import { statedUsd } from "./finder-cost.ts";
+import { PeopleFromGuide, WHO_OPERATION, WHO_STEPS } from "./people-ai.ts";
 
 const problem = (status: number, title: string, detail: string) => new HttpException({ type: `https://expatready.local/problems/${title.toLowerCase().replace(/[^a-z]+/g, "-")}`, title, status, detail }, status);
 const ACTIVE = ["QUEUED", "RUNNING"];
-const LABEL: Record<string, string> = { [FINDER_OPERATION]: "Finding forms", [UPLOAD_OPERATION]: "Reading an uploaded PDF", draft_field_maps: "Drafting field maps" };
+const LABEL: Record<string, string> = { [FINDER_OPERATION]: "Finding forms", [UPLOAD_OPERATION]: "Reading an uploaded PDF", draft_field_maps: "Drafting field maps", [WHO_OPERATION]: "Filling Who can be from the guide" };
 /** The run's status in the words the card shows (EXPERIENCE §4 running, error, done states). */
 export function runStatus(b: Pick<AiBatch, "status" | "cancelRequested">): { code: string; word: string } {
   if (ACTIVE.includes(b.status) && b.cancelRequested) return { code: "stopping", word: "Stopping" };
@@ -36,15 +37,16 @@ type Step = { n: number; kind: string; label: string; uses: "rules" | "ai"; stat
 
 @Injectable()
 export class Runs {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Finder) private readonly finder: Finder, @Inject(Ai) private readonly ai: Ai, @Inject(UploadRuns) private readonly uploads: UploadRuns) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Finder) private readonly finder: Finder, @Inject(Ai) private readonly ai: Ai, @Inject(UploadRuns) private readonly uploads: UploadRuns, @Inject(PeopleFromGuide) private readonly people: PeopleFromGuide) {}
 
   private steps(b: AiBatch & { jobs: DraftingJob[] }): Step[] {
     const plan = (b.plan ?? {}) as { steps?: { kind: string; uses_ai?: boolean }[] };
     const defs = b.operation === FINDER_OPERATION ? FINDER_STEPS.map((s) => ({ kind: s.kind, label: s.label, ai: !!plan.steps?.find((p) => p.kind === s.kind)?.uses_ai }))
       : b.operation === UPLOAD_OPERATION ? UPLOAD_STEPS.map((s) => ({ kind: s.kind, label: s.label, ai: false }))
+      : b.operation === WHO_OPERATION ? WHO_STEPS.map((s) => ({ kind: s.kind, label: s.label, ai: s.uses_ai })) // QA-91 (runtime lane)
       : b.jobs.map((j) => ({ kind: j.kind, label: j.kind === "field_map" ? "AI drafts the form's field map" : j.kind === "reuse_map" ? "Add the reviewed field map from the library" : "Read the form on this computer", ai: j.kind === "field_map" && j.mode === "LIVE" }));
     return defs.map((d, i) => {
-      const j = b.operation === FINDER_OPERATION || b.operation === UPLOAD_OPERATION ? b.jobs.find((x) => x.kind === d.kind) : b.jobs[i];
+      const j = b.operation === FINDER_OPERATION || b.operation === UPLOAD_OPERATION || b.operation === WHO_OPERATION ? b.jobs.find((x) => x.kind === d.kind) : b.jobs[i];
       const c = j?.detail && typeof j.detail === "object" ? (j.detail as { done?: number; total?: number }) : null;
       return { n: i + 1, kind: d.kind, label: d.label, uses: d.ai && !(j?.status === "COMPLETED" && !(j.costUsd ?? 0) && /no ai call/i.test(j.message ?? "")) ? "ai" : "rules", status: j?.status ?? "WAITING", message: plainRunText(j?.message ?? null), usd: j?.costUsd ?? 0, started_at: j && j.status !== "WAITING" && j.status !== "QUEUED" ? j.startedAt : null, finished_at: j?.finishedAt ?? null, details: detailsOf(j?.detail), counts: c?.total ? { done: c.done ?? 0, total: c.total, unit: b.operation === FINDER_OPERATION ? "forms" : "parts" } : null };
     });
@@ -67,7 +69,7 @@ export class Runs {
     const last = Math.max(b.startedAt.getTime(), ...b.jobs.map((j) => Math.max(j.startedAt.getTime(), j.finishedAt?.getTime() ?? 0)));
     const failedStep = steps.find((s) => ["FAILED", "BLOCKED", "NEEDS_PERSON"].includes(s.status));
     // Where the run's card is: the library for an upload; its own page otherwise (S5 points a finder run at its Forms tab).
-    const href = b.operation === UPLOAD_OPERATION ? "/library/forms" : `/ai/${b.id}`;
+    const href = b.operation === UPLOAD_OPERATION ? "/library/forms" : b.operation === WHO_OPERATION ? `/c/${(b.plan as { combination?: { id?: string } } | null)?.combination?.id ?? ""}/questionnaires` : `/ai/${b.id}`;
     return { id: b.id, operation: b.operation, label: LABEL[b.operation] ?? b.operation, scope: b.operation === FINDER_OPERATION ? b.scopeLabel.split("|")[1] ?? null : b.scopeLabel, status: st.code, status_word: st.word, message: plainRunText(b.message),
       step: cur ? { n: cur.n, m: steps.length, label: cur.label } : null, steps, started_at: b.startedAt, finished_at: b.finishedAt, elapsed_ms: (b.finishedAt ?? new Date()).getTime() - b.startedAt.getTime(), usual_ms: usual.ms, last_activity_at: new Date(last),
       usd: { spent: Math.round(b.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0) * 100) / 100, worst: b.worstCaseUsd, usual: usual.usd, about: b.operation === FINDER_OPERATION ? statedUsd(b, usual.usd).about : usual.usd }, can_stop: ACTIVE.includes(b.status) && !b.cancelRequested,
@@ -95,6 +97,7 @@ export class Runs {
     if (!ACTIVE.includes(b.status)) throw problem(409, "Already ended", `This run has already ended (${runStatus(b).word.toLowerCase()}).`);
     if (b.operation === FINDER_OPERATION) await this.finder.stop(actor, id);
     else if (b.operation === UPLOAD_OPERATION) await this.uploads.stop(actor, id);
+    else if (b.operation === WHO_OPERATION) await this.people.stop(actor, id);
     else await this.ai.cancel(actor, id);
     return this.view(id);
   }
