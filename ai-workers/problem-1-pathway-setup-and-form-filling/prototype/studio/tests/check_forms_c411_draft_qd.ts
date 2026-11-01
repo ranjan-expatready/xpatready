@@ -50,7 +50,7 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   let r = await plan("rules");
   const kinds = (r.body.steps ?? []).map((s: J) => s.kind).join(",");
   ok("C4.11 P pass: the plan lists the seven steps in order, how each runs, US$0, before anything runs", r.status === 200 && kinds === "qd_facts,qd_documents,qd_document_facts,qd_sources,qd_conditions,pqr_picks,qd_check" && r.body.totals.worst_usd === 0 && r.body.facts.total > 0 && /^[0-9a-f]{64}$/.test(r.body.plan_sha256), { kinds, facts: r.body.facts?.total });
-  ok("C4.11 N pass: the plan says steps 2 and 5 are not available yet, never a pretend result", r.body.steps?.filter((s: J) => s.how === "not_yet").map((s: J) => s.n).join(",") === "2,5", r.body.steps?.map((s: J) => s.how));
+  ok("C4.11 N pass: the plan says step 5 is not available yet and step 2 is AI work, not run with rules only", r.body.steps?.filter((s: J) => s.how === "not_yet").map((s: J) => s.n).join(",") === "5" && r.body.steps?.[1]?.how === "ai_only", r.body.steps?.map((s: J) => s.how));
   r = await call("POST", `/combinations/${wp}/draft-qd`, { mode: "rules", planSha256: "0".repeat(64) });
   ok("C4.11 P fail: a run whose plan was not looked at (another checksum) is refused in words (409), nothing started", r.status === 409 && /plan again/.test(words(r)) && sql(`select count(*) from ai_batch where operation='draft_questions_documents'`) === "0", words(r));
   r = await plan("fast");
@@ -73,8 +73,8 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
 
   // ---------------------------------------------------------------- S6 replay fail: nothing saved → says so, never looks live
   r = await run("replay");
-  const s6none = step(r, "pqr_picks");
-  ok("C4.11 S6 fail: with no saved AI answer, step 6 says so and proposes nothing, US$0; step 7 still runs", r.status === 201 && r.body.proposed === 0 && r.body.usd === 0 && s6none?.status === "FAILED" && /No saved AI answer/.test(s6none.message) && step(r, "qd_check")?.status === "COMPLETED", s6none);
+  const s6none = step(r, "pqr_picks"), firstDocs = step(r, "qd_documents"), firstLines = Number(sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='requirement_line' and status='waiting'`));
+  ok("C4.11 S6 fail: with no saved AI answer, step 6 says so and proposes nothing, US$0; step 7 still runs", r.status === 201 && waiting("ai") === 0 && r.body.usd === 0 && s6none?.status === "FAILED" && /No saved AI answer/.test(s6none.message) && step(r, "qd_check")?.status === "COMPLETED", s6none);
   ok("C4.11 S6 fail (break m4): the reply says the run had a problem and names step 6, never only \"rules pass\"", r.body.status === "done_with_problems" && /Not done: Pre-qualification picks/.test(r.body.note), r.body.note);
   let card = await call("GET", `/runs/${r.body.runId}`);
   ok("C4.11 R pass: the run shows on the shared run card with its label, seven steps and Done with problems (step 6)", card.status === 200 && card.body.label === "Drafting questions and documents" && card.body.steps.length === 7 && card.body.status === "done_with_problems" && card.body.usd.spent === 0 && card.body.error?.next === null, { label: card.body.label, status: card.body.status, steps: card.body.steps?.length });
@@ -101,7 +101,7 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   ok("C4.11 R pass (review M1): starting answers at once with the run id while the steps go on (the card and Stop show at once)", r.body.started?.status === "running" && r.body.started?.runId === r.body.runId, r.body.started);
   ok("C4.11 R pass: rules only runs all seven steps as one run; step 6 puts the rules' picks on the queue, US$0", r.status === 201 && r.body.status === "done" && r.body.steps.length === 7 && rulesProposed > 0 && waiting("rules") === rulesProposed && r.body.usd === 0
     && ["qd_facts", "qd_document_facts", "qd_sources", "pqr_picks", "qd_check"].every((k) => step(r, k)?.status === "COMPLETED"), r.body.steps?.map((s: J) => `${s.kind}:${s.status}`));
-  ok("C4.11 N pass: steps 2 and 5 end as not available yet, with what to do meanwhile", step(r, "qd_documents")?.status === "NOT_YET" && /next part/.test(step(r, "qd_conditions")?.message ?? "") && /Meanwhile/.test(step(r, "qd_documents")?.message ?? ""), step(r, "qd_documents"));
+  ok("C4.11 N pass: step 5 ends as not available yet with what to do meanwhile; step 2 says rules only reads no checklist", step(r, "qd_conditions")?.status === "NOT_YET" && /Meanwhile/.test(step(r, "qd_conditions")?.message ?? "") && step(r, "qd_documents")?.status === "SKIPPED" && /saved AI answers/.test(step(r, "qd_documents")?.message ?? ""), step(r, "qd_documents"));
   ok("C4.11 R pass: one run is one batch with exactly its seven steps", sql(`select count(*) from drafting_job where batch_id='${r.body.runId}'`) === "7", sql(`select string_agg(kind, ',') from drafting_job where batch_id='${r.body.runId}'`));
   ok("C4.11 pass: step 1 says the facts per person, step 4 where each answer comes from, in words", /facts the forms need: .+ \d+/.test(step(r, "qd_facts")?.message ?? "") && /Document \d+ · Client \d+ · Case officer \d+/.test(step(r, "qd_sources")?.message ?? ""), [step(r, "qd_facts")?.message, step(r, "qd_sources")?.message]);
   const r2 = await run("rules");
@@ -131,6 +131,27 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   ok("C4.11 R pass (break M1): the activity log says who stopped the run", sql(`select count(*) from audit_event where action='stopped' and entity_key='${ended.body.runId}'`) === "1", sql(`select string_agg(summary, ' | ') from audit_event where entity_key='${ended.body.runId}'`));
   r = await call("POST", `/runs/${ended.body.runId}/stop`);
   ok("C4.11 R fail: a run that has ended cannot be stopped again (409)", r.status === 409 && /already ended/.test(words(r)), words(r));
+
+  // ---------------------------------------------------------------- D: step 2, documents and when (C2.6's saved readings)
+  // The sample attaches IMM 5488 to this combination; with it set aside, there is no checklist to read.
+  sql(`update source_attachment set recognised=false where combination_id='${wp}' and kind='Document checklist'`);
+  r = await run("replay");
+  sql(`update source_attachment set recognised=true where combination_id='${wp}' and kind='Document checklist'`);
+  ok("C4.11 D fail: with no official checklist among its sources, step 2 says how to get one and proposes nothing", step(r, "qd_documents")?.status === "FAILED" && /No official document checklist/.test(step(r, "qd_documents")?.message ?? ""), step(r, "qd_documents"));
+  for (const name of ["imm5488e.pdf", "imm5483e.pdf"]) {
+    const fd = new FormData(); fd.append("files", new Blob([new Uint8Array(readFileSync(join(SOLUTION, "official-sources", "ircc", "checklists", name)))]), name); fd.append("combinationId", wp);
+    const x = await fetch(`http://localhost:${PORT}/api/intake`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd });
+    if (!x.ok) throw new Error(`intake of ${name} answered ${x.status}`);
+  }
+  ok("C4.11 D pass: the first saved-answers run replays IMM 5488's saved reading into requirement lines for To review (US$0)", firstDocs?.status === "COMPLETED" && /IMM 5488[^;]*: \d+ document requirements? for To review/.test(firstDocs.message) && firstLines > 0, { firstLines, message: firstDocs?.message });
+  const lines = () => Number(sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='requirement_line' and status='waiting'`));
+  r = await run("replay");
+  const d2 = step(r, "qd_documents");
+  ok("C4.11 D pass: with two checklists, step 2 names each: IMM 5488 replayed before (no line twice), IMM 5483 has no saved reading", d2?.status === "COMPLETED" && lines() === firstLines && /IMM 5488[^;]*: replayed before/.test(d2.message) && /IMM 5483[^;]*: no saved AI reading/.test(d2.message) && r.body.usd === 0, { lines: lines(), message: d2?.message });
+  ok("C4.11 D pass: the lines are the checklist page's own draft (decided and applied there), each a requirement line with its quote", sql(`select count(distinct p.run_id) from proposal_item p join drafting_job j on j.id=p.run_id where p.combination_id='${wp}' and p.kind='requirement_line' and j.kind='checklist_draft' and j.mode='REPLAY'`) === "1" && sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='requirement_line' and (source->>'quote') is null`) === "0");
+  const n2 = lines();
+  r = await run("replay");
+  ok("C4.11 D fail: drafting again puts no requirement line on the queue twice", lines() === n2 && /replayed before/.test(step(r, "qd_documents")?.message ?? ""), { before: n2, after: lines(), message: step(r, "qd_documents")?.message });
 
   // ---------------------------------------------------------------- R: a run its server left running never blocks for good (review M3)
   const wsId = sql(`select workspace_id from combination where id='${wp}'`);

@@ -12,6 +12,8 @@ import { buildSnapshot } from "../../engine/snapshot.ts";
 import { checkWords, documentFacts, factsPerRole, qdChecks, QD_OPERATION, QD_RULES, QD_STEPS, sourceCounts, sourceWords, type QdFinding, type QdKind } from "../../engine/draft-qd.ts";
 import { actorOf, Audit, Db, need, readerOf, type Actor } from "./core.ts";
 import { PqrDrafts } from "./pqr-drafts.ts";
+import { Checklists } from "./checklist.ts";
+import { linesOf, savedReading } from "./saved-readings.ts";
 
 type H = string | undefined;
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
@@ -21,7 +23,6 @@ const problem = (status: number, title: string, detail: string, extra: Record<st
 export const QD_LIVE_WAITING = "AI now for this run waits for the founder's Go for the live trial (P-131). Use rules only, or saved AI answers, meanwhile (US$0).";
 /** Steps 2 and 5 are built in the next parts of C4.11; until then they say so on the card (never a pretend result). */
 export const NOT_YET: Partial<Record<QdKind, string>> = {
-  qd_documents: "Not available in this run yet: replaying the saved checklist readings (C2.6) comes in the next part. Meanwhile the checklist's saved reading is replayed from the combination's Sources.",
   qd_conditions: "Not available in this run yet: AI reading the forms' \"if yes, give details\" questions and the guide's conditions comes in the next part. Meanwhile a person adds conditions on the Questions tab.",
 };
 /** Tests only (the check's usage line): STUDIO_SLOW_QD_STEP=<ms> waits that long in each step, so Stop can be tested. */
@@ -32,7 +33,7 @@ export const QdBody = z.object({ mode: z.enum(["rules", "replay", "live"]), plan
 
 @Injectable()
 export class DraftQd {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(PqrDrafts) private readonly pqr: PqrDrafts, @Inject(Audit) private readonly audit: Audit) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(PqrDrafts) private readonly pqr: PqrDrafts, @Inject(Checklists) private readonly checklists: Checklists, @Inject(Audit) private readonly audit: Audit) {}
 
   /** A run left running by a stopped server can never finish: it says so, and no longer blocks a new run (as people-ai does). */
   async onModuleInit() {
@@ -47,6 +48,29 @@ export class DraftQd {
     need(actor, "author");
     const b = await this.db.aiBatch.update({ where: { id }, data: { cancelRequested: true, message: "Stopping" } });
     await this.audit.log(b.workspaceId, actor.id, "stopped", "questions and documents", id, `${actor.name} stopped drafting questions and documents for "${b.scopeLabel}"`);
+  }
+
+  /** Step 2 (C2.6's replay, unchanged; P-121): each official checklist of the combination with a saved real AI reading of
+   *  its exact text is replayed into requirement lines (listed on To review; decided and applied on the checklist's page).
+   *  Rules only reads no checklist: reading one is AI work, so the step says so and is not run. */
+  private async documents(actor: Actor, c: { id: string }, mode: string): Promise<{ status: string; message: string; proposed: number; detail: Record<string, unknown> }> {
+    if (mode !== "replay") return { status: "SKIPPED", message: "Not run with rules only: reading IRCC's checklist is AI work. Choose saved AI answers to replay its saved reading (US$0).", proposed: 0, detail: {} };
+    const atts = await this.db.sourceAttachment.findMany({ where: { combinationId: c.id, kind: "Document checklist", recognised: true }, orderBy: { edition: "asc" } });
+    if (!atts.length) return { status: "FAILED", message: "No official document checklist among this combination's sources yet: attach it under Sources, then draft again.", proposed: 0, detail: {} };
+    let proposed = 0; const said: string[] = [], jobs: string[] = [];
+    for (const a of atts) {
+      const name = a.edition ?? a.fileName, r = savedReading(a.officialFile);
+      if (!r) { said.push(`${name}: no saved AI reading yet (it is recorded in the founder-approved live trial, P-131)`); continue; }
+      const before = await this.db.draftingJob.count({ where: { attachmentId: a.id, kind: "checklist_draft", mode: "REPLAY", status: { in: ["COMPLETED", "APPLIED"] } } });
+      const job = await this.checklists.replay(actor, a);
+      jobs.push(job.id);
+      const d = (job.detail ?? {}) as { proposed?: number; dropped?: string[] };
+      const n = before ? 0 : d.proposed ?? linesOf(r, name).lines.length;
+      proposed += n;
+      said.push(before ? `${name}: replayed before; its ${d.proposed ?? 0} document requirement${d.proposed === 1 ? "" : "s"} are on To review or applied` : `${name}: ${n} document requirement${n === 1 ? "" : "s"} for To review${d.dropped?.length ? `, ${d.dropped.length} left out with the reason` : ""}`);
+    }
+    const message = `${said.join("; ")}. Saved AI reading, US$0; each line quotes the checklist. They are listed on To review, which opens the checklist's page, where they are decided and applied together.`;
+    return { status: jobs.length ? "COMPLETED" : "FAILED", message, proposed, detail: { checklist_jobs: jobs } };
   }
 
   private async combination(id: string) {
@@ -67,8 +91,8 @@ export class DraftQd {
     const facts = factsPerRole(snapshot);
     if (!facts.total) throw problem(409, "No forms yet", `"${c.label}" has no form fields mapped to facts yet, so there is nothing to draft. Find its forms (Start setup) first.`);
     const steps = QD_STEPS.map((s, i) => ({ n: i + 1, kind: s.kind, label: s.label,
-      how: NOT_YET[s.kind] ? "not_yet" : s.kind === "pqr_picks" ? (mode === "replay" ? "saved" : "rules") : "rules",
-      uses_ai: s.kind === "pqr_picks" && mode === "replay" }));
+      how: NOT_YET[s.kind] ? "not_yet" : s.kind === "pqr_picks" ? (mode === "replay" ? "saved" : "rules") : s.kind === "qd_documents" ? (mode === "replay" ? "saved" : "ai_only") : "rules",
+      uses_ai: (s.kind === "pqr_picks" || s.kind === "qd_documents") && mode === "replay" }));
     const fingerprint = JSON.stringify({ id: c.id, mode, facts: facts.total, roles: facts.roles.map((r) => `${r.role}:${r.facts}`), steps: steps.map((s) => s.how) });
     return { mode, combination: { id: c.id, label: c.label }, steps, facts, totals: { worst_usd: 0 },
       note: mode === "rules" ? "No AI: rules work out each step; what needs a person goes to To review." : "Replays the answers AI gave before for this exact guide, prompt and combination (US$0); a step with none saved says so and proposes nothing.",
@@ -133,7 +157,11 @@ export class DraftQd {
         // Each step reads the draft as it is now: an earlier step may have changed what is waiting, never the draft itself.
         const snapshot = (await buildSnapshot(this.db, c.workspaceId, c.id, "draft")).snapshot;
         if (NOT_YET[s.kind]) { await end(s.kind, "NOT_YET", NOT_YET[s.kind]!); continue; }
-        if (s.kind === "qd_facts") {
+        if (s.kind === "qd_documents") {
+          const r = await this.documents(actor, c, plan.mode);
+          out.proposed += r.proposed;
+          await end(s.kind, r.status, r.message, r.detail);
+        } else if (s.kind === "qd_facts") {
           const f = factsPerRole(snapshot);
           await end(s.kind, "COMPLETED", `${f.total} fact${f.total === 1 ? "" : "s"} the forms need: ${f.roles.map((r) => `${r.label} ${r.facts}`).join(" · ")}`, { roles: f.roles });
         } else if (s.kind === "qd_document_facts") {

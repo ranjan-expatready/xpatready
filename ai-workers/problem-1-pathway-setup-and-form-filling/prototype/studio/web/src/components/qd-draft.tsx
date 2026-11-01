@@ -11,14 +11,14 @@ import { Button, Dialog, Notice, Pill } from "@/components/ui/controls";
 import { RunCard, type RunView } from "@/components/run-card";
 
 type Mode = "rules" | "replay";
-type Plan = { mode: Mode; steps: { n: number; kind: string; label: string; how: "rules" | "saved" | "not_yet"; uses_ai: boolean }[]; facts: { total: number; roles: { role: string; label: string; facts: number }[] }; note: string; live: { approved: boolean; why: string | null }; plan_sha256: string };
+type Plan = { mode: Mode; steps: { n: number; kind: string; label: string; how: "rules" | "saved" | "not_yet" | "ai_only"; uses_ai: boolean }[]; facts: { total: number; roles: { role: string; label: string; facts: number }[] }; note: string; live: { approved: boolean; why: string | null }; plan_sha256: string };
 type Finding = { rule: string; level: "error" | "warning"; message: string };
 type Result = { runId: string; status: string; proposed: number; findings: Finding[]; rules: Record<string, string>; note: string };
 const MODES: [Mode, string, string][] = [
   ["rules", "Rules only", "No AI: rules work out each step. US$0."],
   ["replay", "Saved AI answers", "The answers AI gave before for this combination's files, replayed; a step with none saved says so. US$0."],
 ];
-const HOW: Record<Plan["steps"][number]["how"], [string, "ai" | "neutral" | undefined]> = { rules: ["rules", undefined], saved: ["saved AI answers", "ai"], not_yet: ["not available yet", "neutral"] };
+const HOW: Record<Plan["steps"][number]["how"], [string, "ai" | "neutral" | undefined]> = { rules: ["rules", undefined], saved: ["saved AI answers", "ai"], not_yet: ["not available yet", "neutral"], ai_only: ["AI work: with saved AI answers", "neutral"] };
 
 export function DraftQuestionsDocuments({ id }: { id: string }) {
   const [open, setOpen] = React.useState(false);
