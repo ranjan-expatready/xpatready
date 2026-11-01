@@ -3,7 +3,7 @@
 // generated households, answers and values.
 //   tsx studio/tests/runtime/check_case_engine.ts
 import fc from "fast-check";
-import { ageOn, caseView, checkValue, confirmation, optionsOf, knownOf, shapeOf, type Answer, type GroupAnswer, type Participant, type Row } from "../../engine/runtime/case.ts";
+import { ageOn, caseView, HAS_CHILDREN, hasChildrenOf, checkValue, confirmation, optionsOf, knownOf, shapeOf, type Answer, type GroupAnswer, type Participant, type Row } from "../../engine/runtime/case.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { changedFacts, changedGroups, factsOf, formCoverage, groupFacts, inputHash, readiness, type FormFact } from "../../engine/runtime/forms.ts";
 import { recorder } from "./api.ts";
@@ -241,4 +241,10 @@ prop("property: rows get distinct places in a stable order, whatever order they 
 const removed = knownOf(S, people, [ans("p", "person.job_from", "2019-06", { rowKey: "gone" })], [], TODAY).known;
 ok("fail: an answer of a removed row is never read", ![...removed.keys()].some((k) => k.includes("job_from")));
 
+// C7.7 (G25): "has any children" is worked out from the people on the case (Yes only), never asked then.
+{ const fam: Participant[] = [{ subjectId: "p", role: "principal", label: "P", applies: true }, { subjectId: "s", role: "spouse_or_partner", label: "S", applies: true }, { subjectId: "k", role: "child", label: "K", applies: true }];
+  const known = knownOf(S, fam, [ans("p", HAS_CHILDREN, false)], [], TODAY).known;
+  ok("C7.7 pass: with a child on the case, the principal and the spouse have children (Yes, confirmed), overriding an answer of No; the child has none derived", known.get(`p|${HAS_CHILDREN}`)?.value === true && known.get(`p|${HAS_CHILDREN}`)?.status === "confirmed" && known.get(`s|${HAS_CHILDREN}`)?.value === true && !hasChildrenOf(fam).has("k"));
+  const alone = hasChildrenOf(fam.filter((x) => x.role !== "child"));
+  ok("C7.7 fail: with no child on the case nothing is derived (a child may not be on this application): the answer stands", alone.size === 0 && knownOf(S, fam.slice(0, 1), [ans("p", HAS_CHILDREN, false)], [], TODAY).known.get(`p|${HAS_CHILDREN}`)?.value === false); }
 process.exitCode = summary() ? 1 : 0;
