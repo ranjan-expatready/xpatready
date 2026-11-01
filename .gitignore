@@ -44,3 +44,6 @@ ai-workers/problem-1-pathway-setup-and-form-filling/inputs/meeting-*/
 # Scout lane (P-91): the browser tool output and Goose memory stay local
 ai-workers/problem-1-pathway-setup-and-form-filling/product/scout/reports/playwright/
 .goose/memory/
+
+# Real-name list for product/tools/sync-requirements.sh (AGENTS rule 5): Mac only, never pushed
+ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/requirements-names.txt

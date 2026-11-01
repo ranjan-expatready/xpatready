@@ -15,7 +15,7 @@ PATH_RE='(^|/)(sources|code|archive|\.tools)/|^(sources|code|archive|\.tools)$|(
 # Secrets: private keys and the well-known token shapes, plus high-entropy key=value assignments.
 SECRET_RE='-----BEGIN [A-Z ]*PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{22}|sk-[A-Za-z0-9_-]{20}|xox[baprs]-[A-Za-z0-9-]{10}|AIza[0-9A-Za-z_-]{35}|(password|passwd|api[_-]?key|secret|token)[[:space:]]*[:=][[:space:]]*["'"'"']?[A-Za-z0-9._~+/=-]{16,}'
 # Personal names (AGENTS.md rule 5: roles, not names). Edit this list when a name must be added.
-NAMES_RE='\b(Ranjan|Sanjay)\b'
+NAMES_RE='\b(Ranjan|Sanjay|Tanu|Vishrutha|Ayush|Vivek|Ishaan|Tanvi)\b'
 # Self-exclusion: this file legitimately contains the name list; it is skipped for the names scan only
 # (the secrets scan still covers it). Add future names to NAMES_RE — this file is the mechanism.
 GUARD_REL="ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/push-guard.sh"

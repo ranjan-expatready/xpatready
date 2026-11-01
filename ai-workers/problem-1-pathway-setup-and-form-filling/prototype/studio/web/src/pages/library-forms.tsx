@@ -404,13 +404,3 @@ function SetAccepts({ row }: { row: Row }) {
     </div>
   );
 }
-
-export function ChecksPage() {
-  return (
-    <div className="mx-auto max-w-4xl space-y-5">
-      <div><h1 className="text-2xl font-bold tracking-tight">Checks</h1><p className="mt-1 text-sm text-text-muted">Field validation, consistency checks, document validity and AI review objectives.</p></div>
-      {/* QA-72: say where the checks are today, in plain words. */}
-      <EmptyState title="Checks are listed on each combination's Questionnaires tab" description="Each combination's rules and checks, with the questions they read, are on its Questionnaires tab. A shared list of checks across combinations is not built yet." action={<Link className="text-sm text-text-link underline" to="/">Open Immigration programs</Link>} />
-    </div>
-  );
-}
