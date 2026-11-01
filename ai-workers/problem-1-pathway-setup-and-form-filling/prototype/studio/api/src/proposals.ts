@@ -97,7 +97,7 @@ export async function insertProposals(db: Client, workspaceId: string, items: (N
   // C11.13 (P-120: drafted once, reused): a library item drafted "new" for one form edition is the one "new" item; the
   // same identity drafted for another edition waits as a reuse of it, resolved when the first is accepted. One lock per
   // workspace inside a transaction, so two editions read at once still make one "new" item.
-  if ("$executeRaw" in db && !("$transaction" in db)) await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`proposal-door:${workspaceId}`}))`;
+  await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`proposal-door:${workspaceId}`}))`;
   const firstNew = new Map<string, { id: string; edition: string | null }>();
   for (const [n, it] of items.entries()) {
     const { choice, decidedKey, work, ...item } = it;
@@ -113,7 +113,7 @@ export async function insertProposals(db: Client, workspaceId: string, items: (N
       const twin = await sameInLibrary(db, workspaceId, x.payload);
       if (twin) fail(`Proposal ${n + 1} (${x.kind}) is already in the library as ${twin}${await whereUsedWords(db, workspaceId, x.kind, twin)}: propose reusing it instead.`, HttpStatus.CONFLICT);
       const ident = `${x.kind}|${key}`;
-      const first = firstNew.get(ident) ?? await db.proposalItem.findFirst({ where: { workspaceId, kind: x.kind, identityKey: key, landsOn: "library", status: "waiting", reuse: { path: ["match"], equals: "new" }, NOT: { runId: x.runId } }, select: { id: true, formEdition: true }, orderBy: { createdAt: "asc" } })
+      const first = firstNew.get(ident) ?? await db.proposalItem.findFirst({ where: { workspaceId, kind: x.kind, identityKey: key, landsOn: "library", status: "waiting", reuse: { path: ["match"], equals: "new" }, NOT: { formEdition: x.scope.formEdition } }, select: { id: true, formEdition: true }, orderBy: { createdAt: "asc" } })
         .then((r) => (r ? { id: r.id, edition: r.formEdition } : null));
       if (first && first.edition !== x.scope.formEdition) {
         x.reuse = { match: "reuse", existingKey: null }; x.relatesTo = first.id;
@@ -176,6 +176,14 @@ export async function landField(tx: Tx, l: Landing, f: { key: string; meaning: s
 const taken = async (tx: Tx, ws: string) => new Set((await tx.canonicalField.findMany({ where: { workspaceId: ws }, select: { canonicalFieldKey: true } })).map((x) => x.canonicalFieldKey));
 const slugKey = (label: string, used: Set<string>) => keyFor("x", label, used).slice(2);
 const sourceRef = (r: Row, actor: Actor) => `${r.origin === "rules" ? "rules" : "AI"} run ${r.runId}; accepted by ${actor.id} on the review queue (item ${r.id})`;
+
+/** C11.13 (P-120: a near duplicate's one-line reason is shown to the second person and at release): the library change
+ *  a lander writes carries it beside the decider's reason, once. */
+export function withNearReason(reason: string | null, identity: unknown): string | null {
+  const id = identity as { near?: string[]; nearReason?: string | null } | null;
+  if (!id?.near?.length || !id.nearReason || reason?.includes(id.nearReason)) return reason;
+  return `${reason ? `${reason} ` : ""}Close to ${id.near.slice(0, 3).join(", ")}: ${id.nearReason}`.slice(0, 1000);
+}
 
 /** LANDERS[kind]: what accepting an item writes, inside decide's transaction. A kind with no lander yet is refused. */
 export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalPayload, l: Landing) => Promise<string>>> = {
@@ -332,7 +340,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         } else {
           const land = LANDERS[r.kind as ProposalKind];
           if (!land) fail(`A ${r.kind.replace(/_/g, " ")} proposal is accepted with its own step, not yet on this queue.`, HttpStatus.CONFLICT);
-          landedAs = await land!(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: reason ?? r.reason, proposedBy: actor.id, combinationId: r.combinationId, sourceJobId: r.runId });
+          landedAs = await land!(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: withNearReason(reason ?? r.reason, r.identity), proposedBy: actor.id, combinationId: r.combinationId, sourceJobId: r.runId });
         }
       }
       // What a library lander wrote, as it stands now: Undo refuses once it has changed (PR #96 review (1)).
