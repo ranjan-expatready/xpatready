@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { ChevronRight, Pencil, Save, Search } from "lucide-react";
 import { api, useAction, useActorId, useApi } from "@/lib/api";
 import { Button, Dialog, Field, Input, Notice, Pill, Select, Table, Textarea } from "@/components/ui/controls";
@@ -9,6 +9,8 @@ import { ConditionBuilder } from "@/components/conditions";
 import { OriginPill, useLibraryFields } from "@/pages/configuration";
 import { PERSON } from "@/pages/job";
 import { nameOf } from "@/pages/review";
+import { ItemStatusNote, useCanAuthor, useItemLifecycle } from "@/pages/library-item-actions";
+import { TipProvider } from "@/components/status";
 
 /** QA-39: value types in words (the stored code stays the value). */
 const TYPE_WORD: Record<string, string> = { text: "Text", date: "Date", yes_no: "Yes or no", code: "List of choices", country: "Country", number: "Number", address: "Address", phone: "Phone number", email: "Email address" };
@@ -43,21 +45,26 @@ export function FieldsPage() {
   const [q, setQ] = React.useState("");
   const [only, setOnly] = React.useState("all");
   const list = useApi<any[]>(["fields"], "/library/fields");
-  const rows = (list.data ?? []).filter((f) => (!q || f.key.includes(q.toLowerCase()) || (f.name ?? fieldName(f.key)).toLowerCase().includes(q.toLowerCase()) || f.meaning.toLowerCase().includes(q.toLowerCase())) && (only === "all" || (only === "draft" && f.has_draft) || (only === "ai" && f.origin === "AI_PROPOSAL") || (only === "unplaced" && !f.placement) || (only === "shared" && f.forms.length > 1)));
+  const navigate = useNavigate();
+  const canAuthor = useCanAuthor();
+  const life = useItemLifecycle("fields", () => list.refetch(), canAuthor);
+  // C11.9 (BR-10): a retired field is listed only under "Retired".
+  const rows = (list.data ?? []).filter((f) => (only === "retired" ? f.retired : !f.retired)).filter((f) => (!q || f.key.includes(q.toLowerCase()) || (f.name ?? fieldName(f.key)).toLowerCase().includes(q.toLowerCase()) || f.meaning.toLowerCase().includes(q.toLowerCase())) && (only === "all" || only === "retired" || (only === "draft" && f.has_draft) || (only === "ai" && f.origin === "AI_PROPOSAL") || (only === "unplaced" && !f.placement) || (only === "shared" && f.forms.length > 1)));
   return (
-    <div className="mx-auto max-w-7xl space-y-4">
+    <TipProvider><div className="mx-auto max-w-7xl space-y-4">
       <div><h1 className="text-xl font-semibold">Fields</h1><p className="mt-1 text-sm text-text-muted">One definition per meaning, shared by every form and program. Values about people and cases are never stored here.</p><Origin>each field is read from a form field (proposed by AI, confirmed by a person), a document checklist line, or a rule that needs it. Nothing is added by hand.</Origin></div>
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative w-96"><Search className="absolute left-2.5 top-2.5 size-4 text-text-muted" /><Input className="pl-8" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a field or its meaning" aria-label="Search fields" /></div>
-        <Select className="w-64" value={only} onChange={(e) => setOnly(e.target.value)} aria-label="Filter"><option value="all">All fields</option><option value="shared">Used by more than one form</option><option value="draft">With a draft change</option><option value="ai">AI-proposed</option><option value="unplaced">Not asked anywhere</option></Select>
+        <Select className="w-64" value={only} onChange={(e) => setOnly(e.target.value)} aria-label="Filter"><option value="all">All fields</option><option value="shared">Used by more than one form</option><option value="draft">With a draft change</option><option value="ai">AI-proposed</option><option value="unplaced">Not asked anywhere</option><option value="retired">Retired</option></Select>
         <span className="text-xs text-text-muted">{rows.length} of {list.data?.length ?? 0}</span>
       </div>
       {list.isLoading ? <Spinner label="Loading fields" /> : !list.data?.length ? <EmptyState title="The library is empty" description="Load sample inputs, or add a form with AI drafting; reviewed fields land here." /> : (
-        <Table head={["Field", "Meaning, format and source", "Type", "Forms", "Asked in", "Status"]}>
-          {rows.slice(0, 400).map((f) => <tr key={f.key}><td><Link className="font-medium text-text-link hover:underline" to={`/library/fields/${encodeURIComponent(f.key)}`}>{f.name ?? fieldName(f.key)}</Link><p className="mono break-all text-[11px] text-text-muted">{f.key}</p></td><td className="max-w-md text-xs">{f.meaning}<p className="mt-1 text-[11px]"><span className="text-text-muted">Format: </span><FormatCell f={f.format} /></p><SourceNote r={f} /></td><td className="text-xs">{TYPE_WORD[f.value_type] ?? f.value_type}</td><td className="text-xs">{f.forms.join(", ") || <span className="text-text-muted">none</span>}<span className="text-text-muted"> · {f.boxes} form field{f.boxes === 1 ? "" : "s"}{f.used_in?.length ? ` · ${f.used_in.length} combination${f.used_in.length === 1 ? "" : "s"}` : ""}</span></td><td className="text-xs">{f.placement ? `${f.placement.section.replace(/_/g, " ")} · ${collectedWord(f.placement.collected_from)}` : <span className="text-text-warn">not placed</span>}</td><td><ListPill origin={f.origin} status={f.status} /></td></tr>)}
+        <Table head={["Field", "Meaning, format and source", "Type", "Forms", "Asked in", "Status", ""]}>
+          {rows.slice(0, 400).map((f) => <tr key={f.key} data-item={f.key}><td><Link className="font-medium text-text-link hover:underline" to={`/library/fields/${encodeURIComponent(f.key)}`}>{f.name ?? fieldName(f.key)}</Link><p className="mono break-all text-[11px] text-text-muted">{f.key}</p></td><td className="max-w-md text-xs">{f.meaning}<p className="mt-1 text-[11px]"><span className="text-text-muted">Format: </span><FormatCell f={f.format} /></p><SourceNote r={f} /></td><td className="text-xs">{TYPE_WORD[f.value_type] ?? f.value_type}</td><td className="text-xs">{f.forms.join(", ") || <span className="text-text-muted">none</span>}<span className="text-text-muted"> · {f.boxes} form field{f.boxes === 1 ? "" : "s"}{f.used_in?.length ? ` · ${f.used_in.length} combination${f.used_in.length === 1 ? "" : "s"}` : ""}</span></td><td className="text-xs">{f.placement ? `${f.placement.section.replace(/_/g, " ")} · ${collectedWord(f.placement.collected_from)}` : <span className="text-text-warn">not placed</span>}</td><td><ListPill origin={f.origin} status={f.status} /><ItemStatusNote r={f} /></td><td>{life.action({ ...f, name: f.name ?? fieldName(f.key) }, () => navigate(`/library/fields/${encodeURIComponent(f.key)}`))}</td></tr>)}
         </Table>
       )}
-    </div>
+      {life.node}
+    </div></TipProvider>
   );
 }
 
@@ -170,10 +177,17 @@ function RenameSection({ section, onClose }: { section: { key: string; title: st
 
 export function DocumentTypesPage() {
   const t = useApi<any[]>(["doc-types"], "/library/document-types");
+  const canAuthor = useCanAuthor();
+  const life = useItemLifecycle("document-types", () => t.refetch(), canAuthor);
+  const [retired, setRetired] = React.useState(false);
+  // C11.9 (BR-10): a retired document type is listed only under "Retired".
+  const rows = (t.data ?? []).filter((x) => !!x.retired === retired);
   return (
-    <div className="mx-auto max-w-6xl space-y-4">
+    <TipProvider><div className="mx-auto max-w-6xl space-y-4">
       <div><h1 className="text-xl font-semibold">Document types</h1><p className="mt-1 text-sm text-text-muted">Reusable document definitions. The facts a supported document can supply are a proposal until reading that document proves them on a case.</p><Origin>the document checklist lines of each combination (its official checklist, quoted), applied on the combination's Documents tab. Nothing is added by hand.</Origin></div>
-      {t.isLoading ? <Spinner label="Loading" /> : !t.data?.length ? <EmptyState title="No document types yet" /> : <Table head={["Document type", "Category", "Facts it can supply", "Used by combinations", "Status"]}>{t.data.map((x) => <tr key={x.documentTypeKey}><td className="max-w-md font-medium">{x.name}<SourceNote r={x} /></td><td className="text-xs">{CATEGORY_WORD[x.category] ?? x.category}</td><td className="max-w-lg text-xs">{x.suppliesFacts?.length ? x.suppliesFacts.map(fieldName).join(", ") : <span className="text-text-muted">none recorded</span>}</td><td className="text-xs">{usedWords(x.used_in)}</td><td><ListPill origin={x.origin} status={x.status} /></td></tr>)}</Table>}
-    </div>
+      <div className="flex items-center gap-2"><Select className="w-56" value={retired ? "retired" : "current"} onChange={(e) => setRetired(e.target.value === "retired")} aria-label="Filter"><option value="current">Current document types</option><option value="retired">Retired</option></Select><span className="text-xs text-text-muted">{rows.length} of {t.data?.length ?? 0}</span></div>
+      {t.isLoading ? <Spinner label="Loading" /> : !t.data?.length ? <EmptyState title="No document types yet" /> : !rows.length ? <p className="text-sm text-text-muted" data-none-retired>{retired ? "No document type is retired." : "Every document type is retired: choose Retired to see them."}</p> : <Table head={["Document type", "Category", "Facts it can supply", "Used by combinations", "Status", ""]}>{rows.map((x) => <tr key={x.documentTypeKey} data-item={x.documentTypeKey}><td className="max-w-md font-medium">{x.name}<SourceNote r={x} /></td><td className="text-xs">{CATEGORY_WORD[x.category] ?? x.category}</td><td className="max-w-lg text-xs">{x.suppliesFacts?.length ? x.suppliesFacts.map(fieldName).join(", ") : <span className="text-text-muted">none recorded</span>}</td><td className="text-xs">{usedWords(x.used_in)}</td><td><ListPill origin={x.origin} status={x.status} /><ItemStatusNote r={x} /></td><td>{life.action({ ...x, key: x.documentTypeKey }, () => life.start({ ...x, key: x.documentTypeKey, row_action: x.row_action }))}</td></tr>)}</Table>}
+      {life.node}
+    </div></TipProvider>
   );
 }

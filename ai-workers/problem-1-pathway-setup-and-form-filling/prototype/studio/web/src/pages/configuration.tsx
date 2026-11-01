@@ -15,8 +15,10 @@ export const RevCtx = React.createContext<Record<string, string>>({});
 
 export function useLibraryFields() {
   const q = useApi<any[]>(["fields"], "/library/fields");
-  const list: FieldInfo[] = (q.data ?? []).map((f) => ({ key: f.key, meaning: f.meaning, value_type: f.value_type }));
-  const meaning = React.useCallback((k: string) => list.find((f) => f.key === k)?.meaning ?? k, [list]);
+  // C11.9 (BR-10): a retired field is not offered in pickers; its meaning is still shown where something reads it.
+  const all: FieldInfo[] = (q.data ?? []).map((f) => ({ key: f.key, meaning: f.meaning, value_type: f.value_type }));
+  const list = all.filter((_, i) => !(q.data ?? [])[i]?.retired);
+  const meaning = React.useCallback((k: string) => all.find((f) => f.key === k)?.meaning ?? k, [all]);
   return { list, meaning, loading: q.isLoading };
 }
 
@@ -84,7 +86,7 @@ export function RequirementDialog({ id, r, fields, onClose, onSaved }: { id: str
       footer={<>{!isNew ? <Button variant="destructive" className="mr-auto" onClick={() => save.mutate({ retire: true })}><Trash2 /> Remove</Button> : null}<Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => save.mutate(f)} busy={save.isPending}>Save to draft</Button></>}>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Document type" hint="Reuse a library type, or name a new one below."><Select value={f.documentTypeKey} onChange={(e) => set({ documentTypeKey: e.target.value, newTypeName: "" })}><option value="">(a new type)</option>{(types.data ?? []).map((t) => <option key={t.documentTypeKey} value={t.documentTypeKey}>{t.name}</option>)}</Select></Field>
+          <Field label="Document type" hint="Reuse a library type, or name a new one below."><Select value={f.documentTypeKey} onChange={(e) => set({ documentTypeKey: e.target.value, newTypeName: "" })}><option value="">(a new type)</option>{(types.data ?? []).filter((t) => !t.retired || t.documentTypeKey === f.documentTypeKey).map((t) => <option key={t.documentTypeKey} value={t.documentTypeKey}>{t.name}</option>)}</Select></Field>
           <Field label="New document type name"><Input value={f.newTypeName} disabled={!!f.documentTypeKey} onChange={(e) => set({ newTypeName: e.target.value })} placeholder="Proof of financial support" /></Field>
           <Field label="Whose document"><Select value={f.appliesToRoles} onChange={(e) => set({ appliesToRoles: e.target.value })}>{WHO.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select></Field>
           <Field label="Provided by"><Select value={f.providedBy} onChange={(e) => set({ providedBy: e.target.value })}><option value="client">The client</option><option value="agent">The firm</option><option value="employer">The employer</option><option value="third_party">A third party</option></Select></Field>

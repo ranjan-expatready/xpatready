@@ -11,6 +11,7 @@ import { ACTORS, actorOf, Audit, Db, fail, need, OpenRead, revise, strip, Worksp
 import { actionVerb, changeView, decideChange, resubmitChange, withdrawChange } from "./library-changes.ts";
 import { Intake } from "./intake.ts";
 import { isLifecycleKind, Lifecycle } from "./lifecycle.ts";
+import { isItemLifecycle } from "./library-items.ts";
 import { Impact } from "./impact.ts";
 import { Programs } from "./programs.ts";
 
@@ -107,7 +108,7 @@ export class Screen02 {
   /** Send again: a returned structure or combination change goes through the one guard (QA-59); a field as before. */
   async resubmitLibraryChange(actor: Actor, id: string, b: { label?: string; meaning?: string; reason?: string }) {
     const c = await this.db.libraryChange.findUnique({ where: { id } });
-    if (c && isLifecycleKind(c.kind)) {
+    if (c && (isLifecycleKind(c.kind) || isItemLifecycle(c))) {
       // QA-68: a delete, retire or restore has no name or meaning to correct: refused in words, never dropped silently.
       if (b.label !== undefined || b.meaning !== undefined) throw new HttpException({ type: "https://expatready.local/problems/nothing-to-rename", title: "Only what changed", status: 400, detail: `A ${actionVerb(c.action, c.kind)} is sent again with what changed only; its name and meaning stay as they are.` }, HttpStatus.BAD_REQUEST);
       return this.lifecycle.resubmit(actor, c, b.reason ?? "");
