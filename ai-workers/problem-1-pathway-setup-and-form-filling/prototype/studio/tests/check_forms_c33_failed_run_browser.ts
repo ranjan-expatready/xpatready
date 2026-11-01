@@ -30,7 +30,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const until = async (fn: () => Promise<boolean>, what: string, ms = 120_000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await fn()) return; await sleep(500); } throw new Error(`timed out after ${ms / 1000} s waiting for ${what}`); };
 const ledger = async () => { const l = (await call("GET", "/ledger")).body; return JSON.stringify([l?.committed_usd, l?.wave?.spent_usd]); };
 const liveCalls = () => (existsSync(FAKE_LOG) ? readFileSync(FAKE_LOG, "utf8").split("\n").filter((l) => l.includes('"mode":"live"')).length : 0);
-const TECH = /\b(ENOENT|EACCES|errno|syscall|stack|undefined|null)\b|\/(Users|home|private|tmp)\/|\.(m?[jt]s|py|json):?\d*\b|Error:/;
+const TECH = /\b(ENOENT|EACCES|errno|syscall|stack|undefined|null)\b|\/(Users|home|private|tmp)\/|\.(m?[jt]s|py|json|pdf)\b|\b[A-Z][A-Z0-9]*_[A-Z0-9_]+\b|Error:/; // review M1: no file names or server settings either
 
 async function axe(p: Page, what: string) {
   const v = (await new AxeBuilder({ page: p }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze()).violations;
@@ -85,16 +85,16 @@ const rowOf = (p: Page, form: RegExp, attempt?: number) => p.locator("main table
     await p.waitForURL(/\/jobs\//, { timeout: 30_000 });
     await p.getByText(/proposal/i).first().waitFor({ timeout: 30_000 });
     const jobText = await p.locator("main").innerText();
-    ok("C3.3 step 29: the kept IMM 5257 draft opens with every proposal of its answer, ready to decide", kept.status === "COMPLETED" && kept.items.length > 0 && new RegExp(`\\b${kept.items.length}\\b`).test(jobText), { items: kept.items.length });
+    ok("C3.3 step 29: the kept IMM 5257 draft opens with every proposal of its answer, ready to decide", kept.status === "COMPLETED" && kept.items.length > 0 && jobText.includes(`All (${kept.items.length})`), { items: kept.items.length });
     await p.screenshot({ path: join(SHOTS, "29-kept-draft-1440.png") });
 
     // ── step 30, refusal: the Content reviewer has no way to retry
     await asPerson(p, "user-C");
     await p.goto(`${BASE}/ai/${B}`); await rowOf(p, /IMM 5707/).first().waitFor({ timeout: 30_000 });
-    const rBtn = p.getByRole("button", { name: /Retry 1 failed step$/ });
-    if (await rBtn.isVisible()) { await rBtn.click(); await p.getByText(/does not hold the author duty/).first().waitFor({ timeout: 15_000 }); }
+    await p.getByText("Done with problems").first().waitFor({ timeout: 30_000 });
+    const offered = await p.getByRole("button", { name: /Retry \d+ failed step/ }).count();
     const attemptsC = (await call("GET", `/ai/batches/${B}`)).body.jobs.filter((j: { source: string }) => /IMM 5707/.test(j.source)).length;
-    ok("C3.3 step 30 refusal: the Content reviewer cannot retry (no button, or refused in words); nothing runs again", attemptsC === 1, attemptsC);
+    ok("C3.3 step 30 refusal: the Content reviewer is offered no Retry (the author's duty); nothing runs again", offered === 0 && attemptsC === 1, { offered, attemptsC });
 
     // ── step 30: the author retries; only IMM 5707 runs again; after three attempts Retry needs a person
     await asPerson(p, "user-A");
@@ -106,10 +106,8 @@ const rowOf = (p: Page, form: RegExp, attempt?: number) => p.locator("main table
     }
     await p.reload(); await rowOf(p, /IMM 5707/, 3).waitFor({ timeout: 30_000 });
     ok("C3.3 step 30: Retry ran only IMM 5707 (attempts 2 and 3); IMM 5257's kept draft never ran again", await rowOf(p, /IMM 5707/).count() === 3 && await rowOf(p, /IMM 5257/).count() === 1);
-    const r4 = p.getByRole("button", { name: /Retry \d+ failed step/ });
-    let fourth = "no Retry button";
-    if (await r4.isVisible()) { await r4.click(); fourth = await p.getByText(/needs a person/).first().innerText({ timeout: 15_000 }); }
-    ok("C3.3 step 30 refusal: a fourth attempt is not offered, or is refused in words (\"needs a person\"); no step is added", await rowOf(p, /IMM 5707/).count() === 3 && (fourth === "no Retry button" || /needs a person/.test(fourth)), fourth);
+    const stuck = (await p.getByRole("status").filter({ hasText: "needs a person" }).first().innerText({ timeout: 15_000 })).trim();
+    ok("C3.3 step 30 refusal: after three attempts no fourth is offered; the page says it needs a person and what to do (P-110); no step is added", await p.getByRole("button", { name: /Retry \d+ failed step/ }).count() === 0 && /IMM 5707.*needs a person/.test(stuck) && /Form library by hand/.test(stuck) && await rowOf(p, /IMM 5707/).count() === 3, stuck);
     await p.screenshot({ path: join(SHOTS, "30-after-three-attempts-1440.png"), fullPage: true });
 
     // ── a paid repeat of a failed run is refused in the plan (Library › Forms › IMM 1344 › Re-read with AI)
