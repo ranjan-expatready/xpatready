@@ -99,6 +99,27 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.locator("[data-questions]").waitFor(); await p.waitForTimeout(500);
   step("C11.10 X1 fail (review M2): with no question problems, questionnaires:problems outlines nothing (never a chip showing 0)", await p.locator("[data-focused]").count() === 0 && await p.locator('[data-part-problems="questions"]').count() === 0);
 
+  // Review M1 (second pass): a problem only in the released version (draft clean). The checklist's own link must lead to
+  // the Questionnaires notice that says the released version has it and what is left to do.
+  const relId = sql(`select id from config_release where combination_id='${wp}' order by version desc limit 1`);
+  const relWhen = sql(`select coalesce((snapshot->'rules'->0->'when')::text, '') from config_release where id='${relId}'`);
+  step("setup: the released version has a rule to break", !!relId && relWhen !== "");
+  sql(`update config_release set snapshot = jsonb_set(snapshot, '{rules,0,when}', '{"subjectKind":"PRINCIPAL","op":"eq","field":"person.no_such_fact_x1r","value":true}') where id='${relId}'`);
+  execFileSync("zsh", [path.join(__dirname, "..", "tools", "isolated.sh"), DB.replace(/^xr_studio_/, ""), String(PORT), "restart"], { stdio: "ignore" });
+  const sum3 = (await api(`/combinations/${wp}/summary`)).body;
+  const href = sum3.setup?.next?.href ?? "";
+  step("C11.10 X1 pass: a Not ready rule problem's link goes to Questionnaires, not Documents", /\/questionnaires\?focus=questionnaires%3Aproblems/.test(href) && sum3.setup.next.item.fromRelease === true, href);
+  await p.goto(`${BASE}${href}`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
+  l = await landed("questionnaires:problems");
+  const relNotice = await p.locator('[data-part-problems="questions"]').innerText();
+  step("C11.10 X1 pass: it lands on the notice saying the released version has the problem and the draft is clean (release it)", l.outlined && l.focused && !l.focusInUrl && (await p.locator("[data-from-release]").count()) === 1 && /released version has 1 problem/.test(relNotice), { l, relNotice: relNotice.slice(0, 160) });
+  const bq2 = await badge("Questionnaires"), bd3 = await badge("Documents");
+  step("C11.10 X1 pass: the Questionnaires badge counts it; Documents does not", bq2.n >= 1 && bq2.n === tabCounts(sum3.setup).questionnaires && bd3.n === tabCounts(sum3.setup).documents, { want: tabCounts(sum3.setup), q: bq2.n, d: bd3.n });
+  await p.screenshot({ path: path.join(SHOTS, "05-not-ready-release-only-1440.png") });
+  sql(`update config_release set snapshot = jsonb_set(snapshot, '{rules,0,when}', $q$${relWhen}$q$::jsonb) where id='${relId}'`);
+  step("setup: the released version is put back as it was", sql(`select (snapshot->'rules'->0->'when')::text from config_release where id='${relId}'`) === relWhen);
+  execFileSync("zsh", [path.join(__dirname, "..", "tools", "isolated.sh"), DB.replace(/^xr_studio_/, ""), String(PORT), "restart"], { stdio: "ignore" });
+
   // ---------------------------------------------------------------- fail: a focus that names nothing
   await p.goto(`${BASE}/c/${wp}/documents?focus=documents%3Anothing`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
   await p.locator("[data-documents]").waitFor();

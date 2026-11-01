@@ -41,3 +41,28 @@ Journeys walked as the configuration author (user-A): J1 Study permit tabs show 
 Not checked: a real screen reader, an intended user's unaided walk, the Forms-side keys (C1, already merged).
 
 **Verdict: Block** (commit c7bb6ab0). Fix: (1) the `questions_documents:problems` landing and its count; (2) the problems landings target the right line or row, with a visible ring; (3) the badge number follows the board's rule, or a recorded challenge accepted by the Lead. Should also fix: 4–7.
+
+## Re-review of d93bb3cb (1 Nov)
+Rebuilt web in the worktree and started a fresh `screens_rev5` on :4447. The builder's check, copied to /tmp: **23/23 pass**. The sample was already loaded, so the "sample loads" step did not run, which explains why it is not 24.
+
+**Closed:**
+* **M3 closed.** `tabCounts` sums `count`. Proposals and step-level keys take their step's tab. Study permit now shows **Forms 5**, the board's rule.
+* **M2 closed.** `PartProblems` lists the draft's errors through the engine's own `WHERE_STEP`. `documents:problems` and `questionnaires:problems` land on it. The chip target and the row target are gone. Walked with a rule condition that reads a retired field: "Fix 1 problem" on Questionnaires lands on "1 problem to fix in the questions", which names R-04.
+* **Minor 4 closed.** At 400 px the page is 400 px wide on all six combinations, and axe is clean.
+* **Minor 7 closed.** Every step name carries a C11.10 ID.
+
+**Still open:**
+1. **Major (M1 only partly fixed): a Not ready step 4 still lands nowhere unless the draft has a documents-part error.**
+   * The card's link comes from the engine's step tab, and that tab is Documents whenever the first item is `questions_documents:problems` (`engine/setup-checklist.ts`, `Step.tab`). The landing target is the *draft's* documents notice.
+   * **Case (a), walked.** With an LMIA's release has one rule condition broken, and the draft has the same rule. Card **Resume setup** goes to `/documents?focus=questions_documents%3Aproblems`. Nothing is focused, there is no notice, `?focus` stays in the address, and the badge reads "Documents 1" over a page with nothing to fix. The problem is on Questionnaires (`/tmp/rev5/shots/r2-documents-rel.png`). The same key on Questionnaires lands.
+   * **Case (b), walked.** The release is broken and the draft is clean (only the release snapshot carries the bad rule). Resume setup lands nowhere on either tab, and Review and release does not show it either (`r2-notready-release-only.png`).
+   * The check covers only the documents case, by typing the URL.
+   * Fix (small, in the engine): split step 4's release problems by `WHERE_STEP` part into `documents:problems` / `questionnaires:problems` items with `fromRelease`. Then the step tab, the href and the badge follow the part. `PartProblems` lists the release's errors when the item is from the release, so case (b) has something to land on. Add a pass for a questions-only Not ready item and one for a release-only Not ready item.
+2. Minor, should not block: Documents and Questionnaires pass `done=[]`, so they never show "done since you opened it". `questionnaires:gaps` lands on the selected person. Both are small and can follow in C3 if the Lead records them.
+3. Minor: the notice repeats `problemWords`, which shows rule codes and fact keys ("R-04: Condition reads case.uses_representative…"). These are the Review tab's words already, so this is not new to this slice.
+
+**Overview "Missing" mismatch:** still not blocking (C3).
+
+**Journey score, re-walk: 8 / 10.** Task completed ½ (case (a)) · next step obvious ½ (Documents 1 over an empty page) · plain words 1 · feedback and state 1 · correct data 1 · error recovery 1 · accessibility and screen sizes 1 · speed 1 · visual quality ½ (codes in the notice) · trust and sources ½ (a release-only problem is shown nowhere). The score passes, but a Major is open.
+
+**Verdict: Block** (commit d93bb3cb). Fix: open item 1 (step 4 Not ready items split by part, so the link, the landing and the badge follow the problem, with the two tests). Items 2 and 3 should be fixed or recorded; they do not block.
