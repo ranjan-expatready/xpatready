@@ -66,6 +66,8 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
   const rail = setup ? <SetupRail id={id} code={setup} onClose={closeSetup} /> : null;
   const d = useApi<CombinationView>(["combination", id], `/combinations/${id}`);
   const latest = useFinderLatest(id);
+  // QA-103: the edition the newest find took from (or downloaded into) the library, for a line with no file of its own here.
+  const libraryEdition = (code: string) => latest.data?.forms.find((f) => f.code === code && f.edition && ["ATTACHED", "DOWNLOADED_ATTACHED", "NEWER_FILE_SAME_EDITION"].includes(f.state))?.edition ?? null;
   const toast = useUndoToast();
   const qc = useQueryClient();
   const undoLast = async (changeId?: string) => { await api(`/combinations/${id}/forms/undo`, { method: "POST", json: changeId ? { changeId } : {} }); for (const k of [...formsKeys(id), ["combination", id, "finder"]]) void qc.invalidateQueries({ queryKey: k }); };
@@ -131,7 +133,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
             <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <><ChannelCell id={id} line={{ code: l.code, channel: l.channel as Channel, channelWords: l.channelWords, signature: l.signature, document: l.document } as ChannelLine} canAuthor={canAuthor} options={l.channelOptions} />{l.channel === "ONLINE" ? <p className="text-xs text-text-muted" data-online-words>Answer sheet in portal order (P-113)</p> : null}</>}</td>
             <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <SignatureCell id={id} code={l.code} channel={l.channel as Channel} signature={l.signatureKind as Signature} signatures={l.signatures} canAuthor={canAuthor} />}</td>
             <td className="text-xs">{l.document ? "—" : l.signedBy ? l.signedByLabel : <span className="text-text-muted">Not set</span>}</td>
-            <td className="text-xs"><span className="block">{l.edition ?? <span className="text-text-muted">No edition read yet</span>}{l.document ? null : <span className="text-text-muted"> · {l.boxes} form fields matched</span>}</span>{l.document ? null : <LineReading combo={combo} l={l} fromLibrary={fromLibrary} />}{l.document ? null : <span className="mt-1 block"><StepChip code={l.code} chip={progress[l.code]} onOpen={() => openSetup(l.code)} /></span>}</td>
+            <td className="text-xs"><span className="block">{l.edition ?? libraryEdition(l.code) ?? <span className="text-text-muted">No edition read yet</span>}{l.document ? null : <span className="text-text-muted"> · {l.boxes} form fields matched</span>}</span>{l.document ? null : <LineReading combo={combo} l={l} fromLibrary={fromLibrary} inLibrary={!!libraryEdition(l.code)} />}{l.document ? null : <span className="mt-1 block"><StepChip code={l.code} chip={progress[l.code]} onOpen={() => openSetup(l.code)} /></span>}</td>
             <td className="whitespace-nowrap">{canAuthor ? <><Button size="sm" variant="ghost" aria-label={`Change ${l.code}`} onClick={() => setOpen(l)}><Pencil /> Change</Button><LineMenu id={id} l={l} onRedo={() => redo([l.code])} onRemove={() => setRemoving(l)} /></> : null}</td>
           </tr>
         ))}
@@ -156,8 +158,13 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
 /** Lead check L11: a set-up line whose form fields the library already matched has no AI step left; a line still being
  *  read or drafted keeps its step. Devin Review (PR #71): "matched" is the shown file's own edition (the server's
  *  fromLibrary: its edition has a field map), never the line's count, so a newer unmapped edition keeps Draft with AI. */
-function LineReading({ combo, l, fromLibrary }: { combo: Combo; l: WorkspaceFormLine; fromLibrary: string[] }) {
+function LineReading({ combo, l, fromLibrary, inLibrary }: { combo: Combo; l: WorkspaceFormLine; fromLibrary: string[]; inLibrary: boolean }) {
   const a = attachmentFor(combo, l.code);
+  // QA-103: a line the finder attached has its file in the library, not on this combination: never "Not attached"; it
+  // says where the file is and the next step (read its form fields in the Form library).
+  if (!a && !l.boxes) return inLibrary
+    ? <span className="mt-1 inline-flex flex-col items-start gap-1" data-line-next="read"><Pill tone="info">File in the library</Pill><span className="text-text-muted">Next: read its form fields in <Link className="text-text-link underline" to="/library/forms">Shared library › Forms</Link></span></span>
+    : <span className="mt-1 inline-flex flex-col items-start gap-1" data-line-next="file"><span className="text-text-muted">No file yet: upload it or find it in <Link className="text-text-link underline" to="/library/forms">Shared library › Forms</Link></span></span>;
   const mapped = a ? a.status === "IN_LIBRARY" || fromLibrary.includes(a.id) : l.boxes > 0;
   // The last step and when it ran stay (QA-17); only the next step, which would be AI, goes.
   const last = a ? combo.jobs.find((j) => j.attachmentId === a.id) : undefined;
