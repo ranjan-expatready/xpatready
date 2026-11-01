@@ -32,6 +32,14 @@ export const QdBody = z.object({ mode: z.enum(["rules", "replay", "live"]), plan
 export class DraftQd {
   constructor(@Inject(Db) private readonly db: Db, @Inject(PqrDrafts) private readonly pqr: PqrDrafts, @Inject(Audit) private readonly audit: Audit) {}
 
+  /** A run left running by a stopped server can never finish: it says so, and no longer blocks a new run (as people-ai does). */
+  async onModuleInit() {
+    for (const b of await this.db.aiBatch.findMany({ where: { operation: QD_OPERATION, status: { in: ["QUEUED", "RUNNING"] } }, select: { id: true } })) {
+      await this.db.draftingJob.updateMany({ where: { batchId: b.id, status: { in: ["WAITING", "RUNNING"] } }, data: { status: "CANCELLED", finishedAt: new Date(), message: "The studio server stopped before this step ended." } });
+      await this.db.aiBatch.update({ where: { id: b.id }, data: { status: "FAILED", finishedAt: new Date(), message: "The studio server stopped during this run; the steps already done stand. Draft again." } });
+    }
+  }
+
   private async combination(id: string) {
     const c = /^[0-9a-f-]{36}$/i.test(id) ? await this.db.combination.findUnique({ where: { id } }) : null;
     if (!c) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
