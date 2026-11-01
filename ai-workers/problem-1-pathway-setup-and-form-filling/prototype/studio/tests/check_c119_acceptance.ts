@@ -9,12 +9,18 @@
 // shapes (contracts/structure.ts UsesView: GET …/uses → {uses[{label, href|null, blocks, why}], can{delete, retire, restore}:
 // reason string or null}; Undo POST /library/changes/:id/undo). The filing-order route and where the order lives (the snapshot
 // sorts forms by line key today) are this pack's proposal: Question for the tech lead in the PR. Rules only, US$0.
-//   zsh studio/tools/isolated.sh accept 4448 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4448 xr_studio_accept \
-//     && tsx studio/acceptance/C11.9.test.ts 4448 xr_studio_accept
+// Moved into the suites by the C11.9 PR (P-220: a pack test joins the suites in the PR that makes it pass); it sets up the
+// Visitor visa itself when the copy has none (run-suites.sh runs one tsx step after the copy starts). Answers built:
+// sections by the same guard; the author's own never-released, unused draft deleted at once with Undo; the filing order
+// stored on the combination (form_order, migration 20261101210500_c119_form_order).
+//   zsh studio/tools/isolated.sh screens_c119a 4467 start && tsx studio/tests/check_c119_acceptance.ts 4467 xr_studio_screens_c119a
 import { randomUUID } from "node:crypto";
-import { client, recorder } from "../tests/runtime/api.ts";
+import { client, recorder } from "./runtime/api.ts";
+import { execFileSync } from "node:child_process";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const PORT = Number(process.argv[2] ?? 4448), DB = process.argv[3] ?? "xr_studio_accept";
+const PORT = Number(process.argv[2] ?? 4467), DB = process.argv[3] ?? "xr_studio_screens_c119a";
 const { call, sql } = client(PORT, DB);
 const { ok, summary } = recorder();
 const AUTHOR = "user-A", APPROVER = "user-B";
@@ -28,6 +34,10 @@ const versionOf = (key: string) => Number(sql(`select coalesce(max(version), 0) 
 const changeId = (r: { body: any }) => String(r.body?.change?.id ?? r.body?.changeId ?? r.body?.id ?? ""); // eslint-disable-line @typescript-eslint/no-explicit-any
 
 (async () => {
+  if (!sql(`select count(*) from combination where combination_key = 'vv.single'`).startsWith("1")) {
+    const studio = join(dirname(fileURLToPath(import.meta.url)), "..");
+    execFileSync(join(studio, "node_modules", ".bin", "tsx"), ["--tsconfig", join(studio, "api", "tsconfig.json"), join(studio, "tests", "runtime", "setup_visitor_visa.ts"), String(PORT), DB], { stdio: "ignore" });
+  }
   const vv = sql(`select id from combination where combination_key = 'vv.single'`);
   const ws = sql(`select workspace_id from combination where combination_key = 'vv.single'`);
   if (!vv) { console.error("STOP  run tests/runtime/setup_visitor_visa.ts first"); process.exit(2); }

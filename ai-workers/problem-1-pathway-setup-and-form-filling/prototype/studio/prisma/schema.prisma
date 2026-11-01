@@ -165,6 +165,8 @@ model Combination {
   /// [{ role: "principal"|"spouse_or_partner"|"child"|"representative", label, min, max }]
   participants   Json
   sourceBasis    SourceBasis @default(SOURCE_BACKED) @map("source_basis")
+  /// C11.9 (P-116): the filing order of its forms, as form-line lineage keys; null keeps the order by line key.
+  formOrder      Json?       @map("form_order")
   basisNote      String?     @map("basis_note")
   /// W1-10 slice 1 (P-143, plan §8 Q1): the IRCC account this filing goes through (contracts/forms.ts IRCC_ACCOUNTS,
   /// Sample until the immigration expert confirms). What IRCC accepts is read for this account (C-3). Null: not set.
