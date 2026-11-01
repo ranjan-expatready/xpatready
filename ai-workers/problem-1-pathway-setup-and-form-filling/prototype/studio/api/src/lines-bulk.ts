@@ -3,7 +3,6 @@
 // apply (slice b) re-checks every target with the same rules. Rules only, US$0. Founder 31 Oct (#167): form and
 // document lines first; links between combinations stay on the case (P-106).
 import { Body, Controller, Headers, HttpCode, HttpException, Inject, Injectable, Post } from "@nestjs/common";
-import { buildSnapshots } from "../../engine/snapshot.ts";
 import { acceptsOf, allowedChannels, notAcceptedWords, notNeededWords } from "../../engine/channels.ts";
 import { rolesNamedBy } from "../../engine/people.ts";
 import { CHANNEL_WORDS, type Channel } from "../../contracts/forms.ts";
@@ -52,16 +51,27 @@ export class LinesBulk {
     // QA-94: a fact is named by its meaning in the library, never by its system name.
     const condFields = fieldsOf(line.attachMode === "ANSWER_CONDITIONAL" ? line.predicateJson : null);
     const meanings = new Map((condFields.length ? await this.db.canonicalField.findMany({ where: { workspaceId: src.workspaceId, canonicalFieldKey: { in: condFields } }, orderBy: { version: "asc" }, select: { canonicalFieldKey: true, meaning: true } }) : []).map((f) => [f.canonicalFieldKey, f.meaning] as [string, string]));
-    const snaps = b.op === "add" && fieldsOf(line.attachMode === "ANSWER_CONDITIONAL" ? line.predicateJson : null).length ? await buildSnapshots(this.db, src.workspaceId, live, "draft") : new Map();
+    // Review M1: a condition pulls its library question into a combination's snapshot (engine/snapshot.ts "used"), so a
+    // fact counts as asked when the library has a question for it, a document of that combination supplies it, or it is
+    // derived (the reachability reading of engine/validate.ts). Read once for all targets (m4: no snapshot per target).
+    const libraryAsked = new Set<string>(condFields.length ? [
+      ...(await this.db.sectionQuestion.findMany({ where: { workspaceId: src.workspaceId, canonicalFieldKey: { in: condFields }, status: { not: "RETIRED" } }, select: { canonicalFieldKey: true } })).map((q) => q.canonicalFieldKey),
+      ...(await this.db.derivedField.findMany({ where: { workspaceId: src.workspaceId, derivedKey: { in: condFields } }, select: { derivedKey: true } })).map((d) => d.derivedKey),
+    ] : []);
+    const supplies = new Map((condFields.length ? await this.db.documentType.findMany({ where: { workspaceId: src.workspaceId, suppliesFacts: { hasSome: condFields } }, select: { documentTypeKey: true, suppliesFacts: true } }) : []).map((t) => [t.documentTypeKey, t.suppliesFacts]));
     const [forms, reqs, subs] = await Promise.all([
       line.kind === "form" ? this.db.combinationForm.findMany({ where: { combinationId: { in: live }, lineageKey: line.key } }) : Promise.resolve([]),
-      line.kind === "document" ? this.db.documentRequirement.findMany({ where: { combinationId: { in: live }, documentTypeKey: line.typeKey, appliesToRoles: line.who } }) : Promise.resolve([]),
+      // Review M2: every document line of the targets, so the newest version of each is taken before matching (a draft may
+      // change whose it is, or its type, under the same line key).
+      line.kind === "document" || supplies.size ? this.db.documentRequirement.findMany({ where: { combinationId: { in: live } } }) : Promise.resolve([]),
       this.db.reviewSubmission.findMany({ where: { combinationId: { in: live } }, orderBy: { submittedAt: "desc" }, select: { combinationId: true, status: true } }),
     ]);
     const supersededIds = [...forms, ...reqs].map((r) => r.supersedesId).filter((x): x is string => !!x);
-    const before = new Map<string, string>([
-      ...(line.kind === "form" ? await this.db.combinationForm.findMany({ where: { id: { in: supersededIds } }, select: { id: true, status: true } }) : await this.db.documentRequirement.findMany({ where: { id: { in: supersededIds } }, select: { id: true, status: true } })).map((r) => [r.id, r.status] as [string, string]),
+    const before = new Map<string, { status: string; attachMode: string; predicateJson: unknown; conditionPlain: string | null }>([
+      ...(line.kind === "form" ? await this.db.combinationForm.findMany({ where: { id: { in: supersededIds } }, select: { id: true, status: true, attachMode: true, predicateJson: true, conditionPlain: true } }) : await this.db.documentRequirement.findMany({ where: { id: { in: supersededIds } }, select: { id: true, status: true, attachMode: true, predicateJson: true, conditionPlain: true } })).map((r) => [r.id, r] as [string, typeof r]),
     ]);
+    const reqsOf = new Map<string, (typeof reqs)[number][]>(); for (const r of newestBy(reqs.map((x) => ({ ...x, lineageKey: `${x.combinationId}|${x.lineageKey}` }))).values()) { const k = r.combinationId; reqsOf.set(k, [...(reqsOf.get(k) ?? []), r]); }
+    const whenWords = (r: { attachMode: string; conditionPlain: string | null }) => (r.attachMode === "COMBINATION_MANDATORY" ? "always" : `only if ${r.conditionPlain ?? "its own condition"}`);
     const submitted = new Set<string>(); const seen = new Set<string>();
     for (const s of subs) { if (seen.has(s.combinationId)) continue; seen.add(s.combinationId); if (s.status === "SUBMITTED") submitted.add(s.combinationId); }
 
@@ -71,18 +81,23 @@ export class LinesBulk {
       if (id === src.id) return row("SOURCE", "The line is copied from this combination.");
       if (c.retiredAt) return row("CANNOT_COMBINATION_RETIRED", `"${c.label}" is retired: nothing in it changes. Restore it on Structure first.`);
       // The target's own line, matched on the form number (forms) or the document type and whose it is (documents).
-      const mine = [...newestBy((line.kind === "form" ? forms : reqs).filter((r) => r.combinationId === id)).values()];
+      const mine = line.kind === "form" ? [...newestBy(forms.filter((r) => r.combinationId === id)).values()]
+        : (reqsOf.get(id) ?? []).filter((r) => r.documentTypeKey === line.typeKey && r.appliesToRoles === line.who);
       const kept = mine.find((r) => r.status !== "RETIRED");
       const waits = submitted.has(id);
       if (b.op === "remove") {
         if (!kept) {
-          const draftRemoval = mine.find((r) => r.status === "RETIRED" && r.supersedesId && before.get(r.supersedesId) === "PUBLISHED");
+          const draftRemoval = mine.find((r) => r.status === "RETIRED" && r.supersedesId && before.get(r.supersedesId)?.status === "PUBLISHED");
           return draftRemoval ? row("REMOVED_IN_DRAFT", "Its draft already removes this line; the release takes it out.") : row("DOES_NOT_HAVE", "This combination does not have this line.");
         }
-        return waits ? row("WAITS", WAITS_REMOVE_WORDS) : row("WILL_REMOVE", null);
+        // Review m2: the board names an "only if" that differs from the line chosen.
+        return waits ? row("WAITS", WAITS_REMOVE_WORDS) : row("WILL_REMOVE", sameCondition(kept, line) ? null : `Its own line is ${whenWords(kept)} (the line you chose: ${whenWords(line)}); it is removed all the same.`);
       }
       if (kept) return sameCondition(kept, line) ? row("ALREADY_HAS", "This combination already has this line, with the same \"only if\".")
-        : row("HAS_OTHER_CONDITION", `It has this line ${kept.attachMode === "COMBINATION_MANDATORY" ? "always" : `only if ${kept.conditionPlain ?? "its own condition"}`}: its own line is kept. Change it there if it should match.`);
+        : row("HAS_OTHER_CONDITION", `It has this line ${whenWords(kept)}: its own line is kept. Change it there if it should match.`);
+      // Review m1: a form its draft removed comes back as its own released line (addFormLine), with its own "only if".
+      const restored = line.kind === "form" ? mine.find((r) => r.status === "RETIRED" && r.supersedesId && before.get(r.supersedesId)?.status === "PUBLISHED") : undefined;
+      const restoreWords = restored ? (sameCondition(before.get(restored.supersedesId!)!, line) ? "Its draft's removal is taken back: its released line returns." : `Its draft's removal is taken back: its released line returns ${whenWords(before.get(restored.supersedesId!)!)}, not as the line you chose.`) : null;
       if (libraryBlock) return row("CANNOT_RETIRED", libraryBlock);
       if (line.kind === "form" && line.dataForm && line.channel) {
         const { channels, record } = allowedChannels(accepts, c.portalKey);
@@ -91,14 +106,14 @@ export class LinesBulk {
       }
       const people = (c.participants as { role: string; label?: string; max: number }[]) ?? [];
       const missing = rolesNamedBy(line.who).filter((r) => !people.some((p) => p.role === r && p.max > 0));
-      if (missing.length) return row("CANNOT_PERSON", `The line is for ${WHO_WORDS[line.who] ?? line.who}, and this application has no ${missing.map((r) => ROLE_WORDS[r] ?? r).join(" or ")}. Add them to "Who can be in this application" on its Forms tab first.`);
+      if (missing.length) return row("CANNOT_PERSON", `The line is for ${WHO_WORDS[line.who] ?? line.who}, and nobody in this application is a ${missing.map((r) => people.find((p) => p.role === r)?.label?.toLowerCase() ?? ROLE_WORDS[r] ?? "person it names").join(" or ")}. Add them to "Who can be in this application" on its Forms tab first.`);
       if (line.attachMode === "ANSWER_CONDITIONAL") {
-        const s = snaps.get(id)?.snapshot;
-        const asked = new Set<string>([...(s?.placements ?? []).map((p: { fact: string }) => p.fact), ...((s?.document_types ?? []) as { supplies_facts?: string[] }[]).flatMap((t) => t.supplies_facts ?? []), ...((s?.derived_fields ?? []) as { id: string }[]).map((d) => d.id)]);
-        const unasked = fieldsOf(line.predicateJson).filter((f) => !asked.has(f));
-        if (unasked.length) return row("CANNOT_FACT", `Its "only if" reads ${unasked.map((f) => `"${meanings.get(f) ?? f}"`).join(" and ")}, which this combination does not ask. Add ${unasked.length > 1 ? "those questions" : "that question"} to it first.`);
+        const docSupplied = new Set((reqsOf.get(id) ?? []).filter((r) => r.status !== "RETIRED").flatMap((r) => supplies.get(r.documentTypeKey) ?? []));
+        const unasked = condFields.filter((f) => !libraryAsked.has(f) && !docSupplied.has(f));
+        // m3: a fact with no meaning in the library is named as "a fact not in the library", never by its system name.
+        if (unasked.length) return row("CANNOT_FACT", `Its "only if" reads ${unasked.map((f) => (meanings.has(f) ? `"${meanings.get(f)}"` : "a fact that is not in the library")).join(" and ")}, which nobody can be asked in this combination: no question in the library asks it and none of its documents supplies it. Add that question to the library first.`);
       }
-      return waits ? row("WAITS", WAITS_WORDS) : row("WILL_ADD", null);
+      return waits ? row("WAITS", WAITS_WORDS) : row("WILL_ADD", restoreWords);
     });
     const n = (f: (t: PreviewTarget) => boolean) => targets.filter(f).length;
     return {

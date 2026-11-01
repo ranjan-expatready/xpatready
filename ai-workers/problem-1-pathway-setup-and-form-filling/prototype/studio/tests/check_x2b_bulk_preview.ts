@@ -89,18 +89,27 @@ const PLAIN = (s: string) => !/\bP-\d+\b/.test(s) && !/\b[a-z]+_[a-z_]+\b/.test(
 
   // cannot: the person
   x = await outcomeOf(add(form("IMM 5409")), SP);
-  ok("C1.5 BR-C1 person fail: IMM 5409 (once per couple) cannot go to Study permit, which has no spouse or partner", x.o === "CANNOT_PERSON" && /no spouse or partner/.test(x.why) && PLAIN(x.why), x.why);
+  ok("C1.5 BR-C1 person fail: IMM 5409 (once per couple) cannot go to Study permit, which has no spouse or partner", x.o === "CANNOT_PERSON" && /nobody in this application is a spouse or partner/.test(x.why) && PLAIN(x.why), x.why);
   x = await outcomeOf(add(form("IMM 5409")), SV);
   ok("C1.5 BR-C1 person pass: Super visa has a spouse or partner, so the person is not the reason", x.o !== "CANNOT_PERSON", x.o);
 
-  // cannot: a fact the target does not ask
-  x = await outcomeOf(add(form("IMM 5707")), VV);
-  ok("C1.5 BR-C1 fact fail: IMM 5707's \"only if\" reads a fact Visitor visa does not ask, named in words", x.o === "CANNOT_FACT" && /does not ask/.test(x.why) && PLAIN(x.why), x.why);
+  // cannot: a fact nobody can be asked there (review M1: a condition pulls its library question in, as engine/snapshot.ts does)
   const ws = sql(`select workspace_id from combination where id='${VV}'`);
-  sql(`insert into sqr_section_selection (id, workspace_id, combination_id, section_key, section_order) values (gen_random_uuid(), '${ws}', '${VV}', 'family_members', 99)`);
   x = await outcomeOf(add(form("IMM 5707")), VV);
-  ok("C1.5 BR-C1 fact pass: once Visitor visa asks it (its section chosen), IMM 5707 will be added", x.o === "WILL_ADD", x.t);
-  sql(`delete from sqr_section_selection where combination_id='${VV}' and section_key='family_members'`);
+  ok("C1.5 BR-C1 fact pass (review M1): IMM 5707's \"only if\" fact has a library question, so it will be added though Visitor visa has not chosen its section", x.o === "WILL_ADD", x.t);
+  sql(`update section_question set status='RETIRED' where canonical_field_key='person.travelling_alone_to_canada' and status<>'RETIRED'`);
+  x = await outcomeOf(add(form("IMM 5707")), VV);
+  ok("C1.5 BR-C1 fact fail: with no question in the library for it, the fact cannot be asked: named in words", x.o === "CANNOT_FACT" && /Whether a minor is travelling to Canada alone/.test(x.why) && PLAIN(x.why), x.why);
+  const sup = sql(`select document_type_key from document_type where document_type_key='passport_or_travel_document_information_page_photocopy' limit 1`);
+  sql(`update document_type set supplies_facts = array_append(supplies_facts, 'person.travelling_alone_to_canada') where document_type_key='${sup}'`);
+  const rq0 = await call("POST", `/combinations/${VV}/requirements`, { documentTypeKey: sup, attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant" });
+  x = await outcomeOf(add(form("IMM 5707")), VV);
+  ok("C1.5 BR-C1 fact pass: a document Visitor visa asks for supplies the fact, so it will be added", rq0.status < 300 && x.o === "WILL_ADD", { rq: rq0.status, t: x.t });
+  x = await outcomeOf(add(form("IMM 5707")), SV);
+  ok("C1.5 BR-C1 fact fail: Super visa, without that document, still cannot", x.o === "CANNOT_FACT", x.o);
+  sql(`update document_type set supplies_facts = array_remove(supplies_facts, 'person.travelling_alone_to_canada') where document_type_key='${sup}'`);
+  sql(`delete from document_requirement where combination_id='${VV}' and document_type_key='${sup}'`);
+  sql(`update section_question set status='PUBLISHED' where canonical_field_key='person.travelling_alone_to_canada'`);
 
   // cannot: retired in the library, or its retirement open
   x = await outcomeOf(add(form("IMM 5488")), SV);
@@ -133,6 +142,10 @@ const PLAIN = (s: string) => !/\bP-\d+\b/.test(s) && !/\b[a-z]+_[a-z_]+\b/.test(
   // ------------------------------------------------------------ removing
   x = await outcomeOf(remove(form("IMM 1295")), VV);
   ok("C1.5 BR-C1 will be removed pass: Visitor visa has IMM 1295 (added above): it will be removed", x.o === "WILL_REMOVE" && x.t.tickable && x.t.reason === null, x.t);
+  sql(`update combination_form set attach_mode='ANSWER_CONDITIONAL', predicate_json='{"field":"person.marital_status","op":"eq","value":"married"}', condition_plain='Sample: married applicants' where combination_id='${VV}' and lineage_key='IMM 1295'`);
+  x = await outcomeOf(remove(form("IMM 1295")), VV);
+  ok("C1.5 review m2: removing a line whose \"only if\" differs says so (board: \"its only if differs\")", x.o === "WILL_REMOVE" && /Its own line is only if Sample: married applicants \(the line you chose: always\)/.test(x.why), x.why);
+  sql(`update combination_form set attach_mode='COMBINATION_MANDATORY', predicate_json=null, condition_plain=null where combination_id='${VV}' and lineage_key='IMM 1295'`);
   x = await outcomeOf(remove(form("IMM 1295")), SP);
   ok("C1.5 BR-C1 does not have it fail: Study permit has no IMM 1295: nothing to remove", x.o === "DOES_NOT_HAVE" && !x.t.tickable, x.t);
   const fromVV = { combinationId: VV, kind: "form", key: "IMM 1295" };
@@ -143,6 +156,8 @@ const PLAIN = (s: string) => !/\bP-\d+\b/.test(s) && !/\b[a-z]+_[a-z_]+\b/.test(
   ok("fixture: IMM 1295 removed from Work permit in its draft", del.status < 300, del.body);
   x = await outcomeOf(remove(fromVV, [WP]), WP);
   ok("C1.5 BR-C1 removed in draft fail: once its draft removes it, it is \"removed already in its draft\", not ticked", x.o === "REMOVED_IN_DRAFT" && !x.t.tickable, x.t);
+  x = await outcomeOf(add(fromVV, [WP]), WP);
+  ok("C1.5 review m1: adding back a form its draft removed says its released line returns (not a new line)", x.o === "WILL_ADD" && /removal is taken back: its released line returns/.test(x.why), x.why);
   sql(`insert into review_submission (id, workspace_id, combination_id, draft_sha256, submitted_by, status, change_summary) values (gen_random_uuid(), '${ws}', '${VV}', 'x2b-test-2', 'user-A', 'SUBMITTED', '[]')`);
   // Work permit's removal is undone, so it is again a source that has the line.
   const u = await call("POST", `/combinations/${WP}/forms/undo`, {});
@@ -166,6 +181,16 @@ const PLAIN = (s: string) => !/\bP-\d+\b/.test(s) && !/\b[a-z]+_[a-z_]+\b/.test(
   x = await outcomeOf(add(doc(PASSPORT)), VV);
   ok("C1.5 documents already has it pass: Visitor visa, without it, will have it added", x.o === "WILL_ADD", x.o);
   sql(`delete from document_requirement where combination_id='${SP}' and lineage_key='passport-page-own-key'`);
+  // Review M2: Study permit's passport line v1 is released for each applicant; its draft v2 is for the principal only.
+  sql(`insert into document_requirement (id, workspace_id, combination_id, lineage_key, document_type_key, attach_mode, applies_to_roles, provided_by, version, status, origin, updated_by) values ('00000000-0000-4000-8000-0000000000a1', '${ws}', '${SP}', 'passport-m2', 'passport_or_travel_document_information_page_photocopy', 'COMBINATION_MANDATORY', 'each_applicant', 'client', 1, 'PUBLISHED', 'HUMAN', 'user-A'), (gen_random_uuid(), '${ws}', '${SP}', 'passport-m2', 'passport_or_travel_document_information_page_photocopy', 'COMBINATION_MANDATORY', 'principal_applicant', 'client', 2, 'DRAFT', 'HUMAN', 'user-A')`);
+  x = await outcomeOf(add(doc(PASSPORT)), SP);
+  ok("C1.5 review M2 add: matched on the newest version: its draft is for the principal only, so each applicant's line will be added", x.o === "WILL_ADD", x.t);
+  x = await outcomeOf(remove(doc(PASSPORT)), SP);
+  ok("C1.5 review M2 remove: the principal-only draft is not each applicant's line: nothing to remove", x.o === "DOES_NOT_HAVE", x.t);
+  sql(`update document_requirement set applies_to_roles='each_applicant' where combination_id='${SP}' and lineage_key='passport-m2'`);
+  x = await outcomeOf(remove(doc(PASSPORT)), SP);
+  ok("C1.5 documents will be removed pass: with the newest version for each applicant, it will be removed", x.o === "WILL_REMOVE" && x.t.reason === null, x.t);
+  sql(`delete from document_requirement where combination_id='${SP}' and lineage_key='passport-m2'`);
   x = await outcomeOf(add(doc(MARRIAGE)), SP);
   ok("C1.5 documents person fail: a marriage certificate (once per couple) cannot go to Study permit", x.o === "CANNOT_PERSON" && PLAIN(x.why), x.why);
   sql(`update document_type set status='RETIRED' where document_type_key='passport_or_travel_document_information_page_photocopy'`);
