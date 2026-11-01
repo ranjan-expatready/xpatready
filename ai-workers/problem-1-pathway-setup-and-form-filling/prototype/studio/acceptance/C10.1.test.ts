@@ -24,11 +24,11 @@ const AUTHOR = "user-A", SME = "user-C", APPROVER = "user-B";
   if (n(`select count(*) from combination`) > 0) await call("POST", "/demo/reset", { confirm: "RESET" });
 
   const l = await call("POST", "/demo/load", { sample: "configured" });
-  ok("C10.1: the configured checkpoint loads (2xx)", l.status < 300, { status: l.status, message: l.body?.message });
+  ok("C10.1: the configured checkpoint loads (2xx) and answers its checkpoint rows", l.status < 300 && Array.isArray(l.body?.checkpoint), { status: l.status, message: l.body?.message });
   const rows: Row[] = Array.isArray(l.body?.checkpoint) ? l.body.checkpoint : [];
   const r = (id: string) => rows.find((x) => x.row === id);
   ok("C10.1: one row per DEMO.md mechanism of the M2 gate (1–12 and 17), each saying what it shows", rows.length === GATE.length && GATE.every((id) => (r(id)?.title.length ?? 0) > 10 && (r(id)?.shows.length ?? 0) > 5), rows.map((x) => `${x.row} ${x.status}`));
-  ok("C10.1: a row that is not done says why for a person (no field codes, no error names)", rows.length > 0 && rows.filter((x) => x.status !== "done").every((x) => (x.why ?? x.shows).length > 20 && !/Error|undefined|null|prisma|\[0\]/i.test(x.why ?? x.shows)));
+  ok("C10.1: a row that is not done says why for a person (no field codes, no error names)", rows.length > 0 && rows.filter((x) => x.status !== "done").every((x) => (x.why || x.shows).length > 20 && !/Error|undefined|null|prisma|\[0\]/i.test(x.why || x.shows)));
   ok("C10.1 row 1: the six's official files are read through the form intake (code, edition, checksum)", n(`select count(*) from source_attachment`) > 30 && n(`select count(*) from form_edition where sha256 is null`) === 0);
   ok("C10.1 rows 3–4 (P-138): saved AI answers replayed (REPLAY), and every replayed proposal decided by a named person with a reason", n(`select count(*) from drafting_job where mode = 'REPLAY'`) > 0 && n(`select count(*) from proposal_item where run_id is not null and status = 'waiting'`) === 0 && n(`select count(*) from proposal_item where choice is not null and (decided_by is null or coalesce(decision_reason, '') = '')`) === 0 && n(`select count(*) from proposal_item where choice is not null`) > 0);
   ok("C10.1 row 5 fail (P-80, two people): no library item is approved by the person who proposed it", n(`select count(*) from library_change`) > 0 && n(`select count(*) from library_change where decided_by = proposed_by`) === 0 && n(`select count(*) from library_change where status = 'WAITING'`) === 0);
@@ -44,9 +44,7 @@ const AUTHOR = "user-A", SME = "user-C", APPROVER = "user-B";
   const channelsOf = (snap: string) => { try { return (JSON.parse(snap.slice(snap.indexOf("§") + 1)).forms as { channel?: string }[]).map((f) => f.channel ?? "PDF_UPLOAD"); } catch { return []; } };
   ok("C10.1 part B (DEMO.md checkpoint 2): Visitor visa (A) has release 1 with every form line PDF upload", vvRel.length >= 1 && channelsOf(vvRel[0]).length > 0 && channelsOf(vvRel[0]).every((c) => c === "PDF_UPLOAD"), vvRel.map(channelsOf));
   ok("C10.1 part B (DEMO.md row 9): Visitor visa release 2 is mixed (an Online or Signed PDF upload line beside PDF upload lines)", vvRel.length >= 2 && new Set(channelsOf(vvRel[1])).size >= 2, vvRel.slice(1).map(channelsOf));
-  const fieldsOf = (rel: string | undefined) => { try { return new Set((JSON.parse(rel!.slice(rel!.indexOf("§") + 1)).canonical_fields as { id: string }[]).map((f) => f.id)); } catch { return new Set<string>(); } };
-  const lmiaRel = releasesOf(lmia), shared = [...fieldsOf(lmiaRel[0])].filter((k) => fieldsOf(vvRel[0]).has(k));
-  ok("C10.1 part B (DEMO.md checkpoint 2, row 18): With an LMIA (B) is released and reuses A's shared fields (the same family facts)", lmiaRel.length >= 1 && shared.length >= 20, { releases: lmiaRel.length, shared: shared.length });
+  ok("C10.1 part B (DEMO.md checkpoint 2, row 10): With an LMIA (B) is released too (its reuse of A's facts, row 18, is C10.2's checkpoint 3)", releasesOf(lmia).length >= 1, releasesOf(lmia).length);
   ok("C10.1 part B (DEMO.md row 10): each release is approved by the Approver after the SME's sign-off, never by the author", n(`select count(*) from config_release where approver_id <> '${APPROVER}'`) === 0 && n(`select count(*) from config_release`) >= 3 && n(`select count(*) from review_signoff where actor_id = '${SME}'`) >= 1 && n(`select count(*) from review_submission where submitted_by = '${AUTHOR}' and status = 'APPROVED'`) >= 3);
   // Row 11: the thin family case, one Sample family of four (DEMO.md "The story").
   const vvCase = vv ? sql(`select id from runtime_case where combination_id = '${vv}' order by created_at limit 1`) : "";

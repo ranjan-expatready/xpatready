@@ -1,8 +1,8 @@
 // Acceptance C7.2 (P-220, pack 3; thin runtime slice T): a filled form passes Adobe Validate and its barcodes match the
 // facts (fill-trial gate P-65; P-46: Validate in Adobe Reader, the copy read back and its barcodes compared with the
 // facts by position; P-171: always Validate barcode forms, the last step, again after any change). IRCC: "You must
-// always click the Validate button on 2D barcode forms" (Help Centre 1523); IMM 5257's Validate "will generate a
-// barcode page (page 5 of 5)" (Guide 5256). Status today: Not tested. On main: the case's IMM 5257 copy is generated,
+// always click the Validate button on 2D barcode forms" (Help Centre 1523); Guide 5256: Validate "will generate a
+// barcode page" (it says page 5 of 5; on the 09-2023 form the evidence lane saw it added as page 6, E1/imm5257/STATUS.md). Status today: Not tested. On main: the case's IMM 5257 copy is generated,
 // a validated copy is uploaded back and its written values read back (tools/read_validated.py), but the barcodes are
 // never decoded or compared ("barcode_checked": false), and the evidence lane's Adobe trial (E1/imm5257/STATUS.md,
 // 23 Oct: Validate passed, 5/5 barcodes, 186/186 slots) filled E1's values file, not a copy the Studio generated.
@@ -55,7 +55,7 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   const ev = existsSync(EVIDENCE) ? JSON.parse(readFileSync(EVIDENCE, "utf8")) : null;
   ok("C7.2 evidence: a result of the Mac's Adobe run is recorded at studio/evidence/c7-2-adobe-validate/result.json", ev !== null);
   ok("C7.2 evidence: it is a Studio-generated IMM 5257 of a Visitor visa case (not E1's values file), named by its checksum", ev?.form === "IMM 5257" && ev?.source === "studio case copy" && /^[0-9a-f]{64}$/.test(ev?.copy_sha256 ?? "") && /vv\.single|Visitor visa/.test(String(ev?.combination ?? "")), ev && { form: ev.form, source: ev.source });
-  ok("C7.2 evidence (P-171): Adobe Reader's Validate succeeded on the first press, with the reader's version and the message as shown", /Validation completed successfully/i.test(String(ev?.validate_message ?? "")) && typeof ev?.reader_version === "string" && ev.reader_version.length > 3, ev && { message: ev.validate_message, reader: ev.reader_version });
+  ok("C7.2 evidence (P-171): Adobe Reader's Validate succeeded on the first press, with the reader's version (10 or higher, IRCC Help Centre 660) and the message as shown", /Validation completed successfully/i.test(String(ev?.validate_message ?? "")) && typeof ev?.reader_version === "string" && Number(String(ev.reader_version).split(".")[0]) >= 10, ev && { message: ev.validate_message, reader: ev.reader_version });
   ok("C7.2 evidence (P-46): every barcode decoded and every slot agrees with the facts written (0 unexplained)", ev && ev.barcodes_decoded === ev.barcodes_expected && ev.barcodes_expected === 5 && ev.slots_total > 0 && ev.slots_agree === ev.slots_total && ev.unexplained === 0, ev && { decoded: ev.barcodes_decoded, slots: `${ev.slots_agree}/${ev.slots_total}`, unexplained: ev.unexplained });
   ok("C7.2 evidence: the saved file kept IRCC's certification (no \"changed\" warning) and the written values read back unchanged", ev?.certification_intact === true && ev?.written_values_unchanged === true);
   ok("C7.2 evidence: the result names the validated file's checksum and the screenshots of the Validate message and the barcode page", /^[0-9a-f]{64}$/.test(ev?.validated_sha256 ?? "") && ev?.validated_sha256 !== ev?.copy_sha256 && Array.isArray(ev?.screenshots) && ev.screenshots.length >= 2, ev && { validated: ev.validated_sha256, screenshots: ev.screenshots });

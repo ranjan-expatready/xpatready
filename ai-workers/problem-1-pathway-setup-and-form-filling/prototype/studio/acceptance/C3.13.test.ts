@@ -4,6 +4,9 @@
 // partly built on main (queue item 2a: used_in labels, raw origin and status, sources). Missing and tested here: counts
 // that say what they count (usedBy), status words including "Waiting for a second person", origin words, the section,
 // status and combination filters, search by alias and form code, and reuse per combination. Rules only, US$0.
+// Words beside raw values: status_words and origin_words are added and the raw status and origin kept (the browser suite
+// check_studio_browser.cjs reads origin === "AI_PROPOSAL"); the word for IMPORTED_RELEASE ("From a reviewed release", today's
+// source line) and the used_in, boxes, forms and placement names are today's, not the concept's: Question for the tech lead.
 // The lists keep today's paths (GET /library/fields, /library/sections, /library/document-types) with the concept's query.
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4440 xr_studio_accept \
 //     && tsx studio/acceptance/C3.13.test.ts 4440 xr_studio_accept
@@ -70,8 +73,8 @@ const list = async (kind: string, q = "") => { const r = await call("GET", `/lib
   ok("C3.13 BR-4 pass: a field already released on With an LMIA before the Visitor visa used it is \"Reused\" there", per.rows.some((r) => before.has(r.key)) && wrong.length === 0, wrong.map((r) => r.key));
   const secPer = await list("sections", `combination=${vv}`), dtPer = await list("document-types", `combination=${vv}`);
   ok("C3.13 BR-4: sections and document types answer the same reuse totals for a combination", [secPer, dtPer].every((x) => x.body?.reuse && x.body.reuse.total === x.body.reuse.reused + x.body.reuse.new), [secPer.body?.reuse, dtPer.body?.reuse]);
-  const bad = await list("fields", `combination=not-a-uuid`);
-  ok("C3.13 BR-4 fail: an unknown combination is refused in words (400 or 404), not an empty list", [400, 404].includes(bad.status) && /combination/i.test(String(bad.body?.message ?? bad.body?.detail ?? "")), bad.status);
+  const bad = await list("fields", `combination=not-a-uuid`), unknown = await list("fields", `combination=${randomUUID()}`);
+  ok("C3.13 BR-4 fail: a malformed combination is refused 400 and an unknown one 404, in words, not an empty list", bad.status === 400 && unknown.status === 404 && /combination/i.test(String(unknown.body?.message ?? unknown.body?.detail ?? "")), [bad.status, unknown.status]);
 
   // BR-10: retired items show only under "Retired".
   // A retired field used nowhere (planted as the library stores one: its newest version RETIRED), so the rule is tested

@@ -43,14 +43,17 @@ const rootType = (combo: string) => sql(`with recursive up as (select p.program_
   if (n(`select count(*) from combination`) > 0) await call("POST", "/demo/reset", { confirm: "RESET" });
 
   const l = await call("POST", "/demo/load", { sample: "six" });
-  ok("C11.7: Load sample \"six\" answers 2xx", l.status < 300, { status: l.status, message: l.body?.message });
+  ok("C11.7: Load sample \"six\" answers 2xx and lists the six combinations it made", l.status < 300 && Array.isArray(l.body?.combinations) && l.body.combinations.length === 6, { status: l.status, message: l.body?.message });
   const combos = sql(`select id from combination where retired_at is null`).split("\n").filter(Boolean);
   const trails = combos.map(trail);
   ok("C11.7 pass (P-148, P-112): exactly the six combinations, with P-112's names", combos.length === 6 && SIX.every((t) => trails.includes(t)), trails);
   ok("C11.7 fail (P-148): no Super visa and no seventh combination", !trails.some((t) => /super visa/i.test(t)) && combos.length <= 6, trails.filter((t) => !SIX.includes(t)));
   const types = combos.map(rootType);
   ok("C11.7 (P-106, P-148): five Retail (Individual) combinations and one Corporate", types.filter((t) => t === "INDIVIDUAL").length === 5 && types.filter((t) => t === "CORPORATE").length === 1, types);
-  ok("C11.7 (P-108): every combination has its official PDFs in the library through the form intake (code, edition, checksum)", combos.every((c) => n(`select count(*) from source_attachment where combination_id = '${c}'`) > 0) && n(`select count(*) from form_edition where sha256 is null or edition_label is null`) === 0, combos.map((c) => n(`select count(*) from source_attachment where combination_id = '${c}'`)));
+  // #113: a file with no saved copy is listed in the load's missing[] with the intake's reason (EMP5626 on High-wage position, P-113).
+  const missing = (Array.isArray(l.body?.missing) ? l.body.missing : []) as { combination?: string; code?: string; why?: string }[];
+  const noFile = combos.filter((c) => !n(`select count(*) from source_attachment where combination_id = '${c}'`));
+  ok("C11.7 (P-108): every combination has its official PDFs in the library through the form intake (code, edition, checksum), or each file it lacks is listed with the reason", combos.length > 0 && noFile.every((c) => missing.some((m) => m.combination && trail(c).endsWith(m.combination.split(" › ").at(-1)!) && (m.why ?? "").length > 20)) && n(`select count(*) from form_edition where sha256 is null or edition_label is null`) === 0, { noFile: noFile.map(trail), missing });
   ok("C11.7 (P-108): the load writes no shared field, section or document type itself: they wait as AI proposals for a person", n(`select count(*) from canonical_field where origin <> 'AI_PROPOSAL' or status <> 'DRAFT'`) === 0 && n(`select count(*) from proposal_item where status = 'waiting'`) > 0, { fields: n(`select count(*) from canonical_field`), waiting: n(`select count(*) from proposal_item where status = 'waiting'`) });
   ok("C11.7 (P-108): nothing is released by the load", n(`select count(*) from config_release`) === 0);
   ok("C11.7 (P-138, P-175): the AI answers are replays (mode REPLAY), no live run, US$0", n(`select count(*) from drafting_job where mode = 'REPLAY'`) > 0 && n(`select count(*) from drafting_job where mode = 'LIVE'`) === 0 && n(`select count(*) from ai_batch where mode = 'LIVE'`) === 0 && Number(sql(`select coalesce(sum(cost_usd), 0) from drafting_job`)) === 0 && (l.body?.cost_usd ?? 0) === 0);

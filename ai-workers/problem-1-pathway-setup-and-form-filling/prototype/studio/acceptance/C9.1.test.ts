@@ -10,8 +10,9 @@
 // needs the configured checkpoint (C10.1) to hold IMM 5476 2021 on both combinations with 11-2025 held (DEMO.md row 17).
 // No live AI (US$0).
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C9.1.test.ts 4440 xr_studio_accept
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { LEDGER_DIR } from "../../p2/policy.ts";
 import { client, recorder } from "../tests/runtime/api.ts";
 
 const PORT = Number(process.argv[2] ?? 4440), DB = process.argv[3] ?? "xr_studio_accept";
@@ -25,9 +26,17 @@ const intake = async (dir: string, name: string, actor = "user-A") => {
   const r = await fetch(`http://127.0.0.1:${PORT}/api/intake`, { method: "POST", headers: { "x-actor": actor }, body: fd });
   return (await r.json().catch(() => ({})))?.results?.[0];
 };
+// QA-90: the one shared spend ledger; not there yet = nothing spent.
+const ledger = () => { const f = join(LEDGER_DIR, "spend.jsonl"); return existsSync(f) ? readFileSync(f, "utf8").length : 0; };
+/** The live switch as the server reports it (the finder's free cost plan, P-175); null when there is no combination to ask. */
+const liveOn = async () => { const c = sql(`select id from combination where retired_at is null limit 1`); if (!c) return null; return (await call("POST", `/combinations/${c}/forms/find/plan`, { mode: "live" })).body?.live?.on ?? null; };
 const spent = () => n(`select count(*) from drafting_job where mode = 'LIVE'`) + n(`select count(*) from ai_batch where mode = 'LIVE'`);
 
 (async () => {
+  // Never call a paid route on a copy whose live switch is on (QA-100, P-175): stop before anything.
+  if (!sql(`select id from combination limit 1`)) await call("POST", "/demo/load", {});
+  if ((await liveOn()) !== false) { console.error("STOP  this copy's live AI switch is on (or cannot be read): run on an isolated copy started without it"); process.exit(2); }
+  const ledgerBefore = ledger();
   // ── Part 1: an empty library holding the 2021 IMM 5476; the current one arrives ──
   await call("POST", "/demo/reset", { confirm: "RESET" });
   const first = await intake("previous-editions", "imm5476e-2021.pdf");
@@ -37,10 +46,18 @@ const spent = () => n(`select count(*) from drafting_job where mode = 'LIVE'`) +
   const imp = id ? (await call("GET", `/intake/held/${id}/impact`)).body : null;
   ok("C9.1 BR-12 (on main): compared box by box without AI; unchanged + reworded + new = the new edition's boxes; removed listed", imp?.ai?.used === false && imp.counts.form_fields > 0 && imp.counts.unchanged + imp.counts.reworded + imp.counts.new === imp.counts.form_fields && Number.isInteger(imp.counts.removed), imp?.counts);
   ok("C9.1 P-32: the impact lists what the removed and reworded boxes touch beyond fields: sections, document types, rules and checks (each a list)", imp && ["sections", "document_types", "rules", "checks"].every((k) => Array.isArray(imp.components?.[k])), imp ? Object.keys(imp) : null);
+  // P-138: a saved AI answer for this edition replays at US$0 (labelled replay); otherwise "Draft with AI (about US$x · at most
+  // US$y)" is offered and runs only on a click. Either way, opening the review starts nothing. (Question for the tech lead:
+  // is a saved answer for IMM 5476 11-2025 recorded? Part 2 assumes the configured checkpoint replays one.)
   const offer = imp?.ai?.offer ?? imp?.ai?.draft;
-  ok("C9.1 P-138: AI for the new and reworded boxes only is offered on a click, with its cost in words (about US$x · at most US$y), never started by opening", imp && n(`select count(*) from drafting_job`) === 0 && typeof offer?.boxes === "number" && offer.boxes === imp.counts.reworded + imp.counts.new && /US\$/.test(String(offer?.words ?? offer?.label ?? "")), offer ?? null);
-  const run = id ? await call("POST", `/intake/held/${id}/impact/draft`, {}) : { status: 0, body: null };
-  ok("C9.1 P-175 fail: without the live switch the paid AI run is refused in plain words, US$0, nothing proposed", run.status >= 400 && run.status !== 404 && /live|founder|switch|approved/i.test(words(run)) && spent() === 0, { status: run.status, words: words(run) });
+  const saved = imp?.ai?.saved === true;
+  ok("C9.1 P-138: opening the review starts no AI; AI for the new and reworded boxes only is either a saved answer (replay, US$0) or offered with its cost in words", imp && n(`select count(*) from drafting_job`) === 0 && (saved || (typeof offer?.boxes === "number" && offer.boxes === imp.counts.reworded + imp.counts.new && /US\$/.test(String(offer?.words ?? offer?.label ?? "")))), imp?.ai ?? null);
+  if (!saved) {
+    const run = id ? await call("POST", `/intake/held/${id}/impact/draft`, {}) : { status: 0, body: null };
+    ok("C9.1 P-175 fail: without the live switch the paid AI run is refused in plain words, US$0, nothing proposed", run.status >= 400 && run.status !== 404 && /live|founder|switch|approved/i.test(words(run)) && spent() === 0 && ledger() === ledgerBefore, { status: run.status, words: words(run) });
+  }
+  // P-151 (1) and IRCC-P3-01: IRCC accepts the previous IMM 5476 until 12 March 2026, which has passed (read 1 Nov 2026).
+  ok("C9.1 P-151: the review gives IRCC's accepted-until date for the previous edition (2026-03-12, from the IMM 5476 page) and says it has passed, so cases on it cannot be ready to file", imp?.previous_accepted_until === "2026-03-12" && /passed|no longer accepted/i.test(String(imp?.previous_accepted_words ?? "")), { until: imp?.previous_accepted_until, words: imp?.previous_accepted_words });
 
   // ── Part 2: the configured checkpoint (DEMO.md row 17) ──
   await call("POST", "/demo/reset", { confirm: "RESET" });
@@ -56,7 +73,7 @@ const spent = () => n(`select count(*) from drafting_job where mode = 'LIVE'`) +
   const q = await call("GET", "/review-queue");
   const items2 = (Array.isArray(q.body) ? q.body : (q.body?.items ?? q.body?.rows ?? [])) as { kind: string; forms?: string[]; combinations?: unknown[] }[];
   const ne = items2.find((x) => x.kind === "new_edition" && (x.forms ?? []).includes("IMM 5476"));
-  ok("C9.1 BR-12: To review lists \"New edition: review impact\" for IMM 5476 with the combinations it touches", ne !== undefined && JSON.stringify(ne.combinations ?? []).includes("Visitor visa"), ne ?? q.status);
+  ok("C9.1 BR-12: To review lists \"New edition: review impact\" for IMM 5476 with the combinations it touches", ne !== undefined && JSON.stringify((ne as Record<string, unknown>).combinations ?? (ne as Record<string, unknown>).combination ?? []).includes("Visitor visa"), ne ?? q.status);
   // Accepting changes nothing released until a person releases; open cases stay on their release (P-67, SA-1-32).
   const vv = sql(`select id from combination where label = 'Visitor visa' limit 1`);
   const relBefore = vv ? sql(`select coalesce(max(version), 0) || '§' || coalesce(max(sha256), '') from config_release where combination_id = '${vv}'`) : "";
@@ -64,8 +81,8 @@ const spent = () => n(`select count(*) from drafting_job where mode = 'LIVE'`) +
   const acc = id2 ? await call("POST", `/intake/held/${id2}/impact/accept`, { expected: imp2?.counts?.form_fields }) : { status: 0, body: null };
   ok("C9.1 SA-1-32 pass: accepting the impact changes no released configuration (same release, same hash)", acc.status >= 200 && acc.status < 300 && (vv ? sql(`select coalesce(max(version), 0) || '§' || coalesce(max(sha256), '') from config_release where combination_id = '${vv}'`) : "x") === relBefore, { status: acc.status, words: words(acc) });
   const sub = vv ? await call("POST", `/combinations/${vv}/submit`, {}) : { status: 0, body: null };
-  ok("C9.1 fail: a release with the new edition's boxes still undecided is refused, naming the boxes in words (no raw form-field path)", sub.status === 409 && /IMM 5476/.test(words(sub)) && !/\[0\]/.test(words(sub)), { status: sub.status, words: words(sub).slice(0, 200) });
+  ok("C9.1 fail (K1, check_screen02_slice2.ts): a release with the new edition's boxes still undecided is refused, naming the boxes in words (no raw form-field path)", sub.status === 409 && /IMM 5476/.test(words(sub)) && !/\[0\]/.test(words(sub)), { status: sub.status, words: words(sub).slice(0, 200) });
   ok("C9.1 P-67: the family case stays on its release while the new edition waits", caseRel !== "" && sql(`select i.config_release_id from form_instance i join runtime_case c on c.id = i.case_id where c.combination_id = '${vv}' limit 1`) === caseRel);
-  ok("C9.1 (R-143): no live AI call at any step, US$0", spent() === 0);
+  ok("C9.1 (R-143): no live AI call at any step, US$0, the spend ledger unchanged", spent() === 0 && ledger() === ledgerBefore);
   process.exit(summary() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(2); });

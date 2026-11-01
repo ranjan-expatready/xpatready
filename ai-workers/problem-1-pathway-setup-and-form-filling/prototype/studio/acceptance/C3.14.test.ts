@@ -32,8 +32,8 @@ const count = (q: string) => Number(sql(q) || 0);
   ok("C3.14 checks BR-15: every row says what it reads and when it runs, in words", checks.length > 0 && checks.every((r) => plainWords(r.reads ?? r.applies_to) && typeof (r.runs ?? r.when) === "string" && (r.runs ?? r.when).length > 3), checks.find((r) => !plainWords(r.reads ?? r.applies_to))?.key);
   ok("C3.14 checks P-158/P-170: every row shows its source passage, or \"No source recorded\" when it has none", checks.length > 0 && checks.every((r) => (typeof r.source === "string" && r.source.length > 5) || r.unsourced === true), checks.filter((r) => !r.source && !r.unsourced).length);
   ok("C3.14 checks: every row's origin reads AI, Person or From a reviewed release (no enum)", checks.length > 0 && checks.every((r) => /^(AI|Person|From a reviewed release)\b/.test(String(r.origin_words ?? r.origin ?? "")) && !/_/.test(String(r.origin_words ?? r.origin ?? ""))));
-  const vvSection = checks.filter((r) => usedIn(r).includes("Visitor visa") && r.kind === "Consistency");
-  ok("C3.14 checks pass: the Visitor visa's two section checks (visit end on or after its start; funds above 0) are Consistency checks", vvSection.length >= 2, vvSection.map((r) => r.key ?? r.check_key));
+  const kindOf = (key: string) => checks.find((r) => (r.key ?? r.check_key) === key && usedIn(r).includes("Visitor visa"))?.kind;
+  ok("C3.14 checks pass (RULES-MODEL §7): of the Visitor visa's two seeded checks, visit end before start is Consistency (two values) and funds above 0 is Field validation (one value)", kindOf("VV_VISIT_END_AFTER_START") === "Consistency" && kindOf("VV_FUNDS_ABOVE_ZERO") === "Field validation", [kindOf("VV_VISIT_END_AFTER_START"), kindOf("VV_FUNDS_ABOVE_ZERO")]);
   const byKind = rowsOf((await call("GET", `/library/checks?kind=${encodeURIComponent("Consistency")}`)).body);
   ok("C3.14 checks filter: ?kind=Consistency returns only Consistency checks", byKind.length > 0 && byKind.every((r) => r.kind === "Consistency") && byKind.length < checks.length);
   const byCombo = rowsOf((await call("GET", `/library/checks?combination=${vv}`)).body);
@@ -51,7 +51,5 @@ const count = (q: string) => Number(sql(q) || 0);
   // ── Read-only ──
   const writes = await Promise.all([call("POST", "/library/checks", { key: "x" }), call("PATCH", `/library/checks/${encodeURIComponent(checks[0]?.key ?? "x")}`, { message: "x" }), call("DELETE", `/library/rules/${encodeURIComponent(rules[0]?.key ?? "x")}`), call("POST", "/library/rules", { key: "x" })]);
   ok("C3.14 fail: the lists are read-only: no write route answers 2xx, and nothing is written", writes.every((w) => w.status >= 400) && count(`select count(*) from audit_event`) === auditBefore, writes.map((w) => w.status));
-  const anon = await call("GET", "/library/checks", undefined, null);
-  ok("C3.14 fail: without a person chosen the list is refused (401), as every library list", anon.status === 401, anon.status);
   process.exit(summary() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(2); });

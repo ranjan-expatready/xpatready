@@ -41,7 +41,7 @@ const tag = Date.now().toString(36);
   sql(`insert into library_change (id, workspace_id, kind, key, label, action, reason, status, proposed_by) values ('${randomUUID()}', '${ws}', 'field', '${K.split(".")[0]}.acceptance_waiting_${tag}', '${waitingName}', 'ADD', 'acceptance C3.15', 'WAITING', '${AUTHOR}')`);
   let cur = newest(K).label;
   const dupWaiting = await call("PATCH", `/library/fields/${encodeURIComponent(K)}/name`, { name: waitingName });
-  ok("C3.15 BR-6 fail: a name waiting for the second person in an open library change is refused too (409)", dupWaiting.status === 409 && newest(K).label === cur, { status: dupWaiting.status, words: words(dupWaiting) });
+  ok("C3.15 BR-6 fail: a name waiting for the second person in an open library change for the same group (its key's first part) is refused too (409; Question for the tech lead: library_change has no group column)", dupWaiting.status === 409 && newest(K).label === cur, { status: dupWaiting.status, words: words(dupWaiting) });
   sql(`delete from library_change where reason = 'acceptance C3.15'`);
   cur = newest(K).label;
   const stale = await call("PATCH", `/library/fields/${encodeURIComponent(K)}/name`, { name: `Stale ${tag}`, version: before.version });

@@ -61,6 +61,16 @@ const attrs = (l: string) => l.split("§").slice(0, 7).join("§");
   const rm = await call("POST", "/lines/bulk", { line: { combinationId: VV, kind: "form", key: F }, op: "remove", combinationIds: [SP, SV], include: [SP], idempotencyKey: `acceptance-${randomUUID()}` });
   ok("C1.5 pass: Remove across many takes the line out of each ticked combination (a removing draft), and the preview said which do not have it", rmPv.status === 200 && rmPv.body.targets.some((t: { combinationId: string; outcome: string }) => t.combinationId === SV && t.outcome === "DOES_NOT_HAVE") && rm.status >= 200 && rm.status < 300 && !["DRAFT", "PUBLISHED"].includes(lineOf(SP, F).split("§")[7] ?? ""), { status: rm.status, words: words(rm) });
 
+  // ── A document line too (founder 31 Oct, PR #167: form and document lines first) ──
+  const docLine = sql(`select d.lineage_key from document_requirement d where d.combination_id = '${WP}' and d.status = 'PUBLISHED' and d.document_type_key not in (select document_type_key from document_requirement where combination_id = '${VV}' and status in ('DRAFT', 'PUBLISHED')) order by d.lineage_key limit 1`);
+  const docOn = (combo: string) => docLine ? sql(`select d.status || '§' || coalesce(d.condition_plain, '') || '§' || coalesce(d.applies_to_roles::text, '') from document_requirement d where d.combination_id = '${combo}' and d.document_type_key = (select document_type_key from document_requirement where lineage_key = '${docLine}' and combination_id = '${WP}' limit 1) order by d.version desc limit 1`) : "";
+  const dl = { combinationId: WP, kind: "document", key: docLine };
+  const dPv = await call("POST", "/lines/bulk/preview", { line: dl, op: "add", combinationIds: [VV] });
+  const dAp = await call("POST", "/lines/bulk", { line: dl, op: "add", combinationIds: [VV], include: [VV], idempotencyKey: `acceptance-${randomUUID()}` });
+  ok("C1.5 BR-C2 pass (document line): a With an LMIA document line is previewed, then added to the Visitor visa as a draft with its \"only if\" and whose it is", docLine !== "" && dPv.status === 200 && dAp.status >= 200 && dAp.status < 300 && docOn(VV).split("§")[0] === "DRAFT" && docOn(VV).split("§").slice(1).join("§") === docOn(WP).split("§").slice(1).join("§"), { docLine, preview: dPv.status, add: dAp.status, words: words(dAp) });
+  const dUn = await call("POST", `/lines/bulk/${String(dAp.body?.batchId ?? randomUUID())}/undo`, {}, AUTHOR);
+  ok("C1.5 BR-C4 pass (document line): Undo takes the document line back", dUn.status >= 200 && dUn.status < 300 && !["DRAFT", "PUBLISHED"].includes(docOn(VV).split("§")[0] ?? ""), dUn.status);
+
   // ── Copy one line from another combination (slice d, not built anywhere) ──
   const LM = id("lm.high_wage");
   const cp = await call("POST", `/combinations/${LM}/lines/copy`, { from: { combinationId: WP, kind: "form", key: F } });

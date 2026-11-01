@@ -7,7 +7,8 @@
 // question types; section checks authored as data through the API (RT-7); the error summary per section; tier 3
 // independent review on demand (AI, never changes data); the PQR mode. Part 1 runs on the engine (no server); part 2 on
 // the Visitor visa case through the API. The value_type names for the new types are this pack's proposal (Question for
-// the tech lead in the PR). No live AI (US$0).
+// the tech lead in the PR), and so is testing the 10-year gap as part of the period-history type (P-47 lists "history
+// covers 10 years" under tier 2). No live AI (US$0): the paid review route is called only after the copy reports live AI off.
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4440 xr_studio_accept \
 //     && tsx studio/acceptance/C4.4.test.ts 4440 xr_studio_accept
 import { checkValue } from "../engine/runtime/case.ts";
@@ -36,7 +37,7 @@ const TYPES: [string, unknown, unknown][] = [
   ["address", { street_name: "1 Sample St", city: "Sample City", country: "IND" }, { street_name: "", city: "", country: "" }],
   ["person_name", { family_name: "Sample", given_names: "", no_given_name: true }, { family_name: "Sample", given_names: "" }],
   ["period_history", [{ from: "2016-11", to: "2021-10", what: "Sample work" }, { from: "2021-11", to: "2026-11", what: "Sample study" }], [{ from: "2016-11", to: "2019-01", what: "Sample work" }, { from: "2020-06", to: "2026-11", what: "Sample study" }]],
-  ["document", { file_id: "00000000-0000-4000-8000-000000000001", name: "passport.pdf" }, { name: "passport.exe" }],
+  ["document", { file_id: "00000000-0000-4000-8000-000000000001", name: "passport.pdf" }, { name: "passport.pdf" }],
   ["declaration", true, false],
 ];
 /** Types already built keep today's value_type (money is a number whose form writes CAD; single choice is a code). */
@@ -77,16 +78,18 @@ const snapshot = { canonical_fields: TYPES.map(([t]) => ({ id: `person.sample_${
   const sect = (v2?.sections ?? []).find((s: { problems?: unknown[]; summary?: unknown[] }) => (s.summary ?? s.problems ?? []).some((p: any) => /ends before it starts/.test(JSON.stringify(p)))); // eslint-disable-line @typescript-eslint/no-explicit-any
   ok("C4.4 tier 2: the section holding the dates carries an error summary that links to each field (GOV.UK pattern)", sect !== undefined && (sect.summary ?? sect.problems).every((p: { field?: string; href?: string }) => !!(p.field ?? p.href)), (v2?.sections ?? []).length);
   // Rules as data: a section check is authored through the API, not seeded in the database (RT-7).
-  const author = await call("POST", `/combinations/${vv}/checks`, { group: "section_check", appliesTo: "Passport of each applicant", condition: { subjectKind: "PERSON", op: "lt", field: "person.passport_expiry_date", value: "case.intended_stay_to" }, message: "The passport expires before the visit ends. Check the dates.", sourceQuote: null }, AUTHOR);
-  ok("C4.4 rules as data (RT-7): the author adds a section check to the Visitor visa's draft through the API (no source = labelled Sample)", author.status >= 200 && author.status < 300 && Number(sql(`select count(*) from check_def where combination_id = '${vv}' and status = 'DRAFT' and message like 'The passport expires before%'`)) === 1, { status: author.status, words: words(author) });
+  const author = await call("POST", `/combinations/${vv}/checks`, { group: "section_check", appliesTo: "Funds for the visit", condition: { subjectKind: "CASE", op: "lt", field: "case.funds_available_cad", value: 1000 }, message: "Funds under CAD 1,000 for the visit. Check the amount (Sample threshold).", sourceQuote: null }, AUTHOR);
+  ok("C4.4 rules as data (RT-7): the author adds a section check to the Visitor visa's draft through the API (no source = labelled Sample)", author.status >= 200 && author.status < 300 && Number(sql(`select count(*) from check_def where combination_id = '${vv}' and status = 'DRAFT' and message like 'Funds under CAD 1,000%'`)) === 1, { status: author.status, words: words(author) });
   const offAuthor = await call("POST", `/combinations/${vv}/checks`, { group: "section_check", message: "x" }, OFFICER);
   ok("C4.4 rules as data fail: a case officer cannot author a check (403)", offAuthor.status === 403, offAuthor.status);
   // Tier 3: independent review on demand, never changes data; refused at US$0 without the live switch (P-175).
+  // Never call a paid route on a copy whose live switch is on (QA-100, P-175): the finder's free cost plan reports it.
+  if ((await call("POST", `/combinations/${vv}/forms/find/plan`, { mode: "live" })).body?.live?.on !== false) { console.error("STOP  this copy's live AI switch is on (or cannot be read)"); process.exit(2); }
   const answersBefore = sql(`select count(*) || '§' || coalesce(max(effective_at)::text, '') from client_canonical_answer`);
   const review = await call("POST", `/runtime/cases/${caseId}/review`, {}, OFFICER);
   ok("C4.4 tier 3: the officer's independent review exists and, with live AI off, is refused in words at US$0, changing no answer", review.status >= 400 && review.status !== 404 && /live|founder|switch/i.test(words(review)) && sql(`select count(*) || '§' || coalesce(max(effective_at)::text, '') from client_canonical_answer`) === answersBefore, { status: review.status, words: words(review) });
   // PQR mode (P-47 mode 1): only the questions flagged pre-qualification; ends with a plain result.
   const pqr = await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=pqr`, undefined, OFFICER);
-  ok("C4.4 PQR: the pre-qualification mode answers 200 with only questions flagged pre-qualification and a plain result line", pqr.status === 200 && Array.isArray(pqr.body?.questions) && pqr.body.questions.every((q: { pre_qualification?: boolean }) => q.pre_qualification === true) && typeof pqr.body?.result === "string", { status: pqr.status, words: words(pqr) });
+  ok("C4.4 PQR: the pre-qualification mode answers 200 with only questions flagged pre-qualification and a plain result line", pqr.status === 200 && Array.isArray(pqr.body?.questions) && pqr.body.questions.length > 0 && pqr.body.questions.every((q: { pre_qualification?: boolean }) => q.pre_qualification === true) && typeof pqr.body?.result === "string", { status: pqr.status, words: words(pqr) });
   process.exit(summary() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(2); });
