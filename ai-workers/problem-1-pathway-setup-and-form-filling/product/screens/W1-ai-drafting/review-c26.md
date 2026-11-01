@@ -1,37 +1,81 @@
-# Review: C2.6 checklist replay into requirement proposals (F4, P-219), commit f30a7a7f
+# Review: C2.6 checklist replay into requirement proposals (F4, P-219)
 
-Reviewer: a fresh agent that did not build it. Branch `claude/forms-c26-checklist`, diff `origin/main...f30a7a7f`. The target moved from 398743f1 to f30a7a7f during the review. `git diff 398743f1 f30a7a7f` is typing only in `api/src/checklist.ts` (no `any`; behaviour unchanged). Isolated copy `rev_c26` on :4425, web build of this commit served on :4426. No `*_LIVE` variable, no paid call, US$0. Journey report: `journey-test-reviewer-2026-11-01-f30a7a7f.md`.
+Reviewer: a fresh agent that did not build it. Branch `claude/forms-c26-checklist`.
 
-**Verdict: Block** (Rework of four points; the core is sound). The quote rule, the source-file filter, stub exclusion, the advisory lock and the conditional apply all work. Four Majors are open, listed below.
+**Current: commit 8ec21dfb (re-review of the fixes for the f30a7a7f Block). Verdict: Block.** One new Major is open. The four earlier Majors are fixed, but the M1 fix made checklist proposals disappear from the To review inbox.
 
-## What held (evidence)
-- Builder suite on my copy: `check_forms_c26_checklist.ts 4425 xr_studio_rev_c26` gave **27 passed, 0 failed**. It would fail on main: it imports `linesOf`/`savedReading`/`treeOf`, which do not exist there, and main refuses any conditional apply.
-- **Stub never replayed.** Eight `c1-requirements-stub-*` runs carry IMM 5488's inventory with the same sha256 (`c9815877…`), and one of them is newer than both live runs. `savedReading` excludes them twice, by file name `-requirements-live-` and by `caller === "live"` (checklist.ts:39–41). The R1 pass step requires a `-live-` file, so it fails if the filters go.
-- **Quote rule:** a forged line is dropped and listed (R2 fail step). All 12 queued quotes are in the IMM 5488 text. **Source-file filter:** 33 lines read, 13 from IMM 5488; 12 proposed and 1 dropped as incomplete.
-- **Contract fit:** I parsed all 12 DB rows against `contracts/proposal-item.ts` `ProposalItem` (my probe): **0 failures**. Every row has kind `requirement_line`, lands on the combination, Check, `one_round`, SAMPLE, origin ai, and `rounds.draft.from` replay at US$0.
-- **One open replay:** 8 parallel replays gave 1 job and 12 items. Live still answers 409; IMM 5483 answers 409 in words with nothing queued; user-C answers 403.
-- **Apply:** with a real LMIA-exempt combination, 8 conditional lines were written with `predicate_json` and `condition_plain`. Two were skipped with reasons, for example `reads case.is_employer_specific_work_permit, which is not in the library`. No half-applied failure. The pre-check mirrors `saveRequirement`'s own `checkCondition` (studio.ts:539–540).
-- **UI:** on LMIA-exempt (employer offer) with IMM 5488 and IMM 5406, "Map 1 form" opens Draft setup. Its Checklists panel shows "Replay the saved reading · US$0"; IMM 5483 shows the stub pass only. Keyboard Tab reaches the button and Enter replays. The job page opened in 614 ms. axe is clean on the dialog and the job page; there is no sideways scroll at 1024 or 400 px.
+I ran isolated copy `rev_c26b` on :4425, with this commit's web build on :4426. No `*_LIVE` variable, no paid call, US$0. Journey report: `journey-test-reviewer-2026-11-01-8ec21dfb.md`.
 
-## Issues (ranked)
-1. **Major (Must): items sit in the one review queue but cannot be accepted there, with no way on.** As user-C, To review › Proposals › Open "Copy of LMIA…" › Accept gives the toast "A requirement line proposal is accepted with its own step, not yet on this queue." (409; screenshot `/tmp/revc26/shots/22-queue-accept.png`; it is the same for user-A and user-B). `LANDERS` has no `requirement_line` (proposals.ts:155), and `ON_ITS_PAGE` is only `field_map` (proposals.ts:213), so `decide_on` is null and the row shows "Open", not a link to `/c/:id/jobs/:run`. The test (R3) checks only that the items are present. Fix: either decide them in the queue (a `requirement_line` lander through the requirement writer) or mark `checklist_draft` as decided on its page, with the job-page link and its own words (proposals.tsx:121 says "form-field page"). Add a test step that decides one from the queue.
-2. **Major (Must): a second replay after apply proposes the same lines again, and applying writes duplicates.** Probe on the walked combination: replay, accept all, apply gave 9 lines; replay again (the button stays), accept all, apply gave **19** draft lines from imm5488e.pdf, with suffixed lineage keys (`…:each_applicant:mvxtarrl`). The open lookup only finds `COMPLETED` jobs (checklist.ts:155), and nothing compares against requirements already on the combination (D2; the contract's "an exact duplicate never becomes an item"). Fix: at replay, drop and list (or mark) lines whose document type and person already have a requirement on the combination; refuse the same in apply; add a pass and a fail step.
-3. **Major (Must): the person never sees which lines were not written, or why.** The new skip path returns `skipped` with reasons, but the job page toast says only "9 document requirements added to the draft; not applied: 2" and then moves to the combination (job.tsx:245; screenshot `31-job-applied.png`). The job stays APPLIED and the items show "Accepted", so the two conditional lines silently vanish. Their reasons are only in Activity. Fix: show the skipped lines with their reasons on the job page (a notice that stays) before leaving.
-4. **Major (Must): the checksum rule has no failing test.** Every saved run's inventory sha256 matches today. If `&& x?.sha256 === sha256` is removed (checklist.ts:44), all 27 steps still pass (WAY-OF-WORKING rule 3). `savedReading` reads fixed folders, so no fail case can be built. Fix: pass the runs folder and inventory bytes in (or export the matcher), then add "a changed inventory gives no reading".
-5. Minor (Should): the queue panel names the source as `prototype/p1/inventory/imm5488e.text.inventory.json` (screenshot 22), and `source.sha256` is the inventory JSON's hash. The attachment is linked to the inventory by file name only; `summary.sha256` (the PDF's hash, present in the inventory) is never compared with `attachment.sha256`. That is latent today (no duplicate base names in the manifest). Fix: show `a.officialFile`, and refuse a reading when `summary.sha256 !== a.sha256`.
-6. Minor (Should): "when Only when IRCC authorized…" doubles the word in the job page (job.tsx:258) and in the queue reading (checklist.ts:144).
-7. Minor (Should): the panel says "saved AI reading: 13 lines", but 12 are proposed and 1 is dropped (`readings()` counts raw lines, checklist.ts:123).
-8. Minor (Should): the Draft setup text still says "Questions, sections, document requirements and rules are not AI-drafted here: people author them" (api/src/ai.ts:166), directly above the Checklists panel that AI-reads document requirements.
-9. Minor (Should): applied lines read "Edited by a person" on Documents (screenshot `32-documents.png`), because `saveRequirement` writes `origin: "HUMAN"` (studio.ts:545). The AI origin is lost after apply (D7/D18; pre-existing writer, first real AI content through it).
-10. Minor (Should): the replay writes with `tx.proposalItem.createMany` (checklist.ts:159) and bypasses `insertProposals`, the one door's contract parse. The rows parse today, but nothing enforces it. Two Check items have a null `reason`, and the others carry the AI's note rather than why the item is Check.
-11. Minor (Should): no browser check covers the Replay button. The graph shows the routes tested by API only; this review's walk covered it once.
-12. Minor (pre-existing): the apply loop is not one transaction. A mid-loop failure keeps the earlier rows and resets the job to COMPLETED, so a re-apply duplicates them. The risk is lower now that the pre-checks mirror the writer.
+## Re-review of 8ec21dfb (`git diff f30a7a7f 8ec21dfb`)
+Builder suite on my copy: `check_forms_c26_checklist.ts 4425 xr_studio_rev_c26b` gave **34 passed, 0 failed**. I did not re-run `check_s6_p149.ts` (the builder reports 73/73).
 
-## D1–D20 (0–5)
-D1 4: replay, rules and conditional apply work as claimed; the queue decision path is missing (1) · D2 2: duplicate lines on re-replay (2) · D3 3: document types reused by name; unmatched ones skipped · D4 4: conditions checked against the library before writing · D5 3: double click and parallel replays are safe; re-replay after apply is not · D6 3: audit lines in words with cost · D7 3: AI marked, quote shown, Sample; origin lost after apply (9) · D8 4: breadcrumb on the job page · D9 2: the queue Accept dead end (1) · D10 3: internal path, doubled "when", contradicting dialog text (5, 6, 8) · D11 2: skipped lines shown only as a count (3) · D12 4 · D13 4: axe clean, keyboard, 1024/400 px; 200 % zoom not checked · D14 4: team components · D15 4: 614 ms replay to job page · D16 3: a pass and a fail for most rules; no checksum fail (4) · D17 simulated only · D18 3: quote and edition shown; source shown as inventory path · D19 3: checklist to draft requirements closes via the job page only · D20 simulated only.
+| Earlier finding | Status | Evidence |
+|---|---|---|
+| M1: queue Accept dead end | **Fixed in the queue** | On /review/proposals, all 12 rows show "Decide on its checklist page", and the link opens `/c/<combo>/jobs/<job>`. axe is clean. The API accept answers 409 and nothing changes. Tested with a pass and a fail. |
+| M2: duplicates on re-replay | **Fixed** | `linesOnCombination` (checklist.ts:95) takes each lineage's newest non-retired version. A second replay proposed 2 and dropped 11, 10 of them as "already on this combination". Applying it wrote 0 rows and no suffixed lineage copies. Tested with a pass and a fail. |
+| M3: skipped lines invisible | **Fixed** | After "Apply to the draft" the page stays put. The "Applied: 10 document requirements added" panel lists both skipped lines with their reasons, plus "Back to the combination" (screenshot 42). axe is clean, with no sideways scroll at 400 px. `detail.applied` is tested. |
+| M4: no checksum fail test | **Fixed** | `savedReading(file, { root })`: the same text in another folder still matches, and one changed word (another checksum) gives null. Both are tested. |
+| Minor 6, 7, 8 | Fixed | No doubled "when" (job page: "For principal applicant · Only when IRCC…"). The panel says "12 lines". The ai.ts note now points to the Checklists panel below. |
+| Minor 5, 9, 10, 11, 12 | Open, to be listed in the PR | As the builder states, unchanged. |
 
-## Journey score (reviewer): 7/10, below the pass mark
-Details are in the journey report. The low criteria map to issues 1, 2, 3, 5, 6 and 9.
+## Issues on 8ec21dfb (ranked)
+1. **Major (Must, regression from the M1 fix): waiting checklist proposals vanish from To review.**
+   - **Cause:** `review-queue.ts:53` builds the inbox's proposal groups with `step: { notIn: [...ON_ITS_PAGE] }`. Field-map items are shown there through their own `draftingJob` rows, but that list only reads kinds `field_map` and `reuse_map` (review-queue.ts:51). Adding `checklist_draft` to `ON_ITS_PAGE` (proposals.ts:215) therefore removed checklist drafts from the inbox, and nothing replaces them.
+   - **Evidence:** with 12 proposals waiting, then again with 2 waiting after a second replay, `/review` as user-C reads "Nothing waits for you · All 0" (screenshot 40). `GET /review-queue` gives `{"needs":0,"waiting":0,"running":0,"all":0}` for user-A and user-C, while `GET /review/proposals` holds the group "LMIA-exempt (employer offer): 2".
+   - **Comparison:** on f30a7a7f the same state showed the To review badge "1" (screenshot 22).
+   - **Impact:** the combination's next step stays "Draft setup" (`aiProposals` 0), so a reviewer has no way in except the direct URL or the author clicking Replay again.
+   - **Fix:** either list waiting `checklist_draft` jobs in the inbox, linking to their checklist page (as field-map jobs are), or exclude only `field_map` at review-queue.ts:53.
+   - **Test:** add to `check_forms_c26_checklist.ts` a step asserting that `/review-queue` has an item for the waiting checklist draft with the job link. It must fail on 8ec21dfb.
+2. Minor (Should): the queue's 409 names the identity key, for example `"requirement_line:9e25b29f-…:copy of imm 5802 …" is decided on its checklist page…` (proposals.ts:246). That puts an internal id in the words. It is only reachable through the API now, because the page shows the link. Fix: use the item's label.
+3. Minor (Should): a replay where every line is already on the combination makes a job with 0 items. The job page then says "The stub pass proves the path only…" (job.tsx:254), which is wrong words for a replay. Fix: refuse with 409 "every line of the saved reading is already on this combination", or word the notice for replays.
+4. Minor (nit): apply marks a document type and person as taken (`have.add`, checklist.ts:195) before the person and condition checks. A later line with the same type and person, under a different name, would then read "already on this combination" although nothing was written. This is rare, because `linesOf` already removes same-name repeats.
+5. Still open from f30a7a7f, as the builder lists them:
+   - the queue source is shown as the inventory path, and the PDF checksum is not compared;
+   - applied rows read "Edited by a person" (origin HUMAN);
+   - the replay writes with `createMany` instead of `insertProposals`;
+   - no browser check covers the Replay button;
+   - the apply loop is not one transaction.
+
+## D1–D20 on 8ec21dfb (0–5)
+| D | Score | Evidence |
+|---|---|---|
+| D1 | 4 | Behaves as claimed. |
+| D2 | 4 | No duplicate lines (M2 tests). |
+| D3 | 3 | — |
+| D4 | 4 | Conditions are checked before writing. |
+| D5 | 4 | Double click, parallel replays and re-replay are all safe. |
+| D6 | 3 | — |
+| D7 | 3 | AI origin is lost after apply. |
+| D8 | 4 | — |
+| D9 | 2 | The inbox hides waiting work (issue 1). |
+| D10 | 4 | — |
+| D11 | 3 | Applied panel is good; the inbox shows a false "Nothing waits". |
+| D12 | 4 | — |
+| D13 | 4 | axe clean; keyboard and 400/1024 px fine; 200 % not checked. |
+| D14 | 4 | — |
+| D15 | 4 | 581 ms replay to the job page. |
+| D16 | 4 | Every claimed rule has a pass and a fail; the inbox is not covered. |
+| D17 | — | Simulated only. |
+| D18 | 3 | Source shown as the inventory path. |
+| D19 | 3 | Closes only if the reviewer finds the queue. |
+| D20 | — | Simulated only. |
+
+**Journey score (reviewer) on 8ec21dfb: 8.5/10.** That passes, but issue 1 is open, so the verdict stays Block.
+
+## Earlier round (f30a7a7f, Block)
+Four Majors:
+1. Queue Accept was a dead end.
+2. A re-replay wrote duplicate lines (9 → 19).
+3. Skipped lines were shown only as a count.
+4. The checksum rule had no fail test.
+
+There were also eight Minors. Journey score 7/10. Details are in git history and in `journey-test-reviewer-2026-11-01-f30a7a7f.md`. The rules that held then still hold: the quote check, the source-file filter, stub runs never replayed, contract parse 12/12, one open replay under 8 parallel calls, live 409, and the conditional apply.
 
 ## Could not check
-A visible-browser walk by a person (headless Playwright only), a real screen reader, 200 % zoom, an intended user's unaided walk (D17/D20), and CI logs. Screenshots stay in `/tmp/revc26/shots` (not committed). Clean-up: the `rev_c26` copy is stopped and its database dropped.
+- A visible-browser walk by a person (headless Playwright only).
+- A real screen reader.
+- 200 % zoom.
+- An intended user's unaided walk (D17/D20).
+- CI logs.
+
+Screenshots are in `/tmp/revc26/shots` and are not committed.

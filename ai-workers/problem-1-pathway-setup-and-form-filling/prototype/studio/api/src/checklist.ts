@@ -192,7 +192,6 @@ export class Checklists {
       const type = types.find((t) => t.documentTypeKey === p.document_type || t.name.toLowerCase() === p.document_type!.toLowerCase());
       if (!type) { skipped.push(`${p.document_type} (no such document type in the library yet)`); continue; }
       if (have.has(`${type.documentTypeKey}|${p.who}`)) { skipped.push(`${p.document_type} (already on this combination for ${p.who.replace(/_/g, " ")})`); continue; }
-      have.add(`${type.documentTypeKey}|${p.who}`);
       if (!WHO.includes(p.who)) { skipped.push(`${p.document_type} (whose document it is, "${p.who}", is not a choice yet)`); continue; }
       // A conditional line is written with its condition in the condition language, checked against the library's
       // fields first (C2.6: never a half-applied draft, never a conditional line without its condition).
@@ -201,6 +200,7 @@ export class Checklists {
         const errs = checkCondition(p.condition_tree, lib!.fields, lib!.derived);
         if (errs.length) { skipped.push(`${p.document_type} (its condition does not fit the library yet: ${errs[0]})`); continue; }
       }
+      have.add(`${type.documentTypeKey}|${p.who}`);
       plan.push({ item: i, typeKey: type.documentTypeKey, p: p as RequirementProposal });
     }
     if (bad.length) fail(`${bad.length} accepted proposal${bad.length === 1 ? " is" : "s are"} incomplete (no document type, person or kind): return ${bad.length === 1 ? "it" : "them"}, then apply. For example: ${bad[0]}.`);

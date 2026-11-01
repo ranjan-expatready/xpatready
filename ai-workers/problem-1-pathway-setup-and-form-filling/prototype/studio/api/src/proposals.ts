@@ -243,7 +243,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
     const done = rows.filter((r) => r.status !== "waiting");
     if (done.length) fail(`${done.length === 1 ? "A proposal is" : `${done.length} proposals are`} already decided (${done[0].status}); an approved item changes only as a revision.`, HttpStatus.CONFLICT);
     const elsewhere = rows.find((r) => ON_ITS_PAGE.has(r.step));
-    if (elsewhere) fail(`"${identityKeyOf(elsewhere.payload as ProposalPayload, elsewhere.identityKey)}" is decided on its ${PAGE_WORDS[elsewhere.step] ?? "own page"}.`, HttpStatus.CONFLICT);
+    if (elsewhere) fail(`"${String((elsewhere.payload as { label?: unknown }).label ?? identityKeyOf(elsewhere.payload as ProposalPayload, elsewhere.identityKey))}" is decided on its ${PAGE_WORDS[elsewhere.step] ?? "own page"}.`, HttpStatus.CONFLICT);
     // P-121: several at once is for Ready items only, and never a rules item that adds to the library (1b).
     if (d.action === "accept" && rows.length > 1) {
       const no = rows.map((r) => [r, bulkWhy(r)] as const).filter(([, why]) => why);

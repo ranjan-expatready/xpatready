@@ -250,7 +250,7 @@ function ChecklistJob({ job, combinationId }: { job: ChecklistJobView; combinati
       <div><h1 className="flex items-center gap-2 text-xl font-semibold"><Sparkles className="size-5 text-[#7c3aed]" /> {job.attachment?.edition ?? "Checklist"}: proposed document requirements</h1>
         <div className="mt-2 flex flex-wrap gap-1.5"><ModePill mode={job.mode} /><StatusPill status={job.status} /><Pill>US${Number(job.costUsd ?? 0).toFixed(2)}</Pill></div>
         <p className="mt-2 max-w-3xl text-sm text-text-muted">{job.message}</p></div>
-      {!items.length ? <Notice title="Nothing proposed">The stub pass proves the path only; a live draft proposes each document requirement with the checklist's words beside it.</Notice> : (
+      {!items.length ? <Notice title="Nothing proposed">{job.mode === "REPLAY" ? "Every line of the saved reading is already on this combination, or was dropped by the rules (listed above)." : "The stub pass proves the path only; a live draft proposes each document requirement with the checklist's words beside it."}</Notice> : (
         <ul className="space-y-3">{items.map((i) => { const p = i.payload ?? {}; return (
           <li key={i.id} className="rounded-xl border border-border bg-surface-raised p-4" data-checklist-item={i.kind}>
             <div className="flex flex-wrap items-start justify-between gap-3">

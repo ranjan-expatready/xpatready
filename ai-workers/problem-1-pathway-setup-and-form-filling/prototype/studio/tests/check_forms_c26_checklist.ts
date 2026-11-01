@@ -103,6 +103,9 @@ async function main() {
   const mine = check.filter((x: any) => x.kind === "requirement_line" && x.step === "checklist_draft");
   ok("C2.6 R3: the lines wait in the one review queue under their combination, in Check, titled by document and person, with the quote", r.status === 200 && mine.length === proposed && (r.body.group?.bands?.ready ?? []).every((x: any) => x.kind !== "requirement_line") && mine.every((x: any) => / · /.test(x.title) && x.source?.quote && x.readings?.draft?.from === "replay"), mine[0]?.title);
   ok("C2.6 R3 (#277 M1): each queue line links to its checklist page, where the lines are decided and applied together", mine.every((x: any) => x.decide_on === `/c/${combo}/jobs/${job.id}` && /checklist page/.test(x.bulk_why ?? "")), mine[0]?.decide_on);
+  r = await call("GET", "/review-queue", undefined, "user-C");
+  const row = ((r.body?.items ?? []) as any[]).find((x) => x.kind === "proposals" && x.combination === combo);
+  ok("C2.6 R3 (#277 re-review Major): To review lists the waiting checklist lines for a reviewer, with the way to them", r.status === 200 && !!row && row.state === "needs" && row.next?.href === `/review/proposals?group=${encodeURIComponent(`combination:${combo}`)}` && new RegExp(`${proposed} proposals? waiting`).test(row.what), row ?? r.body?.counts);
   r = await call("POST", "/review/proposals/decide", { ids: [mine[0].id], action: "accept" });
   ok("C2.6 R3 fail (#277 M1): accepting a checklist line on the queue answers 409 and says where it is decided; nothing changes", r.status === 409 && /checklist page/.test(r.body?.message ?? "") && sql(`select status from proposal_item where id='${mine[0].id}'`) === "waiting", r.body?.message);
 
