@@ -2,7 +2,8 @@
 // documents need; a fact a document supplies is not asked; each combination orders its sections with Move up / Move down,
 // the order goes out with its next review and release; the library's one section title is used everywhere.
 // Today the SQR per role and the fromDocuments skip work (Questionnaires tab, Preview); there is no section move, so this
-// fails. ROUTE (proposed; Question for the tech lead): POST /combinations/:id/sections/:key/move {direction: "up"|"down"}.
+// failed. ROUTE (built, #284): POST /combinations/:id/sections/:key/move {direction: "up"|"down", seen: [the order read]}; the move is
+// checked against the order the author was looking at (GET /combinations/:id/section-order), so a stale move is a 409.
 // IRCC: every family member completes their own forms (G5256, trace IRCC-P2-02) — so each applying role has its own
 // questions. Rules only (US$0).
 // Runs on Visitor visa of the six (qa-1 gaps G4, G5, G10 / QA-133 there). Needs first: Visitor visa has questions (J3 /
@@ -42,15 +43,18 @@ run(async () => {
   const o0 = order();
   ok("setup: the combination has at least three chosen sections", o0.length >= 3, o0);
   const second = o0[1];
-  let r = await call("POST", `/combinations/${wp}/sections/${encodeURIComponent(second)}/move`, { direction: "up" }, AUTHOR);
+  const seenNow = async () => ((await call("GET", `/combinations/${wp}/section-order`)).body?.order ?? []).map((x: any) => x.key);
+  let r = await call("POST", `/combinations/${wp}/sections/${encodeURIComponent(second)}/move`, { direction: "up", seen: await seenNow() }, AUTHOR);
   ok("C4.1 pass: Move up puts the second section first", r.status < 300 && order()[0] === second, r.status >= 300 ? words(r) : order().slice(0, 3));
-  r = await call("POST", `/combinations/${wp}/sections/${encodeURIComponent(second)}/move`, { direction: "up" }, AUTHOR);
+  r = await call("POST", `/combinations/${wp}/sections/${encodeURIComponent(second)}/move`, { direction: "up", seen: await seenNow() }, AUTHOR);
   ok("C4.1 fail: the first section cannot move up (409, in words)", r.status === 409 && words(r).length > 10, words(r));
-  r = await call("POST", `/combinations/${wp}/sections/${encodeURIComponent(o0.at(-1)!)}/move`, { direction: "down" }, AUTHOR);
+  r = await call("POST", `/combinations/${wp}/sections/${encodeURIComponent(o0.at(-1)!)}/move`, { direction: "down", seen: await seenNow() }, AUTHOR);
   ok("C4.1 fail: the last section cannot move down (409)", r.status === 409, words(r));
-  r = await call("POST", `/combinations/${wp}/sections/${encodeURIComponent(second)}/move`, { direction: "sideways" }, AUTHOR);
+  r = await call("POST", `/combinations/${wp}/sections/${encodeURIComponent(second)}/move`, { direction: "sideways", seen: await seenNow() }, AUTHOR);
   ok("C4.1 fail: a direction other than up or down is refused (400, in words)", r.status === 400, words(r));
-  r = await call("POST", `/combinations/${wp}/sections/${encodeURIComponent(second)}/move`, { direction: "down" }, "user-B");
+  r = await call("POST", `/combinations/${wp}/sections/${encodeURIComponent(second)}/move`, { direction: "down", seen: await seenNow() }, "user-B");
+  const stale = await call("POST", `/combinations/${wp}/sections/${second}/move`, { direction: "down", seen: o0 }, AUTHOR);
+  ok("C4.1 fail: a move from an older order is refused (409, in words); nothing moves", stale.status === 409 && words(stale).length > 10 && (await seenNow())[0] === second, words(stale));
   ok("C4.1 fail: only an author moves sections (approver 403)", r.status === 403, r.status);
   const sections = (await call("GET", `/combinations/${wp}/workspace?tab=questionnaires`)).body?.questionnaire?.sections ?? [];
   ok("C4.1 pass: the Questionnaires tab shows the new order", sections.length > 0 && sections[0]?.id === second, sections.map((s: any) => s.id).slice(0, 3));
@@ -60,7 +64,7 @@ run(async () => {
   if (released[0]) ok("C4.1 data: the released snapshot still has the old order until the next release", released.indexOf(o0[0]) >= 0 && released.indexOf(o0[0]) < released.indexOf(second), released.slice(0, 3));
   // The move is one named change line of the next review (C4.8): submitted last, so nothing after it depends on it.
   r = await call("POST", `/combinations/${wp}/submit`, { note: "section order (acceptance C4.1)" }, AUTHOR);
-  const line = ((r.body?.changeSummary ?? []) as any[]).find((c) => /section/i.test(String(c.kind)) && String(c.key) === second);
-  ok("C4.1 pass: the review names the move as one change line, in words (the section's title and 'moved up')", !!line && String(line.label).includes(lib) && /moved up|order/i.test(String(line.label)), r.status >= 300 ? words(r) : line ?? (r.body?.changeSummary ?? []).map((c: any) => `${c.kind}|${c.key}`).slice(0, 5));
+  const line = ((r.body?.changeSummary ?? []) as any[]).find((c) => /section/i.test(String(c.kind)));
+  ok("C4.1 pass: the review names the move as one change line, in words (the section's title and its new place, now 1st)", !!line && String(line.label).includes(`"${lib}" now 1st`) && /reordered/i.test(String(line.label)), r.status >= 300 ? words(r) : line ?? (r.body?.changeSummary ?? []).map((c: any) => `${c.kind}|${c.key}`).slice(0, 5));
   T.done();
 });
