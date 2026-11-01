@@ -11,6 +11,10 @@ import { Studio } from "./studio.ts";
 import { itemsOf, KIND_NOUN, actionWord, unapprovedAdds, unapprovedWhy, acceptsView } from "./library-changes.ts";
 import { fillsView } from "./who-fills.ts";
 import { ON_ITS_PAGE } from "./proposals.ts";
+/** The ON_ITS_PAGE steps whose drafts already have their own row in this list (the field-map jobs below). A checklist
+ *  draft's lines (C2.6) have no job row, so they keep their proposals row, whose page links each line to its checklist
+ *  page (#277 re-review Major). */
+const LISTED_AS_JOBS = new Set(["field_map"]);
 import { groupOf } from "./review-proposals.ts";
 import { normaliseCode } from "../../contracts/form-library.ts";
 
@@ -52,7 +56,7 @@ export class ReviewQueueService {
       this.db.combination.findMany({ where: { workspaceId }, select: { id: true, programDefId: true, label: true } }),
       this.db.draftingJob.findMany({ where: { workspaceId, kind: { in: ["field_map", "reuse_map"] } }, orderBy: { startedAt: "desc" }, select: { id: true, combinationId: true, attachmentId: true, kind: true, mode: true, status: true, costUsd: true, startedBy: true, startedAt: true, finishedAt: true, detail: true } }),
       this.db.proposalItem.groupBy({ by: ["runId"], where: { workspaceId, status: "waiting" }, _count: true }),
-      this.db.proposalItem.findMany({ where: { workspaceId, status: "waiting", step: { notIn: [...ON_ITS_PAGE] } }, orderBy: { createdAt: "asc" }, select: { formEdition: true, combinationId: true, runId: true, confidence: true, createdAt: true } }),
+      this.db.proposalItem.findMany({ where: { workspaceId, status: "waiting", step: { notIn: [...ON_ITS_PAGE].filter((x) => LISTED_AS_JOBS.has(x)) } }, orderBy: { createdAt: "asc" }, select: { formEdition: true, combinationId: true, runId: true, confidence: true, createdAt: true } }),
       this.db.aiBatch.findMany({ where: { workspaceId, status: { in: ["QUEUED", "RUNNING"] } }, include: { jobs: { select: { status: true, costUsd: true, attachmentId: true } } } }),
       this.db.reviewSubmission.findMany({ where: { workspaceId }, orderBy: { submittedAt: "desc" } }),
       this.db.fieldMerge.findMany({ where: { workspaceId, status: "PROPOSED" } }),
