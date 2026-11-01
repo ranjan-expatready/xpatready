@@ -16,7 +16,7 @@ import { fmtWhen, Tip, TipProvider } from "@/components/status";
 import { cn } from "@/lib/utils";
 
 const BAND_TONE: Record<Band, string> = { ready: "ok", check: "warn", decide: "danger" };
-const inv = [["proposals"], ["review-queue"], ["catalogue"], ["change-batch"]];
+const inv = [["proposals"], ["review-queue"], ["catalogue"], ["change-batch"], ["fact-sources"], ["pqr-country"]]; // C4.7: a pick ticks a question
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 function Crumbs({ here }: { here: string }) {
@@ -118,7 +118,7 @@ function BandTable({ band, items, onOpen, picked, setPicked, bulk, max }: { band
               <td><Pill>{p.kind_word}</Pill>{p.origin === "rules" ? <Pill className="ml-1" tone="info">Rules</Pill> : <Pill className="ml-1" tone="ai">AI</Pill>}</td>
               <td className="text-xs">{p.lands_on === "combination" ? "This combination" : p.reuse.match === "reuse" ? `Reuses ${p.reuse.existing_key}` : "New library item"}</td>
               <td className="max-w-[20rem] text-xs text-text-muted">{band === "ready" ? p.agreement_word : p.reason ?? p.agreement_word}</td>
-              <td className="text-right">{p.decide_on ? <Link className="whitespace-nowrap text-sm text-text-link underline" to={p.decide_on}>Decide on its form-field page</Link>
+              <td className="text-right">{p.decide_on ? <Link className="whitespace-nowrap text-sm text-text-link underline" to={p.decide_on}>Decide on its {p.step === "checklist_draft" ? "checklist" : "form-field"} page</Link>
                 : <Button size="sm" variant="secondary" onClick={() => onOpen(p)} aria-label={`Open ${p.title}`}>Open<ChevronRight className="size-4" aria-hidden /></Button>}</td>
             </tr>
           ))}
