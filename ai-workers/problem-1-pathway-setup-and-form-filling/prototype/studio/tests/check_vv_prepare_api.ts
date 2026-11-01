@@ -6,6 +6,7 @@
 //   zsh studio/tools/isolated.sh runtime_vp 4432 start && tsx studio/tests/check_vv_prepare_api.ts 4432 xr_studio_runtime_vp
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
+import { snapshotHash } from "../engine/snapshot.ts";
 import { client, recorder } from "./runtime/api.ts";
 
 const PORT = Number(process.argv[2] ?? 4432), DB = process.argv[3] ?? "xr_studio_runtime_vp";
@@ -79,11 +80,26 @@ type P = { derived: boolean; version: string; portal: string | null; filings: { 
   const relC = sql(`select r.id from config_release r join pack_work_pin w on w.config_release_id = r.id where w.case_id = '${c.id}'`);
   const snap = sql(`select snapshot->'forms' from config_release where id='${relC}'`);
   const item5707 = its(A).find((i) => i.form === "IMM 5707")?.id;
+  // As a release without IMM 5707 would be: the snapshot and its fingerprint change together (break B2 refuses one alone).
+  const refit = () => { const h = snapshotHash(JSON.parse(sql(`select snapshot::text from config_release where id='${relC}'`))); sql(`update config_release set sha256='${h}' where id='${relC}'`); pinHash(h); };
+  // Test scaffolding only, on this isolated copy: the pin is frozen by a trigger (runtime_pin_frozen), so the check lifts
+  // it for the one statement that stands in for "this case's release has no IMM 5707", and puts it back at once.
+  const pinHash = (h: string) => sql(`alter table pack_work_pin disable trigger trg_pack_work_pin_frozen; update pack_work_pin set content_hash='${h}' where config_release_id='${relC}'; alter table pack_work_pin enable trigger trg_pack_work_pin_frozen`);
+  const oldHash = sql(`select sha256 from config_release where id='${relC}'`);
   sql(`update config_release set snapshot = jsonb_set(snapshot, '{forms}', (select jsonb_agg(x) from jsonb_array_elements(snapshot->'forms') x where x->>'form_number' <> 'IMM 5707')) where id='${relC}'`);
+  refit();
   try {
-    ({ p } = await prep(c.id));
-    ok("C6.12 review m1 (fail): a form that no longer applies is not listed; its item is kept inactive, not deleted", !!item5707 && !(p?.items ?? []).some((i) => i.form === "IMM 5707") && sql(`select active from filing_item where id='${item5707}'`) === "f");
+    ({ r, p } = await prep(c.id));
+    ok("C6.12 review m1 (fail): a form that no longer applies is not listed; its item is kept inactive, not deleted", !!item5707 && !(p?.items ?? []).some((i) => i.form === "IMM 5707") && sql(`select active from filing_item where id='${item5707}'`) === "f", { r: r.status, body: r.status === 200 ? p?.items?.map((i) => i.form) : r.body });
+  } finally { sql(`update config_release set snapshot = jsonb_set(snapshot, '{forms}', '${snap.replace(/'/g, "''")}'::jsonb), sha256='${oldHash}' where id='${relC}'`); pinHash(oldHash); }
+  // Break B2: a snapshot edited without its fingerprint is refused (409) and nothing is stored from it.
+  const itemsBefore = sql(`select count(*) from filing_item i join filing f on f.id=i.filing_id where f.case_id='${c.id}'`);
+  sql(`update config_release set snapshot = jsonb_set(snapshot, '{forms,0,form_number}', '"IMM 5257 renamed"') where id='${relC}'`);
+  try {
+    r = (await prep(c.id)).r;
+    ok("C6.12 break B2 (fail): a release snapshot edited after release is refused (409) and nothing is stored from it", r.status === 409 && /fingerprint/.test(r.body?.detail ?? "") && sql(`select count(*) from filing_item i join filing f on f.id=i.filing_id where f.case_id='${c.id}'`) === itemsBefore, r.body);
   } finally { sql(`update config_release set snapshot = jsonb_set(snapshot, '{forms}', '${snap.replace(/'/g, "''")}'::jsonb) where id='${relC}'`); }
+  ok("C6.12 break B4 (fail): HEAD is refused (405), never answered by storing rows", (await fetch(`http://127.0.0.1:${PORT}/api/runtime/cases/${c.id}/prepare`, { method: "HEAD", headers: { "x-actor": OFFICER } })).status === 405);
   ({ p } = await prep(c.id));
   ok("C6.12 review m1 pass: when it applies again the same item comes back", its(A).find((i) => i.form === "IMM 5707")?.id === item5707);
 
@@ -99,6 +115,10 @@ type P = { derived: boolean; version: string; portal: string | null; filings: { 
   const twin = await open("VPT", [{ role: "spouse_or_partner", name: "Sample Spouse C" }]);
   const both = await Promise.all([prep(twin.id), prep(twin.id), prep(twin.id)]);
   ok("C6.12 pass (concurrency): three first reads at once store one group and two filings, and agree", both.every((x) => x.r.status === 200) && sql(`select count(*) from submission_group where case_id='${twin.id}'`) === "1" && sql(`select count(*) from filing where case_id='${twin.id}'`) === "2" && new Set(both.map((x) => x.p?.version)).size === 1, both.map((x) => x.r.status));
+
+  // Break B1: many reads at once on one case all answer, and other routes stay quick.
+  const burst = await Promise.all(Array.from({ length: 120 }, () => call("GET", `/runtime/cases/${twin.id}/prepare`, undefined, OFFICER)));
+  ok("C6.12 break B1: 120 reads at once on one case all answer 200 (no transaction for a read with nothing new)", burst.every((x) => x.status === 200), [...new Set(burst.map((x) => x.status))]);
 
   // 409 when the release no longer names the case's combination; another combination: not derived yet.
   const rel = sql(`select r.id from config_release r join pack_work_pin w on w.config_release_id = r.id where w.case_id = '${c.id}'`);

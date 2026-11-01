@@ -389,6 +389,8 @@ export class Demo {
       "Sample profiles and facts": (await t.sampleProfile.count({ where: ws })) + (await t.sampleFact.count({ where: ws })), "Generated PDFs and reports": await t.generatedArtifact.count({ where: ws }), "Activity entries": await t.auditEvent.count({ where: ws }),
       // Runtime lane (R1): cases, the people on them and their answers (all versions)
       Cases: await t.case.count({ where: ws }), "People on cases": await t.party.count({ where: ws }), "Case answers (all versions) and rows": (await t.clientCanonicalAnswer.count({ where: ws })) + (await t.clientFactRecord.count({ where: ws })),
+      // C6.12 /prepare (runtime lane, M3-B2; break B6): the filings and items stored per case (removed with their cases)
+      "Filings, groups and filed items": (await t.submissionGroup.count({ where: ws })) + (await t.filing.count({ where: ws })) + (await t.filingItem.count({ where: ws })),
       "Official pages confirmed": await t.officialPagesRecord.count({ where: ws }), // F2 (forms lane, N8)
       "Library forms remembered as deleted": await t.libraryFormDeletion.count({ where: ws }), // X5 slice c (forms lane)
       // F1 (forms lane): answer lists and field merges (rows parked by W1-02 on an older database are removed too)

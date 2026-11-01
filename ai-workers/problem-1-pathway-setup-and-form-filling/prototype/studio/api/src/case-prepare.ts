@@ -6,12 +6,13 @@
 // case officer reads it; a client and configuration people do not (deny by default, as runtime.ts). Visitor visa only
 // in this slice; other combinations answer "not derived yet". Amounts Sample until the expert confirms. US$0.
 import { randomUUID } from "node:crypto";
-import { Controller, Get, Headers, HttpStatus, Inject, Injectable, Param } from "@nestjs/common";
+import { Controller, Get, Head, Headers, HttpStatus, Inject, Injectable, Param } from "@nestjs/common";
 import type { Channel } from "../../contracts/forms.ts";
 import { acceptsOf } from "../../engine/channels.ts";
 import { checkValue, knownOf } from "../../engine/runtime/case.ts";
 import { deriveFilings } from "../../engine/runtime/filings.ts";
 import { formItems, prepareView } from "../../engine/runtime/prepare.ts";
+import { snapshotHash } from "../../engine/snapshot.ts";
 import { actorOf, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { Runtime } from "./runtime.ts";
 
@@ -22,69 +23,90 @@ export class CasePrepare {
   constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db) {}
 
   async view(actor: Actor, caseId: string) {
-    const first = await this.r.reach(actor, caseId, "officer");
-    // Review m2: the people and answers are read under the per-case lock, so a read racing a change never stores flags
-    // from before it. Review M1: a read writes only what is new or changed (no write at all when nothing changed).
+    // Break B1: a read with nothing new to store takes no transaction and no lock (many reads at once stay cheap); only
+    // a read that has something to store takes the per-case lock, then works everything out again under it (review m2).
+    const fast = await this.prepare(this.db, await this.r.reach(actor, caseId, "officer"), false);
+    if (fast) return fast;
     return this.db.$transaction(async (tx) => {
-      await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${"prepare:" + first.id}))`;
       const c = await this.r.reach(actor, caseId, "officer");
-      const s = this.r.snapshotOf(c), pin = c.pins[0];
-      // Money and filings follow the combination: the release must describe the case's own combination (as /filings).
-      const own = await this.db.combination.findUnique({ where: { id: c.combinationId }, select: { combinationKey: true } });
-      if (!own || s?.combination?.key !== own.combinationKey) fail("This case's release does not describe the case's own combination; nothing was prepared. Ask the Lead.", HttpStatus.CONFLICT);
-      const people = this.r.peopleOf(c);
-      const derived = deriveFilings(own!.combinationKey, people);
-      const head = { case_id: c.id, reference: c.reference, release_version: pin.release.version };
-      if (!derived.derived) return { ...head, ...derived };
-      const today = new Date();
-      const { answers, rows } = await this.r.state(c);
-      // As the checklist (C6.4 B-M2): an answer its own checks reject never decides which forms a person files.
-      const { known } = knownOf(s, people, answers.filter((x) => checkValue(s, x.field, x.value, today).length === 0), rows, today);
-      const needs = formItems(s, people, known, today);
-      const roles = new Map(people.map((p) => [p.subjectId, p.role]));
-      const ws = c.workspaceId;
+      await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${"prepare:" + c.id}))`;
+      return (await this.prepare(tx, await this.r.reach(actor, caseId, "officer"), true))!;
+    }, { timeout: 15_000, maxWait: 10_000 });
+  }
 
-      let groups = await tx.submissionGroup.findMany({ where: { caseId: c.id }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
-      if (!groups.length && derived.filings.length) groups = [await tx.submissionGroup.create({ data: { workspaceId: ws, caseId: c.id, kind: "family" } })];
-      let filings = await tx.filing.findMany({ where: { caseId: c.id }, select: { id: true, subjectId: true, active: true } });
-      const filers = new Set(derived.filings.map((f) => f.applicants[0].subject));
-      const newFilings = derived.filings.filter((f) => !filings.some((x) => x.subjectId === f.applicants[0].subject))
-        .map((f) => ({ id: randomUUID(), workspaceId: ws, caseId: c.id, submissionGroupId: groups[0].id, subjectId: f.applicants[0].subject, combinationKey: f.combination, mode: f.mode }));
-      if (newFilings.length) {
-        await tx.filing.createMany({ data: newFilings });
-        await tx.filingApplicant.createMany({ data: newFilings.map((f) => ({ filingId: f.id, subjectId: f.subjectId, role: roles.get(f.subjectId) ?? "principal", mode: "applying" })), skipDuplicates: true });
-        filings = [...filings, ...newFilings.map((f) => ({ id: f.id, subjectId: f.subjectId, active: true }))];
-      }
-      const flip = async (on: string[], off: string[], m: "filing" | "filingItem") => {
-        if (on.length) await (tx[m] as typeof tx.filing).updateMany({ where: { id: { in: on } }, data: { active: true } });
-        if (off.length) await (tx[m] as typeof tx.filing).updateMany({ where: { id: { in: off } }, data: { active: false } });
-      };
-      await flip(filings.filter((f) => !f.active && filers.has(f.subjectId)).map((f) => f.id), filings.filter((f) => f.active && !filers.has(f.subjectId)).map((f) => f.id), "filing");
-      const filingOf = new Map(filings.filter((f) => filers.has(f.subjectId)).map((f) => [f.subjectId, f.id]));
-      const items = await tx.filingItem.findMany({ where: { filing: { caseId: c.id } }, select: { id: true, filingId: true, formKey: true, subjectId: true, active: true } });
+  /** The prepare view of a case. write=false: null when something new would be stored (the caller retries under the
+   *  lock). write=true: stores only what is new or changed (review M1: no write at all when nothing changed). */
+  private async prepare(q: Tx, c: Reached, write: boolean) {
+    const s = this.r.snapshotOf(c), pin = c.pins[0];
+    // Money and filings follow the combination: the release must describe the case's own combination (as /filings),
+    // and (break B2) be the snapshot its release fingerprinted: a row edited underneath is never stored from.
+    const own = await this.db.combination.findUnique({ where: { id: c.combinationId }, select: { combinationKey: true } });
+    if (!own || s?.combination?.key !== own.combinationKey) fail("This case's release does not describe the case's own combination; nothing was prepared. Ask the Lead.", HttpStatus.CONFLICT);
+    if (snapshotHash(s) !== pin.release.sha256) fail("This case's release no longer matches its fingerprint (it was changed after release); nothing was prepared. Ask the Lead.", HttpStatus.CONFLICT);
+    const people = this.r.peopleOf(c);
+    const derived = deriveFilings(own!.combinationKey, people);
+    const head = { case_id: c.id, reference: c.reference, release_version: pin.release.version };
+    if (!derived.derived) return { ...head, ...derived };
+    const today = new Date();
+    const { answers, rows } = await this.r.state(c);
+    // As the checklist (C6.4 B-M2): an answer its own checks reject never decides which forms a person files.
+    const { known } = knownOf(s, people, answers.filter((x) => checkValue(s, x.field, x.value, today).length === 0), rows, today);
+    const needs = formItems(s, people, known, today);
+    const roles = new Map(people.map((p) => [p.subjectId, p.role]));
+    const ws = c.workspaceId;
+
+    let groups = await q.submissionGroup.findMany({ where: { caseId: c.id }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
+    let filings = await q.filing.findMany({ where: { caseId: c.id }, select: { id: true, subjectId: true, active: true } });
+    const items = await q.filingItem.findMany({ where: { filing: { caseId: c.id } }, select: { id: true, filingId: true, formKey: true, subjectId: true, active: true } });
+    const filers = new Set(derived.filings.map((f) => f.applicants[0].subject));
+    const missing = derived.filings.filter((f) => !filings.some((x) => x.subjectId === f.applicants[0].subject));
+    const filingsOn = filings.filter((f) => !f.active && filers.has(f.subjectId)).map((f) => f.id), filingsOff = filings.filter((f) => f.active && !filers.has(f.subjectId)).map((f) => f.id);
+    let filingOf = new Map(filings.filter((f) => filers.has(f.subjectId)).map((f) => [f.subjectId, f.id]));
+    const key = (i: { filingId: string; formKey: string; subjectId: string }) => `${i.filingId}|${i.formKey}|${i.subjectId}`;
+    const itemPlan = () => {
       const wanted = new Set(needs.filter((n) => filingOf.has(n.subject)).map((n) => `${filingOf.get(n.subject)}|${n.form}|${n.subject}`));
-      const key = (i: { filingId: string; formKey: string; subjectId: string }) => `${i.filingId}|${i.formKey}|${i.subjectId}`;
-      const newItems = needs.filter((n) => filingOf.has(n.subject) && !items.some((i) => key(i) === `${filingOf.get(n.subject)}|${n.form}|${n.subject}`))
-        .map((n) => ({ workspaceId: ws, filingId: filingOf.get(n.subject)!, kind: "form", formKey: n.form, subjectId: n.subject, channel: n.channel }));
-      if (newItems.length) await tx.filingItem.createMany({ data: newItems, skipDuplicates: true });
-      await flip(items.filter((i) => !i.active && wanted.has(key(i))).map((i) => i.id), items.filter((i) => i.active && !wanted.has(key(i))).map((i) => i.id), "filingItem");
-
-      const [allFilings, allItems, accepts] = await Promise.all([
-        tx.filing.findMany({ where: { caseId: c.id }, include: { applicants: true }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }),
-        tx.filingItem.findMany({ where: { filing: { caseId: c.id } }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }),
-        acceptsOf(this.db, ws),
-      ]);
-      const view = prepareView({ derived, portal: s.combination.portal ?? null, needs, labels: new Map(people.map((p) => [p.subjectId, p.label])), accepts: (form) => accepts.get(form),
-        filings: allFilings.map((f) => ({ ...f, applicants: f.applicants.map((a) => ({ subjectId: a.subjectId, role: a.role, mode: a.mode })) })),
-        groups, items: allItems.map((i) => ({ ...i, channel: i.channel as Channel })) });
-      return { ...head, ...view };
-    }, { timeout: 15_000 });
+      return { add: needs.filter((n) => filingOf.has(n.subject) && !items.some((i) => key(i) === `${filingOf.get(n.subject)}|${n.form}|${n.subject}`)),
+        on: items.filter((i) => !i.active && wanted.has(key(i))).map((i) => i.id), off: items.filter((i) => i.active && !wanted.has(key(i))).map((i) => i.id) };
+    };
+    let plan = itemPlan();
+    const changes = (!groups.length && derived.filings.length) || missing.length || filingsOn.length || filingsOff.length || plan.add.length || plan.on.length || plan.off.length;
+    if (changes && !write) return null;
+    if (changes) {
+      if (!groups.length && derived.filings.length) groups = [await q.submissionGroup.create({ data: { workspaceId: ws, caseId: c.id, kind: "family" } })];
+      const fresh = missing.map((f) => ({ id: randomUUID(), workspaceId: ws, caseId: c.id, submissionGroupId: groups[0].id, subjectId: f.applicants[0].subject, combinationKey: f.combination, mode: f.mode }));
+      if (fresh.length) {
+        await q.filing.createMany({ data: fresh });
+        await q.filingApplicant.createMany({ data: fresh.map((f) => ({ filingId: f.id, subjectId: f.subjectId, role: roles.get(f.subjectId) ?? "principal", mode: "applying" })), skipDuplicates: true });
+        filings = [...filings, ...fresh.map((f) => ({ id: f.id, subjectId: f.subjectId, active: true }))];
+        filingOf = new Map(filings.filter((f) => filers.has(f.subjectId)).map((f) => [f.subjectId, f.id]));
+        plan = itemPlan();
+      }
+      if (filingsOn.length) await q.filing.updateMany({ where: { id: { in: filingsOn } }, data: { active: true } });
+      if (filingsOff.length) await q.filing.updateMany({ where: { id: { in: filingsOff } }, data: { active: false } });
+      if (plan.add.length) await q.filingItem.createMany({ data: plan.add.map((n) => ({ workspaceId: ws, filingId: filingOf.get(n.subject)!, kind: "form", formKey: n.form, subjectId: n.subject, channel: n.channel })), skipDuplicates: true });
+      if (plan.on.length) await q.filingItem.updateMany({ where: { id: { in: plan.on } }, data: { active: true } });
+      if (plan.off.length) await q.filingItem.updateMany({ where: { id: { in: plan.off } }, data: { active: false } });
+    }
+    const [allFilings, allItems, accepts] = await Promise.all([
+      q.filing.findMany({ where: { caseId: c.id }, include: { applicants: true }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }),
+      q.filingItem.findMany({ where: { filing: { caseId: c.id } }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }),
+      acceptsOf(this.db, ws),
+    ]);
+    const view = prepareView({ derived, portal: s.combination.portal ?? null, needs, labels: new Map(people.map((p) => [p.subjectId, p.label])), accepts: (form) => accepts.get(form),
+      filings: allFilings.map((f) => ({ ...f, applicants: f.applicants.map((a) => ({ subjectId: a.subjectId, role: a.role, mode: a.mode })) })),
+      groups, items: allItems.map((i) => ({ ...i, channel: i.channel as Channel })) });
+    return { ...head, ...view };
   }
 }
+
+type Tx = Pick<Db, "submissionGroup" | "filing" | "filingApplicant" | "filingItem">;
+type Reached = Awaited<ReturnType<Runtime["reach"]>>;
 
 @CaseRead()
 @Controller("api/runtime")
 export class CasePrepareController {
   constructor(@Inject(CasePrepare) private readonly x: CasePrepare) {}
+  // Break B4: HEAD would run the GET handler and store rows; it is refused (405), never answered from a write.
+  @Head("cases/:id/prepare") head() { fail("HEAD is not offered on /prepare: use GET.", HttpStatus.METHOD_NOT_ALLOWED); }
   @Get("cases/:id/prepare") view(@Headers("x-actor") a: H, @Param("id") id: string) { return this.x.view(actorOf(a), id); }
 }
