@@ -22,7 +22,7 @@ export function OverviewTab({ d, sum, show }: { d: CombinationView; sum: Combina
     <div className="space-y-5" data-overview>
       {/* X1 slice C3: the setup strip replaces "Missing before firms can use it"; ?show=missing (the header's "See n
           missing") lands on it. */}
-      {sum?.setup ? <SetupStrip id={id} setup={sum.setup} landRef={stripRef} /> : null}
+      {sum?.setup ? <SetupStrip id={id} setup={sum.setup} landRef={stripRef} /> : !sum ? <p className="rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm text-text-muted" role="status" data-setup-strip-loading>Loading the setup steps…</p> : null}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Forms" value={k.forms} sub={<>{k.map_boxes} form field{k.map_boxes === 1 ? "" : "s"} matched to shared fields · <Link className="text-text-link underline" to={`/c/${id}/forms`}>see them</Link></>} />
         <Stat label="Questions" value={row?.counts?.questions ?? 0} sub={`questions across all people (each person role counted) · ${k.sections} sections`} />

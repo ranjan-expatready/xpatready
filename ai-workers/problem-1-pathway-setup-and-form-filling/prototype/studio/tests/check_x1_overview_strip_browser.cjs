@@ -56,6 +56,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const fromStrip = { forms: 0, documents: 0, questionnaires: 0 }; for (const l of links) if (l.tab in fromStrip) fromStrip[l.tab] += l.count;
   step("C11.10 X1 C3: the tab badges equal the strip (Forms, Documents, Questionnaires)", ["forms", "documents", "questionnaires"].every((t) => badges[t] === fromStrip[t]) && JSON.stringify(fromStrip) === JSON.stringify(tabCounts(vvSum.setup)), { badges, fromStrip });
   step("C11.10 X1 C3 fail: a tab with nothing open in the strip has no badge", fromStrip.questionnaires === 0 && badges.questionnaires === 0);
+  // Review minors 1, 2, 5 (c0ccd2f6).
+  step("C11.10 X1 C3 (review m2): the marks' legend is a visible line, not a hover-only tooltip", /✓ done · ● next · ◐ AI at work · ⧗ waiting for someone else/.test(await p.locator("[data-strip-legend]").innerText()));
+  step("C11.12 X1 C3 (review m5): people counts the immigration expert has not confirmed carry the Sample label", (await p.locator('[data-step-row="people"] [data-step-summary]').innerText()).includes("Sample"));
+  const shadow = () => p.locator('[data-open-item="pages:record"]').evaluate((e) => getComputedStyle(e).boxShadow);
+  const unfocused = await shadow();
+  await p.locator('[data-open-item="pages:record"]').focus();
+  const ring = await shadow();
+  step("C11.10 X1 C3 (review m1): a strip link shows a focus ring from the keyboard (the page resets outlines); none when not focused", ring !== unfocused && /rgb\((?!255, 255, 255|0, 0, 0)/.test(ring) && !/rgb\((?!255, 255, 255|0, 0, 0)/.test(unfocused), `${unfocused} → ${ring}`);
   await p.screenshot({ path: path.join(SHOTS, "01-overview-strip-author-1440.png"), fullPage: true });
   await axe("Overview with the strip (author)");
   // Keyboard: Tab reaches the first item's link; Enter lands on Forms with the item focused (C1's landing).
