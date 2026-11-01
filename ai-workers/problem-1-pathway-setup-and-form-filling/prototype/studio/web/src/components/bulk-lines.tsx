@@ -100,7 +100,7 @@ function PreviewDialog({ combinationId, line, op, onClose, onApplied }: { combin
   const counts = pv ? [pv.counts.tickable ? `${pv.counts.tickable} will ${op === "add" ? "change" : "be removed"}` : "", pv.counts.waits ? `${pv.counts.waits} wait${pv.counts.waits === 1 ? "s" : ""}` : "", pv.counts.cannot ? `${pv.counts.cannot} cannot` : "", pv.counts.nothing ? `${pv.counts.nothing} no change` : ""].filter(Boolean).join(" · ") : "";
   return (
     <Dialog open wide onOpenChange={(o) => { if (!o && !busy) onClose(); }} title={`${op === "add" ? "Copy" : "Remove"} ${line.short} ${op === "add" ? "to" : "from"} other combinations`}
-      description={<span data-bulk-intro>{pv?.line.words ? <>Line: {pv.line.words}. </> : null}{op === "add" ? PREVIEW_INTRO : PREVIEW_REMOVE_INTRO}</span>}
+      description={<span data-bulk-intro>{pv?.line.words ? <>Line: {pv.line.words.replace(/[.\s]+$/, "")}. </> : null}{op === "add" ? PREVIEW_INTRO : PREVIEW_REMOVE_INTRO}</span>}
       footer={<><Button variant="ghost" onClick={onClose} disabled={busy}>Cancel</Button><Button variant={op === "remove" ? "destructive" : "default"} onClick={() => void go()} busy={busy} disabled={!pv || !n} data-bulk-apply>{verb} {op === "add" ? "to" : "from"} {n} combination{n === 1 ? "" : "s"}</Button></>}>
       <div className="space-y-3" data-bulk-preview={op}>
         {error ? <Notice tone="danger" title="Nothing was changed" action={<Button size="sm" variant="ghost" onClick={again}>Preview again</Button>}><span data-bulk-error>{error}</span></Notice> : null}
@@ -150,7 +150,8 @@ function CopyFromDialog({ combinationId, onClose, onApplied }: { combinationId: 
     setLoading(true);
     try {
       const r = await api<CopyFromResult>("/lines/copy/preview", { method: "POST", json: { sourceId: id, targetId: combinationId } });
-      setPv(r); setTicked(new Set(r.lines.filter((l) => l.outcome === "WILL_ADD").map((l) => `${l.kind}|${l.key}`)));
+      // Nothing ticked at first: the person ticks the line they came for (a source may have 30 lines; #281 Question 1).
+      setPv(r); setTicked(new Set());
     } catch (e) { setError(msg(e)); } finally { setLoading(false); }
   };
   const n = ticked.size;

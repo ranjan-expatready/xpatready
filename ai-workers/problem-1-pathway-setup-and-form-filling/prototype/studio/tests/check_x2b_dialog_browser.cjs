@@ -57,7 +57,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const dlg = p.getByRole("dialog", { name: `Copy ${F} to other combinations` });
   await dlg.waitFor(); await dlg.locator("[data-bulk-row]").first().waitFor({ timeout: 30000 });
   const intro = await dlg.locator("[data-bulk-intro]").innerText();
-  step("C1.5 preview: the line in words and the concept §5 intro", intro.includes("Nothing changes until you choose Add.") && intro.includes(F), intro);
+  step("C1.5 preview: the line in words and the concept §5 intro", intro.includes("Nothing changes until you choose Add.") && intro.includes(F) && !intro.includes(".."), intro);
   const willAdd = await dlg.locator('[data-bulk-row="WILL_ADD"]').count();
   const cannot = await dlg.locator('[data-bulk-row^="CANNOT"]').count();
   step("C1.5 preview: one row per other combination with its full trail, will-change rows ticked, others not tickable", willAdd > 0 && (await dlg.locator('[data-bulk-row="WILL_ADD"] input:checked').count()) === willAdd && (await dlg.locator('[data-bulk-row^="CANNOT"] input:disabled').count()) === cannot && (await dlg.locator("[data-bulk-row] td:nth-child(2)").first().innerText()).includes("›"), `${willAdd} add, ${cannot} cannot`);
@@ -149,7 +149,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const can = await fdlg.locator('[data-copy-from-row="WILL_ADD"]').count();
   step("C1.5 copy from: its lines each say what happens here; lines that cannot come are not tickable", rows > 0 && can > 0 && (await fdlg.locator('[data-copy-from-row^="CANNOT"] input:disabled').count()) === (await fdlg.locator('[data-copy-from-row^="CANNOT"]').count()), `${rows} rows, ${can} will add`);
   await state("copy-from");
-  for (const r of await fdlg.locator('[data-copy-from-row="WILL_ADD"]').all()) { if ((await r.getAttribute("data-line-key")) !== "IMM 5707") await r.locator("input").uncheck(); }
+  step("C1.5 copy from: nothing is ticked at first, and Add is not offered until a line is", (await fdlg.locator("[data-copy-from-row] input:checked").count()) === 0 && await fdlg.locator("[data-copy-from-apply]").isDisabled());
+  await fdlg.locator('[data-copy-from-row="WILL_ADD"][data-line-key="IMM 5707"] input').check();
   const fbtn = fdlg.locator("[data-copy-from-apply]");
   step("C1.5 copy from: the button counts the ticked lines", (await fbtn.innerText()).trim() === "Add 1 line", await fbtn.innerText());
   await fbtn.click();
