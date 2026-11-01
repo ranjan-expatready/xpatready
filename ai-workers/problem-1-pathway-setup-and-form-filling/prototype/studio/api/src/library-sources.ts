@@ -44,7 +44,7 @@ const releaseLine = (ref: string | null | undefined): SourceLine => {
 /** PR #96 finding (a): only each row's newest version counts (a replaced form mapping or checklist line is no longer a
  *  source or a use), and only while that version is a draft or published (a retired newest one hides the older ones). */
 const LIVE = ["PUBLISHED", "DRAFT", "RETIRED"] as const;
-const current = <T extends { version: number; status: string }>(rows: T[], idOf: (r: T) => string): T[] => {
+export const current = <T extends { version: number; status: string }>(rows: T[], idOf: (r: T) => string): T[] => {
   const top = new Map<string, T>(); for (const r of rows) { const k = idOf(r), t = top.get(k); if (!t || r.version > t.version) top.set(k, r); }
   return [...top.values()].filter((r) => r.status === "PUBLISHED" || r.status === "DRAFT");
 };
@@ -99,11 +99,11 @@ export class LibrarySources {
   async usedIn(kind: Kind, workspaceId: string): Promise<Map<string, string[]>> {
     const label = new Map((await this.db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true } })).map((c) => [c.id, c.label]));
     const ids = await this.usedInIds(kind, workspaceId);
-    return new Map([...ids].map(([k, s]) => [k, [...new Set([...s].map((id) => label.get(id)).filter((l): l is string => !!l))].sort()]));
+    return new Map([...ids].map(([k, s]) => [k, [...new Set([...s].map((id) => label.get(id)).filter((l): l is string => !!l))].sort()] as [string, string[]]).filter(([, l]) => l.length));
   }
 
-  /** Combinations each item is used in, by id (where used, and reuse per combination). */
-  private async usedInIds(kind: Kind, workspaceId: string): Promise<Map<string, Set<string>>> {
+  /** C11.9: the same read by combination id (the lifecycle guard links each use and knows a retired combination). */
+  async usedInIds(kind: Kind, workspaceId: string): Promise<Map<string, Set<string>>> {
     const out = new Map<string, Set<string>>();
     const add = (key: string, combinationId: string) => { const s = out.get(key) ?? new Set(); s.add(combinationId); out.set(key, s); };
     if (kind === "section") for (const s of await this.db.sqrSectionSelection.findMany({ where: { workspaceId } })) add(s.sectionKey, s.combinationId);
@@ -217,7 +217,9 @@ export class LibrarySources {
     const workspaceId = await this.ws.id();
     const rows = await this.db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: key } });
     const newest = [...rows].sort((x, y) => y.version - x.version)[0];
-    if (!newest || newest.status === "RETIRED") throw problem(404, "Not found", `${key} is not in the shared library.`);
+    if (!newest) throw problem(404, "Not found", `${key} is not in the shared library.`);
+    // C11.9 review Ma2: a retired field is restored before it is renamed (said in words, not "not found").
+    if (newest.status === "RETIRED") throw problem(409, "Retired", `The field "${(newest.labelChecked && newest.label) || key}" is retired: it takes no new use or change. Restore it in Shared library › Fields first, or choose another.`);
     if (newest.mergedIntoKey) throw problem(409, "Merged", `${key} was merged into ${newest.mergedIntoKey}: rename that field instead.`);
     const group = newest.groupKey ?? key.split(".")[0], want = normalizeLabel(b.name);
     const twins = await this.db.canonicalField.findMany({ where: { workspaceId, groupKey: group, canonicalFieldKey: { not: key }, mergedIntoKey: null, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { canonicalFieldKey: true, label: true, aliases: true } });
@@ -242,6 +244,7 @@ export class LibrarySources {
     const all = await this.db.logicalSection.findMany({ where: { workspaceId }, orderBy: { version: "desc" } });
     const rows = all.filter((s) => s.sectionKey === key);
     if (!rows.length) throw problem(404, "Not found", `There is no section ${key}.`);
+    if (rows[0].status === "RETIRED") throw problem(409, "Retired", `The section "${rows[0].title}" is retired: it takes no new use or change. Restore it in Shared library › Sections first.`); // C11.9
     const latest = new Map<string, string>(); for (const s of all) if (!latest.has(s.sectionKey)) latest.set(s.sectionKey, s.title);
     const twin = [...latest].find(([k, t]) => k !== key && normalizeLabel(t) === normalizeLabel(b.name));
     if (twin) throw problem(409, "Same name", `There is already a section called "${twin[1]}". Use that one, or choose another title.`);
