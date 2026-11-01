@@ -88,10 +88,12 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const colours = await place.locator("[data-place]").evaluateAll((xs) => xs.map((x) => getComputedStyle(x).color));
   step("m6: the place is shown in its level colours, as links back to the lists, with nothing to change it here", (await place.innerText()).includes("Visitors") && new Set(colours).size >= 2 && await p.locator("main").getByRole("textbox", { name: /Program|Category|Pathway/ }).count() === 0, colours.join(" | "));
   step("item 5: Start setup lands on S5's Forms tab; the Start setup block is the finder's 'No form find yet' slot, one block with one find button", (await p.getByRole("tab", { selected: true }).innerText()).replace(/\d+$/, "").trim() === "Forms" /* X1: the tab may carry its setup count */ && /No form find yet/.test(await panel.innerText()) && await p.locator("main [data-find-forms]").count() === 1 && await p.locator("main [data-finder-start]").count() === 1 && await p.locator("main [data-finder]").count() === 1, (await panel.innerText()).slice(0, 200));
-  const head = p.locator("main [data-next-step]").first();
-  step("S3 fix 2: one call to action: the page's Next step is Find forms (no Add sources) while nothing is attached", (await head.innerText()).trim() === "Find forms" && await p.getByText("Add sources").count() === 0, await head.innerText());
-  await p.locator("main").click({ position: { x: 5, y: 5 } }); await head.click(); await p.waitForTimeout(800);
-  step("S3 fix 2: Find forms takes the person to the slot's one button (focused)", await p.evaluate(() => document.activeElement?.hasAttribute("data-find-forms") ?? false));
+  // QA-119: the header's Next step is the setup checklist's next item (step 2 here: the people list, the immigration
+  // expert's), not "Find forms"; the one find button stays the finder slot's.
+  const head = p.locator("[data-header-next]");
+  const nx = (await api(`/combinations/${cid}/summary`)).body.setup.next;
+  await p.waitForFunction((f) => document.querySelector("[data-header-next]")?.getAttribute("data-header-next") === f, nx.item.focus, { timeout: 15000 });
+  step("S3 fix 2 (QA-119): one call to action: the header names the checklist's next item, with no Add sources and no second find button", (await head.innerText()).includes(nx.item.text) && await p.getByText("Add sources").count() === 0 && await p.locator("[data-find-forms]").count() === 1, await head.innerText());
   const offerBtn = panel.locator("[data-find-forms]");
   const label = (await offerBtn.innerText()).trim();
   const offerTip = await tipOf(offerBtn);
