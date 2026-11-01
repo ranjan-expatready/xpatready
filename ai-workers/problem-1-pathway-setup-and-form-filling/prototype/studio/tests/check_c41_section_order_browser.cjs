@@ -3,11 +3,11 @@
 // pressed button after the section moves; one Undo puts it back; the first and last buttons are greyed with the reason
 // in words; the Approver sees no move buttons; the draft names the move for Review. Screenshots at 1440 and 1024 in
 // screens/W1-questions-and-documents/screenshots/c41-section-order/, axe (WCAG 2.2 AA) on each state. No model call (US$0).
-//   zsh studio/tools/isolated.sh runtime_c41 4441 start && node studio/tests/check_c41_section_order_browser.cjs 4441 xr_studio_runtime_c41
+//   zsh studio/tools/isolated.sh runtime_c41 4432 start && node studio/tests/check_c41_section_order_browser.cjs 4432 xr_studio_runtime_c41
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
-const PORT = Number(process.argv[2] ?? 4441), DB = process.argv[3] ?? "xr_studio_runtime_c41";
+const PORT = Number(process.argv[2] ?? 4432), DB = process.argv[3] ?? "xr_studio_runtime_c41";
 const BASE = `http://localhost:${PORT}`;
 const ROOT = path.resolve(__dirname, "..", "..", "..");
 const SHOTS = path.join(ROOT, "product", "screens", "W1-questions-and-documents", "screenshots", "c41-section-order"); fs.mkdirSync(SHOTS, { recursive: true });
@@ -75,6 +75,16 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C4.1 R1: the draft names the move for Review, in words", !!line && line.label.includes(`"${o0[0].title}" now 2nd`), line?.label);
   await state("moved");
 
+  // ======================================================== review Major 1: the focus is kept once, not taken after
+  const third = p.locator(`[data-section="${o0[2].key}"] button[aria-expanded]`);
+  await third.focus(); const y0 = await p.evaluate(() => window.scrollY);
+  await p.keyboard.press("Enter"); await settle();
+  const after = await p.evaluate(() => ({ expanded: document.activeElement?.getAttribute("aria-expanded"), section: document.activeElement?.closest("[data-section]")?.getAttribute("data-section"), move: document.activeElement?.getAttribute("data-move") }));
+  step("C4.1 Major 1 fail-guard: after a move, Enter on another section's header keeps focus on that header (not the Move button)", after.section === o0[2].key && !after.move && after.expanded === "true", JSON.stringify(after));
+  step("C4.1 Major 1 fail-guard: and the page does not jump back to the moved section", Math.abs((await p.evaluate(() => window.scrollY)) - y0) < 200, `${y0} → ${await p.evaluate(() => window.scrollY)}`);
+  await p.getByRole("button", { name: /Open all sections|Close all sections/ }).click(); await settle();
+  step("C4.1 Major 1 fail-guard: Open all sections keeps focus on its own button", /Open all sections|Close all sections/.test(await p.evaluate(() => document.activeElement?.textContent ?? "")), await p.evaluate(() => document.activeElement?.textContent ?? ""));
+
   // ======================================================== Undo
   await p.locator("[data-undo-toast]").getByRole("button", { name: "Undo" }).click();
   await p.locator("[data-undo-toast]").waitFor({ state: "detached", timeout: 15000 }); await settle();
@@ -85,7 +95,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // ======================================================== a stale tab is refused in words
   await api(`/combinations/${wp}/sections/${o0[2].key}/move`, { method: "POST", data: { direction: "up", seen: o0.map((x) => x.key) } });
   await p.locator(`[data-section="${o0[1].key}"] [data-move="up"]`).click();
-  await p.getByText(/was not moved: The sections were reordered since you opened this tab/).waitFor({ timeout: 15000 }); await settle();
+  await p.locator("[data-move-refused]").getByText(/was not moved: The sections were reordered since you opened this tab\. The order shown now is the current one/).waitFor({ timeout: 15000 }); await settle();
+  step("C4.1 m2: the refusal is titled for a section, not for rows", (await p.getByText("Section not moved").count()) === 1 && (await p.getByText(/row.? not changed/).count()) === 0);
   const o3 = await order();
   step("C4.1 R2 fail: a move from a stale tab is refused in words and the order shown refreshes", o3[1].key === o0[2].key && (await shownOrder()).indexOf(o0[2].key) < (await shownOrder()).indexOf(o0[1].key), o3.slice(0, 3).map((x) => x.title).join(", "));
   await state("stale-refused");

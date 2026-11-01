@@ -71,7 +71,7 @@ export async function buildSnapshots(db: PrismaClient, workspaceId: string, comb
   const [comps, nodes, fields, sections, questions, allSel, allForms, allReq, doctypes, allRules, derived, allChecks, answerLists, allSources] = await Promise.all([
     db.combination.findMany({ where: { id: { in: combinationIds } }, include: { program: true } }), db.programDef.findMany({ where: ws }),
     db.canonicalField.findMany({ where: ws }), db.logicalSection.findMany({ where: ws }), db.sectionQuestion.findMany({ where: ws }),
-    db.sqrSectionSelection.findMany({ where: inComp, orderBy: { sectionOrder: "asc" } }),
+    db.sqrSectionSelection.findMany({ where: inComp, orderBy: [{ sectionOrder: "asc" }, { sectionKey: "asc" }] }), // C4.1 m1: ties read the same everywhere
     db.combinationForm.findMany({ where: inComp, include: { form: { include: { editions: true } } } }),
     db.documentRequirement.findMany({ where: inComp }), db.documentType.findMany({ where: ws }),
     db.predicate.findMany({ where: inComp }), db.derivedField.findMany({ where: ws }), db.check.findMany({ where: inComp }),

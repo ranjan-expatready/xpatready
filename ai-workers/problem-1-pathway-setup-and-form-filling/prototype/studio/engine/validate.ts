@@ -189,8 +189,7 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
     const moved = now.map((k, i) => ({ k, i })).filter(({ k, i }) => was[i] !== k);
     if (moved.length) {
       const title = (k: string) => (next.sections as { id: string; title?: string }[]).find((y) => y.id === k)?.title ?? k;
-      const nth = (n: number) => { const t = n % 100, u = n % 10; return `${n}${t >= 11 && t <= 13 ? "th" : u === 1 ? "st" : u === 2 ? "nd" : u === 3 ? "rd" : "th"}`; };
-      out.push({ kind: "Section order", key: String((next.combination as any)?.key ?? "sections"), change: "changed", needs_sme: false, label: `Sections reordered: ${moved.map(({ k, i }) => `"${title(k)}" now ${nth(i + 1)}`).join(", ")}` });
+      out.push({ kind: "Section order", key: String((next.combination as any)?.key ?? "sections"), change: "changed", needs_sme: false, label: `Sections reordered: ${moved.map(({ k, i }) => `"${title(k)}" now ${ordinal(i + 1)}`).join(", ")}` });
     }
   }
   const boxes = (s: Snapshot | null) => new Map<string, any>((s?.field_maps ?? []).flatMap((m: any) => m.entries.map((e: any) => [`${m.form_edition}|${e.data_path}`, e] as [string, any])));
@@ -231,3 +230,6 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   for (const k of new Set([...Object.keys(prev ?? {}), ...Object.keys(next)])) if (prev && !covered.has(k) && canonical((prev as any)[k] ?? null) !== canonical((next as any)[k] ?? null)) out.push({ kind: "Configuration", key: k, change: "changed", needs_sme: true, label: `${k} changed` });
   return out;
 }
+
+/** "1st", "2nd", "3rd", "11th": a section's place said in words (C4.1; Review line and history line). */
+export function ordinal(n: number) { const t = n % 100, u = n % 10; return `${n}${t >= 11 && t <= 13 ? "th" : u === 1 ? "st" : u === 2 ? "nd" : u === 3 ? "rd" : "th"}`; }

@@ -2,10 +2,10 @@
 // and Move down, one move is one draft change of this combination, named on Review, and goes out only in its one release
 // (C4.8). The order is the same for every person, never changes another combination or the library, and a move from an
 // older order is refused. A pass and a fail per rule, on an isolated copy with the sample loaded. Rules only: no AI (US$0).
-//   zsh studio/tools/isolated.sh runtime_c41 4441 start && tsx studio/tests/check_c41_section_order.ts 4441 xr_studio_runtime_c41
+//   zsh studio/tools/isolated.sh runtime_c41 4432 start && tsx studio/tests/check_c41_section_order.ts 4432 xr_studio_runtime_c41
 import { execFileSync } from "node:child_process";
 
-const PORT = Number(process.argv[2] ?? 4441), DB = process.argv[3] ?? "xr_studio_runtime_c41";
+const PORT = Number(process.argv[2] ?? 4432), DB = process.argv[3] ?? "xr_studio_runtime_c41";
 let pass = 0, fail = 0;
 const ok = (name: string, c: boolean, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 240)}` : ""}`); };
 const KEYS = /\b[a-z]+_[a-z_]+\b/;
@@ -115,8 +115,21 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   sql(`update combination set retired_at = null where id='${vv}'`);
   r = await call("POST", `/combinations/00000000-0000-0000-0000-000000000000/sections/${first}/move`, { direction: "up", seen: [] });
   ok("C4.1 fail: an unknown combination is 404 in words (never a 500)", r.status === 404, `${r.status} ${words(r)}`);
-  r = await fetch(`http://localhost:${PORT}/api/combinations/${wp}/section-order`).then((x) => x.status);
-  ok("C4.1 fail: reading the order needs a configuration person (401 without one)", r === 401 || r === 403, r);
+  const anon = await fetch(`http://localhost:${PORT}/api/combinations/${wp}/section-order`).then((x) => x.status);
+  ok("C4.1 fail: reading the order needs a configuration person (401 without one)", anon === 401 || anon === 403, anon);
+
+  // ---------------------------------------------------------------- review m1: a section added back takes a place of its own
+  const oa = await order(), lastKey = oa[oa.length - 1];
+  await call("DELETE", `/combinations/${wp}/sections/${oa[0]}`);
+  await call("POST", `/combinations/${wp}/sections/${oa[0]}`, {});
+  const places = sql(`select count(*) || '/' || count(distinct section_order) from sqr_section_selection where combination_id='${wp}'`);
+  const ob = await order();
+  ok("C4.1 m1 pass: a section removed and added back goes last, with a place no other section has", ob[ob.length - 1] === oa[0] && ob[ob.length - 2] === lastKey && places.split("/")[0] === places.split("/")[1], { places, tail: ob.slice(-2) });
+  // A tie stored by an older build reads the same in the order, the draft and the screen (key order breaks it).
+  sql(`update sqr_section_selection set section_order = 0 where combination_id='${wp}' and section_key in ('${ob[0]}','${ob[1]}')`);
+  const tie = await order();
+  const shownTie = (((await call("GET", `/combinations/${wp}/workspace?tab=questionnaires`)).body.questionnaire?.sections ?? []) as { id: string }[]).map((x) => x.id).filter((k) => tie.includes(k));
+  ok("C4.1 m1 fail-guard: two sections with one place show in the same order on the tab as the move buttons read", shownTie.join() === tie.filter((k) => shownTie.includes(k)).join(), { tie: tie.slice(0, 2), shown: shownTie.slice(0, 2) });
 
   console.log(`\n${pass}/${pass + fail} passed`);
   process.exit(fail ? 1 : 0);

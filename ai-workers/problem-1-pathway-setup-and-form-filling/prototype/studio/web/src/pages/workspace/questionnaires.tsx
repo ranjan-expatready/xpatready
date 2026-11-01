@@ -273,6 +273,7 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
   // C4.1 (P-216): the combination's own section order (the sections it chose); Move up / Move down on each header.
   const secOrder = useQuery({ queryKey: ["section-order", id], queryFn: () => api<{ order: { key: string; title: string }[] }>(`/combinations/${id}/section-order`) });
   const [moved, setMoved] = React.useState<string | null>(null);
+  const [moveRefused, setMoveRefused] = React.useState<string | null>(null);
   const moving = React.useRef(false); // a double click sends one move, not a second one from the order before it
   const sel = useAction((b: { key: string; on: boolean }) => api(`/combinations/${id}/sections/${b.key}`, { method: b.on ? "POST" : "DELETE" }), { success: "Questionnaire sections updated", invalidate: [["combination", id], ["config", id], ["preview"], ["fact-sources", id], ["section-order", id]] });
   React.useEffect(() => { setPicked(new Set()); setFilter("all"); }, [q?.role]);
@@ -287,18 +288,21 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
     const seen = (qc.getQueryData<{ order: { key: string }[] }>(["section-order", id])?.order ?? []).map((y) => y.key);
     let r: { position: number; of: number; order: { key: string; title: string }[] };
     try { r = await api(`/combinations/${id}/sections/${x.key}/move`, { method: "POST", json: { direction, seen } }); }
-    catch (e) { setRefused([{ role: "", fact: "", label: "", message: `"${x.title}" was not moved: ${(e as Error).message}` }]); reload(); return; }
+    catch (e) { setMoveRefused(`"${x.title}" was not moved: ${(e as Error).message.replace(/ Reload to see the order now, then move it again\.$/, " The order shown now is the current one; move it again if you still want to.")}`); reload(); return; }
+    setMoveRefused(null);
     qc.setQueryData(["section-order", id], { order: r.order });
     setMoved(`${x.key}|${direction}`); reload();
     if (!undo) undoToast.show(`"${x.title}" moved ${direction}: now ${r.position} of ${r.of} sections, for every person`, () => move(x, direction === "up" ? "down" : "up", true));
   };
-  // Keep the keyboard on the button that was pressed after the section changes place (React moves the node).
+  // Keep the keyboard on the button that was pressed after the section changes place (React moves the node), once:
+  // the next render belongs to whatever the author does next (review Major 1).
   React.useEffect(() => {
     if (!moved) return;
     const [key, dir] = moved.split("|");
     const b = document.querySelector<HTMLButtonElement>(`[data-section="${CSS.escape(key)}"] [data-move="${dir}"]`);
     if (b && !b.disabled) b.focus(); else document.querySelector<HTMLButtonElement>(`[data-section="${CSS.escape(key)}"] [data-move]:not(:disabled)`)?.focus();
-  });
+    setMoved(null);
+  }, [moved]);
   const remove = async (x: { key: string; title: string }) => {
     let r: { sectionOrder: number | null };
     try { r = await api<{ sectionOrder: number | null }>(`/combinations/${id}/sections/${x.key}`, { method: "DELETE" }); }
@@ -389,6 +393,7 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
       {filter === "pqr" ? <PqrSet id={id} roleLabel={role?.label ?? q.role} n={mine.filter((f) => f.prequalification).length} /> : null}
       {pickedRows.length && canAuthor ? <BulkBar id={id} picked={pickedRows} onClear={() => setPicked(new Set())} onDone={(r, undo) => { setRefused(r.refused); if (r.saved) { setPicked(new Set()); undoToast.show(`${r.what.charAt(0).toUpperCase()}${r.what.slice(1)} on ${r.saved} question${r.saved === 1 ? "" : "s"}`, undo); } }} /> : null}
       {refused.length ? <Notice tone="warn" title={`${refused.length} row${refused.length === 1 ? "" : "s"} not changed`} action={<Button size="sm" variant="ghost" onClick={() => setRefused([])}>Dismiss</Button>}><ul className="mt-1 space-y-0.5" data-bulk-refused>{refused.map((x, i) => <li key={i}>{x.label && !x.message.includes(x.label) ? <><span className="font-medium">{x.label}</span>: </> : null}{x.message}</li>)}</ul></Notice> : null}
+      {moveRefused ? <Notice tone="warn" title="Section not moved" action={<Button size="sm" variant="ghost" onClick={() => setMoveRefused(null)}>Dismiss</Button>}><span data-move-refused>{moveRefused}</span></Notice> : null}
       {undoToast.link ? <p className="text-xs text-text-muted" data-undo-note>Last change on this tab{undoToast.link}</p> : null}
       {/* S2-1 (Lead, 29 Oct): the same sources and numbers as the chips and the strip (slice 1's rules), not the older
           placement count (client or case officer). */}
@@ -462,7 +467,7 @@ function MoveButtons({ s, order, onMove }: { s: { id: string; title: string }; o
     <span className="flex items-center gap-0.5" data-move-buttons>
       {(["up", "down"] as const).map((d) => (
         // A disabled button shows no tooltip, so the reason sits on its wrapper (and in its name for screen readers).
-        <span key={d} title={why[d] ?? undefined} data-move-why={why[d] ?? undefined}>
+        <span key={d} title={why[d] ?? `Move ${d}: ${s.title}`} data-move-why={why[d] ?? undefined}>
           <Button size="sm" variant="ghost" data-move={d} disabled={!!why[d]} aria-label={`Move ${d}: ${s.title}${why[d] ? ` (${why[d]})` : ""}`} onClick={() => onMove(d)}>
             {d === "up" ? <ArrowUp aria-hidden /> : <ArrowDown aria-hidden />}<span className="sr-only sm:not-sr-only">Move {d}</span>
           </Button>

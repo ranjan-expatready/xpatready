@@ -7,7 +7,7 @@ import { canRelease } from "../../../contracts/rules.ts";
 import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
 import { buildSnapshot, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
 import { slug } from "../../engine/import.ts";
-import { checkCondition, diff, validate } from "../../engine/validate.ts";
+import { checkCondition, diff, ordinal, validate } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, need, revise, RUNTIME_ACTORS, strip, Workspace, type Actor } from "./core.ts";
 import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { recordAction, snapshotLines } from "./form-uses.ts";
@@ -485,7 +485,8 @@ export class Studio {
     if (on === !!had) return { ok: true, sectionOrder: had?.sectionOrder ?? null };
     if (on) {
       const back = Number.isInteger(b?.sectionOrder) && (b!.sectionOrder as number) >= 0 ? b!.sectionOrder as number : null;
-      const n = back ?? await this.db.sqrSectionSelection.count({ where: { combinationId } });
+      // C4.1 review m1: a new section goes after the last place in use (never a place another section has).
+      const n = back ?? ((await this.db.sqrSectionSelection.aggregate({ where: { combinationId }, _max: { sectionOrder: true } }))._max.sectionOrder ?? -1) + 1;
       await this.db.sqrSectionSelection.upsert({ where: { combinationId_sectionKey: { combinationId, sectionKey } }, update: {}, create: { workspaceId: c.workspaceId, combinationId, sectionKey, sectionOrder: n } });
     } else {
       sectionOrder = had!.sectionOrder;
@@ -882,6 +883,3 @@ export class Studio {
 /** QA-74: the simulated people's names for stored ids (one id, or several joined by commas), never "user-A" on screen. */
 const PEOPLE: readonly { id: string; name: string }[] = [...ACTORS, ...RUNTIME_ACTORS];
 export const peopleNames = (ids: string | null) => (ids ?? "").split(",").filter(Boolean).map((id) => PEOPLE.find((p) => p.id === id.trim())?.name ?? id).join(", ");
-
-/** "1st", "2nd", "3rd", "11th": a section's place said in words (C4.1). */
-export function ordinal(n: number) { const t = n % 100, u = n % 10; return `${n}${t >= 11 && t <= 13 ? "th" : u === 1 ? "st" : u === 2 ? "nd" : u === 3 ? "rd" : "th"}`; }
