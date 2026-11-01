@@ -15,6 +15,7 @@ import { PreviewTab as StudioPreview } from "@/pages/preview";
 import { ReviewTab } from "@/pages/review";
 import { OverviewTab } from "@/pages/workspace/overview";
 import { FormsTab } from "@/pages/workspace/forms";
+import { BeforeForms } from "@/components/before-forms";
 import { QuestionnairesTab } from "@/pages/workspace/questionnaires";
 import { DocumentsTab } from "@/pages/workspace/documents";
 import { PreviewTab, usePreviewParams } from "@/pages/workspace/preview";
@@ -30,11 +31,31 @@ const peopleWords = (ps: { label: string; min: number; max: number }[]) => (ps ?
  *  level a link back to the list filtered to it, the status, the facts in one muted line and the one next step; one row
  *  of tabs in setup order (walkthrough v2 S5). Old addresses (Sources and forms, Configuration) open the tab that now
  *  holds their part. */
+/** A field-map job finished while its form is not yet marked DRAFTED (the server's second write is still to come). Only
+ *  the form's newest field-map job counts, and only for 30 s after this tab first saw that state: a stub pass (or an
+ *  older job) also ends COMPLETED with the form still READ, for good, and must not keep the tab asking (#147 Devin). */
+const SETTLE_MS = 30_000;
+const settlingSince = new Map<string, number>(); // job id → when this tab first saw it finished with its form READ
+const settling = (d: unknown) => {
+  const v = d as { jobs?: { id: string; kind: string; status: string; attachmentId?: string | null }[]; attachments?: { id: string; status: string }[] } | undefined;
+  const now = Date.now();
+  return !!v?.attachments?.some((a) => {
+    if (a.status !== "READ") return false;
+    const newest = v.jobs?.find((j) => j.kind === "field_map" && j.attachmentId === a.id); // newest first
+    if (newest?.status !== "COMPLETED") return false;
+    const since = settlingSince.get(newest.id) ?? now; settlingSince.set(newest.id, since);
+    return now - since < SETTLE_MS;
+  });
+};
+
 export function CombinationPage() {
   const { id, tab: asked = "overview" } = useParams();
   const [sp] = useSearchParams();
   const tab = tabOf(asked, sp.get("area"));
-  const o = useApi<CombinationView>(["combination", id], `/combinations/${id}`, { refetchInterval: (q) => (q.state.data?.jobs?.some((j) => j.status === "RUNNING" || j.status === "QUEUED") ? 3000 : false) });
+  // #143 review (Major): the server marks a field-map job COMPLETED a moment before its form becomes DRAFTED (two
+  // writes). A fetch between them saw no running job and stopped, so "Review AI proposals" never appeared until a reload.
+  // The tab also keeps asking while a finished field-map job's form still reads READ.
+  const o = useApi<CombinationView>(["combination", id], `/combinations/${id}`, { refetchInterval: (q) => (q.state.data?.jobs?.some((j) => j.status === "RUNNING" || j.status === "QUEUED") || settling(q.state.data) ? 3000 : false) });
   const sum = useApi<CombinationSummary>(["combination-summary", id], `/combinations/${id}/summary`, { refetchInterval: (q) => (q.state.data?.row?.aiRunning ? 3000 : false) });
   if (asked !== tab) return <Navigate replace to={`/c/${id}/${tab}`} />;
   if (o.isLoading) return <Spinner label="Loading combination" />;
@@ -99,7 +120,7 @@ function WorkspaceTab({ id, tab, hasRelease }: { id: string; tab: "forms" | "que
   if (w.isLoading) return <Spinner label={`Loading ${tab}`} />;
   if (w.isError || !w.data) return <ErrorState title="This tab could not be loaded" description={(w.error as Error | null)?.message ?? "No answer from the studio."} action={<button className="text-text-link underline" onClick={() => void w.refetch()}>Try again</button>} />;
   const v = w.data;
-  if (v.tab === "forms") return <FormsTab id={id} lines={v.lines} filing={v.filing} filingDetail={v.filingDetail} account={v.account ?? null} accountKey={v.accountKey ?? null} problems={v.problems} removed={v.removed} fromLibrary={v.fromLibrary} lastChange={v.lastChange} />;
+  if (v.tab === "forms") return <div className="space-y-6"><BeforeForms id={id} people={v.people} /><FormsTab id={id} lines={v.lines} filing={v.filing} filingDetail={v.filingDetail} account={v.account ?? null} accountKey={v.accountKey ?? null} problems={v.problems} removed={v.removed} fromLibrary={v.fromLibrary} lastChange={v.lastChange} /></div>;
   if (v.tab === "questionnaires") return <QuestionnairesTab id={id} people={v.people} questionnaire={v.questionnaire} available={v.available} />;
   if (v.tab === "preview") return <PreviewTab id={id} p={v.preview} empty={v.empty} fetching={w.isFetching} hasRelease={hasRelease} />;
   return null;

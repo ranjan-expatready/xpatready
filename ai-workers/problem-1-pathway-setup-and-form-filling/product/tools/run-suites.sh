@@ -25,6 +25,11 @@ while [ $# -gt 0 ]; do case "$1" in
 esac; shift; done
 # Not regression suites: the 100-program exercise needs its own fixture copy (run by hand, see its usage line).
 SKIP="check_catalogue_scale.cjs"
+# Quarantine (P-205, 31 Oct): a suite that fails at random is skipped in PR and merge-queue checks (--changed) until its
+# fix merges, so one unreliable test cannot stall every batch; the nightly full run still runs it. Remove a name when
+# its fix lands. check_cost_warning_browser.cjs: line 111 waits 30 s for "Start live AI draft"; passed in 19 s on one
+# batch and timed out at 44-50 s on others with the same code (runs 41231402694, 41231387000, 41240923705); fix X8a.
+QUARANTINE="check_cost_warning_browser.cjs"
 OUT="${SUITES_OUT:-$ROOT/$S/var/suites}"; mkdir -p "$OUT"
 TSX="$S/node_modules/.bin/tsx --tsconfig $S/api/tsconfig.json"
 export P2_LEDGER_DIR="${P2_LEDGER_DIR_SUITES:-$OUT/p2-ledger-$$}"; mkdir -p "$P2_LEDGER_DIR"   # QA-90 / P-179: test runs never write the real ledger (forms plan-p179 §5)
@@ -100,6 +105,7 @@ run() {  # $1 file, $2 label, rest: command
 for path in "$S"/tests/check_*.ts "$S"/tests/check_*.cjs; do
   f=$(basename "$path"); case " $SKIP " in *" $f "*) continue;; esac
   picked "$f" || continue
+  case " $QUARANTINE " in *" $f "*) [ -n "$CHANGED" ] && { rows+=("| $f | quarantined | | fails at random: nightly only until its fix merges (P-205) |"); continue; };; esac
   usage=$(grep -m1 -E "studio/tests/$f" "$path")
   if [ "$f" = check_studio_browser.cjs ]; then
     if [ "$DEMO" = 0 ] && [ "${SUITES_BROWSER_ISOLATED:-}" = 1 ]; then
