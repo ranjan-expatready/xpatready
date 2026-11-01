@@ -5,10 +5,10 @@
 // Part A is what #113 promises; part B is the checkpoint as DEMO.md defines it ("A and B released (A release 1 all PDF;
 // A release 2 mixed) … the thin family case on release 1 with IMM 5257 filled") and stays red after #113 until the
 // rows it waits on are built. No live AI (US$0): AI in a checkpoint is saved answers replayed (DEMO.md).
-//   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C10.1.test.ts 4440 xr_studio_accept
+//   zsh studio/tools/isolated.sh accept 4448 start && tsx studio/acceptance/C10.1.test.ts 4448 xr_studio_accept
 import { client, recorder } from "../tests/runtime/api.ts";
 
-const PORT = Number(process.argv[2] ?? 4440), DB = process.argv[3] ?? "xr_studio_accept";
+const PORT = Number(process.argv[2] ?? 4448), DB = process.argv[3] ?? "xr_studio_accept";
 const { call, sql } = client(PORT, DB);
 const { ok, summary } = recorder();
 const n = (q: string) => Number(sql(q) || 0);

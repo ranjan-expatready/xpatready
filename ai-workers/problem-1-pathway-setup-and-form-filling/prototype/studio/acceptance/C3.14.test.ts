@@ -1,55 +1,61 @@
 // Acceptance C3.14 (P-220, pack 3): the Checks list and Shared library › Rules list, read-only, with where used and
-// source (P-37; RULES-MODEL §7; Screen 04 concept BR-14, BR-15; contract §6 names GET /library/checks and
-// GET /library/rules). Status today: Not built (no API route; the web has an empty /library/checks page). Checks and
-// rules are stored per combination (check_def, predicate); the lists gather them across combinations. Rules only, US$0.
-//   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4440 xr_studio_accept \
-//     && tsx studio/acceptance/C3.14.test.ts 4440 xr_studio_accept
+// source (P-37; RULES-MODEL §2, §7; Screen 04 concept BR-14, BR-15). Status today: Not built on main. Open PR #294 builds
+// GET /library/checks and GET /library/rules; the tech lead (#295) asked these tests to follow its routes and words:
+//   checks: one row per check key across combinations {key, kind, kind_word, group, group_word, about, reads[{key, name}],
+//     used_in[{id, key, label}], differs, per_combination[], message, serious, source, unsourced, origin, status};
+//     kinds: cross_record and read_back → Consistency, readiness_warning → Document validity, any other group → Other.
+//   rules: {id, kind (rule | form_line | checklist_line | question), when, then, lives_on {combination, section, tab},
+//     used_in[], reads[], source, unsourced, origin, status}.
+// Filtering by kind, origin and combination happens on the screen (J5.2), not in the API. Rules only, US$0.
+//   zsh studio/tools/isolated.sh accept 4448 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4448 xr_studio_accept \
+//     && tsx studio/acceptance/C3.14.test.ts 4448 xr_studio_accept
 import { client, recorder } from "../tests/runtime/api.ts";
 
-const PORT = Number(process.argv[2] ?? 4440), DB = process.argv[3] ?? "xr_studio_accept";
+const PORT = Number(process.argv[2] ?? 4448), DB = process.argv[3] ?? "xr_studio_accept";
 const { call, sql } = client(PORT, DB);
 const { ok, summary } = recorder();
 type Row = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any -- loose API rows, as in the other checks
-const KINDS = ["Field validation", "Consistency", "Document validity", "AI review"];
-const rowsOf = (b: any) => (Array.isArray(b) ? b : (b?.rows ?? [])) as Row[]; // eslint-disable-line @typescript-eslint/no-explicit-any
-const usedIn = (r: Row) => (r.whereUsed ?? r.used_in ?? []).map((u: any) => (typeof u === "string" ? u : u.label ?? u.combination)) as string[]; // eslint-disable-line @typescript-eslint/no-explicit-any
-const plainWords = (s: unknown) => typeof s === "string" && s.length > 10 && !/[{}]|"op"|_[a-z]+\./.test(s);
+const KIND_WORDS = ["Field validation", "Consistency", "Document validity", "AI review", "Other"];
+const rowsOf = (b: unknown) => (Array.isArray(b) ? b : ((b as Row)?.rows ?? [])) as Row[];
+const keysIn = (r: Row) => (r.used_in ?? []).map((u: Row) => u.key) as string[];
 const count = (q: string) => Number(sql(q) || 0);
 
 (async () => {
   const vv = sql(`select id from combination where combination_key = 'vv.single'`);
   if (!vv || !count(`select count(*) from check_def where combination_id = '${vv}' and status = 'PUBLISHED'`)) { console.error("STOP  run tests/runtime/setup_visitor_visa.ts first (it seeds two Visitor visa section checks)"); process.exit(2); }
-  const auditBefore = count(`select count(*) from audit_event`);
 
   // ── Checks list (BR-15) ──
   const c = await call("GET", "/library/checks");
   const checks = rowsOf(c.body);
   ok("C3.14 checks: GET /library/checks answers 200 with rows", c.status === 200 && checks.length > 0, c.status);
-  const current = sql(`select d.check_key || '§' || cb.label from check_def d join combination cb on cb.id = d.combination_id where d.status = 'PUBLISHED' and cb.retired_at is null`).split("\n").filter(Boolean).map((x) => x.split("§"));
-  const missing = current.filter(([key, combo]) => !checks.some((r) => (r.key ?? r.check_key) === key && usedIn(r).includes(combo)));
+  ok("C3.14 checks pass: one row per check key across combinations, as many as the combinations hold", checks.length === count(`select count(distinct d.check_key) from check_def d join combination cb on cb.id = d.combination_id where d.status in ('DRAFT', 'PUBLISHED')`) && new Set(checks.map((r) => r.key)).size === checks.length, checks.length);
+  const current = sql(`select d.check_key || '§' || cb.combination_key from check_def d join combination cb on cb.id = d.combination_id where d.status = 'PUBLISHED'`).split("\n").filter(Boolean).map((x) => x.split("§"));
+  const missing = current.filter(([key, combo]) => !checks.some((r) => r.key === key && keysIn(r).includes(combo)));
   ok("C3.14 checks pass: every current check of every combination is on the list, with that combination under where used", current.length > 0 && missing.length === 0, missing.slice(0, 5));
-  ok("C3.14 checks BR-15: every row has a kind (Field validation · Consistency · Document validity · AI review)", checks.length > 0 && checks.every((r) => KINDS.includes(r.kind)), [...new Set(checks.map((r) => r.kind))]);
-  ok("C3.14 checks BR-15: every row says what it reads and when it runs, in words", checks.length > 0 && checks.every((r) => plainWords(r.reads ?? r.applies_to) && typeof (r.runs ?? r.when) === "string" && (r.runs ?? r.when).length > 3), checks.find((r) => !plainWords(r.reads ?? r.applies_to))?.key);
-  ok("C3.14 checks P-158/P-170: every row shows its source passage, or \"No source recorded\" when it has none", checks.length > 0 && checks.every((r) => (typeof r.source === "string" && r.source.length > 5) || r.unsourced === true), checks.filter((r) => !r.source && !r.unsourced).length);
-  ok("C3.14 checks: every row's origin reads AI, Person or From a reviewed release (no enum)", checks.length > 0 && checks.every((r) => /^(AI|Person|From a reviewed release)\b/.test(String(r.origin_words ?? r.origin ?? "")) && !/_/.test(String(r.origin_words ?? r.origin ?? ""))));
-  const kindOf = (key: string) => checks.find((r) => (r.key ?? r.check_key) === key && usedIn(r).includes("Visitor visa"))?.kind;
-  ok("C3.14 checks pass (RULES-MODEL §7): of the Visitor visa's two seeded checks, visit end before start is Consistency (two values) and funds above 0 is Field validation (one value)", kindOf("VV_VISIT_END_AFTER_START") === "Consistency" && kindOf("VV_FUNDS_ABOVE_ZERO") === "Field validation", [kindOf("VV_VISIT_END_AFTER_START"), kindOf("VV_FUNDS_ABOVE_ZERO")]);
-  const byKind = rowsOf((await call("GET", `/library/checks?kind=${encodeURIComponent("Consistency")}`)).body);
-  ok("C3.14 checks filter: ?kind=Consistency returns only Consistency checks", byKind.length > 0 && byKind.every((r) => r.kind === "Consistency") && byKind.length < checks.length);
-  const byCombo = rowsOf((await call("GET", `/library/checks?combination=${vv}`)).body);
-  ok("C3.14 checks filter: ?combination= returns only the checks that combination uses", byCombo.length === count(`select count(distinct check_key) from check_def where combination_id = '${vv}' and status = 'PUBLISHED'`) && byCombo.every((r) => usedIn(r).includes("Visitor visa")), byCombo.length);
+  ok("C3.14 checks BR-15: every row says its kind and group in words (no codes), and per combination whether it stops or warns", checks.length > 0 && checks.every((r) => KIND_WORDS.includes(r.kind_word) && !/_/.test(`${r.kind_word}${r.group_word}`) && (r.per_combination ?? []).length === (r.used_in ?? []).length));
+  ok("C3.14 checks RULES-MODEL §7 (#294): answers compared and read-backs are Consistency, readiness warnings Document validity, other groups Other with their group named", checks.filter((r) => ["cross_record", "read_back"].includes(r.group)).every((r) => r.kind_word === "Consistency") && checks.filter((r) => r.group === "readiness_warning").every((r) => r.kind_word === "Document validity") && checks.filter((r) => !["cross_record", "read_back", "readiness_warning"].includes(r.group)).every((r) => r.kind_word === "Other" && (r.group_word ?? "").length > 3) && checks.some((r) => r.group === "readiness_warning"));
+  ok("C3.14 checks BR-15: each row names the shared fields its condition reads (key and name)", checks.filter((r) => (r.reads ?? []).length).length > 0 && checks.every((r) => (r.reads ?? []).every((f: Row) => typeof f.key === "string" && "name" in f)));
+  ok("C3.14 checks P-158/P-170: a check with a source quotes it; one without is flagged (unsourced), never blank", checks.length > 0 && checks.every((r) => r.differs === true || r.unsourced === !r.source));
+  const vvSeeded = checks.filter((r) => ["VV_VISIT_END_AFTER_START", "VV_FUNDS_ABOVE_ZERO"].includes(r.key));
+  ok("C3.14 checks pass: the Visitor visa's two seeded section checks are listed, used by the Visitor visa, unsourced (Sample)", vvSeeded.length === 2 && vvSeeded.every((r) => keysIn(r).includes("vv.single") && r.unsourced === true), vvSeeded.map((r) => [r.key, r.kind_word, r.group_word]));
 
   // ── Rules list (BR-14) ──
   const ru = await call("GET", "/library/rules");
   const rules = rowsOf(ru.body);
+  const by = (k: string) => rules.filter((r) => r.kind === k);
   ok("C3.14 rules: GET /library/rules answers 200 with rows", ru.status === 200 && rules.length > 0, ru.status);
-  const preds = count(`select count(*) from predicate p join combination c on c.id = p.combination_id where p.status = 'PUBLISHED' and c.retired_at is null`);
-  ok("C3.14 rules pass: every current rule is on the list once per combination it serves (where used counted)", rules.reduce((s, r) => s + usedIn(r).length, 0) === preds && preds > 0, { listed: rules.reduce((s, r) => s + usedIn(r).length, 0), preds });
-  ok("C3.14 rules BR-14: each rule reads as a sentence (when … then …, for whom), never as raw JSON", rules.length > 0 && rules.every((r) => plainWords(r.when ?? r.when_plain) && plainWords(r.then ?? r.then_plain ?? r.when ?? r.when_plain)), rules.find((r) => !plainWords(r.when ?? r.when_plain))?.key);
-  ok("C3.14 rules P-170: each rule shows its source passage or \"No source recorded\"", rules.length > 0 && rules.every((r) => (typeof r.source === "string" && r.source.length > 5) || r.unsourced === true));
+  const preds = count(`select count(distinct (combination_id, predicate_key)) from predicate where status in ('DRAFT', 'PUBLISHED')`);
+  ok("C3.14 rules pass: every rule of every combination is listed once (its newest version)", by("rule").length === preds && preds > 0, [by("rule").length, preds]);
+  const formConds = count(`select count(distinct (combination_id, lineage_key)) from combination_form where status in ('DRAFT', 'PUBLISHED') and predicate_json is not null`);
+  ok("C3.14 rules pass: the conditions on form lines are rules too, each saying what it adds (\"… is needed\"); a line with no condition is not", by("form_line").length === formConds && by("form_line").every((r) => / is needed$/.test(r.then ?? "")), [by("form_line").length, formConds]);
+  ok("C3.14 rules BR-14: each rule reads as a sentence (when …, then …), never as raw JSON, and says where it lives (combination or section, and tab)", rules.length > 0 && rules.every((r) => typeof r.then === "string" && r.then.length > 3 && !/[{}]|"op"/.test(`${r.when ?? ""}${r.then}`) && r.lives_on && (r.lives_on.combination || r.lives_on.section)));
+  ok("C3.14 rules P-170: every rule with a source quotes it; one without is flagged (unsourced)", rules.length > 0 && rules.every((r) => r.unsourced === !r.source));
 
-  // ── Read-only ──
-  const writes = await Promise.all([call("POST", "/library/checks", { key: "x" }), call("PATCH", `/library/checks/${encodeURIComponent(checks[0]?.key ?? "x")}`, { message: "x" }), call("DELETE", `/library/rules/${encodeURIComponent(rules[0]?.key ?? "x")}`), call("POST", "/library/rules", { key: "x" })]);
-  ok("C3.14 fail: the lists are read-only: no write route answers 2xx, and nothing is written", writes.every((w) => w.status >= 400) && count(`select count(*) from audit_event`) === auditBefore, writes.map((w) => w.status));
+  // ── Read-only, and who may read ──
+  const before = [count(`select count(*) from check_def`), count(`select count(*) from predicate`), count(`select count(*) from audit_event`)];
+  const writes = await Promise.all([call("POST", "/library/checks", { key: "x" }), call("PATCH", `/library/checks/${encodeURIComponent(checks[0]?.key ?? "x")}`, { message: "x" }), call("DELETE", `/library/rules/${encodeURIComponent(rules[0]?.id ?? "x")}`), call("POST", "/library/rules", { key: "x" })]);
+  ok("C3.14 fail: the lists are read-only: no write route answers 2xx, and nothing is written", writes.every((w) => w.status >= 400) && JSON.stringify(before) === JSON.stringify([count(`select count(*) from check_def`), count(`select count(*) from predicate`), count(`select count(*) from audit_event`)]), writes.map((w) => w.status));
+  const anon = await call("GET", "/library/checks", undefined, null), reviewer = await call("GET", "/library/rules", undefined, "user-C");
+  ok("C3.14 pass/fail (#294, QA-65): any simulated person may read the lists; a request naming no one is 401", anon.status === 401 && reviewer.status === 200, [anon.status, reviewer.status]);
   process.exit(summary() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(2); });

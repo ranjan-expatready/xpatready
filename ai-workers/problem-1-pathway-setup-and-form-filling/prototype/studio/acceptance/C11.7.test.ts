@@ -4,10 +4,10 @@
 // POST /demo/load {"sample":"six"} (its suites check_s7_reset.ts and check_s7_load.ts). Part A is what #113 promises;
 // part B is the rest of the capability row (P-109 as amended by P-112: the Provincial nominee combination is the IRCC
 // permanent-residence application) and stays red after #113 until a builder adds it. No live AI (US$0).
-//   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C11.7.test.ts 4440 xr_studio_accept
+//   zsh studio/tools/isolated.sh accept 4448 start && tsx studio/acceptance/C11.7.test.ts 4448 xr_studio_accept
 import { client, recorder } from "../tests/runtime/api.ts";
 
-const PORT = Number(process.argv[2] ?? 4440), DB = process.argv[3] ?? "xr_studio_accept";
+const PORT = Number(process.argv[2] ?? 4448), DB = process.argv[3] ?? "xr_studio_accept";
 const { call, sql } = client(PORT, DB);
 const { ok, summary } = recorder();
 const n = (q: string) => Number(sql(q) || 0);

@@ -3,18 +3,19 @@
 // Status today: Not built. On main: tier 1 field checks for text, number, money (shape), date, yes/no, single choice,
 // country, address, phone (shape), email (engine/runtime/case.ts checkValue); repeating groups; tier 2 section checks
 // evaluated when seeded as data (setup_visitor_visa.ts seeds two). Missing and tested here: long text, multi choice,
-// person name group with "no given name", period history with the 10-year gap check, document upload, declaration as
+// person name group with "no given name", period history (with the 10-year gap as a section check), document upload, declaration as
 // question types; section checks authored as data through the API (RT-7); the error summary per section; tier 3
 // independent review on demand (AI, never changes data); the PQR mode. Part 1 runs on the engine (no server); part 2 on
 // the Visitor visa case through the API. The value_type names for the new types are this pack's proposal (Question for
-// the tech lead in the PR), and so is testing the 10-year gap as part of the period-history type (P-47 lists "history
-// covers 10 years" under tier 2). No live AI (US$0): the paid review route is called only after the copy reports live AI off.
-//   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4440 xr_studio_accept \
-//     && tsx studio/acceptance/C4.4.test.ts 4440 xr_studio_accept
+// the tech lead in the PR). The 10-year gap is a tier-2 section check held as data (P-47; tech lead on #295), tested
+// through the engine's condition evaluator with a proposed op "covers_years". No live AI (US$0): the paid review route is called only after the copy reports live AI off.
+//   zsh studio/tools/isolated.sh accept 4448 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4448 xr_studio_accept \
+//     && tsx studio/acceptance/C4.4.test.ts 4448 xr_studio_accept
+import { evalCondition, kkey } from "../engine/render.ts";
 import { checkValue } from "../engine/runtime/case.ts";
 import { client, recorder } from "../tests/runtime/api.ts";
 
-const PORT = Number(process.argv[2] ?? 4440), DB = process.argv[3] ?? "xr_studio_accept";
+const PORT = Number(process.argv[2] ?? 4448), DB = process.argv[3] ?? "xr_studio_accept";
 const { call, sql } = client(PORT, DB);
 const { ok, summary } = recorder();
 const AUTHOR = "user-A", OFFICER = "user-O", CLIENT = "user-P";
@@ -36,7 +37,7 @@ const TYPES: [string, unknown, unknown][] = [
   ["email", "client.a@example.com", "client.a@"],
   ["address", { street_name: "1 Sample St", city: "Sample City", country: "IND" }, { street_name: "", city: "", country: "" }],
   ["person_name", { family_name: "Sample", given_names: "", no_given_name: true }, { family_name: "Sample", given_names: "" }],
-  ["period_history", [{ from: "2016-11", to: "2021-10", what: "Sample work" }, { from: "2021-11", to: "2026-11", what: "Sample study" }], [{ from: "2016-11", to: "2019-01", what: "Sample work" }, { from: "2020-06", to: "2026-11", what: "Sample study" }]],
+  ["period_history", [{ from: "2016-11", to: "2021-10", what: "Sample work" }, { from: "2021-11", to: "2026-11", what: "Sample study" }], [{ from: "2021-11", to: "2016-11", what: "Sample work" }]],
   ["document", { file_id: "00000000-0000-4000-8000-000000000001", name: "passport.pdf" }, { name: "passport.pdf" }],
   ["declaration", true, false],
 ];
@@ -53,8 +54,14 @@ const snapshot = { canonical_fields: TYPES.map(([t]) => ({ id: `person.sample_${
     const g = checkValue(snapshot, `person.sample_${t}`, good, TODAY), b = checkValue(snapshot, `person.sample_${t}`, bad, TODAY);
     ok(`C4.4 tier 1 (${t}): a valid answer passes and an invalid one gets a plain message saying how to fix it`, g.length === 0 && b.length > 0 && b.every((m) => m.length > 8 && !/undefined|null|\[object/.test(m)), { good: g, bad: b });
   }
-  const gap = checkValue(snapshot, "person.sample_period_history", TYPES.find(([t]) => t === "period_history")![2], TODAY);
-  ok("C4.4 tier 1 (period history): a gap is named with its months (\"2019-02 to 2020-05 is not covered\")", gap.some((m) => /2019-0?2/.test(m) && /2020-0?5/.test(m)), gap);
+  // Tier 2 (P-47: "history covers 10 years" is a section check, tech lead on #295): a rule held as data, evaluated by the
+  // engine's one condition evaluator. The op name "covers_years" is this pack's proposal (Question for the tech lead).
+  const HIST = "person.sample_period_history";
+  const tenYears = { subjectKind: "PERSON", op: "not", arg: { op: "covers_years", field: HIST, years: 10, until: "case.application_date" } };
+  const knownWith = (rows: unknown) => new Map([[kkey("p1", HIST), { value: rows, status: "confirmed" as const, source: "acceptance" }], [kkey("case", "case.application_date"), { value: "2026-11-01", status: "confirmed" as const, source: "acceptance" }]]);
+  const gapRows = [{ from: "2016-11", to: "2019-01", what: "Sample work" }, { from: "2020-06", to: "2026-11", what: "Sample study" }];
+  const withGap = evalCondition(snapshot, knownWith(gapRows), tenYears, "p1"), noGap = evalCondition(snapshot, knownWith(TYPES.find(([t]) => t === "period_history")![1]), tenYears, "p1");
+  ok("C4.4 tier 2 (P-47): a section check \"history covers 10 years\", held as data, fires on a history with a gap and not on one without", withGap.applies === true && noGap.applies === false, { withGap, noGap });
 
   // ── Part 2: on the Visitor visa case, through the API ──
   const vv = sql(`select id from combination where combination_key = 'vv.single'`);

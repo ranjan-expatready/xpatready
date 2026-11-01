@@ -9,13 +9,13 @@
 // Part 1 (API, runs anywhere): a validated copy whose barcodes cannot be read is never taken as passing. Part 2 (Mac
 // evidence, J6 step 6): the Adobe Validate result for a Studio-generated IMM 5257 is recorded and agrees with the copy.
 // No live AI (US$0).
-//   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4440 xr_studio_accept \
-//     && tsx studio/acceptance/C7.2.test.ts 4440 xr_studio_accept
+//   zsh studio/tools/isolated.sh accept 4448 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4448 xr_studio_accept \
+//     && tsx studio/acceptance/C7.2.test.ts 4448 xr_studio_accept
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { client, recorder } from "../tests/runtime/api.ts";
 
-const PORT = Number(process.argv[2] ?? 4440), DB = process.argv[3] ?? "xr_studio_accept";
+const PORT = Number(process.argv[2] ?? 4448), DB = process.argv[3] ?? "xr_studio_accept";
 const { call, sql, until } = client(PORT, DB);
 const { ok, summary } = recorder();
 const OFFICER = "user-O", CLIENT = "user-P";

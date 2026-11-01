@@ -1,22 +1,24 @@
 // Acceptance C3.13 (P-220, pack 3): the library lists (fields by section, sections, document types) show where used,
 // origin (AI or person) and a worked-out status; with a combination chosen, each row is "Reused" or "New here" with the
 // totals (P-37; Screen 04 concept BR-2, BR-3, BR-4, BR-10; contract in its §6). Status today: Not built in qa's table,
-// partly built on main (queue item 2a: used_in labels, raw origin and status, sources). Missing and tested here: counts
-// that say what they count (usedBy), status words including "Waiting for a second person", origin words, the section,
-// status and combination filters, search by alias and form code, and reuse per combination. Rules only, US$0.
+// partly built on main (queue item 2a: used_in labels, raw origin and status, sources); reuse per combination is in open
+// PR #289 (GET /library/reuse/:kind), which part BR-4 follows. Missing and tested here: counts that say what they count
+// (usedBy), status words including "Waiting for a second person", origin words, the section and status filters, search by
+// alias and form code. Rules only, US$0.
 // Words beside raw values: status_words and origin_words are added and the raw status and origin kept (the browser suite
 // check_studio_browser.cjs reads origin === "AI_PROPOSAL"); the word for IMPORTED_RELEASE ("From a reviewed release", today's
 // source line) and the used_in, boxes, forms and placement names are today's, not the concept's: Question for the tech lead.
 // The lists keep today's paths (GET /library/fields, /library/sections, /library/document-types) with the concept's query.
-//   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4440 xr_studio_accept \
-//     && tsx studio/acceptance/C3.13.test.ts 4440 xr_studio_accept
+//   zsh studio/tools/isolated.sh accept 4448 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4448 xr_studio_accept \
+//     && tsx studio/acceptance/C3.13.test.ts 4448 xr_studio_accept
 // (setup_visitor_visa.ts loads the suites' fixture first: With an LMIA released, then the Visitor visa configured on top.)
 import { randomUUID } from "node:crypto";
 import { client, recorder } from "../tests/runtime/api.ts";
 
-const PORT = Number(process.argv[2] ?? 4440), DB = process.argv[3] ?? "xr_studio_accept";
+const PORT = Number(process.argv[2] ?? 4448), DB = process.argv[3] ?? "xr_studio_accept";
 const { call, sql } = client(PORT, DB);
 const { ok, summary } = recorder();
+const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? ""); // eslint-disable-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any -- loose API rows, as in the other checks
 const STATUS_WORDS = ["Released", "Draft", "Waiting for a second person", "Retired"];
 const statusOf = (r: Row) => String(r.status_words ?? r.status ?? "");
@@ -62,19 +64,25 @@ const list = async (kind: string, q = "") => { const r = await call("GET", `/lib
   const none = await list("fields", `q=${encodeURIComponent("zz-no-such-thing-zz")}`);
   ok("C3.13 BR-3 fail: a search that matches nothing returns an empty list (200), not an error", none.status === 200 && none.rows.length === 0);
 
-  // BR-4: reuse per combination, with totals.
-  const per = await list("fields", `combination=${vv}`);
-  const reuse = per.body?.reuse;
-  ok("C3.13 BR-4: with a combination chosen the answer carries reuse {total, reused, new} with total = reused + new = rows", reuse && reuse.total === reuse.reused + reuse.new && reuse.total === per.rows.length && reuse.total > 0, reuse);
-  ok("C3.13 BR-4: every row is REUSED or NEW and is used by that combination", per.rows.length > 0 && per.rows.every((r) => ["REUSED", "NEW"].includes(r.inCombination) && (r.used_in ?? ["Visitor visa"]).includes("Visitor visa")));
+  // BR-4: reuse per combination, with totals — PR #289's route and words (tech lead, #295): GET /library/reuse/:kind
+  // ?combination=<id or key> → {combinations, combination, total, reused, new, items: {key: {in_combination, brought_in_by}}}.
+  const reuseOf = async (kind: string, combo?: string) => call("GET", `/library/reuse/${kind}${combo ? `?combination=${encodeURIComponent(combo)}` : ""}`);
+  const per = await reuseOf("fields", vv);
+  const items = (per.body?.items ?? {}) as Record<string, { in_combination: string; brought_in_by: string }>;
+  ok("C3.13 BR-4 (#289): with a combination chosen the totals add up (total = reused + new = items marked) and name the combination", per.status === 200 && per.body?.combination?.key === "vv.single" && per.body.total === per.body.reused + per.body.new && per.body.total === Object.keys(items).length && per.body.total > 0, per.status === 200 ? { total: per.body.total, reused: per.body.reused, new: per.body.new } : per.status);
+  ok("C3.13 BR-4 (#289): every marked field is REUSED or NEW, says which combination brought it in, and is a field the Visitor visa uses", Object.keys(items).length > 0 && Object.entries(items).every(([k, x]) => ["REUSED", "NEW"].includes(x.in_combination) && !!x.brought_in_by && (fields.find((r) => r.key === k)?.used_in ?? []).includes("Visitor visa")));
   const wpRelease = sql(`select r.snapshot::text from config_release r join combination c on c.id = r.combination_id where c.combination_key = 'wp.family' order by r.version limit 1`);
   const before = new Set<string>(wpRelease ? (JSON.parse(wpRelease).canonical_fields as { id: string }[]).map((f) => f.id) : []);
-  const wrong = per.rows.filter((r) => before.has(r.key) && r.inCombination !== "REUSED");
-  ok("C3.13 BR-4 pass: a field already released on With an LMIA before the Visitor visa used it is \"Reused\" there", per.rows.some((r) => before.has(r.key)) && wrong.length === 0, wrong.map((r) => r.key));
-  const secPer = await list("sections", `combination=${vv}`), dtPer = await list("document-types", `combination=${vv}`);
-  ok("C3.13 BR-4: sections and document types answer the same reuse totals for a combination", [secPer, dtPer].every((x) => x.body?.reuse && x.body.reuse.total === x.body.reuse.reused + x.body.reuse.new), [secPer.body?.reuse, dtPer.body?.reuse]);
-  const bad = await list("fields", `combination=not-a-uuid`), unknown = await list("fields", `combination=${randomUUID()}`);
-  ok("C3.13 BR-4 fail: a malformed combination is refused 400 and an unknown one 404, in words, not an empty list", bad.status === 400 && unknown.status === 404 && /combination/i.test(String(unknown.body?.message ?? unknown.body?.detail ?? "")), [bad.status, unknown.status]);
+  const wrong = Object.entries(items).filter(([k, x]) => before.has(k) && x.in_combination !== "REUSED");
+  ok("C3.13 BR-4 pass: a field already released on With an LMIA before the Visitor visa used it is \"Reused\" there, brought in by With an LMIA", Object.keys(items).some((k) => before.has(k)) && wrong.length === 0 && Object.entries(items).filter(([k]) => before.has(k)).every(([, x]) => /With an LMIA/.test(x.brought_in_by)), wrong.map(([k]) => k));
+  const secPer = await reuseOf("sections", "vv.single"), dtPer = await reuseOf("document-types", vv);
+  ok("C3.13 BR-4 (#289): sections and document types answer the same totals for a combination (named by key or id)", [secPer, dtPer].every((x) => x.status === 200 && x.body.total === x.body.reused + x.body.new), [secPer.body?.total, dtPer.body?.total]);
+  const offered = await reuseOf("fields");
+  ok("C3.13 (#289): without a combination, every combination is offered with how many items it uses", offered.status === 200 && offered.body?.combination === null && (offered.body?.combinations ?? []).some((c: { key: string; uses: number }) => c.key === "vv.single" && c.uses === per.body?.total), offered.status);
+  const unknown = await reuseOf("fields", randomUUID()), badKind = await reuseOf("checks-and-more", vv);
+  ok("C3.13 BR-4 fail (#289): an unknown combination and an unknown list are 404 in words, not empty figures", unknown.status === 404 && /combination/i.test(words(unknown)) && badKind.status === 404, [unknown.status, badKind.status]);
+  const anon = await call("GET", `/library/reuse/fields?combination=${vv}`, undefined, null);
+  ok("C3.13 fail (QA-65): a request naming no person is 401", anon.status === 401, anon.status);
 
   // BR-10: retired items show only under "Retired".
   // A retired field used nowhere (planted as the library stores one: its newest version RETIRED), so the rule is tested
