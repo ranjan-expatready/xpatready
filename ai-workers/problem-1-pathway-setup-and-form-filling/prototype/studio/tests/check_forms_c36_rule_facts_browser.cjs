@@ -23,7 +23,11 @@ const step = (name, c, detail) => { c ? pass++ : failed++; console.log(`${c ? "P
   sql(`insert into predicate (id, workspace_id, combination_id, predicate_key, predicate_json, when_plain, then_plain, for_whom, version, status, origin, updated_by) select gen_random_uuid(), workspace_id, id, 'r_c36_browser', '{"field":"person.c36_us_refusal","op":"eq","value":true}', 'the person was refused a US visa', 'ask for the refusal letter', 'principal', 1, 'DRAFT', 'HUMAN', 'user-A' from combination where id='${combo}'`);
   const missingBefore = (await api(`/combinations/${combo}/rule-facts`)).body?.facts?.length ?? 0;
 
-  await p.goto(BASE); await p.evaluate(() => { try { localStorage.setItem("xr-actor", "user-A"); } catch { /* ignore */ } });
+  // Review c36 m1: the approver sees the list read-only (no add button), not a form refused at the end.
+  await p.goto(BASE); await p.evaluate(() => { try { localStorage.setItem("xr-actor", "user-B"); } catch { /* ignore */ } });
+  await p.goto(`${BASE}/c/${combo}/questionnaires`); await p.locator("[data-rule-facts]").waitFor({ timeout: 20000 });
+  step("C3.6 fail (m1): the approver has no add button; the row says who adds it", (await p.locator("[data-rule-facts]").getByRole("button", { name: "Add the fact this rule needs" }).count()) === 0 && /The configuration author adds it/.test(await p.locator("[data-rule-facts]").innerText()));
+  await p.evaluate(() => { try { localStorage.setItem("xr-actor", "user-A"); } catch { /* ignore */ } });
   await p.goto(`${BASE}/c/${combo}/questionnaires`);
   const sec = p.locator("[data-rule-facts]");
   await sec.waitFor({ timeout: 20000 });
@@ -43,6 +47,7 @@ const step = (name, c, detail) => { c ? pass++ : failed++; console.log(`${c ? "P
   await row.getByRole("button", { name: /Propose it/ }).click();
   const link = row.getByRole("link", { name: /waits on To review/ });
   await link.waitFor({ timeout: 10000 });
+  step("C3.6 pass (m3): after Propose, focus lands on the row's To review link", await p.evaluate(() => document.activeElement?.tagName === "A" && /waits on To review/.test(document.activeElement.textContent ?? "")));
   step("C3.6 pass: a complete add becomes one proposal; the row says where it waits", Number(sql("select count(*) from proposal_item where step='rule_fact' and status='waiting'")) === 1);
   await link.click(); await p.waitForURL(/\/review\/proposals/, { timeout: 10000 });
   step("C3.6 pass: its link opens To review › Proposals", /\/review\/proposals/.test(p.url()));

@@ -162,7 +162,7 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
     const rule = (r.source as { rule?: { key: string; sentence: string } | null } | null)?.rule;
     if (typeof ruleFact === "string" && used.has(ruleFact)) fail(`${ruleFact} is already in the library (added since it was proposed): reject this one; the rule can use it as it is.`, HttpStatus.CONFLICT);
     const key = typeof ruleFact === "string" ? ruleFact : keyFor(f.subject ?? "case", f.label, used);
-    await landField(tx, l, { key, meaning: f.meaning, valueType: f.valueType, label: f.label, sourceRef: rule ? `Needed by rule ${rule.key}: ${rule.sentence}; ${sourceRef(r, l.actor)}` : sourceRef(r, l.actor) });
+    await landField(tx, l, { key, meaning: f.meaning, valueType: f.valueType, label: f.label, sourceRef: rule ? `Needed by ${rule.sentence}; ${sourceRef(r, l.actor)}` : sourceRef(r, l.actor) });
     return key;
   },
   async section(tx, r, p, l) {

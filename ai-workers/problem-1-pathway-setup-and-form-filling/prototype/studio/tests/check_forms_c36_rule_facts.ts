@@ -71,9 +71,12 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? r.body);
   ok("C3.6 fail: a person without the author duty cannot add (403)", r.status === 403, [r.status, msg(r)]);
   ok("C3.6 fail: every refused add wrote nothing", Number(sql("select count(*) from proposal_item")) === before);
 
-  r = await call("POST", `/combinations/${combo}/rule-facts`, good);
+  // Review c36 M2: three adds of the same fact at once make one proposal; the other two are refused (409).
+  const three = await Promise.all([0, 1, 2].map(() => call("POST", `/combinations/${combo}/rule-facts`, good)));
+  r = three.find((x) => x.status === 201) ?? three[0];
   const pid = r.body?.proposalId;
   ok("C3.6 pass: naming the rule writes one proposal (201)", r.status === 201 && typeof pid === "string" && r.body.rule?.key === "r_c36_refusal", [r.status, r.body]);
+  ok("C3.6 fail (M2): three parallel adds of one fact leave one waiting proposal; the others are 409", three.filter((x) => x.status === 201).length === 1 && three.filter((x) => x.status === 409).length === 2 && Number(sql("select count(*) from proposal_item where step='rule_fact' and status='waiting'")) === 1, three.map((x) => x.status));
   const p = JSON.parse(sql(`select row_to_json(x) from (select kind, step, origin, lands_on, confidence, basis, source, payload, work from proposal_item where id='${pid}') x`) || "{}");
   ok("C3.6 pass: it is a rules item for the library, Check and Sample, its source the rule (key and sentence)", p.kind === "field" && p.step === "rule_fact" && p.origin === "rules" && p.lands_on === "library" && p.confidence === "check" && p.basis === "SAMPLE" && p.source?.rule?.key === "r_c36_refusal" && /^Rule r_c36_refusal/.test(p.source?.quote) && p.work?.ruleFact === "person.c36_refused_visa", p);
   ok("C3.6 pass: the proposal carries the name, meaning and type the person gave, and no key", p.payload?.label === good.label && p.payload?.meaning === good.meaning && p.payload?.valueType === "yes_no" && p.payload?.subject === "person" && !("key" in (p.payload ?? {})), p.payload);
@@ -94,7 +97,7 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? r.body);
   ok("C3.6 pass: the field is a draft of the given type and name", f === "DRAFT|yes_no|Refused a visa before", f);
   ok("C3.6 pass: a second person still approves it (an ADD waits)", sql("select status from library_change where key='person.c36_refused_visa' and kind='field'") === "WAITING");
   r = await call("GET", "/library/fields/person.c36_refused_visa/sources");
-  ok("C3.6 pass: its source reads \"Needed by rule r_c36_refusal: …\"", r.status === 200 && r.body.sources?.some((s: { kind: string; text: string }) => s.kind === "rule" && /^Needed by rule r_c36_refusal: Rule r_c36_refusal: when the test says so/.test(s.text)) && r.body.unsourced === false, r.body.sources);
+  ok("C3.6 pass: its source reads \"Needed by Rule r_c36_refusal: …\" (the key once)", r.status === 200 && r.body.sources?.some((s: { kind: string; text: string }) => s.kind === "rule" && /^Needed by Rule r_c36_refusal: when the test says so/.test(s.text)) && r.body.unsourced === false, r.body.sources);
   r = await call("GET", `/combinations/${combo}/rule-facts`);
   ok("C3.6 fail: once in the library the fact is no longer listed", !(r.body?.facts ?? []).some((x: { fact: string }) => x.fact === "person.c36_refused_visa"));
   r = await call("POST", `/combinations/${combo}/rule-facts`, { ...good, label: "Refused a visa (third)" });

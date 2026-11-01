@@ -67,7 +67,7 @@ export class LibrarySources {
       if (kind === "field") {
         for (const b of boxes) add(b.canonicalFieldKey!, { kind: "form_box", text: `From: ${b.edition.editionLabel} form field "${(b.caption ?? b.dataPath).replace(/^\*/, "").trim()}"`, quote: b.evidenceQuote });
         // C3.6 (P-158 (5), plan §6): a fact added for a rule says "Needed by rule …", the rule's key and its sentence.
-        for (const f of latest.values()) if (f.sourceRef) add(f.canonicalFieldKey, f.sourceRef.startsWith("Needed by rule ") ? { kind: "rule", text: f.sourceRef.split(/; (?:rules|AI) run /)[0] } : f.origin === "AI_PROPOSAL" ? { kind: "ai_run", text: `From the ${f.sourceRef}` } : releaseLine(f.sourceRef));
+        for (const f of latest.values()) if (f.sourceRef) add(f.canonicalFieldKey, /^Needed by (Rule|Check|Form condition|Question condition|Document condition) /.test(f.sourceRef) ? { kind: "rule", text: f.sourceRef.split(/; (?:rules|AI) run /)[0] } : f.origin === "AI_PROPOSAL" ? { kind: "ai_run", text: `From the ${f.sourceRef}` } : releaseLine(f.sourceRef));
       } else if (kind === "answer_list") {
         for (const b of boxes) { const list = latest.get(b.canonicalFieldKey!)?.answerListKey; if (list) add(list, { kind: "form_box", text: `Choices of: ${b.edition.editionLabel} form field "${(b.caption ?? b.dataPath).replace(/^\*/, "").trim()}"` }); }
       } else {

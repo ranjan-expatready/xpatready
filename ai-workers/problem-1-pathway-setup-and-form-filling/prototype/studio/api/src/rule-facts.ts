@@ -56,7 +56,7 @@ export function missingRuleFacts(rules: RuleRef[], library: Set<string>, derived
 
 export const AddRuleFact = z.object({
   fact: z.string({ error: "Name the fact the rule reads." }).trim().min(1, "Name the fact the rule reads.").max(120),
-  rule: z.string({ error: "Name the rule that needs this fact: a fact no form asks is added only for a rule (P-158)." }).trim().min(1, "Name the rule that needs this fact: a fact no form asks is added only for a rule (P-158).").max(200),
+  rule: z.string({ error: "Name the rule that needs this fact: a fact no form asks is added only for a rule that reads it." }).trim().min(1, "Name the rule that needs this fact: a fact no form asks is added only for a rule that reads it.").max(200),
   label: z.string({ error: "Give the fact a name a person reads." }).trim().min(2, "Give the fact a name a person reads (2 characters or more).").max(120),
   meaning: z.string({ error: "Say what the fact means." }).trim().min(10, "Say what the fact means, in a sentence (10 characters or more).").max(500),
   valueType: z.enum(RULE_FACT_TYPES as [string, ...string[]], { message: `Choose the answer type: ${RULE_FACT_TYPES.join(", ")}.` }),
@@ -102,7 +102,7 @@ export class RuleFacts {
     const c = await this.combination(id);
     const { rules, library, missing, waitingFor } = await this.state(c);
     const rule = rules.find((r) => r.key === b.rule);
-    if (!rule) fail(`No condition, rule or check "${b.rule}" in this combination: a fact no form asks is added only for a rule that reads it (P-158).`);
+    if (!rule) fail(`No condition, rule or check "${b.rule}" in this combination: a fact no form asks is added only for a rule that reads it.`);
     if (!factsRead(rule!.tree).includes(b.fact)) fail(`${rule!.sentence.split(":")[0]} does not read ${b.fact}: name the rule that needs it.`);
     if (library.has(b.fact)) fail(`${b.fact} is already in the library: the rule can use it as it is.`, HttpStatus.CONFLICT);
     if (!missing.some((m) => m.fact === b.fact)) fail(`${b.fact} is a derived fact, worked out from others: it is not asked.`, HttpStatus.CONFLICT);
@@ -110,9 +110,15 @@ export class RuleFacts {
     if (waitingFor.has(b.fact)) fail(`A proposal to add ${b.fact} is already waiting on To review › Proposals: decide it there.`, HttpStatus.CONFLICT);
     const subject = b.fact.split(".")[0];
     const sha256 = createHash("sha256").update(canonical(rule!.tree as any)).digest("hex");
-    const job = await this.db.draftingJob.create({ data: { workspaceId: c.workspaceId, combinationId: c.id, kind: "rule_fact", mode: "LOCAL", status: "COMPLETED", costUsd: 0, startedBy: actor.id, finishedAt: new Date(),
+    // M2 (review c36): parallel adds of one fact make one proposal. The waiting check and the write run under one lock
+    // per combination and fact, so a second add waits, then sees the first and is refused (409).
+    const { proposalId } = await this.db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`rule-fact:${c.id}:${b.fact}`}))`;
+    if (await tx.proposalItem.findFirst({ where: { workspaceId: c.workspaceId, combinationId: c.id, kind: "field", status: "waiting", step: "rule_fact", work: { path: ["ruleFact"], equals: b.fact } }, select: { id: true } }))
+      fail(`A proposal to add ${b.fact} is already waiting on To review › Proposals: decide it there.`, HttpStatus.CONFLICT);
+    const job = await tx.draftingJob.create({ data: { workspaceId: c.workspaceId, combinationId: c.id, kind: "rule_fact", mode: "LOCAL", status: "COMPLETED", costUsd: 0, startedBy: actor.id, finishedAt: new Date(),
       message: `${actor.name} named ${rule!.sentence.split(":")[0]} as needing ${b.fact}: one library proposal (rules only, no AI, US$0).`, detail: { operation: "rule_fact", rule: rule!.key, ruleKind: rule!.kind, fact: b.fact } } });
-    const [proposalId] = await insertProposals(this.db, c.workspaceId, [{
+    const [proposalId] = await insertProposals(tx, c.workspaceId, [{
       kind: "field", runId: job.id, step: "rule_fact", scope: { formEdition: null, combinationId: c.id }, landsOn: "library", reuse: { match: "new", existingKey: null },
       payload: { kind: "field", label: b.label, aliases: [], meaning: b.meaning, valueType: b.valueType, subject, formBox: null },
       source: { file: `rule ${rule!.key} (${c.combinationKey})`, sha256, edition: null, page: null, quote: rule!.sentence, quoteFound: true, rule: { key: rule!.key, sentence: rule!.sentence } },
@@ -122,6 +128,8 @@ export class RuleFacts {
       origin: "rules", identity: { key: normalizeLabel(b.label), near: [], nearReason: null }, relatesTo: null, revision: null, basis: "SAMPLE",
       work: { ruleFact: b.fact, ruleKind: rule!.kind },
     }]);
+    return { proposalId };
+    }, { timeout: 30_000, maxWait: 10_000 });
     await this.audit.log(c.workspaceId, actor.id, "proposed", "rule fact", b.fact, `${actor.name} proposed the fact ${b.fact} ("${b.label}") for ${rule!.sentence.split(":")[0]} (Sample; a second person approves it)`, undefined, c.id);
     return { proposalId, fact: b.fact, rule: { key: rule!.key, sentence: rule!.sentence } };
   }
