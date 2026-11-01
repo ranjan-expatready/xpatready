@@ -37,6 +37,7 @@ const Version = z.union([z.string(), z.number()], { error: "Reload: the version 
 const Reason = z.string().trim().max(400, "Keep the reason under 400 characters.").refine((x) => !/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/.test(x), "Write the reason as plain text: it holds a hidden or control character.").optional();
 const SplitBody = z.object({ filing: z.string({ error: "Choose the filing to split out." }), reason: Reason, version: Version });
 const ChannelBody = z.object({ channel: z.unknown(), reason: Reason, version: Version });
+const EnteredBody = z.object({ version: z.string({ error: "Send the section's version from the answer sheet you read (Reload)." }) });
 const DOB = "person.date_of_birth";
 
 type Item = Awaited<ReturnType<Db["filingItem"]["findMany"]>>[number];
@@ -118,7 +119,7 @@ export class CasePrepare {
     const accepts = await acceptsOf(this.db, c.workspaceId);
     const lines = new Map((s.forms as FormLine[]).map((l) => [l.form_number, l]));
     const label = new Map(people.map((p) => [p.subjectId, p.label]));
-    const enteredRows = await this.db.enteredSection.findMany({ where: { caseId: c.id }, include: { snapshot: { select: { inputHash: true } } } });
+    const enteredRows = await this.db.enteredSection.findMany({ where: { caseId: c.id, supersededAt: null }, include: { snapshot: { select: { inputHash: true } } } });
     const enteredBy = new Map<string, typeof enteredRows>();
     for (const e of enteredRows) enteredBy.set(e.itemId, [...(enteredBy.get(e.itemId) ?? []), e]);
     const wantedOf = (i: Item) => wanted.find((w) => w.subject === i.subjectId && w.kind === i.kind && w.key === i.itemKey);
@@ -132,12 +133,13 @@ export class CasePrepare {
         // FQ-6, P-168), Done when every section is entered and current.
         const sheet = ch.channel === "ONLINE" ? sheetOf(i, s, people, answers, rows, view, enteredBy.get(i.id) ?? []) : null;
         const stale = sheet?.sections.filter((x) => x.out_of_date) ?? [];
-        if (sheet && stale.length) return { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null, channel_changed: i.channel ? { by: i.channelBy, at: i.channelAt?.toISOString() ?? null, reason: i.channelReason } : null,
+        if (sheet && stale.length && !waits) return { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null, channel_changed: i.channel ? { by: i.channelBy, at: i.channelAt?.toISOString() ?? null, reason: i.channelReason } : null,
           state: "out_of_date", reason: `Out of date: ${stale.map((x) => x.title).join(", ")} changed after it was entered in the portal. Enter the new answers, then tick it again.` };
-        const allEntered = !!sheet && sheet.sections.length > 0 && sheet.sections.every((x) => x.entered);
+        // Review M2: Done only when every section is entered, current and waits for nothing.
+        const allEntered = !!sheet && sheet.sections.length > 0 && sheet.sections.every((x) => x.entered && !x.out_of_date && !x.waiting.length);
         return { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null,
           channel_changed: i.channel ? { by: i.channelBy, at: i.channelAt?.toISOString() ?? null, reason: i.channelReason } : null,
-          state: waits ? "cannot_start" : allEntered ? "done" : "to_do", reason: allEntered && !waits ? "Every section is entered in the portal." : waits ? `Cannot start yet: waits for ${(w?.missing ?? []).length || "an"} answer${(w?.missing ?? []).length === 1 ? "" : "s"} that decide${(w?.missing ?? []).length === 1 ? "s" : ""} whether it applies.` : rd.missing.length ? `Waiting for ${rd.missing.length} fact${rd.missing.length === 1 ? "" : "s"} to answer or confirm.` : "Every fact it reads is confirmed." };
+          state: waits ? "cannot_start" : allEntered ? "done" : "to_do", reason: allEntered && !waits ? "Every section is entered in the portal, with every answer confirmed and current." : waits ? `Cannot start yet: waits for ${(w?.missing ?? []).length || "an"} answer${(w?.missing ?? []).length === 1 ? "" : "s"} that decide${(w?.missing ?? []).length === 1 ? "s" : ""} whether it applies.` : rd.missing.length ? `Waiting for ${rd.missing.length} fact${rd.missing.length === 1 ? "" : "s"} to answer or confirm.` : "Every fact it reads is confirmed." };
       }
       if (i.kind === "document") return { ...base, document_type: w?.document_type ?? i.itemKey, label: w?.label ?? i.itemKey, state: "to_do", reason: "Not requested yet (the checklist, C6.4)." };
       return { ...base, step: BIOMETRICS_STEP.label, neededBefore: "after_filing" as const, state: "cannot_start", reason: w?.applies === "cannot_tell" ? "Waits for the date of birth: no biometrics under 14 or over 79 (VV-R15)." : BIOMETRICS_STEP.after };
@@ -206,27 +208,31 @@ export class CasePrepare {
     const s = this.r.snapshotOf(c), people = this.r.peopleOf(c);
     const { answers, rows, groups } = await this.r.state(c);
     const view = caseView(s, people, answers, rows, "agent", new Date(), groups);
-    const entered = await this.db.enteredSection.findMany({ where: { itemId: item.id }, include: { snapshot: { select: { inputHash: true } } } });
+    const entered = await this.db.enteredSection.findMany({ where: { itemId: item.id, supersededAt: null }, include: { snapshot: { select: { inputHash: true } } } });
     return { item: item.id, form: item.itemKey, subject: item.subjectId, ...sheetOf(item, s, people, answers, rows, view, entered) };
   }
 
-  /** C7.3: "Entered in the portal" for one section: freezes the answers it shows now (an answer snapshot). Once per
-   *  section: ticking again changes nothing (200). */
-  async entered(actor: Actor, itemId: string, key: string) {
+  /** C7.3: "Entered in the portal" for one section: freezes the answers the officer read (the section's `version`, review
+   *  M3: a sheet that changed since is a 409, Reload). Ticking a current section again changes nothing (200); ticking an
+   *  out-of-date one freezes the new answers and keeps the old tick as history (review M1). */
+  async entered(actor: Actor, itemId: string, key: string, body: unknown) {
     const { c, item } = await this.onlineItem(actor, itemId);
     const now = await this.sheet(actor, itemId);
     const sec = now.sections.find((x) => x.key === key);
     if (!sec) fail(`${item.itemKey}'s answer sheet has no such section.`, HttpStatus.NOT_FOUND);
+    const b = parse(EnteredBody, body);
+    if (b.version !== sec!.version) stale();
     const made = await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
-      const was = await tx.enteredSection.findUnique({ where: { itemId_sectionKey: { itemId: item.id, sectionKey: key } } });
-      if (was) return { row: was, created: false };
-      const snap = await tx.answerSnapshot.create({ data: { workspaceId: c.workspaceId, caseId: c.id, subjectId: item.subjectId, formNumber: item.itemKey, inputHash: sectionHash(sec!.answers), factsJson: { section: key, answers: sec!.answers } as object } });
-      return { row: await tx.enteredSection.create({ data: { workspaceId: c.workspaceId, caseId: c.id, itemId: item.id, sectionKey: key, snapshotId: snap.id, enteredBy: actor.id } }), created: true };
+      const was = await tx.enteredSection.findFirst({ where: { itemId: item.id, sectionKey: key, supersededAt: null }, include: { snapshot: { select: { inputHash: true } } } });
+      if (was && was.snapshot.inputHash === sec!.version) return { row: was, created: false };
+      if (was) await tx.enteredSection.update({ where: { id: was.id }, data: { supersededAt: new Date() } });
+      const snap = await tx.answerSnapshot.create({ data: { workspaceId: c.workspaceId, caseId: c.id, subjectId: item.subjectId, formNumber: item.itemKey, inputHash: sec!.version, factsJson: { section: key, answers: sec!.answers } as object } });
+      return { row: await tx.enteredSection.create({ data: { workspaceId: c.workspaceId, caseId: c.id, itemId: item.id, sectionKey: key, snapshotId: snap.id, enteredBy: actor.id } }), created: true, again: !!was };
     });
     if (made.created) {
-      const who = c.participants.find((p) => p.subjectId === item.subjectId);
-      await this.audit.log(c.workspaceId, actor.id, "entered", "item", item.id, `${actor.name} ticked "${sec!.title}" of ${item.itemKey} as entered in the portal for the ${ROLE[who?.role ?? ""] ?? "person"} on case ${short(c.id)} (${sec!.answers.length} answers frozen)`);
+      const who = c.participants.find((p) => p.subjectId === item.subjectId), n = sec!.answers.length;
+      await this.audit.log(c.workspaceId, actor.id, "entered", "item", item.id, `${actor.name} ticked "${sec!.title}" of ${item.itemKey} as entered in the portal${"again" in made && made.again ? " again, after a change" : ""} for the ${ROLE[who?.role ?? ""] ?? "person"} on case ${short(c.id)} (${n} answer${n === 1 ? "" : "s"} frozen)`);
     }
     return { created: made.created, section: key, entered: { at: made.row.enteredAt.toISOString(), by: made.row.enteredBy } };
   }
@@ -309,7 +315,7 @@ export class CasePrepareController {
   @Post("groups/:gid/split") @HttpCode(HttpStatus.OK) split(@Headers("x-actor") a: H, @Param("gid") gid: string, @Body() b: unknown) { return this.p.split(actorOf(a), gid, b); }
   @Post("items/:id/pdf-copy") @HttpCode(HttpStatus.ACCEPTED) pdfCopy(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.p.pdfCopy(actorOf(a), id, b); }
   @Get("items/:id/answer-sheet") sheet(@Headers("x-actor") a: H, @Param("id") id: string) { return this.p.sheet(actorOf(a), id); }
-  @Post("items/:id/screens/:key/entered") async entered(@Headers("x-actor") a: H, @Param("id") id: string, @Param("key") key: string, @Res({ passthrough: true }) res: Response) { const r = await this.p.entered(actorOf(a), id, key); res.status(r.created ? HttpStatus.CREATED : HttpStatus.OK); return r; }
+  @Post("items/:id/screens/:key/entered") async entered(@Headers("x-actor") a: H, @Param("id") id: string, @Param("key") key: string, @Body() b: unknown, @Res({ passthrough: true }) res: Response) { const r = await this.p.entered(actorOf(a), id, key, b); res.status(r.created ? HttpStatus.CREATED : HttpStatus.OK); return r; }
   @Patch("items/:id/channel") channel(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.p.channel(actorOf(a), id, b); }
 }
 

@@ -10,6 +10,7 @@
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { client, recorder } from "./runtime/api.ts";
+import * as m3 from "../acceptance/lib/m3.ts"; // pack 4's helpers (answer, confirm), on this same copy (argv port, db)
 
 const PORT = Number(process.argv[2] ?? 4432), DB = process.argv[3] ?? "xr_studio_runtime_prep";
 const { call, sql } = client(PORT, DB);
@@ -97,8 +98,26 @@ const releases = () => Number(sql("select count(*) from config_release r join co
   ok("C7.3 (fail): a PDF upload form item has no answer sheet (409, in words)", (await call("GET", `/runtime/items/${i5257p?.id}/answer-sheet`, undefined, OFFICER)).status === 409);
   const i5707p = q.items.find((i: { form?: string; subject: string }) => i.form === "IMM 5707" && i.subject === principal);
   ok("C7.3 (fail): a section that is not on the sheet is not found (404)", (await call("POST", `/runtime/items/${i5707p?.id}/screens/SectionZ/entered`, {}, OFFICER)).status === 404);
+  const sheetA = async () => (await call("GET", `/runtime/items/${i5707p?.id}/answer-sheet`, undefined, OFFICER)).body?.sections?.[0];
   r = await call("POST", `/runtime/items/${i5707p?.id}/screens/SectionA/entered`, {}, OFFICER);
+  ok("C7.3 (review M3, fail): a tick without the section's version is a 400; with an older one a 409 (Reload)", r.status === 400 && (await call("POST", `/runtime/items/${i5707p?.id}/screens/SectionA/entered`, { version: "0" }, OFFICER)).status === 409, r.status);
+  r = await call("POST", `/runtime/items/${i5707p?.id}/screens/SectionA/entered`, { version: (await sheetA())?.version }, OFFICER);
   ok("C7.3: the tick is audited by section and form, without values", r.status === 201 && /ticked "Applicant, spouse and parents" of IMM 5707 as entered in the portal/.test(sql(`select coalesce(string_agg(summary, ' '), '') from audit_event where entity='item' and entity_key='${i5707p?.id}'`) ?? "") && !/Sample Client P/.test(sql(`select coalesce(string_agg(summary, ' '), '') from audit_event where entity='item' and entity_key='${i5707p?.id}'`) ?? ""), r.status);
+  // Review M2: ticking every section while facts still wait never makes the item Done.
+  for (const k of ["SectionB", "SectionC"]) { const v = (await call("GET", `/runtime/items/${i5707p?.id}/answer-sheet`, undefined, OFFICER)).body?.sections?.find((x: { key: string }) => x.key === k)?.version; await call("POST", `/runtime/items/${i5707p?.id}/screens/${k}/entered`, { version: v }, OFFICER); }
+  const allTicked = (await call("GET", `/runtime/items/${i5707p?.id}/answer-sheet`, undefined, OFFICER)).body?.sections ?? [];
+  const itemNow = (await call("GET", `/runtime/cases/${caseId}/prepare`, undefined, OFFICER)).body?.items?.find((i: { id: string }) => i.id === i5707p?.id);
+  ok("C7.3 (review M2, fail): every section ticked but facts still waiting: the item is not Done", allTicked.length === 3 && allTicked.every((x: { entered: unknown }) => !!x.entered) && allTicked.some((x: { waiting: unknown[] }) => x.waiting.length > 0) && itemNow?.state !== "done", itemNow?.state);
+  // Review M1: an out-of-date section ticked again freezes the new answers; the old tick stays as history.
+  await m3.answer(caseId, principal, "person.family_name", "SAMPLEFN", OFFICER); await m3.confirmAll(caseId, principal);
+  let a1 = await sheetA();
+  r = await call("POST", `/runtime/items/${i5707p?.id}/screens/SectionA/entered`, { version: a1?.version }, OFFICER);
+  await m3.answer(caseId, principal, "person.family_name", "SAMPLEFN2", OFFICER); await m3.confirmAll(caseId, principal);
+  a1 = await sheetA();
+  const outOfDate = a1?.out_of_date === true;
+  r = await call("POST", `/runtime/items/${i5707p?.id}/screens/SectionA/entered`, { version: a1?.version }, OFFICER);
+  a1 = await sheetA();
+  ok("C7.3 (review M1): an out-of-date section ticked again is current again (201), and the earlier ticks stay as history", outOfDate && r.status === 201 && a1?.out_of_date === false && sql(`select count(*) from entered_section where item_id='${i5707p?.id}' and section_key='SectionA' and superseded_at is not null`) === "2" && sql(`select count(*) from entered_section where item_id='${i5707p?.id}' and section_key='SectionA' and superseded_at is null`) === "1", { outOfDate, status: r.status });
   const fl = (await call("GET", `/runtime/cases/${caseId}/filings`, undefined, OFFICER)).body;
   const cents = (x: { fees: { line?: string; key?: string; amount_cents: number; waiting?: string }[] }, k: string) => x.fees.filter((f) => (f.key ?? f.line) === k && !f.waiting).reduce((n, f) => n + f.amount_cents, 0);
   ok("C6.12: the /filings view (#283) prices the same as the prepare view: same ages, same split groups", fl.groups?.length === after.groups.length && ["visitor_visa", "biometrics"].every((k) => cents(fl, k) === cents(after, k)) && cents(fl, "biometrics") === 85_00, { filings: fl.groups?.length, prepare: after.groups.length });
