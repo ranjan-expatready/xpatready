@@ -53,10 +53,13 @@ const step = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : 
     const unseen = []; let box = null, started = false, saves = 0;
     for (let i = 0; i < 160 && !box; i++) {
       await p.keyboard.press("Tab");
-      const f = await p.evaluate(() => { const e = document.activeElement; if (!e || e === document.body) return null; const s = getComputedStyle(e); const r = e.getBoundingClientRect();
-        return { tag: e.tagName, type: e.getAttribute("type"), label: (e.getAttribute("aria-label") || e.textContent || "").trim().slice(0, 40), ring: (s.outlineStyle !== "none" && parseFloat(s.outlineWidth) > 0) || /rgb\((?!0, 0, 0\))[^)]*\) 0px 0px 0px [1-9]/.test(s.boxShadow), inView: r.bottom > 0 && r.top < innerHeight }; });
+      const f = await p.evaluate(async () => { const e = document.activeElement; if (!e || e === document.body) return null;
+        // A button eases its ring in (transition-all, 150 ms): read what a person sees once it has settled.
+        await Promise.all(e.getAnimations().map((a) => a.finished.catch(() => {}))); const s = getComputedStyle(e); const r = e.getBoundingClientRect();
+        return { programmatic: e.tabIndex < 0 && !/^(A|BUTTON|INPUT|SELECT|TEXTAREA)$/.test(e.tagName), tag: e.tagName, type: e.getAttribute("type"), label: (e.getAttribute("aria-label") || e.textContent || "").trim().slice(0, 40), ring: (s.outlineStyle !== "none" && parseFloat(s.outlineWidth) > 0) || (s.boxShadow || "").split(/,(?![^(]*\))/).some((l) => { const m = l.trim().match(/^(\w+\(([^)]*)\))\s+0px 0px 0px ([\d.]+)px/); if (!m || !(parseFloat(m[3]) > 0)) return false; const a = m[2].includes("/") ? parseFloat(m[2].split("/")[1]) : (m[1].startsWith("rgba") ? parseFloat(m[2].split(",")[3]) : 1); return a > 0; }), css: `fv=${e.matches(":focus-visible")} cls=${String(e.className).slice(0, 220)} | ${s.outlineStyle} ${s.outlineWidth} | ${(s.boxShadow || "").split(/,(?![^(]*\))/).filter((l) => !/ 0px 0px 0px 0px/.test(l)).join(",")}`, inView: r.bottom > 0 && r.top < innerHeight }; });
       if (!f) continue;
-      if (!f.ring) unseen.push(`${f.tag} ${f.label}`);
+      // A heading the page moves focus to after a step (tabindex=-1, for screen readers) is not a Tab stop (WCAG 2.4.7 is about operable controls).
+      if (!f.ring && !f.programmatic) unseen.push(`${f.tag} ${f.label} [${f.css}]`);
       if (!started && f.tag === "BUTTON" && /^(Start|Continue)/.test(f.label)) { started = true; await p.keyboard.press("Enter"); await p.waitForLoadState("networkidle"); continue; }
       // A choice question: Space picks the focused option (a person answers it by keyboard), then on to Save and continue.
       if (f.tag === "INPUT" && f.type === "radio") { await p.keyboard.press("Space"); continue; }

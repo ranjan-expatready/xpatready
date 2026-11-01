@@ -28,7 +28,8 @@ const norm = (s) => String(s ?? "").replace(/\s+/g, " ").replace(/[→]/g, "").t
   const rows = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).body.rows.filter((r) => r.combinationId);
   const strip = () => p.locator("[data-setup-strip]");
   const header = async () => {
-    const box = p.locator("p", { hasText: /^Next step$/ }).first().locator("xpath=../..");
+    // #216 marks the header box [data-header-next] and labels it "Next step · <step>"; main before #216 labels it "Next step".
+    const box = (await p.locator("[data-header-next]").count()) ? p.locator("[data-header-next]").first() : p.locator("p", { hasText: /^Next step$/ }).first().locator("xpath=../..");
     const btn = box.locator("[data-next-step]");
     return (await btn.count()) ? await btn.innerText() : await box.innerText();
   };
