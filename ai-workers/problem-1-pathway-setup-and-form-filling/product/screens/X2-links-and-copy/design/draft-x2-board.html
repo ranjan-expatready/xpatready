@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>X2 board: links between combinations and copying a line (draft, Sample)</title>
+<style>
+  :root { --primary:#0862c5; --link:#054e9c; --surface:#f7f7f7; --raised:#fff; --border:#d9d9d9; --text:#2d2d2d; --muted:#595959; --danger:#dc2626; --warn:#ff8500; --ai:#e6f4ff; }
+  * { box-sizing: border-box; }
+  body { margin:0; font: 14px/1.45 Inter, system-ui, sans-serif; color: var(--text); background: var(--surface); }
+  .bar { position: sticky; top: 0; background: #fff; border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; z-index: 5; }
+  .bar b { margin-right: 8px; }
+  .bar button { border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 4px 12px; cursor: pointer; font: inherit; }
+  .bar button[aria-pressed="true"] { border-color: var(--primary); color: var(--link); background: var(--ai); font-weight: 600; }
+  main { max-width: 1180px; margin: 0 auto; padding: 20px; }
+  .crumbs { color: var(--link); text-decoration: underline; font-size: 13px; }
+  h1 { font-size: 24px; margin: 6px 0 2px; }
+  .facts { color: var(--muted); font-size: 13px; }
+  .linkline { margin-top: 4px; font-size: 13px; }
+  .linkline a { color: var(--link); }
+  .tabs { display: flex; gap: 22px; border-bottom: 1px solid var(--border); margin: 18px 0 14px; }
+  .tabs span { padding: 8px 2px; color: var(--muted); }
+  .tabs span.on { color: var(--text); border-bottom: 2px solid var(--primary); font-weight: 600; }
+  .card { background: var(--raised); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; box-shadow: 0 1px 2px rgba(0,0,0,.04); margin-bottom: 14px; }
+  .card h2 { font-size: 15px; margin: 0 0 8px; display: flex; justify-content: space-between; align-items: center; }
+  .btn { border-radius: 8px; padding: 6px 12px; font: inherit; cursor: pointer; border: 1px solid var(--border); background: #fff; }
+  .btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .btn.ghost { border-color: transparent; }
+  .row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); }
+  .row:first-of-type { border-top: 0; }
+  .muted { color: var(--muted); font-size: 12px; }
+  .pill { display: inline-block; border-radius: 999px; padding: 1px 8px; font-size: 12px; border: 1px solid var(--border); background: var(--surface); }
+  .pill.warn { border-color: #f5b46b; background: #fff4e6; }
+  .pill.draft { border-color: #9cc3ef; background: var(--ai); }
+  .panel { position: fixed; right: 0; top: 0; bottom: 0; width: 560px; background: #fff; border-left: 1px solid var(--border); box-shadow: -8px 0 24px rgba(0,0,0,.08); padding: 22px; overflow: auto; z-index: 10; }
+  .panel h3 { margin: 0 0 4px; font-size: 18px; }
+  label.f { display: block; font-size: 12px; font-weight: 600; margin: 14px 0 4px; }
+  .input { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font: inherit; background: #fff; }
+  .input.bad { border-color: var(--danger); }
+  .err { color: var(--danger); font-size: 12px; margin-top: 4px; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .radio { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-top: 6px; }
+  .ticks label { display: flex; gap: 8px; padding: 3px 0; }
+  .foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; border-top: 1px solid var(--border); padding-top: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  .banner { border-left: 4px solid var(--warn); background: #fff8ef; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
+  .note { font-size: 12px; color: var(--muted); margin-top: 30px; border-top: 1px dashed var(--border); padding-top: 10px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="bar" role="toolbar" aria-label="Board states">
+  <b>X2 board · Sample · draft for the founder's early look</b>
+  <button data-s="empty">Links: empty</button>
+  <button data-s="filled" aria-pressed="true">Links: one link</button>
+  <button data-s="add">Add a link (panel)</button>
+  <button data-s="errors">Field errors</button>
+  <button data-s="readonly">Approver (read-only)</button>
+  <button data-s="blocked">Other not released</button>
+  <button data-s="bulk">Copy to many (X2b)</button>
+</div>
+<main>
+  <div class="crumbs">Immigration programs › Temporary residence › Work permits › Employer-specific work permit › With an LMIA</div>
+  <h1>With an LMIA <span class="pill">Sample</span></h1>
+  <div class="facts">In Release 1 · 1 draft change · cases opened outside Canada · people: Principal applicant, Spouse or partner (optional), Child (0–4) · filing: PDF only</div>
+  <div class="linkline" data-show="filled add errors readonly blocked bulk">↔ Supported by <a href="#">Labour Market Impact Assessment</a> <span class="pill draft" data-show="filled add errors blocked bulk">draft</span></div>
+  <div class="tabs"><span class="on">Overview</span><span>Forms</span><span>Questionnaires</span><span>Documents</span><span>Preview</span><span>Review and release</span></div>
+
+  <div class="banner" data-show="blocked"><b>Release waits:</b> Supported by Labour Market Impact Assessment: that combination has no release yet. Release it first, or remove the link.</div>
+
+  <section class="card" aria-labelledby="links-h" data-show="empty filled add errors readonly blocked">
+    <h2 id="links-h">Links to other applications <button class="btn" data-hide="readonly" data-go="add">+ Add a link</button></h2>
+    <p class="muted" data-show="empty">Not linked. Add a link when another application usually supports this one (an employer's LMIA for a worker) or comes before it (a study permit before a post-graduation work permit).</p>
+    <div data-show="filled add errors readonly blocked">
+      <div class="row">
+        <div><b>Supported by</b> <a href="#" style="color:var(--link)">Labour Market Impact Assessment</a> <span class="pill draft" data-hide="readonly">draft</span><br>
+          <span class="muted">Corporate and employers › Labour market impact assessments › Labour Market Impact Assessment</span><br>
+          <span>Carries: LMIA number, Position title, Work location · documents: LMIA decision letter, Job offer letter</span><br>
+          <span class="muted">On a case these come from the linked LMIA case, filled in and marked "please confirm"; with no linked case they are asked as usual.</span></div>
+        <div data-hide="readonly"><button class="btn ghost" aria-label="More for this link">⋯</button></div>
+      </div>
+    </div>
+    <p class="muted" data-show="readonly">Approver view: links are released with this combination and approved with its other changes; nothing here is edited.</p>
+  </section>
+
+  <section class="card" data-show="bulk">
+    <h2>Copy IMM 5476 · Use of a representative to other combinations</h2>
+    <p class="muted">Nothing changes until you choose Add. Each combination gets its own draft change; Undo is there until that draft is submitted.</p>
+    <table>
+      <thead><tr><th><input type="checkbox" checked aria-label="All"></th><th>Combination</th><th>What happens</th></tr></thead>
+      <tbody>
+        <tr><td><input type="checkbox" checked aria-label="Visitor visa"></td><td>Temporary residence › Visitor visa › Single entry</td><td><b>Will change:</b> IMM 5476 added, filed as PDF upload, always</td></tr>
+        <tr><td><input type="checkbox" checked aria-label="Study permit"></td><td>Temporary residence › Study permits › Student</td><td><b>Will change:</b> IMM 5476 added</td></tr>
+        <tr><td><input type="checkbox" disabled aria-label="Super visa"></td><td>Temporary residence › Visitor visa › Super visa</td><td class="muted">Already has it (no change)</td></tr>
+        <tr><td><input type="checkbox" disabled aria-label="High wage"></td><td>Corporate and employers › LMIA › High wage</td><td class="muted">Has it with a different "only if" (Has a representative): kept as it is</td></tr>
+        <tr><td><input type="checkbox" disabled aria-label="Outside"></td><td>Permanent residence › Federal skilled › Outside Canada</td><td><span class="pill warn">Cannot</span> IRCC does not accept a PDF upload of IMM 5476 through this combination's account</td></tr>
+      </tbody>
+    </table>
+    <div class="foot"><button class="btn">Cancel</button><button class="btn primary">Add to 2 combinations</button></div>
+  </section>
+
+  <p class="note">Draft board for X2 (C1.3, C1.5). It adapts Screen 03's agreed concept (BR-12, BR-13, Links card) to today's tabs. All names and links are Sample; the LMIA trail is the sample's, not an IRCC page. Questions Q1–Q3 are in concept-draft.md §7.</p>
+</main>
+
+<aside class="panel" aria-labelledby="panel-h" data-show="add errors">
+  <h3 id="panel-h">Add a link</h3>
+  <p class="muted">With an LMIA · draft change</p>
+  <label class="f">Kind</label>
+  <div class="radio"><input type="radio" name="k" checked aria-label="Supported by"><div><b>Supported by</b><div class="hint">Another application the person's case relies on, such as the employer's LMIA for this work permit.</div></div></div>
+  <div class="radio"><input type="radio" name="k" aria-label="Follows"><div><b>Follows</b><div class="hint">An application that usually comes before this one, such as a study permit before a post-graduation work permit.</div></div></div>
+  <label class="f" for="t">Other combination</label>
+  <input id="t" class="input" value="Labour Market Impact Assessment" data-show="add">
+  <input class="input bad" value="With an LMIA (this combination)" data-show="errors" aria-invalid="true">
+  <div class="err" data-show="errors">A combination cannot be linked to itself. Choose the application this one relies on.</div>
+  <div class="hint" data-show="add">Search by any part of its trail: Corporate and employers › Labour market impact assessments › …</div>
+  <label class="f">Facts it carries</label>
+  <div class="ticks">
+    <label><input type="checkbox" checked> LMIA number</label>
+    <label><input type="checkbox" checked> Position title</label>
+    <label><input type="checkbox" checked> Work location</label>
+    <label><input type="checkbox" data-show="errors" checked> Wage offered</label>
+  </div>
+  <div class="err" data-show="errors">Wage offered is not asked in Labour Market Impact Assessment, so it cannot be carried. Untick it, or add it to that combination first.</div>
+  <div class="hint">On a case these come from the linked case already filled in, marked "please confirm". With no linked case they are asked as usual.</div>
+  <label class="f">Documents it carries</label>
+  <div class="ticks"><label><input type="checkbox" checked> LMIA decision letter</label><label><input type="checkbox" checked> Job offer letter</label></div>
+  <div class="foot"><button class="btn" data-go="filled">Cancel</button><button class="btn primary" data-go="filled">Save to draft</button></div>
+</aside>
+
+<script>
+  const show = (s) => {
+    document.querySelectorAll(".bar button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.s === s)));
+    document.querySelectorAll("[data-show]").forEach((e) => { e.hidden = !e.dataset.show.split(" ").includes(s); });
+    document.querySelectorAll("[data-hide]").forEach((e) => { if (e.dataset.hide.split(" ").includes(s)) e.hidden = true; else if (!e.dataset.show) e.hidden = false; });
+  };
+  document.querySelectorAll(".bar button").forEach((b) => b.addEventListener("click", () => show(b.dataset.s)));
+  document.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => show(b.dataset.go)));
+  show("filled");
+</script>
+</body>
+</html>
