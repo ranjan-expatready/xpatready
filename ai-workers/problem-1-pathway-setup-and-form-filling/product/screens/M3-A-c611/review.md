@@ -82,3 +82,5 @@ Also fixed from the break report:
 * A real screen reader.
 * An unaided walk by an intended user (D17 and D20 stay with the founder).
 * CI on this commit. It would not run these suites anyway: see "Lead action".
+
+**Merge check, 98859a54 (merge of origin/main): Approve 98859a54.** Compared with origin/main, `git diff origin/main...98859a54` is exactly the approved C6.11 change (21 files). The only files that differ from f3a04f73 are main.ts and schema.prisma, and only by main's own lines: fill-case's `MAX_VALIDATED_MB` import and QA-126's 413 wording in main.ts, and main's schema changes. Migration 20261101130000 still sorts after main's latest (20261101120000_x2b_line_batch). I did not re-run the app: the coordinator's re-runs on the merged commit are the evidence.
