@@ -657,6 +657,8 @@ export class Studio {
    *  the closed vocabulary (engine/validate.ts), the words shown when it fires, and the fact it sits on (default: the
    *  first fact the condition reads). No source quote: labelled Sample (illustrative). It goes out with the next release. */
   async saveCheck(actor: Actor, combinationId: string, raw: unknown) {
+    // The database keeps a condition's keys in its own order: compare them sorted.
+    const canonical = (v: unknown): string => Array.isArray(v) ? `[${v.map(canonical).join(",")}]` : v && typeof v === "object" ? `{${Object.keys(v).sort().map((k) => `${JSON.stringify(k)}:${canonical((v as Record<string, unknown>)[k])}`).join(",")}}` : JSON.stringify(v);
     const b = (raw ?? {}) as { group?: unknown; appliesTo?: unknown; condition?: unknown; message?: unknown; sourceQuote?: unknown };
     need(actor, "author"); // draft edits are the author duty
     const c = await this.db.combination.findUnique({ where: { id: combinationId } });
@@ -671,6 +673,10 @@ export class Studio {
     const appliesTo = typeof b.appliesTo === "string" ? b.appliesTo : typeof condField === "string" ? condField : null;
     const quote = typeof b.sourceQuote === "string" ? b.sourceQuote.trim() : "";
     if (!appliesTo || !t.fields.has(appliesTo)) fail("Name the question the check sits on: a field of the library (for example case.funds_available_cad).");
+    // Review c44-part2 m1: the same check twice in the draft (a double click) is refused, never saved again.
+    const same = (await this.db.check.findMany({ where: { combinationId, checkGroup: "section_check", status: "DRAFT", appliesTo, message: message.slice(0, 500) } }))
+      .some((x) => canonical(x.predicateJson) === canonical(b.condition));
+    if (same) fail("This check is already in the draft.", HttpStatus.CONFLICT);
     const n = await this.db.check.count({ where: { combinationId } });
     const row = await this.db.check.create({ data: { workspaceId: c!.workspaceId, combinationId, checkKey: `SC-${String(n + 1).padStart(2, "0")}-${Date.now().toString(36).slice(-3)}`, checkGroup: "section_check", appliesTo, predicateJson: b.condition as Prisma.InputJsonValue, severity: "warn", message: message.slice(0, 500), sourceQuote: quote || null, illustrative: !quote, version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id } });
     await this.audit.log(c!.workspaceId, actor.id, "created", "check", row.checkKey, `${actor.name} added section check "${message.slice(0, 80)}" in "${c!.label}" (draft v1${row.illustrative ? ", Sample" : ""})`, { appliesTo, condition: b.condition }, combinationId);

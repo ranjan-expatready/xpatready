@@ -134,8 +134,9 @@ export type ViewSection = { subjectId: string; about_label: string; section: str
 /** One line of a section's error summary: an answer's problem (kind "field") or a section check that fired (kind "check"). */
 export type SectionProblem = { kind: "field" | "check"; field: string; subjectId: string; row: string | null; label: string; message: string; check?: string };
 /** A section check the case's answers trigger (RT-7, release data): a warning on the person's answers. It never blocks
- *  saving (P-71); it blocks "ready to file" for the forms the checked fact fills (P-47 tier 2, C4.4 part 2). fact and section place it on the question it concerns; null when the check names no one question. */
-export type ViewCheck = { id: string; severity: string; message: string; subjectId: string; about_label: string; fact: string | null; section: string | null; illustrative: boolean };
+ *  saving (P-71); a section check (group "section_check", severity warn or block) blocks "ready to file" for the forms the checked
+ *  fact fills (P-47 tier 2, C4.4 part 2); every other group only warns (P-168). fact and section place it on the question it concerns; null when the check names no one question. */
+export type ViewCheck = { id: string; severity: string; group?: string; message: string; subjectId: string; about_label: string; fact: string | null; section: string | null; illustrative: boolean };
 export type QuestionnaireView = {
   mode: "sqr" | "agent"; sections: ViewSection[]; checks: ViewCheck[]; forms: { form: string; person: string; applies: boolean | string }[];
   /** Only when the view skips facts a document supplies (Preview, P-130): per person and document, the facts it fills. */

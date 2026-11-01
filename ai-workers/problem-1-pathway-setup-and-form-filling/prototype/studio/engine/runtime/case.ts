@@ -316,9 +316,9 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   });
   // Checks the answers trigger, on the question they concern; in the client's view only those on the client's parts.
   const shown = new Set(sections.map((x) => `${x.subjectId}|${x.section}`));
-  const checks: ViewCheck[] = (r.checks as { id: string; severity: string; message: string; person: string; person_label: string; applies_to: string | null; illustrative: boolean }[]).map((c) => {
+  const checks: ViewCheck[] = (r.checks as { id: string; severity: string; group: string; message: string; person: string; person_label: string; applies_to: string | null; illustrative: boolean }[]).map((c) => {
     const subjectId = c.person === "case" ? caseSubject.subjectId : c.person, fact = c.applies_to && placementOf(s, c.applies_to) ? c.applies_to : null;
-    return { id: c.id, severity: c.severity, message: c.message, subjectId, about_label: c.person === "case" ? caseSubject.label : c.person_label, fact, section: fact ? placementOf(s, fact)!.section_id : null, illustrative: c.illustrative };
+    return { id: c.id, severity: c.severity, group: c.group, message: c.message, subjectId, about_label: c.person === "case" ? caseSubject.label : c.person_label, fact, section: fact ? placementOf(s, fact)!.section_id : null, illustrative: c.illustrative };
   }).filter((c) => mode === "agent" || (c.section !== null && shown.has(`${c.subjectId}|${c.section}`)));
   // P-47 tier 2 (C4.4 part 2): each section's error summary, GOV.UK pattern: every answer that fails its checks and every
   // section check that fired on the section, each naming the field (and row) it links to, in the order of the questions.

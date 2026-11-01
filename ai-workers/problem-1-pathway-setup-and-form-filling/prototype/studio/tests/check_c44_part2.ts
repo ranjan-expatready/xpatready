@@ -51,6 +51,12 @@ type Sec = { subjectId: string; section: string; questions: Q[]; problems: { kin
   ok("R2 fail: the visit ending before it starts keeps IMM 5257 from being ready to file for the principal, in the check's words", !!fired && !!blocker(crossed) && readiness(crossed, "IMM 5257", "p1").ready === false, readiness(crossed, "IMM 5257", "p1").missing.filter((m) => m.reason === "a check fired"));
   const straight = vcase([caseAns("case.intended_stay_from", "2027-03-01"), caseAns("case.intended_stay_to", "2027-03-10")]);
   ok("R2 pass: dates in order fire no check, so no check blocks IMM 5257", !straight.checks.some((c) => /ends before it starts/.test(c.message)) && !blocker(straight));
+  // Review c44-part2 M1 (P-168, P-136): only a section check blocks; advice, readiness warnings and official rules still
+  // waiting for the expert fire on the same fact and only warn.
+  const onTo = { subjectKind: "CASE", op: "eq", field: "case.intended_stay_to", value: "2027-03-10" };
+  const advisory = { ...snap, checks: [...snap.checks, { id: "T_ADVISE", group: "readiness_warning", severity: "advise", condition: onTo, applies_to: "case.intended_stay_to", message: "Sample advice on the end date.", illustrative: true }, { id: "T_SME", group: "official_rule", severity: "sme_pending", condition: onTo, applies_to: "case.intended_stay_to", message: "Sample official rule waiting for the expert.", illustrative: true }] };
+  const adv = caseView(advisory, people, [caseAns("case.intended_stay_from", "2027-03-01"), caseAns("case.intended_stay_to", "2027-03-10")], [], "agent", new Date("2026-11-01T12:00:00Z"));
+  ok("R2 pass: an advisory readiness warning and an official rule waiting for the expert fire on the end date and only warn: IMM 5257 has no \"a check fired\"", ["T_ADVISE", "T_SME"].every((id) => adv.checks.some((c) => c.id === id)) && !readiness(adv, "IMM 5257", "p1").missing.some((m) => m.reason === "a check fired"), { fired: adv.checks.map((c) => c.id), blocked: readiness(adv, "IMM 5257", "p1").missing.filter((m) => m.reason === "a check fired") });
   const secOf = (v: typeof crossed, fact: string) => (v.sections as Sec[]).find((s) => s.questions.some((q) => q.fact === fact));
   const crossedSec = secOf(crossed, "case.intended_stay_to");
   ok("R1 fail: the section holding the dates lists the fired check in its error summary, linked to its field", !!crossedSec?.problems.some((p) => p.kind === "check" && p.field === "case.intended_stay_to" && p.subjectId === "c" && /ends before it starts/.test(p.message) && p.check === fired?.id), crossedSec?.problems);
@@ -90,6 +96,8 @@ type Sec = { subjectId: string; section: string; questions: Q[]; problems: { kin
   const a2 = await call("POST", `/combinations/${vv}/checks`, { ...base, message: "Funds under CAD 900 (Sample).", condition: { ...cond, value: 900 }, sourceQuote: "Sample quote for the test, not IRCC's words." }, AUTHOR);
   ok("R3 pass: a check with a source quote is not labelled Sample", a2.status >= 200 && a2.status < 300 && a2.body?.illustrative === false, a2.body);
   const before = sql(`select count(*) from check_def where combination_id = '${vv}'`);
+  const dup = await call("POST", `/combinations/${vv}/checks`, base, AUTHOR);
+  ok("R3 fail (review m1): the same check again is refused (409), never saved twice", dup.status === 409 && /already in the draft/.test(words(dup)), { status: dup.status, words: words(dup) });
   const off = await call("POST", `/combinations/${vv}/checks`, base, OFFICER);
   ok("R3 fail: a case officer cannot author a check (403)", off.status === 403, off.status);
   const badOp = await call("POST", `/combinations/${vv}/checks`, { ...base, condition: { ...cond, op: "covers_years" } }, AUTHOR);
