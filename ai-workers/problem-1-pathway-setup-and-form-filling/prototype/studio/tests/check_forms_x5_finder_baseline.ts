@@ -130,6 +130,18 @@ const C = "IMM 5645", VV = "Visitor visa";
   const gone = await call("POST", `/library/forms/${encodeURIComponent(F)}/check-canada`);
   ok("C2.6 X5 break (6bc5eb72) m39 fail: a form with a file whose canada.ca PDF cannot be read gets 409 in words, is not stamped checked, and no check is audited", hasFile === "ready" && gone.status === 409 && /could not be downloaded/.test(gone.body?.detail ?? "") && stamp() === s0 && sql("select count(*) from audit_event where action = 'checked'") === checkedBefore, { hasFile, status: gone.status, d: gone.body?.detail });
 
+  // ── X5 slice c (review 02ca83a5, 3): a listed form deleted from the library is brought back by Find again (a person's
+  // click), which forgets the remembered deletion.
+  freshCopies();
+  await restart();
+  await call("POST", "/demo/reset", { confirm: "RESET" }); await call("POST", "/demo/load");
+  await call("POST", "/library/forms/fill-from-index");
+  const del = await call("DELETE", `/library/forms/${encodeURIComponent(C)}`, { reason: "Not needed in this library" });
+  await call("POST", `/library/changes/${del.body?.id}/approve`, { note: "Checked: unused" }, "user-B");
+  const remembered = sql(`select count(*) from library_form_deletion where form_key = '${C}'`);
+  await findAgain(VV);
+  ok("C3.12 X5 slice c (review 02ca83a5, 3) fail: Find again downloading a deleted form forgets its remembered deletion, and the form is back in the library", remembered === "1" && sql(`select count(*) from library_form_deletion where form_key = '${C}'`) === "0" && sql(`select count(*) from gov_form_def where form_key = '${C}'`) === "1", { remembered });
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.log(`FAIL  the check stopped: ${(e as Error).stack}`); process.exit(1); });

@@ -30,6 +30,7 @@ import { editionMonth, newestEdition } from "../../engine/programs.ts";
 import { ACTORS, Audit, Db, fail, need, OFFICIAL, PY, ROOT, STUDIO, VAR, Workspace, type Actor } from "./core.ts";
 import { recordApproval, Sources } from "./sources.ts";
 import { Finder } from "./finder.ts";
+import { forgetDeletion } from "./library-deletions.ts";
 
 const run = promisify(execFile);
 const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
@@ -349,6 +350,7 @@ export class Intake {
     const page = await this.db.officialDownload.findFirst({ where: { workspaceId, sha256: hash }, select: { formPageUrl: true, sourceUrl: true } });
     await this.db.$transaction(async (tx) => {
       const d = def ?? (await tx.govFormDef.create({ data: { workspaceId, formKey: id.code, displayName: id.title || id.code, formKind: read.kind === "form" ? "data_form" : "document" } }));
+      await forgetDeletion(tx, workspaceId, id.code); // X5 slice c: a person added it back
       // S4 round 6 (D18): where it came from (a person's upload, or the sample load) and the canada.ca page it matched.
       await tx.formEdition.create({ data: { workspaceId, govFormDefId: d.id, editionLabel: id.edition_label, officialFile: item?.file ?? null, sha256: hash, storedPath: stored.replace(`${ROOT}/`, ""), origin: via === "SAMPLE" ? "SAMPLE" : "UPLOADED", formPageUrl: page?.formPageUrl ?? null, sourceUrl: page?.sourceUrl ?? null, checkedAt: page ? new Date() : null } });
       if (page?.formPageUrl && !d.formPageUrl) await tx.govFormDef.update({ where: { id: d.id }, data: { formPageUrl: page.formPageUrl } });
