@@ -30,9 +30,12 @@ const info = (n, d) => console.log(`INFO  ${n} — ${(typeof d === "string" ? d 
   const axe = async (what) => { const r = await new AxeBuilder({ page: p }).analyze(); const bad = r.violations.filter((v) => ["serious", "critical"].includes(v.impact)); step(`${what}: axe has no serious or critical violation`, bad.length === 0, bad.map((v) => `${v.id}: ${v.nodes.length}`)); };
 
   // ---- #259 C3.12: field map in the Forms list
+  // The sample now holds IRCC's whole forms list (237; "Showing 50 of 237 forms"), so IMM 5257 is past the first page.
+  // A person narrows with "Used by"; the walk does the same (qa-2, after-merge 7, 69e0f215).
+  const usedByVisitor = async () => { const sel = p.locator("select", { has: p.locator("option", { hasText: "Visitors › Visitor visa" }) }).first(); if (await sel.count()) { await sel.selectOption({ label: "Visitors › Visitor visa" }); await p.waitForTimeout(500); } };
   for (const w of [1440, 1024, 400]) {
     await p.setViewportSize({ width: w, height: 900 });
-    await p.goto(`${BASE}/library/forms`); await p.getByRole("table").first().waitFor();
+    await p.goto(`${BASE}/library/forms`); await p.getByRole("table").first().waitFor(); await usedByVisitor();
     await p.waitForTimeout(300);
     const head = await p.getByRole("columnheader", { name: "Field map" }).isVisible().catch(() => false);
     const short = await p.locator("[data-field-map-short]").first().isVisible().catch(() => false);
@@ -47,7 +50,7 @@ const info = (n, d) => console.log(`INFO  ${n} — ${(typeof d === "string" ? d 
     await p.screenshot({ path: path.join(SHOTS, `c312-forms-list-${w}.png`) });
   }
   await p.setViewportSize({ width: 1440, height: 900 });
-  await p.goto(`${BASE}/library/forms`); await p.getByRole("table").first().waitFor();
+  await p.goto(`${BASE}/library/forms`); await p.getByRole("table").first().waitFor(); await usedByVisitor();
   const firstForm = p.locator("tbody tr").filter({ hasText: /IMM 5257/ }).first();
   await firstForm.getByRole("button").first().click().catch(async () => { await firstForm.click(); });
   const panel = p.locator("[data-field-map-panel]");

@@ -31,8 +31,24 @@ export const NewCase = z.object({
   /** The simulated client login that answers the questionnaire. */
   clientActor: text("Name the client who answers the questionnaire.", 1, 40),
   principal: z.object({ displayName: text("Give the principal applicant a display name.", 2, 120) }, { message: "Name the principal applicant." }),
+  /** C6.11 (BR-20): the representative of record, a licensed user of the opener's firm. Left out: the firm's only
+   *  representative (a firm with more than one must choose). */
+  representative: z.string({ message: "Choose the representative of record." }).trim().regex(/^user-[A-Za-z0-9]{1,8}$/, "Choose the representative of record.").optional(),
+  /** C6.11: the case officers, users of the opener's firm with the case duty. Left out: the firm's case officers who are
+   *  not representatives (in a solo firm, its one person). */
+  caseOfficers: z.array(z.string().trim().regex(/^user-[A-Za-z0-9]{1,8}$/, "Choose case officers from your firm."), { message: "Choose case officers from your firm." }).min(1, "Choose at least one case officer.").max(5, "A case has at most 5 case officers.").optional(),
   idempotencyKey: idemKey.optional(),
 });
+
+/** C6.11 (BR-20, SI-9): the firm admin changes the representative of record, with a reason kept in the history; a new
+ *  representative asks for a new IMM 5476 (BR-12). */
+const teamUser = z.string({ message: "Choose a person of your firm." }).trim().regex(/^user-[A-Za-z0-9]{1,8}$/, "Choose a person of your firm.");
+/** A reason a person reads in the history: some letters or digits, not only marks or filler characters (break m1). */
+const reason = (missing: string) => text(missing, 5, 300).refine((x) => /[\p{L}\p{N}]/u.test(x.replace(/[\u115f\u1160\u3164\uffa0]/g, "")), missing);
+/** expectedRepresentative: the representative the person saw; a change made meanwhile by someone else is refused (break m4). */
+export const ChangeRepresentative = z.object({ userId: teamUser, reason: reason("Say why the representative changes (at least 5 characters)."), expectedRepresentative: teamUser.nullable().optional() });
+export const AddCaseOfficer = z.object({ userId: teamUser });
+export const EndCaseOfficer = z.object({ reason: reason("Say why this case officer leaves the case (at least 5 characters).") });
 
 export const NewPerson = z.object({
   role: z.string({ message: "Choose who the person is (a person the release lists)." }).trim().regex(/^[a-z][a-z0-9_]{1,40}$/, "Choose who the person is (a person the release lists).").refine((r) => r !== "principal", "The case already has its principal applicant."),

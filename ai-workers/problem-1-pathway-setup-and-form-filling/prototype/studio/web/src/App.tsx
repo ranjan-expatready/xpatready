@@ -1,7 +1,7 @@
 import * as React from "react";
 import { RunChip } from "@/components/run-card";
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { Activity, BookOpen, Boxes, CheckSquare, ChevronDown, Database, FileStack, FileText, Inbox, Layers, ListTree, Moon, RotateCcw, Sparkles, Sun, Upload, X } from "lucide-react";
+import { Activity, BookOpen, Boxes, CheckSquare, ChevronDown, Scale, Database, FileStack, FileText, Inbox, Layers, ListTree, Moon, RotateCcw, Sparkles, Sun, Upload, X } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { api, ApiError, getActor, setActor, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Input, Notice, Pill, Table } from "@/components/ui/controls";
@@ -9,13 +9,15 @@ import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { ProgramsPage } from "@/pages/programs";
 import { ReleasePage } from "@/pages/release";
-import { ChecksPage, FormsPage } from "@/pages/library-forms";
+import { FormsPage } from "@/pages/library-forms";
+import { ChecksPage, RulesPage } from "@/pages/library-rules";
 import { CombinationPage } from "@/pages/combination";
 import { JobPage } from "@/pages/job";
 import { FieldsPage, FieldPage, SectionsPage, DocumentTypesPage } from "@/pages/library";
 import { ActivityPage, ReleasesPage } from "@/pages/history";
 import { AiBatchPage, AiWorkPage } from "@/pages/ai";
 import { ToReviewPage } from "@/pages/to-review";
+import { ReturnStrip } from "@/components/return-strip";
 import { StructurePage } from "@/pages/structure";
 import { EditionImpactPage, HeldFilePage, LibraryChangePage, MergeReviewPage, FormFieldsPage } from "@/pages/review-items";
 import { ChangeBatchPage, ProposalsPage } from "@/pages/proposals";
@@ -45,6 +47,7 @@ function Shell() {
     { to: "/library/documents", label: "Document types", icon: FileStack },
     { to: "/library/forms", label: "Forms", icon: FileText },
     { to: "/library/checks", label: "Checks", icon: CheckSquare },
+    { to: "/library/rules", label: "Rules", icon: Scale },
     { to: "/ai", label: "AI work", icon: Sparkles },
     { to: "/releases", label: "Releases", icon: BookOpen },
     { to: "/activity", label: "Activity", icon: Activity },
@@ -80,9 +83,9 @@ function Shell() {
           <p className="px-2 pb-1 pt-2 text-xs font-medium text-text-muted">Configure</p>
           {nav.slice(0, 3).map((n) => <NavItem key={n.to} {...n} active={n.match ? n.match(loc.pathname) : undefined} />)}
           <p className="px-2 pb-1 pt-4 text-xs font-medium text-text-muted">Shared library</p>
-          {nav.slice(3, 8).map((n) => <NavItem key={n.to} {...n} />)}
+          {nav.slice(3, 9).map((n) => <NavItem key={n.to} {...n} />)}
           <p className="px-2 pb-1 pt-4 text-xs font-medium text-text-muted">History</p>
-          {nav.slice(8).map((n) => <NavItem key={n.to} {...n} />)}
+          {nav.slice(9).map((n) => <NavItem key={n.to} {...n} />)}
           <div className="mt-auto rounded-lg border border-border bg-surface p-3 text-[11px] leading-relaxed text-text-muted">
             Simulated people; local PostgreSQL demo database. AI drafting uses the guarded prototype route (synthetic or public official inputs only). Not production.
           </div>
@@ -93,6 +96,8 @@ function Shell() {
             ? <Notice tone="danger" title="The studio did not accept the simulated person">Pick a person under Simulated person, then reload this page. ({(session.error as Error).message})</Notice>
             : <Notice tone="danger" title="The studio server is not answering">Start it with studio/start.sh, then reload this page. ({(session.error as Error).message})</Notice>
             : !session.isPending && !session.data?.actor ? <Notice tone="danger" title="The studio answered without a person">Something between this page and the studio changed its answer. Reload this page; if it stays, restart the studio.</Notice> : null}
+          {/* C2.12: a page opened from a form's guided path keeps the way back (?form=&c=). */}
+          {!casePerson ? <ReturnStrip /> : null}
           {casePerson ? <Notice tone="warn" title="This page is for the configuration people" action={<Link className="whitespace-nowrap text-text-link underline" to="/cases">Open your cases</Link>}>{me.name} (simulated) works on cases. Programs, forms and rules are set up here by the configuration people; your work is in Cases.</Notice> : <Routes>
             <Route path="/" element={<ProgramsPage />} />
             <Route path="/review" element={<ToReviewPage />} />
@@ -113,6 +118,7 @@ function Shell() {
             <Route path="/library/documents" element={<DocumentTypesPage />} />
             <Route path="/library/forms" element={<FormsPage />} />
             <Route path="/library/checks" element={<ChecksPage />} />
+            <Route path="/library/rules" element={<RulesPage />} />
             <Route path="/release" element={<ReleasePage />} />
             <Route path="/ai" element={<AiWorkPage />} />
             <Route path="/ai/:batchId" element={<AiBatchPage />} />

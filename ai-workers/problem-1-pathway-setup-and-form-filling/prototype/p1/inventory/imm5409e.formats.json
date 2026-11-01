@@ -1,0 +1,21 @@
+{
+ "file": "imm5409e.pdf",
+ "sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+ "read_by": "prototype/p1/xfa_formats.py (the form's own XFA template: maxChars, picture clauses, validate scripts; no AI)",
+ "boxes_with_format": 2,
+ "boxes_unmatched": 0,
+ "boxes": {
+  "IMM_5409[0].Page1[0].Info[0].startDate[0]": {
+   "caption": "Date (YYYY-MM-DD)",
+   "validate_picture": "date{YYYY-MM-DD}",
+   "ui_picture": "date{YYYY-MM-DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "IMM_5409[0].Page1[0].Info[0].endDate[0]": {
+   "caption": "Date (YYYY-MM-DD)",
+   "validate_picture": "date{YYYY-MM-DD}",
+   "ui_picture": "date{YYYY-MM-DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  }
+ }
+}

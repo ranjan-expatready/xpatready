@@ -133,14 +133,16 @@ if [ -z "${CI:-}" ]; then
   fi
 fi
 
-rows=(); fail=0
+rows=(); fail=0; failed=()
 run() {  # $1 file, $2 label, rest: command
-  local f="$1" label="$2"; shift 2; local log="$OUT/${f%.*}.log" t0=$SECONDS
-  if "$TIMEOUT" 1200 "$@" > "$log" 2>&1; then st=PASS; else st=FAIL; fail=1; fi
+  local f="$1" label="$2"; shift 2; local log="$OUT/${f%.*}.log" t0=$SECONDS code=0
+  if "$TIMEOUT" 1200 "$@" > "$log" 2>&1; then st=PASS; else code=$?; st=FAIL; fail=1; failed+=("$f|$code|$log"); fi
   local last; last=$(grep -E "passed|/[0-9]+ passed|[0-9]+ passed" "$log" | tail -1 | cut -c1-90)
   [ -n "$last" ] || last="$(grep -c '^PASS' "$log") checks passed"
-  # A failing check's own line first: "Error" also appears inside PASS lines that quote an expected error.
-  [ "$st" = FAIL ] && last="$( (grep -m1 -E '^(FAIL|STOP)' "$log" || grep -m1 -E 'Error' "$log") | cut -c1-90)"
+  # A failing check's own line first: "Error" also appears inside PASS lines that quote an expected error. Then an
+  # error's message ("TypeError: fetch failed"), not the "name: 'Error'," of a printed error object (1 Nov, batch
+  # 41292621195: that was the whole reason a merge-queue log gave). The exit code says how it ended (124: timed out).
+  [ "$st" = FAIL ] && last="exit $code: $( (grep -m1 -E '^(FAIL|STOP)' "$log" || grep -m1 -E 'Error: ' "$log" || grep -m1 -E 'Error' "$log") | cut -c1-90)"
   rows+=("| $f | $st | $((SECONDS - t0)) s | ${last:-see $log} |")
 }
 for path in "$S"/tests/check_*.ts "$S"/tests/check_*.cjs; do
@@ -202,6 +204,13 @@ if [ -n "$PICK" ] && [ "${#rows[@]}" -eq 0 ]; then
   if [ "$SHARDS" -gt 1 ] && [ "$MINE" = " " ]; then rows=("| (none) | PASS | | $TURN chosen units, none for shard $SHARD/$SHARDS |")
   else rows=("| (none) | FAIL | | suites were chosen but none ran |"); fail=1; fi
 fi
+# Each failing suite's FAIL lines and the end of its log, on stderr: the job log shows why it failed even when the
+# uploaded logs cannot be read, and the summary table (stdout) stays a table (flaky-checks fix, 1 Nov).
+for x in ${failed[@]+"${failed[@]}"}; do   # (bash 3.2 on the Mac: an empty array under set -u)
+  IFS='|' read -r f code log <<< "$x"
+  { echo "::group::$f failed (exit $code): its FAIL lines and the last 40 lines of ${log#$ROOT/}"
+    grep -E '^(FAIL|STOP)' "$log" | head -20; echo "--- last 40 lines"; tail -40 "$log"; echo "::endgroup::"; } >&2
+done
 echo "| Suite | Result | Time | Last line |"; echo "|---|---|---|---|"; printf '%s\n' "${rows[@]}"
 echo "commit $(git rev-parse --short HEAD)${PICK:+ · only the chosen suites ran (--changed $CHANGED)}$([ "$SHARDS" -gt 1 ] && echo " · shard $SHARD/$SHARDS of $TURN units") · logs in ${OUT#$ROOT/}${PREFIX:+ · copies named ${PREFIX}_*, ports +$(( 10000 + 1000 * (SLOT - 1) ))}"
 exit $fail

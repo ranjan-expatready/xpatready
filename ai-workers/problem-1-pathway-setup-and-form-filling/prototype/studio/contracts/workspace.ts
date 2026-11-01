@@ -104,6 +104,9 @@ export type OnlyIf = { kind: "always" } | { kind: "rule"; words: string } | { ki
 /** One form line as the Forms tab shows it. `revision` is the line's optimistic-concurrency token. */
 export type WorkspaceFormLine = {
   line: string; code: string; title: string; document: boolean; edition: string | null; boxes: number;
+  /** QA-103: the form's current edition in the Form library (PDF), whatever the line's field map says; null when the
+   *  library holds no file for it. */
+  libraryEdition?: string | null;
   who: string; minAge: number | null; copies: number; onlyIf: OnlyIf; condition: unknown;
   channel: string; channelWords: string; signature: string | null; accepted: string[]; acceptedBasis: string;
   /** P-143 (W1-10 slice 1): the line's signature value, the signatures that fit its channel (C-2), and every channel

@@ -39,7 +39,7 @@ const LEAKS = /\bP-\d{2,3}\b|\bC-\d{1,2}\b|SIGNED_PDF_UPLOAD|PDF_UPLOAD|NOT_NEED
     const row = (page, code) => page.locator(`tr[data-line="${code}"]`);
     const portalOf = () => sql(`select coalesce(portal_key,'') from combination where id='${vv}'`);
     const waitPortal = async (want) => { for (let i = 0; i < 40 && portalOf() !== want; i++) await sleep(250); return portalOf(); };
-    const chOf = (code) => sql(`select cf.channel from combination_form cf join gov_form_def d on d.id=cf.gov_form_def_id where cf.combination_id='${vv}' and d.form_key='${code}' and cf.status='DRAFT'`);
+    const chOf = (code) => sql(`select cf.channel from combination_form cf join gov_form_def d on d.id=cf.gov_form_def_id where cf.combination_id='${vv}' and d.form_key='${code}' and cf.status in ('DRAFT','PUBLISHED') order by (cf.status='DRAFT') desc limit 1`); // the line as the author sees it: its draft if one exists, else the released line (a line not yet changed has no draft row; drift fixed 1 Nov)
 
     // ── J1 author, Forms tab: the combination files on paper (no IRCC account)
     await p.goto(`${BASE}/c/${vv}/forms`);
@@ -52,13 +52,15 @@ const LEAKS = /\bP-\d{2,3}\b|\bC-\d{1,2}\b|SIGNED_PDF_UPLOAD|PDF_UPLOAD|NOT_NEED
     await accountBox.selectOption("PAPER");
     step("C1.6 J1: picking 'No account (paper filing)' on the screen saves it", (await waitPortal("PAPER")) === "PAPER", portalOf());
     await sleep(800);
-    const toast = (await p.locator("[role=status], [role=alert]").allInnerTexts()).join(" ").replace(/\s+/g, " ");
+    const toast = (await p.locator("[data-toaster], [role=status], [role=alert]").allInnerTexts()).join(" ").replace(/\s+/g, " ");
     step("C1.6 J1: after the change the screen names the lines the new account does not accept (they are kept, not changed silently)", /IMM 5707|IMM 5475|IMM 1295|not accept|Paper/i.test(toast) && chOf("IMM 5707") === "PDF_UPLOAD", toast || "(no message)");
     await p.reload(); await row(p, "IMM 5707").waitFor({ timeout: 30000 });
     const filed = row(p, "IMM 5707").getByRole("combobox", { name: "How IMM 5707 is filed" });
     const opts = await filed.locator("option").evaluateAll((os) => os.map((o) => ({ v: o.value, off: o.disabled, text: o.textContent, why: o.title })));
     const o = (v) => opts.find((x) => x.v === v) ?? {};
-    step("C1.6 C-3 (break M6) J1: on paper filing only Paper is offered; Online and PDF upload greyed, each with a reason in words", !o("PAPER").off && o("ONLINE").off && o("PDF_UPLOAD").off && !!(o("ONLINE").why || /not|only/i.test(o("ONLINE").text ?? "")), opts);
+    // The line's own current way (PDF upload, kept from before) stays selectable so the picker can show it; its reason is
+    // on the option and in the row's note (checked next). Every other way IRCC does not accept is greyed (drift fixed 1 Nov).
+    step("C1.6 C-3 (break M6) J1: on paper filing Paper is offered; Online greyed with a reason in words; the kept PDF upload line carries its reason", !o("PAPER").off && o("ONLINE").off && !!(o("ONLINE").why || /not|only/i.test(o("ONLINE").text ?? "")) && /paper/i.test(o("PDF_UPLOAD").why ?? ""), opts);
     const note = (await row(p, "IMM 5707").innerText()).replace(/\s+/g, " ");
     step("C1.6 J1: the PDF upload line kept from before says on its row why it cannot stay", /paper|Paper|not accept|only/i.test(note), note.slice(0, 240));
     await filed.selectOption("PAPER"); await sleep(1200);
@@ -75,7 +77,7 @@ const LEAKS = /\bP-\d{2,3}\b|\bC-\d{1,2}\b|SIGNED_PDF_UPLOAD|PDF_UPLOAD|NOT_NEED
     const box2 = p2.locator("main").getByRole("combobox", { name: "IRCC account this combination files through" });
     await accountBox.selectOption("PR_PORTAL"); await waitPortal("PR_PORTAL");
     await box2.selectOption("IRCC_SECURE_ACCOUNT"); await sleep(1500);
-    const msg2 = (await p2.locator("[role=status], [role=alert], [role=note]").allInnerTexts()).join(" ").replace(/\s+/g, " ");
+    const msg2 = (await p2.locator("[data-toaster], [role=status], [role=alert], [role=note]").allInnerTexts()).join(" ").replace(/\s+/g, " ");
     step("C1.6 Q1 J2: the second tab's stale choice is refused and the screen says so in words (changed to PR Portal while you were choosing)", portalOf() === "PR_PORTAL" && /while you were choosing|PR Portal/.test(msg2) && !LEAKS.test(msg2), `${portalOf()} · ${msg2 || "(no message)"}`);
     await sleep(500);
     step("C1.6 Q1 J2: the second tab's picker shows the saved account after the refusal, not the refused one", (await box2.inputValue()) === "PR_PORTAL", await box2.inputValue());
@@ -148,7 +150,7 @@ const LEAKS = /\bP-\d{2,3}\b|\bC-\d{1,2}\b|SIGNED_PDF_UPLOAD|PDF_UPLOAD|NOT_NEED
     step("C1.6 J5 input: an unknown account is refused, naming the accounts in words", r.status === 400 && /IRCC secure account/.test(r.body?.detail ?? JSON.stringify(r.body)) && !LEAKS.test(r.body?.detail ?? ""), r.body?.detail ?? r.body);
     const ch = (data) => api(`/combinations/${vv}/forms/${encodeURIComponent("IMM 1295")}/channel`, { method: "PATCH", data });
     r = await ch({ channel: "SIGNED_PDF_UPLOAD", from: "PDF_UPLOAD" });
-    step("C1.6 C-1 J5: the old spelling is refused in words", r.status === 400 && /Online, PDF upload, Paper or Not needed/.test(JSON.stringify(r.body)), r.body?.detail ?? r.body);
+    step("C1.6 C-1 J5: the old spelling is refused in words", r.status === 400 && /Signed PDF upload is now PDF upload/.test(r.body?.detail ?? "") && !LEAKS.test(r.body?.detail ?? ""), r.body?.detail ?? r.body);
     r = await ch({ channel: "PDF_UPLOAD", signature: "QUILL", from: "PDF_UPLOAD" });
     step("C1.6 C-2 J5: an unknown signature is refused in words", r.status === 400 && /typed name|signed by hand/.test(JSON.stringify(r.body)) && !LEAKS.test(r.body?.detail ?? ""), r.body?.detail ?? r.body);
     r = await ch({ channel: "PDF_UPLOAD", fromSignature: "QUILL", from: "PDF_UPLOAD" });

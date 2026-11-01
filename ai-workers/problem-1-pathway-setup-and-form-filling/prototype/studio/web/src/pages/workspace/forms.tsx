@@ -59,11 +59,11 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
   // C2.12 slice 3: one form's guided path, addressable as ?setup=<form number> (a reload lands on the same form).
   const setup = sp.get("setup");
   const openSetup = (code: string) => setSp((x) => { const n = new URLSearchParams(x); n.set("setup", code); return n; });
-  const closeSetup = () => { const code = setup ? normaliseCode(setup) : null; setSp((x) => { const n = new URLSearchParams(x); n.delete("setup"); return n; }, { replace: true }); refocusChip(code); };
+  const closeSetup = () => { const code = setup ? normaliseCode(setup) : null; setSp((x) => { const n = new URLSearchParams(x); n.delete("setup"); n.delete("back"); return n; }, { replace: true }); refocusChip(code); };
   // WCAG 2.4.3: focus goes back to the form's chip; the dialog hands focus back to what was focused before it opened (the
   // page, when the rail opened from the address), so the chip is focused again for a few frames until it holds.
   const refocusChip = (code: string | null, tries = 20) => { const el = document.querySelector<HTMLElement>(`[data-step-chip="${CSS.escape(code ?? "")}"]`); if (el && document.activeElement !== el) el.focus(); if (tries > 0) requestAnimationFrame(() => refocusChip(code, tries - 1)); };
-  const rail = setup ? <SetupRail id={id} code={setup} onClose={closeSetup} /> : null;
+  const rail = setup ? <SetupRail key={setup} id={id} code={setup} onClose={closeSetup} focusCurrent={sp.get("back") === "1"} /> : null;
   const d = useApi<CombinationView>(["combination", id], `/combinations/${id}`);
   const latest = useFinderLatest(id);
   const toast = useUndoToast();
@@ -131,7 +131,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
             <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <><ChannelCell id={id} line={{ code: l.code, channel: l.channel as Channel, channelWords: l.channelWords, signature: l.signature, document: l.document } as ChannelLine} canAuthor={canAuthor} options={l.channelOptions} />{l.channel === "ONLINE" ? <p className="text-xs text-text-muted" data-online-words>Answer sheet in portal order (P-113)</p> : null}</>}</td>
             <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <SignatureCell id={id} code={l.code} channel={l.channel as Channel} signature={l.signatureKind as Signature} signatures={l.signatures} canAuthor={canAuthor} />}</td>
             <td className="text-xs">{l.document ? "—" : l.signedBy ? l.signedByLabel : <span className="text-text-muted">Not set</span>}</td>
-            <td className="text-xs"><span className="block">{l.edition ?? <span className="text-text-muted">No edition read yet</span>}{l.document ? null : <span className="text-text-muted"> · {l.boxes} form fields matched</span>}</span>{l.document ? null : <LineReading combo={combo} l={l} fromLibrary={fromLibrary} />}{l.document ? null : <span className="mt-1 block"><StepChip code={l.code} chip={progress[l.code]} onOpen={() => openSetup(l.code)} /></span>}</td>
+            <td className="text-xs"><span className="block">{l.edition ?? l.libraryEdition ?? <span className="text-text-muted">No edition read yet</span>}{l.document ? null : <span className="text-text-muted"> · {l.boxes} form fields matched</span>}</span>{l.document ? null : <LineReading combo={combo} l={l} fromLibrary={fromLibrary} />}{l.document ? null : <span className="mt-1 block"><StepChip code={l.code} chip={progress[l.code]} onOpen={() => openSetup(l.code)} /></span>}</td>
             <td className="whitespace-nowrap">{canAuthor ? <><Button size="sm" variant="ghost" aria-label={`Change ${l.code}`} onClick={() => setOpen(l)}><Pencil /> Change</Button><LineMenu id={id} l={l} onRedo={() => redo([l.code])} onRemove={() => setRemoving(l)} /></> : null}</td>
           </tr>
         ))}
@@ -158,6 +158,11 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
  *  fromLibrary: its edition has a field map), never the line's count, so a newer unmapped edition keeps Draft with AI. */
 function LineReading({ combo, l, fromLibrary }: { combo: Combo; l: WorkspaceFormLine; fromLibrary: string[] }) {
   const a = attachmentFor(combo, l.code);
+  // QA-103: a line whose file is in the library but not on this combination never says "Not attached": it says the file
+  // is in the library, and its next step is the line's own step chip below (Field map); with no file anywhere, it says so.
+  if (!a && !l.boxes) return l.libraryEdition
+    ? <span className="mt-1 inline-flex flex-col items-start gap-1" data-line-next="library"><Pill tone="info">File in the library</Pill></span>
+    : <span className="mt-1 block text-text-muted" data-line-next="file">No file yet: upload it or find it in <Link className="text-text-link underline" to="/library/forms">Shared library › Forms</Link></span>;
   const mapped = a ? a.status === "IN_LIBRARY" || fromLibrary.includes(a.id) : l.boxes > 0;
   // The last step and when it ran stay (QA-17); only the next step, which would be AI, goes.
   const last = a ? combo.jobs.find((j) => j.attachmentId === a.id) : undefined;
