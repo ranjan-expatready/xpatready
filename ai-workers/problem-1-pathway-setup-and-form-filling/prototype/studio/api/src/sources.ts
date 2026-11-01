@@ -25,6 +25,7 @@ import { identityKeyOf, insertProposals, landField, recordChoice, reviewRow, typ
 import { cleanLabel, labelProblem } from "../../contracts/programs.ts";
 import { START } from "../../contracts/start-setup.ts";
 import { ACTORS, Audit, Db, fail, need, NODE, OFFICIAL, PROTOTYPE, PY, ROOT, SOLUTION, STUDIO, VAR, VAR_ROOT, Workspace, type Actor } from "./core.ts";
+import { forgetDeletion } from "./library-deletions.ts";
 const ACTOR_BY_ID = (id: string) => ACTORS.find((a) => a.id === id) ?? ACTORS[0];
 /** The library revision a comparison was made against: every definition key, version and status. A different revision
  *  at apply time means the comparison is stale (D280). */
@@ -773,6 +774,7 @@ export class Sources {
     const ws = job.workspaceId;
     const res = await this.db.$transaction(async (tx) => {
       const def = await tx.govFormDef.upsert({ where: { workspaceId_formKey: { workspaceId: ws, formKey } }, update: {}, create: { workspaceId: ws, formKey, displayName: b.title?.trim() || TITLES[formKey] || formKey, formKind: "data_form" } });
+      await forgetDeletion(tx, ws, formKey); // X5 slice c
       // An edition uploaded to the library first (Screen 01, P-25) has no box map yet: the draft fills it in.
       let ed = (await tx.formEdition.findFirst({ where: { workspaceId: ws, sha256: a.sha256 } })) ?? (await tx.formEdition.findUnique({ where: { workspaceId_editionLabel: { workspaceId: ws, editionLabel: item.edition } } }));
       if (ed && (await tx.formFieldMap.count({ where: { formEditionId: ed.id } }))) fail(`${ed.editionLabel} already has a field map in the library.`, HttpStatus.CONFLICT);
