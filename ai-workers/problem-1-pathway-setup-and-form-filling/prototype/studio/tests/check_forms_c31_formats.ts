@@ -3,14 +3,17 @@
 // (GET /library/fields, /library/fields/:key, /library/fields/:key/format, POST …/format-check) and on every case
 // answer (engine/runtime/case.ts checkValue). A passing and a failing case per rule. Isolated copy, sample inputs, no
 // browser, NO model call (US$0).
-//   zsh studio/tools/isolated.sh forms_c31 4451 start && tsx studio/tests/check_forms_c31_formats.ts 4451
+//   zsh studio/tools/isolated.sh forms_c31 4451 start && tsx studio/tests/check_forms_c31_formats.ts 4451 xr_studio_forms_c31
+import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { checkForFunction, checkFormat, fieldFormat, FORMAT_CHECK_IDS, FORMAT_CHECKS, formatWords } from "../engine/field-format.ts";
 import { checkValue } from "../engine/runtime/case.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 
-const PORT = Number(process.argv[2] ?? 4451);
+const PORT = Number(process.argv[2] ?? 4451), DB = process.argv[3] ?? "xr_studio_forms_c31";
+const PSQL = process.env.PSQL || (() => { try { return execFileSync("which", ["psql"], { encoding: "utf8" }).trim() || "psql"; } catch { return "/opt/homebrew/opt/postgresql@18/bin/psql"; } })();
+const sql = (q: string) => execFileSync(PSQL, [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
 type Res = { status: number; body: any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- test responses are read loosely, as in the other API checks
@@ -27,7 +30,9 @@ const POSTAL = "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0
 
 (async () => {
   // ─────────────────── The source: every inventoried form has its formats read from the form itself
-  const invs = readdirSync(INV).filter((f) => /^imm.*\.inventory\.json$/.test(f) && !f.includes(".text."));
+  // QA-145: only the committed inventories (Load sample writes more into this folder; those are the loader's, not the source's).
+  const committed = (() => { try { return new Set(execFileSync("git", ["ls-files", "."], { cwd: INV, encoding: "utf8" }).split("\n").filter(Boolean)); } catch { return null; } })();
+  const invs = readdirSync(INV).filter((f) => /^imm.*\.inventory\.json$/.test(f) && !f.includes(".text.") && (!committed || committed.has(f)));
   const formats = invs.map((f) => ({ f, j: (() => { try { return JSON.parse(readFileSync(join(INV, f.replace(".inventory.json", ".formats.json")), "utf8")); } catch { return null; } })() }));
   ok("C3.1 P-162 pass: every inventoried form has its formats read from the official file (same checksum as its inventory)", formats.every(({ f, j }) => j && j.sha256 === JSON.parse(readFileSync(join(INV, f), "utf8")).summary.sha256), formats.filter((x) => !x.j).map((x) => x.f));
   const box = formats.find((x) => x.f === "imm1295e.inventory.json")!.j.boxes[UCI];
@@ -146,6 +151,28 @@ const POSTAL = "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0
   ok("C3.1 P-162 fail: a field on no form says so, not an invented format", fields.filter((f) => !f.forms.length).every((f) => f.format.state === "no_form" && f.format.text === null), fields.find((f) => !f.forms.length && f.format.state !== "no_form"));
   r = await call("GET", "/library/fields/person.uci");
   ok("C3.1 P-162 pass: the field page's data carries the full format with sources", r.status === 200 && r.body.format?.rules?.length >= 2 && r.body.format.read === true, r.body.format);
+
+
+  // ─────────────────── QA-146: the sample's library editions carry their inventory, so their formats are read
+  // Load sample adds each form to the library first and reads it after; the reading must reach the edition too.
+  const reset = await call("POST", "/demo/reset", { confirm: "RESET" });
+  const again = await call("POST", "/demo/load");
+  ok("setup: Reset and Load sample again", reset.status < 300 && again.status === 201, [reset.status, again.status, again.body?.message]);
+  const ed5257 = sql("select coalesce(inventory_file,'') from form_edition where edition_label='IMM 5257 (09-2023)'");
+  ok("C3.1 QA-146 pass: after Load sample, IMM 5257 (09-2023) in the library links its read form fields (its inventory)", ed5257 === "prototype/p1/inventory/imm5257e.inventory.json", ed5257);
+  const unlinked = sql("select string_agg(distinct e.edition_label, ', ') from form_edition e join source_attachment a on a.workspace_id=e.workspace_id and a.sha256=e.sha256 where a.inventory_file is not null and e.inventory_file is null");
+  ok("C3.1 QA-146 pass: no library edition is left without the inventory its read file has (IMM 5257, IMM 1344 were before)", unlinked === "", unlinked);
+  const month = fieldFormat([{ form: "IMM 5257 (09-2023)", inventoryFile: ed5257 || null, dataPath: "form1[0].Page1[0].PersonalDetails[0].DOBMonth[0]", caption: "MM", transform: "date:MM" }], "date");
+  ok("C3.1 QA-146 pass: through that link, IMM 5257's date of birth month rule is read from its own form (imm5257e.formats.json, quoted)", month.read && month.rules.some((r) => r.check === "month" && r.sources.some((x) => x.form === "IMM 5257 (09-2023)" && /Between 01 and 12/.test(x.quote ?? ""))), month);
+  ok("C3.1 QA-146 pass: a date of birth in IMM 5257's format passes", checkFormat(month, "1990-05-12").length === 0, checkFormat(month, "1990-05-12"));
+  ok("C3.1 QA-146 fail: a date of birth with month 13 is flagged in plain words by IMM 5257's rule", checkFormat(month, "1990-13-12").includes("The month is 01 to 12."), checkFormat(month, "1990-13-12"));
+  // An edition that already has its inventory keeps it when another copy of the same file is read.
+  const att = sql("select id from source_attachment where file_name='imm5257e.pdf' and status='READ' limit 1");
+  sql("update form_edition set inventory_file='prototype/p1/inventory/qa146-kept.inventory.json' where edition_label='IMM 5257 (09-2023)'");
+  r = att ? await call("POST", `/attachments/${att}/read`) : { status: 0, body: "no read IMM 5257 attachment" };
+  const kept = sql("select inventory_file from form_edition where edition_label='IMM 5257 (09-2023)'");
+  sql(`update form_edition set inventory_file='${ed5257}' where edition_label='IMM 5257 (09-2023)'`);
+  ok("C3.1 QA-146 fail: reading the file again never overwrites an edition's inventory that is already set", r.status === 201 && kept === "prototype/p1/inventory/qa146-kept.inventory.json", [r.status, kept]);
 
   console.log(`\n${pass} passed, ${fail} failed (C3.1 field formats; US$0)`);
   process.exit(fail ? 1 : 0);

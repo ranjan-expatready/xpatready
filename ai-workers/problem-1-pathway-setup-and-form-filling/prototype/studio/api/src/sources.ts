@@ -16,6 +16,7 @@ import { costUsd, SpendLedger } from "../../../p2/ledger.ts";
 import { effective, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
 import { assembleMerged, flagNearDuplicates, partOutputTokens, planDraft, type DraftPlan, type Prior } from "../../engine/parts.ts";
 import { compareEditions } from "../../engine/programs.ts";
+import { pdfBoxFormats } from "../../engine/field-format.ts";
 import { checkedOutput, costBesideLimit, explainRun, failedOurCheck, isProviderLimit, sameDraftInputs, type DraftInputs, type FieldMapAnswer } from "../../engine/ai-run.ts";
 import { newKeyProblem } from "../../../contracts/fact-key.ts";
 import { reconvertFile } from "../../../p2/reconvert.ts";
@@ -186,6 +187,9 @@ export class Sources {
       const r = JSON.parse(stdout.trim().split("\n").pop()!);
       if (!r.ok) throw new Error(r.error ?? r.status);
       await this.db.sourceAttachment.update({ where: { id: a.id }, data: { status: "READ", statusDetail: `Read: ${r.summary.entry_fields_bound} form fields, ${r.summary.required_fields} required, ${r.summary.choice_fields_with_options} with answer lists, ${r.summary.row_groups_fixed} repeating rows, ${r.summary.barcodes} barcodes. Next: draft its field map with AI.`, inventoryFile: r.inventory_file, inventorySummary: r.summary } });
+      // QA-146 (C3.1): the library edition of this same file gets the inventory too, so its formats and answer lists are
+      // read (field-format.ts and forms.ts go through the edition). An edition that already has one keeps it.
+      if (r.inventory_file) await this.db.formEdition.updateMany({ where: { workspaceId: a.workspaceId, sha256: a.sha256, inventoryFile: null }, data: { inventoryFile: r.inventory_file } });
       await this.db.draftingJob.update({ where: { id: job.id }, data: { status: "COMPLETED", message: `Read ${r.summary.entry_fields_bound} form fields on this computer (no AI)${String(r.status).includes("DIFFERS") ? "; the stored form field list differs from this file and was kept as it was" : ""}.`, detail: r, finishedAt: new Date() } });
       await this.audit.log(a.workspaceId, actor.id, "read", "form", a.officialFile ?? a.fileName, `${actor.name} read ${a.edition}${approved ? " (approved in the product)" : ""}: ${r.summary.entry_fields_bound} form fields (${r.status})`);
       return { ok: true, summary: r.summary };
@@ -665,7 +669,10 @@ export class Sources {
     const { proposals, ...j } = await this.db.draftingJob.findUniqueOrThrow({ where: { id }, include: { proposals: true } });
     const rank: Record<string, number> = { CONFLICT: 0, AMBIGUOUS: 1, NEW: 2, REUSE: 3 };
     const a = j.attachmentId ? await this.db.sourceAttachment.findUnique({ where: { id: j.attachmentId } }) : null;
-    return { ...j, attachment: a, items: proposals.map(reviewRow).sort((x, y) => rank[x.outcome] - rank[y.outcome] || x.proposedKey.localeCompare(y.proposedKey)), elapsed_s: Math.round(((j.finishedAt ?? new Date()).getTime() - j.startedAt.getTime()) / 1000) };
+    // C3.1 AT-8/9/9b (IRCC-F07): beside each form field, what its PDF box says (length, own choices, date pattern).
+    const boxFormat = pdfBoxFormats(a?.inventoryFile);
+    const withFormat = (r: ReturnType<typeof reviewRow>) => ({ ...r, boxes: (r.boxes as { data_path: string }[]).map((b) => ({ ...b, format: boxFormat(b.data_path) })) });
+    return { ...j, attachment: a, items: proposals.map(reviewRow).map(withFormat).sort((x, y) => rank[x.outcome] - rank[y.outcome] || x.proposedKey.localeCompare(y.proposedKey)), elapsed_s: Math.round(((j.finishedAt ?? new Date()).getTime() - j.startedAt.getTime()) / 1000) };
   }
 
   async decide(actor: Actor, jobId: string, itemId: string, body: unknown) {
