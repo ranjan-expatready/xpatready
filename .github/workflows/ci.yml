@@ -73,7 +73,7 @@ jobs:
         run: cd "$S" && ./node_modules/.bin/prisma generate && cd web && ../node_modules/.bin/vite build
       - name: explicit-any count
         if: steps.code.outputs.changed == 'true'
-        run: node "$S/tools/count-any.mjs"
+        run: node "$S/tools/count-any.mjs" --against "${{ github.event.pull_request.base.sha }}"
       - name: Playwright's own Chromium
         if: steps.code.outputs.suites == 'true'
         run: cd "$S" && ./node_modules/.bin/playwright install chromium
