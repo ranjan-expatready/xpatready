@@ -9,9 +9,9 @@ import { buildSnapshots, effective, type Snapshot } from "../../engine/snapshot.
 import { ACTORS, actorOf, Db, Workspace, type Actor } from "./core.ts";
 import { Studio } from "./studio.ts";
 import { itemsOf, KIND_NOUN, actionWord, unapprovedAdds, unapprovedWhy, acceptsView } from "./library-changes.ts";
+import { fillsView } from "./who-fills.ts";
 import { ON_ITS_PAGE } from "./proposals.ts";
 import { groupOf } from "./review-proposals.ts";
-import { fillsView } from "./who-fills.ts";
 import { normaliseCode } from "../../contracts/form-library.ts";
 
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);

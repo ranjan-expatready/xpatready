@@ -124,6 +124,11 @@ ok("c1-v3: the principal's and partner's forms carry their own values (no cross-
   ok("finding 3 adverse: two questions that decide each other are reported as a loop", errs(loop).some((e) => /in a loop/.test(e.message)));
   const rule = clone(g); rule.rules = [{ id: "R", when: { subjectKind: "PRINCIPAL", op: "eq", field: "person.a", value: "x" }, then: "t", for_whom: "principal_applicant" }];
   ok("finding 3 adverse: a rule reading a value its question can hide is an error", errs(rule).some((e) => /Hiding a value a condition reads/.test(e.message)));
+  // C3.8: the validator's reachability problems read in words: each question by its meaning, never a field code.
+  const reachMsgs = [always, hide, unreachable, loop, rule].flatMap((x) => errs(x).map((e) => e.message));
+  ok("C3.8 pass: every reachability problem names its questions by their meaning (\"A\", \"Flag\")", reachMsgs.length >= 5 && reachMsgs.every((m) => /"(A|Flag)"/.test(m)), reachMsgs);
+  ok("C3.8 fail: no reachability problem shows a field code (person.a, person.flag)", reachMsgs.every((m) => !/person\.(a|flag)\b/.test(m)), reachMsgs.find((m) => /person\.(a|flag)\b/.test(m)));
+  ok("C3.8 loop in words: the loop reads \"A\" → \"Flag\" → \"A\"", errs(loop).some((e) => /"A" → "Flag" → "A"|"Flag" → "A" → "Flag"/.test(e.message)), errs(loop).map((e) => e.message));
   const unchanged = diff(g, clone(g));
   ok("finding 2 control: an identical draft has no review items", unchanged.length === 0, unchanged);
   for (const [name, mut, kind] of [["people", (x: any) => x.combination.participants.push({ role: "child", label: "Child", min: 0, max: 2 }), "People on this row"], ["document type supplies", (x: any) => { x.document_types = [{ key: "t", name: "T", supplies_facts: ["person.a"] }]; }, "Document type"], ["derived definition", (x: any) => { x.derived_fields = [{ id: "d", calculation: "c", inputs: ["person.a"] }]; }, "Derived definition"], ["allowed locations", (x: any) => { x.combination.allowed_locations = ["inside_canada"]; }, "Row details"]] as const) {
