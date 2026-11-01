@@ -30,6 +30,8 @@ export function effective<T extends Versioned>(rows: T[], keyOf: (r: T) => strin
 
 export const VALUE_TYPE_TO_DATA_TYPE: Record<string, "STRING" | "NUMBER" | "BOOLEAN" | "DATE" | "ENUM" | "COMPOSITE"> = {
   text: "STRING", yes_no: "BOOLEAN", date: "DATE", code: "ENUM", country: "ENUM", address: "COMPOSITE", number: "NUMBER", phone: "COMPOSITE", email: "STRING",
+  // P-47 question types (C4.4). "document" is not one: an upload is a checklist line, not a question (P-130).
+  long_text: "STRING", multi_choice: "ENUM", person_name: "COMPOSITE", period_history: "COMPOSITE", declaration: "BOOLEAN",
 };
 export const subjectKindOf = (key: string) => ({ person: "PERSON", relationship: "RELATIONSHIP", case: "CASE", organisation: "ORGANISATION", representative: "REPRESENTATIVE" } as Record<string, string>)[key.split(".")[0]] ?? "PERSON";
 

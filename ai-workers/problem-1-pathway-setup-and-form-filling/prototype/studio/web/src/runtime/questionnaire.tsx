@@ -12,6 +12,7 @@ import { Button, Dialog, Input, Notice, Pill, Select, Textarea } from "@/compone
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { historyGaps, type Period } from "../../../../contracts/history";
 import type { EmployerLink } from "./employer";
 import { fillsText, groupLabel, type QuestionnaireView, type ViewAnswer, type ViewCheck, type ViewQuestion, type ViewSection } from "../../../contracts/runtime";
 
@@ -40,7 +41,7 @@ export const noRetryOnRefusal = (n: number, e: Error) => !(e instanceof ApiError
 
 // ------------------------------------------------------------------ question kinds and values
 
-type Kind = "text" | "long" | "email" | "number" | "date" | "month" | "yes_no" | "radio" | "select" | "address" | "phone";
+type Kind = "text" | "long" | "email" | "number" | "date" | "month" | "yes_no" | "radio" | "select" | "address" | "phone" | "multi" | "name" | "history" | "declaration" | "document";
 /** How a question is asked, read from its type and the shape the forms need (precision, lists, phone parts). */
 export function kindOf(q: Question): Kind {
   if (q.shape.phone) return "phone";
@@ -49,6 +50,13 @@ export function kindOf(q: Question): Kind {
     case "yes_no": return "yes_no";
     case "date": return q.shape.datePrecision === "month" ? "month" : "date";
     case "number": return "number";
+    // P-47 types (C4.4). "document" is never asked: an upload is a checklist line (P-130); the field says where it goes.
+    case "long_text": return "long";
+    case "multi_choice": return "multi";
+    case "person_name": return "name";
+    case "period_history": return "history";
+    case "declaration": return "declaration";
+    case "document": return "document";
     case "code": case "country": return q.options ? (q.options.length <= 5 && q.value_type === "code" ? "radio" : "select") : "text";
     default: return q.value_type === "email" || /email/.test(q.fact) ? "email" : q.shape.maxLength <= 200 && /detail|explain|describe|reason/.test(q.fact) ? "long" : "text";
   }
@@ -59,13 +67,23 @@ const ADDRESS: [string, string][] = [["street_number", "Street number"], ["stree
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const asParts = (v: unknown): Parts => (v && typeof v === "object" ? Object.fromEntries(Object.entries(v as Record<string, unknown>).map(([k, x]) => [k, String(x ?? "")])) : {});
 const datePartsOf = (v: unknown): Parts => { const [y = "", m = "", d = ""] = typeof v === "string" ? v.split("-") : []; return { y, m: m.replace(/^0(?=\d)/, ""), d: d.replace(/^0(?=\d)/, "") }; };
+type Name = { family_name?: string; given_names?: string; no_given_name?: boolean };
+type HistoryRow = { from: Parts; to: Parts; what: string };
+const NAME: [keyof Name & string, string][] = [["family_name", "Family name"], ["given_names", "Given names"]];
+const monthOf = (p: Parts) => (p.y || p.m ? `${p.y ?? ""}-${pad(p.m ?? "")}` : "");
+const historyOf = (v: unknown): HistoryRow[] => (Array.isArray(v) ? (v as Period[]).map((r) => ({ from: datePartsOf(r?.from), to: datePartsOf(r?.to), what: String(r?.what ?? "") })) : []);
+const monthWords = (v: unknown) => { const p = datePartsOf(v), m = MONTHS[Number(p.m) - 1]; return m && p.y ? `${m} ${p.y}` : ""; };
 const pad = (x: string) => (/^\d$/.test(x) ? `0${x}` : x);
 
 /** A value as a person reads it: Yes, 14 Jun 2019, the answer list's label, an address on one line. */
 export function shown(q: Question, value: unknown): string {
   if (value === null || value === undefined) return "";
-  if (typeof value === "boolean") return value ? "Yes" : "No";
   const k = kindOf(q);
+  if (k === "declaration") return value === true ? "Declared" : "Not declared";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (k === "multi" && Array.isArray(value)) return value.map((v) => q.options?.find((o) => o.key === v)?.label ?? String(v)).join(", ");
+  if (k === "name") { const n = (value ?? {}) as Name; return n.no_given_name ? `${n.family_name ?? ""} (no given name)`.trim() : [n.given_names, n.family_name].filter(Boolean).join(" "); }
+  if (k === "history" && Array.isArray(value)) return (value as Period[]).map((r) => `${monthWords(r?.from)} to ${r?.to ? monthWords(r.to) : "today"}: ${String(r?.what ?? "")}`).join("; ");
   if ((k === "date" || k === "month") && typeof value === "string") {
     const p = datePartsOf(value), m = MONTHS[Number(p.m) - 1];
     return m && p.y ? `${k === "date" ? `${Number(p.d)} ` : ""}${m} ${p.y}` : value;
@@ -84,6 +102,16 @@ function toValue(k: Kind, draft: unknown): unknown {
     if (!p.y && !p.m && !p.d) return undefined;
     return k === "date" ? `${p.y ?? ""}-${pad(p.m ?? "")}-${pad(p.d ?? "")}` : `${p.y ?? ""}-${pad(p.m ?? "")}`;
   }
+  if (k === "multi") return Array.isArray(draft) && draft.length ? draft : undefined;
+  if (k === "declaration") return typeof draft === "boolean" ? draft : undefined;
+  if (k === "name") {
+    const n = (draft ?? {}) as Name, family = (n.family_name ?? "").trim(), given = (n.given_names ?? "").trim();
+    return family || given || n.no_given_name ? { family_name: family, given_names: given, ...(n.no_given_name ? { no_given_name: true } : {}) } : undefined;
+  }
+  if (k === "history") {
+    const rows = ((draft ?? []) as HistoryRow[]).filter((r) => monthOf(r.from) || monthOf(r.to) || r.what.trim());
+    return rows.length ? rows.map((r) => ({ from: monthOf(r.from), to: monthOf(r.to), what: r.what.trim() })) : undefined;
+  }
   if (k === "address" || k === "phone") { const p = Object.fromEntries(Object.entries(draft as Parts).map(([a, b]) => [a, b.trim()]).filter(([, b]) => b)); return Object.keys(p).length ? p : undefined; }
   if (typeof draft === "string") return draft.trim() ? draft.trim() : undefined;
   return draft ?? undefined;
@@ -91,7 +119,10 @@ function toValue(k: Kind, draft: unknown): unknown {
 function toDraft(k: Kind, value: unknown): unknown {
   if (k === "date" || k === "month") return datePartsOf(value);
   if (k === "address" || k === "phone") return asParts(value);
-  if (k === "yes_no") return typeof value === "boolean" ? value : undefined;
+  if (k === "yes_no" || k === "declaration") return typeof value === "boolean" ? value : undefined;
+  if (k === "multi") return Array.isArray(value) ? value : [];
+  if (k === "name") return value && typeof value === "object" ? { ...(value as Name) } : {};
+  if (k === "history") return historyOf(value);
   return value === null || value === undefined ? "" : String(value);
 }
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
@@ -115,6 +146,108 @@ export function QuestionField({ q, draft, onChange, errors, warnings = [], idBas
     </>
   );
   const box = cn("flex flex-col gap-1.5", invalid ? "border-l-4 border-danger pl-3" : warnings.length ? "border-l-4 border-warn pl-3" : null, !compact && "py-1");
+  if (k === "document") {
+    return (
+      <div className={box} id={idBase}>
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-xs text-text-muted">This is a document, not a question: it is uploaded from the document checklist.</p>
+      </div>
+    );
+  }
+  if (k === "declaration") {
+    return (
+      <fieldset className={box} aria-describedby={control["aria-describedby"]} id={idBase} tabIndex={-1}>
+        <legend className="mb-1.5 text-sm font-medium">{label}</legend>
+        {q.meaning ? <p className="whitespace-pre-line text-sm">{q.meaning}</p> : null}
+        <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-border-strong bg-surface-raised px-3 py-2 text-sm">
+          <input type="checkbox" className="size-4 accent-[var(--color-primary)]" checked={draft === true} onChange={(e) => onChange(e.target.checked)} />
+          I declare that this is true and complete
+        </label>
+        {notes}
+      </fieldset>
+    );
+  }
+  if (k === "multi") {
+    const cur = Array.isArray(draft) ? (draft as string[]) : [];
+    return (
+      <fieldset className={box} aria-describedby={control["aria-describedby"]} id={idBase} tabIndex={-1}>
+        <legend className="mb-1 text-sm font-medium">{label}</legend>
+        <p className="-mt-0.5 mb-1 text-xs text-text-muted">Choose all that apply</p>
+        <div className="grid grid-cols-1 gap-2">
+          {(q.options ?? []).map((o) => (
+            <label key={o.key} className={cn("flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm", cur.includes(o.key) ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border-strong bg-surface-raised hover:bg-text/5")}>
+              <input type="checkbox" className="size-4 accent-[var(--color-primary)]" value={o.key} checked={cur.includes(o.key)} onChange={(e) => onChange(e.target.checked ? [...cur, o.key] : cur.filter((x) => x !== o.key))} />
+              {o.label}
+            </label>
+          ))}
+        </div>
+        {notes}
+      </fieldset>
+    );
+  }
+  if (k === "name") {
+    const n = (draft ?? {}) as Name, set = (part: keyof Name, v: string | boolean) => onChange({ ...n, [part]: v });
+    return (
+      <fieldset className={box} aria-describedby={control["aria-describedby"]} id={idBase} tabIndex={-1}>
+        <legend className="mb-1 text-sm font-medium">{label}</legend>
+        <p className="-mt-0.5 mb-1 text-xs text-text-muted">As on the passport</p>
+        <div className="flex flex-wrap gap-2">
+          {NAME.map(([part, l]) => (
+            <label key={part} className="flex w-full flex-col gap-1 text-xs text-text-muted sm:w-[calc(50%-0.25rem)]">
+              {l}
+              <Input value={String(n[part] ?? "")} onChange={(e) => set(part, e.target.value)} aria-invalid={invalid || undefined} disabled={part === "given_names" && n.no_given_name} className="h-10 text-base sm:h-9 sm:text-sm" autoComplete="off" />
+            </label>
+          ))}
+        </div>
+        <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
+          <input type="checkbox" className="size-4 accent-[var(--color-primary)]" checked={n.no_given_name === true} onChange={(e) => onChange({ ...n, no_given_name: e.target.checked, ...(e.target.checked ? { given_names: "" } : {}) })} />
+          No given name (the passport shows none)
+        </label>
+        {notes}
+      </fieldset>
+    );
+  }
+  if (k === "history") {
+    const rows = Array.isArray(draft) ? (draft as HistoryRow[]) : [];
+    const setRow = (i: number, r: HistoryRow) => onChange(rows.map((x, j) => (j === i ? r : x)));
+    const today = new Date().toISOString().slice(0, 10);
+    const gaps = rows.length ? historyGaps(rows.map((r) => ({ from: monthOf(r.from), to: monthOf(r.to), what: r.what })), today, 10) : undefined;
+    const month = (i: number, r: HistoryRow, end: "from" | "to") => (
+      <div className="flex flex-col gap-1">
+      <span className="text-xs font-medium" aria-hidden>{end === "from" ? "From" : "To"}</span>
+      <div className="flex gap-2">
+        {([["m", "Month", "w-16"], ["y", "Year", "w-24"]] as const).map(([part, l, w]) => (
+          <label key={part} className={cn("flex flex-col gap-1 text-xs text-text-muted", w)}>
+            <span><span className="sr-only">{end === "from" ? "From: " : "To: "}</span>{l}</span>
+            <Input value={r[end][part] ?? ""} onChange={(e) => setRow(i, { ...r, [end]: { ...r[end], [part]: e.target.value } })} aria-invalid={invalid || undefined} inputMode="numeric" maxLength={part === "y" ? 4 : 2} className="h-10 text-base sm:h-9 sm:text-sm" autoComplete="off" />
+          </label>
+        ))}
+      </div>
+      </div>
+    );
+    return (
+      <fieldset className={box} aria-describedby={control["aria-describedby"]} id={idBase} tabIndex={-1}>
+        <legend className="mb-1 text-sm font-medium">{label}</legend>
+        <p className="-mt-0.5 mb-1 text-xs text-text-muted">The last 10 years, with no gaps. Leave "To" empty for what goes on today.</p>
+        <ol className="flex flex-col gap-2">
+          {rows.map((r, i) => (
+            <li key={i} className="flex flex-wrap items-end gap-3 rounded-lg border border-border p-2" aria-label={`Period ${i + 1}`}>
+              {month(i, r, "from")}
+              {month(i, r, "to")}
+              <label className="flex min-w-40 flex-1 flex-col gap-1 text-xs text-text-muted">
+                What you did
+                <Input value={r.what} onChange={(e) => setRow(i, { ...r, what: e.target.value })} aria-invalid={invalid || undefined} className="h-10 text-base sm:h-9 sm:text-sm" autoComplete="off" />
+              </label>
+              <Button type="button" variant="ghost" className="h-11" onClick={() => onChange(rows.filter((_, j) => j !== i))} aria-label={`Remove period ${i + 1}`}><Trash2 aria-hidden />Remove</Button>
+            </li>
+          ))}
+        </ol>
+        <div><Button type="button" variant="secondary" className="h-11" onClick={() => onChange([...rows, { from: {}, to: {}, what: "" }])}><Plus aria-hidden />Add a period</Button></div>
+        {gaps?.length ? <p className="text-[13px] text-text-warn" aria-live="polite">{`Gaps in the 10 years to today: ${gaps.map((g) => g.words).join("; ")}.`}</p> : null}
+        {notes}
+      </fieldset>
+    );
+  }
   if (k === "yes_no" || k === "radio") {
     const opts = k === "yes_no" ? [{ key: "true", label: "Yes" }, { key: "false", label: "No" }] : q.options!;
     const cur = k === "yes_no" ? (draft === undefined ? "" : String(draft)) : String(draft ?? "");
@@ -573,7 +706,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
           ) : <span className="text-text-muted">{q.required ? "Not answered" : "Not answered (optional)"}{q.collected_from !== "client_questionnaire" ? " · the officer enters this from a document or record" : ""}</span>}
           {q.note ? <p className="text-xs text-text-warn">{q.note}</p> : null}
         </div>
-        <div><Button size="sm" variant="ghost" onClick={() => edit(q, row)} aria-label={`${a ? "Edit" : "Add"} ${q.label}${row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""} for ${s.about_label}`}><Pencil aria-hidden />{a ? "Edit" : "Add"}</Button></div>
+        {kindOf(q) === "declaration" ? <p className="max-w-40 text-xs text-text-muted">Only the client makes this declaration</p> : <div><Button size="sm" variant="ghost" onClick={() => edit(q, row)} aria-label={`${a ? "Edit" : "Add"} ${q.label}${row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""} for ${s.about_label}`}><Pencil aria-hidden />{a ? "Edit" : "Add"}</Button></div>}
       </div>
     );
   };

@@ -5,6 +5,8 @@
 import { evalCondition, kkey, render, type Known, type Person, type Role } from "../render.ts";
 import { subjectKindOf, type Snapshot } from "../snapshot.ts";
 import { checkFormat, snapshotFieldFormat } from "../field-format.ts";
+import { z } from "zod";
+import type { Period } from "../../../contracts/history.ts";
 import { Address, CONFIRM_WORDS, groupLabel, MINOR, Phone, type QuestionnaireView, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
 
 export type Participant = { subjectId: string; role: Role | "case"; label: string; applies: boolean };
@@ -25,6 +27,12 @@ type FieldDef = { id: string; value_type?: string; item_version?: number; answer
 const placementOf = (s: Snapshot, field: string): Placement | undefined => (s.placements as Placement[]).find((p) => p.fact === field);
 const fieldOf = (s: Snapshot, field: string): FieldDef | undefined => (s.canonical_fields as FieldDef[]).find((f) => f.id === field);
 export const isClientField = (s: Snapshot, field: string) => CLIENT_SOURCES.has(placementOf(s, field)?.collected_from ?? "") && CLIENT_KINDS.has(subjectKindOf(field));
+
+/** P-47 types (C4.4). Long text with no form box limit: a generous cap so a pasted document is not saved as an answer. */
+const LONG_TEXT_MAX = 4000;
+const PersonName = z.object({ family_name: z.string().optional(), given_names: z.string().optional(), no_given_name: z.boolean().optional() }).strict();
+/** P-130 amends P-47: an upload is a document checklist line, not a question (C4.5). A field typed "document" is never asked. */
+export const DOCUMENT_NOT_A_QUESTION = "An upload is a line of the document checklist, not a question: add it on the Documents tab.";
 
 const realDate = (y: number, m: number, d: number) => { const t = new Date(Date.UTC(y, m - 1, d)); return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d && y >= 1900 && y <= 2100; };
 
@@ -65,7 +73,7 @@ export function shapeOf(s: Snapshot, field: string) {
   // choice field without an answer list may take (labels before any "=code").
   const listed = ts.map((t) => /^code_list:\S+ \(([^)]*)\)/.exec(t)?.[1]).find(Boolean);
   const choices = listed ? listed.split(",").map((x) => x.split("=")[0].trim()).filter(Boolean) : null;
-  return { maxLength: maxes.length ? Math.min(...maxes) : 500, datePrecision: dayNeeded ? "day" as const : "month" as const, phone: ts.some((t) => /phone_part/.test(t)), money: ts.some((t) => /CAD/.test(t)), choices };
+  return { maxLength: maxes.length ? Math.min(...maxes) : fieldOf(s, field)?.value_type === "long_text" ? LONG_TEXT_MAX : 500, datePrecision: dayNeeded ? "day" as const : "month" as const, phone: ts.some((t) => /phone_part/.test(t)), money: ts.some((t) => /CAD/.test(t)), choices };
 }
 
 
@@ -137,6 +145,46 @@ function checkType(s: Snapshot, field: string, value: unknown, today: Date): str
       if (list.length) return list.some((v) => v.key === str) ? [] : ["Choose one of the listed answers."];
       if (shape.choices) return shape.choices.some((c) => c.toLowerCase() === str.toLowerCase()) ? [] : [`Choose one of: ${shape.choices.join(", ")}.`];
       return chars(str) > 120 ? ["Keep the answer to 120 characters."] : [];
+    case "multi_choice": {
+      if (!Array.isArray(value) || !value.length || !value.every((v) => typeof v === "string")) return ["Choose at least one answer."];
+      if (new Set(value).size !== value.length) return ["Choose each answer once."];
+      return !list.length || value.every((v) => list.some((x) => x.key === v)) ? [] : ["Choose only from the listed answers."];
+    }
+    case "long_text": {
+      if (str === null) return ["Enter text."];
+      if (!str) return ["Enter an answer."];
+      return chars(str) > shape.maxLength ? [`Keep it to ${shape.maxLength} characters (it is ${chars(str)}).`] : [];
+    }
+    case "person_name": {
+      const parsed = PersonName.safeParse(value);
+      if (!parsed.success) return ["Enter the name in its parts: family name, and given names or \"no given name\"."];
+      const n = parsed.data, family = (n.family_name ?? "").trim(), given = (n.given_names ?? "").trim(), out: string[] = [];
+      if (!family) out.push("Enter the family name, as on the passport.");
+      if (n.no_given_name && given) out.push("Leave the given names empty, or untick \"no given name\".");
+      else if (!n.no_given_name && !given) out.push("Enter the given names, or tick \"no given name\" if the passport shows none.");
+      for (const [w, x] of [["family name", family], ["given names", given]] as const) if (chars(x) > shape.maxLength) out.push(`Keep the ${w} to ${shape.maxLength} characters.`);
+      return out;
+    }
+    case "period_history": {
+      if (!Array.isArray(value)) return ["Add each period with its start month, end month and what you did."];
+      if (!value.length) return ["Add at least one period."];
+      const now = today.getUTCFullYear() * 100 + today.getUTCMonth() + 1, out: string[] = [];
+      value.forEach((row: Period, i) => {
+        const at = `Period ${i + 1}`;
+        const month = (x: unknown) => { const m = typeof x === "string" ? /^(\d{4})-(\d{2})$/.exec(x.trim()) : null; return m && realDate(Number(m[1]), Number(m[2]), 1) ? Number(m[1]) * 100 + Number(m[2]) : null; };
+        const from = month(row?.from), open = row?.to === undefined || row?.to === null || row?.to === "", to = open ? now : month(row?.to);
+        const early = (x: unknown) => typeof x === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(x.trim()) && Number(x.slice(0, 4)) < 1900;
+        if (from === null) out.push(early(row?.from) ? `${at}: the start is before 1900; check the year.` : `${at}: enter the start as month and year, for example 2019-06.`);
+        if (to === null) out.push(early(row?.to) ? `${at}: the end is before 1900; check the year.` : `${at}: enter the end as month and year, or leave it empty if it goes on today.`);
+        if (from !== null && from > now) out.push(`${at}: the start is in the future; a history covers what has already happened.`);
+        else if (from !== null && to !== null && to < from) out.push(`${at}: the end is before the start; check both months.`);
+        if (to !== null && to > now) out.push(`${at}: the end is in the future; leave it empty if it goes on today.`);
+        if (typeof row?.what !== "string" || !row.what.trim()) out.push(`${at}: say what you did (work, study, unemployed, travel).`);
+      });
+      return out;
+    }
+    case "declaration": return value === true ? [] : ["Tick the box to make the declaration; the application cannot be filed without it."];
+    case "document": return [DOCUMENT_NOT_A_QUESTION];
     case "address": {
       const parsed = Address.strict().safeParse(value);
       if (!parsed.success) return ["Enter the address in its parts (street, city, country), as text."];
@@ -243,7 +291,7 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
       answer: group ? null : one(current.find((a) => !a.rowKey)),
       rows: group ? live.map((x, i) => ({ row: x.rowKey, index: i, fits: q.rows.length ? i < q.rows.length : true, answer: one(current.find((a) => a.rowKey === x.rowKey)) })) : [],
       options,
-      note: !options && (q.value_type === "code" || q.value_type === "country") ? "No answer list yet (forms slice 2): the officer checks this answer before confirming the section." : null,
+      note: !options && (q.value_type === "code" || q.value_type === "country" || q.value_type === "multi_choice") ? "No answer list yet (forms slice 2): the officer checks this answer before confirming the section." : null,
       fills: [...(fills.get(`${q.about}|${q.fact}`)?.values() ?? [])],
       countries: !options && (q.value_type === "country" || q.value_type === "address") ? countries : null,
     };
