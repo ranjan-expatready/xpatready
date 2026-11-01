@@ -1,6 +1,6 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-01 13:45 UTC (Lead handover at 48% context) · milestone: **M2 — Super Admin configuration**, plus the Visitor visa M3 path (P-220) · plan: `design/delivery-plan-2026-11-01.md` · who owns what: `TEAM.md` · work list: `BACKLOG.md`
+updated: 2026-11-01 13:45 UTC (Lead handover at 48% context) · milestone: **M2 — Super Admin configuration**, plus the Visitor visa M3 path (P-220) · plan: `design/delivery-plan-2026-11-01.md` · who owns what: Owners in `BACKLOG.md` · work list: `BACKLOG.md`
 
 ## Goals (P-202, reset by P-220)
 * **Today (1 Nov):** M2 built and queued; Visitor visa set up end to end on the demo; Day-0 acceptance packs merged.
