@@ -1,27 +1,22 @@
 // C3.1 — AI maps form fields to shared fields (reuse / new / ambiguous / conflict) beside the source; each field's type
 // and format come from the form itself and are enforced in code.
-// Status (qa/CAPABILITIES.md, 1 Nov): Partial. Missing: the format part of P-162 (a proposal and the applied field map
-// carry no maximum length, choices or date pattern read from the PDF box (AT-8, AT-9, AT-9b; the field name of the
-// format beside each form field is this file's proposal: `format: { maxLength, choices, datePattern }`); the runtime's limit comes from words the AI
-// wrote in the transform, else 500 characters).
+// Adopted into the suites (B2b, 1 Nov, QA-146 PR): every row passes since the format beside each form field
+// (`format: { maxLength, choices, datePattern }`, engine/field-format.ts pdfBoxFormats) and the runtime limit from the
+// form's own box (engine/runtime/case.ts shapeOf) were built.
 // Decisions: P-162 (formats from the form, enforced in code), P-149 (one door, identity), P-158 (every item from a
 // source), P-175 (live AI off by default), P-38 (analysed once). IRCC rule: [IRCC-F07] a form field's type and format
 // come from the form itself.
 // US$0: the saved real IMM 5257 answer (21 Oct) is replayed; the live path is only ever asked to refuse (no live switch;
 // the stand-in launcher logs any call it gets and would answer a live one with an error).
-// Run (from prototype/studio):
-//   zsh tools/isolated.sh acc_c1 4569 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs
-//   ./node_modules/.bin/tsx acceptance/C3.1.test.ts 4569 xr_studio_acc_c1 ; zsh tools/isolated.sh acc_c1 4569 stop
-// Expected today (main 931cb99a, run 1 Nov 2026 on an isolated copy, US$0): 13 pass, 4 fail — failing: AT-8, AT-9,
-// AT-9b (a proposal's form field shows no maximum length, choices or date pattern read from the PDF box) and AT-10
-// (after apply the runtime limit for family name is 500 characters, not the form's 100) because P-162's formats are not
-// built. (AT-10 runs after AT-15: it needs the applied map.)
+// Run (from prototype/studio; usage line for run-suites.sh):
+//   zsh studio/tools/isolated.sh forms_c31a 4454 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_forms_c31_acceptance.ts 4454 xr_studio_forms_c31a
+// Expected (1 Nov 2026, isolated copy, US$0): 17 pass, 0 fail.
 // Exit: 0 all pass · 1 a check failed · 2 setup missing or refused (demo port or database, copy not reachable, sample).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { shapeOf } from "../engine/runtime/case.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
-import { checkCopy, guard, needCombo, sqlFor, stop } from "./lib/pack1.ts";
+import { checkCopy, guard, needCombo, sqlFor, stop } from "../acceptance/lib/pack1.ts";
 
 const PORT = Number(process.argv[2] ?? 4569), DB = process.argv[3] ?? "xr_studio_acc_c1", NAME = DB.replace(/^xr_studio_/, "");
 guard(PORT, DB); // before anything reads the database or calls the copy (never the demo)
