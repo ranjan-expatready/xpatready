@@ -78,7 +78,7 @@ export class Runs {
 
   /** The one next step a stopped or waiting run offers (never a link to the page already open). */
   private nextOf(b: AiBatch, href: string): { label: string; href: string } | null {
-    const plan = (b.plan ?? {}) as { held_id?: string; held_unread?: boolean };
+    const plan = (b.plan ?? {}) as { held_id?: string; held_unread?: boolean; held_outcome?: string };
     // QA-63 / S3 item 5 (replaces the interim link to the Sources page now that the Forms tab chooses the page): the finder's next step is on the combination's Forms tab, never this card: a run that could not
     // pick the application page opens the Find dialog at the page choice; any other opens it to find again.
     if (b.operation === FINDER_OPERATION) {
@@ -86,6 +86,9 @@ export class Runs {
       return page ? { label: "Choose the application page", href: `/c/${cid}/forms?find=page` } : { label: "Find again", href: `/c/${cid}/forms?find=again` };
     }
     // Round 4 review should: a file the rules could not read can never be approved: say so, and what to do instead.
+    // C2.4 (review of 6c940174, Major 2): a newer edition goes to its impact review, an older one to its To review item.
+    if (b.operation === UPLOAD_OPERATION && plan.held_id && plan.held_outcome === "new_edition_held") return { label: "Review impact", href: `/review/edition/${plan.held_id}` };
+    if (b.operation === UPLOAD_OPERATION && plan.held_id && plan.held_outcome === "older_edition_held") return { label: "See it on To review", href: "/review" };
     if (b.operation === UPLOAD_OPERATION) return plan.held_id ? (plan.held_unread ? { label: "Open it on To review", href: `/review/held/${plan.held_id}` } : { label: "Record the IRCC page it came from", href: `/review/held/${plan.held_id}` }) : null;
     return { label: "See the details", href };
   }

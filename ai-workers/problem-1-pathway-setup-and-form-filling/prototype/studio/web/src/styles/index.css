@@ -16,7 +16,11 @@ html, body, #root { height: 100%; }
 /* S4 round 5 (WCAG 2.2 SC 2.4.11): a focused element is never hidden under the sticky 56 px top bar. */
 html, main { scroll-padding-top: 4.5rem; }
 body { background: var(--color-surface); color: var(--color-text); font-family: var(--font-sans); font-size: 14px; -webkit-font-smoothing: antialiased; }
-:focus-visible { outline: none; }
+/* WCAG 2.4.7 (focus visible): every keyboard-focused element shows a 2 px ring in the brand colour (--color-ring: the
+   primary blue in light, primary-400 in dark, where --color-primary is only a tint). In the base layer, so a control
+   that draws its own ring (`outline-none focus-visible:ring-*`) keeps just that one. It replaces the old app-wide
+   `:focus-visible { outline: none; }`, which left plain links, buttons and selects with no visible focus. */
+@layer base { :focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; } }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
 /* S6 1b (Lead early look): toasts never cover an open side panel. Beside it where the screen is wide enough (panel up to
    560 px + 384 px of toasts); above its footer where the panel takes the whole width. */

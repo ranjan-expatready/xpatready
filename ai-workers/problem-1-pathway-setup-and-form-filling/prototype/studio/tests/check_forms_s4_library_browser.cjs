@@ -49,12 +49,15 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     t0 = Date.now(); await open();
     { const s = speed("performance: Forms first view under 1 s with the sample", Date.now() - t0 < 1000, `${Date.now() - t0} ms`); step(s.label, s.ok, s.detail); }
     const head = await p.locator("thead").innerText();
-    step("C11.11: one list with the board's columns (Number, Title, Type, Edition, IRCC accepts, Used by, Status)", ["Number", "Title", "Type", "Edition", "IRCC accepts", "Used by", "Status"].every((h) => head.includes(h)), head);
+    step("C11.11: one list with the board's columns (Number, Title, Type, Edition, Field map, IRCC accepts, Used by, Status)", ["Number", "Title", "Type", "Edition", "Field map", "IRCC accepts", "Used by", "Status"].every((h) => head.includes(h)), head);
     step("C11.11: forms, guides and checklists in one list (no groups); the guide the finder read is in it", (await forms()).includes("IMM 5257") && (await forms()).includes("Guide 5256") && (await forms()).includes("IMM 5484"), (await forms()).join(","));
     step("C11.11 (change 2): IRCC accepts shows the value with who said it (IMM 5476: PDF upload · Sample · canada.ca words); a form whose page says nothing shows Not set yet (IMM 5257)", /PDF upload\s*Sample · canada\.ca words/.test(await rows().filter({ hasText: "IMM 5476" }).first().innerText()) && /Not set yet/.test(await rows().filter({ hasText: "IMM 5257" }).first().innerText()), await rows().filter({ hasText: "IMM 5476" }).first().innerText());
     step("C11.11 (change 2): guides and checklists say Not filed", /Not filed/.test(await rows().filter({ hasText: "IMM 5484" }).first().innerText()) && /Not filed/.test(await rows().filter({ hasText: "Guide 5256" }).first().innerText()));
     step("C11.11 (change 3): a guide's date says what it is (Updated on canada.ca, or when it was read), never an edition", /Updated on canada\.ca|Read from canada\.ca on/.test(await rows().filter({ hasText: "Guide 5256" }).first().innerText()), await rows().filter({ hasText: "Guide 5256" }).first().innerText());
     step("C11.11 (change 1): Used by shows the combination's place", / › /.test(await rows().filter({ hasText: "IMM 1295" }).first().innerText()), await rows().filter({ hasText: "IMM 1295" }).first().innerText());
+    // C3.12 (P-123): the Field map column, from the current edition's own rows (the sample's IMM 1295 has form fields with no decision yet).
+    const fm1295 = sql(`with r as (select distinct on (data_path) status, outcome from form_field_map where form_edition_id = (select id from form_edition where edition_label = 'IMM 1295 (09-2023)') and status in ('DRAFT', 'PUBLISHED', 'RETIRED') order by data_path, (status = 'DRAFT') desc, version desc) select count(*) filter (where status <> 'RETIRED' and outcome <> 'unresolved') || ' of ' || count(*) filter (where status <> 'RETIRED') from r`);
+    step("C3.12: a Field map column; IMM 1295 says how many of its form fields are decided (the database's count), a guide says No field map", head.includes("Field map") && (await rows().filter({ hasText: "IMM 1295" }).first().locator("[data-field-map]").innerText()).includes(`${fm1295} form fields decided`) && (await rows().filter({ hasText: "Guide 5256" }).first().locator("[data-field-map]").innerText()) === "No field map", { head, fm1295, cell: await rows().filter({ hasText: "IMM 1295" }).first().locator("[data-field-map]").innerText().catch((e) => String(e)) });
     await axe("list with the sample"); await shot("02-list");
 
     // Upload PDF: one way in, many files (two cards)
@@ -108,11 +111,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     // Drawer by keyboard
     await p.getByRole("button", { name: "IMM 1295", exact: true }).focus(); await p.keyboard.press("Enter");
     const dlg = p.getByRole("dialog"); await dlg.waitFor();
-    await dlg.getByText("With an LMIA").first().waitFor({ timeout: 10_000 }).catch(() => {});
+    await dlg.getByText("With an LMIA").first().waitFor({ timeout: 10_000 });
     const dt = await dlg.innerText();
     step("C11.11: the row drawer opens by keyboard with Definition, What IRCC accepts, Where it is used and History", ["Definition", "What IRCC accepts", "Where it is used", "History"].every((h) => dt.includes(h)), dt.slice(0, 200));
     step("C11.11: the drawer says where the form came from and whether canada.ca was compared, the fingerprint kept in Details", /Official copy loaded with the sample|Downloaded from canada.ca|Uploaded by a person/.test(dt) && /checked|No canada\.ca page recorded yet/.test(dt) && (await dlg.locator("details").count()) === 1);
     step("C11.11: Where it is used lists the LMIA combination and its release", /With an LMIA/.test(dt) && /release/.test(dt), dt.slice(dt.indexOf("Where it is used"), dt.indexOf("Where it is used") + 200));
+    step("C3.12: the drawer's Definition says the field map of the current edition, with what it means", /Field map: \d+ of \d+ form fields decided/.test(dt) && /from an earlier release, not decided yet/.test(dt) && !/on To review/.test(dt.slice(dt.indexOf("Field map:"), dt.indexOf("Field map:") + 400)), dt.slice(0, 400));
     await axe("row drawer"); await shot("07-drawer");
     await p.keyboard.press("Escape"); await sleep(300);
     step("review M8: closing the drawer puts focus back on the number that opened it", await p.evaluate(() => document.activeElement?.textContent === "IMM 1295"), await p.evaluate(() => document.activeElement?.outerHTML.slice(0, 120)));
@@ -126,7 +130,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     step("review round 2 M5: keyboard focus is visible on a filter chip (a ring, not nothing)", await p.evaluate(() => { const s = getComputedStyle(document.activeElement); return s.boxShadow !== "none" || (s.outlineStyle !== "none" && s.outlineWidth !== "0px"); }), await p.evaluate(() => document.activeElement?.outerHTML.slice(0, 80)));
     const inView = await p.evaluate(() => { const r = document.querySelector('tr[data-form] td:last-child button')?.getBoundingClientRect(), t = [...document.querySelectorAll('tr[data-form] td')].find((td) => td.textContent?.match(/Ready|Needs your OK|Newer file|Retired/))?.getBoundingClientRect(); return !!r && !!t && r.right <= window.innerWidth && t.right <= window.innerWidth; });
     step("review M5: at 1024 px the Status and ⋯ columns stay in view (no sideways scroll to reach them)", inView);
-    step("review M5: Used by shows the combination's own name first, its place after it, muted", /^With an LMIA · /.test((await p.locator('tr[data-form="IMM 1295"] td').nth(5).innerText()).trim()), await p.locator('tr[data-form="IMM 1295"] td').nth(5).innerText());
+    step("review M5: Used by shows the combination's own name first, its place after it, muted", /^With an LMIA · /.test((await p.locator('tr[data-form="IMM 1295"] td').nth(6).innerText()).trim()), await p.locator('tr[data-form="IMM 1295"] td').nth(6).innerText());
     await p.setViewportSize({ width: 1440, height: 900 }); await sleep(200);
 
     // P-116 amended (28 Oct): one written row action from the state, its reason as visible text; the ⋯ menu keeps the rest
@@ -167,10 +171,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await pane.getByRole("button", { name: "Cancel" }).click(); await sleep(200);
     // R69-2: the list's cache is keyed by the person, so switching person (no reload) reads their own row actions.
     await p.getByLabel("Simulated person").first().selectOption("user-B");
-    await p.waitForFunction(() => document.querySelector('tr[data-form="IMM 5604"] [data-action]')?.getAttribute("data-action") !== "WITHDRAW", null, { timeout: 5000 }).catch(() => {});
+    await p.waitForFunction(() => document.querySelector('tr[data-form="IMM 5604"] [data-action]')?.getAttribute("data-action") !== "WITHDRAW", null, { timeout: 5000 });
     step("R69-2 fail: after switching to another person without reloading, the author's Withdraw is not shown to them (their own action, greyed)", (await act5604.getAttribute("data-action")) === "RETIRE" && (await act5604.getAttribute("aria-disabled")) === "true", await act5604.getAttribute("data-action"));
     await p.getByLabel("Simulated person").first().selectOption("user-A");
-    await p.waitForFunction(() => document.querySelector('tr[data-form="IMM 5604"] [data-action]')?.getAttribute("data-action") === "WITHDRAW", null, { timeout: 5000 }).catch(() => {});
+    await p.waitForFunction(() => document.querySelector('tr[data-form="IMM 5604"] [data-action]')?.getAttribute("data-action") === "WITHDRAW", null, { timeout: 5000 });
     step("R69-2 pass: switching back to the author shows Withdraw of their own waiting change again", (await act5604.getAttribute("data-action")) === "WITHDRAW");
     // QA-66 (R69-1) and QA-68: the second person returns the retire; the author's row says so and keeps Withdraw, and the
     // change's page sends it again with what changed only (no Name or Meaning to edit).
@@ -295,7 +299,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const countSays = async () => (await p.locator('[data-list-count][role="status"]').textContent()) ?? "";
     step("X5 review m2 fail: the count is a status, and the button says forms", /^Showing 100 of \d+ forms$/.test(await countSays()) && /Show \d+ more forms/.test((await pager.textContent()) ?? ""), await countSays());
     // Review (310acb9c) 1 / break m16: a second Enter after Show more opens no drawer (focus is on the row, not its button).
-    await pager.getByRole("button").focus(); await p.keyboard.press("Enter"); await sleep(60); await p.keyboard.press("Enter"); await sleep(300);
+    // The second Enter waits for the first one's rows and focus (before: a fixed 60 ms, which under load pressed Show more
+    // twice; 91/92 on main). The wait fails loudly: no .catch, so a Show more that never lands focus on row 101 fails here.
+    await pager.getByRole("button").focus(); await p.keyboard.press("Enter");
+    await p.waitForFunction(() => { const rows = [...document.querySelectorAll("tr[data-form]")]; const tr = document.activeElement?.closest("tr[data-form]"); return rows.length === 150 && !!tr && rows.indexOf(tr) === 100; }, null, { timeout: 10000 });
+    await p.keyboard.press("Enter"); await sleep(300);
     step("X5 review (310acb9c) 1 fail: a second Enter after Show more opens no drawer (before: row 51's drawer opened)", (await p.getByRole("dialog").count()) === 0 && (await p.locator("tr[data-form]").count()) === 150, `dialogs ${await p.getByRole("dialog").count()}, rows ${await p.locator("tr[data-form]").count()}`);
     if (await p.getByRole("dialog").count()) { await p.keyboard.press("Escape"); await sleep(200); }
     while (await pager.count()) { await pager.getByRole("button").click(); await sleep(200); }
@@ -343,6 +351,22 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     // One readable view (the whole list is now some 240 rows): the first screen at 1440 px.
     await p.setViewportSize({ width: 1440, height: 900 }); await p.getByText("Listed by IRCC · no file yet").first().evaluate((e) => e.scrollIntoView({ block: "center" })); await sleep(150);
     await p.screenshot({ path: path.join(SHOTS, "16-filled-from-index-1440.png") });
+    // X5 slice c (review 00007dd0 1, 2): two remembered deletions; the section passes axe (the button's name holds its visible
+    // words, WCAG 2.5.3), List again works by keyboard and focus moves to the next List again, then to the heading.
+    for (const code of ["IMM 0008 SCH4", "IMM 0008 SCH5"]) {
+      const d = await api(`/library/forms/${encodeURIComponent(code)}`, { method: "DELETE", json: { reason: "Not needed in this library" } });
+      await api(`/library/changes/${d.body?.id}/approve`, { method: "POST", json: { note: "Checked: unused" }, actor: "user-B" });
+    }
+    await open(); const sec = p.locator("[data-remembered-deletions]"); await sec.waitFor({ timeout: 15_000 }); await sec.scrollIntoViewIfNeeded();
+    step("X5 slice c pass: the library names the forms deleted from it, each with List again", (await sec.locator("[data-list-again]").count()) === 2 && /Deleted from the library \(2\)/.test((await sec.textContent()) ?? ""));
+    await axe("X5 slice c: deleted forms with List again");
+    await sec.locator('[data-list-again="IMM 0008 SCH4"]').focus(); await p.keyboard.press("Enter");
+    await p.getByText("IMM 0008 SCH4 is listed again").first().waitFor({ timeout: 15_000 });
+    await p.waitForFunction(() => document.activeElement?.getAttribute("data-list-again") === "IMM 0008 SCH5", null, { timeout: 10_000 });
+    step("X5 slice c (review 00007dd0 2) fail: after List again by keyboard, focus is on the next List again (before: the page)", (await p.evaluate(() => document.activeElement?.getAttribute("data-list-again"))) === "IMM 0008 SCH5");
+    await p.keyboard.press("Enter"); await p.getByText("IMM 0008 SCH5 is listed again").first().waitFor({ timeout: 15_000 });
+    await p.waitForFunction(() => !document.querySelector("[data-remembered-deletions]") && document.activeElement?.hasAttribute("data-fill-index"), null, { timeout: 10_000 });
+    step("X5 slice c fail: with the last one listed again the section goes and focus lands on Fill from IRCC's forms list", (await p.locator("[data-remembered-deletions]").count()) === 0 && await p.evaluate(() => document.activeElement?.hasAttribute("data-fill-index")));
     await as("user-B"); await open();
     step("X5 C2.6 fail: a person without the author duty has no Fill from IRCC's forms list", (await p.locator("[data-fill-index]").count()) === 0);
     step("no page errors", errs.length === 0, errs.join(" | "));

@@ -431,6 +431,21 @@ model OfficialPagesRecord {
   @@map("combination_official_pages")
 }
 
+/// X5 slice c (P-156 (1); the tech lead on #138): a form a second person approved deleting from the library is remembered,
+/// so a later fill from IRCC's forms list does not list it again. A person adding the form back (an upload, a canada.ca
+/// download by Find again, a sample load) forgets it. Keyed by form number; no foreign key (the form's row is gone).
+model LibraryFormDeletion {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  formKey     String   @map("form_key")
+  deletedBy   String   @map("deleted_by")
+  changeId    String?  @map("change_id") @db.Uuid
+  deletedAt   DateTime @default(now()) @map("deleted_at") @db.Timestamptz
+
+  @@unique([workspaceId, formKey])
+  @@map("library_form_deletion")
+}
+
 model ApprovedSource {
   id           String   @id @default(uuid()) @db.Uuid
   workspaceId  String   @map("workspace_id") @db.Uuid
@@ -541,6 +556,33 @@ model FormLineAction {
 
   @@index([combinationId, at])
   @@map("form_line_action")
+}
+
+/// X2b slice (b) (C1.5, concept v3 BR-C3, BR-C4): one copy or removal of a form or document line across many combinations,
+/// written in one transaction. The idempotency key makes a retried request change nothing twice; `targets` holds, per
+/// combination, the line rows before and after (what one Undo puts back, and how it sees a later change). Undo is done
+/// or refused as a whole and never undoes past a later release.
+model LineBatch {
+  id                  String    @id @default(uuid()) @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid
+  idempotencyKey      String    @map("idempotency_key")
+  actor               String
+  /// add · remove (database check)
+  op                  String
+  /// form · document (database check)
+  kind                String
+  /// The line's key on the source combination (a form number, or a document line key).
+  lineKey             String    @map("line_key")
+  sourceCombinationId String    @map("source_combination_id") @db.Uuid
+  /// [{ combinationId, label, keys[], before: rows[], after: [{ id, status, version, sig }] }]
+  targets             Json
+  at                  DateTime  @default(now()) @db.Timestamptz
+  undoneAt            DateTime? @map("undone_at") @db.Timestamptz
+  undoneBy            String?   @map("undone_by")
+
+  @@unique([workspaceId, idempotencyKey])
+  @@index([workspaceId, at])
+  @@map("line_batch")
 }
 
 /// One box of one form edition and the fact that fills it. The team stores entries as Json on

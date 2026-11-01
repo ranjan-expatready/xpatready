@@ -18,8 +18,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 (async () => {
   // Spend guard (30 Oct incident): the server on this port must run the fake launcher, resolved as the server does.
   const pid = execFileSync("lsof", ["-ti", `tcp:${PORT}`, "-sTCP:LISTEN"], { encoding: "utf8" }).trim().split("\n")[0];
-  // The server's environment: /proc on Linux (CI), "ps -E" on macOS (its -E flag is macOS-only; lead, 31 Oct).
-  const env = !pid ? "" : fs.existsSync(`/proc/${pid}/environ`) ? fs.readFileSync(`/proc/${pid}/environ`, "utf8").split("\0").join(" ") : execFileSync("ps", ["-E", "-ww", "-p", pid, "-o", "command="], { encoding: "utf8" });
+  // The server's environment: /proc/<pid>/environ on Linux (GitHub's machines; `ps -E` is macOS-only), `ps -E` on the Mac.
+  const env = !pid ? "" : process.platform === "linux" ? fs.readFileSync(`/proc/${pid}/environ`, "utf8").split("\0").join(" ") : execFileSync("ps", ["-E", "-ww", "-p", pid, "-o", "command="], { encoding: "utf8" });
   const fake = env.match(/STUDIO_FAKE_LAUNCHER=(\S+)/)?.[1];
   const real = path.join(ROOT, "..", "..", ""), fixture = path.join(__dirname, "fixtures", "fake-launch.mjs");
   const otherLive = [...env.matchAll(/\b(\w+_LIVE)=approved\b/g)].map((m) => m[1]).filter((k) => k !== "STUDIO_AI_LIVE");
@@ -49,7 +49,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const record = { caller: "live", contract_valid: true, drafting_run: { status: "completed", usage: { cost_usd: 0 } }, raw_output: JSON.stringify({ people: [{ role: "principal", min: 1, max: 1, applies: true, quote: sentence, why: null }], unresolved: [] }) };
   fs.writeFileSync(path.join(VAR, "fake-launch.json"), JSON.stringify({ jobs: { "studio-who-can-be-check": { stub: { exit: 0, out: { ok: true } }, live: { exit: 0, record } }, "studio-who-can-be-": { stub: { exit: 0, out: { ok: true } }, live: { exit: 0, sleep_ms: 4000, record } } } }));
 
-  await p.goto(`${BASE}/c/${vv}/questionnaires`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
+  // Slice C1 (P-161 (2)): the people card sits in Before forms on the Forms tab.
+  await p.goto(`${BASE}/c/${vv}/forms`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
   const who = p.locator("[data-who-can-be]");
   await who.getByRole("button", { name: "Show and edit" }).click();
   await who.getByRole("button", { name: "Fill from the guide" }).click();

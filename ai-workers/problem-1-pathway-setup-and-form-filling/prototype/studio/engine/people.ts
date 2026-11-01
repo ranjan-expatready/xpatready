@@ -35,6 +35,8 @@ export function checkPeople(list: PeopleLine[], roles: Role[], strict = true): {
 
 /** The roles a form line's "who fills it" names by role (removing one of them leaves the line with nobody). */
 const NAMES: Record<string, string[]> = { spouse_or_partner: ["spouse_or_partner"], couple_once: ["spouse_or_partner"], each_dependent_child: ["child"], representative: ["representative"], sponsor: ["sponsor"] };
+/** X2b (BR-C1 "the line's person is not in that application"): the roles a line's "who" needs in a combination. */
+export const rolesNamedBy = (who: string): string[] => NAMES[who] ?? [];
 
 /** Form lines that name a person this save removes (or sets to at most 0): the save asks first (M4). */
 export function linesNamingRemoved(before: { role: string; max: number }[], after: { role: string; max: number }[], lines: { form: string; who: string }[]) {

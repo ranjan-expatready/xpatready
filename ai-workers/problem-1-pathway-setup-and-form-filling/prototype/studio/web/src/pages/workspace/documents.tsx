@@ -10,6 +10,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import type { ChecklistLineRow, ChecklistView } from "../../../../contracts/workspace";
 import { api, ApiError, useActorId, useApi, useSessionView } from "@/lib/api";
+import { FOCUS_RING, useFocusItem } from "@/components/focus-item";
+import { PartProblems } from "@/components/part-problems";
 import { Button, Input, Notice, Panel, Pill, Table } from "@/components/ui/controls";
 import { Tip } from "@/components/status";
 import { useUndoToast } from "@/components/lifecycle";
@@ -47,6 +49,8 @@ export function DocumentsTab({ id }: { id: string }) {
   const [shown, setShown] = React.useState<string | null>(null);
   const [edit, setEdit] = React.useState<any>(null);
   const [error, setError] = React.useState<string | null>(null);
+  // X1 (slice C2): a ?focus= link from the setup checklist lands on its place here (documents:lines, documents:problems).
+  useFocusItem(v.data ? [] : undefined);
   const refresh = () => { for (const k of [["checklist", id], ["config", id], ["combination", id], ["fact-sources", id], ["preview"], ["draft"]]) void qc.invalidateQueries({ queryKey: k }); };
   if (v.isPending) return <div className="h-40 animate-pulse rounded-xl border border-border bg-surface" aria-busy="true"><span className="sr-only" role="status">Loading each person's checklist</span></div>;
   if (v.error) return <Notice tone="danger" title="The checklists could not be loaded">{v.error.message} <button type="button" className="font-medium text-text-link underline" onClick={() => void v.refetch()}>Retry</button></Notice>;
@@ -55,7 +59,7 @@ export function DocumentsTab({ id }: { id: string }) {
   const reqOf = (lineage: string) => (cfg.data?.snapshot?.document_requirements ?? []).find((r: any) => r.lineage === lineage);
   const addButton = canAuthor ? <Button size="sm" onClick={() => setEdit({})} data-add-document><Plus /> Add a document</Button> : null;
   if (!role) return (
-    <section className="rounded-xl border border-border bg-surface-raised p-5" data-documents-empty>
+    <section className={cn("rounded-xl border border-border bg-surface-raised p-5", FOCUS_RING)} data-documents-empty data-focus="documents:lines">
       <h2 className="font-semibold">No documents yet</h2>
       <p className="mt-1 text-sm text-text-muted">Draft them from IRCC's checklist, or add one.</p>
       <div className="mt-3">{addButton}</div>
@@ -105,7 +109,7 @@ export function DocumentsTab({ id }: { id: string }) {
   const open = role.lines.find((l) => l.lineage === shown);
   return (
     <RevCtx.Provider value={cfg.data?.revisions ?? {}}>
-      <section aria-labelledby="docs-head" className="space-y-4" data-documents>
+      <section aria-labelledby="docs-head" className={cn("space-y-4", FOCUS_RING)} data-documents data-focus="documents:lines">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="docs-head" className="font-semibold">Documents each person gives</h2>
           <span className="flex flex-wrap items-center gap-2"><Input aria-label="Find a document" placeholder="Find a document…" className="h-8 w-56" value={find} onChange={(e) => setFind(e.target.value)} />{addButton}</span>
@@ -117,6 +121,7 @@ export function DocumentsTab({ id }: { id: string }) {
         <div role="group" aria-label="When it is needed" className="flex flex-wrap gap-1.5">
           {chip("all", "All")}{chip("always", `Always ${role.lines.filter((l) => l.base).length}`)}{chip("onlyif", `Only if ${role.lines.filter((l) => !l.base).length}`)}{chip("needs", `Needs you · ${needs.size}`)}
         </div>
+        <PartProblems id={id} part="documents" />
         {error ? <Notice tone="warn" title="Not changed" action={<Button size="sm" variant="ghost" onClick={() => setError(null)}>Dismiss</Button>}><span data-documents-error>{error}</span></Notice> : null}
         {undoToast.link ? <p className="text-xs text-text-muted" data-undo-note>Last change on this tab{undoToast.link}</p> : null}
         <p className="text-sm text-text-muted">A document that supplies facts takes those questions out of the client questionnaire. Missing or unreadable at the case, the questionnaire asks them ("We could not read it from your passport").</p>

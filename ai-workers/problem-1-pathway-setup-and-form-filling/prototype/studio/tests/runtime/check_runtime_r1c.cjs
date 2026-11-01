@@ -361,20 +361,33 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   // views take 70–280 ms with ~30 ms API calls; the misses came at load averages of 10–13 (the CI runner and other lanes'
   // suites on this Mac). So each view is shown once untimed (warm-up), then timed three times; the budget is unchanged
   // and applies to the best of the three, since other work on the machine only ever adds time. All three are reported.
-  const best = async (view, reset) => { await reset(); await view(); const all = []; for (let i = 0; i < 3; i++) { await reset(); const t = Date.now(); await view(); all.push(Date.now() - t); } return { ms: Math.min(...all), all }; };
+  // #113 held (1 Nov): a reset ends only when the page has settled. The tab triggers animate their border for 150 ms
+  // (transition-all), and Playwright's click waits for its target to stop moving: timed straight after "back to the
+  // application", the person's tab measured ~270 ms (on main's code too) while the app drew it in ~30 ms. The tab is
+  // also timed inside the page (pointer down to the heading); the two must agree, so the measure times the app.
+  const settled = (p) => p.waitForFunction(() => document.getAnimations().every((a) => a.playState !== "running" || a.effect?.getTiming().iterations === Infinity), undefined, { timeout: WAIT });
+  const best = async (p, view, reset) => { await reset(); await view(); const all = []; for (let i = 0; i < 3; i++) { await reset(); await settled(p); const t = Date.now(); await view(); all.push(Date.now() - t); } return { ms: Math.min(...all), all }; };
   const caseView = (p) => async () => { await p.goto(`${BASE}/cases/${caseId}`); await p.getByRole("heading", { name: "Application details" }).waitFor(); };
-  const personTab = (p) => async () => { await p.getByRole("tab", { name: /^Sample Applicant C/ }).click(); await p.getByRole("heading", { name: "Travel and identity documents" }).waitFor(); };
+  const inPage = [];
+  const personTab = (p) => async () => {
+    await p.evaluate(() => { window.__tab0 = null; addEventListener("pointerdown", () => { window.__tab0 = performance.now(); }, { capture: true, once: true }); });
+    await p.getByRole("tab", { name: /^Sample Applicant C/ }).click(); await p.getByRole("heading", { name: "Travel and identity documents" }).waitFor();
+    inPage.push(await p.evaluate(() => (window.__tab0 === null ? null : Math.round(performance.now() - window.__tab0))));
+  };
   const backToApplication = (p) => async () => { await p.getByRole("tab", { name: /^The application/ }).click(); await p.getByRole("heading", { name: "Application details" }).waitFor(); };
   const clientPart = (p) => async () => { await p.goto(`${BASE}/cases/${caseId}/questionnaire?part=3`); await p.getByText(/^Part 3 of \d+/).waitFor(); };
   const none = async () => {};
-  const agent = await best(caseView(o), none), tab = await best(personTab(o), backToApplication(o)), part = await best(clientPart(c), none);
+  const agent = await best(o, caseView(o), none), tab = await best(o, personTab(o), backToApplication(o)), part = await best(c, clientPart(c), none);
+  // The warm-up is inPage[0]; the timed clicks are inPage[1..3], in the order of tab.all.
+  const gaps = tab.all.map((ms, i) => (inPage[i + 1] === null || inPage[i + 1] === undefined ? Infinity : ms - inPage[i + 1]));
+  if (!process.env.R1C_SLOW) { const s = speed(`budget measure: the timed person's tab agrees with the page's own time (pointer down to heading ${inPage.slice(1).join("/")} ms), so it times the app and not a wait before the click`, Math.min(...gaps) < 100, { timed: tab.all, in_page: inPage.slice(1) }); step(s.label, s.ok, s.detail); }
   const [agentMs, tabMs, partMs] = [agent.ms, tab.ms, part.ms];
   if (!process.env.R1C_SLOW) { const s = speed(`budget: first view of the case page (best of 3 after a warm-up: ${agentMs} ms) and of a client part (${partMs} ms) under 1 s; a person's tab (${tabMs} ms) under 200 ms`, agentMs < 1000 && partMs < 1000 && tabMs < 200, { agent: agent.all, part: part.all, tab: tab.all }); step(s.label, s.ok, s.detail); }
   // The measure still catches a slow app: the same views with every API answer held 1.1 s are over the budget.
   if (!process.env.R1C_SLOW) {
     const s = await open("user-P", 390, 844);
     await s.route("**/api/**", async (r) => { await new Promise((ok) => setTimeout(ok, 1100)); await r.continue(); });
-    const slow = await best(clientPart(s), none);
+    const slow = await best(s, clientPart(s), none);
     step(`budget fail: a client part whose answers take 1.1 s measures over 1 s (best of 3: ${slow.ms} ms), so the best-of-3 never hides real slowness`, slow.ms >= 1000, slow.all);
     await s.context().close();
   }

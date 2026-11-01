@@ -6,7 +6,7 @@ import { createHash } from "node:crypto";
 import { render, type BoxRow, type Person, type Role } from "../render.ts";
 import type { Snapshot } from "../snapshot.ts";
 import { groupLabel, type QuestionnaireView, type Readiness } from "../../contracts/runtime.ts";
-import { knownOf, type Answer, type Participant, type Row } from "./case.ts";
+import { checkValue, knownOf, type Answer, type Participant, type Row } from "./case.ts";
 
 /** One confirmed fact a copy reads: which form field, which fact about whom, which row, which value. */
 export type FormFact = { box: string; fact: string; about: string; row: number | null; value: unknown };
@@ -18,7 +18,14 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
   const { known } = knownOf(s, people, answers, rows, today);
   const cov = render(s, renderPeople, known, { today }).coverage.find((c) => c.form === form && c.person === subjectId);
   if (!cov) return null;
-  return { ...cov, facts: factsOf(cov.boxes) };
+  // QA-122 (P-71, P-72): a confirmed answer that fails its checks is never written; its form field is "not written"
+  // with the problem as the reason, and readiness lists the fact as "needs a fix".
+  const boxes = cov.boxes.map((b) => {
+    if (b.coverage !== "confirmed fact" || !b.fact) return b;
+    const problems = checkValue(s, b.fact, b.value, today);
+    return problems.length ? { ...b, coverage: "answered on screen" as const, fix: `confirmed with a problem, not written: ${problems.join(" ")}` } : b;
+  });
+  return { ...cov, boxes, facts: factsOf(boxes) };
 }
 
 /** The forms a case fills as PDFs: the release files them as a PDF (its filing line is not Online) and has their
@@ -63,12 +70,16 @@ export function changedFacts(then: FormFact[], now: FormFact[]): string[] {
  *  here) and by missing or conflicting facts it needs: a required question (not hidden) that fills this form for this
  *  person (matched by the person's id) with an answer that is missing, not confirmed, or confirmed with a problem (it
  *  would be written wrong: review and break report M2). A required repeating group the form reads with no entries
- *  blocks too, until "none apply" is answered and confirmed for it (Lead, break M3). Optional facts left empty do not. */
+ *  blocks too, until "none apply" is answered and confirmed for it (Lead, break M3). Optional facts left empty, or answered
+ *  validly and not confirmed (never written, P-72), do not; an optional fact answered with a problem does (QA-122). */
 export function readiness(view: QuestionnaireView, form: string, subjectId: string): Readiness {
   const reads = view.sections.flatMap((s) => s.questions).filter((q) => q.fills.some((f) => f.form === form && f.subject === subjectId) && !q.hidden);
   const reason = (a: { confirmed: boolean; problems: string[] } | null | undefined) => (!a ? "not answered" as const : a.problems.length ? "needs a fix" as const : !a.confirmed ? "not confirmed" as const : null);
-  const missing = reads.filter((q) => q.required).flatMap((q) => {
-    const r = q.group ? q.rows.map((x) => reason(x.answer)).find(Boolean) ?? null : reason(q.answer);
+  // QA-122: an optional fact counts only when it is answered with a problem (it would be written wrong, P-71).
+  const optional = (a: { problems: string[] } | null | undefined) => (a && a.problems.length ? "needs a fix" as const : null);
+  const missing = reads.flatMap((q) => {
+    const why = q.required ? reason : optional;
+    const r = q.group ? q.rows.map((x) => why(x.answer)).find(Boolean) ?? null : why(q.answer);
     return r ? [{ fact: q.fact, label: q.label, about: q.about_label, reason: r }] : [];
   });
   const read = new Set(reads.map((q) => `${q.subjectId}|${q.section}`));

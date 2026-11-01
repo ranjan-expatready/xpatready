@@ -29,8 +29,8 @@ const launches = () => (existsSync(join(VAR, "fake-launch.log")) ? readFileSync(
   // Spend guard (30 Oct: a wrong fixture path once let this check reach the real launcher, US$0.17 unapproved): before
   // anything runs, the server on this port must be started with the fake launcher, resolved exactly as the server does.
   const pid = execFileSync("lsof", ["-ti", `tcp:${PORT}`, "-sTCP:LISTEN"], { encoding: "utf8" }).trim().split("\n")[0];
-  // The server's environment: /proc on Linux (CI), "ps -E" on macOS (its -E flag is macOS-only; lead, 31 Oct).
-  const env = !pid ? "" : existsSync(`/proc/${pid}/environ`) ? readFileSync(`/proc/${pid}/environ`, "utf8").split("\0").join(" ") : execFileSync("ps", ["-E", "-ww", "-p", pid, "-o", "command="], { encoding: "utf8" });
+  // The server's environment: /proc/<pid>/environ on Linux (GitHub's machines; `ps -E` is macOS-only), `ps -E` on the Mac.
+  const env = !pid ? "" : process.platform === "linux" ? readFileSync(`/proc/${pid}/environ`, "utf8").split("\0").join(" ") : execFileSync("ps", ["-E", "-ww", "-p", pid, "-o", "command="], { encoding: "utf8" });
   const fake = env.match(/STUDIO_FAKE_LAUNCHER=(\S+)/)?.[1], varRoot = env.match(/STUDIO_VAR=(\S+)/)?.[1] ?? "";
   if (!fake || launcherFor(fake, varRoot) !== FAKE_LAUNCHER) { console.error(`STOP  the server on :${PORT} does not run the fake launcher (${fake ?? "not set"}): this check would make paid AI calls. Start it as the usage line says.`); process.exit(2); }
   ok("spend guard pass: this server runs the fake launcher (resolved as the server does), so nothing here reaches a model", launcherFor(fake, varRoot) === FAKE_LAUNCHER, fake);

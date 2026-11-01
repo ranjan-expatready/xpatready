@@ -16,7 +16,7 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). The wa
 ## 1. Modes
 | Mode | Trigger | Scope |
 |---|---|---|
-| `after-merge` | Lead, after every merge of app code into `main` | Smoke of every Works capability + full test of the capabilities the merge touched (`git diff --stat <last tested commit>..main`) |
+| `after-merge` | Lead, after every merge of app code into `main` | Smoke of every Works capability + full test of the capabilities the merge touched (`git diff --stat <last tested commit>..main`); re-score in the same round every row the merged PRs name in their titles or set to "Built, awaiting qa" (P-219) |
 | `milestone` | Lead, before a milestone gate | Every capability in P/`qa/CAPABILITIES.md` for the milestone, every role, coverage report, all suites rerun |
 | `capability <name>` | Lead or founder | One capability or screen, in depth |
 | `explore <area>` | Founder, Lead, or when time allows | Charter-based exploration (60 min): what a real author, RCIC, officer or client would try |
@@ -36,7 +36,7 @@ Screenshot each decision point and every defect (`P/qa/reports/<date>-<mode>/`).
 * Turn every bug you find into a replayable check in `prototype/studio/tests/qa/` (Playwright or API script) that fails today and passes when fixed.
 
 ## 4. Record
-* **P/`qa/CAPABILITIES.md`** — one row per capability: status Works / Broken / Partial / Not built / Not tested, last tested commit and date, evidence. Keep under 100 lines; detail goes in reports.
+* **P/`qa/CAPABILITIES.md`** — one row per capability: status Works / Broken / Partial / Not built / Not tested, or "Built, awaiting qa" (set by a builder, P-219; only qa moves it on), last tested commit and date, evidence. Keep under 100 lines; detail goes in reports.
 * **P/`qa/BUGS.md`** — open findings only: QA-n · **type** (Bug: built but wrong · Gap: requirement or decision not met or not built · Conflict: behaviour, requirement and decision disagree · Ambiguity: the requirement or decision is unclear, phrased as a question · UX: works but confusing, slow or unclear words) · severity (Blocker, Critical, Major, Minor) · capability · requirement or decision ID · steps · expected · actual · evidence · found on commit · owning lane (your best guess; the Lead assigns). Closed bugs move to P/`history/`. Before a new row, check P/`scout/FINDINGS.md`: a scout finding already there gets your evidence, not a second row.
 * **Report** `P/qa/reports/<date>-<mode>.md` (under 150 lines): verdict, what works, bugs, coverage, journey scores where a screen was walked, what you could not test, **Questions for the Lead**, **Suggestions** (each labelled *Needed for the proof* or *Later* (P-26) and *Capability* or *Scaffolding* (P-33); never build them).
 * D17 and D20 need an intended user: you may simulate, never award them.
@@ -44,3 +44,4 @@ Screenshot each decision point and every defect (`P/qa/reports/<date>-<mode>/`).
 ## 5. Hand back
 Commit your report and `qa/BUGS.md` rows on a branch `claude/qa-<word>` from main (`qa: <mode> — <summary>` + attribution line), push, open a PR (`gh pr create --base main`) and label it `review: approved` (records only; it merges by itself on green CI). Reply once, briefly: the run (mode, main commit), verdict (ready or not, one line), bugs (n Blocker · n Critical · n Major · n Minor, new QA-…), coverage, questions.
 A Blocker or Critical goes to the top of the backlog: the tech lead holds merges in that area until it is fixed and retested.
+**Finish the round, then hand over (P-218):** from 60% context start no new round, finish the one in hand, write a Handover comment on your records PR and stop; hard stop at 80%. Commit your own checks with the records PR, never in a stash (cloud copies are lost).

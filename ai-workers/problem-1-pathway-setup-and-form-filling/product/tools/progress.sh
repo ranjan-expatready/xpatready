@@ -5,7 +5,7 @@ PH="$(cd "$(dirname "$0")/.." && pwd)"
 python3 - "$PH/qa/CAPABILITIES.md" "$1" <<'EOF'
 import re, sys, collections
 names = {"M2": "M2 · Super Admin setup", "T": "R1 · thin runtime slice", "M3": "M3 · case, agent and client"}
-order = ["Works", "Partial", "Not tested", "Broken", "Not built"]
+order = ["Works", "Built, awaiting qa", "Partial", "Not tested", "Broken", "Not built"]
 c = collections.defaultdict(collections.Counter)
 for line in open(sys.argv[1]):
     if re.match(r"^\| C\d", line):

@@ -1,6 +1,7 @@
 // Product Studio API (NestJS 11, as the team's backend) and the built web app on one local port.
 //   node --tsconfig-raw is not used: run with tsx (see studio/start.sh), http://localhost:4400
 import { FactSources, FactSourcesController } from "./fact-sources.ts";
+import { LinesBulk, LinesBulkController } from "./lines-bulk.ts";
 import { PersonChecklists, PersonChecklistsController } from "./person-checklist.ts";
 import { WhoFills, WhoFillsController } from "./who-fills.ts";
 import { OfficialPagesController, OfficialPagesService } from "./official-pages.ts";
@@ -20,12 +21,13 @@ import { Forms, FormsController } from "./forms.ts";
 import { Intake, MAX_BYTES, MAX_FILES } from "./intake.ts";
 import { Programs } from "./programs.ts";
 import { ReviewQueueController, ReviewQueueService } from "./review-queue.ts";
+import { FormProgressController, FormProgressService } from "./form-progress.ts";
 import { Screen02, Screen02Controller } from "./screen02.ts";
 import { ReviewProposals, ReviewProposalsController } from "./review-proposals.ts";
 import { Impact } from "./impact.ts";
 import { Checklists, ChecklistsController } from "./checklist.ts";
 import { Runtime, RuntimeController } from "./runtime.ts";
-import { CaseForms, CaseFormsController } from "./fill-case.ts";
+import { CaseForms, CaseFormsController, MAX_VALIDATED_MB } from "./fill-case.ts";
 import { Sources } from "./sources.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { Structure, StructureController } from "./structure.ts";
@@ -156,8 +158,12 @@ class ProblemErrors implements ExceptionFilter {
       const body = e.getResponse() as any, status = e.getStatus();
       // Upload limits fire before the intake sees the files (break m9): say which limit, in plain words.
       if (status === 413 || /^(File too large|Too many files)$/.test(String(body?.message ?? ""))) {
+        const many = /files/i.test(String(body?.message));
+        // QA-126: a validated copy (C-9) takes one PDF of up to 20 MB, so it is worded with its own limits, not the intake's.
+        if (/\/form-copies\/[^/]+\/validated\/?$/.test(String(host.switchToHttp().getRequest()?.path ?? "")))
+          return send(413, "Too large", many ? "Send only the one validated PDF you saved from Adobe. Nothing was recorded." : `The file is larger than ${MAX_VALIDATED_MB} MB: send the validated PDF of this form. Nothing was recorded.`);
         const files = MAX_FILES, mb = MAX_BYTES / 1024 / 1024;
-        return send(413, "Too large", /files/i.test(String(body?.message)) ? `Add at most ${files} files at a time. Nothing was added.` : `A file is larger than ${mb} MB. Nothing was added; add files up to ${mb} MB each.`);
+        return send(413, "Too large", many ? `Add at most ${files} files at a time. Nothing was added.` : `A file is larger than ${mb} MB. Nothing was added; add files up to ${mb} MB each.`);
       }
       if (typeof body === "object" && body.detail) return send(status, body.title ?? "Request refused", body.detail, body);
       const detail = typeof body === "object" ? (Array.isArray(body.message) ? body.message.join("; ") : body.message ?? e.message) : String(body);
@@ -177,7 +183,7 @@ class ProblemErrors implements ExceptionFilter {
   }
 }
 
-@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, Screen02Controller, ReviewProposalsController, ChecklistsController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController, WhoFillsController, LibrarySourcesController, OfficialPagesController], providers: [OfficialPagesService, FactSources, PersonChecklists, WhoFills, LibrarySources, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, CaseForms, ReviewQueueService, Screen02, ReviewProposals, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs] })
+@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, FormProgressController, Screen02Controller, ReviewProposalsController, ChecklistsController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController, WhoFillsController, LibrarySourcesController, OfficialPagesController, LinesBulkController], providers: [LinesBulk, FormProgressService, OfficialPagesService, FactSources, PersonChecklists, WhoFills, LibrarySources, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, CaseForms, ReviewQueueService, Screen02, ReviewProposals, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs] })
 class AppModule {}
 
 async function main() {

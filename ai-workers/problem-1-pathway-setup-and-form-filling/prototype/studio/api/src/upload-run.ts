@@ -34,6 +34,14 @@ export const UPLOAD_STEPS = [
 type Kind = (typeof UPLOAD_STEPS)[number]["kind"];
 type Identity = { ok: boolean; kind?: string; code?: string; edition_label?: string; title?: string; language?: string; error?: string };
 
+/** C2.4 (review of 6c940174, Major 2): an approved file held as a newer or older edition is not a source to verify:
+ *  its card says what it waits for and links to its own step (Review impact; the older edition's item), never to
+ *  "Record the IRCC page". */
+export const HELD_WORDS: Record<string, string> = {
+  new_edition_held: "Held as a new edition: nothing changes until a person reviews its impact on To review.",
+  older_edition_held: "Kept aside as an older edition: it is not used. See it on To review.",
+};
+
 @Injectable()
 export class UploadRuns implements OnModuleInit {
   private canada: CanadaSource = canadaSource();
@@ -144,7 +152,7 @@ export class UploadRuns implements OnModuleInit {
       outcome = one?.outcome ?? "failed";
       // Review major 6: a held file's card links to its own To review item, where the uploader records the IRCC page first.
       const held = outcome.includes("held") ? await this.db.intakeItem.findFirst({ where: { sha256: sha(bytes), status: "HELD" }, orderBy: { createdAt: "desc" }, select: { id: true, code: true } }) : null;
-      if (held) { const b = await this.db.aiBatch.findUnique({ where: { id: batchId } }); await this.db.aiBatch.update({ where: { id: batchId }, data: { plan: { ...(b!.plan as object), held_id: held.id, held_unread: !held.code } } }); }
+      if (held) { const b = await this.db.aiBatch.findUnique({ where: { id: batchId } }); await this.db.aiBatch.update({ where: { id: batchId }, data: { plan: { ...(b!.plan as object), held_id: held.id, held_unread: !held.code, held_outcome: outcome } } }); }
       unread = !!held && !held.code;
       return { status: outcome === "refused" || outcome === "failed" ? "FAILED" : outcome.includes("held") ? "NEEDS_PERSON" : "COMPLETED", message: one?.message ?? "Nothing was added." };
     });
@@ -159,7 +167,7 @@ export class UploadRuns implements OnModuleInit {
       }
     }
     const done: Record<string, string> = { added: "Added to the library.", in_library: "Already in the library: nothing was added twice.", attached: "Added to the library." };
-    await this.finish(batchId, s4 === "COMPLETED" ? "COMPLETED" : s4 === "NEEDS_PERSON" ? "NEEDS_PERSON" : "FAILED", s4 === "COMPLETED" ? done[outcome] ?? "In the library." : s4 === "NEEDS_PERSON" ? (unread ? "Held: the rules could not read its form number, so it cannot be approved. Upload the official PDF from canada.ca instead." : "Held: record the IRCC page it came from on To review; then a second person compares and approves it.") : "Not added.");
+    await this.finish(batchId, s4 === "COMPLETED" ? "COMPLETED" : s4 === "NEEDS_PERSON" ? "NEEDS_PERSON" : "FAILED", s4 === "COMPLETED" ? done[outcome] ?? "In the library." : s4 === "NEEDS_PERSON" ? (unread ? "Held: the rules could not read its form number, so it cannot be approved. Upload the official PDF from canada.ca instead." : HELD_WORDS[outcome] ?? "Held: record the IRCC page it came from on To review; then a second person compares and approves it.") : "Not added.");
   }
 
   /** The library's guides whose page text prints this form number (rules, US$0). */
