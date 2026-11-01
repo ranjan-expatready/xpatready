@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { RunCard } from "@/components/run-card";
 import { peopleWords } from "@/lib/people";
 import { DraftPqrPicks } from "@/components/pqr-draft";
+import { DraftQuestionsDocuments } from "@/components/qd-draft";
 
 const TIPS = {
   card: "Sets which people a case may include and how many; each person marked as applicant gets their own forms, questions and documents.",
@@ -401,7 +402,7 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
       {fs.error ? <Notice tone="warn" title="Where each answer comes from could not load">{fs.error.message} <button type="button" className="font-medium text-text-link underline" onClick={() => void fs.refetch()}>Retry</button></Notice> : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="questions-head" className="font-semibold">Questions for each person</h2>
-        <span className="flex flex-wrap items-center gap-2"><Button size="sm" variant="ghost" onClick={() => setOpenIds(allOpen ? new Set() : new Set(q.sections.map((s) => s.id)))}>{allOpen ? "Close all sections" : "Open all sections"}</Button>{addSection}</span>
+        <span className="flex flex-wrap items-center gap-2">{canAuthor ? <DraftQuestionsDocuments id={id} /> : null}<Button size="sm" variant="ghost" onClick={() => setOpenIds(allOpen ? new Set() : new Set(q.sections.map((s) => s.id)))}>{allOpen ? "Close all sections" : "Open all sections"}</Button>{addSection}</span>
       </div>
       <div role="group" aria-label="Person" className="flex flex-wrap gap-1.5">
         {q.roles.map((r) => <button key={r.role} type="button" aria-pressed={r.role === q.role} data-role-chip={r.role} onClick={() => { const n = new URLSearchParams(sp); n.set("role", r.role); setSp(n, { replace: true }); }}

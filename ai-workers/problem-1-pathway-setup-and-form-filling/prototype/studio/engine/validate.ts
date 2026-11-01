@@ -122,6 +122,15 @@ export function derivedRead(s: Snapshot): Set<string> {
 /** Grounding audit finding 3 (W1 3.4, 3.5): a question's condition must never hide a value that something applicable
  *  still reads, every value that decides a question must be obtainable, and questions must not decide each other in a
  *  loop. Errors block submission and release. A form or box that applies under the same condition is compatible. */
+/** C4.11 step 7 (W1 concept §4, "every deciding fact is asked before what depends on it"): the same reachability and
+ *  loop rules validate() runs, on the snapshot alone (derived definitions from the snapshot), for the drafting run. */
+export function askedInOrder(s: Snapshot): Problem[] {
+  const placed = new Set(s.placements.map((p) => p.fact));
+  const docFacts = new Set((s.document_types ?? []).flatMap((t) => t.supplies_facts ?? []));
+  const derived = new Set((s.derived_fields as { id: string }[]).map((d) => d.id));
+  return reachability(s, placed, docFacts, derived, (f) => `"${factWords(s, f)}"`);
+}
+
 // C3.8: the messages name each question by its meaning (`words`), never by its field code.
 function reachability(s: Snapshot, placed: Set<string>, docFacts: Set<string>, derived: Set<string>, words: (fact: string) => string): Problem[] {
   const out: Problem[] = [];

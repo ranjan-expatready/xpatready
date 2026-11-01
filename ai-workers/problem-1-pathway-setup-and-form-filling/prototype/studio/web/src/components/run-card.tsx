@@ -22,9 +22,9 @@ const STEP_ICON: Record<string, React.ReactElement> = {
   COMPLETED: <CircleCheck className="size-4 text-ok" aria-hidden />, APPLIED: <CircleCheck className="size-4 text-ok" aria-hidden />,
   RUNNING: <Loader2 className="size-4 animate-spin text-primary motion-reduce:animate-none" aria-hidden />,
   FAILED: <CircleAlert className="size-4 text-danger" aria-hidden />, BLOCKED: <CircleAlert className="size-4 text-danger" aria-hidden />, PARTIAL: <CircleAlert className="size-4 text-text-warn" aria-hidden />,
-  NEEDS_PERSON: <CircleAlert className="size-4 text-text-warn" aria-hidden />, CANCELLED: <CircleSlash className="size-4 text-text-muted" aria-hidden />, SKIPPED: <CircleSlash className="size-4 text-text-muted" aria-hidden />,
+  NEEDS_PERSON: <CircleAlert className="size-4 text-text-warn" aria-hidden />, CANCELLED: <CircleSlash className="size-4 text-text-muted" aria-hidden />, SKIPPED: <CircleSlash className="size-4 text-text-muted" aria-hidden />, NOT_YET: <CircleDashed className="size-4 text-text-muted" aria-hidden />,
 };
-const STEP_WORD: Record<string, string> = { COMPLETED: "Done", APPLIED: "Done", RUNNING: "Running", FAILED: "Failed", BLOCKED: "Blocked", PARTIAL: "Done with problems", NEEDS_PERSON: "Waiting for you", CANCELLED: "Stopped", SKIPPED: "Not needed", WAITING: "Waiting", QUEUED: "Waiting" };
+const STEP_WORD: Record<string, string> = { COMPLETED: "Done", APPLIED: "Done", RUNNING: "Running", FAILED: "Failed", BLOCKED: "Blocked", PARTIAL: "Done with problems", NEEDS_PERSON: "Waiting for you", CANCELLED: "Stopped", SKIPPED: "Not needed", NOT_YET: "Not available yet", WAITING: "Waiting", QUEUED: "Waiting" };
 const STOP_TIP = "Ends this run now. Steps already finished keep their results. An AI call already sent is ended too; it stays counted at its reserved worst case because the provider may still bill it.";
 
 /** About first, then the ceiling, then what it spent (P-123 cost line), in the same words as the button that started it

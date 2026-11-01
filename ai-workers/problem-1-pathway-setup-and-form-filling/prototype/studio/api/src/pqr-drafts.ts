@@ -97,7 +97,8 @@ export class PqrDrafts {
   }
 
   /** Runs the plan: picks go into the one review queue (never ticked here). */
-  async draft(actor: Actor, id: string, body: unknown) {
+  /** `opts.jobId` (C4.11): the step of a "Draft questions and documents" run this draft writes, instead of its own job. */
+  async draft(actor: Actor, id: string, body: unknown, opts: { jobId?: string } = {}) {
     need(actor, "author");
     const plan = await this.plan(id, body);
     const b = PqrDraftBody.parse(body);
@@ -105,7 +106,9 @@ export class PqrDrafts {
     if (plan.mode === "live" && plan.totals.worst_usd > plan.totals.remaining_usd + 1e-9) throw problem(409, "Over the spending cap", `Not started: the worst case (US$${plan.totals.worst_usd.toFixed(2)}) is above what is left of the AI spending cap (US$${plan.totals.remaining_usd.toFixed(2)}). Use saved AI answers or rules only.`);
     const c = await this.combination(id);
     const snapshot = (await buildSnapshot(this.db, c.workspaceId, c.id, "draft")).snapshot;
-    const job = await this.db.draftingJob.create({ data: { workspaceId: c.workspaceId, combinationId: c.id, kind: PQR_STEP, mode: plan.mode === "rules" ? "LOCAL" : plan.mode.toUpperCase(), status: "RUNNING", startedBy: actor.id, message: "Drafting pre-qualification picks" } });
+    const jobData = { mode: plan.mode === "rules" ? "LOCAL" : plan.mode.toUpperCase(), status: "RUNNING", message: "Drafting pre-qualification picks" };
+    const job = opts.jobId ? await this.db.draftingJob.update({ where: { id: opts.jobId }, data: jobData })
+      : await this.db.draftingJob.create({ data: { workspaceId: c.workspaceId, combinationId: c.id, kind: PQR_STEP, startedBy: actor.id, ...jobData } });
     const out = { runId: job.id, mode: plan.mode, from: plan.mode === "rules" ? "rules" as string | null : null, proposed: 0, ready: 0, decide: 0, check: 0, already: 0, removed: 0, dropped: [] as { role: string; asks: string; why: string }[], unresolved: [] as { passage: string; reason: string }[], usd: 0, run_files: [] as string[], note: "" };
     let items: ReturnType<typeof pqrPicksFromRounds>["items"] = [];
     if (plan.mode === "rules") {
