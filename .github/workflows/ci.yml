@@ -10,30 +10,97 @@
 #     smoke set; everything when a shared file changed; no model call, US$0) on the founder's Mac (self-hosted runner
 #     xr-mac, free; P-195, 31 Oct: GitHub's machines used the US$10 monthly budget in one morning). The full set runs
 #     every night on main on the same Mac (nightly.yml).
+# P-213 (founder 1 Nov, a two-day trial capped at US$30): a merge-queue batch (branch mergify/merge-queue/...) runs its
+# suites on four GitHub Linux machines at once (job "shard", run-suites.sh --shard i/4, each a fresh copy), with the fast
+# checks on the first; the job "ci" then only reports their result, so Mergify's "check-success = ci" is unchanged.
+# Builders' own PRs keep the fast checks on the Mac. Fallback, one switch: repository variable BATCH_RUNNER=mac puts
+# batches back on the Mac exactly as before (gh variable set BATCH_RUNNER --body mac).
 # A lane opens its pull request when its work is ready for the Lead's check, so a code change is tested about once;
 # a newer push to the pull request cancels the older run. Docs-only pull requests (most Lead PRs) take about a minute.
 name: ci
 on:
   pull_request:
 jobs:
-  ci:
-    # P-195 (founder, 31 Oct): back on the Mac. Builders now run in the cloud, so the Mac runs only checks, the demo and
-    # the Lead. The browser suite runs on its own isolated copy, never the :4400 demo (no --demo).
-    runs-on: [self-hosted, macOS, xr-mac]
-    timeout-minutes: 90   # P-183: a busy Mac never stops a check halfway
+  shard:
+    # P-213: only merge-queue batches, only while BATCH_RUNNER is not "mac". A fresh machine each, so the browser suite
+    # runs on its :4400 demo (--demo), as on 31 Oct. GitHub's 2-core Linux machine: US$0.006 a minute.
+    if: startsWith(github.event.pull_request.head.ref, 'mergify/') && vars.BATCH_RUNNER != 'mac'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions: { contents: read }
-    concurrency: { group: "ci-${{ github.event.pull_request.number }}", cancel-in-progress: true }
+    concurrency: { group: "shard-${{ github.event.pull_request.number }}-${{ matrix.shard }}", cancel-in-progress: true }
+    strategy:
+      fail-fast: true   # one red shard fails the batch: stop the others and save their minutes
+      matrix: { shard: [1, 2, 3, 4] }
     env:
       P: ai-workers/problem-1-pathway-setup-and-form-filling/product
       S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
+      - name: push guard (shard 1 only; excluded paths, PDFs, secrets, personal names)
+        if: matrix.shard == 1
+        run: |
+          chmod +x "$P/tools/push-guard.sh"
+          "$P/tools/push-guard.sh" "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/package-lock.json
+      - name: set up like a cloud session (cloud-setup.sh; it also builds the web app the browser suites need)
+        run: bash "$P/tools/cloud-setup.sh"
+      - name: rules files, decision impact, graph, official PDFs, explicit-any count (shard 1 only)
+        if: matrix.shard == 1
+        run: |
+          bash "$P/tools/check-docs.sh" && bash "$P/tools/decision-impact.sh" && node "$P/tools/graph.mjs" --check
+          python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py
+          node "$S/tools/count-any.mjs" --against "${{ github.event.pull_request.base.sha }}"
+      - name: Playwright's own Chromium
+        run: cd "$S" && ./node_modules/.bin/playwright install chromium
+      - name: studio suites, shard ${{ matrix.shard }} of 4 (run-suites.sh --demo --changed --shard; US$0 model spend)
+        run: |
+          bash "$P/tools/run-suites.sh" --demo --changed "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}" --shard ${{ matrix.shard }}/4 | tee suites.md
+          exit ${PIPESTATUS[0]}
+      - name: summary
+        if: always()
+        run: '[ -f suites.md ] && cat suites.md >> "$GITHUB_STEP_SUMMARY" || true'
+      - name: logs (only when something failed)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: suite-logs-shard-${{ matrix.shard }}
+          path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/
+          retention-days: 14
+  ci:
+    # P-195 (founder, 31 Oct): back on the Mac. Builders now run in the cloud, so the Mac runs only checks, the demo and
+    # the Lead. The browser suite runs on its own isolated copy, never the :4400 demo (no --demo).
+    # P-213: for a batch checked by the shards, this job runs on a GitHub machine and only reports the shards' result.
+    needs: shard
+    if: ${{ !cancelled() }}
+    runs-on: ${{ fromJSON(startsWith(github.event.pull_request.head.ref, 'mergify/') && vars.BATCH_RUNNER != 'mac' && '["ubuntu-latest"]' || '["self-hosted","macOS","xr-mac"]') }}
+    timeout-minutes: 90   # P-183: a busy Mac never stops a check halfway
+    permissions: { contents: read }
+    concurrency: { group: "ci-${{ github.event.pull_request.number }}", cancel-in-progress: true }
+    env:
+      P: ai-workers/problem-1-pathway-setup-and-form-filling/product
+      S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+      SHARDED: ${{ startsWith(github.event.pull_request.head.ref, 'mergify/') && vars.BATCH_RUNNER != 'mac' }}
+    steps:
+      - name: the four shards' result (P-213)
+        if: env.SHARDED == 'true'
+        run: |
+          echo "shards: ${{ needs.shard.result }}"; [ "${{ needs.shard.result }}" = success ]
+      - uses: actions/checkout@v4
+        if: env.SHARDED != 'true'
+        with: { fetch-depth: 0 }
       - name: push guard (excluded paths, PDFs, secrets, personal names)
+        if: env.SHARDED != 'true'
         run: |
           chmod +x "$P/tools/push-guard.sh"
           "$P/tools/push-guard.sh" "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
       - id: code
+        if: env.SHARDED != 'true'
         name: does this pull request change code?
         env: { HEAD_REF: "${{ github.event.pull_request.head.ref }}" }
         run: |
@@ -54,31 +121,36 @@ jobs:
           fi
           echo "changed=true" >> "$GITHUB_OUTPUT"; echo "suites=true" >> "$GITHUB_OUTPUT"
       - name: the Mac's tools (node 24, venv, official PDFs, database) linked like a lane copy (lane.sh setup)
+        if: env.SHARDED != 'true'
         run: |
           [ -e .tools ] || ln -s "$HOME/Desktop/Xpatready/.tools" .tools
           # Each line added is put in front of the last one: node 24 last, so it wins over Homebrew's node 23.
           echo /opt/homebrew/bin >> "$GITHUB_PATH"; echo /opt/homebrew/opt/postgresql@18/bin >> "$GITHUB_PATH"; echo "$PWD/.tools/node-v24.21.0/bin" >> "$GITHUB_PATH"
       - name: node 24
+        if: env.SHARDED != 'true'
         run: |
           node --version | grep -q '^v24\.' || { echo "node 24 not first on PATH - $(command -v node) $(node --version)"; exit 1; }
       - name: packages (npm ci; the graph and any-count checks read TypeScript from them)
+        if: env.SHARDED != 'true'
         run: cd "$S" && npm ci --no-fund --no-audit
       - name: rules files, decision impact, graph (P-86)
+        if: env.SHARDED != 'true'
         run: |
           bash "$P/tools/check-docs.sh" && bash "$P/tools/decision-impact.sh" && node "$P/tools/graph.mjs" --check
       - name: official IRCC PDFs (manifest checksums, P-31)
+        if: env.SHARDED != 'true'
         run: python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py
       - name: web app build (the browser suites need it)
-        if: steps.code.outputs.changed == 'true'
+        if: env.SHARDED != 'true' && (steps.code.outputs.changed == 'true')
         run: cd "$S" && ./node_modules/.bin/prisma generate && cd web && ../node_modules/.bin/vite build
       - name: explicit-any count
-        if: steps.code.outputs.changed == 'true'
+        if: env.SHARDED != 'true' && (steps.code.outputs.changed == 'true')
         run: node "$S/tools/count-any.mjs" --against "${{ github.event.pull_request.base.sha }}"
       - name: Playwright's own Chromium
-        if: steps.code.outputs.suites == 'true'
+        if: env.SHARDED != 'true' && (steps.code.outputs.suites == 'true')
         run: cd "$S" && ./node_modules/.bin/playwright install chromium
       - name: studio suites this change can affect (run-suites.sh --changed, browser suite on its own copy; US$0)
-        if: steps.code.outputs.suites == 'true'
+        if: env.SHARDED != 'true' && (steps.code.outputs.suites == 'true')
         # Two test slots on the Mac (P-199): each runner gets its own copy names and ports, so two checks never meet.
         env: { COPY_PREFIX: "${{ runner.name == 'xr-mac-2' && 'ci2' || 'ci' }}", SUITES_BROWSER_ISOLATED: "1", SUITES_CI_FIRST: "1" }
         # One at a time (a parallel trial, 30 Oct, failed 12 suites). Copies named ci_*, like the nightly run; the one
@@ -87,10 +159,10 @@ jobs:
           bash "$P/tools/run-suites.sh" --changed "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}" | tee suites.md
           exit ${PIPESTATUS[0]}
       - name: summary
-        if: always() && steps.code.outputs.suites == 'true'
+        if: env.SHARDED != 'true' && (always() && steps.code.outputs.suites == 'true')
         run: '[ -f suites.md ] && cat suites.md >> "$GITHUB_STEP_SUMMARY" || true'
       - name: logs (only when something failed)
-        if: failure() && steps.code.outputs.suites == 'true'
+        if: env.SHARDED != 'true' && (failure() && steps.code.outputs.suites == 'true')
         uses: actions/upload-artifact@v4
         with:
           name: suite-logs
