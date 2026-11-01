@@ -71,3 +71,33 @@ The gap qa named ("To review's screen still ignores ?form=") is closed. To revie
 **I could not check:** a real screen reader, an intended user walking it unaided (D17/D20 stay with the founder), or 200 % zoom on the browser itself (I emulated it with a 720 px viewport).
 
 **Verdict: Approve**
+
+---
+
+## Delta ccdc74a6 · independent reviewer · 1 Nov 2026
+
+Reviewed `git diff 95014fdf..ccdc74a6`:
+- the code changes are in `return-strip.tsx`, `to-review.tsx` and `setup-rail.tsx`
+- six new fail checks in `check_forms_c212_to_review_browser.cjs`
+- the record has moved to `qa/built/C2.12.md`; `qa/CAPABILITIES.md` has no diff against main (P-221)
+- the commit also adds this file and the journey file unchanged
+
+Setup: I rebuilt the web bundle (`index-CsI1POFX.js`) and used my own copy, forms_rev on :4456. The copy is now stopped, its database dropped and its working files removed. US$0, :4400 never used. I restored the `screenshots/c212` images the suite rewrites. Web `tsc` is clean.
+
+**Reruns:**
+- `check_forms_c212_to_review_browser.cjs`: 30/30 on two fresh starts, plus a third run before my probe
+- `check_forms_c212_rail_browser.cjs`: 31/31
+
+| Minor | Result | Evidence (my probe, not the builder's suite) |
+|---|---|---|
+| m1 (row links) | Fixed | Rail → "Everything for IMM 5257 on To review" → Enter on the row link → job page **with** the strip. Back to the steps puts focus on `review`. |
+| m3 (400 title) | Fixed | The title now comes from `errors[].field` (`ApiError.field`). Suite check "review m3 fail". |
+| m4 (count words) | Fixed | The strip now says "· 1 thing open in this step". It says what it counts (open items in this step). Nit, not a finding: "thing" is vague next to the rail's "84 AI proposals". |
+| m5 (focus) | Fixed | Enter on "Show every form" puts focus on the H1 "To review" (tabIndex -1). The next Tab goes to search. |
+| m6 (crafted `c`) | Fixed | On `/library/forms`, `c` = `../../review-queue?x=1#`, `x/../<id>` and `a%2Fb` give no strip and the page renders (body text 5659 characters, no page error). `c` must match `^[A-Za-z0-9-]{1,64}$` and is encoded in `progressPath`, `/combinations/…` and `backToSteps`. A valid id still shows the strip. |
+| m7 (normalised code) | Fixed | `?form=imm5257` shows "Only IMM 5257" and sends the normalised code to the API. No sideways scroll at 390 px. |
+| m2 (job.tsx Apply / Preview) | Open, accepted | `job.tsx` belongs to the runtime lane. It is listed in the PR as a follow-up, and recovery is the Forms tab chip. It stays a Minor; not a Blocker. |
+
+New issues: none. Journey score: **9.5/10** (up from 8.5). Plain words and accessibility go back to 1; error recovery stays at ½ for m2 only.
+
+**Verdict: Approve** (no open Blocker or Major), for commit `ccdc74a6`.
