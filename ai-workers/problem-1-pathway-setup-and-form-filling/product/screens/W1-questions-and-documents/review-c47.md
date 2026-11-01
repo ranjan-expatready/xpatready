@@ -56,3 +56,16 @@ The score after the fixes is **8/10. Pass**. Details are in `journey-test-review
   * **M3.** A one-letter quote passed the "quote found in the guide" rule (R2).
   * **M4.** An edit ticked another person's fact and recorded it as the rules' pick.
 * **Minors then:** the client can read the plan; system keys and decision ids on screen; focus lost; removed picks came back; 210 vs 32; R3 counted length only; a round that throws left the job RUNNING. Of these, the "removed picks", R3, job-RUNNING and Undo-key Minors are fixed in c3d62b5e. The rest are listed above.
+
+## Re-review after merging main (bfda0879)
+
+Scope: the merge resolution only (merge of origin/main be8c79fe into PR head 2f0b6a69). Journey not re-run; the earlier score (8/10 on c3d62b5e) stands.
+
+- `api/src/main.ts` (conflict): the `@Module` line is the exact union. It keeps main's `TeamController` and `Team` and the PR's `PqrDraftsController` and `PqrDrafts`, and drops nothing from either side. Both imports are present (lines 30 and 39).
+- `api/src/proposals.ts` (conflict): `decide` now ends with `}, { ...QUEUE_TX, timeout: 120_000 });`. That gives main's `maxWait: 10_000` (unchanged from the PR's value) and keeps the PR's tested 120 s timeout for bulk accepts of 80+ picks (Review M2). The other `QUEUE_TX` user (line 361) keeps main's 60 s. The M2 comment is kept.
+- Auto-merged `api/src/fact-sources.ts`, `engine/sources.ts` and `web/src/pages/workspace/questionnaires.tsx` were checked mechanically. For each file, the changed lines from merge-base to main match the changed lines from the PR head to the merge, and the changed lines from merge-base to the PR head match the changed lines from main to the merge. So both sides' changes landed verbatim. The hunks do not overlap: QA-114 `released` versus the C4.7 `acceptPqrPick` `opts.view`, C3.11 signed scans versus the C4.7 one-liner, and QA-91/C4.1 versus the C4.7 three lines.
+- The builder's evidence on bfda0879 covers behaviour: tsc is clean for src, the any-count matches base, and the 8 listed suites pass, including the C4.7 API and browser suites, S6 and the queue.
+
+No new Blocker, Major or Minor.
+
+**Verdict: Approve** (commit bfda0879)
