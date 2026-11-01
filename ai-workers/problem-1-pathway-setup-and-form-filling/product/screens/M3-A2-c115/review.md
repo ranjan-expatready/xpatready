@@ -36,3 +36,13 @@ D1 concept fit 9, the frame 1 line is exact · D2 words 9, Minor 2 · D3 states 
 
 ## Could not check
 A real screen reader. True browser 200 % zoom (simulated as 720 px at 2× scale). A live Offered or Corporate case (nothing released on the copy, and I did not change it during the running suite). An intended user's unaided walk (D17/D20 stay with the founder).
+
+## Round 2 (fix commit `a44f240f`, 1 Nov 2026)
+Checked only the fix commit (`git show a44f240f -- '*.ts' '*.tsx' '*.cjs'`) and its effects. :4437 used read-only.
+* **Minor 1, fixed.** The ⓘ is now a `<button aria-label="About: relies on an employer case">` inside the shared `Tip` (`web/src/runtime/employer.tsx:16`), so it takes focus and opens on keyboard focus with a visible focus ring. The browser check Tabs to it from "Case officer" and waits for the role=tooltip copy, which Radix only mounts when the tooltip is open. The nested `TipProvider` is harmless. Note (no new finding): Radix closes a tooltip on scroll, so in a short dialog the first Tab may scroll and close it. That is the shared Tip's behaviour across the app, not this item's. The check uses a 1200 px viewport for this step, and the PR records why.
+* **Minor 2, fixed.** The reason is now "Offered: the {label} forms read N employer fact(s) from a Corporate case, read-only." (`engine/runtime/employer.ts:25`). It no longer names facts. The test checks the exact string for the 2-fact case (`check_c115_employer.ts:25`).
+* **Minor 3, fixed.** `employer_link` is spread only when `team` is present (`api/src/runtime.ts:125`). On :4437, case C115B-mvy0lofk: officer and rep get the line and `team`, client user-P gets 200 with neither. The new API line checks this. The only web consumer (`cases.tsx:157`) already renders it conditionally, and `CaseInfo.employer_link` is optional, so the client page is unchanged.
+* **No regression seen.** `web` passes `tsc --noEmit`. No other code changed. The builder's runs (c115 20/20 and 9/9 ×3, r1c 123/123, r1d 86/86, c611 57/57 and 22/22) match the change surface. I did not re-run them, because the copy was not mine to restart.
+* Minor 4 (part 2 note) stays open, as planned. Journey score unchanged: **8.5/10**, and the keyboard tooltip gap is closed.
+
+**Verdict: Approve** (no open Blocker or Major), for commit `a44f240f`.
