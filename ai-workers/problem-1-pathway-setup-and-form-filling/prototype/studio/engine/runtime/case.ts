@@ -123,7 +123,14 @@ function checkType(s: Snapshot, field: string, value: unknown, today: Date): str
       if (shape.datePrecision === "month") { const m = /^(\d{4})-(\d{2})$/.exec(str ?? ""); return m && realDate(Number(m[1]), Number(m[2]), 1) ? [] : ["Enter a month and year, for example 2019-06."]; }
       const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str ?? "");
       if (!m || !realDate(Number(m[1]), Number(m[2]), Number(m[3]))) return ["Enter a real date as day, month and year."];
-      return field === MINOR.birthDateField && str! > today.toISOString().slice(0, 10) ? ["A date of birth cannot be in the future."] : [];
+      if (field === MINOR.birthDateField && str! > today.toISOString().slice(0, 10)) return ["A date of birth cannot be in the future."];
+      // C6.4 B-M3: an application is submitted near today; a date years away (1900, 2200) is a typing mistake, and ages
+      // worked out on it would be impossible. Within 5 years either side (Sample bound, not an IRCC rule).
+      if (field === "case.application_date") {
+        const y = today.getUTCFullYear(), md = today.toISOString().slice(4, 10), from = `${y - 5}${md}`, to = `${y + 5}${md}`;
+        if (str! < from || str! > to) return ["Enter the date the application is submitted: within 5 years of today."];
+      }
+      return [];
     }
     case "code": case "country":
       if (str === null || !str) return ["Choose an answer."];
