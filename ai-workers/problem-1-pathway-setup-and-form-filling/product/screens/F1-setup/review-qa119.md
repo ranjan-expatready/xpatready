@@ -128,3 +128,19 @@ Journey score (reviewer): **9/10, pass.** See `journey-test-reviewer-2026-11-01-
 * This is the people endpoint's existing rule, in forms F2 territory. It should be settled when F2 adds the confirm controls (concept §5 Q1).
 
 **Verdict: Approve on f2b321c8.** Blockers: none. Majors: none. The minors m1–m3 are closed. The `LANDED_FOCUS` note and the F2 note stand as recorded.
+
+## Re-check on f8ded396 (merges)
+**Scope:** `git diff f2b321c8 f8ded396` over `studio/web` and `studio/contracts` (11 files), read only. The commits in between are merges only: #210's branch at c12259bb/fe80b93a, which had merged main including F8 #174. I ran nothing, started no server and touched no screenshot. The builder's runs on f8ded396 after `vite build`: `check_qa119_next_step_browser` 30/30, `check_x1_overview_strip_browser` 28/28, `check_screen01_browser` 116/116. US$0.
+
+**`overview.tsx`: all three survive.**
+* Main's F8 `ruleProblems` (line 18) feeds the error and warning counts.
+* #210's `stripRef` landing on `show === "missing"` is kept (lines 21-22).
+* QA-119's `failed`/`onRetry` error line is kept with its 2 px primary ring and offset on Retry (line 33), along with the `retried` focus return to the strip (lines 24-25).
+
+**`combination.tsx`:** the only change is main's C1.6 `filing:` fact in the subtitle. The "See it on …" link keeps its ring (line 163).
+
+**Rest of QA-119:** `setup-strip.tsx`, `part-problems.tsx`, `contracts/setup-checklist.ts`, `engine/setup-checklist.ts`, the fixture, and the three checks above are byte-identical between f2b321c8 and f8ded396. The other web and contract changes come from main: forms C2.12 progress, the review queue, the library, `problemWords` for F8, and QA-77 names. `start-setup.tsx` keeps `data-next-step`.
+
+Journey score (reviewer): 9/10, carried from 11485f0d, not re-walked. No QA-119 behaviour changed.
+
+**Verdict: Approve on f8ded396.** Blockers: none. Majors: none. No new findings. The earlier notes stand.
