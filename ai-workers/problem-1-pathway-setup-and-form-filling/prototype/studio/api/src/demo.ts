@@ -191,6 +191,7 @@ export class Demo {
       await tx.libraryChange.deleteMany({ where: ws }); await tx.approvedSource.deleteMany({ where: ws }); // Screen 02 slice 2
       await tx.officialPagesRecord.deleteMany({ where: ws }); // F2 (forms lane, N8)
       await tx.libraryFormDeletion.deleteMany({ where: ws }); // X5 slice c (forms lane): remembered library deletions
+      await tx.lineBatch.deleteMany({ where: ws }); // X2b slice (b) (screens lane): one copy or removal across many combinations
       await tx.recaptureTask.deleteMany({ where: ws }); await tx.extensionSession.deleteMany({ where: ws }); await tx.extensionPairing.deleteMany({ where: ws }); // F2 (forms lane, parked by W1-02): the browser extension's tasks, sessions and codes left from before the park; a reset signs every extension out
       await tx.personRole.deleteMany({ where: ws }); // S5 (Lead check L9): person roles have no foreign key to the workspace
       await tx.workspace.delete({ where: { id: workspaceId } });
