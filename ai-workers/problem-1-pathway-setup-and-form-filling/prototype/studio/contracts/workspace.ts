@@ -2,6 +2,7 @@
 // the form line an author edits, the Sample families Preview offers, and what GET /combinations/:id/workspace?tab=
 // answers. Pure; shared by the API, the web app and the tests (STANDARDS §6: contract first, zod).
 import { z } from "zod";
+import type { FormStepChip } from "./form-progress.ts";
 import type { QuestionnaireView } from "./runtime.ts";
 
 /** BR-1: the tabs in setup order (walkthrough v2 S5, P-118 Q5). */
@@ -205,7 +206,7 @@ export const changeWords = (c: LastFormChange) => `${({ attach: "Added", remove:
 /** GET /combinations/:id/workspace?tab= — one request per tab view. Overview, Documents and Review read the combination
  *  page's existing reads. */
 export type WorkspaceView =
-  | { tab: "forms"; asked: string; people: PeopleView; lines: WorkspaceFormLine[]; filing: string; filingDetail: string; /** P-143: the IRCC account it files through, in words (null: not set) */ account?: string | null; /** Review M2: its key, for the picker */ accountKey?: string | null; problems: { level: "error" | "warning"; item: string; message: string }[]; removed: RemovedForm[]; fromLibrary: string[]; lastChange: LastFormChange | null }
+  | { tab: "forms"; asked: string; people: PeopleView; lines: WorkspaceFormLine[]; filing: string; filingDetail: string; /** P-143: the IRCC account it files through, in words (null: not set) */ account?: string | null; /** Review M2: its key, for the picker */ accountKey?: string | null; problems: { level: "error" | "warning"; item: string; message: string }[]; removed: RemovedForm[]; fromLibrary: string[]; lastChange: LastFormChange | null; /** F2 C2.12 slice 3 (forms lane, review 28b3bba3 Major 1): each form's step chip, by form number (lines and attached forms; none for document lines) */ progress?: Record<string, FormStepChip> }
   | { tab: "questionnaires"; asked: string; people: PeopleView; questionnaire: QuestionnairesView | null; available: { key: string; title: string }[] }
   | { tab: "preview"; asked: string; preview: PreviewView | null; empty: string | null }
   | { tab: Exclude<TabKey, "forms" | "questionnaires" | "preview">; asked: string };

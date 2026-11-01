@@ -97,7 +97,10 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
 
 /** The team's right-anchored panel (Dialog variant="panel" / Sheet, P-48): any pane that collects a value. Pinned
  *  header (title, optional badge), scrolling body, pinned footer (Close left, primary right). */
-export function Panel({ open, onOpenChange, title, description, badge, children, footer }: { open: boolean; onOpenChange: (o: boolean) => void; title: string; description?: React.ReactNode; badge?: React.ReactNode; children: React.ReactNode; footer?: React.ReactNode }) {
+export function Panel({ open, onOpenChange, title, description, badge, children, footer, bodyLabel }: { open: boolean; onOpenChange: (o: boolean) => void; title: string; description?: React.ReactNode; badge?: React.ReactNode; children: React.ReactNode; footer?: React.ReactNode;
+  /** C2.12 slice 3 (WCAG 2.1.1, axe scrollable-region-focusable): a panel whose body may hold no focusable item names its
+   *  scrolling body, which then takes focus so a keyboard can scroll it. */
+  bodyLabel?: string }) {
   // S6 1b (Lead early look): while a side panel is open, toasts move clear of it (styles/index.css), so they never cover
   // its footer's Accept or Reject.
   React.useEffect(() => { if (!open) return; document.body.dataset.panelOpen = "true"; return () => { delete document.body.dataset.panelOpen; }; }, [open]);
@@ -113,7 +116,7 @@ export function Panel({ open, onOpenChange, title, description, badge, children,
             </div>
             <DialogPrimitive.Close className="rounded-md p-1 text-text-muted hover:bg-text/5" aria-label="Close"><X className="size-4" /></DialogPrimitive.Close>
           </div>
-          <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>
+          <div className="flex-1 overflow-y-auto px-6 py-4" {...(bodyLabel ? { tabIndex: 0, role: "region", "aria-label": bodyLabel } : {})}>{children}</div>
           {footer ? <div className="flex items-center justify-between gap-2 border-t border-border px-6 py-3">{footer}</div> : null}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
