@@ -115,11 +115,11 @@ function WorkspaceTab({ id, tab, hasRelease }: { id: string; tab: "forms" | "que
   const pp = usePreviewParams();
   const [sp] = useSearchParams();
   const qs = new URLSearchParams({ tab, ...(tab === "preview" ? Object.fromEntries(Object.entries(pp).filter(([, v]) => v)) : {}), ...(tab === "questionnaires" && sp.get("role") ? { role: sp.get("role")! } : {}) }).toString();
-  const w = useApi<WorkspaceView>(["combination", id, "workspace", qs], `/combinations/${id}/workspace?${qs}`, { placeholderData: (prev) => (prev?.tab === tab ? prev : undefined) });
+  const w = useApi<WorkspaceView>(["combination", id, "workspace", qs], `/combinations/${id}/workspace?${qs}`, { placeholderData: (prev) => (prev?.tab === tab ? prev : undefined), refetchOnWindowFocus: tab === "forms" }); // C2.12 m6: the step chips follow work done elsewhere
   if (w.isLoading) return <Spinner label={`Loading ${tab}`} />;
   if (w.isError || !w.data) return <ErrorState title="This tab could not be loaded" description={(w.error as Error | null)?.message ?? "No answer from the studio."} action={<button className="text-text-link underline" onClick={() => void w.refetch()}>Try again</button>} />;
   const v = w.data;
-  if (v.tab === "forms") return <FormsTab id={id} lines={v.lines} filing={v.filing} filingDetail={v.filingDetail} account={v.account ?? null} accountKey={v.accountKey ?? null} problems={v.problems} removed={v.removed} fromLibrary={v.fromLibrary} lastChange={v.lastChange} />;
+  if (v.tab === "forms") return <FormsTab id={id} lines={v.lines} filing={v.filing} filingDetail={v.filingDetail} account={v.account ?? null} accountKey={v.accountKey ?? null} problems={v.problems} removed={v.removed} fromLibrary={v.fromLibrary} lastChange={v.lastChange} progress={v.progress} />;
   if (v.tab === "questionnaires") return <QuestionnairesTab id={id} people={v.people} questionnaire={v.questionnaire} available={v.available} />;
   if (v.tab === "preview") return <PreviewTab id={id} p={v.preview} empty={v.empty} fetching={w.isFetching} hasRelease={hasRelease} />;
   return null;

@@ -178,7 +178,7 @@ export class Ai implements OnModuleInit {
    *  blocked by the usage limit, a failed "add from the library") never hides a draft waiting for review (break M4,
    *  Lead check Major). It is being mapped while queued, running, or done with proposals to decide or not yet added to
    *  its draft. An applied one is in the library and is added from there. One set of queries for a whole plan. */
-  private async mappingIndex(workspaceId: string, sha256s: string[], db: Pick<Db, "sourceAttachment" | "draftingJob" | "proposalItem"> = this.db) {
+  async mappingIndex(workspaceId: string, sha256s: string[], db: Pick<Db, "sourceAttachment" | "draftingJob" | "proposalItem"> = this.db) {
     const shas = [...new Set(sha256s)];
     const atts = shas.length ? await db.sourceAttachment.findMany({ where: { workspaceId, sha256: { in: shas } }, select: { id: true, sha256: true, combination: { select: { label: true } } } }) : [];
     const jobs = atts.length ? await db.draftingJob.findMany({ where: { workspaceId, attachmentId: { in: atts.map((a) => a.id) }, kind: "field_map", mode: { not: "STUB" }, status: { in: ["QUEUED", "RUNNING", "COMPLETED", "APPLIED"] } }, orderBy: { startedAt: "desc" }, select: { id: true, attachmentId: true, combinationId: true, status: true } }) : [];

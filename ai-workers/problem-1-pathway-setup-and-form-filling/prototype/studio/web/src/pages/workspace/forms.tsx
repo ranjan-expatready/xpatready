@@ -25,6 +25,8 @@ import { attachmentFor, pendingForms, ReadingCell, ReadingSteps, SourcesLine, St
 import { FormPicker } from "@/components/forms";
 import { useApi } from "@/lib/api";
 import { SetupRail, StepChip } from "./setup-rail";
+import type { FormStepChip } from "../../../../contracts/form-progress";
+import { normaliseCode } from "../../../../contracts/form-library";
 import { AccountPicker, ChannelCell, SignatureCell } from "@/components/channels";
 import type { CombinationSummary, CombinationView } from "../../../../contracts/programs";
 /** The fields of a summary line that ChannelCell reads. */
@@ -44,7 +46,7 @@ const TIPS = {
 
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
 
-export function FormsTab({ id, lines, filing, filingDetail, account = null, accountKey = null, problems, removed = [], fromLibrary = [], lastChange = null }: { id: string; lines: WorkspaceFormLine[]; filing: string; filingDetail: string; account?: string | null; accountKey?: string | null; problems: { level: "error" | "warning"; item: string; message: string }[]; removed?: RemovedForm[]; fromLibrary?: string[]; lastChange?: LastFormChange | null }) {
+export function FormsTab({ id, lines, filing, filingDetail, account = null, accountKey = null, problems, removed = [], fromLibrary = [], lastChange = null, progress = {} }: { id: string; lines: WorkspaceFormLine[]; filing: string; filingDetail: string; account?: string | null; accountKey?: string | null; problems: { level: "error" | "warning"; item: string; message: string }[]; removed?: RemovedForm[]; fromLibrary?: string[]; lastChange?: LastFormChange | null; progress?: Record<string, FormStepChip> }) {
   const { canAuthor, known } = useSessionView();
   const [open, setOpen] = React.useState<WorkspaceFormLine | null>(null);
   const [adding, setAdding] = React.useState(false);
@@ -55,7 +57,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
   // C2.12 slice 3: one form's guided path, addressable as ?setup=<form number> (a reload lands on the same form).
   const setup = sp.get("setup");
   const openSetup = (code: string) => setSp((x) => { const n = new URLSearchParams(x); n.set("setup", code); return n; });
-  const closeSetup = () => { const code = setup; setSp((x) => { const n = new URLSearchParams(x); n.delete("setup"); return n; }, { replace: true }); refocusChip(code); };
+  const closeSetup = () => { const code = setup ? normaliseCode(setup) : null; setSp((x) => { const n = new URLSearchParams(x); n.delete("setup"); return n; }, { replace: true }); refocusChip(code); };
   // WCAG 2.4.3: focus goes back to the form's chip; the dialog hands focus back to what was focused before it opened (the
   // page, when the rail opened from the address), so the chip is focused again for a few frames until it holds.
   const refocusChip = (code: string | null, tries = 20) => { const el = document.querySelector<HTMLElement>(`[data-step-chip="${CSS.escape(code ?? "")}"]`); if (el && document.activeElement !== el) el.focus(); if (tries > 0) requestAnimationFrame(() => refocusChip(code, tries - 1)); };
@@ -122,7 +124,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
             <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <><ChannelCell id={id} line={{ code: l.code, channel: l.channel as Channel, channelWords: l.channelWords, signature: l.signature, document: l.document } as ChannelLine} canAuthor={canAuthor} options={l.channelOptions} />{l.channel === "ONLINE" ? <p className="text-xs text-text-muted" data-online-words>Answer sheet in portal order (P-113)</p> : null}</>}</td>
             <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <SignatureCell id={id} code={l.code} channel={l.channel as Channel} signature={l.signatureKind as Signature} signatures={l.signatures} canAuthor={canAuthor} />}</td>
             <td className="text-xs">{l.document ? "—" : l.signedBy ? l.signedByLabel : <span className="text-text-muted">Not set</span>}</td>
-            <td className="text-xs"><span className="block">{l.edition ?? <span className="text-text-muted">No edition read yet</span>}{l.document ? null : <span className="text-text-muted"> · {l.boxes} form fields matched</span>}</span>{l.document ? null : <LineReading combo={combo} l={l} fromLibrary={fromLibrary} />}{l.document ? null : <span className="mt-1 block"><StepChip id={id} code={l.code} onOpen={() => openSetup(l.code)} /></span>}</td>
+            <td className="text-xs"><span className="block">{l.edition ?? <span className="text-text-muted">No edition read yet</span>}{l.document ? null : <span className="text-text-muted"> · {l.boxes} form fields matched</span>}</span>{l.document ? null : <LineReading combo={combo} l={l} fromLibrary={fromLibrary} />}{l.document ? null : <span className="mt-1 block"><StepChip code={l.code} chip={progress[l.code]} onOpen={() => openSetup(l.code)} /></span>}</td>
             <td className="whitespace-nowrap">{canAuthor ? <><Button size="sm" variant="ghost" aria-label={`Change ${l.code}`} onClick={() => setOpen(l)}><Pencil /> Change</Button><LineMenu id={id} l={l} onRedo={() => redo([l.code])} onRemove={() => setRemoving(l)} /></> : null}</td>
           </tr>
         ))}
@@ -130,7 +132,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
           <tr key={a.id} data-pending={a.edition ?? a.fileName}>
             <td><span className="mono font-medium">{(a.edition ?? a.fileName).split(" (")[0]}</span><br /><span className="text-xs text-text-muted">{a.edition} · {a.fileName}</span></td>
             <td colSpan={5} className="text-xs text-text-muted">Attached from the Form library: not set up as a line yet. It is read, then its form fields are matched to shared fields; it joins the lines when the matches are applied.</td>
-            <td className="text-xs"><ReadingCell d={combo} a={a} inLibrary={inLibrary(a)} />{a.edition ? <span className="mt-1 block"><StepChip id={id} code={a.edition.split(" (")[0]} onOpen={() => openSetup(a.edition!.split(" (")[0])} /></span> : null}</td>
+            <td className="text-xs"><ReadingCell d={combo} a={a} inLibrary={inLibrary(a)} />{a.edition ? <span className="mt-1 block"><StepChip code={a.edition.split(" (")[0]} chip={progress[a.edition.split(" (")[0]]} onOpen={() => openSetup(a.edition!.split(" (")[0])} /></span> : null}</td>
             <td />
           </tr>
         ))}

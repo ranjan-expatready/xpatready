@@ -19,7 +19,7 @@ const call = async (method: string, path: string, body?: unknown, actor: string 
 const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 
 const base: ProgressFacts = { form: "IMM 5257", combinationId: "c1", line: "present", edition: "IMM 5257 (09-2023)", mapped: 0, unresolved: 0, draft: "none", items: [], problems: [], canAuthor: true };
-const item = (kind: QueueItem["kind"], state: QueueItem["state"], extra: Partial<QueueItem> = {}): QueueItem => ({ id: `${kind}:1`, kind, title: "t", what: `${kind} words`, state, waiting_on: state === "waiting" ? "A content publisher decides each proposal." : null, by: null, at: "2026-10-31T00:00:00Z", cost_usd: null, next: state === "needs" ? { label: `Do the ${kind}`, href: `/x/${kind}`, note: null } : null, forms: ["IMM 5257"], ...extra });
+const item = (kind: QueueItem["kind"], state: QueueItem["state"], extra: Partial<QueueItem> = {}): QueueItem => ({ id: `${kind}:1`, kind, title: "t", what: `${kind} words`, state, waiting_on: state === "waiting" ? "A content publisher decides each proposal." : null, by: null, at: "2026-10-31T00:00:00Z", cost_usd: null, next: state === "needs" ? { label: `Do the ${kind}`, href: `/x/${kind}`, note: null } : null, forms: ["IMM 5257"], combination: null, ...extra });
 const st = (p: ReturnType<typeof formProgress>, k: string) => p.steps.find((s) => s.key === k)!;
 
 (async () => {
@@ -49,7 +49,8 @@ const st = (p: ReturnType<typeof formProgress>, k: string) => p.steps.find((s) =
   // ── BR-4 resume: current is the first unfinished step; the person's next can be a later step while the current one waits
   const br4 = formProgress({ ...base, mapped: 12, items: [item("ai_proposals", "waiting"), item("held_file", "needs")] });
   ok("C2.12 BR-4 pass: the current step waits on someone else; the person's next is a later step they can take", br4.current === "review" && br4.next_for_you?.step === "second_person");
-  ok("C2.12 BR-4 fail: what's left lists every step not done, with who acts", br4.whats_left.map((w) => w.step).join() === "review,second_person,complete" && br4.whats_left[0].who !== null);
+  ok("C2.12 BR-5 pass: what's left lists every open step, with who acts", br4.whats_left.map((w) => w.step).slice(0, 2).join() === "review,second_person" && br4.whats_left[0].who !== null);
+  ok("C2.12 BR-5 fail (s3 Minor 1): what's left leaves out the blocked steps after them (step 6 not started)", !br4.whats_left.some((w) => w.step === "complete"), br4.whats_left);
 
   // ── Review (514f0d8d): the rules it found without a failing test
   ok("C2.12 BR-3 pass (review M3): undecided form fields on To review (form_fields) fill step 3", st(formProgress({ ...base, mapped: 12, items: [item("form_fields", "needs")] }), "review").next?.label === "Do the form_fields");
@@ -57,6 +58,17 @@ const st = (p: ReturnType<typeof formProgress>, k: string) => p.steps.find((s) =
   ok("C2.12 BR-14 fail (review M2b): a form not on the combination: nothing after step 1 has started, even with a library field map", (() => { const p = formProgress({ ...base, line: "none", mapped: 53 }); return p.steps.slice(1).every((x) => x.state === "not_started" && x.next === null) && p.next_for_you?.step === "attach"; })());
   ok("C2.12 BR-10 pass (review m3): a warning does not keep the field map from complete (it is said); an error does", st(formProgress({ ...base, mapped: 12, problems: [{ level: "warning", message: "A list purpose note." }] }), "complete").state === "done" && /A list purpose note/.test(st(formProgress({ ...base, mapped: 12, problems: [{ level: "warning", message: "A list purpose note." }] }), "complete").words) && st(formProgress({ ...base, mapped: 12, problems: [{ level: "error", message: "E" }] }), "complete").state === "needs_you");
   ok("C2.12 BR-5 pass: each line of what's left links where it is done, when the person can do it", br4.whats_left.find((w) => w.step === "second_person")?.href === "/x/held_file");
+
+  // ── Slice 3 review (28b3bba3) Major 4 and #186's Minor B: the rules that had no failing test
+  ok("C2.12 BR-3 pass (s3 Major 4): a form not on the combination with no PDF in the library points to uploading it there", (() => { const s = st(formProgress({ ...base, line: "none", edition: null }), "attach"); return s.next?.label === "Upload its PDF in the Form library" && s.next.href === "/library/forms"; })());
+  ok("C2.12 BR-3 fail (s3 Major 4): with a PDF in the library it is never sent to upload one (Add it from the library)", st(formProgress({ ...base, line: "none" }), "attach").next?.href !== "/library/forms");
+  ok("C2.12 BR-4 fail (Minor B): the non-author's step-2 words never tell them to draft with AI", (() => { const s = st(formProgress({ ...base, canAuthor: false }), "map"); return s.words === "No field map yet." && !/draft it with AI/.test(s.words); })());
+  ok("C2.12 words (Minor B): one form field has a field map; two have", /1 form field of .* has a field map/.test(st(formProgress({ ...base, mapped: 1 }), "map").words) && /2 form fields of .* have a field map/.test(st(formProgress({ ...base, mapped: 2 }), "map").words));
+  // Major 2 (K1: progress is keyed by form and combination): another combination's item of the same form is not this path's.
+  ok("C2.12 K1 pass (s3 Major 2): an item about this combination fills its step", st(formProgress({ ...base, mapped: 12, items: [item("ai_proposals", "needs", { combination: "c1" })] }), "review").state === "needs_you");
+  ok("C2.12 K1 fail (s3 Major 2): an item about another combination's copy of the form is never this path's step", st(formProgress({ ...base, mapped: 12, items: [item("ai_proposals", "needs", { combination: "c2" })] }), "review").state === "done");
+  ok("C2.12 K1 pass (s3 Major 2): a library-wide item of the form (no combination: a held new edition) is every path's", st(formProgress({ ...base, mapped: 12, items: [item("new_edition", "waiting", { combination: null })] }), "second_person").state === "waiting_others");
+  ok("C2.12 BR-7 fail (s3 Major 2): the same file being mapped in another combination: step 2 waits there, with its link and no Draft", (() => { const p = formProgress({ ...base, elsewhere: { combination: "Super visa", href: "/c/c2/jobs/j1", why: "Being mapped in Super visa: 84 proposals left." } }); const s = st(p, "map"); return s.state === "waiting_others" && /Being mapped in Super visa/.test(s.words) && s.next?.href === "/c/c2/jobs/j1" && p.next_for_you?.step !== "map"; })());
 
   // ── The API on the sample (US$0): one saved AI answer replayed on the Super visa's IMM 5257.
   await call("POST", "/demo/reset", { confirm: "RESET" });
@@ -109,6 +121,22 @@ const st = (p: ReturnType<typeof formProgress>, k: string) => p.steps.find((s) =
   // A form only attached (not yet a line) whose field map the library already has: step 2 is Add from library, never "set up".
   const p5707b = (await call("GET", `/combinations/${sv}/forms/${encodeURIComponent("IMM 5707")}/progress`)).body;
   ok("C2.12 BR-3 fail (attached, not a line): a library field map is not this combination's: step 2 is Add from library and the form is not 'all done'", p5707b.steps?.[1]?.state === "needs_you" && p5707b.steps[1].next?.label === "Add from library" && p5707b.current === "map", p5707b.steps?.[1]);
+  // ── Slice 3 review (28b3bba3) Major 2, on the sample: Super visa's draft of IMM 5257 is not Visitor visa's IMM 5257 path.
+  const vv = sql("select id from combination where label = 'Visitor visa' limit 1");
+  const pv = (await call("GET", `/combinations/${vv}/forms/${encodeURIComponent("IMM 5257")}/progress`)).body;
+  ok("C2.12 K1 fail (s3 Major 2, API): Visitor visa's IMM 5257 path shows none of Super visa's AI proposals", !JSON.stringify(pv.steps ?? []).includes(`/c/${sv}/jobs/`) || pv.steps[1].state === "waiting_others", pv.steps?.slice(1, 3));
+  ok("C2.12 K1 fail (s3 Major 2, API): no step of Visitor visa's path is Super visa's review (step 3 not started)", pv.steps?.[2]?.state === "not_started" && pv.steps?.[2]?.next === null, pv.steps?.[2]);
+  ok("C2.12 BR-7 pass (s3 Major 2, API): Visitor visa's step 2 says it is being mapped in Super visa, links there, offers no Draft", pv.steps?.[1]?.state === "waiting_others" && /Being mapped in Super visa/.test(pv.steps[1].words) && /\/jobs\//.test(pv.steps[1].next?.href ?? "") && pv.next_for_you?.label !== "Draft with AI or add from the library", pv.steps?.[1]);
+  ok("C2.12 K1 pass (s3 Major 2, API): Super visa's own path still has its step 3 from its job", (await call("GET", path)).body.steps?.[2]?.next?.href?.startsWith(`/c/${sv}/jobs/`) === true || author.steps[2].state !== "not_started");
+  // Review Minor B: step 4 is new shared fields only: a "what IRCC accepts" change of IMM 5257 is not a step of its path.
+  const acc = await call("POST", `/library/forms/${encodeURIComponent("IMM 5257")}/accepts`, { channels: ["PAPER"], reason: "Test: a library change of another kind (Sample)." });
+  const p4 = (await call("GET", path, undefined, "user-C")).body;
+  ok("C2.12 fail (Minor B, API): a library change of another kind (what IRCC accepts) is not step 4", acc.status < 300 ? p4.steps?.[3]?.state !== "waiting_others" && p4.steps?.[3]?.state !== "needs_you" : false, { acc: acc.status, s4: p4.steps?.[3] });
+  // Major 4 on the sample: a form listed from IRCC's forms list with no file yet: step 1 points to uploading its PDF.
+  await call("POST", "/library/forms/fill-from-index");
+  const nofile = sql("select d.form_key from gov_form_def d where not exists (select 1 from form_edition e where e.gov_form_def_id = d.id) and d.form_kind <> 'document' order by d.form_key limit 1");
+  const pn = (await call("GET", `/combinations/${sv}/forms/${encodeURIComponent(nofile)}/progress`)).body;
+  ok("C2.12 BR-3 pass (s3 Major 4, API): a listed form with no file yet: step 1 is Upload its PDF in the Form library", !!nofile && pn.steps?.[0]?.next?.label === "Upload its PDF in the Form library" && pn.next_for_you?.href === "/library/forms", { nofile, s1: pn.steps?.[0] });
   // ── refusals
   ok("C2.12 API fail: a form not in the library is 404 in words", (await call("GET", `/combinations/${sv}/forms/${encodeURIComponent("IMM 9999")}/progress`)).status === 404);
   ok("C2.12 API fail: an unknown combination is 404 in words", (await call("GET", `/combinations/00000000-0000-0000-0000-000000000000/forms/${encodeURIComponent("IMM 5257")}/progress`)).status === 404 && (await call("GET", `/combinations/not-an-id/forms/${encodeURIComponent("IMM 5257")}/progress`)).status === 404);
