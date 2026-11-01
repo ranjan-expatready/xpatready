@@ -13,6 +13,7 @@ export type ItemList = "fields" | "document-types";
 /** The lifecycle part of a list row (api/src/library-items.ts itemState). */
 export type ItemRow = { key: string; name: string; row_action: LifecycleWord; retired: boolean; change: { id: string; action: string; status: string; by: string | null } | null };
 /** Review minor: a shared field or document type comes back when it is approved (QA-64), not with the next release. */
+const ITEM_RESTORE_BODY = "It comes back to pickers and AI suggestions when a second person approves it. Nothing that uses it today changes.";
 const ITEM_RESTORE_TIP = "Brings it back to pickers and new setups when a second person approves it.";
 const domId = (key: string) => `why-${key.replace(/\W+/g, "-")}`;
 
@@ -44,12 +45,14 @@ export function useItemLifecycle(list: ItemList, refetch: () => Promise<unknown>
         const c = await api<{ id: string }>(kind === "DELETE" ? path(r.key) : `${path(r.key)}/${kind.toLowerCase()}`, { method: kind === "DELETE" ? "DELETE" : "POST", json: { reason } });
         // Break minor: an Undo after the approver has acted says why in words (the toast closes first, then this shows).
         undo.show(SAY.sent(kind, r.name), async () => {
-          try { await api(`/library/changes/${c.id}/withdraw`, { method: "POST", json: { note: SAY.undone } }); }
-          catch (e) { const m = (e as Error).message; setTimeout(() => undo.show(`Not undone: ${m}`), 0); }
+          let failed: string | null = null;
+          try { await api(`/library/changes/${c.id}/withdraw`, { method: "POST", json: { note: SAY.undone } }); } catch (e) { failed = (e as Error).message; }
           await after();
+          // Shown after the toast closes itself (its finally), so the words stay (review round 2 minor).
+          if (failed) setTimeout(() => undo.show(`Not undone: ${failed}`), 0);
         });
       }
-      setActing({ busy: false, error: null }); setOpen(null); await after();
+      setActing({ busy: false, error: null }); close(); await after(); // focus back on the row's action (review round 2 minor)
     } catch (e) { setActing({ busy: false, error: (e as Error).message }); }
   };
 
@@ -85,7 +88,7 @@ export function useItemLifecycle(list: ItemList, refetch: () => Promise<unknown>
           </aside>
         ) : (
           <ImpactPanel key={`impact-${open.key}`} kind={kind!} name={open.name} goes={kind === "DELETE" ? shown?.uses.filter((u) => u.kind === "placement").map((u) => ({ label: u.label })) : undefined} kept={kind === "RETIRE" ? shown?.uses.filter((u) => !u.blocks && u.kind !== "draft_change").map((u) => u.label) : undefined}
-            takesEffect={kind === "RETIRE" || kind === "RESTORE" ? SAY.takesEffect("DELETE") : undefined} busy={acting.busy} error={acting.error} onCancel={close} onSend={(reason) => void send(open, reason)} />
+            takesEffect={kind === "RETIRE" || kind === "RESTORE" ? SAY.takesEffect("DELETE") : undefined} body={kind === "RESTORE" ? ITEM_RESTORE_BODY : undefined} busy={acting.busy} error={acting.error} onCancel={close} onSend={(reason) => void send(open, reason)} />
         )}
       </div>
     ) : null}

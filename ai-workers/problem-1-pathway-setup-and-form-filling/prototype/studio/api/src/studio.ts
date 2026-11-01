@@ -501,7 +501,7 @@ export class Studio {
     if (!COLLECTED.includes(b.collectedFrom)) fail(`Collected from must be one of: ${COLLECTED.join(", ")}.`);
     if (!["once_per_case", "per_person", "per_row"].includes(b.repeats)) fail("Repeats must be once per case, per person or per row.");
     const types = await this.libraryTypes(workspaceId);
-    if (b.condition) { const errs = checkCondition(b.condition, types.fields, types.derived); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); if (!b.conditionEffect) fail("Choose what the condition does (show, hide, require or optional)."); }
+    if (b.condition) { const errs = this.conditionErrors(b.condition, types); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); if (!b.conditionEffect) fail("Choose what the condition does (show, hide, require or optional)."); }
     const data = { sectionKey: b.sectionKey, collectedFrom: b.collectedFrom, repeats: b.repeats, tier: b.tier ?? "case", questionText: b.questionText?.trim() || null, helpText: b.helpText?.trim() || null, predicateJson: b.condition ?? null, conditionEffect: (b.conditionEffect as any) ?? null, conditionPlain: b.conditionPlain ?? null, ruleOnly: !!b.ruleOnly };
     const rows = await this.db.sectionQuestion.findMany({ where: { workspaceId, lineageKey: key } });
     // C4.9 (P-97): who fills an existing placement changes only through a library change with a second person (who-fills.ts).
@@ -606,13 +606,18 @@ export class Studio {
     const retired = await retiredFieldKeys(this.db, workspaceId);
     const fields = new Map((await this.db.canonicalField.findMany({ where: { workspaceId }, orderBy: { version: "asc" } })).filter((f) => !retired.has(f.canonicalFieldKey)).map((f) => [f.canonicalFieldKey, f.valueType]));
     const derived = new Set((await this.db.derivedField.findMany({ where: { workspaceId } })).map((d) => d.derivedKey));
-    return { fields, derived };
+    return { fields, derived, retired };
+  }
+
+  /** The engine's condition check, with a retired field named as retired, never "not in the library" (C11.9 review minor). */
+  private conditionErrors(condition: unknown, t: { fields: Map<string, string>; derived: Set<string>; retired: Set<string> }) {
+    return checkCondition(condition, t.fields, t.derived).map((e) => { const m = /^reads (\S+), which is not in the library$/.exec(e); return m && t.retired.has(m[1]) ? `reads "${m[1].split(".").pop()!.replace(/_/g, " ")}", a retired field: restore it in Shared library › Fields first, or choose another` : e; });
   }
 
   async checkCondition(b: { condition: any }) {
     const workspaceId = await this.ws.id();
     const t = await this.libraryTypes(workspaceId);
-    return { errors: checkCondition(b.condition, t.fields, t.derived) };
+    return { errors: this.conditionErrors(b.condition, t) };
   }
 
   // ------------------------------------------------------------------ the combination's own configuration
@@ -638,7 +643,7 @@ export class Studio {
     await refuseRetired(this.db, workspaceId, "document_type", [typeKey, ...(Array.isArray(b.alternatives) ? b.alternatives : [])]); // C11.9 break M1
     if (!WHO.includes(b.appliesToRoles)) fail("Choose whose document it is.");
     if (b.attachMode === "ANSWER_CONDITIONAL" && !b.condition) fail("A conditional requirement needs its condition.");
-    if (b.condition) { const t = await this.libraryTypes(workspaceId); const errs = checkCondition(b.condition, t.fields, t.derived); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); }
+    if (b.condition) { const t = await this.libraryTypes(workspaceId); const errs = this.conditionErrors(b.condition, t); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); }
     // W1-15 slice 3: alternatives are other library document types; any one of them counts instead of this line's.
     const alternatives = [...new Set((Array.isArray(b.alternatives) ? b.alternatives : []).filter((k) => typeof k === "string" && k && k !== typeKey))];
     if (alternatives.length) { const known = await this.db.documentType.findMany({ where: { workspaceId, documentTypeKey: { in: alternatives } }, select: { documentTypeKey: true } });
@@ -667,7 +672,7 @@ export class Studio {
     if (!b.thenPlain?.trim()) fail("Say what the rule does, in plain words.");
     if (!WHO.includes(b.forWhom)) fail("Choose whom the rule is evaluated for.");
     const t = await this.libraryTypes(c.workspaceId);
-    const errs = checkCondition(b.condition, t.fields, t.derived);
+    const errs = this.conditionErrors(b.condition, t);
     if (!b.condition || errs.length) fail(`Condition: ${errs.join("; ") || "missing"}.`);
     const data = { predicateJson: b.condition, whenPlain: b.whenPlain ?? null, thenPlain: b.thenPlain.trim(), forWhom: b.forWhom, sourceQuote: b.sourceQuote ?? null, origin: "HUMAN" as const };
     let row;
@@ -703,7 +708,7 @@ export class Studio {
     // until it has one (engine/validate.ts), and Preview says "Cannot tell yet: no rule".
     if (b.conditionPlain !== undefined && b.condition === undefined && (b.attachMode ?? rows[0].attachMode) === "ANSWER_CONDITIONAL") changes.conditionPlain = b.conditionPlain.trim() || null;
     if (b.attachMode) { changes.attachMode = b.attachMode; if (b.attachMode === "COMBINATION_MANDATORY") { changes.predicateJson = null; changes.conditionPlain = null; } }
-    if (b.condition !== undefined && (b.attachMode ?? rows[0].attachMode) === "ANSWER_CONDITIONAL") { const t = await this.libraryTypes(c.workspaceId); const errs = checkCondition(b.condition, t.fields, t.derived); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); changes.predicateJson = b.condition; changes.conditionPlain = b.conditionPlain ?? null; }
+    if (b.condition !== undefined && (b.attachMode ?? rows[0].attachMode) === "ANSWER_CONDITIONAL") { const t = await this.libraryTypes(c.workspaceId); const errs = this.conditionErrors(b.condition, t); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); changes.predicateJson = b.condition; changes.conditionPlain = b.conditionPlain ?? null; }
     const { row } = await revise(this.db.combinationForm, rows, { ...changes, origin: "HUMAN" }, actor.id, strip);
     // A released line's removal is a new version (revise makes it a draft): it must say RETIRED too, or the removal is lost.
     if (b.retire) await this.db.combinationForm.update({ where: { id: row.id }, data: { status: "RETIRED" } });

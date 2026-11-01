@@ -129,7 +129,7 @@ const why = { reason: "Not needed by any setup any more." };
   r = await call("POST", `/combinations/${comboId}/requirements`, { ...line, documentTypeKey: anyType, alternatives: ["c119_unused_type"] });
   ok("C11.9 M1 fail: a retired document type is not an alternative (409)", r.status === 409 && /is retired/.test(r.body?.detail), [r.status, r.body?.detail]);
   r = await call("POST", `/combinations/${comboId}/requirements`, { ...line, attachMode: "ANSWER_CONDITIONAL", documentTypeKey: anyType, condition: { field: "person.c119_released", op: "eq", value: "x" }, conditionPlain: "test" });
-  ok("C11.9 M1 fail: a new condition cannot read a retired field (400)", r.status === 400 && /person\.c119_released/.test(r.body?.detail ?? r.body?.message ?? ""), [r.status, r.body?.detail ?? r.body?.message]);
+  ok("C11.9 M1 fail: a new condition cannot read a retired field (400), said as retired, not 'not in the library'", r.status === 400 && /a retired field: restore it/.test(r.body?.detail ?? r.body?.message ?? "") && !/not in the library/.test(r.body?.detail ?? r.body?.message ?? ""), [r.status, r.body?.detail ?? r.body?.message]);
 
   // M4: a document type used only as another line's alternative counts as used.
   docType("c119_alt_type", "PUBLISHED");
@@ -205,6 +205,20 @@ const why = { reason: "Not needed by any setup any more." };
   ok("C11.9 break-2 minor fail: a field a document type supplies is not deleted", typeof u.body?.can?.delete === "string" && u.body.uses.some((x: { label: string }) => /supplies it/.test(x.label)), u.body?.can);
   r = await call("POST", "/library/fields/person.c119_live/retire", {});
   ok("C11.9 break-2 minor fail: a retire with no reason says 'Say why' in words, never the validator's", r.status === 400 && /^Say why/.test(r.body?.detail), r.body?.detail);
+
+  // Review round 2 Major 1: Screen 02's field map (a replayed saved AI answer, US$0) cannot point a form field at a retired field.
+  const sv = sql("select id from combination where combination_key like '%super_visa%' limit 1");
+  const att = ((await call("GET", `/combinations/${sv}/attachments`)).body as { id: string; edition?: string }[]).find((a) => /IMM 5257 \(/.test(a.edition ?? ""));
+  const saved = ((await call("GET", `/attachments/${att!.id}/draft-options`)).body.saved_runs ?? []).find((x: { valid: boolean }) => x.valid);
+  r = await call("POST", `/attachments/${att!.id}/draft`, { mode: "replay", runFile: saved.file });
+  const jobId = r.body?.id ?? r.body?.job?.id ?? sql(`select id from drafting_job where combination_id='${sv}' and kind='field_map' order by started_at desc limit 1`);
+  for (let i = 0; i < 120 && (await call("GET", `/jobs/${jobId}`)).body?.status !== "COMPLETED"; i++) await new Promise((res) => setTimeout(res, 500));
+  const job = (await call("GET", `/jobs/${jobId}`)).body;
+  ok("setup: the saved field-map answer is replayed (no model call)", job?.status === "COMPLETED" && job.items?.length > 0, job?.status);
+  r = await call("POST", `/jobs/${jobId}/items/${job.items[0].id}`, { decision: "CHANGED", key: "person.c119_released" });
+  ok("C11.9 review-2 Major 1 fail: a field-map decision cannot choose a retired field (409, in words)", r.status === 409 && /is retired/.test(r.body?.detail), [r.status, r.body?.detail]);
+  r = await call("POST", `/jobs/${jobId}/items/${job.items[0].id}`, { decision: "CHANGED", key: "person.c119_live" });
+  ok("C11.9 review-2 Major 1 pass: the same decision with a current field is taken", r.status < 300, [r.status, r.body?.detail]);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

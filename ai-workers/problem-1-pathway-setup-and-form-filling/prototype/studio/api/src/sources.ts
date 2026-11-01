@@ -20,6 +20,7 @@ import { checkedOutput, costBesideLimit, explainRun, failedOurCheck, isProviderL
 import { newKeyProblem } from "../../../contracts/fact-key.ts";
 import { reconvertFile } from "../../../p2/reconvert.ts";
 import { addFormLine, resolveKey } from "./form-lines.ts";
+import { lockItem, refuseRetired } from "./library-items.ts";
 import { ledgerRead } from "./cost-gate.ts";
 import { keyFor, sameName } from "./library-changes.ts";
 import { identityKeyOf, insertProposals, QUEUE_TX, landField, recordChoice, reviewRow, type NewProposal, type Work } from "./proposals.ts";
@@ -702,6 +703,7 @@ export class Sources {
       // A field merged into another redirects to it (P-65): the decision records the surviving id.
       const key = await resolveKey(this.db, job.workspaceId, b.key ?? fail("Choose the library field to use, or type a new key."));
       decidedKey = key;
+      await refuseRetired(this.db, job.workspaceId, "field", [key]); // C11.9 review round 2 Major 1: a retired field takes no new form field
       const exists = await this.db.canonicalField.findFirst({ where: { workspaceId: job.workspaceId, canonicalFieldKey: key } });
       const problem = exists ? null : newKeyProblem(key);
       if (problem) fail(`A new key is area.name in lower case: ${problem}.`);
@@ -803,6 +805,9 @@ export class Sources {
           { key: i.decidedKey!, meaning: i.proposedMeaning, valueType: i.proposedType, label: p.label ?? null, sourceRef: `${job.mode === "REPLAY" ? "replayed " : ""}AI run ${job.runId}; decided by ${i.decidedBy}` });
         created++;
       }
+      // C11.9 review round 2 Major 1: checked again under each field's lock, so a retire approved meanwhile refuses the apply.
+      const mappedKeys = [...new Set(out.entries.map((e: any) => { const d = e.fact ? decision.get(e.fact) : undefined; return d?.decision === "RETURNED" ? null : (d?.decidedKey ?? e.fact ?? null); }).filter((k: unknown): k is string => typeof k === "string"))];
+      await lockItem(tx, ws, "field", mappedKeys); await refuseRetired(tx, ws, "field", mappedKeys);
       await tx.formFieldMap.createMany({ data: out.entries.map((e: any) => {
         const d = e.fact ? decision.get(e.fact) : undefined;
         const returned = d?.decision === "RETURNED";
