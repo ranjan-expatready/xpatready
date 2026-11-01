@@ -97,14 +97,8 @@ export class LibrarySources {
   /** Combinations each item is used in, by label (C3.13 where used). */
   async usedIn(kind: Kind, workspaceId: string): Promise<Map<string, string[]>> {
     const label = new Map((await this.db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true } })).map((c) => [c.id, c.label]));
-    const ids = await this.usedInIds(kind, workspaceId);
-    return new Map([...ids].map(([k, s]) => [k, [...new Set([...s].map((id) => label.get(id)).filter((l): l is string => !!l))].sort()] as [string, string[]]).filter(([, l]) => l.length));
-  }
-
-  /** C11.9: the same read by combination id (the lifecycle guard links each use and knows a retired combination). */
-  async usedInIds(kind: Kind, workspaceId: string): Promise<Map<string, Set<string>>> {
     const out = new Map<string, Set<string>>();
-    const add = (key: string, combinationId: string) => { const s = out.get(key) ?? new Set(); s.add(combinationId); out.set(key, s); };
+    const add = (key: string, combinationId: string) => { const l = label.get(combinationId); if (!l) return; const s = out.get(key) ?? new Set(); s.add(l); out.set(key, s); };
     if (kind === "section") for (const s of await this.db.sqrSectionSelection.findMany({ where: { workspaceId } })) add(s.sectionKey, s.combinationId);
     else if (kind === "document_type") for (const r of current(await this.db.documentRequirement.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }), (r) => `${r.combinationId}|${r.lineageKey}`)) add(r.documentTypeKey, r.combinationId);
     else {
@@ -139,7 +133,7 @@ export class LibrarySources {
       if (kind === "answer_list") for (const f of await this.db.canonicalField.findMany({ where: { workspaceId }, orderBy: { version: "asc" } })) listOf.set(f.canonicalFieldKey, f.answerListKey);
       for (const [f, c] of uses) { const key = kind === "field" ? f : listOf.get(f); if (key) add(key, c); }
     }
-    return out;
+    return new Map([...out].map(([k, s]) => [k, [...s].sort()]));
   }
 
   async sources(kindWord: string, key: string): Promise<SourcesView> {

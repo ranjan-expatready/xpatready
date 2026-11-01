@@ -1,6 +1,5 @@
 // Product Studio application service: programs and combinations, the shared library (versioned edits), the
 // combination's own configuration, previews through the common renderer, validation, review and release.
-import { itemState, openItemChanges } from "./library-items.ts";
 import { FILLS_LOCK } from "./who-fills.ts";
 import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { Prisma, type ReviewSubmission } from "@prisma/client";
@@ -394,15 +393,14 @@ export class Studio {
     const placements = new Map((await this.db.sectionQuestion.findMany({ where: { workspaceId }, orderBy: { version: "desc" } })).map((p) => [p.canonicalFieldKey, p]));
     const latest = new Map<string, (typeof rows)[number]>();
     for (const r of rows) if (!latest.has(r.canonicalFieldKey)) latest.set(r.canonicalFieldKey, r);
-    const versionsBy = new Map<string, typeof rows>(); for (const r of rows) versionsBy.set(r.canonicalFieldKey, [...(versionsBy.get(r.canonicalFieldKey) ?? []), r]);
     const needle = (q.q ?? "").toLowerCase();
-    const [src, used, open] = await Promise.all([this.lib.all("field", workspaceId), this.lib.usedIn("field", workspaceId), openItemChanges(this.db, workspaceId, "field")]);
+    const [src, used] = await Promise.all([this.lib.all("field", workspaceId), this.lib.usedIn("field", workspaceId)]);
     const fmt = await this.fieldBoxes(workspaceId);
     return [...latest.values()].filter((f) => !needle || f.canonicalFieldKey.includes(needle) || f.meaning.toLowerCase().includes(needle)).map((f) => {
       const u = usage.filter((x) => x.canonicalFieldKey === f.canonicalFieldKey);
       const forms = [...new Set(u.map((x) => editions.get(x.formEditionId)))].filter(Boolean);
       const p = placements.get(f.canonicalFieldKey);
-      return { key: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, scope: f.scope, version: f.version, status: f.status, origin: f.origin, has_draft: f.status === "DRAFT", boxes: u.reduce((a, x) => a + x._count._all, 0), forms, placement: p ? { section: p.sectionKey, collected_from: p.collectedFrom } : null, name: (f.labelChecked && f.label) || null, ...sourceSummary(src.get(f.canonicalFieldKey)), used_in: used.get(f.canonicalFieldKey) ?? [], format: formatLine(fmt.get(f.canonicalFieldKey), f.valueType), ...itemState(versionsBy.get(f.canonicalFieldKey) ?? [], open.get(f.canonicalFieldKey)) };
+      return { key: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, scope: f.scope, version: f.version, status: f.status, origin: f.origin, has_draft: f.status === "DRAFT", boxes: u.reduce((a, x) => a + x._count._all, 0), forms, placement: p ? { section: p.sectionKey, collected_from: p.collectedFrom } : null, name: (f.labelChecked && f.label) || null, ...sourceSummary(src.get(f.canonicalFieldKey)), used_in: used.get(f.canonicalFieldKey) ?? [], format: formatLine(fmt.get(f.canonicalFieldKey), f.valueType) };
     });
   }
 
@@ -584,8 +582,8 @@ export class Studio {
     const workspaceId = await this.ws.id();
     const rows = await this.db.documentType.findMany({ where: { workspaceId }, orderBy: [{ name: "asc" }, { version: "desc" }] });
     const seen = new Set<string>();
-    const [src, used, open] = await Promise.all([this.lib.all("document_type", workspaceId), this.lib.usedIn("document_type", workspaceId), openItemChanges(this.db, workspaceId, "document_type")]);
-    return rows.filter((r) => !seen.has(r.documentTypeKey) && seen.add(r.documentTypeKey)).map((r) => ({ ...r, ...sourceSummary(src.get(r.documentTypeKey)), used_in: used.get(r.documentTypeKey) ?? [], ...itemState(rows.filter((x) => x.documentTypeKey === r.documentTypeKey), open.get(r.documentTypeKey)) }));
+    const [src, used] = await Promise.all([this.lib.all("document_type", workspaceId), this.lib.usedIn("document_type", workspaceId)]);
+    return rows.filter((r) => !seen.has(r.documentTypeKey) && seen.add(r.documentTypeKey)).map((r) => ({ ...r, ...sourceSummary(src.get(r.documentTypeKey)), used_in: used.get(r.documentTypeKey) ?? [] }));
   }
 
   async libraryTypes(workspaceId: string) {
