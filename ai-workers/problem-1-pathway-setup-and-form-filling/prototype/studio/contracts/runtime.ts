@@ -214,3 +214,18 @@ export function fillsText(fills: { form: string; person: string; subject?: strin
 
 /** Why a copy cannot be locked yet (P-71, Lead R1d early look): the same words in the API and on the button. */
 export const notReady = (n: number) => `${n} fact${n === 1 ? "" : "s"} to answer or confirm before filing: do that, then generate a new copy.`;
+
+/** C6.12 (M3-B; M3 case view r5c §"New", BR-1, BR-16, BR-18): a case's filings, submission groups and fee lines, derived
+ *  on each read from the pinned release and the case's people (engine/runtime/filings.ts). Money in whole cents, CAD. */
+export type FeeSource = { page: string; url: string; quote: string; quote_kind: "IRCC's words" | "summary of the Lead-checked record"; read: string; checked: string };
+export type FilingApplicant = { subject: string; label: string; role: string; mode: "applying" | "declared_only" };
+export type CaseFiling = { id: string; combination: string; label: string; mode: "files_own" | "on_principal"; applicants: FilingApplicant[]; group: string;
+  status: "NOT_STARTED"; number: string | null };
+export type SubmissionGroup = { id: string; kind: "family"; label: string; filings: string[]; splittable: boolean; why: string;
+  totals: { line: string; label: string; people: number; per_person_cents: number; list_cents: number; family_max_cents: number; family_from: number; total_cents: number; cap_applied: boolean; why: string; source: FeeSource }[];
+  total_cents: number };
+export type FeeLine = { filing: string; payer: string; line: string; label: string; amount_cents: number; exempt: boolean; why: string };
+export type NotFiling = { subject: string; label: string; role: string; why: string };
+export type CaseFilings =
+  | { derived: true; combination: string; label: string; filings: CaseFiling[]; groups: SubmissionGroup[]; fees: FeeLine[]; not_filing: NotFiling[]; currency: "CAD"; basis: string; why: string | null; version: string }
+  | { derived: false; combination: string; why: string };

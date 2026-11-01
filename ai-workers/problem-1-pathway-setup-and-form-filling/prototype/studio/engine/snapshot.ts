@@ -60,6 +60,13 @@ export type Snapshot = {
   row_versions: Record<string, string>;
 };
 
+/** The release fingerprint of a snapshot as stored: the same expression assemble() uses (C6.12 break B2: a route that
+ *  stores what a release says re-checks the snapshot against its release's sha256, since a row can be edited underneath). */
+export function snapshotHash(snapshot: Snapshot): string {
+  const { row_versions: _rv, mode: _m, ...hashed } = snapshot;
+  return sha256(canonical(content({ ...hashed, forms: hashed.forms.map(fingerprintLine) }) as Parameters<typeof canonical>[0]));
+}
+
 export async function buildSnapshot(db: PrismaClient, workspaceId: string, combinationId: string, mode: Mode): Promise<{ snapshot: Snapshot; sha256: string }> {
   return (await buildSnapshots(db, workspaceId, [combinationId], mode)).get(combinationId)!;
 }
