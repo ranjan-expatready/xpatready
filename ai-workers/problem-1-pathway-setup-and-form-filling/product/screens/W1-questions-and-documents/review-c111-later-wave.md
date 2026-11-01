@@ -70,3 +70,17 @@ See `journey-test-reviewer-c111-2026-11-01.md`. Plain words scored ½ (m1) and t
 - Real IRCC portal behaviour: Sample until the immigration expert confirms.
 
 **Side effect to note:** the browser suites I re-ran rewrote 34 committed screenshots in this worktree (c46-preview-channels, preview, slice1, qa/reports/2026-10-28-after-merge-r3). I was told not to reset, so I left them modified. Restore them, or commit them, deliberately.
+
+## Delta review on b388b384 (2026-11-01)
+Code read only; no suites run (another run held the ports). Since 0c511652, the only product code change is fb67d1df: one line, `preview.tsx:149`. Both merges (919bb534, b388b384) bring only main's work (C3.12, C3.13, C11.16, the c31 quarantine). `git diff 0c511652 b388b384 -- '*/preview.tsx'` is that one line and nothing else.
+
+- **m1 fixed.** The channel pill on an APPLICATION or COUPLE line now shows `ONLINE_LATER_WAVE` when `f.channel === "ONLINE"`, so a line has one label wherever it sits. Other channels still show `f.channelWords`, and the tone is unchanged. The "Online: …" sub-line (`data-later-wave-line`) is kept. The fix's note made dropping its prefix optional, so this is not a finding.
+- **m2 fixed.** The `title` is gone from the Online-group pill, so a screen reader no longer hears the group note again on each line. The note is still visible in the group heading (`data-later-wave`).
+- **c46 browser suite, reasoned step by step:**
+  - Line 65 (`/Online \(later wave\)/` on the IMM 1295 line) still holds.
+  - Line 66 (no `data-later-wave-pill` under PAPER or PDF_UPLOAD) still holds. The couple pill has no such attribute and sits in COUPLE.
+  - Lines 80 and 84 (IMM 5409 before and after it is set to Online) still hold. Before, the pill reads `channelWords`. After, the line has "later wave" twice and "no PDF" from the sub-line.
+  - No suite asserts the pill `title` or a bare "Online" pill text (checked: s5_slice1, preview_sets, qa_am_1027, screen01*).
+- **Still open (Should, not blocking):** m3 (the purple `ai` tone on channel pills) is listed by the builder as its own item. Record note 4 stands.
+
+**Verdict: Approve** at b388b384. Journey score **9.5 / 10, pass**. Plain words now scores 1 (m1 fixed), and trust and sources stays at ½ (m3). This is reasoned from the code, not re-walked in a browser.
