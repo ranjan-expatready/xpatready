@@ -4,7 +4,7 @@ updated: 2026-11-01 19:05 UTC (overnight Lead hand-over to a fresh Lead, founder
 
 ## Start here (fresh `/lead`)
 1. Founder's first message: "Resume from STATE. Run builders and qa in the cloud, one fresh session per row. Process frozen until 15 Nov."
-2. Read `WAY-OF-WORKING.md` (if #347 has not merged yet, read it on branch `lead/2026-11-01-lean-setup`), then this page. Run `/usage` in the first hour to see where the plan goes (token analysis: session notes, factory-recommendation-2026-11-01).
+2. Read `WAY-OF-WORKING.md` (merged in #347), then this page. Run `/usage` in the first hour to see where the plan goes (token analysis: session notes, factory-recommendation-2026-11-01).
 3. Start builders **in the cloud**, one fresh session per row, under yourself; size by the measures (add while batch failures < 10% and approved→merged < 1 h). One qa in the cloud. The Mac runs only the Lead and the :4400 demo.
 4. Watch with event monitors and one 20-minute check; no minute-level sweeps. Hand over at about 250k tokens.
 
@@ -29,7 +29,7 @@ M2 30/56 Works · R1 6/8 · M3 1/16. qa-2's #353 (queued) moves C1.5, C3.1, C3.1
 | #344 | C11.13 | open | review → label |
 | #345 | C3.4 (part, draft) | draft | finish the row (one PR) |
 | #348 | C4.1 (replaces #195) | draft | reviewer → label (section order already on main via #284) |
-| #347 | lean rules (P-224) | Lead PR | merge when green |
+| #347 | lean rules (P-224) | **merged** | — |
 
 ## Visitor visa path order
 C6.11 ✓ merged → C6.12 + C6.4 (#325) → /prepare + C11.6 (#356) → C7.3 (#358) · C7.6 (#350) → C7.7 (#357) → C8.1 signing → C8.2 filing record → C9.2 → C10.2 demo story. Parallel: C6.5 (reads documents; after #325), C6.9 (eligibility; B3c's next).
