@@ -5,14 +5,14 @@ import { RunCard } from "@/components/run-card";
 import { fmtWhen } from "@/components/status";
 import { Link, useParams } from "react-router-dom";
 import { ChevronRight, CircleStop, RotateCw, Sparkles } from "lucide-react";
-import { api, useAction, useApi } from "@/lib/api";
+import { api, useAction, useActorId, useApi } from "@/lib/api";
 import { Button, Notice, Pill, Table } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { BatchPart } from "../../../contracts/screen02";
 
-const STATUS: Record<string, [string, string]> = { QUEUED: ["neutral", "Queued"], RUNNING: ["ai", "Running"], COMPLETED: ["ok", "Done"], APPLIED: ["ok", "Added to draft"], PARTIAL: ["warn", "Partly done"], FAILED: ["danger", "Failed"], BLOCKED: ["warn", "Blocked"], CANCELLED: ["neutral", "Cancelled"], NEEDS_PERSON: ["warn", "Waiting for you"], WAITING: ["neutral", "Waiting"], SKIPPED: ["neutral", "Skipped"], NOT_YET: ["neutral", "Not available yet"] }; // QA-62: no code on screen
+const STATUS: Record<string, [string, string]> = { QUEUED: ["neutral", "Queued"], RUNNING: ["ai", "Running"], COMPLETED: ["ok", "Done"], APPLIED: ["ok", "Added to draft"], PARTIAL: ["warn", "Done with problems"], FAILED: ["danger", "Failed"], BLOCKED: ["warn", "Blocked"], CANCELLED: ["neutral", "Cancelled"], NEEDS_PERSON: ["warn", "Waiting for you"], WAITING: ["neutral", "Waiting"], SKIPPED: ["neutral", "Skipped"], NOT_YET: ["neutral", "Not available yet"] }; // QA-62: no code on screen
 export const BatchStatus = ({ s }: { s: string }) => { const [t, l] = STATUS[s] ?? ["neutral", s]; return <Pill tone={t}>{l}</Pill>; };
 const MODE: Record<string, string> = { LIVE: "Live AI", REPLAY: "Replay of saved runs", STUB: "Stub pass", LOCAL: "No AI (library)", RULES: "Rules only (no AI)", live: "Live AI", replay: "Replay of saved runs", rules: "Rules only (no AI)" };
 const active = (s: string) => s === "QUEUED" || s === "RUNNING";
@@ -44,6 +44,10 @@ export function AiBatchPage() {
   const { batchId } = useParams();
   const b = useApi<any>(["ai-batch", batchId], `/ai/batches/${batchId}`, { refetchInterval: (q: any) => (q.state.data && (active(q.state.data.status) || q.state.data.jobs.some((j: any) => active(j.status))) ? 2500 : false) });
   const cancel = useAction(() => api(`/ai/batches/${batchId}/cancel`, { method: "POST" }), { success: (r: any) => `Cancelled: ${r.stopped} queued step${r.stopped === 1 ? "" : "s"} stopped${r.still_running ? `; ${r.still_running} already running` : ""}`, invalidate: [["ai-batch", batchId], ["ai-batches"], ["catalogue"]] });
+  // C3.3 review m3: Retry is the author's; other people are not offered a button the server refuses.
+  const actorId = useActorId();
+  const session = useApi<{ actor?: { duties?: string[] } }>(["session", actorId], "/session");
+  const canAuthor = (session.data?.actor?.duties ?? []).includes("author");
   const retry = useAction(() => api(`/ai/batches/${batchId}/retry`, { method: "POST" }), { success: "Retrying the failed steps only", invalidate: [["ai-batch", batchId], ["ai-batches"], ["catalogue"]] });
   if (b.isLoading) return <Spinner label="Loading AI work" />;
   if (b.isError) return <ErrorState title="This AI work could not be opened" description={(b.error as Error).message} action={<Link className="text-text-link underline" to="/ai">All AI work</Link>} />;
@@ -61,6 +65,8 @@ export function AiBatchPage() {
   const latest = new Map<string, any>(); for (const j of d.jobs) { const k = `${j.attachmentId}|${j.kind}`; const cur = latest.get(k); if (!cur || j.attempt > cur.attempt) latest.set(k, j); }
   // The server says which steps its retry runs again (cancelled part-way included, screen-map work never).
   const failed = [...latest.values()].filter((j) => j.retryable);
+  // C3.3 review m2 (P-110): a step that reached its attempts is not offered again; the page says it needs a person and what to do.
+  const stuck = [...latest.values()].filter((j) => j.needs_person);
   return (
     <div className="mx-auto max-w-6xl space-y-5">
       <nav className="flex items-center gap-1 text-xs text-text-muted"><Link to="/ai" className="hover:underline">AI work</Link><ChevronRight className="size-3" /><span>{d.scopeLabel}</span></nav>
@@ -72,11 +78,12 @@ export function AiBatchPage() {
         </div>
         <div className="flex gap-2">
           {running ? <Button variant="secondary" onClick={() => cancel.mutate(undefined)} busy={cancel.isPending}><CircleStop /> Cancel</Button> : null}
-          {!running && failed.length ? <Button variant="secondary" onClick={() => retry.mutate(undefined)} busy={retry.isPending}><RotateCw /> Retry {failed.length} failed step{failed.length === 1 ? "" : "s"}</Button> : null}
+          {!running && failed.length && canAuthor ? <Button variant="secondary" onClick={() => retry.mutate(undefined)} busy={retry.isPending}><RotateCw /> Retry {failed.length} failed step{failed.length === 1 ? "" : "s"}</Button> : null}
         </div>
       </div>
       {running ? <Notice tone="ai" title="Running" action={<Spinner label="Working" />}>Steps run two at a time. This page updates by itself; leaving it does not stop the work. Cancel stops queued steps; a call already sent to the AI cannot be recalled, and its output will not be applied.</Notice> : null}
       {d.message ? <p className="text-sm">{d.message}</p> : null}
+      {!running && stuck.length ? <Notice tone="warn" title={`${stuck.map((j) => j.source).join(", ")} needs a person`}>It failed three times, so it is not tried again. Add the form from the Form library by hand, or start its draft again once the cause is fixed.</Notice> : null}
       <Table head={["Combination", "Source", "Step", "Status", "What happened", "Cost", ""]}>
         {d.jobs.map((j: any) => (
           <tr key={j.id}>
@@ -84,7 +91,7 @@ export function AiBatchPage() {
             <td>{j.source}</td>
             <td className="text-xs">{j.kind === "reuse_map" ? "Add from library" : MODE[j.mode] ?? j.mode}{j.attempt > 1 ? ` · attempt ${j.attempt}` : ""}</td>
             <td><BatchStatus s={j.status} /></td>
-            <td className="max-w-md text-xs text-text-muted">{j.message}</td>
+            <td className="max-w-md text-xs text-text-muted">{j.said ?? j.message}</td>
             <td className="whitespace-nowrap text-xs">{j.costUsd === null ? (active(j.status) ? "pending" : "n/a") : `US$${Number(j.costUsd).toFixed(2)}`}</td>
             <td>{j.kind === "field_map" && j.status === "COMPLETED" && j.mode !== "STUB" ? <Link className="whitespace-nowrap text-sm font-medium text-text-link hover:underline" to={`/c/${j.combinationId}/jobs/${j.id}`}>Review proposals</Link> : j.status === "APPLIED" && j.kind === "field_map" ? <Link className="text-xs text-text-link hover:underline" to={`/c/${j.combinationId}/jobs/${j.id}`}>Applied</Link> : null}</td>
           </tr>))}

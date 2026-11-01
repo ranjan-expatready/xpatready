@@ -1,5 +1,6 @@
 // Product Studio application service: programs and combinations, the shared library (versioned edits), the
 // combination's own configuration, previews through the common renderer, validation, review and release.
+import { itemState, lockItem, openItemChanges, refuseRetired, retiredFieldKeys } from "./library-items.ts";
 import { FILLS_LOCK } from "./who-fills.ts";
 import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { Prisma, type ReviewSubmission } from "@prisma/client";
@@ -418,7 +419,7 @@ export class Studio {
   }
 
   // ------------------------------------------------------------------ the shared library
-  async fields(q: { q?: string }) {
+  async fields(q: { q?: string; retired?: string }) {
     const workspaceId = await this.ws.id();
     const rows = await this.db.canonicalField.findMany({ where: { workspaceId }, orderBy: [{ canonicalFieldKey: "asc" }, { version: "desc" }] });
     const usage = await this.db.formFieldMap.groupBy({ by: ["canonicalFieldKey", "formEditionId"], where: { workspaceId, outcome: "mapped", status: { in: ["PUBLISHED", "DRAFT"] } }, _count: { _all: true } });
@@ -426,15 +427,17 @@ export class Studio {
     const placements = new Map((await this.db.sectionQuestion.findMany({ where: { workspaceId }, orderBy: { version: "desc" } })).map((p) => [p.canonicalFieldKey, p]));
     const latest = new Map<string, (typeof rows)[number]>();
     for (const r of rows) if (!latest.has(r.canonicalFieldKey)) latest.set(r.canonicalFieldKey, r);
+    const versionsBy = new Map<string, typeof rows>(); for (const r of rows) versionsBy.set(r.canonicalFieldKey, [...(versionsBy.get(r.canonicalFieldKey) ?? []), r]);
     const needle = (q.q ?? "").toLowerCase();
-    const [src, used] = await Promise.all([this.lib.all("field", workspaceId), this.lib.usedIn("field", workspaceId)]);
+    const [src, used, open] = await Promise.all([this.lib.all("field", workspaceId), this.lib.usedIn("field", workspaceId), openItemChanges(this.db, workspaceId, "field")]);
     const fmt = await this.fieldBoxes(workspaceId);
     return [...latest.values()].filter((f) => !needle || f.canonicalFieldKey.includes(needle) || f.meaning.toLowerCase().includes(needle)).map((f) => {
       const u = usage.filter((x) => x.canonicalFieldKey === f.canonicalFieldKey);
       const forms = [...new Set(u.map((x) => editions.get(x.formEditionId)))].filter(Boolean);
       const p = placements.get(f.canonicalFieldKey);
-      return { key: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, scope: f.scope, version: f.version, status: f.status, origin: f.origin, has_draft: f.status === "DRAFT", boxes: u.reduce((a, x) => a + x._count._all, 0), forms, placement: p ? { section: p.sectionKey, collected_from: p.collectedFrom } : null, name: (f.labelChecked && f.label) || null, ...sourceSummary(src.get(f.canonicalFieldKey)), used_in: used.get(f.canonicalFieldKey) ?? [], format: formatLine(fmt.get(f.canonicalFieldKey), f.valueType) };
-    });
+      return { key: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, scope: f.scope, version: f.version, status: f.status, origin: f.origin, has_draft: f.status === "DRAFT", boxes: u.reduce((a, x) => a + x._count._all, 0), forms, placement: p ? { section: p.sectionKey, collected_from: p.collectedFrom } : null, name: (f.labelChecked && f.label) || null, ...sourceSummary(src.get(f.canonicalFieldKey)), used_in: used.get(f.canonicalFieldKey) ?? [], format: formatLine(fmt.get(f.canonicalFieldKey), f.valueType), ...itemState(versionsBy.get(f.canonicalFieldKey) ?? [], open.get(f.canonicalFieldKey)) };
+    // C11.9 BR-10 (pack 3): the default list, the one pickers read, leaves retired fields out; ?retired=only lists them.
+    }).filter((r) => (q.retired === "all" ? true : q.retired === "only" ? r.retired : !r.retired));
   }
 
   /** P-162 (C3.1): each field's current mapped form fields with their edition's inventory, for its format. Only the
@@ -500,7 +503,10 @@ export class Studio {
 
   async updateField(actor: Actor, key: string, b: { meaning?: string; valueType?: string; note?: string; retire?: boolean }) {
     need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
+    // C11.9 (break B1, review Ma4): retiring goes through the one guard (where used first, a second person), never here.
+    if (b.retire !== undefined) throw new HttpException({ type: "https://expatready.local/problems/use-retire", title: "Use Retire", status: 410, detail: `A shared field is retired with POST /api/library/fields/${key}/retire (where used first; a second person approves), not by editing it.` }, HttpStatus.GONE);
     const workspaceId = await this.ws.id();
+    await refuseRetired(this.db, workspaceId, "field", [key]); // review Ma2: editing a retired field never brings it back
     const rows = await this.db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: key } });
     const merged = [...rows].sort((x, y) => y.version - x.version)[0]?.mergedIntoKey; // F1: a merged field only redirects (break m12)
     if (merged) fail(`${key} was merged into ${merged}: change that field instead.`, HttpStatus.CONFLICT);
@@ -509,7 +515,11 @@ export class Studio {
     if (b.valueType !== undefined) { if (!VALUE_TYPES.includes(b.valueType)) fail("Unknown value type."); changes.valueType = b.valueType; changes.dataType = VALUE_TYPE_TO_DATA_TYPE[b.valueType]; }
     if (b.note !== undefined) changes.note = b.note;
     if (b.retire) changes.status = "RETIRED";
-    const { row, created } = await revise(this.db.canonicalField, rows, changes, actor.id, (r) => ({ ...strip(r), origin: "HUMAN" }));
+    // C11.9 break round 2 (Major 2): checked again and written under the item's lock, so a retire approved at the same moment waits.
+    const { row, created } = await this.db.$transaction(async (tx) => {
+      await lockItem(tx, workspaceId, "field", [key]); await refuseRetired(tx, workspaceId, "field", [key]);
+      return revise(tx.canonicalField, await tx.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: key } }), changes, actor.id, (r: typeof rows[number]) => ({ ...strip(r), origin: "HUMAN" }));
+    });
     if (b.retire && !created) await this.db.canonicalField.update({ where: { id: row.id }, data: { status: "RETIRED" } });
     await this.audit.log(workspaceId, actor.id, "updated", "field", key, `${actor.name} ${b.retire ? "retired" : "changed"} field ${key} (draft v${row.version})`, changes);
     return row;
@@ -519,21 +529,28 @@ export class Studio {
     need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
     const workspaceId = await this.ws.id();
     if (!(await this.db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: key } }))) fail(`No field ${key}.`, HttpStatus.NOT_FOUND);
+    await refuseRetired(this.db, workspaceId, "field", [key]); // C11.9 break M1: a retired field takes no new placement
     if (!(await this.db.logicalSection.findFirst({ where: { workspaceId, sectionKey: b.sectionKey } }))) fail("Choose an existing section (or create one first).");
+    await refuseRetired(this.db, workspaceId, "section", [b.sectionKey]); // C11.9: a retired section takes no new question
     if (!COLLECTED.includes(b.collectedFrom)) fail(`Collected from must be one of: ${COLLECTED.join(", ")}.`);
     if (!["once_per_case", "per_person", "per_row"].includes(b.repeats)) fail("Repeats must be once per case, per person or per row.");
     const types = await this.libraryTypes(workspaceId);
-    if (b.condition) { const errs = draftErrors(checkCondition(b.condition, types.fields, types.derived)); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); if (!b.conditionEffect) fail("Choose what the condition does (show, hide, require or optional)."); }
+    if (b.condition) { const errs = draftErrors(this.conditionErrors(b.condition, types)); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); if (!b.conditionEffect) fail("Choose what the condition does (show, hide, require or optional)."); }
     const data = { sectionKey: b.sectionKey, collectedFrom: b.collectedFrom, repeats: b.repeats, tier: b.tier ?? "case", questionText: b.questionText?.trim() || null, helpText: b.helpText?.trim() || null, predicateJson: b.condition ?? null, conditionEffect: (b.conditionEffect as any) ?? null, conditionPlain: b.conditionPlain ?? null, ruleOnly: !!b.ruleOnly };
     const rows = await this.db.sectionQuestion.findMany({ where: { workspaceId, lineageKey: key } });
     // C4.9 (P-97): who fills an existing placement changes only through a library change with a second person (who-fills.ts).
     const now = [...rows].sort((a, b) => b.version - a.version).find((r) => r.status === "DRAFT" || r.status === "PUBLISHED");
     if (now && now.collectedFrom !== b.collectedFrom) fail(FILLS_LOCK, HttpStatus.CONFLICT);
-    let row;
-    if (!rows.length) {
-      const order = await this.db.sectionQuestion.count({ where: { workspaceId, sectionKey: b.sectionKey } });
-      row = await this.db.sectionQuestion.create({ data: { workspaceId, lineageKey: key, canonicalFieldKey: key, displayOrder: order + 1, ...data, version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id } });
-    } else row = (await revise(this.db.sectionQuestion, rows, { ...data, origin: "HUMAN" }, actor.id, strip)).row;
+    // C11.9 break round 2 (Major 2): checked again and written under the field's lock (a retire approved at once waits).
+    const row = await this.db.$transaction(async (tx) => {
+      await lockItem(tx, workspaceId, "field", [key]); await refuseRetired(tx, workspaceId, "field", [key]);
+      await lockItem(tx, workspaceId, "section", [b.sectionKey]); await refuseRetired(tx, workspaceId, "section", [b.sectionKey]); // round 3 Major 1
+      if (!rows.length) {
+        const order = await tx.sectionQuestion.count({ where: { workspaceId, sectionKey: b.sectionKey } });
+        return tx.sectionQuestion.create({ data: { workspaceId, lineageKey: key, canonicalFieldKey: key, displayOrder: order + 1, ...data, version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id } });
+      }
+      return (await revise(tx.sectionQuestion, rows, { ...data, origin: "HUMAN" }, actor.id, strip)).row;
+    });
     await this.audit.log(workspaceId, actor.id, "updated", "placement", key, `${actor.name} placed ${key} in ${b.sectionKey} (${b.collectedFrom}${b.condition ? ", conditional" : ""}; draft v${row.version})`, data);
     return row;
   }
@@ -544,8 +561,8 @@ export class Studio {
     const seen = new Set<string>();
     const qs = await this.db.sectionQuestion.groupBy({ by: ["sectionKey"], where: { workspaceId }, _count: { _all: true } });
     const sel = await this.db.sqrSectionSelection.groupBy({ by: ["sectionKey"], where: { workspaceId }, _count: { _all: true } });
-    const [src, used] = await Promise.all([this.lib.all("section", workspaceId), this.lib.usedIn("section", workspaceId)]);
-    return rows.filter((r) => !seen.has(r.sectionKey) && seen.add(r.sectionKey)).map((r) => ({ ...sourceSummary(src.get(r.sectionKey)), used_in: used.get(r.sectionKey) ?? [], key: r.sectionKey, title: r.title, meaning: r.meaning, version: r.version, status: r.status, origin: r.origin, questions: qs.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0, combinations: sel.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0 }));
+    const [src, used, open] = await Promise.all([this.lib.all("section", workspaceId), this.lib.usedIn("section", workspaceId), openItemChanges(this.db, workspaceId, "section")]);
+    return rows.filter((r) => !seen.has(r.sectionKey) && seen.add(r.sectionKey)).map((r) => ({ ...itemState(rows.filter((x) => x.sectionKey === r.sectionKey), open.get(r.sectionKey), "section"), ...sourceSummary(src.get(r.sectionKey)), used_in: used.get(r.sectionKey) ?? [], key: r.sectionKey, title: r.title, meaning: r.meaning, version: r.version, status: r.status, origin: r.origin, questions: qs.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0, combinations: sel.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0 }));
   }
 
   /** QA-93 (P-116): removing answers with the place the section had, so Undo adds it back in the same place. */
@@ -556,6 +573,7 @@ export class Studio {
     if (c.retiredAt) fail(`"${c.label}" is retired: its questionnaire is not changed. Restore it on Structure first; open cases keep their release.`, HttpStatus.CONFLICT);
     const section = await this.db.logicalSection.findFirst({ where: { workspaceId: c.workspaceId, sectionKey }, orderBy: { version: "desc" } });
     if (on && !section) fail("That section is not in the shared library (it may have been removed by a reset). Reload, then choose one from the list.", HttpStatus.NOT_FOUND);
+    if (on) await refuseRetired(this.db, c.workspaceId, "section", [sectionKey]); // C11.9: a retired section takes no new combination
     const title = section?.title ?? "That section";
     let sectionOrder: number | null = null;
     // #201 review m3: adding a section already chosen, or removing one that is not, changes nothing and writes no history.
@@ -565,7 +583,11 @@ export class Studio {
       const back = Number.isInteger(b?.sectionOrder) && (b!.sectionOrder as number) >= 0 ? b!.sectionOrder as number : null;
       // C4.1 review m1: a new section goes after the last place in use (never a place another section has).
       const n = back ?? ((await this.db.sqrSectionSelection.aggregate({ where: { combinationId }, _max: { sectionOrder: true } }))._max.sectionOrder ?? -1) + 1;
-      await this.db.sqrSectionSelection.upsert({ where: { combinationId_sectionKey: { combinationId, sectionKey } }, update: {}, create: { workspaceId: c.workspaceId, combinationId, sectionKey, sectionOrder: n } });
+      // C11.9 round 3 Major 1: checked again and written under the section's lock (a retire approved at once waits).
+      await this.db.$transaction(async (tx) => {
+        await lockItem(tx, c.workspaceId, "section", [sectionKey]); await refuseRetired(tx, c.workspaceId, "section", [sectionKey]);
+        await tx.sqrSectionSelection.upsert({ where: { combinationId_sectionKey: { combinationId, sectionKey } }, update: {}, create: { workspaceId: c.workspaceId, combinationId, sectionKey, sectionOrder: n } });
+      });
     } else {
       sectionOrder = had!.sectionOrder;
       await this.db.sqrSectionSelection.deleteMany({ where: { combinationId, sectionKey } });
@@ -615,20 +637,27 @@ export class Studio {
     const workspaceId = await this.ws.id();
     const rows = await this.db.documentType.findMany({ where: { workspaceId }, orderBy: [{ name: "asc" }, { version: "desc" }] });
     const seen = new Set<string>();
-    const [src, used] = await Promise.all([this.lib.all("document_type", workspaceId), this.lib.usedIn("document_type", workspaceId)]);
-    return rows.filter((r) => !seen.has(r.documentTypeKey) && seen.add(r.documentTypeKey)).map((r) => ({ ...r, ...sourceSummary(src.get(r.documentTypeKey)), used_in: used.get(r.documentTypeKey) ?? [] }));
+    const [src, used, open] = await Promise.all([this.lib.all("document_type", workspaceId), this.lib.usedIn("document_type", workspaceId), openItemChanges(this.db, workspaceId, "document_type")]);
+    return rows.filter((r) => !seen.has(r.documentTypeKey) && seen.add(r.documentTypeKey)).map((r) => ({ ...r, ...sourceSummary(src.get(r.documentTypeKey)), used_in: used.get(r.documentTypeKey) ?? [], ...itemState(rows.filter((x) => x.documentTypeKey === r.documentTypeKey), open.get(r.documentTypeKey), "document_type") }));
   }
 
   async libraryTypes(workspaceId: string) {
-    const fields = new Map((await this.db.canonicalField.findMany({ where: { workspaceId }, orderBy: { version: "asc" } })).map((f) => [f.canonicalFieldKey, f.valueType]));
+    // C11.9 (break M1): a retired field is no longer offered to conditions, so a new condition cannot read it.
+    const retired = await retiredFieldKeys(this.db, workspaceId);
+    const fields = new Map((await this.db.canonicalField.findMany({ where: { workspaceId }, orderBy: { version: "asc" } })).filter((f) => !retired.has(f.canonicalFieldKey)).map((f) => [f.canonicalFieldKey, f.valueType]));
     const derived = new Set((await this.db.derivedField.findMany({ where: { workspaceId } })).map((d) => d.derivedKey));
-    return { fields, derived };
+    return { fields, derived, retired };
+  }
+
+  /** The engine's condition check, with a retired field named as retired, never "not in the library" (C11.9 review minor). */
+  private conditionErrors(condition: unknown, t: { fields: Map<string, string>; derived: Set<string>; retired: Set<string> }) {
+    return checkCondition(condition, t.fields, t.derived).map((e) => { const m = /^reads (\S+), which is not in the library$/.exec(e); return m && t.retired.has(m[1]) ? `reads "${m[1].split(".").pop()!.replace(/_/g, " ")}", a retired field: restore it in Shared library › Fields first, or choose another` : e; });
   }
 
   async checkCondition(b: { condition: any }) {
     const workspaceId = await this.ws.id();
     const t = await this.libraryTypes(workspaceId);
-    return { errors: checkCondition(b.condition, t.fields, t.derived) };
+    return { errors: this.conditionErrors(b.condition, t) };
   }
 
   // ------------------------------------------------------------------ the combination's own configuration
@@ -651,20 +680,27 @@ export class Studio {
         await this.db.libraryChange.create({ data: { workspaceId, kind: "document_type", key: typeKey, label: b.newTypeName.trim(), action: "ADD", reason: "Named while adding a document requirement.", status: "WAITING", proposedBy: actor.id, combinationId } }); }
     }
     if (!typeKey || !(await this.db.documentType.findFirst({ where: { workspaceId, documentTypeKey: typeKey } }))) fail("Choose a document type, or name a new one.");
+    await refuseRetired(this.db, workspaceId, "document_type", [typeKey, ...(Array.isArray(b.alternatives) ? b.alternatives : [])]); // C11.9 break M1
     if (!WHO.includes(b.appliesToRoles)) fail("Choose whose document it is.");
     if (b.attachMode === "ANSWER_CONDITIONAL" && !b.condition) fail("A conditional requirement needs its condition.");
-    if (b.condition) { const t = await this.libraryTypes(workspaceId); const errs = draftErrors(checkCondition(b.condition, t.fields, t.derived)); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); }
+    if (b.condition) { const t = await this.libraryTypes(workspaceId); const errs = draftErrors(this.conditionErrors(b.condition, t)); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); }
     // W1-15 slice 3: alternatives are other library document types; any one of them counts instead of this line's.
     const alternatives = [...new Set((Array.isArray(b.alternatives) ? b.alternatives : []).filter((k) => typeof k === "string" && k && k !== typeKey))];
     if (alternatives.length) { const known = await this.db.documentType.findMany({ where: { workspaceId, documentTypeKey: { in: alternatives } }, select: { documentTypeKey: true } });
       const missing = alternatives.filter((k) => !known.some((t) => t.documentTypeKey === k)); if (missing.length) fail(`An alternative must be a document type in the library: ${missing.join(", ")} is not.`); }
     const data = { alternatives: alternatives.length ? alternatives : Prisma.DbNull, documentTypeKey: typeKey!, attachMode: b.attachMode, predicateJson: b.attachMode === "ANSWER_CONDITIONAL" ? b.condition : null, conditionPlain: b.attachMode === "ANSWER_CONDITIONAL" ? (b.conditionPlain ?? null) : null, appliesToRoles: b.appliesToRoles, providedBy: b.providedBy ?? "client", sourceQuote: b.sourceQuote ?? null, sourceFile: b.sourceFile ?? null, note: b.note ?? null, origin: "HUMAN" as const };
-    let row;
-    if (!lineage) {
-      let key = `${typeKey}:${b.appliesToRoles}`;
-      if (await this.db.documentRequirement.findFirst({ where: { combinationId, lineageKey: key } })) key = `${key}:${Date.now().toString(36)}`;
-      row = await this.db.documentRequirement.create({ data: { workspaceId, combinationId, lineageKey: key, ...data, version: 1, status: "DRAFT", updatedBy: actor.id } });
-    } else { const rows = await this.db.documentRequirement.findMany({ where: { combinationId, lineageKey: lineage } }); this.sameRevision(rows, b.baseRevision); row = (await revise(this.db.documentRequirement, rows, data, actor.id, strip)).row; }
+    // C11.9 break round 2 (Major 2): the type and its alternatives are checked again and the line written under their
+    // locks, so a retire approved at the same moment either waits for this line (and is refused) or refuses it.
+    const typeKeys = [typeKey!, ...alternatives];
+    const row = await this.db.$transaction(async (tx) => {
+      await lockItem(tx, workspaceId, "document_type", typeKeys); await refuseRetired(tx, workspaceId, "document_type", typeKeys);
+      if (!lineage) {
+        let key = `${typeKey}:${b.appliesToRoles}`;
+        if (await tx.documentRequirement.findFirst({ where: { combinationId, lineageKey: key } })) key = `${key}:${Date.now().toString(36)}`;
+        return tx.documentRequirement.create({ data: { workspaceId, combinationId, lineageKey: key, ...data, version: 1, status: "DRAFT", updatedBy: actor.id } });
+      }
+      const rows = await tx.documentRequirement.findMany({ where: { combinationId, lineageKey: lineage } }); this.sameRevision(rows, b.baseRevision); return (await revise(tx.documentRequirement, rows, data, actor.id, strip)).row;
+    });
     await this.audit.log(workspaceId, actor.id, lineage ? "updated" : "created", "document requirement", row.lineageKey, `${actor.name} ${lineage ? "changed" : "added"} a ${b.attachMode === "ANSWER_CONDITIONAL" ? "conditional" : "base"} document requirement in "${c.label}" (draft v${row.version})`, data, combinationId);
     return row;
   }
@@ -676,7 +712,7 @@ export class Studio {
     if (!b.thenPlain?.trim()) fail("Say what the rule does, in plain words.");
     if (!WHO.includes(b.forWhom)) fail("Choose whom the rule is evaluated for.");
     const t = await this.libraryTypes(c.workspaceId);
-    const errs = draftErrors(checkCondition(b.condition, t.fields, t.derived));
+    const errs = draftErrors(this.conditionErrors(b.condition, t));
     if (!b.condition || errs.length) fail(`Condition: ${errs.join("; ") || "missing"}.`);
     const data = { predicateJson: b.condition, whenPlain: b.whenPlain ?? null, thenPlain: b.thenPlain.trim(), forWhom: b.forWhom, sourceQuote: b.sourceQuote ?? null, origin: "HUMAN" as const };
     let row;
@@ -742,7 +778,7 @@ export class Studio {
     // until it has one (engine/validate.ts), and Preview says "Cannot tell yet: no rule".
     if (b.conditionPlain !== undefined && b.condition === undefined && (b.attachMode ?? rows[0].attachMode) === "ANSWER_CONDITIONAL") changes.conditionPlain = b.conditionPlain.trim() || null;
     if (b.attachMode) { changes.attachMode = b.attachMode; if (b.attachMode === "COMBINATION_MANDATORY") { changes.predicateJson = null; changes.conditionPlain = null; } }
-    if (b.condition !== undefined && (b.attachMode ?? rows[0].attachMode) === "ANSWER_CONDITIONAL") { const t = await this.libraryTypes(c.workspaceId); const errs = draftErrors(checkCondition(b.condition, t.fields, t.derived)); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); changes.predicateJson = b.condition; changes.conditionPlain = b.conditionPlain ?? null; }
+    if (b.condition !== undefined && (b.attachMode ?? rows[0].attachMode) === "ANSWER_CONDITIONAL") { const t = await this.libraryTypes(c.workspaceId); const errs = draftErrors(this.conditionErrors(b.condition, t)); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); changes.predicateJson = b.condition; changes.conditionPlain = b.conditionPlain ?? null; }
     const { row } = await revise(this.db.combinationForm, rows, { ...changes, origin: "HUMAN" }, actor.id, strip);
     // A released line's removal is a new version (revise makes it a draft): it must say RETIRED too, or the removal is lost.
     if (b.retire) await this.db.combinationForm.update({ where: { id: row.id }, data: { status: "RETIRED" } });

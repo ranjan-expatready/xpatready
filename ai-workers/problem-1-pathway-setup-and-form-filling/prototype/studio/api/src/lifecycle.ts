@@ -14,8 +14,9 @@ import { applyCondition, COND_KIND } from "./question-condition.ts";
 import { RECHECK, WHY } from "../../contracts/lifecycle.ts";
 
 /** The entity an audit line names for a library change (the same on every line about it). */
-const entityOf = (kind: string) => (kind === "structure_node" ? "structure" : kind === "library_form" ? "form" : "combination");
+const entityOf = (kind: string) => (kind === "structure_node" ? "structure" : kind === "library_form" ? "form" : kind === "field" ? "field" : kind === "document_type" ? "document type" : kind === "section" ? "section" : "combination");
 import { formUses, hasApprovedFile } from "./form-uses.ts";
+import { applyItem, deleteOwnItem, isItemLifecycle, itemUses, ITEM_OWN_NOTE, recheckItem, undoOwnItem, ITEM_KINDS, type ItemKind } from "./library-items.ts";
 import { rememberDeletion } from "./library-deletions.ts";
 import { newestEdition } from "../../engine/programs.ts";
 import { acceptsOf, allowedChannels, lineOf, notAcceptedWords, notNeededWords, type AcceptRecord } from "../../engine/channels.ts";
@@ -26,6 +27,8 @@ import type { Channel } from "../../contracts/forms.ts";
 export const LIFECYCLE_KINDS = ["structure_node", "combination", "library_form"] as const;
 export type LifecycleKind = (typeof LIFECYCLE_KINDS)[number];
 export const isLifecycleKind = (k: string): k is LifecycleKind => (LIFECYCLE_KINDS as readonly string[]).includes(k);
+/** C11.9: a shared field or document type (its ADD keeps its own path in library-changes.ts). */
+const isItem = (k: string): k is ItemKind => (ITEM_KINDS as readonly string[]).includes(k);
 const OPEN = ["WAITING", "RETURNED", "APPROVED"]; // a change not yet applied or released: nothing else may start on it
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
 const problem = (status: number, title: string, detail: string, extra: Record<string, unknown> = {}) =>
@@ -205,22 +208,28 @@ export class Lifecycle {
     return rows.map((r) => ({ at: r.at.toISOString(), by: nameOf(r.actor) ?? (r.actor === "system" ? "The studio" : r.actor), what: r.summary }));
   }
 
-  private async usesOf(kind: LifecycleKind, key: string) { return kind === "structure_node" ? this.nodeUses(key) : kind === "library_form" ? formUses(this.db, await this.ws.id(), key) : this.combinationUses(key); }
+  private async usesOf(kind: LifecycleKind | ItemKind, key: string, actorId?: string) { if (isItem(kind)) return itemUses(this.db, await this.ws.id(), kind, key, undefined, actorId); return kind === "structure_node" ? this.nodeUses(key) : kind === "library_form" ? formUses(this.db, await this.ws.id(), key) : this.combinationUses(key); }
   private refusal(u: UsesView, action: LifecycleAction) { return action === "DELETE" ? u.can.delete : action === "RETIRE" ? u.can.retire : u.can.restore; }
 
   /** Delete, retire or restore proposed by an author: checked now, waiting for a different person (L4). */
-  async propose(actor: Actor, kind: LifecycleKind, key: string, action: LifecycleAction, reason: string) {
+  async propose(actor: Actor, kind: LifecycleKind | ItemKind, key: string, action: LifecycleAction, reason: string) {
     need(actor, "author");
     const workspaceId = await this.ws.id();
-    const u = await this.usesOf(kind, key);
+    const u = await this.usesOf(kind, key, actor.id);
     const no = this.refusal(u, action);
     if (no) throw problem(409, `Cannot ${action.toLowerCase()}`, no, { uses: u.uses });
+    // C11.9 (P-116 amended, pack 3): the author's own never-released, unused draft is deleted at once, with Undo.
+    if (isItem(kind) && action === "DELETE" && u.immediate) {
+      const c = await deleteOwnItem(this.db, actor.id, workspaceId, kind, key, u.label, reason);
+      await this.audit.log(workspaceId, actor.id, "deleted", entityOf(kind), key, `${actor.name} deleted "${u.label}": their own draft, never approved, released or used`);
+      return { ...changeView(c), immediate: true };
+    }
     if (kind === "structure_node" && action === "DELETE") {
       const g = await graph(this.db, workspaceId), f = await this.facts(workspaceId, g, key);
       if (ownDraft(f, actor.id)) return this.deleteOwnDraft(actor, workspaceId, g, f, reason);
     }
     let label = u.label, matches: string[] = [];
-    if (kind !== "library_form") {
+    if (kind !== "library_form" && !isItem(kind)) {
       // QA-51 (BR-7): the trail starts with the Pathway type, as on the Structure: both types can hold the same names.
       const at = kind === "structure_node" ? key : (await this.db.combination.findUnique({ where: { id: key }, select: { program: { select: { programNodeKey: true } } } }))?.program.programNodeKey;
       const type = at ? pathwayTypeOf(await graph(this.db, workspaceId), at) : null;
@@ -269,6 +278,11 @@ export class Lifecycle {
       const no = c.action === "DELETE" ? u.can.delete : c.action === "RETIRE" ? u.can.retire : u.can.restore;
       if (no) throw problem(409, `Cannot ${actionVerb(c.action, c.kind)}`, no, { uses: u.uses });
       matches = []; // as proposed: a form's change lists nothing with it
+    } else if (isItemLifecycle(c)) {
+      // C11.9: a shared field's or document type's change is checked again by its own rule, leaving this change out.
+      const no = await recheckItem(this.db, c);
+      if (no) throw problem(409, `Cannot ${actionVerb(c.action, c.kind)}`, no);
+      matches = [];
     } else {
       const u = await this.combinationUses(c.key).catch(() => null);
       if (!u) throw problem(409, "No longer there", RECHECK.gone);
@@ -300,6 +314,11 @@ export class Lifecycle {
   async undoOwnDelete(actor: Actor, id: string) {
     need(actor, "author");
     const c = await this.db.libraryChange.findUnique({ where: { id } });
+    if (c && isItemLifecycle(c) && c.action === "DELETE" && c.decisionNote === ITEM_OWN_NOTE) {
+      await undoOwnItem(this.db, actor.id, c);
+      await this.audit.log(c.workspaceId, actor.id, "restored", entityOf(c.kind), c.key, `${actor.name} undid deleting "${c.label ?? c.key}": it is back`);
+      return changeView((await this.db.libraryChange.findUnique({ where: { id } }))!);
+    }
     if (!c || c.kind !== "structure_node" || c.action !== "DELETE" || c.status !== "RELEASED" || c.decisionNote !== OWN_DRAFT_NOTE) throw problem(409, "Cannot undo", "Only a delete of your own draft can be undone here.");
     if (c.proposedBy !== actor.id) throw problem(403, "Not yours", "Only the person who deleted it can undo it.");
     const rows = ((c.matches as { rows?: Record<string, unknown>[] }).rows ?? []) as (ProgramDef & Record<string, unknown>)[];
@@ -316,8 +335,8 @@ export class Lifecycle {
   }
   /** ReviewCard (P-116 amended): the approval re-check, run now, so the approver sees it before the click. */
   async recheck(c: LibraryChange): Promise<{ ok: boolean; text: string; kept: string[] } | null> {
-    if (!isLifecycleKind(c.kind) || c.status !== "WAITING") return null;
-    const u = await this.usesOf(c.kind, c.key).catch(() => null);
+    if ((!isLifecycleKind(c.kind) && !isItemLifecycle(c)) || c.status !== "WAITING") return null;
+    const u = await this.usesOf(c.kind as LifecycleKind | ItemKind, c.key).catch(() => null);
     if (!u) return { ok: false, text: RECHECK.gone, kept: [] };
     const others = { ...u, uses: u.uses.filter((x) => x.kind !== "draft_change"), can: { delete: null, retire: null, restore: null } as UsesView["can"] };
     const again = await this.againFor(c, others);
@@ -334,8 +353,8 @@ export class Lifecycle {
       if (proposed && current && current.editionLabel !== proposed) throw problem(409, "A new edition arrived", `This was proposed for ${proposed}; the library's current edition is now ${current.editionLabel}. Return it with that reason, and propose what IRCC accepts for the new edition.`);
       return;
     }
-    if (!isLifecycleKind(c.kind)) return;
-    const u = await this.usesOf(c.kind, c.key).catch(() => null);
+    if (!isLifecycleKind(c.kind) && !isItemLifecycle(c)) return;
+    const u = await this.usesOf(c.kind as LifecycleKind | ItemKind, c.key).catch(() => null);
     if (!u) throw problem(409, "No longer there", RECHECK.gone);
     const others = { ...u, uses: u.uses.filter((x) => x.kind !== "draft_change"), can: { delete: null, retire: null, restore: null } as UsesView["can"] };
     const again = await this.againFor(c, others);
@@ -344,6 +363,7 @@ export class Lifecycle {
   /** The one approval re-check, for the ReviewCard before the click and for the approval itself (P-116 amended). */
   private async againFor(c: LibraryChange, others: UsesView): Promise<string | null> {
     if (c.kind === "structure_node") return this.recheckNode(c);
+    if (isItemLifecycle(c)) return recheckItem(this.db, c);
     if (c.kind !== "library_form") return this.recheckCombination(c, others);
     const again = this.recheckForm(c, others);
     // Break round 2 N1: a file of the form approved since the delete was asked is kept (P-51): retire it instead.
@@ -430,6 +450,13 @@ export class Lifecycle {
         return true;
       });
       if (done) await this.audit.log(c.workspaceId, actor.id, c.action === "RETIRE" ? "retired" : "restored", "form", c.key, `${actor.name} approved ${actionVerb(c.action, c.kind)} "${c.label ?? c.key}": it takes effect now`);
+      return;
+    }
+    // C11.9: a shared field's or document type's delete, retire or restore is applied at approval (as a library form's).
+    if (isItemLifecycle(c)) {
+      if (!(await this.db.$transaction((tx) => applyItem(tx, c)))) return;
+      const what = c.action === "DELETE" ? "deleted (never released, used nowhere)" : c.action === "RETIRE" ? "retired now: hidden from pickers and AI; earlier releases and open cases keep it" : "restored now: back in pickers and AI";
+      await this.audit.log(c.workspaceId, actor.id, c.action === "DELETE" ? "deleted" : c.action === "RETIRE" ? "retired" : "restored", entityOf(c.kind), c.key, `${actor.name} approved ${actionVerb(c.action, c.kind)} "${c.label ?? c.key}": ${what}`);
       return;
     }
     if (!isLifecycleKind(c.kind) || c.action !== "DELETE") return;

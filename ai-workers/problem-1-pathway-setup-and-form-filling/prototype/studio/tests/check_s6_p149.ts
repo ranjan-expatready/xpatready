@@ -296,6 +296,8 @@ const item = (payload: any, over: any = {}) => ({ kind: payload.kind, runId: RUN
   // ─────────────────── the free-add scan (P-149 one door)
   const ALLOW: { file: string; near: RegExp; why: string }[] = [
     { file: "forms.ts", near: /supersedesId: gone\.id, mergedIntoKey: to/, why: "the P-65 merge writes the merged field's retired version" },
+    // C11.9: Undo of the author's own delete puts back the very rows the delete removed (same ids); the item already went through the door.
+    { file: "library-items.ts", near: /\b(canonicalField|logicalSection|documentType)\.create\(\{ data: again\(r\) as Prisma\./, why: "C11.9 undoOwnItem restores the rows its own delete removed" },
   ];
   // Owed by other lanes (reported in the hand-back, never widened): a free add still in their files.
   const OWED: { file: string; near: RegExp; why: string }[] = [
@@ -308,7 +310,7 @@ const item = (payload: any, over: any = {}) => ({ kind: payload.kind, runId: RUN
   const src = join(STUDIO, "api", "src");
   const files = readdirSync(src).filter((f) => f.endsWith(".ts")).map((f) => [f, readFileSync(join(src, f), "utf8")] as [string, string]);
   const hits = scan(files);
-  ok("C3.6 P-149 scan pass: no library item is created outside the one door (allowlist: the P-65 merge)", hits.length === 0, hits.map((h) => `${h.file}:${h.line}`));
+  ok("C3.6 P-149 scan pass: no library item is created outside the one door (allowlist: the P-65 merge, the C11.9 own-delete Undo)", hits.length === 0, hits.map((h) => `${h.file}:${h.line}`));
   ok("C3.6 P-149 scan pass: the door itself lands fields, sections, answer lists and document types", ["canonicalField", "logicalSection", "answerList", "documentType"].every((m) => new RegExp(`${m}\\.create\\(`).test(files.find(([f]) => f === "proposals.ts")![1])));
   ok("C3.6 P-149 scan fail: a planted free add in another file is caught", scan([["planted.ts", "await this.db.logicalSection.create({ data: {} });"]]).length === 1);
   const owed = OWED.filter((o) => files.some(([f, t]) => f === o.file && t.split("\n").some((l) => o.near.test(l))));

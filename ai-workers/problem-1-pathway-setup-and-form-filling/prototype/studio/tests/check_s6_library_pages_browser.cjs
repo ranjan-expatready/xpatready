@@ -77,10 +77,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 
     // Sections: rename in a dialog, a taken title refused
     await go("/library/sections");
-    await p.getByRole("button", { name: "Rename Languages" }).click();
+    await p.getByRole("button", { name: "Edit Languages", exact: true }).click(); // C11.9: the row's Edit opens the rename
     await p.getByLabel("Title").fill("Languages spoken"); await p.getByRole("dialog").getByRole("button", { name: "Rename" }).click(); await settle();
     step("C3.15: an author renames a section on the Sections page", /Languages spoken/.test(await main()) && sql("select title from logical_section where section_key='languages' order by version desc limit 1") === "Languages spoken");
-    await p.getByRole("button", { name: "Rename Languages spoken" }).click();
+    await p.getByRole("button", { name: "Edit Languages spoken", exact: true }).click();
     await p.getByLabel("Title").fill("personal details"); await p.getByRole("dialog").getByRole("button", { name: "Rename" }).click(); await settle();
     step("C3.15 fail: another section's title is refused in words", /already a section called "Personal details"/.test(await p.locator("body").innerText()));
     await p.screenshot({ path: path.join(SHOTS, "section-rename-refused.png") });

@@ -60,6 +60,13 @@ export type Snapshot = {
   row_versions: Record<string, string>;
 };
 
+/** The release fingerprint of a snapshot as stored: the same expression assemble() uses (C6.12 break B2: a route that
+ *  stores what a release says re-checks the snapshot against its release's sha256, since a row can be edited underneath). */
+export function snapshotHash(snapshot: Snapshot): string {
+  const { row_versions: _rv, mode: _m, ...hashed } = snapshot;
+  return sha256(canonical(content({ ...hashed, forms: hashed.forms.map(fingerprintLine) }) as Parameters<typeof canonical>[0]));
+}
+
 export async function buildSnapshot(db: PrismaClient, workspaceId: string, combinationId: string, mode: Mode): Promise<{ snapshot: Snapshot; sha256: string }> {
   return (await buildSnapshots(db, workspaceId, [combinationId], mode)).get(combinationId)!;
 }
@@ -114,6 +121,11 @@ function formEditions(f: { channel?: string | null; form: { editions: FormEditio
   return { ...(f.channel === "ONLINE" ? { online_versions: online.filter((e) => e.portalKey === portalKey).length } : {}), ...(online.length && !pdf.length ? { online_only: true } : {}) };
 }
 
+/** C11.9: sort form lines by the combination's filing order (null: by line key, today's order and hash). */
+const byFilingOrder = (order: unknown) => {
+  const at = new Map((Array.isArray(order) ? order : []).map((k, i) => [String(k), i]));
+  return (a: { lineageKey: string }, b: { lineageKey: string }) => (at.get(a.lineageKey) ?? Infinity) - (at.get(b.lineageKey) ?? Infinity) || a.lineageKey.localeCompare(b.lineageKey);
+};
 function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; sections: any[]; questions: any[]; doctypes: any[]; derived: any[]; selections: any[]; cforms: any[]; requirements: any[]; rules: any[]; checks: any[]; sources?: any[]; allMaps: any[]; shared: { lists: Map<string, { key: string; label: string }[]>; effFields: any[]; effSections: any[]; effQuestions: any[]; effTypes: any[]; entriesOf: (editionId: string) => any[] } }): { snapshot: Snapshot; sha256: string } {
   const { derived, selections, cforms, requirements, rules, checks, allMaps, shared } = rows;
   const effSources = effective(rows.sources ?? [], (r: any) => r.lineageKey, mode).filter((r: any) => r.status !== "RETIRED" && (r.source || r.prequalification));
@@ -161,7 +173,8 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
     canonical_fields: effFields.filter((f) => used.has(f.canonicalFieldKey)).sort((a, b) => a.canonicalFieldKey.localeCompare(b.canonicalFieldKey)).map((f) => { note("field", f.canonicalFieldKey, f); return { id: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, data_type: f.dataType, scope: f.scope, item_version: f.version, status: f.status, origin: f.origin, ...(f.answerListKey && shared.lists.has(f.answerListKey) ? { answer_list: { key: f.answerListKey, values: shared.lists.get(f.answerListKey) } } : {}) }; }),
     sections: selections.map((s) => effSections.find((x) => x.sectionKey === s.sectionKey)).filter(Boolean).map((s) => { note("section", s!.sectionKey, s!); return { id: s!.sectionKey, title: s!.title, meaning: s!.meaning, item_version: s!.version, status: s!.status }; }),
     placements: placements.sort((a, b) => a.sectionKey.localeCompare(b.sectionKey) || a.displayOrder - b.displayOrder).map((q) => { note("placement", q.lineageKey, q); return { lineage: q.lineageKey, fact: q.canonicalFieldKey, section_id: q.sectionKey, order: q.displayOrder, question_text: q.questionText, help_text: q.helpText, repeats: q.repeats, tier: q.tier, collected_from: q.collectedFrom, client_visible: q.clientVisible, condition: q.predicateJson, condition_effect: q.conditionEffect, condition_plain: q.conditionPlain, rule_only: q.ruleOnly, ...(clientOnly.has(q.sectionKey) ? { client_only: true } : {}), item_version: q.version, status: q.status }; }),
-    forms: forms.sort((a, b) => a.lineageKey.localeCompare(b.lineageKey)).map((f) => { note("form", f.lineageKey, f); return { form_number: f.form.formKey, title: f.form.displayName, form_kind: f.form.formKind, who: f.who, status: f.attachMode === "COMBINATION_MANDATORY" ? "always" : "conditional", condition: f.predicateJson, condition_plain: f.conditionPlain, source_quote: f.sourceQuote, item_version: f.version, origin: f.origin, ...(f.channel && f.channel !== "PDF_UPLOAD" ? { channel: f.channel } : {}), ...(f.signature && f.signature !== "NONE" ? { signature: f.signature } : {}), ...formEditions(f, comp.portalKey),
+    // C11.9 (P-116): the combination's filing order when one is set (lineage keys); lines it does not name follow by key.
+    forms: forms.sort(byFilingOrder(comp.formOrder)).map((f) => { note("form", f.lineageKey, f); return { form_number: f.form.formKey, title: f.form.displayName, form_kind: f.form.formKind, who: f.who, status: f.attachMode === "COMBINATION_MANDATORY" ? "always" : "conditional", condition: f.predicateJson, condition_plain: f.conditionPlain, source_quote: f.sourceQuote, item_version: f.version, origin: f.origin, ...(f.channel && f.channel !== "PDF_UPLOAD" ? { channel: f.channel } : {}), ...(f.signature && f.signature !== "NONE" ? { signature: f.signature } : {}), ...formEditions(f, comp.portalKey),
       // S5: only when set, so a line that keeps the defaults keeps its fingerprint (no draft change appears).
       ...(f.minAge ? { min_age: f.minAge } : {}), ...(f.signedBy ? { signed_by: f.signedBy } : {}), ...(f.copies && f.copies > 1 ? { copies: f.copies } : {}) }; }),
     field_maps: fieldMaps,

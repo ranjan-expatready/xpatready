@@ -6,7 +6,7 @@
 // The free-add scan (tests/check_s6_p149.ts) refuses a library .create anywhere else.
 import { HttpStatus } from "@nestjs/common";
 import { proposeConditionChange } from "./question-condition.ts";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { Prisma, ProposalItem as Row } from "@prisma/client";
 import { ProposalItem, ProposalPayload, type ProposalKind } from "../../contracts/proposal-item.ts";
 import { normalizeLabel } from "../../contracts/programs.ts";
@@ -30,10 +30,23 @@ const isLibraryKind = (k: string) => (LIBRARY_PROPOSAL_KINDS as readonly string[
 /** The identity key of a library kind under its rule (P-149 (2), Lead 29 Oct): a field, section or person role by its
  *  name, an answer list by its set of value codes (order ignored), a document type by its name and what it proves.
  *  The combination kinds keep the producer's key. */
+/** An answer list's identity: its codes, sorted. A long list (a country list has 200 codes) is named by its count and a
+ *  hash of the codes, so the key stays within the contract's 300 characters (C3.4); the library side uses the same rule. */
+export function listIdentity(codes: string[]): string {
+  const all = [...new Set(codes)].sort().join(",");
+  return all.length <= 300 ? all : `codes:${new Set(codes).size}:${createHash("sha256").update(all).digest("hex").slice(0, 40)}`;
+}
+
+/** The words a person reads for an item: its name, never an answer list's code list or hash (C3.4 review Minor 5). */
+export function nameOf(p: ProposalPayload, given: string): string {
+  const named = (p as { label?: unknown; name?: unknown }).label ?? (p as { name?: unknown }).name;
+  return typeof named === "string" && named.trim() ? named : identityKeyOf(p, given);
+}
+
 export function identityKeyOf(p: ProposalPayload, given: string): string {
   switch (p.kind) {
     case "field": case "section": case "person_role": return normalizeLabel(p.label);
-    case "answer_list": return [...new Set(p.values.map((v) => v.code))].sort().join(",");
+    case "answer_list": return listIdentity(p.values.map((v) => v.code));
     case "document_type": return `${normalizeLabel(p.name)}|${normalizeLabel(p.proves)}`;
     default: return given;
   }
@@ -53,7 +66,7 @@ export async function sameInLibrary(db: Client, workspaceId: string, p: Proposal
   }
   if (p.kind === "answer_list") {
     const rows = await db.answerList.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] } }, include: { values: { select: { valueKey: true } } } });
-    return rows.find((r) => [...new Set(r.values.map((v) => v.valueKey))].sort().join(",") === want)?.answerListKey ?? null;
+    return rows.find((r) => listIdentity(r.values.map((v) => v.valueKey)) === want)?.answerListKey ?? null;
   }
   if (p.kind === "document_type") {
     // The same identity as identityKeyOf: a name and what it proves (two proofs under one name are two items).
@@ -321,7 +334,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
     // P-121: several at once is for Ready items only, and never a rules item that adds to the library (1b).
     if (d.action === "accept" && rows.length > 1) {
       const no = rows.map((r) => [r, bulkWhy(r)] as const).filter(([, why]) => why);
-      if (no.length) fail(`Only Ready items are accepted together. ${no.length === 1 ? "One item" : `${no.length} items`} cannot be: "${identityKeyOf(no[0][0].payload as ProposalPayload, no[0][0].identityKey)}" (${no[0][1]}). Nothing was accepted.`, HttpStatus.CONFLICT);
+      if (no.length) fail(`Only Ready items are accepted together. ${no.length === 1 ? "One item" : `${no.length} items`} cannot be: "${nameOf(no[0][0].payload as ProposalPayload, no[0][0].identityKey)}" (${no[0][1]}). Nothing was accepted.`, HttpStatus.CONFLICT);
     }
     const out: { id: string; landedAs: string | null }[] = [];
     for (const r of rows) {
@@ -337,7 +350,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
       if (d.action !== "reject") {
         if (r.landsOn === "library" && (r.reuse as { match: string }).match === "new") {
           const twin = await sameInLibrary(tx, workspaceId, payload);
-          if (twin) fail(`"${identityKeyOf(payload, r.identityKey)}" is already in the library as ${twin} (added since it was proposed): reject this one, or reuse that item.`, HttpStatus.CONFLICT);
+          if (twin) fail(`"${nameOf(payload, r.identityKey)}" is already in the library as ${twin} (added since it was proposed): reject this one, or reuse that item.`, HttpStatus.CONFLICT);
         }
         const reuse = r.reuse as { match: string; existingKey: string | null };
         // P-120: a reuse adds nothing to the library; it records the existing item it uses, if that is still there.
@@ -350,7 +363,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
           reuse.match = resolved.match; reuse.existingKey = resolved.existingKey;
         }
         if (r.landsOn === "library" && reuse.match === "reuse" && d.action === "accept") {
-          if (!(await usableInLibrary(tx, workspaceId, r.kind, reuse.existingKey))) fail(`"${identityKeyOf(payload, r.identityKey)}" reuses ${reuse.existingKey ?? "no item"}, which is not in the library (retired, merged or never added): reject this proposal, or edit it into a new item.`, HttpStatus.CONFLICT);
+          if (!(await usableInLibrary(tx, workspaceId, r.kind, reuse.existingKey))) fail(`"${nameOf(payload, r.identityKey)}" reuses ${reuse.existingKey ?? "no item"}, which is not in the library (retired, merged or never added): reject this proposal, or edit it into a new item.`, HttpStatus.CONFLICT);
           landedAs = reuse.existingKey; reused = true;
         } else if (r.kind === "pqr_pick") {
           const got = await landPqrPick(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: reason ?? r.reason });
@@ -403,7 +416,7 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     for (const r of rows) {
       const { landedStamp } = (r.work ?? {}) as { landedStamp?: string };
       if (landedStamp && r.decidedKey && (await stampOf(tx, workspaceId, r.kind, r.decidedKey)) !== landedStamp)
-        fail(`"${identityKeyOf(r.payload as ProposalPayload, r.identityKey)}" was changed after it was accepted, so Undo would erase that change. Nothing was undone: retire or delete it in the shared library instead.`, HttpStatus.CONFLICT);
+        fail(`"${nameOf(r.payload as ProposalPayload, r.identityKey)}" was changed after it was accepted, so Undo would erase that change. Nothing was undone: retire or delete it in the shared library instead.`, HttpStatus.CONFLICT);
     }
     // C4.7: an accepted pick's tick is taken back only while it is the draft the accept wrote (not changed or released
     // since); the draft it replaced comes back as it was.
