@@ -7,6 +7,7 @@
 //   * shared files run everything: prisma/, contracts/, engine/, api/src/main.ts, package files, tools/, tests/ files that
 //     are not check_*, prototype/p1, p2, p5, .github/, run-suites.sh (and this file), and any code file no rule covers;
 //   * a changed check_* file runs itself (the three runtime R1 suites run together: they share one copy, in order);
+//     acceptance/C6.11.test.ts and acceptance/lib/m3.ts run the R1 group (C6.11 runs on its copy, before R1a's reset);
 //   * a web page or component: the routes it serves (App.tsx's router, through whatever imports it) and its own names,
 //     looked up in the browser suites; no match, or a file the shell itself uses, runs every browser suite;
 //   * an API module (api/src/<x>.ts): the endpoint paths of the module and of every module that imports it (in main.ts,
@@ -203,6 +204,8 @@ function pick(f) {
     if (/^check_/.test(n)) return suites.has(n) && suites.get(n) === f ? { picks: new Map([[n, "changed"]]) } : {};
     return { all: `${s}: a test helper, not check_* (shared)` };
   }
+  // Pack 4's C6.11 acceptance test runs on the R1 copy, with the three R1 suites (run-suites.sh); its helper too.
+  if (/^acceptance\/(C6\.11\.test\.ts|lib\/m3\.ts)$/.test(s)) return { picks: new Map([["check_runtime_r1a.ts", "runs acceptance/C6.11.test.ts on the R1 copy"]]) };
   if (/^api\/src\/[^/]+\.ts$/.test(s)) return apiPick(f);
   if (s.startsWith("web/")) return webPick(f);
   return { all: `${s}: no rule covers it` };

@@ -191,6 +191,8 @@ if [ -f "$RT/check_runtime_r1a.ts" ] && { picked check_runtime_r1a.ts || picked 
     [ -f "$RT/check_runtime_r1c.cjs" ] && run check_runtime_r1c.cjs "$RN" node "$RT/check_runtime_r1c.cjs" "$RP"
     # R1d next on the same copy (it fills forms from the cases R1c made); R1a last: its --reset empties the workspace.
     [ -f "$RT/check_runtime_r1d.ts" ] && run check_runtime_r1d.ts "$RN" $TSX "$RT/check_runtime_r1d.ts" "$RP" "xr_studio_$RN"
+    # Pack 4's C6.11 acceptance test (firm, users and case team; runtime lane M3-A3) on the same copy, before R1a's --reset.
+    [ -f "$S/acceptance/C6.11.test.ts" ] && run C6.11.test.ts "$RN" $TSX "$S/acceptance/C6.11.test.ts" "$RP" "xr_studio_$RN"
     run check_runtime_r1a.ts "$RN" $TSX "$RT/check_runtime_r1a.ts" "$RP" "xr_studio_$RN" --reset
   else rows+=("| check_runtime_r1a.ts | FAIL | | isolated copy runtime_r1 or setup_visitor_visa.ts failed (see setup_visitor_visa.log) |"); fail=1; fi
   zsh "$S/tools/isolated.sh" "$RN" "$RP" stop >/dev/null 2>&1
