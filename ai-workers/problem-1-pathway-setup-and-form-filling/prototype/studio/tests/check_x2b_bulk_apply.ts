@@ -51,15 +51,18 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
 
   // ------------------------------------------------------------ BR-C2, BR-C3: add a form
   // The source line has settings of its own, so the copy is seen to carry them (who, channel, signature, age, copies).
-  sql(`update combination_form set min_age=18, copies=2, signed_by='principal_applicant' where combination_id='${WP}' and lineage_key='IMM 5476'`);
+  // Review m1: settings that differ from the defaults (signature, "only if"), so dropping one from the copy fails a check.
+  sql(`update combination_form set min_age=18, copies=2, signed_by='principal_applicant', signature='HAND_SCANNED', attach_mode='ANSWER_CONDITIONAL', predicate_json='{"field":"person.marital_status","op":"eq","value":"married"}', condition_plain='Sample: married applicants' where combination_id='${WP}' and lineage_key='IMM 5476'`);
   const before = counted();
   const key = randomUUID();
   r = await apply(form("IMM 5476"), "add", [VV, SP], { idempotencyKey: key });
   const batch1 = r.body?.batchId as string;
   ok("C1.5 BR-C3 pass: IMM 5476 is added to Visitor visa and Study permit in one batch, with the toast's words", r.status === 200 && r.body.changed.length === 2 && r.body.message === "IMM 5476 added to 2 combinations (draft changes in each)." && !r.body.replayed, r.body);
   ok("C1.5 BR-C3: one batch row, two new draft lines", sql(`select count(*) from line_batch where id='${batch1}'`) === "1" && lines(VV, "IMM 5476") === "1:DRAFT" && lines(SP, "IMM 5476") === "1:DRAFT", [lines(VV, "IMM 5476"), lines(SP, "IMM 5476")]);
-  const copy = sql(`select who||'|'||channel||'|'||signature||'|'||coalesce(min_age::text,'-')||'|'||copies||'|'||coalesce(signed_by,'-')||'|'||origin||'|'||coalesce(finder_batch_id::text,'-') from combination_form where combination_id='${VV}' and lineage_key='IMM 5476'`);
-  ok("C1.5 BR-C2 pass: copied who, channel, signature, minimum age, copies and signer; never an AI origin or a finder run", copy === "principal_applicant|PDF_UPLOAD|NONE|18|2|principal_applicant|HUMAN|-", copy);
+  const COPY = (cid: string) => sql(`select who||'|'||channel||'|'||signature||'|'||coalesce(min_age::text,'-')||'|'||copies||'|'||coalesce(signed_by,'-')||'|'||attach_mode||'|'||coalesce(predicate_json::text,'-')||'|'||coalesce(condition_plain,'-')||'|'||origin||'|'||coalesce(finder_batch_id::text,'-') from combination_form where combination_id='${cid}' and lineage_key='IMM 5476' order by version desc limit 1`);
+  const SRC = sql(`select who||'|'||channel||'|'||signature||'|'||coalesce(min_age::text,'-')||'|'||copies||'|'||coalesce(signed_by,'-')||'|'||attach_mode||'|'||coalesce(predicate_json::text,'-')||'|'||coalesce(condition_plain,'-') from combination_form where combination_id='${WP}' and lineage_key='IMM 5476' order by version desc limit 1`) + "|HUMAN|-";
+  const copy = COPY(VV);
+  ok("C1.5 BR-C2 pass: copied who, channel, signature, minimum age, copies, signer and \"only if\"; never an AI origin or a finder run", copy === SRC && /HAND_SCANNED/.test(copy) && /marital_status/.test(copy), { copy, SRC });
   const quote = sql(`select source_quote from combination_form where combination_id='${VV}' and lineage_key='IMM 5476'`);
   ok("C1.5 BR-C2: the copy's origin reads \"copied from\" the source's trail", /^Copied from .+›.+/.test(quote), quote);
   ok("C1.5: each combination's own Undo step is recorded under the batch (its draft bar shows its own change)", sql(`select count(*) from form_line_action where detail->>'batch_id'='${batch1}' and undone_at is null`) === "2");
@@ -174,6 +177,58 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   const body = { line: form("IMM 5476"), op: "add", combinationIds: [VV, SP], include: [VV, SP], idempotencyKey: k2 };
   const [p1, p2] = await Promise.all([call("POST", "/lines/bulk", body), call("POST", "/lines/bulk", body)]);
   ok("C1.5 BR-C3 retry at once: two identical requests sent together make one batch and one line per combination", p1.status === 200 && p2.status === 200 && p1.body.batchId === p2.body.batchId && sql(`select count(*) from line_batch where idempotency_key='${k2}'`) === "1" && lines(VV, "IMM 5476") === "1:DRAFT", { p1: p1.status, p2: p2.status, w: words(p2) });
+
+  // ------------------------------------------------------------ review M1: a target that had the form before gets the source's line
+  // (1) a draft-only line removed in place (v1 RETIRED, no earlier version): addFormLine flips it back; it takes the source's settings.
+  sql(`delete from combination_form where combination_id='${SV}' and lineage_key='IMM 5476'`);
+  sql(`insert into combination_form (id, workspace_id, combination_id, gov_form_def_id, lineage_key, who, attach_mode, source_quote, version, status, origin, updated_by) select gen_random_uuid(), '${ws}', '${SV}', gov_form_def_id, 'IMM 5476', 'each_applicant', 'COMBINATION_MANDATORY', 'old', 1, 'RETIRED', 'AI_FOUND', 'user-A' from combination_form where combination_id='${WP}' and lineage_key='IMM 5476' limit 1`);
+  r = await apply(form("IMM 5476"), "add", [SV]);
+  ok("C1.5 review M1 (draft-only line removed in place): the line written is the source's line, \"copied from\"", r.status === 200 && lines(SV, "IMM 5476") === "1:DRAFT" && COPY(SV) === SRC && /^Copied from/.test(sql(`select source_quote from combination_form where combination_id='${SV}' and lineage_key='IMM 5476'`)), { s: r.status, c: COPY(SV) });
+  // (2) after a released removal (v1 superseded, v2 RETIRED): addFormLine makes v3; it takes the source's settings.
+  sql(`delete from combination_form where combination_id='${SV}' and lineage_key='IMM 5476'`);
+  sql(`insert into combination_form (id, workspace_id, combination_id, gov_form_def_id, lineage_key, who, attach_mode, condition_plain, source_quote, version, status, origin, updated_by) select '00000000-0000-4000-8000-0000000000b1', '${ws}', '${SV}', gov_form_def_id, 'IMM 5476', 'each_applicant', 'ANSWER_CONDITIONAL', 'Sample old condition', 'old', 1, 'SUPERSEDED', 'HUMAN', 'user-A' from combination_form where combination_id='${WP}' and lineage_key='IMM 5476' limit 1`);
+  sql(`insert into combination_form (id, workspace_id, combination_id, gov_form_def_id, lineage_key, who, attach_mode, condition_plain, source_quote, version, status, supersedes_id, origin, updated_by) select gen_random_uuid(), workspace_id, combination_id, gov_form_def_id, lineage_key, who, attach_mode, condition_plain, source_quote, 2, 'RETIRED', id, 'HUMAN', 'user-A' from combination_form where id='00000000-0000-4000-8000-0000000000b1'`);
+  r = await apply(form("IMM 5476"), "add", [SV]);
+  ok("C1.5 review M1 (after a released removal): the new version is the source's line, not the old one", r.status === 200 && lines(SV, "IMM 5476") === "1:SUPERSEDED,2:RETIRED,3:DRAFT" && COPY(SV) === SRC, { s: r.status, l: lines(SV, "IMM 5476"), c: COPY(SV) });
+  sql(`delete from combination_form where combination_id='${SV}' and lineage_key='IMM 5476'`);
+
+  // ------------------------------------------------------------ review m4: removal of a draft-only line, and Undo refusals for a removal
+  sql(`delete from combination_form where combination_id='${VV}' and lineage_key='IMM 5476'`);
+  r = await apply(form("IMM 5476"), "add", [VV]);
+  r = await apply(form("IMM 5476"), "remove", [VV]);
+  const batchRm2 = r.body?.batchId as string;
+  ok("C1.5 review m4: removing a draft-only line retires it in place (no new version)", r.status === 200 && lines(VV, "IMM 5476") === "1:RETIRED", lines(VV, "IMM 5476"));
+  sql(`insert into library_change (id, workspace_id, kind, key, action, status, proposed_by) values (gen_random_uuid(), '${ws}', 'library_form', 'IMM 5476', 'RETIRE', 'WAITING', 'user-B')`);
+  r = await undo(batchRm2);
+  ok("C1.5 BR-C4 fail: undoing a removal never brings back a form whose retirement is open on To review", r.status === 409 && /open on To review/.test(words(r)) && lines(VV, "IMM 5476") === "1:RETIRED", words(r));
+  sql(`delete from library_change where key='IMM 5476' and action='RETIRE'`);
+  sql(`update combination_form set copies=3, updated_by='user-B', updated_at=now() where combination_id='${VV}' and lineage_key='IMM 5476'`);
+  r = await undo(batchRm2);
+  ok("C1.5 review m3: a refused Undo of a removal says \"after the removal\"", r.status === 409 && /was changed after the removal \(IMM 5476 removed, by Approver/.test(words(r)), words(r));
+  sql(`update combination_form set copies=2, updated_by='user-A' where combination_id='${VV}' and lineage_key='IMM 5476'`);
+  r = await undo(batchRm2);
+  ok("C1.5 BR-C4 pass: the removal undone, the draft line is back", r.status === 200 && lines(VV, "IMM 5476") === "1:DRAFT", lines(VV, "IMM 5476"));
+  ok("C1.5: the Undo writes one batch-level audit line too", sql(`select count(*) from audit_event where entity='line batch' and action='undone' and entity_key='bulk:${batchRm2}'`) === "1");
+  r = await call("POST", "/lines/bulk", { line: doc(PASSPORT), op: "add", combinationIds: [SP], include: [SP], idempotencyKey: "doc-retired-key" });
+  const rmDoc = await apply(doc(PASSPORT), "remove", [SP]);
+  sql(`update document_type set status='RETIRED' where document_type_key='${T}'`);
+  r = await undo(rmDoc.body?.batchId);
+  ok("C1.5 BR-C4 fail: undoing a document removal never brings back a document type retired in the library", rmDoc.status === 200 && r.status === 409 && /retired in the library/.test(words(r)), { rm: rmDoc.status, w: words(r) });
+  sql(`update document_type set status='PUBLISHED' where document_type_key='${T}'`);
+  // nit: a replay of an undone batch says it was undone
+  r = await call("POST", "/lines/bulk", { line: form("IMM 5476"), op: "add", combinationIds: [VV, SP], include: [VV, SP], idempotencyKey: key });
+  ok("C1.5 BR-C3 retry of an undone batch: says it was undone, changes nothing", r.status === 200 && r.body.replayed && /and undone by Configuration author at/.test(r.body.message), r.body?.message);
+
+  // ------------------------------------------------------------ review M2: a bulk add racing the Forms tab's own Add never answers 500
+  let five = 0; const seen = new Set<string>();
+  for (let i = 0; i < 4; i++) {
+    sql(`delete from combination_form where combination_id in ('${VV}','${SV}') and lineage_key='IMM 5707'`);
+    const [bulk, single] = await Promise.all([apply(form("IMM 5707"), "add", [VV, SV]), call("POST", `/combinations/${VV}/forms`, { formKey: "IMM 5707" })]);
+    if (bulk.status >= 500 || single.status >= 500) five++;
+    seen.add(`${bulk.status}/${single.status}`);
+    if (bulk.status === 200) await undo(bulk.body.batchId);
+  }
+  ok("C1.5 review M2: four races of a bulk add against a single Add: no 500 (a loser is a 409 in words)", five === 0 && [...seen].every((x) => /^(200|409)\/(201|200|409)$/.test(x)), [...seen]);
 
   console.log(`\n${pass}/${pass + fail} passed`);
   process.exit(fail ? 1 : 0);

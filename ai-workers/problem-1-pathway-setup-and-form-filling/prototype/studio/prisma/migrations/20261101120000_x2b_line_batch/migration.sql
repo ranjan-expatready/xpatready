@@ -18,8 +18,11 @@ CREATE TABLE "line_batch" (
     "undone_at" TIMESTAMPTZ,
     "undone_by" TEXT,
 
-    CONSTRAINT "line_batch_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "line_batch_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "line_batch_op_check" CHECK ("op" IN ('add', 'remove')),
+    CONSTRAINT "line_batch_kind_check" CHECK ("kind" IN ('form', 'document'))
 );
 
-CREATE UNIQUE INDEX "line_batch_idempotency_key_key" ON "line_batch"("idempotency_key");
+-- The request key is unique within a workspace (as the other keyed tables).
+CREATE UNIQUE INDEX "line_batch_workspace_id_idempotency_key_key" ON "line_batch"("workspace_id", "idempotency_key");
 CREATE INDEX "line_batch_workspace_id_at_idx" ON "line_batch"("workspace_id", "at");

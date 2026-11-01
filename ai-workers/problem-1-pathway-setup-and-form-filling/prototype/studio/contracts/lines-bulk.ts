@@ -80,5 +80,5 @@ export type ApplyResult = { batchId: string; op: BulkOp; changed: { combinationI
 export type UndoResult = { batchId: string; undone: { combinationId: string; trail: string[] }[]; message: string };
 /** Concept §4 "After": the toast. */
 export const appliedWords = (line: string, op: BulkOp, n: number) => `${line} ${op === "add" ? "added to" : "removed from"} ${n} combination${n === 1 ? "" : "s"} (draft changes in each).`;
-/** Concept §5 "Undo refused". */
-export const undoRefusedWords = (combination: string, what: string, who: string, time: string) => `${combination} was changed after the copy (${what}, by ${who} at ${time}). Nothing was undone.`;
+/** Concept §5 "Undo refused" (review m3: a removal says removal). */
+export const undoRefusedWords = (op: BulkOp, combination: string, what: string, who: string, time: string) => `${combination} was changed after the ${op === "add" ? "copy" : "removal"} (${what}, by ${who} at ${time}). Nothing was undone.`;

@@ -162,7 +162,9 @@ export class LinesBulk {
     const b = parsed.data;
     const include = [...new Set(b.include)];
     if (include.some((id) => !b.combinationIds.includes(id))) throw problem(400, "Not previewed", "A ticked combination is not one of those you previewed. Preview again.", { errors: [{ field: "include", message: "Preview again." }] });
-    const prior = await this.db.lineBatch.findUnique({ where: { idempotencyKey: b.idempotencyKey } });
+    const ws0 = (await this.db.combination.findUnique({ where: { id: b.line.combinationId }, select: { workspaceId: true } }))?.workspaceId;
+    const byKey = (db: Tx) => (ws0 ? db.lineBatch.findUnique({ where: { workspaceId_idempotencyKey: { workspaceId: ws0, idempotencyKey: b.idempotencyKey } } }) : Promise.resolve(null));
+    const prior = await byKey(this.db);
     if (prior) return this.replay(prior, actor, b);
     // attachNow's two refusals the preview does not run (review of #254): a form listed by IRCC with no file at all, and a
     // form whose only file still waits for a second person, are never put on a combination.
@@ -178,9 +180,12 @@ export class LinesBulk {
     try {
       return await this.db.$transaction(async (tx) => {
         // Two applies on the same combinations run one after the other: the targets' rows are locked in one order.
-        await tx.$queryRaw`SELECT id FROM combination WHERE id = ANY(${[...include].sort()}::uuid[]) ORDER BY id FOR UPDATE`;
+        // Review M2: NO KEY UPDATE, so a single Add on one of these combinations (whose new line's foreign key takes a key
+        // share lock on the combination row) is not blocked into a deadlock; two bulk applies still queue on each other.
+        await tx.$executeRaw`SET LOCAL lock_timeout = '10s'`;
+        await tx.$queryRaw`SELECT id FROM combination WHERE id = ANY(${[...include].sort()}::uuid[]) ORDER BY id FOR NO KEY UPDATE`;
         // The same key sent twice at once: the second waits on the lock above, then answers the first one's batch.
-        const first = await tx.lineBatch.findUnique({ where: { idempotencyKey: b.idempotencyKey } });
+        const first = await byKey(tx);
         if (first) return this.replay(first, actor, b);
         const pv = await this.evaluate(tx, b);
         const ticked = include.map((id) => pv.targets.find((t) => t.combinationId === id)!);
@@ -200,9 +205,13 @@ export class LinesBulk {
     } catch (e) {
       // The same key sent twice at once: the second one's insert meets the first one's batch, and answers it.
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-        const first = await this.db.lineBatch.findUnique({ where: { idempotencyKey: b.idempotencyKey } });
+        const first = await byKey(this.db);
         if (first) return this.replay(first, actor, b);
       }
+      // Review M2, m4: a deadlock, a lock wait, a write conflict or a line another request wrote at the same moment is
+      // answered in words, never a 500; nothing was written (the transaction rolled back).
+      if (e instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2034", "P2010"].includes(e.code) || /40P01|55P03|deadlock|lock timeout/i.test(String((e as Error)?.message ?? "")))
+        throw problem(409, "Busy", "These combinations were being changed by another request at the same moment. Nothing was changed. Preview again, then try once more.");
       throw e;
     }
   }
@@ -216,8 +225,12 @@ export class LinesBulk {
         const def = await tx.govFormDef.findUniqueOrThrow({ where: { workspaceId_formKey: { workspaceId: ws, formKey: key } }, select: { id: true } });
         const r = await addFormLine(tx, { workspaceId: ws, combinationId: id, govFormDefId: def.id, formKey: key, who: line.who, origin: "HUMAN", by: actor.id, sourceQuote: `Copied from ${from}`, attachMode: line.attachMode as "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL", conditionPlain: line.conditionPlain });
         if (r === "already") throw changed();
-        // A new line takes the rest of the source line's settings; a removed line that comes back keeps its own (addFormLine).
-        if (!before.length) await tx.combinationForm.updateMany({ where: { combinationId: id, lineageKey: key, version: 1, status: "DRAFT" }, data: { predicateJson: (line.predicateJson ?? Prisma.DbNull) as Prisma.InputJsonValue, ...line.copied } });
+        // Review M1: the line written is the source's line, as the preview checked it. A released line that comes back
+        // (its draft's removal taken back) stays as released, which the preview says; any other line addFormLine wrote
+        // (new, a draft-only line flipped back, or a new version after a released removal) is a draft and takes the source's
+        // settings whole.
+        const top = (await tx.combinationForm.findMany({ where: { combinationId: id, lineageKey: key }, orderBy: { version: "desc" }, take: 1 }))[0];
+        if (top?.status === "DRAFT") await tx.combinationForm.update({ where: { id: top.id }, data: { who: line.who, attachMode: line.attachMode as "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL", predicateJson: (line.predicateJson ?? Prisma.DbNull) as Prisma.InputJsonValue, conditionPlain: line.conditionPlain, sourceQuote: `Copied from ${from}`.slice(0, 500), origin: "HUMAN", finderBatchId: null, updatedBy: actor.id, ...line.copied } });
         await recordAction(tx, { workspaceId: ws, combinationId: id, action: "attach", codes: [key], before, by: actor.id, batchId });
       } else {
         // As a single removal (studio.ts saveForm): a draft changes in place, a released line gets a removing draft version.
@@ -250,13 +263,13 @@ export class LinesBulk {
   }
 
   /** The same key again: the first request's answer, never a second change. Another change under the same key is refused. */
-  private async replay(prior: { id: string; actor: string; op: string; kind: string; lineKey: string; sourceCombinationId: string; workspaceId: string; targets: Prisma.JsonValue }, actor: Actor, b: BulkApply): Promise<ApplyResult> {
+  private async replay(prior: { id: string; actor: string; undoneAt: Date | null; undoneBy: string | null; op: string; kind: string; lineKey: string; sourceCombinationId: string; workspaceId: string; targets: Prisma.JsonValue }, actor: Actor, b: BulkApply): Promise<ApplyResult> {
     if (prior.actor !== actor.id || prior.op !== b.op || prior.kind !== b.line.kind || prior.lineKey !== b.line.key || prior.sourceCombinationId !== b.line.combinationId) throw problem(409, "Key used", "That request key was already used for another change. Reload the page.");
     const targets = prior.targets as unknown as BatchTarget[];
     const trails = await this.trails(this.db, prior.workspaceId);
     const combos = await this.db.combination.findMany({ where: { id: { in: targets.map((t) => t.combinationId) } }, select: { id: true, label: true, programDefId: true } });
     const short = targets[0]?.short ?? b.line.key;
-    return { batchId: prior.id, op: b.op, changed: targets.map((t) => { const c = combos.find((x) => x.id === t.combinationId); return { combinationId: t.combinationId, trail: c ? trails(c) : [t.label] }; }), message: appliedWords(short, b.op, targets.length), replayed: true };
+    return { batchId: prior.id, op: b.op, changed: targets.map((t) => { const c = combos.find((x) => x.id === t.combinationId); return { combinationId: t.combinationId, trail: c ? trails(c) : [t.label] }; }), message: prior.undoneAt ? `${appliedWords(short, b.op, targets.length).replace(/\.$/, "")}, and undone by ${nameOf(prior.undoneBy)} at ${hhmm(prior.undoneAt)}. Nothing changed now.` : appliedWords(short, b.op, targets.length), replayed: true };
   }
 
   /** POST /lines/bulk/:batchId/undo (BR-C4): every target of the batch goes back to how it was, together, while none of
@@ -306,10 +319,10 @@ export class LinesBulk {
         if (!moved && !gone) continue;
         if (moved) {
           const what = `${t.short} ${moved.status === "RETIRED" ? "removed" : moved.status === "PUBLISHED" ? "released" : "changed"}`;
-          throw problem(409, "Changed since", undoRefusedWords(t.label, what, nameOf(moved.updatedBy), hhmm(moved.updatedAt)), { combinationId: t.combinationId });
+          throw problem(409, "Changed since", undoRefusedWords(bt.op as "add" | "remove", t.label, what, nameOf(moved.updatedBy), hhmm(moved.updatedAt)), { combinationId: t.combinationId });
         }
         const own = kind === "form" ? (await tx.formLineAction.findMany({ where: { combinationId: t.combinationId, undoneAt: { not: null } }, orderBy: { undoneAt: "desc" } })).find((a) => (a.detail as { batch_id?: string } | null)?.batch_id === bt.id) : undefined;
-        throw problem(409, "Changed since", undoRefusedWords(t.label, own ? "its own Undo on its Forms tab" : "the line was taken out", own ? nameOf(own.undoneBy) : "another person", own?.undoneAt ? hhmm(own.undoneAt) : "an unknown time"), { combinationId: t.combinationId });
+        throw problem(409, "Changed since", undoRefusedWords(bt.op as "add" | "remove", t.label, own ? "its own Undo on its Forms tab" : "the line was taken out", own ? nameOf(own.undoneBy) : "another person", own?.undoneAt ? hhmm(own.undoneAt) : "an unknown time"), { combinationId: t.combinationId });
       }
       for (const t of targets) {
         const keep = new Set(t.before.map((r) => String(r.id)));
@@ -327,6 +340,7 @@ export class LinesBulk {
       // The combinations' own Undo steps for this batch are spent with it.
       await tx.$executeRaw`UPDATE form_line_action SET undone_at = now(), undone_by = ${actor.id} WHERE combination_id = ANY(${ids}::uuid[]) AND undone_at IS NULL AND detail->>'batch_id' = ${bt.id}`;
       const audit = new Audit(tx as unknown as Db);
+      await audit.log(bt.workspaceId, actor.id, "undone", "line batch", `bulk:${bt.id}`, `${actor.name} undid the ${bt.op === "add" ? "copy" : "removal"} of ${targets[0]?.short ?? bt.lineKey} on ${targets.length} combination${targets.length === 1 ? "" : "s"} (one batch)`, { batchId: bt.id, targets: ids });
       for (const t of targets) await audit.log(bt.workspaceId, actor.id, "undone", kind === "form" ? "form" : "document requirement", t.keys.join(", ").slice(0, 120), `${actor.name} undid the ${bt.op === "add" ? "copy" : "removal"} of ${t.short} on "${t.label}" (one batch of ${targets.length})`, { batchId: bt.id }, t.combinationId);
     });
     const trails = await this.trails(this.db, bt.workspaceId);
