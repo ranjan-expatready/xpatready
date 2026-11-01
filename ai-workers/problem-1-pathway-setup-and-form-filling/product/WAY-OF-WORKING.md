@@ -66,9 +66,9 @@ The tech lead is a consultant, not an order-taker. These steps come before any a
 `PRODUCT.md` (what we build) · `BACKLOG.md` (work, in order) · `STATE.md` (one page) · `DECISIONS.md` · `ASSUMPTIONS.md` · `STANDARDS.md`, `EXPERIENCE.md`, `QUALITY.md` (the bar; full scoring at milestones) · `qa/BUGS.md`, `qa/CAPABILITIES.md` · `screens/<item>/` (board, plan, review) · `DEMO.md`, `STAND-INS.md` · `ENVIRONMENT.md`. The `lanes/` files are frozen, and they leave once the PRs that still edit them have merged.
 
 ## Numbers (on demand, kept current by the tech lead)
-Capabilities working per milestone · PRs merged and their median time from start to merge · bugs found after merge · the tech lead's share of commits · AI spend. If bugs after merge rise, the part that caused it goes back.
+Capabilities working per milestone · PRs merged and their median time from start to merge · bugs found after merge · the tech lead's share of commits · AI spend. Merge flow, daily during the P-213 trial: merges an hour, batch check minutes (longest shard), wasted runner time (cancelled plus failed batches), GitHub Actions spend. If bugs after merge rise, the part that caused it goes back.
 
 ## Founder's answers (30 Oct)
-1. **Checks machine:** the Mac's runner runs CI (US$0); revisit if waits pass 30 minutes. Next step from the research: a fast check on each PR and the full set as the second gate.
+1. **Checks machine** (amended 1 Nov, P-210, P-213): builders' PRs get the fast checks on the Mac; each merge-queue batch runs the full affected suites on four GitHub Linux machines at once (`run-suites.sh --shard i/4`), one batch at a time; the nightly full run stays on the Mac. Spend is capped by the founder's GitHub Actions budget (US$30 for the 1–3 Nov trial). Fallback in one step: repository variable `BATCH_RUNNER=mac`.
 2. **Demos:** on demand. The demo updates to `main` after every merge; early looks for new screens stay.
 3. **Briefs:** on demand. The tech lead writes unasked only when a decision, a risk or a spend needs the founder.

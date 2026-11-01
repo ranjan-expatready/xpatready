@@ -1,10 +1,11 @@
-// S5 Questionnaires tab (W1-08, P-119, walkthrough v2 S5): "Who can be in this application" edited at the top (it decides
-// each person's questions; challenge M3, M4), then slice 2's questions per person: wording, who fills it, only if, the
+// S5 Questionnaires tab (W1-08, P-119, walkthrough v2 S5): "Who can be in this application" (it decides each person's
+// questions; challenge M3, M4) is edited in Before forms on the Forms tab since slice C1 (P-161 (2)); this file keeps
+// its card (WhoCanBe) and the tab links to it. Then slice 2's questions per person: wording, who fills it, only if, the
 // forms that need it, coverage (a gap blocks release), field codes only in a question's side panel (early-look fix 3);
 // the rules and checks used here fold below (m4). People pick from the shared library's person roles; a new kind of
 // person is added there (S6), never here.
 import * as React from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { BookOpen, ChevronDown, Plus, Undo2, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -28,7 +29,7 @@ const TIPS = {
 export function QuestionnairesTab({ id, people, questionnaire, available }: { id: string; people: PeopleView; questionnaire: QuestionnairesView | null; available: { key: string; title: string }[] }) {
   return (
     <div className="space-y-6">
-      <WhoCanBe id={id} v={people} />
+      <p className="text-sm text-text-muted" data-who-can-be-moved>Who can be in this application ({people.lines.filter((l) => l.max > 0).map((l) => l.label).join(", ") || "nobody yet"}) is set before the forms. <Link className="text-text-link underline" to={`/c/${id}/forms?focus=people%3Acard`}>Change on Forms</Link></p>
       <QuestionsByPerson id={id} q={questionnaire} available={available} />
       <ConfigArea id={id} areas={["rules", "checks"]} />
     </div>
@@ -37,9 +38,13 @@ export function QuestionnairesTab({ id, people, questionnaire, available }: { id
 
 type Line = PeopleLine & { label: string };
 const toLines = (v: PeopleView): Line[] => v.lines.map((l) => ({ role: l.role, label: l.label, min: l.min, max: l.max, applies: l.applies, preview: l.preview, quote: l.quote ?? null, origin: l.origin }));
+/** The folded line's plain words (board P-161 (2), Lead C1 decision 4): "Principal applicant (always) · Dependent child,
+ *  0–5 (optional)"; exact counts and who files their own application stay in Show and edit. A role whose most is 0
+ *  cannot be in the application, so the folded line leaves it out (#139 review). */
+const plainWords = (label: string, l: { min: number; max: number }) => `${label}${l.max > 1 ? `, ${l.min}–${l.max}` : ""} (${l.min > 0 ? "always" : "optional"})`;
 const howMany = (l: { min: number; max: number }) => (l.min === l.max ? (l.min === 1 ? "exactly 1" : `exactly ${l.min}`) : `${l.min} to ${l.max}`);
 
-function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
+export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
   const qc = useQueryClient(); const toast = useToast();
   const { canAuthor } = useSessionView();
   const [editing, setEditing] = React.useState(false);
@@ -82,10 +87,13 @@ function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
     catch (e) { toast.push({ tone: "danger", text: (e as Error).message }); refresh(); } finally { setBusy(false); }
   };
   const err = (i: number, f: string) => errors[`participants[${i}].${f}`];
+  // QA-77 (C11.12, L7): one name per person on the page, as the header and Overview say it: the combination's own label
+  // (kept when typed on purpose), else the shared library's name.
+  const nameOf = (l: { role: string; label?: string | null }) => l.label || role(l.role)?.label || l.role;
   const shown = editing ? lines : toLines(v);
   if (!unfolded && !editing && !filling) return (
     <section aria-labelledby="who-can-be" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-surface-raised px-5 py-3 shadow-sm" data-who-can-be data-folded>
-      <p className="min-w-0 text-sm"><span id="who-can-be" className="font-semibold">Who can be in this application</span> <span className="text-text-muted">· {shown.map((l) => `${role(l.role)?.label ?? l.label} ${howMany(l)}`).join(" · ")}{shown.filter((l) => l.applies).length > 1 ? " · each applicant files their own application" : ""}</span></p>
+      <p className="min-w-0 text-sm"><span id="who-can-be" className="font-semibold">Who can be in this application</span> <span className="text-text-muted" data-people-words>· {shown.filter((l) => l.max > 0).map((l) => plainWords(nameOf(l), l)).join(" · ")}</span></p>
       <Button size="sm" variant="ghost" onClick={() => setUnfolded(true)} aria-expanded={false}><ChevronDown /> {canAuthor ? "Show and edit" : "Show"}</Button>
     </section>
   );
@@ -113,14 +121,14 @@ function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
             const r = role(l.role); const principal = l.role === "principal";
             return (
               <tr key={l.role} className="border-b border-border last:border-0 align-top" data-person={l.role}>
-                <td className="py-2 pr-3"><span className="font-medium">{r?.label ?? l.label}</span>{r && !r.mayBeApplicant ? <p className="text-xs text-text-muted">never an applicant</p> : null}{err(i, "role") ? <p role="alert" className="text-xs text-text-danger">{err(i, "role")}</p> : null}</td>
+                <td className="py-2 pr-3"><span className="font-medium">{nameOf(l)}</span>{r && r.label !== nameOf(l) ? <p className="text-xs text-text-muted" data-library-role>role: {r.label}</p> : null}{r && !r.mayBeApplicant ? <p className="text-xs text-text-muted">never an applicant</p> : null}{err(i, "role") ? <p role="alert" className="text-xs text-text-danger">{err(i, "role")}</p> : null}</td>
                 <td className="py-2 pr-3">{editing && !principal ? (
-                  <span className="flex items-center gap-1.5"><Input aria-label={`Fewest ${r?.label ?? l.role}`} className="h-8 w-14" inputMode="numeric" value={String(l.min)} onChange={(e) => set(i, { min: Number(e.target.value.replace(/\D/g, "").slice(0, 1) || 0) })} /><span className="text-text-muted">to</span><Input aria-label={`Most ${r?.label ?? l.role}`} className="h-8 w-14" inputMode="numeric" value={String(l.max)} onChange={(e) => set(i, { max: Number(e.target.value.replace(/\D/g, "").slice(0, 1) || 0) })} /></span>
+                  <span className="flex items-center gap-1.5"><Input aria-label={`Fewest ${nameOf(l)}`} className="h-8 w-14" inputMode="numeric" value={String(l.min)} onChange={(e) => set(i, { min: Number(e.target.value.replace(/\D/g, "").slice(0, 1) || 0) })} /><span className="text-text-muted">to</span><Input aria-label={`Most ${nameOf(l)}`} className="h-8 w-14" inputMode="numeric" value={String(l.max)} onChange={(e) => set(i, { max: Number(e.target.value.replace(/\D/g, "").slice(0, 1) || 0) })} /></span>
                 ) : howMany(l)}{err(i, "max") || err(i, "min") ? <p role="alert" className="text-xs text-text-danger">{err(i, "max") ?? err(i, "min")}</p> : null}</td>
-                <td className="py-2 pr-3">{editing && !principal && r?.mayBeApplicant ? <label className="flex items-center gap-2"><input type="checkbox" checked={l.applies} onChange={(e) => set(i, { applies: e.target.checked })} aria-label={`${r?.label ?? l.role} files their own application`} /> {l.applies ? "Yes" : "No"}</label> : l.applies ? "Yes" : <span className="text-text-muted">—</span>}{err(i, "applies") ? <p role="alert" className="text-xs text-text-danger">{err(i, "applies")}</p> : null}</td>
+                <td className="py-2 pr-3">{editing && !principal && r?.mayBeApplicant ? <label className="flex items-center gap-2"><input type="checkbox" checked={l.applies} onChange={(e) => set(i, { applies: e.target.checked })} aria-label={`${nameOf(l)} files their own application`} /> {l.applies ? "Yes" : "No"}</label> : l.applies ? "Yes" : <span className="text-text-muted">—</span>}{err(i, "applies") ? <p role="alert" className="text-xs text-text-danger">{err(i, "applies")}</p> : null}</td>
                 <td className="py-2 pr-3 text-text-muted">{v.lines.find((x) => x.role === l.role)?.answeredBy ?? (l.role === "child" ? "Principal, under 18" : "Themselves")}</td>
                 <td className="max-w-72 py-2 pr-3 text-xs text-text-muted">{l.quote ? `"${l.quote}"` : l.origin === "AI_PROPOSAL" || l.origin === "CODE_MATCH" ? "" : "—"}{l.origin === "AI_PROPOSAL" ? <Pill tone="ai" className="ml-1">AI</Pill> : l.origin === "CODE_MATCH" ? <span data-origin-rules><Pill className="ml-1" title="Found by rules in the guide's sentences; no AI">Rules</Pill></span> : null}</td>
-                {editing ? <td className="py-2">{principal ? null : <Button size="icon" variant="ghost" aria-label={`Remove ${r?.label ?? l.role}`} onClick={() => setLines((ls) => ls.filter((_, j) => j !== i))}><X /></Button>}</td> : null}
+                {editing ? <td className="py-2">{principal ? null : <Button size="icon" variant="ghost" aria-label={`Remove ${nameOf(l)}`} onClick={() => setLines((ls) => ls.filter((_, j) => j !== i))}><X /></Button>}</td> : null}
               </tr>
             );
           })}

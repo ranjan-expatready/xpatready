@@ -15,6 +15,7 @@ import { PreviewTab as StudioPreview } from "@/pages/preview";
 import { ReviewTab } from "@/pages/review";
 import { OverviewTab } from "@/pages/workspace/overview";
 import { FormsTab } from "@/pages/workspace/forms";
+import { BeforeForms } from "@/components/before-forms";
 import { QuestionnairesTab } from "@/pages/workspace/questionnaires";
 import { DocumentsTab } from "@/pages/workspace/documents";
 import { PreviewTab, usePreviewParams } from "@/pages/workspace/preview";
@@ -76,6 +77,10 @@ export function CombinationPage() {
     changes ? `${changes} draft change${changes === 1 ? "" : "s"}` : last ? "draft matches the release" : null,
     d.submission?.status === "SUBMITTED" ? (d.submission.stale ? "submitted, then changed" : "in review") : null,
     d.allowed_locations?.length ? `cases opened ${d.allowed_locations.map((l) => l === "inside_canada" ? "inside Canada" : "outside Canada").join(" or ")}` : null,
+    // C1.6 (Screen 03 concept: the facts line names the filing method, before the people): how the application is
+    // filed, from its form lines; said only once a form that is actually filed is on it (not a checklist, not a line
+    // marked Not needed: review c16 m1).
+    sum.data?.forms?.some((f) => !f.document && f.channel !== "NOT_NEEDED") ? `filing: ${sum.data.filing}` : null,
     `people: ${peopleWords(c.participants)}`,
     c.source_basis === "ILLUSTRATIVE" ? "Sample" : null, // SC-5: no "source-backed" jargon in the subtitle
   ].filter(Boolean).join(" · ");
@@ -119,7 +124,7 @@ function WorkspaceTab({ id, tab, hasRelease }: { id: string; tab: "forms" | "que
   if (w.isLoading) return <Spinner label={`Loading ${tab}`} />;
   if (w.isError || !w.data) return <ErrorState title="This tab could not be loaded" description={(w.error as Error | null)?.message ?? "No answer from the studio."} action={<button className="text-text-link underline" onClick={() => void w.refetch()}>Try again</button>} />;
   const v = w.data;
-  if (v.tab === "forms") return <FormsTab id={id} lines={v.lines} filing={v.filing} filingDetail={v.filingDetail} account={v.account ?? null} accountKey={v.accountKey ?? null} problems={v.problems} removed={v.removed} fromLibrary={v.fromLibrary} lastChange={v.lastChange} />;
+  if (v.tab === "forms") return <div className="space-y-6"><BeforeForms id={id} people={v.people} /><FormsTab id={id} lines={v.lines} filing={v.filing} filingDetail={v.filingDetail} account={v.account ?? null} accountKey={v.accountKey ?? null} problems={v.problems} removed={v.removed} fromLibrary={v.fromLibrary} lastChange={v.lastChange} /></div>;
   if (v.tab === "questionnaires") return <QuestionnairesTab id={id} people={v.people} questionnaire={v.questionnaire} available={v.available} />;
   if (v.tab === "preview") return <PreviewTab id={id} p={v.preview} empty={v.empty} fetching={w.isFetching} hasRelease={hasRelease} />;
   return null;
