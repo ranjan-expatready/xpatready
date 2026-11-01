@@ -44,7 +44,7 @@ const step = (name, c, detail) => { c ? pass++ : failed++; console.log(`${c ? "P
   await panel.getByRole("link", { name: "Open Proposals" }).first().click();
   await p.waitForURL(/\/review\/proposals\?group=/, { timeout: 20000 });
   const groupAsked = decodeURIComponent(new URL(p.url()).searchParams.get("group") ?? "");
-  step("C3.4 fail→pass (review Minor 1): Open Proposals opens IMM 5257's own group", /^edition:IMM 5257/.test(groupAsked), groupAsked);
+  step("C3.4 fail→pass (review Minor 1): Open Proposals opens IMM 5257's own group", groupAsked === "edition:" + sql("select edition from source_attachment where file_name ilike 'imm5257e%' and edition is not null limit 1").trim(), groupAsked);
   // Review Minor 2: a rules item's reading says it came from the rules, never "saved run".
   const openBtn = p.locator("tr", { has: p.getByText("Rules", { exact: true }) }).getByRole("button", { name: /^Open / }).first();
   await openBtn.waitFor({ timeout: 20000 });

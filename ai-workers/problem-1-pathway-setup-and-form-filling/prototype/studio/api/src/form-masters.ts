@@ -13,9 +13,10 @@ import { identityKeyOf, insertProposals, QUEUE_TX, sameInLibrary, type NewPropos
 
 export const MASTERS_STEP = "masters_edition";
 type InvField = { caption?: string | null; data_path?: string | null; section?: string | null; options_from?: string | null; options_resolved?: unknown; presence?: string | null; heading?: string | null; ui?: string | null };
-/** Review c34 M1: hidden boxes, barcodes and the form's machine parts are not a person's section. */
+/** Review c34 M1: hidden boxes, barcodes and the form's machine parts are not a person's section. A part named by a
+ *  number word (IMM 5475's "Five", "Seven") is a real part a person fills: it stays, for a person to rename (re-review M2). */
 const hidden = (f: InvField) => /invisible|hidden/i.test(String(f.presence ?? "")) || /barcode/i.test(`${f.data_path ?? ""} ${f.caption ?? ""} ${f.ui ?? ""}`);
-const MACHINE_PART = /^(#?subform\d*|text ?field\d*|header|buttons?( ?header)?|page\d*|one|two|three|four|five|six|seven|eight|nine|ten|fragment\d*|row\d*)$/i;
+const MACHINE_PART = /^(#?subform\d*|text ?field\d*|header|buttons?( ?header)?|page\d*|fragment\d*|row\d*)$/i;
 
 /** "MaritalStatusList" → "Marital status"; "PersonalDetails" → "Personal details". */
 export function words(name: string): string {

@@ -295,7 +295,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
     // P-121: several at once is for Ready items only, and never a rules item that adds to the library (1b).
     if (d.action === "accept" && rows.length > 1) {
       const no = rows.map((r) => [r, bulkWhy(r)] as const).filter(([, why]) => why);
-      if (no.length) fail(`Only Ready items are accepted together. ${no.length === 1 ? "One item" : `${no.length} items`} cannot be: "${identityKeyOf(no[0][0].payload as ProposalPayload, no[0][0].identityKey)}" (${no[0][1]}). Nothing was accepted.`, HttpStatus.CONFLICT);
+      if (no.length) fail(`Only Ready items are accepted together. ${no.length === 1 ? "One item" : `${no.length} items`} cannot be: "${nameOf(no[0][0].payload as ProposalPayload, no[0][0].identityKey)}" (${no[0][1]}). Nothing was accepted.`, HttpStatus.CONFLICT);
     }
     const out: { id: string; landedAs: string | null }[] = [];
     for (const r of rows) {
@@ -315,7 +315,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         const reuse = r.reuse as { match: string; existingKey: string | null };
         // P-120: a reuse adds nothing to the library; it records the existing item it uses, if that is still there.
         if (r.landsOn === "library" && reuse.match === "reuse" && d.action === "accept") {
-          if (!(await usableInLibrary(tx, workspaceId, r.kind, reuse.existingKey))) fail(`"${identityKeyOf(payload, r.identityKey)}" reuses ${reuse.existingKey ?? "no item"}, which is not in the library (retired, merged or never added): reject this proposal, or edit it into a new item.`, HttpStatus.CONFLICT);
+          if (!(await usableInLibrary(tx, workspaceId, r.kind, reuse.existingKey))) fail(`"${nameOf(payload, r.identityKey)}" reuses ${reuse.existingKey ?? "no item"}, which is not in the library (retired, merged or never added): reject this proposal, or edit it into a new item.`, HttpStatus.CONFLICT);
           landedAs = reuse.existingKey; reused = true;
         } else if (r.kind === "pqr_pick") {
           const got = await landPqrPick(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: reason ?? r.reason });
@@ -362,7 +362,7 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     for (const r of rows) {
       const { landedStamp } = (r.work ?? {}) as { landedStamp?: string };
       if (landedStamp && r.decidedKey && (await stampOf(tx, workspaceId, r.kind, r.decidedKey)) !== landedStamp)
-        fail(`"${identityKeyOf(r.payload as ProposalPayload, r.identityKey)}" was changed after it was accepted, so Undo would erase that change. Nothing was undone: retire or delete it in the shared library instead.`, HttpStatus.CONFLICT);
+        fail(`"${nameOf(r.payload as ProposalPayload, r.identityKey)}" was changed after it was accepted, so Undo would erase that change. Nothing was undone: retire or delete it in the shared library instead.`, HttpStatus.CONFLICT);
     }
     // C4.7: an accepted pick's tick is taken back only while it is the draft the accept wrote (not changed or released
     // since); the draft it replaced comes back as it was.
