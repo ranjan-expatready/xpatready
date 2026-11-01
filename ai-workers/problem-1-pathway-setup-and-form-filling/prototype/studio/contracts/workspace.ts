@@ -104,6 +104,9 @@ export type OnlyIf = { kind: "always" } | { kind: "rule"; words: string } | { ki
 /** One form line as the Forms tab shows it. `revision` is the line's optimistic-concurrency token. */
 export type WorkspaceFormLine = {
   line: string; code: string; title: string; document: boolean; edition: string | null; boxes: number;
+  /** QA-103: the form's current edition in the Form library (PDF), whatever the line's field map says; null when the
+   *  library holds no file for it. */
+  libraryEdition?: string | null;
   who: string; minAge: number | null; copies: number; onlyIf: OnlyIf; condition: unknown;
   channel: string; channelWords: string; signature: string | null; accepted: string[]; acceptedBasis: string;
   /** P-143 (W1-10 slice 1): the line's signature value, the signatures that fit its channel (C-2), and every channel
@@ -252,6 +255,8 @@ export type ChecklistLineRow = {
   lineage: string; role: string; document: { key: string; name: string }; who: string; base: boolean; when: string;
   providedBy: string; alternatives: { key: string; name: string }[]; supplies: ChecklistFactRow[]; aboutOthers: number;
   quote: string | null; status: string; origin: string; position: number | null; rank: number; by: string | null;
+  /** C3.11: worked out from a form line filed as Signed PDF upload (never stored), with why; changed on that line only. */
+  automatic?: { form: string; reason: string };
 };
 export type ChecklistView = {
   roles: { role: string; label: string; lines: ChecklistLineRow[] }[];

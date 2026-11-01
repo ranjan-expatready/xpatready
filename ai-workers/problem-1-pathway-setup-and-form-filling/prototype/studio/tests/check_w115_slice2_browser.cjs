@@ -80,7 +80,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const menu = p.locator("[data-row-menu-items]"); await menu.waitFor();
   const menuText = await menu.innerText();
   step("P-147 Q1 pass: the ⋯ menu lists every action", ["Open details", "Change where it comes from…", "Back to the rules' default", "Change in the library…", "Move up or down", "Retire"].every((x) => menuText.includes(x)), menuText.replace(/\n/g, " | "));
-  step("P-147 Q1 fail-guard: each greyed action keeps its reason as visible text (order set in the library section; a line is not retired here)", /The order is set in the library section .+ Change it there\./.test(menuText) && /A question line is not retired here\. Retire the question in the library\./.test(menuText) && await menu.locator('[data-disabled] [data-menu-why]').count() >= 3, menuText.replace(/\n/g, " | "));
+  step("P-147 Q1 fail-guard: each greyed action keeps its reason as visible text (order inside a section set in the library, sections moved on their header; a line is not retired here)", /Questions keep the library's order inside .+ use Move up or Move down on its header\./.test(menuText) && /A question line is not retired here\. Retire the question in the library\./.test(menuText) && await menu.locator('[data-disabled] [data-menu-why]').count() >= 3, menuText.replace(/\n/g, " | "));
   await state("row-menu-greyed-reasons");
   await p.keyboard.press("Escape");
 
@@ -126,8 +126,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C4.10 M1 pass: the row now says Client, Ask, Changed here", /Client/.test(await row.locator("[data-comes-from]").innerText()) && /Ask/.test(await row.innerText()) && await row.locator('[data-row-status="draft"]').count() === 1, await row.innerText());
   await p.locator("[data-undo-toast] [data-undo]").waitFor({ timeout: 5000 }).catch(() => {});
   step("undo toast: one Undo for the save", await p.locator("[data-undo-toast] [data-undo]").count() === 1);
-  await p.locator("[data-undo-toast] [data-undo]").click(); await settle();
-  await row.locator('[data-row-status="rules"]').waitFor({ timeout: 10000 }).catch(() => {});
+  await p.locator("[data-undo-toast] [data-undo]").click();
+  // Lead, 30 Oct (main CI flake, the QA-116 family): under load the refetch lands after settle's fixed pause; wait on
+  // the change itself (the row back on the rules), not a timer. A row that never goes back still fails below.
+  await row.locator('[data-row-status="rules"]').waitFor({ timeout: 30000 }).catch(() => {}); await settle();
   step("Undo pass: the row goes back to the passport and the rules", /Document/.test(await row.locator("[data-comes-from]").innerText()) && await row.locator('[data-row-status="rules"]').count() === 1, await row.innerText());
 
   // ======================================================== a declaration: always the client

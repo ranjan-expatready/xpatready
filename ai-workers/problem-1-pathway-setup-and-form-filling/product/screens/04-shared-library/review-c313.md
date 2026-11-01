@@ -39,3 +39,45 @@ A real screen reader. An intended user's unaided walk (D17, D20 stay with the fo
 2. Use a time that never changes, not `updatedAt` (issue 2).
 3. Fields totals count only library fields, and a test compares them with the rows (issue 3).
 Minors 4–7 are recommended but do not block.
+
+## Re-review, commit 900f70ac (diff from c0006eb0)
+
+**Verdict: Approve.** No Blocker or Major is open. **Journey score 9.5 / 10 (pass).**
+
+I used my own fresh copy on :4449 (never :4400) and made no AI calls. Both suites pass on fresh copies at 900f70ac: `check_c313_reuse.ts` 21/21 and `check_c313_reuse_browser.cjs` 24/24.
+
+* **Issue 1 (Major) is closed.** "Brought in by" is now the combination named on the item's first ADD library change (`library-sources.ts:169-176`).
+  * I redid my own sequence: Study permit names "Probe two", then With an LMIA adds it. Study permit shows **New here** and LMIA shows **Reused, from Study permit**.
+  * The same holds for "Probe three": Study permit first, then High-wage position.
+  * The new "M1 fail" test (LMIA was set up first) would fail under the old rule.
+* **Issue 2 (Major) is closed.** No `updatedAt` is read any more. I rewrote `updated_at = now()` on all 29 requirement rows of Study permit and With an LMIA, and no mark or total changed.
+  * The fallback, for items with no ADD record, uses `ConfigRelease.releasedAt`, then `createdAt`. Neither value changes after it is written.
+* **Issue 3 (Major) is closed.** `keysOf` limits the counts to items that are in the library. Fields for With an LMIA read "164 · 0 reused · 164 new". The chooser says "(164 used)" and the list has 164 rows.
+  * New tests: "M3 pass/fail", which check that every marked key is a row and that `person.age_years` is not counted.
+* **Issue 4 is closed.** "from Study permit" is visible text under the Reused pill, so keyboard and touch users can read it.
+* **Issue 5 is closed.** I delayed the reuse request by 800 ms: no row was drawn before the marks arrived, at 1440, 1024 and 400 px or at 200 % zoom.
+* **Issue 6 is accepted as recorded.** `build-notes-c313.md` records the separate route, its cost (two requests per view) and the rule. The response still has no shared zod contract, which stays a Minor.
+* **Issue 7 is accepted as recorded.** The build notes state that both suites need a fresh copy for each run.
+* Checked again on Document types at 1440, 1024 and 400 px and at 200 % zoom: axe WCAG 2.2 A/AA clean, no sideways scroll, no page errors.
+
+**New Minors (Should, not blocking):**
+* **A withdrawn ADD still gets the credit.** The ADD query does not filter on status (`library-sources.ts:170`). Withdrawing a new field deletes its draft rows but keeps the WITHDRAWN ADD (`library-changes.ts:165-170`). If another combination later adds the same key, the combination that withdrew it would be shown as having brought it in. Fix: add `status: { not: "WITHDRAWN" }`.
+* **Library-only field maps fall back to release order.** A field map applied without a combination (`sources.ts:794`, `job.combinationId` null) writes an ADD with no combination. Those fields then use the release-or-creation fallback, but the build notes describe the fallback only for the sample import. Fix: one line in `build-notes-c313.md`.
+
+**Journey score, re-run:**
+
+| Criterion | Score | Note |
+|---|---|---|
+| Task completed | 1 | |
+| Next step obvious | ½ | Unchanged: the empty state's "set up this combination first" has no link |
+| Plain words | 1 | |
+| Feedback and state | 1 | |
+| Correct data | 1 | |
+| Error recovery | 1 | |
+| Accessibility and screen sizes | 1 | |
+| Speed | 1 | |
+| Visual quality | 1 | |
+| Trust and sources | 1 | |
+| **Total** | **9.5 / 10** | **Pass** |
+
+**D1–D20 changes:** D1 4 · D2 4 · D5 4 · D6 4 · D11 4 · D13 5 · D16 4 · D18 4. The rest are unchanged; D17 and D20 remain simulated only.

@@ -3,6 +3,7 @@
 // form page named one, else the form page), Upload PDF and Find again. A download that worked has no link. On the loaded
 // demo's Visitor visa, the saved finder answer replayed (US$0), against a test-made copy of the recorded canada.ca files:
 // IMM 5645's recorded PDF removed (the page names the PDF: link = the PDF), then its page changed (link = the page).
+// Then (#261 m1–m3) another form's bytes, a page with no PDF and a damaged PDF, each re-recorded in the copy's index.
 // Axe (WCAG 2.2 AA) on the row. US$0: no model call, nothing calls canada.ca.
 //   zsh studio/tools/isolated.sh forms_c1115 4451 start STUDIO_CANADA_FIXTURES=canada-c1115 && node studio/tests/check_forms_c1115_download_link.cjs 4451 xr_studio_forms_c1115
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
@@ -78,8 +79,35 @@ const call = async (method, pth, body, actor = "user-A") => {
     f5645 = latest.forms.find((f) => f.code === "IMM 5645");
     step("C11.15 P-156 (4) pass (API): the form page could not be read: Not found, linking to the form page (no PDF link known)", f5645?.state === "NOT_FOUND" && f5645.link === PAGE_URL, f5645);
 
+    // 2b–2d (#261 m1–m3): canada.ca serves something that is not this form; each time the copy's index takes the new
+    // file's checksum, as if recorded so (the studio re-reads a changed index).
+    const restore = () => { for (const [rel, src] of [["forms/imm5645e.pdf", "forms/imm5645e.pdf"], ["canada/pages/imm5645.html", "canada/pages/imm5645.html"], ["canada/index.json", "canada/index.json"]]) fs.copyFileSync(path.join(OFFICIAL, src), path.join(COPY, rel)); };
+    const record = (rel, bytes) => {
+      fs.writeFileSync(path.join(COPY, rel), bytes);
+      const ix = JSON.parse(fs.readFileSync(path.join(COPY, "canada", "index.json"), "utf8"));
+      ix.items.find((i) => i.path === rel).sha256 = require("node:crypto").createHash("sha256").update(bytes).digest("hex");
+      fs.writeFileSync(path.join(COPY, "canada", "index.json"), JSON.stringify(ix, null, 2));
+    };
+    const editions5645 = () => sql("select count(*) from form_edition e join gov_form_def d on d.id = e.gov_form_def_id where d.form_key = 'IMM 5645'");
+    // 2b. Another form's bytes (IMM 5257) behind IMM 5645's PDF link: refused, and the link is the form page, not that file (m2).
+    restore(); record("forms/imm5645e.pdf", fs.readFileSync(path.join(OFFICIAL, "forms", "imm5257e.pdf")));
+    latest = await find("c1115-other-form-1", ["IMM 5645"]);
+    f5645 = latest.forms.find((f) => f.code === "IMM 5645");
+    step("C11.15 m1/m2 pass (API): canada.ca's file reads as another form: Not found, not stored, linking to the form page", f5645?.state === "NOT_FOUND" && /reads as IMM 5257/.test(f5645.why ?? "") && f5645.link === PAGE_URL && editions5645() === "0", f5645);
+    step("C11.15 m2 fail (API): the refused file's own address is not offered", f5645?.link !== PDF_URL, f5645?.link);
+    // 2c. The form page names no PDF (online only): the link is the form page.
+    restore(); record("canada/pages/imm5645.html", Buffer.from(fs.readFileSync(path.join(OFFICIAL, "canada", "pages", "imm5645.html"), "utf8").split("/content/dam/ircc/documents/pdf/english/kits/forms/imm5645/01-01-2021/imm5645e.pdf").join("#no-pdf")));
+    latest = await find("c1115-no-pdf-page-1", ["IMM 5645"]);
+    f5645 = latest.forms.find((f) => f.code === "IMM 5645");
+    step("C11.15 m1 pass (API): the form page names no PDF: Not found, says so, linking to the form page", f5645?.state === "NOT_FOUND" && /has no PDF to download/.test(f5645.why ?? "") && f5645.link === PAGE_URL && editions5645() === "0", f5645);
+    // 2d. A PDF whose number and edition cannot be read (damaged): the link is the PDF itself (the right file, a person reads it; m3's reader failure gives the same).
+    restore(); record("forms/imm5645e.pdf", Buffer.from("%PDF-1.4\n% damaged on purpose by the C11.15 check\n%%EOF\n"));
+    latest = await find("c1115-unreadable-1", ["IMM 5645"]);
+    f5645 = latest.forms.find((f) => f.code === "IMM 5645");
+    step("C11.15 m1/m3 pass (API): the file cannot be read: Not found, says so, linking to the PDF", f5645?.state === "NOT_FOUND" && /could not be read from the file/.test(f5645.why ?? "") && f5645.link === PDF_URL && editions5645() === "0", f5645);
+
     // 3. Both readable again: Find again downloads it, and the link is gone.
-    fs.copyFileSync(path.join(OFFICIAL, "canada", "pages", "imm5645.html"), path.join(COPY, "canada", "pages", "imm5645.html"));
+    restore();
     latest = await find("c1115-again-1", ["IMM 5645"]);
     f5645 = latest.forms.find((f) => f.code === "IMM 5645");
     step("C11.15 fail (API): once canada.ca answers, Find again downloads and attaches it, with no link", f5645?.state === "DOWNLOADED_ATTACHED" && !f5645.link, f5645);

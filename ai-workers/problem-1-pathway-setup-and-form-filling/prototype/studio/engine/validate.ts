@@ -88,7 +88,7 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   }
   for (const r of s.rules) for (const e of checkCondition(r.when, types, derived)) out.push({ level: "error", where: "Rules", item: r.id, message: `Condition ${e}.` });
   for (const c of s.checks.filter((x) => x.condition && typeof x.condition === "object")) for (const e of checkCondition(c.condition, types, derived)) out.push({ level: "warning", where: "Checks", item: c.id, message: `Condition ${e}; the check is not evaluated.` });
-  out.push(...reachability(s, placed, docFacts, derived));
+  out.push(...reachability(s, placed, docFacts, derived, (f) => `"${(meaningOf.get(f) ?? (s.derived_fields as { id: string; plain?: string | null }[]).find((d) => d.id === f)?.plain ?? f).trim().replace(/\.$/, "")}"`));
   // Only the derived definitions this combination reads (Lead check item 3): the library holds every definition, and
   // one nobody here uses is not this combination's warning.
   const reads = derivedRead(s);
@@ -122,7 +122,8 @@ export function derivedRead(s: Snapshot): Set<string> {
 /** Grounding audit finding 3 (W1 3.4, 3.5): a question's condition must never hide a value that something applicable
  *  still reads, every value that decides a question must be obtainable, and questions must not decide each other in a
  *  loop. Errors block submission and release. A form or box that applies under the same condition is compatible. */
-function reachability(s: Snapshot, placed: Set<string>, docFacts: Set<string>, derived: Set<string>): Problem[] {
+// C3.8: the messages name each question by its meaning (`words`), never by its field code.
+function reachability(s: Snapshot, placed: Set<string>, docFacts: Set<string>, derived: Set<string>, words: (fact: string) => string): Problem[] {
   const out: Problem[] = [];
   const bareCond = (c: any) => { if (!c || typeof c !== "object") return null; const { subjectKind: _k, ...n } = c; return canonical(n); };
   const fieldsOf = (c: any) => c ? [...JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]) : [];
@@ -136,10 +137,10 @@ function reachability(s: Snapshot, placed: Set<string>, docFacts: Set<string>, d
       const own = bareCond(p.condition), when = p.condition_plain ?? "its condition";
       const forms = new Map<string, boolean>();
       for (const r of readers.get(p.fact) ?? []) { const ok = eff === "SHOW" && [r.formCond, r.boxCond].some((c) => bareCond(c) === own); forms.set(r.form, (forms.get(r.form) ?? true) && ok); }
-      for (const [form, ok] of forms) if (!ok) out.push({ level: "error", where: "Questions", item: p.fact, message: `Hiding a value a form reads: the question for ${p.fact} is ${eff === "HIDE" ? "hidden when" : "shown only when"} "${when}", but ${form} reads it ${s.forms.find((x) => x.form_number === form)?.condition ? "under a different condition" : "whenever the form applies"}. Make the form or its form fields apply under the same condition, or remove the question's condition.` });
-      for (const c of conditions) if (fieldsOf(c.tree).includes(p.fact) && !(eff === "SHOW" && own && canonical(c.tree).includes(own))) out.push({ level: "error", where: "Questions", item: p.fact, message: `Hiding a value a condition reads: ${c.what} reads ${p.fact}, whose question is ${eff === "HIDE" ? "hidden when" : "shown only when"} "${when}". The condition could never be decided while the question is hidden.` });
+      for (const [form, ok] of forms) if (!ok) out.push({ level: "error", where: "Questions", item: p.fact, message: `Hiding a value a form reads: the question ${words(p.fact)} is ${eff === "HIDE" ? "hidden when" : "shown only when"} "${when}", but ${form} reads it ${s.forms.find((x) => x.form_number === form)?.condition ? "under a different condition" : "whenever the form applies"}. Make the form or its form fields apply under the same condition, or remove the question's condition.` });
+      for (const c of conditions) if (fieldsOf(c.tree).includes(p.fact) && !(eff === "SHOW" && own && canonical(c.tree).includes(own))) out.push({ level: "error", where: "Questions", item: p.fact, message: `Hiding a value a condition reads: ${c.what} reads the answer to ${words(p.fact)}, whose question is ${eff === "HIDE" ? "hidden when" : "shown only when"} "${when}". The condition could never be decided while the question is hidden.` });
     }
-    for (const f of fieldsOf(p.condition)) if (!placed.has(f) && !docFacts.has(f) && !derived.has(f)) out.push({ level: "error", where: "Questions", item: p.fact, message: `Unreachable question: it depends on ${f}, which no question, supported document or derived definition supplies, so it can never be decided.` });
+    for (const f of fieldsOf(p.condition)) if (!placed.has(f) && !docFacts.has(f) && !derived.has(f)) out.push({ level: "error", where: "Questions", item: p.fact, message: `Unreachable question: ${words(p.fact)} depends on ${words(f)}, which no question, supported document or derived definition supplies, so it can never be decided.` });
   }
   // Loops: question A depends on B, which depends (directly or through others) on A.
   const dep = new Map<string, string[]>();
@@ -147,7 +148,7 @@ function reachability(s: Snapshot, placed: Set<string>, docFacts: Set<string>, d
   const reported = new Set<string>();
   const visit = (start: string, at: string, path: string[]) => {
     for (const next of dep.get(at) ?? []) {
-      if (next === start) { const loop = [...path, start]; const k = [...loop].sort().join(","); if (!reported.has(k)) { reported.add(k); out.push({ level: "error", where: "Questions", item: start, message: `Questions decide each other in a loop: ${loop.join(" → ")}. None of them can be shown first.` }); } }
+      if (next === start) { const loop = [...path, start]; const k = [...loop].sort().join(","); if (!reported.has(k)) { reported.add(k); out.push({ level: "error", where: "Questions", item: start, message: `Questions decide each other in a loop: ${loop.map(words).join(" → ")}. None of them can be shown first.` }); } }
       else if (!path.includes(next) && path.length < 12) visit(start, next, [...path, next]);
     }
   };
@@ -179,6 +180,18 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
         out.push({ kind: label, key, change: "changed", origin: x.origin, needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? x.fact ?? key });
       }
     for (const [key, x] of a) if (!b.has(key)) out.push({ kind: label, key, change: "removed", needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? key });
+  }
+  // C4.1 (P-216): the combination's own section order is part of its release. A move changes no section, so the lines
+  // above miss it; it is named once, in words, with each moved section's new place among the sections kept.
+  if (prev) {
+    const ids = (x: Snapshot) => ((x.sections as { id: string }[]) ?? []).map((y) => y.id);
+    const kept = new Set(ids(prev).filter((k) => ids(next).includes(k)));
+    const was = ids(prev).filter((k) => kept.has(k)), now = ids(next).filter((k) => kept.has(k));
+    const moved = now.map((k, i) => ({ k, i })).filter(({ k, i }) => was[i] !== k);
+    if (moved.length) {
+      const title = (k: string) => (next.sections as { id: string; title?: string }[]).find((y) => y.id === k)?.title ?? k;
+      out.push({ kind: "Section order", key: next.combination?.key ?? "sections", change: "changed", needs_sme: false, label: `Sections reordered: ${moved.map(({ k, i }) => `"${title(k)}" now ${ordinal(i + 1)}`).join(", ")}` });
+    }
   }
   const boxes = (s: Snapshot | null) => new Map<string, any>((s?.field_maps ?? []).flatMap((m: any) => m.entries.map((e: any) => [`${m.form_edition}|${e.data_path}`, e] as [string, any])));
   const a = boxes(prev), b = boxes(next);
@@ -218,3 +231,6 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   for (const k of new Set([...Object.keys(prev ?? {}), ...Object.keys(next)])) if (prev && !covered.has(k) && canonical((prev as any)[k] ?? null) !== canonical((next as any)[k] ?? null)) out.push({ kind: "Configuration", key: k, change: "changed", needs_sme: true, label: `${k} changed` });
   return out;
 }
+
+/** "1st", "2nd", "3rd", "11th": a section's place said in words (C4.1; Review line and history line). */
+export function ordinal(n: number) { const t = n % 100, u = n % 10; return `${n}${t >= 11 && t <= 13 ? "th" : u === 1 ? "st" : u === 2 ? "nd" : u === 3 ? "rd" : "th"}`; }

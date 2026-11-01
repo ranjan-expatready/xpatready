@@ -200,6 +200,38 @@ const PLAIN = (s: string) => !/\bP-\d+\b/.test(s) && !/\b[a-z]+_[a-z_]+\b/.test(
   x = await outcomeOf(remove(doc(PASSPORT)), SP);
   ok("C1.5 documents remove: Study permit does not have the passport page", x.o === "DOES_NOT_HAVE", x.o);
 
+  // ------------------------------------------------------------ review carries of #254 (n1, n2, Paper with an account record, Not needed)
+  // n1: a question edited (v2) and then retired asks nothing, though its first version is still released.
+  const QCOLS = "workspace_id,lineage_key,section_key,canonical_field_key,display_order,question_text,help_text,repeats,tier,collected_from,client_visible,predicate_json,condition_effect,condition_plain,rule_only,origin,updated_by";
+  sql(`insert into section_question (id,${QCOLS},version,status,supersedes_id) select gen_random_uuid(),${QCOLS},2,'RETIRED',id from section_question where canonical_field_key='person.travelling_alone_to_canada' and version=1`);
+  x = await outcomeOf(add(form("IMM 5707")), VV);
+  ok("C1.5 review n1 fail: a question whose newest version is retired does not count as asked (its released v1 does not)", x.o === "CANNOT_FACT", x.t);
+  ok("C1.5 review n2: the sentence names the answer needed and why nothing gives it, in plain words", /^Its "only if" needs the answer to "Whether a minor is travelling to Canada alone"\. Nothing in this combination gives that answer: no question in the library asks it, and none of its documents supplies it\. Add a question for it to the library first\.$/.test(x.why), x.why);
+  sql(`update section_question set status='DRAFT' where canonical_field_key='person.travelling_alone_to_canada' and version=2`);
+  x = await outcomeOf(add(form("IMM 5707")), VV);
+  ok("C1.5 review n1 pass: the same question as an open draft (v2) counts as asked", x.o === "WILL_ADD", x.t);
+  sql(`delete from section_question where canonical_field_key='person.travelling_alone_to_canada' and version=2`);
+  // The channel with an account record: IMM 5476's library record says IRCC accepts it (every account) only as a PDF upload.
+  sql(`update combination_form set channel='PAPER', signature='PEN' where combination_id='${WP}' and lineage_key='IMM 5476'`);
+  x = await outcomeOf(add(form("IMM 5476")), VV);
+  ok("C1.5 BR-C2 channel fail (account record): IMM 5476 filed on Paper cannot go where the library records PDF upload only, in words", x.o === "CANNOT_CHANNEL" && /IMM 5476 is filed as .*Paper.*only as a PDF upload/i.test(x.why) && PLAIN(x.why), x.why);
+  const ed5476 = sql(`select e.id from form_edition e join gov_form_def f on f.id=e.gov_form_def_id where f.form_key='IMM 5476' and e.channel<>'ONLINE' order by e.edition_label desc limit 1`);
+  sql(`update form_edition_accept set channels='{PDF_UPLOAD,PAPER}' where form_edition_id='${ed5476}' and account='ANY'`);
+  x = await outcomeOf(add(form("IMM 5476")), VV);
+  ok("C1.5 BR-C2 channel pass (account record): once the record accepts Paper, the Paper line will be added", x.o === "WILL_ADD", x.t);
+  // Not needed: only the target account's own record may say the account asks it itself (C-4).
+  sql(`update combination_form set channel='NOT_NEEDED', signature='NONE' where combination_id='${WP}' and lineage_key='IMM 5476'`);
+  x = await outcomeOf(add(form("IMM 5476"), [FS]), FS);
+  ok("C1.5 BR-C2 Not needed fail: no record says Permanent residence's account asks IMM 5476 itself, in words", x.o === "CANNOT_CHANNEL" && /marked Not needed, but no record says/.test(x.why) && PLAIN(x.why), x.why);
+  sql(`insert into form_edition_accept (id, workspace_id, form_edition_id, account, channels, basis, set_by) values (gen_random_uuid(), '${ws}', '${ed5476}', 'PR_PORTAL', '{NOT_NEEDED}', 'SAMPLE_FIXTURE', 'user-A')`);
+  x = await outcomeOf(add(form("IMM 5476"), [FS]), FS);
+  ok("C1.5 BR-C2 Not needed pass: with that account's own record, the Not needed line will be added", x.o === "WILL_ADD", x.t);
+  x = await outcomeOf(add(form("IMM 5476"), [VV]), VV);
+  ok("C1.5 BR-C2 Not needed fail: another account's record never applies (Visitor visa, no account)", x.o === "CANNOT_CHANNEL", x.t);
+  sql(`delete from form_edition_accept where form_edition_id='${ed5476}' and account='PR_PORTAL'`);
+  sql(`update form_edition_accept set channels='{PDF_UPLOAD}' where form_edition_id='${ed5476}' and account='ANY'`);
+  sql(`update combination_form set channel='PDF_UPLOAD', signature='NONE' where combination_id='${WP}' and lineage_key='IMM 5476'`);
+
   // ------------------------------------------------------------ every reason is plain words
   const all = [await preview(add(form("IMM 5409"))), await preview(add(form("IMM 5707"))), await preview(add(doc(MARRIAGE)))].flatMap((p) => p.body.targets.map((t: any) => String(t.reason ?? "")));
   ok("words: no reason carries a decision code or a system name", all.every(PLAIN), all.filter((s) => !PLAIN(s)));

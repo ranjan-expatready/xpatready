@@ -90,7 +90,26 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   d = await open(f.fact);
   const appr = await d.locator("[data-who-fills]").innerText();
   step("C4.9 pass: approved: the drawer says the case officer fills it from the next release", /Approved: the case officer fills it for every combination from the next release/.test(appr), appr.replace(/\n/g, " "));
+  step("C4.9 QA-114: until the release the library line still says the client (the released value), never the approved one", /In the shared library: filled by the client\./.test(appr) && !/In the shared library: filled by the case officer/.test(appr), appr.replace(/\n/g, " "));
   await state("approved-next-release");
+  await p.keyboard.press("Escape");
+  const coming = await p.locator(`[data-questions] tr[data-fact="${f.fact}"]`).first().locator("[data-fills-coming]").innerText().catch(() => "");
+  step("C4.9 QA-114: the row marks the approved change as coming with the next release", /From the next release: filled by the case officer/.test(coming), coming);
+  const other = facts.find((x) => x.role === "principal" && x.fact !== f.fact && x.placed && !x.clientOnly);
+  step("C4.9 QA-114 fail: a row with no approved change carries no such mark", await p.locator(`[data-questions] tr[data-fact="${other.fact}"]`).first().locator("[data-fills-coming]").count() === 0, other.fact);
+
+  // ======================================================== QA-112: a case fact, with no checklist of its own
+  const caseFact = facts.find((x) => x.role === "case" && !x.ruleDocument && !(x.also ?? []).length && !x.clientOnly);
+  d = await open(caseFact.fact);
+  const src = await d.locator("section[aria-labelledby='d-source']").innerText();
+  step("C4.10 QA-112 pass: a case fact says once, in case words, that no document supplies it; no checklist named", (src.match(/The case has no documents/g) ?? []).length === 1 && /The case has no documents of its own/.test(src) && !/checklist/.test(src) && !/No document supplies it\./.test(src), src.replace(/\n/g, " "));
+  step("C4.10 QA-112 pass: no fallback line where no document can supply it", await d.locator("[data-fallback]").count() === 0 && !/Fallback question/.test(src));
+  await state("case-fact-no-documents");
+  await p.keyboard.press("Escape");
+  const docFact = facts.find((x) => x.role === "principal" && x.ruleDocument && x.placed);
+  d = await open(docFact.fact);
+  step("C4.10 QA-112 fail: a fact a document supplies keeps its fallback line", /Fallback question reachable/.test(await d.locator("[data-fallback]").innerText().catch(() => "")));
+  await p.keyboard.press("Escape");
 
   step("no page error or console error on the way", errs.length === 0, errs.slice(0, 3).join(" | "));
   await b.close();

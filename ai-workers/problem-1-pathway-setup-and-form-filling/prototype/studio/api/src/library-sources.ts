@@ -249,7 +249,99 @@ export class LibrarySources {
     await this.audit.log(workspaceId, actor.id, "renamed", "section", key, `${actor.name} renamed section "${old}" to "${b.name}" (draft v${row.version})`);
     return { key, name: b.name, version: row.version, status: row.status };
   }
+
+  /** The names of the shared fields a list reads ("Family name"; null when the name was never confirmed: the screen
+   *  derives one from the key). */
+  private async fieldNames(workspaceId: string): Promise<Map<string, string | null>> {
+    const rows = await this.db.canonicalField.findMany({ where: { workspaceId }, orderBy: { version: "desc" }, select: { canonicalFieldKey: true, label: true, labelChecked: true } });
+    const out = new Map<string, string | null>(); for (const r of rows) if (!out.has(r.canonicalFieldKey)) out.set(r.canonicalFieldKey, (r.labelChecked && r.label) || null);
+    return out;
+  }
+
+  /** C3.14 (Screen 04 BR-15, RULES-MODEL §7, P-37): the Checks list, read-only. One row per check across combinations
+   *  (its newest draft or published version in each), with its kind, what it is about, the fields it reads, whether it
+   *  stops or warns, where it is used, its source (a check with none is flagged) and its origin. Nothing is authored
+   *  here (P-28): checks are proposed on To review and set per combination. */
+  async checks() {
+    const workspaceId = await this.ws.id();
+    const [rows, combos, names] = await Promise.all([
+      this.db.check.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }),
+      this.db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true, combinationKey: true } }),
+      this.fieldNames(workspaceId),
+    ]);
+    const cur = current(rows, (k) => `${k.combinationId}|${k.checkKey}`);
+    const byKey = new Map<string, typeof cur>(); for (const k of cur) byKey.set(k.checkKey, [...(byKey.get(k.checkKey) ?? []), k]);
+    const label = new Map(combos.map((c) => [c.id, c]));
+    const out = [...byKey].map(([key, ks]) => {
+      // Review c314 M1: each combination keeps its own values (effect, message, source, origin); the row says when they differ.
+      const per = ks.filter((x) => label.has(x.combinationId)).map((x) => { const c = label.get(x.combinationId)!; return { combination: { id: c.id, key: c.combinationKey, label: c.label }, serious: x.severity === "block", message: x.message, source: x.sourceQuote ?? null, unsourced: !x.sourceQuote, sample: x.illustrative, origin: x.origin, status: x.status }; }).sort((a, b) => a.combination.label.localeCompare(b.combination.label));
+      const same = (f: (x: (typeof per)[number]) => unknown) => new Set(per.map((x) => JSON.stringify(f(x)))).size <= 1;
+      const differs = !(same((x) => x.serious) && same((x) => x.message) && same((x) => x.source) && same((x) => x.origin) && same((x) => x.sample));
+      const k = ks[0], one = per[0];
+      const reads = [...new Set(ks.flatMap((x) => fieldsOf(x.predicateJson)))];
+      const kind = CHECK_TIER[k.checkGroup] ?? "other";
+      return { key, kind, kind_word: TIER_WORD[kind], group: k.checkGroup, group_word: GROUP_WORD[k.checkGroup] ?? k.checkGroup.replace(/_/g, " "), about: k.appliesTo, reads: reads.map((f) => ({ key: f, name: names.get(f) ?? null })), used_in: per.map((x) => x.combination), differs, per_combination: per,
+        // The shared values, only when every combination holds the same (otherwise null: the screen says "Differs by combination").
+        message: differs ? null : one?.message ?? null, serious: differs ? null : one?.serious ?? null, source: differs ? null : one?.source ?? null, unsourced: differs ? null : one?.unsourced ?? true, sample: per.some((x) => x.sample), origin: differs ? null : one?.origin ?? null, status: per.some((x) => x.status === "DRAFT") ? "DRAFT" : one?.status ?? "PUBLISHED" };
+    });
+    return out.sort((a, b) => a.kind_word.localeCompare(b.kind_word) || a.group_word.localeCompare(b.group_word) || a.key.localeCompare(b.key));
+  }
+
+  /** C3.14 (P-37, RULES-MODEL §2, Screen 04 view 10): Shared library › Rules, read-only. Every rule in one place as a
+   *  sentence (when …, then …) with where it lives (the combination and its tab, where it is changed), the fields it
+   *  reads, its source (none flagged) and origin: a combination's rules, the conditions on its form lines and its
+   *  checklist lines, and the conditions on questions (used by every combination that picks the section). */
+  async rules() {
+    const workspaceId = await this.ws.id();
+    const [preds, forms, docs, questions, picks, combos, names, types, sections] = await Promise.all([
+      this.db.predicate.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }),
+      this.db.combinationForm.findMany({ where: { workspaceId, status: { in: [...LIVE] } }, include: { form: { select: { formKey: true } } } }),
+      this.db.documentRequirement.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }),
+      this.db.sectionQuestion.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }),
+      this.db.sqrSectionSelection.findMany({ where: { workspaceId } }),
+      this.db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true, combinationKey: true } }),
+      this.fieldNames(workspaceId),
+      this.db.documentType.findMany({ where: { workspaceId }, orderBy: { version: "desc" }, select: { documentTypeKey: true, name: true } }),
+      this.db.logicalSection.findMany({ where: { workspaceId }, orderBy: { version: "desc" }, select: { sectionKey: true, title: true } }),
+    ]);
+    const combo = new Map(combos.map((c) => [c.id, { id: c.id, key: c.combinationKey, label: c.label }]));
+    const typeName = new Map<string, string>(); for (const t of types) if (!typeName.has(t.documentTypeKey)) typeName.set(t.documentTypeKey, t.name);
+    const sectionTitle = new Map<string, string>(); for (const t of sections) if (!sectionTitle.has(t.sectionKey)) sectionTitle.set(t.sectionKey, t.title);
+    const reads = (c: unknown) => [...new Set(fieldsOf(c))].map((f) => ({ key: f, name: names.get(f) ?? null }));
+    const status = (x: { status: string }) => x.status;
+    type Row = { id: string; kind: "rule" | "form_line" | "checklist_line" | "question"; kind_word: string; when: string | null; then: string; lives_on: { combination: { id: string; key: string; label: string } | null; section: string | null; tab: string; tab_word: string }; used_in: { id: string; key: string; label: string }[]; reads: { key: string; name: string | null }[]; source: string | null; unsourced: boolean; origin: string; status: string };
+    const out: Row[] = [];
+    for (const r of current(preds, (r) => `${r.combinationId}|${r.predicateKey}`)) {
+      const c = combo.get(r.combinationId) ?? null;
+      out.push({ id: `rule:${r.id}`, kind: "rule", kind_word: RULE_KIND.rule, when: r.whenPlain, then: r.thenPlain, lives_on: { combination: c, section: null, tab: "questionnaires", tab_word: "Questionnaires tab" }, used_in: c ? [c] : [], reads: reads(r.predicateJson), source: r.sourceQuote, unsourced: !r.sourceQuote, origin: r.origin, status: status(r) });
+    }
+    for (const l of current(forms, (l) => `${l.combinationId}|${l.lineageKey}`).filter((l) => l.predicateJson || l.conditionPlain)) {
+      const c = combo.get(l.combinationId) ?? null;
+      out.push({ id: `form_line:${l.id}`, kind: "form_line", kind_word: RULE_KIND.form_line, when: l.conditionPlain, then: `${l.form.formKey} is needed`, lives_on: { combination: c, section: null, tab: "forms", tab_word: "Forms tab" }, used_in: c ? [c] : [], reads: reads(l.predicateJson), source: l.sourceQuote, unsourced: !l.sourceQuote, origin: l.origin, status: status(l) });
+    }
+    for (const d of current(docs, (d) => `${d.combinationId}|${d.lineageKey}`).filter((d) => d.predicateJson || d.conditionPlain)) {
+      const c = combo.get(d.combinationId) ?? null;
+      out.push({ id: `checklist_line:${d.id}`, kind: "checklist_line", kind_word: RULE_KIND.checklist_line, when: d.conditionPlain, then: `${typeName.get(d.documentTypeKey) ?? d.documentTypeKey} is needed`, lives_on: { combination: c, section: null, tab: "documents", tab_word: "Documents tab" }, used_in: c ? [c] : [], reads: reads(d.predicateJson), source: d.sourceQuote, unsourced: !d.sourceQuote, origin: d.origin, status: status(d) });
+    }
+    const pickedBy = new Map<string, string[]>(); for (const p of picks) pickedBy.set(p.sectionKey, [...(pickedBy.get(p.sectionKey) ?? []), p.combinationId]);
+    for (const q of current(questions, (q) => q.lineageKey).filter((q) => q.predicateJson || q.conditionPlain)) {
+      const used = (pickedBy.get(q.sectionKey) ?? []).map((id) => combo.get(id)).filter((c): c is NonNullable<typeof c> => !!c).sort((a, b) => a.label.localeCompare(b.label));
+      out.push({ id: `question:${q.id}`, kind: "question", kind_word: RULE_KIND.question, when: q.conditionPlain, then: `Ask ${names.get(q.canonicalFieldKey) ?? fieldWord(q.canonicalFieldKey)}${q.conditionEffect === "HIDE" ? " (hidden when this holds)" : q.conditionEffect === "OPTIONAL" ? " (optional when this holds)" : ""}`, lives_on: { combination: null, section: sectionTitle.get(q.sectionKey) ?? q.sectionKey, tab: "questionnaires", tab_word: "the section's question" }, used_in: used, reads: reads(q.predicateJson), source: null, unsourced: true, origin: q.origin, status: status(q) });
+    }
+    const order = { rule: 0, form_line: 1, checklist_line: 2, question: 3 } as const;
+    return out.sort((a, b) => order[a.kind] - order[b.kind] || (a.lives_on.combination?.label ?? "").localeCompare(b.lives_on.combination?.label ?? "") || a.then.localeCompare(b.then));
+  }
 }
+
+/** C3.14 (challenge M8, accepted by the Lead): the kind of a check, from a written mapping of its stored group onto
+ *  RULES-MODEL §7's kinds; a group that does not map cleanly shows "Other". Official rules mix document, form and
+ *  answer checks, so they stay Other until each check carries its kind. Field validation lives on the field (tier 1);
+ *  AI review objectives are not built yet (no screen creates them). */
+const CHECK_TIER: Record<string, "consistency" | "document_validity"> = { cross_record: "consistency", read_back: "consistency", readiness_warning: "document_validity" };
+const TIER_WORD: Record<string, string> = { field_validation: "Field validation", consistency: "Consistency", document_validity: "Document validity", ai_review: "AI review", other: "Other" };
+const GROUP_WORD: Record<string, string> = { official_rule: "Official rule", readiness_warning: "Readiness warning", cross_record: "Answers compared", read_back: "Read back from the filled form" };
+const fieldWord = (key: string) => { const w = (key.split(".").pop() ?? key).replace(/_/g, " "); return w.charAt(0).toUpperCase() + w.slice(1); };
+const RULE_KIND = { rule: "Rule", form_line: "Condition on a form", checklist_line: "Condition on a document", question: "Condition on a question" } as const;
 
 const NameBody = z.object({ name: z.string({ error: "Give the new name." }).trim().min(2, "A name has at least two characters.").max(80, "Keep the name under 80 characters.") });
 const parseName = (body: unknown) => { const r = NameBody.safeParse(body); if (!r.success) throw new HttpException(problemFromZod(r.error), HttpStatus.BAD_REQUEST); return r.data; };
@@ -261,4 +353,6 @@ export class LibrarySourcesController {
   @Get("library/:kind/:key/sources") sources(@Param("kind") kind: string, @Param("key") key: string) { return this.s.sources(kind, key); }
   @Patch("library/fields/:key/name") renameField(@Headers("x-actor") a: H, @Param("key") key: string, @Body() b: unknown) { return this.s.renameField(actorOf(a), key, b); }
   @Patch("library/sections/:key") renameSection(@Headers("x-actor") a: H, @Param("key") key: string, @Body() b: unknown) { return this.s.renameSection(actorOf(a), key, b); }
+  @Get("library/checks") checks(@Headers("x-actor") a: H) { readerOf(a); return this.s.checks(); }
+  @Get("library/rules") rules(@Headers("x-actor") a: H) { readerOf(a); return this.s.rules(); }
 }
