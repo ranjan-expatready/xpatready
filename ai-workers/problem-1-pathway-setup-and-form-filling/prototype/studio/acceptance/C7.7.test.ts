@@ -43,7 +43,7 @@ await main("C7.7", "Deliverables list per filing (Visitor visa)", async () => {
   const copy = (await call("GET", `/runtime/form-copies/${copyId}`, undefined, OFFICER)).body;
   ok("C7.7-11 pass: the copy is IRCC's own IMM 5707 PDF filled from the same confirmed facts, marked \"Copy, not for filing\"", copy?.status === "GENERATED" && copy?.copy_not_for_filing === true && copy?.source === "ircc_pdf" && copy?.intact === true, copy);
   p = (await prepare(c.id)).p;
-  ok("C7.7-12 pass: the copy is never counted: no new item, readiness unchanged", (p?.items ?? []).length === before && JSON.stringify(p?.readiness) === readyBefore);
+  ok("C7.7-12 pass: the copy is never counted: no new item, readiness unchanged", before > 0 && !!copyId && (p?.items ?? []).length === before && JSON.stringify(p?.readiness) === readyBefore);
   r = await call("POST", `/runtime/form-copies/${copyId}/lock`, { kind: "filed" }, OFFICER);
   ok("C7.7-13 fail: a \"Copy, not for filing\" cannot be locked as filed or uploaded (409, in words)", r.status === 409 && /not for filing/i.test(r.body?.detail ?? ""), r.body?.detail);
   r = await call("POST", `/runtime/items/${itemsOf(p, P, "IMM 5257")[0]?.id}/pdf-copy`, {}, OFFICER);

@@ -5,7 +5,7 @@
 // per-section "Entered in the portal" tick is C7.3-9.
 // Breadth, after Visitor visa: Paper lines signed in pen with the barcode page on top; client e-sign in the PR Portal.
 //   tsx studio/acceptance/C8.1.test.ts 4440 xr_studio_accept
-import { CLIENT, FAMILY, OFFICER, call, firms, generateCopy, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readyToFile, sendFile, signedScan, sql, yearsAgo, filingOf } from "./lib/m3.ts";
+import { CLIENT, FAMILY, fillEverything, OFFICER, call, firms, generateCopy, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readyToFile, sendFile, signedScan, sql, yearsAgo, filingOf } from "./lib/m3.ts";
 
 await main("C8.1", "Signed PDFs: steps, signed scans and who signs (Visitor visa)", async () => {
   const vv = needVisitorVisa();
@@ -18,6 +18,7 @@ await main("C8.1", "Signed PDFs: steps, signed scans and who signs (Visitor visa
   const f = await firms();
   const c = await openCase(vv, [{ role: "principal", name: "Sample Client A", dob: yearsAgo(40) }], { representative: f.rep, caseOfficers: [f.officer ?? OFFICER] });
   const P = c.subjects["Sample Client A"];
+  await fillEverything(c.id); // a form is signed only once its facts are confirmed (P-71)
   p = (await prepare(c.id)).p;
   const it = itemsOf(p, P, "IMM 5476")[0];
   const steps = async () => ((await call("GET", `/runtime/items/${it?.id}`, undefined, OFFICER)).body?.sign_steps ?? []) as { key: string; done: { at: string; by: string } | null }[];
@@ -41,7 +42,7 @@ await main("C8.1", "Signed PDFs: steps, signed scans and who signs (Visitor visa
   ok("C8.1-11 fail (BR-21): \"Uploaded to IRCC\" before the filing is Ready to file is refused (409)", r.status === 409 && /ready to file/i.test(r.body?.detail ?? ""), r.body?.detail);
   ok("C8.1-12 fail: there is no \"sign for the client\" action (404 or 405)", !!it?.id && [404, 405].includes((await call("POST", `/runtime/items/${it?.id}/sign-for-client`, {}, OFFICER)).status));
 
-  const ready = await readyToFile(c.id, f.rep, f.officer ?? OFFICER);
+  const ready = await readyToFile(c.id, f.rep);
   r = await call("POST", `/runtime/items/${it?.id}/sign-steps/uploaded_to_ircc`, {}, OFFICER);
   ok("C8.1-13 pass: after Ready to file, \"Uploaded to IRCC\" is ticked; the item is Done", ready.includes(filingOf(p, P)?.id ?? "") && r.status === 200 && itemsOf((await prepare(c.id)).p, P, "IMM 5476")[0]?.state === "done", { ready, status: r.status });
   ok("C8.1-14 pass (data): the scan is never changed in place (append-only signed_scan)", Number(sql(`select count(*) from signed_scan where item_id='${it?.id}'`) ?? 0) >= 1 && sql(`update signed_scan set sha256='x' where item_id='${it?.id}' returning 1`) === null);

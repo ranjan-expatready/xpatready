@@ -27,7 +27,7 @@ await main("C6.12", "Filings and fees derived from the case (Visitor visa)", asy
   const child10 = filingOf(p, c.subjects["Sample Child A1"])?.id, child15 = filingOf(p, c.subjects["Sample Child A2"])?.id;
   ok("C6.12-8 pass: biometrics CAD 170 for the family (three people 14–79; maximum for 2 or more; VV-R14); the child of 10 has no biometrics line, with the reason \"under 14\" (VV-R15)",
     total(p, BIO) === 170 && !(p?.fees ?? []).some((f) => BIO.test(f.line) && f.filing === child10 && !f.exempt) && (p?.fees ?? []).some((f) => f.filing === child15 && BIO.test(f.line)), p?.fees?.filter((f) => BIO.test(f.line)));
-  ok("C6.12-9 pass: every fee line says its source (canada.ca fee list, read date) or Sample", (p?.fees ?? []).length > 0 && (p?.fees ?? []).every((f) => /canada\.ca|ircc\.canada\.ca|Sample/.test(f.source ?? "")));
+  ok("C6.12-9 pass: the visitor visa and biometrics fee lines cite the IRCC fee list (VV-R13, VV-R14); any other line says Sample", (p?.fees ?? []).length > 0 && (p?.fees ?? []).every((f) => (VISA.test(f.line) || BIO.test(f.line)) ? /ircc\.canada\.ca\/english\/information\/fees|canada\.ca/.test(f.source ?? "") : /Sample/.test(f.source ?? "")), p?.fees?.map((f) => f.source));
 
   // Six people: the family maximum applies to the group, once, on the principal's filing (BR-18).
   const six: Person[] = [...FAMILY, { role: "child", name: "Sample Child A3", dob: yearsAgo(6) }, { role: "child", name: "Sample Child A4", dob: yearsAgo(3) }];
@@ -51,10 +51,11 @@ await main("C6.12", "Filings and fees derived from the case (Visitor visa)", asy
   ok("C6.12-14 fail: splitting a filing that is no longer in the group is refused (409 or 422)", [409, 422].includes(r.status), r.status);
 
   // Biometrics age edges (VV-R15): exactly 14 gives biometrics; 79 gives; 80 does not.
-  const edge = async (age: number) => { const x = await openCase(vv, [{ role: "principal", name: `Sample Client E${age}`, dob: yearsAgo(age) }]); return (await prepare(x.id)).p; };
-  const [a14, a79, a80] = [await edge(14), await edge(79), await edge(80)];
-  ok("C6.12-15 pass: one person aged 14, or 79, pays visa CAD 100 and biometrics CAD 85", total(a14, VISA) === 100 && total(a14, BIO) === 85 && total(a79, BIO) === 85);
-  ok("C6.12-16 pass: one person aged 80 has no biometrics line (\"over 79\")", total(a80, VISA) === 100 && total(a80, BIO) === 0 && !(a80?.fees ?? []).some((f) => BIO.test(f.line) && !f.exempt));
+  // Two days either side of each birthday, so the server's time zone and 29 February never decide it (FQ-7 open).
+  const edge = async (years: number, days: number) => { const x = await openCase(vv, [{ role: "principal", name: `Sample Client E${years}`, dob: yearsAgo(years, days) }]); return (await prepare(x.id)).p; };
+  const [justOver14, justUnder14, age79, justOver80] = [await edge(14, 2), await edge(14, -2), await edge(80, -2), await edge(80, 2)];
+  ok("C6.12-15 pass: just past the 14th birthday, and aged 79, a person pays visa CAD 100 and biometrics CAD 85; two days before turning 14, no biometrics", total(justOver14, VISA) === 100 && total(justOver14, BIO) === 85 && total(age79, BIO) === 85 && total(justUnder14, VISA) === 100 && total(justUnder14, BIO) === 0);
+  ok("C6.12-16 pass: a person just past 80 has no biometrics line (\"over 79\")", total(justOver80, VISA) === 100 && total(justOver80, BIO) === 0 && !(justOver80?.fees ?? []).some((f) => BIO.test(f.line) && !f.exempt));
 
   // A date of birth corrected later recomputes the derived fees before filing (BR-12: drafts recompute).
   const kid = c.subjects["Sample Child A1"];

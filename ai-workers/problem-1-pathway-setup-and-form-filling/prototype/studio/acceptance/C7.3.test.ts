@@ -31,7 +31,7 @@ await main("C7.3", "Answer sheet for an Online line (IMM 5707)", async () => {
   const name = a.find((x) => x.fact === "person.family_name" && x.subject === P);
   ok("C7.3-5 pass: Section A lists the applicant's confirmed answers with their source and the text to copy", !!name && name.copy_text === String(name.value) && ["Document", "Client", "Case officer"].includes(name.source), name);
   ok("C7.3-6 pass: Section A also carries the spouse's answers (IMM 5707 includes the spouse, VV-R07), labelled by person", a.some((x) => x.subject === c.subjects["Sample Spouse A"]));
-  ok("C7.3-7 pass: a date is offered to copy as the portal takes it (YYYY-MM-DD)", a.filter((x) => /date/.test(x.fact)).every((x) => /^\d{4}-\d{2}-\d{2}$/.test(x.copy_text)));
+  ok("C7.3-7 pass: a date is offered to copy as the portal takes it (YYYY-MM-DD)", a.filter((x) => /date/.test(x.fact)).length > 0 && a.filter((x) => /date/.test(x.fact)).every((x) => /^\d{4}-\d{2}-\d{2}$/.test(x.copy_text)));
 
   const sec = s?.sections[0]?.key;
   r = await call("POST", `/runtime/items/${item?.id}/screens/${sec}/entered`, {}, CLIENT);

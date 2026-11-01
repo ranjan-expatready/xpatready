@@ -1,6 +1,6 @@
 // C6.11 Firm, users and case team (M3-A; r5c BR-20, BR-21; P-154, P-155, P-164 (3); stand-ins SI-9, SI-15).
-// Visitor visa: one Sample firm (a representative with licence body and number, a case officer, a firm admin) and one
-// Sample solo firm; one representative of record per case; assign and reassign with history; IMM 5476 fills from the
+// Visitor visa: one Sample firm (two representatives with licence body and number, FQ-9; the built case officer
+// `user-O`; the firm admin duty held by one of them) and one Sample solo firm; one representative of record per case; assign and reassign with history; IMM 5476 fills from the
 // representative of record, and a change asks for a new one and marks the old one out of date. Rules: VV-R10, VV-R11.
 //   tsx studio/acceptance/C6.11.test.ts 4440 xr_studio_accept   (after lib/setup_vv_m3.ts)
 import { AUTHOR, CLIENT, FAMILY, OFFICER, call, firms, itemsOf, main, needVisitorVisa, ok, openCase, prepare, sql } from "./lib/m3.ts";
@@ -47,8 +47,12 @@ await main("C6.11", "Firm, users and case team", async () => {
   const facts = (await call("GET", `/runtime/cases/${c.id}/questionnaire?mode=agent`, undefined, OFFICER)).body?.sections?.flatMap((s: { questions: { fact: string; answer: { value: unknown } | null }[] }) => s.questions) ?? [];
   ok("C6.11-16 pass: the representative's facts IMM 5476 reads (membership ID, licensing body) come from the representative of record, source \"Firm\", not typed per case",
     !!rep?.licence?.number && facts.some((q: { fact: string; answer: { value: unknown; channel?: string } | null }) => q.fact === "representative.membership_id" && q.answer?.value === rep.licence!.number && q.answer?.channel === "firm"));
-  const newRep = f.firm?.users.find((u) => u.duties.includes("representative") && u.actor !== f.rep)?.actor ?? f.soloRep;
-  r = await call("PUT", `/runtime/cases/${c.id}/team`, { representative: newRep, reason: "Representative leaves the firm (Sample)", version: t?.version }, f.admin);
+  const newRep = f.rep2;
+  ok("C6.11-16a pass (FQ-9): the Sample firm has a second representative to hand the case to", !!newRep, f.firm?.users.map((u) => u.duties));
+  const t2 = (await call("GET", `/runtime/cases/${c.id}/team`, undefined, f.admin)).body;
+  r = await call("PUT", `/runtime/cases/${c.id}/team`, { representative: f.soloRep, reason: "Another firm (Sample)", version: t2?.version }, f.admin);
+  ok("C6.11-16b fail: a representative from another firm cannot become this case's representative of record (422)", !!f.soloRep && r.status === 422, r.status);
+  r = await call("PUT", `/runtime/cases/${c.id}/team`, { representative: newRep, reason: "Representative leaves the firm (Sample)", version: t2?.version }, f.admin);
   p = (await prepare(c.id)).p;
   const after = itemsOf(p, P, "IMM 5476");
   ok("C6.11-17 pass: changing the representative asks for a new IMM 5476 naming the new representative (To do, history line \"new IMM 5476 needed\"); a signed earlier one goes Out of date (C9.2-6)",

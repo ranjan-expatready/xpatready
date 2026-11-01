@@ -1,7 +1,8 @@
 // C6.9 Staff eligibility page (M3-D; r5c BR-14; P-77, P-141, P-164 (1); stand-in SI-1). Visitor visa part: the gates
 // are rules as data on the release (lib/setup_vv_m3.ts S7, Sample values from canada.ca's eligibility list, VV-R01);
 // an adapter fills AG-03's result shape with three outcomes and no score; each run is a frozen snapshot with the rules
-// version, a disclaimer and who ran it; override needs a reason; out of date when a fact changes. Rules only, no AI.
+// version, a disclaimer and who ran it; only facts settle gates (travel document, convictions); money, health, ties
+// and leaving are the officer's judgement (FQ-5); override needs a reason; out of date when a fact changes. Rules only, no AI.
 // The judgement items on IRCC's list (ties, leaving at the end of the visit) are shown as the officer's judgement,
 // never as gates (FQ-5).
 // Breadth, after Visitor visa: score grids, cut-off bands and what-if advice (SI-2, the team's AG-03).
@@ -24,9 +25,9 @@ await main("C6.9", "Staff eligibility page (Visitor visa gates, stand-in SI-1)",
   let r = await assess();
   let a = r.body as Assessment | undefined, res = vvResult(a);
   ok("C6.9-2 pass: a run returns AG-03's shape: pack id and version (our release pin), rules as at, disclaimer, who and when, source stand-in", r.status === 201 && !!a?.packId && a?.packVersion !== undefined && !!a?.rulesAsOfByProgram?.["vv.single"] && (a?.disclaimerText ?? "").length > 20 && a?.createdBy === OFFICER && a?.source === "stand-in", a);
-  ok("C6.9-3 pass: with funds, passport and convictions unanswered: Possibly eligible, needs those facts (missing inputs named)", res?.outcome === "POSSIBLY_ELIGIBLE" && ["case.funds_available_cad", "person.passport_number", "person.criminal_history"].every((f) => res!.missingInputs.includes(f)), res);
-  ok("C6.9-4 pass: each gate shows Met, Not met or Not answered with the facts it reads", (res?.gates ?? []).length === 3 && res!.gates.every((g) => ["met", "not_met", "not_answered"].includes(g.state) && g.facts.length > 0), res?.gates);
-  ok("C6.9-5 pass: the officer's judgement items (ties, leaving at the end of the visit) are listed, never gates (FQ-5)", (res?.judgement ?? []).length === 2 && !(res?.gates ?? []).some((g) => /ties|leave/i.test(g.key)), res?.judgement);
+  ok("C6.9-3 pass: with passport and convictions unanswered: Possibly eligible, needs those facts (missing inputs named)", res?.outcome === "POSSIBLY_ELIGIBLE" && ["person.passport_number", "person.criminal_history"].every((f) => res!.missingInputs.includes(f)), res);
+  ok("C6.9-4 pass: each gate shows Met, Not met or Not answered with the facts it reads", (res?.gates ?? []).length === 2 && res!.gates.every((g) => ["met", "not_met", "not_answered"].includes(g.state) && g.facts.length > 0), res?.gates);
+  ok("C6.9-5 pass: the officer's judgement items (money for the stay, good health, ties, leaving at the end) are listed, never gates (FQ-5)", (res?.judgement ?? []).length === 4 && !(res?.gates ?? []).some((g) => /money|funds|health|ties|leave/i.test(g.key)), res?.judgement);
   ok("C6.9-6 pass (SI-1 adapter): never below the cut-off, no score, no breakdown, no recommendations", OUTCOMES.includes(res?.outcome ?? "") && res?.outcome !== "ELIGIBLE_BELOW_CUTOFF" && res?.score === null && res?.maxScore === null && Object.keys(res?.breakdown ?? {}).length === 0 && (res?.recommendations ?? []).length === 0);
 
   for (const [f, val] of [["person.passport_number", "SAMPLEP12"], ["person.passport_expiry_date", inDays(3 * 365)], ["person.criminal_history", true]] as const) await answer(c.id, P, f, val);
@@ -42,11 +43,11 @@ await main("C6.9", "Staff eligibility page (Visitor visa gates, stand-in SI-1)",
   ok("C6.9-8 pass: every gate met gives Likely eligible", res?.outcome === "LIKELY_ELIGIBLE" && res!.gates.every((g) => g.state === "met"), res);
   ok("C6.9-9 pass (AG-3-1): an earlier run is a frozen snapshot; it is unchanged and marked out of date after the facts changed", sql(`select result_json::text from assessment where id='${first}'`) === firstJson && !!firstJson
     && (await call("GET", `/runtime/cases/${c.id}/assessments`, undefined, OFFICER)).body?.assessments?.find((x: Assessment) => x.id === first)?.out_of_date === true);
-  await answer(c.id, c.caseSubject, "case.funds_available_cad", "9000");
+  await answer(c.id, P, "person.passport_number", "SAMPLEP13");
   r = await assess(OFFICER);
   ok("C6.9-10 fail (AG-3-28): running again after a change without a reason is refused (400)", r.status === 400 && /reason/i.test(JSON.stringify(r.body)), r.status);
 
-  const latest = (await call("GET", `/runtime/cases/${c.id}/assessments`, undefined, OFFICER)).body?.assessments?.[0] as Assessment | undefined;
+  const latest = ([...((await call("GET", `/runtime/cases/${c.id}/assessments`, undefined, OFFICER)).body?.assessments ?? [])] as Assessment[]).sort((x, y) => y.createdAt.localeCompare(x.createdAt))[0] as Assessment | undefined;
   r = await call("POST", `/runtime/assessments/${latest?.id}/override`, { programKey: "vv.single", fromOutcome: "LIKELY_ELIGIBLE", label: "Refer to the representative" }, OFFICER);
   ok("C6.9-11 fail: an override without a reason is refused on the field (400)", r.status === 400 && /reason/i.test(JSON.stringify(r.body)), r.status);
   r = await call("POST", `/runtime/assessments/${latest?.id}/override`, { programKey: "vv.single", fromOutcome: "LIKELY_ELIGIBLE", label: "Refer to the representative", reason: "Earlier refusal (Sample)" }, OFFICER);

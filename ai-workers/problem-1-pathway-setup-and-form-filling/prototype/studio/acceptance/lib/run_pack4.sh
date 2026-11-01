@@ -11,7 +11,7 @@ zsh studio/tools/isolated.sh $NAME $PORT start >/dev/null || exit 1
 $TSX studio/tests/runtime/setup_visitor_visa.ts $PORT $DB > "$OUT/setup_r1.log" 2>&1; echo "setup release 1: $(tail -1 $OUT/setup_r1.log)"
 $TSX studio/acceptance/lib/setup_vv_m3.ts $PORT $DB > "$OUT/setup_r2.log" 2>&1; echo "setup release 2: $(tail -1 $OUT/setup_r2.log)"
 fails=0
-for t in C6.11 C6.12 C11.6 C6.4 C6.5 C6.9 C7.7 C7.3 C7.5 C7.6 C8.1 C8.2 C9.2; do
+for t in C6.11 C6.12 C11.6 C6.4 C6.5 C6.9 C7.7 C7.3 C7.5 C8.1 C8.2 C9.2 C7.6; do  # C7.6 last: it moves edition dates (restored at its end)
   $TSX studio/acceptance/$t.test.ts $PORT $DB > "$OUT/$t.log" 2>&1 || fails=$((fails+1)); echo "$t: $(tail -1 $OUT/$t.log)"
 done
 zsh studio/tools/isolated.sh $NAME $PORT start >/dev/null && { $TSX studio/acceptance/C10.2.test.ts $PORT $DB > "$OUT/C10.2.log" 2>&1 || fails=$((fails+1)); echo "C10.2: $(tail -1 $OUT/C10.2.log)"; }

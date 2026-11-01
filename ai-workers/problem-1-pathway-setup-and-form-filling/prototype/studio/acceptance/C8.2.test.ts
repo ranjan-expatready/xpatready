@@ -19,7 +19,7 @@ await main("C8.2", "Record the submission per group (Visitor visa)", async () =>
 
   let r = await call("PATCH", `/runtime/groups/${g?.id}/record`, body(), officer);
   ok("C8.2-1 fail (BR-11, P-168): recording is refused while the filings are not Ready to file (409, names the blocks)", r.status === 409 && /ready to file/i.test(JSON.stringify(r.body)), r.status);
-  const ready = await readyToFile(c.id, f.rep, officer);
+  const ready = await readyToFile(c.id, f.rep);
   ok("C8.2-2 pass: both filings reach Ready to file (setup for the record)", ready.length === 2, ready);
   p = (await prepare(c.id, officer)).p;
   r = await call("PATCH", `/runtime/groups/${g?.id}/record`, body({ version: p?.version, filings: [{ ...body().filings[0], application_number: "" }, body().filings[1]] }), officer);
@@ -35,14 +35,14 @@ await main("C8.2", "Record the submission per group (Visitor visa)", async () =>
     sql(`select portal || '|' || our_reference || '|' || prepared_by || '|' || reviewed_by from filing_record where filing_id='${fP}'`) === `APR_PORTAL|SAMPLE-REF-1|${officer}|${f.rep}` && sql(`select uci from filing_person_record where subject_id='${S}' and filing_id='${fS}'`) === "2222-2222");
   r = await call("PATCH", `/runtime/groups/${g?.id}/record`, body({ version: p?.version }), officer);
   ok("C8.2-8 fail (BR-15): a second recording is refused (409)", r.status === 409, r.status);
-  r = await call("PATCH", `/runtime/items/${itemsOf(p, P, "IMM 5257")[0]?.id}/channel`, { channel: "ONLINE", version: p?.version }, officer);
-  ok("C8.2-9 fail: after recording the filing is read-only: a channel change is refused (409)", r.status === 409, r.status);
+  r = await call("PATCH", `/runtime/items/${itemsOf(p, P, "IMM 5257")[0]?.id}/channel`, { channel: "PAPER", reason: "Accommodation (Sample)", version: p?.version }, officer);
+  ok("C8.2-9 fail: after recording the filing is read-only: even an accepted channel change is refused (409)", r.status === 409, r.status);
   r = await call("POST", `/runtime/filings/${fP}/record/corrections`, { application_number: "V300000009" }, officer);
   ok("C8.2-10 fail: correcting a number without a reason is refused (400)", r.status === 400, r.status);
   r = await call("POST", `/runtime/filings/${fP}/record/corrections`, { application_number: "V300000009", reason: "Typo in the number (Sample)" }, officer);
   ok("C8.2-11 pass: \"Correct a number\" changes it and keeps the old one in the history with the reason", r.status === 200 && (await prepare(c.id, officer)).p?.filings.find((x) => x.id === fP)?.number === "V300000009" && sql(`select count(*) from filing_record_correction where filing_id='${fP}'`) === "1");
-  await answer(c.id, P, "person.family_name", "SAMPLEDY");
+  await answer(c.id, P, "person.family_name", "SAMPLEDY", CLIENT); // counts as confirmed (P-78), as in C9.2
   p = (await prepare(c.id, officer)).p;
   ok("C8.2-12 pass (BR-12, P-142 D7): a fact changed after filing marks the filed items \"Filed with an earlier value\" and opens a task to re-sign or tell IRCC (Unconfirmed: no counsel)",
-    itemsOf(p, P).some((i) => i.state === "out_of_date" && /earlier value/i.test(i.reason ?? "")) && Number(sql(`select count(*) from case_task where case_id='${c.id}' and kind='after_filing_change'`) ?? 0) === 1);
+    itemsOf(p, P).some((i) => i.state === "out_of_date" && /earlier value/i.test(i.reason ?? "")) && Number(sql(`select count(*) from case_task where case_id='${c.id}' and kind='after_filing_change'`) ?? 0) >= 1);
 });

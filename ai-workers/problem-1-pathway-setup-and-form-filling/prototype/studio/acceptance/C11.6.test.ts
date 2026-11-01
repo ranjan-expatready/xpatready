@@ -25,11 +25,15 @@ await main("C11.6", "Channel per form on the case, inside what IRCC accepts", as
   r = await call("PATCH", `/runtime/items/${i5257?.id}/channel`, { channel: "FAX", version: p?.version }, OFFICER);
   ok("C11.6-7 fail: an unknown channel is a 400 naming the four channels", r.status === 400 && /Online|PDF upload|Paper|Not needed/.test(JSON.stringify(r.body)), r.status);
   ok("C11.6-8 fail: a client cannot change a channel (403)", (await call("PATCH", `/runtime/items/${i5257?.id}/channel`, { channel: "ONLINE", version: p?.version }, CLIENT)).status === 403);
-  const target = (i5257?.accepts ?? []).find((x) => x !== i5257?.channel);
+  r = await call("PATCH", `/runtime/items/${i5257?.id}/channel`, { channel: "ONLINE", version: p?.version }, OFFICER);
+  ok("C11.6-8a fail (r5c §6): Online on IMM 5257 on the APR Portal is refused with the reason (422; Sample accepts record, setup S4a)", r.status === 422 && /PDF upload|accept/i.test(r.body?.detail ?? ""), r.body?.detail);
+  const target = "PAPER";
   r = await call("PATCH", `/runtime/items/${i5257?.id}/channel`, { channel: target, version: p?.version }, OFFICER);
+  ok("C11.6-8b fail (FQ-3, recommended): Paper on a visitor visa needs a written accommodation reason (400 without one)", r.status === 400 && /reason|accommodation/i.test(JSON.stringify(r.body)), r.status);
+  r = await call("PATCH", `/runtime/items/${i5257?.id}/channel`, { channel: target, reason: "Cannot apply online: accommodation (Sample)", version: p?.version }, OFFICER);
   const changed = r.status === 200;
   p = (await prepare(c.id)).p;
-  ok("C11.6-9 pass: a channel inside what IRCC accepts is saved on that person's item only; the spouse's IMM 5257 keeps its channel", !!target && r.status === 200 && itemsOf(p, P, "IMM 5257")[0]?.channel === target && itemsOf(p, c.subjects["Sample Spouse A"], "IMM 5257")[0]?.channel === "PDF_UPLOAD", { target, status: r.status });
+  ok("C11.6-9 pass: Paper, accepted for IMM 5257 (Sample) and given with a reason, is saved on that person's item only; the spouse's IMM 5257 keeps its channel", !!target && r.status === 200 && itemsOf(p, P, "IMM 5257")[0]?.channel === target && itemsOf(p, c.subjects["Sample Spouse A"], "IMM 5257")[0]?.channel === "PDF_UPLOAD", { target, status: r.status });
   ok("C11.6-10 pass (data): the change is audited with who, from and to, without client values", /IMM 5257/.test(sql(`select coalesce(string_agg(summary, ' '), '') from audit_event where entity='item' and entity_key='${i5257?.id}'`) ?? ""));
   r = await call("PATCH", `/runtime/items/${i5257?.id}/channel`, { channel: "PDF_UPLOAD", version: 0 }, OFFICER);
   ok("C11.6-11 fail: a change from an older version is refused (409, Reload)", r.status === 409, r.status);

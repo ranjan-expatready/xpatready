@@ -3,27 +3,34 @@
 From a case to the application ready to file, on the agreed design M3 case view r5c (29 Oct; `product/screens/M3-agent-view/`, `M3-prepare-application/`; BACKLOG L1; features M3-A to M3-F). Run: `zsh studio/acceptance/lib/run_pack4.sh [port]` (its own isolated copy, US$0, no live AI). The routes and names the tests assume: `M3-CONTRACT.md`. The click-through: `journeys/J7-visitor-visa-end-to-end.md`. The IRCC rules: `product/compliance-trace.md`, section "Pack 4" (VV-R01…VV-R21).
 
 ## Tests (each fails today; a builder moves it into the suites in the PR that makes it pass)
-| Feature | Capability | Test | What it proves for Visitor visa |
-|---|---|---|---|
-| M3-A | C6.11 | `C6.11.test.ts` | Sample firm and solo firm (SI-9); representative of record with licence; assign and reassign with history; IMM 5476 from the representative; a change asks for a new one |
-| M3-B | C6.12 | `C6.12.test.ts` | one filing per person, one family group; CAD 100 per person, CAD 500 for 5+; biometrics CAD 85 / CAD 170, none under 14 or over 79; split with a reason |
-| M3-B | C11.6 | `C11.6.test.ts` | the line's channel as each item's default; IRCC's accepted channels per edition × account; refusal with IRCC's line; portal read-only |
-| M3-C | C6.4 | `C6.4.test.ts` | checklist per person from release × role × conditions; recomputed; team states; the document is the person's |
-| M3-C | C6.5 | `C6.5.test.ts` | passport read by rules (synthetic PDF, `lib/fixtures.ts`); proposals with provenance; field by field; typed versus document check; unreadable flagged; a letter replayed at US$0 |
-| M3-D | C6.9 | `C6.9.test.ts` | AG-03's shape from our gates (SI-1); three outcomes, no score; frozen snapshots; override and review |
-| M3-E | C7.7 | `C7.7.test.ts` | deliverables per person (forms by age, documents, biometrics step); stage 1 counts; PDF copy not for filing |
-| M3-E | C7.6 | `C7.6.test.ts` | the blocks (facts, barcode, signature, review, accepted-until) and the warnings passed with a reason; Ready to file; Self-reviewed |
-| M3-E | C7.5 | `C7.5.test.ts` | rules cross-checks; AI review replayed only, cost first; team words and states; never blocks |
-| M3-E | C7.3 | `C7.3.test.ts` | answer sheet in the PDF twin's order; copy text; Entered ticks frozen; out of date after a change |
-| M3-F | C8.1 | `C8.1.test.ts` | who signs; print → signed → scan → uploaded to IRCC, in order, upload only after Ready to file |
-| M3-F | C8.2 | `C8.2.test.ts` | record per group; numbers, dates, UCI; read-only; second record refused; correction history |
-| M3-F | C9.2 | `C9.2.test.ts` | out of date on the case's items with words, block, Undo, scope; files unchanged |
-| M3-F | C10.2 | `C10.2.test.ts` | Finished story checkpoint (Visitor visa part), US$0 |
-| setup | — | `lib/setup_vv_m3.ts` | release 2 of Visitor visa: account, IMM 5476, who signs, channels, filing modes (M3-0), document lines, gates (M3-8) |
+| Feature | Capability | Test | What it proves for Visitor visa | Needs first (cannot go green alone) |
+|---|---|---|---|---|
+| M3-A | C6.11 | `C6.11.test.ts` | Sample firm and solo firm (SI-9); representative of record with licence; assign and reassign with history; IMM 5476 from the representative; a change asks for a new one | C6.12 `/prepare` (IMM 5476 items) |
+| M3-B | C6.12 | `C6.12.test.ts` | one filing per person, one family group; CAD 100 per person, CAD 500 for 5+; biometrics CAD 85 / CAD 170, none under 14 or over 79; split with a reason | C6.11 (a case needs its representative); setup S5, S7a |
+| M3-B | C11.6 | `C11.6.test.ts` | the line's channel as each item's default; IRCC's accepted channels per edition × account; refusal with IRCC's line; portal read-only | C6.12; setup S4a |
+| M3-C | C6.4 | `C6.4.test.ts` | checklist per person from release × role × conditions; recomputed; team states; the document is the person's | setup S6, S6a |
+| M3-C | C6.5 | `C6.5.test.ts` | passport read by rules (synthetic PDF, `lib/fixtures.ts`); proposals with provenance; field by field; typed versus document check; unreadable flagged; a letter replayed at US$0 | C6.4 (upload on a line); saved letter read (FQ-10) |
+| M3-D | C6.9 | `C6.9.test.ts` | AG-03's shape from our gates (SI-1); three outcomes, no score; frozen snapshots; override and review | setup S7 |
+| M3-E | C7.7 | `C7.7.test.ts` | deliverables per person (forms by age, documents, biometrics step); stage 1 counts; PDF copy not for filing | C6.12, C6.4 |
+| M3-E | C7.6 | `C7.6.test.ts` | the blocks (facts, barcode, signature, review, accepted-until) and the warnings passed with a reason; Ready to file; Self-reviewed | C6.11, C6.12, C8.1 signing steps; W1-16 accepted-until |
+| M3-E | C7.5 | `C7.5.test.ts` | rules cross-checks; AI review replayed only, cost first; team words and states; never blocks | C6.12; saved IMM 5257 review (FQ-10) |
+| M3-E | C7.3 | `C7.3.test.ts` | answer sheet in the PDF twin's order; copy text; Entered ticks frozen; out of date after a change | C6.12 |
+| M3-F | C8.1 | `C8.1.test.ts` | who signs; print → signed → scan → uploaded to IRCC, in order, upload only after Ready to file | C6.11, C6.12, C7.6 (Ready to file) |
+| M3-F | C8.2 | `C8.2.test.ts` | record per group; numbers, dates, UCI; read-only; second record refused; correction history | C7.6, C8.1 |
+| M3-F | C9.2 | `C9.2.test.ts` | out of date on the case's items with words, block, Undo, scope; files unchanged | C6.11, C7.3, C8.1 |
+| M3-F | C10.2 | `C10.2.test.ts` | Finished story checkpoint (Visitor visa part), US$0 | all of the above |
+| setup | — | `lib/setup_vv_m3.ts` | release 2 of Visitor visa: account, IMM 5476, who signs, channels, filing modes (M3-0), document lines, gates (M3-8) | — |
 
 ## Breadth, after Visitor visa
 * **C1.3** (employer case link) and **C11.5** (Retail and Corporate apart, case link to an employer case): no employer facts on a visitor visa. Test with the Corporate Sample and the work permit (DEMO combination B).
+* The visitor medical exam (VV-R16: a stay over 6 months **and** a listed country, a public-health job or a super visa; FQ-11) and IMM 5645 in place of IMM 5707 for some countries (Guide 5256: "IMM 5707 or IMM 5645").
 * Inside the Visitor visa tests, named in each file's header: C6.12 sponsorship + PR pair and the "study 6 months or more?" question; C6.4 police certificates and the PR / Express Entry rules (P-171 (6), P-172); C6.5 printed-text and table reading (STANDARDS §1 gate); C6.9 score grids (SI-2); C7.5 other form families (SI-6); C7.3 the live portal order (W6); C7.7 and C8.1 Paper lines, waiting filings, client e-sign; C8.2 sponsorship and citizenship groups; C9.2 the employer-case change; C10.2 combination B (row 18) and row 13 (W6, parked).
+
+## Saved AI runs (no live call from any test)
+C6.5-20 (the synthetic letter of invitation read by AI vision) and C7.5-7…13 (the AI review of IMM 5257) replay saved runs at US$0. Those runs do not exist yet: each is recorded once by a live run with the founder's Go (FQ-10), on the fixed values in the tests (`lib/fixtures.ts` letterPdf; `lib/m3.ts` FIXED), and replayed by form edition and field values, not by PDF checksum. Until then the precondition lines C6.5-19b and C7.5-6b say so. No test sends `mode: "live"`; the cost card is read instead (P-110, P-175).
+
+## Challenger (1 Nov)
+A fresh challenger found 5 Blockers, 13 Majors, 15 Minors (`side-session-notes/…/pack4-challenge.md`, outside the repository). All Blockers and Majors are fixed in this pack, with two choices: M2 (a second representative) became FQ-9, and M4 (declarations) became FQ-12. Minors fixed except: m6 declined (P-47: an invalid value is saved and flagged, never refused, so QA-122 is fixed by blocking, C7.6-4); m4 the SI-1 plug-in fixture and "AI off" checks stay in the journey (J7 4.1) for the builder's browser check; m10 kept (routes that must not exist answer 404 today and after); m12 the IMM 5707 section titles are the forms lane's `contracts/pdf-sections.json` labels, read by the test, not fixed in it.
 
 ## Founder questions (no design choice was made for these; the tests use the recommendation and say so)
 1. **FQ-1 Which IRCC account files a represented visitor visa?** canada.ca lists "visitor visa" under the APR portal and "temporary resident visas" under the IRCC portal for representatives on the same page (VV-R12). **Recommend the APR Portal** (DEMO.md P-98, r5c BR-10); the expert confirms.
@@ -34,3 +41,7 @@ From a case to the application ready to file, on the agreed design M3 case view 
 6. **FQ-6 Does an entered Online section that went out of date block "Ready to file"?** P-136 says "a signed, uploaded or entered item" blocks; P-168 and r5c BR-9 name only signed or uploaded items and say an entered Online section warns. Recommend **warn** (P-168 is the later decision; the portal shows the officer what was entered); the tests follow that (C7.3-13).
 7. **FQ-7 On which date is age counted** (biometrics under 14 or over 79, IMM 5707 at 18, a parent signing under 18)? Recommend the submission date: shown "as at today" until the group is recorded, then frozen.
 8. **FQ-8 Biometrics given in the last 10 years** (VV-R19). Recommend a per-person fact "biometrics given on" (date): no biometrics fee or step while it is under 10 years old; after the Visitor visa path is green.
+9. **FQ-9 A second representative in the Sample firm.** BR-20 seeds "a representative and a case officer"; testing a change of representative of record (BR-20, C6.11-17, C9.2-10) needs a second one in the same firm (a change to the solo firm's representative is another firm and is refused, C6.11-16b). Recommend seeding two representatives (one also holding the firm admin duty) and using the built `user-O` as the case officer.
+10. **FQ-10 Recording the two saved AI runs.** The letter of invitation read (AI vision, cost to be estimated on the card) and the IMM 5257 review (one live trial, about US$1, SI-6). Recommend one founder Go for both, on the fixed test values, before the C6.5 and C7.5 builders start.
+11. **FQ-11 The visitor medical exam.** Needs a question "lived 6 months or more in a row in one of IRCC's listed countries in the past year" and the list as data. Recommend after the Visitor visa path is green (breadth), Sample list from the canada.ca page.
+12. **FQ-12 Declarations of an adult who is not the principal.** BR-6 and P-97: the officer may enter them on the person's behalf but never confirm them; the person's own link is a client screen (after M3). Recommend for M3: the officer enters them with `onBehalfOf` and a reason, recorded as declared by that person from their signed form, and they count for filling; the tests do that (`lib/m3.ts` fillEverything).
