@@ -97,9 +97,27 @@ if [ -n "$CHANGED" ]; then
   fi
 fi
 picked() { [ -z "$PICK" ] && return 0; case "$PICK" in *" $1 "*) return 0;; esac; return 1; }
-# --shard i/n: each chosen unit (a suite, or the three R1 suites together) takes the next turn; this copy runs turn i of
-# every n. Same order on every machine (the glob is sorted), so the n shards together run each chosen suite once.
-TURN=0; myturn() { TURN=$((TURN + 1)); [ $(( (TURN - 1) % SHARDS + 1 )) -eq "$SHARD" ]; }
+# --shard i/n: the chosen units (a suite, or the three R1 suites together as check_runtime_r1a.ts) are dealt to n shards
+# longest first by tools/suite-times.tsv (unknown: 30 s; quarantined: 0), each to the shard with the least time so far.
+# Every machine computes the same deal, so the n shards together run each chosen unit once. myturn <unit>: is it mine?
+TURN=0; MINE=" "
+if [ "$SHARDS" -gt 1 ]; then
+  units=()
+  for path in "$S"/tests/check_*.ts "$S"/tests/check_*.cjs; do f=$(basename "$path"); case " $SKIP " in *" $f "*) continue;; esac; picked "$f" && units+=("$f"); done
+  RT0="$S/tests/runtime"
+  [ -f "$RT0/check_case_engine.ts" ] && picked check_case_engine.ts && units+=(check_case_engine.ts)
+  [ -f "$RT0/check_runtime_r1a.ts" ] && { picked check_runtime_r1a.ts || picked check_runtime_r1c.cjs || picked check_runtime_r1d.ts; } && units+=(check_runtime_r1a.ts)
+  for t in check_p2_guard check_p2_launch; do [ -f "$P/prototype/tests/$t.ts" ] && picked "$t.ts" && units+=("$t.ts"); done
+  TURN=${#units[@]}
+  MINE=" $(printf '%s\n' "${units[@]}" | awk -v n="$SHARDS" -v me="$SHARD" -v q=" $QUARANTINE " -v tf="$P/product/tools/suite-times.tsv" '
+    BEGIN { while ((getline l < tf) > 0) { if (l ~ /^#/) continue; split(l, a, "\t"); t[a[1]] = a[2] } }
+    { u[NR] = $0; w[NR] = (index(q, " " $0 " ") ? 0 : (($0 in t) ? t[$0] : 30)); if ($0 == "check_runtime_r1a.ts") w[NR] += t["check_runtime_r1c.cjs"] + t["check_runtime_r1d.ts"] }
+    END { for (i = 1; i <= NR; i++) o[i] = i
+          for (i = 1; i <= NR; i++) for (j = i + 1; j <= NR; j++) if (w[o[j]] > w[o[i]] || (w[o[j]] == w[o[i]] && u[o[j]] < u[o[i]])) { x = o[i]; o[i] = o[j]; o[j] = x }
+          for (k = 1; k <= n; k++) load[k] = 0
+          for (i = 1; i <= NR; i++) { b = 1; for (k = 2; k <= n; k++) if (load[k] < load[b]) b = k; load[b] += w[o[i]]; if (b == me) printf "%s ", u[o[i]] } }') "
+fi
+myturn() { [ "$SHARDS" -le 1 ] && return 0; case "$MINE" in *" $1 "*) return 0;; esac; return 1; }
 pg_ctl -D "$ROOT/.tools/solution-1-prototype/pg18-data" status >/dev/null 2>&1 || zsh "$S/start.sh" >/dev/null 2>&1 || { echo "the demo database is not running and start.sh failed"; exit 2; }
 
 rows=(); fail=0
@@ -115,7 +133,7 @@ run() {  # $1 file, $2 label, rest: command
 for path in "$S"/tests/check_*.ts "$S"/tests/check_*.cjs; do
   f=$(basename "$path"); case " $SKIP " in *" $f "*) continue;; esac
   picked "$f" || continue
-  myturn || continue
+  myturn "$f" || continue
   case " $QUARANTINE " in *" $f "*) [ -n "$CHANGED" ] && { rows+=("| $f | quarantined | | fails at random: nightly only until its fix merges (P-205) |"); continue; };; esac
   usage=$(grep -m1 -E "studio/tests/$f" "$path")
   if [ "$f" = check_studio_browser.cjs ]; then
@@ -150,9 +168,9 @@ done
 # Suites outside tests/check_*: the runtime lane's (R1, two steps on one copy) and the drafting guard's (prototype/tests,
 # plain: they make their own temporary copies). Both lanes' Lead checks found CI skipping them (24 Oct).
 RT="$S/tests/runtime"; RN=$(iname runtime_r1); RP=$(iport 4430)
-if [ -f "$RT/check_case_engine.ts" ] && picked check_case_engine.ts && myturn; then run check_case_engine.ts plain $TSX "$RT/check_case_engine.ts"; fi
+if [ -f "$RT/check_case_engine.ts" ] && picked check_case_engine.ts && myturn check_case_engine.ts; then run check_case_engine.ts plain $TSX "$RT/check_case_engine.ts"; fi
 # The three R1 suites share one copy and run in order: chosen together (select-suites.mjs) or not at all.
-if [ -f "$RT/check_runtime_r1a.ts" ] && { picked check_runtime_r1a.ts || picked check_runtime_r1c.cjs || picked check_runtime_r1d.ts; } && myturn; then
+if [ -f "$RT/check_runtime_r1a.ts" ] && { picked check_runtime_r1a.ts || picked check_runtime_r1c.cjs || picked check_runtime_r1d.ts; } && myturn check_runtime_r1a.ts; then
   if zsh "$S/tools/isolated.sh" "$RN" "$RP" start >/dev/null 2>&1 && $TSX "$RT/setup_visitor_visa.ts" "$RP" "xr_studio_$RN" > "$OUT/setup_visitor_visa.log" 2>&1; then
     # R1c's browser journey first: it publishes a release 2 that R1a expects (runtime lane, 24 Oct).
     [ -f "$RT/check_runtime_r1c.cjs" ] && run check_runtime_r1c.cjs "$RN" node "$RT/check_runtime_r1c.cjs" "$RP"
@@ -163,12 +181,12 @@ if [ -f "$RT/check_runtime_r1a.ts" ] && { picked check_runtime_r1a.ts || picked 
   zsh "$S/tools/isolated.sh" "$RN" "$RP" stop >/dev/null 2>&1
 fi
 for t in check_p2_guard check_p2_launch; do
-  [ -f "$P/prototype/tests/$t.ts" ] && picked "$t.ts" && myturn && run "$t.ts" plain "$S/node_modules/.bin/tsx" "$P/prototype/tests/$t.ts"
+  [ -f "$P/prototype/tests/$t.ts" ] && picked "$t.ts" && myturn "$t.ts" && run "$t.ts" plain "$S/node_modules/.bin/tsx" "$P/prototype/tests/$t.ts"
 done
 # A choice that ran nothing is a fault, never a pass.
 # A shard can rightly get nothing when few suites were chosen (fewer than n): that shard says so and passes.
 if [ -n "$PICK" ] && [ "${#rows[@]}" -eq 0 ]; then
-  if [ "$SHARDS" -gt 1 ] && [ "$TURN" -lt "$SHARD" ]; then rows=("| (none) | PASS | | $TURN chosen units, none for shard $SHARD/$SHARDS |")
+  if [ "$SHARDS" -gt 1 ] && [ "$MINE" = " " ]; then rows=("| (none) | PASS | | $TURN chosen units, none for shard $SHARD/$SHARDS |")
   else rows=("| (none) | FAIL | | suites were chosen but none ran |"); fail=1; fi
 fi
 echo "| Suite | Result | Time | Last line |"; echo "|---|---|---|---|"; printf '%s\n' "${rows[@]}"
