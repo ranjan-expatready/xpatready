@@ -9,7 +9,8 @@ import type { BoxRow } from "../render.ts";
 import { sectionGroupOf } from "../twin.ts";
 
 export type SheetAnswer = { label: string; fact: string; subject: string; person: string; row: number | null; value: unknown; copy_text: string; source: "Document" | "Client" | "Case officer" };
-export type SheetSection = { key: string; title: string; entered: { at: string; by: string } | null; out_of_date: boolean; answers: SheetAnswer[]; waiting: { fact: string; subject: string; label: string }[] };
+/** `version`: the section's fingerprint now; a tick sends the one it read, so it freezes what the officer saw. */
+export type SheetSection = { key: string; title: string; version: string; entered: { at: string; by: string } | null; out_of_date: boolean; answers: SheetAnswer[]; waiting: { fact: string; subject: string; label: string }[] };
 export type Sheet = { order_basis: "pdf_twin"; order_note: string; sections: SheetSection[] };
 /** Where an answer came from, by the channel that first gave it. */
 export type Origin = (subject: string, fact: string) => string | null | undefined;
@@ -34,21 +35,23 @@ export const sectionHash = (answers: { fact: string; subject: string; row: numbe
 /** The sheet for one form and person, from the form's boxes for that person (formCoverage), the twin's sections and the
  *  entered ticks (each with the fingerprint of the answers it froze). */
 export function answerSheet(sections: Record<string, string>, boxes: BoxRow[], origin: Origin, labels: Map<string, string>, entered: Map<string, { at: string; by: string; hash: string }>): Sheet {
-  const out: SheetSection[] = Object.entries(sections).map(([key, title]) => ({ key, title, entered: null, out_of_date: false, answers: [], waiting: [] }));
+  const out: SheetSection[] = Object.entries(sections).map(([key, title]) => ({ key, title, version: "", entered: null, out_of_date: false, answers: [], waiting: [] }));
   const byKey = new Map(out.map((x) => [x.key, x]));
   for (const b of boxes) {
     if (!b.fact) continue;
     const sec = byKey.get(sectionGroupOf(b.box.split(".").slice(1).join(".")) ?? "");
     if (!sec) continue;
     const subject = (b.about ?? "").split("/")[0], label = labels.get(b.fact) ?? b.meaning ?? b.caption ?? b.fact;
+    if (!subject) continue; // a box about nobody on this case (for example the spouse's, with no spouse) is not asked for
     if (b.coverage === "confirmed fact") {
       if (sec.answers.some((a) => a.subject === subject && a.fact === b.fact && a.row === b.row)) continue;
       sec.answers.push({ label, fact: b.fact, subject, person: b.about_label, row: b.row, value: b.value, copy_text: copyText(b.value), source: sourceOf(origin(subject, b.fact)) });
     } else if (!sec.waiting.some((w) => w.subject === subject && w.fact === b.fact)) sec.waiting.push({ fact: b.fact, subject, label });
   }
   for (const sec of out) {
+    sec.version = sectionHash(sec.answers);
     const e = entered.get(sec.key);
-    if (e) { sec.entered = { at: e.at, by: e.by }; sec.out_of_date = e.hash !== sectionHash(sec.answers); }
+    if (e) { sec.entered = { at: e.at, by: e.by }; sec.out_of_date = e.hash !== sec.version; }
   }
   return { order_basis: "pdf_twin", order_note: "In the PDF form's section order until the portal's own screens are recorded (W6).", sections: out };
 }
