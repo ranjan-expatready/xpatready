@@ -215,7 +215,9 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   await p.locator('[data-step-row="forms"] [data-open-item="forms:sources"]').waitFor();
   const vvHeadStep = (await p.locator("main [data-next-step]").first().textContent()).trim();
   const vvForms = (await p.locator('[data-step-row="forms"]').innerText()).replace(/\s+/g, " ");
-  step("item 1 P-180 (X1 C3): Visitor visa — the row says Resume setup; the header's step and the strip's Forms row name the same one form found; no missing list", vvRowStep === "Resume setup" && vvHeadStep === "Add 1 form from the library" && /Add 1 form found/.test(vvForms) && await p.getByRole("region", { name: /Missing before firms can use it/ }).count() === 0, `${vvRowStep} | ${vvHeadStep} | ${vvForms}`);
+  // QA-119: the header's step is the checklist's next item, the strip's ● Next row (Official pages first on Visitor visa).
+  const vvNextRow = (await p.locator('[data-step-row][data-mark="next"]').first().innerText()).replace(/\s+/g, " ");
+  step("item 1 P-180 (X1 C3, QA-119): Visitor visa — the row says Resume setup; the header's step is the strip's ● Next item; the Forms row names the one form found; no missing list", vvRowStep === "Resume setup" && vvHeadStep === "Confirm the checklist page" && vvNextRow.includes(vvHeadStep) && /Add 1 form found/.test(vvForms) && await p.getByRole("region", { name: /Missing before firms can use it/ }).count() === 0, `${vvRowStep} | ${vvHeadStep} | ${vvNextRow} | ${vvForms}`);
   // Lead check items 3 and 5: no warnings on a combination with no setup; the Questions tile says what it counts.
   const vvTiles = await p.locator("main").textContent();
   step("item 3: a combination with no setup shows no warnings (\"no problems\")", !/\d+ warnings?/.test(vvTiles) && /no problems/.test(vvTiles));
@@ -230,7 +232,10 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   const vvId = p.url().split("/c/")[1].split("/")[0];
   const vvList = (await cat("pathway=INDIVIDUAL&filter=all")).rows.find((x) => x.nodeKey === "individual.visitors.visitor_visa").nextAction;
   const vvPage = (await p.locator("[data-next-step]").first().textContent())?.trim();
-  step("review #1: the page's next step is the row's (same words, same action)", vvList && vvPage === vvList.label && (await p.locator("[data-next-step]").first().getAttribute("data-next-step")) === vvList.kind, `${vvList?.label} / ${vvPage}`);
+  // QA-119 (replaces review #1's "the row's nextAction"): the page's one next step is the setup checklist's next item,
+  // the same one the Programs card's Resume setup lands on; never the catalogue's older step when they differ.
+  const vvChecklist = (await (await p.request.fetch(`${BASE}/api/combinations/${vvId}/summary`, { headers: { "x-actor": "user-A" } })).json()).setup.next;
+  step("QA-119: the page's next step is the setup checklist's next item (its words and kind), not the catalogue's older step", vvChecklist && vvPage === vvChecklist.item.text && (await p.locator("[data-next-step]").first().getAttribute("data-next-step")) === vvChecklist.item.kind && vvPage !== vvList?.label, `${vvChecklist?.item.text} / ${vvPage} / old ${vvList?.label}`);
   step("review #1: a form already mapped in the library is not called unmapped", !/IMM 5707[^\n]*not mapped yet/.test(await p.locator("main").textContent()));
   await state("combination-page-overview");
 
