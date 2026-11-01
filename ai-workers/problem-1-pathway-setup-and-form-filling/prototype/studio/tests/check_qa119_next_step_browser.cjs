@@ -5,6 +5,7 @@
 // tooltip. Walked in a real browser as the configuration author and the immigration expert; axe (WCAG 2.2 AA). US$0.
 //   zsh studio/tools/isolated.sh screens_q119 4442 start && node studio/tests/check_qa119_next_step_browser.cjs 4442 xr_studio_screens_q119
 const fs = require("node:fs");
+const { stepsBeforeForms } = require("./fixtures/steps-before-forms.cjs");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
 const { nextStepHref, itemHref, tabOfFocus, LANDED_FOCUS } = require("../contracts/setup-checklist.ts");
@@ -133,7 +134,27 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await err.getByRole("button", { name: "Retry" }).click();
   await p.locator("[data-setup-strip]").waitFor({ timeout: 15000 }).catch(() => undefined);
   step("X1 follow-up: Retry loads the strip once the studio answers", await p.locator("[data-setup-strip]").count() === 1 && await err.count() === 0);
+  step("X1 follow-up (review m2): after Retry, focus is on the strip, not lost to the page", await p.evaluate(() => document.activeElement?.hasAttribute("data-setup-strip")));
   await p.unroute(/\/api\/combinations\/[^/]+\/summary/);
+
+  // Review m1: the header's "See it on …" link and the strip's Retry draw a focus ring when tabbed to.
+  await actAs("user-A"); await openOverview(sv.combinationId);
+  const see = header().getByRole("link", { name: /See it on/ });
+  await see.focus(); await p.keyboard.press("Shift+Tab"); await p.keyboard.press("Tab"); await p.waitForTimeout(250);
+  step("C11.10 QA-119 (review m1): the header's 'See it on Forms' link shows a focus ring", await see.evaluate((e) => e === document.activeElement && /\dpx/.test(getComputedStyle(e).boxShadow) && getComputedStyle(e).boxShadow !== "none"));
+  // Review m3: the header's Find forms runs the finder (focus on its one button), as the Programs list's step does.
+  const hw = combos.find((r) => r.label === "High-wage position");
+  await stepsBeforeForms((pth, init = {}) => api(pth, "user-A", init), hw.combinationId);
+  const hwNext = (await api(`/combinations/${hw.combinationId}/summary`)).body.setup.next;
+  await openOverview(hw.combinationId);
+  const find = header().locator('[data-next-step="find_forms"]');
+  step("setup: High-wage position's next item is Find forms once steps 1 and 2 are done", hwNext?.item.kind === "find_forms" && await find.count() === 1, hwNext?.item);
+  if (await find.count()) {
+    await find.click(); await p.waitForURL(/\/forms/);
+    await p.waitForFunction(() => document.activeElement?.hasAttribute("data-find-forms"), null, { timeout: 10000 }).catch(() => undefined);
+    step("C11.10 QA-119 (review m3): the header's Find forms opens Forms with the finder's one button focused", await p.evaluate(() => document.activeElement?.hasAttribute("data-find-forms") ?? false));
+  }
+  step("C11.10 QA-119 fail (review m3): the header's Find forms is a button that runs the step, not a link with a ?focus= nothing answers", await find.count() === 0 || (await find.evaluate((e) => e.tagName)) === "BUTTON");
 
   step("no page errors", errs.length === 0, errs.slice(0, 3));
   await b.close();

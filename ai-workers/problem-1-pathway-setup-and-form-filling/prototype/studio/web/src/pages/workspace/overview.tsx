@@ -17,6 +17,9 @@ export function OverviewTab({ d, sum, show, failed, onRetry }: { d: CombinationV
   const warnings = d.draft.problems.length - errors;
   const stripRef = React.useRef<HTMLElement>(null);
   React.useEffect(() => { if (show === "missing") { stripRef.current?.scrollIntoView({ block: "center" }); stripRef.current?.focus({ preventScroll: true }); } }, [show, !!sum?.setup]);
+  // C3 follow-up (review m2): after Retry, focus moves to the strip once it is back, not to the page's body.
+  const retried = React.useRef(false);
+  React.useEffect(() => { if (retried.current && sum?.setup) { retried.current = false; stripRef.current?.focus({ preventScroll: true }); } }, [sum?.setup]);
   const last = d.releases[0];
   return (
     <div className="space-y-5" data-overview>
@@ -24,7 +27,7 @@ export function OverviewTab({ d, sum, show, failed, onRetry }: { d: CombinationV
           missing") lands on it. */}
       {/* X1 follow-up (C3 review minor 1): a failed summary says so and offers Retry, never an endless "Loading". */}
       {sum?.setup ? <SetupStrip id={id} setup={sum.setup} landRef={stripRef} />
-        : failed && !sum ? <p className="rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm text-text-danger" role="alert" data-setup-strip-error>The setup steps could not be loaded · <button type="button" className="font-medium text-text-link underline" onClick={onRetry}>Retry</button></p>
+        : failed && !sum ? <p className="rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm text-text-danger" role="alert" data-setup-strip-error>The setup steps could not be loaded · <button type="button" className="rounded-sm font-medium text-text-link underline outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1" onClick={() => { retried.current = true; onRetry?.(); }}>Retry</button></p>
         : !sum ? <p className="rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm text-text-muted" role="status" data-setup-strip-loading>Loading the setup steps…</p> : null}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Forms" value={k.forms} sub={<>{k.map_boxes} form field{k.map_boxes === 1 ? "" : "s"} matched to shared fields · <Link className="text-text-link underline" to={`/c/${id}/forms`}>see them</Link></>} />

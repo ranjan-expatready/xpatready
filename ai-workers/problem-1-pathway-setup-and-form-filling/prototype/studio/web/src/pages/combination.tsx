@@ -156,7 +156,7 @@ function NextStep({ row, setup }: { row: CatalogueLeaf; setup: CombinationSummar
       <div>
         <p className="text-xs font-medium text-text-muted">Next step{next ? ` · ${STEP_LABEL[next.step]}` : ""}</p>
         {!next ? <p className="text-sm font-medium">{row.status === "READY" ? "Nothing to do: firms can open cases on it" : "Nothing to do right now"}</p>
-          : !mine ? <><p className="text-sm font-medium" data-next-waiting>{viewer?.nextLine ?? next.line}</p><Link className="text-xs text-text-link underline" to={href}>See it on {TAB_WORD[href.split("?")[0].split("/")[3] ?? ""] ?? "its page"}</Link></> : null}
+          : !mine ? <><p className="text-sm font-medium" data-next-waiting>{viewer?.nextLine ?? next.line}</p><Link className="rounded-sm text-xs text-text-link underline outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1" to={href}>See it on {TAB_WORD[href.split("?")[0].split("/")[3] ?? ""] ?? "its page"}</Link></> : null}
       </div>
       {next && mine ? (paired
         ? <StepTip a={paired}><Button size="sm" data-next-step={next.item.kind} onClick={() => void step.run(row, paired)}>{label} <ArrowRight /></Button></StepTip>
