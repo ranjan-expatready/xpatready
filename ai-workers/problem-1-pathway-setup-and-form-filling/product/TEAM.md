@@ -18,7 +18,7 @@ Every worker reads this first. One owner per capability and per shared file; nev
 | Flaky-checks fixer | merge flow | batch-breaking checks (P-214) |
 
 ## Test writers (Mac, Day 0)
-Pack 1 J1–J2 · Pack 2 J3–J4 · Pack 3 J5–J6 · Pack 4 Visitor visa M3 path. Output: `prototype/studio/acceptance/`, `acceptance/journeys/`, `product/compliance-trace.md`. Builders adopt their rows' tests when they land.
+Pack 1 J1–J2 · Pack 2 J3–J4 · Pack 3 J5–J6 · Pack 4 Visitor visa M3 path. Output: `prototype/studio/acceptance/`, `acceptance/journeys/`, and the compliance trace table (product folder, created by the packs). Builders adopt their rows' tests when they land.
 
 ## qa
 qa-1: after-merge rounds, re-score the rows each merged PR names · qa-2: Visitor visa baseline walk, then journey walks.
