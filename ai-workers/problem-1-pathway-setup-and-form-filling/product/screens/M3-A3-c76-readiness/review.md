@@ -98,3 +98,60 @@ D1 3: classification right, P-151 fee warning missing (Major 4) · D2 3: dates f
 * **Could not check:** any UI, keyboard, axe or widths (none exist); real built input from /prepare (not built yet); a server-side race (no store until part 2).
 
 **Verdict: Block.** Fix before approval: Major 1 (dates), Major 2 (the contract's `Signature`/`Channel`), Major 3 (finding `item` and pass scope), Major 4 (fee warning before its date).
+
+---
+
+# Round 2: commit 8cd983a6 (`git diff a8e44952..8cd983a6`)
+
+Reviewer: the same fresh agent, which did not build it · 1 Nov 2026.
+
+What I ran:
+* `check_c76_readiness.ts`: 45/45, twice.
+* `tsc -p api/tsconfig.json`: no error in either C7.6 file. The 4 remaining errors are in other files and were there before.
+* No explicit `any`.
+* New edge probes in `/tmp/c76probe2/probe.ts` (not committed).
+* US$0, no server, no model calls.
+
+Journey test: **8.5 / 10, pass** (round 2 section of `journey-test-reviewer-2026-11-01.md`).
+
+## Verdict: Approve (for commit 8cd983a6)
+The four Majors are fixed and tested, and no Blocker or Major is open. The Minors below can be fixed in part 2 or a follow-up.
+
+## Round 1 issues
+* **M1 fixed.**
+  * `dayOf` (`readiness.ts:83-88`) reads a date or a timestamp as its day.
+  * It throws, naming the field, on `"1 Oct 2026"`, `"2026-13-01"`, `"2026-10-01 00:00:00"` and an empty `today`.
+  * An expired edition or fee given as a timestamp blocks. A timestamp on the accepted-until day only warns. Each case has a test.
+* **M2 fixed.** `Channel` and `Signature` come from `contracts/forms.ts` (`:23`), and `TYPED_NAME` waits for nothing (`:111`).
+* **M3 fixed for its two cases.** Findings are keyed `finding|<id>`, and a pass stores `keys` taken from `passKeys` when it is written.
+  * A pass for the passport does not cover a photo that goes missing later.
+  * A pass for one finding leaves the CRITICAL one open.
+  * Both are tested (`check` "M3 fail", "M3 pass and fail").
+* **M4 fixed.** `Fee.superseded` warns `edition_superseded` with "Adopt update" before its date (`:129`), with a test.
+* **Minors 1–7 fixed:**
+  * `unblocks` on every line.
+  * `CODE_WORDS` in `cannotPass`, which no longer shows a code.
+  * The reason is trimmed before both limits.
+  * `signerOwes`.
+  * Typed generators.
+  * An independent `ready` property over 600 runs, stated from the inputs (`check` `needsWork`).
+  * The P-136 / P-168 choice is written in the header (`:17-18`).
+
+## New, all Minor (Should)
+1. **A key without an item can collide.**
+   * A document without an `item` is keyed `missing_document|<subject>|`, the same for every such document of that person.
+   * A pass written for the passport then also covers a photo that goes missing later (probe 1).
+   * Fix: make `DocumentItem.item` required (checklist rows have ids), or add the label to the fallback key.
+2. **An entered-section pass covers sections that go out of date later.**
+   * `entered_out_of_date` is keyed by the form item, not the sections.
+   * A pass written for "Personal details" also covers "Travel history" when it goes out of date later (probe 2).
+   * Fix: key it by item plus the sorted section names, or give one line per section.
+3. **`item` on fact lines is no longer the item id.**
+   * `missing_facts` and `fact_problem` put a composite in `item` (`i1|facts|staff`, `:107-108`).
+   * /prepare and pack 4's `Prepare.blocks[].item` will expect the form item's id to link the row.
+   * Fix: keep `item: f.item` and put the composite only in `key`.
+4. **`dayOf` accepts calendar-impossible days** such as `2026-02-30`, because `Date.parse` rolls them over. Harmless for ordering, but it is not "refused".
+5. **`outOfDate.since` is not read with `dayOf`** (`:110`), so `"yesterday"` shows as "changed on yesterday". Read it as a day as well.
+6. **A `Date` object** (not a string) throws a TypeError, not the named error. /prepare must pass strings. Not a defect, just a fit note.
+
+**Verdict: Approve** for commit 8cd983a6. No Blocker or Major is open. New Minors 1–3 are worth doing before part 2's pass route stores keys.

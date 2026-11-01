@@ -75,6 +75,10 @@ r = filingReadiness(done({ fees: [{ line: "Visitor visa fee (Sample)", acceptedU
 ok("C7.6 M1 fail: an expired fee given as a timestamp blocks (it never disappears)", codes(r.blocks).join() === "edition_expired");
 let threw = ""; try { filingReadiness(done({ fees: [{ line: "Visitor visa fee (Sample)", acceptedUntil: "1 Oct 2026" }] })); } catch (e) { threw = (e as Error).message; }
 ok("C7.6 M1 fail: a date that is not YYYY-MM-DD is refused with its name, never ignored", /not a date/.test(threw) && /Visitor visa fee/.test(threw), threw);
+let threw2 = ""; try { dayOf("2026-02-30", "a date"); } catch (e) { threw2 = (e as Error).message; }
+ok("C7.6 r2 m4 fail: an impossible day (30 February) is refused", /not a date/.test(threw2), threw2);
+r = filingReadiness(done({ forms: [i5257(), i5476({ outOfDate: { fact: "Passport number", since: "2026-10-31T22:00:00Z" } })] }));
+ok("C7.6 r2 m5 pass: the out-of-date mark's time is shown as its day", /changed on 2026-10-31 /.test(r.blocks[0]?.words ?? ""), r.blocks);
 ok("C7.6 M1 pass: dayOf reads a date, a timestamp and null", dayOf("2026-11-01", "d") === "2026-11-01" && dayOf("2026-11-01T23:59:00+05:30", "d") === "2026-11-01" && dayOf(null, "d") === null);
 // Review M4 (P-151 (1)): a fee no longer current warns before its date.
 r = filingReadiness(done({ fees: [{ line: "Visitor visa fee (Sample)", superseded: true, acceptedUntil: "2026-12-01" }] }));
@@ -110,6 +114,14 @@ r = filingReadiness(done({ findings: [{ id: "g1", severity: "CRITICAL", form: "I
 ok("C7.6 C7.5-8 fail: an AI or rules finding, even CRITICAL, only warns", !r.blocks.length && codes(r.warns).join() === "finding" && /CRITICAL/.test(r.warns[0].words));
 r = filingReadiness(done({ forms: [i5257({ channel: "ONLINE", copyStale: true, enteredOutOfDate: ["Personal details"] }), i5476()] }));
 ok("C7.6 warn fail: on an Online line a stale PDF copy and an entered section out of date warn", codes(r.warns).sort().join() === "copy_stale,entered_out_of_date" && !r.blocks.length, r.warns);
+const online = (secs: string[]) => [i5257({ channel: "ONLINE", enteredOutOfDate: secs }), i5476()];
+r = filingReadiness(done({ forms: online(["Personal details", "Travel history"]), passes: [pass(done({ forms: online(["Personal details"]) }), "entered_out_of_date")] }));
+ok("C7.6 r2 m2 fail: a pass for one entered section does not cover another that went out of date later", !r.ready && r.warns.length === 1 && /Travel history/.test(r.warns[0].words) && r.passed.length === 1, r.warns);
+const noItem = (labels: string[]) => ({ documents: labels.map((label) => ({ label, subject: "s-P", person: "Sample Client A", required: true, received: false })) });
+r = filingReadiness(done({ ...noItem(["Passport", "Photo"]), passes: [pass(done(noItem(["Passport"])), "missing_document")] }));
+ok("C7.6 r2 m1 fail: documents without an item id are keyed by their label, so passing the passport leaves the photo open", !r.ready && r.warns.length === 1 && /Photo/.test(r.warns[0].words), r.warns);
+r = filingReadiness(done({ forms: [i5257({ readiness: { ready: false, missing: [{ fact: "a", label: "A", about: "x", reason: "not answered" }, { fact: "b", label: "B", about: "x", reason: "needs a fix" }, { fact: "c", label: "C", about: "x", reason: "needs a fix" }] } }), i5476()] }));
+ok("C7.6 r2 m3 pass: every line keeps the form item's own id in item (the prepare view links by it); keys tell lines apart", r.blocks.every((b) => b.item === "i-5257") && new Set(r.blocks.map((b) => b.key)).size === r.blocks.length && r.blocks.length === 3, r.blocks.map((b) => [b.item, b.key]));
 r = filingReadiness(done({ forms: [i5257({ copyStale: true }), i5476()] }));
 ok("C7.6 warn pass: a PDF upload line has no \"PDF copy\" warning (its own copy is checked by Validate)", r.ready);
 

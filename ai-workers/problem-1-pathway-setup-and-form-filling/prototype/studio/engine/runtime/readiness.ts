@@ -82,8 +82,9 @@ const list = (xs: string[]) => xs.length <= 3 ? xs.join(", ") : `${xs.slice(0, 3
 /** YYYY-MM-DD of a date or timestamp; null stays null; anything else is refused (review M1: never fail open). */
 export function dayOf(d: string | null | undefined, what: string): string | null {
   if (d === null || d === undefined) return null;
+  if (typeof d !== "string") throw new Error(`${what} is not a date string: ${JSON.stringify(d)}`);
   const m = /^(\d{4}-\d{2}-\d{2})(T[\d:.]+(Z|[+-]\d{2}:?\d{2})?)?$/.exec(d.trim());
-  if (!m || Number.isNaN(Date.parse(m[1]))) throw new Error(`${what} is not a date: ${JSON.stringify(d)}`);
+  if (!m || Number.isNaN(Date.parse(m[1])) || new Date(`${m[1]}T00:00:00Z`).toISOString().slice(0, 10) !== m[1]) throw new Error(`${what} is not a date: ${JSON.stringify(d)}`);
   return m[1];
 }
 const UNBLOCKS = "Ready to file and Record", PASS_OR_FIX = "Ready to file, once passed with a reason or fixed";
@@ -92,10 +93,12 @@ const ofWho = (f: { form: string; person: string }) => `${f.form} for ${f.person
 /** The blocks and warnings of one filing, and whether it may be marked "Ready to file". */
 export function filingReadiness(x: FilingInput): FilingReadiness {
   const blocks: Line<BlockCode>[] = [], warns: Line<WarnCode>[] = [];
-  type In<C extends string> = Omit<Line<C>, "key" | "unblocks"> & { form?: string };
-  const keyOf = (l: In<string>) => l.item ?? `${l.code}|${l.subject ?? ""}|${l.form ?? ""}`;
-  const block = ({ form, ...l }: In<BlockCode>) => blocks.push({ ...l, key: keyOf({ ...l, form }), unblocks: UNBLOCKS });
-  const warn = ({ form, ...l }: In<WarnCode>) => warns.push({ ...l, key: keyOf({ ...l, form }), unblocks: PASS_OR_FIX });
+  // `item` stays the item's own id (the prepare view links the row by it); `part` tells apart several lines of one code
+  // on one item (missing facts per owner, each fact with a problem, each entered section), so a pass is never wider.
+  type In<C extends string> = Omit<Line<C>, "key" | "unblocks"> & { form?: string; part?: string };
+  const keyOf = (l: In<string>) => `${l.item ?? `${l.code}|${l.subject ?? ""}|${l.form ?? ""}`}${l.part ? `|${l.part}` : ""}`;
+  const block = ({ form, part, ...l }: In<BlockCode>) => blocks.push({ ...l, key: keyOf({ ...l, form, part }), unblocks: UNBLOCKS });
+  const warn = ({ form, part, ...l }: In<WarnCode>) => warns.push({ ...l, key: keyOf({ ...l, form, part }), unblocks: PASS_OR_FIX });
   const today = dayOf(x.today, "today")!;
   for (const f of x.forms) {
     if (f.channel === "NOT_NEEDED") continue;   // the portal asks it itself: shown greyed, never a block
@@ -104,10 +107,10 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
     const missing = f.readiness.missing.filter((m) => m.reason !== "needs a fix"), problems = f.readiness.missing.filter((m) => m.reason === "needs a fix");
     const byOwner = new Map<Owes, string[]>();
     for (const m of missing) { const o = f.owesFact?.[m.fact] ?? "staff"; byOwner.set(o, [...(byOwner.get(o) ?? []), m.label]); }
-    for (const [owes, labels] of byOwner) block({ code: "missing_facts", ...at, item: f.item && `${f.item}|facts|${owes}`, owes, words: `${ofWho(f)}: ${labels.length} fact${labels.length === 1 ? "" : "s"} missing or not confirmed (${list(labels)}). Only confirmed facts fill the form.` });
-    for (const m of problems) block({ code: "fact_problem", ...at, item: f.item && `${f.item}|${m.fact}`, owes: f.owesFact?.[m.fact] ?? "staff", words: `${ofWho(f)}: "${m.label}" has a problem, so it would be written wrong. Fix it, then confirm it.` });
+    for (const [owes, labels] of byOwner) block({ code: "missing_facts", ...at, part: owes, owes, words: `${ofWho(f)}: ${labels.length} fact${labels.length === 1 ? "" : "s"} missing or not confirmed (${list(labels)}). Only confirmed facts fill the form.` });
+    for (const m of problems) block({ code: "fact_problem", ...at, part: m.fact, owes: f.owesFact?.[m.fact] ?? "staff", words: `${ofWho(f)}: "${m.label}" has a problem, so it would be written wrong. Fix it, then confirm it.` });
     // BR-9 1: out of date, or a required signature missing.
-    if (f.outOfDate) block({ code: "out_of_date", ...at, owes: "staff", words: `${ofWho(f)} is out of date: "${f.outOfDate.fact}" changed on ${f.outOfDate.since.slice(0, 10)} after it was signed or uploaded. Make a new copy.` });
+    if (f.outOfDate) block({ code: "out_of_date", ...at, owes: "staff", words: `${ofWho(f)} is out of date: "${f.outOfDate.fact}" changed on ${dayOf(f.outOfDate.since, `${f.form}'s out-of-date mark`)} after it was signed or uploaded. Make a new copy.` });
     if (f.signature !== "NONE" && f.signature !== "TYPED_NAME" && !f.signed) {
       const how = f.signature === "HAND_SCANNED" ? "signed by hand and its scan uploaded" : "signed in pen";
       block({ code: "missing_signature", ...at, owes: f.signerOwes ?? "client", words: `${ofWho(f)} must be ${how}${f.signers?.length ? ` by ${list(f.signers)}` : ""}.` });
@@ -120,7 +123,8 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
     if (e && until && today > until) block({ code: "edition_expired", ...at, owes: "staff", words: `${ofWho(f)}: edition ${e.label} was accepted by IRCC until ${until}. Adopt update to the current edition.` });
     else if (e?.superseded) warn({ code: "edition_superseded", ...at, owes: "staff", words: `${ofWho(f)}: edition ${e.label} has a newer edition${until ? `; IRCC accepts it until ${until}` : ""}. Adopt update.` });
     if (f.channel === "ONLINE" && f.copyStale) warn({ code: "copy_stale", ...at, owes: "staff", words: `${ofWho(f)}: the PDF copy is older than today's facts (a copy, not for filing). Download it again.` });
-    if (f.channel === "ONLINE" && f.enteredOutOfDate?.length) warn({ code: "entered_out_of_date", ...at, owes: "staff", words: `${ofWho(f)}: ${list(f.enteredOutOfDate)} ${f.enteredOutOfDate.length === 1 ? "was" : "were"} entered in the portal before a fact changed. Enter ${f.enteredOutOfDate.length === 1 ? "it" : "them"} again.` });
+    // One line per entered section (review r2 m2): a pass for one section never covers another that goes out of date later.
+    if (f.channel === "ONLINE") for (const sec of f.enteredOutOfDate ?? []) warn({ code: "entered_out_of_date", ...at, part: sec, owes: "staff", words: `${ofWho(f)}: "${sec}" was entered in the portal before a fact changed. Enter it again.` });
   }
   for (const c of x.openChecks ?? []) block({ code: "open_check", subject: c.subject, owes: "staff", words: `${c.person}: "${c.label}" differs between the answer and the document. Resolve the check.` });
   for (const fee of x.fees ?? []) {
@@ -129,7 +133,7 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
     else if (fee.superseded) warn({ code: "edition_superseded", ...at, owes: "staff", words: `Fee "${fee.line}" has a newer amount${until ? `; it is accepted until ${until}` : ""}. Adopt update.` });
   }
   if (!x.reviewed) block({ code: "representative_review", owes: "representative", words: "The representative of record has not reviewed this filing. Nothing reaches IRCC unreviewed." });
-  for (const d of x.documents ?? []) if (d.required && !d.received) warn({ code: "missing_document", item: d.item, subject: d.subject, owes: d.owes ?? "client", words: `${d.person}: ${d.label} not received.` });
+  for (const d of x.documents ?? []) if (d.required && !d.received) warn({ code: "missing_document", item: d.item, form: d.label, subject: d.subject, owes: d.owes ?? "client", words: `${d.person}: ${d.label} not received.` });
   for (const g of x.findings ?? []) warn({ code: "finding", item: `finding|${g.id}`, subject: g.subject, owes: "staff", words: `${g.severity} finding${g.form ? ` on ${g.form}` : ""}: ${g.words}` });
 
   // A pass covers the warning lines it named when it was written, with a reason (BR-26); a new line needs a new pass.

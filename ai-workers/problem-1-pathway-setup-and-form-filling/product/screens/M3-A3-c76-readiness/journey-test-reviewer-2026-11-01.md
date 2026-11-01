@@ -50,3 +50,32 @@ Fixes that would raise it, most valuable first:
 5. Use plain words in `cannotPass`.
 
 Could not test: any UI, keyboard, axe or widths (there are none). A real screen reader. An intended user's unaided walk (D17 and D20 stay with the founder).
+
+---
+
+## Round 2: commit 8cd983a6 (engine only, same setup; probes `/tmp/c76probe2/probe.ts`)
+
+Journeys 3, 4, 5, 7 and 9 now hold:
+* 3: one finding is passed alone and the CRITICAL one stays open.
+* 4: timestamps are read as their day, and a value that is not a date is refused, naming the field.
+* 5: a superseded fee warns "Adopt update" before its date.
+* 7: `TYPED_NAME` waits for nothing.
+* 9: a document missing later stays open.
+
+Two places are still loose:
+* A document without an item collides on its key.
+* A pass for one entered section also covers later sections of the same form (review round 2, new Minors 1–2).
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | Every BR-9 block and warning is present, including the fee warning (M4). |
+| Next step obvious | 1 | Each line says the fix and what it `unblocks`. |
+| Plain words | 1 | `CODE_WORDS`. No internal code is shown in `cannotPass`. Form and person are named. No %. |
+| Feedback and state | 1 | `passed` keeps who, when and why. Keys are stored at pass time. |
+| Correct data | 1 | Dates are read as their day or refused. The contract's `Signature` is used. |
+| Error recovery | ½ | Item-less document keys and entered-section keys still let a pass cover a later line. |
+| Accessibility and screen sizes | ½ | Not applicable (no UI), held at ½. |
+| Speed | 1 | Pure function, no queries. |
+| Visual quality | ½ | Not applicable (no UI), held at ½. |
+| Trust and sources | 1 | Findings only warn and keep their severity. Passes are recorded. The Unconfirmed legal line is kept. |
+| **Total** | **8.5 / 10** | **Pass** (8 or more, no criterion at 0). |
