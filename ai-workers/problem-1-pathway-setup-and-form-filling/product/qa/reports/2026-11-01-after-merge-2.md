@@ -5,7 +5,9 @@
 Copies: isolated qa_am :4471 and qa_n1 :4472, plus the copies the two cost checks start for themselves. `prisma generate` and `vite build` were run after switching to main. No STUDIO_*_LIVE was set; the cost checks start with `STUDIO_AI_LIVE=""` and the queue held. **US$0.** The full suite set was not run (founder, 1 Nov).
 
 ## Verdict
-**Ready.** No new Blocker, Critical or Major. Two rows close (QA-74, QA-113). QA-73 narrows to a Minor: the Item column no longer shows keys, but it now shows each calculation's whole definition, and one of them holds a system role name.
+Round 1 (c582e8d8) and round 2 (832ee5bd, §5–§6): **ready.** 0 Blocker · 0 Critical · 0 Major new; 2 new Minor (QA-120, QA-121).
+
+Round 1: **ready.** No new Blocker, Critical or Major. Two rows close (QA-74, QA-113). QA-73 narrows to a Minor: the Item column no longer shows keys, but it now shows each calculation's whole definition, and one of them holds a system role name.
 
 ## 1. What merged: #133 and #166
 | Check | Result |
@@ -48,7 +50,38 @@ The API server ran under c8 (`NODE_V8_COVERAGE` + `tests/qa/coverage-preload.mjs
 
 **Not comparable with the floor** (api 97.4 / 82.5, engine 99.4 / 89.6, 29 Oct): the floor is measured over every suite, and the founder ruled out the full suite set for qa (1 Nov). No fall is claimed; the floor stays as it is until a full c8 run (Question 2).
 
-## 5. What I could not test
+
+## 5. Second round: main 832ee5bd (tech lead's request, 1 Nov)
+Merged since c582e8d8 (product PRs): #174, #173, #177, #179, #186, #131, #201, #171, #154, #206, #223 (plus records and tools: #172, #217, #164, #193, #224). `npm ci`, `prisma generate` and `vite build` first. Each PR's own checks on fresh copies (qa_r :4473):
+
+| PR | Check | Result |
+|---|---|---|
+| #174 F8 empty combination cannot be sent or released | `check_f8_empty_release.ts` | 12/12 |
+| #173 C1.6 filing method on the combination page | `check_c16_header_browser.cjs` | 11/11 |
+| #177, #131 cost warning wait; Continue covers retries | `check_cost_warning_browser.cjs`, `check_cost_override.ts` | 26/26, 71/71 |
+| #179 C2.12 slice 1 To review names its forms | `check_forms_c212_queue_forms.ts` | 45/45 |
+| #186 C2.12 slice 2 one form's guided path | `check_forms_c212_progress.ts` | 38/38 |
+| #201 C4.8 questionnaire change only in its own release | `check_c48_sqr_release.ts` | 22/22 |
+| #171 QA-77 one name per person | `check_qa77_names_browser.cjs`, `check_w1_before_forms_browser.cjs` | 11/11, 23/23 |
+| #154 X5 slice c deleted forms remembered | `check_forms_s4_library_browser.cjs`, `check_forms_x5_finder_baseline.ts`, `check_forms_x5_library.ts` | 99/99, 8/8, 78/78 |
+| #206 X1 step badges, `?focus=` landings | `check_setup_checklist.ts`, `check_w1_start_setup_browser.cjs`, `check_x1_tabs_focus_browser.cjs` | 63/63, not run here (needs `STUDIO_AI_LIVE=approved` with the fake launcher; qa never sets a live switch, so on this copy the slot offers "Find form numbers by rules (free)" and its 3 AI-button steps fail as expected; CI runs it), 29/29 |
+| #223 W1-15 slice 1 skip | `check_w115_slice1.ts` | 47/47 |
+
+Note: right after a container restart every copy failed to start (Postgres down); `start.sh` first, then the copies.
+
+## 6. Explore: F2 forms and X1 setup (832ee5bd, qa_ex :4474, sample loaded)
+**F2, C2.12 guided path (API).** `GET /combinations/:id/forms/:code/progress` answers in words: "IMM 5257" and "IMM5257" and "imm 5257" all find the form; "IMM 9999" → 404 "IMM 9999 is not in the library."; unknown or malformed combination id → 404 "This combination does not exist (it may have been deleted)."; case officer → 403 "Not for case people"; no person → 401 "Choose a person first". A library form not on the combination → step 1 "IMM 1295 is not on this combination." with "Add it from the library" to the Forms tab. **No screen yet:** nothing in the web app calls `/progress`, and To review ignores `?form=` (a link with `?form=IMM 5257` shows the whole list with no sign of a filter). Expected for slices 1–2 (API); C2.12 moves to Partial.
+
+**X1 setup.** Tabs at 1440, 1024 and 400 px: "Forms 4" and "Documents 1" badges with accessible names ("Forms 4 setup items open"); the tablist scrolls inside itself at 400 px with no page scroll; axe clean on Overview and Questionnaires; no page or console error. `?focus=` landed with focus and the 2 s ring on documents:lines, questionnaires:gaps, pages:record and people:card, and the key left the address. Found:
+* **QA-120 (UX · Minor · screens):** the Review and release tab's error count has no space and no accessible name: it reads "Review and release1" (since 29–30 Oct, `combination.tsx:106`).
+* **QA-121 (UX · Minor · screens):** a `?focus=` key with no place on the page (`documents:problems` once the problems are gone, or a wrong key) lands nowhere and says nothing; the key stays in the address. The concept's "This was done since you opened it" only shows for items still drawn.
+* QA-119 (the header's next step vs the checklist) is still open on main; its fix (#216) is not merged yet.
+
+Selector injection through `?focus=` (`"]),body,[x="`) is escaped (`CSS.escape`): nothing lands, no error.
+
+Also merged after 832ee5bd and not tested this round: #208 (records), #225 (QA-76 slice a), #197 (C4.2 pre-qualification).
+
+## 7. What I could not test
 * A headed walk: this cloud copy has no visible browser; the journeys ran headless at 1440 and 1024.
 * The read-only walk of the shared demo on :4400: it lives on the Mac only.
 * The graph (`graph.mjs`): no new capability merged in this window.
