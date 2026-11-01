@@ -11,13 +11,15 @@ updated: 2026-11-01 16:35 UTC (Lead close-out at 65% context, founder's ask) · 
 
 Acceptance tests (Day-0 packs, all on main): pack 1 forms in 245/286 checks (2/14 tests green), pack 3 library and demo 78/163 (1/10), pack 4 Visitor visa M3 4/230 (0/14), pack 2 baseline on #298. The green count is the progress number to watch.
 
+## Overnight run 1–2 Nov (P-223): a fresh Lead session runs it; builders continue; at most 7 builders + 1 qa; up to 100% of the weekly plan; tell the founder before credits run out
+
 ## Resume here (a fresh `/lead` chat, in the desktop app so it can start sessions)
 1. **Read each Handover comment** written at close-out (founder's ask: every builder finishes its item, labels it, hands over, stops). Open PRs: #313, #315, #316, #318, #319, #320, #321, #283, #282, #314, #116, #311 and the C6.4 PR from `claude/serene-euler-vp7ar1`. Close #281 (replaced by #314) and #289 (replaced by #318) once their replacements merge.
 2. **Watches:** idle sweep every 4 minutes while builders run (15 while paused); 20-minute check; 90-second alarm; PR alarm (red, dequeued); 2-hourly ops review on a cheap model.
 3. **Start builders from the Handovers,** one per group, Visitor visa first, then the 15 partly built M2 rows. A cloud builder can push only its own branch: it re-opens an old PR's work as a new PR, or the Lead fast-forwards the old branch from the Mac.
 4. **Before every label:** merge main and re-run the touched suites (an approved PR behind main conflicts at merge, four did today).
 
-## Decisions waiting for the founder
+## Decisions waiting for the founder (most settled by P-223)
 * **Credits:** weekly plan 54% at 16:20 UTC (resets 5 Nov), about 6 points an hour with 10 builders; extra usage OFF.
 * **PR checks on GitHub machines** instead of the one Mac runner (about US$1 a day, estimate).
 * **One paid AI trial on Visitor visa** to record answers that C2.6, C3.4, C4.11 and C4.7 replay (pack 2; cost to be stated first).
