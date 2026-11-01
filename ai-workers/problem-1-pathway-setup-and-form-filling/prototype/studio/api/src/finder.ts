@@ -89,6 +89,10 @@ const AI_SETTINGS: Record<"find_guide" | "find_forms", AiStep> = {
 };
 type AiKind = keyof typeof AI_SETTINGS;
 const ATTACHABLE = new Set(["always", "condition", "alternative"]);
+/** Library type, one rule for the library and the finder (#274 review M2). Rows made before S4 say only "document": a filed
+ *  form when its title says so (IMM 5802, an employer's offer of employment form; review major 9), otherwise a checklist
+ *  or instructions, read by AI and never filed (IMM 5881, IMM 5905; round 2 major 4). */
+export const libraryType = (kind: string, title = "") => (kind === "guide" ? "guide" : kind === "checklist" || (kind === "document" && !(/\bform\b/i.test(title) && !/checklist/i.test(title))) ? "checklist" : "form");
 const STOPWORDS = new Set(["and", "or", "the", "a", "an", "of", "for", "to", "in", "with", "your", "retail", "corporate", "employers", "temporary", "residence", "permanent", "canada", "application", "apply"]);
 const words = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter((w) => w.length > 1 && !STOPWORDS.has(w)).map((w) => w.replace(/s$/, ""));
 const sameText = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, "-").replace(/\s+/g, " ").trim();
@@ -104,6 +108,9 @@ export type FinderResult = {
   missing: { code: string; title: string | null; why: string; quote: string; link?: string | null }[];
   decide: { code: string; draft: Proposal | null; check: Proposal | null; why: string }[];
   not_for: { code: string; applies: string; quote: string }[];
+  /** QA-101 (P-118, P-156): forms the rounds named that the library types checklist, guide or document: kept in the
+   *  library as sources AI reads, never attached as a filed line. */
+  checklists?: { code: string; title: string | null; quote: string; kind: string; source: "library" | "downloaded" | "newer_file"; edition?: string | null }[];
   dropped: { code: string; why: string }[];
   rules_only?: { code: string; sentence: string }[];
   guide_choice?: { candidates: { title: string; url: string }[]; why: string };
@@ -450,18 +457,26 @@ export class Finder implements OnModuleInit {
       const dl = out.filter((x) => x.source === "downloaded").length;
       return { status: result.missing.length ? "PARTIAL" : "COMPLETED", message: `${out.length - dl} in the library, ${dl} downloaded from canada.ca, ${result.missing.length} not found. US$0.`, detail: { done: n, total: toFetch.length }, value: out };
     });
-    const found = fetched?.value ?? [];
+    // QA-101 (P-118, P-156: checklists are read, never filed): a checklist, guide or document the rounds named is kept in
+    // the library as a source and listed as such; only filed forms go on to be lines.
+    const got = fetched?.value ?? [];
+    const kinds = got.length ? await this.db.govFormDef.findMany({ where: { workspaceId: b.workspaceId, formKey: { in: got.map((f) => f.code) } }, select: { formKey: true, formKind: true, displayName: true } }) : [];
+    // QA-101: what the library types checklist or guide is read, never filed (QA-101 review M2: the library's own rule).
+    const notFiled = new Map(kinds.filter((k) => libraryType(k.formKind, k.displayName) !== "form").map((k) => [k.formKey, libraryType(k.formKind, k.displayName)]));
+    result.checklists = got.filter((f) => notFiled.has(f.code)).map((f) => ({ code: f.code, title: f.title, quote: f.quote, kind: notFiled.get(f.code)!, source: f.source, edition: f.edition ?? null }));
+    const found = got.filter((f) => !notFiled.has(f.code));
 
     // 6. Attach with no confirm step (P-123): one change on the forms list, undoable while the draft is open.
     await this.step(batchId, "finder_attach", async () => {
-      if (!found.length) return { status: "COMPLETED", message: "Nothing to attach.", value: null };
+      const kept = result.checklists?.length ? ` ${result.checklists.length} kept in the library as ${result.checklists.length === 1 ? "a checklist" : "checklists"} (read, never filed).` : "";
+      if (!found.length) return { status: "COMPLETED", message: `Nothing to attach.${kept}`, value: null };
       const lines = await this.attachFound(b.workspaceId, combinationId, found, actor, batchId);
       for (const f of found) f.line = lines[f.code];
       const failed = found.filter((f) => !lines[f.code]);
       for (const f of failed) result.missing.push({ code: f.code, title: f.title, why: `${f.code} was not attached: it is retired or being retired in the library, or its answer did not fit the line. Check it in Shared library › Forms.`, quote: f.quote });
       const added = Object.values(lines).filter((x) => x === "added").length;
       const removed = Object.values(lines).filter((x) => x === "removed_by_person").length;
-      return { status: "COMPLETED", message: `${added} attached automatically (Picked by AI · Sample), ${found.length - added - removed} already on this combination${removed ? `, ${removed} not attached back (a person removed ${removed === 1 ? "it" : "them"})` : ""}.`, value: null };
+      return { status: "COMPLETED", message: `${added} attached automatically (Picked by AI · Sample), ${found.length - added - removed} already on this combination${removed ? `, ${removed} not attached back (a person removed ${removed === 1 ? "it" : "them"})` : ""}.${kept}`, value: null };
     });
     result.attach = found.filter((f) => f.line);
     // C-5 (P-140): each attached form's channel is proposed for a second person, never written here.
@@ -829,16 +844,17 @@ export class Finder implements OnModuleInit {
     const run = await this.latest(combinationId);
     if (!run) return { run: null, forms: [] };
     const r: FinderResult | null = run.result;
-    const codes = [...(r?.attach ?? []).map((a) => a.code), ...(r?.missing ?? []).map((m) => m.code), ...(r?.decide ?? []).map((d) => d.code), ...(r?.not_for ?? []).map((n) => n.code)];
+    const codes = [...(r?.attach ?? []).map((a) => a.code), ...(r?.missing ?? []).map((m) => m.code), ...(r?.decide ?? []).map((d) => d.code), ...(r?.not_for ?? []).map((n) => n.code), ...(r?.checklists ?? []).map((c) => c.code)];
     const lines = await this.db.combinationForm.findMany({ where: { combinationId, lineageKey: { in: codes } }, orderBy: { version: "desc" } });
     const line = (c: string) => lines.find((l) => l.lineageKey === c);
     const held = await this.db.intakeItem.findMany({ where: { forCombinationId: combinationId, forCode: { in: codes }, status: "HELD" }, select: { forCode: true } });
-    const stateOf = (c: string, base: string) => { const l = line(c); if (l?.status === "RETIRED") return "REMOVED_BY_PERSON"; if (base === "NOT_FOUND" && l) return "ATTACHED"; if (base === "NOT_FOUND" && held.some((h) => h.forCode === c)) return "UPLOAD_WAITING_SECOND_PERSON"; return base; };
+    const stateOf = (c: string, base: string) => { const l = line(c); if (l?.status === "RETIRED") return "REMOVED_BY_PERSON"; if ((base === "NOT_FOUND" || base === "TO_DECIDE") && l) return "ATTACHED"; /* QA-102: a form already on this combination is not offered again */ if (base === "NOT_FOUND" && held.some((h) => h.forCode === c)) return "UPLOAD_WAITING_SECOND_PERSON"; return base; };
     const forms = [
-      ...(r?.attach ?? []).map((a) => ({ code: a.code, title: a.title, quote: a.quote, conditionPlain: a.applies === "always" ? null : a.condition ?? a.quote, who: a.who, state: stateOf(a.code, a.source === "downloaded" ? "DOWNLOADED_ATTACHED" : a.source === "newer_file" ? "NEWER_FILE_SAME_EDITION" : "ATTACHED") })),
+      ...(r?.attach ?? []).map((a) => ({ code: a.code, title: a.title, quote: a.quote, conditionPlain: a.applies === "always" ? null : a.condition ?? a.quote, who: a.who, state: stateOf(a.code, a.source === "downloaded" ? "DOWNLOADED_ATTACHED" : a.source === "newer_file" ? "NEWER_FILE_SAME_EDITION" : "ATTACHED"), edition: a.edition ?? null })),
       ...(r?.missing ?? []).map((m) => ({ code: m.code, title: m.title, quote: m.quote, conditionPlain: null, who: null, state: stateOf(m.code, "NOT_FOUND"), why: m.why, link: m.link ?? null })),
       ...(r?.decide ?? []).map((d) => ({ code: d.code, title: (d.draft ?? d.check)?.title ?? null, quote: (d.draft ?? d.check)?.quote ?? null, conditionPlain: (d.draft ?? d.check)?.condition ?? null, who: (d.draft ?? d.check)?.who ?? null, state: stateOf(d.code, "TO_DECIDE"), why: d.why })),
       ...(r?.not_for ?? []).map((n) => ({ code: n.code, title: null, quote: n.quote, conditionPlain: null, who: null, state: "NOT_FOR_THIS_APPLICATION" })),
+      ...(r?.checklists ?? []).map((c) => ({ code: c.code, title: c.title, quote: c.quote, conditionPlain: null, who: null, state: "CHECKLIST_IN_LIBRARY", edition: c.edition ?? null })),
     ].map((f) => ({ ...f, lineId: line(f.code)?.id ?? null, lineVersion: line(f.code)?.version ?? null, runId: run.id }));
     // S3 item 5: a run that could not pick the application page says so on the Forms tab, with the pages it saw, so the
     // person chooses one there and finds again (never a dead end).

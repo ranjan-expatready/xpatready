@@ -19,8 +19,8 @@ import { FindFormsStart } from "@/components/start-setup";
 import { useCostGate } from "@/components/cost-warning";
 import { COST_WORDS } from "../../../../contracts/cost-check";
 
-export type FinderState = "ATTACHED" | "DOWNLOADED_ATTACHED" | "NEWER_FILE_SAME_EDITION" | "NOT_FOUND" | "UPLOAD_WAITING_SECOND_PERSON" | "REMOVED_BY_PERSON" | "TO_DECIDE" | "NOT_FOR_THIS_APPLICATION";
-export type FinderForm = { code: string; title: string; quote: string | null; conditionPlain: string | null; who: string | null; state: FinderState; why?: string | null; /** C11.15 (P-156 (4)): where the file is on canada.ca when its download failed. */ link?: string | null; lineId?: string | null; lineVersion?: number | null; runId: string };
+export type FinderState = "ATTACHED" | "DOWNLOADED_ATTACHED" | "NEWER_FILE_SAME_EDITION" | "NOT_FOUND" | "UPLOAD_WAITING_SECOND_PERSON" | "REMOVED_BY_PERSON" | "TO_DECIDE" | "NOT_FOR_THIS_APPLICATION" | "CHECKLIST_IN_LIBRARY";
+export type FinderForm = { code: string; title: string; quote: string | null; conditionPlain: string | null; who: string | null; state: FinderState; why?: string | null; /** C11.15 (P-156 (4)): where the file is on canada.ca when its download failed. */ link?: string | null; lineId?: string | null; lineVersion?: number | null; runId: string; /** QA-103: the library edition the finder used or downloaded. */ edition?: string | null };
 /** S3 item 5: a run that could not pick the application page names the pages it saw; the person chooses one here. */
 export type PageChoice = { candidates: { title: string; url: string }[]; why: string };
 export type FinderLatest = { run: { id: string; status: string; mode: string; finished_at: string | null } | null; forms: FinderForm[]; sample_note?: string; page_choice?: PageChoice | null };
@@ -143,6 +143,8 @@ const STATE_WORDS: Record<FinderState, [string, "warn" | "danger" | "info" | "ne
   ATTACHED: ["On this combination", "info"], DOWNLOADED_ATTACHED: ["Downloaded from canada.ca and added", "info"], NEWER_FILE_SAME_EDITION: ["A newer file on canada.ca", "warn"],
   NOT_FOUND: ["Not found", "danger"], UPLOAD_WAITING_SECOND_PERSON: ["Uploaded · waiting for a second person", "warn"], REMOVED_BY_PERSON: ["Removed by a person", "neutral"],
   TO_DECIDE: ["AI's two rounds disagree · you decide", "warn"], NOT_FOR_THIS_APPLICATION: ["Not for this application", "neutral"],
+  // QA-101 (P-118, P-156): a checklist is read for its documents and never filed, so it is not a line.
+  CHECKLIST_IN_LIBRARY: ["Checklist · in the library, read for documents, not filed", "neutral"],
 };
 
 /** What the latest find named that is not a line on this combination, each with the step that moves it. */
@@ -169,6 +171,7 @@ function FinderRows({ id, forms, onRedo, canAuthor }: { id: string; forms: Finde
           {canAuthor ? <span className="flex flex-wrap gap-2">
             {f.state === "NOT_FOUND" && f.link ? <a className="inline-flex h-8 items-center rounded px-1 text-sm text-text-link underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" href={f.link} target="_blank" rel="noreferrer" data-download-link>Download from this link<span className="sr-only"> (canada.ca, opens in a new tab)</span></a> : null}
             {f.state === "NOT_FOUND" ? <><UploadFor id={id} code={f.code} onDone={refresh} /><Button size="sm" variant="ghost" onClick={() => onRedo([f.code])}><RefreshCw /> Find again</Button></> : null}
+            {f.state === "CHECKLIST_IN_LIBRARY" ? <Link className="text-sm text-text-link underline" to="/library/forms">Open the Form library</Link> : null}
             {f.state === "UPLOAD_WAITING_SECOND_PERSON" ? <Link className="text-sm text-text-link underline" to="/review">Open To review</Link> : null}
             {f.state === "REMOVED_BY_PERSON" || f.state === "TO_DECIDE" ? <Button size="sm" variant="secondary" onClick={() => void add(f.code)} busy={busy === f.code}><Plus /> {f.state === "REMOVED_BY_PERSON" ? "Add back" : "Add to this combination"}</Button> : null}
           </span> : null}
