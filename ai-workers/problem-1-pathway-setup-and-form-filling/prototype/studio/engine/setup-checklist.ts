@@ -101,13 +101,18 @@ export function setupChecklistOf(s: SetupInput, key = ""): SetupChecklist {
   for (const p of errors) { const t = stepOfWhere(p.where); problemsBy[t.step]++; if (t.part) partProblems[t.part]++; }
   const relErrors = (s.release?.problems ?? []).filter((p) => p.level === "error");
   const relBy = Object.fromEntries(STEP_KEYS.map((k) => [k, 0])) as Record<StepKey, number>;
-  for (const p of relErrors) relBy[stepOfWhere(p.where).step]++;
+  // X1 (review M1): step 4's release problems are split by part, so a Not ready item lands on the tab that holds it.
+  const relPart = { documents: 0, questions: 0 };
+  for (const p of relErrors) { const t = stepOfWhere(p.where); relBy[t.step]++; if (t.part) relPart[t.part]++; }
   const notReady = relErrors.length > 0;
   const counts: Counts = { forms: s.forms.lines, people: s.people.roles, applicants: s.people.applicants, documents: s.documents.lines, questions: s.questions, proposals: proposalsBy, problems: problemsBy, held: s.held };
 
   const open: Record<StepKey, OpenItem[]> = { pages: [], people: [], forms: [], questions_documents: [], release: [] };
   // Release problems first, on their own steps (Not ready, §6).
-  for (const k of STEP_KEYS) if (relBy[k]) open[k].push(problemsItem(relBy[k], k, true));
+  for (const k of STEP_KEYS) if (relBy[k]) {
+    if (k !== "questions_documents") { open[k].push(problemsItem(relBy[k], k, true)); continue; }
+    for (const [part, focus] of [["documents", "documents:problems"], ["questions", "questionnaires:problems"]] as const) if (relPart[part]) open[k].push({ ...problemsItem(relPart[part], k, true), focus });
+  }
   if (s.combinationId) {
     // 1 Official pages: no record yet → open, with no item until the forms lane lands the record (plan.md slice A).
     if (s.pages.state === "proposed") open.pages.push(s.pages.matches === 1 ? item("confirm_pages", 1, "Confirm the checklist page", "pages:record", { tier: "author" })
