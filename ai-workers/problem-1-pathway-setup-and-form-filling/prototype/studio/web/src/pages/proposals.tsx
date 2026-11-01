@@ -141,10 +141,11 @@ function UndoBar({ batchId, n, until, onGone }: { batchId: string; n: number; un
   );
 }
 
-function Reading({ label, r }: { label: string; r: QueueProposal["readings"]["draft"] }) {
+// A rules item's reading is the rules' own reading of the file, never an AI run (C3.4 review Minor 2).
+function Reading({ label, r, rules = false }: { label: string; r: QueueProposal["readings"]["draft"]; rules?: boolean }) {
   return (
     <div className="rounded-lg border border-border bg-surface px-3 py-2">
-      <p className="text-xs font-medium text-text-muted">{label}{r ? ` · ${r.from === "live" ? "live" : "saved run"}` : ""}</p>
+      <p className="text-xs font-medium text-text-muted">{label}{r ? ` · ${rules ? "rules, US$0" : r.from === "live" ? "live" : "saved run"}` : ""}</p>
       <p className="mt-0.5 text-sm">{r ? r.text || "No words given." : "No reading."}</p>
     </div>
   );
@@ -172,8 +173,8 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
         <section aria-label="Both readings">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted"><Tip tip="AI reads the source twice: a first reading, then a checker that has not seen it. Items from the rules have no AI reading." focusable><span>Both readings</span></Tip> · {p.agreement_word}</h3>
           <div className="mt-1 grid gap-2">
-            <Reading label="First reading" r={p.readings.draft} />
-            <Reading label="Checker's reading" r={p.readings.check} />
+            <Reading label="First reading" r={p.readings.draft} rules={p.origin === "rules"} />
+            <Reading label="Checker's reading" r={p.readings.check} rules={p.origin === "rules"} />
           </div>
         </section>
         <section aria-label="IRCC's words">
