@@ -16,7 +16,7 @@ import { fmtWhen, Tip, TipProvider } from "@/components/status";
 import { cn } from "@/lib/utils";
 
 const BAND_TONE: Record<Band, string> = { ready: "ok", check: "warn", decide: "danger" };
-const inv = [["proposals"], ["review-queue"], ["catalogue"], ["change-batch"]];
+const inv = [["proposals"], ["review-queue"], ["catalogue"], ["change-batch"], ["fact-sources"], ["pqr-country"]]; // C4.7: a pick ticks a question
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 function Crumbs({ here }: { here: string }) {

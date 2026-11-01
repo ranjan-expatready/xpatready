@@ -12,6 +12,7 @@ import { normalizeLabel } from "../../contracts/programs.ts";
 import { subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
 import { fail, need, type Actor, type Audit, type Db } from "./core.ts";
 import { keyFor } from "./library-changes.ts";
+import { acceptPqrPick } from "./fact-sources.ts";
 
 type Tx = Prisma.TransactionClient;
 type Client = Db | Tx;
@@ -189,6 +190,27 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
   },
 };
 
+/** C4.7 (P-76, P-149 one door): a pre-qualification pick lands on this combination, not the library. Accept writes the
+ *  tick through the same draft row and refusals as a person's tick (fact-sources.ts acceptPqrPick), inside decide's
+ *  transaction; the draft row it replaced is kept in the item's work, so Undo puts it back as it was. */
+async function landPqrPick(tx: Tx, r: Row, p: ProposalPayload, l: Landing): Promise<{ key: string; work: PqrWork }> {
+  if (p.kind !== "pqr_pick") fail("Wrong payload.");
+  // Break B5: an edit changes only a pick's reason; the question and the person it ticks are the pick itself.
+  const was = r.payload as { factKey?: string; role?: string };
+  if ((p as { factKey: string }).factKey !== was.factKey || (p as { role: string }).role !== was.role) fail("An edit changes only the pick's reason. To ask another question, remove this pick and tick that question on the Questionnaires tab.", HttpStatus.CONFLICT);
+  const lineageKey = `${(p as { role: string }).role}|${(p as { factKey: string }).factKey}`;
+  const before = r.combinationId ? await tx.factSource.findFirst({ where: { combinationId: r.combinationId, lineageKey }, orderBy: { version: "desc" } }) : null;
+  const item = { id: r.id, kind: r.kind, runId: r.runId, step: r.step, scope: { formEdition: r.formEdition, combinationId: r.combinationId }, landsOn: r.landsOn, reuse: r.reuse, payload: p,
+    source: r.source ?? null, rounds: r.rounds, rules: r.rules, agreement: r.agreement, confidence: r.confidence, reason: r.reason, origin: r.origin, identity: r.identity,
+    relatesTo: r.relatesTo, revision: r.revision ?? null, status: "waiting", decision: null, basis: r.basis };
+  await acceptPqrPick(tx, l.actor, item, { view: false });
+  const made = await tx.factSource.findFirst({ where: { combinationId: r.combinationId!, lineageKey }, orderBy: { version: "desc" } });
+  const { updatedAt, ...kept } = before ?? ({} as NonNullable<typeof before>);
+  return { key: lineageKey, work: { pqrRowId: made!.id, pqrBefore: before?.status === "DRAFT" ? { ...kept, updatedAt: updatedAt.toISOString() } : null } };
+}
+type PqrWork = { pqrRowId: string; pqrBefore: Record<string, unknown> | null };
+const pqrStamp = (tx: Tx, combinationId: string | null, key: string) => tx.factSource.findMany({ where: { combinationId: combinationId ?? "", lineageKey: key }, orderBy: { version: "asc" }, select: { id: true, version: true, status: true, updatedAt: true } });
+
 /** The draft rows a library lander made, by kind (undo removes them while they are still untouched drafts). */
 const LANDED: Record<string, (tx: Tx, ws: string, key: string) => Promise<unknown>> = {
   field: (tx, ws, key) => tx.canonicalField.deleteMany({ where: { workspaceId: ws, canonicalFieldKey: key, version: 1, status: "DRAFT" } }),
@@ -263,7 +285,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         if (p.data!.kind !== r.kind) fail("An edit keeps the proposal's kind.");
         payload = p.data!;
       }
-      let landedAs: string | null = null, reused = false;
+      let landedAs: string | null = null, reused = false, pqr: (PqrWork & { stamp: string }) | null = null;
       if (d.action !== "reject") {
         if (r.landsOn === "library" && (r.reuse as { match: string }).match === "new") {
           const twin = await sameInLibrary(tx, workspaceId, payload);
@@ -274,6 +296,9 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         if (r.landsOn === "library" && reuse.match === "reuse" && d.action === "accept") {
           if (!(await usableInLibrary(tx, workspaceId, r.kind, reuse.existingKey))) fail(`"${identityKeyOf(payload, r.identityKey)}" reuses ${reuse.existingKey ?? "no item"}, which is not in the library (retired, merged or never added): reject this proposal, or edit it into a new item.`, HttpStatus.CONFLICT);
           landedAs = reuse.existingKey; reused = true;
+        } else if (r.kind === "pqr_pick") {
+          const got = await landPqrPick(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: reason ?? r.reason });
+          landedAs = got.key; pqr = { ...got.work, stamp: JSON.stringify(await pqrStamp(tx, r.combinationId, got.key)) };
         } else {
           const land = LANDERS[r.kind as ProposalKind];
           if (!land) fail(`A ${r.kind.replace(/_/g, " ")} proposal is accepted with its own step, not yet on this queue.`, HttpStatus.CONFLICT);
@@ -282,16 +307,18 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
       }
       // What a library lander wrote, as it stands now: Undo refuses once it has changed (PR #96 review (1)).
       const landedStamp = landedAs && !reused ?await stampOf(tx, workspaceId, r.kind, landedAs) : null;
-      const work = { ...((r.work ?? {}) as object), ...(d.action === "edit" ? { beforeEdit: r.payload } : {}), ...(landedStamp ? { landedStamp } : {}) };
+      const work = { ...((r.work ?? {}) as object), ...(d.action === "edit" ? { beforeEdit: r.payload } : {}), ...(landedStamp ? { landedStamp } : {}), ...(pqr ? { pqr } : {}) };
       await tx.proposalItem.update({ where: { id: r.id }, data: { status: d.action === "accept" ? "accepted" : d.action === "edit" ? "edited" : "rejected", decidedBy: actor.id, decidedAt: new Date(),
         decisionReason: reason, batchId, decidedKey: landedAs,
-        ...(d.action === "edit" || landedStamp ? { work: work as Prisma.InputJsonValue } : {}),
+        ...(d.action === "edit" || landedStamp || pqr ? { work: work as Prisma.InputJsonValue } : {}),
         // An edit keeps the item's own reading beside it, so Undo puts the item back as it was proposed (1b).
         ...(d.action === "edit" ? { payload: payload as Prisma.InputJsonValue, identityKey: identityKeyOf(payload, r.identityKey) } : {}) } });
       out.push({ id: r.id, landedAs });
     }
     return out;
-  }, QUEUE_TX);
+  // Review M2 (#282): a bulk accept of up to BATCH_MAX picks checks each against the combination inside this one
+  // transaction; Prisma's 5 s default ended batches above about 45 picks with nothing accepted.
+  }, { ...QUEUE_TX, timeout: 120_000 });
   await audit.log(workspaceId, actor.id, "decided", "proposals", batchId, `${actor.name} ${d.action === "accept" ? "accepted" : d.action === "edit" ? "edited and accepted" : "rejected"} ${landed.length} proposal${landed.length === 1 ? "" : "s"}${reason ? `: ${reason}` : ""}`);
   return { batchId, items: landed };
 }
@@ -316,12 +343,22 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
       if (landedStamp && r.decidedKey && (await stampOf(tx, workspaceId, r.kind, r.decidedKey)) !== landedStamp)
         fail(`"${identityKeyOf(r.payload as ProposalPayload, r.identityKey)}" was changed after it was accepted, so Undo would erase that change. Nothing was undone: retire or delete it in the shared library instead.`, HttpStatus.CONFLICT);
     }
+    // C4.7: an accepted pick's tick is taken back only while it is the draft the accept wrote (not changed or released
+    // since); the draft it replaced comes back as it was.
+    for (const r of rows) {
+      const { pqr } = (r.work ?? {}) as { pqr?: PqrWork & { stamp: string } };
+      if (!pqr || !r.decidedKey) continue;
+      if (JSON.stringify(await pqrStamp(tx, r.combinationId, r.decidedKey)) !== pqr.stamp)
+        fail(`A pre-qualification tick this decision made was changed or released after it was accepted, so Undo would erase that change. Nothing was undone: change it on the Questionnaires tab instead.`, HttpStatus.CONFLICT);
+      await tx.factSource.delete({ where: { id: pqr.pqrRowId } });
+      if (pqr.pqrBefore) await tx.factSource.create({ data: { ...(pqr.pqrBefore as Prisma.FactSourceUncheckedCreateInput), updatedAt: new Date(String(pqr.pqrBefore.updatedAt)) } });
+    }
     for (const c of adds) await LANDED[c.kind]?.(tx, workspaceId, c.key);
     await tx.libraryChange.deleteMany({ where: { workspaceId, batchId } });
     for (const r of rows) {
-      const { beforeEdit, landedStamp, ...work } = (r.work ?? {}) as { beforeEdit?: ProposalPayload; landedStamp?: string };
+      const { beforeEdit, landedStamp, pqr, ...work } = (r.work ?? {}) as { beforeEdit?: ProposalPayload; landedStamp?: string; pqr?: unknown };
       await tx.proposalItem.update({ where: { id: r.id }, data: { status: "waiting", decidedBy: null, decidedAt: null, decisionReason: null, batchId: null, decidedKey: null,
-        ...(beforeEdit || landedStamp ? { work: work as Prisma.InputJsonValue } : {}),
+        ...(beforeEdit || landedStamp || pqr ? { work: work as Prisma.InputJsonValue } : {}),
         ...(beforeEdit ? { payload: beforeEdit as Prisma.InputJsonValue, identityKey: identityKeyOf(beforeEdit, r.identityKey) } : {}) } });
     }
     return rows.length;
