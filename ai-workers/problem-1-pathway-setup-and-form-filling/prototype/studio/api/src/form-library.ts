@@ -10,12 +10,13 @@ import { UploadRuns } from "./upload-run.ts";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { manifest } from "../../engine/import.ts";
+import { effective } from "../../engine/snapshot.ts";
 import { compareEditions, newestEdition } from "../../engine/programs.ts";
 import { officialUrl, parseFormPage, parseFormsIndex } from "../../engine/canada.ts";
 import { INDEX_URL } from "./finder.ts";
 import { fileMonth, libraryRows, newerOnIndex, planIndexFill } from "../../engine/library-index.ts";
 import { ACCOUNT_WORDS, throughAccount } from "../../contracts/forms.ts";
-import { AcceptsBody, acceptsWords, AttachBody, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
+import { AcceptsBody, acceptsWords, AttachBody, fieldMapState, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
 import { CanadaError, canadaSource, type CanadaSource } from "./canada.ts";
 import { ACTORS, actorOf, Audit, ConfigRead, Db, need, readerOf, Workspace, type Actor } from "./core.ts";
 import { rowActionOf } from "./form-row-action.ts";
@@ -103,9 +104,17 @@ export class FormLibrary {
     const lineCodes = new Set((await this.db.combinationForm.findMany({ where: { workspaceId }, distinct: ["lineageKey"], select: { lineageKey: true } })).map((x) => x.lineageKey));
     const releasedCodes = new Set((await this.db.$queryRaw<{ code: string }[]>`SELECT DISTINCT f->>'form_number' AS code FROM config_release r, jsonb_array_elements(COALESCE(r.snapshot->'forms', '[]'::jsonb)) f WHERE r.workspace_id = ${workspaceId}::uuid`).map((x) => x.code));
     const waitingAccepts = new Set((await this.db.libraryChange.findMany({ where: { workspaceId, kind: "form_accepts", status: { in: ["WAITING", "RETURNED"] } }, select: { key: true } })).map((x) => x.key));
+    // C3.12: each form's field map on its current edition, read once for the whole list (one query, not one per row).
+    const currents = new Map(forms.map((f) => [f.formKey, newestEdition(this.printedApproved(f.editions, approved.all))]));
+    const currentIds = [...currents.values()].filter((e) => !!e).map((e) => e!.id);
+    const mapRows = currentIds.length ? await this.db.formFieldMap.findMany({ where: { workspaceId, formEditionId: { in: currentIds } }, select: { formEditionId: true, dataPath: true, version: true, status: true, outcome: true } }) : [];
+    // AI field-map proposals still waiting on To review, per edition (they are not field-map rows until a person accepts).
+    const proposedOf = new Map((await this.db.proposalItem.groupBy({ by: ["formEdition"], where: { workspaceId, status: "waiting", step: "field_map", formEdition: { in: [...currents.values()].filter((e) => !!e).map((e) => e!.editionLabel) } }, _count: { _all: true } })).map((g) => [g.formEdition!, g._count._all]));
+    const mapsOf = new Map<string, typeof mapRows>();
+    for (const m of mapRows) mapsOf.set(m.formEditionId, [...(mapsOf.get(m.formEditionId) ?? []), m]);
     const rows = forms.map((f) => {
       const editions = this.printedApproved(f.editions, approved.all);
-      const current = newestEdition(editions);
+      const current = currents.get(f.formKey);
       const newestPerCombination = new Map<string, (typeof f.usedBy)[number]>();
       for (const u of f.usedBy) if (!newestPerCombination.has(u.combinationId)) newestPerCombination.set(u.combinationId, u);
       const using: { id: string; label: string; picked_by_ai: boolean; as_source?: boolean }[] = [...newestPerCombination.entries()].filter(([, u]) => u.status !== "RETIRED").map(([id, u]) => ({ id, label: trails.get(id) ?? u.combination.label, picked_by_ai: u.origin === "AI_FOUND" }));
@@ -123,6 +132,7 @@ export class FormLibrary {
       return { code: f.formKey, title: f.displayName, type: TYPE_OF(f.formKind, f.displayName), edition: current?.editionLabel ?? null, canada_updated: current?.canadaUpdated ?? null,
         // P-143 (C-3): one record per IRCC account (ANY first); the column says them in words, one line per account.
         ...acceptsRow(current?.accepts ?? [], TYPE_OF(f.formKind, f.displayName) === "form"), accepts_waiting: waitingAccepts.has(f.formKey),
+        field_map: fieldMapState(TYPE_OF(f.formKind, f.displayName), !!current, current ? effective(mapsOf.get(current.id) ?? [], (m) => m.dataPath, "draft") : [], current ? proposedOf.get(current.editionLabel) ?? 0 : 0),
         origin: current?.origin ?? (current?.officialFile ? "SAMPLE" : current ? "UPLOADED" : null), downloaded_from: current && approved.downloaded.has(current.sha256!) ? current.sourceUrl : null, checked_at: current?.checkedAt ?? null,
         form_page_url: f.formPageUrl ?? current?.formPageUrl ?? null, fingerprint: current?.sha256 ?? null, attachment_id: current ? atts.find((a) => a.sha256 === current.sha256 && a.kind === "Form")?.id ?? null : null,
         used_by: using, status, listed_by_ircc: !!f.listedOnIndexAt, newer_on_index: indexNewer && !current?.newerFileSha256, plain: !f.retiredAt && !f.editions.length && !lineCodes.has(f.formKey) && !releasedCodes.has(f.formKey) && !held.some((h) => h.code === f.formKey) && !pendingChange, lifecycle_waiting: lifecycle, lifecycle_approved: pendingChange?.status === "APPROVED", lifecycle_returned: pendingChange?.status === "RETURNED", older_editions: editions.filter((e) => e.id !== current?.id).sort((a, b) => compareEditions(b, a)).map((e) => e.editionLabel), retired: !!f.retiredAt, pending: pendingChange ?? null };
