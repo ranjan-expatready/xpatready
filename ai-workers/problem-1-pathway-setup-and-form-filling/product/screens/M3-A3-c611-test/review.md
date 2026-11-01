@@ -91,3 +91,27 @@ Report: `journey-test-reviewer-2026-11-01.md`, written next to this review. Ever
 * Another process in this checkout set `acceptance/lib/m3.ts` back to origin/main for a few minutes during my run (16:42 UTC) and then restored it. I reran everything from a `git archive` of the HEAD commit, and the results above are from that.
 
 **Verdict: Block**: fix M1. S1 and m1–m3 and m6 are cheap and worth doing in the same PR; m4, m5 and m7 are for the tech lead and other lanes.
+
+---
+
+## Round 2: commit `aa12a560b8c77ad92ee69dfd021b5a3e85d82de3` (diff 223ae94e..aa12a560)
+I ran it on copy `rev_c611` at :4439, and the studio tree matched the commit.
+* **Release 1** (after `setup_visitor_visa.ts`): 22/22 passed, and the 3 IMM 5476 lines print PENDING.
+* **Release 2** (after `acceptance/lib/setup_vv_m3.ts`, which publishes IMM 5476): C6.11-15, -16c and -17a **FAIL** (22/25).
+* So the release query (`pack_work_pin` → `config_release.snapshot.forms[].form_number`) is valid SQL and finds the form; it does not fall back to null. The lines can now fail.
+* I did not rerun the R1 group through run-suites. The builder reports r1c 123/123, r1d 86/86, C6.11 22/22 and r1a 99/99.
+
+| Round 1 | Status |
+|---|---|
+| M1 | **Fixed.** Pending now depends on the case's pinned release, not on the result (`C6.11.test.ts`, the `has5476` query). When the release has IMM 5476, each line needs `/prepare` to answer 200 and has to find what it expects. Two changes go further than round 1 asked: -15 now also requires exactly one IMM 5476 for the principal, and -16c runs the original questionnaire assertion (`channel === "firm"`). |
+| m1 | **Fixed.** The client must get 403, and so must the author. |
+| m2 | **Fixed.** `assigned_by` and `ended_by` must equal the firm admin's name, and that name must exist. |
+| m3 | **Fixed.** -3a needs both user lists to be non-empty, and -5 needs `f.rep`. |
+| m6 | **Fixed.** The usage line now uses port 4438 (the runtime range) and `setup_visitor_visa.ts`. The README now names the in-place exception. |
+| S1, m4, m5, m7 | These go in the PR body for the tech lead and other lanes, as agreed. I did not review the PR text itself. |
+
+Remaining minor (no action needed): -16c reads the questionnaire as `first`, the case officer who was taken off in -11. That works because `reach` checks only the firm, but the line will need another actor if case access is later limited to the current team.
+
+The journey score stays **7.5/10**. Its half-points are for the browser walk and timing, which this change cannot raise. Trust and sources now has a real check behind it, one that can fail, ready for when IMM 5476 lands.
+
+**Verdict: Approve** for commit `aa12a560b8c77ad92ee69dfd021b5a3e85d82de3`: there is no open Blocker or Major.
