@@ -26,7 +26,7 @@ const ROOT = execSync("git rev-parse --show-toplevel", { encoding: "utf8" }).tri
 const P = "ai-workers/problem-1-pathway-setup-and-form-filling", PR = `${P}/prototype`, S = `${PR}/studio`;
 const SKIP = new Set(["check_catalogue_scale.cjs"]);   // as in run-suites.sh: not a regression suite
 const SMOKE = ["check_engine.ts", "check_case_engine.ts", "check_w1_structure.ts", "check_screen01_api.ts", "check_w1_start_setup.ts", "check_dv_backbone_browser.cjs"];
-const RUNTIME_GROUP = ["check_runtime_r1c.cjs", "check_runtime_r1d.ts", "check_c611_team.ts", "check_runtime_r1a.ts"];
+const RUNTIME_GROUP = ["check_runtime_r1c.cjs", "check_runtime_r1d.ts", "check_runtime_r1a.ts"];
 const DOCS = /\.(md|txt|png|jpe?g|gif|webp|svg|pdf)$/i;
 
 const read = (f) => { try { return readFileSync(join(ROOT, f), "utf8"); } catch { return ""; } };
