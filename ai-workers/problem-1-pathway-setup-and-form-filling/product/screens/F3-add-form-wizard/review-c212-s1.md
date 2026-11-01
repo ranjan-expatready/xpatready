@@ -82,3 +82,38 @@ Live-AI suites and a product-made AI draft of IMM 5475. The replay route refused
 Journey test: `journey-test-reviewer-2026-10-31-c212-531ff8da.md`. **Score 8.5/10 (pass).**
 
 **Verdict: Block.** To fix: Major 1 (match files by checksum, and make the m3 test use real data) and Major 2 (failing tests for proposals by combination and held files with a code). Minor 1 is a Should.
+
+# Round at 41b97b46
+Commit reviewed: **`41b97b46`** (one fix commit on 531ff8da). I did not build it. Changes: `api/src/review-queue.ts` (`formOfFile`: checksum first, then label) and `tests/check_forms_c212_queue_forms.ts` (45 checks). I ran everything on /tmp `git archive` copies, on ports 4450–4453. Every database was dropped afterwards. No `*_LIVE` variable was set. Cost: US$0.
+
+## Verdict: **Ship** (0 Blocker, 0 Major, 1 Minor). For the PR: **Approve**
+Major 1, Major 2 and Minor 1 from the last round are closed, live and by mutation.
+
+## Checks
+| Check | Result |
+|---|---|
+| New suite | 45/45 (:4450, 109 s) |
+| Mutations (fresh copy and database per run, :4452 and :4453) | **26 caught, 3 missed of 29.** Caught: the 21 from the last round, plus the 3 it missed (proposals by combination → [], a held file with a code → [], field maps from any version), plus checksum removed for all files, for AI drafts only, and for running steps only. Missed: see Minor 1 and the note below. |
+| Major 1, live | Same repro as the last round, on the golden database: a field_map job copied onto attachment `30921539` (Form "IMM 5475 (12-2022)") → `forms: ["IMM 5475"]`, and listed under `?form=IMM 5475` ✓. The suite's check now picks a real demo file whose label differs from its checksum's edition (IMM 5475). It inserts no edition ✓. On the demo, the 7 files whose label differs from their edition's (3 IMM 5475, IMM 5881 checklist, IMM 5905 instructions, Guide 5256, Guide 5487) all resolve by checksum. No checksum belongs to two forms (15 editions, 15 checksums). The lookup is workspace-scoped and replaces the label read with one batched `OR` read. |
+| Label fallback, live | A file with a checksum no edition has, labelled "IMM 5257 (09-2023)" → [IMM 5257] ✓ |
+| Major 2 and Minor 1, live | The suite's loop now includes `held_file` and `proposals:combination`. A newer DRAFT mapping without the key takes its form off the who-fills change. Each of these mutations is caught ✓ |
+| Golden comparison, main vs 41b97b46 | One `fillAllKinds` database, 54 items. Order: branch, main (`isolated.sh rv41gold 4451 restart`), branch, main, branch. 4 people × 17 queries = 136 responses. Settled pass (the running batch finished): **0 differences with `forms` removed, 508 items**. The first pass was taken while the batch was still running: 0 differences with the `running` item left out (`cmp_norun`). Every raw difference in that pass was that batch finishing between snapshots. Branch vs branch gave the same pattern. |
+| Neighbouring suites (fresh copies, :4450 and :4451) | screen02_fix 61/61 · screen02_slice2 53/53 · s6_p149 73/73 (`tsx --tsconfig api/tsconfig.json`) · who_fills 26/26 · forms_qa53 20/20. `check_who_fills.json` was rewritten (through the `product/` link) and I restored it with `git checkout --`. |
+| Graph (P-86) | G1 0 · G2 0 · G3 2 (the same two routes as before) · G4–G6 0 |
+
+## Issues, ranked
+**Minor 1 (Should): the label fallback in `formOfFile` has no failing test.** Repro: delete ` ?? (a.edition ? formOfLabel.get(a.edition) : undefined)` at `review-queue.ts:80` and the suite is still 45/45. The code is right live (see above). The suite's oracle already encodes the fallback, but no file in the filled data reaches it: every demo file with an edition matches by checksum. **Fix:** in the same suite, give one file a checksum that no edition has and a label equal to an edition's, then check that its item names that form.
+
+**Note (not a finding):** two other mutations change nothing on any data the product makes today. (a) Label checked before checksum: no demo file's label is another form's edition label. (b) `codeOf` parsing the label back: it now reads only `proposal_item.formEdition`, which is an edition label and parses to the same number. Both are equivalent mutants here.
+
+**m5** stands as recorded in the last round: the PR body should say that the golden suite lands with the `engine/queue.ts` move.
+
+## D1–D20 (changes from the last round)
+D1 5 (D2 per kind, files by checksum) · D2 5 · D7 4 (an AI item on the demo's IMM 5475 file names IMM 5475) · D16 4 (26/29 mutations caught; Minor 1) · D17 and D20 simulated only. The rest are unchanged. No UI file changed since 9f2132bd.
+
+## Could not check
+Live-AI suites. A product-made AI draft of IMM 5475: the replay route refuses it ("IMM 5475 is already in this combination's configuration."), so the repro uses a copied job row, as the suite does. The PR body (no PR yet). There is no screen yet (F3b).
+
+Journey test: `journey-test-reviewer-2026-10-31-c212-41b97b46.md`. **Score 9.5/10 (pass).**
+
+**Verdict: Approve.** No open Blocker or Major. Minor 1 is a Should.
