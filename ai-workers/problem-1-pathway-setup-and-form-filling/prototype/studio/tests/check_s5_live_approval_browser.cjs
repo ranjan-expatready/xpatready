@@ -24,7 +24,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C11.12 L2 pass: with the founder's live-trial approval on the server, the plan says AI now is approved", rules.status === 201 && rules.body?.live?.approved === true && rules.body.live.why === null, JSON.stringify(rules.body?.live));
   const live = await api(`/combinations/${sv}/people/propose/plan`, { method: "POST", data: { mode: "live" } });
   step("C11.12 L2 pass: and the AI now plan says the most it can cost before anything runs", live.status === 201 && live.body?.totals?.worst_usd > 0, JSON.stringify(live.body?.totals ?? live.body?.detail));
-  await p.goto(`${BASE}/c/${sv}/questionnaires`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
+  // Slice C1 (P-161 (2)): the people card sits in Before forms on the Forms tab.
+  await p.goto(`${BASE}/c/${sv}/forms`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
   const who = p.locator("[data-who-can-be]");
   // Board v2 (P-147 §3): the card is folded to one line; "Show and edit" opens the built table.
   await who.getByRole("button", { name: "Show and edit" }).click();
