@@ -48,3 +48,9 @@ To raise the score: put Overview's chips in the card's words (task completed →
 
 ## Not tested
 A real screen reader. An intended user's unaided walk (D17/D20 stay with the founder). The approver's view (same components). The studio-preview count labels live.
+
+## Re-run on a4c9131f (after main's #210), 2026-11-01, :4443
+Journeys: the content publisher reads who can be in wp.family, vv.single and sv.super_visa on Overview, then on Forms and Questionnaires, at 1440, 1024 and 512 px (×2).
+What held: the header says each person in the card's words on every tab. Overview has no second list, so the Major above is gone. There is no old wording anywhere in main, no sideways scroll and no page errors. The names check passed 16/16.
+Score change: task completed ½ → 1. Every other line is unchanged. **9 / 10, pass (8 or more, no 0).**
+Not tested: the same items as before.

@@ -42,3 +42,18 @@ A real screen reader. Any intended user's unaided walk (D17/D20 stay with the fo
 Open: 1 Major (finding 1).
 
 **Verdict: Block** on 6eab6bc7. To fix: (1) the Overview chips in the same words as the card, with an Overview step in the check; and (2), recommended in the same PR, replace the tautological fail guard with the real one above.
+
+## Re-review on a4c9131f (merge of origin/main 63168762 into 819e85fe), 2026-11-01
+I reviewed this on a copy the builder had already started on :4443 (db xr_studio_screens_qa77), built from a4c9131f. I never touched :4400.
+- **Merge kept all of main.** origin/main is an ancestor of a4c9131f. `git diff origin/main a4c9131f` and `git diff a4c9131f^2 a4c9131f` give the same 9 files, all of them the PR's own: `lib/people.ts`, `combination.tsx`, `questionnaires.tsx`, the names check, these two records and 3 screenshots. `overview.tsx` is byte-identical to main, which includes #210's setup strip and the removal of the people chips (P-161 (2)). None of main's other 29 files differ.
+- **QA-77 is still delivered.** The header (`combination.tsx:87`), the folded Forms line (`questionnaires.tsx:98`) and the Questionnaires note (`questionnaires.tsx:35`) all use the one `peopleWords` formatter. The table's Person column uses the same names. On Overview the header is now the only place people are listed. I walked wp.family, vv.single and sv.super_visa at 1440 px, 1024 px and 512 px (×2, i.e. 200 %): no `[data-overview-people]` list, none of the old forms (`· 0 to 4`, `· applicant`, `(0–4)`) anywhere in main, no sideways scroll, no page errors.
+- **Test change is sound.** The only test change since 819e85fe is the Overview step. The chip comparison became "Overview has no `[data-overview-people]`". That is the most a test can check once main removed the list. The pass steps for the header, the note and the table, and both real fail guards (the old formatter run on stored people, and the live header with no `(n–m)`), are unchanged. I reran it: **16/16** (one fewer than the builder's 17, because the sample-load step is skipped once loaded). Afterwards I restored the screenshot the check rewrites.
+
+Findings
+1. **Minor:** the Overview step only checks that one selector is absent (`check_qa77_names_browser.cjs:66-67`). If a list came back under another attribute, it would still pass. Fix (optional): also assert that the text of Overview's `[data-overview]` has none of the person labels followed by `· n` or `· a to b`.
+2. **Minor (carried):** the psql path is still hard-coded to `/opt/homebrew/...` (`:13`).
+3. **Nit:** the fail-guard comment and the `oldOverview` guard still talk about the Overview chips, which are gone. They are harmless as history.
+
+Journey score (reviewer): **9 / 10**. Task completed is now 1, because no surface says a person another way. Error recovery stays at ½. See the journey report.
+
+No Blocker or Major open. **Verdict: Approve** on a4c9131f.
