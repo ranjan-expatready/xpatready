@@ -66,7 +66,6 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
     if (asked === "page" && latest.data.page_choice) choosePage(); else redo();
     setSp((x) => { const n = new URLSearchParams(x); n.delete("find"); return n; }, { replace: true });
   }, [asked, latest.data]); // eslint-disable-line react-hooks/exhaustive-deps
-  const finder = <><FinderPanel id={id} latest={latest.data} onRedo={redo} onChoosePage={choosePage} removed={removed.map((r) => r.code)} />{finding ? <FindDialog id={id} only={finding.length ? finding : undefined} page={choosingPage ? latest.data?.page_choice ?? { candidates: [], why: "" } : null} onClose={() => { setFinding(null); setChoosingPage(false); }} onStarted={(runId) => window.dispatchEvent(new CustomEvent("s5-find-started", { detail: runId }))} /> : null}</>;
   const onRemoved = (code: string) => toast.show(`${code} removed from this combination; it stays in the Form library`, () => undoLast());
   const noRule = lines.filter((l) => l.onlyIf.kind === "words_only");
   const add = canAuthor ? <Button size="sm" variant="secondary" onClick={() => setAdding(true)}><Plus /> Add a form from the library</Button> : null;
@@ -75,6 +74,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
   const codes = lines.map((l) => l.code);
   // A form removed in this draft is under "Removed in this draft" (Undo), not a form waiting to be set up.
   const pending = combo ? pendingForms(combo, [...codes, ...removed.map((r) => r.code)]) : [];
+  const finder = <><FinderPanel id={id} latest={latest.data} onRedo={redo} onChoosePage={choosePage} removed={removed.map((r) => r.code)} lineCount={lines.length + pending.length} />{finding ? <FindDialog id={id} only={finding.length ? finding : undefined} page={choosingPage ? latest.data?.page_choice ?? { candidates: [], why: "" } : null} onClose={() => { setFinding(null); setChoosingPage(false); }} onStarted={(runId) => window.dispatchEvent(new CustomEvent("s5-find-started", { detail: runId }))} /> : null}</>;
   // Break m4 (Screen 01): an author never sees the channels as read-only words while the session loads.
   if (!known || !combo) return <Spinner label="Loading forms" />;
   const undo = canAuthor ? <>{lastChange ? <UndoBar change={lastChange} onUndo={undoLast} /> : null}{removed.length ? <RemovedNotice id={id} removed={removed} /> : null}</> : null;
