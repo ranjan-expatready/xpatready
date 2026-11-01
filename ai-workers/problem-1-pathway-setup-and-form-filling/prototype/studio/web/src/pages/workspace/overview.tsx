@@ -19,8 +19,11 @@ export function OverviewTab({ d, sum, show }: { d: CombinationView; sum: Combina
   const row = sum?.row;
   const missing = row && row.status !== "READY" ? row.missing : [];
   const k = d.draft.counts;
-  const errors = d.draft.problems.filter((p) => p.level === "error").length;
-  const warnings = d.draft.problems.length - errors;
+  // F8: "Nothing to release yet" is a release problem the missing list already says ("No forms yet", with its step);
+  // the Rules and checks tile counts rule and check problems only (Lead check item 3: no setup shows "no problems").
+  const ruleProblems = d.draft.problems.filter((p) => p.where !== "Release");
+  const errors = ruleProblems.filter((p) => p.level === "error").length;
+  const warnings = ruleProblems.length - errors;
   const missingRef = React.useRef<HTMLElement>(null);
   React.useEffect(() => { if (show === "missing") { missingRef.current?.scrollIntoView({ block: "center" }); missingRef.current?.focus({ preventScroll: true }); } }, [show, !!sum]);
   const people = d.combination.participants as { role: string; label: string; min: number; max: number; applies?: boolean }[];
