@@ -58,13 +58,16 @@ export class FormLibrary {
   /** C2.12 slice 2 (review 514f0d8d M4): one form's current approved edition, the same rule as the Forms list (currentEdition),
    *  read for that form alone (the guided path needs no other row). */
   async currentOf(code: string): Promise<{ edition: string; sha256: string } | null | undefined> {
+    return (await this.currentOfMany([code])).get(code);
+  }
+  /** C2.12 slice 3 (review 28b3bba3 Major 1): the same for several forms in one set of queries (the Forms tab's chips).
+   *  A form not in the library has no entry; one with no approved file yet is null. */
+  async currentOfMany(codes: string[]): Promise<Map<string, { edition: string; sha256: string } | null>> {
     const workspaceId = await this.ws.id();
-    const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: code } }, include: { editions: true } });
-    if (!def) return undefined;
-    const shas = def.editions.map((e) => e.sha256).filter((x): x is string => !!x);
+    const defs = codes.length ? await this.db.govFormDef.findMany({ where: { workspaceId, formKey: { in: [...new Set(codes)] } }, include: { editions: true } }) : [];
+    const shas = defs.flatMap((d) => d.editions.map((e) => e.sha256)).filter((x): x is string => !!x);
     const ok = new Set([...manifest().map((i) => i.sha256), ...(shas.length ? (await this.db.approvedSource.findMany({ where: { workspaceId, sha256: { in: shas } }, select: { sha256: true } })).map((x) => x.sha256) : []), ...(shas.length ? (await this.db.officialDownload.findMany({ where: { workspaceId, sha256: { in: shas } }, select: { sha256: true } })).map((x) => x.sha256) : [])]);
-    const cur = this.currentEdition(def.editions, ok);
-    return cur?.sha256 ? { edition: cur.editionLabel, sha256: cur.sha256 } : null;
+    return new Map(defs.map((def) => { const cur = this.currentEdition(def.editions, ok); return [def.formKey, cur?.sha256 ? { edition: cur.editionLabel, sha256: cur.sha256 } : null] as const; }));
   }
 
   private async approvedShas(workspaceId: string) {
