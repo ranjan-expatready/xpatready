@@ -1,3 +1,56 @@
+# F2 C2.12 slice 3: the guided path on the Forms tab (step chip and rail) · independent reviewer · round 3 · 1 Nov 2026
+
+Commit reviewed: **`075ffcdf`** on `claude/forms-c212c-hfb2om`. This round is a delta: I read `git diff ed2516cf 075ffcdf` against the round-2 fix list below. I did not build it.
+- Ports: 4454–4459 only. Every copy was stopped and its database dropped.
+- Web build: current (a rebuild gave the same hash, `index-BO23YPzN.js`).
+- Cost: US$0, replay only. SQL was used only as test input for the running state.
+- Tree: the tracked screenshots the suite rewrote were restored, and the tree is clean apart from this file and the journey-test file.
+
+## Verdict: **Ship** (0 Blocker, 0 Major open). For the PR: **Approve**
+Major A is fixed and holds in the running app. N1–N3 are fixed. One N1 item, the rail key, still has no isolated test; I judge that acceptable (below).
+
+## Round-2 fix list, item by item
+| Item | Result | Evidence |
+|---|---|---|
+| **Major A**: the chip stays "Running" after the run | **Fixed** | Fix: `web/src/pages/combination.tsx:118-120`, a 4 s `refetchInterval` only while some chip is `running`. My walk on Visitor visa IMM 5257 with the rail closed: as A, the chip went from Running to "Step 3 of 6 · Review · Your step" **567 ms** after the job was set to COMPLETED, with no reload. As C: 560 ms, ending on "Waiting on someone else". 2 reads in 10 s while running, **0 when idle and 0 after the run ends** (the poll stops). Mutation (poll off): suite **30/31**, and the Major A step fails |
+| N1: frozen chip label (m11) | Fixed, tested | Mutation (label fixed at "Your step"): 30/31 |
+| N1: running words (m10) | Fixed, tested | Mutation (running branch off): 30/31 |
+| N1: rail focus refetch (m9) | Fixed, tested | Mutation (`refetchOnWindowFocus: false`): 30/31 |
+| N1: rail key under `["combination", id]` (m6) | **Untested, accepted** | Mutation (`["form-progress", id, code]`): 31/31. Accepted because the behaviour this key serves is covered another way. The rail is a modal that only reads and links, so no row action can run while it is open. On remount, the rail fetches again (staleTime 2 s, `lib/api.ts:29`). Its focus refetch and its running poll are now tested. The key is an implementation detail, not a rule with its own outcome |
+| N2: the elsewhere words repeat | Fixed | API on Visitor visa after a Super visa replay: "Being mapped in Super visa…" appears once (in the words). Who: "The people working on it there finish it; nothing to do here until then." Link: "Open it in Super visa". Mutation (old who line): 53/54 |
+| N3: the ORed API checks | Fixed | `check_forms_c212_progress.ts:127` and `:130` are now strict. With m1 (engine combination filter off), `:127` fails as well (51/54; at ed2516cf it passed) |
+
+## What I checked
+| Check | Result |
+|---|---|
+| Suites at 075ffcdf (fresh copies) | `check_forms_c212_rail_browser` **31/31** (:4455). `check_forms_c212_progress` **54/54** (:4454) |
+| Mutations (`git archive` of 075ffcdf, fresh copy each) | **6 of 7 caught**: forms poll, chip label, running words, rail focus, who line, combination filter. Survived: m6 rail key (accepted, above) |
+| axe, running state with the rail closed | 0 violations at 1024 and 390 px, as A and as C. The suite adds the running rail at 3 widths |
+| Graph (P-86), tsc | G1 0 · G2 0 · G3 2 (old attachment routes, not this slice) · G4–G6 0. Web tsc: no error in `combination.tsx` or `setup-rail.tsx` |
+| Not run | `run-suites.sh --changed`: its ports (164xx) are outside my range |
+
+## Issues
+None new. Carried from round 2 and declared for the PR, not re-scored: Minor 2 (board fit), Minor 4, Minor 8, Minor 9, and #186 Minors C–F.
+
+## D1–D20 (changes from round 2 only)
+- D10 4: N2 fixed.
+- D11 4: Major A fixed; the chip and the rail agree.
+- D16 4: 6 of 7 mutations caught; the one left is accepted.
+- Every other score is unchanged from round 2. D17 and D20 are simulated only.
+
+## Could not check
+- A real screen reader.
+- A visible browser: headless Chrome only.
+- Live AI.
+- An intended user's unaided walk (D17, D20).
+- `run-suites.sh`.
+
+Journey test: `journey-test-reviewer-2026-11-01-c212-075ffcdf.md`. **Score 9.5/10 (pass).**
+
+**Verdict: Approve** (075ffcdf). No open Blocker or Major.
+
+---
+
 # F2 C2.12 slice 3: the guided path on the Forms tab (step chip and rail) · independent reviewer · round 2 · 1 Nov 2026
 
 Commit reviewed: **`ed2516cf`** on `claude/forms-c212c-hfb2om` (stacked on #186, cd8a023d). I read `git diff 9a8aac8e ed2516cf` (this round's fix) and `git diff cd8a023d ed2516cf` (the slice). I did not build it. Read against the board `design/draft-wizard.html` (PDF views only, P-102), `concept.md` §3–§6 (BR-1, BR-4, BR-5, BR-7, K1, M5, m6, m9), STANDARDS and EXPERIENCE, and round 1 below.
