@@ -38,3 +38,27 @@ Detail as it stood in `qa/reports/bugs-open-detail.md`:
 
 | QA-77 | UX · Minor | C11.12 · PRODUCT §4 person roles | **f7cb40d9** | Visitor visa names its people two ways on one page: header and Overview "Applicant, Spouse or partner (travelling), Child (travelling)"; Questionnaires table "Principal applicant, Spouse or partner, Child". §4 says Principal applicant. Fix: one set of names, from the people table | `ws/`ev-people-names.png, combo2-overview-1440.png | runtime | Open |
 
+## QA-119 — closed 1 Nov 2026 (after-merge 25cefb67)
+
+Closed by the qa lane on main **25cefb67** (fixed by #216): on test copy qa_wk :4472 (Load sample, no STUDIO_*_LIVE), every sample combination in setup shows the same next step in the header ("Next step · <step>") and as the strip's ● Next item; `tests/qa/check_qa_am_1101c_walk.cjs 4472` 16/16 and again 15/15 (the QA-119 line green both times). The header of a Live combination now names the strip's open step too: see QA-129.
+
+Row as it stood in `qa/BUGS.md`:
+
+| QA-119 | Conflict · Major | C11.10 · P-157, P-161 (one derived setup checklist drives the card, the button and "Next: …") | 52768cd2 · 6b424941 (still on all 5; #216, which fixes it, passes the qa check 5/5 on its branch fb500e6c but is dequeued) | Combination page: the header box "Next step" says **Add 1 form from the library** while Before forms (new, #139) marks **Official pages ● Next · Choose the checklist page** and the card reads Next: Choose the checklist page. Two next steps on one screen; all five sample combinations in setup disagree. The header still reads `row.nextAction` (W1 plan open point 1, "parity is proven"). | screens | Open |
+
+Detail as it stood in `qa/reports/bugs-open-detail.md`:
+
+| QA-119 | Conflict · Major | C11.10 · P-157, P-161 | **52768cd2** | Steps: Load sample; Immigration programs › Super visa › Forms (any width; seen at 400 px). Expected: one next step: the header box, the card and Before forms say the same (P-161 (1): "n of 5 done · Next: …" from the one checklist). Actual: header "Next step: Add 1 form from the library" (catalogue `nextAction`); Before forms ● Next on Official pages, `GET /combinations/:id/summary` setup.next = choose_pages "Choose the checklist page"; catalogue: visitor visa "Add 1 form from the library" vs "Confirm the checklist page", study permit "Add 3 forms…" vs "Choose the checklist page", partner outside "Add 2 forms…" vs "Choose…", With an LMIA "Review and release" vs "Confirm the checklist page". Evidence: `qa/reports/2026-11-01-after-merge/before-forms-400.png`. Note: also the item's words differ ("Add 1 form found" in the checklist vs "Add 1 form from the library"). Question for the Lead: is the header box replaced by the checklist's next now (slice B), or does it wait for F2? | screens | Open |
+
+
+## QA-122 — closed 1 Nov 2026 (after-merge 25cefb67)
+
+Closed by the qa lane on main **25cefb67** (fixed by #257): on test copy qa_rt :4473 (`tests/runtime/setup_visitor_visa.ts`, no model call), an optional date confirmed with a problem ("tomorrow") makes IMM 5257 not ready, listed "needs a fix" for Client A; an optional fact left empty still does not block (P-71); `tests/qa/check_qa_am_1101b_api.ts 4473` 7/7.
+
+Row as it stood in `qa/BUGS.md`:
+
+| QA-122 | Bug · Major | C7.6 · P-71, P-72 | 751cbc42 (explore runtime) | An optional fact confirmed with a problem (a date "tomorrow") is written into IMM 5257 and never blocks Ready to file: readiness checks required facts only … | runtime | Open |
+
+Detail as it stood in `qa/reports/bugs-open-detail.md`:
+
+| QA-122 | Bug · Major | C7.6 · P-71, P-72 | **751cbc42** (explore runtime) | Steps: release Visitor visa (`setup_visitor_visa.ts`); case officer opens a case; answers an optional date that fills IMM 5257 (e.g. `person.national_id_issue_date`, or the spouse's `person.current_residence_status_to`) with "tomorrow"; Confirm section (reply: `invalid: 1`); open the case's forms. Expected: IMM 5257 lists that fact "needs a fix" and is not ready, like a required fact with a problem (P-71: blocked by facts it would write wrong). Actual: the answer is VERIFIED with problems ["Enter a real date as day, month and year."]; readiness omits it (`engine/runtime/forms.ts` `readiness` filters `q.required`); Generate wrote it: the copy's snapshot records `ToDate` = "tomorrow". Once every required fact is fine the form shows Ready to file with a wrong value | `tests/qa/check_qa_am_1101b_api.ts` (6/7 today; the QA-122 line passes when fixed; a guard keeps empty optional facts non-blocking) | runtime | Open |

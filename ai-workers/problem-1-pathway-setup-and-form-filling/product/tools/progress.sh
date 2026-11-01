@@ -5,7 +5,7 @@ PH="$(cd "$(dirname "$0")/.." && pwd)"
 python3 - "$PH/qa/CAPABILITIES.md" "$1" <<'EOF'
 import re, sys, collections
 names = {"M2": "M2 · Super Admin setup", "T": "R1 · thin runtime slice", "M3": "M3 · case, agent and client"}
-order = ["Works", "Partial", "Not tested", "Broken", "Not built"]
+order = ["Works", "Built, awaiting qa", "Partial", "Not tested", "Broken", "Not built"]
 import os
 built = {n[:-3] for n in os.listdir(os.path.join(os.path.dirname(sys.argv[1]), "built")) if n.endswith(".md")} if os.path.isdir(os.path.join(os.path.dirname(sys.argv[1]), "built")) else set()
 c = collections.defaultdict(collections.Counter)
