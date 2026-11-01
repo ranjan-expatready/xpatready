@@ -2,7 +2,7 @@
 
 Each open capability in `product/qa/CAPABILITIES.md` gets its acceptance tests here **before** anyone builds it: `<capability-id>.test.ts` checks the API and the data underneath and **fails today**; `journeys/J<n>-<name>.md` gives the click-through steps with an expected result at each step, which the builder turns into a browser check. Each IRCC business rule a test relies on has a row in `product/compliance-trace.md` (rule → canada.ca page, quote, date → test → capability).
 
-* **Not run by `product/tools/run-suites.sh` or the merge batches:** these tests are red on purpose. The builder who makes a capability work **moves its test into the suites** (`tests/…`) in the PR that makes it pass, and names the capability ID in the PR's first line. A test may also stay here and be run by `run-suites.sh` in place, with the copy it needs (C6.11 runs on the runtime R1 copy, after R1d; M3-A3).
+* **Not run by `product/tools/run-suites.sh` or the merge batches:** these tests are red on purpose. The builder who makes a capability work **moves its test into the suites** (`tests/…`) in the PR that makes it pass, and names the capability ID in the PR's first line.
 * **How to run one** (an isolated copy, never the demo; US$0, no live AI):
   ```
   zsh studio/tools/isolated.sh accept 4440 start

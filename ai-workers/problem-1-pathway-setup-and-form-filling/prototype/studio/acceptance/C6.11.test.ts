@@ -3,7 +3,7 @@
 // `user-O`; the firm admin duty held by one of them) and one Sample solo firm; one representative of record per case; assign and reassign with history; IMM 5476 fills from the
 // representative of record, and a change asks for a new one and marks the old one out of date. Rules: VV-R10, VV-R11.
 //   zsh studio/tools/isolated.sh runtime_m3a3 4438 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4438 xr_studio_runtime_m3a3
-//   tsx studio/acceptance/C6.11.test.ts 4438 xr_studio_runtime_m3a3   (run-suites.sh runs it on the R1 copy, after R1d)
+//   tsx studio/acceptance/C6.11.test.ts 4438 xr_studio_runtime_m3a3   (green on release 1; proposed for the R1 suite copy, PR #330)
 // Adopted by the runtime lane (M3-A3) with the routes as built in #288 (M3-CONTRACT.md "Builds already open"):
 // GET /runtime/firm read as one user of each firm (firms are isolated), top-level `representative` and `caseOfficers`
 // on POST /runtime/cases, PUT …/team/representative {userId, reason, expectedRepresentative}, POST …/team/officers
