@@ -48,12 +48,15 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     t0 = Date.now(); await open();
     step("performance: Forms first view under 1 s with the sample", Date.now() - t0 < 1000, `${Date.now() - t0} ms`);
     const head = await p.locator("thead").innerText();
-    step("C11.11: one list with the board's columns (Number, Title, Type, Edition, IRCC accepts, Used by, Status)", ["Number", "Title", "Type", "Edition", "IRCC accepts", "Used by", "Status"].every((h) => head.includes(h)), head);
+    step("C11.11: one list with the board's columns (Number, Title, Type, Edition, Field map, IRCC accepts, Used by, Status)", ["Number", "Title", "Type", "Edition", "Field map", "IRCC accepts", "Used by", "Status"].every((h) => head.includes(h)), head);
     step("C11.11: forms, guides and checklists in one list (no groups); the guide the finder read is in it", (await forms()).includes("IMM 5257") && (await forms()).includes("Guide 5256") && (await forms()).includes("IMM 5484"), (await forms()).join(","));
     step("C11.11 (change 2): IRCC accepts shows the value with who said it (IMM 5476: PDF upload · Sample · canada.ca words); a form whose page says nothing shows Not set yet (IMM 5257)", /PDF upload\s*Sample · canada\.ca words/.test(await rows().filter({ hasText: "IMM 5476" }).first().innerText()) && /Not set yet/.test(await rows().filter({ hasText: "IMM 5257" }).first().innerText()), await rows().filter({ hasText: "IMM 5476" }).first().innerText());
     step("C11.11 (change 2): guides and checklists say Not filed", /Not filed/.test(await rows().filter({ hasText: "IMM 5484" }).first().innerText()) && /Not filed/.test(await rows().filter({ hasText: "Guide 5256" }).first().innerText()));
     step("C11.11 (change 3): a guide's date says what it is (Updated on canada.ca, or when it was read), never an edition", /Updated on canada\.ca|Read from canada\.ca on/.test(await rows().filter({ hasText: "Guide 5256" }).first().innerText()), await rows().filter({ hasText: "Guide 5256" }).first().innerText());
     step("C11.11 (change 1): Used by shows the combination's place", / › /.test(await rows().filter({ hasText: "IMM 1295" }).first().innerText()), await rows().filter({ hasText: "IMM 1295" }).first().innerText());
+    // C3.12 (P-123): the Field map column, from the current edition's own rows (the sample's IMM 1295 has form fields with no decision yet).
+    const fm1295 = sql(`with r as (select distinct on (data_path) status, outcome from form_field_map where form_edition_id = (select id from form_edition where edition_label = 'IMM 1295 (09-2023)') order by data_path, version desc) select count(*) filter (where outcome <> 'unresolved') || ' of ' || count(*) from r`);
+    step("C3.12: a Field map column; IMM 1295 says how many of its form fields are decided (the database's count), a guide says No field map", head.includes("Field map") && (await rows().filter({ hasText: "IMM 1295" }).first().locator("[data-field-map]").innerText()).includes(`${fm1295} form fields decided`) && (await rows().filter({ hasText: "Guide 5256" }).first().locator("[data-field-map]").innerText()) === "No field map", { head, fm1295, cell: await rows().filter({ hasText: "IMM 1295" }).first().locator("[data-field-map]").innerText().catch((e) => String(e)) });
     await axe("list with the sample"); await shot("02-list");
 
     // Upload PDF: one way in, many files (two cards)
@@ -107,11 +110,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     // Drawer by keyboard
     await p.getByRole("button", { name: "IMM 1295", exact: true }).focus(); await p.keyboard.press("Enter");
     const dlg = p.getByRole("dialog"); await dlg.waitFor();
-    await dlg.getByText("With an LMIA").first().waitFor({ timeout: 10_000 }).catch(() => {});
+    await dlg.getByText("With an LMIA").first().waitFor({ timeout: 10_000 });
     const dt = await dlg.innerText();
     step("C11.11: the row drawer opens by keyboard with Definition, What IRCC accepts, Where it is used and History", ["Definition", "What IRCC accepts", "Where it is used", "History"].every((h) => dt.includes(h)), dt.slice(0, 200));
     step("C11.11: the drawer says where the form came from and whether canada.ca was compared, the fingerprint kept in Details", /Official copy loaded with the sample|Downloaded from canada.ca|Uploaded by a person/.test(dt) && /checked|No canada\.ca page recorded yet/.test(dt) && (await dlg.locator("details").count()) === 1);
     step("C11.11: Where it is used lists the LMIA combination and its release", /With an LMIA/.test(dt) && /release/.test(dt), dt.slice(dt.indexOf("Where it is used"), dt.indexOf("Where it is used") + 200));
+    step("C3.12: the drawer's Definition says the field map of the current edition, with what it means", /Field map: \d+ of \d+ form fields decided/.test(dt) && /no decision yet/.test(dt), dt.slice(0, 400));
     await axe("row drawer"); await shot("07-drawer");
     await p.keyboard.press("Escape"); await sleep(300);
     step("review M8: closing the drawer puts focus back on the number that opened it", await p.evaluate(() => document.activeElement?.textContent === "IMM 1295"), await p.evaluate(() => document.activeElement?.outerHTML.slice(0, 120)));
@@ -125,7 +129,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     step("review round 2 M5: keyboard focus is visible on a filter chip (a ring, not nothing)", await p.evaluate(() => { const s = getComputedStyle(document.activeElement); return s.boxShadow !== "none" || (s.outlineStyle !== "none" && s.outlineWidth !== "0px"); }), await p.evaluate(() => document.activeElement?.outerHTML.slice(0, 80)));
     const inView = await p.evaluate(() => { const r = document.querySelector('tr[data-form] td:last-child button')?.getBoundingClientRect(), t = [...document.querySelectorAll('tr[data-form] td')].find((td) => td.textContent?.match(/Ready|Needs your OK|Newer file|Retired/))?.getBoundingClientRect(); return !!r && !!t && r.right <= window.innerWidth && t.right <= window.innerWidth; });
     step("review M5: at 1024 px the Status and ⋯ columns stay in view (no sideways scroll to reach them)", inView);
-    step("review M5: Used by shows the combination's own name first, its place after it, muted", /^With an LMIA · /.test((await p.locator('tr[data-form="IMM 1295"] td').nth(5).innerText()).trim()), await p.locator('tr[data-form="IMM 1295"] td').nth(5).innerText());
+    step("review M5: Used by shows the combination's own name first, its place after it, muted", /^With an LMIA · /.test((await p.locator('tr[data-form="IMM 1295"] td').nth(6).innerText()).trim()), await p.locator('tr[data-form="IMM 1295"] td').nth(6).innerText());
     await p.setViewportSize({ width: 1440, height: 900 }); await sleep(200);
 
     // P-116 amended (28 Oct): one written row action from the state, its reason as visible text; the ⋯ menu keeps the rest
@@ -166,10 +170,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await pane.getByRole("button", { name: "Cancel" }).click(); await sleep(200);
     // R69-2: the list's cache is keyed by the person, so switching person (no reload) reads their own row actions.
     await p.getByLabel("Simulated person").first().selectOption("user-B");
-    await p.waitForFunction(() => document.querySelector('tr[data-form="IMM 5604"] [data-action]')?.getAttribute("data-action") !== "WITHDRAW", null, { timeout: 5000 }).catch(() => {});
+    await p.waitForFunction(() => document.querySelector('tr[data-form="IMM 5604"] [data-action]')?.getAttribute("data-action") !== "WITHDRAW", null, { timeout: 5000 });
     step("R69-2 fail: after switching to another person without reloading, the author's Withdraw is not shown to them (their own action, greyed)", (await act5604.getAttribute("data-action")) === "RETIRE" && (await act5604.getAttribute("aria-disabled")) === "true", await act5604.getAttribute("data-action"));
     await p.getByLabel("Simulated person").first().selectOption("user-A");
-    await p.waitForFunction(() => document.querySelector('tr[data-form="IMM 5604"] [data-action]')?.getAttribute("data-action") === "WITHDRAW", null, { timeout: 5000 }).catch(() => {});
+    await p.waitForFunction(() => document.querySelector('tr[data-form="IMM 5604"] [data-action]')?.getAttribute("data-action") === "WITHDRAW", null, { timeout: 5000 });
     step("R69-2 pass: switching back to the author shows Withdraw of their own waiting change again", (await act5604.getAttribute("data-action")) === "WITHDRAW");
     // QA-66 (R69-1) and QA-68: the second person returns the retire; the author's row says so and keeps Withdraw, and the
     // change's page sends it again with what changed only (no Name or Meaning to edit).
