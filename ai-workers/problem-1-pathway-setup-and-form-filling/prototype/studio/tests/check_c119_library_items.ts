@@ -250,12 +250,18 @@ const why = { reason: "Not needed by any setup any more." };
 
   // Major 4: the author's own new document type, its ADD still waiting, is deleted at once with that ADD; Undo brings both back.
   docType("c119_own_new", "DRAFT");
-  sql(`insert into library_change (id, workspace_id, kind, key, label, action, reason, status, proposed_by) values (gen_random_uuid(), '${ws}', 'document_type', 'c119_own_new', 'Own new', 'ADD', 'Named while adding a line.', 'RETURNED', 'user-A')`);
+  sql(`insert into library_change (id, workspace_id, kind, key, label, action, reason, status, proposed_by, decided_by, decided_at, decision_note) values (gen_random_uuid(), '${ws}', 'document_type', 'c119_own_new', 'Own new', 'ADD', 'Named while adding a line.', 'RETURNED', 'user-A', 'user-B', now(), 'Use the existing type.')`);
   u = await call("GET", "/library/document-types/c119_own_new/uses");
   r = await call("POST", "/library/document-types/c119_own_new/delete", why);
   ok("C11.9 round-3 Major 4 pass: an own new document type whose ADD was returned is deleted at once, its ADD withdrawn", u.body?.immediate === true && r.body?.immediate === true && status("document_type", "document_type_key", "c119_own_new") === "" && sql("select status from library_change where key='c119_own_new' and action='ADD'") === "WITHDRAWN", [u.body?.can?.delete, r.status, r.body?.detail]);
   const und = await call("POST", `/library/changes/${r.body.id}/undo`);
   ok("C11.9 round-3 Major 4 pass: Undo brings the type and its returned ADD back", und.status < 300 && status("document_type", "document_type_key", "c119_own_new") === "DRAFT" && sql("select status from library_change where key='c119_own_new' and action='ADD'") === "RETURNED", [und.status, und.body?.detail]);
+  ok("C11.9 round-4 Major 2 fail: Undo keeps the second person's return (who, when, the note)", sql("select coalesce(decided_by,'') || '|' || (decided_at is not null) || '|' || coalesce(decision_note,'') from library_change where key='c119_own_new' and action='ADD'") === "user-B|true|Use the existing type.", sql("select coalesce(decided_by,'') || '|' || coalesce(decision_note,'') from library_change where key='c119_own_new' and action='ADD'"));
+  // Round 4 Major 1: the row of an own new section or document type (its ADD by the author) offers Delete, not Withdraw.
+  sectionRow("c119_own_sec", "DRAFT");
+  sql(`insert into library_change (id, workspace_id, kind, key, label, action, reason, status, proposed_by) values (gen_random_uuid(), '${ws}', 'section', 'c119_own_sec', 'Own section', 'ADD', 'A form part.', 'WAITING', 'user-A')`);
+  const secRow = ((await call("GET", "/library/sections")).body as { key: string; row_action: string; change: { action: string; by_id: string } | null }[]).find((x) => x.key === "c119_own_sec");
+  ok("C11.9 round-4 Major 1 pass: an own new section's row offers Delete (its waiting ADD named on the row)", secRow?.row_action === "DELETE" && secRow.change?.action === "ADD" && secRow.change.by_id === "user-A", secRow);
   docType("c119_their_new", "DRAFT"); sql("update document_type set updated_by='user-B' where document_type_key='c119_their_new'");
   sql(`insert into library_change (id, workspace_id, kind, key, label, action, reason, status, proposed_by) values (gen_random_uuid(), '${ws}', 'document_type', 'c119_their_new', 'Their new', 'ADD', 'Named while adding a line.', 'WAITING', 'user-B')`);
   r = await call("POST", "/library/document-types/c119_their_new/delete", why);

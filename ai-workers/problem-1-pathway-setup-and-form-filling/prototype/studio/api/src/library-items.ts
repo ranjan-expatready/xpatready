@@ -209,7 +209,7 @@ export async function openItemChanges(db: Db, workspaceId: string, kind: ItemKin
 export function itemState(v: Version[], open?: { id: string; action: string; status: string; by: string | null; by_id: string }, kind: ItemKind = "field") {
   const st = stateOf(v);
   // A document type's waiting ADD keeps its state's action, greyed on the row (its addition is decided on To review).
-  return { retired: st.retired, released: st.released, row_action: open && !(open.action === "ADD" && kind === "document_type") ? "WITHDRAW" : st.retired ? "RESTORE" : st.released ? "RETIRE" : "DELETE", change: open ?? null };
+  return { retired: st.retired, released: st.released, row_action: open && !(open.action === "ADD" && kind !== "field") ? "WITHDRAW" : st.retired ? "RESTORE" : st.released ? "RETIRE" : "DELETE", change: open ?? null };
 }
 
 // ── C11.9 (P-116 amended, pack 3): the author's own draft deleted at once, and its Undo ──
@@ -235,7 +235,7 @@ export async function deleteOwnItem(db: Db, actorId: string, workspaceId: string
       await tx.documentType.deleteMany({ where: { workspaceId, documentTypeKey: key } });
     }
     // Round 3 Major 4: their own waiting ADD goes with it (withdrawn), and comes back with an Undo.
-    const add = await tx.libraryChange.findFirst({ where: { workspaceId, kind, key, action: "ADD", status: { in: ["WAITING", "RETURNED"] }, proposedBy: actorId }, select: { id: true, status: true } });
+    const add = await tx.libraryChange.findFirst({ where: { workspaceId, kind, key, action: "ADD", status: { in: ["WAITING", "RETURNED"] }, proposedBy: actorId }, select: { id: true, status: true, decidedBy: true, decidedAt: true, decisionNote: true } });
     if (add) await tx.libraryChange.update({ where: { id: add.id }, data: { status: "WITHDRAWN", decidedBy: actorId, decidedAt: new Date(), decisionNote: "Withdrawn: its author deleted their own draft." } });
     return tx.libraryChange.create({ data: { workspaceId, kind, key, label, action: "DELETE", reason, status: "RELEASED", proposedBy: actorId, decidedBy: actorId, decidedAt: new Date(), decisionNote: ITEM_OWN_NOTE,
       matches: { rows, questions, add } as unknown as Prisma.InputJsonValue } });
@@ -247,13 +247,14 @@ const again = (r: Row) => Object.fromEntries(Object.entries(r).filter(([, v]) =>
 export async function undoOwnItem(db: Db, actorId: string, c: LibraryChange): Promise<void> {
   if (c.proposedBy !== actorId) throw problem(403, "Not yours", "Only the person who deleted it can undo it.");
   const kind = c.kind as ItemKind;
-  const m = (c.matches ?? {}) as { rows?: Row[]; questions?: Row[]; add?: { id: string; status: string } | null };
+  const m = (c.matches ?? {}) as { rows?: Row[]; questions?: Row[]; add?: { id: string; status: string; decidedBy: string | null; decidedAt: string | null; decisionNote: string | null } | null };
   await db.$transaction(async (tx) => {
     await lockItem(tx, c.workspaceId, kind, [c.key]);
     if ((await versionsOf(tx, kind, c.workspaceId, c.key)).length) throw problem(409, "Cannot undo", `Something named ${c.key} was added meanwhile: add it again instead.`);
     const done = await tx.libraryChange.updateMany({ where: { id: c.id, status: "RELEASED", decisionNote: ITEM_OWN_NOTE }, data: { status: "WITHDRAWN", decisionNote: "Undone: it is back." } });
     if (!done.count) throw problem(409, "Cannot undo", "It was undone already.");
-    if (m.add) await tx.libraryChange.update({ where: { id: m.add.id }, data: { status: m.add.status, decidedBy: null, decidedAt: null, decisionNote: null } });
+    // Round 4 Major 2: the ADD comes back exactly as it was, with the second person's decision and note.
+    if (m.add) await tx.libraryChange.update({ where: { id: m.add.id }, data: { status: m.add.status, decidedBy: m.add.decidedBy, decidedAt: m.add.decidedAt ? new Date(m.add.decidedAt) : null, decisionNote: m.add.decisionNote } });
     for (const r of m.rows ?? []) {
       if (kind === "field") await tx.canonicalField.create({ data: again(r) as Prisma.CanonicalFieldUncheckedCreateInput });
       else if (kind === "section") await tx.logicalSection.create({ data: again(r) as Prisma.LogicalSectionUncheckedCreateInput });

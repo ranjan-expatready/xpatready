@@ -11,7 +11,7 @@ import { BlockedLine, ImpactPanel, RowAction, WherePanel, useUndoToast } from "@
 
 export type ItemList = "fields" | "document-types" | "sections";
 /** The lifecycle part of a list row (api/src/library-items.ts itemState). */
-export type ItemRow = { key: string; name: string; row_action: LifecycleWord; retired: boolean; change: { id: string; action: string; status: string; by: string | null } | null };
+export type ItemRow = { key: string; name: string; row_action: LifecycleWord; retired: boolean; change: { id: string; action: string; status: string; by: string | null; by_id?: string } | null };
 /** Review minor: a shared field or document type comes back when it is approved (QA-64), not with the next release. */
 const ITEM_RESTORE_BODY = "It comes back to pickers and AI suggestions when a second person approves it. Nothing that uses it today changes.";
 const ITEM_RESTORE_TIP = "Brings it back to pickers and new setups when a second person approves it.";
@@ -19,6 +19,8 @@ const domId = (key: string) => `why-${key.replace(/\W+/g, "-")}`;
 
 /** The page's lifecycle: `action(row)` for each row, `node` (the panel and the toast) once on the page. */
 export function useItemLifecycle(list: ItemList, refetch: () => Promise<unknown>, canAuthor: boolean) {
+  // Round 4 Major 1: the author's own new item (its ADD by them) offers Delete, which deletes it at once with its ADD.
+  const me = useActorId();
   const [open, setOpen] = React.useState<ItemRow | null>(null);
   // Review Ma1: "view" opens where it is used and its history (Edit on a list with no page of its own), never the action.
   const [viewing, setViewing] = React.useState(false);
@@ -59,7 +61,7 @@ export function useItemLifecycle(list: ItemList, refetch: () => Promise<unknown>
 
   /** Edit (or View) and the row's one written action. */
   const action = (r: ItemRow, onEdit: () => void) => (
-    <RowAction kind={r.row_action} why={!canAuthor ? WHY.author : r.change?.action === "ADD" && r.row_action !== "WITHDRAW" ? "Its addition waits on To review: decide it there first." : null} tip={r.row_action === "DELETE" ? TIP.DELETE(0, false) : r.row_action === "RETIRE" ? TIP.RETIRE(false) : r.row_action === "RESTORE" ? ITEM_RESTORE_TIP : TIP.WITHDRAW(r.name)}
+    <RowAction kind={r.row_action} why={!canAuthor ? WHY.author : r.change?.action === "ADD" && r.row_action !== "WITHDRAW" && r.change.by_id !== me ? "Its addition waits on To review: decide it there first." : null} tip={r.row_action === "DELETE" ? TIP.DELETE(0, false) : r.row_action === "RETIRE" ? TIP.RETIRE(false) : r.row_action === "RESTORE" ? ITEM_RESTORE_TIP : TIP.WITHDRAW(r.name)}
       canEdit={canAuthor && list !== "document-types"} name={r.name} reasonId={domId(r.key)} onEdit={onEdit} onAction={() => start(r)} editTip={canAuthor && list !== "document-types" ? (list === "sections" ? "Rename it." : "Open it: rename, where it is used, its history.") : "See where it is used and its history."} />
   );
   const kind = open?.row_action;

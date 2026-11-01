@@ -124,6 +124,22 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     const draft = (await api(`/combinations/${sv}/config?mode=draft`)).body?.snapshot?.forms?.map((f) => f.form_number) ?? [];
     step("C11.9 filing order pass: moved down and saved, the draft files that form second", rr.status() === 200 && draft[1] === firstCode, [rr.status(), draft.join(",")]);
 
+    // ── round 4 Major 1: an own new document type, named through a checklist line (the product's path), returned by the
+    // second person after the line was removed: its row offers Delete, which deletes it at once with its ADD.
+    const cid = sql("select id from combination where retired_at is null order by label limit 1");
+    const made = await api(`/combinations/${cid}/requirements`, { method: "POST", data: { newTypeName: "C119 own new type", attachMode: "COMBINATION_MANDATORY", appliesToRoles: "principal_applicant", providedBy: "client" } });
+    await api(`/combinations/${cid}/requirements/${encodeURIComponent(made.body.lineageKey)}`, { method: "PATCH", data: { retire: true } });
+    const addId = sql("select id from library_change where key='c119_own_new_type' and action='ADD'");
+    await api(`/library/changes/${addId}/return`, { method: "POST", data: { note: "Use the existing type." }, actor: "user-B" });
+    await go("/library/documents");
+    const ownRow = row("c119_own_new_type");
+    step("C11.9 round-4 Major 1 pass: the own new type's row offers Delete, not greyed", (await ownRow.locator('[data-action="DELETE"]:not([aria-disabled])').count()) === 1, await ownRow.innerText().catch(() => "no row"));
+    await ownRow.locator('[data-action="DELETE"]').click();
+    const ownPanel = p.locator('[data-impact-panel="DELETE"]'); await ownPanel.waitFor({ timeout: 15000 });
+    await ownPanel.locator("[data-confirm-send]").click();
+    await p.locator("[data-undo-toast]").waitFor({ timeout: 10000 });
+    step("C11.9 round-4 Major 1 pass: deleted at once with its ADD withdrawn", sql("select count(*) from document_type where document_type_key='c119_own_new_type'") === "0" && sql(`select status from library_change where id='${addId}'`) === "WITHDRAWN");
+
     // ── the Fields table fits at 1024 px (the action sits in the Status cell, no extra column)
     await p.setViewportSize({ width: 1024, height: 800 }); await go("/library/fields");
     step("C11.9 1024 px pass: Fields has no sideways scroll", await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1 && [...document.querySelectorAll("main table")].every((t) => (t.parentElement?.scrollWidth ?? 0) <= (t.parentElement?.clientWidth ?? 0) + 1)));
