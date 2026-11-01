@@ -58,3 +58,35 @@
 * Any screen and a real screen reader.
 * The live IRCC fee page.
 * An intended user's unaided walk (D17 and D20 stay with the founder).
+
+---
+
+# Round 2: commit 66bb8816 (reviewer, 1 Nov 2026, :4471 `xr_studio_rev2prep`, stopped afterwards)
+
+Same journeys J1–J4 through the API: officer reads /prepare; person off and on; form stops applying; client and author refused.
+* **Held.** Ids are stable across person and form changes. The xmin check shows a steady read writes nothing. An edited snapshot gets 409, HEAD gets 405, and the words say "not travelling". API check 31/31.
+* **Break it.** Several officers opening /prepare at once on cases with something new to store:
+  - 12 new cases, one read each, all at once: 11×500. Any other route waits 14.6 s.
+  - 10 reads at once on one new case: 10×500 after 15.6 s.
+  - Cause: the pool deadlocks because the transaction also queries through `this.db` (review round 2, R2-M1, Major).
+  - Steady reads: 300 at once all returned 200.
+* **Minor.** Filing order is arbitrary (principal third of five) (R2-m1).
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | J1–J4 hold; m1 and B2 now tested |
+| Next step obvious | ½ | Item `state` and reasons; no next action yet (later slices) |
+| Plain words | 1 | "Not travelling (not applying on this case)"; 409 texts plain |
+| Feedback and state | 1 | `derived`, `state`, `not_filing`, `not_built` (G15 named), `version` |
+| Correct data | 1 | Nothing written on a steady read; no duplicates; fees add up |
+| Error recovery | ½ | 500 (P2028) under concurrent first reads; a retry one at a time gives 200 |
+| Accessibility and screen sizes | n/a | No screen |
+| Speed | ½ | Steady read 50–83 ms; a write burst stalls the whole API for 15 s |
+| Visual quality | n/a | No screen |
+| Trust and sources | 1 | Fee source cited; fingerprint checked before storing |
+
+**6.5 of 8 applicable = 8.1/10, reported as 8. Pass** (no criterion at 0). Fixes, most valuable first:
+1. Use only `tx` inside the transaction (R2-M1). This raises Error recovery and Speed.
+2. Order filings by participant (R2-m1).
+
+Not tested: any screen, a real screen reader, the live IRCC page, or an intended user's walk (D17 and D20 stay with the founder).

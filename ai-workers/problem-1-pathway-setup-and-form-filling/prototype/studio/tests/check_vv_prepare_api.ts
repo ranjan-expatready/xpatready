@@ -120,6 +120,17 @@ type P = { derived: boolean; version: string; portal: string | null; filings: { 
   const burst = await Promise.all(Array.from({ length: 120 }, () => call("GET", `/runtime/cases/${twin.id}/prepare`, undefined, OFFICER)));
   ok("C6.12 break B1: 120 reads at once on one case all answer 200 (no transaction for a read with nothing new)", burst.every((x) => x.status === 200), [...new Set(burst.map((x) => x.status))]);
 
+  // Review round 2 M1: reads that each have something to store, arriving together, never use up the connections.
+  const fresh = await open("VPF", [{ role: "spouse_or_partner", name: "Sample Spouse F" }]);
+  const firsts = await Promise.all(Array.from({ length: 24 }, () => prep(fresh.id)));
+  ok("C6.12 review R2-M1: 24 first reads at once on one new case all answer 200, one group and two filings stored", firsts.every((x) => x.r.status === 200) && sql(`select count(*) from submission_group where case_id='${fresh.id}'`) === "1" && sql(`select count(*) from filing where case_id='${fresh.id}'`) === "2", [...new Set(firsts.map((x) => x.r.status))]);
+  const many = await Promise.all(Array.from({ length: 12 }, (_, i) => open(`VPM${i}`, [])));
+  const t0 = Date.now();
+  const reads = await Promise.all(many.map((m) => prep(m.id)));
+  ok("C6.12 review R2-M1: 12 new cases read at once all answer 200 within seconds, one group each", reads.every((x) => x.r.status === 200) && Date.now() - t0 < 8000 && many.every((m) => sql(`select count(*) from submission_group where case_id='${m.id}'`) === "1"), { statuses: [...new Set(reads.map((x) => x.r.status))], ms: Date.now() - t0 });
+  const order = (await prep(six.id)).p?.filings.map((f) => f.applicants[0].subject);
+  ok("C6.12 review R2-m1: filings follow the order of the people on the case", JSON.stringify(order) === JSON.stringify(["Sample Client A", "Sample Spouse B", "Sample Child B1", "Sample Child B2", "Sample Child B3", "Sample Child B4"].map((n) => six.subjects[n])), order);
+
   // 409 when the release no longer names the case's combination; another combination: not derived yet.
   const rel = sql(`select r.id from config_release r join pack_work_pin w on w.config_release_id = r.id where w.case_id = '${c.id}'`);
   sql(`update config_release set snapshot = jsonb_set(snapshot, '{combination,key}', '"wp.family"') where id = '${rel}'`);

@@ -85,3 +85,67 @@ Noted, not findings:
 * No mutation runs in source: I may only edit this report. m1 is shown by reading the code and the tests.
 * Coverage was not run, and the suites are the builder's.
 * The Lead check and the founder's walkthrough are not part of this review.
+
+---
+
+# Round 2: commit 66bb8816 (fixes cd426dd4, c45c3179, 66bb8816)
+
+Reviewer agent, 1 Nov 2026. I read `git diff 6c832db3 66bb8816` (code: `api/src/case-prepare.ts`, `api/src/demo.ts`, `engine/snapshot.ts`, `engine/runtime/filings.ts`, `engine/runtime/prepare.ts`, `tests/check_vv_prepare_api.ts`) and the whole item as `761a5ef8..66bb8816`. I used an isolated copy `rev2prep` on :4471 (`xr_studio_rev2prep`) and stopped it at the end. I did not use :4400 or run-suites. US$0.
+Journey test round 2: `journey-test-reviewer-2026-11-01.md`, **8/10, passes**. That does not lift the Block below.
+
+**Verdict: Block** for 66bb8816. One new Major is open (R2-M1), and the round-2 fix for B1 caused it.
+
+## What I ran
+* `check_vv_prepare.ts`: 15/15. `check_vv_prepare_api.ts 4471 xr_studio_rev2prep`: 31/31 (30 checks plus setup). `count-any --against origin/main`: 428 at the base and 428 now. `graph.mjs --check`: G1 0, G2 0, G3 1 (the same unrelated route as round 1).
+* Both releases on the copy re-hash with `snapshotHash()` to their stored `sha256`.
+* Probes with curl and psql, actor `user-O`, results below.
+
+## Round-1 findings: closed
+* **M1 closed.** A steady read writes nothing (the xmin check passes). New rows are added in bulk with `createMany`, and each flag change is one `updateMany`. A steady read took 50–83 ms on a 5-filing case (`/filings` 14–18 ms). The statement count is constant.
+* **m1 closed.** The test removes IMM 5707 and refits the fingerprint: the item goes `active=f` and is hidden, then the same id comes back. Lifting the trigger is test scaffolding on the isolated copy and is commented. It is not a demo step, so P-33 does not apply.
+* **m2 closed in substance.** On the write path the case is reached again after the lock is taken (`case-prepare.ts:32-33`). See R2-M1 for the cost of how it is done.
+* **m3 closed for stability.** Order is now by `createdAt`, then `id`. See R2-m1.
+* **m4 closed.** "Not travelling (not applying on this case)" is asserted by the API check. G15 is named in `not_built`.
+* **B2 closed.** An edited snapshot gets 409 "no longer matches its fingerprint" and stores nothing (API check). `snapshotHash` (`engine/snapshot.ts:63-66`) uses the same expression as `assemble` (`:181-184`). This also covers B3, as stated: a bad line can only come from an edited snapshot.
+* **B4 closed.** HEAD answers 405 `application/problem+json` (checked with `curl -I`).
+* **B6 closed.** The demo scope counts groups, filings and items. `filing_applicant` is still not counted because it has no `workspace_id`. This is a note, not a finding.
+* **B1 closed for steady reads only.** 300 reads at once on a stored case all returned 200 (12.4 s for the whole burst). It is reopened for reads that store something; see R2-M1.
+* **B5 and B7 not changed.** The builder's reasons hold: pack 4 C6.12-3 reads `files_own`, and no route can change a role today. They must be in the PR as stated. I could not see the PR from here.
+
+## Issues (ranked)
+1. **R2-M1 · Major · Must: concurrent reads that store something deadlock the connection pool, giving 500s and stalling the whole API for 15 s.**
+   - Repro, fresh case with 2 people, N first reads of `/prepare` at once:
+     - N=5 and N=9: all 200 in under 0.7 s.
+     - **N=10: 10×500 after 15.6 s.** N=12: 10×500. N=20: 11×500. N=30: 24×500 after 31 s. N=300 on a new 6-person case: 291×500 after 81 s.
+   - **Across cases (the realistic one):** 12 different new cases with one first read each, sent at once: **11×500**. An unrelated `GET /runtime/cases/:id` sent during that burst took **14.6 s** (0.018 s idle). Retrying each case on its own gave 200.
+   - api.log: P2028 "Unable to start a transaction in the given time" 249 times, "Transaction not found" 22 times, and "expired transaction … 50312 ms passed".
+   - Cause: inside `$transaction` the code still queries through `this.db`, not `tx`:
+     - `this.r.reach` twice (`case-prepare.ts:31` and `:33`; `reach` uses `this.db`, `runtime.ts:50`);
+     - `this.db.combination.findUnique` (`:43`);
+     - `acceptsOf(this.db, …)` (`:93`).
+
+     Each open transaction holds one pool connection and waits for a second one. With 10 transactions open (the pg pool default of 10 under `PrismaPg`, `core.ts:28`), none can go on. They wait until `timeout: 15_000` ends them, and every other route waits too.
+   - This is a regression. At 6c832db3 `reach` ran before the transaction, and the transaction body used only `tx`, so the breaker's 30 first reads at once all returned 200. The same pile-up will happen after any change (a person added or removed, a form newly applying) if several officers open /prepare at once. The new B1 test only covers the steady path: its 120 reads run on `twin` after it is already stored.
+   - Fix: inside the transaction, use only `tx`.
+     - Pass a client to `reach` (or read the case and participants with `tx` after the lock);
+     - use `q.combination` and `acceptsOf(q, ws)`;
+     - drop the first `reach` at `:31` and lock on `caseId`, since `reach` already returned it on the fast path.
+   - Test: 12 or more first reads at once, on one new case and on 12 new cases. All must be 200, with one group per case and no duplicates.
+2. **R2-m1 · Minor · Should: filing order is now arbitrary, not principal first.**
+   - New filings are made in one `createMany` with one `created_at`, so the `id` tiebreak orders them by random UUID.
+   - Seen on a 5-person case: Child 1, Child 2, **principal**, Child 4, Child 3. At 6c832db3 they came out in participant order (one upsert per person). The order is stable, so `version` is safe, but a screen built on this would list the family in a random order.
+   - Fix: order `filings` in `prepareView` by the derived filings' order (participant order), not by row order.
+
+Noted, not findings: `readiness: []` stays an empty slot until M3-A3 (declared). The demo count leaves out `filing_applicant` (B6 note above).
+
+## D1–D20 changes from round 1
+* D2 Data integrity 5: writes only on change; ids, the fingerprint check and no duplicates hold.
+* D5 Stability 3: the pool deadlock under ≥10 concurrent writing reads (R2-M1).
+* D15 Speed 3: steady reads are fine. A write burst stalls every route for 15 s.
+* D16 Testability 4: m1, B2 and B4 now each have a test that fails when the rule is removed. The B1 test misses the write path.
+* All other scores are unchanged.
+
+## Not checked
+* The PR text (B5 and B7 differences): I worked on the local branch only.
+* The release re-hash on the shared copies: their older schemas have no `config_release`. I re-hashed only this copy's 2 releases.
+* No screen, so no browser, axe or screen-size pass.

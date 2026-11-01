@@ -23,20 +23,23 @@ export class CasePrepare {
   constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db) {}
 
   async view(actor: Actor, caseId: string) {
-    // Break B1: a read with nothing new to store takes no transaction and no lock (many reads at once stay cheap); only
-    // a read that has something to store takes the per-case lock, then works everything out again under it (review m2).
-    const fast = await this.prepare(this.db, await this.r.reach(actor, caseId, "officer"), false);
+    // Everything but the stored rows is read first, on the shared client, outside any transaction (review round 2 M1:
+    // a transaction that also reads through the shared client holds two connections and starves the pool).
+    const got = await this.context(await this.r.reach(actor, caseId, "officer"));
+    if (!got.ready) return got.head;
+    const ctx = got.ready;
+    // Break B1: a read with nothing new to store takes no transaction and no lock. Only a read that has something to
+    // store takes the per-case lock and, under it, reads the stored rows again before writing (only through tx).
+    const fast = await this.rows(this.db, ctx, false);
     if (fast) return fast;
     return this.db.$transaction(async (tx) => {
-      const c = await this.r.reach(actor, caseId, "officer");
-      await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${"prepare:" + c.id}))`;
-      return (await this.prepare(tx, await this.r.reach(actor, caseId, "officer"), true))!;
+      await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${"prepare:" + ctx.c.id}))`;
+      return (await this.rows(tx, ctx, true))!;
     }, { timeout: 15_000, maxWait: 10_000 });
   }
 
-  /** The prepare view of a case. write=false: null when something new would be stored (the caller retries under the
-   *  lock). write=true: stores only what is new or changed (review M1: no write at all when nothing changed). */
-  private async prepare(q: Tx, c: Reached, write: boolean) {
+  /** What the case's release, people and answers say, and what IRCC accepts: read once, before any lock. */
+  private async context(c: Reached) {
     const s = this.r.snapshotOf(c), pin = c.pins[0];
     // Money and filings follow the combination: the release must describe the case's own combination (as /filings),
     // and (break B2) be the snapshot its release fingerprinted: a row edited underneath is never stored from.
@@ -46,12 +49,18 @@ export class CasePrepare {
     const people = this.r.peopleOf(c);
     const derived = deriveFilings(own!.combinationKey, people);
     const head = { case_id: c.id, reference: c.reference, release_version: pin.release.version };
-    if (!derived.derived) return { ...head, ...derived };
+    if (!derived.derived) return { head: { ...head, ...derived }, ready: null };
     const today = new Date();
     const { answers, rows } = await this.r.state(c);
     // As the checklist (C6.4 B-M2): an answer its own checks reject never decides which forms a person files.
     const { known } = knownOf(s, people, answers.filter((x) => checkValue(s, x.field, x.value, today).length === 0), rows, today);
-    const needs = formItems(s, people, known, today);
+    return { head, ready: { c, s, head, people, derived, needs: formItems(s, people, known, today), accepts: await acceptsOf(this.db, c.workspaceId) } };
+  }
+
+  /** The stored rows for the case's view. write=false: null when something new would be stored (the caller retries
+   *  under the lock). write=true: stores only what is new or changed (review M1: no write at all when nothing changed). */
+  private async rows(q: Tx, ctx: NonNullable<Awaited<ReturnType<CasePrepare["context"]>>["ready"]>, write: boolean) {
+    const { c, s, head, people, derived, needs, accepts } = ctx;
     const roles = new Map(people.map((p) => [p.subjectId, p.role]));
     const ws = c.workspaceId;
 
@@ -87,10 +96,11 @@ export class CasePrepare {
       if (plan.on.length) await q.filingItem.updateMany({ where: { id: { in: plan.on } }, data: { active: true } });
       if (plan.off.length) await q.filingItem.updateMany({ where: { id: { in: plan.off } }, data: { active: false } });
     }
-    const [allFilings, allItems, accepts] = await Promise.all([
-      q.filing.findMany({ where: { caseId: c.id }, include: { applicants: true }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }),
+    // Review round 2 m1: filings in the order of the people on the case (new filings share one created_at).
+    const order = new Map(people.map((p, i) => [p.subjectId, i]));
+    const [allFilings, allItems] = await Promise.all([
+      q.filing.findMany({ where: { caseId: c.id }, include: { applicants: true }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }).then((xs) => xs.sort((x, y) => (order.get(x.subjectId) ?? 99) - (order.get(y.subjectId) ?? 99))),
       q.filingItem.findMany({ where: { filing: { caseId: c.id } }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }),
-      acceptsOf(this.db, ws),
     ]);
     const view = prepareView({ derived, portal: s.combination.portal ?? null, needs, labels: new Map(people.map((p) => [p.subjectId, p.label])), accepts: (form) => accepts.get(form),
       filings: allFilings.map((f) => ({ ...f, applicants: f.applicants.map((a) => ({ subjectId: a.subjectId, role: a.role, mode: a.mode })) })),
