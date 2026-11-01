@@ -5,7 +5,7 @@
 // LibraryChange carrying the batch id and the item id, so a second person still approves every new library item (BR-7).
 // The free-add scan (tests/check_s6_p149.ts) refuses a library .create anywhere else.
 import { HttpStatus } from "@nestjs/common";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { Prisma, ProposalItem as Row } from "@prisma/client";
 import { ProposalItem, ProposalPayload, type ProposalKind } from "../../contracts/proposal-item.ts";
 import { normalizeLabel } from "../../contracts/programs.ts";
@@ -28,10 +28,17 @@ const isLibraryKind = (k: string) => (LIBRARY_PROPOSAL_KINDS as readonly string[
 /** The identity key of a library kind under its rule (P-149 (2), Lead 29 Oct): a field, section or person role by its
  *  name, an answer list by its set of value codes (order ignored), a document type by its name and what it proves.
  *  The combination kinds keep the producer's key. */
+/** An answer list's identity: its codes, sorted. A long list (a country list has 200 codes) is named by its count and a
+ *  hash of the codes, so the key stays within the contract's 300 characters (C3.4); the library side uses the same rule. */
+export function listIdentity(codes: string[]): string {
+  const all = [...new Set(codes)].sort().join(",");
+  return all.length <= 300 ? all : `codes:${new Set(codes).size}:${createHash("sha256").update(all).digest("hex").slice(0, 40)}`;
+}
+
 export function identityKeyOf(p: ProposalPayload, given: string): string {
   switch (p.kind) {
     case "field": case "section": case "person_role": return normalizeLabel(p.label);
-    case "answer_list": return [...new Set(p.values.map((v) => v.code))].sort().join(",");
+    case "answer_list": return listIdentity(p.values.map((v) => v.code));
     case "document_type": return `${normalizeLabel(p.name)}|${normalizeLabel(p.proves)}`;
     default: return given;
   }
@@ -51,7 +58,7 @@ export async function sameInLibrary(db: Client, workspaceId: string, p: Proposal
   }
   if (p.kind === "answer_list") {
     const rows = await db.answerList.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] } }, include: { values: { select: { valueKey: true } } } });
-    return rows.find((r) => [...new Set(r.values.map((v) => v.valueKey))].sort().join(",") === want)?.answerListKey ?? null;
+    return rows.find((r) => listIdentity(r.values.map((v) => v.valueKey)) === want)?.answerListKey ?? null;
   }
   if (p.kind === "document_type") {
     // The same identity as identityKeyOf: a name and what it proves (two proofs under one name are two items).
