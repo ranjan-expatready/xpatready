@@ -1,3 +1,30 @@
+## Round 63d0c6ce (delta after main merges)
+Reviewer: independent reviewer · 1 Nov 2026. Commit reviewed: **`63d0c6ce`** on `claude/forms-c212c-hfb2om`. Only change since 075ffcdf (Approve, 9.5/10): two merges of main (03f56b9b with conflicts, 63d0c6ce clean at 751cbc42). No new slice code. This round sits above round 3 so the newest round reads first.
+
+**Verdict: Approve**
+
+What I checked:
+- **Nothing from main was dropped.** I compared the slice's patch before and after the merges, line by line: `git diff cd8a023d 075ffcdf` against `git diff 751cbc42 63d0c6ce`. They are identical except for the three conflict lines. Each of those keeps both sides:
+  - `api/src/workspace.ts`: the forms response returns `people` (Before forms, from main) and `progress` (the chips, from the slice).
+  - `contracts/workspace.ts`: the forms `WorkspaceView` has `people: PeopleView` and `progress?`.
+  - `web/src/pages/combination.tsx`: `<BeforeForms id people />` wraps `<FormsTab … progress={v.progress} />`. `refetchOnWindowFocus` and the 4 s poll while a chip is `running` are both still there.
+  - `forms.tsx`, `setup-rail.tsx`, `form-progress.ts` (api, contracts, engine) and `review-queue.ts` match 075ffcdf exactly against the new base. Main's C1.8 copies change in `forms.tsx` and `workspace.ts` is kept.
+- **What main brought near the slice.** Main's changes to `form-library.ts` (index fill, deletion memory, List again), `library-deletions.ts` and `setup-checklist` do not touch `currentOfMany`, `mappingIndex` or the chip inputs. The slice's lines in `form-library.ts` apply unchanged.
+- **Reruns.** I reran three suites on my own copy (forms_rev, :4459, `xr_studio_forms_rev`) against the current web bundle (`index-Cv9LNWGF.js`, built after the commit; no source file is newer than it):
+  - `check_forms_c212_progress.ts`: 54/54
+  - `check_forms_c212_rail_browser.cjs`: 31/31, no page errors
+  - `check_w1_before_forms_browser.cjs`: 23/23
+- **Type checks.** Web `tsc` is clean. API `tsc` has one error, at `tests/check_c18_age_case.ts:59`. It comes from main: this branch's diff against main does not touch that file.
+- **Cleanup and cost.** I dropped the copy's database and removed its working files. Cost US$0, no AI calls.
+
+Issues: no Blocker or Major, and nothing new. The Minors carried from round 3 stand as declared there.
+
+Journey score: **9.5/10, carried from 075ffcdf** (`journey-test-reviewer-2026-11-01-c212-075ffcdf.md`). The behaviour is unchanged. Before forms now sits above the table, and the rail and Before forms browser suites pass together on one page. I did not run a separate journey walk for this delta.
+
+Tree note: the suites rewrite tracked screenshots under `screens/*/screenshots/`. Those files were already modified before this round, from the builder's runs, and my reruns rewrote some again. I did not restore them because they are not mine to write. The builder should restore them or commit them on purpose.
+
+---
+
 # F2 C2.12 slice 3: the guided path on the Forms tab (step chip and rail) · independent reviewer · round 3 · 1 Nov 2026
 
 Commit reviewed: **`075ffcdf`** on `claude/forms-c212c-hfb2om`. This round is a delta: I read `git diff ed2516cf 075ffcdf` against the round-2 fix list below. I did not build it.
