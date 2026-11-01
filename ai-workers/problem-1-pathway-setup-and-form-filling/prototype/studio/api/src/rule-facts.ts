@@ -9,6 +9,7 @@ import { Body, Controller, Get, Headers, HttpStatus, Inject, Injectable, Param, 
 import { z } from "zod";
 import { buildSnapshot, VALUE_TYPE_TO_DATA_TYPE, type Snapshot } from "../../engine/snapshot.ts";
 import { canonical } from "../../../contracts/rules.ts";
+type Json = Parameters<typeof canonical>[0];
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { actorOf, Audit, Db, fail, need, readerOf, type Actor } from "./core.ts";
 import { insertProposals } from "./proposals.ts";
@@ -26,10 +27,11 @@ const FACT_KEY = /^[a-z][a-z0-9_]*\.[a-z0-9_.]+$/;
 /** Every field key a condition tree reads (the same walk as engine/validate.ts checkCondition). */
 export function factsRead(tree: unknown): string[] {
   const out = new Set<string>();
-  const walk = (n: any) => {
+  const walk = (n: unknown) => {
     if (!n || typeof n !== "object") return;
-    if (typeof n.field === "string") out.add(n.field);
-    (Array.isArray(n.args) ? n.args : []).forEach(walk); if (n.arg) walk(n.arg);
+    const o = n as { field?: unknown; args?: unknown; arg?: unknown };
+    if (typeof o.field === "string") out.add(o.field);
+    (Array.isArray(o.args) ? o.args : []).forEach(walk); if (o.arg) walk(o.arg);
   };
   walk(tree);
   return [...out];
@@ -140,7 +142,7 @@ export class RuleFacts {
     if (!FACT_KEY.test(b.fact)) fail(`The rule reads "${b.fact}", which is not a fact key (group.name): correct the rule first.`);
     if (waitingFor.has(b.fact)) fail(`A proposal to add ${b.fact} is already waiting on To review › Proposals: decide it there.`, HttpStatus.CONFLICT);
     const subject = b.fact.split(".")[0];
-    const sha256 = createHash("sha256").update(canonical(rule!.tree as any)).digest("hex");
+    const sha256 = createHash("sha256").update(canonical(rule!.tree as Json)).digest("hex");
     // M2 (review c36): parallel adds of one fact make one proposal. The waiting check and the write run under one lock
     // per combination and fact, so a second add waits, then sees the first and is refused (409).
     const { proposalId } = await this.db.$transaction(async (tx) => {
@@ -185,7 +187,7 @@ export class RuleFacts {
     const near = nearLabels(b.label, fields.map((f) => f.label ?? "").filter(Boolean)).slice(0, 5);
     if (near.length && !b.nearReason) fail(`"${b.label}" is close to the library's ${near.map((n) => `"${n}"`).join(", ")}: say why it is not the same (a one-line reason the second person reads), or use the existing field.`);
     const key = keyFor(b.subject, b.label, new Set(fields.map((f) => f.canonicalFieldKey)));
-    const sha256 = createHash("sha256").update(canonical((rule!.tree ?? {}) as any)).digest("hex"); // eslint-disable-line @typescript-eslint/no-explicit-any -- same as add()
+    const sha256 = createHash("sha256").update(canonical((rule!.tree ?? {}) as Json)).digest("hex");
     const name = rule!.sentence.split(":")[0];
     const { proposalId } = await this.db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`rule-fact:${c.id}:${normalizeLabel(b.label)}`}))`;
