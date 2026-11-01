@@ -11,6 +11,9 @@ Language (PDF hardening, 26 Oct): IRCC prints the language after the edition ("I
 the title ("IMM 5257 F : Demande …"); a French version has the same code and edition as the English one, so it is reported
 as "fr" for the intake to hold rather than taken for the English edition. A password-protected file is said to be one.
   .tools/solution-1-prototype/.venv/bin/python -I studio/tools/read_form_identity.py <file>
+C3.12 (FormEdition.published): "--dates <file> ..." reads only the published date of each file (no text extraction) and
+prints one JSON object {path: "YYYY-MM-DD" | null}; a file that cannot be read is null, the same as a file with no date.
+  .tools/solution-1-prototype/.venv/bin/python -I studio/tools/read_form_identity.py --dates <file> [<file> ...]
 """
 import html
 import json
@@ -125,7 +128,24 @@ def main(path):
     return {"ok": True, "kind": kind, "code": code, "edition": edition, "edition_label": f"{code} ({edition})", "title": clean, "published": published, "language": language}
 
 
-if __name__ == "__main__":
+def published_only(path):
+    """C3.12: the published date alone, as main() reads it (ModDate, else CreationDate; a saved page's date modified)."""
+    try:
+        with open(path, "rb") as f:
+            raw = f.read()
+        if raw[:5] != b"%PDF-":
+            return read_html(raw).get("published") if re.match(rb"\s*(<!doctype html|<html)", raw[:512], re.I) else None
+        reader = PdfReader(path)
+        if reader.is_encrypted:
+            reader.decrypt("")
+        return pdf_date(reader.metadata)
+    except Exception:  # unreadable or damaged: no date, never a crash
+        return None
+
+
+if __name__ == "__main__" and sys.argv[1:2] == ["--dates"]:
+    print(json.dumps({p: published_only(p) for p in sys.argv[2:]}))
+elif __name__ == "__main__":
     try:
         print(json.dumps(main(sys.argv[1])))
     except Exception as e:  # unreadable or damaged file: say so, never crash the upload

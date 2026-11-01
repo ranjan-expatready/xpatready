@@ -117,11 +117,29 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     step("C11.11: the drawer says where the form came from and whether canada.ca was compared, the fingerprint kept in Details", /Official copy loaded with the sample|Downloaded from canada.ca|Uploaded by a person/.test(dt) && /checked|No canada\.ca page recorded yet/.test(dt) && (await dlg.locator("details").count()) === 1);
     step("C11.11: Where it is used lists the LMIA combination and its release", /With an LMIA/.test(dt) && /release/.test(dt), dt.slice(dt.indexOf("Where it is used"), dt.indexOf("Where it is used") + 200));
     step("C3.12: the drawer's Definition says the field map of the current edition, with what it means", /Field map: \d+ of \d+ form fields decided/.test(dt) && /from an earlier release, not decided yet/.test(dt) && !/on To review/.test(dt.slice(dt.indexOf("Field map:"), dt.indexOf("Field map:") + 400)), dt.slice(0, 400));
+    step("C3.12 published pass: the drawer says the date the file gives, as the file's date", /Published 2026-06-04 \(the date in the file\)/.test(dt), dt.slice(0, 300));
+    step("C3.12 published fail: the drawer never presents the printed edition as the published date", !/Published 09-2023|Published \(09-2023\)/.test(dt));
     await axe("row drawer"); await shot("07-drawer");
     await p.keyboard.press("Escape"); await sleep(300);
     step("review M8: closing the drawer puts focus back on the number that opened it", await p.evaluate(() => document.activeElement?.textContent === "IMM 1295"), await p.evaluate(() => document.activeElement?.outerHTML.slice(0, 120)));
     step("review minor: the table's name includes every column, IRCC accepts too", /IRCC accepts/.test((await p.locator('[role="region"][aria-label^="Table:"]').first().getAttribute("aria-label")) ?? ""));
     step("review M8: the hidden file input is not a stop of its own when tabbing", (await p.locator('input[type="file"]').getAttribute("tabindex")) === "-1");
+    // C3.12 published date in the list: its own line under the edition at 1440, in the short line at 1024 and 400; no sideways scroll.
+    await p.getByLabel("Search number or title").fill("1295"); await sleep(500);
+    step("C3.12 published pass: at 1440 the Edition column shows the date the file gives under the edition", /^Published 2026-06-04$/.test((await p.locator('tr[data-form="IMM 1295"] [data-published]').innerText()).trim()));
+    sql("update form_edition set published = '' where edition_label = 'IMM 5409 (01-2023)'");
+    await open(); await p.getByLabel("Search number or title").fill("5409"); await sleep(600);
+    step("C3.12 published fail: a file that names no date says 'Date not in the file' (never a guess)", /^Date not in the file$/.test((await p.locator('tr[data-form="IMM 5409"] [data-published]').innerText()).trim()));
+    await p.getByLabel("Search number or title").fill(""); await sleep(500);
+    for (const w of [1440, 1024, 400]) {
+      await p.setViewportSize({ width: w, height: 900 }); await sleep(300);
+      const sh = w < 1280 ? (await p.locator('tr[data-form="IMM 1295"] [data-published-short]').innerText().catch(() => "")).trim() : "wide";
+      const wide = await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+      step(`C3.12 published: at ${w} px the date is shown${w < 1280 ? " in the row's short line" : ""} and the page has no sideways scroll`, (w >= 1280 || /Published 2026-06-04/.test(sh)) && !wide, `${sh} · wide=${wide}`);
+      if (w === 400) { await axe("Forms list at 400 px with published dates"); await p.screenshot({ path: path.join(SHOTS, "c312-published-400.png"), fullPage: true }); }
+    }
+    await p.setViewportSize({ width: 1440, height: 900 }); await sleep(200);
+    await p.screenshot({ path: path.join(SHOTS, "c312-published-1440.png") });
     await p.getByLabel("Search number or title").fill(""); await sleep(500);
     await p.setViewportSize({ width: 1024, height: 900 }); await sleep(300);
     const fits = await p.evaluate(() => { const reg = document.querySelector('[role="region"][aria-label^="Table:"]'); return !!reg && reg.scrollWidth <= reg.clientWidth + 1 && [...document.querySelectorAll('tr[data-form] td:last-child button')].every((b) => b.getBoundingClientRect().right <= reg.getBoundingClientRect().right + 1); });

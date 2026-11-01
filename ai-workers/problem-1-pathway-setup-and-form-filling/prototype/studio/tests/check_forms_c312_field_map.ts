@@ -3,8 +3,13 @@
 // checklist "No field map", a form with no usable edition "No edition yet". The pure rule (contracts/form-library.ts
 // fieldMapState) with a pass and a fail per rule, then the API on the sample against the database's own rows. US$0 (one
 // saved AI answer replayed, no model call).
+// C3.12 published date (FormEdition.published, migration 20261101150000): each edition shows the date its own file says it
+// was published (not the printed edition), a file with no date says so, an older edition keeps its own date, and editions
+// made before the column are read once and kept. A pass and a fail per rule, against the database's own column.
 //   zsh studio/tools/isolated.sh forms_c312 4450 start && tsx studio/tests/check_forms_c312_field_map.ts 4450 xr_studio_forms_c312
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { fieldMapState } from "../contracts/form-library.ts";
 
 const PORT = Number(process.argv[2] ?? 4450), DB = process.argv[3] ?? "xr_studio_forms_c312";
@@ -95,6 +100,43 @@ type Row = { code: string; type: string; edition: string | null; field_map: Fm }
       ok("C3.12 API fail: a complete field map with an AI proposal waiting is no longer 'Complete' (waits for review)", now.kind === "waiting", now);
     }
   }
+
+  // ── C3.12 published date: the date the file says it was published (FormEdition.published), US$0 (rules, no AI)
+  type Pub = Row & { published: string | null; older_editions: { label: string; published: string | null }[] };
+  const pubRows = async () => (await call("GET", "/library/forms/list")).body.rows as Pub[];
+  let pr = await pubRows();
+  const r1295 = pr.find((r) => r.code === "IMM 1295")!, r5707 = pr.find((r) => r.code === "IMM 5707")!;
+  ok("C3.12 published pass: a sample form shows the date its file gives (IMM 1295: 2026-06-04), the same as the column", r1295.published === "2026-06-04" && sql("select published from form_edition where edition_label = 'IMM 1295 (09-2023)'") === "2026-06-04", r1295.published);
+  ok("C3.12 published fail: the published date is not the printed edition (IMM 5707 is edition 01-2023, published 2025-04-11)", r5707.edition === "IMM 5707 (01-2023)" && r5707.published === "2025-04-11", [r5707.edition, r5707.published]);
+  ok("C3.12 published pass: every form edition made before the column was read once and kept (no row left unread)", sql("select count(*) from form_edition where published is null and channel = 'PDF'") === "0");
+  ok("C3.12 published fail: a guide with no date in its page is kept as read with no date (''), shown as none", sql("select count(*) from form_edition e join gov_form_def d on d.id = e.gov_form_def_id where d.form_kind = 'guide' and e.published = ''") !== "0" && pr.filter((r) => r.type === "guide").every((r) => r.published === null));
+  // An uploaded PDF (door 2, the intake): its date is set when it is added, from the reader that already read its identity.
+  const IRCC = join(import.meta.dirname, "..", "..", "..", "official-sources", "ircc");
+  const fd = new FormData(); fd.append("files", new Blob([new Uint8Array(readFileSync(join(IRCC, "forms", "imm5604e.pdf")))], { type: "application/pdf" }), "imm5604e.pdf");
+  const up = await (await fetch(`http://localhost:${PORT}/api/intake`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd })).json() as { results?: { outcome: string; edition: string | null }[] };
+  const added = up.results?.[0];
+  ok("C3.12 published pass: an uploaded PDF keeps the date its file gives the moment it is added (IMM 5604: 2023-02-27)", !!added?.edition && sql(`select published from form_edition where edition_label = '${added.edition}'`) === "2023-02-27", { added, col: added?.edition ? sql(`select coalesce(published, 'NULL') from form_edition where edition_label = '${added.edition}'`) : null });
+  pr = await pubRows();
+  ok("C3.12 published pass: the Forms list shows the uploaded form's date", pr.find((r) => r.code === "IMM 5604")?.published === "2023-02-27", pr.find((r) => r.code === "IMM 5604"));
+  // A file that names no date: kept as '' (read), shown as none, and not read again on the next list.
+  sql("update form_edition set published = '' where edition_label = 'IMM 5409 (01-2023)'");
+  pr = await pubRows();
+  ok("C3.12 published pass: a file that names no date is shown as none (the page says 'Date not in the file')", pr.find((r) => r.code === "IMM 5409")?.published === null, pr.find((r) => r.code === "IMM 5409")?.published);
+  ok("C3.12 published fail: a file read once with no date is not read again on every list (stays '')", sql("select published from form_edition where edition_label = 'IMM 5409 (01-2023)'") === "");
+  sql("update form_edition set published = 'not a date' where edition_label = 'IMM 5475 (05-2021)'");
+  ok("C3.12 published fail: anything but a YYYY-MM-DD date is never shown as a date", (await pubRows()).find((r) => r.code === "IMM 5475")?.published === null);
+  // An older edition keeps its own date (test input: IMM 5257's committed previous edition joins as an earlier edition,
+  // unread, the way rows made before the column are).
+  const ws = sql("select workspace_id from form_edition where edition_label = 'IMM 5257 (09-2023)'"), def = sql("select gov_form_def_id from form_edition where edition_label = 'IMM 5257 (09-2023)'");
+  sql(`insert into form_edition (id, workspace_id, gov_form_def_id, edition_label, official_file, sha256) values (gen_random_uuid(), '${ws}', '${def}', 'IMM 5257 (06-2018)', 'imm5257e-pre-2023.pdf', 'd512ef649902eadc400c667cf6ad41bba0d905e2a54245a339be6c25a2d80f11')`);
+  pr = await pubRows();
+  const v = pr.find((r) => r.code === "IMM 5257")!, older = v.older_editions.find((e) => e.label === "IMM 5257 (06-2018)");
+  ok("C3.12 published pass: an older edition shows its own file's date (IMM 5257 (06-2018): 2019-04-18), read once and kept", older?.published === "2019-04-18" && sql("select published from form_edition where edition_label = 'IMM 5257 (06-2018)'") === "2019-04-18", v.older_editions);
+  ok("C3.12 published fail: the current edition keeps its own date, not the older one's", v.edition === "IMM 5257 (09-2023)" && v.published === "2026-06-04", [v.edition, v.published]);
+  // A file not on disk is left unread (null), never marked as having no date.
+  sql(`insert into form_edition (id, workspace_id, gov_form_def_id, edition_label, stored_path) values (gen_random_uuid(), '${ws}', '${def}', 'IMM 5257 (01-2017)', 'var/nowhere/missing.pdf')`);
+  await pubRows();
+  ok("C3.12 published fail: a file missing from disk stays unread (null, tried again later), never '' (no date)", sql("select coalesce(published, 'NULL') from form_edition where edition_label = 'IMM 5257 (01-2017)'") === "NULL");
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
