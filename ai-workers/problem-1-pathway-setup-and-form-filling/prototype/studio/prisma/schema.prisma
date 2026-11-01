@@ -1212,6 +1212,9 @@ model Case {
   idempotencyKey String?  @map("idempotency_key")
   /// sha256 of the create request: a key reused with a different request is refused, never answered with another case.
   idempotencyFingerprint String? @map("idempotency_fingerprint") @db.VarChar(64)
+  /// C6.11 (BR-20, SI-9): the Sample firm whose staff work this case (samples/firms.json); staff of another firm reach
+  /// none of its cases. Cases opened before C6.11 belong to the Sample firm.
+  firmKey        String   @default("sample-firm") @map("firm_key")
 
   /// A case keeps its combination: deleting a combination with cases is refused (reset deletes cases first).
   combination  Combination       @relation(fields: [combinationId], references: [id], onDelete: Restrict)
@@ -1219,11 +1222,35 @@ model Case {
   participants CaseParticipant[]
   forms        FormInstance[]
   snapshots    AnswerSnapshot[]
+  team         CaseTeamMember[]
 
   @@unique([workspaceId, idempotencyKey])
   @@unique([workspaceId, reference])
   @@index([workspaceId, createdAt])
   @@map("runtime_case")
+}
+
+/// C6.11 (BR-20, SI-15): who works a case, shaped like the team's AG-07 CaseTeamMember (LEAD_REPRESENTATIVE · OFFICER).
+/// One row per assignment; a reassignment ends the row (ended_at, by, reason) and inserts the next, so the history stays.
+/// The database refuses two current representatives of record on one case and the same person twice in one role
+/// (partial unique indexes in the migration 20261101120000_c611_case_team). userId names a seeded Sample user.
+model CaseTeamMember {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  caseId      String    @map("case_id") @db.Uuid
+  userId      String    @map("user_id")
+  /// LEAD_REPRESENTATIVE (the representative of record, on IMM 5476) · OFFICER (a case officer)
+  role        String
+  assignedBy  String    @map("assigned_by")
+  assignedAt  DateTime  @default(now()) @map("assigned_at") @db.Timestamptz
+  endedAt     DateTime? @map("ended_at") @db.Timestamptz
+  endedBy     String?   @map("ended_by")
+  endReason   String?   @map("end_reason")
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId, assignedAt])
+  @@map("case_team_member")
 }
 
 /// The release a case works from (team PackWorkPin, pinned per case and combination here). Insert-only.
