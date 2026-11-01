@@ -8,7 +8,7 @@
 // questions. Rules only (US$0).
 // Runs on Visitor visa of the six (qa-1 gaps G4, G5, G10 / QA-133 there). Needs first: Visitor visa has questions (J3 /
 // C4.11); until then it stops with exit 2, and runs meanwhile on the suites' fixture: add `wp.family` as 4th argument.
-//   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C4.1.test.ts 4440 xr_studio_accept [wp.family]
+//   zsh studio/tools/isolated.sh accept 4433 start && tsx studio/acceptance/C4.1.test.ts 4433 xr_studio_accept [wp.family]
 import { AUTHOR, pack2, run } from "./lib/pack2.ts";
 
 const T = pack2("C4.1");

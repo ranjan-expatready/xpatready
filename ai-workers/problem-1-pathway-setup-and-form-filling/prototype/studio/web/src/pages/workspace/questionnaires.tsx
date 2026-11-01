@@ -294,10 +294,11 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
   const [moved, setMoved] = React.useState<string | null>(null);
   const [moveRefused, setMoveRefused] = React.useState<string | null>(null);
   const moving = React.useRef(false); // a double click sends one move, not a second one from the order before it
-  const sel = useAction((b: { key: string; on: boolean }) => api(`/combinations/${id}/sections/${b.key}`, { method: b.on ? "POST" : "DELETE" }), { success: "Questionnaire sections updated", invalidate: [["combination", id], ["config", id], ["preview"], ["fact-sources", id], ["section-order", id]] });
+  const sel = useAction((b: { key: string; on: boolean }) => api(`/combinations/${id}/sections/${b.key}`, { method: b.on ? "POST" : "DELETE" }), { success: "Questionnaire sections updated", invalidate: [["combination", id], ["combination-summary", id], ["config", id], ["catalogue"], ["draft"], ["preview"], ["fact-sources", id], ["section-order", id]] });
   React.useEffect(() => { setPicked(new Set()); setFilter("all"); }, [q?.role]);
   // QA-93 (P-116): removing a section asks first, says what goes for whom, then offers one Undo that puts it back in its place.
-  const reload = () => { for (const k of [["combination", id], ["config", id], ["preview"], ["fact-sources", id], ["section-order", id]]) void qc.invalidateQueries({ queryKey: k }); };
+  // The draft bar and the header read draft, combination-summary and catalogue: refresh them too (review #348 M1).
+  const reload = () => { for (const k of [["combination", id], ["combination-summary", id], ["config", id], ["catalogue"], ["draft"], ["preview"], ["fact-sources", id], ["section-order", id]]) void qc.invalidateQueries({ queryKey: k }); };
   const move = async (x: { key: string; title: string }, direction: "up" | "down", undo = false) => {
     if (moving.current) return;
     moving.current = true;

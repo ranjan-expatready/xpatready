@@ -64,8 +64,13 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.locator("[data-undo-toast]").waitFor({ timeout: 15000 }); await settle();
   const o1 = await order();
   step("C4.1 R1 pass: Enter on Move down moves the first section to second, saved", o1[1].key === o0[0].key && o1[0].key === o0[1].key, o1.slice(0, 3).map((x) => x.title).join(", "));
-  const shown1 = await shownOrder();
+  // The tab refetches after the move; wait for it (up to 5 s) rather than read the old order once (the flaky 27/28, #350).
+  let shown1 = await shownOrder();
+  for (let t = 0; t < 25 && shown1.indexOf(o0[0].key) !== shown1.indexOf(o0[1].key) + 1; t++) { await p.waitForTimeout(200); shown1 = await shownOrder(); }
   step("C4.1: the tab shows the new order at once", shown1.indexOf(o0[0].key) === shown1.indexOf(o0[1].key) + 1, shown1.slice(0, 3).join());
+  // Review #348 M1: the draft bar counts the move at once (it read "No unreleased changes" until a reload).
+  const barNow = await p.waitForFunction(() => !/No unreleased changes/.test(document.body.innerText), null, { timeout: 5000 }).then(() => true, () => false);
+  step("C4.1 fail-guard: after a move the draft bar shows the unreleased change at once, without a reload", barNow);
   const focused = await p.evaluate(() => { const a = document.activeElement; return `${a?.closest("[data-section]")?.getAttribute("data-section")}|${a?.getAttribute("data-move")}`; });
   step("C4.1: the keyboard stays on the pressed button after the section moves", focused === `${o0[0].key}|down`, focused);
   const toast = await p.locator("[data-undo-toast]").innerText();
