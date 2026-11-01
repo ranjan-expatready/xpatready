@@ -3,11 +3,13 @@
 // sections · 0 reused · 18 new here") and marks each row Reused or New here; the choice stays in the address; a
 // combination that uses nothing says so. Sample inputs; no AI call (US$0). Screenshots into
 // product/screens/04-shared-library/screenshots/c313/, axe (WCAG 2.2 AA) on each state.
-//   zsh studio/tools/isolated.sh screens_reuseui 4448 start && node studio/tests/check_c313_reuse_browser.cjs 4448
+//   zsh studio/tools/isolated.sh screens_c313ui 4468 start && node studio/tests/check_c313_reuse_browser.cjs 4468
+// Own port and copy (fix row from #374): on 4448 it shared the port with check_f8_empty_release.ts and two others; a
+// copy still listening there could answer the start check, so this suite reached an already-loaded copy (demo/load 409).
 const path = require("node:path"); const fs = require("node:fs");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
-const PORT = Number(process.argv[2] ?? 4448), BASE = `http://localhost:${PORT}`;
+const PORT = Number(process.argv[2] ?? 4468), BASE = `http://localhost:${PORT}`;
 const SHOTS = path.join(__dirname, "..", "..", "..", "product", "screens", "04-shared-library", "screenshots", "c313"); fs.mkdirSync(SHOTS, { recursive: true });
 let fail = 0, pass = 0;
 const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${String(detail).replace(/\s+/g, " ").slice(0, 260)}` : ""}`); };
