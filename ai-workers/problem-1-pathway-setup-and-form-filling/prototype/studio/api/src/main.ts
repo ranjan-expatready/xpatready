@@ -26,6 +26,7 @@ import { Screen02, Screen02Controller } from "./screen02.ts";
 import { ReviewProposals, ReviewProposalsController } from "./review-proposals.ts";
 import { Impact } from "./impact.ts";
 import { Checklists, ChecklistsController } from "./checklist.ts";
+import { RuleFacts, RuleFactsController } from "./rule-facts.ts";
 import { Runtime, RuntimeController } from "./runtime.ts";
 import { Team, TeamController } from "./team.ts";
 import { firmOfActor } from "./firms.ts";
@@ -51,6 +52,8 @@ type H = string | undefined;
 class StudioController {
   constructor(@Inject(Studio) private readonly s: Studio) {}
   @OpenRead("who-am-I before a person is chosen; the copies' health check") @Get("session") session(@Headers("x-actor") a: H) { return this.s.session(actorOf(a)); }
+  /** C11.10 (P-115): Cards / List per person, on the server. Any known person keeps their own choice. */
+  @Patch("session/preferences") preferences(@Headers("x-actor") a: H, @Body() b: unknown) { return this.s.setPreferences(actorOf(a), b); }
   @Get("combinations/:id") overview(@Param("id") id: string) { return this.s.combination(id); }
   @Patch("combinations/:id") updateComp(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.s.updateCombination(actorOf(a), id, b); }
   @Get("combinations/:id/config") config(@Param("id") id: string, @Query("mode") mode: any) { return this.s.config(id, mode === "published" ? "published" : "draft"); }
@@ -192,7 +195,7 @@ class ProblemErrors implements ExceptionFilter {
   }
 }
 
-@Module({ controllers: [TeamController, StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, FormProgressController, Screen02Controller, ReviewProposalsController, ChecklistsController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController, WhoFillsController, LibrarySourcesController, OfficialPagesController, LinesBulkController, PqrDraftsController], providers: [LinesBulk, PqrDrafts, FormProgressService, OfficialPagesService, FactSources, PersonChecklists, WhoFills, LibrarySources, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, Team, CaseForms, ReviewQueueService, Screen02, ReviewProposals, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs] })
+@Module({ controllers: [TeamController, StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, FormProgressController, Screen02Controller, ReviewProposalsController, ChecklistsController, RuleFactsController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController, WhoFillsController, LibrarySourcesController, OfficialPagesController, LinesBulkController, PqrDraftsController], providers: [LinesBulk, PqrDrafts, FormProgressService, OfficialPagesService, FactSources, PersonChecklists, RuleFacts, WhoFills, LibrarySources, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, Team, CaseForms, ReviewQueueService, Screen02, ReviewProposals, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs] })
 class AppModule {}
 
 async function main() {

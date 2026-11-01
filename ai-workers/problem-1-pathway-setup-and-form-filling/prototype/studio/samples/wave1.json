@@ -10,7 +10,7 @@
       "categories": [
         { "key": "visitors.visitor_visa", "label": "Visitor visa", "locations": ["outside_canada"],
           "setup": { "key": "vv.single", "page": "https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada/apply-visitor-visa.html",
-            "participants": [{ "role": "principal", "label": "Applicant", "min": 1, "max": 1 }, { "role": "spouse_or_partner", "label": "Spouse or partner (travelling)", "min": 0, "max": 1, "preview": 0 }, { "role": "child", "label": "Child (travelling)", "min": 0, "max": 4, "preview": 0 }, { "role": "representative", "label": "Representative", "min": 0, "max": 1, "preview": 0 }],
+            "participants": [{ "role": "principal", "label": "Principal applicant", "min": 1, "max": 1 }, { "role": "spouse_or_partner", "label": "Spouse or partner (travelling)", "min": 0, "max": 1, "preview": 0 }, { "role": "child", "label": "Child (travelling)", "min": 0, "max": 4, "preview": 0 }, { "role": "representative", "label": "Representative", "min": 0, "max": 1, "preview": 0 }],
             "sources": ["imm5257e.pdf", "imm5257_1e.pdf", "imm5707e.pdf", "imm5645e.pdf", "imm5409e.pdf", "imm5476e.pdf", "imm5475e.pdf", "imm5484e.pdf", "guide-5256.html"], "missing": [],
             "note": "Sample: IRCC's visitor visa application from outside Canada (guide 5256)." } }
       ] },

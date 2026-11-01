@@ -134,3 +134,39 @@ Row as it stood in `qa/BUGS.md`:
 Detail as it stood in `qa/reports/bugs-open-detail.md`:
 
 | QA-103 | UX · Major | C11.15, C1.6 · PRODUCT §4 | **a9fe60c0** (live find) | Same run: step 5 "2 downloaded from canada.ca" (IMM 1294, IMM 5483) → expected: the line says the file is in the library and what to do next (read and match its form fields) → actual: "No edition read yet · 0 form fields matched · Not attached" on lines that the change bar says "AI attached"; no button for the next step on those rows | `live-find-study-forms.jpg/.txt` | forms | Open |
+
+## QA-135 — closed 1 Nov 2026 (after-merge 936f0395, qa-2)
+
+Closed by the qa lane on main **936f0395** (fixed by #322): adding the application itself as a person answers 422 "The application itself is not a person, so it cannot be added. This application can add: spouse or partner (travelling), child (travelling)." (API probe on a `setup_visitor_visa.ts` copy).
+
+Row as it stood in `qa/BUGS.md`:
+
+| QA-135 | UX · Minor | C6.2, C11.12 · STANDARDS (Problem Details in plain words) | 25cefb67 (re-score) | Adding a second "case" subject to a case is refused 422 "This case's release does not list a case in who can be in this application …": the internal role name "case" in the words. … | runtime | Open |
+
+Detail as it stood in `qa/reports/bugs-open-detail.md`:
+
+| QA-135 | UX · Minor | C6.2, C11.12 · STANDARDS (Problem Details) | **25cefb67** (re-scoring pass) | Steps: fresh copy, `setup_visitor_visa.ts`; as user-O `POST /api/runtime/cases/<id>/people` `{"role":"case","displayName":"The application again"}`. Expected: a field error in plain words (the application is not a person). Actual: 422 "This case's release does not list a case in who can be in this application, so one cannot be added." (`api/src/runtime.ts:119`); nothing added. Seen by `tests/qa/check_qa_r1a_probe.ts` (70/71; it expects 400). Owning lane: runtime. |
+
+## QA-143 — closed 1 Nov 2026 (after-merge 936f0395, qa-2)
+
+Closed by the qa lane on main **936f0395** (fixed by #322): the configured checkpoint's Visitor visa reads "Who can be in this application (Principal applicant (always) · Spouse or partner (travelling) (optional) · …", with no bare "Applicant" (`reports/2026-11-01-after-merge-13/qa143-vv-people-1440.png`; `check_s7_load.ts` 21/21).
+
+Row as it stood in `qa/BUGS.md`:
+
+| QA-143 | Bug · Minor | C11.12 · P-209 (X1c) | 73396df2 (after-merge 7) | Demo › Load sample and Load the configured checkpoint (both from `samples/wave1.json` since #113) still label the Visitor visa principal "Applicant". Seen on Overview, Questionnaires ("Applicant · 0 questions") and in Review problems. #275 renamed only `samples/programs.json`, which is now the suites' fixture. … | runtime | Open |
+
+Detail as it stood in `qa/reports/bugs-open-detail.md`:
+
+| QA-143 | Bug · Minor | C11.12 · P-209 | **73396df2** | Steps: blank copy; Demo › Load the configured checkpoint (or Demo › Load sample); open Visitors › Visitor visa › Questionnaires. Expected (P-209, X1c): the principal reads "Principal applicant", and "(travelling)" stays on the spouse and child. Actual: "Who can be in this application (Applicant (always) · Spouse or partner (travelling) …)", "Applicant · 0 questions · 53 not asked", and the Review problems say "Applicant: … nobody is asked for it". Cause: `samples/wave1.json:13` still has `"label": "Applicant"`. #275 changed `samples/programs.json:53,148`, but #113 (merged in the same window) made the Demo menu load `wave1.json`. Evidence: `reports/2026-11-01-after-merge-7/c1112-vv-people-1440.png`, `vv-configured-questionnaires-1440.png`. Check: `tests/qa/check_qa_am_1101f_walk.cjs 4474 xr_studio_qa_jn` (C11.12 step fails today). |
+
+## QA-146 — closed 1 Nov 2026 (after-merge 936f0395, qa-2)
+
+Closed by the qa lane on main **936f0395** (fixed by #316): IMM 5257's edition now has `inventory_file = prototype/p1/inventory/imm5257e.inventory.json` (IMM 1344 too). On the configured checkpoint person.date_of_birth lists "Month 01 to 12 · IMM 5257 SCH1 … (the form's own check)" and person.family_name "At most 100 characters" (`qa146-field-format-1440.png`; `check_forms_c31_formats.ts` 107/107, `check_forms_c31_acceptance.ts` 17/17).
+
+Row as it stood in `qa/BUGS.md`:
+
+| QA-146 | Gap · Major | C3.1 · P-162, P-220 | 61f561d7 (after-merge 10) | IMM 5257's edition (Visitor visa's main form) has no `inventory_file` in either sample, though `p1/inventory/imm5257e.inventory.json` and `.formats.json` are committed. So fields IMM 5257 asks show "Format: not read yet (its forms have not been read)" and its formats are not enforced on answers. … | forms | Open |
+
+Detail as it stood in `qa/reports/bugs-open-detail.md`:
+
+| QA-146 | Gap · Major | C3.1 · P-162 | **61f561d7** | Steps: Demo › Load the configured checkpoint; Shared library › Fields › person.date_of_birth (or person.family_name, person.phone_number). Expected (P-162): each field's format read from its forms, IMM 5257 included (formats committed in `p1/inventory/imm5257e.formats.json`). Actual: "Format: not read yet (its forms have not been read)." `form_edition.inventory_file` is null for IMM 5257 (09-2023) on the configured checkpoint and on the suites fixture, while IMM 5475, 5476, 5409, 5707 and 5257 SCH1 have theirs. `engine/field-format.ts:127-130` reads formats beside the edition's inventory, so IMM 5257's are never read. Evidence: `reports/2026-11-01-after-merge-10/c31-field-format-1440.png`. |

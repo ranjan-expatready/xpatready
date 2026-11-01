@@ -10,16 +10,18 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, BookOpen, ChevronDown, Plus, Undo2, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { type BulkSourceResult, type CountryPqrView, type FactSourceRow, type PeopleLine, type PeoplePlan, type PeopleProposal, type PeopleView, type QuestionnaireQuestion, type QuestionnairesView } from "../../../../contracts/workspace";
-import { api, ApiError, useAction, useSessionView, useToast } from "@/lib/api";
+import { api, ApiError, useAction, useApi, useSessionView, useToast } from "@/lib/api";
+import type { CombinationSummary } from "../../../../contracts/programs";
 import { Button, Dialog, Input, Notice, Panel, Pill, Select, Table } from "@/components/ui/controls";
 import { Tip } from "@/components/status";
 import { BulkBar, FactDrawer, RowMenu, RowStatus, ComesFrom, PreQual, SAY, SourceChips, SourceStrip, useFactSources, useRefreshSources, useUndoToast, type Filter } from "@/pages/workspace/sources";
 import { Lock } from "lucide-react";
 import { ConfigArea } from "@/pages/configuration";
-import { FOCUS_RING, useFocusItem } from "@/components/focus-item";
+import { DoneSinceNotice, FOCUS_RING, useFocusItem } from "@/components/focus-item";
 import { PartProblems } from "@/components/part-problems";
 import { cn } from "@/lib/utils";
 import { RunCard } from "@/components/run-card";
+import { RuleFacts } from "@/components/rule-facts";
 import { peopleWords } from "@/lib/people";
 import { DraftPqrPicks } from "@/components/pqr-draft";
 
@@ -37,6 +39,7 @@ export function QuestionnairesTab({ id, people, questionnaire, available }: { id
       <p className="text-sm text-text-muted" data-who-can-be-moved>Who can be in this application ({peopleWords(people.lines, (l) => l.label) || "nobody yet"}) is set before the forms. <Link className="text-text-link underline" to={`/c/${id}/forms?focus=people%3Acard`}>Change on Forms</Link></p>
       <QuestionsByPerson id={id} q={questionnaire} available={available} />
       <ConfigArea id={id} areas={["rules", "checks"]} />
+      <RuleFacts combinationId={id} />
     </div>
   );
 }
@@ -279,7 +282,9 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
   const [shown, setShown] = React.useState<{ fact: string; q: QuestionnaireQuestion | null; section: string | null } | null>(null);
   const [filter, setFilter] = React.useState<Filter>("all");
   // X1 (slice C2): a ?focus= link from the setup checklist lands here (questionnaires:gaps, questionnaires:problems).
-  useFocusItem([]);
+  // Review m3: the from-release notice waits for the summary, so nothing counts as gone before it is in.
+  const sumForFocus = useApi<CombinationSummary>(["combination-summary", id], `/combinations/${id}/summary`);
+  const doneSince = useFocusItem(sumForFocus.data ? [] : undefined, (k) => k.startsWith("questionnaires:") || k === "questions_documents:problems");
   const [picked, setPicked] = React.useState<Set<string>>(new Set());
   const [refused, setRefused] = React.useState<BulkSourceResult["refused"]>([]);
   const fs = useFactSources(id);
@@ -337,6 +342,7 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
   ) : null;
   if (!q) return (
     <section className={cn("rounded-xl border border-border bg-surface-raised p-5", FOCUS_RING)} data-questions-empty data-focus="questionnaires:gaps">
+      <DoneSinceNotice shown={doneSince} />
       <h2 className="font-semibold">No questions yet</h2>
       <p className="mt-1 text-sm text-text-muted">The questions each person needs come from the facts their forms read. Add forms on the Forms tab, or a library section here.</p>
       <div className="mt-3">{addSection}</div>
@@ -398,6 +404,7 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
   return (
     <section aria-labelledby="questions-head" className="space-y-4" data-questions>
       <SourceStrip v={fs.data} />
+      <DoneSinceNotice shown={doneSince} />
       {fs.error ? <Notice tone="warn" title="Where each answer comes from could not load">{fs.error.message} <button type="button" className="font-medium text-text-link underline" onClick={() => void fs.refetch()}>Retry</button></Notice> : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="questions-head" className="font-semibold">Questions for each person</h2>

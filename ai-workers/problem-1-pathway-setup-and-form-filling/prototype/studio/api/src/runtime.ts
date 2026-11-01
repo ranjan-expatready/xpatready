@@ -155,7 +155,11 @@ export class Runtime {
     const limits = (this.snapshotOf(c).combination.participants ?? []) as { role: string; max?: number; label?: string }[];
     const limit = limits.find((p) => p.role === b.role);
     // S5 (M3): any role the pinned release lists, within its maximum; anything else is refused (P-119).
-    if (!limit || !(limit.max ?? 0)) fail(`This case's release does not list a ${b.role.replace(/_/g, " ")} in who can be in this application, so one cannot be added.`, HttpStatus.UNPROCESSABLE_ENTITY);
+    // QA-135: the role in the release's own words, never its internal name; the application itself is not a person.
+    // Review m3: the examples are the roles this release really lets a person add (never a fixed list).
+    const addable = limits.filter((p) => p.role !== "principal" && p.role !== "case" && (p.max ?? 0) > 0).map((p) => (p.label ?? p.role.replace(/_/g, " ")).toLowerCase());
+    if (b.role === "case") fail(`The application itself is not a person, so it cannot be added. ${addable.length ? `This application can add: ${addable.join(", ")}.` : "This application lists no one else to add."}`, HttpStatus.UNPROCESSABLE_ENTITY);
+    if (!limit || !(limit.max ?? 0)) fail(`This case's release does not list a ${(limit?.label ?? b.role.replace(/_/g, " ")).toLowerCase()} in who can be in this application, so one cannot be added.`, HttpStatus.UNPROCESSABLE_ENTITY);
     const workspaceId = c.workspaceId;
     // QA-28: the same idempotency key answers with the person it added; a different request with that key is refused.
     const { idempotencyKey: key, ...request } = b;

@@ -107,6 +107,16 @@ export function JobPage() {
   );
 }
 
+/** C3.1 (IRCC-F07, P-162): what the form field's own PDF box says, in words, beside the proposal; read from the form, never the AI. */
+type BoxFormat = { maxLength: number | null; choices: { label: string; code: string }[] | null; datePattern: string | null } | null | undefined;
+function boxFormatWords(f: BoxFormat): string | null {
+  if (!f) return null;
+  if (f.choices) { const c = f.choices.filter((x) => x.label || x.code); return `The form's own choices (${c.length}): ${c.slice(0, 4).map((x) => x.code && x.code !== x.label ? `${x.label} (${x.code})` : x.label).join(", ")}${c.length > 4 ? `, and ${c.length - 4} more` : ""}`; }
+  if (f.datePattern) return `Date, written ${f.datePattern} (from the form)`;
+  if (f.maxLength) return `Text, at most ${f.maxLength} characters (from the form)`;
+  return null;
+}
+
 function ItemCard({ item, jobId, locked }: { item: any; jobId: string; locked: boolean }) {
   const [mode, setMode] = React.useState<null | "other" | "new" | "return" | "why">(null);
   // BR-7 (review Must 3): accepting makes a new shared field while a library field could fit, so it needs a reason.
@@ -134,7 +144,7 @@ function ItemCard({ item, jobId, locked }: { item: any; jobId: string; locked: b
         <div className="rounded-lg bg-surface p-3">
           <p className="text-[11px] font-medium uppercase tracking-wide text-text-muted">Whose value the form fields read ({item.boxes.length} form field{item.boxes.length > 1 ? "s" : ""})</p>
           <div className="mt-1 flex flex-wrap gap-1">{item.persons.map((p: string) => <Pill key={p} tone="info">{PERSON[p] ?? p}</Pill>)}</div>
-          <ul className="mt-2 space-y-1 text-xs">{item.boxes.slice(0, 4).map((b: any) => <li key={b.data_path}><span className="font-medium">{b.caption || b.data_path.split(".").slice(-2).join(".")}</span> · {PERSON[b.person] ?? b.person}{b.row !== null ? ` · row ${b.row + 1}` : ""} · {b.confidence}{b.evidence ? <span className="block truncate text-text-muted" title={b.evidence}>"{b.evidence}"</span> : null}</li>)}{item.boxes.length > 4 ? <li className="text-text-muted">and {item.boxes.length - 4} more</li> : null}</ul>
+          <ul className="mt-2 space-y-1 text-xs">{item.boxes.slice(0, 4).map((b: any) => <li key={b.data_path}><span className="font-medium">{b.caption || b.data_path.split(".").slice(-2).join(".")}</span> · {PERSON[b.person] ?? b.person}{b.row !== null ? ` · row ${b.row + 1}` : ""} · {b.confidence}{b.evidence ? <span className="block truncate text-text-muted" title={b.evidence}>"{b.evidence}"</span> : null}{boxFormatWords(b.format) ? <span className="block text-text-muted" data-box-format>{boxFormatWords(b.format)}</span> : null}</li>)}{item.boxes.length > 4 ? <li className="text-text-muted">and {item.boxes.length - 4} more</li> : null}</ul>
         </div>
         <div className="rounded-lg bg-surface p-3">
           <p className="text-[11px] font-medium uppercase tracking-wide text-text-muted">Library comparison</p>

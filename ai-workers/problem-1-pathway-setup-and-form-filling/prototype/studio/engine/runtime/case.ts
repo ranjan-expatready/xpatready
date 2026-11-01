@@ -73,6 +73,9 @@ export function shapeOf(s: Snapshot, field: string) {
   // choice field without an answer list may take (labels before any "=code").
   const listed = ts.map((t) => /^code_list:\S+ \(([^)]*)\)/.exec(t)?.[1]).find(Boolean);
   const choices = listed ? listed.split(",").map((x) => x.split("=")[0].trim()).filter(Boolean) : null;
+  // C3.1 AT-10 (IRCC-F07, P-162): the form's own box limit for the whole answer (read from the PDF) counts too.
+  const boxMax = snapshotFieldFormat(s as never, field).rules.filter((r) => r.check === "max_length" && !r.part).map((r) => Number(r.params.n)).filter((n) => n > 0);
+  maxes.push(...boxMax);
   return { maxLength: maxes.length ? Math.min(...maxes) : fieldOf(s, field)?.value_type === "long_text" ? LONG_TEXT_MAX : 500, datePrecision: dayNeeded ? "day" as const : "month" as const, phone: ts.some((t) => /phone_part/.test(t)), money: ts.some((t) => /CAD/.test(t)), choices };
 }
 

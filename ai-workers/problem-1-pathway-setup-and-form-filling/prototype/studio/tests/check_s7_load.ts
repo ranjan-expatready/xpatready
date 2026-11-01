@@ -42,6 +42,11 @@ const sampleOk = (f: Parameters<typeof trailsOf>[0]) => { const t = trailsOf(f);
   const seventh = structuredClone(file);
   seventh.programs[0].categories.push({ key: "visitors.super_visa", label: "Super visa", locations: ["outside_canada"], setup: { key: "sv.super_visa" } });
   ok("C11.7 fail: a seventh combination (a Super visa) is refused by the check", !sampleOk(seventh), trailsOf(seventh).length);
+  // QA-143 (P-209): the Demo menu loads this file, so the principal is never the bare "Applicant" here (#275 renamed
+  // only samples/programs.json); "(travelling)" stays on the spouse and child.
+  const labels = JSON.stringify(file).match(/"role":"[a-z_]+","label":"[^"]*"/g) ?? [];
+  ok("C11.12 QA-143 fail: no participant in samples/wave1.json is labelled the bare \"Applicant\"", labels.length >= 6 && !labels.some((l) => /"label":"Applicant"/.test(l)), labels.filter((l) => /"Applicant"/.test(l)));
+  ok("C11.12 QA-143 pass (P-209): Visitor visa's principal reads \"Principal applicant\" and its spouse keeps \"(travelling)\"", /"role":"principal","label":"Principal applicant"[^\]]*"role":"spouse_or_partner","label":"Spouse or partner \(travelling\)"/.test(JSON.stringify(file.programs.find((p: { categories: { key: string }[] }) => p.categories.some((c) => c.key === "visitors.visitor_visa")))), null);
 
   await call("POST", "/demo/reset", { confirm: "RESET" });
   const wrong = await call("POST", "/demo/load", { sample: "everything" });
