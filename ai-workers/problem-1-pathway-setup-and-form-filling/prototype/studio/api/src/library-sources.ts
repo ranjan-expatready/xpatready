@@ -194,6 +194,7 @@ export class LibrarySources {
     const all = await this.db.logicalSection.findMany({ where: { workspaceId }, orderBy: { version: "desc" } });
     const rows = all.filter((s) => s.sectionKey === key);
     if (!rows.length) throw problem(404, "Not found", `There is no section ${key}.`);
+    if (rows[0].status === "RETIRED") throw problem(409, "Retired", `The section "${rows[0].title}" is retired: it takes no new use or change. Restore it in Shared library › Sections first.`); // C11.9
     const latest = new Map<string, string>(); for (const s of all) if (!latest.has(s.sectionKey)) latest.set(s.sectionKey, s.title);
     const twin = [...latest].find(([k, t]) => k !== key && normalizeLabel(t) === normalizeLabel(b.name));
     if (twin) throw problem(409, "Same name", `There is already a section called "${twin[1]}". Use that one, or choose another title.`);

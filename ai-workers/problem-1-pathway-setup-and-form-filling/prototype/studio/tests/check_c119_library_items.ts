@@ -47,6 +47,7 @@ const why = { reason: "Not needed by any setup any more." };
 
   // ─────────────────── BR-9 delete only the never-released and unused; BR-8 a second person
   field("person.c119_unused_draft", "DRAFT");
+  sql("update canonical_field set updated_by = 'user-B' where canonical_field_key = 'person.c119_unused_draft'"); // another person's draft: the second-person path (an own draft is deleted at once, pack 3)
   r = await call("POST", "/library/fields/person.c119_unused_draft/retire", why);
   ok("C11.9 BR-9 fail: a never-released field is not retired (409: delete it instead)", r.status === 409 && /never released: delete it instead/.test(r.body?.detail), r.body?.detail);
   ok("C11.9 reason fail: a delete without a reason is refused (400), nothing written", (await call("DELETE", "/library/fields/person.c119_unused_draft", {})).status === 400 && Number(sql("select count(*) from library_change where key='person.c119_unused_draft'")) === 0);
@@ -98,6 +99,7 @@ const why = { reason: "Not needed by any setup any more." };
   const trow = ((await call("GET", "/library/document-types")).body as { documentTypeKey: string; retired: boolean; row_action: string }[]).find((t) => t.documentTypeKey === "c119_unused_type");
   ok("C11.9 BR-10 pass: its row is marked retired and offers Restore", trow?.retired === true && trow.row_action === "RESTORE", trow);
   docType("c119_draft_type", "DRAFT");
+  sql("update document_type set updated_by = 'user-B' where document_type_key = 'c119_draft_type'");
   const ddel = await call("DELETE", "/library/document-types/c119_draft_type", why);
   r = await call("POST", `/library/changes/${ddel.body.id}/approve`, {}, "user-B");
   ok("C11.9 pass: a never-released, unused document type is deleted at approval", r.status < 300 && status("document_type", "document_type_key", "c119_draft_type") === "", r.body?.status);

@@ -91,6 +91,27 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await p.getByLabel("Filter").selectOption("retired");
     step("C11.9 BR-10: the Retired filter says when nothing is retired", /No document type is retired/.test(await p.locator("main").innerText()));
 
+    // ── Sections (same guard): a used section's Retire is refused, linking each combination
+    await go("/library/sections");
+    const sec = row(sql("select section_key from sqr_section_selection group by section_key order by count(*) desc limit 1"));
+    await sec.locator('[data-action="RETIRE"]').click();
+    await p.locator("[data-item-panel] [data-where-panel]").waitFor({ timeout: 15000 });
+    step("C11.9 sections: a used section's Retire is refused in words, each use linked", /Can't retire yet/.test(await p.locator("[data-item-panel]").innerText()) && (await p.locator("[data-item-panel] [data-stops] a[href^='/c/']").count()) >= 1);
+    await p.keyboard.press("Escape");
+    // ── the author's own draft: Delete at once, then Undo (P-116 amended)
+    sql("insert into canonical_field (id, workspace_id, canonical_field_key, version, status, meaning, value_type, data_type, scope, subject_kind, origin, updated_by, label, label_checked) select gen_random_uuid(), id, 'person.c119_mine', 1, 'DRAFT', 'My own draft field.', 'text', 'STRING', 'CLIENT_LEVEL', 'PERSON', 'HUMAN', 'user-A', 'My draft field', true from workspace where key='demo'");
+    await go("/library/fields"); await search("c119_mine");
+    await row("person.c119_mine").locator('[data-action="DELETE"]').click();
+    const own = p.locator('[data-impact-panel="DELETE"]'); await own.waitFor({ timeout: 15000 });
+    step("C11.9 own draft: the confirm deletes at once (no reason, no second person)", (await own.locator("#lifecycle-reason").count()) === 0 && /^Delete$/.test((await own.locator("[data-confirm-send]").innerText()).trim()));
+    await own.locator("[data-confirm-send]").click();
+    await p.locator("[data-undo-toast]").waitFor({ timeout: 10000 });
+    await p.waitForFunction(() => !document.querySelector('tr[data-item="person.c119_mine"]'), null, { timeout: 10000 });
+    step("C11.9 own draft pass: it is gone from the list and the toast says Deleted with Undo", /Deleted "My draft field"/.test(await p.locator("[data-undo-toast]").innerText()) && sql("select count(*) from canonical_field where canonical_field_key='person.c119_mine'") === "0");
+    await p.locator("[data-undo]").click();
+    await p.waitForFunction(() => !!document.querySelector('tr[data-item="person.c119_mine"]'), null, { timeout: 10000 });
+    step("C11.9 own draft Undo pass: it is back as the same draft", sql("select status from canonical_field where canonical_field_key='person.c119_mine'") === "DRAFT");
+
     // ── the Fields table fits at 1024 px (the action sits in the Status cell, no extra column)
     await p.setViewportSize({ width: 1024, height: 800 }); await go("/library/fields");
     step("C11.9 1024 px pass: Fields has no sideways scroll", await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1 && [...document.querySelectorAll("main table")].every((t) => (t.parentElement?.scrollWidth ?? 0) <= (t.parentElement?.clientWidth ?? 0) + 1)));

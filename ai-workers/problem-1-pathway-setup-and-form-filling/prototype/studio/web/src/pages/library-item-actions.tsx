@@ -9,7 +9,7 @@ import { api, queryClient, useActorId, useApi } from "@/lib/api";
 import { Button } from "@/components/ui/controls";
 import { BlockedLine, ImpactPanel, RowAction, WherePanel, useUndoToast } from "@/components/lifecycle";
 
-export type ItemList = "fields" | "document-types";
+export type ItemList = "fields" | "document-types" | "sections";
 /** The lifecycle part of a list row (api/src/library-items.ts itemState). */
 export type ItemRow = { key: string; name: string; row_action: LifecycleWord; retired: boolean; change: { id: string; action: string; status: string; by: string | null } | null };
 /** Review minor: a shared field or document type comes back when it is approved (QA-64), not with the next release. */
@@ -35,18 +35,19 @@ export function useItemLifecycle(list: ItemList, refetch: () => Promise<unknown>
   const close = () => { const key = open?.key; setOpen(null); setViewing(false); setTimeout(() => document.querySelector<HTMLElement>(`tr[data-item="${CSS.escape(key ?? "")}"] [data-action]`)?.focus(), 0); };
   // Minor (review and break): Escape closes the panel, as Close does.
   React.useEffect(() => { if (!open) return; const k = (e: KeyboardEvent) => { if (e.key === "Escape") close(); }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); });
-  const after = async () => { await refetch(); void queryClient.invalidateQueries({ queryKey: [list === "fields" ? "fields" : "doc-types"] }); };
+  const after = async () => { await refetch(); void queryClient.invalidateQueries({ queryKey: [list === "fields" ? "fields" : list === "sections" ? "sections" : "doc-types"] }); };
   const send = async (r: ItemRow, reason: string) => {
     setActing({ busy: true, error: null });
     try {
       if (r.row_action === "WITHDRAW") { await api(`/library/changes/${r.change!.id}/withdraw`, { method: "POST", json: { note: reason } }); undo.show(SAY.withdrawn(r.name)); }
       else {
         const kind = r.row_action as Exclude<LifecycleWord, "WITHDRAW">;
-        const c = await api<{ id: string }>(kind === "DELETE" ? path(r.key) : `${path(r.key)}/${kind.toLowerCase()}`, { method: kind === "DELETE" ? "DELETE" : "POST", json: { reason } });
+        const c = await api<{ id: string; immediate?: boolean }>(kind === "DELETE" ? path(r.key) : `${path(r.key)}/${kind.toLowerCase()}`, { method: kind === "DELETE" ? "DELETE" : "POST", json: { reason: reason || SAY.ownDraft } });
         // Break minor: an Undo after the approver has acted says why in words (the toast closes first, then this shows).
-        undo.show(SAY.sent(kind, r.name), async () => {
+        // C11.9 (P-116 amended): an own draft is deleted at once; its Undo puts it back.
+        undo.show(c.immediate ? SAY.deletedNow(r.name, 0) : SAY.sent(kind, r.name), async () => {
           let failed: string | null = null;
-          try { await api(`/library/changes/${c.id}/withdraw`, { method: "POST", json: { note: SAY.undone } }); } catch (e) { failed = (e as Error).message; }
+          try { await api(c.immediate ? `/library/changes/${c.id}/undo` : `/library/changes/${c.id}/withdraw`, { method: "POST", json: c.immediate ? {} : { note: SAY.undone } }); } catch (e) { failed = (e as Error).message; }
           await after();
           // Shown after the toast closes itself (its finally), so the words stay (review round 2 minor).
           if (failed) setTimeout(() => undo.show(`Not undone: ${failed}`), 0);
@@ -59,7 +60,7 @@ export function useItemLifecycle(list: ItemList, refetch: () => Promise<unknown>
   /** Edit (or View) and the row's one written action. */
   const action = (r: ItemRow, onEdit: () => void) => (
     <RowAction kind={r.row_action} why={!canAuthor ? WHY.author : r.change?.action === "ADD" && r.row_action !== "WITHDRAW" ? "Its addition waits on To review: decide it there first." : null} tip={r.row_action === "DELETE" ? TIP.DELETE(0, false) : r.row_action === "RETIRE" ? TIP.RETIRE(false) : r.row_action === "RESTORE" ? ITEM_RESTORE_TIP : TIP.WITHDRAW(r.name)}
-      canEdit={canAuthor && list === "fields"} name={r.name} reasonId={domId(r.key)} onEdit={onEdit} onAction={() => start(r)} editTip={canAuthor && list === "fields" ? "Open it: rename, where it is used, its history." : "See where it is used and its history."} />
+      canEdit={canAuthor && list !== "document-types"} name={r.name} reasonId={domId(r.key)} onEdit={onEdit} onAction={() => start(r)} editTip={canAuthor && list !== "document-types" ? (list === "sections" ? "Rename it." : "Open it: rename, where it is used, its history.") : "See where it is used and its history."} />
   );
   const kind = open?.row_action;
   // A use that stops a delete but not a retire (a library form's field reads it) is kept, not stopping, for Retire.
@@ -87,7 +88,7 @@ export function useItemLifecycle(list: ItemList, refetch: () => Promise<unknown>
             <div className="flex justify-end border-t border-border px-5 py-3"><Button variant="ghost" autoFocus onClick={close}>Close</Button></div>
           </aside>
         ) : (
-          <ImpactPanel key={`impact-${open.key}`} kind={kind!} name={open.name} goes={kind === "DELETE" ? shown?.uses.filter((u) => u.kind === "placement").map((u) => ({ label: u.label })) : undefined} kept={kind === "RETIRE" ? shown?.uses.filter((u) => !u.blocks && u.kind !== "draft_change").map((u) => u.label) : undefined}
+          <ImpactPanel key={`impact-${open.key}`} kind={kind!} name={open.name} immediate={kind === "DELETE" && !!uses.data?.immediate} goes={kind === "DELETE" ? shown?.uses.filter((u) => u.kind === "placement").map((u) => ({ label: u.label })) : undefined} kept={kind === "RETIRE" ? shown?.uses.filter((u) => !u.blocks && u.kind !== "draft_change").map((u) => u.label) : undefined}
             takesEffect={kind === "RETIRE" || kind === "RESTORE" ? SAY.takesEffect("DELETE") : undefined} body={kind === "RESTORE" ? ITEM_RESTORE_BODY : undefined} busy={acting.busy} error={acting.error} onCancel={close} onSend={(reason) => void send(open, reason)} />
         )}
       </div>

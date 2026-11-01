@@ -114,7 +114,7 @@ export function FieldPage() {
           {!place ? <Notice tone="warn">Not placed: nobody is asked for this value yet, so form fields that read it stay unresolved in a case unless a supported document supplies it.</Notice> : null}
           {p ? <>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Section"><Select value={p.sectionKey} onChange={(e) => setP({ ...p, sectionKey: e.target.value })}><option value="">Choose a section</option>{(sections.data ?? []).map((s) => <option key={s.key} value={s.key}>{s.title}</option>)}</Select></Field>
+              <Field label="Section"><Select value={p.sectionKey} onChange={(e) => setP({ ...p, sectionKey: e.target.value })}><option value="">Choose a section</option>{(sections.data ?? []).filter((x) => !x.retired || x.key === p.sectionKey).map((s) => <option key={s.key} value={s.key}>{s.title}</option>)}</Select></Field>
               <Field label="Collected from"><Select value={p.collectedFrom} onChange={(e) => setP({ ...p, collectedFrom: e.target.value })}>{COLLECTED.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select></Field>
               <Field label="Repeats"><Select value={p.repeats} onChange={(e) => setP({ ...p, repeats: e.target.value })}><option value="once_per_case">Once per case</option><option value="per_person">For each person the forms need</option><option value="per_row">For each row (history, children)</option></Select></Field>
               <Field label="Question text" hint="Optional; the meaning is used when empty."><Input value={p.questionText} onChange={(e) => setP({ ...p, questionText: e.target.value })} /></Field>
@@ -160,12 +160,19 @@ export function FieldPage() {
 export function SectionsPage() {
   const s = useApi<any[]>(["sections"], "/library/sections");
   const [editing, setEditing] = React.useState<{ key: string; title: string } | null>(null);
+  // C11.9: delete, retire and restore through the one guard; a retired section is listed only under "Retired".
+  const canAuthor = useCanAuthor();
+  const life = useItemLifecycle("sections", () => s.refetch(), canAuthor);
+  const [retired, setRetired] = React.useState(false);
+  const shownRows = (s.data ?? []).filter((x) => !!x.retired === retired);
   return (
-    <div className="mx-auto max-w-6xl space-y-4">
+    <TipProvider><div className="mx-auto max-w-6xl space-y-4">
       <div><h1 className="text-xl font-semibold">Sections</h1><p className="mt-1 text-sm text-text-muted">Reusable groups of questions. Each combination selects the sections its questionnaire uses.</p><Origin>the forms' own parts, each confirmed on To review. Nothing is added by hand; a combination picks its sections on its Questionnaires tab.</Origin></div>
-      {s.isLoading ? <Spinner label="Loading" /> : !s.data?.length ? <EmptyState title="No sections yet" description="Sections come with the forms' parts; add a form first." /> : <Table head={["Section", "Meaning", "Questions", "Used by combinations", "Status", ""]}>{s.data.map((x) => <tr key={x.key}><td className="font-medium">{x.title}</td><td className="max-w-lg text-xs text-text-muted">{x.meaning}<SourceNote r={x} /></td><td>{x.questions}</td><td className="text-xs">{usedWords(x.used_in)}</td><td><ListPill origin={x.origin} status={x.status} /></td><td><Button variant="ghost" size="sm" aria-label={`Rename ${x.title}`} onClick={() => setEditing({ key: x.key, title: x.title })}><Pencil /> Rename</Button></td></tr>)}</Table>}
+      <div className="flex items-center gap-2"><Select className="w-56" value={retired ? "retired" : "current"} onChange={(e) => setRetired(e.target.value === "retired")} aria-label="Filter"><option value="current">Current sections</option><option value="retired">Retired</option></Select><span className="text-xs text-text-muted">{shownRows.length} of {s.data?.length ?? 0}</span></div>
+      {s.isLoading ? <Spinner label="Loading" /> : !s.data?.length ? <EmptyState title="No sections yet" description="Sections come with the forms' parts; add a form first." /> : !shownRows.length ? <p className="text-sm text-text-muted">{retired ? "No section is retired." : "Every section is retired: choose Retired to see them."}</p> : <Table head={["Section", "Meaning", "Questions", "Used by combinations", "Status"]}>{shownRows.map((x) => <tr key={x.key} data-item={x.key}><td className="font-medium">{x.title}</td><td className="max-w-lg text-xs text-text-muted">{x.meaning}<SourceNote r={x} /></td><td>{x.questions}</td><td className="text-xs">{usedWords(x.used_in)}</td><td>{x.retired ? <Pill>Retired</Pill> : <ListPill origin={x.origin} status={x.status} />}<ItemStatusNote r={x} /><div className="mt-1.5">{life.action({ ...x, name: x.title }, () => (x.retired ? life.view({ ...x, name: x.title }) : setEditing({ key: x.key, title: x.title })))}</div></td></tr>)}</Table>}
       {editing ? <RenameSection section={editing} onClose={() => setEditing(null)} /> : null}
-    </div>
+      {life.node}
+    </div></TipProvider>
   );
 }
 

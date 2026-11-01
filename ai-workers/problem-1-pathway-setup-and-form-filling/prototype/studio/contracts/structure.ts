@@ -88,6 +88,8 @@ export type UsesView = {
   can: { delete: string | null; retire: string | null; restore: string | null };
   /** A combination row: its own combination is retired or restored with the name, in one approval (P-128, Lead 28 Oct). */
   withCombination?: boolean;
+  /** C11.9: the author's own never-released, unused draft: a delete takes effect at once, with Undo (P-116 amended). */
+  immediate?: boolean;
   pending: { id: string; action: LifecycleAction; by: string | null } | null;
   /** Its Activity lines, newest first (added, renamed, reordered, proposed, removed …). */
   history: { at: string; by: string | null; what: string }[];

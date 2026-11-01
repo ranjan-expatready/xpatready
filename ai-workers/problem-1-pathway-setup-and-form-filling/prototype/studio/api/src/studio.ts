@@ -498,6 +498,7 @@ export class Studio {
     if (!(await this.db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: key } }))) fail(`No field ${key}.`, HttpStatus.NOT_FOUND);
     await refuseRetired(this.db, workspaceId, "field", [key]); // C11.9 break M1: a retired field takes no new placement
     if (!(await this.db.logicalSection.findFirst({ where: { workspaceId, sectionKey: b.sectionKey } }))) fail("Choose an existing section (or create one first).");
+    await refuseRetired(this.db, workspaceId, "section", [b.sectionKey]); // C11.9: a retired section takes no new question
     if (!COLLECTED.includes(b.collectedFrom)) fail(`Collected from must be one of: ${COLLECTED.join(", ")}.`);
     if (!["once_per_case", "per_person", "per_row"].includes(b.repeats)) fail("Repeats must be once per case, per person or per row.");
     const types = await this.libraryTypes(workspaceId);
@@ -526,8 +527,8 @@ export class Studio {
     const seen = new Set<string>();
     const qs = await this.db.sectionQuestion.groupBy({ by: ["sectionKey"], where: { workspaceId }, _count: { _all: true } });
     const sel = await this.db.sqrSectionSelection.groupBy({ by: ["sectionKey"], where: { workspaceId }, _count: { _all: true } });
-    const [src, used] = await Promise.all([this.lib.all("section", workspaceId), this.lib.usedIn("section", workspaceId)]);
-    return rows.filter((r) => !seen.has(r.sectionKey) && seen.add(r.sectionKey)).map((r) => ({ ...sourceSummary(src.get(r.sectionKey)), used_in: used.get(r.sectionKey) ?? [], key: r.sectionKey, title: r.title, meaning: r.meaning, version: r.version, status: r.status, origin: r.origin, questions: qs.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0, combinations: sel.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0 }));
+    const [src, used, open] = await Promise.all([this.lib.all("section", workspaceId), this.lib.usedIn("section", workspaceId), openItemChanges(this.db, workspaceId, "section")]);
+    return rows.filter((r) => !seen.has(r.sectionKey) && seen.add(r.sectionKey)).map((r) => ({ ...itemState(rows.filter((x) => x.sectionKey === r.sectionKey), open.get(r.sectionKey), "section"), ...sourceSummary(src.get(r.sectionKey)), used_in: used.get(r.sectionKey) ?? [], key: r.sectionKey, title: r.title, meaning: r.meaning, version: r.version, status: r.status, origin: r.origin, questions: qs.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0, combinations: sel.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0 }));
   }
 
   /** QA-93 (P-116): removing answers with the place the section had, so Undo adds it back in the same place. */
@@ -538,6 +539,7 @@ export class Studio {
     if (c.retiredAt) fail(`"${c.label}" is retired: its questionnaire is not changed. Restore it on Structure first; open cases keep their release.`, HttpStatus.CONFLICT);
     const section = await this.db.logicalSection.findFirst({ where: { workspaceId: c.workspaceId, sectionKey }, orderBy: { version: "desc" } });
     if (on && !section) fail("That section is not in the shared library (it may have been removed by a reset). Reload, then choose one from the list.", HttpStatus.NOT_FOUND);
+    if (on) await refuseRetired(this.db, c.workspaceId, "section", [sectionKey]); // C11.9: a retired section takes no new combination
     const title = section?.title ?? "That section";
     let sectionOrder: number | null = null;
     // #201 review m3: adding a section already chosen, or removing one that is not, changes nothing and writes no history.

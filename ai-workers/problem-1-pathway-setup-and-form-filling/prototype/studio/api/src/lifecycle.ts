@@ -13,9 +13,9 @@ import { applyFills } from "./who-fills.ts";
 import { RECHECK, WHY } from "../../contracts/lifecycle.ts";
 
 /** The entity an audit line names for a library change (the same on every line about it). */
-const entityOf = (kind: string) => (kind === "structure_node" ? "structure" : kind === "library_form" ? "form" : kind === "field" ? "field" : kind === "document_type" ? "document type" : "combination");
+const entityOf = (kind: string) => (kind === "structure_node" ? "structure" : kind === "library_form" ? "form" : kind === "field" ? "field" : kind === "document_type" ? "document type" : kind === "section" ? "section" : "combination");
 import { formUses, hasApprovedFile } from "./form-uses.ts";
-import { applyItem, isItemLifecycle, itemUses, recheckItem, ITEM_KINDS, type ItemKind } from "./library-items.ts";
+import { applyItem, deleteOwnItem, isItemLifecycle, itemUses, ITEM_OWN_NOTE, recheckItem, undoOwnItem, ITEM_KINDS, type ItemKind } from "./library-items.ts";
 import { rememberDeletion } from "./library-deletions.ts";
 import { newestEdition } from "../../engine/programs.ts";
 import { acceptsOf, allowedChannels, lineOf, notAcceptedWords, notNeededWords, type AcceptRecord } from "../../engine/channels.ts";
@@ -207,16 +207,22 @@ export class Lifecycle {
     return rows.map((r) => ({ at: r.at.toISOString(), by: nameOf(r.actor) ?? (r.actor === "system" ? "The studio" : r.actor), what: r.summary }));
   }
 
-  private async usesOf(kind: LifecycleKind | ItemKind, key: string) { if (isItem(kind)) return itemUses(this.db, await this.ws.id(), kind, key); return kind === "structure_node" ? this.nodeUses(key) : kind === "library_form" ? formUses(this.db, await this.ws.id(), key) : this.combinationUses(key); }
+  private async usesOf(kind: LifecycleKind | ItemKind, key: string, actorId?: string) { if (isItem(kind)) return itemUses(this.db, await this.ws.id(), kind, key, undefined, actorId); return kind === "structure_node" ? this.nodeUses(key) : kind === "library_form" ? formUses(this.db, await this.ws.id(), key) : this.combinationUses(key); }
   private refusal(u: UsesView, action: LifecycleAction) { return action === "DELETE" ? u.can.delete : action === "RETIRE" ? u.can.retire : u.can.restore; }
 
   /** Delete, retire or restore proposed by an author: checked now, waiting for a different person (L4). */
   async propose(actor: Actor, kind: LifecycleKind | ItemKind, key: string, action: LifecycleAction, reason: string) {
     need(actor, "author");
     const workspaceId = await this.ws.id();
-    const u = await this.usesOf(kind, key);
+    const u = await this.usesOf(kind, key, actor.id);
     const no = this.refusal(u, action);
     if (no) throw problem(409, `Cannot ${action.toLowerCase()}`, no, { uses: u.uses });
+    // C11.9 (P-116 amended, pack 3): the author's own never-released, unused draft is deleted at once, with Undo.
+    if (isItem(kind) && action === "DELETE" && u.immediate) {
+      const c = await deleteOwnItem(this.db, actor.id, workspaceId, kind, key, u.label, reason);
+      await this.audit.log(workspaceId, actor.id, "deleted", entityOf(kind), key, `${actor.name} deleted "${u.label}": their own draft, never approved, released or used`);
+      return { ...changeView(c), immediate: true };
+    }
     if (kind === "structure_node" && action === "DELETE") {
       const g = await graph(this.db, workspaceId), f = await this.facts(workspaceId, g, key);
       if (ownDraft(f, actor.id)) return this.deleteOwnDraft(actor, workspaceId, g, f, reason);
@@ -307,6 +313,11 @@ export class Lifecycle {
   async undoOwnDelete(actor: Actor, id: string) {
     need(actor, "author");
     const c = await this.db.libraryChange.findUnique({ where: { id } });
+    if (c && isItemLifecycle(c) && c.action === "DELETE" && c.decisionNote === ITEM_OWN_NOTE) {
+      await undoOwnItem(this.db, actor.id, c);
+      await this.audit.log(c.workspaceId, actor.id, "restored", entityOf(c.kind), c.key, `${actor.name} undid deleting "${c.label ?? c.key}": it is back`);
+      return changeView((await this.db.libraryChange.findUnique({ where: { id } }))!);
+    }
     if (!c || c.kind !== "structure_node" || c.action !== "DELETE" || c.status !== "RELEASED" || c.decisionNote !== OWN_DRAFT_NOTE) throw problem(409, "Cannot undo", "Only a delete of your own draft can be undone here.");
     if (c.proposedBy !== actor.id) throw problem(403, "Not yours", "Only the person who deleted it can undo it.");
     const rows = ((c.matches as { rows?: Record<string, unknown>[] }).rows ?? []) as (ProgramDef & Record<string, unknown>)[];

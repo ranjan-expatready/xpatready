@@ -12,7 +12,7 @@ import { ACTORS, type Db } from "./core.ts";
 import { combinationTrails } from "./form-uses.ts";
 import { current, LibrarySources } from "./library-sources.ts";
 
-export const ITEM_KINDS = ["field", "document_type"] as const;
+export const ITEM_KINDS = ["field", "document_type", "section"] as const;
 export type ItemKind = (typeof ITEM_KINDS)[number];
 const LIFECYCLE_ACTIONS = ["DELETE", "RETIRE", "RESTORE"];
 /** A delete, retire or restore of a shared field or document type (never a field's ADD, which keeps its own path). */
@@ -23,10 +23,15 @@ const problem = (status: number, title: string, detail: string, extra: Record<st
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
 const fieldWord = (key: string) => { const w = (key.split(".").pop() ?? key).replace(/_/g, " "); return w.charAt(0).toUpperCase() + w.slice(1); };
 
-type Version = { id: string; status: string; version: number };
+type Version = { id: string; status: string; version: number; updatedBy?: string };
+/** C11.9 (P-116 amended): the note on an own draft deleted at once (its Undo puts the same rows back). */
+export const ITEM_OWN_NOTE = "Deleted at once: the author's own draft, never approved, released or used.";
+const KIND_WORD: Record<ItemKind, string> = { field: "field", document_type: "document type", section: "section" };
+const LIST_WORD: Record<ItemKind, string> = { field: "Fields", document_type: "Document types", section: "Sections" };
 async function versionsOf(db: Db | Prisma.TransactionClient, kind: ItemKind, workspaceId: string, key: string) {
-  if (kind === "field") return (await db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: key }, orderBy: { version: "desc" }, select: { id: true, status: true, version: true, label: true, labelChecked: true, mergedIntoKey: true, groupKey: true } })).map((r) => ({ ...r, name: (r.labelChecked && r.label) || fieldWord(key) }));
-  return (await db.documentType.findMany({ where: { workspaceId, documentTypeKey: key }, orderBy: { version: "desc" }, select: { id: true, status: true, version: true, name: true } }));
+  if (kind === "field") return (await db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: key }, orderBy: { version: "desc" }, select: { id: true, status: true, version: true, label: true, labelChecked: true, mergedIntoKey: true, groupKey: true, updatedBy: true } })).map((r) => ({ ...r, name: (r.labelChecked && r.label) || fieldWord(key) }));
+  if (kind === "section") return (await db.logicalSection.findMany({ where: { workspaceId, sectionKey: key }, orderBy: { version: "desc" }, select: { id: true, status: true, version: true, title: true, updatedBy: true } })).map((r) => ({ ...r, name: r.title }));
+  return (await db.documentType.findMany({ where: { workspaceId, documentTypeKey: key }, orderBy: { version: "desc" }, select: { id: true, status: true, version: true, name: true, updatedBy: true } }));
 }
 /** Its state from its versions: released once any version left draft; retired when no version is published or draft. */
 /** Break round 2 (Major 1): every action of an item is serialised on one advisory lock, taken inside the transaction
@@ -38,7 +43,7 @@ export const stateOf = (v: Version[]) => ({ released: v.some((r) => r.status !==
 
 /** Where a shared field or document type is used (L3, L6), and what may be done with it now. `except` leaves one change
  *  out of the open-change check (the returned change being sent again, or the one being approved). */
-export async function itemUses(db: Db, workspaceId: string, kind: ItemKind, key: string, except?: string): Promise<UsesView> {
+export async function itemUses(db: Db, workspaceId: string, kind: ItemKind, key: string, except?: string, actorId?: string): Promise<UsesView> {
   const versions = await versionsOf(db, kind, workspaceId, key);
   if (!versions.length) throw problem(404, "Not in the library", `${key} is not in the shared library (it may have been deleted or reset).`);
   const name = versions[0].name;
@@ -71,7 +76,7 @@ export async function itemUses(db: Db, workspaceId: string, kind: ItemKind, key:
     const label = trails.get(id) ?? c.label;
     // Break M3: a retired combination's draft still names it, so it blocks a delete (never a retire: it keeps it).
     uses.push(c.retiredAt ? { kind: "combination", label, href: `/c/${id}`, blocks: true, retireOk: true, why: "Combination retired: it keeps it, so it can be retired, not deleted" }
-      : { kind: "combination", label, href: kind === "document_type" ? `/c/${id}/documents` : `/c/${id}`, blocks: true, why: kind === "document_type" ? "Its document checklist lists it: remove the line there first" : "Its setup reads it: remove it there first" });
+      : { kind: "combination", label, href: kind === "document_type" ? `/c/${id}/documents` : `/c/${id}`, blocks: true, why: kind === "document_type" ? "Its document checklist lists it: remove the line there first" : kind === "section" ? "Its questionnaire uses it: remove it there first" : "Its setup reads it: remove it there first" });
   }
   // A field read by a form field of a library form no combination uses yet: it blocks a delete, never a retire.
   if (kind === "field") {
@@ -92,8 +97,13 @@ export async function itemUses(db: Db, workspaceId: string, kind: ItemKind, key:
     const types = current(await db.documentType.findMany({ where: { workspaceId, suppliesFacts: { has: key } }, select: { documentTypeKey: true, name: true, version: true, status: true } }), (t) => t.documentTypeKey);
     for (const t of types) uses.push({ kind: "form_field", label: `Document type "${t.name}" supplies it`, href: "/library/documents", blocks: true, retireOk: true, why: "A document type supplies it: it can be retired, not deleted" });
   }
+  // C11.9 sections: the questions placed in it: they stop a delete (they would be left without a section), not a retire.
+  if (kind === "section") {
+    const qs = current(await db.sectionQuestion.findMany({ where: { workspaceId, sectionKey: key }, select: { lineageKey: true, version: true, status: true } }), (q) => q.lineageKey);
+    if (qs.length) uses.push({ kind: "child", label: `${qs.length} question${qs.length === 1 ? "" : "s"} placed in it`, href: "/library/fields", blocks: true, retireOk: true, why: "Questions are placed in it: it can be retired, not deleted" });
+  }
   // Releases keep it, never changed (L2): listed, never blocking.
-  const path = kind === "field" ? "canonical_fields" : "document_types", prop = kind === "field" ? "id" : "key";
+  const path = kind === "field" ? "canonical_fields" : kind === "section" ? "sections" : "document_types", prop = kind === "document_type" ? "key" : "id";
   const released = await db.$queryRaw<{ combination_id: string; version: number }[]>`
     SELECT r.combination_id, r.version FROM config_release r WHERE r.workspace_id = ${workspaceId}::uuid AND r.snapshot->${path} @> jsonb_build_array(jsonb_build_object(${prop}::text, ${key}::text)) ORDER BY r.version DESC`;
   const newest = new Map<string, number>(); for (const r of released) if (!newest.has(r.combination_id)) newest.set(r.combination_id, Number(r.version));
@@ -113,6 +123,8 @@ export async function itemUses(db: Db, workspaceId: string, kind: ItemKind, key:
   }
   const stops = uses.filter((u) => u.blocks && u.kind !== "draft_change");
   const stopsRetire = stops.filter((u) => !u.retireOk);
+  // P-116 amended (pack 3): the author's own draft, never released, used nowhere, is deleted at once, with Undo.
+  const immediate = !merged && !pending && !st.released && !released.length && !stops.length && !!actorId && (versions as Version[]).every((r) => r.status === "DRAFT" && r.updatedBy === actorId);
   const history = (await db.auditEvent.findMany({ where: { workspaceId, entityKey: key, combinationId: null }, orderBy: { at: "desc" }, take: 10, select: { at: true, actor: true, summary: true } })).map((r) => ({ at: r.at.toISOString(), by: nameOf(r.actor) ?? (r.actor === "system" ? "The studio" : r.actor), what: r.summary }));
   return { key, label: name, trail: [name], retired: st.retired, released: st.released || released.length > 0, uses,
     can: {
@@ -120,6 +132,7 @@ export async function itemUses(db: Db, workspaceId: string, kind: ItemKind, key:
       retire: p ?? (st.retired ? WHY.alreadyRetired : !st.released ? WHY.neverReleased : st.draft ? WHY.draftVersion : stopsRetire.length ? WHY.usedBy(stopsRetire.map((u) => u.label)) : null),
       restore: p ?? (!st.retired ? WHY.notRetired : nameTaken),
     },
+    immediate,
     pending: pending && pending.action !== "ADD" ? { id: pending.id, action: pending.action as "DELETE" | "RETIRE" | "RESTORE", by: nameOf(pending.proposedBy) } : null, history };
 }
 
@@ -128,7 +141,7 @@ export async function itemUses(db: Db, workspaceId: string, kind: ItemKind, key:
 export async function refuseRetired(db: Db | Prisma.TransactionClient, workspaceId: string, kind: ItemKind, keys: (string | null | undefined)[]) {
   for (const key of [...new Set(keys.filter((k): k is string => !!k))]) {
     const v = await versionsOf(db, kind, workspaceId, key);
-    if (v.length && stateOf(v).retired) throw problem(409, "Retired", `${kind === "field" ? "The field" : "The document type"} "${v[0].name}" is retired: it takes no new use or change. Restore it in Shared library › ${kind === "field" ? "Fields" : "Document types"} first, or choose another.`, { key });
+    if (v.length && stateOf(v).retired) throw problem(409, "Retired", `The ${KIND_WORD[kind]} "${v[0].name}" is retired: it takes no new use or change. Restore it in Shared library › ${LIST_WORD[kind]} first, or choose another.`, { key });
   }
 }
 /** The keys of retired shared fields (conditions may not read them, C11.9). */
@@ -166,7 +179,7 @@ export async function applyItem(tx: Prisma.TransactionClient, c: LibraryChange):
     return false;
   }
   const v = await versionsOf(tx, kind, c.workspaceId, c.key);
-  const set = (id: string, status: "PUBLISHED" | "RETIRED") => kind === "field" ? tx.canonicalField.update({ where: { id }, data: { status } }) : tx.documentType.update({ where: { id }, data: { status } });
+  const set = (id: string, status: "PUBLISHED" | "RETIRED") => kind === "field" ? tx.canonicalField.update({ where: { id }, data: { status } }) : kind === "section" ? tx.logicalSection.update({ where: { id }, data: { status } }) : tx.documentType.update({ where: { id }, data: { status } });
   if (c.action === "RETIRE") { const cur = v.find((r) => r.status === "PUBLISHED"); if (!cur) throw problem(409, "No longer allowed", "It has no published version to retire: return this change."); await set(cur.id, "RETIRED"); }
   else if (c.action === "RESTORE") { const cur = v.find((r) => r.status === "RETIRED"); if (!cur) throw problem(409, "No longer allowed", "It is not retired: return this change."); await set(cur.id, "PUBLISHED"); }
   else {
@@ -174,7 +187,8 @@ export async function applyItem(tx: Prisma.TransactionClient, c: LibraryChange):
     if (kind === "field") {
       await tx.sectionQuestion.deleteMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: c.key, status: "DRAFT" } });
       await tx.canonicalField.deleteMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: c.key, status: "DRAFT" } });
-    } else await tx.documentType.deleteMany({ where: { workspaceId: c.workspaceId, documentTypeKey: c.key, status: "DRAFT" } });
+    } else if (kind === "section") await tx.logicalSection.deleteMany({ where: { workspaceId: c.workspaceId, sectionKey: c.key, status: "DRAFT" } });
+    else await tx.documentType.deleteMany({ where: { workspaceId: c.workspaceId, documentTypeKey: c.key, status: "DRAFT" } });
   }
   return true;
 }
@@ -194,4 +208,68 @@ export function itemState(v: Version[], open?: { id: string; action: string; sta
   const st = stateOf(v);
   // A document type's waiting ADD keeps its state's action, greyed on the row (its addition is decided on To review).
   return { retired: st.retired, released: st.released, row_action: open && !(open.action === "ADD" && kind === "document_type") ? "WITHDRAW" : st.retired ? "RESTORE" : st.released ? "RETIRE" : "DELETE", change: open ?? null };
+}
+
+// ── C11.9 (P-116 amended, pack 3): the author's own draft deleted at once, and its Undo ──
+type Row = Record<string, unknown>;
+/** Deletes an own never-released, unused draft at once (checked again under its lock) and records it as one change the
+ *  author can undo; returns that change. */
+export async function deleteOwnItem(db: Db, actorId: string, workspaceId: string, kind: ItemKind, key: string, label: string, reason: string): Promise<LibraryChange> {
+  return db.$transaction(async (tx) => {
+    await lockItem(tx, workspaceId, kind, [key]);
+    const u = await itemUses(tx as unknown as Db, workspaceId, kind, key, undefined, actorId);
+    if (!u.immediate) throw problem(409, "Cannot delete at once", u.can.delete ?? "It changed meanwhile: reload it.");
+    let rows: Row[] = [], questions: Row[] = [];
+    if (kind === "field") {
+      questions = await tx.sectionQuestion.findMany({ where: { workspaceId, canonicalFieldKey: key, status: "DRAFT" } }) as Row[];
+      rows = await tx.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: key } }) as Row[];
+      await tx.sectionQuestion.deleteMany({ where: { workspaceId, canonicalFieldKey: key, status: "DRAFT" } });
+      await tx.canonicalField.deleteMany({ where: { workspaceId, canonicalFieldKey: key } });
+    } else if (kind === "section") {
+      rows = await tx.logicalSection.findMany({ where: { workspaceId, sectionKey: key } }) as Row[];
+      await tx.logicalSection.deleteMany({ where: { workspaceId, sectionKey: key } });
+    } else {
+      rows = await tx.documentType.findMany({ where: { workspaceId, documentTypeKey: key } }) as Row[];
+      await tx.documentType.deleteMany({ where: { workspaceId, documentTypeKey: key } });
+    }
+    return tx.libraryChange.create({ data: { workspaceId, kind, key, label, action: "DELETE", reason, status: "RELEASED", proposedBy: actorId, decidedBy: actorId, decidedAt: new Date(), decisionNote: ITEM_OWN_NOTE,
+      matches: { rows, questions } as unknown as Prisma.InputJsonValue } });
+  });
+}
+/** A stored row, ready to create again (nulls left to the column's default, so a null JSON column is never written). */
+const again = (r: Row) => Object.fromEntries(Object.entries(r).filter(([, v]) => v !== null));
+/** Undo of an own-draft delete: the same rows come back, unless the key was taken meanwhile. */
+export async function undoOwnItem(db: Db, actorId: string, c: LibraryChange): Promise<void> {
+  if (c.proposedBy !== actorId) throw problem(403, "Not yours", "Only the person who deleted it can undo it.");
+  const kind = c.kind as ItemKind;
+  const m = (c.matches ?? {}) as { rows?: Row[]; questions?: Row[] };
+  await db.$transaction(async (tx) => {
+    await lockItem(tx, c.workspaceId, kind, [c.key]);
+    if ((await versionsOf(tx, kind, c.workspaceId, c.key)).length) throw problem(409, "Cannot undo", `Something named ${c.key} was added meanwhile: add it again instead.`);
+    const done = await tx.libraryChange.updateMany({ where: { id: c.id, status: "RELEASED", decisionNote: ITEM_OWN_NOTE }, data: { status: "WITHDRAWN", decisionNote: "Undone: it is back." } });
+    if (!done.count) throw problem(409, "Cannot undo", "It was undone already.");
+    for (const r of m.rows ?? []) {
+      if (kind === "field") await tx.canonicalField.create({ data: again(r) as Prisma.CanonicalFieldUncheckedCreateInput });
+      else if (kind === "section") await tx.logicalSection.create({ data: again(r) as Prisma.LogicalSectionUncheckedCreateInput });
+      else await tx.documentType.create({ data: again(r) as Prisma.DocumentTypeUncheckedCreateInput });
+    }
+    for (const q of m.questions ?? []) await tx.sectionQuestion.create({ data: again(q) as Prisma.SectionQuestionUncheckedCreateInput });
+  });
+}
+
+/** C11.9 (P-116): the author sets the filing order of a combination's forms: every current form line, each once. */
+export async function reorderForms(db: Db, actor: { id: string; name: string; duties: readonly string[] }, combinationId: string, body: unknown) {
+  if (!(actor.duties as readonly string[]).includes("author")) throw problem(403, "Not allowed", `${actor.name} (simulated) does not hold the author duty.`);
+  const c = await db.combination.findUnique({ where: { id: combinationId }, select: { id: true, workspaceId: true, label: true, retiredAt: true } });
+  if (!c) throw problem(404, "Not found", "This combination does not exist (the demo may have been reset).");
+  if (c.retiredAt) throw problem(409, "Retired", `"${c.label}" is retired: its forms are not changed. Restore it on Structure first.`);
+  const lines = (body as { lines?: unknown } | null)?.lines;
+  if (!Array.isArray(lines) || !lines.every((x) => typeof x === "string")) throw problem(400, "Check the request", "Give the form lines in the order they are filed (lines: a list of line keys).");
+  const now = current(await db.combinationForm.findMany({ where: { combinationId }, select: { lineageKey: true, version: true, status: true } }), (l) => l.lineageKey).map((l) => l.lineageKey);
+  const given = lines as string[];
+  const missing = now.filter((k) => !given.includes(k)), extra = given.filter((k) => !now.includes(k));
+  if (missing.length || extra.length || new Set(given).size !== given.length) throw problem(400, "Every form once", `The filing order lists every form of "${c.label}" once.${missing.length ? ` Missing: ${missing.join(", ")}.` : ""}${extra.length ? ` Not its forms: ${extra.join(", ")}.` : ""}${new Set(given).size !== given.length ? " One is listed twice." : ""} Nothing changed.`);
+  await db.combination.update({ where: { id: combinationId }, data: { formOrder: given } });
+  await db.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: actor.id, action: "reordered", entity: "form", entityKey: combinationId, combinationId, summary: `${actor.name} set the filing order of "${c.label}"'s forms (draft): ${given.join(", ")}`.slice(0, 600) } });
+  return { lines: given };
 }

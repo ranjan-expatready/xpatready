@@ -142,7 +142,7 @@ function Questions({ id, s }: { id: string; s: any }) {
   const [add, setAdd] = React.useState("");
   const sel = useAction((b: { key: string; on: boolean }) => api(`/combinations/${id}/sections/${b.key}`, { method: b.on ? "POST" : "DELETE" }), { success: "Questionnaire sections updated", invalidate: [["config", id], ["combination", id], ["preview"]] });
   const by = (sec: string) => s.placements.filter((p: any) => p.section_id === sec);
-  const unselected = (sections.data ?? []).filter((x) => !s.sections.some((y: any) => y.id === x.key));
+  const unselected = (sections.data ?? []).filter((x) => !x.retired && !s.sections.some((y: any) => y.id === x.key)); // C11.9: retired sections are not offered
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-end gap-2"><Field label="Add a library section to this questionnaire" className="w-96"><Select value={add} onChange={(e) => setAdd(e.target.value)}><option value="">choose a section</option>{unselected.map((x) => <option key={x.key} value={x.key}>{x.title} ({x.questions} questions)</option>)}</Select></Field><Button disabled={!add} onClick={() => { sel.mutate({ key: add, on: true }); setAdd(""); }}><Plus /> Add section</Button><Link to="/library/sections" className="ml-auto text-sm text-text-link underline">Manage sections</Link></div>
