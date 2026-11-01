@@ -16,6 +16,7 @@ import { FieldsPage, FieldPage, SectionsPage, DocumentTypesPage } from "@/pages/
 import { ActivityPage, ReleasesPage } from "@/pages/history";
 import { AiBatchPage, AiWorkPage } from "@/pages/ai";
 import { ToReviewPage } from "@/pages/to-review";
+import { ReturnStrip } from "@/components/return-strip";
 import { StructurePage } from "@/pages/structure";
 import { EditionImpactPage, HeldFilePage, LibraryChangePage, MergeReviewPage, FormFieldsPage } from "@/pages/review-items";
 import { ChangeBatchPage, ProposalsPage } from "@/pages/proposals";
@@ -93,6 +94,8 @@ function Shell() {
             ? <Notice tone="danger" title="The studio did not accept the simulated person">Pick a person under Simulated person, then reload this page. ({(session.error as Error).message})</Notice>
             : <Notice tone="danger" title="The studio server is not answering">Start it with studio/start.sh, then reload this page. ({(session.error as Error).message})</Notice>
             : !session.isPending && !session.data?.actor ? <Notice tone="danger" title="The studio answered without a person">Something between this page and the studio changed its answer. Reload this page; if it stays, restart the studio.</Notice> : null}
+          {/* C2.12: a page opened from a form's guided path keeps the way back (?form=&c=). */}
+          {!casePerson ? <ReturnStrip /> : null}
           {casePerson ? <Notice tone="warn" title="This page is for the configuration people" action={<Link className="whitespace-nowrap text-text-link underline" to="/cases">Open your cases</Link>}>{me.name} (simulated) works on cases. Programs, forms and rules are set up here by the configuration people; your work is in Cases.</Notice> : <Routes>
             <Route path="/" element={<ProgramsPage />} />
             <Route path="/review" element={<ToReviewPage />} />
