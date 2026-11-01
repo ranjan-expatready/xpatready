@@ -137,6 +137,9 @@ export class FormLibrary {
     const shown = shaped.filter((r) => (q.for !== "picker" || (r.status !== "retired" && !!r.edition)) && (!q.type || r.type === q.type) && (!q.usedBy || r.used_by.some((u) => u.id === q.usedBy)) && (!q.status || r.status === q.status) && (!term || r.code.toLowerCase().includes(term) || r.code.toLowerCase().includes(termCode!) || r.title.toLowerCase().includes(term)));
     const count = (pred: (r: (typeof shaped)[number]) => boolean) => shaped.filter(pred).length;
     return { rows: shown, counts: { all: shaped.length, form: count((r) => r.type === "form"), guide: count((r) => r.type === "guide"), checklist: count((r) => r.type === "checklist"), needs_ok: count((r) => r.status === "needs_ok"), no_file: count((r) => r.status === "no_file"), ready: count((r) => r.status === "ready"), newer_file: count((r) => r.status === "newer_file"), retired: count((r) => r.status === "retired") },
+      // X5 slice c review / break M1: the remembered deletions, each with "List again" (an upload cannot add back a number
+      // the file reader does not produce, such as a schedule: this is the one way back that always works).
+      remembered_deletions: (await this.db.libraryFormDeletion.findMany({ where: { workspaceId }, orderBy: { formKey: "asc" } })).map((d) => ({ code: d.formKey, deleted_by: nameOf(d.deletedBy), deleted_at: d.deletedAt.toISOString() })),
       combinations: combos, sample_note: "Which forms a combination needs and what IRCC accepts are Sample until the immigration expert confirms." };
   }
 
@@ -197,8 +200,16 @@ export class FormLibrary {
     // X5 break m1: the count is what this fill created (two fills at once no longer both say "221 new").
     // Break m14 / the outside check on #145: the words count what this fill did, not what it planned: a form another fill created meanwhile
     // is "already in the library", one deleted meanwhile is not counted, and "newer" names only the rows this fill marked.
-    const { created, already, newer } = await this.db.$transaction(async (tx) => {
-      const made = plan.create.length ? (await tx.govFormDef.createMany({ data: plan.create.map((c) => ({ workspaceId, formKey: c.formKey, displayName: c.title, formKind: c.kind, formPageUrl: c.pageUrl, listedOnIndexAt: now, indexDateModified: c.dateModified })), skipDuplicates: true })).count : 0;
+    const { created, already, newer, deleted } = await this.db.$transaction(async (tx) => {
+      // X5 slice c (the tech lead on #138): a form a second person approved deleting is not listed again until a person adds
+      // it back. Read in this transaction; a delete approved while this fill runs is undone below, after the insert.
+      const gone = new Set((await tx.libraryFormDeletion.findMany({ where: { workspaceId }, select: { formKey: true } })).map((d) => d.formKey));
+      const toCreate = plan.create.filter((c) => !gone.has(c.formKey));
+      let made = toCreate.length ? (await tx.govFormDef.createMany({ data: toCreate.map((c) => ({ workspaceId, formKey: c.formKey, displayName: c.title, formKind: c.kind, formPageUrl: c.pageUrl, listedOnIndexAt: now, indexDateModified: c.dateModified })), skipDuplicates: true })).count : 0;
+      // A delete approved meanwhile (its row committed after the read above): this fill's own new row for it goes again.
+      const late = (await tx.libraryFormDeletion.findMany({ where: { workspaceId, formKey: { in: toCreate.map((c) => c.formKey) } }, select: { formKey: true } })).map((d) => d.formKey);
+      if (late.length) { made -= (await tx.govFormDef.deleteMany({ where: { workspaceId, formKey: { in: late }, listedOnIndexAt: now, editions: { none: {} }, usedBy: { none: {} } } })).count; late.forEach((k) => gone.add(k)); }
+      const skipped = plan.create.filter((c) => gone.has(c.formKey)).map((c) => c.formKey);
       let kept = 0; const marked: string[] = [];
       // X5 break m4: a form deleted meanwhile (an approved delete) is skipped, never a failed fill.
       for (const l of plan.listed) {
@@ -212,11 +223,33 @@ export class FormLibrary {
         kept += n;
         if (n && moved) marked.push(l.formKey);
       }
-      return { created: made, already: kept + (plan.create.length - made), newer: marked };
+      return { created: made, already: kept + (plan.create.length - skipped.length - made), newer: marked, deleted: skipped };
     });
-    const words = `${created} new form${created === 1 ? "" : "s"} listed (no file yet), ${already} already in the library${newer.length ? `, ${newer.length} with a newer edition on canada.ca (${newer.slice(0, 5).join(", ")}${newer.length > 5 ? "…" : ""})` : ""}${parsed.noPage.length ? `, ${parsed.noPage.length} left out with no canada.ca page` : ""}${unreadable.length ? `, ${unreadable.length} left out whose number or title could not be read` : ""}`;
-    await this.audit.log(workspaceId, actor.id, "filled", "form library", null, `${actor.name} filled the form library from IRCC's forms list: ${words}. No AI, no download, US$0.`, { created, listed: already, newer, no_page: parsed.noPage, unreadable });
-    return { created, listed: already, newer, no_page: parsed.noPage, unreadable, message: `Filled from IRCC's forms list: ${words}.` };
+    const words = `${created} new form${created === 1 ? "" : "s"} listed (no file yet), ${already} already in the library${newer.length ? `, ${newer.length} with a newer edition on canada.ca (${newer.slice(0, 5).join(", ")}${newer.length > 5 ? "…" : ""})` : ""}${deleted.length ? `, ${deleted.length} left out that ${deleted.length === 1 ? "was" : "were"} deleted from the library (${deleted.slice(0, 5).join(", ")}${deleted.length > 5 ? "…" : ""}; "List again" under the table brings ${deleted.length === 1 ? "it" : "one"} back)` : ""}${parsed.noPage.length ? `, ${parsed.noPage.length} left out with no canada.ca page` : ""}${unreadable.length ? `, ${unreadable.length} left out whose number or title could not be read` : ""}`;
+    await this.audit.log(workspaceId, actor.id, "filled", "form library", null, `${actor.name} filled the form library from IRCC's forms list: ${words}. No AI, no download, US$0.`, { created, listed: already, newer, deleted, no_page: parsed.noPage, unreadable });
+    return { created, listed: already, newer, deleted, no_page: parsed.noPage, unreadable, message: `Filled from IRCC's forms list: ${words}.` };
+  }
+
+  /** X5 slice c (break / review of 02ca83a5 M1): a person brings a remembered deletion back. The memory is forgotten and the
+   *  form is listed again from IRCC's forms list at once (the ordinary fill, US$0: no AI, no download). */
+  async listAgain(actor: Actor, code: string) {
+    need(actor, "author");
+    const workspaceId = await this.ws.id();
+    const memory = await this.db.libraryFormDeletion.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: code } } });
+    const gone = await this.db.libraryFormDeletion.deleteMany({ where: { workspaceId, formKey: code } });
+    if (!gone.count || !memory) throw problem(404, "Not a deleted form", `${code} is not among the forms deleted from the library.`);
+    // Review (00007dd0) 4: a fill that fails puts the memory back, and nothing is audited as listed again.
+    let fill: Awaited<ReturnType<FormLibrary["fillFromIndex"]>>;
+    try { fill = await this.fillFromIndex(actor); } catch (e) {
+      await this.db.libraryFormDeletion.createMany({ data: [{ workspaceId, formKey: code, deletedBy: memory.deletedBy, changeId: memory.changeId, deletedAt: memory.deletedAt }], skipDuplicates: true });
+      throw e;
+    }
+    const back = await this.db.govFormDef.count({ where: { workspaceId, formKey: code } });
+    await this.audit.log(workspaceId, actor.id, "restored", "form", code, `${actor.name} listed ${code} again: later fills from IRCC's forms list include it`);
+    // Review (00007dd0) 3: the ordinary fill ran, so any other form IRCC added since the last fill is said too.
+    const others = fill.created - (back && fill.created ? 1 : 0);
+    const more = others > 0 ? ` The fill also listed ${others} other new form${others === 1 ? "" : "s"} from IRCC's forms list.` : "";
+    return { code, listed: back > 0, others, message: (back ? `${code} is listed again (no file yet). Find again on a combination, or upload its PDF, to add its file.` : `${code} will be listed again when IRCC's forms list includes it (it is not on the list now).`) + more };
   }
 
   async checkCanada(actor: Actor, code: string) {
@@ -440,6 +473,7 @@ export class FormLibraryController {
   @Post("combinations/:id/forms") attach(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.lib.attach(actorOf(a), id, b); }
   @Delete("combinations/:id/forms/:code") remove(@Headers("x-actor") a: H, @Param("id") id: string, @Param("code", { transform: normaliseCode }) code: string, @Body() b: unknown) { return this.lib.remove(actorOf(a), id, code, b); }
   @Post("library/forms/fill-from-index") fill(@Headers("x-actor") a: H) { return this.lib.fillFromIndex(actorOf(a)); }
+  @Post("library/forms/:code/list-again") listAgain(@Headers("x-actor") a: H, @Param("code", { transform: normaliseCode }) code: string) { return this.lib.listAgain(actorOf(a), code); }
   @Get("library/forms/list") list(@Headers("x-actor") a: H, @Query() q: unknown) { return this.lib.list(q, readerOf(a).id); }
   @Get("library/forms/:code/uses") uses(@Param("code", { transform: normaliseCode }) code: string) { return this.lib.uses(code); }
   @Post("library/forms/:code/accepts") accepts(@Headers("x-actor") a: H, @Param("code", { transform: normaliseCode }) code: string, @Body() b: unknown) { return this.lib.proposeAccepts(actorOf(a), code, b); }
