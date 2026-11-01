@@ -1,0 +1,839 @@
+{
+ "file": "imm5257_1e.pdf",
+ "sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+ "read_by": "prototype/p1/xfa_formats.py (the form's own XFA template: maxChars, picture clauses, validate scripts; no AI)",
+ "boxes_with_format": 44,
+ "boxes_unmatched": 0,
+ "boxes": {
+  "Schedule1[0].FamilyName[0]": {
+   "caption": "*Family name (as shown on your passport or travel document)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "Schedule1[0].GivenName[0]": {
+   "caption": "Given name(s) (as shown on your passport or travel document)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "Schedule1[0].ApplicantBirthDate[0].Year[0]": {
+   "caption": "*Date of birth",
+   "checks": [
+    {
+     "function": "validateDOBYYYY",
+     "args": [
+      "ButtonsHeader.Age"
+     ],
+     "quote": [
+      {
+       "key": "DOB_Year",
+       "text": "The correct format is: Between 1900 - current year, or ****."
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "Schedule1[0].ApplicantBirthDate[0].Month[0]": {
+   "caption": "Question 2 Date of Birth Month in MM format",
+   "checks": [
+    {
+     "function": "validateDOBMM",
+     "args": [
+      "ButtonsHeader.Age"
+     ],
+     "quote": [
+      {
+       "key": "DOB_Month",
+       "text": "The correct format is: Between 01 and 12, or **"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "Schedule1[0].ApplicantBirthDate[0].Day[0]": {
+   "caption": "Question 2 Date of Birth Day in DD format",
+   "checks": [
+    {
+     "function": "validateDOBDD",
+     "args": [
+      "DBMonth",
+      "this",
+      "ButtonsHeader.Age"
+     ],
+     "quote": [
+      {
+       "key": "DOB_Day",
+       "text": "The correct format is: Between 01 and 31, or **"
+      },
+      {
+       "key": "Day_Must_Be_Less_Than_29",
+       "text": "The correct format is: Between 01 and 29, or **"
+      },
+      {
+       "key": "Day_Must_Be_Less_Than_28",
+       "text": "The correct format is: Between 01 and 28, or **"
+      },
+      {
+       "key": "30_Day",
+       "text": "The correct format is: Between 01-30, or **"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "Schedule1[0].UCI[0]": {
+   "caption": "UCI",
+   "checks": [
+    {
+     "function": "validateUCI",
+     "args": [],
+     "quote": [
+      {
+       "key": "UCI",
+       "text": "The correct format is: Numeric characters"
+      }
+     ]
+    }
+   ],
+   "max_chars": 10
+  },
+  "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].From[0].Year[0]": {
+   "caption": "Military Service From Date Year. The year of the start of the Military Service in YYYY format",
+   "checks": [
+    {
+     "function": "validateMilitaryFromYear",
+     "args": [],
+     "quote": [
+      {
+       "key": "Year_No_Stars_Plus_One",
+       "text": "The correct format is: Numeric characters between 1900 and current year plus 1."
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].From[0].Month[0]": {
+   "caption": "Military Service From Date Month. The month of the start of the Military Service in MM format",
+   "checks": [
+    {
+     "function": "validateEduMonth",
+     "args": [],
+     "quote": [
+      {
+       "key": "DOB_Month_No_Stars",
+       "text": "The correct format is: Between 01 and 12"
+      }
+     ]
+    },
+    {
+     "function": "validateDateInPastOrPresentPlusOne",
+     "args": [
+      "this"
+     ],
+     "quote": [
+      {
+       "key": "Future_Date_Plus_One",
+       "text": "The correct format is: Must be less than or equal to Current Year + 1."
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].To[0].Year[0]": {
+   "caption": "Military Service To Date Year. The year of the end of the Military Service in YYYY format",
+   "max_chars": 4
+  },
+  "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].To[0].Month[0]": {
+   "caption": "Military Service To Date Month. The month of the end of the Military Service in MM format",
+   "checks": [
+    {
+     "function": "validateMilitaryFromYear",
+     "args": [],
+     "quote": [
+      {
+       "key": "Year_No_Stars_Plus_One",
+       "text": "The correct format is: Numeric characters between 1900 and current year plus 1."
+      }
+     ]
+    },
+    {
+     "function": "validateEduMonth",
+     "args": [],
+     "quote": [
+      {
+       "key": "DOB_Month_No_Stars",
+       "text": "The correct format is: Between 01 and 12"
+      }
+     ]
+    },
+    {
+     "function": "validateDateInPastOrPresentPlusOne",
+     "args": [
+      "this"
+     ],
+     "quote": [
+      {
+       "key": "Future_Date_Plus_One",
+       "text": "The correct format is: Must be less than or equal to Current Year + 1."
+      }
+     ]
+    },
+    {
+     "function": "validateEduCrossRef",
+     "args": [
+      "from.Month",
+      "Year",
+      "this"
+     ],
+     "quote": [
+      {
+       "key": "GreaterThanEqualToFromYear",
+       "text": "The correct format is: Greater than or equal to From (YYYY)"
+      },
+      {
+       "key": "GreaterThanEqualToFromMonth",
+       "text": "The correct format is: Greater than or equal to From (MM)"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].Location[0]": {
+   "caption": "Military Service Location/Place where stationed. The location or place of your military service",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].Province[0]": {
+   "caption": "Military Service Province. The province of your military service",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 50
+  },
+  "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].CountryCode[0]": {
+   "caption": "Military Service Country or Territory. The country or territory of your military service",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].From[0].Year[0]": {
+   "caption": "Question 5 From Date Year. The year of the start of the event in YYYY format",
+   "checks": [
+    {
+     "function": "validateMilitaryFromYear",
+     "args": [],
+     "quote": [
+      {
+       "key": "Year_No_Stars_Plus_One",
+       "text": "The correct format is: Numeric characters between 1900 and current year plus 1."
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].From[0].Month[0]": {
+   "caption": "Question 5 From Date Month. The month of the start of the event in MM format",
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].To[0].Year[0]": {
+   "caption": "Question 5 To Date Year. The year of the end of the event in YYYY format",
+   "max_chars": 4
+  },
+  "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].To[0].Month[0]": {
+   "caption": "Question 5 To Date Month. The month of the end of the event in MM format",
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Location[0]": {
+   "caption": "Question 5 Location. The location of the event",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Province[0]": {
+   "caption": "Question 5 Province. The province of the event",
+   "max_chars": 50
+  },
+  "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].CountryCode[0]": {
+   "caption": "Question 5 Country or Territory. The country or territory of the event",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Details[0]": {
+   "caption": "Details:",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].From[0].Year[0]": {
+   "caption": "Organizations From Date Year. The year of the start of the membership or association in YYYY format",
+   "checks": [
+    {
+     "function": "validateMilitaryFromYear",
+     "args": [],
+     "quote": [
+      {
+       "key": "Year_No_Stars_Plus_One",
+       "text": "The correct format is: Numeric characters between 1900 and current year plus 1."
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].From[0].Month[0]": {
+   "caption": "Organizations From Date Month. The month of the start of the membership or association in MM format",
+   "checks": [
+    {
+     "function": "validateEduMonth",
+     "args": [],
+     "quote": [
+      {
+       "key": "DOB_Month_No_Stars",
+       "text": "The correct format is: Between 01 and 12"
+      }
+     ]
+    },
+    {
+     "function": "validateDateInPastOrPresentPlusOne",
+     "args": [
+      "this"
+     ],
+     "quote": [
+      {
+       "key": "Future_Date_Plus_One",
+       "text": "The correct format is: Must be less than or equal to Current Year + 1."
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].To[0].Year[0]": {
+   "caption": "Organizations To Date Year. The year of the end of the membership or association in YYYY format",
+   "max_chars": 4
+  },
+  "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].To[0].Month[0]": {
+   "caption": "Organizations To Date Month. The month of the end of the membership or association in MM format",
+   "checks": [
+    {
+     "function": "validateMilitaryFromYear",
+     "args": [],
+     "quote": [
+      {
+       "key": "Year_No_Stars_Plus_One",
+       "text": "The correct format is: Numeric characters between 1900 and current year plus 1."
+      }
+     ]
+    },
+    {
+     "function": "validateEduMonth",
+     "args": [],
+     "quote": [
+      {
+       "key": "DOB_Month_No_Stars",
+       "text": "The correct format is: Between 01 and 12"
+      }
+     ]
+    },
+    {
+     "function": "validateDateInPastOrPresentPlusOne",
+     "args": [
+      "this"
+     ],
+     "quote": [
+      {
+       "key": "Future_Date_Plus_One",
+       "text": "The correct format is: Must be less than or equal to Current Year + 1."
+      }
+     ]
+    },
+    {
+     "function": "validateEduCrossRef",
+     "args": [
+      "from.Month",
+      "Year",
+      "this"
+     ],
+     "quote": [
+      {
+       "key": "GreaterThanEqualToFromYear",
+       "text": "The correct format is: Greater than or equal to From (YYYY)"
+      },
+      {
+       "key": "GreaterThanEqualToFromMonth",
+       "text": "The correct format is: Greater than or equal to From (MM)"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].NameOfOrganization[0]": {
+   "caption": "Organizations Name of Organization",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].ActivitiesPositionHeld[0]": {
+   "caption": "Organizations Activities and/or positions held within organization",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 50
+  },
+  "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].Province[0]": {
+   "caption": "Organizations Province. The province of the organization",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 50
+  },
+  "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].CountryCode[0]": {
+   "caption": "Organizations Country or Territory. The country or territory of the organization",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].From[0].Year[0]": {
+   "caption": "Government Positions From Date Year. The year of the start of the government position held in YYYY format",
+   "checks": [
+    {
+     "function": "validateMilitaryFromYear",
+     "args": [],
+     "quote": [
+      {
+       "key": "Year_No_Stars_Plus_One",
+       "text": "The correct format is: Numeric characters between 1900 and current year plus 1."
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].From[0].Month[0]": {
+   "caption": "Government Positions From Date Month. The month of the start of the government position held in MM format",
+   "checks": [
+    {
+     "function": "validateEduMonth",
+     "args": [],
+     "quote": [
+      {
+       "key": "DOB_Month_No_Stars",
+       "text": "The correct format is: Between 01 and 12"
+      }
+     ]
+    },
+    {
+     "function": "validateDateInPastOrPresentPlusOne",
+     "args": [
+      "this"
+     ],
+     "quote": [
+      {
+       "key": "Future_Date_Plus_One",
+       "text": "The correct format is: Must be less than or equal to Current Year + 1."
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].To[0].Year[0]": {
+   "caption": "Government Positions To Date Year. The year of the end of the government position held in YYYY format",
+   "max_chars": 4
+  },
+  "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].To[0].Month[0]": {
+   "caption": "Government Positions To Date Month. The month of the end of the government position held in MM format",
+   "checks": [
+    {
+     "function": "validateMilitaryFromYear",
+     "args": [],
+     "quote": [
+      {
+       "key": "Year_No_Stars_Plus_One",
+       "text": "The correct format is: Numeric characters between 1900 and current year plus 1."
+      }
+     ]
+    },
+    {
+     "function": "validateEduMonth",
+     "args": [],
+     "quote": [
+      {
+       "key": "DOB_Month_No_Stars",
+       "text": "The correct format is: Between 01 and 12"
+      }
+     ]
+    },
+    {
+     "function": "validateDateInPastOrPresentPlusOne",
+     "args": [
+      "this"
+     ],
+     "quote": [
+      {
+       "key": "Future_Date_Plus_One",
+       "text": "The correct format is: Must be less than or equal to Current Year + 1."
+      }
+     ]
+    },
+    {
+     "function": "validateEduCrossRef",
+     "args": [
+      "from.Month",
+      "Year",
+      "this"
+     ],
+     "quote": [
+      {
+       "key": "GreaterThanEqualToFromYear",
+       "text": "The correct format is: Greater than or equal to From (YYYY)"
+      },
+      {
+       "key": "GreaterThanEqualToFromMonth",
+       "text": "The correct format is: Greater than or equal to From (MM)"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].CountryCode[0]": {
+   "caption": "Government Positions Country or Territory. The country or territory of the government position held",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].LevelOfJurisdiction[0]": {
+   "caption": "Government Positions Level of jurisdiction. The level of jurisdiction of the government position held (Example: national, regional, municipal)",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 50
+  },
+  "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].DepartmentBranch[0]": {
+   "caption": "Government Positions Department/Branch. The department or branch of the government position held",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].ActivitiesPositionHeld[0]": {
+   "caption": "Government Positions Activities and/or positions held",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 50
+  },
+  "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].From[0].Year[0]": {
+   "caption": "Previous Travel From Date Year. The year of the start of your previous travel in YYYY format",
+   "checks": [
+    {
+     "function": "validateMilitaryFromYear",
+     "args": [],
+     "quote": [
+      {
+       "key": "Year_No_Stars_Plus_One",
+       "text": "The correct format is: Numeric characters between 1900 and current year plus 1."
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].From[0].Month[0]": {
+   "caption": "Previous Travel From Date Month. The month of the start of your previous travel in MM format",
+   "checks": [
+    {
+     "function": "validateEduMonth",
+     "args": [],
+     "quote": [
+      {
+       "key": "DOB_Month_No_Stars",
+       "text": "The correct format is: Between 01 and 12"
+      }
+     ]
+    },
+    {
+     "function": "validateDateInPastOrPresentPlusOne",
+     "args": [
+      "this"
+     ],
+     "quote": [
+      {
+       "key": "Future_Date_Plus_One",
+       "text": "The correct format is: Must be less than or equal to Current Year + 1."
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].To[0].Year[0]": {
+   "caption": "Previous Travel To Date Year. The year of the end of your previous travel in YYYY format",
+   "max_chars": 4
+  },
+  "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].To[0].Month[0]": {
+   "caption": "Previous Travel To Date Month. The month of the end of your previous travel in MM format",
+   "checks": [
+    {
+     "function": "validateMilitaryFromYear",
+     "args": [],
+     "quote": [
+      {
+       "key": "Year_No_Stars_Plus_One",
+       "text": "The correct format is: Numeric characters between 1900 and current year plus 1."
+      }
+     ]
+    },
+    {
+     "function": "validateEduMonth",
+     "args": [],
+     "quote": [
+      {
+       "key": "DOB_Month_No_Stars",
+       "text": "The correct format is: Between 01 and 12"
+      }
+     ]
+    },
+    {
+     "function": "validateDateInPastOrPresentPlusOne",
+     "args": [
+      "this"
+     ],
+     "quote": [
+      {
+       "key": "Future_Date_Plus_One",
+       "text": "The correct format is: Must be less than or equal to Current Year + 1."
+      }
+     ]
+    },
+    {
+     "function": "validateEduCrossRef",
+     "args": [
+      "from.Month",
+      "Year",
+      "this"
+     ],
+     "quote": [
+      {
+       "key": "GreaterThanEqualToFromYear",
+       "text": "The correct format is: Greater than or equal to From (YYYY)"
+      },
+      {
+       "key": "GreaterThanEqualToFromMonth",
+       "text": "The correct format is: Greater than or equal to From (MM)"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].CountryCode[0]": {
+   "caption": "Previous Travel Country or Territory. The country or territory where your previous travel took place",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].Location[0]": {
+   "caption": "Previous Travel Location. The location where your previous travel took place",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 50
+  },
+  "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].PurposeOfTravel[0]": {
+   "caption": "Previous Travel Purpose of Travel.",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 50
+  }
+ }
+}

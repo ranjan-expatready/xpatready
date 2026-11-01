@@ -4,6 +4,7 @@
 // what the release preview shows. No I/O; every output says why.
 import { evalCondition, kkey, render, type Known, type Person, type Role } from "../render.ts";
 import { subjectKindOf, type Snapshot } from "../snapshot.ts";
+import { checkFormat, snapshotFieldFormat } from "../field-format.ts";
 import { Address, CONFIRM_WORDS, groupLabel, MINOR, Phone, type QuestionnaireView, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
 
 export type Participant = { subjectId: string; role: Role | "case"; label: string; applies: boolean };
@@ -96,8 +97,14 @@ export function optionsOf(s: Snapshot, field: string): { key: string; label: str
 /** Characters as a person counts them (an emoji is one), not UTF-16 units. */
 const chars = (x: string) => [...x].length;
 
-/** Field checks (P-47 tier 1): the value's type, list and limits. Returns plain messages; empty when the value is fine. */
+/** Field checks (P-47 tier 1): the value's type, list and limits, then (P-162, C3.1) the format its forms' own boxes
+ *  enforce (engine/field-format.ts: digits only for a UCI, a Canadian postal code, …). Plain messages; empty when fine. */
 export function checkValue(s: Snapshot, field: string, value: unknown, today = new Date()): string[] {
+  const typed = checkType(s, field, value, today);
+  return typed.length ? typed : checkFormat(snapshotFieldFormat(s as never, field), value, { today });
+}
+
+function checkType(s: Snapshot, field: string, value: unknown, today: Date): string[] {
   const f = fieldOf(s, field);
   if (!f) return ["This question is not in the release the case works from."];
   const shape = shapeOf(s, field), type = String(f.value_type ?? "text");

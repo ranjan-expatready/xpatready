@@ -4,6 +4,7 @@
 // a failing case, on an isolated copy where setup_visitor_visa.ts released the visitor visa. No model call (US$0).
 //   zsh studio/tools/isolated.sh runtime_r1 4430 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4430 xr_studio_runtime_r1
 //   tsx studio/tests/runtime/check_runtime_r1d.ts 4430 xr_studio_runtime_r1
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { appendFileSync, copyFileSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -17,6 +18,7 @@ const { call, sql, until } = client(PORT, DB);
 const { ok, summary } = recorder();
 const OFFICER = "user-O", CLIENT = "user-P", CLIENT_B = "user-Q", AUTHOR = "user-A";
 const ROOT = join(import.meta.dirname, "..", "..", "..", "..", "..", "..");
+const STUDIO = join(import.meta.dirname, "..", "..");
 const run = Date.now().toString(36);
 const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
 const bytes = (path: string, actor: string) => new Promise<{ status: number; body: Buffer; name: string }>((resolve, reject) => {
@@ -198,11 +200,39 @@ async function main() {
   ok("C11.6 C-9 fail: a file that is not the validated PDF is refused and nothing is recorded", r.status === 422 && /not a PDF/.test(r.body?.detail ?? "") && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "0", r.body?.detail);
   r = await sendValidated(locked1, readFileSync(join(ROOT, "ai-workers", "problem-1-pathway-setup-and-form-filling", "official-sources", "ircc", "forms", "imm5257e.pdf")), "imm5257e.pdf");
   ok("C11.6 C-9 fail: IRCC's blank form (none of the copy's values) does not read back, nothing recorded", r.status === 422 && /values the product wrote differ|could not be read/.test(r.body?.detail ?? "") && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "0", r.body?.detail);
+  ok("C11.6 C-9 QA-127 fail-guard: a file that does not read back names the values in the form's words, never a field path", !/form1\[|\[0\]\./.test(r.body?.detail ?? "") && (!/values the product wrote differ/.test(r.body?.detail ?? "") || /should say /.test(r.body?.detail ?? "")), r.body?.detail);
+  // QA-126: this upload takes one PDF of up to 20 MB; the refusals say so (they said the intake's 25 MB and 20 files).
+  r = await sendValidated(locked1, Buffer.concat([validatedFile, Buffer.alloc(20 * 1024 * 1024)]), "imm5257-validated.pdf");
+  ok("C11.6 C-9 QA-126 fail: a validated copy over 20 MB is refused with this upload's own limit (413, \"20 MB\", never the intake's 25 MB), nothing recorded", r.status === 413 && /larger than 20 MB/.test(r.body?.detail ?? "") && !/25 MB/.test(r.body?.detail ?? "") && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "0", r.body?.detail);
+  {
+    const fd = new FormData(); for (const n of ["a.pdf", "b.pdf"]) fd.append("file", new Blob([new Uint8Array(validatedFile)]), n);
+    const res = await fetch(`http://127.0.0.1:${PORT}/api/runtime/form-copies/${locked1}/validated`, { method: "POST", headers: { "x-actor": OFFICER }, body: fd });
+    const detail = ((await res.json().catch(() => null)) as { detail?: string } | null)?.detail ?? "";
+    ok("C11.6 C-9 QA-126 fail: two files at once are refused as \"only the one validated PDF\" (never \"at most 20 files\"), nothing recorded", res.status === 413 && /only the one validated PDF/.test(detail) && !/20 files/.test(detail) && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "0", `${res.status} ${detail}`);
+  }
+  // QA-127: one value changed after Validate is refused, naming that value (the form's words), what the copy wrote and what the file holds.
+  {
+    const changedPdf = join(tmpdir(), `qa127-${run}.pdf`);
+    const py = join(ROOT, ".tools", "solution-1-prototype", ".venv", "bin", "python");
+    const one = JSON.parse(execFileSync(py, ["-I", join(STUDIO, "tests", "fixtures", "change_one_value.py"), join(ROOT, row1.path), join(ROOT, row1.path.replace(/\.pdf$/, ".request.json")), changedPdf], { encoding: "utf8" }).trim().split("\n").pop()!) as { path: string; wrote: string; now: string };
+    const boxes = JSON.parse(sql(`select s.facts_json->'boxes' from form_instance x join answer_snapshot s on s.id = x.snapshot_id where x.id='${locked1}'`)) as { box: string; caption?: string; meaning?: string }[];
+    const words = (boxes.find((b) => b.box === one.path)?.caption || boxes.find((b) => b.box === one.path)?.meaning || "").trim();
+    r = await sendValidated(locked1, readFileSync(changedPdf), "imm5257-validated.pdf"); rmSync(changedPdf, { force: true });
+    const d = r.body?.detail ?? "";
+    ok("C11.6 C-9 QA-127 pass: one value changed after Validate is refused (422) and the refusal names it, with what the copy wrote and what the file holds", r.status === 422 && /1 of the \d+ values/.test(d) && /The value that differs: /.test(d) && words.length > 0 && d.includes(`"${words.slice(0, 80)}"`) && d.includes(`should say "${one.wrote.slice(0, 60)}" but says "${one.now}"`) && !d.includes(one.path), `${words} | ${d}`);
+    ok("C11.6 C-9 QA-127: nothing is recorded for it", sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "0");
+  }
   r = await sendValidated(locked1, copyFile, "imm5257-validated.pdf");
   ok("C11.6 C-9 fail (break M1): the product's own copy sent back unchanged is not validated: refused in words (422) and nothing recorded", r.status === 422 && /unchanged: it was not validated/.test(r.body?.detail ?? "") && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "0", r.body?.detail);
   r = await sendValidated(locked1, validatedFile, "imm5257-validated.pdf", CLIENT);
   ok("C11.6 C-9 fail: the client cannot send a validated copy (officer only)", r.status === 403, r.status);
-  r = await sendValidated(locked1, validatedFile, "imm5257-validated.pdf");
+  // QA-128 (P-65, kept once): the same validated file sent twice at once (a double click) is kept once, with one audit line.
+  const auditBefore = Number(sql(`select count(*) from audit_event where summary like '%read back a validated copy%'`));
+  const doubleSend = await Promise.all([sendValidated(locked1, validatedFile, "imm5257-validated.pdf"), sendValidated(locked1, validatedFile, "imm5257-validated.pdf")]);
+  r = doubleSend.find((x) => x.status === 201) ?? doubleSend[0];
+  const other = doubleSend.find((x) => x !== r)!;
+  ok("C11.6 C-9 QA-128 fail: the same validated file sent twice at once is kept once: one answers 201, the other 409 in words naming the kept one; one validated copy and one audit line", doubleSend.filter((x) => x.status === 201).length === 1 && other.status === 409 && /already read back and kept/.test(other.body?.detail ?? "") && other.body?.existingId === r.body?.id
+    && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "1" && Number(sql(`select count(*) from audit_event where summary like '%read back a validated copy%'`)) === auditBefore + 1, doubleSend.map((x) => `${x.status} ${x.body?.detail ?? x.body?.id ?? ""}`));
   ok("C11.6 C-9 pass: the validated and saved copy reads back with every value the product wrote; its checksum and the facts' fingerprint are kept", r.status === 201 && r.body?.copy?.validated?.current === true && r.body.copy.validated.read_back.equal === r.body.copy.validated.read_back.written && r.body.copy.validated.read_back.written > 0
     && sql(`select sha256 from validated_copy where form_instance_id='${locked1}'`) === sha(validatedFile), r.body);
   // C-9 (Devin on PR #121): the copy marked ready for filing downloads in its validated form, checked like the copy.

@@ -80,7 +80,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const menu = p.locator("[data-row-menu-items]"); await menu.waitFor();
   const menuText = await menu.innerText();
   step("P-147 Q1 pass: the ⋯ menu lists every action", ["Open details", "Change where it comes from…", "Back to the rules' default", "Change in the library…", "Move up or down", "Retire"].every((x) => menuText.includes(x)), menuText.replace(/\n/g, " | "));
-  step("P-147 Q1 fail-guard: each greyed action keeps its reason as visible text (order set in the library section; a line is not retired here)", /The order is set in the library section .+ Change it there\./.test(menuText) && /A question line is not retired here\. Retire the question in the library\./.test(menuText) && await menu.locator('[data-disabled] [data-menu-why]').count() >= 3, menuText.replace(/\n/g, " | "));
+  step("P-147 Q1 fail-guard: each greyed action keeps its reason as visible text (order inside a section set in the library, sections moved on their header; a line is not retired here)", /Questions keep the library's order inside .+ use Move up or Move down on its header\./.test(menuText) && /A question line is not retired here\. Retire the question in the library\./.test(menuText) && await menu.locator('[data-disabled] [data-menu-why]').count() >= 3, menuText.replace(/\n/g, " | "));
   await state("row-menu-greyed-reasons");
   await p.keyboard.press("Escape");
 
@@ -126,8 +126,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C4.10 M1 pass: the row now says Client, Ask, Changed here", /Client/.test(await row.locator("[data-comes-from]").innerText()) && /Ask/.test(await row.innerText()) && await row.locator('[data-row-status="draft"]').count() === 1, await row.innerText());
   await p.locator("[data-undo-toast] [data-undo]").waitFor({ timeout: 5000 }).catch(() => {});
   step("undo toast: one Undo for the save", await p.locator("[data-undo-toast] [data-undo]").count() === 1);
-  await p.locator("[data-undo-toast] [data-undo]").click(); await settle();
-  await row.locator('[data-row-status="rules"]').waitFor({ timeout: 10000 }).catch(() => {});
+  await p.locator("[data-undo-toast] [data-undo]").click();
+  // Lead, 30 Oct (main CI flake, the QA-116 family): under load the refetch lands after settle's fixed pause; wait on
+  // the change itself (the row back on the rules), not a timer. A row that never goes back still fails below.
+  await row.locator('[data-row-status="rules"]').waitFor({ timeout: 30000 }).catch(() => {}); await settle();
   step("Undo pass: the row goes back to the passport and the rules", /Document/.test(await row.locator("[data-comes-from]").innerText()) && await row.locator('[data-row-status="rules"]').count() === 1, await row.innerText());
 
   // ======================================================== a declaration: always the client
@@ -151,12 +153,12 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await bar.getByLabel("Set where it comes from").selectOption("AGENT"); await settle();
   const refused = p.locator("[data-bulk-refused]");
   // Same for the bulk refusal list: wait for both rows before reading it.
-  await refused.locator("li").nth(1).waitFor({ timeout: 10000 }).catch(() => {});
+  await refused.locator("li").nth(1).waitFor({ timeout: 10000 });
   step("P-155(3) fail (bulk): Case officer on two passport facts is refused per row, each in words with its question (write why in its details)", await refused.locator("li").count() === 2 && /The case officer enters only .+ Open its details to write why/.test(await refused.innerText()), await refused.innerText());
   await state("bulk-refused-in-words");
   await bar.getByLabel("Set where it comes from").selectOption("CLIENT"); await settle();
   const toast = p.locator("[data-undo-toast]");
-  step("P-147 Q2 pass: set to the client on 2 questions, with one Undo", /set to the client on 2 questions/.test(await toast.innerText()) && await toast.locator("[data-undo]").count() === 1 && await p.locator("[data-bulk-bar]").count() === 0, await toast.innerText());
+  step("P-147 Q2 pass: set to the client for 2 questions, with one Undo", /set to the client for 2 questions/.test(await toast.innerText()) && await toast.locator("[data-undo]").count() === 1 && await p.locator("[data-bulk-bar]").count() === 0, await toast.innerText());
   const changed = (await api(`/combinations/${wp}/fact-sources`)).body.facts.filter((f) => f.change?.batchId);
   step("bulk: both rows carry one batch id", changed.length === 2 && changed[0].change.batchId === changed[1].change.batchId, changed.map((f) => f.fact).join(", "));
   await state("bulk-done-undo-toast");
@@ -164,6 +166,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.locator("[data-note-undo]").click(); await settle();
   const after = (await api(`/combinations/${wp}/fact-sources`)).body.facts.filter((f) => f.change);
   step("Undo pass: one Undo takes both rows back", after.length === 0, after.map((f) => f.fact).join(", "));
+  // Runtime Minors 1 Nov: the pre-qualification toast read "Pre-qualification on on 2 questions".
+  await ticks.nth(0).check(); await ticks.nth(1).check();
+  await bar.getByLabel("Pre-qualification").selectOption("on"); await settle();
+  const pqToast = await toast.innerText();
+  step("Minors 1 Nov pass: the bulk pre-qualification toast reads \"Pre-qualification on for 2 questions\"", /^Pre-qualification on for 2 questions/m.test(pqToast), pqToast);
+  step("Minors 1 Nov fail-guard: no \"on on\" in the toast", !/\bon on\b/.test(pqToast), pqToast);
+  await p.locator("[data-note-undo]").click(); await settle();
+  step("Undo pass: the pre-qualification change is taken back too", (await api(`/combinations/${wp}/fact-sources`)).body.facts.filter((f) => f.change).length === 0);
 
   // ======================================================== Needs you: a release check on its row
   sql(`insert into fact_source (workspace_id, combination_id, lineage_key, role, canonical_field_key, source, version, status, origin, updated_by) select workspace_id, id, '${decl.role}|${decl.fact}', '${decl.role}', '${decl.fact}', 'AGENT', 1, 'DRAFT', 'HUMAN', 'user-A' from combination where id='${wp}'`);

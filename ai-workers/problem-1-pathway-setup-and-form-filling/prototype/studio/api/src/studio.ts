@@ -7,7 +7,7 @@ import { canRelease } from "../../../contracts/rules.ts";
 import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
 import { buildSnapshot, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
 import { slug } from "../../engine/import.ts";
-import { checkCondition, diff, validate } from "../../engine/validate.ts";
+import { checkCondition, diff, ordinal, validate } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, need, revise, RUNTIME_ACTORS, strip, Workspace, type Actor } from "./core.ts";
 import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { recordAction, snapshotLines } from "./form-uses.ts";
@@ -16,10 +16,19 @@ import { cleanLabel, normalizeLabel, problemFromZod, problemWords } from "../../
 import { DocumentLineEdit, FormLineEdit, PeopleBody, UndoBody, type PersonRoleView } from "../../contracts/workspace.ts";
 import { checkPeople, linesNamingRemoved } from "../../engine/people.ts";
 import { LibrarySources, type SourceLine } from "./library-sources.ts";
+import { checkFormat, fieldFormat, formatWords, type MappedBox } from "../../engine/field-format.ts";
 
 const VALUE_TYPES = Object.keys(VALUE_TYPE_TO_DATA_TYPE);
 /** S6 (2a), P-158 item 6: a list row's first source and how many more; an item with none is flagged, never blank. */
 const SHORT: Partial<Record<SourceLine["kind"], string>> = { release: "From a reviewed release", ai_run: "From an AI run a person decided" };
+/** P-162: a field's format in one line, or why there is none ("Format: not read yet" when no form field of it has
+ *  been read; a field on no form says so). */
+const formatLine = (boxes: MappedBox[] | undefined, valueType?: string | null) => {
+  if (!boxes?.length) return { text: null, state: "no_form" as const };
+  const f = fieldFormat(boxes, valueType);
+  const text = formatWords(f);
+  return text ? { text, state: "read" as const } : { text: null, state: f.read ? "none_on_form" as const : "not_read" as const };
+};
 const sourceSummary = (lines: SourceLine[] | undefined) => {
   const best = lines?.find((l) => !SHORT[l.kind]) ?? lines?.[0]; // a form box or checklist line before a release note
   return { source: best ? SHORT[best.kind] ?? best.text : null, more_sources: Math.max(0, (lines?.length ?? 0) - 1), unsourced: !lines?.length };
@@ -386,12 +395,46 @@ export class Studio {
     for (const r of rows) if (!latest.has(r.canonicalFieldKey)) latest.set(r.canonicalFieldKey, r);
     const needle = (q.q ?? "").toLowerCase();
     const [src, used] = await Promise.all([this.lib.all("field", workspaceId), this.lib.usedIn("field", workspaceId)]);
+    const fmt = await this.fieldBoxes(workspaceId);
     return [...latest.values()].filter((f) => !needle || f.canonicalFieldKey.includes(needle) || f.meaning.toLowerCase().includes(needle)).map((f) => {
       const u = usage.filter((x) => x.canonicalFieldKey === f.canonicalFieldKey);
       const forms = [...new Set(u.map((x) => editions.get(x.formEditionId)))].filter(Boolean);
       const p = placements.get(f.canonicalFieldKey);
-      return { key: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, scope: f.scope, version: f.version, status: f.status, origin: f.origin, has_draft: f.status === "DRAFT", boxes: u.reduce((a, x) => a + x._count._all, 0), forms, placement: p ? { section: p.sectionKey, collected_from: p.collectedFrom } : null, name: (f.labelChecked && f.label) || null, ...sourceSummary(src.get(f.canonicalFieldKey)), used_in: used.get(f.canonicalFieldKey) ?? [] };
+      return { key: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, scope: f.scope, version: f.version, status: f.status, origin: f.origin, has_draft: f.status === "DRAFT", boxes: u.reduce((a, x) => a + x._count._all, 0), forms, placement: p ? { section: p.sectionKey, collected_from: p.collectedFrom } : null, name: (f.labelChecked && f.label) || null, ...sourceSummary(src.get(f.canonicalFieldKey)), used_in: used.get(f.canonicalFieldKey) ?? [], format: formatLine(fmt.get(f.canonicalFieldKey), f.valueType) };
     });
+  }
+
+  /** P-162 (C3.1): each field's current mapped form fields with their edition's inventory, for its format. Only the
+   *  newest version per edition and form field counts, while it maps this field. */
+  private async fieldBoxes(workspaceId: string, key?: string): Promise<Map<string, MappedBox[]>> {
+    const rows = await this.db.formFieldMap.findMany({ where: { workspaceId, ...(key ? { canonicalFieldKey: key } : {}), status: { in: ["PUBLISHED", "DRAFT"] } }, include: { edition: { include: { form: true } } }, orderBy: { version: "desc" } });
+    const seen = new Set<string>(), out = new Map<string, MappedBox[]>();
+    for (const r of rows) {
+      const id = `${r.formEditionId}|${r.dataPath}`;
+      if (seen.has(id)) continue; seen.add(id);
+      if (r.outcome !== "mapped" || !r.canonicalFieldKey) continue;
+      out.set(r.canonicalFieldKey, [...(out.get(r.canonicalFieldKey) ?? []), { form: r.edition.editionLabel, inventoryFile: r.edition.inventoryFile, dataPath: r.dataPath, caption: r.caption, transform: r.transform }]);
+    }
+    return out;
+  }
+
+  /** P-162: a shared field's format, read from its form fields (`GET /library/fields/:key/format`). */
+  async fieldFormatOf(key: string) {
+    const workspaceId = await this.ws.id();
+    const field = await this.db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: key }, orderBy: { version: "desc" }, select: { valueType: true } });
+    if (!field) fail(`${key} is not in the shared library.`, HttpStatus.NOT_FOUND);
+    const boxes = (await this.fieldBoxes(workspaceId, key)).get(key) ?? [];
+    const f = fieldFormat(boxes, field!.valueType);
+    return { key, ...f, line: formatLine(boxes, field!.valueType), forms: [...new Set(boxes.map((b) => b.form))] };
+  }
+
+  /** P-162: the fixed format checks run on a value, as a case would (`POST /library/fields/:key/format-check`). */
+  async checkFieldFormat(key: string, body: unknown) {
+    const b = (body ?? {}) as { value?: unknown; country?: unknown; other_date?: unknown };
+    if (!("value" in (b as object))) fail("Give the value to check.", HttpStatus.BAD_REQUEST);
+    const f = await this.fieldFormatOf(key);
+    const problems = checkFormat(f, b.value, { country: typeof b.country === "string" ? b.country : null, otherDate: typeof b.other_date === "string" ? b.other_date : null });
+    return { key, value: b.value, ok: !problems.length, problems, format: f.line };
   }
 
   async field(key: string) {
@@ -406,7 +449,9 @@ export class Studio {
     const [forms, reqs, rules, checks, comps] = await Promise.all([this.db.combinationForm.findMany({ where: { workspaceId }, include: { form: true } }), this.db.documentRequirement.findMany({ where: { workspaceId } }), this.db.predicate.findMany({ where: { workspaceId } }), this.db.check.findMany({ where: { workspaceId } }), this.db.combination.findMany({ where: { workspaceId } })]);
     const compLabel = new Map(comps.map((c) => [c.id, c.label]));
     const types = await this.db.documentType.findMany({ where: { workspaceId } });
+    const format = fieldFormat((await this.fieldBoxes(workspaceId, key)).get(key) ?? [], versions[0].valueType);
     return {
+      format,
       versions: versions.map((v) => ({ ...v })), current: versions[0],
       used_by: Object.values(boxes.reduce((a: any, b) => { const k = b.edition.editionLabel; a[k] ??= { form: b.edition.form.formKey, edition: k, boxes: [] as any[] }; a[k].boxes.push({ data_path: b.dataPath, caption: b.caption, person: b.person, row: b.row, transform: b.transform, status: b.status, origin: b.origin }); return a; }, {})),
       placements: placements.map((p) => ({ ...p, section_title: sections.find((s) => s.sectionKey === p.sectionKey)?.title ?? p.sectionKey })),
@@ -485,7 +530,8 @@ export class Studio {
     if (on === !!had) return { ok: true, sectionOrder: had?.sectionOrder ?? null };
     if (on) {
       const back = Number.isInteger(b?.sectionOrder) && (b!.sectionOrder as number) >= 0 ? b!.sectionOrder as number : null;
-      const n = back ?? await this.db.sqrSectionSelection.count({ where: { combinationId } });
+      // C4.1 review m1: a new section goes after the last place in use (never a place another section has).
+      const n = back ?? ((await this.db.sqrSectionSelection.aggregate({ where: { combinationId }, _max: { sectionOrder: true } }))._max.sectionOrder ?? -1) + 1;
       await this.db.sqrSectionSelection.upsert({ where: { combinationId_sectionKey: { combinationId, sectionKey } }, update: {}, create: { workspaceId: c.workspaceId, combinationId, sectionKey, sectionOrder: n } });
     } else {
       sectionOrder = had!.sectionOrder;
@@ -493,6 +539,43 @@ export class Studio {
     }
     await this.audit.log(c.workspaceId, actor.id, "updated", "section selection", sectionKey, `${actor.name} ${on ? "added" : "removed"} the section "${title}" ${on ? "to" : "from"} the questionnaire of "${c.label}"`, undefined, c.id);
     return { ok: true, sectionOrder };
+  }
+
+  /** C4.1 (P-216): the combination's sections in its own order, with the library title of each (one title everywhere). */
+  async sectionOrder(combinationId: string) {
+    const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
+    const rows = await this.db.sqrSectionSelection.findMany({ where: { combinationId }, orderBy: [{ sectionOrder: "asc" }, { sectionKey: "asc" }] });
+    const lib = await this.db.logicalSection.findMany({ where: { workspaceId: c.workspaceId, sectionKey: { in: rows.map((r) => r.sectionKey) } }, orderBy: { version: "desc" } });
+    const title = (k: string) => lib.find((x) => x.sectionKey === k)?.title ?? k;
+    return { order: rows.map((r) => ({ key: r.sectionKey, title: title(r.sectionKey) })) };
+  }
+
+  /** C4.1 (P-216 answer 1): Move up / Move down on a section header. One move is one draft change of this combination,
+   *  released with it (C4.8); the order is the same for every person. `seen` is the order the author was looking at: a
+   *  move from an older order is refused (409), so two authors never undo each other's move without knowing. */
+  async moveSection(actor: Actor, combinationId: string, sectionKey: string, b: unknown) {
+    need(actor, "author");
+    const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
+    if (c.retiredAt) fail(`"${c.label}" is retired: its questionnaire is not changed. Restore it on Structure first; open cases keep their release.`, HttpStatus.CONFLICT);
+    const body = (b ?? {}) as { direction?: unknown; seen?: unknown };
+    if (body.direction !== "up" && body.direction !== "down") fail('Say which way to move the section: "up" or "down".', HttpStatus.BAD_REQUEST);
+    if (!Array.isArray(body.seen) || !body.seen.every((x) => typeof x === "string")) fail("The order you were looking at was not sent. Reload the tab, then move the section again.", HttpStatus.BAD_REQUEST);
+    const up = body.direction === "up";
+    const { order } = await this.sectionOrder(combinationId);
+    const keys = order.map((x) => x.key);
+    const at = keys.indexOf(sectionKey);
+    if (at < 0) fail("That section is not one this combination chose, so it has no place of its own to move. Its questions follow the sections chosen here; add the section first.", HttpStatus.CONFLICT);
+    const title = order[at].title;
+    const seen = (body.seen as string[]).filter((k) => keys.includes(k));
+    if (seen.length !== keys.length || seen.some((k, i) => k !== keys[i])) fail("The sections were reordered since you opened this tab. Reload to see the order now, then move it again.", HttpStatus.CONFLICT);
+    if (up && at === 0) fail(`"${title}" is already the first section.`, HttpStatus.CONFLICT);
+    if (!up && at === keys.length - 1) fail(`"${title}" is already the last section.`, HttpStatus.CONFLICT);
+    const to = up ? at - 1 : at + 1;
+    [keys[at], keys[to]] = [keys[to], keys[at]];
+    await this.db.$transaction(keys.map((k, i) => this.db.sqrSectionSelection.update({ where: { combinationId_sectionKey: { combinationId, sectionKey: k } }, data: { sectionOrder: i } })));
+    const nth = ordinal(to + 1);
+    await this.audit.log(c.workspaceId, actor.id, "updated", "section selection", sectionKey, `${actor.name} moved the section "${title}" ${body.direction} in the questionnaire of "${c.label}": now ${nth} of ${keys.length}`, undefined, c.id);
+    return { ok: true, position: to + 1, of: keys.length, order: keys.map((k) => ({ key: k, title: order.find((x) => x.key === k)!.title })) };
   }
 
   async documentTypes() {
@@ -836,11 +919,27 @@ export class Studio {
     return rows.map((r) => ({ id: r.id, combination: r.combination.label, combination_id: r.combinationId, version: r.version, sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: r.approverId, names: { author: peopleNames(r.authorId), submitter: peopleNames(r.submitterId), approver: peopleNames(r.approverId) }, summary: r.summary, basis: r.basis }));
   }
 
-  async activity(limit = 200) {
+  /** C6.11 review Major 1: firm staff read the configuration lines and their own firm's case lines only; another firm's
+   *  case events (opened, team, people, answers, sections, form copies) are left out. Case lines name their case as
+   *  "case <first 8 of its id>". Configuration people read every line, as before. */
+  async activity(limit = 200, firmKey: string | null = null) {
     const workspaceId = await this.ws.id();
-    return (await this.db.auditEvent.findMany({ where: { workspaceId }, orderBy: { at: "desc" }, take: limit })).map((e) => ({ ...e, who: peopleNames(e.actor) }));
+    const rows = await this.db.auditEvent.findMany({ where: { workspaceId }, orderBy: { at: "desc" }, take: firmKey ? limit * 5 : limit });
+    let kept = rows;
+    if (firmKey) {
+      const own = new Set((await this.db.case.findMany({ where: { workspaceId, firmKey }, select: { id: true } })).map((c) => c.id.slice(0, 8)));
+      kept = rows.filter((e) => {
+        if (!CASE_ENTITIES.has(e.entity)) return true;
+        const id = e.entity === "case" && e.entityKey ? e.entityKey.slice(0, 8) : /\bcase ([0-9a-f]{8})\b/.exec(e.summary)?.[1];
+        return !!id && own.has(id);
+      }).slice(0, limit);
+    }
+    return kept.map((e) => ({ ...e, who: peopleNames(e.actor) }));
   }
 }
+
+/** The audit entities written by case work (runtime.ts, fill-case.ts, team.ts). */
+const CASE_ENTITIES = new Set(["case", "person", "case fact", "row", "group", "section", "form copy"]);
 
 /** QA-74: the simulated people's names for stored ids (one id, or several joined by commas), never "user-A" on screen. */
 const PEOPLE: readonly { id: string; name: string }[] = [...ACTORS, ...RUNTIME_ACTORS];

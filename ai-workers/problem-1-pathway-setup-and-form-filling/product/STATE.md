@@ -1,37 +1,33 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-01 10:05 UTC (Lead handover at 55% context) · milestone: **M2 — Super Admin configuration**, with the thin runtime slice R1 · way of working: `WAY-OF-WORKING.md` · work list: `BACKLOG.md` (features F1–F8) · merge flow trial: `design/merge-flow-trial-2026-11-01.md`
+updated: 2026-11-01 13:45 UTC (Lead handover at 48% context) · milestone: **M2 — Super Admin configuration**, plus the Visitor visa M3 path (P-220) · plan: `design/delivery-plan-2026-11-01.md` · who owns what: `TEAM.md` · work list: `BACKLOG.md`
 
-## Goals (P-202)
-* **Today (1 Nov):** keep the four lanes building; land #113 (now fixed for Linux) so runtime's waiting branches follow; qa retests today's merges.
-* **This week (to 7 Nov):** F7 done; F1, F2 and F6 well under way; workflow frozen except fixes (P-204).
-* **3 Nov:** verdict on the P-213 trial with the founder (keep the four GitHub shards if batches stay at 15 minutes or less within the US$30 cap; fallback `BATCH_RUNNER=mac`).
+## Goals (P-202, reset by P-220)
+* **Today (1 Nov):** M2 built and queued; Visitor visa set up end to end on the demo; Day-0 acceptance packs merged.
+* **This week:** M2 done for all six combinations (target 6 Nov); Visitor visa case to application ready (target 5 Nov).
+* **3 Nov:** verdict on the GitHub shard trial (P-213) and measured swarm numbers against the plan's targets.
 
 ## Resume here (a fresh `/lead` chat)
-1. **Set three watches first:** the 20-minute check (lead skill standing rule 1); the 10-minute lane nudge (`ListAgents`; an idle cloud session with work left and no Handover gets `SendMessage` "continue" with its next step, P-218); the 90-second alarm (Monitor: red checks, merges, PR "Question for the tech lead" / "Handover" / "Blocker/Major" comments, demo down; re-arm every 30 minutes).
-2. **Lanes now (cloud; one-way: they read `SendMessage`, answer in PR comments):**
-   * **Forms:** "Forms builder: rest of F2, then F3", running. Brief: Handover on #249.
-   * **qa:** "QA: after-merge from 63168762, retests and C2.12", running. Brief: Handover on #253; told to explore while main was still.
-   * **Runtime:** needs the founder to start the card "Runtime builder: X1c, then F7, F6, #116 after #113" (brief: Handover on #257).
-   * **Screens:** needs the founder to start the card "Screens builder: X2b slices (b)–(d), QA-129, F5" (brief: Handover 4 on #254). X2b slice (b) adds a `line_batch` migration: the Lead reads that diff before it merges.
-3. **Queue at handover:** batch #242 + #249 + #252 + #253 + #254 + #257 testing; #113, #216 and #256 queued next; #248 (this records PR) refreshed.
-4. **Old sessions to archive (the founder, from the sidebar):** the Mac session "Runtime lane: transaction timeout fix…" (`local_3b02c2d2`; Remote Control blocks `archive_session`; nothing unpushed) and every cloud session whose PRs are merged and Handover written (all except the four above).
-5. **Watch:** `check_w1_structure_browser.cjs` C11.3 R3-5 failed once at random (07:54); a second random fail quarantines it (P-205). Spend: about US$3 of US$30 by 08:08 UTC from run minutes (the Lead cannot read billing; ask the founder for the figure on 3 Nov).
+1. **Watches first (founder 1 Nov):** 4-minute idle sweep (`ListAgents`; idle without Handover → exact next step; Handover → replacement card); 20-minute check (merges, queue, red, demo, usage %); 90-second alarm (merges, "Question for the tech lead", Handover, Blocker, migration, red main, demo down); PR alarm (red check, dequeued); Mac alarm (memory under 15% or load over 40); 2-hourly ops review on a cheap model writing the ops lessons file (product, ops folder, created on its first run).
+2. **Starting sessions:** the founder works over Remote Control, so the app lets the Lead start sessions only on a message typed in the desktop app; otherwise the Lead proposes cards. Ask the founder once to type "start all waiting builder cards" in the desktop app.
+3. **Cards waiting for the founder (replacements for builders that handed over):** Forms builder 3 (label #277, then C3.4, C3.6, C11.13, C11.14) · Swarm B1b (C3.12 with a migration, C11.1) · Screens builder 7 (resolve #281's code conflict first, then C11.16, C11.10, C11.3, C11.12) · Swarm B4b (C4.11) · Swarm M3-A2 (C11.5, then the case) · Swarm B5b (C11.9, C3.15) · Swarm B3b (C4.5, C4.4) · Runtime builder 3 (X9 #300, #116, built files C10.1, C3.11, C11.7).
+4. **Running now:** Swarm B2 (#291 C3.1, then C3.3, C11.8 incl. job.tsx m2 one-liner, C9.1) · Swarm M3-B (#283 C6.12 approved; C6.4 built locally, opens after #283 merges; then C11.6) · Flaky-checks fixer (P-214) · qa-2 (after-merge rounds; re-score C10.1, C11.7, C1.5) · Day-0 packs on the Mac (#295 pack 3 awaiting its fixes for the Lead's answers, #298 pack 2, #296 pack 4, pack 1 still finishing).
+5. **Old sessions for the founder to archive:** every session with a Handover comment (QA after-merge 6b424941, both old Screens builders, both old Forms builders, both old Runtime builders, Swarm B1, B3, B4, B5, M3-A, qa first session).
 
-## Progress (from `qa/CAPABILITIES.md` by `tools/progress.sh`; moves only after qa tests)
-* M2 Super Admin setup: 21 of 57 work (36%) at the last count; about 20 product PRs merged 1 Nov await qa's retest.
-* R1 thin runtime slice: 6 of 8 work (75%)
-* M3 case, agent and client: 0 of 15 work · 3 partial
+## The three open risks
+1. **Credits:** weekly plan 48% used at 13:40 UTC, about 5–7 points an hour with the swarm; extra usage still OFF. Ask the founder; if it stays off, cut to about 6 builders.
+2. **Mac check line:** each builder PR's own `ci` runs on the one Mac runner (`xr-mac`); 6–7 PRs wait in line, and a cloud builder can push to only one branch, so it cannot open its next PR until the first merges. Founder decision pending: move PR `ci` to GitHub Linux (about US$1 a day, estimate, inside the US$30 trial cap).
+3. **Builders burn context in about an hour** (60–80%), so lanes stop often; replacements wait on the founder's clicks (risk 2 of "Starting sessions").
 
-## The merge flow now (1 Nov)
-* Builders' PRs: fast checks on the Mac; a PR joins the Mergify queue only with its own check green and the label (P-210). Before the label, the builder runs its files' suites (P-217; when the selection is ALL, only the touched files' suites).
-* Batches of up to 6, one at a time, on four GitHub Linux machines (P-213), split by measured suite times: 12–17 minutes. Speed budgets are judged on the Mac nightly only (P-215). Tests must work on Linux (#113's `ps -E` broke two batches).
-* The Lead merges merge-flow fixes ahead of the queue, refreshes records-only conflicts and labels approved PRs whose builder stopped before its pre-check (P-214). A PR dropped for failing checks needs "@mergifyio requeue", not "queue".
-* Results 1 Nov: 41 merges. About 2 an hour before 05:49 UTC, about 7 an hour after when PRs wait; 16 batches since the switch, 8 failed (most of them #113).
+## Progress (`tools/progress.sh`, 13:45 UTC)
+* M2: 25 of 56 work · 2 built, awaiting qa · 25 partial · 4 not built. R1: 6 of 8. M3: 0 of 16 (Visitor visa path in flight: C6.11 #288, C6.12 #283, C6.4 built).
+* Merged since 11:40: #269, #271, #272, #273, #275, #278, #113, #287 (plus the queue batch in flight: #285, #294, #284, #292, #288, #289, #290, #280).
 
-## Founder decisions waiting
-* None.
+## Decisions today (in `DECISIONS.md`)
+P-219 (capability IDs per PR, re-score what merges) · P-220 (tests first, swarm, Visitor visa first) · P-221 (`qa/built/<ID>.md`, never edit `qa/CAPABILITIES.md` in builder PRs). Not yet a row (record next): the name-free requirements copy on GitHub (`domain/requirements-2026-10-19/`, #290; AGENTS rule 3; founder 1 Nov) and Merge Protections switched on in Mergify (approved PRs queue themselves, 1 Nov).
 
-## Log (newest first; earlier lines are in git history)
-- 2026-11-01 10:05 · tech lead: handover at 55% context. 41 merges today. P-210 to P-218 recorded (queue fix, any per PR, shards, unblock, speed budgets on the Mac, #195 answers, local suites before the label, finish the item then hand over). #113 solved (the speed miss was the measure; `ps -E` replaced on Linux). QA-122 (Major) fixed in #257. Builders now hand over at 60–80% after finishing the item.
-- 2026-11-01 01:45 · tech lead: handover at 59% context. Overnight 31 Oct: 8 merges since 17:20 UTC; one unreliable suite quarantined.
+## Lessons today
+* Approved PRs never queued themselves until Merge Protections was on; every earlier merge was a typed command.
+* A shared scoreboard edited by every PR collides; one file per item (P-221).
+* Check a new suite on Linux before it joins the batch (#113's speed check broke a batch).
+* Migration folders need distinct timestamps; read every migration again when it changes.

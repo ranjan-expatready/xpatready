@@ -93,7 +93,7 @@ const row = async (code, a = "user-A") => (await call("GET", `/api/library/forms
   ok("C11.9 pass (R69-3 not reproduced): with delete and retire both refused, the row's action carries the reason (greyed)", !!uses.can?.delete && !!uses.can?.retire && !!both?.action?.why, { can: uses.can, action: both?.action });
 
   // ── Browser: the walk, R69-2 / QA-67, QA-68 page, R69-3 greyed ──────────────────────────────────────────────────────
-  const browser = await chromium.launch({ headless: !process.env.QA_HEADED });
+  const browser = await chromium.launch({ channel: "chrome", headless: !process.env.QA_HEADED }); // the installed Chrome, as the other qa checks (drift fixed 1 Nov: the bundled headless shell is not on Linux runners)
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   await page.addInitScript(() => { try { if (!sessionStorage.getItem("qa-init")) { localStorage.setItem("xr-actor", "user-A"); sessionStorage.setItem("qa-init", "1"); } } catch {} });
   const rowEl = (code) => page.locator("tr", { hasText: code }).first();

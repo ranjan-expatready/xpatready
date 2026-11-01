@@ -47,12 +47,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     step("C2.12 BR-4 pass: Enter on the chip opens the rail, addressed as ?setup=IMM 5257", new URL(p.url()).searchParams.get("setup") === "IMM 5257");
     const rail = p.locator('[data-setup-rail="IMM 5257"]');
     step("C2.12 pass: the rail lists the six steps, step 2 marked current (aria-current=step)", (await rail.locator("[data-step]").count()) === 6 && (await rail.locator('[data-step="map"]').getAttribute("aria-current")) === "step" && (await rail.locator('[data-step="attach"]').getAttribute("data-state")) === "done");
-    step("C2.12 pass: Your next step names the author's step and links to the Forms tab", /Draft with AI or add from the library/.test(await rail.locator("[data-next-for-you]").textContent()) && (await rail.locator("[data-next-for-you] a").getAttribute("href")) === `/c/${sv}/forms`);
+    step("C2.12 pass: Your next step names the author's step and links to the Forms tab", /Draft with AI or add from the library/.test(await rail.locator("[data-next-for-you]").textContent()) && (await rail.locator("[data-next-for-you] a").getAttribute("href")) === `/c/${sv}/forms?form=IMM+5257&c=${sv}`);
     const fromApi = (await api(`/combinations/${sv}/forms/${encodeURIComponent("IMM 5257")}/progress`)).body;
     step("C2.12 BR-5 pass: what's left lists the steps not done, as the API gives them", (await rail.locator("[data-whats-left] li").count()) === fromApi.whats_left.length && fromApi.whats_left.length > 0);
     // Review Minor 7: every step's link is the API's (BR-1: it lands where the step is done).
+    // The return strip (C2.12): each link also carries ?form=&c= (the way back); without those two it is the API's link.
+    const bare = (h) => { if (!h) return h; const u = new URL(h, BASE); const way = u.searchParams.get("form") === "IMM 5257" && u.searchParams.get("c") === sv; u.searchParams.delete("form"); u.searchParams.delete("c"); return way ? `${u.pathname}${u.search}${u.hash}` : `missing the way back: ${h}`; };
     const links = await rail.locator("[data-step]").evaluateAll((ls) => ls.map((l) => l.querySelector("[data-step-link]")?.getAttribute("href") ?? null));
-    step("C2.12 BR-1 pass: each step links where the API says it is done (and only those steps)", JSON.stringify(links) === JSON.stringify(fromApi.steps.map((x) => x.next?.href ?? null)) && links.some(Boolean), JSON.stringify(links));
+    step("C2.12 BR-1 pass: each step links where the API says it is done (and only those steps), with the way back", JSON.stringify(links.map(bare)) === JSON.stringify(fromApi.steps.map((x) => x.next?.href ?? null)) && links.some(Boolean), JSON.stringify(links));
     step("C2.12 BR-1 pass: the rail has no write action (links and Close only)", (await p.getByRole("dialog").locator("button").evaluateAll((bs) => bs.map((x) => x.textContent?.trim()).filter((t) => t && !/^Close$/.test(t)))).length === 0, await p.getByRole("dialog").locator("button").allTextContents());
     await axe("the guided path of IMM 5257"); await shot("01-rail-author");
     // BR-4 resume: a reload lands on the same form's path.
