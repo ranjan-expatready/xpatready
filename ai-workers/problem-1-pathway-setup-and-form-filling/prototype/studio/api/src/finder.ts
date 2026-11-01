@@ -42,6 +42,7 @@ import { linkFinderGuides } from "./guide-sources.ts";
 import { LIVE_RUN, newestFirst, StepRunner, worstRoundUsd, type AiStep, type RoundOut, type SavedRun } from "./rounds.ts";
 import { otherPages } from "../../engine/rounds.ts";
 import { MAX_ATTEMPTS, OVERRIDE_TTL_MS } from "../../../p2/policy.ts";
+import { forgetDeletion } from "./library-deletions.ts";
 
 const run = promisify(execFile);
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
@@ -554,6 +555,7 @@ export class Finder implements OnModuleInit {
     if (!existsSync(stored)) writeFileSync(stored, bytes);
     await this.db.$transaction(async (tx) => {
       const def = await tx.govFormDef.upsert({ where: { workspaceId_formKey: { workspaceId, formKey: key } }, update: { formPageUrl: url }, create: { workspaceId, formKey: key, displayName: title.replace(/^guide\s*\d+\s*[-–:]?\s*/i, "") || key, formKind: "guide", formPageUrl: url } });
+      await forgetDeletion(tx, workspaceId, key); // X5 slice c
       const have = await tx.formEdition.findFirst({ where: { workspaceId, govFormDefId: def.id, contentSha256: fp } });
       if (have) { await tx.formEdition.update({ where: { id: have.id }, data: { checkedAt: new Date() } }); return; }
       await tx.formEdition.createMany({ data: [{ workspaceId, govFormDefId: def.id, editionLabel: label, sha256: fileSha, contentSha256: fp, storedPath: stored.replace(`${ROOT}/`, ""), origin: "DOWNLOADED", formPageUrl: url, sourceUrl: url, canadaUpdated: modified, checkedAt: new Date() }], skipDuplicates: true }); // a guide is read by AI, never filed: no record of what IRCC accepts
@@ -638,6 +640,7 @@ export class Finder implements OnModuleInit {
     try {
       await this.db.$transaction(async (tx) => {
         const d = def ?? (await tx.govFormDef.upsert({ where: { workspaceId_formKey: { workspaceId, formKey: p.code } }, update: {}, create: { workspaceId, formKey: p.code, displayName: id.title || row.title || p.code, formKind: kind === "checklist" ? "checklist" : "data_form", formPageUrl: row.pageUrl } }));
+        await forgetDeletion(tx, workspaceId, p.code); // X5 slice c: Find again, a person's click, took it from canada.ca
         await tx.formEdition.create({ data: { workspaceId, govFormDefId: d.id, editionLabel: id.edition_label, sha256: fileSha, storedPath: stored.replace(`${ROOT}/`, ""), origin: "DOWNLOADED", formPageUrl: row.pageUrl, sourceUrl: pdfUrl, canadaUpdated: page.lastUpdated, checkedAt: new Date(), indexDateSeenCurrent: indexAtStart } }); // X5 break (0796fc0c) M16: just taken from canada.ca, so current at the index date read before the download (break 521bc9c4 m49: never a date a fill set while it downloaded). C-5: what IRCC accepts is proposed for a person after attach, never written here
       });
     } catch (e) {

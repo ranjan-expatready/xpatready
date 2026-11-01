@@ -6,9 +6,9 @@ import { appendFileSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmS
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { seedShared } from "../../p2/tools/seed-shared-ledger.ts";
-import { costCheck } from "../engine/cost-check.ts";
+import { ceilCents, costCheck, runWorstUsd } from "../engine/cost-check.ts";
 import { COST_WORDS } from "../contracts/cost-check.ts";
-import { BudgetExceeded, LedgerBusy, OverrideRefused, SpendLedger } from "../../p2/ledger.ts";
+import { BudgetExceeded, costUsd, LedgerBusy, OverrideRefused, SpendLedger } from "../../p2/ledger.ts";
 import { runDrafting } from "../../p2/runner.ts";
 import { createHash } from "node:crypto";
 import { EXPERIMENT_CAP_USD, OVERRIDE_CEILING_USD, WAVE1_START } from "../../p2/policy.ts";
@@ -162,6 +162,33 @@ for (const [what, line, re] of [
   ok(`C11.8 N6 break n4 fail: a ledger line with ${what} refuses a Continue and a reservation in words (BudgetExceeded, nothing written)`, throws(() => m.l.recordOverride({ run_key: "n", limits: ["experiment"], worst_usd: 6, by: "user-A" }), BudgetExceeded, re) && throws(() => m.l.reserve("run-n", 1, 0.5, 5, "paid"), BudgetExceeded, re) && m.lines().length === 2);
 }
 ok("C11.8 N6 break n4 pass: well-formed override and use lines pass the check (a clean ledger adds up as before)", (() => { const g = fresh(100); const x = g.l.recordOverride({ run_key: "g", limits: ["experiment", "wave"], worst_usd: 1, by: "user-A" }); g.l.useOverride(x.id, "g"); return Math.abs(g.l.committed() - 100) < 1e-9; })());
+
+// ── #131 review M1: a Continue past "attempts" only (no money limit passed) still holds its run to the worst case the
+// person accepted: before, every reservation that passed no limit was admitted, so one click could pay for ~3 runs.
+const ao = fresh(10); const aoO = ao.l.recordOverride({ run_key: "ao", limits: ["attempts"], worst_usd: 2, by: "user-A" }); ao.l.useOverride(aoO.id, "ao");
+const ao1 = (() => { try { return ao.l.reserve("run-ao", 1, 2, 5, "paid", { overrideId: aoO.id, runKey: "ao" }); } catch (e) { return e as Error; } })();
+ok("C11.8 #131 review M1 pass: an attempts-only Continue admits its run up to the accepted worst case (US$2)", typeof ao1 === "string" && ao.l.overrideRoomUsd(aoO.id) === 0, ao1);
+ok("C11.8 #131 review M1 fail: a second US$2 reservation under it (a retry) is refused, above what is left of the accepted worst case (before: admitted)", throws(() => ao.l.reserve("run-ao", 2, 2, 5, "paid", { overrideId: aoO.id, runKey: "ao" }), BudgetExceeded, /above the US\$0\.0000 left of the worst case the person accepted/));
+ok("C11.8 #131 review M1 pass: a US$0 stub pass under it still runs (it spends nothing)", typeof (() => { try { return ao.l.reserve("run-ao", 3, 0.5, 5, "stub", { overrideId: aoO.id, runKey: "ao" }); } catch (e) { return e; } })() === "string");
+
+// #131 review M1 (rounding): a plan's worst case is rounded UP to the cent. Two attempts of US$1.892 make US$3.784, which
+// rounded to the nearest cent was US$3.78, and the run's own second attempt was refused by US$0.004.
+ok("C11.8 #131 review M1 pass: worst cases round up to the cent (US$3.784 → US$3.79; a whole cent stays as it is)", ceilCents(1.892 * 2) === 3.79 && ceilCents(2.76) === 2.76 && ceilCents(0) === 0);
+const rc2 = fresh(10); const rcO = rc2.l.recordOverride({ run_key: "rc2", limits: ["attempts"], worst_usd: ceilCents(1.892 * 2), by: "user-A" }); rc2.l.useOverride(rcO.id, "rc2");
+const rcA1 = (() => { try { return rc2.l.reserve("run-rc2", 1, 1.892, 5, "paid", { overrideId: rcO.id, runKey: "rc2" }); } catch (e) { return e as Error; } })();
+const rcA2 = (() => { try { return rc2.l.reserve("run-rc2", 2, 1.892, 5, "paid", { overrideId: rcO.id, runKey: "rc2" }); } catch (e) { return e as Error; } })();
+ok("C11.8 #131 review M1 fail: with the worst case rounded up, the run's own second attempt fits (before, at US$3.78, it was refused)", typeof rcA1 === "string" && typeof rcA2 === "string", [rcA1, rcA2]);
+ok("C11.8 #131 review M1 pass: rounded to the nearest cent instead, the second attempt is refused (what happened before the fix)", (() => { const z = fresh(10); const zo = z.l.recordOverride({ run_key: "z", limits: ["attempts"], worst_usd: Math.round(1.892 * 2 * 100) / 100, by: "user-A" }); z.l.useOverride(zo.id, "z"); z.l.reserve("run-z", 1, 1.892, 5, "paid", { overrideId: zo.id, runKey: "z" }); return throws(() => z.l.reserve("run-z", 2, 1.892, 5, "paid", { overrideId: zo.id, runKey: "z" }), BudgetExceeded, /left of the worst case/); })());
+
+// #131 review (3da6779f) M1: the plan's own worst case, as Ai.estimate makes it, at the reviewer's probe size (151,000
+// request bytes, Opus 5.5, 64,000 output tokens, 2 attempts): US$3.79, and both attempts of the run fit under it.
+const perAttempt151 = costUsd("claude-opus-5-5", 151_000 + 2_000, 64_000), plan151 = runWorstUsd(perAttempt151, 2);
+const pr151 = fresh(10); const po151 = pr151.l.recordOverride({ run_key: "p151", limits: ["attempts"], worst_usd: plan151, by: "user-A" }); pr151.l.useOverride(po151.id, "p151");
+const a151 = [1, 2].map((n) => { try { return pr151.l.reserve("run-151", n, perAttempt151, 5, "paid", { overrideId: po151.id, runKey: "p151" }); } catch (e) { return e as Error; } });
+ok("C11.8 #131 review M1 pass: at 151,000 bytes the plan's worst case is US$3.79 (rounded up) and both attempts of the run are admitted under it", plan151 === 3.79 && a151.every((x) => typeof x === "string"), { plan151, a151 });
+// The guard against undoing it: both places a plan prices a run (a whole form, each A4 part) go through runWorstUsd.
+const aiSrc = readFileSync(join(import.meta.dirname, "..", "api", "src", "ai.ts"), "utf8"), srcSrc = readFileSync(join(import.meta.dirname, "..", "api", "src", "sources.ts"), "utf8");
+ok("C11.8 #131 review M1 fail: Ai.estimate and each A4 part price a run through runWorstUsd (rounded up), never Math.round or a bare Math.min", /const worst = runWorstUsd\(perAttempt, /.test(aiSrc) && /const worst = saved \|\| repeats \? 0 : runWorstUsd\(costUsd\(/.test(srcSrc));
 
 // ── Break m7: a Continue is used only by the person who recorded it.
 const pr = fresh(118); const po = pr.l.recordOverride({ run_key: "pr", limits: ["experiment"], worst_usd: 3, by: "user-A" });
