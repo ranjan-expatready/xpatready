@@ -19,8 +19,11 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { BlockedLine, ImpactPanel, RowAction, useUndoToast } from "@/components/lifecycle";
 import { ACTION_LABEL, RETURNED_LABEL, SAY, TIP, WAITING_LABEL, WHY } from "../../../contracts/lifecycle";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { FieldMapState } from "../../../contracts/form-library";
 
 type Row = { code: string; title: string; type: "form" | "guide" | "checklist"; edition: string | null; canada_updated: string | null; accepts: string | null; accepts_basis: string | null; accepts_quote: string | null; accepts_waiting: boolean;
+  /** C3.12: the field map of its current edition (contracts/form-library.ts fieldMapState). */
+  field_map: FieldMapState;
   /** P-143 (C-3): one record per IRCC account (ANY: every account), each with its basis and IRCC's line. */
   accepts_accounts?: { account: string; account_words: string; channels: string[]; words: string; basis: string; quote: string | null; source_url: string | null }[];
   origin: string | null; downloaded_from: string | null; checked_at: string | null; form_page_url: string | null; fingerprint: string | null; attachment_id: string | null;
@@ -142,14 +145,15 @@ export function FormsPage() {
   }, [countText, dq]);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- the row callbacks only call state setters; the rows and the person are what change it
   const tableEl = React.useMemo(() => (
-            <Table label="Table: Number, Title, Type, Edition, IRCC accepts, Used by, Status" headClass={[undefined, undefined, "hidden xl:table-cell", "hidden xl:table-cell"]} head={["Number", "Title", "Type", "Edition", <Tip key="ia" tip={ACCEPTS_TIP}><span tabIndex={0} className="underline decoration-dotted rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">IRCC accepts</span></Tip>, "Used by", "Status", <span key="a" className="sr-only">Actions</span>]}>
+            <Table label="Table: Number, Title, Type, Edition, Field map, IRCC accepts, Used by, Status" headClass={[undefined, undefined, "hidden xl:table-cell", "hidden xl:table-cell", "hidden xl:table-cell"]} head={["Number", "Title", "Type", "Edition", "Field map", <Tip key="ia" tip={ACCEPTS_TIP}><span tabIndex={0} className="underline decoration-dotted rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">IRCC accepts</span></Tip>, "Used by", "Status", <span key="a" className="sr-only">Actions</span>]}>
               {pageRows.map((r) => (<React.Fragment key={r.code}>
                 <tr data-form={r.code} tabIndex={-1} className={`focus-visible:outline-2! focus-visible:outline-solid! focus-visible:-outline-offset-2! focus-visible:outline-ring! ${r.status === "retired" ? "text-text-muted" : ""}`}>
                   <td className="whitespace-nowrap text-xs tabular-nums"><button type="button" className="rounded text-text-link underline-offset-2 hover:underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" onClick={() => setOpen(r)}>{r.code}</button></td>
                   <td className="min-w-32 max-w-56 break-words xl:max-w-80"><span className="line-clamp-2" title={r.title}>{r.title}</span>
-                    <span className="mt-0.5 block text-xs text-text-muted xl:hidden">{TYPE_WORD[r.type]} · {editionText(r) ?? "no usable edition yet"}</span></td>
+                    <span className="mt-0.5 block text-xs text-text-muted xl:hidden">{TYPE_WORD[r.type]} · {editionText(r) ?? "no usable edition yet"}{r.type === "form" && r.edition ? <> · <Tip tip={r.field_map.tip}><span tabIndex={0} data-field-map-short={r.field_map.kind} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">Field map: {r.field_map.words}</span></Tip></> : null}</span></td>
                   <td className="hidden xl:table-cell">{TYPE_WORD[r.type]}</td>
                   <td className="hidden xl:table-cell">{editionText(r) ?? <span className="text-text-muted">no usable edition yet</span>}</td>
+                  <td className="hidden xl:table-cell"><FieldMapCell fm={r.field_map} /></td>
                   <td className="max-w-36 xl:max-w-none"><AcceptsCell r={r} /></td>
                   <td className="max-w-48 xl:max-w-72">{r.used_by.length === 0 ? <span className="text-text-muted">Not used</span> : r.used_by.length === 1 ? <TrailText label={r.used_by[0].label} /> : <Tip tip={r.used_by.map((u) => u.label).join(", ")}>{/* DV-d1-1 (N8): a count a person trusts at a glance: a plain link-style button (opens where it is used), never a dotted line that reads as struck through */}<button type="button" data-used-by-count className="rounded text-text-link underline-offset-2 hover:underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" onClick={() => setOpen(r)}>{r.used_by.length} combinations</button></Tip>}</td>
                   <td><span className="inline-flex flex-wrap gap-1">{(() => { const ix = r.status === "no_file" && r.listed_by_ircc ? STATUS_INDEX.listed : r.status === "newer_file" && r.newer_on_index ? STATUS_INDEX.newer : null; return <Tip tip={ix?.tip ?? STATUS[r.status].tip}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" data-row-status={r.status}><Pill tone={STATUS[r.status].tone}>{ix?.word ?? STATUS[r.status].word}</Pill></span></Tip>; })()}{r.lifecycle_waiting && r.lifecycle_returned ? <Tip tip={TIP.returned}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone="danger">{RETURNED_LABEL[r.lifecycle_waiting]}</Pill></span></Tip> : r.lifecycle_waiting ? <Tip tip={r.lifecycle_approved ? `Approved: the form is ${r.lifecycle_waiting === "RESTORE" ? "restored" : "retired"} with the next release (Release, on the combination's Review page).` : `A request to ${r.lifecycle_waiting.toLowerCase()} this form waits for a second person on To review.`}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone="warn">{r.lifecycle_approved ? `${ACTION_LABEL[r.lifecycle_waiting]} approved` : WAITING_LABEL[r.lifecycle_waiting]}</Pill></span></Tip> : null}</span></td>
@@ -163,7 +167,7 @@ export function FormsPage() {
                   </td>
                 </tr>
                 {/* The greyed action's reason, as visible text under its row (P-116 amended; aria-describedby on the action). */}
-                {canAuthor && r.action.why ? <tr data-reason-for={r.code}><td colSpan={8} className="pt-0 text-right"><BlockedLine id={`why-${r.code.replace(/\W+/g, "-")}`} text={r.action.why} onWhere={() => setOpen(r)} className="ml-auto max-w-[40rem]" /></td></tr> : null}
+                {canAuthor && r.action.why ? <tr data-reason-for={r.code}><td colSpan={9} className="pt-0 text-right"><BlockedLine id={`why-${r.code.replace(/\W+/g, "-")}`} text={r.action.why} onWhere={() => setOpen(r)} className="ml-auto max-w-[40rem]" /></td></tr> : null}
               </React.Fragment>
               ))}
             </Table>
@@ -341,6 +345,7 @@ function FormDrawer({ row, onClose, canAuthor }: { row: Row; onClose: () => void
         <p>{row.type === "guide" ? editionText(row) : <>Current edition: {row.edition ?? "none usable yet"}{row.canada_updated ? ` · canada.ca last updated ${row.canada_updated}` : ""}</>}</p>
         <p>{row.type === "guide" ? "Read from its canada.ca page" : row.origin ? ORIGIN[row.origin] ?? row.origin : "Where it came from is not recorded"}{row.downloaded_from && row.type !== "guide" ? <> · <a className="text-text-link underline" href={row.downloaded_from} target="_blank" rel="noreferrer">PDF link</a></> : null}</p>
         {row.form_page_url ? <p><a className="text-text-link underline" href={row.form_page_url} target="_blank" rel="noreferrer">{/\.pdf$/i.test(row.form_page_url) ? "Its file on IRCC's site (no form page)" : "Its page on canada.ca"}</a>{/\.pdf$/i.test(row.form_page_url) ? null : <> · checked {when(row.checked_at)}</>}</p> : <p className="text-text-muted">No canada.ca page recorded yet.</p>}
+        {row.type === "form" ? <p data-field-map-panel={row.field_map.kind}>Field map: {row.field_map.words}<span className="block text-xs text-text-muted">{row.field_map.tip}</span></p> : null}
         {row.older_editions.map((e) => <p key={e.label} className="text-text-muted" data-kept-by><span className="font-medium text-text">Earlier edition {e.label.replace(`${row.code} `, "")}</span> · {e.kept_by}</p>)}
         <details><summary className="cursor-pointer text-text-muted">Details</summary><p className="mono break-all text-xs">File fingerprint (SHA-256): {row.fingerprint ?? "none"}</p></details>
       </section>
@@ -362,6 +367,12 @@ function FormDrawer({ row, onClose, canAuthor }: { row: Row; onClose: () => void
       {!canAuthor ? <p className="mt-4 text-xs text-text-muted">Read-only: you do not hold the author duty.</p> : null}
     </Panel>
   );
+}
+
+/** C3.12: the field map of a form's current edition, in words, with what it means on hover or focus. */
+function FieldMapCell({ fm }: { fm: FieldMapState }) {
+  const muted = fm.kind === "not_filled" || fm.kind === "no_edition" || fm.kind === "none";
+  return <Tip tip={fm.tip}><span tabIndex={0} data-field-map={fm.kind} className={`rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${muted ? "text-text-muted" : ""}`}>{fm.kind === "complete" ? <Pill tone="ok">{fm.words}</Pill> : fm.kind === "proposed" || fm.kind === "waiting" ? <Pill tone="warn">{fm.words}</Pill> : fm.words}</span></Tip>;
 }
 
 /** C11.18: set or correct what IRCC accepts, with the canada.ca line it comes from or a reason; a second person approves. */
