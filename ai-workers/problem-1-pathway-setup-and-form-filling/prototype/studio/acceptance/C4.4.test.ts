@@ -8,7 +8,7 @@
 // independent review on demand (AI, never changes data); the PQR mode. Part 1 runs on the engine (no server); part 2 on
 // the Visitor visa case through the API. The value_type names for the new types are this pack's proposal (Question for
 // the tech lead in the PR). The 10-year gap is a tier-2 section check held as data (P-47; tech lead on #295), tested
-// through the engine's condition evaluator with a proposed op "covers_years". No live AI (US$0): the paid review route is called only after the copy reports live AI off.
+// through the engine's condition evaluator as a derived field (months_uncovered_10y) and a "gt 0" check. No live AI (US$0): the paid review route is called only after the copy reports live AI off.
 // Part 1 is built and adopted (C4.4 part 1, swarm B3b): tests/check_c44_question_types.ts runs it in the suites with a
 // pass and a fail per rule. Changed here with it: the fixture's field maps carry a data_path (every real map has one; the
 // engine read it and the run crashed instead of failing, tech lead 1 Nov); a type that throws now fails loudly; "document"
@@ -67,7 +67,7 @@ const snapshot = { canonical_fields: TYPES.map(([t]) => ({ id: `person.sample_${
   const docWords = checkValue(docField, "person.sample_document", { file_id: "00000000-0000-4000-8000-000000000001", name: "passport.pdf" }, TODAY);
   ok("C4.4 / P-130: a field typed \"document\" is never answered as a question; the words send the person to the document checklist", docWords.length === 1 && docWords[0] === DOCUMENT_NOT_A_QUESTION, docWords);
   // Tier 2 (P-47: "history covers 10 years" is a section check, tech lead on #295): a rule held as data, evaluated by the
-  // engine's one condition evaluator. The op name "covers_years" is this pack's proposal (Question for the tech lead).
+  // engine's one condition evaluator. A derived field with the tested calculation months_uncovered_10y, checked "gt 0" (closed vocabulary).
   const HIST = "person.sample_period_history";
   const tenYears = { subjectKind: "PERSON", op: "gt", field: "person.sample_history_uncovered_months", value: 0 };
   const knownWith = (rows: unknown) => new Map([[kkey("p1", HIST), { value: rows, status: "confirmed" as const, source: "acceptance" }], [kkey("case", "case.application_date"), { value: "2026-11-01", status: "confirmed" as const, source: "acceptance" }]]);

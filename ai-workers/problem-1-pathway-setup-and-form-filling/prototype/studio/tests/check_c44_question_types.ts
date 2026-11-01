@@ -66,6 +66,9 @@ const plain = (m: string[]) => m.length > 0 && m.every((x) => x.length > 8 && !/
   ok("C4.4 period history: an open end (\"goes on today\") passes; an end month in the future fails", check("period_history", [{ from: "2016-11", to: "", what: "Sample work" }]).length === 0 && plain(check("period_history", [{ from: "2016-11", to: "2027-01", what: "Sample work" }])), check("period_history", [{ from: "2016-11", to: "2027-01", what: "Sample work" }]));
   const noWhat = check("period_history", [{ from: "2016-11", to: "2019-13", what: "" }]);
   ok("C4.4 period history fail: a month that is not real and an empty \"what\" each get their own message naming the period", noWhat.length === 2 && noWhat.every((m) => m.startsWith("Period 1:")), noWhat);
+  const future = check("period_history", [{ from: "2027-03", to: "", what: "Sample study" }]), early = check("period_history", [{ from: "1899-06", to: "1950-01", what: "Sample work" }]);
+  ok("C4.4 period history fail (review m1): a period starting in the future says so, not \"the end is before the start\"", future.length === 1 && /start is in the future/.test(future[0]), future);
+  ok("C4.4 period history fail (review m2): a real year before 1900 is named as too early, not as \"enter the start as month and year\"", early.length === 1 && /before 1900/.test(early[0]), early);
   ok("C4.4 period history fail: no periods at all is refused", plain(check("period_history", [])) && plain(check("period_history", "2016 to now")), check("period_history", []));
   ok("C4.4 declaration fail: only a ticked declaration (true) passes; \"yes\" as text does not", check("declaration", true).length === 0 && plain(check("declaration", "yes")), check("declaration", "yes"));
   // P-130: an upload is a document checklist line, not a question.
@@ -122,6 +125,12 @@ const plain = (m: string[]) => m.length > 0 && m.every((x) => x.length > 8 && !/
   const name = await put(P, "person.c44_sample_name_at_birth", { family_name: "Sample", given_names: "", no_given_name: true }, CLIENT);
   const decl = await put(P, "person.c44_sample_declaration", false, CLIENT);
   ok("C4.4 person name and declaration through the API: \"no given name\" saves clean; an unticked declaration is flagged", name.status === 200 && (name.body?.answer?.problems ?? []).length === 0 && decl.status === 200 && (decl.body?.answer?.problems ?? []).length === 1, { name: name.body?.answer?.problems, decl: decl.body?.answer?.problems });
+  // P-97, P-130 (review M1): the declaration is the client's own; the officer cannot make it for them.
+  const offDecl = await put(P, "person.c44_sample_declaration", true, OFFICER);
+  const declNow = sql(`select value_json::text || '|' || (source_json->>'actor') from client_canonical_answer where subject_id = '${P}' and canonical_field_key = 'person.c44_sample_declaration' and superseded_by_id is null`);
+  ok("C4.4 declaration fail (review M1): the officer's tick is refused (403) in words, and the client's answer stays as it was", offDecl.status === 403 && /Only the client/.test(msg(offDecl)) && declNow === "false|user-P", { status: offDecl.status, words: msg(offDecl), declNow });
+  const cliDecl = await put(P, "person.c44_sample_declaration", true, CLIENT);
+  ok("C4.4 declaration pass: the client makes the declaration (200, no problems)", cliDecl.status === 200 && (cliDecl.body?.answer?.problems ?? []).length === 0, { status: cliDecl.status, problems: cliDecl.body?.answer?.problems });
   const stored = sql(`select value_json::text from client_canonical_answer where subject_id = '${P}' and canonical_field_key = 'person.c44_sample_name_at_birth' and superseded_by_id is null order by effective_at desc limit 1`);
   const parsed = JSON.parse(stored || "null");
   ok("C4.4 data: the name is stored in its parts, as answered", parsed?.family_name === "Sample" && parsed?.given_names === "" && parsed?.no_given_name === true, stored);

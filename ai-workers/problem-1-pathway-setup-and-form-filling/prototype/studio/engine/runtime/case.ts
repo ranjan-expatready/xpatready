@@ -166,9 +166,11 @@ function checkType(s: Snapshot, field: string, value: unknown, today: Date): str
         const at = `Period ${i + 1}`;
         const month = (x: unknown) => { const m = typeof x === "string" ? /^(\d{4})-(\d{2})$/.exec(x.trim()) : null; return m && realDate(Number(m[1]), Number(m[2]), 1) ? Number(m[1]) * 100 + Number(m[2]) : null; };
         const from = month(row?.from), open = row?.to === undefined || row?.to === null || row?.to === "", to = open ? now : month(row?.to);
-        if (from === null) out.push(`${at}: enter the start as month and year, for example 2019-06.`);
-        if (to === null) out.push(`${at}: enter the end as month and year, or leave it empty if it goes on today.`);
-        if (from !== null && to !== null && to < from) out.push(`${at}: the end is before the start; check both months.`);
+        const early = (x: unknown) => typeof x === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(x.trim()) && Number(x.slice(0, 4)) < 1900;
+        if (from === null) out.push(early(row?.from) ? `${at}: the start is before 1900; check the year.` : `${at}: enter the start as month and year, for example 2019-06.`);
+        if (to === null) out.push(early(row?.to) ? `${at}: the end is before 1900; check the year.` : `${at}: enter the end as month and year, or leave it empty if it goes on today.`);
+        if (from !== null && from > now) out.push(`${at}: the start is in the future; a history covers what has already happened.`);
+        else if (from !== null && to !== null && to < from) out.push(`${at}: the end is before the start; check both months.`);
         if (to !== null && to > now) out.push(`${at}: the end is in the future; leave it empty if it goes on today.`);
         if (typeof row?.what !== "string" || !row.what.trim()) out.push(`${at}: say what you did (work, study, unemployed, travel).`);
       });

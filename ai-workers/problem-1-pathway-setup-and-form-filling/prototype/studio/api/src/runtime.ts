@@ -220,6 +220,8 @@ export class Runtime {
     const place = (s.placements as { fact: string; repeats: string; section_id: string; collected_from: string }[]).find((p) => p.fact === fieldKey);
     if (!field || !place) fail(`The release this case works from does not ask for ${fieldKey}.`, HttpStatus.NOT_FOUND);
     if (!officer && !isClientField(s, fieldKey)) fail("The officer enters this fact from a document or record.", HttpStatus.FORBIDDEN);
+    // P-97, P-130: a declaration is always the client's own; the officer never makes it for them (C4.4 review M1).
+    if (officer && (field as { value_type?: string }).value_type === "declaration") fail("Only the client makes this declaration, in their own questionnaire; the officer cannot tick it for them.", HttpStatus.FORBIDDEN);
     const caseLevel = place!.repeats === "once_per_case" || fieldKey.startsWith("case.");
     if (caseLevel !== (who!.role === "case")) fail(caseLevel ? "This is asked once for the application, not for a person." : "This is asked for a person, not for the application.", HttpStatus.UNPROCESSABLE_ENTITY);
     if (place!.repeats !== "per_row" && b.row) fail("This question has one answer, not rows.", HttpStatus.UNPROCESSABLE_ENTITY);

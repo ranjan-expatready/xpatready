@@ -81,7 +81,7 @@ export function shown(q: Question, value: unknown): string {
   if (k === "declaration") return value === true ? "Declared" : "Not declared";
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (k === "multi" && Array.isArray(value)) return value.map((v) => q.options?.find((o) => o.key === v)?.label ?? String(v)).join(", ");
-  if (k === "name") { const n = (value ?? {}) as Name; return [n.no_given_name ? "(no given name)" : n.given_names, n.family_name].filter(Boolean).join(" "); }
+  if (k === "name") { const n = (value ?? {}) as Name; return n.no_given_name ? `${n.family_name ?? ""} (no given name)`.trim() : [n.given_names, n.family_name].filter(Boolean).join(" "); }
   if (k === "history" && Array.isArray(value)) return (value as Period[]).map((r) => `${monthWords(r?.from)} to ${r?.to ? monthWords(r.to) : "today"}: ${String(r?.what ?? "")}`).join("; ");
   if ((k === "date" || k === "month") && typeof value === "string") {
     const p = datePartsOf(value), m = MONTHS[Number(p.m) - 1];
@@ -705,7 +705,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
           ) : <span className="text-text-muted">{q.required ? "Not answered" : "Not answered (optional)"}{q.collected_from !== "client_questionnaire" ? " · the officer enters this from a document or record" : ""}</span>}
           {q.note ? <p className="text-xs text-text-warn">{q.note}</p> : null}
         </div>
-        <div><Button size="sm" variant="ghost" onClick={() => edit(q, row)} aria-label={`${a ? "Edit" : "Add"} ${q.label}${row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""} for ${s.about_label}`}><Pencil aria-hidden />{a ? "Edit" : "Add"}</Button></div>
+        {kindOf(q) === "declaration" ? <p className="max-w-40 text-xs text-text-muted">Only the client makes this declaration</p> : <div><Button size="sm" variant="ghost" onClick={() => edit(q, row)} aria-label={`${a ? "Edit" : "Add"} ${q.label}${row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""} for ${s.about_label}`}><Pencil aria-hidden />{a ? "Edit" : "Add"}</Button></div>}
       </div>
     );
   };
