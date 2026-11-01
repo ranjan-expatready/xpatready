@@ -17,6 +17,7 @@ import { BulkBar, FactDrawer, RowMenu, RowStatus, ComesFrom, PreQual, SAY, Sourc
 import { Lock } from "lucide-react";
 import { ConfigArea } from "@/pages/configuration";
 import { FOCUS_RING, useFocusItem } from "@/components/focus-item";
+import { PartProblems } from "@/components/part-problems";
 import { cn } from "@/lib/utils";
 
 const TIPS = {
@@ -355,7 +356,8 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
         {q.roles.map((r) => <button key={r.role} type="button" aria-pressed={r.role === q.role} data-role-chip={r.role} onClick={() => { const n = new URLSearchParams(sp); n.set("role", r.role); setSp(n, { replace: true }); }}
           className={cn("min-h-9 rounded-full border px-3 py-1 text-sm", r.role === q.role ? "border-primary bg-primary/10 font-medium text-text-link" : "border-border bg-surface-raised text-text-muted hover:bg-text/5")}>{r.label} · {r.questions} question{r.questions === 1 ? "" : "s"}{r.gaps ? <span className="ml-1 rounded bg-danger/12 px-1 text-xs text-text-danger">{r.gaps} not asked</span> : null}</button>)}
       </div>
-      <div className={FOCUS_RING} data-focus="questionnaires:problems"><SourceChips rows={mine} needs={checks.size} value={filter} onChange={setFilter} /></div>
+      <SourceChips rows={mine} needs={checks.size} value={filter} onChange={setFilter} />
+      <PartProblems id={id} part="questions" />
       {filter === "pqr" ? <PqrSet id={id} roleLabel={role?.label ?? q.role} n={mine.filter((f) => f.prequalification).length} /> : null}
       {pickedRows.length && canAuthor ? <BulkBar id={id} picked={pickedRows} onClear={() => setPicked(new Set())} onDone={(r, undo) => { setRefused(r.refused); if (r.saved) { setPicked(new Set()); undoToast.show(`${r.what.charAt(0).toUpperCase()}${r.what.slice(1)} on ${r.saved} question${r.saved === 1 ? "" : "s"}`, undo); } }} /> : null}
       {refused.length ? <Notice tone="warn" title={`${refused.length} row${refused.length === 1 ? "" : "s"} not changed`} action={<Button size="sm" variant="ghost" onClick={() => setRefused([])}>Dismiss</Button>}><ul className="mt-1 space-y-0.5" data-bulk-refused>{refused.map((x, i) => <li key={i}>{x.label && !x.message.includes(x.label) ? <><span className="font-medium">{x.label}</span>: </> : null}{x.message}</li>)}</ul></Notice> : null}

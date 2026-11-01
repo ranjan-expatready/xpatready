@@ -17,11 +17,12 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 
 (async () => {
   // ---------------------------------------------------------------- pure rules
-  step("X1 (rule): Before forms' pages and people, and forms items, count on Forms", tabOfFocus("pages:record") === "forms" && tabOfFocus("people:card") === "forms" && tabOfFocus("forms:lines") === "forms" && tabOfFocus("people proposal") === "forms");
-  step("X1 (rule): documents and questionnaires items count on their own tabs; release counts on none", tabOfFocus("documents:lines") === "documents" && tabOfFocus("questionnaires:gaps") === "questionnaires" && tabOfFocus("release") === null);
-  const c = tabCounts({ steps: [{ open: [{ focus: "pages:record" }, { focus: "forms:lines" }] }, { open: [{ focus: "documents:lines" }, { focus: "release" }] }] });
-  step("X1 (rule): counts per tab from the steps' open items", c.forms === 2 && c.documents === 1 && c.questionnaires === 0, c);
-  step("X1 fail (rule): no checklist counts nothing (never a guess)", JSON.stringify(tabCounts(null)) === JSON.stringify({ forms: 0, documents: 0, questionnaires: 0 }));
+  step("C11.10 X1 (rule): Before forms' pages and people, and forms items, count on Forms", tabOfFocus("pages:record") === "forms" && tabOfFocus("people:card") === "forms" && tabOfFocus("forms:lines") === "forms" && tabOfFocus("people proposal") === "forms");
+  step("C11.10 X1 (rule): documents and questionnaires items count on their own tabs; release counts on none", tabOfFocus("documents:lines") === "documents" && tabOfFocus("questionnaires:gaps") === "questionnaires" && tabOfFocus("release") === null);
+  step("C11.10 X1 (rule, review M3): proposals take their step's tab; a Not ready step-level key takes its step's tab", tabOfFocus("review:forms") === "forms" && tabOfFocus("review:people") === "forms" && tabOfFocus("review:documents") === "documents" && tabOfFocus("review:questions") === "questionnaires" && tabOfFocus("questions_documents:problems", "documents") === "documents" && tabOfFocus("questions_documents:problems", "review") === null);
+  const c = tabCounts({ steps: [{ tab: "forms", open: [{ focus: "forms:sources", count: 3 }, { focus: "review:forms", count: 1 }, { focus: "forms:problems", count: 1 }] }, { tab: "documents", open: [{ focus: "documents:lines", count: 1 }, { focus: "questions_documents:problems", count: 2 }] }, { tab: "review", open: [{ focus: "release", count: 1 }] }] });
+  step("C11.10 X1 (rule, review M3): a tab counts the sum of its items' counts, as the board's 'Forms 5' = 3 found + 1 proposal + 1 problem", c.forms === 5 && c.documents === 3 && c.questionnaires === 0, c);
+  step("C11.10 X1 fail (rule): no checklist counts nothing (never a guess)", JSON.stringify(tabCounts(null)) === JSON.stringify({ forms: 0, documents: 0, questionnaires: 0 }));
 
   const b = await chromium.launch({ headless: true, ...(process.platform === "darwin" ? { channel: "chrome" } : fs.existsSync("/opt/pw-browsers/chromium") ? { executablePath: "/opt/pw-browsers/chromium" } : {}) });
   const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: "light", reducedMotion: "reduce" });
@@ -44,10 +45,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.locator("[data-step-badge]").first().waitFor({ timeout: 10000 });
   const badge = async (label) => { const t = p.getByRole("tab", { name: new RegExp(`^${label}`) }); return { n: Number(await t.locator("[data-step-badge]").getAttribute("data-step-badge").catch(() => "0") ?? 0), name: await t.innerText() }; };
   const bf = await badge("Forms"), bd = await badge("Documents"), bq = await badge("Questionnaires");
-  step("X1 pass: the Forms tab shows the number of open setup items that land on it", want.forms > 0 && bf.n === want.forms, { want, got: bf });
-  step("X1 pass: the Documents tab shows its number", want.documents > 0 && bd.n === want.documents, { want, got: bd });
-  step("X1 fail: a tab with nothing open shows no badge", want.questionnaires === 0 && bq.n === 0, { want, got: bq });
-  step("X1: the badge is read as words by a screen reader", /setup items? open/.test(await p.getByRole("tab", { name: /^Forms/ }).locator(".sr-only").innerText()));
+  step("C11.10 X1 pass: the Forms tab shows the number of open setup items that land on it", want.forms > 0 && bf.n === want.forms, { want, got: bf });
+  step("C11.10 X1 pass: the Documents tab shows its number", want.documents > 0 && bd.n === want.documents, { want, got: bd });
+  step("C11.10 X1 fail: a tab with nothing open shows no badge", want.questionnaires === 0 && bq.n === 0, { want, got: bq });
+  step("C11.10 X1: the badge is read as words by a screen reader", /setup items? open/.test(await p.getByRole("tab", { name: /^Forms/ }).locator(".sr-only").innerText()));
   await p.screenshot({ path: path.join(SHOTS, "01-tab-badges-1440.png"), clip: { x: 0, y: 0, width: 1440, height: 520 } });
 
   // ---------------------------------------------------------------- Documents: the checklist's own link lands
@@ -55,19 +56,38 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("setup: Super visa's checklist has a documents item", !!docItem, sum.setup.steps.map((s) => s.open.map((i) => i.focus)));
   await p.goto(`${BASE}/c/${sv}/documents?focus=documents%3Alines`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
   let l = await landed("documents:lines");
-  step("X1 pass: ?focus=documents:lines lands on the Documents tab's checklist: focused, outlined, the address cleared", l.outlined && l.focused && !l.focusInUrl, l);
+  step("C11.10 X1 pass: ?focus=documents:lines lands on the Documents tab's checklist: focused, outlined, the address cleared", l.outlined && l.focused && !l.focusInUrl, l);
   await p.screenshot({ path: path.join(SHOTS, "02-documents-landed-1440.png") });
   await axe("Documents, landed");
   await p.waitForTimeout(2300);
-  step("X1: the outline goes after 2 s", await p.locator('[data-focus="documents:lines"][data-focused]').count() === 0);
+  step("C11.10 X1: the outline goes after 2 s", await p.locator('[data-focus="documents:lines"][data-focused]').count() === 0);
 
   const wp = sql("select id from combination where combination_key='wp.family'");
+  // Review M1, M2: a document line's condition naming a field that does not exist is a Documents problem; "Fix 1 problem"
+  // lands on the notice that lists it (never on a chip showing 0), and the Not ready key lands there too.
+  step("C11.10 X1 fail (setup): no documents problems notice while there is nothing to fix", await (async () => { await p.goto(`${BASE}/c/${wp}/documents`); await p.locator("[data-documents]").waitFor(); return (await p.locator("[data-part-problems]").count()) === 0; })());
+  const line = sql(`select lineage_key from document_requirement where combination_id='${wp}' and status <> 'RETIRED' order by lineage_key limit 1`);
+  sql(`update document_requirement set attach_mode='ANSWER_CONDITIONAL', predicate_json='{"subjectKind":"PRINCIPAL","op":"eq","field":"person.no_such_fact_x1","value":true}', condition_plain='Has a fact that does not exist' where combination_id='${wp}' and lineage_key='${line}' and status <> 'RETIRED'`);
+  // The written line bypasses the server's per-workspace checklist cache: restart this copy (same database) so it reads it.
+  execFileSync("zsh", [path.join(__dirname, "..", "tools", "isolated.sh"), DB.replace(/^xr_studio_/, ""), String(PORT), "restart"], { stdio: "ignore" });
+  const sum2 = (await api(`/combinations/${wp}/summary`)).body;
+  const docProblems = sum2.setup.steps.flatMap((x) => x.open).filter((i) => i.focus === "documents:problems");
+  step("setup: the broken condition is one documents problem on the checklist", docProblems.length === 1, sum2.setup.steps.flatMap((x) => x.open).map((i) => `${i.focus}:${i.count}`));
   await p.goto(`${BASE}/c/${wp}/documents?focus=documents%3Aproblems`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
   l = await landed("documents:problems");
-  step("X1 pass: ?focus=documents:problems lands (the first line that needs attention, else the When chips)", l.outlined && l.focused && !l.focusInUrl, l);
+  const notice = await p.locator('[data-part-problems="documents"]').innerText();
+  step("C11.10 X1 pass (review M2): 'Fix 1 problem' lands on the notice that lists the documents problem: focused, outlined, the address cleared", l.outlined && l.focused && !l.focusInUrl && /1 problem to fix in the documents/.test(notice) && /does not exist|no_such_fact_x1|Condition/i.test(notice), { l, notice: notice.slice(0, 160) });
+  const bd2 = await badge("Documents");
+  step("C11.10 X1 pass (review M3): the Documents badge counts it", bd2.n === tabCounts(sum2.setup).documents && bd2.n >= 1, { want: tabCounts(sum2.setup), got: bd2 });
+  await p.screenshot({ path: path.join(SHOTS, "04-documents-problems-landed-1440.png") });
+  await p.goto(`${BASE}/c/${wp}/documents?focus=questions_documents%3Aproblems`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
+  await p.locator('[data-focus-also~="questions_documents:problems"][data-focused]').waitFor({ timeout: 10000 });
+  step("C11.10 X1 pass (review M1): a Not ready item's questions_documents:problems lands on the same notice and the address is cleared", !new URLSearchParams(new URL(p.url()).search).has("focus"));
+  sql(`update document_requirement set attach_mode='COMBINATION_MANDATORY', predicate_json=null, condition_plain=null where combination_id='${wp}' and lineage_key='${line}' and status <> 'RETIRED'`);
+  execFileSync("zsh", [path.join(__dirname, "..", "tools", "isolated.sh"), DB.replace(/^xr_studio_/, ""), String(PORT), "restart"], { stdio: "ignore" });
 
   // ---------------------------------------------------------------- Questionnaires
-  for (const key of ["questionnaires:gaps", "questionnaires:problems"]) {
+  for (const key of ["questionnaires:gaps"]) {
     await p.goto(`${BASE}/c/${wp}/questionnaires?focus=${encodeURIComponent(key)}`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
     l = await landed(key);
     step(`X1 pass: ?focus=${key} lands on the Questionnaires tab: focused, outlined, the address cleared`, l.outlined && l.focused && !l.focusInUrl, l);
@@ -75,11 +95,15 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.screenshot({ path: path.join(SHOTS, "03-questionnaires-landed-1440.png") });
   await axe("Questionnaires, landed");
 
+  await p.goto(`${BASE}/c/${wp}/questionnaires?focus=questionnaires%3Aproblems`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
+  await p.locator("[data-questions]").waitFor(); await p.waitForTimeout(500);
+  step("C11.10 X1 fail (review M2): with no question problems, questionnaires:problems outlines nothing (never a chip showing 0)", await p.locator("[data-focused]").count() === 0 && await p.locator('[data-part-problems="questions"]').count() === 0);
+
   // ---------------------------------------------------------------- fail: a focus that names nothing
   await p.goto(`${BASE}/c/${wp}/documents?focus=documents%3Anothing`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
   await p.locator("[data-documents]").waitFor();
   await p.waitForTimeout(500);
-  step("X1 fail: a focus that names nothing on the page outlines nothing and breaks nothing", await p.locator("[data-focused]").count() === 0 && errs.length === 0);
+  step("C11.10 X1 fail: a focus that names nothing on the page outlines nothing and breaks nothing", await p.locator("[data-focused]").count() === 0 && errs.length === 0);
 
   step("no page errors", errs.length === 0, errs.join(" | "));
   await b.close();

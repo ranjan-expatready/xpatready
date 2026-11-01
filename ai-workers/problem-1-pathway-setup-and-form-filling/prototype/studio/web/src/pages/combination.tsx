@@ -165,5 +165,5 @@ export function useGo() { return useNavigate(); }
 /** X1 (slice C2, board v3 "Forms 5"): the number of open setup items on a tab; nothing when none. Read aloud as words. */
 function StepBadge({ n }: { n: number }) {
   if (!n) return null;
-  return <span className="ml-1.5 rounded-full bg-warn/15 px-1.5 text-xs text-text-warn" data-step-badge={n}><span aria-hidden>{n}</span><span className="sr-only">, {n} setup {n === 1 ? "item" : "items"} open</span></span>;
+  return <span className="relative ml-1.5 rounded-full bg-warn/15 px-1.5 text-xs text-text-warn" data-step-badge={n}><span aria-hidden>{n}</span><span className="sr-only">, {n} setup {n === 1 ? "item" : "items"} open</span></span>;
 }

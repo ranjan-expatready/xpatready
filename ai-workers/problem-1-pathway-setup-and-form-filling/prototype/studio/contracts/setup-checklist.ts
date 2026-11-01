@@ -97,16 +97,21 @@ export type ViewerChecklist = z.infer<typeof ViewerChecklist>;
 /** GET /catalogue cards: the steps without their open items (the summary carries the full checklist). */
 export type CardSetup = Pick<ViewerChecklist, "chip" | "bar" | "next" | "current" | "viewer"> & { steps: Omit<Step, "open">[] };
 
-/** W1 setup checklist slice C2 (X1): the tab each open item lands on, from its focus key (Before forms' official pages
- *  and people sit on Forms, P-161 (2)). The tab headers count from this, never recount (concept §8: one counts object). */
+/** W1 setup checklist slice C2 (X1): the tab each open item lands on. Before forms' official pages and people sit on
+ *  Forms (P-161 (2)); a proposal ("review:<part>") and a step-level key ("<step>:problems", the Not ready items) take
+ *  the tab of their step, as the board counts them. The tab headers count from this, never recount (concept §8). */
 export type BadgeTab = "forms" | "documents" | "questionnaires";
-export const tabOfFocus = (focus: string): BadgeTab | null => {
-  const head = focus.split(/[:\s]/)[0];
-  return head === "forms" || head === "pages" || head === "people" ? "forms" : head === "documents" ? "documents" : head === "questionnaires" ? "questionnaires" : null;
+const BADGE_TABS: readonly string[] = ["forms", "documents", "questionnaires"];
+export const tabOfFocus = (focus: string, stepTab?: string): BadgeTab | null => {
+  const [head, tail] = focus.split(/[:\s]/);
+  if (head === "forms" || head === "pages" || head === "people") return "forms";
+  if (head === "documents" || head === "questionnaires") return head;
+  if (head === "review") return tail === "documents" ? "documents" : tail === "questions" ? "questionnaires" : tail === "forms" || tail === "people" ? "forms" : null;
+  return stepTab && BADGE_TABS.includes(stepTab) ? (stepTab as BadgeTab) : null;
 };
-/** Open items per tab, from the setup checklist's steps (an item that lands nowhere on these tabs is not counted). */
-export function tabCounts(setup: { steps: { open: { focus: string }[] }[] } | null | undefined): Record<BadgeTab, number> {
+/** Open setup work per tab: the sum of each item's count (board v3: "Forms 5" = 3 forms found + 1 proposal + 1 problem). */
+export function tabCounts(setup: { steps: { tab?: string; open: { focus: string; count: number }[] }[] } | null | undefined): Record<BadgeTab, number> {
   const out: Record<BadgeTab, number> = { forms: 0, documents: 0, questionnaires: 0 };
-  for (const s of setup?.steps ?? []) for (const i of s.open) { const t = tabOfFocus(i.focus); if (t) out[t]++; }
+  for (const s of setup?.steps ?? []) for (const i of s.open) { const t = tabOfFocus(i.focus, s.tab); if (t) out[t] += i.count; }
   return out;
 }
