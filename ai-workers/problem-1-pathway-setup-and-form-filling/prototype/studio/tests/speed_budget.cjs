@@ -6,15 +6,21 @@
 // same views take 58–280 ms when it is quieter (runtime lane, 30 Oct).
 const os = require("node:os");
 
-/** The machine now: one-minute load against the core count. */
-function machine() { const load = os.loadavg()[0], cores = os.cpus().length; return { load, cores, busy: load > cores }; }
+/** The machine now: one-minute load against the core count. GitHub's hosted machines (2 cores, shared) are never judged:
+ *  #113's batch missed the 200 ms tab budget at 273 ms on one at load 1.8, so the nightly run on the Mac (self-hosted)
+ *  judges the budgets (Lead, 1 Nov; the budgets stay, P-184). */
+function machine(env = process.env) {
+  const load = os.loadavg()[0], cores = os.cpus().length;
+  if (env.RUNNER_ENVIRONMENT === "github-hosted") return { load, cores, busy: true, reason: `CI machine (${cores} cores): judged by the nightly run on the Mac` };
+  return { load, cores, busy: load > cores };
+}
 
 /** A speed step: { label, ok, detail } for the suite's own step()/ok(). within: the measure met its budget; detail: the
  *  measured times. env is for the helper's own check only (check_speed_budget.ts); suites leave it out. */
 function speed(label, within, detail, env = machine()) {
   const at = `load ${env.load.toFixed(1)} on ${env.cores} cores`;
   const text = typeof detail === "string" ? detail : JSON.stringify(detail);
-  if (env.busy) return { label: `${label} — not judged: machine busy (${at})`, ok: true, detail: `${text} · ${at}` };
+  if (env.busy) return { label: `${label} — not judged: ${env.reason ? `${env.reason} (${at})` : `machine busy (${at})`}`, ok: true, detail: `${text} · ${at}` };
   return { label, ok: !!within, detail: `${text} · ${at}` };
 }
 
