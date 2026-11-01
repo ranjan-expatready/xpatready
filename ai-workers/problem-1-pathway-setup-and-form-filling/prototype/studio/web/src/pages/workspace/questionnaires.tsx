@@ -20,6 +20,7 @@ import { FOCUS_RING, useFocusItem } from "@/components/focus-item";
 import { PartProblems } from "@/components/part-problems";
 import { cn } from "@/lib/utils";
 import { RunCard } from "@/components/run-card";
+import { RuleFacts } from "@/components/rule-facts";
 import { peopleWords } from "@/lib/people";
 
 const TIPS = {
@@ -36,6 +37,7 @@ export function QuestionnairesTab({ id, people, questionnaire, available }: { id
       <p className="text-sm text-text-muted" data-who-can-be-moved>Who can be in this application ({peopleWords(people.lines, (l) => l.label) || "nobody yet"}) is set before the forms. <Link className="text-text-link underline" to={`/c/${id}/forms?focus=people%3Acard`}>Change on Forms</Link></p>
       <QuestionsByPerson id={id} q={questionnaire} available={available} />
       <ConfigArea id={id} areas={["rules", "checks"]} />
+      <RuleFacts combinationId={id} />
     </div>
   );
 }
