@@ -55,3 +55,29 @@ Fixes, most valuable first:
 * A keyboard-only walk and 200 % zoom on the representative tab.
 * The SQR part in the browser (checked through the API only).
 * Screenshots are under `/tmp/claude-0/-home-user-xpatready/996db592-b798-557c-8d10-93d97a7e840a/scratchpad/` (`rep-tab-1024.png`, `rep-tab-400.png`, `rep-confirm-1024.png`, `rep-edit-1024.png`). They are not committed.
+
+## Round 2 (commit 7a07e52b, own fresh copy on :4438, now stopped)
+I re-walked journeys 1, 4 and 5 in the browser (headless chromium) and checked the data in the API, the database and the PDF read back.
+
+* **Journey 1.** A new IMM 5476 copy on a fully confirmed case is `out_of_date: false, changed: []`. The PDF holds the representative's name, e-mail, address and phone from the firm record. Lock as filed is refused only by the "filling is not proven yet" gate, which existed before; there is no "out of date" loop. The country is written as `canada` (Minor n1).
+* **Journey 4.** Lines read "From the firm record", with "Change it in the firm record" and no Edit. The Confirm section buttons are disabled. The empty fax still offers Add, and Save fails with "That person is not on this case." (Minor n2).
+* **Journey 5.** The client's questionnaire has no representative block (`r2-client-1024.png`).
+* Suites: `check_vv_prepare_api` 30/30, `check_case_engine` 57/57, `check_p5_engine` 33/33.
+* axe 0 at 1024. No sideways scroll at 400 or 1024. Keyboard Tab reaches the representative tab and its parts.
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | The block is filled and the copy is current. |
+| Next step obvious | ½ | Fax Add leads nowhere. The intro says "Click Edit". |
+| Plain words | ½ | The lower-case "representative" tab, and `canada`. |
+| Feedback and state | 1 | Copy state is right. Source words are right. |
+| Correct data | ½ | `canada` in lower case on IRCC's form. |
+| Error recovery | ½ | Fax Add gives 404 words. |
+| Accessibility and screen sizes | 1 | axe 0, both widths fine. |
+| Speed | 1 | About 1 s page, 70–80 ms API. |
+| Visual quality | 1 | `r2-rep-tab-1024.png` |
+| Trust and sources | 1 | "From the firm record" with its tooltip. |
+
+**Round 2 score: 8/10, Pass** (no criterion at 0).
+
+Screenshots (not committed) are under `/tmp/claude-0/-home-user-xpatready/996db592-b798-557c-8d10-93d97a7e840a/scratchpad/`: `r2-rep-tab-1024.png`, `r2-rep-tab-400.png`, `r2-fax-add-1024.png`, `r2-client-1024.png`.
