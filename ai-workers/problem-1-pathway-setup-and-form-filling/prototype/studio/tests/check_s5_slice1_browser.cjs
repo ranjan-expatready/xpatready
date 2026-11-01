@@ -63,7 +63,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const ovButtons = await panel().getByRole("button").count();
   const ovText = await panel().innerText();
   step("BR-2 pass: Overview has no add or edit control (links only)", ovButtons === 0, `${ovButtons} buttons`);
-  step("BR-2: Overview shows the counts, who can be in the application (read only) and released versions in one line", /Who can be in this application/.test(ovText) && /Change on Forms/.test(ovText) && /Released versions: Release 1/.test(ovText) && !/Held for a person|Recent steps|Add form/.test(ovText));
+  // X1 C3: the setup strip names the people step (its card left the Overview for Forms, P-161 (2)).
+  step("BR-2: Overview shows the setup steps (people among them, read only), the counts and released versions in one line", /Setup steps · \d of 5 done/.test(ovText) && /Who can be in this application/.test(ovText) && /Released versions: Release 1/.test(ovText) && !/Held for a person|Recent steps|Add form/.test(ovText));
   await state("overview");
 
   // ======================================================== Forms: the line drawer (C11.6, M1)

@@ -94,3 +94,35 @@ Three Minors from the review of PR #108, each with a pass and a fail test:
 * **(b) Submit for review was offered while Forms or Documents were still open** (`engine/setup-checklist.ts`), and the submit endpoint refuses it then. Submit is now offered only when Forms and Questions and documents have nothing open. Official pages and people are not gated, because no screen confirms them yet (P-176 Q1); gating them would hide Submit on every combination. `check_setup_checklist`: two steps.
 * **(c) Resume pointed to `/review?c=…&step=…`, whose page reads neither.** The link is now `/review/proposals?c=…&step=…`. `GET /review/proposals` takes `c` and `step` (contract `ProposalsQuery`) and opens the oldest group holding that combination's proposals for that step: its own group, or its forms' edition groups. With nothing waiting, no group is chosen (200), and a step outside 1–5 is a 400. The page passes them on and keeps the chosen group in the URL. `check_setup_checklist`: the href step changed, plus two API steps.
 
+
+## Slice C3: the Overview strip (1 Nov, X1, branch `claude/funny-mccarthy-w2r441`, stacked on C2 in #206)
+Concept v4 §7 "Overview" and board v3 §5. The strip **replaces "Missing before firms can use it"**, and the people card **leaves the Overview** (P-161 (2); people sit in "Before forms" on Forms).
+* `web/src/components/setup-strip.tsx`: "Setup steps · n of 5 done" (· Live once released), with the board's tooltip. Each of the five rows shows the mark (✓ ● ○ ◐ ⧗, also in words for screen readers), the step and its one-line summary from the checklist (never recounted), plus the tier when people are confirmed. It then shows its open items as links.
+  * A done step says "See on Forms", "See on Documents" or "See on Review and release".
+  * A step after the current one says "After <the step before>".
+  * If the current step's first item is not the viewer's to act on (§5 overlay), its mark reads ⧗, with the overlay's "Waiting for the immigration expert: …".
+  * Retired: one line, no rows.
+* **One definition of a link:** `contracts/setup-checklist.ts` `itemHref(id, step, stepTab, item)`. The engine's `next.href` and the strip both use it. An item lands on the tab that `tabOfFocus` names, the tab whose badge counts it, so a questions problem in step 4 goes to Questionnaires even when the step's tab is Documents.
+* `?show=missing`, the header's old "See n missing" address, now lands on the strip with focus.
+* **Deviation from board v3:**
+  * The board shows a later step with only "After Forms" and no links.
+  * Here, a later step's items stay links, in the muted colour, under the same "After …" line.
+  * Why: steps 1 and 2 cannot be confirmed on any screen yet. The Confirm and Choose controls for official pages come with forms F2. Hiding the later links would leave the author no way from the Overview to "Add 1 form found".
+  * Revisit when F2 lands.
+* **Not in this slice:** the header's "Next step" box. The concept says the strip replaces it too. But today it runs the old next action ("Add 1 form from the library") with its dialogs, and the checklist's first item ("Confirm the checklist page") has no control yet. Swapping it now would leave the author stuck, so it waits for forms F2 (question in the PR).
+* Tests: new `check_x1_overview_strip_browser.cjs`, with a pass and a fail per rule:
+  * `itemHref`'s three rules;
+  * the five rows and marks equal the checklist;
+  * the old list and the people card are gone;
+  * every item is linked where the engine sends it;
+  * the badges equal the strip, and a tab with nothing open has no badge;
+  * Enter lands on Forms and on Documents;
+  * `?show=missing` lands on the strip;
+  * ⧗ for the author and ● for the expert on Super visa;
+  * Live done rows;
+  * no sideways scroll at 400 px;
+  * axe on three states.
+  
+  The tests reading the old Overview are moved to the strip: `check_screen01_browser` (items 1 and F2), `check_s5_slice1_browser` (BR-2) and `check_w1_before_forms_browser` (the people line).
+
+Screenshots: `screens/F1-setup/screenshots/x1-strip/` shows the author, waiting (the author on Super visa), Live, and 400 px.
