@@ -65,7 +65,7 @@ export function conditionSubjects(people: Person[], holder: string, kind: string
 }
 /** A line's condition for one holder: true when it holds on any of its subjects, false when it fails on all, else
  *  cannot tell (with the missing facts of the first undecided subject). */
-export function lineCondition(s: Snapshot, known: Known, people: Person[], holder: string, tree: any): Cond & { about?: string; document?: true; nobody?: string } {
+export function lineCondition(s: Snapshot, known: Known, people: Person[], holder: string, tree: { subjectKind?: string } | null | undefined): Cond & { about?: string; document?: true; nobody?: string } {
   if (!tree) return { applies: true, missing: [] };
   const subjects = conditionSubjects(people, holder, tree.subjectKind);
   if (subjects === "document") return { applies: "cannot_tell", missing: [], document: true };
