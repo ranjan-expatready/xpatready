@@ -26,6 +26,7 @@ const SAY = {
   first: "It is already first on this checklist.",
   last: "It is already last on this checklist.",
   notSet: "Not set · Sample: on the immigration expert's list (report D9).",
+  automatic: (form: string) => `Follows the ${form} form line: change its channel or who signs it on the Forms tab.`,
 };
 type When = "all" | "always" | "onlyif" | "needs";
 
@@ -83,11 +84,19 @@ export function DocumentsTab({ id }: { id: string }) {
       undoToast.show(`"${l.document.name}" removed from the checklist${out ? `: ${out} fact${out === 1 ? "" : "s"} move to the client questionnaire` : ""}`, async () => { await api(`/combinations/${id}/checklist/undo-remove`, { method: "POST", json: { lineage: l.lineage } }); refresh(); });
     } catch (e) { setError((e as Error).message); }
   };
-  const menu = (l: ChecklistLineRow, i: number) => (
+  const menu = (l: ChecklistLineRow, i: number) => l.automatic ? (
+    // C3.11: a signed scan is changed only on its form line.
+    <RowMenu name={l.document.name} items={[
+      { label: "Open details", onSelect: () => setShown(l.lineage) },
+      { label: "Move up", why: SAY.automatic(l.automatic.form) },
+      { label: "Remove from checklist", why: SAY.automatic(l.automatic.form) },
+      { label: "Open the Forms tab", href: `/c/${id}/forms` },
+    ]} />
+  ) : (
     <RowMenu name={l.document.name} items={[
       { label: "Open details", onSelect: () => setShown(l.lineage) },
       { label: "Move up", why: !canAuthor ? SAY.readOnly : i === 0 ? SAY.first : null, onSelect: () => void move(l, "up") },
-      { label: "Move down", why: !canAuthor ? SAY.readOnly : i === role.lines.length - 1 ? SAY.last : null, onSelect: () => void move(l, "down") },
+      { label: "Move down", why: !canAuthor ? SAY.readOnly : i === role.lines.length - 1 || role.lines[i + 1]?.automatic ? SAY.last : null, onSelect: () => void move(l, "down") },
       { label: "Remove from checklist", why: !canAuthor ? SAY.readOnly : null, onSelect: () => void remove(l) },
       { label: "Change the document type in the library…", href: `/library/documents` },
       { label: "Retire", why: SAY.retire },
@@ -121,11 +130,11 @@ export function DocumentsTab({ id }: { id: string }) {
           <Table dense head={["Document", "Who", "When", "Supplies", "Status", <span key="a" className="sr-only">Actions</span>]} label={`${role.label}'s checklist`}>
             {lines.map((l) => (
               <tr key={l.lineage} data-doc-line={l.lineage}>
-                <td className="max-w-sm"><button type="button" className="text-left font-medium hover:text-text-link hover:underline" aria-label={`Details of: ${l.document.name}`} onClick={() => setShown(l.lineage)}>{l.document.name}</button>{l.alternatives.length ? <span className="block text-xs text-text-muted" data-doc-alternatives>or {l.alternatives.map((a) => a.name).join(" · or ")}</span> : null}</td>
+                <td className="max-w-sm"><button type="button" className="text-left font-medium hover:text-text-link hover:underline" aria-label={`Details of: ${l.document.name}`} onClick={() => setShown(l.lineage)}>{l.document.name}</button>{l.alternatives.length ? <span className="block text-xs text-text-muted" data-doc-alternatives>or {l.alternatives.map((a) => a.name).join(" · or ")}</span> : null}{l.automatic ? <span className="block text-xs text-text-muted" data-doc-reason>{l.automatic.reason}</span> : null}</td>
                 <td className="text-xs">{whoLabel(l.who)}</td>
                 <td className="max-w-56 text-xs">{l.base ? "Always" : <span title={l.when}>{l.when.length > 70 ? `${l.when.slice(0, 70)}…` : l.when}</span>}</td>
                 <td className="text-xs"><Tip tip={l.supplies.length ? l.supplies.map((x) => x.label).join(" · ") : "It supplies no answer: filed as is."} focusable><span className="cursor-help underline decoration-dotted underline-offset-4" data-doc-supplies>{suppliesText(l)}</span></Tip></td>
-                <td>{needs.has(l.lineage) ? <span data-doc-status="check"><Pill tone="danger" title={needs.get(l.lineage)}>Release check</Pill></span> : <span data-doc-status={l.status.toLowerCase()}>{l.status === "PUBLISHED" ? <Pill tone="ok">Released</Pill> : <OriginPill origin={l.origin} status={l.status} />}</span>}</td>
+                <td>{l.automatic ? <span data-doc-status="automatic"><Pill tone="neutral" title={SAY.automatic(l.automatic.form)}>Added by the form line</Pill></span> : needs.has(l.lineage) ? <span data-doc-status="check"><Pill tone="danger" title={needs.get(l.lineage)}>Release check</Pill></span> : <span data-doc-status={l.status.toLowerCase()}>{l.status === "PUBLISHED" ? <Pill tone="ok">Released</Pill> : <OriginPill origin={l.origin} status={l.status} />}</span>}</td>
                 <td className="w-10">{menu(l, role.lines.indexOf(l))}</td>
               </tr>
             ))}
@@ -151,6 +160,16 @@ export function DocumentsTab({ id }: { id: string }) {
 function DocumentDrawer({ line, roles, roleLabel, canAuthor, onClose, onEdit, onRemove }: { line: ChecklistLineRow; roles: ChecklistView["roles"]; roleLabel: string; canAuthor: boolean; onClose: () => void; onEdit: () => void; onRemove: () => void }) {
   const index = (roles.find((r) => r.role === line.role)?.lines ?? []).findIndex((l) => l.lineage === line.lineage);
   const total = roles.find((r) => r.role === line.role)?.lines.length ?? 0;
+  if (line.automatic) return (
+    <Panel open onOpenChange={(o) => !o && onClose()} title={line.document.name} description={`${roleLabel}'s checklist · ${index + 1} of ${total}`} badge={<Pill tone="neutral">Added by the form line</Pill>}
+      footer={<Button variant="ghost" onClick={onClose}>Close</Button>}>
+      <div className="space-y-3 text-sm" data-doc-drawer data-doc-drawer-automatic>
+        <p data-drawer-reason>{line.automatic.reason}</p>
+        <dl className="grid grid-cols-[9rem_1fr] gap-x-3 gap-y-1"><dt className="text-text-muted">Who</dt><dd>{whoLabel(line.who)}</dd><dt className="text-text-muted">When</dt><dd>{line.base ? "Always" : `Only if: ${line.when}`}</dd><dt className="text-text-muted">Supplies</dt><dd>None: filed as is.</dd></dl>
+        <p className="text-xs text-text-muted">{SAY.automatic(line.automatic.form)} Filed another way, this line goes away at once. Sample until the immigration expert confirms (P-62 §3, P-143).</p>
+      </div>
+    </Panel>
+  );
   return (
     <Panel open onOpenChange={(o) => !o && onClose()} title={line.document.name} description={`${roleLabel}'s checklist · ${index + 1} of ${total}`} badge={line.status === "PUBLISHED" ? <Pill tone="ok">Released</Pill> : <OriginPill origin={line.origin} status={line.status} />}
       footer={canAuthor ? <><Button variant="ghost" onClick={onRemove} data-drawer-remove>Remove from checklist</Button><Button onClick={onEdit} data-drawer-edit>Edit</Button></> : <><span className="text-xs text-text-muted">{SAY.readOnly}</span><Button variant="ghost" onClick={onClose}>Close</Button></>}>

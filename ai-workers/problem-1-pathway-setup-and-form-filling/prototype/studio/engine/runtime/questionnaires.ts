@@ -57,8 +57,11 @@ export function questionnairesView(s: Snapshot, roleIn: string | undefined, wher
     }
     byId.set(part.section, sec);
   }
-  // Sections the combination uses that ask this person nothing still show, in the configuration's order.
-  for (const x of s.sections as { id: string; title: string }[]) if (!byId.has(x.id)) byId.set(x.id, { id: x.id, title: x.title, questions: [] });
+  // Sections the combination uses that ask nobody anything still show, in the configuration's order (P-174: the section
+  // choice decides which empty sections show; this is where one is removed). QA-117: a section that asks another person
+  // (or the application, with the principal) is theirs, not an empty section of this person.
+  const askedSomeone = new Set(view.sections.filter((x) => x.questions.length).map((x) => x.section));
+  for (const x of s.sections as { id: string; title: string }[]) if (!byId.has(x.id) && !askedSomeone.has(x.id)) byId.set(x.id, { id: x.id, title: x.title, questions: [] });
   const order = (s.sections as { id: string }[]).map((x) => x.id);
   const sections = [...byId.values()].sort((a, b) => (order.indexOf(a.id) + 1 || 999) - (order.indexOf(b.id) + 1 || 999));
   // Coverage for this person: every fact a form field needs, by who covers it.

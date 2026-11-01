@@ -27,7 +27,7 @@ import { ReviewProposals, ReviewProposalsController } from "./review-proposals.t
 import { Impact } from "./impact.ts";
 import { Checklists, ChecklistsController } from "./checklist.ts";
 import { Runtime, RuntimeController } from "./runtime.ts";
-import { CaseForms, CaseFormsController } from "./fill-case.ts";
+import { CaseForms, CaseFormsController, MAX_VALIDATED_MB } from "./fill-case.ts";
 import { Sources } from "./sources.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { Structure, StructureController } from "./structure.ts";
@@ -107,7 +107,7 @@ class SourcesController {
 class DemoController {
   constructor(@Inject(Demo) private readonly d: Demo) {}
   @Get("status") status() { return this.d.status(); }
-  @Post("load") load(@Headers("x-actor") a: H) { return this.d.load(actorOf(a)); }
+  @Post("load") load(@Headers("x-actor") a: H, @Body() b: { sample?: string } | null) { return this.d.load(actorOf(a), b); }
   @Post("reset") reset(@Headers("x-actor") a: H, @Body() b: any) { return this.d.reset(actorOf(a), b?.confirm); }
 }
 
@@ -158,8 +158,12 @@ class ProblemErrors implements ExceptionFilter {
       const body = e.getResponse() as any, status = e.getStatus();
       // Upload limits fire before the intake sees the files (break m9): say which limit, in plain words.
       if (status === 413 || /^(File too large|Too many files)$/.test(String(body?.message ?? ""))) {
+        const many = /files/i.test(String(body?.message));
+        // QA-126: a validated copy (C-9) takes one PDF of up to 20 MB, so it is worded with its own limits, not the intake's.
+        if (/\/form-copies\/[^/]+\/validated\/?$/.test(String(host.switchToHttp().getRequest()?.path ?? "")))
+          return send(413, "Too large", many ? "Send only the one validated PDF you saved from Adobe. Nothing was recorded." : `The file is larger than ${MAX_VALIDATED_MB} MB: send the validated PDF of this form. Nothing was recorded.`);
         const files = MAX_FILES, mb = MAX_BYTES / 1024 / 1024;
-        return send(413, "Too large", /files/i.test(String(body?.message)) ? `Add at most ${files} files at a time. Nothing was added.` : `A file is larger than ${mb} MB. Nothing was added; add files up to ${mb} MB each.`);
+        return send(413, "Too large", many ? `Add at most ${files} files at a time. Nothing was added.` : `A file is larger than ${mb} MB. Nothing was added; add files up to ${mb} MB each.`);
       }
       if (typeof body === "object" && body.detail) return send(status, body.title ?? "Request refused", body.detail, body);
       const detail = typeof body === "object" ? (Array.isArray(body.message) ? body.message.join("; ") : body.message ?? e.message) : String(body);

@@ -42,10 +42,24 @@ const formOf = (form: string) => (/^[A-Z]{2,6} ?\d{3,5}[A-Z]?$/.test(form) ? for
 const ACTIVE_PER_CASE = 5;
 const run = promisify(execFile);
 /** C-9: a validated copy is one PDF, at most this size. */
-const MAX_VALIDATED_BYTES = 20 * 1024 * 1024;
+export const MAX_VALIDATED_BYTES = 20 * 1024 * 1024, MAX_VALIDATED_MB = MAX_VALIDATED_BYTES / 1024 / 1024;
 type Snap = ReturnType<Runtime["snapshotOf"]>;
 /** P-143: a form's channel in the case's release (an older release's spelling read as today's, C-8). */
 const channelIn = (s: Snap, form: string): Channel => lineOf((s.forms as { form_number: string; channel?: string; signature?: string }[]).find((f) => f.form_number === form) ?? {}).channel;
+/** QA-127: the values that differ after a read-back, by the form's own words for each field (its caption or the fact's
+ *  meaning, never a field path) with what the copy wrote and what the file holds, so the person can put them back.
+ *  At most three are named; the rest are counted (`total`: all that differ; the reader lists at most ten). */
+export function differing(boxes: { box: string; caption?: string | null; meaning?: string | null }[] | undefined, mismatches: unknown, total?: number): string {
+  const bad = (Array.isArray(mismatches) ? mismatches : []) as { path?: string; wrote?: unknown; read?: unknown }[];
+  if (!bad.length) return "";
+  const all = Math.max(total ?? bad.length, bad.length);
+  const byPath = new Map((boxes ?? []).map((b) => [b.box, b]));
+  const said = (v: unknown) => (v === null || v === undefined || v === "" ? "nothing" : `"${String(v).slice(0, 60)}"`);
+  const name = (p: string) => { const b = byPath.get(p); const w = (b?.caption || b?.meaning || "").trim(); return w ? `"${w.slice(0, 80)}"` : "a field the product filled"; };
+  const shown = bad.slice(0, 3).map((m) => `${name(String(m.path ?? ""))} should say ${said(m.wrote)} but says ${said(m.read)}`);
+  return ` ${all === 1 ? "The value that differs" : "The values that differ"}: ${shown.join("; ")}${all > shown.length ? `; and ${all - shown.length} more` : ""}.`;
+}
+
 /** C-9 (P-144): a barcode form filed by PDF upload or on paper needs a current validated copy before it is filed. */
 const needsValidate = (s: Snap, form: string) => isBarcodeForm(form) && ["PDF_UPLOAD", "PAPER"].includes(channelIn(s, form));
 const OUT_OF_DATE = "Out of date: validate again";
@@ -268,7 +282,7 @@ export class CaseForms implements OnModuleInit {
     const { x, c } = await this.copyFor(actor, id);
     const f = (files ?? [])[0];
     if (!f?.buffer?.length || (files ?? []).length !== 1) fail("Send the one validated PDF you saved from Adobe.", HttpStatus.BAD_REQUEST);
-    if (f!.buffer!.length > MAX_VALIDATED_BYTES) fail("The file is larger than 20 MB: send the validated PDF of this form.", HttpStatus.PAYLOAD_TOO_LARGE);
+    if (f!.buffer!.length > MAX_VALIDATED_BYTES) fail(`The file is larger than ${MAX_VALIDATED_MB} MB: send the validated PDF of this form. Nothing was recorded.`, HttpStatus.PAYLOAD_TOO_LARGE);
     if (x.status !== "GENERATED" || !x.path) conflict("Only a generated copy can be validated and read back.");
     if (channelIn(this.runtime.snapshotOf(c), x.formNumber) === "ONLINE") conflict(`${x.formNumber} is filed Online: its PDF is a ${NOT_FOR_FILING.toLowerCase()}, so there is nothing to validate.`);
     const { answers, rows, groups } = await this.runtime.state(c);
@@ -290,8 +304,15 @@ export class CaseForms implements OnModuleInit {
     catch { rb = { ok: false, why: "The file could not be read back." }; }
     // Refused uploads are not left in the working files (break minor).
     if (!rb.ok) rmSync(path, { force: true });
-    if (!rb.ok) fail(`Not read back: ${rb.why ?? "the file does not hold the values this copy wrote."} Nothing was recorded; validate this copy in Adobe, save it and send it again.`, HttpStatus.UNPROCESSABLE_ENTITY);
-    const v = await this.db.validatedCopy.create({ data: { workspaceId: c.workspaceId, formInstanceId: x.id, path: path.replace(`${ROOT}/`, ""), sha256: sha, factsHash: inputHash(cov?.facts ?? []), readBack: rb as object, readBy: actor.id } });
+    if (!rb.ok) fail(`Not read back: ${rb.why ?? "the file does not hold the values this copy wrote."}${differing((x.snapshot.factsJson as Stored).boxes, rb.mismatches, rb.written !== undefined && rb.read_back_equal !== undefined ? rb.written - rb.read_back_equal : undefined)} Nothing was recorded; validate this copy in Adobe, save it and send it again.`, HttpStatus.UNPROCESSABLE_ENTITY);
+    // QA-128 (P-65: kept once): the same validated file sent twice at once (a double click) is kept once. The copy's row is
+    // locked, so the second send waits for the first and then finds its line.
+    const v = await this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM form_instance WHERE id = ${x.id}::uuid FOR UPDATE`;
+      const kept = await tx.validatedCopy.findFirst({ where: { formInstanceId: x.id, sha256: sha }, select: { id: true } });
+      if (kept) throw new HttpException({ type: "https://expatready.local/problems/validated-copy", title: "Already read back", status: 409, detail: `This validated file is already read back and kept for this copy of ${x.formNumber}; nothing was added.`, existingId: kept.id }, HttpStatus.CONFLICT);
+      return tx.validatedCopy.create({ data: { workspaceId: c.workspaceId, formInstanceId: x.id, path: path.replace(`${ROOT}/`, ""), sha256: sha, factsHash: inputHash(cov?.facts ?? []), readBack: rb as object, readBy: actor.id } });
+    });
     await this.audit.log(c.workspaceId, actor.id, "validated", "form copy", x.formNumber, `${actor.name} read back a validated copy of ${x.formNumber} (copy ${short(x.id)}) on case ${short(x.caseId)}: ${rb.read_back_equal}/${rb.written} values equal`);
     return { id: v.id, copy: await this.copy(actor, id) };
   }

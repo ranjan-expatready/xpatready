@@ -8,7 +8,7 @@ import { caseView, knownOf, type Answer, type Participant } from "./case.ts";
 import { CHANNEL_WORDS, type Channel } from "../../contracts/forms.ts";
 import { MINOR } from "../../contracts/runtime.ts";
 import { FAMILIES, type FamilyKey, type OutputGroup, type PreviewSets, type PreviewView } from "../../contracts/workspace.ts";
-import { documentFacts, factSources, prequalification, SOURCE_WORDS } from "../sources.ts";
+import { documentFacts, factSources, prequalification, SOURCE_WORDS, suppliesOf } from "../sources.ts";
 
 type Line = { role: string; label?: string; min?: number; max?: number; applies?: boolean };
 const limits = (participants: Line[], role: string) => { const p = participants.find((x) => x.role === role); return { min: p?.min ?? 0, max: p?.max ?? 0, label: p?.label, applies: p?.applies !== false }; };
@@ -76,7 +76,11 @@ export function previewFamily(s: Snapshot, family: FamilyKey | "", person: strin
     if (f?.source !== "DOCUMENT" || !f.document) return null;
     const key = f.document.key, name = f.document.name;
     if (!(docFacts.get(subjectId)?.get(fact) ?? []).some((x) => x.key === key)) return null;
-    const holders = new Set([subjectId, partnerOf(subjectId)]);
+    // Review Minor (preview.ts:80): the needed line must be the one that supplies this fact about this person: the
+    // person's own document for a fact about its holder, the partner's for a fact about the holder's spouse.
+    const t = (s.document_types as Parameters<typeof suppliesOf>[0][]).find((x) => x.key === key);
+    const abouts = new Set((t ? suppliesOf(t) : []).filter((x) => x.fact === fact).map((x) => x.about));
+    const holders = new Set([abouts.has("holder") ? subjectId : null, abouts.has("holder.spouse") ? partnerOf(subjectId) : null].filter((x): x is string => !!x));
     return r.checklist.some((d) => holders.has(d.person) && d.status === "Needed" && (d.document_type_key === key || d.requirement === name)) ? name : null;
   };
   const questionnaire = caseView(s, people, answers, [], "sqr", today, [], { skipDocumentFacts: fromDocument });
