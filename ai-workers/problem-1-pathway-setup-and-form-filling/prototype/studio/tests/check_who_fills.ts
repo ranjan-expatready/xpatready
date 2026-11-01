@@ -76,6 +76,7 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   L = await list();
   const fNow = L.find((x) => x.fact === f.fact && x.role === "principal");
   ok("C4.9: the rules follow the library: Comes from is now the case officer, the change says approved for the next release", fNow?.ruleSource === "AGENT" && fNow?.fills.change?.status === "APPROVED", { rule: fNow?.ruleSource, change: fNow?.fills.change?.status });
+  ok("C4.9 QA-114: approved but not released, the library still says the client fills it (the released value); the change says the case officer from the next release", fNow?.fills.library === "CLIENT" && fNow?.fills.change?.to === "CASE_OFFICER", fNow?.fills);
 
   // ---------------------------------------------------------------- Review names it once; the release publishes it
   const c = (await call("GET", `/combinations/${wp}`)).body;
@@ -99,6 +100,7 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   ok("C4.9: the released snapshot carries the new default", (rel.placements as any[]).find((p) => p.fact === f.fact)?.collected_from === "staff_working_view");
   L = await list();
   ok("C4.9: once released, the row has no open change", L.find((x) => x.fact === f.fact)?.fills.change === null);
+  ok("C4.9 QA-114 pass: once released, the library says the case officer fills it", L.find((x) => x.fact === f.fact && x.role === "principal")?.fills.library === "CASE_OFFICER", L.find((x) => x.fact === f.fact)?.fills);
 
   // ---------------------------------------------------------------- a per-combination choice still wins (C4.10)
   const v = L.find((x) => x.fact === f.fact && x.role === "principal");

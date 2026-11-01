@@ -112,7 +112,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("remove pass: the line leaves the checklist and shows under Removed in this draft", await row.count() === 0 && /Removed in this draft/.test(await p.locator("[data-removed-docs]").innerText().catch(() => "")));
   step("remove: one Undo for it", await p.locator("[data-undo-toast] [data-undo]").count() === 1);
   await state("documents-removed-in-draft");
-  await p.locator("[data-note-undo]").click(); await settle();
+  await p.locator("[data-note-undo]").click();
+  // QA-116 (the QA-96 family): under load the refetch lands after a fixed pause; wait on the change itself, not a timer.
+  await row.waitFor({ state: "attached", timeout: 20000 }).catch(() => {});
+  await p.locator("[data-removed-docs]").waitFor({ state: "detached", timeout: 20000 }).catch(() => {}); await settle();
   step("Undo pass: the line is back and nothing is listed as removed", await row.count() === 1 && await p.locator("[data-removed-docs]").count() === 0, `${await row.count()} ${await p.locator("[data-removed-docs]").innerText().catch(() => "-")} ${await p.locator("[data-documents-error]").innerText().catch(() => "")}`);
 
   // ======================================================== read only: the approver
