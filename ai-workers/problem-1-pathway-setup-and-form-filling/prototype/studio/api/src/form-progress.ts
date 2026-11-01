@@ -19,30 +19,41 @@ export class FormProgressService {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(ReviewQueueService) private readonly queue: ReviewQueueService,
     @Inject(FormLibrary) private readonly lib: FormLibrary, @Inject(Studio) private readonly studio: Studio) {}
 
-  async progress(actor: Actor, combinationId: string, raw: string): Promise<FormProgress> {
+  async progress(actor: Actor, rawId: string, raw: string): Promise<FormProgress> {
     const workspaceId = await this.ws.id();
     const code = normaliseCode(raw);
     if (!code || code.length > 40) throw problem(400, "Not a form number", "Give a form number, such as IMM 5257.");
-    const combo = /^[0-9a-f-]{36}$/i.test(combinationId) ? await this.db.combination.findFirst({ where: { id: combinationId, workspaceId }, select: { id: true } }) : null;
+    // Review (514f0d8d) m5: an id in capitals is the same combination (ids are stored in lower case).
+    const combinationId = rawId.toLowerCase();
+    const combo = /^[0-9a-f-]{36}$/.test(combinationId) ? await this.db.combination.findFirst({ where: { id: combinationId, workspaceId }, select: { id: true } }) : null;
     if (!combo) throw problem(404, "No such combination", "This combination does not exist (it may have been deleted).");
-    const lines = effective(await this.db.combinationForm.findMany({ where: { workspaceId, combinationId, lineageKey: code }, select: { lineageKey: true, version: true, status: true } }), (l) => l.lineageKey, "draft");
-    // On this combination: a form line, or (before its setup) the form's PDF attached to it, as the Forms tab lists it.
+    // Review M4: the library's current approved edition of this one form (the Forms list's rule, FormLibrary.currentOf).
+    const current = await this.lib.currentOf(code);
+    if (current === undefined) throw problem(404, "Not in the library", `${code} is not in the library.`);
+    // Review M2a: on this combination = its form line as the draft has it now; only a form with no line history yet counts
+    // its attached PDF (before its setup, as the Forms tab lists it), so a removed line reads not on the combination.
+    const history = await this.db.combinationForm.findMany({ where: { workspaceId, combinationId, lineageKey: code }, select: { lineageKey: true, version: true, status: true } });
     const shas = (await this.db.formEdition.findMany({ where: { workspaceId, form: { formKey: code }, sha256: { not: null } }, select: { sha256: true } })).map((e) => e.sha256!);
     const attached = shas.length ? await this.db.sourceAttachment.findFirst({ where: { combinationId, sha256: { in: shas } }, select: { id: true } }) : null;
-    const line = lines.some((l) => l.status !== "RETIRED") || attached ? "present" as const : "none" as const;
-    // The library's current approved edition, as Shared library › Forms shows it (one rule, FormLibrary.list).
-    const row = ((await this.lib.list({ q: code }, actor.id)).rows as { code: string; edition: string | null; fingerprint: string | null }[]).find((r) => r.code === code);
-    if (!row) throw problem(404, "Not in the library", `${code} is not in the library.`);
-    const ed = row.edition ? await this.db.formEdition.findUnique({ where: { workspaceId_editionLabel: { workspaceId, editionLabel: row.edition } }, select: { id: true } }) : null;
+    const line = history.length ? (effective(history, (l) => l.lineageKey, "draft").some((l) => l.status !== "RETIRED") ? "present" as const : "none" as const) : attached ? "present" as const : "none" as const;
+    const ed = current ? await this.db.formEdition.findUnique({ where: { workspaceId_editionLabel: { workspaceId, editionLabel: current.edition } }, select: { id: true } }) : null;
     const maps = ed ? effective(await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id }, select: { dataPath: true, version: true, status: true, outcome: true } }), (m) => m.dataPath, "draft").filter((m) => m.status !== "RETIRED") : [];
     // The newest field-map draft of this combination's copy of that file (a stub pass proves the path only: not a draft).
-    const att = row.fingerprint ? await this.db.sourceAttachment.findFirst({ where: { combinationId, sha256: row.fingerprint }, select: { id: true } }) ?? attached : attached;
+    const att = current ? await this.db.sourceAttachment.findFirst({ where: { combinationId, sha256: current.sha256 }, select: { id: true } }) ?? attached : attached;
     const job = att ? await this.db.draftingJob.findFirst({ where: { attachmentId: att.id, kind: { in: ["field_map", "reuse_map"] }, mode: { not: "STUB" } }, orderBy: { startedAt: "desc" }, select: { status: true } }) : null;
     const draft = !job ? "none" as const : ["QUEUED", "RUNNING"].includes(job.status) ? "running" as const : job.status === "COMPLETED" ? "done" as const : "stopped" as const;
-    const items = (await this.queue.items(actor)).filter((i) => i.forms.includes(code));
+    let items = (await this.queue.items(actor)).filter((i) => i.forms.includes(code));
+    // Review m2: step 4 is new shared fields: a library change of another kind (what IRCC accepts, a library form's
+    // lifecycle, who fills) is not part of this form's field map, so it is not a step of its path.
+    const changeIds = items.filter((i) => i.id.startsWith("change:")).map((i) => i.id.slice(7));
+    const fieldChanges = new Set(changeIds.length ? (await this.db.libraryChange.findMany({ where: { id: { in: changeIds }, kind: "field" }, select: { id: true } })).map((c) => c.id) : []);
+    items = items.filter((i) => !i.id.startsWith("change:") || fieldChanges.has(i.id.slice(7)));
     const problems = (((await this.studio.combination(combinationId)) as { draft: { problems: { where: string; item: string; level: "error" | "warning"; message: string }[] } }).draft.problems)
       .filter((p) => p.where === "Forms" && p.item === code).map((p) => ({ level: p.level, message: p.message }));
-    return formProgress({ form: code, combinationId, line, edition: row.edition, mapped: maps.length, unresolved: maps.filter((m) => m.outcome === "unresolved").length, draft, items, problems, canAuthor: (actor.duties as readonly string[]).includes("author") });
+    // Review M1: form fields with no decision count only while they are in a draft (To review lists those, K1); ones carried
+    // from an earlier release are the validator's warning on step 6 ("decide them when this edition is drafted again").
+    return formProgress({ form: code, combinationId, line, edition: current?.edition ?? null, mapped: maps.filter((m) => m.outcome !== "unresolved").length,
+      unresolved: maps.filter((m) => m.outcome === "unresolved" && m.status === "DRAFT").length, draft, items, problems, canAuthor: (actor.duties as readonly string[]).includes("author") });
   }
 }
 

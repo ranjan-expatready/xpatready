@@ -32,7 +32,9 @@ const KINDS: Record<"review" | "fields" | "second_person", QueueItem["kind"][]> 
 
 /** A step read from To review items: one the person can take now, one waiting on someone else, or nothing open. */
 function fromItems(items: QueueItem[], kinds: QueueItem["kind"][]): { state: "needs_you" | "waiting_others" | "running" | null; count: number; next: ProgressStep["next"]; who: string | null; words: string | null } {
-  const open = items.filter((i) => kinds.includes(i.kind));
+  // Review (514f0d8d) m1: in To review's own order (needs first, then oldest first), so both lead with the same item.
+  const ORDER: Record<QueueItem["state"], number> = { needs: 0, waiting: 1, running: 2 };
+  const open = items.filter((i) => kinds.includes(i.kind)).sort((a, b) => ORDER[a.state] - ORDER[b.state] || a.at.localeCompare(b.at));
   const mine = open.find((i) => i.state === "needs" && i.next?.href);
   if (mine) return { state: "needs_you", count: open.length, next: { label: mine.next!.label, href: mine.next!.href! }, who: null, words: mine.what };
   const waiting = open.find((i) => i.state === "waiting");
@@ -60,10 +62,19 @@ export function formProgress(f: ProgressFacts): FormProgress {
 
   // 2. Field map drafted: a stored field map, or a finished AI draft of this file.
   steps.push(step("map", author(
-    f.mapped > 0 || f.draft === "done" ? { state: "done", words: f.mapped > 0 ? `${plural(f.mapped, "form field")} of ${f.edition ?? f.form} have a field map.` : "The AI draft of the field map has finished.", next: null, who: null, count: 0 }
+    f.mapped > 0 || f.draft === "done" ? { state: "done", words: f.mapped > 0 ? `${plural(f.mapped, "form field")} of ${f.edition ?? f.form} ${f.mapped === 1 ? "has" : "have"} a field map.` : "The AI draft of the field map has finished.", next: null, who: null, count: 0 }
     : f.draft === "running" ? { state: "running", words: "The AI draft of the field map is running; this page follows it.", next: null, who: null, count: 1 }
-    : { state: attached ? "needs_you" : "not_started", words: f.draft === "stopped" ? "The last AI draft stopped before it finished: draft again, or add the field map from the library." : "No field map yet: draft it with AI, or add it from the library (no AI, US$0).", next: attached ? { label: "Draft with AI or add from the library", href: forms } : null, who: null, count: 1 })));
+    : { state: attached ? "needs_you" : "not_started", words: !f.canAuthor ? (f.draft === "stopped" ? "The last AI draft stopped before it finished." : "No field map yet.") : f.draft === "stopped" ? "The last AI draft stopped before it finished: draft again, or add the field map from the library." : "No field map yet: draft it with AI, or add it from the library (no AI, US$0).", next: attached ? { label: "Draft with AI or add from the library", href: forms } : null, who: null, count: 1 })));
   const mapped = steps[1].state === "done";
+  // Review (514f0d8d) M2b, plan §7 / BR-14: until the form is on the combination with a usable PDF, nothing after step 1
+  // has started (a library field map of a form this combination does not have is not its progress).
+  if (!attached) {
+    for (const key of ["map", "review", "fields", "second_person", "complete"] as const) {
+      const at = STEP_KEYS.indexOf(key);
+      steps[at] = step(key, { state: "not_started", words: "Comes after the form is on this combination with a usable PDF.", next: null, who: null, count: 0 });
+    }
+    return finish(f, steps);
+  }
 
   // 3–5. From To review: the same items, the same next step (plan D3).
   for (const key of ["review", "fields", "second_person"] as const) {
@@ -76,19 +87,26 @@ export function formProgress(f: ProgressFacts): FormProgress {
   }
 
   // 6. Complete: drafted, nothing open above, and the validator raises nothing for this form on this combination.
-  const open = f.problems.filter((p) => p.level === "error" || p.level === "warning");
+  // Review m3: only errors keep the field map from being complete (warnings do not stop a release, BR-10); they are said.
+  const open = f.problems.filter((p) => p.level === "error");
+  const warns = f.problems.filter((p) => p.level === "warning");
   const before = steps.slice(0, 5).every((s) => s.state === "done");
   steps.push(before && !open.length
-    ? step("complete", { state: "done", words: "The field map is complete for this combination: it goes out with the next release.", next: null, who: null, count: 0 })
+    ? step("complete", { state: "done", words: `The field map is complete for this combination: it goes out with the next release.${warns.length ? ` To note: ${warns.map((p) => p.message).slice(0, 2).join(" ")}` : ""}`, next: null, who: null, count: 0 })
     : step("complete", { state: before ? "needs_you" : "not_started", words: open.length ? open.map((p) => p.message).slice(0, 2).join(" ") : "Comes after the steps above.", next: before && open.length ? { label: "See what is left on Review and release", href: `/c/${f.combinationId}/review` } : null, who: null, count: open.length || (before ? 0 : 1) }));
 
+  return finish(f, steps);
+}
+
+function finish(f: ProgressFacts, steps: ProgressStep[]): FormProgress {
   const notDone = steps.filter((s) => s.state !== "done");
   const current = notDone[0]?.key ?? null;
   // BR-4: the person's first step that can go ahead now; when the current one waits for someone else, a later one of theirs.
-  const mine = notDone.find((s) => s.state === "needs_you" && s.next);
+  // A step not started that the person can start (Add it from the library) counts too.
+  const mine = notDone.find((s) => (s.state === "needs_you" || s.state === "not_started") && s.next);
   return {
     form: f.form, combination: f.combinationId, steps, current,
     next_for_you: mine ? { step: mine.key, label: mine.next!.label, href: mine.next!.href } : null,
-    whats_left: notDone.map((s) => ({ step: s.key, what: s.label, count: s.count, who: s.who })),
+    whats_left: notDone.map((s) => ({ step: s.key, what: s.label, count: s.count, who: s.who, href: s.next?.href ?? null })), // BR-5: each line links where it is done
   };
 }

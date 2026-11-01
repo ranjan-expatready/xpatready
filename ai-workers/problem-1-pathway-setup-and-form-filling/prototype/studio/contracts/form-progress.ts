@@ -33,5 +33,5 @@ export type FormProgress = {
    *  step this person can take meanwhile); null when there is none. */
   next_for_you: { step: StepKey; label: string; href: string } | null;
   /** Every step not done, with how many things are open and who acts. */
-  whats_left: { step: StepKey; what: string; count: number; who: string | null }[];
+  whats_left: { step: StepKey; what: string; count: number; who: string | null; href: string | null }[];
 };

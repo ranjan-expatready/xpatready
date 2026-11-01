@@ -51,6 +51,13 @@ const st = (p: ReturnType<typeof formProgress>, k: string) => p.steps.find((s) =
   ok("C2.12 BR-4 pass: the current step waits on someone else; the person's next is a later step they can take", br4.current === "review" && br4.next_for_you?.step === "second_person");
   ok("C2.12 BR-4 fail: what's left lists every step not done, with who acts", br4.whats_left.map((w) => w.step).join() === "review,second_person,complete" && br4.whats_left[0].who !== null);
 
+  // ── Review (514f0d8d): the rules it found without a failing test
+  ok("C2.12 BR-3 pass (review M3): undecided form fields on To review (form_fields) fill step 3", st(formProgress({ ...base, mapped: 12, items: [item("form_fields", "needs")] }), "review").next?.label === "Do the form_fields");
+  ok("C2.12 D3 fail (review m1): two step-3 items lead with To review's first (needs, then oldest), not the list's order", st(formProgress({ ...base, mapped: 12, items: [item("ai_proposals", "needs", { id: "a", at: "2026-10-31T10:00:00Z" }), item("form_fields", "needs", { id: "b", at: "2026-10-30T10:00:00Z" })] }), "review").next?.label === "Do the form_fields");
+  ok("C2.12 BR-14 fail (review M2b): a form not on the combination: nothing after step 1 has started, even with a library field map", (() => { const p = formProgress({ ...base, line: "none", mapped: 53 }); return p.steps.slice(1).every((x) => x.state === "not_started" && x.next === null) && p.next_for_you?.step === "attach"; })());
+  ok("C2.12 BR-10 pass (review m3): a warning does not keep the field map from complete (it is said); an error does", st(formProgress({ ...base, mapped: 12, problems: [{ level: "warning", message: "A list purpose note." }] }), "complete").state === "done" && /A list purpose note/.test(st(formProgress({ ...base, mapped: 12, problems: [{ level: "warning", message: "A list purpose note." }] }), "complete").words) && st(formProgress({ ...base, mapped: 12, problems: [{ level: "error", message: "E" }] }), "complete").state === "needs_you");
+  ok("C2.12 BR-5 pass: each line of what's left links where it is done, when the person can do it", br4.whats_left.find((w) => w.step === "second_person")?.href === "/x/held_file");
+
   // ── The API on the sample (US$0): one saved AI answer replayed on the Super visa's IMM 5257.
   await call("POST", "/demo/reset", { confirm: "RESET" });
   await call("POST", "/demo/load");
@@ -58,7 +65,14 @@ const st = (p: ReturnType<typeof formProgress>, k: string) => p.steps.find((s) =
   const path = `/combinations/${sv}/forms/${encodeURIComponent("IMM 5257")}/progress`;
   let r = await call("GET", path);
   ok("C2.12 API pass: before any draft, the author's path: step 1 done (its PDF is attached), current step 2 with Draft with AI", r.status === 200 && r.body.steps[0].state === "done" && r.body.current === "map" && r.body.next_for_you?.step === "map", r.body);
+  // Review M3: the server reads the author duty itself: the content reviewer is told who drafts, never offered it.
+  const asC = (await call("GET", path, undefined, "user-C")).body;
+  ok("C2.12 BR-4 fail (review M3, API): the content reviewer is told the configuration author drafts; no Draft with AI", asC.steps[1].state === "waiting_others" && asC.steps[1].next === null && asC.next_for_you === null, asC.steps[1]);
   const att = ((await call("GET", `/combinations/${sv}/attachments`)).body as { id: string; edition?: string }[]).find((a) => /IMM 5257 \(/.test(a.edition ?? ""))!;
+  // Review M3: a stub pass proves the path only: it is not a field-map draft.
+  // Test input (a finished stub step written straight to the table: running the stub pass rewrites tracked p2 files).
+  sql(`insert into drafting_job (id, workspace_id, combination_id, attachment_id, kind, mode, status, started_by, finished_at) select gen_random_uuid(), workspace_id, combination_id, id, 'field_map', 'STUB', 'COMPLETED', 'user-A', now() from source_attachment where id = '${att.id}'`);
+  ok("C2.12 BR-3 fail (review M3, API): after a stub pass the field map is still not drafted (step 2 the author's)", (await call("GET", path)).body.steps[1].state === "needs_you");
   const saved = (((await call("GET", `/attachments/${att.id}/draft-options`)).body.saved_runs ?? []) as { valid: boolean; file: string }[]).find((x) => x.valid)!;
   await call("POST", `/attachments/${att.id}/draft`, { mode: "replay", runFile: saved.file });
   for (let i = 0; i < 150; i++) { r = await call("GET", path, undefined, "user-C"); if (r.body?.steps?.[1]?.state === "done") break; await new Promise((x) => setTimeout(x, 400)); }
@@ -68,6 +82,30 @@ const st = (p: ReturnType<typeof formProgress>, k: string) => p.steps.find((s) =
   ok("C2.12 D3 pass (API): after the draft, step 2 done and step 3's next step is To review's for the same person (label and link)", r.body.steps[1].state === "done" && !!mine && s3.state === "needs_you" && s3.next?.label === mine!.next!.label && s3.next?.href === mine!.next!.href, { s3, mine: mine?.next });
   const author = (await call("GET", path)).body;
   ok("C2.12 API pass: the same path read by another person names their own step or who acts (never a step they cannot take)", author.steps.every((s: { state: string; next: unknown; who: string | null }) => s.state !== "waiting_others" || (s.next === null && !!s.who)));
+  // Review M3: another form's To review items never move this form's path (IMM 5707 on the same combination).
+  const p5707 = (await call("GET", `/combinations/${sv}/forms/${encodeURIComponent("IMM 5707")}/progress`, undefined, "user-C")).body;
+  ok("C2.12 D2 fail (review M3, API): IMM 5257's AI proposals are not IMM 5707's step 3", p5707.steps?.[2]?.next?.href !== s3.next?.href, p5707.steps?.[2]);
+  // Review M1, M2a, M3 on the released sample combination (With an LMIA).
+  const lmia = sql("select id from combination where label = 'With an LMIA' limit 1");
+  const lmiaProblems = ((await call("GET", `/combinations/${lmia}`)).body.draft.problems as { where: string; item: string; message: string }[]).filter((p) => p.where === "Forms");
+  const lmiaForms = sql(`select distinct lineage_key from combination_form where combination_id = '${lmia}' and status <> 'RETIRED'`).split("\n").filter(Boolean);
+  let leaked = "", phantom = "";
+  for (const code of lmiaForms) {
+    const pg = (await call("GET", `/combinations/${lmia}/forms/${encodeURIComponent(code)}/progress`)).body;
+    const q = (await call("GET", `/review-queue?filter=all&form=${encodeURIComponent(code)}`)).body.items as QueueItem[];
+    // M1: step 3 needs you only when To review has an item for it.
+    if (pg.steps?.[2]?.state === "needs_you" && !q.some((i) => ["ai_proposals", "proposals", "form_fields"].includes(i.kind))) phantom += `${code} `;
+    // M3: step 6 says only this form's problems.
+    const others = lmiaProblems.filter((p) => p.item !== code && !lmiaProblems.some((x) => x.item === code && x.message === p.message));
+    if (others.some((p) => (pg.steps?.[5]?.words ?? "").includes(p.message))) leaked += `${code} `;
+  }
+  ok("C2.12 D3 fail (review M1, API): no form on With an LMIA gets a step-3 'needs you' that To review does not list (carried undecided fields are step 6's warning)", lmiaForms.length >= 5 && !phantom, phantom);
+  ok("C2.12 fail (review M3, API): step 6 says only its own form's problems", !leaked, leaked);
+  const gone = lmiaForms[0], gv = Number(sql(`select max(version) from combination_form where combination_id = '${lmia}' and lineage_key = '${gone}'`));
+  await call("DELETE", `/combinations/${lmia}/forms/${encodeURIComponent(gone)}`, { version: gv });
+  const afterRm = (await call("GET", `/combinations/${lmia}/forms/${encodeURIComponent(gone)}/progress`)).body;
+  ok("C2.12 BR-3 fail (review M2a, API): a form removed from the combination reads not on it (before: its attached PDF kept it there)", afterRm.steps?.[0]?.state === "not_started" && afterRm.steps.slice(1).every((x: { state: string }) => x.state === "not_started"), afterRm.steps?.[0]);
+  ok("C2.12 API (review m5): a combination id in capitals is the same combination", (await call("GET", `/combinations/${sv.toUpperCase()}/forms/${encodeURIComponent("IMM 5257")}/progress`)).status === 200);
   // ── refusals
   ok("C2.12 API fail: a form not in the library is 404 in words", (await call("GET", `/combinations/${sv}/forms/${encodeURIComponent("IMM 9999")}/progress`)).status === 404);
   ok("C2.12 API fail: an unknown combination is 404 in words", (await call("GET", `/combinations/00000000-0000-0000-0000-000000000000/forms/${encodeURIComponent("IMM 5257")}/progress`)).status === 404 && (await call("GET", `/combinations/not-an-id/forms/${encodeURIComponent("IMM 5257")}/progress`)).status === 404);
