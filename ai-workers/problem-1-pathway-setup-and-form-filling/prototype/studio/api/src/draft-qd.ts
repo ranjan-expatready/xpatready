@@ -109,14 +109,15 @@ export class DraftQd {
     let fresh: typeof res.items = [], already = 0, removed = 0;
     await this.db.$transaction(async (tx) => {
       await tx.$executeRawUnsafe(`select pg_advisory_xact_lock(hashtext($1))`, `qd_conditions:${c.id}`);
-      const seen = await tx.proposalItem.findMany({ where: { workspaceId: c.workspaceId, combinationId: c.id, kind: "condition", status: { in: ["waiting", "rejected"] } }, select: { identityKey: true, status: true } });
-      const waiting = new Set(seen.filter((x) => x.status === "waiting").map((x) => x.identityKey)), gone = new Set(seen.filter((x) => x.status === "rejected").map((x) => x.identityKey));
+      const seen = await tx.proposalItem.findMany({ where: { workspaceId: c.workspaceId, combinationId: c.id, kind: "condition", status: { in: ["waiting", "rejected", "accepted", "edited"] } }, select: { identityKey: true, status: true } });
+      // Part 3: an accepted condition (its library change waits or is approved) is not proposed again either.
+      const waiting = new Set(seen.filter((x) => x.status === "waiting").map((x) => x.identityKey)), gone = new Set(seen.filter((x) => x.status !== "waiting").map((x) => x.identityKey));
       fresh = res.items.filter((x) => !waiting.has(x.identity.key) && !gone.has(x.identity.key));
       already = res.items.filter((x) => waiting.has(x.identity.key)).length; removed = res.items.filter((x) => gone.has(x.identity.key) && !waiting.has(x.identity.key)).length;
       await insertProposals(tx, c.workspaceId, fresh);
     });
     const ready = fresh.filter((x) => x.confidence === "ready").length;
-    const message = `${fresh.length} condition${fresh.length === 1 ? "" : "s"} for To review (Ready ${ready} · Check ${fresh.filter((x) => x.confidence === "check").length} · Decide ${fresh.filter((x) => x.confidence === "decide").length})${already ? `; ${already} already waiting there` : ""}${removed ? `; ${removed} a person removed before are not proposed again` : ""}${res.dropped.length ? `; ${res.dropped.length} left out with the reason` : ""}. Saved AI answers, US$0.`;
+    const message = `${fresh.length} condition${fresh.length === 1 ? "" : "s"} for To review (Ready ${ready} · Check ${fresh.filter((x) => x.confidence === "check").length} · Decide ${fresh.filter((x) => x.confidence === "decide").length})${already ? `; ${already} already waiting there` : ""}${removed ? `; ${removed} a person removed or accepted before are not proposed again` : ""}${res.dropped.length ? `; ${res.dropped.length} left out with the reason` : ""}. Saved AI answers, US$0.`;
     return { status: "COMPLETED", message, proposed: fresh.length, detail: { dropped: res.dropped, unresolved: res.unresolved, run_files: [d.runFile, k.runFile], details: res.dropped.length ? res.dropped.map((x) => `${x.asks}: ${x.why}`).join("\n") : null } };
   }
 

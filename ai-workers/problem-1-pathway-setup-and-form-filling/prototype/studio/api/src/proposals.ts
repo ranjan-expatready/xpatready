@@ -5,6 +5,7 @@
 // LibraryChange carrying the batch id and the item id, so a second person still approves every new library item (BR-7).
 // The free-add scan (tests/check_s6_p149.ts) refuses a library .create anywhere else.
 import { HttpStatus } from "@nestjs/common";
+import { proposeConditionChange } from "./question-condition.ts";
 import { randomUUID } from "node:crypto";
 import type { Prisma, ProposalItem as Row } from "@prisma/client";
 import { ProposalItem, ProposalPayload, type ProposalKind } from "../../contracts/proposal-item.ts";
@@ -154,6 +155,11 @@ const sourceRef = (r: Row, actor: Actor) => `${r.origin === "rules" ? "rules" : 
 
 /** LANDERS[kind]: what accepting an item writes, inside decide's transaction. A kind with no lander yet is refused. */
 export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalPayload, l: Landing) => Promise<string>>> = {
+  /** C4.11 part 3 (forms lane): a waiting library change for a second person (question-condition.ts), never a direct edit. */
+  async condition(tx, _r, p, l) {
+    if (p.kind !== "condition") fail("Wrong payload.");
+    return proposeConditionChange(tx, l, p as Extract<ProposalPayload, { kind: "condition" }>);
+  },
   async field(tx, r, p, l) {
     if (p.kind !== "field") fail("Wrong payload.");
     const f = p as Extract<ProposalPayload, { kind: "field" }>;

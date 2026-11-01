@@ -12,10 +12,11 @@ import { ACTORS, type Actor, type Db } from "./core.ts";
 import { isLifecycleKind, publishLifecycle, withdrawLifecycle } from "./lifecycle.ts";
 import { ACTION_LABEL } from "../../contracts/lifecycle.ts";
 import { fillsView, releaseFills } from "./who-fills.ts";
+import { conditionView, COND_KIND, releaseCondition } from "./question-condition.ts";
 
 export const LIBRARY_KINDS = ["field", "section", "document_type", "check"] as const;
 export type LibraryKind = (typeof LIBRARY_KINDS)[number];
-export const KIND_NOUN: Record<string, string> = { library_form: "library form", answer_list: "answer list", form_accepts: "what IRCC accepts", placement_fills: "a question", field: "shared field", section: "section", document_type: "document type", check: "check", structure_node: "structure name", combination: "combination" };
+export const KIND_NOUN: Record<string, string> = { library_form: "library form", answer_list: "answer list", form_accepts: "what IRCC accepts", placement_fills: "a question", placement_condition: "when a question is asked", field: "shared field", section: "section", document_type: "document type", check: "check", structure_node: "structure name", combination: "combination" };
 // The lifecycle words come from the one word set (contracts/lifecycle.ts, P-116 amended 28 Oct): Delete, Retire, Restore.
 // "Remove" is kept for a form line taken off a combination (it stays in the library, P-123).
 // QA-113: the action word already says "who fills", so its noun is "a question" ("Change who fills a question: …").
@@ -62,7 +63,7 @@ export function changeView(c: LibraryChange) {
   return { id: c.id, kind: c.kind, kind_word: KIND_NOUN[c.kind] ?? c.kind, key: c.key, label: c.label ?? c.key, action: c.action, action_word: actionWord(c.action, c.kind), reason: c.reason,
     ai_verdict: c.aiVerdict, matches: c.matches, status: c.status, proposed_by: nameOf(c.proposedBy), proposed_by_id: c.proposedBy, proposed_at: c.proposedAt,
     decided_by: nameOf(c.decidedBy), decided_at: c.decidedAt, decision_note: c.decisionNote, released_in: c.releasedIn, combination_id: c.combinationId,
-    ...(c.kind === "form_accepts" ? { accepts: acceptsView(c) } : {}), ...(c.kind === "placement_fills" ? { fills: fillsView(c) } : {}) }; // C4.9 (runtime lane)
+    ...(c.kind === "form_accepts" ? { accepts: acceptsView(c) } : {}), ...(c.kind === "placement_fills" ? { fills: fillsView(c) } : {}), ...(c.kind === COND_KIND ? { condition: conditionView(c) } : {}) }; // C4.9 (runtime lane)
 }
 
 /** C11.18: what the second person compares: before → after, IRCC's line or the reason, and the form's canada.ca page. */
@@ -204,6 +205,7 @@ export async function publishLibraryChanges(tx: Prisma.TransactionClient, worksp
   }
   // C4.9 (runtime lane, P-97): an approved change of who fills is released once its placement draft is published.
   out.push(...(await releaseFills(tx, workspaceId, pack)));
+  out.push(...(await releaseCondition(tx, workspaceId, pack))); // C4.11 part 3 (forms lane)
   return out;
 }
 type Status = "DRAFT" | "PUBLISHED" | "SUPERSEDED" | "RETIRED";

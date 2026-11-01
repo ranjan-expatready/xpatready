@@ -185,11 +185,28 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
     r = await run("replay");
     ok("C4.11 C fail: drafting again puts no condition on the queue twice", sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition'`) === "2" && /2 already waiting/.test(step(r, "qd_conditions")?.message ?? ""), step(r, "qd_conditions")?.message);
     const cid = sql(`select id from proposal_item where combination_id='${wp}' and kind='condition' and identity_key='principal|${ct2.fact}|${cd2.fact}'`);
-    const acc = await call("POST", "/review/proposals/decide", { ids: [cid], action: "accept" });
-    ok("C4.11 C fail: a condition is not yet accepted on the queue (its lander is part 3): refused in words, nothing changes", acc.status === 409 && /not yet on this queue/.test(words(acc)) && sql(`select status from proposal_item where id='${cid}'`) === "waiting", words(acc));
     const rej = await call("POST", "/review/proposals/decide", { ids: [cid], action: "reject", reason: "The guide means something else here." });
     r = await run("replay");
-    ok("C4.11 C fail (review m1): a condition a person removed is not proposed again", rej.status < 300 && sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition' and status='waiting'`) === "1" && /1 a person removed before/.test(step(r, "qd_conditions")?.message ?? ""), { rej: rej.status, message: step(r, "qd_conditions")?.message });
+    ok("C4.11 C fail (review m1): a condition a person removed is not proposed again", rej.status < 300 && sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition' and status='waiting'`) === "1" && /1 a person removed or accepted before/.test(step(r, "qd_conditions")?.message ?? ""), { rej: rej.status, message: step(r, "qd_conditions")?.message });
+    // ---------------------------------------------------------------- L3: part 3, accepting a condition (tech lead's option (a), BR-6)
+    const keep = sql(`select id from proposal_item where combination_id='${wp}' and kind='condition' and status='waiting' and identity_key='principal|${ct1.fact}|${cd1.fact}'`);
+    const q0 = sql(`select coalesce(predicate_json::text,'none') || '|' || count(*) over () from section_question where lineage_key='${ct1.fact}' order by version desc limit 1`);
+    let acc = await call("POST", "/review/proposals/decide", { ids: [keep], action: "accept" });
+    const chg = sql(`select id || '|' || status from library_change where kind='placement_condition' and key='${ct1.fact}' order by proposed_at desc limit 1`).split("|");
+    ok("C4.11 L3 pass: accepting a condition writes a waiting library change for a second person; the question is unchanged until then", (acc.status === 200 || acc.status === 201) && chg[1] === "WAITING" && sql(`select coalesce(predicate_json::text,'none') || '|' || count(*) over () from section_question where lineage_key='${ct1.fact}' order by version desc limit 1`) === q0, { status: acc.status, chg, words: words(acc) });
+    const batch = String(acc.body.batchId ?? "");
+    r = await call("POST", `/review/proposals/undo/${batch}`);
+    ok("C4.11 L3 fail: Undo within the batch removes the waiting change and the condition waits on the queue again", (r.status === 200 || r.status === 201) && sql(`select count(*) from library_change where id='${chg[0]}'`) === "0" && sql(`select status from proposal_item where id='${keep}'`) === "waiting", { status: r.status, words: words(r) });
+    acc = await call("POST", "/review/proposals/decide", { ids: [keep], action: "accept" });
+    const chg2 = sql(`select id from library_change where kind='placement_condition' and key='${ct1.fact}' and status='WAITING' limit 1`);
+    r = await call("POST", `/library/changes/${chg2}/approve`, {}, "user-A");
+    ok("C4.11 L3 fail: the author cannot approve their own change of when a question is asked (second person)", r.status >= 400 && sql(`select status from library_change where id='${chg2}'`) === "WAITING", { status: r.status, words: words(r) });
+    r = await call("POST", `/library/changes/${chg2}/approve`, {}, "user-B");
+    const tree = sql(`select predicate_json->>'field' || '|' || coalesce(condition_effect::text,'') || '|' || status from section_question where lineage_key='${ct1.fact}' order by version desc limit 1`);
+    ok("C4.11 L3 pass: the second person's approval gives the question a draft version with the condition (shown when the deciding answer is given)", r.status < 300 && tree === `${cd1.fact}|SHOW|DRAFT` && sql(`select status from library_change where id='${chg2}'`) === "APPROVED", { status: r.status, tree, words: words(r) });
+    r = await run("replay");
+    const again = step(r, "qd_conditions")?.message ?? "";
+    ok("C4.11 L3 fail: once accepted, the same condition is not proposed again", sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition' and status='waiting' and identity_key='principal|${ct1.fact}|${cd1.fact}'`) === "0", again);
   } else ok("C4.11 C setup: the sample has two yes-no, one free-text and three other principal questions with distinct names", false, { yesNo: yesNo.length, text: text.length, others: others.length });
 
   // ---------------------------------------------------------------- R: a run its server left running never blocks for good (review M3)
