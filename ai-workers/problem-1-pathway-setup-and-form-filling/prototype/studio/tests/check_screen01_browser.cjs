@@ -8,6 +8,7 @@
 const path = require("node:path"); const fs = require("node:fs");
 const { chromium } = require("playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
+const { speed } = require("./speed_budget.cjs"); // P-184: speed budgets judged only when the Mac is not busy
 const PORT = Number(process.argv[2] ?? 4404), BASE = `http://localhost:${PORT}`;
 const ROOT = path.resolve(__dirname, "..", "..", "..");
 const OFFICIAL = path.join(ROOT, "official-sources", "ircc");
@@ -98,7 +99,7 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   let t0 = Date.now(); await p.goto(BASE); await grid().waitFor(); timings.cold_first_view_ms = Date.now() - t0;
   await p.goto(`${BASE}/library/forms`); await idle();
   t0 = Date.now(); await p.goto(BASE); await grid().waitFor(); timings.first_view_ms = Date.now() - t0;
-  step("performance: first view under 1 s with the sample data (app files cached)", timings.first_view_ms < 1000, `${timings.first_view_ms} ms (cold browser ${timings.cold_first_view_ms} ms)`);
+  { const s = speed("performance: first view under 1 s with the sample data (app files cached)", timings.first_view_ms < 1000, `${timings.first_view_ms} ms (cold browser ${timings.cold_first_view_ms} ms)`); step(s.label, s.ok, s.detail); }
   await idle();
   // Card v4 (P-180 Q2, amends BR-13): every combination by default; the status is one row of chips with counts.
   const chipKeys = await p.locator("[data-status-chip]").evaluateAll((cs) => cs.map((c) => `${c.dataset.statusChip}:${c.getAttribute("aria-pressed")}:${c.textContent}`));
@@ -129,7 +130,7 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
     await new Promise((res) => { const o = new MutationObserver(() => { if (done()) { o.disconnect(); res(); } }); o.observe(document.body, { subtree: true, childList: true, attributes: true }); });
     return Math.round(performance.now() - t);
   }, liveWant);
-  step("performance: changing the view answers under 200 ms", timings.filter_ms < 200, `${timings.filter_ms} ms`);
+  { const s = speed("performance: changing the view answers under 200 ms", timings.filter_ms < 200, `${timings.filter_ms} ms`); step(s.label, s.ok, s.detail); }
   await idle();
   const liveRows = await grid().locator('[role="row"][data-node]').count();
   step("F1: Live shows every row that is Live", liveRows === liveWant && liveRows >= 1 && (await row("With an LMIA").innerText()).includes("Live") && await grid().locator('[role="row"][data-node]:not([data-state="LIVE"])').count() === 0, liveRows);

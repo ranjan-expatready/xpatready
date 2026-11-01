@@ -134,3 +134,17 @@ Fit check against today's data: a checklist line is a `document_requirement` (ty
 3. **The IMM 5409 finding:** if a form filed once per couple shows under every person, I fix it in Preview's grouping (C4.6), not in who a form applies to. If who it applies to is wrong, that is a rules fault; I report it before changing it.
 
 **Size:** heavy-medium: one engine function (`previewSets`), the preview view, one renderer option, and two checks (API and browser at 1440 and 1024 px with the accessibility check). It does not touch the forms lane's channel files.
+
+## QA-91: Who can be › AI as a run card (C11.12; P-110 Stop and progress): short plan for the Lead, 30 Oct (no code yet)
+**Finding:** `people-ai.ts` propose runs both AI rounds inside one HTTP request (up to 2 rounds × 2 attempts × 300 s) with no progress, no Stop and no run card. It matters only for **AI now**, which stays off until the founder's Go for a live trial (`STUDIO_PEOPLE_AI_LIVE`); rules only and saved AI answers finish at once (US$0).
+
+**Plan (reuses the shared run experience, W1-07, `runs.ts`):**
+| Element | Record | API | Rule | Test |
+|---|---|---|---|---|
+| AI now starts a run | one `AiBatch` (operation `who_can_be`, worst case from the plan, plan sha) + four `DraftingJob` steps (read guide · AI round · AI check round · rules keep agreed lines) | `POST /combinations/:id/people/propose` with mode live → 202 `{ runId }`; rules and replay stay as now (200 with the proposal) | the plan sha and the cap are checked before the run starts, as now | live stubbed by the launcher's stub mode (US$0): 202, four steps in order |
+| Progress | step status, times, cost per round | `GET /runs/:id` (existing; `runs.ts` gets the label "Filling Who can be from the guide" and the four step labels) | real steps, no invented percentage (EXPERIENCE §4) | step n of 4 while running |
+| Stop | `cancelRequested` | `POST /runs/:id/stop` (existing) → `launchOnce(…, wanted)` already ends the running launcher call | no round starts after Stop; what was spent stays on the card | stop between rounds: round 2 never starts, status Stopped |
+| Result | the proposal kept on the batch (`plan.result`), never saved to the combination | `GET /combinations/:id/people/runs/:runId` → the same `PeopleProposal` | nothing is saved until the person accepts and saves (as now) | done run → the editor fills from it; a stopped or failed run says so in words |
+| UI | — | the Who can be dialog shows `RunCard` while it runs, then the proposal | the top-bar chip follows the person (existing) | browser at 1440 and 1024 with axe |
+
+**Files:** `people-ai.ts`, `runs.ts` (one label, one step list, the stop dispatch: shared with forms and screens, a narrow addition), `questionnaires.tsx` (the dialog), contracts `workspace.ts` (the 202 shape), two checks (API with the stub launcher, browser). **Size:** medium; no schema change (AiBatch and DraftingJob as they are). **Lead (30 Oct): build it now, as planned** — the founder approved a live Who can be retest (QA-99), so AI now is used and needs the run card, progress and Stop (P-110).

@@ -1,0 +1,218 @@
+{
+  "at": "2026-10-31T08:39:11.299Z",
+  "port": 4430,
+  "pass": 30,
+  "fail": 0,
+  "log": [
+    {
+      "name": "C3.11 fail-guard: with every line filed as PDF upload, no signed-scan line is on any checklist",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "C3.11 setup: IMM 1295 is set to PDF upload, signed by hand and scanned, through the Forms tab's route",
+      "ok": true,
+      "detail": 200
+    },
+    {
+      "name": "C3.11 pass: IMM 1295 filed as PDF upload, signed by hand and scanned, adds \"IMM 1295 signed by hand and scanned\" to each person it is about (not set = the person signs)",
+      "ok": true,
+      "detail": [
+        "principal",
+        "spouse_or_partner"
+      ]
+    },
+    {
+      "name": "C3.11 pass: each line says why it is there (the form and its channel) and supplies no facts",
+      "ok": true,
+      "detail": {
+        "form": "IMM 1295",
+        "reason": "IMM 1295 is filed as PDF upload, signed by hand and scanned: it is printed, signed by hand, scanned and uploaded."
+      }
+    },
+    {
+      "name": "C3.11 pass: the signed scans follow the person's other documents (last on the checklist)",
+      "ok": true
+    },
+    {
+      "name": "C3.11 fail: a person the form is not about gets no signed scan of it (the representative)",
+      "ok": true,
+      "detail": [
+        "principal",
+        "spouse_or_partner"
+      ]
+    },
+    {
+      "name": "C3.11 M2 pass: Preview by person lists \"IMM 1295 signed by hand and scanned\" for the principal applicant, as the case gets it",
+      "ok": true,
+      "detail": [
+        "Copy of LMIA and copy of employment contract from prospective employer|Cannot tell yet",
+        "Education and work experience evidence (New Delhi specification: certificates, diplomas or degrees with mark sheets; appointment and relieving letters; salary slips and Form 16; bank statements; reference letters with duration, duties and contact details)|Cannot tell yet",
+        "Evidence of exemption from the work permit processing fee|Cannot tell yet",
+        "Job offer letter|Cannot tell yet",
+        "Letter from current employer|Cannot tell yet",
+        "Letter of explanation - exceptional situation, no valid travel document (Venezuelan passport)|Cannot tell yet",
+        "Letter of explanation - Venezuelan passport extended 5 years|Cannot tell yet",
+        "Passport or travel document information page photocopy|Needed",
+        "Proof of completed upfront medical exam|Cannot tell yet",
+        "Proof of fee payment (processing fee and other applicable fees receipt)|Needed",
+        "Proof of legal immigration status in country of residence|Cannot tell yet",
+        "Proof of meeting the requirements of the offered job|Cannot tell yet",
+        "Proof of past work experience (e.g. pay stubs)|Cannot tell yet",
+        "Québec Acceptance Certificate (CAQ) evidence|Cannot tell yet",
+        "Résumé|Cannot tell yet",
+        "Reference letter from past employers|Cannot tell yet",
+        "Visa application photographs|Cannot tell yet",
+        "IMM 1295 signed by hand and scanned|Needed"
+      ]
+    },
+    {
+      "name": "C3.11: nothing is stored for it (no document requirement row, no document type)",
+      "ok": true
+    },
+    {
+      "name": "C3.11 fail: a signed scan cannot be moved on its own (409, in words naming the Forms tab)",
+      "ok": true,
+      "detail": "IMM 1295 signed by hand and scanned is added because IMM 1295 is filed as PDF upload, signed by hand and scanned; it stays after the other documents. Change the form line on the Forms tab to change it."
+    },
+    {
+      "name": "C3.11 fail: the last own document cannot move below the signed scans (409)",
+      "ok": true,
+      "detail": "It is already last before the signed scans, which follow their form lines."
+    },
+    {
+      "name": "C3.11 fail: a signed scan is not a requirement that can be removed alone (refused)",
+      "ok": true,
+      "detail": 404
+    },
+    {
+      "name": "C3.11 pass: signed by the principal applicant for the family → only the principal's checklist has it, saying it is for the family",
+      "ok": true,
+      "detail": [
+        "principal"
+      ]
+    },
+    {
+      "name": "C3.11 fail: signed by No signature → no signed scan, and the release check says why (error)",
+      "ok": true,
+      "detail": [
+        "IMM 1295 is filed as PDF upload, signed by hand and scanned, but \"Signed by\" says No signature, so nobody is asked for its signed scan. Choose who signs it, or choose another signature."
+      ]
+    },
+    {
+      "name": "C3.11 pass: back to the person signing, the release error is gone",
+      "ok": true
+    },
+    {
+      "name": "C3.11 pass: filed as PDF upload again, every signed scan of the form is gone at once",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "C3.11 M2 fail: filed as PDF upload again, Preview by person no longer lists the signed scan",
+      "ok": true,
+      "detail": [
+        "Copy of LMIA and copy of employment contract from prospective employer|Cannot tell yet",
+        "Education and work experience evidence (New Delhi specification: certificates, diplomas or degrees with mark sheets; appointment and relieving letters; salary slips and Form 16; bank statements; reference letters with duration, duties and contact details)|Cannot tell yet",
+        "Evidence of exemption from the work permit processing fee|Cannot tell yet",
+        "Job offer letter|Cannot tell yet",
+        "Letter from current employer|Cannot tell yet",
+        "Letter of explanation - exceptional situation, no valid travel document (Venezuelan passport)|Cannot tell yet",
+        "Letter of explanation - Venezuelan passport extended 5 years|Cannot tell yet",
+        "Passport or travel document information page photocopy|Needed",
+        "Proof of completed upfront medical exam|Cannot tell yet",
+        "Proof of fee payment (processing fee and other applicable fees receipt)|Needed",
+        "Proof of legal immigration status in country of residence|Cannot tell yet",
+        "Proof of meeting the requirements of the offered job|Cannot tell yet",
+        "Proof of past work experience (e.g. pay stubs)|Cannot tell yet",
+        "Québec Acceptance Certificate (CAQ) evidence|Cannot tell yet",
+        "Résumé|Cannot tell yet",
+        "Reference letter from past employers|Cannot tell yet",
+        "Visa application photographs|Cannot tell yet"
+      ]
+    },
+    {
+      "name": "C3.11 fail-guard: the release keeps its own checklist (no signed scan was ever released)",
+      "ok": true
+    },
+    {
+      "name": "C3.11 pass: the release snapshot carries it with its form line (the next release's checklist has the signed scans, the same rule)",
+      "ok": true
+    },
+    {
+      "name": "C3.11 engine pass: not set = each person the form is about signs",
+      "ok": true,
+      "detail": [
+        "principal",
+        "spouse_or_partner"
+      ]
+    },
+    {
+      "name": "C3.11 engine pass: the person and the representative → the representative too",
+      "ok": true,
+      "detail": [
+        "principal",
+        "representative",
+        "spouse_or_partner"
+      ]
+    },
+    {
+      "name": "C3.11 engine pass: a parent, for a minor → a child's form is signed by the principal applicant",
+      "ok": true,
+      "detail": [
+        "principal"
+      ]
+    },
+    {
+      "name": "C3.11 engine fail: a parent, for a minor → an adult's form is still signed by the person",
+      "ok": true
+    },
+    {
+      "name": "C3.11 engine fail: a checklist (form kind document) signed by hand and scanned adds nothing",
+      "ok": true
+    },
+    {
+      "name": "C3.11 engine pass: a release made before C1.6 (channel spelled SIGNED_PDF_UPLOAD) still asks for the signed scan",
+      "ok": true,
+      "detail": 1
+    },
+    {
+      "name": "C3.11 engine fail: a PDF upload with a typed name asks for no signed scan",
+      "ok": true
+    },
+    {
+      "name": "C3.11 M2 engine pass: the case renderer asks each person the form is about for the signed scan (Needed)",
+      "ok": true,
+      "detail": [
+        "child:Needed",
+        "principal:Needed",
+        "spouse_or_partner:Needed"
+      ]
+    },
+    {
+      "name": "C3.11 M2 engine pass: signed by the principal applicant for the family → only the principal gets it",
+      "ok": true,
+      "detail": [
+        "principal:Needed"
+      ]
+    },
+    {
+      "name": "C3.11 M2 engine fail: a typed name, or No signature, asks nobody for a signed scan",
+      "ok": true
+    },
+    {
+      "name": "C3.11 M2 engine pass: Preview by person (previewFamily) lists it with the principal's documents",
+      "ok": true,
+      "detail": [
+        "Reference letter from past employers",
+        "Visa application photographs",
+        "IMM TEST signed by hand and scanned"
+      ]
+    },
+    {
+      "name": "C3.11 engine pass: a conditional form's signed scan is conditional with the form's own words",
+      "ok": true,
+      "detail": "Only if the applicant has a representative"
+    }
+  ]
+}
