@@ -10,7 +10,7 @@ import * as React from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { Copy, MoreHorizontal, Pencil, Plus, RefreshCw, Trash2, Undo2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Copy, MoreHorizontal, Pencil, Plus, RefreshCw, Trash2, Undo2 } from "lucide-react";
 import { CHANNEL_WORDS, CHANNELS, SIGNATURE_FITS, SIGNATURE_WORDS, throughAccount, type Channel, type Signature } from "../../../../contracts/forms";
 import { changeWords, COPIES_WORDS, copiesWords, SIGNED_BY, type LastFormChange, type RemovedForm, type WorkspaceFormLine } from "../../../../contracts/workspace";
 import { api, ApiError, useAction, useSessionView, useToast } from "@/lib/api";
@@ -121,6 +121,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
         <p className="min-w-0 text-sm" data-filing>{/* P-143, review M2: the IRCC account, chosen here by an author; min-w-0 (QA-20): the line shrinks to 390 px and the picker with it */}<span className="mr-3" data-account><span className="text-text-muted">IRCC account: </span>{canAuthor ? <AccountPicker id={id} saved={accountKey} /> : account ? `Filed ${accountKey ? throughAccount(accountKey) : `through the ${account}`}` : <span className="text-text-muted">Not set (every way IRCC may accept is offered, Sample)</span>}</span><span className="text-text-muted">Filing: </span>{lines.length ? <><b className="font-semibold" title={filingDetail !== filing ? filingDetail : undefined}>{filing}</b>{filingDetail !== filing ? <span className="sr-only"> ({filingDetail})</span> : null}</> : <b className="font-semibold">not known until a form is set up</b>} <span className="text-text-muted">· {count} · Sample until the immigration expert confirms</span></p>
         <span className="flex flex-wrap items-center gap-3">{add}<Link className="text-sm text-text-link underline" to="/library/forms">Open the Form library</Link></span>
       </div>
+      {canAuthor && lines.length > 1 ? <FilingOrder id={id} codes={lines.map((l) => l.code)} /> : null}
       {pending.length ? <p className={cn("text-sm", FOCUS_RING)} data-pending-summary data-focus="forms:sources"><span className="font-medium">Not set up yet: </span>{[ready ? `${plural(ready, "form")} can be added from the library now (${ready === 1 ? "its" : "their"} form fields are already matched, no AI needed)` : "", toDraft ? `${plural(toDraft, "form")} ${toDraft === 1 ? "needs" : "need"} reading and drafting with AI` : ""].filter(Boolean).join("; ")}. Each row has its step.</p> : null}
       <StepNotices d={combo} />
       <HeldEditions id={id} />
@@ -390,5 +391,26 @@ function HeldEditions({ id }: { id: string }) {
         <p className="mt-1">This combination keeps using the edition in the library until a person reviews what changed. <Link className="font-medium text-text-link underline" to="/review">Review it on To review</Link></p>
       </Notice>
     </div>
+  );
+}
+
+/** C11.9 (P-116 "reorder where order matters"): the order the forms are filed in, moved with Up and Down, saved to the
+ *  draft (POST /combinations/:id/forms/reorder); the snapshot and every tab list them in this order. */
+function FilingOrder({ id, codes }: { id: string; codes: string[] }) {
+  const [open, setOpen] = React.useState(false);
+  const [order, setOrder] = React.useState(codes);
+  React.useEffect(() => { if (!open) setOrder(codes); }, [codes.join("|"), open]);
+  const qc = useQueryClient();
+  const save = useAction(() => api(`/combinations/${id}/forms/reorder`, { method: "POST", json: { forms: order } }), { success: "Filing order saved to the draft", onDone: () => { setOpen(false); for (const k of formsKeys(id)) void qc.invalidateQueries({ queryKey: k }); } });
+  const move = (i: number, d: -1 | 1) => setOrder((o) => { const n = [...o]; [n[i], n[i + d]] = [n[i + d], n[i]]; return n; });
+  if (!open) return <p className="text-sm"><button type="button" className="text-text-link underline underline-offset-2" onClick={() => setOpen(true)} data-filing-order-open>Change the filing order</button></p>;
+  return (
+    <section aria-label="Filing order" className="space-y-2 rounded-lg border border-border p-3" data-filing-order>
+      <p className="text-sm font-medium">Filing order <span className="font-normal text-text-muted">: the order the forms are filed in, top first</span></p>
+      <ol className="space-y-1 text-sm">{order.map((c, i) => <li key={c} className="flex items-center gap-2" data-order-row={c}><span className="w-6 text-text-muted">{i + 1}.</span><span className="min-w-24 font-medium">{c}</span>
+        <Button variant="ghost" size="sm" disabled={i === 0} aria-label={`Move ${c} up`} onClick={() => move(i, -1)}><ArrowUp /></Button>
+        <Button variant="ghost" size="sm" disabled={i === order.length - 1} aria-label={`Move ${c} down`} onClick={() => move(i, 1)}><ArrowDown /></Button></li>)}</ol>
+      <div className="flex gap-2"><Button size="sm" busy={save.isPending} disabled={order.join("|") === codes.join("|")} onClick={() => save.mutate(undefined)} data-filing-order-save>Save to draft</Button><Button size="sm" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button></div>
+    </section>
   );
 }

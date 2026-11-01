@@ -177,14 +177,14 @@ const why = { reason: "Not needed by any setup any more." };
 
   // Major 2: a retire approved at the same moment as a new line using the type: never a retired type on a current line.
   let both = 0;
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 12; i++) {
     const k = `c119_race_line_${i}`; docType(k, "PUBLISHED");
     const rq = await call("POST", `/library/document-types/${k}/retire`, why);
-    const [ap2, ln] = await Promise.all([call("POST", `/library/changes/${rq.body.id}/approve`, {}, "user-B"), call("POST", `/combinations/${comboId}/requirements`, { ...line, documentTypeKey: k })]);
+    const [ap2, ln] = await Promise.all([call("POST", `/library/changes/${rq.body.id}/approve`, {}, "user-B"), new Promise((res) => setTimeout(res, (i % 4) * 15)).then(() => call("POST", `/combinations/${comboId}/requirements`, { ...line, documentTypeKey: k }))]);
     if (status("document_type", "document_type_key", k) === "RETIRED" && ln.status < 300) both++;
     void ap2;
   }
-  ok("C11.9 break-2 Major 2 fail: in 6 simultaneous approve-and-add rounds a retired type never ends up on a current line", both === 0, both);
+  ok("C11.9 break-2 Major 2 fail: in 12 staggered approve-and-add rounds a retired type never ends up on a current line", both === 0, both);
 
   // Major 3: a waiting change of who fills its question stops a retire.
   field("person.c119_fills", "PUBLISHED");
@@ -221,6 +221,52 @@ const why = { reason: "Not needed by any setup any more." };
   ok("C11.9 review-2 Major 1 fail: a field-map decision cannot choose a retired field (409, in words)", r.status === 409 && /is retired/.test(r.body?.detail), [r.status, r.body?.detail]);
   r = await call("POST", `/jobs/${jobId}/items/${job.items[0].id}`, { decision: "CHANGED", key: "person.c119_live" });
   ok("C11.9 review-2 Major 1 pass: the same decision with a current field is taken", r.status < 300, [r.status, r.body?.detail]);
+
+  // ─────────────────── round 3 (review on 3c2225ed)
+  const ws = sql("select id from workspace where key='demo'");
+  const sectionRow = (key: string, st: string, by = "user-A") => sql(`insert into logical_section (id, workspace_id, section_key, version, status, title, origin, updated_by) values (gen_random_uuid(), '${ws}', '${key}', 1, '${st}', 'C11.9 ${key}', 'HUMAN', '${by}')`);
+  // Major 1: a retired section is never chosen by a current combination, even when the retire is approved at the same moment.
+  let selBad = 0;
+  for (let i = 0; i < 12; i++) {
+    const k = `c119_race_sec_${i}`; sectionRow(k, "PUBLISHED", "user-B");
+    const rq = await call("POST", `/library/sections/${k}/retire`, why);
+    await Promise.all([call("POST", `/library/changes/${rq.body.id}/approve`, {}, "user-B"), new Promise((res) => setTimeout(res, (i % 4) * 15)).then(() => call("POST", `/combinations/${comboId}/sections/${k}`, {}))]);
+    if (sql(`select status from logical_section where section_key='${k}'`) === "RETIRED" && sql(`select count(*) from sqr_section_selection where section_key='${k}'`) !== "0") selBad++;
+  }
+  ok("C11.9 round-3 Major 1 fail: in 12 staggered retire-and-select rounds a retired section is never left selected", selBad === 0, selBad);
+  sectionRow("c119_retired_sec", "RETIRED", "user-B");
+  r = await call("POST", `/combinations/${comboId}/sections/c119_retired_sec`, {});
+  ok("C11.9 round-3 fail: choosing a retired section for a combination is refused (409, retired)", r.status === 409 && /is retired/.test(r.body?.detail ?? r.body?.message ?? ""), [r.status, r.body?.detail ?? r.body?.message]);
+
+  // Major 2: Undo never puts a draft question back into a retired or deleted section.
+  sectionRow("c119_undo_sec", "PUBLISHED", "user-B");
+  field("person.c119_undo_q", "DRAFT");
+  await call("POST", "/library/fields/person.c119_undo_q/placement", { sectionKey: "c119_undo_sec", collectedFrom: "client_questionnaire", repeats: "per_person" });
+  const own = await call("POST", "/library/fields/person.c119_undo_q/delete", why);
+  const sret = await call("POST", "/library/sections/c119_undo_sec/retire", why);
+  await call("POST", `/library/changes/${sret.body.id}/approve`, {}, "user-B");
+  r = await call("POST", `/library/changes/${own.body.id}/undo`);
+  ok("C11.9 round-3 Major 2 fail: Undo of a field whose question's section is now retired is refused in words; nothing comes back", own.body?.immediate === true && r.status === 409 && /retired now: restore that section first/.test(r.body?.detail) && status("canonical_field", "canonical_field_key", "person.c119_undo_q") === "", [own.body?.immediate, r.status, r.body?.detail]);
+
+  // Major 4: the author's own new document type, its ADD still waiting, is deleted at once with that ADD; Undo brings both back.
+  docType("c119_own_new", "DRAFT");
+  sql(`insert into library_change (id, workspace_id, kind, key, label, action, reason, status, proposed_by) values (gen_random_uuid(), '${ws}', 'document_type', 'c119_own_new', 'Own new', 'ADD', 'Named while adding a line.', 'RETURNED', 'user-A')`);
+  u = await call("GET", "/library/document-types/c119_own_new/uses");
+  r = await call("POST", "/library/document-types/c119_own_new/delete", why);
+  ok("C11.9 round-3 Major 4 pass: an own new document type whose ADD was returned is deleted at once, its ADD withdrawn", u.body?.immediate === true && r.body?.immediate === true && status("document_type", "document_type_key", "c119_own_new") === "" && sql("select status from library_change where key='c119_own_new' and action='ADD'") === "WITHDRAWN", [u.body?.can?.delete, r.status, r.body?.detail]);
+  const und = await call("POST", `/library/changes/${r.body.id}/undo`);
+  ok("C11.9 round-3 Major 4 pass: Undo brings the type and its returned ADD back", und.status < 300 && status("document_type", "document_type_key", "c119_own_new") === "DRAFT" && sql("select status from library_change where key='c119_own_new' and action='ADD'") === "RETURNED", [und.status, und.body?.detail]);
+  docType("c119_their_new", "DRAFT"); sql("update document_type set updated_by='user-B' where document_type_key='c119_their_new'");
+  sql(`insert into library_change (id, workspace_id, kind, key, label, action, reason, status, proposed_by) values (gen_random_uuid(), '${ws}', 'document_type', 'c119_their_new', 'Their new', 'ADD', 'Named while adding a line.', 'WAITING', 'user-B')`);
+  r = await call("POST", "/library/document-types/c119_their_new/delete", why);
+  ok("C11.9 round-3 Major 4 fail: someone else's new type whose ADD waits is not deleted (409, decide that first)", r.status === 409 && status("document_type", "document_type_key", "c119_their_new") === "DRAFT", [r.status, r.body?.detail]);
+
+  // Major 3 (route by form numbers, as the screen sends them).
+  const vvId = sql("select f.combination_id from combination_form f join combination c on c.id = f.combination_id where c.retired_at is null and f.status in ('DRAFT','PUBLISHED') group by f.combination_id having count(distinct f.gov_form_def_id) >= 2 order by 1 limit 1");
+  const codes = sql(`select g.form_key from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id='${vvId}' and f.status in ('DRAFT','PUBLISHED') group by g.form_key order by g.form_key`).split("\n").filter(Boolean);
+  r = await call("POST", `/combinations/${vvId}/forms/reorder`, { forms: [...codes].reverse() });
+  const order = ((await call("GET", `/combinations/${vvId}/config?mode=draft`)).body?.snapshot?.forms ?? []).map((f: { form_number: string }) => f.form_number);
+  ok("C11.9 round-3 Major 3 pass: the filing order sent by form number is kept in the draft", codes.length >= 2 && r.status === 200 && JSON.stringify(order) === JSON.stringify([...codes].reverse()), [r.status, order, codes]);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

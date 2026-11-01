@@ -109,7 +109,9 @@ export async function itemUses(db: Db, workspaceId: string, kind: ItemKind, key:
   const newest = new Map<string, number>(); for (const r of released) if (!newest.has(r.combination_id)) newest.set(r.combination_id, Number(r.version));
   for (const [cid, v] of newest) uses.push({ kind: "release", label: `${trails.get(cid) ?? combo.get(cid)?.label ?? "A combination"} · release ${v}`, href: `/c/${cid}/review`, blocks: false, why: "Kept by its releases and their open cases (never changed)" });
   // Break round 2 (Major 3): a waiting change of who fills its question is an open change of the field too.
-  const pending = await db.libraryChange.findFirst({ where: { workspaceId, kind: kind === "field" ? { in: ["field", "placement_fills"] } : kind, key, status: { in: OPEN }, ...(except ? { id: { not: except } } : {}) }, orderBy: { proposedAt: "desc" } });
+  // Round 3 Major 4: the author's own new item still waiting (its ADD, by them) is part of their own draft, not a block.
+  const ownAdd = actorId ? await db.libraryChange.findFirst({ where: { workspaceId, kind, key, action: "ADD", status: { in: ["WAITING", "RETURNED"] }, proposedBy: actorId }, select: { id: true, status: true } }) : null;
+  const pending = await db.libraryChange.findFirst({ where: { workspaceId, kind: kind === "field" ? { in: ["field", "placement_fills"] } : kind, key, status: { in: OPEN }, ...(ownAdd && !(versions as Version[]).some((r) => r.status !== "DRAFT") ? { NOT: { id: ownAdd.id } } : {}), ...(except ? { id: { not: except } } : {}) }, orderBy: { proposedAt: "desc" } });
   if (pending) uses.push({ kind: "draft_change", label: `${pending.action === "ADD" ? "Add" : pending.action[0] + pending.action.slice(1).toLowerCase()} waiting (${pending.status.toLowerCase()})`, href: `/review/change/${pending.id}`, blocks: true, why: "A change to it is already open: approve, return or withdraw it first" });
   const p = merged ? `It was merged into ${merged}: it only points there now, so it is never deleted, retired or restored.` : pending ? WHY.waiting : null;
   // Break round 2 (Major 4): a restore brings its name back: refused while another current field of its group answers to it.
@@ -232,8 +234,11 @@ export async function deleteOwnItem(db: Db, actorId: string, workspaceId: string
       rows = await tx.documentType.findMany({ where: { workspaceId, documentTypeKey: key } }) as Row[];
       await tx.documentType.deleteMany({ where: { workspaceId, documentTypeKey: key } });
     }
+    // Round 3 Major 4: their own waiting ADD goes with it (withdrawn), and comes back with an Undo.
+    const add = await tx.libraryChange.findFirst({ where: { workspaceId, kind, key, action: "ADD", status: { in: ["WAITING", "RETURNED"] }, proposedBy: actorId }, select: { id: true, status: true } });
+    if (add) await tx.libraryChange.update({ where: { id: add.id }, data: { status: "WITHDRAWN", decidedBy: actorId, decidedAt: new Date(), decisionNote: "Withdrawn: its author deleted their own draft." } });
     return tx.libraryChange.create({ data: { workspaceId, kind, key, label, action: "DELETE", reason, status: "RELEASED", proposedBy: actorId, decidedBy: actorId, decidedAt: new Date(), decisionNote: ITEM_OWN_NOTE,
-      matches: { rows, questions } as unknown as Prisma.InputJsonValue } });
+      matches: { rows, questions, add } as unknown as Prisma.InputJsonValue } });
   });
 }
 /** A stored row, ready to create again (nulls left to the column's default, so a null JSON column is never written). */
@@ -242,18 +247,26 @@ const again = (r: Row) => Object.fromEntries(Object.entries(r).filter(([, v]) =>
 export async function undoOwnItem(db: Db, actorId: string, c: LibraryChange): Promise<void> {
   if (c.proposedBy !== actorId) throw problem(403, "Not yours", "Only the person who deleted it can undo it.");
   const kind = c.kind as ItemKind;
-  const m = (c.matches ?? {}) as { rows?: Row[]; questions?: Row[] };
+  const m = (c.matches ?? {}) as { rows?: Row[]; questions?: Row[]; add?: { id: string; status: string } | null };
   await db.$transaction(async (tx) => {
     await lockItem(tx, c.workspaceId, kind, [c.key]);
     if ((await versionsOf(tx, kind, c.workspaceId, c.key)).length) throw problem(409, "Cannot undo", `Something named ${c.key} was added meanwhile: add it again instead.`);
     const done = await tx.libraryChange.updateMany({ where: { id: c.id, status: "RELEASED", decisionNote: ITEM_OWN_NOTE }, data: { status: "WITHDRAWN", decisionNote: "Undone: it is back." } });
     if (!done.count) throw problem(409, "Cannot undo", "It was undone already.");
+    if (m.add) await tx.libraryChange.update({ where: { id: m.add.id }, data: { status: m.add.status, decidedBy: null, decidedAt: null, decisionNote: null } });
     for (const r of m.rows ?? []) {
       if (kind === "field") await tx.canonicalField.create({ data: again(r) as Prisma.CanonicalFieldUncheckedCreateInput });
       else if (kind === "section") await tx.logicalSection.create({ data: again(r) as Prisma.LogicalSectionUncheckedCreateInput });
       else await tx.documentType.create({ data: again(r) as Prisma.DocumentTypeUncheckedCreateInput });
     }
-    for (const q of m.questions ?? []) await tx.sectionQuestion.create({ data: again(q) as Prisma.SectionQuestionUncheckedCreateInput });
+    // Round 3 Major 2: a draft question goes back only into a section that is still there and not retired.
+    for (const q of m.questions ?? []) {
+      const sk = String(q.sectionKey ?? "");
+      const sv = await versionsOf(tx, "section", c.workspaceId, sk);
+      if (!sv.length) throw problem(409, "Cannot undo", `Its question's section "${sk.replace(/_/g, " ")}" was deleted meanwhile: add the field to a section again instead. Nothing was undone.`);
+      if (stateOf(sv).retired) throw problem(409, "Cannot undo", `Its question's section "${sv[0].name}" is retired now: restore that section first. Nothing was undone.`);
+      await tx.sectionQuestion.create({ data: again(q) as Prisma.SectionQuestionUncheckedCreateInput });
+    }
   });
 }
 
@@ -263,7 +276,13 @@ export async function reorderForms(db: Db, actor: { id: string; name: string; du
   const c = await db.combination.findUnique({ where: { id: combinationId }, select: { id: true, workspaceId: true, label: true, retiredAt: true } });
   if (!c) throw problem(404, "Not found", "This combination does not exist (the demo may have been reset).");
   if (c.retiredAt) throw problem(409, "Retired", `"${c.label}" is retired: its forms are not changed. Restore it on Structure first.`);
-  const lines = (body as { lines?: unknown } | null)?.lines;
+  // The screen sends form numbers (forms), a direct call may send line keys (lines); both name every current line once.
+  const byForm = (body as { forms?: unknown } | null)?.forms;
+  let lines = (body as { lines?: unknown } | null)?.lines;
+  if (Array.isArray(byForm) && byForm.every((x) => typeof x === "string")) {
+    const rows = current(await db.combinationForm.findMany({ where: { combinationId }, select: { lineageKey: true, version: true, status: true, form: { select: { formKey: true } } } }), (l) => l.lineageKey);
+    lines = (byForm as string[]).map((code) => rows.find((r) => r.form.formKey === code)?.lineageKey ?? code);
+  }
   if (!Array.isArray(lines) || !lines.every((x) => typeof x === "string")) throw problem(400, "Check the request", "Give the form lines in the order they are filed (lines: a list of line keys).");
   const now = current(await db.combinationForm.findMany({ where: { combinationId }, select: { lineageKey: true, version: true, status: true } }), (l) => l.lineageKey).map((l) => l.lineageKey);
   const given = lines as string[];

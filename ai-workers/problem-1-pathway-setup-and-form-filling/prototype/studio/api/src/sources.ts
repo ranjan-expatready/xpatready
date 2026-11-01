@@ -806,7 +806,7 @@ export class Sources {
         created++;
       }
       // C11.9 review round 2 Major 1: checked again under each field's lock, so a retire approved meanwhile refuses the apply.
-      const mappedKeys = [...new Set(out.entries.map((e: any) => { const d = e.fact ? decision.get(e.fact) : undefined; return d?.decision === "RETURNED" ? null : (d?.decidedKey ?? e.fact ?? null); }).filter((k: unknown): k is string => typeof k === "string"))];
+      const mappedKeys = [...new Set((out.entries as { fact?: string | null }[]).map((e) => { const d = e.fact ? decision.get(e.fact) : undefined; return d?.decision === "RETURNED" ? null : (d?.decidedKey ?? e.fact ?? null); }).filter((k: unknown): k is string => typeof k === "string"))];
       await lockItem(tx, ws, "field", mappedKeys); await refuseRetired(tx, ws, "field", mappedKeys);
       await tx.formFieldMap.createMany({ data: out.entries.map((e: any) => {
         const d = e.fact ? decision.get(e.fact) : undefined;

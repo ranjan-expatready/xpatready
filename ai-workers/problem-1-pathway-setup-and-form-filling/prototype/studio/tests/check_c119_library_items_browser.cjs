@@ -95,7 +95,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await go("/library/sections");
     const sec = row(sql("select section_key from sqr_section_selection group by section_key order by count(*) desc limit 1"));
     await sec.locator('[data-action="RETIRE"]').click();
-    await p.locator("[data-item-panel] [data-where-panel]").waitFor({ timeout: 15000 });
+    await p.locator("[data-item-panel] [data-stops]").waitFor({ timeout: 15000 }); // the uses are read (the panel shows before they load)
     step("C11.9 sections: a used section's Retire is refused in words, each use linked", /Can't retire yet/.test(await p.locator("[data-item-panel]").innerText()) && (await p.locator("[data-item-panel] [data-stops] a[href^='/c/']").count()) >= 1);
     await p.keyboard.press("Escape");
     // ── the author's own draft: Delete at once, then Undo (P-116 amended)
@@ -111,6 +111,18 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await p.locator("[data-undo]").click();
     await p.waitForFunction(() => !!document.querySelector('tr[data-item="person.c119_mine"]'), null, { timeout: 10000 });
     step("C11.9 own draft Undo pass: it is back as the same draft", sql("select status from canonical_field where canonical_field_key='person.c119_mine'") === "DRAFT");
+
+    // ── the filing order of a combination's forms (Forms tab): Down, then Save to draft
+    const sv = sql("select f.combination_id from combination_form f join combination c on c.id = f.combination_id where c.retired_at is null and f.status in ('DRAFT','PUBLISHED') group by f.combination_id having count(distinct f.gov_form_def_id) >= 2 order by 1 limit 1");
+    await go(`/c/${sv}/forms`);
+    await p.locator("[data-filing-order-open]").click();
+    const firstCode = (await p.locator("[data-order-row]").first().getAttribute("data-order-row"));
+    await p.getByRole("button", { name: `Move ${firstCode} down` }).click();
+    const sent = p.waitForResponse((r) => r.url().endsWith(`/combinations/${sv}/forms/reorder`), { timeout: 10000 });
+    await p.locator("[data-filing-order-save]").click();
+    const rr = await sent;
+    const draft = (await api(`/combinations/${sv}/config?mode=draft`)).body?.snapshot?.forms?.map((f) => f.form_number) ?? [];
+    step("C11.9 filing order pass: moved down and saved, the draft files that form second", rr.status() === 200 && draft[1] === firstCode, [rr.status(), draft.join(",")]);
 
     // ── the Fields table fits at 1024 px (the action sits in the Status cell, no extra column)
     await p.setViewportSize({ width: 1024, height: 800 }); await go("/library/fields");

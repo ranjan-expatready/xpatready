@@ -511,6 +511,7 @@ export class Studio {
     // C11.9 break round 2 (Major 2): checked again and written under the field's lock (a retire approved at once waits).
     const row = await this.db.$transaction(async (tx) => {
       await lockItem(tx, workspaceId, "field", [key]); await refuseRetired(tx, workspaceId, "field", [key]);
+      await lockItem(tx, workspaceId, "section", [b.sectionKey]); await refuseRetired(tx, workspaceId, "section", [b.sectionKey]); // round 3 Major 1
       if (!rows.length) {
         const order = await tx.sectionQuestion.count({ where: { workspaceId, sectionKey: b.sectionKey } });
         return tx.sectionQuestion.create({ data: { workspaceId, lineageKey: key, canonicalFieldKey: key, displayOrder: order + 1, ...data, version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id } });
@@ -549,7 +550,11 @@ export class Studio {
       const back = Number.isInteger(b?.sectionOrder) && (b!.sectionOrder as number) >= 0 ? b!.sectionOrder as number : null;
       // C4.1 review m1: a new section goes after the last place in use (never a place another section has).
       const n = back ?? ((await this.db.sqrSectionSelection.aggregate({ where: { combinationId }, _max: { sectionOrder: true } }))._max.sectionOrder ?? -1) + 1;
-      await this.db.sqrSectionSelection.upsert({ where: { combinationId_sectionKey: { combinationId, sectionKey } }, update: {}, create: { workspaceId: c.workspaceId, combinationId, sectionKey, sectionOrder: n } });
+      // C11.9 round 3 Major 1: checked again and written under the section's lock (a retire approved at once waits).
+      await this.db.$transaction(async (tx) => {
+        await lockItem(tx, c.workspaceId, "section", [sectionKey]); await refuseRetired(tx, c.workspaceId, "section", [sectionKey]);
+        await tx.sqrSectionSelection.upsert({ where: { combinationId_sectionKey: { combinationId, sectionKey } }, update: {}, create: { workspaceId: c.workspaceId, combinationId, sectionKey, sectionOrder: n } });
+      });
     } else {
       sectionOrder = had!.sectionOrder;
       await this.db.sqrSectionSelection.deleteMany({ where: { combinationId, sectionKey } });
