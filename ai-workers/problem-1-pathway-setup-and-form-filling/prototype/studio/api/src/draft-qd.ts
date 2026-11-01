@@ -77,10 +77,12 @@ export class DraftQd {
     for (const a of atts) {
       const name = a.edition ?? a.fileName, r = savedReading(a.officialFile);
       if (!r) { said.push(`${name}: no saved AI reading yet (it is recorded in the founder-approved live trial, P-131)`); continue; }
-      const before = await this.db.draftingJob.count({ where: { attachmentId: a.id, kind: "checklist_draft", mode: "REPLAY", status: { in: ["COMPLETED", "APPLIED"] } } });
+      // Review m4 (part 2): "replayed before" only when the replay hands back an earlier draft, not because one was applied.
+      const prior = new Set((await this.db.draftingJob.findMany({ where: { attachmentId: a.id, kind: "checklist_draft", mode: "REPLAY" }, select: { id: true } })).map((j) => j.id));
       const job = await this.checklists.replay(actor, a);
       jobs.push(job.id);
       const d = (job.detail ?? {}) as { proposed?: number; dropped?: string[] };
+      const before = prior.has(job.id);
       const n = before ? 0 : d.proposed ?? linesOf(r, name).lines.length;
       proposed += n;
       said.push(before ? `${name}: replayed before; its ${d.proposed ?? 0} document requirement${d.proposed === 1 ? "" : "s"} are on To review or applied` : `${name}: ${n} document requirement${n === 1 ? "" : "s"} for To review${d.dropped?.length ? `, ${d.dropped.length} left out with the reason` : ""}`);

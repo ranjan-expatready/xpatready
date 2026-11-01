@@ -159,31 +159,38 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   const facts5 = ((await call("GET", `/combinations/${wp}/fact-sources`)).body.facts ?? []) as { role: string; fact: string; label: string; placed: boolean; forms: string[] }[];
   const mine5 = facts5.filter((f) => f.role === "principal" && f.placed && f.forms.length);
   const uniq = mine5.filter((f) => mine5.filter((g) => g.label.toLowerCase() === f.label.toLowerCase()).length === 1);
-  const [ct1, cd1, ct2, cd2] = uniq;
+  const typeOf = new Map(sql(`select distinct on (canonical_field_key) canonical_field_key || '|' || value_type from canonical_field order by canonical_field_key, version desc`).split("\n").map((l) => l.split("|") as [string, string]));
+  const yesNo = uniq.filter((f) => typeOf.get(f.fact) === "yes_no"), text = uniq.filter((f) => typeOf.get(f.fact) === "text");
+  const others = uniq.filter((f) => !yesNo.slice(0, 2).includes(f) && !text.slice(0, 1).includes(f));
+  const [cd1, cd2] = yesNo, [ctext] = text, [ct1, ct2, ct3] = others;
   const cond = (asks: string, depends_on: string, when = "yes", quote = QUOTE) => ({ role: "principal", asks, depends_on, when, quote, why: "The guide asks it only in this case." });
   const saveC = (check: boolean, conditions: unknown[]) => {
     const f = `studio-qd-conditions${check ? "-check" : ""}-c411-test-live-20261101t170000000z-${check ? "c" : "d"}${Date.now().toString(36)}.json`;
     writeFileSync(join(RUNS, f), JSON.stringify({ caller: "live", contract_valid: true, launch_evidence: { template_sha256: sha(readFileSync(join(PROMPTS, check ? "conditions-check.v1.md" : "conditions.v1.md"))) }, drafting_run: { status: "completed", inputs: { official_files: inputs, combination: "wp.family" }, usage: { cost_usd: 0.5 } }, raw_output: JSON.stringify({ conditions, unresolved: [] }) }));
     written.push(join(RUNS, f));
   };
-  if (ct1 && cd1 && ct2 && cd2) {
-    saveC(false, [cond(ct1.label, cd1.label), cond(ct2.label, cd2.label, "no"), cond("A made up question", cd1.label), cond(cd2.label, ct1.label, "yes", "This sentence is not anywhere in the guide at all.")]);
-    saveC(true, [cond(ct1.label, cd1.label), cond(ct2.label, cd2.label, "yes")]);
+  if (cd1 && cd2 && ctext && ct1 && ct2 && ct3) {
+    saveC(false, [cond(ct1.label, cd1.label), cond(ct2.label, cd2.label, "no"), cond("A made up question", cd1.label), cond(ct3.label, cd1.label, "yes", "This sentence is not anywhere in the guide at all."), cond(ct3.label, ctext.label, "yes")]);
+    saveC(true, [cond(ct1.label, cd1.label), cond(ct2.label, cd2.label, "yes"), cond(ct3.label, ctext.label, "yes")]);
     r = await run("replay");
     const c5 = step(r, "qd_conditions");
-    const item = (t: string, d: string) => sql(`select agreement || '|' || confidence || '|' || (select bool_and((x->>'passed')::boolean) from jsonb_array_elements(rules) x) from proposal_item where combination_id='${wp}' and kind='condition' and identity_key='principal|${t}|${d}'`).split("|");
-    const [ag1, cf1, rules1] = item(ct1.fact, cd1.fact), [ag2, cf2] = item(ct2.fact, cd2.fact);
-    ok("C4.11 C pass: both readings give the same question, deciding question and answer: agreed, Ready when every rule passes (else Check with the reason)", c5?.status === "COMPLETED" && ag1 === "agreed" && cf1 === (rules1 === "t" ? "ready" : "check"), { ag1, cf1, rules1, message: c5?.message });
+    const item = (t: string, d: string) => sql(`select agreement || '|' || confidence || '|' || (select bool_and((x->>'passed')::boolean) from jsonb_array_elements(rules) x) || '|' || (payload->'condition'->'tree'->>'value') from proposal_item where combination_id='${wp}' and kind='condition' and identity_key='principal|${t}|${d}'`).split("|");
+    const [ag1, cf1, rules1, v1] = item(ct1.fact, cd1.fact), [ag2, cf2] = item(ct2.fact, cd2.fact);
+    ok("C4.11 C pass: both readings give the same question, deciding yes-no question and answer: agreed, value true; Ready when every rule passes, else Check with the reason", c5?.status === "COMPLETED" && ag1 === "agreed" && v1 === "true" && cf1 === (rules1 === "t" ? "ready" : "check"), { ag1, cf1, rules1, v1, message: c5?.message });
     ok("C4.11 C fail: the readings give different deciding answers: Check, never Ready", ag2 === "differ" && cf2 === "check", { ag2, cf2 });
-    const dropped5 = (await call("GET", `/runs/${r.body.runId}`)).body.steps?.find((x: J) => x.kind === "qd_conditions")?.message ?? "";
-    ok("C4.11 C fail: a question this combination does not ask, and a sentence not in the guide, are left out with the reason (never guessed)", /2 left out with the reason/.test(dropped5) && sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition'`) === "2", dropped5);
-    ok("C4.11 C pass: each condition is a queue item from AI with its guide sentence and a valid condition on the deciding question", sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition' and origin='ai' and source->>'quote' is not null and payload->'condition'->'tree'->>'field' in ('${cd1.fact}','${cd2.fact}')`) === "2");
+    const details = sql(`select detail->>'details' from drafting_job where batch_id='${r.body.runId}' and kind='qd_conditions'`);
+    ok("C4.11 C fail (review M1): a free-text deciding question cannot decide by one answer: left out with the reason, never Ready", /free-text|text form/.test(details) && item(ct3.fact, ctext.fact)[0] === "", details.split("\n").find((l) => /text form/.test(l)));
+    ok("C4.11 C fail: a question this combination does not ask, and a sentence not in the guide, are left out with the reason (never guessed)", /not exactly one question/.test(details) && /not in Guide 5487/.test(details) && sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition'`) === "2", c5?.message);
+    ok("C4.11 C pass: each condition names the question it hides, quotes the guide, and reads the deciding question", sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition' and origin='ai' and source->>'quote' is not null and payload->'condition'->'tree'->>'field' in ('${cd1.fact}','${cd2.fact}') and payload->'condition'->>'sentence' like '"%" is asked only when %'`) === "2");
     r = await run("replay");
     ok("C4.11 C fail: drafting again puts no condition on the queue twice", sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition'`) === "2" && /2 already waiting/.test(step(r, "qd_conditions")?.message ?? ""), step(r, "qd_conditions")?.message);
-    const cid = sql(`select id from proposal_item where combination_id='${wp}' and kind='condition' limit 1`);
+    const cid = sql(`select id from proposal_item where combination_id='${wp}' and kind='condition' and identity_key='principal|${ct2.fact}|${cd2.fact}'`);
     const acc = await call("POST", "/review/proposals/decide", { ids: [cid], action: "accept" });
     ok("C4.11 C fail: a condition is not yet accepted on the queue (its lander is part 3): refused in words, nothing changes", acc.status === 409 && /not yet on this queue/.test(words(acc)) && sql(`select status from proposal_item where id='${cid}'`) === "waiting", words(acc));
-  } else ok("C4.11 C setup: the sample has four principal questions with distinct names", false, uniq.length);
+    const rej = await call("POST", "/review/proposals/decide", { ids: [cid], action: "reject", reason: "The guide means something else here." });
+    r = await run("replay");
+    ok("C4.11 C fail (review m1): a condition a person removed is not proposed again", rej.status < 300 && sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition' and status='waiting'`) === "1" && /1 a person removed before/.test(step(r, "qd_conditions")?.message ?? ""), { rej: rej.status, message: step(r, "qd_conditions")?.message });
+  } else ok("C4.11 C setup: the sample has two yes-no, one free-text and three other principal questions with distinct names", false, { yesNo: yesNo.length, text: text.length, others: others.length });
 
   // ---------------------------------------------------------------- R: a run its server left running never blocks for good (review M3)
   const wsId = sql(`select workspace_id from combination where id='${wp}'`);
