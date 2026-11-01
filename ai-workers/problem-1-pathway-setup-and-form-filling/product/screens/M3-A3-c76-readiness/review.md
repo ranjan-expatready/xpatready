@@ -155,3 +155,25 @@ The four Majors are fixed and tested, and no Blocker or Major is open. The Minor
 6. **A `Date` object** (not a string) throws a TypeError, not the named error. /prepare must pass strings. Not a defect, just a fit note.
 
 **Verdict: Approve** for commit 8cd983a6. No Blocker or Major is open. New Minors 1–3 are worth doing before part 2's pass route stores keys.
+
+---
+
+# Round 3: commit 48f926d3 (`git diff 8cd983a6..48f926d3`)
+
+Checks:
+* `check_c76_readiness.ts`: 50/50, twice.
+* `tsc -p api/tsconfig.json`: no error in either C7.6 file. The 4 errors left are in other files and were there before.
+* No explicit `any`. US$0.
+* Probes: `/tmp/c76probe2/p3.ts`.
+
+Round 2 Minors, all fixed:
+* **m1:** a document without an id is keyed by its label. Passing the passport leaves the photo open (tested).
+* **m2:** there is one `entered_out_of_date` line per section, keyed `item|section`. A later section stays open (tested).
+* **m3:** `item` is always the form item's own id, and `part` tells the lines apart in `key` only. Tested: 3 lines, one item, 3 different keys.
+* **m4:** 30 February and 29 February 2027 are refused; 29 February 2028 is accepted (tested and probed).
+* **m5:** the out-of-date day is read with `dayOf` (tested).
+* **m6:** a `Date` object or a number gives the named error, "… is not a date string" (probed). It has no test of its own, which is a nit and not a finding.
+
+Nothing new found. Journey score unchanged: **8.5 / 10, pass**. The ½ for error recovery now stands at 1, but I have not re-scored.
+
+**Verdict: Approve** for commit 48f926d3. No Blocker, Major or Minor is open.
