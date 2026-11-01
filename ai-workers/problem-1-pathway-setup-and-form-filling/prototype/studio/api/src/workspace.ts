@@ -5,6 +5,7 @@
 // through the runtime's own caseView (engine/runtime/preview.ts).
 import { Body, Controller, Get, Headers, HttpStatus, Inject, Injectable, Param, Patch, Post, Query } from "@nestjs/common";
 import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snapshot.ts";
+import { newestEdition } from "../../engine/programs.ts";
 import { questionnairesView } from "../../engine/runtime/questionnaires.ts";
 import { previewFamily } from "../../engine/runtime/preview.ts";
 import { wordsOnly } from "../../engine/render.ts";
@@ -60,13 +61,16 @@ export class WorkspaceViews {
     const rows = await this.db.combinationForm.findMany({ where: { combinationId: id }, orderBy: { version: "desc" } });
     const status = new Map<string, string>(), version = new Map<string, number>();
     for (const r of rows) if (!status.has(r.lineageKey)) { status.set(r.lineageKey, r.status); version.set(r.lineageKey, r.version); }
+    // QA-103: each line's current library edition (one read for the tab), so a line with no field map yet still names its file.
+    const defs = await this.db.govFormDef.findMany({ where: { workspaceId, formKey: { in: (snapshot.forms as SnapForm[]).map((f) => f.form_number) } }, select: { formKey: true, editions: { select: { editionLabel: true, channel: true, sha256: true } } } });
+    const libraryEdition = new Map(defs.map((d) => [d.formKey, newestEdition(d.editions.filter((e) => e.channel !== "ONLINE" && e.sha256))?.editionLabel ?? null]));
     const lines = (snapshot.forms as SnapForm[]).map((f): WorkspaceFormLine => {
       const map = maps.filter((m) => m.form_number === f.form_number).at(-1);
       const { channel, signature } = lineOf(f), account = snapshot.combination.portal ?? null;
       const { channels: accepted, record } = allowedChannels(accepts.get(f.form_number), account);
       const onlyIf: OnlyIf = f.status !== "conditional" ? { kind: "always" } : wordsOnly(f) ? { kind: "words_only", words: f.condition_plain ?? "" } : { kind: "rule", words: f.condition_plain ?? "" };
       return {
-        line: f.form_number, code: f.form_number, title: f.title, document: (f.form_kind ?? "data_form") === "document", edition: map?.form_edition ?? null,
+        line: f.form_number, code: f.form_number, title: f.title, document: (f.form_kind ?? "data_form") === "document", edition: map?.form_edition ?? null, libraryEdition: libraryEdition.get(f.form_number) ?? null,
         boxes: map ? map.entries.filter((e) => e.outcome === "mapped").length : 0, who: f.who, minAge: f.min_age ?? null, copies: f.copies ?? 1, onlyIf, condition: f.condition ?? null,
         channel, channelWords: CHANNEL_WORDS[channel], signature: (f.form_kind ?? "data_form") === "document" ? null : signatureOf(signature), signatureKind: signature,
         // P-143 (C-2): the signatures that fit the line's channel; C-3, C-4: each channel, offered or refused with its reason.
@@ -152,6 +156,7 @@ export class WorkspaceController {
   constructor(@Inject(WorkspaceViews) private readonly w: WorkspaceViews, @Inject(Studio) private readonly s: Studio, @Inject(PeopleFromGuide) private readonly g: PeopleFromGuide) {}
   // Slice 3: "Who can be" filled from the guide: the plan (cost first), then the proposal (never saved by itself).
   @Post("combinations/:id/people/propose/plan") peoplePlan(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { readerOf(a); return this.g.plan(id, b); }
+  @Get("combinations/:id/people/runs/:runId") peopleRun(@Headers("x-actor") a: H, @Param("id") id: string, @Param("runId") r: string) { readerOf(a); return this.g.result(id, r); } // QA-91
   @Post("combinations/:id/people/propose") propose(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.g.propose(actorOf(a), id, b); }
   // Break m8: reads need a configuration person in x-actor (readerOf), like the catalogue.
   @Get("combinations/:id/workspace") view(@Headers("x-actor") a: H, @Param("id") id: string, @Query() q: Q) { return this.w.view(id, q, readerOf(a)); }

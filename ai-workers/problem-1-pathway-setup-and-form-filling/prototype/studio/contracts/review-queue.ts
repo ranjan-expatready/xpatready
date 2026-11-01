@@ -20,7 +20,10 @@ export const ReviewQueueQuery = z.object({
   q: z.string().trim().max(120).optional(),
   /** F2 C2.12 (F3 plan D2): only the items that belong to this form (its number as the library writes it, "IMM 5257"). */
   form: z.string().trim().min(1, "Give a form number, such as IMM 5257.").max(40, "A form number has at most 40 characters.").optional(),
-}).strict();
+  /** F2 C2.12 (concept K1, the return strip): with `form`, only this combination's items and the library-wide ones (as the
+   *  form's guided path counts them), so To review opened from the path lists what the path says is left. */
+  combination: z.string().trim().min(1).max(64, "A combination reference has at most 64 characters.").optional(),
+}).strict().refine((x) => !x.combination || x.form, { message: "Give the form too: a combination narrows one form's items.", path: ["combination"] });
 
 /** needs: the asking person can take the next step. waiting: someone else must (a second person, an approver).
  *  running: AI work not finished yet. */

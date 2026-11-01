@@ -1,0 +1,76 @@
+{
+ "file": "imm5475e.pdf",
+ "sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+ "read_by": "prototype/p1/xfa_formats.py (the form's own XFA template: maxChars, picture clauses, validate scripts; no AI)",
+ "boxes_with_format": 15,
+ "boxes_unmatched": 0,
+ "boxes": {
+  "IMM_5475[0].Page1[0].AppDetails[0].AppFamily[0]": {
+   "caption": "Family name (Surname)",
+   "max_chars": 100
+  },
+  "IMM_5475[0].Page1[0].AppDetails[0].AppGiven[0]": {
+   "caption": "Given name(s)",
+   "max_chars": 100
+  },
+  "IMM_5475[0].Page1[0].AppDetails[0].DOB[0].currentDate[0]": {
+   "caption": "2. Your date of birth (YYYY-MM-DD)",
+   "validate_picture": "date{YYYY-MM-DD}",
+   "ui_picture": "date{YYYY-MM-DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "IMM_5475[0].Page1[0].Five[0].AppFamily[0]": {
+   "caption": "Family name (Surname)",
+   "max_chars": 100
+  },
+  "IMM_5475[0].Page1[0].Five[0].AppGiven[0]": {
+   "caption": "Given name(s)",
+   "max_chars": 100
+  },
+  "IMM_5475[0].Page1[0].Five[0].apt[0]": {
+   "caption": "Apt/Unit",
+   "max_chars": 10
+  },
+  "IMM_5475[0].Page1[0].Five[0].Number[0]": {
+   "caption": "Street no.",
+   "max_chars": 10
+  },
+  "IMM_5475[0].Page1[0].Five[0].homeAddress[0]": {
+   "caption": "Street name",
+   "max_chars": 100
+  },
+  "IMM_5475[0].Page1[0].Five[0].city[0]": {
+   "caption": "City/Town",
+   "max_chars": 30
+  },
+  "IMM_5475[0].Page1[0].Five[0].city[1]": {
+   "caption": "Country or territory",
+   "max_chars": 30
+  },
+  "IMM_5475[0].Page1[0].Five[0].postalCode[0]": {
+   "caption": "Postal code/Zip",
+   "format_picture": "text{A9 9AA}|text{A99 9AA}|text{AA9 9AA}|text{AA99 9AA}|text{A9A 9AA}|text{AA9A 9AA}",
+   "max_chars": 10
+  },
+  "IMM_5475[0].Page1[0].Five[0].Rphone[0]": {
+   "caption": "Area Code and Telephone number",
+   "format_picture": "text{'('999')' 999-9999}"
+  },
+  "IMM_5475[0].Page1[0].Five[0].Rphone[1]": {
+   "caption": "Area Code and Telephone number",
+   "format_picture": "text{'('999')' 999-9999}"
+  },
+  "IMM_5475[0].Page1[0].Seven[0].currentDate[0]": {
+   "caption": "Date (YYYY-MM-DD)",
+   "validate_picture": "date{YYYY-MM-DD}",
+   "ui_picture": "date{YYYY-MM-DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "IMM_5475[0].Page1[0].Seven[0].currentDate[1]": {
+   "caption": "Date (YYYY-MM-DD)",
+   "validate_picture": "date{YYYY-MM-DD}",
+   "ui_picture": "date{YYYY-MM-DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  }
+ }
+}

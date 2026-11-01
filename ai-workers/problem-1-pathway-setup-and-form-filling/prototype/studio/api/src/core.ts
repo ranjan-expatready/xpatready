@@ -39,6 +39,11 @@ export const ACTORS = [
  *  hold no configuration duty; configuration people hold no case duty. */
 export const RUNTIME_ACTORS = [
   { id: "user-O", persona: "officer", name: "Case officer", role: "Firm staff · case officer", duties: ["case"], area: "runtime" },
+  // C6.11 (BR-20, SI-9): the Sample firm's representative (also its firm admin) and the Sample solo firm's one person,
+  // who holds all three duties. Their firm and licence are in samples/firms.json (firmOf in api/src/team.ts).
+  { id: "user-R", persona: "representative", name: "Representative", role: "Firm staff · representative · firm admin", duties: ["case", "represent", "firm_admin"], area: "runtime" },
+  { id: "user-T", persona: "representative-2", name: "Second representative", role: "Firm staff · representative", duties: ["case", "represent"], area: "runtime" },
+  { id: "user-S", persona: "solo", name: "Solo representative", role: "Solo firm · representative · case officer · firm admin", duties: ["case", "represent", "firm_admin"], area: "runtime" },
   { id: "user-P", persona: "client", name: "Client A", role: "Client · principal applicant", duties: ["answer"], area: "client" },
   { id: "user-Q", persona: "client-b", name: "Client B", role: "Client · principal applicant", duties: ["answer"], area: "client" },
 ] as const;
