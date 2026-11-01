@@ -103,7 +103,13 @@ export function CombinationPage() {
       </div>
       {c.basis_note ? <Notice tone={c.source_basis === "ILLUSTRATIVE" ? "warn" : "info"}>{c.basis_note}</Notice> : null}
       <div role="tablist" aria-label="Combination" className="flex gap-1 overflow-x-auto border-b border-border">
-        {TABS.map((t) => <Link key={t.key} role="tab" aria-selected={tab === t.key} aria-label={t.key in badges && badges[t.key as BadgeTab] ? `${t.label} ${badges[t.key as BadgeTab]} setup ${badges[t.key as BadgeTab] === 1 ? "item" : "items"} open` : undefined} to={`/c/${id}/${t.key}`} className={cn("whitespace-nowrap border-b-2 px-3 py-2 text-sm", tab === t.key ? "border-primary font-medium text-text" : "border-transparent text-text-muted hover:text-text")}>{t.label}{t.key in badges && badges[t.key as BadgeTab] ? <>{" "}<StepBadge n={badges[t.key as BadgeTab]} /></> : null}{t.key === "review" && errorCount ? <span className="ml-1.5 rounded bg-danger/12 px-1 text-xs text-text-danger">{errorCount}</span> : null}</Link>)}
+        {TABS.map((t) => {
+          // QA-120: one badge style for every count on a tab, a space before it, and one name read aloud and shown as the
+          // tip: "Forms 4 setup items open", "Review and release 1 problem" (the visible text starts it exactly, WCAG 2.5.3).
+          const open = t.key in badges ? badges[t.key as BadgeTab] : 0, problems = t.key === "review" ? errorCount : 0;
+          const name = tabName(t.label, open, problems);
+          return <Link key={t.key} role="tab" aria-selected={tab === t.key} aria-label={name} title={name !== t.label ? name : undefined} data-tab={t.key} to={`/c/${id}/${t.key}`} className={cn("whitespace-nowrap border-b-2 px-3 py-2 text-sm", tab === t.key ? "border-primary font-medium text-text" : "border-transparent text-text-muted hover:text-text")}>{t.label}{open ? <>{" "}<StepBadge n={open} /></> : null}{problems ? <>{" "}<StepBadge n={problems} tone="danger" /></> : null}</Link>;
+        })}
       </div>
       <div role="tabpanel" aria-label={TABS.find((t) => t.key === tab)!.label}>
         {tab === "overview" ? <OverviewTab d={d} sum={sum.data} show={sp.get("show")} />
@@ -166,11 +172,14 @@ export function StatusPill({ status }: { status: string }) {
 }
 export function useGo() { return useNavigate(); }
 
-/** X1 (slice C2, board v3 "Forms 5"): the number of open setup items on a tab; nothing when none. Read aloud as words
- *  through the tab's aria-label. */
-function StepBadge({ n }: { n: number }) {
+/** X1 (slice C2, board v3 "Forms 5"): the number of open setup items on a tab (warn), or of problems to fix (danger);
+ *  nothing when none. Read aloud through the tab's aria-label (tabName), so the badge itself is hidden from it. */
+function StepBadge({ n, tone = "warn" }: { n: number; tone?: "warn" | "danger" }) {
   if (!n) return null;
-  // The words are the tab's accessible name (aria-label "Forms 2 setup items open", which starts with the visible text
-  // "Forms 2", WCAG 2.5.3), so the tab's visible text stays "Forms 2".
-  return <span aria-hidden className="ml-1 rounded-full bg-warn/15 px-1.5 text-xs text-text-warn" data-step-badge={n}>{n}</span>;
+  return <span aria-hidden className={cn("rounded-full px-1.5 text-xs", tone === "danger" ? "bg-danger/12 text-text-danger" : "bg-warn/15 text-text-warn")} data-step-badge={n} data-badge-tone={tone}>{n}</span>;
+}
+/** QA-120: a tab's name in words, its visible label first. */
+export function tabName(label: string, open: number, problems: number) {
+  const parts = [open ? `${open} setup ${open === 1 ? "item" : "items"} open` : "", problems ? `${problems} ${problems === 1 ? "problem" : "problems"}` : ""].filter(Boolean);
+  return parts.length ? `${label} ${parts.join(", ")}` : label;
 }

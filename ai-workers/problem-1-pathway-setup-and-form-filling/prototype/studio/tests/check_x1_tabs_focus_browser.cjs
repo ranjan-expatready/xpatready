@@ -1,7 +1,7 @@
 // X1 (W1 setup checklist slice C2; concept §B/§C, board v3 "Forms 5"): each setup tab of a combination says how many
 // open setup items land on it (StepBadge, counted from the summary's checklist, never recounted), and a ?focus= link
 // from the checklist lands on its place on Documents and Questionnaires (focused, outlined 2 s, address cleared), as it
-// already does on Forms (C1). Walked in a real browser; axe (WCAG 2.2 AA) on the landed pages. No model call (US$0).
+// already does on Forms (C1); QA-120: counts on tabs read in words, one badge style; QA-121: a place gone says so. Walked in a real browser; axe (WCAG 2.2 AA) on the landed pages. No model call (US$0).
 //   zsh studio/tools/isolated.sh screens_x1 4442 start && node studio/tests/check_x1_tabs_focus_browser.cjs 4442 xr_studio_screens_x1
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
@@ -50,6 +50,25 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C11.10 X1 fail: a tab with nothing open shows no badge", want.questionnaires === 0 && bq.n === 0, { want, got: bq });
   step("C11.10 X1: the badge is read as words by a screen reader (the tab's name), while the tab's text stays 'Forms 4'", /^Forms \d+ setup items? open$/.test(await p.getByRole("tab", { name: /^Forms/ }).getAttribute("aria-label")) && /^Forms\s*\d+$/.test((await p.getByRole("tab", { name: /^Forms/ }).innerText()).trim()));
   await p.screenshot({ path: path.join(SHOTS, "01-tab-badges-1440.png"), clip: { x: 0, y: 0, width: 1440, height: 520 } });
+  // QA-120: every count on a tab has one badge style and a space before it, and the tab's name says it in words.
+  const fTab = p.getByRole("tab", { name: /^Forms/ });
+  step("QA-120 pass: a setup-items tab is named in words and keeps its visible text first, with the same tip", (await fTab.getAttribute("aria-label")) === (await fTab.getAttribute("title")) && /^Forms \d+ setup items? open$/.test(await fTab.getAttribute("title") ?? ""));
+  let reviewTab = null;
+  for (const key of ["sv.super_visa", "vv.single", "sp.student", "fs.outside", "lm.high_wage", "wp.family"]) {
+    await p.goto(`${BASE}/c/${sql(`select id from combination where combination_key='${key}'`)}/overview`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
+    await p.waitForTimeout(300);
+    const t = p.locator('[data-tab="review"]');
+    if (await t.locator('[data-badge-tone="danger"]').count()) { reviewTab = { key, name: await t.getAttribute("aria-label"), tip: await t.getAttribute("title"), text: (await t.innerText()).trim(), cls: await t.locator('[data-badge-tone="danger"]').getAttribute("class"), warnCls: await p.locator('[data-badge-tone="warn"]').first().getAttribute("class").catch(() => null) }; break; }
+  }
+  step("QA-120 setup: a sample combination has a problem to fix on Review and release", !!reviewTab, reviewTab);
+  if (reviewTab) {
+    step("QA-120 pass: Review and release reads \"Review and release 1 problem\" (never \"Review and release1\"), the same as its tip", /^Review and release \d+ problems?$/.test(reviewTab.name ?? "") && reviewTab.tip === reviewTab.name, reviewTab);
+    step("QA-120 pass: its visible text has a space before the count", /^Review and release \d+$/.test(reviewTab.text) && !/release\d/.test(reviewTab.text), reviewTab.text);
+    step("QA-120 pass: one badge shape for both counts (rounded-full px-1.5 text-xs), danger in colour only", !!reviewTab.warnCls ? reviewTab.cls.replace(/bg-\S+|text-text-\S+/g, "").trim() === reviewTab.warnCls.replace(/bg-\S+|text-text-\S+/g, "").trim() : /rounded-full px-1\.5 text-xs/.test(reviewTab.cls), reviewTab);
+  }
+  const plainTab = p.getByRole("tab", { name: /^Overview/ });
+  step("QA-120 fail: a tab with no count keeps its plain name and no tip", (await plainTab.getAttribute("aria-label")) === "Overview" && (await plainTab.getAttribute("title")) === null);
+  await p.goto(`${BASE}/c/${sv}/overview`); await p.locator("[data-step-badge]").first().waitFor({ timeout: 10000 });
 
   // ---------------------------------------------------------------- Documents: the checklist's own link lands
   const docItem = sum.setup.steps.flatMap((s) => s.open).find((i) => i.focus === "documents:lines");
@@ -125,6 +144,19 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.locator("[data-documents]").waitFor();
   await p.waitForTimeout(500);
   step("C11.10 X1 fail: a focus that names nothing on the page outlines nothing and breaks nothing", await p.locator("[data-focused]").count() === 0 && errs.length === 0);
+  // QA-121: a ?focus= place that is no longer on the page says so on the tab, and the key leaves the address.
+  await p.locator("[data-done-since]").waitFor({ timeout: 5000 }).catch(() => { throw new Error("QA-121: the done-since notice never showed for a focus that names nothing"); });
+  step("QA-121 pass: a focus whose place is not on Documents says \"This was done since you opened it\" on the tab", /This was done since you opened it\./.test(await p.locator("[data-done-since]").innerText()) && /\/documents$/.test(new URL(p.url()).pathname));
+  step("QA-121 pass: the focus key leaves the address once it has been answered", !new URL(p.url()).searchParams.has("focus"), p.url());
+  await axe("Documents, focus place gone");
+  await p.goto(`${BASE}/c/${wp}/questionnaires?focus=questionnaires%3Aproblems`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
+  await p.locator("[data-questions]").waitFor();
+  await p.locator("[data-done-since]").waitFor({ timeout: 5000 }).catch(() => { throw new Error("QA-121: the done-since notice never showed on Questionnaires"); });
+  step("QA-121 pass (Questionnaires): with its question problems fixed, questionnaires:problems lands on the tab and says it was done", !new URL(p.url()).searchParams.has("focus") && await p.locator("[data-done-since]").count() === 1);
+  await p.goto(`${BASE}/c/${sv}/documents?focus=documents%3Alines`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
+  await p.locator("[data-focused]").waitFor({ timeout: 5000 });
+  await p.waitForTimeout(1800);
+  step("QA-121 fail: a focus that lands says nothing about being done", await p.locator("[data-done-since]").count() === 0);
 
   step("no page errors", errs.length === 0, errs.join(" | "));
   await b.close();

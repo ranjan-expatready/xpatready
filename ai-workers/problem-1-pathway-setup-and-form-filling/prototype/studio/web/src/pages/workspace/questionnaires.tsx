@@ -16,7 +16,7 @@ import { Tip } from "@/components/status";
 import { BulkBar, FactDrawer, RowMenu, RowStatus, ComesFrom, PreQual, SAY, SourceChips, SourceStrip, useFactSources, useRefreshSources, useUndoToast, type Filter } from "@/pages/workspace/sources";
 import { Lock } from "lucide-react";
 import { ConfigArea } from "@/pages/configuration";
-import { FOCUS_RING, useFocusItem } from "@/components/focus-item";
+import { DoneSinceNotice, FOCUS_RING, useFocusItem } from "@/components/focus-item";
 import { PartProblems } from "@/components/part-problems";
 import { cn } from "@/lib/utils";
 
@@ -260,7 +260,7 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
   const [shown, setShown] = React.useState<{ fact: string; q: QuestionnaireQuestion | null; section: string | null } | null>(null);
   const [filter, setFilter] = React.useState<Filter>("all");
   // X1 (slice C2): a ?focus= link from the setup checklist lands here (questionnaires:gaps, questionnaires:problems).
-  useFocusItem([]);
+  const doneSince = useFocusItem([]);
   const [picked, setPicked] = React.useState<Set<string>>(new Set());
   const [refused, setRefused] = React.useState<BulkSourceResult["refused"]>([]);
   const fs = useFactSources(id);
@@ -350,6 +350,7 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
   return (
     <section aria-labelledby="questions-head" className="space-y-4" data-questions>
       <SourceStrip v={fs.data} />
+      <DoneSinceNotice shown={doneSince} />
       {fs.error ? <Notice tone="warn" title="Where each answer comes from could not load">{fs.error.message} <button type="button" className="font-medium text-text-link underline" onClick={() => void fs.refetch()}>Retry</button></Notice> : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="questions-head" className="font-semibold">Questions for each person</h2>
