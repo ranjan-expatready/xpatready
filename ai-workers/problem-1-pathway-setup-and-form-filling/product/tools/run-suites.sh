@@ -106,12 +106,12 @@ if [ "$SHARDS" -gt 1 ]; then
   for path in "$S"/tests/check_*.ts "$S"/tests/check_*.cjs; do f=$(basename "$path"); case " $SKIP " in *" $f "*) continue;; esac; picked "$f" && units+=("$f"); done
   RT0="$S/tests/runtime"
   [ -f "$RT0/check_case_engine.ts" ] && picked check_case_engine.ts && units+=(check_case_engine.ts)
-  [ -f "$RT0/check_runtime_r1a.ts" ] && { picked check_runtime_r1a.ts || picked check_runtime_r1c.cjs || picked check_runtime_r1d.ts; } && units+=(check_runtime_r1a.ts)
+  [ -f "$RT0/check_runtime_r1a.ts" ] && { picked check_runtime_r1a.ts || picked check_runtime_r1c.cjs || picked check_runtime_r1d.ts || picked check_c611_team.ts; } && units+=(check_runtime_r1a.ts)
   for t in check_p2_guard check_p2_launch; do [ -f "$P/prototype/tests/$t.ts" ] && picked "$t.ts" && units+=("$t.ts"); done
   TURN=${#units[@]}
   MINE=" $(printf '%s\n' "${units[@]}" | awk -v n="$SHARDS" -v me="$SHARD" -v q=" $QUARANTINE " -v tf="$P/product/tools/suite-times.tsv" '
     BEGIN { while ((getline l < tf) > 0) { if (l ~ /^#/) continue; split(l, a, "\t"); t[a[1]] = a[2] } }
-    { u[NR] = $0; w[NR] = (index(q, " " $0 " ") ? 0 : (($0 in t) ? t[$0] : 30)); if ($0 == "check_runtime_r1a.ts") w[NR] += t["check_runtime_r1c.cjs"] + t["check_runtime_r1d.ts"] }
+    { u[NR] = $0; w[NR] = (index(q, " " $0 " ") ? 0 : (($0 in t) ? t[$0] : 30)); if ($0 == "check_runtime_r1a.ts") w[NR] += t["check_runtime_r1c.cjs"] + t["check_runtime_r1d.ts"] + t["check_c611_team.ts"] }
     END { for (i = 1; i <= NR; i++) o[i] = i
           for (i = 1; i <= NR; i++) for (j = i + 1; j <= NR; j++) if (w[o[j]] > w[o[i]] || (w[o[j]] == w[o[i]] && u[o[j]] < u[o[i]])) { x = o[i]; o[i] = o[j]; o[j] = x }
           for (k = 1; k <= n; k++) load[k] = 0
@@ -183,12 +183,14 @@ done
 RT="$S/tests/runtime"; RN=$(iname runtime_r1); RP=$(iport 4430)
 if [ -f "$RT/check_case_engine.ts" ] && picked check_case_engine.ts && myturn check_case_engine.ts; then run check_case_engine.ts plain $TSX "$RT/check_case_engine.ts"; fi
 # The three R1 suites share one copy and run in order: chosen together (select-suites.mjs) or not at all.
-if [ -f "$RT/check_runtime_r1a.ts" ] && { picked check_runtime_r1a.ts || picked check_runtime_r1c.cjs || picked check_runtime_r1d.ts; } && myturn check_runtime_r1a.ts; then
+if [ -f "$RT/check_runtime_r1a.ts" ] && { picked check_runtime_r1a.ts || picked check_runtime_r1c.cjs || picked check_runtime_r1d.ts || picked check_c611_team.ts; } && myturn check_runtime_r1a.ts; then
   if zsh "$S/tools/isolated.sh" "$RN" "$RP" start >/dev/null 2>&1 && $TSX "$RT/setup_visitor_visa.ts" "$RP" "xr_studio_$RN" > "$OUT/setup_visitor_visa.log" 2>&1; then
     # R1c's browser journey first: it publishes a release 2 that R1a expects (runtime lane, 24 Oct).
     [ -f "$RT/check_runtime_r1c.cjs" ] && run check_runtime_r1c.cjs "$RN" node "$RT/check_runtime_r1c.cjs" "$RP"
     # R1d next on the same copy (it fills forms from the cases R1c made); R1a last: its --reset empties the workspace.
     [ -f "$RT/check_runtime_r1d.ts" ] && run check_runtime_r1d.ts "$RN" $TSX "$RT/check_runtime_r1d.ts" "$RP" "xr_studio_$RN"
+    # C6.11 (M3-A): the case team on the same released Visitor visa, before R1a's reset.
+    [ -f "$RT/check_c611_team.ts" ] && run check_c611_team.ts "$RN" $TSX "$RT/check_c611_team.ts" "$RP" "xr_studio_$RN"
     run check_runtime_r1a.ts "$RN" $TSX "$RT/check_runtime_r1a.ts" "$RP" "xr_studio_$RN" --reset
   else rows+=("| check_runtime_r1a.ts | FAIL | | isolated copy runtime_r1 or setup_visitor_visa.ts failed (see setup_visitor_visa.log) |"); fail=1; fi
   zsh "$S/tools/isolated.sh" "$RN" "$RP" stop >/dev/null 2>&1
