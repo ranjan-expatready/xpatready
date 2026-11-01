@@ -2,6 +2,7 @@
 // AI field-map draft (p2/launch.ts: stub pass, then the live call under the existing route, input allowlist, ledger
 // and caps), a labelled replay of a saved real run, comparison with the shared library and the person's decisions.
 import { HttpStatus, Inject, Injectable } from "@nestjs/common";
+import { runWorstUsd } from "../../engine/cost-check.ts";
 import { execFile, execFileSync, spawn, type ChildProcess } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -25,6 +26,7 @@ import { identityKeyOf, insertProposals, landField, recordChoice, reviewRow, typ
 import { cleanLabel, labelProblem } from "../../contracts/programs.ts";
 import { START } from "../../contracts/start-setup.ts";
 import { ACTORS, Audit, Db, fail, need, NODE, OFFICIAL, PROTOTYPE, PY, ROOT, SOLUTION, STUDIO, VAR, VAR_ROOT, Workspace, type Actor } from "./core.ts";
+import { forgetDeletion } from "./library-deletions.ts";
 const ACTOR_BY_ID = (id: string) => ACTORS.find((a) => a.id === id) ?? ACTORS[0];
 /** The library revision a comparison was made against: every definition key, version and status. A different revision
  *  at apply time means the comparison is stale (D280). */
@@ -318,11 +320,12 @@ export class Sources {
       const draftInputs: DraftInputs = { inputSha, templateSha: sha(readFileSync(join(PROMPTS, job.template))), schemaSha: sha(readFileSync(join(PROMPTS, job.output_schema))), model: settings.model, effort: settings.effort, maxOutputTokens: settings.max_output_tokens, known: job.known ?? null };
       const saved = existsSync(RUNS) ? this.savedRuns(jobId, inputSha).find((r) => r.valid && sameDraftInputs(r.envelope, draftInputs)) : undefined;
       const repeats = saved ? null : this.repeatsFailedRun(jobId, draftInputs);
-      const worst = saved || repeats ? 0 : Math.min(RUN_CAP_USD, costUsd(settings.model, bytes.length + 8_000, settings.max_output_tokens) * settings.max_attempts);
+      const worst = saved || repeats ? 0 : runWorstUsd(costUsd(settings.model, bytes.length + 8_000, settings.max_output_tokens), settings.max_attempts);
       return { index: p.index, count: p.count, sections: p.sections, fields: p.fields.length, paths: p.fields.map((f) => f.data_path!), jobId, file, inputSha, saved_run: saved?.file ?? null, repeats_failed_run: repeats?.run_id ?? null, worst_usd: Math.round(worst * 100) / 100 };
     });
     return { plan: { total: plan.total, reused: plan.reused, leftover: plan.leftover } as Omit<DraftPlan, "parts">, parts, wholeJobId: whole.jobId, inventoryFile: invRel, inventorySha: invSha,
-      reusedFrom: [...new Set(plan.reused.map((r) => r.reused_from))], worst_usd: Math.round(parts.reduce((x, p) => x + p.worst_usd, 0) * 100) / 100 };
+      // #131 review M1: rounded up to the cent, never down (the runner reserves each part's exact worst case).
+      reusedFrom: [...new Set(plan.reused.map((r) => r.reused_from))], worst_usd: Math.ceil(parts.reduce((x, p) => x + p.worst_usd, 0) * 100 - 1e-6) / 100 };
   }
 
   /** The edition printed on the file, as the intake read it into the library (P-51); else the approved list's label. */
@@ -334,8 +337,10 @@ export class Sources {
    *  replay a saved run, or the guarded stub pass and, for live, the paid call. */
   async runDraftStep(id: string) {
     const j = await this.db.draftingJob.findUniqueOrThrow({ where: { id }, include: { batch: { select: { plan: true } } } });
-    // P-179: a person's Continue covers the run it started (each step's first attempt), never a later retry.
-    const ov = j.mode === "LIVE" && j.attempt === 1 ? overrideOf(j.batch?.plan) : undefined;
+    // P-179: a person's Continue covers the run it started, including a retry of that same run (forms follow-up, 31 Oct;
+    // question in the PR): every attempt of every step of the batch carries it, and the ledger still holds the run's
+    // reservations to the worst case the person accepted and total spend to the ceiling (SpendLedger.overrideRefusal).
+    const ov = j.mode === "LIVE" ? overrideOf(j.batch?.plan) : undefined;
     let a = await this.db.sourceAttachment.findUniqueOrThrow({ where: { id: j.attachmentId! } });
     if (a.status === "RECOGNISED" || a.status === "READ_FAILED") {
       await this.db.draftingJob.update({ where: { id }, data: { message: "Reading the form's fields on this computer (no AI)" } });
@@ -773,6 +778,7 @@ export class Sources {
     const ws = job.workspaceId;
     const res = await this.db.$transaction(async (tx) => {
       const def = await tx.govFormDef.upsert({ where: { workspaceId_formKey: { workspaceId: ws, formKey } }, update: {}, create: { workspaceId: ws, formKey, displayName: b.title?.trim() || TITLES[formKey] || formKey, formKind: "data_form" } });
+      await forgetDeletion(tx, ws, formKey); // X5 slice c
       // An edition uploaded to the library first (Screen 01, P-25) has no box map yet: the draft fills it in.
       let ed = (await tx.formEdition.findFirst({ where: { workspaceId: ws, sha256: a.sha256 } })) ?? (await tx.formEdition.findUnique({ where: { workspaceId_editionLabel: { workspaceId: ws, editionLabel: item.edition } } }));
       if (ed && (await tx.formFieldMap.count({ where: { formEditionId: ed.id } }))) fail(`${ed.editionLabel} already has a field map in the library.`, HttpStatus.CONFLICT);

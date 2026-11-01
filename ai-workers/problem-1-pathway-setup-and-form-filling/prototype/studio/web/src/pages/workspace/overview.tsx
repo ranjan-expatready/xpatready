@@ -13,8 +13,11 @@ export function OverviewTab({ d, sum, show, failed, onRetry }: { d: CombinationV
   const id = d.combination.id;
   const row = sum?.row;
   const k = d.draft.counts;
-  const errors = d.draft.problems.filter((p) => p.level === "error").length;
-  const warnings = d.draft.problems.length - errors;
+  // F8: "Nothing to release yet" is a release problem the setup strip already says (step 3, Forms); the Rules and
+  // checks tile counts rule and check problems only (Lead check item 3: no setup shows "no problems").
+  const ruleProblems = d.draft.problems.filter((p) => p.where !== "Release");
+  const errors = ruleProblems.filter((p) => p.level === "error").length;
+  const warnings = ruleProblems.length - errors;
   const stripRef = React.useRef<HTMLElement>(null);
   React.useEffect(() => { if (show === "missing") { stripRef.current?.scrollIntoView({ block: "center" }); stripRef.current?.focus({ preventScroll: true }); } }, [show, !!sum?.setup]);
   // C3 follow-up (review m2): after Retry, focus moves to the strip once it is back, not to the page's body.
