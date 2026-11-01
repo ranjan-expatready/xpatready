@@ -100,3 +100,21 @@ Reviewed: `git diff 1f493b96 81166e07`, fixes only. Evidence: the code was read,
 Journey score: 7/10 (down from 7.5). A guide condition on a listed answer, the common case, now stops the run with an unhelpful message. Report: `journey-test-reviewer-2026-11-01-c411p2.md`, round 2.
 
 To fix before Approve: **M2**, with its pass and fail tests.
+
+## Round 3 (a6776ec5)
+
+Reviewed: `git diff 81166e07 a6776ec5`, fixes only. I ran `answerOf` directly (tsx) on a snapshot-shaped list. "Common-law" and "common_law" both give `common_law`, and "Divorced" is refused with the reason. The builder's 49/49 is taken as given; the app was not started again.
+
+### Verdict: Approve
+
+* **M2 fixed.**
+  * `answerOf` reads `v.key` and `v.label` and stores the key, and the type now matches the snapshot's shape.
+  * Pure pass and fail tests cover: label to key, an answer not on the list, and yes-no.
+  * An error in step 5 now fails only step 5 (`.catch` in `draft-qd.ts`), with a plain message, and step 6 still runs. This is defence in depth beyond the ask.
+* **M1:** closed.
+* **Still open, Should, listed for later:**
+  * The pure `conditionsFromRounds` Ready test (it needs a rendered snapshot, per the builder).
+  * Part 1's m8 and m9.
+  * m5, the shared-condition store, belongs to part 3.
+
+Journey score: 7.5/10. Round 2's break is gone; the journey is back at round 1's level, with M1's no-op Ready condition removed.
