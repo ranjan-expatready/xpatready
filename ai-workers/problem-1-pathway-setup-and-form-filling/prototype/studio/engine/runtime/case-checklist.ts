@@ -9,7 +9,7 @@
 // C6.5; waiving (P-171 (6)) and the Express Entry block (P-172) are permanent-residence rules, not this combination's.
 import { ageInYears } from "../../../contracts/rules.ts";
 import { MINOR } from "../../contracts/runtime.ts";
-import { evalCondition, subjectsFor, type Known, type Person } from "../render.ts";
+import { lineCondition, lineHolders, type Known, type Person } from "../render.ts";
 import type { Snapshot } from "../snapshot.ts";
 import type { Participant } from "./case.ts";
 
@@ -138,7 +138,7 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
     // R3 / B-M1: whose list a line goes on is the line's own "whose document"; only a case-level line ("case") goes on
     // the principal's. The condition's subject says whose answers decide it (below), never whose list it is on.
     // A person not applying has no filing on a Visitor visa (C6.12), so no lines of their own.
-    const holders = [...new Set(subjectsFor(persons, r.who).map((h) => (h === "case" ? principal : h)))].filter((h): h is string => !!h && applying.has(h));
+    const holders = [...new Set(lineHolders(persons, r.who).map((h) => (h === "case" ? principal : h)))].filter((h): h is string => !!h && applying.has(h));
     for (const h of holders) {
       const plain = r.condition_plain ?? null;
       let state: Need = "needed", missing: Missing[] = [];
@@ -183,20 +183,11 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
 }
 const ORDER: Record<Need, number> = { needed: 0, answer_first: 1, not_needed: 2 };
 
-/** A condition decided on its own subject: the case, the principal, the spouse, the holder's own answers (each
- *  applicant / each person) or the children (any child). A condition about a document waits for its contents (C6.5). */
+/** A condition decided on its own subject, by the one rule Preview and the Documents tab use (render.ts lineCondition;
+ *  Q2 on #325), with the case checklist's words for "nobody on the case". */
 function conditionFor(s: Snapshot, known: Known, tree: Cond, holder: string, persons: Person[]): { applies: boolean | "cannot_tell"; missing: string[]; about?: string; why?: string; document?: true } {
-  const kind = tree.subjectKind;
-  if (kind === "DOCUMENT") return { applies: "cannot_tell", missing: [], document: true };
-  const role = kind === "PRINCIPAL" ? "principal" : kind === "SPOUSE" ? "spouse_or_partner" : kind === "DEPENDENT" ? "child" : null;
-  const holderRole = persons.find((p) => p.id === holder)?.role;
-  const subjects = kind === "CASE" ? ["case"] : !role || role === holderRole ? [holder] : persons.filter((p) => p.role === role).map((p) => p.id);
-  if (!subjects.length) return { applies: false, missing: [], why: `Not needed: it depends on the ${role === "spouse_or_partner" ? "spouse or partner" : "children"}, and there is none on the case.` };
-  const rs = subjects.map((about) => ({ about, ...evalCondition(s, known, tree, about) }));
-  const yes = rs.find((x) => x.applies === true);
-  if (yes) return { applies: true, missing: [] };
-  const open = rs.find((x) => x.applies !== false);
-  return open ? { applies: "cannot_tell", missing: open.missing, about: open.about } : { applies: false, missing: [] };
+  const c = lineCondition(s, known, persons, holder, tree);
+  return c.nobody ? { applies: false, missing: [], why: `Not needed: it depends on the ${c.nobody}, and there is none on the case.` } : c;
 }
 
 /** The words a person sees for a fact: its question on the release, else its meaning, else the key. */

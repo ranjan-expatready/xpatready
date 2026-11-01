@@ -46,6 +46,36 @@ export function subjectsFor(people: Person[], who: string, subjectKind?: string)
   }
 }
 
+/** One rule for whose list a document line goes on (BR-3 "conditions on that person's facts"; C6.4 review R3, Q2 on
+ *  #325): the line's own "whose document" names its holders, never its condition's subject. A case-level line stays
+ *  "case" here; each caller places it (Preview and the Documents tab list it under the case, a case's checklist under
+ *  the principal). Used by render (Preview), engine/sources.ts (the Documents tab) and engine/runtime/case-checklist.ts. */
+export function lineHolders(people: Person[], who: string): string[] {
+  return subjectsFor(people, who);
+}
+/** On whose answers a line's condition is decided, for one holder: CASE → the case; PRINCIPAL or SPOUSE → that person
+ *  (none on the case: nobody, so the line is not needed); DEPENDENT → the holder when a child, else every child (any one
+ *  is enough); EACH_APPLICANT, EACH_PERSON or none → the holder. DOCUMENT → a document's contents decide it (uploads, C6.5). */
+export function conditionSubjects(people: Person[], holder: string, kind: string | undefined): string[] | "document" {
+  if (kind === "DOCUMENT") return "document";
+  if (kind === "CASE") return ["case"];
+  const role = kind === "PRINCIPAL" ? "principal" : kind === "SPOUSE" ? "spouse_or_partner" : kind === "DEPENDENT" ? "child" : null;
+  if (!role || people.find((p) => p.id === holder)?.role === role) return [holder === "case" ? (people.find((p) => p.role === "principal")?.id ?? "case") : holder];
+  return find(people, role).map((p) => p.id);
+}
+/** A line's condition for one holder: true when it holds on any of its subjects, false when it fails on all, else
+ *  cannot tell (with the missing facts of the first undecided subject). */
+export function lineCondition(s: Snapshot, known: Known, people: Person[], holder: string, tree: any): Cond & { about?: string; document?: true; nobody?: string } {
+  if (!tree) return { applies: true, missing: [] };
+  const subjects = conditionSubjects(people, holder, tree.subjectKind);
+  if (subjects === "document") return { applies: "cannot_tell", missing: [], document: true };
+  if (!subjects.length) return { applies: false, missing: [], nobody: tree.subjectKind === "SPOUSE" ? "spouse or partner" : "children" };
+  const rs = subjects.map((about) => ({ about, ...evalCondition(s, known, tree, about) }));
+  if (rs.some((r) => r.applies === true)) return { applies: true, missing: [] };
+  const open = rs.find((r) => r.applies !== false);
+  return open ? { applies: "cannot_tell", missing: open.missing, about: open.about } : { applies: false, missing: [] };
+}
+
 /** Who signs a form filed as PDF upload, signed by hand and scanned (C3.11; contracts/workspace.ts SIGNED_BY, Sample): the
  *  one rule for the Documents tab (sources.ts signedScanLines) and Preview by person and the case (render), X9b / #113
  *  review m6. The form is about each person its "who" names (the form rows' own list; its condition never narrows who it
@@ -199,13 +229,11 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   for (const f of forms) if (f.applies === "cannot_tell") addDecider(f.missing, f.person, `whether ${f.form} applies to ${f.person_label}`);
 
   // ------------------------------------------------------------ document checklist
+  // Q2 (#325): whose list a line is on comes from its own "who" (lineHolders); its condition is decided on its subject.
   const checklist = s.document_requirements.flatMap((d) => {
-    const kind = d.condition?.subjectKind;
-    if (kind === "DOCUMENT") return [];
-    const people0 = kind === "CASE" ? subjectsFor(people, d.who) : subjectsFor(people, d.who, kind === "EACH_APPLICANT" || kind === "EACH_PERSON" ? undefined : kind);
-    return people0.map((person) => {
-      const c = evalCondition(s, known, d.condition, kind === "CASE" ? "case" : person);
-      if (c.applies === "cannot_tell") addDecider(c.missing, person, `whether "${d.document_type}" is needed`);
+    return lineHolders(people, d.who).map((person) => {
+      const c = lineCondition(s, known, people, person, d.condition);
+      if (c.applies === "cannot_tell") addDecider(c.missing, c.about ?? person, `whether "${d.document_type}" is needed`);
       return { lineage: d.lineage, requirement: d.document_type, document_type_key: (d as { document_type_key?: string }).document_type_key ?? null, person, person_label: label(person), base_or_conditional: d.base_or_conditional, provided_by: d.provided_by, applies: c.applies, missing: c.missing,
         status: c.applies === false ? "Not needed" : c.applies === "cannot_tell" ? "Cannot tell yet" : "Needed", why: d.condition_plain ?? (d.base_or_conditional === "base" ? "required for every person it names" : d.note ?? ""), source_quote: d.source_quote, origin: d.origin, item_status: d.status };
     });
