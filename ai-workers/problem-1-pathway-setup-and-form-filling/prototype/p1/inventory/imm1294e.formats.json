@@ -1,0 +1,2621 @@
+{
+ "file": "imm1294e.pdf",
+ "sha256": "394c745501ef87e46a0b15618ca342387ca06c5b2f226face2956b0372047d09",
+ "read_by": "prototype/p1/xfa_formats.py (the form's own XFA template: maxChars, picture clauses, validate scripts; no AI)",
+ "boxes_with_format": 194,
+ "boxes_unmatched": 0,
+ "boxes": {
+  "form1[0].Page1[0].PersonalDetails[0].ServiceIn[0].ServiceIn[0]": {
+   "caption": "*I want service in",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page1[0].PersonalDetails[0].UCIClientID[0]": {
+   "caption": "UCI",
+   "checks": [
+    {
+     "function": "validateUCI",
+     "args": [],
+     "quote": [
+      {
+       "key": "UCI",
+       "text": "The correct format is: Numeric characters"
+      }
+     ]
+    }
+   ],
+   "max_chars": 10
+  },
+  "form1[0].Page1[0].PersonalDetails[0].Name[0].FamilyName[0]": {
+   "caption": "*Family name (as shown on your passport or travel document)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    },
+    {
+     "function": "validateDuplicateName",
+     "args": [
+      "this",
+      "AliasName.AliasGivenName",
+      "AliasName.AliasFamilyName",
+      "AliasName.AliasNameIndicator.AliasNameIndicator"
+     ],
+     "quote": [
+      {
+       "key": "duplicateNames1",
+       "text": "2. Nickname, maiden name, alias, etc"
+      },
+      {
+       "key": "duplicateNames2",
+       "text": "The correct format is: Nickname, maiden name, alias, etc... cannot be the same as Full Name"
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Page1[0].PersonalDetails[0].Name[0].GivenName[0]": {
+   "caption": "Given name(s) (as shown on your passport or travel document)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    },
+    {
+     "function": "validateDuplicateName",
+     "args": [
+      "FamilyName",
+      "AliasName.AliasGivenName",
+      "AliasName.AliasFamilyName",
+      "AliasName.AliasNameIndicator.AliasNameIndicator"
+     ],
+     "quote": [
+      {
+       "key": "duplicateNames1",
+       "text": "2. Nickname, maiden name, alias, etc"
+      },
+      {
+       "key": "duplicateNames2",
+       "text": "The correct format is: Nickname, maiden name, alias, etc... cannot be the same as Full Name"
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasFamilyName[0]": {
+   "caption": "b) Family name",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    },
+    {
+     "function": "validateDuplicateName",
+     "args": [
+      "Name.FamilyName",
+      "AliasGivenName",
+      "this",
+      "AliasNameIndicator.AliasNameIndicator"
+     ],
+     "quote": [
+      {
+       "key": "duplicateNames1",
+       "text": "2. Nickname, maiden name, alias, etc"
+      },
+      {
+       "key": "duplicateNames2",
+       "text": "The correct format is: Nickname, maiden name, alias, etc... cannot be the same as Full Name"
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasGivenName[0]": {
+   "caption": "Given name(s)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    },
+    {
+     "function": "validateDuplicateName",
+     "args": [
+      "Name.FamilyName",
+      "this",
+      "AliasFamilyName",
+      "AliasNameIndicator.AliasNameIndicator"
+     ],
+     "quote": [
+      {
+       "key": "duplicateNames1",
+       "text": "2. Nickname, maiden name, alias, etc"
+      },
+      {
+       "key": "duplicateNames2",
+       "text": "The correct format is: Nickname, maiden name, alias, etc... cannot be the same as Full Name"
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Page1[0].PersonalDetails[0].Sex[0].Sex[0]": {
+   "caption": "*Sex",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page1[0].PersonalDetails[0].DOBYear[0]": {
+   "caption": "*YYYY",
+   "max_chars": 4
+  },
+  "form1[0].Page1[0].PersonalDetails[0].DOBMonth[0]": {
+   "caption": "*MM",
+   "checks": [
+    {
+     "function": "validateDOBMM",
+     "args": [
+      "ButtonsHeader.Age"
+     ],
+     "quote": [
+      {
+       "key": "DOB_Month",
+       "text": "The correct format is: Between 01 and 12, or **"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "form1[0].Page1[0].PersonalDetails[0].DOBDay[0]": {
+   "caption": "*DD",
+   "checks": [
+    {
+     "function": "validateDOBDD",
+     "args": [
+      "DOBMonth",
+      "this",
+      "ButtonsHeader.Age"
+     ],
+     "quote": [
+      {
+       "key": "DOB_Day",
+       "text": "The correct format is: Between 01 and 31, or **"
+      },
+      {
+       "key": "Day_Must_Be_Less_Than_29",
+       "text": "The correct format is: Between 01 and 29, or **"
+      },
+      {
+       "key": "Day_Must_Be_Less_Than_28",
+       "text": "The correct format is: Between 01 and 28, or **"
+      },
+      {
+       "key": "30_Day",
+       "text": "The correct format is: Between 01-30, or **"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PlaceBirthCity[0]": {
+   "caption": "*City/Town",
+   "checks": [
+    {
+     "function": "validatePOBText",
+     "args": [],
+     "quote": [
+      {
+       "key": "POBCity",
+       "text": "The correct format is: Alphabetic characters and special characters slash, hyphen, double quotes, period, ampersand, apostrophe and comma."
+      }
+     ]
+    }
+   ],
+   "max_chars": 30
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PlaceBirthCountry[0]": {
+   "caption": "*Country or Territory",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page1[0].PersonalDetails[0].Citizenship[0].Citizenship[0]": {
+   "caption": "*Citizenship",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ]
+  },
+  "form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Other[0]": {
+   "caption": "Question 7 C If your immigration status is other, please give details.",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 30
+  },
+  "form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].FromDate[0]": {
+   "caption": "Question 7 D The start date of your immigration status in your current country of residence in YYYY-MM-DD format",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].ToDate[0]": {
+   "caption": "Question 7 E The end date of your immigration status in your current country of residence in YYYY-MM-DD format",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].CORDates[0].FromYr[0]": {
+   "caption": "",
+   "max_chars": 4
+  },
+  "form1[0].Page1[0].PersonalDetails[0].CORDates[0].FromMM[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page1[0].PersonalDetails[0].CORDates[0].FromDD[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page1[0].PersonalDetails[0].CORDates[0].ToYr[0]": {
+   "caption": "",
+   "max_chars": 4
+  },
+  "form1[0].Page1[0].PersonalDetails[0].CORDates[0].ToMM[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page1[0].PersonalDetails[0].CORDates[0].ToDD[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Country[0]": {
+   "caption": "Question 8 B Row 1 Country or Territory. If you replied Yes to question 8 A, please give your previous country or territory of residence.",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Status[0]": {
+   "caption": "Question 8 B Row 1 Status. Your immigration status in your previous country or territory of residence",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Other[0]": {
+   "caption": "Question 8 B Row 1 Other Details. If your immigration status was other, please give details.",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 30
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].FromDate[0]": {
+   "caption": "Question 8 B Row 1 Status From Date. The start date of your immigration status in your previous country of residence in YYYY-MM-DD format",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].ToDate[0]": {
+   "caption": "Question 8 B Row 1 Status To Date. The end date of your immigration status in your previous country of residence in YYYY-MM-DD format",
+   "checks": [
+    {
+     "function": "validateDateWithHiddenFields",
+     "args": [
+      ">",
+      "FromDate.rawValue",
+      "PCRDatesR1.ToYr",
+      "PCRDatesR1.ToMM",
+      "PCRDatesR1.ToDD"
+     ],
+     "quote": []
+    }
+   ],
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].Country[0]": {
+   "caption": "Question 8 B Row 2 Country or Territory. If you have more than one previous country or territory of residence, please give your other previous country or territory of residence.",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].Status[0]": {
+   "caption": "Question 8 B Row 2 Status. Your immigration status in your previous country of residence",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].Other[0]": {
+   "caption": "Question 8 B Row 2 Other Details. If your immigration status was other, please give details.",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 30
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].FromDate[0]": {
+   "caption": "Question 8 B Row 2 Status From Date. The start date of your immigration status in your previous country of residence in YYYY-MM-DD format",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].ToDate[0]": {
+   "caption": "Question 8 B Row 2 Status To Date. The end date of your immigration status in your previous country of residence in YYYY-MM-DD format",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].FromYr[0]": {
+   "caption": "",
+   "max_chars": 4
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].FromMM[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].FromDD[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].ToYr[0]": {
+   "caption": "",
+   "max_chars": 4
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].ToMM[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].ToDD[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].FromYr[0]": {
+   "caption": "",
+   "max_chars": 4
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].FromMM[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].FromDD[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].ToYr[0]": {
+   "caption": "",
+   "max_chars": 4
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].ToMM[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].ToDD[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Country[0]": {
+   "caption": "Question 9 B Country or Territory. If you replied No to question 9 A, please give the country or territory from where you are applying.",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Status[0]": {
+   "caption": "Question 9 B Status. Your immigration status in the country from where you are applying.",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Other[0]": {
+   "caption": "Question 9 B Other Details. If your immigration status is other, please give details.",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 30
+  },
+  "form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].FromDate[0]": {
+   "caption": "Question 9 B. Status From Date. The start date of your immigration status in the country from where you are applying in YYYY-MM-DD format",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].ToDate[0]": {
+   "caption": "Question 9 B Status To Date. The end date of your immigration status in the country from where you are applying in YYYY-MM-DD format",
+   "checks": [
+    {
+     "function": "validateDateWithHiddenFields",
+     "args": [
+      ">",
+      "FromDate.rawValue",
+      "CWADates.ToYr",
+      "CWADates.ToMM",
+      "CWADates.ToDD"
+     ],
+     "quote": []
+    }
+   ],
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].CWADates[0].FromYr[0]": {
+   "caption": "",
+   "max_chars": 4
+  },
+  "form1[0].Page1[0].PersonalDetails[0].CWADates[0].FromMM[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page1[0].PersonalDetails[0].CWADates[0].FromDD[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page1[0].PersonalDetails[0].CWADates[0].ToYr[0]": {
+   "caption": "",
+   "max_chars": 4
+  },
+  "form1[0].Page1[0].PersonalDetails[0].CWADates[0].ToMM[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page1[0].PersonalDetails[0].CWADates[0].ToDD[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MaritalStatus[0]": {
+   "caption": "*a) Your current marital status",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page1[0].MaritalStatus[0].SectionA[0].DateOfMarriage[0]": {
+   "caption": "Date",
+   "checks": [
+    {
+     "function": "validateDateWithHiddenFields",
+     "args": [
+      "<",
+      "utilDates.getToday("
+     ],
+     "quote": []
+    }
+   ],
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromYr[0]": {
+   "caption": "",
+   "max_chars": 4
+  },
+  "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromMM[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromDD[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page1[0].MaritalStatus[0].SectionA[0].FamilyName[0]": {
+   "caption": "Family name",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Page1[0].MaritalStatus[0].SectionA[0].GivenName[0]": {
+   "caption": "Given name(s)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PMFamilyName[0]": {
+   "caption": "Family name",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevSpouseDOB[0].DOBYear[0]": {
+   "caption": "YYYY",
+   "max_chars": 4
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevSpouseDOB[0].DOBMonth[0]": {
+   "caption": "MM",
+   "checks": [
+    {
+     "function": "validateDOBMM",
+     "args": [
+      "Page1.ButtonsHeader.PrevSpouseAge"
+     ],
+     "quote": [
+      {
+       "key": "DOB_Month",
+       "text": "The correct format is: Between 01 and 12, or **"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevSpouseDOB[0].DOBDay[0]": {
+   "caption": "DD",
+   "checks": [
+    {
+     "function": "validateDOBDD",
+     "args": [
+      "DOBMonth",
+      "this",
+      "Page1.ButtonsHeader.PrevSpouseAge"
+     ],
+     "quote": [
+      {
+       "key": "DOB_Day",
+       "text": "The correct format is: Between 01 and 31, or **"
+      },
+      {
+       "key": "Day_Must_Be_Less_Than_29",
+       "text": "The correct format is: Between 01 and 29, or **"
+      },
+      {
+       "key": "Day_Must_Be_Less_Than_28",
+       "text": "The correct format is: Between 01 and 28, or **"
+      },
+      {
+       "key": "30_Day",
+       "text": "The correct format is: Between 01-30, or **"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].GivenName[0].PMGivenName[0]": {
+   "caption": "Given name(s)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].TypeOfRelationship[0]": {
+   "caption": "d) Type of relationship",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].FromDate[0]": {
+   "caption": "From",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].ToDate[0].ToDate[0]": {
+   "caption": "To",
+   "checks": [
+    {
+     "function": "validateDateWithHiddenFields",
+     "args": [
+      ">=",
+      "FromDate.rawValue",
+      "PreviouslyMarriedDates.ToYr",
+      "PreviouslyMarriedDates.ToMM",
+      "PreviouslyMarriedDates.ToDD"
+     ],
+     "quote": []
+    }
+   ],
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].FromYr[0]": {
+   "caption": "",
+   "max_chars": 4
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].FromMM[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].FromDD[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].ToYr[0]": {
+   "caption": "",
+   "max_chars": 4
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].ToMM[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].ToDD[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].nativeLang[0].nativeLang[0]": {
+   "caption": "*a) Native language/ Mother Tongue",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].ableToCommunicate[0].ableToCommunicate[0]": {
+   "caption": "*b) Are you able to communicate in English and/or French?",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].lov[0]": {
+   "caption": "c) In which language are you most at ease?",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].PassportNum[0].PassportNum[0]": {
+   "caption": "*Passport number",
+   "checks": [
+    {
+     "function": "validatePassportNum",
+     "args": [],
+     "quote": [
+      {
+       "key": "Passport_Format",
+       "text": "The correct format is: All letters and numbers with no special characters."
+      }
+     ]
+    }
+   ],
+   "max_chars": 20
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].CountryofIssue[0].CountryofIssue[0]": {
+   "caption": "*Country or territory of issue",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueDate[0].IssueDate[0]": {
+   "caption": "*Issue date",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].ExpiryDate[0]": {
+   "caption": "*Expiry date",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueYYYY[0]": {
+   "caption": "",
+   "max_chars": 4
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueMM[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueDD[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].expiryYYYY[0]": {
+   "caption": "",
+   "max_chars": 4
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].expiryMM[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].expiryDD[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Page2[0].natID[0].natIDdocs[0].DocNum[0].DocNum[0]": {
+   "caption": "Document number",
+   "checks": [
+    {
+     "function": "validatePassportNum",
+     "args": [],
+     "quote": [
+      {
+       "key": "Passport_Format",
+       "text": "The correct format is: All letters and numbers with no special characters."
+      }
+     ]
+    }
+   ],
+   "max_chars": 20
+  },
+  "form1[0].Page2[0].natID[0].natIDdocs[0].CountryofIssue[0].CountryofIssue[0]": {
+   "caption": "Country or territory of issue",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page2[0].natID[0].natIDdocs[0].IssueDate[0].IssueDate[0]": {
+   "caption": "Issue date",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page2[0].natID[0].natIDdocs[0].ExpiryDate[0]": {
+   "caption": "Expiry date",
+   "checks": [
+    {
+     "function": "validateDate",
+     "args": [
+      ">",
+      "utilDates.getToday("
+     ],
+     "quote": [
+      {
+       "key": "Validation Error",
+       "text": "Validation Error"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page2[0].USCard[0].usCarddocs[0].DocNum[0].DocNum[0]": {
+   "caption": "U.S. Citizenship and Immigration Services (USCIS) number",
+   "checks": [
+    {
+     "function": "validateUSCIS",
+     "args": [],
+     "quote": [
+      {
+       "key": "USCIS_Format",
+       "text": "The correct format is: All letters and numbers with no special characters, spaces or hyphens."
+      }
+     ]
+    }
+   ],
+   "max_chars": 10
+  },
+  "form1[0].Page2[0].USCard[0].usCarddocs[0].ExpiryDate[0]": {
+   "caption": "Expiry date",
+   "checks": [
+    {
+     "function": "validateDate",
+     "args": [
+      ">",
+      "utilDates.getToday("
+     ],
+     "quote": [
+      {
+       "key": "Validation Error",
+       "text": "Validation Error"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page2[0].contact[0].AddressRow1[0].POBox[0].POBox[0]": {
+   "caption": "P.O. box",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 15
+  },
+  "form1[0].Page2[0].contact[0].AddressRow1[0].Apt[0].AptUnit[0]": {
+   "caption": "Apt/Unit",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 10
+  },
+  "form1[0].Page2[0].contact[0].AddressRow1[0].StreetNum[0].StreetNum[0]": {
+   "caption": "Street no.",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 10
+  },
+  "form1[0].Page2[0].contact[0].AddressRow1[0].Streetname[0].Streetname[0]": {
+   "caption": "*Street name",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Page2[0].contact[0].AddressRow2[0].CityTow[0].CityTown[0]": {
+   "caption": "*City/Town",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 30
+  },
+  "form1[0].Page2[0].contact[0].AddressRow2[0].Country[0].Country[0]": {
+   "caption": "*Country or Territory",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page2[0].contact[0].AddressRow2[0].ProvinceState[0].ProvinceState[0]": {
+   "caption": "Province/State",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page2[0].contact[0].AddressRow2[0].PostalCode[0].PostalCode[0]": {
+   "caption": "Postal code",
+   "checks": [
+    {
+     "function": "validatePostalCodeBasedOnCountry",
+     "args": [
+      "Country.Country"
+     ],
+     "quote": [
+      {
+       "key": "Incorrect_CAN_PostalCode",
+       "text": "The Postal Code you entered does not follow Canadian format (ie. X9X 9X9)."
+      },
+      {
+       "key": "Incorrect_US_ZipCode",
+       "text": "The correct format is: Must be formatted 99999 or 99999-9999"
+      },
+      {
+       "key": "Validation Error",
+       "text": "Validation Error"
+      },
+      {
+       "key": "CANPostalError",
+       "text": "Postal Code is a Canadian format. Country must be equal to Canada."
+      },
+      {
+       "key": "Postal Code Format",
+       "text": "The correct format is: Numbers, Letters, Spaces and Hyphens only"
+      },
+      {
+       "key": "Leave_Blank",
+       "text": "If you do not have a Postal Code, leave the field BLANK."
+      }
+     ]
+    }
+   ],
+   "ui_picture": "text{99999-9999}|text{99999}",
+   "format_picture": "text{99999-9999}|text{99999}",
+   "max_chars": 10
+  },
+  "form1[0].Page2[0].contact[0].AddressRow2[0].District[0]": {
+   "caption": "District",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 30
+  },
+  "form1[0].Page2[0].contact[0].ResidentialAddressRow1[0].AptUnit[0].AptUnit[0]": {
+   "caption": "Apt/Unit",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 10
+  },
+  "form1[0].Page2[0].contact[0].ResidentialAddressRow1[0].StreetNum[0].StreetNum[0]": {
+   "caption": "Street no.",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 10
+  },
+  "form1[0].Page2[0].contact[0].ResidentialAddressRow1[0].StreetName[0].Streetname[0]": {
+   "caption": "Street name",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Page2[0].contact[0].ResidentialAddressRow1[0].CityTown[0].CityTown[0]": {
+   "caption": "City/Town",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 30
+  },
+  "form1[0].Page2[0].contact[0].ResidentialAddressRow2[0].Country[0].Country[0]": {
+   "caption": "Country or Territory",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page2[0].contact[0].ResidentialAddressRow2[0].ProvinceState[0].ProvinceState[0]": {
+   "caption": "Province/State",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page2[0].contact[0].ResidentialAddressRow2[0].PostalCode[0].PostalCode[0]": {
+   "caption": "Postal code",
+   "checks": [
+    {
+     "function": "validatePostalCodeBasedOnCountry",
+     "args": [
+      "Country.Country"
+     ],
+     "quote": [
+      {
+       "key": "Incorrect_CAN_PostalCode",
+       "text": "The Postal Code you entered does not follow Canadian format (ie. X9X 9X9)."
+      },
+      {
+       "key": "Incorrect_US_ZipCode",
+       "text": "The correct format is: Must be formatted 99999 or 99999-9999"
+      },
+      {
+       "key": "Validation Error",
+       "text": "Validation Error"
+      },
+      {
+       "key": "CANPostalError",
+       "text": "Postal Code is a Canadian format. Country must be equal to Canada."
+      },
+      {
+       "key": "Postal Code Format",
+       "text": "The correct format is: Numbers, Letters, Spaces and Hyphens only"
+      },
+      {
+       "key": "Leave_Blank",
+       "text": "If you do not have a Postal Code, leave the field BLANK."
+      }
+     ]
+    }
+   ],
+   "ui_picture": "text{99999-9999}|text{99999}",
+   "format_picture": "text{99999-9999}|text{99999}",
+   "max_chars": 10
+  },
+  "form1[0].Page2[0].contact[0].ResidentialAddressRow2[0].District[0]": {
+   "caption": "District",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 30
+  },
+  "form1[0].Page3[0].PhoneNumbers[0].Phone[0].Type[0]": {
+   "caption": "Type",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page3[0].PhoneNumbers[0].Phone[0].NumberExt[0]": {
+   "caption": "Ext.",
+   "checks": [
+    {
+     "function": "validateDigits",
+     "args": [],
+     "quote": [
+      {
+       "key": "DigitText",
+       "text": "The correct format is: Must contain only numbers ."
+      }
+     ]
+    }
+   ],
+   "format_picture": "num{zzzzzzzzzzzz9}",
+   "max_chars": 5
+  },
+  "form1[0].Page3[0].PhoneNumbers[0].Phone[0].NumberCountry[0]": {
+   "caption": "Country Code",
+   "checks": [
+    {
+     "function": "validateCountryTeleCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "InvalidCountryCode1",
+       "text": "The correct format is: Must be 3 or fewer characters"
+      },
+      {
+       "key": "InvalidCountryCode3",
+       "text": "The correct format is: Country codes that start with 1 must be 4 digits"
+      },
+      {
+       "key": "InvalidCountryCode2",
+       "text": "The correct format is: Must be numeric and must not start with '11'"
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "form1[0].Page3[0].PhoneNumbers[0].Phone[0].ActualNumber[0]": {
+   "caption": "",
+   "checks": [
+    {
+     "function": "validateUniqueTelephone",
+     "args": [],
+     "quote": [
+      {
+       "key": "AltTwinPhoneNumberError",
+       "text": "Alternate Telephone No. must not be the same as Telephone No. Alternate Telephone Data has been cleared."
+      }
+     ]
+    }
+   ]
+  },
+  "form1[0].Page3[0].PhoneNumbers[0].Phone[0].NANumber[0].AreaCode[0]": {
+   "caption": "No.",
+   "checks": [
+    {
+     "function": "validateAreaCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_areaCode_exchange",
+       "text": "The correct format is: Must be 3 numbers and must not start with '0' or '1'"
+      }
+     ]
+    }
+   ],
+   "max_chars": 3
+  },
+  "form1[0].Page3[0].PhoneNumbers[0].Phone[0].NANumber[0].FirstThree[0]": {
+   "caption": "Question 3 : 3 digit Exchange Number",
+   "checks": [
+    {
+     "function": "validateAreaCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_areaCode_exchange",
+       "text": "The correct format is: Must be 3 numbers and must not start with '0' or '1'"
+      }
+     ]
+    }
+   ],
+   "max_chars": 3
+  },
+  "form1[0].Page3[0].PhoneNumbers[0].Phone[0].NANumber[0].LastFive[0]": {
+   "caption": "Question 3 : 4 digit Subscriber Number",
+   "checks": [
+    {
+     "function": "validatePhoneNAN",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_subscriber",
+       "text": "The correct format is: Must be 4 numbers"
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "form1[0].Page3[0].PhoneNumbers[0].Phone[0].IntlNumber[0].IntlNumber[0]": {
+   "caption": "No.",
+   "checks": [
+    {
+     "function": "validateIntlNum",
+     "args": [],
+     "quote": [
+      {
+       "key": "PhoneText",
+       "text": "The correct format must contain only numbers and spaces."
+      }
+     ]
+    }
+   ],
+   "max_chars": 20
+  },
+  "form1[0].Page3[0].PhoneNumbers[0].AltPhone[0].Type[0]": {
+   "caption": "Type",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page3[0].PhoneNumbers[0].AltPhone[0].NumberExt[0]": {
+   "caption": "Ext.",
+   "checks": [
+    {
+     "function": "validateDigits",
+     "args": [],
+     "quote": [
+      {
+       "key": "DigitText",
+       "text": "The correct format is: Must contain only numbers ."
+      }
+     ]
+    }
+   ],
+   "format_picture": "num{zzzzzzzzzzzz9}",
+   "max_chars": 5
+  },
+  "form1[0].Page3[0].PhoneNumbers[0].AltPhone[0].NumberCountry[0]": {
+   "caption": "Country Code",
+   "checks": [
+    {
+     "function": "validateCountryTeleCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "InvalidCountryCode1",
+       "text": "The correct format is: Must be 3 or fewer characters"
+      },
+      {
+       "key": "InvalidCountryCode3",
+       "text": "The correct format is: Country codes that start with 1 must be 4 digits"
+      },
+      {
+       "key": "InvalidCountryCode2",
+       "text": "The correct format is: Must be numeric and must not start with '11'"
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "form1[0].Page3[0].PhoneNumbers[0].AltPhone[0].NANumber[0].AreaCode[0]": {
+   "caption": "No.",
+   "checks": [
+    {
+     "function": "validateAreaCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_areaCode_exchange",
+       "text": "The correct format is: Must be 3 numbers and must not start with '0' or '1'"
+      }
+     ]
+    }
+   ],
+   "max_chars": 3
+  },
+  "form1[0].Page3[0].PhoneNumbers[0].AltPhone[0].NANumber[0].FirstThree[0]": {
+   "caption": "Question 4 : 3 digit Exchange Number",
+   "checks": [
+    {
+     "function": "validateAreaCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_areaCode_exchange",
+       "text": "The correct format is: Must be 3 numbers and must not start with '0' or '1'"
+      }
+     ]
+    }
+   ],
+   "max_chars": 3
+  },
+  "form1[0].Page3[0].PhoneNumbers[0].AltPhone[0].NANumber[0].LastFive[0]": {
+   "caption": "Question 4 : 4 digit Subscriber Number",
+   "checks": [
+    {
+     "function": "validatePhoneNAN",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_subscriber",
+       "text": "The correct format is: Must be 4 numbers"
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "form1[0].Page3[0].PhoneNumbers[0].AltPhone[0].IntlNumber[0].IntlNumber[0]": {
+   "caption": "No.",
+   "checks": [
+    {
+     "function": "validateIntlNum",
+     "args": [],
+     "quote": [
+      {
+       "key": "PhoneText",
+       "text": "The correct format must contain only numbers and spaces."
+      }
+     ]
+    }
+   ],
+   "max_chars": 20
+  },
+  "form1[0].Page3[0].FaxEmail[0].Phone[0].NumberExt[0]": {
+   "caption": "Ext.",
+   "checks": [
+    {
+     "function": "validateDigits",
+     "args": [],
+     "quote": [
+      {
+       "key": "DigitText",
+       "text": "The correct format is: Must contain only numbers ."
+      }
+     ]
+    }
+   ],
+   "format_picture": "num{zzzzzzzzzzzz9}",
+   "max_chars": 5
+  },
+  "form1[0].Page3[0].FaxEmail[0].Phone[0].NumberCountry[0]": {
+   "caption": "Country Code",
+   "checks": [
+    {
+     "function": "validateCountryTeleCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "InvalidCountryCode1",
+       "text": "The correct format is: Must be 3 or fewer characters"
+      },
+      {
+       "key": "InvalidCountryCode3",
+       "text": "The correct format is: Country codes that start with 1 must be 4 digits"
+      },
+      {
+       "key": "InvalidCountryCode2",
+       "text": "The correct format is: Must be numeric and must not start with '11'"
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "form1[0].Page3[0].FaxEmail[0].Phone[0].NANumber[0].AreaCode[0]": {
+   "caption": "No.",
+   "checks": [
+    {
+     "function": "validateAreaCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_areaCode_exchange",
+       "text": "The correct format is: Must be 3 numbers and must not start with '0' or '1'"
+      }
+     ]
+    }
+   ],
+   "max_chars": 3
+  },
+  "form1[0].Page3[0].FaxEmail[0].Phone[0].NANumber[0].FirstThree[0]": {
+   "caption": "Question 5: 3 digit Exchange Number",
+   "checks": [
+    {
+     "function": "validateAreaCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_areaCode_exchange",
+       "text": "The correct format is: Must be 3 numbers and must not start with '0' or '1'"
+      }
+     ]
+    }
+   ],
+   "max_chars": 3
+  },
+  "form1[0].Page3[0].FaxEmail[0].Phone[0].NANumber[0].LastFive[0]": {
+   "caption": "Question 5 :4 digit Subscriber Number",
+   "checks": [
+    {
+     "function": "validatePhoneNAN",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_subscriber",
+       "text": "The correct format is: Must be 4 numbers"
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "form1[0].Page3[0].FaxEmail[0].Phone[0].IntlNumber[0].IntlNumber[0]": {
+   "caption": "No.",
+   "checks": [
+    {
+     "function": "validateIntlNum",
+     "args": [],
+     "quote": [
+      {
+       "key": "PhoneText",
+       "text": "The correct format must contain only numbers and spaces."
+      }
+     ]
+    }
+   ],
+   "max_chars": 20
+  },
+  "form1[0].Page3[0].FaxEmail[0].Email[0]": {
+   "caption": "E-mail address",
+   "checks": [
+    {
+     "function": "validateEmail",
+     "args": [],
+     "quote": [
+      {
+       "key": "Email",
+       "text": "The correct format is: Must contain one '@' and at least one '.' and use English and/or French characters only and have from 2 to 6 characters after the last Period."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Page3[0].DetailsOfStudy[0].PurposeRow1[0].schoolName[0].SchoolName[0]": {
+   "caption": "*a) Name of School",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "format_picture": "null{}|zero{}|num.currency{}",
+   "max_chars": 200
+  },
+  "form1[0].Page3[0].DetailsOfStudy[0].PurposeRow1[0].schoolName[0].Level[0]": {
+   "caption": "*b) My level of study will be:",
+   "checks": [
+    {
+     "function": "validateDropDownList",
+     "args": [
+      "xfa.datasets.LOVFile.LOV.LevelOfStudyList"
+     ],
+     "quote": []
+    },
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page3[0].DetailsOfStudy[0].PurposeRow1[0].schoolName[0].Program[0]": {
+   "caption": "c) My field of study will be:",
+   "checks": [
+    {
+     "function": "validateDropDownList",
+     "args": [
+      "xfa.datasets.LOVFile.LOV.FieldOfStudyList"
+     ],
+     "quote": []
+    },
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page3[0].DetailsOfStudy[0].PurposeRow1[0].ProvinceState[0].Prov[0]": {
+   "caption": "*Province",
+   "checks": [
+    {
+     "function": "validateDropDownList",
+     "args": [
+      "xfa.datasets.LOVFile.LOV.ProvinceAbbrevList"
+     ],
+     "quote": []
+    },
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page3[0].DetailsOfStudy[0].PurposeRow1[0].CityTown[0].CityTown[0]": {
+   "caption": "*City/Town",
+   "checks": [
+    {
+     "function": "validateDropDownList",
+     "args": [
+      "xfa.datasets.LOVFile.LOV.CityList.\" + ProvinceState.Prov.formattedValue"
+     ],
+     "quote": []
+    },
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page3[0].DetailsOfStudy[0].PurposeRow1[0].Address[0].Address[0]": {
+   "caption": "*Address",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 130
+  },
+  "form1[0].Page3[0].DetailsOfStudy[0].PurposeRow1[0].HowLongStudy[0].FromDate[0]": {
+   "caption": "*From",
+   "checks": [
+    {
+     "function": "validateDate",
+     "args": [
+      ">=",
+      "utilDates.getToday("
+     ],
+     "quote": [
+      {
+       "key": "Validation Error",
+       "text": "Validation Error"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page3[0].DetailsOfStudy[0].PurposeRow1[0].HowLongStudy[0].ToDate[0]": {
+   "caption": "*To",
+   "checks": [
+    {
+     "function": "validateDate",
+     "args": [
+      ">=",
+      "utilDates.getToday("
+     ],
+     "quote": [
+      {
+       "key": "Validation Error",
+       "text": "Validation Error"
+      }
+     ]
+    },
+    {
+     "function": "validateDate",
+     "args": [
+      ">=",
+      "FromDate.rawValue"
+     ],
+     "quote": [
+      {
+       "key": "Validation Error",
+       "text": "Validation Error"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page3[0].DetailsOfStudy[0].PurposeRow1[0].DLI[0]": {
+   "caption": "a) Designated Learning Institution # (O#)",
+   "max_chars": 21
+  },
+  "form1[0].Page3[0].DetailsOfStudy[0].PurposeRow1[0].StudentNo[0]": {
+   "caption": "b) My Student ID # is:",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 25
+  },
+  "form1[0].Page3[0].Contacts_Row1[0].tuition[0].amount[0]": {
+   "caption": "*Tuition",
+   "checks": [
+    {
+     "function": "validateFunds",
+     "args": [],
+     "quote": [
+      {
+       "key": "Funds",
+       "text": "Must be greater than or equal to Zero and less than or equal to 999,999,999,999"
+      }
+     ]
+    }
+   ],
+   "format_picture": "null{}|num{$z,zzz,zz9.zz}",
+   "max_chars": 7
+  },
+  "form1[0].Page3[0].Contacts_Row1[0].roomBoard[0].amount[0]": {
+   "caption": "Room and board",
+   "checks": [
+    {
+     "function": "validateFunds",
+     "args": [],
+     "quote": [
+      {
+       "key": "Funds",
+       "text": "Must be greater than or equal to Zero and less than or equal to 999,999,999,999"
+      }
+     ]
+    }
+   ],
+   "format_picture": "null{}|num{$z,zzz,zz9.zz}",
+   "max_chars": 7
+  },
+  "form1[0].Page3[0].Contacts_Row1[0].other[0].amount[0]": {
+   "caption": "Other",
+   "checks": [
+    {
+     "function": "validateFunds",
+     "args": [],
+     "quote": [
+      {
+       "key": "Funds",
+       "text": "Must be greater than or equal to Zero and less than or equal to 999,999,999,999"
+      }
+     ]
+    }
+   ],
+   "format_picture": "null{}|num{$z,zzz,zz9.zz}",
+   "max_chars": 7
+  },
+  "form1[0].Page3[0].Contacts_Row1[0].expensesPaid[0].Funds[0].Funds[0]": {
+   "caption": "*Funds available for my stay (CAD)",
+   "checks": [
+    {
+     "function": "validateFunds",
+     "args": [],
+     "quote": [
+      {
+       "key": "Funds",
+       "text": "Must be greater than or equal to Zero and less than or equal to 999,999,999,999"
+      }
+     ]
+    }
+   ],
+   "format_picture": "null{}|num{$zzz,zzz,zzz,zz9}",
+   "max_chars": 12
+  },
+  "form1[0].Page3[0].Contacts_Row1[0].expensesPaid[0].expensesPaidBy[0]": {
+   "caption": "*a) My expenses in Canada will be paid by:",
+   "checks": [
+    {
+     "function": "validateDropDownList",
+     "args": [
+      "xfa.datasets.LOVFile.LOV.ExpensesPaidBySPList"
+     ],
+     "quote": []
+    },
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page3[0].Contacts_Row1[0].expensesPaid[0].Other[0]": {
+   "caption": "b) Other",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 50
+  },
+  "form1[0].Page3[0].Contacts_Row1[0].PAL[0].DocNum[0]": {
+   "caption": "Document Number",
+   "max_chars": 30
+  },
+  "form1[0].Page3[0].Contacts_Row1[0].PAL[0].DocExpiry[0]": {
+   "caption": "Expiry Date (YYYY-MM-DD)",
+   "checks": [
+    {
+     "function": "validateDate",
+     "args": [
+      ">",
+      "utilDates.getToday("
+     ],
+     "quote": [
+      {
+       "key": "Validation Error",
+       "text": "Validation Error"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page3[0].Contacts_Row1[0].CAQ[0].CertNum[0]": {
+   "caption": "Certificate Number",
+   "max_chars": 25
+  },
+  "form1[0].Page3[0].Contacts_Row1[0].CAQ[0].CertExpiry[0]": {
+   "caption": "Expiry Date (YYYY-MM-DD)",
+   "checks": [
+    {
+     "function": "validateDate",
+     "args": [
+      ">",
+      "utilDates.getToday("
+     ],
+     "quote": [
+      {
+       "key": "Validation Error",
+       "text": "Validation Error"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page3[0].Education[0].Edu_Row1[0].FromYear[0]": {
+   "caption": "YYYY",
+   "checks": [
+    {
+     "function": "validateEduFromYear",
+     "args": [],
+     "quote": [
+      {
+       "key": "Year_No_Stars",
+       "text": "The correct format is: Numeric characters and between 1900 - current year."
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "form1[0].Page3[0].Education[0].Edu_Row1[0].FromMonth[0]": {
+   "caption": "MM",
+   "checks": [
+    {
+     "function": "validateEduMonth",
+     "args": [],
+     "quote": [
+      {
+       "key": "DOB_Month_No_Stars",
+       "text": "The correct format is: Between 01 and 12"
+      }
+     ]
+    },
+    {
+     "function": "validateEduDateInPresentOrPast",
+     "args": [
+      "this"
+     ],
+     "quote": [
+      {
+       "key": "Future_Date_Error",
+       "text": "The correct format is: Must be less than or equal to Today's Date."
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "form1[0].Page3[0].Education[0].Edu_Row1[0].ToYear[0]": {
+   "caption": "YYYY",
+   "max_chars": 4
+  },
+  "form1[0].Page3[0].Education[0].Edu_Row1[0].ToMonth[0]": {
+   "caption": "MM",
+   "checks": [
+    {
+     "function": "validateEduToYear",
+     "args": [],
+     "quote": [
+      {
+       "key": "Year",
+       "text": "The correct format is: Numeric characters and greater than or equal to 1900."
+      }
+     ]
+    },
+    {
+     "function": "validateEduMonth",
+     "args": [],
+     "quote": [
+      {
+       "key": "DOB_Month_No_Stars",
+       "text": "The correct format is: Between 01 and 12"
+      }
+     ]
+    },
+    {
+     "function": "validateEduCrossRef",
+     "args": [
+      "FromMonth",
+      "ToYear",
+      "this"
+     ],
+     "quote": [
+      {
+       "key": "ToDate",
+       "text": "To Date:"
+      },
+      {
+       "key": "ToDateLessThanFromDate",
+       "text": "To date cannot be less than From date"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "form1[0].Page3[0].Education[0].Edu_Row1[0].FieldOfStudy[0]": {
+   "caption": "Field and level of study",
+   "max_chars": 30
+  },
+  "form1[0].Page3[0].Education[0].Edu_Row1[0].School[0]": {
+   "caption": "School/Facility name",
+   "max_chars": 75
+  },
+  "form1[0].Page3[0].Education[0].Edu_Row1[0].CityTown[0]": {
+   "caption": "City/Town",
+   "max_chars": 30
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow1[0].FromYear[0]": {
+   "caption": "*YYYY",
+   "checks": [
+    {
+     "function": "validateEduFromYear",
+     "args": [],
+     "quote": [
+      {
+       "key": "Year_No_Stars",
+       "text": "The correct format is: Numeric characters and between 1900 - current year."
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow1[0].FromMonth[0]": {
+   "caption": "*MM",
+   "checks": [
+    {
+     "function": "validateEduMonth",
+     "args": [],
+     "quote": [
+      {
+       "key": "DOB_Month_No_Stars",
+       "text": "The correct format is: Between 01 and 12"
+      }
+     ]
+    },
+    {
+     "function": "validateEduDateInPresentOrPast",
+     "args": [
+      "this"
+     ],
+     "quote": [
+      {
+       "key": "Future_Date_Error",
+       "text": "The correct format is: Must be less than or equal to Today's Date."
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow1[0].ToYear[0]": {
+   "caption": "YYYY",
+   "max_chars": 4
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow1[0].ToMonth[0]": {
+   "caption": "MM",
+   "checks": [
+    {
+     "function": "validateEduToYear",
+     "args": [],
+     "quote": [
+      {
+       "key": "Year",
+       "text": "The correct format is: Numeric characters and greater than or equal to 1900."
+      }
+     ]
+    },
+    {
+     "function": "validateEduMonth",
+     "args": [],
+     "quote": [
+      {
+       "key": "DOB_Month_No_Stars",
+       "text": "The correct format is: Between 01 and 12"
+      }
+     ]
+    },
+    {
+     "function": "validateEduCrossRef",
+     "args": [
+      "FromMonth",
+      "ToYear",
+      "this"
+     ],
+     "quote": [
+      {
+       "key": "ToDate",
+       "text": "To Date:"
+      },
+      {
+       "key": "ToDateLessThanFromDate",
+       "text": "To date cannot be less than From date"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow1[0].Occupation[0].Occupation[0]": {
+   "caption": "*Current Activity/Occupation",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 75
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow1[0].Employer[0]": {
+   "caption": "*Company/Employer/Facility name",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 75
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow1[0].CityTown[0].CityTown[0]": {
+   "caption": "*City/Town",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 30
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow1[0].Country[0].Country[0]": {
+   "caption": "*Country or Territory",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow1[0].ProvState[0]": {
+   "caption": "Province/State",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow2[0].FromYear[0]": {
+   "caption": "YYYY",
+   "checks": [
+    {
+     "function": "validateEduFromYear",
+     "args": [],
+     "quote": [
+      {
+       "key": "Year_No_Stars",
+       "text": "The correct format is: Numeric characters and between 1900 - current year."
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow2[0].FromMonth[0]": {
+   "caption": "MM",
+   "checks": [
+    {
+     "function": "validateEduMonth",
+     "args": [],
+     "quote": [
+      {
+       "key": "DOB_Month_No_Stars",
+       "text": "The correct format is: Between 01 and 12"
+      }
+     ]
+    },
+    {
+     "function": "validateEduDateInPresentOrPast",
+     "args": [
+      "this"
+     ],
+     "quote": [
+      {
+       "key": "Future_Date_Error",
+       "text": "The correct format is: Must be less than or equal to Today's Date."
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow2[0].ToYear[0]": {
+   "caption": "YYYY",
+   "max_chars": 4
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow2[0].ToMonth[0]": {
+   "caption": "MM",
+   "checks": [
+    {
+     "function": "validateEduToYear",
+     "args": [],
+     "quote": [
+      {
+       "key": "Year",
+       "text": "The correct format is: Numeric characters and greater than or equal to 1900."
+      }
+     ]
+    },
+    {
+     "function": "validateEduMonth",
+     "args": [],
+     "quote": [
+      {
+       "key": "DOB_Month_No_Stars",
+       "text": "The correct format is: Between 01 and 12"
+      }
+     ]
+    },
+    {
+     "function": "validateEduCrossRef",
+     "args": [
+      "FromMonth",
+      "ToYear",
+      "this"
+     ],
+     "quote": [
+      {
+       "key": "ToDate",
+       "text": "To Date:"
+      },
+      {
+       "key": "ToDateLessThanFromDate",
+       "text": "To date cannot be less than From date"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow2[0].Occupation[0].Occupation[0]": {
+   "caption": "Previous Activity/Occupation",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 75
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow2[0].Employer[0]": {
+   "caption": "Company/Employer/Facility name",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 75
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow2[0].CityTown[0].CityTown[0]": {
+   "caption": "City/Town",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 30
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow2[0].Country[0].Country[0]": {
+   "caption": "Country or Territory",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow2[0].ProvState[0]": {
+   "caption": "Province/State",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow3[0].FromYear[0]": {
+   "caption": "YYYY",
+   "checks": [
+    {
+     "function": "validateEduFromYear",
+     "args": [],
+     "quote": [
+      {
+       "key": "Year_No_Stars",
+       "text": "The correct format is: Numeric characters and between 1900 - current year."
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow3[0].FromMonth[0]": {
+   "caption": "MM",
+   "checks": [
+    {
+     "function": "validateEduMonth",
+     "args": [],
+     "quote": [
+      {
+       "key": "DOB_Month_No_Stars",
+       "text": "The correct format is: Between 01 and 12"
+      }
+     ]
+    },
+    {
+     "function": "validateEduDateInPresentOrPast",
+     "args": [
+      "this"
+     ],
+     "quote": [
+      {
+       "key": "Future_Date_Error",
+       "text": "The correct format is: Must be less than or equal to Today's Date."
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow3[0].ToYear[0]": {
+   "caption": "YYYY",
+   "max_chars": 4
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow3[0].ToMonth[0]": {
+   "caption": "MM",
+   "checks": [
+    {
+     "function": "validateEduToYear",
+     "args": [],
+     "quote": [
+      {
+       "key": "Year",
+       "text": "The correct format is: Numeric characters and greater than or equal to 1900."
+      }
+     ]
+    },
+    {
+     "function": "validateEduMonth",
+     "args": [],
+     "quote": [
+      {
+       "key": "DOB_Month_No_Stars",
+       "text": "The correct format is: Between 01 and 12"
+      }
+     ]
+    },
+    {
+     "function": "validateEduCrossRef",
+     "args": [
+      "FromMonth",
+      "ToYear",
+      "this"
+     ],
+     "quote": [
+      {
+       "key": "ToDate",
+       "text": "To Date:"
+      },
+      {
+       "key": "ToDateLessThanFromDate",
+       "text": "To date cannot be less than From date"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow3[0].Occupation[0].Occupation[0]": {
+   "caption": "Previous Activity/Occupation",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 75
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow3[0].Employer[0]": {
+   "caption": "Company/Employer/Facility name",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 75
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow3[0].CityTown[0].CityTown[0]": {
+   "caption": "City/Town",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 30
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow3[0].Country[0].Country[0]": {
+   "caption": "Country or Territory",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page3[0].Occupation[0].OccupationRow3[0].ProvState[0]": {
+   "caption": "Province/State",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Page4[0].BackgroundInfo[0].Details[0].MedicalDetails[0]": {
+   "caption": "c) If you answered \"yes\" to question 1a) or 1b), please provide details and the name of the family member (if applicable).",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 200
+  },
+  "form1[0].Page4[0].PageWrapper[0].BackgroundInfo2[0].Details[0].refusedDetails[0]": {
+   "caption": "d) If you answered “yes” to question 2a), 2b) or 2c), please provide details.",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 200
+  },
+  "form1[0].Page4[0].PageWrapper[0].BackgroundInfo3[0].Details[0]": {
+   "caption": "b) If you answered “yes” to question 3a) above, please provide details.",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 200
+  },
+  "form1[0].Page4[0].PageWrapper[0].Military[0].militaryServiceDetails[0]": {
+   "caption": "b) If you answered yes to question 4a), please provide dates of service and countries or territories where you served.",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 200
+  },
+  "form1[0].Page4[0].C1CertificateIssueDate[0]": {
+   "caption": "Date: YYYY-MM-DD",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page4[0].ReaderInfo[0]": {
+   "caption": "readerInfo",
+   "max_chars": 50
+  }
+ }
+}
