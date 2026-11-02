@@ -162,3 +162,21 @@ Suites on :4466: c36 answer values 46/46, its browser 12/12, c36 rule facts 42/4
 - Data integrity: **met**, including the API edit routes.
 
 ### Journey score (reviewer): 10 / 10, pass (see journey file, Round 4).
+
+## Round 5 (cc5ce7d4, then aae5e81a)
+
+Scope: `git diff 655cff0b..aae5e81a` in `prototype/studio`. The merge of origin/main touches no C3.6 file. cc5ce7d4: `ruleValuesKnown()` checks every rule of the combination that reads the fact (both add routes), refuses naming the rule that lacks a value, and stores the union as `work.ruleValues` (the landing re-check in proposals.ts reads that). aae5e81a, on the builder's note: `valuesCompared()` tracks negation, so it counts a positive eq/in and a neq under an odd number of `not`.
+
+Verified on my own copy, port 4466 (`isolated.sh rev_c36`), live AI off, at aae5e81a: `check_forms_c36_answer_values.ts` 50/50, `check_forms_c36_rule_facts.ts` 42/42. I also probed `valuesCompared` directly:
+- `in` with an array gives every string in it.
+- Nested and/or recurse with no change of sense: `and(or(eq c, not(in d)), eq other.fact)` gives [c].
+- `not(neq g)` gives [g], `not(not(eq h))` gives [h], `not(and(eq i, neq j))` gives [j].
+- gte, exists, a plain neq, and not(gte/exists) give nothing, so those shapes are never refused.
+
+Note (not a finding): a dead branch of an `or` (`or(eq A, …)` with A missing) is still refused. That is right, because that branch can never hold, and the message says "add it as a value, or correct the rule".
+
+Journey: the change is server-only with no screen change; the round-4 journey score carries forward, **10/10**.
+
+No open Blocker, Major or minor.
+
+**Verdict: Approve** (aae5e81a)
