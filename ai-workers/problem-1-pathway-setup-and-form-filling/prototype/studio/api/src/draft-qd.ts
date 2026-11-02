@@ -15,7 +15,7 @@ import { z } from "zod";
 import { buildSnapshot } from "../../engine/snapshot.ts";
 import { checkWords, documentFacts, factsPerRole, qdChecks, QD_OPERATION, QD_RULES, QD_STEPS, sourceCounts, sourceWords, type QdFinding, type QdKind } from "../../engine/draft-qd.ts";
 import { actorOf, Audit, Db, need, readerOf, type Actor } from "./core.ts";
-import { LIVE_WAITING, PqrDrafts, PQR_AI, type SavedState } from "./pqr-drafts.ts";
+import { charsOf, factNames, inputsOf, LIVE_WAITING, PqrDrafts, PQR_AI, type SavedState } from "./pqr-drafts.ts";
 import { Checklists } from "./checklist.ts";
 import { linesOf, savedReading, staleReading } from "./saved-readings.ts";
 import { insertProposals } from "./proposals.ts";
@@ -27,7 +27,9 @@ import { conditionsFromRounds, conditionsShapeOk, CONDITIONS_STEP, type CondAnsw
  *  saved real answers (US$0); or live on the guarded launcher (live wiring 5a). Prompts: p2/prompts/conditions{,-check}.v1.md. */
 export const CONDITIONS_AI: AiStep = {
   kind: CONDITIONS_STEP, jobBase: "studio-qd-conditions", configurationVersion: "c411-conditions",
-  template: "conditions.v1.md", check: "conditions-check.v1.md", schema: "conditions-output.v1.schema.json", effort: "low", max_output_tokens: 6000,
+  // QA-162: v2 gives the rounds the combination's question list and asks for its keys; #531's v1 answers (guide only) still replay.
+  template: "conditions.v2.md", check: "conditions-check.v2.md", schema: "conditions-output.v2.schema.json", effort: "low", max_output_tokens: 6000,
+  replays: [{ template: "conditions.v1.md", check: "conditions-check.v1.md", label: "Saved before the question list", inputs: 1 }],
   shapeOk: conditionsShapeOk,
   words: {
     noSaved: "No saved AI answer for this guide, prompt and combination yet: it is recorded once in an approved Live run. Meanwhile a person adds conditions on the Questions tab.",
@@ -113,7 +115,7 @@ export class DraftQd {
   /** Step 5's two saved rounds of ONE run (C4.7 break B1): the newest checker round, then the first round of that run. */
   private async savedConditionRounds(c: { combinationKey: string }, g: Guide & { input: { file: string; sha256: string } }, batchId?: string): Promise<{ d: RoundOut<CondAnswer>; k: RoundOut<CondAnswer> | null }> {
     const runner = new StepRunner(this.sources);
-    const ctx: RoundContext = { trail: g.trail, contextKey: c.combinationKey, inputs: [g.input], mode: "replay", wanted: async () => true, batchId };
+    const ctx: RoundContext = { trail: g.trail, contextKey: c.combinationKey, inputs: inputsOf(g), mode: "replay", wanted: async () => true, batchId };
     const k = await runner.round<CondAnswer>(CONDITIONS_AI, true, ctx);
     if (!k.ok) return { d: k, k: null };
     const d = await runner.round<CondAnswer>(CONDITIONS_AI, false, { ...ctx, replayPair: pairOf(CONDITIONS_AI, true, k.runFile) });
@@ -139,7 +141,7 @@ export class DraftQd {
     let d: RoundOut<CondAnswer>, k: RoundOut<CondAnswer> | null;
     if (mode === "replay") ({ d, k } = await this.savedConditionRounds(c, { ...g, input: g.input }, batchId));
     else {
-      const ctx: RoundContext = { trail: g.trail, contextKey: c.combinationKey, inputs: [g.input], mode: "live", wanted: async () => !(await stopped()), batchId };
+      const ctx: RoundContext = { trail: g.trail, contextKey: c.combinationKey, inputs: inputsOf(g), mode: "live", wanted: async () => !(await stopped()), batchId };
       // Break L3: a round that throws ends as a failed round, so a paid first round's cost is still counted and said.
       const safe = async (isCheck: boolean): Promise<RoundOut<CondAnswer>> => { try { return await this.runner.round<CondAnswer>(CONDITIONS_AI, isCheck, ctx); } catch (e) { console.warn(`[draft-qd] conditions ${batchId}:`, String(e).slice(0, 300)); return { ok: false, costUsd: 0, reason: "The AI step stopped on this computer." }; } };
       d = await safe(false);
@@ -157,7 +159,7 @@ export class DraftQd {
       return { status: wasStopped ? "CANCELLED" : "FAILED", message, proposed: 0, detail: {}, usd, offerSaved };
     }
     const r = (x: typeof d & { ok: true }): CondRound => ({ output: x.output, from: x.from, runFile: x.runFile, costUsd: x.costUsd });
-    const res = conditionsFromRounds(snapshot, { draft: r(d), check: r(k) }, { ...g.input, text: g.text, code: g.code }, { runId: jobId, combinationId: c.id });
+    const res = conditionsFromRounds(snapshot, { draft: r(d), check: r(k) }, { ...g.input, text: g.text, code: g.code }, { runId: jobId, combinationId: c.id }, await factNames(this.db, c.workspaceId, snapshot));
     let fresh: typeof res.items = [], already = 0, removed = 0;
     await this.db.$transaction(async (tx) => {
       await tx.$executeRawUnsafe(`select pg_advisory_xact_lock(hashtext($1))`, `qd_conditions:${c.id}`);
@@ -198,14 +200,14 @@ export class DraftQd {
     const none = { available: false, why: guideWhy, files: [] as string[] };
     const saved = mode === "rules" ? null : { qd_documents: docs, qd_conditions: g ? await this.conditionsSaved(c, g) : none, pqr_picks: g ? await this.pqr.saved(c, g) : none };
     const anySaved = !!saved && (saved.qd_documents || saved.qd_conditions.available || saved.pqr_picks.available);
-    const worst = mode === "live" && g?.input ? round2(roundBudgetUsd(CONDITIONS_AI, false, [g.input], g.text.length) + roundBudgetUsd(CONDITIONS_AI, true, [g.input], g.text.length) + this.pqr.worstUsd(g)) : 0;
+    const worst = mode === "live" && g?.input ? round2(roundBudgetUsd(CONDITIONS_AI, false, inputsOf(g), charsOf(g)) + roundBudgetUsd(CONDITIONS_AI, true, inputsOf(g), charsOf(g)) + this.pqr.worstUsd(g)) : 0;
     const remaining = this.sources.ledger().remaining_usd;
     const live = (k: string) => k === "qd_conditions" || k === "pqr_picks";
     const steps = QD_STEPS.map((s, i) => ({ n: i + 1, kind: s.kind, label: s.label,
       how: NOT_YET[s.kind] ? "not_yet" : mode === "rules" ? (s.kind === "pqr_picks" ? "rules" : s.ai ? "ai_only" : "rules") : s.ai ? (mode === "live" && live(s.kind) ? "live" : "saved") : "rules",
       uses_ai: s.ai && mode !== "rules",
       // Part 5b: each Live AI step's own worst case (the acceptance contract states it per step).
-      worst_usd: mode === "live" && g?.input ? (s.kind === "qd_conditions" ? round2(roundBudgetUsd(CONDITIONS_AI, false, [g.input], g.text.length) + roundBudgetUsd(CONDITIONS_AI, true, [g.input], g.text.length)) : s.kind === "pqr_picks" ? round2(this.pqr.worstUsd(g)) : 0) : 0 }));
+      worst_usd: mode === "live" && g?.input ? (s.kind === "qd_conditions" ? round2(roundBudgetUsd(CONDITIONS_AI, false, inputsOf(g), charsOf(g)) + roundBudgetUsd(CONDITIONS_AI, true, inputsOf(g), charsOf(g))) : s.kind === "pqr_picks" ? round2(this.pqr.worstUsd(g)) : 0) : 0 }));
     const fingerprint = JSON.stringify({ id: c.id, mode, facts: facts.total, roles: facts.roles.map((r) => `${r.role}:${r.facts}`), steps: steps.map((s) => s.how), worst, saved: mode === "replay" && saved ? [saved.qd_documents, ...saved.qd_conditions.files, ...saved.pqr_picks.files] : null });
     return { mode, combination: { id: c.id, label: c.label }, steps, facts, totals: { worst_usd: worst, remaining_usd: remaining },
       note: mode === "rules" ? "No AI: rules work out each step; what needs a person goes to To review."

@@ -10,7 +10,8 @@
 import { subjectKindOf, type Snapshot } from "./snapshot.ts";
 import { factSources, type FactSourceView } from "./sources.ts";
 import { askedInOrder, checkCondition } from "./validate.ts";
-import { isSentence, matchFact, sameText } from "./pqr-picks.ts";
+import { isSentence, sameText, takenAs } from "./pqr-picks.ts";
+import { findFact, listed, type Names } from "./fact-words.ts";
 import type { ProposalItem } from "../contracts/proposal-item.ts";
 type RoundReading = NonNullable<ProposalItem["rounds"]["draft"]>;
 
@@ -41,14 +42,25 @@ export function answerOf(field: { value_type?: string; answer_list?: { values?: 
 }
 
 /** The questions this combination asks (placed), per person: the ones a condition may name. */
-const asked = (s: Snapshot): FactSourceView[] => factSources(s).filter((f) => f.placed && f.forms.length > 0);
+const isAsked = (f: FactSourceView) => f.placed && f.forms.length > 0;
+
+/** C1 (QA-162): the one question these words name for this person (engine/fact-words.ts), among every fact of the
+ *  combination so that a near one is never taken in place of the one meant; it must be a question this combination asks. */
+function named(all: FactSourceView[], role: string, asks: string, names: Names, what: (x: string) => string): { f: FactSourceView; loose: string | null } | { why: string } {
+  const found = findFact(all, role, asks, names);
+  if (!found.fact) return { why: found.why === "several" ? `${what(`"${asks}"`)} could be ${found.several.length} questions of this person (${listed(found.several)}), so it is not guessed.` : `${what(`"${asks}"`)} is not a question this combination asks of this person, so it is not guessed.` };
+  if (!isAsked(found.fact)) return { why: `${what(`"${found.fact.label}"`)} is not asked by a question of this combination yet, so it is not guessed.` };
+  return { f: found.fact, loose: found.how === "words" ? takenAs(asks, found.fact) : null };
+}
 
 /** C1–C5 on one round's condition; null when it passes, else the reason in words. */
-export function conditionProblem(s: Snapshot, guideText: string, guideCode: string, c: CondAnswer["conditions"][number]): { why: string } | { target: FactSourceView; decider: FactSourceView; tree: Record<string, unknown>; warn: string | null } {
-  const qs = asked(s);
-  const target = matchFact(qs, c.role, c.asks), decider = matchFact(qs, c.role, c.depends_on);
-  if (!target) return { why: `"${c.asks}" is not exactly one question this combination asks of this person, so it is not guessed.` };
-  if (!decider) return { why: `"${c.depends_on}" (what decides "${target.label}") is not exactly one question this combination asks of this person, so it is not guessed.` };
+export function conditionProblem(s: Snapshot, guideText: string, guideCode: string, c: CondAnswer["conditions"][number], names: Names = new Map(), all: FactSourceView[] = factSources(s)): { why: string } | { target: FactSourceView; decider: FactSourceView; tree: Record<string, unknown>; warn: string | null; loose: string | null } {
+  const t = named(all, c.role, c.asks, names, (x) => x);
+  if ("why" in t) return t;
+  const target = t.f;
+  const d = named(all, c.role, c.depends_on, names, (x) => `${x} (what decides "${target.label}")`);
+  if ("why" in d) return d;
+  const decider = d.f, loose = t.loose ?? d.loose;
   if (target.fact === decider.fact) return { why: `"${target.label}" cannot decide itself.` };
   if (!isSentence(c.quote) || !sameText(guideText).includes(sameText(c.quote))) return { why: `Its sentence is not in ${guideCode}'s text, so it is not proposed.` };
   const reason = c.why.trim();
@@ -69,18 +81,19 @@ export function conditionProblem(s: Snapshot, guideText: string, guideCode: stri
   // A form that reads the answer whenever it applies would lose it while the question is hidden: kept, but for a person
   // to check (never Ready), with the reason, since the form or its box may need the same condition first.
   const hides = after.find((p) => /^Hiding a value/.test(p.message));
-  return { target, decider, tree, warn: hides ? hides.message.slice(0, 300) : null };
+  return { target, decider, tree, warn: hides ? hides.message.slice(0, 300) : null, loose };
 }
 
 /** The two rounds into queue items (C1–C6). `guide` is the file the rounds read. */
 export function conditionsFromRounds(s: Snapshot, rounds: { draft: CondRound; check: CondRound }, guide: { file: string; sha256: string; text: string; code: string },
-  at: { runId: string; combinationId: string }): { items: NewCondition[]; dropped: CondDropped[]; unresolved: { passage: string; reason: string }[] } {
+  at: { runId: string; combinationId: string }, names: Names = new Map()): { items: NewCondition[]; dropped: CondDropped[]; unresolved: { passage: string; reason: string }[] } {
   const dropped: CondDropped[] = [];
-  type Kept = { target: FactSourceView; decider: FactSourceView; tree: Record<string, unknown>; warn: string | null; c: CondAnswer["conditions"][number] };
+  const all = factSources(s);
+  type Kept = { target: FactSourceView; decider: FactSourceView; tree: Record<string, unknown>; warn: string | null; loose: string | null; c: CondAnswer["conditions"][number] };
   const kept = (r: CondRound, which: string) => {
     const out = new Map<string, Kept>();
     for (const c of r.output.conditions) {
-      const x = conditionProblem(s, guide.text, guide.code, c);
+      const x = conditionProblem(s, guide.text, guide.code, c, names, all);
       if ("why" in x) { dropped.push({ role: c.role, asks: c.asks, why: `${x.why} (${which})` }); continue; }
       const k = `${x.target.role}|${x.target.fact}|${x.decider.fact}`;
       if (!out.has(k)) out.set(k, { ...x, c });
@@ -94,14 +107,16 @@ export function conditionsFromRounds(s: Snapshot, rounds: { draft: CondRound; ch
   const items: NewCondition[] = [];
   for (const key of [...new Set([...d.keys(), ...k2.keys()])]) {
     const a = d.get(key), b = k2.get(key), x = (a ?? b)!;
-    const agree = !!a && !!b && JSON.stringify(a.tree) === JSON.stringify(b.tree), same = agree && !x.warn;
+    const agree = !!a && !!b && JSON.stringify(a.tree) === JSON.stringify(b.tree);
+    // QA-162: a question or deciding question named in other words than its own is never Ready (no bulk accept unseen).
+    const loose = a?.loose ?? b?.loose ?? null, same = agree && !x.warn && !loose;
     items.push({
       kind: "condition", runId: at.runId, step: CONDITIONS_STEP, scope: { formEdition: null, combinationId: at.combinationId }, landsOn: "combination", reuse: { match: "new", existingKey: null },
       payload: payload(x), source: { file: guide.file, sha256: guide.sha256, edition: null, page: null, quote: x.c.quote.slice(0, 1000), quoteFound: true, rule: null },
       rounds: { draft: a ? reading(rounds.draft, a) : null, check: b ? reading(rounds.check, b) : null },
-      rules: [{ rule: "one_question_each", passed: true, why: null }, { rule: "quote_found", passed: true, why: null }, { rule: "valid_condition", passed: true, why: null }, { rule: "asked_first", passed: true, why: null }, { rule: "form_still_reads", passed: !x.warn, why: x.warn }],
+      rules: [{ rule: "one_question_each", passed: true, why: null }, { rule: "quote_found", passed: true, why: null }, { rule: "valid_condition", passed: true, why: null }, { rule: "asked_first", passed: true, why: null }, { rule: "form_still_reads", passed: !x.warn, why: x.warn }, { rule: "named_exactly", passed: !loose, why: loose ? loose.slice(0, 300) : null }],
       agreement: agree ? "agreed" : a && b ? "differ" : "one_round", confidence: same ? "ready" : a && b ? "check" : "decide",
-      reason: same ? null : agree ? cut(`Both readings agree, but a form still reads this answer when the question is hidden: ${x.warn}`, 500) : a && b ? `The readings give different answers for "${x.decider.label}" ("${a.c.when}" and "${b.c.when}"). Check which one the guide means.` : `Only the ${a ? "first" : "second"} reading found this condition. Decide: keep it or remove it.`,
+      reason: same ? null : cut([agree ? (x.warn ? `Both readings agree, but a form still reads this answer when the question is hidden: ${x.warn}` : "Both readings agree.") : a && b ? `The readings give different answers for "${x.decider.label}" ("${a.c.when}" and "${b.c.when}"). Check which one the guide means.` : `Only the ${a ? "first" : "second"} reading found this condition. Decide: keep it or remove it.`, loose ? `${loose} Check it is this question.` : ""].filter(Boolean).join(" "), 500),
       origin: "ai", identity: { key, near: [], nearReason: null }, relatesTo: null, revision: null, basis: "SAMPLE",
     });
   }
