@@ -122,7 +122,10 @@ export function previewFilings(lines: { role: string; label?: string; min: numbe
   });
   const coFiled = out.some((f) => f.kind === "co_filed");
   const together = out.length === 1 ? "1 filing" : coFiled ? `${n(out.length, "filing")} sent together: ${out.map((f) => f.words).join(" + ")}` : `${n(out.length, "filing")} in one submission`;
-  return { filings: out, submissions: [{ filings: out.map((f) => f.id), splittable: out.length > 1 && !coFiled, words: together }], gets: together };
+  // The case's rule (engine/runtime/filings.ts, api/src/case-prepare.ts split): beside a sponsorship, only another own
+  // filing (not the principal's) may leave the submission.
+  const splittable = out.length > 1 && (!coFiled || out.some((f) => f.kind !== "co_filed" && f.principal !== "principal"));
+  return { filings: out, submissions: [{ filings: out.map((f) => f.id), splittable, words: together }], gets: together };
 }
 
 /** The release's filing mode per role, read once for the case's prepare view and its filings (concept §6, m2). A mode

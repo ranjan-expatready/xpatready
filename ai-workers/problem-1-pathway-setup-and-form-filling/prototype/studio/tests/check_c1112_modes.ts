@@ -96,4 +96,10 @@ ok("C11.12 review M2 fail: with no default (another combination) the line files 
 ok("C11.12 review m1 fail: filingMode and filing that disagree are refused", first([P, { role: "child", min: 0, max: 1, applies: true, filingMode: "files_own", filing: "on_principal_applying" }]) === "Filing: send one choice (filingMode and filing disagree).");
 ok("C11.12 review m1 pass: filingMode and filing that agree are accepted", run([P, { role: "child", min: 0, max: 1, applies: true, filingMode: "on_principal", filing: "on_principal_applying" }]).errors.length === 0);
 
+// Devin review on #478: the preview's split rule is the case's (a spouse's own filing may leave a sponsorship's group)
+const coSp = previewFilings([P, { role: "spouse_or_partner", min: 0, max: 1, applies: true, filingMode: "files_own" }, sponsor()] as never, "Spouse sponsorship", false);
+ok("C11.12 preview pass: principal + spouse's own filing + sponsorship → splittable (the spouse may leave), as the case says", coSp.filings.length === 3 && coSp.submissions[0].splittable === true);
+const caseCoSp = deriveFilings("fs.spouse", [{ subjectId: "a", role: "principal", label: "A", applies: true }, { subjectId: "s", role: "spouse_or_partner", label: "S", applies: true }, { subjectId: "p", role: "sponsor", label: "P", applies: false }], undefined, { modes: new Map([["spouse_or_partner", "files_own"], ["sponsor", "co_files"]]) as never });
+ok("C11.12 preview fail guard: the preview and the case agree on splittable for the same people", caseCoSp.derived && caseCoSp.groups[0].splittable === coSp.submissions[0].splittable && co.submissions[0].splittable === false);
+
 process.exit(summary() ? 1 : 0);
