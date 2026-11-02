@@ -93,12 +93,14 @@ export function TestsTab({ id }: { id: string }) {
       <FamiliesSection combinationId={id} keys={d.keys} />
       {!d.items.length ? <Notice tone="warn" title="Nothing to test yet">This combination has no form field map and no eligibility rules yet.</Notice> : null}
       {d.items.map((it) => {
-        const keys = d.keys.filter((k) => k.item_kind === it.item_kind && k.item_ref === it.item_ref);
+        // G2 (Devin on #568): a field-map key shows under the edition it was written for (with one edition, every key).
+        const sameForm = d.items.filter((x) => x.item_kind === it.item_kind && x.item_ref === it.item_ref).length > 1;
+        const keys = d.keys.filter((k) => k.item_kind === it.item_kind && k.item_ref === it.item_ref && (!sameForm || (k.expected as { edition?: string } | null)?.edition === it.edition));
         return (
-          <section key={`${it.item_kind}|${it.item_ref}`} id={testAnchor(it.item_kind, it.item_ref)} tabIndex={-1} aria-label={it.label} className="space-y-2 rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
+          <section key={`${it.item_kind}|${it.item_ref}|${it.edition ?? ""}`} id={testAnchor(it.item_kind, it.item_ref)} tabIndex={-1} aria-label={it.label} className="space-y-2 rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
             <h3 className="text-sm font-semibold">{it.label}{it.edition ? <span className="ml-2 font-normal text-text-muted">{it.edition}</span> : null}</h3>
             {keys.length ? <ul className="space-y-2">{keys.map((k) => <KeyRow key={k.id} k={k} combinationId={id} item={it} family={families.find((f) => f.id === k.family.id)} />)}</ul>
-              : <p className="text-sm text-text-muted">No test family has expected values for this item yet. Without a passing signed test it cannot be released (G2).</p>}
+              : <p className="text-sm text-text-muted">No test family has expected values for this item yet. Without a passing signed test it cannot be released.</p>}
             <WriteKey combinationId={id} item={it} families={families} keys={keys} />
           </section>
         );

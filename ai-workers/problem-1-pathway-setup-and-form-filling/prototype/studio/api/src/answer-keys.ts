@@ -30,6 +30,7 @@ type FamilyRow = { id: string; familyKey: string; label: string; referenceDate: 
 export const familyOf = (r: FamilyRow): Family => ({ key: r.familyKey, label: r.label, reference_date: r.referenceDate, people: r.people as Family["people"], facts: r.facts as Family["facts"], none_apply: (r.noneApply ?? []) as Family["none_apply"] });
 const familyView = (r: FamilyRow) => ({ id: r.id, ...familyOf(r), version: r.version, sample: SAMPLE_WORDS, saved_by: nameOf(r.updatedBy), saved_at: at(r.updatedAt) });
 const pdfHas = (s: Snapshot, form: string) => (s.field_maps as { form_number: string; channel?: string }[]).some((m) => m.form_number === form && m.channel !== "ONLINE");
+const editionIn = (expected: unknown) => { const e = obj(expected).edition; return typeof e === "string" && e.trim() ? e.trim() : null; };
 /** A field-map key's edition (the one it was written for), or null for a rule-set key. */
 export const editionOf = (k: { itemKind: string; expected: unknown }) => (k.itemKind === "field_map" ? ((k.expected as MapExpected | null)?.edition ?? null) : null);
 const itemWords = (kind: string, ref: string) => (kind === "rule_set" ? "the eligibility rules" : `the ${ref} field map`);
@@ -156,13 +157,17 @@ export class AnswerKeys {
 
   /** Concept §4 (challenge M5 b): the Expected editor's boxes of one form's map in this combination's draft, read
    *  through the engine (keyBoxes); never a run's output. */
-  async boxes(combinationId: string, form: unknown) {
+  async boxes(combinationId: string, form: unknown, edition?: unknown) {
     const c = await this.combination(combinationId);
     const ref = typeof form === "string" ? form.trim() : "";
     if (!ref) invalid([{ field: "form", message: "Name the form (?form=IMM 5257)." }]);
     const s = await this.draft(c.workspaceId, c.id);
     if (!pdfHas(s, ref)) fail(`${ref} has no PDF field map in this combination.`, HttpStatus.NOT_FOUND);
-    return keyBoxes(s, ref, this.inventory(s, ref))!;
+    // G2 (Devin on #568): ?edition= picks that edition's map and form field list (a combination may hold several).
+    const ed = typeof edition === "string" && edition.trim() ? edition.trim() : null;
+    const out = keyBoxes(s, ref, this.inventoryOrNull(s, ref, ed) ?? this.inventory(s, ref), ed);
+    if (!out) fail(`${ref} has no PDF field map of the edition ${ed} in this combination.`, HttpStatus.NOT_FOUND);
+    return out!;
   }
 
   // ------------------------------------------------------------------------------------------------ keys (BR-2, BR-7)
@@ -211,7 +216,7 @@ export class AnswerKeys {
     const f = await this.family(b.family_id as string);
     const s = await this.draft(c.workspaceId, c.id);
     // Break m2: a map key needs the form's field list (it says which boxes a person fills), as a run does.
-    const { expected, errors } = checkExpected(s, kind, ref, familyOf(f), b.expected, kind === "field_map" && pdfHas(s, ref) ? this.inventory(s, ref) : null);
+    const { expected, errors } = checkExpected(s, kind, ref, familyOf(f), b.expected, kind === "field_map" && pdfHas(s, ref) ? this.inventoryOrNull(s, ref, editionIn(b.expected)) ?? this.inventory(s, ref) : null);
     if (errors.length) invalid(errors);
     if (await this.db.answerKey.findUnique({ where: { familyId_combinationId_itemKind_itemRef: { familyId: f.id, combinationId, itemKind: kind, itemRef: ref } } })) invalid([{ field: "family_id", message: `The family "${f.familyKey}" already has a key for ${itemWords(kind, ref)} here: change that one.` }]);
     const k = await this.db.answerKey.create({ data: { workspaceId: c.workspaceId, familyId: f.id, combinationId, itemKind: kind, itemRef: ref, expected: expected as object, updatedBy: actor.id } });
@@ -228,7 +233,7 @@ export class AnswerKeys {
     const s = await this.draft(k.workspaceId, k.combinationId);
     // Review minor 1 (BR-6): a change that names no edition keeps the key's own; it never moves to the map's edition.
     const given = obj(b.expected), kept = k.itemKind === "field_map" && !(typeof given.edition === "string" && given.edition.trim()) ? { ...given, edition: (k.expected as MapExpected).edition } : b.expected;
-    const { expected, errors } = checkExpected(s, k.itemKind as ItemKind, k.itemRef, familyOf(k.family), kept, k.itemKind === "field_map" && pdfHas(s, k.itemRef) ? this.inventory(s, k.itemRef) : null);
+    const { expected, errors } = checkExpected(s, k.itemKind as ItemKind, k.itemRef, familyOf(k.family), kept, k.itemKind === "field_map" && pdfHas(s, k.itemRef) ? this.inventoryOrNull(s, k.itemRef, editionIn(kept)) ?? this.inventory(s, k.itemRef) : null);
     if (errors.length) invalid(errors);
     if (b.version !== k.version) conflict(`${nameOf(k.updatedBy)} saved these expected values at ${k.updatedAt.toISOString().slice(11, 16)} UTC. Reload their version, then make your change again.`);
     const why = changeProblem(k.state, b.reason);
@@ -277,7 +282,7 @@ export class AnswerKeysController {
   @Post("answer-keys/families") createFamily(@Headers("x-actor") a: H, @Body() b: unknown) { return this.k.createFamily(readerOf(a), b); }
   @Put("answer-keys/families/:id") updateFamily(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.k.updateFamily(readerOf(a), id, b); }
   @Get("answer-keys/fields") fields(@Headers("x-actor") a: H) { readerOf(a); return this.k.libraryFields(); }
-  @Get("combinations/:id/answer-keys/boxes") boxes(@Headers("x-actor") a: H, @Param("id") id: string, @Query("form") form: unknown) { readerOf(a); return this.k.boxes(id, form); }
+  @Get("combinations/:id/answer-keys/boxes") boxes(@Headers("x-actor") a: H, @Param("id") id: string, @Query("form") form: unknown, @Query("edition") edition: unknown) { readerOf(a); return this.k.boxes(id, form, edition); }
   @Get("combinations/:id/answer-keys") list(@Headers("x-actor") a: H, @Param("id") id: string) { readerOf(a); return this.k.list(id); }
   @Post("combinations/:id/answer-keys") create(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.k.create(readerOf(a), id, b); }
   @Get("answer-keys/:id") get(@Headers("x-actor") a: H, @Param("id") id: string) { readerOf(a); return this.k.get(id); }

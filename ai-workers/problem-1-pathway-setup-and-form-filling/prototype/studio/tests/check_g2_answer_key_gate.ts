@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { buildSnapshot, snapshotHash, type Snapshot } from "../engine/snapshot.ts";
-import { fingerprintOf, inventoryHash, type MapExpected } from "../engine/answer-keys.ts";
+import { checkExpected, checkFamily, fingerprintOf, inventoryHash, keyBoxes, type MapExpected } from "../engine/answer-keys.ts";
 import type { Inventory } from "../engine/form-values.ts";
 import { answerKeyGate, evidenceOf, testableItems, type GateItem, type GateKey } from "../engine/answer-key-gate.ts";
 import { isDemoSnapshot } from "../engine/validate.ts";
@@ -43,6 +43,8 @@ const { snapshot: s, sha256 } = await draftOf(vv);
 const rel = releasedOf(vv)!;
 const wpDraft = (await draftOf(wp)).snapshot;
 const all = () => true;
+const inv5257 = JSON.parse(readFileSync(join(STUDIO, "..", "..", (s.field_maps as { form_number: string; inventory_file: string }[]).find((x) => x.form_number === "IMM 5257")!.inventory_file), "utf8")) as Inventory;
+const famE1 = checkFamily(sample, new Set((s.canonical_fields as { id: string }[]).map((f) => f.id)), new Set(["principal", "spouse_or_partner", "child"])).family;
 
 // BR-1 what is tested
 const items0 = testableItems(s, rel, all);
@@ -55,6 +57,10 @@ ok("C5.5 BR-1: eligibility rules with gates are one item (the rule set)", testab
 // BR-2 new or changed since the last release
 ok("C5.5 BR-2: with the draft as released, neither map is new or changed", items0.every((i) => !i.changed));
 ok("C5.5 BR-2: with nothing released, every item is new", testableItems(s, null, all).every((i) => i.changed));
+const { realBaseline } = await import("../api/src/answer-key-gate.ts");
+const wpRel = releasedOf(wp)!;
+ok("C5.5 BR-2 (reviewer m1): the baseline is the latest real release: a newer Demo release is passed over", realBaseline([{ snapshot: rel }, { snapshot: wpRel }]) === wpRel && isDemoSnapshot(rel) && !isDemoSnapshot(wpRel));
+ok("C5.5 BR-2 fail (reviewer m1): with only Demo releases there is no baseline (every item is new to a real release)", realBaseline([{ snapshot: rel }]) === null);
 const moved = clone(s); const e = (moved.field_maps as { form_number: string; entries: { caption?: string | null }[] }[]).find((m) => m.form_number === "IMM 5707")!.entries[0]; e.caption = `${e.caption ?? ""} (moved)`;
 const it2 = testableItems(moved, rel, all);
 ok("C5.5 BR-2 fail: a changed IMM 5707 map entry makes IMM 5707 changed, and only it", it2.find((i) => i.item_ref === "IMM 5707")?.changed === true && it2.find((i) => i.item_ref === "IMM 5257")?.changed === false);
@@ -75,6 +81,10 @@ ok("C5.5 BR-2 fail (Devin on #568): a second mapped edition added after the rele
 const oldKey = key("SIGNED", "PASSED", { item_ref: "IMM 5257", edition: itTwo.find((i) => !i.changed)?.edition ?? null });
 const gTwo = answerKeyGate(itTwo, [oldKey], real);
 ok("C5.5 BR-4 fail (SA-1B-296 r5): a signed passing key for the old edition does not pass the new edition (E7 names it)", gTwo.items.find((i) => i.edition === "IMM 5257 (01-2027)")?.result === "no_test" && gTwo.items.find((i) => i.edition !== "IMM 5257 (01-2027)")?.result === "passed" && gTwo.problems.some((p) => p.level === "error" && /no answer-key test/.test(p.message)), gTwo.items.map((i) => [i.edition, i.result]));
+const kbNew = keyBoxes(twoEd, "IMM 5257", inv5257, "IMM 5257 (01-2027)"), kbNone = keyBoxes(twoEd, "IMM 5257", inv5257, "IMM 5257 (01-2099)");
+ok("C5.5 (Devin on #568, 2nd pass): the Expected editor's boxes come from the edition asked for; an edition the combination lacks gives none", kbNew?.edition === "IMM 5257 (01-2027)" && kbNone === null);
+const ex27 = checkExpected(twoEd, "field_map", "IMM 5257", famE1, { ...e1Keys("IMM 5257 (01-2027)").key }, inv5257);
+ok("C5.5 (Devin on #568, 2nd pass): expected values for the new edition are checked against that edition and keep it", !ex27.errors.length && (ex27.expected as MapExpected).edition === "IMM 5257 (01-2027)", ex27.errors.slice(0, 2));
 let g = answerKeyGate([item()], [], real);
 ok("C5.5 BR-5 E7: a new map with no test on a real release is an error naming it, on Tests, with its form", g.problems.length === 1 && g.problems[0].level === "error" && g.problems[0].where === "Tests" && g.problems[0].label === "IMM 5707 field map" && /^no answer-key test\./.test(g.problems[0].message) && g.problems[0].forms[0] === "IMM 5707" && g.items[0].result === "no_test", lv(g));
 g = answerKeyGate([item()], [], demo);
@@ -142,7 +152,7 @@ let v = await view(vv);
 await call("GET", `/combinations/${vv}/review`, undefined, APPROVER); await call("GET", "/catalogue", undefined, AUTHOR); await call("GET", "/draft", undefined, APPROVER);
 ok("C5.5 BR-6 (challenge m4): reading the combination, its review, the catalogue and the shared draft writes no run", runs() === before);
 ok("C5.5 BR-3 API: the Visitor visa draft would be a Demo release; the gate judged it", v.draft.answer_keys.demo === true && v.draft.answer_keys.judged === true, v.draft.answer_keys);
-ok("C5.5 BR-2 API: both maps as released and untested: two warnings, no error", tests(v).length === 2 && tests(v).every((p) => p.level === "warning" && /released before the answer-key gate/.test(p.message)), tests(v));
+ok("C5.5 BR-2 API (reviewer m1): the Visitor visa has only Demo releases, so its maps are new to a real release: two warnings on this Demo release, no error", tests(v).length === 2 && tests(v).every((p) => p.level === "warning" && /no answer-key test: allowed only in a Demo release/.test(p.message)), tests(v));
 
 // A hand-written key (G4's E1 key) for IMM 5257: unsigned (Sample)
 const edIMM5257 = (s.field_maps as { form_number: string; form_edition: string }[]).find((x) => x.form_number === "IMM 5257")!.form_edition;
@@ -154,7 +164,7 @@ const kid: string = k.body.id;
 v = await view(vv);
 const l5257 = tests(v).filter((p) => p.label === "IMM 5257 field map");
 ok("C5.5 BR-2 API: a map with a key is gated even unchanged; before Submit its key 'runs at Submit' and is Sample on a Demo release (warnings)", l5257.length === 2 && l5257.every((p) => p.level === "warning") && l5257.some((p) => /runs at Submit/.test(p.message)) && l5257.some((p) => /is Sample/.test(p.message)), l5257);
-ok("C5.5 BR-9 API: the review block lists IMM 5257 with its family and IMM 5707 as released before the gate", v.draft.answer_keys.items.find((i: { item_ref: string }) => i.item_ref === "IMM 5257")?.keys?.[0]?.family === sample.label && v.draft.answer_keys.items.find((i: { item_ref: string }) => i.item_ref === "IMM 5707")?.result === "untested_released");
+ok("C5.5 BR-9 API: the review block lists IMM 5257 with its family and IMM 5707 with no test", v.draft.answer_keys.items.find((i: { item_ref: string }) => i.item_ref === "IMM 5257")?.keys?.[0]?.family === sample.label && v.draft.answer_keys.items.find((i: { item_ref: string }) => i.item_ref === "IMM 5707")?.result === "no_test");
 
 // Submit runs the tests (SA-1B-296 r3); a Demo release goes through with the unsigned passing key
 const r0 = runs();
@@ -166,7 +176,8 @@ const a0 = runs();
 r = await call("POST", `/combinations/${vv}/approve`, undefined, APPROVER);
 const sum1 = JSON.parse(sql(`select summary from config_release where combination_id = '${vv}' order by version desc limit 1`) || "{}");
 ok("C5.5 Done when: the Visitor visa Demo release still goes through (an unsigned passing key; IMM 5707 untested as released)", r.status === 201 && runs() === a0 + 1, r.body?.detail ?? r.body);
-ok("C5.5 BR-9: the release's summary freezes the key it rests on (Draft, passed, its run) and no ungated item", Array.isArray(sum1.answer_keys) && sum1.answer_keys.length === 1 && sum1.answer_keys[0].key_id === kid && sum1.answer_keys[0].state === "DRAFT" && sum1.answer_keys[0].run === "PASSED" && !!sum1.answer_keys[0].run_id, sum1.answer_keys);
+const s5257 = (sum1.answer_keys ?? []).find((x: { item_ref: string }) => x.item_ref === "IMM 5257"), s5707 = (sum1.answer_keys ?? []).find((x: { item_ref: string }) => x.item_ref === "IMM 5707");
+ok("C5.5 BR-9: the release's summary freezes the key it rests on (Draft, passed, its run) and names the item it released untested", Array.isArray(sum1.answer_keys) && sum1.answer_keys.length === 2 && s5257?.key_id === kid && s5257.state === "DRAFT" && s5257.run === "PASSED" && !!s5257.run_id && s5707?.result === "no_test" && !s5707.key_id, sum1.answer_keys);
 // BR-6 (Devin on #568): in the release transaction the keys must be exactly those judged: one more, one fewer, or one
 // at another version or state is refused.
 const { keysUnchanged } = await import("../api/src/answer-key-gate.ts");

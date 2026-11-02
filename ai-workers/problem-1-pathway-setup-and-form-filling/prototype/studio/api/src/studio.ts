@@ -914,17 +914,18 @@ export class Studio {
     const { snapshot, sha256 } = await buildSnapshot(this.db, c.workspaceId, id, "draft");
     // Re-checked at approval, not only at submission: a row that has since fallen above a full combination, or a draft
     // that now has errors, is not released.
-    // G2 BR-6: the tests run again at release, on this exact draft, before it is judged.
-    await runKeys(this.db, this.audit, actor, c, snapshot, sha256);
-    const keyGate = await keyGateOf(this.db, id, snapshot, sha256);
-    const blocking = (await this.problems(c.workspaceId, snapshot, id, keyGate)).filter((p) => p.level === "error");
-    if (blocking.length) refuse(`Release refused: ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${problemWords(blocking[0])})`, blocking, HttpStatus.CONFLICT);
-    // The same review gate as the shared Release page (QA-1, review should 2).
+    // The same review gate as the shared Release page (QA-1, review should 2). G2 (reviewer m2): the cheap refusals come
+    // first, so a draft refused for them runs no answer-key test.
     const gate = await this.releaseGate(id, sha256);
     if (!gate.ok) { await this.audit.log(c.workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: ${gate.why}`); fail(`Release refused: ${gate.why}`, HttpStatus.CONFLICT); }
     // A new shared field this draft uses is approved by a second person first (Screen 02 slice 2, B1).
     const waiting = await unapprovedAdds(this.db, c.workspaceId, itemsOf(snapshot));
     if (waiting.length) fail(`Release refused: ${unapprovedWhy(waiting)}.`, HttpStatus.CONFLICT);
+    // G2 BR-6: the tests run again at release, on this exact draft, before it is judged.
+    await runKeys(this.db, this.audit, actor, c, snapshot, sha256);
+    const keyGate = await keyGateOf(this.db, id, snapshot, sha256);
+    const blocking = (await this.problems(c.workspaceId, snapshot, id, keyGate)).filter((p) => p.level === "error");
+    if (blocking.length) refuse(`Release refused: ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${problemWords(blocking[0])})`, blocking, HttpStatus.CONFLICT);
     const sub = (gate as { sub: ReviewSubmission }).sub;
     const authors = await this.draftAuthors(id, snapshot, c.workspaceId);
     for (const author of authors) {
@@ -971,14 +972,14 @@ export class Studio {
     for (const id of ids) {
       const c = await this.db.combination.findUniqueOrThrow({ where: { id }, include: { program: true } });
       const { snapshot, sha256 } = await buildSnapshot(this.db, workspaceId, id, "draft");
-      await runKeys(this.db, this.audit, actor, c, snapshot, sha256); // G2 BR-6: the tests run again at release
-      const keyGate = await keyGateOf(this.db, id, snapshot, sha256);
-      const blocking = (await this.problems(workspaceId, snapshot, id, keyGate)).filter((p) => p.level === "error");
-      if (blocking.length) refuse(`Release refused: "${c.label}" has ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${problemWords(blocking[0])})`, blocking, HttpStatus.CONFLICT);
       const gate = await this.releaseGate(id, sha256);
       if (!gate.ok) { await this.audit.log(workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: "${c.label}": ${gate.why}`); fail(`Release refused: "${c.label}": ${gate.why}`, HttpStatus.CONFLICT); }
       const waiting = await unapprovedAdds(this.db, workspaceId, itemsOf(snapshot));
       if (waiting.length) fail(`Release refused: "${c.label}": ${unapprovedWhy(waiting)}.`, HttpStatus.CONFLICT);
+      await runKeys(this.db, this.audit, actor, c, snapshot, sha256); // G2 BR-6 (reviewer m2: after the cheap refusals): the tests run again at release
+      const keyGate = await keyGateOf(this.db, id, snapshot, sha256);
+      const blocking = (await this.problems(workspaceId, snapshot, id, keyGate)).filter((p) => p.level === "error");
+      if (blocking.length) refuse(`Release refused: "${c.label}" has ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${problemWords(blocking[0])})`, blocking, HttpStatus.CONFLICT);
       prepared.push({ c, snapshot, sha256, authors: await this.draftAuthors(id, snapshot, workspaceId), sub: (gate as { sub: ReviewSubmission }).sub, keyGate });
     }
     const submitted = prepared.filter((p) => p.sub.submittedBy === actor.id).map((p) => p.c.label);

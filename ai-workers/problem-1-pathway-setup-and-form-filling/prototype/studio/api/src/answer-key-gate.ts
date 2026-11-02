@@ -28,7 +28,12 @@ const failureWords = (lines: unknown): string | null => {
 };
 
 export type Gate = { demo: boolean; judged: boolean; items: ItemVerdict[]; problems: GateProblem[]; evidence: ReturnType<typeof evidenceOf>; /** every key judged (BR-6) */ keys: { key_id: string; version: number; state: string }[] };
-type Input = { combinationId: string; snapshot: Snapshot; sha256: string; released: { snapshot: unknown; sha256: string } | null; submitted: boolean };
+/** `released`: the latest release (any kind; a draft identical to it has nothing to release). `baseline`: the latest
+ *  real release, what "new or changed" is measured against (reviewer m1: a Demo release proves nothing for a real one,
+ *  so maps first released in a demo stay new until a real release carries them). */
+type Input = { combinationId: string; snapshot: Snapshot; sha256: string; released: { snapshot: unknown; sha256: string } | null; baseline: unknown; submitted: boolean };
+/** The latest real release of a list ordered newest first (BR-3: a Demo release is never a real publish). */
+export const realBaseline = (releases: { snapshot: unknown }[]) => releases.find((r) => !isDemoSnapshot(r.snapshot))?.snapshot ?? null;
 
 /** The keys of each combination with their last run judged against this draft (runState: key version, item and inputs
  *  fingerprints), the failing ones with their first failing value. */
@@ -66,7 +71,7 @@ export async function gatesOf(db: Db, rows: Input[]): Promise<Map<string, Gate>>
   for (const r of rows) {
     const demo = demoRelease(r.snapshot);
     if (!states.has(r.combinationId)) { out.set(r.combinationId, { demo, judged: false, items: [], problems: [], evidence: [], keys: [] }); continue; }
-    const items = testableItems(r.snapshot, (r.released?.snapshot ?? null) as Snapshot | null, (form, edition) => !!fieldListOf(r.snapshot, form, edition));
+    const items = testableItems(r.snapshot, (r.baseline ?? null) as Snapshot | null, (form, edition) => !!fieldListOf(r.snapshot, form, edition));
     const keys = states.get(r.combinationId)!, g = answerKeyGate(items, keys, { demo, submitted: r.submitted });
     out.set(r.combinationId, { demo, judged: true, items: g.items, problems: g.problems, evidence: evidenceOf(g.items), keys: keys.map((k) => ({ key_id: k.key_id, version: k.version, state: k.state })) });
   }
@@ -75,11 +80,11 @@ export async function gatesOf(db: Db, rows: Input[]): Promise<Map<string, Gate>>
 
 /** One draft's gate: its latest release and whether it is submitted are read here. */
 export async function gateOf(db: Db, combinationId: string, snapshot: Snapshot, sha256: string): Promise<Gate> {
-  const [rel, sub] = await Promise.all([
-    db.configRelease.findFirst({ where: { combinationId }, orderBy: { version: "desc" }, select: { snapshot: true, sha256: true } }),
+  const [rels, sub] = await Promise.all([
+    db.configRelease.findMany({ where: { combinationId }, orderBy: { version: "desc" }, select: { snapshot: true, sha256: true } }),
     db.reviewSubmission.findFirst({ where: { combinationId }, orderBy: { submittedAt: "desc" }, select: { status: true, draftSha256: true } }),
   ]);
-  return (await gatesOf(db, [{ combinationId, snapshot, sha256, released: rel, submitted: sub?.status === "SUBMITTED" && sub.draftSha256 === sha256 }])).get(combinationId)!;
+  return (await gatesOf(db, [{ combinationId, snapshot, sha256, released: rels[0] ?? null, baseline: realBaseline(rels), submitted: sub?.status === "SUBMITTED" && sub.draftSha256 === sha256 }])).get(combinationId)!;
 }
 
 /** BR-6 (SA-1B-296 r3): every key of the combination runs on this exact draft and its run is stored (who: the person

@@ -29,7 +29,7 @@ import { openNodeKeys, startWhy } from "./lifecycle.ts";
 import { Sources } from "./sources.ts";
 import { Studio } from "./studio.ts";
 import { filingProblems } from "../../engine/filing-modes.ts";
-import { gatesOf, type Gate } from "./answer-key-gate.ts";
+import { gatesOf, realBaseline, type Gate } from "./answer-key-gate.ts";
 
 /** Parses a request body or query with its contract; a mismatch is a 400 Problem Details with field errors. */
 export function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
@@ -131,8 +131,9 @@ export class Programs {
     // G2 (C5.5): the answer-key gate of every draft at once (one keys query), from stored runs only (BR-6).
     const lastSub = new Map<string, (typeof subs)[number]>();
     for (const x of subs) if (!lastSub.has(x.combinationId)) lastSub.set(x.combinationId, x);
+    const relsOf = new Map<string, (typeof releases)[number][]>(); for (const r of releases) (relsOf.get(r.combinationId) ?? relsOf.set(r.combinationId, []).get(r.combinationId)!).push(r);
     const keyGates = combos.length ? await gatesOf(this.db, combos.map((c) => { const d = snaps.get(c.id) as { snapshot: Snapshot; sha256: string }, r = latest.get(c.id), sub = lastSub.get(c.id);
-      return { combinationId: c.id, snapshot: d.snapshot, sha256: d.sha256, released: r ? { snapshot: r.snapshot, sha256: r.sha256 } : null, submitted: sub?.status === "SUBMITTED" && sub.draftSha256 === d.sha256 }; })) : new Map<string, Gate>();
+      return { combinationId: c.id, snapshot: d.snapshot, sha256: d.sha256, released: r ? { snapshot: r.snapshot, sha256: r.sha256 } : null, baseline: realBaseline(relsOf.get(c.id) ?? []), submitted: sub?.status === "SUBMITTED" && sub.draftSha256 === d.sha256 }; })) : new Map<string, Gate>();
     const mapped = new Set(editions.filter((e) => e.maps.length).map((e) => e.sha256));
     const pending = new Map(items.map((i) => [i.runId, i._count]));
     // The date each official file was downloaded (its leading ISO part: a hand fetch adds a note after it).
@@ -230,7 +231,7 @@ export class Programs {
         changes,
         review: { stage: reviewStage(gates.get(c.id)), submittedBy: submittedBy.get(c.id) ?? null, authors: [] },
       };
-      rows.push({ pathway, changes, errors: errors.length, firstError: errors[0] ? `${errors[0].item}: ${errors[0].message}` : null, hasContent, docNames,
+      rows.push({ pathway, changes, errors: errors.length, firstError: errors[0] ? `${errors[0].where === "Tests" ? (errors[0] as { label?: string }).label || errors[0].item : errors[0].item}: ${errors[0].message}` : null, hasContent, docNames,
         setup: setupChecklistOf(input, `${c.id}|${key}`),
         searchText: [...path, ...forms.map((f) => f.code), ...docNames].join(" "),
         leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, filed: filedOf(snapForms), progress, counts: hasContent ? rowCounts(snapshot, participants) : null, status, statusText: retired ? "Retired" : status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],

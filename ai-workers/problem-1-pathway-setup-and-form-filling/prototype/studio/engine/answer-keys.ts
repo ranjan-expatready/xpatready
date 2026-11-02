@@ -182,7 +182,9 @@ export function checkExpected(s: Snapshot, kind: ItemKind, ref: string, family: 
   for (const id of Object.keys(raw)) if (!ids.has(id) || id in Object.prototype) errors.push({ field: `expected.people.${id}`, message: `"${id}" is not a person of the family ${family.label}.` });
   if (!Object.keys(raw).length) errors.push({ field: "expected.people", message: "Give the expected result for at least one person." });
   if (kind === "field_map") {
-    const m = pdfMap(s, ref);
+    // G2 (Devin on #568): checked against the edition the key names when the combination has it (each edition is its
+    // own item); otherwise against the form's first map, which a save then moves the key to (the editor says so first).
+    const m = pdfMap(s, ref, str(b.edition).trim() || null) ?? pdfMap(s, ref);
     if (!m) return { expected: null, errors: [{ field: "item_ref", message: `${ref} has no PDF field map in this combination.` }] };
     const boxes = new Set(m.entries.map((e) => e.data_path));
     const invBox = new Map((inv?.fields ?? []).filter((x) => x.data_path).map((x) => [x.data_path!, x]));
@@ -278,8 +280,8 @@ export type KeyBox = { data_path: string; caption: string; meaning: string; fact
  *  field list; a box the list lacks after, in map order), with its caption, the fact it reads and whose, and the form's
  *  own options for a choice box. It reads the map and the form only, never a run: the key must not copy the product's
  *  output. null: the combination has no PDF map of that form. */
-export function keyBoxes(s: Snapshot, form: string, inv: Inventory): { form: string; edition: string; boxes: KeyBox[]; captions: Record<string, string> } | null {
-  const m = pdfMap(s, form);
+export function keyBoxes(s: Snapshot, form: string, inv: Inventory, edition?: string | null): { form: string; edition: string; boxes: KeyBox[]; captions: Record<string, string> } | null {
+  const m = pdfMap(s, form, edition) ?? (edition ? undefined : pdfMap(s, form));
   if (!m) return null;
   const caption = labelsOf(s, m, inv), meaning = meaningsOf(s);
   const at = new Map(inv.fields.map((f, i) => [f.data_path ?? "", i] as const)), boxOf = new Map(inv.fields.filter((f) => f.data_path).map((f) => [f.data_path!, f] as const));

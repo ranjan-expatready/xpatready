@@ -44,6 +44,13 @@ Built to concept v2 as approved (Q1 error, Q2 new or changed plus every item wit
    * That is consistent with P-240; noted so it is a known path, not a surprise.
 7. **A refused Submit or Approve still stores its runs.** This is intended: the runs are the evidence of what failed. There is one audit line per pass.
 
+8. **Devin on #568:**
+   * Every mapped PDF edition of a form is its own item, and a key counts only for its edition. G4's editor, `checkExpected`, `keyBoxes` and the runner now take the edition.
+   * One limit is left: G4's unique key (family, combination, item) means a second edition of the same form needs a second family. Making the edition part of the key's identity is a migration, so it is a question for the tech lead and is not built here.
+   * The release transaction refuses any change to the judged key set.
+9. **Reviewer m1:** "new or changed" is measured against the latest **real** release. A Demo release never counts as one, so maps first released in a demo stay new until a real release carries them.
+10. **Reviewer m2:** Approve and the shared release run the keys only after their cheap refusals.
+
 ## Checks
 * `check_g2_answer_key_gate.ts` 59/59
 * `check_g2_answer_key_gate_firm.ts` 13/13
