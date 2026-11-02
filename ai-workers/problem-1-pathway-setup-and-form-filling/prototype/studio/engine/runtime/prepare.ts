@@ -1,86 +1,79 @@
-// C6.12 /prepare (M3-B2, runtime lane; r5c BR-1, BR-8, BR-16, BR-18, contract §6): the pure parts of a case's prepare
-// view. formItems: which form each person files (the release's form lines × the case's answers, as Preview and the
-// Forms tab work them out), with the combination line's channel and signature as the item's default. prepareView: the
-// stored filings, groups and items with the derived fee lines, in the M3-CONTRACT shape. No database, no clock; the API
-// (api/src/case-prepare.ts) stores the rows so each keeps its id. Tests: tests/check_vv_prepare.ts.
-import type { Channel, Signature } from "../../contracts/forms.ts";
-import type { CaseFilings } from "../../contracts/runtime.ts";
-import { allowedChannels, lineOf, type AcceptRecord } from "../channels.ts";
-import { render, type Known, type Person } from "../render.ts";
-import type { Snapshot } from "../snapshot.ts";
-import type { Participant } from "./case.ts";
+// C6.12, C11.6 (M3-B, runtime lane; M3 case view r5c §6 "items", BR-8, BR-10; P-122, P-137, P-143): the items of a
+// case's "Prepare application" view and the rule for a form's channel on the case. Pure: no database, no clock (today is
+// passed in); api/src/case-prepare.ts stores the items so their ids and the officer's channel stay.
+//   * Items per filing, one kind each: a form the release's line gives the person (its "who" and minimum age, render.ts),
+//     a document the person's checklist needs (C6.4), and an IRCC step (biometrics, for each person who gives them,
+//     after filing: VV-R15, VV-R17).
+//   * A form item starts on its combination line's channel; the case officer may pick another only inside what the Form
+//     library records IRCC accepts for that form on the combination's IRCC account (engine/channels.ts allowedChannels),
+//     and Paper only with a written accommodation reason when the combination files through an IRCC account (VV-R02:
+//     "You must apply online", FQ-3). The portal is the combination's and never changes on a case.
+//   * Readiness of a filing is C7.6's (engine/runtime/readiness.ts, M3-A3): this file never decides it.
+// tests/check_vv_prepare.ts.
+import { createHash } from "node:crypto";
+import { CHANNEL_WORDS, CHANNELS, SIGNATURE_FITS, signatureFits, type Channel, type Signature } from "../../contracts/forms.ts";
+import { allowedChannels, lineOf, notAcceptedWords, notNeededWords, type AcceptRecord } from "../channels.ts";
+import { ageCheck, type FeeRule } from "./filings.ts";
 
-export type FormNeed = { form: string; subject: string; applies: true | "cannot_tell"; why: string; channel: Channel; signature: Signature };
+export type ItemKind = "form" | "document" | "step";
+/** What an item is, before it is stored: `key` is the form number, the document type key or the step key. */
+export type WantedItem = { subject: string; kind: ItemKind; key: string; label: string; applies: true | "cannot_tell"; missing?: string[]; document_type?: string; neededBefore?: "after_filing" };
+type FormRow = { form: string; person: string; form_kind?: string; applies: boolean | "cannot_tell"; missing?: string[] };
+type DocLine = { document: { key: string; name: string }; document_type: string; label: string };
 
-/** The forms each applying person files: a form line that applies to them (or cannot tell yet: it stays on the list,
- *  waiting for the answer). A case-level form ("case") is the principal's. Not-applying people file nothing (C6.12). */
-export function formItems(s: Snapshot, people: Participant[], known: Known, today: Date): FormNeed[] {
-  const persons: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Person["role"], label: p.label, applies: p.applies }));
-  const principal = persons.find((p) => p.role === "principal")?.id;
-  const applying = new Set(persons.filter((p) => p.applies).map((p) => p.id));
-  const lines = new Map((s.forms as { form_number: string; channel?: string; signature?: string }[]).map((f) => [f.form_number, lineOf(f)]));
-  const out = new Map<string, FormNeed>();
-  for (const f of render(s, persons, known, { today }).forms as { form: string; person: string; applies: boolean | "cannot_tell"; why: string; form_kind: string }[]) {
-    const subject = f.person === "case" ? principal : f.person;
-    if (!subject || !applying.has(subject) || f.applies === false || f.form_kind === "document") continue;
-    const line = lines.get(f.form) ?? lineOf({});
-    const k = `${f.form}|${subject}`;
-    if (!out.has(k) || f.applies === true) out.set(k, { form: f.form, subject, applies: f.applies, why: f.why, channel: line.channel, signature: line.signature });
+/** BIOMETRICS: the IRCC step a person who gives biometrics has, after filing (VV-R17: "Wait for your biometrics
+ *  instruction letter"). */
+export const BIOMETRICS_STEP = { key: "biometrics", label: "Give biometrics", after: "IRCC's biometrics instruction letter comes after you apply (VV-R17): book and give them then." } as const;
+
+/** The items each filer should have now, from the release's forms per person (render), each person's needed documents
+ *  (the checklist's `lines`) and the biometrics rule with each person's age. A form that does not apply is left out; one
+ *  that cannot be told yet (its condition or the age waits for an answer) is kept, so it says what it waits for. */
+export function wantedItems(filers: string[], forms: FormRow[], docs: Map<string, DocLine[]>, biometrics: FeeRule | undefined, ages: Map<string, number | null>): WantedItem[] {
+  const out: WantedItem[] = [];
+  for (const subject of filers) {
+    for (const f of forms.filter((x) => x.person === subject && (x.form_kind ?? "data_form") === "data_form" && x.applies !== false))
+      out.push({ subject, kind: "form", key: f.form, label: f.form, applies: f.applies === true ? true : "cannot_tell", ...(f.applies === "cannot_tell" ? { missing: f.missing ?? [] } : {}) });
+    for (const d of docs.get(subject) ?? []) if (!out.some((x) => x.subject === subject && x.kind === "document" && x.key === d.document.key))
+      out.push({ subject, kind: "document", key: d.document.key, label: d.label, document_type: d.document_type, applies: true });
+    const bio = biometrics ? ageCheck(biometrics, ages.get(subject)) : { pays: false as const, why: "" };
+    if ("pays" in bio && bio.pays) out.push({ subject, kind: "step", key: BIOMETRICS_STEP.key, label: BIOMETRICS_STEP.label, applies: true, neededBefore: "after_filing" });
+    // Review m2: with no date of birth yet the step is kept, waiting for it, so the person is never silently left out.
+    else if ("waits" in bio) out.push({ subject, kind: "step", key: BIOMETRICS_STEP.key, label: BIOMETRICS_STEP.label, applies: "cannot_tell", missing: ["person.date_of_birth"], neededBefore: "after_filing" });
   }
-  return [...out.values()].sort((a, b) => a.subject.localeCompare(b.subject) || a.form.localeCompare(b.form));
+  return out;
 }
 
-export type StoredFiling = { id: string; subjectId: string; submissionGroupId: string; combinationKey: string; mode: string; status: string; applicationNumber: string | null; active: boolean;
-  applicants: { subjectId: string; role: string; mode: string }[] };
-export type StoredGroup = { id: string; kind: string };
-export type StoredItem = { id: string; filingId: string; kind: string; formKey: string; subjectId: string; channel: Channel; channelReason: string | null; active: boolean; version: number };
-
-export type PrepareItem = { id: string; kind: "form"; form: string; filing: string; subject: string; channel: Channel; channel_reason: string | null; accepts: Channel[]; accepts_basis: AcceptRecord | null;
-  signature: Signature; state: "to_do" | "waiting"; reason: string; version: number };
-export type PrepareFee = { filing: string; subject: string; payer: string; line: string; label: string; amount: number; amount_cents: number; exempt: boolean; reason: string; source: string };
-export type Prepare = {
-  derived: true; combination: string; portal: string | null; portal_read_only: true; version: string;
-  stage1: never[]; readiness: never[];
-  filings: { id: string; combination: string; label: string; applicants: { subject: string; role: string; mode: string }[]; group: string; status: string; number: string | null }[];
-  groups: { id: string; kind: string; filings: string[]; splittable: boolean; label: string; why: string; total_cents: number }[];
-  items: PrepareItem[]; fees: PrepareFee[]; not_filing: { subject: string; label: string; role: string; why: string }[]; basis: string; not_built: string[];
-};
-
-/** The prepare view from the stored rows and the derived fees (deriveFilings keys its lines by person: `filing-<subject>`). */
-export function prepareView(o: { derived: Extract<CaseFilings, { derived: true }>; portal: string | null; filings: StoredFiling[]; groups: StoredGroup[]; items: StoredItem[]; needs: FormNeed[];
-  accepts: (form: string) => AcceptRecord[] | undefined; labels: Map<string, string> }): Prepare {
-  const active = o.filings.filter((f) => f.active), bySubject = new Map(active.map((f) => [f.subjectId, f]));
-  const idOf = (derivedId: string) => bySubject.get(derivedId.replace(/^filing-/, ""))?.id ?? derivedId;
-  const need = new Map(o.needs.map((n) => [`${n.form}|${n.subject}`, n]));
-  const label = (s: string) => o.labels.get(s) ?? s;
-  const items: PrepareItem[] = o.items.filter((i) => i.active && active.some((f) => f.id === i.filingId)).map((i) => {
-    const n = need.get(`${i.formKey}|${i.subjectId}`);
-    const allowed = allowedChannels(o.accepts(i.formKey), o.portal);
-    // The signature follows the item's channel (edition × channel, P-143): the line's when the channel is the line's.
-    const sig = n && n.channel === i.channel ? n.signature : lineOf({ channel: i.channel }).signature;
-    return { id: i.id, kind: "form" as const, form: i.formKey, filing: i.filingId, subject: i.subjectId, channel: i.channel, channel_reason: i.channelReason, accepts: allowed.channels, accepts_basis: allowed.record,
-      signature: sig, state: (n?.applies === true ? "to_do" : "waiting") as PrepareItem["state"], reason: n ? (n.applies === true ? `${i.formKey} for ${label(i.subjectId)}: ${n.why}.` : `${i.formKey} for ${label(i.subjectId)} waits for an answer: ${n.why}.`) : `${i.formKey}.`, version: i.version };
-  }).sort((a, b) => a.filing.localeCompare(b.filing) || a.form.localeCompare(b.form));
-  const fees: PrepareFee[] = o.derived.fees.map((f) => {
-    const src = o.derived.groups[0]?.totals.find((t) => t.line === f.line)?.source;
-    return { filing: idOf(f.filing), subject: f.filing.replace(/^filing-/, ""), payer: f.payer, line: f.label, label: f.label, amount: f.amount_cents / 100, amount_cents: f.amount_cents, exempt: f.exempt, reason: f.why,
-      source: src ? `${src.page}, ${src.url} (read ${src.read}): "${src.quote}". ${src.checked}` : "Sample" };
-  });
-  const filings = active.map((f) => ({ id: f.id, combination: f.combinationKey, label: o.derived.filings.find((d) => d.applicants[0].subject === f.subjectId)?.label ?? f.id,
-    applicants: f.applicants.map((a) => ({ subject: a.subjectId, role: a.role, mode: f.mode })), group: f.submissionGroupId, status: f.status, number: f.applicationNumber }));
-  const groups = o.groups.map((g) => {
-    const ids = filings.filter((f) => f.group === g.id).map((f) => f.id), d = o.derived.groups[0];
-    return { id: g.id, kind: g.kind, filings: ids, splittable: ids.length > 1, label: d?.label ?? "", why: d?.why ?? "", total_cents: d?.total_cents ?? 0 };
-  }).filter((g) => g.filings.length);
-  const body = { filings, groups, items: items.map((i) => [i.id, i.channel, i.version, i.state]), fees: fees.map((f) => [f.filing, f.line, f.amount_cents, f.exempt]) };
-  return { derived: true, combination: o.derived.combination, portal: o.portal, portal_read_only: true, version: hash(JSON.stringify(body)), stage1: [], readiness: [],
-    filings, groups, items, fees, not_filing: o.derived.not_filing, basis: o.derived.basis,
-    not_built: ["splitting a group (BR-16)", "biometrics age exemptions (VV-R15), and a biometrics line waiting for a date of birth (G15)", "document and step items (C6.4 storage, C7.7)", "stage 1 and readiness (C7.6)", "filing modes from configuration (M3-0)"] };
+/** A form line as the release holds it (snapshot.forms). */
+export type FormLine = { form_number: string; channel?: string; signature?: string; signed_by?: string };
+/** A form item's channel today (the officer's choice, else the line's), the channels IRCC accepts for it on the account,
+ *  and the signature that follows edition × channel: the line's when it fits the channel, else the channel's first. */
+export function channelOf(line: FormLine | undefined, records: AcceptRecord[] | undefined, account: string | null | undefined, chosen: string | null | undefined): { channel: Channel; line_channel: Channel; accepts: Channel[]; accepts_basis: AcceptRecord | null; signature: Signature } {
+  const l = lineOf(line ?? {});
+  const channel = (chosen as Channel | null | undefined) ?? l.channel;
+  const { channels, record } = allowedChannels(records, account);
+  return { channel, line_channel: l.channel, accepts: channels, accepts_basis: record, signature: signatureFits(channel, l.signature) ? l.signature : SIGNATURE_FITS[channel][0] };
 }
 
-/** A short, stable fingerprint (FNV-1a, 64 bits as hex): the view's version for "changed since you looked" (409). */
-function hash(s: string): string {
-  let h = 0xcbf29ce484222325n;
-  for (let i = 0; i < s.length; i++) { h ^= BigInt(s.charCodeAt(i)); h = (h * 0x100000001b3n) & 0xffffffffffffffffn; }
-  return h.toString(16).padStart(16, "0");
+export const CHANNEL_CHOICES = `Choose ${CHANNELS.map((c) => CHANNEL_WORDS[c]).join(", ").replace(/, ([^,]+)$/, " or $1")}.`;
+/** C11.6: whether a form item may move to `want`: 400 for an unknown channel or Paper without a reason where an IRCC
+ *  account files online, 422 outside what IRCC accepts (IRCC's own line quoted when the record has one). */
+export function channelChange(form: string, want: unknown, reason: string | null | undefined, records: AcceptRecord[] | undefined, account: string | null | undefined): { ok: true; channel: Channel } | { ok: false; status: 400 | 422; field: string; detail: string } {
+  if (typeof want !== "string") return { ok: false, status: 400, field: "channel", detail: `Send one way to file, as text. ${CHANNEL_CHOICES}` };
+  if (!(CHANNELS as readonly string[]).includes(want)) return { ok: false, status: 400, field: "channel", detail: `"${want.slice(0, 20)}" is not a way to file. ${CHANNEL_CHOICES}` };
+  const channel = want as Channel;
+  const { channels, record } = allowedChannels(records, account);
+  if (channel === "NOT_NEEDED" && !channels.includes("NOT_NEEDED")) return { ok: false, status: 422, field: "channel", detail: notNeededWords(form, account) };
+  if (!channels.includes(channel)) {
+    const quote = record?.quote ? ` IRCC's line: "${record.quote}"${record.source_url ? ` (${record.source_url})` : ""}.` : "";
+    return { ok: false, status: 422, field: "channel", detail: `${notAcceptedWords(form, channel, record ?? { account: account ?? "ANY", channels, basis: "", quote: null })}${quote}` };
+  }
+  // VV-R02 ("You must apply online"; paper only if you cannot), FQ-3: Paper through an IRCC account is an accommodation.
+  if (channel === "PAPER" && account && account !== "PAPER" && !(reason ?? "").trim()) return { ok: false, status: 400, field: "reason", detail: `Paper is for a person who cannot apply online (an accommodation, IRCC: "You must apply online"). Give the reason for ${form} on paper.` };
+  return { ok: true, channel };
+}
+
+/** The view's version: changes whenever a group, a filing's group or an item's channel changes, so a write made from an
+ *  older read is refused (409, Reload). */
+export function prepareVersion(groups: { id: string; filings: string[] }[], items: { id: string; channel?: string | null; version: number }[]): string {
+  return createHash("sha256").update(JSON.stringify([groups.map((g) => [g.id, [...g.filings].sort()] as const).sort((a, b) => a[0].localeCompare(b[0])), items.map((i) => [i.id, i.channel ?? null, i.version]).sort()])).digest("hex").slice(0, 16);
 }
