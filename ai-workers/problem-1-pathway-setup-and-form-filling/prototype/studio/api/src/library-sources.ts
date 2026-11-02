@@ -6,8 +6,9 @@
 import { Body, Controller, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Query } from "@nestjs/common";
 import { z } from "zod";
 import { normalizeLabel, problemFromZod } from "../../contracts/programs.ts";
-import { newestEdition } from "../../engine/programs.ts";
+import { current, fieldsOf } from "../../engine/where-used.ts";
 import { actorOf, Audit, Db, need, readerOf, revise, strip, Workspace, type Actor } from "./core.ts";
+import { itemCombinations, mappedBoxes } from "./where-used.ts";
 
 type H = string | undefined;
 const problem = (status: number, title: string, detail: string) =>
@@ -41,15 +42,10 @@ const releaseLine = (ref: string | null | undefined): SourceLine => {
   const [what, runs] = ref.split("; proposed by ");
   return { kind: "release", text: `From ${what}`, quote: runs ? `proposed by AI runs ${runs}` : null };
 };
-/** PR #96 finding (a): only each row's newest version counts (a replaced form mapping or checklist line is no longer a
- *  source or a use), and only while that version is a draft or published (a retired newest one hides the older ones). */
 const LIVE = ["PUBLISHED", "DRAFT", "RETIRED"] as const;
-export const current = <T extends { version: number; status: string }>(rows: T[], idOf: (r: T) => string): T[] => {
-  const top = new Map<string, T>(); for (const r of rows) { const k = idOf(r), t = top.get(k); if (!t || r.version > t.version) top.set(k, r); }
-  return [...top.values()].filter((r) => r.status === "PUBLISHED" || r.status === "DRAFT");
-};
-/** The shared fields a condition reads (the engine's own reading, engine/validate.ts). */
-const fieldsOf = (c: unknown) => (c ? [...JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]) : []);
+/** PR #96 finding (a) (newest version only, while draft or published) and the fields a condition reads: one copy, in the
+ *  where-used service (SH2, engine/where-used.ts). */
+export { current };
 
 @Injectable()
 export class LibrarySources {
@@ -61,7 +57,7 @@ export class LibrarySources {
     // PR #96 finding (c): two lines with the same words but different quotes (two lines of one checklist) both stay.
     const add = (key: string, l: SourceLine) => { const a = out.get(key) ?? []; if (!a.some((x) => x.text === l.text && (x.quote ?? null) === (l.quote ?? null))) a.push(l); out.set(key, a); };
     if (kind === "field" || kind === "answer_list" || kind === "section") {
-      const boxes = await this.mappedBoxes(workspaceId);
+      const boxes = await mappedBoxes(this.db, workspaceId);
       const fields = await this.db.canonicalField.findMany({ where: { workspaceId }, orderBy: { version: "desc" } });
       const latest = new Map<string, (typeof fields)[number]>(); for (const f of fields) if (!latest.has(f.canonicalFieldKey)) latest.set(f.canonicalFieldKey, f);
       if (kind === "field") {
@@ -88,13 +84,6 @@ export class LibrarySources {
     return out;
   }
 
-  /** The current mapped form fields (PR #96 finding (a): the newest version per edition and data path, so a mapping
-   *  replaced by a newer one, or by one that maps nothing, no longer counts). */
-  private async mappedBoxes(workspaceId: string) {
-    const rows = await this.db.formFieldMap.findMany({ where: { workspaceId, status: { in: [...LIVE] } }, include: { edition: true }, orderBy: [{ formEditionId: "asc" }, { dataPath: "asc" }] });
-    return current(rows, (b) => `${b.formEditionId}|${b.dataPath}`).filter((b) => b.outcome === "mapped" && b.canonicalFieldKey);
-  }
-
   /** Combinations each item is used in, by label (C3.13 where used). */
   async usedIn(kind: Kind, workspaceId: string): Promise<Map<string, string[]>> {
     const label = new Map((await this.db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true } })).map((c) => [c.id, c.label]));
@@ -104,43 +93,7 @@ export class LibrarySources {
 
   /** C11.9: the same read by combination id (the lifecycle guard links each use and knows a retired combination). */
   async usedInIds(kind: Kind, workspaceId: string): Promise<Map<string, Set<string>>> {
-    const out = new Map<string, Set<string>>();
-    const add = (key: string, combinationId: string) => { const s = out.get(key) ?? new Set(); s.add(combinationId); out.set(key, s); };
-    if (kind === "section") for (const s of await this.db.sqrSectionSelection.findMany({ where: { workspaceId } })) add(s.sectionKey, s.combinationId);
-    else if (kind === "document_type") for (const r of current(await this.db.documentRequirement.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }), (r) => `${r.combinationId}|${r.lineageKey}`)) add(r.documentTypeKey, r.combinationId);
-    else {
-      // A field is used where a combination's form reads it, and (PR #96 finding (b)) where its rules, document lines,
-      // form conditions and checks read it, or its questionnaire asks it (a question in a section the combination
-      // selects, or that question's condition). An answer list is used where one of its fields is.
-      const uses: [string, string][] = [];
-      const [boxes, lines, rules, docs, checks, questions, picks] = await Promise.all([
-        this.mappedBoxes(workspaceId),
-        this.db.combinationForm.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }),
-        this.db.predicate.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }),
-        this.db.documentRequirement.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }),
-        this.db.check.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }),
-        this.db.sectionQuestion.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }),
-        this.db.sqrSectionSelection.findMany({ where: { workspaceId } }),
-      ]);
-      const formLines = current(lines, (l) => `${l.combinationId}|${l.lineageKey}`);
-      const combosOf = new Map<string, string[]>(); for (const l of formLines) combosOf.set(l.govFormDefId, [...(combosOf.get(l.govFormDefId) ?? []), l.combinationId]);
-      // PR #108 minor (a): a combination fills its form's current edition (per channel: the newest one mapped; a newer
-      // edition not mapped yet leaves the older in use), so a field mapped only on a superseded edition is not used there.
-      const chan = (e: (typeof boxes)[number]["edition"]) => `${e.govFormDefId}|${e.channel}`;
-      const editions = [...new Map(boxes.map((b) => [b.edition.id, b.edition])).values()];
-      const currentOf = new Map<string, string>(); for (const k of new Set(editions.map(chan))) currentOf.set(k, newestEdition(editions.filter((e) => chan(e) === k))!.id);
-      for (const b of boxes) if (currentOf.get(chan(b.edition)) === b.edition.id) for (const c of combosOf.get(b.edition.govFormDefId) ?? []) uses.push([b.canonicalFieldKey!, c]);
-      for (const l of formLines) for (const f of fieldsOf(l.predicateJson)) uses.push([f, l.combinationId]);
-      for (const r of current(rules, (r) => `${r.combinationId}|${r.predicateKey}`)) for (const f of fieldsOf(r.predicateJson)) uses.push([f, r.combinationId]);
-      for (const d of current(docs, (d) => `${d.combinationId}|${d.lineageKey}`)) for (const f of fieldsOf(d.predicateJson)) uses.push([f, d.combinationId]);
-      for (const k of current(checks, (k) => `${k.combinationId}|${k.checkKey}`)) for (const f of fieldsOf(k.predicateJson)) uses.push([f, k.combinationId]);
-      const combosOfSection = new Map<string, string[]>(); for (const p of picks) combosOfSection.set(p.sectionKey, [...(combosOfSection.get(p.sectionKey) ?? []), p.combinationId]);
-      for (const q of current(questions, (q) => q.lineageKey)) for (const f of [q.canonicalFieldKey, ...fieldsOf(q.predicateJson)]) for (const c of combosOfSection.get(q.sectionKey) ?? []) uses.push([f, c]);
-      const listOf = new Map<string, string | null>();
-      if (kind === "answer_list") for (const f of await this.db.canonicalField.findMany({ where: { workspaceId }, orderBy: { version: "asc" } })) listOf.set(f.canonicalFieldKey, f.answerListKey);
-      for (const [f, c] of uses) { const key = kind === "field" ? f : listOf.get(f); if (key) add(key, c); }
-    }
-    return out;
+    return itemCombinations(this.db, workspaceId, kind); // SH2: the one where-used service (P-258)
   }
 
   /** C3.13 (Screen 04 BR-4, P-37): with a combination chosen, each library item it uses is "Reused" (it was in the library
