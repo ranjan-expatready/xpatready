@@ -3,13 +3,13 @@
 // stored the first time, so each keeps its id across reads, people who stop applying and forms that stop applying; fee
 // lines add up to what is paid; who may read it; 409 and "not derived". Each rule has a passing and a failing case. The
 // check releases the Visitor visa itself (setup_visitor_visa.ts) when its copy has none. No model call (US$0).
-//   zsh studio/tools/isolated.sh runtime_vps 4465 start && tsx studio/tests/check_vv_prepare_store_api.ts 4465 xr_studio_runtime_vps
+//   zsh studio/tools/isolated.sh runtime_vps 4432 start && tsx studio/tests/check_vv_prepare_store_api.ts 4432 xr_studio_runtime_vps
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { snapshotHash } from "../engine/snapshot.ts";
 import { client, recorder } from "./runtime/api.ts";
 
-const PORT = Number(process.argv[2] ?? 4465), DB = process.argv[3] ?? "xr_studio_runtime_vps";
+const PORT = Number(process.argv[2] ?? 4432), DB = process.argv[3] ?? "xr_studio_runtime_vps";
 const { call, sql } = client(PORT, DB);
 const { ok, summary } = recorder();
 const OFFICER = "user-O", CLIENT = "user-P", AUTHOR = "user-A";
