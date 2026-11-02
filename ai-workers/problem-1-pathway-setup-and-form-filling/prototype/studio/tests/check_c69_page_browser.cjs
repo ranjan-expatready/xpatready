@@ -60,6 +60,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.goto(BASE); await as("user-O");
   await p.goto(`${BASE}/cases/${c.id}`); await settle();
   const card = p.locator("section[aria-labelledby=eligibility]");
+  await card.locator("li").first().waitFor({ timeout: 15000 }); // the card reads its own list after the case page
   step("C6.9 page pass: the case page shows the card \"Eligibility (staff only)\" with one line per traveller and the SI-1 chip", (await card.count()) === 1 && /Sample Client A[\s\S]*Not run[\s\S]*Sample Spouse A/.test(await card.innerText()) && (await card.locator('[data-stand-in="SI-1"]').count()) === 1);
   await tabTo(/^Open eligibility/); await p.keyboard.press("Enter"); await settle();
   step("C6.9 page pass: Open eligibility (keyboard) opens /cases/:id/eligibility with the trail Cases › reference › Eligibility", p.url().endsWith(`/cases/${c.id}/eligibility`) && /Cases\s*›\s*C69P-[\s\S]*›\s*Eligibility/.test(await p.locator("nav[aria-label=Path]").innerText()));

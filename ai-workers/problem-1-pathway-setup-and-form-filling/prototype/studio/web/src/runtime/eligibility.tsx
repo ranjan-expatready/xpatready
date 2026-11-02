@@ -21,7 +21,7 @@ type Override = { id: string; programKey: string; fromOutcome: string; label: st
 export type Assessment = {
   id: string; person: string; releaseId: string; packVersion: number; rulesAsOfByProgram: Record<string, string>; disclaimerText: string;
   createdBy: string; createdAt: string; runType: "MANUAL" | "RERUN"; reason: string | null; results: Result[];
-  out_of_date: boolean; changed: { fact: string; about: string; was: unknown; now: unknown }[]; release_changed: boolean;
+  out_of_date: boolean; changed: { fact: string; about: string; was: unknown; now: unknown }[]; release_changed: boolean; not_travelling?: boolean;
   overrides: Override[]; reviewedBy: string | null; reviewedAt: string | null; reviewNote: string | null; reviewStamp?: { name?: string; stamp?: "Reviewed" | "Seen"; duty?: string };
 };
 type List = { stand_in: string; stand_in_words: string; assessments: Assessment[] };
@@ -73,7 +73,7 @@ export function EligibilityCard({ caseId, people }: { caseId: string; people: Ca
         <span className="flex-1" />
         <Link to={`/cases/${caseId}/eligibility`} className="text-[13px] font-medium text-text-link hover:underline">Open eligibility</Link>
       </header>
-      {q.isLoading ? <div className="px-4 py-3"><Skeleton className="h-5 w-1/2" /></div> : q.isError ? <p className="px-4 py-3 text-sm text-text-danger">{(q.error as Error).message}</p> : (
+      {q.isLoading ? <div className="px-4 py-3" aria-busy="true"><Skeleton className="h-5 w-1/2" /></div> : q.isError ? <p className="px-4 py-3 text-sm text-text-danger">{(q.error as Error).message}</p> : (
         <ul className="divide-y divide-border">
           {travellers.map((p) => {
             const a = latestOf(q.data?.assessments, p.subject_id), o = outcomeWords(a?.results[0]);
@@ -169,7 +169,7 @@ function Result({ caseId, a, r, runs, open }: { caseId: string; a: Assessment; r
     <>
       {a.out_of_date ? (
         <div role="status" className="rounded-lg border border-warn bg-warn/15 px-3 py-2 text-sm text-text-warn">
-          <p className="font-medium">Out of date: {a.changed.length ? a.changed.map((x) => `${factWords(x.fact)} changed from ${shown(x.was)} to ${shown(x.now)}`).join("; ") : "the case now uses another release"}, after this check.</p>
+          <p className="font-medium">Out of date: {[...a.changed.map((x) => `${factWords(x.fact)} changed from ${shown(x.was)} to ${shown(x.now)}`), ...(a.not_travelling ? ["this person no longer travels on this application"] : []), ...(a.release_changed ? ["the case now uses another release"] : [])].join("; ")}, after this check.</p>
           <p>Run again to see today's result. This result stays readable.</p>
         </div>
       ) : null}
