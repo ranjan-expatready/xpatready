@@ -176,6 +176,10 @@ ok("C5.4 BR-3 pass (review MJ-R2 on #587): digits written with thousands groups 
 ok("C5.4 BR-3 fail (review MJ-R2 on #587): a grouped number never states its neighbour (1469 or 690 in \"$14,690\", 14690 in \"14,6900\", 14 in \"14 690\", 1085 in \"$1,085.50\", 1000 in \"10,00\")",
   !statesInDigits("The fee is $14,690", "1469") && !statesInDigits("The fee is $14,690", "690") && !statesInDigits("The fee is 14,6900", "14690") && !statesInDigits("14 690 $", "14") && !statesInDigits("14 690 $", "690")
   && !statesInDigits("Fee: $1,085.50", "1085") && !statesInDigits("10,00", "1000") && !statesInDigits("1,0000", "1000") && !statesInDigits("$14,690", "4690"));
+ok("C5.4 BR-3 (Devin round 4 on #587): a negative threshold keeps its edges: -10 is stated by \"-10\" and \"\u221210\", never by \"-100\", \"-10.5\" or a bare \"10\"; any other value shape is matched whole (1e-7 never in 1e-70)",
+  statesInDigits("a threshold of -10 points", "-10") && statesInDigits("a threshold of \u221210 points", "-10") && statesInDigits("at -1,000", "-1000")
+  && !statesInDigits("The threshold is -100", "-10") && !statesInDigits("The threshold is -10.5", "-10") && !statesInDigits("The threshold is 10", "-10")
+  && statesInDigits("x is 1e-7 here", "1e-7") && !statesInDigits("x is 1e-70 here", "1e-7"));
 ok("C5.4 BR-3 pass (Devin on #587): digits, English words and IRCC's date forms state the number", statesValue("at least 18 years of age", "18") && statesValue("valid for five years", "5") && statesValue("within ninety days", "90") && statesValue("Twenty-one days", "21") && statesValue("on or after November 1, 2024", "2024-11-01"));
 ok("C5.4 BR-3 fail (Devin on #587): words for another number never state this one (21 for 18; 180 for 18; \"fifty\" for 5)", !statesValue("Applicants must be at least 21 years old", "18") && !statesValue("within 180 days", "18") && !statesValue("fifty days", "5") && !statesValue("", "18")
   // Devin on #587 (second round): never part of a bigger written number
