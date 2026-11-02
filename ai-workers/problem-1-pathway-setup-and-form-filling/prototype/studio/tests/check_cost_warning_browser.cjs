@@ -1,12 +1,15 @@
 // P-179 (C11.8): the shared cost warning walked in a real browser on the field-map start (combination › Next step "Draft
 // setup" › Draft again › Start). Over the US$120 cap: the warning shows expected, worst case, spend so far against the cap
 // and the limit, before anything starts; Cancel starts nothing and records nothing (US$0); Continue records the author's
-// override and starts the run with it; past US$132 there is no Continue. The check starts its own isolated copy with no
-// live AI switch and the queue held, on a scratch ledger of its own: no AI call, no launcher, US$0. Screenshots at 1440,
-// 1024 and 390 px into product/screens/W1-ai-drafting/screenshots/p179/; axe (WCAG 2.2 AA) on the warning.
-// C11.8 (P-175 one door rule): on a copy without the live switch Draft setup offers no live start that would call the
-// model, so the warning walk below needs a copy that reports live on with the stand-in launcher (GET /session → ai); on
-// this check's own copy (no switch) it checks the live-off panel instead and prints SKIP for the walk.
+// override and starts the run with it; past US$132 there is no Continue. The check starts its own isolated copy with the
+// queue held, on a scratch ledger of its own. Screenshots at 1440, 1024 and 390 px into
+// product/screens/W1-ai-drafting/screenshots/p179/; axe (WCAG 2.2 AA) on the warning.
+// C11.8 (P-175 one door rule; review M1; P-192 pairing approved by the tech lead for this check, 2 Nov), in two phases on
+// the same copy: (1) no live switch: Draft setup and the Forms tab's Draft with AI say live AI is off, offer Saved, and
+// start nothing; (2) the copy restarted with STUDIO_AI_LIVE=approved paired with STUDIO_FAKE_LAUNCHER (the test fixture),
+// STUDIO_HOLD_QUEUE=1 and the scratch ledger: the warning walk, its live starts queued and held, never sent; nothing can
+// reach a model; US$0. Guard: phase 2 aborts before any start unless the copy reports live on with the stand-in launcher
+// (GET /session → ai). Never on a shared copy or the demo.
 //   node studio/tests/check_cost_warning_browser.cjs [port=4456] [name=forms_cw]
 const path = require("node:path"); const fs = require("node:fs"); const os = require("node:os"); const { execFileSync } = require("node:child_process");
 const { stepsBeforeForms } = require("./fixtures/steps-before-forms.cjs");
@@ -18,13 +21,16 @@ const ROOT = path.resolve(__dirname, "..", "..", "..");
 const SHOTS = path.join(ROOT, "product", "screens", "W1-ai-drafting", "screenshots", "p179"); fs.mkdirSync(SHOTS, { recursive: true });
 const SCRATCH = fs.mkdtempSync(path.join(os.tmpdir(), "p2-ledger-p179b-")), LEDGER = path.join(SCRATCH, "spend.jsonl");
 const ISOLATED = path.join(__dirname, "..", "tools", "isolated.sh");
-execFileSync("zsh", [ISOLATED, NAME, String(PORT), "start", `P2_LEDGER_DIR=${SCRATCH}`, "STUDIO_HOLD_QUEUE=1"], { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, STUDIO_AI_LIVE: "" } });
+// P-192 guard, part 1: the live switch is only ever passed together with the fake launcher (this fixture, absolute path).
+const FAKE = path.join(__dirname, "fixtures", "fake-launch.mjs");
+if (!fs.existsSync(FAKE)) { console.log(`FAIL  guard: the fake launcher ${FAKE} is missing; the live switch is never set without it`); fs.rmSync(SCRATCH, { recursive: true, force: true }); process.exit(1); }
+const NO_SWITCH = { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, STUDIO_AI_LIVE: "", STUDIO_FAKE_LAUNCHER: "" } };
+execFileSync("zsh", [ISOLATED, NAME, String(PORT), "start", `P2_LEDGER_DIR=${SCRATCH}`, "STUDIO_HOLD_QUEUE=1"], NO_SWITCH);
 const stop = () => { try { execFileSync("zsh", [ISOLATED, NAME, String(PORT), "stop"], { stdio: "ignore" }); } catch { /* already stopped */ } fs.rmSync(SCRATCH, { recursive: true, force: true }); };
 const sql = (q) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 const lines = () => (fs.existsSync(LEDGER) ? fs.readFileSync(LEDGER, "utf8") : "").split("\n").filter(Boolean).map((l) => JSON.parse(l));
 let n = 0; const seed = (usd) => fs.appendFileSync(LEDGER, JSON.stringify({ type: "reserve", id: `seed-p179-${++n}`, run_id: `seed-p179-${n}`, attempt: 1, worst_usd: usd, caller: "check_cost_warning_browser seed", at: "2026-10-20T00:00:00.000Z" }) + "\n");
-let fail = 0, pass = 0, skipped = 0;
-const skip = (name) => { skipped++; console.log(`SKIP  ${name} — needs a copy that reports live on with the stand-in launcher (C11.8)`); };
+let fail = 0, pass = 0;
 const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${!ok && detail !== undefined ? ` — ${String(detail).slice(0, 260)}` : ""}`); };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -58,8 +64,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     };
     const warning = p.locator("[data-cost-warning]");
     const ai = (await api("/session")).body?.ai;
-    const STANDIN = ai?.live === true && ai?.launcher === "stand-in";
-    if (!STANDIN) {
+    { // Phase 1: this copy has no live switch.
       // C11.8 (P-175, J2 step 10): live AI off: Draft setup says so and what to use instead; Live's Start is not offered.
       await open(false);
       const panel = p.getByRole("dialog", { name: "Draft setup" });
@@ -85,9 +90,15 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       await fd.locator('input[type="radio"]').first().check();
       const fOff = await fd.getByText("Live AI is off on this copy", { exact: true }).waitFor({ timeout: 30_000 }).then(() => true, () => false);
       step("C11.8 P-175 fail (break m1): on the Forms tab, Draft with AI › Live says live AI is off and its Start is disabled; nothing started", fOff && (await fd.locator("[data-draft-start]").isDisabled()) && (await api("/ai/batches")).body.length === 0, JSON.stringify({ fOff, text: ((await fd.textContent()) ?? "").slice(0, 200) }));
-      ["the cost warning before a live start (Draft setup)", "Cancel starts nothing", "focus back on Start", "Escape before the warning is ready", "Continue records the override and starts the run", "the Forms tab's Draft with AI warning", "its Cancel and Escape", "its spend figure read again", "its Continue starts the run", "past the ceiling, no Continue"].forEach((n) => skip(`C11.8 P-179 ${n}`));
     }
-    if (STANDIN) {
+    // Phase 2: the same copy (database and files kept) restarted with the live switch paired with the fake launcher.
+    execFileSync("zsh", [ISOLATED, NAME, String(PORT), "restart", `P2_LEDGER_DIR=${SCRATCH}`, "STUDIO_HOLD_QUEUE=1", "STUDIO_AI_LIVE=approved", `STUDIO_FAKE_LAUNCHER=${FAKE}`], NO_SWITCH);
+    // P-192 guard, part 2: before any start, the copy itself must report live on with the stand-in launcher. Anything else
+    // (the fake launcher not honoured, the guarded launcher, a shared copy or the demo answering this port) aborts here.
+    const ai2 = (await api("/session")).body?.ai;
+    step("P-192 guard: restarted, this check's own copy reports live on with the stand-in launcher (queue held, scratch ledger)", ai2?.live === true && ai2?.launcher === "stand-in", JSON.stringify(ai2));
+    if (!(ai2?.live === true && ai2?.launcher === "stand-in")) throw new Error(`guard: stopped before any start (GET /session → ai: ${JSON.stringify(ai2)})`);
+    {
     // Break 3 m1 on Draft setup: the panel is opened while the start fits (US$0 spent); spend then arrives (another copy)
     // to just under the cap, so this start could pass it by half its worst case, and the panel's plan is out of date.
     await open(false);
@@ -142,7 +153,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     // plan the dialog holds goes out of date (break 3 m1).
     await p.goto(`${BASE}/c/${vv}/forms`);
     const row = p.locator('[data-pending^="IMM 5409"]');
-    await row.getByRole("button", { name: "Read form" }).click();
+    // Phase 1 read this form on the same copy, so its row may already offer Draft with AI; Read form only if still offered.
+    await row.getByRole("button", { name: /^(Read form|Draft with AI)$/ }).first().waitFor({ timeout: 30_000 });
+    if (await row.getByRole("button", { name: "Read form" }).count()) await row.getByRole("button", { name: "Read form" }).click();
     await row.getByRole("button", { name: "Draft with AI" }).click({ timeout: 30_000 });
     const dd = p.getByRole("dialog", { name: /^Draft the field map of IMM 5409/ });
     // X8a: follow the page's own ready signals, never a fixed time. First the dialog's saved answers must be in: until then
@@ -213,6 +226,6 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     step("US$0: no AI call was made (no reserve line other than this check's seeds)", lines().filter((l) => l.type === "reserve").every((l) => String(l.id).startsWith("seed-p179")));
   } catch (e) { step("the check ran to its end", false, e.stack); }
   await b.close(); stop();
-  console.log(`\n${pass} passed, ${fail} failed, ${skipped} skipped`);
+  console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })();

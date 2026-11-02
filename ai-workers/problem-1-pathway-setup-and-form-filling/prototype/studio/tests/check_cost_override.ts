@@ -1,14 +1,15 @@
 // P-179 (C11.8): the API side of a cost warning a person may continue past. Every forms plan carries `cost_check` and
 // `run_key`; POST /ai/overrides records a person's Continue (author only, the plan made again must match, never past
 // US$132); a launch over a limit starts only with an unused Continue for that run (once, within 10 minutes); attempts per
-// form (Q2) allow exactly one more run per click. The check starts its own isolated copy with no live AI switch and the
-// queue held, on a scratch ledger of its own that it seeds (test spend and test overrides never reach the ledger every
-// copy shares, QA-90): no AI call, no launcher, US$0. Every rule has a passing and a failing case.
-// C11.8 (P-175 one door rule): on a copy without the live switch a live field-map start is refused at the door, after
-// every cost refusal and before anything is queued or a Continue is used. So the sections where a live start must be
-// queued (with a Continue, and its retries) run only when the copy itself reports live on with the stand-in launcher
-// (GET /session → ai); on this check's own copy (no switch) they print SKIP and the door's refusal is checked in their
-// place (the Continue stays unused; it is then expired so the later sections see no unused Continue of this person).
+// form (Q2) allow exactly one more run per click. The check starts its own isolated copy with the queue held, on a
+// scratch ledger of its own that it seeds (test spend and test overrides never reach the ledger every copy shares, QA-90).
+// Every rule has a passing and a failing case.
+// C11.8 (P-175 one door rule; review M1; P-192 pairing approved by the tech lead for this check, 2 Nov): a live field-map
+// start is refused at the door on a copy without the live switch, so this check's own copy starts with
+// STUDIO_AI_LIVE=approved paired with STUDIO_FAKE_LAUNCHER (the test fixture), STUDIO_HOLD_QUEUE=1 and the scratch
+// ledger: live starts are queued and held, never sent; nothing can reach a model; US$0. Guard: the check aborts before
+// any start unless the copy reports live on with the stand-in launcher (GET /session → ai). The door with the switch off
+// is checked in check_forms_c118_acceptance.ts (AT-3b, AT-9b). Never on a shared copy or the demo.
 //   tsx --tsconfig studio/api/tsconfig.json studio/tests/check_cost_override.ts [port=4454] [name=forms_co]
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -20,15 +21,17 @@ const PORT = Number(process.argv[2] ?? 4454), NAME = process.argv[3] ?? "forms_c
 const SCRATCH = mkdtempSync(join(tmpdir(), "p2-ledger-p179-"));
 const LEDGER = join(SCRATCH, "spend.jsonl");
 const ISOLATED = join(import.meta.dirname, "..", "tools", "isolated.sh");
-execFileSync("zsh", [ISOLATED, NAME, String(PORT), "start", `P2_LEDGER_DIR=${SCRATCH}`, "STUDIO_HOLD_QUEUE=1"], { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, STUDIO_AI_LIVE: "" } });
+// P-192 guard, part 1: the live switch is only ever passed together with the fake launcher (this fixture, absolute path).
+const FAKE = join(import.meta.dirname, "fixtures", "fake-launch.mjs");
+if (!existsSync(FAKE)) { console.log(`FAIL  guard: the fake launcher ${FAKE} is missing; the live switch is never set without it`); rmSync(SCRATCH, { recursive: true, force: true }); process.exit(1); }
+execFileSync("zsh", [ISOLATED, NAME, String(PORT), "start", `P2_LEDGER_DIR=${SCRATCH}`, "STUDIO_HOLD_QUEUE=1", "STUDIO_AI_LIVE=approved", `STUDIO_FAKE_LAUNCHER=${FAKE}`], { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, STUDIO_AI_LIVE: "", STUDIO_FAKE_LAUNCHER: "" } });
 const stop = () => { try { execFileSync("zsh", [ISOLATED, NAME, String(PORT), "stop"], { stdio: "ignore" }); } catch { /* already stopped */ } rmSync(SCRATCH, { recursive: true, force: true }); };
 const lines = () => (existsSync(LEDGER) ? readFileSync(LEDGER, "utf8") : "").split("\n").filter(Boolean).map((l) => JSON.parse(l) as Record<string, any>); // eslint-disable-line @typescript-eslint/no-explicit-any -- ledger lines are read loosely
 let seq = 0;
 /** Seeds committed spend before Wave 1 started (so only the experiment cap moves), settled at that amount. */
 const seed = (usd: number) => { const id = `seed-p179-${++seq}`; appendFileSync(LEDGER, JSON.stringify({ type: "reserve", id, run_id: id, attempt: 1, worst_usd: usd, caller: "check_cost_override seed", at: "2026-10-20T00:00:00.000Z" }) + "\n"); };
 
-let pass = 0, fail = 0, skipped = 0;
-const skip = (name: string) => { skipped++; console.log(`SKIP  ${name} — needs a copy that reports live on with the stand-in launcher (C11.8)`); };
+let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${!c && detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
 type Res = { status: number; body: any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- test responses are read loosely, as in the other API checks
 const call = async (method: string, path: string, body?: unknown, actor: string | null = "user-A"): Promise<Res> => {
@@ -46,21 +49,11 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   ok("C11.8 P-179 fail: the free stub pass never carries an override, and a launch with none carries nothing", !launchArgs("L", "job", "stub", [], ov).includes("--override-id") && !launchArgs("L", "job", "live", []).includes("--override-id"));
   ok("C11.8 P-179 pass: a run's plan names its override; a plan with none or a broken one names nothing", overrideOf({ override: { ...ov, limits: ["run"] } })?.id === ov.id && overrideOf({}) === undefined && overrideOf({ override: { id: "x" } }) === undefined && overrideOf(null) === undefined);
 
-  // C11.8: does this copy send live calls to the stand-in launcher with live on (then live starts are queued, held)?
+  // P-192 guard, part 2: before any start, the copy itself must report live on with the stand-in launcher. Anything else
+  // (the fake launcher not honoured, the guarded launcher, a shared copy or the demo answering this port) aborts here.
   const ai = (await call("GET", "/session")).body?.ai;
-  const STANDIN = ai?.live === true && ai?.launcher === "stand-in";
-  const OFF = ai?.live === false;
-  if (!STANDIN && !OFF) { console.log(`FAIL  the copy did not say whether live AI is on (GET /session → ai): ${JSON.stringify(ai)}`); stop(); process.exit(1); }
-  const used0 = (id: string) => lines().filter((l) => l.type === "override_use" && l.id === id).length;
-  const expire0 = (id: string) => writeFileSync(LEDGER, readFileSync(LEDGER, "utf8").replace(new RegExp(`("id":"${id}"[^\\n]*"expires_at":")[^"]+`), "$12026-10-01T00:00:00.000Z"));
-  /** C11.8 AT-9b here: with a valid Continue, a live start on a copy without the switch is refused at the door (409, in
-   *  words), nothing queued, the Continue unused; then expired (as the run it would have started ending). */
-  const door = async (what: string, overrideId: string) => {
-    const q = sql(`select count(*) from drafting_job where attachment_id='${src}' and status='QUEUED'`);
-    const rr = await draft(overrideId);
-    ok(`C11.8 P-175 door (${what}): with no live switch the start carrying a valid Continue is refused (409, AI switched off), nothing queued, the Continue unused`, rr.status === 409 && /switched off/.test(msg(rr)) && sql(`select count(*) from drafting_job where attachment_id='${src}' and status='QUEUED'`) === q && used0(overrideId) === 0, { status: rr.status, m: msg(rr) });
-    expire0(overrideId);
-  };
+  if (!(ai?.live === true && ai?.launcher === "stand-in")) { console.log(`FAIL  guard: the copy does not report live on with the stand-in launcher (GET /session → ai: ${JSON.stringify(ai)}); stopped before any start`); stop(); process.exit(1); }
+  ok("P-192 guard: this check's own copy reports live on with the stand-in launcher (queue held, scratch ledger)", true);
 
   // ──────────────────────────────────────────── setup: IMM 5409 on the Visitor visa, one whole-form live draft (as check_ai_launch_paths)
   await call("POST", "/demo/load");
@@ -107,7 +100,6 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   const line = lines().find((l) => l.type === "override" && l.id === o1);
   ok("C11.8 P-179 pass: the author's Continue is recorded in the shared ledger (who, which run, which limit, worst case, 10 minutes) and answered", r.status === 201 && line?.by === "user-A" && line.run_key === p.run_key && line.limits.join() === "attempts" && line.worst_usd === worst && Date.parse(r.body.expires_at) - Date.parse(line.at) === 600_000, { status: r.status, body: r.body, line });
   ok("C11.8 P-179 pass: the Continue is in the audit trail (ai_override, the person and the limit)", sql(`select count(*) from audit_event where action='ai_override' and entity_key='${o1}' and summary like '%past attempts%'`) === "1");
-  if (STANDIN) {
   r = await draft(o1);
   const job1 = r.body?.id as string;
   const batch1 = job1 ? sql(`select batch_id from drafting_job where id='${job1}'`) : "";
@@ -148,13 +140,9 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   r = await call("POST", `/ai/batches/${batch1}/retry`, {});
   ok("C11.8 P-179 follow-up fail: a run with no Continue for a form past its paid attempts is still not retried (400, needs a person)", r.status === 400 && /needs a person, not another paid retry/.test(msg(r)), { status: r.status, m: msg(r) });
   sql(`update ai_batch set plan = jsonb_set(plan, '{override}', '${keptOverride}'::jsonb) where id='${batch1}'`); // the run's Continue back, as it was
-  } else {
-    await door("Q2, past attempts", o1);
-    ["the Continue run is queued", "its audit line", "its retry keeps the Continue", "retry past the cap", "retry by another person", "a free step retried by another author", "retry once the worst case is reserved", "no Continue, no retry"].forEach((n) => skip(`C11.8 P-179 ${n}`));
-  }
   p = await planNow();
   r = await draft(o1);
-  ok("C11.8 P-179 fail (Q2): one click is one run: the same Continue again is refused (409 used), nothing queued", p.targets?.[0]?.over_attempts === true && r.status === 409 && (STANDIN ? /already used/ : /expired/).test(msg(r)), { status: r.status, m: msg(r) });
+  ok("C11.8 P-179 fail (Q2): one click is one run: the same Continue again is refused (409 used), nothing queued", p.targets?.[0]?.over_attempts === true && r.status === 409 && /already used/.test(msg(r)), { status: r.status, m: msg(r) });
   r = await call("POST", "/ai/overrides", { run_key: p.run_key, worst_usd: p.cost_check.worst_usd, limits: ["attempts"], start });
   const o2 = r.body?.override_id as string;
   // An override that has run out of time: its expiry moved back in the scratch ledger (as 10 minutes passing).
@@ -176,7 +164,6 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   ok("C11.8 P-179 fail: without a Continue the start over the cap is refused as before (nothing queued)", r.status === 400 && /experiment cap/.test(msg(r)), { status: r.status, m: msg(r) });
   r = await cont(p);
   const o3 = r.body?.override_id as string;
-  if (STANDIN) {
   r = await draft(o3);
   ok("C11.8 P-179 pass: with the author's Continue the start over the cap is queued, for this run's worst case only", r.status === 201 && lines().find((l) => l.type === "override" && l.id === o3)?.worst_usd === worst, { status: r.status, m: msg(r) });
   // #131 review m2: a retry under a Continue that named the experiment cap is held to the US$132 ceiling.
@@ -186,10 +173,6 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   r = await call("POST", `/ai/batches/${batch3}/retry`, {});
   ok("C11.8 #131 review m2 fail: past US$132, a retry under a Continue that named the cap is refused in the founder's words (409), nothing queued", JSON.parse(sql(`select plan::text from ai_batch where id='${batch3}'`)).override?.limits?.includes("experiment") && r.status === 409 && /founder must raise the cap/.test(msg(r)) && sql(`select count(*) from drafting_job where batch_id='${batch3}' and status='QUEUED'`) === "0", { status: r.status, m: msg(r) });
   writeFileSync(LEDGER, snap3);
-  } else {
-    await door("past the cap", o3);
-    skip("C11.8 P-179 the start over the cap is queued with the Continue"); skip("C11.8 #131 review m2 retry past US$132");
-  }
   // Review m6: the Continue's audit line says what was over and why, not the dialog's instructions.
   const auditO3 = sql(`select summary from audit_event where action='ai_override' and entity_key='${o3}'`);
   ok("C11.8 review m6: the ai_override audit line names the limit and why (the cap's words), not 'Continue records…; Cancel starts nothing'", /AI spending cap/.test(auditO3) && !/Cancel starts nothing|Continue records your name/.test(auditO3), auditO3);
@@ -200,7 +183,6 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   const expire = (id: string) => writeFileSync(LEDGER, readFileSync(LEDGER, "utf8").replace(new RegExp(`("id":"${id}"[^\\n]*"expires_at":")[^"]+`), "$12026-10-01T00:00:00.000Z"));
   const draftKey = (key: string, overrideId?: string) => call("POST", `/attachments/${src}/draft`, { mode: "live", idempotencyKey: key, ...(overrideId ? { overrideId } : {}) });
   let pm = await planNow();
-  if (STANDIN) {
   // A second Continue for the same run by the same person: written into the scratch ledger, because the API now uses that
   // person's unused Continue again instead of recording a second one (N6, review N2; checked below).
   const oa = (await cont(pm)).body?.override_id as string, ob = `override-${Date.now()}-m1b`;
@@ -226,11 +208,6 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   r = await draftKey(`p179-m2-other-${Date.now()}`, oc);
   ok("C11.8 break m2 fail: the same Continue with another launch key is refused (409 already used)", r.status === 409 && /already (used|queued or running)/.test(msg(r)), { status: r.status, m: msg(r) });
   await cancelOpen();
-  } else {
-    const oa = (await cont(pm)).body?.override_id as string;
-    await door("one form, one Continue", oa);
-    ["review m1 two starts at once", "review m1 only the started run's Continue is used", "review m1 the unused Continue starts its run", "break m2 a double click", "break m2 a later retry with that key", "N6 another form's launch key", "break m2 the same Continue with another key"].forEach((n) => skip(`C11.8 ${n}`));
-  }
   pm = await planNow();
   // Break m7: a Continue recorded by another person (written into the scratch ledger: one author persona exists).
   const oz = `override-${Date.now()}-zz`;
@@ -267,7 +244,7 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   // N6 (break n2): the Continues the sections above used started runs that were then stopped before they reserved. A used
   // Continue holds its worst case until its run reserves or ends: these runs ended, so they hold nothing.
   const pEnded = await planNow();
-  ok("C11.8 N6 break n2 pass: Continues whose runs were stopped hold nothing (held US$0), though used within 10 minutes and never reserved", pEnded.cost_check.held_usd === 0 && (!STANDIN || lines().some((l) => l.type === "override_use" && Date.now() - Date.parse(l.at) < 600_000)), pEnded.cost_check);
+  ok("C11.8 N6 break n2 pass: Continues whose runs were stopped hold nothing (held US$0), though used within 10 minutes and never reserved", pEnded.cost_check.held_usd === 0 && lines().some((l) => l.type === "override_use" && Date.now() - Date.parse(l.at) < 600_000), pEnded.cost_check);
   const reservedNow = () => lines().filter((l) => l.type === "reserve").reduce((a, l) => a + l.worst_usd, 0);
   seed(132 - 1.5 * worst - reservedNow());
   const pn = await planNow();
@@ -284,10 +261,8 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   r = await cont(pn2);
   ok("C11.8 N6 review N2 pass: the retry's Continue is the same one, used again (201, same id, no second line; before: 409 'held … the founder must raise the cap')", pn2.run_key === pn.run_key && pn2.cost_check.can_continue && r.status === 201 && r.body?.override_id === on && lines().filter((l) => l.type === "override").length === overridesBefore, { same_key: pn2.run_key === pn.run_key, status: r.status, m: msg(r) });
   ok("C11.8 N6 review N2 pass: the audit says it is the same Continue again", /chose Continue past experiment .* again \(their Continue from a moment ago/.test(sql(`select summary from audit_event where action='ai_override' and entity_key='${on}' order by at desc limit 1`)), sql(`select summary from audit_event where action='ai_override' and entity_key='${on}' order by at desc limit 1`));
-  if (STANDIN) {
-    r = await draft(on);
-    ok("C11.8 N6 review N2 pass: and it starts the run, once", r.status === 201 && used(on) === 1, { status: r.status, m: msg(r) });
-  } else { await door("N6 review N2", on); skip("C11.8 N6 review N2 and it starts the run, once"); }
+  r = await draft(on);
+  ok("C11.8 N6 review N2 pass: and it starts the run, once", r.status === 201 && used(on) === 1, { status: r.status, m: msg(r) });
   await cancelOpen();
   // Another start's Continue from a moment ago (written in the scratch ledger: one author persona) holds its worst case.
   const oh = `override-${Date.now()}-held`;
@@ -327,7 +302,7 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   ok("C11.8 P-179 fail: a finder Continue past US$132 is refused too (409), nothing recorded", r.status === 409 && /founder must raise the cap/.test(msg(r)), { status: r.status, m: msg(r) });
   const usedO3 = lines().filter((l) => l.type === "override_use" && l.id === o3).length;
   r = await call("POST", `/combinations/${vv}/forms/find`, { mode: "live", planSha256: fp.plan_sha256, idempotencyKey: `p179-find-${Date.now()}`, overrideId: o3 });
-  ok("C11.8 P-179 fail: with no live AI switch the finder refuses before any Continue is used (US$0)", r.status === 409 && lines().filter((l) => l.type === "override_use" && l.id === o3).length === usedO3, { status: r.status, m: msg(r) });
+  ok("C11.8 P-179 fail: past US$132 the live finder start carrying a Continue is refused (409, the founder must raise the cap) and no Continue is used (US$0)", r.status === 409 && /founder must raise the cap/.test(msg(r)) && lines().filter((l) => l.type === "override_use" && l.id === o3).length === usedO3, { status: r.status, m: msg(r) });
   r = await call("POST", "/ai/overrides", { run_key: fp.run_key, worst_usd: fp.cost_check.worst_usd, limits: ["run"], start: { kind: "find_page" } });
   ok("C11.8 P-179 fail: a Continue for an unknown kind of start is a plain 400", r.status === 400 && /Say which start/.test(msg(r)), { status: r.status, m: msg(r) });
 
@@ -345,6 +320,6 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   ok("C11.8 break m6 pass: with the line fixed the plan answers again", r.status === 201 || r.status === 200, { status: r.status, m: msg(r) });
 
   ok("US$0: no AI call was made (no reserve line other than this check's seeds)", lines().filter((l) => l.type === "reserve" && !String(l.id).startsWith("seed-p179")).every((l) => l.caller === "stub" || l.worst_usd === 0), lines().filter((l) => l.type === "reserve").length);
-  console.log(`\n${pass} passed, ${fail} failed, ${skipped} skipped`);
+  console.log(`\n${pass} passed, ${fail} failed`);
   stop(); process.exit(fail ? 1 : 0);
 })().catch((e) => { console.log(`FAIL  the check stopped: ${(e as Error).stack}`); stop(); process.exit(1); });
