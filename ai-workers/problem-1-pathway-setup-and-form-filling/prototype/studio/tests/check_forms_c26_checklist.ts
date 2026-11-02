@@ -116,6 +116,8 @@ async function main() {
   const before = count();
   r = await call("POST", `/jobs/${job.id}/apply-checklist`);
   ok("C2.6 R5 fail (QA-157): the old apply door answers 410, says to use the review queue, and writes nothing", r.status === 410 && /review queue/.test(r.body?.message ?? "") && count() === before, r.body?.message);
+  r = await call("POST", "/review/proposals/decide", { ids: [mine[0].id], action: "accept" }, "user-C");
+  ok("C2.6 R5 fail: accepting a document line writes the combination's draft, so it needs the author duty (a reviewer gets 403); nothing is written", r.status === 403 && count() === before && sql(`select status from proposal_item where id='${mine[0].id}'`) === "waiting", r.body?.message);
   const results: { id: string; base: boolean; status: number; words: string }[] = [];
   for (const x of mine) {
     const base = sql(`select payload->>'always' from proposal_item where id='${x.id}'`) === "true";

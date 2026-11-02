@@ -257,6 +257,8 @@ const say = (k: string) => k.replace(/_/g, " ");
  *  when the library lacks it, is the document_type item proposed beside it (relatesTo): accepting the line accepts that
  *  item in the same decision, so it still waits for a second person (BR-7), and one Undo takes both back. */
 async function landRequirementLine(tx: Tx, r: Row, p: ProposalPayload, l: Landing): Promise<string> {
+  // Draft edits of a combination are the author duty (studio.ts saveRequirement; the old apply door needed it too).
+  need(l.actor, "author");
   // Break M7 (#277): a stored line is checked before anything is written; a malformed one is refused in words.
   const parsed = ProposalPayload.safeParse(p);
   if (!parsed.success || parsed.data.kind !== "requirement_line") fail(`This document line is incomplete (${parsed.success ? "not a document line" : plainIssues(parsed.error)}): reject it, or edit it into a whole line.`);
