@@ -73,6 +73,17 @@ export const worstRoundUsd = (step: AiStep, inputChars: number) => Math.min(RUN_
 const requestBytesOf = (template: string, inputs: { file: string }[]) =>
   inputs.reduce((n, i) => { try { return n + statSync(join(SOLUTION, i.file)).size; } catch { return n; } }, 0) + (() => { try { return statSync(join(PROMPTS, template)).size; } catch { return 0; } })() + 8_000;
 
+/** The launcher job of one live round, exactly as `round` writes it (PA: the paid runner's committed job files are made
+ *  with this, so a result recorded on the Mac through p2/launch.ts is the run this round's replay finds). */
+export function roundJob(step: AiStep, isCheck: boolean, ctx: Pick<RoundContext, "trail" | "contextKey" | "inputs" | "batchId">) {
+  const template = isCheck ? step.check : step.template;
+  // The launcher admits one known fact (p2/launch.ts knownOk): a combination's trail, or a printed form edition.
+  const edition = editionOfContextKey(ctx.contextKey);
+  return { job_id: jobIdFor(step.jobBase, isCheck, ctx.trail, ctx.batchId), kind: step.kind, combination: ctx.contextKey, configuration_version: step.configurationVersion, template, output_schema: step.schema, inputs: ctx.inputs,
+    settings: { provider_route: ROUTE, model: MODEL, effort: step.effort, timeout_ms: step.timeout_ms ?? 300_000, max_attempts: MAX_ATTEMPTS, budget_usd: sizedBudgetUsd(step, requestBytesOf(template, ctx.inputs)), max_output_tokens: step.max_output_tokens },
+    known: edition ? { form_edition: `${edition.code} (${edition.edition})` } : { combination_trail: ctx.trail } };
+}
+
 const readRun = (f: string): SavedRun | null => { try { return { ...JSON.parse(readFileSync(join(RUNS, f), "utf8")), file: f }; } catch { return null; } };
 
 export class StepRunner {
@@ -112,11 +123,7 @@ export class StepRunner {
       if (!step.shapeOk(saved)) return { ok: false, costUsd: 0, reason: step.words.badSaved };
       return { ok: true, output: saved, costUsd: 0, from: "replay", runFile: `prototype/p2/runs/${r.file}`, ...(label ? { earlier: label } : {}) };
     }
-    // The launcher admits one known fact (p2/launch.ts knownOk): a combination's trail, or a printed form edition.
-    const edition = editionOfContextKey(ctx.contextKey);
-    const job = { job_id: jobId, kind: step.kind, combination: ctx.contextKey, configuration_version: step.configurationVersion, template, output_schema: step.schema, inputs: ctx.inputs,
-      settings: { provider_route: ROUTE, model: MODEL, effort: step.effort, timeout_ms: step.timeout_ms ?? 300_000, max_attempts: MAX_ATTEMPTS, budget_usd: sizedBudgetUsd(step, requestBytesOf(template, ctx.inputs)), max_output_tokens: step.max_output_tokens },
-      known: edition ? { form_edition: `${edition.code} (${edition.edition})` } : { combination_trail: ctx.trail } };
+    const job = roundJob(step, isCheck, ctx);
     mkdirSync(JOBS, { recursive: true });
     writeFileSync(join(JOBS, `${jobId}.json`), JSON.stringify(job, null, 1) + "\n");
     if (ctx.batchId) this.liveJobs.set(ctx.batchId, jobId);
