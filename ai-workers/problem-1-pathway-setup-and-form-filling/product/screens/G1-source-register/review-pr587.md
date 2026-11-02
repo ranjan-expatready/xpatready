@@ -169,11 +169,13 @@ I reviewed `git diff c841b8c9 86816a18`.
 * MJ-R2, with its tests.
 * r2-1 to r2-4: fix, or list them in the PR for the tech lead.
 
-## Round 3: head **c98f1808** (diff 0ec051ff..c98f1808: MJ-R2, r2-3, r2-4)
-* **Suites:** engine **51/51**; API **50/50** on a fresh isolated copy (:4471, stopped and dropped). After Reset, 17 of 27 are still held and the import still cites 10.
+## Round 3: head **5e9331fb** (diff 0ec051ff..5e9331fb: MJ-R2, r2-3, r2-4, then Devin round 4 on negative values)
+I reviewed c98f1808 first. The head then moved to 5e9331fb, which changes only `statesInDigits` and adds one engine check. The verdict below is on **5e9331fb**.
+* **Suites at c98f1808:** engine **51/51**, API **50/50**.
+* **Suites at 5e9331fb:** engine **52/52**, API **50/50**. Each API run was on a fresh isolated copy (:4471, stopped and dropped). After Reset, 17 of 27 are still held and the import still cites 10.
 * **Probes:** a scratch script calling `statesInDigits`, `Cited` and `NonePublished` directly, outside the repo.
 
-### Verdict (c98f1808): **Approve**. No Blocker or Major is open. Journey score **9.4/10** (7.5 of 8 applicable: correct data back to 1; plain words stays ½).
+### Verdict (5e9331fb): **Approve**. No Blocker or Major is open. Journey score **9.4/10** (7.5 of 8 applicable: correct data back to 1; plain words stays ½).
 
 * **MJ-R2 is fixed** (`engine/source-register.ts:261-270`).
   * **Now accepted:** "$14,690.", "($14,690)", "$14 690" (narrow no-break space), "$1,000,000" for 1000000, and "$1,085.00".
@@ -201,9 +203,16 @@ I reviewed `git diff c841b8c9 86816a18`.
   Still accepted: `1.2.3.4.nip.io` (a domain name), punycode and upper-case hosts.
 * **r2-1 and r2-2:** posted to the tech lead as questions on #587 (19:33 UTC), with recommendations. That is the right place (P-26). The PR body's "Questions: None open" line is now out of date; point it to that comment.
 
+* **Devin round 4 (5e9331fb) is fixed.** A negative value now uses the same edged pattern, with the sign written `[-−]`:
+  * "-10" and "−10" state -10; "-1 000" states -1000; "-10.0" states -10.
+  * "-100", "-10.5", "5-10 years" and "- 10" do not.
+  * Any other value shape is matched whole: 1e-7 is not stated by "1e-70" or "x1e-7".
+  * Positive values take exactly the same path as before (the group index only moved), so the import's citations are unchanged.
+
 ### Minors (non-blocking; list them in the PR or a later row)
 * **r3-1 · The lookbehind blocks more than the stated cost.** `(?<!\d G)` refuses a number after *any* number and one space, not only after a group of three.
   * "IMM 5707 18 years", "Schedule 1 18 years" and "within 30 60 or 90 days" no longer state 18 or 60. ("page 3, 18 years" and "30, 60 or 90" still do.)
   * The same holds for "aged 18 100 days" on the other side.
   * Rare in IRCC prose, and it fails closed. A real group before the number is 1–3 digits that are not themselves preceded by a digit, so it could be narrowed to `(?<!(?:^|[^\d.,])\d{1,3}G)`. Mention the cost in the code comment if it is kept.
 * **r3-2 · Wording in the r2-2 question.** It says the author "picks 'None published'" when IRCC writes the number only in other words or units ("one year" for 12 months). That answer would be untrue, because IRCC does publish it. When the tech lead decides r2-2, the refusal could tell the author to copy words that state the number in the rule's own unit, or else wait for the later row.
+* **r3-3 · Two cases still pass loosely** (they never refuse a true citation; the expert's sign-off of the Source lines covers them). "IMM-10" states -10, because a letter before the sign is allowed. "the threshold is -10" states 10, because a positive value ignores a minus sign before it. That second case is right for ranges such as "5-10 years". Note both in the code comment, or require the sign to stand alone.
