@@ -22,7 +22,7 @@ export const KIND_NOUN: Record<string, string> = { library_form: "library form",
 // The lifecycle words come from the one word set (contracts/lifecycle.ts, P-116 amended 28 Oct): Delete, Retire, Restore.
 // "Remove" is kept for a form line taken off a combination (it stays in the library, P-123).
 // QA-113: the action word already says "who fills", so its noun is "a question" ("Change who fills a question: …").
-const ACTION_WORD: Record<string, string> = { ADD: "Add", DELETE: ACTION_LABEL.DELETE, RETIRE: ACTION_LABEL.RETIRE, RESTORE: ACTION_LABEL.RESTORE, EDIT_RULE: "Change the rule of", SET_ACCEPTS: "Set what IRCC accepts for", SET_FILLS: "Change who fills", SET_CONDITION: "Change when it is asked:" };
+const ACTION_WORD: Record<string, string> = { ADD: "Add", DELETE: ACTION_LABEL.DELETE, RETIRE: ACTION_LABEL.RETIRE, RESTORE: ACTION_LABEL.RESTORE, EDIT_RULE: "Change the rule of", SET_ACCEPTS: "Set what IRCC accepts for", SET_FILLS: "Change who fills", SET_CONDITION: "Change when it is asked:", RENAME: "Rename" };
 export const actionWord = (action: string, _kind?: string) => ACTION_WORD[action] ?? action;
 /** The same word inside a sentence ("approved delete …", "set what IRCC accepts for …"): only its first letter lowered. */
 export const actionVerb = (action: string, kind?: string) => { const w = actionWord(action, kind); return w[0].toLowerCase() + w.slice(1); };
@@ -65,7 +65,13 @@ export function changeView(c: LibraryChange) {
   return { id: c.id, kind: c.kind, kind_word: KIND_NOUN[c.kind] ?? c.kind, key: c.key, label: c.label ?? c.key, action: c.action, action_word: actionWord(c.action, c.kind), reason: c.reason,
     ai_verdict: c.aiVerdict, matches: c.matches, status: c.status, proposed_by: nameOf(c.proposedBy), proposed_by_id: c.proposedBy, proposed_at: c.proposedAt,
     decided_by: nameOf(c.decidedBy), decided_at: c.decidedAt, decision_note: c.decisionNote, released_in: c.releasedIn, combination_id: c.combinationId,
-    ...(c.kind === "form_accepts" ? { accepts: acceptsView(c) } : {}), ...(c.kind === "placement_fills" ? { fills: fillsView(c) } : {}), ...(c.kind === COND_KIND ? { condition: conditionView(c) } : {}) }; // C4.9 (runtime lane)
+    ...(c.kind === "form_accepts" ? { accepts: acceptsView(c) } : {}), ...(c.kind === "placement_fills" ? { fills: fillsView(c) } : {}), ...(c.kind === COND_KIND ? { condition: conditionView(c) } : {}),
+    ...(c.action === "RENAME" ? { rename: renameView(c) } : {}) }; // C4.9 (runtime lane); G-CORE B2 rename
+}
+/** G-CORE B2: what the second person compares on a rename: the name before and the name proposed. */
+export function renameView(c: Pick<LibraryChange, "label" | "matches">) {
+  const m = (c.matches ?? {}) as { before?: string; before_words?: string; undo_of?: string | null };
+  return { before: m.before_words ?? m.before ?? null, after: c.label ?? null, undo: !!m.undo_of };
 }
 
 /** C11.18: what the second person compares: before → after, IRCC's line or the reason, and the form's canada.ca page. */
@@ -78,7 +84,7 @@ export function acceptsView(c: Pick<LibraryChange, "key" | "matches">) {
 
 /** A second person decides (P-53 item 4, BR-9): never the person who proposed it. Claimed on its status, so two
  *  decisions at the same moment cannot both succeed. */
-export async function decideChange(db: Pick<Db, "libraryChange"> | Prisma.TransactionClient, actor: Actor, id: string, decision: "approve" | "return", note?: string) {
+export async function decideChange(db: Pick<Db, "libraryChange" | "changeSet"> | Prisma.TransactionClient, actor: Actor, id: string, decision: "approve" | "return", note?: string) {
   if (!(actor.duties as readonly string[]).includes("review")) throw problem(403, "Not allowed", `${actor.name} (simulated) does not hold the review duty.`);
   const c = await db.libraryChange.findUnique({ where: { id } });
   if (!c) throw problem(404, "Not found", "This library change does not exist (the demo may have been reset).");
@@ -88,8 +94,13 @@ export async function decideChange(db: Pick<Db, "libraryChange"> | Prisma.Transa
   if (c.appliedBy === actor.id) throw problem(403, "A different person decides", `You applied the draft that created this ${changeNoun(c.kind)}, so a different person approves or returns it.`);
   if (decision === "return" && !note?.trim()) throw problem(400, "Say why", "Say why it goes back, so the author can correct it.");
   if ((note ?? "").length > 300) throw problem(400, "Too long", "Keep the reason under 300 characters.");
-  const done = await db.libraryChange.updateMany({ where: { id, status: "WAITING" }, data: { status: decision === "approve" ? "APPROVED" : "RETURNED", decidedBy: actor.id, decidedAt: new Date(), decisionNote: note?.trim() || null } });
-  if (!done.count) throw problem(409, "Already decided", "Someone decided this change at the same moment. Refresh to see it.");
+  const write = async (w: Pick<Db, "libraryChange" | "changeSet"> | Prisma.TransactionClient) => {
+    const done = await w.libraryChange.updateMany({ where: { id, status: "WAITING" }, data: { status: decision === "approve" ? "APPROVED" : "RETURNED", decidedBy: actor.id, decidedAt: new Date(), decisionNote: note?.trim() || null } });
+    if (!done.count) throw problem(409, "Already decided", "Someone decided this change at the same moment. Refresh to see it.");
+    // G-CORE B2 (review M1): a returned change's change set (a rename through the door) stops waiting, in the same write.
+    if (decision === "return") await w.changeSet.updateMany({ where: { libraryChangeId: id, status: "waiting" }, data: { status: "undone" } });
+  };
+  if ("$transaction" in db && typeof db.$transaction === "function") await (db as Db).$transaction((tx) => write(tx)); else await write(db);
   return changeView((await db.libraryChange.findUnique({ where: { id } }))!);
 }
 
@@ -137,6 +148,8 @@ export async function resubmitChange(db: Db, actor: Actor, id: string, b: { labe
   const c = await db.libraryChange.findUnique({ where: { id } });
   if (!c) throw problem(404, "Not found", "This library change does not exist (the demo may have been reset).");
   if (c.status !== "RETURNED") throw problem(409, "Not returned", `Only a returned change is corrected and sent again; this one is ${c.status.toLowerCase()}.`);
+  // G-CORE B2: a rename is sent again through its door (the check runs again), never corrected here.
+  if (c.action === "RENAME") throw problem(409, "Rename it again", "A returned rename is not sent again from here: rename it again on its page, where the check runs again.");
   if (c.proposedBy !== actor.id) throw problem(403, "Not yours", `Only the person who proposed a change can correct it and send it again. ${ACTORS.find((a) => a.id === c.proposedBy)?.name ?? "Another person"} proposed this one: ask them to correct or withdraw it.`);
   const reason = (b.reason ?? "").trim();
   if (reason.length < 8 || reason.length > 300) throw problem(400, "Say what changed", "Say what you corrected, so the second person can check it (8 to 300 characters).");
@@ -162,9 +175,17 @@ export async function withdrawChange(db: Db, actor: Actor, id: string, note?: st
   // DV-bb-9: only the person who proposed a change withdraws it, whatever its kind (as only they undo their own delete).
   if (c.proposedBy !== actor.id) throw problem(403, "Not yours", `Only the person who proposed a change can withdraw it. ${ACTORS.find((a) => a.id === c.proposedBy)?.name ?? "Another person"} proposed this one: ask them to withdraw it.`);
   if (isLifecycleKind(c.kind) || isItemLifecycle(c)) return withdrawLifecycle(db, actor, c, note); // W1-03: remove, retire or restore (P-116); C11.9 fields and document types
-  if (c.kind !== "field" || c.action !== "ADD" || !["WAITING", "RETURNED"].includes(c.status)) throw problem(409, "Cannot withdraw", "Only a new shared field that is waiting or returned is withdrawn.");
+  const renaming = c.action === "RENAME" && ["WAITING", "RETURNED"].includes(c.status);
+  if (!renaming && (c.kind !== "field" || c.action !== "ADD" || !["WAITING", "RETURNED"].includes(c.status))) throw problem(409, "Cannot withdraw", "Only a new shared field or a rename that is waiting or returned is withdrawn.");
   const why = (note ?? "").trim();
   if (why.length < 3 || why.length > 300) throw problem(400, "Say why", "Say why it is withdrawn (3 to 300 characters).");
+  // G-CORE B2: a withdrawn rename changes nothing (the name was never changed).
+  if (renaming) return db.$transaction(async (tx) => {
+    const done = await tx.libraryChange.updateMany({ where: { id, status: { in: ["WAITING", "RETURNED"] } }, data: { status: "WITHDRAWN", decidedBy: actor.id, decidedAt: new Date(), decisionNote: why } });
+    if (!done.count) throw problem(409, "Changed meanwhile", "Someone decided this at the same moment. Refresh to see it.");
+    await tx.changeSet.updateMany({ where: { libraryChangeId: id, status: "waiting" }, data: { status: "undone" } }); // review M1: ended, not applied
+    return changeView((await tx.libraryChange.findUnique({ where: { id } }))!);
+  });
   return db.$transaction(async (tx) => {
     if (await tx.canonicalField.count({ where: { workspaceId: c.workspaceId, canonicalFieldKey: c.key, status: { not: "DRAFT" } } })) throw problem(409, "Already released", "This field was released meanwhile; retire it in the library instead.");
     const done = await tx.libraryChange.updateMany({ where: { id, status: { in: ["WAITING", "RETURNED"] } }, data: { status: "WITHDRAWN", decidedBy: actor.id, decidedAt: new Date(), decisionNote: why } });

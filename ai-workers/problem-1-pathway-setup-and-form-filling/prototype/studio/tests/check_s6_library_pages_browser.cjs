@@ -63,27 +63,49 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await go("/library/fields/person.family_name");
     let fd = await main();
     step("P-158 item 6: a field's page lists where it comes from, box by box, and the combinations using it", /Where it comes from/.test(fd) && /From: IMM 1295 \(09-2023\) form field "Family name/.test(fd) && /Used in combinations: With an LMIA/.test(fd), fd.slice(0, 200));
-    await p.getByLabel("Name", { exact: true }).fill("Surname"); await p.getByRole("button", { name: "Rename" }).click(); await settle();
+    // G-CORE B2: Rename opens a dialog with "What this change touches"; a released field's rename waits for a second person (P-266).
+    await p.getByLabel("Name", { exact: true }).fill("Surname"); await p.getByRole("button", { name: "Rename" }).click();
+    const dlg = p.getByRole("dialog");
+    await dlg.locator('[data-change-preview="ok"]').waitFor({ timeout: 30000 });
+    const panel = await dlg.innerText();
+    step("G-CORE BR-3: the rename dialog shows what the change touches (checks, tier in words, sections, forms, combinations, releases, open cases) before the confirm", /What this change touches/.test(panel) && /Checks passed/.test(panel) && /Waits for a second person/.test(panel) && /SECTIONS \(\d+\)|Sections \(\d+\)/i.test(panel) && /Forms \(\d+\)/i.test(panel) && /Combinations \(\d+\)/i.test(panel) && /Releases \(\d+\)/i.test(panel) && /Open cases \(\d+\)/i.test(panel), panel.slice(0, 300));
+    await p.screenshot({ path: path.join(SHOTS, "field-rename-preview.png"), fullPage: true });
+    await axe("the rename dialog with its change preview");
+    await dlg.getByRole("button", { name: "Send for approval" }).click(); await settle();
     fd = await main();
-    step("C3.15: an author renames the field on its page: the heading shows the new name, a new draft version", /^Surname$/m.test(fd) && /v2 draft/.test(fd), fd.slice(0, 160));
+    step("G-CORE P-266: sent for approval, the name is unchanged and the page says it waits for a second person", !/^Surname$/m.test(fd) && /waits for a second person on To review/.test(fd), fd.slice(0, 200));
+    const waiting = sql("select id from library_change where key='person.family_name' and action='RENAME' and status='WAITING'");
+    step("G-CORE: the approver approves it", (await api(`/library/changes/${waiting}/approve`, { method: "POST", actor: "user-B", data: {} })).status < 300);
+    await go("/library/fields/person.family_name");
+    fd = await main();
+    step("C3.15: approved, the heading shows the new name, a new draft version, and Undo rename is offered", /^Surname$/m.test(fd) && /v2 draft/.test(fd) && (await p.getByRole("button", { name: "Undo rename" }).count()) === 1, fd.slice(0, 160));
     await p.screenshot({ path: path.join(SHOTS, "field-renamed.png"), fullPage: true });
     await axe("a field's page");
     await go("/library/fields/person.given_names");
-    await p.getByLabel("Name", { exact: true }).fill("surname"); await p.getByRole("button", { name: "Rename" }).click(); await settle();
-    const refused = await p.locator("body").innerText();
-    step("C3.15 fail: renaming onto another field's name is refused in words, the old name kept", /already the name of Surname/.test(refused) && sql("select label_checked from canonical_field where canonical_field_key='person.given_names' order by version desc limit 1") === "f", refused.match(/.*already.*/)?.[0]);
+    await p.getByLabel("Name", { exact: true }).fill("surname"); await p.getByRole("button", { name: "Rename" }).click();
+    await p.getByRole("dialog").locator('[data-change-preview="refused"]').waitFor({ timeout: 30000 });
+    const refused = await p.getByRole("dialog").innerText();
+    step("C3.15 fail: renaming onto another field's name is refused in words before the confirm (which stays off), the old name kept", /already the name of Surname/.test(refused) && await p.getByRole("dialog").getByRole("button", { name: /Rename|Send for approval/ }).last().isDisabled() && sql("select label_checked from canonical_field where canonical_field_key='person.given_names' order by version desc limit 1") === "f", refused.match(/.*already.*/)?.[0]);
+    await p.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
     await go("/library/fields/person.old_hand_made");
     step("P-162 fail: a field with no source says so on its page", /No source recorded/.test(await main()));
 
-    // Sections: rename in a dialog, a taken title refused
+    // Sections: rename in a dialog with the change preview, a taken title refused
     await go("/library/sections");
     await p.getByRole("button", { name: "Edit Languages", exact: true }).click(); // C11.9: the row's Edit opens the rename
-    await p.getByLabel("Title").fill("Languages spoken"); await p.getByRole("dialog").getByRole("button", { name: "Rename" }).click(); await settle();
-    step("C3.15: an author renames a section on the Sections page", /Languages spoken/.test(await main()) && sql("select title from logical_section where section_key='languages' order by version desc limit 1") === "Languages spoken");
+    await p.getByLabel("Title").fill("Languages spoken");
+    await p.getByRole("dialog").locator('[data-change-preview="ok"]').waitFor({ timeout: 30000 });
+    await p.getByRole("dialog").getByRole("button", { name: /^(Rename|Send for approval)$/ }).click(); await settle();
+    const secWait = sql("select id from library_change where kind='section' and key='languages' and action='RENAME' and status='WAITING'");
+    if (secWait) await api(`/library/changes/${secWait}/approve`, { method: "POST", actor: "user-B", data: {} });
+    await go("/library/sections");
+    step("C3.15: an author renames a section on the Sections page (approved by a second person when released)", /Languages spoken/.test(await main()) && sql("select title from logical_section where section_key='languages' order by version desc limit 1") === "Languages spoken");
     await p.getByRole("button", { name: "Edit Languages spoken", exact: true }).click();
-    await p.getByLabel("Title").fill("personal details"); await p.getByRole("dialog").getByRole("button", { name: "Rename" }).click(); await settle();
-    step("C3.15 fail: another section's title is refused in words", /already a section called "Personal details"/.test(await p.locator("body").innerText()));
+    await p.getByLabel("Title").fill("personal details");
+    await p.getByRole("dialog").locator('[data-change-preview="refused"]').waitFor({ timeout: 30000 });
+    step("C3.15 fail: another section's title is refused in words", /already a section called "Personal details"/.test(await p.getByRole("dialog").innerText()));
     await p.screenshot({ path: path.join(SHOTS, "section-rename-refused.png") });
+    await p.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
 
     const r = await api("/library/fields", { method: "POST", data: { key: "person.free_add", meaning: "A field typed in by hand.", valueType: "text" } });
     step("C3.6 P-158 fail: the free add is gone underneath too (410)", r.status === 410, r.status);

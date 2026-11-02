@@ -2,7 +2,8 @@
 // pipeline's reader. It reads the library and where-used (SH2, api/src/where-used.ts) into plain shapes, runs the pure
 // rules check and review tier (engine/change-set.ts) with the engine's own verifiers passed in, and builds the preview
 // "What this change touches" with its fingerprint. `POST /api/change-sets/check` writes nothing. The flows that write
-// (rename and merge in B2, AI proposals in B3) call `check` inside their own transaction and record a change_set row.
+// (rename and merge in B2, AI proposals in B3) call `guard` before they write and record a change_set row (`record`) in
+// their own transaction.
 import { Body, Controller, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Post } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import type { Prisma } from "@prisma/client";
@@ -16,7 +17,7 @@ import { askedInOrder, isNode } from "../../engine/validate.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { current, fieldReaders, newestBy } from "../../engine/where-used.ts";
 import { Db, readerOf, Workspace } from "./core.ts";
-import { noFreeAdd } from "./library-sources.ts";
+import { noFreeAdd } from "./no-free-add.ts";
 import { pendingNewFields, ridingLists } from "./proposals.ts";
 import { combinationTrails, itemCombinations, itemReleases, mappedBoxes, openCasesByRelease } from "./where-used.ts";
 
@@ -26,6 +27,12 @@ const LIVE = ["PUBLISHED", "DRAFT", "RETIRED"] as const;
 const VERIFIERS = { valueProblems, canonical: canonical as (t: never) => string, shape: (t: unknown) => validatePredicate(t, isNode) };
 const isLive = (s: string) => s === "DRAFT" || s === "PUBLISHED";
 const byWords = (a: string, b: string) => a.localeCompare(b);
+/** BR-3 copy (concept §5): the preview is stale. */
+export const STALE = "What this change touches changed since you opened it. Look at it again, then confirm.";
+/** change_set.status (the table's check constraint): applied (direct, or approved by the second person) · waiting ·
+ *  rolled_back · undone (it ended without being applied: returned, withdrawn or a merge rejected; the linked
+ *  library_change / field_merge says which). Review B2 M1: every decision that ends a wait sets it, in the same write. */
+export type ChangeSetStatus = "applied" | "waiting" | "rolled_back" | "undone";
 
 /** The newest version of every library item, as the engine's check reads them. */
 export async function libraryOf(db: Client, workspaceId: string): Promise<Library> {
@@ -113,7 +120,23 @@ export class ChangeSets {
     const preview = await this.preview(db, ws, items, library, rows, trails, releasesOf);
     // Review m1, breaker M7: the same change on the same library is the same fingerprint, whatever the row or key order.
     const fingerprint = createHash("sha256").update(canonical(JSON.parse(JSON.stringify({ items, problems, tier, preview })) as never)).digest("hex");
-    return { ok: !problems.length, problems, truncated, not_checked: NOT_CHECKED, tier, preview, fingerprint };
+    return { ok: !problems.length, problems, truncated, not_checked: NOT_CHECKED, tier, preview, fingerprint, made_by: madeBy };
+  }
+
+  /** BR-1, BR-3 (B2): the one door a confirm passes. The fixed rules check runs; any problem refuses (409, each problem in
+   *  words, nothing written); an `expected` fingerprint that is no longer the current one answers 409 "look again" with
+   *  the fresh check, so the screen shows what changed. Returns the check (its tier decides direct or second person). */
+  async guard(items: ChangeItem[], madeBy: MadeBy, expected?: string | null, workspaceId?: string, db: Client = this.db): Promise<CheckResult> {
+    const r = await this.check(items, madeBy, workspaceId, db);
+    if (!r.ok) throw new HttpException({ type: "https://expatready.local/problems/change-refused", title: "Not changed", status: HttpStatus.CONFLICT, detail: `${r.problems.map((p) => p.message).join(" ")} Nothing was changed.`, problems: r.problems, check: r }, HttpStatus.CONFLICT);
+    if (expected != null && expected !== r.fingerprint) // break m7: an empty fingerprint is stale too, never "no check"
+      throw new HttpException({ type: "https://expatready.local/problems/look-again", title: "Look again", status: HttpStatus.CONFLICT, detail: STALE, check: r }, HttpStatus.CONFLICT);
+    return r;
+  }
+
+  /** BR-5, BR-6: the change set's record, written inside the change's own transaction (a refused change writes none). */
+  record(tx: Prisma.TransactionClient, workspaceId: string, actorId: string, items: ChangeItem[], madeBy: MadeBy, r: CheckResult, status: ChangeSetStatus, links: { libraryChangeId?: string; fieldMergeId?: string; before?: Prisma.InputJsonValue } = {}) {
+    return tx.changeSet.create({ data: { workspaceId, madeBy, actor: actorId, items: items as unknown as Prisma.InputJsonValue, problems: r.problems as unknown as Prisma.InputJsonValue, tier: r.tier.tier, expertAtRelease: r.tier.expert_at_release, fingerprint: r.fingerprint, status, ...links } });
   }
 
   /** P-253 step 4: per item, every touched section, form, rule, combination, release and open case, and before → after. */

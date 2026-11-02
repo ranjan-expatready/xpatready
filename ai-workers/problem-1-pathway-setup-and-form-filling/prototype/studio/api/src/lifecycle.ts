@@ -129,6 +129,11 @@ export function rowAction(f: NodeFacts, pending: { action: LifecycleAction; mine
 const OWN_DRAFT_NOTE = "Deleted at once: the author's own draft, never approved, released or used.";
 const RECHECK_UNDONE = "Undone at once.";
 
+/** G-CORE B2: an action whose approval re-check and apply another service owns (the rename door, rename-door.ts). The
+ *  service registers itself at start-up, so this file never imports it (no import cycle). */
+export type ApprovalHook = { check(c: LibraryChange): Promise<void>; apply(actor: Actor, c: LibraryChange): Promise<void> };
+export const APPROVAL_HOOKS = new Map<string, ApprovalHook>();
+
 @Injectable()
 export class Lifecycle {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit) {}
@@ -335,6 +340,9 @@ export class Lifecycle {
   }
   /** ReviewCard (P-116 amended): the approval re-check, run now, so the approver sees it before the click. */
   async recheck(c: LibraryChange): Promise<{ ok: boolean; text: string; kept: string[] } | null> {
+    // G-CORE B2: a waiting rename is checked again by its door, said before the click (the same check the approval runs).
+    const hook = APPROVAL_HOOKS.get(c.action);
+    if (hook) { if (c.status !== "WAITING") return null; try { await hook.check(c); return { ok: true, text: "Checked again just now: nothing blocks it.", kept: [] }; } catch (e) { const b = e instanceof HttpException ? (e.getResponse() as { detail?: string }) : null; return { ok: false, text: (b?.detail ?? "The check could not run: refresh and try again.").replace(/ Return this rename[^.]*\./, ""), kept: [] }; } }
     if ((!isLifecycleKind(c.kind) && !isItemLifecycle(c)) || c.status !== "WAITING") return null;
     const u = await this.usesOf(c.kind as LifecycleKind | ItemKind, c.key).catch(() => null);
     if (!u) return { ok: false, text: RECHECK.gone, kept: [] };
@@ -345,6 +353,7 @@ export class Lifecycle {
 
   /** Checked again when a second person approves: something may have started using it since it was proposed. */
   async checkApprove(c: LibraryChange) {
+    const hook = APPROVAL_HOOKS.get(c.action); if (hook) return hook.check(c); // G-CORE B2: a rename (rename-door.ts)
     // Break m5: what IRCC accepts is approved for the edition it was proposed for; a newer edition since is refused.
     if (c.kind === "form_accepts") {
       const proposed = (c.matches as { edition?: string } | null)?.edition;
@@ -438,6 +447,7 @@ export class Lifecycle {
   /** After approval: a delete is applied at once (L1: never released, used nowhere). Retire and restore wait for the
    *  release (publishLifecycle). */
   async afterApprove(actor: Actor, c: LibraryChange) {
+    const hook = APPROVAL_HOOKS.get(c.action); if (hook) return hook.apply(actor, c); // G-CORE B2: a rename, checked again and applied
     if (c.kind === "form_accepts") return this.applyAccepts(actor, c);
     if (c.kind === COND_KIND) return applyCondition(this.db, this.audit, actor, c); // C4.11 part 3 (forms lane): a draft question version with its condition
     if (c.kind === "placement_fills") return applyFills(this.db, this.audit, actor, c); // C4.9 (runtime lane): a draft placement
