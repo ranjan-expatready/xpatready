@@ -41,7 +41,13 @@ SKIP="check_catalogue_scale.cjs"
 # focus lands on the row's To review link") failed batch b489cc2d79 and #374's own PR check (a run-suites.sh-only change),
 # and on main 70eb4b7e it failed 1 of 3 runs on a fresh isolated copy ("focus lands on the Proposals link"). Fix row
 # (forms): the check waits for the page's ready signal and the focus move before reading document.activeElement.
-QUARANTINE="check_forms_c36_rule_facts_browser.cjs"
+# check_screen01_api.ts (C2.2 source trust, screens) quarantined 2 Nov 03:45 UTC: "source-trust race: a new unapproved form
+# uploaded five times gives five answers" failed #404's PR check (records only, run 41379078310, shard 1) and merge-queue
+# batch run 41382319102 for #405 (qa records only); it passed on other PRs. Neither change touches code, so it fails
+# without a code cause in those PRs, but it may be a real race in source trust. Fix row (screens): find whether the race
+# is in the product (five concurrent uploads of one unapproved form must give one held item) or in the check; fix with a
+# fail test; take it off this list in that PR.
+QUARANTINE="check_forms_c36_rule_facts_browser.cjs check_screen01_api.ts"
 OUT="${SUITES_OUT:-$ROOT/$S/var/suites}"; mkdir -p "$OUT"
 TSX="$S/node_modules/.bin/tsx --tsconfig $S/api/tsconfig.json"
 export P2_LEDGER_DIR="${P2_LEDGER_DIR_SUITES:-$OUT/p2-ledger-$$}"; mkdir -p "$P2_LEDGER_DIR"   # QA-90 / P-179: test runs never write the real ledger (forms plan-p179 §5)
