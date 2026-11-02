@@ -70,6 +70,12 @@ export class Demo {
     // never a half-load and a 500.
     if (this.loading) fail("The sample inputs are already loading: wait for them to finish.", HttpStatus.CONFLICT);
     this.loading = true;
+    try { return await this.loadClaimed(actor, workspaceId, configured, six); } finally { this.loading = false; }
+  }
+  private loading = false;
+
+  /** The load itself, once the one-load-at-a-time claim is held (by load, or by resetToSix for its whole run). */
+  private async loadClaimed(actor: Actor, workspaceId: string, configured: boolean, six: boolean, again = "Reset the demo, then load again.") {
     const t0 = Date.now();
     const log: string[] = [];
     try {
@@ -82,10 +88,27 @@ export class Demo {
       const said = e instanceof HttpException ? (e.getResponse() as { detail?: string; message?: string | string[] }) : null;
       if (said && typeof said === "object" && (said.detail || said.message)) (e as Error).message = String(said.detail ?? [said.message].flat().join("; "));
       await this.audit.log(workspaceId, actor.id, "failed", "sample inputs", null, `Loading the sample inputs stopped: ${(e as Error).message.slice(0, 300)}`, { log });
-      fail(`Loading stopped after: ${log.slice(-1)[0] ?? "the start"}. Reason: ${(e as Error).message.slice(0, 240)}. Reset the demo, then load again.`, HttpStatus.INTERNAL_SERVER_ERROR);
+      fail(`Loading stopped after: ${log.slice(-1)[0] ?? "the start"}. Reason: ${(e as Error).message.slice(0, 240)}. ${again}`, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  /** D1 (P-226) "Reset to the six": one action, one confirmation. Empties all configuration exactly as Reset does (the
+   *  same code), then loads the six P-148 combinations exactly as Load sample "six" does (the same code). Saved AI
+   *  results are files Reset never touches (preserved(), checked byte-identical), so the six's saved answers replay.
+   *  One run at a time: the load's claim is taken before anything awaits, so a second click or a Load sample meanwhile
+   *  is refused (409). A failure in the reset part changes nothing (one transaction); a failure in the load part leaves
+   *  the configuration emptied with part of the six, and its message says so: choosing Reset to the six again starts clean. */
+  async resetToSix(actor: Actor, confirm: unknown) {
+    need(actor, "author");
+    if (confirm !== "RESET") fail("Type RESET to confirm.");
+    if (this.loading) fail("Reset to the six or a sample load is already running: wait for it to finish.", HttpStatus.CONFLICT);
+    this.loading = true;
+    try {
+      const reset = await this.reset(actor, "RESET");
+      const six = await this.loadClaimed(actor, await this.ws.id(), false, true, "The configuration was emptied but the six did not fully load: choose Demo › Reset to the six again to start clean.");
+      return { ...six, sample: "six", reset };
     } finally { this.loading = false; }
   }
-  private loading = false;
 
   private async loadSteps(actor: Actor, workspaceId: string, t0: number, log: string[]) {
     // The reviewed release as engine/import.ts reads it; the sample loader itself reads only its document lines (QA-115).
