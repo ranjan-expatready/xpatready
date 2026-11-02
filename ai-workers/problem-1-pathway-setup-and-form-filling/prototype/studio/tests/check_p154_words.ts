@@ -1,4 +1,4 @@
-// P-154 (29 Oct): "agent" is retired as a role word; people read Document · Client · Case officer and "case view". QA-81's
+// P-154 (29 Oct): "agent" is retired as a role word; people read Document · Client · Case officer and "case view" (P-271, 2 Nov: that view is now "Agent view"). QA-81's
 // two places in screens pages: the Corporate panel on Immigration programs (fixed here) and the Documents "Provided by"
 // choice, whose wording "The firm" comes from the runtime lane's slice 2 (Lead PR #80; this check expects it once synced).
 // Pure: reads the page sources; no server, no database, NO model call (US$0). The stored code "agent" stays; only words.

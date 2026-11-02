@@ -1,5 +1,5 @@
-// C4.7 walked like a content publisher in a real browser (forms lane): on Work permit, family's Questionnaires tab, the
-// Pre-qualification view offers "Draft pre-qualification picks". P-227: exactly two ways, Live and Saved. With no Saved
+// C4.7 walked like a content publisher in a real browser (forms lane): on Work permit, family's Smart questionnaire (SQR) tab, the
+// Prospect questionnaire (PQR) view offers "Draft Prospect questionnaire (PQR) picks". P-227: exactly two ways, Live and Saved. With no Saved
 // result, Saved is greyed with why and a failed Live run offers nothing; with a Saved result (two rounds written here into
 // p2/runs, removed after), a failed Live run offers "Use Saved (US$0)", which replays at US$0 into To review; each pick
 // reads in words with its reason and IRCC's sentence; Accept ticks the question, Reject (remove) needs a reason and ticks
@@ -59,12 +59,12 @@ const failing = { stub: { exit: 0, out: { ok: true } }, live: { exit: 1, err: "t
   const wp = sql(`select id from combination where combination_key='wp.family'`);
   const go = async () => { await p.goto(`${BASE}/c/${wp}/questionnaires`); await p.getByRole("tablist", { name: "Combination" }).waitFor(); await p.locator("[data-source-strip]").waitFor(); await settle(); };
   const chip = () => p.locator('[data-source-chip="pqr"]');
-  const dlg = p.getByRole("dialog", { name: "Draft pre-qualification picks" });
+  const dlg = p.getByRole("dialog", { name: "Draft Prospect questionnaire (PQR) picks" });
   const start = () => dlg.locator("[data-pqr-start]");
-  const open = async () => { await p.getByRole("button", { name: "Draft pre-qualification picks" }).click(); await dlg.waitFor(); await dlg.locator('[data-plan-loaded="true"]').waitFor(); await settle(); };
+  const open = async () => { await p.getByRole("button", { name: "Draft Prospect questionnaire (PQR) picks" }).click(); await dlg.waitFor(); await dlg.locator('[data-plan-loaded="true"]').waitFor(); await settle(); };
 
   await go(); await chip().click(); await settle();
-  step("C4.7 pass: the Pre-qualification view offers Draft pre-qualification picks to the author", await p.getByRole("button", { name: "Draft pre-qualification picks" }).isVisible());
+  step("C4.7 pass: the Prospect questionnaire (PQR) view offers Draft Prospect questionnaire (PQR) picks to the author", await p.getByRole("button", { name: "Draft Prospect questionnaire (PQR) picks" }).isVisible());
   await open();
   const modes = await dlg.locator("[data-pqr-mode]").evaluateAll((xs) => xs.map((x) => x.getAttribute("data-pqr-mode")));
   step("C4.7 S pass (P-227): exactly two ways are offered, Live and Saved", JSON.stringify(modes) === JSON.stringify(["live", "replay"]), modes.join(","));
@@ -108,7 +108,7 @@ const failing = { stub: { exit: 0, out: { ok: true } }, live: { exit: 1, err: "t
   await p.waitForURL(/\/review\/proposals\?group=combination/); await p.locator("[data-band]").first().waitFor(); await settle();
   const rows = p.locator('[data-band="ready"] tbody tr');
   const titles = await rows.locator("td:nth-child(2) .font-medium").allInnerTexts();
-  step("C4.7 To review pass: each pick reads \"Ask in pre-qualification: … (person)\"", titles.length === 2 && titles.every((t) => /^Ask in pre-qualification: .+ \(.+\)$/.test(t)), titles.join(" | "));
+  step("C4.7 To review pass: each pick reads \"Ask in the Prospect questionnaire (PQR): … (person)\"", titles.length === 2 && titles.every((t) => /^Ask in the Prospect questionnaire \(PQR\): .+ \(.+\)$/.test(t)), titles.join(" | "));
   step("C4.7 To review fail: no field or role key is shown to a person", titles.every((t) => !KEYS.test(t) && !/\bprincipal\b/.test(t)));
   await state("to-review-picks");
   const dob = titles.find((t) => /birth/i.test(t)), other = titles.find((t) => t !== dob);
@@ -129,7 +129,7 @@ const failing = { stub: { exit: 0, out: { ok: true } }, live: { exit: 1, err: "t
   await p.waitForFunction((t) => ![...document.querySelectorAll('[data-band="ready"] tbody tr td:nth-child(2) .font-medium')].some((x) => x.textContent === t), other, { timeout: 30000 });
   step("C4.7 Q2 pass: a removed pick keeps its reason and ticks nothing", sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='pqr_pick' and status='rejected'`) === "1" && sql(`select count(*) from fact_source where combination_id='${wp}' and prequalification`) === "1");
   await go();
-  step("C4.7 Q1 pass: back on the Questionnaires tab, Pre-qualification counts 1", /Pre-qualification 1/.test(await chip().innerText()), await chip().innerText());
+  step("C4.7 Q1 pass: back on the Smart questionnaire (SQR) tab, Prospect questionnaire (PQR) counts 1", /Prospect questionnaire \(PQR\) 1/.test(await chip().innerText()), await chip().innerText());
 
   // The demo's own state: no live switch and nothing saved: the dialog says nothing can start, tied to Draft.
   for (const f of written.splice(0)) fs.rmSync(f, { force: true });

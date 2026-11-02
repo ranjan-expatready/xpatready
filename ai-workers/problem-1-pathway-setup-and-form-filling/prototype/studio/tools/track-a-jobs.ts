@@ -35,9 +35,13 @@ export type TrackAJob = { row: string; label: string; step: AiStep; isCheck: boo
 /** The Track A runs that have a consumer in the app today (C4.7 PQR picks, C4.11 step 5 conditions, C3.4 masters), in run
  *  order: C4.7 first, because C4.11 step 6 replays it (#417 blocker 5). Each step is a draft round then a blind checker round. */
 export async function trackAJobs(): Promise<TrackAJob[]> {
-  const { PQR_AI } = await import("../api/src/pqr-drafts.ts");
-  const { CONDITIONS_AI } = await import("../api/src/draft-qd.ts");
+  const { PQR_AI: pqr } = await import("../api/src/pqr-drafts.ts");
+  const { CONDITIONS_AI: cond } = await import("../api/src/draft-qd.ts");
   const { MASTERS_FORM_AI, MASTERS_GUIDE_AI } = await import("../api/src/form-masters.ts");
+  // QA-162: these are the jobs of the runs recorded on 2 Nov (#530, #531): the v1 prompts, the guide only. The steps now
+  // draft Live with v2 (the guide and the combination's question list); a v2 paid run gets its own jobs with its Go.
+  const PQR_AI: AiStep = { ...pqr, template: "pqr-picks.v1.md", check: "pqr-picks-check.v1.md", schema: "pqr-picks-output.v1.schema.json", replays: undefined };
+  const CONDITIONS_AI: AiStep = { ...cond, template: "conditions.v1.md", check: "conditions-check.v1.md", schema: "conditions-output.v1.schema.json", replays: undefined };
   return [
     { row: "C4.7", label: "PQR picks, draft round", step: PQR_AI, isCheck: false, reads: "guide" },
     { row: "C4.7", label: "PQR picks, checker round", step: PQR_AI, isCheck: true, reads: "guide" },

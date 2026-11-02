@@ -69,7 +69,7 @@ export function ChecksPage() {
   const f = useFilters(rows, (r) => [r.key, r.kind_word, r.group_word, r.about, ...r.per_combination.flatMap((x) => [x.message, x.source]), ...r.reads.map((x) => x.name ?? fieldName(x.key))].join(" "), CHECK_KINDS_ALWAYS);
   return (
     <div className="mx-auto max-w-7xl space-y-4">
-      <div><h1 className="text-xl font-semibold">Checks</h1><p className="mt-1 text-sm text-text-muted">Every check across combinations: what it looks at, the fields it reads, where it is used and its source. Checks warn; only the form's own Validate stops a form. Read-only: checks are proposed on To review and change on their combination's Questionnaires tab.</p><p className="mt-1 text-xs text-text-muted"><span className="font-medium">When it runs:</span> not built (no check records its stage yet).</p></div>
+      <div><h1 className="text-xl font-semibold">Checks</h1><p className="mt-1 text-sm text-text-muted">Every check across combinations: what it looks at, the fields it reads, where it is used and its source. Checks warn; only the form's own Validate stops a form. Read-only: checks are proposed on To review and change on their combination's Smart questionnaire (SQR) tab.</p><p className="mt-1 text-xs text-text-muted"><span className="font-medium">When it runs:</span> not built (no check records its stage yet).</p></div>
       {list.isLoading ? <Spinner label="Loading checks" /> : !list.data?.length ? <EmptyState title="No checks yet" description="AI drafts checks from form limits, guides and checklists when a combination's sources are read; they appear on To review first." /> : <>
         {f.bar("check")}
         {f.note ? <p data-kind-note className="text-sm text-text-muted">{f.note}</p> : null}

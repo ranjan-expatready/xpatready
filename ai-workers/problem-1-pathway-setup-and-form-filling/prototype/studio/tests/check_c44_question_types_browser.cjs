@@ -1,6 +1,6 @@
 // C4.4 part 1 in a real browser (runtime lane, swarm B3b; P-47): the one renderer asks the new question types (long text,
 // multi choice, person name group with "no given name", period history with its gaps in plain words, declaration with
-// its full text) to the client on a phone (390 px, one part per screen) and to the officer in the case view (1440 and
+// its full text) to the client on a phone (390 px, one part per screen) and to the officer in the Agent view (1440 and
 // 1024 px), on the Visitor visa case of setup_c44_types.ts. A pass and a fail per rule; the data is checked underneath
 // through the API; axe-core (WCAG 2.2 A/AA) on every state; no sideways scroll. No AI (US$0).
 // Screenshots: product/screens/W1-questions-and-documents/screenshots/c44-question-types/.
@@ -120,7 +120,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
     step("data: the answers are stored as answered (text, the chosen keys, the name's parts, the periods, the declaration)", /Niagara/.test(aLong?.value ?? "") && JSON.stringify(aMulti?.value) === JSON.stringify(["tourism", "family"]) && aName?.value?.no_given_name === true && aName?.value?.given_names === "" && aName?.value?.family_name === "Sampled" && Array.isArray(aHist?.value) && aHist.value.length === 2 && aHist.value[1].to === "" && aDecl?.value === true, { aMulti: aMulti?.value, aName: aName?.value, aHist: aHist?.value, aDecl: aDecl?.value });
     step("data: every new answer checks clean at tier 1", [aLong, aMulti, aName, aHist, aDecl].every((a) => (a?.problems ?? []).length === 0), [aLong, aMulti, aName, aHist, aDecl].map((a) => a?.problems));
 
-    // ── The officer, in the case view ──
+    // ── The officer, in the Agent view ──
     const o = await open(OFFICER, 1440, 900);
     await o.goto(`${BASE}/cases/${caseId}`); await idle(o);
     await o.getByRole("tab", { name: /^Sample Applicant A/ }).click();

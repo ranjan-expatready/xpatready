@@ -17,7 +17,7 @@ const TYPE_WORD: Record<string, string> = { text: "Text", date: "Date", yes_no: 
   // P-47 types (C4.4 review m5); "document" is not one (P-130: an upload is a checklist line).
   long_text: "Long text", multi_choice: "Several choices", person_name: "Person's name (family and given names)", period_history: "Periods of time (history)", declaration: "Declaration (tick to agree)" };
 const TYPES = Object.keys(TYPE_WORD);
-const COLLECTED: [string, string][] = [["client_questionnaire", "Client questionnaire"], ["verified_document", "A verified document"], ["staff_working_view", "The case officer (case view)"], ["profile_record", "Client profile"], ["existing_record", "Existing record"]];
+const COLLECTED: [string, string][] = [["client_questionnaire", "Client questionnaire"], ["verified_document", "A verified document"], ["staff_working_view", "The case officer (Agent view)"], ["profile_record", "Client profile"], ["existing_record", "Existing record"]];
 const collectedWord = (k: string) => COLLECTED.find(([x]) => x === k)?.[1] ?? k.replace(/_/g, " ");
 /** QA-39, QA-71: a field's name in words from its key ("person.family_name" → "Family name"); the key itself stays small. */
 const ABBREVIATIONS = new Set(["dli", "eta", "id", "ircc", "lmia", "noc", "pgwp", "pr", "sin", "uci"]);
@@ -41,6 +41,12 @@ const FROM_WORD: Record<string, string> = { pdf_box: "the PDF form field", form_
 /** GET /library/:kind/:key/sources (api/src/library-sources.ts). */
 type SourcesView = { name: string; sources: { kind: string; text: string; quote?: string | null }[]; unsourced: boolean; used_in: string[] };
 /** Where used (C3.13): the combinations by name, the first two and a count. */
+// C3.13 BR-3: the search also finds a field by one of its aliases, or by the start of the code or number of a form that
+// fills it, with or without its space ("imm5257" or "5257" finds IMM 5257; 3 characters at least), as
+// GET /library/fields?q= does (api/src/library-items.ts formCodeStarts).
+const compact = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+const formCodeStarts = (form: string, code: string) => { const c = compact(form); return c.startsWith(code) || c.replace(/^\p{L}+/u, "").startsWith(code); };
+const findsByAliasOrForm = (f: { aliases?: string[]; forms: string[] }, q: string) => (f.aliases ?? []).some((a) => a.toLowerCase().includes(q.toLowerCase())) || (compact(q).length >= 3 && f.forms.some((c) => formCodeStarts(c, compact(q))));
 const usedWords = (used: string[] | undefined) => !used?.length ? <span className="text-text-muted">none</span> : <span title={used.join(", ")}>{used.slice(0, 2).join(", ")}{used.length > 2 ? ` and ${used.length - 2} more` : ""}</span>;
 
 /** GET /library/reuse/:kind (api/src/library-sources.ts, C3.13, Screen 04 BR-4). */
@@ -79,12 +85,12 @@ export function FieldsPage() {
   const canAuthor = useCanAuthor();
   const life = useItemLifecycle("fields", () => list.refetch(), canAuthor);
   // C11.9 (BR-10): a retired field is listed only under "Retired".
-  const rows = (list.data ?? []).filter((f) => (only === "retired" ? f.retired : !f.retired)).filter((f) => reuse.keep(f.key) && (!q || f.key.includes(q.toLowerCase()) || (f.name ?? fieldName(f.key)).toLowerCase().includes(q.toLowerCase()) || f.meaning.toLowerCase().includes(q.toLowerCase())) && (only === "all" || only === "retired" || (only === "draft" && f.has_draft) || (only === "ai" && f.origin === "AI_PROPOSAL") || (only === "unplaced" && !f.placement) || (only === "shared" && f.forms.length > 1)));
+  const rows = (list.data ?? []).filter((f) => (only === "retired" ? f.retired : !f.retired)).filter((f) => reuse.keep(f.key) && (!q || f.key.includes(q.toLowerCase()) || (f.name ?? fieldName(f.key)).toLowerCase().includes(q.toLowerCase()) || f.meaning.toLowerCase().includes(q.toLowerCase()) || findsByAliasOrForm(f, q)) && (only === "all" || only === "retired" || (only === "draft" && f.has_draft) || (only === "ai" && f.origin === "AI_PROPOSAL") || (only === "unplaced" && !f.placement) || (only === "shared" && f.forms.length > 1)));
   return (
     <TipProvider><div className="mx-auto max-w-7xl space-y-4">
       <div><h1 className="text-xl font-semibold">Fields</h1><p className="mt-1 text-sm text-text-muted">One definition per meaning, shared by every form and program. Values about people and cases are never stored here.</p><Origin>each field is read from a form field (proposed by AI, confirmed by a person), a document checklist line, or a rule that needs it. Nothing is added by hand.</Origin></div>
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative w-96"><Search className="absolute left-2.5 top-2.5 size-4 text-text-muted" /><Input className="pl-8" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a field or its meaning" aria-label="Search fields" /></div>
+        <div className="relative w-96"><Search className="absolute left-2.5 top-2.5 size-4 text-text-muted" /><Input className="pl-8" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a field, its meaning, an alias or a form code" aria-label="Search fields" /></div>
         <Select className="w-64" value={only} onChange={(e) => setOnly(e.target.value)} aria-label="Filter"><option value="all">All fields</option><option value="shared">Used by more than one form</option><option value="draft">With a draft change</option><option value="ai">AI-proposed</option><option value="unplaced">Not asked anywhere</option><option value="retired">Retired</option></Select>
         <ReuseBar reuse={reuse} noun="field" />
         <span className="text-xs text-text-muted">{rows.length} of {list.data?.length ?? 0}</span>
@@ -199,7 +205,7 @@ export function SectionsPage() {
   const shownRows = shown.filter((x) => !!x.retired === retired);
   return (
     <TipProvider><div className="mx-auto max-w-6xl space-y-4">
-      <div><h1 className="text-xl font-semibold">Sections</h1><p className="mt-1 text-sm text-text-muted">Reusable groups of questions. Each combination selects the sections its questionnaire uses.</p><Origin>the forms' own parts, each confirmed on To review. Nothing is added by hand; a combination picks its sections on its Questionnaires tab.</Origin></div>
+      <div><h1 className="text-xl font-semibold">Sections</h1><p className="mt-1 text-sm text-text-muted">Reusable groups of questions. Each combination selects the sections its questionnaire uses.</p><Origin>the forms' own parts, each confirmed on To review. Nothing is added by hand; a combination picks its sections on its Smart questionnaire (SQR) tab.</Origin></div>
       <div className="flex flex-wrap items-center gap-2"><ReuseBar reuse={reuse} noun="section" /><Select className="w-56" value={retired ? "retired" : "current"} onChange={(e) => setRetired(e.target.value === "retired")} aria-label="Filter"><option value="current">Current sections</option><option value="retired">Retired</option></Select><span className="text-xs text-text-muted">{shownRows.length} of {s.data?.length ?? 0}</span></div>
       {s.isLoading || reuse.waiting ? <Spinner label="Loading" /> : !s.data?.length ? <EmptyState title="No sections yet" description="Sections come with the forms' parts; add a form first." /> : !shown.length ? <NoneInCombination reuse={reuse} noun="section" /> : !shownRows.length ? <p className="text-sm text-text-muted">{retired ? "No section is retired." : "Every section is retired: choose Retired to see them."}</p> : <Table head={["Section", "Meaning", "Questions", "Used by combinations", "Status"]}>{shownRows.map((x) => <tr key={x.key} data-item={x.key}><td className="font-medium">{x.title}</td><td className="max-w-lg text-xs text-text-muted">{x.meaning}<SourceNote r={x} /></td><td>{x.questions}</td><td className="text-xs">{usedWords(x.used_in)}</td><td><div className="flex flex-wrap gap-1"><ReuseMark reuse={reuse} k={x.key} />{x.retired ? <Pill>Retired</Pill> : <ListPill origin={x.origin} status={x.status} />}</div><ItemStatusNote r={x} /><div className="mt-1.5">{life.action({ ...x, name: x.title }, () => (x.retired ? life.view({ ...x, name: x.title }) : setEditing({ key: x.key, title: x.title })))}</div></td></tr>)}</Table>}
       {editing ? <RenameSection section={editing} onClose={() => setEditing(null)} /> : null}
