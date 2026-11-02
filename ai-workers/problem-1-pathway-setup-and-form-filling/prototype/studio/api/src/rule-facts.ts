@@ -42,14 +42,17 @@ export function factsRead(tree: unknown): string[] {
  *  them: a rule that tests a value the list lacks would never hold. */
 export function valuesCompared(tree: unknown, fact: string): string[] {
   const out = new Set<string>();
-  const walk = (n: unknown) => {
+  // Devin review (yellow): a value is needed only where its absence makes the test impossible: a positive eq or in, or
+  // a neq under a not. A not flips the sense (contracts/rules.ts evaluate); a positive neq or a negated eq needs none.
+  const walk = (n: unknown, neg: boolean) => {
     if (!n || typeof n !== "object") return;
-    const o = n as { field?: unknown; value?: unknown; values?: unknown; args?: unknown; arg?: unknown };
-    // Devin review (yellow): only eq and in need the value to exist; a neq or not-in of a missing value still holds.
-    if (o.field === fact && ((n as { op?: unknown }).op === "eq" || (n as { op?: unknown }).op === "in")) for (const v of [o.value, o.values].flat()) if (typeof v === "string") out.add(v);
-    (Array.isArray(o.args) ? o.args : []).forEach(walk); if (o.arg) walk(o.arg);
+    const o = n as { op?: unknown; field?: unknown; value?: unknown; values?: unknown; args?: unknown; arg?: unknown };
+    const needs = (!neg && (o.op === "eq" || o.op === "in")) || (neg && o.op === "neq");
+    if (o.field === fact && needs) for (const v of [o.value, o.values].flat()) if (typeof v === "string") out.add(v);
+    const flip = o.op === "not" ? !neg : neg;
+    (Array.isArray(o.args) ? o.args : []).forEach((a) => walk(a, flip)); if (o.arg) walk(o.arg, flip);
   };
-  walk(tree);
+  walk(tree, false);
   return [...out];
 }
 /** Refuses a choice whose values miss a value a rule compares the fact with; every rule of the combination that reads

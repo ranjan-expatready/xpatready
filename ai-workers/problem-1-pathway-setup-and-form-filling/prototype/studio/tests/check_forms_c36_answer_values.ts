@@ -186,6 +186,13 @@ const TRAVELS = ["Both parents", "One parent", "Another adult", "Alone"], CUSTOD
   rule("r_c36_neq", `{"field":"person.c36_neq","op":"neq","value":"other"}`, "ask for the usual papers");
   r = await call("POST", `/combinations/${combo}/rule-facts`, { fact: "person.c36_neq", rule: "r_c36_neq", label: "Who travels along", meaning: "Who travels along with the child (Sample).", valueType: "code", values: ["Alone", "Both parents"] });
   ok("C3.6 pass (Devin yellow): a neq rule does not need its value among the answers", r.status === 201, msg(r));
+  rule("r_c36_not_a", `{"field":"person.c36_not","op":"eq","value":"alone"}`, "ask for the consent letter");
+  rule("r_c36_not_b", `{"op":"not","arg":{"field":"person.c36_not","op":"eq","value":"other"}}`, "ask for the usual papers");
+  r = await call("POST", `/combinations/${combo}/rule-facts`, { fact: "person.c36_not", rule: "r_c36_not_a", label: "Travel company", meaning: "Who the child travels in company of (Sample).", valueType: "code", values: ["Alone", "Guardian"] });
+  ok("C3.6 pass (Devin yellow): another rule's not(eq other) needs no value 'other'", r.status === 201, msg(r));
+  rule("r_c36_not_c", `{"op":"not","arg":{"field":"person.c36_notneq","op":"neq","value":"sole"}}`, "ask for the custody order");
+  r = await call("POST", `/combinations/${combo}/rule-facts`, { fact: "person.c36_notneq", rule: "r_c36_not_c", label: "Custody kind", meaning: "What kind of custody applies (Sample).", valueType: "code", values: ["Shared", "Adopted"] });
+  ok("C3.6 fail (Devin yellow): not(neq sole) needs the value 'sole'", r.status === 400 && /"sole"/.test(msg(r)), msg(r));
   console.log(`\n${pass} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.error("FAIL  unexpected", e); process.exit(1); });
