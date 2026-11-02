@@ -1,7 +1,8 @@
 import * as React from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ChevronRight, Pencil, Save, Search } from "lucide-react";
-import { api, useAction, useActorId, useApi } from "@/lib/api";
+import { ChevronRight, Pencil, Save, Search, Undo2 } from "lucide-react";
+import { api, ApiError, useAction, useActorId, useApi } from "@/lib/api";
+import { ChangePreview, useChangeCheck } from "@/ChangePreview";
 import { Button, Dialog, Field, Input, Notice, Pill, Select, Table, Textarea } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -123,7 +124,7 @@ export function FieldPage() {
   const [name, setName] = React.useState("");
   React.useEffect(() => { if (cur) setName((cur.labelChecked && cur.label) || fieldName(key)); }, [cur?.id, cur?.label]);
   const src = useApi<SourcesView>(["field-sources", key], `/library/fields/${encodeURIComponent(key)}/sources`);
-  const rename = useAction(() => api(`/library/fields/${encodeURIComponent(key)}/name`, { method: "PATCH", json: { name } }), { success: "Renamed (a new draft version)", invalidate: [...inv, ["field-sources", key]] });
+  const [renaming, setRenaming] = React.useState(false); // G-CORE B2: the rename is confirmed in a dialog with "What this change touches"
   const savePlace = useAction(() => api(`/library/fields/${encodeURIComponent(key)}/placement`, { method: "POST", json: p }), { success: "Placement saved as a draft version", invalidate: inv });
   if (f.isLoading) return <Spinner label="Loading field" />;
   if (f.isError) return <Notice tone="danger" title="Field not found">{(f.error as Error).message}</Notice>;
@@ -139,7 +140,9 @@ export function FieldPage() {
         <section className="space-y-3 rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
           <h2 className="font-semibold">Definition</h2>
           {retiredNow ? <Notice tone="warn" title="Retired">It takes no change or new use. Restore it on Fields (choose the Retired filter) first.</Notice> : null}
-          <div className="flex items-start gap-2"><Field label="Name" className="flex-1" hint="Renaming is direct and makes a new draft version; a name another field in this group already has is refused."><Input value={name} onChange={(e) => setName(e.target.value)} /></Field><Button className="mt-6" variant="secondary" onClick={() => rename.mutate(undefined)} busy={rename.isPending} disabled={retiredNow || !name.trim() || name.trim() === shown}><Pencil /> Rename</Button></div>
+          <div className="flex items-start gap-2"><Field label="Name" className="flex-1" hint="Rename shows what it touches first. It applies now as a draft version, or waits for a second person when a released combination uses the field; a name another field in this group already has is refused."><Input value={name} onChange={(e) => setName(e.target.value)} /></Field><Button className="mt-6" variant="secondary" onClick={() => setRenaming(true)} disabled={retiredNow || !name.trim() || name.trim() === shown}><Pencil /> Rename</Button></div>
+          <LastRename kind="field" itemKey={key} invalidate={[...inv, ["field-sources", key]]} />
+          {renaming ? <RenameDialog kind="field" itemKey={key} current={shown} initial={name.trim()} label="Name" invalidate={[...inv, ["field-sources", key]]} onClose={() => setRenaming(false)} /> : null}
           <Field label="Meaning" hint="What reviewers and the comparison rely on; one meaning per field."><Textarea value={meaning} onChange={(e) => setMeaning(e.target.value)} /></Field>
           <Field label="Value type"><Select value={type} onChange={(e) => setType(e.target.value)}>{TYPES.map((t) => <option key={t} value={t}>{TYPE_WORD[t]}</option>)}</Select></Field>
           <div className="flex justify-end"><Button onClick={() => saveDef.mutate(undefined)} busy={saveDef.isPending} disabled={retiredNow || meaning === cur.meaning && type === cur.valueType}><Save /> Save as draft</Button></div>
@@ -215,12 +218,51 @@ export function SectionsPage() {
 }
 
 function RenameSection({ section, onClose }: { section: { key: string; title: string }; onClose: () => void }) {
-  const [title, setTitle] = React.useState(section.title);
-  const save = useAction(() => api(`/library/sections/${encodeURIComponent(section.key)}`, { method: "PATCH", json: { name: title } }), { success: "Section renamed (a new draft version)", invalidate: [["sections"]], onDone: onClose });
+  return <RenameDialog kind="section" itemKey={section.key} current={section.title} initial={section.title} label="Title" invalidate={[["sections"]]} onClose={onClose} withUndo />;
+}
+
+type RenameAnswer = { applied: boolean; name: string; version: number | null; words: string; change_set: string; change_id: string | null };
+/** G-CORE B2 (BR-1, BR-3, BR-4): a rename through the change-set door. The new name, "What this change touches" for it, and
+ *  a confirm that sends the panel's fingerprint as `expected`; the tier says whether it applies now or waits. */
+function RenameDialog({ kind, itemKey, current, initial, label, invalidate, onClose, withUndo }: { kind: "field" | "section"; itemKey: string; current: string; initial: string; label: string; invalidate: unknown[][]; onClose: () => void; withUndo?: boolean }) {
+  const [name, setName] = React.useState(initial);
+  const [typed, setTyped] = React.useState(initial.trim());
+  React.useEffect(() => { const t = setTimeout(() => setTyped(name.trim()), 300); return () => clearTimeout(t); }, [name]);
+  const ready = typed.length > 0 && typed !== current;
+  const check = useChangeCheck([{ action: "rename", kind, key: itemKey, name: typed }], ready);
+  const [stale, setStale] = React.useState(false);
+  const path = kind === "field" ? `/library/fields/${encodeURIComponent(itemKey)}/name` : `/library/sections/${encodeURIComponent(itemKey)}`;
+  const save = useAction(() => api<RenameAnswer>(path, { method: "PATCH", json: { name: typed, expected: check.data?.fingerprint } }), {
+    success: (r) => (r.applied ? (kind === "field" ? "Renamed (a new draft version)" : "Section renamed (a new draft version)") : `"${current}" stays as it is until a second person approves the new name on To review`),
+    invalidate: [...invalidate, ["last-rename", kind, itemKey], ["review"]], onDone: onClose });
+  React.useEffect(() => { if (save.error instanceof ApiError && save.error.problem.title === "Look again") { setStale(true); void check.refetch(); } }, [save.error]);
+  const second = check.data?.tier.tier === "second_person";
+  const busy = name.trim() !== typed || check.isFetching;
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()} title={`Rename "${section.title}"`} description="Renaming is direct and makes a new draft version; another section's title is refused." footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => save.mutate(undefined)} busy={save.isPending} disabled={!title.trim() || title.trim() === section.title}>Rename</Button></>}>
-      <Field label="Title"><Input value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
+    <Dialog open wide onOpenChange={(o) => !o && onClose()} title={`Rename "${current}"`} description="See what the change touches, then confirm. A name already used is refused."
+      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => { setStale(false); save.mutate(undefined); }} busy={save.isPending} disabled={!ready || busy || !check.data?.ok}>{second ? "Send for approval" : "Rename"}</Button></>}>
+      <div className="space-y-3">
+        <Field label={label}><Input value={name} onChange={(e) => setName(e.target.value)} /></Field>
+        {ready ? <ChangePreview check={check} stale={stale} /> : <p className="text-sm text-text-muted">Type the new {kind === "field" ? "name" : "title"} to see what it touches.</p>}
+        {withUndo ? <LastRename kind={kind} itemKey={itemKey} invalidate={invalidate} /> : null}
+      </div>
     </Dialog>
+  );
+}
+
+/** BR-6: the item's newest rename, and "Undo rename" (a new change through the same door; refused in words when the
+ *  old name was taken since or the item changed again). */
+function LastRename({ kind, itemKey, invalidate }: { kind: "field" | "section"; itemKey: string; invalidate: unknown[][] }) {
+  const last = useApi<{ id: string; status: string; before: string | null; after: string; by: string; at: string; made_by: string } | null>(["last-rename", kind, itemKey], `/change-sets/renames/${kind}/${encodeURIComponent(itemKey)}`);
+  const undo = useAction(() => api<RenameAnswer>(`/change-sets/${last.data!.id}/undo-rename`, { method: "POST", json: {} }), {
+    success: (r) => (r.applied ? `Rename undone: "${r.name}" again (a new draft version)` : "The undo waits for a second person on To review"), invalidate: [...invalidate, ["last-rename", kind, itemKey], ["review"]] });
+  const x = last.data;
+  if (!x) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted" data-last-rename={x.status}>
+      {x.status === "waiting" ? <span>Renaming to "{x.after}" waits for a second person on To review ({x.by}).</span>
+        : <><span>Last renamed from "{x.before}" to "{x.after}" by {x.by}.</span><Button size="sm" variant="secondary" onClick={() => undo.mutate(undefined)} busy={undo.isPending}><Undo2 /> Undo rename</Button></>}
+    </div>
   );
 }
 
