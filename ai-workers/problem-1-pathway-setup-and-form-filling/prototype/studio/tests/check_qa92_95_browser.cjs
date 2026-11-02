@@ -100,7 +100,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const ids = async () => p.locator("[data-questions] [data-section]:not([data-section='unasked'])").evaluateAll((xs) => xs.map((x) => x.getAttribute("data-section")));
   const before = await ids();
   const busy = p.locator("[data-questions] [data-section]").filter({ has: p.locator("[data-remove-why]") }).first();
-  step("QA-93 fail-guard: a section that asks this person something offers no Remove, and says why in words", await busy.count() === 1 && await busy.getByRole("button", { name: /^Remove from questionnaire/ }).count() === 0 && /placed in it in the shared library and stays? asked/.test(await busy.locator("[data-remove-why]").innerText()));
+  // UX-A part 5: the Remove is greyed (aria-disabled) and its reason is its tooltip and description, not a paragraph.
+  const greyed = busy.locator("[data-remove-blocked]");
+  step("QA-93 fail-guard: a section that asks this person something has a greyed Remove that says why in words", await busy.count() === 1 && await greyed.getAttribute("aria-disabled") === "true" && /placed in it in the shared library and stays? asked/.test((await busy.locator("[data-remove-why]").textContent()) ?? "") && (await greyed.getAttribute("aria-describedby")) === (await busy.locator("[data-remove-why]").getAttribute("id")));
   const sec = p.locator(`[data-questions] [data-section="${target}"]`);
   const title = (await sec.locator("button[aria-expanded] .font-medium").first().innerText()).trim();
   await sec.getByRole("button", { name: `Remove from questionnaire: ${title}` }).click();

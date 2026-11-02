@@ -515,8 +515,13 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
                   removing it here would only move it to the end. Offered only where it changes something: a section that
                   asks this person nothing. */}
               {canAuthor ? (s.questions.length
-                ? <span className="max-w-64 text-right text-xs text-text-muted" data-remove-why>Remove from questionnaire: not here. Its {s.questions.length} question{s.questions.length === 1 ? " is" : "s are"} placed in it in the shared library and stay{s.questions.length === 1 ? "s" : ""} asked; change the placement there.</span>
+                // UX-A part 5 (P-273; UX baseline finding 3): the reason is the greyed control's tooltip and description,
+                // not a 4-line paragraph on every section (Linear/Stripe: disabled control + tip with the reason).
+                ? <Tip tip={`Not here: its ${s.questions.length} question${s.questions.length === 1 ? " is" : "s are"} placed in it in the shared library and stay${s.questions.length === 1 ? "s" : ""} asked; change the placement there.`}>
+                    <Button size="sm" variant="ghost" aria-disabled="true" className="h-auto max-w-36 cursor-not-allowed whitespace-normal py-1 text-right text-text-muted/60 hover:bg-transparent" onClick={(e) => e.preventDefault()} aria-label={`Remove from questionnaire (not available here): ${s.title}`} aria-describedby={`remove-why-${s.id}`} data-remove-blocked>Remove from questionnaire</Button>
+                  </Tip>
                 : <Button size="sm" variant="ghost" onClick={() => setRemoving({ key: s.id, title: s.title })} aria-label={`Remove from questionnaire: ${s.title}`}>Remove from questionnaire</Button>) : null}
+              {canAuthor && s.questions.length ? <span id={`remove-why-${s.id}`} hidden data-remove-why>Not here: its {s.questions.length} question{s.questions.length === 1 ? " is" : "s are"} placed in it in the shared library and stay{s.questions.length === 1 ? "s" : ""} asked; change the placement there.</span> : null}
             </div>
             {isOpen ? (lines.length ? (
               <div className="border-t border-border px-4 py-3">

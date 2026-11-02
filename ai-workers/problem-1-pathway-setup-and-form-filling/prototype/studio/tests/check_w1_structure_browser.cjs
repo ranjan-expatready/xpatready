@@ -152,12 +152,13 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   await p.setViewportSize({ width: 1440, height: 900 }); await p.waitForTimeout(150);
 
   // ======================================================== row actions (P-116 amended, the shared pattern): why not, own draft, second person
-  const blocked = (name) => row(name).locator("[data-blocked-line]");
-  step("C11.9 P-116 amended fail: a combination row with a setup draft has a greyed Delete; the reason is visible text under it", (await row("Visitor visa").locator("[data-action]").getAttribute("aria-disabled")) === "true" && (await blocked("Visitor visa").innerText()).startsWith("Can't delete: its setup draft uses it.") && (await row("Visitor visa").locator("[data-action]").getAttribute("aria-describedby")) === `why-${vv}`, await blocked("Visitor visa").innerText().catch(() => ""));
+  // UX-A part 5 (P-273, amends P-116's visible line): the reason is the greyed action's tooltip and description.
+  const blocked = (name) => ({ innerText: async () => (await row(name).locator("[data-blocked-why]").textContent()) ?? "" });
+  step("C11.9 P-116 amended fail: a combination row with a setup draft has a greyed Delete; the reason is its description (UX-A part 5)", (await row("Visitor visa").locator("[data-action]").getAttribute("aria-disabled")) === "true" && (await blocked("Visitor visa").innerText()).startsWith("Can't delete: its setup draft uses it.") && (await row("Visitor visa").locator("[data-action]").getAttribute("aria-describedby")) === `why-${vv}`, await blocked("Visitor visa").innerText().catch(() => ""));
   step("C11.9 R3-4 fail: a Program with a setup draft under it has a greyed Delete naming it, in plain words (no rule codes)", /^Can't delete: "Visitor visa" under it has a setup draft\./.test(await blocked("Visitors").innerText()) && !/\(L\d\)/.test(await p.locator("[data-tree]").innerText()));
   await row("Visitors").locator("[data-action]").click({ force: true });
   step("C11.9 R3-2 fail: clicking a greyed Delete opens nothing", await p.locator("[data-impact-panel]").count() === 0);
-  await blocked("Visitors").getByRole("button", { name: "See where used" }).click();
+  await row("Visitors").locator("[data-edit]").click(); // the details list each use (UX-A part 5: no line under the row)
   await panel().locator("[data-where-panel]").waitFor(); await p.waitForFunction(() => !document.querySelector("[data-where-panel] [role=status]"));
   step("C11.9 WherePanel: 'See where used' opens Edit; what stops it is listed apart from what is kept", /Visitor visa/.test(await panel().locator("[data-where-panel] [data-stops]").innerText().catch(() => "")), await panel().locator("[data-where-panel]").innerText());
   await panel().getByRole("button", { name: "Close the details" }).click();

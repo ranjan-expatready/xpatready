@@ -51,6 +51,8 @@ const TIPS = {
   library: "The edition this combination uses, how many of its form fields are matched to shared fields, and the step the form waits for (read it, draft with AI, review AI's proposals).",
 };
 
+/** UX-A part 5: the explanation of an attached form's state, as its tip and description (never a sentence on every row). */
+const PENDING_WHY = "Attached from the Form library, not set up as a line yet. It is read, then its form fields are matched to shared fields; it joins the lines when the matches are applied.";
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
 
 export function FormsTab({ id, lines, filing, filingDetail, account = null, accountKey = null, problems, removed = [], removedEver = [], fromLibrary = [], lastChange = null, progress = {} }: { id: string; lines: WorkspaceFormLine[]; filing: string; filingDetail: string; account?: string | null; accountKey?: string | null; problems: { level: "error" | "warning"; item: string; message: string }[]; removed?: RemovedForm[]; removedEver?: string[]; fromLibrary?: string[]; lastChange?: LastFormChange | null; progress?: Record<string, FormStepChip> }) {
@@ -162,7 +164,8 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
         {pending.map((a) => (
           <tr key={a.id} data-pending={a.edition ?? a.fileName} data-attachment={a.id}>
             <td><span className="mono font-medium">{(a.edition ?? a.fileName).split(" (")[0]}</span><br />{/* QA-78: the edition a person reads, never the file name (imm5257e.pdf). */}<span className="text-xs text-text-muted">{a.edition ?? "Not read yet"}</span></td>
-            <td colSpan={5} className="text-xs text-text-muted">Attached from the Form library: not set up as a line yet. It is read, then its form fields are matched to shared fields; it joins the lines when the matches are applied.</td>
+            {/* UX-A part 5 (finding 3): two words in the row, the explanation in a tip reachable by keyboard. */}
+            <td colSpan={5} className="text-xs text-text-muted" data-pending-why><Tip tip={PENDING_WHY}><button type="button" className="cursor-help rounded-sm text-left underline decoration-dotted underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-describedby={`pending-why-${a.id}`}>Attached, not set up yet</button></Tip><span id={`pending-why-${a.id}`} hidden>{PENDING_WHY}</span></td>
             <td className="text-xs"><ReadingCell d={combo} a={a} inLibrary={inLibrary(a)} />{a.edition ? <span className="mt-1 block"><StepChip code={a.edition.split(" (")[0]} chip={progress[a.edition.split(" (")[0]]} onOpen={() => openSetup(a.edition!.split(" (")[0])} /></span> : null}</td>
             <td />
           </tr>

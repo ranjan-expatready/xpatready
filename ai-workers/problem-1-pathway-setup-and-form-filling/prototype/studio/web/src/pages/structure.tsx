@@ -403,16 +403,17 @@ function Row({ n, num, selected, current, justAdded, canAuthor, words, onEdit, o
       </div>
       <span className={cn("text-xs text-text-muted", list && (wide ? "max-xl:hidden" : "hidden"))} data-loc>{leaf ? <Tip tip={LOC_TIP}><span>{locWords(n.allowedLocations)}</span></Tip> : null}</span>
       {wide ? <span className="text-xs text-text-muted max-xl:hidden" data-used-by-line>{leaf ? <Tip tip={USED_TIP}><span><span className="sr-only">Used by: </span>{usedBy(c)}</span></Tip> : null}</span> : null}
-      <RowAction kind={a.kind} why={why} tip={a.kind === "DELETE" ? TIP.DELETE(a.below.length, a.immediate) : a.kind === "RETIRE" ? TIP.RETIRE(a.withCombination) : a.kind === "RESTORE" ? TIP.RESTORE : TIP.WITHDRAW(n.label)}
+      <RowAction kind={a.kind} why={why && canAuthor && a.why ? `${why} Its details (Edit) list each use.` : why} tip={a.kind === "DELETE" ? TIP.DELETE(a.below.length, a.immediate) : a.kind === "RETIRE" ? TIP.RETIRE(a.withCombination) : a.kind === "RESTORE" ? TIP.RESTORE : TIP.WITHDRAW(n.label)}
         canEdit={canAuthor} name={n.label} tabIndex={tab} reasonId={reasonId} onEdit={onEdit} onAction={onAction} editTip={TIP.edit(leaf, canAuthor)} />
-      {/* The reason a state greys the action, as visible text under the row (P-116 amended); a reader's is the tooltip. */}
+      {/* UX-A part 5 (P-273, finding 3; amends P-116's visible line under every row): the reason a state greys the action is
+          the greyed action's tooltip and its description (screen readers); the details (Edit) show it as text with each use. */}
       {/* A returned change (QA-59): who returned it and why, as visible text, with Send again beside the row's Withdraw. */}
       {n.pending?.status === "RETURNED" ? (
         <p className={cn("col-span-full -mt-0.5 pb-0.5 text-xs text-text-danger", list ? "pl-[4.25rem]" : ["pl-[3.25rem]", "pl-[3.75rem]", "pl-[5.5rem]", "pl-[7rem]"][level])} data-returned>
           {SAY.returnedNote(n.pending.by, n.pending.note)}
           {canAuthor && n.pending.mine ? <button type="button" onClick={onSendAgain} className="ml-2 rounded font-semibold text-text-link underline underline-offset-2 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" data-send-again>Send again</button> : null}
         </p>) : null}
-      {canAuthor && a.why ? <BlockedLine id={reasonId} text={a.why} onWhere={onEdit} className={cn("col-span-full -mt-0.5 pb-0.5", list ? "pl-[4.25rem]" : ["pl-[3.25rem]", "pl-[3.75rem]", "pl-[5.5rem]", "pl-[7rem]"][level])} /> : null}
+      {canAuthor && a.why ? <span id={reasonId} hidden data-blocked-why>{a.why} Its details (Edit) list each use.</span> : null}
     </div>
   );
 }
