@@ -14,9 +14,9 @@ type Doc = { id: string; current: boolean; sha256: string; size_bytes: number; m
 type Line = { id: string; version: number; derived_id: string; label: string; state: string; reason: string; required: boolean; kept: boolean; state_reason: string | null; documents: Doc[] };
 type P = { subject: string; lines: Line[]; waiting: Line[]; not_needed: Line[] };
 const studio = join(import.meta.dirname, "..");
-const MAX = 20 * 1024 * 1024, LETTER = /authori[sz]ation/i, TRAVEL = "person.travelling_alone_to_canada";
+const MAX = 20 * 1024 * 1024, LETTER = /authori[sz]ation/i, TRAVEL = "person.travels_with"; // R3: the letter follows "travels with" (alone) on a child under 18
 
-const hasLetter = () => sql("select count(*) from document_type where document_type_key='letter_of_authorization_for_a_minor'") === "1";
+const hasLetter = () => sql("select count(*) from canonical_field where canonical_field_key='person.travels_with'") !== "0" && sql("select count(*) from document_type where document_type_key='letter_of_authorization_for_a_minor'") === "1";
 if (!hasLetter()) for (const f of ["tests/runtime/setup_visitor_visa.ts", "acceptance/lib/setup_vv_m3.ts"])
   try { execFileSync(join(studio, "node_modules", ".bin", "tsx"), ["--tsconfig", join(studio, "api", "tsconfig.json"), join(studio, f), String(PORT), DB], { stdio: ["ignore", "ignore", "inherit"], timeout: 900_000 }); }
   catch { /* the setups exit 1 on their own known gaps (pack 4 S2w, S7, S7a); what this check needs is asked below */ }
@@ -25,6 +25,7 @@ await main("C6.4 storage", "request, upload, Not applicable, kept lines; QA-149"
   ok("setup: the Visitor visa with pack 4's document lines is released on this copy", hasLetter());
   const c = await openCase(sql("select id from combination where combination_key='vv.single'")!, FAMILY);
   const A = c.subjects["Sample Client A"], S = c.subjects["Sample Spouse A"], K1 = c.subjects["Sample Child A1"];
+  await answer(c.id, c.caseSubject, "case.application_date", new Date().toISOString().slice(0, 10), OFFICER); // ages for the under-18 lines (R3)
   const list = async (actor = OFFICER) => { const r = await call("GET", `/runtime/cases/${c.id}/checklist`, undefined, actor); return (r.body?.people ?? []) as P[]; };
   const of = (ps: P[], s: string) => ps.find((x) => x.subject === s)!;
   const line = (ps: P[], s: string, re: RegExp) => of(ps, s)?.lines.find((x) => re.test(x.label));
@@ -40,16 +41,16 @@ await main("C6.4 storage", "request, upload, Not applicable, kept lines; QA-149"
 
   // QA-149: the deciding question stays on the case once answered.
   ok("QA-149 fail (before): unanswered, the child's \"travelling alone\" is asked (it decides the letter line)", await asked("agent", OFFICER));
-  let r = await answer(c.id, K1, TRAVEL, true, CLIENT);
+  let r = await answer(c.id, K1, TRAVEL, "alone", CLIENT);
   ok("QA-149 pass: after yes, the officer's case view still asks it, so it can be corrected", r.status < 300 && await asked("agent", OFFICER), r.status);
   ok("QA-149 pass: after yes, the client's questionnaire still asks it", await asked("sqr", CLIENT));
   let ps = await list();
   const letter = line(ps, K1, LETTER);
   ok("C6.4 pass: yes adds the letter line, Not requested, with a stored id (not the derived one)", !!letter && letter.state === "not_requested" && letter.id !== letter.derived_id && /^[0-9a-f-]{36}$/.test(letter.id), letter);
-  r = await answer(c.id, K1, TRAVEL, false, CLIENT);
+  r = await answer(c.id, K1, TRAVEL, "both_parents", CLIENT);
   ps = await list();
   ok("QA-149 pass: the change back to no is saved and the line goes (nothing requested, so nothing kept)", r.status < 300 && !line(ps, K1, LETTER), r.body?.detail ?? r.status);
-  r = await call("PUT", `/runtime/cases/${c.id}/answers/${K1}/${TRAVEL}`, { value: true, expectedId: null }, CLIENT);
+  r = await call("PUT", `/runtime/cases/${c.id}/answers/${K1}/${TRAVEL}`, { value: "alone", expectedId: null }, CLIENT);
   ok("QA-149 fail: a change sent without the id of the answer seen is still refused (409)", r.status === 409, r.status);
 
   // Rows: one per person x document, written once.
@@ -127,20 +128,20 @@ await main("C6.4 storage", "request, upload, Not applicable, kept lines; QA-149"
 
   // Kept lines: acted on, they stay when the answers no longer call for them.
   ps = await list(); // the change to yes above was refused, so the letter is not on the list
-  await answer(c.id, K1, TRAVEL, true, CLIENT);
+  await answer(c.id, K1, TRAVEL, "alone", CLIENT);
   const kl = line(await list(), K1, LETTER)!;
   ok("C6.4 pass: the letter line comes back with the same id it had before", kl?.id === letter?.id, [kl?.id, letter?.id]);
   await call("POST", `/runtime/checklist-lines/${kl.id}/request`, {}, OFFICER);
-  await answer(c.id, K1, TRAVEL, false, CLIENT);
+  await answer(c.id, K1, TRAVEL, "both_parents", CLIENT);
   const kept = line(await list(), K1, LETTER);
   ok("C6.4 pass: a requested line the answers no longer call for stays on the list, kept, not required, saying why", !!kept && kept.kept && !kept.required && kept.state === "requested" && /Kept on the list/.test(kept.reason), kept);
   const ps2 = await list();
   ok("C6.4 pass: a kept line is not listed twice (not also under Not needed)", !of(ps2, K1).not_needed.some((x) => LETTER.test(x.label)));
   // A line nobody acted on and the answers took away cannot be acted on.
   const k2 = c.subjects["Sample Child A2"];
-  await answer(c.id, k2, TRAVEL, true, CLIENT);
+  await answer(c.id, k2, TRAVEL, "alone", CLIENT);
   const l2 = line(await list(), k2, LETTER)!;
-  await answer(c.id, k2, TRAVEL, false, CLIENT);
+  await answer(c.id, k2, TRAVEL, "both_parents", CLIENT);
   r = await call("POST", `/runtime/checklist-lines/${l2.id}/request`, {}, OFFICER);
   ok("C6.4 fail: a line the answers took away and nobody acted on cannot be requested (409, words)", r.status === 409 && /not on .* list now/i.test(String(r.body?.detail)), r.body);
   // Break m4: the same request at the same moment (a double click) is one request, never a false conflict.

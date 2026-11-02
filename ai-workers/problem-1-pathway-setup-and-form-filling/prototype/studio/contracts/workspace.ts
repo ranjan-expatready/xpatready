@@ -12,6 +12,7 @@ export const TABS = [
   { key: "questionnaires", label: "Questionnaires" },
   { key: "documents", label: "Documents" },
   { key: "preview", label: "Preview" },
+  { key: "tests", label: "Tests" }, // G4 (forms lane, C5.7): answer-key tests
   { key: "review", label: "Review and release" },
 ] as const;
 export type TabKey = (typeof TABS)[number]["key"];
@@ -103,6 +104,10 @@ export type PeopleView = {
   submissions: { filings: string[]; splittable: boolean; words: string }[];
   /** In words: "3 filings in one submission". */
   gets: string;
+  /** C11.12 PR 3: what the editor needs to work out the preview and the warnings as the author edits (the same pure
+   *  functions as the server, engine/filing-modes.ts): the combination, whether its fees are worked out, and the
+   *  built-in filing mode a case falls back to per role (Sample). */
+  combinationKey: string; combinationLabel: string; feesKnown: boolean; defaults: Record<string, LineMode>;
 };
 /** C11.12 (concept §6): the read-only words of a line's filing mode. */
 export type FilingWords = { filingWords: string; ifNotTravelling: string | null; fees: string | null; tip: string | null };

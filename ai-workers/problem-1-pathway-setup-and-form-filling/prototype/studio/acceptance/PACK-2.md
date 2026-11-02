@@ -21,7 +21,7 @@ Results on main at the merge of 1 Nov evening (branch at a5313918), each test on
 | `C4.2.test.ts` | PQR marking | exit 2 (no questions) | Red 8/10 | QA-125 words ("the database refused a duplicate"); a fact whose section was taken out can still be ticked |
 | `C4.6.test.ts` | Preview by person per channel | Red 11/17 | — | no "who signs" on a PDF (shape proposed `PreviewForm.sign`); no later-wave note on Online |
 | `C4.8.test.ts` | PQR and SQR in the one release | exit 2 (no questions) | **Green 10/10** | — (Works) |
-| `C11.12.test.ts` | Who can be: filing mode, submissions, P-209 | Red 5/19 | — | no filing mode, filings or submissions; Demo sample says "Applicant" (QA-143) |
+| `C11.12.test.ts` | Who can be: filing mode, submissions, P-209 | Red 5/19 | 18/19 (C11.12 PR 1, #445) | line 57 amended to "warn" (P-233 (3)); left: line 90, the sample's principal labels (QA-143, screens-1's sample fixes) |
 | `C11.12-runtime.test.ts` | Runtime refuses a role not listed or over the maximum | — (no release) | **Green 4/4** | — |
 | `C11.10.test.ts` | Setup cards, chips, Needs you | Red 12/15 | — | Cards / List not kept per person on the server (route proposed, a question) |
 | `X1a.test.ts` | An empty combination is never released | **Green 12/12** | — | — |

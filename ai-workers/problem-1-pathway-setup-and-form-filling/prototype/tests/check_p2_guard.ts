@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { fingerprint, type CaptureRecord } from "../contracts/portal-capture.ts";
-import { tmpdir } from "node:os";
+import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
 import { admitInput, admitRun, answerKeyFiles, assertNoLinksUnder, assertRoute, canaryStrings, isolatedNodeArgs, PolicyRefusal, screenMakerText } from "../p2/guard.ts";
 import { admittedPublicText, buildDigest, findForbidden } from "../p2/screen.ts";
@@ -75,6 +75,30 @@ t("failed attempts and the retry are both charged at worst case", r1.status === 
 const before = calls;
 const r2 = await runDrafting(run("run-2"), build, ok, ledger);
 t("third attempt across runs refused before the call when the experiment cap would be passed", r2.status === "budget_exceeded" && calls === before && r2.attempts[0].outcome === "refused_before_call");
+// PC (#508 breaker Major 1): the run record's cost equals what the ledger counts. launch.ts sums each attempt's cost_usd,
+// else its worst_usd; an attempt the cap refused reserved nothing, so it must carry cost_usd 0.
+const recordCost = (o: { attempts: { cost_usd?: number; worst_usd?: number }[] }) => o.attempts.reduce((x, a) => x + (a.cost_usd ?? a.worst_usd ?? 0), 0);
+t("PC pass: an attempt refused by the cap costs US$0 in the run record (as the ledger: nothing reserved)", r2.attempts[0].cost_usd === 0 && recordCost(r2) === 0);
+t("PC fail: an attempt that ran and failed stays counted at its worst case in the run record, as in the ledger", Math.abs(recordCost(r1) - ledger.committed()) < 1e-9 && recordCost(r1) > 0);
+const timingOut: Caller = async () => { calls++; throw new Error("Request timed out"); };
+const lTo = new SpendLedger(mkdtempSync(join(tmpdir(), "p2-ledger-")), 0.5); // room for one attempt (worst about US$0.328), not two
+const rTo = await runDrafting(run("run-timeout"), build, timingOut, lTo);
+t("PC pass: a first attempt that timed out keeps the run timed_out when the cap refuses the retry (not budget_exceeded)", rTo.status === "timed_out" && rTo.attempts.length === 2 && rTo.attempts[0].outcome === "timed_out" && rTo.attempts[1].outcome === "refused_before_call");
+t("PC pass: that run's record cost equals the ledger's (the timed-out attempt at its worst case, the refused one at US$0)", Math.abs(recordCost(rTo) - lTo.committed()) < 1e-9 && Math.abs(recordCost(rTo) - rTo.attempts[0].worst_usd!) < 1e-9);
+t("PC fail: a run whose first attempt is refused by the cap is budget_exceeded, at US$0", r2.status === "budget_exceeded" && recordCost(r2) === 0);
+// PC (breaker M1): a settle that cannot be written (another process holds the ledger's short lock) leaves the reservation
+// at its worst case in the ledger; the run record then says the worst case too, for an answer and for a free refusal.
+const holdLock = (l: SpendLedger) => writeFileSync(join(l.file, "..", "spend.reserve.lock"), `${hostname()}:${process.pid}:pc-test`);
+const lockFree = (l: SpendLedger) => rmSync(join(l.file, "..", "spend.reserve.lock"), { force: true });
+for (const [name, mk] of [["an answer", (l: SpendLedger): Caller => async () => { holdLock(l); return { text: "{}", usage: { input_tokens: 1000, output_tokens: 1000 } }; }],
+  ["a refusal by the provider (400)", (l: SpendLedger): Caller => async () => { holdLock(l); throw Object.assign(new Error("400 invalid_request_error"), { status: 400 }); }]] as const) {
+  const lS = new SpendLedger(mkdtempSync(join(tmpdir(), "p2-ledger-")), 5, { waitMs: 200 });
+  const rS = await runDrafting(run(`run-settle-${name.length}`, 1), build, mk(lS), lS); lockFree(lS);
+  t(`PC pass: ${name} whose settle could not be written: the run record counts the worst case, as the ledger does`, !!rS.attempts[0].settle_error && Math.abs(recordCost(rS) - lS.committed()) < 1e-9 && Math.abs(recordCost(rS) - rS.attempts[0].worst_usd) < 1e-9);
+}
+const lF = new SpendLedger(mkdtempSync(join(tmpdir(), "p2-ledger-")), 5);
+const rF = await runDrafting(run("run-settled", 1), build, async () => { throw Object.assign(new Error("400 invalid_request_error"), { status: 400 }); }, lF);
+t("PC fail: the same refusal with its settle written costs US$0 in both", !rF.attempts[0].settle_error && recordCost(rF) === 0 && lF.committed() === 0);
 const rejected: Caller = async () => { calls++; throw Object.assign(new Error("400 invalid_request_error: compiled grammar is too large"), { status: 400 }); };
 const c0 = calls;
 const l400 = new SpendLedger(mkdtempSync(join(tmpdir(), "p2-ledger-")), 40);

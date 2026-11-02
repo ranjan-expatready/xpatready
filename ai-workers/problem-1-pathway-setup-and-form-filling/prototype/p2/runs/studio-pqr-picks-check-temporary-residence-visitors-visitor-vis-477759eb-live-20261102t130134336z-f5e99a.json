@@ -1,0 +1,119 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-pqr-picks-check-temporary-residence-visitors-visitor-vis-477759eb-live-20261102t130134336z-f5e99a",
+  "idempotency_key": "c78d71d13ccf8c10a3155bb054efb3cd113da8e6e1e762eddb35224e6ed94458",
+  "contract_version": "drafting-run/v0",
+  "kind": "pqr_picks",
+  "output_sha256": "c19b7d1fed743ce26ea2156c6167fd0cc80a6cc96856f97235930ea6be191502",
+  "inputs": {
+   "combination": "vv.single",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/guide-5256.text.inventory.json",
+     "sha256": "c6bc458e9381a53f71ae15015330eee769ce91a18cfc00a7daad1dad65ab16c2"
+    }
+   ],
+   "configuration_version": "c47-pqr-picks"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "low",
+   "timeout_ms": 300000,
+   "max_attempts": 2,
+   "budget_usd": 1,
+   "max_output_tokens": 4000,
+   "prompt_version": "pqr-picks-check.v1.md",
+   "prompt_sha256": "07515e2008ee5a3c9d6e7d6dc2dc5ba315d5999d92d6b44373bf3df7736f09d1"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 16725,
+    "output_tokens": 1095,
+    "duration_ms": 9499
+   }
+  ],
+  "usage": {
+   "input_tokens": 16725,
+   "output_tokens": 1095,
+   "cost_usd": 0.0888,
+   "duration_ms": 9499
+  },
+  "started_at": "2026-11-02T13:01:34.338Z",
+  "ended_at": "2026-11-02T13:01:44.044Z"
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": null,
+ "launch_evidence": {
+  "path_code_sha256": "bd72e22a529b83dc002842cb3423f059f922a8bad8feebf2bca1f5dfb7f3f046",
+  "template_sha256": "4c154232bd4b249dd241c410e3fd3c7790194bed5be0ca89caecbc2ca570734f",
+  "schema_file": "pqr-picks-output.v1.schema.json",
+  "schema_sha256": "27a912c884dfc8b79caea3198c3248b557b566208d4a58190da7666557b21e72",
+  "known": {
+   "combination_trail": "Temporary residence › Visitors › Visitor visa"
+  },
+  "screened": true,
+  "output_sha256": "c19b7d1fed743ce26ea2156c6167fd0cc80a6cc96856f97235930ea6be191502",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/Users/ranjansingh/Desktop/Xpatready/.claude/worktrees/paid-runner-48310b/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "8846a85e9c03507a4efcc19f2621ed194b6ea77cb0b2bc1bb03eace7e81c5bc6",
+  "request_bytes": 55826,
+  "stub_calls": null,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/.tools/p2-ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 47.82136399999999
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/guide-5256.text.inventory.json",
+    "sha256": "c6bc458e9381a53f71ae15015330eee769ce91a18cfc00a7daad1dad65ab16c2",
+    "kind": "inventory"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "9de64bcd1dd238f905d4689a8841f7f8370736b0c6c48b995e764ff72dcb15a3",
+   "digest_made_at": "2026-11-02T13:01:34.337Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "0580cdf0e5a66e5c6205d296835e21a7",
+   "ticket_expires_at": "2026-11-02T13:03:34.337Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"picks\":[{\"role\":\"principal\",\"asks\":\"Purpose of visit\",\"quote\":\"You must show the officer that you meet the requirements of the Immigration and Refugee Protection Act (IRPA) and the Immigration and Refugee Protection Regulations and that you will be in Canada for a temporary stay.\",\"why\":\"The officer must be satisfied the stay is temporary, so the reason for the trip comes first.\"},{\"role\":\"principal\",\"asks\":\"Ties to home country\",\"quote\":\"satisfy an officer that you will leave Canada at the end of your stay,\",\"why\":\"The officer tests whether the prospect will leave at the end of the stay.\"},{\"role\":\"principal\",\"asks\":\"Funds available for stay\",\"quote\":\"show that you have enough money to maintain yourself and your family members in Canada and to return home,\",\"why\":\"Enough money to stay and return home is an eligibility requirement.\"},{\"role\":\"principal\",\"asks\":\"Plans to work or study\",\"quote\":\"not intend to work or study in Canada unless authorized to do so,\",\"why\":\"Intending to work or study without authorization conflicts with a visitor visa.\"},{\"role\":\"principal\",\"asks\":\"Criminal record\",\"quote\":\"be law abiding and have no record of criminal activity,\",\"why\":\"A criminal record affects admissibility.\"},{\"role\":\"principal\",\"asks\":\"Security concerns\",\"quote\":\"not be a risk to the security of Canada,\",\"why\":\"Security risk is tested for admissibility.\"},{\"role\":\"principal\",\"asks\":\"Health condition\",\"quote\":\"be in good health (complete a medical examination if required).\",\"why\":\"Health is a stated requirement for the visa.\"},{\"role\":\"principal\",\"asks\":\"Ever held Canadian PR\",\"quote\":\"We cannot issue you a TRV if you are a permanent resident.\",\"why\":\"A current permanent resident cannot be issued this visa.\"},{\"role\":\"spouse_or_partner\",\"asks\":\"Accompanying spouse or partner\",\"quote\":\"Your spouse or common-law partner and children must meet all of the requirements for temporary residence in Canada.\",\"why\":\"An accompanying spouse must meet the same requirements.\"},{\"role\":\"child\",\"asks\":\"Accompanying children\",\"quote\":\"Your spouse or common-law partner and children must meet all of the requirements for temporary residence in Canada.\",\"why\":\"Accompanying children must meet the same requirements.\"}],\"unresolved\":[{\"passage\":\"provide any additional document requested by the officer to establish your admissibility, and\",\"reason\":\"Depends on what the officer requests, not something the prospect can answer upfront.\"},{\"passage\":\"If you plan to work, visit or study in Canada for more than six months:\",\"reason\":\"Medical exam triggers depend on stay length and residence history in listed countries, which the guide does not name; this could be a length-of-stay or residence-history fact, so it is left for a person to decide.\"},{\"passage\":\"Most people must apply online. You can only apply on paper if you can’t apply online, including for reasons of a disability, or if you’re travelling with an identity or travel document that was issued to a refugee, a stateless person or a non-citizen.\",\"reason\":\"This governs the method of application, not visa eligibility.\"},{\"passage\":\"The age of your children is ‘locked in’ when you make your refugee claim.\",\"reason\":\"The dependent-child definition refers to refugee and permanent residence contexts; how it applies to a visitor visa is unclear.\"}]}"
+}

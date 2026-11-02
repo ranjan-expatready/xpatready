@@ -14,16 +14,21 @@ import { fileURLToPath } from "node:url";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { buildSnapshot, type Snapshot } from "../engine/snapshot.ts";
-import { changeProblem, checkExpected, checkFamily, fingerprintOf, NO_SCORING, runFieldMap, runRuleSet, runState, signProblem, type Family, type MapExpected } from "../engine/answer-keys.ts";
+import { changeProblem, checkExpected, checkFamily, fingerprintOf, keyBoxes, NO_SCORING, runFieldMap, runRuleSet, runState, signProblem, type Family, type MapExpected } from "../engine/answer-keys.ts";
 import type { Inventory } from "../engine/form-values.ts";
+import { writesParts } from "../engine/field-format.ts";
 import { client, recorder } from "./runtime/api.ts";
+import { AMENDED, e1Keys, P, sample } from "./g4_e1_key.ts";
 
 const PORT = Number(process.argv[2] ?? 4450), DB = process.argv[3] ?? "xr_studio_forms_g4";
-const { call, sql } = client(PORT, DB);
+const { call: call0, sql } = client(PORT, DB);
+// P-63: every refusal this check triggers is read for "box" or a data path in its words (the field names stay paths).
+const refusals: string[] = [];
+const call = async (...a: Parameters<typeof call0>) => { const r = await call0(...a); if (r.status >= 400 && r.body && typeof r.body === "object") refusals.push([r.body.detail, typeof r.body.message === "string" ? r.body.message : "", ...((r.body.errors ?? []) as { message: string }[]).map((e) => e.message)].filter(Boolean).join(" ")); return r; };
 const { ok, summary } = recorder();
 const STUDIO = join(dirname(fileURLToPath(import.meta.url)), "..");
 const AUTHOR = "user-A", EXPERT = "user-C", APPROVER = "user-B", OFFICER = "user-O";
-const FORM = "IMM 5257", P = "form1[0].";
+const FORM = "IMM 5257";
 const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
 
 // ------------------------------------------------------------------------------------------------ the inputs
@@ -37,30 +42,9 @@ const snap = async () => (await buildSnapshot(db as never, ws, vv, "draft")).sna
 let s: Snapshot = await snap();
 const map = (s.field_maps as { form_number: string; form_edition: string; inventory_file: string; entries: { data_path: string; fact?: string | null; person?: string | null; caption?: string | null }[] }[]).find((m) => m.form_number === FORM)!;
 const inv = JSON.parse(readFileSync(join(STUDIO, "..", "..", map.inventory_file), "utf8")) as Inventory;
-const sample = JSON.parse(readFileSync(join(STUDIO, "samples", "answer-key-families.json"), "utf8")).families[0];
 const fields = new Set((s.canonical_fields as { id: string }[]).map((f) => f.id)), roles = new Set(["principal", "spouse_or_partner", "child"]);
-const e1 = JSON.parse(readFileSync(join(STUDIO, "..", "evidence-lane", "E1", "imm5257", "values.complete.json"), "utf8")).values as Record<string, string>;
 
-/** Where today's IMM 5257 map gives something other than E1's checked fill. Each is an open point for the immigration
- *  expert (the PR's Questions); the key holds what the map gives today, and the E1 run below fails on exactly these. */
-const AMENDED: Record<string, { value: string; why: string }> = {
-  "Page1[0].PersonalDetails[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]": { value: "", why: "E1 writes N; no question asks other names yet (C7.2)" },
-  "Page2[0].natID[0].q1[0].natIDIndicator[0]": { value: "", why: "E1 writes N; no question asks a national identity document yet (C7.2)" },
-  "Page2[0].USCard[0].q1[0].usCardIndicator[0]": { value: "", why: "E1 writes N; no question asks a US card yet (C7.2)" },
-  "Page2[0].MaritalStatus[0].SectionA[0].Passport[0].TaiwanPIN[0]": { value: "", why: "E1 writes N; the release publishes this box as not a fact" },
-  "Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IsraelPassportIndicator[0]": { value: "", why: "E1 writes N; the release publishes this box as not a fact" },
-  "Page3[0].Signature[0].Consent0[0].Choice[0]": { value: "", why: "E1 writes N; the release publishes the consent box as not a fact" },
-  "Page3[0].BackgroundInfo[0].Choice[0]": { value: "", why: "E1 writes N (tuberculosis question); the map has no fact on this box" },
-  "Page3[0].PageWrapper[0].GovPosition[0].Choice[0]": { value: "", why: "E1 writes N (government position); the map has no fact on this box" },
-  "Page3[0].DetailsOfVisit[0].Contacts_Row1[0].AddressInCanada[0].AddressInCanada[0]": { value: "100 SAMPLE STREET, TORONTO, ON M5V 0A1, Canada", why: "E1 writes \"100 SAMPLE STREET, TORONTO ON M5V 0A1\"; the map's one-line address adds commas and the country" },
-  "Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Country[0]": { value: "205", why: "E1 leaves it blank when the country where applying is the country of residence; the map writes it" },
-  "Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].CanadaUS[0]": { value: "0", why: "E1 leaves the Canada/US switch unset; the map writes it off" },
-  ...Object.fromEntries(["ResidentialAddressRow1[0].CityTown[0].CityTown[0]", "ResidentialAddressRow1[0].StreetName[0].Streetname[0]", "ResidentialAddressRow1[0].StreetNum[0].StreetNum[0]", "ResidentialAddressRow2[0].Country[0].Country[0]", "ResidentialAddressRow2[0].PostalCode[0].PostalCode[0]"]
-    .map((b) => [`Page2[0].ContactInformation[0].contact[0].${b}`, { value: ({ "ResidentialAddressRow1[0].CityTown[0].CityTown[0]": "NEW DELHI", "ResidentialAddressRow1[0].StreetName[0].Streetname[0]": "EXAMPLE ROAD", "ResidentialAddressRow1[0].StreetNum[0].StreetNum[0]": "12", "ResidentialAddressRow2[0].Country[0].Country[0]": "205", "ResidentialAddressRow2[0].PostalCode[0].PostalCode[0]": "110001" } as Record<string, string>)[b], why: "E1 leaves the residential address blank when it is the mailing address (Y); the map writes it too" }])),
-};
-const e1Key: MapExpected = { edition: map.form_edition, people: { mother: { ...e1 } } };
-const key: MapExpected = { edition: map.form_edition, people: { mother: { ...e1, ...Object.fromEntries(Object.entries(AMENDED).map(([b, a]) => [P + b, a.value])) } } };
-for (const [b, a] of Object.entries(AMENDED)) if (a.value === "") delete key.people.mother[P + b]; // a box not in the key must stay blank (BR-4)
+const { e1Key, key } = e1Keys(map.form_edition);
 
 // ------------------------------------------------------------------------------------------------ Part A: engine
 // P-249: the engine files read no database, file, network or model (their imports only).
@@ -92,6 +76,19 @@ const sMap = clone(s); if (sig) (sMap.field_maps as typeof map[]).find((m) => m.
 const exSig = sig ? checkExpected(sMap, "field_map", FORM, family, { people: { mother: { [sig]: "EXAMPLE" } } }, inv) : null;
 ok("C5.7 BR-2 fail (challenge M5 c): a box a person fills (a signature) cannot be given a value", !!exSig && exSig.errors.some((e) => /filled by a person/.test(e.message)), { sig, errors: exSig?.errors });
 ok("C5.7 BR-2 fail: a scoring key is refused in words (no scoring tables yet)", checkExpected(s, "scoring", "crs", family, {}).errors[0]?.message === NO_SCORING);
+
+// §4 Expected editor (challenge M5 b, STANDARDS §3.2): the boxes it offers, from the map and the form, never a run
+const MS = `${P}Page1[0].MaritalStatus[0].SectionA[0].MaritalStatus[0]`;
+const kb = keyBoxes(s, FORM, inv)!, mappedN = (map.entries as { outcome?: string }[]).filter((e) => e.outcome === "mapped").length;
+const invAt = new Map(inv.fields.map((f, i) => [f.data_path, i]));
+const ms = kb.boxes.find((b) => b.data_path === MS);
+ok(`C5.7 §4: the Expected editor offers every mapped IMM 5257 box (${kb.boxes.length}) in the form's order, each with its caption, fact and whose`, kb.boxes.length === mappedN && kb.boxes.every((b, i) => i === 0 || (invAt.get(b.data_path) ?? 1e9) > (invAt.get(kb.boxes[i - 1].data_path) ?? -1)) && kb.boxes.every((b) => b.caption && b.whose) && kb.edition === map.form_edition, { n: kb.boxes.length, mappedN });
+ok("C5.7 §4 (pick, don't type): a choice box carries the form's own options, label beside code (marital status: Married = 01)", !!ms?.options.some((o) => o.code === "01" && /Married/.test(o.label)) && kb.boxes.find((b) => /AliasNameIndicator\[0\]$/.test(b.data_path))?.options.map((o) => o.code).sort().join() === "N,Y", ms?.options.slice(0, 3));
+ok("C5.7 §4: a text box has no options (typed), and none of the map's mapped boxes is one a person fills", kb.boxes.find((b) => b.fact === "person.family_name" && b.whose === "form_subject")?.options.length === 0 && kb.boxes.every((b) => !b.by_a_person));
+const sMap2 = clone(s); if (sig) (sMap2.field_maps as typeof map[]).find((m) => m.form_number === FORM)!.entries.push({ data_path: sig, fact: "person.family_name", person: "form_subject", caption: "Signature", outcome: "mapped" } as typeof map.entries[number]);
+const kbSig = sig ? keyBoxes(sMap2, FORM, inv)!.boxes.find((b) => b.data_path === sig) : undefined;
+ok("C5.7 §4 fail (challenge M5 c): a signature box mapped by mistake is flagged as filled by a person, so the editor leaves it out", !!kbSig?.by_a_person && /signature/.test(kbSig.by_a_person_why ?? ""), kbSig);
+ok("C5.7 §4 fail: a form the combination has no PDF map of gives no boxes", keyBoxes(s, "IMM 0000", inv) === null);
 
 // BR-3, BR-4: the run
 const pass = runFieldMap(s, family, FORM, inv, key);
@@ -178,6 +175,19 @@ const list0 = (await call("GET", `/combinations/${vv}/answer-keys`, undefined, A
 ok("C5.7 API: the combination lists its testable items (the IMM 5257 map and the eligibility rules)", list0.items?.some((i: { item_ref: string }) => i.item_ref === FORM) && list0.items?.some((i: { item_kind: string }) => i.item_kind === "rule_set"), list0.items);
 const kBad = await call("POST", `/combinations/${vv}/answer-keys`, { family_id: fid, item_kind: "field_map", item_ref: FORM, expected: { people: { mother: { "form1[0].Nowhere[0]": "X" } } } }, AUTHOR);
 ok("C5.7 API fail: a key with a box the map does not have is refused on the field (400)", kBad.status === 400 && kBad.body.errors?.[0]?.field === "expected.people.mother.form1[0].Nowhere[0]", kBad.body);
+// §4 Expected editor through the API: the boxes endpoint and the field picker (reads); a signature box in a save is 400.
+const bx = await call("GET", `/combinations/${vv}/answer-keys/boxes?form=${encodeURIComponent(FORM)}`, undefined, APPROVER);
+ok("C5.7 §4 API: GET …/answer-keys/boxes?form=IMM 5257 gives the engine's boxes in the form's order, a choice box with its options", bx.status === 200 && bx.body.boxes.length === kb.boxes.length && bx.body.boxes.map((b: { data_path: string }) => b.data_path).join() === kb.boxes.map((b) => b.data_path).join() && bx.body.boxes.find((b: { data_path: string }) => b.data_path === MS)?.options.some((o: { code: string }) => o.code === "01"), { status: bx.status, n: bx.body?.boxes?.length });
+ok("C5.7 §4 API fail: a case person cannot read the boxes (403); a form not in the combination is 404; no form is 400 on the field", (await call("GET", `/combinations/${vv}/answer-keys/boxes?form=IMM%205257`, undefined, OFFICER)).status === 403 && (await call("GET", `/combinations/${vv}/answer-keys/boxes?form=IMM%200000`, undefined, AUTHOR)).status === 404 && (await call("GET", `/combinations/${vv}/answer-keys/boxes`, undefined, AUTHOR)).body.errors?.[0]?.field === "form");
+const lf = await call("GET", "/answer-keys/fields", undefined, AUTHOR);
+const lfMs = lf.body?.fields?.find((f: { id: string }) => f.id === "person.marital_status");
+ok("C5.7 BR-1 API: GET /answer-keys/fields lists the library's fields with their type and, for a choice field, its answer list's values", lf.status === 200 && lf.body.fields.length >= 50 && lfMs?.values?.length > 3 && lf.body.fields.find((f: { id: string }) => f.id === "person.family_name")?.values === null, lfMs);
+const lfPhone = lf.body?.fields?.find((f: { id: string }) => f.id === "person.phone_number");
+ok("C5.7 BR-1 (Devin review, 2nd pass): a text-typed phone read part by part after \"select primary phone;\" or \"select alternate phone;\" is marked parts; a name is not", writesParts("select primary phone; phone_part:extension (max 5 chars)") && writesParts("select alternate phone; phone_part:nanp_area_code (3 digits)") && !writesParts("select alternate phone; derive:1 if country calling code is 1, else 0") && lfPhone?.value_type === "text" && lfPhone?.parts === true && lf.body.fields.find((f: { id: string }) => f.id === "person.family_name")?.parts === false, lfPhone);
+ok("C5.7 BR-1 API fail: a case person cannot read the field picker (403)", (await call("GET", "/answer-keys/fields", undefined, OFFICER)).status === 403);
+const SIG = `${P}Page3[0].Signature[0].TextField2[0]`;
+const kSig = await call("POST", `/combinations/${vv}/answer-keys`, { family_id: fid, item_kind: "field_map", item_ref: FORM, expected: { people: { mother: { [SIG]: "EXAMPLE MOTHER" } } } }, EXPERT);
+ok("C5.7 §4 API fail (challenge M5 c): saving a value for the applicant's signature box is refused on that box (400): a person signs it", kSig.status === 400 && kSig.body.errors?.[0]?.field === `expected.people.mother.${SIG}` && /filled by a person/.test(kSig.body.errors[0].message) && !bx.body.boxes.some((b: { data_path: string }) => b.data_path === SIG), kSig.body);
 const k = await call("POST", `/combinations/${vv}/answer-keys`, { family_id: fid, item_kind: "field_map", item_ref: FORM, expected: key }, EXPERT);
 ok("C5.7 API: the expert enters the expected values; the key is Draft, Sample, Not run", k.status === 201 && k.body.state === "DRAFT" && /Sample/.test(k.body.sample) && k.body.run.state === "NOT_RUN", k.body?.run ?? k.body);
 const kid: string = k.body.id;
@@ -190,6 +200,8 @@ const signed = await call("POST", `/answer-keys/${kid}/sign`, { version: 1 }, EX
 ok("C5.7 API: the expert signs; the key is Signed, no longer Sample, still Passed", signed.status === 200 && signed.body.state === "SIGNED" && signed.body.sample === null && signed.body.signed_by === "Content reviewer" && signed.body.run.state === "PASSED", signed.body);
 const noWhy = await call("PUT", `/answer-keys/${kid}`, { expected: key, version: 1 }, AUTHOR);
 ok("C5.7 API fail: changing signed values without a reason is refused on the field (400)", noWhy.status === 400 && noWhy.body.errors?.[0]?.field === "reason", noWhy.body);
+const same = await call("PUT", `/answer-keys/${kid}`, { expected: key, version: 1, reason: "looked again, nothing to change (test)" }, AUTHOR);
+ok("C5.7 BR-7 (break m6): a signed key \"changed\" to the same values keeps its signature and version", same.status === 200 && same.body.state === "SIGNED" && same.body.version === 1, { status: same.status, state: same.body?.state });
 ok("C5.7 API fail: a stale change is refused (409)", (await call("PUT", `/answer-keys/${kid}`, { expected: key, version: 0, reason: "x" }, AUTHOR)).status === 409);
 const changed = await call("PUT", `/answer-keys/${kid}`, { expected: less, version: 1, reason: "Date of birth year checked separately (test)" }, AUTHOR);
 ok("C5.7 API: a change with a reason returns the key to Draft and its last run to Not run", changed.status === 200 && changed.body.state === "DRAFT" && changed.body.run.state === "NOT_RUN" && changed.body.change_reason === "Date of birth year checked separately (test)", changed.body?.run);
@@ -226,6 +238,8 @@ const f2now = (await call("GET", "/answer-keys/families", undefined, AUTHOR)).bo
 const saves = await Promise.all(["one", "two"].map((w) => call("PUT", `/answer-keys/families/${f2.id}`, { ...f2now, label: `E1 household ${w} (Sample)`, version: f2now.version, reason: `two saves at once (${w})` }, AUTHOR)));
 ok("C5.7 BR-8 (review minor 4): two saves of one family version at once: one saves, the other is refused (409)", saves.map((x) => x.status).sort().join() === "200,409", saves.map((x) => x.status));
 ok("C5.7 BR-4 (review minor 6): a line names the form's heading with its caption (not \"YYYY\" alone)", pass.lines.some((l) => l.target === `${P}Page1[0].PersonalDetails[0].DOBYear[0]` && l.label.length > 4 && /YYYY/.test(l.label)), pass.lines.find((l) => l.target === `${P}Page1[0].PersonalDetails[0].DOBYear[0]`)?.label);
+const starred = map.entries.filter((e) => /^\s*\*/.test(e.caption ?? "")).map((e) => e.data_path), byTarget = new Map(pass.lines.map((l) => [l.target, l.label]));
+ok("C5.7 BR-4 (Devin review of 53149ff8): a required form field keeps the form's \"* \" marker in its label; an optional one has none", starred.length > 0 && starred.filter((b) => byTarget.has(b)).every((b) => byTarget.get(b)!.startsWith("* ")) && pass.lines.filter((l) => !starred.includes(l.target) && l.target.startsWith(P)).every((l) => !l.label.startsWith("* ")), starred.filter((b) => byTarget.has(b) && !byTarget.get(b)!.startsWith("* ")).slice(0, 3));
 ok("C5.7 API fail (break m12): a family id that is not an id is refused on the field (400)", (await call("POST", `/combinations/${vv}/answer-keys`, { family_id: 42, item_kind: "rule_set", item_ref: "eligibility", expected: rules }, AUTHOR)).body.errors?.[0]?.field === "family_id");
 // Break M1: a family change racing the expert's sign never leaves a signature on facts the expert did not see.
 let raced = 0, kept = 0;
@@ -254,9 +268,25 @@ const esc = await call("POST", `/combinations/${vv}/answer-keys`, { family_id: f
 ok("C5.7 API fail (Devin review): a form field list path outside the solution folder is never read (422)", esc.status === 422, esc.status);
 sql(`update combination set retired_at = now() where id = '${vv}' returning id`);
 ok("C5.7 API fail (break m9): on a retired combination a key is not changed or signed (409)", (await call("PUT", `/answer-keys/${k4.id}`, { expected: rules, version: 2, reason: "x" }, AUTHOR)).status === 409 && (await call("POST", `/answer-keys/${k4.id}/sign`, { version: 2 }, EXPERT)).status === 409);
+// Review minor (re-review 3a3cf527): the copy is put back, so the check can run again on it.
+sql(`update combination set retired_at = null where id = '${vv}' returning id`);
+sql(`update form_edition set inventory_file = '${map.inventory_file}' where id = '${ed0}' returning id`);
+ok("C5.7 API fail (STANDARDS §6): a body of the wrong shape is refused by the contract, on the field (400)", (await call("POST", `/answer-keys/${k4.id}/sign`, { version: "2" }, EXPERT)).body.errors?.[0]?.field === "version" && (await call("POST", "/answer-keys/families", { label: "X", reference_date: "2026-01-01", people: "nobody" }, AUTHOR)).body.errors?.[0]?.field === "people");
 const missing = await call("GET", "/answer-keys/00000000-0000-0000-0000-000000000000", undefined, AUTHOR);
 ok("C5.7 API fail: an unknown key or a malformed id is 404", missing.status === 404 && (await call("GET", "/answer-keys/not-a-uuid", undefined, AUTHOR)).status === 404);
 
+// Review of 917066dc: no two different form fields of the map read the same (the editor shows every one under each
+// person), and the residential and the mailing City/Town differ.
+const labelled = keyBoxes(s, FORM, inv)!.boxes, byLabel = new Map<string, string[]>();
+for (const b of labelled) byLabel.set(b.caption, [...(byLabel.get(b.caption) ?? []), b.data_path]);
+const twins = [...byLabel].filter(([, d]) => d.length > 1);
+const city = (fact: string) => labelled.find((b) => b.fact === fact && /City\/Town/.test(b.caption))?.caption ?? "";
+const runLabels = runFieldMap(s, family, FORM, inv, key).lines.filter((l) => l.person === "mother"), runTwins = runLabels.filter((l, i) => runLabels.findIndex((x) => x.label === l.label && x.target !== l.target) >= 0 && i >= 0);
+ok("C5.7 §4 (review of 917066dc): no two IMM 5257 form fields read the same in the editor or the run's lines; residential and mailing City/Town differ, place of birth reads as such", !twins.length && !runTwins.length && city("person.residential_address") !== city("person.mailing_address") && /residential/i.test(city("person.residential_address")) && /mailing/i.test(city("person.mailing_address")) && /birth/i.test(city("person.place_of_birth_city")), { twins: twins.slice(0, 3), runTwins: runTwins.slice(0, 2).map((l) => l.label), res: city("person.residential_address"), mail: city("person.mailing_address"), pob: city("person.place_of_birth_city") });
+const bad63 = refusals.filter((x) => /\bbox(es)?\b|form1\[0\]\./i.test(x));
+ok("C5.7 P-63: no refusal the API sent in this check says \"box\" or shows a form1[0] path", refusals.length > 20 && bad63.length === 0, { refusals: refusals.length, bad: bad63.slice(0, 3) });
+const words = runFieldMap(s, family, FORM, inv, less).lines.filter((l) => !l.pass);
+ok("C5.7 P-63, §5: a failing line names the form field by its caption, never a path, and says it in one sentence", words.every((l) => !/form1\[0\]|\bbox/i.test(`${l.label} ${l.why ?? ""} ${l.says ?? ""}`)) && /^IMM 5257, YYYY — Date of birth \(EXAMPLE MOTHER \(Sample\)\): expected nothing \(not in the key\), got '1962'$/.test(words[0]?.says ?? ""), words[0]);
 await db.$disconnect();
 console.log("\nAmended boxes (open points for the immigration expert):");
 for (const [b, a] of Object.entries(AMENDED)) console.log(`  ${b}: ${a.why}`);
