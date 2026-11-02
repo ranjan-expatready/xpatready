@@ -53,7 +53,8 @@ export function mandatoryOpen(inv: Inventory, entries: MapEntry[], boxes: BoxRes
     // question fills keeps the form's own words.
     const asked = e?.fact ? words.labelOf?.(e.fact) : undefined;
     const label = asked && !/^derived:/.test(b?.transform ?? "") ? asked : wordsOf(e, f.caption, path);
-    const settled = b?.about && e?.fact ? words.noneApply?.get(`${b.about.split("/")[0]}|${e.fact}`) : undefined;
+    // Review R2-m1 on #592: only the group's row fields; a question asked once outside its rows still needs its answer.
+    const settled = b?.about && e?.fact && b.row !== null && b.row !== undefined ? words.noneApply?.get(`${b.about.split("/")[0]}|${e.fact}`) : undefined;
     if (e?.outcome === "not_a_fact") out.push({ box: path, label, reason: "fill it in Adobe", why: "not a fact the case keeps: complete it in Adobe if the form asks for it" });
     else if (b?.result === "by hand") out.push({ box: path, label, reason: "filled by hand", why: b.why ?? "type it in Adobe" });
     // A derived "is anything recorded?" Yes/No (C7.2 cause 3): an answer can only make it Yes; its No needs a question

@@ -93,3 +93,49 @@ D1 Requirement fit 4 (every field listed; words and one why wrong) · D2 Data in
 * A real screen reader. D17/D20 (intended user).
 
 **Verdict: Block** — commit **ac3b72f3**. To fix: **M-1** (name mapped lines by their question; no XFA names; fail test), **M-2** (the "none apply" why; fail test). Fix the Minors m-1 to m-6 or list them in the PR.
+
+## Round 2 — b3881cfb and d75d5510 (reviewer, 2 Nov 2026)
+**Verdict: Block** on **d75d5510**: 1 Major (a flaky check, new this round in my record, but present since f23edbd0). M-1 and M-2 are fixed.
+* **How it was checked:** a fresh worktree pinned to b3881cfb, then d75d5510; its own `node_modules`; :4439 by hand; a fresh database for each suite.
+  * At d75d5510: `check_qa165_mandatory` 37/37 (when it passes; see R2-M1), `check_qa165_form_validation` 30/30, `check_c72_imm5257_fill` 41/41 (at b3881cfb; its code paths are unchanged since), setup 13/13, r1c 132/132, r1d 96/96.
+  * My walk again: 1440, 1024, 720 and 390 px with no sideways scroll; axe 0 on the page; keyboard opens the list; client and author 403; list 254–282 ms; console clean.
+* **M-1 fixed.**
+  * A line a question fills now reads the case's question words: "Country or territory where you live now" and "Your status in the country where you live now" (were "Date of birth"); "Start date of a period of activity or occupation (2 form fields)" (was "YYYY"/"MM").
+  * The education line is no longer cut at "Question 1.".
+  * Derived, unmapped and not-a-fact lines keep the form's words. Checked live for principal, spouse and child.
+* **M-2 fixed.**
+  * Rows of a group whose "none apply" is confirmed now read "fill it in Adobe: "none apply" is confirmed for "Employment and activity history", but IRCC's form requires this field: complete it in Adobe, or take back "none apply" and add the entry".
+  * Checked on the principal in the r1c state.
+* **#572-era Minors:** m-4 (mtime cache) and m-6 (P-237/P-238 cite) fixed. The breaker's `solutionFile` (realpath, no node_modules) and the date-with-a-year check (30/30) read correctly.
+* **d75d5510 (`open-lines.ts`):** lines are grouped by caption alone, with a qualifier unique across the group. The new 500-run property never failed in 30 runs. The unit cases (reasons differ; three City/Town) hold.
+
+### Findings (open at d75d5510)
+* **R2-M1 (Major) The new check is flaky:** `tests/check_qa165_mandatory.ts:112`.
+  * The property's names come from `/^[A-Z][a-z]{2,8}$/`. A name ending in "sig" or "sign" (counterexample `{"name":"Asig","required":true,…}`) is a signature to `isSignatureBox` (`engine/form-steps.ts:26`), so it is rightly never listed. The property expects it listed.
+  * It failed **2 of 30** runs at b3881cfb, **2 of 30** at d75d5510, and 1 of 16 before that: about 7 %.
+  * `run-suites.sh` runs every `tests/check_*.ts`, so CI and `main` go red at random ("`main` always works").
+  * Fix: keep generated names clear of the signature and oath rules (e.g. `.filter((n) => !/sig(n|nature)?$/i.test(n))`), or derive the expectation with `byAPerson`. Run the check 30 times as proof.
+* **R2-m1 (Minor)** `api/src/fill-case.ts:140` / `engine/runtime/mandatory.ts:56`: "none apply" settles *every* question of the section, not only its row questions.
+  * Employment holds "Your present occupation" (`person.occupation`), still asked after "none apply". No mandatory IMM 5257 field reads it today, so this is latent.
+  * If a mandatory field mapped it, the officer would be told "fill it in Adobe" for a question they can answer.
+  * Fix: settle only row boxes (`b.row != null`), or only the group's row questions.
+* **R2-m2 (Minor)** `engine/runtime/open-lines.ts:37`: one question filling several boxes still shows XFA names ("Current mailing address (form field: Streetname / City Town / Country)"). Readable, not the form's words. Listed for a later pass.
+* **Still open from round 1, listed in the PR (accepted as Minors):**
+  * m-1: a document-sourced line has no "where".
+  * m-2 and m-3: wording regexes.
+  * m-5: consent quote truncated.
+  * The forms-lane captions of Taiwan PIN and Israel passport still show the language-test question.
+
+### Journey score, round 2 (the one score for this check): **8.5/10, pass**
+* task completed 1
+* next step obvious ½ (document-sourced lines have no where)
+* plain words ½ (Taiwan PIN/Israel captions; XFA suffixes)
+* feedback and state 1
+* correct data 1
+* error recovery 1
+* accessibility and sizes 1
+* speed 1
+* visual quality ½ (a two-line summary; long lists)
+* trust and sources 1
+
+**Verdict: Block** — commit **d75d5510**. To fix: **R2-M1** (the flaky property, with 30 green runs as proof). Then Approve on that head if nothing else changes.

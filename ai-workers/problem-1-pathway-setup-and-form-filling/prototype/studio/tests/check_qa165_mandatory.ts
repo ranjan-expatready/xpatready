@@ -47,6 +47,8 @@ const q3 = mandatoryOpen(inv, [{ data_path: c, evidence_quote: "Education Sectio
 ok("fail (review M-1 on #592): a question's number (\"Education Section Question 1.\") is not cut off as the sentence", /post-secondary education/.test(q3[0]?.label ?? ""), q3[0]?.label);
 // Review M-2 on #592: a row field of a group settled as "none apply" has no answer to give.
 const q4 = mandatoryOpen(inv, [{ data_path: d, fact: "person.employment_activity", outcome: "mapped" }], [box(d, { row: 0 })], { ...all, [d]: "" }, { noneApply: new Map([["principal|person.employment_activity", "\"Employment and activity history\""]]) });
+const q5 = mandatoryOpen(inv, [{ data_path: d, fact: "person.employment_activity", outcome: "mapped" }], [box(d, { row: null })], { ...all, [d]: "" }, { noneApply: new Map([["principal|person.employment_activity", "\"Employment and activity history\""]]) });
+ok("fail (review R2-m1 on #592): \"none apply\" covers only the group's row fields; a field asked outside the rows (\"Your present occupation\") still needs its answer", q5[0]?.reason === "needs an answer", q5);
 ok("fail (review M-2 on #592): after a confirmed \"none apply\", a required row field says so and the way out, never \"not answered yet\"", q4[0]?.reason === "fill it in Adobe" && /"none apply" is confirmed for "Employment and activity history"/.test(q4[0]?.why ?? "") && /take back "none apply"/.test(q4[0]?.why ?? ""), q4);
 const o5 = mandatoryOpen(inv, [{ data_path: a, fact: "person.x", outcome: "mapped" }], [box(a, { result: "by hand", why: "\"Z\" has no code" })], one);
 ok("pass: a value with no code in the form → \"filled by hand\", with why", o5.length === 1 && o5[0].reason === "filled by hand" && /no code/.test(o5[0].why), o5);
@@ -109,7 +111,10 @@ fc.assert(fc.property(fc.uniqueArray(fc.array(fc.constantFrom("A[0]", "A[1]", "B
 ok("property (500 runs): lines that share a caption always end with different words, whatever their places on the form", true);
 
 // Properties over generated field lists.
-const field = fc.record({ name: fc.stringMatching(/^[A-Z][a-z]{2,8}$/), required: fc.boolean(), written: fc.boolean(), mapped: fc.constantFrom("none", "mapped", "not_a_fact", "unresolved") });
+// Review R2-M1 on #592: a generated name that ends like a signature box ("…sig", "…sign"; engine/form-steps.ts
+// isSignatureBox) is rightly never listed, so the names here keep clear of that rule (it failed ~7 % of runs before).
+const notSignature = (n: string) => !/(sig(nature)?(lbl|label)?|sign)$/i.test(n);
+const field = fc.record({ name: fc.stringMatching(/^[A-Z][a-z]{2,8}$/).filter(notSignature), required: fc.boolean(), written: fc.boolean(), mapped: fc.constantFrom("none", "mapped", "not_a_fact", "unresolved") });
 fc.assert(fc.property(fc.uniqueArray(field, { selector: (f) => f.name, maxLength: 30 }), (fs) => {
   const i: Inventory = { fields: fs.map((f) => ({ data_path: `form1[0].P[0].${f.name}[0]`, caption: `${f.name} of the person`, required: f.required, ui: "textEdit" })) };
   const values = Object.fromEntries(fs.filter((f) => f.written).map((f) => [`form1[0].P[0].${f.name}[0]`, "v"]));
