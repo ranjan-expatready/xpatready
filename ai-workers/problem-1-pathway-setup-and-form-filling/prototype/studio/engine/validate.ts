@@ -11,6 +11,7 @@ import { duplicateValidity, validityProblems } from "./runtime/case-checklist.ts
 import { COVERAGE_FIXES, coverageGaps } from "./coverage.ts";
 import { factSourceProblems, factWords, who } from "./sources.ts";
 import { oathMappedProblems } from "./form-steps.ts";
+import { eligibilityChanges, gateProblems } from "./eligibility-gates.ts";
 
 // C-11: a field map's form field list, read once per file (paths are relative to the Solution 1 folder, as in fill.ts).
 const SOLUTION = join(import.meta.dirname, "..", "..", "..");
@@ -101,6 +102,7 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   // Only the derived definitions this combination reads (Lead check item 3): the library holds every definition, and
   // one nobody here uses is not this combination's warning.
   const reads = derivedRead(s);
+  out.push(...gateProblems(s.eligibility, placed, reads, types, derived, (f) => `"${factWords(s, f)}"`)); // C6.9 BR-5
   for (const d of derivedRows) if (reads.has(d.id) && !CALCULATIONS[d.calculation]) out.push({ level: "warning", where: "Derived fields", item: d.id, message: `Calculation ${d.calculation} has no tested helper: recorded, never evaluated.` });
   out.push(...channelProblems(s, accepts));
   out.push(...oathMappedProblems(s.field_maps, inventoryFields)); // C-11 (P-171 c): a mapped oath box is by a person
@@ -244,8 +246,9 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
       else if (canonical(a.get(key)) !== canonical(x)) out.push({ kind: "Where an answer comes from", key, change: "changed", origin: x.origin, needs_sme: true, label: line(next, x, words(x)) });
     for (const [key, x] of a) if (!b.has(key)) out.push({ kind: "Where an answer comes from", key, change: "removed", needs_sme: true, label: line(prev!, x, "back to the rules' source, no pre-qualification") });
   }
+  out.push(...eligibilityChanges(prev?.eligibility, next.eligibility)); // C6.9 BR-4
   // Completeness guard: any other part of the released content that differs is listed rather than silently passed.
-  const covered = new Set(["canonical_fields", "sections", "placements", "forms", "document_requirements", "rules", "checks", "field_maps", "combination", "document_types", "derived_fields", "fact_sources", "mode", "row_versions"]);
+  const covered = new Set(["canonical_fields", "sections", "placements", "forms", "document_requirements", "rules", "checks", "field_maps", "combination", "document_types", "derived_fields", "fact_sources", "eligibility", "mode", "row_versions"]);
   for (const k of new Set([...Object.keys(prev ?? {}), ...Object.keys(next)])) if (prev && !covered.has(k) && canonical((prev as any)[k] ?? null) !== canonical((next as any)[k] ?? null)) out.push({ kind: "Configuration", key: k, change: "changed", needs_sme: true, label: `${k} changed` });
   return out;
 }
