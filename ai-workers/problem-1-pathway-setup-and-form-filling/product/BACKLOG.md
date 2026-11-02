@@ -39,6 +39,7 @@ One owner per row and per shared file; never build another owner's rows. Under t
 | G3 | screens | **Demo release path and mark** (C5.6) | Sample content releases only in the demo workspace, marked "Demo release" on every screen that shows the release, excluded from real-publish counts; refused elsewhere | P-240 |
 | G4 | forms | **Answer-key family editor and runner** (C5.7) | a made-up family with expected values (Sample until the expert signs) runs against a map, scoring table or rule set and shows pass or fail per value; the Visitor visa IMM 5257 map has one passing family | P-240; team C6 "not built" |
 | G2 | forms | **Release refused: no passing signed answer-key test** (C5.5), after G4 | maps, scoring tables and rule sets without a passing expert-signed test are refused; a combination without a test only warns (W7) | P-240; SA-1B-296, -181, -199 |
+| G5 | screens | **Release needs a form line** (C5.1, F8/X1a rework, P-248) | a combination with documents but no form line shows a warning while configured and Release is refused (API 409, plain words); a PDF, a portal-screen edition or an online-only form counts; existing tests expecting documents-only to release are updated | P-248; SA-1B-90 |
 
 ## Demo first (founder, 2 Nov): in order, ahead of Now
 | # | Area | Item | Done when (beyond the standard) | Source |
