@@ -63,10 +63,13 @@ type Item = { in_combination: "REUSED" | "NEW"; brought_in_by: string };
   // ─────────────────── Review c313 M1, M2: the combination that brought an item in is the one that added it
   const sp = r.body.combinations.find((c: { key: string }) => c.key === "sp.student");
   const line = (newTypeName?: string, documentTypeKey?: string) => ({ ...(newTypeName ? { newTypeName } : { documentTypeKey }), attachMode: "COMBINATION_MANDATORY", appliesToRoles: "principal_applicant", providedBy: "client", sourceQuote: "C3.13 test line." });
-  const spAdd = await call("POST", `/combinations/${sp.id}/requirements`, line("C313 probe letter"));
+  // C3.6 (P-158): the new name waits as a library proposal (202); a second person accepts it, then the line is added with it.
+  const spName = await call("POST", `/combinations/${sp.id}/requirements`, line("C313 probe letter"));
+  const spAcc = await call("POST", "/review/proposals/decide", { ids: [spName.body?.proposalId], action: "accept" }, "user-B");
   const probe = sql("select key from library_change where kind='document_type' and label='C313 probe letter'");
+  const spAdd = await call("POST", `/combinations/${sp.id}/requirements`, line(undefined, probe));
   const lmAdd = await call("POST", `/combinations/${lmia.id}/requirements`, line(undefined, probe));
-  ok("setup: Study permit names a new document type on a checklist line; With an LMIA (set up first) then uses it too", spAdd.status === 201 && lmAdd.status === 201 && !!probe, [spAdd.status, lmAdd.status, spAdd.body?.detail, lmAdd.body?.detail]);
+  ok("setup: Study permit names a new document type on a checklist line; With an LMIA (set up first) then uses it too", spName.status === 202 && spAcc.status === 201 && spAdd.status === 201 && lmAdd.status === 201 && !!probe, [spName.status, spAcc.status, spAdd.status, lmAdd.status, spAcc.body?.message, spAdd.body?.detail, lmAdd.body?.detail]);
   const mark = async (combo: string) => (await call("GET", `/library/reuse/document-types?combination=${combo}`)).body.items[probe] as Item | undefined;
   let [spM, lmM] = [await mark("sp.student"), await mark("wp.family")];
   ok("C3.13 M1 pass: the combination that added the item is credited (Study permit: New here), even though another was set up first", spM?.in_combination === "NEW" && spM.brought_in_by === "Study permit", spM);

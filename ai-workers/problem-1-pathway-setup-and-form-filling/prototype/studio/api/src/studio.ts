@@ -9,6 +9,8 @@ import { canRelease } from "../../../contracts/rules.ts";
 import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
 import { buildSnapshot, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
 import { slug } from "../../engine/import.ts";
+import { identityKeyOf, insertProposals } from "./proposals.ts";
+import { nameKey, namedDocumentType, waitingDocumentType } from "./document-type-names.ts";
 import { checkCondition, diff, ordinal, validate, isDemoSnapshot } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, need, revise, RUNTIME_ACTORS, strip, Workspace, type Actor } from "./core.ts";
 import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
@@ -701,7 +703,7 @@ export class Studio {
   }
 
   // ------------------------------------------------------------------ the combination's own configuration
-  async saveRequirement(actor: Actor, combinationId: string, lineage: string | null, b: { documentTypeKey?: string; newTypeName?: string; attachMode: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: any; conditionPlain?: string; appliesToRoles: string; providedBy?: string; sourceQuote?: string; sourceFile?: string; note?: string; alternatives?: string[]; retire?: boolean; baseRevision?: string }) {
+  async saveRequirement(actor: Actor, combinationId: string, lineage: string | null, b: { documentTypeKey?: string; newTypeName?: string; documentTypeName?: string; proves?: string; attachMode: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: any; conditionPlain?: string; appliesToRoles: string; providedBy?: string; sourceQuote?: string; sourceFile?: string; note?: string; alternatives?: string[]; retire?: boolean; baseRevision?: string }) {
     need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
     const workspaceId = c.workspaceId;
@@ -712,18 +714,58 @@ export class Studio {
       await this.audit.log(workspaceId, actor.id, "retired", "document requirement", lineage, `${actor.name} removed document requirement ${lineage} from "${c.label}" (draft)`, undefined, combinationId);
       return row;
     }
+    // Break m (#573): text fields are text; a number or an object is refused in words, never a 500 or "[object Object]".
+    const TEXT: [string, unknown][] = [["The document type", b.documentTypeKey], ["The new document type's name", b.documentTypeName], ["The new document type's name", b.newTypeName], ["What it proves", b.proves], ["Provided by", b.providedBy], ["The source quote", b.sourceQuote]];
+    for (const [what, v] of TEXT) if (v !== undefined && v !== null && typeof v !== "string") fail(`${what} must be text.`);
     let typeKey = b.documentTypeKey;
-    if (!typeKey && b.newTypeName?.trim()) {
-      typeKey = slug(b.newTypeName);
-      if (!(await this.db.documentType.findFirst({ where: { workspaceId, documentTypeKey: typeKey } }))) { await this.db.documentType.create({ data: { workspaceId, documentTypeKey: typeKey, name: b.newTypeName.trim(), category: b.providedBy ?? "client", version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id } });
-        // A new document type waits for a second person on To review, like a new field (Lead re-check 25 Oct).
-        await this.db.libraryChange.create({ data: { workspaceId, kind: "document_type", key: typeKey, label: b.newTypeName.trim(), action: "ADD", reason: "Named while adding a document requirement.", status: "WAITING", proposedBy: actor.id, combinationId } }); }
+    const MODES = ["COMBINATION_MANDATORY", "ANSWER_CONDITIONAL"];
+    const lineProblems = async () => { // the line's own checks, run before a name is proposed too (review m2: nothing unchecked waits)
+      if ((!lineage || b.attachMode !== undefined) && !MODES.includes(b.attachMode)) fail("Choose whether the document is always needed or only when a condition is true.");
+      if (!WHO.includes(b.appliesToRoles)) fail("Choose whose document it is.");
+      if (b.attachMode === "ANSWER_CONDITIONAL" && !b.condition) fail("A conditional requirement needs its condition.");
+      if (b.condition) { const t = await this.libraryTypes(workspaceId); const errs = draftErrors(this.conditionErrors(b.condition, t)); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); }
+    };
+    // C3.6 (P-149, P-158): a document type named while adding a requirement is never written by hand. A name the library
+    // has (live or retired, matched as the library's lander keys it and by its normalised name) is that type, as before; a
+    // new name waits as one library proposal on To review › Proposals, and the line is added with it once it is accepted.
+    const typeName = cleanLabel(String(b.documentTypeName ?? b.newTypeName ?? ""));
+    if (!typeKey && typeName) {
+      if (!normalizeLabel(typeName)) fail("Give the new document type a name with letters or numbers.");
+      typeKey = (await namedDocumentType(this.db, workspaceId, typeName)) ?? undefined;
+      if (!typeKey) {
+        // Review m1: an edit never proposes; the line would keep its old type while the words said "add the line with it".
+        if (lineage) fail(`"${typeName}" is not in the library. To give this line a new document type, add a new line with that name (it waits as a library proposal), then remove this one; or choose a library type here.`, HttpStatus.CONFLICT);
+        if (typeName.length > 120) fail("Keep the document type's name under 120 characters.");
+        await lineProblems();
+        // Review M1: the identity is the name and what it proves (P-149 (2)); the default proves names no combination, so
+        // the same name from two combinations is one item.
+        const proves = (b.proves?.trim() || "Not stated yet: the person who named it did not say; the second person may state it before accepting.").slice(0, 200);
+        const payload = { kind: "document_type" as const, name: typeName, proves, category: (b.providedBy ?? "client").slice(0, 60), suppliesFacts: [], readerKind: "person_only" as const, identityDocument: false };
+        const quote = b.sourceQuote?.trim() ? ` The author's source: "${b.sourceQuote.trim().slice(0, 300)}".` : "";
+        const norm = nameKey(typeName);
+        const proposalId = await this.db.$transaction(async (tx) => {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`requirement-type:${workspaceId}:${norm}`}))`;
+          // Review M1: a waiting proposal for the same name (any letter case, spacing, punctuation or Latin accent, from any
+          // combination or from AI drafting) is this one.
+          const twin = await waitingDocumentType(tx, workspaceId, typeName);
+          if (twin !== null) fail(`A proposal to add the document type "${twin}" is already waiting on To review › Proposals: decide it there, then add the line with it.`, HttpStatus.CONFLICT);
+          const job = await tx.draftingJob.create({ data: { workspaceId, combinationId, kind: "requirement_type", mode: "LOCAL", status: "COMPLETED", costUsd: 0, startedBy: actor.id, finishedAt: new Date(),
+            message: `${actor.name} named a new document type while adding a requirement to "${c.label}": one library proposal (no AI, US$0).`, detail: { operation: "requirement_type", name: typeName } } });
+          const [id] = await insertProposals(tx, workspaceId, [{
+            kind: "document_type", runId: job.id, step: "requirement_type", scope: { formEdition: null, combinationId }, landsOn: "library", reuse: { match: "new", existingKey: null },
+            payload, source: null, rounds: { draft: null, check: null }, rules: [{ rule: "not_in_library", passed: true, why: null }],
+            agreement: "rules_only", confidence: "check", reason: `Named by a person while adding a document requirement to "${c.label}": a second person checks the name and what it proves.${quote}`.slice(0, 500),
+            origin: "rules", identity: { key: identityKeyOf(payload, ""), near: [], nearReason: null }, relatesTo: null, revision: null, basis: "SAMPLE",
+          }]);
+          return id;
+        }, { timeout: 30_000, maxWait: 10_000 });
+        await this.audit.log(workspaceId, actor.id, "proposed", "document type", typeName, `${actor.name} proposed the document type "${typeName}" while adding a requirement to "${c.label}" (Sample; a second person approves it)`, undefined, combinationId);
+        return { status: "waiting" as const, proposalId, message: `"${typeName}" waits for a second person on To review › Proposals. Once it is accepted, choose it here and save the line.` };
+      }
     }
     if (!typeKey || !(await this.db.documentType.findFirst({ where: { workspaceId, documentTypeKey: typeKey } }))) fail("Choose a document type, or name a new one.");
     await refuseRetired(this.db, workspaceId, "document_type", [typeKey, ...(Array.isArray(b.alternatives) ? b.alternatives : [])]); // C11.9 break M1
-    if (!WHO.includes(b.appliesToRoles)) fail("Choose whose document it is.");
-    if (b.attachMode === "ANSWER_CONDITIONAL" && !b.condition) fail("A conditional requirement needs its condition.");
-    if (b.condition) { const t = await this.libraryTypes(workspaceId); const errs = draftErrors(this.conditionErrors(b.condition, t)); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); }
+    await lineProblems();
     // W1-15 slice 3: alternatives are other library document types; any one of them counts instead of this line's.
     const alternatives = [...new Set((Array.isArray(b.alternatives) ? b.alternatives : []).filter((k) => typeof k === "string" && k && k !== typeKey))];
     if (alternatives.length) { const known = await this.db.documentType.findMany({ where: { workspaceId, documentTypeKey: { in: alternatives } }, select: { documentTypeKey: true } });
@@ -734,6 +776,10 @@ export class Studio {
     const typeKeys = [typeKey!, ...alternatives];
     const row = await this.db.$transaction(async (tx) => {
       await lockItem(tx, workspaceId, "document_type", typeKeys); await refuseRetired(tx, workspaceId, "document_type", typeKeys);
+      // C3.6 (review round 3): read again under the lock, so a type an Undo removed meanwhile is never written onto a line.
+      const still = new Set((await tx.documentType.findMany({ where: { workspaceId, documentTypeKey: { in: typeKeys } }, select: { documentTypeKey: true } })).map((t) => t.documentTypeKey));
+      const gone = typeKeys.find((k) => !still.has(k));
+      if (gone) fail(gone === typeKey ? "Choose a document type, or name a new one: this one is no longer in the library." : `An alternative must be a document type in the library: ${gone} is not.`);
       if (!lineage) {
         let key = `${typeKey}:${b.appliesToRoles}`;
         if (await tx.documentRequirement.findFirst({ where: { combinationId, lineageKey: key } })) key = `${key}:${Date.now().toString(36)}`;
