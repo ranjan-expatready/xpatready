@@ -10,3 +10,8 @@ Main: 50df70dc. AI spend: US$0 (no key; the ledger was unchanged).
 
 Minors on #504 (follow-ups): `proposals.ts:117` workaround; rules and checks `used_in` still inside `library-sources.ts`; `impact.ts` `.catch(() => 0)` turns a database error into "0 open cases".
 Not tested: OPEN-only case counts (no data in another status).
+| #509 SH3 | 0c800ed1 | **Pass**, Minor (no output test for `fact-sources.ts`) | `check_sh3_resolver.ts` 55/55. Callers' suites with no server green (`check_case_engine` 63/63, `check_vv_checklist` 60/60, `check_c1112_modes` 39/39, …). `check_vv_prepare_api` 35/35. `setup_vv_m3` 18/20, as on main (S2w, S7a). Nothing held under P-251 is built |
+| #510 Track A jobs | f00cfcb4 | **Pass** | All four stub passes contract-valid at US$0. Inputs match the manifest. The run name and fields match the Saved reader. Worst US$2.66. Old and new contracts agree on all 260 saved runs. Every entry in this copy's local ledger is actual US$0 |
+| #506 C4.7 | 3c377911 | **Pass**; row stays Partial (real picks wait for Track A) | Acceptance 15/15 + 2 WAIT. Picks check 51/58 (the 7 others need the live switch and are refused at the door). Walk 30/30: exactly Live and Saved, roles 403, To review at 400 px, axe 0. Question: any run file counts as Saved, not only qa-checked ones (P-227) |
+
+The tech lead ruled #504's Major (QA-161) a follow-up: SH2b, the next PR in the G-CORE lane.
