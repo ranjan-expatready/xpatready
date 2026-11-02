@@ -74,14 +74,14 @@ export const releaseUses = (rows: { combinationId: string; version: number; late
 
 /** G-CORE preview (P-253 step 4): the rules, form and document lines, checks and questions that read one field, each named
  *  by its table and key, with its combination (a question: each combination selecting its section). */
-export type Reader = { kind: "form_line" | "rule" | "document_line" | "check" | "question"; key: string; combinationId: string };
+export type Reader = { kind: "form_line" | "rule" | "document_line" | "check" | "question"; key: string; combinationId: string; /** The current version's condition. */ tree: unknown };
 export function fieldReaders(r: FieldUseRows, field: string): Reader[] {
   const out: Reader[] = [];
   const reads = (c: unknown) => fieldsOf(c).includes(field);
-  for (const l of current(r.lines, (l) => `${l.combinationId}|${l.lineageKey}`)) if (reads(l.predicateJson)) out.push({ kind: "form_line", key: l.lineageKey, combinationId: l.combinationId });
-  for (const x of current(r.rules, (x) => `${x.combinationId}|${x.predicateKey}`)) if (reads(x.predicateJson)) out.push({ kind: "rule", key: x.predicateKey, combinationId: x.combinationId });
-  for (const d of current(r.docs, (d) => `${d.combinationId}|${d.lineageKey}`)) if (reads(d.predicateJson)) out.push({ kind: "document_line", key: d.lineageKey, combinationId: d.combinationId });
-  for (const k of current(r.checks, (k) => `${k.combinationId}|${k.checkKey}`)) if (reads(k.predicateJson)) out.push({ kind: "check", key: k.checkKey, combinationId: k.combinationId });
-  for (const q of current(r.questions, (q) => q.lineageKey)) if (reads(q.predicateJson)) for (const p of r.picks) if (p.sectionKey === q.sectionKey) out.push({ kind: "question", key: q.lineageKey, combinationId: p.combinationId });
+  for (const l of current(r.lines, (l) => `${l.combinationId}|${l.lineageKey}`)) if (reads(l.predicateJson)) out.push({ kind: "form_line", key: l.lineageKey, combinationId: l.combinationId, tree: l.predicateJson });
+  for (const x of current(r.rules, (x) => `${x.combinationId}|${x.predicateKey}`)) if (reads(x.predicateJson)) out.push({ kind: "rule", key: x.predicateKey, combinationId: x.combinationId, tree: x.predicateJson });
+  for (const d of current(r.docs, (d) => `${d.combinationId}|${d.lineageKey}`)) if (reads(d.predicateJson)) out.push({ kind: "document_line", key: d.lineageKey, combinationId: d.combinationId, tree: d.predicateJson });
+  for (const k of current(r.checks, (k) => `${k.combinationId}|${k.checkKey}`)) if (reads(k.predicateJson)) out.push({ kind: "check", key: k.checkKey, combinationId: k.combinationId, tree: k.predicateJson });
+  for (const q of current(r.questions, (q) => q.lineageKey)) if (reads(q.predicateJson)) for (const p of r.picks) if (p.sectionKey === q.sectionKey) out.push({ kind: "question", key: q.lineageKey, combinationId: p.combinationId, tree: q.predicateJson });
   return out;
 }

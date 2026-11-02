@@ -6,22 +6,26 @@
 import { Body, Controller, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Post } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import type { Prisma } from "@prisma/client";
-import { canonical } from "../../../contracts/rules.ts";
+import { canonical, validatePredicate } from "../../../contracts/rules.ts";
 import { ChangeSetBody, NOT_CHECKED, type ChangeItem, type CheckResult, type MadeBy, type PreviewItem } from "../../contracts/change-set.ts";
-import { problemFromZod } from "../../contracts/programs.ts";
-import { checkChangeSet, riskOf, type Context, type Library } from "../../engine/change-set.ts";
+import { normalizeLabel, problemFromZod } from "../../contracts/programs.ts";
+import { checkChangeSet, listId, riskOf, type Context, type Library, type OrderCheck } from "../../engine/change-set.ts";
 import { valueProblems } from "../../engine/eligibility-gates.ts";
 import { buildSnapshot } from "../../engine/snapshot.ts";
-import { askedInOrder } from "../../engine/validate.ts";
+import { askedInOrder, isNode } from "../../engine/validate.ts";
+import type { Snapshot } from "../../engine/snapshot.ts";
 import { current, fieldReaders, newestBy } from "../../engine/where-used.ts";
 import { Db, readerOf, Workspace } from "./core.ts";
 import { noFreeAdd } from "./library-sources.ts";
+import { ridingLists } from "./proposals.ts";
 import { combinationTrails, itemCombinations, itemReleases, mappedBoxes, openCasesByRelease } from "./where-used.ts";
 
 type Client = Db | Prisma.TransactionClient;
 type H = string | undefined;
 const LIVE = ["PUBLISHED", "DRAFT", "RETIRED"] as const;
-const VERIFIERS = { valueProblems, canonical: canonical as (t: never) => string };
+const VERIFIERS = { valueProblems, canonical: canonical as (t: never) => string, shape: (t: unknown) => validatePredicate(t, isNode) };
+const isLive = (s: string) => s === "DRAFT" || s === "PUBLISHED";
+const byWords = (a: string, b: string) => a.localeCompare(b);
 
 /** The newest version of every library item, as the engine's check reads them. */
 export async function libraryOf(db: Client, workspaceId: string): Promise<Library> {
@@ -31,11 +35,17 @@ export async function libraryOf(db: Client, workspaceId: string): Promise<Librar
     db.answerList.findMany({ where: { workspaceId }, select: { answerListKey: true, status: true, version: true, values: { select: { valueKey: true } } } }),
     db.documentType.findMany({ where: { workspaceId }, select: { documentTypeKey: true, name: true, readerProfile: true, status: true, version: true } }),
   ]);
+  // Review B1 M1: every live version's names count, as today's doors read them (library-sources.ts, proposals.ts).
+  const liveNames = new Map<string, string[]>(); for (const f of fields) if (isLive(f.status) && !f.mergedIntoKey) liveNames.set(f.canonicalFieldKey, [...(liveNames.get(f.canonicalFieldKey) ?? []), f.label ?? "", ...f.aliases].filter(Boolean));
+  const liveTitles = new Map<string, string[]>(); for (const x of sections) if (isLive(x.status)) liveTitles.set(x.sectionKey, [...(liveTitles.get(x.sectionKey) ?? []), x.title]);
+  const listIds = new Map<string, string[]>(); for (const l of lists) if (isLive(l.status)) listIds.set(l.answerListKey, [...(listIds.get(l.answerListKey) ?? []), listId(l.values.map((v) => v.valueKey))]);
+  const proves = (t: (typeof types)[number]) => String((t.readerProfile as { proves?: unknown } | null)?.proves ?? "");
+  const docIds = new Map<string, string[]>(); for (const t of types) if (isLive(t.status)) docIds.set(t.documentTypeKey, [...(docIds.get(t.documentTypeKey) ?? []), `${normalizeLabel(t.name)}|${normalizeLabel(proves(t))}`]);
   return {
-    fields: newestBy(fields, (f) => f.canonicalFieldKey).map((f) => ({ key: f.canonicalFieldKey, group: f.groupKey ?? f.canonicalFieldKey.split(".")[0], label: f.label, aliases: f.aliases, valueType: f.valueType, answerListKey: f.answerListKey, status: f.status, mergedInto: f.mergedIntoKey })),
-    sections: newestBy(sections, (s) => s.sectionKey).map((s) => ({ key: s.sectionKey, title: s.title, status: s.status })),
-    answerLists: newestBy(lists, (l) => l.answerListKey).map((l) => ({ key: l.answerListKey, values: l.values.map((v) => v.valueKey), status: l.status })),
-    documentTypes: newestBy(types, (t) => t.documentTypeKey).map((t) => ({ key: t.documentTypeKey, name: t.name, proves: String((t.readerProfile as { proves?: unknown } | null)?.proves ?? ""), status: t.status })),
+    fields: newestBy(fields, (f) => f.canonicalFieldKey).map((f) => ({ key: f.canonicalFieldKey, group: f.groupKey ?? f.canonicalFieldKey.split(".")[0], label: f.label, aliases: f.aliases, valueType: f.valueType, answerListKey: f.answerListKey, status: f.status, mergedInto: f.mergedIntoKey, names: liveNames.get(f.canonicalFieldKey) ?? [] })),
+    sections: newestBy(sections, (x) => x.sectionKey).map((x) => ({ key: x.sectionKey, title: x.title, status: x.status, liveTitles: liveTitles.get(x.sectionKey) ?? [] })),
+    answerLists: newestBy(lists, (l) => l.answerListKey).map((l) => ({ key: l.answerListKey, values: l.values.map((v) => v.valueKey), status: l.status, liveIds: listIds.get(l.answerListKey) ?? [] })),
+    documentTypes: newestBy(types, (t) => t.documentTypeKey).map((t) => ({ key: t.documentTypeKey, name: t.name, proves: proves(t), status: t.status, liveIds: docIds.get(t.documentTypeKey) ?? [] })),
   };
 }
 
@@ -64,49 +74,45 @@ export class ChangeSets {
   /** The fixed rules check, the tier and the preview for one change set (no write). `db` may be a transaction. */
   async check(items: ChangeItem[], madeBy: MadeBy, workspaceId?: string, db: Client = this.db): Promise<CheckResult> {
     const ws = workspaceId ?? (await this.ws.id());
-    const [library, rows, trails, derived] = await Promise.all([libraryOf(db, ws), useRows(db, ws), combinationTrails(db, ws), db.derivedField.findMany({ where: { workspaceId: ws }, select: { derivedKey: true } })]);
+    const [library, rows, trails, derived, riding] = await Promise.all([libraryOf(db, ws), useRows(db, ws), combinationTrails(db, ws), db.derivedField.findMany({ where: { workspaceId: ws }, select: { derivedKey: true } }), ridingLists(db, ws)]);
     // P-266: an item a released combination uses (its key is in a release snapshot).
     const released = new Set<string>();
     const releasesOf = new Map<string, { combinationId: string; version: number }[]>();
-    for (const it of items) { const s = subjectOf(it); if (!s.kind) continue; const r = await itemReleases(db, ws, s.kind, s.key); releasesOf.set(`${s.kind}:${s.key}`, r); if (r.length && it.kind !== "condition") released.add(`${it.kind}:${it.key}`); }
-    // R6 and R8 for a condition on a question: the conditions on it now, and the question order on each combination that
-    // selects its section, before and after (challenge M5: the draft snapshot of each combination using the section).
-    const existing: (unknown[] | undefined)[] = [], order: Context["order"] = [], rewrites: Context["rewrites"] = [];
-    for (const it of items) {
+    for (const it of items) { const s = subjectOf(it); if (!s.kind || releasesOf.has(`${s.kind}:${s.key}`)) continue; const r = await itemReleases(db, ws, s.kind, s.key); releasesOf.set(`${s.kind}:${s.key}`, r); }
+    for (const it of items) { const s = subjectOf(it); if (s.kind && it.kind !== "condition" && releasesOf.get(`${s.kind}:${s.key}`)?.length) released.add(`${it.kind}:${it.key}`); }
+    // R8: each affected combination's draft snapshot, read once per check (breaker minor: not once per item).
+    const snaps = new Map<string, Snapshot>();
+    const snap = async (cid: string) => { if (!snaps.has(cid)) snaps.set(cid, (await buildSnapshot(db as Db, ws, cid, "draft")).snapshot); return snaps.get(cid)!; };
+    const orderOn = async (cids: string[], change: (s: Snapshot) => Snapshot): Promise<OrderCheck[]> => {
+      const out: OrderCheck[] = [];
+      for (const cid of [...new Set(cids)].sort()) { const s = await snap(cid); out.push({ combination: trails.get(cid) ?? "a combination", before: askedInOrder(s).map((p) => p.message), after: askedInOrder(change(s)).map((p) => p.message) }); }
+      return out;
+    };
+    const fieldUsers = await itemCombinations(db, ws, "field");
+    const existing: Context["existing"] = [], order: Context["order"] = [], rewrites: Context["rewrites"] = [];
+    for (const [i, it] of items.entries()) {
       existing.push(undefined); order.push(undefined); rewrites.push(undefined);
-      const i = existing.length - 1;
       if (it.action === "set_condition" && it.target === "question") {
-        const q = current(rows.questions, (x) => x.lineageKey).find((x) => x.lineageKey === it.key);
-        existing[i] = q?.predicateJson ? [q.predicateJson] : [];
-        if (q) {
-          const combos = rows.picks.filter((p) => p.sectionKey === q.sectionKey).map((p) => p.combinationId);
-          const before: string[] = [], after: string[] = [];
-          for (const cid of combos) {
-            const s = (await buildSnapshot(db as Db, ws, cid, "draft")).snapshot;
-            before.push(...askedInOrder(s).map((p) => p.message));
-            after.push(...askedInOrder({ ...s, placements: s.placements.map((p) => (p.fact === it.key ? { ...p, condition: it.tree, condition_effect: "SHOW" } : p)) } as typeof s).map((p) => p.message));
-          }
-          order[i] = { before, after };
-        }
+        // The question's current placement (as question-condition.ts placementOf reads it); null when no question asks it.
+        const q = current(rows.questions, (x) => x.lineageKey).find((x) => x.lineageKey === it.key) ?? null;
+        existing[i] = q ? (q.predicateJson ? [q.predicateJson] : []) : null;
+        if (q) order[i] = await orderOn(rows.picks.filter((p) => p.sectionKey === q.sectionKey).map((p) => p.combinationId),
+          (s) => ({ ...s, placements: s.placements.map((p) => (p.fact === it.key ? { ...p, condition: it.tree, condition_effect: "SHOW" } : p)) }) as Snapshot);
       }
-      // Challenge M4: every condition a merge rewrites, before and after the swap.
+      // Challenge M4 and review B1 M2, M3: every current condition a merge rewrites, before and after the swap (R5–R7),
+      // and the question order on every combination reading the field, before and after (R8).
       if (it.action === "merge") {
-        const swap = (j: unknown) => (j == null ? j : JSON.parse(JSON.stringify(j).split(`"field":"${it.key}"`).join(`"field":"${it.into}"`)));
-        rewrites[i] = fieldReaders(rows, it.key).map((r) => {
-          const tree = r.kind === "form_line" ? rows.lines.find((x) => x.lineageKey === r.key && x.combinationId === r.combinationId)?.predicateJson
-            : r.kind === "rule" ? rows.rules.find((x) => x.predicateKey === r.key && x.combinationId === r.combinationId)?.predicateJson
-            : r.kind === "document_line" ? rows.docs.find((x) => x.lineageKey === r.key && x.combinationId === r.combinationId)?.predicateJson
-            : r.kind === "check" ? rows.checks.find((x) => x.checkKey === r.key && x.combinationId === r.combinationId)?.predicateJson
-            : rows.questions.find((x) => x.lineageKey === r.key)?.predicateJson;
-          return { where: `${READER_WORDS[r.kind]} ${r.key} on ${trails.get(r.combinationId) ?? "a combination"}`, before: tree, after: swap(tree) };
-        });
+        const swap = <T>(j: T): T => (j == null ? j : JSON.parse(JSON.stringify(j).split(`"field":"${it.key}"`).join(`"field":"${it.into}"`)));
+        rewrites[i] = fieldReaders(rows, it.key).map((r) => ({ where: `${READER_WORDS[r.kind]} ${r.key} on ${trails.get(r.combinationId) ?? "a combination"}`, before: r.tree, after: swap(r.tree) }));
+        order[i] = await orderOn([...(fieldUsers.get(it.key) ?? [])], (s) => swap(s));
       }
     }
-    const ctx: Context = { library, released, derived: new Set(derived.map((d) => d.derivedKey)), existing, order, rewrites };
+    const ctx: Context = { library, released, derived: new Set(derived.map((d) => d.derivedKey)), riding, existing, order, rewrites };
     const problems = checkChangeSet(items, madeBy, ctx, VERIFIERS);
     const tier = riskOf(items, madeBy, released);
     const preview = await this.preview(db, ws, items, library, rows, trails, releasesOf);
-    const fingerprint = createHash("sha256").update(JSON.stringify({ items, problems, tier, preview })).digest("hex");
+    // Review m1, breaker M7: the same change on the same library is the same fingerprint, whatever the row or key order.
+    const fingerprint = createHash("sha256").update(canonical(JSON.parse(JSON.stringify({ items, problems, tier, preview })) as never)).digest("hex");
     return { ok: !problems.length, problems, not_checked: NOT_CHECKED, tier, preview, fingerprint };
   }
 
@@ -119,20 +125,38 @@ export class ChangeSets {
       const s = subjectOf(it);
       const f = s.kind === "field" ? lib.fields.find((x) => x.key === s.key) : undefined;
       const sec = s.kind === "section" ? lib.sections.find((x) => x.key === s.key) : undefined;
+      const rels = s.kind ? releasesOf.get(`${s.kind}:${s.key}`) ?? [] : [];
       const combos = s.kind ? [...(usedBy[s.kind].get(s.key) ?? [])] : [];
       const qs = s.kind === "field" ? current(rows.questions, (q) => q.lineageKey).filter((q) => q.canonicalFieldKey === s.key) : [];
-      const sections = s.kind === "section" ? [{ key: s.key, title: sec?.title ?? s.key }] : [...new Set(qs.map((q) => q.sectionKey))].map((k) => ({ key: k, title: sectionTitle.get(k) ?? k }));
+      const sections = (s.kind === "section" ? [{ key: s.key, title: sec?.title ?? s.key }] : [...new Set(qs.map((q) => q.sectionKey))].map((k) => ({ key: k, title: sectionTitle.get(k) ?? k }))).sort((a, b) => byWords(a.title, b.title));
       const forms = s.kind === "field" ? [...new Set(rows.boxes.filter((b) => b.canonicalFieldKey === s.key).map((b) => b.edition.editionLabel))].sort() : [];
-      const rules = s.kind === "field" ? fieldReaders(rows, s.key).map((r) => ({ kind: READER_WORDS[r.kind], key: r.key, combination: trails.get(r.combinationId) ?? "A combination" })) : [];
-      const releases = (s.kind ? releasesOf.get(`${s.kind}:${s.key}`) ?? [] : []).map((r) => ({ combination: trails.get(r.combinationId) ?? "A combination", version: r.version }));
-      const cases = (await openCasesByRelease(db, combos)).map((c) => ({ combination: trails.get(c.combinationId) ?? "A combination", release: c.release, cases: c.cases }));
+      const rules = (s.kind === "field" ? fieldReaders(rows, s.key).map((r) => ({ kind: READER_WORDS[r.kind], key: r.key, combination: trails.get(r.combinationId) ?? "A combination" })) : []).sort((a, b) => byWords(`${a.kind}|${a.key}|${a.combination}`, `${b.kind}|${b.key}|${b.combination}`));
+      const releases = rels.map((r) => ({ combination: trails.get(r.combinationId) ?? "A combination", version: r.version })).sort((a, b) => byWords(a.combination, b.combination) || a.version - b.version);
+      // Review m2, breaker minor: the open cases pinned to a release that carries it (a combination only a release uses
+      // counts too); a case not pinned yet is listed with no release.
+      const carries = new Set(rels.map((r) => `${r.combinationId}|${r.version}`));
+      const cases = (await openCasesByRelease(db, [...new Set([...combos, ...rels.map((r) => r.combinationId)])])).filter((c) => c.release === null || carries.has(`${c.combinationId}|${c.release}`))
+        .map((c) => ({ combination: trails.get(c.combinationId) ?? "A combination", release: c.release, cases: c.cases })).sort((a, b) => byWords(a.combination, b.combination) || (a.release ?? 0) - (b.release ?? 0));
       const name = f ? f.label || f.key : sec ? sec.title : null;
       const [before, after] = it.action === "rename" ? [name, it.name] : it.action === "alias" ? [name, `${name} (also "${it.alias}")`] : it.action === "merge" ? [name, `merged into ${lib.fields.find((x) => x.key === it.into)?.label ?? it.into}`]
-        : it.action === "set_condition" ? [JSON.stringify(current(rows.questions, (q) => q.lineageKey).find((q) => q.lineageKey === it.key)?.predicateJson ?? null), JSON.stringify(it.tree)] : [null, it.name];
+        : it.action === "set_condition" ? [conditionWords(current(rows.questions, (q) => q.lineageKey).find((q) => q.lineageKey === it.key)?.predicateJson ?? null, lib), conditionWords(it.tree, lib)] : [null, it.name];
       out.push({ item: i, kind: it.kind, key: it.key, name, before, after, sections, forms, rules, combinations: combos.map((id) => ({ id, label: trails.get(id) ?? id })).sort((a, b) => a.label.localeCompare(b.label)), releases, open_cases: cases });
     }
     return out;
   }
+}
+/** A condition in words with the fields' names (review m11: names, never codes); "Always asked" when there is none. */
+export function conditionWords(tree: unknown, lib: Library, depth = 0): string {
+  if (tree == null) return "Always asked";
+  const n = tree as { op?: string; field?: string; value?: unknown; args?: unknown[]; arg?: unknown };
+  if (depth > 12 || typeof n !== "object") return "a condition";
+  const name = (k?: string) => lib.fields.find((f) => f.key === k)?.label ?? k ?? "a fact";
+  const v = (x: unknown) => (Array.isArray(x) ? x.map((y) => JSON.stringify(y)).join(" or ") : JSON.stringify(x));
+  const W: Record<string, string> = { eq: "is", neq: "is not", in: "is one of", gt: "is more than", gte: "is at least", lt: "is less than", lte: "is at most" };
+  if (n.op && W[n.op]) return `${name(n.field)} ${W[n.op]} ${v(n.value)}`;
+  if ((n.op === "and" || n.op === "or") && Array.isArray(n.args)) return n.args.map((a) => conditionWords(a, lib, depth + 1)).join(` ${n.op} `);
+  if (n.op === "not") return `not (${conditionWords(n.arg, lib, depth + 1)})`;
+  return n.op === "exists" ? `${name(n.field)} is answered` : "a condition";
 }
 const READER_WORDS: Record<string, string> = { form_line: "Form line", rule: "Rule", document_line: "Document line", check: "Check", question: "Question condition" };
 

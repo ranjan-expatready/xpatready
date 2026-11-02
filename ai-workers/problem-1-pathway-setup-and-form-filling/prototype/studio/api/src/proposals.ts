@@ -56,7 +56,7 @@ export function identityKeyOf(p: ProposalPayload, given: string): string {
 
 /** C3.6 (break R2-M1): a draft list that a draft field names and that has no ADD of its own rides with that field; it is not a library item
  *  another proposal may reuse: it can still be undone or withdrawn with its field. */
-async function ridingLists(db: Client, workspaceId: string): Promise<Set<string>> {
+export async function ridingLists(db: Client, workspaceId: string): Promise<Set<string>> {
   const named = await db.canonicalField.findMany({ where: { workspaceId, status: "DRAFT", answerListKey: { not: null } }, select: { answerListKey: true } });
   if (!named.length) return new Set();
   const drafts = await db.answerList.findMany({ where: { workspaceId, status: "DRAFT", answerListKey: { in: named.map((f) => f.answerListKey!) } }, select: { answerListKey: true } });

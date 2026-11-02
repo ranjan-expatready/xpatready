@@ -28,7 +28,7 @@ CREATE TABLE "change_set" (
     CONSTRAINT "change_set_pkey" PRIMARY KEY ("id"),
     CONSTRAINT "change_set_made_by_check" CHECK ("made_by" IN ('person', 'ai', 'ai_edited', 'ai_draft')),
     CONSTRAINT "change_set_tier_check" CHECK ("tier" IN ('direct', 'second_person')),
-    CONSTRAINT "change_set_status_check" CHECK ("status" IN ('applied', 'waiting', 'refused', 'rolled_back', 'undone'))
+    CONSTRAINT "change_set_status_check" CHECK ("status" IN ('applied', 'waiting', 'rolled_back', 'undone'))
 );
 
 CREATE INDEX "change_set_workspace_id_created_at_idx" ON "change_set"("workspace_id", "created_at");

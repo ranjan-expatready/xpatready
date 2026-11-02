@@ -2016,7 +2016,7 @@ model ChangeSet {
   tier          String
   expertAtRelease Boolean @default(false) @map("expert_at_release")
   fingerprint   String   @db.VarChar(64)
-  /// applied (direct) · waiting (a second person) · refused · rolled_back · undone
+  /// applied (direct) · waiting (a second person) · rolled_back · undone (a refused change writes no row)
   status        String
   libraryChangeId String? @map("library_change_id") @db.Uuid
   fieldMergeId  String?  @map("field_merge_id") @db.Uuid

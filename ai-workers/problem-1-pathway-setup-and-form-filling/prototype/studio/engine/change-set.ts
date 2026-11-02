@@ -6,13 +6,17 @@ import { normalizeLabel } from "../contracts/programs.ts";
 import type { ChangeItem, CheckProblem, MadeBy, RuleId, Tier, TierResult } from "../contracts/change-set.ts";
 import { fieldsOf } from "./where-used.ts";
 
-/** The newest version of each library item, as the API reads it. */
-export type LibField = { key: string; group: string; label: string | null; aliases: string[]; valueType: string; answerListKey: string | null; status: string; mergedInto: string | null };
-export type LibSection = { key: string; title: string; status: string };
-export type LibList = { key: string; values: string[]; status: string };
-export type LibDocType = { key: string; name: string; proves: string; status: string };
+/** The newest version of each library item, as the API reads it, with the names every live (draft or published) version
+ *  answers to: today's doors check all of them (library-sources.ts rename, proposals.ts sameInLibrary; review B1 M1). */
+export type LibField = { key: string; group: string; label: string | null; aliases: string[]; valueType: string; answerListKey: string | null; status: string; mergedInto: string | null;
+  /** Labels and aliases of every live version that is not merged away. */ names: string[] };
+export type LibSection = { key: string; title: string; status: string; /** Titles of every live version. */ liveTitles: string[] };
+export type LibList = { key: string; values: string[]; status: string; /** The code set of every live version (listIdentity). */ liveIds: string[] };
+export type LibDocType = { key: string; name: string; proves: string; status: string; /** name|proves of every live version. */ liveIds: string[] };
 export type Library = { fields: LibField[]; sections: LibSection[]; answerLists: LibList[]; documentTypes: LibDocType[] };
 
+/** R8's question order on one combination's draft, before and after the change (compared per combination, review m4). */
+export type OrderCheck = { combination: string; before: string[]; after: string[] };
 /** What the check reads beside the library, per item (index-aligned with the change set's items). */
 export type Context = {
   library: Library;
@@ -20,43 +24,59 @@ export type Context = {
   released: Set<string>;
   /** Worked-out facts (derived fields): a condition may read them. */
   derived: Set<string>;
-  /** Per item: the conditions already on its target (R6). */
-  existing?: (unknown[] | undefined)[];
-  /** Per item: R8's question-order problems on each affected combination's draft, before and after the change. */
-  order?: ({ before: string[]; after: string[] } | undefined)[];
-  /** Per merge item: every condition the merge rewrites, before and after the swap (R5, R7, R8 on them). */
+  /** Draft answer lists that ride with a draft field (proposals.ts ridingLists): not reusable, so not a duplicate. */
+  riding?: Set<string>;
+  /** Per set_condition item: the condition on its target now (R6), or null when the target does not exist. */
+  existing?: (unknown[] | null | undefined)[];
+  /** Per item: R8's question order on each affected combination's draft, before and after the change. */
+  order?: (OrderCheck[] | undefined)[];
+  /** Per merge item: every condition the merge rewrites, before and after the swap (R5–R7 on them; R8 is `order`). */
   rewrites?: ({ where: string; before: unknown; after: unknown }[] | undefined)[];
 };
-/** The engine's own verifiers, passed in (engine/eligibility-gates.ts valueProblems, contracts/rules.ts canonical). */
-export type Verifiers = { valueProblems: (tree: unknown, types: Map<string, string>, derived: Set<string>) => string[]; canonical: (tree: never) => string };
+/** The engine's own verifiers, passed in: engine/eligibility-gates.ts valueProblems, contracts/rules.ts canonical and the
+ *  closed predicate vocabulary (contracts/rules.ts validatePredicate with engine/validate.ts isNode). */
+export type Verifiers = { valueProblems: (tree: unknown, types: Map<string, string>, derived: Set<string>) => string[]; canonical: (tree: never) => string; shape: (tree: unknown) => string[] };
 
 const LIVE = (s: string) => s === "DRAFT" || s === "PUBLISHED";
 const letters = (s: string) => (s.match(/\p{L}/gu) ?? []).length;
 const fieldName = (f: LibField) => f.label || f.key;
+/** A library key: lower-case words with dots and underscores ("person.family_name", "passport"). */
+export const KEY = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$/;
+/** Control, invisible and direction characters (contracts/runtime.ts INVISIBLE, copied: that file is not pure). */
+const UNSEEN = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200b\u200e\u200f\u2028-\u202e\u2066-\u2069\ufeff]/;
+/** A condition the check reads at all (breaker M1): at most this deep and this many parts; anything larger is refused
+ *  before any verifier runs, so no tree can crash or stall the check. */
+export const TREE_MAX = { depth: 12, nodes: 200 };
+/** The most problems one check returns (breaker minor: a 50-item set cannot answer megabytes). */
+export const PROBLEMS_MAX = 200;
 /** The library's kinds of answer (engine/snapshot.ts VALUE_TYPE_TO_DATA_TYPE; a test keeps the two the same). */
 export const VALUE_TYPES = new Set(["text", "yes_no", "date", "code", "country", "address", "number", "phone", "email", "long_text", "multi_choice", "person_name", "period_history", "declaration"]);
 /** Field codes in a verifier's words become the fields' names (EXPERIENCE: names, never codes). */
 const named = (m: string, lib: Library) => lib.fields.reduce((t, f) => (f.label ? t.split(f.key).join(f.label) : t), m);
+const nameOfKey = (lib: Library, key: string) => { const f = lib.fields.find((x) => x.key === key); return f ? fieldName(f) : key; };
 
 // ───────────────────────────────────────────────── R3: no exact duplicate, one row per action and kind (challenge M2)
 /** The scope each action checks names in, kept as today's flows check them (library-sources.ts rename, proposals.ts
  *  sameInLibrary), so a person and the AI get the same answer for the same action. */
 export const DUPLICATE_SCOPE: Record<string, string> = {
-  "field:rename": "the other active fields of its group, by name or alias",
-  "field:alias": "the other active fields of its group, by name or alias",
-  "section:rename": "every other section's title, retired ones too",
-  "field:accept_proposal": "every active field of the library, by name or alias",
-  "section:accept_proposal": "every active section, by title (and the proposal's aliases)",
-  "answer_list:accept_proposal": "every active answer list, by its codes",
-  "document_type:accept_proposal": "every active document type, by name and what it proves",
+  "field:rename": "every live version of the other active fields of its group, by name or alias",
+  "field:alias": "every live version of the other active fields of its group, by name or alias",
+  "section:rename": "every other section's newest title, retired ones too",
+  "field:accept_proposal": "every live version of every active field of the library, by name or alias",
+  "section:accept_proposal": "every live version of every section, by title (and the proposal's aliases)",
+  "answer_list:accept_proposal": "every live version of every answer list not riding with a draft field, by its exact codes",
+  "document_type:accept_proposal": "every live version of every document type, by name and what it proves",
 };
-const listId = (codes: string[]) => [...new Set(codes.map((c) => c.trim().toUpperCase()))].sort().join("|");
+/** proposals.ts listIdentity: the distinct codes, sorted, exactly as written (the long-list hash is the same string's). */
+export const listId = (codes: string[]) => [...new Set(codes)].sort().join(",");
+const docId = (name: string, proves: string) => `${normalizeLabel(name)}|${normalizeLabel(proves)}`;
 
-function duplicate(it: ChangeItem, lib: Library): string | null {
+function duplicate(it: ChangeItem, ctx: Context): string | null {
+  const lib = ctx.library;
   if (it.kind === "field" && (it.action === "rename" || it.action === "alias")) {
     const me = lib.fields.find((f) => f.key === it.key); if (!me) return null;
     const want = normalizeLabel(it.action === "rename" ? it.name : it.alias);
-    const twin = lib.fields.find((t) => t.key !== it.key && t.group === me.group && !t.mergedInto && LIVE(t.status) && [t.label ?? "", ...t.aliases].some((x) => normalizeLabel(x) === want));
+    const twin = lib.fields.find((t) => t.key !== it.key && t.group === me.group && t.names.some((x) => normalizeLabel(x) === want));
     return twin ? `"${it.action === "rename" ? it.name : it.alias}" is already the name of ${twin.label ?? twin.key} in this group. If they mean the same, merge them; otherwise choose another name.` : null;
   }
   if (it.kind === "section" && it.action === "rename") {
@@ -65,71 +85,95 @@ function duplicate(it: ChangeItem, lib: Library): string | null {
   }
   if (it.action === "accept_proposal" || it.action === "create") {
     const want = normalizeLabel(it.name);
-    if (it.kind === "field") { const t = lib.fields.find((f) => LIVE(f.status) && !f.mergedInto && [f.label ?? "", ...f.aliases].some((x) => x && normalizeLabel(x) === want)); return t ? `"${it.name}" is already in the library as ${fieldName(t)}: reuse it instead.` : null; }
-    if (it.kind === "section") { const names = new Set([want, ...(it.action === "accept_proposal" ? it.aliases.map(normalizeLabel) : [])]); const t = lib.sections.find((s) => LIVE(s.status) && names.has(normalizeLabel(s.title))); return t ? `"${it.name}" is already in the library as the section "${t.title}": reuse it instead.` : null; }
-    if (it.kind === "answer_list" && it.action === "accept_proposal" && it.values?.length) { const id = listId(it.values); const t = lib.answerLists.find((l) => LIVE(l.status) && listId(l.values) === id); return t ? `This list of choices is already in the library as ${t.key}: reuse it instead.` : null; }
-    if (it.kind === "document_type") { const proves = normalizeLabel(it.action === "accept_proposal" ? it.proves ?? "" : ""); const t = lib.documentTypes.find((d) => LIVE(d.status) && normalizeLabel(d.name) === want && normalizeLabel(d.proves) === proves); return t ? `"${it.name}" is already in the library as a document type: reuse it instead.` : null; }
+    if (it.kind === "field") { const t = lib.fields.find((f) => f.names.some((x) => x && normalizeLabel(x) === want)); return t ? `"${it.name}" is already in the library as ${fieldName(t)}: reuse it instead.` : null; }
+    if (it.kind === "section") { const names = new Set([want, ...(it.action === "accept_proposal" ? it.aliases.map(normalizeLabel) : [])]); const t = lib.sections.find((s) => s.liveTitles.some((x) => names.has(normalizeLabel(x)))); return t ? `"${it.name}" is already in the library as the section "${t.title}": reuse it instead.` : null; }
+    if (it.kind === "answer_list" && it.action === "accept_proposal" && it.values?.length) { const id = listId(it.values); const t = lib.answerLists.find((l) => !ctx.riding?.has(l.key) && l.liveIds.includes(id)); return t ? `This list of choices is already in the library${t.values.length ? ` (${t.values.slice(0, 3).join(", ")}${t.values.length > 3 ? ", …" : ""})` : ""}: reuse it instead.` : null; }
+    if (it.kind === "document_type") { const id = docId(it.name, it.action === "accept_proposal" ? it.proves ?? "" : ""); const t = lib.documentTypes.find((d) => d.liveIds.includes(id)); return t ? `"${it.name}" is already in the library as a document type: reuse it instead.` : null; }
   }
   return null;
 }
-/** Two items of one change set that would make the same new name (caught before either is written). */
-function sameWithinSet(items: ChangeItem[]): [number, string][] {
-  const seen = new Map<string, number>(), out: [number, string][] = [];
-  items.forEach((it, i) => {
-    const name = it.action === "rename" || it.action === "accept_proposal" || it.action === "create" ? it.name : it.action === "alias" ? it.alias : null;
-    if (!name) return;
-    const k = `${it.kind}|${normalizeLabel(name)}`;
-    if (seen.has(k)) out.push([i, `"${name}" is given twice in this change (items ${seen.get(k)! + 1} and ${i + 1}): keep one.`]); else seen.set(k, i);
-  });
-  return out;
+/** The words a new name is compared in within one set: a field's rename or alias within its group (review m5). */
+function nameKey(it: ChangeItem, lib: Library): string | null {
+  const name = it.action === "rename" || it.action === "accept_proposal" || it.action === "create" ? it.name : it.action === "alias" ? it.alias : null;
+  if (!name) return null;
+  const group = it.kind === "field" && (it.action === "rename" || it.action === "alias") ? lib.fields.find((f) => f.key === it.key)?.group ?? "" : "*";
+  return `${it.kind}|${group}|${normalizeLabel(name)}`;
 }
 
-// ───────────────────────────────────────────────── R5–R8 on one condition tree
-type Node = { op?: string; field?: string; value?: unknown; args?: unknown[]; arg?: unknown };
-const nodes = (tree: unknown): Node[] => { const out: Node[] = [], stack = [tree]; while (stack.length) { const n = stack.pop() as Node | null; if (!n || typeof n !== "object") continue; out.push(n); for (const a of n.args ?? []) stack.push(a); if (n.arg) stack.push(n.arg); } return out; };
-/** R7: a value compared with a choice field that is not on that field's list (the condition can never be true). */
-function neverTrue(tree: unknown, lib: Library): string[] {
+// ───────────────────────────────────────────────── R1 on a condition: its size first, then the closed vocabulary
+type Node = { op?: string; field?: string; value?: unknown; args?: unknown; arg?: unknown };
+/** Every part of a tree, without recursion; null when it is deeper or larger than TREE_MAX (or not a tree). */
+function nodes(tree: unknown): Node[] | null {
+  const out: Node[] = [], stack: [unknown, number][] = [[tree, 1]];
+  while (stack.length) {
+    const [n, d] = stack.pop()!;
+    if (!n || typeof n !== "object" || Array.isArray(n)) return null;
+    if (d > TREE_MAX.depth || out.length >= TREE_MAX.nodes) return null;
+    const x = n as Node; out.push(x);
+    if (x.args !== undefined) { if (!Array.isArray(x.args)) return null; for (const a of x.args) stack.push([a, d + 1]); }
+    if (x.arg !== undefined) stack.push([x.arg, d + 1]);
+  }
+  return out;
+}
+/** R1 for a condition: a tree of the closed vocabulary, small enough to read. Returns its parts when it is one. */
+function conditionShape(tree: unknown, v: Verifiers): { parts: Node[] | null; why: string | null } {
+  const parts = nodes(tree);
+  if (!parts) return { parts: null, why: `The condition is not a condition, or it is larger than ${TREE_MAX.depth} levels or ${TREE_MAX.nodes} parts.` };
+  const errs = v.shape(tree);
+  return errs.length ? { parts: null, why: `The condition is not valid: ${errs[0]}.` } : { parts, why: null };
+}
+
+// ───────────────────────────────────────────────── R5–R7 on one condition tree (R8 is the question order)
+/** R7: an "is" or "is one of" with a value not on the field's list, which can never be true. Codes are compared exactly,
+ *  as the evaluator does (contracts/rules.ts). "is not" with such a value is always true, so it is not this rule. */
+function neverTrue(parts: Node[], lib: Library): string[] {
   const out: string[] = [];
-  for (const n of nodes(tree)) {
-    if (!n.field || !["eq", "neq", "in"].includes(n.op ?? "")) continue;
+  for (const n of parts) {
+    if (!n.field || (n.op !== "eq" && n.op !== "in")) continue;
     const f = lib.fields.find((x) => x.key === n.field); const list = f?.answerListKey ? lib.answerLists.find((l) => l.key === f.answerListKey) : undefined;
     if (!f || !list?.values.length) continue;
-    const codes = new Set(list.values.map((v) => v.trim().toUpperCase()));
-    for (const v of n.op === "in" ? (Array.isArray(n.value) ? n.value : []) : [n.value]) if (typeof v === "string" && !codes.has(v.trim().toUpperCase())) out.push(`The condition asks ${fieldName(f)} to be "${v}", which is not on its list: it can never be true.`);
+    const codes = new Set(list.values);
+    const vals = n.op === "in" ? (Array.isArray(n.value) ? n.value : []) : [n.value];
+    const off = vals.filter((v) => typeof v === "string" && !codes.has(v));
+    if (off.length && off.length === vals.length) out.push(`The condition asks ${fieldName(f)} to be "${off.join('" or "')}", which is not on its list: it can never be true.`);
   }
   return out;
 }
 /** R6: an "and"/"or" that repeats one of its parts. */
-function repeatedPart(tree: unknown, v: Verifiers): string[] {
+function repeatedPart(parts: Node[], v: Verifiers): string[] {
   const out: string[] = [];
-  for (const n of nodes(tree)) if ((n.op === "and" || n.op === "or") && n.args?.length) { const c = n.args.map((a) => v.canonical(a as never)); if (new Set(c).size < c.length) out.push(`The condition repeats one of its parts under "${n.op}": remove the copy.`); }
+  for (const n of parts) if ((n.op === "and" || n.op === "or") && Array.isArray(n.args) && n.args.length) { const c = n.args.map((a) => v.canonical(a as never)); if (new Set(c).size < c.length) out.push(`The condition repeats one of its parts under "${n.op}": remove the copy.`); }
   return out;
 }
 const ORDER = /^Unreachable question|^Questions decide each other in a loop/;
 
 function treeProblems(i: number, tree: unknown, ctx: Context, v: Verifiers, where = ""): CheckProblem[] {
-  const out: CheckProblem[] = [];
   const at = where ? ` (${where})` : "";
+  const shape = conditionShape(tree, v);
+  if (!shape.parts) return [{ rule: "R1", item: i, message: `${shape.why!.replace(/\.$/, "")}${at}.` }];
+  const out: CheckProblem[] = [];
   const types = new Map(ctx.library.fields.map((f) => [f.key, f.valueType]));
   // R4 inside a condition: every field it reads exists and is still in use.
   for (const k of new Set(fieldsOf(tree))) {
     const f = ctx.library.fields.find((x) => x.key === k);
     if (!f && !ctx.derived.has(k)) out.push({ rule: "R4", item: i, message: `The condition reads ${k}, which is not in the library${at}.` });
-    else if (f && (f.mergedInto || !LIVE(f.status))) out.push({ rule: "R4", item: i, message: `The condition reads ${fieldName(f)}, which is ${f.mergedInto ? `merged into ${f.mergedInto}` : "retired"}${at}.` });
+    else if (f && (f.mergedInto || !LIVE(f.status))) out.push({ rule: "R4", item: i, message: `The condition reads ${fieldName(f)}, which is ${f.mergedInto ? `merged into ${nameOfKey(ctx.library, f.mergedInto)}` : "retired"}${at}.` });
   }
   for (const m of v.valueProblems(tree, types, ctx.derived)) out.push({ rule: "R5", item: i, message: `The condition ${named(m, ctx.library)}${at}.` });
-  for (const m of repeatedPart(tree, v)) out.push({ rule: "R6", item: i, message: `${m.replace(/\.$/, "")}${at}.` });
-  for (const m of neverTrue(tree, ctx.library)) out.push({ rule: "R7", item: i, message: `${m.replace(/\.$/, "")}${at}.` });
+  for (const m of repeatedPart(shape.parts, v)) out.push({ rule: "R6", item: i, message: `${m.replace(/\.$/, "")}${at}.` });
+  for (const m of neverTrue(shape.parts, ctx.library)) out.push({ rule: "R7", item: i, message: `${m.replace(/\.$/, "")}${at}.` });
   return out;
 }
 
-/** A merged-field chain is at most this many hops long (SH3 resolver contract, #509 Q1: it follows at most 5 keys). */
+/** A merged-field chain is at most this many merges long (SH3 resolver contract, #509 Q1: it follows at most 5 keys). */
 export const MERGE_HOPS_MAX = 4;
 /** The longest chain of merged fields that ends at `key` (0 when nothing was merged into it). */
 export function mergeDepth(fields: LibField[], key: string, seen = new Set<string>()): number {
   if (seen.has(key)) return 0; seen.add(key);
   return Math.max(0, ...fields.filter((f) => f.mergedInto === key).map((f) => 1 + mergeDepth(fields, f.key, seen)));
 }
+/** The library keys an item changes (a merge changes both fields). */
+const keysOf = (it: ChangeItem) => (it.action === "merge" ? [`field:${it.key}`, `field:${it.into}`] : [`${it.kind === "condition" ? "condition" : it.kind}:${it.key}`]);
 
 /** The fixed rules check (P-253 step 2), in order; every rule runs and every error refuses. */
 export function checkChangeSet(items: ChangeItem[], madeBy: MadeBy, ctx: Context, v: Verifiers): CheckProblem[] {
@@ -138,12 +182,16 @@ export function checkChangeSet(items: ChangeItem[], madeBy: MadeBy, ctx: Context
   const lib = ctx.library;
   items.forEach((it, i) => {
     // R1 type and format.
+    if (!KEY.test(it.key) || (it.action === "merge" && !KEY.test(it.into))) add("R1", i, "A library key is lower-case words joined by dots or underscores (like person.family_name).");
     const name = it.action === "rename" || it.action === "accept_proposal" || it.action === "create" ? it.name : it.action === "alias" ? it.alias : null;
-    const max = it.action === "rename" || it.action === "alias" ? 80 : 120; // the rename door's own limit (library-sources.ts NameBody)
-    if (name !== null && (name.length < 2 || name.length > max)) add("R1", i, name.length < 2 ? "A name has at least two characters." : `Keep the name under ${max} characters.`);
-    else if (name !== null && letters(name) < 1) add("R1", i, "A name has at least one letter.");
+    // The rename door's own limits (library-sources.ts NameBody: 2 to 80 characters); a new item's name needs a letter.
+    const max = it.action === "rename" || it.action === "alias" ? 80 : 120;
+    if (name !== null && UNSEEN.test(name)) add("R1", i, "Remove the control, invisible or direction characters from the name.");
+    else if (name !== null && (name.length < 2 || name.length > max)) add("R1", i, name.length < 2 ? "A name has at least two characters." : `Keep the name under ${max} characters.`);
+    else if (name !== null && (it.action === "accept_proposal" || it.action === "create") && letters(name) < 1) add("R1", i, "A new item's name has at least one letter.");
     if (it.action === "accept_proposal" && it.kind === "field" && !VALUE_TYPES.has(it.valueType ?? "")) add("R1", i, `"${it.valueType ?? "nothing"}" is not a kind of answer the library knows.`);
-    if (it.action === "set_condition" && (!it.tree || typeof it.tree !== "object")) add("R1", i, "The condition is empty or not a condition.");
+    // B1 checks conditions on questions (the AI's condition proposals, C4.11); other targets are changed on their pages.
+    if (it.action === "set_condition" && it.target !== "question") add("R1", i, "Only a question's condition goes through this check now; a form line, document line, rule or check condition is changed on its own page.");
     // R2 source and reason, for anything new.
     if (it.action === "accept_proposal" || it.action === "create") {
       if (!it.source) add("R2", i, `"${it.name}" needs a source: a form box, an official page with its quote, or "set by ExpatReady".`);
@@ -151,23 +199,27 @@ export function checkChangeSet(items: ChangeItem[], madeBy: MadeBy, ctx: Context
       if (r.length > 300 || letters(r) < 3) add("R2", i, `"${it.name}" needs a reason in words (3 to 300 characters): why nothing in the library fits.`);
     }
     // R3 no exact duplicate.
-    const dup = duplicate(it, lib); if (dup) add("R3", i, dup);
+    const dup = duplicate(it, ctx); if (dup) add("R3", i, dup);
     // R4 references intact.
+    if (it.action === "accept_proposal" || it.action === "create") {
+      const taken = it.kind === "field" ? lib.fields.some((f) => f.key === it.key) : it.kind === "section" ? lib.sections.some((s) => s.key === it.key) : it.kind === "answer_list" ? lib.answerLists.some((l) => l.key === it.key) : lib.documentTypes.some((d) => d.key === it.key);
+      if (taken) add("R4", i, `The key ${it.key} is already taken in the library: a new item needs a new key.`);
+    }
     if (it.action === "rename" || it.action === "alias" || it.action === "merge") {
       const has = it.kind === "section" ? lib.sections.find((s) => s.key === it.key) : lib.fields.find((f) => f.key === it.key);
       if (!has) add("R4", i, `${it.key} is not in the shared library.`);
       else if (has.status === "RETIRED") add("R4", i, `${it.kind === "section" ? `The section "${(has as LibSection).title}"` : `The field "${fieldName(has as LibField)}"`} is retired: it takes no new use or change. Restore it first.`);
-      else if (it.kind === "field" && (has as LibField).mergedInto) add("R4", i, `${it.key} was merged into ${(has as LibField).mergedInto}: change that field instead.`);
+      else if (it.kind === "field" && (has as LibField).mergedInto) add("R4", i, `${fieldName(has as LibField)} was merged into ${nameOfKey(lib, (has as LibField).mergedInto!)}: change that field instead.`);
     }
     if (it.action === "merge") {
-      if (it.key === it.into) add("R4", i, "Choose two different fields.");
       const keep = lib.fields.find((f) => f.key === it.into), gone = lib.fields.find((f) => f.key === it.key);
-      if (!keep || keep.status === "RETIRED" || keep.mergedInto) add("R4", i, `${it.into} is not an active field of the library.`);
-      else if (gone && gone.valueType !== keep.valueType) add("R4", i, `${it.into} holds a ${keep.valueType} and ${it.key} a ${gone.valueType}: fields of different kinds are not the same meaning.`);
+      if (it.key === it.into) add("R4", i, "Choose two different fields.");
+      else if (!keep || keep.status === "RETIRED" || keep.mergedInto) add("R4", i, `${keep ? fieldName(keep) : it.into} is not an active field of the library.`);
+      else if (gone && gone.valueType !== keep.valueType) add("R4", i, `${fieldName(keep)} holds a ${keep.valueType} and ${fieldName(gone)} a ${gone.valueType}: fields of different kinds are not the same meaning.`);
       else if (gone && (gone.answerListKey ?? null) !== (keep.answerListKey ?? null)) add("R4", i, `${fieldName(keep)} and ${fieldName(gone)} use different lists of choices: merging them would leave answers off the list.`);
-      // SH3 contract (#509, Q1): the resolver follows at most MERGE_HOPS_MAX hops of merged fields and answers the first
-      // key beyond that, so a merge that would make a longer chain is refused.
-      else if (gone) { const hops = mergeDepth(lib.fields, it.key) + 1; if (hops > MERGE_HOPS_MAX) add("R4", i, `Merging ${fieldName(gone)} into ${fieldName(keep)} would make a chain of ${hops + 1} merged fields (at most ${MERGE_HOPS_MAX + 1}): merge the older fields straight into ${fieldName(keep)} first.`); }
+      // SH3 contract (#509, Q1): the resolver follows at most MERGE_HOPS_MAX merges and answers the first key beyond
+      // that, so a merge that would make a longer chain is refused.
+      else if (gone) { const merges = mergeDepth(lib.fields, it.key) + 1; if (merges > MERGE_HOPS_MAX) add("R4", i, `Merging ${fieldName(gone)} into ${fieldName(keep)} would make a chain of ${merges} merges; at most ${MERGE_HOPS_MAX} are followed.`); }
       // R5, R6, R7 on every condition the merge rewrites (challenge M4): only the problems the swap makes count. The swap
       // renames the field inside the words, so they are compared by how many there are of each rule, before and after.
       for (const w of ctx.rewrites?.[i] ?? []) {
@@ -177,19 +229,24 @@ export function checkChangeSet(items: ChangeItem[], madeBy: MadeBy, ctx: Context
         for (const [rule, n] of count(after)) if (n > (before.get(rule) ?? 0)) out.push(...after.filter((p) => p.rule === rule).slice(before.get(rule) ?? 0));
       }
     }
-    if (it.action === "set_condition") {
-      out.push(...treeProblems(i, it.tree, ctx, v));
-      // R6 the same condition already on the target.
-      const mine = v.canonical(it.tree as never);
-      if ((ctx.existing?.[i] ?? []).some((e) => e && v.canonical(e as never) === mine)) add("R6", i, "The same condition is already on it: nothing would change.");
+    if (it.action === "set_condition" && it.target === "question") {
+      if (ctx.existing?.[i] === null) add("R4", i, `No question asks ${nameOfKey(lib, it.key)} in the library, so its condition has nowhere to go.`);
+      const tp = treeProblems(i, it.tree, ctx, v); out.push(...tp);
+      // R6 the same condition already on the target (only for a tree that is a condition at all).
+      if (!tp.some((p) => p.rule === "R1")) { const mine = v.canonical(it.tree as never); if ((ctx.existing?.[i] ?? []).some((e) => e && v.canonical(e as never) === mine)) add("R6", i, "The same condition is already on it: nothing would change."); }
     }
-    // R8 loop or unreachable question: only the problems this change makes.
-    const o = ctx.order?.[i];
-    if (o) { const before = new Set(o.before); for (const m of o.after) if (ORDER.test(m) && !before.has(m)) add("R8", i, m); }
+    // R8 loop or unreachable question, per combination: only the problems this change makes there.
+    for (const o of ctx.order?.[i] ?? []) { const before = new Set(o.before); for (const m of new Set(o.after)) if (ORDER.test(m) && !before.has(m)) add("R8", i, `${m}${o.combination ? ` (${o.combination})` : ""}`); }
   });
-  for (const [i, m] of sameWithinSet(items)) add("R3", i, m);
+  // R3 and R4 across the items of one set (breaker M3): one change per item, and no new name given twice.
+  const seenName = new Map<string, number>(), seenKey = new Map<string, number>();
+  items.forEach((it, i) => {
+    const k = nameKey(it, lib);
+    if (k) { if (seenName.has(k)) add("R3", i, `"${it.action === "alias" ? it.alias : (it as { name: string }).name}" is given twice in this change (items ${seenName.get(k)! + 1} and ${i + 1}): keep one.`); else seenName.set(k, i); }
+    for (const key of keysOf(it)) { if (seenKey.has(key) && seenKey.get(key) !== i) { add("R4", i, `Items ${seenKey.get(key)! + 1} and ${i + 1} both change ${key.split(":")[0] === "field" ? nameOfKey(lib, key.slice(6)) : key.slice(key.indexOf(":") + 1)}: one change per item in a change set (send the next one after this one).`); break; } seenKey.set(key, i); }
+  });
   void madeBy;
-  return out;
+  return out.slice(0, PROBLEMS_MAX);
 }
 
 // ───────────────────────────────────────────────── review by risk (P-253 step 6, P-266), one table, fixed in code
@@ -215,9 +272,11 @@ export const RAISES = {
   released: "It is used by a released combination: a second person approves (P-266).",
   ai: "The AI made it: an AI change is never direct (P-121, P-253 step 3).",
 } as const;
-/** Which items the immigration expert signs at release review, as today (validate.ts diff needs_sme): rules and
- *  conditions, and anything the AI made. No gate at approval (P-253 Q3, tech lead on PR #504). */
-const expertSigns = (it: ChangeItem, madeBy: MadeBy) => it.kind === "condition" || madeBy !== "person";
+/** Which items the immigration expert signs at release review, as today (validate.ts diff needs_sme: rules, document
+ *  requirements, checks, a form line with a condition, and anything the AI made; not a person's question condition). No
+ *  gate at approval (P-253 Q3, tech lead on PR #504; review B1 M5). */
+export const EXPERT_TARGETS = new Set(["rule", "document_line", "check", "form_line"]);
+const expertSigns = (it: ChangeItem, madeBy: MadeBy) => madeBy !== "person" || (it.action === "set_condition" && EXPERT_TARGETS.has(it.target));
 export const TIER_WORDS: Record<Tier, string> = { direct: "Applies now as a draft; logged, and shown at the next release review.", second_person: "Waits for a second person to approve." };
 
 export function riskOf(items: ChangeItem[], madeBy: MadeBy, released: Set<string>): TierResult {
