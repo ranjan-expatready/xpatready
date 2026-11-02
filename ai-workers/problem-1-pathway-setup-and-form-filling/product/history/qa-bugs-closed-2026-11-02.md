@@ -1,0 +1,25 @@
+# qa findings closed on 2 Nov 2026 (moved word for word from `qa/BUGS.md` and `qa/reports/bugs-open-detail.md`, AGENTS.md rule 8)
+
+## QA-73 — closed 2 Nov 2026 (after-merge 59d2da74)
+
+Closed by the qa lane on main **59d2da74** (fixed by #389, F8): `tests/check_screens_qa_1029_browser.cjs` on a fresh isolated copy: every Item cell on Review and release is 60 characters or fewer or clamped (22 items, 20 with the long definition in the tip, longest 56), no Item shows a system role name or a whole definition, "IMM 1295:" once; `tests/check_review_item_words.ts` 7/7. Six-sample Visitor visa Review tab at 1440/1024/400 px: no sideways scroll, form titles in the Item column, number in the tip (screenshots `qa/reports/2026-11-02-after-merge/qa73-*.png`).
+
+Row as it stood in `qa/BUGS.md`:
+
+| QA-73 | UX · Minor (was Major) | C4.x Review and release tab · PRODUCT §4 | f7cb40d9 | **Retest 832ee5bd (1 Nov): keys gone; each Item is now the calculation's whole definition (up to about 260 characters, e.g. "Sort the person's activity rows by start month; count calendar months …") and one holds a system role name: "… holding the role subject_spouse_or_partner …". Expected: a short name per item, the definition in a tip. "IMM 1295: IMM 1295:" fixed.** Retest deda0e6b: warnings now in words ("Calculated answers · … this calculation is not checked by a test yet", "the immigration expert's sign-off"). Still: the changes table's Item column is the key alone (`person.age_years` …, 1 … | screens | Open |
+
+Row as it stood in `qa/reports/bugs-open-detail.md`:
+
+| QA-73 | UX · Minor (was Major) | C4.x Review and release tab · PRODUCT §4 | **f7cb40d9** | **Retest 832ee5bd (1 Nov): keys gone; each Item is now the calculation's whole definition (up to about 260 characters, e.g. "Sort the person's activity rows by start month; count calendar months …") and one holds a system role name: "… holding the role subject_spouse_or_partner …". Expected: a short name per item, the definition in a tip. "IMM 1295: IMM 1295:" fixed.** **Retest deda0e6b: warnings now in words ("Calculated answers · … this calculation is not checked by a test yet", "the immigration expert's sign-off"). Still: the changes table's Item column is the key alone (`person.age_years` …, 13 rows on Visitor visa); "IMM 1295: IMM 1295: 37 rows".** Before: Combination › Review and release: the changes table names items by key (`case.applying_country_differs_from_citizenship`, `person.age_years` …) with Kind "Derived definition"; warnings read "Derived fields · … Calculation other has no tested helper: recorded, never evaluated", "Calculation count_people_in_role", "role subject_spouse_or_partner"; "Field map IMM 1295 (09-2023) · IMM 1295: IMM 1295: 37 rows"; steps say "SME duty". Fix: item = its meaning ("Age in whole years"); Kind "Calculated answer"; warning "This calculation is not checked by a test yet; it is shown, never used to decide"; role words; one "IMM 1295:"; "the immigration expert's sign-off" | `ws/`ev-review-keys.png, ev-review-warnings.png | screens | Open |
+
+## QA-145 — closed 2 Nov 2026 (after-merge 59d2da74)
+
+Closed by the qa lane on main **59d2da74** (fixed by #378, commits 325b6588 and 8a1c53ec: what Load sample generates is committed, so a load rewrites the same bytes): after five Load sample runs on isolated copies (acceptance C11.3, C11.7, C11.10, C11.13, C2.12) and the Demo menu's Load sample walked in the browser, `git status --porcelain` is empty; no `p1/inventory` or `p2/jobs/studio-fieldmap-*` file is new or changed.
+
+Row as it stood in `qa/BUGS.md`:
+
+| QA-145 | Bug · Minor | C11.7 · AGENTS rule 1 (clean clone), STANDARDS | 61f561d7 (after-merge 10) | Demo › Load sample (the six) writes 9 `prototype/p1/inventory/*.inventory.json` and 12 `prototype/p2/jobs/studio-fieldmap-*.json` files into the repository's own folders. Any clone that loads it is left dirty, and `check_forms_c31_formats.ts` then fails ("every inventoried form has its formats read"). Also: the acceptance packs rewrite tracked `prototype/p2` files (stub-pass runs, canary digest). … | runtime | Open |
+
+Row as it stood in `qa/reports/bugs-open-detail.md`:
+
+| QA-145 | Bug · Minor | C11.7 | **61f561d7** | Steps: an isolated copy; Demo › Load sample (`POST /demo/load {"sample":"six"}`); `git status --ignored` in the clone. Expected: a load writes only to the copy's database and its `var/` folder. Actual: new untracked `prototype/p1/inventory/imm{0008,1294,5406,5532,5562,5604,5645,5646,5710}e.inventory.json` and `prototype/p2/jobs/studio-fieldmap-*.json` (12), and `prototype/p2/jobs/studio-fieldmap-imm5476e.json` modified. `check_forms_c31_formats.ts` then fails 99/100 ("every inventoried form has its formats read"), and passes 100/100 with those 9 files moved aside. Seen again 1 Nov evening (acceptance runs on 56e3dfd5): running the packs also rewrites tracked files: `prototype/p2/runs/stub-pass/studio-fieldmap-imm5257e-p1of5…p5of5-*.json`, `prototype/p2/screening/canary-digest.json` and `prototype/p2/jobs/studio-fieldmap-imm5476e.json`. |
