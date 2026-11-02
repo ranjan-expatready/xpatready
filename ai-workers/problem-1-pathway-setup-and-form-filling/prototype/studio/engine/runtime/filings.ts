@@ -42,11 +42,13 @@ export const BIOMETRICS_EXEMPT_SOURCE = line("biometrics")?.exempt?.source as Fe
  *  whole-number age limits for an exemption. Anything else makes its combination not derived: never a wrong total. */
 export function soundLine(l: TableLine | undefined): l is TableLine {
   if (!l || typeof l !== "object" || typeof l.key !== "string" || !FEE_BASES.includes(l.basis) || l.basis === "per_position") return false;
-  if (typeof l.per_person_cad !== "number" || !Number.isFinite(l.per_person_cad) || l.per_person_cad < 0) return false;
+  // Amounts are whole cents: a sub-cent value would round to a different (even zero) fee (outside check on #455).
+  const cents = (cad: unknown) => typeof cad === "number" && Number.isFinite(cad) && cad >= 0 && Number.isSafeInteger(Math.round(cad * 100)) && Math.abs(cad * 100 - Math.round(cad * 100)) < 1e-6;
+  if (!cents(l.per_person_cad)) return false;
   if (l.roles !== undefined && (!Array.isArray(l.roles) || !l.roles.length || l.roles.some((r) => typeof r !== "string"))) return false;
   if (l.basis === "per_person_by_role" && !l.roles?.length) return false;
   const m = l.family_max;
-  if (l.basis === "family_maximum" && !(m && typeof m.cad === "number" && m.cad > 0 && Number.isInteger(m.from_people) && m.from_people >= 2)) return false;
+  if (l.basis === "family_maximum" && !(m && cents(m.cad) && m.cad > 0 && Number.isInteger(m.from_people) && m.from_people >= 2)) return false;
   if (l.exempt && !(Number.isInteger(l.exempt.under_age) && Number.isInteger(l.exempt.over_age) && l.exempt.source)) return false;
   return true;
 }
