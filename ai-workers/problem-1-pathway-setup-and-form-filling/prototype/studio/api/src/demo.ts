@@ -428,6 +428,8 @@ export class Demo {
       "Person roles added here": await t.personRole.count({ where: { ...ws, builtIn: false } }),
       // S7 (P-108): Reset empties everything, these two included
       "canada.ca files saved by the finder and form line changes": (await t.officialDownload.count({ where: ws })) + (await t.formLineAction.count({ where: ws })),
+      // G4 (forms lane): test families, their answer keys and runs
+      "Answer-key families, keys and runs": (await t.testFamily.count({ where: ws })) + (await t.answerKey.count({ where: ws })) + (await t.answerKeyRun.count({ where: ws })),
     };
     const builtIn = await t.personRole.count({ where: { ...ws, builtIn: true } });
     const dir = VAR("demo");
@@ -473,6 +475,7 @@ export class Demo {
       // Children first; every table is scoped to the demo workspace id.
       await tx.case.deleteMany({ where: ws }); await tx.party.deleteMany({ where: ws }); // runtime lane (R1): cases (with their pins and participants), then people with their answers and rows
       await tx.proposalItem.deleteMany({ where: ws }); await tx.draftingJob.deleteMany({ where: ws }); await tx.aiBatch.deleteMany({ where: ws });
+      await tx.testFamily.deleteMany({ where: ws }); // G4 (forms lane): test families; their keys and runs go with them
       await tx.reviewSignoff.deleteMany({ where: ws }); await tx.reviewSubmission.deleteMany({ where: ws }); await tx.configRelease.deleteMany({ where: ws }); await tx.packVersion.deleteMany({ where: ws });
       await tx.formFieldMap.deleteMany({ where: ws }); await tx.combinationForm.deleteMany({ where: ws }); await tx.formEdition.deleteMany({ where: ws }); await tx.govFormDef.deleteMany({ where: ws });
       await tx.sqrSectionSelection.deleteMany({ where: ws }); await tx.documentRequirement.deleteMany({ where: ws }); await tx.predicate.deleteMany({ where: ws }); await tx.check.deleteMany({ where: ws });
