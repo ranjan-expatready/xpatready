@@ -41,10 +41,12 @@ const FROM_WORD: Record<string, string> = { pdf_box: "the PDF form field", form_
 /** GET /library/:kind/:key/sources (api/src/library-sources.ts). */
 type SourcesView = { name: string; sources: { kind: string; text: string; quote?: string | null }[]; unsourced: boolean; used_in: string[] };
 /** Where used (C3.13): the combinations by name, the first two and a count. */
-// C3.13 BR-3: the search also finds a field by one of its aliases, or by the code of a form that fills it, typed with or
-// without its space ("imm5257" finds IMM 5257), as GET /library/fields?q= does.
+// C3.13 BR-3: the search also finds a field by one of its aliases, or by the start of the code or number of a form that
+// fills it, with or without its space ("imm5257" or "5257" finds IMM 5257; 3 characters at least), as
+// GET /library/fields?q= does (api/src/library-items.ts formCodeStarts).
 const compact = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
-const findsByAliasOrForm = (f: { aliases?: string[]; forms: string[] }, q: string) => (f.aliases ?? []).some((a) => a.toLowerCase().includes(q.toLowerCase())) || (!!compact(q) && f.forms.some((c) => compact(c).includes(compact(q))));
+const formCodeStarts = (form: string, code: string) => { const c = compact(form); return c.startsWith(code) || c.replace(/^\p{L}+/u, "").startsWith(code); };
+const findsByAliasOrForm = (f: { aliases?: string[]; forms: string[] }, q: string) => (f.aliases ?? []).some((a) => a.toLowerCase().includes(q.toLowerCase())) || (compact(q).length >= 3 && f.forms.some((c) => formCodeStarts(c, compact(q))));
 const usedWords = (used: string[] | undefined) => !used?.length ? <span className="text-text-muted">none</span> : <span title={used.join(", ")}>{used.slice(0, 2).join(", ")}{used.length > 2 ? ` and ${used.length - 2} more` : ""}</span>;
 
 /** GET /library/reuse/:kind (api/src/library-sources.ts, C3.13, Screen 04 BR-4). */

@@ -21,13 +21,15 @@ const keys = (rows: Row[]) => new Set(rows.map((r) => r.key));
 
   // ─────────────────── BR-2: usedBy says what it counts, on all three lists
   const withForms = fields.find((r) => r.forms.length > 1) ?? fields.find((r) => r.forms.length > 0)!;
-  ok("BR-2 pass: a field's forms count is the number of forms its row lists (one reading for the list and the count)", fields.every((r) => r.usedBy.forms === new Set(r.forms).size) && withForms.usedBy.forms > 0, { key: withForms.key, forms: withForms.forms, usedBy: withForms.usedBy });
+  const formsSql = new Map(sql(`select m.canonical_field_key, count(distinct g.form_key) from form_field_map m join form_edition e on e.id = m.form_edition_id join gov_form_def g on g.id = e.gov_form_def_id where m.outcome = 'mapped' and m.status in ('PUBLISHED','DRAFT') group by 1`).split("\n").filter(Boolean).map((l) => { const [k, n] = l.split("|"); return [k, Number(n)] as [string, number]; }));
+  const formsWrong = fields.filter((r) => r.usedBy.forms !== (formsSql.get(r.key) ?? 0) || r.usedBy.forms !== r.forms.length);
+  ok("BR-2 pass: a field's forms count is the forms whose field map fills it (from the database), the same as the forms its row lists", formsWrong.length === 0 && withForms.usedBy.forms > 0, formsWrong.length ? formsWrong.slice(0, 3).map((r) => [r.key, r.usedBy.forms, formsSql.get(r.key)]) : { key: withForms.key, forms: withForms.forms, usedBy: withForms.usedBy });
   const sectionsSql = (key: string) => Number(sql(`select count(distinct q.section_key) from section_question q where q.canonical_field_key = '${key}' and q.status in ('PUBLISHED','DRAFT') and q.version = (select max(version) from section_question x where x.workspace_id = q.workspace_id and x.lineage_key = q.lineage_key)`));
   const placed = fields.find((r) => r.placement)!;
   ok("BR-2 pass: a placed field's sections count is the sections whose current questions ask it", placed.usedBy.sections === sectionsSql(placed.key) && placed.usedBy.sections > 0, { key: placed.key, usedBy: placed.usedBy });
   const unplaced = fields.find((r) => !r.placement && sectionsSql(r.key) === 0);
   ok("BR-2 fail: a field no section asks counts 0 sections (never a guess)", !unplaced || unplaced.usedBy.sections === 0, unplaced?.usedBy);
-  ok("BR-2 pass: a field's combinations count equals its where-used combinations", fields.every((r) => r.usedBy.combinations === r.used_in.length), fields.find((r) => r.usedBy.combinations !== r.used_in.length)?.key);
+  ok("BR-2 pass: a field's combinations count matches its Used in list (one where-used read for both)", fields.every((r) => r.usedBy.combinations === r.used_in.length), fields.find((r) => r.usedBy.combinations !== r.used_in.length)?.key);
   const sections = (await list("sections")).rows;
   const sec = sections.find((s) => s.questions > 0 && s.usedBy.forms > 0);
   const secForms = sec ? new Set(fields.filter((f) => f.placement?.section === sec.key).flatMap((f) => f.forms)) : new Set();
@@ -86,6 +88,18 @@ const keys = (rows: Row[]) => new Set(rows.map((r) => r.key));
   ok("BR-3 pass: a field's name (label) finds it", keys(byName.rows).has(draftKey), byName.rows.length);
   const retiredSearch = await list("fields", `q=${encodeURIComponent("C3.13 retired probe")}`);
   ok("BR-3 fail: the default search does not bring back a retired field (only status=retired does)", retiredSearch.status === 200 && !keys(retiredSearch.rows).has(retiredKey) && keys((await list("fields", `status=retired&q=${encodeURIComponent("C3.13 retired probe")}`)).rows).has(retiredKey));
+  // Review c313 M1: a field moved to another section is listed under its new section, never under the one it left.
+  const mover = fields.find((r) => r.placement && r.status === "PUBLISHED")!, from = mover.placement.section;
+  const to = sections.find((s) => s.key !== from && !s.retired)!.key;
+  const moved = await call("POST", `/library/fields/${encodeURIComponent(mover.key)}/placement`, { sectionKey: to, collectedFrom: mover.placement.collected_from });
+  const after = (await list("fields")).rows.find((r) => r.key === mover.key);
+  const inTo = keys((await list("fields", `section=${encodeURIComponent(to)}`)).rows), inFrom = keys((await list("fields", `section=${encodeURIComponent(from)}`)).rows);
+  ok("BR-3 pass: a re-placed field shows its new section and is listed under it", moved.status < 300 && after?.placement?.section === to && inTo.has(mover.key) && after?.usedBy.sections === sectionsSql(mover.key), { status: moved.status, placement: after?.placement, usedBy: after?.usedBy });
+  ok("BR-3 fail: a re-placed field is no longer listed under the section it left", !inFrom.has(mover.key), { from, to });
+  const short = await list("fields", "q=57");
+  ok("BR-3 fail: two characters are not taken as a form code (every IMM 5xxx field would match)", short.status === 200 && short.rows.length < fields.length / 2, short.rows.length);
+  const byNumber = await list("fields", `q=${encodeURIComponent(form.replace(/^\D+/, "").replace(/\s+/g, ""))}`);
+  ok("BR-3 pass: a form's number alone finds the fields it fills", keys(byNumber.rows).size > 0 && [...keys(spaced.rows)].every((k) => keys(byNumber.rows).has(k)), byNumber.rows.length);
   const noSection = await list("fields", "section=no_such_section");
   ok("BR-3 fail: an unknown section lists nothing (200, empty)", noSection.status === 200 && noSection.rows.length === 0, noSection.status);
 

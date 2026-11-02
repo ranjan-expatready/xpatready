@@ -63,9 +63,16 @@ export async function documentTypeUseKinds(db: Client, workspaceId: string, key:
 }
 /** Item key → the labels of the combinations using it, sorted (Library › Used in; a duplicate refusal's words). */
 export async function usedInLabels(db: Client, workspaceId: string, kind: UsedKind): Promise<Map<string, string[]>> {
-  const [ids, combos] = await Promise.all([itemCombinations(db, workspaceId, kind), db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true } })]);
+  return (await usedInBoth(db, workspaceId, kind)).labels;
+}
+/** C3.13 (BR-2): one where-used read for a list page: each item's combination ids that still exist (its usedBy count)
+ *  and their labels (its Used in list), so the count and the list come from the same read. */
+export async function usedInBoth(db: Client, workspaceId: string, kind: UsedKind): Promise<{ ids: Map<string, Set<string>>; labels: Map<string, string[]> }> {
+  const [all, combos] = await Promise.all([itemCombinations(db, workspaceId, kind), db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true } })]);
   const label = new Map(combos.map((c) => [c.id, c.label]));
-  return new Map([...ids].map(([k, s]) => [k, [...new Set([...s].map((id) => label.get(id)).filter((l): l is string => !!l))].sort()] as [string, string[]]).filter(([, l]) => l.length));
+  const ids = new Map([...all].map(([k, s]) => [k, new Set([...s].filter((id) => label.has(id)))] as [string, Set<string>]));
+  const labels = new Map([...ids].map(([k, s]) => [k, [...new Set([...s].map((id) => label.get(id)!))].sort()] as [string, string[]]).filter(([, l]) => l.length));
+  return { ids, labels };
 }
 
 /** Each combination's place as its full trail in words, Pathway type › Pathway › Program › Category › Sub-category (P-104,

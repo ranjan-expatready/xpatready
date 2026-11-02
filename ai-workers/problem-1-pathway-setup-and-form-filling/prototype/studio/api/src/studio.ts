@@ -450,22 +450,23 @@ export class Studio {
     const rows = await this.db.canonicalField.findMany({ where: { workspaceId }, orderBy: [{ canonicalFieldKey: "asc" }, { version: "desc" }] });
     const { formsOf, boxesOf } = await this.formUsage(workspaceId);
     const questions = await this.db.sectionQuestion.findMany({ where: { workspaceId }, orderBy: { version: "desc" } });
-    const placements = new Map(questions.map((p) => [p.canonicalFieldKey, p]));
+    // C3.13 review M1: a field's placement is its newest question (rows come newest first); the oldest used to win, so a
+    // re-placed field showed, and was filtered by, the section it had left.
+    const placements = new Map<string, (typeof questions)[number]>(); for (const p of questions) if (!placements.has(p.canonicalFieldKey)) placements.set(p.canonicalFieldKey, p);
     // C3.13 BR-2: the sections that ask a field are its current (draft or published) questions' sections.
     const sectionsOf = new Map<string, Set<string>>();
     for (const x of current(questions, (r) => r.lineageKey)) sectionsOf.set(x.canonicalFieldKey, (sectionsOf.get(x.canonicalFieldKey) ?? new Set()).add(x.sectionKey));
     const latest = new Map<string, (typeof rows)[number]>();
     for (const r of rows) if (!latest.has(r.canonicalFieldKey)) latest.set(r.canonicalFieldKey, r);
     const versionsBy = new Map<string, typeof rows>(); for (const r of rows) versionsBy.set(r.canonicalFieldKey, [...(versionsBy.get(r.canonicalFieldKey) ?? []), r]);
-    const [src, used, ids, open] = await Promise.all([this.lib.all("field", workspaceId), this.lib.usedIn("field", workspaceId), this.lib.usedInIds("field", workspaceId), openItemChanges(this.db, workspaceId, "field")]);
-    const combos = new Set((await this.db.combination.findMany({ where: { workspaceId }, select: { id: true } })).map((c) => c.id));
+    const [src, { ids, labels: used }, open] = await Promise.all([this.lib.all("field", workspaceId), this.lib.usedInBoth("field", workspaceId), openItemChanges(this.db, workspaceId, "field")]);
     const fmt = await this.fieldBoxes(workspaceId);
     const list = [...latest.values()].map((f) => {
       const forms = formsOf.get(f.canonicalFieldKey) ?? [];
       const p = placements.get(f.canonicalFieldKey);
       // C3.13 BR-2: where used as counts that say what they count: forms that fill it (the forms listed), combinations
       // using it (the where-used service, SH2), sections asking it.
-      const usedBy = { forms: forms.length, combinations: [...(ids.get(f.canonicalFieldKey) ?? [])].filter((id) => combos.has(id)).length, sections: sectionsOf.get(f.canonicalFieldKey)?.size ?? 0 };
+      const usedBy = { forms: forms.length, combinations: ids.get(f.canonicalFieldKey)?.size ?? 0, sections: sectionsOf.get(f.canonicalFieldKey)?.size ?? 0 };
       const state = itemState(versionsBy.get(f.canonicalFieldKey) ?? [], open.get(f.canonicalFieldKey));
       return { key: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, scope: f.scope, version: f.version, status: f.status, origin: f.origin, origin_words: originWords(f.origin), has_draft: f.status === "DRAFT", boxes: boxesOf.get(f.canonicalFieldKey) ?? 0, forms, usedBy, placement: p ? { section: p.sectionKey, collected_from: p.collectedFrom } : null, name: (f.labelChecked && f.label) || null, aliases: f.aliases, ...sourceSummary(src.get(f.canonicalFieldKey)), used_in: used.get(f.canonicalFieldKey) ?? [], format: formatLine(fmt.get(f.canonicalFieldKey), f.valueType), ...state };
     });
@@ -593,14 +594,13 @@ export class Studio {
     const seen = new Set<string>();
     const qs = await this.db.sectionQuestion.groupBy({ by: ["sectionKey"], where: { workspaceId }, _count: { _all: true } });
     const sel = await this.db.sqrSectionSelection.groupBy({ by: ["sectionKey"], where: { workspaceId }, _count: { _all: true } });
-    const [src, used, ids, open, { formsOf }, questions, combos] = await Promise.all([this.lib.all("section", workspaceId), this.lib.usedIn("section", workspaceId), this.lib.usedInIds("section", workspaceId), openItemChanges(this.db, workspaceId, "section"), this.formUsage(workspaceId),
-      this.db.sectionQuestion.findMany({ where: { workspaceId } }), this.db.combination.findMany({ where: { workspaceId }, select: { id: true } })]);
+    const [src, { ids, labels: used }, open, { formsOf }, questions] = await Promise.all([this.lib.all("section", workspaceId), this.lib.usedInBoth("section", workspaceId), openItemChanges(this.db, workspaceId, "section"), this.formUsage(workspaceId),
+      this.db.sectionQuestion.findMany({ where: { workspaceId } })]);
     // C3.13 BR-2: a section is used by the forms that fill a field its current questions ask, and by the combinations that
     // choose it; no section holds another, so its sections count is 0.
     const formsIn = new Map<string, Set<string>>();
     for (const x of current(questions, (r) => r.lineageKey)) for (const f of formsOf.get(x.canonicalFieldKey) ?? []) formsIn.set(x.sectionKey, (formsIn.get(x.sectionKey) ?? new Set()).add(f));
-    const live = new Set(combos.map((c) => c.id));
-    return rows.filter((r) => !seen.has(r.sectionKey) && seen.add(r.sectionKey)).map((r) => ({ ...itemState(rows.filter((x) => x.sectionKey === r.sectionKey), open.get(r.sectionKey), "section"), ...sourceSummary(src.get(r.sectionKey)), used_in: used.get(r.sectionKey) ?? [], usedBy: { forms: formsIn.get(r.sectionKey)?.size ?? 0, combinations: [...(ids.get(r.sectionKey) ?? [])].filter((id) => live.has(id)).length, sections: 0 }, key: r.sectionKey, title: r.title, meaning: r.meaning, version: r.version, status: r.status, origin: r.origin, origin_words: originWords(r.origin), questions: qs.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0, combinations: sel.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0 }));
+    return rows.filter((r) => !seen.has(r.sectionKey) && seen.add(r.sectionKey)).map((r) => ({ ...itemState(rows.filter((x) => x.sectionKey === r.sectionKey), open.get(r.sectionKey), "section"), ...sourceSummary(src.get(r.sectionKey)), used_in: used.get(r.sectionKey) ?? [], usedBy: { forms: formsIn.get(r.sectionKey)?.size ?? 0, combinations: ids.get(r.sectionKey)?.size ?? 0, sections: 0 }, key: r.sectionKey, title: r.title, meaning: r.meaning, version: r.version, status: r.status, origin: r.origin, origin_words: originWords(r.origin), questions: qs.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0, combinations: sel.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0 }));
   }
 
   /** QA-93 (P-116): removing answers with the place the section had, so Undo adds it back in the same place. */
@@ -675,11 +675,10 @@ export class Studio {
     const workspaceId = await this.ws.id();
     const rows = await this.db.documentType.findMany({ where: { workspaceId }, orderBy: [{ name: "asc" }, { version: "desc" }] });
     const seen = new Set<string>();
-    const [src, used, ids, open, combos] = await Promise.all([this.lib.all("document_type", workspaceId), this.lib.usedIn("document_type", workspaceId), this.lib.usedInIds("document_type", workspaceId), openItemChanges(this.db, workspaceId, "document_type"), this.db.combination.findMany({ where: { workspaceId }, select: { id: true } })]);
-    const live = new Set(combos.map((c) => c.id));
+    const [src, { ids, labels: used }, open] = await Promise.all([this.lib.all("document_type", workspaceId), this.lib.usedInBoth("document_type", workspaceId), openItemChanges(this.db, workspaceId, "document_type")]);
     // C3.13 BR-2: a document type is used by the combinations whose checklist lists it, takes it as an alternative or reads
     // a fact from it (SH2b); no form fills it and no section holds it, so those counts are 0.
-    return rows.filter((r) => !seen.has(r.documentTypeKey) && seen.add(r.documentTypeKey)).map((r) => ({ ...r, origin_words: originWords(r.origin), ...sourceSummary(src.get(r.documentTypeKey)), used_in: used.get(r.documentTypeKey) ?? [], usedBy: { forms: 0, combinations: [...(ids.get(r.documentTypeKey) ?? [])].filter((id) => live.has(id)).length, sections: 0 }, ...itemState(rows.filter((x) => x.documentTypeKey === r.documentTypeKey), open.get(r.documentTypeKey), "document_type") }));
+    return rows.filter((r) => !seen.has(r.documentTypeKey) && seen.add(r.documentTypeKey)).map((r) => ({ ...r, origin_words: originWords(r.origin), ...sourceSummary(src.get(r.documentTypeKey)), used_in: used.get(r.documentTypeKey) ?? [], usedBy: { forms: 0, combinations: ids.get(r.documentTypeKey)?.size ?? 0, sections: 0 }, ...itemState(rows.filter((x) => x.documentTypeKey === r.documentTypeKey), open.get(r.documentTypeKey), "document_type") }));
   }
 
   async libraryTypes(workspaceId: string) {

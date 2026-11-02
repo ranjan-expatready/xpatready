@@ -216,12 +216,14 @@ const ORIGIN_WORDS: Record<Origin, string> = { // typed by the enum: a new origi
 export const originWords = (origin: Origin) => ORIGIN_WORDS[origin];
 
 /** C3.13 BR-3 and BR-10 (Screen 04 §6, `GET /library/:kind?q=&section=&status=&origin=`): one filter for a library list.
- *  q matches the item's own words (name, meaning, key, aliases) or, ignoring spaces and case, a form code of a form that
- *  fills it ("imm5707" finds IMM 5707). status: released · draft · waiting · retired · all; without it the list leaves
+ *  q matches the item's own words (name, meaning, key, aliases) or, ignoring spaces and case, the start of the code or
+ *  number of a form that fills it ("imm5707" or "5707" finds IMM 5707; 3 characters at least, review c313 m2). status: released · draft · waiting · retired · all; without it the list leaves
  *  retired items out, as pickers need (C11.9; `retired=all` or `retired=only` still work). origin: ai · person · release. */
 const STATUS_PARAM: Record<string, (typeof STATUS_WORDS)[number] | "all"> = { released: "Released", draft: "Draft", waiting: "Waiting for a second person", retired: "Retired", all: "all" };
 const ORIGIN_PARAM: Record<string, Origin[]> = { ai: ["AI_PROPOSAL", "AI_FOUND"], person: ["HUMAN", "CODE_MATCH"], release: ["IMPORTED_RELEASE"] };
 const compact = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+/** A form code typed from its start, or from its number ("imm5707", "5707", "imm 57"), never a letter or digit inside it. */
+export const formCodeStarts = (form: string, code: string) => { const c = compact(form); return c.startsWith(code) || c.replace(/^\p{L}+/u, "").startsWith(code); };
 type ListQuery = { q?: string; retired?: string; section?: string; status?: string; origin?: string };
 export function libraryFilter<R extends { retired: boolean; status_words: string; origin: Origin }>(q: ListQuery, texts: (r: R) => string[], forms: (r: R) => string[] = () => [], section?: (r: R) => string | null) {
   const status = q.status?.trim().toLowerCase() || undefined, origin = q.origin?.trim().toLowerCase() || undefined;
@@ -234,7 +236,7 @@ export function libraryFilter<R extends { retired: boolean; status_words: string
     if (!shown) return false;
     if (origin && !ORIGIN_PARAM[origin].includes(r.origin)) return false;
     if (q.section && section && section(r) !== q.section) return false;
-    return !needle || texts(r).some((t) => t.toLowerCase().includes(needle)) || (!!code && forms(r).some((f) => compact(f).includes(code)));
+    return !needle || texts(r).some((t) => t.toLowerCase().includes(needle)) || (code.length >= 3 && forms(r).some((f) => formCodeStarts(f, code)));
   };
 }
 
