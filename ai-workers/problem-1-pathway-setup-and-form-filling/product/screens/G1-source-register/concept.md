@@ -1,6 +1,6 @@
-# G1 Release refused: no source entry (C5.4): concept draft v2 (helper drafter, 2 Nov 2026)
+# G1 Release refused: no source entry (C5.4): concept v2 (2 Nov 2026)
 
-Status: **draft for the tech lead** (skill screen-concept part A, steps 1–7). It is not `concept.md`.
+Status: **v2, waiting for the tech lead's approval** (P-223 (4): an independent challenge, then his OK; posted on #544, part 1 on #558). `concept-draft.md` is the drafter's copy as handed over.
 - v2 fixes every Blocker and Major in `challenge.md` (B1, M1–M4) and takes the cheap Minors (m2–m8).
 - It is built on the design the tech lead agreed on PR #469. **⚑ PR 1** marks the three changes to his agreed table (M2, M3, the reason column); the migration needs his OK on them first. **Rec.** = recommendation.
 - Row (BACKLOG): "a release with a number lacking a source entry or 'None published – set by ExpatReady' is refused, naming each item; API and screen tests" (P-240; SA-1B-290, -193). Boards: `design/draft-g1-review-refusal.html`, `design/draft-g1-source-panel.html`.
@@ -23,7 +23,7 @@ Status: **draft for the tech lead** (skill screen-concept part A, steps 1–7). 
   - Keys carry the combination, because keys like `R-01` repeat (`import.ts:104`): a form-line condition is kind `rule`, key `<combination>/form:<number>`; a document line is `<combination>/doc:<lineage>`; a gate is `<combination>/gate:<key>`; a rule or check is `<combination>/<key>`.
   - Out: `0` in a comparison ("already passed"), form box limits, UI numbers, versions, positions, copies.
   - Count on the work-permit release: **19 numbers on 17 items**: 18 ×5 (two on the IMM 5707 form line), 90 ×5, 30 ×4, 5 ×4, 1 ×1. Dates add 8 if the founder question is answered yes. The import cites 8 of the 19 (18 ×5 and 5 ×3, where its quote states the number), so **11 remain after Reset**: 90 ×5, 30 ×4, 1 ×1, and the 5 on the "exceptional situation" letter.
-- **BR-2 Address by meaning (M3) ⚑ PR 1.** `value_path` holds `<field>|<op>|<k>`, the k-th leaf with that field and operator in the item's condition (e.g. `person.age_years|gte|1`). Other addresses: `min_age`, `months` (validity), and the fee field name. The JSON path is kept only as a hint. Inserting a clause keeps the address; changing `gte` to `gt` lists the number again.
+- **BR-2 Address by meaning (M3) ⚑ PR 1.** `value_path` holds `<field>|<op>|<k>`, the k-th leaf with that field and operator in the item's condition (e.g. `person.age_years|gte|1`). Other addresses: `min_age`, `months` (validity), and the fee field name. The JSON path is kept only as a hint. Inserting a clause on another field or operator keeps the address; one on the same field and operator before it shifts k, and the shift shows as a number listed again (never lost in silence). Changing `gte` to `gt` lists the number again.
 - **BR-3 Cited or None published (the agreed CHECK).** Cited: https URL ("Use an https address."), a quote of at most 300 characters, a date read of today or earlier, an optional page note of at most 200 characters. None published: a reason of at least 10 characters (Decision 3). **⚑ PR 1: `none_published_reason`**; the CHECK becomes citation XOR (none_published AND reason).
 - **BR-4 Records that already cite count; no rows are written for them.**
   - A fee line counts. CI refuses one without a source, so the branch never refuses in the app; its fail test is engine-level only, with fixture lines. The `fee` kind stays unused until R2 S7a (the migration comment says so); "Fees" is not a `where`.
@@ -44,11 +44,11 @@ Status: **draft for the tech lead** (skill screen-concept part A, steps 1–7). 
 - **Release page:** "Held back: 11 numbers have no source" · "Fix on Review and release".
 - **Source panel** (Side panel, 480–560 px; board 2): one card per number, **Official source** (URL, page, quote, date) or **None published – set by ExpatReady** (reason). The URL can be picked from the combination's approved sources (STANDARDS §3.2); the quote is filled in from the item's own quote. No fee card (m4, P-26).
 - **The panel also opens from:** the RuleDialog section "Sources of its numbers"; a "Sources" action on each check row that holds a number; a "Source" link under "From age", whose hint changes from "Sample." to "Needs a source before release." (m3).
-- **Words (m6), never field codes:** item = the rule's `then`, the check's message, "Form IMM 5707", or the document's name. Number = the field's short name (`engine/render.ts:164`, QA-82) + the operator in words + the value, e.g. "Age in whole years: at least 18".
+- **Words (m6), never field codes:** item = the rule's `then`, the check's message, "Form IMM 5707", or the document's name. Number = the field's short name (`engine/render.ts:164`, QA-82) + the operator in words + the value, e.g. "Age years: at least 18".
 - **States:** missing, cited, none published, changed, field errors, read-only, conflict (409, with who and when from M2), empty, loading. The import's entries show "From the sample load". Full width at 400 px.
 
 ## 5. Copy
-- **Refusal:** "<item>: <value> has no source entry. Add the official source, or mark 'None published – set by ExpatReady'." E.g. "Form IMM 5707: Age in whole years: at least 18 has no source entry. …"
+- **Refusal:** "<item>: <value> has no source entry. Add the official source, or mark 'None published – set by ExpatReady'." E.g. "Form IMM 5707: Age years: at least 18 has no source entry. …"
 - **409:** "Release refused: 11 numbers have no source entry. Each is listed on Review and release."
 - **Changed:** "<item>: the source was written for 90; the number is now 60. Check the source again, or mark 'None published – set by ExpatReady'."
 - **Chips:** No source · Official source · None published – set by ExpatReady · Changed since its source · From the sample load.

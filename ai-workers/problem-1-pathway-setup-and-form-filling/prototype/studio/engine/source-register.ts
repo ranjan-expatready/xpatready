@@ -92,6 +92,7 @@ const isObj = (x: unknown): x is Record<string, unknown> => typeof x === "object
  *  gte, lt, lte) counts, except 0 ("already passed", "none"), booleans and answer-list codes; a date counts only with
  *  `dates`. The k in the address counts every leaf with the same field and operator, in reading order, whatever its
  *  value, so a clause added elsewhere in the tree leaves the address as it was. */
+const ORDERED = new Set(["gt", "gte", "lt", "lte"]);
 function conditionNumbers(tree: unknown, dates: boolean): { address: string; value: string; words: string; hint: string }[] {
   const out: { address: string; value: string; words: string; hint: string }[] = [];
   const seen = new Map<string, number>();
@@ -102,7 +103,10 @@ function conditionNumbers(tree: unknown, dates: boolean): { address: string; val
       const k = `${x.field}|${x.op}`, nth = (seen.get(k) ?? 0) + 1;
       seen.set(k, nth);
       const v = x.value;
-      const isNumber = typeof v === "number" && Number.isFinite(v) && v !== 0;
+      // Review MJ-1 on #558: the predicate contract allows text on gt/gte/lt/lte and the save check does not test value
+      // types, so "18" on gte is a published number too; text on eq/neq stays an answer code.
+      const numericText = ORDERED.has(x.op) && typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) && Number(v) !== 0 && !ISO_DATE.test(v.trim());
+      const isNumber = (typeof v === "number" && Number.isFinite(v) && v !== 0) || numericText;
       const isDate = dates && typeof v === "string" && ISO_DATE.test(v);
       if (isNumber || isDate) {
         const value = canonicalValue(v);

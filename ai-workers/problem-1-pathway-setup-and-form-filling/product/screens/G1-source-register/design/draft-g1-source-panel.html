@@ -82,7 +82,7 @@
       <!-- missing -->
       <div data-state="missing" class="show">
         <div class="num">
-          <h3>Age in whole years: at least 18 <span class="pill danger">No source</span></h3>
+          <h3>Age years: at least 18 <span class="pill danger">No source</span></h3>
           <fieldset><legend>Where does 18 come from?</legend>
             <div class="choice" role="radiogroup">
               <label class="on"><input type="radio" name="m1" checked> Official source</label>
@@ -101,7 +101,7 @@
             <textarea rows="3">Family Information (IMM 5707) Note: Must be completed by those aged 18 years or older or a minor travelling alone to Canada.</textarea>
           </label>
           <p class="muted">Filled in from the rule's own quote. Check that it states 18.</p>
-          <label class="f" style="display:flex;gap:6px;align-items:center"><input type="checkbox" checked style="width:auto"> Use the same source for the other 18 in this rule (Age in whole years: less than 18)</label>
+          <label class="f" style="display:flex;gap:6px;align-items:center"><input type="checkbox" checked style="width:auto"> Use the same source for the other 18 in this rule (Age years: less than 18)</label>
         </div>
         <div class="ann">The two choices stay side by side, and only the choice that is on shows its fields. The URL is picked from the approved sources (STANDARDS §3.2), or typed. The date read defaults to today. The words are filled in from the item's own quote, or from a validity check's <code>cite</code>. One save writes one <code>source_entry</code> per address, by meaning (<code>person.age_years|gte|1</code>, M3), with <code>version</code> for the conflict check (M2). The "same source" box writes the second row (<code>person.age_years|lt|1</code>).</div>
       </div>
@@ -109,13 +109,13 @@
       <!-- cited -->
       <div data-state="cited">
         <div class="num">
-          <h3>Age in whole years: at least 18 <span class="pill ok">Official source</span> <span class="pill">From the sample load</span></h3>
+          <h3>Age years: at least 18 <span class="pill ok">Official source</span> <span class="pill">From the sample load</span></h3>
           <p style="margin:6px 0 0"><a href="#" style="color:var(--link)">IMM 5488 Document checklist</a> · checked 19 Oct 2026 · written by the sample load</p>
           <blockquote>"Family Information (IMM 5707) Note: Must be completed by those aged 18 years or older or a minor travelling alone to Canada."</blockquote>
           <button class="btn link">Change</button>
         </div>
         <div class="num">
-          <h3>Age in whole years: less than 18 <span class="pill ok">Official source</span> <span class="pill">From the sample load</span></h3>
+          <h3>Age years: less than 18 <span class="pill ok">Official source</span> <span class="pill">From the sample load</span></h3>
           <p class="muted" style="margin:6px 0 0">Same source as above · checked 19 Oct 2026</p>
           <button class="btn link">Change</button>
         </div>
@@ -188,8 +188,8 @@
       <div data-state="rule">
         <p class="muted">Edit rule R-01 (the existing dialog, <code>configuration.tsx</code> RuleDialog), below "Condition in plain words":</p>
         <div class="num"><h3>Sources of its numbers</h3>
-          <p style="margin:4px 0"><span class="pill ok">Official source</span> Age in whole years: at least 18 · IMM 5488 checklist <button class="btn link">Change</button></p>
-          <p style="margin:4px 0"><span class="pill danger">No source</span> Age in whole years: less than 18 <button class="btn link">Add source</button></p>
+          <p style="margin:4px 0"><span class="pill ok">Official source</span> Age years: at least 18 · IMM 5488 checklist <button class="btn link">Change</button></p>
+          <p style="margin:4px 0"><span class="pill danger">No source</span> Age years: less than 18 <button class="btn link">Add source</button></p>
           <p class="muted">A number you add or change here gets its source before release. Save the rule first, then add its source: a source is written for the number as saved.</p>
         </div>
         <div class="ann">The section lists the numbers of the saved draft version. "Add source" opens this same panel; no panel is stacked on the dialog, because the dialog closes on save. The checks list gets a "Sources" row action on any check that holds a number. A form line's "From age" gets a "Source" link under its field, and its hint changes from "Leave empty for any age. Sample." to "Leave empty for any age. Needs a source before release." (m3).</div>

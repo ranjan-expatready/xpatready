@@ -120,6 +120,23 @@ ok("C5.4 BR-4 pass (Devin on #558): a validity rule that cites its own 12 months
 const dv12bare = { ...dv12, sourced_by: undefined };
 ok("C5.4 BR-6 fail (Devin on #558): without its own cite, the same stale 6-month entry still refuses the 12 as changed", sourceProblems([dv12bare], stale).length === 1 && sourceProblems([dv12bare], stale)[0].state === "changed");
 
+// Review on #558 (MJ-1 and the surviving mutants): numeric text on an ordering operator, a number under "not", a number
+// compared with eq, and k counting every leaf of the same field and operator (0s included).
+const edge: WalkedSnapshot = { combination: { key: "t.edge" }, rules: [
+  { id: "R-T1", when: { op: "gte", field: "person.age_years", value: "18" }, then: "Text eighteen", for_whom: "principal" },
+  { id: "R-T2", when: { op: "not", arg: { op: "lt", field: "case.trip_days", value: 7 } }, then: "Not under seven", for_whom: "case" },
+  { id: "R-T3", when: { op: "eq", field: "case.children", value: 3 }, then: "Three children", for_whom: "case" },
+  { id: "R-T4", when: { op: "and", args: [{ op: "gte", field: "case.funds_cad", value: 0 }, { op: "gte", field: "case.funds_cad", value: 5000 }] }, then: "Funds", for_whom: "case" },
+  { id: "R-T5", when: { op: "eq", field: "person.status", value: "18" }, then: "An answer code", for_whom: "principal" },
+] } as unknown as WalkedSnapshot;
+const en = publishedNumbers(edge);
+const at = (key: string) => en.filter((n) => n.key === `t.edge/${key}`);
+ok("C5.4 BR-1 fail (review MJ-1 on #558): \"18\" stored as text on gte is a published number, refused without a source", at("R-T1").length === 1 && at("R-T1")[0].value === "18" && sourceProblems(at("R-T1"), []).length === 1, en.map((n) => `${n.key} ${n.address} ${n.value}`));
+ok("C5.4 BR-1 pass (review on #558): text on eq is an answer code, never a number", at("R-T5").length === 0);
+ok("C5.4 BR-1 fail (review on #558): a number under \"not\" is walked", at("R-T2").length === 1 && at("R-T2")[0].value === "7");
+ok("C5.4 BR-1 fail (review on #558): a number compared with eq counts", at("R-T3").length === 1 && at("R-T3")[0].address === "case.children|eq|1");
+ok("C5.4 BR-2 fail (review on #558): k counts every leaf of the same field and operator, 0 included, so the 5000 is the second", at("R-T4").length === 1 && at("R-T4")[0].address === "case.funds_cad|gte|2", at("R-T4").map((n) => n.address));
+
 // ---------------------------------------------------------------- M1 kept outside validate(), pure
 const src = readFileSync(join(STUDIO, "engine", "source-register.ts"), "utf8");
 ok("C5.4 M1 pass: source-register.ts reads no file or database and only takes validate.ts's Problem type", !/node:fs|@prisma|fetch\(/.test(src) && !/^import \{[^}]*\} from "\.\/validate\.ts"/m.test(src) && /^import type \{ Problem \} from "\.\/validate\.ts"/m.test(src));
