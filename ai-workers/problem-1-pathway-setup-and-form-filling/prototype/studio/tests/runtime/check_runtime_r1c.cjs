@@ -234,7 +234,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await o.getByRole("tab", { name: /^The application/ }).click(); 
   const visitSec = o.locator("section").filter({ has: o.getByRole("heading", { name: "Your visit" }) });
   await visitSec.getByRole("button", { name: /Confirm section/ }).click(); await idle(o);
-  step("agent pass: Confirm section confirms the visit's answers (Confirmed, history kept)", await shows(o.getByText(/Your visit for The application: \d+ answers? confirmed/)) && await shows(visitSec.getByText("Confirmed", { exact: true }).first()));
+  step("agent pass: Confirm section confirms the visit's answers (Confirmed, history kept)", await shows(o.getByText(/Your visit for the application: \d+ answers? confirmed/)) && await shows(visitSec.getByText("Confirmed", { exact: true }).first()));
   step("agent source (review M4): a confirmed answer still says who first answered it", await shows(visitSec.getByText(/questionnaire · Client A · .* · confirmed by Case officer/).first()));
   step("readability (Lead, R1d): an answer read by the whole household says \"fills IMM 5257 for N people\", with each person on hover", await shows(visitSec.getByText(/fills IMM 5257 for 6 people/).first()) && /Sample Child C4/.test((await visitSec.getByText(/fills IMM 5257 for 6 people/).first().getAttribute("title")) ?? ""));
   step("agent copy: no label reads \"(optional) (optional)\"", !(await o.locator("main").textContent()).includes("(optional) (optional)"));

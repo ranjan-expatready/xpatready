@@ -807,7 +807,7 @@ export function PreviewQuestions({ view, person }: { view: QuestionnaireView; pe
   // Drift check 4: a section asked once for the application and again about the person shares its title; the name then
   // says whom each is about, so the jump list never shows the same name twice.
   const twice = new Set(parts.map((s) => s.title).filter((t, i, all) => all.indexOf(t) !== i));
-  const nameOf = (s: (typeof parts)[number]) => (twice.has(s.title) ? `${s.title} (${s.subjectId === "case" ? "the application" : s.about_label.replace(/ \(Sample\)$/, "")})` : s.title);
+  const nameOf = (s: (typeof parts)[number]) => (twice.has(s.title) ? `${s.title} (${inSentence(s.subjectId === "case" ? "The application" : s.about_label).replace(/ \(Sample\)$/, "")})` : s.title);
   return (
     <div className="space-y-3" data-preview-questions>
       <nav aria-label="Sections" className="flex flex-wrap gap-1.5" data-section-jump>
