@@ -78,7 +78,9 @@ export function pqrPicksFromRounds(s: Snapshot, rounds: { draft: Round; check: R
       const reason = p.why.trim();
       if (reason.length > 300 || (reason.match(/\p{L}/gu) ?? []).length < 3) { dropped.push({ role: p.role, asks: p.asks, why: `It has no reason in words of 3 to 300 characters (${which}).` }); continue; }
       const k = sourceKey(f.role, f.fact);
-      if (!out.has(k)) out.set(k, { f, p, how: found.how });
+      // Review m3: a second pick of the same question in one reading is listed, never dropped silently.
+      if (out.has(k)) { dropped.push({ role: p.role, asks: p.asks, why: `"${f.label}" is already picked once in this reading (${which}).` }); continue; }
+      out.set(k, { f, p, how: found.how });
     }
     return out;
   };

@@ -119,10 +119,13 @@ const closed = (o: unknown, required: string[], optional: string[], what: string
 
 /** QA-162: a combination's question list, made by the studio from its draft (role, library key and label of each question
  *  it asks), so an AI round names a question by its key. Names only, never an answer: a closed record of plain one-line
- *  texts (no "<" or ">", so nothing can close the input it is sent in), library keys, at most 2,000 questions, none twice;
- *  never the representative's (the firm's) facts. */
+ *  labels (no control, format, line or paragraph separator characters, no angle bracket of any form, so nothing can
+ *  forge a line or close the input it is sent in), library keys, at most 2,000 questions and 200 KB, none twice; never a
+ *  representative's (the firm's) role or key. */
+const LABEL_BAD = /[\p{C}\p{Zl}\p{Zp}<>\uFF1C\uFF1E\u2039\u203A\u00AB\u00BB\u2329\u232A\u3008\u3009\u27E8\u27E9]/u;
 function admitQuestionList(rel: string, bytes: Buffer, h: string): AdmittedInput {
   const no = (m: string): never => refuse(`question list ${rel} not admitted: ${m}`);
+  if (bytes.length > 200_000) no("it is larger than 200 KB");
   const env = json(bytes, no);
   closed(env, ["contract", "combination", "questions"], [], "question list", no);
   if (env.contract !== "question-list/v1") no("not a question-list/v1 record");
@@ -132,9 +135,9 @@ function admitQuestionList(rel: string, bytes: Buffer, h: string): AdmittedInput
   for (const q of env.questions as unknown[]) {
     closed(q, ["role", "key", "label"], [], "question", no);
     const { role, key, label } = q as Record<string, unknown>;
-    if (typeof role !== "string" || !/^[a-z][a-z_]{0,40}$/.test(role) || role === "representative") no(`"${String(role).slice(0, 40)}" is not the role of a person applying or of the case`);
-    if (typeof key !== "string" || key.length > 120 || !/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/.test(key)) no(`"${String(key).slice(0, 60)}" is not a library key`);
-    if (typeof label !== "string" || !label.trim() || label.length > 300 || /[\u0000-\u001f<>]/.test(label)) no(`the label of ${String(key)} is not one plain line of at most 300 characters`);
+    if (typeof role !== "string" || !/^[a-z][a-z_]{0,40}$/.test(role) || role.startsWith("representative")) no(`"${String(role).slice(0, 40)}" is not the role of a person applying or of the case`);
+    if (typeof key !== "string" || key.length > 120 || !/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/.test(key) || key.startsWith("representative.")) no(`"${String(key).slice(0, 60)}" is not a library key of a person applying or of the case`);
+    if (typeof label !== "string" || !label.trim() || Array.from(label).length > 300 || LABEL_BAD.test(label)) no(`the label of ${String(key)} is not one plain line of at most 300 characters`);
     const k = `${role}|${key}`;
     if (seen.has(k)) no(`${k} appears twice`);
     seen.add(k);

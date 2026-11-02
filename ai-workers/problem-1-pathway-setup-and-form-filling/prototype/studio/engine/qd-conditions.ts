@@ -96,7 +96,9 @@ export function conditionsFromRounds(s: Snapshot, rounds: { draft: CondRound; ch
       const x = conditionProblem(s, guide.text, guide.code, c, names, all);
       if ("why" in x) { dropped.push({ role: c.role, asks: c.asks, why: `${x.why} (${which})` }); continue; }
       const k = `${x.target.role}|${x.target.fact}|${x.decider.fact}`;
-      if (!out.has(k)) out.set(k, { ...x, c });
+      // Review m3: the same condition twice in one reading is listed, never dropped silently.
+      if (out.has(k)) { dropped.push({ role: c.role, asks: c.asks, why: `"${x.target.label}" asked when "${x.decider.label}" is answered is already proposed once in this reading (${which}).` }); continue; }
+      out.set(k, { ...x, c });
     }
     return out;
   };

@@ -3,7 +3,7 @@
 // library's words ("Purpose of the visit to Canada", key case.visit_purpose). Pure: no database, no AI.
 // The rule, in order (never guessed: two or more equally good questions → none, and the reason names them):
 //   W1 exact: the words equal a question's label, the last part of its key, one of its other names, or the key itself;
-//   W2 words: every meaningful word of the pick (after plain-word normalising and the short synonym list below; the
+//   W2 words (a pick of two meaningful words or more): every meaningful word of the pick (after plain-word normalising and the short synonym list below; the
 //      person's own role words like "spouse" dropped) is found in one question's label, key, question text or aliases;
 //      when several questions hold them all, the one whose key says nothing more than the pick wins, else none.
 //   A pick for the principal may name a question about the application itself (role "case": purpose of the visit, funds,
@@ -66,8 +66,9 @@ export function findFact(facts: FactSourceView[], role: string, asks: string, na
   }
   // W2: every meaningful word of the pick, the person's own role words dropped.
   const drop = new Set((ROLE_WORDS[role] ?? []).map(stem));
-  const pick = [...new Set(wordsOf(asks))].filter((w) => !drop.has(w));
-  if (!pick.length) return { fact: null, why: "none", several: [] };
+  const said = [...new Set(wordsOf(asks))], pick = said.filter((w) => !drop.has(w));
+  // Review m1: one word ("Marriage", "Police", "Health") is too little to tie to a long label: exact only (W1).
+  if (!pick.length || said.length < 2) return { fact: null, why: "none", several: [] };
   const all = (f: FactSourceView) => { const have = new Set([f.label, lastPart(f.fact), ...(names.get(f.fact) ?? [])].flatMap(wordsOf)); return pick.every((w) => have.has(w)); };
   const hits = near.filter(all);
   if (hits.length === 1) return { fact: hits[0], how: "words" };

@@ -47,7 +47,10 @@ export type RoundContext = { trail: string; contextKey: string; inputs: { file: 
   override?: { id: string; run_key: string };
   /** C4.7 break B1 (2 Nov): replay only a saved run of this job stem (pairOf), so a draft and its checker round come from
    *  the same live run, never two runs mixed. Unset: the newest usable run, as before. */
-  replayPair?: string };
+  replayPair?: string;
+  /** QA-162 break M2: replay only answers to this prompt version (its replays label; "" for the current one), so a
+   *  draft round is never paired with a checker round of another prompt version. Unset: any replayable version. */
+  replayPrompt?: string };
 
 /** The job stem a saved run file shares with the other round of the same live run: the file name without its round base
  *  ("<jobBase>-" or "<jobBase>-check-") and without its "-live-<time>-<suffix>.json" tail. */
@@ -130,7 +133,7 @@ export class StepRunner {
       const runs = (existsSync(RUNS) ? readdirSync(RUNS).filter((f) => mine.test(f) && (ctx.replayPair === undefined || pairOf(step, isCheck, f) === ctx.replayPair)).sort(newestFirst) : []).map(readRun);
       const usable = (x: SavedRun | null, p: { sha256: string; inputs?: number }): x is SavedRun => !!x && isSameSavedRun(x, { ...want, templateSha256: p.sha256, inputs: p.inputs === undefined ? want.inputs : want.inputs.slice(0, p.inputs) }) && (() => { try { return step.shapeOk(JSON.parse(String(x.raw_output))); } catch { return false; } })();
       let r: SavedRun | undefined, label = "";
-      for (const p of prompts) { r = runs.find((x): x is SavedRun => usable(x, p)); if (r) { label = promptOfRun(r, prompts) ?? ""; break; } }
+      for (const p of prompts.filter((x) => ctx.replayPrompt === undefined || x.label === ctx.replayPrompt)) { r = runs.find((x): x is SavedRun => usable(x, p)); if (r) { label = promptOfRun(r, prompts) ?? ""; break; } }
       if (!r) return { ok: false, costUsd: 0, reason: step.words.noSaved };
       const saved = JSON.parse(String(r.raw_output)) as T;
       if (!step.shapeOk(saved)) return { ok: false, costUsd: 0, reason: step.words.badSaved };

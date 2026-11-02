@@ -118,7 +118,7 @@ export class DraftQd {
     const ctx: RoundContext = { trail: g.trail, contextKey: c.combinationKey, inputs: inputsOf(g), mode: "replay", wanted: async () => true, batchId };
     const k = await runner.round<CondAnswer>(CONDITIONS_AI, true, ctx);
     if (!k.ok) return { d: k, k: null };
-    const d = await runner.round<CondAnswer>(CONDITIONS_AI, false, { ...ctx, replayPair: pairOf(CONDITIONS_AI, true, k.runFile) });
+    const d = await runner.round<CondAnswer>(CONDITIONS_AI, false, { ...ctx, replayPair: pairOf(CONDITIONS_AI, true, k.runFile), replayPrompt: k.earlier ?? "" });
     return { d: d.ok ? d : { ok: false, costUsd: 0, reason: "The newest saved checker reading has no first reading from the same run, so it is not used." }, k };
   }
 
@@ -208,7 +208,7 @@ export class DraftQd {
       uses_ai: s.ai && mode !== "rules",
       // Part 5b: each Live AI step's own worst case (the acceptance contract states it per step).
       worst_usd: mode === "live" && g?.input ? (s.kind === "qd_conditions" ? round2(roundBudgetUsd(CONDITIONS_AI, false, inputsOf(g), charsOf(g)) + roundBudgetUsd(CONDITIONS_AI, true, inputsOf(g), charsOf(g))) : s.kind === "pqr_picks" ? round2(this.pqr.worstUsd(g)) : 0) : 0 }));
-    const fingerprint = JSON.stringify({ id: c.id, mode, facts: facts.total, roles: facts.roles.map((r) => `${r.role}:${r.facts}`), steps: steps.map((s) => s.how), worst, saved: mode === "replay" && saved ? [saved.qd_documents, ...saved.qd_conditions.files, ...saved.pqr_picks.files] : null });
+    const fingerprint = JSON.stringify({ id: c.id, mode, questions: g?.questions?.sha256 ?? null, facts: facts.total, roles: facts.roles.map((r) => `${r.role}:${r.facts}`), steps: steps.map((s) => s.how), worst, saved: mode === "replay" && saved ? [saved.qd_documents, ...saved.qd_conditions.files, ...saved.pqr_picks.files] : null });
     return { mode, combination: { id: c.id, label: c.label }, steps, facts, totals: { worst_usd: worst, remaining_usd: remaining },
       note: mode === "rules" ? "No AI: rules work out each step; what needs a person goes to To review."
         : mode === "replay" ? "Saved: each AI step replays both rounds of one earlier Live run for this guide (US$0); a step with none saved says so and proposes nothing. The other steps are worked out by the rules."

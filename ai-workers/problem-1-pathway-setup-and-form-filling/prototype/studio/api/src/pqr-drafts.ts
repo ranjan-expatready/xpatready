@@ -11,7 +11,7 @@
 // Ready). Every pick is Sample until the immigration expert confirms it at release (AGENTS rule 4).
 import { Body, Controller, Headers, HttpCode, HttpException, Inject, Injectable, Param, Post } from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 import { buildSnapshot, type Snapshot } from "../../engine/snapshot.ts";
@@ -71,14 +71,18 @@ export const charsOf = (g: { text: string; questions: QuestionList | null }) => 
  *  representative's), written once per content into p2/question-lists (its name carries its checksum; never committed),
  *  so a Live round can name a question by its key (p2/guard.ts admitQuestionList admits it). Null when none is asked. */
 export function questionList(combinationKey: string, s: Snapshot): QuestionList | null {
-  const one = (t: string) => t.replace(/[\u0000-\u001f<>]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 300);
-  const questions = factSources(s).filter((f) => f.placed && f.forms.length > 0 && f.role !== "representative" && /^[a-z][a-z_]{0,40}$/.test(f.role) && /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/.test(f.fact) && f.fact.length <= 120)
+  // The guard's rule (p2/guard.ts LABEL_BAD): no control, format or separator characters, no angle brackets of any kind;
+  // cut by characters, never inside one (break m: a lone surrogate).
+  const one = (t: string) => Array.from(t.replace(/[\p{C}\p{Zl}\p{Zp}<>\uFF1C\uFF1E\u2039\u203A\u00AB\u00BB\u2329\u232A\u3008\u3009\u27E8\u27E9]+/gu, " ").replace(/\s+/g, " ").trim()).slice(0, 300).join("").trim();
+  const questions = factSources(s).filter((f) => f.placed && f.forms.length > 0 && !/^representative/.test(f.role) && !f.fact.startsWith("representative.") && /^[a-z][a-z_]{0,40}$/.test(f.role) && /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/.test(f.fact) && f.fact.length <= 120)
     .map((f) => ({ role: f.role, key: f.fact, label: one(f.label) || f.fact })).sort((a, b) => a.role.localeCompare(b.role) || a.key.localeCompare(b.key)).slice(0, 2000);
   if (!questions.length) return null;
   const key = combinationKey.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^[^a-z0-9]+/, "").slice(0, 80) || "combination";
   const text = `${JSON.stringify({ contract: "question-list/v1", combination: key, questions }, null, 1)}\n`, h = sha(text);
-  const name = `${key}-${h.slice(0, 12)}.questions.json`, dir = join(PROTOTYPE, "p2", "question-lists");
-  if (!existsSync(join(dir, name))) { mkdirSync(dir, { recursive: true }); writeFileSync(join(dir, name), text); }
+  const name = `${key}-${h.slice(0, 12)}.questions.json`, dir = join(PROTOTYPE, "p2", "question-lists"), file = join(dir, name);
+  // Written whole (a temporary file renamed), and rewritten when the file there is not this content (break m).
+  const current = (() => { try { return sha(readFileSync(file)) === h; } catch { return false; } })();
+  if (!current) { mkdirSync(dir, { recursive: true }); const tmp = join(dir, `.${name}.${process.pid}.tmp`); writeFileSync(tmp, text); renameSync(tmp, file); }
   return { file: `prototype/p2/question-lists/${name}`, sha256: h, chars: text.length };
 }
 /** P-227: whether a Saved result exists for this combination's guide (both rounds, readable, this prompt), and if not, why. */
@@ -120,7 +124,7 @@ export class PqrDrafts {
     const ctx: RoundContext = { trail: g.trail, contextKey: c.combinationKey, inputs: inputsOf(g), mode: "replay", wanted: async () => true };
     const k = await this.runner.round<PqrAnswer>(PQR_AI, true, ctx);
     if (!k.ok) return { d: k, k: null };
-    const d = await this.runner.round<PqrAnswer>(PQR_AI, false, { ...ctx, replayPair: pairOf(PQR_AI, true, k.runFile) });
+    const d = await this.runner.round<PqrAnswer>(PQR_AI, false, { ...ctx, replayPair: pairOf(PQR_AI, true, k.runFile), replayPrompt: k.earlier ?? "" });
     return { d: d.ok ? d : { ok: false, costUsd: 0, reason: "The newest saved checker reading has no first reading from the same run, so it is not used." }, k };
   }
 
@@ -156,7 +160,7 @@ export class PqrDrafts {
     return { mode, combination: { id: c.id, label: c.label }, guide: g ? { code: g.code, title: g.title, file: g.input?.file ?? null, questions: g.questions?.file ?? null } : null, steps: mode === "rules" ? STEPS.rules : STEPS.ai, candidates,
       totals: { worst_usd: worst, remaining_usd: remaining }, note, live: { approved: aiLive(), why: aiLive() ? null : LIVE_WAITING }, saved,
       // Break B4: the Saved result looked at is part of the plan, so a run never replays another one than the person saw.
-      plan_sha256: sha(JSON.stringify({ id: c.id, mode, guide: g?.input?.sha256 ?? null, worst, candidates, ...(mode === "replay" ? { saved: saved?.files ?? [] } : {}) })) };
+      plan_sha256: sha(JSON.stringify({ id: c.id, mode, guide: g?.input?.sha256 ?? null, questions: g?.questions?.sha256 ?? null, worst, candidates, ...(mode === "replay" ? { saved: saved?.files ?? [] } : {}) })) };
   }
 
   /** Runs the plan: picks go into the one review queue (never ticked here). */

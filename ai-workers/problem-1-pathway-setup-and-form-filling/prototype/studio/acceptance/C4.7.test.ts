@@ -35,7 +35,7 @@ run(async () => {
     ok(S1, true);
     r = await call("POST", `/combinations/${wp}/pqr-picks/draft`, { mode: "replay", planSha256: sp.body?.plan_sha256 }, AUTHOR);
     ok("setup: the Saved draft ran at US$0", r.status === 201 && r.body?.usd === 0, r.status >= 300 ? words(r) : r.body?.note);
-    ok("C4.7 pass (QA-162): every saved pick left out is listed with its reason, none dropped silently", r.status === 201 && (r.body?.dropped ?? []).every((d: any) => String(d.why ?? "").length > 20) && r.body.proposed + (r.body.dropped ?? []).length >= 7, { proposed: r.body?.proposed, dropped: (r.body?.dropped ?? []).length });
+    ok("C4.7 pass (QA-162): every saved pick left out is listed with its reason, none dropped silently", r.status === 201 && (r.body?.dropped ?? []).every((d: any) => String(d.why ?? "").length > 20) && r.body.proposed >= 7 && (r.body.dropped ?? []).length > 0 && (r.body.dropped ?? []).length <= 10, { proposed: r.body?.proposed, dropped: (r.body?.dropped ?? []).length });
   } else {
     if (sp.status === 200) { const on = `Track A's Saved PQR-picks result (${sp.body?.saved?.why ?? "none yet"})`; T.wait(S1, on); T.wait(S2, on); }
     else ok(S1, false, words(sp));
@@ -56,8 +56,11 @@ run(async () => {
   } else ok("C4.7 pass: rules picks say Rules, never AI", picks.length > 0 && picks.every((x: any) => x.origin === "rules" && x.agreement === "rules_only"));
   ok("C4.7 pass: a pick waiting changes nothing (no tick yet)", picks.length > 0 && ticks() === t0, { t0, now: ticks() });
 
-  // A third pick for a person (not the application itself), so its fact can be set by hand to come from the case officer.
-  const [a, b] = picks, c = picks.slice(2).find((x: any) => key(x).role !== "case") ?? picks[2];
+  // A third pick whose fact the case officer may give (review M1, QA-162: a client-only fact, e.g. criminal history, is
+  // refused that choice, so the pick is chosen by the fact's own offer, never by queue order).
+  const facts0 = (await call("GET", `/combinations/${wp}/fact-sources`)).body?.facts ?? [];
+  const offered = (x: any) => facts0.some((f: any) => f.role === key(x).role && f.fact === key(x).factKey && f.agentOffered);
+  const [a, b] = picks, c = picks.slice(2).find(offered) ?? picks[2];
   r = await call("POST", "/review/proposals/decide", { ids: [a?.id ?? randomUUID()], action: "accept" }, AUTHOR);
   ok("C4.7 pass: accepting a pick ticks it on the combination's draft (lander exists)", r.status < 300 && ticks() === t0 + 1, r.status >= 300 ? words(r) : undefined);
   const tick = sql(`select origin||'|'||coalesce(reason,'') from fact_source where combination_id='${wp}' and prequalification and canonical_field_key='${key(a).factKey}' and role='${key(a).role}' order by version desc limit 1`);

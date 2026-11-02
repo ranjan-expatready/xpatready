@@ -75,6 +75,10 @@ const saved = <T>(f: string) => ({ output: JSON.parse(String(JSON.parse(readFile
   ok("QA-162 fail: \"Planned dates of stay\" names two questions (first and last day), so it is left out naming both, never guessed", p.dropped.some((x) => x.asks === "Planned dates of stay" && /could be 2 questions/.test(x.why) && /first day/.test(x.why) && /last day/.test(x.why)), p.dropped.find((x) => x.asks === "Planned dates of stay"));
   ok("QA-162 fail: a fact no question asks (\"Ever held Canadian PR\", \"Ties to home country\") is left out with its reason", ["Ever held Canadian PR", "Ties to home country", "Valid passport"].every((a) => p.dropped.some((x) => x.asks === a && /No question of this combination asks/.test(x.why))));
   ok("QA-162 pass: every pick left out has its reason in words, and every pick is either landed or left out", p.dropped.every((x) => x.why.length > 20) && pLanded + p.dropped.length === picks);
+  const readings = p.items.reduce((n, x) => n + (x.rounds.draft ? 1 : 0) + (x.rounds.check ? 1 : 0), 0);
+  ok("QA-162 pass (review m3): every landed pick is a reading of an item on To review (none vanishes between landed and proposed)", readings === pLanded, { readings, landed: pLanded });
+  const twice = pqrPicksFromRounds(s, { draft: { ...pd, output: { ...pd.output, picks: [...pd.output.picks, pd.output.picks.find((x) => x.asks === "Purpose of visit")!] } } as Round, check: pk as Round }, guide, at, names);
+  ok("QA-162 fail (review m3): the same question picked twice in one reading is listed as left out, with the reason, never dropped silently", twice.dropped.length === p.dropped.length + 1 && twice.dropped.some((x) => x.asks === "Purpose of visit" && /already picked once in this reading/.test(x.why)) && twice.items.length === p.items.length);
   ok("QA-162 pass: a pick named in other words than the question's own is never Ready, and says what the AI wrote", p.items.filter((x) => x.rules.some((r) => r.rule === "named_exactly" && !r.passed)).every((x) => x.confidence !== "ready" && /in the AI's own words: "|The AI wrote "/.test(x.reason ?? "") && x.rules.some((r) => r.rule === "named_exactly" && /taken as/.test(r.why ?? ""))));
 
   // ---- C4.11 step 5: the saved conditional questions
@@ -94,6 +98,8 @@ const saved = <T>(f: string) => ({ output: JSON.parse(String(JSON.parse(readFile
   ok("QA-162 fail: words that fit several questions (\"Other names used\") are left out naming them, never guessed", c.dropped.some((x) => x.asks === "Other names used" && /could be 2 questions/.test(x.why)), c.dropped.find((x) => x.asks === "Other names used"));
   ok("QA-162 pass: more saved conditions land than the 0 of 22 before", cLanded > cBefore && cLanded > 0, { before: cBefore, now: cLanded });
   ok("QA-162 pass: every condition left out has its reason, and every condition is landed or left out", c.dropped.every((x) => x.why.length > 20) && cLanded + c.dropped.length === conds);
+  const cReadings = c.items.reduce((n, x) => n + (x.rounds.draft ? 1 : 0) + (x.rounds.check ? 1 : 0), 0);
+  ok("QA-162 pass (review m3): every landed condition is a reading of an item on To review", cReadings === cLanded, { cReadings, landed: cLanded });
   ok("QA-162 pass: a condition named in other words is never Ready", c.items.filter((x) => x.rules.some((r) => r.rule === "named_exactly" && !r.passed)).every((x) => x.confidence !== "ready"));
 
   // ---- the question list a Live v2 round now sends (no call here): made from this draft, admitted by the launcher's guard
@@ -102,6 +108,15 @@ const saved = <T>(f: string) => ({ output: JSON.parse(String(JSON.parse(readFile
   try { sent = ql ? buildRequest("system", {}, [admitInput(ql.file, ql.sha256)]).user : ""; } catch (e) { sent = `refused: ${(e as Error).message}`; }
   ok("QA-162 pass: Visitor visa's question list (for future Live rounds) is admitted by the launcher's guard and lists each question as role | key | label", sent.includes("case | case.visit_purpose | Purpose of the visit to Canada") && sent.includes("principal | person.criminal_history |"), sent.slice(0, 200));
   ok("QA-162 pass: it never lists the representative's (the firm's) questions", !!ql && !/^representative \|/m.test(sent));
+
+  // Break M1: the plan's checksum covers the question list, so a list changed after the plan was looked at refuses the run.
+  const planOf = async () => (await (await fetch(`http://localhost:${PORT}/api/combinations/${vv}/pqr-picks/plan`, { method: "POST", headers: { "x-actor": "user-A", "content-type": "application/json" }, body: JSON.stringify({ mode: "replay" }) })).json()) as { plan_sha256?: string; guide?: { questions?: string } };
+  const p1 = await planOf();
+  const fid = sql(`select id from canonical_field where canonical_field_key='case.visit_purpose' order by version desc limit 1`), was = sql(`select meaning from canonical_field where id='${fid}'`);
+  sql(`update canonical_field set meaning = meaning || ' (edited)' where id='${fid}'`);
+  const p2 = await planOf();
+  sql(`update canonical_field set meaning = '${was.replace(/'/g, "''")}' where id='${fid}'`);
+  ok("QA-162 fail (break M1): a question's label changed after the plan gives another question list and another plan checksum", !!p1.plan_sha256 && !!p2.plan_sha256 && p1.guide?.questions !== p2.guide?.questions && p1.plan_sha256 !== p2.plan_sha256, { a: p1.guide?.questions, b: p2.guide?.questions });
 
   console.log(`\nQA-162 counts — C4.7 picks: before ${pBefore}/${picks}, now ${pLanded}/${picks} · C4.11 step 5 conditions: before ${cBefore}/${conds}, now ${cLanded}/${conds} (port ${PORT})`);
   console.log(`${pass}/${pass + fail} passed`);
