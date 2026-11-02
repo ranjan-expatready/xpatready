@@ -12,7 +12,7 @@ import { execFileSync } from "node:child_process";
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { linesOf, savedReading, treeOf, wordsOf } from "../api/src/checklist.ts";
+import { docTypeOf, linesOf, savedReading, treeOf, wordsOf } from "../api/src/checklist.ts";
 
 const PORT = Number(process.argv[2] ?? 4458), DB = process.argv[3] ?? "xr_studio_forms_c26";
 const OFFICIAL = join(import.meta.dirname, "..", "..", "..", "official-sources", "ircc");
@@ -49,6 +49,11 @@ async function main() {
   ok("C2.6 R2 fail: a conditional line with no condition is incomplete, dropped and listed", noCond.lines.length === 0 && /incomplete/.test(noCond.dropped[0] ?? ""), noCond.dropped);
 
   const tree = treeOf({ subject_kind: "each_applicant", tree_json: JSON.stringify({ op: "not", condition: { op: "and", conditions: [{ op: "eq", field: "person.a", value: true }] } }) }) as any;
+  const lineOf = (document_type: string, quote: string) => ({ document_type, who: "each_applicant", base_or_conditional: "base" as const, condition_plain: null, condition_tree: null, provided_by: "client", quote, reason: null, note: null, office: false, part: null });
+  const pp = docTypeOf(lineOf("passport_information_page_copy", "A copy of the information page of your valid passport"), "IMM 5484");
+  ok("C2.6 P-134: a passport is proposed as an identity document read by its coded lines", pp.identityDocument === true && pp.readerKind === "coded_lines" && pp.name === "Passport information page copy", pp);
+  const ls = docTypeOf(lineOf("proof_of_legal_status_in_country_of_residence", "If your country of residence differs from the country of citizenship listed on your passport"), "IMM 5484");
+  ok("C2.6 P-134 fail: a document whose quote only mentions a passport is not an identity document", ls.identityDocument === false && ls.readerKind === "letter_or_record", ls);
   ok("C2.6 R5: a saved condition becomes a condition-language root (subject kind on the root; branch keys args and arg, as p2 assemble)", tree?.subjectKind === "EACH_APPLICANT" && tree.arg?.op === "and" && tree.arg.args?.[0]?.field === "person.a" && !("condition" in tree), tree);
   ok("C2.6 R5 fail: a condition whose text does not parse, or no condition, gives no tree", treeOf({ tree_json: "{not json" }) === null && treeOf(null) === null && treeOf({ tree_json: "[1]" }) === null);
 

@@ -295,7 +295,7 @@ function ChecklistJob({ job, combinationId }: { job: ChecklistJobView; combinati
         <ul className="space-y-3">{items.map((i) => { const p = i.payload ?? {}; const st = STANDS[i.status ?? "waiting"] ?? STANDS.waiting; const type = i.kind === "document_type"; return (
           <li key={i.id} className="rounded-xl border border-border bg-surface-raised p-4" data-checklist-item={i.kind}>
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div><Pill tone="info">{type ? "new document type" : "document line"}</Pill> <b className="ml-1">{type ? p.name : String(p.document_type ?? i.proposedMeaning).replace(/_/g, " ")}</b>
+              <div><Pill tone="info">{type ? "new document type" : "document line"}</Pill> <b className="ml-1">{type ? p.name : String(p.document_type ?? i.proposedMeaning).replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase())}</b>
                 <p className="mt-1 text-sm">{type ? p.proves : <>{p.who ? `For ${String(p.who).replace(/_/g, " ")}` : null}{i.confidence === "decide" ? " · the visa office decides: a person says when" : p.base_or_conditional === "conditional" ? ` · ${p.condition_plain}` : " · always"}</>}</p></div>
               <Pill tone={st.tone}>{st.word}</Pill>
             </div>

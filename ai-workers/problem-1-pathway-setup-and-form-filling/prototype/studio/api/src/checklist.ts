@@ -140,7 +140,8 @@ const IDENTITY = /\bpassport\b|\btravel document\b/i;
 /** The document type a checklist line names, as a library proposal (Sample): its name, what it proves (the checklist's
  *  own words), and how it is read (P-133, P-134: identity documents by coded lines; photos by a person; else a record). */
 export function docTypeOf(l: ReadLine, checklist: string): DocTypePayload {
-  const identity = IDENTITY.test(l.document_type.replace(/_/g, " ")) || IDENTITY.test(l.quote);
+  // The document named, never its quote: "proof of legal status… listed on your passport" is not a passport (C2.6 shots).
+  const identity = IDENTITY.test(l.document_type.replace(/_/g, " "));
   const photo = /\bphoto/i.test(l.document_type);
   return { kind: "document_type", name: typeName(l.document_type).slice(0, 120), proves: cut(`What ${checklist} asks for: "${l.quote}"`, 200),
     category: l.provided_by === "other" ? "other" : "client", suppliesFacts: [], readerKind: identity ? "coded_lines" : photo ? "person_only" : "letter_or_record", identityDocument: identity };
