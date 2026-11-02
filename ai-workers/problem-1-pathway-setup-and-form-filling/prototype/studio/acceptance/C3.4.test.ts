@@ -31,7 +31,8 @@ run(async () => {
   ok("C3.4 pass: a second click reuses the edition's one draft (P-138: drafted once per edition)", r.status < 300 && again.body?.id === r.body?.id);
 
   const q = await call("GET", "/review/proposals");
-  const group = (q.body?.groups ?? []).find((g: any) => g.kind === "edition" && /IMM 5257/.test(g.title));
+  // The edition itself, not IMM 5257 SCH1 (its own group, listed first after the field maps; C3.4 builder, 2 Nov).
+  const group = (q.body?.groups ?? []).find((g: any) => g.kind === "edition" && /^IMM 5257 \(/.test(g.title));
   ok("C3.4 pass: an edition group for IMM 5257 waits in the one review queue", !!group, (q.body?.groups ?? []).map((g: any) => g.title));
   const v = group ? await call("GET", `/review/proposals?group=${encodeURIComponent(group.id)}`) : { body: null };
   const b = v.body?.group?.bands ?? {};
