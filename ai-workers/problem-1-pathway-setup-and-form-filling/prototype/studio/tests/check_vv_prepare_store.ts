@@ -1,7 +1,7 @@
 // C6.12 /prepare checks (M3-B2, runtime lane; #325's, kept on the unified engine of #356): engine/runtime/prepare.ts on a small synthetic release. formItems: which
 // forms each applying person files, with the line's channel and signature; prepareView: the stored rows and derived fee
 // lines in the M3-CONTRACT shape. Each rule has a passing and a failing case. No database, no server, no model (US$0).
-//   tsx studio/tests/check_vv_prepare.ts
+//   tsx studio/tests/check_vv_prepare_store.ts
 import type { Known } from "../engine/render.ts";
 import type { Participant } from "../engine/runtime/case.ts";
 import { render, type Person } from "../engine/render.ts";
