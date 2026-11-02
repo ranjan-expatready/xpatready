@@ -7,6 +7,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { copiesWords, DocumentLineEdit, FormLineEdit } from "../contracts/workspace.ts";
 import { lineSig } from "../api/src/form-uses.ts";
+import { sourceEveryNumber } from "./fixtures/source-every-number.cjs"; // G1 (C5.4): a release needs every number sourced
 
 const PORT = Number(process.argv[2] ?? 4441), DB = process.argv[3] ?? "xr_studio_screens_c18";
 const log: any[] = []; let pass = 0, fail = 0;
@@ -79,6 +80,7 @@ const field = (r: { body: any }, f: string) => (r.body?.errors ?? []).find((e: a
   const huge = FormLineEdit.safeParse({ copies: 1e308 });
   ok("C1.8 m4: a huge number is refused with the sentence once", !huge.success && huge.error.issues.length === 1, !huge.success && huge.error.issues.map((i) => i.message));
   const release = async () => {
+    await sourceEveryNumber(PORT, C); // G1 (C5.4): "From age 18" and the release's other numbers need a source first
     const s = await call("POST", `/combinations/${C}/submit`, {});
     const changes = ((await call("GET", `/combinations/${C}/review`)).body.submission?.changeSummary ?? []) as any[];
     const sme = changes.filter((x) => x.needs_sme).map((x) => `${x.kind}|${x.key}`);
