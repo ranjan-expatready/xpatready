@@ -147,3 +147,26 @@ Reviewer, fresh context. Run from the branch head 3d650ed7 (the shared clone was
 **Journey score, round 3: 9.5/10, pass (unchanged).** No product code changed since f00b6ea0 except main's merged work. The round 2 journeys stand, and C4.11's landing on To review was re-walked by the browser check above.
 
 **Verdict: APPROVE** on **3d650ed7**. No open Blocker or Major. S3 (rest), S4 and m-r3 are follow-ups.
+
+## Round 4: ca408820 (6a05dee7 test fix + merge of main ca108010)
+Reviewer, fresh context. Own worktree at ca408820 (detached), web built there, isolated copy `rv469` on **:4448** only. `isolated.sh` refused from the worktree (its `pg_ctl status` check fails on the linked `.tools`), so the copy was started by hand as `isolated.sh` does: fresh `xr_studio_rv469`, `prisma migrate deploy`, `tsx api/src/main.ts`. It was stopped and dropped afterwards, and the worktree was removed. Never :4400, no `*_LIVE`, US$0.
+
+**1. The test change is an honest correction. It hides no loss.**
+- On main, the Questions table has no column for the forms. Its columns are Question, Comes from, Pre-qualification and Only if. On main, the only "IMM nnnn" in the table's text came from one field's *meaning* shown as the row label when no question was written ("…wording to confirm against the official IMM 1295"). That is a drafting note in a definition, not a list of the forms that need the question. Other rows never showed a form, so no user could rely on the row to see the forms.
+- The forms that need a question were always in the Details panel's **Used by** line: `sources.tsx:245`, `(f?.forms ?? q?.neededBy ?? []).join(", ")`. That line is byte-identical to main's (main: line 243). QA-82 adds 2 lines above it, so it shifted.
+- QA-82 also keeps the meaning on screen. It moves to a "Meaning:" line at the top of the same panel (`data-fact-meaning`), so the IMM 1295 note is still one click away.
+- The new step makes the check stronger, not weaker. It judges the real carrier of "which forms" (`/Used by\s+IMM \d{4}/` on `[data-question-details]`), and it fails if Used by names no form. My run printed "Used by IMM 1295 Used in 1 combination".
+- `git diff b1841fbe 6a05dee7` changes only `tests/check_s5_slice2_browser.cjs`, +5/-1. The old step only lost its `/IMM \d{4}/` clause. Its chip-count and who-fills clauses are unchanged.
+
+**2. The merge does not alter QA-82's code.**
+- `git merge-tree --write-tree 6a05dee7 ca108010` gives tree `9121acd5`, which is exactly ca408820's tree. It is a clean automatic merge with no hand edits.
+- `git diff 045af590 6a05dee7` and `git diff ca108010 ca408820` (outside `*/screens/*`) have identical +/- lines. They cover the same 8 files: QA-82's 7, plus the S5 test.
+- `git diff b1841fbe ca408820 -- . ':!*/screens/*'` is 30 files. All of them except the S5 test come from main.
+
+**3. Runs on ca408820, :4448:**
+- `check_s5_slice2_browser.cjs 4448 xr_studio_rv469`: **63/63**. Both C4.1 steps passed, with no page errors in the walk.
+- On a fresh copy, `npx tsx --tsconfig api/tsconfig.json tests/check_c41_questionnaire_roles.ts 4448 xr_studio_rv469`: **9/9**, including the 3 QA-82 steps.
+
+**Journey score, round 4: 9.5/10, pass (unchanged).** No product code changed since 3d650ed7 except main's merged work. The C4.1 Questions → Details → Used by path was re-walked by the browser check above.
+
+**Verdict: APPROVE** on **ca408820**. No open Blocker or Major. S3 (rest), S4 and m-r3 remain follow-ups.
