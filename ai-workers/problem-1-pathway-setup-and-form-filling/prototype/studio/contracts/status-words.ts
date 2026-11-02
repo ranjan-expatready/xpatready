@@ -7,5 +7,13 @@ export const STATE_WORDS = { NOT_STARTED: "Not started", IN_SETUP: "In progress"
 export const STATUS_WORDS = { IN_SETUP: STATE_WORDS.IN_SETUP, NOT_READY: STATE_WORDS.NOT_READY, READY: STATE_WORDS.READY } as const;
 /** Structure's "Used by" for a combination nothing uses yet (no release, no open case): never "Setup draft". */
 export const USED_BY_NOTHING_YET = "Nothing yet: not released";
+/** UX-A part 3 (review r2 M1): the shared draft bar's words. Combinations' changes are counted apart from the shared
+ *  library's, so the number beside "across N combinations" is what those combinations' headers and Review tabs say.
+ *  `total` is the draft's whole count (combinations' + library's). */
+export function draftBarWords(total: number, combinations: number, library: number): string {
+  const own = Math.max(0, total - library), s = (n: number) => (n === 1 ? "" : "s");
+  if (!combinations) return `${library} change${s(library)} in the shared library, released with the next release`;
+  return `${own} change${s(own)} across ${combinations} combination${s(combinations)}${library ? ` · ${library} in the shared library` : ""}`;
+}
 /** A Live combination's open setup items are for its next release: firms keep using the released one meanwhile. */
 export const LIVE_NEXT = "for the next release";

@@ -23,7 +23,7 @@ const problemLine = (p: any) => p.where === "Derived fields" ? `${p.label ? role
 
 /** changesCount: the combination's draft changes as the summary counts them (the shared draft bar's and the header's one
  *  count, UX-A part 3); undefined while it loads. */
-export function ReviewTab({ d, changesCount }: { d: any; changesCount?: number }) {
+export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: any; changesCount?: number; countFailed?: boolean; onRetryCount?: () => void }) {
   const id = d.combination.id;
   const actorId = useActorId();
   const r = useApi<any>(["review", id, actorId], `/combinations/${id}/review`);
@@ -85,10 +85,10 @@ export function ReviewTab({ d, changesCount }: { d: any; changesCount?: number }
       <AnswerKeyBlock combinationId={id} v={v.draft.answer_keys} />
       <div className="rounded-xl border border-border bg-surface-raised">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
-          <p className="font-medium">{sub ? "Submitted changes" : "Changes in the draft"} compared with {v.releases[0] ? `released version ${v.releases[0].version}` : "nothing released"} ({changes.length})</p>
+          <p className="font-medium">{sub ? "Submitted changes" : "Changes in the draft"} compared with {v.releases[0] ? `released version ${v.releases[0].version}` : "nothing released"} ({counting && !sub ? "…" : changes.length})</p>
           {sub && (can("sme") || can("review")) ? <div className="flex gap-2"><Button size="sm" variant="secondary" onClick={() => setPicked(new Set(changes.filter((c) => !signed.has(ref(c)) && (!c.needs_sme || can("sme"))).map(ref)))}>Select all I can sign</Button><Button size="sm" onClick={() => sign.mutate({ items: [...picked], action: "signed" })} disabled={!picked.size} busy={sign.isPending}><CheckCircle2 /> Sign {picked.size || ""}</Button></div> : null}
         </div>
-        {!changes.length ? <p className="px-4 py-6 text-sm text-text-muted" role={counting && !sub ? "status" : undefined}>{counting && !sub ? "Counting the draft changes…" : v.releases[0] ? "The draft is identical to the released version." : "Nothing configured yet."}</p> : (
+        {!changes.length ? <p className="px-4 py-6 text-sm text-text-muted" role={counting && !sub ? "status" : undefined}>{counting && !sub ? (countFailed ? <>The draft changes could not be counted. {onRetryCount ? <button type="button" className="font-medium text-text-link underline" onClick={onRetryCount}>Try again</button> : null}</> : "Counting the draft changes…") : v.releases[0] ? "The draft is identical to the released version." : "Nothing configured yet."}</p> : (
           <Table className="rounded-none border-0" dense head={["", "Kind", "Item", "Change", "Origin", "Needs", "Signed"]}>
             {changes.slice(0, allChanges ? undefined : 25).map((c) => { const s = signed.get(ref(c)); return (
               <tr key={ref(c)}>
