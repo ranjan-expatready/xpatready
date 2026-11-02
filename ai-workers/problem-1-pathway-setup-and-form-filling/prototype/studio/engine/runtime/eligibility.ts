@@ -18,7 +18,9 @@ export const DISCLAIMER_LOCALE = "en-CA";
 
 export type Outcome = "LIKELY_ELIGIBLE" | "ELIGIBLE_BELOW_CUTOFF" | "POSSIBLY_ELIGIBLE" | "NOT_ELIGIBLE";
 export type GateState = "met" | "not_met" | "not_answered";
-export type GateResult = { key: string; label: string; state: GateState; facts: string[]; values: Record<string, unknown>; missing: string[]; whenNotMet: WhenNotMet };
+export type GateResult = { key: string; label: string; state: GateState; facts: string[]; values: Record<string, unknown>; missing: string[]; whenNotMet: WhenNotMet;
+  /** Answered facts not confirmed yet (concept BR-9: they count, and the page marks them "Not confirmed yet"). */
+  unconfirmed: string[] };
 /** AG-03 §7 AssessmentProgramResult, plus our `gates` and `judgement` (concept §1 "Our additions"). */
 export type ProgramResult = {
   programKey: string; programLabel: string; outcome: Outcome;
@@ -57,6 +59,7 @@ export function rewriteMissing(node: unknown, missing: (fact: string) => boolean
 export function gateResult(s: Snapshot, known: Known, gate: Gate, person: string): GateResult {
   const facts = gateFacts({ gates: [gate] });
   const values = Object.fromEntries(facts.map((f) => [f, present(valueOf(known, f, person)) ? valueOf(known, f, person) : null]));
+  const unconfirmed = facts.filter((f) => present(values[f]) && known.get(kkey(aboutOf(known, f, person), f))?.status !== "confirmed");
   const tree = rewriteMissing(gate.condition, (f) => !present(valueOf(known, f, person)));
   const e = evalCondition(s, known, tree, person);
   const state: GateState = e.applies === true ? "met" : e.applies === false ? "not_met" : "not_answered";
@@ -64,7 +67,7 @@ export function gateResult(s: Snapshot, known: Known, gate: Gate, person: string
   // not met still names the facts it could not read (break m1 on fd26c492, P-229 (3): "the missing facts are listed too").
   const read = e.missing.filter((m) => facts.includes(m));
   const missing = state === "met" ? [] : state === "not_met" ? read : read.length ? read : facts.filter((f) => !present(values[f]));
-  return { key: gate.key, label: gate.label, state, facts, values, missing, whenNotMet: gate.whenNotMet === "needs_review" ? "needs_review" : "not_eligible" };
+  return { key: gate.key, label: gate.label, state, facts, values, missing, whenNotMet: gate.whenNotMet === "needs_review" ? "needs_review" : "not_eligible", unconfirmed };
 }
 
 /** BR-10: the outcome from the gate states. Both lists are always filled; `FAIL_BEATS_MISSING` decides the one case the

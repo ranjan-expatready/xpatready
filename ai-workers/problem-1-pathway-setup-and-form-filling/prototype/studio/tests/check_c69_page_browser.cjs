@@ -88,7 +88,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C6.9 page fail: Run again without a reason is refused on the field, in words", /Give a reason for running again, such as 'Passport renewed'\./.test(await p.locator("[role=dialog]").innerText()));
   await state("run-again-reason");
   await p.keyboard.type("Facts added (Sample)"); await p.keyboard.press("Enter"); await p.waitForSelector("[role=dialog]", { state: "detached" }); await settle();
-  step("C6.9 page pass (P-230 (1)): Run again with a reason: the background rule is Not met and goes to the representative's review: Possibly eligible, never Not eligible", /Possibly eligible — the representative reviews this/.test(await text()) && /For the representative's review: Answered no to the criminal history question \(Sample\)\./.test(await text()) && /The representative reviews this: not a Not eligible on its own/.test(await text()) && !/Not eligible on this application's rules/.test(await text()) && !/Out of date:/.test(await text()));
+  step("C6.9 page pass (P-230 (1)): Run again with a reason: the background rule is Not met and goes to the representative's review: Possibly eligible, never Not eligible", /Possibly eligible — the representative reviews this/.test(await text()) && /For the representative's review: Answered no to the criminal history question \(Sample\)\./.test(await text()) && /The representative reviews this: never “Not eligible” on its own/.test(await text()) && !/Not eligible on this application's rules/.test(await text()) && !/Out of date:/.test(await text()));
+  step("C6.9 page pass (BR-9): answered but not confirmed values count and are marked \"(not confirmed yet)\"", /Passport number: SAMPLEP12 \(not confirmed yet\)/.test(await text()));
   await state("needs-review");
 
   await tabTo(/^Override result/); await p.keyboard.press("Enter"); await p.waitForSelector("[role=dialog]");

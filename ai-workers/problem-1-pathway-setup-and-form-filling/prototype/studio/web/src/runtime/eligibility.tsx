@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { noRetryOnRefusal, useCaseView, type CasePerson } from "./questionnaire";
 import { useFirm } from "./team";
 
-type Gate = { key: string; label: string; state: "met" | "not_met" | "not_answered"; facts: string[]; values: Record<string, unknown>; missing: string[]; whenNotMet?: "not_eligible" | "needs_review" };
+type Gate = { key: string; label: string; state: "met" | "not_met" | "not_answered"; facts: string[]; values: Record<string, unknown>; missing: string[]; whenNotMet?: "not_eligible" | "needs_review"; unconfirmed?: string[] };
 type Result = { programKey: string; programLabel: string; outcome: string; score: number | null; failedGates: string[]; missingInputs: string[]; reviewGates?: string[]; gates: Gate[]; judgement: string[] };
 type Override = { id: string; programKey: string; fromOutcome: string; label: string; reason: string; by: string; name?: string; duty?: string; at: string; outOfDate?: boolean };
 export type Assessment = {
@@ -178,7 +178,7 @@ function Result({ caseId, a, r, runs, open }: { caseId: string; a: Assessment; r
         <span className="text-xs text-text-muted" title="Programs with a points score show it here when the team's Qualifier is connected">Score: none (this application has no points score)</span>
       </div>
       {r.outcome === "NOT_ELIGIBLE" ? <p className="text-sm">Fails: {r.failedGates.map((k) => labels.get(k) ?? k).join("; ")}{r.missingInputs.length ? `; also needs: ${r.missingInputs.map(factWords).join(", ")}` : ""}. The representative reviews this, and IRCC decides.</p> : null}
-      {r.reviewGates?.length ? <p className="text-sm">For the representative's review: {r.reviewGates.map((k) => labels.get(k) ?? k).join("; ")}. A rule like this is never a Not eligible on its own; the representative reviews it, and IRCC decides.</p> : null}
+      {r.reviewGates?.length ? <p className="text-sm">For the representative's review: {r.reviewGates.map((k) => labels.get(k) ?? k).join("; ")}. A rule like this never gives “Not eligible” on its own; the representative reviews it, and IRCC decides.</p> : null}
       {a.overrides.map((x) => <p key={x.id} className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"><span className="font-medium">Officer's override: {x.label}</span> — {x.reason} <span className="text-xs text-text-muted">({x.name ?? nameOf(x.by)}, {when(x.at)}; the result above is the rules' own)</span></p>)}
       <div>
         <h3 className="mb-1 text-sm font-semibold">Rules checked</h3>
@@ -192,8 +192,8 @@ function Result({ caseId, a, r, runs, open }: { caseId: string; a: Assessment; r
               </span>
               <span className="min-w-0">
                 <span className="block [overflow-wrap:anywhere]">{g.label}</span>
-                <span className="block text-xs text-text-muted [overflow-wrap:anywhere]">{g.facts.map((f) => `${factWords(f)}: ${shown(g.values[f])}`).join(" · ")}</span>
-                {g.state === "not_met" && g.whenNotMet === "needs_review" ? <span className="block text-xs font-medium text-text-warn">The representative reviews this: not a Not eligible on its own</span> : null}
+                <span className="block text-xs text-text-muted [overflow-wrap:anywhere]">{g.facts.map((f) => `${factWords(f)}: ${shown(g.values[f])}${g.unconfirmed?.includes(f) ? " (not confirmed yet)" : ""}`).join(" · ")}</span>
+                {g.state === "not_met" && g.whenNotMet === "needs_review" ? <span className="block text-xs font-medium text-text-warn">The representative reviews this: never “Not eligible” on its own</span> : null}
                 {g.missing.length ? <Link to={`/cases/${caseId}`} className="text-xs text-text-link hover:underline">{g.missing.map(factWords).join(", ")} → Answer in the case view</Link> : null}
               </span>
             </li>

@@ -50,6 +50,13 @@ await main("C6.9 part 2", "Eligibility runs (stand-in SI-1 adapter and routes)",
     ok("C6.9 BR-18 pass: the result is for the case's own combination only", all.programKey === "vv.single" && assess(snap(), knownOf(ALL), P)!.programKey === "vv.single");
   }
   {
+    // Concept BR-9: an answered fact counts whether or not it is confirmed, and the page names it as not confirmed yet.
+    const k: Known = new Map([[kkey(P, "person.passport_number"), { value: "SAMPLEP12", status: "confirmed" as const, source: "check" }], [kkey(P, "person.passport_expiry_date"), { value: "2030-01-01", status: "answered" as const, source: "check" }]]);
+    const g = gateResult(snap(), k, GATES[0], P);
+    ok("C6.9 BR-9 pass: an answered, unconfirmed fact counts (Met) and is listed as not confirmed yet", g.state === "met" && g.unconfirmed.join() === "person.passport_expiry_date", g);
+    ok("C6.9 BR-9 fail: a confirmed fact is never listed as not confirmed; an unanswered one neither", !g.unconfirmed.includes("person.passport_number") && gateResult(snap(), new Map(), GATES[0], P).unconfirmed.length === 0);
+  }
+  {
     // Review M1 on fd26c492 (AG-3-12): a fact asked once per case, of the case subject, whatever its prefix, is read as
     // the rules read it (the person's own answer, else the case's), so an answered fact never reads unanswered.
     const g = { key: "x.rel", label: "Relationship start date answered", condition: { subjectKind: "PERSON", op: "exists", field: "relationship.start_date" } };

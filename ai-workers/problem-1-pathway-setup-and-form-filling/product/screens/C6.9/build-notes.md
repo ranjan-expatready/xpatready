@@ -91,3 +91,10 @@ D1 job fit 8 · D2 rules as data 9 · D3 correctness 8 · D4 contract 8 · D5 se
 * **Reviewer m4:** concept §6 and §8 updated for R4.
 * **Left, as a known limit (breaker m2):** a gate on a repeating-row fact reads the first row only, the way the questionnaire's rules read a box with no row; row facts carry no answer id. Visitor visa has no such gate. Refusing such gates at release is a follow-up, asked in the PR.
 * Tests: `check_c69_runs` 75/75, `check_c69_gates` 87/87, `check_vv_prepare_api` 32/32, acceptance C6.9 12/15 (11–13 are part 3).
+
+# Part 3: override, review and the page (BR-15, BR-16, BR-18, §4–§5)
+* **Scope:** P-229 and P-230 (1), with the current words and outcomes. **P-236** (renaming to "Case check from confirmed facts" and using the team's three outcome words) is **on hold**: the SA-01B product owner has paused the PQR and assessment area, per the tech lead's correction of 2 Nov. Applying it later changes copy only (the words in `web/src/runtime/eligibility.tsx` `outcomeWords`, the titles and the browser check's patterns); the API keeps AG-03's codes either way.
+* **API:** `POST /runtime/assessments/:aid/override` and `/review` in `api/src/assessments.ts`. The stamp comes from the firm's record: "Reviewed" for a licensed representative, "Seen" otherwise (P-229 (2)).
+* **Page and card:** `web/src/runtime/eligibility.tsx`, plus three lines in `cases.tsx` (the import, the route and the card).
+* **BR-9 "Not confirmed yet":** the adapter lists, per gate, the answered facts that are not confirmed (`unconfirmed`), and the page marks each one "(not confirmed yet)".
+* **Tests:** `check_c69_page_browser.cjs` 38/38, `check_c69_runs` 89/89, acceptance C6.9 15/15.
