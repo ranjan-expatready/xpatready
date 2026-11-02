@@ -1,0 +1,59 @@
+{
+ "about": "P-65 (a), S2 (SA-1B-174): which form edition (the official file's SHA-256) and which field map version each fill trial ran on; the verdict is the evidence lane's STATUS.md. map_version null: the E1 trials of 23–24 Oct ran P1's values through p5/fill.py, so each counts for its edition only. A trial recorded from now on writes the map version (api/src/fill-trials.ts mapVersion) it ran on.",
+ "trials": [
+  {
+   "form": "IMM 0008",
+   "edition": "IMM 0008 (05-2026)",
+   "form_sha256": "2560489b57160f59c54a58d2f837d220a0426285ec17465c487b6fe2a5f63285",
+   "map_version": null,
+   "status_file": "prototype/evidence-lane/E1/imm0008/STATUS.md",
+   "recorded_on": "2026-10-23",
+   "note": "E1 trial; the edition's SHA-256 matches its STATUS.md and the official manifest"
+  },
+  {
+   "form": "IMM 1295",
+   "edition": "IMM 1295 (09-2023)",
+   "form_sha256": "57fc256eef7d9d856e4ae85ebf8bfe80da41833ebde7a8c7ed78f2483470d7bb",
+   "map_version": null,
+   "status_file": "prototype/evidence-lane/E1/imm1295/STATUS.md",
+   "recorded_on": "2026-10-23",
+   "note": "E1 trial; the edition's SHA-256 matches its STATUS.md and the official manifest"
+  },
+  {
+   "form": "IMM 1344",
+   "edition": "IMM 1344 (09-2024)",
+   "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+   "map_version": null,
+   "status_file": "prototype/evidence-lane/E1/imm1344/STATUS.md",
+   "recorded_on": "2026-10-23",
+   "note": "E1 trial; the edition's SHA-256 matches its STATUS.md and the official manifest"
+  },
+  {
+   "form": "IMM 5257",
+   "edition": "IMM 5257 (09-2023)",
+   "form_sha256": "0dc03b24e7914a178ad29e2cfae811045835a1d36d7a3c35f040251d0aca562e",
+   "map_version": null,
+   "status_file": "prototype/evidence-lane/E1/imm5257/STATUS.md",
+   "recorded_on": "2026-10-23",
+   "note": "E1 trial; the edition's SHA-256 matches its STATUS.md and the official manifest"
+  },
+  {
+   "form": "IMM 5409",
+   "edition": "IMM 5409 (01-2023)",
+   "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+   "map_version": null,
+   "status_file": "prototype/evidence-lane/E1/imm5409/STATUS.md",
+   "recorded_on": "2026-10-24",
+   "note": "E1 trial; the edition's SHA-256 matches its STATUS.md and the official manifest"
+  },
+  {
+   "form": "IMM 5707",
+   "edition": "IMM 5707 (01-2023)",
+   "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+   "map_version": null,
+   "status_file": "prototype/evidence-lane/E1/imm5707/STATUS.md",
+   "recorded_on": "2026-10-24",
+   "note": "E1 trial; the edition's SHA-256 matches its STATUS.md and the official manifest"
+  }
+ ]
+}

@@ -4,6 +4,7 @@
 // and a failing case. No model call (US$0). Amounts Sample until the immigration expert confirms (P-171).
 //   zsh studio/tools/isolated.sh runtime_r1 4430 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4430 xr_studio_runtime_r1
 //   tsx studio/tests/runtime/check_vv_filings_api.ts 4430 xr_studio_runtime_r1
+import { FEE_TABLE } from "../../engine/runtime/filings.ts";
 import { client, recorder } from "./api.ts";
 
 const PORT = Number(process.argv[2] ?? 4430), DB = process.argv[3] ?? "xr_studio_runtime_r1";
@@ -29,7 +30,7 @@ const run = Date.now().toString(36);
   r = await filings();
   ok("C6.12 pass: one person → one Visitor visa filing, CAD 100 and biometrics CAD 85, from the pinned release", r.status === 200 && r.body.derived === true && r.body.filings.length === 1 && r.body.groups[0].total_cents === 185_00 && r.body.release_version >= 1 && r.body.combination === "vv.single", r.body);
   ok("C6.12: the case row is never a filing", !r.body.filings.some((f: { applicants: { role: string }[] }) => f.applicants[0].role === "case") && !r.body.not_filing.some((f: { role: string }) => f.role === "case"));
-  ok("C6.12 P-170: the fee lines carry the IRCC fee list URL, its words and the date read", r.body.groups[0].totals.every((f: { source: { url: string; quote: string; read: string } }) => /ircc\.canada\.ca/.test(f.source.url) && f.source.quote.length > 10 && f.source.read === "2026-10-29") && r.body.groups[0].totals.some((f: { source: { quote: string } }) => /same time and place/.test(f.source.quote)));
+  ok("C6.12 P-170: the fee lines carry the IRCC fee list URL, its words and the date read", r.body.groups[0].totals.every((f: { source: { url: string; quote: string; read: string } }) => /ircc\.canada\.ca/.test(f.source.url) && f.source.quote.length > 10 && f.source.read === FEE_TABLE.read) /* R2: the read date comes from the dated fee table */ && r.body.groups[0].totals.some((f: { source: { quote: string } }) => /same time and place/.test(f.source.quote)));
 
   // Grow the family to six: the CAD 500 maximum applies.
   const spouse = (await call("POST", `/runtime/cases/${caseId}/people`, { role: "spouse_or_partner", displayName: "Sample Spouse A" }, OFFICER)).body?.subject_id as string;
