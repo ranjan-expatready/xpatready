@@ -5,12 +5,12 @@ Main scored: fbe3f01f (#541, #543, #544, #545, #522, #528, with #525 and the row
 **Verdict:** main is green for every row these PRs touched. M2 goes from **41 to 43 of 60 Works**:
 * Up: C3.12, C11.12 and C5.7.
 * Down: C3.13, from Works to Partial. This is not a regression: its pack can run again and is red on parts never built.
-* No new Blocker, Critical or Major. New: one Minor, QA-166. Closed: QA-148 and QA-161.
+* No new Blocker, Critical or Major. New: one Minor, QA-169. Closed: QA-148 and QA-161.
 
 ## Per-head check (migration PR, before merge)
 | PR | Head | Verdict | Evidence |
 |---|---|---|---|
-| #556 G-CORE B1 (migration) | 8d0c4bcc | **Pass**, Minor QA-166 | See the details below; also commented on the PR |
+| #556 G-CORE B1 (migration) | 8d0c4bcc | **Pass**, Minor QA-169 | See the details below; also commented on the PR |
 
 #556 details:
 * **Migration:** additive (one table `change_set`, 3 CHECKs, 2 indexes, no ALTER, DROP or foreign key) and it sorts after `20261102170000`.
@@ -44,7 +44,7 @@ Notes on the table:
 Smoke (the `--changed` set by hand): engine 43/43, case engine 69/69, w1 structure 81/81, dv backbone browser 8/8, screen01 API 135/135 (quarantined, run anyway). Not run: `check_w1_start_setup`, because its usage line sets `STUDIO_AI_LIVE=approved` (P-276).
 
 ## Bugs
-* **New:** QA-166 (UX · Minor). The R4 message shows a raw key: "no.such is not in the shared library." (`api/src/change-sets.ts:249`).
+* **New:** QA-169 (UX · Minor). The R4 message shows a raw key: "no.such is not in the shared library." (`api/src/change-sets.ts:249`).
 * **Closed:**
   * QA-148: C3.12 pack 17/17 and the screen at three widths.
   * QA-161: sh2b, sh2 and c119 green on main.
