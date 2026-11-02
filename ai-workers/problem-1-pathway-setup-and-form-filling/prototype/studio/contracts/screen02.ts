@@ -7,6 +7,8 @@ export type LibraryChangeView = {
   ai_verdict: string | null; matches: { key: string; score: number }[]; status: "WAITING" | "APPROVED" | "RETURNED" | "RELEASED" | "WITHDRAWN";
   proposed_by: string | null; proposed_by_id: string; proposed_at: string; decided_by: string | null; decided_at: string | null; decision_note: string | null;
   released_in: number | null; combination_id: string | null;
+  /** G-CORE B2: a rename waiting for a second person (action RENAME): the name now and the name proposed. */
+  rename?: { before: string | null; after: string | null; undo: boolean };
 };
 export type LibraryChangeDetail = LibraryChangeView & { field: { key: string; label: string | null; meaning: string; value_type: string; group: string | null; status: string; /** C3.6: the answer list the field carries, approved with it. */ answer_list?: { key: string; label: string; status: string; values: { code: string; label: string }[] } | null } | null;
   /** A structure name (P-128): the names a branch delete takes with it, and whether a retire or restore takes its combination. */

@@ -1,28 +1,23 @@
 // S6 Shared library, queue item (2a) (screens lane; P-158 delta items 1 and 6, C3.13, C3.15): every library item comes
 // from a source, so the free adds answer 410; each item's sources ("From: IMM 1295 form field …", "checklist IMM 5488 …") and
 // where it is used, read from the rows that already hold them (form field maps, checklist requirement quotes, the
-// imported release); a direct, versioned rename of a field's name or a section's title with the exact-duplicate check.
+// imported release); a versioned rename of a field's name or a section's title through the G-CORE door (rename-door.ts).
 // The one door (every item a ProposalItem, a rule as a source) comes in S6 slice 1, on the forms lane's contract v2.
-import { Body, Controller, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Query } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Query, Res } from "@nestjs/common";
+import type { Response } from "express";
 import { z } from "zod";
-import { normalizeLabel, problemFromZod } from "../../contracts/programs.ts";
+import { problemFromZod } from "../../contracts/programs.ts";
 import { current, fieldsOf } from "../../engine/where-used.ts";
-import { actorOf, Audit, Db, need, readerOf, revise, strip, Workspace, type Actor } from "./core.ts";
+import { actorOf, Audit, Db, need, readerOf, Workspace, type Actor } from "./core.ts";
 import { itemCombinations, mappedBoxes, usedInBoth, usedInLabels } from "./where-used.ts";
+import { renameAnswer, Renames } from "./rename-door.ts";
 
 type H = string | undefined;
 const problem = (status: number, title: string, detail: string) =>
   new HttpException({ type: `https://expatready.local/problems/${title.toLowerCase().replace(/[^a-z]+/g, "-")}`, title, status, detail }, status);
 
-/** P-158 item 1: nothing is added to the library by hand; the 410 says where the item comes from instead. */
-const FROM: Record<string, string> = {
-  field: "A field comes from a form field (add the form under Forms and confirm what the AI read), a checklist line, or a rule that needs it.",
-  section: "Sections are proposed from the forms' own parts and confirmed on To review.",
-  answer_list: "An answer list comes from a form field's own choices or an IRCC code list.",
-};
-export const noFreeAdd = (kind: keyof typeof FROM): never => {
-  throw new HttpException({ type: "https://expatready.local/problems/no-free-add", title: "Not added by hand", status: HttpStatus.GONE, detail: `Nothing is added to the shared library by hand. ${FROM[kind]}` }, HttpStatus.GONE);
-};
+// P-158 item 1 (moved to its own file so the G-CORE door imports it without a cycle, B2).
+export { noFreeAdd } from "./no-free-add.ts";
 
 /** The URL word for each kind (`GET /library/:kind/:key/sources`). */
 const KINDS = { fields: "field", sections: "section", "document-types": "document_type", "answer-lists": "answer_list" } as const;
@@ -49,7 +44,7 @@ export { current };
 
 @Injectable()
 export class LibrarySources {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Renames) private readonly renames: Renames) {}
 
   /** Every source of every item of one kind (one read per table, so a list page gets them in one call). */
   async all(kind: Kind, workspaceId: string): Promise<Map<string, SourceLine[]>> {
@@ -165,49 +160,30 @@ export class LibrarySources {
     return (await this.db.answerList.findFirst({ where: { workspaceId, answerListKey: key }, orderBy: { version: "desc" } }))?.label ?? null;
   }
 
-  /** C3.15: an author renames a shared field directly (a new draft version, no second person), never onto another
-   *  field's name or label in the same group (BR-7, the exact-duplicate check; the database index backs it). */
+  /** C3.15 through the G-CORE door (B2, P-266, P-96): an author renames a shared field. The door runs the fixed rules
+   *  check (the exact duplicate in its own group among them, BR-7; the database index backs it) and its tier: direct
+   *  (a new draft version, logged) or, when a released combination uses it, a second person on To review. */
   async renameField(actor: Actor, key: string, body: unknown) {
     need(actor, "author");
     const b = parseName(body);
     const workspaceId = await this.ws.id();
-    const rows = await this.db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: key } });
-    const newest = [...rows].sort((x, y) => y.version - x.version)[0];
+    const newest = await this.db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: key }, orderBy: { version: "desc" } });
     if (!newest) throw problem(404, "Not found", `${key} is not in the shared library.`);
     // C11.9 review Ma2: a retired field is restored before it is renamed (said in words, not "not found").
     if (newest.status === "RETIRED") throw problem(409, "Retired", `The field "${(newest.labelChecked && newest.label) || key}" is retired: it takes no new use or change. Restore it in Shared library › Fields first, or choose another.`);
     if (newest.mergedIntoKey) throw problem(409, "Merged", `${key} was merged into ${newest.mergedIntoKey}: rename that field instead.`);
-    const group = newest.groupKey ?? key.split(".")[0], want = normalizeLabel(b.name);
-    const twins = await this.db.canonicalField.findMany({ where: { workspaceId, groupKey: group, canonicalFieldKey: { not: key }, mergedIntoKey: null, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { canonicalFieldKey: true, label: true, aliases: true } });
-    const twin = twins.find((t) => [t.label ?? "", ...t.aliases].some((x) => normalizeLabel(x) === want));
-    if (twin) throw problem(409, "Same name", `"${b.name}" is already the name of ${twin.label ?? twin.canonicalFieldKey} in this group. If they mean the same, merge them; otherwise choose another name.`);
-    const old = (newest.labelChecked && newest.label) || key;
-    try {
-      const { row } = await revise(this.db.canonicalField, rows, { label: b.name, groupKey: group, labelChecked: true }, actor.id, strip);
-      await this.audit.log(workspaceId, actor.id, "renamed", "field", key, `${actor.name} renamed field ${key} from "${old}" to "${b.name}" (draft v${row.version})`);
-      return { key, name: b.name, version: row.version, status: row.status };
-    } catch (e) {
-      if (/canonical_field_name_unique|Unique constraint/.test(String(e))) throw problem(409, "Same name", `"${b.name}" is already a field's name in this group.`);
-      throw e;
-    }
+    return this.renames.rename(actor, "field", key, b.name, b.expected);
   }
 
-  /** C3.15 for sections: a direct, versioned title change; another section's title is refused. */
+  /** C3.15 for sections, through the same door: a versioned title change; another section's title is refused. */
   async renameSection(actor: Actor, key: string, body: unknown) {
     need(actor, "author");
     const b = parseName(body);
     const workspaceId = await this.ws.id();
-    const all = await this.db.logicalSection.findMany({ where: { workspaceId }, orderBy: { version: "desc" } });
-    const rows = all.filter((s) => s.sectionKey === key);
-    if (!rows.length) throw problem(404, "Not found", `There is no section ${key}.`);
-    if (rows[0].status === "RETIRED") throw problem(409, "Retired", `The section "${rows[0].title}" is retired: it takes no new use or change. Restore it in Shared library › Sections first.`); // C11.9
-    const latest = new Map<string, string>(); for (const s of all) if (!latest.has(s.sectionKey)) latest.set(s.sectionKey, s.title);
-    const twin = [...latest].find(([k, t]) => k !== key && normalizeLabel(t) === normalizeLabel(b.name));
-    if (twin) throw problem(409, "Same name", `There is already a section called "${twin[1]}". Use that one, or choose another title.`);
-    const old = latest.get(key);
-    const { row } = await revise(this.db.logicalSection, rows, { title: b.name }, actor.id, strip);
-    await this.audit.log(workspaceId, actor.id, "renamed", "section", key, `${actor.name} renamed section "${old}" to "${b.name}" (draft v${row.version})`);
-    return { key, name: b.name, version: row.version, status: row.status };
+    const newest = await this.db.logicalSection.findFirst({ where: { workspaceId, sectionKey: key }, orderBy: { version: "desc" } });
+    if (!newest) throw problem(404, "Not found", `There is no section ${key}.`);
+    if (newest.status === "RETIRED") throw problem(409, "Retired", `The section "${newest.title}" is retired: it takes no new use or change. Restore it in Shared library › Sections first.`); // C11.9
+    return this.renames.rename(actor, "section", key, b.name, b.expected);
   }
 
   /** The names of the shared fields a list reads ("Family name"; null when the name was never confirmed: the screen
@@ -303,7 +279,8 @@ const GROUP_WORD: Record<string, string> = { official_rule: "Official rule", rea
 const fieldWord = (key: string) => { const w = (key.split(".").pop() ?? key).replace(/_/g, " "); return w.charAt(0).toUpperCase() + w.slice(1); };
 const RULE_KIND = { rule: "Rule", form_line: "Condition on a form", checklist_line: "Condition on a document", question: "Condition on a question" } as const;
 
-const NameBody = z.object({ name: z.string({ error: "Give the new name." }).trim().min(2, "A name has at least two characters.").max(80, "Keep the name under 80 characters.") });
+// G-CORE B2 (BR-3): `expected` is the fingerprint of the preview the person looked at; a stale one answers "look again".
+const NameBody = z.object({ name: z.string({ error: "Give the new name." }).trim().min(2, "A name has at least two characters.").max(80, "Keep the name under 80 characters."), expected: z.string().max(64).nullish() });
 const parseName = (body: unknown) => { const r = NameBody.safeParse(body); if (!r.success) throw new HttpException(problemFromZod(r.error), HttpStatus.BAD_REQUEST); return r.data; };
 
 @Controller("api")
@@ -311,8 +288,9 @@ export class LibrarySourcesController {
   constructor(@Inject(LibrarySources) private readonly s: LibrarySources) {}
   @Get("library/reuse/:kind") reuse(@Headers("x-actor") a: H, @Param("kind") kind: string, @Query("combination") combination?: string) { readerOf(a); return this.s.reuse(kind, combination); }
   @Get("library/:kind/:key/sources") sources(@Param("kind") kind: string, @Param("key") key: string) { return this.s.sources(kind, key); }
-  @Patch("library/fields/:key/name") renameField(@Headers("x-actor") a: H, @Param("key") key: string, @Body() b: unknown) { return this.s.renameField(actorOf(a), key, b); }
-  @Patch("library/sections/:key") renameSection(@Headers("x-actor") a: H, @Param("key") key: string, @Body() b: unknown) { return this.s.renameSection(actorOf(a), key, b); }
+  // G-CORE B2: 200 when the rename applied now, 202 when it waits for a second person (P-266).
+  @Patch("library/fields/:key/name") async renameField(@Headers("x-actor") a: H, @Param("key") key: string, @Body() b: unknown, @Res({ passthrough: true }) res: Response) { return renameAnswer(res, await this.s.renameField(actorOf(a), key, b)); }
+  @Patch("library/sections/:key") async renameSection(@Headers("x-actor") a: H, @Param("key") key: string, @Body() b: unknown, @Res({ passthrough: true }) res: Response) { return renameAnswer(res, await this.s.renameSection(actorOf(a), key, b)); }
   @Get("library/checks") checks(@Headers("x-actor") a: H) { readerOf(a); return this.s.checks(); }
   @Get("library/rules") rules(@Headers("x-actor") a: H) { readerOf(a); return this.s.rules(); }
 }
