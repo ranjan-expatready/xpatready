@@ -23,3 +23,18 @@
   * `runtime/check_c115_employer` 20, `runtime/check_qa122_generate` 7, `runtime/check_c611_team` 59;
   * `check_c69_runs` 98, `check_c69_page_browser` 43, acceptance C6.9 15.
 * **A note for tests:** the catalogue's cache key is the audit log. A test that changes the library by SQL writes an audit row, as the library screen does.
+
+## Review round 1 (ea7f28b2): Block, two Majors, and the fixes
+* **M1, draft work blocked new cases:** `startableMissing` now reads the release alone: the row-level structure lines and the rules against the live library, never the draft's undecided form fields (K1).
+  * Test: a field left undecided in the next draft never stops a case (201). The same line fails on ea7f28b2 (409).
+  * The catalogue still mixes them in for its status; that is raised, not changed, in `challenge.md` (screens lane).
+* **M2, the officer's words:** the refusal's `detail` is now one plain sentence: ""<label>" is not ready for new cases: N item(s) to fix in Immigration programs, by the people who set it up. Cases already open are not affected."
+  * The catalogue's full lines, with field paths and steps, stay in `missing[]` for authors.
+  * The toast text wraps (`min-w-0`, `[overflow-wrap:anywhere]`) in both toasters, and Dismiss stays in place.
+  * Tests: the sentence, and the absence of field paths, keys or step codes.
+* **Minors:**
+  * 2: the catalogue's JSDoc is back on `catalogue()`.
+  * 4: the test restores the field and removes its draft row in `finally`.
+  * 1 is noted: `startableMissing` passes no setup state. The status is the same; a setup-waiting line's step words can differ from the catalogue's, and only authors read them.
+* **Not walked in a browser after the fix:** the toast change is CSS only, and the long tokens are gone from the officer's sentence.
+* **Tests:** `check_s4_startable` 10/10.

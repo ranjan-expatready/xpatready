@@ -86,10 +86,10 @@ export class Runtime {
     if (combination!.retiredAt) fail(`"${combination!.label}" was retired by a release: new cases are not opened on it. Cases already open keep their release.`, HttpStatus.CONFLICT);
     const release = await this.db.configRelease.findFirst({ where: { combinationId: b.combinationId }, orderBy: { version: "desc" } });
     if (!release) fail(`"${combination!.label}" has no released version yet: a case opens only on a released configuration.`, HttpStatus.CONFLICT);
-    // S4 (SA-1B-90): a case opens only on a startable ("Live") release. A release the catalogue shows as Not ready is
-    // refused with its missing items, in the catalogue's words, so the person sees what to fix and where.
+    // S4 (SA-1B-90): a case opens only on a startable release. The case officer reads a plain sentence (review M2 on
+    // ea7f28b2: no field paths or keys, no author's step); the catalogue's own lines go in `missing` for the authors.
     const missing = await this.programs.startableMissing(b.combinationId, release!);
-    if (missing.length) throw new HttpException({ type: "https://expatready.local/problems/not-startable", title: "Not ready for cases", status: 409, detail: `"${combination!.label}" is released but not ready for cases (Not ready in Immigration programs): ${missing.map((m) => m.text).join(" ")}`, missing: missing.map((m) => ({ code: m.code, text: m.text, step: m.step })) }, HttpStatus.CONFLICT);
+    if (missing.length) throw new HttpException({ type: "https://expatready.local/problems/not-startable", title: "Not ready for cases", status: 409, detail: `"${combination!.label}" is not ready for new cases: ${missing.length === 1 ? "1 item" : `${missing.length} items`} to fix in Immigration programs, by the people who set it up. Cases already open are not affected.`, missing: missing.map((m) => ({ code: m.code, text: m.text, step: m.step })) }, HttpStatus.CONFLICT);
     let client: Actor | null = null;
     try { client = actorOf(b.clientActor); } catch { /* reported below as a field error */ }
     if (!client || !(client.duties as readonly string[]).includes("answer")) fieldError("clientActor", "Choose a client login (the client who answers the questionnaire).");

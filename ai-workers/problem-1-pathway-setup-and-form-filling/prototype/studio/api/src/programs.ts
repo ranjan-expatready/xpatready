@@ -235,19 +235,21 @@ export class Programs {
     return new Map(rows.map((r) => [r.leaf.nodeKey, { combinationId: r.leaf.combinationId, live: r.leaf.live, needs: actor ? !r.leaf.retired && !!forViewer(r.setup, actor).needsYou : r.leaf.needsYou, retired: r.leaf.retired, status: r.leaf.status, statusText: r.leaf.statusText }]));
   }
 
-  /** GET /catalogue: one request for the whole tree of one pathway, filtered and searched on the server. */
-  /** S4 (SA-1B-90): what keeps a combination's newest release from being startable, read exactly as the catalogue reads
-   *  it (the release's snapshot, the combination's structure, every rule against the live library). Empty = Live: a case
-   *  may open on it. The words are the catalogue's own "missing" lines (engine/programs.ts missingItems). */
+  /** S4 (SA-1B-90): what keeps a combination's newest release from being startable, read from the release alone: its
+   *  snapshot through `missingItems`, every rule against the live library (`validate`), and the row's place in the
+   *  structure. The draft's undecided form fields (`structureProblems`' K1 lines) are left out on purpose: they are work
+   *  in the next draft, which the release gate checks; they never stop cases on a release that has not changed (review
+   *  M1 on ea7f28b2). Empty = startable. The lines are the catalogue's words, for authors. */
   async startableMissing(combinationId: string, release: { snapshot: unknown }) {
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId }, select: { workspaceId: true, participants: true } });
     const lib = await this.db.canonicalField.findMany({ where: { workspaceId: c.workspaceId }, select: { canonicalFieldKey: true, valueType: true, status: true } });
     const library = lib.filter((f) => f.status !== "RETIRED").map((f) => ({ key: f.canonicalFieldKey, valueType: f.valueType }));
     const relSnap = release.snapshot as unknown as Snapshot;
-    const problems = [...(await this.studio.structureProblems(combinationId)), ...validate(relSnap, library, derivedOf(relSnap))];
-    return missingItems(relSnap, c.participants as ParticipantLine[], problems);
+    const rowLevel = (await this.studio.structureProblems(combinationId)).filter((p) => p.where === "Row");
+    return missingItems(relSnap, c.participants as ParticipantLine[], [...rowLevel, ...validate(relSnap, library, derivedOf(relSnap))]);
   }
 
+  /** GET /catalogue: one request for the whole tree of one pathway, filtered and searched on the server. */
   async catalogue(query: unknown, actor?: Actor): Promise<CatalogueResponse> {
     const t0 = performance.now();
     const q = parse(CatalogueQuery, query);
