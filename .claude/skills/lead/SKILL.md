@@ -42,6 +42,7 @@ Rows reaching Works · median approved-to-merged time · batch failure rate (tar
 
 ## Habits
 * Judge a check by its exit code, never by the tail of its output.
+* A lane is working only if it pushed in the last 90 minutes; never trust "still pushing" in STATE (2 Nov: G-CORE B2 sat ~3 h with no builder). `flow-watch.sh` 4b/4c flag labelled PRs with red CI and unfinished M2 rows nobody is on; act on each at that check.
 * Before pushing to a PR's branch, check that the PR is still open (it may have merged itself).
 * Base advice on all the history there is, never one sample.
 * Before deleting a cache or tool, search the repository for paths into it.
