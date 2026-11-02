@@ -75,9 +75,12 @@ for p in real:
 
 # 4b. Labelled PRs whose own check is red: the builder ended at the label and nobody fixes it (2 Nov: #563, #573 sat 70–110 min).
 for p in approved:
-    ci = gh("pr", "view", str(p["number"]), "--json", "statusCheckRollup", "--jq", "[.statusCheckRollup[]|select(.name==\"ci\")|.conclusion]|last // \"\"").strip()
+    v = json.loads(gh("pr", "view", str(p["number"]), "--json", "statusCheckRollup,mergeable"))
+    ci = ([c.get("conclusion") for c in v["statusCheckRollup"] if c.get("name") == "ci"] or [""])[-1]
     if ci == "FAILURE":
         alarm(f"#{p['number']} is labelled but its own ci is red: its builder has ended; start a fixer ({p['title'][:50]})")
+    if v["mergeable"] == "CONFLICTING" and "dequeued" not in [l["name"] for l in p["labels"]]:
+        alarm(f"#{p['number']} is labelled but conflicts with main, so it can't queue: its builder merges main in (P-270) ({p['title'][:50]})")
 
 # 4c. Unfinished M2 rows with no one on them (2 Nov: G-CORE B2 had no builder for ~3 h after B1 merged, while STATE said
 # "still pushing"). A row is covered by an open product PR naming it, or a branch push naming it in the last 90 minutes.
