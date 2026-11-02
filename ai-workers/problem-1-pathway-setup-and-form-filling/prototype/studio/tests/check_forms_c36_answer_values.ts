@@ -177,6 +177,15 @@ const TRAVELS = ["Both parents", "One parent", "Another adult", "Alone"], CUSTOD
   r = await call("POST", "/review/proposals/decide", { ids: [mid], action: "edit", payload: { ...JSON.parse(sql(`select payload from proposal_item where id='${mid}'`)), values: [{ code: "both_parents", label: "Both parents" }, { code: "one_parent", label: "One parent" }] } }, "user-C");
   ok("C3.6 fail (review m-r3a): an edit cannot drop the value the rule compares", r.status === 400 && /compares this fact with "alone"/.test(msg(r)) && sql("select count(*) from canonical_field where canonical_field_key='person.c36_with'") === "0", msg(r));
   ok("C3.6 fail (review m-r3b): a soft hyphen does not make a second value", /listed twice/.test(String(refused(() => answerValues("code", ["Alone", "Al\u00adone"])))));
+
+  // ─────────────────── Devin review on #426: every rule that reads the fact counts; neq does not need its value
+  rule("r_c36_two_a", `{"field":"person.c36_two","op":"eq","value":"alone"}`, "ask for the consent letter");
+  rule("r_c36_two_b", `{"field":"person.c36_two","op":"eq","value":"guardian"}`, "ask for the guardian papers");
+  r = await call("POST", `/combinations/${combo}/rule-facts`, { fact: "person.c36_two", rule: "r_c36_two_a", label: "Who travels with", meaning: "Who travels with the child (Sample).", valueType: "code", values: ["Alone", "Both parents"] });
+  ok("C3.6 fail (Devin red): another rule reading the fact is checked too, and named", r.status === 400 && /r_c36_two_b compares person\.c36_two with "guardian"/.test(msg(r)), msg(r));
+  rule("r_c36_neq", `{"field":"person.c36_neq","op":"neq","value":"other"}`, "ask for the usual papers");
+  r = await call("POST", `/combinations/${combo}/rule-facts`, { fact: "person.c36_neq", rule: "r_c36_neq", label: "Who travels along", meaning: "Who travels along with the child (Sample).", valueType: "code", values: ["Alone", "Both parents"] });
+  ok("C3.6 pass (Devin yellow): a neq rule does not need its value among the answers", r.status === 201, msg(r));
   console.log(`\n${pass} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.error("FAIL  unexpected", e); process.exit(1); });

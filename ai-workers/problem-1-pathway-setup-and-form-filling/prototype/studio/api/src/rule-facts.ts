@@ -45,18 +45,24 @@ export function valuesCompared(tree: unknown, fact: string): string[] {
   const walk = (n: unknown) => {
     if (!n || typeof n !== "object") return;
     const o = n as { field?: unknown; value?: unknown; values?: unknown; args?: unknown; arg?: unknown };
-    if (o.field === fact) for (const v of [o.value, o.values].flat()) if (typeof v === "string") out.add(v);
+    // Devin review (yellow): only eq and in need the value to exist; a neq or not-in of a missing value still holds.
+    if (o.field === fact && ((n as { op?: unknown }).op === "eq" || (n as { op?: unknown }).op === "in")) for (const v of [o.value, o.values].flat()) if (typeof v === "string") out.add(v);
     (Array.isArray(o.args) ? o.args : []).forEach(walk); if (o.arg) walk(o.arg);
   };
   walk(tree);
   return [...out];
 }
-/** Refuses a choice whose values miss a value the rule compares the fact with. */
-function ruleValuesKnown(rule: RuleRef, fact: string, values: { code: string; label: string }[] | undefined) {
-  if (!values) return;
+/** Refuses a choice whose values miss a value a rule compares the fact with; every rule of the combination that reads
+ *  the fact counts, not only the one named (Devin review, red). Returns the values all those rules need. */
+function ruleValuesKnown(all: RuleRef[], fact: string, values: { code: string; label: string }[] | undefined): string[] {
+  const needed = [...new Set(all.flatMap((r) => valuesCompared(r.tree, fact)))];
+  if (!values) return needed;
   const codes = new Set(values.map((v) => v.code));
-  const missing = valuesCompared(rule.tree, fact).filter((v) => !codes.has(v));
-  if (missing.length) fail(`${rule.sentence.split(":")[0]} compares ${fact} with ${missing.map((m) => `"${m}"`).join(", ")}, which is not among the answer values (${values.map((v) => v.code).join(", ")}): add it as a value, or correct the rule.`);
+  for (const r of all) {
+    const missing = valuesCompared(r.tree, fact).filter((v) => !codes.has(v));
+    if (missing.length) fail(`${r.sentence.split(":")[0]} compares ${fact} with ${missing.map((m) => `"${m}"`).join(", ")}, which is not among the answer values (${values.map((v) => v.code).join(", ")}): add it as a value, or correct the rule.`);
+  }
+  return needed;
 }
 
 const clip = (s: string) => (s.length > 300 ? `${s.slice(0, 297)}...` : s);
@@ -167,7 +173,7 @@ export class RuleFacts {
     const rule = rules.find((r) => r.key === b.rule);
     if (!rule) fail(`No condition, rule or check "${b.rule}" in this combination: a fact no form asks is added only for a rule that reads it.`);
     if (!factsRead(rule!.tree).includes(b.fact)) fail(`${rule!.sentence.split(":")[0]} does not read ${b.fact}: name the rule that needs it.`);
-    ruleValuesKnown(rule!, b.fact, values);
+    const ruleValues = ruleValuesKnown(rules.filter((r) => factsRead(r.tree).includes(b.fact)), b.fact, values);
     if (library.has(b.fact)) fail(`${b.fact} is already in the library: the rule can use it as it is.`, HttpStatus.CONFLICT);
     // MA3 (review c36 r3): a retired field keeps its key, so it cannot be added again: it is restored.
     if (await this.db.canonicalField.findFirst({ where: { workspaceId: c.workspaceId, canonicalFieldKey: b.fact, status: "RETIRED", mergedIntoKey: null }, select: { id: true } }))
@@ -196,7 +202,7 @@ export class RuleFacts {
       rules: [{ rule: "named_rule_reads_fact", passed: true, why: null }, { rule: "not_in_library", passed: true, why: null }],
       agreement: "rules_only", confidence: "check", reason: "Added for a rule, with a meaning a person wrote: a second person checks the name and meaning.",
       origin: "rules", identity: { key: normalizeLabel(b.label), near: [], nearReason: null }, relatesTo: null, revision: null, basis: "SAMPLE",
-      work: { ruleFact: b.fact, ruleKind: rule!.kind, ruleValues: valuesCompared(rule!.tree, b.fact) }, // review m-r3a: re-checked at landing
+      work: { ruleFact: b.fact, ruleKind: rule!.kind, ruleValues }, // review m-r3a: re-checked at landing
     }]);
     return { proposalId };
     }, { timeout: 30_000, maxWait: 10_000 });
@@ -233,7 +239,7 @@ export class RuleFacts {
     // it again from the item as decided (name and subject may be edited at accept), so it never freezes.
     const all = await this.db.canonicalField.findMany({ where: { workspaceId: c.workspaceId }, select: { canonicalFieldKey: true } });
     const key = keyFor(b.subject, b.label, new Set(all.map((f) => f.canonicalFieldKey)));
-    ruleValuesKnown(rule!, key, values); // break R2-M2: when the rule already reads the built key
+    const ruleValues = ruleValuesKnown(namedRules(snapshot).filter((r) => factsRead(r.tree).includes(key)), key, values); // break R2-M2: rules that already read the built key
     const sha256 = createHash("sha256").update(canonical((rule!.tree ?? {}) as Json)).digest("hex");
     const name = rule!.sentence.split(":")[0];
     const { proposalId } = await this.db.$transaction(async (tx) => {
@@ -250,7 +256,7 @@ export class RuleFacts {
         rules: [{ rule: "named_rule_exists", passed: true, why: null }, { rule: "not_in_library", passed: true, why: null }, ...(near.length ? [{ rule: "near_duplicate_reason", passed: true, why: b.nearReason ?? null }] : [])],
         agreement: "rules_only", confidence: "check", reason: "Added for a rule, with a meaning a person wrote; not meaning-checked (P-95): a second person checks the name and meaning.",
         origin: "rules", identity: { key: normalizeLabel(b.label), near, nearReason: b.nearReason ?? null }, relatesTo: null, revision: null, basis: "SAMPLE",
-        work: { forRule: rule!.key, ruleKind: rule!.kind, keyPreview: key, ruleValues: valuesCompared(rule!.tree, key) },
+        work: { forRule: rule!.key, ruleKind: rule!.kind, keyPreview: key, ruleValues },
       }]);
       return { proposalId };
     }, { timeout: 30_000, maxWait: 10_000 });
