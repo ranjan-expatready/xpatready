@@ -119,7 +119,7 @@ type P = { derived: boolean; filings: { id: string; mode: string; owner?: { subj
   const ps = await peopleStep();
   ok("C11.12 n3 fail: the child with no mode → the people step shows 'Fix 1 problem' (focus: the people card)", ps?.state !== "done" && ps?.open?.some((i: { kind: string; focus?: string }) => i.kind === "fix_problems" && i.focus === "people:card"), ps);
 
-  // The widened checks (migration 20261102160000_c1112_filing_modes): the new values hold, anything else is refused.
+  // The widened checks (migration 20261102170000_c1112_filing_modes): the new values hold, anything else is refused.
   const refused = (q: string) => { try { sql(q); return false; } catch { return true; } };
   ok("C11.12 migration fail: an applicant mode outside applying/declared_only is refused by the database", refused(`update filing_applicant set mode='sometimes' where subject_id='${K}'`));
   ok("C11.12 migration fail: a filing mode outside files_own/on_principal/co_filed is refused by the database", refused(`update filing set mode='on_principal_applying' where case_id='${id}'`));
