@@ -1,4 +1,4 @@
-// M2 queue item 3, who fills a question (runtime lane; C4.9, P-97; plan.md "Who fills"): the Questionnaires drawer's
+// M2 queue item 3, who fills a question (runtime lane; C4.9, P-97; plan.md "Who fills"): the Smart questionnaire (SQR) drawer's
 // "Who fills it, for every combination" walked in a real browser. The library default in words, "Change who fills…" with a
 // required reason, the waiting change on the row's drawer, a refusal in words, the client-only lock, and the read-only
 // approver; To review lists it for the second person. A pass and a fail per rule; screenshots at 1440 and 1024 in

@@ -17,7 +17,7 @@ export const QD_STEPS = [
   { kind: "qd_document_facts", label: "Which facts each document supplies", ai: false },
   { kind: "qd_sources", label: "Where each answer comes from: a document, the client or the case officer", ai: false },
   { kind: "qd_conditions", label: "Questions asked only in some cases, and their conditions", ai: true },
-  { kind: "pqr_picks", label: "Pre-qualification picks, each with its reason", ai: true },
+  { kind: "pqr_picks", label: "Prospect questionnaire (PQR) picks, each with its reason", ai: true },
   { kind: "qd_check", label: "Rules check the whole draft", ai: false },
 ] as const;
 export type QdKind = (typeof QD_STEPS)[number]["kind"];
@@ -61,7 +61,7 @@ export const sourceWords = (c: ReturnType<typeof sourceCounts>) =>
 export const QD_RULES = {
   one_source: "Every form field has exactly one source",
   asked_first: "Every deciding fact is asked before what depends on it",
-  pqr_subset: "Pre-qualification asks only what the full questionnaire asks (PQR ⊂ SQR)",
+  pqr_subset: "The Prospect questionnaire (PQR) asks only what the Smart questionnaire asks (PQR ⊂ SQR)",
   document_on_checklist: "Every document fact's document is on the checklist",
 } as const;
 export type QdRule = keyof typeof QD_RULES;
@@ -71,7 +71,7 @@ export function qdChecks(s: Snapshot): QdFinding[] {
   const out: QdFinding[] = [];
   for (const g of coverageGaps(s)) out.push({ rule: "one_source", level: "error", message: `${g.role}: "${g.fact}" is read by ${g.forms.join(", ")}, but ${g.why}.` });
   for (const p of factSourceProblems(s)) {
-    const rule: QdRule = /pre-qualification/i.test(p.message) ? "pqr_subset" : /not on this person's checklist|which is asked only in some cases|if it cannot be read/i.test(p.message) ? "document_on_checklist" : "one_source";
+    const rule: QdRule = /Prospect questionnaire \(PQR\)|pre-qualification/i.test(p.message) ? "pqr_subset" : /not on this person's checklist|which is asked only in some cases|if it cannot be read/i.test(p.message) ? "document_on_checklist" : "one_source";
     out.push({ rule, level: p.level, message: p.message });
   }
   for (const p of askedInOrder(s)) out.push({ rule: "asked_first", level: p.level, message: p.message });

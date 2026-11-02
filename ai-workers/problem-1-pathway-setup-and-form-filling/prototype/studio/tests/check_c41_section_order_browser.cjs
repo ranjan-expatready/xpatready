@@ -1,4 +1,4 @@
-// F6 / C4.1 (runtime lane; P-216 answer 1): an author changes the combination's section order on the Questionnaires tab
+// F6 / C4.1 (runtime lane; P-216 answer 1): an author changes the combination's section order on the Smart questionnaire (SQR) tab
 // with Move up and Move down on each section header, walked in a real browser and by keyboard. The keyboard stays on the
 // pressed button after the section moves; one Undo puts it back; the first and last buttons are greyed with the reason
 // in words; the Approver sees no move buttons; the draft names the move for Review. Screenshots at 1440 and 1024 in

@@ -391,7 +391,7 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
   return (
     <div className="mx-auto max-w-xl space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold">Your questionnaire</h1>
+        <h1 className="text-2xl font-semibold">Client questionnaire</h1>
         <p className="mt-1 text-sm text-text-muted">Case {view.case.reference}. You answer for everyone travelling on this application. Each answer is saved when you press Save; you can stop and come back at any time.</p>
       </div>
       <div className="rounded-xl border border-border bg-surface-raised p-4">
@@ -622,7 +622,7 @@ function ConfirmPill({ a }: { a: Answer }) {
   const text = a.status === "VERIFIED" ? "Confirmed" : a.confirmed ? "Counts as confirmed" : /principal/.test(a.why) ? "Answered by the principal" : "To confirm";
   return <Pill tone={tone} title={a.why}>{tone === "warn" ? null : <Check className="size-3" aria-hidden />}{text}</Pill>;
 }
-const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "case view", confirm_section: "confirmed section", firm_record: "firm record" };
+const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "Agent view", confirm_section: "confirmed section", firm_record: "firm record" };
 const WHO: Record<string, string> = { "user-O": "Case officer", "user-R": "Representative", "user-T": "Second representative", "user-S": "Solo representative", "user-P": "Client A", "user-Q": "Client B" };
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
@@ -808,7 +808,7 @@ export function PreviewQuestions({ view, person }: { view: QuestionnaireView; pe
   const keyOfPart = (s: (typeof parts)[number]) => `${s.subjectId}|${s.section}`;
   const [openKey, setOpenKey] = React.useState<string | null>(null);
   const open = parts.find((s) => keyOfPart(s) === openKey) ?? parts[0];
-  if (!parts.length) return <Notice tone="info" title="Nothing to ask">This person answers nothing in the client's questionnaire for this family.</Notice>;
+  if (!parts.length) return <Notice tone="info" title="Nothing to ask">This person answers nothing in the Client questionnaire for this family.</Notice>;
   const asked = (s: (typeof parts)[number]) => s.questions.filter((q) => !q.hidden);
   // Drift check 4: a section asked once for the application and again about the person shares its title; the name then
   // says whom each is about, so the jump list never shows the same name twice.

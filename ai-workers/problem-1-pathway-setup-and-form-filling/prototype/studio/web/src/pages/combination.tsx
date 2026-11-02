@@ -103,7 +103,8 @@ export function CombinationPage() {
         {row ? <NextStep row={row} setup={sum.data?.setup ?? null} /> : null}
       </div>
       {c.basis_note ? <Notice tone={c.source_basis === "ILLUSTRATIVE" ? "warn" : "info"}>{c.basis_note}</Notice> : null}
-      <div role="tablist" aria-label="Combination" className="flex gap-1 overflow-x-auto border-b border-border">
+      {/* K13 break M1: the tabs wrap instead of scrolling, so no tab or badge is ever cut off at any width or zoom. */}
+      <div role="tablist" aria-label="Combination" className="flex flex-wrap gap-x-1 border-b border-border">
         {TABS.map((t) => {
           // QA-120: one badge style for every count on a tab, a space before it, and one name read aloud and shown as the
           // tip: "Forms 4 setup items open", "Review and release 1 problem" (the visible text starts it exactly, WCAG 2.5.3).
@@ -150,7 +151,7 @@ function WorkspaceTab({ id, tab, hasRelease }: { id: string; tab: "forms" | "que
  *  runs it as the Programs list does; any other item opens where it is done (`nextStepHref`: its tab when the tab has no
  *  landing place for it yet). No checklist item (Live, nothing open; retired): nothing to do. */
 const PAIRED: Partial<Record<ItemKind, NextAction["kind"]>> = { map_forms: "draft_ai", add_forms_found: "add_from_library", find_forms: "add_forms", view_ai: "view_progress" };
-const TAB_WORD: Record<string, string> = { forms: "Forms", documents: "Documents", questionnaires: "Questionnaires", review: "Review and release" };
+const TAB_WORD: Record<string, string> = { forms: "Forms", documents: "Documents", questionnaires: "Smart questionnaire (SQR)", review: "Review and release" };
 function NextStep({ row, setup }: { row: CatalogueLeaf; setup: CombinationSummary["setup"] }) {
   const nav = useNavigate();
   const [, setSp] = useSearchParams();
