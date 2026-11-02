@@ -91,6 +91,24 @@ const leak = (t) => (t.match(KEY) ?? t.match(INTERNAL) ?? t.match(HASH))?.[0];
     await box.fill(offered[0]);
     const row = box.locator("xpath=..");
     step("pass: a name chosen is a library field (its meaning shows; no \"not a library field\" warning) and the box keeps the name", (await box.inputValue()) === offered[0] && !/not a library field/.test(await row.innerText()), await row.innerText());
+    // Break R2-M1: typed key by key, a name that starts with another field's whole name ("Email" → "Email address")
+    // keeps every character and ends as its own field.
+    const longer = offered.find((o) => offered.some((q) => q !== o && o.startsWith(`${q} `)));
+    step("setup: some field's name starts with another field's whole name", !!longer, longer);
+    if (longer) {
+      await box.fill(""); await box.click(); await p.keyboard.type(longer, { delay: 5 });
+      step("fail case (break R2-M1): typed key by key, the box keeps exactly what was typed and finds the field", (await box.inputValue()) === longer && !/not a library field/.test(await row.innerText()), { typed: longer, box: await box.inputValue(), note: (await row.innerText()).slice(0, 160) });
+      await p.keyboard.press("Tab");
+      step("pass: leaving the box keeps the field's name", (await box.inputValue()) === longer, await box.inputValue());
+    }
+    // Break R2-M2: a calculated value (age) is offered by name and accepted as it is.
+    const calc = offered.find((o) => / \(calculated\)$/.test(o) && /^Age/i.test(o)) ?? offered.find((o) => / \(calculated\)$/.test(o));
+    step("fail case (break R2-M2): calculated values are offered by name (\"… (calculated)\")", !!calc && !KEY.test(calc), calc);
+    if (calc) {
+      await box.fill(calc);
+      await p.waitForTimeout(600); // the editor's own check runs 250 ms after a change
+      step("pass: a calculated value chosen by name says what it calculates, with no \"not a library field\" warning and no error", /Calculated: /.test(await row.innerText()) && !/not a library field|not in the library/.test(await p.locator("main").innerText()), (await row.innerText()).slice(0, 200));
+    }
     await p.getByRole("button", { name: "Edit as JSON" }).click();
     step("pass: the condition stores the field's key (advanced JSON view)", KEY.test(await p.getByLabel("Condition as JSON").inputValue()), (await p.getByLabel("Condition as JSON").inputValue()).slice(0, 120));
   }

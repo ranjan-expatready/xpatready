@@ -3,7 +3,7 @@
 // JSON. Every change is checked by the server against the library's field types; nothing here runs code.
 import * as React from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, useApi } from "@/lib/api";
 import { Button, Input, Select, Textarea } from "@/components/ui/controls";
 import { fieldName } from "@/lib/field-name";
 
@@ -50,7 +50,14 @@ export function ConditionBuilder({ value, onChange, fields, defaultSubject = "EA
   const [errors, setErrors] = React.useState<string[]>([]);
   const subject = value?.subjectKind ?? defaultSubject;
   const { combine, rows } = toRows(value);
-  const typeOf = (k: string) => fields.find((f) => f.key === k)?.value_type ?? (k.includes("days") || k.includes("age") || k.includes("years") ? "number" : "text");
+  // Break R2-M2: calculated values (age, days until expiry) are offered by name beside the library's fields.
+  const derivedQ = useApi<{ key: string; plain: string }[]>(["library-derived"], "/library/derived", { staleTime: 60_000 });
+  const derived: FieldInfo[] = React.useMemo(() => (derivedQ.data ?? []).map((d) => ({ key: d.key, meaning: d.plain, value_type: /days|age|years|months|count|number/.test(d.key) ? "number" : "text", name: `${fieldName(d.key)} (calculated)` })), [derivedQ.data]);
+  const offered = React.useMemo(() => [...fields, ...derived], [fields, derived]);
+  const typeOf = (k: string) => offered.find((f) => f.key === k)?.value_type ?? (k.includes("days") || k.includes("age") || k.includes("years") ? "number" : "text");
+  // Break R2-M1: while a person types, the box keeps exactly what they typed (a name that is the start of another, such
+  // as "Email" in "Email address", never swaps the text); the condition stores the key of a whole name only.
+  const [typing, setTyping] = React.useState<Record<number, string>>({});
   const listId = React.useId();
 
   React.useEffect(() => {
@@ -67,9 +74,11 @@ export function ConditionBuilder({ value, onChange, fields, defaultSubject = "EA
   // The field box shows a known field's name; a name typed or chosen becomes its key (a key typed still works; a value
   // that is not a library field, such as a derived age, stays as typed).
   // Two fields with one name are told apart by the group they belong to ("Family name (person)", "Family name (case)").
-  const nameOf = React.useMemo(() => { const n = new Map<string, number>(); for (const f of fields) n.set(baseName(f), (n.get(baseName(f)) ?? 0) + 1); return (f: FieldInfo) => (n.get(baseName(f)) ?? 0) > 1 ? `${baseName(f)} (${(f.key.split(".")[0] ?? "").replace(/_/g, " ")})` : baseName(f); }, [fields]);
-  const shownField = (k: string) => { const f = fields.find((x) => x.key === k); return f ? nameOf(f) : k; };
-  const keyOf = (t: string) => { const v = t.trim().toLowerCase(); return fields.find((x) => x.key === t.trim())?.key ?? fields.find((x) => nameOf(x).toLowerCase() === v)?.key ?? t; };
+  const nameOf = React.useMemo(() => { const n = new Map<string, number>(); for (const f of offered) n.set(baseName(f), (n.get(baseName(f)) ?? 0) + 1); return (f: FieldInfo) => (n.get(baseName(f)) ?? 0) > 1 ? `${baseName(f)} (${(f.key.split(".")[0] ?? "").replace(/_/g, " ")})` : baseName(f); }, [offered]);
+  // A key the editor does not offer (a retired field, break r2-m4) is shown in words too; its warning says what it is.
+  const shownField = (k: string) => { const f = offered.find((x) => x.key === k); return f ? nameOf(f) : /^[a-z][a-z0-9_]*\.[a-z0-9_.]+$/.test(k) ? fieldName(k) : k; };
+  const keyOf = (t: string) => { const v = t.trim().toLowerCase(); return offered.find((x) => x.key === t.trim())?.key ?? offered.find((x) => nameOf(x).toLowerCase() === v)?.key ?? t; };
+  const sameName = (t: string) => offered.filter((x) => baseName(x).toLowerCase() === t.trim().toLowerCase());
   if (json) return (
     <div className="flex flex-col gap-2">
       <Textarea className="mono min-h-32" value={text} onChange={(e) => { setText(e.target.value); try { onChange(JSON.parse(e.target.value)); } catch { setErrors(["not valid JSON yet"]); } }} aria-label="Condition as JSON" />
@@ -84,19 +93,23 @@ export function ConditionBuilder({ value, onChange, fields, defaultSubject = "EA
         <span className="text-text-muted">when</span>
         <Select className="w-auto" value={combine} onChange={(e) => build(subject, e.target.value, rows)} aria-label="Combine">{[["and", "all of these are true"], ["or", "any of these is true"]].map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select>
       </div>
-      <datalist id={listId}>{fields.map((f) => <option key={f.key} value={nameOf(f)}>{f.meaning}</option>)}</datalist>
+      <datalist id={listId}>{offered.map((f) => <option key={f.key} value={nameOf(f)}>{f.meaning}</option>)}</datalist>
       {rows.map((r, i) => {
         const t = typeOf(r.field);
         const set = (p: Partial<Row>) => build(subject, combine, rows.map((x, j) => (j === i ? { ...x, ...p } : x)));
         return (
           <div key={i} className="grid grid-cols-[1fr_auto_1fr_auto] items-center gap-2">
-            <Input list={listId} value={shownField(r.field)} placeholder="field, e.g. Marital status" onChange={(e) => set({ field: keyOf(e.target.value) })} aria-label="Field" />
+            <Input list={listId} value={typing[i] ?? shownField(r.field)} placeholder="field, e.g. Marital status" onChange={(e) => { const v = e.target.value; setTyping((t) => ({ ...t, [i]: v })); set({ field: keyOf(v) }); }} onBlur={() => setTyping((t) => { const { [i]: _drop, ...rest } = t; return rest; })} aria-label="Field" />
             <Select className="w-44" value={r.op} onChange={(e) => set({ op: e.target.value })} aria-label="Comparison">{OPS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select>
             {r.op === "exists" ? <span className="text-xs text-text-muted">(no value)</span>
               : t === "yes_no" && r.op !== "in" ? <Select value={r.value} onChange={(e) => set({ value: e.target.value })} aria-label="Value"><option value="">choose</option><option value="true">yes</option><option value="false">no</option></Select>
               : <Input type={t === "date" && r.op !== "in" ? "date" : "text"} value={r.value} placeholder={r.op === "in" ? "values, separated by commas" : t === "number" ? "number" : "value"} onChange={(e) => set({ value: e.target.value })} aria-label="Value" />}
             <Button size="icon" variant="ghost" aria-label="Remove this comparison" onClick={() => build(subject, combine, rows.filter((_, j) => j !== i))}><Trash2 /></Button>
-            {r.field && !fields.some((f) => f.key === r.field) ? <p className="col-span-4 -mt-1 text-xs text-text-warn">"{r.field}" is not a library field yet (derived values such as age are allowed). The draft saves; release waits until the fact is added from Smart questionnaire (SQR) › Facts a rule needs.</p> : r.field ? <p className="col-span-4 -mt-1 text-xs text-text-muted">{fields.find((f) => f.key === r.field)?.meaning} · {t}</p> : null}
+            {!r.field ? null
+              : derived.some((f) => f.key === r.field) ? <p className="col-span-4 -mt-1 text-xs text-text-muted">Calculated: {derived.find((f) => f.key === r.field)?.meaning}</p>
+              : fields.some((f) => f.key === r.field) ? <p className="col-span-4 -mt-1 text-xs text-text-muted">{fields.find((f) => f.key === r.field)?.meaning} · {t}</p>
+              : sameName(typing[i] ?? r.field).length > 1 ? <p className="col-span-4 -mt-1 text-xs text-text-warn">{sameName(typing[i] ?? r.field).length} fields are named "{(typing[i] ?? r.field).trim()}": choose one from the list ({sameName(typing[i] ?? r.field).map(nameOf).join(" or ")}).</p>
+              : <p className="col-span-4 -mt-1 text-xs text-text-warn">"{shownField(r.field)}" is not a library field or a calculated value yet. The draft saves; release waits until the fact is added from Smart questionnaire (SQR) › Facts a rule needs, or a calculated value is chosen from the list.</p>}
           </div>
         );
       })}

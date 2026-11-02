@@ -104,3 +104,19 @@ None.
 * Two fields with the same name.
 * A real screen reader.
 * An intended user's unaided walk (D17 and D20 stay with the founder).
+
+## Addendum, round 3 (commit 9cd221d9): Verdict: Approve
+* **R2-M1 is fixed.** `check_cost_warning_browser.cjs:147` now reads:
+  * the new Details words: "… AI spending cap (the experiment cap) · this round's budget (Wave 1): …";
+  * either money-left form that `spendLeftWords` produces.
+* **Evidence for the fix:**
+  * Both new patterns return `true` on the exact dialog text I recorded in round 2 (checked with node).
+  * The builder's run log (`scratchpad/suites2/cw.log`, 18:36) shows **27 passed, 0 failed**. It includes this step under its new name, and "US$0: no AI call was made".
+  * I did not run it myself, because it clicks Start Live and Continue.
+* **r2-n1 is fixed.** The source references list has `space-y-1` (`library.tsx:173`).
+* **r2-n2 is fixed.** The comment now matches the code, which appends the key's group (`conditions.tsx:69`).
+* **r2-n3** goes to the PR's Minors, as agreed.
+* **Web build:** the web was not rebuilt. That has no effect on behaviour: the only web changes are one spacing class and one comment, and the round-2 walk stands.
+* **Open items:** no Blocker or Major. n4, n5 and r2-n3 stay listed in the PR.
+* **Unchanged from round 2:** the journey score is 9.5 / 10, a pass.
+* **Run notes:** US$0, :4400 never used. I did not touch the breaker's copy on :4471.
