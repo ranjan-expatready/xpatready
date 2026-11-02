@@ -50,7 +50,7 @@ export function UnsourcedNumbers({ id, blocking }: { id: string; blocking: boole
   // Devin on #615 (EXPERIENCE: every screen has its loading and error states): Review may list source problems while
   // this list is still loading or failed to load, so say so and offer to try again, never a silent gap.
   if (q.isPending) return <p className="rounded-lg border border-border bg-surface-raised px-4 py-3 text-sm text-text-muted" data-unsourced-loading>Loading the numbers and their sources…</p>;
-  if (!q.data) return <Notice tone="danger" title="The numbers and their sources could not be loaded" action={<Button size="sm" variant="secondary" onClick={() => void q.refetch()} busy={q.isFetching}>Try again</Button>}><span data-unsourced-error>{(q.error as Error | null)?.message ?? "No answer from the server."} Review and release still lists them; their Add source buttons come back with the list.</span></Notice>;
+  if (!q.data) return <Notice tone="danger" title="The numbers and their sources could not be loaded" action={<Button size="sm" variant="secondary" onClick={() => void q.refetch()} busy={q.isFetching}>Try again</Button>}><span data-unsourced-error>{(q.error as Error | null)?.message ?? "No answer from the server."} Submit stays refused until each number has its answer; try again to see them and their Add source buttons.</span></Notice>;
   const held = q.data.numbers.filter((n) => !n.passes);
   const groups = [...held.reduce((m, n) => { const k = `${n.kind}|${n.key}`; m.set(k, [...(m.get(k) ?? []), n]); return m; }, new Map<string, SourceNumberView[]>()).values()];
   const c = q.data.counts;

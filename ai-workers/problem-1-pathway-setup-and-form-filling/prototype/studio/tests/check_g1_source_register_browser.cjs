@@ -203,7 +203,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     let fail503 = true;
     await p.route("**/api/combinations/*/sources", (route) => fail503 ? route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ title: "Unavailable", status: 503, detail: "The sources service is down (test)." }) }) : route.continue());
     await p.reload(); await settle(); await p.locator("[data-unsourced-error]").waitFor({ timeout: 30000 });
-    step("C5.4 (Devin on #615): when the sources fail to load, Review says so with the server's words and Try again", (await p.locator("[data-unsourced-error]").innerText()).includes("The sources service is down (test).") && await p.getByRole("button", { name: "Try again" }).count() === 1);
+    step("C5.4 (Devin on #615; review r3 m1): when the sources fail to load, Review says so with the server's words, that Submit stays refused, and Try again", (await p.locator("[data-unsourced-error]").innerText()).includes("The sources service is down (test). Submit stays refused until each number has its answer; try again to see them and their Add source buttons.") && await p.getByRole("button", { name: "Try again" }).count() === 1);
     await axe("Review and release with the sources error", "main");
     fail503 = false; await p.getByRole("button", { name: "Try again" }).click(); await settle();
     step("C5.4 (Devin on #615): Try again brings the list back", await p.locator("[data-sources-all-set], [data-unsourced]").count() === 1);
