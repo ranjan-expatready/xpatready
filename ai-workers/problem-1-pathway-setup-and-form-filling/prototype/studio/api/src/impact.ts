@@ -14,6 +14,7 @@ import { newestEdition } from "../../engine/programs.ts";
 import { effective } from "../../engine/snapshot.ts";
 import { ACTORS, Audit, Db, fail, need, PY, ROOT, SOLUTION, STUDIO, Workspace, type Actor } from "./core.ts";
 import { APPROVED_DIR, recordApproval, Sources } from "./sources.ts";
+import { formCombinations, openCases } from "./where-used.ts";
 
 const run = promisify(execFile);
 type InvField = { data_path?: string; caption?: string; section?: string };
@@ -46,9 +47,9 @@ export class Impact {
     // Impact on the library: the shared fields read by form fields that were removed or reworded.
     const touchedKeys = [...new Set(rows.filter((r) => (r.change === "removed" || r.change === "reworded") && r.field).map((r) => r.field!))];
     const fields = touchedKeys.length ? await this.db.canonicalField.findMany({ where: { workspaceId: h.workspaceId, canonicalFieldKey: { in: touchedKeys } }, orderBy: { version: "desc" }, distinct: ["canonicalFieldKey"], select: { canonicalFieldKey: true, label: true, meaning: true } }) : [];
-    const uses = await this.db.combinationForm.findMany({ where: { workspaceId: h.workspaceId, govFormDefId: def.id, status: { not: "RETIRED" } }, include: { combination: { select: { id: true, label: true } } } });
-    const combos = [...new Map(uses.map((u) => [u.combination.id, u.combination])).values()];
-    const cases = combos.length ? await this.db.case.count({ where: { combinationId: { in: combos.map((c) => c.id) } } }).catch(() => 0) : 0;
+    // SH2 (P-258): the combinations that file the form now and their open cases, from the one where-used service.
+    const combos = await formCombinations(this.db, h.workspaceId, def.formKey);
+    const cases = await openCases(this.db, combos.map((c) => c.id)).catch(() => 0);
     return {
       id: h.id, form: def.formKey, title: def.displayName, edition: h.editionLabel, library_edition: old?.editionLabel ?? null, uploaded_by: ACTORS.find((a) => a.id === h.createdBy)?.name ?? "A person", at: h.createdAt,
       counts: { form_fields: fresh.length, unchanged: count("unchanged"), reworded: count("reworded"), new: count("new"), removed: count("removed") },
