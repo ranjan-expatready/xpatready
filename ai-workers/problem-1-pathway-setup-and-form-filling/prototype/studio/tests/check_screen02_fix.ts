@@ -264,10 +264,10 @@ const REASON = "Test: a different meaning from the library field that could fit.
        select gen_random_uuid(), workspace_id, 'requirement_line', id, 'checklist_draft', 'combination', '{"match":"new","existingKey":null}', '{"who": 5}'::jsonb || '{"kind":"requirement_line"}', null, '{"draft":null,"check":null}', 'one_round', 'check', 'ai', '{"key":"requirement.brk","near":[],"nearReason":null}', 'requirement.brk', '{"proposedKey":"requirement.brk","outcome":"NEW","reason":"test input","legacyKind":"document_requirement","legacyPayload":{"who": 5},"sourceQuote":"Test input"}' from drafting_job where id='${ckJob}'`);
   const bad = sql(`select id from proposal_item where run_id='${ckJob}' and identity_key='requirement.brk'`);
   r = await call("POST", `/jobs/${ckJob}/items/${bad}`, { decision: "NEW", label: "Brk checklist", meaning: "A test meaning long enough." });
-  ok("C3.4 m8 fail: a checklist proposal cannot be made a shared field (400)", r.status === 400, r.body?.detail);
-  await call("POST", `/jobs/${ckJob}/items/${bad}`, { decision: "ACCEPTED" });
-  r = await call("POST", `/jobs/${ckJob}/apply-checklist`);
-  ok("C3.4 M7 fail: a malformed accepted proposal is refused (400) and the draft is not marked applied", r.status === 400 && sql(`select status from drafting_job where id='${ckJob}'`) === "COMPLETED", r.body?.detail);
+  ok("C3.4 m8 fail: a checklist proposal cannot be made a shared field (410: it is decided on the review queue only)", r.status === 410, r.body?.detail);
+  const reqs = Number(sql(`select count(*) from document_requirement where combination_id='${sv}'`));
+  r = await call("POST", "/review/proposals/decide", { ids: [bad], action: "accept" });
+  ok("C3.4 M7 fail: a malformed line is refused at accept (400, in words) and nothing is written", r.status === 400 && /incomplete/.test(r.body?.detail ?? "") && sql(`select status from proposal_item where id='${bad}'`) === "waiting" && Number(sql(`select count(*) from document_requirement where combination_id='${sv}'`)) === reqs, r.body?.detail);
 
   console.log(`\n${pass}/${pass + fail} passed`);
   process.exit(fail ? 1 : 0);

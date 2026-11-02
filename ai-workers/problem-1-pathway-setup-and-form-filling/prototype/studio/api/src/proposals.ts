@@ -7,7 +7,7 @@
 import { HttpStatus } from "@nestjs/common";
 import { proposeConditionChange } from "./question-condition.ts";
 import { createHash, randomUUID } from "node:crypto";
-import type { Prisma, ProposalItem as Row } from "@prisma/client";
+import { Prisma, type ProposalItem as Row } from "@prisma/client";
 import { ProposalItem, ProposalPayload, type ProposalKind } from "../../contracts/proposal-item.ts";
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { DRAFT_FIELDS_STEP, FIELD_ID, FIELD_ID_MAX } from "./field-draft-items.ts";
@@ -17,6 +17,8 @@ import { keyFor } from "./library-changes.ts";
 import { checkedFieldValues, dropFieldList, type AnswerValue } from "./answer-values.ts";
 import { acceptPqrPick } from "./fact-sources.ts";
 import { usedInLabels } from "./where-used.ts";
+import { lockItem, refuseRetired } from "./library-items.ts";
+import { checkCondition } from "../../engine/validate.ts";
 import { nearMatches } from "../../engine/near.ts";
 
 type Tx = Prisma.TransactionClient;
@@ -40,8 +42,14 @@ export function listIdentity(codes: string[]): string {
   return all.length <= 300 ? all : `codes:${new Set(codes).size}:${createHash("sha256").update(all).digest("hex").slice(0, 40)}`;
 }
 
+/** C2.6: a document line in words, "Passport information page copy · each applicant" (its payload has no label). */
+export function lineTitle(p: { documentType?: unknown; roles?: unknown }): string {
+  const t = String(p.documentType ?? "A document").replace(/_/g, " ").trim(), roles = Array.isArray(p.roles) ? p.roles.map((x) => String(x).replace(/_/g, " ")).join(", ") : "";
+  return `${t ? t[0].toUpperCase() + t.slice(1) : "A document"}${roles ? ` · ${roles}` : ""}`.replace(/\bUs\b/, "US").slice(0, 160);
+}
 /** The words a person reads for an item: its name, never an answer list's code list or hash (C3.4 review Minor 5). */
 export function nameOf(p: ProposalPayload, given: string): string {
+  if (p.kind === "requirement_line") return lineTitle(p);
   const named = (p as { label?: unknown; name?: unknown }).label ?? (p as { name?: unknown }).name;
   return typeof named === "string" && named.trim() ? named : identityKeyOf(p, given);
 }
@@ -254,6 +262,86 @@ export function withNearReason(reason: string | null, identity: unknown): string
   return `${reason ? `${reason} ` : ""}Close to ${id.near.slice(0, 3).join(", ")}: ${id.nearReason}`.slice(0, 1000);
 }
 
+/** "document type key|person" of every requirement the combination has now (each lineage's newest version, unless
+ *  retired): a checklist line already there is never written twice (#277 review M2). */
+export async function linesOnCombination(db: Client, combinationId: string): Promise<Set<string>> {
+  const rows = await db.documentRequirement.findMany({ where: { combinationId }, select: { lineageKey: true, version: true, status: true, documentTypeKey: true, appliesToRoles: true } });
+  const top = new Map<string, (typeof rows)[number]>();
+  for (const r of rows) { const t = top.get(r.lineageKey); if (!t || r.version > t.version) top.set(r.lineageKey, r); }
+  return new Set([...top.values()].filter((r) => r.status !== "RETIRED").map((r) => `${r.documentTypeKey}|${r.appliesToRoles}`));
+}
+/** Whose document a line is (the requirement writer's list, studio.ts WHO; kept here so the lander needs no Studio). */
+const LINE_WHO = ["each_applicant", "principal_applicant", "spouse_or_partner", "couple_once", "each_dependent_child", "each_person", "case", "representative", "sponsor"];
+const say = (k: string) => k.replace(/_/g, " ");
+
+/** C2.6 (QA-157, P-149 one door): an accepted checklist line becomes a DRAFT document line of its combination, under the
+ *  requirement writer's rules (studio.ts saveRequirement): a library document type that is not retired, a known person,
+ *  a condition in the condition language when it is not always needed, never the same line twice. Its document type,
+ *  when the library lacks it, is the document_type item proposed beside it (relatesTo): accepting the line accepts that
+ *  item in the same decision, so it still waits for a second person (BR-7), and one Undo takes both back. */
+async function landRequirementLine(tx: Tx, r: Row, p: ProposalPayload, l: Landing): Promise<string> {
+  // Draft edits of a combination are the author duty (studio.ts saveRequirement; the old apply door needed it too).
+  need(l.actor, "author");
+  // Break M7 (#277): a stored line is checked before anything is written; a malformed one is refused in words.
+  const parsed = ProposalPayload.safeParse(p);
+  if (!parsed.success || parsed.data.kind !== "requirement_line") fail(`This document line is incomplete (${parsed.success ? "not a document line" : plainIssues(parsed.error)}): reject it, or edit it into a whole line.`);
+  const q = parsed.data as Extract<ProposalPayload, { kind: "requirement_line" }>;
+  if (!r.combinationId) fail("A document line belongs to a combination, and this proposal names none.");
+  const live = { in: ["DRAFT", "PUBLISHED"] as ("DRAFT" | "PUBLISHED")[] };
+  const inLibrary = async (k: string) => (await tx.documentType.findFirst({ where: { workspaceId: l.ws, status: live, OR: [{ documentTypeKey: k }, { name: { equals: k, mode: "insensitive" } }, { name: { equals: say(k), mode: "insensitive" } }] }, orderBy: { version: "desc" }, select: { documentTypeKey: true } }))?.documentTypeKey ?? null;
+  let typeKey = await inLibrary(q.documentType);
+  // The type proposed beside the line counts only while the line still names it (break M2: an edit naming another type
+  // that the library lacks is refused, never quietly landed on the proposed one).
+  const named = (r.payload as { documentType?: unknown }).documentType === q.documentType;
+  const t = !typeKey && named && r.relatesTo ? await tx.proposalItem.findUnique({ where: { id: r.relatesTo } }) : null;
+  if (t?.kind === "document_type") {
+    const tn = String((t.payload as { name?: unknown }).name ?? q.documentType);
+    if (t.status === "waiting") {
+      if ((t.reuse as { match?: string }).match === "new") { const twin = await sameInLibrary(tx, l.ws, t.payload as ProposalPayload); if (twin) fail(`"${tn}" is already in the library as ${twin} (added since it was proposed): reject the document type proposal, then reject it and add the line by hand on the combination's Documents with ${twin}.`, HttpStatus.CONFLICT); }
+      typeKey = await LANDERS.document_type!(tx, t, t.payload as ProposalPayload, { ...l, itemId: t.id, reason: `Accepted with its document line "${String((r.work as { label?: unknown } | null)?.label ?? q.documentType)}".` });
+      await tx.proposalItem.update({ where: { id: t.id }, data: { status: "accepted", decidedBy: l.actor.id, decidedAt: new Date(), decisionReason: "Accepted with its document line.", batchId: l.batchId, decidedKey: typeKey,
+        work: { ...((t.work ?? {}) as object), landedStamp: await stampOf(tx, l.ws, "document_type", typeKey!) } as Prisma.InputJsonValue } });
+    } else if (["accepted", "edited"].includes(t.status) && t.decidedKey && (await usableInLibrary(tx, l.ws, "document_type", t.decidedKey))) typeKey = t.decidedKey;
+    else fail(`Its document type "${tn}" was ${t.status === "rejected" ? "rejected" : "taken back"}, so the line has none: reject it and add the line by hand on the combination's Documents, with a document type of the library.`, HttpStatus.CONFLICT);
+  }
+  if (!typeKey) fail(`"${say(q.documentType)}" is not a document type in the shared library: reject it and add the line by hand on the combination's Documents, with a document type that is.`, HttpStatus.CONFLICT);
+  await lockItem(tx, l.ws, "document_type", [typeKey]); await refuseRetired(tx, l.ws, "document_type", [typeKey]);
+  const roles = [...new Set(q.roles)]; // break m1: a role named twice is one line
+  const bad = roles.find((x) => !LINE_WHO.includes(x));
+  if (bad) fail(`Whose document it is, "${say(bad)}", is not a choice: reject it and add the line by hand on the combination's Documents, for a person of Who can be.`);
+  let tree: unknown = null;
+  if (!q.always) {
+    tree = q.condition?.tree;
+    if (!tree || typeof tree !== "object") fail(`"${say(q.documentType)}" has no condition yet, and the checklist does not settle when it is needed, so it cannot be accepted as it stands: reject it and add the line by hand on the combination's Documents, with when it is needed (or as always needed).`, HttpStatus.CONFLICT);
+    // The requirement writer's check: a draft may read a fact the library does not have yet (release blocks it, P-223 (a)).
+    const all = await tx.canonicalField.findMany({ where: { workspaceId: l.ws }, orderBy: { version: "asc" }, select: { canonicalFieldKey: true, valueType: true, status: true } });
+    const newest = new Map(all.map((f) => [f.canonicalFieldKey, f])); // each field's newest version (ordered by version)
+    const retired = new Set([...newest.values()].filter((f) => f.status === "RETIRED").map((f) => f.canonicalFieldKey));
+    const fields = new Map([...newest.values()].filter((f) => !retired.has(f.canonicalFieldKey)).map((f) => [f.canonicalFieldKey, f.valueType]));
+    const derived = new Set((await tx.derivedField.findMany({ where: { workspaceId: l.ws }, select: { derivedKey: true } })).map((d) => d.derivedKey));
+    // As the writer (studio.ts conditionErrors, C11.9 break M1): a retired field is named as retired and refused; a field
+    // not in the library at all is allowed in a draft (release blocks it).
+    const errs = checkCondition(tree, fields, derived).map((e) => { const m = /^reads (\S+), which is not in the library$/.exec(e); return m && retired.has(m[1]) ? `it reads "${m[1].split(".").pop()!.replace(/_/g, " ")}", a retired field: restore it in Shared library › Fields first, or choose another` : e; })
+      .filter((e) => !/^reads [a-z][a-z0-9_]*\.[a-z0-9_.]+, which is not in the library$/.test(e));
+    if (errs.length) fail(`Its condition does not fit the condition language yet (${errs[0]}): reject it and add the line by hand on the combination's Documents, with a condition that does.`);
+  }
+  const have = await linesOnCombination(tx, r.combinationId!);
+  const twice = roles.find((x) => have.has(`${typeKey}|${x}`));
+  if (twice) fail(`"${say(q.documentType)}" for ${say(twice)} is already on this combination: reject this one.`, HttpStatus.CONFLICT);
+  const w = (r.work ?? {}) as { officialFile?: string; providedBy?: string };
+  const src = r.source as { quote?: string; file?: string } | null;
+  const keys: string[] = [];
+  for (const role of roles) {
+    let key = `${typeKey}:${role}`;
+    if (await tx.documentRequirement.findFirst({ where: { combinationId: r.combinationId!, lineageKey: key }, select: { id: true } })) key = `${key}:${Date.now().toString(36)}`;
+    await tx.documentRequirement.create({ data: { workspaceId: l.ws, combinationId: r.combinationId!, lineageKey: key, version: 1, status: "DRAFT", documentTypeKey: typeKey!, attachMode: q.always ? "COMBINATION_MANDATORY" : "ANSWER_CONDITIONAL",
+      predicateJson: q.always ? Prisma.DbNull : (tree as Prisma.InputJsonValue), conditionPlain: q.always ? null : q.condition?.sentence ?? null, appliesToRoles: role, providedBy: w.providedBy ?? "client",
+      sourceQuote: src?.quote ?? null, sourceFile: w.officialFile ?? (src?.file ? src.file.split("/").pop()! : null), alternatives: Prisma.DbNull, origin: "AI_PROPOSAL", updatedBy: l.actor.id } });
+    keys.push(key);
+  }
+  return keys.join(",");
+}
+
 /** LANDERS[kind]: what accepting an item writes, inside decide's transaction. A kind with no lander yet is refused. */
 export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalPayload, l: Landing) => Promise<string>>> = {
   /** C4.11 part 3 (forms lane): a waiting library change for a second person (question-condition.ts), never a direct edit. */
@@ -321,6 +409,7 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
     await waitingAdd(tx, l, "document_type", key, d.name);
     return key;
   },
+  requirement_line: landRequirementLine,
 };
 
 /** C4.7 (P-76, P-149 one door): a pre-qualification pick lands on this combination, not the library. Accept writes the
@@ -359,7 +448,10 @@ const STAMP: Record<string, (tx: Tx, ws: string, key: string) => Promise<unknown
   answer_list: (tx, ws, key) => tx.answerList.findMany({ where: { workspaceId: ws, answerListKey: key }, orderBy: { version: "asc" }, select: { version: true, status: true, updatedAt: true, values: { orderBy: { valueKey: "asc" }, select: { valueKey: true, label: true, sortOrder: true } } } }),
   document_type: (tx, ws, key) => tx.documentType.findMany({ where: { workspaceId: ws, documentTypeKey: key }, orderBy: { version: "asc" }, select: { version: true, status: true, updatedAt: true } }),
 };
-const stampOf = async (tx: Tx, ws: string, kind: string, key: string) => (STAMP[kind] ? JSON.stringify(await STAMP[kind](tx, ws, key)) : null);
+/** C2.6: a document line a checklist item landed, as it stands (its lineages on its combination). */
+const lineStamp = (tx: Tx, combinationId: string, key: string) => tx.documentRequirement.findMany({ where: { combinationId, lineageKey: { in: key.split(",") } }, orderBy: [{ lineageKey: "asc" }, { version: "asc" }], select: { lineageKey: true, version: true, status: true, updatedAt: true } });
+const stampOf = async (tx: Tx, ws: string, kind: string, key: string, combinationId?: string | null) =>
+  kind === "requirement_line" ? (combinationId ? JSON.stringify(await lineStamp(tx, combinationId, key)) : null) : STAMP[kind] ? JSON.stringify(await STAMP[kind](tx, ws, key)) : null;
 
 export const UNDO_SECONDS = 10;
 export const BATCH_MAX = 200;
@@ -370,16 +462,16 @@ export const BATCH_MAX = 200;
 export const QUEUE_TX = { timeout: 60_000, maxWait: 10_000 };
 /** The field-map step's items map form fields as well, so they are decided on their form-field page (job.tsx) until
  *  that page folds into the queue with the edition drafts (1b, build-notes). A checklist draft's requirement lines
- *  (C2.6) are decided and applied together on their checklist page (job.tsx ChecklistJob), which writes them through
- *  the requirement writer with their conditions; the queue lists them with the link (#277 review M1). */
-export const ON_ITS_PAGE = new Set(["field_map", "checklist_draft"]);
+ *  (C2.6) are decided here, on the queue, like every other item (QA-157, P-149 one door: LANDERS.requirement_line). */
+export const ON_ITS_PAGE = new Set(["field_map"]);
 /** The page an ON_ITS_PAGE step is decided on, in words. */
-export const PAGE_WORDS: Record<string, string> = { field_map: "form-field page, where its form fields are mapped too", checklist_draft: "checklist page, where the checklist's lines are decided and applied together" };
+export const PAGE_WORDS: Record<string, string> = { field_map: "form-field page, where its form fields are mapped too" };
 /** Why an item cannot be accepted with others (P-121, P-158): only Ready items, never a rules item landing on the
  *  library. null when it can. */
-export function bulkWhy(r: Pick<Row, "confidence" | "origin" | "landsOn" | "step">): string | null {
+export function bulkWhy(r: Pick<Row, "confidence" | "origin" | "landsOn" | "step"> & { agreement?: string }): string | null {
   if (ON_ITS_PAGE.has(r.step)) return `It is decided on its ${(PAGE_WORDS[r.step] ?? "own page").split(",")[0]}.`;
-  if (r.confidence !== "ready") return r.confidence === "check" ? "It needs a check first: open it and decide it on its own." : "Its two readings differ: open it and choose.";
+  // C2.6 (QA-157): a one-round Decide item is one its source leaves to a person (e.g. the visa office), not two readings.
+  if (r.confidence !== "ready") return r.confidence === "check" ? "It needs a check first: open it and decide it on its own." : r.agreement === "one_round" ? "Its source leaves it to a person: open it and decide it on its own." : "Its two readings differ: open it and choose.";
   if (r.origin === "rules" && r.landsOn === "library") return "A rules item that adds to the shared library is accepted on its own.";
   return null;
 }
@@ -398,7 +490,11 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
   if (reason && reason.length > 300) fail("Keep the reason under 300 characters.");
   const batchId = randomUUID();
   const landed = await db.$transaction(async (tx) => {
-    const rows = await tx.proposalItem.findMany({ where: { id: { in: ids }, workspaceId } });
+    // C2.6 break M3: the items are locked first, so an accept and a reject of the same item at the same moment cannot
+    // both succeed; the second waits, then reads the first's decision and is refused as already decided.
+    const valid = ids.filter((x) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x));
+    if (valid.length) await tx.$queryRaw`SELECT id FROM proposal_item WHERE id = ANY(${valid}::uuid[]) ORDER BY id FOR UPDATE`;
+    const rows = await tx.proposalItem.findMany({ where: { id: { in: valid }, workspaceId } });
     if (rows.length !== new Set(ids).size) fail("A proposal was not found (the demo may have been reset).", HttpStatus.NOT_FOUND);
     const done = rows.filter((r) => r.status !== "waiting");
     if (done.length) fail(`${done.length === 1 ? "A proposal is" : `${done.length} proposals are`} already decided (${done[0].status}); an approved item changes only as a revision.`, HttpStatus.CONFLICT);
@@ -451,7 +547,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         }
       }
       // What a library lander wrote, as it stands now: Undo refuses once it has changed (PR #96 review (1)).
-      const landedStamp = landedAs && !reused ?await stampOf(tx, workspaceId, r.kind, landedAs) : null;
+      const landedStamp = landedAs && !reused ? await stampOf(tx, workspaceId, r.kind, landedAs, r.combinationId) : null;
       const work = { ...((r.work ?? {}) as object), ...(d.action === "edit" ? { beforeEdit: r.payload } : {}), ...(landedStamp ? { landedStamp } : {}), ...(pqr ? { pqr } : {}) };
       await tx.proposalItem.update({ where: { id: r.id }, data: { status: d.action === "accept" ? "accepted" : d.action === "edit" ? "edited" : "rejected", decidedBy: actor.id, decidedAt: new Date(),
         decisionReason: reason, batchId, decidedKey: landedAs, ...(resolved && d.action !== "reject" ? { reuse: resolved } : {}),
@@ -488,19 +584,25 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     const users = keys.length ? await tx.proposalItem.findMany({ where: { workspaceId, status: { in: ["accepted", "edited"] }, decidedKey: { in: keys }, reuse: { path: ["match"], equals: "reuse" }, NOT: { batchId } }, select: { kind: true, decidedKey: true, formEdition: true } }) : [];
     const user = users.find((u) => added.some((r) => r.kind === u.kind && r.decidedKey === u.decidedKey));
     if (user) fail(`${user.decidedKey} is now reused by an item accepted for ${user.formEdition ?? "another source"}, so Undo would take it away under that item. Nothing was undone: undo that decision first, or retire the item in the shared library.`, HttpStatus.CONFLICT);
-    // C3.6 (break M1 on #573): a document type a checklist line now uses (as its type or an alternative) is not taken away
-    // under that line. The line door takes the same per-item lock (studio.ts saveRequirement, library-items.ts lockItem).
-    const typeKeys = added.filter((r) => r.kind === "document_type").map((r) => r.decidedKey!).sort();
-    for (const k of typeKeys) await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`library-item:${workspaceId}:document_type:${k}`}))::text AS locked`;
-    for (const k of typeKeys) {
-      const line = await tx.documentRequirement.findFirst({ where: { workspaceId, status: { not: "RETIRED" }, OR: [{ documentTypeKey: k }, { alternatives: { array_contains: [k] } }] }, select: { combinationId: true } });
-      if (line) fail(`The document type ${k} is already used by a checklist line, so Undo would take it away under that line. Nothing was undone: remove the line first, or retire the type in the shared library.`, HttpStatus.CONFLICT);
+    // C3.6 (break M1 on #573) and C2.6 (break M1 on #574): a document type this batch added that a line outside this
+    // batch now uses (as its type or an alternative) is not taken away under that line. The lines this batch wrote itself
+    // (a C2.6 checklist line accepted with its new type) go with it, so one Undo still takes both back. The line door
+    // takes the same per-item lock (studio.ts saveRequirement, library-items.ts lockItem).
+    const typeKeys = [...new Set([...adds.filter((c) => c.kind === "document_type").map((c) => c.key), ...added.filter((r) => r.kind === "document_type").map((r) => r.decidedKey!)])].sort();
+    if (typeKeys.length) {
+      await lockItem(tx, workspaceId, "document_type", typeKeys);
+      const own = new Set(rows.filter((r) => r.kind === "requirement_line" && r.decidedKey && r.combinationId).flatMap((r) => r.decidedKey!.split(",").map((k) => `${r.combinationId}|${k}`)));
+      for (const k of typeKeys) {
+        const using = (await tx.documentRequirement.findMany({ where: { workspaceId, status: { not: "RETIRED" }, OR: [{ documentTypeKey: k }, { alternatives: { array_contains: [k] } }] }, select: { combinationId: true, lineageKey: true, combination: { select: { label: true } } } }))
+          .find((d) => !own.has(`${d.combinationId}|${d.lineageKey}`));
+        if (using) fail(`The document type ${k} is already used by a checklist line on ${using.combination.label}, so Undo would take it away under that line. Nothing was undone: remove that line (or undo its decision) first, or retire the type in the shared library.`, HttpStatus.CONFLICT);
+      }
     }
     // PR #96 review (1): an item edited after the accept is not erased by Undo; the library keeps the person's edit.
     for (const r of rows) {
       const { landedStamp } = (r.work ?? {}) as { landedStamp?: string };
-      if (landedStamp && r.decidedKey && (await stampOf(tx, workspaceId, r.kind, r.decidedKey)) !== landedStamp)
-        fail(`"${nameOf(r.payload as ProposalPayload, r.identityKey)}" was changed after it was accepted, so Undo would erase that change. Nothing was undone: retire or delete it in the shared library instead.`, HttpStatus.CONFLICT);
+      if (landedStamp && r.decidedKey && (await stampOf(tx, workspaceId, r.kind, r.decidedKey, r.combinationId)) !== landedStamp)
+        fail(`"${nameOf(r.payload as ProposalPayload, r.identityKey)}" was changed after it was accepted, so Undo would erase that change. Nothing was undone: ${r.kind === "requirement_line" ? "change or remove the line on the combination's Documents instead" : "retire or delete it in the shared library instead"}.`, HttpStatus.CONFLICT);
     }
     // C4.7: an accepted pick's tick is taken back only while it is the draft the accept wrote (not changed or released
     // since); the draft it replaced comes back as it was.
@@ -515,6 +617,8 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     // C3.6 (break B2): a field's own draft list goes with it, unless another field uses it.
     const lists = await tx.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: adds.filter((c) => c.kind === "field").map((c) => c.key) }, status: "DRAFT", version: 1 }, select: { answerListKey: true } });
     for (const c of adds) await LANDED[c.kind]?.(tx, workspaceId, c.key);
+    // C2.6: the draft document lines a checklist item wrote (unchanged since, checked above) go with it.
+    for (const r of rows) if (r.kind === "requirement_line" && r.decidedKey && r.combinationId) await tx.documentRequirement.deleteMany({ where: { combinationId: r.combinationId, lineageKey: { in: r.decidedKey.split(",") }, version: 1, status: "DRAFT" } });
     for (const x of lists) await dropFieldList(tx, workspaceId, x.answerListKey);
     await tx.libraryChange.deleteMany({ where: { workspaceId, batchId } });
     for (const r of rows) {
