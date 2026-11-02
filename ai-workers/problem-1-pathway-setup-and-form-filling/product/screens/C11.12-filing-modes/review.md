@@ -1,57 +1,89 @@
 # C11.12 filing modes, PR 1 of 3: review (independent reviewer, 2 Nov)
 
-**Commit reviewed:** `e4cc6008` on `claude/fervent-fermat-mvm1kg` (branch head). It differs from `a6d0af44` only by reverting test-run screenshots and evidence JSON; `git diff a6d0af44 e4cc6008` touches no api, engine, contracts, web, samples or test file.
-**Against:** concept r2 §3, §6, §6b (PR 1 scope), `challenge.md` (B1, m2, m4, m6, m8), P-233 (all read from `origin/lead/2026-11-02-c1112-board`); STANDARDS, EXPERIENCE, QUALITY.
-**Run:** my own copies on :4441 and :4442 (never :4400). US$0, live AI off. `check_c1112_modes.ts` 32/32. `C11.12.test.ts` 18/19; the one fail is line 90, principal labels in `wave1.json`, the same on main. `tsc` is clean for web and api. A probe script that releases and opens a case. A browser journey with 22/22 checks (`journey-test-reviewer-2026-11-02.md`).
+**Commit reviewed:** `92e25d3d` on `claude/fervent-fermat-mvm1kg` (branch head).
+- The fixes are in `9dbf504b`.
+- After that comes a merge of origin/main, which adds no file to this PR's diff.
+- Then the earlier review files.
 
-## Verdict: Block (Ship after fixes)
-The rules, the editor fix and the `setup_vv_m3` fix are sound, and each is tested pass and fail. One Major: PR 1 lets a configuration be released that crashes the case's Prepare view. A second Major: the preview disagrees with the case for lines that have no mode. Both are small to fix.
+**Round 1** was on `e4cc6008` and gave Block: Majors M1 and M2, Minors m1–m4. This round re-checks only what changed since then.
 
-## Issues
-**M1 (Major, Must): a release with a Declared only line gives a 500 on every case's Prepare.** PR 1 adds `declared_only` and `co_files` to the contract and lets them be saved and released (the save only warns, and the release check has no line for them). But the runtime still feeds the release's mode straight into the filing: `case-prepare.ts:74` and `case-filings.ts:30` cast it to `CaseFiling["mode"]`. The DB check `filing_mode_check` allows only `files_own` and `on_principal`. Reproduced on :4441 with these steps:
-1. Run release 1 and pack 4's release 2.
-2. `PATCH /combinations/:vv/people` with child `declared_only`, `applies:false` → 200 with the Guide 5256 warning.
-3. Submit, sign off, approve → release 3 (201).
-4. `openCase(vv, FAMILY)`, then `GET /runtime/cases/:id/prepare` → **500**. `api.log`: `new row for relation "filing" violates check constraint "filing_mode_check"`.
+**Against:** concept r2 §3, §6 and §6b (PR 1 scope), `challenge.md`, and P-233, all read from `origin/lead/2026-11-02-c1112-board`; also STANDARDS, EXPERIENCE and QUALITY.
 
-`GET …/filings` on the same case returns filings with `mode:"declared_only"` and applicants `"applying"`, which breaks the `CaseFiling` contract. A Sponsor `co_files` line can reach the same path on any combination the runtime derives.
+**Run:** my own copy on :4441, never :4400. US$0, live AI off.
+- `check_c1112_modes.ts` 39/39.
+- `tsc` for the web build is clean.
+- `tsc` for the api build reports errors only in `check_x2b_bulk_apply.ts`, `check_c18_age_case.ts` and `check_vv_checklist.ts`. They are not in this PR's diff; they came from main.
+- My round-1 probes, re-run on a fresh copy: release 1, `setup_vv_m3`, then child Declared only and release 3.
 
-Fix (keep it switched off until PR 2): add a release-check **error** for any line with `declared_only` or `co_files` on a combination the runtime derives ("Cases cannot use this filing yet"; removed in PR 2). Alternatively, map modes through `filingOf()` in both runtime readers so only modes the engine knows reach it. Add a fail test (release check, or the probe above).
+## Verdict: Approve
+Both Majors are fixed, each with a passing and a failing test. No Blocker or Major is open.
 
-**M2 (Major, Must): the "What a case gets" preview disagrees with the case for a line with no mode.** `previewFilings` uses `modeOf → null → "files nothing"` (`engine/filing-modes.ts:302`, `filingPlan` line 288). The case instead falls back to the combination's table (`filings.ts` `rules.modes`; for `vv.single` the child files their own). This state is reachable from the screen today: untick Applicant on Child, save, tick it again, save. The API view then says `gets: "2 filings in one submission"` and the child shows `filingWords: "Filing not set"`, while a case of that release gives the child a filing. Lines saved before C11.12 (demo database drafts) are in the same state.
+## Round-1 issues
+- **M1, fixed.** `releaseModes()` (`engine/filing-modes.ts`) lets only `files_own` and `on_principal` reach the case engine. Both `case-prepare.ts:74` and `case-filings.ts:30` use it.
+  - Probe: child `declared_only` saved (200, with the Guide 5256 warning) and released as version 3. The case's Prepare answered **200**. `/filings` answered 200 with every filing `files_own`/`applying`.
+  - Tests: `check_c1112_modes.ts` has M1 pass and fail cases, plus `deriveFilings` keeping every mode the database accepts. Removing the filter turns the fail case red.
+  - The release fingerprint is untouched: only the runtime reads the modes differently.
+- **M2, fixed.** `previewFilings(…, fallback)` uses `defaultModeOf()`, the same built-in table `deriveFilings` falls back to; `workspace.ts:141` wires it in.
+  - Probe: untick Child, then tick it again → the view says "3 filings in one submission", the same as the case.
+  - Tests: a pass for Visitor visa and a fail for a combination with no default.
+- **m1, fixed.** When `filingMode` and `filing` disagree, the save answers 400 "Filing: send one choice (filingMode and filing disagree)" (`engine/people.ts`). Probe: 400. Tests: pass (they agree) and fail (they disagree).
+- **m2, fixed.**
+  - The release warning now says a case uses the combination's built-in default until the Filing column ships.
+  - Ticking Applicant on a Declared only line clears the mode in the editor, so the strict 400 can no longer be reached from the screen (`questionnaires.tsx:139`).
+- **m3 and m4, listed in the PR body.** The editor's browser check comes with PR 3. The Sponsor lines in `wave1.json` and `programs.json` come with PR 2. Accepted as recorded. My round-1 browser journey (22/22) covers the editor paths for now.
 
-This breaks §6b ("preview from the same plan the case will use") and challenge m4, and the preview's sentence is wrong rather than labelled. Fix: in the preview, use the same fallback the case uses for a line without a mode. Or name the line ("Child: filing not set, not counted") and keep it out of `gets`. Add a pass and a fail test.
+## New Minors (Should; list in the PR, no new scope)
+- **n1: until PR 2, the preview can disagree with the case for lines with a mode.** For a Visitor visa line set by API to On the principal's or Declared only:
+  - The preview shows PR 2's plan: the person is on the principal's filing, and a declared-only person has no fee.
+  - The case still gives a travelling person their own filing, with fees (probe: preview "2 filings", case 4 filings).
+  - It is reachable only through the API (no screen control until PR 3), and Visitor visa warns on both modes.
+  - Fix: one line in the PR body saying so; PR 2's tests close it (`check_vv_filings` "VV child On the principal's → 4 people counted").
+- **n2: the warning's wording.** "A case uses the combination's built-in default (Sample)" is true for Visitor visa only. For other combinations the case's filings are "not derived yet". Fine while those combinations show that sentence on the case; reword with PR 3 when the warning becomes a blocker.
 
-**m1 (Minor, Should): alias conflict.** `modeSent` prefers `filingMode` over `filing` silently (`filing-modes.ts:204`). Probe: `{filingMode:"files_own", filing:"declared_only"}` → 200, stored as `files_own`. The view also returns both names (`workspace.ts:140`), so one thing has two names (challenge m2). Question (1) is accepted only as a stopgap that keeps the agreed test untouched. Refuse a body whose two values disagree, and record that `filing` is removed when `C11.12.test.ts` moves to `filingMode` (PACK-2.md).
+## The PR's questions (unchanged from round 1)
+1. **The `filing` alias:** acceptable as a stopgap; the disagreement is now refused.
+2. **The release line as a warning until PR 3:** agreed; it flips in PR 3, and the test already covers both states.
+3. **No Sponsor line in the samples:** acceptable, tracked with PR 2.
 
-**m2 (Minor, Should): warnings that point to a control that does not exist yet.** The release warning "Filing for Child … choose how … (Forms › Who can be in this application)" (`filing-modes.ts:242`) appears after an on-screen untick or Add person, and nothing on the screen can set a mode until PR 3; Undo is the only way back. Similarly, ticking Applicant on a `declared_only` line gives the strict 400 "choose another filing or untick applicant" (`people.ts:359`), with no filing choice to make. Either add "(coming with the Filing column)" or accept and list both in the PR as known until PR 3.
-
-**m3 (Minor, Should): the editor fix has no automated test in this PR.** `toLines`, "Use these lines", Add person and untick-clears-mode (`questionnaires.tsx:50, 73–74, 139, 152`) are untested here; `check_c1112_modes.ts` BR-8 covers only `checkPeople`. My journey shows they work (save, Undo, Use these lines, Add Sponsor and untick all keep or clear modes as designed). Add one browser check like it, or state in the PR that PR 3 adds it.
-
-**m4 (Minor, record): no Sponsor line in the samples.** Concept §6 puts `{role:"sponsor",…,filingMode:"co_files"}` in **both** `wave1.json fs.spouse` and `programs.json fs.outside`. Question (3) defers `wave1.json` to its owner; `programs.json` is not covered by that reason. Accepted only if the PR names the row that adds both (and runs `check_s5_slice1`/`check_s7_load` then).
-
-## The PR's questions
-1. **The `filing` alias:** acceptable as temporary, given the Lead's rule to touch only line 57. Fix m1.
-2. **`FILING_NOT_SET_BLOCKS = false` until PR 3:** agree ("unfinished work merges switched off"). Otherwise drafts would be unreleasable with no control to fix them. It must flip in PR 3 with its test (`check_c1112_modes.ts` already checks both states).
-3. **No Sponsor in samples:** acceptable for `wave1.json`, with m4 tracked. Unticking Applicant to clear an applicant mode is right: otherwise BR-5 would silently tick it again on save.
-
-## Concept fit (PR 1 scope, §6b)
-Contract enum, nullable: met. BR-1, BR-2, BR-3 (strict refuses; non-strict and read drop, B1), BR-4, BR-5 (with m6, stored tick kept) and BR-8 (save keeps mode): met, each with a pass and a fail in `check_c1112_modes.ts`. Removing any rule turns its exact-message assertion red. BR-7 warn (Visitor visa, On the principal's and Declared only, m5): met; acceptance line 57 is the only test edit. Release check: met, as a warning. Preview from one plan: met for lines with modes, not for lines without (M2). `setup_vv_m3`: met (Representative gets no mode; pack 4 counts unchanged per builder, setup line S5 PASS on my copy). Samples: family modes met; Sponsor not done (m4). Fees: never CAD 0 (Sample words, "not worked out yet" for co-filed and non-`vv.single`).
-
-## Code
-Server authorisation: a reviewer's PATCH gets 403. Concurrency: two saves at one version give 200 and a 409 naming who saved. Field errors carry `participants[i].filingMode`. No per-row requests. No migration in this PR. Other `PeopleView` readers: `before-forms.tsx` only; it typechecks. Read path `workspace.ts:137–139`: precedence is correct; a stored applicant mode on the Representative is dropped.
+## Concept fit (PR 1 scope, §6b): met
+- Contract enum.
+- BR-1 to BR-5 and BR-8, each with a pass and a fail.
+- BR-7 warns.
+- The release check, as a warning.
+- The preview from the same plan, with the case's fallback.
+- `setup_vv_m3` (B1).
+- The samples' family modes.
+- `C11.12.test.ts`: only line 57 changed. 18/19 per the builder; line 90 fails the same on main. I ran 18/19 myself in round 1.
+- Fees never read CAD 0, and Sample is labelled.
 
 ## D1–D20 (1–5)
-D1 Requirement fit 3, M1 and M2 · D2 Data integrity 3, releasable crash state (M1) · D3 Reuse 4, one `LINE_MODES` list, one `filingOf` helper · D4 Rule integrity 4 · D5 Stability 4, Undo and 409 hold · D6 Governance 4, audit row per save unchanged · D7 AI trust 4, "Use these lines" keeps modes and AI proposes none · D8 Orientation 4, unchanged screen · D9 Flow 3, the warning points to a control not yet built (m2) · D10 Language 4 · D11 Feedback 4, the save toast · D12 Visual 4, unchanged · D13 Accessibility 4, axe clean at 400, 1024 and 1440 px with no sideways scroll; keyboard only partly walked · D14 Team look 4 · D15 Speed 4 · D16 Testability 3, editor paths untested (m3) and the M1 path untested · D17 simulated only · D18 Provenance 4, Sample and guide quote in warnings · D19 Capability closure 3, M1 breaks Setup → case · D20 simulated only.
+- D1 Requirement fit: 4.
+- D2 Data integrity: 4. A release can no longer break a case; versioned saves give a 409.
+- D3 Reuse: 4. One mode list, one fallback table.
+- D4 Rule integrity: 4.
+- D5 Stability: 4.
+- D6 Governance: 4.
+- D7 AI trust: 4.
+- D8 Orientation: 4.
+- D9 Flow: 4. The warning is honest now.
+- D10 Language: 4.
+- D11 Feedback: 4.
+- D12 Visual: 4. The screen is unchanged.
+- D13 Accessibility: 4. axe is clean at 400, 1024 and 1440 px (round 1).
+- D14 Team look: 4.
+- D15 Speed: 4.
+- D16 Testability: 4. The editor test comes in PR 3.
+- D17: simulated only.
+- D18 Provenance: 4.
+- D19 Capability closure: 4. Setup, release and case Prepare hold.
+- D20: simulated only.
 
-## Journey score: 7.5 / 10 (below the pass of 8; no criterion at 0)
-Details are in `journey-test-reviewer-2026-11-02.md`. Fixing M1 and M2 raises "correct data" and "error recovery" to pass.
+## Journey score: 9 / 10 (pass)
+Re-scored in `journey-test-reviewer-2026-11-02.md` (round 2).
 
 ## Not checked
-- The graph tool: `graph.mjs` rewrites the tracked `qa/GRAPH.md`, so I did not run it. The existing GRAPH.md names C11.12 in 12 tests.
-- A real screen reader, and 200 % zoom (only 400 px as a proxy).
-- The full keyboard-only main path.
-- Pack 4 and the three suites the builder was re-running.
-- The Filing column, the preview panel and the engine (PRs 2 and 3, out of scope).
+- I did not run `graph.mjs` (it rewrites the tracked `qa/GRAPH.md`); the builder ran it (exit 0).
+- Pack 4, the S5 suites and the browser suites after the fix: I take the builder's counts.
+- 200 % zoom, a full keyboard-only walk, and a screen reader.
 
-**Verdict: Block.** Fix M1 and M2, each with a fail test. Fix or list m1–m4 in the PR.
+**Verdict: Approve** on `92e25d3d`. No Blocker or Major is open. Put n1 and n2 in the PR body with m3 and m4.
