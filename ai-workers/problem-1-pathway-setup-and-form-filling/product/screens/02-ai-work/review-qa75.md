@@ -38,3 +38,34 @@ Fail test: 16/16, run twice on :4466. Each check fails on the old code (old chip
 200 % zoom; a full keyboard-only walk of the job page; a screen reader; a NEEDS_PERSON field-map job made by the product itself (only inserted rows exist; no code path creates one today).
 
 **Verdict: Approve** for e5efc549. No open Blocker or Major; Minors 1–3 are optional or a follow-up.
+
+## Round 2 (aaa1bb3a)
+Diff `e5efc549..aaa1bb3a`: `job.tsx`, `combination.tsx` (ModePill, StatusPill), `ai.tsx` (empty state), the fail test, records. Isolated copy `rev_qa75` on :4466, web rebuilt at aaa1bb3a; US$0, live AI off. `ai-launch.tsx` untouched, as agreed.
+
+| Break point | Now | Held |
+|---|---|---|
+| M1 running/queued notice | RUNNING rules step: "The rules are working · This page updates by itself", no step or exit code; QUEUED: "Waiting to start", no spinner; AI steps still "The AI is drafting" | yes |
+| m1 trail follows the job | Job opened under another combination's address: trail and "Open the Forms tab" go to the job's own combination | yes |
+| m2 unnamed kinds | rule_fact/upload LOCAL: "A rules step"; finder_propose LIVE: "A step of AI work"; failed non-map: "This step failed"; error "This step could not be opened" | yes |
+| m3 no combination | Trail "AI work › A rules step" | yes (see 1) |
+| m4 checklist heading | No attachment: "Proposed document requirements"; Sparkles `shrink-0` | yes |
+| m5 unknown mode/status | "weird mode", empty status "No status" | yes |
+| m6 waiting message | WAITING/SKIPPED show the step's message | yes |
+| m7 empty edition | `edition = ''` falls back to "imm1295e.pdf: AI-proposed field map" | yes |
+| m8 Apply with 0 proposals | "Nothing was proposed, so there is nothing to apply." and Apply disabled | yes |
+| m9 fixture | Main case now REPLAY; LOCAL chip check moved to the read_form case | yes |
+| Round 1 minor 1 (status words) | "Waiting for you", "Not needed" now match the run card | partly (see 3) |
+| `ai.tsx` empty state | "…or a form on its Forms tab." | yes |
+
+Fail test 21/21 on :4466. Regression `check_screen02_slice2_browser.cjs` "all passed" on :4466 (its screenshots and stub-pass run files were reverted). No test asserts the removed words. Keyboard walk: Tab reaches the crumbs and "Open the Forms tab", Enter opens the Forms tab. 720 px (200 % of 1440) and 400 px: no sideways scroll. No page errors.
+
+**Blockers:** none. **Majors:** none.
+**Minors** (fix now or log):
+1. **A step with no combination still links to the address's Forms tab.** The trail now goes to AI work, but `cid` falls back to the URL id (`job.tsx:67`), so the "Waiting for you" / Blocked / Failed action "Open the Forms tab" (`:86-87`) opens `/c/<address>/forms`. Seen on an upload_identity job with no combination. Fix: when there is no combination, link to AI work (or the batch).
+2. **"Preview the draft" still uses the address** (`job.tsx:116,125`, `nav(/c/${id}/preview)`), the one link m1 did not move to `cid`. The checklist view also gets `combinationId={id!}` (`:64`); its trail is fine because JobTrail uses `combination.id`.
+3. **Status words still differ in two pairs.** The job page says "Completed" and "Applied to draft"; the AI work list and run card say "Done" and "Added to draft". `ai.tsx:15` itself still says "Skipped" where the run card and job page say "Not needed".
+4. Noted only: a checklist step in NEEDS_PERSON shows the pill and message but no "Waiting for you" notice with an action. A STUB field map while running says "The AI is drafting" although a stub pass has no AI content.
+
+Journey score: **9.5 / 10, pass** (`journey-test-reviewer-2026-11-02-qa75.md`, Round 2). Plain words got ½.
+
+**Verdict: Approve** for aaa1bb3a. No open Blocker or Major; Minors 1–4 are optional or a follow-up.

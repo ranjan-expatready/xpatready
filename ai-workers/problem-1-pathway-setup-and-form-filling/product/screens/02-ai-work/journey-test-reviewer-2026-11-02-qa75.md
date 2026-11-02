@@ -43,3 +43,17 @@ This is a bug-fix check, not a full screen: the journeys cover the job page `/c/
 **9 / 10, no 0: pass.**
 
 Not tested: a real screen reader; a NEEDS_PERSON job made by the product itself (none is created in code today; only inserted rows); an intended user's walk (D17/D20 stay with the founder).
+
+## Round 2 (aaa1bb3a)
+Same copy (:4466), web rebuilt. Journeys 1–7 walked again, plus: 8. running rules step; 9. queued AI step; 10. step with no combination, empty edition, completed map with nothing proposed.
+* J1 now reads "Waiting for you" (pill and notice). J3 unchanged. J8: "The rules are working", no step codes. J9: "Waiting to start", no spinner. J10: trail "AI work › A rules step"; heading "imm1295e.pdf: AI-proposed field map"; "Nothing was proposed, so there is nothing to apply." with Apply disabled.
+* Fail test 21/21; slice2 suite all passed. Keyboard-only: Tab to "Open the Forms tab", Enter opens Forms. 720 px and 400 px: no sideways scroll. Ready in about 0.4 s.
+* Findings (Minor): "Open the Forms tab" on a step with no combination still goes to the address's combination (`job.tsx:67,86-87`); "Preview the draft" uses the address (`job.tsx:116`); "Completed"/"Applied to draft" vs "Done"/"Added to draft" on the AI work list.
+
+| Criterion | Score | Change |
+|---|---|---|
+| Plain words | ½ | Two status pairs still differ from the AI work list |
+| Accessibility and sizes | 1 | Keyboard-only walk and 200 % width now done; axe clean |
+| All others | 1 | As round 1 |
+
+**9.5 / 10, no 0: pass.** Not tested: a real screen reader; an intended user's walk (D17/D20 stay with the founder).
