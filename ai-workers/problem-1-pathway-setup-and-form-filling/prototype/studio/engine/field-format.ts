@@ -161,6 +161,9 @@ export type MappedBox = { form: string; inventoryFile: string | null; dataPath: 
 /** A map's transform without its "select primary phone;" style choice of which value (review M1): the part that says
  *  how the value is written. */
 const core = (transform: string | null | undefined) => (transform ?? "").split(";").map((x) => x.trim()).filter((x) => x && !/^select\b/i.test(x)).join("; ");
+/** Whether a map's transform writes the value part by part (an address or a phone), after any "select …;" choice:
+ *  the answer is then stored as parts (G4 family editor, GET /answer-keys/fields). */
+export const writesParts = (transform: string | null | undefined) => /^(?:address_part|phone_part|phone):/.test(core(transform));
 /** The answer part a form field writes (an address or phone part), from the map's transform; the phone's national
  *  number is the stored answer's `number`. */
 const partOf = (transform: string | null | undefined) => {
