@@ -143,6 +143,10 @@ try {
   const r01 = s.numbers.find((n: { key: string; address: string }) => n.key === "wp.family/R-01" && n.address === "person.age_years|gte|1");
   const cfg = (await call("GET", `/combinations/${wp}/config`)).body.snapshot;
   const rule = cfg.rules.find((x: { id: string }) => x.id === "R-01");
+  // G1 PR 2b: the Source panel offers the item's own quote as the words that state the number.
+  const noQuote = s.numbers.filter((n: { item_quote?: string | null }) => n.item_quote === undefined);
+  ok("C5.4 §4 (PR 2b): each number carries its item's own quote (item_quote), read from the item it belongs to: R-01's is the rule's own source quote",
+    r01.item_quote === String(rule.source_quote).trim() && noQuote.length === 0, { got: r01.item_quote, want: rule.source_quote, missing: noQuote.length });
   const when19 = JSON.parse(JSON.stringify(rule.when).replace('{"op":"gte","field":"person.age_years","value":18}', '{"op":"gte","field":"person.age_years","value":19}'));
   r = await call("PATCH", `/combinations/${wp}/rules/R-01`, { condition: when19, whenPlain: rule.when_plain, thenPlain: rule.then, forWhom: rule.for_whom, sourceQuote: rule.source_quote });
   ok("setup: rule R-01's \"at least 18\" changed to 19 in the draft", r.status < 300, r.body);

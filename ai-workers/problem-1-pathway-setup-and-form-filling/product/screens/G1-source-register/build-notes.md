@@ -70,3 +70,33 @@ r1a) and check_case_engine pass.
 (`concept.md:38`): `isDemoSnapshot` now reads Sample sources; BR-7 (`concept.md:33`): the catalogue gates only rows with
 changes or no release; BR-4 (`concept.md:29`): fee numbers report `where` "People" (decision 2); §4 Release page
 (`concept.md:44`): the held reason is "17 numbers have no source entry: fix on Review and release."
+
+## PR 2b: the screens (built 2 Nov, after #587)
+**Split (one small item = one PR).** PR 2b is the Review block and the Source panel, the two boards a release needs. The
+panel's other entry points (the RuleDialog section "Sources of its numbers", a check row's "Sources" action, the "Source"
+link under a form line's "From age") are **PR 2c**. Each reuses `SourcePanel` with the item it opens on; none needs a new
+API.
+* **Review and release** (`web/src/pages/review.tsx`, `web/src/components/unsourced-numbers.tsx`): "Numbers without a
+  source (n)", grouped by item, each line in the refusal's own words with **Add source** (or **Check source** when its
+  number changed). The first six items show, then "Show all n items". The context line counts the sample load's own
+  citations and the fee-table lines. The validation block no longer repeats these numbers: it counts "other" errors.
+  When every number has its answer, the block says so in one line. A Live combination with no draft change lists its
+  numbers in neutral colours, saying they block the next submission once the draft changes (BR-7 gates only a changed
+  draft).
+* **Source panel** (`web/src/components/source-panel.tsx`): one card per number of the item. States: missing (opens on
+  Official source, the item's own quote and today's date filled in), cited, None published, Sample, changed ("The source
+  was written for 18; the number is now 19", **Still correct for 19** / **Write a new source**), field errors in §5's
+  words on their fields, conflict (409: who and when, **Reload theirs** / **Keep mine and save again**), read only for a
+  non-author ("Only the configuration author adds sources."), empty, loading. Fee-table and validity-rule numbers show
+  read only (BR-4, no fee card). The "same source for the other 18 in this item" box writes the twin in one go.
+* **Where the build differs from board 2:**
+  1. **The address picker** offers the addresses this combination already cites (an HTML list), not the combination's
+     approved official pages: no endpoint lists those with their addresses today. A later row can feed the same list.
+  2. **"Still correct for 19"** re-saves the same answer, so a citation whose words state 18 is refused on the words, and
+     the editor opens with the error in place. That is the agreed rule (the words must state the number), not a bug.
+  3. **The None published guidance** stays in view above the reason, also while the reason shows an error.
+  4. Item words for a check show the first sentence (build note 2), the whole text on hover.
+* **API** (additive): each number carries `item_quote`, its item's own source quote (`itemQuoteOf()`), for the panel.
+* **Checks:** `tests/check_g1_source_register_browser.cjs` **41/41** (1440, 1024 and 400 px; axe on the block, the
+  panel with errors, the conflict and the all-sourced state; keyboard in and out). API suite 51/51 (`item_quote`).
+  `check_s5_slice2_browser` 63/63 (it reads the validation list). Web `tsc` 0; `count-any` 422 (unchanged).

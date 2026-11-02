@@ -68,6 +68,9 @@ export type SourceEntryView = {
 export type SourceNumberView = {
   kind: (typeof NUMBER_KINDS)[number]; key: string; address: string; value: string; item: string; item_words: string; words: string; where: string;
   state: NumberStateName; passes: boolean; entry: SourceEntryView | null;
+  /** G1 PR 2b: the item's own source quote, which the Source panel offers as the words that state the number. Absent on a
+   *  PUT's answer. */
+  item_quote?: string | null;
 };
 /** GET /combinations/:id/sources. `unused`: entries whose number is gone ("No longer used"); `held_back`: the numbers
  *  that refuse Submit, Approve and release now. */

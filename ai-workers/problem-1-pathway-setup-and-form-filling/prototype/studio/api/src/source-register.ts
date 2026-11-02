@@ -22,6 +22,15 @@ export function feeLinesOf(combinationKey: string): FeeLineInput[] {
   return (c?.lines ?? []).map((k) => lines.find((l) => l?.key === k)).filter((l): l is FeeLineInput => !!l);
 }
 export const numbersOf = (s: Snapshot): PublishedNumber[] => publishedNumbers(s, { feeLines: feeLinesOf(s.combination.key) });
+/** G1 PR 2b (concept §4: "the quote is filled in from the item's own quote"): the item's own source quote, read at the
+ *  number's JSON path hint (`forms[3].…`, `checks[12].…`, `eligibility.gates[0].…`); null when the item holds none. */
+export function itemQuoteOf(s: Snapshot, hint: string): string | null {
+  const m = /^(eligibility\.gates|[a-z_]+)\[(\d+)\]/.exec(hint);
+  if (!m) return null;
+  const list = m[1] === "eligibility.gates" ? (s as { eligibility?: { gates?: unknown[] } | null }).eligibility?.gates : (s as unknown as Record<string, unknown>)[m[1]];
+  const q = Array.isArray(list) ? (list[Number(m[2])] as { source_quote?: unknown } | undefined)?.source_quote : null;
+  return typeof q === "string" && q.trim() ? q.trim() : null;
+}
 
 /** BR-7: the gate, on a draft only (a released snapshot is never re-judged). The entries are the draft's own frozen
  *  `sources` (read once per workspace in buildSnapshots), so the combination page, the catalogue and Submit agree. */
@@ -56,7 +65,7 @@ export class SourceRegister {
     const all = numbersOf(snapshot);
     const numbers: SourceNumberView[] = all.filter((n) => !only || (n.kind === only.kind && n.key === only.key)).map((n) => {
       const r = byKey.get(entryKey(n)), st = numberState(n, r ? sourceEntryOf(r) : undefined, demo);
-      return { kind: n.kind, key: n.key, address: n.address, value: n.value, item: n.item, item_words: n.item_words, words: n.words, where: n.where, state: st.state, passes: st.passes, entry: r ? view(r) : null };
+      return { kind: n.kind, key: n.key, address: n.address, value: n.value, item: n.item, item_words: n.item_words, words: n.words, where: n.where, state: st.state, passes: st.passes, entry: r ? view(r) : null, item_quote: itemQuoteOf(snapshot, n.hint) };
     });
     const used = new Set(all.map(entryKey));
     const unused = rows.filter((r) => !used.has(entryKey(sourceEntryOf(r))) && (!only || (r.itemKind === only.kind && r.itemKey === only.key))).map((r) => ({ kind: r.itemKind, key: r.itemKey, address: r.valuePath, value: r.value }));
