@@ -35,7 +35,8 @@ type P = { derived: boolean; version: string; portal: string | null; filings: { 
   };
   const prep = async (id: string, who = OFFICER) => { const r = await call("GET", `/runtime/cases/${id}/prepare`, undefined, who); return { r, p: r.status === 200 ? r.body as P : null }; };
   const filingOf = (p: P | null, s: string) => p?.filings.find((f) => f.applicants[0].subject === s);
-  const sum = (p: P | null, re: RegExp) => (p?.fees ?? []).filter((f) => re.test(f.line)).reduce((t, f) => t + (f.exempt ? 0 : f.amount), 0);
+  // A line that waits for a date of birth (G15, VV-R15, #356) is not counted until it is answered.
+  const sum = (p: P | null, re: RegExp) => (p?.fees ?? []).filter((f) => re.test(f.line) && !(f as { waiting?: unknown }).waiting).reduce((t, f) => t + (f.exempt ? 0 : f.amount), 0);
 
   const c = await open("VP", [{ role: "spouse_or_partner", name: "Sample Spouse A" }, { role: "child", name: "Sample Child A1" }]);
   const A = c.subjects["Sample Client A"], S = c.subjects["Sample Spouse A"], K = c.subjects["Sample Child A1"];
@@ -61,9 +62,10 @@ type P = { derived: boolean; version: string; portal: string | null; filings: { 
   // Items: each filing's forms, the combination line's channel, what IRCC accepts, the signature, the reason.
   const its = (s: string) => (p?.items ?? []).filter((i) => i.subject === s);
   ok("C6.12 items pass: each person files their own IMM 5257 on their own filing", [A, S, K].every((s) => its(s).some((i) => i.form === "IMM 5257" && i.filing === filingOf(p, s)?.id)), p?.items.map((i) => `${i.form}:${i.subject.slice(0, 4)}`));
-  ok("C6.12 items: each item starts on its combination line's channel, lists the channels IRCC accepts and its signature, and says why it is there", (p?.items ?? []).every((i) => i.channel === sql(`select coalesce(x->>'channel','PDF_UPLOAD') from pack_work_pin w join config_release r on r.id=w.config_release_id, jsonb_array_elements(r.snapshot->'forms') x where w.case_id='${c.id}' and x->>'form_number'='${i.form}'`) && i.accepts.length >= 1 && i.accepts.includes(i.channel) && !!i.signature && i.reason.length > 10));
+  // The unified view (#356) also lists document and step items (C6.4 checklist, VV-R15 biometrics): these checks are the forms'.
+  ok("C6.12 items: each item starts on its combination line's channel, lists the channels IRCC accepts and its signature, and says why it is there", (p?.items ?? []).filter((i) => (i as { kind?: string }).kind === "form").every((i) => i.channel === sql(`select coalesce(x->>'channel','PDF_UPLOAD') from pack_work_pin w join config_release r on r.id=w.config_release_id, jsonb_array_elements(r.snapshot->'forms') x where w.case_id='${c.id}' and x->>'form_number'='${i.form}'`) && i.accepts.length >= 1 && i.accepts.includes(i.channel) && !!i.signature && i.reason.length > 10));
   const inRelease = new Set(sql(`select string_agg(x->>'form_number', ',') from pack_work_pin w join config_release r on r.id=w.config_release_id, jsonb_array_elements(r.snapshot->'forms') x where w.case_id='${c.id}'`).split(","));
-  ok("C6.12 items (fail): no item names a form outside the case's release, or a person without a filing", (p?.items ?? []).every((i) => inRelease.has(i.form) && p!.filings.some((f) => f.id === i.filing && f.applicants[0].subject === i.subject)));
+  ok("C6.12 items (fail): no item names a form outside the case's release, or a person without a filing", (p?.items ?? []).every((i) => ((i as { kind?: string }).kind !== "form" || inRelease.has(i.form)) && p!.filings.some((f) => f.id === i.filing && f.applicants[0].subject === i.subject)));
 
   // Someone stops applying: no filing, fee or item; back again: the same filing and items.
   const fileK = filingOf(p, K)!.id, itemsK = its(K).map((i) => i.id).sort();
@@ -104,7 +106,9 @@ type P = { derived: boolean; version: string; portal: string | null; filings: { 
   ok("C6.12 review m1 pass: when it applies again the same item comes back", its(A).find((i) => i.form === "IMM 5707")?.id === item5707);
 
   // Fees: what the lines add up to is what is paid; six people reach the family maximum, on the principal's filing.
-  ok("C6.12 BR-18 pass: three people: visitor visa CAD 300, biometrics CAD 170 (the family maximum from 2), each line cites the fee list", sum(p, /visitor visa/i) === 300 && sum(p, /biometrics/i) === 170 && (p?.fees ?? []).every((f) => /ircc\.canada\.ca/.test(f.source) && !!f.reason));
+  // #356 (G15, VV-R15): with no dates of birth yet, each biometrics line waits and is not counted (pack 4's C6.12 checks
+  // the CAD 170 family maximum with dates of birth).
+  ok("C6.12 BR-18 pass: three people: visitor visa CAD 300; biometrics waits for the dates of birth (not counted); each line cites IRCC's fee page", sum(p, /visitor visa/i) === 300 && sum(p, /biometrics/i) === 0 && (p?.fees ?? []).filter((f) => /biometrics/i.test(f.line)).every((f) => !!(f as { waiting?: unknown }).waiting) && (p?.fees ?? []).every((f) => /canada\.ca/.test(f.source) && !!f.reason));
   const six = await open("VP6", [{ role: "spouse_or_partner", name: "Sample Spouse B" }, ...[1, 2, 3, 4].map((n) => ({ role: "child", name: `Sample Child B${n}` }))]);
   const q = (await prep(six.id)).p;
   const lead = filingOf(q, six.subjects["Sample Client A"])?.id;
