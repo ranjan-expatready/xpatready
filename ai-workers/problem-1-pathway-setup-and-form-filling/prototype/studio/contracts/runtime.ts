@@ -157,6 +157,9 @@ export type FormCopy = {
   id: string; status: "QUEUED" | "RUNNING" | "GENERATED" | "FAILED"; created_at: string; created_by: string; finished_at: string | null; error: string | null;
   locked: { kind: keyof typeof LOCK_KINDS; at: string; by: string } | null; out_of_date: boolean; stale: boolean; changed: string[];
   counts: { written: number; by_hand: number; blank: number; not_written: number; by_a_person: number } | null; intact: boolean | null; person_steps: string[];
+  /** P-145 (C7.7): a copy of a form the case's release files Online: IRCC's own PDF ("ircc_pdf") filled from the same
+   *  confirmed facts, marked "Copy, not for filing", never locked, filed or counted. */
+  copy_not_for_filing: boolean; source: "ircc_pdf";
   /** Form fields the officer writes by hand in Adobe, each with its question and why (review M3). */
   by_hand: { label: string; why: string }[];
   /** The copy's file is on disk and unchanged; false: it cannot be handed over (break m1). */
