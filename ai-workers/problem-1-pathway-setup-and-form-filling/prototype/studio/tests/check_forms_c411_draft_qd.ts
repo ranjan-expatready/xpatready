@@ -79,7 +79,7 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   ok("C4.11 C fail: with no saved AI answer for the conditions, step 5 says so, proposes nothing, US$0", c5none?.status === "FAILED" && /No saved AI answer/.test(c5none.message) && sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition'`) === "0", c5none);
   const s6none = step(r, "pqr_picks"), firstDocs = step(r, "qd_documents"), firstLines = Number(sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='requirement_line' and status='waiting'`));
   ok("C4.11 S6 fail: with no saved AI answer, step 6 says so and proposes nothing, US$0; step 7 still runs", r.status === 201 && waiting("ai") === 0 && r.body.usd === 0 && s6none?.status === "FAILED" && /No saved AI answer/.test(s6none.message) && step(r, "qd_check")?.status === "COMPLETED", s6none);
-  ok("C4.11 S6 fail (break m4): the reply says the run had a problem and names step 6, never only \"rules pass\"", r.body.status === "done_with_problems" && /Not done:.*Pre-qualification picks/.test(r.body.note), r.body.note);
+  ok("C4.11 S6 fail (break m4): the reply says the run had a problem and names step 6, never only \"rules pass\"", r.body.status === "done_with_problems" && /Not done:.*Prospect questionnaire \(PQR\) picks/.test(r.body.note), r.body.note);
   let card = await call("GET", `/runs/${r.body.runId}`);
   ok("C4.11 R pass: the run shows on the shared run card with its label, seven steps and Done with problems (step 6)", card.status === 200 && card.body.label === "Drafting questions and documents" && card.body.steps.length === 7 && card.body.status === "done_with_problems" && card.body.usd.spent === 0 && card.body.error?.next === null, { label: card.body.label, status: card.body.status, steps: card.body.steps?.length });
 
@@ -92,11 +92,14 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
     writeFileSync(join(RUNS, f), JSON.stringify({ caller: "live", contract_valid: true, launch_evidence: { template_sha256: sha(readFileSync(join(PROMPTS, check ? "pqr-picks-check.v1.md" : "pqr-picks.v1.md"))) }, drafting_run: { status: "completed", inputs: { official_files: inputs, combination: "wp.family" }, usage: { cost_usd: 0.4 } }, raw_output: JSON.stringify({ picks, unresolved: [] }) }));
     written.push(join(RUNS, f));
   };
-  save(false, [pick("Date of birth", "The guide tests age-related eligibility.")]); save(true, [pick("Date of birth", "The guide tests age-related eligibility.")]);
+  // QA-162: plus one pick no question of this combination asks, which is left out and shown with its reason on the card.
+  save(false, [pick("Date of birth", "The guide tests age-related eligibility."), pick("Favourite colour", "Not a question of this combination.")]); save(true, [pick("Date of birth", "The guide tests age-related eligibility.")]);
   r = await run("replay");
   const s6saved = step(r, "pqr_picks");
   ok("C4.11 S6 pass: saved AI answers are replayed into the queue at US$0, as AI items", r.status === 201 && r.body.proposed > 0 && r.body.usd === 0 && s6saved?.status === "COMPLETED" && waiting("ai") === r.body.proposed, { proposed: r.body.proposed, ai: waiting("ai"), s6saved });
   card = await call("GET", `/runs/${r.body.runId}`);
+  const s6card = card.body.steps?.find((s: J) => s.kind === "pqr_picks");
+  ok("C4.11 S6 fail (QA-162): a saved pick no question asks is left out, and the card's step 6 says so with its reason, never a bare count", /1 left out with the reason/.test(s6card?.message ?? "") && /Favourite colour: No question of this combination asks "Favourite colour"/.test(s6card?.details ?? ""), { message: s6card?.message, details: s6card?.details });
   ok("C4.11 S6 pass: the card shows step 6 as AI work but spent US$0, never as a live run", card.body.steps?.find((s: J) => s.kind === "pqr_picks")?.uses === "ai" && card.body.usd.spent === 0 && sql(`select mode from ai_batch where id='${r.body.runId}'`) === "REPLAY", card.body.steps?.find((s: J) => s.kind === "pqr_picks"));
 
   // ---------------------------------------------------------------- R + S6 rules: the whole run, rules only
@@ -183,7 +186,7 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
     ok("C4.11 C fail: the readings give different deciding answers: Check, never Ready", ag2 === "differ" && cf2 === "check", { ag2, cf2 });
     const details = sql(`select detail->>'details' from drafting_job where batch_id='${r.body.runId}' and kind='qd_conditions'`);
     ok("C4.11 C fail (review M1): a free-text deciding question cannot decide by one answer: left out with the reason, never Ready", /free-text|text form/.test(details) && item(ct3.fact, ctext.fact)[0] === "", details.split("\n").find((l) => /text form/.test(l)));
-    ok("C4.11 C fail: a question this combination does not ask, and a sentence not in the guide, are left out with the reason (never guessed)", /not exactly one question/.test(details) && /not in Guide 5487/.test(details) && sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition'`) === "2", c5?.message);
+    ok("C4.11 C fail: a question this combination does not ask, and a sentence not in the guide, are left out with the reason (never guessed)", /is not a question this combination asks|could be \d+ questions of this person/.test(details) && /not in Guide 5487/.test(details) && sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition'`) === "2", c5?.message);
     ok("C4.11 C pass: each condition names the question it hides, quotes the guide, and reads the deciding question", sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition' and origin='ai' and source->>'quote' is not null and payload->'condition'->'tree'->>'field' in ('${cd1.fact}','${cd2.fact}') and payload->'condition'->>'sentence' like '"%" is asked only when %'`) === "2");
     r = await run("replay");
     ok("C4.11 C fail: drafting again puts no condition on the queue twice", sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition'`) === "2" && /2 already waiting/.test(step(r, "qd_conditions")?.message ?? ""), step(r, "qd_conditions")?.message);
@@ -240,7 +243,7 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
     plant(clientFact, "source, document_type_key", "'DOCUMENT', 'no_such_document'");
     r = await run("rules");
     const pqr = (r.body.findings as { rule: string; message: string }[]).filter((f) => f.rule === "pqr_subset"), doc = (r.body.findings as { rule: string; message: string }[]).filter((f) => f.rule === "document_on_checklist");
-    ok("C4.11 K fail: a PQR tick on a fact the case officer gives is found by step 7, named under PQR ⊂ SQR", pqr.length >= 1 && /pre-qualification/.test(pqr[0].message) && r.body.rules?.pqr_subset?.includes("PQR"), pqr[0]);
+    ok("C4.11 K fail: a PQR tick on a fact the case officer gives is found by step 7, named under PQR ⊂ SQR", pqr.length >= 1 && /Prospect questionnaire \(PQR\)/.test(pqr[0].message) && r.body.rules?.pqr_subset?.includes("PQR"), pqr[0]);
     ok("C4.11 K fail: a document fact whose document is not on the checklist is found by step 7, under its rule", doc.length >= 1 && /not on this person's checklist/.test(doc[0].message), doc[0]);
     ok("C4.11 K pass: findings are for a person to fix; the run still ends Done and changes nothing in the draft", r.body.status === "done" && sql(`select count(*) from fact_source where combination_id='${wp}' and version=99`) === "2", r.body.note);
   } else ok("C4.11 K setup: the sample has a case officer fact and a client fact", false, { agentFact, clientFact });
@@ -340,8 +343,10 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
     {
       const { roundBudgetUsd, sizedBudgetUsd, worstRoundUsd } = await import("../api/src/rounds.ts");
       const { PQR_AI } = await import("../api/src/pqr-drafts.ts"), { CONDITIONS_AI } = await import("../api/src/draft-qd.ts");
-      const g = (await call("POST", `/combinations/${wp}/pqr-picks/plan`, { mode: "replay" })).body.guide.file as string;
-      const len = String(JSON.parse(readFileSync(join(SOLUTION, g), "utf8")).text ?? "").length, ins = [{ file: g }];
+      const gp = (await call("POST", `/combinations/${wp}/pqr-picks/plan`, { mode: "replay" })).body.guide, g = gp.file as string, ql = gp.questions as string | null;
+      // QA-162: a Live round reads the guide and the combination's question list, so both count in its worst case.
+      ok("C4.11 m1 pass (QA-162): the plan names the question list a Live round reads beside the guide", typeof ql === "string" && /^prototype\/p2\/question-lists\/wp\.family-[0-9a-f]{12}\.questions\.json$/.test(ql), ql);
+      const len = String(JSON.parse(readFileSync(join(SOLUTION, g), "utf8")).text ?? "").length + (ql ? readFileSync(join(SOLUTION, ql), "utf8").length : 0), ins = [{ file: g }, ...(ql ? [{ file: ql }] : [])];
       const sum = [CONDITIONS_AI, PQR_AI].reduce((n, st) => n + roundBudgetUsd(st, false, ins, len) + roundBudgetUsd(st, true, ins, len), 0);
       const p5 = (await plan("live")).body.totals.worst_usd;
       ok("C4.11 m1 pass: Live's stated worst case is the sum of its four rounds' launcher budgets", Math.abs(p5 - Math.round(sum * 100) / 100) < 0.011, { p5, sum });

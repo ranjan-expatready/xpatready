@@ -1,5 +1,5 @@
-// M2 queue item 2, PQR (runtime lane; C4.2, C4.8; P-76, P-132; plan.md "PQR"): the Questionnaires tab's
-// "Pre-qualification" chip walked in a real browser. The chip shows only the person's ticked questions with how each is
+// M2 queue item 2, PQR (runtime lane; C4.2, C4.8; P-76, P-132; plan.md "PQR"): the Smart questionnaire (SQR) tab's
+// "Prospect questionnaire (PQR)" chip walked in a real browser. The chip shows only the person's ticked questions with how each is
 // asked and confirmed; the country PQR is a view of the newest releases (a draft tick named as a draft change until the
 // one release, then listed with the combination and its release). A pass and a fail per rule; screenshots at 1440 and
 // 1024 in screens/W1-questions-and-documents/screenshots/pqr/, axe (WCAG 2.2 AA) on each state. No model call (US$0).
@@ -46,22 +46,22 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 
   // ======================================================== no tick yet
   await go();
-  step("C4.2 pass: the chips include Pre-qualification with its count (0 after Load sample)", /Pre-qualification 0/.test(await chip().innerText()), await chip().innerText());
+  step("C4.2 pass: the chips include Prospect questionnaire (PQR) with its count (0 after Load sample)", /Prospect questionnaire \(PQR\) 0/.test(await chip().innerText()), await chip().innerText());
   await chip().click(); await settle();
   step("C4.2 fail: with no tick, the chip shows no question", await shownRows().count() === 0, await shownRows().count());
-  step("C4.2: the PQR panel says how a PQR answer is asked and confirmed", /0 pre-qualification questions/.test(await p.locator("[data-pqr-set]").innerText()) && /please confirm/.test(await p.locator("[data-pqr-set]").innerText()));
+  step("C4.2: the PQR panel says how a PQR answer is asked and confirmed", /0 Prospect questionnaire \(PQR\) questions/.test(await p.locator("[data-pqr-set]").innerText()) && /please confirm/.test(await p.locator("[data-pqr-set]").innerText()));
 
   // ======================================================== a draft tick
   const L = (await api(`/combinations/${wp}/fact-sources`)).body;
   const dob = L.facts.find((f) => f.role === "principal" && f.fact === "person.date_of_birth");
   const t = await api(`/combinations/${wp}/fact-sources/principal/${encodeURIComponent("person.date_of_birth")}`, { method: "PUT", data: { prequalification: true, reason: "Sample: decides the family rows", version: dob.version } });
-  step("setup: Date of birth ticked for pre-qualification (draft)", t.status === 200, t.status);
+  step("setup: Date of birth ticked for the Prospect questionnaire (PQR) (draft)", t.status === 200, t.status);
   await go(); await chip().click(); await settle();
   const facts = await shownRows().evaluateAll((rs) => rs.map((r) => r.getAttribute("data-fact")));
   step("C4.2 pass: the chip shows exactly the ticked question", facts.length === 1 && facts[0] === "person.date_of_birth", facts.join());
   step("C4.2: the row says where it comes from and Ask", /Document/.test(await shownRows().first().innerText()) && /Ask/.test(await shownRows().first().innerText()));
   const panel = await p.locator("[data-pqr-set]").innerText();
-  step("C4.2 P-132 fail: a draft tick is not yet in the country PQR; the panel says it changes 1 line at the next release", /1 pre-qualification question\b/.test(panel) && /Country pre-qualification:\s*0 questions/.test(panel) && /changes 1 line at its next release/.test(panel), panel.replace(/\n/g, " "));
+  step("C4.2 P-132 fail: a draft tick is not yet in the country PQR; the panel says it changes 1 line at the next release", /1 Prospect questionnaire \(PQR\) question\b/.test(panel) && /Country Prospect questionnaire \(PQR\):\s*0 questions/.test(panel) && /changes 1 line at its next release/.test(panel), panel.replace(/\n/g, " "));
   step("C4.2 fail-guard: the panel shows no system key", !KEYS.test(panel), panel.match(KEYS)?.[0]);
   await state("draft-tick");
   await p.locator('[data-role-chip="spouse_or_partner"]').click(); await settle();
@@ -77,7 +77,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C4.8: the tick goes out in the combination's one release (Release 2)", r.status === 201 && r.body?.version === 2, r.status);
   await go(); await chip().click(); await settle();
   const after = await p.locator("[data-pqr-set]").innerText();
-  step("C4.2 P-132 pass: once released, the country PQR has 1 question from 1 of 1 released combination", /Country pre-qualification:\s*1 question from 1 of 1 released combination/.test(after) && await p.locator("[data-pqr-pending]").count() === 0, after.replace(/\n/g, " "));
+  step("C4.2 P-132 pass: once released, the country PQR has 1 question from 1 of 1 released combination", /Country Prospect questionnaire \(PQR\):\s*1 question from 1 of 1 released combination/.test(after) && await p.locator("[data-pqr-pending]").count() === 0, after.replace(/\n/g, " "));
   await p.getByRole("button", { name: "Show the list" }).click(); await settle();
   const line = await p.locator('[data-pqr-line="principal|person.date_of_birth"]').innerText();
   step("C4.2 P-132: the country line names the question, the person, the combination and its release", /Date of birth/.test(line) && /Principal applicant/.test(line) && /With an LMIA \(release 2\)/.test(line), line.replace(/\s+/g, " "));

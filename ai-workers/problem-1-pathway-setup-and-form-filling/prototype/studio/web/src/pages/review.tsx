@@ -9,11 +9,13 @@ import { problemWords } from "../../../contracts/programs";
 import { roleKeysInWords } from "@/pages/job";
 import { fieldName } from "@/pages/library";
 import { itemCell } from "@/lib/item-words";
+import { Link } from "react-router-dom";
+import { AnswerKeyBlock, fixOnTests } from "@/components/answer-key-gate";
 
 /** The simulated person's name for an id the server stores (QA-10: never "user-A" on screen). */
 export const nameOf = (actors: { id: string; name: string }[] | undefined, id: string | null | undefined) => actors?.find((a) => a.id === id)?.name ?? id ?? "";
 /** QA-73: the engine's part names in the words the pages use (the stored codes stay as they are). */
-const KIND_WORD: Record<string, string> = { "Derived definition": "Calculated answer", "Derived fields": "Calculated answers" };
+const KIND_WORD: Record<string, string> = { "Derived definition": "Calculated answer", "Derived fields": "Calculated answers", Questionnaires: "Smart questionnaire (SQR)", Tests: "Answer-key tests" }; // K13 (P-271): the key stays, the word is the module's; G2: answer-key tests
 // QA-73: a message that already starts with its form or item says it once ("IMM 1295: 37 rows", not "IMM 1295: IMM 1295: …").
 const problemLine = (p: any) => p.where === "Derived fields" ? `${p.label ? roleKeysInWords(p.label) : "A calculation"}: this calculation is not checked by a test yet; it is shown, never used to decide.`
   : String(p.message ?? "").startsWith(`${p.label ?? p.item}:`) ? p.message : problemWords(p);
@@ -62,10 +64,11 @@ export function ReviewTab({ d }: { d: any }) {
         <div className="rounded-xl border border-border bg-surface-raised p-4">
           <p className="font-medium">Validation of the draft</p>
           <p className="mt-1 text-xs text-text-muted">{errors.length} error{errors.length === 1 ? "" : "s"} (block submission) · {warnings.length} warning{warnings.length === 1 ? "" : "s"} (shown and recorded)</p>
-          <ul className="mt-2 space-y-1 text-sm">{[...errors, ...warnings].slice(0, allProblems ? undefined : 8).map((p: any, i: number) => <li key={i} className="flex gap-2"><Pill tone={p.level === "error" ? "danger" : "warn"}>{p.level}</Pill><span data-problem><b>{KIND_WORD[p.where] ?? p.where}</b> · {problemLine(p)}</span></li>)}</ul>
+          <ul className="mt-2 space-y-1 text-sm">{[...errors, ...warnings].slice(0, allProblems ? undefined : 8).map((p: any, i: number) => <li key={i} className="flex gap-2"><Pill tone={p.level === "error" ? "danger" : "warn"}>{p.level}</Pill><span data-problem className="min-w-0 [overflow-wrap:anywhere]"><b>{KIND_WORD[p.where] ?? p.where}</b> · {problemLine(p)}</span>{p.where === "Tests" && p.item ? <> <Link className="text-text-link hover:underline" to={fixOnTests(id, p.item === "eligibility" ? "rule_set" : "field_map", p.item)} aria-label={`Fix on Tests: ${p.label ?? p.item}`} data-fix-tests>Fix on Tests</Link></> : null}</li>)}</ul>
           {errors.length + warnings.length > 8 ? <Button size="sm" variant="ghost" className="mt-1" onClick={() => setAllProblems(!allProblems)}>{allProblems ? "Show fewer" : `Show all ${errors.length + warnings.length}`}</Button> : null}
         </div>
       ) : <Notice tone="ok" title="The draft passes validation" />}
+      <AnswerKeyBlock combinationId={id} v={v.draft.answer_keys} />
       <div className="rounded-xl border border-border bg-surface-raised">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
           <p className="font-medium">{sub ? "Submitted changes" : "Changes in the draft"} compared with {v.releases[0] ? `released version ${v.releases[0].version}` : "nothing released"} ({changes.length})</p>

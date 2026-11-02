@@ -110,3 +110,31 @@ Journeys: (1) the officer reads the record, then adds, changes and clears a numb
 **Scores moved:** D6 4 (feed placement no longer spoofable; numbers never in the feed) · D10 4 (m3 left) · D16 4 (firm filter and inactive guard now fail when removed). **Journey score: 9 / 10, pass.** Trust and sources rises to 1 (M1 fixed); plain words stays ½ (m3).
 
 **Verdict: Approve** (commit 64f39903). No open Blocker or Major. Minors m3, m4 and breaker m6 stay listed in the PR as follow-ups.
+
+## Round 3 (b343f016), 2 Nov
+**Scope:** `git diff 64f39903 b343f016`: `engine/runtime/filing-record.ts` (separators, cap removed), `api/src/filing-record.ts:51` (`before`), `tests/check_c82_filing_numbers.ts` (properties). The rest is records (this review, the break report).
+**Runs (own copy `runtime_c82r` on :4439, fresh database; US$0):** `check_c82_filing_numbers.ts` **13/13** · `check_c82_filing_record_api.ts` **24/24**. Copy stopped afterwards.
+
+**Checked**
+* **STANDARDS §7 [M], properties when the engine changes: met.** Three fast-check properties, 500 to 1,000 runs each:
+  * any valid number, in any case and with any separators, is stored bare and upper-case;
+  * any non-ASCII character inside a number is refused;
+  * whatever is taken is upper-case ASCII that matches the pattern.
+  * The second property is a real failing case: its generator leaves out only separator characters.
+* **Breaker R2-m1: closed.**
+  * One `SEPARATORS` class (`\s`, `-`, U+2010–U+2015, U+2212, U+00AD) is used by both `normaliseNumber` and the non-ASCII guard, so a dash is removed before the guard runs.
+  * Probes:
+    * value "W12–345—6789" with `before` "—" is saved as W123456789;
+    * a `before` of "w12−345­6789" (minus sign and soft hyphen) matches the stored W123456789 and saves;
+    * a value of only "—" is refused with 422 (not a clear; null or blank clears, which is the safer side).
+* **Cap: removed, safely.**
+  * The contract bounds input at 200 characters (201 gives 400 with plain words). The pack pattern decides the shape (199 digits gives 422).
+  * The pattern is simple and anchored, so 200 characters cost nothing.
+* **Technology gate:** fast-check is not new. Three existing checks already import it (`check_screen01_rules.ts`, `runtime/check_vv_filings.ts`, `runtime/check_case_engine.ts`).
+
+**Minor (not this PR's; a follow-up for the tech lead):** fast-check reaches `studio/node_modules` only as a dependency of `effect` (`package-lock.json:3981`); it is not declared in `studio/package.json`. Declare it as a devDependency, so these four checks do not break if `effect` drops it.
+**Still open from round 2 (Minor, listed in the PR):** m3 (`basis` words), m4 (`person.uci` key in code), breaker m6 (id oracle).
+
+**Scores:** D16 5 for the engine (examples plus properties, each rule failing when removed); otherwise as round 2. **Journey score: 9 / 10, pass** (unchanged).
+
+**Verdict: Approve** (commit b343f016). No open Blocker or Major.

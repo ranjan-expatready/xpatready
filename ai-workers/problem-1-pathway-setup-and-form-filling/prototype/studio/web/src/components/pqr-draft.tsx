@@ -21,7 +21,7 @@ export function DraftPqrPicks({ id }: { id: string }) {
   const [open, setOpen] = React.useState(false);
   return (
     <>
-      <Button size="sm" variant="secondary" onClick={() => setOpen(true)} data-pqr-draft><Sparkles /> Draft pre-qualification picks</Button>
+      <Button size="sm" variant="secondary" onClick={() => setOpen(true)} data-pqr-draft><Sparkles /> Draft Prospect questionnaire (PQR) picks</Button>
       {open ? <DraftDialog id={id} onClose={() => setOpen(false)} /> : null}
     </>
   );
@@ -66,7 +66,7 @@ function DraftDialog({ id, onClose }: { id: string; onClose: () => void }) {
     ? <><Button variant="ghost" onClick={onClose}>Done</Button>{result.offer_saved ? <Button variant="secondary" onClick={useSaved} data-pqr-use-saved>Use Saved (US$0)</Button> : null}{result.proposed || result.already ? <Button asChild><Link to={to} data-pqr-open-review>Open To review</Link></Button> : null}</>
     : <><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void run()} busy={busy} disabled={!plan.data || closed(mode) || overCap} aria-describedby={(base.isSuccess || base.isError) && closed(mode) ? "pqr-none" : overCap ? "pqr-cost" : undefined} data-pqr-start data-mode={mode}><Sparkles /> {closed(mode) ? "Draft" : mode === "replay" ? "Draft with Saved (US$0)" : "Draft Live"}</Button></>;
   return (
-    <Dialog open wide onOpenChange={(o) => { if (!o) onClose(); }} title="Draft pre-qualification picks" description="Each pick goes to To review with its reason; you accept or remove each there. Nothing is asked until a pick is accepted. Sample until the immigration expert confirms." footer={footer}>
+    <Dialog open wide onOpenChange={(o) => { if (!o) onClose(); }} title="Draft Prospect questionnaire (PQR) picks" description="Each pick goes to To review with its reason; you accept or remove each there. Nothing is asked until a pick is accepted. Sample until the immigration expert confirms." footer={footer}>
       {result ? (
         <div className="space-y-3 text-sm outline-none" data-pqr-result ref={resultRef} tabIndex={-1} role="status">
           <p data-pqr-note>{result.note}</p>

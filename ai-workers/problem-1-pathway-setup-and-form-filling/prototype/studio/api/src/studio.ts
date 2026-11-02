@@ -1,6 +1,7 @@
 // Product Studio application service: programs and combinations, the shared library (versioned edits), the
 // combination's own configuration, previews through the common renderer, validation, review and release.
-import { itemState, lockItem, openItemChanges, refuseRetired, retiredFieldKeys } from "./library-items.ts";
+import { itemState, libraryFilter, lockItem, openItemChanges, originWords, refuseRetired, retiredFieldKeys } from "./library-items.ts";
+import { current } from "../../engine/where-used.ts";
 import { FILLS_LOCK } from "./who-fills.ts";
 import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { Prisma, type ReviewSubmission } from "@prisma/client";
@@ -8,6 +9,8 @@ import { canRelease } from "../../../contracts/rules.ts";
 import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
 import { buildSnapshot, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
 import { slug } from "../../engine/import.ts";
+import { identityKeyOf, insertProposals } from "./proposals.ts";
+import { nameKey, namedDocumentType, waitingDocumentType } from "./document-type-names.ts";
 import { checkCondition, diff, ordinal, validate, isDemoSnapshot } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, need, revise, RUNTIME_ACTORS, strip, Workspace, type Actor } from "./core.ts";
 import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
@@ -19,8 +22,27 @@ import { DocumentLineEdit, FormLineEdit, PeopleBody, UndoBody, type PersonRoleVi
 import { checkPeople, linesNamingRemoved } from "../../engine/people.ts";
 import { filingProblems, filingWarnings, modeSent } from "../../engine/filing-modes.ts";
 import { LibrarySources, type SourceLine } from "./library-sources.ts";
+import { aiLive, usesFakeLauncher } from "./sources.ts";
 import { checkFormat, fieldFormat, formatWords, type MappedBox } from "../../engine/field-format.ts";
 import { releaseLabel } from "../../contracts/runtime.ts";
+import { gateOf as keyGateOf, keysUnchanged, runKeys, type Gate as KeyGate } from "./answer-key-gate.ts";
+import type { Problem } from "../../engine/validate.ts";
+/** G2 (C5.5, BR-8; shared with G1 BR-8): a refusal carries every blocking problem in `errors[]`, each in words; `detail`
+ *  (and `message`, read by older callers) keeps the sentence the screens and checks already show. */
+/** G2 BR-9: the keys a release rests on, frozen in its summary (only when the gate judged it). */
+/** G2: a gate that adds no line, for judging the rest of a draft before its tests run (reviewer m2). */
+const NO_KEY_GATE: KeyGate = { demo: false, judged: false, items: [], problems: [], evidence: [], keys: [] };
+const keyEvidence = (g: KeyGate) => (g.judged ? { answer_keys: g.evidence } : {});
+const staleKeys = (label: string): never => { throw new HttpException({ type: "https://expatready.local/problems/stale", title: "Changed by someone else", status: 409, statusCode: 409, detail: `Release refused: an answer-key test of "${label}" was changed or signed a moment ago. Open Review and release again.`, message: `Release refused: an answer-key test of "${label}" was changed or signed a moment ago. Open Review and release again.` }, HttpStatus.CONFLICT); };
+/** G2 BR-9 (challenge m7): a key's expected values changed since the last release named it (another key version). */
+const changedSince = (summary: unknown, k: { key_id: string; version: number; change_reason: string | null }) => {
+  const before = ((summary as { answer_keys?: { key_id?: string; key_version?: number }[] } | null)?.answer_keys ?? []).find((e) => e.key_id === k.key_id);
+  return before && before.key_version !== k.version ? { reason: k.change_reason } : null;
+};
+const refuse = (detail: string, problems: (Problem & { forms?: string[] })[], status = HttpStatus.BAD_REQUEST): never => {
+  throw new HttpException({ type: "https://expatready.local/problems/draft-problems", title: status === HttpStatus.CONFLICT ? "Release refused" : "Fix the problems first", status, statusCode: status, detail, message: detail,
+    errors: problems.map((p) => ({ where: p.where, item: p.item, label: p.label ?? null, forms: p.forms ?? [], message: problemWords(p) })) }, status);
+};
 /** C3.6 (P-223, option (a)): a draft condition may read a fact the library lacks; validate() keeps it as an error that
  *  blocks release, and Questionnaires › "Facts a rule needs that no form asks" offers the add. Other errors still refuse. */
 const draftErrors = (errs: string[]) => errs.filter((e) => !/^reads [a-z][a-z0-9_]*\.[a-z0-9_.]+, which is not in the library$/.test(e));
@@ -88,7 +110,10 @@ export class Studio {
     // "Structure exists" counts any name, Pathways included (W1-03 B1: after Reset the Structure is empty in both tabs).
     const [programs, fields, releases, jobs, sample] = await Promise.all([this.db.programDef.count({ where: { workspaceId } }), this.db.canonicalField.count({ where: { workspaceId } }), this.db.configRelease.count({ where: { workspaceId } }), this.db.draftingJob.count({ where: { workspaceId } }), this.db.auditEvent.count({ where: { workspaceId, action: "loaded", entity: "sample inputs" } })]);
     // sampleLoaded: the sample inputs were loaded into this workspace, not merely "some program exists" (QA-12).
-    return { actor, actors: ACTORS, workspace: { key: "demo", label: "Demo workspace (disposable)", id: workspaceId }, counts: { programs, fields, releases, jobs }, sampleLoaded: sample > 0, preferences: await this.preferences(actor.id) };
+    return { actor, actors: ACTORS, workspace: { key: "demo", label: "Demo workspace (disposable)", id: workspaceId }, counts: { programs, fields, releases, jobs }, sampleLoaded: sample > 0, preferences: await this.preferences(actor.id),
+      // C11.8 (additive): whether live AI is on and which launcher this copy uses, so a check can tell a copy whose live
+      // calls go to the stand-in launcher (nothing reaches a model) from one without the switch. Read only; sets nothing.
+      ai: { live: aiLive(), launcher: usesFakeLauncher() ? "stand-in" : "guarded" } };
   }
 
   /** C11.10 (P-115): a person's own view choices. Only known keys and values are kept (contracts/session.ts). */
@@ -359,7 +384,8 @@ export class Studio {
     const { snapshot, sha256 } = await buildSnapshot(this.db, c.workspaceId, id, "draft");
     const last = c.releases[0];
     const changes = diff((last?.snapshot as any) ?? null, snapshot);
-    const problems = await this.problems(c.workspaceId, snapshot, id);
+    const gate = await keyGateOf(this.db, id, snapshot, sha256); // G2 (C5.5): answer-key tests, read only
+    const problems = await this.problems(c.workspaceId, snapshot, id, gate);
     const sub = await this.db.reviewSubmission.findFirst({ where: { combinationId: id }, orderBy: { submittedAt: "desc" } });
     return {
       combination: { id: c.id, key: c.combinationKey, label: c.label, description: c.description, participants: c.participants, source_basis: c.sourceBasis, basis_note: await this.basisNote(c), created_by: c.createdBy },
@@ -367,7 +393,9 @@ export class Studio {
       path: chain.map((n) => ({ key: n.programNodeKey, label: n.label, level: LEVEL[n.nodeKind].name })), allowed_locations: c.program.allowedLocations,
       attachments: c.attachments, jobs: c.jobs.map((j) => ({ ...j, detail: undefined })),
       releases: c.releases.map((r) => ({ id: r.id, version: r.version, demo: isDemoSnapshot(r.snapshot), release: r.packVersion?.version ?? r.version, label: releaseLabel(r), sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: ACTORS.find((x) => x.id === r.approverId)?.name ?? "Approver", summary: r.summary, basis: r.basis })),
-      draft: { sha256, matches_release: !!last && last.sha256 === sha256, changes, problems, counts: this.counts(snapshot) },
+      draft: { sha256, matches_release: !!last && last.sha256 === sha256, changes, problems, counts: this.counts(snapshot),
+        // G2 BR-9: what a release would rest on (per item and key), and whether it would be a Demo release.
+        answer_keys: { demo: gate.demo, judged: gate.judged, items: gate.items.map((i) => ({ ...i, keys: i.keys.map((k) => ({ ...k, changed_since_release: changedSince(last?.summary, k) })) })) } },
       submission: sub ? { ...sub, stale: sub.status === "SUBMITTED" && sub.draftSha256 !== sha256 } : null,
     };
   }
@@ -376,7 +404,7 @@ export class Studio {
     return { fields: s.canonical_fields.length, sections: s.sections.length, placements: s.placements.length, forms: s.forms.length, map_boxes: s.field_maps.reduce((a, m) => a + m.entries.length, 0), document_requirements: s.document_requirements.length, rules: s.rules.length, checks: s.checks.length };
   }
 
-  async problems(workspaceId: string, s: Snapshot, combinationId?: string) {
+  async problems(workspaceId: string, s: Snapshot, combinationId?: string, gate?: KeyGate) {
     const structure = combinationId ? await this.structureProblems(combinationId) : [];
     const lib = (await this.db.canonicalField.findMany({ where: { workspaceId }, select: { canonicalFieldKey: true, valueType: true, status: true } })).filter((f) => f.status !== "RETIRED").map((f) => ({ key: f.canonicalFieldKey, valueType: f.valueType }));
     const carried = combinationId ? (await this.undecidedFormFields(combinationId, "PUBLISHED")).map((f) => ({ level: "warning" as const, where: "Forms", item: f.form, message: `Not decided yet (from an earlier release): ${f.n} form field${f.n === 1 ? "" : "s"}${forExample(f.example)}. Decide them when this edition is drafted again.` })) : [];
@@ -384,12 +412,14 @@ export class Studio {
     // engine/filing-modes.ts FILING_NOT_SET_BLOCKS).
     const roles = await this.personRoles(workspaceId);
     const filing = filingProblems((s.combination?.participants ?? []) as { role: string; label?: string; max: number; filingMode?: unknown }[], roles);
-    const all = [...structure, ...filing, ...emptyProblem(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...carried]; // L4: what IRCC accepts
+    // G2 (C5.5): the answer-key gate's lines, in the same list as every other problem (one list on Review and release).
+    const tests = combinationId ? (gate ?? (await keyGateOf(this.db, combinationId, s, (await buildSnapshot(this.db, workspaceId, combinationId, "draft")).sha256))).problems : [];
+    const all = [...structure, ...filing, ...emptyProblem(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...carried, ...tests]; // L4: what IRCC accepts
     // C2.12 (plan F3a-1, BR-10): each problem names the forms it touches, so a form's path shows its own: a Forms problem its form,
     // any other the forms whose field map reads that item as a fact; none otherwise.
     const formsOf = new Map<string, Set<string>>();
     for (const m of s.field_maps) for (const e of m.entries) if (e.fact) (formsOf.get(e.fact) ?? formsOf.set(e.fact, new Set()).get(e.fact)!).add(m.form_number);
-    return all.map((p) => ({ ...p, forms: p.where === "Forms" ? [p.item] : [...(formsOf.get(p.item) ?? [])].sort() }));
+    return all.map((p) => ({ ...p, forms: p.where === "Forms" ? [p.item] : p.where === "Tests" ? ((p as { forms?: string[] }).forms ?? []) : [...(formsOf.get(p.item) ?? [])].sort() }));
   }
 
   async config(id: string, mode: Mode) {
@@ -427,25 +457,49 @@ export class Studio {
   }
 
   // ------------------------------------------------------------------ the shared library
-  async fields(q: { q?: string; retired?: string }) {
-    const workspaceId = await this.ws.id();
-    const rows = await this.db.canonicalField.findMany({ where: { workspaceId }, orderBy: [{ canonicalFieldKey: "asc" }, { version: "desc" }] });
+  /** Each field's mapped form fields by form edition (draft or published), and the form numbers that fill it: the row's
+   *  "forms" list, and the count C3.13 says beside it (one reading for both). */
+  private async formUsage(workspaceId: string) {
     const usage = await this.db.formFieldMap.groupBy({ by: ["canonicalFieldKey", "formEditionId"], where: { workspaceId, outcome: "mapped", status: { in: ["PUBLISHED", "DRAFT"] } }, _count: { _all: true } });
     const editions = new Map((await this.db.formEdition.findMany({ where: { workspaceId }, include: { form: true } })).map((e) => [e.id, e.form.formKey]));
-    const placements = new Map((await this.db.sectionQuestion.findMany({ where: { workspaceId }, orderBy: { version: "desc" } })).map((p) => [p.canonicalFieldKey, p]));
+    const formsOf = new Map<string, string[]>(), boxesOf = new Map<string, number>();
+    for (const u of usage) {
+      if (!u.canonicalFieldKey) continue;
+      const form = editions.get(u.formEditionId), had = formsOf.get(u.canonicalFieldKey) ?? [];
+      if (form && !had.includes(form)) had.push(form);
+      formsOf.set(u.canonicalFieldKey, had); boxesOf.set(u.canonicalFieldKey, (boxesOf.get(u.canonicalFieldKey) ?? 0) + u._count._all);
+    }
+    return { formsOf, boxesOf };
+  }
+
+  /** C3.13 BR-3 (Screen 04 §6): search by name, meaning, alias or form code; ?section=, ?status=, ?origin= filters.
+   *  `?retired=` (C11.9) stays: "all" for the whole list, "only" for the retired ones. */
+  async fields(q: { q?: string; retired?: string; section?: string; status?: string; origin?: string }) {
+    const workspaceId = await this.ws.id();
+    const rows = await this.db.canonicalField.findMany({ where: { workspaceId }, orderBy: [{ canonicalFieldKey: "asc" }, { version: "desc" }] });
+    const { formsOf, boxesOf } = await this.formUsage(workspaceId);
+    const questions = await this.db.sectionQuestion.findMany({ where: { workspaceId }, orderBy: { version: "desc" } });
+    // C3.13 review M1: a field's placement is its newest question (rows come newest first); the oldest used to win, so a
+    // re-placed field showed, and was filtered by, the section it had left.
+    const placements = new Map<string, (typeof questions)[number]>(); for (const p of questions) if (!placements.has(p.canonicalFieldKey)) placements.set(p.canonicalFieldKey, p);
+    // C3.13 BR-2: the sections that ask a field are its current (draft or published) questions' sections.
+    const sectionsOf = new Map<string, Set<string>>();
+    for (const x of current(questions, (r) => r.lineageKey)) sectionsOf.set(x.canonicalFieldKey, (sectionsOf.get(x.canonicalFieldKey) ?? new Set()).add(x.sectionKey));
     const latest = new Map<string, (typeof rows)[number]>();
     for (const r of rows) if (!latest.has(r.canonicalFieldKey)) latest.set(r.canonicalFieldKey, r);
     const versionsBy = new Map<string, typeof rows>(); for (const r of rows) versionsBy.set(r.canonicalFieldKey, [...(versionsBy.get(r.canonicalFieldKey) ?? []), r]);
-    const needle = (q.q ?? "").toLowerCase();
-    const [src, used, open] = await Promise.all([this.lib.all("field", workspaceId), this.lib.usedIn("field", workspaceId), openItemChanges(this.db, workspaceId, "field")]);
+    const [src, { ids, labels: used }, open] = await Promise.all([this.lib.all("field", workspaceId), this.lib.usedInBoth("field", workspaceId), openItemChanges(this.db, workspaceId, "field")]);
     const fmt = await this.fieldBoxes(workspaceId);
-    return [...latest.values()].filter((f) => !needle || f.canonicalFieldKey.includes(needle) || f.meaning.toLowerCase().includes(needle)).map((f) => {
-      const u = usage.filter((x) => x.canonicalFieldKey === f.canonicalFieldKey);
-      const forms = [...new Set(u.map((x) => editions.get(x.formEditionId)))].filter(Boolean);
+    const list = [...latest.values()].map((f) => {
+      const forms = formsOf.get(f.canonicalFieldKey) ?? [];
       const p = placements.get(f.canonicalFieldKey);
-      return { key: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, scope: f.scope, version: f.version, status: f.status, origin: f.origin, has_draft: f.status === "DRAFT", boxes: u.reduce((a, x) => a + x._count._all, 0), forms, placement: p ? { section: p.sectionKey, collected_from: p.collectedFrom } : null, name: (f.labelChecked && f.label) || null, ...sourceSummary(src.get(f.canonicalFieldKey)), used_in: used.get(f.canonicalFieldKey) ?? [], format: formatLine(fmt.get(f.canonicalFieldKey), f.valueType), ...itemState(versionsBy.get(f.canonicalFieldKey) ?? [], open.get(f.canonicalFieldKey)) };
-    // C11.9 BR-10 (pack 3): the default list, the one pickers read, leaves retired fields out; ?retired=only lists them.
-    }).filter((r) => (q.retired === "all" ? true : q.retired === "only" ? r.retired : !r.retired));
+      // C3.13 BR-2: where used as counts that say what they count: forms that fill it (the forms listed), combinations
+      // using it (the where-used service, SH2), sections asking it.
+      const usedBy = { forms: forms.length, combinations: ids.get(f.canonicalFieldKey)?.size ?? 0, sections: sectionsOf.get(f.canonicalFieldKey)?.size ?? 0 };
+      const state = itemState(versionsBy.get(f.canonicalFieldKey) ?? [], open.get(f.canonicalFieldKey));
+      return { key: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, scope: f.scope, version: f.version, status: f.status, origin: f.origin, origin_words: originWords(f.origin), has_draft: f.status === "DRAFT", boxes: boxesOf.get(f.canonicalFieldKey) ?? 0, forms, usedBy, placement: p ? { section: p.sectionKey, collected_from: p.collectedFrom } : null, name: (f.labelChecked && f.label) || null, aliases: f.aliases, ...sourceSummary(src.get(f.canonicalFieldKey)), used_in: used.get(f.canonicalFieldKey) ?? [], format: formatLine(fmt.get(f.canonicalFieldKey), f.valueType), ...state };
+    });
+    return list.filter(libraryFilter(q, (r) => [r.key, r.meaning, r.name ?? "", latest.get(r.key)?.label ?? "", ...r.aliases], (r) => r.forms, (r) => r.placement?.section ?? null));
   }
 
   /** P-162 (C3.1): each field's current mapped form fields with their edition's inventory, for its format. Only the
@@ -569,8 +623,13 @@ export class Studio {
     const seen = new Set<string>();
     const qs = await this.db.sectionQuestion.groupBy({ by: ["sectionKey"], where: { workspaceId }, _count: { _all: true } });
     const sel = await this.db.sqrSectionSelection.groupBy({ by: ["sectionKey"], where: { workspaceId }, _count: { _all: true } });
-    const [src, used, open] = await Promise.all([this.lib.all("section", workspaceId), this.lib.usedIn("section", workspaceId), openItemChanges(this.db, workspaceId, "section")]);
-    return rows.filter((r) => !seen.has(r.sectionKey) && seen.add(r.sectionKey)).map((r) => ({ ...itemState(rows.filter((x) => x.sectionKey === r.sectionKey), open.get(r.sectionKey), "section"), ...sourceSummary(src.get(r.sectionKey)), used_in: used.get(r.sectionKey) ?? [], key: r.sectionKey, title: r.title, meaning: r.meaning, version: r.version, status: r.status, origin: r.origin, questions: qs.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0, combinations: sel.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0 }));
+    const [src, { ids, labels: used }, open, { formsOf }, questions] = await Promise.all([this.lib.all("section", workspaceId), this.lib.usedInBoth("section", workspaceId), openItemChanges(this.db, workspaceId, "section"), this.formUsage(workspaceId),
+      this.db.sectionQuestion.findMany({ where: { workspaceId } })]);
+    // C3.13 BR-2: a section is used by the forms that fill a field its current questions ask, and by the combinations that
+    // choose it; no section holds another, so its sections count is 0.
+    const formsIn = new Map<string, Set<string>>();
+    for (const x of current(questions, (r) => r.lineageKey)) for (const f of formsOf.get(x.canonicalFieldKey) ?? []) formsIn.set(x.sectionKey, (formsIn.get(x.sectionKey) ?? new Set()).add(f));
+    return rows.filter((r) => !seen.has(r.sectionKey) && seen.add(r.sectionKey)).map((r) => ({ ...itemState(rows.filter((x) => x.sectionKey === r.sectionKey), open.get(r.sectionKey), "section"), ...sourceSummary(src.get(r.sectionKey)), used_in: used.get(r.sectionKey) ?? [], usedBy: { forms: formsIn.get(r.sectionKey)?.size ?? 0, combinations: ids.get(r.sectionKey)?.size ?? 0, sections: 0 }, key: r.sectionKey, title: r.title, meaning: r.meaning, version: r.version, status: r.status, origin: r.origin, origin_words: originWords(r.origin), questions: qs.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0, combinations: sel.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0 }));
   }
 
   /** QA-93 (P-116): removing answers with the place the section had, so Undo adds it back in the same place. */
@@ -645,8 +704,10 @@ export class Studio {
     const workspaceId = await this.ws.id();
     const rows = await this.db.documentType.findMany({ where: { workspaceId }, orderBy: [{ name: "asc" }, { version: "desc" }] });
     const seen = new Set<string>();
-    const [src, used, open] = await Promise.all([this.lib.all("document_type", workspaceId), this.lib.usedIn("document_type", workspaceId), openItemChanges(this.db, workspaceId, "document_type")]);
-    return rows.filter((r) => !seen.has(r.documentTypeKey) && seen.add(r.documentTypeKey)).map((r) => ({ ...r, ...sourceSummary(src.get(r.documentTypeKey)), used_in: used.get(r.documentTypeKey) ?? [], ...itemState(rows.filter((x) => x.documentTypeKey === r.documentTypeKey), open.get(r.documentTypeKey), "document_type") }));
+    const [src, { ids, labels: used }, open] = await Promise.all([this.lib.all("document_type", workspaceId), this.lib.usedInBoth("document_type", workspaceId), openItemChanges(this.db, workspaceId, "document_type")]);
+    // C3.13 BR-2: a document type is used by the combinations whose checklist lists it, takes it as an alternative or reads
+    // a fact from it (SH2b); no form fills it and no section holds it, so those counts are 0.
+    return rows.filter((r) => !seen.has(r.documentTypeKey) && seen.add(r.documentTypeKey)).map((r) => ({ ...r, origin_words: originWords(r.origin), ...sourceSummary(src.get(r.documentTypeKey)), used_in: used.get(r.documentTypeKey) ?? [], usedBy: { forms: 0, combinations: ids.get(r.documentTypeKey)?.size ?? 0, sections: 0 }, ...itemState(rows.filter((x) => x.documentTypeKey === r.documentTypeKey), open.get(r.documentTypeKey), "document_type") }));
   }
 
   async libraryTypes(workspaceId: string) {
@@ -669,7 +730,7 @@ export class Studio {
   }
 
   // ------------------------------------------------------------------ the combination's own configuration
-  async saveRequirement(actor: Actor, combinationId: string, lineage: string | null, b: { documentTypeKey?: string; newTypeName?: string; attachMode: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: any; conditionPlain?: string; appliesToRoles: string; providedBy?: string; sourceQuote?: string; sourceFile?: string; note?: string; alternatives?: string[]; retire?: boolean; baseRevision?: string }) {
+  async saveRequirement(actor: Actor, combinationId: string, lineage: string | null, b: { documentTypeKey?: string; newTypeName?: string; documentTypeName?: string; proves?: string; attachMode: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: any; conditionPlain?: string; appliesToRoles: string; providedBy?: string; sourceQuote?: string; sourceFile?: string; note?: string; alternatives?: string[]; retire?: boolean; baseRevision?: string }) {
     need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
     const workspaceId = c.workspaceId;
@@ -680,18 +741,58 @@ export class Studio {
       await this.audit.log(workspaceId, actor.id, "retired", "document requirement", lineage, `${actor.name} removed document requirement ${lineage} from "${c.label}" (draft)`, undefined, combinationId);
       return row;
     }
+    // Break m (#573): text fields are text; a number or an object is refused in words, never a 500 or "[object Object]".
+    const TEXT: [string, unknown][] = [["The document type", b.documentTypeKey], ["The new document type's name", b.documentTypeName], ["The new document type's name", b.newTypeName], ["What it proves", b.proves], ["Provided by", b.providedBy], ["The source quote", b.sourceQuote]];
+    for (const [what, v] of TEXT) if (v !== undefined && v !== null && typeof v !== "string") fail(`${what} must be text.`);
     let typeKey = b.documentTypeKey;
-    if (!typeKey && b.newTypeName?.trim()) {
-      typeKey = slug(b.newTypeName);
-      if (!(await this.db.documentType.findFirst({ where: { workspaceId, documentTypeKey: typeKey } }))) { await this.db.documentType.create({ data: { workspaceId, documentTypeKey: typeKey, name: b.newTypeName.trim(), category: b.providedBy ?? "client", version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id } });
-        // A new document type waits for a second person on To review, like a new field (Lead re-check 25 Oct).
-        await this.db.libraryChange.create({ data: { workspaceId, kind: "document_type", key: typeKey, label: b.newTypeName.trim(), action: "ADD", reason: "Named while adding a document requirement.", status: "WAITING", proposedBy: actor.id, combinationId } }); }
+    const MODES = ["COMBINATION_MANDATORY", "ANSWER_CONDITIONAL"];
+    const lineProblems = async () => { // the line's own checks, run before a name is proposed too (review m2: nothing unchecked waits)
+      if ((!lineage || b.attachMode !== undefined) && !MODES.includes(b.attachMode)) fail("Choose whether the document is always needed or only when a condition is true.");
+      if (!WHO.includes(b.appliesToRoles)) fail("Choose whose document it is.");
+      if (b.attachMode === "ANSWER_CONDITIONAL" && !b.condition) fail("A conditional requirement needs its condition.");
+      if (b.condition) { const t = await this.libraryTypes(workspaceId); const errs = draftErrors(this.conditionErrors(b.condition, t)); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); }
+    };
+    // C3.6 (P-149, P-158): a document type named while adding a requirement is never written by hand. A name the library
+    // has (live or retired, matched as the library's lander keys it and by its normalised name) is that type, as before; a
+    // new name waits as one library proposal on To review › Proposals, and the line is added with it once it is accepted.
+    const typeName = cleanLabel(String(b.documentTypeName ?? b.newTypeName ?? ""));
+    if (!typeKey && typeName) {
+      if (!normalizeLabel(typeName)) fail("Give the new document type a name with letters or numbers.");
+      typeKey = (await namedDocumentType(this.db, workspaceId, typeName)) ?? undefined;
+      if (!typeKey) {
+        // Review m1: an edit never proposes; the line would keep its old type while the words said "add the line with it".
+        if (lineage) fail(`"${typeName}" is not in the library. To give this line a new document type, add a new line with that name (it waits as a library proposal), then remove this one; or choose a library type here.`, HttpStatus.CONFLICT);
+        if (typeName.length > 120) fail("Keep the document type's name under 120 characters.");
+        await lineProblems();
+        // Review M1: the identity is the name and what it proves (P-149 (2)); the default proves names no combination, so
+        // the same name from two combinations is one item.
+        const proves = (b.proves?.trim() || "Not stated yet: the person who named it did not say; the second person may state it before accepting.").slice(0, 200);
+        const payload = { kind: "document_type" as const, name: typeName, proves, category: (b.providedBy ?? "client").slice(0, 60), suppliesFacts: [], readerKind: "person_only" as const, identityDocument: false };
+        const quote = b.sourceQuote?.trim() ? ` The author's source: "${b.sourceQuote.trim().slice(0, 300)}".` : "";
+        const norm = nameKey(typeName);
+        const proposalId = await this.db.$transaction(async (tx) => {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`requirement-type:${workspaceId}:${norm}`}))`;
+          // Review M1: a waiting proposal for the same name (any letter case, spacing, punctuation or Latin accent, from any
+          // combination or from AI drafting) is this one.
+          const twin = await waitingDocumentType(tx, workspaceId, typeName);
+          if (twin !== null) fail(`A proposal to add the document type "${twin}" is already waiting on To review › Proposals: decide it there, then add the line with it.`, HttpStatus.CONFLICT);
+          const job = await tx.draftingJob.create({ data: { workspaceId, combinationId, kind: "requirement_type", mode: "LOCAL", status: "COMPLETED", costUsd: 0, startedBy: actor.id, finishedAt: new Date(),
+            message: `${actor.name} named a new document type while adding a requirement to "${c.label}": one library proposal (no AI, US$0).`, detail: { operation: "requirement_type", name: typeName } } });
+          const [id] = await insertProposals(tx, workspaceId, [{
+            kind: "document_type", runId: job.id, step: "requirement_type", scope: { formEdition: null, combinationId }, landsOn: "library", reuse: { match: "new", existingKey: null },
+            payload, source: null, rounds: { draft: null, check: null }, rules: [{ rule: "not_in_library", passed: true, why: null }],
+            agreement: "rules_only", confidence: "check", reason: `Named by a person while adding a document requirement to "${c.label}": a second person checks the name and what it proves.${quote}`.slice(0, 500),
+            origin: "rules", identity: { key: identityKeyOf(payload, ""), near: [], nearReason: null }, relatesTo: null, revision: null, basis: "SAMPLE",
+          }]);
+          return id;
+        }, { timeout: 30_000, maxWait: 10_000 });
+        await this.audit.log(workspaceId, actor.id, "proposed", "document type", typeName, `${actor.name} proposed the document type "${typeName}" while adding a requirement to "${c.label}" (Sample; a second person approves it)`, undefined, combinationId);
+        return { status: "waiting" as const, proposalId, message: `"${typeName}" waits for a second person on To review › Proposals. Once it is accepted, choose it here and save the line.` };
+      }
     }
     if (!typeKey || !(await this.db.documentType.findFirst({ where: { workspaceId, documentTypeKey: typeKey } }))) fail("Choose a document type, or name a new one.");
     await refuseRetired(this.db, workspaceId, "document_type", [typeKey, ...(Array.isArray(b.alternatives) ? b.alternatives : [])]); // C11.9 break M1
-    if (!WHO.includes(b.appliesToRoles)) fail("Choose whose document it is.");
-    if (b.attachMode === "ANSWER_CONDITIONAL" && !b.condition) fail("A conditional requirement needs its condition.");
-    if (b.condition) { const t = await this.libraryTypes(workspaceId); const errs = draftErrors(this.conditionErrors(b.condition, t)); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); }
+    await lineProblems();
     // W1-15 slice 3: alternatives are other library document types; any one of them counts instead of this line's.
     const alternatives = [...new Set((Array.isArray(b.alternatives) ? b.alternatives : []).filter((k) => typeof k === "string" && k && k !== typeKey))];
     if (alternatives.length) { const known = await this.db.documentType.findMany({ where: { workspaceId, documentTypeKey: { in: alternatives } }, select: { documentTypeKey: true } });
@@ -702,6 +803,10 @@ export class Studio {
     const typeKeys = [typeKey!, ...alternatives];
     const row = await this.db.$transaction(async (tx) => {
       await lockItem(tx, workspaceId, "document_type", typeKeys); await refuseRetired(tx, workspaceId, "document_type", typeKeys);
+      // C3.6 (review round 3): read again under the lock, so a type an Undo removed meanwhile is never written onto a line.
+      const still = new Set((await tx.documentType.findMany({ where: { workspaceId, documentTypeKey: { in: typeKeys } }, select: { documentTypeKey: true } })).map((t) => t.documentTypeKey));
+      const gone = typeKeys.find((k) => !still.has(k));
+      if (gone) fail(gone === typeKey ? "Choose a document type, or name a new one: this one is no longer in the library." : `An alternative must be a document type in the library: ${gone} is not.`);
       if (!lineage) {
         let key = `${typeKey}:${b.appliesToRoles}`;
         if (await tx.documentRequirement.findFirst({ where: { combinationId, lineageKey: key } })) key = `${key}:${Date.now().toString(36)}`;
@@ -850,8 +955,9 @@ export class Studio {
     const { snapshot, sha256 } = await buildSnapshot(this.db, c.workspaceId, id, "draft");
     const last = await this.db.configRelease.findFirst({ where: { combinationId: id }, orderBy: { version: "desc" } });
     if (last?.sha256 === sha256) fail("Nothing has changed since the released version.");
-    const errors = (await this.problems(c.workspaceId, snapshot, id)).filter((p) => p.level === "error");
-    if (errors.length) fail(`Fix ${errors.length} problem${errors.length > 1 ? "s" : ""} before submitting: ${errors.slice(0, 3).map(problemWords).join(" · ")}`); // S5: a coverage gap is said in words, never by its field code
+    await runKeys(this.db, this.audit, actor, c, snapshot, sha256); // G2 BR-6 (SA-1B-296 r3): the tests run at Submit
+    const errors = (await this.problems(c.workspaceId, snapshot, id, await keyGateOf(this.db, id, snapshot, sha256))).filter((p) => p.level === "error");
+    if (errors.length) refuse(`Fix ${errors.length} problem${errors.length > 1 ? "s" : ""} before submitting: ${errors.slice(0, 3).map(problemWords).join(" · ")}`, errors); // S5: a coverage gap is said in words, never by its field code
     const changes = diff((last?.snapshot as any) ?? null, snapshot);
     // W1-02 (break M2): nothing to sign is nothing to release, even when the fingerprint moved (an older release's keys).
     // Refused before anything is written (PR #39 review): a waiting submission is never withdrawn by a refused one.
@@ -892,8 +998,10 @@ export class Studio {
     const { snapshot, sha256 } = await buildSnapshot(this.db, c.workspaceId, id, "draft");
     // Re-checked at approval, not only at submission: a row that has since fallen above a full combination, or a draft
     // that now has errors, is not released.
-    const blocking = (await this.problems(c.workspaceId, snapshot, id)).filter((p) => p.level === "error");
-    if (blocking.length) fail(`Release refused: ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${problemWords(blocking[0])})`, HttpStatus.CONFLICT);
+    // G2 (reviewer m2; check_f8_empty_release): the draft's own problems first, as before, without the answer-key lines
+    // (they are judged after the tests run, below); then the review and self-approval refusals; only then the tests run.
+    const own = (await this.problems(c.workspaceId, snapshot, id, NO_KEY_GATE)).filter((p) => p.level === "error");
+    if (own.length) refuse(`Release refused: ${own.length} problem${own.length > 1 ? "s" : ""} (${problemWords(own[0])})`, own, HttpStatus.CONFLICT);
     // The same review gate as the shared Release page (QA-1, review should 2).
     const gate = await this.releaseGate(id, sha256);
     if (!gate.ok) { await this.audit.log(c.workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: ${gate.why}`); fail(`Release refused: ${gate.why}`, HttpStatus.CONFLICT); }
@@ -906,10 +1014,16 @@ export class Studio {
       const check = canRelease({ author: { user_id: author, role: "content_publisher" }, submitter: { user_id: sub.submittedBy, role: "content_publisher" }, approver: { user_id: actor.id, role: "content_publisher" }, configuration_sha256: sha256 }, sub.draftSha256);
       if (!check.ok) { await this.audit.log(c.workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: ${check.reason}`); fail(`Release refused: ${check.reason.replace("self-approval refused: approver is the author", "you changed this draft, so a different person releases it (BR-14)").replace("self-approval refused: approver is the submitter", "you submitted it, so a different person releases it (BR-14)")}.`, HttpStatus.CONFLICT); }
     }
+    // G2 BR-6: the tests run again at release, on this exact draft, before it is judged (after the review and self-approval refusals: round-2 review m4).
+    await runKeys(this.db, this.audit, actor, c, snapshot, sha256);
+    const keyGate = await keyGateOf(this.db, id, snapshot, sha256);
+    const blocking = (await this.problems(c.workspaceId, snapshot, id, keyGate)).filter((p) => p.level === "error");
+    if (blocking.length) refuse(`Release refused: ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${problemWords(blocking[0])})`, blocking, HttpStatus.CONFLICT);
     const changes = sub.changeSummary as any[];
     const release = await this.db.$transaction(async (tx) => {
+      if (!(await keysUnchanged(tx, id, keyGate.keys))) staleKeys(c.label); // G2 BR-6 (challenge m8)
       const pack = await this.newPackVersion(tx, c.workspaceId, authors, actor.id, { rows: 1, via: "combination review" });
-      const out = await this.publishRow(tx, c, snapshot, sha256, { packVersionId: pack.id, authors, submitter: sub.submittedBy, approver: actor.id, summary: { changes: changes.length, sme_signed: changes.filter((x) => x.needs_sme).length, counts: this.counts(snapshot) } });
+      const out = await this.publishRow(tx, c, snapshot, sha256, { packVersionId: pack.id, authors, submitter: sub.submittedBy, approver: actor.id, summary: { changes: changes.length, sme_signed: changes.filter((x) => x.needs_sme).length, counts: this.counts(snapshot), ...keyEvidence(keyGate) } });
       await tx.reviewSubmission.update({ where: { id: sub.id }, data: { status: "APPROVED", decidedBy: actor.id, decidedAt: new Date() } });
       const library = await publishLibraryChanges(tx, c.workspaceId, pack.version, { items: itemsOf(snapshot) });
       return { ...out, pack: pack.version, library };
@@ -941,17 +1055,22 @@ export class Studio {
   async releaseRows(actor: Actor, ids: string[], libraryIds?: string[]) {
     need(actor, "approve");
     const workspaceId = await this.ws.id();
-    const prepared: { c: { id: string; workspaceId: string; sourceBasis: string; label: string }; snapshot: Snapshot; sha256: string; authors: string[]; sub: ReviewSubmission }[] = [];
+    const prepared: { c: { id: string; workspaceId: string; sourceBasis: string; label: string }; snapshot: Snapshot; sha256: string; authors: string[]; sub: ReviewSubmission; keyGate: KeyGate }[] = [];
     for (const id of ids) {
       const c = await this.db.combination.findUniqueOrThrow({ where: { id }, include: { program: true } });
       const { snapshot, sha256 } = await buildSnapshot(this.db, workspaceId, id, "draft");
-      const blocking = (await this.problems(workspaceId, snapshot, id)).filter((p) => p.level === "error");
-      if (blocking.length) fail(`Release refused: "${c.label}" has ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${problemWords(blocking[0])})`, HttpStatus.CONFLICT);
+      // G2 (reviewer m2): the draft's own problems first, without the answer-key lines; the tests run after the cheap refusals.
+      const own = (await this.problems(workspaceId, snapshot, id, NO_KEY_GATE)).filter((p) => p.level === "error");
+      if (own.length) refuse(`Release refused: "${c.label}" has ${own.length} problem${own.length > 1 ? "s" : ""} (${problemWords(own[0])})`, own, HttpStatus.CONFLICT);
       const gate = await this.releaseGate(id, sha256);
       if (!gate.ok) { await this.audit.log(workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: "${c.label}": ${gate.why}`); fail(`Release refused: "${c.label}": ${gate.why}`, HttpStatus.CONFLICT); }
       const waiting = await unapprovedAdds(this.db, workspaceId, itemsOf(snapshot));
       if (waiting.length) fail(`Release refused: "${c.label}": ${unapprovedWhy(waiting)}.`, HttpStatus.CONFLICT);
-      prepared.push({ c, snapshot, sha256, authors: await this.draftAuthors(id, snapshot, workspaceId), sub: (gate as { sub: ReviewSubmission }).sub });
+      await runKeys(this.db, this.audit, actor, c, snapshot, sha256); // G2 BR-6 (reviewer m2: after the cheap refusals): the tests run again at release
+      const keyGate = await keyGateOf(this.db, id, snapshot, sha256);
+      const blocking = (await this.problems(workspaceId, snapshot, id, keyGate)).filter((p) => p.level === "error");
+      if (blocking.length) refuse(`Release refused: "${c.label}" has ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${problemWords(blocking[0])})`, blocking, HttpStatus.CONFLICT);
+      prepared.push({ c, snapshot, sha256, authors: await this.draftAuthors(id, snapshot, workspaceId), sub: (gate as { sub: ReviewSubmission }).sub, keyGate });
     }
     const submitted = prepared.filter((p) => p.sub.submittedBy === actor.id).map((p) => p.c.label);
     if (submitted.length) {
@@ -968,8 +1087,9 @@ export class Studio {
       const pack = await this.newPackVersion(tx, workspaceId, authors, actor.id, { rows: prepared.length, via: "shared draft" });
       const rows = [];
       for (const p of prepared) {
+        if (!(await keysUnchanged(tx, p.c.id, p.keyGate.keys))) staleKeys(p.c.label); // G2 BR-6 (challenge m8)
         const changes = p.sub.changeSummary as { needs_sme?: boolean }[];
-        const r = await this.publishRow(tx, p.c, p.snapshot, p.sha256, { packVersionId: pack.id, authors: p.authors, submitter: p.sub.submittedBy, approver: actor.id, summary: { changes: changes.length, sme_signed: changes.filter((x) => x.needs_sme).length, counts: this.counts(p.snapshot) } });
+        const r = await this.publishRow(tx, p.c, p.snapshot, p.sha256, { packVersionId: pack.id, authors: p.authors, submitter: p.sub.submittedBy, approver: actor.id, summary: { changes: changes.length, sme_signed: changes.filter((x) => x.needs_sme).length, counts: this.counts(p.snapshot), ...keyEvidence(p.keyGate) } });
         await tx.reviewSubmission.update({ where: { id: p.sub.id }, data: { status: "APPROVED", decidedBy: actor.id, decidedAt: new Date() } });
         rows.push({ label: p.c.label, version: r.version });
       }

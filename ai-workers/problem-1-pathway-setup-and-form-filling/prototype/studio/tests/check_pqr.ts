@@ -54,7 +54,7 @@ const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
   ok("C4.2 API read: the country PQR after Load sample: no question yet, one released combination (Sample)", K.lines.length === 0 && K.released === 1 && /Sample/.test(K.basis), { lines: K.lines.length, released: K.released });
   const put = (role: string, fact: string, b: any) => call("PUT", `/combinations/${wp}/fact-sources/${role}/${encodeURIComponent(fact)}`, b);
   let r = await put("principal", "person.date_of_birth", { prequalification: true, reason: "Sample: decides the family rows", version: 0 });
-  ok("C4.2 pass: the author ticks Date of birth for pre-qualification (a draft row of the one per-combination record)", r.status === 200 && r.body?.prequalification === true && sql(`select count(*) from fact_source where combination_id='${wp}' and prequalification`) === "1", r.body?.prequalification ?? words(r));
+  ok("C4.2 pass: the author ticks Date of birth for the Prospect questionnaire (PQR) (a draft row of the one per-combination record)", r.status === 200 && r.body?.prequalification === true && sql(`select count(*) from fact_source where combination_id='${wp}' and prequalification`) === "1", r.body?.prequalification ?? words(r));
   const L = (await call("GET", `/combinations/${wp}/fact-sources`)).body;
   ok("C4.2 pass: the combination's PQR set lists exactly the ticked questions, with how each is asked", L.counts.prequalification === 1 && L.prequalification.length === 1 && L.prequalification[0].fact === "person.date_of_birth" && L.prequalification[0].source === "DOCUMENT", L.prequalification);
   K = await country();
@@ -64,7 +64,7 @@ const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
 
   // ---------------------------------------------------------------- C4.8: one review and release, no PQR-only approval
   let c = (await call("GET", `/combinations/${wp}`)).body;
-  const line = (c.draft.changes as any[]).find((x) => x.kind === "Where an answer comes from" && /pre-qualification/.test(x.label));
+  const line = (c.draft.changes as any[]).find((x) => x.kind === "Where an answer comes from" && /Prospect questionnaire \(PQR\)/.test(x.label));
   ok("C4.8 pass: the tick is one named line among the combination's changes, for the immigration expert's sign-off", !!line && line.needs_sme === true && !KEYS.test(line.label), line?.label);
   for (const path of [`/combinations/${wp}/pqr/approve`, `/combinations/${wp}/pqr/release`, `/combinations/${wp}/pqr/submit`]) {
     r = await call("POST", path, {});
@@ -141,7 +141,7 @@ const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
   const officer = factSources(D).find((f) => f.source === "AGENT" && f.placed);
   if (officer) { r = await tryAccept("user-A", { ...pick, id: newId(), payload: { ...pick.payload, factKey: officer.fact, role: officer.role }, identity: { key: `${officer.role}|${officer.fact}`, near: [], nearReason: null } }); ok("C4.7 fail: a pick on a case officer fact is refused with the tick's own words (422)", r.status === 422 && /prospect is asked only what they can answer/.test(String(r.body?.detail)), r.body?.detail); }
   c = (await call("GET", `/combinations/${wp}`)).body;
-  ok("C4.8 + C4.7: the accepted pick is a named change of the one release, for the immigration expert's sign-off", (c.draft.changes as any[]).some((x) => x.key === pick.identity.key && x.needs_sme && /pre-qualification/.test(x.label)), (c.draft.changes as any[]).filter((x) => x.key === pick.identity.key).map((x) => x.label));
+  ok("C4.8 + C4.7: the accepted pick is a named change of the one release, for the immigration expert's sign-off", (c.draft.changes as any[]).some((x) => x.key === pick.identity.key && x.needs_sme && /Prospect questionnaire \(PQR\)/.test(x.label)), (c.draft.changes as any[]).filter((x) => x.key === pick.identity.key).map((x) => x.label));
   await db.$disconnect();
 
   r = await call("GET", `/combinations/not-a-combination/pqr/country`);
