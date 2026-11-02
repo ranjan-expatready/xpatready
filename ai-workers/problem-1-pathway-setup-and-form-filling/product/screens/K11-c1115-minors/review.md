@@ -1,8 +1,12 @@
-# Review: K11 (C11.15 Minors), forms, commit a6a94750
+# Review: K11 (C11.15 Minors), forms, PR #512
+
+**Verdict: Approve** (head ca76d1b9; round 2 below). Round 1 (a6a94750) was Block.
+
+## Round 1: commit a6a94750
 
 **Branch** `claude/elegant-knuth-y7lnq9`, exact commit `a6a94750`, diff `git diff origin/main...a6a94750` (6 files, +218 / −7). The shared contract `contracts/workspace.ts` is named in the commit body. The reviewer did not build this change. 2 Nov.
 
-**Verdict: Block.** There is one Major: an existing suite fails at this commit. The five fixes themselves hold as claimed (see the table). When the fix for M1 is committed, re-review only that delta.
+Round 1 verdict (a6a94750): Block. There is one Major: an existing suite fails at this commit. The five fixes themselves hold as claimed (see the table). When the fix for M1 is committed, re-review only that delta.
 
 ## Runs (own copies, US$0, never :4400 / 4452 / 4453)
 * `check_forms_k11_words.ts`: **12/12** (no server).
@@ -40,4 +44,46 @@ See `journey-test-reviewer-2026-11-02.md`.
 ## Could not check
 A real screen reader. A live find with real AI (US$0 rule; QA-111 was driven with the fake launcher and the run card's poll held on RUNNING, as the builder did). The full `run-suites.sh` set at this commit; only the 5 suites above were run.
 
-**Verdict: Block.** To fix: M1 (commit the `data-attachment` row hook, rerun `check_forms_demo.ts` and the changed suites). Recommended in the same PR: m1–m3.
+Round 1 verdict (a6a94750): Block. To fix: M1 (commit the `data-attachment` row hook, rerun `check_forms_demo.ts` and the changed suites). Recommended in the same PR: m1–m3.
+
+## Round 2: head ca76d1b9 (delta since a6a94750), 2 Nov
+**Scope.** `git diff a6a94750 ca76d1b9 -- …/studio`. I reviewed the builder's files: `finder.tsx`, `forms.tsx`, `contracts/workspace.ts` (`irccWords`), `check_forms_demo.ts`, `check_forms_k11_minors_browser.cjs` and `check_forms_k11_words.ts`. The other changes come from the origin/main merge ff8dad68 (QA-82 `asked`, `render.ts`, questionnaires, sources). They do not conflict with these files and are not reviewed here. The web was rebuilt (dist was older than the commit).
+
+**Fixes**
+* **M1, closed.**
+  * The not-yet-line row now carries `data-attachment={a.id}` (`forms.tsx:151`). `check_forms_demo.ts:74–76` finds its own copy's row by the attachment id, looked up through the held item's sha256.
+  * `check_forms_demo.ts` on a fresh :4454: **23/23** (at a6a94750 it stopped at line 75).
+* **m1, closed.**
+  * When focus is inside `[role="menu"]`, the opener is the menu's `aria-labelledby` trigger (`finder.tsx:63–67`). Otherwise it is the focused element, as before.
+  * The reviewer walk (port 4454): Redo with AI from "Actions for IMM 5707", then keyboard Escape → focus on that button; mouse Cancel → the same button. At a6a94750 both went to BODY.
+  * Find again, then Escape: still back on Find again.
+  * The new browser step covers the keyboard path. It would have failed at a6a94750 (BODY in the round 1 walk).
+* **m2, closed.**
+  * The browser check now writes the 29 Oct link-text quote onto IMM 1294's `combination_form.source_quote`. It checks that the line shows "… (IMM 1294). Pages 1 to 3 …" without the link text, and that the stored quote still holds it.
+  * This can now fail: main's `irccWords` has no link-text rule.
+  * The data is written to the check's own database only.
+* **m3, closed.**
+  * `/\s*\(opens in a new (?:tab|window)\)(?:\s+(?=[.,;]))?/gi` drops a space only where the link text was.
+  * New case: "Use version 1 .5 of the form (opens in a new tab), if applicable" keeps " .5" as read. The earlier probe cases (`$ .50`, a newline followed by ".") are no longer touched.
+
+**Runs (own copies, :4454, US$0)**
+
+| Check | Result |
+|---|---|
+| `check_forms_k11_words.ts` (no server) | 13/13 |
+| `check_forms_k11_minors_browser.cjs` | 22/22, run twice |
+| `check_forms_demo.ts` | 23/23 |
+
+* The reviewer walk repeated: the approver gets 403 and sees no controls. 1024 px, 200 % and 400 px have no sideways scroll. axe is clean. No page or console errors.
+* No screenshot or evidence file was overwritten: `git status` was clean after the runs. The copy was stopped and its database dropped.
+* Not re-run by me: `check_forms_qa101_103.cjs` (22/22 in round 1; the delta does not touch its paths), `check_s5_leadcheck`, and `check_s5_slice2_browser`. For those I have only the builder's report.
+
+**Still open (Minor, not this PR's scope).**
+* After Start, Find again is disabled and focus goes to the page body. Main does the same, and it is outside QA-110.
+* "(P-113)" on the Online line (`forms.tsx:143`) is older than this PR.
+
+**Journey score (reviewer), round 2: 9.5 / 10, pass.** Accessibility goes ½ → 1 because the Redo path now returns focus. Plain words stays ½ because of "(P-113)", which is older than this PR.
+
+Findings: Blocker 0 · Major 0 · Minor 0 in the delta.
+
+**Verdict: Approve** (ca76d1b9).
