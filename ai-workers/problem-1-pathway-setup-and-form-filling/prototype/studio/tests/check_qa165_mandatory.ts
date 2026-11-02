@@ -97,6 +97,17 @@ ok("fail (Devin on #592): one field per person (IMM 0008) gives lines that each 
 const deps = openLines([0, 1].map((i) => L(`form1[0].Page1[0].dependants[${i}].personalDetails[0].q3-4-5-6[0].Sex[0].Sex[0]`)));
 ok("pass: the same block repeated is numbered in words (Dependant 1, Dependant 2)", deps.length === 2 && /Dependant 1\)$/.test(deps[0].label) && /Dependant 2\)$/.test(deps[1].label), deps.map((x) => x.label));
 
+// Devin on #592 (0ac437c0): collisions by the caption alone, and a qualifier unique across the whole group.
+const reasons = openLines([L("form1[0].Page1[0].PersonalDetails[0].Sex[0]", "Sex", "needs an answer", "a"), L("form1[0].Page1[0].depPrime[0].Sex[0]", "Sex", "no question asks it yet", "b")]);
+ok("fail (Devin on #592): two lines with the same caption but different reasons are still told apart", new Set(reasons.map((x) => x.label)).size === 2, reasons.map((x) => x.label));
+const cities = openLines(["Page2[0].contact[0].AddressRow2[0]", "Page3[0].DetailsOfStudy[0].PurposeRow1[0]", "Page3[0].Occupation[0].OccupationRow1[0]"].map((b) => L(`form1[0].${b}.CityTown[0]`, "City/Town")));
+ok("fail (Devin on #592): three lines sharing a caption and a field name each get a different qualifier (never two \"Page3\")", new Set(cities.map((x) => x.label)).size === 3 && cities.every((x) => !/Page3\)$/.test(x.label)), cities.map((x) => x.label));
+fc.assert(fc.property(fc.uniqueArray(fc.array(fc.constantFrom("A[0]", "A[1]", "B[0]", "C[0]", "Row1[0]", "Row2[0]"), { minLength: 1, maxLength: 4 }), { selector: (p) => p.join("."), minLength: 2, maxLength: 6 }), (parents) => {
+  const ls = openLines(parents.map((p) => L(`form1[0].${p.join(".")}.City[0]`, "City/Town")));
+  return new Set(ls.map((x) => x.label)).size === ls.length;
+}), { numRuns: 500 });
+ok("property (500 runs): lines that share a caption always end with different words, whatever their places on the form", true);
+
 // Properties over generated field lists.
 const field = fc.record({ name: fc.stringMatching(/^[A-Z][a-z]{2,8}$/), required: fc.boolean(), written: fc.boolean(), mapped: fc.constantFrom("none", "mapped", "not_a_fact", "unresolved") });
 fc.assert(fc.property(fc.uniqueArray(field, { selector: (f) => f.name, maxLength: 30 }), (fs) => {
