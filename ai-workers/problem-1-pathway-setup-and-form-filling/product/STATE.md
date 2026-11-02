@@ -49,7 +49,7 @@ IMM 5257 field map: **verified for Saved at US$0** (21 Oct run reused; after #42
 | A11 | Finish before starting (P-231) | in force; C8.1, C8.2 paused |
 | A12 | Fast-track (forms-3, forms-4, C11.12 board) | done |
 | A13 | Visual progress report for the founder's founder | dashboard published (private; share from its menu) |
-| A16 | Pull the latest SA-01B; review it end to end incl. the Chrome extension; every conflicting or overlapping decision; a high-level split of what the team builds vs the POC; grill one question at a time; decisions into BACKLOG at M2/M3/M4 | snapshot 2026-11-02-1054 synced to `domain/requirements-2026-11-02/`; P-235, P-236, P-237 decided; P-71 and conflicts 4–6 being asked by the session "SA01B scope and handover review"; Lead records |
+| A16 | Pull the latest SA-01B; review it end to end incl. the Chrome extension; every conflicting or overlapping decision; a high-level split of what the team builds vs the POC; grill one question at a time; decisions into BACKLOG at M2/M3/M4 | snapshot 2026-11-02-1054 synced to `domain/requirements-2026-11-02/`; P-235–P-238 decided; conflicts 4–6 and Corporate timing being asked by the session "SA01B scope and handover review"; Lead records |
 | A15 | Weekly plan: full speed until 93%, then keep 7% for the last hand-over and all updates (P-234) | in force; Lead sends "STOP: 93%" |
 | A14 | Close finished sessions, tidy the sidebar | local ones archived by the old Lead; cloud ones need the founder on claude.ai/code |
 
