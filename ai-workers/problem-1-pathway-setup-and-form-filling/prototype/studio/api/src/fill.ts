@@ -8,9 +8,8 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { runTransform } from "../../../p5/transforms.ts";
-import { codeForValue, hasCodes, labelForText, type ListValue, type OptionMap } from "../../engine/options.ts";
-import { byAPerson, inFormFormat, personSteps } from "../../engine/form-steps.ts";
+import { formValues } from "../../engine/form-values.ts";
+import { personSteps } from "../../engine/form-steps.ts";
 import type { BoxRow } from "../../engine/render.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { Audit, Db, fail, PROTOTYPE, PY, ROOT, SOLUTION, VAR, type Actor } from "./core.ts";
@@ -32,33 +31,10 @@ export async function writeForm(snapshot: Snapshot, cov: { boxes: BoxRow[] }, fo
   if (line?.channel === "ONLINE" && !opts.notForFiling) fail(`${form} is filed Online here: it needs the browser extension (later wave), so the product does not fill it. File it as a PDF upload to fill its PDF.`, HttpStatus.CONFLICT);
   const map = snapshot.field_maps.find((m: { form_number: string; channel?: string }) => m.form_number === form && m.channel !== "ONLINE");
   if (!map?.official_file || !map.inventory_file) fail("This form's official file or form field list is not recorded; it cannot be filled.");
-  type Entry = { data_path: string; fact?: string | null; option_map?: OptionMap | null };
-  type Def = { id: string; answer_list?: { values: ListValue[] } };
-  const entryOf = new Map<string, Entry>((map.entries as Entry[]).map((e) => [e.data_path, e]));
-  const listOf = new Map<string, ListValue[]>((snapshot.canonical_fields as Def[]).flatMap((f) => (f.answer_list ? [[f.id, f.answer_list.values] as [string, ListValue[]]] : [])));
   const inv = JSON.parse(readFileSync(join(SOLUTION, map.inventory_file), "utf8"));
   const box = new Map<string, any>(inv.fields.filter((x: any) => x.data_path).map((x: any) => [x.data_path, x]));
-  const values: Record<string, string> = {};
-  // F1 slice 2 (evidence lane F2, F3): a signature is never typed by the product; values go in the form's own format.
-  const write = (path: string, v: string) => (values[path] = inFormFormat(box.get(path) ?? {}, v));
-  // C7.2 cause 1: the derivations that compare two facts read the other one from the same person's confirmed facts.
-  const confirmed = new Map<string, unknown>(cov.boxes.filter((b) => b.coverage === "confirmed fact" && b.fact && (b.row === null || b.row === undefined)).map((b) => [`${b.about}|${b.fact}`, b.value]));
-  // F1 slice 2 and 2b (evidence lane F2, F6): a signature or the oath block is never written, whatever is mapped to it.
-  const boxes = cov.boxes.map((r: any) => {
-    const person = byAPerson(inv.fields, box.get(r.box) ?? { data_path: r.box });
-    if (person) return { ...r, result: "by a person", why: person };
-    // C7.2 cause 3: a Yes/No "is anything recorded?" box is written "N" when a person confirmed that nothing applies.
-    if (r.coverage !== "confirmed fact" && !r.nothing_recorded) return { ...r, result: "not written", why: r.fix ?? (r.coverage === "answered on screen" ? "answered on screen, not confirmed" : r.detail) };
-    // A form field on an answer list takes its own code from its option map (the team's ENUM map, onMissing REFUSE).
-    const e = entryOf.get(r.box), list = e?.fact ? listOf.get(e.fact) : undefined;
-    if (e?.option_map && list) { const code = codeForValue(r.value, e.option_map, list); if (code === null) return { ...r, result: "by hand", why: `"${r.value}" has no code in this form field's option map` }; write(r.box, code); return { ...r, result: "written", written: values[r.box] }; }
-    // A text form field (no codes in its transform and no choices of its own) writes the value's label, never its key.
-    const own = box.get(r.box) ?? {};
-    const text = list && !hasCodes(r.transform) && !(Array.isArray(own.options_resolved) && own.options_resolved.length);
-    const o = runTransform(r.transform ?? "as_is", r.nothing_recorded ? null : text ? labelForText(r.value, list) : r.value, own, { fact: (k) => confirmed.get(`${r.about}|${k}`), nothingRecorded: !!r.nothing_recorded });
-    if (o.ok) { write(r.box, o.value); return { ...r, result: "written", written: values[r.box], ...(r.nothing_recorded ? { why: r.detail } : {}) }; }
-    return { ...r, result: "hand" in o ? "by hand" : "blank", why: o.reason };
-  });
+  // G4 (C5.7): the value step is engine code (engine/form-values.ts), shared with the answer-key runner.
+  const { boxes, values } = formValues(snapshot, map, inv, cov.boxes);
   // F1 slice 2 (evidence lane F1, F2, F4): what a person does on the filled PDF before the form's own Validate passes.
   const steps = personSteps(inv.fields, values, inv.groups ?? []);
   const out = join(dir, `${base}.pdf`), req = join(dir, `${base}.request.json`);
