@@ -37,11 +37,11 @@ const ALL = (p: Person) => [...p.lines, ...p.waiting, ...p.not_needed];
       await add({ documentTypeKey: "visa_application_photographs", attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant" }),
       await add({ documentTypeKey: "birth_certificate_of_accompanying_dependent_child", attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_dependent_child" }),
       // C3.6 (P-158): a new type waits as a library proposal (202); a second person accepts it, then the line goes in with it.
-      await (async () => { const named = await add({ newTypeName: "Police certificate", attachMode: "ANSWER_CONDITIONAL", appliesToRoles: "each_applicant" });
+      await (async () => { const named = await add({ newTypeName: "Police certificate", attachMode: "ANSWER_CONDITIONAL", appliesToRoles: "each_applicant", condition: { subjectKind: "EACH_APPLICANT", op: "gte", field: "person.age_years", value: 18 }, conditionPlain: "the person is 18 or older" });
         const key = named.status === 202 ? (await call("POST", "/review/proposals/decide", { ids: [named.body.proposalId], action: "accept" }, "user-B")).body?.items?.[0]?.landedAs : null;
         return key ? add({ documentTypeKey: key, attachMode: "ANSWER_CONDITIONAL", appliesToRoles: "each_applicant", condition: { subjectKind: "EACH_APPLICANT", op: "gte", field: "person.age_years", value: 18 }, conditionPlain: "the person is 18 or older" }) : named; })(),
     ];
-    ok("setup: four Sample document lines added to the Visitor visa draft", results.every((x) => x.status < 300), results.map((x) => x.status < 300 ? x.status : x.body));
+    ok("setup: four Sample document lines added to the Visitor visa draft", results.every((x) => x.status === 201), results.map((x) => x.status < 300 ? x.status : x.body));
     // R4: the police certificate's age rule as release data, on the document type key (P-170 citation: immigration-facts
     // row 20, read 29 Oct, Lead-checked; Sample until the immigration expert confirms, P-171).
     const ws = sql(`select workspace_id from combination where id='${vv}'`);

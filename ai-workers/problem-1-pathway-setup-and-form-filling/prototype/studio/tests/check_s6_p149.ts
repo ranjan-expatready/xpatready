@@ -302,7 +302,7 @@ const item = (payload: any, over: any = {}) => ({ kind: payload.kind, runId: RUN
   // Owed by other lanes (reported in the hand-back, never widened): a free add still in their files.
   const OWED: { file: string; near: RegExp; why: string }[] = [
     { file: "forms.ts", near: /answerListKey: b\.key, version: 1, status: "DRAFT", label: b\.label, origin: "HUMAN"/, why: "createAnswerList: unreachable since (2a) made POST /library/answer-lists 410; forms lane deletes it" },
-    { file: "studio.ts", near: /documentTypeKey: typeKey, name: b\.newTypeName/, why: "a document type named while adding a requirement (configuration.tsx): goes through the door with W1-10 / P-158 item 4" },
+    // C3.6 (#523's follow-up): a document type named while adding a requirement now goes through the door (studio.ts saveRequirement).
   ];
   const CREATE = /\b(canonicalField|logicalSection|answerList|documentType)\.(create|createMany|upsert|createManyAndReturn)\s*\(/g;
   const scan = (files: [string, string][]) => files.flatMap(([f, text]) => text.split("\n").flatMap((line, i) => [...line.matchAll(CREATE)].map(() => ({ file: f, line: i + 1, text: line }))))

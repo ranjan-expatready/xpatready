@@ -418,7 +418,10 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         } else {
           const land = LANDERS[r.kind as ProposalKind];
           if (!land) fail(`A ${r.kind.replace(/_/g, " ")} proposal is accepted with its own step, not yet on this queue.`, HttpStatus.CONFLICT);
-          landedAs = await land!(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: withNearReason(reason ?? r.reason, r.identity), proposedBy: actor.id, combinationId: r.combinationId, sourceJobId: r.runId });
+          // C3.6 (#523 Question 1): a type a person named while adding a requirement keeps that person as its proposer (as
+          // before it went through the queue), read from the server's own run, so their "Delete your own unapproved type" stays.
+          const namer = r.step === "requirement_type" && r.runId ? (await tx.draftingJob.findFirst({ where: { id: r.runId, workspaceId, kind: "requirement_type" }, select: { startedBy: true } }))?.startedBy : null;
+          landedAs = await land!(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: withNearReason(reason ?? r.reason, r.identity), proposedBy: namer ?? actor.id, combinationId: r.combinationId, sourceJobId: r.runId });
         }
       }
       // What a library lander wrote, as it stands now: Undo refuses once it has changed (PR #96 review (1)).
