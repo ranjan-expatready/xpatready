@@ -1,7 +1,10 @@
 -- C6.12 + C11.6 (runtime lane, M3-B; r5c BR-1, BR-16, §6 "items"; P-122, P-135): evolves the four tables of
--- 20261102010000_c612_prepare_filings (#325) to what the unified "Prepare application" view needs. Expand only: columns
--- are added, two NOT NULLs are relaxed, checks are widened, and existing values are converted in this migration. No
--- table, column or row is dropped. Every row here is derived by GET /runtime/cases/:id/prepare from the case and its
+-- 20261102010000_c612_prepare_filings (#325) to what the unified "Prepare application" view needs. Additive, with the
+-- existing values converted in this migration (the tech lead's instruction, 2 Nov): columns are added, two NOT NULLs are
+-- relaxed, checks are widened, kinds are upper-cased and #325's stored line channels become null. No table, column or
+-- row is dropped. Not old-code compatible (break r3 M2): #325's code writes kind 'family' and no case_id/item_key, so it
+-- does not run on this schema; the migration and the code that reads it ship together, and a rollback runs the SQL
+-- below, with the app stopped, before #325's code starts. Every row here is derived by GET /runtime/cases/:id/prepare from the case and its
 -- release (#325 has no route that writes by hand), so the conversions lose nothing.
 --   * submission_group: a split-out group (SEPARATE) with its reason (BR-16); kinds upper-cased (family -> FAMILY);
 --     at most one FAMILY group per case.
@@ -10,9 +13,10 @@
 --     every kind (form_key kept, nullable, read by no code; dropped by a later contract migration); the case id on
 --     each item; the channel the case officer chose (C11.6) with who and when, null meaning the combination line's
 --     channel. #325 stored the line's channel on every item and had no way to change it, so those become null.
--- Rollback (STANDARDS §5), in one transaction, after the code that reads the new columns is reverted:
---   DELETE FROM "filing_item";  -- derived rows: #325's /prepare makes them again on the next read, with the line's channel
---                                  (a channel the officer chose, C11.6, goes with C11.6's code)
+-- Rollback (STANDARDS §5): stop the app, run this in one transaction, then start #325's code:
+--   DELETE FROM "filing_item";  -- every item row goes: #325's /prepare makes the form items again on the next read, with
+--                                  NEW ids and the line's channel. Item ids and any channel the officer chose (C11.6) do
+--                                  not survive a rollback (filings and groups keep their ids).
 --   DROP INDEX "filing_item_filing_id_kind_item_key_subject_id_key"; DROP INDEX "filing_item_case_id_idx";
 --   ALTER TABLE "filing_item" DROP CONSTRAINT "filing_item_case_id_fkey", DROP CONSTRAINT "filing_item_kind_check",
 --     DROP COLUMN "case_id", DROP COLUMN "item_key", DROP COLUMN "channel_by", DROP COLUMN "channel_at",

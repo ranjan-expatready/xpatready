@@ -33,8 +33,10 @@ const parse = <S extends z.ZodType>(schema: S, input: unknown): z.infer<S> => { 
 const stale = (): never => { throw new HttpException({ type: "https://expatready.local/problems/stale", title: "Changed since you read it", status: 409, detail: "This application's filings or items changed since you read them. Reload, then make your change again." }, HttpStatus.CONFLICT); };
 const refuse = (status: number, field: string, detail: string): never => { throw new HttpException({ type: "https://expatready.local/problems/validation", title: status === 422 ? "Not accepted" : "Some details need fixing", status, detail, errors: [{ field, message: detail }] }, status); };
 const Version = z.union([z.string(), z.number()], { error: "Reload: the version you read is missing." });
-// Break m2: a reason is plain text: no control characters, no hidden direction marks or zero-width characters.
-const Reason = z.string().trim().max(400, "Keep the reason under 400 characters.").refine((x) => !/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/.test(x), "Write the reason as plain text: it holds a hidden or control character.").optional();
+// Break m2: a reason is plain text: no control characters (C0, C1), no hidden direction marks, separators or zero-width spaces.
+const Reason = z.string().trim().max(400, "Keep the reason under 400 characters.").refine((x) => !/[\u0000-\u001f\u007f-\u009f\u061c\u200b\u200e\u200f\u2028\u2029\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff\u115f\u1160\u3164\uffa0]/.test(x) && !/[\ud800-\udfff]/u.test(x), "Write the reason as plain text: it holds a hidden or control character.")
+  // Break r3 m1, m2: joiners that scripts and emoji need (U+200C, U+200D) are allowed; a reason must say something.
+  .refine((x) => x === "" || /[\p{L}\p{N}]/u.test(x), "Write the reason in words: it holds no letter or digit.").optional();
 const SplitBody = z.object({ filing: z.string({ error: "Choose the filing to split out." }), reason: Reason, version: Version });
 const ChannelBody = z.object({ channel: z.unknown(), reason: Reason, version: Version });
 const DOB = "person.date_of_birth";
@@ -76,12 +78,18 @@ export class CasePrepare {
     const filers = first.filings.map((f) => f.applicants[0].subject);
     const wanted = wantedItems(filers, r.forms as never, docs as never, feeRule(own!.combinationKey, "biometrics"), ages);
 
-    // #325 break B1: a read with nothing new to store takes no transaction and no lock; only a read with something to
-    // store takes the case's row lock and, under it, reads the stored rows again before writing (only through tx).
+    // #325 break B1: a read with nothing new to store takes no lock; only a read with something to store takes the case's
+    // row lock and, under it, reads the stored rows again before writing (only through tx). Break r3 M1: the three reads
+    // are one snapshot (one repeatable-read batch on one connection, no lock), so groups, filings, items and the version
+    // made from them always agree.
+    const read = (q: Tx | Db) => [
+      q.submissionGroup.findMany({ where: { caseId: c.id }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }),
+      q.filing.findMany({ where: { caseId: c.id } }),
+      q.filingItem.findMany({ where: { caseId: c.id }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }),
+    ] as const;
     const sync = async (tx: Tx | Db, write: boolean) => {
-      let groups = await tx.submissionGroup.findMany({ where: { caseId: c.id }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
-      const filings0 = await tx.filing.findMany({ where: { caseId: c.id } });
-      const items0 = await tx.filingItem.findMany({ where: { caseId: c.id }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
+      const [g0, filings0, items0] = write ? await Promise.all(read(tx)) : await this.db.$transaction([...read(this.db)], { isolationLevel: "RepeatableRead" });
+      let groups = g0;
       const live = new Map(filings0.filter((f) => f.active).map((f) => [f.subjectId, f.id]));
       const wantKeys = new Set(wanted.filter((w) => live.has(w.subject)).map((w) => `${live.get(w.subject)}|${w.kind}|${w.key}|${w.subject}`));
       const has = new Set(items0.map((i) => `${i.filingId}|${i.kind}|${i.itemKey}|${i.subjectId}`));
@@ -114,7 +122,7 @@ export class CasePrepare {
       return { groups, filings, items: items.filter((i) => i.active) };
     };
     const stored = (await sync(this.db, false)) ?? await this.db.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
       return (await sync(tx, true))!;
     }, { timeout: 15_000, maxWait: 10_000 });
 
@@ -154,7 +162,9 @@ export class CasePrepare {
     const stage1 = filings.map((f) => { const mine = items.filter((i) => i.filing === f.id && i.kind === "form") as { form: string; subject: string }[]; const missing = new Set(mine.flatMap((i) => formReadiness(view, i.form, i.subject).missing.map((m) => `${m.about}|${m.fact}`))); return { filing: f.id, to_confirm: missing.size, confirmed: mine.length && !missing.size ? 1 : 0 }; });
     // C7.6 (M3-A3) fills this from engine/runtime/readiness.ts; until then each filing is not ready and says why.
     const readiness = filings.map((f) => ({ filing: f.id, ready: false, blocks: [] as { code: string; item?: string; words: string }[], warns: [] as { code: string; item?: string; words: string }[], built: false, why: "Ready to file is worked out by C7.6 (not built yet)." }));
-    const version = await storedVersion(this.db, c.id);
+    // Review r3 m1: the version from the very rows this view shows (never a later read), so a write from it is checked
+    // against what the officer saw.
+    const version = versionOf(stored.filings, stored.items);
     const peopleView = people.filter((p) => p.role !== "case").map((p) => { const f = filings.find((x) => x.applicants[0].subject === p.subjectId); const nf = done.not_filing.find((x) => x.subject === p.subjectId); return { subject: p.subjectId, label: p.label, role: p.role, applies: p.applies, age: ages.get(p.subjectId) ?? null, filing: f?.id ?? null, why: nf?.why ?? null }; });
     return { case_id: c.id, reference: c.reference, release_version: pin.release.version, derived: true, combination: own!.combinationKey, portal: own!.portalKey ?? null, portal_words: own!.portalKey ? `Filed through ${own!.portalKey === "APR_PORTAL" ? "APR Portal" : own!.portalKey}: set by the combination, not on the case` : null,
       // #325's list of people with no filing, each with the reason (kept for its readers and tests).
@@ -177,7 +187,7 @@ export class CasePrepare {
       refuse(400, "reason", `Give a reason to split this filing out: it is then priced on its own, and the family maximum (${rules.map((r) => `${r!.label} ${cad(r!.familyMaxCents)} for ${r!.familyFrom} or more`).join(", ")}) of ${group ? "this group" : "the family"} no longer covers it.`);
     }
     const moved = await this.db.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
       if (String(b.version) !== await storedVersion(tx, c.id)) return "stale" as const;
       const members = await tx.filing.findMany({ where: { submissionGroupId: g!.id, active: true }, select: { id: true, subjectId: true } });
       const f = members.find((x) => x.id === b.filing);
@@ -212,7 +222,7 @@ export class CasePrepare {
     const before = (now.items.find((i) => i.id === item!.id) as { channel?: keyof typeof CHANNEL_WORDS } | undefined)?.channel ?? "PDF_UPLOAD";
     const to = (ok as { channel: keyof typeof CHANNEL_WORDS }).channel;
     const result = await this.db.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
       if (String(b.version) !== await storedVersion(tx, c.id)) return "stale" as const;
       const row = await tx.filingItem.findUnique({ where: { id: item!.id } });
       if (!row || !row.active) return "stale" as const;
@@ -239,6 +249,10 @@ async function storedVersion(tx: Tx | Db, caseId: string) {
     tx.filing.findMany({ where: { caseId, active: true }, select: { id: true, submissionGroupId: true } }),
     tx.filingItem.findMany({ where: { caseId, active: true }, select: { id: true, channel: true, version: true } }),
   ]);
+  return versionOf(filings, items);
+}
+/** The version of a set of current filings and items (the same rule for the view and for a write's check). */
+function versionOf(filings: { id: string; submissionGroupId: string }[], items: { id: string; channel?: string | null; version: number }[]) {
   const groups = [...new Set(filings.map((f) => f.submissionGroupId))].map((id) => ({ id, filings: filings.filter((f) => f.submissionGroupId === id).map((f) => f.id) }));
   return prepareVersion(groups, items);
 }

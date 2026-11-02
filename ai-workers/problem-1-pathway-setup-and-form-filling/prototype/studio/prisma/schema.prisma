@@ -1668,7 +1668,7 @@ model SubmissionGroup {
   id          String   @id @default(uuid()) @db.Uuid
   workspaceId String   @map("workspace_id") @db.Uuid
   caseId      String   @map("case_id") @db.Uuid
-  /// family (one submission at the same time and place)
+  /// FAMILY (one submission at the same time and place) · SEPARATE (a filing split out, with its reason)
   kind        String
   /// C6.12 split (BR-16): why a SEPARATE group was split out (required for SEPARATE, never in an audit line).
   reason      String?
