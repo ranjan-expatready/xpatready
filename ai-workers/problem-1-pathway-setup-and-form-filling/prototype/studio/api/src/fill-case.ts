@@ -70,6 +70,11 @@ export function plainWhy(why: string | null | undefined): string {
 }
 
 /** C-9 (P-144): a barcode form filed by PDF upload or on paper needs a current validated copy before it is filed. */
+/** QA-165 (P-144, P-237): a validated copy counts only when the form's own Validate result had passed when it was read
+ *  back (read_validated.py form_validation, kept in its read-back). A row recorded before QA-165 has no such result: it
+ *  never counts as validated, and the person sends the validated file again (the copy view, `lock` and `file` alike). */
+const formPassed = (v: { readBack: unknown } | undefined) => (v?.readBack as { validation?: { passed?: boolean } } | null)?.validation?.passed === true;
+const NOT_FORM_CHECKED = "Read back before the form's own Validate result was checked: send the file you validated in Adobe again";
 const needsValidate = (s: Snap, form: string) => isBarcodeForm(form) && ["PDF_UPLOAD", "PAPER"].includes(channelIn(s, form));
 const OUT_OF_DATE = "Out of date: validate again";
 /** What a file check names in its refusal: the generated copy, or the validated copy read back (C-9). */
@@ -135,7 +140,7 @@ export class CaseForms implements OnModuleInit {
   /** A copy with its state today; changed facts are named by their question (labels), never by their keys. */
   private copyOf(x: Awaited<ReturnType<Db["formInstance"]["findMany"]>>[number] & { snapshot: { factsJson: unknown }; validated?: { readAt: Date; readBy: string; factsHash: string; readBack: unknown }[] }, today: FormFact[], labels = new Map<string, string>(), todayGroups: GroupFact[] = [], notForFiling = false): FormCopy {
     // C-10: a validated copy is current while the form's facts are what they were when it was read back.
-    const v = x.validated?.[0], vrb = v?.readBack as { written?: number; read_back_equal?: number } | undefined, current = !!v && v.factsHash === inputHash(today);
+    const v = x.validated?.[0], vrb = v?.readBack as { written?: number; read_back_equal?: number } | undefined, current = !!v && formPassed(v) && v.factsHash === inputHash(today);
     const stored = x.snapshot.factsJson as Stored, then = stored.facts;
     const changed = x.status === "GENERATED" ? [...changedFacts(then, today).map((f) => labels.get(f) ?? f), ...changedGroups(stored.groups, todayGroups)] : [];
     const result = x.resultJson as { counts?: FormCopy["counts"]; intact?: boolean; person_steps?: string[]; boxes?: { fact: string | null; result: string; why: string | null }[] } | null;
@@ -144,7 +149,7 @@ export class CaseForms implements OnModuleInit {
       locked: x.lockedAt ? { kind: x.lockedKind as keyof typeof LOCK_KINDS, at: x.lockedAt.toISOString(), by: x.lockedBy! } : null,
       out_of_date: changed.length > 0, stale: !!x.lockedAt && changed.length > 0, changed, counts: result?.counts ?? null, intact: result?.intact ?? null, person_steps: result?.person_steps ?? [], copy_not_for_filing: notForFiling, source: "ircc_pdf",
       by_hand: byHand, file_ok: x.status === "GENERATED" && !!x.path && existsSync(join(ROOT, x.path)),
-      validated: v ? { at: v.readAt.toISOString(), by: v.readBy, current, words: current ? "Validated copy read back" : OUT_OF_DATE, read_back: { written: vrb?.written ?? 0, equal: vrb?.read_back_equal ?? 0 } } : null };
+      validated: v ? { at: v.readAt.toISOString(), by: v.readBy, current, words: !formPassed(v) ? NOT_FORM_CHECKED : current ? "Validated copy read back" : OUT_OF_DATE, read_back: { written: vrb?.written ?? 0, equal: vrb?.read_back_equal ?? 0 } } : null };
   }
 
   /** RT-13: a new copy of one form for one person, from the confirmed facts as they are now (frozen with the copy).
@@ -269,6 +274,7 @@ export class CaseForms implements OnModuleInit {
     if (needsValidate(s, x.formNumber)) {
       const v = x.validated[0];
       if (!v) conflict(`${x.formNumber} is a barcode form filed as ${CHANNEL_WORDS[channelIn(s, x.formNumber)]}: Validate it in Adobe, save it and read the validated copy back here before it is filed (IRCC returns it unprocessed otherwise).`);
+      if (!formPassed(v)) conflict(`${x.formNumber}'s validated copy was read back before the form's own Validate result was checked, so it does not show that Validate passed. Send the file you validated in Adobe again, then lock it.`);
       if (v!.factsHash !== inputHash(cov?.facts ?? [])) conflict(`${x.formNumber}'s validated copy is out of date: a fact on the form changed after it was validated. Make a new copy, validate it again and read it back.`);
     }
     const n = await this.db.formInstance.updateMany({ where: { id, status: "GENERATED", lockedAt: null }, data: { lockedKind: b.kind, lockedAt: new Date(), lockedBy: actor.id } });
@@ -346,7 +352,7 @@ export class CaseForms implements OnModuleInit {
     if (x.status !== "GENERATED" || !x.path) fail("This copy has no file.", HttpStatus.NOT_FOUND);
     const form = x.formNumber.replace(/\s+/g, ""), s = this.runtime.snapshotOf(c);
     const v = x.validated[0];
-    if (!original && v && needsValidate(s, x.formNumber)) { // the same rule as `lock` (a barcode form on PDF upload or paper)
+    if (!original && v && formPassed(v) && needsValidate(s, x.formNumber)) { // the same rule as `lock` (a barcode form on PDF upload or paper; QA-165)
       const { answers, rows } = await this.runtime.state(c);
       const cov = formCoverage(s, this.runtime.peopleOf(c), answers, rows, x.formNumber, x.subjectId);
       // C-10: current while the form's facts are what they were when it was read back (as `copyOf` shows it).

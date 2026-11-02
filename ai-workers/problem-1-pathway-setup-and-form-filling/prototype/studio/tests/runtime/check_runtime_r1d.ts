@@ -275,6 +275,23 @@ async function main() {
   rmSync(vPath); rmSync(vOutside);
   renameSync(`${vPath}.away`, vPath);
   ok("C11.6 C-9 pass: with its file back, the validated copy downloads again", sha((await bytes(`/runtime/form-copies/${locked1}/file`, OFFICER)).body) === sha(validatedFile));
+  // QA-165 (Devin on #572): a validated copy read back before QA-165 kept no result of the form's own Validate. Such a
+  // row never counts: not current on the copy, not lockable, and the download is the product's copy, not that file. The
+  // table is append-only (trg_validated_copy_guard), so the old row is added as the latest one, then a passing one after it.
+  {
+    const again = (keep: string) => sql(`insert into validated_copy (id, workspace_id, form_instance_id, path, sha256, facts_hash, read_back, read_by, read_at)
+      select gen_random_uuid(), workspace_id, form_instance_id, path, sha256, facts_hash, ${keep}, read_by, now() from validated_copy where form_instance_id='${locked1}' order by read_at limit 1`);
+    again("read_back - 'validation'");
+    const view = (await call("GET", `/runtime/form-copies/${locked1}`, undefined, OFFICER)).body as Copy | undefined;
+    ok("QA-165 fail (Devin on #572): a validated copy read back before the form's own result was checked is not current, and says to send the validated file again", view?.validated?.current === false && /send the file you validated in Adobe again/.test(view?.validated?.words ?? ""), view?.validated);
+    const lk = await call("POST", `/runtime/form-copies/${locked1}/lock`, { kind: "validated_copy_uploaded" }, OFFICER);
+    ok("QA-165 fail (Devin on #572): such a copy cannot be locked for filing (409, in words), nothing locked", lk.status === 409 && /before the form's own Validate result was checked/.test(lk.body?.detail ?? "") && sql(`select locked_at is null from form_instance where id='${locked1}'`) === "t", lk.body?.detail);
+    const dl = await bytes(`/runtime/form-copies/${locked1}/file`, OFFICER);
+    ok("QA-165 fail (Devin on #572): such a copy's file is not handed out as the validated one (the product's copy instead)", dl.status === 200 && sha(dl.body) === row1.sha && sha(dl.body) !== sha(validatedFile), dl.name);
+    again("read_back");
+    ok("QA-165 pass: a later read-back whose form result passed makes the copy current again", (await call("GET", `/runtime/form-copies/${locked1}`, undefined, OFFICER)).body?.validated?.current === true);
+  }
+  const validatedRows = sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`); // 3: the read-back and the two QA-165 rows
   r = await call("POST", `/runtime/form-copies/${locked1}/lock`, { kind: "validated_copy_uploaded" }, OFFICER);
   ok("RT-16 pass: the officer locks an up-to-date generated copy (\"validated copy uploaded back\")", r.status === 201 && r.body.locked?.kind === "validated_copy_uploaded", r.body);
   r = await call("POST", `/runtime/form-copies/${locked1}/lock`, { kind: "filed" }, OFFICER);
@@ -293,7 +310,7 @@ async function main() {
   const locked = f.copies.find((x) => x.id === locked1)!;
   ok("RT-15/16 pass: after the passport number changes, the locked copy is stale and names the fact; its file and row are unchanged", locked.stale && locked.out_of_date && locked.changed.some((x) => /passport/i.test(x)) && sha(readFileSync(join(ROOT, row1.path))) === row1.sha && sql(`select sha256 from form_instance where id='${locked1}'`) === row1.sha, locked);
   ok("RT-15 pass: nothing was regenerated on its own (a new copy only on the officer's request)", sql(`select count(*) from form_instance where case_id='${caseId}'`) === before);
-  ok("C11.6 C-10 pass: after a fact on the form changed, its validated copy says \"Out of date: validate again\" and is kept as history", locked.validated?.current === false && locked.validated?.words === "Out of date: validate again" && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "1", locked.validated);
+  ok("C11.6 C-10 pass: after a fact on the form changed, its validated copy says \"Out of date: validate again\" and is kept as history", locked.validated?.current === false && locked.validated?.words === "Out of date: validate again" && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === validatedRows, locked.validated);
   ok("C11.6 C-10 pass: once its validated copy is out of date, the download is the copy as made again (the old validated file is not handed over as current)", sha((await bytes(`/runtime/form-copies/${locked1}/file`, OFFICER)).body) === row1.sha);
   ok("RT-15 fail-guard: the spouse's copy, whose facts did not change, is not out of date", !(await formOf("IMM 5257", spouse)).copies.find((x) => x.id === spouse2)!.out_of_date);
   r = await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `gen-${run}-3` }, OFFICER);
