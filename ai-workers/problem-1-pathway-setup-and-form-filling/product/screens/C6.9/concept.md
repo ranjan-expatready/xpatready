@@ -157,7 +157,7 @@ Problem Details on every refusal (`type`, `title`, `status`, `detail`, `errors[{
 
 | Route | Request | Response | Refusals |
 |---|---|---|---|
-| `PUT /combinations/:id/eligibility-gates` (author) | `{gates[{key,label,condition}], judgement: string[], disclaimer?, version?}` | 200 `{gates (stored with subjectKind), judgement, disclaimer, version, savedBy, savedAt}` | 400 field (BR-2, BR-2a); 403 not an author; 404; 409 stale |
+| `PUT /combinations/:id/eligibility-gates` (author) | `{gates[{key,label,condition,whenNotMet?}], judgement: string[], disclaimer?, version?}` | 200 `{gates (stored with subjectKind), judgement, disclaimer, version, savedBy, savedAt}` | 400 field (BR-2, BR-2a); 403 not an author; 404; 409 stale |
 | `GET /combinations/:id/eligibility-gates` | — | the same, plus `released: {…}\|null` | 404 |
 | `POST /runtime/cases/:id/assessments` | `{person, reason?}` | 201 Assessment | 400 `person` (BR-7) or `reason` (BR-14); 403 client; 404 another firm; 409 no gates or pin mismatch |
 | `GET /runtime/cases/:id/assessments[?person=]` | `person` optional; omitted means every person on the case | 200 `{stand_in: "SI-1", assessments: Assessment[]}`, newest first | 403; 404 |
@@ -175,8 +175,8 @@ Problem Details on every refusal (`type`, `title`, `status`, `detail`, `errors[{
 * `results[]`, each with:
   * `programKey`, `programLabel`, `outcome`;
   * `score: null`, `maxScore: null`, `passMark: null`, `selectionModel: null`, `competitivenessBand: null`, `gapToPass: null`;
-  * `failedGates[]`, `missingInputs[]`, `breakdown: {}`, `recommendations: []`;
-  * `gates[{key, label, state, facts[], values{}, missing[]}]`;
+  * `failedGates[]`, `missingInputs[]`, `reviewGates[]` (ours, R4), `breakdown: {}`, `recommendations: []`;
+  * `gates[{key, label, state, facts[], values{}, missing[], whenNotMet}]`;
   * `judgement[]`.
 
 `out_of_date`, `changed`, `gates`, `judgement` and `releaseId` are ours; the rest uses AG-03's names.
@@ -226,7 +226,7 @@ Problem Details on every refusal (`type`, `title`, `status`, `detail`, `errors[{
 | 7 | the officer runs and reads | the client gets 403; another firm gets 404; the case subject or `applies: false` → 400 | C6.9-1 |
 | 8 | the envelope carries pin, rules as at, disclaimer, who, `stand-in` | an UPDATE on `assessment` is refused by the trigger; `result_json` byte-identical | C6.9-2, C6.9-9 |
 | 9 | answered facts → Met or Not met; `or(passport, refugee document)` with a passport only → Met | an unanswered passport → Not answered (never Not met), listed as missing; an invalid value → missing | C6.9-3, C6.9-4 |
-| 10 | all met → Likely; a fail with all answered → Not eligible `vv.no_convictions` | a fail plus a missing fact → per the switch, with both lists filled; no gates → 409 | C6.9-7, C6.9-8 |
+| 10 | all met → Likely; a `not_eligible` gate failed with all answered → Not eligible; `vv.no_convictions` (needs review, R4) answered yes → Possibly eligible, in `reviewGates` | a fail plus a missing fact → Not eligible (the switch, `true`), with both lists filled; no gates → 409 | C6.9-7, C6.9-8 |
 | 11 | score and breakdown empty or null | never `ELIGIBLE_BELOW_CUTOFF` | C6.9-6, C6.9-15 |
 | 12 | 4 judgement lines | no gate about money, health, ties or leaving | C6.9-5 |
 | 13 | a changed value → the earlier run is out of date, naming the change | **Confirm section on the facts a run read → `out_of_date` stays false** | C6.9-9 |

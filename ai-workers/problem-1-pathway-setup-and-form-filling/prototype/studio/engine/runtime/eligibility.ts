@@ -32,10 +32,17 @@ export type ProgramResult = {
  *  (kept for tracing only; out of date compares values, BR-13). */
 export type Input = { fact: string; about: string; value: unknown; answerId: string | null };
 
-/** Whose value a gate fact is: a `case.*` fact is the case's, every other one the person's (render.ts factsOf). */
-export const aboutOf = (fact: string, person: string) => (fact.startsWith("case.") ? "case" : person);
 const present = (v: unknown) => v !== undefined && v !== null && v !== "";
-const valueOf = (known: Known, fact: string, person: string) => known.get(kkey(aboutOf(fact, person), fact))?.value;
+/** Whose value a gate fact is, read as the rules read it (render.ts factsOf gives each person the case's facts too):
+ *  the person's own answer, else the case's, whatever the fact's prefix. A fact asked once per case of the case subject
+ *  (relationship.start_date, representative.*) is the case's (review M1 on fd26c492: it read as unanswered, a false Not
+ *  met). Unanswered: a `case.*` fact is the case's, every other one the person's. */
+export function aboutOf(known: Known, fact: string, person: string): string {
+  if (present(known.get(kkey(person, fact))?.value)) return person;
+  if (present(known.get(kkey("case", fact))?.value)) return "case";
+  return fact.startsWith("case.") ? "case" : person;
+}
+const valueOf = (known: Known, fact: string, person: string) => known.get(kkey(aboutOf(known, fact, person), fact))?.value;
 
 /** BR-9: every `exists f` leaf on a fact the person has not answered becomes a leaf that `evaluate` reads as "cannot
  *  tell" and lists `f` as missing; every other leaf stays. The sentinel never equals a real answer, because `f` is absent. */
@@ -53,8 +60,10 @@ export function gateResult(s: Snapshot, known: Known, gate: Gate, person: string
   const tree = rewriteMissing(gate.condition, (f) => !present(valueOf(known, f, person)));
   const e = evalCondition(s, known, tree, person);
   const state: GateState = e.applies === true ? "met" : e.applies === false ? "not_met" : "not_answered";
-  // A rule that cannot run at all (a calculation with no helper) waits on the facts it reads: never a verdict.
-  const missing = state !== "not_answered" ? [] : e.missing.filter((m) => facts.includes(m)).length ? e.missing.filter((m) => facts.includes(m)) : facts.filter((f) => !present(values[f]));
+  // A rule that cannot run at all (a calculation with no helper) waits on the facts it reads: never a verdict. A gate
+  // not met still names the facts it could not read (break m1 on fd26c492, P-229 (3): "the missing facts are listed too").
+  const read = e.missing.filter((m) => facts.includes(m));
+  const missing = state === "met" ? [] : state === "not_met" ? read : read.length ? read : facts.filter((f) => !present(values[f]));
   return { key: gate.key, label: gate.label, state, facts, values, missing, whenNotMet: gate.whenNotMet === "needs_review" ? "needs_review" : "not_eligible" };
 }
 
@@ -66,7 +75,7 @@ export function outcomeOf(gates: GateResult[], failBeatsMissing = FAIL_BEATS_MIS
   const notMet = gates.filter((g) => g.state === "not_met");
   const failedGates = notMet.filter((g) => g.whenNotMet !== "needs_review").map((g) => g.key);
   const reviewGates = notMet.filter((g) => g.whenNotMet === "needs_review").map((g) => g.key);
-  const missingInputs = [...new Set(gates.filter((g) => g.state === "not_answered").flatMap((g) => g.missing))];
+  const missingInputs = [...new Set(gates.flatMap((g) => g.missing))];
   const outcome: Outcome = failedGates.length && (failBeatsMissing || !missingInputs.length) ? "NOT_ELIGIBLE" : missingInputs.length || reviewGates.length ? "POSSIBLY_ELIGIBLE" : "LIKELY_ELIGIBLE";
   return { outcome, failedGates, missingInputs, reviewGates };
 }
@@ -87,19 +96,20 @@ export function assess(s: Snapshot, known: Known, person: string, failBeatsMissi
 /** BR-8: the facts a run read, in gate order, with their values today (null when unanswered). */
 export function inputsOf(s: Snapshot, known: Known, person: string, answerId: (about: string, fact: string) => string | null): Input[] {
   return gateFacts(s.eligibility as SnapshotEligibility | undefined).map((fact) => {
-    const about = aboutOf(fact, person), v = valueOf(known, fact, person);
+    const about = aboutOf(known, fact, person), v = valueOf(known, fact, person);
     return { fact, about, value: present(v) ? v : null, answerId: present(v) ? answerId(about, fact) : null };
   });
 }
 
 /** BR-13: a run is out of date when a fact it read now has a different value (added, changed or removed), compared by
  *  canonical value, never by answer id (Confirm section writes a new row with the same value), or when the case's pin
- *  is no longer the run's release. Worked out on every read; never written. */
-export function outOfDate(inputs: Input[], now: (about: string, fact: string) => unknown, sameRelease: boolean) {
+ *  is no longer the run's release. Today's value is read the way the run read it (`nowOf`). Worked out on every read;
+ *  never written. */
+export function outOfDate(inputs: Input[], now: (fact: string) => unknown, sameRelease: boolean) {
   const norm = (v: unknown) => canonical((present(v) ? v : null) as never);
-  const changed = inputs.filter((i) => norm(i.value) !== norm(now(i.about, i.fact))).map((i) => ({ fact: i.fact, about: i.about, was: i.value, now: present(now(i.about, i.fact)) ? now(i.about, i.fact) : null }));
+  const changed = inputs.filter((i) => norm(i.value) !== norm(now(i.fact))).map((i) => ({ fact: i.fact, about: i.about, was: i.value, now: present(now(i.fact)) ? now(i.fact) : null }));
   return { out_of_date: changed.length > 0 || !sameRelease, changed, release_changed: !sameRelease };
 }
 
-/** Today's value of a fact, read the same way a run reads it (for outOfDate). */
-export const nowOf = (known: Known) => (about: string, fact: string) => known.get(kkey(about, fact))?.value;
+/** Today's value of a fact for this person, read the same way a run reads it (for outOfDate). */
+export const nowOf = (known: Known, person: string) => (fact: string) => valueOf(known, fact, person);

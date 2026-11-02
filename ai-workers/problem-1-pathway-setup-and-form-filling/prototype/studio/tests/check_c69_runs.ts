@@ -50,6 +50,25 @@ await main("C6.9 part 2", "Eligibility runs (stand-in SI-1 adapter and routes)",
     ok("C6.9 BR-18 pass: the result is for the case's own combination only", all.programKey === "vv.single" && assess(snap(), knownOf(ALL), P)!.programKey === "vv.single");
   }
   {
+    // Review M1 on fd26c492 (AG-3-12): a fact asked once per case, of the case subject, whatever its prefix, is read as
+    // the rules read it (the person's own answer, else the case's), so an answered fact never reads unanswered.
+    const g = { key: "x.rel", label: "Relationship start date answered", condition: { subjectKind: "PERSON", op: "exists", field: "relationship.start_date" } };
+    const caseKnown = (v: unknown): Known => new Map([[kkey("case", "relationship.start_date"), { value: v, status: "answered" as const, source: "check" }]]);
+    const met = gateResult(snap([g]), caseKnown("2015-06-01"), g, P);
+    ok("C6.9 M1 pass: a non-case.* fact answered on the case subject reads Met for each person (never a false Not met)", met.state === "met" && met.values["relationship.start_date"] === "2015-06-01", met);
+    const ins = inputsOf(snap([g]), caseKnown("2015-06-01"), P, () => "id-1");
+    ok("C6.9 M1 pass: the run records it as the case's fact, with its value and answer id", ins[0].about === "case" && ins[0].value === "2015-06-01" && ins[0].answerId === "id-1", ins);
+    ok("C6.9 M1 fail: when the case's answer changes, the run is out of date (it was never compared before)", outOfDate(ins, nowOf(caseKnown("2016-01-01"), P), true).changed[0]?.now === "2016-01-01");
+    ok("C6.9 M1 fail: unanswered anywhere, it is Not answered (missing), never Not met", gateResult(snap([g]), new Map(), g, P).state === "not_answered");
+    // Break m1 on fd26c492 (P-229 (3)): a gate not met still names the facts it could not read.
+    const mixed = { key: "x.mixed", label: "Passport and no convictions", condition: { subjectKind: "PERSON", op: "and", args: [{ op: "exists", field: "person.passport_number" }, { op: "eq", field: "person.criminal_history", value: false }] } };
+    const res = assess(snap([mixed as never]), knownOf({ "person.criminal_history": true }), P)!;
+    ok("C6.9 break m1 pass: a gate not met with a fact unanswered inside it → Not eligible, the missing fact listed too", res.outcome === "NOT_ELIGIBLE" && res.failedGates.join() === "x.mixed" && res.missingInputs.join() === "person.passport_number", res);
+    const resRv = assess(snap([{ ...mixed, whenNotMet: "needs_review" } as never]), knownOf({ "person.criminal_history": true }), P)!;
+    ok("C6.9 break m1 fail: the same as needs_review → Possibly eligible, still listing the missing fact", resRv.outcome === "POSSIBLY_ELIGIBLE" && resRv.reviewGates.join() === "x.mixed" && resRv.missingInputs.join() === "person.passport_number", resRv);
+    ok("C6.9 break m1 pass: a Met gate lists nothing missing (an \"or\" settled by one branch)", assess(snap([{ key: "x.or", label: "Either", condition: { subjectKind: "PERSON", op: "or", args: [{ op: "exists", field: "person.passport_number" }, { op: "exists", field: "person.refugee_travel_document_number" }] } } as never]), knownOf({ "person.passport_number": "P1" }), P)!.missingInputs.length === 0);
+  }
+  {
     // P-230 (1), BACKLOG R4: "when not met" as data on the gate.
     const REVIEW = [GATES[0], { ...GATES[1], whenNotMet: "needs_review" as const }];
     const types = new Map([["person.passport_number", "text"], ["person.passport_expiry_date", "date"], ["person.criminal_history", "yes_no"]]);
@@ -75,11 +94,11 @@ await main("C6.9 part 2", "Eligibility runs (stand-in SI-1 adapter and routes)",
   {
     const k = knownOf(ALL), ins = inputsOf(snap(), k, P, (_a, f) => `id-${f}`);
     ok("C6.9 BR-8 pass: the inputs list every gate fact once with its value and answer id", ins.length === 3 && ins.every((i) => i.about === P && i.answerId === `id-${i.fact}`) && ins[0].value === "SAMPLEP12", ins);
-    ok("C6.9 BR-13 pass: the same values (a new answer id, as Confirm section writes) → not out of date", outOfDate(ins, nowOf(knownOf({ ...ALL })), true).out_of_date === false);
-    const ch = outOfDate(ins, nowOf(knownOf({ ...ALL, "person.passport_number": "SAMPLEP13" })), true);
+    ok("C6.9 BR-13 pass: the same values (a new answer id, as Confirm section writes) → not out of date", outOfDate(ins, nowOf(knownOf({ ...ALL }), P), true).out_of_date === false);
+    const ch = outOfDate(ins, nowOf(knownOf({ ...ALL, "person.passport_number": "SAMPLEP13" }), P), true);
     ok("C6.9 BR-13 fail: a changed value → out of date, naming the fact, was and now", ch.out_of_date && ch.changed.length === 1 && ch.changed[0].was === "SAMPLEP12" && ch.changed[0].now === "SAMPLEP13", ch);
-    ok("C6.9 BR-13 fail: a removed answer, or a fact answered since, → out of date", outOfDate(ins, nowOf(knownOf({ "person.passport_number": "SAMPLEP12" })), true).changed.length === 2 && outOfDate(inputsOf(snap(), knownOf({}), P, () => null), nowOf(k), true).changed.length === 3);
-    ok("C6.9 BR-13 fail: the case's pin moved to another release → out of date, values unchanged", (() => { const x = outOfDate(ins, nowOf(k), false); return x.out_of_date && x.release_changed && !x.changed.length; })());
+    ok("C6.9 BR-13 fail: a removed answer, or a fact answered since, → out of date", outOfDate(ins, nowOf(knownOf({ "person.passport_number": "SAMPLEP12" }), P), true).changed.length === 2 && outOfDate(inputsOf(snap(), knownOf({}), P, () => null), nowOf(k, P), true).changed.length === 3);
+    ok("C6.9 BR-13 fail: the case's pin moved to another release → out of date, values unchanged", (() => { const x = outOfDate(ins, nowOf(k, P), false); return x.out_of_date && x.release_changed && !x.changed.length; })());
     ok("C6.9 BR-13 pass: a number answered as 8000 or 8000 again compares equal (canonical values)", !outOfDate([{ fact: "case.f", about: "case", value: 8000, answerId: null }], () => 8000, true).out_of_date);
   }
 
@@ -164,8 +183,32 @@ await main("C6.9 part 2", "Eligibility runs (stand-in SI-1 adapter and routes)",
   ok("C6.9 list fail: an unknown person on the list is refused (400 on person)", r.status === 400 && fields(r.body).includes("person"), r.status);
   r = await call("GET", `/runtime/assessments/${good?.id}`, undefined, OFFICER);
   ok("C6.9 GET one pass: the officer reads one run, worked out now (out of date)", r.status === 200 && r.body?.id === good?.id && r.body?.out_of_date === true && Array.isArray(r.body?.overrides), r.status);
+  ok("C6.9 GET one fail: a client reading a real run's id gets 403 (no verdict)", (await call("GET", `/runtime/assessments/${good?.id}`, undefined, CLIENT)).status === 403);
   ok("C6.9 GET one fail: another firm's staff get 404; a malformed id 404", (await call("GET", `/runtime/assessments/${good?.id}`, undefined, "user-S")).status === 404 && (await call("GET", "/runtime/assessments/not-an-id", undefined, OFFICER)).status === 404);
+  ok("C6.9 BR-8 pass: no audit row of any run holds an answer value (SAMPLEP12, SAMPLEP13, the expiry date)", sql(`select count(*) from audit_event where entity in ('assessment','assessment_override') and (summary like '%SAMPLEP1%' or summary like '%${inDays(3 * 365)}%' or detail::text like '%SAMPLEP1%')`) === "0" && sql(`select count(*) from audit_event where entity='assessment'`) !== "0");
   ok("C6.9 BR-17 pass: rules only: no model call (no ai_batch row, the spend record) in any run", sql("select count(*) from ai_batch") === spend0);
-  const t0 = Date.now(); await list(); const ms = Date.now() - t0;
-  ok("C6.9 scale: the list of 5 runs for 2 people answers in under 300 ms", ms < 300, ms);
+  // Review M2 / break M1 on fd26c492: 40 first runs at once for a new person → one first run, the rest need a reason.
+  const c2 = await openCase(vv, [{ role: "principal", name: "Sample Client R", dob: yearsAgo(41) }, { role: "spouse_or_partner", name: "Sample Spouse R", dob: yearsAgo(39) }, { role: "child", name: "Sample Child R1", dob: yearsAgo(12) }, { role: "child", name: "Sample Child R2", dob: yearsAgo(9) }]);
+  const R = Object.values(c2.subjects);
+  const race = await Promise.all(Array.from({ length: 40 }, () => call("POST", `/runtime/cases/${c2.id}/assessments`, { person: R[0] }, OFFICER)));
+  ok("C6.9 M2 fail: 40 first runs sent at once → exactly one 201 (MANUAL), 39 refused on reason; one row", race.filter((x) => x.status === 201).length === 1 && race.filter((x) => x.status === 400 && fields(x.body).includes("reason")).length === 39 && sql(`select count(*) from assessment where case_id='${c2.id}'`) === "1", race.map((x) => x.status).join(""));
+  // Break m4: the reason counts characters, and needs a letter or digit.
+  r = await call("POST", `/runtime/cases/${c2.id}/assessments`, { person: R[0], reason: "—" }, OFFICER);
+  ok("C6.9 break m4 fail: a reason with no letter or digit (\"—\") is no reason (400 on reason)", r.status === 400 && fields(r.body).includes("reason"), r.body);
+  r = await call("POST", `/runtime/cases/${c2.id}/assessments`, { person: R[0], reason: "😀".repeat(301) }, OFFICER);
+  ok("C6.9 break m4 fail: 301 characters is refused on reason", r.status === 400 && fields(r.body).includes("reason"));
+  r = await call("POST", `/runtime/cases/${c2.id}/assessments`, { person: R[0], reason: "Renewed 😀" + "😀".repeat(291) }, OFFICER);
+  ok("C6.9 break m4 pass: 300 characters with emoji (each one character) is accepted", r.status === 201, r.body?.detail ?? r.status);
+  // Break m3: a person marked not travelling after a run → that run is out of date, said as not travelling.
+  r = await call("POST", `/runtime/cases/${c2.id}/assessments`, { person: R[1] }, OFFICER);
+  await call("PATCH", `/runtime/cases/${c2.id}/people/${R[1]}`, { applies: false }, OFFICER);
+  const gone = (await call("GET", `/runtime/cases/${c2.id}/assessments?person=${R[1]}`, undefined, OFFICER)).body?.assessments?.[0];
+  ok("C6.9 break m3 fail: after the spouse is marked not travelling, their earlier run reads out of date (not travelling)", gone?.out_of_date === true && gone?.not_travelling === true, gone && { out: gone.out_of_date, nt: gone.not_travelling });
+  ok("C6.9 break m3 pass: a traveller still travelling is not marked so", (await call("GET", `/runtime/cases/${c2.id}/assessments?person=${R[0]}`, undefined, OFFICER)).body?.assessments?.every((x: { not_travelling?: boolean }) => !x.not_travelling));
+  await call("PATCH", `/runtime/cases/${c2.id}/people/${R[1]}`, { applies: true }, OFFICER);
+  // Scale (concept §8): 4 people × 10 runs, listed in under 300 ms.
+  for (const who of R) for (let i = (await call("GET", `/runtime/cases/${c2.id}/assessments?person=${who}`, undefined, OFFICER)).body?.assessments?.length ?? 0; i < 10; i++) await call("POST", `/runtime/cases/${c2.id}/assessments`, { person: who, ...(i ? { reason: `Run ${i + 1} (Sample)` } : {}) }, OFFICER);
+  const n40 = sql(`select count(*) from assessment where case_id='${c2.id}'`);
+  const t0 = Date.now(); const big = await call("GET", `/runtime/cases/${c2.id}/assessments`, undefined, OFFICER); const ms = Date.now() - t0;
+  ok("C6.9 scale: 4 people × 10 runs are listed in under 300 ms", n40 === "40" && big.body?.assessments?.length === 40 && ms < 300, { n40, ms });
 });

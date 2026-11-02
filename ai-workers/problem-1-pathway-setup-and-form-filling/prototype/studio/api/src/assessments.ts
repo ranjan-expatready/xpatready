@@ -63,19 +63,26 @@ export class Assessments {
     const { s, known, answerId } = await this.knownNow(c);
     const e = s.eligibility as SnapshotEligibility | undefined;
     if (!e?.gates?.length) refused("This application's release has no eligibility rules yet. An author adds them and a reviewer releases them.");
-    const earlier = await this.db.assessment.count({ where: { caseId: c.id, subjectId: person } });
-    if (earlier && !reason) fieldError("reason", "Give a reason for running again, such as 'Passport renewed'.");
     const result = assess(s, known, person)!;
-    const id = randomUUID(), at = new Date();
-    const envelope: Envelope = {
-      releaseId: release.id, packId: release.packVersionId ?? null, packVersion: release.version,
-      rulesAsOfByProgram: { [s.combination.key]: release.releasedAt.toISOString().slice(0, 10) },
-      disclaimerText: e!.disclaimer, disclaimerLocale: DISCLAIMER_LOCALE, createdBy: actor.id, createdAt: at.toISOString(),
-      runType: earlier ? "RERUN" : "MANUAL", reason, source: "stand-in", person, inputs: inputsOf(s, known, person, answerId), results: [result],
-    };
-    const row = await this.db.assessment.create({ data: { id, workspaceId: c.workspaceId, caseId: c.id, subjectId: person, configReleaseId: release.id, resultJson: envelope as never, runType: envelope.runType, reason, createdBy: actor.id, createdAt: at } });
+    const id = randomUUID();
+    // Review M2 on fd26c492 (STANDARDS idempotent creates): the count of earlier runs and the insert happen under one
+    // lock per person, so two clicks at once never write two first runs with no reason (the second needs a reason).
+    const { row, envelope } = await this.db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`assessment:${c.id}:${person}`}))`;
+      const earlier = await tx.assessment.count({ where: { caseId: c.id, subjectId: person } });
+      if (earlier && !reason) fieldError("reason", "Give a reason for running again, such as 'Passport renewed'.");
+      const at = new Date();
+      const envelope: Envelope = {
+        releaseId: release.id, packId: release.packVersionId ?? null, packVersion: release.version,
+        rulesAsOfByProgram: { [s.combination.key]: release.releasedAt.toISOString().slice(0, 10) },
+        disclaimerText: e!.disclaimer, disclaimerLocale: DISCLAIMER_LOCALE, createdBy: actor.id, createdAt: at.toISOString(),
+        runType: earlier ? "RERUN" : "MANUAL", reason, source: "stand-in", person, inputs: inputsOf(s, known, person, answerId), results: [result],
+      };
+      const row = await tx.assessment.create({ data: { id, workspaceId: c.workspaceId, caseId: c.id, subjectId: person, configReleaseId: release.id, resultJson: envelope as never, runType: envelope.runType, reason, createdBy: actor.id, createdAt: at } });
+      return { row, envelope };
+    });
     await this.audit.log(c.workspaceId, actor.id, "created", "assessment", id, `${actor.name} ran an eligibility check on case ${short(c.id)} for person ${short(person)} (${envelope.runType === "RERUN" ? "run again" : "first run"}): ${result.outcome.toLowerCase().replace(/_/g, " ")}`, { outcome: result.outcome, release: release.version });
-    return this.view(row, [], null, { ...envelope, ...outOfDate(envelope.inputs, nowOf(known), true) });
+    return this.view(row, [], null, { ...envelope, ...outOfDate(envelope.inputs, nowOf(known, person), true) });
   }
 
   /** GET the list (BR-13): every run on the case, or one person's, newest first; out of date worked out now. Two
@@ -103,7 +110,10 @@ export class Assessments {
 
   private fresh(x: Row, known: Parameters<typeof nowOf>[0], c: Reached) {
     const env = x.resultJson as unknown as Envelope;
-    return { ...env, ...outOfDate(env.inputs ?? [], nowOf(known), c.pins[0].configReleaseId === x.configReleaseId) };
+    const o = outOfDate(env.inputs ?? [], nowOf(known, x.subjectId), c.pins[0].configReleaseId === x.configReleaseId);
+    // Break m3 on fd26c492: a person no longer travelling (or removed) makes the run out of date, said in words.
+    const travelling = c.participants.some((p) => p.subjectId === x.subjectId && p.applies);
+    return { ...env, ...o, ...(travelling ? {} : { out_of_date: true, not_travelling: true }) };
   }
 
   private view(x: Row, overrides: AssessmentOverride[], review: AssessmentReview | null, env: Envelope & ReturnType<typeof outOfDate>) {

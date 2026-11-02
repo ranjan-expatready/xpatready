@@ -24,5 +24,6 @@ const oneLine = (x: string) => !INVISIBLE.test(x) && !LONE.test(x) && !/[\t\n\r]
 /** POST /runtime/cases/:id/assessments. `reason` is needed from a person's second run on (BR-14), checked by the API. */
 export const AssessmentRunBody = z.object({
   person: z.string({ error: "Choose the person to check." }).min(1, "Choose the person to check."),
-  reason: z.string({ error: "Give the reason as text." }).trim().max(300, "Keep the reason to 300 characters.").refine(oneLine, "Write the reason as one line of plain text.").optional(),
+  // Break m4 on fd26c492: the length counts characters (an emoji is one), and a reason needs a letter or a digit.
+  reason: z.string({ error: "Give the reason as text." }).trim().refine((x) => [...x].length <= 300, "Keep the reason to 300 characters.").refine(oneLine, "Write the reason as one line of plain text.").refine((x) => !x || /[\p{L}\p{N}]/u.test(x), "Give a reason in words, such as 'Passport renewed'.").optional(),
 });
