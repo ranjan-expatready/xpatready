@@ -1,61 +1,17 @@
-# Nightly full set (test-speed plan, founder 31 Oct; T1, P-228 (6), 2 Nov): every suite runs on main every night and on
-# demand ("Run workflow"), on four GitHub Linux machines at once (the repository is public: no minutes billed, US$0),
-# each a fresh copy set up like a cloud session (cloud-setup.sh), as the pull-request shards do (ci.yml "shard").
-# No model call: every suite replays saved runs or uses the fake launcher (run-suites.sh pairs any *_LIVE with it, P-192).
-# Quarantined suites (run-suites.sh QUARANTINE) still run here, as P-205 says: nightly is where they are judged.
-# Speed budgets (P-215): SPEED_JUDGE=1 lets tests/speed_budget.cjs judge them on these machines when the machine is not
-# busy (load at or below its cores); pull-request shards leave it unset and never judge. Fallback, one switch:
-# repository variable NIGHTLY_RUNNER=mac runs the old single job on the founder's Mac instead.
+# Nightly full set (test-speed plan, founder 31 Oct): each pull request checks only the suites its files can affect, on
+# the same Mac since P-195 (ci.yml, run-suites.sh --changed); every suite runs here every night on main, on the founder's Mac
+# (self-hosted runner "xr-mac", ~/actions-runner-xpatready: no GitHub-hosted minutes are billed, US$0). The Mac must be
+# on at 21:00 UTC; "Run workflow" (workflow_dispatch) starts it by hand. The :4400 demo is never touched (the browser
+# suite runs on its own isolated copy). No model call: every suite replays saved runs.
 name: nightly
 on:
   schedule:
-    - cron: "7 21 * * *"
+    - cron: "0 21 * * *"
   workflow_dispatch:
 jobs:
-  shard:
-    if: ${{ vars.NIGHTLY_RUNNER != 'mac' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 90
-    permissions: { contents: read }
-    concurrency: { group: "nightly-${{ matrix.shard }}", cancel-in-progress: false }
-    strategy:
-      fail-fast: false   # a full run reports every red suite, not only the first
-      matrix: { shard: [1, 2, 3, 4] }
-    env:
-      P: ai-workers/problem-1-pathway-setup-and-form-filling/product
-      S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
-    steps:
-      - uses: actions/checkout@v4
-        with: { ref: main }
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-          cache-dependency-path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/package-lock.json
-      - name: set up like a cloud session (cloud-setup.sh; it also builds the web app the browser suites need)
-        run: bash "$P/tools/cloud-setup.sh"
-      - name: Playwright's own Chromium
-        run: cd "$S" && ./node_modules/.bin/playwright install chromium
-      - name: every studio suite, shard ${{ matrix.shard }} of 4 (run-suites.sh --demo --shard; US$0 model spend)
-        env: { SPEED_JUDGE: "1" }
-        run: |
-          bash "$P/tools/run-suites.sh" --demo --shard ${{ matrix.shard }}/4 | tee suites.md
-          exit ${PIPESTATUS[0]}
-      - name: summary
-        if: always()
-        run: '[ -f suites.md ] && { echo "Nightly full set on main $(git rev-parse --short HEAD), shard ${{ matrix.shard }}/4"; echo; cat suites.md; } >> "$GITHUB_STEP_SUMMARY" || true'
-      - name: logs (only when something failed)
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: nightly-suite-logs-shard-${{ matrix.shard }}
-          path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/
-          retention-days: 14
   suites:
-    # The old Mac job (self-hosted runner "xr-mac"), kept as the fallback: repository variable NIGHTLY_RUNNER=mac.
-    if: ${{ vars.NIGHTLY_RUNNER == 'mac' }}
     runs-on: [self-hosted, macOS, xr-mac]
-    timeout-minutes: 90
+    timeout-minutes: 90   # P-183: a busy Mac never stops a run halfway
     permissions: { contents: read }
     concurrency: { group: nightly, cancel-in-progress: false }
     env:
@@ -64,17 +20,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { ref: main }
-      - name: the Mac's tools linked like a lane copy
+      - name: the Mac's tools (node 24, venv, official PDFs, database) linked like a lane copy (lane.sh setup)
         run: |
           [ -e .tools ] || ln -s "$HOME/Desktop/Xpatready/.tools" .tools
+          # Each line added is put in front of the last one: node 24 last, so it wins over Homebrew's node 23.
           echo /opt/homebrew/bin >> "$GITHUB_PATH"; echo /opt/homebrew/opt/postgresql@18/bin >> "$GITHUB_PATH"; echo "$PWD/.tools/node-v24.21.0/bin" >> "$GITHUB_PATH"
-      - name: packages, web build, Chromium
-        run: cd "$S" && npm ci --no-fund --no-audit && ./node_modules/.bin/prisma generate && (cd web && ../node_modules/.bin/vite build) && ./node_modules/.bin/playwright install chromium
-      - name: every studio suite
-        env: { COPY_PREFIX: "ci", SUITES_BROWSER_ISOLATED: "1", SUITES_CI_FIRST: "1" }
+      - name: node 24
+        run: |
+          node --version | grep -q '^v24\.' || { echo "node 24 not first on PATH - $(command -v node) $(node --version)"; exit 1; }
+      - name: packages (npm ci)
+        run: cd "$S" && npm ci --no-fund --no-audit
+      - name: web app build (the browser suites need it)
+        run: cd "$S" && ./node_modules/.bin/prisma generate && cd web && ../node_modules/.bin/vite build
+      - name: Playwright's own Chromium
+        run: cd "$S" && ./node_modules/.bin/playwright install chromium
+      - name: every studio suite (run-suites.sh, browser suite on its own copy; no model call, US$0)
+        # The same Mac setup as the pull request check had (P-183): copies named ci_*, CI first (lanes' full runs wait).
+        env: { COPY_PREFIX: "${{ runner.name == 'xr-mac-2' && 'ci2' || 'ci' }}", SUITES_BROWSER_ISOLATED: "1", SUITES_CI_FIRST: "1" }
         run: |
           bash "$P/tools/run-suites.sh" | tee suites.md
           exit ${PIPESTATUS[0]}
       - name: summary
         if: always()
         run: '[ -f suites.md ] && { echo "Nightly full set on main $(git rev-parse --short HEAD)"; echo; cat suites.md; } >> "$GITHUB_STEP_SUMMARY" || true'
+      - name: logs (only when something failed)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-suite-logs
+          path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/
+          retention-days: 14
