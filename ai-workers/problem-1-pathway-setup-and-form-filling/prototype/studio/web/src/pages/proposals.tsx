@@ -87,6 +87,8 @@ export function ProposalsPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-sm text-text-muted" aria-live="polite">{picked.size ? `${plural(picked.size, "item")} chosen` : `${readyOk.length} can be accepted together`}{readyOk.length > max ? ` · at most ${max} at a time` : ""}</span>
                           <Button size="sm" variant="secondary" onClick={() => setPicked(new Set(readyOk.slice(0, max).map((p) => p.id)))}>Choose {readyOk.length > max ? `the first ${max}` : `all ${readyOk.length}`}</Button>
+                          {/* C11.14 (P-121): Deselect all within the group, as Choose all selects within it. */}
+                          <Button size="sm" variant="ghost" disabled={!picked.size} onClick={() => setPicked(new Set())}>Clear the choice</Button>
                           <Button size="sm" busy={decideMany.isPending} disabled={!picked.size} onClick={() => decideMany.mutate([...picked])}><Check className="size-4" aria-hidden />Accept {picked.size ? plural(picked.size, "item") : ""}</Button>
                         </div>) : null} />
                   ))}
