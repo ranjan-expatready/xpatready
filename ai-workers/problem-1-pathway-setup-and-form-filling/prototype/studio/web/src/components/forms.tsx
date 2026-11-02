@@ -64,7 +64,7 @@ export function IntakeResults({ results }: { results: IntakeResult[] }) {
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-medium">{r.edition ?? r.code ?? r.file}</span>
               <Pill tone={tone}>{label}</Pill>
-              <span className="text-xs text-text-muted">{[KIND[r.kind] ?? r.kind, r.title, r.published ? `published ${r.published}` : null, r.file].filter(Boolean).join(" · ")}</span>
+              <span className="text-xs text-text-muted">{[KIND[r.kind] ?? r.kind, r.title, r.published ? `file saved ${r.published}` : null /* K3: the PDF's own date, not IRCC's published month */, r.file].filter(Boolean).join(" · ")}</span>
             </div>
             <p className="text-xs text-text-muted">{r.message}</p>
           </li>

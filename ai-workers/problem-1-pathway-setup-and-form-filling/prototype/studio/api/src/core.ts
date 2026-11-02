@@ -102,9 +102,18 @@ export const STARTING_ROLES = (JSON.parse(readFileSync(join(STUDIO, "samples", "
 export class Workspace {
   private cached: string | null = null;
   constructor(@Inject(Db) private readonly db: Db) {}
+  /** C3.13 red check (nightly 41381724752, #493's CI 41419363380): on an empty database the page's first calls and a
+   *  sample load each created the workspace at once; the losers' duplicate (P2002) answered 409 "Already in progress or
+   *  already exists". Concurrent callers now share one creation, and a duplicate from another process re-reads the row. */
+  private creating: Promise<string> | null = null;
   async id(): Promise<string> {
     if (this.cached) { const ok = await this.db.workspace.findUnique({ where: { id: this.cached } }); if (ok) return this.cached; }
-    const w = await this.db.workspace.upsert({ where: { key: WORKSPACE_KEY }, update: {}, create: { key: WORKSPACE_KEY, label: "Demo workspace (disposable)" } });
+    this.creating ??= this.create().finally(() => { this.creating = null; });
+    return this.creating;
+  }
+  private async create(): Promise<string> {
+    const make = () => this.db.workspace.upsert({ where: { key: WORKSPACE_KEY }, update: {}, create: { key: WORKSPACE_KEY, label: "Demo workspace (disposable)" } });
+    const w = await make().catch((e: { code?: string }) => { if (e?.code === "P2002") return make(); throw e; });
     // S5 (M3): a workspace starts with the six built-in person roles (Reset keeps them; Sample until the expert confirms).
     if (!(await this.db.personRole.count({ where: { workspaceId: w.id } }))) await this.db.personRole.createMany({ skipDuplicates: true, data: STARTING_ROLES.map((r, i) => ({ workspaceId: w.id, roleKey: r.key, label: r.label, meaning: r.meaning, takesPartInCase: r.takesPartInCase, mayBeApplicant: r.mayBeApplicant, builtIn: true, displayOrder: i + 1 })) });
     this.cached = w.id;

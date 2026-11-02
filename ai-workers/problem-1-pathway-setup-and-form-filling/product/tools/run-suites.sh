@@ -52,6 +52,13 @@ SKIP="check_catalogue_scale.cjs"
 # a forms change; merge-queue run 41400122250 on #423, a test-only change). Neither touches the Demo menu, so main fails it.
 # The API check check_d1_reset_to_six.ts passes. Fix row (runtime-3): make the arrow-key path open the dialog (or fix the
 # check), with a fail test; take it off this list in that PR.
+# check_c313_reuse_browser.cjs (C3.13, screens) quarantined 2 Nov 11:40 UTC by the tech lead (P-214): its setup step "sample inputs
+# loaded" fails with 409 "Already in progress or already exists", then a 30 s wait on the Combination chooser (nightly
+# 41381724752 on main; run 41419363380 on #493, a data-only R3 change). #423 added diagnostics; the cause is open. Fix row:
+# runtime lane L1 (finish plan P-264), with a fail test; take it off this list in that PR.
+# Back on 2 Nov (runtime L1): the cause was Workspace.id() racing on an empty database (Prisma's upsert with an empty
+# update is a plain INSERT, so the page's first calls and the sample load each created the workspace; the losers' P2002
+# answered 409). api/src/core.ts now shares one creation; fail test tests/check_workspace_first_calls.ts (5/9 before, 9/9).
 QUARANTINE="check_forms_c36_rule_facts_browser.cjs check_screen01_api.ts check_d1_reset_to_six_browser.cjs"
 OUT="${SUITES_OUT:-$ROOT/$S/var/suites}"; mkdir -p "$OUT"
 TSX="$S/node_modules/.bin/tsx --tsconfig $S/api/tsconfig.json"

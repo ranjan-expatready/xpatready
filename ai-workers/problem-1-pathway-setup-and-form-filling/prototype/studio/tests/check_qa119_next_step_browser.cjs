@@ -91,7 +91,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const pages = (await api(`/combinations/${vv}/official-pages`)).body;
   await api(`/combinations/${vv}/official-pages/confirm`, "user-A", { method: "POST", data: { attachmentId: pages.candidates.find((c) => c.match).id } });
   const pe = (await api(`/combinations/${vv}/workspace?tab=questionnaires`)).body.people;
-  const saved = await api(`/combinations/${vv}/people`, "user-A", { method: "PATCH", data: { participants: pe.lines.map((x) => ({ role: x.role, min: x.min, max: x.max, applies: x.applies, ...(x.quote ? { quote: x.quote } : {}), ...(x.origin ? { origin: x.origin } : {}) })), version: pe.version } });
+  const saved = await api(`/combinations/${vv}/people`, "user-A", { method: "PATCH", data: { participants: pe.lines.map((x) => ({ role: x.role, min: x.min, max: x.max, applies: x.applies, ...(x.quote ? { quote: x.quote } : {}), ...(x.origin ? { origin: x.origin } : {}), ...(x.filingMode ? { filingMode: x.filingMode } : {}) })), version: pe.version } });
   const vvSum = (await api(`/combinations/${vv}/summary`)).body;
   step("setup: Visitor visa's next item is now a Forms item with no landing place", saved.status === 200 && vvSum.setup.next?.step === "forms" && !LANDED_FOCUS.includes(vvSum.setup.next.item.focus), { saved: saved.status, next: vvSum.setup.next?.item });
   await openOverview(vv);

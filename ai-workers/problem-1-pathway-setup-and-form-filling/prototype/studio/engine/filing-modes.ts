@@ -47,10 +47,10 @@ export function filingNotSet(lines: { role: string; label?: string; min?: number
   return lines.filter((l) => l.role !== "principal" && l.max > 0 && roles.find((r) => r.key === l.role)?.mayBeApplicant && !isLineMode(l.filingMode))
     .map((l) => l.label || roles.find((r) => r.key === l.role)?.label || l.role);
 }
-export const filingNotSetWords = "Filing not set: until the Filing column is on this screen, a case uses the combination's built-in default (Sample); a new release will ask for it then.";
-/** Switched off until the editor can set a mode (PR 3 of C11.12): until then a missing mode is a warning, so no draft
- *  saved before C11.12 becomes unreleasable with no way to fix it on the screen ("unfinished work merges switched off"). */
-export const FILING_NOT_SET_BLOCKS = false;
+export const filingNotSetWords = "Filing not set: choose how this person's application goes to IRCC (Forms › Who can be in this application). A new release needs it.";
+/** On since C11.12 PR 3 (the Filing column sets the mode): a new release needs a mode on every role that may be an
+ *  applicant; pinned releases are kept (BR-7). */
+export const FILING_NOT_SET_BLOCKS = true;
 /** The release check's lines (BR-7): one per role with no mode; an error once FILING_NOT_SET_BLOCKS is on. */
 export function filingProblems(lines: Parameters<typeof filingNotSet>[0], roles: RoleFacts[], blocks = FILING_NOT_SET_BLOCKS) {
   return filingNotSet(lines, roles).map((label) => ({ level: blocks ? "error" as const : "warning" as const, where: "People", item: `Filing for ${label}`, message: filingNotSetWords }));
@@ -85,7 +85,9 @@ export type PlannedFiling = { id: string; owner: PlanPerson; kind: "own" | "fami
 export function filingPlan(people: PlanPerson[], modeOf: (role: string) => LineMode | null | undefined): { filings: PlannedFiling[]; notFiling: { person: PlanPerson; why: string }[] } {
   const filings: PlannedFiling[] = [], notFiling: { person: PlanPerson; why: string }[] = [];
   const principal = people.find((p) => p.role === "principal");
-  const main: PlannedFiling | null = principal ? { id: `filing-${principal.subject}`, owner: principal, kind: "own", applicants: [{ person: principal, mode: "applying" }] } : null;
+  // The runtime lets a principal be marked not travelling (C6.12 tests): then there is no principal's filing.
+  if (principal && !principal.travelling) notFiling.push({ person: principal, why: "Not travelling (not applying on this case): no filing and no fee." });
+  const main: PlannedFiling | null = principal?.travelling ? { id: `filing-${principal.subject}`, owner: principal, kind: "own", applicants: [{ person: principal, mode: "applying" }] } : null;
   if (main) filings.push(main);
   for (const p of people) {
     if (p === principal) continue;
@@ -104,7 +106,8 @@ const n = (k: number, one: string, many = `${one}s`) => `${k} ${k === 1 ? one : 
 export function previewFilings(lines: { role: string; label?: string; min: number; max: number; preview?: number; applies: boolean; filingMode?: LineMode | null }[], combination: string, feesKnown: boolean, fallback: (role: string) => LineMode | undefined = () => undefined) {
   const people: PlanPerson[] = [];
   for (const l of lines) {
-    const count = l.role === "principal" ? 1 : Math.max(l.min, Math.min(l.max, l.preview ?? (l.min || 1)));
+    // PR 3 (board r2): at least one of each person who may be on a case, more when the preview family says so.
+    const count = l.role === "principal" ? 1 : l.max <= 0 ? 0 : Math.min(l.max, Math.max(1, l.min, l.preview ?? 1));
     for (let k = 1; k <= count; k++) people.push({ subject: `${l.role}-${k}`, role: l.role, label: count > 1 ? `${l.label ?? l.role} ${k}` : l.label ?? l.role, travelling: l.filingMode !== "declared_only" });
   }
   // Review M2: a line with no mode (saved before C11.12, or its Applicant tick changed) follows the same built-in default
@@ -120,15 +123,21 @@ export function previewFilings(lines: { role: string; label?: string; min: numbe
   });
   const coFiled = out.some((f) => f.kind === "co_filed");
   const together = out.length === 1 ? "1 filing" : coFiled ? `${n(out.length, "filing")} sent together: ${out.map((f) => f.words).join(" + ")}` : `${n(out.length, "filing")} in one submission`;
-  return { filings: out, submissions: [{ filings: out.map((f) => f.id), splittable: out.length > 1 && !coFiled, words: together }], gets: together };
+  // The case's rule (engine/runtime/filings.ts, api/src/case-prepare.ts split): beside a sponsorship, only another own
+  // filing (not the principal's) may leave the submission.
+  const splittable = out.length > 1 && (!coFiled || out.some((f) => f.kind !== "co_filed" && f.principal !== "principal"));
+  return { filings: out, submissions: [{ filings: out.map((f) => f.id), splittable, words: together }], gets: together };
 }
 
-/** The release's modes the case's filings read. Review M1 (PR 1 of C11.12): until the case engine handles Declared only
- *  and co-filing (PR 2), only Files own and On the principal's reach it; any other mode falls back to the built-in
- *  default, so a released Declared only line never breaks a case's Prepare view. */
-export const RUNTIME_MODES: readonly LineMode[] = ["files_own", "on_principal"];
-export function releaseModes(participants: { role: string; applies?: boolean; filingMode?: unknown }[]): Map<string, "files_own" | "on_principal"> {
-  const out = new Map<string, "files_own" | "on_principal">();
-  for (const p of participants) if (isLineMode(p.filingMode) && RUNTIME_MODES.includes(p.filingMode) && p.applies !== false) out.set(p.role, p.filingMode as "files_own" | "on_principal");
+/** The release's filing mode per role, read once for the case's prepare view and its filings (concept §6, m2). A mode
+ *  is kept only where it can hold: an applicant mode on a line marked applicant or Declared only, co_files on a line
+ *  that is not; an applicant mode stored on a never-applicant line by earlier setup runs (challenge B1) is dropped. */
+export function releaseModes(participants: { role: string; applies?: boolean; filingMode?: unknown }[]): Map<string, LineMode> {
+  const out = new Map<string, LineMode>();
+  for (const p of participants) {
+    const m = p.filingMode;
+    if (!isLineMode(m)) continue;
+    if (m === "co_files" ? p.role !== "principal" && p.applies !== true : m === "declared_only" || p.applies !== false) out.set(p.role, m);
+  }
   return out;
 }
