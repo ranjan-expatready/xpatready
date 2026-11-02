@@ -44,7 +44,15 @@ export type RoundOut<T> = { ok: true; output: T; costUsd: number; from: "live" |
  *  (`edition:<code>:<edition>`, engine/rounds.ts editionContextKey). `trail` is the plain place name the job carries. */
 export type RoundContext = { trail: string; contextKey: string; inputs: { file: string; sha256: string }[]; mode: "live" | "replay" | "rules"; wanted: () => Promise<boolean>; batchId?: string;
   /** P-179: the person's Continue this run was started with; passed to each live call (the ledger checks it). */
-  override?: { id: string; run_key: string } };
+  override?: { id: string; run_key: string };
+  /** C4.7 break B1 (2 Nov): replay only a saved run of this job stem (pairOf), so a draft and its checker round come from
+   *  the same live run, never two runs mixed. Unset: the newest usable run, as before. */
+  replayPair?: string };
+
+/** The job stem a saved run file shares with the other round of the same live run: the file name without its round base
+ *  ("<jobBase>-" or "<jobBase>-check-") and without its "-live-<time>-<suffix>.json" tail. */
+export const pairOf = (step: Pick<AiStep, "jobBase">, isCheck: boolean, file: string) =>
+  file.replace(/^.*\//, "").replace(new RegExp(`^${step.jobBase}-${isCheck ? "check-" : ""}`), "").replace(/-live-\d{8}t\d{9}z-[a-z0-9]+\.json$/, "");
 
 /** Lead 29 Oct (G4): may a form's run number `attempt` be retried? A live form has one budget of paid attempts across its
  *  runs (p2/policy.ts), each run counted at the most it could use; a stub run costs nothing and is never counted. */
@@ -114,7 +122,7 @@ export class StepRunner {
       const mine = replayPattern(step.jobBase, isCheck);
       // The current prompt's answer first; else one of an earlier version the step still replays (plan §4), labelled.
       const prompts = [{ sha256: want.templateSha256, label: "" }, ...(step.replays ?? []).map((v) => ({ sha256: sha(readFileSync(join(PROMPTS, isCheck ? v.check : v.template))), label: v.label }))];
-      const runs = (existsSync(RUNS) ? readdirSync(RUNS).filter((f) => mine.test(f)).sort(newestFirst) : []).map(readRun);
+      const runs = (existsSync(RUNS) ? readdirSync(RUNS).filter((f) => mine.test(f) && (ctx.replayPair === undefined || pairOf(step, isCheck, f) === ctx.replayPair)).sort(newestFirst) : []).map(readRun);
       const usable = (x: SavedRun | null, p: { sha256: string }): x is SavedRun => !!x && isSameSavedRun(x, { ...want, templateSha256: p.sha256 }) && (() => { try { return step.shapeOk(JSON.parse(String(x.raw_output))); } catch { return false; } })();
       let r: SavedRun | undefined, label = "";
       for (const p of prompts) { r = runs.find((x): x is SavedRun => usable(x, p)); if (r) { label = promptOfRun(r, prompts) ?? ""; break; } }
