@@ -37,13 +37,16 @@ export function removedLines<T extends { lineageKey: string; status: string }>(r
   for (const r of rows) if (!newest.has(r.lineageKey)) newest.set(r.lineageKey, r);
   return [...newest.values()].filter((r) => r.status === "RETIRED");
 }
-/** Break 3: the attached forms not set up yet, one per form number: recognised Form files whose number is neither a line
- *  nor a removed form. The API's count (programs.ts) and the Forms tab's rows (sources.tsx pendingForms) use it. */
-export function attachedNotSetUp<A extends { kind: string; recognised?: boolean | null; edition?: string | null }>(attachments: A[], taken: Iterable<string>): A[] {
+/** Break 3: the attached forms not set up yet, one per form number: Form files whose number is neither a line nor a
+ *  removed form. A file is a "Form" only when it is on the official list or a second person approved it in the product
+ *  (P-80, stored with recognised = false; re-break N1); an unknown file is another kind (api/src/sources.ts). The API's
+ *  count (programs.ts) and the Forms tab's rows (sources.tsx pendingForms) use it. */
+export function attachedNotSetUp<A extends { kind: string; edition?: string | null; officialFile?: string | null; id?: string }>(attachments: A[], taken: Iterable<string>): A[] {
   const skip = new Set(taken), seen = new Set<string>(), out: A[] = [];
   for (const a of attachments) {
-    const code = (a.edition ?? "").split(" (")[0];
-    if (a.kind !== "Form" || a.recognised === false || skip.has(code) || seen.has(code)) continue;
+    // One per form number; a file with no edition read yet is its own form (re-review N1: never merged into one "").
+    const code = (a.edition ?? a.officialFile ?? a.id ?? "").split(" (")[0];
+    if (a.kind !== "Form" || skip.has(code) || seen.has(code)) continue;
     seen.add(code); out.push(a);
   }
   return out;

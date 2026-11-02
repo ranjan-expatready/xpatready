@@ -29,12 +29,13 @@ ok("removed fail case (break 2): a removal released before is still removed, nev
 // Attached, not set up (break 3).
 const att = [
   { kind: "Form", recognised: true, edition: "IMM 5409 (09-2023)" }, { kind: "Form", recognised: true, edition: "IMM 5409 (09-2023)" },
-  { kind: "Form", recognised: false, edition: null }, { kind: "Checklist", recognised: true, edition: "IMM 5484 (05-2026)" },
+  { kind: "Unrecognised file", recognised: false, edition: null }, { kind: "Checklist", recognised: true, edition: "IMM 5484 (05-2026)" },
+  { kind: "Form", recognised: false, edition: "IMM 5645 (03-2024)" }, // re-break N1: approved in the product (P-80)
   { kind: "Form", recognised: true, edition: "IMM 1295 (12-2024)" }, { kind: "Form", recognised: true, edition: "IMM 5257 (09-2023)" },
 ];
 const pending = attachedNotSetUp(att, ["IMM 5257", ...removedLines(rows).map((r) => r.lineageKey)]);
-ok("attached pass: one row per form number not yet a line", pending.map((a) => a.edition).join() === "IMM 5409 (09-2023)", pending);
-ok("attached fail case (break 3): the same form attached twice is one form; an unrecognised file and a checklist are none; a removed form is not waiting", pending.length === 1);
+ok("attached pass: one row per form number not yet a line, a form approved in the product included (re-break N1)", pending.map((a) => a.edition).join() === "IMM 5409 (09-2023),IMM 5645 (03-2024)", pending);
+ok("attached fail case (break 3): the same form attached twice is one form; an unknown file and a checklist are none; a removed form is not waiting", pending.length === 2);
 
 // Form facts per person.
 const roles = [{ role: "spouse_or_partner", label: "Spouse or partner", facts: 101 }, { role: "principal", label: "Principal applicant", facts: 98 }, { role: "case", label: "The application", facts: 22 }, { role: "child", label: "Child", facts: 97 }];

@@ -538,7 +538,7 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
           </div>
         </div>
       ) : null}
-      <p className="text-xs text-text-muted">{total} question{total === 1 ? "" : "s"} for {role?.label}, from the largest Sample family the combination allows. {q.notAsked ? `${q.notAsked} placed question${q.notAsked === 1 ? " is" : "s are"} not asked: no form reads ${q.notAsked === 1 ? "it" : "them"} and ${q.notAsked === 1 ? "it decides" : "they decide"} nothing.` : ""}</p>
+      <p className="text-xs text-text-muted">{total} question{total === 1 ? "" : "s"} for {role?.label}, from the largest household the combination allows. {q.notAsked ? `${q.notAsked} placed question${q.notAsked === 1 ? " is" : "s are"} not asked: no form reads ${q.notAsked === 1 ? "it" : "them"} and ${q.notAsked === 1 ? "it decides" : "they decide"} nothing.` : ""}</p>
       {/* QA-92: a fact about the case is saved under its own role ("case"), not the person whose tab shows it. */}
       {shown ? <FactDrawer key={`${q.role}|${shown.fact}|${byFact.get(shown.fact)?.version ?? 0}`} id={id} role={byFact.get(shown.fact)?.role ?? q.role} roleLabel={byFact.get(shown.fact)?.role === "case" ? "The case (asked once)" : role?.label ?? q.role} section={shown.section} q={shown.q} f={byFact.get(shown.fact)} canAuthor={canAuthor} onClose={() => setShown(null)} onSaved={(t, u) => undoToast.show(t, u)} /> : null}
       {removing ? <Dialog open onOpenChange={(o) => !o && setRemoving(null)} title={`Remove "${removing.title}" from the questionnaire?`} description="The sections are chosen once for the whole combination."

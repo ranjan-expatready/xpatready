@@ -52,7 +52,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.screenshot({ path: path.join(SHOTS, "01-tab-badges-1440.png"), clip: { x: 0, y: 0, width: 1440, height: 520 } });
   // QA-120: every count on a tab has one badge style and a space before it, and the tab's name says it in words.
   const fTab = p.getByRole("tab", { name: /^Forms/ });
-  step("QA-120 pass (UX-A part 1): a setup-items tab is named by its visible text, and its tip says what the badge counts in full", /^Forms \d+ to do$/.test(await fTab.getAttribute("aria-label") ?? "") && /^\d+ setup items? open on Forms$/.test(await fTab.getAttribute("title") ?? ""));
+  step("QA-120 pass (UX-A part 1): a setup-items tab is named by its visible text, and its tip says what the badge counts in full, naming the steps (review m1)", /^Forms \d+ to do$/.test(await fTab.getAttribute("aria-label") ?? "") && /^\d+ setup items? open on Forms \((Official pages|Who can be in this application|Forms)(, [^)]+)?\)$/.test(await fTab.getAttribute("title") ?? ""));
   let reviewTab = null;
   for (const key of ["sv.super_visa", "vv.single", "sp.student", "fs.outside", "lm.high_wage", "wp.family"]) {
     await p.goto(`${BASE}/c/${sql(`select id from combination where combination_key='${key}'`)}/overview`); await p.getByRole("tablist", { name: "Combination" }).waitFor();

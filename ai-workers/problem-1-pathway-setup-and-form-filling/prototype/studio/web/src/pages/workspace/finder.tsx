@@ -121,7 +121,7 @@ export function FindDialog({ id, only, page, onClose, onStarted }: { id: string;
 /** The finder's strip above the lines: what the latest find did, Find (again), and its run while it runs. */
 /** count: the forms on the combination (QA-78: forms added without a find are counted, never "No form find yet"), the
  *  one forms count of contracts/counts.ts, from the summary; null while it loads. */
-export function FinderPanel({ id, latest, onRedo, onChoosePage, removed = [], count = null }: { id: string; latest: FinderLatest | undefined; onRedo: (codes?: string[]) => void; onChoosePage: () => void; removed?: string[]; count?: FormsCount | null }) {
+export function FinderPanel({ id, latest, onRedo, onChoosePage, removed = [], count = null, countFailed = false }: { id: string; latest: FinderLatest | undefined; onRedo: (codes?: string[]) => void; onChoosePage: () => void; removed?: string[]; count?: FormsCount | null; countFailed?: boolean }) {
   const lineCount = count?.total ?? 0;
   const { canAuthor } = useSessionView();
   const qc = useQueryClient();
@@ -148,7 +148,7 @@ export function FinderPanel({ id, latest, onRedo, onChoosePage, removed = [], co
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="text-sm">
           <p className="font-medium">{waitsForPage ? START.pageTitle : run ? `AI found ${attached} form${attached === 1 ? "" : "s"} for this combination${notFound ? `, ${notFound} not found` : ""}${decide ? `, ${decide} to decide` : ""}` : lineCount ? `On this combination: ${formsWords(count!)}` : count ? "No form find yet" : "Forms on this combination"}</p>
-          <p className="text-xs text-text-muted" data-finder-status>{waitsForPage ? `${START.pageBody} ` : run ? `${endSentence(`Last find ${run.finished_at ? fmtWhen(run.finished_at) : "running now"}${run.mode === "replay" ? " · Saved, US$0" : run.mode === "rules" ? " · rules only, US$0" : ""}`)} ` : lineCount ? "Added without an AI find. Nothing was spent on finding forms yet. " : count ? `${START.body} ` : "Counting the forms on this combination… "}Which forms apply is Sample until the immigration expert confirms.</p>
+          <p className="text-xs text-text-muted" data-finder-status>{waitsForPage ? `${START.pageBody} ` : run ? `${endSentence(`Last find ${run.finished_at ? fmtWhen(run.finished_at) : "running now"}${run.mode === "replay" ? " · Saved, US$0" : run.mode === "rules" ? " · rules only, US$0" : ""}`)} ` : lineCount ? "Added without an AI find. Nothing was spent on finding forms yet. " : count ? `${START.body} ` : countFailed ? "The forms count could not be loaded (Retry on the filing line below). " : "Counting the forms on this combination… "}Which forms apply is Sample until the immigration expert confirms.</p>
         </div>
         {/* Lead split (28 Oct): the first find is started from Start setup (screens lane, S3): its "Find forms with AI"
             button is this slot. Once a find exists, Find again (or choosing the page it waits for) is this list's one action. */}

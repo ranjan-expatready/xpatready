@@ -114,7 +114,7 @@ export function PreviewTab({ id, p, empty, fetching, hasRelease }: { id: string;
         </section>
         <section aria-labelledby="pv-agent" className={cn("rounded-xl border border-border bg-surface-raised p-4", shown !== "agent" && "hidden xl:block")} data-set="agent">
           <h2 id="pv-agent" className="font-semibold">{SETS[2].title(p)}</h2>
-          <p className="mt-1 text-xs text-text-muted">Every question for {who.label}, with where its answer comes from. The same count as the Questionnaires tab.</p>
+          <p className="mt-1 text-xs text-text-muted">Every question for {who.label} in this Sample family, with where its answer comes from. Counted as the Questionnaires tab counts them; that tab reads the largest household the combination allows, so a person's number can differ with the family chosen here.</p>
           <div className="mt-2 max-h-[36rem] space-y-3 overflow-y-auto pr-1" tabIndex={0} role="region" aria-label={`Every question for ${who.label}`}>
             {p.sets.agent.sections.map((x) => (
               <div key={`${x.about}|${x.section}`} data-agent-section={x.section}>
