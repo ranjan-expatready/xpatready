@@ -142,11 +142,17 @@ ok("SH3 render (review r2-m1): an answered deciding fact placed once per case st
     forms: [{ form_number: "F1", who: "principal_applicant", status: "conditional", condition: { op: "eq", field: "person.flag", value: true } }] } as unknown as Snapshot;
   const k: Known = new Map([["A|person.flag", { value: true, status: "answered", source: "t" }]]);
   const abouts = render.render(S, single, k).questions.filter((q) => q.fact === "person.flag").map((q) => q.about).sort();
-  // Review r3-m1: an answered case.* deciding fact is kept on the filing (render.ts:156's case. branch); rule_only, so only that path asks it.
+  return same(abouts, ["A", FILING]);
+})());
+// Review r4-m4: r3-m1 in its own check, so a failure names its own rule.
+ok("SH3 render (review r3-m1): an answered case.* deciding fact is kept on the filing (render.ts:156; rule-only, so only that path asks it)", (() => {
+  const S = { combination: { key: "t", participants: [] }, canonical_fields: [{ id: "person.flag", value_type: "yes_no" }], derived_fields: [], field_maps: [], checks: [], rules: [], document_types: [], document_requirements: [],
+    sections: [{ id: "s1", title: "S" }], placements: [{ fact: "person.flag", section_id: "s1", repeats: "once_per_case", collected_from: "client_questionnaire" }],
+    forms: [{ form_number: "F1", who: "principal_applicant", status: "conditional", condition: { op: "eq", field: "person.flag", value: true } }] } as unknown as Snapshot;
   const S2 = { ...S, canonical_fields: [{ id: "case.mode", value_type: "code" }], placements: [{ fact: "case.mode", section_id: "s1", repeats: "once", collected_from: "client_questionnaire", rule_only: true }], forms: [{ form_number: "F1", who: "principal_applicant", status: "conditional", condition: { op: "eq", field: "case.mode", value: "x" } }] } as unknown as Snapshot;
   const k2: Known = new Map([["case|case.mode", { value: "x", status: "answered", source: "t" }]]);
   const r2 = render.render(S2, single, k2).questions.filter((q) => q.fact === "case.mode").map((q) => q.about);
-  return same(abouts, ["A", FILING]) && same(r2, [FILING]);
+  return same(r2, [FILING]);
 })());
 
 // ---- The four places call the resolver; the engine part is lift-ready
@@ -161,6 +167,9 @@ const imports = (t: string) => [...t.matchAll(/\bfrom\s+["']([^"']+)["']|\bimpor
 ok("SH3 (P-249): the contract imports nothing; the engine resolver imports only the contract", imports(src("contracts/resolver.ts")).length === 0 && imports(src("engine/resolver.ts")).length > 0 && imports(src("engine/resolver.ts")).every((m) => m === "../contracts/resolver.ts"));
 ok("SH3 (P-249) (fail): the import check sees a multi-line import and a dynamic one", same(imports('import {\n a,\n b } from "pg";\nconst x = await import("@prisma/client");'), ["pg", "@prisma/client"]));
 ok("SH3 d1/d2: eligibility.ts, case-checklist.ts and programs.ts read R5/R6b from the resolver and keep no copy", ["engine/runtime/eligibility.ts", "engine/runtime/case-checklist.ts", "engine/programs.ts"].every((f) => /from "\.\.?\/resolver\.ts"/.test(src(f)) && !/startsWith\("case\."\)/.test(src(f))));
+ok("SH3 tidy-up: preview.ts, validate.ts, pqr-picks.ts and coverage.ts key choices with sourceKey and keep no role|fact template", ["engine/runtime/preview.ts", "engine/validate.ts", "engine/pqr-picks.ts", "engine/coverage.ts"].every((f) => /sourceKey\(/.test(src(f)) && !/\$\{[^}]*role[^}]*\}\|\$\{/.test(src(f))));
+ok("SH3 tidy-up (r4-m3): eligibility reads \"is answered\" from the resolver (R6b present) and keeps no copy", R.present("") === false && R.present(null) === false && R.present(undefined) === false && R.present(0) && R.present(false) && R.present(" ") && /import \{ present, valueHolder \} from "\.\.\/resolver\.ts"/.test(src("engine/runtime/eligibility.ts")) && !/const present =/.test(src("engine/runtime/eligibility.ts")));
+ok("SH3 tidy-up: coverage.ts names a gap's person by the resolver's roleOf (the filing in words, \"the application\")", /resolvedRole\(people, about\)/.test(src("engine/coverage.ts")) && /about === FILING \? "the application"/.test(src("engine/coverage.ts")));
 ok("SH3 (P-249): the resolver satisfies the contract's interface (one object)", R.resolver.boxOwner === R.aboutOf && R.resolver.holders === R.subjectsFor && R.resolver.factsFor === R.factsOf && R.resolver.canonicalFact === R.canonicalFact);
 
 summary();

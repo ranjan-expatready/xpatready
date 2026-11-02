@@ -2,6 +2,7 @@ import * as React from "react";
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { type CatalogueLeaf, type CombinationSummary, type CombinationView, type NextAction } from "../../../contracts/programs";
 import { tabOf, TABS, type WorkspaceView } from "../../../contracts/workspace";
+import { TestsTab } from "@/components/answer-keys";
 import { nextStepHref, STEP_LABEL, tabCounts, tabSteps, type BadgeTab, type ItemKind } from "../../../contracts/setup-checklist";
 import { ArrowRight, ChevronRight, Sparkles } from "lucide-react";
 import { CATALOGUE_URL_KEY, STATUS_WORD } from "@/pages/programs";
@@ -120,6 +121,7 @@ export function CombinationPage() {
         {tab === "overview" ? <OverviewTab d={d} sum={sum.data} show={sp.get("show")} failed={sum.isError} onRetry={() => void sum.refetch()} />
           : tab === "documents" ? <DocumentsTab id={c.id} />
           : tab === "review" ? <ReviewTab d={d} />
+          : tab === "tests" ? <TestsTab id={c.id} />
           : tab === "preview" && sp.get("view") === "studio" ? <div className="space-y-3"><Link className="text-sm text-text-link underline" to={`/c/${id}/preview`}>Back to the preview by person</Link><StudioPreview d={d} /></div>
           : <WorkspaceTab id={c.id} tab={tab} hasRelease={!!last} />}
       </div>
