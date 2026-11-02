@@ -71,3 +71,18 @@ Fail-then-pass proved by mutation: I put `api/src/form-masters.ts`, `api/src/rou
 Rescored from 7: Correct data 1 (was 0.5), Error recovery 1 (was 0.5). Task completed, Next step, Accessibility, Visual quality stay 0.5 (no UI). **8 / 10.** Raise: a Live or Saved entry on the screen (+1).
 
 **Verdict: Approve** (no open Blocker or Major; commit b6c11837).
+
+## Merge re-review (098ac055)
+
+Scope: the merge of origin/main into b51a4500 only; read-only, no suite run by me (the builder's list stands), `tsc --noEmit` shows no error in the touched files.
+
+- `rounds.ts`: both sides kept. `replayPrompt` (filter on `prompts` by label) and `replayWindow` (filter on run files by `runTime`) are independent and each unset leaves the old behaviour. The masters steps set only `replayPair` + `replayWindow` (`form-masters.ts:169`) and have no `replays`, so `prompts` is the one current prompt: a draft and a checker cannot come from two runs or two prompt versions. A draft prompt changed since the checker's run finds no draft: refused, never mixed.
+- `usable`/`isSameSavedRun`: main's `inputs` slice applies only to a `replays` entry with `inputs`; for the current prompt (and so for the masters steps) it is `want.inputs` as before. `isSameSavedRun` itself is unchanged.
+- `AiStep` shape: only `replays[].inputs` added (optional); `form-masters.ts` and `engine/masters-ai.ts` untouched by main and still compile. The new `question_list` input kind and `inputsOf` touch only the PQR/conditions steps; masters still send `[t.input]`.
+- `track-a-jobs.ts`: v1 pins apply only to PQR/CONDITIONS; the four C3.4 jobs are derived from `MASTERS_*_AI` as before. Main changed no `studio-masters-*.json` job file and no masters prompt, so the four files should still equal the derivation (the builder's `check_forms_pa_track_a_jobs` is the proof).
+
+No Blocker, no Major. Minor (none new from the merge).
+
+**Verdict: Approve** (merge commit 098ac055, conditional on the builder's listed suites passing).
+
+Builder's suites on isolated copies of 098ac055 (US$0; fake launcher where Live is on), all exit 0: check_forms_c34_ai 50/50 · check_forms_c34_ai_live 8/8 · check_forms_pa_track_a_jobs 28/28 · check_forms_c34_masters 29/29 · its browser suite 9/9 · check_forms_c47_pqr_picks 60/60 · check_forms_c411_draft_qd 77/77 · schema lint 24 · qa_ai_paths 33. Any ratchet 423 (unchanged); graph --check exit 0. The condition of the Approve is met.
