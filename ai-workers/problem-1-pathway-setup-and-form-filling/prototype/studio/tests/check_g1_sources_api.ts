@@ -184,8 +184,10 @@ try {
   ok("setup: the Visitor visa's IMM 5707 line gets \"From age 18\" in the draft (a threshold number)", r.status < 300 && fromAge?.state === "missing", { status: r.status, body: r.status < 300 ? undefined : r.body, fromAge });
   r = await call("POST", `/combinations/${v}/submit`, { note: "G1 check" }, AUTHOR);
   ok("C5.4 Decision 1 fail: in the demo workspace too, a number with no entry refuses Submit, named", r.status === 400 && listed(r).length === 1 && listed(r)[0].message === `Form IMM 5707: From age: 18 has no source entry. ${NONE}`, r.body);
-  r = await call("POST", `/combinations/${wp}/sources/sample`, undefined, AUTHOR);
-  ok("C5.4 Decision 1 fail: the demo seed never answers a source-backed combination with Sample", r.status === 404 || r.status === 409, r.status);
+  // Review m3 on #587: the work permit's id after the Reset above (the old one would answer 404 for the wrong reason).
+  const wpNow = idOf("wp.family");
+  r = await call("POST", `/combinations/${wpNow}/sources/sample`, undefined, AUTHOR);
+  ok("C5.4 Decision 1 fail: the demo seed never answers a source-backed combination with Sample (409, \"source-backed\")", !!wpNow && r.status === 409 && /source-backed/.test(r.body.detail ?? ""), { wpNow, status: r.status, detail: r.body.detail });
   // Devin on #587: a retired combination is read only for the Sample seed too, as for PUT.
   sql(`update combination set retired_at = now() where id = '${v}'`);
   r = await call("POST", `/combinations/${v}/sources/sample`, undefined, AUTHOR);

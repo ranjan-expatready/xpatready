@@ -6,7 +6,7 @@
 import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Put } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { SourceBody, type SourceEntryView, type SourceNumberView, type SourcesView, NUMBER_STATES } from "../../contracts/sources.ts";
+import { SourceEntryBody, type SourceEntryView, type SourceNumberView, type SourcesView, NUMBER_STATES } from "../../contracts/source-register.ts";
 import { buildSnapshot, sourceEntryOf, type Snapshot } from "../../engine/snapshot.ts";
 import { canonicalValue, SAMPLE_LOADER as SAMPLE_CREATOR, entryKey, entryOf, numberState, publishedNumbers, sourceProblems, statesValue, type FeeLineInput, type PublishedNumber, type SourceProblem } from "../../engine/source-register.ts";
 import { FEE_TABLE } from "../../engine/runtime/filings.ts";
@@ -76,7 +76,7 @@ export class SourceRegister {
    *  409 an old version or a value that moved. Audit "source entry added" / "source entry changed". */
   async save(actor: Actor, id: string, kind: string, rawKey: string, body: unknown): Promise<SourceNumberView> {
     if (!(actor.duties as readonly string[]).includes("author")) throw new HttpException({ type: "https://expatready.local/problems/forbidden", title: "Read only", status: 403, detail: "Only the configuration author adds sources." }, HttpStatus.FORBIDDEN);
-    const parsed = SourceBody.safeParse(body ?? {});
+    const parsed = SourceEntryBody.safeParse(body ?? {});
     if (!parsed.success) throw new HttpException(problemFromZod(parsed.error), HttpStatus.BAD_REQUEST);
     const b = parsed.data;
     const c = await this.combination(id);

@@ -36,7 +36,7 @@ export const Cited = z.object({
 export const NonePublished = z.object({ reason: z.string({ error: SOURCE_WORDS.reason }).trim().min(10, SOURCE_WORDS.reason) });
 
 /** PUT /combinations/:id/sources/:kind/:key. `version`: the entry's version as read (0 when it has none yet). */
-export const SourceBody = z.object({
+export const SourceEntryBody = z.object({
   address: z.string({ error: SOURCE_WORDS.address }).trim().min(1, SOURCE_WORDS.address),
   value: z.union([z.string(), z.number()], { error: SOURCE_WORDS.value }),
   cited: Cited.optional(),
@@ -45,7 +45,7 @@ export const SourceBody = z.object({
 }, { error: "Send the source as { address, value, cited | none_published, version }." }).superRefine((b, ctx) => {
   if (!!b.cited === !!b.none_published) ctx.addIssue({ code: "custom", path: ["answer"], message: SOURCE_WORDS.oneAnswer });
 });
-export type SourceBody = z.infer<typeof SourceBody>;
+export type SourceEntryBody = z.infer<typeof SourceEntryBody>;
 
 export const NUMBER_KINDS = ["rule", "check", "threshold", "fee"] as const;
 export const NUMBER_STATES = ["missing", "cited", "none_published", "sample", "changed", "fee_table", "validity_cite"] as const;

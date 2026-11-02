@@ -11,6 +11,7 @@ import { slug } from "../engine/import.ts";
 import { statesValue, canonicalValue, entryOf, frozenSources, numberState, publishedNumbers, SAMPLE_LOADER, sourceChanges, sourceProblems, statesInDigits, type FeeLineInput, type PublishedNumber, type SourceEntry, type WalkedSnapshot } from "../engine/source-register.ts";
 import { problemWords } from "../contracts/programs.ts";
 import { FEE_TABLE } from "../engine/runtime/filings.ts";
+import { isDemoSnapshot } from "../engine/validate.ts";
 import { WHERE_STEP } from "../engine/setup-checklist.ts";
 import { recorder } from "./runtime/api.ts";
 
@@ -174,6 +175,12 @@ ok("C5.4 BR-3 fail (Devin on #587): words for another number never state this on
   && !statesValue("within twenty-one days", "20") && !statesValue("within twenty one days", "20") && !statesValue("five hundred dollars", "5") && !statesValue("twenty-five years", "5") && !statesValue("one hundred and five days", "5") && statesValue("within twenty days, or five years", "5") && statesValue("within twenty days", "20")
   // Devin on #587 (third round): a range's bounds are both stated; "and" joins a compound only after hundred
   && statesValue("between two and five years", "5") && statesValue("between two and five years", "2") && !statesValue("one hundred and five days", "5"));
+
+// Review m4 on #587: a release whose frozen sources include a Sample entry is a Demo release (G3), never a real publish;
+// a source-backed release with only cited or None-published entries is not.
+const realSnap = { combination: { source_basis: "SOURCE_BACKED" }, checks: [], sources: [{ kind: "rule", key: "wp.family/R-01", address: "person.age_years|gte|1", value: "18", cited: { url: "https://www.canada.ca/x", quote: "at least 18", date: "2026-10-19" }, sample: false }] };
+ok("C5.4 BR-10 fail (review m4 on #587): a frozen Sample source makes the release a Demo release", isDemoSnapshot({ ...realSnap, sources: [...realSnap.sources, { kind: "rule", key: "wp.family/R-05", address: "x|gte|1", value: "5", sample: true }] }) === true);
+ok("C5.4 BR-10 pass (review m4 on #587): cited and None-published sources leave a source-backed release real", isDemoSnapshot(realSnap) === false && isDemoSnapshot({ ...realSnap, sources: [{ ...realSnap.sources[0], cited: undefined, none_published: { reason: "IRCC publishes no limit" } }] }) === false);
 
 // ---------------------------------------------------------------- M1 kept outside validate(), pure
 const src = readFileSync(join(STUDIO, "engine", "source-register.ts"), "utf8");
