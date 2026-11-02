@@ -64,7 +64,9 @@ export async function runDrafting(
       let id: string;
       try { id = ledger.reserve(run.run_id, n, worst, run.settings.budget_usd, call.kind ?? "unmarked", opts.override ? { overrideId: opts.override.id, runKey: opts.override.runKey } : {}); } catch (e) {
         if (!(e instanceof BudgetExceeded)) throw e;
-        out.status = "budget_exceeded"; out.attempts.push({ n, outcome: "refused_before_call", error: e.message, worst_usd: worst });
+        // PC (#508 breaker Major 1): nothing was reserved or sent, so the attempt costs US$0 in the run record, as in the
+        // ledger (launch.ts sums cost_usd, else worst_usd); and an earlier attempt that timed out keeps the run timed_out.
+        out.status = out.status === "timed_out" ? "timed_out" : "budget_exceeded"; out.attempts.push({ n, outcome: "refused_before_call", error: e.message, cost_usd: 0, worst_usd: worst });
         return out;
       }
       const t0 = Date.now();
