@@ -14,4 +14,7 @@ Not tested: OPEN-only case counts (no data in another status).
 | #510 Track A jobs | f00cfcb4 | **Pass** | All four stub passes contract-valid at US$0. Inputs match the manifest. The run name and fields match the Saved reader. Worst US$2.66. Old and new contracts agree on all 260 saved runs. Every entry in this copy's local ledger is actual US$0 |
 | #506 C4.7 | 3c377911 | **Pass**; row stays Partial (real picks wait for Track A) | Acceptance 15/15 + 2 WAIT. Picks check 51/58 (the 7 others need the live switch and are refused at the door). Walk 30/30: exactly Live and Saved, roles 403, To review at 400 px, axe 0. Question: any run file counts as Saved, not only qa-checked ones (P-227) |
 
+| #512 C11.15 Minors | eff1b5a2 | **Pass** | K11 browser 22/22 (×2), k11 words 13/13, qa101_103 22/22, demo 23/23, s5 slice 2 63/63, s5 lead check 49/49, w1 start setup 43/43. Acceptance 33/37, the same 4 known gaps as main (AT-1, AT-12 ×2, AT-24). QA-78, 105, 107, 110 and 111 each fail on main and pass on the head. QA-98 passes its checks (to close) |
+| #513 G4 part 1 | 43487860 | **Pass**, Minor (the "On the demo" note) | Migration additive (3 new tables). Upgrade tested on a database holding the six's data (668 rows unchanged); rollback tested. `check_g4_answer_keys` 76/76, c72 fill 38/38, forms slice2 41/41 and 2b 36/36, channels 105/105, r1d 86/86, qa122 7/7, D1 25/25 |
+
 The tech lead ruled #504's Major (QA-161) a follow-up: SH2b, the next PR in the G-CORE lane.
