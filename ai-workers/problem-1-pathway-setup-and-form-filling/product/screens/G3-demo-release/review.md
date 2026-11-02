@@ -57,3 +57,17 @@ D1 3 (M1: half the agreed definition) · D2 3 (a miscount is possible, M1) · D3
 - An intended user's unaided walk (D17 and D20 stay with the founder).
 - "Refused elsewhere": there is no second workspace, by LeadX's ruling.
 - I did not re-run the builder's regression suites (screen01 116, slice2, qa_1029 63). I accepted them as reported.
+
+## Round 3: a3decbdf (any-ratchet fix only)
+
+Scope: `git diff 815284a8 a3decbdf` only. Round 2 approved 815284a8 with journey score 8.5/10. The round 2 text is not in this file; this section follows round 1. Three files, +8/−6. No route, schema, copy or layout change.
+
+- **`engine/validate.ts`:** `isDemoSnapshot(raw: unknown)` narrows to an object, then reads `checks` only when it is an array. I ran 11 direct cases: null, undefined, string, number, `[]`, `{}`, ILLUSTRATIVE, SOURCE_BACKED with `null` and non-Sample checks, a Sample check after a `null`, and `checks` as an object. All give the same result as the 815284a8 version. One case differs: `checks` that is a non-array object used to throw (`.some` is not a function) and now returns false. That is safer, and no real snapshot has that shape.
+- **`api/src/studio.ts`:** two `r.snapshot as any` casts are removed. The Prisma `JsonValue` goes straight into `unknown`, so the types stay sound and runtime is unchanged.
+- **`web/src/pages/review.tsx`:** `(y: any)` becomes `(y: { id: string; demo?: boolean })`. This affects types only. The outer `d: any` and `x: any` were already there before this commit and stay.
+- **Re-run:** `count-any --against origin/main` gives 427 (the base is 427). `tsc --noEmit` on the api and web projects shows no error in the touched files. `check_g3_demo_release_browser.cjs` passed 11/11 on a fresh isolated copy (`screens_g3r3`, :4447, live AI off), then I stopped the copy.
+- **Journey:** no user-visible change, so round 2's journey score of 8.5/10 stands. I did not re-walk it.
+
+No Blocker, Major or new Minor.
+
+**Verdict: APPROVE** on a3decbdf.
