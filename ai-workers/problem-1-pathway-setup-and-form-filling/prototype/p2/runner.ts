@@ -78,7 +78,8 @@ export async function runDrafting(
       if (r) {
         const c = costUsd(run.settings.model, r.usage.input_tokens, r.usage.output_tokens);
         const notSettled = ledger.settleOrKeep(id, c, r.stop_reason === "end_turn" || r.stop_reason === undefined ? "ok" : `ok_stop_${r.stop_reason}`);
-        out.attempts.push({ n, outcome: "ok", cost_usd: c, worst_usd: worst, stop_reason: r.stop_reason, input_tokens: r.usage.input_tokens, output_tokens: r.usage.output_tokens, duration_ms: Date.now() - t0, ...(notSettled ? { settle_error: `counted at its worst case: ${notSettled}` } : {}) });
+        // PC: a settle not written leaves the ledger at the worst case, so the run record says the same (never less).
+        out.attempts.push({ n, outcome: "ok", cost_usd: notSettled ? worst : c, worst_usd: worst, stop_reason: r.stop_reason, input_tokens: r.usage.input_tokens, output_tokens: r.usage.output_tokens, duration_ms: Date.now() - t0, ...(notSettled ? { settle_error: `counted at its worst case: ${notSettled}` } : {}) });
         out.status = "completed"; out.text = r.text;
         return out;
       }
@@ -95,7 +96,7 @@ export async function runDrafting(
         // #121 review 6, Minor 2: a US$0 settle that could not be written is said on the attempt (it stays at its worst case).
         const notSettled = ledger.settleOrKeep(id, refused || busy ? 0 : worst, refused ? "refused_by_provider_usd0" : busy ? "busy_usd0" : "error_counted_at_worst_case");
         out.attempts.push({ n, outcome: refused ? "refused_by_provider" : busy ? "busy" : timedOut ? "timed_out" : "error", error: (e as Error).message.slice(0, 300),
-          ...(requestId ? { request_id: requestId } : {}), ...(refused || busy ? { cost_usd: 0 } : {}), worst_usd: worst, duration_ms: Date.now() - t0, ...(notSettled ? { settle_error: `counted at its worst case: ${notSettled}` } : {}) });
+          ...(requestId ? { request_id: requestId } : {}), ...(refused || busy ? { cost_usd: notSettled ? worst : 0 } : {}), worst_usd: worst, duration_ms: Date.now() - t0, ...(notSettled ? { settle_error: `counted at its worst case: ${notSettled}` } : {}) });
         if (timedOut) out.status = "timed_out";
         // A refused request fails the same way on retry (D17): no second attempt.
         if (refused) break;
