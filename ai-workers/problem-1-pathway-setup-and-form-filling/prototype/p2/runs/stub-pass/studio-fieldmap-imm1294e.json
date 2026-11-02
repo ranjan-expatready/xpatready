@@ -19,8 +19,8 @@
    "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
   }
  ],
- "digest_sha256": "108141fc7284d456869252e16a1cdd9296086654880386d232abe274b653b29b",
- "run_id": "studio-fieldmap-imm1294e-stub-20261102t103621812z-65753e",
- "at": "2026-11-02T10:36:22.242Z",
+ "digest_sha256": "f5cbcb0d0e93d36f057e8392ca8d37c001211b80b98a8bff64772552e3d03dae",
+ "run_id": "studio-fieldmap-imm1294e-stub-20261102t122531421z-2c458b",
+ "at": "2026-11-02T12:25:31.762Z",
  "stub_calls": 1
 }
