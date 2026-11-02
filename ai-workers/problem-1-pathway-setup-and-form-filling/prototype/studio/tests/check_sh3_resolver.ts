@@ -12,6 +12,7 @@ import { linesNamingRemoved, rolesNamedBy } from "../engine/people.ts";
 import { documentFacts } from "../engine/sources.ts";
 import { resolveKey } from "../api/src/form-lines.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
+import * as eligibility from "../engine/runtime/eligibility.ts";
 import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
@@ -70,6 +71,12 @@ ok("SH3 R5 (fail): any other fact is a person fact; nothing is household-scoped 
 const known: Known = new Map(Object.entries({ "A|person.name": "principal-name", "B|person.name": "partner-name", "case|case.purpose": "visit", "A|person.job|0": "row", "A/parent_1|person.name": "parent-name" }).map(([k, value]) => [k, { value, status: "answered" as const, source: "t" }]));
 ok("SH3 R6: a person sees their own facts and the filing's", same(R.factsOf(known, "A"), { "person.name": "principal-name", "case.purpose": "visit" }));
 ok("SH3 R6 (fail): never another person's, never a list row; a relative sees only their own and the filing's", R.factsOf(known, "B")["person.name"] === "partner-name" && !("person.job" in R.factsOf(known, "A")) && same(R.factsOf(known, "A/parent_1"), { "case.purpose": "visit", "person.name": "parent-name" }) && same(R.factsOf(known, FILING), { "case.purpose": "visit" }));
+
+// ---- R6b whose value a person's fact is read from (SH3 follow-up d1: engine/runtime/eligibility.ts aboutOf)
+const kv = (pairs: Record<string, unknown>): Known => new Map(Object.entries(pairs).map(([k, value]) => [k, { value, status: "answered" as const, source: "t" }]));
+ok("SH3 R6b: the person's own answer first, else the filing's (a fact asked once per case)", R.valueHolder(kv({ "A|person.x": 1, "case|person.x": 2 }), "person.x", "A") === "A" && R.valueHolder(kv({ "case|relationship.start_date": "2020-01-01" }), "relationship.start_date", "A") === FILING);
+ok("SH3 R6b (fail): unanswered → by the id rule (case. → the filing, else the person); an empty or null answer is no answer", R.valueHolder(kv({}), "case.purpose", "A") === FILING && R.valueHolder(kv({}), "person.x", "A") === "A" && R.valueHolder(kv({ "A|person.x": "", "case|person.x": null }), "person.x", "A") === "A" && R.valueHolder(kv({ "A|case.p": "" }), "case.p", "A") === FILING);
+ok("SH3 d1: eligibility's aboutOf is the resolver's R6b", eligibility.aboutOf === R.valueHolder && R.resolver.valueHolder === R.valueHolder);
 
 // ---- R7 signers
 const sign = (who: string, by: string | null | undefined, people = fam) => R.formSigners(people, who, by);
@@ -135,7 +142,11 @@ ok("SH3 render (review r2-m1): an answered deciding fact placed once per case st
     forms: [{ form_number: "F1", who: "principal_applicant", status: "conditional", condition: { op: "eq", field: "person.flag", value: true } }] } as unknown as Snapshot;
   const k: Known = new Map([["A|person.flag", { value: true, status: "answered", source: "t" }]]);
   const abouts = render.render(S, single, k).questions.filter((q) => q.fact === "person.flag").map((q) => q.about).sort();
-  return same(abouts, ["A", FILING]);
+  // Review r3-m1: an answered case.* deciding fact is kept on the filing (render.ts:156's case. branch); rule_only, so only that path asks it.
+  const S2 = { ...S, canonical_fields: [{ id: "case.mode", value_type: "code" }], placements: [{ fact: "case.mode", section_id: "s1", repeats: "once", collected_from: "client_questionnaire", rule_only: true }], forms: [{ form_number: "F1", who: "principal_applicant", status: "conditional", condition: { op: "eq", field: "case.mode", value: "x" } }] } as unknown as Snapshot;
+  const k2: Known = new Map([["case|case.mode", { value: "x", status: "answered", source: "t" }]]);
+  const r2 = render.render(S2, single, k2).questions.filter((q) => q.fact === "case.mode").map((q) => q.about);
+  return same(abouts, ["A", FILING]) && same(r2, [FILING]);
 })());
 
 // ---- The four places call the resolver; the engine part is lift-ready
@@ -149,6 +160,7 @@ ok("SH3: people.ts, sources.ts, fact-sources.ts and form-lines.ts call the resol
 const imports = (t: string) => [...t.matchAll(/\bfrom\s+["']([^"']+)["']|\bimport\s*\(\s*["']([^"']+)["']|\brequire\s*\(\s*["']([^"']+)["']|^\s*import\s+["']([^"']+)["']/gm)].map((m) => m[1] ?? m[2] ?? m[3] ?? m[4]);
 ok("SH3 (P-249): the contract imports nothing; the engine resolver imports only the contract", imports(src("contracts/resolver.ts")).length === 0 && imports(src("engine/resolver.ts")).length > 0 && imports(src("engine/resolver.ts")).every((m) => m === "../contracts/resolver.ts"));
 ok("SH3 (P-249) (fail): the import check sees a multi-line import and a dynamic one", same(imports('import {\n a,\n b } from "pg";\nconst x = await import("@prisma/client");'), ["pg", "@prisma/client"]));
+ok("SH3 d1/d2: eligibility.ts, case-checklist.ts and programs.ts read R5/R6b from the resolver and keep no copy", ["engine/runtime/eligibility.ts", "engine/runtime/case-checklist.ts", "engine/programs.ts"].every((f) => /from "\.\.?\/resolver\.ts"/.test(src(f)) && !/startsWith\("case\."\)/.test(src(f))));
 ok("SH3 (P-249): the resolver satisfies the contract's interface (one object)", R.resolver.boxOwner === R.aboutOf && R.resolver.holders === R.subjectsFor && R.resolver.factsFor === R.factsOf && R.resolver.canonicalFact === R.canonicalFact);
 
 summary();

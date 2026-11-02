@@ -112,3 +112,11 @@ D1 3/5: four scopes shaped, person and filing built, but filing misdescribed (M1
 * **Head moved to cc52f0b1.** It changes only `tests/check_sh3_resolver.ts:70-72`: the three personal names in the R6 fixture values become "principal-name", "partner-name" and "parent-name" (AGENTS rule 5). The values stay distinct, so R6 still tells the people apart. 54/54 on cc52f0b1, and both R6 mutants are still caught.
 
 **Verdict: Approve** (cc52f0b1, and c00868d7 before it). No Blocker or Major is open; r2-m1 can follow.
+
+## Round 3 (7506b899)
+Test-only since c00868d7: cc52f0b1 (role placeholders in the R6 fixture) and 7506b899, which adds the r2-m1 check. engine, contracts and api are unchanged.
+* `check_sh3_resolver` is **55/55** on the head.
+* My two call-site mutants are now caught: render.ts:236 (placements loop) and :156 with the placement passed in. That fixes r2-m1.
+* **Minor r3-m1:** :156 with its `case.` branch removed still survives. The new check answers only a `person.` fact, so an answered `case.*` decider keyed on the filing is not pinned. One more known value in the same check would cover it; it can follow.
+
+**Verdict: Approve** (7506b899). No Blocker or Major is open.
