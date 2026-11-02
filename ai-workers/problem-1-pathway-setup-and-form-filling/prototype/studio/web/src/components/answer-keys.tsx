@@ -5,11 +5,15 @@
 // Expected editor, challenge M5 b). US$0: no AI here.
 import * as React from "react";
 import type { AnswerKeysView, FamilyView, KeyView, RunState, TestItem } from "../../../contracts/answer-keys";
-import { api, useAction, useApi, useSessionView } from "@/lib/api";
+import { api, useAction, useApi } from "@/lib/api";
 import { Button, Notice, Pill, Table } from "@/components/ui/controls";
-import { FamiliesSection, KeyEditor, WriteKey } from "@/components/answer-key-editors";
+import { FamiliesSection, Gated, KeyEditor, OUTCOME_WORDS, useDuties, WHY, WriteKey } from "@/components/answer-key-editors";
 
 const RUN_WORDS: Record<RunState, { label: string; tone: string }> = { PASSED: { label: "Passed", tone: "ok" }, FAILED: { label: "Failed", tone: "danger" }, NOT_RUN: { label: "Not run", tone: "neutral" } };
+
+const RULE_WORDS: Record<string, string> = { ...OUTCOME_WORDS, met: "Met", not_met: "Not met", not_answered: "Not answered" };
+/** Review minor 3: a rule-set line's outcome or gate state in words (a map's value is shown exactly as written). */
+const said = (kind: string, x: string) => (x === "" ? "(blank)" : kind === "rule_set" ? RULE_WORDS[x] ?? x : x);
 
 /** BR-4: one key's lines, failures first (the API orders them), with the filler's reason when a value differs. */
 function KeyLines({ id }: { id: string }) {
@@ -25,8 +29,8 @@ function KeyLines({ id }: { id: string }) {
           <td className="py-1 pr-3"><Pill tone={l.pass ? "ok" : "danger"}>{l.pass ? "Pass" : "Fail"}</Pill></td>
           <td className="py-1 pr-3" title={l.target}>{l.label}</td>
           <td className="py-1 pr-3">{l.person_label}</td>
-          <td className="py-1 pr-3 font-mono text-xs">{l.expected === "" ? "(blank)" : l.expected}</td>
-          <td className="py-1 pr-3 font-mono text-xs">{l.got === "" ? "(blank)" : l.got}</td>
+          <td className="py-1 pr-3 font-mono text-xs">{said(k.data!.item_kind, l.expected)}</td>
+          <td className="py-1 pr-3 font-mono text-xs">{said(k.data!.item_kind, l.got)}</td>
           <td className="py-1 text-xs text-text-muted">{l.why ?? ""}</td>
         </tr>
       ))}
@@ -36,10 +40,9 @@ function KeyLines({ id }: { id: string }) {
 
 function KeyRow({ k, combinationId, item, family }: { k: KeyView; combinationId: string; item: TestItem; family: FamilyView | undefined }) {
   const [open, setOpen] = React.useState(false), [editing, setEditing] = React.useState(false);
-  const { session } = useSessionView();
-  const expert = (session.data?.actor?.duties ?? []).includes("sme");
+  const may = useDuties();
   const inv = [["combination", combinationId, "answer-keys"], ["answer-key", k.id]];
-  const run = useAction(() => api(`/answer-keys/${k.id}/run`, { method: "POST" }), { success: (r: { result: string; passed: number; failed: number }) => `${k.family.label}: ${r.result === "PASSED" ? "passed" : "failed"}, ${r.passed} of ${r.passed + r.failed} values`, invalidate: inv, onDone: () => setOpen(true) });
+  const run = useAction(() => api(`/answer-keys/${k.id}/run`, { method: "POST" }), { success: (r: { result: string; passed: number; failed: number }) => (r.result === "PASSED" ? `${k.family.label}: passed, all ${r.passed} values` : `${k.family.label}: failed, ${r.failed} of ${r.passed + r.failed} values wrong`), invalidate: inv, onDone: () => setOpen(true) });
   const sign = useAction(() => api(`/answer-keys/${k.id}/sign`, { method: "POST", json: { version: k.version } }), { success: "Expected values signed", invalidate: inv });
   const last = k.run.last, words = RUN_WORDS[k.run.state];
   return (
@@ -50,9 +53,9 @@ function KeyRow({ k, combinationId, item, family }: { k: KeyView; combinationId:
         <Pill tone={words.tone} title={k.run.why}>{words.label}{k.run.state === "FAILED" && last ? ` (${last.failed} of ${last.passed + last.failed})` : ""}</Pill>
         <span className="text-xs text-text-muted">{k.run.why}</span>
         <span className="ml-auto flex gap-2">
-          <Button size="sm" variant="ghost" disabled={!family} title={!family ? "Loading the family…" : undefined} onClick={() => setEditing(true)}>Change</Button>
-          <Button size="sm" variant="outline" busy={run.isPending} onClick={() => run.mutate(undefined)}>Run</Button>
-          {k.state === "DRAFT" ? <Button size="sm" variant="secondary" disabled={!expert} title={!expert ? "Only the immigration expert signs expected values." : undefined} busy={sign.isPending} onClick={() => sign.mutate(undefined)}>Sign</Button> : null}
+          <Gated size="sm" variant="ghost" allowed={may.key && !!family} why={!may.key ? WHY.key : "Loading the family…"} onClick={() => setEditing(true)}>Change</Gated>
+          <Gated size="sm" variant="outline" allowed={may.run} why={WHY.run} busy={run.isPending} onClick={() => run.mutate(undefined)}>Run</Gated>
+          {k.state === "DRAFT" ? <Gated size="sm" variant="secondary" allowed={may.sign} why={WHY.sign} busy={sign.isPending} onClick={() => sign.mutate(undefined)}>Sign</Gated> : null}
           <Button size="sm" variant="ghost" aria-expanded={open} onClick={() => setOpen((x) => !x)}>{open ? "Hide lines" : "Lines"}</Button>
         </span>
       </div>
@@ -67,13 +70,14 @@ function KeyRow({ k, combinationId, item, family }: { k: KeyView; combinationId:
 export function TestsTab({ id }: { id: string }) {
   const v = useApi<AnswerKeysView>(["combination", id, "answer-keys"], `/combinations/${id}/answer-keys`);
   const fams = useApi<{ families: FamilyView[] }>(["answer-key-families"], "/answer-keys/families");
-  const families = fams.data?.families ?? [];
+  const families = fams.data?.families ?? [], may = useDuties();
   if (v.isLoading) return <p className="text-sm text-text-muted">Loading the tests…</p>;
   if (v.isError || !v.data) return <Notice tone="danger" title="The tests could not be loaded">Try again in a moment.</Notice>;
   const d = v.data;
   return (
     <div className="space-y-4">
       <Notice tone="info" title="Answer-key tests">Made-up families, never a client. Expected values are Sample until the immigration expert signs them (P-240). A run fills the item for the family the way a case does and compares every value.</Notice>
+      {may.readOnly ? <Notice tone="info" title="Read-only for you">You can read the families, the expected values and the last runs. Writing families is for the configuration author; writing expected values and running tests, for the author or the immigration expert; signing, for the immigration expert.</Notice> : null}
       <FamiliesSection combinationId={id} keys={d.keys} />
       {!d.items.length ? <Notice tone="warn" title="Nothing to test yet">This combination has no form field map and no eligibility rules yet.</Notice> : null}
       {d.items.map((it) => {

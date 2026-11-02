@@ -194,6 +194,8 @@ const signed = await call("POST", `/answer-keys/${kid}/sign`, { version: 1 }, EX
 ok("C5.7 API: the expert signs; the key is Signed, no longer Sample, still Passed", signed.status === 200 && signed.body.state === "SIGNED" && signed.body.sample === null && signed.body.signed_by === "Content reviewer" && signed.body.run.state === "PASSED", signed.body);
 const noWhy = await call("PUT", `/answer-keys/${kid}`, { expected: key, version: 1 }, AUTHOR);
 ok("C5.7 API fail: changing signed values without a reason is refused on the field (400)", noWhy.status === 400 && noWhy.body.errors?.[0]?.field === "reason", noWhy.body);
+const same = await call("PUT", `/answer-keys/${kid}`, { expected: key, version: 1, reason: "looked again, nothing to change (test)" }, AUTHOR);
+ok("C5.7 BR-7 (break m6): a signed key \"changed\" to the same values keeps its signature and version", same.status === 200 && same.body.state === "SIGNED" && same.body.version === 1, { status: same.status, state: same.body?.state });
 ok("C5.7 API fail: a stale change is refused (409)", (await call("PUT", `/answer-keys/${kid}`, { expected: key, version: 0, reason: "x" }, AUTHOR)).status === 409);
 const changed = await call("PUT", `/answer-keys/${kid}`, { expected: less, version: 1, reason: "Date of birth year checked separately (test)" }, AUTHOR);
 ok("C5.7 API: a change with a reason returns the key to Draft and its last run to Not run", changed.status === 200 && changed.body.state === "DRAFT" && changed.body.run.state === "NOT_RUN" && changed.body.change_reason === "Date of birth year checked separately (test)", changed.body?.run);

@@ -3,7 +3,8 @@
 // presses Run and sees Passed, then opens the lines; a key that leaves a box out reads Failed (1 of …) and its lines put
 // the failure first, naming the box; the author cannot sign (greyed, with the reason), the expert signs and it reads
 // Signed. Slice 2: the author writes a small family through the family editor (a bad save first: each error on its
-// field); the approver's save is refused with the server's words; the expert writes three boxes through the Expected
+// field); for the approver every action is greyed with its reason (read-only), for the expert the family actions; the
+// expert writes three boxes through the Expected
 // editor (every mapped box in the form's order, a choice box picked from the form's own options) and Run reads Failed,
 // listing the boxes the key left out; a signed key's Change needs a reason. axe on each state, 1024 px without sideways
 // scroll, screenshots in screens/G4-answer-keys/screenshots/.
@@ -77,7 +78,7 @@ const step = (name: string, ok: unknown, detail?: unknown) => { ok ? pass++ : fa
   await state("not-run");
 
   const signBtn = row.getByRole("button", { name: "Sign" });
-  step("C5.7 BR-7 fail: the author's Sign is greyed and says why", (await signBtn.isDisabled()) && /Only the immigration expert/.test((await signBtn.getAttribute("title")) ?? ""));
+  step("C5.7 BR-7 fail: the author's Sign is greyed and says why", (await signBtn.getAttribute("aria-disabled")) === "true" && /Only the immigration expert/.test((await signBtn.getAttribute("title")) ?? ""));
   await row.getByRole("button", { name: "Run" }).click();
   await p.waitForFunction((id: string) => /Passed|Failed/.test(document.querySelector(`[data-key="${id}"]`)?.textContent ?? ""), k.body.id, { timeout: 60000 });
   await settle();
@@ -140,16 +141,39 @@ const step = (name: string, ok: unknown, detail?: unknown) => { ok ? pass++ : fa
   const smallFam = famRow.body.families.find((f: { key: string }) => f.key === small);
   step("C5.7 BR-1 (UI): the author writes a family through the editor; it lists with Sample and is stored as typed (a choice value by its key, a date as YYYY-MM-DD)", /Sample/.test(await panel.locator(`[data-family="${small}"]`).innerText()) && smallFam?.facts.length === 4 && smallFam.facts.some((f: { fact: string; value: unknown }) => f.fact === "person.sex" && f.value === "f_female") && smallFam.facts.some((f: { fact: string; value: unknown }) => f.fact === "person.date_of_birth" && f.value === "1980-05-17"), JSON.stringify(smallFam?.facts));
 
+  // Review Major 1 (EXPERIENCE §4 read-only, §2.8): what a person may not do is greyed before they try, keeps focus and
+  // says why; clicking it opens nothing.
+  const greyed = async (b: import("playwright").Locator, why: RegExp) => {
+    const desc = await b.getAttribute("aria-describedby");
+    const said = desc ? await p.locator(`[id="${desc}"]`).innerText() : "";
+    await b.evaluate((el) => (el as HTMLButtonElement).click());
+    await p.waitForTimeout(150);
+    const focusable = await b.evaluate((el) => { (el as HTMLElement).focus(); return document.activeElement === el; });
+    return (await b.getAttribute("aria-disabled")) === "true" && focusable && why.test((await b.getAttribute("title")) ?? "") && why.test(said) && (await p.getByRole("dialog").count()) === 0;
+  };
   await as("user-B"); await p.goto(`${BASE}/c/${vv}/tests`); await settle();
-  await panel.getByRole("button", { name: "Write a family" }).click();
-  await dlg.locator('[data-editor="family"]').waitFor({ timeout: 30000 });
-  await p.waitForFunction(() => !/Loading the library/.test(document.querySelector('[role="dialog"]')?.textContent ?? ""), null, { timeout: 30000 });
-  await fillFamily(`approver-${run}`);
-  await dlg.getByRole("button", { name: "Write the family" }).click();
-  await dlg.getByText(/does not hold the author duty/).waitFor({ timeout: 30000 });
-  step("C5.7 BR-1 fail (UI, 403): the approver's save is refused and the dialog shows the server's reason", /Not saved/.test(await dlg.innerText()) && /does not hold the author duty/.test(await dlg.innerText()));
-  p.once("dialog", (d) => void d.accept()); // "Discard your unsaved changes?"
-  await dlg.getByRole("button", { name: "Close" }).click(); await closed();
+  await panel.getByText("Read-only for you").waitFor({ timeout: 30000 });
+  const e1uRow = panel.locator('[data-key]').filter({ hasText: "one box left out" }).first();
+  const asApprover = {
+    note: /Read-only for you/.test(await panel.innerText()),
+    writeFamily: await greyed(panel.getByRole("button", { name: "Write a family" }), /Only the configuration author writes test families/),
+    editFamily: await greyed(panel.locator(`[data-family="${small}"]`).getByRole("button", { name: /^Edit the family/ }), /Only the configuration author writes test families/),
+    writeKey: await greyed(panel.getByRole("region", { name: "IMM 5257 field map" }).getByRole("button", { name: "Write expected values" }), /author or the immigration expert writes expected values/),
+    change: await greyed(e1uRow.getByRole("button", { name: "Change" }), /author or the immigration expert writes expected values/),
+    run: await greyed(e1uRow.getByRole("button", { name: "Run" }), /author or the immigration expert runs a test/),
+    sign: await greyed(e1uRow.getByRole("button", { name: "Sign" }), /Only the immigration expert signs/),
+  };
+  step("C5.7 (review Major 1) fail-proof: for the approver the tab says read-only, and Write a family, Edit, Write expected values, Change, Run and Sign are each greyed (focusable) with their reason and open nothing", Object.values(asApprover).every(Boolean), JSON.stringify(asApprover));
+  await state("approver-read-only");
+  await as("user-C"); await p.goto(`${BASE}/c/${vv}/tests`); await settle();
+  await p.waitForFunction(() => document.querySelector('[aria-label^="Edit the family"]')?.getAttribute("aria-disabled") === "true", null, { timeout: 30000 });
+  const asExpert = {
+    noNote: !/Read-only for you/.test(await panel.innerText()),
+    writeFamily: await greyed(panel.getByRole("button", { name: "Write a family" }), /Only the configuration author writes test families/),
+    editFamily: await greyed(panel.locator(`[data-family="${small}"]`).getByRole("button", { name: /^Edit the family/ }), /Only the configuration author writes test families/),
+    writeKeyOpen: (await panel.getByRole("region", { name: "IMM 5257 field map" }).getByRole("button", { name: "Write expected values" }).getAttribute("aria-disabled")) === null,
+  };
+  step("C5.7 (review Major 1): for the expert the family editor's Write and Edit are greyed with the reason; Write expected values is open", Object.values(asExpert).every(Boolean), JSON.stringify(asExpert));
 
   await as("user-C"); await p.goto(`${BASE}/c/${vv}/tests`); await settle();
   const imm = panel.getByRole("region", { name: "IMM 5257 field map" });
@@ -196,6 +220,81 @@ const step = (name: string, ok: unknown, detail?: unknown) => { ok ? pass++ : fa
   await closed();
   await p.waitForFunction((id: string) => /Back to Draft/.test(document.querySelector(`[data-key="${id}"]`)?.textContent ?? ""), sk.id, { timeout: 30000 });
   step("C5.7 BR-7 (UI): with a reason the change saves; the key reads Draft · Sample, Back to Draft with the reason, and Not run", /Draft · Sample/.test(await srow.innerText()) && /Given name corrected \(test\)/.test(await srow.innerText()) && /Not run/.test(await srow.innerText()), await srow.innerText());
+
+  // ---------------------------------------------------------------------------------------------- break 860bf1a9 (P2-M1…M3)
+  // P2-M3: E1's family (48 facts) fits the dialog at 1440 and 1024 px: nothing inside it reaches past its edges and no
+  // part of it scrolls sideways (a one-line hint cut with "…" and its full text on hover is meant to be cut).
+  const overflow = () => p.evaluate(() => {
+    const d = document.querySelector('[role="dialog"]')!, r = d.getBoundingClientRect();
+    const out = [...d.querySelectorAll("*")].filter((e) => { const b = e.getBoundingClientRect(); return b.width > 0 && (b.right > r.right + 1 || b.left < r.left - 1); });
+    const scrollers = [...d.querySelectorAll("*")].filter((e) => e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflowX !== "visible" && getComputedStyle(e).textOverflow !== "ellipsis" && e.tagName !== "SELECT" && e.tagName !== "TEXTAREA");
+    const removes = [...d.querySelectorAll('[data-fact-row] button')].filter((b) => b.textContent === "Remove");
+    const last = removes[removes.length - 1]?.getBoundingClientRect();
+    return { out: out.length, first: out[0] ? `${out[0].tagName} ${(out[0].textContent ?? "").slice(0, 40)}` : "", scrollers: scrollers.length, scroller: scrollers[0] ? `${scrollers[0].tagName}.${scrollers[0].className} ${scrollers[0].scrollWidth}/${scrollers[0].clientWidth}` : "", removes: removes.length, lastIn: !!last && last.right <= r.right && last.left >= r.left };
+  });
+  await as("user-A"); await p.goto(`${BASE}/c/${vv}/tests`); await settle();
+  await panel.getByRole("button", { name: `Edit the family ${sample.label}` }).first().click();
+  await dlg.locator("[data-fact-row]").nth(47).waitFor({ timeout: 30000 });
+  await p.waitForFunction(() => !/Loading/.test(document.querySelector('[role="dialog"]')?.textContent ?? ""), null, { timeout: 30000 });
+  const o1440 = await overflow();
+  await p.setViewportSize({ width: 1024, height: 768 }); await p.waitForTimeout(250);
+  const o1024 = await overflow();
+  await p.screenshot({ path: path.join(SHOTS, "10-family-editor-48-facts-1024.png") });
+  await p.setViewportSize({ width: 1440, height: 900 }); await p.waitForTimeout(250);
+  await p.screenshot({ path: path.join(SHOTS, "10-family-editor-48-facts-1440.png") });
+  step("C5.7 BR-1 (break P2-M3): with E1's 48 facts nothing in the family editor reaches past the dialog at 1440 or 1024 px, every Remove reachable", [o1440, o1024].every((o) => o.out === 0 && o.scrollers === 0 && o.removes === 48 && o.lastIn), JSON.stringify({ o1440, o1024 }));
+  await dlg.getByRole("button", { name: "Cancel" }).click(); await closed();
+
+  // P2-M2: a 409, then Cancel and reopen, loads the latest version (family, then key); the next save goes through.
+  await panel.locator(`[data-family="${small}"]`).getByRole("button", { name: /^Edit the family/ }).click();
+  await dlg.locator('[data-editor="family"]').waitFor({ timeout: 30000 });
+  const fNow = (await api("/answer-keys/families")).body.families.find((f: { key: string }) => f.key === small);
+  const theirs = await api(`/answer-keys/families/${fNow.id}`, { method: "PUT", data: { ...fNow, label: "Small family, renamed elsewhere (Sample)", version: fNow.version } });
+  await dlg.getByLabel("Name", { exact: true }).fill("Small family, my name (Sample)");
+  await dlg.getByRole("button", { name: "Save the family" }).click();
+  await dlg.getByText(/Changed by someone else/).waitFor({ timeout: 30000 });
+  p.once("dialog", (d) => void d.accept());
+  await dlg.getByRole("button", { name: "Cancel" }).click(); await closed();
+  await panel.locator(`[data-family="${small}"]`).getByRole("button", { name: /^Edit the family/ }).click();
+  await dlg.locator('[data-editor="family"]').waitFor({ timeout: 30000 });
+  const reopened = await dlg.getByLabel("Name", { exact: true }).inputValue();
+  await dlg.getByLabel("Name", { exact: true }).fill("Small family, three boxes (Sample)");
+  await dlg.getByRole("button", { name: "Save the family" }).click();
+  await closed();
+  step("C5.7 BR-8 (break P2-M2): after a 409 on a family, Cancel and reopen shows their version and the next save goes through", theirs.status === 200 && reopened === "Small family, renamed elsewhere (Sample)", reopened);
+
+  await srow.getByRole("button", { name: "Change" }).click();
+  await dlg.locator('[data-editor="expected"] [data-box]').first().waitFor({ timeout: 30000 });
+  const kNow = (await api(`/answer-keys/${sk.id}`)).body;
+  const kTheirs = await api(`/answer-keys/${sk.id}`, { method: "PUT", actor: "user-C", data: { expected: { people: { principal: { ...kNow.expected.people.principal, [`${PD}Name[0].GivenName[0]`]: "THEIRS" } } }, version: kNow.version } });
+  await dlg.locator(`[data-box="${PD}Name[0].GivenName[0]"] input`).fill("MINE");
+  await dlg.getByRole("button", { name: "Save the expected values" }).click();
+  await dlg.getByText(/Changed by someone else/).waitFor({ timeout: 30000 });
+  p.once("dialog", (d) => void d.accept());
+  await dlg.getByRole("button", { name: "Cancel" }).click(); await closed();
+  await srow.getByRole("button", { name: "Change" }).click();
+  await dlg.locator('[data-editor="expected"] [data-box]').first().waitFor({ timeout: 30000 });
+  const kReopened = await dlg.locator(`[data-box="${PD}Name[0].GivenName[0]"] input`).inputValue();
+  await dlg.locator(`[data-box="${PD}Name[0].GivenName[0]"] input`).fill("PRINCIPAL");
+  await dlg.getByRole("button", { name: "Save the expected values" }).click();
+  await closed();
+  step("C5.7 BR-8 (break P2-M2): after a 409 on a key, Cancel and reopen shows their values and the next save goes through", kTheirs.status === 200 && kReopened === "THEIRS", kReopened);
+
+  // P2-M1: the key is signed while the author edits it: Save shows the server's reason on a reason field that appears.
+  await srow.getByRole("button", { name: "Change" }).click();
+  await dlg.locator('[data-editor="expected"] [data-box]').first().waitFor({ timeout: 30000 });
+  step("C5.7 BR-7: a Draft key's editor asks no reason", (await dlg.getByLabel("Reason for the change").count()) === 0);
+  const kV = (await api(`/answer-keys/${sk.id}`)).body.version;
+  const signedMeanwhile = await api(`/answer-keys/${sk.id}/sign`, { method: "POST", actor: "user-C", data: { version: kV } });
+  await dlg.locator(`[data-box="${PD}Name[0].GivenName[0]"] input`).fill("PRINCIPAL TWO");
+  await dlg.getByRole("button", { name: "Save the expected values" }).click();
+  await dlg.getByLabel("Reason for the change").waitFor({ timeout: 30000 });
+  step("C5.7 BR-7 fail (break P2-M1): signed meanwhile, Save shows the reason field with the server's words", signedMeanwhile.status === 200 && /give a one-line reason/.test(await dlg.innerText()) && (await dlg.getByLabel("Reason for the change").getAttribute("aria-invalid")) === "true");
+  await dlg.getByLabel("Reason for the change").fill("Second given name (test)");
+  await dlg.getByRole("button", { name: "Save the expected values" }).click();
+  await closed();
+  const kAfter = (await api(`/answer-keys/${sk.id}`)).body;
+  step("C5.7 BR-7 (break P2-M1): with the reason the change saves and the key is back to Draft", kAfter.state === "DRAFT" && kAfter.change_reason === "Second given name (test)", kAfter.state);
   step("no page errors", errs.length === 0, errs.join(" | "));
   await b.close();
   console.log(`\n${pass}/${pass + fail} passed`);

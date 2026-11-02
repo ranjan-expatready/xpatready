@@ -10,6 +10,7 @@ import { Prisma } from "@prisma/client";
 import type { z } from "zod";
 import { FamilyBody, KeyCreateBody, KeyUpdateBody, SignBody } from "../../contracts/answer-keys.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
+import { canonical } from "../../../contracts/rules.ts";
 import { buildSnapshot, effective, type Snapshot } from "../../engine/snapshot.ts";
 import { blank, changeProblem, checkExpected, checkFamily, fingerprintOf, ITEM_KINDS, keyBoxes, NO_SCORING, runFieldMap, runRuleSet, runState, SAMPLE_WORDS, signProblem, unclean, type Family, type FieldError, type ItemKind, type MapExpected, type RuleExpected } from "../../engine/answer-keys.ts";
 import type { Inventory } from "../../engine/form-values.ts";
@@ -126,7 +127,7 @@ export class AnswerKeys {
     const [rows, lists] = await Promise.all([this.db.canonicalField.findMany({ where: { workspaceId } }), this.db.answerList.findMany({ where: { workspaceId }, include: { values: { orderBy: { sortOrder: "asc" } } } })]);
     const values = new Map(effective(lists, (l) => l.answerListKey, "draft").map((l) => [l.answerListKey, l.values.map((v) => ({ key: v.valueKey, label: v.label }))]));
     return {
-      fields: effective(rows, (r) => r.canonicalFieldKey, "draft").sort((a, b) => a.canonicalFieldKey.localeCompare(b.canonicalFieldKey))
+      fields: effective(rows, (r) => r.canonicalFieldKey, "draft").filter((f) => f.status !== "RETIRED").sort((a, b) => a.canonicalFieldKey.localeCompare(b.canonicalFieldKey))
         .map((f) => ({ id: f.canonicalFieldKey, label: (f.labelChecked && f.label) || f.meaning, value_type: f.valueType, values: f.answerListKey ? values.get(f.answerListKey) ?? [] : null })),
     };
   }
@@ -210,6 +211,8 @@ export class AnswerKeys {
     if (b.version !== k.version) conflict(`${nameOf(k.updatedBy)} saved these expected values at ${k.updatedAt.toISOString().slice(11, 16)} UTC. Reload their version, then make your change again.`);
     const why = changeProblem(k.state, b.reason);
     if (why) invalid([{ field: "reason", message: why }]);
+    // Break m6: a signed key "changed" to the very same values keeps its signature (nothing to sign again).
+    if (k.state === "SIGNED" && canonical(expected as never) === canonical(k.expected as never)) return this.get(id);
     const reason = k.state === "SIGNED" ? String(b.reason).trim() : null;
     // Break m1: the state read is part of the guard, so a sign landing during this change makes it a 409, never an
     // unsigning without a reason.
