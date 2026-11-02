@@ -45,6 +45,7 @@ import { normaliseCode } from "../../contracts/form-library.ts";
 import { FormLibrary, FormLibraryController } from "./form-library.ts";
 import { Runs, RunsController } from "./runs.ts";
 import { UploadRuns } from "./upload-run.ts";
+import { MAX_DOCUMENT_MB } from "../../contracts/documents.ts";
 import { StartSetup, StartSetupController } from "./start-setup.ts";
 import { LibrarySources, LibrarySourcesController, noFreeAdd } from "./library-sources.ts";
 import { registerFeatures } from "./features.ts";
@@ -175,6 +176,9 @@ class ProblemErrors implements ExceptionFilter {
       if (status === 413 || /^(File too large|Too many files)$/.test(String(body?.message ?? ""))) {
         const many = /files/i.test(String(body?.message));
         // QA-126: a validated copy (C-9) takes one PDF of up to 20 MB, so it is worded with its own limits, not the intake's.
+        // C6.4 (break m5): a checklist line takes one PDF, JPEG or PNG of up to 20 MB, worded with its own limits.
+        if (/\/checklist-lines\/[^/]+\/documents\/?$/.test(String(host.switchToHttp().getRequest()?.path ?? "")))
+          return send(413, "Too large", many ? "Send one file at a time. Nothing was stored." : `The file is larger than ${MAX_DOCUMENT_MB} MB. Nothing was stored.`);
         if (/\/form-copies\/[^/]+\/validated\/?$/.test(String(host.switchToHttp().getRequest()?.path ?? "")))
           return send(413, "Too large", many ? "Send only the one validated PDF you saved from Adobe. Nothing was recorded." : `The file is larger than ${MAX_VALIDATED_MB} MB: send the validated PDF of this form. Nothing was recorded.`);
         const files = MAX_FILES, mb = MAX_BYTES / 1024 / 1024;
