@@ -25,11 +25,15 @@ import { RuleFacts } from "@/components/rule-facts";
 import { peopleWords } from "@/lib/people";
 import { DraftPqrPicks } from "@/components/pqr-draft";
 import { DraftQuestionsDocuments } from "@/components/qd-draft";
+import { appliesOf, FILING_TIP, filingWarnings, filingWords, previewFilings } from "../../../../engine/filing-modes";
+import type { LineMode } from "../../../../contracts/workspace";
 
 const TIPS = {
   card: "Sets which people a case may include and how many; each person marked as applicant gets their own forms, questions and documents.",
   many: "The fewest and the most of this person a case may have. 0 to 1 means optional.",
-  applicant: "Files their own application: gets their own copy of every form set to \"Each applicant\" and their own questions. A sponsor or representative never is.",
+  // C11.12 (concept §5): the filing tip, word for word.
+  filing: FILING_TIP,
+  fees: "What this person's application pays, in words. Amounts are Sample until the immigration expert confirms; where IRCC's fees for this combination are not worked out yet, nothing is guessed.",
   answered: "Who types this person's answers. The principal answers for a child under 18 (Sample age, P-78); an adult confirms their own answers.",
   words: "The line in IRCC's guide this comes from, when AI filled it.",
 };
@@ -52,6 +56,50 @@ const toLines = (v: PeopleView): Line[] => v.lines.map((l) => ({ role: l.role, l
  *  0–5 (optional)"; exact counts and who files their own application stay in Show and edit. A role whose most is 0
  *  cannot be in the application, so the folded line leaves it out (#139 review). */
 const howMany = (l: { min: number; max: number }) => (l.min === l.max ? (l.min === 1 ? "exactly 1" : `exactly ${l.min}`) : `${l.min} to ${l.max}`);
+
+/** C11.12 (board r2 frame 1): how one person's application is filed. Editing: the three choices for a role that may be
+ *  an applicant, Files nothing or Files the sponsorship for one that never is; the principal always files their own. */
+const MODE_WORDS: Record<LineMode, string> = { files_own: "Files own application", on_principal: "On the principal's application", declared_only: "Declared only (not accompanying)", co_files: "Files the sponsorship (sent with the principal's application)" };
+function FilingCell({ l, i, editing, mayBeApplicant, name, words, warning, error, onMode }: { l: Line; i: number; editing: boolean; mayBeApplicant: boolean; name: string; words: ReturnType<typeof filingWords>; warning: string | null; error?: string; onMode: (m: LineMode | null) => void }) {
+  const principal = l.role === "principal";
+  const id = `filing-${i}`;
+  const choices: LineMode[] = mayBeApplicant ? ["files_own", "on_principal", "declared_only"] : ["co_files"];
+  return (
+    <div className="min-w-0">
+      {editing && !principal ? (
+        <Select id={id} aria-label={`Filing for ${name}`} aria-invalid={!!error} aria-describedby={error ? `${id}-error` : undefined} className="h-8 max-w-64" value={l.filingMode ?? ""} onChange={(e) => onMode((e.target.value || null) as LineMode | null)}>
+          <option value="">{mayBeApplicant ? "Choose how it is filed" : "Files nothing"}</option>
+          {choices.map((m) => <option key={m} value={m}>{MODE_WORDS[m]}</option>)}
+        </Select>
+      ) : (
+        <span className={cn("font-medium", words.filingWords === "Filing not set" && "text-text-warn")} data-filing-words>{words.filingWords === "Filing not set" ? "⚠ Filing not set" : words.filingWords}</span>
+      )}
+      {principal ? <p className="text-xs text-text-muted">Always, for the principal</p> : words.ifNotTravelling ? <p className="text-xs text-text-muted" data-if-not-travelling>{words.ifNotTravelling}</p> : null}
+      {!mayBeApplicant && l.filingMode === "co_files" ? <p className="text-xs text-text-muted">Sent with the principal's application; never alone</p> : null}
+      {warning ? <p className="mt-1 text-xs text-text-warn" data-filing-warning role="status">⚠ {warning.replace(/^[^:]+: [^.]+\. /, "")} You can still save.</p> : null}
+      {error ? <p id={`${id}-error`} role="alert" className="text-xs text-text-danger">{error}</p> : null}
+    </div>
+  );
+}
+
+/** C11.12 "What a case gets" (board r2): the filings and how they are sent, for one case of each line's preview count,
+ *  from the plan a case itself uses (engine/filing-modes.ts filingPlan). */
+function WhatACaseGets({ gets }: { gets: ReturnType<typeof previewFilings> }) {
+  const people = (f: (typeof gets.filings)[number]) => f.people > 1 ? `${f.people} people on it${f.declaredOnly ? `, ${f.declaredOnly} declared only (no fee)` : ""}` : f.kind === "co_filed" ? "Co-filed · cannot be sent alone" : "1 person · own number and decision";
+  return (
+    <section aria-labelledby="case-gets" className="mt-4 rounded-lg border border-border bg-surface p-4" data-case-gets>
+      <h3 id="case-gets" className="text-sm font-semibold">What a case gets <span className="font-normal text-text-muted">(preview family, Sample)</span></h3>
+      {!gets.filings.length ? <p className="mt-1 text-sm text-text-muted">{gets.gets}</p> : (
+        <>
+          <p className="mt-1 text-sm" data-gets>{gets.submissions[0]?.splittable === false && gets.filings.length > 1 ? `${gets.gets} · cannot be split` : gets.gets}</p>
+          <ul className="mt-2 space-y-1.5 text-sm">
+            {gets.filings.map((f) => <li key={f.id} className="rounded-md border border-border px-3 py-2" data-preview-filing={f.kind}><span className="font-medium">{f.words}</span><span className="block text-xs text-text-muted">{people(f)} · {f.fee}</span></li>)}
+          </ul>
+        </>
+      )}
+    </section>
+  );
+}
 
 export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
   const qc = useQueryClient(); const toast = useToast();
@@ -102,6 +150,12 @@ export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
   // (kept when typed on purpose), else the shared library's name.
   const nameOf = (l: { role: string; label?: string | null }) => l.label || role(l.role)?.label || l.role;
   const shown = editing ? lines : toLines(v);
+  // C11.12 (P-233): the words, warnings and "What a case gets" are worked out here with the server's own pure functions
+  // (engine/filing-modes.ts), so they follow each edit before Save and match what the save and a case will do.
+  const words = (l: Line) => filingWords({ role: l.role, filingMode: l.filingMode ?? null, applies: l.applies }, !!role(l.role)?.mayBeApplicant, v.feesKnown, v.combinationLabel);
+  const warnings = filingWarnings(v.combinationKey, shown.map((l) => ({ role: l.role, label: nameOf(l), filingMode: l.filingMode ?? null })));
+  const warningOf = (r: string) => { const name = nameOf(shown.find((l) => l.role === r) ?? { role: r }); return warnings.find((w) => w.startsWith(`${name}:`)) ?? null; };
+  const gets = previewFilings(shown.map((l) => ({ ...l, label: nameOf(l), filingMode: l.filingMode ?? null })), v.combinationLabel, v.feesKnown, (r) => v.defaults[r]);
   if (!unfolded && !editing && !filling) return (
     <section aria-labelledby="who-can-be" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-surface-raised px-5 py-3 shadow-sm" data-who-can-be data-folded>
       <p className="min-w-0 text-sm"><span id="who-can-be" className="font-semibold">Who can be in this application</span> <span className="text-text-muted" data-people-words>· {peopleWords(shown, nameOf)}</span></p>
@@ -122,8 +176,9 @@ export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
         <thead><tr className="border-b border-border text-left text-xs text-text-muted">
           <th className="py-2 pr-3 font-medium">Person</th>
           <th className="py-2 pr-3 font-medium"><Tip tip={TIPS.many} focusable><span className="cursor-help underline decoration-dotted underline-offset-4">How many</span></Tip></th>
-          <th className="py-2 pr-3 font-medium"><Tip tip={TIPS.applicant} focusable><span className="cursor-help underline decoration-dotted underline-offset-4">Applicant</span></Tip></th>
+          <th className="py-2 pr-3 font-medium"><Tip tip={TIPS.filing} focusable><span className="cursor-help underline decoration-dotted underline-offset-4">Filing</span></Tip></th>
           <th className="py-2 pr-3 font-medium"><Tip tip={TIPS.answered} focusable><span className="cursor-help underline decoration-dotted underline-offset-4">Answered by</span></Tip></th>
+          <th className="py-2 pr-3 font-medium"><Tip tip={TIPS.fees} focusable><span className="cursor-help underline decoration-dotted underline-offset-4">Fees</span></Tip></th>
           <th className="py-2 pr-3 font-medium"><Tip tip={TIPS.words} focusable><span className="cursor-help underline decoration-dotted underline-offset-4">IRCC's words</span></Tip></th>
           {editing ? <th className="py-2 font-medium"><span className="sr-only">Remove</span></th> : null}
         </tr></thead>
@@ -136,8 +191,9 @@ export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
                 <td className="py-2 pr-3">{editing && !principal ? (
                   <span className="flex items-center gap-1.5"><Input aria-label={`Fewest ${nameOf(l)}`} className="h-8 w-14" inputMode="numeric" value={String(l.min)} onChange={(e) => set(i, { min: Number(e.target.value.replace(/\D/g, "").slice(0, 1) || 0) })} /><span className="text-text-muted">to</span><Input aria-label={`Most ${nameOf(l)}`} className="h-8 w-14" inputMode="numeric" value={String(l.max)} onChange={(e) => set(i, { max: Number(e.target.value.replace(/\D/g, "").slice(0, 1) || 0) })} /></span>
                 ) : howMany(l)}{err(i, "max") || err(i, "min") ? <p role="alert" className="text-xs text-text-danger">{err(i, "max") ?? err(i, "min")}</p> : null}</td>
-                <td className="py-2 pr-3">{editing && !principal && r?.mayBeApplicant ? <label className="flex items-center gap-2"><input type="checkbox" checked={l.applies} onChange={(e) => set(i, { applies: e.target.checked, ...((!e.target.checked && (l.filingMode === "files_own" || l.filingMode === "on_principal")) || (e.target.checked && l.filingMode === "declared_only") ? { filingMode: null } : {}) })} aria-label={`${nameOf(l)} files their own application`} /> {l.applies ? "Yes" : "No"}</label> : l.applies ? "Yes" : <span className="text-text-muted">—</span>}{err(i, "applies") ? <p role="alert" className="text-xs text-text-danger">{err(i, "applies")}</p> : null}</td>
-                <td className="py-2 pr-3 text-text-muted">{v.lines.find((x) => x.role === l.role)?.answeredBy ?? (l.role === "child" ? "Principal, under 18" : "Themselves")}</td>
+                <td className="py-2 pr-3" data-label="Filing" data-filing={l.filingMode ?? (principal ? "files_own" : "")}><FilingCell l={l} i={i} editing={editing} mayBeApplicant={!!r?.mayBeApplicant} name={nameOf(l)} words={words(l)} warning={warningOf(l.role)} error={err(i, "filingMode") ?? err(i, "applies")} onMode={(m) => set(i, { filingMode: m, applies: appliesOf(m, l.applies) && !!r?.mayBeApplicant })} /></td>
+                <td className="py-2 pr-3 text-text-muted" data-label="Answered by">{v.lines.find((x) => x.role === l.role)?.answeredBy ?? (l.role === "child" ? "Principal, under 18" : "Themselves")}</td>
+                <td className="max-w-56 py-2 pr-3 text-xs text-text-muted" data-label="Fees" data-fees>{words(l).fees ?? (r?.mayBeApplicant ? "—" : "No fee")}</td>
                 <td className="max-w-72 py-2 pr-3 text-xs text-text-muted">{l.quote ? `"${l.quote}"` : l.origin === "AI_PROPOSAL" || l.origin === "CODE_MATCH" ? "" : "—"}{l.origin === "AI_PROPOSAL" ? <Pill tone="ai" className="ml-1">AI</Pill> : l.origin === "CODE_MATCH" ? <span data-origin-rules><Pill className="ml-1" title="Found by rules in the guide's sentences; no AI">Rules</Pill></span> : null}</td>
                 {editing ? <td className="py-2">{principal ? null : <Button size="icon" variant="ghost" aria-label={`Remove ${nameOf(l)}`} onClick={() => setLines((ls) => ls.filter((_, j) => j !== i))}><X /></Button>}</td> : null}
               </tr>
@@ -146,6 +202,7 @@ export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
         </tbody>
       </table>
       {errors.participants ? <p role="alert" className="mt-2 text-xs text-text-danger">{errors.participants}</p> : null}
+      <WhatACaseGets gets={gets} />
       {editing ? (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
           <span className="flex flex-wrap items-center gap-2">
@@ -155,7 +212,7 @@ export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
           <span className="flex gap-2"><Button variant="ghost" onClick={() => setFilling(true)}><BookOpen /> Fill from the guide</Button><Button variant="ghost" onClick={() => { setEditing(false); setErrors({}); }}>Cancel</Button><Button onClick={() => void save()} busy={busy}>Save</Button></span>
         </div>
       ) : null}
-      <p className={cn("mt-3 text-xs text-text-muted", editing ? "" : "sr-only")}>Rules check on Save: exactly one principal applicant · how many from 0 to 9, the fewest no more than the most · a sponsor or representative is never an applicant · removing a person a form names asks first.</p>
+      <p className={cn("mt-3 text-xs text-text-muted", editing ? "" : "sr-only")}>Rules check on Save: exactly one principal applicant, who files their own · how many from 0 to 9, the fewest no more than the most · a sponsor or representative is never an applicant · every applicant role has a filing · removing a person a form names asks first.</p>
       {filling ? <FillFromGuide id={id} onClose={() => setFilling(false)} onUse={useProposal} /> : null}
       {confirm ? <Dialog open onOpenChange={(o) => !o && setConfirm(null)} title="Remove a person that forms name?" description={confirm.text} footer={<><Button variant="ghost" onClick={() => { const back = toLines(v).filter((l) => confirm.roles.includes(l.role) && !lines.some((x) => x.role === l.role)); setLines((ls) => [...ls, ...back]); setConfirm(null); }}>Keep the person</Button><Button variant="destructive" onClick={() => void save(true)} busy={busy}>Save anyway</Button></>}><p className="text-sm text-text-muted">Those forms stay in the combination but name nobody until you add the person back or change whose form it is.</p></Dialog> : null}
     </section>
