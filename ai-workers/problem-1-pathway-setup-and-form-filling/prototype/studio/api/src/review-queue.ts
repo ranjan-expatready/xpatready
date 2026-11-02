@@ -67,7 +67,7 @@ export class ReviewQueueService {
     const workspaceId = await this.ws.id();
     const [nodes, combos, jobs, pending, queued, batches, subs, merges, held, changes] = await Promise.all([
       this.db.programDef.findMany({ where: { workspaceId }, select: { id: true, programNodeKey: true, parentNodeKey: true, nodeKind: true, label: true } }),
-      this.db.combination.findMany({ where: { workspaceId }, select: { id: true, programDefId: true, label: true, createdAt: true } }),
+      this.db.combination.findMany({ where: { workspaceId }, select: { id: true, programDefId: true, label: true, createdAt: true, retiredAt: true } }),
       this.db.draftingJob.findMany({ where: { workspaceId, kind: { in: ["field_map", "reuse_map"] } }, orderBy: { startedAt: "desc" }, select: { id: true, combinationId: true, attachmentId: true, kind: true, mode: true, status: true, costUsd: true, startedBy: true, startedAt: true, finishedAt: true, detail: true } }),
       this.db.proposalItem.groupBy({ by: ["runId"], where: { workspaceId, status: "waiting" }, _count: true }),
       this.db.proposalItem.findMany({ where: { workspaceId, status: "waiting", step: { notIn: [...ON_ITS_PAGE].filter((x) => LISTED_AS_JOBS.has(x)) } }, orderBy: { createdAt: "asc" }, select: { formEdition: true, combinationId: true, runId: true, confidence: true, createdAt: true } }),
@@ -156,7 +156,9 @@ export class ReviewQueueService {
     // as both release routes (QA-1), so this list and the Release page say the same thing.
     const latest = new Map<string, (typeof subs)[number]>();
     for (const s of subs) if (!latest.has(s.combinationId)) latest.set(s.combinationId, s);
-    const open = [...latest.values()].filter((s) => s.status === "SUBMITTED");
+    // Break round 2 m2: a retired combination's submission waits for nobody.
+    const retired = new Set(combos.filter((c) => c.retiredAt).map((c) => c.id));
+    const open = [...latest.values()].filter((s) => s.status === "SUBMITTED" && !retired.has(s.combinationId));
     if (open.length) {
       const snaps = await buildSnapshots(this.db, workspaceId, open.map((s) => s.combinationId), "draft");
       const gates = await this.studio.releaseGates(open.map((s) => ({ combinationId: s.combinationId, sha256: snaps.get(s.combinationId)!.sha256 })));
@@ -168,7 +170,7 @@ export class ReviewQueueService {
         const unapproved = gate.ok ? await unapprovedAdds(this.db, workspaceId, itemsOf((snaps.get(s.combinationId) as { snapshot: Snapshot }).snapshot)) : [];
         if (unapproved.length) out.push({ ...base, what: `Submitted with ${plural(changes, "change")}. Not ready to release: ${unapprovedWhy(unapproved)}.`, state: "waiting" as const, waiting_on: "Its new shared fields are decided on To review first.", next: null });
         else if (gate.ok) out.push({ ...base, what: `Submitted with ${plural(changes, "change")}; every change that needs a sign-off is signed. Ready to release.`, ...(holds(actor, "approve") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Release", href, note: null } } : { state: "waiting" as const, waiting_on: mine ? "An approver releases it: not the person who submitted it." : "An approver releases it.", next: null }) });
-        else if (/changed after it was submitted/.test(gate.why)) out.push({ ...base, what: `The draft changed after it was submitted. ${gate.why.split(": ")[1] ?? ""}`.trim(), ...(holds(actor, "review") ? { state: "needs" as const, waiting_on: null, next: { label: "Submit again", href, note: null } } : { state: "waiting" as const, waiting_on: "A content publisher submits it again.", next: null }) });
+        else if (/changed after it was submitted/.test(gate.why)) out.push({ ...base, what: `The draft changed after it was submitted. ${gate.why.split(": ")[1] ?? ""}`.trim(), ...(holds(actor, "author") ? { state: "needs" as const, waiting_on: null, next: { label: "Submit again", href, note: null } } : { state: "waiting" as const, waiting_on: "The configuration author submits it again.", next: null }) });
         else out.push({ ...base, what: `Submitted with ${plural(changes, "change")}. ${gate.why}`, ...(holds(actor, "sme") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Review and sign", href, note: null } } : { state: "waiting" as const, waiting_on: mine ? "The content reviewer signs it: not the person who submitted it." : "The content reviewer signs the changes that need the SME duty.", next: null }) });
       }
     }

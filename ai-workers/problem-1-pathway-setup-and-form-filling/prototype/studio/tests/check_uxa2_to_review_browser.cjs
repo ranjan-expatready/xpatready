@@ -123,6 +123,22 @@ const PEOPLE = ["user-A", "user-B", "user-C"];
   step("pass: with the filing set again, Visitor visa leaves To review and nothing is blocked", !after.items.some((i) => i.combination === vv && i.kind === "setup") && after.blocked === 0, after.items.filter((i) => i.kind === "setup").map((i) => i.title));
   await agree("put back");
 
+  // Break round 2: on the six (AI proposals on several combinations) every combination Programs marks Needs you is on To
+  // review's Needs you, and no setup row is outside it. AI proposals themselves follow the forms lane's rule (a reviewer
+  // decides them, C2.6/C2.12) while the card follows P-180 (the author): that open question is in the PR, not settled here.
+  const six = await api("/demo/reset-to-six", { method: "POST", data: { confirm: "RESET" } });
+  step("setup: the six load (saved AI answers replayed, US$0)", six.status < 300, six.status);
+  for (const actor of PEOPLE) {
+    const prog = await programsNeeds(actor), q = await reviewNeeds(actor);
+    const setupCombos = new Set(q.items.filter((i) => i.kind === "setup").map((i) => i.combination));
+    const anyCombos = new Set(q.items.map((i) => i.combination).filter(Boolean));
+    step(`the six (${actor}): setup rows are Programs Needs-you combinations; every Programs Needs-you combination is on To review's Needs you`, [...setupCombos].every((c) => prog.has(c)) && [...prog].every((c) => anyCombos.has(c)), { programs: [...prog].length, setup: [...setupCombos].length });
+  }
+  for (const actor of ["user-B", "user-C"]) {
+    const q = await reviewNeeds(actor);
+    step(`fail case (break round 2 m2, ${actor}): "Submit again" is never Needs you for someone the server refuses`, q.items.every((i) => i.next?.label !== "Submit again"), q.items.map((i) => `${i.kind}:${i.next?.label}`));
+  }
+
   step("no page error or console error on the walk", errs.length === 0, errs.slice(0, 3));
   await b.close();
   console.log(`\n${pass} passed, ${fail} failed`);
