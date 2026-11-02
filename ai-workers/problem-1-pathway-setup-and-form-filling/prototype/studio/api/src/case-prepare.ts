@@ -228,7 +228,9 @@ export class CasePrepare {
     const group = now.groups.find((x) => x.id === g!.id);
     if (!b.reason) {
       const rules = (rulesFrom(FEE_TABLE, now.combination ?? "")?.fees ?? []).filter((x) => x.basis === "family_maximum"); // break r1: the capped lines from the table, never keys in code
-      refuse(400, "reason", `Give a reason to split this filing out: it is then priced on its own, and the family maximum (${rules.map((r) => `${r!.label} ${cad(r!.familyMaxCents)} for ${r!.familyFrom} or more`).join(", ")}) of ${group ? "this group" : "the family"} no longer covers it.`);
+      // Break on #500 m6: with no capped line there is no maximum to name.
+      refuse(400, "reason", rules.length ? `Give a reason to split this filing out: it is then priced on its own, and the family maximum (${rules.map((r) => `${r!.label} ${cad(r!.familyMaxCents)} for ${r!.familyFrom} or more`).join(", ")}) of ${group ? "this group" : "the family"} no longer covers it.`
+        : "Give a reason to split this filing out: it is then sent on its own.");
     }
     const moved = await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;

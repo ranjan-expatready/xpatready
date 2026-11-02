@@ -88,9 +88,27 @@ const bad: [string, (t: FeeTable) => FeeTable][] = [
   ["a cap with no amount", lineEdit({ family_max: { from_people: 5 } })], ["a cap of zero", lineEdit({ family_max: { cad: 0, from_people: 5 } })], ["a cap from zero people", lineEdit({ family_max: { cad: 500, from_people: 0 } })],
   ["a sub-cent amount", lineEdit({ per_person_cad: 0.001 })], ["a sub-cent cap", lineEdit({ family_max: { cad: 0.001, from_people: 5 } })], ["a cap just above zero", lineEdit({ family_max: { cad: 0.000000001, from_people: 5 } })], ["an amount just above a whole cent", lineEdit({ per_person_cad: 100.000000001 })],
   ["an exemption without ages", (t) => ({ ...t, lines: t.lines.map((l) => (l.key === "biometrics" ? { ...l, exempt: { source: l.exempt!.source } } as typeof l : l)) })],
+  // Break on #500 (M1, m1, m2): each of these was priced in silence (or threw) before.
+  ["a role the library does not know (\"spouse\")", lineEdit({ basis: "per_person_by_role", roles: ["principal", "spouse", "child"] })], ["a role nobody has", lineEdit({ roles: ["nobody"] })],
+  ["a role that never applies (the sponsor)", lineEdit({ basis: "per_person_by_role", roles: ["sponsor"] })],
+  ["swapped age limits", (t) => ({ ...t, lines: t.lines.map((l) => (l.key === "biometrics" ? { ...l, exempt: { ...l.exempt!, under_age: 80, over_age: 14 } } : l)) })],
+  ["negative age limits", (t) => ({ ...t, lines: t.lines.map((l) => (l.key === "biometrics" ? { ...l, exempt: { ...l.exempt!, under_age: -5, over_age: -1 } } : l)) })],
+  ["a line without its source", lineEdit({ source: undefined })], ["a line without its words", lineEdit({ label: undefined })],
+  ["a table mode on a role the library does not know", (t) => ({ ...t, combinations: { ...t.combinations, "vv.single": { ...t.combinations["vv.single"], modes: { ...t.combinations["vv.single"].modes, chlid: "files_own" } } } })],
+  ["a spouse that co-files", (t) => ({ ...t, combinations: { ...t.combinations, "vv.single": { ...t.combinations["vv.single"], modes: { ...t.combinations["vv.single"].modes, spouse_or_partner: "co_files" } } } })],
+  ["a representative with a filing", (t) => ({ ...t, combinations: { ...t.combinations, "vv.single": { ...t.combinations["vv.single"], modes: { ...t.combinations["vv.single"].modes, representative: "co_files" } } } })],
 ];
 for (const [what, edit] of bad) ok(`R2 (break r1) fail: ${what} makes the Visitor visa not derived, never a wrong total`, vvWith(edit) === undefined);
 ok("R2 (break r1): the shipped table passes the same checks (Visitor visa derived)", vvWith((t) => t) !== undefined);
+ok("R2 (break on #500 m1) fail: a table with no combinations is not derived, and nothing throws", (() => { try { return rulesFrom({ ...FEE_TABLE, combinations: undefined } as unknown as FeeTable, "vv.single") === undefined; } catch { return false; } })());
+const appAged: FeeTable = { ...perApp, lines: perApp.lines.map((l) => (l.key === "app_fee" ? { ...l, exempt: FEE_TABLE.lines.find((x) => x.key === "biometrics")!.exempt } : l)) };
+ok("R2 (break on #500 m3) fail: an age exemption on a per-application line is refused (the owner's age would decide for everyone on it)", rulesFrom(appAged, "t.app") === undefined && rulesFrom(perApp, "t.app") !== undefined);
+// Break on #500 M2: a sponsorship combination added to the table with the sample's modes (the sponsor co-files) is not
+// priced from the table: no basis reaches the sponsor, so the sponsorship fee would land on the sponsored person.
+const fsOut: FeeTable = { ...FEE_TABLE, combinations: { ...FEE_TABLE.combinations, "fs.outside": { label: "Spouse sponsorship (outside Canada)", lines: ["spouse_sponsorship", "spouse_dependent_child"], modes: { principal: "files_own", sponsor: "co_files", child: "on_principal" } } } };
+ok("R2 + C11.12 (break on #500 M2) fail: a table combination whose sponsor co-files is not derived from the table, never charged to the sponsored person", rulesFrom(fsOut, "fs.outside") === undefined);
+const fsRel = deriveFilings("fs.outside", [...family(1, 1), person("SP", "sponsor")], (k) => rulesFrom(fsOut, k), { modes: new Map([["sponsor", "co_files"], ["child", "on_principal"]]), label: "Spouse sponsorship" }) as Derived;
+ok("R2 + C11.12 (break on #500 M2) pass: its filings still come from the release (the sponsorship co-filed), with no amount and words that say so", fsRel.derived && fsRel.fees.length === 0 && fsRel.fees_worked_out === false && fsRel.filings.some((f) => f.mode === "co_filed") && fsRel.groups.every((g) => g.total_cents === null) && /not worked out yet/.test(fsRel.fees_why ?? ""), { fees: fsRel.fees.length, why: fsRel.fees_why });
 const allDeps: FeeTable = { ...perApp, combinations: { "t.app": { label: "Test", lines: ["app_fee"], modes: { principal: "on_principal", child: "on_principal" } } } };
 ok("R2 (break r1 B16, C11.12 BR-2) fail: a table putting the principal on another's application is refused: not derived, never guessed", deriveFilings("t.app", family(1, 2), (k) => rulesFrom(allDeps, k)).derived === false && rulesFrom(allDeps, "t.app") === undefined);
 const misspelt: FeeTable = { ...perApp, combinations: { "t.app": { label: "Test", lines: ["app_fee"], modes: { principal: "files_own", child: "on_principal_typo" as never } } } };

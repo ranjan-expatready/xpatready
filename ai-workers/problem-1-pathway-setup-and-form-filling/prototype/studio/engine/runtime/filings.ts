@@ -16,6 +16,7 @@ import type { Participant } from "./case.ts";
 import type { LineMode } from "../../contracts/workspace.ts";
 import { filingPlan, isLineMode, notWorkedOut, type PlanPerson } from "../filing-modes.ts";
 import FEES from "../../samples/fee-table.json" with { type: "json" };
+import ROLES from "../../samples/person-roles.json" with { type: "json" };
 
 /** R2 (P-230 (7)): the dated fee table is data (samples/fee-table.json: amounts, family maximums, ages and each line's
  *  source with page, quote and date), never code; a fee change is an edit there with its test. Part 2 moves it into a
@@ -42,16 +43,26 @@ export const BIOMETRICS_EXEMPT_SOURCE = line("biometrics")?.exempt?.source as Fe
  *  engine works out (not per_position), a family maximum with a positive amount from 2 people when the basis is
  *  family_maximum, a non-empty list of roles when it is per_person_by_role (and a list whenever roles are given), and
  *  whole-number age limits for an exemption. Anything else makes its combination not derived: never a wrong total. */
+/** The shared role library (samples/person-roles.json): a line charges people of roles that may apply; a co-filing role
+ *  is one that takes part in a case but never applies (the sponsor), which the table cannot price yet. Break on #500: a role the library does not know
+ *  (a typo such as "spouse") would charge nobody in silence. */
+const ROLE_LIB = (ROLES as { roles: { key: string; takesPartInCase: boolean; mayBeApplicant: boolean }[] }).roles;
+const APPLICANT_ROLES = new Set(ROLE_LIB.filter((r) => r.mayBeApplicant).map((r) => r.key));
 export function soundLine(l: TableLine | undefined): l is TableLine {
   if (!l || typeof l !== "object" || typeof l.key !== "string" || !FEE_BASES.includes(l.basis) || l.basis === "per_position") return false;
+  // Break on #500 m1: a line without its words or its source would throw while it is priced; refused instead.
+  if (typeof l.label !== "string" || !l.label.trim() || !l.source || typeof l.source !== "object" || typeof l.source.page !== "string") return false;
   // Amounts are whole cents: a sub-cent value would round to a different (even zero) fee (outside check on #455).
   const cents = (cad: unknown) => typeof cad === "number" && Number.isFinite(cad) && cad >= 0 && /^\d+(\.\d{1,2})?$/.test(String(cad)) && Number.isSafeInteger(Math.round(cad * 100));
   if (!cents(l.per_person_cad)) return false;
-  if (l.roles !== undefined && (!Array.isArray(l.roles) || !l.roles.length || l.roles.some((r) => typeof r !== "string"))) return false;
+  if (l.roles !== undefined && (!Array.isArray(l.roles) || !l.roles.length || l.roles.some((r) => typeof r !== "string" || !APPLICANT_ROLES.has(r)))) return false;
   if (l.basis === "per_person_by_role" && !l.roles?.length) return false;
   const m = l.family_max;
   if (l.basis === "family_maximum" && !(m && cents(m.cad) && m.cad > 0 && Number.isInteger(m.from_people) && m.from_people >= 2)) return false;
-  if (l.exempt && !(Number.isInteger(l.exempt.under_age) && Number.isInteger(l.exempt.over_age) && l.exempt.source)) return false;
+  // Break on #500 M1: ages in order and never negative (swapped ages exempted everyone); m3: an age exemption belongs to
+  // a person, so a line charged once per application cannot carry one (the owner's age would decide for everyone on it).
+  if (l.exempt && !(Number.isInteger(l.exempt.under_age) && Number.isInteger(l.exempt.over_age) && l.exempt.under_age >= 0 && l.exempt.under_age <= l.exempt.over_age && l.exempt.source)) return false;
+  if (l.exempt && l.basis === "per_application") return false;
   return true;
 }
 
@@ -71,7 +82,7 @@ export const FAMILY_GROUP = "group-family";
 
 /** A combination's rules from the fee table (an own property only: "constructor" or "__proto__" is no combination). */
 export function rulesFrom(table: FeeTable, key: string): Rules | undefined {
-  const c = Object.hasOwn(table.combinations, key) ? table.combinations[key] : undefined;
+  const c = table.combinations && typeof table.combinations === "object" && Object.hasOwn(table.combinations, key) ? table.combinations[key] : undefined;
   if (!c) return undefined;
   // A combination lists its lines once each, at least one; the table holds each key once (break r1 B).
   if (!Array.isArray(c.lines) || !c.lines.length || new Set(c.lines).size !== c.lines.length || !Array.isArray(table.lines)) return undefined;
@@ -83,6 +94,11 @@ export function rulesFrom(table: FeeTable, key: string): Rules | undefined {
   // else (the principal "on the principal's", a misspelt mode) makes the combination not derived, never guessed.
   const modes = Object.entries(c.modes ?? {});
   if (modes.some(([role, m]) => !isLineMode(m) || (role === "principal" && m !== "files_own"))) return undefined;
+  // Break on #500 m2: the same rules as the studio's save (BR-3, BR-4): a role the library knows; an applicant mode only
+  // on a role that may apply. M2: the table cannot price a sponsorship (no basis reaches the co-filing sponsor, so a
+  // sponsorship line would land on the sponsored person), so a combination whose table modes co-file is not derived from
+  // the table; its filings still come from its release, with "Fees not worked out yet".
+  if (modes.some(([role, m]) => m === "co_files" || !APPLICANT_ROLES.has(role))) return undefined;
   // A line the engine cannot charge soundly makes the combination not derived: a missing line, a basis not worked out
   // (per_position), a family maximum without its cap, or a per-role line naming no role.
   const fees = (lines as TableLine[]).map((l): FeeRule => ({
