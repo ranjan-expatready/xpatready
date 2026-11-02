@@ -7,6 +7,7 @@ import { render, type BoxRow, type Person, type Role } from "../render.ts";
 import type { Snapshot } from "../snapshot.ts";
 import { groupLabel, type QuestionnaireView, type Readiness } from "../../contracts/runtime.ts";
 import { checkValue, knownOf, type Answer, type Participant, type Row } from "./case.ts";
+import { recordedDerivation } from "../../../p5/transforms.ts";
 
 /** One confirmed fact a copy reads: which form field, which fact about whom, which row, which value. */
 export type FormFact = { box: string; fact: string; about: string; row: number | null; value: unknown };
@@ -26,6 +27,28 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
     return problems.length ? { ...b, coverage: "answered on screen" as const, fix: `confirmed with a problem, not written: ${problems.join(" ")}` } : b;
   });
   return { ...cov, boxes, facts: factsOf(boxes) };
+}
+
+/** C7.2 cause 3 (P-72): a derived "is anything recorded?" Yes/No box is "N" only when a person answered "none apply"
+ *  and it is confirmed: every fact it names was asked of that person (not hidden) in a repeating group that has no
+ *  entries and whose "none apply" is confirmed (IMM 5257: post-secondary education, previous countries of residence).
+ *  An empty question in a confirmed section is not an answer (Confirm section vouches only for the answers shown;
+ *  review r1 B1), so "other names", the national identity document and the US card stay "not written" until a question
+ *  asks them (forms question in the PR). Marked on a copy's boxes only; a later entry or a changed "none apply" makes
+ *  the copy out of date through its group facts (changedGroups). */
+export function markNothingRecorded(boxes: BoxRow[], view: QuestionnaireView): BoxRow[] {
+  return boxes.map((b) => {
+    const d = b.coverage === "confirmed fact" || !b.fact || !b.about || b.about === "case" ? null : recordedDerivation(b.transform);
+    if (!d) return b;
+    const subject = b.about!.split("/")[0], facts = new Set([b.fact!, ...d.facts]);
+    const asked = view.sections.flatMap((s) => s.questions.filter((q) => q.subjectId === subject && facts.has(q.fact)).map((q) => ({ s, q })));
+    if (!asked.length || asked.some(({ q }) => q.hidden) || new Set(asked.map(({ q }) => q.fact)).size !== facts.size) return b;
+    if (asked.some(({ q }) => q.answer || q.rows.some((r) => r.answer))) return b;
+    const settled = (s: QuestionnaireView["sections"][number]) => !!s.group && s.group.rows === 0 && !!s.group.none_apply?.value && s.group.none_apply.confirmed;
+    if (!asked.every(({ s }) => settled(s))) return b;
+    const titles = [...new Set(asked.map(({ s }) => s.title))].join(", ");
+    return { ...b, nothing_recorded: true as const, detail: `nothing recorded: "none apply" confirmed in ${titles}` };
+  });
 }
 
 /** The forms a case fills as PDFs: the release files them as a PDF (its filing line is not Online) and has their

@@ -672,10 +672,12 @@ export class Sources {
     const { proposals, ...j } = await this.db.draftingJob.findUniqueOrThrow({ where: { id }, include: { proposals: true } });
     const rank: Record<string, number> = { CONFLICT: 0, AMBIGUOUS: 1, NEW: 2, REUSE: 3 };
     const a = j.attachmentId ? await this.db.sourceAttachment.findUnique({ where: { id: j.attachmentId } }) : null;
+    // QA-75: the page's trail names the combination ("<combination> › Forms").
+    const combination = j.combinationId ? await this.db.combination.findUnique({ where: { id: j.combinationId }, select: { id: true, label: true } }) : null;
     // C3.1 AT-8/9/9b (IRCC-F07): beside each form field, what its PDF box says (length, own choices, date pattern).
     const boxFormat = pdfBoxFormats(a?.inventoryFile);
     const withFormat = (r: ReturnType<typeof reviewRow>) => ({ ...r, boxes: (r.boxes as { data_path: string }[]).map((b) => ({ ...b, format: boxFormat(b.data_path) })) });
-    return { ...j, attachment: a, items: proposals.map(reviewRow).map(withFormat).sort((x, y) => rank[x.outcome] - rank[y.outcome] || x.proposedKey.localeCompare(y.proposedKey)), elapsed_s: Math.round(((j.finishedAt ?? new Date()).getTime() - j.startedAt.getTime()) / 1000) };
+    return { ...j, attachment: a, combination, items: proposals.map(reviewRow).map(withFormat).sort((x, y) => rank[x.outcome] - rank[y.outcome] || x.proposedKey.localeCompare(y.proposedKey)), elapsed_s: Math.round(((j.finishedAt ?? new Date()).getTime() - j.startedAt.getTime()) / 1000) };
   }
 
   async decide(actor: Actor, jobId: string, itemId: string, body: unknown) {
