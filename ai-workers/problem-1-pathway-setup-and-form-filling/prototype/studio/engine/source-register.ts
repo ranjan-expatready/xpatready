@@ -94,8 +94,10 @@ export const numberWords = (field: string, op: string, value: string, isDate: bo
   `${field ? factName(field) : field}: ${(isDate ? DATE_OP : NUMBER_OP)[op] ?? op} ${value}`;
 
 const text = (x: unknown) => (typeof x === "string" ? x.trim() : "");
-/** An item in words as the refusal leads with it ("<item>: …"): its own text without a closing full stop. */
-const itemText = (x: unknown) => text(x).replace(/\.$/, "");
+const FIELD_CODE = /\b(?:person|case|relationship|organisation|representative)\.[a-z0-9_]+(?:\.[a-z0-9_]+)*\b/g;
+/** An item in words as the refusal leads with it ("<item>: …"): its own text without a closing full stop, any field code
+ *  in it said by its short name (QA-82: never a field code on the main path; a rule's "then" may name one). */
+const itemText = (x: unknown) => text(x).replace(FIELD_CODE, (k) => factName(k)).replace(/\.$/, "");
 const isObj = (x: unknown): x is Record<string, unknown> => typeof x === "object" && x !== null && !Array.isArray(x);
 
 /** BR-1, BR-2: the published numbers in one item's condition. Every leaf comparing a field with a number (eq, neq, gt,

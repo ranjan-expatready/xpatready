@@ -22,7 +22,8 @@ export function refuseBlocking(blocking: ProblemLine[], status: HttpStatus, lead
   const gates = [...new Set(blocking.filter(gated).map((p) => p.gate))];
   if (!gates.length) return;
   const counts = gates.map((g) => (GATE_WORDS[g] ?? ((n: number) => `${n} item${n === 1 ? "" : "s"} refused (${g}). Each is listed on Review and release.`))(blocking.filter((p) => gated(p) && p.gate === g).length));
-  const first = blocking.slice(0, 3).map(problemWords).join(" · ");
+  // Problems no gate counted come first in the words (each is named nowhere else in `detail`), then the gated ones.
+  const first = [...blocking.filter((p) => !gated(p)), ...blocking.filter(gated)].slice(0, 3).map(problemWords).join(" · ");
   const more = blocking.length > 3 ? ` and ${blocking.length - 3} more` : "";
   throw new HttpException({
     type: `https://expatready.local/problems/${gates.length === 1 ? gates[0] : "release-gates"}`, title: "Refused: items listed", status,

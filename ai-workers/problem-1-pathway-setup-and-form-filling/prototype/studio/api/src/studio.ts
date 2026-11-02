@@ -6,7 +6,7 @@ import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { Prisma, type ReviewSubmission } from "@prisma/client";
 import { canRelease } from "../../../contracts/rules.ts";
 import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
-import { buildSnapshot, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
+import { buildSnapshot, snapshotHash, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
 import { slug } from "../../engine/import.ts";
 import { checkCondition, diff, ordinal, validate, isDemoSnapshot } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, isDemoWorkspace, need, revise, RUNTIME_ACTORS, strip, Workspace, WORKSPACE_KEY, type Actor } from "./core.ts";
@@ -387,8 +387,13 @@ export class Studio {
     const roles = await this.personRoles(workspaceId);
     const filing = filingProblems((s.combination?.participants ?? []) as { role: string; label?: string; max: number; filingMode?: unknown }[], roles);
     // G1 BR-7 (challenge M1): every published number needs a source entry; the draft only, never a released snapshot.
-    const sources = s.mode === "draft" ? draftSourceProblems(s, isDemoWorkspace()) : [];
-    const all = [...structure, ...filing, ...sources, ...emptyProblem(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...carried]; // L4: what IRCC accepts
+    // Only a draft that will be submitted (it differs from its release, or there is none): a Live row with no draft
+    // changes lists none, as on the catalogue (tech lead on #568; EXPERIENCE §2.5, one status everywhere).
+    const last = s.mode === "draft" && combinationId ? await this.db.configRelease.findFirst({ where: { combinationId }, orderBy: { version: "desc" }, select: { sha256: true } }) : null;
+    const sources = s.mode === "draft" && (!last || last.sha256 !== snapshotHash(s)) ? draftSourceProblems(s, isDemoWorkspace()) : [];
+    // G1: the numbers without a source come after the validator's own errors, so a list cut at its first lines still
+    // shows those (the Review tab shows eight).
+    const all = [...structure, ...filing, ...emptyProblem(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...sources, ...carried]; // L4: what IRCC accepts
     // C2.12 (plan F3a-1, BR-10): each problem names the forms it touches, so a form's path shows its own: a Forms problem its form,
     // any other the forms whose field map reads that item as a fact; none otherwise.
     const formsOf = new Map<string, Set<string>>();

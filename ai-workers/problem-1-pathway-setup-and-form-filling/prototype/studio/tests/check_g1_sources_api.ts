@@ -63,8 +63,8 @@ try {
     held === 17 && s.numbers.filter((n: { passes: boolean }) => !n.passes).every((n: { state: string }) => n.state === "missing"), s.numbers.filter((n: { passes: boolean }) => !n.passes).map((n: { value: string }) => n.value));
   let page = (await call("GET", `/combinations/${wp}`)).body;
   ok("C5.4 M4 pass: Release 1 froze the import's entries, so nothing reads \"changed since Release 1\" after Reset", page.draft.matches_release === true && page.draft.changes.length === 0, page.draft.changes);
-  ok("C5.4 BR-7 pass: the draft's page lists every number held back, each in §5's words, routed by its own where",
-    page.draft.problems.filter((p: { gate?: string }) => p.gate === "no-source").length === held && page.draft.problems.some((p: { gate?: string; label: string; message: string; where: string }) => p.gate === "no-source" && p.where === "Checks" && p.message === `Passport days until expiry: at most 90 has no source entry. ${NONE}`));
+  ok("C5.4 #568 pass: the Live combination with no draft changes lists no source problem on its page (nothing to submit); GET sources still counts them",
+    page.draft.problems.filter((p: { gate?: string }) => p.gate === "no-source").length === 0 && held > 0);
 
   // ------------------------------------------------------------------ tech lead on #568: a Live row with no draft changes shows no source problem
   let row = await leaf(wp);
@@ -80,6 +80,8 @@ try {
   r = await put(wp, n90, { address: n90.address, value: n90.value, none_published: { reason: "ExpatReady's own warning lead time: IRCC publishes none" }, version: 0 });
   ok("C5.4 PUT pass: a \"None published\" answer with its reason saves: 200, version 1, state none_published", r.status === 200 && r.body.entry.version === 1 && r.body.state === "none_published" && r.body.passes === true, r.body);
   page = (await call("GET", `/combinations/${wp}`)).body;
+  ok("C5.4 BR-7 fail: once the draft differs from its release, its page lists every number still held back, each in §5's words, routed by its own where",
+    page.draft.problems.filter((p: { gate?: string }) => p.gate === "no-source").length === held - 1 && page.draft.problems.some((p: { gate?: string; message: string; where: string }) => p.gate === "no-source" && p.where === "Checks" && p.message === `Passport days until expiry: at most 30 has no source entry. ${NONE}`));
   const srcLines = page.draft.changes.filter((c: { kind: string }) => c.kind === "Source");
   ok("C5.4 BR-9 fail: one entry moves the fingerprint and adds exactly one Source change, for the expert to sign", page.draft.sha256 !== shaBefore && page.draft.changes.length === 1 && srcLines.length === 1 && srcLines[0].needs_sme === true && /Passport days until expiry: at most 90: None published – set by ExpatReady$/.test(srcLines[0].label), page.draft.changes);
   ok("C5.4 BR-9 pass: a combination with no entries carries no `sources` and keeps its fingerprint while another combination's entries change",

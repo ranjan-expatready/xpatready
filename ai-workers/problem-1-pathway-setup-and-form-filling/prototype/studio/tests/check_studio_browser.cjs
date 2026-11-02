@@ -14,6 +14,7 @@
 const path = require("node:path"); const fs = require("node:fs");
 const { chromium } = require("playwright");
 const { setFilingModes } = require("./fixtures/steps-before-forms.cjs");
+const { sourceEveryNumber } = require("./fixtures/source-every-number.cjs"); // G1 (C5.4): a release needs every number sourced
 const URL = process.env.STUDIO_URL ?? "http://localhost:4400"; // an isolated copy: STUDIO_URL=http://localhost:<port>
 const ROOT = path.resolve(__dirname, "..", "..", "..", "..", "..");
 const OFFICIAL = path.join(ROOT, "ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/ircc");
@@ -161,6 +162,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   step("A6: the released version is unchanged by the draft edit", !relBefore.checklist.some((r) => /Custody documents/.test(r.requirement)));
 
   // review and release under separate duties
+  await sourceEveryNumber(URL, wp); // G1 (C5.4): the release's numbers need a source first (Source panel: PR 2b)
   await go(`/c/${wp}/review`);
   await click(btn("Submit for review"));
   { const t = await toastLike(/Submitted for review/); step("A7: the author submits the change for review", /Submitted for review/.test(t), t); }
@@ -388,6 +390,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   // C11.12 BR-7: a new release needs each applicant role's filing; the author sets them (through the API: scaffolding here;
   // check_c1112_filing_browser.cjs walks the Filing column on its screen).
   await setFilingModes(async (pth, init = {}) => { const r = await p.request.fetch(`${URL}/api${pth}`, { headers: { "x-actor": "user-A", "content-type": "application/json" }, ...init }); return { status: r.status(), body: await r.json() }; }, scratch);
+  await sourceEveryNumber(URL, scratch); // G1 (C5.4)
   await go(`/c/${scratch}/review`);
   await click(btn("Submit for review"));
   await as("user-C"); await click(btn("Select all I can sign")); await click(btn(/^Sign/));

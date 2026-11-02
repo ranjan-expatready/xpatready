@@ -164,6 +164,9 @@ const one = sourceChanges(withSrc([]), withSrc(frozenSources([rw90], [{ kind: rw
 ok("C5.4 BR-9 fail: one entry added is one Source change, for the expert, in words (item, number, answer)", one.length === 1 && one[0].kind === "Source" && one[0].change === "added" && one[0].needs_sme && one[0].label.endsWith("Passport days until expiry: at most 90: None published – set by ExpatReady"), one);
 ok("C5.4 m7 pass: the sample load's entries carry the sample loader's id, the same as api/src/lifecycle.ts SAMPLE_CREATOR", new RegExp(`SAMPLE_CREATOR = "${SAMPLE_LOADER}"`).test(readFileSync(join(STUDIO, "api", "src", "lifecycle.ts"), "utf8")));
 
+const r37 = publishedNumbers(release).find((n) => n.key === "wp.family/R-37")!;
+ok("C5.4 m6 pass (QA-82): an item whose own words name a field code reads its short name instead (R-37's \"then\")", !!r37 && !/person\.[a-z_]/.test(r37.item_words) && /Venezuelan extended passport expiry/.test(r37.item_words), r37?.item_words);
+
 // ---------------------------------------------------------------- M1 kept outside validate(), pure
 const src = readFileSync(join(STUDIO, "engine", "source-register.ts"), "utf8");
 ok("C5.4 M1 pass: source-register.ts reads no file or database and only takes validate.ts's Problem type", !/node:fs|@prisma|fetch\(/.test(src) && !/^import \{[^}]*\} from "\.\/validate\.ts"/m.test(src) && /^import type \{ Change, Problem \} from "\.\/validate\.ts"/m.test(src));
