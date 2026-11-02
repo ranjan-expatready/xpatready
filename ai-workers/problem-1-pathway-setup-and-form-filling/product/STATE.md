@@ -1,6 +1,6 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-02 20:45 UTC by **Lead 4** (took over from Lead 3 at 20:10 UTC; check at minutes 13 and 43, job a02fd171) · milestone: **M2 — Super Admin configuration**, gate 59/60 with held parts named (P-265, P-284); estimate **about 4 Nov** · M3 per row (P-261) · how we work: `WAY-OF-WORKING.md` · decisions to read word for word: DECISIONS **P-275 … P-285**
+updated: 2026-11-02 21:55 UTC by **Lead 4** (took over from Lead 3 at 20:10 UTC; check at minutes 13 and 43, job a02fd171) · milestone: **M2 — Super Admin configuration**, gate 59/60 with held parts named (P-265, P-284); estimate **about 4 Nov** · M3 per row (P-261) · how we work: `WAY-OF-WORKING.md` · decisions to read word for word: DECISIONS **P-275 … P-285**
 
 ## Leads, in order (founder, 2 Nov: "keep naming … so that I know who is the latest lead"; highest number = current)
 Lead 1 (`local_17ac4d7f…`, 2 Nov morning) → Lead 2 (`local_0bd306e3…`, ~15:40–18:35 UTC) → Lead 3 (`local_b0474939…`, 18:36–20:10 UTC) → **Lead 4** (started by Lead 3, 20:10 UTC, local, shares the main copy) → Lead 5 · standby (`local_c490b934-7479-4dd1-815a-af7e3fbfba23`) → Lead 6 · standby (`local_235884ee-b9da-4ec3-a2b1-7ee8d8f98a2d`). **P-286:** at about 250k the current Lead rewrites STATE, CronDeletes its check, renames itself "… (ended)" and sends the next standby "take over now" (works from a cron turn). Each Lead renames itself "Lead N · <date> <UTC start>" and, when handing over, starts Lead N+1 itself in a founder-typed turn, then stops its own check (CronDelete). A cron turn cannot start a session: if the context passes about 250k overnight, keep going (1M window) and hand over in the founder's next typed turn.
@@ -10,10 +10,10 @@ Lead 1 (`local_17ac4d7f…`, 2 Nov morning) → Lead 2 (`local_0bd306e3…`, ~15
 2. **Overnight (P-285, founder asleep ~20:00–02:00 UTC):** act with all approvals; 30-minute checks (minutes 13 and 43); tokens free below 80% of the weekly plan (44% at 19:53) but none wasted (founder: "please don't waste tokens"); at 80% nothing new starts, builders push and stop, STATE rewritten. Paid AI: the tech lead approves up to **US$50 total tonight**, usual + worst cost in records first (Go comment on the PR), runs only on a Mac paid-runner session. Records PRs merge at least hourly even during a batch. qa per batch (P-277); Sonnet subagents (P-278); merge main only on conflict (P-270).
 3. **Restarting work:** local Mac sessions wake on SendMessage; idle cloud ones often don't. Cron turns can't start sessions: leave an own_initiative card and list it under "For the founder's morning".
 4. `flow-watch.sh` now also flags labelled PRs with red CI or a conflict (4b) and unfinished M2 rows nobody has pushed to in 90 min (4c; HELD and WAITS lists in the script). Act on every RED each check. A lane counts as working only if it pushed in 90 min.
-5. Records: **#578** (this branch) merges once `decision-impact.sh` passes (needs qa's C5.4 → P-279 and C11.3 → P-284 cites). qa was asked at 20:00 UTC to fold its records PRs #567, #582, #581 into one; merge it directly, then #578.
+5. Records: #578 merged 20:53 UTC; the current records branch is `lead/2026-11-02-c` (pushed hourly, P-285).
 
-## Progress (20:45 UTC)
-M2 on main's scorecard **48/60** (qa's records #581 merged 20:07 UTC; was 41); qa has scored about **46** (in its unmerged records PRs); plus C3.6 (#573 merged), C11.3 (P-284) to score. 2 Nov: 117 PRs merged (87 product, 30 records); M2 34 → ~46. AI spend today **US$9.12** + tonight's Gos. Weekly plan 44%. **Target by ~02:00 UTC: 50+ on main's scorecard.**
+## Progress (21:55 UTC)
+M2 on main's scorecard **49/60** (qa's #581, #605, #606 merged; was 41 at 20:05). Merged since 20:10 UTC, qa to score: #563 QA-163 (C11.7, C2.12, C4.11), #570 (C11.8), #568 (G2, C5.5 scored Works), #585 (C3.4), #574 (C2.6). Queued: #602 G-CORE B2 (C11.13, C11.14) + #587 G1 + #554 UX-A (batch #611), #592 QA-165, #603 IMM 5532 saved run (qa Saved check passed 21:33). AI spend 2 Nov **US$10.72** (IMM 5532 US$1.61 tonight). Weekly plan 48%. **Target by ~02:00 UTC: 50+.**
 
 ## M2 rows not Works, and who has them (20:05 UTC)
 | Row | In flight | Then |
