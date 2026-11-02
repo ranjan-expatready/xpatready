@@ -2,7 +2,9 @@
 // choose Reset to the six…, read what goes, what comes back and what is kept, type RESET, confirm (a double click
 // sends one request), see the six loaded with the saved AI answers replayed. Widths 1440, 1024 and 400 without
 // sideways scroll; axe (WCAG 2.2 AA) on each dialog. Screenshots before/after in screens/W1-reset-and-sample/screenshots/
-// (d1-*). A pass and a fail per rule. Replays only, no model call (US$0).
+// (d1-*). A failure midway is forced in this copy's own database (a trigger refusing the third combination, dropped in
+// finally): the dialog stays open with the server's words and RESET typed, and the screen behind shows the emptied
+// configuration (D1 review 2). A pass and a fail per rule. Replays only, no model call (US$0).
 //   zsh studio/tools/isolated.sh rt_d1b 4432 start && node studio/tests/check_d1_reset_to_six_browser.cjs 4432 xr_studio_rt_d1b
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
@@ -69,6 +71,25 @@ const post = (p, body) => fetch(`${BASE}/api${p}`, { method: "POST", headers: { 
   await p.keyboard.press("Escape");
   await dialog().waitFor({ state: "detached" });
   step("D1 fail: Escape (cancel) changes nothing: the same workspace, the Super visa still there", sql(`select id from workspace limit 1`) === oldWs && n(`select count(*) from combination where label='Super visa'`) === 1);
+
+  // A failure midway (D1 review 2): the words stay in the dialog, and the screen behind reads the emptied state again.
+  const superBefore = await p.getByText("Super visa").count();
+  sql(`create or replace function d1_refuse_third() returns trigger language plpgsql as $$ begin if (select count(*) from combination where workspace_id = new.workspace_id) >= 2 then raise exception 'd1 test: the third combination is refused'; end if; return new; end $$`);
+  sql(`create trigger d1_refuse_third before insert on combination for each row execute function d1_refuse_third()`);
+  try {
+    await p.getByRole("button", { name: "Demo" }).click(); await p.getByRole("menuitem", { name: /Reset to the six/ }).click();
+    await dialog().getByText("Reset to the six?").waitFor();
+    await p.getByLabel("Type RESET to confirm").fill("RESET"); await p.keyboard.press("Enter");
+    await p.locator("[data-six-failed]").waitFor({ timeout: 400000 });
+  } finally { sql(`drop trigger if exists d1_refuse_third on combination`); sql(`drop function if exists d1_refuse_third()`); }
+  const failedText = await p.locator("[data-six-failed]").innerText();
+  step("D1 fail (review 2): after a failure midway the dialog stays open with the server's words in place, RESET still typed, ready to try again", /emptied/.test(failedText) && /Reset to the six again/.test(failedText) && (await p.getByLabel("Type RESET to confirm").inputValue()) === "RESET" && await dialog().getByRole("button", { name: "Try again" }).isEnabled(), failedText);
+  step("D1 fail (review m1): the words are plain (no database internals or server paths)", !/invocation|prisma|\.ts:\d|\/home\/|\/Users\//i.test(failedText), failedText);
+  await widths("d1-03-reset-to-six-stopped", true);
+  await p.keyboard.press("Escape"); await dialog().waitFor({ state: "detached" });
+  const behind = n(`select count(*) from combination`);
+  let superAfter = -1; for (let i = 0; i < 20 && superAfter !== 0; i++) { superAfter = await p.getByText("Super visa").count(); if (superAfter) await p.waitForTimeout(250); }
+  step("D1 fail (review 2): the screen behind shows the emptied configuration, not the old one (the Super visa gone)", superBefore > 0 && superAfter === 0 && behind === 2 && n(`select count(*) from combination where label='Super visa'`) === 0, `Super visa on screen ${superBefore} → ${superAfter}; combinations in the database ${behind}`);
 
   // Again, through to the end; confirmed with a double click: one request.
   await p.getByRole("button", { name: "Demo" }).click(); await p.getByRole("menuitem", { name: /Reset to the six/ }).click();

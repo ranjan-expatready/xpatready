@@ -3,6 +3,7 @@ import { RunChip } from "@/components/run-card";
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { Activity, BookOpen, Boxes, CheckSquare, ChevronDown, Scale, Database, FileStack, FileText, Inbox, Layers, ListTree, Moon, RotateCcw, Sparkles, Sun, Upload, X } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, getActor, setActor, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Input, Notice, Pill, Table } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
@@ -304,19 +305,27 @@ function ResetDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: 
 /** D1 (P-226): Demo › Reset to the six. One confirmation, one request: Reset's emptying, then Load sample's six. */
 function ResetToSixDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenChange: (o: boolean) => void; onDone: (r: SixLoad) => void }) {
   const [confirm, setConfirm] = React.useState("");
+  const [failed, setFailed] = React.useState<string | null>(null);
+  const qc = useQueryClient();
   const once = React.useRef(false); // a double click sends one request
-  const run = useAction(() => api<SixLoad>("/demo/reset-to-six", { method: "POST", json: { confirm } }), { success: (r) => `Reset to the six in ${((r.reset?.seconds ?? 0) + r.seconds).toFixed(1)} s`, invalidate: [[]], onDone: (r) => { setConfirm(""); onOpenChange(false); onDone(r); } });
-  const go = () => { if (once.current || confirm !== "RESET") return; once.current = true; run.mutate(undefined, { onSettled: () => { once.current = false; } }); };
+  const toast = useToast();
+  // Its own mutation, not useAction: a failure is told once, inside the dialog (below), not also in a toast over its buttons.
+  const run = useMutation<SixLoad, Error>({ mutationFn: () => api<SixLoad>("/demo/reset-to-six", { method: "POST", json: { confirm } }),
+    onSuccess: (r) => { void qc.invalidateQueries(); toast.push({ tone: "ok", text: `Reset to the six in ${((r.reset?.seconds ?? 0) + r.seconds).toFixed(1)} s` }); setConfirm(""); onOpenChange(false); onDone(r); } });
+  // D1 review 2: a failure midway has still emptied the configuration, so every screen reads again, and the server's
+  // words stay in the dialog (open, RESET still typed) ready for a retry, not only in a passing toast.
+  const go = () => { if (once.current || confirm !== "RESET") return; once.current = true; setFailed(null); run.mutate(undefined, { onError: (e) => { setFailed(e.message); void qc.invalidateQueries(); }, onSettled: () => { once.current = false; } }); };
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!run.isPending) { onOpenChange(o); if (!o) setConfirm(""); } }} wide title="Reset to the six?" description="One step: empties all configuration, then loads the six agreed combinations with their structure and official PDFs. US$0: no live AI call."
-      footer={<><Button variant="ghost" disabled={run.isPending} onClick={() => onOpenChange(false)}>Cancel</Button><Button variant="destructive" disabled={confirm !== "RESET"} busy={run.isPending} onClick={go}><RotateCcw /> Reset to the six</Button></>}>
-      <div className="grid gap-4 text-sm sm:grid-cols-3" data-six-dialog>
+    <Dialog open={open} onOpenChange={(o) => { if (!run.isPending) { onOpenChange(o); if (!o) { setConfirm(""); setFailed(null); } } }} wide title="Reset to the six?" description="One step: empties all configuration, then loads the six agreed combinations with their structure and official PDFs. US$0: no live AI call."
+      footer={<><Button variant="ghost" disabled={run.isPending} onClick={() => onOpenChange(false)}>Cancel</Button><Button variant="destructive" disabled={confirm !== "RESET"} busy={run.isPending} onClick={go}><RotateCcw /> {failed ? "Try again" : "Reset to the six"}</Button></>}>
+      {failed ? <Notice tone="danger" title="Reset to the six stopped"><span data-six-failed>{failed}</span></Notice> : null}
+      <div className={cn("grid gap-4 text-sm sm:grid-cols-3", failed && "mt-3")} data-six-dialog>
         <div><p className="mb-1 font-medium">Goes</p><ul className="list-disc space-y-1 pl-5" data-six-goes><li>All configuration: structure, combinations, the shared library (fields, sections, document types), the Form library, checks, rules, questionnaires and releases</li><li>Cases and the activity record</li></ul></div>
-        <div><p className="mb-1 font-medium">Comes back</p><ul className="list-disc space-y-1 pl-5" data-six-comes><li>The six combinations: 5 Retail + 1 Corporate <Pill tone="warn">Sample</Pill> (P-148)</li><li>Their official PDFs in the Form library (from saved copies)</li><li>Form finder and saved AI answers replayed, waiting for people to review</li></ul></div>
+        <div><p className="mb-1 font-medium">Comes back</p><ul className="list-disc space-y-1 pl-5" data-six-comes><li>The six combinations: 5 Retail + 1 Corporate <Pill tone="warn">Sample</Pill></li><li>Their official PDFs in the Form library (from saved copies)</li><li>Form finder and saved AI answers replayed, waiting for people to review</li><li>A form without a saved AI answer waits for Draft with AI; a file without a saved copy shows as "Not found · Upload PDF"</li></ul></div>
         <div><p className="mb-1 font-medium">Kept</p><ul className="list-disc space-y-1 pl-5" data-six-kept-list><li>Saved AI results (recorded answers), so they replay at US$0</li><li>The official PDF copies and the spend record, checked unchanged</li></ul></div>
       </div>
       <p className="mt-3 text-sm text-text-muted">Nothing is released: a second person approves every library item. To show building from nothing, use Reset demo instead. This takes about half a minute.</p>
-      <label className="mt-3 block text-sm">Type <b>RESET</b> to confirm<Input className="mt-1 w-48" value={confirm} onChange={(e) => setConfirm(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") go(); }} aria-label="Type RESET to confirm" /></label>
+      <label className="mt-3 flex flex-col gap-1.5 text-sm"><span>Type <b>RESET</b> to confirm</span><Input className="w-48" value={confirm} onChange={(e) => setConfirm(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") go(); }} aria-label="Type RESET to confirm" /></label>
     </Dialog>
   );
 }
