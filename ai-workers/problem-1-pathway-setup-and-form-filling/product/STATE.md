@@ -42,6 +42,10 @@ Started this chat (cloud, one row each, end when labelled): QA-163, QA-162, qa-b
 ## Holds (P-251, the product owner of SA-01B): nobody builds these
 L-SA3 · L-SA6–L-SA11 · G5 · the P-236 rename · C11 · E1–E6 · design-only items · SH3/SH4 contracts go to the product owner with them.
 
+## To archive (P-283)
+* Mac, in the sidebar group "To archive": the previous Lead chat (`local_17ac4d7f-…`). This chat moves there once the new Lead runs.
+* Cloud (founder archives on claude.ai/code): the old forms L5 Track B, forms L8 and qa lanes (replaced by the QA-162, QA-163, qa-batch sessions); forms L4 Track A (closed, no PR); each one-row session started today once its PR has merged (check its hand-over first). qa-batch ends after golden journey 2; qa-batch-2 scores tonight's batches until about 01:00 UTC.
+
 ## Waiting for the founder
 1. **Open a new chat and type `/lead`** (this hand-over).
 2. **Archive** the previous Lead chat on the Mac (Remote Control attached, so the tech lead could not) and the old forms L5, forms L8 and qa lanes on claude.ai/code.
