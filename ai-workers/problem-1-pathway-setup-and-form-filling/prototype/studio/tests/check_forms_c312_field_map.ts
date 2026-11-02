@@ -82,7 +82,8 @@ type Row = { code: string; type: string; edition: string | null; field_map: Fm }
   const asReviewer = await list("user-C");
   ok("C3.12 API pass: a reader without the author duty sees the same field map words", asReviewer.length === rows.length && asReviewer.every((r) => rows.find((x) => x.code === r.code)?.field_map.words === r.field_map.words));
 
-  // A replayed AI draft (the sample's saved answer is for IMM 5257 (06-2018), an older edition than the library's current one).
+  // A replayed AI draft: the sample's saved answer (21 Oct, prompt v1) misread the edition as IMM 5257 (06-2018); since D3 its
+  // proposals carry the file's edition (09-2023), the library's current one (the edition is a fact of the file, p2/convert.ts).
   const sv = sql("select id from combination where combination_key like '%super_visa%' limit 1");
   const att = ((await call("GET", `/combinations/${sv}/attachments`)).body as { id: string; edition?: string }[]).find((a) => /IMM 5257 \(/.test(a.edition ?? ""));
   const before = rows.find((r) => r.code === "IMM 5257")!;
@@ -91,15 +92,17 @@ type Row = { code: string; type: string; edition: string | null; field_map: Fm }
   if (att && saved) {
     await call("POST", `/attachments/${att.id}/draft`, { mode: "replay", runFile: saved.file });
     for (let i = 0; i < 150 && Number(sql("select count(*) from proposal_item where status = 'waiting' and step = 'field_map'")) === 0; i++) await new Promise((x) => setTimeout(x, 400));
-    const on = sql("select form_edition from proposal_item where status = 'waiting' and step = 'field_map' limit 1");
-    rows = await list();
-    const same = rows.find((r) => r.code === "IMM 5257")!;
-    ok("C3.12 API fail: AI proposals for another edition (" + on + ") do not move the current edition's (" + before.edition + ") field map", on !== before.edition && same.field_map.words === before.field_map.words, { on, before: before.field_map, after: same.field_map });
-    // Test input: the same proposals as if drafted on the current edition (copied rows; the saved answer is for 06-2018).
-    const n = Number(sql(`with c as (insert into proposal_item (id, workspace_id, kind, run_id, step, form_edition, combination_id, lands_on, reuse, payload, source, rounds, rules, agreement, confidence, reason, origin, identity, identity_key, status, basis) select gen_random_uuid(), workspace_id, kind, run_id, step, '${before.edition}', combination_id, lands_on, reuse, payload, source, rounds, rules, agreement, confidence, reason, origin, identity, identity_key || '#c312', status, basis from proposal_item where status = 'waiting' and step = 'field_map' and form_edition = '${on}' returning 1) select count(*) from c`));
+    const on = sql("select string_agg(distinct form_edition, ',') from proposal_item where status = 'waiting' and step = 'field_map'");
+    const n = Number(sql("select count(*) from proposal_item where status = 'waiting' and step = 'field_map'"));
     rows = await list();
     const after = rows.find((r) => r.code === "IMM 5257")!.field_map;
-    ok(`C3.12 API pass: ${n} AI proposals waiting for the current edition, nothing mapped yet: 'AI draft · ${n} to review'`, n > 0 && after.kind === "proposed" && after.words === `AI draft · ${n} to review`, { n, after });
+    ok(`C3.12 API pass (D3): the ${n} replayed AI proposals land on the file's edition (${on}), the current one: 'AI draft · ${n} to review', nothing mapped yet`, n > 0 && on === before.edition && after.kind === "proposed" && after.words === `AI draft · ${n} to review`, { on, n, after });
+    // Test input: the same proposals labelled with another edition do not move the current edition's field map.
+    sql(`update proposal_item set form_edition = 'IMM 5257 (06-2018)' where status = 'waiting' and step = 'field_map' and form_edition = '${on}'`);
+    const same = (await list()).find((r) => r.code === "IMM 5257")!;
+    ok("C3.12 API fail: AI proposals for another edition (IMM 5257 (06-2018)) do not move the current edition's (" + before.edition + ") field map", same.field_map.words === before.field_map.words, { before: before.field_map, after: same.field_map });
+    sql(`update proposal_item set form_edition = '${on}' where status = 'waiting' and step = 'field_map' and form_edition = 'IMM 5257 (06-2018)'`);
+    rows = await list();
     // The same proposals on a form whose map is complete keep it from 'Complete' (IMM 5257 SCH1 here has unresolved fields; use any complete one if the sample has one).
     const full = rows.find((r) => r.field_map.kind === "complete");
     if (full) {
