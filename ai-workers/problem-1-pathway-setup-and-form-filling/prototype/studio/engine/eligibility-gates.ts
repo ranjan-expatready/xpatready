@@ -6,7 +6,12 @@ import { canonical } from "../../contracts/rules.ts";
 import { INVISIBLE, LONE } from "../contracts/runtime.ts";
 import { checkCondition } from "./validate.ts";
 
-export type Gate = { key: string; label: string; condition: Record<string, unknown> };
+/** `whenNotMet` (P-230 (1), BACKLOG R4): what a gate not met means, as data. Absent: Not eligible (the default).
+ *  "needs_review": the representative reviews it, so the result is Possibly eligible, never Not eligible (the background
+ *  question: rehabilitation, record suspension and a temporary resident permit exist). Stored only when set, so the
+ *  releases made before it keep their fingerprints. */
+export type WhenNotMet = "not_eligible" | "needs_review";
+export type Gate = { key: string; label: string; condition: Record<string, unknown>; whenNotMet?: "needs_review" };
 /** What the combination row stores (combination.eligibility). `disclaimer` null: the Sample default goes into the release. */
 export type StoredEligibility = { gates: Gate[]; judgement: string[]; disclaimer: string | null; version: number; by: string; at: string };
 /** What a release carries (snapshot.eligibility), frozen with it. */
@@ -99,7 +104,7 @@ function lineProblem(x: string, what: string, max: number): string | null {
 /** BR-2, BR-2a: the gates, judgement lines and disclaimer a save may store, or the refusals on their fields. A condition
  *  with no root subjectKind is stored with PERSON and only then checked (contracts/rules.ts validatePredicate needs a
  *  root kind); another root kind is refused. `fieldTypes`/`derived` are the library's live fields and derived keys. */
-export function checkGates(input: { gates: { key?: unknown; label?: unknown; condition?: unknown }[]; judgement: unknown[]; disclaimer?: unknown }, fieldTypes: Map<string, string>, derived: Set<string>): { gates: Gate[]; judgement: string[]; disclaimer: string | null; errors: FieldError[] } {
+export function checkGates(input: { gates: { key?: unknown; label?: unknown; condition?: unknown; whenNotMet?: unknown }[]; judgement: unknown[]; disclaimer?: unknown }, fieldTypes: Map<string, string>, derived: Set<string>): { gates: Gate[]; judgement: string[]; disclaimer: string | null; errors: FieldError[] } {
   const errors: FieldError[] = [];
   const seen = new Set<string>(), labels = new Map<string, number>();
   const gates: Gate[] = input.gates.map((g, i) => {
@@ -113,6 +118,9 @@ export function checkGates(input: { gates: { key?: unknown; label?: unknown; con
     else if (!label || blank(label)) errors.push({ field: `gates.${i}.label`, message: "Give the gate a label: what a person reads beside its result." });
     else if (labels.has(same(label))) errors.push({ field: `gates.${i}.label`, message: `Gate ${labels.get(same(label))! + 1} already reads "${label}": give each gate its own label, so a person can tell them apart.` });
     else labels.set(same(label), i);
+    // P-230 (1): "when not met" is data; only the two words are taken, and the default is not stored.
+    if (g.whenNotMet !== undefined && g.whenNotMet !== null && g.whenNotMet !== "not_eligible" && g.whenNotMet !== "needs_review") errors.push({ field: `gates.${i}.whenNotMet`, message: 'When a gate is not met it means "not_eligible" (the default) or "needs_review" (the representative reviews it).' });
+    const review = g.whenNotMet === "needs_review" ? { whenNotMet: "needs_review" as const } : {};
     const raw = g.condition;
     if (raw == null || typeof raw !== "object" || Array.isArray(raw) || !Object.keys(raw).length) {
       errors.push({ field: `gates.${i}.condition`, message: "A gate needs a rule the answers on file can settle. Anything only an officer can weigh goes under Officer's judgement." });
@@ -130,7 +138,7 @@ export function checkGates(input: { gates: { key?: unknown; label?: unknown; con
     const condition = { ...given, subjectKind: "PERSON" }; // BR-2a
     const ruleErrors = checkCondition(condition, fieldTypes, derived);
     for (const e of ruleErrors.length ? ruleErrors : valueProblems(condition, fieldTypes, derived)) errors.push({ field: `gates.${i}.condition`, message: `The rule ${e}.` });
-    return { key, label, condition };
+    return { key, label, condition, ...review };
   });
   const lines = new Map<string, number>();
   const judgement = input.judgement.map((l, i) => {
@@ -171,6 +179,8 @@ export function conditionWords(n: unknown): string {
     default: return x.op && x.field ? `${x.field} ${ops[x.op] ?? x.op} ${v(x.value)}` : "";
   }
 }
+/** P-230 (1): the change summary says when a gate not met only asks for the representative's review. */
+const whenWords = (g: Gate) => (g.whenNotMet === "needs_review" ? " — when not met: the representative reviews it (never Not eligible)" : "");
 const shortWords = (c: unknown) => { const w = conditionWords(c); return w.length > 300 ? `${w.slice(0, 297)}…` : w; };
 
 /** BR-1, BR-6: what a release carries, or nothing when no gate and no judgement line is set (so a combination without
@@ -178,7 +188,7 @@ const shortWords = (c: unknown) => { const w = conditionWords(c); return w.lengt
 export function snapshotEligibility(stored: unknown): SnapshotEligibility | undefined {
   const e = stored as Partial<StoredEligibility> | null | undefined;
   if (!e || (!(e.gates ?? []).length && !(e.judgement ?? []).length)) return undefined;
-  return { gates: (e.gates ?? []).map((g) => ({ key: g.key, label: g.label, condition: g.condition })), judgement: [...(e.judgement ?? [])], disclaimer: e.disclaimer ?? DEFAULT_DISCLAIMER };
+  return { gates: (e.gates ?? []).map((g) => ({ key: g.key, label: g.label, condition: g.condition, ...(g.whenNotMet === "needs_review" ? { whenNotMet: g.whenNotMet } : {}) })), judgement: [...(e.judgement ?? [])], disclaimer: e.disclaimer ?? DEFAULT_DISCLAIMER };
 }
 
 /** The facts a set of gates reads, in gate order, once each. */
@@ -223,12 +233,13 @@ export function eligibilityChanges(prev: SnapshotEligibility | undefined, next: 
   const a = new Map((prev?.gates ?? []).map((g) => [g.key, g])), b = new Map((next?.gates ?? []).map((g) => [g.key, g]));
   for (const [k, g] of b) {
     const was = a.get(k);
-    if (!was) { line(k, "added", `Gate: ${g.label} — rule: ${shortWords(g.condition)}`); continue; }
+    if (!was) { line(k, "added", `Gate: ${g.label} — rule: ${shortWords(g.condition)}${whenWords(g)}`); continue; }
     if (canonical(was as never) === canonical(g as never)) continue;
     // Review minor 7 and break report M1: the SME sees the old label and, when the rule changed, the rule in words with
     // its values, before and after.
     const rule = canonical(was.condition as never) !== canonical(g.condition as never);
-    line(k, "changed", `Gate: ${was.label === g.label ? g.label : `${was.label} → ${g.label}`}${rule ? ` (rule changed: ${shortWords(g.condition)}; was: ${shortWords(was.condition)})` : ""}`);
+    const when = (was.whenNotMet ?? null) !== (g.whenNotMet ?? null);
+    line(k, "changed", `Gate: ${was.label === g.label ? g.label : `${was.label} → ${g.label}`}${rule ? ` (rule changed: ${shortWords(g.condition)}; was: ${shortWords(was.condition)})` : ""}${when ? ` (when not met: ${g.whenNotMet === "needs_review" ? "the representative reviews it" : "not eligible"}; was: ${was.whenNotMet === "needs_review" ? "the representative reviews it" : "not eligible"})` : ""}`);
   }
   // Break report m4: gate order is content (missing facts are listed in gate order), so a reorder is reviewed.
   const keptA = [...a.keys()].filter((k) => b.has(k)), keptB = [...b.keys()].filter((k) => a.has(k));
