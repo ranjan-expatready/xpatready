@@ -104,6 +104,11 @@ await main("Setup", "Visitor visa release 2 for the M3 path (Super Admin, M2)", 
       const acc = named.status === 202 ? await call("POST", "/review/proposals/decide", { ids: [named.body?.proposalId], action: "accept" }, REVIEWER) : named;
       typeKey = acc.body?.items?.[0]?.landedAs ?? "";
       ok(`S6 new document type proposed and accepted: ${q.name}`, named.status === 202 && acc.status === 201 && !!typeKey, [named.status, acc.status, named.body?.detail ?? acc.body?.detail]);
+      // The type's library ADD is credited to the person who accepted it (appliedBy, as for the facts in S6a), so a third
+      // person approves it; otherwise release 2 is refused for types waiting on To review (#573 CI, check_c69_page_browser).
+      const ch = typeKey ? sql(`select id from library_change where kind='document_type' and key='${typeKey}' and status='WAITING' limit 1`) : "";
+      const ap = ch ? await call("POST", `/library/changes/${ch}/approve`, {}, APPROVER) : { status: 0, body: null } as typeof r;
+      ok(`S6 new document type approved into the library by a third person: ${q.name}`, !!ch && ap.status < 300, ap.body?.detail ?? ap.body?.message ?? ap.status);
     }
     r = await call("POST", `/combinations/${vv}/requirements`, { documentTypeKey: typeKey, providedBy: "client", attachMode: q.mode, appliesToRoles: q.who, ...(q.condition ? { condition: q.condition, conditionPlain: q.plain } : {}), ...(q.cite ?? {}) }, AUTHOR);
     ok(`S6 document requirement: ${q.name} (${q.who})`, r.status === 201, r.body?.detail ?? r.status);
