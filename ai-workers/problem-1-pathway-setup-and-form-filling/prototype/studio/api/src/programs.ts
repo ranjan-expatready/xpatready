@@ -45,8 +45,6 @@ type SnapForm = { form_number: string; form_kind?: string | null; channel?: Chan
 
 type Row = {
   leaf: CatalogueLeaf; pathway: string; changes: number; errors: number; firstError: string | null; hasContent: boolean;
-  /** G2 (breaker M1): every blocking problem of the draft in words, for the shared release's refusal (never sent to a page). */
-  blocking?: { where: string; item: string; label: string | null; forms: string[]; message: string }[];
   searchText: string; docNames: string[];
   /** W1 setup checklist (slice A): the same for every viewer; forViewer adds the duty overlay after the cache. */
   setup: SetupChecklist;
@@ -233,7 +231,7 @@ export class Programs {
         changes,
         review: { stage: reviewStage(gates.get(c.id)), submittedBy: submittedBy.get(c.id) ?? null, authors: [] },
       };
-      rows.push({ pathway, changes, errors: errors.length, blocking: errors.map((e) => ({ where: e.where, item: e.item, label: (e as { label?: string }).label ?? null, forms: (e as { forms?: string[] }).forms ?? [], message: problemWords(e) })), firstError: errors[0] ? `${errors[0].where === "Tests" ? (errors[0] as { label?: string }).label || errors[0].item : errors[0].item}: ${errors[0].message}` : null, hasContent, docNames,
+      rows.push({ pathway, changes, errors: errors.length, firstError: errors[0] ? `${errors[0].where === "Tests" ? (errors[0] as { label?: string }).label || errors[0].item : errors[0].item}: ${errors[0].message}` : null, hasContent, docNames,
         setup: setupChecklistOf(input, `${c.id}|${key}`),
         searchText: [...path, ...forms.map((f) => f.code), ...docNames].join(" "),
         leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, filed: filedOf(snapForms), progress, counts: hasContent ? rowCounts(snapshot, participants) : null, status, statusText: retired ? "Retired" : status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
@@ -408,8 +406,16 @@ export class Programs {
       const shown = d.rows.slice(0, 5).map((r) => `${r.label}: ${r.why}`).join(" · ");
       // G2 (breaker M1; BR-8, shared with G1): the refusal lists every blocking item of every held row in errors[] (a
       // row held by its review step or by who releases says that, once).
-      const all = (await this.rows()).rows, byId = new Map(all.map((x) => [x.leaf.combinationId, x]));
-      const errors = d.rows.flatMap((r) => { const b = byId.get(r.combinationId)?.blocking ?? []; return (b.length ? b : [{ where: "Review", item: r.label, label: r.label, forms: [], message: `${r.label}: ${r.why}` }]).map((x) => ({ ...x, combination: r.label })); });
+      // Devin on #568: each held row's problems come from the same check Submit and Approve use (studio.problems), read
+      // only on this refusal path; a row held by its review step or by who releases says that reason too.
+      const workspaceId = await this.ws.id();
+      const errors: Record<string, unknown>[] = [];
+      for (const r of d.rows) {
+        const { snapshot } = await buildSnapshot(this.db, workspaceId, r.combinationId!, "draft");
+        const own = (await this.studio.problems(workspaceId, snapshot, r.combinationId!)).filter((p) => p.level === "error");
+        for (const p of own) errors.push({ combination: r.label, where: p.where, item: p.item, label: (p as { label?: string }).label ?? null, forms: (p as { forms?: string[] }).forms ?? [], message: problemWords(p) });
+        if (!own.length || !r.why || !own.some((p) => r.why!.includes(p.message))) errors.push({ combination: r.label, where: "Review", item: r.label, label: r.label, forms: [], message: `${r.label}: ${r.why}` });
+      }
       throw problem(409, "Every change is held back", `Nothing can be released yet. ${shown}${d.rows.length > 5 ? ` · and ${d.rows.length - 5} more (see Review and release)` : ""}`, { errors });
     }
     const out = await this.studio.releaseRows(actor, include.map((r) => r.combinationId!), d.library.map((l) => l.id));

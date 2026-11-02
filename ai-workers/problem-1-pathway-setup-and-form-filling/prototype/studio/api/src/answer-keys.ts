@@ -92,6 +92,16 @@ export class AnswerKeys {
     return inv!;
   }
   private inventoryOrNull(s: Snapshot, form: string, edition?: string | null): Inventory | null { return fieldListOf(s, form, edition)?.inv ?? null; }
+  /** G2 (Devin on #568, 3rd pass): the field list of the edition asked for, never another edition's: an edition the
+   *  combination has whose list is not recorded is refused in words (422); an edition it lacks, or none named, reads
+   *  the form's first map's list as before. */
+  private listFor(s: Snapshot, form: string, edition: string | null): Inventory {
+    const has = edition && (s.field_maps as { form_number: string; form_edition?: string; channel?: string }[]).some((m) => m.form_number === form && m.form_edition === edition && m.channel !== "ONLINE");
+    if (!has) return this.inventory(s, form);
+    const inv = this.inventoryOrNull(s, form, edition);
+    if (!inv) fail(`${form} (${edition})'s form field list is not recorded, so its map cannot be tested.`, HttpStatus.UNPROCESSABLE_ENTITY);
+    return inv!;
+  }
 
   // ------------------------------------------------------------------------------------------------ families (BR-1)
   async families() {
@@ -165,7 +175,7 @@ export class AnswerKeys {
     if (!pdfHas(s, ref)) fail(`${ref} has no PDF field map in this combination.`, HttpStatus.NOT_FOUND);
     // G2 (Devin on #568): ?edition= picks that edition's map and form field list (a combination may hold several).
     const ed = typeof edition === "string" && edition.trim() ? edition.trim() : null;
-    const out = keyBoxes(s, ref, this.inventoryOrNull(s, ref, ed) ?? this.inventory(s, ref), ed);
+    const out = keyBoxes(s, ref, this.listFor(s, ref, ed), ed);
     if (!out) fail(`${ref} has no PDF field map of the edition ${ed} in this combination.`, HttpStatus.NOT_FOUND);
     return out!;
   }
@@ -216,7 +226,7 @@ export class AnswerKeys {
     const f = await this.family(b.family_id as string);
     const s = await this.draft(c.workspaceId, c.id);
     // Break m2: a map key needs the form's field list (it says which boxes a person fills), as a run does.
-    const { expected, errors } = checkExpected(s, kind, ref, familyOf(f), b.expected, kind === "field_map" && pdfHas(s, ref) ? this.inventoryOrNull(s, ref, editionIn(b.expected)) ?? this.inventory(s, ref) : null);
+    const { expected, errors } = checkExpected(s, kind, ref, familyOf(f), b.expected, kind === "field_map" && pdfHas(s, ref) ? this.listFor(s, ref, editionIn(b.expected)) : null);
     if (errors.length) invalid(errors);
     if (await this.db.answerKey.findUnique({ where: { familyId_combinationId_itemKind_itemRef: { familyId: f.id, combinationId, itemKind: kind, itemRef: ref } } })) invalid([{ field: "family_id", message: `The family "${f.familyKey}" already has a key for ${itemWords(kind, ref)} here: change that one.` }]);
     const k = await this.db.answerKey.create({ data: { workspaceId: c.workspaceId, familyId: f.id, combinationId, itemKind: kind, itemRef: ref, expected: expected as object, updatedBy: actor.id } });
@@ -233,7 +243,7 @@ export class AnswerKeys {
     const s = await this.draft(k.workspaceId, k.combinationId);
     // Review minor 1 (BR-6): a change that names no edition keeps the key's own; it never moves to the map's edition.
     const given = obj(b.expected), kept = k.itemKind === "field_map" && !(typeof given.edition === "string" && given.edition.trim()) ? { ...given, edition: (k.expected as MapExpected).edition } : b.expected;
-    const { expected, errors } = checkExpected(s, k.itemKind as ItemKind, k.itemRef, familyOf(k.family), kept, k.itemKind === "field_map" && pdfHas(s, k.itemRef) ? this.inventoryOrNull(s, k.itemRef, editionIn(kept)) ?? this.inventory(s, k.itemRef) : null);
+    const { expected, errors } = checkExpected(s, k.itemKind as ItemKind, k.itemRef, familyOf(k.family), kept, k.itemKind === "field_map" && pdfHas(s, k.itemRef) ? this.listFor(s, k.itemRef, editionIn(kept)) : null);
     if (errors.length) invalid(errors);
     if (b.version !== k.version) conflict(`${nameOf(k.updatedBy)} saved these expected values at ${k.updatedAt.toISOString().slice(11, 16)} UTC. Reload their version, then make your change again.`);
     const why = changeProblem(k.state, b.reason);

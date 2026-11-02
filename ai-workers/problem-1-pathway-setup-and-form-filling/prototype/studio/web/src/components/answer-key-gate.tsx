@@ -33,7 +33,7 @@ export function AnswerKeyBlock({ combinationId, v }: { combinationId: string; v:
         <div className="mt-2 overflow-x-auto">
           <Table dense head={["Item", "Family", "Expert", "Last run", "Result", ""]}>
             {v.items.flatMap((it) => (it.keys.length ? it.keys : [null]).map((k, i) => (
-              <tr key={`${it.item_kind}|${it.item_ref}|${k?.key_id ?? "none"}`} data-gate-item={`${it.item_kind}|${it.item_ref}`}>
+              <tr key={`${it.item_kind}|${it.item_ref}|${it.edition ?? ""}|${k?.key_id ?? "none"}`} data-gate-item={`${it.item_kind}|${it.item_ref}`}>
                 <td className="text-xs">{i === 0 ? <>{it.label}{it.edition ? <span className="text-text-muted"> · {it.edition}</span> : null}</> : null}</td>
                 <td className="text-xs">{k ? k.family : "—"}</td>
                 <td className="text-xs">{k ? (k.state === "SIGNED" ? <>Signed by {k.signed_by}{k.signed_at ? `, ${fmtWhen(k.signed_at)}` : ""}</> : "Not signed (Sample)") : "—"}

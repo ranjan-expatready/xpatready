@@ -80,6 +80,7 @@ const itTwo = testableItems(twoEd, rel, all).filter((i) => i.item_ref === "IMM 5
 ok("C5.5 BR-2 fail (Devin on #568): a second mapped edition added after the released one is its own item, new; the released edition stays unchanged", itTwo.length === 2 && itTwo.find((i) => i.edition === "IMM 5257 (01-2027)")?.changed === true && itTwo.find((i) => i.edition !== "IMM 5257 (01-2027)")?.changed === false, itTwo.map((i) => [i.edition, i.changed]));
 const oldKey = key("SIGNED", "PASSED", { item_ref: "IMM 5257", edition: itTwo.find((i) => !i.changed)?.edition ?? null });
 const gTwo = answerKeyGate(itTwo, [oldKey], real);
+ok("C5.5 (round-2 review m1): the new edition's line names the key that exists for the old edition and why it does not count", gTwo.problems.some((p) => /A key for IMM 5257 \(09-2023\) does not count for IMM 5257 \(01-2027\)/.test(p.message)), gTwo.problems.map((p) => p.message));
 ok("C5.5 BR-4 fail (SA-1B-296 r5): a signed passing key for the old edition does not pass the new edition (E7 names it)", gTwo.items.find((i) => i.edition === "IMM 5257 (01-2027)")?.result === "no_test" && gTwo.items.find((i) => i.edition !== "IMM 5257 (01-2027)")?.result === "passed" && gTwo.problems.some((p) => p.level === "error" && /no answer-key test/.test(p.message)), gTwo.items.map((i) => [i.edition, i.result]));
 const kbNew = keyBoxes(twoEd, "IMM 5257", inv5257, "IMM 5257 (01-2027)"), kbNone = keyBoxes(twoEd, "IMM 5257", inv5257, "IMM 5257 (01-2099)");
 ok("C5.5 (Devin on #568, 2nd pass): the Expected editor's boxes come from the edition asked for; an edition the combination lacks gives none", kbNew?.edition === "IMM 5257 (01-2027)" && kbNone === null);
@@ -190,6 +191,12 @@ ok("C5.5 BR-6 fail (Devin on #568): a key added after judging (the judged set is
 ok("C5.5 BR-6 fail: a key at another version or state than judged is refused", !(await inTx(judged.map((x) => ({ ...x, version: x.version + 1 })))) && !(await inTx(judged.map((x) => ({ ...x, state: x.state === "SIGNED" ? "DRAFT" : "SIGNED" })))));
 ok("C5.5 BR-9: the release is a Demo release on the Releases list (G3)", (await call("GET", `/releases?combination=${vv}`, undefined, APPROVER)).body.find((x: { version: number }) => x.version === r.body.version)?.demo === true);
 
+// Reviewer m2: Approve on a draft that is not submitted (the cheap refusal) runs no answer-key test.
+await touch(vv);
+const n0 = runs();
+r = await call("POST", `/combinations/${vv}/approve`, undefined, APPROVER);
+ok("C5.5 (reviewer m2): Approve on a draft not submitted is refused before any key runs", r.status === 409 && runs() === n0, { status: r.status, runs: runs() - n0, detail: r.body?.detail });
+
 // A failing key refuses even a Demo release (Q3), naming the value
 const wrong: MapExpected = clone(e1); const FN = `${P}Page1[0].PersonalDetails[0].Name[0].FamilyName[0]`; wrong.people.mother[FN] = "NOT-THE-NAME";
 let cur = (await call("GET", `/answer-keys/${kid}`, undefined, AUTHOR)).body;
@@ -215,6 +222,7 @@ ok("C5.5 setup: after Submit the signed key is changed (back to Draft)", r.statu
 v = await view(vv);
 ok("C5.5 BR-5 fail (challenge m3): once submitted, the key not run on this draft is an error on Review", tests(v).some((p) => p.level === "error" && p.label === "IMM 5257 field map" && /run it on Tests/.test(p.message)), tests(v));
 const shared = (await call("GET", "/draft", undefined, APPROVER)).body;
+ok("C5.5 (reviewer m3): the held reason names the item by its label, never its bare form number", /^IMM 5257 field map: /.test(shared.rows.find((x: { combinationId: string }) => x.combinationId === vv)?.why ?? ""), shared.rows.find((x: { combinationId: string }) => x.combinationId === vv)?.why);
 ok("C5.5 BR-5 (m3): the shared Release page holds the Visitor visa with the reason", shared.rows.find((x: { combinationId: string }) => x.combinationId === vv)?.held === true && /IMM 5257/.test(shared.rows.find((x: { combinationId: string }) => x.combinationId === vv)?.why ?? ""), shared.rows.find((x: { combinationId: string }) => x.combinationId === vv));
 const a1 = runs();
 r = await call("POST", `/combinations/${vv}/approve`, undefined, APPROVER);

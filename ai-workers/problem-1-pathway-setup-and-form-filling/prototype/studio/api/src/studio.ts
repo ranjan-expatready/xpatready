@@ -26,6 +26,8 @@ import type { Problem } from "../../engine/validate.ts";
 /** G2 (C5.5, BR-8; shared with G1 BR-8): a refusal carries every blocking problem in `errors[]`, each in words; `detail`
  *  (and `message`, read by older callers) keeps the sentence the screens and checks already show. */
 /** G2 BR-9: the keys a release rests on, frozen in its summary (only when the gate judged it). */
+/** G2: a gate that adds no line, for judging the rest of a draft before its tests run (reviewer m2). */
+const NO_KEY_GATE: KeyGate = { demo: false, judged: false, items: [], problems: [], evidence: [], keys: [] };
 const keyEvidence = (g: KeyGate) => (g.judged ? { answer_keys: g.evidence } : {});
 const staleKeys = (label: string): never => { throw new HttpException({ type: "https://expatready.local/problems/stale", title: "Changed by someone else", status: 409, statusCode: 409, detail: `Release refused: an answer-key test of "${label}" was changed or signed a moment ago. Open Review and release again.`, message: `Release refused: an answer-key test of "${label}" was changed or signed a moment ago. Open Review and release again.` }, HttpStatus.CONFLICT); };
 /** G2 BR-9 (challenge m7): a key's expected values changed since the last release named it (another key version). */
@@ -914,24 +916,27 @@ export class Studio {
     const { snapshot, sha256 } = await buildSnapshot(this.db, c.workspaceId, id, "draft");
     // Re-checked at approval, not only at submission: a row that has since fallen above a full combination, or a draft
     // that now has errors, is not released.
-    // The same review gate as the shared Release page (QA-1, review should 2). G2 (reviewer m2): the cheap refusals come
-    // first, so a draft refused for them runs no answer-key test.
+    // G2 (reviewer m2; check_f8_empty_release): the draft's own problems first, as before, without the answer-key lines
+    // (they are judged after the tests run, below); then the review and self-approval refusals; only then the tests run.
+    const own = (await this.problems(c.workspaceId, snapshot, id, NO_KEY_GATE)).filter((p) => p.level === "error");
+    if (own.length) refuse(`Release refused: ${own.length} problem${own.length > 1 ? "s" : ""} (${problemWords(own[0])})`, own, HttpStatus.CONFLICT);
+    // The same review gate as the shared Release page (QA-1, review should 2).
     const gate = await this.releaseGate(id, sha256);
     if (!gate.ok) { await this.audit.log(c.workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: ${gate.why}`); fail(`Release refused: ${gate.why}`, HttpStatus.CONFLICT); }
     // A new shared field this draft uses is approved by a second person first (Screen 02 slice 2, B1).
     const waiting = await unapprovedAdds(this.db, c.workspaceId, itemsOf(snapshot));
     if (waiting.length) fail(`Release refused: ${unapprovedWhy(waiting)}.`, HttpStatus.CONFLICT);
-    // G2 BR-6: the tests run again at release, on this exact draft, before it is judged.
-    await runKeys(this.db, this.audit, actor, c, snapshot, sha256);
-    const keyGate = await keyGateOf(this.db, id, snapshot, sha256);
-    const blocking = (await this.problems(c.workspaceId, snapshot, id, keyGate)).filter((p) => p.level === "error");
-    if (blocking.length) refuse(`Release refused: ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${problemWords(blocking[0])})`, blocking, HttpStatus.CONFLICT);
     const sub = (gate as { sub: ReviewSubmission }).sub;
     const authors = await this.draftAuthors(id, snapshot, c.workspaceId);
     for (const author of authors) {
       const check = canRelease({ author: { user_id: author, role: "content_publisher" }, submitter: { user_id: sub.submittedBy, role: "content_publisher" }, approver: { user_id: actor.id, role: "content_publisher" }, configuration_sha256: sha256 }, sub.draftSha256);
       if (!check.ok) { await this.audit.log(c.workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: ${check.reason}`); fail(`Release refused: ${check.reason.replace("self-approval refused: approver is the author", "you changed this draft, so a different person releases it (BR-14)").replace("self-approval refused: approver is the submitter", "you submitted it, so a different person releases it (BR-14)")}.`, HttpStatus.CONFLICT); }
     }
+    // G2 BR-6: the tests run again at release, on this exact draft, before it is judged (after the review and self-approval refusals: round-2 review m4).
+    await runKeys(this.db, this.audit, actor, c, snapshot, sha256);
+    const keyGate = await keyGateOf(this.db, id, snapshot, sha256);
+    const blocking = (await this.problems(c.workspaceId, snapshot, id, keyGate)).filter((p) => p.level === "error");
+    if (blocking.length) refuse(`Release refused: ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${problemWords(blocking[0])})`, blocking, HttpStatus.CONFLICT);
     const changes = sub.changeSummary as any[];
     const release = await this.db.$transaction(async (tx) => {
       if (!(await keysUnchanged(tx, id, keyGate.keys))) staleKeys(c.label); // G2 BR-6 (challenge m8)
@@ -972,6 +977,9 @@ export class Studio {
     for (const id of ids) {
       const c = await this.db.combination.findUniqueOrThrow({ where: { id }, include: { program: true } });
       const { snapshot, sha256 } = await buildSnapshot(this.db, workspaceId, id, "draft");
+      // G2 (reviewer m2): the draft's own problems first, without the answer-key lines; the tests run after the cheap refusals.
+      const own = (await this.problems(workspaceId, snapshot, id, NO_KEY_GATE)).filter((p) => p.level === "error");
+      if (own.length) refuse(`Release refused: "${c.label}" has ${own.length} problem${own.length > 1 ? "s" : ""} (${problemWords(own[0])})`, own, HttpStatus.CONFLICT);
       const gate = await this.releaseGate(id, sha256);
       if (!gate.ok) { await this.audit.log(workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: "${c.label}": ${gate.why}`); fail(`Release refused: "${c.label}": ${gate.why}`, HttpStatus.CONFLICT); }
       const waiting = await unapprovedAdds(this.db, workspaceId, itemsOf(snapshot));

@@ -50,7 +50,10 @@ export function answerKeyGate(items: GateItem[], keys: GateKey[], o: { demo: boo
     const v = (result: ItemResult): ItemVerdict => ({ ...it, gated, result, keys: mine });
     if (!gated) { say("warning", it, "released before the answer-key gate; untested."); return v("untested_released"); }
     if (!it.testable) { say(sample, it, "cannot be tested: its form field list is not recorded."); return v("cannot_test"); }
-    if (!mine.length) { say(sample, it, o.demo ? "no answer-key test: allowed only in a Demo release." : "no answer-key test. Write a test family's expected values on Tests; the immigration expert signs them."); return v("no_test"); }
+    // Round-2 review m1: a key written for another edition of the form is named, so Tests and this line agree.
+    const other = it.item_kind === "field_map" ? keys.filter((k) => k.item_kind === "field_map" && k.item_ref === it.item_ref && k.edition !== it.edition) : [];
+    const elsewhere = other.length ? ` A key for ${[...new Set(other.map((k) => k.edition ?? "another edition"))].join(", ")} does not count for ${it.edition}: one edition proves nothing about another.` : "";
+    if (!mine.length) { say(sample, it, (o.demo ? "no answer-key test: allowed only in a Demo release." : "no answer-key test. Write a test family's expected values on Tests; the immigration expert signs them.") + elsewhere); return v("no_test"); }
     const failed = mine.filter((k) => k.run.state === "FAILED"), notRun = mine.filter((k) => k.run.state === "NOT_RUN"), signed = mine.filter((k) => k.state === "SIGNED");
     // A failing key refuses every release, a Demo release too (Q3): a test has shown the item wrong.
     for (const k of failed) say("error", it, k.run.passed + k.run.failed === 0 ? `${keyWords(k)} failed: it tests no value. Give the expected values on Tests.` : `${keyWords(k)} failed: ${k.run.failed} of ${k.run.passed + k.run.failed} values.${k.run.first_failure ? ` ${k.run.first_failure}` : ""}`);

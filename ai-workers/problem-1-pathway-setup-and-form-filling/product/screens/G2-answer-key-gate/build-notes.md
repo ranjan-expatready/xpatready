@@ -69,6 +69,19 @@ Built to concept v2 as approved (Q1 error, Q2 new or changed plus every item wit
       * G3's chip shows in a non-demo workspace;
       * the scale was measured outside the server (about 10 ms per changed combination with 6 maps).
 
+14. **Devin, 3rd and 4th passes (fixed):**
+    * the boxes, create and update calls never borrow another edition's form field list;
+    * the shared release's `errors[]` comes from `studio.problems()`, the same check Submit and Approve use.
+15. **Round-2 review (fixed):**
+    * m1: the line for an edition with no key names the key that exists for another edition;
+    * m2 and m3 now have tests that fail without the fix;
+    * m4: Approve runs the keys after the self-approval check;
+    * the block's row key now includes the edition.
+16. **The first CI run that finished (dbbb8d7a, shard 2) caught `check_f8_empty_release`:** the m2 reorder had changed Approve's wording on an empty combination.
+    * Approve and release now judge the draft's own problems first, as before but without the answer-key lines.
+    * Then come the review and self-approval refusals; only then do the tests run and the full judgement follow.
+    * F8 is back to 12/12. The other 55 suites of that shard passed; shards 1, 3 and 4 were cancelled when shard 2 failed.
+
 ## Checks
 * `check_g2_answer_key_gate.ts` 59/59
 * `check_g2_answer_key_gate_firm.ts` 13/13
