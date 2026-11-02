@@ -180,3 +180,7 @@ Journey: the change is server-only with no screen change; the round-4 journey sc
 No open Blocker, Major or minor.
 
 **Verdict: Approve** (aae5e81a)
+
+## Merge 21175a41
+Merge 21175a41 (origin/main 0dbcbd84 into C3.6): the only change against aae5e81a in C3.6 files is api/src/proposals.ts LANDERS.field, which keeps #427's drafted-field key (proposed / draftedKey / proposedName, plus its field-draft-items.ts import) and then C3.6's values check, ruleValues re-check, landAnswerList and answerListKey into landField, unchanged; every other C3.6 file is byte-identical to aae5e81a.
+**Verdict: Approve** (21175a41)
