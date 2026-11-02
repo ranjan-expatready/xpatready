@@ -66,3 +66,26 @@ The run file is genuine and consistent, the ledger and the cost limits match, an
 * **Minors:** m1 (229 of 314 unresolved: honest follow-up), m2 (state 14 forms and 476 proposals), m3 (person choices for a human), m4 (launcher path, carried), m5 (my runs dirtied the checkout).
 
 A re-review needs only: the changed test file, `check_c10_1_configured.ts` 27/27, and green CI on the new head. The run file, stub pass, canary digest and the two other test edits need no change.
+
+---
+
+## Re-review on 9560dd3d
+
+* **Change read:** `git diff 8c39c2a0..9560dd3d`: two files. The review file (added unchanged) and `check_c10_1_configured.ts` (one assertion plus a comment). No run file, stub pass, canary digest, product code or other test changed.
+* **Cost: US$0.** No `--live`, no `*_LIVE`, no model call, port 4461 and `rv5532` only; the shared ledger stayed at 180,011 bytes. I ran the committed test from `9560dd3d` through an untracked temporary copy of the file (deleted afterwards), against my isolated copy of `rv5532`, which was stopped afterwards. The app code on my copy equals the app code at `9560dd3d` (the diff touches no app file).
+
+| Re-check | Result |
+|---|---|
+| M1: row 3 assertion | Now `jobs === 14 && status === "done" && why === null && shows.startsWith(`${jobs} saved`)`. It states the new fact exactly. |
+| M1: fail side kept | A saved run lost or mismatched gives `jobs` 13, fails `jobs === 14`, and the row turns "partial" with the form named, which also fails `status`/`why`. The assertion is not satisfied by an empty list alone. |
+| M1: result | `check_c10_1_configured.ts` **27 passed, 0 failed** (row 3 PASS: `status "done"`, `why` null, "14 saved AI answers replayed (US$0)"). Rows 4 and 12 still pass. |
+| Header line 5 ("IMM 5257 waits for the paid run") | Still true: it is row 12's sentence, which the test still checks. Agreed to leave it. |
+| Rest of the change | Unchanged from my first review: the run file, stub pass, digest and the two other test edits need no change. |
+
+The Minors m1 to m5 stand as written (m1: 229 of 314 unresolved is an honest follow-up; m5: do not commit what my first test runs left in the checkout). CI on the new head is not visible to me; approval holds only with it green.
+
+**Verdict on 9560dd3d: Approve**
+
+* **Blockers:** none.
+* **Majors:** none (M1 closed).
+* **Minors:** m1 to m5 as above, none blocks.
