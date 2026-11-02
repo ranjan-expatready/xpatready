@@ -56,13 +56,15 @@ ok("R2 fail: a role the table gives no filing (the spouse here) files nothing an
 ok("R2 fail: a combination not in the table is not derived and says so; an inherited name is never a combination", deriveFilings("fs.spouse", family(1, 0)).derived === false && /not derived yet/.test((deriveFilings("fs.spouse", family(1, 0)) as { why: string }).why) && rulesFrom(FEE_TABLE, "constructor") === undefined && rulesFrom(FEE_TABLE, "__proto__") === undefined);
 ok("R2: spouse and PNP fee lines are in the table, cited, ready for their combinations (data edit)", ["spouse_sponsorship", "spouse_dependent_child", "pr_adult", "pr_dependent_child"].every((k) => FEE_TABLE.lines.some((l) => l.key === k && l.per_person_cad > 0)));
 
-// ── Devin on #455: per application counts applications; an uncapped line names no cap; the basis names its own table
+// ── outside check on #455: per application counts applications; an uncapped line names no cap; the basis names its own table
 const perApp: FeeTable = { ...FEE_TABLE, as_of: "2027-01-01", read: "2027-01-02", lines: [...FEE_TABLE.lines, { key: "app_fee", label: "Application fee", status: "Researched (test, 2027-01-02): may change", basis: "per_application", per_person_cad: 100, source: FEE_TABLE.lines[0].source }],
   combinations: { "t.app": { label: "Test", lines: ["app_fee"], modes: { principal: "files_own", child: "on_principal" } } } };
 const app = viaData("t.app", family(1, 1), perApp) as Derived;
-ok("R2 (Devin #455 r1) fail: a child on the principal's application is not charged the per-application fee again: CAD 100 once", total(app, "app_fee") === 100_00 && app.fees.filter((f) => f.line === "app_fee" && f.amount_cents > 0).length === 1, app.fees.map((f) => `${f.payer}:${f.amount_cents}`));
-ok("R2 (Devin #455 r2) fail: an uncapped line's words name no family maximum", app.groups[0].totals.every((t) => !/the family maximum|CAD 0\b|starts at/.test(t.why)) && /no family maximum/.test(app.groups[0].totals[0].why), app.groups[0].totals.map((t) => t.why));
-ok("R2 (Devin #455 r3) fail: the basis names the table that priced the fees (as of 2027-01-01), not the shipped one", /as of 2027-01-01, read 2027-01-02/.test(app.basis) && /as of 2026-09-21/.test((deriveFilings("vv.single", family(1, 0)) as Derived).basis), app.basis.slice(0, 120));
+ok("R2 (outside check #455 r1) fail: a child on the principal's application is not charged the per-application fee again: CAD 100 once", total(app, "app_fee") === 100_00 && app.fees.filter((f) => f.line === "app_fee" && f.amount_cents > 0).length === 1, app.fees.map((f) => `${f.payer}:${f.amount_cents}`));
+const split = deriveFilings("t.app", family(1, 1), (k) => rulesFrom(perApp, k), { groupOf: (subj) => (subj === "C0" ? "group-split" : "group-family") }) as Derived;
+ok("R2 (outside check #455 r4) fail: a child's filing split out of the principal's group pays its own per-application fee (CAD 100 + CAD 100)", total(split, "app_fee") === 200_00 && split.groups.every((g) => g.totals.some((t) => t.line === "app_fee" && t.total_cents === 100_00)), split.groups.map((g) => g.totals.map((t) => t.total_cents)));
+ok("R2 (outside check #455 r2) fail: an uncapped line's words name no family maximum", app.groups[0].totals.every((t) => !/the family maximum|CAD 0\b|starts at/.test(t.why)) && /no family maximum/.test(app.groups[0].totals[0].why), app.groups[0].totals.map((t) => t.why));
+ok("R2 (outside check #455 r3) fail: the basis names the table that priced the fees (as of 2027-01-01), not the shipped one", /as of 2027-01-01, read 2027-01-02/.test(app.basis) && /as of 2026-09-21/.test((deriveFilings("vv.single", family(1, 0)) as Derived).basis), app.basis.slice(0, 120));
 
 // ── The checklist's combinations are data
 ok("R2: the checklist is worked out for the combinations the table marks (Visitor visa today)", DERIVED_FOR.has("vv.single"));

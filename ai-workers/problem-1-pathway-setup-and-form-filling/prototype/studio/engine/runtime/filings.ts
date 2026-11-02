@@ -40,7 +40,7 @@ export type AgeExempt = { underAge: number; overAge: number; source: FeeSource }
  *  family maximum the cap never applies (familyFrom is then beyond any household). */
 export type FeeRule = { key: string; label: string; basis?: FeeBasis; perPersonCents: number; familyMaxCents: number; familyFrom: number; source: FeeSource; exempt?: AgeExempt; roles?: string[] };
 type Rules = { label: string; modes: Map<string, CaseFiling["mode"]>; fees: FeeRule[]; groupWhy?: string;
-  /** The table these rules were priced from (Devin on #455: the basis names that table, never the shipped one). */
+  /** The table these rules were priced from (outside check on #455: the basis names that table, never the shipped one). */
   table?: { as_of: string; read: string } };
 /** What the case adds (C6.12, the stored prepare view): each person's age in whole years (null: no date of birth yet),
  *  the filing modes the release says per role (M3-0; a role it leaves out falls back to the table below), and the
@@ -95,7 +95,7 @@ export function familyFee(rule: FeeRule, people: number): SubmissionGroup["total
   const listCents = rule.perPersonCents * people;
   const capApplied = people >= rule.familyFrom && listCents > rule.familyMaxCents;
   const totalCents = capApplied ? rule.familyMaxCents : listCents;
-  // P-247: a line on any basis but family_maximum has no cap, so its words never name one (Devin on #455).
+  // P-247: a line on any basis but family_maximum has no cap, so its words never name one (outside check on #455).
   const capped = !rule.basis || rule.basis === "family_maximum";
   const why = !capped
     ? `${people} × ${cad(rule.perPersonCents)} = ${cad(listCents)} (${rule.basis === "per_application" ? "per application" : "per person"}; no family maximum).`
@@ -140,8 +140,10 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
     const totals: SubmissionGroup["totals"] = [];
     for (const rule of rules.fees) {
       // A per_application line is charged once per application: a filing on the principal's application (on_principal)
-      // is covered by it, never charged twice (Devin on #455).
-      const mine = all.filter((f) => (!rule.roles || rule.roles.includes(f.applicants[0].role)) && !(rule.basis === "per_application" && f.mode === "on_principal"));
+      // is covered by it when that application is in the same group, never charged twice; split out alone, it pays its
+      // own (outside check on #455).
+      const ownInGroup = all.some((f) => f.mode !== "on_principal");
+      const mine = all.filter((f) => (!rule.roles || rule.roles.includes(f.applicants[0].role)) && !(rule.basis === "per_application" && f.mode === "on_principal" && ownInGroup));
       if (!mine.length) continue;
       const check = new Map(mine.map((f) => [f.id, ageCheck(rule, opts.ages?.get(f.applicants[0].subject))]));
       const paying = mine.filter((f) => { const c = check.get(f.id)!; return "pays" in c && c.pays; });
