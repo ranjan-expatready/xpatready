@@ -1,6 +1,6 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-02 05:15 UTC (**hand-over**: the Lead of 1–2 Nov reached 70% context) · milestone: **M2 — Super Admin configuration**, plus the Visitor visa M3 path · how we work: `WAY-OF-WORKING.md` (P-224, amended by P-228 and P-231) · decisions to read word for word: DECISIONS P-223 … P-233 · reports: `reports/night-2026-11-01-02.md` (v2), `reports/plan-24h-2026-11-02.md` · dashboard: https://claude.ai/artifact/R4q1suvZsTqJ29QToJxdao (snapshot 04:30 UTC)
+updated: 2026-11-02 05:35 UTC (**new Lead "LeadX" took over at 05:20 UTC**; every live session adopted by message; P-234 pace: full speed to 93% of the weekly plan, then STOP and hand over) · milestone: **M2 — Super Admin configuration**, plus the Visitor visa M3 path · how we work: `WAY-OF-WORKING.md` (P-224, amended by P-228 and P-231) · decisions to read word for word: DECISIONS P-223 … P-234 · reports: `reports/night-2026-11-01-02.md` (v2), `reports/plan-24h-2026-11-02.md` · dashboard: https://claude.ai/artifact/R4q1suvZsTqJ29QToJxdao (snapshot 04:30 UTC)
 
 ## Start here (fresh `/lead`)
 0. **First job (founder, 2 Nov): clean up and take over every session of the old Lead.** List them all (`ListAgents` for cloud and local, `list_sessions {"linked": true}`). For each: is it working, does it have an open PR, unpushed work or a Handover? **Dead, finished or not responding** → make sure its work is pushed and its PR has a Handover, then close it (local: `archive_session`; cloud: give the founder the exact titles to archive on claude.ai/code, one at a time). **Alive with work left** → message it that you are its new Lead (your session name) and restate its queue from the table below; from then on it reports to you. Nothing stays under the old Lead. Already known: vv-runtime and runtime-2 (cloud) stopped near 90% → founder archives; evidence-c72 (local) is finished, but archive it only after paid-runner-2 is done (they share a worktree); paid-runner-2 (local) is ready, waiting for a Go per run on #417 (launcher route only).
@@ -49,6 +49,7 @@ IMM 5257 field map: **verified for Saved at US$0** (21 Oct run reused; after #42
 | A11 | Finish before starting (P-231) | in force; C8.1, C8.2 paused |
 | A12 | Fast-track (forms-3, forms-4, C11.12 board) | done |
 | A13 | Visual progress report for the founder's founder | dashboard published (private; share from its menu) |
+| A15 | Weekly plan: full speed until 93%, then keep 7% for the last hand-over and all updates (P-234) | in force; Lead sends "STOP: 93%" |
 | A14 | Close finished sessions, tidy the sidebar | local ones archived by the old Lead; cloud ones need the founder on claude.ai/code |
 
 ## Lessons of the day (lead skill "Not drifting")
