@@ -1043,12 +1043,13 @@ export class Studio {
         return !!id && own.has(id);
       }).slice(0, limit);
     }
-    return kept.map((e) => ({ ...e, who: peopleNames(e.actor) }));
+    // C8.2 (breaker M1 on #553): government identifiers never travel in the feed; the audit row keeps them (AG-7-95).
+    return kept.map((e) => ({ ...e, ...(e.entity === "application number" ? { detail: null } : {}), who: peopleNames(e.actor) }));
   }
 }
 
 /** The audit entities written by case work (runtime.ts, fill-case.ts, team.ts). */
-const CASE_ENTITIES = new Set(["case", "person", "case fact", "row", "group", "section", "form copy", "item", "submission group"]);
+const CASE_ENTITIES = new Set(["case", "person", "case fact", "row", "group", "section", "form copy", "item", "submission group", "application number" /* C8.2 */]);
 
 /** QA-74: the simulated people's names for stored ids (one id, or several joined by commas), never "user-A" on screen. */
 const PEOPLE: readonly { id: string; name: string }[] = [...ACTORS, ...RUNTIME_ACTORS];
