@@ -233,3 +233,43 @@ Scope: BR-7…BR-14, BR-17, BR-18, the §6 run routes and R4 (P-230 (1)). Diff `
 **Journey score:** 8/10 (`journey-test-reviewer-2026-11-02-part2.md`). Correct data and error recovery are ½ because of M1 and M2; the UI criteria are ½ until part 3.
 
 **Verdict: Block** on fd26c492. Fix M1 and M2, each with its test. The minors can go in the same PR or follow.
+
+## Part 2 review round 2 (36163fad)
+Delta `fd26c492..36163fad`, one commit. Fresh isolated copy `rev_c69` on :4439 (never :4400); live AI off; US$0.
+
+**What I ran:**
+- `check_c69_runs.ts`: **75/75** on a fresh copy, then 72/72 on the same copy (the setup lines are skipped the second time). The 40-at-once race line passed both times.
+- `check_c69_gates.ts`: **87/87**. `check_vv_prepare_api.ts`: **32/32**. Each ran on a fresh copy.
+- `acceptance/C6.9.test.ts`: **12/15**. C6.9-11…13 fail with 404, which is part 3.
+- `graph.mjs --check`: exit 0.
+
+**Round 1 findings re-checked:**
+- **M1, fixed.**
+  - `engine/runtime/eligibility.ts` `aboutOf` now reads the person's own answer, else the case's, whatever the prefix. `inputsOf` and `nowOf` read the same way.
+  - My repro `scratchpad/probe/pure.mts` now gives `LIKELY_ELIGIBLE`, `state: met`, `inputs[0].about: "case"`, value `2020-01-01`.
+  - There are 4 new lines (pass, and fail on out of date). The out-of-date line fails against the old `nowOf`.
+- **M2, fixed.**
+  - The count and the insert run in one `$transaction` under `pg_advisory_xact_lock(hashtext('assessment:case:person'))`. The `reason` refusal is thrown inside it, so it rolls back.
+  - My 2-at-once probe now gives 400 + 201, with one MANUAL row.
+  - A heavier probe I wrote, `race100.mts`: 100 POSTs at once across 2 people, with and without reasons. Result: 35 × 201 and 65 × 400 (all on `reason`), **no 5xx**, and exactly 2 MANUAL rows, one per person.
+- **m1, fixed.** The audit check searches the summary and the detail for the answered values, and requires at least one audit row, so it cannot pass vacuously.
+- **m2, fixed.** A client reading a real run id gets 403 (tested; my probe agrees).
+- **m3, fixed.** 4 people × 10 runs: 40 rows are listed in under 300 ms.
+- **m4, fixed.** Concept §6 lists `reviewGates` and `whenNotMet`, and the PUT body has `whenNotMet?`. §8 row 10 is reworded for R4.
+
+**Breaker's fixes:**
+- **m1:** a gate not met now lists the facts it could not read, and `missingInputs` takes them from every gate. Tested for a `not_eligible` gate (Not eligible) and a `needs_review` gate (Possibly). A Met gate lists nothing.
+  - Side effect, checked: with `FAIL_BEATS_MISSING = false`, a failed gate with a fact missing inside it would now read Possibly eligible. That is closer to AG-3-13 ("all gate inputs are present"). The switch is `true`, so nothing changes today.
+- **m3:** after `PATCH applies:false`, the run reads `out_of_date: true, not_travelling: true`. A traveller is not marked. A person removed from the case is treated the same way.
+- **m4:** characters are counted with `[...x].length` (300 emoji pass, 301 are refused), and a reason needs a letter or a digit (`"—"` → 400). Unicode words still pass: my probe gave 201.
+
+**New minors (not blocking):**
+- **r2-1:** when both the person and the case have answered the same fact, `aboutOf` shows the person's value. `factsOf` (`render.ts:104`), which the verdict uses, takes whichever comes last in the Map. So `values` and `inputs` could show a value other than the one judged. It is rare: a fact is normally asked of one subject. Fix: pick the same subject in both.
+- **r2-2:** on breaker m2, left as a known limit and asked in the PR: a gate on a row fact compares row 0 only. That can give a false **Not met**, not only Not answered. For example, `eq` on row 0 fails while row 1 matches.
+  - Visitor visa has no such gate, and it is disclosed, so it does not block.
+  - The follow-up should refuse row-fact gates at release (part 1's check) rather than leave them.
+- **r2-3:** `not_travelling` is not in concept §6 "Assessment fields / ours".
+
+**Journey score:** 9/10. Correct data and error recovery go back to 1. Accessibility and visual quality stay ½ until the page (part 3). The journey report is unchanged since round 1; this note supersedes its score.
+
+**Verdict: Approve** on 36163fad. No Blocker or Major is open. The three minors can be follow-ups.
