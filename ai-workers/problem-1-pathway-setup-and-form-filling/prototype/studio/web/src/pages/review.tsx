@@ -49,7 +49,7 @@ export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: a
   // Review n1 / break m2: while the summary's count is unknown the list waits, so it never shows the library's items
   // beside "No unreleased changes" for a moment.
   const counting = changesCount === undefined;
-  const draftChanges: any[] = changesCount === 0 || counting ? [] : v.draft.changes;
+  const draftChanges = changesCount === 0 || counting ? [] : v.draft.changes;
   const changes: any[] = sub ? sub.changeSummary : draftChanges;
   const signed = new Map<string, any>((v.signoffs ?? []).map((s: any) => [s.itemRef, s]));
   const errors = v.draft.problems.filter((p: any) => p.level === "error"), warnings = v.draft.problems.filter((p: any) => p.level === "warning");
