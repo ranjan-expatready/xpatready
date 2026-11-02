@@ -140,6 +140,7 @@ const failing = { stub: { exit: 0, out: { ok: true } }, live: { exit: 1, err: "t
   await go(); await chip().click(); await settle(); await open();
   step("C4.7 S fail: Live greyed while the switch is off, with the reason", await dlg.locator('[data-pqr-mode="live"] input').isDisabled() && /not open[\s\S]*approved first/.test(await dlg.locator('[data-pqr-mode="live"]').innerText()));
   step("C4.7 S fail: neither way open: Nothing can start says why, and Draft is off and points to it", /Nothing can start/.test(await dlg.locator("[data-pqr-none]").innerText()) && await start().isDisabled() && (await start().getAttribute("aria-describedby")) === "pqr-none");
+  step("qa minor 1 (#506): when nothing can start, no way looks chosen and the button reads Draft", (await dlg.locator('[data-pqr-mode] input:checked').count()) === 0 && (await start().innerText()).trim() === "Draft", await start().innerText());
   await state("nothing-can-start");
   step("no page error or console error on the way", errs.length === 0, errs.join(" | "));
   await b.close();
