@@ -140,7 +140,8 @@ export class SourceRegister {
  *  source-backed combination. Returns how many entries it wrote. */
 export async function seedSampleSources(db: Db, combinationId: string): Promise<number> {
   const c = await db.combination.findUniqueOrThrow({ where: { id: combinationId } });
-  if (c.sourceBasis !== "ILLUSTRATIVE" || c.retiredAt) return 0; // never a source-backed or a retired combination (Devin on #587)
+  // Never a source-backed or a retired combination (Devin on #587), never outside the demo workspace (break m8).
+  if (c.sourceBasis !== "ILLUSTRATIVE" || c.retiredAt || !isDemoWorkspace()) return 0;
   const { snapshot } = await buildSnapshot(db, c.workspaceId, combinationId, "draft");
   const held = sourceProblems(numbersOf(snapshot), (snapshot.sources ?? []).map(entryOf)).filter((p) => p.state === "missing");
   if (!held.length) return 0;

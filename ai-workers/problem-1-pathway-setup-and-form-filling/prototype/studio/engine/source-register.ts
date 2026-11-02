@@ -119,11 +119,26 @@ function conditionNumbers(tree: unknown, dates: boolean): { address: string; val
       // types, so "18" on gte is a published number too; text on eq/neq stays an answer code.
       const numericText = ORDERED.has(x.op) && typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) && Number(v) !== 0 && !ISO_DATE.test(v.trim());
       const isNumber = (typeof v === "number" && Number.isFinite(v) && v !== 0) || numericText;
-      const isDate = dates && typeof v === "string" && ISO_DATE.test(v);
+      // Break B1 on #587: a date stored with a time or a trailing space ("2019-06-07T00:00:00Z", "2019-06-07 ") still
+      // decides the rule as that date, so it is the same published date (its canonical text is the ISO date).
+      const isDate = dates && typeof v === "string" && ISO_DATE.test(canonicalValue(v));
       if (isNumber || isDate) {
         const value = canonicalValue(v);
         out.push({ address: `${k}|${nth}`, value, words: numberWords(x.field, x.op, value, isDate), hint: `${path}.value` });
       }
+    }
+    // Break M1 on #587: each number (or date) in an "in" list is published as much as a gte's: "age in [18, 19, 20]"
+    // must not pass where "age ≥ 18" is held. Address: the list's own k, then the place in the list ("…|in|1.2").
+    if (x.field && x.op === "in" && Array.isArray(x.value)) {
+      const k = `${x.field}|in`, nth = (seen.get(k) ?? 0) + 1;
+      seen.set(k, nth);
+      x.value.forEach((v: unknown, i: number) => {
+        const isNumber = typeof v === "number" && Number.isFinite(v) && v !== 0;
+        const isDate = dates && typeof v === "string" && ISO_DATE.test(canonicalValue(v));
+        if (!isNumber && !isDate) return;
+        const value = canonicalValue(v);
+        out.push({ address: `${k}|${nth}.${i + 1}`, value, words: numberWords(x.field!, "eq", value, isDate), hint: `${path}.value[${i}]` });
+      });
     }
     if (Array.isArray(x.args)) x.args.forEach((a, i) => walk(a, `${path}.args[${i}]`));
     if (x.arg) walk(x.arg, `${path}.arg`);

@@ -27,13 +27,17 @@ const realDate = (x: string) => ISO.test(x) && !Number.isNaN(Date.parse(`${x}T00
 /** The official source: an https address, the words that state the number (≤ 300), the date read (today or earlier),
  *  an optional page note (≤ 200). */
 export const Cited = z.object({
-  url: z.string({ error: SOURCE_WORDS.url }).trim().refine((x) => /^https:\/\/[^\s/]+\.[^\s]+$/.test(x), SOURCE_WORDS.url),
+  // Break m4/m5 on #587: a real https address (it parses, its host has a name before and after a dot, no quotes or
+  // angle brackets), at most 2,000 characters.
+  url: z.string({ error: SOURCE_WORDS.url }).trim().refine((x) => x.length <= 2000 && /^https:\/\/[^\s"'<>]+$/.test(x) && (() => { try { const u = new URL(x); return u.protocol === "https:" && /^[^.]+(\.[^.]+)+$/.test(u.hostname); } catch { return false; } })(), SOURCE_WORDS.url),
   page: z.string({ error: SOURCE_WORDS.page }).trim().max(200, SOURCE_WORDS.page).nullish(),
-  quote: z.string({ error: SOURCE_WORDS.quote }).trim().min(1, SOURCE_WORDS.quote).refine((x) => [...x].length <= 300, SOURCE_WORDS.quote),
-  date: z.string({ error: SOURCE_WORDS.dateShape }).trim().refine(realDate, SOURCE_WORDS.dateShape).refine((x) => !realDate(x) || x <= today(), SOURCE_WORDS.date),
+  quote: z.string({ error: SOURCE_WORDS.quote }).trim().min(1, SOURCE_WORDS.quote).refine((x) => [...x].length <= 300 && /[\p{L}\p{N}]/u.test(x), SOURCE_WORDS.quote), // break m2: words, not only invisible marks
+  date: z.string({ error: SOURCE_WORDS.dateShape }).trim().refine(realDate, SOURCE_WORDS.dateShape).refine((x) => !realDate(x) || x <= today(), SOURCE_WORDS.date).refine((x) => !realDate(x) || x >= "1990-01-01", SOURCE_WORDS.dateShape), // break m3: never year 1
 });
 /** "None published – set by ExpatReady" with why (Decision 3: at least 10 characters). */
-export const NonePublished = z.object({ reason: z.string({ error: SOURCE_WORDS.reason }).trim().min(10, SOURCE_WORDS.reason) });
+// Break m1/m2/m5 on #587: ten characters as a person counts them (not UTF-16 units, as the database counts), at least
+// one letter or digit (not only invisible marks), at most 500 characters.
+export const NonePublished = z.object({ reason: z.string({ error: SOURCE_WORDS.reason }).trim().refine((x) => [...x].length >= 10 && [...x].length <= 500 && /[\p{L}\p{N}]/u.test(x), SOURCE_WORDS.reason) });
 
 /** PUT /combinations/:id/sources/:kind/:key. `version`: the entry's version as read (0 when it has none yet). */
 export const SourceEntryBody = z.object({

@@ -182,6 +182,18 @@ const realSnap = { combination: { source_basis: "SOURCE_BACKED" }, checks: [], s
 ok("C5.4 BR-10 fail (review m4 on #587): a frozen Sample source makes the release a Demo release", isDemoSnapshot({ ...realSnap, sources: [...realSnap.sources, { kind: "rule", key: "wp.family/R-05", address: "x|gte|1", value: "5", sample: true }] }) === true);
 ok("C5.4 BR-10 pass (review m4 on #587): cited and None-published sources leave a source-backed release real", isDemoSnapshot(realSnap) === false && isDemoSnapshot({ ...realSnap, sources: [{ ...realSnap.sources[0], cited: undefined, none_published: { reason: "IRCC publishes no limit" } }] }) === false);
 
+// Break B1 and M1 on #587: a date stored with a time or a trailing space is still the published date; the numbers in
+// an "in" list are published like a gte's (answer-code text in a list is not).
+const odd: WalkedSnapshot = { combination: { key: "t.odd" }, rules: [
+  { id: "R-D1", when: { op: "gte", field: "person.passport_issue_date", value: "2019-06-07T00:00:00Z" }, then: "Time on the date", for_whom: "principal" },
+  { id: "R-D2", when: { op: "lt", field: "person.passport_issue_date", value: "2019-06-07 " }, then: "Space after the date", for_whom: "principal" },
+  { id: "R-L1", when: { op: "in", field: "person.age_years", value: [18, 19, 0, 21] }, then: "Ages listed", for_whom: "principal" },
+  { id: "R-L2", when: { op: "in", field: "person.status", value: ["01", "02"] }, then: "Codes listed", for_whom: "principal" },
+] } as unknown as WalkedSnapshot;
+const on = publishedNumbers(odd), atO = (key: string) => on.filter((n) => n.key === `t.odd/${key}`);
+ok("C5.4 BR-1 fail (break B1 on #587): a date stored with a time, or a trailing space, is the same published date and is held without a source", atO("R-D1").length === 1 && atO("R-D1")[0].value === "2019-06-07" && atO("R-D2").length === 1 && atO("R-D2")[0].value === "2019-06-07" && sourceProblems([...atO("R-D1"), ...atO("R-D2")], []).length === 2, on.map((n) => `${n.key} ${n.address} ${n.value}`));
+ok("C5.4 BR-1 fail (break M1 on #587): each number in an \"in\" list is published (0 left out), addressed by its place; codes in a list are not", atO("R-L1").map((n) => `${n.address}=${n.value}`).join() === "person.age_years|in|1.1=18,person.age_years|in|1.2=19,person.age_years|in|1.4=21" && atO("R-L2").length === 0, atO("R-L1").map((n) => n.address));
+
 // ---------------------------------------------------------------- M1 kept outside validate(), pure
 const src = readFileSync(join(STUDIO, "engine", "source-register.ts"), "utf8");
 ok("C5.4 M1 pass: source-register.ts reads no file or database and only takes validate.ts's Problem type", !/node:fs|@prisma|fetch\(/.test(src) && !/^import \{[^}]*\} from "\.\/validate\.ts"/m.test(src) && /^import type \{ Change, Problem \} from "\.\/validate\.ts"/m.test(src));

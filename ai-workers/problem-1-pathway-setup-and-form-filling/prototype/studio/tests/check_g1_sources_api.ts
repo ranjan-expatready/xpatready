@@ -115,6 +115,17 @@ try {
   ok("C5.4 BR-3 fail (Devin on #587): a quote that states another number (21 for 30) is refused on its field, and nothing is stored", b.status === 400 && b.errors.some((e) => e.field === "cited.quote" && e.message === "These words do not state 30. Copy the words that state the number.") && (await sources(wp)).numbers.find((n: { key: string }) => n.key === "wp.family/RW_PASSPORT_EXPIRY_30").state === "missing", b);
   r = await put(wp, n30, { address: n30.address, value: 30, cited: { url: "https://www.canada.ca/x", quote: "Test data, not an official quote: within thirty days of expiry", date: "2026-10-19" }, version: 0 });
   ok("C5.4 BR-3 pass (Devin on #587): words that state the number in English (\"thirty days\") are accepted", r.status === 200 && r.body.state === "cited", r.body);
+  // Break m1–m5 on #587: each is a 400 on its field, never a 500 or a stored blank.
+  const n90b = (await sources(wp)).numbers.find((n: { key: string; state: string; value: string }) => n.state === "missing" && n.value === "90");
+  const bad90 = async (body: Record<string, unknown>) => { const x = await put(wp, n90b, { address: n90b.address, value: 90, version: 0, ...body }); return { status: x.status, fields: ((x.body.errors ?? []) as { field: string }[]).map((e) => e.field) }; };
+  const emoji = await bad90({ none_published: { reason: "😀😀😀😀😀" } });
+  const zwsp = await bad90({ none_published: { reason: "\u200b".repeat(10) } });
+  const zq = await bad90({ cited: { url: "https://www.canada.ca/x", quote: "\u200b", date: "2026-10-19" } });
+  const urls = await Promise.all(["https://..x", "https://a.b/\"><script>x</script>", "https://" + "a".repeat(2001) + ".ca"].map((u) => bad90({ cited: { url: u, quote: "at most 90 days", date: "2026-10-19" } })));
+  const year1 = await bad90({ cited: { url: "https://www.canada.ca/x", quote: "at most 90 days", date: "0001-01-01" } });
+  const long = await bad90({ none_published: { reason: "r".repeat(501) } });
+  ok("C5.4 BR-3 fail (break m1–m5 on #587): five emoji or zero-width marks as a reason, an invisible quote, a malformed or over-long https address, year 1, a 501-character reason: each 400 on its field",
+    emoji.status === 400 && emoji.fields.includes("none_published.reason") && zwsp.status === 400 && zq.status === 400 && zq.fields.includes("cited.quote") && urls.every((u) => u.status === 400 && u.fields.includes("cited.url")) && year1.status === 400 && year1.fields.includes("cited.date") && long.status === 400, { emoji, zwsp, zq, urls, year1, long });
   r = await put(wp, n30, { address: n30.address, value: 45, none_published: { reason: "ExpatReady's own warning lead time" }, version: 0 });
   ok("C5.4 BR-6 fail: a value that is not the number now (45 for 30) gets 409 with the number as it is", r.status === 409 && r.body.value === "30" && /the number is now 30, not 45/.test(r.body.detail), r.body);
 
