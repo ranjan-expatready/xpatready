@@ -216,3 +216,19 @@ I reviewed c98f1808 first. The head then moved to 5e9331fb, which changes only `
   * Rare in IRCC prose, and it fails closed. A real group before the number is 1–3 digits that are not themselves preceded by a digit, so it could be narrowed to `(?<!(?:^|[^\d.,])\d{1,3}G)`. Mention the cost in the code comment if it is kept.
 * **r3-2 · Wording in the r2-2 question.** It says the author "picks 'None published'" when IRCC writes the number only in other words or units ("one year" for 12 months). That answer would be untrue, because IRCC does publish it. When the tech lead decides r2-2, the refusal could tell the author to copy words that state the number in the rule's own unit, or else wait for the later row.
 * **r3-3 · Two cases still pass loosely** (they never refuse a true citation; the expert's sign-off of the Source lines covers them). "IMM-10" states -10, because a letter before the sign is allowed. "the threshold is -10" states 10, because a positive value ignores a minus sign before it. That second case is right for ranges such as "5-10 years". Note both in the code comment, or require the sign to stand alone.
+
+## Round 4: head **d23c4308** (code diff 5e9331fb..056114a1: r3-1, r3-2; d23c4308 adds only the round-3 record in this file)
+* **Suites:** engine **53/53**; API **50/50** on a fresh isolated copy (:4471, stopped and dropped). After Reset, 17 of 27 are still held and the import still cites 10, so the narrower lookbehind made the import cite nothing new.
+
+### Verdict (d23c4308, code identical to 056114a1): **Approve**. No Blocker or Major is open. Journey score **9.4/10** (unchanged).
+* **r3-1 is fixed** (`engine/source-register.ts:272-275`). The group lookbehind now applies only when the value's first group has three digits and the value is unsigned.
+  * **Now stated:** 18 in "IMM 5707 18 years"; 690 in "IMM 5707 690" (the 5707 is too long to be a group).
+  * **Still never stated:**
+    * 690 in "14 690", "1 234 690" and "1,234,690";
+    * 234690 in "1 234 690" (1234690 is stated there);
+    * 14 in "14 690";
+    * -690 in "-14 690".
+  * **Refused because truly ambiguous, failing closed:** 690 in "page 12 690 days" and "Form 1 690 dollars", and 5 in "5 100 people". Each could be one grouped number.
+  * The new check has passes and fails on both sides of the rule.
+* **r3-2 is fixed.** The PR body's Questions link the 19:33 comment and say the honest answer is other words from the page that state the number in digits, never "None published".
+* r3-3 (two loose passes, harmless) stays as noted.
