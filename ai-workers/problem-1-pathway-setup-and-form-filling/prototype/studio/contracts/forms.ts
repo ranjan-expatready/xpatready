@@ -88,7 +88,9 @@ export const SetOptionMap = z.object({ dataPath: z.string().trim().min(1, "Name 
  *  than the form has room for. Words are Sample until the immigration expert confirms them. Never a silent cut. */
 export const LIST_PURPOSES = [
   { key: "current", label: "Current" },
-  { key: "for_post", label: "For the post applied for" },
+  // S9 (SA-1B-10 rule 1, SA-1B-11 rule 1, spec fix 2 Nov): "for post" is the list entry tagged "send post here", the
+  // mailing address, never the job applied for. The key keeps the spec's words ("the entry marked for post").
+  { key: "for_post", label: "Mailing address (tagged \"send post here\")" },
   { key: "all", label: "All" },
   { key: "latest", label: "Latest" },
   { key: "date_range", label: "In a date range" },

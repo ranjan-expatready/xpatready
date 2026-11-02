@@ -51,7 +51,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await who.getByRole("button", { name: "Fill from the guide" }).click();
   const fill = p.getByRole("dialog"); await fill.locator("[data-people-cost]").waitFor({ timeout: 30000 }).catch(() => {});
   step("C11.12 L8: Fill from the guide can be opened while editing (it adds to the editor's lines)", /Guide 5256/.test(await fill.innerText()));
-  step("C11.12 L2 fail: AI now is greyed, saying it waits for the founder's Go for a live trial", await fill.getByLabel(/AI now/).isDisabled() && /founder's Go for a live trial/.test(await fill.locator('[data-fill-mode="live"]').innerText()));
+  step("C11.12 L2 fail: AI now is greyed, saying it waits for the founder's Go for a live trial", await fill.getByLabel(/^Live/).isDisabled() && /founder's Go for a live trial/.test(await fill.locator('[data-fill-mode="live"]').innerText()));
   step("C11.12 L2 pass: Rules only is chosen and costs US$0", await fill.getByLabel(/Rules only/).isChecked() && /Cost: US\$0/.test(await fill.locator("[data-people-cost]").innerText()));
   await state("fill-from-guide-ai-now-greyed");
   await fill.getByRole("button", { name: "Fill" }).click(); await fill.locator("[data-people-proposal]").waitFor({ timeout: 30000 }).catch(() => {});

@@ -122,7 +122,7 @@ async function look(page, name, w, { axeOn = true } = {}) {
   if (!(await again.count())) { await browser.close(); console.log(`\n${pass} passed, ${fail} failed (stopped: no Find again)`); return; }
   await again.click(); await page.locator("[data-find-dialog]").waitFor();
   const words = {};
-  for (const [m, label] of [["replay", "Use saved AI answers"], ["rules", "Rules only"], ["live", "AI now"]]) {
+  for (const [m, label] of [["replay", "^Saved"], ["rules", "^Rules only"], ["live", "^Live"]]) {
     await page.getByLabel(new RegExp(label)).check(); await page.waitForTimeout(300);
     await page.locator("[data-find-plan], [role=dialog] .text-text-danger, [role=dialog] [role=alert]").first().waitFor({ timeout: 30000 }).catch(() => {});
     await page.waitForTimeout(1500);

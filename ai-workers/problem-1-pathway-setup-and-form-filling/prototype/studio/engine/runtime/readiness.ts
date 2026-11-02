@@ -42,6 +42,8 @@ export type FormItem = {
   /** A validated copy is read back and still matches today's facts (C-9, C-10). */
   validatedCurrent: boolean;
   signature: Signature; signed: boolean; signers?: string[];
+  /** Who signs (contracts/workspace.ts SIGNED_BY): unset means a signature is needed; only "none" means none (S1). */
+  signedBy?: string | null;
   /** Who owes a missing signature (default the client; the representative signs IMM 5476's own part). */
   signerOwes?: Owes;
   /** Signed or uploaded, then a fact changed: the fact and when (BR-12). */
@@ -115,9 +117,11 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
     for (const m of problems) block({ code: "fact_problem", ...at, part: m.fact, owes: f.owesFact?.[m.fact] ?? "staff", words: `${ofWho(f)}: "${m.label}" has a problem, so it would be written wrong. Fix it, then confirm it.` });
     // BR-9 1: out of date, or a required signature missing.
     if (f.outOfDate) block({ code: "out_of_date", ...at, owes: "staff", words: `${ofWho(f)} is out of date: "${f.outOfDate.fact}" changed on ${dayOf(f.outOfDate.since, `${f.form}'s out-of-date mark`)} after it was signed or uploaded. Make a new copy.` });
-    if (f.signature !== "NONE" && f.signature !== "TYPED_NAME" && !f.signed) {
-      const how = f.signature === "HAND_SCANNED" ? "signed by hand and its scan uploaded" : "signed in pen";
-      block({ code: "missing_signature", ...at, owes: f.signerOwes ?? "client", words: `${ofWho(f)} must be ${how}${f.signers?.length ? ` by ${list(f.signers)}` : ""}.` });
+    if (signatureNeeded(f) && !f.signed) {
+      const how = f.signature === "HAND_SCANNED" ? "signed by hand and its scan uploaded" : f.signature === "PEN" ? "signed in pen"
+        : "signed (how it is signed is not set on the form line yet; until it is, the signature is waited for)";
+      // S1 review m3: when the line does not say how it is signed, staff set that first (the client cannot), so staff owe it.
+      block({ code: "missing_signature", ...at, owes: f.signature === "NONE" ? "staff" : f.signerOwes ?? "client", words: `${ofWho(f)} must be ${how}${f.signers?.length ? ` by ${list(f.signers)}` : ""}.` });
     }
     // BR-9 2 (P-144): IRCC returns a barcode form unprocessed without its Validate.
     if (f.needsValidate && (f.channel === "PDF_UPLOAD" || f.channel === "PAPER") && !f.validatedCurrent)
@@ -165,6 +169,18 @@ export function passProblem(reason: unknown): string | null {
   if (t.length > 300) return "Keep it to 300 characters.";
   if (/[\u0000-\u001f\u007f-\u009f\u200b\u200e\u200f\u2028-\u202e\u2066-\u2069\ufeff]/.test(t)) return "Remove the control or invisible characters from this text.";
   return null;
+}
+
+/** S1 (SA-1B-102 rule 3, AG16-60: "a missing signature rule must default to needs a signature"; "Duplicate beats a
+ *  miss"): whether "Ready to file" waits for this line's signature. Only `signedBy: "none"` means no signature; an unset
+ *  `signedBy` needs one. A hand or pen signature the line names is always waited for; a typed name is signed as the form
+ *  is typed, and an Online line with no method is signed in the portal at submission. The default method `NONE` on a PDF
+ *  upload or Paper line means "how it is signed is not set", so the signature is waited for, never assumed absent (prisma/schema.prisma combination_form
+ *  `signature @default(NONE)` stays: no migration). */
+export function signatureNeeded(f: Pick<FormItem, "channel" | "signature" | "signedBy">): boolean {
+  if (f.signature === "HAND_SCANNED" || f.signature === "PEN") return true; // a signature the line names is always waited for
+  if (f.signature !== "NONE") return false;                                   // a typed name is signed as it is typed
+  return (f.channel === "PDF_UPLOAD" || f.channel === "PAPER") && f.signedBy !== "none";
 }
 
 /** People's words for each code (never the key itself). */
