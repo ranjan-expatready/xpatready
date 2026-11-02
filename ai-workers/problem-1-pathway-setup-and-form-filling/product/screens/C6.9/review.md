@@ -235,41 +235,51 @@ Scope: BR-7…BR-14, BR-17, BR-18, the §6 run routes and R4 (P-230 (1)). Diff `
 **Verdict: Block** on fd26c492. Fix M1 and M2, each with its test. The minors can go in the same PR or follow.
 
 ## Part 2 review round 2 (36163fad)
-Delta `fd26c492..36163fad`, one commit. Fresh isolated copy `rev_c69` on :4439 (never :4400); live AI off; US$0.
+*(Restored. This section was written uncommitted on 36163fad and was lost from the working tree when the merge below was made in the same clone. Its content is unchanged.)*
+
+Delta `fd26c492..36163fad`. Fresh copy `rev_c69` on :4439; live AI off; US$0.
 
 **What I ran:**
-- `check_c69_runs.ts`: **75/75** on a fresh copy, then 72/72 on the same copy (the setup lines are skipped the second time). The 40-at-once race line passed both times.
+- `check_c69_runs.ts`: **75/75**, then 72/72 on the same copy. The 40-at-once race line passed both times.
 - `check_c69_gates.ts`: **87/87**. `check_vv_prepare_api.ts`: **32/32**. Each ran on a fresh copy.
-- `acceptance/C6.9.test.ts`: **12/15**. C6.9-11…13 fail with 404, which is part 3.
+- Acceptance: **12/15**. C6.9-11…13 are part 3.
 - `graph.mjs --check`: exit 0.
 
-**Round 1 findings re-checked:**
-- **M1, fixed.**
-  - `engine/runtime/eligibility.ts` `aboutOf` now reads the person's own answer, else the case's, whatever the prefix. `inputsOf` and `nowOf` read the same way.
-  - My repro `scratchpad/probe/pure.mts` now gives `LIKELY_ELIGIBLE`, `state: met`, `inputs[0].about: "case"`, value `2020-01-01`.
-  - There are 4 new lines (pass, and fail on out of date). The out-of-date line fails against the old `nowOf`.
-- **M2, fixed.**
-  - The count and the insert run in one `$transaction` under `pg_advisory_xact_lock(hashtext('assessment:case:person'))`. The `reason` refusal is thrown inside it, so it rolls back.
-  - My 2-at-once probe now gives 400 + 201, with one MANUAL row.
-  - A heavier probe I wrote, `race100.mts`: 100 POSTs at once across 2 people, with and without reasons. Result: 35 × 201 and 65 × 400 (all on `reason`), **no 5xx**, and exactly 2 MANUAL rows, one per person.
-- **m1, fixed.** The audit check searches the summary and the detail for the answered values, and requires at least one audit row, so it cannot pass vacuously.
-- **m2, fixed.** A client reading a real run id gets 403 (tested; my probe agrees).
-- **m3, fixed.** 4 people × 10 runs: 40 rows are listed in under 300 ms.
-- **m4, fixed.** Concept §6 lists `reviewGates` and `whenNotMet`, and the PUT body has `whenNotMet?`. §8 row 10 is reworded for R4.
+**Round 1 fixes:**
+- **M1, fixed.** `aboutOf` reads the person's own answer, else the case's, whatever the prefix. `inputsOf` and `nowOf` read the same way. `scratchpad/probe/pure.mts` now gives `LIKELY_ELIGIBLE`, gate Met, `about: "case"`. There are 4 new test lines.
+- **M2, fixed.** The count and the insert run in one `$transaction` under `pg_advisory_xact_lock`, and the `reason` refusal rolls back. My 2-at-once probe gives 400 + 201. `race100.mts`, 100 mixed POSTs at once across 2 people, gives 35 × 201 and 65 × 400 on `reason`, **no 5xx**, and exactly 2 MANUAL rows.
+- **m1–m4, fixed.**
+  - m1: the audit check searches the summary and the detail for values, and requires at least one row.
+  - m2: a client reading a real run id gets 403.
+  - m3: 4 people × 10 runs are listed in under 300 ms.
+  - m4: concept §6 and §8 cover R4.
 
-**Breaker's fixes:**
-- **m1:** a gate not met now lists the facts it could not read, and `missingInputs` takes them from every gate. Tested for a `not_eligible` gate (Not eligible) and a `needs_review` gate (Possibly). A Met gate lists nothing.
-  - Side effect, checked: with `FAIL_BEATS_MISSING = false`, a failed gate with a fact missing inside it would now read Possibly eligible. That is closer to AG-3-13 ("all gate inputs are present"). The switch is `true`, so nothing changes today.
-- **m3:** after `PATCH applies:false`, the run reads `out_of_date: true, not_travelling: true`. A traveller is not marked. A person removed from the case is treated the same way.
-- **m4:** characters are counted with `[...x].length` (300 emoji pass, 301 are refused), and a reason needs a letter or a digit (`"—"` → 400). Unicode words still pass: my probe gave 201.
+**Breaker's fixes, checked:**
+- m1: a gate not met lists the facts it could not read.
+- m3: a person marked not travelling gives `not_travelling: true` and out of date.
+- m4: characters are counted and a reason needs a letter or digit.
 
 **New minors (not blocking):**
-- **r2-1:** when both the person and the case have answered the same fact, `aboutOf` shows the person's value. `factsOf` (`render.ts:104`), which the verdict uses, takes whichever comes last in the Map. So `values` and `inputs` could show a value other than the one judged. It is rare: a fact is normally asked of one subject. Fix: pick the same subject in both.
-- **r2-2:** on breaker m2, left as a known limit and asked in the PR: a gate on a row fact compares row 0 only. That can give a false **Not met**, not only Not answered. For example, `eq` on row 0 fails while row 1 matches.
-  - Visitor visa has no such gate, and it is disclosed, so it does not block.
-  - The follow-up should refuse row-fact gates at release (part 1's check) rather than leave them.
-- **r2-3:** `not_travelling` is not in concept §6 "Assessment fields / ours".
+- **r2-1:** when both the person and the case have answered the same fact, `aboutOf` shows the person's value. `factsOf` (`render.ts:104`), which the verdict uses, takes the last one in Map order, so the run could show a value other than the one judged. It is rare.
+- **r2-2:** the row-fact limit (breaker m2, asked in the PR) compares row 0 only, so it can give a false **Not met**, not only Not answered. Visitor visa has no such gate. Follow-up: refuse row-fact gates at release.
+- **r2-3:** `not_travelling` is not in concept §6.
 
-**Journey score:** 9/10. Correct data and error recovery go back to 1. Accessibility and visual quality stay ½ until the page (part 3). The journey report is unchanged since round 1; this note supersedes its score.
+**Journey score:** 9/10. Correct data and error recovery go back to 1. The UI criteria stay ½ until part 3.
 
-**Verdict: Approve** on 36163fad. No Blocker or Major is open. The three minors can be follow-ups.
+**Verdict: Approve** on 36163fad.
+
+## Part 2 delta (2fe5fc84)
+2fe5fc84 is a merge of origin/main (6cb61e23: #410 QA-75 job page, #412 quarantine of `check_screen01_api.ts`) into 36163fad.
+
+**Checks:**
+- `git diff 36163fad 2fe5fc84` over the part 2 files is **empty**: `engine/`, `contracts/`, `prisma/`, `acceptance/C6.9.test.ts`, `acceptance/lib/`, `tests/check_c69_*`, `screens/C6.9/`, and `api/` except `sources.ts`.
+- The merge brings only QA-75's files:
+  - `api/src/sources.ts` (+1 read of the job's combination label);
+  - `web/src/pages/{job,ai,combination}.tsx`;
+  - a browser check and its review notes;
+  - `run-suites.sh`, which adds `check_screen01_api.ts` to the quarantine only. No C6.9 check is skipped.
+- `git diff 6cb61e23 2fe5fc84` lists only the 14 part 2 files, so the merge is exactly main plus part 2, with no stray resolution.
+
+**Quick re-run on a fresh copy on :4439:** `check_c69_runs` **75/75**; acceptance C6.9 **12/15** (11–13 are part 3).
+
+**Verdict: Approve** on 2fe5fc84. No Blocker or Major is open. The minors r2-1…r2-3 stand as follow-ups.
