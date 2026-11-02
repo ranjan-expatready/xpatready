@@ -64,3 +64,44 @@
 - An intended user's unaided walk (D17 and D20 stay with the founder).
 - 200 % zoom on the client page.
 - The full batch.
+
+## Round 2 (f00b6ea0, reviewer, 2 Nov)
+- Setup: a detached worktree at f00b6ea0 with its own `vite build`. Copies ran on :4449 (wp.family) and :4442 (Visitor visa, setup 13/13). Never :4400, US$0. Screenshots are in the scratchpad `shots2/`.
+- **Journeys 1–4** all held:
+  - The tab shows 7/7 short names. Each has the visible mark "No question written yet (the field's name is shown)".
+  - Keyboard: Tab, then Enter, opens Details.
+  - Details now opens with "Meaning: …".
+  - The approver sees the same marks. Preview shows no mark.
+- **Journey 5 (client):** held. The client questionnaire API reads the full meaning for the background questions ("Whether the person ever committed, was arrested for, charged with or convicted of …"), as on main.
+- **Journey 6 (regression):** held. r1c 125/125, r1d 86/86, r1a 99/99, case_engine 61/61, check_engine 43/43, c41 9/9.
+- **Fail test:** with round 1's engine, c41 gives 8/9. Only the new B1 step fails.
+- **Automated checks:**
+  - axe: 0 violations on the tab and in Details.
+  - No sideways scroll at 400, 1024 or 1440 px.
+  - No console errors.
+  - Tab first view: 1.54 s, with the runtime suites running at the same time.
+- **Break-it:** the same field reads "US PR card expiry date" on the Questions tab and "Us PR card expiry date" in Shared library, because the library's copy of the helper was not updated (review S3). Minor.
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | The author sees which questions need wording. The client can answer with the legal scope. |
+| Next step obvious | 1 | The visible mark says what to do |
+| Plain words | ½ | The tab and Shared library differ on abbreviations (S3), and "Subject is …" uses an internal word |
+| Feedback and state | 1 | The mark is visible to both roles |
+| Correct data | 1 | `asked` matches `question_text`, and the client label is unchanged from main |
+| Error recovery | 1 | The runtime group is green |
+| Accessibility and screen sizes | 1 | axe 0, keyboard works, 3 widths with no sideways scroll, mark text visible |
+| Speed | 1 | No new requests |
+| Visual quality | 1 | Muted mark, and the meaning at the top of Details |
+| Trust and sources | 1 | The definition is kept for the client and shown in Details |
+| **Total** | **9.5/10** | **Pass** |
+
+**Could not test:**
+- A real screen reader.
+- An intended user's unaided walk (D17/D20).
+- The qa r1c walk and the full batch.
+
+## Round 3 (3d650ed7: merge of main + C4.11 test-step wait)
+- No QA-82 product code changed: the merge equals the clean auto-merge, and 3d650ed7 touches only `check_forms_c411_draft_qd_browser.cjs`.
+- I re-ran the crossing to the next screen, Draft questions and documents → Open To review, on :4448 (`STUDIO_SLOW_QD_STEP=400`). It gave **19/19**, landing on `/review/proposals?group=combination:<id>` with no console error. `check_c41_questionnaire_roles` gave **9/9**.
+- **Score: 9.5/10, pass (unchanged from round 2).** It could not be tested beyond this, for the same reasons as round 2.

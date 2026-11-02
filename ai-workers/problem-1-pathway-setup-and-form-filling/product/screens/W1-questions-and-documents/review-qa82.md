@@ -72,3 +72,78 @@ A real screen reader; an intended user's unaided walk (D17/D20); the full batch 
 **Verdict: Block** on f995d29d. To fix:
 1. B1: the client's questionnaire must not lose the field's meaning for an unwritten question (`engine/render.ts:327` → `case.ts:292` → `questionnaire.tsx:138`), plus a fail test on the client view.
 2. M1: `check_runtime_r1c.cjs:103,204` and `qa/check_qa_r1c_walk.cjs:111` pass on the head (with 1 they should pass unchanged); run the whole runtime group.
+
+## Round 2: f00b6ea0 (`git diff f995d29d f00b6ea0`)
+Reviewer, fresh context. Detached worktree at f00b6ea0 with its own `vite build`. Copies ran on :4449 (`xr_studio_rv_qa82`, wp.family) and :4442 (`xr_studio_rv_r1`, Visitor visa). Never :4400, no `*_LIVE`, US$0.
+
+**Runs on the head:** check_c41_questionnaire_roles **9/9** · check_case_engine **61/61** (the file is now byte-identical to main) · check_engine **43/43** · setup_visitor_visa 13/13 · **check_runtime_r1c 125/125** · check_runtime_r1d **86/86** · check_runtime_r1a **99/99**. That is 99, not the 98 the PR states. It is run after r1c with `--reset`, as `run-suites.sh:213` does. r1d was run on a fresh setup because r1a's reset clears the case.
+**The fail test is real:** with f995d29d's `render.ts` swapped in and the server restarted, c41 gives **8/9**. The new step fails ("Service language", "Marital status" in Preview). Restored afterwards.
+
+| Round 1 | Status on f00b6ea0 | Evidence |
+|---|---|---|
+| B1 the client lost the meaning | **Resolved** | `render.ts:328` label = `question_text \|\| meaning \|\| fact`, same as main (`git diff 21d988b7 f00b6ea0` changes only `asked`). Client questionnaire API on the Visitor visa case: "Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence", the same for refused visa, disorder requiring services, military service and status violation. |
+| M1 r1c red | **Resolved** | r1c 125/125. The client groups read the meaning again, so `check_runtime_r1c.cjs:103,204` and the qa walk's selector match unchanged. I did not run the qa walk. |
+| S1 Details had no meaning | **Resolved** | `sources.tsx:194` shows "Meaning: Official language (English or French) in which …" at the top of Details (screenshot details-1440). axe 0. |
+| S2 explanation only in `title` | **Resolved** | The mark's visible text is "No question written yet (the field's name is shown)", with no `title`. The approver also sees all 7 marks. |
+| S3 factName abbreviations | **Partly** | The engine copy now knows TB/TRV/US/USCIS and writes "Canada". Shared library's `fieldName` (`web/src/pages/library.tsx:23-24`, plus `fieldWord` in `api/src/library-items.ts:24`) still lacks them. The same field reads "US PR card expiry date" on the Questions tab and "Us PR card expiry date" in Shared library. The comment "as Shared library names fields" (`render.ts:164`) is therefore not exact, and the tab ignores a checked library label (`labelChecked`). Still a Should, not blocking. |
+
+**New, Should (S4):** `render.ts:164-165` still says "A question with no written wording shows this, never the field's meaning". `render()`'s label does show the meaning now. Fix: the comment should say this applies to the author's Questions tab only (`questionnaires.ts:53`).
+
+**Honesty of the PR (asked):** the description states plainly that "the client's questionnaire and Preview keep the meaning for an unwritten question … So QA-82's client part stays as on main until real questions are written". It gives the reason (legal scope) and the path forward (sample wording, or AI drafting under P-225, options (b)/(c) on #423). The title is limited to the author's Questions tab. This matches round 1's fix option. The only inexactness is r1a 98 vs my 99.
+
+**Regression walk** (Playwright on :4449, by role and visible text):
+- The Questions tab has 7/7 rows with a short name and the visible mark.
+- Keyboard: Tab reaches "Details of: Service language" and Enter opens it.
+- Details shows the meaning. The approver sees the same marks.
+- Preview never shows the mark.
+- axe on the tab and in Details: 0 violations.
+- No sideways scroll at 400, 1024 or 1440 px. No console errors.
+- First view of the tab: 1.54 s, while the runtime suites ran on the same machine.
+
+**D1–D20 changes:**
+- D1 4: the tab is fixed and the client keeps the meaning.
+- D3 3: the helper is still duplicated (S3).
+- D9 4: the meaning is in Details.
+- D10 3: the tab and the library differ on abbreviations.
+- D13 4: the mark is visible.
+- D16 4: the new step fails on f995d29d's engine, and r1c is green.
+- D19 4: the path from author to client is intact.
+
+All other scores are as in round 1. D17 and D20 are simulated only.
+
+**Journey score, round 2: 9.5/10, pass** (`journey-test-reviewer-qa82-2026-11-02.md`, Round 2).
+
+**Verdict: Approve** on f00b6ea0. There is no open Blocker or Major. S3 (rest) and S4 are Should items and can follow.
+
+## Round 3: 3d650ed7 (merge d95e9822 + one test step)
+Reviewer, fresh context. Run from the branch head 3d650ed7 (the shared clone was already on it; its `web/dist` was built after the merge, and 3d650ed7 changes only a test). Isolated copy `rv469` on **:4448** only, stopped after each run. Never :4400, no `*_LIVE`, US$0.
+
+**1. The merge brings in only main's changes.**
+- `git merge-tree --write-tree f00b6ea0 045af590` gives tree `752ebc96`. That is exactly d95e9822's tree, so the merge is a clean automatic merge with no hand edits to resolve conflicts.
+- QA-82's own diff (`git diff <merge-base> f00b6ea0` vs `git diff 045af590 d95e9822`, outside `screens/`) is the same 6 files with the same lines. Only two hunk offsets moved (`render.ts` -133 → -155, `questionnaires.tsx` 390 → 393).
+- `git diff f00b6ea0 3d650ed7 -- . ':!*/screens/*'` is 89 files. 88 come from main, and the 89th is the test file.
+- `git diff d95e9822 3d650ed7` changes only `tests/check_forms_c411_draft_qd_browser.cjs`, +4/-1.
+
+**2. The test change is sound and hides no defect.**
+- **Why it flaked:** the step read `main` after `settle()`. `settle()` waits for no `aria-busy`, no `.animate-spin` and no `[data-qd-result] .animate-pulse`. While the query is pending, the Proposals page shows `<Skeleton className="h-64" />` (`web/src/pages/proposals.tsx:64`). That skeleton is a plain `animate-pulse` div outside `[data-qd-result]` (`components/ui/skeleton.tsx:20`), so `settle()` can pass during it. On a slow runner the step then read only the heading and intro, which contain no "pre-qualification". The page shows the right content once its data arrives, so this is a race in the test, not in the app.
+- **The fail case is kept:** the wait is `.catch(() => {})`, and then the same regex judges `main`. If the text never comes, the step still fails, now printing the URL and the first 300 characters. The builder showed 18/19 with a regex that never matches.
+- **The landing did not move:**
+  - The link is unchanged: `qd-draft.tsx:61` is ``/review/proposals?group=combination:${id}``. Main's only edits to `qd-draft.tsx` are D2 wording (Saved/Live).
+  - Main's edits to `proposals.tsx` (a "Saved"/"Live" reading word and the C3.6 answer-values panel), `review-proposals.ts` (`values` on the view) and `api/src/proposals.ts` (C3.6 answer lists) do not touch how a group is chosen or listed. `ProposalsPage` still reads only `group` (or `c`/`step`), never `form`.
+  - K1's `?form=` filter is on main in `to-review.tsx:32` and `return-strip.tsx:14`. Those are the `/review` page, not `/review/proposals`, so K1 cannot narrow this landing.
+  - QA-82's 6 files do not touch review or proposals.
+  - My run printed `…/review/proposals?group=combination%3Aba30d75c-…`, the drafted combination.
+
+**3. Runs on 3d650ed7:**
+- `isolated.sh rv469 4448 start STUDIO_SLOW_QD_STEP=400`, then `check_forms_c411_draft_qd_browser.cjs 4448 xr_studio_rv469`: **19/19**. The step passed with the detail above. No page or console error.
+- On a fresh rv469 copy, `check_c41_questionnaire_roles.ts 4448 xr_studio_rv469`: **9/9**, including the 3 QA-82 steps.
+- The browser check rewrites `screens/W1-questions-and-documents/screenshots/c411/01-plan-rules-only-*.png` in the clone. I restored them with `git checkout` and left nothing behind.
+
+**Minor (m-r3, not blocking, may follow):**
+- The step's regex would also pass on any page whose `main` holds "pre-qualification". It does not check that the open group is this combination. The new detail prints the URL, but the step does not judge it.
+- Fix: also check `new URL(p.url()).searchParams.get("group") === "combination:" + <id>`, or check `aria-current` on that group. That is one line.
+- Separately, `settle()` could count `[data-slot="skeleton"]` as busy. That would fix this class of race for every page.
+
+**Journey score, round 3: 9.5/10, pass (unchanged).** No product code changed since f00b6ea0 except main's merged work. The round 2 journeys stand, and C4.11's landing on To review was re-walked by the browser check above.
+
+**Verdict: APPROVE** on **3d650ed7**. No open Blocker or Major. S3 (rest), S4 and m-r3 are follow-ups.
