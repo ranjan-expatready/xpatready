@@ -25,6 +25,21 @@ import { nextStepHref, STEP_LABEL, type ItemKind } from "../../contracts/setup-c
 /** UX-A part 2: next steps that already have their own row here (AI proposals, AI work running, a new edition held,
  *  a submission to sign or release), so a combination's setup row never repeats them. */
 const LISTED_ELSEWHERE: readonly ItemKind[] = ["review_proposals", "view_ai", "review_edition", "sign", "release"];
+/** Problems of the released version (the checklist's fix items marked fromRelease): firms cannot open cases until they
+ *  are fixed (Devin review on #616: a Not ready combination whose draft is clean read "." with no count). */
+export const releasedProblems = (setup: { steps: { open: { kind: string; count: number; fromRelease?: boolean }[] }[] }) =>
+  setup.steps.flatMap((x) => x.open).filter((i) => i.kind === "fix_problems" && i.fromRelease).reduce((t, i) => t + i.count, 0);
+/** A setup row's words: the draft's blockers, the released version's problems apart, and the next step a screen offers
+ *  (review n5); never empty (a bare "." before). */
+export function setupRowWords(s: { live: boolean; blockers: { n: number; first: string | null }; setup: Parameters<typeof releasedProblems>[0] }, nextWords: string | null) {
+  const n = s.blockers.n, rel = releasedProblems(s.setup);
+  const parts = [
+    rel ? `${plural(rel, "problem")} in the released version: firms cannot open cases until ${rel === 1 ? "it is" : "they are"} fixed` : "",
+    n ? `${plural(n, "problem")} to fix before release${s.live ? " of its next version" : ""}${s.blockers.first ? ` (first: ${s.blockers.first})` : ""}` : "",
+    nextWords ?? "",
+  ].filter(Boolean);
+  return parts.length ? `${parts.join(". ")}.` : "Open its setup to see what is left.";
+}
 /** Steps no screen offers yet (N8: the checklist page's confirmation, who can apply): never named as a row's next step. */
 const NO_SCREEN_YET: readonly ItemKind[] = ["confirm_pages", "choose_pages", "confirm_people"];
 
@@ -275,15 +290,13 @@ export class ReviewQueueService {
       const fixable = s.setup.steps.some((x) => x.open.some((i) => i.kind === "fix_problems" || i.kind === "unasked"));
       if (!own.length && !fixable) continue;
       const n = s.blockers.n, next = s.setup.next;
-      const what = [n ? `${plural(n, "problem")} to fix before release${s.live ? " of its next version" : ""}${s.blockers.first ? ` (first: ${s.blockers.first})` : ""}` : "",
-        // Review n5: a step no screen offers yet (N8) is not named as the next step here.
-        next && !NO_SCREEN_YET.includes(next.item.kind) ? `Next step · ${STEP_LABEL[next.step]}: ${next.item.text}` : ""].filter(Boolean).join(". ");
-      const base = { id: `setup:${s.combinationId}${fixable ? ":blocked" : ""}`, kind: "setup" as const, title: s.path, by: null, at: (since.get(s.combinationId) ?? new Date(0)).toISOString(), cost_usd: null, what: `${what}.`, forms: [], combination: s.combinationId };
+      const what = setupRowWords(s, next && !NO_SCREEN_YET.includes(next.item.kind) ? `Next step · ${STEP_LABEL[next.step]}: ${next.item.text}` : null);
+      const base = { id: `setup:${s.combinationId}${fixable ? ":blocked" : ""}`, kind: "setup" as const, title: s.path, by: null, at: (since.get(s.combinationId) ?? new Date(0)).toISOString(), cost_usd: null, what, forms: [], combination: s.combinationId };
       if (own.length) {
         const go = own[0];
         // Review n1: the link never names a second number beside the row's ("Fix them" when "Nothing to release yet" is in it).
         const fixes = own.filter((i) => i.kind === "fix_problems").reduce((t, i) => t + i.count, 0);
-        const label = go.kind === "fix_problems" && fixes !== n ? "Fix them" : go.text.split(":")[0];
+        const label = go.kind === "fix_problems" && fixes !== n + releasedProblems(s.setup) ? "Fix them" : go.text.split(":")[0];
         out.push({ ...base, state: "needs" as const, waiting_on: null, next: { label, href: nextStepHref(s.combinationId, { item: go, step: go.step }, go.tab ?? "forms"), note: null } });
       } else out.push({ ...base, state: "waiting" as const, waiting_on: "The configuration author fixes them.", next: null });
     }
