@@ -44,7 +44,7 @@ export function wantedItems(filers: string[], forms: FormRow[], docs: Map<string
 }
 
 /** A form line as the release holds it (snapshot.forms). */
-export type FormLine = { form_number: string; channel?: string; signature?: string; signed_by?: string };
+export type FormLine = { form_number: string; channel?: string; signature?: string; signed_by?: string; who?: string };
 /** A form item's channel today (the officer's choice, else the line's), the channels IRCC accepts for it on the account,
  *  and the signature that follows edition × channel: the line's when it fits the channel, else the channel's first. */
 export function channelOf(line: FormLine | undefined, records: AcceptRecord[] | undefined, account: string | null | undefined, chosen: string | null | undefined): { channel: Channel; line_channel: Channel; accepts: Channel[]; accepts_basis: AcceptRecord | null; signature: Signature } {

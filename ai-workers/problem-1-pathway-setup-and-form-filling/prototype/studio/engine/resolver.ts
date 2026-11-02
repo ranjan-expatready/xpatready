@@ -119,7 +119,7 @@ export function valueHolder(known: Known, fact: string, person: string): string 
 /** R7: who signs a form filed as PDF upload, signed by hand and scanned (C3.11; contracts/workspace.ts SIGNED_BY,
  *  Sample): the one rule for the Documents tab (sources.ts signedScanLines) and Preview (render). Returns each signer's
  *  id with the form rows (person ids, or FILING) they sign for. */
-export function formSigners(people: PersonOnFiling[], who: string, signedBy: string | null | undefined): Map<string, string[]> {
+export function formSigners(people: PersonOnFiling[], who: string, signedBy: string | null | undefined, minor?: (id: string) => boolean | undefined): Map<string, string[]> {
   const by = signedBy ?? "person", out = new Map<string, string[]>();
   if (by === "none") return out;
   const principal = people.find((p) => p.role === ROLE.principal)?.id;
@@ -127,7 +127,10 @@ export function formSigners(people: PersonOnFiling[], who: string, signedBy: str
   for (const row of subjectsFor(people, who)) {
     const about = row === FILING ? principal : row.split("/")[0];
     if (!about) continue;
-    const signsFor = by === "principal_for_family" || (by === "parent_for_minor" && people.find((p) => p.id === about)?.role === ROLE.child) ? principal : about;
+    // Devin on #617: "for a minor" is decided by age when the caller knows it (an adult dependent child signs their own);
+    // a child whose age is not known stays a minor, as before.
+    const isChild = people.find((p) => p.id === about)?.role === ROLE.child;
+    const signsFor = by === "principal_for_family" || (by === "parent_for_minor" && isChild && (minor?.(about) ?? true)) ? principal : about;
     for (const id of [signsFor, ...(by === "person_and_representative" ? reps : [])]) if (id) out.set(id, [...(out.get(id) ?? []), row]);
   }
   return out;

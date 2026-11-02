@@ -139,3 +139,17 @@ D1 Requirement fit 4 (every field listed; words and one why wrong) · D2 Data in
 * trust and sources 1
 
 **Verdict: Block** — commit **d75d5510**. To fix: **R2-M1** (the flaky property, with 30 green runs as proof). Then Approve on that head if nothing else changes.
+
+## Round 3 — 6412fdce (reviewer, 2 Nov 2026)
+**Verdict: Approve** on **6412fdce**: no open Blocker or Major.
+* **How it was checked:** a fresh worktree pinned to 6412fdce, with its own `node_modules`, on :4439 by hand. A fresh database for each suite.
+* **R2-M1 fixed.** The property's names are filtered with the signature rule's own pattern (`notSignature`). A name that would end in "Signature" is filtered too, so the caption rule cannot catch one either.
+  * `check_qa165_mandatory`: **0 of 40 runs failed** (38/38 each). Before the fix: 2 of 30 at d75d5510.
+* **R2-m1 fixed.** "None apply" now settles only row boxes (`mandatory.ts:57`, `b.row != null`). The new check q5 holds: a non-row field still "needs an answer".
+  * Mutation: with the row condition removed, q5 FAILS (37/38). Restored.
+  * Live in the r1c state: the principal's employment row fields still read "fill it in Adobe: "none apply" is confirmed for …".
+* **Runs at 6412fdce:** setup 13/13, r1c 132/132, r1d 96/96. The delta touches only `mandatory.ts` (one condition) and the check.
+* **Still open, listed in the PR (Minor):** round 1 m-1, m-2, m-3, m-5; R2-m2 (XFA names when one question fills several boxes); the forms-lane captions of Taiwan PIN and Israel passport.
+* **Journey score:** unchanged at **8.5/10, pass**. Nothing on the screen changed since round 2.
+
+**Verdict: Approve** — commit **6412fdce**.
