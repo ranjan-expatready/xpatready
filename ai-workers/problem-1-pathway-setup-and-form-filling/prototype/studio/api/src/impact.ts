@@ -49,7 +49,8 @@ export class Impact {
     const fields = touchedKeys.length ? await this.db.canonicalField.findMany({ where: { workspaceId: h.workspaceId, canonicalFieldKey: { in: touchedKeys } }, orderBy: { version: "desc" }, distinct: ["canonicalFieldKey"], select: { canonicalFieldKey: true, label: true, meaning: true } }) : [];
     // SH2 (P-258): the combinations that file the form now and their open cases, from the one where-used service.
     const combos = (await formCombinations(this.db, h.workspaceId, def.formKey)).sort((x, y) => x.label.localeCompare(y.label));
-    const cases = await openCases(this.db, combos.map((c) => c.id)).catch(() => 0);
+    // SH2b (qa minor 2 on #504): a database error fails the review loudly, never "0 open cases".
+    const cases = await openCases(this.db, combos.map((c) => c.id));
     return {
       id: h.id, form: def.formKey, title: def.displayName, edition: h.editionLabel, library_edition: old?.editionLabel ?? null, uploaded_by: ACTORS.find((a) => a.id === h.createdBy)?.name ?? "A person", at: h.createdAt,
       counts: { form_fields: fresh.length, unchanged: count("unchanged"), reworded: count("reworded"), new: count("new"), removed: count("removed") },

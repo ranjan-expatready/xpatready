@@ -11,13 +11,14 @@
 // Ready). Every pick is Sample until the immigration expert confirms it at release (AGENTS rule 4).
 import { Body, Controller, Headers, HttpCode, HttpException, Inject, Injectable, Param, Post } from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
-import { buildSnapshot } from "../../engine/snapshot.ts";
-import { pqrPicksByRules } from "../../engine/sources.ts";
+import { buildSnapshot, type Snapshot } from "../../engine/snapshot.ts";
+import { namesOf, type Names } from "../../engine/fact-words.ts";
+import { factSources, pqrPicksByRules } from "../../engine/sources.ts";
 import { pqrCandidates, pqrPicksFromRounds, pqrShapeOk, PQR_STEP, type PqrAnswer, type Round } from "../../engine/pqr-picks.ts";
-import { actorOf, Audit, Db, need, SOLUTION, type Actor } from "./core.ts";
+import { actorOf, Audit, Db, need, PROTOTYPE, SOLUTION, type Actor } from "./core.ts";
 import { inventoryFor } from "./finder.ts";
 import { whoCanBeTrail } from "./people-ai.ts";
 import { insertProposals } from "./proposals.ts";
@@ -32,7 +33,9 @@ const problem = (status: number, title: string, detail: string, extra: Record<st
 
 export const PQR_AI: AiStep = {
   kind: "pqr_picks", jobBase: "studio-pqr-picks", configurationVersion: "c47-pqr-picks",
-  template: "pqr-picks.v1.md", check: "pqr-picks-check.v1.md", schema: "pqr-picks-output.v1.schema.json", effort: "low", max_output_tokens: 4000,
+  // QA-162: v2 gives the rounds the combination's question list and asks for its keys; #530's v1 answers (guide only) still replay.
+  template: "pqr-picks.v2.md", check: "pqr-picks-check.v2.md", schema: "pqr-picks-output.v2.schema.json", effort: "low", max_output_tokens: 4000,
+  replays: [{ template: "pqr-picks.v1.md", check: "pqr-picks-check.v1.md", label: "Saved before the question list", inputs: 1 }],
   shapeOk: pqrShapeOk,
   words: {
     noSaved: "No saved AI answer for this guide, prompt and combination yet: it is recorded once in an approved Live run.",
@@ -40,6 +43,12 @@ export const PQR_AI: AiStep = {
     nothingUsed: "Nothing of it is proposed.",
   },
 };
+/** QA-162: the other names an AI round's words may use for a fact: its question text here and the library's aliases. */
+export async function factNames(db: Db, workspaceId: string, snapshot: Snapshot): Promise<Names> {
+  const facts = [...new Set((snapshot.placements as { fact: string }[]).map((p) => p.fact))];
+  const rows = facts.length ? await db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: facts }, NOT: { aliases: { isEmpty: true } } }, select: { canonicalFieldKey: true, aliases: true } }) : [];
+  return namesOf(snapshot.placements as { fact: string; question_text?: string | null }[], rows.map((r) => ({ key: r.canonicalFieldKey, aliases: r.aliases })));
+}
 export const LIVE_WAITING = "Live is not open yet: each paid run is approved first, with its cost stated.";
 const STEPS = {
   rules: [{ n: 1, label: "Find the facts this combination's rules read (rules)", uses_ai: false }, { n: 2, label: "Keep those a prospect can answer and a question asks (rules)", uses_ai: false }],
@@ -51,7 +60,31 @@ const STEPS = {
   ],
 };
 export const PqrDraftBody = z.object({ mode: z.enum(["rules", "replay", "live"]), planSha256: z.string().regex(/^[0-9a-f]{64}$/).optional() }).strict();
-type Guide = { code: string; title: string; text: string; input: { file: string; sha256: string } | null; trail: string };
+type Guide = { code: string; title: string; text: string; input: { file: string; sha256: string } | null; trail: string; questions: QuestionList | null };
+type QuestionList = { file: string; sha256: string; chars: number };
+/** What a round reads: the guide, then (QA-162) the combination's question list when it asks any question. */
+export const inputsOf = (g: { input: { file: string; sha256: string } | null; questions: QuestionList | null }) => g.input ? [g.input, ...(g.questions ? [{ file: g.questions.file, sha256: g.questions.sha256 }] : [])] : [];
+/** The characters a round reads, for its worst case. */
+export const charsOf = (g: { text: string; questions: QuestionList | null }) => g.text.length + (g.questions?.chars ?? 0);
+
+/** QA-162: the combination's question list (role, library key and label of each question its draft asks; never the
+ *  representative's), written once per content into p2/question-lists (its name carries its checksum; never committed),
+ *  so a Live round can name a question by its key (p2/guard.ts admitQuestionList admits it). Null when none is asked. */
+export function questionList(combinationKey: string, s: Snapshot): QuestionList | null {
+  // The guard's rule (p2/guard.ts LABEL_BAD): no control, format or separator characters, no angle brackets of any kind;
+  // cut by characters, never inside one (break m: a lone surrogate).
+  const one = (t: string) => Array.from(t.replace(/[\p{C}\p{Zl}\p{Zp}<>\uFF1C\uFF1E\u2039\u203A\u00AB\u00BB\u2329\u232A\u3008\u3009\u27E8\u27E9]+/gu, " ").replace(/\s+/g, " ").trim()).slice(0, 300).join("").trim();
+  const questions = factSources(s).filter((f) => f.placed && f.forms.length > 0 && !/^representative/.test(f.role) && !f.fact.startsWith("representative.") && /^[a-z][a-z_]{0,40}$/.test(f.role) && /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/.test(f.fact) && f.fact.length <= 120)
+    .map((f) => ({ role: f.role, key: f.fact, label: one(f.label) || f.fact })).sort((a, b) => a.role.localeCompare(b.role) || a.key.localeCompare(b.key)).slice(0, 2000);
+  if (!questions.length) return null;
+  const key = combinationKey.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^[^a-z0-9]+/, "").slice(0, 80) || "combination";
+  const text = `${JSON.stringify({ contract: "question-list/v1", combination: key, questions }, null, 1)}\n`, h = sha(text);
+  const name = `${key}-${h.slice(0, 12)}.questions.json`, dir = join(PROTOTYPE, "p2", "question-lists"), file = join(dir, name);
+  // Written whole (a temporary file renamed), and rewritten when the file there is not this content (break m).
+  const current = (() => { try { return sha(readFileSync(file)) === h; } catch { return false; } })();
+  if (!current) { mkdirSync(dir, { recursive: true }); const tmp = join(dir, `.${name}.${process.pid}.tmp`); writeFileSync(tmp, text); renameSync(tmp, file); }
+  return { file: `prototype/p2/question-lists/${name}`, sha256: h, chars: text.length };
+}
 /** P-227: whether a Saved result exists for this combination's guide (both rounds, readable, this prompt), and if not, why. */
 export type SavedState = { available: boolean; why: string | null; files: string[] };
 /** Break B3 (2 Nov): a pre-qualification draft of a combination that started this long ago and is still RUNNING is taken
@@ -67,30 +100,31 @@ export class PqrDrafts {
   private async combination(id: string) {
     const c = /^[0-9a-f-]{36}$/i.test(id) ? await this.db.combination.findUnique({ where: { id } }) : null;
     if (!c) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
-    if (c.retiredAt) throw problem(409, "Retired", `"${c.label}" is retired: its pre-qualification is not drafted. Restore it on Structure first.`);
+    if (c.retiredAt) throw problem(409, "Retired", `"${c.label}" is retired: its Prospect questionnaire (PQR) is not drafted. Restore it on Structure first.`);
     return c;
   }
 
   /** The combination's guide: the one linked as its source (the finder read it, or Load sample linked it), as people-ai reads it. */
-  async guide(c: { id: string; workspaceId: string; label: string }): Promise<Guide> {
+  async guide(c: { id: string; workspaceId: string; label: string; combinationKey: string }): Promise<Guide> {
     const shas = (await this.db.sourceAttachment.findMany({ where: { combinationId: c.id }, select: { sha256: true } })).map((a) => a.sha256);
     const ed = shas.length ? await this.db.formEdition.findFirst({ where: { workspaceId: c.workspaceId, sha256: { in: shas }, form: { formKind: "guide" } }, include: { form: true } }) : null;
-    if (!ed?.form.formPageUrl) throw problem(409, "No guide yet", `"${c.label}" has no IRCC guide among its sources yet: finding its forms (Start setup) reads and links it. Then draft its pre-qualification.`);
+    if (!ed?.form.formPageUrl) throw problem(409, "No guide yet", `"${c.label}" has no IRCC guide among its sources yet: finding its forms (Start setup) reads and links it. Then draft its Prospect questionnaire (PQR).`);
     const input = inventoryFor(ed.form.formPageUrl);
     let text = "";
     if (input) { try { text = String(JSON.parse(readFileSync(join(SOLUTION, input.file), "utf8")).text ?? ""); } catch { text = ""; } }
     if (!text) throw problem(409, "Guide not readable", `${ed.form.formKey}'s text is not on this computer yet, so it cannot be read here. Find the forms again to read it.`);
-    return { code: ed.form.formKey, title: ed.form.displayName, text, input, trail: await whoCanBeTrail(this.db, c.id) };
+    const draft = (await buildSnapshot(this.db, c.workspaceId, c.id, "draft")).snapshot;
+    return { code: ed.form.formKey, title: ed.form.displayName, text, input, trail: await whoCanBeTrail(this.db, c.id), questions: questionList(c.combinationKey, draft) };
   }
 
   /** The two saved rounds of ONE live run (break B1): the newest usable checker round, then the first round of the same
    *  run (same job stem, rounds.ts pairOf). A live run whose checker round failed left no checker file, so an earlier
    *  complete run is used instead of its lone first round. Read-only: a replay round reads files and sends nothing. */
   private async savedRounds(c: { combinationKey: string }, g: Guide & { input: { file: string; sha256: string } }): Promise<{ d: RoundOut<PqrAnswer>; k: RoundOut<PqrAnswer> | null }> {
-    const ctx: RoundContext = { trail: g.trail, contextKey: c.combinationKey, inputs: [g.input], mode: "replay", wanted: async () => true };
+    const ctx: RoundContext = { trail: g.trail, contextKey: c.combinationKey, inputs: inputsOf(g), mode: "replay", wanted: async () => true };
     const k = await this.runner.round<PqrAnswer>(PQR_AI, true, ctx);
     if (!k.ok) return { d: k, k: null };
-    const d = await this.runner.round<PqrAnswer>(PQR_AI, false, { ...ctx, replayPair: pairOf(PQR_AI, true, k.runFile) });
+    const d = await this.runner.round<PqrAnswer>(PQR_AI, false, { ...ctx, replayPair: pairOf(PQR_AI, true, k.runFile), replayPrompt: k.earlier ?? "" });
     return { d: d.ok ? d : { ok: false, costUsd: 0, reason: "The newest saved checker reading has no first reading from the same run, so it is not used." }, k };
   }
 
@@ -103,7 +137,7 @@ export class PqrDrafts {
   }
 
   /** The most the two Live rounds can reserve (C4.11 review m1: the launcher's own per-round budget). */
-  worstUsd(g: Guide): number { return g.input ? roundBudgetUsd(PQR_AI, false, [g.input], g.text.length) + roundBudgetUsd(PQR_AI, true, [g.input], g.text.length) : 0; }
+  worstUsd(g: Guide): number { return g.input ? roundBudgetUsd(PQR_AI, false, inputsOf(g), charsOf(g)) + roundBudgetUsd(PQR_AI, true, inputsOf(g), charsOf(g)) : 0; }
   /** C4.11 review M1: the launcher job of the live round running now for this draft's job, so a run's Stop can end it. */
   liveJob(jobId: string) { return this.runner.liveJob(jobId); }
 
@@ -123,10 +157,10 @@ export class PqrDrafts {
     const note = mode === "rules" ? "No AI: the rules propose the facts this combination's rules read. Each pick goes to To review for a person to accept or remove."
       : mode === "replay" ? "Saved: both AI rounds of one earlier Live run for this exact guide and prompt, replayed through the same steps (US$0)."
       : "Two AI rounds read the guide; a pick is Ready only when both make it, with its sentence in the guide.";
-    return { mode, combination: { id: c.id, label: c.label }, guide: g ? { code: g.code, title: g.title, file: g.input?.file ?? null } : null, steps: mode === "rules" ? STEPS.rules : STEPS.ai, candidates,
+    return { mode, combination: { id: c.id, label: c.label }, guide: g ? { code: g.code, title: g.title, file: g.input?.file ?? null, questions: g.questions?.file ?? null } : null, steps: mode === "rules" ? STEPS.rules : STEPS.ai, candidates,
       totals: { worst_usd: worst, remaining_usd: remaining }, note, live: { approved: aiLive(), why: aiLive() ? null : LIVE_WAITING }, saved,
       // Break B4: the Saved result looked at is part of the plan, so a run never replays another one than the person saw.
-      plan_sha256: sha(JSON.stringify({ id: c.id, mode, guide: g?.input?.sha256 ?? null, worst, candidates, ...(mode === "replay" ? { saved: saved?.files ?? [] } : {}) })) };
+      plan_sha256: sha(JSON.stringify({ id: c.id, mode, guide: g?.input?.sha256 ?? null, questions: g?.questions?.sha256 ?? null, worst, candidates, ...(mode === "replay" ? { saved: saved?.files ?? [] } : {}) })) };
   }
 
   /** Runs the plan: picks go into the one review queue (never ticked here). */
@@ -140,14 +174,14 @@ export class PqrDrafts {
     if (plan.mode === "live" && plan.totals.worst_usd > plan.totals.remaining_usd + 1e-9) throw problem(409, "Over the spending cap", `Not started: the worst case (US$${plan.totals.worst_usd.toFixed(2)}) is above what is left of the AI spending cap (US$${plan.totals.remaining_usd.toFixed(2)}). Nothing was started.`);
     const c = await this.combination(id);
     const snapshot = (await buildSnapshot(this.db, c.workspaceId, c.id, "draft")).snapshot;
-    const jobData = { mode: plan.mode === "rules" ? "LOCAL" : plan.mode.toUpperCase(), status: "RUNNING", message: "Drafting pre-qualification picks" };
+    const jobData = { mode: plan.mode === "rules" ? "LOCAL" : plan.mode.toUpperCase(), status: "RUNNING", message: "Drafting Prospect questionnaire (PQR) picks" };
     // Break B3: one pre-qualification draft at a time per combination (a reload and a second Live start never run two paid
     // rounds side by side). The check and the new job are made under one lock per combination.
     // C4.11 review m5: a "Draft questions and documents" step (opts.jobId) is held to the same rule against a draft of its own.
     const job = await this.db.$transaction(async (tx) => {
         await tx.$executeRawUnsafe(`select pg_advisory_xact_lock(hashtext($1))`, `pqr_picks_run:${c.id}`);
         const going = await tx.draftingJob.findFirst({ where: { combinationId: c.id, kind: PQR_STEP, status: "RUNNING", startedAt: { gte: new Date(Date.now() - RUNNING_FOR_MS) }, ...(opts.jobId ? { id: { not: opts.jobId } } : {}) }, select: { id: true } });
-        if (going) throw problem(409, "Already drafting", "Pre-qualification picks are already being drafted for this combination. Wait for that run to end, then look at To review.", { runId: going.id });
+        if (going) throw problem(409, "Already drafting", "Prospect questionnaire (PQR) picks are already being drafted for this combination. Wait for that run to end, then look at To review.", { runId: going.id });
         return opts.jobId ? tx.draftingJob.update({ where: { id: opts.jobId }, data: jobData })
           : tx.draftingJob.create({ data: { workspaceId: c.workspaceId, combinationId: c.id, kind: PQR_STEP, startedBy: actor.id, ...jobData } });
       });
@@ -161,7 +195,7 @@ export class PqrDrafts {
       const g = await this.guide(c);
       if (!g.input) { out.note = `${g.code} is not among the official files the AI may read, so its picks cannot be drafted with Live or Saved.`; }
       else {
-        const ctx: RoundContext = { trail: g.trail, contextKey: c.combinationKey, inputs: [g.input], mode: plan.mode, wanted: async () => !(await opts.stopped?.()), batchId: job.id };
+        const ctx: RoundContext = { trail: g.trail, contextKey: c.combinationKey, inputs: inputsOf(g), mode: plan.mode, wanted: async () => !(await opts.stopped?.()), batchId: job.id };
         // Review minor (#282): a round that throws ends this job as FAILED, never left running.
         const safe = async (isCheck: boolean) => { try { return await this.runner.round<PqrAnswer>(PQR_AI, isCheck, ctx); } catch (e) { console.warn(`pqr picks ${job.id}:`, String(e).slice(0, 400)); return { ok: false as const, costUsd: 0, reason: "The AI step stopped on this computer, so nothing of it is used." }; } };
         // Saved: both rounds of one saved run (break B1). Live: a first round, then a blind checker round.
@@ -183,7 +217,7 @@ export class PqrDrafts {
         else {
           out.from = d.from === "live" || k.from === "live" ? "live" : "replay";
           const r = (x: typeof d & { ok: true }): Round => ({ output: x.output, from: x.from, runFile: x.runFile, costUsd: x.costUsd });
-          const res = pqrPicksFromRounds(snapshot, { draft: r(d), check: r(k) }, { ...g.input, text: g.text, code: g.code }, { runId: job.id, combinationId: c.id });
+          const res = pqrPicksFromRounds(snapshot, { draft: r(d), check: r(k) }, { ...g.input, text: g.text, code: g.code }, { runId: job.id, combinationId: c.id }, await factNames(this.db, c.workspaceId, snapshot));
           items = res.items; out.dropped = res.dropped; out.unresolved = res.unresolved;
         }
       }
@@ -202,13 +236,15 @@ export class PqrDrafts {
       out.already = items.filter((x) => waiting.has(x.identity.key)).length;
       out.removed = items.filter((x) => !waiting.has(x.identity.key) && gone(x)).length;
       await insertProposals(tx, c.workspaceId, fresh);
-      await tx.draftingJob.update({ where: { id: job.id }, data: { status: out.cancelled ? "CANCELLED" : out.note && !items.length ? "FAILED" : "COMPLETED", costUsd: out.usd, finishedAt: new Date(), runFile: out.run_files[0] ?? null, message: out.note || `${fresh.length} pick${fresh.length === 1 ? "" : "s"} proposed`, detail: { dropped: out.dropped, unresolved: out.unresolved, run_files: out.run_files } } });
+      await tx.draftingJob.update({ where: { id: job.id }, data: { status: out.cancelled ? "CANCELLED" : out.note && !items.length ? "FAILED" : "COMPLETED", costUsd: out.usd, finishedAt: new Date(), runFile: out.run_files[0] ?? null, message: out.note || `${fresh.length} pick${fresh.length === 1 ? "" : "s"} proposed${out.dropped.length ? `, ${out.dropped.length} left out with the reason` : ""}`,
+        // QA-162: the run card shows each left-out pick with its reason (runs.ts details), never only a count.
+        detail: { dropped: out.dropped, unresolved: out.unresolved, run_files: out.run_files, details: out.dropped.length ? out.dropped.map((x) => `${x.asks}: ${x.why}`).join("\n") : null } } });
     });
     out.proposed = fresh.length;
     out.ready = fresh.filter((x) => x.confidence === "ready").length; out.check = fresh.filter((x) => x.confidence === "check").length; out.decide = fresh.filter((x) => x.confidence === "decide").length;
     const how = plan.mode === "rules" ? "rules only" : plan.mode === "replay" ? "Saved" : "Live";
     out.note = out.note || `${fresh.length} pick${fresh.length === 1 ? "" : "s"} for To review${out.already ? ` (${out.already} already waiting there)` : ""}${out.removed ? `; ${out.removed} a person removed before are not proposed again` : ""}${out.dropped.length ? `, ${out.dropped.length} left out with the reason` : ""}. Nothing is asked until a person accepts a pick. Sample until the immigration expert confirms.`;
-    await this.audit.log(c.workspaceId, actor.id, "proposed", "pre-qualification", c.combinationKey, `${actor.name} drafted pre-qualification picks for "${c.label}" (${how}, US$${out.usd.toFixed(2)}): ${fresh.length} to review`, { runId: job.id, mode: plan.mode, run_files: out.run_files }, c.id);
+    await this.audit.log(c.workspaceId, actor.id, "proposed", "pre-qualification", c.combinationKey, `${actor.name} drafted Prospect questionnaire (PQR) picks for "${c.label}" (${how}, US$${out.usd.toFixed(2)}): ${fresh.length} to review`, { runId: job.id, mode: plan.mode, run_files: out.run_files }, c.id);
     return out;
     } catch (e) {
       // Review round 2 n2: whatever stops this draft ends its job as FAILED, so "Already drafting" never blocks the

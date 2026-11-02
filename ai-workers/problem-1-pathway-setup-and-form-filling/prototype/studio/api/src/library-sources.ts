@@ -8,7 +8,7 @@ import { z } from "zod";
 import { normalizeLabel, problemFromZod } from "../../contracts/programs.ts";
 import { current, fieldsOf } from "../../engine/where-used.ts";
 import { actorOf, Audit, Db, need, readerOf, revise, strip, Workspace, type Actor } from "./core.ts";
-import { itemCombinations, mappedBoxes } from "./where-used.ts";
+import { itemCombinations, mappedBoxes, usedInLabels } from "./where-used.ts";
 
 type H = string | undefined;
 const problem = (status: number, title: string, detail: string) =>
@@ -86,9 +86,7 @@ export class LibrarySources {
 
   /** Combinations each item is used in, by label (C3.13 where used). */
   async usedIn(kind: Kind, workspaceId: string): Promise<Map<string, string[]>> {
-    const label = new Map((await this.db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true } })).map((c) => [c.id, c.label]));
-    const ids = await this.usedInIds(kind, workspaceId);
-    return new Map([...ids].map(([k, s]) => [k, [...new Set([...s].map((id) => label.get(id)).filter((l): l is string => !!l))].sort()] as [string, string[]]).filter(([, l]) => l.length));
+    return usedInLabels(this.db, workspaceId, kind); // SH2b review m2: one id-to-label mapping, in the service
   }
 
   /** C11.9: the same read by combination id (the lifecycle guard links each use and knows a retired combination). */
@@ -270,7 +268,7 @@ export class LibrarySources {
     const out: Row[] = [];
     for (const r of current(preds, (r) => `${r.combinationId}|${r.predicateKey}`)) {
       const c = combo.get(r.combinationId) ?? null;
-      out.push({ id: `rule:${r.id}`, kind: "rule", kind_word: RULE_KIND.rule, when: r.whenPlain, then: r.thenPlain, lives_on: { combination: c, section: null, tab: "questionnaires", tab_word: "Questionnaires tab" }, used_in: c ? [c] : [], reads: reads(r.predicateJson), source: r.sourceQuote, unsourced: !r.sourceQuote, origin: r.origin, status: status(r) });
+      out.push({ id: `rule:${r.id}`, kind: "rule", kind_word: RULE_KIND.rule, when: r.whenPlain, then: r.thenPlain, lives_on: { combination: c, section: null, tab: "questionnaires", tab_word: "Smart questionnaire (SQR) tab" }, used_in: c ? [c] : [], reads: reads(r.predicateJson), source: r.sourceQuote, unsourced: !r.sourceQuote, origin: r.origin, status: status(r) });
     }
     for (const l of current(forms, (l) => `${l.combinationId}|${l.lineageKey}`).filter((l) => l.predicateJson || l.conditionPlain)) {
       const c = combo.get(l.combinationId) ?? null;

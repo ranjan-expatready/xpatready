@@ -7,7 +7,8 @@ import { fmtWhen } from "@/components/status";
 import { StandIn } from "@/components/stand-in";
 
 /** QA-74: what an activity line is about, in the words the pages use. */
-const ITEM_WORD: Record<string, string> = { "configuration row": "combination", row: "combination" };
+// K13 (P-271): stored item words stay as written; people read the names of today ("pre-qualification" is the PQR).
+const ITEM_WORD: Record<string, string> = { "configuration row": "combination", row: "combination", "pre-qualification": "Prospect questionnaire (PQR)" };
 
 export function ReleasesPage() {
   const r = useApi<any[]>(["releases"], "/releases");

@@ -9,7 +9,7 @@ import type { QuestionnaireView } from "./runtime.ts";
 export const TABS = [
   { key: "overview", label: "Overview" },
   { key: "forms", label: "Forms" },
-  { key: "questionnaires", label: "Questionnaires" },
+  { key: "questionnaires", label: "Smart questionnaire (SQR)" },
   { key: "documents", label: "Documents" },
   { key: "preview", label: "Preview" },
   { key: "tests", label: "Tests" }, // G4 (forms lane, C5.7): answer-key tests

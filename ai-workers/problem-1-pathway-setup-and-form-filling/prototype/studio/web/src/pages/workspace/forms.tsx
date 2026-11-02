@@ -57,6 +57,8 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
   const [adding, setAdding] = React.useState(false);
   const [finding, setFinding] = React.useState<string[] | null>(null);
   const [choosingPage, setChoosingPage] = React.useState(false);
+  // C11.15: a line's own "Redo with AI" chooses its stage (find, read, match); Find again for a form not on it does not.
+  const [lineRedo, setLineRedo] = React.useState(false);
   const [sp, setSp] = useSearchParams();
   const [removing, setRemoving] = React.useState<WorkspaceFormLine | null>(null);
   // C2.12 slice 3: one form's guided path, addressable as ?setup=<form number> (a reload lands on the same form).
@@ -74,8 +76,8 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
   const bulk = useBulkLines(id);
   const qc = useQueryClient();
   const undoLast = async (changeId?: string) => { await api(`/combinations/${id}/forms/undo`, { method: "POST", json: changeId ? { changeId } : {} }); for (const k of [...formsKeys(id), ["combination", id, "finder"]]) void qc.invalidateQueries({ queryKey: k }); };
-  const redo = (codes?: string[]) => { setChoosingPage(false); setFinding(codes ?? []); };
-  const choosePage = () => { setChoosingPage(true); setFinding([]); };
+  const redo = (codes?: string[], onLine = false) => { setChoosingPage(false); setLineRedo(onLine); setFinding(codes ?? []); };
+  const choosePage = () => { setChoosingPage(true); setLineRedo(false); setFinding([]); };
   // S3 item 5 (QA-63): a run card elsewhere (AI work) sends the person here: ?find=page opens the page choice, ?find=again
   // the Find dialog; the address is cleaned so a reload does not open it again.
   const asked = sp.get("find");
@@ -105,7 +107,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
   const sc = sumForFocus.data?.setup?.counts;
   const formsCount: FormsCount | null = sc ? { total: sc.forms, setUp: sc.formsSetUp } : null;
   const doneSince = useFocusItem(known && combo && sumForFocus.data ? [] : undefined, (k) => k.startsWith("forms:") && k !== "forms:finder");
-  const finder = <><FinderPanel id={id} latest={latest.data} onRedo={redo} onChoosePage={choosePage} removed={removed.map((r) => r.code)} count={formsCount} countFailed={sumForFocus.isError} onRetryCount={() => void sumForFocus.refetch()} />{finding ? <FindDialog id={id} only={finding.length ? finding : undefined} page={choosingPage ? latest.data?.page_choice ?? { candidates: [], why: "" } : null} onClose={() => { setFinding(null); setChoosingPage(false); }} onStarted={(runId) => window.dispatchEvent(new CustomEvent("s5-find-started", { detail: runId }))} /> : null}</>;
+  const finder = <><FinderPanel id={id} latest={latest.data} onRedo={redo} onChoosePage={choosePage} removed={removed.map((r) => r.code)} count={formsCount} countFailed={sumForFocus.isError} onRetryCount={() => void sumForFocus.refetch()} />{finding ? <FindDialog id={id} only={finding.length ? finding : undefined} page={choosingPage ? latest.data?.page_choice ?? { candidates: [], why: "" } : null} stages={lineRedo} onClose={() => { setFinding(null); setChoosingPage(false); setLineRedo(false); }} onStarted={(runId) => window.dispatchEvent(new CustomEvent("s5-find-started", { detail: runId }))} /> : null}</>;
   // Break m4 (Screen 01): an author never sees the channels as read-only words while the session loads.
   if (!known || !combo) return <Spinner label="Loading forms" />;
   const undo = canAuthor ? <>{lastChange ? <UndoBar change={lastChange} onUndo={undoLast} /> : null}{removed.length ? <RemovedNotice id={id} removed={removed} /> : null}</> : null;
@@ -150,7 +152,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
             <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <SignatureCell id={id} code={l.code} channel={l.channel as Channel} signature={l.signatureKind as Signature} signatures={l.signatures} canAuthor={canAuthor} />}</td>
             <td className="text-xs">{l.document ? "—" : l.signedBy ? l.signedByLabel : <span className="text-text-muted">Not set</span>}</td>
             <td className="text-xs"><span className="block">{l.edition ?? l.libraryEdition ?? <span className="text-text-muted">No edition read yet</span>}{l.document ? null : <span className="text-text-muted"> · {l.boxes} form fields matched</span>}</span>{l.document ? null : <LineReading combo={combo} l={l} fromLibrary={fromLibrary} />}{l.document ? null : <span className="mt-1 block"><StepChip code={l.code} chip={progress[l.code]} onOpen={() => openSetup(l.code)} /></span>}</td>
-            <td className="whitespace-nowrap">{canAuthor ? <><Button size="sm" variant="ghost" aria-label={`Change ${l.code}`} onClick={() => setOpen(l)}><Pencil /> Change</Button><LineMenu id={id} l={l} onRedo={() => redo([l.code])} onRemove={() => setRemoving(l)} onBulk={(op) => bulk.open({ kind: "form", key: l.code, short: l.code }, op)} /></> : null}</td>
+            <td className="whitespace-nowrap">{canAuthor ? <><Button size="sm" variant="ghost" aria-label={`Change ${l.code}`} onClick={() => setOpen(l)}><Pencil /> Change</Button><LineMenu id={id} l={l} onRedo={() => redo([l.code], true)} onRemove={() => setRemoving(l)} onBulk={(op) => bulk.open({ kind: "form", key: l.code, short: l.code }, op)} /></> : null}</td>
           </tr>
         ))}
         {pending.map((a) => (

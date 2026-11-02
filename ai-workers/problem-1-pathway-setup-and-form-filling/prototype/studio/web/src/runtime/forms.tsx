@@ -23,8 +23,8 @@ export function FormsPanel({ caseId }: { caseId: string }) {
   return (
     <section aria-labelledby="forms-h" className="rounded-xl border border-border bg-surface-raised">
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-4 py-3">
-        <h2 id="forms-h" className="text-base font-semibold">Forms</h2>
-        <p className="text-[13px] text-text-muted">Filled from confirmed answers only. A new copy is made only when you ask; a locked copy never changes.</p>
+        <h2 id="forms-h" className="text-base font-semibold">Prepare application</h2>
+        <p className="text-[13px] text-text-muted">The forms to file, filled from confirmed answers only. A new copy is made only when you ask; a locked copy never changes.</p>
       </header>
       {q.isLoading ? <div className="p-4"><Skeleton className="h-16 w-full" /></div>
         : q.isError ? <div className="p-4"><Notice tone="danger" title="The forms could not be loaded">{(q.error as Error).message}</Notice></div>

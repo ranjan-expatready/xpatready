@@ -1,6 +1,6 @@
 // S5 Combination workspace slice 2 and the slice 1 early-look fixes (Lead note 27 Oct 23:05) walked in a real browser like
 // a person: Forms lists each form once with its reading status in its row and the sources in one line (fix 1); filing
-// warnings in business words (fix 2); Questionnaires per person with question wording, who fills it, the forms that need
+// warnings in business words (fix 2); Smart questionnaire (SQR) per person with question wording, who fills it, the forms that need
 // it and a side panel that alone shows the field code (fix 3), a coverage gap blocking release; Preview with one section
 // open and a jump list (fix 4). The drift check's Shoulds (Lead note 28 Oct): counts for forms attached but not set up
 // (5), IRCC's words as sentences (6), Remove asks first and Undo puts it back (8, P-116), Review in words (2), Preview
@@ -100,7 +100,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C11.10 drift 5: the summary and the rows agree on the forms to add from the library (no AI for them)", k > 0 && await p.locator("[data-pending]").getByRole("button", { name: "Add from library" }).count() === k, summary);
   await state("forms-attached-not-set-up");
 
-  // ======================================================== fix 3 and slice 2: Questionnaires per person
+  // ======================================================== fix 3 and slice 2: Smart questionnaire (SQR) per person
   await go(C, "questionnaires");
   const q = p.locator("[data-questions]");
   step("one section open at first; the others fold (the page stays short)", await p.locator("[data-section] [aria-expanded=true]").count() === 1 && await p.locator("[data-section]").count() > 5);

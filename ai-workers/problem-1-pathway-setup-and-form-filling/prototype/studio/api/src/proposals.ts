@@ -16,7 +16,8 @@ import { fail, need, type Actor, type Audit, type Db } from "./core.ts";
 import { keyFor } from "./library-changes.ts";
 import { checkedFieldValues, dropFieldList, type AnswerValue } from "./answer-values.ts";
 import { acceptPqrPick } from "./fact-sources.ts";
-import { LibrarySources } from "./library-sources.ts";
+import { usedInLabels } from "./where-used.ts";
+import { nearMatches } from "../../engine/near.ts";
 
 type Tx = Prisma.TransactionClient;
 type Client = Db | Tx;
@@ -56,7 +57,7 @@ export function identityKeyOf(p: ProposalPayload, given: string): string {
 
 /** C3.6 (break R2-M1): a draft list that a draft field names and that has no ADD of its own rides with that field; it is not a library item
  *  another proposal may reuse: it can still be undone or withdrawn with its field. */
-async function ridingLists(db: Client, workspaceId: string): Promise<Set<string>> {
+export async function ridingLists(db: Client, workspaceId: string): Promise<Set<string>> {
   const named = await db.canonicalField.findMany({ where: { workspaceId, status: "DRAFT", answerListKey: { not: null } }, select: { answerListKey: true } });
   if (!named.length) return new Set();
   const drafts = await db.answerList.findMany({ where: { workspaceId, status: "DRAFT", answerListKey: { in: named.map((f) => f.answerListKey!) } }, select: { answerListKey: true } });
@@ -106,6 +107,12 @@ async function usableInLibrary(db: Client, workspaceId: string, kind: string, ke
 
 const plainIssues = (e: { issues: { path: PropertyKey[]; message: string }[] }) => e.issues.slice(0, 3).map((i) => `${i.path.join(".") || "item"}: ${i.message}`).join("; ");
 
+/** The new fields other proposals are waiting to add to the library (QA-159: a near duplicate of one is caught too). */
+export async function pendingNewFields(db: Client, workspaceId: string, except?: string[]): Promise<{ key: string | null; name: string; meaning: string | null }[]> {
+  const rows = await db.proposalItem.findMany({ where: { workspaceId, kind: "field", landsOn: "library", status: "waiting", reuse: { path: ["match"], equals: "new" }, ...(except?.length ? { id: { notIn: except } } : {}) }, select: { payload: true, work: true } });
+  return rows.map((r) => ({ key: ((r.work as { proposedKey?: string } | null)?.proposedKey) ?? null, name: String((r.payload as { label?: unknown }).label ?? ""), meaning: ((r.payload as { meaning?: string }).meaning) ?? null })).filter((x) => x.name);
+}
+
 /** The one door: parses each item against contract v2, checks its identity, and writes them together (all or none).
  *  Refused: a malformed item (400), two items of one batch with the same identity, or a new library item that already
  *  exists in the library (409: reuse it instead). A waiting item of another run is caught again at approval. */
@@ -114,7 +121,8 @@ const plainIssues = (e: { issues: { path: PropertyKey[]; message: string }[] }) 
 export async function whereUsedWords(db: Client, workspaceId: string, kind: string, key: string): Promise<string> {
   const k = (["field", "section", "document_type", "answer_list"] as const).find((x) => x === kind);
   if (!k) return "";
-  const used = (await new LibrarySources(db as unknown as Db, undefined as never, undefined as never).usedIn(k, workspaceId)).get(key) ?? [];
+  // SH2b (qa minor 1 on #504): read from the one where-used service, not through a LibrarySources built without its services.
+  const used = (await usedInLabels(db, workspaceId, k)).get(key) ?? [];
   return used.length ? `, used in ${used.slice(0, 5).join(", ")}${used.length > 5 ? ` and ${used.length - 5} more` : ""}` : ", used in no combination yet";
 }
 
@@ -127,6 +135,8 @@ export async function insertProposals(db: Client, workspaceId: string, items: (N
   // workspace inside a transaction, so two editions read at once still make one "new" item.
   await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`proposal-door:${workspaceId}`}))`;
   const firstNew = new Map<string, { id: string; edition: string | null }>();
+  const batchNew: { key: string | null; name: string; meaning: string | null }[] = [];
+  let nearPool: { key: string | null; name: string; meaning: string | null }[] | undefined;
   for (const [n, it] of items.entries()) {
     const { choice, decidedKey, work: given, ...item } = it; let work = given;
     const parsed = ProposalItem.safeParse({ ...item, id: randomUUID(), status: "waiting", decision: null });
@@ -148,6 +158,20 @@ export async function insertProposals(db: Client, workspaceId: string, items: (N
         if (x.confidence === "ready") x.confidence = "check";
         x.reason = `The same item is drafted for ${(first.edition ?? "another form").trim()}. Whichever is accepted first adds it to the library; this one then reuses it.${x.reason ? ` ${x.reason}` : ""}`.slice(0, 500);
       } else if (!firstNew.has(ident)) firstNew.set(ident, { id: x.id, edition: x.scope.formEdition });
+    }
+    // QA-159 (G-CORE B1 R3): a new field near a library field, or near another new field waiting (in this batch or an
+    // earlier run), is found here on the server with the one rule (engine/near.ts), not only when the producer says so.
+    if (x.kind === "field" && x.landsOn === "library" && x.reuse.match === "new") {
+      const p = x.payload as { label: string; meaning?: string };
+      const me = { key: ((work as { proposedKey?: string } | null)?.proposedKey) ?? null, name: p.label, meaning: p.meaning ?? null };
+      nearPool ??= [
+        ...(await db.canonicalField.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] }, mergedIntoKey: null }, select: { canonicalFieldKey: true, label: true, meaning: true } }))
+          .map((f) => ({ key: f.canonicalFieldKey, name: f.label || f.canonicalFieldKey, meaning: f.meaning })),
+        ...(await pendingNewFields(db, workspaceId)),
+      ]; // review r4-m1: read once per batch, not once per item
+      const near = nearMatches(me, [...nearPool, ...batchNew]);
+      if (near.length) x.identity = { ...x.identity, near: [...new Set([...x.identity.near, ...near.map((n) => n.name)])].slice(0, 10), nearReason: x.identity.nearReason ?? near[0].why };
+      batchNew.push(me);
     }
     // C11.13 (BAND_TIPS): an item close to a library item is never Ready: a person reads the near match and its reason.
     if (x.identity.near.length && x.confidence === "ready") { x.confidence = "check"; x.reason = `Close to ${x.identity.near.slice(0, 3).join(", ")}: ${x.identity.nearReason}${x.reason ? ` ${x.reason}` : ""}`.slice(0, 500); }
@@ -303,7 +327,7 @@ async function landPqrPick(tx: Tx, r: Row, p: ProposalPayload, l: Landing): Prom
   if (p.kind !== "pqr_pick") fail("Wrong payload.");
   // Break B5: an edit changes only a pick's reason; the question and the person it ticks are the pick itself.
   const was = r.payload as { factKey?: string; role?: string };
-  if ((p as { factKey: string }).factKey !== was.factKey || (p as { role: string }).role !== was.role) fail("An edit changes only the pick's reason. To ask another question, remove this pick and tick that question on the Questionnaires tab.", HttpStatus.CONFLICT);
+  if ((p as { factKey: string }).factKey !== was.factKey || (p as { role: string }).role !== was.role) fail("An edit changes only the pick's reason. To ask another question, remove this pick and tick that question on the Smart questionnaire (SQR) tab.", HttpStatus.CONFLICT);
   const lineageKey = `${(p as { role: string }).role}|${(p as { factKey: string }).factKey}`;
   const before = r.combinationId ? await tx.factSource.findFirst({ where: { combinationId: r.combinationId, lineageKey }, orderBy: { version: "desc" } }) : null;
   const item = { id: r.id, kind: r.kind, runId: r.runId, step: r.step, scope: { formEdition: r.formEdition, combinationId: r.combinationId }, landsOn: r.landsOn, reuse: r.reuse, payload: p,
@@ -470,7 +494,7 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
       const { pqr } = (r.work ?? {}) as { pqr?: PqrWork & { stamp: string } };
       if (!pqr || !r.decidedKey) continue;
       if (JSON.stringify(await pqrStamp(tx, r.combinationId, r.decidedKey)) !== pqr.stamp)
-        fail(`A pre-qualification tick this decision made was changed or released after it was accepted, so Undo would erase that change. Nothing was undone: change it on the Questionnaires tab instead.`, HttpStatus.CONFLICT);
+        fail(`A Prospect questionnaire (PQR) tick this decision made was changed or released after it was accepted, so Undo would erase that change. Nothing was undone: change it on the Smart questionnaire (SQR) tab instead.`, HttpStatus.CONFLICT);
       await tx.factSource.delete({ where: { id: pqr.pqrRowId } });
       if (pqr.pqrBefore) await tx.factSource.create({ data: { ...(pqr.pqrBefore as Prisma.FactSourceUncheckedCreateInput), updatedAt: new Date(String(pqr.pqrBefore.updatedAt)) } });
     }

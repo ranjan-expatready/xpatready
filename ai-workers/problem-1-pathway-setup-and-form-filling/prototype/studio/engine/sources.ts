@@ -149,11 +149,11 @@ export function factSourceProblems(s: Snapshot): Problem[] {
       else if (!f.placed) say(f.document?.base ? "warning" : "error", f, f.document?.base ? `comes from ${f.document.name}; if it cannot be read, nobody is asked for it. Add a question for it as the fallback.` : `comes from ${f.document?.name}, which is asked only in some cases: when it is not asked, nobody gives this answer. Add a question for it, or choose Client.`);
     }
     if (person && f.source === "CLIENT" && !f.placed) say("error", f, "comes from the client, but no question asks it. Add the question, or choose another source.");
-    if (person && f.source === "AGENT" && !f.placed && !isAgentFact(f.fact) && f.role !== "representative") say("error", f, "comes from the case officer, but no place lets the case officer enter it. Add it to the case view, or choose another source.");
+    if (person && f.source === "AGENT" && !f.placed && !isAgentFact(f.fact) && f.role !== "representative") say("error", f, "comes from the case officer, but no place lets the case officer enter it. Add it to the Agent view, or choose another source.");
     if (person && f.source === "AGENT" && agentRefusal(f, f.sourceReason)) say("error", f, "comes from the case officer without a written reason. Write why in its details, or choose the client or a document.");
     if (f.prequalification) {
-      if (f.source === "AGENT") say("error", f, "is ticked for pre-qualification, but it comes from the case officer: a prospect is asked only what they can answer. Untick it, or choose Client or Document.");
-      else if (!f.placed) say("error", f, "is ticked for pre-qualification, but no question asks it, so the prospect cannot be asked. Add the question, or untick it.");
+      if (f.source === "AGENT") say("error", f, "is ticked for the Prospect questionnaire (PQR), but it comes from the case officer: a prospect is asked only what they can answer. Untick it, or choose Client or Document.");
+      else if (!f.placed) say("error", f, "is ticked for the Prospect questionnaire (PQR), but no question asks it, so the prospect cannot be asked. Add the question, or untick it.");
     }
   }
   return out;

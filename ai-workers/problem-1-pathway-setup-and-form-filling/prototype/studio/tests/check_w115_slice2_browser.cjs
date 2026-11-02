@@ -1,4 +1,4 @@
-// W1-15 Questions and documents, slice 2 (runtime lane; board v2 agreed P-147): the Questionnaires tab walked like a
+// W1-15 Questions and documents, slice 2 (runtime lane; board v2 agreed P-147): the Smart questionnaire (SQR) tab walked like a
 // content publisher in a real browser. The strip, source chips and "Needs you"; "Who can be" folded to one line; rows of
 // five things; the ⋯ menu whose greyed actions keep their reason as visible text; the side drawer with its locks in words
 // (a declaration is always the client's; the case officer for a passport fact only with a written reason, P-155(3)); a
@@ -54,7 +54,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C4.10 strip pass: full form = from documents + client answers + case officer enters, with the server's counts", strip.includes(String(L.counts.facts)) && strip.includes(String(L.counts.document)) && L.counts.facts === L.counts.document + L.counts.client + L.counts.agent && /✓ Every fact has one source/.test(strip), strip.replace(/\n/g, " "));
   step("C4.10 strip fail-guard: it shows no system key", !/\b[a-z_]+\.[a-z_]+\b/.test(strip));
   // Slice C1 (P-161 (2)): the people card moved to Before forms on Forms (its fold is checked in check_w1_before_forms_browser).
-  step("P-161 (2) pass: Questionnaires no longer holds the people card; one line names the people and links to Forms", await p.locator("[data-who-can-be]").count() === 0 && await p.locator("[data-who-can-be-moved]").getByRole("link", { name: "Change on Forms" }).count() === 1);
+  step("P-161 (2) pass: Smart questionnaire (SQR) no longer holds the people card; one line names the people and links to Forms", await p.locator("[data-who-can-be]").count() === 0 && await p.locator("[data-who-can-be-moved]").getByRole("link", { name: "Change on Forms" }).count() === 1);
   const chips = await p.locator('[role="group"][aria-label="Where it comes from"]').innerText();
   step("EXPERIENCE §0 pass: source chips Document · Client · Case officer and Needs you · 0", /Document \d+/.test(chips) && /Client \d+/.test(chips) && /Case officer \d+/.test(chips) && /Needs you · 0/.test(chips), chips.replace(/\n/g, " "));
   step("P-154 fail-guard: the strip, the chips and the person line never say agent", !/\bagents?\b/i.test(`${strip} ${chips} ${await p.locator("[data-coverage]").innerText()}`) && /Case officer enters/.test(strip));
@@ -71,7 +71,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // ======================================================== rows of five things, ⋯ menu
   const firstTable = p.locator("[data-section] table").first();
   const heads = (await firstTable.locator("thead th").allInnerTexts()).map((x) => x.trim()).filter(Boolean);
-  step("P-147 Q1 pass: a row shows five things: Question · Comes from · Pre-qualification · Only if · Status", JSON.stringify(heads) === JSON.stringify(["Question", "Comes from", "Pre-qualification", "Only if", "Status", "Actions"]), heads.join(" | "));
+  step("P-147 Q1 pass: a row shows five things: Question · Comes from · Prospect questionnaire (PQR) · Only if · Status", JSON.stringify(heads) === JSON.stringify(["Question", "Comes from", "PQR", "Only if", "Status", "Actions"]), heads.join(" | "));
   await p.locator('[data-source-chip="DOCUMENT"]').click(); await settle();
   const docRows = p.locator('[data-question]:has([data-comes-from="DOCUMENT"])');
   step("chip pass: Document shows only rows from a document", await docRows.count() > 0 && await p.locator('[data-question]:not(:has([data-comes-from="DOCUMENT"]))').count() === 0, await docRows.count());
@@ -148,7 +148,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("P-147 Q2 fail-guard: no bulk bar while nothing is ticked", await p.locator("[data-bulk-bar]").count() === 0);
   await ticks.nth(0).check(); await ticks.nth(1).check();
   const bar = p.locator("[data-bulk-bar]");
-  step("P-147 Q2 pass: two ticked rows show the bulk bar (Set where it comes from, Pre-qualification; no bulk remove, delete or retire)", /2 selected/.test(await bar.innerText()) && await bar.getByLabel("Set where it comes from").count() === 1 && await bar.getByLabel("Pre-qualification").count() === 1 && !/^(Remove|Delete|Retire)/m.test(await bar.locator("button").allInnerTexts().then((x) => x.join("\n"))), await bar.innerText());
+  step("P-147 Q2 pass: two ticked rows show the bulk bar (Set where it comes from, Prospect questionnaire (PQR); no bulk remove, delete or retire)", /2 selected/.test(await bar.innerText()) && await bar.getByLabel("Set where it comes from").count() === 1 && await bar.getByLabel("Prospect questionnaire (PQR)").count() === 1 && !/^(Remove|Delete|Retire)/m.test(await bar.locator("button").allInnerTexts().then((x) => x.join("\n"))), await bar.innerText());
   await state("bulk-bar-two-ticked");
   await bar.getByLabel("Set where it comes from").selectOption("AGENT"); await settle();
   const refused = p.locator("[data-bulk-refused]");
@@ -166,14 +166,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.locator("[data-note-undo]").click(); await settle();
   const after = (await api(`/combinations/${wp}/fact-sources`)).body.facts.filter((f) => f.change);
   step("Undo pass: one Undo takes both rows back", after.length === 0, after.map((f) => f.fact).join(", "));
-  // Runtime Minors 1 Nov: the pre-qualification toast read "Pre-qualification on on 2 questions".
+  // Runtime Minors 1 Nov: the Prospect questionnaire (PQR) toast read "Prospect questionnaire (PQR) on on 2 questions".
   await ticks.nth(0).check(); await ticks.nth(1).check();
-  await bar.getByLabel("Pre-qualification").selectOption("on"); await settle();
+  await bar.getByLabel("Prospect questionnaire (PQR)").selectOption("on"); await settle();
   const pqToast = await toast.innerText();
-  step("Minors 1 Nov pass: the bulk pre-qualification toast reads \"Pre-qualification on for 2 questions\"", /^Pre-qualification on for 2 questions/m.test(pqToast), pqToast);
+  step("Minors 1 Nov pass: the bulk Prospect questionnaire (PQR) toast reads \"Prospect questionnaire (PQR) on for 2 questions\"", /^Prospect questionnaire \(PQR\) on for 2 questions/m.test(pqToast), pqToast);
   step("Minors 1 Nov fail-guard: no \"on on\" in the toast", !/\bon on\b/.test(pqToast), pqToast);
   await p.locator("[data-note-undo]").click(); await settle();
-  step("Undo pass: the pre-qualification change is taken back too", (await api(`/combinations/${wp}/fact-sources`)).body.facts.filter((f) => f.change).length === 0);
+  step("Undo pass: the Prospect questionnaire (PQR) change is taken back too", (await api(`/combinations/${wp}/fact-sources`)).body.facts.filter((f) => f.change).length === 0);
 
   // ======================================================== Needs you: a release check on its row
   sql(`insert into fact_source (workspace_id, combination_id, lineage_key, role, canonical_field_key, source, version, status, origin, updated_by) select workspace_id, id, '${decl.role}|${decl.fact}', '${decl.role}', '${decl.fact}', 'AGENT', 1, 'DRAFT', 'HUMAN', 'user-A' from combination where id='${wp}'`);

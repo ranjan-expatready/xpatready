@@ -1,6 +1,6 @@
 // X1 (W1 setup checklist slice C2; concept §B/§C, board v3 "Forms 5"): each setup tab of a combination says how many
 // open setup items land on it (StepBadge, counted from the summary's checklist, never recounted), and a ?focus= link
-// from the checklist lands on its place on Documents and Questionnaires (focused, outlined 2 s, address cleared), as it
+// from the checklist lands on its place on Documents and Smart questionnaire (SQR) (focused, outlined 2 s, address cleared), as it
 // already does on Forms (C1); QA-120: counts on tabs read in words, one badge style; QA-121: a place gone says so. Walked in a real browser; axe (WCAG 2.2 AA) on the landed pages. No model call (US$0).
 //   zsh studio/tools/isolated.sh screens_x1 4442 start && node studio/tests/check_x1_tabs_focus_browser.cjs 4442 xr_studio_screens_x1
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
@@ -43,8 +43,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const want = tabCounts(sum.setup);
   await p.goto(`${BASE}/c/${sv}/overview`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
   await p.locator("[data-step-badge]").first().waitFor({ timeout: 10000 });
-  const badge = async (label) => { const t = p.getByRole("tab", { name: new RegExp(`^${label}`) }); return { n: Number(await t.locator("[data-step-badge]").getAttribute("data-step-badge").catch(() => "0") ?? 0), name: await t.innerText() }; };
-  const bf = await badge("Forms"), bd = await badge("Documents"), bq = await badge("Questionnaires");
+  // K13: "Smart questionnaire (SQR)" has parentheses, so the tab name is escaped before it becomes a pattern.
+  const badge = async (label) => { const t = p.getByRole("tab", { name: new RegExp(`^${label.replace(/[()]/g, "\\$&")}`) }); return { n: Number(await t.locator("[data-step-badge]").getAttribute("data-step-badge").catch(() => "0") ?? 0), name: await t.innerText() }; };
+  const bf = await badge("Forms"), bd = await badge("Documents"), bq = await badge("Smart questionnaire (SQR)");
   step("C11.10 X1 pass: the Forms tab shows the number of open setup items that land on it", want.forms > 0 && bf.n === want.forms, { want, got: bf });
   step("C11.10 X1 pass: the Documents tab shows its number", want.documents > 0 && bd.n === want.documents, { want, got: bd });
   step("C11.10 X1 fail: a tab with nothing open shows no badge", want.questionnaires === 0 && bq.n === 0, { want, got: bq });
@@ -105,21 +106,21 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   sql(`update document_requirement set attach_mode='COMBINATION_MANDATORY', predicate_json=null, condition_plain=null where combination_id='${wp}' and lineage_key='${line}' and status <> 'RETIRED'`);
   execFileSync("zsh", [path.join(__dirname, "..", "tools", "isolated.sh"), DB.replace(/^xr_studio_/, ""), String(PORT), "restart"], { stdio: "ignore" });
 
-  // ---------------------------------------------------------------- Questionnaires
+  // ---------------------------------------------------------------- Smart questionnaire (SQR)
   for (const key of ["questionnaires:gaps"]) {
     await p.goto(`${BASE}/c/${wp}/questionnaires?focus=${encodeURIComponent(key)}`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
     l = await landed(key);
-    step(`X1 pass: ?focus=${key} lands on the Questionnaires tab: focused, outlined, the address cleared`, l.outlined && l.focused && !l.focusInUrl, l);
+    step(`X1 pass: ?focus=${key} lands on the Smart questionnaire (SQR) tab: focused, outlined, the address cleared`, l.outlined && l.focused && !l.focusInUrl, l);
   }
   await p.screenshot({ path: path.join(SHOTS, "03-questionnaires-landed-1440.png") });
-  await axe("Questionnaires, landed");
+  await axe("Smart questionnaire (SQR), landed");
 
   await p.goto(`${BASE}/c/${wp}/questionnaires?focus=questionnaires%3Aproblems`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
   await p.locator("[data-questions]").waitFor(); await p.waitForTimeout(500);
   step("C11.10 X1 fail (review M2): with no question problems, questionnaires:problems outlines nothing (never a chip showing 0)", await p.locator("[data-focused]").count() === 0 && await p.locator('[data-part-problems="questions"]').count() === 0);
 
   // Review M1 (second pass): a problem only in the released version (draft clean). The checklist's own link must lead to
-  // the Questionnaires notice that says the released version has it and what is left to do.
+  // the Smart questionnaire (SQR) notice that says the released version has it and what is left to do.
   const relId = sql(`select id from config_release where combination_id='${wp}' order by version desc limit 1`);
   const relWhen = sql(`select coalesce((snapshot->'rules'->0->'when')::text, '') from config_release where id='${relId}'`);
   step("setup: the released version has a rule to break", !!relId && relWhen !== "");
@@ -127,13 +128,13 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   execFileSync("zsh", [path.join(__dirname, "..", "tools", "isolated.sh"), DB.replace(/^xr_studio_/, ""), String(PORT), "restart"], { stdio: "ignore" });
   const sum3 = (await api(`/combinations/${wp}/summary`)).body;
   const href = sum3.setup?.next?.href ?? "";
-  step("C11.10 X1 pass: a Not ready rule problem's link goes to Questionnaires, not Documents", /\/questionnaires\?focus=questionnaires%3Aproblems/.test(href) && sum3.setup.next.item.fromRelease === true, href);
+  step("C11.10 X1 pass: a Not ready rule problem's link goes to Smart questionnaire (SQR), not Documents", /\/questionnaires\?focus=questionnaires%3Aproblems/.test(href) && sum3.setup.next.item.fromRelease === true, href);
   await p.goto(`${BASE}${href}`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
   l = await landed("questionnaires:problems");
   const relNotice = await p.locator('[data-part-problems="questions"]').innerText();
   step("C11.10 X1 pass: it lands on the notice saying the released version has the problem and the draft is clean (release it)", l.outlined && l.focused && !l.focusInUrl && (await p.locator("[data-from-release]").count()) === 1 && /released version has 1 problem/.test(relNotice), { l, relNotice: relNotice.slice(0, 160) });
-  const bq2 = await badge("Questionnaires"), bd3 = await badge("Documents");
-  step("C11.10 X1 pass: the Questionnaires badge counts it; Documents does not", bq2.n >= 1 && bq2.n === tabCounts(sum3.setup).questionnaires && bd3.n === tabCounts(sum3.setup).documents, { want: tabCounts(sum3.setup), q: bq2.n, d: bd3.n });
+  const bq2 = await badge("Smart questionnaire (SQR)"), bd3 = await badge("Documents");
+  step("C11.10 X1 pass: the Smart questionnaire (SQR) badge counts it; Documents does not", bq2.n >= 1 && bq2.n === tabCounts(sum3.setup).questionnaires && bd3.n === tabCounts(sum3.setup).documents, { want: tabCounts(sum3.setup), q: bq2.n, d: bd3.n });
   await p.screenshot({ path: path.join(SHOTS, "05-not-ready-release-only-1440.png") });
   sql(`update config_release set snapshot = jsonb_set(snapshot, '{rules,0,when}', $q$${relWhen}$q$::jsonb) where id='${relId}'`);
   step("setup: the released version is put back as it was", sql(`select (snapshot->'rules'->0->'when')::text from config_release where id='${relId}'`) === relWhen);
@@ -151,8 +152,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await axe("Documents, focus place gone");
   await p.goto(`${BASE}/c/${wp}/questionnaires?focus=questionnaires%3Aproblems`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
   await p.locator("[data-questions]").waitFor();
-  await p.locator("[data-done-since]").waitFor({ timeout: 5000 }).catch(() => { throw new Error("QA-121: the done-since notice never showed on Questionnaires"); });
-  step("QA-121 pass (Questionnaires): with its question problems fixed, questionnaires:problems lands on the tab and says it was done", !new URL(p.url()).searchParams.has("focus") && await p.locator("[data-done-since]").count() === 1);
+  await p.locator("[data-done-since]").waitFor({ timeout: 5000 }).catch(() => { throw new Error("QA-121: the done-since notice never showed on Smart questionnaire (SQR)"); });
+  step("QA-121 pass (Smart questionnaire (SQR)): with its question problems fixed, questionnaires:problems lands on the tab and says it was done", !new URL(p.url()).searchParams.has("focus") && await p.locator("[data-done-since]").count() === 1);
   await p.goto(`${BASE}/c/${sv}/documents?focus=documents%3Alines`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
   await p.locator("[data-focused]").waitFor({ timeout: 5000 });
   await p.waitForTimeout(1800);

@@ -21,11 +21,11 @@ export async function mappedBoxes(db: Client, workspaceId: string) {
 }
 
 /** Item key → the ids of the combinations using it (C3.13 where used; C11.9's lifecycle guard). A section is used where a
- *  combination selects it, a document type where a current checklist line lists it, a field where engine fieldUses says,
- *  and an answer list where one of its fields is. */
+ *  combination selects it; a document type where a current checklist line lists it, takes it as an alternative, or a
+ *  fact is read from it (SH2b); a field where engine fieldUses says; and an answer list where one of its fields is. */
 export async function itemCombinations(db: Client, workspaceId: string, kind: UsedKind): Promise<Map<string, Set<string>>> {
   if (kind === "section") return byItem((await db.sqrSectionSelection.findMany({ where: { workspaceId } })).map((s) => [s.sectionKey, s.combinationId]));
-  if (kind === "document_type") return byItem(current(await db.documentRequirement.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }), (r) => `${r.combinationId}|${r.lineageKey}`).map((r) => [r.documentTypeKey, r.combinationId]));
+  if (kind === "document_type") return byItem([...(await documentTypeUses(db, workspaceId))].map(([k, c]) => [k, c] as [string, string]));
   const [boxes, lines, rules, docs, checks, questions, picks] = await Promise.all([
     mappedBoxes(db, workspaceId),
     db.combinationForm.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }),
@@ -40,6 +40,32 @@ export async function itemCombinations(db: Client, workspaceId: string, kind: Us
   const listOf = new Map<string, string | null>();
   for (const f of await db.canonicalField.findMany({ where: { workspaceId }, orderBy: { version: "asc" } })) listOf.set(f.canonicalFieldKey, f.answerListKey);
   return byItem(pairs, (f) => listOf.get(f));
+}
+
+/** Every use of every document type: [type, combination, how] (a line lists it, a line's alternative, a fact's source). */
+async function documentTypeUses(db: Client, workspaceId: string): Promise<[string, string, "line" | "alternative" | "fact"][]> {
+  const [reqs, facts] = await Promise.all([
+    db.documentRequirement.findMany({ where: { workspaceId, status: { in: [...LIVE] } }, select: { combinationId: true, lineageKey: true, version: true, status: true, documentTypeKey: true, alternatives: true } }),
+    db.factSource.findMany({ where: { workspaceId, status: { in: [...LIVE] } }, select: { combinationId: true, lineageKey: true, version: true, status: true, documentTypeKey: true } }),
+  ]);
+  const lines = current(reqs, (r) => `${r.combinationId}|${r.lineageKey}`);
+  return [
+    ...lines.map((r) => [r.documentTypeKey, r.combinationId, "line"] as [string, string, "line"]),
+    ...lines.flatMap((r) => (Array.isArray(r.alternatives) ? (r.alternatives as unknown[]) : []).filter((k): k is string => typeof k === "string").map((k) => [k, r.combinationId, "alternative"] as [string, string, "alternative"])),
+    ...current(facts, (f) => `${f.combinationId}|${f.lineageKey}`).filter((f) => f.documentTypeKey).map((f) => [f.documentTypeKey!, f.combinationId, "fact"] as [string, string, "fact"]),
+  ];
+}
+/** For one document type: each combination using it and how (the guard says it in words). */
+export async function documentTypeUseKinds(db: Client, workspaceId: string, key: string): Promise<Map<string, Set<string>>> {
+  const out = new Map<string, Set<string>>();
+  for (const [k, c, how] of await documentTypeUses(db, workspaceId)) if (k === key) out.set(c, (out.get(c) ?? new Set()).add(how));
+  return out;
+}
+/** Item key → the labels of the combinations using it, sorted (Library › Used in; a duplicate refusal's words). */
+export async function usedInLabels(db: Client, workspaceId: string, kind: UsedKind): Promise<Map<string, string[]>> {
+  const [ids, combos] = await Promise.all([itemCombinations(db, workspaceId, kind), db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true } })]);
+  const label = new Map(combos.map((c) => [c.id, c.label]));
+  return new Map([...ids].map(([k, s]) => [k, [...new Set([...s].map((id) => label.get(id)).filter((l): l is string => !!l))].sort()] as [string, string[]]).filter(([, l]) => l.length));
 }
 
 /** Each combination's place as its full trail in words, Pathway type › Pathway › Program › Category › Sub-category (P-104,
@@ -90,4 +116,19 @@ export async function itemReleases(db: Client, workspaceId: string, kind: "field
 /** The open cases on these combinations (each stays on the release it started on). */
 export async function openCases(db: Client, combinationIds: string[]): Promise<number> {
   return combinationIds.length ? db.case.count({ where: { combinationId: { in: combinationIds }, status: "OPEN" } }) : 0;
+}
+
+/** The open cases on these combinations, per pinned release (each case stays on the release it was opened on; every case
+ *  pins at open, runtime.ts). A case with no pin yet is counted with `release: null`. */
+export async function openCasesByRelease(db: Client, combinationIds: string[]): Promise<{ combinationId: string; release: number | null; cases: number }[]> {
+  if (!combinationIds.length) return [];
+  const [cases, pins] = await Promise.all([
+    db.case.findMany({ where: { combinationId: { in: combinationIds }, status: "OPEN" }, select: { id: true, combinationId: true } }),
+    db.packWorkPin.findMany({ where: { combinationId: { in: combinationIds } }, select: { caseId: true, configReleaseId: true } }),
+  ]);
+  const versions = new Map((await db.configRelease.findMany({ where: { id: { in: [...new Set(pins.map((p) => p.configReleaseId))] } }, select: { id: true, version: true } })).map((r) => [r.id, r.version]));
+  const releaseOf = new Map(pins.map((p) => [p.caseId, versions.get(p.configReleaseId) ?? null]));
+  const counts = new Map<string, { combinationId: string; release: number | null; cases: number }>();
+  for (const c of cases) { const release = releaseOf.get(c.id) ?? null, k = `${c.combinationId}|${release}`; const row = counts.get(k) ?? { combinationId: c.combinationId, release, cases: 0 }; row.cases++; counts.set(k, row); }
+  return [...counts.values()].sort((a, b) => a.combinationId.localeCompare(b.combinationId) || (a.release ?? 0) - (b.release ?? 0));
 }

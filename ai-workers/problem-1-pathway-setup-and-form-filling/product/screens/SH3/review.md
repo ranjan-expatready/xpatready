@@ -205,3 +205,16 @@ Reviewer role, fresh context. Row: SH3 tidy-up (shared service, no screen), `git
 Could not check: preview's server-backed suites (`check_preview_sets`), CI on this commit, and `graph.mjs` (it writes `qa/graph.json`; this row adds no page or route).
 
 **Verdict: Block** (cacf7905). To fix: **M1**, the two preview.ts readers through `sourceKey` and a check that sees them. m1 to m3 may ride along.
+
+## Round 2 (a2d870ec)
+* **What changed** since cacf7905 (`git diff cacf7905 a2d870ec`): `preview.ts`, the contract header, two check lines, and the review section above.
+* **Runs:** `check_sh3_resolver` 63/63, `check_engine` 43/43, `check_screen01_rules` 67/0, `check_vv_checklist` 60/60, `check_forms_proposal_contract` 22/0, `runtime/check_case_engine` 69/69.
+* **M1, fixed.** Both preview.ts readers (:77, :120) now call `sourceKey(roleOf(subjectId), fact)`, the same expression, so behaviour is unchanged. The check uses the widened regex. In a throwaway worktree, putting back either reader, the map (:70) or coverage's template fails it.
+* **m1, fixed:** case.ts:378.
+* **m2, fixed:** the subject-id copies are listed and move with SH4.
+* **m3, fixed:** the r4-m3 title is narrowed, and (e) is added.
+* **Nit:** the header now names base 4cc6d2be, but `preview.ts:71`, `:73` are the head's lines (`:70`, `:72` on 4cc6d2be). The other numbers are the same on both. It can follow.
+* **Score of the code and tests: 9.5/10.** "Task completed" and "trust and sources" move to 1. "Code quality" stays at ½: the tidy-up checks are still source regexes, and r4-m1 is still open as stated.
+* **Correction:** the cacf7905 section's total should read 8.5/10, not 8/10 (seven criteria at 1, three at ½). Its verdict does not change.
+
+**Verdict: Approve** (a2d870ec). No Blocker or Major is open.

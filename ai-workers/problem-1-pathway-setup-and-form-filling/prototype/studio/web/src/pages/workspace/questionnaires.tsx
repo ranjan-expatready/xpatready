@@ -312,17 +312,17 @@ function PqrSet({ id, roleLabel, n }: { id: string; roleLabel: string; n: number
   const pending = c ? c.thisCombination.draftAdds.length + c.thisCombination.draftRemoves.length : 0;
   const { canAuthor } = useSessionView();
   return (
-    <section aria-label="Pre-qualification questions" className="space-y-2 rounded-xl border border-border bg-surface-raised p-4" data-pqr-set>
-      <p className="text-sm"><span className="font-medium">{roleLabel}: {n} pre-qualification question{n === 1 ? "" : "s"} in this combination.</span> <span className="text-text-muted">A prospect answers them before a case starts; the client questionnaire later shows each answer as "please confirm", and a document read that differs is a check, not an overwrite. A tick goes out with this combination's next release, checked with everything else in it.</span></p>
+    <section aria-label="Prospect questionnaire (PQR) questions" className="space-y-2 rounded-xl border border-border bg-surface-raised p-4" data-pqr-set>
+      <p className="text-sm"><span className="font-medium">{roleLabel}: {n} Prospect questionnaire (PQR) question{n === 1 ? "" : "s"} in this combination.</span> <span className="text-text-muted">A prospect answers them before a case starts; the client questionnaire later shows each answer as "please confirm", and a document read that differs is a check, not an overwrite. A tick goes out with this combination's next release, checked with everything else in it.</span></p>
       {canAuthor ? <div className="flex items-center gap-2"><DraftPqrPicks id={id} /><span className="text-xs text-text-muted">Picks with a reason each go to To review, where you accept or remove each.</span></div> : null}
-      {country.error ? <Notice tone="warn" title="The country pre-qualification could not load">{country.error.message} <button type="button" className="font-medium text-text-link underline" onClick={() => void country.refetch()}>Retry</button></Notice> : null}
+      {country.error ? <Notice tone="warn" title="The country Prospect questionnaire (PQR) could not load">{country.error.message} <button type="button" className="font-medium text-text-link underline" onClick={() => void country.refetch()}>Retry</button></Notice> : null}
       {c ? (
         <div className="text-sm" data-pqr-country>
-          <p><span className="font-medium">Country pre-qualification:</span> {c.lines.length} question{c.lines.length === 1 ? "" : "s"} from {c.combinations} of {c.released} released combination{c.released === 1 ? "" : "s"}. It is put together from each combination's newest release, so nothing is set there.{pending ? <span className="text-text-muted" data-pqr-pending> This combination's draft changes {pending} line{pending === 1 ? "" : "s"} at its next release.</span> : null}{" "}
+          <p><span className="font-medium">Country Prospect questionnaire (PQR):</span> {c.lines.length} question{c.lines.length === 1 ? "" : "s"} from {c.combinations} of {c.released} released combination{c.released === 1 ? "" : "s"}. It is put together from each combination's newest release, so nothing is set there.{pending ? <span className="text-text-muted" data-pqr-pending> This combination's draft changes {pending} line{pending === 1 ? "" : "s"} at its next release.</span> : null}{" "}
             {c.lines.length ? <button type="button" className="font-medium text-text-link underline" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Hide the list" : "Show the list"}</button> : null}</p>
           {open ? (
             <div className="mt-2">
-              <Table dense head={["Question", "Person", "Asked by"]} label="Country pre-qualification questions">
+              <Table dense head={["Question", "Person", "Asked by"]} label="Country Prospect questionnaire (PQR) questions">
                 {c.lines.map((l) => <tr key={`${l.role}|${l.fact}`} data-pqr-line={`${l.role}|${l.fact}`}><td className="font-medium">{l.label}</td><td>{l.roleLabel}</td><td className="text-xs">{l.combinations.map((x) => `${x.label} (release ${x.release})`).join(" · ")}</td></tr>)}
               </Table>
               <p className="mt-1 text-xs text-text-muted">{c.basis}.</p>
@@ -363,7 +363,7 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
   const [moved, setMoved] = React.useState<string | null>(null);
   const [moveRefused, setMoveRefused] = React.useState<string | null>(null);
   const moving = React.useRef(false); // a double click sends one move, not a second one from the order before it
-  const sel = useAction((b: { key: string; on: boolean }) => api(`/combinations/${id}/sections/${b.key}`, { method: b.on ? "POST" : "DELETE" }), { success: "Questionnaire sections updated", invalidate: [["combination", id], ["combination-summary", id], ["config", id], ["catalogue"], ["draft"], ["preview"], ["fact-sources", id], ["section-order", id]] });
+  const sel = useAction((b: { key: string; on: boolean }) => api(`/combinations/${id}/sections/${b.key}`, { method: b.on ? "POST" : "DELETE" }), { success: "Smart questionnaire (SQR) sections updated", invalidate: [["combination", id], ["combination-summary", id], ["config", id], ["catalogue"], ["draft"], ["preview"], ["fact-sources", id], ["section-order", id]] });
   React.useEffect(() => { setPicked(new Set()); setFilter("all"); }, [q?.role]);
   // QA-93 (P-116): removing a section asks first, says what goes for whom, then offers one Undo that puts it back in its place.
   // The draft bar and the header read draft, combination-summary and catalogue: refresh them too (review #348 M1).
@@ -467,7 +467,7 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
   };
   const head = (facts: string[]) => {
     const pickable = facts.filter((x) => byFact.has(x)); const all = pickable.length > 0 && pickable.every((x) => picked.has(x));
-    return [...(canAuthor ? [<input key="all" type="checkbox" aria-label="Select every row in this section" disabled={!pickable.length} checked={all} onChange={(e) => toggle(pickable, e.target.checked)} />] : []), "Question", "Comes from", "Pre-qualification", "Only if", "Status", <span key="a" className="sr-only">Actions</span>];
+    return [...(canAuthor ? [<input key="all" type="checkbox" aria-label="Select every row in this section" disabled={!pickable.length} checked={all} onChange={(e) => toggle(pickable, e.target.checked)} />] : []), "Question", "Comes from", "PQR", "Only if", "Status", <span key="a" className="sr-only">Actions</span>];
   };
   return (
     <section aria-labelledby="questions-head" className="space-y-4" data-questions>

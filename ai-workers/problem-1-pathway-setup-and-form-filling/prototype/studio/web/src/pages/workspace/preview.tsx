@@ -38,9 +38,10 @@ export function usePreviewParams() {
 
 /** C4.3 (board v2 frame 4): the three sets for one person, side by side from 1280 px, one at a time with a switch below. */
 const SETS = [
-  { key: "pqr", title: (p: PreviewView) => `Pre-qualification (${p.sets.pqr.length})` },
-  { key: "sqr", title: (p: PreviewView) => `What the client is asked (${p.sets.sqr.asked} of ${p.sets.agent.questions})` },
-  { key: "agent", title: (p: PreviewView) => `Case officer's view (${p.sets.agent.questions})` },
+  { key: "pqr", title: (p: PreviewView) => `Prospect questionnaire (PQR) · ${p.sets.pqr.length}` },
+  // UX-A part 1 (contracts/counts.ts): "asked" is part of the person's questions (the SQR tab's chip), said as such.
+  { key: "sqr", title: (p: PreviewView) => `Client questionnaire · ${p.sets.sqr.asked} of ${questionsWords(p.sets.agent.questions)}` },
+  { key: "agent", title: (p: PreviewView) => `Agent view · ${p.sets.agent.questions}` },
 ] as const;
 type SetKey = (typeof SETS)[number]["key"];
 
@@ -90,15 +91,14 @@ export function PreviewTab({ id, p, empty, fetching, hasRelease }: { id: string;
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,26rem)_minmax(0,1fr)]" data-sets>
         <section aria-labelledby="pv-pqr" className={cn("rounded-xl border border-border bg-surface-raised p-4", shown !== "pqr" && "hidden xl:block")} data-set="pqr">
           <h2 id="pv-pqr" className="font-semibold">{SETS[0].title(p)}</h2>
-          <p className="mt-1 text-xs text-text-muted">What a prospect is asked first, before an application starts. They confirm these answers later in the full questionnaire; no result is shown to them.</p>
-          {!p.sets.pqr.length ? <p className="mt-2 text-sm text-text-muted" data-pqr-empty>No pre-qualification question is ticked for {who.label}. Tick them on the Questionnaires tab.</p> : (
+          <p className="mt-1 text-xs text-text-muted">What a prospect is asked first, before an application starts. They confirm these answers later in the Client questionnaire; no result is shown to them.</p>
+          {!p.sets.pqr.length ? <p className="mt-2 text-sm text-text-muted" data-pqr-empty>No Prospect questionnaire (PQR) question is ticked for {who.label}. Tick them on the Smart questionnaire (SQR) tab.</p> : (
             <ul className="mt-2 space-y-1.5 text-sm">{p.sets.pqr.map((q) => <li key={q.fact} className="flex flex-wrap items-center gap-1.5" data-pqr-fact={q.fact}><span>{q.label}</span><Pill tone={q.from === "Client" ? "neutral" : "info"}>{q.from}</Pill></li>)}</ul>
           )}
         </section>
         <section aria-labelledby="pv-q" className={cn("space-y-2", shown !== "sqr" && "hidden xl:block")} data-set="sqr">
-          {/* UX-A part 1 (contracts/counts.ts): "asked" is part of the person's questions (the Questionnaires chip), said as such. */}
-          <h2 id="pv-q" className="font-semibold">What {who.label} is asked <span className="font-normal text-text-muted" data-asked-of={p.sets.agent.questions}>· {p.sets.sqr.asked} of {questionsWords(p.sets.agent.questions)}</span></h2>
-          <p className="text-xs text-text-muted">The others come from documents or the case officer, or a rule skips them for these Sample answers.</p>
+          <h2 id="pv-q" className="font-semibold">{SETS[1].title(p)}</h2>
+          <p className="text-xs text-text-muted" data-sqr-sub>The questions {who.label} answers on the case's link; the others come from documents or the case officer, or a rule skips them for these Sample answers.</p>
           {p.sets.sqr.fromDocuments.length ? (
             <div className="rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm" data-from-documents>
               <p className="font-medium">From {who.label}'s documents</p>
@@ -114,7 +114,7 @@ export function PreviewTab({ id, p, empty, fetching, hasRelease }: { id: string;
         </section>
         <section aria-labelledby="pv-agent" className={cn("rounded-xl border border-border bg-surface-raised p-4", shown !== "agent" && "hidden xl:block")} data-set="agent">
           <h2 id="pv-agent" className="font-semibold">{SETS[2].title(p)}</h2>
-          <p className="mt-1 text-xs text-text-muted">Every question for {who.label} in this Sample family, with where its answer comes from. Counted as the Questionnaires tab counts them; that tab reads the largest household the combination allows, so a person's number can differ with the family chosen here.</p>
+          <p className="mt-1 text-xs text-text-muted">Every question for {who.label} in this Sample family, with where its answer comes from. Counted as the Smart questionnaire (SQR) tab counts them; that tab reads the largest household the combination allows, so a person's number can differ with the family chosen here.</p>
           <div className="mt-2 max-h-[36rem] space-y-3 overflow-y-auto pr-1" tabIndex={0} role="region" aria-label={`Every question for ${who.label}`}>
             {p.sets.agent.sections.map((x) => (
               <div key={`${x.about}|${x.section}`} data-agent-section={x.section}>
