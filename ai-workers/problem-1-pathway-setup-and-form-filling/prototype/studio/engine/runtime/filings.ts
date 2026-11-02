@@ -13,39 +13,45 @@
 import { createHash } from "node:crypto";
 import type { CaseFiling, CaseFilings, FeeLine, FeeSource, NotFiling, SubmissionGroup } from "../../contracts/runtime.ts";
 import type { Participant } from "./case.ts";
+import FEES from "../../samples/fee-table.json" with { type: "json" };
 
-/** IRCC fee list, as read and checked by the Lead on 29 Oct (product/screens/W1-baseline/immigration-facts-2026-10-29.md
- *  row 19; P-171). Not re-read on 1 Nov: canada.ca and ircc.canada.ca are outside this cloud session's network. */
-const FEE_PAGE = { page: "IRCC fee list", url: "https://ircc.canada.ca/english/information/fees/fees.asp", read: "2026-10-29",
-  checked: "Lead-checked record (immigration-facts-2026-10-29.md row 19); amounts Sample until the immigration expert confirms (P-171)" };
-export const VISITOR_FEE_SOURCE: FeeSource = { ...FEE_PAGE, quote: "maximum fee for a family of 5 or more people applying at the same time and place", quote_kind: "IRCC's words" };
-export const BIOMETRICS_FEE_SOURCE: FeeSource = { ...FEE_PAGE, quote: "biometrics CAD 85, CAD 170 for a family of 2 or more", quote_kind: "summary of the Lead-checked record" };
+/** R2 (P-230 (7)): the dated fee table is data (samples/fee-table.json: amounts, family maximums, ages and each line's
+ *  source with page, quote and date), never code; a fee change is an edit there with its test. Part 2 moves it into a
+ *  stored library table frozen with each release (setup S7a). */
+type TableLine = { key: string; label: string; status: string; per_person_cad: number; family_max?: { cad: number; from_people: number } | null; roles?: string[];
+  exempt?: { under_age: number; over_age: number; source: FeeSource } | null; source: FeeSource };
+type TableCombination = { label: string; lines: string[]; checklist?: boolean; modes?: Record<string, CaseFiling["mode"]>; group_why?: string };
+export type FeeTable = { as_of: string; read: string; status: string; lines: TableLine[]; combinations: Record<string, TableCombination> };
+export const FEE_TABLE = FEES as unknown as FeeTable;
+const line = (key: string) => FEE_TABLE.lines.find((l) => l.key === key)!;
+export const VISITOR_FEE_SOURCE: FeeSource = line("visitor_visa").source;
+export const BIOMETRICS_FEE_SOURCE: FeeSource = line("biometrics").source;
 /** VV-R15 (compliance-trace): who gives no biometrics, in IRCC's words with the page and its date. "Over 79" is read as
  *  80 or older, and age is counted as at today until the group is recorded (FQ-7, open). */
-export const BIOMETRICS_EXEMPT_SOURCE: FeeSource = { page: "When to give biometrics: temporary residents", url: "https://www.canada.ca/en/immigration-refugees-citizenship/services/biometrics/when-to-give-temporary-residence.html",
-  quote: "a child under the age of 14; an applicant over the age of 79", quote_kind: "IRCC's words", read: "2026-03-30 (page date)", checked: "compliance-trace.md VV-R15; age as at today until the group is recorded (FQ-7 open)" };
+export const BIOMETRICS_EXEMPT_SOURCE: FeeSource = line("biometrics").exempt!.source;
 
 /** A fee line nobody outside these ages pays (biometrics, VV-R15): under `underAge` or over `overAge`. */
 export type AgeExempt = { underAge: number; overAge: number; source: FeeSource };
-export type FeeRule = { key: string; label: string; perPersonCents: number; familyMaxCents: number; familyFrom: number; source: FeeSource; exempt?: AgeExempt };
-type Rules = { label: string; modes: Map<string, CaseFiling["mode"]>; fees: FeeRule[] };
+/** A fee line: `roles` limits it to the filings of those roles (spouse and PNP fees); none means every filing. Without a
+ *  family maximum the cap never applies (familyFrom is then beyond any household). */
+export type FeeRule = { key: string; label: string; perPersonCents: number; familyMaxCents: number; familyFrom: number; source: FeeSource; exempt?: AgeExempt; roles?: string[] };
+type Rules = { label: string; modes: Map<string, CaseFiling["mode"]>; fees: FeeRule[]; groupWhy?: string };
 /** What the case adds (C6.12, the stored prepare view): each person's age in whole years (null: no date of birth yet),
  *  the filing modes the release says per role (M3-0; a role it leaves out falls back to the table below), and the
  *  submission group each person's filing is in (a split is stored; default the family group). */
 export type FilingOptions = { ages?: Map<string, number | null>; modes?: Map<string, CaseFiling["mode"]>; groupOf?: (subject: string) => string; groupKind?: (group: string) => SubmissionGroup["kind"] };
 export const FAMILY_GROUP = "group-family";
 
-/** Visitor visa (outside Canada): every role files its own application (BR-1); fees from the fee list (P-171). */
-const RULES = new Map<string, Rules>([
-  ["vv.single", {
-    label: "Visitor visa",
-    modes: new Map([["principal", "files_own"], ["spouse_or_partner", "files_own"], ["child", "files_own"]]),
-    fees: [
-      { key: "visitor_visa", label: "Visitor visa fee", perPersonCents: 100_00, familyMaxCents: 500_00, familyFrom: 5, source: VISITOR_FEE_SOURCE },
-      { key: "biometrics", label: "Biometrics fee", perPersonCents: 85_00, familyMaxCents: 170_00, familyFrom: 2, source: BIOMETRICS_FEE_SOURCE, exempt: { underAge: 14, overAge: 79, source: BIOMETRICS_EXEMPT_SOURCE } },
-    ],
-  }],
-]);
+/** A combination's rules from the fee table (an own property only: "constructor" or "__proto__" is no combination). */
+export function rulesFrom(table: FeeTable, key: string): Rules | undefined {
+  const c = Object.hasOwn(table.combinations, key) ? table.combinations[key] : undefined;
+  if (!c) return undefined;
+  const fees = c.lines.map((k) => table.lines.find((l) => l.key === k)).filter((l): l is TableLine => !!l).map((l): FeeRule => ({
+    key: l.key, label: l.label, perPersonCents: Math.round(l.per_person_cad * 100), familyMaxCents: Math.round((l.family_max?.cad ?? 0) * 100), familyFrom: l.family_max?.from_people ?? Number.MAX_SAFE_INTEGER,
+    source: l.source, ...(l.exempt ? { exempt: { underAge: l.exempt.under_age, overAge: l.exempt.over_age, source: l.exempt.source } } : {}), ...(l.roles ? { roles: l.roles } : {}) }));
+  return { label: c.label, modes: new Map(Object.entries(c.modes ?? {})), fees, groupWhy: c.group_why };
+}
+const RULES = { get: (key: string) => rulesFrom(FEE_TABLE, key) };
 
 /** The fee rule of a combination by its key (biometrics: its ages, VV-R15), for the items and words that need it. */
 export const feeRule = (combinationKey: string, key: string): FeeRule | undefined => RULES.get(combinationKey)?.fees.find((f) => f.key === key);
@@ -85,12 +91,20 @@ export function familyFee(rule: FeeRule, people: number): SubmissionGroup["total
   return { line: rule.key, label: rule.label, people, per_person_cents: rule.perPersonCents, list_cents: listCents, family_max_cents: rule.familyMaxCents, family_from: rule.familyFrom, total_cents: totalCents, cap_applied: capApplied, why, source: rule.source };
 }
 
+/** The age exemptions of a combination's lines in words, from the table (no age is written in code). */
+function ageWords(rules: Rules, ages: boolean): string {
+  const limited = rules.fees.filter((f) => f.exempt);
+  if (!limited.length) return "";
+  if (!ages) return `${limited.map((f) => f.label.replace(/ fee$/, "")).join(", ")} exemptions (for example by age) are not checked yet: every person applying is charged.`;
+  return limited.map((f) => `${f.label.replace(/ fee$/, "")}: none under ${f.exempt!.underAge} or over ${f.exempt!.overAge}, age as at today (FQ-7).`).join(" ");
+}
+
 /** The case's filings, submission groups and fee lines, from the combination's key and the people on the case. Each
  *  group is priced on its own; an age-limited line counts only the people who pay it, and a person with no date of birth
  *  yet has a line that waits for it, never charged or exempt in silence (G15). */
 export function deriveFilings(combinationKey: string, people: Participant[], rulesFor: (key: string) => Rules | undefined = (k) => RULES.get(k), opts: FilingOptions = {}): CaseFilings {
   const rules = rulesFor(combinationKey);
-  if (!rules) return { derived: false, combination: combinationKey, why: `Filings and fees are worked out for the Visitor visa only so far; this combination's are not derived yet. Nothing is guessed.` };
+  if (!rules) return { derived: false, combination: combinationKey, why: `Filings and fees are not derived yet for this combination (they are worked out once its fee lines and filing modes are in the fee table). Nothing is guessed.` };
   const modeOf = (role: string) => opts.modes?.get(role) ?? rules.modes.get(role);
   const persons = people.filter((p) => p.role !== "case");
   const notFiling: NotFiling[] = [];
@@ -106,9 +120,11 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
     applicants: [{ subject: p.subjectId, label: p.label, role: p.role, mode: "applying" }], group: groupOf(p.subjectId), status: "NOT_STARTED", number: null }));
   const groups: SubmissionGroup[] = [], fees: FeeLine[] = [];
   for (const gid of [...new Set(filings.map((f) => f.group))]) {
-    const mine = filings.filter((f) => f.group === gid);
+    const all = filings.filter((f) => f.group === gid), mine = all;
     const totals: SubmissionGroup["totals"] = [];
     for (const rule of rules.fees) {
+      const mine = all.filter((f) => !rule.roles || rule.roles.includes(f.applicants[0].role));
+      if (!mine.length) continue;
       const check = new Map(mine.map((f) => [f.id, ageCheck(rule, opts.ages?.get(f.applicants[0].subject))]));
       const paying = mine.filter((f) => { const c = check.get(f.id)!; return "pays" in c && c.pays; });
       const t = familyFee(rule, paying.length);
@@ -126,12 +142,12 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
     }
     const kind = opts.groupKind?.(gid) ?? "family";
     groups.push({ id: gid, kind, label: mine.length === 1 ? "One submission" : `One submission for ${mine.length} people`, filings: mine.map((f) => f.id), splittable: mine.length > 1,
-      why: kind === "separate" ? "Split out with a reason: priced on its own, so the other group's family maximums do not cover it." : mine.length === 1 ? "One person applying." : "A family's visitor visa applications go together, at the same time and place, so the family maximums apply (BR-16).",
+      why: kind === "separate" ? "Split out with a reason: priced on its own, so the other group's family maximums do not cover it." : mine.length === 1 ? "One person applying." : rules.groupWhy ?? "The family's applications go together, so the family maximums apply.",
       totals, total_cents: totals.reduce((s, t) => s + t.total_cents, 0) });
   }
   const body = { filings, groups, fees, not_filing: notFiling };
   return { derived: true, combination: combinationKey, label: rules.label, ...body, currency: "CAD",
-    basis: `Fees from the ${FEE_PAGE.page} (read ${FEE_PAGE.read}); Sample until the immigration expert confirms (P-171). ${opts.ages ? "Biometrics: none under 14 or over 79 (VV-R15), age as at today (FQ-7)." : "Biometrics exemptions (for example by age) are not checked yet: every person applying is charged."} Paying is not built.`,
+    basis: `Fees from the ${FEE_TABLE.lines[0]?.source.page ?? "fee table"} (fee table as of ${FEE_TABLE.as_of}, read ${FEE_TABLE.read}); Sample until the immigration expert confirms (P-171). ${ageWords(rules, !!opts.ages)} Paying is not built.`,
     why: filings.length ? null : "Nobody on this case is applying, so there is no filing and no fee.",
     version: createHash("sha256").update(JSON.stringify(body)).digest("hex").slice(0, 16) };
 }
