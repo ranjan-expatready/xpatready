@@ -50,3 +50,44 @@ D1 job fit 8 · D2 rules as data 9 · D3 correctness 8 · D4 contract 8 · D5 se
 * Labels and conditions stay Sample; canada.ca not re-opened from the cloud (concept §10): the tech lead re-opens it on the Mac before merge.
 * No gate-authoring screen and no Undo (concept "Not built").
 * A gate on a derived fact is refused at release (choice 5).
+
+# Part 2: the runs (BR-7…BR-14, BR-17, BR-18)
+
+## As built
+* **Adapter** `engine/runtime/eligibility.ts` (pure, stand-in SI-1): `rewriteMissing` (BR-9's `exists` rewrite), `gateResult`, `outcomeOf`, `assess`, `inputsOf`, `outOfDate`. **`FAIL_BEATS_MISSING = true`** (P-229 (3)); the shared `evaluate` is unchanged.
+* **Routes** `api/src/assessments.ts`, registered in `api/src/features/eligibility.ts` with part 1's: `POST /runtime/cases/:id/assessments`, `GET /runtime/cases/:id/assessments[?person=]`, `GET /runtime/assessments/:aid`. No migration: part 1 made the tables.
+* **Contract:** `AssessmentRunBody` added to `contracts/eligibility.ts` (person; reason up to 300 characters, one line, no invisible characters).
+
+## Choices where the concept left room
+1. **Facts read:** only answers their own checks accept (`checkValue`), as the C6.4 checklist reads them; an invalid value counts as missing (AG-03 §9).
+2. **`packVersion`** is the release's version and **`packId`** its `packVersionId` (challenge Minor 6); `releaseId` is kept too.
+3. **`rulesAsOfByProgram`** is the release's `releasedAt` date, in UTC.
+4. **The envelope also stores `person` and `inputs`** (concept BR-8), so out of date needs no other table. `out_of_date`, `changed[]` and `release_changed` are worked out on every read and never written.
+5. **A reason of spaces only is no reason** (trimmed). A first run may carry a reason; it is kept.
+6. **`GET /runtime/assessments/:aid`** answers 403 to a client whatever the id (as every eligibility route does), 404 to staff for an unknown or malformed id, and 404 to another firm's staff (through `reach`).
+7. **The view already carries `overrides[]` and the review fields** (read from part 1's tables, empty until part 3), so part 3 only adds the writes and the page.
+8. **Audit:** one row per run, naming the case and the person by short id and the outcome; no answer value (STANDARDS §5).
+
+## Checks
+* `tests/check_c69_runs.ts`: 50/50 on a fresh copy (sets up release 1, proves the 409 with no gates there, then runs the M3 setup).
+* `acceptance/C6.9.test.ts`: C6.9-1…10, 14, 15 pass; C6.9-11…13 wait for part 3 (override and review).
+
+## R4: a gate's own outcome when not met (P-230 (1), the tech lead's message of 2 Nov)
+* `whenNotMet` on a gate, as data: `not_eligible` (default, not stored, so earlier releases keep their fingerprints) or `needs_review`. Saved by the PUT (refused on `gates.N.whenNotMet` otherwise), carried in `snapshot.eligibility`, and a change is an "Eligibility" change-summary line in words.
+* The adapter lists a `needs_review` gate not met in `reviewGates` (our addition), never in `failedGates`: the result is Possibly eligible. The gate's own state stays Not met (honest). `FAIL_BEATS_MISSING` applies to `not_eligible` gates only.
+* **Data and test changed with it:** S7 (`acceptance/lib/setup_vv_m3.ts`) gives `vv.no_convictions` `whenNotMet: "needs_review"`; **C6.9-7** now expects Possibly eligible with the gate in `reviewGates` (was Not eligible). Labels unchanged (Sample).
+* Tests: 9 pure pass/fail lines and 1 route line in `check_c69_runs.ts` (60/60); `check_c69_gates.ts` 87/87 with S7's new body.
+
+## Part 2, review round 1 (fd26c492: reviewer Block, breaker 1 Major) and the fixes
+* **M1 (reviewer), a false Not met on an answered fact:** the adapter now reads a gate fact as the rules read it, the person's answer first and then the case's, whatever the prefix. Out of date re-reads it the same way. Before, `relationship.start_date` and `representative.*` (asked once per case, of the case subject) read as unanswered. Tests: 4 lines "C6.9 M1".
+* **M2 (reviewer) = M1 (breaker), simultaneous first runs skipping the reason:** the count of earlier runs and the insert now run in one transaction under `pg_advisory_xact_lock` per case and person. Test: 40 POSTs at once give one 201 and 39 refusals on `reason`. Against the old code the same test fails (several MANUAL rows).
+* **Breaker m1:** a gate not met still lists the facts it could not read (P-229 (3)).
+* **Breaker m3:** a person marked not travelling after a run makes that run out of date (`not_travelling: true`).
+* **Breaker m4:** the reason counts characters (an emoji is one, 300 at most) and needs a letter or a digit.
+* **Reviewer m1–m3:**
+  * the audit check now searches every run's audit text for the answer values;
+  * a client reading a real run's id gets 403 (tested);
+  * scale is tested as 4 people × 10 runs, in under 300 ms.
+* **Reviewer m4:** concept §6 and §8 updated for R4.
+* **Left, as a known limit (breaker m2):** a gate on a repeating-row fact reads the first row only, the way the questionnaire's rules read a box with no row; row facts carry no answer id. Visitor visa has no such gate. Refusing such gates at release is a follow-up, asked in the PR.
+* Tests: `check_c69_runs` 75/75, `check_c69_gates` 87/87, `check_vv_prepare_api` 32/32, acceptance C6.9 12/15 (11–13 are part 3).

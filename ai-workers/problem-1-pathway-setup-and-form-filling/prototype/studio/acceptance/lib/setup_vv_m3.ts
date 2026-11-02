@@ -74,7 +74,10 @@ await main("Setup", "Visitor visa release 2 for the M3 path (Super Admin, M2)", 
   // wider question (committed, arrested, charged or convicted): Sample.
   const gates = [
     { key: "vv.travel_document", label: "Passport number and expiry date answered (Sample)", condition: { op: "and", args: [{ op: "exists", field: "person.passport_number" }, { op: "exists", field: "person.passport_expiry_date" }] } },
-    { key: "vv.no_convictions", label: "Answered no to the criminal history question (Sample)", condition: { op: "eq", field: "person.criminal_history", value: false } },
+    // P-230 (1) (researched 2 Nov): the background question covers committed, arrested, charged or convicted, and
+    // rehabilitation, record suspension and a temporary resident permit exist, so a Yes asks for the representative's
+    // review, never a hard Not eligible ("when not met" as data).
+    { key: "vv.no_convictions", label: "Answered no to the criminal history question (Sample)", condition: { op: "eq", field: "person.criminal_history", value: false }, whenNotMet: "needs_review" },
   ];
   const judgement = ["Has enough money for the stay", "Is in good health", "Ties that will take the person back home", "Will leave Canada at the end of the visit"];
   r = await call("PUT", `/combinations/${vv}/eligibility-gates`, { gates, judgement }, AUTHOR);
