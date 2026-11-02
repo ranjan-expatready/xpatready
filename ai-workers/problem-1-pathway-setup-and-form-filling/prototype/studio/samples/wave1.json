@@ -48,9 +48,9 @@
       "categories": [
         { "key": "family_sponsorship.spouse_partner", "label": "Spouse or common-law partner", "locations": ["inside_canada", "outside_canada"],
           "setup": { "key": "fs.spouse", "page": "https://www.canada.ca/en/immigration-refugees-citizenship/services/immigrate-canada/family-sponsorship/spouse-partner-children/apply.html",
-            "participants": [{ "role": "principal", "label": "Sponsored spouse or partner", "min": 1, "max": 1, "filingMode": "files_own" }, { "role": "child", "label": "Child", "min": 0, "max": 4, "preview": 0, "filingMode": "on_principal" }, { "role": "representative", "label": "Representative", "min": 0, "max": 1, "preview": 0 }],
-            "sources": ["imm1344e.pdf", "imm5532e.pdf", "imm0008e.pdf", "imm5669e.pdf", "imm5406e.pdf", "imm5562e.pdf", "imm5409e.pdf", "imm5604e.pdf", "imm5476e.pdf", "imm5475e.pdf", "imm5533e.pdf", "imm5589e.pdf", "guide-5289.html"], "missing": [],
-            "note": "Sample: IRCC's spouse or common-law partner sponsorship (guide 5289)." } }
+            "participants": [{ "role": "principal", "label": "Sponsored spouse or partner", "min": 1, "max": 1, "filingMode": "files_own" }, { "role": "sponsor", "label": "Sponsor", "min": 1, "max": 1, "filingMode": "co_files" }, { "role": "child", "label": "Child", "min": 0, "max": 4, "preview": 0, "filingMode": "on_principal" }, { "role": "representative", "label": "Representative", "min": 0, "max": 1, "preview": 0 }],
+            "sources": ["imm1344e.pdf", "imm5532e.pdf", "imm0008e.pdf", "imm5669e.pdf", "imm5406e.pdf", "imm5409e.pdf", "imm5604e.pdf", "imm5476e.pdf", "imm5475e.pdf", "imm5533e.pdf", "imm5589e.pdf", "guide-5289.html"], "missing": [],
+            "note": "Sample: IRCC's spouse or common-law partner sponsorship (guide 5289). Sponsor added (Researched, P-230, PR #413 research_notes/visitor-visa-and-six-combinations-research-2026-11-02.md Q3, Q9): a person on the case, never an applicant. IMM 5562 held: no IRCC checklist for this application names it (Researched, P-230 Q9)." } }
       ] },
     { "pathway": "corporate.temporary_residence", "key": "lmia", "label": "Labour market impact assessment", "description": "Sample: an employer's application to ESDC before hiring a foreign worker.",
       "categories": [
