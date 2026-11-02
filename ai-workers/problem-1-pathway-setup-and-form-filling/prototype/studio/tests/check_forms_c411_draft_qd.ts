@@ -275,6 +275,16 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
     r = await plan("replay");
     ok("C4.11 LV fail: a newest saved checker round with no first round of its own run makes step 5 not Saved", r.body.saved?.steps?.qd_conditions === false && r.body.saved?.steps?.pqr_picks === true, r.body.saved);
     rmSync(join(RUNS, lone), { force: true }); written.pop();
+    // PF (#531 review m1, C4.7 break B1): a newer step-5 first round alone (a Live run whose checker round failed) never
+    // pairs with an older checker round: Saved stays the complete older run, and a Saved run replays exactly that run.
+    const loneD = `studio-qd-conditions-c411-lone-d-live-20261102t235900000z-d${Date.now().toString(36)}.json`;
+    writeFileSync(join(RUNS, loneD), readFileSync(written.filter((f) => /studio-qd-conditions-c411-test-live-/.test(f)).pop()!)); written.push(join(RUNS, loneD));
+    r = await plan("replay");
+    ok("C4.11 PF pass: with a newer step-5 first round alone, step 5 is still Saved (the complete older run)", r.body.saved?.steps?.qd_conditions === true, r.body.saved);
+    r = await run("replay");
+    const pf = JSON.parse(sql(`select coalesce(detail->'run_files', '[]'::jsonb) from drafting_job where batch_id='${r.body.runId}' and kind='qd_conditions'`) || "[]") as string[];
+    ok("C4.11 PF fail: the newer draft-only run is never paired with the older checker round (both replayed files are one run's)", step(r, "qd_conditions")?.status === "COMPLETED" && pf.length === 2 && pf.every((f) => f.includes("-c411-test-live-")) && !pf.some((f) => f.includes("lone-d")), { files: pf, step: step(r, "qd_conditions")?.status });
+    rmSync(join(RUNS, loneD), { force: true }); written.pop();
     r = await plan("live");
     ok("C4.11 LV pass: Live states its worst case before it runs (four AI rounds), inside the cap; steps 5 and 6 Live, step 2 Saved", r.status === 200 && r.body.totals.worst_usd > 0 && r.body.totals.worst_usd <= r.body.totals.remaining_usd && r.body.live?.approved === true && r.body.steps?.[4]?.how === "live" && r.body.steps?.[5]?.how === "live" && r.body.steps?.[1]?.how === "saved", { totals: r.body.totals, how: r.body.steps?.map((x: J) => x.how) });
     scenario({ "studio-qd-conditions-check": good(condOut), "studio-qd-conditions": good(condOut), "studio-pqr-picks-check": good(pickOut), "studio-pqr-picks": good(pickOut) });
