@@ -66,6 +66,11 @@ const err = (where: string) => ({ level: "error" as const, where, item: "x", mes
   step("C1.4 (fail case): with no proposal the run's own step is next, and its button is View AI progress", run.next?.item.kind === "view_ai" && run.steps[2].state === "ai", run.next?.item);
 }
 {
+  // UX-A part 3 (break B1): the catalogue's startable check failing on the release (statusOf: Not ready) makes the chip
+  // Not ready even with no validator error, so the header, the strip and the card say one state; never Live.
+  const ns = setupChecklistOf(live({ notStartable: true }));
+  step("UX-A3 (break B1): a released combination failing the startable check is Not ready, never Live", ns.chip.status === "NOT_READY" && ns.bar.text !== "✓ Live", ns.chip);
+  step("UX-A3 (break B1) fail case: a released, startable combination stays Live", setupChecklistOf(live({ notStartable: false })).chip.status === "LIVE");
   const nr = setupChecklistOf(live({ release: { number: 2, problems: [err("Documents")] }, changes: 1, review: { stage: "submit", submittedBy: null, authors: [] }, proposals: { person_role: 1 } }));
   step("C11.10: Not ready — the release's problem is the first item (before a draft proposal), chip Not ready, step 5 reopens", nr.next?.item.fromRelease === true && nr.next.step === "questions_documents" && nr.chip.status === "NOT_READY" && nr.steps[4].state !== "done", nr.next);
   const v = forViewer(nr, AUTHOR);

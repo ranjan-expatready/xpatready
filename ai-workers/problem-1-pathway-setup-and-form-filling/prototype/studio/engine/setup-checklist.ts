@@ -89,6 +89,9 @@ export type SetupInput = {
   documents: { lines: number; rolesWithout: number };
   questions: number;
   held: number;
+  /** UX-A part 3 (break B1): the catalogue's startable check failed on the released version (statusOf: Not ready), so the
+   *  chip is Not ready even when the release raises no validator error: one state on the header, strip and card. */
+  notStartable?: boolean;
   running: { batchId: string; step: StepKey } | null;
   changes: number;
   review: { stage: "submit" | "sign" | "release"; submittedBy: string | null; authors: string[] };
@@ -120,7 +123,7 @@ export function setupChecklistOf(s: SetupInput, key = ""): SetupChecklist {
   // X1 (review M1): step 4's release problems are split by part, so a Not ready item lands on the tab that holds it.
   const relPart = { documents: 0, questions: 0 };
   for (const p of relErrors) { const t = stepOfWhere(p.where); relBy[t.step]++; if (t.part) relPart[t.part]++; }
-  const notReady = relErrors.length > 0;
+  const notReady = relErrors.length > 0 || (!!s.release && !!s.notStartable);
   const counts: Counts = { forms: s.forms.onCombination ?? s.forms.lines + s.forms.sources, formsSetUp: s.forms.lines, people: s.people.roles, applicants: s.people.applicants, documents: s.documents.lines, questions: s.questions, proposals: proposalsBy, problems: problemsBy, held: s.held };
 
   const open: Record<StepKey, OpenItem[]> = { pages: [], people: [], forms: [], questions_documents: [], release: [] };

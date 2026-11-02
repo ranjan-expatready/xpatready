@@ -32,7 +32,8 @@ export function ReviewTab({ d, changesCount }: { d: any; changesCount?: number }
   const [picked, setPicked] = React.useState<Set<string>>(new Set());
   const [allProblems, setAllProblems] = React.useState(false);
   const [allChanges, setAllChanges] = React.useState(false);
-  const inv = [["review", id], ["combination", id], ["programs"], ["preview"], ["config", id], ["sources", id]];
+  // UX-A part 3 (break M2): a submit, sign or release refreshes the header, the draft bar and the cards too (G1: and the sources).
+  const inv = [["review", id], ["combination", id], ["combination-summary", id], ["draft"], ["catalogue"], ["programs"], ["preview"], ["config", id], ["sources", id]];
   const submit = useAction(() => api(`/combinations/${id}/submit`, { method: "POST", json: { note } }), { success: "Submitted for review", invalidate: inv, onDone: () => setNote("") });
   const sign = useAction((b: any) => api(`/combinations/${id}/signoff`, { method: "POST", json: b }), { success: (x: any) => "Recorded", invalidate: inv, onDone: () => { setPicked(new Set()); setNote(""); } });
   const approve = useAction(() => api(`/combinations/${id}/approve`, { method: "POST" }), { success: (x: any) => `Released version ${x.version}`, invalidate: inv });
@@ -45,7 +46,10 @@ export function ReviewTab({ d, changesCount }: { d: any; changesCount?: number }
   const sub = v.submission?.status === "SUBMITTED" ? v.submission : null;
   // UX-A part 3 (finding 7): the draft's changes are the summary's count (the draft bar's "No unreleased changes" and the
   // header): a combination with nothing configured has none, even though its draft carries shared library items.
-  const draftChanges: any[] = changesCount === 0 ? [] : v.draft.changes;
+  // Review n1 / break m2: while the summary's count is unknown the list waits, so it never shows the library's items
+  // beside "No unreleased changes" for a moment.
+  const counting = changesCount === undefined;
+  const draftChanges: any[] = changesCount === 0 || counting ? [] : v.draft.changes;
   const changes: any[] = sub ? sub.changeSummary : draftChanges;
   const signed = new Map<string, any>((v.signoffs ?? []).map((s: any) => [s.itemRef, s]));
   const errors = v.draft.problems.filter((p: any) => p.level === "error"), warnings = v.draft.problems.filter((p: any) => p.level === "warning");
@@ -64,7 +68,7 @@ export function ReviewTab({ d, changesCount }: { d: any; changesCount?: number }
         </Notice>
       ) : null}
       <div className="grid gap-3 md:grid-cols-3">
-        <StepCard n={1} title="Author submits" done={!!sub} who="Configuration author (only the author submits)" text={sub ? `Submitted by ${nameOf(session.data.actors, sub.submittedBy)}, ${fmtWhen(sub.submittedAt)}${sub.stale ? ": the draft changed afterwards, submit again" : ""}` : `${draftChanges.length} draft change${draftChanges.length === 1 ? "" : "s"}; ${errors.length} problem${errors.length === 1 ? "" : "s"} to fix`} />
+        <StepCard n={1} title="Author submits" done={!!sub} who="Configuration author (only the author submits)" text={sub ? `Submitted by ${nameOf(session.data.actors, sub.submittedBy)}, ${fmtWhen(sub.submittedAt)}${sub.stale ? ": the draft changed afterwards, submit again" : ""}` : `${counting ? "Counting draft changes" : `${draftChanges.length} draft change${draftChanges.length === 1 ? "" : "s"}`}; ${errors.length} problem${errors.length === 1 ? "" : "s"} to fix`} />
         <StepCard n={2} title="The immigration expert signs the content" done={!!sub && !unsignedSme.length} who="Content reviewer (the immigration expert's sign-off)" text={sub ? `${needSme.length - unsignedSme.length} of ${needSme.length} rule, document, check or AI-proposed changes signed` : "Rules, document requirements, checks and AI proposals need the immigration expert's sign-off"} />
         <StepCard n={3} title="A second person releases" done={false} who="Approver (never the author or submitter)" text={v.releases[0] ? `Last released: version ${v.releases[0].version}, in Release ${v.releases[0].release}, by ${v.releases[0].approver}` : "Nothing released yet"} />
       </div>
@@ -84,7 +88,7 @@ export function ReviewTab({ d, changesCount }: { d: any; changesCount?: number }
           <p className="font-medium">{sub ? "Submitted changes" : "Changes in the draft"} compared with {v.releases[0] ? `released version ${v.releases[0].version}` : "nothing released"} ({changes.length})</p>
           {sub && (can("sme") || can("review")) ? <div className="flex gap-2"><Button size="sm" variant="secondary" onClick={() => setPicked(new Set(changes.filter((c) => !signed.has(ref(c)) && (!c.needs_sme || can("sme"))).map(ref)))}>Select all I can sign</Button><Button size="sm" onClick={() => sign.mutate({ items: [...picked], action: "signed" })} disabled={!picked.size} busy={sign.isPending}><CheckCircle2 /> Sign {picked.size || ""}</Button></div> : null}
         </div>
-        {!changes.length ? <p className="px-4 py-6 text-sm text-text-muted">{v.releases[0] ? "The draft is identical to the released version." : "Nothing configured yet."}</p> : (
+        {!changes.length ? <p className="px-4 py-6 text-sm text-text-muted" role={counting && !sub ? "status" : undefined}>{counting && !sub ? "Counting the draft changes…" : v.releases[0] ? "The draft is identical to the released version." : "Nothing configured yet."}</p> : (
           <Table className="rounded-none border-0" dense head={["", "Kind", "Item", "Change", "Origin", "Needs", "Signed"]}>
             {changes.slice(0, allChanges ? undefined : 25).map((c) => { const s = signed.get(ref(c)); return (
               <tr key={ref(c)}>

@@ -83,6 +83,25 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("pass: after a real change on LMIA the bar, the header and the Review tab say the same number", lsum2.changes > 0 && listed2 === lsum2.changes && barN === lsum2.changes && rev2.includes(`${lsum2.changes} draft change`), { summary: lsum2.changes, listed2, barN });
   await api(`/combinations/${lm}/forms`, { method: "POST", data: { formKey: code } });
 
+  // ------------------------------------------------------------------ break B1: released but not startable is one state everywhere
+  const sv = sql("select id from combination where combination_key='sv.super_visa'");
+  if (sv) {
+    const anyForm = sql(`select cf.lineage_key from combination_form cf join combination c on c.id=cf.combination_id where c.combination_key='wp.family' and cf.status not in ('RETIRED','SUPERSEDED') and cf.lineage_key like 'IMM 5%' order by cf.lineage_key limit 1`);
+    await api(`/combinations/${sv}/forms`, { method: "POST", data: { formKey: anyForm } });
+    const call = (pth, data, actor) => p.request.fetch(`${BASE}/api${pth}`, { method: "POST", headers: { "x-actor": actor, "content-type": "application/json" }, data }).then(async (r) => ({ status: r.status(), body: await r.json().catch(() => null) }));
+    const sub = await call(`/combinations/${sv}/submit`, { note: "UX-A3 check" }, "user-A");
+    const rv = (await p.request.fetch(`${BASE}/api/combinations/${sv}/review`, { headers: { "x-actor": "user-C" } }).then((r) => r.json()));
+    const items = ((rv.submission?.changeSummary ?? rv.draft?.changes) ?? []).map((c) => `${c.kind}|${c.key}`);
+    const sign = items.length ? await call(`/combinations/${sv}/signoff`, { items, action: "signed" }, "user-C") : { status: 0 };
+    const rel = await call(`/combinations/${sv}/approve`, {}, "user-B");
+    step("setup (break B1): Super visa released with one form", sub.status < 300 && rel.status < 300, { sub: sub.status, sign: sign.status, rel: rel.status, why: rel.body?.detail });
+    const ssum = (await api(`/combinations/${sv}/summary`)).body;
+    await p.goto(`${BASE}/c/${sv}/overview`); await p.locator("[data-strip-head]").waitFor({ timeout: 15000 });
+    const chipWord = (await p.locator("[data-status]").first().innerText()).trim(), stripHead = (await p.locator("[data-strip-head]").innerText()).trim();
+    const cardLive = ssum.setup.chip.status === "LIVE", headerLive = ssum.row.status === "READY";
+    step("break B1: the header chip, the setup strip and the card say one state (never Not ready beside Live)", cardLive === headerLive && (chipWord === "Live") === stripHead.startsWith("Live") && !(chipWord === "Not ready" && /^Live/.test(stripHead)), { chipWord, stripHead, chip: ssum.setup.chip.status, row: ssum.row.status });
+  } else step("setup (break B1): the sample has Super visa", false);
+
   // ------------------------------------------------------------------ widths
   for (const [w, h] of [[1024, 768], [400, 860]]) {
     await p.setViewportSize({ width: w, height: h });
