@@ -65,7 +65,7 @@ run(async () => {
   ok("C3.4 pass: two clicks at once still share the one draft", par.every((x) => x.body?.id === r.body?.id), par.map((x) => x.body?.id));
 
   const q = await call("GET", "/review/proposals");
-  const group = (q.body?.groups ?? []).find((g: any) => g.kind === "edition" && /IMM 5257/.test(g.title) && !/Schedule/.test(g.title));
+  const group = (q.body?.groups ?? []).find((g: any) => g.kind === "edition" && /^edition:IMM 5257 \(/.test(g.id)); // IMM 5257 itself, never IMM 5257 SCH1 (since D3 its proposals carry the library's label, not the model's "Schedule 1" text)
   ok("C3.4 pass: an edition group for IMM 5257 waits in the one review queue", !!group, (q.body?.groups ?? []).map((g: any) => g.title));
   const v = group ? await call("GET", `/review/proposals?group=${encodeURIComponent(group.id)}`) : { body: null };
   ok("C3.4 fail→pass (review Minor 1): the draft names its queue group, so \"Open Proposals\" opens IMM 5257's group, not the oldest", !!group && r.body?.group === group.id && again.body?.group === group.id, { said: r.body?.group, queue: group?.id });
