@@ -6,9 +6,14 @@
 //   L  live is refused before anything runs (409, live.approved false) · A  only an author runs it
 //   R  run: a plan not shown is refused (409); the same idempotency key is one run; BR-12 the spend limit is checked
 //   S  /api/runs/:id names each step by its key with its outcome (done, nothing_to_do, …)
+//   O  BR-10 (part 4c): a saved reading of an earlier text of the checklist is out of date, named, never replayed
 //   zsh studio/tools/isolated.sh forms_c411k 4455 start && tsx studio/tests/check_forms_c411_contract.ts 4455 xr_studio_forms_c411k
 import { execFileSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { savedReading, staleReading } from "../api/src/saved-readings.ts";
 
 const PORT = Number(process.argv[2] ?? 4455), DB = process.argv[3] ?? "xr_studio_forms_c411k";
 type J = Record<string, any>;
@@ -26,6 +31,19 @@ const AI = new Set(["documents", "conditions", "pqr_picks", "checker"]);
 const asPlan = (ai: string) => STEPS.map((step) => ({ step, mode: AI.has(step) ? ai : "rules" }));
 
 (async () => {
+  // O: BR-10, the pure rule on a scratch folder (a checklist text, and saved runs that read it or an earlier text).
+  {
+    const root = mkdtempSync(join(tmpdir(), "c411o-")), runs = join(root, "runs"), inv = "prototype/p1/inventory/ckl.text.inventory.json";
+    mkdirSync(join(root, "prototype/p1/inventory"), { recursive: true }); mkdirSync(runs);
+    const text = JSON.stringify({ text: "Bring your passport." }); writeFileSync(join(root, inv), text);
+    const now = createHash("sha256").update(text).digest("hex");
+    const saved = (name: string, sha256: string) => writeFileSync(join(runs, name), JSON.stringify({ caller: "live", contract_valid: true, raw_output: { documents: [] }, drafting_run: { kind: "requirements", run_id: name, inputs: { official_files: [{ file: inv, sha256 }] } } }));
+    saved("c1-requirements-live-20261001t000000000z.json", "a".repeat(64));
+    ok("C4.11 O fail (BR-10): a saved reading of an earlier text is out of date (named) and is never replayed", !!staleReading("ckl.pdf", { runs, root }) && savedReading("ckl.pdf", { runs, root }) === null, staleReading("ckl.pdf", { runs, root }));
+    saved("c1-requirements-live-20261002t000000000z.json", now);
+    ok("C4.11 O pass (BR-10): with a saved reading of the current text, it replays and nothing is out of date", savedReading("ckl.pdf", { runs, root })?.sha256 === now && staleReading("ckl.pdf", { runs, root }) === null);
+    rmSync(root, { recursive: true, force: true });
+  }
   const served = (await call("GET", "/session")).body?.workspace?.id;
   const inDb = (() => { try { return sql(`select id from workspace where id='${served}'`); } catch { return ""; } })();
   if (!served || !inDb) { console.error(`STOP  the database ${DB} is not the one the server on port ${PORT} uses.`); process.exit(2); }
@@ -41,6 +59,7 @@ const asPlan = (ai: string) => STEPS.map((step) => ({ step, mode: AI.has(step) ?
   ok("C4.11 P pass: the plan lists the 7 steps in order", r.status === 200 && JSON.stringify((plan.steps ?? []).map((s: J) => s.step)) === JSON.stringify(STEPS), r.status >= 300 ? words(r) : plan.steps);
   ok("C4.11 P pass: each step says its mode and its cost (usual and worst), US$0 for saved answers and rules", (plan.steps ?? []).length === 7 && plan.steps.every((s: J) => ["replay", "rules"].includes(s.mode) && s.cost?.usual === 0 && s.cost?.worst === 0) && plan.totals?.worst_usd === 0);
   ok("C4.11 P pass: a replayed step says what is known of its saved result (state, US$0); a rules step has none", plan.steps?.filter((s: J) => s.mode === "replay").every((s: J) => s.saved && s.saved.usd === 0 && typeof s.saved.state === "string") && plan.steps?.filter((s: J) => s.mode === "rules").every((s: J) => s.saved === null));
+  ok("C4.11 O pass: the documents step names its current saved reading (Work permit's IMM 5488)", plan.steps?.find((s: J) => s.step === "documents")?.saved?.state === "current", plan.steps?.find((s: J) => s.step === "documents")?.saved);
   ok("C4.11 P pass: the plan carries its fingerprint (plan_sha256)", /^[0-9a-f]{64}$/.test(String(plan.plan_sha256 ?? "")));
   const rulesPlan = (await P(asPlan("rules"))).body;
   ok("C4.11 P pass: rules only is another plan, with another fingerprint and no AI step", /^[0-9a-f]{64}$/.test(String(rulesPlan.plan_sha256 ?? "")) && rulesPlan.plan_sha256 !== plan.plan_sha256 && rulesPlan.steps?.every((s: J) => !s.uses_ai));

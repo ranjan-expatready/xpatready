@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { actorOf, Db, need, readerOf, type Actor } from "./core.ts";
 import { DraftQd, QD_LIVE_WAITING } from "./draft-qd.ts";
-import { savedReading } from "./saved-readings.ts";
+import { savedReading, staleReading } from "./saved-readings.ts";
 import type { QdKind } from "../../engine/draft-qd.ts";
 
 /** The contract's step keys, in run order, and the run engine's step each one is. */
@@ -87,6 +87,9 @@ export class DraftContract {
   private saved(step: ContractStep, checklists: { edition: string | null; fileName: string; officialFile: string | null }[]) {
     if (step === "documents") {
       const found = checklists.map((a) => ({ a, r: savedReading(a.officialFile) })).filter((x) => x.r);
+      // BR-10: a saved reading of an older text of this checklist is out of date: named, never offered as Replay.
+      const stale = !found.length ? checklists.map((a) => ({ a, r: staleReading(a.officialFile) })).find((x) => x.r) : undefined;
+      if (stale) return { usd: 0, state: "out_of_date", date: null, edition: stale.a.edition ?? stale.a.fileName, run_file: stale.r!.runFile, why: `The saved AI reading was of an earlier text of ${stale.a.edition ?? stale.a.fileName}, so it is not replayed. A new reading is recorded in the founder-approved live trial (P-131); meanwhile this step proposes nothing.` };
       if (!found.length) return { usd: 0, state: "none", date: null, edition: null, why: checklists.length ? "No saved AI reading of this combination's checklist yet: it is recorded in the founder-approved live trial (P-131)." : "No official document checklist among this combination's sources yet." };
       const date = /(\d{8})t/i.exec(found[0].r!.runFile)?.[1];
       return { usd: 0, state: "current", date: date ? `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}` : null, edition: found[0].a.edition ?? found[0].a.fileName, run_file: found[0].r!.runFile };
