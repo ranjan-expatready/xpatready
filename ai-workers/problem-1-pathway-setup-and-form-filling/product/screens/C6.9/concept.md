@@ -76,7 +76,7 @@ Sources: **O** = official page quoted; **D** = a DECISIONS row; **FQ** = an open
   * Then `evalCondition` decides: true is **Met**, false is **Not met**, cannot tell is **Not answered** (its missing facts are the gate's).
 
   So an "or" gate settles once one branch is true. Without the rewrite, `evaluate` returns *false* for `exists` on a missing fact (`prototype/contracts/rules.ts:105,121`), and an unanswered passport would read "Not eligible", a false NOT that AG-3-12 forbids. The shared `evaluate` is not changed (show/hide rules rely on it). An answered fact counts whether or not it is confirmed; the page marks it "Not confirmed yet". Sources: T AG-3-12; C. (C6.9-3, C6.9-4)
-* **BR-10 Outcome.** With no gate Not met and none Not answered, the result is `LIKELY_ELIGIBLE`. With none Not met but some Not answered, it is `POSSIBLY_ELIGIBLE`. **Some Not met *and* some Not answered: undecided, Q3.** The adapter has one switch, `FAIL_BEATS_MISSING`; it is `false` (AG-03 as written: the result is `POSSIBLY_ELIGIBLE`) until the founder answers Q3, per the tech lead's binding condition 1 on #391, and can be flipped without other changes. Either way, every result fills both `failedGates` (keys; the page shows labels) and `missingInputs` (fact keys, deduplicated, in gate order).
+* **BR-10 Outcome.** With no gate Not met and none Not answered, the result is `LIKELY_ELIGIBLE`. With none Not met but some Not answered, it is `POSSIBLY_ELIGIBLE`. **Some Not met *and* some Not answered: `NOT_ELIGIBLE`** (the founder's answer to Q3, P-229 (3), 2 Nov; our addition to AG-3-13 for the team). The adapter's one switch, `FAIL_BEATS_MISSING`, is `true` (part 2); `false` would give AG-03 as written, `POSSIBLY_ELIGIBLE`. **A gate's own outcome when not met (P-230 (1), BACKLOG R4):** each gate may carry `whenNotMet` as data, `not_eligible` (the default, not stored) or `needs_review`. A `needs_review` gate not met is listed in `reviewGates` (ours), never in `failedGates`, and gives `POSSIBLY_ELIGIBLE` ("the representative reviews this"), never `NOT_ELIGIBLE`; the outcome set is unchanged and `FAIL_BEATS_MISSING` applies to `not_eligible` gates only. The Visitor visa background gate (`vv.no_convictions`) is `needs_review`: the IMM 5257 question covers committed, arrested, charged or convicted, and rehabilitation, record suspension and a temporary resident permit exist (researched 2 Nov, `research_notes/visitor-visa-and-six-combinations-research-2026-11-02.md` Q8). C6.9-7 changed with it (Not eligible → Possibly eligible, the gate for review). Either way, every result fills both `failedGates` (keys; the page shows labels) and `missingInputs` (fact keys, deduplicated, in gate order).
 
   A release with no gates gives **no result**: the run is refused 409, "This application's release has no eligibility rules yet". Zero gates never reads "Likely eligible". **Conflict, not settled here:**
   * AG-3-13 says: "When **all gate inputs are present** and any gate fails, the outcome SHALL be NOT_ELIGIBLE".
@@ -157,7 +157,7 @@ Problem Details on every refusal (`type`, `title`, `status`, `detail`, `errors[{
 
 | Route | Request | Response | Refusals |
 |---|---|---|---|
-| `PUT /combinations/:id/eligibility-gates` (author) | `{gates[{key,label,condition}], judgement: string[], disclaimer?, version?}` | 200 `{gates (stored with subjectKind), judgement, disclaimer, version, savedBy, savedAt}` | 400 field (BR-2, BR-2a); 403 not an author; 404; 409 stale |
+| `PUT /combinations/:id/eligibility-gates` (author) | `{gates[{key,label,condition,whenNotMet?}], judgement: string[], disclaimer?, version?}` | 200 `{gates (stored with subjectKind), judgement, disclaimer, version, savedBy, savedAt}` | 400 field (BR-2, BR-2a); 403 not an author; 404; 409 stale |
 | `GET /combinations/:id/eligibility-gates` | — | the same, plus `released: {…}\|null` | 404 |
 | `POST /runtime/cases/:id/assessments` | `{person, reason?}` | 201 Assessment | 400 `person` (BR-7) or `reason` (BR-14); 403 client; 404 another firm; 409 no gates or pin mismatch |
 | `GET /runtime/cases/:id/assessments[?person=]` | `person` optional; omitted means every person on the case | 200 `{stand_in: "SI-1", assessments: Assessment[]}`, newest first | 403; 404 |
@@ -175,8 +175,8 @@ Problem Details on every refusal (`type`, `title`, `status`, `detail`, `errors[{
 * `results[]`, each with:
   * `programKey`, `programLabel`, `outcome`;
   * `score: null`, `maxScore: null`, `passMark: null`, `selectionModel: null`, `competitivenessBand: null`, `gapToPass: null`;
-  * `failedGates[]`, `missingInputs[]`, `breakdown: {}`, `recommendations: []`;
-  * `gates[{key, label, state, facts[], values{}, missing[]}]`;
+  * `failedGates[]`, `missingInputs[]`, `reviewGates[]` (ours, R4), `breakdown: {}`, `recommendations: []`;
+  * `gates[{key, label, state, facts[], values{}, missing[], whenNotMet}]`;
   * `judgement[]`.
 
 `out_of_date`, `changed`, `gates`, `judgement` and `releaseId` are ours; the rest uses AG-03's names.
@@ -226,7 +226,7 @@ Problem Details on every refusal (`type`, `title`, `status`, `detail`, `errors[{
 | 7 | the officer runs and reads | the client gets 403; another firm gets 404; the case subject or `applies: false` → 400 | C6.9-1 |
 | 8 | the envelope carries pin, rules as at, disclaimer, who, `stand-in` | an UPDATE on `assessment` is refused by the trigger; `result_json` byte-identical | C6.9-2, C6.9-9 |
 | 9 | answered facts → Met or Not met; `or(passport, refugee document)` with a passport only → Met | an unanswered passport → Not answered (never Not met), listed as missing; an invalid value → missing | C6.9-3, C6.9-4 |
-| 10 | all met → Likely; a fail with all answered → Not eligible `vv.no_convictions` | a fail plus a missing fact → per the switch, with both lists filled; no gates → 409 | C6.9-7, C6.9-8 |
+| 10 | all met → Likely; a `not_eligible` gate failed with all answered → Not eligible; `vv.no_convictions` (needs review, R4) answered yes → Possibly eligible, in `reviewGates` | a fail plus a missing fact → Not eligible (the switch, `true`), with both lists filled; no gates → 409 | C6.9-7, C6.9-8 |
 | 11 | score and breakdown empty or null | never `ELIGIBLE_BELOW_CUTOFF` | C6.9-6, C6.9-15 |
 | 12 | 4 judgement lines | no gate about money, health, ties or leaving | C6.9-5 |
 | 13 | a changed value → the earlier run is out of date, naming the change | **Confirm section on the facts a run read → `out_of_date` stays false** | C6.9-9 |
