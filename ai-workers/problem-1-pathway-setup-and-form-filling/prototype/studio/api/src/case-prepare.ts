@@ -18,7 +18,9 @@ import { acceptsOf } from "../../engine/channels.ts";
 import { caseChecklist } from "../../engine/runtime/case-checklist.ts";
 import { caseView, checkValue, knownOf } from "../../engine/runtime/case.ts";
 import { releaseModes } from "../../engine/filing-modes.ts";
-import { ageOn, cad, deriveFilings, FAMILY_GROUP, feeRule } from "../../engine/runtime/filings.ts";
+import { ageOn, cad, deriveFilings, FAMILY_GROUP, FEE_TABLE, feeRule, rulesFrom } from "../../engine/runtime/filings.ts";
+/** Review r1 M4: the biometrics ages come from the fee table, never from code. */
+const bioAges = feeRule("vv.single", "biometrics")?.exempt;
 import { formCoverage, readiness as formReadiness } from "../../engine/runtime/forms.ts";
 import { answerSheet, sectionHash, type Sheet } from "../../engine/runtime/answer-sheet.ts";
 import { BIOMETRICS_STEP, channelChange, channelOf, prepareVersion, wantedItems, type FormLine } from "../../engine/runtime/prepare.ts";
@@ -172,7 +174,7 @@ export class CasePrepare {
           state: waits ? "cannot_start" : allEntered ? "done" : "to_do", reason: allEntered && !waits ? "Every section is entered in the portal, with every answer confirmed and current." : waits ? `Cannot start yet: waits for ${(w?.missing ?? []).length || "an"} answer${(w?.missing ?? []).length === 1 ? "" : "s"} that decide${(w?.missing ?? []).length === 1 ? "s" : ""} whether it applies.` : rd.missing.length ? `Waiting for ${rd.missing.length} fact${rd.missing.length === 1 ? "" : "s"} to answer or confirm.` : "Every fact it reads is confirmed." };
       }
       if (i.kind === "document") return { ...base, document_type: w?.document_type ?? i.itemKey, label: w?.label ?? i.itemKey, state: "to_do", reason: "Not requested yet (the checklist, C6.4)." };
-      return { ...base, step: BIOMETRICS_STEP.label, neededBefore: "after_filing" as const, state: "cannot_start", reason: w?.applies === "cannot_tell" ? "Waits for the date of birth: no biometrics under 14 or over 79 (VV-R15)." : BIOMETRICS_STEP.after };
+      return { ...base, step: BIOMETRICS_STEP.label, neededBefore: "after_filing" as const, state: "cannot_start", reason: w?.applies === "cannot_tell" ? `Waits for the date of birth: no biometrics under ${bioAges?.underAge ?? "?"} or over ${bioAges?.overAge ?? "?"} (VV-R15).` : BIOMETRICS_STEP.after };
     });
     // Stage 1 (C7.7): the facts each filing's forms still wait for, counted before any item.
     const stage1 = filings.map((f) => { const mine = items.filter((i) => i.filing === f.id && i.kind === "form") as { form: string; subject: string }[]; const missing = new Set(mine.flatMap((i) => formReadiness(view, i.form, i.subject).missing.map((m) => `${m.about}|${m.fact}`))); return { filing: f.id, to_confirm: missing.size, confirmed: mine.length && !missing.size ? 1 : 0 }; });
@@ -199,7 +201,7 @@ export class CasePrepare {
     const now = await this.build(actor, c);
     const group = now.groups.find((x) => x.id === g!.id);
     if (!b.reason) {
-      const rules = ["visitor_visa", "biometrics"].map((k) => feeRule(now.combination ?? "", k)).filter((x) => !!x);
+      const rules = (rulesFrom(FEE_TABLE, now.combination ?? "")?.fees ?? []).filter((x) => x.basis === "family_maximum"); // break r1: the capped lines from the table, never keys in code
       refuse(400, "reason", `Give a reason to split this filing out: it is then priced on its own, and the family maximum (${rules.map((r) => `${r!.label} ${cad(r!.familyMaxCents)} for ${r!.familyFrom} or more`).join(", ")}) of ${group ? "this group" : "the family"} no longer covers it.`);
     }
     const moved = await this.db.$transaction(async (tx) => {
