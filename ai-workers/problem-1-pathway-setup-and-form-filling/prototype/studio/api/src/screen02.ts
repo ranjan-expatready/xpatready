@@ -1,6 +1,7 @@
 // Screen 02 slice 2 endpoints in the screens lane's own file (challenge point 1): a decision on one PDF form field (K1),
 // library changes approved by a second person (LibraryChange), the held-file decision (P-80) and the new-edition impact
 // review (P-32, C9.1). Merges keep their F1 endpoints (forms.ts); Screen 02 adds their pages.
+import { fieldListValues } from "./answer-values.ts";
 import { Body, Controller, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Query, Res } from "@nestjs/common";
 import type { Response } from "express";
 import { Prisma } from "@prisma/client";
@@ -101,7 +102,7 @@ export class Screen02 {
     const listed = c!.kind === "structure_node" && Array.isArray(c!.matches) ? (c!.matches as string[]) : [];
     const names = listed.filter((k) => k !== c!.key && !k.startsWith("combination:"));
     const goesWith = names.length ? (await this.db.programDef.findMany({ where: { workspaceId: c!.workspaceId, programNodeKey: { in: names } }, select: { programNodeKey: true, label: true } })).sort((a, b) => names.indexOf(a.programNodeKey) - names.indexOf(b.programNodeKey)).map((n) => n.label) : [];
-    return { ...changeView(c!), field: field ? { key: field.canonicalFieldKey, label: field.label, meaning: field.meaning, value_type: field.valueType, group: field.groupKey, status: field.status } : null,
+    return { ...changeView(c!), field: field ? { key: field.canonicalFieldKey, label: field.label, meaning: field.meaning, value_type: field.valueType, group: field.groupKey, status: field.status, answer_list: await fieldListValues(this.db, c!.workspaceId, field.answerListKey) } : null,
       goes_with: goesWith, with_combination: listed.some((k) => k.startsWith("combination:")), recheck: await this.lifecycle.recheck(c!), accepts_impact: await this.lifecycle.acceptsImpact(c!) };
   }
   undoDelete(actor: Actor, id: string) { return this.lifecycle.undoOwnDelete(actor, id); }

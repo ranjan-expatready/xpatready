@@ -35,7 +35,10 @@ export type GroupKind = "edition" | "combination" | "run";
 export type ProposalGroup = { id: string; kind: GroupKind; title: string; sub: string; counts: Record<Band, number>; total: number; oldest: string };
 export type Reading = { text: string; from: "live" | "replay"; payload: unknown } | null;
 export type QueueProposal = {
-  id: string; kind: string; kind_word: string; title: string; meaning: string | null; band: Band; agreement: string; agreement_word: string; reason: string | null;
+  id: string; kind: string; kind_word: string; title: string; meaning: string | null;
+  /** C3.6: a choice fact's (or an answer list's) answer values, as the second person reads them; null for other kinds. */
+  values: { code: string; label: string }[] | null;
+  band: Band; agreement: string; agreement_word: string; reason: string | null;
   lands_on: "library" | "combination"; reuse: { match: "reuse" | "new"; existing_key: string | null }; origin: "ai" | "rules"; step: string;
   readings: { draft: Reading; check: Reading };
   source: { file: string; edition: string | null; page: number | null; quote: string; quote_found: boolean; rule: { key: string; sentence: string } | null } | null;
