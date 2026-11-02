@@ -114,6 +114,11 @@ ok("c1-v3: the principal's and partner's forms carry their own values (no cross-
   ok("finding 3: the deciding question is asked before the dependent one (no external answer needed)", w.questions.some((q) => q.fact === "person.flag" && q.status === "needs an answer") && w.questions.some((q) => q.fact === "person.a" && q.status === "hidden by a condition"), w.questions.map((q) => [q.fact, q.status]));
   const no = render(g, people, new Map([[kkey("principal", "person.flag"), { value: false, status: "answered" as const, source: "t" }]]));
   ok("finding 3 positive: when the flag is false the form truly does not apply and the question stays hidden", no.forms[0].applies === false && no.questions.find((q) => q.fact === "person.a")?.status === "hidden by a condition");
+  // QA-149: once answered, the deciding question still says what it decides (a case asks only questions that fill a box
+  // or decide something, engine/runtime/case.ts), so it can be changed back; it no longer counts as "to decide" (review M2).
+  const flagQ = no.questions.find((q) => q.fact === "person.flag");
+  ok("QA-149 pass: an answered deciding question still decides the form (decides is not empty)", !!flagQ && flagQ.status === "answered" && flagQ.decides.some((d) => /F applies/.test(d)), flagQ);
+  ok("QA-149 fail: an answered decider is not counted as a deciding question still open (count 1 before, 0 after)", w.summary.deciding_questions === 1 && no.summary.deciding_questions === 0 && no.deciders.length === 0, [w.summary.deciding_questions, no.summary.deciding_questions]);
   const always = clone(g); always.forms[0] = { ...always.forms[0], status: "always", condition: null };
   ok("finding 3 adverse: SHOW-if on a value an always-applying form reads is an error", errs(always).some((e) => /Hiding a value a form reads/.test(e.message)));
   const hide = clone(g); hide.placements[0].condition_effect = "HIDE";
