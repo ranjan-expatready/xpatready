@@ -173,6 +173,8 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   const label = (about: string | null) => {
     if (!about) return "nobody on this case";
     if (about === "case") return "The application";
+    // QA-76: a form that reads the representative when no representative is on the case names the role, never its key.
+    if (about === "representative") return "The representative";
     const [id, rel] = about.split("/");
     const p = people.find((x) => x.id === id);
     if (!rel) return p?.label ?? about;
