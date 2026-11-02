@@ -29,6 +29,10 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
   ok("C3.2: release check: a list row with no purpose is a warning (\"Purpose: not set\"), never an error", warn(snap([row])).length === 1 && warn(snap([row]))[0].level === "warning", warn(snap([row]))[0]?.message);
   ok("C3.2: release check fail: once the list row has a purpose, or the field is not a list row, no warning is left", warn(snap([{ ...row, list_purpose: { kind: "all", overflow: "extra_sheet" } }])).length === 0 && warn(snap([{ ...row, row: null }])).length === 0 && warn(snap([{ ...row, outcome: "not_a_fact" }])).length === 0);
   ok("C3.2: the five purposes and two overflow choices are one constant each", LIST_PURPOSES.map((p) => p.key).join() === "current,for_post,all,latest,date_range" && LIST_OVERFLOWS.map((o) => o.key).join() === "extra_sheet,flag_officer");
+  // S9 (SA-1B-10 rule 1, SA-1B-11 rule 1, spec fix 2 Nov): "for post" is the mailing address tagged "send post here".
+  const forPost = LIST_PURPOSES.find((p) => p.key === "for_post")?.label ?? "";
+  ok("S9 pass (SA-1B-11): the for_post purpose says it is the mailing address, the entry tagged \"send post here\"", /mailing address/i.test(forPost) && /send post here/.test(forPost), forPost);
+  ok("S9 fail (SA-1B-11): no purpose reads as the job applied for (\"post applied for\", job, position)", !LIST_PURPOSES.some((p) => /applied for|\bjob\b|position/i.test(p.label)), LIST_PURPOSES.map((p) => p.label));
 
   // ──────────────────────────────────────────── API
   await call("POST", "/demo/load");
