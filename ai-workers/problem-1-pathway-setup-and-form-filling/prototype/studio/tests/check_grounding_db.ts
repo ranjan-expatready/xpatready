@@ -60,6 +60,8 @@ const sql = (q: string) => execFileSync(PSQL, [`postgresql://xr_studio@127.0.0.1
 
   // ------------------------------------------------------------ finding 2: review differences and authorship
   const id = row.id;
+  // C11.12 BR-7 (P-233): a new release needs a filing mode on every applicant role; set as the author would (Sample).
+  sql(`update combination set participants = (select jsonb_agg(case when x->>'role' in ('spouse_or_partner','child') then x || '{"filingMode":"files_own"}'::jsonb else x end) from jsonb_array_elements(participants) x) where id='${id}'`);
   r = await call("POST", `/combinations/${id}/requirements`, { newTypeName: "Passport", attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant", providedBy: "client", sourceQuote: "test fixture" });
   ok("a base document requirement is added to the draft", r.status === 201, r.body?.lineageKey);
   r = await call("POST", `/combinations/${id}/requirements`, { newTypeName: "Bank statement", attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant" }, "user-C");
@@ -81,7 +83,7 @@ const sql = (q: string) => execFileSync(PSQL, [`postgresql://xr_studio@127.0.0.1
   ok("first release: submit, SME sign-off, second-person approval", v1.submit === 201 && v1.approve === 201 && v1.version === 1, v1);
   r = await call("POST", `/combinations/${id}/submit`, {});
   ok("control: nothing changed since the release, so nothing can be submitted", r.status === 400 && /Nothing has changed/.test(r.body.message), r.body.message);
-  r = await call("PATCH", `/combinations/${id}`, { participants: [{ role: "principal", label: "Applicant", min: 1, max: 1 }, { role: "spouse_or_partner", label: "Spouse or partner", min: 0, max: 1, preview: 1 }] });
+  r = await call("PATCH", `/combinations/${id}`, { participants: [{ role: "principal", label: "Applicant", min: 1, max: 1 }, { role: "spouse_or_partner", label: "Spouse or partner", min: 0, max: 1, preview: 1, filingMode: "files_own" }] });
   ok("only the people on the row change", r.status === 200);
   const v2 = await release("people only");
   ok("a people-only change appears in review and needs the SME duty; early approval is refused", v2.items.includes(`People on this row|${row.combinationKey}`) && v2.sme.includes(`People on this row|${row.combinationKey}`) && v2.early === 409 && v2.version === 2, v2);
@@ -96,7 +98,7 @@ const sql = (q: string) => execFileSync(PSQL, [`postgresql://xr_studio@127.0.0.1
   r = await call("PATCH", `/combinations/${id}`, { participants: [{ role: "principal", label: "Applicant", min: 1, max: 1 }, { role: "spouse_or_partner", label: "Spouse or partner", min: 0, max: 1, preview: 1 }, { role: "child", label: "Child", min: 0, max: 3, preview: 0 }] });
   const sub3 = await call("POST", `/combinations/${id}/submit`, {});
   ok("setup: a people change is submitted for release", sub3.status === 201, sub3.body?.message);
-  r = await call("PATCH", `/combinations/${id}`, { participants: [{ role: "principal", label: "Applicant", min: 1, max: 1 }, { role: "spouse_or_partner", label: "Spouse or partner", min: 0, max: 1, preview: 1 }] });
+  r = await call("PATCH", `/combinations/${id}`, { participants: [{ role: "principal", label: "Applicant", min: 1, max: 1 }, { role: "spouse_or_partner", label: "Spouse or partner", min: 0, max: 1, preview: 1, filingMode: "files_own" }] });
   r = await call("POST", `/combinations/${id}/approve`, {}, "user-B");
   ok("a draft changed after submission cannot be released (stale submission)", r.status === 409 && /hash|changed/.test(r.body.message), r.body.message);
   r = await call("PATCH", `/combinations/${id}`, { description: "Changed from an old screen", expectedLabel: "Visitor visa (renamed)" });

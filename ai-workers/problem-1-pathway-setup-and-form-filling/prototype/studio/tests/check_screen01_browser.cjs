@@ -84,6 +84,8 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   step("setup: one replay of a saved real AI run on Super visa (no model call, US$0)", r.status < 300, run?.file);
   // A released row that firms cannot use (Not ready): a form but no questions, released by a second person.
   const ss = (await api("/combinations", { method: "POST", data: { nodeKey: "individual.work_permits.open.spouse_student" } })).body.combination;
+  // C11.12 BR-7 (P-233): a new release needs a filing mode on every applicant role; set as the author would (Sample).
+  sql(`update combination set participants = (select jsonb_agg(case when x->>'role' in ('spouse_or_partner','child') then x || '{"filingMode":"files_own"}'::jsonb else x end) from jsonb_array_elements(participants) x) where id='${ss.id}'`);
   await api(`/combinations/${ss.id}/lines`, { method: "POST", data: { kind: "FORM", formKey: "IMM 1295" } });
   // A release needs its review first (QA-1): the author submits, the content reviewer signs any expert change.
   await api(`/combinations/${ss.id}/submit`, { method: "POST", data: {} });
