@@ -95,9 +95,9 @@ await main("Setup", "Visitor visa release 2 for the M3 path (Super Admin, M2)", 
       r = await call("POST", "/review/proposals/decide", { ids: [pid], action: "accept" }, REVIEWER);
       ok(`S6a (R3) ${f.fact} accepted by the second person`, r.status < 300, r.body?.detail ?? r.body?.message ?? r.status);
       // The field's library change is credited to the person who accepted it (C3.6), so a third person approves it.
-      const ch = sql(`select id from library_change where kind='field' and key='${f.fact}' and status='WAITING' order by created_at desc limit 1`);
+      const ch = sql(`select id from library_change where kind='field' and key='${f.fact}' and status='WAITING' limit 1`);
       r = ch ? await call("POST", `/library/changes/${ch}/approve`, {}, APPROVER) : { status: 0, body: null } as typeof r;
-      ok(`S6a (R3) ${f.fact} approved into the library, its answer list with it`, r.status < 300, r.body?.detail ?? r.body?.message ?? r.status);
+      ok(`S6a (R3) ${f.fact} approved into the library, its answer list with it`, !!ch && r.status < 300, r.body?.detail ?? r.body?.message ?? r.status);
     }
     r = await call("POST", `/library/fields/${f.fact}/placement`, { sectionKey: "your_visit", collectedFrom: "client_questionnaire", repeats: "per_person", tier: "case", questionText: `${f.question} (Researched)` }, AUTHOR);
     ok(`S6a (R3) "${f.question}" is asked per person in Your visit`, r.status < 300, r.body?.detail ?? r.status);
