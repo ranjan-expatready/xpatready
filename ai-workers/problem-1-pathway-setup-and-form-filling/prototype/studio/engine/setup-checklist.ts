@@ -92,6 +92,9 @@ export type SetupInput = {
   /** UX-A part 3 (break B1): the catalogue's startable check failed on the released version (statusOf: Not ready), so the
    *  chip is Not ready even when the release raises no validator error: one state on the header, strip and card. */
   notStartable?: boolean;
+  /** Devin review on #622: the startable check's causes (engine/programs.ts missingItems, on the released version), so a
+   *  Not ready combination whose release raises no validator error still has an item to act on, on the step that fixes it. */
+  notStartableWhy?: { code: string; text: string }[];
   running: { batchId: string; step: StepKey } | null;
   changes: number;
   review: { stage: "submit" | "sign" | "release"; submittedBy: string | null; authors: string[] };
@@ -101,6 +104,12 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 const item = (kind: ItemKind, count: number, text: string, focus: string, extra: Partial<OpenItem> = {}): OpenItem => {
   const a = actsOn(kind, extra.tier);
   return { kind, count, text, focus, acts: a.duties[0] ?? null, fromRelease: false, ...extra };
+};
+/** Where each startable-check cause is fixed (engine/programs.ts missingItems codes). */
+const NOT_STARTABLE_AT: Record<string, { step: StepKey; focus: string }> = {
+  no_forms: { step: "forms", focus: "forms:problems" }, form_without_edition: { step: "forms", focus: "forms:problems" }, filing_problem: { step: "forms", focus: "forms:problems" },
+  filing_not_set: { step: "people", focus: "people:problems" }, role_without_questions: { step: "questions_documents", focus: "questionnaires:problems" },
+  rule_problem: { step: "questions_documents", focus: "questionnaires:problems" },
 };
 const problemsItem = (n: number, step: StepKey, fromRelease: boolean) =>
   item("fix_problems", n, fromRelease ? `Fix ${plural(n, "problem")}: firms cannot open cases until ${n === 1 ? "it is" : "they are"} fixed` : `Fix ${plural(n, step === "forms" ? "form problem" : "problem")}`, `${step}:problems`, { fromRelease });
@@ -131,6 +140,12 @@ export function setupChecklistOf(s: SetupInput, key = ""): SetupChecklist {
   for (const k of STEP_KEYS) if (relBy[k]) {
     if (k !== "questions_documents") { open[k].push(problemsItem(relBy[k], k, true)); continue; }
     for (const [part, focus] of [["documents", "documents:problems"], ["questions", "questionnaires:problems"]] as const) if (relPart[part]) open[k].push({ ...problemsItem(relPart[part], k, true), focus });
+  }
+  // Devin review on #622: Not ready only by the startable check (no validator error on the release): each cause is a
+  // release fix item on the step that fixes it, so the header never says "Nothing to do right now" while Not ready.
+  if (s.release && s.notStartable && !relErrors.length) for (const m of s.notStartableWhy ?? []) {
+    const at = NOT_STARTABLE_AT[m.code] ?? { step: "forms" as StepKey, focus: "forms:problems" };
+    open[at.step].push(item("fix_problems", 1, `${m.text.replace(/\s*Next step:.*$/, "").replace(/\.$/, "")}: firms cannot open cases until it is fixed`, at.focus, { fromRelease: true }));
   }
   if (s.combinationId) {
     // 1 Official pages: no record yet → open, with no item until the forms lane lands the record (plan.md slice A).

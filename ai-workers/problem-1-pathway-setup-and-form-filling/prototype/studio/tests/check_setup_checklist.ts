@@ -71,6 +71,11 @@ const err = (where: string) => ({ level: "error" as const, where, item: "x", mes
   const ns = setupChecklistOf(live({ notStartable: true }));
   step("UX-A3 (break B1): a released combination failing the startable check is Not ready, never Live", ns.chip.status === "NOT_READY" && ns.bar.text !== "✓ Live", ns.chip);
   step("UX-A3 (break B1) fail case: a released, startable combination stays Live", setupChecklistOf(live({ notStartable: false })).chip.status === "LIVE");
+  // Devin review on #622: Not ready only by the startable check (no validator error on the release) still has a next step.
+  const why = setupChecklistOf(live({ notStartable: true, notStartableWhy: [{ code: "role_without_questions", text: "No questions yet for Principal applicant. Next step: Add questions." }] }));
+  step("UX-A3 (Devin) fail case: Not ready by the startable check alone has a next step, never \"nothing to do\"", why.chip.status === "NOT_READY" && !!why.next && why.next.item.fromRelease && why.next.item.kind === "fix_problems" && /^No questions yet for Principal applicant/.test(why.next.item.text) && why.next.item.text === "No questions yet for Principal applicant: firms cannot open cases until it is fixed", why.next);
+  step("UX-A3 (Devin): the cause lands on the step that fixes it (questions on Questionnaires)", why.next?.step === "questions_documents" && why.next?.item.focus === "questionnaires:problems", why.next);
+  step("UX-A3 (Devin) pass: a released, startable combination gets no such item", !setupChecklistOf(live({ notStartable: false, notStartableWhy: [{ code: "no_forms", text: "x" }] })).steps.some((x) => x.open.some((i) => i.fromRelease)));
   const nr = setupChecklistOf(live({ release: { number: 2, problems: [err("Documents")] }, changes: 1, review: { stage: "submit", submittedBy: null, authors: [] }, proposals: { person_role: 1 } }));
   step("C11.10: Not ready — the release's problem is the first item (before a draft proposal), chip Not ready, step 5 reopens", nr.next?.item.fromRelease === true && nr.next.step === "questions_documents" && nr.chip.status === "NOT_READY" && nr.steps[4].state !== "done", nr.next);
   const v = forViewer(nr, AUTHOR);
