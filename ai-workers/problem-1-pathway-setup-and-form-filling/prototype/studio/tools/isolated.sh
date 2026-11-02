@@ -27,6 +27,9 @@ if [[ "$ACTION" == "start" ]]; then dropdb -h 127.0.0.1 -p 54329 -U xr_studio --
 mkdir -p "$VARDIR"
 cd "$STUDIO"
 DATABASE_URL="$URL" ./node_modules/.bin/prisma migrate deploy >/dev/null
+# As start.sh does: a database client older than the schema makes every query on a new column fail quietly (a load
+# answers 201 having read nothing; #378 review B1). Regenerated only when the schema is newer or the client is missing, so a start stays fast.
+[[ ! -e node_modules/.prisma/client/index.js || prisma/schema.prisma -nt node_modules/.prisma/client/index.js ]] && ./node_modules/.bin/prisma generate >/dev/null
 env DATABASE_URL="$URL" STUDIO_PORT="$PORT" STUDIO_VAR="$VARDIR" "$@" nohup ./node_modules/.bin/tsx --tsconfig api/tsconfig.json api/src/main.ts >> "$VARDIR/api.log" 2>&1 &
 for i in {1..60}; do curl -s -o /dev/null "localhost:$PORT/api/session" && { echo "isolated $NAME on http://localhost:$PORT ($DB)"; exit 0; }; sleep 0.5; done
 echo "did not start"; tail -20 "$VARDIR/api.log"; exit 1
