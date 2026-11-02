@@ -20,3 +20,9 @@ concept says (18 ×5, 90 ×5, 30 ×4, 5 ×4, 1 ×1). With `dates: true` it is 27
 10. **A record's own cite wins over an older entry (Devin on #558).** Trade-off for the tech lead (BR-4 against BR-6): a validity rule moved from 6 to 12 months whose own quote still says 6 now passes, where before its old entry caught it. Recommend: in PR 2a, a validity rule counts as sourced only when its quote contains its months in digits.
 11. **Not counted, for the tech lead:** numeric `in` lists (none in the sample), and "plus 5 years" written only in words in the derived field `person.venezuelan_extended_passport_expiry` (a published number with no leaf). Recommend: derived calculations as a later row.
 12. **"None published" without a reason** counts as answered for now; it narrows to `{reason}` when the ⚑ reason column is agreed.
+
+## Founder's answer (P-279, 2 Nov ~16:45 UTC, relayed by the tech lead on #558): dates count
+`publishedNumbers()` now walks cut-off and in-force dates by default (`dates: false` turns them off). The work-permit
+release publishes **27** numbers (the 19 plus 7 June 2019 ×6 and 1 November 2024 ×2). The import cites only where its
+quote states the number in digits, so the "held back" count after Reset grows from the concept's 11 by the dates the
+import cannot cite; PR 2a's API suite states the real figure.

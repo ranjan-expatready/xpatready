@@ -54,7 +54,7 @@ export type WalkedSnapshot = {
   document_types?: { key: string }[];
 };
 export type PublishedOptions = {
-  /** Founder question (concept §7): do cut-off and in-force dates count? Default false: numbers only. */
+  /** Cut-off and in-force dates count as published numbers (founder, P-279, 2 Nov): on unless a caller turns them off. */
   dates?: boolean;
   /** The combination's fee lines (samples/fee-table.json until R2 S7a puts fees in the release). */
   feeLines?: FeeLineInput[];
@@ -129,7 +129,7 @@ const feeSourced = (s: FeeSourceLike) => !!s && ["page", "url", "quote", "read"]
  *  months and the combination's fee lines. Left out: field-map box conditions and limits (how a box is filled, not who
  *  files), UI numbers, versions, positions and copies. */
 export function publishedNumbers(s: WalkedSnapshot, opts: PublishedOptions = {}): PublishedNumber[] {
-  const dates = opts.dates === true, combo = s.combination.key, out: PublishedNumber[] = [];
+  const dates = opts.dates !== false, combo = s.combination.key, out: PublishedNumber[] = [];
   const add = (kind: NumberKind, key: string, where: Where, item_words: string, tree: unknown, hintRoot: string) => {
     for (const n of conditionNumbers(tree, dates)) out.push({ kind, key: `${combo}/${key}`, address: n.address, value: n.value, where, item_words, words: n.words, hint: `${hintRoot}.${n.hint}` });
   };

@@ -39,7 +39,7 @@ const release: WalkedSnapshot = {
   rules: config.rules.map((r, i) => ({ id: `R-${String(i + 1).padStart(2, "0")}`, when: r.when, then: r.then })),
   checks: config.checks.filter((c) => c.group !== "form_native").map((c) => ({ id: c.id, group: c.group, applies_to: c.applies_to ?? null, condition: c.condition, message: [c.condition_plain, c.user_action].filter(Boolean).join(" ").slice(0, 900) || null, source_quote: c.source_quote ?? null })),
 };
-const nums = publishedNumbers(release);
+const nums = publishedNumbers(release, { dates: false }); // numbers only: the counts below; dates (on by default, P-279) are checked apart
 const items = new Set(nums.map((n) => n.key));
 const tally = (list: PublishedNumber[]) => Object.entries(list.reduce<Record<string, number>>((m, n) => ({ ...m, [n.value]: (m[n.value] ?? 0) + 1 }), {})).sort((a, b) => Number(b[0]) - Number(a[0])).map(([v, c]) => `${v}×${c}`).join(" ");
 const imm5707 = nums.filter((n) => n.key === "wp.family/form:IMM 5707");
@@ -50,8 +50,8 @@ ok("C5.4 BR-1 pass: the IMM 5707 form line's own two 18s are listed (kind rule, 
 ok("C5.4 BR-1 pass: the two Venezuelan document lines' 5 years are listed under Documents, keyed by lineage", nums.filter((n) => n.where === "Documents" && n.value === "5" && /^wp\.family\/doc:letter_of_explanation_/.test(n.key)).length === 2);
 ok("C5.4 BR-1 fail: 0 in a comparison, yes/no values and answer-list codes are never listed (OR_PASSPORT_EXPIRED's lt 0; eq '01'; eq true)",
   !nums.some((n) => n.value === "0") && !nums.some((n) => n.key.endsWith("/OR_PASSPORT_EXPIRED") || n.key.endsWith("/CR_STATUS_CITIZEN_BUT_RESIDENCE_DIFFERS") || n.key.endsWith("/CR_LANGUAGE_ANSWERS_MATCH")) && !nums.some((n) => n.address.startsWith("person.travelling_alone_to_canada")));
-const withDates = publishedNumbers(release, { dates: true });
-ok("C5.4 BR-1 fail: dates are left out by default (founder question open); with dates on, the 8 cut-off and in-force dates join (7 June 2019 ×6, 1 November 2024 ×2)",
+const withDates = publishedNumbers(release);
+ok("C5.4 BR-1 pass (founder, P-279): dates count by default: the 8 cut-off and in-force dates join (7 June 2019 ×6, 1 November 2024 ×2), 27 in all; dates: false leaves numbers only",
   !nums.some((n) => /^\d{4}-/.test(n.value)) && withDates.length === 27 && withDates.filter((n) => n.value === "2019-06-07").length === 6 && withDates.filter((n) => n.value === "2024-11-01").length === 2, { withDates: withDates.length });
 const small: WalkedSnapshot = {
   combination: { key: "vv.single" },
