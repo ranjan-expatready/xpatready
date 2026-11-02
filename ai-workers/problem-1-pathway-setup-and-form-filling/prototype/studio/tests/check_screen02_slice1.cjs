@@ -4,6 +4,7 @@
 // through the same endpoints the screens use (a saved AI answer replayed: no model call, US$0). Screenshots of every
 // state at 1440 and 1024 px into product/screens/02-ai-work/screenshots/slice1/, axe (WCAG 2.2 AA) on each.
 //   zsh studio/tools/isolated.sh screens_s02 4441 start && node studio/tests/check_screen02_slice1.cjs 4441 xr_studio_screens_s02
+const { setFilingModes } = require("./fixtures/steps-before-forms.cjs");
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
@@ -75,6 +76,7 @@ function pdf(title, text) {
   // A combination submitted by the author (waiting for the reviewer or the approver).
   const ss = (await api("/combinations", { method: "POST", data: { nodeKey: "individual.work_permits.open.spouse_student" } })).body.combination;
   await api(`/combinations/${ss.id}/lines`, { method: "POST", data: { kind: "FORM", formKey: "IMM 1295" } });
+  await setFilingModes(api, ss.id); // C11.12 BR-7: a new release needs each applicant role's filing, as the author sets it
   r = await api(`/combinations/${ss.id}/submit`, { method: "POST", data: {} });
   const smeItems = ((await api(`/combinations/${ss.id}/review`)).body.submission?.changeSummary ?? []).filter((x) => x.needs_sme).length;
   step("setup: Spouse of a student submitted for review by the author", r.status === 201, `${smeItems} change(s) need the SME duty`);
