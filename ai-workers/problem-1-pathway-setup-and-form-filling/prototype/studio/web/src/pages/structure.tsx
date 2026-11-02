@@ -23,6 +23,7 @@ import { ACTION_LABEL, RETURNED_LABEL, SAY, TIP, WAITING_LABEL, WHY } from "../.
 import { LevelMark, pathwayAccent } from "@/components/levels";
 import { cn } from "@/lib/utils";
 import { StartSetupButton } from "@/components/start-setup";
+import { STATE_WORDS, USED_BY_NOTHING_YET } from "../../../contracts/status-words";
 
 type ListResp = { pathwayType: PathwayType; typeLabel: string; nodes: StructureNode[]; empty: boolean; meaningCheck: { on: boolean; why: string } };
 type Close = { key: string; label: string; trail: string[]; why: string };
@@ -43,10 +44,10 @@ const PENDING_WORD: Record<LifecycleAction, string> = WAITING_LABEL; // the one 
 const ACTION_WORDS = ACTION_LABEL;
 const USED_TIP = "What uses this combination: the releases firms have and the cases open on it. Its details list each one.";
 const STATUS: { value: string; label: string; test: (n: StructureNode) => boolean }[] = [
-  { value: "setup", label: "In setup", test: (n) => !!n.combination?.id && n.combination.status === "IN_SETUP" },
-  { value: "notready", label: "Not ready", test: (n) => !!n.combination?.id && n.combination.status === "NOT_READY" },
-  { value: "live", label: "Live", test: (n) => !!n.combination?.id && n.combination.status === "READY" },
-  { value: "ns", label: "Not started", test: (n) => !!n.combination && !n.combination.id },
+  { value: "setup", label: STATE_WORDS.IN_SETUP, test: (n) => !!n.combination?.id && n.combination.status === "IN_SETUP" },
+  { value: "notready", label: STATE_WORDS.NOT_READY, test: (n) => !!n.combination?.id && n.combination.status === "NOT_READY" },
+  { value: "live", label: STATE_WORDS.READY, test: (n) => !!n.combination?.id && n.combination.status === "READY" },
+  { value: "ns", label: STATE_WORDS.NOT_STARTED, test: (n) => !!n.combination && !n.combination.id },
   { value: "waiting", label: "Waiting for approval", test: (n) => !!n.pending },
 ];
 const norm = (s: string) => s.normalize("NFKC").toLocaleLowerCase("en-CA").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
@@ -55,7 +56,7 @@ const many = (n: number, one: string, more: string) => `${n} ${n === 1 ? one : m
 const usedBy = (c: StructureNode["combination"]) => {
   if (!c?.id) return "Nothing yet";
   const parts = [c.releases ? `${c.releases} release${c.releases === 1 ? "" : "s"}` : "", c.openCases ? `${c.openCases} open case${c.openCases === 1 ? "" : "s"}` : ""].filter(Boolean);
-  return parts.length ? parts.join(" · ") : "Setup draft";
+  return parts.length ? parts.join(" · ") : USED_BY_NOTHING_YET;
 };
 
 const VIEW_KEY = (actor: string | null) => `xr-structure-view:${actor ?? "anyone"}`;
@@ -338,7 +339,7 @@ export function StructurePage() {
         </section>
         {confirmNode ? <ImpactPanel key={`impact-${confirmNode.key}-${confirm!.again ? "again" : ""}`} kind={confirm!.kind} name={confirmNode.label} immediate={!confirm!.again && confirm!.kind === "DELETE" && confirmNode.action.immediate} again={confirm!.again}
           goes={confirm!.kind === "DELETE" ? (confirm!.again ? branchOf(confirmNode.key) : confirmNode.action.below).map((k) => ({ num: num.get(k) ?? null, label: byKey.get(k)?.label ?? k })) : undefined}
-          kept={confirm!.kind === "RETIRE" && confirmNode.combination?.id && usedBy(confirmNode.combination) !== "Setup draft" ? [usedBy(confirmNode.combination)] : undefined}
+          kept={confirm!.kind === "RETIRE" && confirmNode.combination?.id && usedBy(confirmNode.combination) !== USED_BY_NOTHING_YET ? [usedBy(confirmNode.combination)] : undefined}
           withCombination={confirmNode.action.withCombination} busy={acting.busy} error={acting.error} onCancel={() => setConfirm(null)} onSend={(reason) => void sendAction(confirmNode, confirm!.kind, reason, confirm!.again)} />
         : selectedNode ? <DetailPanel key={selectedNode.key} node={selectedNode} num={num.get(selectedNode.key) ?? null} type={type} siblings={kids.get(selectedNode.parentKey)?.filter((s) => selectedNode.parentKey !== null || s.level === "pathway") ?? []} leaf={isLeaf(selectedNode)}
           leaves={below(selectedNode.key).filter(isLeaf).map((x) => ({ n: x, path: trailOf(x).slice(trailOf(selectedNode).length).map((y) => y.label) }))} canAuthor={canAuthor} onClose={() => set({ node: null })}
@@ -532,7 +533,7 @@ function DetailPanel({ node, num, type, siblings, leaf, leaves, canAuthor, onClo
                 return (
                   <li key={l.key} className="flex flex-wrap items-center gap-x-2">
                     <span className="min-w-0 break-words">{path.join(" › ")}</span>
-                    <span className="text-xs text-text-muted">{l.retired || c?.retired ? "Retired" : c?.statusText ?? "Not started"}</span>
+                    <span className="text-xs text-text-muted">{l.retired || c?.retired ? STATE_WORDS.RETIRED : c?.statusText ?? STATE_WORDS.NOT_STARTED}</span>
                     {c?.id ? <Link className="font-semibold text-text-link underline underline-offset-2" to={`/c/${c.id}`} aria-label={`Open ${l.label}`}>Open</Link>
                       : !l.retired && canAuthor ? <StartSetupButton nodeKey={l.key} label={l.label} why={c?.startWhy} variant="outline" /> : null}
                   </li>

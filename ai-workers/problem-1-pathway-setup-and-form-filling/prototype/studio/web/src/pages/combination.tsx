@@ -24,6 +24,7 @@ import { DocumentsTab } from "@/pages/workspace/documents";
 import { PreviewTab, usePreviewParams } from "@/pages/workspace/preview";
 import { LEVEL_TEXT } from "@/components/levels";
 import { plural, toDoWords, toFixWords } from "../../../contracts/counts";
+import { LIVE_NEXT } from "../../../contracts/status-words";
 
 /** Where it sits, read-only here (P-125 (3)), in the level colours of the shared Trail (S3 m6). */
 const PLACE_TEXT: Record<string, string> = { Pathway: LEVEL_TEXT.pathway, Program: LEVEL_TEXT.program, Category: LEVEL_TEXT.category, "Sub-category": LEVEL_TEXT.subCategory };
@@ -121,7 +122,7 @@ export function CombinationPage() {
       <div role="tabpanel" aria-label={TABS.find((t) => t.key === tab)!.label}>
         {tab === "overview" ? <OverviewTab d={d} sum={sum.data} show={sp.get("show")} failed={sum.isError} onRetry={() => void sum.refetch()} />
           : tab === "documents" ? <DocumentsTab id={c.id} />
-          : tab === "review" ? <ReviewTab d={d} />
+          : tab === "review" ? <ReviewTab d={d} changesCount={sum.data ? changes : undefined} />
           : tab === "tests" ? <TestsTab id={c.id} />
           : tab === "preview" && sp.get("view") === "studio" ? <div className="space-y-3"><Link className="text-sm text-text-link underline" to={`/c/${id}/preview`}>Back to the preview by person</Link><StudioPreview d={d} /></div>
           : <WorkspaceTab id={c.id} tab={tab} hasRelease={!!last} />}
@@ -163,6 +164,7 @@ function NextStep({ row, setup }: { row: CatalogueLeaf; setup: CombinationSummar
   const id = row.combinationId!;
   const step = useNextStep((_leaf, suffix = "") => suffix.startsWith("?") ? setSp(new URLSearchParams(suffix.slice(1)), { replace: true }) : nav(`/c/${id}${suffix}`));
   const next = setup?.next ?? null;
+  const live = row.status === "READY";
   const viewer = setup && "viewer" in setup ? setup.viewer : null;
   const stepTab = next ? setup!.steps.find((s) => s.key === next.step)?.tab ?? "forms" : "forms";
   const paired = next && row.nextAction && PAIRED[next.item.kind] === row.nextAction.kind ? row.nextAction : null;
@@ -174,7 +176,8 @@ function NextStep({ row, setup }: { row: CatalogueLeaf; setup: CombinationSummar
   return (
     <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3 shadow-sm" data-header-next={next ? next.item.focus : ""}>
       <div>
-        <p className="text-xs font-medium text-text-muted">Next step{next ? ` · ${STEP_LABEL[next.step]}` : ""}</p>
+        {/* UX-A part 3: a Live combination's open items are for its next release; firms keep the released one meanwhile. */}
+        <p className="text-xs font-medium text-text-muted" data-next-live={live && next ? "" : undefined}>Next step{live && next ? ` ${LIVE_NEXT}` : ""}{next ? ` · ${STEP_LABEL[next.step]}` : ""}</p>
         {!next ? <p className="text-sm font-medium">{row.status === "READY" ? "Nothing to do: firms can open cases on it" : "Nothing to do right now"}</p>
           : !mine ? <><p className="text-sm font-medium" data-next-waiting>{viewer?.nextLine ?? next.line}</p><Link className="rounded-sm text-xs text-text-link underline outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1" to={href}>See it on {TAB_WORD[href.split("?")[0].split("/")[3] ?? ""] ?? "its page"}</Link></> : null}
       </div>
