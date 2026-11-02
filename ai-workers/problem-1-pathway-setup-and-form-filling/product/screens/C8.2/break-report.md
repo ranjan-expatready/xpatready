@@ -29,3 +29,25 @@ Repro context: the case officer is `x-actor: user-O`. Inactive filings were made
 * **Odd ids:** "abc", 36 hyphens, "zzzz…", wrong grouping, 36 hex characters with no hyphens, the zero uuid, a case id used as a filing id, and a filing id used as a case id all give 404, never 500. An upper-case uuid finds the filing.
 * **Inactive filing:** 409 before the body is read, for any body, and nothing changes.
 * **UCI:** each applicant shows the current `person.uci` answer of their own subject. A replaced answer shows the newest value. A principal's UCI never appears on the spouse or on case 2. Answering the spouse's UCI through case 2's URL gives 404 "That person is not on this case". No UCI is copied onto the filing. (UCI shape is not checked on entry: "12-3" is accepted and shown. That belongs to the UCI entry item, not this slice.)
+
+## Round 2 (64f39903)
+
+**Tested:** a fresh copy of `runtime_c82` on :4433 at 64f39903, seeded by the suite (`check_c82_filing_record_api.ts` 24/24, `check_c82_filing_numbers.ts` 9/9), then stopped. No Blocker or Major remains.
+
+| # | Sev | What I did | Expected | Actual | Where |
+|---|---|---|---|---|---|
+| R2-m1 | Minor | `value` "W12‑345‐6789" (non-breaking hyphen U+2011, hyphen U+2010), "W12–345−6789" (en dash, minus sign), "W12­3456789" (invisible soft hyphen) | Hyphens are removed (AG-7-95 r1). Numbers copied from a PDF or a word processor often carry these characters | 422 "Application numbers look like W123456789", which does not say which character is wrong. Only the ASCII hyphen and `\s` are removed. Unicode spaces (U+3000, U+2028, U+FEFF) are removed. The same applies to `before` "-" or " - - " with nothing stored: blanked to "" and then 409 "Someone changed…" (the value "-" itself gives 422) | `engine/runtime/filing-record.ts:15-16`; `api/src/filing-record.ts:51` |
+
+**Fixes confirmed:**
+* **M1:** `GET /api/activity` as user-O, R, T, S, A, B and C: 0 "application number" lines carry `detail`, and no feed row contains a string matching `[A-Z]{1,2}[0-9]{8,9}`. The audit rows still keep before and after.
+* **Case-marker spoof:** another firm (user-S) opened a case with reference "case e814dc85" and a person named "case e814dc85" (e814dc85 starts firm A's case id), then set a number. The summary reads "On case 024fc3f9 (case e814dc85): …". user-O sees 0 of that line and user-S sees 1.
+* **m2:** the same case's sibling filing gives "Already on another filing of this case." With another case as well: "Already on another filing of this case. Already on case ACC-…-bp3h."
+* **Firm-scoped warning:** with firm S holding W223456789, firm S got no warning on saving it, and firm A's warning named only firm A's own case.
+* **m3:** `before` " w-123 456 789 " matches W123456789. `""`, `"   "` and `null` mean none (200). A wrong `before` gives 409.
+* **m4:** W12345678 followed by 150 spaces or 190 hyphens is saved as W12345678. Over 200 raw characters gives 400 "That is too long to be an application number." More than 20 characters after normalising gives 422. A missing `before` gives 400 with plain words.
+* **m5:** ſ, ı, ﬀ, fullwidth Ｗ, Arabic-Indic digits and a zero-width space are all refused (422).
+
+**Still held:**
+* **Concurrency:** 50 PUTs at once (`before:" "`, lower-case hyphenated values) gave 1 × 200 and 49 × 409, with one audit line and no server error in the log.
+* **Access:** 403 for user-P, user-Q and user-A; 404 for user-S.
+* **Kept by decision, not refiled:** m1 (an inactive filing still counts as a duplicate, and clearing it is 409) and m6 (the existence oracle), as listed in the PR.

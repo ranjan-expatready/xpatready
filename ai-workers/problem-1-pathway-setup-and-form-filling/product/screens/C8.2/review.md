@@ -77,3 +77,36 @@ Journeys: (1) the officer reads the record, then adds, changes and clears a numb
 * Pre-existing, not this PR's (for the tech lead to note): people with the configuration `review` duty read every case line, including number details (`main.ts:94`).
 
 **Verdict: Block** (commit 22f3f2ab). Fix: **M1** (commit the marker-first summary and its check); **M2** (add the cross-firm duplicate-warning check). Recommended in the same push: m1–m6. Re-review only the delta.
+
+## Round 2 (64f39903), 2 Nov
+**Scope:** `git diff 22f3f2ab 64f39903`: `api/src/filing-record.ts`, `api/src/studio.ts` (feed `detail`), `contracts/filing-record.ts`, `engine/runtime/filing-record.ts`, both C8.2 checks. The breaker's `break-report.md` was read alongside.
+**Runs (own copy `runtime_c82r` on :4439, fresh database; US$0):** `check_c82_filing_numbers.ts` **9/9** · `check_c82_filing_record_api.ts` **24/24**. Copy stopped afterwards.
+
+**Fixes**
+* **M1, closed.**
+  * The summary now starts with the marker: "On case <8> (<ref>): …" (`filing-record.ts:66`). The feed's first-match regex therefore always takes the case's own marker, even when a typed person name or case reference reads "case ffffffff".
+  * The new check (principal "Sample case ffffffff") fails with the old order.
+* **M2, closed.**
+  * A `sample-solo` case saves a number firm A already uses: warning null, and none of firm A's references in the body.
+  * Removing `case: { firmKey }` makes that check fail. Confirmed by reading the code: the solo firm would get "Already on case <A's ref>".
+* **Breaker M1, closed.** The feed returns `detail: null` for "application number" lines (`studio.ts:1047`).
+  * Probe: user-A, user-B, user-O and user-S get 6, 6, 5 and 1 lines; 0 with detail; 0 with a number in the summary.
+  * The audit row still keeps before and after (the check reads it in SQL).
+* **m1, closed:** the inactive filing gives 409 with nothing saved (tested, then restored).
+* **m2, closed:** a sibling on the same case gives "Already on another filing of this case." (probed). When the number is also on another case, that case's reference follows.
+* **m5, closed:** a missing `before` gives "Send "before": the number you read, or null when there was none."
+* **Breaker minors, closed:**
+  * `before` is normalised: `""` counts as none, and " w22-3456789 " matches W223456789 (probed, 200).
+  * The 200-character cap applies first; the 20-character limit is checked after spaces are removed, so a padded valid number saves (probed).
+  * "ſ123456789" is refused with 422 before upper-casing. The unit check covers ſ, ı, ﬀ and fullwidth letters.
+* `api.log`: 0 numbers.
+
+**Still open (Minor, listed in the PR, accepted as follow-ups):**
+* m3: the `basis` words in GET name IRCC and a PR step.
+* m4: the `person.uci` key is hard-coded.
+* Breaker m6: the id-existence oracle. Another firm gets "No such case." for a real filing and "No such filing." for an absent one (probed); low risk with uuids.
+* Breaker m1 (inactive filings count as duplicates) is kept on purpose (rule 6, AG16-60). It is now worded clearly for the same case.
+
+**Scores moved:** D6 4 (feed placement no longer spoofable; numbers never in the feed) · D10 4 (m3 left) · D16 4 (firm filter and inactive guard now fail when removed). **Journey score: 9 / 10, pass.** Trust and sources rises to 1 (M1 fixed); plain words stays ½ (m3).
+
+**Verdict: Approve** (commit 64f39903). No open Blocker or Major. Minors m3, m4 and breaker m6 stay listed in the PR as follow-ups.

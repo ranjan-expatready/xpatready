@@ -5,15 +5,17 @@
 
 export type NumberRule = { pattern: string; words: string; example: string };
 
-/** AG-7-95 rule 1: stored upper-case with spaces and hyphens removed. */
-export const normaliseNumber = (raw: string) => raw.replace(/[\s-]+/g, "").toUpperCase();
+/** Spaces and every hyphen or dash a pasted number may carry (keyboard hyphen, U+2010–U+2015, minus sign, soft hyphen). */
+const SEPARATORS = /[\s\-\u2010-\u2015\u2212\u00AD]+/g;
+/** AG-7-95 rule 1: stored upper-case with spaces and hyphens removed (breaker R2-m1 on #553: any hyphen or dash). */
+export const normaliseNumber = (raw: string) => raw.replace(SEPARATORS, "").toUpperCase();
 
 /** A filing's application number: null clears it; otherwise the normalised value, or why it is refused (never warned). */
 export function checkApplicationNumber(raw: string | null | undefined, rule: NumberRule): { value: string | null } | { error: string } {
   if (raw === null || raw === undefined || !raw.trim()) return { value: null };
   // Breaker m5 on #553: only plain letters and digits, checked BEFORE upper-casing ("ſ" would otherwise become "S").
-  const bare = raw.replace(/[\s-]+/g, "");
-  if (/[^\x21-\x7E]/.test(bare) || bare.length > 20) return { error: `Application numbers look like ${rule.example} (${rule.words}).` };
+  const bare = raw.replace(SEPARATORS, "");
+  if (/[^\x21-\x7E]/.test(bare)) return { error: `Application numbers look like ${rule.example} (${rule.words}).` }; // size: the contract's bound; shape: the pack's pattern
   const value = normaliseNumber(raw);
   return new RegExp(rule.pattern).test(value) ? { value } : { error: `Application numbers look like ${rule.example} (${rule.words}).` };
 }

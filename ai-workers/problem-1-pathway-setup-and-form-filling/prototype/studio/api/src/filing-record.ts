@@ -48,7 +48,7 @@ export class FilingRecord {
     if ("error" in checked) fail(checked.error, HttpStatus.UNPROCESSABLE_ENTITY);
     const value = (checked as { value: string | null }).value;
     // Breaker m3 on #553: "before" is read as the number is stored (blank = none; case, spaces and hyphens ignored).
-    const before = parsed.data!.before && parsed.data!.before.trim() ? normaliseNumber(parsed.data!.before) : null;
+    const before = parsed.data!.before ? normaliseNumber(parsed.data!.before) || null : null; // "-" or " - " is no number too
     if (before !== (f!.applicationNumber ?? null)) fail("Someone changed this filing's application number after you read it: read the filing record again, then try again. Nothing was saved.", HttpStatus.CONFLICT);
     const others = value ? await this.db.filing.findMany({ where: { workspaceId: f!.workspaceId, applicationNumber: value, NOT: { id: f!.id }, case: { firmKey: c.firmKey } }, select: { caseId: true, case: { select: { reference: true } } } }) : [];
     if (value !== (f!.applicationNumber ?? null)) {
