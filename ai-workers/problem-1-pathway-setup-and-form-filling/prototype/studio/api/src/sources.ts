@@ -598,13 +598,16 @@ export class Sources {
     // S6 slice 1a: the comparison's proposals enter the one review queue through the door (contract v2); the comparison
     // itself (outcome, candidates, form fields, affected items) is the server's working column beside them.
     const libKeys = new Set(library.map((l) => l.key));
+    // D3: the edition is a fact of the file (p2/convert.ts), never the model's reading: a saved answer that misread it (the
+    // 21 Oct IMM 5257 run says 06-2018 for the 09-2023 file) still lands on the file's edition; the reading stays on the job.
+    const fileEdition = (await this.printedEdition(a)) ?? null; // printedEdition falls back to the attachment's own label
     const quoteOf = (q?: string) => (q && /^[0-9a-f]{64}$/.test(a.sha256) ? { file: a.fileName.slice(0, 300), sha256: a.sha256, edition: a.edition?.slice(0, 60) ?? null, page: null, quote: q.slice(0, 1000), quoteFound: true, rule: null } : null);
     const proposals: (NewProposal & Work)[] = items.map((i) => {
       const near = i.candidates.filter((c) => c.score >= 0.55).map((c) => c.key).slice(0, 10);
       const reuses = !!i.recommendation.key && (i.recommendation.action === "reuse" || (i.recommendation.action === "decide" && libKeys.has(i.recommendation.key)));
       const ready = i.outcome === "REUSE" || (i.outcome === "NEW" && !near.length);
       const payload = { kind: "field" as const, label: i.proposedKey.slice(0, 120), aliases: [], meaning: i.proposedMeaning, valueType: i.proposedType, subject: null, formBox: null };
-      return { kind: "field", runId: jobId, step: job.kind, scope: { formEdition: (out.form_edition ?? a.edition ?? null)?.slice(0, 60) ?? null, combinationId: job.combinationId }, landsOn: "library",
+      return { kind: "field", runId: jobId, step: job.kind, scope: { formEdition: fileEdition?.slice(0, 60) ?? null, combinationId: job.combinationId }, landsOn: "library",
         reuse: reuses ? { match: "reuse", existingKey: i.recommendation.key } : { match: "new", existingKey: null }, payload, source: quoteOf(i.evidence.quotes[0]), rounds: { draft: null, check: null }, rules: [],
         agreement: "one_round", confidence: ready ? "ready" : i.outcome === "NEW" ? "check" : "decide", reason: ready ? null : i.reason.slice(0, 500), origin: "ai",
         identity: { key: identityKeyOf(payload, ""), near, nearReason: near.length ? i.reason.slice(0, 300) : null }, relatesTo: null, revision: null, basis: "SAMPLE",
