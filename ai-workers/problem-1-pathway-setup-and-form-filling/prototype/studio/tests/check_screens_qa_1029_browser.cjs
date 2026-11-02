@@ -116,8 +116,13 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     step("QA-71: Document types: facts in words, categories in words, no \"reader profiles\"", !KEY.test(dt) && (await p.locator("main table tbody td:nth-child(2)").allInnerTexts()).every((c) => /^(Client|Employer|Government|Someone else)$/.test(c.trim())) && !/reader profiles|Imported release/.test(dt), (dt.match(KEY) ?? [])[0]);
     await axe("Document types"); await p.screenshot({ path: path.join(SHOTS, "documents-1440.png") });
 
-    // QA-73: Review and release in words
+    // QA-73: Review and release in words. UX-A part 3 (P-273): a combination with nothing set up has nothing to release, so
+    // its Review tab lists no change (as Immigration programs and the bar say); one form from the library gives Visitor
+    // visa content, and its draft's calculations are listed with it.
+    const aForm = sql(`select cf.lineage_key from combination_form cf join combination c on c.id=cf.combination_id where c.combination_key='wp.family' and cf.status not in ('RETIRED','SUPERSEDED') and cf.lineage_key like 'IMM 5%' order by cf.lineage_key limit 1`);
+    step("setup: a form from the library is added to Visitor visa (its draft has content)", (await api(`/combinations/${visitor}/forms`, { method: "POST", data: { formKey: aForm } })).status < 300, aForm);
     await go(`/c/${visitor}/review`);
+    await p.locator("main table").filter({ has: p.locator("th", { hasText: /^Item$/ }) }).first().waitFor({ timeout: 30000 }).catch(() => undefined);
     const rv = await main();
     step("QA-73: Review and release: no \"SME duty\", no \"Derived\", no \"no tested helper\"", !/SME duty|Derived definition|Derived fields|no tested helper/.test(rv), (rv.match(/SME duty|Derived[^\n]{0,40}|no tested helper/) ?? [])[0]);
     // QA-73 retest 832ee5bd (F8): the Item column names each item in a few words; a calculation's long definition is in the tip.
