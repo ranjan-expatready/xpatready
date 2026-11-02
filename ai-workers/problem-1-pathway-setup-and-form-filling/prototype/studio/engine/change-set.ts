@@ -214,7 +214,11 @@ export function checkChangeSet(items: ChangeItem[], madeBy: MadeBy, ctx: Context
     // adding, needs a reason that names it (why it does not fit); it is never direct and never Ready.
     else if ((it.action === "accept_proposal" || it.action === "create") && it.kind === "field") {
       const near = nearMatches({ key: it.key, name: it.name }, [...lib.fields.filter((f) => LIVE(f.status) && !f.mergedInto).map((f) => ({ key: f.key, name: fieldName(f) })), ...(ctx.pendingNew ?? [])]);
-      const reason = (it.reason ?? "").toLowerCase();
+      // Review r4-M1: the item's own name and key are taken out of the reason first, so "The full name as on travel
+      // document is asked…" does not count as naming "Full name" (one name holds the other).
+      const esc = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const own = [it.name, it.key, it.key.split(".").slice(1).join(" ").replace(/_/g, " ")].filter((x) => x.trim().length > 1);
+      const reason = own.reduce((r, o) => r.replace(new RegExp(esc(o.toLowerCase()), "g"), " "), (it.reason ?? "").toLowerCase());
       for (const n of near) if (!reason.includes(n.name.toLowerCase()) && !(n.key && reason.includes(n.key.toLowerCase()))) add("R3", i, `"${it.name}" is close to ${n.name} (${n.why}): reuse ${n.name}, or say in the reason why it does not fit.`);
     }
     // R4 references intact.

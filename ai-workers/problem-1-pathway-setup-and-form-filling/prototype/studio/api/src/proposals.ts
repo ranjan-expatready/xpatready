@@ -136,6 +136,7 @@ export async function insertProposals(db: Client, workspaceId: string, items: (N
   await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`proposal-door:${workspaceId}`}))`;
   const firstNew = new Map<string, { id: string; edition: string | null }>();
   const batchNew: { key: string | null; name: string; meaning: string | null }[] = [];
+  let nearPool: { key: string | null; name: string; meaning: string | null }[] | undefined;
   for (const [n, it] of items.entries()) {
     const { choice, decidedKey, work: given, ...item } = it; let work = given;
     const parsed = ProposalItem.safeParse({ ...item, id: randomUUID(), status: "waiting", decision: null });
@@ -163,9 +164,12 @@ export async function insertProposals(db: Client, workspaceId: string, items: (N
     if (x.kind === "field" && x.landsOn === "library" && x.reuse.match === "new") {
       const p = x.payload as { label: string; meaning?: string };
       const me = { key: ((work as { proposedKey?: string } | null)?.proposedKey) ?? null, name: p.label, meaning: p.meaning ?? null };
-      const lib = (await db.canonicalField.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] }, mergedIntoKey: null }, select: { canonicalFieldKey: true, label: true, meaning: true } }))
-        .map((f) => ({ key: f.canonicalFieldKey, name: f.label || f.canonicalFieldKey, meaning: f.meaning }));
-      const near = nearMatches(me, [...lib, ...(await pendingNewFields(db, workspaceId)), ...batchNew]);
+      nearPool ??= [
+        ...(await db.canonicalField.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] }, mergedIntoKey: null }, select: { canonicalFieldKey: true, label: true, meaning: true } }))
+          .map((f) => ({ key: f.canonicalFieldKey, name: f.label || f.canonicalFieldKey, meaning: f.meaning })),
+        ...(await pendingNewFields(db, workspaceId)),
+      ]; // review r4-m1: read once per batch, not once per item
+      const near = nearMatches(me, [...nearPool, ...batchNew]);
       if (near.length) x.identity = { ...x.identity, near: [...new Set([...x.identity.near, ...near.map((n) => n.name)])].slice(0, 10), nearReason: x.identity.nearReason ?? near[0].why };
       batchNew.push(me);
     }

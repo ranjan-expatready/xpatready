@@ -187,6 +187,11 @@ const travelName: ChangeItem = { action: "accept_proposal", kind: "field", key: 
 ok("G-CORE R3 near fail: a new field near a library field (QA-159), with a reason that does not name it, is refused", check([travelName]).some((p) => p.rule === "R3" && /is close to Whole name \(draft\) \(one name holds the other\)/.test(p.message)), check([travelName]));
 ok("G-CORE R3 near pass: the same field with a reason that says why the near one does not fit passes R3", !rules([{ ...travelName, reason: "Whole name (draft) holds the current name; this is the name exactly as printed on the travel document" }]).includes("R3"));
 ok("G-CORE R3 near fail: a new field near one another proposal is waiting to add is refused too", check([{ ...travelName, key: "person.travel_doc_name", name: "Name on travel document as printed", reason: "From IMM 5604" }], ctx({ pendingNew: [{ key: "person.printed_name", name: "Printed name on travel document" }] })).some((p) => p.rule === "R3" && /Printed name on travel document/.test(p.message)));
+const qa159 = ctx({ pendingNew: [{ key: "person.full_name", name: "Full name" }] });
+const nearFull = (reason: string) => check([{ ...travelName, reason }], qa159).some((p) => p.rule === "R3" && /is close to Full name/.test(p.message));
+ok("G-CORE R3 near fail (review r4-M1): a reason that only describes the item itself (its own name holds the near one's) does not count as naming it", nearFull("The full name as on travel document is asked on IMM 5604 box 2"));
+ok("G-CORE R3 near pass (review r4-M1): a reason that names the near field apart from the item's own name passes", !nearFull("Full name holds the name in daily use; IMM 5604 asks for the name exactly as printed on the travel document"));
+ok("G-CORE R3 near fail: the item's own key in the reason does not count either", nearFull("person.full_name_as_on_travel_document is asked on IMM 5604"));
 ok("G-CORE R3 near pass: a new field near nothing passes", !rules([height]).includes("R3"));
 ok("G-CORE tier: a near-duplicate new field is never direct (a new item waits for a second person)", riskOf([travelName], "ai", new Set()).tier === "second_person");
 // ───────── STANDARDS §7 properties
