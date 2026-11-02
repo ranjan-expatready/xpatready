@@ -114,3 +114,40 @@ Diff: `git diff cbd26765..2aeb1608`. Run on a fresh isolated copy `rev64` on :44
 * **9 / 10.** Passes, with no criterion at 0.
 
 **Verdict: Approve** (for 2aeb1608982fdb7bcbed2e3a083588a19dd336bf). No open Blocker or Major. List m-R2-1 and m-R2-2 in the PR, or fix them in the area's Minor PR.
+
+## Round 3: delta review at 4370cb9d9dcc8ed6082249c58e9e46928bf6d5ed
+Diff: `git diff 2aeb1608..4370cb9d`; 7904aa77 in between holds only the round-2 notes. Run on a fresh isolated copy `rev64` on :4425, started from 4370cb9d. US$0.
+
+**Checks:**
+* `check_c64_storage_api.ts`: 48/48.
+* `acceptance/C6.4.test.ts`: 16/16.
+* `check_engine.ts`: 43/43.
+* The round-1 probes all still hold:
+  * 6 GETs at once: 5 rows.
+  * 8 uploads at once: one 201, 1 row, 1 file.
+  * 21 MB: 413 in the route's words.
+  * Exactly 20 MB: 201.
+  * Configuration person: 403; another firm's officer: 404.
+  * Not applicable and upload at once: one 200, one 409, no file.
+
+**The four changes:**
+1. **Version before the "already Requested" shortcut** (`case-checklist.ts:132-134`). The race-path return is limited to `seen === undefined` (`:142`). Correct. Tested: a stale version on an already-requested line gets 409. In my probe, four requests at once with the same version gave one 200 and three 409s, with one audit line.
+2. **Write inside the clean-up** (`:170-172`). A failed mkdir or write now reaches `rmSync`. Correct. A disk-full case cannot be tested here.
+3. **`CaseActorGuard`** (`:198-210`). Nest runs guards before interceptors. Probes:
+   * A configuration person sending 22 MB: 403, not 413, so the file was not read first.
+   * No `x-actor`, or an unknown one: 401 "Choose a simulated person first", from `actorOf`.
+   * The case's own client and officer still pass, and `Runtime.reach` still checks the case.
+4. **`SeenVersion`** (`contracts/documents.ts:22-26`). Probes:
+   * JSON `""` and `null`: 200 (tested).
+   * Multipart `version=` (empty): 201.
+   * `-1` and `1.5`: 400 "a whole number from 0" (tested for -1).
+   * A padded `" 1 "` is read as 1, and was correctly 409 here because the line was already at version 2.
+
+**New finding, Minor (not blocking): m-R3-1.** A double click that sends the version seen gets a 409 on the second request, not an idempotent 200. This follows from change 1: it is the deliberate choice to honour a supplied version.
+* The 409 detail says "(it is Requested now)", so the person is not misled.
+* The screen lane should either not send `version` on Request, or treat this 409 with the state Requested as success.
+* No change asked in this PR. Record it for the case-view screen.
+
+**Journey score (round 3, API-only):** unchanged at **9 / 10**. It passes, with no criterion at 0. Accessibility and visual quality are ½ only because there is no screen.
+
+**Verdict: Approve** (for 4370cb9d9dcc8ed6082249c58e9e46928bf6d5ed). No open Blocker or Major. m-R3-1 goes to the PR's Minor list or the screen lane's notes.
