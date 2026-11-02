@@ -38,3 +38,6 @@ Sound: no Blocker, Critical or Major found in the batch. **M2 +2 Works: C11.15 a
 
 ## Batch 4 (214db197 → 4031894d: #579 T1 part 1, test-only)
 * No capability row: `tests/speed_budget.cjs` only judges speed budgets on a GitHub machine when `SPEED_JUDGE=1`. `check_speed_budget.ts` 9/9, and 9/9 with `RUNNER_ENVIRONMENT=github-hosted`. No bugs.
+
+## Batch 5 (4031894d → c155ebf3: #584 C3.13 rest)
+* **C3.13 → Works.** `acceptance/C3.13.test.ts` 23/23 on Visitor visa configured (8/23 before #584, per qa-batch's #567). `check_c313_words_filters.ts` 32/32 and `check_c313_search_browser.cjs` 12/12. No bugs. Note for the tech lead: #567 also edits the C3.13 row (scored down before #584), so whichever records PR merges second keeps this score.
