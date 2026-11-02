@@ -88,7 +88,7 @@ function WhatACaseGets({ gets }: { gets: ReturnType<typeof previewFilings> }) {
   const people = (f: (typeof gets.filings)[number]) => f.people > 1 ? `${f.people} people on it${f.declaredOnly ? `, ${f.declaredOnly} declared only (no fee)` : ""}` : f.kind === "co_filed" ? "Co-filed · cannot be sent alone" : "1 person · own number and decision";
   return (
     <section aria-labelledby="case-gets" className="mt-4 rounded-lg border border-border bg-surface p-4" data-case-gets>
-      <h3 id="case-gets" className="text-sm font-semibold">What a case gets <span className="font-normal text-text-muted">(preview family, Sample)</span></h3>
+      <h3 id="case-gets" className="text-sm font-semibold">What a case gets <span className="font-normal text-text-muted">(one of each person who may be on a case, Sample)</span></h3>
       {!gets.filings.length ? <p className="mt-1 text-sm text-text-muted">{gets.gets}</p> : (
         <>
           <p className="mt-1 text-sm" data-gets>{gets.submissions[0]?.splittable === false && gets.filings.length > 1 ? `${gets.gets} · cannot be split` : gets.gets}</p>
@@ -169,10 +169,11 @@ export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
           <h2 id="who-can-be" className="flex items-center gap-2 font-semibold">Who can be in this application <Tip tip={TIPS.card} focusable><span aria-label="What this sets" className="inline-flex size-4 cursor-help items-center justify-center rounded-full border border-border-strong text-[10px] text-text-muted">i</span></Tip></h2>
           <p className="mt-0.5 text-xs text-text-muted">{v.savedBy ? `Last changed by ${v.savedBy}${v.savedAt ? ` at ${new Date(v.savedAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : ""}` : "As set when the combination was created"} · numbers Sample until the immigration expert confirms</p>
         </div>
-        {canAuthor && !editing ? <div className="flex gap-2">{v.canUndo ? <Button size="sm" variant="ghost" onClick={() => void undo()} busy={busy}><Undo2 /> Undo last change</Button> : null}<Button size="sm" variant="ghost" onClick={() => setFilling(true)}><BookOpen /> Fill from the guide</Button><Button size="sm" variant="secondary" onClick={() => { setLines(toLines(v)); setEditing(true); }}>Edit</Button></div> : null}
+        {canAuthor && !editing ? <div className="flex flex-wrap gap-2">{v.canUndo ? <Button size="sm" variant="ghost" onClick={() => void undo()} busy={busy}><Undo2 /> Undo last change</Button> : null}<Button size="sm" variant="ghost" onClick={() => setFilling(true)}><BookOpen /> Fill from the guide</Button><Button size="sm" variant="secondary" onClick={() => { setLines(toLines(v)); setEditing(true); }}>Edit</Button></div> : null}
       </div>
       {stale ? <Notice tone="warn" className="mt-3" title="Changed by someone else" action={<Button size="sm" variant="secondary" onClick={() => { setStale(null); setEditing(false); refresh(); }}>Reload their version</Button>}>{stale}</Notice> : null}
-      <table className="mt-3 w-full text-sm">
+      {/* Board r2: under 760 px (phone, 200 % zoom) each row becomes a card with its field names. */}
+      <table className="mt-3 w-full text-sm max-[759px]:block max-[759px]:[&_thead]:hidden max-[759px]:[&_tbody]:block max-[759px]:[&_tr]:block max-[759px]:[&_tr]:py-2 max-[759px]:[&_td]:block max-[759px]:[&_td]:py-1 max-[759px]:[&_td]:max-w-none max-[759px]:[&_td[data-label]]:before:block max-[759px]:[&_td[data-label]]:before:text-xs max-[759px]:[&_td[data-label]]:before:text-text-muted max-[759px]:[&_td[data-label]]:before:content-[attr(data-label)]">
         <thead><tr className="border-b border-border text-left text-xs text-text-muted">
           <th className="py-2 pr-3 font-medium">Person</th>
           <th className="py-2 pr-3 font-medium"><Tip tip={TIPS.many} focusable><span className="cursor-help underline decoration-dotted underline-offset-4">How many</span></Tip></th>
@@ -188,13 +189,13 @@ export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
             return (
               <tr key={l.role} className="border-b border-border last:border-0 align-top" data-person={l.role}>
                 <td className="py-2 pr-3"><span className="font-medium">{nameOf(l)}</span>{r && r.label !== nameOf(l) ? <p className="text-xs text-text-muted" data-library-role>role: {r.label}</p> : null}{r && !r.mayBeApplicant ? <p className="text-xs text-text-muted">never an applicant</p> : null}{err(i, "role") ? <p role="alert" className="text-xs text-text-danger">{err(i, "role")}</p> : null}</td>
-                <td className="py-2 pr-3">{editing && !principal ? (
+                <td className="py-2 pr-3" data-label="How many">{editing && !principal ? (
                   <span className="flex items-center gap-1.5"><Input aria-label={`Fewest ${nameOf(l)}`} className="h-8 w-14" inputMode="numeric" value={String(l.min)} onChange={(e) => set(i, { min: Number(e.target.value.replace(/\D/g, "").slice(0, 1) || 0) })} /><span className="text-text-muted">to</span><Input aria-label={`Most ${nameOf(l)}`} className="h-8 w-14" inputMode="numeric" value={String(l.max)} onChange={(e) => set(i, { max: Number(e.target.value.replace(/\D/g, "").slice(0, 1) || 0) })} /></span>
                 ) : howMany(l)}{err(i, "max") || err(i, "min") ? <p role="alert" className="text-xs text-text-danger">{err(i, "max") ?? err(i, "min")}</p> : null}</td>
                 <td className="py-2 pr-3" data-label="Filing" data-filing={l.filingMode ?? (principal ? "files_own" : "")}><FilingCell l={l} i={i} editing={editing} mayBeApplicant={!!r?.mayBeApplicant} name={nameOf(l)} words={words(l)} warning={warningOf(l.role)} error={err(i, "filingMode") ?? err(i, "applies")} onMode={(m) => set(i, { filingMode: m, applies: appliesOf(m, l.applies) && !!r?.mayBeApplicant })} /></td>
                 <td className="py-2 pr-3 text-text-muted" data-label="Answered by">{v.lines.find((x) => x.role === l.role)?.answeredBy ?? (l.role === "child" ? "Principal, under 18" : "Themselves")}</td>
                 <td className="max-w-56 py-2 pr-3 text-xs text-text-muted" data-label="Fees" data-fees>{words(l).fees ?? (r?.mayBeApplicant ? "—" : "No fee")}</td>
-                <td className="max-w-72 py-2 pr-3 text-xs text-text-muted">{l.quote ? `"${l.quote}"` : l.origin === "AI_PROPOSAL" || l.origin === "CODE_MATCH" ? "" : "—"}{l.origin === "AI_PROPOSAL" ? <Pill tone="ai" className="ml-1">AI</Pill> : l.origin === "CODE_MATCH" ? <span data-origin-rules><Pill className="ml-1" title="Found by rules in the guide's sentences; no AI">Rules</Pill></span> : null}</td>
+                <td className="max-w-72 py-2 pr-3 text-xs text-text-muted" data-label="IRCC's words">{l.quote ? `"${l.quote}"` : l.origin === "AI_PROPOSAL" || l.origin === "CODE_MATCH" ? "" : "—"}{l.origin === "AI_PROPOSAL" ? <Pill tone="ai" className="ml-1">AI</Pill> : l.origin === "CODE_MATCH" ? <span data-origin-rules><Pill className="ml-1" title="Found by rules in the guide's sentences; no AI">Rules</Pill></span> : null}</td>
                 {editing ? <td className="py-2">{principal ? null : <Button size="icon" variant="ghost" aria-label={`Remove ${nameOf(l)}`} onClick={() => setLines((ls) => ls.filter((_, j) => j !== i))}><X /></Button>}</td> : null}
               </tr>
             );

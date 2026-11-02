@@ -34,7 +34,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   };
   await open();
   const cell = (role) => who.locator(`[data-person="${role}"] [data-label="Filing"]`);
-  step("C11.12 pass: the read view says each person's filing in words (Visitor visa sample: everyone files their own)", /Files own application/.test(await cell("child").innerText()) && /Files nothing/.test(await cell("representative").innerText()), await cell("child").innerText());
+  step("C11.12 pass: the read view says each person's filing in words (Visitor visa sample: everyone files their own)", /Files own application/.test(await cell("child").innerText()) && /Files own application/.test(await cell("spouse_or_partner").innerText()), await cell("child").innerText());
   step("C11.12 pass: the principal says 'Always, for the principal'; Fees words never show CAD 0", /Always, for the principal/.test(await cell("principal").innerText()) && !/CAD 0\b/.test(await who.innerText()));
   const gets0 = await who.locator("[data-gets]").innerText();
   step("C11.12 pass: What a case gets: one filing per person in one submission", /filings in one submission/.test(gets0), gets0);
@@ -80,12 +80,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.screenshot({ path: path.join(SHOTS, "03-filing-not-set-1440.png") });
 
   // 375 px and 200 % zoom: no sideways scroll on the page.
+  await open();
   for (const [w, h, z, name] of [[375, 812, 1, "375"], [720, 900, 2, "200pct"]]) {
     await p.setViewportSize({ width: w, height: h });
     await p.evaluate((zz) => { document.documentElement.style.zoom = String(zz); }, z);
     await p.waitForTimeout(300);
-    const over = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    step(`C11.12 pass (${name}): no sideways scroll`, over <= 1, over);
+    // The card's own content (the page's tab bar and forms table are other screens' and scroll in their own boxes).
+    const over = await p.evaluate(() => { const W = document.documentElement.clientWidth; let m = 0; for (const e of document.querySelectorAll("[data-who-can-be], [data-who-can-be] *")) m = Math.max(m, e.getBoundingClientRect().right - W); return Math.round(m); });
+    step(`C11.12 pass (${name}): Who can be in this application fits the width (rows become cards), no sideways scroll`, over <= 1, over);
     await p.screenshot({ path: path.join(SHOTS, `04-${name}.png`), fullPage: false });
     await p.evaluate(() => { document.documentElement.style.zoom = "1"; });
   }

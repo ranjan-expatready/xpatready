@@ -106,7 +106,8 @@ const n = (k: number, one: string, many = `${one}s`) => `${k} ${k === 1 ? one : 
 export function previewFilings(lines: { role: string; label?: string; min: number; max: number; preview?: number; applies: boolean; filingMode?: LineMode | null }[], combination: string, feesKnown: boolean, fallback: (role: string) => LineMode | undefined = () => undefined) {
   const people: PlanPerson[] = [];
   for (const l of lines) {
-    const count = l.role === "principal" ? 1 : Math.max(l.min, Math.min(l.max, l.preview ?? (l.min || 1)));
+    // PR 3 (board r2): at least one of each person who may be on a case, more when the preview family says so.
+    const count = l.role === "principal" ? 1 : l.max <= 0 ? 0 : Math.min(l.max, Math.max(1, l.min, l.preview ?? 1));
     for (let k = 1; k <= count; k++) people.push({ subject: `${l.role}-${k}`, role: l.role, label: count > 1 ? `${l.label ?? l.role} ${k}` : l.label ?? l.role, travelling: l.filingMode !== "declared_only" });
   }
   // Review M2: a line with no mode (saved before C11.12, or its Applicant tick changed) follows the same built-in default
