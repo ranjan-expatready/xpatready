@@ -1,6 +1,7 @@
 // "Who can be in this application" (S5, P-119, challenge M3/M4): the rules a save must pass, read against the shared
 // library's person roles (one list for the editor, the validator and the runtime; no role list in code). Pure.
-import type { PeopleLine, PersonRoleView } from "../contracts/workspace.ts";
+import { FILING_CHOICE, type LineMode, type PeopleLine, type PersonRoleView } from "../contracts/workspace.ts";
+import { appliesOf, isLineMode, modeSent } from "./filing-modes.ts";
 
 export type PeopleError = { field: string; message: string };
 type Role = Pick<PersonRoleView, "key" | "label" | "takesPartInCase" | "mayBeApplicant" | "retired">;
@@ -14,6 +15,7 @@ export function checkPeople(list: PeopleLine[], roles: Role[], strict = true): {
   const errors: PeopleError[] = [];
   const byKey = new Map(roles.map((r) => [r.key, r]));
   const seen = new Set<string>();
+  let coFilers = 0;
   const lines = list.map((p, i) => {
     const at = (f: string) => `participants[${i}].${f}`;
     const r = byKey.get(p.role);
@@ -25,10 +27,30 @@ export function checkPeople(list: PeopleLine[], roles: Role[], strict = true): {
     if (p.max < p.min) errors.push({ field: at("max"), message: `${r?.label ?? p.role}: the most cannot be fewer than the fewest (${p.min}).` });
     if (p.role === PRINCIPAL && (p.min !== 1 || p.max !== 1)) errors.push({ field: at("min"), message: "There is exactly one principal applicant on every case." });
     if (p.role === PRINCIPAL && !p.applies) errors.push({ field: at("applies"), message: "The principal applicant always files their own application." });
-    if (p.role === PRINCIPAL && p.filingMode === "on_principal") errors.push({ field: at("filingMode"), message: "The principal applicant always files their own application." });
-    let applies = p.applies;
+    // C11.12 (P-135, P-233) BR-1…BR-5: one filing mode per role, read from filingMode (or the acceptance pack's `filing`).
+    const name = p.label?.trim() || r?.label || p.role;
+    const sent = modeSent(p);
+    let mode: LineMode | null = null;
+    // Review m1: the pack's alias and the field must not disagree (the alias goes when C11.12.test.ts is renamed).
+    if (p.filingMode != null && p.filing != null && modeSent({ filing: p.filing }) !== p.filingMode) errors.push({ field: at("filingMode"), message: "Filing: send one choice (filingMode and filing disagree)." });
+    else if (sent != null && !isLineMode(sent)) errors.push({ field: at("filingMode"), message: FILING_CHOICE }); // BR-1
+    else if (isLineMode(sent)) mode = sent;
+    if (p.role === PRINCIPAL && mode && mode !== "files_own") errors.push({ field: at("filingMode"), message: "The principal applicant always files their own application." }); // BR-2
+    if (mode && mode !== "co_files" && r && !r.mayBeApplicant) { // BR-3: strict refuses; stored lines and older callers drop it (B1)
+      if (strict) errors.push({ field: at("filingMode"), message: `${r.label} takes part in the case but files no application.` });
+      mode = null;
+    }
+    if (mode === "co_files") { // BR-4
+      if (r?.mayBeApplicant || p.role === PRINCIPAL) errors.push({ field: at("filingMode"), message: `${name} may be an applicant: choose Files own application, On the principal's application or Declared only. Only a person who is never an applicant (a sponsor) files the sponsorship.` });
+      else if (p.min !== 1 || p.max !== 1) errors.push({ field: at("max"), message: `One ${name.toLowerCase()} co-files: set how many to 1 to 1.` });
+      if (coFilers++) errors.push({ field: at("filingMode"), message: "Only one person files the sponsorship: keep one co-filing line." });
+    }
+    // BR-5: a mode decides "applicant"; an explicit tick that contradicts Declared only is refused on the editor's save.
+    if (strict && mode === "declared_only" && p.applies) errors.push({ field: at("applies"), message: "Declared only means not accompanying: choose another filing or untick applicant." });
+    let applies = appliesOf(mode, p.applies);
     if (applies && r && !r.mayBeApplicant) { if (strict) errors.push({ field: at("applies"), message: `${r.label} is never an applicant: they take part in the case but file no application of their own.` }); applies = false; }
-    return { ...p, applies, label: p.label?.trim() || r?.label || p.role }; // Lead check L7: a typed label is kept
+    const { filing: _alias, filingMode: _sent, ...rest } = p;
+    return { ...rest, applies, ...(mode ? { filingMode: mode } : {}), label: name }; // Lead check L7: a typed label is kept
   });
   if (!list.some((p) => p.role === PRINCIPAL)) errors.push({ field: "participants", message: "Add the principal applicant: every case has exactly one." });
   return { errors, lines };
