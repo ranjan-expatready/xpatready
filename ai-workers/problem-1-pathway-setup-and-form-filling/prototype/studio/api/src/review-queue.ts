@@ -19,14 +19,12 @@ import { groupOf } from "./review-proposals.ts";
 import { isLifecycleKind } from "./lifecycle.ts";
 import { normaliseCode } from "../../contracts/form-library.ts";
 import { Programs } from "./programs.ts";
-import { forViewer, mayAct } from "../../engine/setup-checklist.ts";
-import { nextStepHref, STEP_LABEL, type ItemKind, type SetupChecklist } from "../../contracts/setup-checklist.ts";
+import { needsYouItems } from "../../engine/setup-checklist.ts";
+import { nextStepHref, STEP_LABEL, type ItemKind } from "../../contracts/setup-checklist.ts";
 
 /** UX-A part 2: next steps that already have their own row here (AI proposals, AI work running, a new edition held,
  *  a submission to sign or release), so a combination's setup row never repeats them. */
 const LISTED_ELSEWHERE: readonly ItemKind[] = ["review_proposals", "view_ai", "review_edition", "sign", "release"];
-/** The setup checklist's Fix items (any step), where a blocker is fixed. */
-const fixItemsOf = (setup: SetupChecklist) => setup.steps.flatMap((s) => s.open.filter((i) => i.kind === "fix_problems").map((i) => ({ item: i, step: s.key, tab: s.tab ?? "review" })));
 
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
 const holds = (a: Actor, duty: string) => (a.duties as readonly string[]).includes(duty);
@@ -259,33 +257,28 @@ export class ReviewQueueService {
         what: `${b.status === "QUEUED" ? "Queued" : "Running"}: ${done} of ${plural(b.jobs.length, "step")} finished · worst case US$${b.worstCaseUsd.toFixed(2)}.`, state: "running" as const, waiting_on: null, next: { label: "View progress", href: `/ai/${b.id}`, note: null } });
     }
 
-    // UX-A part 2 (P-273; UX baseline finding 2): each combination's release blockers and its next step, read from its
-    // setup checklist (the one the Programs card, the Overview and the page header read), so "Needs you" never says
-    // nothing waits while a combination's release is blocked. One row per combination; a step listed above (AI proposals,
-    // AI running, a held edition, a submission) is not repeated. Not about one form (forms []), so a form's guided path
-    // never counts it.
+    // UX-A part 2 (P-273; UX baseline finding 2): a combination is on Needs you exactly when the one rule says so
+    // (engine/setup-checklist.ts needsYouItems: a review, a confirmation a screen offers, or release-blocking problems
+    // this person fixes), the rule the Programs chip and card read too (review M2). Items with their own rows here (AI
+    // proposals, a held edition, sign, release) are not repeated. A release blocked for someone else's fix is listed
+    // under Waiting for others. Building steps (find, add, map, draft) and confirmations no screen offers yet stay on
+    // Programs and the page header (N8: a mark nobody can clear is noise; review M1). Not about one form (forms []).
     const since = new Map(combos.map((c) => [c.id, c.createdAt]));
     for (const s of await this.programs.setupStates()) {
-      // The draft's errors as its Review and release tab counts them ("Nothing to release yet" included).
-      const n = s.blockers.n, fix = fixItemsOf(s.setup)[0];
-      const next = s.setup.next && s.setup.next.item.kind !== "fix_problems" && !LISTED_ELSEWHERE.includes(s.setup.next.item.kind) ? s.setup.next : null;
-      if (!n && !next) continue;
-      const tabOf = (step: string) => s.setup.steps.find((x) => x.key === step)?.tab ?? "forms";
-      const what = [n ? `${plural(n, "problem")} ${n === 1 ? "blocks" : "block"} release${s.live ? " of its next version" : ""}${s.blockers.first ? ` (first: ${s.blockers.first})` : ""}` : "", next ? `Next step · ${STEP_LABEL[next.step]}: ${next.item.text}` : ""].filter(Boolean).join(". ");
-      const base = { id: `setup:${s.combinationId}${n ? ":blocked" : ""}`, kind: "setup" as const, title: s.path, by: null, at: (since.get(s.combinationId) ?? new Date(0)).toISOString(), cost_usd: null, what: `${what}.`, forms: [], combination: s.combinationId };
-      const v = forViewer(s.setup, actor);
-      // An empty draft's only blocker ("Nothing to release yet") is fixed by setting it up: its next step decides the row.
-      if (n && !(n === 1 && s.blockers.empty && next)) {
-        // The configuration author fixes them: on the Fix item's place when the checklist has one, else through the next
-        // step when that is theirs (an empty draft is fixed by setting it up), else on the Review and release tab.
-        const author = mayAct({ kind: "fix_problems" }, actor);
-        const go = fix ? { label: fix.item.text.split(":")[0], href: nextStepHref(s.combinationId, { item: fix.item, step: fix.step }, fix.tab) }
-          : next && v.filled ? { label: next.item.text, href: nextStepHref(s.combinationId, next, tabOf(next.step)) } : { label: `See ${plural(n, "problem")}`, href: `/c/${s.combinationId}/review` };
-        out.push({ ...base, ...(author ? { state: "needs" as const, waiting_on: null, next: { ...go, note: null } } : { state: "waiting" as const, waiting_on: `The configuration author fixes ${n === 1 ? "it" : "them"}.`, next: null }) });
-        continue;
-      }
-      out.push({ ...base, ...(v.filled ? { state: "needs" as const, waiting_on: null, next: { label: next!.item.text, href: nextStepHref(s.combinationId, next!, tabOf(next!.step)), note: null } }
-        : { state: "waiting" as const, waiting_on: v.nextLine, next: null }) });
+      const own = needsYouItems(s.setup, actor).filter((i) => !LISTED_ELSEWHERE.includes(i.kind));
+      const fixable = s.setup.steps.some((x) => x.open.some((i) => i.kind === "fix_problems" || i.kind === "unasked"));
+      if (!own.length && !fixable) continue;
+      const n = s.blockers.n, next = s.setup.next;
+      const what = [n ? `${plural(n, "problem")} to fix before release${s.live ? " of its next version" : ""}${s.blockers.first ? ` (first: ${s.blockers.first})` : ""}` : "",
+        next ? `Next step · ${STEP_LABEL[next.step]}: ${next.item.text}` : ""].filter(Boolean).join(". ");
+      const base = { id: `setup:${s.combinationId}${fixable ? ":blocked" : ""}`, kind: "setup" as const, title: s.path, by: null, at: (since.get(s.combinationId) ?? new Date(0)).toISOString(), cost_usd: null, what: `${what}.`, forms: [], combination: s.combinationId };
+      if (own.length) {
+        const go = own[0];
+        // Review n1: the link never names a second number beside the row's ("Fix them" when "Nothing to release yet" is in it).
+        const fixes = own.filter((i) => i.kind === "fix_problems").reduce((t, i) => t + i.count, 0);
+        const label = go.kind === "fix_problems" && fixes !== n ? "Fix them" : go.text.split(":")[0];
+        out.push({ ...base, state: "needs" as const, waiting_on: null, next: { label, href: nextStepHref(s.combinationId, { item: go, step: go.step }, go.tab ?? "forms"), note: null } });
+      } else out.push({ ...base, state: "waiting" as const, waiting_on: "The configuration author fixes them.", next: null });
     }
     return out;
   }

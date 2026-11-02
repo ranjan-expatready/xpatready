@@ -117,9 +117,12 @@ const err = (where: string) => ({ level: "error" as const, where, item: "x", mes
   step("C11.10: Retired → \"Retired at Release n\", no Needs you", states[4].bar.text === "Retired at Release 3" && states[4].chip.status === "RETIRED" && !forViewer(states[4], AUTHOR).needsYou);
 }
 {
-  // Needs you (founder 30 Oct: "a review or a confirmation"), never a building step.
+  // Needs you (founder 30 Oct: "a review or a confirmation"), never a building step; UX-A part 2 (P-273): a draft's
+  // release-blocking problem is Needs you for the author who fixes it, not for someone who cannot.
   const building = setupChecklistOf(draft({ forms: { lines: 0, fromLibrary: 0, draftable: 2, unmapped: 0, sources: 2 } }));
-  step("C11.10 (fail case): building work (Map forms, Find forms, a draft's own problem) is not Needs you", !forViewer(building, AUTHOR).needsYou && !forViewer(setupChecklistOf(draft({ problems: [err("Forms")] })), AUTHOR).needsYou);
+  step("C11.10 (fail case): building work (Map forms, Find forms) is not Needs you", !forViewer(building, AUTHOR).needsYou);
+  const blocked = setupChecklistOf(draft({ problems: [err("Forms")] }));
+  step("UX-A2 (P-273): a draft's release-blocking problem is Needs you for the author, not for the expert", forViewer(blocked, AUTHOR).needsYou?.count === 1 && !forViewer(blocked, SME).needsYou, forViewer(blocked, AUTHOR).needsYou);
   const review = setupChecklistOf(draft({ proposals: { field: 2, requirement_line: 1 } }));
   step("C11.10: waiting proposals are Needs you for the author (3), not for the expert", forViewer(review, AUTHOR).needsYou?.count === 3 && !forViewer(review, SME).needsYou, forViewer(review, AUTHOR).needsYou);
   step("C11.10: an overlay keeps the contract (ViewerChecklist parses)", ViewerChecklist.safeParse({ ...review, viewer: forViewer(review, AUTHOR) }).success);

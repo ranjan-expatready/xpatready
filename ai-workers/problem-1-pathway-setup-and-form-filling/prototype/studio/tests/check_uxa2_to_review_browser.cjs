@@ -1,21 +1,26 @@
-// UX-A part 2 (P-273; UX baseline 2 Nov finding 2): To review's "Needs you" includes each combination's next step and the
-// problems that block its release, from the setup checklist the Programs card and the page header read, walked in a real
-// browser on the demo sample. Pass: the configuration author sees Visitor visa's next step there and it opens where it is
-// done; the number of blocking problems is the Review and release tab's. Fail cases: with a release-blocking error
-// (Filing not set) the row says so and leads to the fix; a person who cannot fix it never reads a bare "Nothing waits for
-// you" while a release is blocked; a step listed elsewhere (AI proposals) is not repeated. 1440, 1024 and 400 px without
+// UX-A part 2 (P-273; UX baseline 2 Nov finding 2): To review's "Needs you" includes the problems that block a combination's
+// release, and a combination is on it exactly when the one rule (engine/setup-checklist.ts needsYouItems) says it needs
+// that person, the rule the Programs chip and card read (review M2). Walked in a real browser on the demo sample. Pass: with
+// a release-blocking error on Visitor visa the author's Needs you lists it with the Review and release tab's count and a
+// link to the fix; the Programs card marks it Needs you for the same person. Fail cases: no Needs-you row offers a step no
+// screen offers (Confirm or Choose the checklist page, Confirm who can apply; review M1, N8); a person who cannot fix a
+// blocked release reads "Nothing waits for you, but … to fix before release", never a bare "Nothing waits for you"; steps
+// with their own rows are not repeated; a combination with nothing set up is not called blocked. For user-A, user-B and
+// user-C the combinations on Programs' Needs you and on To review's Needs you are the same. 1440, 1024 and 400 px without
 // sideways page scroll; axe (WCAG 2.2 AA). Screenshots in product/screens/UX-A/screenshots/ (uxa2-*). No model call (US$0).
-//   zsh studio/tools/isolated.sh screens_uxa2 4446 start && node studio/tests/check_uxa2_to_review_browser.cjs 4446 xr_studio_screens_uxa2
+//   zsh studio/tools/isolated.sh screens_uxa2 4448 start && node studio/tests/check_uxa2_to_review_browser.cjs 4448 xr_studio_screens_uxa2
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
-const PORT = Number(process.argv[2] ?? 4446), DB = process.argv[3] ?? "xr_studio_screens_uxa2";
+const PORT = Number(process.argv[2] ?? 4448), DB = process.argv[3] ?? "xr_studio_screens_uxa2";
 const BASE = `http://localhost:${PORT}`;
 const ROOT = path.resolve(__dirname, "..", "..", "..");
 const SHOTS = path.join(ROOT, "product", "screens", "UX-A", "screenshots"); fs.mkdirSync(SHOTS, { recursive: true });
 const sql = (q) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 let fail = 0, pass = 0;
-const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${String(typeof detail === "string" ? detail : JSON.stringify(detail)).slice(0, 260)}` : ""}`); };
+const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : "FAIL"}  UX-A2: ${name}${detail !== undefined ? ` — ${String(typeof detail === "string" ? detail : JSON.stringify(detail)).slice(0, 260)}` : ""}`); };
+const NO_SCREEN = /^(Confirm the checklist page|Choose the checklist page|Confirm who can apply)$/;
+const PEOPLE = ["user-A", "user-B", "user-C"];
 
 (async () => {
   const b = await chromium.launch({ headless: true, ...(process.platform === "darwin" ? { channel: "chrome" } : fs.existsSync("/opt/pw-browsers/chromium") ? { executablePath: "/opt/pw-browsers/chromium" } : {}) });
@@ -31,51 +36,56 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const axe = async (name) => { const r = await new AxeBuilder({ page: p }).include("main").withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze(); step(`axe: ${name} has no WCAG A/AA violation`, r.violations.length === 0, r.violations.map((v) => `${v.id}: ${v.nodes[0]?.target?.join(" ")}`).join(" | ")); };
   const openReview = async (f = "") => { await p.goto(`${BASE}/review${f}`); await p.getByRole("heading", { name: "To review" }).waitFor(); await p.waitForFunction(() => !document.querySelector('[aria-busy="true"]'), null, { timeout: 15000 }); };
   const vvRow = () => p.locator(`tr[data-item^="setup:${vv}"]`);
+  // Programs' Needs you, per person, as combination ids (both Pathway types).
+  const programsNeeds = async (actor) => { const ids = new Set(); for (const pw of ["INDIVIDUAL", "CORPORATE"]) { const c = (await api(`/catalogue?pathway=${pw}&filter=all`, {}, actor)).body; for (const r of c?.rows ?? []) if (r.needsYou && r.combinationId) ids.add(r.combinationId); } return ids; };
+  const reviewNeeds = async (actor) => (await api("/review-queue?filter=needs", {}, actor)).body;
+  const agree = async (label) => {
+    for (const actor of PEOPLE) {
+      const prog = await programsNeeds(actor), q = await reviewNeeds(actor);
+      const setupCombos = new Set(q.items.filter((i) => i.kind === "setup").map((i) => i.combination));
+      const anyCombos = new Set(q.items.map((i) => i.combination).filter(Boolean));
+      step(`${label} (${actor}): every setup row on Needs you is a Programs Needs-you combination, and every Programs Needs-you combination is on To review's Needs you`, [...setupCombos].every((c) => prog.has(c)) && [...prog].every((c) => anyCombos.has(c)), { programs: [...prog].length, setup: [...setupCombos].length, any: [...anyCombos].length });
+      step(`${label} (${actor}): no Needs-you row offers a step no screen offers (N8)`, q.items.every((i) => !NO_SCREEN.test(i.next?.label ?? "")), q.items.map((i) => i.next?.label));
+    }
+  };
 
-  // ------------------------------------------------------------------ pass: the author's Needs you has Visitor visa's next step
-  const sum = (await api(`/combinations/${vv}/summary`)).body;
-  const nextText = sum.setup.next?.item.text;
-  await openReview();
-  step("pass: Needs you lists Visitor visa as a Setup step with its next step, the header's words", await vvRow().count() === 1 && (await vvRow().getAttribute("data-state")) === "needs" && (await vvRow().innerText()).includes(`Next step · Official pages: ${nextText}`), { next: nextText, row: await vvRow().innerText().catch(() => "") });
-  const q = (await api("/review-queue?filter=needs")).body;
-  step("pass: the menu's To review number is Needs you's", await p.locator('a[href="/review"] [aria-label$="waiting for you"]').innerText().catch(() => "") === String(q.counts.needs), q.counts);
-  await axe("To review (author)");
-  await p.screenshot({ path: path.join(SHOTS, "uxa2-01-needs-you-author-1440.png"), fullPage: true });
-  // The Review and release tab counts the same blocking problems as the row.
-  const blockRow = (await api("/review-queue?filter=all")).body.items.find((i) => i.combination === vv && i.kind === "setup");
-  const n = Number((blockRow.what.match(/^(\d+) problems? blocks?/) ?? [])[1] ?? 0);
-  await p.goto(`${BASE}/c/${vv}/overview`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
-  const tabFix = Number(await p.locator('[data-tab="review"] [data-badge-tone="danger"]').getAttribute("data-step-badge").catch(() => "0"));
-  step("pass: the row's blocking problems are the Review and release tab's \"to fix\"", n === tabFix, { row: blockRow.what, tabFix });
-  // The step opens where it is done.
-  await openReview();
-  await vvRow().getByRole("link", { name: nextText }).click();
-  await p.waitForURL(new RegExp(`/c/${vv}/forms`));
-  step("pass: the step's link opens Visitor visa's Forms tab, where the checklist page is confirmed", new RegExp(`/c/${vv}/forms`).test(p.url()), p.url());
+  // ------------------------------------------------------------------ as loaded: nothing blocked, nothing on screen-less steps
+  await agree("as loaded");
+  const all0 = (await api("/review-queue?filter=all")).body;
+  step("fail case (review n2): a combination with nothing set up is not called blocked", all0.blocked === 0 && !all0.items.some((i) => i.kind === "setup"), { blocked: all0.blocked, setup: all0.items.filter((i) => i.kind === "setup").map((i) => i.title) });
 
-  // ------------------------------------------------------------------ fail case: a release-blocking error is listed and fixed by the author
+  // ------------------------------------------------------------------ a release-blocking error on Visitor visa
   const people = (await api(`/combinations/${vv}/workspace?tab=forms`)).body.people;
   const lines = people.lines.map((l) => ({ role: l.role, label: l.label, min: l.min, max: l.max, applies: l.applies, filing: l.filing ?? null }));
   const broken = lines.map((l) => (l.role === "spouse_or_partner" ? { ...l, filing: null, filingMode: null } : l));
-  const saved = await api(`/combinations/${vv}/people`, { method: "PATCH", data: { participants: broken, version: people.version } });
-  step("setup: Visitor visa's spouse has no filing set (a release-blocking error)", saved.status < 300, saved);
+  const saved = await api(`/combinations/${vv}/people`, { method: "PATCH", data: { participants: broken, version: people.version, confirmRemove: true } });
+  step("setup: Visitor visa's spouse has no filing set (a release-blocking error)", saved.status < 300, saved.status);
   await openReview();
+  step("pass: the author's Needs you lists Visitor visa as a Setup step", await vvRow().count() === 1 && (await vvRow().getAttribute("data-state")) === "needs", await vvRow().innerText().catch(() => ""));
   const said = await vvRow().innerText();
-  step("fail case: the row says the problems block release and names the first, with the fix as its step", /\d+ problems? blocks? release \(first: Filing for Spouse or partner/.test(said) && await vvRow().getByRole("link", { name: /^Fix 1 problem$/ }).count() === 1, said);
+  const n = Number((said.match(/(\d+) problems? to fix before release/) ?? [])[1] ?? -1);
+  step("pass: the row names the first problem", /first: Filing for Spouse or partner/.test(said), said);
+  const nav = await p.locator('a[href="/review"] [aria-label$="waiting for you"]').innerText().catch(() => "");
+  step("pass: the menu's To review number is Needs you's", nav === String((await reviewNeeds("user-A")).counts.needs), nav);
+  await axe("To review (author, blocked)");
+  await p.screenshot({ path: path.join(SHOTS, "uxa2-01-needs-you-author-1440.png"), fullPage: true });
   await p.goto(`${BASE}/c/${vv}/overview`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
-  const tabFix2 = Number(await p.locator('[data-tab="review"] [data-badge-tone="danger"]').getAttribute("data-step-badge").catch(() => "0"));
-  const n2 = Number((said.match(/(\d+) problems? blocks?/) ?? [])[1] ?? 0);
-  step("fail case: the row's number follows the Review and release tab's (one more)", n2 === tabFix2 && n2 === tabFix + 1, { n2, tabFix2, before: tabFix });
-  await openReview(); await vvRow().getByRole("link", { name: /^Fix 1 problem$/ }).click();
+  const tabFix = Number(await p.locator('[data-tab="review"] [data-badge-tone="danger"]').getAttribute("data-step-badge").catch(() => "0"));
+  step("pass: the row's number is the Review and release tab's \"to fix\"", n === tabFix && n > 0, { n, tabFix });
+  await openReview();
+  const link = vvRow().getByRole("link");
+  const linkText = (await link.innerText()).trim();
+  step("pass (review n1): the link never names a second, different number", /^Fix them$/.test(linkText) || linkText === `Fix ${n} problem${n === 1 ? "" : "s"}`, { linkText, n });
+  await link.click();
   await p.waitForURL(new RegExp(`/c/${vv}/forms`));
-  step("fail case: Fix opens the people card on Forms, where the filing is set", /focus=people/.test(p.url()) || new RegExp(`/c/${vv}/forms`).test(p.url()), p.url());
-  await openReview(); await p.screenshot({ path: path.join(SHOTS, "uxa2-02-blocked-author-1440.png"), fullPage: true });
+  step("pass: the link opens the people card on Forms, where the filing is set", /focus=people/.test(p.url()) || new RegExp(`/c/${vv}/forms`).test(p.url()), p.url());
+  await agree("blocked");
 
-  // The approver cannot fix it: never a bare "Nothing waits for you" while a release is blocked.
+  // The approver cannot fix it: never a bare "Nothing waits for you".
   await as("user-B"); await openReview();
-  const needsB = (await api("/review-queue?filter=needs", {}, "user-B")).body;
+  const needsB = await reviewNeeds("user-B");
   const empty = await p.locator("main").innerText();
-  step("fail case: the approver's empty Needs you says releases are blocked (never a bare \"Nothing waits for you\")", needsB.counts.needs === 0 && needsB.blocked > 0 && /Nothing waits for you, but \d+ combinations?'? releases? (is|are) blocked/.test(empty), { needs: needsB.counts, blocked: needsB.blocked });
+  step("fail case: the approver's empty Needs you says a combination has problems to fix before release", needsB.counts.needs === 0 && needsB.blocked === 1 && /Nothing waits for you, but 1 combination has problems to fix before release/.test(empty) && /Their problems are fixed by the configuration author/.test(empty), { needs: needsB.counts, blocked: needsB.blocked });
   await p.getByRole("button", { name: "Show Waiting for others" }).click();
   await vvRow().waitFor();
   step("fail case: Show Waiting for others lists Visitor visa as waiting for the configuration author", (await vvRow().getAttribute("data-state")) === "waiting" && /The configuration author fixes/.test(await vvRow().innerText()), await vvRow().innerText());
@@ -92,19 +102,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   }
   await p.setViewportSize({ width: 1440, height: 900 });
 
-  // Put the filing back: the blocking row goes, the next step stays.
+  // ------------------------------------------------------------------ not repeated, no form, put back
+  const all = (await api("/review-queue?filter=all")).body.items;
+  step("pass: one setup row per combination at most, belonging to no form (a form's guided path never counts it)", new Set(all.filter((i) => i.kind === "setup").map((i) => i.combination)).size === all.filter((i) => i.kind === "setup").length && all.filter((i) => i.kind === "setup").every((i) => i.forms.length === 0));
   const now = (await api(`/combinations/${vv}/workspace?tab=forms`)).body.people;
   await api(`/combinations/${vv}/people`, { method: "PATCH", data: { participants: lines, version: now.version } });
-  const after = (await api("/review-queue?filter=all")).body.items.find((i) => i.combination === vv && i.kind === "setup");
-  step("pass: with the filing set again, the row is back to its next step and the blocking count to the tab's", !!after && !/Filing for/.test(after.what), after?.what);
-
-  // ------------------------------------------------------------------ not repeated: a step with its own row stays there
-  const all = (await api("/review-queue?filter=all")).body.items;
-  const dup = all.filter((i) => i.kind === "setup" && /Next step · [^:]+: (Review \d+ (AI )?proposals?|View AI progress|Review and sign|Release)\b/.test(i.what));
-  step("pass: no setup row repeats a step that has its own row (AI proposals, AI running, sign, release)", dup.length === 0, dup.map((d) => d.what));
-  step("pass: one setup row per combination at most", new Set(all.filter((i) => i.kind === "setup").map((i) => i.combination)).size === all.filter((i) => i.kind === "setup").length);
-  // A form's guided path is not changed by these rows (they belong to no form).
-  step("pass: a setup row belongs to no form, so a form's guided path never counts it", all.filter((i) => i.kind === "setup").every((i) => i.forms.length === 0));
+  const after = (await api("/review-queue?filter=all")).body;
+  step("pass: with the filing set again, Visitor visa leaves To review and nothing is blocked", !after.items.some((i) => i.combination === vv && i.kind === "setup") && after.blocked === 0, after.items.filter((i) => i.kind === "setup").map((i) => i.title));
+  await agree("put back");
 
   step("no page error or console error on the walk", errs.length === 0, errs.slice(0, 3));
   await b.close();

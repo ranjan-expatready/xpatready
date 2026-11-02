@@ -55,7 +55,16 @@ export function mayAct(item: Pick<OpenItem, "kind" | "tier" | "notBy">, actor: {
 // a mark nobody can clear is noise. It still counts as open on the step and in the Next line. N8 (F2 review M1, break M3):
 // the same for confirm_pages and choose_pages: the record and its endpoint exist, the "Before forms" block that offers
 // them comes with slice C; until then they are not "Needs you".
-const REVIEWS: ItemKind[] = ["review_people", "review_proposals", "review_edition", "sign", "release", "fix_problems"];
+// UX-A part 2 (P-273, UX baseline finding 2, 2 Nov): a draft's release-blocking problems are Needs you too (the founder's
+// "Needs you includes release blockers"), not only a released version's; amends the 30 Oct "never a draft's own problem".
+// Building steps (find, add, map, draft) and confirmations no screen offers yet stay out (N8).
+const REVIEWS: ItemKind[] = ["review_people", "review_proposals", "review_edition", "sign", "release", "fix_problems", "unasked"];
+/** The items that make a combination "Needs you" for this person: the one definition the Programs chip, the card mark,
+ *  Structure and To review all read (UX-A part 2, review M2). */
+export function needsYouItems(c: SetupChecklist, actor: { id: string; duties: readonly string[] }): (OpenItem & { step: StepKey; tab?: string })[] {
+  if (c.chip.status === "RETIRED") return [];
+  return c.steps.flatMap((s) => s.open.map((i) => ({ ...i, step: s.key, tab: s.tab }))).filter((i) => REVIEWS.includes(i.kind) && mayAct(i, actor));
+}
 
 /** The official-pages record (forms lane, queue item 2). Until it lands every combination reads "no_record". */
 export type OfficialPages = { state: "no_record" } | { state: "proposed"; matches: number } | { state: "confirmed"; by: string | null; as: Tier };
@@ -212,7 +221,7 @@ const WAITING_FOR: Record<"author" | "sme" | "approve", string> = { author: "the
 export function forViewer(c: SetupChecklist, actor: { id: string; duties: readonly string[] }): ViewerOverlay {
   const author = actor.duties.includes("author");
   const button = !author || c.chip.status === "LIVE" || c.chip.status === "RETIRED" ? "Open" : c.chip.status === "NOT_STARTED" ? "Start setup" : "Resume setup";
-  const mine = c.chip.status === "RETIRED" ? [] : c.steps.flatMap((s) => s.open).filter((i) => REVIEWS.includes(i.kind) && (i.kind !== "fix_problems" || i.fromRelease) && mayAct(i, actor));
+  const mine = needsYouItems(c, actor);
   const n = mine.reduce((t, i) => t + i.count, 0);
   const first = c.next?.item;
   const filled = !!first && first.kind !== "view_ai" && mayAct(first, actor);
