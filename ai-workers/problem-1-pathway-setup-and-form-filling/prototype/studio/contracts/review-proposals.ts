@@ -16,7 +16,7 @@ export const BAND_TIPS: Record<Band, string> = {
 };
 export const PROPOSAL_KIND_WORDS: Record<string, string> = {
   field: "Shared field", answer_list: "Answer list", section: "Section", document_type: "Document type", form_check: "Form check", person_role: "Person role",
-  condition: "Condition", requirement_line: "Requirement line", cross_check: "Cross-check", comes_from: "Comes from", pqr_pick: "Program question pick",
+  condition: "Condition", requirement_line: "Requirement line", cross_check: "Cross-check", comes_from: "Comes from", pqr_pick: "Prospect questionnaire (PQR) pick",
 };
 export const AGREEMENT_WORDS: Record<string, string> = { agreed: "Both readings agree", differ: "The readings differ", one_round: "One reading only", rules_only: "From the rules, no AI reading" };
 

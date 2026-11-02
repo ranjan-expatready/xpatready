@@ -24,7 +24,7 @@ export const SetFactSource = z.object({
   /** P-155(3): why the case officer enters a fact that is not a case officer's own. */
   sourceReason: z.string().trim().max(400, "Keep the reason under 400 characters.").nullable().optional(),
   documentTypeKey: z.string().trim().min(1).max(120).nullable().optional(),
-  prequalification: z.boolean({ error: "Say whether this fact is asked for pre-qualification." }).optional(),
+  prequalification: z.boolean({ error: "Say whether this fact is asked in the Prospect questionnaire (PQR)." }).optional(),
   reason: z.string().trim().max(400).nullable().optional(),
   /** The version read (0 when the rules' default was shown): a stale one is a 409. */
   version: z.number({ error: "Reload: the version you read is missing." }).int().min(0),
@@ -100,7 +100,7 @@ export class FactSources {
       if (newest?.status === "DRAFT") await tx.factSource.delete({ where: { id: newest.id } });
       await tx.factSource.create({ data: { workspaceId: c.workspaceId, combinationId: id, lineageKey, role, canonicalFieldKey: fact, ...data, version: (newest?.version ?? 0) + 1, status: "DRAFT", supersedesId: published?.id ?? null, origin: "HUMAN", updatedBy: actor.id } });
     });
-    await this.audit.log(c.workspaceId, actor.id, "changed", "fact source", lineageKey, `${actor.name} set where "${f.label}" (${role}) comes from in "${c.label}": ${keep ? `${keep === "DOCUMENT" ? `Document · ${documentTypeKey}` : keep === "CLIENT" ? "Client" : `Case officer (why: ${sourceReason})`}` : "as the rules say"}${tick ? ", pre-qualification" : ""}`, { before: newest ? { source: newest.source, document: newest.documentTypeKey, prequalification: newest.prequalification } : null }, id);
+    await this.audit.log(c.workspaceId, actor.id, "changed", "fact source", lineageKey, `${actor.name} set where "${f.label}" (${role}) comes from in "${c.label}": ${keep ? `${keep === "DOCUMENT" ? `Document · ${documentTypeKey}` : keep === "CLIENT" ? "Client" : `Case officer (why: ${sourceReason})`}` : "as the rules say"}${tick ? ", Prospect questionnaire (PQR)" : ""}`, { before: newest ? { source: newest.source, document: newest.documentTypeKey, prequalification: newest.prequalification } : null }, id);
     return (await this.list(id)).facts.find((x) => x.role === role && x.fact === fact);
   }
 
@@ -188,7 +188,7 @@ export async function bulkSet(db: Db, audit: Audit, actor: Actor, c: { id: strin
       await tx.factSource.create({ data: { workspaceId: c.workspaceId, combinationId: c.id, lineageKey: x.key, role: x.f.role, canonicalFieldKey: x.f.fact, ...x.data, version: (x.newest?.version ?? 0) + 1, status: "DRAFT", supersedesId: x.published?.id ?? null, origin: "HUMAN", updatedBy: actor.id, batchId } });
     }
   });
-  const what = [b.source ? `where the answer comes from set to ${b.source === "RULES" ? "the rules' default" : b.source === "CLIENT" ? "the client" : b.source === "AGENT" ? "the case officer" : "a document"}` : "", b.prequalification === undefined ? "" : `pre-qualification ${b.prequalification ? "on" : "off"}`].filter(Boolean).join(", ");
+  const what = [b.source ? `where the answer comes from set to ${b.source === "RULES" ? "the rules' default" : b.source === "CLIENT" ? "the client" : b.source === "AGENT" ? "the case officer" : "a document"}` : "", b.prequalification === undefined ? "" : `Prospect questionnaire (PQR) ${b.prequalification ? "on" : "off"}`].filter(Boolean).join(", ");
   if (save.length) await audit.log(c.workspaceId, actor.id, "changed", "fact source", `bulk:${batchId}`, `${actor.name} changed ${save.length} question${save.length === 1 ? "" : "s"} in "${c.label}": ${what}`, { batchId, rows: save.map((x) => x.key) }, c.id);
   return { saved: save.length, batchId, what, refused };
 }
@@ -223,12 +223,12 @@ export async function acceptPqrPick(tx: Prisma.TransactionClient, actor: Actor, 
   const parsed = ProposalItem.safeParse(raw);
   if (!parsed.success) throw new HttpException(problemFromZod(parsed.error), HttpStatus.BAD_REQUEST);
   const item = parsed.data;
-  if (item.payload.kind !== "pqr_pick") throw problem(400, "Not a pick", "Only a pre-qualification pick is accepted here.");
+  if (item.payload.kind !== "pqr_pick") throw problem(400, "Not a pick", "Only a Prospect questionnaire (PQR) pick is accepted here.");
   if (item.status !== "waiting") throw problem(409, "Decided already", "This pick was already accepted or rejected.");
   const id = item.scope.combinationId ?? "";
   const c = /^[0-9a-f-]{36}$/i.test(id) ? await db.combination.findUnique({ where: { id } }) : null;
   if (!c) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
-  if (c.retiredAt) throw problem(409, "Retired", `"${c.label}" is retired: its pre-qualification is not changed. Restore it on Structure first.`);
+  if (c.retiredAt) throw problem(409, "Retired", `"${c.label}" is retired: its Prospect questionnaire (PQR) is not changed. Restore it on Structure first.`);
   const { role, factKey: fact, reason } = item.payload;
   const lineageKey = sourceKey(role, fact);
   const rows = await db.factSource.findMany({ where: { combinationId: id, lineageKey }, orderBy: { version: "desc" } });
@@ -236,13 +236,13 @@ export async function acceptPqrPick(tx: Prisma.TransactionClient, actor: Actor, 
   const { snapshot } = await buildSnapshot(db, c.workspaceId, id, "draft");
   const f = factSources(snapshot).find((x) => x.role === role && x.fact === fact);
   if (!f) throw problem(404, "Not needed", `No form of "${c.label}" needs this answer for this person any more, so it is not asked. Reject the pick.`);
-  if (f.prequalification) throw problem(409, "Asked already", `"${f.label}" is already asked in pre-qualification.`);
+  if (f.prequalification) throw problem(409, "Asked already", `"${f.label}" is already asked in the Prospect questionnaire (PQR).`);
   const errors = refusals(f, (newest?.source ?? null) as FactSourceView["source"] | null, newest?.documentTypeKey ?? null, true, newest?.sourceReason ?? null);
   if (errors.length) throw problem(422, "Not possible", errors[0].message, { errors });
   if (newest?.status === "DRAFT") await tx.factSource.delete({ where: { id: newest.id } });
   await tx.factSource.create({ data: { workspaceId: c.workspaceId, combinationId: id, lineageKey, role, canonicalFieldKey: fact, source: newest?.source ?? null, documentTypeKey: newest?.documentTypeKey ?? null, prequalification: true, reason, sourceReason: newest?.sourceReason ?? null,
     version: (newest?.version ?? 0) + 1, status: "DRAFT", supersedesId: rows.find((r) => r.status === "PUBLISHED")?.id ?? null, origin: item.origin === "ai" ? "AI_PROPOSAL" : "CODE_MATCH", updatedBy: actor.id } });
-  await audit.log(c.workspaceId, actor.id, "accepted", "fact source", lineageKey, `${actor.name} accepted the ${item.origin === "ai" ? "AI's" : "rules'"} pick: ask "${f.label}" (${who(snapshot, role)}) in pre-qualification for "${c.label}". Why: ${reason}`, { itemId: item.id, runId: item.runId }, id);
+  await audit.log(c.workspaceId, actor.id, "accepted", "fact source", lineageKey, `${actor.name} accepted the ${item.origin === "ai" ? "AI's" : "rules'"} pick: ask "${f.label}" (${who(snapshot, role)}) in the Prospect questionnaire (PQR) for "${c.label}". Why: ${reason}`, { itemId: item.id, runId: item.runId }, id);
   // Review M2 (#282): the queue's bulk accept needs no view back, so it skips the second snapshot per pick.
   if (opts.view === false) return undefined;
   return factSources((await buildSnapshot(db, c.workspaceId, id, "draft")).snapshot).find((x) => x.role === role && x.fact === fact);

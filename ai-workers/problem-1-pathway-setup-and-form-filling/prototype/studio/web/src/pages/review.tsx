@@ -13,7 +13,7 @@ import { itemCell } from "@/lib/item-words";
 /** The simulated person's name for an id the server stores (QA-10: never "user-A" on screen). */
 export const nameOf = (actors: { id: string; name: string }[] | undefined, id: string | null | undefined) => actors?.find((a) => a.id === id)?.name ?? id ?? "";
 /** QA-73: the engine's part names in the words the pages use (the stored codes stay as they are). */
-const KIND_WORD: Record<string, string> = { "Derived definition": "Calculated answer", "Derived fields": "Calculated answers" };
+const KIND_WORD: Record<string, string> = { "Derived definition": "Calculated answer", "Derived fields": "Calculated answers", Questionnaires: "Smart questionnaire (SQR)" }; // K13 (P-271): the key stays, the word is the module's
 // QA-73: a message that already starts with its form or item says it once ("IMM 1295: 37 rows", not "IMM 1295: IMM 1295: …").
 const problemLine = (p: any) => p.where === "Derived fields" ? `${p.label ? roleKeysInWords(p.label) : "A calculation"}: this calculation is not checked by a test yet; it is shown, never used to decide.`
   : String(p.message ?? "").startsWith(`${p.label ?? p.item}:`) ? p.message : problemWords(p);

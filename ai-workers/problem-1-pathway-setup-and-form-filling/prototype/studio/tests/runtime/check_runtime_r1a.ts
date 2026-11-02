@@ -172,7 +172,7 @@ async function main() {
 
   // ── RT-12 who may do what (deny by default)
   r = await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, CLIENT);
-  ok("RT-12 fail: the client cannot open the case view (403)", r.status === 403);
+  ok("RT-12 fail: the client cannot open the Agent view (403)", r.status === 403);
   r = await call("GET", `/runtime/cases/${caseId}/questionnaire`, undefined, CLIENT);
   ok("RT-12 pass: the client opens their own questionnaire, which shows only client fields", r.status === 200 && !qs(r.body).some((q) => q.fact === "person.passport_number") && qs(r.body).some((q) => q.fact === "person.marital_status"));
   r = await call("GET", `/runtime/cases/${caseId}`, undefined, CLIENT_B);

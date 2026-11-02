@@ -42,7 +42,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     step(`QA-77 pass (${key}): the folded Who can be line uses the same names`, names.every((n) => folded.includes(n)), folded);
     step(`QA-77 pass (${key}): the table's Person column uses the same names, in order`, JSON.stringify(rows) === JSON.stringify(names), JSON.stringify(rows));
     // #113 (runtime builder): one way to say each person on every page — the header, the folded Who can be line and the
-    // Questionnaires note give the same words per person, counts included ("Child, 0–4 (optional)"), from one formatter.
+    // Smart questionnaire (SQR) note give the same words per person, counts included ("Child, 0–4 (optional)"), from one formatter.
     const foldedWords = folded.split("\n")[0].split(" · ").slice(1).map((x) => x.trim()); // read before Show unfolded it
     const headerWords = peopleLine.split("people: ")[1].split(" · ")[0].split("; ").map((x) => x.trim());
     step(`QA-77 #113 pass (${key}): the header says each person in the same words as Who can be, counts included`, foldedWords.length === names.length && JSON.stringify(headerWords) === JSON.stringify(foldedWords) && foldedWords.every((w) => /\((always|optional)\)$/.test(w)), `${headerWords.join(" | ")} vs ${foldedWords.join(" | ")}`);
@@ -57,14 +57,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
       step("axe: the Who can be table has no WCAG A/AA violation", r.violations.length === 0, r.violations.map((v) => `${v.id}: ${v.nodes[0]?.target?.join(" ")}`).join(" | "));
     }
   }
-  // #113: the Questionnaires note names the people in those same words; fail guard: a header in the old form ("Child (0–4)") is caught.
+  // #113: the Smart questionnaire (SQR) note names the people in those same words; fail guard: a header in the old form ("Child (0–4)") is caught.
   {
     const id = sql(`select id from combination where combination_key='wp.family'`);
     await p.goto(`${BASE}/c/${id}/forms`); await p.locator("[data-people-words]").waitFor({ timeout: 15000 });
     const folded = (await p.locator("[data-people-words]").innerText()).replace(/^·\s*/, "").split(" · ").map((x) => x.trim());
     await p.goto(`${BASE}/c/${id}/questionnaires`); await p.locator("[data-who-can-be-moved]").waitFor({ timeout: 15000 });
     const note = await p.locator("[data-who-can-be-moved]").innerText();
-    step("QA-77 #113 pass (wp.family): the Questionnaires note says each person in the same words as Who can be on Forms", folded.length > 1 && note.includes(`(${folded.join(" · ")})`), `${note} vs ${folded.join(" · ")}`);
+    step("QA-77 #113 pass (wp.family): the Smart questionnaire (SQR) note says each person in the same words as Who can be on Forms", folded.length > 1 && note.includes(`(${folded.join(" · ")})`), `${note} vs ${folded.join(" · ")}`);
     // Overview: since #210 (P-161 (2)) it has no people list of its own, so it cannot say a person another way.
     await p.goto(`${BASE}/c/${id}/overview`); await p.locator("[data-overview]").waitFor({ timeout: 15000 });
     step("QA-77 #113 pass (wp.family): Overview keeps no second list of people (P-161 (2)), so no other words for them", (await p.locator("[data-overview-people]").count()) === 0);

@@ -67,7 +67,7 @@ export class PqrDrafts {
   private async combination(id: string) {
     const c = /^[0-9a-f-]{36}$/i.test(id) ? await this.db.combination.findUnique({ where: { id } }) : null;
     if (!c) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
-    if (c.retiredAt) throw problem(409, "Retired", `"${c.label}" is retired: its pre-qualification is not drafted. Restore it on Structure first.`);
+    if (c.retiredAt) throw problem(409, "Retired", `"${c.label}" is retired: its Prospect questionnaire (PQR) is not drafted. Restore it on Structure first.`);
     return c;
   }
 
@@ -75,7 +75,7 @@ export class PqrDrafts {
   async guide(c: { id: string; workspaceId: string; label: string }): Promise<Guide> {
     const shas = (await this.db.sourceAttachment.findMany({ where: { combinationId: c.id }, select: { sha256: true } })).map((a) => a.sha256);
     const ed = shas.length ? await this.db.formEdition.findFirst({ where: { workspaceId: c.workspaceId, sha256: { in: shas }, form: { formKind: "guide" } }, include: { form: true } }) : null;
-    if (!ed?.form.formPageUrl) throw problem(409, "No guide yet", `"${c.label}" has no IRCC guide among its sources yet: finding its forms (Start setup) reads and links it. Then draft its pre-qualification.`);
+    if (!ed?.form.formPageUrl) throw problem(409, "No guide yet", `"${c.label}" has no IRCC guide among its sources yet: finding its forms (Start setup) reads and links it. Then draft its Prospect questionnaire (PQR).`);
     const input = inventoryFor(ed.form.formPageUrl);
     let text = "";
     if (input) { try { text = String(JSON.parse(readFileSync(join(SOLUTION, input.file), "utf8")).text ?? ""); } catch { text = ""; } }
@@ -140,14 +140,14 @@ export class PqrDrafts {
     if (plan.mode === "live" && plan.totals.worst_usd > plan.totals.remaining_usd + 1e-9) throw problem(409, "Over the spending cap", `Not started: the worst case (US$${plan.totals.worst_usd.toFixed(2)}) is above what is left of the AI spending cap (US$${plan.totals.remaining_usd.toFixed(2)}). Nothing was started.`);
     const c = await this.combination(id);
     const snapshot = (await buildSnapshot(this.db, c.workspaceId, c.id, "draft")).snapshot;
-    const jobData = { mode: plan.mode === "rules" ? "LOCAL" : plan.mode.toUpperCase(), status: "RUNNING", message: "Drafting pre-qualification picks" };
+    const jobData = { mode: plan.mode === "rules" ? "LOCAL" : plan.mode.toUpperCase(), status: "RUNNING", message: "Drafting Prospect questionnaire (PQR) picks" };
     // Break B3: one pre-qualification draft at a time per combination (a reload and a second Live start never run two paid
     // rounds side by side). The check and the new job are made under one lock per combination.
     // C4.11 review m5: a "Draft questions and documents" step (opts.jobId) is held to the same rule against a draft of its own.
     const job = await this.db.$transaction(async (tx) => {
         await tx.$executeRawUnsafe(`select pg_advisory_xact_lock(hashtext($1))`, `pqr_picks_run:${c.id}`);
         const going = await tx.draftingJob.findFirst({ where: { combinationId: c.id, kind: PQR_STEP, status: "RUNNING", startedAt: { gte: new Date(Date.now() - RUNNING_FOR_MS) }, ...(opts.jobId ? { id: { not: opts.jobId } } : {}) }, select: { id: true } });
-        if (going) throw problem(409, "Already drafting", "Pre-qualification picks are already being drafted for this combination. Wait for that run to end, then look at To review.", { runId: going.id });
+        if (going) throw problem(409, "Already drafting", "Prospect questionnaire (PQR) picks are already being drafted for this combination. Wait for that run to end, then look at To review.", { runId: going.id });
         return opts.jobId ? tx.draftingJob.update({ where: { id: opts.jobId }, data: jobData })
           : tx.draftingJob.create({ data: { workspaceId: c.workspaceId, combinationId: c.id, kind: PQR_STEP, startedBy: actor.id, ...jobData } });
       });
@@ -208,7 +208,7 @@ export class PqrDrafts {
     out.ready = fresh.filter((x) => x.confidence === "ready").length; out.check = fresh.filter((x) => x.confidence === "check").length; out.decide = fresh.filter((x) => x.confidence === "decide").length;
     const how = plan.mode === "rules" ? "rules only" : plan.mode === "replay" ? "Saved" : "Live";
     out.note = out.note || `${fresh.length} pick${fresh.length === 1 ? "" : "s"} for To review${out.already ? ` (${out.already} already waiting there)` : ""}${out.removed ? `; ${out.removed} a person removed before are not proposed again` : ""}${out.dropped.length ? `, ${out.dropped.length} left out with the reason` : ""}. Nothing is asked until a person accepts a pick. Sample until the immigration expert confirms.`;
-    await this.audit.log(c.workspaceId, actor.id, "proposed", "pre-qualification", c.combinationKey, `${actor.name} drafted pre-qualification picks for "${c.label}" (${how}, US$${out.usd.toFixed(2)}): ${fresh.length} to review`, { runId: job.id, mode: plan.mode, run_files: out.run_files }, c.id);
+    await this.audit.log(c.workspaceId, actor.id, "proposed", "pre-qualification", c.combinationKey, `${actor.name} drafted Prospect questionnaire (PQR) picks for "${c.label}" (${how}, US$${out.usd.toFixed(2)}): ${fresh.length} to review`, { runId: job.id, mode: plan.mode, run_files: out.run_files }, c.id);
     return out;
     } catch (e) {
       // Review round 2 n2: whatever stops this draft ends its job as FAILED, so "Already drafting" never blocks the
