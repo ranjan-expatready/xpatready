@@ -5,7 +5,7 @@
 // test server only) to prove both sides: 6.5 s inside the transaction now completes; past the 60 s room the step fails
 // alone, writes nothing, and its siblings keep their proposals. US$0: replays only, no live AI call.
 // R-146 (2 Nov): IMM 5406, 5562, 5604 and 5646 got saved answers (#502), so the six replayed ten forms, and thirteen
-// with IMM 0008, 1294 and 5710 (second batch; IMM 5532 waits for row PD); the test names them, so a replay lost under load still fails it.
+// with IMM 0008, 1294 and 5710 (second batch; IMM 5532 waits for its re-run on the inventory row PD fixed); the test names them, so a replay lost under load still fails it.
 //   tsx studio/tests/check_queue_tx.ts [port=4434] [name=runtime_qtx]   (starts its own isolated copy)
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -29,7 +29,7 @@ const steps = () => sql(`select a.file_name || '§' || j.status || '§' || regex
   .map((l) => { const [file, status, message, items] = l.split("§"); return { file, status, message, items: Number(items), said: Number(/(\d+) fields: /.exec(message)?.[1] ?? -1) }; });
 // QA-90: the one shared spend ledger (p2/policy.ts LEDGER_DIR); not there yet = nothing spent.
 /** The sample's forms with a saved field-map answer, in file order (six before R-146's saved maps, ten after #502, thirteen
- *  after R-146's second batch; IMM 5532 waits for row PD, its inventory repeats data paths). */
+ *  after R-146's second batch; IMM 5532 waits for its re-run on the inventory row PD fixed; add it here when that run lands). */
 const SAVED = ["imm0008e.pdf", "imm1294e.pdf", "imm1344e.pdf", "imm5257_1e.pdf", "imm5406e.pdf", "imm5409e.pdf", "imm5475e.pdf", "imm5476e.pdf", "imm5562e.pdf", "imm5604e.pdf", "imm5646e.pdf", "imm5707e.pdf", "imm5710e.pdf"];
 const ledger = () => { const f = join(LEDGER_DIR, "spend.jsonl"); return existsSync(f) ? readFileSync(f, "utf8").length : 0; };
 
