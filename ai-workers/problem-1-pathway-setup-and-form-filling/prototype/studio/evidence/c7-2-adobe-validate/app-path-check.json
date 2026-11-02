@@ -35,7 +35,8 @@
  "mandatory_fields": {
   "total": 46,
   "app_filled": 32,
-  "e1_filled_by_som": 45
+  "e1_filled_by_som": 45,
+  "note": "the app copy leaves 14 mandatory fields empty (consent counted by data path)"
  },
  "copy_counts": {
   "blank": 11,
@@ -73,7 +74,7 @@
    "box": "Page2[0].MaritalStatus[0].SectionA[0].Passport[0].TaiwanPIN[0]",
    "e1_value": "N",
    "mandatory": true,
-   "app_result": "not in the published map",
+   "app_result": "published as not a fact (no fact mapped)",
    "fact": null,
    "why": null
   },
@@ -81,7 +82,7 @@
    "box": "Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IsraelPassportIndicator[0]",
    "e1_value": "N",
    "mandatory": true,
-   "app_result": "not in the published map",
+   "app_result": "published as not a fact (no fact mapped)",
    "fact": null,
    "why": null
   },
@@ -177,7 +178,7 @@
    "box": "Page3[0].BackgroundInfo[0].Choice[0]",
    "e1_value": "N",
    "mandatory": false,
-   "app_result": "not in the published map",
+   "app_result": "published as not a fact (no fact mapped)",
    "fact": null,
    "why": null
   },
@@ -185,17 +186,19 @@
    "box": "Page3[0].PageWrapper[0].GovPosition[0].Choice[0]",
    "e1_value": "N",
    "mandatory": false,
-   "app_result": "not in the published map",
+   "app_result": "published as not a fact (no fact mapped)",
    "fact": null,
-   "why": null
+   "why": null,
+   "question": "background question 6: witnessed or took part in ill-treatment of prisoners or civilians"
   },
   {
    "box": "Page3[0].Signature[0].Consent0[0].Choice[0]",
    "e1_value": "N",
-   "mandatory": false,
-   "app_result": "not in the published map",
+   "mandatory": true,
+   "app_result": "published as not a fact (no fact mapped)",
    "fact": null,
-   "why": null
+   "why": null,
+   "note": "required in the inventory at Page3.Consent1.Signature.Consent0 (same data path)"
   }
  ],
  "adobe_validate": "not run: Adobe Acrobat access for computer use was declined in this session (2026-11-02); E1's run on 23 Oct passed with all mandatory fields filled",
