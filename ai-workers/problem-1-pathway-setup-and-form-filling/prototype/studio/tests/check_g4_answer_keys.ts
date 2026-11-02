@@ -113,6 +113,18 @@ const travelling = runFieldMap(s, { ...family, people: family.people.map((p) => 
 ok("C5.7 BR-4 fail: when the husband travels too, his IMM 5257 applies and fails with no expected values for him", travelling.result === "FAILED" && travelling.lines.some((l) => l.person === "father" && !l.pass && /no expected values/.test(l.why ?? "")));
 ok("C5.7 BR-3: a run reads the family's reference date, not today (the same family twice gives the same lines)", JSON.stringify(runFieldMap(s, family, FORM, inv, key).lines) === JSON.stringify(pass.lines));
 
+// Break report: dropped people and hostile input
+const ghost = runFieldMap(s, family, FORM, inv, { ...key, people: { ...key.people, aunt: { [`${P}Page1[0].PersonalDetails[0].DOBYear[0]`]: "1970" } } });
+ok("C5.7 BR-4 fail (break M2): expected values for a person the family no longer has fail, never skipped", ghost.result === "FAILED" && ghost.lines[0].person === "aunt" && /not a person of the family/.test(ghost.lines[0].why ?? ""), ghost.lines[0]);
+const deep: Record<string, unknown> = {}; let at: Record<string, unknown> = deep; for (let i = 0; i < 10000; i++) { at.x = {}; at = at.x as Record<string, unknown>; }
+const hostile = checkFamily({ ...sample, label: "\u200b\u200b", facts: [{ about: "mother", fact: "person.family_name", value: "EX\u0000" }, { about: "mother", fact: "person.given_names", value: deep }, { about: "case", fact: "person.sex", value: "f_female" }, { about: "mother/parent_1/extra", fact: "person.family_name", value: "X" }] }, fields, roles);
+ok("C5.7 BR-1 fail (break m4, m5, m7, m10, m11): an invisible name, a NUL, a 10,000-deep value, a person field about the application and a three-part subject are each refused on their field", ["label", "facts[0].value", "facts[1].value", "facts[2].about", "facts[3].about"].every((f) => hostile.errors.some((e) => e.field === f)), hostile.errors.map((e) => e.field));
+ok("C5.7 BR-1 fail (break m8, m11): a person id \"constructor\" and a principal who stays home are refused", checkFamily({ ...sample, people: [{ id: "constructor", role: "principal", label: "X (Sample)", applies: false }], facts: [] }, fields, roles).errors.filter((e) => e.field === "people[0].id" || /principal applicant travels/.test(e.message)).length === 2);
+const many = checkFamily({ ...sample, facts: Array.from({ length: 10000 }, () => ({ about: "x", fact: "y", value: "" })) }, fields, roles);
+ok("C5.7 BR-1 fail (break m6): 10,000 facts are refused once, before any fact is read", many.errors.length === 1 && many.errors[0].field === "facts", many.errors.length);
+ok("C5.7 BR-2 fail (break m3): an edition of a million characters is refused", checkExpected(s, "field_map", FORM, family, { ...key, edition: "x".repeat(1_000_000) }, inv).errors.some((e) => e.field === "expected.edition"));
+ok("C5.7 BR-7 fail (break m7): a reason of invisible characters only, or with a line separator, is refused", !!changeProblem("SIGNED", "\u200b") && !!changeProblem("SIGNED", "line one\u2028line two"));
+
 // BR-5: fingerprints
 const fp = fingerprintOf(s, "field_map", FORM, inv), last = { result: "PASSED", itemFingerprint: pass.fingerprint.item, inputsFingerprint: pass.fingerprint.inputs, keyVersion: 1 };
 ok("C5.7 BR-5: the last run on the item as it is reads Passed", runState(last, fp, 1).state === "PASSED" && fp.item === pass.fingerprint.item);
@@ -196,6 +208,44 @@ ok("C5.7 API: a rule-set key runs and passes", rk.status === 201 && rr.body.resu
 ok("C5.7 API fail: a scoring key is refused in words (400)", (await call("POST", `/combinations/${vv}/answer-keys`, { family_id: fid, item_kind: "scoring", item_ref: "crs", expected: {} }, AUTHOR)).body.detail === NO_SCORING);
 const audit = sql(`select string_agg(summary, ' | ') from audit_event where entity in ('answer key', 'answer-key family') and entity_key like 'e1-${run}%'`);
 ok("C5.7 API: runs, signatures and changes are audited without the family's values (SA-1B-296 f.9)", /ran the family/.test(audit) && /signed the expected values/.test(audit) && !/MOTHER|EXAMPLE|Z7654321|1962/.test(audit), audit.slice(0, 300));
+// Review minors 1 and 4: guards that only a second request at the same moment, or a change without an edition, reaches.
+const f2 = (await call("POST", "/answer-keys/families", { ...sample, key: `e1b-${run}` }, AUTHOR)).body;
+const k2 = (await call("POST", `/combinations/${vv}/answer-keys`, { family_id: f2.id, item_kind: "field_map", item_ref: FORM, expected: { ...key, edition: "IMM 5257 (01-2020)" } }, EXPERT)).body;
+const k2b = await call("PUT", `/answer-keys/${k2.id}`, { expected: { people: key.people }, version: 1 }, AUTHOR);
+const r4 = await call("POST", `/answer-keys/${k2.id}/run`, undefined, AUTHOR);
+ok("C5.7 BR-6 (review minor 1): a change that names no edition keeps the key's own edition, and the run still fails in words", k2b.status === 200 && k2b.body.expected.edition === "IMM 5257 (01-2020)" && r4.body.result === "FAILED" && r4.body.lines[0].target === "edition", { status: k2b.status, edition: k2b.body?.expected?.edition, line: r4.body?.lines?.[0]?.target });
+ok("C5.7 API fail: the approver (no author or expert duty) cannot run a key (403)", (await call("POST", `/answer-keys/${k2.id}/run`, undefined, APPROVER)).status === 403);
+const signs = await Promise.all([1, 2].map(() => call("POST", `/answer-keys/${k2.id}/sign`, { version: 2 }, EXPERT)));
+ok("C5.7 BR-7 (review minor 4): two signs of one version at once: one signs, the other is refused (409)", signs.map((x) => x.status).sort().join() === "200,409", signs.map((x) => x.status));
+const f2now = (await call("GET", "/answer-keys/families", undefined, AUTHOR)).body.families.find((f: { id: string }) => f.id === f2.id);
+const saves = await Promise.all(["one", "two"].map((w) => call("PUT", `/answer-keys/families/${f2.id}`, { ...f2now, label: `E1 household ${w} (Sample)`, version: f2now.version, reason: `two saves at once (${w})` }, AUTHOR)));
+ok("C5.7 BR-8 (review minor 4): two saves of one family version at once: one saves, the other is refused (409)", saves.map((x) => x.status).sort().join() === "200,409", saves.map((x) => x.status));
+ok("C5.7 BR-4 (review minor 6): a line names the form's heading with its caption (not \"YYYY\" alone)", pass.lines.some((l) => l.target === `${P}Page1[0].PersonalDetails[0].DOBYear[0]` && l.label.length > 4 && /YYYY/.test(l.label)), pass.lines.find((l) => l.target === `${P}Page1[0].PersonalDetails[0].DOBYear[0]`)?.label);
+ok("C5.7 API fail (break m12): a family id that is not an id is refused on the field (400)", (await call("POST", `/combinations/${vv}/answer-keys`, { family_id: 42, item_kind: "rule_set", item_ref: "eligibility", expected: rules }, AUTHOR)).body.errors?.[0]?.field === "family_id");
+// Break M1: a family change racing the expert's sign never leaves a signature on facts the expert did not see.
+let raced = 0, kept = 0;
+for (let i = 0; i < 8; i++) {
+  const f3 = (await call("POST", "/answer-keys/families", { ...sample, key: `e1r${i}-${run}` }, AUTHOR)).body;
+  const k3 = (await call("POST", `/combinations/${vv}/answer-keys`, { family_id: f3.id, item_kind: "rule_set", item_ref: "eligibility", expected: rules }, EXPERT)).body;
+  const [fr, sg] = await Promise.all([call("PUT", `/answer-keys/families/${f3.id}`, { ...f3, facts: f3.facts.map((x: { fact: string; about: string }) => (x.about === "mother" && x.fact === "person.family_name" ? { ...x, value: `CHANGED${i}` } : x)), version: 1, reason: "race test" }, AUTHOR), call("POST", `/answer-keys/${k3.id}/sign`, { version: 1 }, EXPERT)]);
+  const end = (await call("GET", `/answer-keys/${k3.id}`, undefined, AUTHOR)).body;
+  if (fr.status === 200 && sg.status === 200) raced++;
+  if (fr.status === 200 && end.state === "SIGNED") kept++;
+}
+ok("C5.7 BR-7 fail (break M1): eight family changes racing a sign: no key stays Signed after its family changed", kept === 0, { kept, both_ok: raced });
+// Break m1: a key change racing a sign: one of them is refused, or the change carries the reason.
+const f4 = (await call("POST", "/answer-keys/families", { ...sample, key: `e1s-${run}` }, AUTHOR)).body;
+const k4 = (await call("POST", `/combinations/${vv}/answer-keys`, { family_id: f4.id, item_kind: "rule_set", item_ref: "eligibility", expected: rules }, EXPERT)).body;
+const [pu, sg4] = await Promise.all([call("PUT", `/answer-keys/${k4.id}`, { expected: rules, version: 1 }, AUTHOR), call("POST", `/answer-keys/${k4.id}/sign`, { version: 1 }, EXPERT)]);
+ok("C5.7 BR-7 fail (break m1): a change without a reason racing a sign never both succeed", !(pu.status === 200 && sg4.status === 200), [pu.status, sg4.status]);
+// Break m9 and m2, at the end (they change the copy): a retired combination's keys are not changed or signed; a map
+// with no form field list takes no key.
+const ed0 = sql(`select e.id from form_edition e join gov_form_def g on g.id = e.gov_form_def_id where g.form_key = 'IMM 5257' limit 1`);
+sql(`update form_edition set inventory_file = null where id = '${ed0}' returning id`);
+const noInv = await call("POST", `/combinations/${vv}/answer-keys`, { family_id: f4.id, item_kind: "field_map", item_ref: FORM, expected: key }, AUTHOR);
+ok("C5.7 API fail (break m2): a map key is refused while the form's field list is not recorded (422)", noInv.status === 422, noInv.body);
+sql(`update combination set retired_at = now() where id = '${vv}' returning id`);
+ok("C5.7 API fail (break m9): on a retired combination a key is not changed or signed (409)", (await call("PUT", `/answer-keys/${k4.id}`, { expected: rules, version: 2, reason: "x" }, AUTHOR)).status === 409 && (await call("POST", `/answer-keys/${k4.id}/sign`, { version: 2 }, EXPERT)).status === 409);
 const missing = await call("GET", "/answer-keys/00000000-0000-0000-0000-000000000000", undefined, AUTHOR);
 ok("C5.7 API fail: an unknown key or a malformed id is 404", missing.status === 404 && (await call("GET", "/answer-keys/not-a-uuid", undefined, AUTHOR)).status === 404);
 

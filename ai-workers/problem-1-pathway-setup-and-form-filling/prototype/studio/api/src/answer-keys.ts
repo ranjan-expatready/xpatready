@@ -6,8 +6,9 @@
 import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Put } from "@nestjs/common";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { Prisma } from "@prisma/client";
 import { buildSnapshot, type Snapshot } from "../../engine/snapshot.ts";
-import { changeProblem, checkExpected, checkFamily, fingerprintOf, ITEM_KINDS, NO_SCORING, runFieldMap, runRuleSet, runState, SAMPLE_WORDS, signProblem, type Family, type FieldError, type ItemKind, type MapExpected, type RuleExpected } from "../../engine/answer-keys.ts";
+import { blank, changeProblem, checkExpected, checkFamily, fingerprintOf, ITEM_KINDS, NO_SCORING, runFieldMap, runRuleSet, runState, SAMPLE_WORDS, signProblem, unclean, type Family, type FieldError, type ItemKind, type MapExpected, type RuleExpected } from "../../engine/answer-keys.ts";
 import type { Inventory } from "../../engine/form-values.ts";
 import { ACTORS, Audit, Db, fail, need, readerOf, SOLUTION, Workspace, type Actor } from "./core.ts";
 
@@ -21,6 +22,7 @@ const at = (d: Date | null | undefined) => (d ? d.toISOString() : null);
 type FamilyRow = { id: string; familyKey: string; label: string; referenceDate: string; people: unknown; facts: unknown; noneApply: unknown; version: number; updatedBy: string; updatedAt: Date };
 const familyOf = (r: FamilyRow): Family => ({ key: r.familyKey, label: r.label, reference_date: r.referenceDate, people: r.people as Family["people"], facts: r.facts as Family["facts"], none_apply: (r.noneApply ?? []) as Family["none_apply"] });
 const familyView = (r: FamilyRow) => ({ id: r.id, ...familyOf(r), version: r.version, sample: SAMPLE_WORDS, saved_by: nameOf(r.updatedBy), saved_at: at(r.updatedAt) });
+const pdfHas = (s: Snapshot, form: string) => (s.field_maps as { form_number: string; channel?: string }[]).some((m) => m.form_number === form && m.channel !== "ONLINE");
 const itemWords = (kind: string, ref: string) => (kind === "rule_set" ? "the eligibility rules" : `the ${ref} field map`);
 
 @Injectable()
@@ -91,14 +93,17 @@ export class AnswerKeys {
     if (errors.length) invalid(errors);
     if (b.version !== f.version) conflict(`${nameOf(f.updatedBy)} saved this family at ${f.updatedAt.toISOString().slice(11, 16)} UTC. Reload their version, then make your change again.`, { current: familyView(f) });
     const signed = await this.db.answerKey.count({ where: { familyId: id, state: "SIGNED" } });
-    const reason = typeof b.reason === "string" ? b.reason.trim() : "";
-    if (signed && (!reason || /[\n\r]/.test(reason) || [...reason].length > 300)) invalid([{ field: "reason", message: `${signed} signed answer key${signed === 1 ? " uses" : "s use"} this family: give a one-line reason; ${signed === 1 ? "it goes" : "they go"} back to Draft for the expert to sign again.` }]);
+    const reason = typeof b.reason === "string" && !unclean(b.reason) && !blank(b.reason) && !/[\n\r]/.test(b.reason) && [...b.reason.trim()].length <= 300 ? b.reason.trim() : "";
+    if (signed && !reason) invalid([{ field: "reason", message: `${signed} signed answer key${signed === 1 ? " uses" : "s use"} this family: give a one-line reason; ${signed === 1 ? "it goes" : "they go"} back to Draft for the expert to sign again.` }]);
     const done = await this.db.$transaction(async (tx) => {
       const n = await tx.testFamily.updateMany({ where: { id, version: f.version }, data: { label: family.label, referenceDate: family.reference_date, people: family.people, facts: family.facts as object[], noneApply: family.none_apply, version: { increment: 1 }, updatedBy: actor.id } });
       if (!n.count) return false;
+      // Break M1, review minor 5: the family's keys are locked first, so a sign cannot land between the count and the
+      // change (it waits, then finds a new version and is refused); one statement unsigns and versions every key.
+      const locked = await tx.$queryRaw<{ state: string }[]>(Prisma.sql`SELECT "state" FROM "answer_key" WHERE "family_id" = ${id}::uuid FOR UPDATE`);
+      if (!reason && locked.some((k) => k.state === "SIGNED")) throw new HttpException({ type: "https://expatready.local/problems/validation", title: "Some details need fixing", status: 400, detail: "A key using this family was signed a moment ago: give a one-line reason; it goes back to Draft for the expert to sign again.", errors: [{ field: "reason", message: "A key using this family was signed a moment ago: give a one-line reason." }] }, HttpStatus.BAD_REQUEST);
       // Every key of the family gets a new version, so its last run reads "Not run" (BR-5): the facts changed.
-      await tx.answerKey.updateMany({ where: { familyId: id, state: "SIGNED" }, data: { state: "DRAFT", signedByUserId: null, signedAt: null, changeReason: `Family changed: ${reason}`, updatedBy: actor.id } });
-      await tx.answerKey.updateMany({ where: { familyId: id }, data: { version: { increment: 1 } } });
+      await tx.$executeRaw(Prisma.sql`UPDATE "answer_key" SET "version" = "version" + 1, "change_reason" = CASE WHEN "state" = 'SIGNED' THEN ${`Family changed: ${reason}`} ELSE "change_reason" END, "state" = 'DRAFT', "signed_by_user_id" = NULL, "signed_at" = NULL, "updated_by" = ${actor.id}, "updated_at" = now() WHERE "family_id" = ${id}::uuid`);
       return true;
     });
     if (!done) conflict("Someone saved this family a moment ago. Reload their version, then make your change again.");
@@ -148,9 +153,11 @@ export class AnswerKeys {
     const b = obj(body);
     const kind = b.item_kind as ItemKind, ref = typeof b.item_ref === "string" ? b.item_ref.trim() : "";
     if (!(ITEM_KINDS as readonly string[]).includes(kind)) invalid([{ field: "item_kind", message: "Choose what the key tests: field_map (a form's field map) or rule_set (the eligibility rules)." }]);
-    const f = await this.family(typeof b.family_id === "string" ? b.family_id : "");
+    if (typeof b.family_id !== "string" || !UUID.test(b.family_id)) invalid([{ field: "family_id", message: "Choose the test family (its id)." }]);
+    const f = await this.family(b.family_id as string);
     const s = await this.draft(c.workspaceId, c.id);
-    const { expected, errors } = checkExpected(s, kind, ref, familyOf(f), b.expected, kind === "field_map" ? this.inventoryOrNull(s, ref) : null);
+    // Break m2: a map key needs the form's field list (it says which boxes a person fills), as a run does.
+    const { expected, errors } = checkExpected(s, kind, ref, familyOf(f), b.expected, kind === "field_map" && pdfHas(s, ref) ? this.inventory(s, ref) : null);
     if (errors.length) invalid(errors);
     if (await this.db.answerKey.findUnique({ where: { familyId_combinationId_itemKind_itemRef: { familyId: f.id, combinationId, itemKind: kind, itemRef: ref } } })) invalid([{ field: "family_id", message: `The family "${f.familyKey}" already has a key for ${itemWords(kind, ref)} here: change that one.` }]);
     const k = await this.db.answerKey.create({ data: { workspaceId: c.workspaceId, familyId: f.id, combinationId, itemKind: kind, itemRef: ref, expected: expected as object, updatedBy: actor.id } });
@@ -162,15 +169,20 @@ export class AnswerKeys {
   async update(actor: Actor, id: string, body: unknown) {
     this.writer(actor);
     const k = await this.key(id);
+    if (k.combination.retiredAt) fail(`"${k.combination.label}" is retired: its answer keys are not changed.`, HttpStatus.CONFLICT);
     const b = obj(body);
     const s = await this.draft(k.workspaceId, k.combinationId);
-    const { expected, errors } = checkExpected(s, k.itemKind as ItemKind, k.itemRef, familyOf(k.family), b.expected, k.itemKind === "field_map" ? this.inventoryOrNull(s, k.itemRef) : null);
+    // Review minor 1 (BR-6): a change that names no edition keeps the key's own; it never moves to the map's edition.
+    const given = obj(b.expected), kept = k.itemKind === "field_map" && !(typeof given.edition === "string" && given.edition.trim()) ? { ...given, edition: (k.expected as MapExpected).edition } : b.expected;
+    const { expected, errors } = checkExpected(s, k.itemKind as ItemKind, k.itemRef, familyOf(k.family), kept, k.itemKind === "field_map" && pdfHas(s, k.itemRef) ? this.inventory(s, k.itemRef) : null);
     if (errors.length) invalid(errors);
     if (b.version !== k.version) conflict(`${nameOf(k.updatedBy)} saved these expected values at ${k.updatedAt.toISOString().slice(11, 16)} UTC. Reload their version, then make your change again.`);
     const why = changeProblem(k.state, b.reason);
     if (why) invalid([{ field: "reason", message: why }]);
     const reason = k.state === "SIGNED" ? String(b.reason).trim() : null;
-    const n = await this.db.answerKey.updateMany({ where: { id, version: k.version }, data: { expected: expected as object, version: { increment: 1 }, state: "DRAFT", signedByUserId: null, signedAt: null, changeReason: reason ?? k.changeReason, updatedBy: actor.id } });
+    // Break m1: the state read is part of the guard, so a sign landing during this change makes it a 409, never an
+    // unsigning without a reason.
+    const n = await this.db.answerKey.updateMany({ where: { id, version: k.version, state: k.state }, data: { expected: expected as object, version: { increment: 1 }, state: "DRAFT", signedByUserId: null, signedAt: null, changeReason: reason ?? k.changeReason, updatedBy: actor.id } });
     if (!n.count) conflict("Someone saved these expected values a moment ago. Reload their version, then make your change again.");
     await this.audit.log(k.workspaceId, actor.id, "updated", "answer key", `${k.family.familyKey}:${k.itemRef}`, `${actor.name} changed the expected values of the family "${k.family.familyKey}" for ${itemWords(k.itemKind, k.itemRef)}${reason ? " (were signed: back to Draft)" : ""}`, reason ? { reason } : undefined, k.combinationId);
     return this.get(id);
@@ -179,9 +191,10 @@ export class AnswerKeys {
   /** BR-7: the expert signs the version shown. */
   async sign(actor: Actor, id: string, body: unknown) {
     const k = await this.key(id);
+    if (k.combination.retiredAt) fail(`"${k.combination.label}" is retired: its answer keys are not signed.`, HttpStatus.CONFLICT);
     const why = signProblem(k, actor, obj(body).version);
     if (why) throw new HttpException({ type: "https://expatready.local/problems/sign", title: "Not signed", status: holds(actor, "sme") ? 409 : 403, detail: why }, holds(actor, "sme") ? HttpStatus.CONFLICT : HttpStatus.FORBIDDEN);
-    const n = await this.db.answerKey.updateMany({ where: { id, version: k.version, state: "DRAFT" }, data: { state: "SIGNED", signedByUserId: actor.id, signedAt: new Date() } });
+    const n = await this.db.answerKey.updateMany({ where: { id, version: k.version, state: "DRAFT" }, data: { state: "SIGNED", signedByUserId: actor.id, signedAt: new Date() } }); // the PUT guard reads the state too (break m1)
     if (!n.count) conflict("These expected values changed a moment ago: reload, read them again, then sign.");
     await this.audit.log(k.workspaceId, actor.id, "signed", "answer key", `${k.family.familyKey}:${k.itemRef}`, `${actor.name} signed the expected values of the family "${k.family.familyKey}" for ${itemWords(k.itemKind, k.itemRef)}`, undefined, k.combinationId);
     return this.get(id);

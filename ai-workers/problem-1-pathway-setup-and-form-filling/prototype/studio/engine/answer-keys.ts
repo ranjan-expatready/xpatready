@@ -5,6 +5,7 @@
 // the family's reference date. Items: a form's field map, or a combination's eligibility rule set. Scoring tables do
 // not exist in this product yet (C6.9 SI-1: "no score"), so the kind is refused, never faked (concept Q1).
 import { canonical, sha256 } from "../../contracts/rules.ts";
+import { INVISIBLE, LONE } from "../contracts/runtime.ts";
 import { byAPerson } from "./form-steps.ts";
 import { formValues, type Inventory } from "./form-values.ts";
 import type { BoxRow } from "./render.ts";
@@ -21,7 +22,7 @@ export const OUTCOMES: Outcome[] = ["LIKELY_ELIGIBLE", "ELIGIBLE_BELOW_CUTOFF", 
 export const GATE_STATES: GateState[] = ["met", "not_met", "not_answered"];
 /** Relatives a form describes but who are not on the case (render.ts aboutOf: `<subject>/parent_1`, …). */
 export const RELATIONS = ["parent_1", "parent_2", "sibling"] as const;
-export const LIMITS = { people: 12, facts: 600, value: 500, label: 120, boxes: 2000, reason: 300 } as const;
+export const LIMITS = { people: 12, facts: 600, value: 500, label: 120, boxes: 2000, reason: 300, edition: 60, depth: 4 } as const;
 const KEY = /^[a-z][a-z0-9_-]{1,39}$/, PERSON_ID = /^[a-z][a-z0-9_]{0,23}$/, FACT = /^[a-z]+(\.[a-z0-9_]+)+$/, DATE = /^\d{4}-\d{2}-\d{2}$/;
 /** The case's own subject in a family (facts about the application, `case.*`). */
 export const CASE = "case";
@@ -44,6 +45,24 @@ export type Fingerprint = { item: string; inputs: string };
 export type FieldError = { field: string; message: string };
 
 const str = (x: unknown) => (typeof x === "string" ? x : "");
+/** Break m5, m7: text with control or invisible characters (NUL, zero-width, bidi overrides) or a lone surrogate. */
+export const unclean = (x: string) => INVISIBLE.test(x) || LONE.test(x);
+/** No letter or digit once invisible characters are set aside (break m7: "\u200b" is not a name). */
+export const blank = (x: string) => !/[\p{L}\p{N}]/u.test(x);
+/** Break m4: how deep a value goes, without recursion (a 10,000-deep value overflowed JSON.stringify), and whether any
+ *  text inside it is unclean. Values are scalars or small objects (an address, a phone): 4 levels is plenty. */
+function valueProblem(v: unknown): string | null {
+  const stack: [unknown, number][] = [[v, 1]];
+  while (stack.length) {
+    const [n, d] = stack.pop()!;
+    if (d > LIMITS.depth) return "This value is nested too deeply for a form.";
+    if (typeof n === "string" && unclean(n)) return "This value holds control or invisible characters.";
+    if (n && typeof n === "object") for (const x of Object.values(n)) stack.push([x, d + 1]);
+  }
+  return null;
+}
+/** Break m8: an own entry only ("constructor" is not a person of every object). */
+const own = <T>(o: Record<string, T>, k: string): T | undefined => (Object.prototype.hasOwnProperty.call(o, k) ? o[k] : undefined);
 const realDate = (x: string) => DATE.test(x) && !Number.isNaN(Date.parse(`${x}T00:00:00Z`)) && new Date(`${x}T00:00:00Z`).toISOString().startsWith(x);
 
 /** BR-1: a family as typed, checked. `fields`: the library's field ids (a fact must be one of them); `roles`: the
@@ -54,33 +73,38 @@ export function checkFamily(input: unknown, fields: Set<string>, roles: Set<stri
   const errors: FieldError[] = [];
   const key = str(b.key).trim(), label = str(b.label).trim(), ref = str(b.reference_date).trim();
   if (!KEY.test(key)) errors.push({ field: "key", message: "Give the family a short key: lower-case letters, digits, - or _ (2 to 40), starting with a letter." });
-  if (!label || [...label].length > LIMITS.label) errors.push({ field: "label", message: `Give the family a name of 1 to ${LIMITS.label} characters.` });
+  if (!label || blank(label) || unclean(label) || [...label].length > LIMITS.label) errors.push({ field: "label", message: `Give the family a name of 1 to ${LIMITS.label} characters, with no control or invisible characters.` });
   if (!realDate(ref)) errors.push({ field: "reference_date", message: "Give the date the family is read on (YYYY-MM-DD): ages are worked out on it." });
   const rawPeople = Array.isArray(b.people) ? b.people : [];
   if (!rawPeople.length || rawPeople.length > LIMITS.people) errors.push({ field: "people", message: `A family has 1 to ${LIMITS.people} people.` });
   const people: FamilyPerson[] = rawPeople.map((p, i) => {
     const o = (p && typeof p === "object" ? p : {}) as Record<string, unknown>;
     const id = str(o.id).trim(), role = str(o.role).trim(), l = str(o.label).trim();
-    if (!PERSON_ID.test(id) || id === CASE) errors.push({ field: `people[${i}].id`, message: "Give each person a short id: lower-case letters, digits or _, starting with a letter (not \"case\")." });
+    if (!PERSON_ID.test(id) || id === CASE || id in Object.prototype) errors.push({ field: `people[${i}].id`, message: "Give each person a short id: lower-case letters, digits or _, starting with a letter (not \"case\")." });
     if (!roles.has(role)) errors.push({ field: `people[${i}].role`, message: `Choose a role of the library: ${[...roles].sort().join(", ")}.` });
     if (o.applies !== undefined && typeof o.applies !== "boolean") errors.push({ field: `people[${i}].applies`, message: "Say whether the person is travelling (true or false)." });
-    if (!l || [...l].length > LIMITS.label) errors.push({ field: `people[${i}].label`, message: `Give each person a made-up name of 1 to ${LIMITS.label} characters.` });
+    if (!l || blank(l) || unclean(l) || [...l].length > LIMITS.label) errors.push({ field: `people[${i}].label`, message: `Give each person a made-up name of 1 to ${LIMITS.label} characters, with no control or invisible characters.` });
     return { id, role, label: l, applies: o.applies !== false };
   });
   const ids = people.map((p) => p.id);
   ids.forEach((id, i) => { if (ids.indexOf(id) !== i) errors.push({ field: `people[${i}].id`, message: `Two people have the id "${id}".` }); });
   if (people.filter((p) => p.role === "principal").length !== 1) errors.push({ field: "people", message: "A family has exactly one principal applicant." });
+  else if (people.find((p) => p.role === "principal")!.applies === false) errors.push({ field: "people", message: "The principal applicant travels: only other people can stay home (break m11)." });
   const rawFacts = Array.isArray(b.facts) ? b.facts : [];
-  if (rawFacts.length > LIMITS.facts) errors.push({ field: "facts", message: `A family has at most ${LIMITS.facts} facts.` });
+  // Break m6: too many facts is said once, before any fact is read.
+  if (rawFacts.length > LIMITS.facts) return { family: { key, label, reference_date: ref, people, facts: [], none_apply: [] }, errors: [...errors, { field: "facts", message: `A family has at most ${LIMITS.facts} facts.` }] };
   const seen = new Set<string>();
   const facts: FamilyFact[] = rawFacts.map((f, i) => {
     const o = (f && typeof f === "object" ? f : {}) as Record<string, unknown>;
     const about = str(o.about).trim(), fact = str(o.fact).trim(), row = o.row === undefined || o.row === null ? null : o.row;
-    const [who, rel] = about.split("/");
-    if (about !== CASE && !(ids.includes(who) && (rel === undefined || (RELATIONS as readonly string[]).includes(rel)))) errors.push({ field: `facts[${i}].about`, message: `"${about}" is not a person of this family, "case" for the application, or a relative a form describes (${RELATIONS.map((r) => `<person>/${r}`).join(", ")}).` });
+    const [who, rel, ...more] = about.split("/");
+    if (about !== CASE && !(ids.includes(who) && !more.length && (rel === undefined || (RELATIONS as readonly string[]).includes(rel)))) errors.push({ field: `facts[${i}].about`, message: `"${about}" is not a person of this family, "case" for the application, or a relative a form describes (${RELATIONS.map((r) => `<person>/${r}`).join(", ")}).` });
     if (!FACT.test(fact) || !fields.has(fact)) errors.push({ field: `facts[${i}].fact`, message: `"${fact}" is not a field of the library.` });
+    // Break m11: a person's field is about a person, an application's field about the application.
+    if (FACT.test(fact) && ((about === CASE && fact.startsWith("person.")) || (about !== CASE && fact.startsWith("case.")))) errors.push({ field: `facts[${i}].about`, message: `${fact} is ${about === CASE ? "about a person, not the application" : "about the application: give it with about \"case\""}.` });
     if (row !== null && !(Number.isInteger(row) && (row as number) >= 0 && (row as number) < 50)) errors.push({ field: `facts[${i}].row`, message: "A row is a whole number from 0 to 49." });
     if (o.value === undefined || o.value === null || o.value === "") errors.push({ field: `facts[${i}].value`, message: "Give the value (leave the fact out when the family has none)." });
+    else if (valueProblem(o.value)) errors.push({ field: `facts[${i}].value`, message: valueProblem(o.value)! });
     else if (JSON.stringify(o.value).length > LIMITS.value * 4) errors.push({ field: `facts[${i}].value`, message: "This value is too long for a form." });
     const k = `${about}|${fact}|${row ?? ""}`;
     if (seen.has(k)) errors.push({ field: `facts[${i}]`, message: `${fact} is given twice for ${about}${row === null ? "" : ` (row ${row})`}.` });
@@ -96,6 +120,7 @@ export function checkFamily(input: unknown, fields: Set<string>, roles: Set<stri
     const about = str(o.about).trim(), group = str(o.group).trim();
     if (!ids.includes(about)) errors.push({ field: `none_apply[${i}].about`, message: `"${about}" is not a person of this family.` });
     if (!/^[A-Za-z0-9_.:-]{1,80}$/.test(group)) errors.push({ field: `none_apply[${i}].group`, message: "Name the repeating group (its section)." });
+    else if ((b.none_apply as { about?: unknown; group?: unknown }[]).slice(0, i).some((x) => x?.about === about && x?.group === group)) errors.push({ field: `none_apply[${i}]`, message: `"None apply" is given twice for ${group}.` });
     return { about, group };
   });
   return { family: { key, label, reference_date: ref, people, facts, none_apply }, errors };
@@ -118,7 +143,7 @@ export function asCase(s: Snapshot, f: Family) {
   return { people, answers, rows, groups, today: new Date(at) };
 }
 
-const pdfMap = (s: Snapshot, form: string) => (s.field_maps as { form_number: string; form_edition: string; channel?: string; entries: { data_path: string; caption?: string | null; outcome?: string; fact?: string | null }[] }[]).find((m) => m.form_number === form && m.channel !== "ONLINE");
+const pdfMap = (s: Snapshot, form: string) => (s.field_maps as { form_number: string; form_edition: string; channel?: string; entries: { data_path: string; caption?: string | null; heading?: string | null; outcome?: string; fact?: string | null }[] }[]).find((m) => m.form_number === form && m.channel !== "ONLINE");
 
 /** BR-5 (challenge M2): the fingerprint of the item a key tests, and of everything the run read: the whole snapshot
  *  (answer lists, form lines, derived fields, placements, formats) and, for a map, the form field list (the snapshot
@@ -136,7 +161,7 @@ export function checkExpected(s: Snapshot, kind: ItemKind, ref: string, family: 
   const errors: FieldError[] = [];
   const raw = (b.people && typeof b.people === "object" && !Array.isArray(b.people) ? b.people : {}) as Record<string, unknown>;
   const ids = new Set(family.people.map((p) => p.id));
-  for (const id of Object.keys(raw)) if (!ids.has(id)) errors.push({ field: `expected.people.${id}`, message: `"${id}" is not a person of the family ${family.label}.` });
+  for (const id of Object.keys(raw)) if (!ids.has(id) || id in Object.prototype) errors.push({ field: `expected.people.${id}`, message: `"${id}" is not a person of the family ${family.label}.` });
   if (!Object.keys(raw).length) errors.push({ field: "expected.people", message: "Give the expected result for at least one person." });
   if (kind === "field_map") {
     const m = pdfMap(s, ref);
@@ -144,6 +169,7 @@ export function checkExpected(s: Snapshot, kind: ItemKind, ref: string, family: 
     const boxes = new Set(m.entries.map((e) => e.data_path));
     const invBox = new Map((inv?.fields ?? []).filter((x) => x.data_path).map((x) => [x.data_path!, x]));
     const edition = str(b.edition).trim() || m.form_edition;
+    if (unclean(edition) || [...edition].length > LIMITS.edition) errors.push({ field: "expected.edition", message: `Name the form edition as the library does (at most ${LIMITS.edition} characters), e.g. "${m.form_edition}".` });
     const people: Record<string, Record<string, string>> = {};
     let count = 0;
     for (const [id, v] of Object.entries(raw)) {
@@ -155,7 +181,7 @@ export function checkExpected(s: Snapshot, kind: ItemKind, ref: string, family: 
         // Challenge M5 (c): a box a person fills (a signature, the oath) is never written by the product, so no key holds it.
         const person = inv ? byAPerson(inv.fields, invBox.get(box) ?? { data_path: box }) : null;
         if (person) { errors.push({ field: `expected.people.${id}.${box}`, message: `${m.entries.find((e) => e.data_path === box)?.caption || box} is filled by a person (${person}), never by the product: leave it out of the key.` }); continue; }
-        if (typeof val !== "string" || [...val].length > LIMITS.value) { errors.push({ field: `expected.people.${id}.${box}`, message: `Write the value the form field holds, as text of at most ${LIMITS.value} characters ("" when it stays blank).` }); continue; }
+        if (typeof val !== "string" || unclean(val) || [...val].length > LIMITS.value) { errors.push({ field: `expected.people.${id}.${box}`, message: `Write the value the form field holds, as text of at most ${LIMITS.value} characters ("" when it stays blank).` }); continue; }
         people[id][box] = val;
       }
     }
@@ -195,11 +221,12 @@ export function runFieldMap(s: Snapshot, family: Family, form: string, inv: Inve
   const nameOf = (id: string) => family.people.find((p) => p.id === id)?.label ?? id;
   if (!m) return finish([{ person: "", person_label: "", target: form, label: form, expected: "a PDF field map", got: "none", pass: false, why: `${form} has no PDF field map in this combination.` }], fp);
   if (expected.edition !== m.form_edition) return finish([{ person: "", person_label: "", target: "edition", label: `${form} edition`, expected: expected.edition, got: m.form_edition, pass: false, why: `This key is for edition ${expected.edition}; the map is edition ${m.form_edition}. One good edition proves nothing about another.` }], fp);
-  const caption = new Map(m.entries.map((e) => [e.data_path, e.caption ?? ""]));
+  // Review minor 6: a caption alone can be "YYYY"; the line says the form's heading too ("Date of birth: YYYY").
+  const caption = new Map(m.entries.map((e) => [e.data_path, [e.heading, e.caption].filter((x) => x && x.trim()).join(": ")]));
   const c = asCase(s, family);
   const view = caseView(s, c.people, c.answers, c.rows, "agent", c.today, c.groups);
   for (const p of family.people) {
-    const want = expected.people[p.id];
+    const want = own(expected.people, p.id);
     const cov = formCoverage(s, c.people, c.answers, c.rows, form, p.id, c.today);
     const applies = !!cov && cov.applies !== false;
     if (!applies) {
@@ -214,7 +241,14 @@ export function runFieldMap(s: Snapshot, family: Family, form: string, inv: Inve
     }
     for (const [box, got] of Object.entries(values)) if (!want || !(box in want)) lines.push({ person: p.id, person_label: nameOf(p.id), target: box, label: caption.get(box) || box, expected: "(not in the key)", got, pass: false, why: want ? "written, not expected: add it to the key or fix the map" : `${form} applies to ${p.label} but the key has no expected values for them` });
   }
-  return finish(lines, fp);
+  return finish([...gone(family, expected), ...lines], fp);
+}
+
+/** Break M2: expected values for a person the family no longer has (or who stopped travelling, for rules) fail, never
+ *  silently skipped. */
+function gone(family: Family, expected: Expected, travelling = false): Line[] {
+  return Object.keys(expected.people).filter((id) => { const p = family.people.find((x) => x.id === id); return !p || (travelling && p.applies === false); })
+    .map((id) => ({ person: id, person_label: id, target: "person", label: "Person", expected: "in the family", got: "not in the family", pass: false, why: `The key has expected values for "${id}", who is not ${travelling ? "a travelling person" : "a person"} of the family ${family.label} now: change the key or the family.` }));
 }
 
 /** BR-3, BR-4: a rule set run: the combination's eligibility rules for each travelling person (engine/runtime/
@@ -225,7 +259,7 @@ export function runRuleSet(s: Snapshot, family: Family, expected: RuleExpected):
   const { known } = knownOf(s, c.people, c.answers, c.rows, c.today);
   const gateLabel = new Map((s.eligibility?.gates ?? []).map((g) => [g.key, g.label]));
   for (const p of family.people.filter((x) => x.applies !== false)) {
-    const want = expected.people[p.id];
+    const want = own(expected.people, p.id);
     if (!want) { lines.push({ person: p.id, person_label: p.label, target: "outcome", label: "Outcome", expected: "(not in the key)", got: "", pass: false, why: `the key has no expected result for ${p.label}` }); continue; }
     const r = assess(s, known, p.id);
     if (!r) { lines.push({ person: p.id, person_label: p.label, target: "outcome", label: "Outcome", expected: want.outcome, got: "no result", pass: false, why: "the combination has no eligibility rules" }); continue; }
@@ -235,7 +269,7 @@ export function runRuleSet(s: Snapshot, family: Family, expected: RuleExpected):
       lines.push({ person: p.id, person_label: p.label, target: `gate:${k}`, label: gateLabel.get(k) ?? k, expected: st, got: g?.state ?? "(gate removed)", pass: g?.state === st, ...(g && g.state !== st && g.missing.length ? { why: `missing: ${g.missing.join(", ")}` } : {}) });
     }
   }
-  return finish(lines, fp);
+  return finish([...gone(family, expected, true), ...lines], fp);
 }
 
 /** BR-5: the state of a key's last run against the item now. */
@@ -261,6 +295,6 @@ export function signProblem(key: { state: string; version: number }, by: { id: s
 export function changeProblem(state: string, reason: unknown): string | null {
   if (state !== "SIGNED") return null;
   const r = str(reason).trim();
-  return !r || /[\n\r]/.test(r) || [...r].length > LIMITS.reason ? `These expected values are signed: give a one-line reason (up to ${LIMITS.reason} characters) to change them; they go back to Draft.` : null;
+  return !r || blank(r) || unclean(r) || /[\n\r]/.test(r) || [...r].length > LIMITS.reason ? `These expected values are signed: give a one-line reason (up to ${LIMITS.reason} characters) to change them; they go back to Draft.` : null;
 }
 
