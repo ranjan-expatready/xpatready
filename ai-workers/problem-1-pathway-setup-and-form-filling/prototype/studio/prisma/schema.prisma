@@ -181,6 +181,10 @@ model Combination {
   /// 409 naming who saved last. Every save writes an audit row with the list before it, which Undo restores.
   participantsVersion Int     @default(1) @map("participants_version")
   participantsBy      String? @map("participants_by")
+  /// C6.9 part 1 (BR-1…BR-6): the draft's eligibility gates as data, { gates[{key,label,condition}], judgement[],
+  /// disclaimer|null, version, by }; a release copies { gates, judgement, disclaimer } into snapshot.eligibility. Null:
+  /// none set, so the snapshot and its fingerprint stay as before.
+  eligibility         Json?
 
   program      ProgramDef            @relation(fields: [programDefId], references: [id], onDelete: Restrict)
   attachments  SourceAttachment[]
@@ -1257,8 +1261,10 @@ model Case {
   team         CaseTeamMember[]
   groups       SubmissionGroup[]
   filings      Filing[]
+  assessments  Assessment[] // C6.9
   filingItems  FilingItem[]
   checklistLines ChecklistLine[]
+  enteredSections EnteredSection[]
 
   /// C6.11 break M2, M3: a reference and an idempotency key are unique within a firm, so one firm neither collides with
   /// nor learns of another firm's cases.
@@ -1289,6 +1295,33 @@ model CaseTeamMember {
 
   @@index([caseId, assignedAt])
   @@map("case_team_member")
+}
+
+/// C7.3 (r5c §6, P-62 §6): "Entered in the portal" for one section of an Online form item's answer sheet: who ticked it,
+/// when, and the answers it showed, frozen in an answer snapshot. One current tick per item and section; a fact changed
+/// after it marks the section out of date (P-65). Ticking an out-of-date section again freezes a new snapshot and marks the
+/// old tick superseded (kept as history); the frozen answers never change.
+model EnteredSection {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  caseId      String   @map("case_id") @db.Uuid
+  itemId      String   @map("item_id") @db.Uuid
+  /// The PDF twin's section group (contracts/pdf-sections.json), e.g. SectionA, until the portal's own screens (W6).
+  sectionKey  String   @map("section_key")
+  snapshotId  String   @unique @map("snapshot_id") @db.Uuid
+  enteredBy   String   @map("entered_by")
+  enteredAt   DateTime @default(now()) @map("entered_at") @db.Timestamptz
+  /// Set when the section is ticked again after it went out of date (the next tick is the current one).
+  supersededAt DateTime? @map("superseded_at") @db.Timestamptz
+
+  case     Case           @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  item     FilingItem     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  snapshot AnswerSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  /// One current tick per item and section: a partial unique index in the migration (WHERE superseded_at IS NULL).
+  @@index([itemId, sectionKey])
+  @@index([caseId])
+  @@map("entered_section")
 }
 
 /// The release a case works from (team PackWorkPin, pinned per case and combination here). Insert-only.
@@ -1490,8 +1523,9 @@ model AnswerSnapshot {
   factsJson   Json     @map("facts_json")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  case Case          @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  form FormInstance?
+  case    Case            @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  form    FormInstance?
+  entered EnteredSection?
 
   @@map("answer_snapshot")
 }
@@ -1749,8 +1783,9 @@ model FilingItem {
   version       Int            @default(1)
   createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
 
-  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  filing Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
+  case    Case             @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  filing  Filing           @relation(fields: [filingId], references: [id], onDelete: Cascade)
+  entered EnteredSection[]
 
   @@unique([filingId, kind, itemKey, subjectId])
   @@index([caseId])
@@ -1824,4 +1859,61 @@ model CaseDocument {
 
   @@index([subjectId, documentType])
   @@map("case_document")
+}
+
+/// C6.9 (M3-D, SI-1; team AG-03 §7 Assessment): one eligibility run for one person on a case, frozen. result_json holds
+/// AG-03's whole envelope (its AssessmentProgramResult list inside, not as rows). A database trigger refuses any UPDATE
+/// (migration 20261102120000_c69_eligibility); review and override are rows of their own. Written from part 2.
+model Assessment {
+  id              String   @id @default(uuid()) @db.Uuid
+  workspaceId     String   @map("workspace_id") @db.Uuid
+  caseId          String   @map("case_id") @db.Uuid
+  subjectId       String   @map("subject_id") @db.Uuid
+  configReleaseId String   @map("config_release_id") @db.Uuid
+  resultJson      Json     @map("result_json")
+  /// MANUAL (the first run for a person), then RERUN
+  runType         String   @map("run_type")
+  reason          String?
+  createdBy       String   @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  case      Case                 @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  overrides AssessmentOverride[]
+  review    AssessmentReview?
+
+  @@index([caseId, subjectId, createdAt])
+  @@map("assessment")
+}
+
+/// C6.9 (BR-15, AG-03 AssessmentOverride): an officer's label and reason beside an engine result; the result never changes.
+model AssessmentOverride {
+  id           String   @id @default(uuid()) @db.Uuid
+  assessmentId String   @map("assessment_id") @db.Uuid
+  programKey   String   @map("program_key")
+  fromOutcome  String   @map("from_outcome")
+  label        String
+  reason       String
+  /// { by, duty, licence, outOfDate }
+  stamp        Json
+  createdBy    String   @map("created_by")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@index([assessmentId])
+  @@map("assessment_override")
+}
+
+/// C6.9 (BR-16, AG-3-34): "Reviewed by" / "Seen by" on a run, once per run.
+model AssessmentReview {
+  assessmentId String   @id @map("assessment_id") @db.Uuid
+  reviewedBy   String   @map("reviewed_by")
+  reviewedAt   DateTime @default(now()) @map("reviewed_at") @db.Timestamptz
+  note         String?
+  /// { duty, licence, stamp: "Reviewed"|"Seen", outOfDate }
+  stamp        Json
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@map("assessment_review")
 }
