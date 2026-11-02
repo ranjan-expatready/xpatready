@@ -50,6 +50,10 @@ const ALL = (p: Person) => [...p.lines, ...p.waiting, ...p.not_needed];
     sql(`insert into check_def (id, workspace_id, combination_id, check_key, check_group, applies_to, predicate_json, severity, message, source_quote, illustrative, version, status, origin, updated_by) values (gen_random_uuid(), '${ws}', '${vv}', 'VV_POLICE_CERT_6_MONTHS', 'document_validity', '${policeKey}', '${JSON.stringify(rule)}'::jsonb, 'warn', 'For the country where the person lives now: issued no more than 6 months before the application is submitted.', 'no more than 6 months before the date you submit your application', true, 1, 'DRAFT', 'HUMAN', '${AUTHOR}') on conflict do nothing`);
     ok("setup: the police certificate rule added to the draft as data, on its document type key", !!policeKey && sql(`select count(*) from check_def where combination_id='${vv}' and check_group='document_validity'`) === "1", policeKey);
     for (const c of (await call("GET", "/library/changes?status=WAITING")).body) await call("POST", `/library/changes/${c.id}/approve`, {}, REVIEWER);
+    // G1 (C5.4): the police certificate line's "18 or older" is a published number; the Visitor visa is Sample, so the
+    // demo seed answers it with a Sample source (demo workspace only; the release stays a Demo release).
+    const seeded = await call("POST", `/combinations/${vv}/sources/sample`, undefined, AUTHOR);
+    ok("setup: the Visitor visa's numbers answered with Sample sources (G1 demo seed)", seeded.status === 200 && seeded.body.sources.counts.held_back === 0, seeded.body);
     let r = await call("POST", `/combinations/${vv}/submit`, { note: "C6.4 check: Sample document lines" }, AUTHOR);
     ok("setup: submitted", r.status < 300, r.body);
     const sub = (await call("GET", `/combinations/${vv}/review`)).body.submission;

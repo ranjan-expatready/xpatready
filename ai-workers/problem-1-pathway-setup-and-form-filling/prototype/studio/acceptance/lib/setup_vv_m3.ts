@@ -163,6 +163,12 @@ await main("Setup", "Visitor visa release 2 for the M3 path (Super Admin, M2)", 
   ], combinations: { "vv.single": ["visitor_visa", "biometrics"] } }, AUTHOR);
   ok("S7a (W4, C6.12) the Visitor visa fee lines saved as a dated fee table, each with its source", r.status < 300, r.body?.detail ?? r.status);
 
+  // G1 (C5.4; tech lead on #558): the Visitor visa is Sample, so the demo seed answers each number its draft publishes
+  // ("From age 18" on IMM 5476 and IMM 5707, …) with a Sample source: it passes in the demo workspace only, and the
+  // release stays a Demo release. A number nobody answered would refuse the submit, naming it.
+  r = await call("POST", `/combinations/${vv}/sources/sample`, undefined, AUTHOR);
+  ok("S7b (G1) the Visitor visa's numbers answered with Sample sources by the demo seed (demo workspace only)", r.status < 300 && r.body?.sources?.counts?.held_back === 0, r.body?.detail ?? r.body?.sources?.counts ?? r.status);
+
   // Submit, sign off, release; a release refused because the draft moved during it (library changes applied at
   // approval) is submitted again once, as a person would after "Review the change, submit it again".
   let refs: string[] = [];

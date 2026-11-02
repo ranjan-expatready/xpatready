@@ -7,6 +7,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { sourceEveryNumber } from "./fixtures/source-every-number.cjs"; // G1 (C5.4): a release needs every number sourced
 
 const PORT = Number(process.argv[2] ?? 4438), DB = process.argv[3] ?? "xr_studio_runtime_fills";
 const log: any[] = []; let pass = 0, fail = 0;
@@ -89,6 +90,7 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   r = await call("POST", `/library/fields/${encodeURIComponent(f.fact)}/placement`, { sectionKey: pl[0], collectedFrom: "staff_working_view", repeats: pl[1] });
   ok("C4.9 Q3 pass: saving a placement that keeps who fills it is still allowed", r.status >= 200 && r.status < 300, `${r.status} ${words(r)}`);
 
+  await sourceEveryNumber(PORT, wp); // G1 (C5.4): the release's numbers need a source before it is submitted
   r = await call("POST", `/combinations/${wp}/submit`, {});
   const review = (await call("GET", `/combinations/${wp}/review`)).body;
   const sme = ((review.submission?.changeSummary ?? []) as any[]).filter((x) => x.needs_sme).map((x) => `${x.kind}|${x.key}`);

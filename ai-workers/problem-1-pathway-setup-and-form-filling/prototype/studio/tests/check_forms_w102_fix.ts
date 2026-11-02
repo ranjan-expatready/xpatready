@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { chromium } from "playwright";
 import { channelProblems } from "../engine/channels.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
+import { sourceEveryNumber } from "./fixtures/source-every-number.cjs"; // G1 (C5.4): a release needs every number sourced
 
 const PORT = Number(process.argv[2] ?? 4450), DB = process.argv[3] ?? "xr_studio_forms_w102";
 const OFFICIAL = join(import.meta.dirname, "..", "..", "..", "official-sources", "ircc", "forms");
@@ -48,6 +49,7 @@ const onlineEdition = (ws: string, defId: string, label: string) => sql(`insert 
   // ──────────────────────────────────────────── break M2: an older release keeps its fingerprint
   ok("C1.6: setup: With an LMIA's draft equals its release (sample)", (await call("GET", `/combinations/${wp}`)).body.draft?.matches_release === true);
   sql(`update combination set portal_key = 'APR_PORTAL' where id = '${wp}'`); // an older database: the portal chosen before the park, as w110_channels renamed it
+  await sourceEveryNumber(PORT, wp); // G1 (C5.4): the release's numbers need a source before it is submitted
   const r1 = await release(wp, "W1-02 fix check: a release made with a portal (older database)");
   ok("C1.6: break M2 setup: a release made with a portal and an Online-free draft goes out", r1.approve.status === 201, r1.approve.body?.message);
   let r = await call("POST", `/combinations/${wp}/submit`, { note: "nothing changed" });

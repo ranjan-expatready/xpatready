@@ -9,6 +9,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { agentRefusal, CASE_OFFICER_NEEDS_REASON } from "../engine/sources.ts";
+import { sourceEveryNumber } from "./fixtures/source-every-number.cjs"; // G1 (C5.4): a release needs every number sourced
 
 const PORT = Number(process.argv[2] ?? 4436), DB = process.argv[3] ?? "xr_studio_runtime_w115b";
 const log: any[] = []; let pass = 0, fail = 0;
@@ -124,6 +125,7 @@ const CODES = /\bP-\d+\b/;
   await call("DELETE", `/combinations/${wp}/fact-sources/${d0.role}/${encodeURIComponent(d0.fact)}`, { version: get(d0.role, d0.fact).version });
   r = await bulk({ items: items([get(docs[2].role, docs[2].fact)]), prequalification: true });
   const batch3 = r.body.batchId;
+  await sourceEveryNumber(PORT, wp); // G1 (C5.4): the release's numbers need a source before it is submitted
   await call("POST", `/combinations/${wp}/submit`, {});
   const review = (await call("GET", `/combinations/${wp}/review`)).body;
   const sme = ((review.submission?.changeSummary ?? []) as any[]).filter((x) => x.needs_sme).map((x) => `${x.kind}|${x.key}`);

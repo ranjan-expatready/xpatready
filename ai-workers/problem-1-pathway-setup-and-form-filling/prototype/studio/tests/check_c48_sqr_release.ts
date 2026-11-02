@@ -5,6 +5,7 @@
 // A pass and a fail per rule, on an isolated copy with the sample loaded. Rules only: no AI call (US$0).
 //   zsh studio/tools/isolated.sh runtime_c48 4437 start && tsx studio/tests/check_c48_sqr_release.ts 4437 xr_studio_runtime_c48
 import { execFileSync } from "node:child_process";
+import { sourceEveryNumber } from "./fixtures/source-every-number.cjs"; // G1 (C5.4): a release needs every number sourced
 
 const PORT = Number(process.argv[2] ?? 4437), DB = process.argv[3] ?? "xr_studio_runtime_c48";
 let pass = 0, fail = 0;
@@ -69,6 +70,7 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   ok("C4.8 fail: the change is not released before the combination is submitted", r.status >= 400 && inRelease(await released()), `${r.status} ${words(r).slice(0, 120)}`);
 
   // ---------------------------------------------------------------- one review and release
+  await sourceEveryNumber(PORT, wp); // G1 (C5.4): the release's numbers need a source before it is submitted
   r = await call("POST", `/combinations/${wp}/submit`, {});
   ok("C4.8 pass: the combination is submitted with its questionnaire change", r.status === 201 || r.status === 200, words(r) || r.status);
   const review = (await call("GET", `/combinations/${wp}/review`)).body;

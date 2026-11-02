@@ -10,6 +10,7 @@
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
+const { sourceEveryNumber } = require("./fixtures/source-every-number.cjs"); // G1 (C5.4): a release needs every number sourced
 const PORT = Number(process.argv[2] ?? 4435), DB = process.argv[3] ?? "xr_studio_runtime_s5e";
 const BASE = `http://localhost:${PORT}`;
 const ROOT = path.resolve(__dirname, "..", "..", "..");
@@ -89,7 +90,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await go(VV, "forms");
   step("fix 1: forms attached but not set up yet are their own rows with their next step (Read form or Draft with AI)", await p.locator("[data-pending]").count() >= 1 && (await p.getByRole("button", { name: /Read form|Draft with AI|Add from library/ }).count()) >= 1, await p.locator("[data-pending]").count());
   const filingLine = await p.locator("[data-filing]").innerText(), pendingN = await p.locator("[data-pending]").count();
-  step("C11.10 drift 5: the header counts the attached forms (never \"No forms yet · 0 forms\" above them) and says what each waits for", !/No forms yet|· 0 forms/.test(filingLine) && filingLine.includes(`${pendingN} form${pendingN === 1 ? "" : "s"} attached, 0 set up`) && /Not set up yet: .*(added from the library now|drafting with AI)/.test(await p.locator("[data-pending-summary]").innerText()), filingLine);
+  step("C11.10 drift 5: the header counts the attached forms (never \"No forms yet · 0 forms\" above them) and says what each waits for", !/No forms yet|· 0 forms/.test(filingLine) && filingLine.includes(`${pendingN} form${pendingN === 1 ? "" : "s"} · 0 set up`) && /Not set up yet: .*(added from the library now|drafting with AI)/.test(await p.locator("[data-pending-summary]").innerText()), filingLine);
   // QA-119 (P-157, P-161 (1)): the header's one next step is the setup checklist's next item (here step 1, Official pages),
   // no longer the catalogue's "Add n forms from the library"; the summary and the rows still agree on the forms to add
   // from the library (no AI for them), and no second "Add n forms from the library" step competes with the header.
@@ -111,7 +112,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // QA-82 (#469): the row no longer shows the field's meaning, which once carried an "IMM nnnn" by chance; the forms
   // that need a question are its Details panel's "Used by" line (checked below, after the panel opens).
   step("C4.1: one chip per person with a question count; who fills each question is shown", await p.locator("[data-role-chip]").count() === 4 && /Client|Case officer/.test(qText));
-  step("coverage: the person's line says how many answers the forms need and who gives them (none asked of nobody on the sample)", /the forms need \d+ answers for this person · \d+ from documents · \d+ asked of the client · \d+ entered by the case officer/.test(await p.locator("[data-coverage]").innerText()) && !/asked of nobody/.test(await p.locator("[data-coverage]").innerText()));
+  step("coverage: the person's line says how many answers the forms need and who gives them (none asked of nobody on the sample)", /\d+ form facts( \(\d+ of them once for the application\))? · \d+ from documents · \d+ asked of the client · \d+ entered by the case officer/.test(await p.locator("[data-coverage]").innerText()) && !/asked of nobody/.test(await p.locator("[data-coverage]").innerText()));
   await p.locator("[data-question]").first().getByRole("button", { name: /^Details of/ }).click();
   const det = p.getByRole("dialog");
   step("fix 3 (QA-94): the field code stays behind the side panel's library link, never as text", /Open this answer in the shared library/.test(await det.innerText()) && !CODE.test(await det.locator("[data-question-details]").innerText()) && CODE.test(decodeURIComponent(await det.locator("[data-library-link]").getAttribute("href") ?? "")));
@@ -177,6 +178,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C6.1 QA-38 fail-guard: with one release the New case list names release 1", l1 === "With an LMIA · release 1", l1);
   // Release 2: IMM 1295 filed Online (later wave), through the same submit, sign-off and second-person approval.
   await api(`/combinations/${C}/forms/${encodeURIComponent("IMM 1295")}/channel`, { method: "PATCH", data: { channel: "ONLINE", from: "PDF_UPLOAD" } });
+  await sourceEveryNumber(BASE, C); // G1 (C5.4): the release's numbers need a source first
   await api(`/combinations/${C}/submit`, { method: "POST", data: { note: "IMM 1295 filed Online (later wave)" } });
   const sub2 = (await api(`/combinations/${C}/review`, { actor: "user-C" })).body?.submission;
   await api(`/combinations/${C}/signoff`, { method: "POST", data: { items: (sub2?.changeSummary ?? []).map((x) => `${x.kind}|${x.key}`), action: "signed" }, actor: "user-C" });

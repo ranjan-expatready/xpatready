@@ -9,6 +9,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { effective } from "../engine/snapshot.ts";
+import { sourceEveryNumber } from "./fixtures/source-every-number.cjs"; // G1 (C5.4): a release needs every number sourced
 
 const PORT = Number(process.argv[2] ?? 4438), DB = process.argv[3] ?? "xr_studio_runtime_w115d";
 const log: any[] = []; let pass = 0, fail = 0;
@@ -126,6 +127,7 @@ const PASSPORT = "passport_or_travel_document_information_page_photocopy";
   vw = views(rowsOf("check_def", "check_key", chk[1] ?? ""));
   ok("C4.10 pass (open point 3): a check removed in the draft stays in the published view until a release", !!chk[0] && vw.draft === 0 && vw.published === 1 && vw.oldRule === 0, vw);
 
+  await sourceEveryNumber(PORT, wp); // G1 (C5.4): the release's numbers need a source before it is submitted
   await call("POST", `/combinations/${wp}/submit`, {});
   const review = (await call("GET", `/combinations/${wp}/review`)).body;
   const sme = ((review.submission?.changeSummary ?? []) as any[]).filter((x) => x.needs_sme).map((x) => `${x.kind}|${x.key}`);
