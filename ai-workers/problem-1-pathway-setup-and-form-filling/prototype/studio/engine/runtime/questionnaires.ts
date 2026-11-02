@@ -9,6 +9,8 @@ import type { Snapshot } from "../snapshot.ts";
 import { coverageGaps } from "../coverage.ts";
 import { caseView, knownOf, type Participant } from "./case.ts";
 import { familiesFor, familyPeople, sampleBirthDates } from "./preview.ts";
+import { questionsFor } from "./question-count.ts";
+import type { RoleQuestions } from "../../contracts/counts.ts";
 import { filledByOf, type FamilyKey, type QuestionnaireRole, type QuestionnaireSection, type QuestionnairesView } from "../../contracts/workspace.ts";
 
 type Line = { role: string; label?: string; min?: number; max?: number; applies?: boolean };
@@ -19,25 +21,50 @@ export function largest(s: Snapshot) {
   const participants = (s.combination.participants ?? []) as Line[];
   const fams = familiesFor(participants);
   const family = (fams.at(-1)?.key ?? "single") as FamilyKey;
-  return { participants, family, people: familyPeople(participants, family) };
+  // UX-A part 1 (break 1): the Sample families have no single parent with children, so a combination allowing a child
+  // but no spouse lost its Child chip and every count of the child's questions while the form facts (coverage's largest
+  // household: each role allowed, two children at most) still counted them. The missing people join here, as coverage
+  // reads the household, so questions and form facts count the same people.
+  const people = familyPeople(participants, family);
+  const lim = (role: string) => participants.find((p) => p.role === role);
+  const sp = lim("spouse_or_partner"), ch = lim("child");
+  if ((sp?.max ?? 0) > 0 && !people.some((p) => p.role === "spouse_or_partner")) people.splice(2, 0, { subjectId: "spouse", role: "spouse_or_partner", label: sp?.label ?? "Spouse or partner", applies: sp?.applies !== false });
+  const kids = Math.min(ch?.max ?? 0, 2), have = people.filter((p) => p.role === "child").length;
+  const at = people.findIndex((p) => !["case", "principal", "spouse_or_partner", "child"].includes(p.role));
+  for (let i = have; i < kids; i++) people.splice(at < 0 ? people.length : at + (i - have), 0, { subjectId: `child-${i + 1}`, role: "child", label: `${ch?.label ?? "Child"} ${i + 1}`, applies: ch?.applies !== false });
+  return { participants, family, people };
 }
 
-export function questionnairesView(s: Snapshot, roleIn: string | undefined, whereUsed: Map<string, number>, today = new Date()): QuestionnairesView {
+/** One person per role (the first of each) of the largest family, read through caseView in agent mode, so every
+ *  needed question shows. */
+function agentRead(s: Snapshot, today: Date) {
   const { participants, people } = largest(s);
   // One person per role (the first of each); the application's questions go with the principal, who answers them.
   const firstOf = new Map<string, Participant>();
   for (const p of people) if (p.role !== "case" && !firstOf.has(p.role)) firstOf.set(p.role, p);
   const answers = sampleBirthDates(s, people, today);
   const view = caseView(s, people, answers, [], "agent", today);
+  return { participants, people, firstOf, answers, view };
+}
+const rolesOf = (r: ReturnType<typeof agentRead>): RoleQuestions[] => r.participants.filter((p) => r.firstOf.has(p.role))
+  .map((p) => ({ role: p.role, label: p.label ?? p.role, questions: questionsFor(r.view, r.firstOf.get(p.role)!.subjectId) }));
+
+/** UX-A part 1 (contracts/counts.ts): the one question count. Per person role, the questions of that role's
+ *  questionnaire (the Questionnaires chips); `total`, their sum (the Overview, the setup strip, the Programs panel). */
+export function questionCounts(s: Snapshot, today = new Date()): { roles: RoleQuestions[]; total: number } {
+  const roles = rolesOf(agentRead(s, today));
+  return { roles, total: roles.reduce((n, r) => n + r.questions, 0) };
+}
+
+export function questionnairesView(s: Snapshot, roleIn: string | undefined, whereUsed: Map<string, number>, today = new Date()): QuestionnairesView {
+  const read = agentRead(s, today);
+  const { participants, people, firstOf, answers, view } = read;
   const renderPeople: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role, label: p.label, applies: p.applies }));
   const r = render(s, renderPeople, knownOf(s, people, answers, [], today).known, { today });
   const gapsAll = coverageGaps(s);
   const mine = (person: string) => (x: string) => x === person || (person === "principal" && x === "case");
   const gapsOf = (role: string) => gapsAll.filter((g) => g.role === role || (role === "principal" && g.role === "the application"));
-  const roles: QuestionnaireRole[] = participants.filter((p) => firstOf.has(p.role)).map((p) => {
-    const person = firstOf.get(p.role)!.subjectId;
-    return { role: p.role, label: p.label ?? p.role, questions: view.sections.filter((x) => mine(person)(x.subjectId)).reduce((n, x) => n + x.questions.length, 0), gaps: gapsOf(p.role).length };
-  });
+  const roles: QuestionnaireRole[] = rolesOf(read).map((r) => ({ ...r, gaps: gapsOf(r.role).length }));
   const role = roles.some((x) => x.role === roleIn) ? roleIn! : roles[0]?.role ?? "principal";
   const person = firstOf.get(role)?.subjectId ?? "principal";
   const field = new Map((s.canonical_fields as { id: string; meaning?: string; value_type?: string }[]).map((f) => [f.id, f]));

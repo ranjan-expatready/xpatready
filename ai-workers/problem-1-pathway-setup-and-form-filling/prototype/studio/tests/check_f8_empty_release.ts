@@ -19,7 +19,7 @@ const call = async (method: string, path: string, body?: unknown, actor = "user-
 };
 const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? "");
-const EMPTY = /Nothing to release yet: this combination has no forms and no documents/;
+const EMPTY = /Nothing to release yet: no form is set up on this combination and it has no documents/;
 
 (async () => {
   const served = (await call("GET", "/session")).body?.workspace?.id;

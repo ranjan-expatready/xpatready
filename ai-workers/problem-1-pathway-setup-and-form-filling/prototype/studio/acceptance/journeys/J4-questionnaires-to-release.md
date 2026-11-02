@@ -7,7 +7,7 @@
 Each step: what the person does → what they must see (and what the data must hold). A builder turns these into browser checks at 1440 and 1024 px (and 400 px for steps 1, 6 and 15), axe clean, keyboard only for steps 3, 7 and 11.
 
 ## A. Empty combinations never go out (X1a)
-1. **Open Work permit with an LMIA inside Canada (no form, no document after the load).** → Review and release says "Nothing to release yet: this combination has no forms and no documents…", naming Find forms; **Send for review** is disabled with that reason.
+1. **Open Work permit with an LMIA inside Canada (no form, no document after the load).** → Review and release says "Nothing to release yet: no form is set up on this combination and it has no documents…" (UX-A part 1 words), naming Find forms; **Send for review** is disabled with that reason.
 2. **Add IMM 5710, then remove it.** → The message disappears, then comes back. As the approver, the Release page holds Visitor visa back with the same words (or does not list it); Release never releases it.
 2a. **The bug's real case:** with a combination that can be sent for review, send it, then remove its last form and document lines. → As the content reviewer, signing the waiting submission is refused in words; as the approver, Release is refused (`acceptance/X1a-submitted.test.ts`).
 

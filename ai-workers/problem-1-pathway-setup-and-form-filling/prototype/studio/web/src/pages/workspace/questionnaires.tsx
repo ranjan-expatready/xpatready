@@ -27,6 +27,7 @@ import { DraftPqrPicks } from "@/components/pqr-draft";
 import { DraftQuestionsDocuments } from "@/components/qd-draft";
 import { appliesOf, FILING_TIP, filingWarnings, filingWords, previewFilings } from "../../../../engine/filing-modes";
 import type { LineMode } from "../../../../contracts/workspace";
+import { APPLICATION_ROLE, personFactRows, personFactsWords } from "../../../../contracts/counts";
 
 const TIPS = {
   card: "Sets which people a case may include and how many; each person marked as applicant gets their own forms, questions and documents.",
@@ -423,10 +424,13 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
   const keep = (fact: string) => { const f = byFact.get(fact); return filter === "all" || (filter === "needs" ? checks.has(fact) : filter === "pqr" ? !!f?.prequalification : f?.source === filter); };
   const opened = openIds ?? new Set(q.sections[0] ? [q.sections[0].id] : []);
   const allOpen = q.sections.every((s) => opened.has(s.id));
-  const total = q.sections.reduce((n, s) => n + s.questions.length, 0);
+  // UX-A part 1 (review m3): the footer says the chip's count (the one question count), never its own sum.
+  const total = q.roles.find((r) => r.role === q.role)?.questions ?? 0;
   const pickedRows = [...byFact.values()].filter((f) => picked.has(f.fact));
   const mine = [...byFact.values()];
-  const count = (src: FactSourceRow["source"]) => mine.filter((f) => f.source === src).length;
+  // UX-A part 1 (review m3): the person's form facts by the one rule (contracts/counts.ts), as the Draft dialog counts them.
+  const counted = personFactRows(fs.data?.facts ?? [], q.role);
+  const count = (src: FactSourceRow["source"]) => counted.filter((f) => f.source === src).length;
   const toggle = (facts: string[], on: boolean) => setPicked((now) => { const n = new Set(now); for (const x of facts) if (on) n.add(x); else n.delete(x); return n; });
   const backToRules = async (f: FactSourceRow, label: string) => {
     try {
@@ -487,7 +491,7 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
       {undoToast.link ? <p className="text-xs text-text-muted" data-undo-note>Last change on this tab{undoToast.link}</p> : null}
       {/* S2-1 (Lead, 29 Oct): the same sources and numbers as the chips and the strip (slice 1's rules), not the older
           placement count (client or case officer). */}
-      <p className={cn("text-sm", FOCUS_RING)} data-coverage data-focus={q.coverage.gaps.length ? undefined : "questionnaires:gaps"}><span className="font-medium">{role?.label}:</span> {fs.data ? <>the forms need {mine.length} answer{mine.length === 1 ? "" : "s"} for this person · {count("DOCUMENT")} from documents · {count("CLIENT")} asked of the client · {count("AGENT")} entered by the case officer</> : "working out where each answer comes from…"}{q.coverage.gaps.length ? <span className="text-text-danger"> · {q.coverage.gaps.length} asked of nobody</span> : null}</p>
+      <p className={cn("text-sm", FOCUS_RING)} data-coverage data-focus={q.coverage.gaps.length ? undefined : "questionnaires:gaps"}><span className="font-medium">{role?.label}:</span> {fs.data ? <>{personFactsWords(counted.length, counted.filter((f) => f.role === APPLICATION_ROLE).length)} · {count("DOCUMENT")} from documents · {count("CLIENT")} asked of the client · {count("AGENT")} entered by the case officer</> : "working out where each answer comes from…"}{q.coverage.gaps.length ? <span className="text-text-danger"> · {q.coverage.gaps.length} asked of nobody</span> : null}</p>
       {q.coverage.gaps.length ? (
         <div className={FOCUS_RING} data-focus="questionnaires:gaps"><Notice tone="danger" title={`${q.coverage.gaps.length} answer${q.coverage.gaps.length === 1 ? " is" : "s are"} needed but asked of nobody: release waits for ${q.coverage.gaps.length === 1 ? "it" : "them"}`}>
           <ul className="mt-1 space-y-0.5" data-gaps>{q.coverage.gaps.slice(0, 8).map((g) => <li key={g.fact}>"{g.meaning}", needed by {g.forms.join(", ")}</li>)}</ul>
@@ -534,7 +538,7 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
           </div>
         </div>
       ) : null}
-      <p className="text-xs text-text-muted">{total} question{total === 1 ? "" : "s"} for {role?.label}, from the largest Sample family the combination allows. {q.notAsked ? `${q.notAsked} placed question${q.notAsked === 1 ? " is" : "s are"} not asked: no form reads ${q.notAsked === 1 ? "it" : "them"} and ${q.notAsked === 1 ? "it decides" : "they decide"} nothing.` : ""}</p>
+      <p className="text-xs text-text-muted">{total} question{total === 1 ? "" : "s"} for {role?.label}, from the largest household the combination allows. {q.notAsked ? `${q.notAsked} placed question${q.notAsked === 1 ? " is" : "s are"} not asked: no form reads ${q.notAsked === 1 ? "it" : "them"} and ${q.notAsked === 1 ? "it decides" : "they decide"} nothing.` : ""}</p>
       {/* QA-92: a fact about the case is saved under its own role ("case"), not the person whose tab shows it. */}
       {shown ? <FactDrawer key={`${q.role}|${shown.fact}|${byFact.get(shown.fact)?.version ?? 0}`} id={id} role={byFact.get(shown.fact)?.role ?? q.role} roleLabel={byFact.get(shown.fact)?.role === "case" ? "The case (asked once)" : role?.label ?? q.role} section={shown.section} q={shown.q} f={byFact.get(shown.fact)} canAuthor={canAuthor} onClose={() => setShown(null)} onSaved={(t, u) => undoToast.show(t, u)} /> : null}
       {removing ? <Dialog open onOpenChange={(o) => !o && setRemoving(null)} title={`Remove "${removing.title}" from the questionnaire?`} description="The sections are chosen once for the whole combination."

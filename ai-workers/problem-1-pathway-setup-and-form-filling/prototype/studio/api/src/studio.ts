@@ -74,7 +74,9 @@ function retiredPeople(c: { label: string; retiredAt: Date | null }) {
  *  it is never submitted, signed off or released. It is a release problem (submit, approve, the release page, the Review
  *  tab read problems()), not a validator one: the Overview's missing list (engine/programs.ts, fed by validate()) already
  *  says "No forms yet" with its next step, once (review f8 M1, check_screen01_rules). */
-export const EMPTY_WORDS = "Nothing to release yet: this combination has no forms and no documents. Add the forms it files (Find forms, or add one from the Form library) before sending it for review.";
+// UX-A part 1 (review M1): "set up", in the words of contracts/counts.ts: a form attached but not set up is still on the
+// combination ("2 forms · 0 set up"), so this never says "no forms" beside a count that says 2.
+export const EMPTY_WORDS = "Nothing to release yet: no form is set up on this combination and it has no documents. Set up the forms it files (Find forms, add one from the Form library, or finish one attached) before sending it for review.";
 export const emptyProblem = (s: Pick<Snapshot, "forms" | "document_requirements">) =>
   s.forms.length || (s.document_requirements ?? []).length ? [] : [{ level: "error" as const, where: "Release", item: "", message: EMPTY_WORDS }];
 

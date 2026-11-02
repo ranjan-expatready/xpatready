@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-r
 import { type CatalogueLeaf, type CombinationSummary, type CombinationView, type NextAction } from "../../../contracts/programs";
 import { tabOf, TABS, type WorkspaceView } from "../../../contracts/workspace";
 import { TestsTab } from "@/components/answer-keys";
-import { nextStepHref, STEP_LABEL, tabCounts, type BadgeTab, type ItemKind } from "../../../contracts/setup-checklist";
+import { nextStepHref, STEP_LABEL, tabCounts, tabSteps, type BadgeTab, type ItemKind } from "../../../contracts/setup-checklist";
 import { ArrowRight, ChevronRight, Sparkles } from "lucide-react";
 import { CATALOGUE_URL_KEY, STATUS_WORD } from "@/pages/programs";
 import { StepTip, useNextStep } from "@/components/next-step";
@@ -23,6 +23,7 @@ import { QuestionnairesTab } from "@/pages/workspace/questionnaires";
 import { DocumentsTab } from "@/pages/workspace/documents";
 import { PreviewTab, usePreviewParams } from "@/pages/workspace/preview";
 import { LEVEL_TEXT } from "@/components/levels";
+import { plural, toDoWords, toFixWords } from "../../../contracts/counts";
 
 /** Where it sits, read-only here (P-125 (3)), in the level colours of the shared Trail (S3 m6). */
 const PLACE_TEXT: Record<string, string> = { Pathway: LEVEL_TEXT.pathway, Program: LEVEL_TEXT.program, Category: LEVEL_TEXT.category, "Sub-category": LEVEL_TEXT.subCategory };
@@ -68,7 +69,7 @@ export function CombinationPage() {
   const changes = sum.data?.changes ?? 0;
   const errorCount = d.draft.problems.filter((p) => p.level === "error").length;
   // X1 (slice C2): each setup tab says how many open setup items land on it, from the summary's checklist.
-  const badges = tabCounts(sum.data?.setup);
+  const badges = tabCounts(sum.data?.setup), steps = tabSteps(sum.data?.setup);
   // Back to the list exactly as it was left (pathway, filters, sort, search; scroll restored there), this row highlighted.
   const backTo = (() => { try { return sessionStorage.getItem(CATALOGUE_URL_KEY) ?? "/"; } catch { return "/"; } })();
   const pw = d.pathway?.client_type === "CORPORATE" ? "pw=CORPORATE&" : "";
@@ -105,11 +106,15 @@ export function CombinationPage() {
       {c.basis_note ? <Notice tone={c.source_basis === "ILLUSTRATIVE" ? "warn" : "info"}>{c.basis_note}</Notice> : null}
       <div role="tablist" aria-label="Combination" className="flex gap-1 overflow-x-auto border-b border-border">
         {TABS.map((t) => {
-          // QA-120: one badge style for every count on a tab, a space before it, and one name read aloud and shown as the
-          // tip: "Forms 4 setup items open", "Review and release 1 problem" (the visible text starts it exactly, WCAG 2.5.3).
+          // QA-120: one badge style for every count on a tab, a space before it. UX-A part 1 (contracts/counts.ts): the
+          // badge says what it counts in its own text ("Forms 4 to do", "Review and release 1 to fix"), never a bare
+          // number read as forms; the tab's name is exactly its text (WCAG 2.5.3) and the tip says it in full.
           const open = t.key in badges ? badges[t.key as BadgeTab] : 0, problems = t.key === "review" ? errorCount : 0;
           const name = tabName(t.label, open, problems);
-          return <Link key={t.key} role="tab" aria-selected={tab === t.key} aria-label={name} title={name !== t.label ? name : undefined} data-tab={t.key} to={`/c/${id}/${t.key}`} className={cn("whitespace-nowrap border-b-2 px-3 py-2 text-sm", tab === t.key ? "border-primary font-medium text-text" : "border-transparent text-text-muted hover:text-text")}>{t.label}{open ? <>{" "}<StepBadge n={open} /></> : null}{problems ? <>{" "}<StepBadge n={problems} tone="danger" /></> : null}</Link>;
+          // Review m1: the tip names the steps the items belong to, and is the tab's description, so a keyboard or screen
+          // reader user hears it too (a title alone is not reachable).
+          const tip = name !== t.label ? tabTip(t.label, open, problems, (steps[t.key as BadgeTab] ?? []).map((k) => STEP_LABEL[k])) : undefined;
+          return <React.Fragment key={t.key}><Link role="tab" aria-selected={tab === t.key} aria-label={name} title={tip} aria-describedby={tip ? `tab-tip-${t.key}` : undefined} data-tab={t.key} to={`/c/${id}/${t.key}`} className={cn("whitespace-nowrap border-b-2 px-3 py-2 text-sm", tab === t.key ? "border-primary font-medium text-text" : "border-transparent text-text-muted hover:text-text")}>{t.label}{open ? <>{" "}<StepBadge n={open} /></> : null}{problems ? <>{" "}<StepBadge n={problems} tone="danger" /></> : null}</Link>{tip ? <span id={`tab-tip-${t.key}`} hidden>{tip}</span> : null}</React.Fragment>;
         })}
       </div>
       <div role="tabpanel" aria-label={TABS.find((t) => t.key === tab)!.label}>
@@ -137,7 +142,7 @@ function WorkspaceTab({ id, tab, hasRelease }: { id: string; tab: "forms" | "que
   if (w.isLoading) return <Spinner label={`Loading ${tab}`} />;
   if (w.isError || !w.data) return <ErrorState title="This tab could not be loaded" description={(w.error as Error | null)?.message ?? "No answer from the studio."} action={<button className="text-text-link underline" onClick={() => void w.refetch()}>Try again</button>} />;
   const v = w.data;
-  if (v.tab === "forms") return <div className="space-y-6"><BeforeForms id={id} people={v.people} /><FormsTab id={id} lines={v.lines} filing={v.filing} filingDetail={v.filingDetail} account={v.account ?? null} accountKey={v.accountKey ?? null} problems={v.problems} removed={v.removed} fromLibrary={v.fromLibrary} lastChange={v.lastChange} progress={v.progress} /></div>;
+  if (v.tab === "forms") return <div className="space-y-6"><BeforeForms id={id} people={v.people} /><FormsTab id={id} lines={v.lines} filing={v.filing} filingDetail={v.filingDetail} account={v.account ?? null} accountKey={v.accountKey ?? null} problems={v.problems} removed={v.removed} removedEver={v.removedEver} fromLibrary={v.fromLibrary} lastChange={v.lastChange} progress={v.progress} /></div>;
   if (v.tab === "questionnaires") return <QuestionnairesTab id={id} people={v.people} questionnaire={v.questionnaire} available={v.available} />;
   if (v.tab === "preview") return <PreviewTab id={id} p={v.preview} empty={v.empty} fetching={w.isFetching} hasRelease={hasRelease} />;
   return null;
@@ -195,13 +200,19 @@ export function StatusPill({ status }: { status: string }) {
 export function useGo() { return useNavigate(); }
 
 /** X1 (slice C2, board v3 "Forms 5"): the number of open setup items on a tab (warn), or of problems to fix (danger);
- *  nothing when none. Read aloud through the tab's aria-label (tabName), so the badge itself is hidden from it. */
+ *  nothing when none. UX-A part 1: it says what it counts ("4 to do", "1 to fix"). Read aloud through the tab's
+ *  aria-label (tabName, the same words), so the badge itself is hidden from it. */
 function StepBadge({ n, tone = "warn" }: { n: number; tone?: "warn" | "danger" }) {
   if (!n) return null;
-  return <span aria-hidden className={cn("rounded-full px-1.5 text-xs", tone === "danger" ? "bg-danger/12 text-text-danger" : "bg-warn/15 text-text-warn")} data-step-badge={n} data-badge-tone={tone}>{n}</span>;
+  return <span aria-hidden className={cn("whitespace-nowrap rounded-full px-1.5 text-xs", tone === "danger" ? "bg-danger/12 text-text-danger" : "bg-warn/15 text-text-warn")} data-step-badge={n} data-badge-tone={tone}>{tone === "danger" ? toFixWords(n) : toDoWords(n)}</span>;
 }
-/** QA-120: a tab's name in words, its visible label first. */
+/** QA-120: a tab's name, exactly its visible text: "Forms 4 to do", "Review and release 1 to fix". */
 export function tabName(label: string, open: number, problems: number) {
-  const parts = [open ? `${open} setup ${open === 1 ? "item" : "items"} open` : "", problems ? `${problems} ${problems === 1 ? "problem" : "problems"}` : ""].filter(Boolean);
-  return parts.length ? `${label} ${parts.join(", ")}` : label;
+  const parts = [open ? toDoWords(open) : "", problems ? toFixWords(problems) : ""].filter(Boolean);
+  return parts.length ? `${label} ${parts.join(" ")}` : label;
+}
+/** The tip: what the badge counts, in full, and the steps the open items belong to. */
+export function tabTip(label: string, open: number, problems: number, steps: string[] = []) {
+  const parts = [open ? `${plural(open, "setup item")} open on ${label}${steps.length ? ` (${steps.join(", ")})` : ""}` : "", problems ? `${plural(problems, "problem")} to fix before release` : ""].filter(Boolean);
+  return parts.join("; ");
 }
