@@ -32,3 +32,6 @@ Sound: no Blocker, Critical or Major found in the batch. **M2 +2 Works: C11.15 a
 ## Questions for the tech lead
 1. C4.11 waits on #563 (QA-163) for the six, and on the rest of QA-162 for step 5 (2 of 20). Is a third PR planned for step 5's matching? The other 18 conditions need either the question list in the prompt for a fresh saved run (the PR says future runs see it) or a re-run on the Go.
 2. Who updates `acceptance/C4.11.test.ts` to the current run contract: the forms lane or qa?
+
+## Batch 3 (0d129be5 → 214db197: #576 PD)
+* **C11.7 stays Partial.** `check_forms_pd_unique_paths.ts` 10/10 and `check_forms_pd_apply_replayed.ts` 8/8 (IMM 5532's unnamed XFA subforms get unique data paths). `acceptance/C11.7.test.ts` 18/21, the same three part-B steps red as before (Provincial nominee from paper twins, nomination certificate, IMM 5669/5406 Online). IMM 5532's saved map waits for its paid re-run on the tech lead's Go. No bugs.
