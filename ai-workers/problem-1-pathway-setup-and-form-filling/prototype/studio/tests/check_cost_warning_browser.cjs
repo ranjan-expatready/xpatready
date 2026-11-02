@@ -4,6 +4,9 @@
 // override and starts the run with it; past US$132 there is no Continue. The check starts its own isolated copy with no
 // live AI switch and the queue held, on a scratch ledger of its own: no AI call, no launcher, US$0. Screenshots at 1440,
 // 1024 and 390 px into product/screens/W1-ai-drafting/screenshots/p179/; axe (WCAG 2.2 AA) on the warning.
+// C11.8 (P-175 one door rule): on a copy without the live switch Draft setup offers no live start that would call the
+// model, so the warning walk below needs a copy that reports live on with the stand-in launcher (GET /session → ai); on
+// this check's own copy (no switch) it checks the live-off panel instead and prints SKIP for the walk.
 //   node studio/tests/check_cost_warning_browser.cjs [port=4456] [name=forms_cw]
 const path = require("node:path"); const fs = require("node:fs"); const os = require("node:os"); const { execFileSync } = require("node:child_process");
 const { stepsBeforeForms } = require("./fixtures/steps-before-forms.cjs");
@@ -20,7 +23,8 @@ const stop = () => { try { execFileSync("zsh", [ISOLATED, NAME, String(PORT), "s
 const sql = (q) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 const lines = () => (fs.existsSync(LEDGER) ? fs.readFileSync(LEDGER, "utf8") : "").split("\n").filter(Boolean).map((l) => JSON.parse(l));
 let n = 0; const seed = (usd) => fs.appendFileSync(LEDGER, JSON.stringify({ type: "reserve", id: `seed-p179-${++n}`, run_id: `seed-p179-${n}`, attempt: 1, worst_usd: usd, caller: "check_cost_warning_browser seed", at: "2026-10-20T00:00:00.000Z" }) + "\n");
-let fail = 0, pass = 0;
+let fail = 0, pass = 0, skipped = 0;
+const skip = (name) => { skipped++; console.log(`SKIP  ${name} — needs a copy that reports live on with the stand-in launcher (C11.8)`); };
 const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${!ok && detail !== undefined ? ` — ${String(detail).slice(0, 260)}` : ""}`); };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -53,6 +57,27 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       if (start) await p.getByRole("button", { name: /^Start \d+ step/ }).click();
     };
     const warning = p.locator("[data-cost-warning]");
+    const ai = (await api("/session")).body?.ai;
+    const STANDIN = ai?.live === true && ai?.launcher === "stand-in";
+    if (!STANDIN) {
+      // C11.8 (P-175, J2 step 10): live AI off: Draft setup says so and what to use instead; Live's Start is not offered.
+      await open(false);
+      const panel = p.getByRole("dialog", { name: "Draft setup" });
+      await p.locator("[data-cost-line]").waitFor({ timeout: 30_000 });
+      { const modes = await p.locator('fieldset[aria-label="How the AI runs"] input[type="radio"]').count(); const t = await p.locator('fieldset[aria-label="How the AI runs"]').innerText();
+        step("D2 (P-227): the AI start offers exactly Live and Saved, never the stub pass", modes === 2 && /Live/.test(t) && /Saved/.test(t) && !/Stub pass/i.test(t), { modes, t: t.slice(0, 160) }); }
+      const offTitle = panel.getByText("Live AI is off on this copy", { exact: true });
+      const seen = await offTitle.waitFor({ timeout: 30_000 }).then(() => true, () => false);
+      const startBtn = p.getByRole("button", { name: /^Start \d+ step/ });
+      const words = (await panel.textContent()) ?? "";
+      step("C11.8 P-175 fail (J2 step 10): with live AI off, Draft setup says AI is switched off and to choose Saved (US$0), and Live's Start is disabled; nothing started", ai?.live === false && seen && (await startBtn.isDisabled()) && /switched off on this copy: no paid AI call can start here\. Choose Saved \(US\$0\)/.test(words) && !/rules only/i.test(words) && (await api("/ai/batches")).body.length === 0, JSON.stringify({ ai, seen, words: words.slice(0, 300) }));
+      await axe("Draft setup, live AI off"); await shot("00-live-off");
+      await p.locator('fieldset[aria-label="How the AI runs"] input[type="radio"]').nth(1).check();
+      const gone = await offTitle.waitFor({ state: "detached", timeout: 30_000 }).then(() => true, () => false);
+      step("C11.8 P-175 pass: choosing Saved (no model call, US$0) takes the live-off notice away", gone);
+      ["the cost warning before a live start (Draft setup)", "Cancel starts nothing", "focus back on Start", "Escape before the warning is ready", "Continue records the override and starts the run", "the Forms tab's Draft with AI warning", "its Cancel and Escape", "its spend figure read again", "its Continue starts the run", "past the ceiling, no Continue"].forEach((n) => skip(`C11.8 P-179 ${n}`));
+    }
+    if (STANDIN) {
     // Break 3 m1 on Draft setup: the panel is opened while the start fits (US$0 spent); spend then arrives (another copy)
     // to just under the cap, so this start could pass it by half its worst case, and the panel's plan is out of date.
     await open(false);
@@ -173,10 +198,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await axe("cost warning, past the ceiling"); await shot("03-past-ceiling");
     await p.locator("[data-cost-cancel]").click();
     step("C11.8 P-179 pass: Cancel past the ceiling leaves exactly the two earlier runs and their two overrides", (await api("/ai/batches")).body.length === 2 && lines().filter((l) => l.type === "override").length === 2);
+    }
     step("no page errors", errs.length === 0, errs.join(" | "));
     step("US$0: no AI call was made (no reserve line other than this check's seeds)", lines().filter((l) => l.type === "reserve").every((l) => String(l.id).startsWith("seed-p179")));
   } catch (e) { step("the check ran to its end", false, e.stack); }
   await b.close(); stop();
-  console.log(`\n${pass} passed, ${fail} failed`);
+  console.log(`\n${pass} passed, ${fail} failed, ${skipped} skipped`);
   process.exit(fail ? 1 : 0);
 })();

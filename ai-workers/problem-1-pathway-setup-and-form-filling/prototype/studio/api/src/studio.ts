@@ -19,6 +19,7 @@ import { DocumentLineEdit, FormLineEdit, PeopleBody, UndoBody, type PersonRoleVi
 import { checkPeople, linesNamingRemoved } from "../../engine/people.ts";
 import { filingProblems, filingWarnings, modeSent } from "../../engine/filing-modes.ts";
 import { LibrarySources, type SourceLine } from "./library-sources.ts";
+import { aiLive, usesFakeLauncher } from "./sources.ts";
 import { checkFormat, fieldFormat, formatWords, type MappedBox } from "../../engine/field-format.ts";
 import { releaseLabel } from "../../contracts/runtime.ts";
 /** C3.6 (P-223, option (a)): a draft condition may read a fact the library lacks; validate() keeps it as an error that
@@ -88,7 +89,10 @@ export class Studio {
     // "Structure exists" counts any name, Pathways included (W1-03 B1: after Reset the Structure is empty in both tabs).
     const [programs, fields, releases, jobs, sample] = await Promise.all([this.db.programDef.count({ where: { workspaceId } }), this.db.canonicalField.count({ where: { workspaceId } }), this.db.configRelease.count({ where: { workspaceId } }), this.db.draftingJob.count({ where: { workspaceId } }), this.db.auditEvent.count({ where: { workspaceId, action: "loaded", entity: "sample inputs" } })]);
     // sampleLoaded: the sample inputs were loaded into this workspace, not merely "some program exists" (QA-12).
-    return { actor, actors: ACTORS, workspace: { key: "demo", label: "Demo workspace (disposable)", id: workspaceId }, counts: { programs, fields, releases, jobs }, sampleLoaded: sample > 0, preferences: await this.preferences(actor.id) };
+    return { actor, actors: ACTORS, workspace: { key: "demo", label: "Demo workspace (disposable)", id: workspaceId }, counts: { programs, fields, releases, jobs }, sampleLoaded: sample > 0, preferences: await this.preferences(actor.id),
+      // C11.8 (additive): whether live AI is on and which launcher this copy uses, so a check can tell a copy whose live
+      // calls go to the stand-in launcher (nothing reaches a model) from one without the switch. Read only; sets nothing.
+      ai: { live: aiLive(), launcher: usesFakeLauncher() ? "stand-in" : "guarded" } };
   }
 
   /** C11.10 (P-115): a person's own view choices. Only known keys and values are kept (contracts/session.ts). */
