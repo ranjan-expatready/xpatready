@@ -36,7 +36,9 @@ export const sourcesPath = (id: string, kind?: string, key?: string) => `/combin
 export type SourceItem = { kind: string; key: string; item_words: string; where: string };
 
 /** The right-hand panel for one item's numbers. `onSaved` lets the caller refresh its own lists. */
-export function SourcePanel({ id, item, onClose, returnFocus }: { id: string; item: SourceItem | null; onClose: () => void; returnFocus?: () => HTMLElement | null | undefined }) {
+export function SourcePanel({ id, item, onClose, returnFocus, note }: { id: string; item: SourceItem | null; onClose: () => void; returnFocus?: () => HTMLElement | null | undefined;
+  /** A line read first (m3: "This check stays Sample: …" for a check marked illustrative). */
+  note?: string }) {
   const { canAuthor } = useSessionView();
   const q = useApi<SourcesView>(["sources", id, item?.kind, item?.key], item ? sourcesPath(id, item.kind, item.key) : null, { staleTime: 0 });
   // URLs this combination already cites, offered as choices (STANDARDS §3.2: the approved sources the release uses).
@@ -61,6 +63,7 @@ export function SourcePanel({ id, item, onClose, returnFocus }: { id: string; it
       description={item ? <><span title={item.item_words}>{firstSentence(item.item_words)}</span> · {item.where}</> : undefined}
       footer={<><Button variant="ghost" onClick={close}>Close</Button><span className="text-xs text-text-muted">{canAuthor ? "Each number saves on its own." : SOURCE_SAY.readOnly}</span></>}>
       <div className="space-y-4 text-sm" data-source-panel>
+        {note ? <p className="rounded-lg bg-warn/10 px-3 py-2 text-xs" data-source-note>{note}</p> : null}
         {q.isLoading ? <Spinner label="Loading the sources" /> : q.isError ? <Notice tone="danger" title="The sources could not be loaded">{(q.error as Error).message}</Notice>
           : !numbers.length ? <p className="text-text-muted" data-source-empty>{SOURCE_SAY.empty}</p>
           : numbers.map((n) => <NumberCard key={`${n.address}`} id={id} n={n} canAuthor={canAuthor} urls={urls} siblings={numbers} setDirty={setDirty} />)}
@@ -215,4 +218,52 @@ function Answer({ n }: { n: SourceNumberView }) {
   if (e.cited) return <span className="[overflow-wrap:anywhere]"><a className="text-text-link underline" href={e.cited.url} target="_blank" rel="noreferrer noopener">{host}</a>{e.cited.page ? ` · ${e.cited.page}` : ""} · checked {fmtDate(e.cited.date)} · {who}<br /><q className="text-text-muted">{e.cited.quote}</q></span>;
   if (e.none_published) return <span className="[overflow-wrap:anywhere]">None published – set by ExpatReady · {fmtDate(e.updated_at)} · {who}<br /><span className="text-text-muted">{e.none_published.reason}</span></span>;
   return <span>Sample: no source claimed · {who}</span>;
+}
+
+/** G1 PR 2c (concept §4: "The panel also opens from …"): one item's published numbers where the item is edited, with
+ *  their state, and a control that opens the Source panel on that item. `variant`: "section" in the rule dialog ("Sources
+ *  of its numbers", each number with its chip), "button" on a check row ("Sources (n)"), "link" under a form line's
+ *  "From age" ("Source"). Nothing shows for an item with no published number. The numbers are the draft's as saved. */
+export function ItemSources({ id, kind, suffix, address, variant, label, note }: {
+  id: string; kind: string; suffix: string; address?: string; variant: "section" | "button" | "link"; label?: string; note?: string;
+}) {
+  const q = useApi<SourcesView>(["sources", id], sourcesPath(id));
+  const { canAuthor } = useSessionView();
+  const [open, setOpen] = React.useState<SourceItem | null>(null);
+  const opener = React.useRef<HTMLButtonElement | null>(null);
+  const nums = (q.data?.numbers ?? []).filter((n) => n.kind === kind && n.key.endsWith(`/${suffix}`) && (!address || n.address === address));
+  if (!nums.length) return null;
+  const item: SourceItem = { kind: nums[0].kind, key: nums[0].key, item_words: nums[0].item_words, where: nums[0].where };
+  const held = nums.filter((n) => !n.passes).length;
+  const verb = canAuthor ? (held ? "Add or check sources" : "Check sources") : "View sources";
+  const name = label ?? item.item_words;
+  const chipOf = (n: SourceNumberView) => <Pill tone={CHIP_TONE[n.state] ?? "neutral"}>{n.state === "fee_table" || n.state === "validity_cite" ? SOURCE_CHIP.cited : SOURCE_CHIP[n.state as keyof typeof SOURCE_CHIP]}</Pill>;
+  const panel = <SourcePanel id={id} item={open} onClose={() => setOpen(null)} returnFocus={() => opener.current} note={note} />;
+  const show = () => setOpen(item);
+  if (variant === "button") return (
+    <>
+      <Button ref={opener} size="sm" variant="ghost" onClick={show} aria-label={`Sources (${nums.length})${held ? ` ${held} no source` : ""}: ${name}`} data-item-sources={item.key}>
+        Sources ({nums.length}){held ? <Pill tone="danger" className="ml-1">{held} no source</Pill> : null}
+      </Button>
+      {panel}
+    </>
+  );
+  if (variant === "link") return (
+    <span className="flex flex-wrap items-center gap-1.5 text-xs" data-item-sources={item.key}>
+      {nums.map((n) => <React.Fragment key={n.address}>{chipOf(n)}</React.Fragment>)}
+      <button ref={opener} type="button" className="text-text-link underline" onClick={show} aria-label={`Source of ${nums.map((n) => n.words).join("; ")}`}>Source</button>
+      {panel}
+    </span>
+  );
+  return (
+    <section className="rounded-lg border border-border p-3" aria-labelledby={`item-src-${item.key.replace(/[^a-z0-9]/gi, "-")}`} data-item-sources={item.key}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 id={`item-src-${item.key.replace(/[^a-z0-9]/gi, "-")}`} className="text-sm font-medium">Sources of its numbers</h3>
+        <Button ref={opener} size="sm" variant="secondary" onClick={show}>{verb}</Button>
+      </div>
+      <p className="mt-1 text-xs text-text-muted">The numbers as saved in the draft. Save a change first to give a new number its source.</p>
+      <ul className="mt-2 space-y-1 text-sm">{nums.map((n) => <li key={n.address} className="flex flex-wrap items-center gap-2">{n.words} {chipOf(n)}</li>)}</ul>
+      {panel}
+    </section>
+  );
 }

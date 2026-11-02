@@ -127,3 +127,17 @@ API.
 * **Reviewer round 2 (Approve, 9.5/10 on 3aba0266):** its flaky-check Minor is fixed (a card's state is read once the
   refetch lands). **Follow-up, not built:** the browser's Back still discards a typed, unsaved source without asking,
   as the app's existing Dialog guard does; a `beforeunload` plus route block belongs in a shared row for every panel.
+
+## PR 2c: the panel's other entry points (built 2 Nov, after PR 2b)
+* **One component, three places** (`ItemSources` in `web/src/components/source-panel.tsx`), each opening the same Source
+  panel on its item, with focus returned to the control that opened it:
+  * **Rule dialog** (`pages/configuration.tsx`): a section "Sources of its numbers" lists each number with its chip and
+    says the numbers are the draft's as saved ("Save a change first to give a new number its source"). An unsaved edit
+    in the dialog is not yet a published number, so it cannot be sourced before the save.
+  * **Checks table:** a "Sources" column; a check that holds a number offers "Sources (n)", with "n no source" when
+    any is held. A check added without a source quote (Sample, illustrative) opens the panel with §5's note "This check
+    stays Sample: …" above its numbers (m3).
+  * **Form line drawer** (`pages/workspace/forms.tsx`): a saved "From age" reads "Needs a source before release."
+    (was "Sample."), with its chip and a "Source" link. An empty "From age" reads "Leave empty for any age."
+* No API change. Browser `tests/check_g1_source_entry_points_browser.cjs` **20/20** (axe on each place, focus return, a
+  None published answer saved from the form line).

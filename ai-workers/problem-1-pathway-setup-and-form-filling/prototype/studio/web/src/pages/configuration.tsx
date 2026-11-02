@@ -8,6 +8,7 @@ import { ConditionBuilder, plainCondition, type FieldInfo } from "@/components/c
 import { cn } from "@/lib/utils";
 import { irccWords } from "../../../contracts/workspace";
 import { normalizeLabel } from "../../../contracts/programs";
+import { ItemSources, SOURCE_SAY } from "@/components/source-panel";
 
 export const WHO: [string, string][] = [["each_applicant", "Each applicant"], ["principal_applicant", "Principal applicant"], ["spouse_or_partner", "Spouse or partner"], ["couple_once", "Once per couple"], ["each_dependent_child", "Each child"], ["each_person", "Each person"], ["case", "The application (once)"], ["representative", "The representative"], ["sponsor", "The sponsor"]];
 export const whoLabel = (w: string) => WHO.find(([v]) => v === w)?.[1] ?? w;
@@ -46,7 +47,7 @@ export function ConfigArea({ id, areas }: { id: string; areas: ("documents" | "q
         {areas.includes("documents") ? <Documents id={id} s={s} fields={fields} /> : null}
         {areas.includes("questions") ? <section aria-labelledby="cfg-q" className="space-y-3"><h2 id="cfg-q" className="font-semibold">Questions by section</h2><Questions id={id} s={s} /></section> : null}
         {areas.includes("rules") ? <details className="rounded-xl border border-border bg-surface-raised px-4 py-3" data-rules><summary className="cursor-pointer font-semibold">Rules used here ({s.rules.length})</summary><div className="mt-3 space-y-3"><Rules id={id} s={s} fields={fields} /></div></details> : null}
-        {areas.includes("checks") ? <details className="rounded-xl border border-border bg-surface-raised px-4 py-3" data-checks><summary className="cursor-pointer font-semibold">Checks on these answers ({(s.checks ?? []).length})</summary><div className="mt-3 space-y-3"><Checks s={s} meaning={fields.meaning} /></div></details> : null}
+        {areas.includes("checks") ? <details className="rounded-xl border border-border bg-surface-raised px-4 py-3" data-checks><summary className="cursor-pointer font-semibold">Checks on these answers ({(s.checks ?? []).length})</summary><div className="mt-3 space-y-3"><Checks id={id} s={s} meaning={fields.meaning} /></div></details> : null}
       </div>
     </RevCtx.Provider>
   );
@@ -141,6 +142,8 @@ function RuleDialog({ id, r, fields, onClose }: { id: string; r: any; fields: an
         <Field label="Evaluated for"><Select value={forWhom} onChange={(e) => setForWhom(e.target.value)}>{WHO.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select></Field>
         <ConditionBuilder value={cond} onChange={setCond} fields={fields.list} />
         <Field label="Condition in plain words"><Input value={when} onChange={(e) => setWhen(e.target.value)} /></Field>
+        {/* G1 PR 2c (concept §4): the rule's published numbers and their sources, as saved in the draft. */}
+        {!isNew ? <ItemSources id={id} kind="rule" suffix={r.id} variant="section" /> : null}
       </div>
     </Dialog>
   );
@@ -178,11 +181,13 @@ function Questions({ id, s }: { id: string; s: any }) {
   );
 }
 
-function Checks({ s, meaning }: { s: any; meaning: (k: string) => string }) {
+function Checks({ id, s, meaning }: { id: string; s: any; meaning: (k: string) => string }) {
   return (
     <>
       <Notice tone="info">Checks run on facts as they are confirmed. Warnings never become a blanket block; severity comes from the approved configuration. Form-field checks stay with each form's field map.</Notice>
-      <Table head={["Check", "Group", "Severity", "When it fires"]}>{s.checks.map((c: any) => <tr key={c.id}><td className="mono">{c.id}{c.illustrative ? <Pill tone="warn" className="ml-1">Illustrative</Pill> : null}</td><td className="text-xs">{c.group.replace(/_/g, " ")}</td><td><Pill tone={c.severity === "block" ? "danger" : c.severity === "warn" ? "warn" : "neutral"}>{c.severity}</Pill></td><td className="max-w-2xl text-xs">{c.message ?? plainCondition(c.condition, meaning)}</td></tr>)}</Table>
+      <Table head={["Check", "Group", "Severity", "When it fires", "Sources"]}>{s.checks.map((c: any) => <tr key={c.id}><td className="mono">{c.id}{c.illustrative ? <Pill tone="warn" className="ml-1">Illustrative</Pill> : null}</td><td className="text-xs">{c.group.replace(/_/g, " ")}</td><td><Pill tone={c.severity === "block" ? "danger" : c.severity === "warn" ? "warn" : "neutral"}>{c.severity}</Pill></td><td className="max-w-2xl text-xs">{c.message ?? plainCondition(c.condition, meaning)}</td>
+        {/* G1 PR 2c: a check that holds a number opens the Source panel on it (m3: an illustrative check says it stays Sample). */}
+        <td><ItemSources id={id} kind="check" suffix={c.id} variant="button" label={`check ${c.id}`} note={c.illustrative ? SOURCE_SAY.sampleCheck : undefined} /></td></tr>)}</Table>
     </>
   );
 }
