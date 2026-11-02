@@ -314,7 +314,10 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
     const used = new Set((await tx.documentType.findMany({ where: { workspaceId: l.ws }, select: { documentTypeKey: true } })).map((x) => `x.${x.documentTypeKey}`));
     const key = slugKey(d.name, used);
     await tx.documentType.create({ data: { workspaceId: l.ws, documentTypeKey: key, name: d.name, category: d.category || "client", suppliesFacts: d.suppliesFacts,
-      readerProfile: { readerKind: d.readerKind, identityDocument: d.identityDocument, proves: d.proves }, version: 1, status: "DRAFT", origin: "AI_PROPOSAL", updatedBy: l.actor.id } });
+      readerProfile: { readerKind: d.readerKind, identityDocument: d.identityDocument, proves: d.proves }, version: 1, status: "DRAFT",
+      // C3.6: a type a person named while adding a requirement is the person's (made by: person), as before it went through
+      // the queue; its author is the namer (decide passes them as proposedBy), so their own-draft Delete stays (C11.9).
+      ...(r.step === "requirement_type" ? { origin: "HUMAN" as const, updatedBy: l.proposedBy ?? l.actor.id } : { origin: "AI_PROPOSAL" as const, updatedBy: l.actor.id }) } });
     await waitingAdd(tx, l, "document_type", key, d.name);
     return key;
   },
@@ -441,7 +444,10 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         } else {
           const land = LANDERS[r.kind as ProposalKind];
           if (!land) fail(`A ${r.kind.replace(/_/g, " ")} proposal is accepted with its own step, not yet on this queue.`, HttpStatus.CONFLICT);
-          landedAs = await land!(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: withNearReason(reason ?? r.reason, r.identity), proposedBy: actor.id, combinationId: r.combinationId, sourceJobId: r.runId });
+          // C3.6 (#523 Question 1): a type a person named while adding a requirement keeps that person as its proposer (as
+          // before it went through the queue), read from the server's own run, so their "Delete your own unapproved type" stays.
+          const namer = r.step === "requirement_type" && r.runId ? (await tx.draftingJob.findFirst({ where: { id: r.runId, workspaceId, kind: "requirement_type" }, select: { startedBy: true } }))?.startedBy : null;
+          landedAs = await land!(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: withNearReason(reason ?? r.reason, r.identity), proposedBy: namer ?? actor.id, combinationId: r.combinationId, sourceJobId: r.runId });
         }
       }
       // What a library lander wrote, as it stands now: Undo refuses once it has changed (PR #96 review (1)).
@@ -482,6 +488,14 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     const users = keys.length ? await tx.proposalItem.findMany({ where: { workspaceId, status: { in: ["accepted", "edited"] }, decidedKey: { in: keys }, reuse: { path: ["match"], equals: "reuse" }, NOT: { batchId } }, select: { kind: true, decidedKey: true, formEdition: true } }) : [];
     const user = users.find((u) => added.some((r) => r.kind === u.kind && r.decidedKey === u.decidedKey));
     if (user) fail(`${user.decidedKey} is now reused by an item accepted for ${user.formEdition ?? "another source"}, so Undo would take it away under that item. Nothing was undone: undo that decision first, or retire the item in the shared library.`, HttpStatus.CONFLICT);
+    // C3.6 (break M1 on #573): a document type a checklist line now uses (as its type or an alternative) is not taken away
+    // under that line. The line door takes the same per-item lock (studio.ts saveRequirement, library-items.ts lockItem).
+    const typeKeys = added.filter((r) => r.kind === "document_type").map((r) => r.decidedKey!).sort();
+    for (const k of typeKeys) await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`library-item:${workspaceId}:document_type:${k}`}))::text AS locked`;
+    for (const k of typeKeys) {
+      const line = await tx.documentRequirement.findFirst({ where: { workspaceId, status: { not: "RETIRED" }, OR: [{ documentTypeKey: k }, { alternatives: { array_contains: [k] } }] }, select: { combinationId: true } });
+      if (line) fail(`The document type ${k} is already used by a checklist line, so Undo would take it away under that line. Nothing was undone: remove the line first, or retire the type in the shared library.`, HttpStatus.CONFLICT);
+    }
     // PR #96 review (1): an item edited after the accept is not erased by Undo; the library keeps the person's edit.
     for (const r of rows) {
       const { landedStamp } = (r.work ?? {}) as { landedStamp?: string };

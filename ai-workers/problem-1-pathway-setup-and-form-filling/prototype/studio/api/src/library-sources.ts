@@ -8,7 +8,7 @@ import { z } from "zod";
 import { normalizeLabel, problemFromZod } from "../../contracts/programs.ts";
 import { current, fieldsOf } from "../../engine/where-used.ts";
 import { actorOf, Audit, Db, need, readerOf, revise, strip, Workspace, type Actor } from "./core.ts";
-import { itemCombinations, mappedBoxes, usedInLabels } from "./where-used.ts";
+import { itemCombinations, mappedBoxes, usedInBoth, usedInLabels } from "./where-used.ts";
 
 type H = string | undefined;
 const problem = (status: number, title: string, detail: string) =>
@@ -87,6 +87,11 @@ export class LibrarySources {
   /** Combinations each item is used in, by label (C3.13 where used). */
   async usedIn(kind: Kind, workspaceId: string): Promise<Map<string, string[]>> {
     return usedInLabels(this.db, workspaceId, kind); // SH2b review m2: one id-to-label mapping, in the service
+  }
+
+  /** C3.13: both at once (a list page's usedBy count and its Used in labels, one read). */
+  async usedInBoth(kind: Kind, workspaceId: string) {
+    return usedInBoth(this.db, workspaceId, kind);
   }
 
   /** C11.9: the same read by combination id (the lifecycle guard links each use and knows a retired combination). */

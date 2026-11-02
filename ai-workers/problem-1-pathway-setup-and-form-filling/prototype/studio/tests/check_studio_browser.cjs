@@ -136,6 +136,17 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
     await dlg.getByLabel("Why it is needed, in plain words").fill("Only for a minor travelling alone.");
     await dlg.getByLabel("Source quote").fill("Minors travelling alone or with one parent must provide custody documents or a letter of authorization from the other non accompanying parent or a letter of authorization signed by both parents or legal guardians."); }
   await p.getByText("Condition is valid").waitFor();
+  // C3.6 (P-158): the new type name waits as a library proposal; the dialog stays open with the line's details; a second
+  // person accepts it (here through the API), the dialog chooses the type, and the author saves the line.
+  const named = p.waitForResponse((r) => /\/requirements$/.test(r.url()) && r.request().method() === "POST");
+  await click(p.getByRole("dialog").getByRole("button", { name: "Save to draft" }));
+  const namedRes = await named;
+  await p.locator("[data-requirement-type-waiting]").waitFor({ timeout: 15000 }).catch(() => {});
+  step("A5 (C3.6): the new document type waits as a library proposal; the dialog stays open with the line's details", namedRes.status() === 202 && (await p.locator("[data-requirement-type-waiting]").count()) === 1 && (await p.getByRole("dialog").getByLabel("Why it is needed, in plain words").inputValue()) === "Only for a minor travelling alone.", namedRes.status());
+  const pid = (await namedRes.json().catch(() => ({})))?.proposalId;
+  const acc = await p.request.fetch(`${URL}/api/review/proposals/decide`, { method: "POST", headers: { "x-actor": "user-B", "content-type": "application/json" }, data: { ids: [pid], action: "accept" } });
+  await p.locator("[data-requirement-type-accepted]").waitFor({ timeout: 20000 }).catch(() => {});
+  step("A5 (C3.6): once a second person accepts it, the dialog chooses the new type", acc.status() === 201 && (await p.locator("[data-requirement-type-accepted]").count()) === 1, acc.status());
   await click(p.getByRole("dialog").getByRole("button", { name: "Save to draft" }));
   { const t = await toastLike(/added to the draft/); step("A5: a person adds a conditional document requirement with a valid condition, saved as draft", /added to the draft/.test(t), t); }
   await p.reload(); await idle(); await click(p.getByRole("tab", { name: /^Documents/ }));

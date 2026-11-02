@@ -16,7 +16,7 @@ export function OverviewTab({ d, sum, show, failed, onRetry }: { d: CombinationV
   const k = d.draft.counts;
   // F8: "Nothing to release yet" is a release problem the setup strip already says (step 3, Forms); the Rules and
   // checks tile counts rule and check problems only (Lead check item 3: no setup shows "no problems").
-  const ruleProblems = d.draft.problems.filter((p) => p.where !== "Release");
+  const ruleProblems = d.draft.problems.filter((p) => p.where !== "Release" && p.where !== "Tests"); // G2: answer-key tests are a release gate, not a rule or check problem
   const errors = ruleProblems.filter((p) => p.level === "error").length;
   const warnings = ruleProblems.length - errors;
   const stripRef = React.useRef<HTMLElement>(null);

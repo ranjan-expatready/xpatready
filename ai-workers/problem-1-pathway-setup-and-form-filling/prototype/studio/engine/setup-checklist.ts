@@ -20,6 +20,8 @@ export const WHERE_STEP: Record<string, { step: StepKey; part?: "documents" | "q
   Eligibility: { step: "questions_documents", part: "questions" },
   // C11.12: "Filing for <role>" is about Who can be in this application (the people step).
   People: { step: "people" },
+  // G2 (C5.5): answer-key tests gate the release; their lines open Tests from step 5.
+  Tests: { step: "release" },
 };
 export const stepOfWhere = (where: string) => WHERE_STEP[where] ?? { step: "release" as StepKey };
 
