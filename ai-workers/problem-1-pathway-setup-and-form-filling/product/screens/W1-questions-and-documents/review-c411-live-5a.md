@@ -181,3 +181,11 @@ Rules as before: :4455 only, the fake launcher with the switch only on the usage
 **Journey:** not rescored. 5b is an API contract with no screen change, and the 5a dialog score (9.5/10) is unaffected.
 
 **Verdict: Approve** (commit f8a6fe90, with 1b179125 on top). No Blocker or Major is open. p1–p4 are follow-ups, as are the earlier n2 (its own row, before the paid Visitor visa run) and L7–L11.
+
+**Head 3a7d6823 (rebase onto main 7180f4d5), 2 Nov: Approve.**
+* All 8 commits are patch-identical to 3c377911..6249be5d (`git range-diff`, every pair "=").
+* In `prototype/studio`, the 36 files that differ between 6249be5d and 3a7d6823 are exactly the 36 files main changed in 3c377911..7180f4d5. Every one that only main touched is byte-equal to main. Every one that only we touched is byte-equal to 6249be5d.
+* The only file both sides touched is `rounds.ts`. It has #510's `roundJob` (line 91, used by `round` at 139) beside our `pairOf` (54) and `roundBudgetUsd` (82), and our hunk there is unchanged.
+* `roundJob`'s `budget_usd` is the same `sizedBudgetUsd(requestBytesOf(…))` that `roundBudgetUsd` takes as its floor, so the stated worst case is still at least each recorded job's cap.
+* 6249be5d itself, which I had not reviewed before: wording only in `draft-contract.ts`. It closes p1 (the checker's US$0 now says its blind rounds are counted under conditions and pqr_picks) and p2 (the documents step's words now name an approved Live run of the checklist, not P-131).
+* I reran no suites (a breaker is on this copy) and rely on the coordinator's run-suites on 3a7d6823. p3, p4, n2 and L7–L11 stay follow-ups.
