@@ -7,10 +7,12 @@
 //   R4 Ready only when both rounds pick it · R5 one item per person and fact; words tied to exactly one question
 //   Q1 accept writes the tick through the queue (origin AI) · Q2 remove needs a reason, nothing ticked · Q3 Undo restores
 //   Q4 bulk accept for Ready only · Q5 roles · P plan first (cost, plan checksum) · L live only with the switch
+//   S (P-227) the plan says whether a Saved result exists (both rounds, this combination) · F a failed Live run offers
+//   Saved only when one exists. "rules" stays an API path here (tests, C4.11's rules run); a person sees Live and Saved.
 //   zsh studio/tools/isolated.sh forms_c47 4461 start STUDIO_AI_LIVE=approved STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_forms_c47_pqr_picks.ts 4461 xr_studio_forms_c47
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const PORT = Number(process.argv[2] ?? 4461), DB = process.argv[3] ?? "xr_studio_forms_c47", NAME = DB.replace(/^xr_studio_/, "");
@@ -48,13 +50,14 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   r = await call("POST", `/combinations/${wp}/pqr-picks/draft`, { mode: "rules", planSha256: "0".repeat(64) });
   ok("C4.7 P fail: a run whose plan was not looked at (another checksum) is refused in words (409)", r.status === 409 && /plan again/.test(words(r)), words(r));
   r = await plan(wp, "fast");
-  ok("C4.7 P fail: an unknown way is refused in words (400)", r.status === 400 && /rules only, saved AI answers or AI now/.test(words(r)), words(r));
+  ok("C4.7 P fail: an unknown way is refused in words (400)", r.status === 400 && /Choose Live or Saved/.test(words(r)), words(r));
   r = await plan("00000000-0000-4000-8000-000000000000", "rules");
   ok("C4.7 P fail: an unknown combination is refused in words (404)", r.status === 404 && /does not exist/.test(words(r)), words(r));
   r = await plan(lm, "replay");
   ok("C4.7 P fail: AI needs the combination's guide: with none linked it says how to get one (409)", r.status === 409 && /no IRCC guide/.test(words(r)), words(r));
   r = await plan(wp, "replay");
   ok("C4.7 P pass: saved AI answers name the guide the rounds read, at US$0", r.status === 200 && r.body.guide?.code === "Guide 5487" && r.body.totals.worst_usd === 0 && r.body.steps.some((s: any) => s.uses_ai), r.body?.guide);
+  ok("C4.7 S fail (P-227): with nothing saved the plan says Saved is not available, and why", r.body?.saved?.available === false && /No saved AI answer/.test(String(r.body?.saved?.why)), r.body?.saved);
   const guideFile: string = r.body.guide.file;
 
   // ---------------------------------------------------------------- Q5: roles
@@ -67,8 +70,10 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   const both = await Promise.all([1, 2].map(() => call("POST", `/combinations/${wp}/pqr-picks/draft`, { mode: "rules", planSha256: p0 })));
   r = both[0];
   const nRules = Number(waiting("rules"));
-  ok("C4.7 R5 fail (break B1): two drafts at the same moment give one pick per person and fact", both.every((x) => x.status === 201) && nRules === both[0].body.proposed + both[1].body.proposed && Math.min(both[0].body.proposed, both[1].body.proposed) === 0 && sql(`select count(*) from (select identity_key from proposal_item where combination_id='${wp}' and kind='pqr_pick' and status='waiting' group by identity_key having count(*) > 1) d`) === "0", both.map((x) => x.body?.proposed));
-  r = both[0].body.proposed ? both[0] : both[1];
+  // Since break B3 (2 Nov) the second may also be refused while the first runs (409, one draft at a time).
+  const ran = both.filter((x) => x.status === 201);
+  ok("C4.7 R5 fail (break B1): two drafts at the same moment give one pick per person and fact", ran.length >= 1 && both.every((x) => x.status === 201 || (x.status === 409 && /already being drafted/.test(words(x)))) && nRules === ran.reduce((n, x) => n + x.body.proposed, 0) && sql(`select count(*) from (select identity_key from proposal_item where combination_id='${wp}' and kind='pqr_pick' and status='waiting' group by identity_key having count(*) > 1) d`) === "0", both.map((x) => `${x.status}:${x.body?.proposed}`));
+  r = ran.find((x) => x.body.proposed) ?? ran[0];
   ok("C4.7 pass: rules only puts picks on the one review queue, each a contract item from the rules with its reason, US$0", r.status === 201 && r.body.proposed > 0 && r.body.proposed === nRules && r.body.usd === 0 && r.body.check === r.body.proposed, { proposed: r.body?.proposed, nRules });
   r = await draft(wp, "rules");
   ok("C4.7 R5 fail: drafting again does not put the same pick on the queue twice", r.status === 201 && r.body.proposed === 0 && r.body.already === nRules && Number(waiting("rules")) === nRules, r.body?.note);
@@ -79,8 +84,8 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   r = await draft(wp, "replay");
   ok("C4.7 replay fail: with no saved AI answer for this guide and prompt it says so, proposes nothing, US$0", r.status === 201 && r.body.proposed === 0 && r.body.usd === 0 && /No saved AI answer/.test(r.body.note), r.body?.note);
   const inputs = [{ file: guideFile, sha256: sha(readFileSync(join(SOLUTION, guideFile))) }];
-  const save = (check: boolean, picks: unknown[], combination = "wp.family") => {
-    const f = `studio-pqr-picks${check ? "-check" : ""}-c47-test-live-20261101t120000000z-${check ? "c" : "d"}${Date.now().toString(36)}.json`;
+  const save = (check: boolean, picks: unknown[], combination = "wp.family", stem = "c47-test", at = "20261101t120000000z") => {
+    const f = `studio-pqr-picks${check ? "-check" : ""}-${stem}-live-${at}-${check ? "c" : "d"}${Date.now().toString(36)}.json`;
     mkdirSync(RUNS, { recursive: true });
     writeFileSync(join(RUNS, f), JSON.stringify({ caller: "live", contract_valid: true, launch_evidence: { template_sha256: sha(readFileSync(join(PROMPTS, check ? "pqr-picks-check.v1.md" : "pqr-picks.v1.md"))) }, drafting_run: { status: "completed", inputs: { official_files: inputs, combination }, usage: { cost_usd: 0.4 } }, raw_output: JSON.stringify({ picks, unresolved: [{ passage: "be law-abiding", reason: "Two facts in one line." }] }) }));
     written.push(join(RUNS, f));
@@ -89,6 +94,7 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   save(false, [pick("Date of birth")], "vv.single"); save(true, [pick("Date of birth")], "vv.single");
   r = await draft(wp, "replay");
   ok("C4.7 replay fail: a saved answer of another combination is never replayed for this one", r.status === 201 && r.body.proposed === 0 && /No saved AI answer/.test(r.body.note), r.body?.note);
+  ok("C4.7 S fail: another combination's saved answer does not make Saved available here", (await plan(wp, "replay")).body?.saved?.available === false);
   // Reject the rules' picks first, so the AI's picks are not already waiting (one item per person and fact).
   const ids = sql(`select string_agg(id::text, ',') from proposal_item where combination_id='${wp}' and kind='pqr_pick' and status='waiting'`).split(",");
   r = await call("POST", "/review/proposals/decide", { ids, action: "reject", reason: "Cleared for the AI's reading (test)." });
@@ -96,7 +102,29 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   ok("C4.7 Q2 fail (break B3): a pick a person removed is not proposed again by the next draft", again.status === 201 && again.body.proposed === 0 && again.body.removed === ids.length && Number(waiting("rules")) === 0, { proposed: again.body?.proposed, removed: again.body?.removed });
   ok("C4.7 Q2 pass: Remove takes picks off the queue with a reason; nothing is ticked", r.status === 201 || r.status === 200 ? Number(waiting("rules")) === 0 && sql(`select count(*) from fact_source where combination_id='${wp}' and prequalification`) === "0" : false, r.status);
   save(false, [pick("Date of birth"), pick("Country of citizenship"), pick("criminal history"), pick("uci"), pick("Favourite colour"), pick("Country of birth", "Asked first.", "A sentence that is not in the guide at all."), pick("Marital status", "x"), pick("Family name", "..."), pick("Email address", "Asked first to reach the prospect.", "You must")]);
+  r = await plan(wp, "replay");
+  ok("C4.7 S fail: only the first round saved: Saved is not available (both rounds are needed)", r.body?.saved?.available === false, r.body?.saved);
   save(true, [pick("Date of birth", "The guide tests age-related eligibility."), pick("Criminal history")]);
+  r = await plan(wp, "replay");
+  ok("C4.7 S pass: both rounds saved for this combination's guide: the plan says Saved is available", r.body?.saved?.available === true && r.body?.saved?.why === null, r.body?.saved);
+  // Break B1: the two rounds come from ONE run. A newer first round alone (a Live run whose checker round failed) is not
+  // mixed with an older run's checker round: the complete older run is used. A checker round alone is never paired.
+  const keep = written.length;
+  save(false, [pick("Favourite colour")], "wp.family", "c47-lone", "20261102t120000000z");
+  r = await plan(wp, "replay");
+  ok("C4.7 B1 pass: a newer first round alone does not break Saved: both rounds of the complete run are used", r.body?.saved?.available === true && r.body.saved.files.length === 2 && r.body.saved.files.every((f: string) => f.includes("-c47-test-live-")), r.body?.saved?.files);
+  save(true, [pick("Favourite colour")], "wp.family", "c47-lone2", "20261102t130000000z");
+  r = await plan(wp, "replay");
+  ok("C4.7 B1 fail: a newest checker round with no first round of its own run is never paired with another run's", r.body?.saved?.available === false && /same run/.test(String(r.body?.saved?.why)), r.body?.saved);
+  for (const f of written.splice(keep)) rmSync(f, { force: true });
+  // Break B4: the Saved result looked at is part of the plan's checksum.
+  const p1 = (await plan(wp, "replay")).body.plan_sha256;
+  save(false, [pick("Date of birth")], "wp.family", "c47-new", "20261102t140000000z"); save(true, [pick("Date of birth")], "wp.family", "c47-new", "20261102t140000000z");
+  const p2 = (await plan(wp, "replay")).body.plan_sha256;
+  r = await call("POST", `/combinations/${wp}/pqr-picks/draft`, { mode: "replay", planSha256: p1 });
+  ok("C4.7 B4 fail: a newer Saved result changes the plan; a draft with the plan looked at before is refused (409)", p1 !== p2 && r.status === 409 && /plan again/.test(words(r)), { same: p1 === p2, status: r.status });
+  for (const f of written.splice(keep)) rmSync(f, { force: true });
+  ok("C4.7 B4 pass: with the newer result gone, the plan is the one looked at before", (await plan(wp, "replay")).body.plan_sha256 === p1);
   r = await draft(wp, "replay");
   const body = r.body;
   ok("C4.7 replay pass: the saved answers replay at US$0 and name their run files; nothing is ticked yet", r.status === 201 && body.from === "replay" && body.usd === 0 && body.run_files.length === 2 && sql(`select count(*) from fact_source where combination_id='${wp}' and prequalification`) === "0", { from: body?.from, files: body?.run_files });
@@ -161,6 +189,32 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   for (const f of ["fake-launch.log", "fake-launch.count"]) rmSync(join(VAR, f), { force: true });
   const rec = (picks: unknown[]) => ({ caller: "live", contract_valid: true, raw_output: JSON.stringify({ picks, unresolved: [] }), drafting_run: { status: "completed", usage: { cost_usd: 0 }, attempts: [{ n: 1, outcome: "ok" }] } });
   writeFileSync(join(VAR, "fake-launch.json"), JSON.stringify({ jobs: { "studio-pqr-picks-check": { stub: { exit: 0, out: { ok: true } }, live: { exit: 0, record: rec([pick("given names")]) } }, "studio-pqr-picks": { stub: { exit: 0, out: { ok: true } }, live: { exit: 0, record: rec([pick("given names")]) } } } }));
+  // F (P-227, D2 part 4): a failed Live run offers Saved when a Saved result exists (the two saved above), never otherwise.
+  const failing = { stub: { exit: 0, out: { ok: true } }, live: { exit: 1, err: "the service did not answer" } };
+  writeFileSync(join(VAR, "fake-launch.json"), JSON.stringify({ jobs: { "studio-pqr-picks-check": failing, "studio-pqr-picks": failing } }));
+  r = await draft(wp, "live");
+  ok("C4.7 F pass: a failed Live run proposes nothing and offers Saved (US$0) because one exists", r.status === 201 && r.body.proposed === 0 && r.body.offer_saved === true && /use Saved \(US\$0\)/.test(r.body.note), { offer: r.body?.offer_saved, note: r.body?.note });
+  const aside = written.map((f) => [f, `${f}.aside`]);
+  for (const [f, t] of aside) renameSync(f, t);
+  r = await draft(wp, "live");
+  ok("C4.7 F fail: a failed Live run with no Saved result offers nothing", r.status === 201 && r.body.proposed === 0 && r.body.offer_saved === false && !/use Saved/.test(r.body.note), { offer: r.body?.offer_saved, note: r.body?.note });
+  r = await draft(wp, "replay");
+  ok("C4.7 F fail: a Saved run that has nothing to replay never offers Saved", r.status === 201 && r.body.offer_saved === false && /No saved AI answer/.test(r.body.note), r.body?.note);
+  for (const [f, t] of aside) renameSync(t, f);
+  // Break B2: a first round that ran and cost something, then a failed checker round: the cost is said, never "nothing".
+  const paid = { caller: "live", contract_valid: true, raw_output: JSON.stringify({ picks: [pick("given names")], unresolved: [] }), drafting_run: { status: "completed", usage: { cost_usd: 0.37 }, attempts: [{ n: 1, outcome: "ok" }] } };
+  writeFileSync(join(VAR, "fake-launch.json"), JSON.stringify({ jobs: { "studio-pqr-picks-check": failing, "studio-pqr-picks": { stub: { exit: 0, out: { ok: true } }, live: { exit: 0, record: paid } } } }));
+  r = await draft(wp, "live");
+  ok("C4.7 B2 fail: a failed checker round after a paid first round says what it cost (counted), never 'nothing was charged'", r.status === 201 && r.body.proposed === 0 && r.body.usd === 0.37 && /US\$0\.37 \(counted\)/.test(r.body.note) && !/nothing was charged/i.test(r.body.note), r.body?.note);
+  // Break B3: one draft at a time per combination: a second Live start while the first runs is refused in words.
+  writeFileSync(join(VAR, "fake-launch.json"), JSON.stringify({ jobs: { "studio-pqr-picks-check": failing, "studio-pqr-picks": { stub: { exit: 0, out: { ok: true } }, live: { exit: 1, err: "slow then failed", sleep_ms: 2500 } } } }));
+  const pl = (await plan(wp, "live")).body.plan_sha256;
+  const go = (await Promise.all([0, 400].map(async (ms) => { await new Promise((res) => setTimeout(res, ms)); return call("POST", `/combinations/${wp}/pqr-picks/draft`, { mode: "live", planSha256: pl }); })));
+  ok("C4.7 B3 fail: a second Live start while one runs is refused (409, already drafting), the first one runs", go[0].status === 201 && go[1].status === 409 && /already being drafted/.test(words(go[1])), go.map((x) => `${x.status} ${words(x).slice(0, 60)}`));
+  r = await draft(wp, "rules");
+  ok("C4.7 B3 pass: once that run ended, the next draft starts", r.status === 201, r.status);
+  for (const f of ["fake-launch.log", "fake-launch.count"]) rmSync(join(VAR, f), { force: true });
+  writeFileSync(join(VAR, "fake-launch.json"), JSON.stringify({ jobs: { "studio-pqr-picks-check": { stub: { exit: 0, out: { ok: true } }, live: { exit: 0, record: rec([pick("given names")]) } }, "studio-pqr-picks": { stub: { exit: 0, out: { ok: true } }, live: { exit: 0, record: rec([pick("given names")]) } } } }));
   r = await plan(wp, "live");
   ok("C4.7 L pass: AI now states its worst case before it runs", r.status === 200 && r.body.totals.worst_usd > 0 && r.body.live.approved === true, r.body?.totals);
   r = await draft(wp, "live");
@@ -173,7 +227,7 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   const calls = readFileSync(join(VAR, "fake-launch.log"), "utf8");
   r = await plan(wp, "live");
   const rp = await plan(wp, "rules");
-  ok("C4.7 L fail: without the switch AI now is refused in words before anything runs (409); the plan says it is off", r.status === 409 && /waits for the founder's Go/.test(words(r)) && rp.body?.live?.approved === false, words(r));
+  ok("C4.7 L fail: without the switch AI now is refused in words before anything runs (409); the plan says it is off", r.status === 409 && /not open yet: each paid run is approved first/.test(words(r)) && rp.body?.live?.approved === false, words(r));
   r = await call("POST", `/combinations/${wp}/pqr-picks/draft`, { mode: "live", planSha256: "0".repeat(64) });
   ok("C4.7 L fail: a live draft is refused (409) and the launcher is never asked", r.status === 409 && readFileSync(join(VAR, "fake-launch.log"), "utf8") === calls, r.status);
   // ---------------------------------------------------------------- Q4 (review M2): a bulk accept of 80 Ready picks
@@ -193,7 +247,7 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   }
 
 })().catch((e) => { console.error("FAIL  unexpected", e); fail++; }).finally(() => {
-  for (const f of written) rmSync(f, { force: true });
+  for (const f of written) { rmSync(f, { force: true }); rmSync(`${f}.aside`, { force: true }); }
   const out = join(STUDIO, "var", "suites"); mkdirSync(out, { recursive: true });
   writeFileSync(join(out, "check_forms_c47_pqr_picks.json"), JSON.stringify({ at: new Date().toISOString(), pass, fail, log }, null, 1));
   console.log(`\n${pass}/${pass + fail} passed`);
