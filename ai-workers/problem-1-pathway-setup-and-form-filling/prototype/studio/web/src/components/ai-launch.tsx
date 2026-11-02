@@ -21,10 +21,10 @@ const MODES = [
 const WORK_CHANGED = "The work changed since you reviewed it (a source, a draft or a running step changed). Review the updated plan, then start again.";
 const TONE: Record<string, string> = { draft: "ai", reuse_saved_output: "info", reuse_library: "ok", skip: "neutral", not_eligible: "warn" };
 
-export function AiLaunchDialog({ scope, onClose, initialMode = "LIVE" }: { scope: AiScope; onClose: () => void; initialMode?: "LIVE" | "REPLAY" | "STUB" }) {
+export function AiLaunchDialog({ scope, onClose, initialMode = "LIVE" }: { scope: AiScope; onClose: () => void; initialMode?: "LIVE" | "REPLAY" }) {
   const nav = useNavigate();
   const toast = useToast();
-  const [mode, setMode] = React.useState<"LIVE" | "REPLAY" | "STUB">(initialMode);
+  const [mode, setMode] = React.useState<"LIVE" | "REPLAY">(initialMode);
   const [again, setAgain] = React.useState(false);
   const [limit, setLimit] = React.useState<string>("");
   const [key] = React.useState(() => (globalThis.crypto?.randomUUID?.() ?? `k-${Date.now()}-${Math.random().toString(36).slice(2)}`));
@@ -60,7 +60,7 @@ export function AiLaunchDialog({ scope, onClose, initialMode = "LIVE" }: { scope
     <Panel open onOpenChange={(o) => !o && onClose()} title={scope.kind === "combination" ? "Draft setup" : "AI configuration"} description={p ? `${p.operation_label} · ${p.scope.label}` : scope.label ?? "Preparing the plan"}
       footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={start} busy={busy} disabled={!p || !runnable || plan.isFetching || !(Number(limit) >= 0)}><Sparkles /> {p ? `Start ${runnable} step${runnable === 1 ? "" : "s"}${p.totals.worst_usd ? `, up to US$${p.totals.worst_usd.toFixed(2)}` : ", US$0"}` : "Start"}</Button></>}>
       <div className="space-y-4">
-        <fieldset className="grid gap-2 md:grid-cols-3" aria-label="How the AI runs">
+        <fieldset className="grid gap-2 md:grid-cols-2" aria-label="How the AI runs">
           {MODES.map(([k, l, d]) => (
             <label key={k} className={cn("cursor-pointer rounded-lg border p-3 text-sm", mode === k ? "border-primary bg-primary/5" : "border-border")}>
               <span className="flex items-center gap-2 font-medium"><input type="radio" name="ai-mode" checked={mode === k} onChange={() => setMode(k)} />{l}</span>
@@ -123,7 +123,7 @@ function Checklists({ combinationId, onOpen }: { combinationId: string; onOpen: 
   const [busy, setBusy] = React.useState<string | null>(null), [err, setErr] = React.useState<string | null>(null);
   const checklists = (list.data ?? []).filter((a) => a.recognised && a.kind === "Document checklist");
   if (!checklists.length) return null;
-  const run = async (id: string, mode: "stub" | "replay") => { setBusy(`${id}:${mode}`); setErr(null); try { const j = await api<{ id: string }>(`/attachments/${id}/draft-checklist`, { method: "POST", json: { mode } }); onOpen(j.id); } catch (e) { setErr((e as Error).message); } finally { setBusy(null); } };
+  const run = async (id: string, mode: "replay") => { setBusy(`${id}:${mode}`); setErr(null); try { const j = await api<{ id: string }>(`/attachments/${id}/draft-checklist`, { method: "POST", json: { mode } }); onOpen(j.id); } catch (e) { setErr((e as Error).message); } finally { setBusy(null); } };
   const savedOf = (id: string) => (readings.data ?? []).find((r) => r.attachmentId === id && r.saved);
   return (
     <section aria-labelledby="ck-h" className="space-y-2 rounded-lg border border-border p-3" data-checklists>
