@@ -100,7 +100,7 @@ const oldIn = (t) => OLD.filter(([re]) => re.test(t)).map(([re, why]) => `${why}
     step(`K13 break M1 fail: at ${w} px no combination tab or badge is cut off`, cut.length === 0, cut.join(" | "));
   }
   await p.setViewportSize({ width: 1440, height: 900 });
-  for (const key of ["overview", "forms", "questionnaires", "documents", "preview", "review"]) await visit(`combination: ${key === "questionnaires" ? "Smart questionnaire" : key}`, `/c/${vv}/${key}`);
+  for (const key of ["overview", "forms", "questionnaires", "documents", "preview", "tests", "review"]) await visit(`combination: ${key === "questionnaires" ? "Smart questionnaire" : key}`, `/c/${vv}/${key}`);
   const sqr = await visit("combination: Smart questionnaire (views)", `/c/${vv}/questionnaires`);
   step("K13 pass: the Smart questionnaire names its prospect view \"Prospect questionnaire (PQR)\"", /Prospect questionnaire \(PQR\)/.test(sqr), sqr.match(/.{0,60}PQR.{0,60}/)?.[0]);
   for (const set of ["pqr", "sqr", "agent"]) await visit(`combination: preview ${set}`, `/c/${vv}/preview?set=${set}`);
