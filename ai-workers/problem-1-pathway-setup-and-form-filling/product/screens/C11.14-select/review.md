@@ -77,3 +77,6 @@ Diff `eeff3f40..16b08b2e`, web rebuilt, own copy `rev_c1114` on :4467. Suite `ch
 Journey score unchanged in substance: Accessibility and sizes now 1 (focus kept); Task completed stays ½ (demo data, M1 recorded as Partial). **9.5 / 10 — pass.**
 
 **Verdict: Approve** (for 16b08b2e; no open Blocker or Major; m2 Should, in the PR).
+
+**Test fix (ebbdffe8):** the poll re-runs the same query for the same expected value `edited|Name on the birth certificate`, then does one more read after 40 x 200 ms and compares it, so the step still FAILs (showing the value) if the write never lands. It only waits longer; the step means the same thing.
+**Verdict: Approve**
