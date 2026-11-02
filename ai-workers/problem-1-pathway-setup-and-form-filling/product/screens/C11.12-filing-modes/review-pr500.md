@@ -115,3 +115,11 @@
 * The merge carries both sides' hunks in the four shared files unchanged. Main's QA-82 hunks (`asked` in `contracts/workspace.ts`, `engine/render.ts`, `engine/runtime/questionnaires.ts`, the "No question written yet" note in `questionnaires.tsx`) are line-for-line equal to its own diff from the merge base. C11.12's Filing column hunks are equal to theirs.
 * Re-checked here: `tsc` web 0 errors and api 13 (unchanged, untouched test files); `check_c1112_modes` 44/44, `check_r2_fee_table` 67/67.
 * The money path did not change, so my round-2 Approve and 10/10 journey score carry to 228c765d.
+
+**Round 4 · d2865fe5 (tests only): Approve.**
+* The QA-119 helper now does what a person does at step 2. The editor keeps each line's mode (BR-8) and the person sets a filing for each applicant role (BR-7). The old helper dropped stored modes, which the screen never does.
+* No check is weakened:
+  * "Filing not set" blocking is still checked on its own (`check_c1112_modes`, `check_c1112_filing_browser`).
+  * The suites that use the helper still assert the next step after step 2.
+* I re-ran `check_qa119_next_step_browser`: 30/30 on :4471.
+* Minor (Should): the helper hard-codes `["spouse_or_partner","child"]` (`tests/fixtures/steps-before-forms.cjs:9`). The people view already sends `mayBeApplicant` per line (`api/src/workspace.ts:141`), and keying on it would follow the role library.
