@@ -57,6 +57,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await p.screenshot({ path: path.join(SHOTS, "queue-1440.png"), fullPage: true });
     await axe("the review queue");
 
+    // C11.14 (P-121): Select all and Deselect all within the group
+    step("C11.14 fail: Clear the choice is off while nothing is chosen", await band("ready").getByRole("button", { name: "Clear the choice" }).isDisabled());
+    await band("ready").getByRole("button", { name: "Choose all 2" }).click();
+    step("C11.14 pass: Choose all picks the group's two acceptable Ready items", (await band("ready").getByRole("checkbox", { checked: true }).count()) === 2 && /2 items chosen/.test(await band("ready").innerText()));
+    await band("ready").getByRole("button", { name: "Clear the choice" }).click();
+    step("C11.14 pass (review m1): focus moves to Choose all after clearing", await p.waitForFunction(() => document.activeElement?.hasAttribute("data-choose-all"), null, { timeout: 3000 }).then(() => true, () => false));
+    step("C11.14 pass: Clear the choice deselects all; Accept is off again", (await band("ready").getByRole("checkbox", { checked: true }).count()) === 0 && await band("ready").getByRole("button", { name: /^Accept/ }).isDisabled());
+
     // Bulk accept, Undo, accept again
     await band("ready").getByRole("button", { name: "Choose all 2" }).click();
     await band("ready").getByRole("button", { name: "Accept 2 items" }).click(); await settle();
