@@ -1,0 +1,51 @@
+{
+ "file": "imm5562e.pdf",
+ "sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+ "read_by": "prototype/p1/xfa_formats.py (the form's own XFA template: maxChars, picture clauses, validate scripts; no AI)",
+ "boxes_with_format": 7,
+ "boxes_unmatched": 0,
+ "boxes": {
+  "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].fromDate[0]": {
+   "caption": "",
+   "validate_picture": "date{YYYY-MM}",
+   "ui_picture": "date{YYYY-MM}",
+   "format_picture": "date{YYYY-MM}"
+  },
+  "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].toDate[0]": {
+   "caption": "",
+   "validate_picture": "date{YYYY-MM}",
+   "ui_picture": "date{YYYY-MM}",
+   "format_picture": "date{YYYY-MM}"
+  },
+  "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].fromDate[0]": {
+   "caption": "",
+   "validate_picture": "date{YYYY-MM}",
+   "ui_picture": "date{YYYY-MM}",
+   "format_picture": "date{YYYY-MM}"
+  },
+  "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].toDate[0]": {
+   "caption": "",
+   "validate_picture": "date{YYYY-MM}",
+   "ui_picture": "date{YYYY-MM}",
+   "format_picture": "date{YYYY-MM}"
+  },
+  "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].fromDate[0]": {
+   "caption": "",
+   "validate_picture": "date{YYYY-MM}",
+   "ui_picture": "date{YYYY-MM}",
+   "format_picture": "date{YYYY-MM}"
+  },
+  "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].toDate[0]": {
+   "caption": "",
+   "validate_picture": "date{YYYY-MM}",
+   "ui_picture": "date{YYYY-MM}",
+   "format_picture": "date{YYYY-MM}"
+  },
+  "IMM_5562[0].Page2[0].Item3[0].SignedDate[0]": {
+   "caption": "Date (YYYY-MM-DD)",
+   "validate_picture": "date{YYYY-MM-DD}",
+   "ui_picture": "date{YYYY-MM-DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  }
+ }
+}

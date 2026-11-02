@@ -3,8 +3,11 @@
  "kind": "field_map",
  "combination": "studio",
  "configuration_version": "studio-add-form",
- "template": "field-map.v1.md",
- "output_schema": "field-map-output.v1.schema.json",
+ "template": "field-map.v2.md",
+ "output_schema": "field-map-output.v2.schema.json",
+ "known": {
+  "form_edition": "IMM 5476 (11-2025)"
+ },
  "inputs": [
   {
    "file": "prototype/p1/inventory/imm5476e.inventory.json",
