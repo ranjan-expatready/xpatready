@@ -118,3 +118,9 @@ Fix delta read: `53604e3c` (engine, api, contracts, tests, migration header). Th
 - Next step obvious stays at ½ and visual quality stays at ½: no screen until PR 3.
 
 **Verdict: Approve** for `61f168b7` (code identical at `5c922635`). No open Blocker or Major. Minors m4 and n1 and the breaker's 8 and 9 stay open.
+
+## Round 3 (re-check on `ebe609f9`; delta `5c922635..ebe609f9`, studio only)
+- **n1 closed.** `filings.ts:154–156`: a group holding a sponsorship is splittable only when it also holds an own filing other than the principal's, which matches the server's rule (`case-prepare.ts:240`).
+- **Re-run:** `check_vv_filings` 55/55 (n1 pass and fail, the split words), `check_vv_prepare` 32/32, `check_c1112_modes` 39/39, and `check_c1112_prepare_api` 28/28 on a fresh copy on :4444. The group with the spouse is splittable; after the spouse is split out, the principal's filing and the sponsorship alone are not.
+- **Minor, wording only:** a splittable group with a sponsorship still has the `why` "…sent together and cannot be split". That is true of the pair, but could say the other filings may leave. Optional.
+- **Verdict: Approve** for `ebe609f9`. No open Blocker or Major. Minors m4, the breaker's 8 and 9, and this wording point stay open.
