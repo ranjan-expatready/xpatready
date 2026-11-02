@@ -13,7 +13,7 @@ import { checkWords, documentFacts, factsPerRole, qdChecks, QD_OPERATION, QD_RUL
 import { actorOf, Audit, Db, need, readerOf, type Actor } from "./core.ts";
 import { PqrDrafts } from "./pqr-drafts.ts";
 import { Checklists } from "./checklist.ts";
-import { linesOf, savedReading } from "./saved-readings.ts";
+import { linesOf, savedReading, staleReading } from "./saved-readings.ts";
 import { insertProposals } from "./proposals.ts";
 import { StepRunner, type AiStep, type RoundContext } from "./rounds.ts";
 import { Sources } from "./sources.ts";
@@ -76,7 +76,8 @@ export class DraftQd {
     let proposed = 0; const said: string[] = [], jobs: string[] = [];
     for (const a of atts) {
       const name = a.edition ?? a.fileName, r = savedReading(a.officialFile);
-      if (!r) { said.push(`${name}: no saved AI reading yet (it is recorded in the founder-approved live trial, P-131)`); continue; }
+      // #397 m2 (BR-10): a reading of an earlier text is named as out of date, as the plan says, and is not replayed.
+      if (!r) { said.push(staleReading(a.officialFile) ? `${name}: its saved AI reading is of an earlier text, so it is out of date and not replayed (a new reading is recorded in the founder-approved live trial, P-131)` : `${name}: no saved AI reading yet (it is recorded in the founder-approved live trial, P-131)`); continue; }
       // Review m4 (part 2): "replayed before" only when the replay hands back an earlier draft, not because one was applied.
       const prior = new Set((await this.db.draftingJob.findMany({ where: { attachmentId: a.id, kind: "checklist_draft", mode: "REPLAY" }, select: { id: true } })).map((j) => j.id));
       const job = await this.checklists.replay(actor, a);
@@ -148,7 +149,9 @@ export class DraftQd {
   }
 
   /** Runs the plan as one run (an AiBatch with its seven steps), step by step; Stop is honoured between steps. */
-  async run(actor: Actor, id: string, body: unknown) {
+  /** `opts.idempotencyKey` (C4.11 contract, api/src/draft-contract.ts): the same key on the same combination returns the
+   *  run it started, checked under the same lock as the new run, so a double click is one run. */
+  async run(actor: Actor, id: string, body: unknown, opts: { idempotencyKey?: string } = {}) {
     need(actor, "author");
     const plan = await this.plan(id, body);
     const b = QdBody.parse(body);
@@ -158,6 +161,11 @@ export class DraftQd {
     // so two clicks at the same moment never both start.
     const batch = await this.db.$transaction(async (tx) => {
     await tx.$executeRawUnsafe(`select pg_advisory_xact_lock(hashtext($1))`, `draft_qd:${c.id}`);
+    const keyed = opts.idempotencyKey ? `qd-key-${c.id}-${opts.idempotencyKey}` : null;
+    const same = keyed ? await tx.aiBatch.findFirst({ where: { workspaceId: c.workspaceId, idempotencyKey: keyed }, select: { id: true, planSha256: true, status: true } }) : null;
+    // Review m2: a key already used for another plan is a mistake, never a quiet return of the other run.
+    if (same && same.planSha256 !== plan.plan_sha256) throw problem(409, "Key used for another plan", "This idempotency key started a run of another plan: use a new key for this plan.", { runId: same.id });
+    if (same) return { again: same.id, status: same.status };
     const running = await tx.aiBatch.findFirst({ where: { workspaceId: c.workspaceId, operation: QD_OPERATION, plan: { path: ["combination", "id"], equals: c.id }, status: { in: ["QUEUED", "RUNNING"] } }, select: { id: true, startedAt: true } });
     // A run that has not moved for STALE_MS (its server stopped mid-run and was not restarted cleanly) ends as Failed
     // instead of blocking this combination for good (review M3; onModuleInit does the same at start).
@@ -165,10 +173,11 @@ export class DraftQd {
       await tx.draftingJob.updateMany({ where: { batchId: running.id, status: { in: ["WAITING", "RUNNING"] } }, data: { status: "CANCELLED", finishedAt: new Date(), message: "The run stopped moving before this step ended." } });
       await tx.aiBatch.update({ where: { id: running.id }, data: { status: "FAILED", finishedAt: new Date(), message: "This run stopped moving (the studio server may have stopped); the steps already done stand." } });
     } else if (running) throw problem(409, "Already running", `"${c.label}" is being drafted already: its run card shows each step.`, { runId: running.id });
-    return tx.aiBatch.create({ data: { workspaceId: c.workspaceId, idempotencyKey: `qd-${plan.plan_sha256.slice(0, 16)}-${Date.now()}`, operation: QD_OPERATION, scopeKind: "combination", scopeLabel: c.label,
+    return tx.aiBatch.create({ data: { workspaceId: c.workspaceId, idempotencyKey: keyed ?? `qd-${plan.plan_sha256.slice(0, 16)}-${Date.now()}`, operation: QD_OPERATION, scopeKind: "combination", scopeLabel: c.label,
       mode: plan.mode === "rules" ? "LOCAL" : "REPLAY", status: "RUNNING", planSha256: plan.plan_sha256,
       plan: { operation: QD_OPERATION, operation_label: "Draft questions and documents", combination: { id: c.id }, mode: plan.mode, steps: plan.steps.map((s) => ({ kind: s.kind, uses_ai: s.uses_ai, how: s.how })) }, spendLimitUsd: 0, worstCaseUsd: 0, expectedUsd: 0, startedBy: actor.id, message: "Drafting questions and documents" } });
     });
+    if ("again" in batch) return { runId: batch.again, status: ["QUEUED", "RUNNING"].includes(batch.status) ? "running" : batch.status.toLowerCase(), again: true };
     await this.db.draftingJob.createMany({ data: QD_STEPS.map((s, i) => ({ workspaceId: c.workspaceId, combinationId: c.id, batchId: batch.id, kind: s.kind, mode: plan.mode === "rules" ? "LOCAL" : "REPLAY", status: "WAITING", message: "Waits for the step before it", startedBy: actor.id, startedAt: new Date(Date.now() + i) })) });
     // Break/review M1: the steps run in the background, so the run card (with Stop) shows at once where it was started.
     void this.execute(batch.id, actor, c, plan).catch((e) => console.warn(`[draft-qd] run ${batch.id}: ${String((e as Error).message ?? e).slice(0, 300)}`));
