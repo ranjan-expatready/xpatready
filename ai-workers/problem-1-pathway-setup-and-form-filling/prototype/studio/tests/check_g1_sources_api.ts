@@ -126,6 +126,16 @@ try {
   const long = await bad90({ none_published: { reason: "r".repeat(501) } });
   ok("C5.4 BR-3 fail (break m1–m5 on #587): five emoji or zero-width marks as a reason, an invisible quote, a malformed or over-long https address, year 1, a 501-character reason: each 400 on its field",
     emoji.status === 400 && emoji.fields.includes("none_published.reason") && zwsp.status === 400 && zq.status === 400 && zq.fields.includes("cited.quote") && urls.every((u) => u.status === 400 && u.fields.includes("cited.url")) && year1.status === 400 && year1.fields.includes("cited.date") && long.status === 400, { emoji, zwsp, zq, urls, year1, long });
+  // Review r2-3 on #587: each limit answers in its own words (concept §5), never another limit's.
+  const said = async (body: Record<string, unknown>) => { const x = await put(wp, n90b, { address: n90b.address, value: 90, version: 0, ...body }); return ((x.body.errors ?? []) as { field: string; message: string }[]).map((e) => `${e.field}: ${e.message}`); };
+  const w = { long: await said({ none_published: { reason: "r".repeat(501) } }), emoji: await said({ none_published: { reason: "😀".repeat(10) } }), short: await said({ none_published: { reason: "too short" } }),
+    old: await said({ cited: { url: "https://www.canada.ca/x", quote: "at most 90 days", date: "1989-05-01" } }), shape: await said({ cited: { url: "https://www.canada.ca/x", quote: "at most 90 days", date: "2026-02-30" } }) };
+  ok("C5.4 BR-3 fail (review r2-3 on #587): a 501-character reason, ten emoji, a 9-character reason, a 1989 date read and 30 February each answer their own words",
+    w.long.includes("none_published.reason: Keep the reason to 500 characters.") && w.emoji.includes("none_published.reason: Write the reason in words.") && w.short.includes("none_published.reason: Say why ExpatReady set this number (at least 10 characters).")
+    && w.old.includes("cited.date: The date read cannot be before 1990.") && w.shape.includes("cited.date: Give the date read as a date (YYYY-MM-DD).") && w.long.length === 1 && w.emoji.length === 1 && w.old.length === 1, w);
+  // Review r2-4 on #587: PR 2b shows the address as a link, so no user name, password or IP host.
+  const creds = await Promise.all(["https://user:pw@evil.example.com/x", "https://user@www.canada.ca/x", "https://10.0.0.1/x", "https://0x7f.1/x", "https://[::1]/x"].map((u) => bad90({ cited: { url: u, quote: "at most 90 days", date: "2026-10-19" } })));
+  ok("C5.4 BR-3 fail (review r2-4 on #587): an address with a user name, a password or an IP host is a 400 on cited.url", creds.every((u) => u.status === 400 && u.fields.includes("cited.url")), creds);
   r = await put(wp, n30, { address: n30.address, value: 45, none_published: { reason: "ExpatReady's own warning lead time" }, version: 0 });
   ok("C5.4 BR-6 fail: a value that is not the number now (45 for 30) gets 409 with the number as it is", r.status === 409 && r.body.value === "30" && /the number is now 30, not 45/.test(r.body.detail), r.body);
 

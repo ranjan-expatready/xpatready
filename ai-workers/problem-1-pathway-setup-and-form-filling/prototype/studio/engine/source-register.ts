@@ -258,7 +258,16 @@ export function statesInDigits(quote: unknown, value: string): boolean {
     const [y, m, d] = [iso[1], MONTHS[Number(iso[2]) - 1], String(Number(iso[3]))];
     return q.includes(value) || new RegExp(`\\b${m}\\s+${d},?\\s+${y}\\b`).test(q) || new RegExp(`\\b${d}\\s+${m},?\\s+${y}\\b`).test(q);
   }
-  return new RegExp(`(?<![\\d.,])${value.replace(/\./g, "\\.")}(?![\\d]|[.,]\\d)`).test(q);
+  // Review MJ-R2 on #587: official pages write thousands in groups ("$14,690", "CAN$1,085", "1 000"), and fees often
+  // with cents ("$1,085.00"). The integer part may carry one group mark between groups of three; a whole number may
+  // end ".0" or ".00". Never a digit, a group or a decimal part around it ("14,6900", "1469" in "14,690", "14" in "14 690").
+  const num = /^(\d+)(\.\d+)?$/.exec(value);
+  if (!num) return q.includes(value);
+  const G = "[,\\u0020\\u00a0\\u2009\\u202f]";
+  const groups: string[] = [];
+  for (let i = num[1].length; i > 0; i -= 3) groups.unshift(num[1].slice(Math.max(0, i - 3), i));
+  const body = groups.join(`${G}?`) + (num[2] ? num[2].replace(".", "\\.") : "(?:\\.00?)?");
+  return new RegExp(`(?<![\\d.,])(?<!\\d${G})${body}(?![\\d]|[.,]\\d|${G}\\d{3}(?!\\d))`).test(q);
 }
 
 const ONES = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];

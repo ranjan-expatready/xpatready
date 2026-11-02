@@ -107,3 +107,64 @@ Break pass: races, hostile URL, impossible and future dates, `sample:true` smugg
 * CI on this head. `code/` (team mapping). D17 and D20.
 
 **Verdict: Approve** (c841b8c9). No Blocker or Major is open. Fix m1–m5 or list them in the PR; m6 is for PR 2b and the tech lead.
+
+## Round 2: head **86816a18** (Devin rounds 1–3, my m1–m4, breaker B1, M1, m1–m5, m8)
+I reviewed `git diff c841b8c9 86816a18`.
+* **Suites:** engine **46/46**; API **48/48** on a fresh isolated copy (:4471), stopped and dropped afterwards.
+* **Probes:** a scratch script calling `statesValue`, `publishedNumbers` and `SourceEntryBody` directly, kept outside the repo.
+* **Fixed:**
+  * m1: no `as never`.
+  * m2: `contracts/source-register.ts` and `SourceEntryBody`, with no old name left.
+  * m3: line 201 uses the re-imported id and requires 409 "source-backed".
+  * m4: engine checks 182–183 on `isDemoSnapshot`.
+  * B1: a date with a time or a trailing space is the same published date.
+  * The Sample seed refuses a retired combination (409, writes nothing) and writes nothing outside the demo workspace (m8).
+
+### Verdict (86816a18): **Block**. One Major, no Blocker. Journey score **8.8/10** (7 of 8 applicable: correct data drops to ½).
+
+### Major
+**MJ-R2 · `statesValue` refuses every true citation that groups its thousands, which pushes the author toward a false "None published".** *Must.*
+* **Where:** `engine/source-register.ts:261`, used by `statesValue` (`:275`) on every cited PUT. The lookbehind `(?<![\d.,])` and the plain digit match need the canonical digits unbroken.
+* **Probe:**
+  * `"Proof of funds of $14,690 …"` does not state 14690;
+  * `"CAN$1,085 per person"` does not state 1085;
+  * `"1 000 dollars"` does not state 1000.
+* **Why it matters:**
+  * IRCC writes money with a comma. Concept BR-5 itself names 13757 as a value.
+  * For any funds or income threshold in a condition, the author can never cite IRCC's own words, and the only other answer, "None published – set by ExpatReady", would be untrue (D18, P-170).
+  * The demo's 27 numbers are all below 1000, so no suite sees it.
+* **Fix:** accept the canonical digits written with thousands groups (`,`, space, NBSP or thin space between groups of three), with or without a currency sign.
+* **Tests:**
+  * a pass for "$14,690" and 14690;
+  * a fail for "$14,690" and 1469;
+  * a fail for "14,6900".
+
+### Answers to the three questions
+1. **The "in"-list address `<field>|in|<k>.<place>` is safe, but it does not stay put.**
+   * It fails closed. Inserting 17 at the front of [18,19,20] lists 17, 18 and 19 as changed and 20 as missing. Removing 18 lists 19 and 20 as changed. Reordering lists every value. An entry can only pass again when its place holds the same value on the same field.
+   * Text codes, booleans and 0 stay out, which matches runtime `in`, a strict `includes` (`contracts/rules.ts:131`).
+   * It is **not stable**: one insertion asks again for every source after it. That contradicts the spirit of BR-2 ("address by meaning; the JSON path is only a hint").
+   * The list is a set at runtime, so the address could carry the value instead (`<field>|in|<k>=<value>`). Then an added or removed value moves only itself.
+   * **Minor r2-1:** the tech lead chooses. Either way, add the address to concept BR-2. Also, the words "Age years: exactly 18" would read better as "one of 18, 19, 20".
+2. **`statesValue`: it refuses true citations too often in one class (MJ-R2) and now and then in others (Minor r2-2, for the tech lead):**
+   * **Unit conversions:** "valid for at least one year" can never state a rule stored as 12 months. There is no honest way to cite it.
+   * **Numbers over 99 in words:** "one hundred and eighty days".
+   * **Date forms:** "June 07, 2019", "Jun. 7, 2019", "November 1st, 2024".
+   * **The other way, it is permissive:** "section 90 of the Act" states 90; "one of the following" states 1. It is a guard, not a proof; the expert's sign-off of the Source lines remains the check.
+   * Everything else I tried behaved as written:
+     * 21, written "twenty-one" or "twenty one", in any case;
+     * "21-year-old", "18th", "18+", "under 18.";
+     * "six (6) months";
+     * "between two and five" (states both 2 and 5);
+     * "twenty-one" never states 20; "five hundred" and "fifty-five" never state 5.
+3. **The new limits do not all speak §5's words (Minor r2-3).**
+   * The https, quote and future-date messages are §5's own words. The quote refusal "These words do not state 90. Copy the words that state the number." extends §5's sentence.
+   * **But** a reason over 500 characters, or one with no letter or digit (ten NBSPs, ten emoji), answers "Say why ExpatReady set this number (at least 10 characters)." That is wrong for the 600-character case.
+   * A date read of 1989-05-01 answers "Give the date read as a date (YYYY-MM-DD)." although it is one.
+   * **Fix:** give each new limit its own words in `SOURCE_WORDS`, and add them to concept §5. For example: "Keep the reason to 500 characters." and "The date read cannot be before 1990."
+   * The database has no maximum on the reason, which is consistent (the API is stricter).
+* **Minor r2-4:** the URL check still accepts `https://user:pw@evil.example.com/x` and `https://10.0.0.1/x`. PR 2b will show this address as a link, so refuse a user name, a password or an IP host there.
+
+### To fix for Approve
+* MJ-R2, with its tests.
+* r2-1 to r2-4: fix, or list them in the PR for the tech lead.
