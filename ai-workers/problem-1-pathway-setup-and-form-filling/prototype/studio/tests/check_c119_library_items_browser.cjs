@@ -82,8 +82,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await axe("Document types, a refused Retire");
     await p.locator("[data-item-panel]").getByRole("button", { name: "Close" }).click();
     // Review Ma1: on Document types the first button is View (no page of its own) and opens where used and history only.
+    // Nightly 41365074483 (Mac): the where-used panel shows at once with a loading skeleton; History arrives with the
+    // answer. The uses answer is held back 1.5 s here (as on a slow machine), and the step waits for History first.
+    const slow = async (r) => { await new Promise((s) => setTimeout(s, 1500)); await r.continue(); };
+    await p.route("**/uses", slow);
     await first.locator("[data-edit]").click();
     await p.locator("[data-item-view] [data-where-panel]").waitFor({ timeout: 15000 });
+    await p.locator("[data-item-view]").getByText(/^(History|No history yet\.)$/).first().waitFor({ timeout: 15000 });
+    await p.unroute("**/uses", slow);
     step("C11.9 Ma1 pass: View on a document type opens where it is used and its history, with no action to send", (await first.locator("[data-edit]").innerText()).startsWith("View") && (await p.locator("[data-item-view]").count()) === 1 && (await p.locator("[data-impact-panel], [data-confirm-send]").count()) === 0 && /History|No history yet/.test(await p.locator("[data-item-view]").innerText()));
     await p.keyboard.press("Escape");
     await p.waitForFunction(() => !document.querySelector("[data-item-panel]"), null, { timeout: 5000 });

@@ -37,6 +37,26 @@ export function savedReading(officialFile: string | null, where: { runs?: string
   }
   return null;
 }
+/** BR-10 (C4.11 part 4c): the newest saved real reading of this checklist FILE whose text checksum is no longer the
+ *  file's (a newer edition replaced the text), or null. It is never replayed (savedReading matches checksums only); it
+ *  is named so a plan can say the saved result is out of date instead of "none". */
+export function staleReading(officialFile: string | null, where: { runs?: string; root?: string } = {}): { runFile: string; sha256: string } | null {
+  if (!officialFile) return null;
+  const inventory = inventoryOf(officialFile), RUNS = where.runs ?? RUNS_DIR;
+  let now = ""; try { now = createHash("sha256").update(readFileSync(join(where.root ?? SOLUTION, inventory))).digest("hex"); } catch { return null; /* #397 m1: the text is not on this computer, so nothing can be said to be of an earlier text */ }
+  let files: string[]; try { files = readdirSync(RUNS).filter((f) => /-requirements-live-.*\.json$/.test(f)).sort().reverse(); } catch { return null; }
+  let stale: { runFile: string; sha256: string } | null = null;
+  for (const f of files) {
+    let d: { caller?: unknown; contract_valid?: unknown; drafting_run?: { kind?: unknown; inputs?: { official_files?: { file?: unknown; sha256?: unknown }[] } } };
+    try { d = JSON.parse(readFileSync(join(RUNS, f), "utf8")); } catch { continue; }
+    if (d?.caller !== "live" || d?.contract_valid !== true || d?.drafting_run?.kind !== "requirements") continue;
+    const read = (d.drafting_run.inputs?.official_files ?? []).find((x) => x?.file === inventory);
+    if (!read || typeof read.sha256 !== "string") continue;
+    if (read.sha256 === now) return null; // a reading of the current text exists: nothing is out of date
+    stale ??= { runFile: `prototype/p2/runs/${f}`, sha256: read.sha256 };
+  }
+  return stale;
+}
 const str = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 
 export type ReadLine = RequirementProposal & { condition_plain: string | null; condition_tree: unknown; provided_by: string; quote: string; reason: string | null };
