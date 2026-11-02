@@ -192,6 +192,12 @@ const nearFull = (reason: string) => check([{ ...travelName, reason }], qa159).s
 ok("G-CORE R3 near fail (review r4-M1): a reason that only describes the item itself (its own name holds the near one's) does not count as naming it", nearFull("The full name as on travel document is asked on IMM 5604 box 2"));
 ok("G-CORE R3 near pass (review r4-M1): a reason that names the near field apart from the item's own name passes", !nearFull("Full name holds the name in daily use; IMM 5604 asks for the name exactly as printed on the travel document"));
 ok("G-CORE R3 near fail: the item's own key in the reason does not count either", nearFull("person.full_name_as_on_travel_document is asked on IMM 5604"));
+ok("G-CORE R3 near fail (review r5-m1): the own name with commas or extra spaces still does not count", nearFull("The Full  Name, as on travel document, is asked on IMM 5604 box 2"));
+const birth = ctx({ pendingNew: [{ key: "person.birth_place", name: "Birth place" }] });
+const mother = (reason: string): ChangeItem => ({ action: "accept_proposal", kind: "field", key: "person.mother_birth_place", name: "Birth place of mother", valueType: "text", aliases: [], source: src, reason });
+const nearBirth = (reason: string) => check([mother(reason)], birth).some((p) => p.rule === "R3" && /is close to Birth place/.test(p.message));
+ok("G-CORE R3 near fail (review r5-m1): words that only contain the near name (\"rebirth places\" for \"Birth place\") do not name it", nearBirth("From the rebirth places register on IMM 5406"));
+ok("G-CORE R3 near pass (review r5-m1): naming the near field as words, with punctuation around it, passes", !nearBirth("Not Birth place (the person's own): the mother's, from IMM 5406"));
 ok("G-CORE R3 near pass: a new field near nothing passes", !rules([height]).includes("R3"));
 ok("G-CORE tier: a near-duplicate new field is never direct (a new item waits for a second person)", riskOf([travelName], "ai", new Set()).tier === "second_person");
 // ───────── STANDARDS §7 properties
