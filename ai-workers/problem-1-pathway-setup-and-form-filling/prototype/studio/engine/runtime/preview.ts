@@ -74,7 +74,7 @@ export function previewFamily(s: Snapshot, family: FamilyKey | "", person: strin
   // Lead Q2: the client view skips a fact a document supplies when that document is needed from its holder for this family
   // (the holder, or the partner for a partner's fact); otherwise the question is the fallback and is asked (P-130).
   const fromDocument = (subjectId: string, fact: string): string | null => {
-    const f = sources.get(`${roleOf(subjectId)}|${fact}`);
+    const f = sources.get(sourceKey(roleOf(subjectId), fact));
     if (f?.source !== "DOCUMENT" || !f.document) return null;
     const key = f.document.key, name = f.document.name;
     if (!(docFacts.get(subjectId)?.get(fact) ?? []).some((x) => x.key === key)) return null;
@@ -117,7 +117,7 @@ export function previewFamily(s: Snapshot, family: FamilyKey | "", person: strin
   const formDef = new Map((s.forms as { form_number: string; who: string; condition?: { subjectKind?: string } | null }[]).map((f) => [f.form_number, f]));
   const groupOf = (form: string, ch: Channel): OutputGroup => { const d = formDef.get(form); return d?.who === "case" || d?.condition?.subjectKind === "CASE" ? "APPLICATION" : d?.who === "couple_once" ? "COUPLE" : ch; };
   const fromWords = (subjectId: string, fact: string, collected: string) => {
-    const f = sources.get(`${roleOf(subjectId)}|${fact}`);
+    const f = sources.get(sourceKey(roleOf(subjectId), fact));
     if (!f) return collected === "client_questionnaire" || collected === "profile_record" ? SOURCE_WORDS.CLIENT : SOURCE_WORDS.AGENT;
     return f.source === "DOCUMENT" ? `${SOURCE_WORDS.DOCUMENT} · ${f.document?.name ?? "a document"}` : SOURCE_WORDS[f.source];
   };

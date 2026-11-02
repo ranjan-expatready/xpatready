@@ -166,3 +166,42 @@ Reviewer role, fresh context. Row: SH3 follow-ups d1 + d2 (the tech lead's answe
 Could not check: c69's route part and CI on this commit.
 
 **Verdict: Approve** (62a89f22). No Blocker or Major is open; r4-m1 to r4-m4 are Minor.
+
+## Tidy-up (cacf7905)
+Reviewer role, fresh context. Row: SH3 tidy-up (shared service, no screen), `git diff origin/main...cacf7905`. Mutants ran in a throwaway worktree in the scratchpad, never in the working tree. No server, no port. No UI, so **the journey test does not apply**: I scored the code and the tests instead (below), and there is no separate report.
+* **Runs** (from `prototype/`): `check_sh3_resolver` **63/63**, `check_engine` 43/43, `check_screen01_rules` 67/0, `check_vv_checklist` 60/60, `check_forms_proposal_contract` 22/0. Also run: `check_line_holders` 19/19 and `runtime/check_case_engine` 69/69 (eligibility.ts changed). `tsc -p api/tsconfig.json`: no errors in any changed file.
+* **(1) No behaviour change: confirmed.** I read every replaced expression and ran an old-against-new harness: **33,174 comparisons, 0 differences**.
+  * `coverage.ts:35`: the filing branch comes first, so the resolver's own `FILING` branch is never reached. What is left is main's expression token for token: `find(id === about.split("/")[0])?.role ?? about`. That covers relatives (`A/parent_1` → A's role), an unknown key (the key itself), `case/x`, `/`, ids containing "/", and people whose role is "", null or undefined.
+  * `sourceKey(r, f)` is the same template behind a call. The arguments are evaluated in the same order. undefined, null, numbers, objects, "|" and "" stringify the same way. (A Symbol throws in both.) The four changed sites pass the same two arguments in the same order (`preview.ts:70`, `validate.ts:245` both maps, `pqr-picks.ts:83`, `coverage.ts:46`).
+  * `present` is moved unchanged and imported where it was a local copy. The harness covered 18 odd values, 0 differences.
+* **(2) The (c)/(d) text, line by line on cacf7905.** r4-m2's three points are fixed:
+  * `case-checklist.ts:126` is now in (c);
+  * `runtime.ts:269` says "with the placement" and `:310` "prefix only";
+  * `answer-keys.ts:105` is listed.
+  These are correct: render.ts :138 and :156, import.ts:41, proposals.ts:214, snapshot.ts:37. So are the (a)/(b) anchors, whose files are unchanged since the SH3 merge. Two points are wrong (M1, m1).
+* **(3) The new checks:** 16 mutants, 14 caught.
+  * Caught: each of the four templates put back; coverage's local roleOf put back; "the application" dropped; eligibility's local `present` put back; `present` accepting ""; `present = !!v`; roleOf's fallback set to ""; roleOf without the relative split; and the sourceKey format.
+  * render.ts:156 without its `case.` branch now fails **only** the split check, under its own r3-m1 label. **r4-m4 is fixed.** The always-filing mutant fails r2-m1's check and QA-149.
+  * Survived: `validate.ts` with sourceKey's arguments swapped (no pure suite reads the diff's `key`), and `preview.ts:77`'s reader changed (preview's tests need a server). Both gaps predate this PR; the second one is why M1 matters.
+  * The tidy-up checks are source regexes (m2). r4-m1 is left open, as stated.
+* **(4) Lift-ready (P-249): yes.** engine/resolver.ts still imports only `../contracts/resolver.ts` (line 6, and its check passes). The new export `present` is pure. coverage.ts → resolver.ts adds no cycle.
+
+**Major (fix before Approve)**
+* **M1. preview.ts is only half moved, and the contract and the check both say it is done.**
+  * `engine/runtime/preview.ts:70` now builds the `sources` map with `sourceKey`. But its two readers still type the template out: `:77` (`fromDocument`) and `:120` (`fromWords`), both `` sources.get(`${roleOf(subjectId)}|${fact}`) ``.
+  * Yet contract (d) says the template in runtime/preview.ts "moved". The check at `check_sh3_resolver.ts:170` says preview.ts "keep[s] no role|fact template". It passes because its regex only sees `${x.role}|${x.fact}` and `${role}|${b.fact}`.
+  * The risk is the drift SH3 exists to stop. If R8 changes (for example, a filing id is added under P-251/SH4), the writer follows and the two readers do not. Every Preview fact would then lose its document or officer source, silently: mutant m16 survives every pure suite.
+  * Fix (no behaviour change): `sources.get(sourceKey(roleOf(subjectId), fact))` at :77 and :120. Widen the check to `/\$\{[^}]*role[^}]*\}\|\$\{/` over the four files. On cacf7905 that regex matches exactly preview.ts:77 and :120, and nothing else.
+
+**Minor**
+* **m1. (d) cites `engine/runtime/case.ts:365`; the template is at `:378`** (`ticked`). It was already `:378` at the SH3 merge (332f2c4d), so the round-1 number was wrong from the start. Also, the block's header still reads "file:line on SH3's merge with main", but (c) now cites post-d2 lines (case-checklist.ts:126 was :124 there). Fix: `:378`, and "file:line on cacf7905" (or on the merge of this PR).
+* **m2. Not in the inventory:** runtime-people copies of R4 keyed on `subjectId`, namely `roleOf` and `partnerOf` at `runtime/preview.ts:71`, `:73`, and `roleOf` at `runtime/case.ts:379` (L1's file). Either list them under (d) or say why they are not copies. This is text only; no new move is asked.
+* **m3. The r4-m3 check's title** says "one rule for what counts as an answer". It covers eligibility only, which was r4-m3's scope and is fine. But the same predicate is still typed out in `contracts/runtime.ts:76` (answer input) and `runtime/team.ts:89`. Either narrow the title to eligibility or name those two places in (d).
+
+**Score of the code and tests: 8/10.**
+* 1 each: next step obvious, plain words, feedback (r4-m4 split, each check names its rule), correct data (0 differences), edge cases, fit and portability, speed.
+* ½ each: task completed (M1), code quality (the half move, and source-regex checks), trust and sources (the (d) claim and the line number, M1 and m1).
+
+Could not check: preview's server-backed suites (`check_preview_sets`), CI on this commit, and `graph.mjs` (it writes `qa/graph.json`; this row adds no page or route).
+
+**Verdict: Block** (cacf7905). To fix: **M1**, the two preview.ts readers through `sourceKey` and a check that sees them. m1 to m3 may ride along.
