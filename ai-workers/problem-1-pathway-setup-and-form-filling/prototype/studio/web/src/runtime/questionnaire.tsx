@@ -401,7 +401,7 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
       </div>
       {people.map(([id, label]) => (
         <section key={id} aria-labelledby={`p-${id}`}>
-          <h2 id={`p-${id}`} className="mb-2 text-base font-semibold [overflow-wrap:anywhere]">{label === "The application" ? "About the application" : `About ${label}`}</h2>
+          <h2 id={`p-${id}`} className="mb-2 text-base font-semibold [overflow-wrap:anywhere]">{label === "The application" || label === "The representative" ? `About ${label.replace(/^The /, "the ")}` : `About ${label}`}</h2>
           <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface-raised">
             {parts.map((s, i) => [s, i] as const).filter(([s]) => s.subjectId === id).map(([s, i]) => {
               const st = partState(s, passed, view.checks);

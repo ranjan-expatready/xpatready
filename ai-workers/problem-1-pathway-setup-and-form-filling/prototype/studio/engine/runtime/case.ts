@@ -294,7 +294,7 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
       answer: group ? null : one(current.find((a) => !a.rowKey)),
       rows: group ? live.map((x, i) => ({ row: x.rowKey, index: i, fits: q.rows.length ? i < q.rows.length : true, answer: one(current.find((a) => a.rowKey === x.rowKey)) })) : [],
       options,
-      note: !options && (q.value_type === "code" || q.value_type === "country" || q.value_type === "multi_choice") ? "No answer list yet (forms slice 2): the officer checks this answer before confirming the section." : null,
+      note: !options && (q.value_type === "code" || q.value_type === "country" || q.value_type === "multi_choice") ? "No list of choices yet: check this answer before confirming the section." : null,
       fills: [...(fills.get(`${q.about}|${q.fact}`)?.values() ?? [])],
       countries: !options && (q.value_type === "country" || q.value_type === "address") ? countries : null,
     };

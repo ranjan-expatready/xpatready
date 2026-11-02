@@ -182,6 +182,8 @@ type Box = { box: string; fact: string | null; result: string; why: string | nul
   // An entry needs "none apply" taken back first (the API refuses a row while it stands): either step dates the copy.
   const eduSec = (await view()).find((x) => x.subjectId === P && x.section === "education_history");
   const undo = await call("PUT", `/runtime/cases/${caseId}/groups/${P}/education_history/none-apply`, { noneApply: false, expectedId: eduSec?.group?.none_apply?.id ?? null }, OFFICER);
+  const withdrawn = (await call("GET", `/runtime/form-copies/${copyId}`, undefined, OFFICER)).body;
+  ok("C7.2 cause 3 fail (review of #414 m2): \"none apply\" taken back alone already makes the copy that says \"N\" out of date", undo.status < 300 && withdrawn?.out_of_date === true, { undo: undo.status, out_of_date: withdrawn?.out_of_date, changed: withdrawn?.changed });
   const row = await newRow(P, "education_history");
   failed.length = 0; await put(P, "person.education_institution", "SAMPLE UNIVERSITY", row);
   const later = (await call("GET", `/runtime/form-copies/${copyId}`, undefined, OFFICER)).body;
