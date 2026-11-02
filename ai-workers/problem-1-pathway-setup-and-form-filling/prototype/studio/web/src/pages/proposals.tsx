@@ -145,7 +145,7 @@ function UndoBar({ batchId, n, until, onGone }: { batchId: string; n: number; un
 function Reading({ label, r, rules = false }: { label: string; r: QueueProposal["readings"]["draft"]; rules?: boolean }) {
   return (
     <div className="rounded-lg border border-border bg-surface px-3 py-2">
-      <p className="text-xs font-medium text-text-muted">{label}{r ? ` · ${rules ? "rules, US$0" : r.from === "live" ? "live" : "saved run"}` : ""}</p>
+      <p className="text-xs font-medium text-text-muted">{label}{r ? ` · ${rules ? "rules, US$0" : r.from === "live" ? "Live" : "Saved"}` : ""}</p>
       <p className="mt-0.5 text-sm">{r ? r.text || "No words given." : "No reading."}</p>
     </div>
   );
