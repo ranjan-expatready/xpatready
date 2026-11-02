@@ -109,6 +109,6 @@ D1 3/5: four scopes shaped, person and filing built, but filing misdescribed (M1
   * r2-m1. Two render.ts call-site swaps still survive every pure suite: `render.ts:156` (the answered-decider key) and `:236` (the placements loop's `isFilingFact(p.fact, p)`). Both are provably the main expression. Fix: one check each, e.g. an answered `person.flag` placed once_per_case stays keyed on the person, and a once_per_case placement is asked once, on "case".
 * **Score of the code and tests: 9.5/10.** "Next step obvious", "plain words" and "trust and sources" move to 1: M3 rows can now see what is built, what is held and what is still outside the resolver. "Task completed" stays at ½ for r2-m1.
 
-* **Head moved to cc52f0b1.** It changes only `tests/check_sh3_resolver.ts:70-72`: the R6 fixture values "Ann", "Ben" and "Pat" become "principal-name", "partner-name" and "parent-name" (AGENTS rule 5). The values stay distinct, so R6 still tells the people apart. 54/54 on cc52f0b1, and both R6 mutants are still caught.
+* **Head moved to cc52f0b1.** It changes only `tests/check_sh3_resolver.ts:70-72`: the three personal names in the R6 fixture values become "principal-name", "partner-name" and "parent-name" (AGENTS rule 5). The values stay distinct, so R6 still tells the people apart. 54/54 on cc52f0b1, and both R6 mutants are still caught.
 
 **Verdict: Approve** (cc52f0b1, and c00868d7 before it). No Blocker or Major is open; r2-m1 can follow.
