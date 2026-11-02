@@ -170,6 +170,7 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
       <div className="flex flex-col gap-4 text-sm">
         {p.reason ? <Notice tone={p.band === "decide" ? "danger" : "warn"} title="Why a person looks">{p.reason}</Notice> : null}
         {p.meaning ? <section><h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted">What it means</h3><p className="mt-1">{p.meaning}</p></section> : null}
+        {p.values?.length ? <section aria-label="Answer values" data-answer-values><h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted">Answer values · {p.values.length}</h3><ul className="mt-1 list-disc pl-5">{p.values.map((v) => <li key={v.code}>{v.label}</li>)}</ul></section> : null}
         <section aria-label="Both readings">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted"><Tip tip="AI reads the source twice: a first reading, then a checker that has not seen it. Items from the rules have no AI reading." focusable><span>Both readings</span></Tip> · {p.agreement_word}</h3>
           <div className="mt-1 grid gap-2">
