@@ -81,9 +81,16 @@ export class Runs {
    *  could not draft: the link opens that form's Draft dialog on the Forms tab, already on Saved (US$0). */
   private async savedInstead(b: AiBatch & { jobs: DraftingJob[] }): Promise<{ label: string; href: string } | null> {
     if (b.operation !== "draft_field_maps" || b.mode !== "LIVE") return null;
-    for (const j of b.jobs.filter((x) => x.kind === "field_map" && ["FAILED", "BLOCKED", "CANCELLED"].includes(x.status) && x.attachmentId && x.combinationId)) {
+    // Review M1: only a form that itself ran Live (a Live run can use a Saved result for a form, A3); review m2: a failed
+    // form before a stopped one; with several forms the label names the form.
+    const order = ["FAILED", "BLOCKED", "CANCELLED"];
+    const failed = b.jobs.filter((x) => x.kind === "field_map" && x.mode === "LIVE" && order.includes(x.status) && x.attachmentId && x.combinationId).sort((x, y) => order.indexOf(x.status) - order.indexOf(y.status));
+    const many = b.jobs.filter((x) => x.kind === "field_map").length > 1;
+    for (const j of failed) {
       const o = await this.sources.draftOptions(j.attachmentId!).catch(() => null);
-      if (o?.saved_runs.some((r: { valid?: boolean }) => r.valid)) return { label: "Use Saved (US$0)", href: `/c/${j.combinationId}/forms?draft=${j.attachmentId}` };
+      if (!o?.saved_runs.some((r: { valid?: boolean }) => r.valid)) continue;
+      const form = many ? (await this.db.sourceAttachment.findUnique({ where: { id: j.attachmentId! }, select: { edition: true, fileName: true } }).catch(() => null)) : null;
+      return { label: form ? `Use Saved for ${(form.edition ?? form.fileName).replace(/\s*\(.*$/, "")} (US$0)` : "Use Saved (US$0)", href: `/c/${j.combinationId}/forms?draft=${j.attachmentId}` };
     }
     return null;
   }

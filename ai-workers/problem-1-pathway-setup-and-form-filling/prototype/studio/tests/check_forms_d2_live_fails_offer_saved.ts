@@ -29,10 +29,10 @@ const words = (r: { body: J }) => String(r.body?.detail ?? r.body?.message ?? ""
   ok("setup: Visitor visa's IMM 5257 has a valid saved result (Saved can be offered) and is not in the library (so it is drafted, not reused)", saved > 0 && sql(`select status from source_attachment where id='${att}'`) !== "IN_LIBRARY", saved);
   const spentBefore = sql("select coalesce(sum(cost_usd),0) from drafting_job");
 
-  const runOf = async (mode: "LIVE" | "REPLAY") => {
+  const runOf = async (mode: "LIVE" | "REPLAY", draftAgain = true) => {
     const scope = { kind: "source", ids: [att] };
-    const plan = (await call("POST", "/ai/plan", { scope, mode, draftAgain: true })).body;
-    const r = await call("POST", "/ai/batches", { scope, mode, draftAgain: true, planSha256: plan.plan_sha256, idempotencyKey: `d2p4-${mode}-${Date.now()}`, ...(plan.cost_check?.override_needed ? { override: true } : {}) });
+    const plan = (await call("POST", "/ai/plan", { scope, mode, draftAgain })).body;
+    const r = await call("POST", "/ai/batches", { scope, mode, draftAgain, planSha256: plan.plan_sha256, idempotencyKey: `d2p4-${mode}-${Date.now()}`, ...(plan.cost_check?.override_needed ? { override: true } : {}) });
     const id = r.body?.id ?? r.body?.batchId ?? r.body?.batch?.id;
     if (!id) return { r, view: null as J | null };
     let view: J = {};
@@ -46,6 +46,12 @@ const words = (r: { body: J }) => String(r.body?.detail ?? r.body?.message ?? ""
   // Fail: a Saved run that fails does not offer Saved again.
   const replay = await runOf("REPLAY");
   ok("D2 P-227 fail: a failed Saved run does not offer Saved again (its own next step stays)", !!replay.view?.error && replay.view.error.next?.label !== "Use Saved (US$0)", [replay.r.status, words(replay.r), replay.view?.error]);
+  // Review M1: a Live run that used the Saved result for this form (A3: draft again off reuses the saved answer) and failed
+  // does not offer Saved again.
+  const reused = await runOf("LIVE", false);
+  const jobMode = reused.view ? sql(`select mode from drafting_job where batch_id='${reused.view.id}' and kind='field_map' limit 1`) : "";
+  ok("setup: with draft again off, the Live run used the Saved result for IMM 5257 (its step ran as Saved)", jobMode === "REPLAY", [reused.r.status, words(reused.r), jobMode]);
+  ok("D2 P-227 fail (review M1): a Live run whose form already used Saved, and failed, does not offer Saved again", !!reused.view?.error && reused.view.error.next?.label !== "Use Saved (US$0)", reused.view?.error);
   ok("D2: no model call, US$0 (the fault stops the form before any launcher)", sql("select coalesce(sum(cost_usd),0) from drafting_job") === spentBefore);
 
   // Browser: the link opens the form's Draft dialog, on Saved.
