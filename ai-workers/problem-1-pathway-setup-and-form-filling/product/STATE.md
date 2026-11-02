@@ -27,6 +27,20 @@ M2 **34/56 Works** · 8 built, awaiting qa · 14 partial. R1 6/8 (C4.4 built; C7
 * **Full run red** (run 41365074483 on b1a662cd): c44 (#395 merged) and c119 (#394 merged) are fixed; c1116 fix #398 is queued. After it merges, run `gh workflow run nightly.yml --ref main` and judge by its conclusion. GitHub skipped the 21:00 UTC schedule on 1 Nov.
 * Still quarantined: `check_forms_c36_rule_facts_browser.cjs` (C3.6 focus check; its fix row is open).
 
+## Founder asks (P-228 (9): kept here until answered or done; never dropped silently)
+| # | Ask (2 Nov) | Status | Owner |
+|---|---|---|---|
+| A1 | Honest end-to-end progress report | done: `reports/night-2026-11-01-02.md` v2 | Lead |
+| A2 | 24-hour plan for every open capability, M3 prerequisites, parallel sessions | done: `reports/plan-24h-2026-11-02.md` | Lead |
+| A3 | Reset to the six; saved AI results survive every reset (P-226) | building (D1) | runtime-2 |
+| A4 | Live or Saved at every AI step; Saved only after verification (P-227) | after D3 (D2) | forms-1 |
+| A5 | Visitor visa configured end to end with AI, saved for demos (D3, QA-144) | spend plan awaited; R-146 approved | forms-1, Lead verifies |
+| A6 | Six combinations checked against canada.ca and fixed | checked (about 70%, *estimate*); fixes routed | screens-1 |
+| A7 | Reuse earlier POCs (p1–p5, E1, expected/, research notes) before building | routed to every builder; C7.2 reuses E1 IMM 5257 | all |
+| A8 | Root causes of drift, dropped asks and not listening, plus mitigations | answered 2 Nov ~04:40 UTC; fixes in the lead skill and here | Lead |
+| A9 | A fresh Lead session runs the next 24 hours | later today (founder) | Lead |
+| A10 | Morning report of AI spend and progress | daily | Lead |
+
 ## Decisions waiting for the founder (detail in the night report §7)
 1. ~~Paid replay trials~~ **Decided: P-225** (2 Nov), a standing budget of up to US$20 a day for library drafting runs. Each run needs the Lead's "Go" after its cost is stated in the PR; the Lead reports spend every morning. R-146 (8 forms' field maps, up to US$45) still needs the founder's own Go.
 2. C6.9 concept (approved overnight under P-223 (4)): Q1 disclaimer on the release (amends P-77 (2)), Q2 any staff may override or review in M3, Q3 fail vs missing (recommend "Not eligible, also needs …").
