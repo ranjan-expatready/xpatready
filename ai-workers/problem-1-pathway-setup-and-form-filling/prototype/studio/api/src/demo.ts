@@ -70,6 +70,12 @@ export class Demo {
     // never a half-load and a 500.
     if (this.loading) fail("The sample inputs are already loading: wait for them to finish.", HttpStatus.CONFLICT);
     this.loading = true;
+    try { return await this.loadClaimed(actor, workspaceId, configured, six); } finally { this.loading = false; }
+  }
+  private loading = false;
+
+  /** The load itself, once the one-load-at-a-time claim is held (by load, or by resetToSix for its whole run). */
+  private async loadClaimed(actor: Actor, workspaceId: string, configured: boolean, six: boolean, again = "Reset the demo, then load again.") {
     const t0 = Date.now();
     const log: string[] = [];
     try {
@@ -81,11 +87,32 @@ export class Demo {
       // A problem response (a service's own words in an object) is told in those words, never "Http Exception".
       const said = e instanceof HttpException ? (e.getResponse() as { detail?: string; message?: string | string[] }) : null;
       if (said && typeof said === "object" && (said.detail || said.message)) (e as Error).message = String(said.detail ?? [said.message].flat().join("; "));
-      await this.audit.log(workspaceId, actor.id, "failed", "sample inputs", null, `Loading the sample inputs stopped: ${(e as Error).message.slice(0, 300)}`, { log });
-      fail(`Loading stopped after: ${log.slice(-1)[0] ?? "the start"}. Reason: ${(e as Error).message.slice(0, 240)}. Reset the demo, then load again.`, HttpStatus.INTERNAL_SERVER_ERROR);
+      // D1 review (m1): only a service's own words reach the person; anything else (a database or file error, with its
+      // code locations and server paths) goes to the server log, and the person reads plain words.
+      if (!said) console.error(`[demo] loading the sample inputs stopped after: ${log.slice(-1)[0] ?? "the start"}`, e);
+      const reason = said ? (e as Error).message.slice(0, 240) : "an unexpected error on the server (the details are in the server log)";
+      await this.audit.log(workspaceId, actor.id, "failed", "sample inputs", null, `Loading the sample inputs stopped: ${reason}`, { log }).catch(() => undefined); // the workspace may be gone (a reset meanwhile)
+      fail(`Loading stopped after: ${log.slice(-1)[0] ?? "the start"}. Reason: ${reason}. ${again}`, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  /** D1 (P-226) "Reset to the six": one action, one confirmation. Empties all configuration exactly as Reset does (the
+   *  same code), then loads the six P-148 combinations exactly as Load sample "six" does (the same code). Saved AI
+   *  results are files Reset never touches (preserved(), checked byte-identical), so the six's saved answers replay.
+   *  One run at a time: the load's claim is taken before anything awaits, so a second click or a Load sample meanwhile
+   *  is refused (409). A failure in the reset part changes nothing (one transaction); a failure in the load part leaves
+   *  the configuration emptied with part of the six, and its message says so: choosing Reset to the six again starts clean. */
+  async resetToSix(actor: Actor, confirm: unknown) {
+    need(actor, "author");
+    if (confirm !== "RESET") fail("Type RESET to confirm.");
+    if (this.loading) fail("Reset to the six or a sample load is already running: wait for it to finish.", HttpStatus.CONFLICT);
+    this.loading = true;
+    try {
+      const reset = await this.wipe(actor);
+      const six = await this.loadClaimed(actor, await this.ws.id(), false, true, "The configuration was emptied but the six did not fully load: choose Demo › Reset to the six again to start clean.");
+      return { ...six, sample: "six", reset };
     } finally { this.loading = false; }
   }
-  private loading = false;
 
   private async loadSteps(actor: Actor, workspaceId: string, t0: number, log: string[]) {
     // The reviewed release as engine/import.ts reads it; the sample loader itself reads only its document lines (QA-115).
@@ -428,6 +455,15 @@ export class Demo {
   async reset(actor: Actor, confirm: string) {
     need(actor, "author");
     if (confirm !== "RESET") fail('Type RESET to confirm.');
+    // D1 break M1 (the one change to the blank Reset, P-226): it takes the same one-at-a-time claim as Load sample and
+    // Reset to the six, so it never empties a workspace that a load is still writing to (rows of a deleted workspace).
+    if (this.loading) fail("A sample load or Reset to the six is running: wait for it to finish, then reset.", HttpStatus.CONFLICT);
+    this.loading = true;
+    try { return await this.wipe(actor); } finally { this.loading = false; }
+  }
+
+  /** Reset's work, once the one-at-a-time claim is held (by reset, or by resetToSix for its whole run). */
+  private async wipe(actor: Actor) {
     const workspaceId = await this.ws.id();
     this.ai.forgetQueue(); // queued AI steps of this workspace must not start; running ones find their rows gone and stop
     const before = { scope: await this.scope(workspaceId), preserved: this.preserved() };
@@ -455,6 +491,7 @@ export class Demo {
       // L9: and any left by a reset made before this fix.
       await tx.$executeRaw`DELETE FROM person_role r WHERE NOT EXISTS (SELECT 1 FROM workspace w WHERE w.id = r.workspace_id)`;
     });
+    await this.sweepOrphans();
     const dir = VAR("demo");
     if (dir.startsWith(join(VAR_ROOT, "workspaces")) && existsSync(dir)) rmSync(dir, { recursive: true, force: true });
     this.ws.forget();
@@ -466,6 +503,21 @@ export class Demo {
     appendFileSync(join(VAR_ROOT, "reset-log.jsonl"), JSON.stringify({ at: new Date().toISOString(), by: actor.id, old_workspace: workspaceId, ...result, removed: before.scope.rows }) + "\n");
     await this.audit.log(fresh, actor.id, "reset", "demo workspace", null, `${actor.name} reset the demo: ${result.removed_rows} rows and ${result.removed_files} working files removed; ${result.remaining_rows} rows remain; preserved evidence ${unchanged ? "byte-identical" : "CHANGED"} (${after.preserved.map((p) => p.files).reduce((a, b) => a + b, 0)} files fingerprinted)`, result);
     return result;
+  }
+
+  /** D1 break M1: rows of a workspace that no longer exists (left by a reset that raced a load before the claim above),
+   *  in every table with a workspace id, read from the database's own column list. A row another table still points at
+   *  is removed on a later pass, once that row is gone; one query per table per pass, normally one pass and no rows. */
+  private async sweepOrphans() {
+    const tables = (await this.db.$queryRaw<{ t: string }[]>`SELECT table_name AS t FROM information_schema.columns WHERE table_schema = current_schema() AND column_name = 'workspace_id' AND table_name <> 'workspace'`).map((r) => r.t);
+    for (let pass = 0, left = tables; pass < 4 && left.length; pass++) {
+      const blocked: string[] = [];
+      for (const t of left) {
+        try { await this.db.$executeRawUnsafe(`DELETE FROM "${t.replace(/"/g, "")}" x WHERE NOT EXISTS (SELECT 1 FROM workspace w WHERE w.id = x.workspace_id)`); }
+        catch { blocked.push(t); } // still pointed at by an orphan row elsewhere: tried again on the next pass
+      }
+      left = blocked;
+    }
   }
 
   actors() { return ACTORS; }
