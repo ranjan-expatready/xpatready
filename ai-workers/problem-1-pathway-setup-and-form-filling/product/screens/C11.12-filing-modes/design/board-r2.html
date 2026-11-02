@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Filing per role</title>
+<style>
+  :root {
+    --primary: #0862c5; --primary-50: #e6f4ff; --text: #2d2d2d; --muted: #5b6673; --border: #dde3ea; --border-strong: #b8c3cf;
+    --surface: #ffffff; --page: #f4f6f8; --warn: #9a4a00; --warn-bg: #fff4e6; --danger: #b42318; --ok: #1f7a3a; --ok-bg: #e8f6ec; --slate: #37506e;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--text); font: 14px/1.45 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header.shell { background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 16px; display: flex; gap: 10px; align-items: center; }
+  .logo { width: 22px; height: 22px; border-radius: 6px; background: var(--primary); }
+  .shell b { font-size: 14px; } .shell span { color: var(--muted); font-size: 12px; }
+  main { max-width: 1120px; margin: 0 auto; padding: 16px; }
+  .note { font-size: 12px; color: var(--muted); margin: 0 0 16px; }
+  h1 { font-size: 18px; margin: 4px 0 2px; } h2 { font-size: 16px; margin: 0; } h3 { font-size: 14px; margin: 0 0 6px; }
+  .trail { font-size: 12px; color: var(--muted); }
+  .frame { margin: 20px 0 8px; font-size: 12px; font-weight: 600; color: var(--slate); text-transform: uppercase; letter-spacing: .04em; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .cardhead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .i { display: inline-flex; width: 16px; height: 16px; border: 1px solid var(--border-strong); border-radius: 50%; font-size: 10px; align-items: center; justify-content: center; color: var(--muted); cursor: help; }
+  .btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 6px 12px; font: inherit; color: var(--text); }
+  .btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .pill { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+  .pill.sample { background: #f1f3f5; } .pill.warn { color: var(--warn); background: var(--warn-bg); border-color: #ffd29a; }
+  .pill.ok { color: var(--ok); background: var(--ok-bg); border-color: #b9e2c4; } .pill.rules { color: var(--slate); }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 12px; font-weight: 500; color: var(--muted); padding: 8px 10px 8px 0; border-bottom: 1px solid var(--border); }
+  th u { text-decoration: underline dotted; text-underline-offset: 4px; }
+  td { padding: 9px 10px 9px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  .who { font-weight: 600; } .sub { font-size: 12px; color: var(--muted); }
+  .quote { font-size: 12px; color: var(--muted); max-width: 260px; }
+  select, input.n { font: inherit; border: 1px solid var(--border-strong); border-radius: 6px; padding: 5px 8px; background: var(--surface); color: var(--text); }
+  select:focus, input.n:focus, .btn:focus { outline: 2px solid var(--primary); outline-offset: 2px; }
+  input.n { width: 44px; text-align: center; }
+  .fixed { color: var(--text); } .muted { color: var(--muted); }
+  .warnline { margin-top: 4px; font-size: 12px; color: var(--warn); }
+  .err { margin-top: 4px; font-size: 12px; color: var(--danger); }
+  .preview { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
+  .gets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .filing { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; min-width: 170px; background: #fbfcfd; }
+  .filing b { display: block; font-size: 13px; } .filing .sub { margin-top: 2px; }
+  .submission { border: 1px dashed var(--border-strong); border-radius: 10px; padding: 8px; }
+  .submission > .sub { margin: 0 0 6px 2px; }
+  .lock { color: var(--slate); font-weight: 600; }
+  .folded { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; }
+  .states { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+  .state { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 13px; }
+  .state h3 { font-size: 12px; color: var(--slate); text-transform: uppercase; letter-spacing: .03em; }
+  .rules { font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .legend { font-size: 12px; color: var(--muted); }
+  /* Phone and 200 % zoom: each row becomes a card. */
+  @media (max-width: 760px) {
+    table, thead, tbody, tr, td { display: block; width: 100%; }
+    thead { position: absolute; left: -9999px; }
+    tr { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+    td { border: 0; padding: 4px 0; }
+    td[data-label]::before { content: attr(data-label); display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+    .quote { max-width: none; }
+  }
+</style>
+</head>
+<body>
+<header class="shell"><div class="logo" aria-hidden="true"></div><b>ExpatReady</b><span>Product Studio · Pathway Configurator</span></header>
+<main>
+  <p class="note">Board for C11.12 (filing mode per role). Static mock: nothing here saves. All people, counts and modes are Sample until the immigration expert confirms; IRCC quotes are from canada.ca pages read 2 Nov 2026.</p>
+
+  <!-- Frame 1: Visitor visa, editing -->
+  <div class="frame">1 · Visitor visa · editing</div>
+  <div class="trail">Programs › Visitors › Visitor visa › Forms</div>
+  <h1>Visitor visa</h1>
+  <div class="card">
+    <div class="cardhead">
+      <h2>Who can be in this application <span class="i" title="Sets which people a case may include, how many, and how each person's application is filed; each applicant gets their own forms, questions and documents.">i</span></h2>
+      <span><span class="pill rules">Rules</span> <span class="pill sample">Sample</span></span>
+    </div>
+    <table>
+      <thead><tr>
+        <th>Person</th><th><u title="The fewest and the most of this person a case may have. 0 to 1 means optional.">How many</u></th>
+        <th><u title="How this person's application goes to IRCC. Files own application: their own application, number and fee. On the principal's application: one application for the family; forms and fees repeat per person on it. Declared only: named on the principal's application but not accompanying; no fee.">Filing</u></th>
+        <th><u title="Who types this person's answers. The principal answers for a child under 18.">Answered by</u></th>
+        <th><u title="Worked out from the filing; amounts are on the fee table (Sample until the immigration expert confirms).">Fees</u></th>
+        <th><u title="The line in IRCC's guide this comes from.">IRCC's words</u></th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td data-label="Person"><span class="who">Principal applicant</span></td>
+          <td data-label="How many">Always 1</td>
+          <td data-label="Filing"><span class="fixed">Files own application</span><div class="sub">Always, for the principal</div></td>
+          <td data-label="Answered by">Themselves</td>
+          <td data-label="Fees">Own fees; the family maximum is paid on this filing</td>
+          <td data-label="IRCC's words" class="quote">"Family members must complete their own application forms." Guide 5256</td>
+        </tr>
+        <tr>
+          <td data-label="Person"><span class="who">Spouse or partner (travelling)</span><div class="sub">role: Spouse or partner</div></td>
+          <td data-label="How many"><input class="n" aria-label="Fewest spouse or partner" value="0"> to <input class="n" aria-label="Most spouse or partner" value="1"></td>
+          <td data-label="Filing">
+            <select aria-label="Filing for Spouse or partner">
+              <option selected>Files own application</option><option>On the principal's application</option><option>Declared only (not accompanying)</option>
+            </select>
+            <div class="sub">If not travelling: no filing</div>
+          </td>
+          <td data-label="Answered by">Themselves</td>
+          <td data-label="Fees">Own fees; covered by the family maximum when 5 or more apply together</td>
+          <td data-label="IRCC's words" class="quote">"This form must be completed by each person applying." Guide 5256</td>
+        </tr>
+        <tr>
+          <td data-label="Person"><span class="who">Child (travelling)</span><div class="sub">role: Child</div></td>
+          <td data-label="How many"><input class="n" aria-label="Fewest child" value="0"> to <input class="n" aria-label="Most child" value="4"></td>
+          <td data-label="Filing">
+            <select aria-label="Filing for Child">
+              <option>Files own application</option><option selected>On the principal's application</option><option>Declared only (not accompanying)</option>
+            </select>
+            <div class="warnline" role="status">Check this: Guide 5256 says family members complete their own application forms. You can still save.</div>
+          </td>
+          <td data-label="Answered by">Principal, under 18</td>
+          <td data-label="Fees">On the principal's filing</td>
+          <td data-label="IRCC's words" class="quote">"Family members must complete their own application forms." Guide 5256</td>
+        </tr>
+        <tr>
+          <td data-label="Person"><span class="who">Representative</span><div class="sub">never an applicant</div></td>
+          <td data-label="How many"><input class="n" aria-label="Fewest representative" value="0"> to <input class="n" aria-label="Most representative" value="1"></td>
+          <td data-label="Filing"><span class="muted">Files nothing</span></td>
+          <td data-label="Answered by">The firm</td>
+          <td data-label="Fees">No fee</td>
+          <td data-label="IRCC's words" class="quote">—</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="preview">
+      <h3>What a case gets <span class="sub">(preview: principal, spouse and 2 children)</span></h3>
+      <div class="gets">
+        <div class="submission"><div class="sub">One submission, sent together · family maximums apply</div>
+          <div class="gets">
+            <div class="filing"><b>Visitor visa: Principal applicant</b><div class="sub">3 people on it: principal + 2 children · carries the biometrics family maximum (CAD 170 from 2 people); visa fees CAD 100 × 3 (the CAD 500 cap starts at 5)</div></div>
+            <div class="filing"><b>Visitor visa: Spouse or partner</b><div class="sub">1 person · own number and decision</div></div>
+          </div>
+        </div>
+      </div>
+      <p class="sub">With the warning above taken back (Child: Files own application) this becomes 4 filings in one submission.</p>
+    </div>
+    <div class="folded" style="margin-top:12px; border-top:1px solid var(--border); padding-top:10px;">
+      <span class="rules">Rules check on Save: exactly one principal applicant, who files their own · how many from 0 to 9 · a sponsor or representative is never an applicant · every applicant role has a filing · removing a person a form names asks first.</span>
+      <span><button class="btn">Cancel</button> <button class="btn primary">Save</button></span>
+    </div>
+  </div>
+
+  <!-- Frame 2: Spouse sponsorship, read view -->
+  <div class="frame">2 · Spouse sponsorship · saved (read view)</div>
+  <div class="trail">Programs › Family sponsorship › Spouse or partner › Forms</div>
+  <h1>Spouse or partner sponsorship</h1>
+  <div class="card">
+    <div class="cardhead">
+      <h2>Who can be in this application <span class="i" title="Sets which people a case may include, how many, and how each person's application is filed.">i</span></h2>
+      <span><span class="pill sample">Sample</span> <button class="btn">Change</button></span>
+    </div>
+    <table>
+      <thead><tr><th>Person</th><th>How many</th><th>Filing</th><th>Answered by</th><th>Fees</th><th>IRCC's words</th></tr></thead>
+      <tbody>
+        <tr>
+          <td data-label="Person"><span class="who">Sponsored spouse or partner</span><div class="sub">role: Principal applicant</div></td>
+          <td data-label="How many">Always 1</td>
+          <td data-label="Filing">Files own application <div class="sub">Permanent residence, for the family</div><div class="sub">Fees not worked out yet for Spouse sponsorship; nothing is guessed</div></td>
+          <td data-label="Answered by">Themselves</td>
+          <td data-label="Fees">Fees not worked out yet</td>
+          <td data-label="IRCC's words" class="quote">The principal applicant "will submit both applications together online". Apply page, 2026-09-11</td>
+        </tr>
+        <tr>
+          <td data-label="Person"><span class="who">Child</span></td>
+          <td data-label="How many">0 to 4</td>
+          <td data-label="Filing">On the principal's application <div class="sub">If not travelling: declared only, no fee</div></td>
+          <td data-label="Answered by">Principal, under 18</td>
+          <td data-label="Fees">On the principal's filing (not worked out yet); none if declared only</td>
+          <td data-label="IRCC's words" class="quote">"Document Checklist - Spouse (Including Dependent Children)". IMM 5533</td>
+        </tr>
+        <tr>
+          <td data-label="Person"><span class="who">Sponsor</span><div class="sub">never an applicant</div></td>
+          <td data-label="How many">Always 1</td>
+          <td data-label="Filing">Files the sponsorship <div class="sub"><span class="lock">Sent with the principal's application; never alone</span></div></td>
+          <td data-label="Answered by">Themselves</td>
+          <td data-label="Fees">On the sponsorship filing (not worked out yet)</td>
+          <td data-label="IRCC's words" class="quote">"completed and signed by you, the sponsor and the person you are sponsoring". IMM 5533 item 2</td>
+        </tr>
+        <tr>
+          <td data-label="Person"><span class="who">Representative</span><div class="sub">never an applicant</div></td>
+          <td data-label="How many">0 to 1</td>
+          <td data-label="Filing"><span class="muted">Files nothing</span></td>
+          <td data-label="Answered by">The firm</td>
+          <td data-label="Fees">No fee</td>
+          <td data-label="IRCC's words" class="quote">—</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="preview">
+      <h3>What a case gets <span class="sub">(preview: sponsored spouse, sponsor, 2 children, one not coming)</span></h3>
+      <div class="submission"><div class="sub">One submission · <span class="lock">cannot be split</span></div>
+        <div class="gets">
+          <div class="filing"><b>Permanent residence: Sponsored spouse</b><div class="sub">3 people: spouse and 1 child applying · 1 child declared only (no fee)</div></div>
+          <div class="filing"><b>Sponsorship: Sponsor</b><div class="sub">Co-filed · cannot be sent alone</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frame 3: states -->
+  <div class="frame">3 · Other states</div>
+  <div class="states">
+    <div class="state"><h3>Folded (Forms tab)</h3><b>Who can be in this application</b> <span class="muted">· Principal applicant (always, own) · Spouse or partner 0–1 (own) · Child 0–4 (own) · Representative 0–1</span> <a href="#">Show and edit</a></div>
+    <div class="state"><h3>Needs work</h3>Child <span class="pill warn">Filing not set</span><div class="sub">Also listed under "Missing before firms can use it: Filing for Child". The release waits for it.</div></div>
+    <div class="state"><h3>Sponsor on a case</h3>No travelling switch: "The sponsor's application is always sent with the principal's."</div>
+    <div class="state"><h3>Field error (on Save)</h3>Principal applicant · <select aria-label="Filing for Principal applicant (error example)"><option>Declared only (not accompanying)</option></select><div class="err" role="alert">The principal applicant always files their own application.</div></div>
+    <div class="state"><h3>Field error (sponsor count)</h3>Sponsor 0 to 2 · Files the sponsorship<div class="err" role="alert">One sponsor co-files: set how many to 1 to 1.</div></div>
+    <div class="state"><h3>Fees not worked out</h3>Express Entry · 1 filing, 4 people (1 declared only)<div class="sub">Fees not worked out yet for Provincial nominee, Express Entry; nothing is guessed.</div></div>
+    <div class="state"><h3>Conflict</h3>Someone else saved Who can be in this application at 10:42 (the configuration author). <button class="btn">Reload</button></div>
+    <div class="state"><h3>Read-only (released)</h3>Release 3 carries these filings. Change them in the next draft; open cases keep Release 3. <span class="pill ok">Released</span></div>
+    <div class="state"><h3>Empty preview</h3><span class="muted">Add the principal applicant to see what a case gets.</span></div>
+  </div>
+  <p class="legend" style="margin-top:16px;">Under 760 px wide (phone, 200 % zoom) each table row becomes a card with its field names. Status is always words plus shape, never colour alone.</p>
+</main>
+</body>
+</html>
