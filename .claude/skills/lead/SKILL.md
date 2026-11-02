@@ -47,6 +47,14 @@ Rows reaching Works · median approved-to-merged time · batch failure rate (tar
 * Before deleting a cache or tool, search the repository for paths into it.
 * Context: `get_usage` gives each Mac session's share; report all of them when asked, with what to do.
 
+## Sessions and tokens (2 Nov evening)
+* Start sessions only in a turn the founder typed, with `target: "cloud"`; a cron turn can only leave a card, and a card starts on the Mac.
+* One row per session. Every brief carries the founder's decision IDs, a testable "Done when" and the standard rules: Sonnet helpers (P-278), breaker only for money, schema, permissions or new screens, diff-only re-review, label after Approve (P-277), merge main only on conflict (P-270), live AI off, questions as "Question for the tech lead" in a PR comment. Each session ends when its PR is labelled.
+* Before saying "55 by tonight", sort the open rows: likely Works on re-score, one small PR, waits on a fix or paid run, several PRs or held. Give the forecast from that.
+* When nothing merges, measure machine waits first (a batch's final `ci` job queues even after its shards pass). The guard refuses CI cancels: ask the founder, never work around it.
+* Sidebar: nested sessions move with their parent. Never move a Lead chat while any of its lanes still works; move finished sessions one by one into "To archive" (P-283), after checking for unpushed work.
+* Hand over at about 250k tokens (P-276): rewrite STATE first, then stop the 30-minute check (CronDelete), so two Leads never run checks at once.
+
 ## Talking to the founder
 Plain business words, short. Say what changed and what merged, what is visible on the demo, and at most three asks, each with a recommendation. Write unasked only for a decision, a risk or a spend.
 
