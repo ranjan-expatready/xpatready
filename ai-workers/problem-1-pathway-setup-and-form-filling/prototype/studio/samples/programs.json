@@ -360,6 +360,13 @@
           "filingMode": "files_own"
          },
          {
+          "role": "sponsor",
+          "label": "Sponsor",
+          "min": 1,
+          "max": 1,
+          "filingMode": "co_files"
+         },
+         {
           "role": "child",
           "label": "Child",
           "min": 0,
@@ -379,7 +386,7 @@
          "imm5476e.pdf",
          "imm5475e.pdf"
         ],
-        "note": "Sample: the sponsorship forms are completed in the IRCC portal and are not in the library; only the representative and consent forms are attached."
+        "note": "Sample: the sponsorship forms are completed in the IRCC portal and are not in the library; only the representative and consent forms are attached. Sponsor added (Researched, P-230, PR #413 research_notes/visitor-visa-and-six-combinations-research-2026-11-02.md Q3, Q9): a person on the case, never an applicant."
        }
       },
       {
