@@ -179,7 +179,7 @@ export function FieldPage() {
         <h2 className="font-semibold">Where it comes from</h2>
         {src.isLoading ? <Spinner label="Loading sources" /> : src.data?.unsourced ? <Notice tone="warn">No source recorded: this field was not read from a form field, a checklist line or a rule.</Notice> : <><ul className="mt-2 space-y-1 text-sm">{(src.data?.sources ?? []).slice(0, 30).map((l) => <li key={`${l.text}|${l.quote ?? ""}`}>{l.text}{l.quote ? <span className="text-xs text-text-muted"> · {l.kind === "release" ? l.quote : `"${l.quote}"`}</span> : null}</li>)}</ul>
           {/* UX-A part 4 review M1: the release's hash, the AI runs and a form field's data path are under Details. */}
-          <AdminDetails className="mt-2" items={[["Source references", (src.data?.sources ?? []).some((l) => l.ref) ? <ul>{(src.data?.sources ?? []).slice(0, 30).flatMap((l) => (l.ref ?? "").split("\n").filter(Boolean)).map((r) => <li key={r}>{r}</li>)}</ul> : null]]} /></>}
+          <AdminDetails className="mt-2" items={[["Source references", (src.data?.sources ?? []).some((l) => l.ref) ? <ul className="space-y-1">{(src.data?.sources ?? []).slice(0, 30).flatMap((l) => (l.ref ?? "").split("\n").filter(Boolean)).map((r) => <li key={r}>{r}</li>)}</ul> : null]]} /></>}
         <p className="mt-3 text-sm"><span className="text-text-muted">Used in combinations:</span> {src.data?.used_in?.length ? src.data.used_in.join(", ") : "none"}</p>
       </section>
       <section className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm">

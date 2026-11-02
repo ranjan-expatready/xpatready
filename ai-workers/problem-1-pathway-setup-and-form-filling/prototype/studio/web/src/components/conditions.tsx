@@ -66,7 +66,7 @@ export function ConditionBuilder({ value, onChange, fields, defaultSubject = "EA
   };
   // The field box shows a known field's name; a name typed or chosen becomes its key (a key typed still works; a value
   // that is not a library field, such as a derived age, stays as typed).
-  // Two fields with one name are told apart by whom they are about ("Date of birth (spouse)").
+  // Two fields with one name are told apart by the group they belong to ("Family name (person)", "Family name (case)").
   const nameOf = React.useMemo(() => { const n = new Map<string, number>(); for (const f of fields) n.set(baseName(f), (n.get(baseName(f)) ?? 0) + 1); return (f: FieldInfo) => (n.get(baseName(f)) ?? 0) > 1 ? `${baseName(f)} (${(f.key.split(".")[0] ?? "").replace(/_/g, " ")})` : baseName(f); }, [fields]);
   const shownField = (k: string) => { const f = fields.find((x) => x.key === k); return f ? nameOf(f) : k; };
   const keyOf = (t: string) => { const v = t.trim().toLowerCase(); return fields.find((x) => x.key === t.trim())?.key ?? fields.find((x) => nameOf(x).toLowerCase() === v)?.key ?? t; };
