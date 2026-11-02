@@ -34,14 +34,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
       await p.setViewportSize({ width: w, height: h });
       await go("/library/checks");
       const t = await main();
-      step(`C3.14 BR-15 (${w}): Checks lists every check, read-only, says where they change and that checks only warn, and offers no write button`, (await rows().count()) === checks.length && /Read-only/.test(t) && /Questionnaires tab/.test(t) && /Checks warn; only the form's own Validate stops a form/.test(t) && /When it runs: not built/.test(t) && await noWrite(), t.slice(0, 300));
+      step(`C3.14 BR-15 (${w}): Checks lists every check, read-only, says where they change and that checks only warn, and offers no write button`, (await rows().count()) === checks.length && /Read-only/.test(t) && /Smart questionnaire \(SQR\) tab/.test(t) && /Checks warn; only the form's own Validate stops a form/.test(t) && /When it runs: not built/.test(t) && await noWrite(), t.slice(0, 300));
       step(`C3.14 BR-15 (${w}): each row shows its kind and group, what it reads, its effect per combination (linked) and its source; nothing says it stops`, /Consistency/.test(t) && /Answers compared/.test(t) && /Warns/.test(t) && /Serious warning/.test(t) && !/Stops until resolved/.test(t) && (await rows().first().locator("a[href*='/questionnaires']").count()) >= 1 && (await p.locator("main [data-source]").count()) === checks.length, t.slice(300, 700));
       step(`C3.14 (${w}): no sideways scroll`, await fits());
       await p.screenshot({ path: path.join(SHOTS, `checks-${w}.png`), fullPage: false });
       await axe(`Checks (${w})`);
       await go("/library/rules");
       const r = await main();
-      step(`C3.14 (${w}): Rules lists every rule as a sentence with where it lives (combination · tab, linked), read-only`, (await rows().count()) === rules.length && /Every rule in one place/.test(r) && /With an LMIA · Documents tab/.test(r) && /With an LMIA · Questionnaires tab/.test(r) && /\nWhen: /.test(r) && !/\. when:/.test(r) && await noWrite(), r.slice(0, 300));
+      step(`C3.14 (${w}): Rules lists every rule as a sentence with where it lives (combination · tab, linked), read-only`, (await rows().count()) === rules.length && /Every rule in one place/.test(r) && /With an LMIA · Documents tab/.test(r) && /With an LMIA · Smart questionnaire \(SQR\) tab/.test(r) && /\nWhen: /.test(r) && !/\. when:/.test(r) && await noWrite(), r.slice(0, 300));
       step(`C3.14 (${w}): no sideways scroll`, await fits());
       await p.screenshot({ path: path.join(SHOTS, `rules-${w}.png`), fullPage: false });
       await axe(`Rules (${w})`);

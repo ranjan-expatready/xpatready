@@ -19,6 +19,9 @@ ok("P-184 fail: at exactly the core count the budget is still judged (busy means
 const hosted = machine({ RUNNER_ENVIRONMENT: "github-hosted" });
 const e = speed("tab under 200 ms", 273 < 200, { tab: [291, 273, 275] }, hosted);
 ok("Lead 1 Nov pass: on a GitHub-hosted machine the budget is not judged, said so with the reason, the time and the load", hosted.busy && e.ok && /not judged: CI machine \(\d+ cores\): judged by the nightly run on the Mac \(load [\d.]+ on \d+ cores\)/.test(e.label) && /291/.test(e.detail), e);
+const nightly = machine({ RUNNER_ENVIRONMENT: "github-hosted", SPEED_JUDGE: "1" });
+ok("T1 (P-228 (6)): the nightly full run on GitHub (SPEED_JUDGE=1) is judged by load like the Mac, with no CI reason", !nightly.reason && nightly.busy === nightly.load > nightly.cores, nightly);
+ok("T1 fail: a pull-request shard on GitHub (no SPEED_JUDGE) is still never judged", hosted.busy === true && !!hosted.reason && machine({ RUNNER_ENVIRONMENT: "github-hosted", SPEED_JUDGE: "0" }).busy === true);
 const selfHosted = machine({ RUNNER_ENVIRONMENT: "self-hosted" });
 ok("Lead 1 Nov fail: the Mac runner (self-hosted) and a lane copy are judged by load as before, with no CI reason", !selfHosted.reason && selfHosted.busy === selfHosted.load > selfHosted.cores && !machine({}).reason, selfHosted);
 const m = machine();

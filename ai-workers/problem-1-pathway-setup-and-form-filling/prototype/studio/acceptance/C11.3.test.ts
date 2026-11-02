@@ -10,12 +10,11 @@
 // P-175, P-116, P-148 (Load sample shows only the six P-112 combinations).
 // US$0: no model, no canada.ca; the AI check is only asked on a copy without the live switch.
 //   zsh tools/isolated.sh acc_a3 4563 start && ./node_modules/.bin/tsx acceptance/C11.3.test.ts 4563 xr_studio_acc_a3
-// Expected today (main 931cb99a, run 1 Nov 2026 on an isolated copy, US$0): 19 pass, 8 fail — failing: AT-5 (second)
-// because the meaning check answers "The AI meaning check is off" (footer on:false) instead of sitting behind the live
-// switch (P-95, P-175); AT-9.2–9.6 because Load sample still has Study permit › No sub-category, "With an LMIA", no
-// Provincial nominees › Express Entry stream, Spouse or partner › Applicant outside/in Canada and "LMIA" instead of
-// P-112's names (AT-9.1 Visitor visa passes); AT-10 Used by and AT-10 finder plan because their trails start at the
-// Program / Pathway, without the Pathway type.
+// Expected today (branch claude/awesome-mendel-nusfn1 from main 55376830, 2 Nov 2026, isolated copy, US$0): 26 pass, 1
+// fail — failing: AT-5 (second) only, the AI "did you mean", which waits on X6 (the meaning check answers "The AI
+// meaning check is off", footer on:false). AT-9 loads the six as the Demo menu does ({"sample":"six"}, P-148); before
+// 2 Nov it called POST /demo/load with no body, the suites' older fixture (api/src/demo.ts load), so AT-9.2–9.6 failed
+// on names no person can load (qa after-merge 2 Nov, Question 1). AT-10 full trails pass since #505 (QA-150).
 // Exit: 0 all pass · 1 a check failed · 2 setup missing or refused (demo port or database, copy not reachable, sample).
 import { checkCopy, sqlFor } from "./lib/pack1.ts";
 
@@ -113,7 +112,7 @@ const FIVE = /^(Retail|Corporate and employers) › [^›]+ › [^›]+ › [^�
 
   // ------------------------------------------------ the sample uses the wave 1 names (P-112); the full trail on every list
   await call("POST", "/demo/reset", { confirm: "RESET" });
-  const load = await call("POST", "/demo/load");
+  const load = await call("POST", "/demo/load", { sample: "six" }); // what Demo › Load sample sends (web/src/App.tsx); no body is the suites' fixture
   if (load.status >= 300) { console.error("STOP  setup missing: Load sample failed", load.status); process.exit(2); }
   const trails = [...((await call("GET", "/catalogue?pathway=INDIVIDUAL&filter=all")).body?.rows ?? []), ...((await call("GET", "/catalogue?pathway=CORPORATE&filter=all")).body?.rows ?? [])].map((x: any) => T(...x.trail)); // eslint-disable-line @typescript-eslint/no-explicit-any
   const WAVE1 = [

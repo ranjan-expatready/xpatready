@@ -59,7 +59,7 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   // Row 5: every new library item approved by a second person, never by the author who accepted it.
   ok("C10.1 row 5: every new library item is approved by the Approver (user-B)", n(`select count(*) from library_change where status = 'WAITING'`) === 0 && n(`select count(*) from library_change`) > 0 && /approved by the Approver, not by the author/.test(r("5").shows), r("5").shows);
   ok("C10.1 row 5 fail: no library item is approved by the person who proposed it", n(`select count(*) from library_change where decided_by = proposed_by`) === 0);
-  ok("C10.1 rows 6 and 8: Reset and the Questionnaires and Preview tabs are named as built", r("6").status === "done" && r("8").status === "done");
+  ok("C10.1 rows 6 and 8: Reset and the Smart questionnaire (SQR) and Preview tabs are named as built", r("6").status === "done" && r("8").status === "done");
   ok("C10.1 rows 7 and 17: not built yet, said in plain words (their lanes' functions are not on main)", r("7").status === "not built yet" && r("17").status === "not built yet" && /^Not built yet: /.test(r("7").shows) && /^Not built yet: /.test(r("17").shows), [r("7").shows, r("17").shows]);
   // Row 10: release through submit, SME sign-off and a different person; the validator's refusals said, empty never released.
   const released = sql(`select c.label || '§' || r.version || '§' || p.approver_id from config_release r join combination c on c.id = r.combination_id join pack_version p on p.id = r.pack_version_id`).split("\n").filter(Boolean);

@@ -116,6 +116,8 @@ export type FinderResult = {
   rules_only?: { code: string; sentence: string }[];
   guide_choice?: { candidates: { title: string; url: string }[]; why: string };
   ai_inputs?: { file: string; sha256: string }[];
+  /** C11.15 (review M1): a run for some forms only says, per form, what AI decided and what happened to its line. */
+  redo?: { code: string; said: string }[];
   /** C-5 (P-140): per attached form, the channel proposed for a second person (ready or check) or listed (no change). */
   channels?: { code: string; outcome: "ready" | "check" | "listed" | "kept"; why: string | null; change_id?: string }[];
 };
@@ -159,6 +161,24 @@ export function inventoryFor(url: string): { file: string; sha256: string } | nu
   return null;
 }
 
+/** C11.15 (review M1): what a run for one form found about it, in one sentence (the line is never changed silently). */
+export function onlyWords(code: string, r: FinderResult, line: "added" | "already" | "removed_by_person" | undefined): string {
+  if (line === "added") return `${code}: both AI rounds name it for this combination; it is attached (Picked by AI · Sample).`;
+  if (line === "already") return `${code}: both AI rounds name it again; its line is unchanged.`;
+  if (line === "removed_by_person") return `${code}: both AI rounds name it, but a person removed it from this combination, so it is not attached back (Add back is on the Forms tab).`;
+  const d = r.decide.find((x) => x.code === code);
+  if (d) return `${code}: the two AI rounds disagree (${d.why}); its line is unchanged and a person decides.`;
+  const n = r.not_for.find((x) => x.code === code);
+  if (n) return `${code}: the pages name it as ${n.applies === "separate_application" ? "a separate application" : "not needed here"}; its line is unchanged. Remove it if it does not apply.`;
+  const c = (r.checklists ?? []).find((x) => x.code === code);
+  if (c) return `${code}: it is a ${c.kind} the pages name: kept in the library as a source, never filed; its line is unchanged.`;
+  const m = r.missing.find((x) => x.code === code);
+  if (m) return `${code}: not found this time (${m.why.replace(/\.$/, "")}); its line is unchanged.`;
+  const x = r.dropped.find((y) => y.code === code);
+  if (x) return `${code}: AI's answer about it failed the rules (${x.why.replace(/\.$/, "")}); its line is unchanged.`;
+  return `${code}: AI did not name it on these pages this time; its line is unchanged. Remove it if it no longer applies.`;
+}
+
 @Injectable()
 export class Finder implements OnModuleInit {
   private canada: CanadaSource = canadaSource();
@@ -183,11 +203,13 @@ export class Finder implements OnModuleInit {
 
   // ------------------------------------------------------------------ plan and launch
   /** What a run will do, what it may cost and the fingerprint the launch must repeat (the person saw this plan). */
-  async plan(combinationId: string, body: unknown) {
+  async plan(combinationId: string, body: unknown, opts: { fresh?: boolean } = {}) {
+    combinationId = combinationId.toLowerCase(); // C11.15 break B1: one combination, one spelling (locks and run keys use it)
     const b = parse(FinderBody, body);
     const c = await trailOf(this.db, combinationId);
     if (b.pageUrl) { const u = officialUrl(b.pageUrl); if (!u.ok) throw problem(400, "Only canada.ca pages", `${u.why} Paste the address of the official application or guide page on canada.ca.`, { errors: [{ field: "pageUrl", message: u.why }] }); }
-    const remembered = b.pageUrl ? null : await this.rememberedPages(combinationId);
+    // C11.15 Redo with AI, stage "find" (P-123): the application page is found again, never the remembered one.
+    const remembered = b.pageUrl || opts.fresh ? null : await this.rememberedPages(combinationId);
     const ledger = this.sources.ledger();
     // Cost: each AI round's worst case as the ledger reserves it (inputs bounded by bytes, both attempts); replay and rules US$0.
     // QA-98: each AI step states the reserve it carries (the page pick's two rounds, then one forms round each), so the
@@ -235,7 +257,8 @@ export class Finder implements OnModuleInit {
   }
 
   /** Launch: the same plan fingerprint, one run per combination at a time, the same key returns the same run. */
-  async launch(actor: Actor, combinationId: string, body: unknown) {
+  async launch(actor: Actor, combinationId: string, body: unknown, opts: { fresh?: boolean } = {}) {
+    combinationId = combinationId.toLowerCase(); // C11.15 break B1: one combination, one spelling (locks and run keys use it)
     need(actor, "author");
     const b = parse(FinderLaunchBody, body);
     const workspaceId = await this.ws.id();
@@ -243,7 +266,7 @@ export class Finder implements OnModuleInit {
     if (again && !again.scopeLabel.startsWith(`${combinationId}|`)) throw problem(409, "Key already used", "This launch key belongs to another run. Look at the plan again to start a new one.");
     if (again) return this.view(again.id);
     if (b.mode === "live" && !aiLive()) throw problem(409, "AI now is switched off", START.liveOff);
-    const plan = await this.plan(combinationId, { mode: b.mode, pageUrl: b.pageUrl, only: b.only });
+    const plan = await this.plan(combinationId, { mode: b.mode, pageUrl: b.pageUrl, only: b.only }, opts);
     if (plan.plan_sha256 !== b.planSha256) throw problem(409, "Look at the plan again", "Something changed since you looked at the plan (the pages, the mode or the cost). Look at it again before starting.");
     // P-179: over a limit, a start needs a person's Continue (checked here, used once inside the transaction below); without
     // one it is refused as before.
@@ -491,6 +514,17 @@ export class Finder implements OnModuleInit {
         const p = channelProposal(draft.find((x) => x.code === f.code)?.channel, check.find((x) => x.code === f.code)?.channel, f.filed_note, (q) => !!sameText(q) && allText.includes(sameText(q)), earlier);
         result.channels.push(await this.proposeChannel(b.workspaceId, f.code, p, actor.id));
       }
+    }
+    // C11.15 review M1: a run for some forms only (Redo with AI, Find again for one form) reports only those forms, and
+    // says per form what AI decided and what happened to its line, so a Redo never reads as a find of the whole combination.
+    if (only) {
+      const mine = (c: string) => only.includes(c);
+      result.missing = result.missing.filter((m) => mine(m.code)); result.decide = result.decide.filter((d) => mine(d.code));
+      result.not_for = result.not_for.filter((n) => mine(n.code)); result.dropped = result.dropped.filter((d) => mine(d.code));
+      result.checklists = (result.checklists ?? []).filter((c) => mine(c.code));
+      result.redo = only.map((code) => ({ code, said: onlyWords(code, result, found.find((f) => f.code === code)?.line) }));
+      const problems = result.missing.length + result.decide.length + result.dropped.length;
+      return this.finish(batchId, problems ? "PARTIAL" : "COMPLETED", result.redo.map((r) => r.said).join(" "), result);
     }
     const problems = result.missing.length + result.decide.length + result.dropped.length;
     await this.audit.log(b.workspaceId, actor.id, "found", "form finder", combinationId, `The form finder attached ${found.filter((f) => f.line === "added").length} form${found.length === 1 ? "" : "s"} to "${plan.combination.label}" (Picked by AI · Sample); ${result.missing.length} not found, ${result.decide.length} to decide`, { attach: found.map((f) => f.code), missing: result.missing.map((m) => m.code) }, combinationId);
@@ -845,6 +879,13 @@ export class Finder implements OnModuleInit {
     const live = this.rounds.liveJob(batchId);
     if (live) this.sources.stopLaunches((jobId) => jobId === live);
     await this.audit.log(b.workspaceId, actor.id, "stopped", "form finder", batchId, `${actor.name} stopped the form finder for ${b.scopeLabel.includes("|") ? b.scopeLabel.slice(b.scopeLabel.indexOf("|") + 1) : "a combination"}`);
+    // C11.15 AT-24: the run ends at its next step boundary (well under a second without a live call): Stop answers with
+    // that end when it comes within 3 s, else "Stopping" as before (a live call's launcher may take up to 10 s to end).
+    for (const until = Date.now() + 3000; Date.now() < until;) {
+      const now = await this.db.aiBatch.findUnique({ where: { id: batchId }, select: { status: true } });
+      if (!now || !["QUEUED", "RUNNING"].includes(now.status)) break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
     return this.view(batchId);
   }
 
@@ -853,9 +894,28 @@ export class Finder implements OnModuleInit {
    *  are added to S5's six states: the two AI rounds disagreed (a person decides, P-121), or the page names it as a
    *  separate application. */
   async latestForms(combinationId: string) {
+    combinationId = combinationId.toLowerCase(); // C11.15 break B1: one combination, one spelling (locks and run keys use it)
     const run = await this.latest(combinationId);
     if (!run) return { run: null, forms: [] };
-    const r: FinderResult | null = run.result;
+    // C11.15 review M1: the list is the newest find of the whole combination; a newer run for some forms only (Redo,
+    // Find again for one form) that ended replaces just those forms' rows, so a Redo of one form never hides the others.
+    const runs = await this.db.aiBatch.findMany({ where: { operation: FINDER_OPERATION, scopeLabel: { startsWith: `${combinationId}|` } }, orderBy: { startedAt: "desc" }, select: { id: true, plan: true, status: true } });
+    const onlyOf = (p: unknown) => ((p as FinderPlan | null)?.only ?? null) as string[] | null;
+    const full = runs.find((x) => !onlyOf(x.plan));
+    const r: FinderResult = structuredClone((full?.plan as unknown as FinderPlan | undefined)?.result ?? { pages: [], printed: [], attach: [], missing: [], decide: [], not_for: [], dropped: [] });
+    const runOf = new Map<string, string>();
+    const newer = full ? runs.slice(0, runs.indexOf(full)) : runs;
+    for (const x of newer.reverse().filter((y) => ["COMPLETED", "PARTIAL"].includes(y.status) && onlyOf(y.plan))) {
+      const o = (x.plan as unknown as FinderPlan).result;
+      if (!o) continue;
+      for (const code of onlyOf(x.plan)!) {
+        const has = [o.attach, o.missing, o.decide, o.not_for, o.checklists ?? []].some((l) => l.some((e) => e.code === code));
+        if (!has) continue; // AI did not name it this time: the earlier row stays (the run's own words say so)
+        r.attach = r.attach.filter((e) => e.code !== code); r.missing = r.missing.filter((e) => e.code !== code); r.decide = r.decide.filter((e) => e.code !== code); r.not_for = r.not_for.filter((e) => e.code !== code); r.checklists = (r.checklists ?? []).filter((e) => e.code !== code);
+        r.attach.push(...o.attach.filter((e) => e.code === code)); r.missing.push(...o.missing.filter((e) => e.code === code)); r.decide.push(...o.decide.filter((e) => e.code === code)); r.not_for.push(...o.not_for.filter((e) => e.code === code)); r.checklists.push(...(o.checklists ?? []).filter((e) => e.code === code));
+        runOf.set(code, x.id);
+      }
+    }
     const codes = [...(r?.attach ?? []).map((a) => a.code), ...(r?.missing ?? []).map((m) => m.code), ...(r?.decide ?? []).map((d) => d.code), ...(r?.not_for ?? []).map((n) => n.code), ...(r?.checklists ?? []).map((c) => c.code)];
     const lines = await this.db.combinationForm.findMany({ where: { combinationId, lineageKey: { in: codes } }, orderBy: { version: "desc" } });
     const line = (c: string) => lines.find((l) => l.lineageKey === c);
@@ -867,14 +927,15 @@ export class Finder implements OnModuleInit {
       ...(r?.decide ?? []).map((d) => ({ code: d.code, title: (d.draft ?? d.check)?.title ?? null, quote: (d.draft ?? d.check)?.quote ?? null, conditionPlain: (d.draft ?? d.check)?.condition ?? null, who: (d.draft ?? d.check)?.who ?? null, state: stateOf(d.code, "TO_DECIDE"), why: d.why })),
       ...(r?.not_for ?? []).map((n) => ({ code: n.code, title: null, quote: n.quote, conditionPlain: null, who: null, state: "NOT_FOR_THIS_APPLICATION" })),
       ...(r?.checklists ?? []).map((c) => ({ code: c.code, title: c.title, quote: c.quote, conditionPlain: null, who: null, state: "CHECKLIST_IN_LIBRARY", edition: c.edition ?? null })),
-    ].map((f) => ({ ...f, lineId: line(f.code)?.id ?? null, lineVersion: line(f.code)?.version ?? null, runId: run.id }));
+    ].map((f) => ({ ...f, lineId: line(f.code)?.id ?? null, lineVersion: line(f.code)?.version ?? null, runId: runOf.get(f.code) ?? full?.id ?? run.id }));
     // S3 item 5: a run that could not pick the application page says so on the Forms tab, with the pages it saw, so the
     // person chooses one there and finds again (never a dead end).
-    return { run: { id: run.id, status: run.status, mode: run.mode, finished_at: run.finished_at }, forms, sample_note: run.sample_note, page_choice: r?.guide_choice ?? null };
+    return { run: { id: run.id, status: run.status, mode: run.mode, finished_at: run.finished_at }, forms, sample_note: run.sample_note, page_choice: run.result?.guide_choice ?? null };
   }
 
   /** The combination's newest finder run (S5's Forms tab reads this; slice 1 serves it to the scripted journey). */
   async latest(combinationId: string) {
+    combinationId = combinationId.toLowerCase(); // C11.15 break B1: one combination, one spelling (locks and run keys use it)
     const b = await this.db.aiBatch.findFirst({ where: { operation: FINDER_OPERATION, scopeLabel: { startsWith: `${combinationId}|` } }, orderBy: { startedAt: "desc" } });
     return b ? this.view(b.id) : null;
   }

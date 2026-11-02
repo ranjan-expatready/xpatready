@@ -1,6 +1,6 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-02 20:10 UTC by **Lead 3**, handing over to **Lead 4** for tokens (this chat ~240k; each check re-reads it) · milestone: **M2 — Super Admin configuration**, gate 59/60 with held parts named (P-265, P-284); estimate **about 4 Nov** · M3 per row (P-261) · how we work: `WAY-OF-WORKING.md` · decisions to read word for word: DECISIONS **P-275 … P-285**
+updated: 2026-11-02 20:45 UTC by **Lead 4** (took over from Lead 3 at 20:10 UTC; check at minutes 13 and 43, job a02fd171) · milestone: **M2 — Super Admin configuration**, gate 59/60 with held parts named (P-265, P-284); estimate **about 4 Nov** · M3 per row (P-261) · how we work: `WAY-OF-WORKING.md` · decisions to read word for word: DECISIONS **P-275 … P-285**
 
 ## Leads, in order (founder, 2 Nov: "keep naming … so that I know who is the latest lead"; highest number = current)
 Lead 1 (`local_17ac4d7f…`, 2 Nov morning) → Lead 2 (`local_0bd306e3…`, ~15:40–18:35 UTC) → Lead 3 (`local_b0474939…`, 18:36–20:10 UTC) → **Lead 4** (started by Lead 3, 20:10 UTC, local, shares the main copy). Each Lead renames itself "Lead N · <date> <UTC start>" and, when handing over, starts Lead N+1 itself in a founder-typed turn, then stops its own check (CronDelete). A cron turn cannot start a session: if the context passes about 250k overnight, keep going (1M window) and hand over in the founder's next typed turn.
@@ -12,8 +12,8 @@ Lead 1 (`local_17ac4d7f…`, 2 Nov morning) → Lead 2 (`local_0bd306e3…`, ~15
 4. `flow-watch.sh` now also flags labelled PRs with red CI or a conflict (4b) and unfinished M2 rows nobody has pushed to in 90 min (4c; HELD and WAITS lists in the script). Act on every RED each check. A lane counts as working only if it pushed in 90 min.
 5. Records: **#578** (this branch) merges once `decision-impact.sh` passes (needs qa's C5.4 → P-279 and C11.3 → P-284 cites). qa was asked at 20:00 UTC to fold its records PRs #567, #582, #581 into one; merge it directly, then #578.
 
-## Progress (20:05 UTC)
-M2 on main's scorecard **41/60**; qa has scored about **46** (in its unmerged records PRs); plus C3.6 (#573 merged), C11.3 (P-284) to score. 2 Nov: 117 PRs merged (87 product, 30 records); M2 34 → ~46. AI spend today **US$9.12** + tonight's Gos. Weekly plan 44%. **Target by ~02:00 UTC: 50+ on main's scorecard.**
+## Progress (20:45 UTC)
+M2 on main's scorecard **48/60** (qa's records #581 merged 20:07 UTC; was 41); qa has scored about **46** (in its unmerged records PRs); plus C3.6 (#573 merged), C11.3 (P-284) to score. 2 Nov: 117 PRs merged (87 product, 30 records); M2 34 → ~46. AI spend today **US$9.12** + tonight's Gos. Weekly plan 44%. **Target by ~02:00 UTC: 50+ on main's scorecard.**
 
 ## M2 rows not Works, and who has them (20:05 UTC)
 | Row | In flight | Then |
@@ -27,7 +27,7 @@ M2 on main's scorecard **41/60**; qa has scored about **46** (in its unmerged re
 | C5.4 | G1: #587 PR 2a approved; G1 lane (cloud "screens L2") | more PRs |
 | C5.5 | G2 #568 queued | build PRs |
 | C11.13, C11.14 | G-CORE B2 (cloud `gcore-b2`, started 20:00) | B3 |
-| C9.1 | **nobody: Lead 4 shapes row C9.1-AI** (AI impact step on a new edition; paid run) | builder in the founder's next typed turn |
+| C9.1 | row C9.1-AI **Ready** (Lead 4, 20:40 UTC; brief `design/c91-ai-row-2026-11-02.md`); no builder yet: a card is left for the founder (this turn could not start a session) | PR 1 US$0, then one paid run on the tech lead's Go |
 | C10.1 | waits on #563 (needs a released Visitor visa, QA-144) | — |
 | C5.1 | held (P-251, P-265) | — |
 Also approved/queued, no M2 row change: #554 UX-A part 1 (batch #591).
@@ -43,7 +43,7 @@ L-SA3 · L-SA6–L-SA11 · G5 · the P-236 rename · C11 · E1–E6 · design-on
 * Cloud: the founder archives a parent (the previous Lead) once all its lanes are done; the tech lead says so in chat in one line (P-283 as amended 3 Nov).
 
 ## For the founder's morning
-* Cards left by overnight checks (if any) are listed here by Lead 4.
+* **C9.1-AI builder** (forms, one row): card left by Lead 4 at 20:45 UTC; start it, or Lead 4 starts it at your next typed message.
 
 ## Waiting for the founder
 1. **Open a new chat and type `/lead`** (this hand-over).

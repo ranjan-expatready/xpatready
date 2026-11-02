@@ -187,7 +187,8 @@ export async function copyBytes(copyId: string, actor = OFFICER): Promise<Buffer
   const res = await fetch(`http://127.0.0.1:${PORT}/api/runtime/form-copies/${copyId}/file`, { headers: { "x-actor": actor } }).catch(() => null);
   return res?.ok ? Buffer.from(await res.arrayBuffer()) : Buffer.alloc(0);
 }
-export const asValidated = (b: Buffer) => Buffer.concat([b, Buffer.from("\n% Saved after Validate (simulated in this check)\n")]);
+// QA-165: the form's own Validate result written into the copy (tests/runtime/validated.ts), never bytes appended.
+export { asValidated } from "../../tests/runtime/validated.ts";
 export async function sendFile(path: string, file: Buffer, name: string, actor = OFFICER) {
   const fd = new FormData(); fd.append("file", new Blob([new Uint8Array(file)]), name);
   const res = await fetch(`http://127.0.0.1:${PORT}/api${path}`, { method: "POST", headers: { "x-actor": actor }, body: fd }).catch(() => null);

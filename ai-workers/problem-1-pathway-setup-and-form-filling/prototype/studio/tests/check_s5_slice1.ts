@@ -54,7 +54,7 @@ const P = (extra: any[] = [], child = false) => [{ role: "principal", min: 1, ma
   const C = wp.combinationId;
   const people = async () => (await call("GET", `/combinations/${C}/workspace?tab=questionnaires`)).body.people;
   const v0 = await people();
-  ok("C11.12 read: the Questionnaires tab answers who can be in the application with version, roles and answered by", v0.version === 1 && v0.lines.length === 4 && v0.roles.length === 6 && v0.lines.find((l: any) => l.role === "child").answeredBy === "Principal, under 18" && v0.canUndo === false, v0.lines.map((l: any) => l.role));
+  ok("C11.12 read: the Smart questionnaire (SQR) tab answers who can be in the application with version, roles and answered by", v0.version === 1 && v0.lines.length === 4 && v0.roles.length === 6 && v0.lines.find((l: any) => l.role === "child").answeredBy === "Principal, under 18" && v0.canUndo === false, v0.lines.map((l: any) => l.role));
   let r = await call("PATCH", `/combinations/${C}/people`, { participants: P([{ role: "sponsor", min: 0, max: 1, applies: false }]), version: 1 }, "user-B");
   ok("C11.12 fail: only the author changes who can be in the application (403 for the approver)", r.status === 403, r.status);
   r = await call("PATCH", `/combinations/${C}/people`, { participants: P([{ role: "parent", min: 0, max: 2, applies: false }]), version: 1 });

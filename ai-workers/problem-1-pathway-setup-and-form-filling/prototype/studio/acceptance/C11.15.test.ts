@@ -23,6 +23,9 @@
 // twice and AT-24 (no Redo with AI endpoint: 404, so no stage can be redone or stopped). QA-101/102/104 guards, Delete
 // of an unused form (AT-21), Retire refused while in use (AT-22) and Upload PDF of a readable official file (AT-23)
 // pass. The first find on a fresh copy downloads from the recorded canada.ca copies and can take over a minute.
+// Builder, C11.15 (2 Nov): Redo is POST …/forms/:code/redo {stage} as proposed above (api/src/form-redo.ts); AT-1 runs on
+// the Demo menu's Load sample (the six), which already replays the finder; the checks after it reload the suites'
+// fixture. Expected on the branch: 37 pass.
 // Exit: 0 all pass · 1 a check failed · 2 setup missing or refused (demo port or database, copy not reachable, sample).
 
 import { readFileSync } from "node:fs";
@@ -75,16 +78,24 @@ const upload = async (name: string, bytes: Buffer, extra: Record<string, string>
 
 (async () => {
   await checkCopy(PORT, DB);
+  // ------------------------------------------------ Load sample replays the finder (P-123)
+  // Load sample is the Demo menu's (the six, P-148: {sample: "six"}). Its finder replay attaches Visitor visa's forms, so
+  // the checks after AT-1 start again from the suites' fixture load (no forms attached yet: the first find downloads and
+  // attaches, AT-3, AT-7, AT-9). Builder, C11.15 (2 Nov): run on the six from the start, AT-3/7/9/10 fail (30/37).
+  await call("POST", "/demo/reset", { confirm: "RESET" });
+  const usdSix = await committed();
+  const six = await call("POST", "/demo/load", { sample: "six" });
+  if (six.status >= 300) stop(`Load sample (the six) failed (${six.status})`);
+  const vvSix = await needCombo(PORT, DB, "visitor_visa");
+  const land0 = (await call("GET", `/combinations/${vvSix}/start-setup`)).body;
+  ok("C11.15 AT-1 Load sample replays the finder for Visitor visa: its saved answer's run is there and its forms are attached (Picked by AI), US$0",
+    !!land0?.run && /:AI_FOUND/.test(lines(vvSix)) && (await committed()) === usdSix, { run: land0?.run, lines: lines(vvSix) });
+
   await call("POST", "/demo/reset", { confirm: "RESET" });
   const load = await call("POST", "/demo/load");
   if (load.status >= 300) stop(`Load sample failed (${load.status})`);
   const vv = await needCombo(PORT, DB, "visitor_visa");
   const usd0 = await committed();
-
-  // ------------------------------------------------ Load sample replays the finder (P-123)
-  const land0 = (await call("GET", `/combinations/${vv}/start-setup`)).body;
-  ok("C11.15 AT-1 Load sample replays the finder for Visitor visa: its saved answer's run is there and its forms are attached (Picked by AI), US$0",
-    !!land0?.run && /:AI_FOUND/.test(lines(vv)) && (await committed()) === usd0, { run: land0?.run, lines: lines(vv) });
 
   // ------------------------------------------------ the finder: canada.ca only, library first, downloads, no confirm step
   const off = await call("POST", `/combinations/${vv}/forms/find/plan`, { mode: "replay", pageUrl: "https://www.example.com/visitor-forms.html" });

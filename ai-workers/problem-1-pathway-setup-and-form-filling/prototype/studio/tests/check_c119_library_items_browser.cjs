@@ -133,7 +133,13 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     // ── round 4 Major 1: an own new document type, named through a checklist line (the product's path), returned by the
     // second person after the line was removed: its row offers Delete, which deletes it at once with its ADD.
     const cid = sql("select id from combination where retired_at is null order by label limit 1");
-    const made = await api(`/combinations/${cid}/requirements`, { method: "POST", data: { newTypeName: "C119 own new type", attachMode: "COMBINATION_MANDATORY", appliesToRoles: "principal_applicant", providedBy: "client" } });
+    // C3.6 (P-158): the name waits as a library proposal (202); the second person accepts it (its ADD still names the
+    // author who named it, #523 Q1), then the line is added with it.
+    const named = await api(`/combinations/${cid}/requirements`, { method: "POST", data: { newTypeName: "C119 own new type", attachMode: "COMBINATION_MANDATORY", appliesToRoles: "principal_applicant", providedBy: "client" } });
+    const accepted = await api("/review/proposals/decide", { method: "POST", data: { ids: [named.body?.proposalId], action: "accept" }, actor: "user-B" });
+    const ownKey = accepted.body?.items?.[0]?.landedAs;
+    const made = await api(`/combinations/${cid}/requirements`, { method: "POST", data: { documentTypeKey: ownKey, attachMode: "COMBINATION_MANDATORY", appliesToRoles: "principal_applicant", providedBy: "client" } });
+    step("C3.6 setup: named (202), accepted by the second person (201), then the line added with it (201)", named.status === 202 && accepted.status === 201 && ownKey === "c119_own_new_type" && made.status === 201, [named.status, accepted.status, ownKey, made.status]);
     await api(`/combinations/${cid}/requirements/${encodeURIComponent(made.body.lineageKey)}`, { method: "PATCH", data: { retire: true } });
     const addId = sql("select id from library_change where key='c119_own_new_type' and action='ADD'");
     await api(`/library/changes/${addId}/return`, { method: "POST", data: { note: "Use the existing type." }, actor: "user-B" });

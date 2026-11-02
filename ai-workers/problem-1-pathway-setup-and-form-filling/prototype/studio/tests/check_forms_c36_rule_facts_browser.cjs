@@ -1,4 +1,4 @@
-// C3.6 (P-158 (5); forms lane): "Facts a rule needs that no form asks" on a combination's Questionnaires tab, walked in a
+// C3.6 (P-158 (5); forms lane): "Facts a rule needs that no form asks" on a combination's Smart questionnaire (SQR) tab, walked in a
 // real browser as the configuration author: the panel lists a fact a rule reads, its form refuses an incomplete add in
 // plain words, a complete add becomes a proposal that waits on To review › Proposals, and the panel is gone once nothing
 // is missing; "Add a fact a rule needs" names a rule and proposes a new fact under a built key (Day-0 acceptance). axe (WCAG 2.2 AA) on the open form; no sideways scroll at 400 px. US$0, no model call.
@@ -32,7 +32,7 @@ const step = (name, c, detail) => { c ? pass++ : failed++; console.log(`${c ? "P
   const sec = p.locator("[data-rule-facts]");
   await sec.waitFor({ timeout: 20000 });
   const row = sec.locator('[data-rule-fact="person.c36_us_refusal"]');
-  step("C3.6 pass: the Questionnaires tab lists the fact a rule reads, with the rule's sentence", (await row.count()) === 1 && /Rule r_c36_browser: the person was refused a US visa, then ask for the refusal letter/.test(await row.innerText()), await sec.innerText().catch(() => ""));
+  step("C3.6 pass: the Smart questionnaire (SQR) tab lists the fact a rule reads, with the rule's sentence", (await row.count()) === 1 && /Rule r_c36_browser: the person was refused a US visa, then ask for the refusal letter/.test(await row.innerText()), await sec.innerText().catch(() => ""));
   await row.getByRole("button", { name: "Add the fact this rule needs" }).click();
   step("C3.6 pass: the button opens the form and says it is open (aria-expanded)", (await row.getByRole("button", { name: "Add the fact this rule needs" }).getAttribute("aria-expanded")) === "true");
   const axe = await new AxeBuilder({ page: p }).include("[data-rule-facts]").withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze();

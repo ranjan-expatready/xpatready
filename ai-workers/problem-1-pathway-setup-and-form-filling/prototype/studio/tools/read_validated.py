@@ -2,18 +2,58 @@
 product made, clicked Validate in Adobe and saved it; this reads the saved file with the proven E5 reader
 (p1/e5_roundtrip.py read_back, unchanged) and compares every value the product wrote (the copy's .request.json) with
 what the saved file holds. Validate adds the barcode and may set computed fields, so other data is reported, never
-refused here. The barcode itself is decoded and compared by the M3 tool (evidence-lane/E1/tools/barcode_compare.py),
+refused here. QA-165: it also reports the form's own Validate result kept in the file (form_validation); the server
+records the copy as validated only when that result passed. The barcode itself is decoded and compared by the M3 tool (evidence-lane/E1/tools/barcode_compare.py),
 which needs the decoded barcodes; this slice records that it was not run. Prints one JSON line.
   .tools/solution-1-prototype/.venv/bin/python -I studio/tools/read_validated.py <validated.pdf> <copy.pdf> <copy.request.json>
 """
 import hashlib
 import json
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent.parent / "p1"))
 import e5_roundtrip as E  # noqa: E402
+
+PASSED = {"Yes", "Oui"}  # the form's own words for its flag after a Validate that passed (its message table, Yes_ENU / Yes_FRA)
+
+
+FLAG_LEAVES = ("ApplicationValidatedFlag[", "ApplicationValidatedFlagMirror[")
+DATE_PARTS = ("Year", "Month", "Day")
+
+
+def validation_leaves(paths):
+    """Where a form keeps its own Validate result, in its data paths. Two shapes, both IRCC's (templates read 2 Nov 2026):
+    IMM 5257, IMM 5257 Schedule 1 and IMM 1295 keep ApplicationValidatedFlag and a DateLastValidated with Year, Month and
+    Day; IMM 0008 and IMM 1344 set ApplicationValidatedFlagMirror (ApplicationValidatedFlag copies it by a calculate
+    script) and keep DateLastValidated as one field (validateForm: DateLastValidated.rawValue = utilDates.getToday())."""
+    last = lambda p: p.split(".")[-1]
+    flags = [p for p in paths if last(p).startswith(FLAG_LEAVES)]
+    parts = {k: [p for p in paths if ".DateLastValidated[" in p and last(p).startswith(k + "[")] for k in DATE_PARTS}
+    single = [p for p in paths if last(p).startswith("DateLastValidated[")]
+    return flags, parts, single
+
+
+def form_validation(pdf_bytes):
+    """QA-165 (P-144, P-237): the form's own Validate result as the saved file keeps it. The form sets its flag to
+    Yes/Oui and fills its date last validated only when Validate finds the form complete, and sets No and clears the
+    date otherwise (validateForm and setDateLastValidated in each form's XFA template; see validation_leaves). Passed =
+    every flag that holds a value says the same Yes/Oui (break m3 on #572: never Yes and Oui mixed), at least one does,
+    and the date is filled. A form that keeps no such
+    flag cannot show that Validate passed, so it never counts as validated from the file alone."""
+    parts = {k: v.get_object().get_data() for k, v in E.xfa_streams(E.open_reader(pdf_bytes)).items()}
+    data = E.data_root(ET.fromstring(parts["datasets"]))
+    leaves = dict(E.leaves(data)) if data is not None else {}
+    flags, date_parts, single = validation_leaves(list(leaves))
+    said = [leaves[p] for p in flags if leaves[p]]
+    flag = said[0] if said and all(v == said[0] for v in said) else (" / ".join(said) or None)
+    kept = bool(flags) or b"ApplicationValidatedFlag" in parts.get("template", b"")
+    ymd = {k: next((leaves[p] for p in ps if leaves[p]), "") for k, ps in date_parts.items()}
+    on = "-".join(ymd[k] for k in DATE_PARTS) if all(ymd.values()) else next((leaves[p] for p in single if leaves[p]), None)
+    return {"kept_by_form": kept, "flag": flag, "date_last_validated": on,
+            "passed": kept and bool(said) and len(set(said)) == 1 and said[0] in PASSED and on is not None}
 
 
 def main():
@@ -31,9 +71,14 @@ def main():
         print(json.dumps({**out, "ok": False, "why": f"The file could not be read as this form ({type(e).__name__})."}))
         return
     ok = rb["read_back_equal"] == rb["written"]
-    print(json.dumps({**out, "ok": ok, "written": rb["written"], "read_back_equal": rb["read_back_equal"], "mismatches": rb["mismatches"],
+    try:
+        validation = form_validation(data)
+    except Exception as e:  # noqa: BLE001 (read above as this form; a failure here is reported, never taken as passed)
+        validation = {"kept_by_form": False, "flag": None, "date_last_validated": None, "passed": False, "error": type(e).__name__}
+    print(json.dumps({**out, "ok": ok, "validation": validation, "written": rb["written"], "read_back_equal": rb["read_back_equal"], "mismatches": rb["mismatches"],
                       "other_data_leaves_changed": rb["other_data_leaves_changed"], "barcode_checked": False,
                       "why": None if ok else f"{rb['written'] - rb['read_back_equal']} of the {rb['written']} values the product wrote differ in this file."}))
 
 
-main()
+if __name__ == "__main__":
+    main()
