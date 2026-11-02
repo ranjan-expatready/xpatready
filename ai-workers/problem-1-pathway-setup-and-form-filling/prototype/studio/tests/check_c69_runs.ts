@@ -1,4 +1,4 @@
-// C6.9 part 2 (M3-D, concept screens/C6.9/concept.md BR-7…BR-14, BR-17, BR-18; stand-in SI-1): eligibility runs. A pass
+// C6.9 parts 2 and 3 (M3-D, concept screens/C6.9/concept.md BR-7…BR-18; stand-in SI-1): eligibility runs, override and review. A pass
 // and a fail per rule: first the pure adapter (engine/runtime/eligibility.ts), then the routes on an isolated copy that
 // it sets up when empty: the Visitor visa release 1 (tests/runtime/setup_visitor_visa.ts, no gates: a run is refused),
 // then the M3 setup (acceptance/lib/setup_vv_m3.ts; its S7 and S8 lines release the gates). No browser, no model call (US$0).
@@ -48,6 +48,13 @@ await main("C6.9 part 2", "Eligibility runs (stand-in SI-1 adapter and routes)",
     ok("C6.9 BR-12 pass: the 4 judgement lines are copied onto the result", all.judgement.join("|") === JUDGEMENT.join("|"));
     ok("C6.9 BR-12 fail: judgement lines never change the outcome (none, or other words, same outcome)", assess(snap(GATES, []), knownOf(ALL), P)!.outcome === all.outcome && assess(snap(GATES, ["Has no money at all"]), knownOf(ALL), P)!.outcome === all.outcome);
     ok("C6.9 BR-18 pass: the result is for the case's own combination only", all.programKey === "vv.single" && assess(snap(), knownOf(ALL), P)!.programKey === "vv.single");
+  }
+  {
+    // Concept BR-9: an answered fact counts whether or not it is confirmed, and the page names it as not confirmed yet.
+    const k: Known = new Map([[kkey(P, "person.passport_number"), { value: "SAMPLEP12", status: "confirmed" as const, source: "check" }], [kkey(P, "person.passport_expiry_date"), { value: "2030-01-01", status: "answered" as const, source: "check" }]]);
+    const g = gateResult(snap(), k, GATES[0], P);
+    ok("C6.9 BR-9 pass: an answered, unconfirmed fact counts (Met) and is listed as not confirmed yet", g.state === "met" && g.unconfirmed.join() === "person.passport_expiry_date", g);
+    ok("C6.9 BR-9 fail: a confirmed fact is never listed as not confirmed; an unanswered one neither", !g.unconfirmed.includes("person.passport_number") && gateResult(snap(), new Map(), GATES[0], P).unconfirmed.length === 0);
   }
   {
     // Review M1 on fd26c492 (AG-3-12): a fact asked once per case, of the case subject, whatever its prefix, is read as
@@ -110,6 +117,7 @@ await main("C6.9 part 2", "Eligibility runs (stand-in SI-1 adapter and routes)",
     ok("setup: the Visitor visa release 1 on this copy (setup_visitor_visa.ts)", tsx("tests/runtime/setup_visitor_visa.ts").status === 0 && vvRelease() === "1", vvRelease());
     const c1 = await openCase(needVisitorVisa(), [{ role: "principal", name: "Sample Client Z", dob: yearsAgo(30) }]);
     const r1 = await call("POST", `/runtime/cases/${c1.id}/assessments`, { person: c1.subjects["Sample Client Z"] }, OFFICER);
+    ok("C6.9 break m2 fail: on a release with no gates the list says so (has_rules: false), so the page offers no Run button", (await call("GET", `/runtime/cases/${c1.id}/assessments`, undefined, OFFICER)).body?.has_rules === false);
     ok("C6.9 BR-10 fail: a case on a release with no gates is refused 409: \"This application's release has no eligibility rules yet\" (never Likely eligible)", r1.status === 409 && /has no eligibility rules yet/.test(r1.body?.detail ?? "") && sql(`select count(*) from assessment where case_id='${c1.id}'`) === "0", r1.body);
     const m3 = tsx("acceptance/lib/setup_vv_m3.ts").stdout ?? "";
     ok("setup: M3 setup S7 and S8 pass (gates saved and released)", ["S7 (M3-8)", "S8 release 2"].every((k) => m3.split("\n").some((l) => l.startsWith("PASS") && l.includes(k))));
@@ -168,6 +176,9 @@ await main("C6.9 part 2", "Eligibility runs (stand-in SI-1 adapter and routes)",
 
   await confirmAll(c.id, A);
   let l = await list(`?person=${A}`);
+  const marked = (x: { results?: { gates: { unconfirmed?: string[] }[] }[] } | undefined) => (x?.results?.[0]?.gates ?? []).flatMap((g) => g.unconfirmed ?? []);
+  ok("C6.9 BR-9 pass (review minor 6): before Confirm section the run marks the officer's answers not confirmed yet", marked(good).length > 0, marked(good));
+  ok("C6.9 BR-9 fail (review minor 6): after Confirm section the same run, read again, marks none (worked out when read)", marked(l?.assessments?.find((x: { id: string }) => x.id === good?.id)).length === 0, marked(l?.assessments?.find((x: { id: string }) => x.id === good?.id)));
   ok("C6.9 BR-13 pass: Confirm section on the facts a run read (a new row, same value) leaves it up to date", l?.assessments?.find((x: { id: string }) => x.id === good?.id)?.out_of_date === false, l?.assessments?.map((x: { out_of_date: boolean }) => x.out_of_date));
   await answer(c.id, A, "person.passport_number", "SAMPLEP13");
   l = await list(`?person=${A}`);
@@ -187,6 +198,47 @@ await main("C6.9 part 2", "Eligibility runs (stand-in SI-1 adapter and routes)",
   ok("C6.9 GET one fail: another firm's staff get 404; a malformed id 404", (await call("GET", `/runtime/assessments/${good?.id}`, undefined, "user-S")).status === 404 && (await call("GET", "/runtime/assessments/not-an-id", undefined, OFFICER)).status === 404);
   ok("C6.9 BR-8 pass: no audit row of any run holds an answer value (SAMPLEP12, SAMPLEP13, the expiry date)", sql(`select count(*) from audit_event where entity in ('assessment','assessment_override') and (summary like '%SAMPLEP1%' or summary like '%${inDays(3 * 365)}%' or detail::text like '%SAMPLEP1%')`) === "0" && sql(`select count(*) from audit_event where entity='assessment'`) !== "0");
   ok("C6.9 BR-17 pass: rules only: no model call (no ai_batch row, the spend record) in any run", sql("select count(*) from ai_batch") === spend0);
+
+  // ------------------------------------------------------------------ part 3: override and review (BR-15, BR-16; P-229 (2))
+  const ov = (body: Record<string, unknown>, actor = OFFICER, id = good?.id) => call("POST", `/runtime/assessments/${id}/override`, body, actor);
+  const base = { programKey: "vv.single", fromOutcome: "LIKELY_ELIGIBLE", label: "Refer to the representative", reason: "Earlier refusal (Sample)" };
+  r = await ov({ ...base, reason: " " });
+  ok("C6.9 BR-15 fail: an override with an empty reason is refused on the field reason (400)", r.status === 400 && fields(r.body).includes("reason"), r.body);
+  r = await ov({ ...base, label: "" });
+  ok("C6.9 BR-15 fail: an override with an empty label is refused on the field label (400)", r.status === 400 && fields(r.body).includes("label"), r.body);
+  r = await ov({ ...base, label: "x".repeat(81) });
+  ok("C6.9 BR-15 fail: a label over 80 characters is refused on label", r.status === 400 && fields(r.body).includes("label"), r.status);
+  r = await ov({ ...base, programKey: "other.program" });
+  ok("C6.9 BR-15 fail: a programKey not in the run is refused (400 on programKey)", r.status === 400 && fields(r.body).includes("programKey"), r.body);
+  r = await ov({ ...base, fromOutcome: "NOT_ELIGIBLE" });
+  ok("C6.9 BR-15 fail: a fromOutcome that is not the run's outcome is refused 409: \"The result changed since you opened it\"", r.status === 409 && /changed since you opened it/.test(r.body?.detail ?? ""), r.body);
+  ok("C6.9 BR-15 fail: a client cannot override (403); another firm's staff get 404", (await ov(base, CLIENT)).status === 403 && (await ov(base, "user-S")).status === 404);
+  const audit0 = Number(sql("select count(*) from audit_event where entity='assessment_override'"));
+  r = await ov(base);
+  ok("C6.9 BR-15 pass: an override on an out-of-date run is kept (201), with who, duty, licence and out of date; one audit row", r.status === 201 && r.body?.by === OFFICER && r.body?.duty === "Case officer" && r.body?.licence === null && r.body?.outOfDate === true && Number(sql("select count(*) from audit_event where entity='assessment_override'")) === audit0 + 1, r.body);
+  const after = (await call("GET", `/runtime/assessments/${good?.id}`, undefined, OFFICER)).body;
+  // Break M1 on 2572b9b0: the same override sent 20 times at once is one row, and every answer names it.
+  const dup = await Promise.all(Array.from({ length: 20 }, () => ov(base)));
+  ok("C6.9 break M1 fail: 20 identical overrides at once → all 201 with the same id, one row, one audit row", dup.every((x) => x.status === 201) && new Set(dup.map((x) => x.body?.id)).size === 1 && dup[0].body?.id === r.body?.id && sql(`select count(*) from assessment_override where assessment_id='${good?.id}'`) === "1" && Number(sql("select count(*) from audit_event where entity='assessment_override'")) === audit0 + 1, dup.map((x) => x.status).join(""));
+  r = await ov({ ...base, label: "." });
+  ok("C6.9 break m5 fail: a label with no letter or digit is refused on label", r.status === 400 && fields(r.body).includes("label"), r.body);
+  r = await ov({ ...base, label: "😀".repeat(81) });
+  ok("C6.9 break m5 fail: 81 characters (emoji) is refused on label; lengths count characters", r.status === 400 && fields(r.body).includes("label"));
+  r = await ov({ ...base, label: "Borderline 😀" + "😀".repeat(68), reason: "Second view (Sample)" });
+  ok("C6.9 break m5 pass: an 80-character label with emoji is kept", r.status === 201, r.body?.detail ?? r.status);
+  ok("C6.9 BR-15 pass: the engine's outcome is unchanged and the override shows beside it", after?.results?.[0]?.outcome === "LIKELY_ELIGIBLE" && after?.overrides?.length === 1 && after.overrides[0].label === "Refer to the representative" && sql(`select result_json::text from assessment where id='${good?.id}'`)?.includes("LIKELY_ELIGIBLE"));
+  r = await call("POST", `/runtime/assessments/${good?.id}/review`, { note: "Checked with the client (Sample)" }, "user-R");
+  ok("C6.9 BR-16 pass (P-229 (2)): a licensed representative's review is stamped \"Reviewed\" with the licence; 200; an audit row", r.status === 200 && r.body?.stamp === "Reviewed" && r.body?.reviewedBy === "user-R" && !!r.body?.licence?.number && r.body?.outOfDate === true && sql(`select count(*) from audit_event where entity='assessment' and entity_key='${good?.id}' and action='reviewed'`) === "1", r.body);
+  r = await call("POST", `/runtime/assessments/${good?.id}/review`, {}, OFFICER);
+  ok("C6.9 BR-16 fail: a second review is refused 409, naming who reviewed and when", r.status === 409 && /Already reviewed by Representative \(Sample\) on \d{4}-\d{2}-\d{2}/.test(r.body?.detail ?? ""), r.body?.detail);
+  r = await call("POST", `/runtime/assessments/${first?.id}/review`, {}, OFFICER);
+  ok("C6.9 BR-16 pass (P-229 (2)): the case officer (no licence) may review too, stamped \"Seen\"", r.status === 200 && r.body?.stamp === "Seen" && r.body?.licence === null && r.body?.reviewNote === null, r.body);
+  // Break m1 on 2572b9b0: an override sent from a page opened before a newer check goes nowhere silently: 409.
+  r = await run(A, { reason: "Newer check (Sample)" });
+  r = await ov({ ...base, label: "Late override", reason: "Opened before the newer check (Sample)" });
+  ok("C6.9 break m1 fail: an override on a check that a newer one replaced is refused 409 (\"a newer check exists\"); nothing written", r.status === 409 && /newer check exists/.test(r.body?.detail ?? "") && sql(`select count(*) from assessment_override where label='Late override'`) === "0", r.body);
+  ok("C6.9 break m2 pass: the list says the case's release has eligibility rules (has_rules)", (await list()).has_rules === true);
+  ok("C6.9 BR-16 fail: a client cannot review (403)", (await call("POST", `/runtime/assessments/${first?.id}/review`, {}, CLIENT)).status === 403);
   // Review M2 / break M1 on fd26c492: 40 first runs at once for a new person → one first run, the rest need a reason.
   const c2 = await openCase(vv, [{ role: "principal", name: "Sample Client R", dob: yearsAgo(41) }, { role: "spouse_or_partner", name: "Sample Spouse R", dob: yearsAgo(39) }, { role: "child", name: "Sample Child R1", dob: yearsAgo(12) }, { role: "child", name: "Sample Child R2", dob: yearsAgo(9) }]);
   const R = Object.values(c2.subjects);
