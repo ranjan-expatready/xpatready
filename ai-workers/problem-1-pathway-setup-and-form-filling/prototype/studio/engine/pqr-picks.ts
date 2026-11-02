@@ -98,8 +98,8 @@ export function pqrPicksFromRounds(s: Snapshot, rounds: { draft: Round; check: R
       rounds: { draft: a ? reading(rounds.draft, a) : null, check: b ? reading(rounds.check, b) : null },
       rules: [{ rule: "pqr_subset_of_sqr", passed: true, why: null }, { rule: "quote_found", passed: true, why: null }, { rule: "named_exactly", passed: !loose.length, why: loose.length ? takenAs(loose[0].p.asks, x.f).slice(0, 300) : null }],
       agreement: both ? "agreed" : "one_round", confidence: both ? (loose.length ? "check" : "ready") : "decide",
-      reason: (both ? (loose.length ? `Both readings pick "${x.f.label}". ${takenAs(loose[0].p.asks, x.f)} Check it is this question.` : null)
-        : `Only the ${a ? "first" : "second"} reading picked "${x.f.label}"; the other did not. Decide: keep it or remove it.${loose.length ? ` ${takenAs(loose[0].p.asks, x.f)}` : ""}`)?.slice(0, 500) ?? null,
+      reason: (both ? (loose.length ? `Both readings pick it, in the AI's own words: "${loose[0].p.asks.trim().slice(0, 80)}". Check it is this question.` : null)
+        : `Only the ${a ? "first" : "second"} reading picked "${x.f.label}"; the other did not. Decide: keep it or remove it.${loose.length ? ` The AI wrote "${loose[0].p.asks.trim().slice(0, 80)}".` : ""}`)?.slice(0, 500) ?? null,
       origin: "ai", identity: { key: k, near: [], nearReason: null }, relatesTo: null, revision: null, basis: "SAMPLE",
     });
   }

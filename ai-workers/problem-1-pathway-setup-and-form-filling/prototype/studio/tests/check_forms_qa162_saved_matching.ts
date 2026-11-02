@@ -75,7 +75,7 @@ const saved = <T>(f: string) => ({ output: JSON.parse(String(JSON.parse(readFile
   ok("QA-162 fail: \"Planned dates of stay\" names two questions (first and last day), so it is left out naming both, never guessed", p.dropped.some((x) => x.asks === "Planned dates of stay" && /could be 2 questions/.test(x.why) && /first day/.test(x.why) && /last day/.test(x.why)), p.dropped.find((x) => x.asks === "Planned dates of stay"));
   ok("QA-162 fail: a fact no question asks (\"Ever held Canadian PR\", \"Ties to home country\") is left out with its reason", ["Ever held Canadian PR", "Ties to home country", "Valid passport"].every((a) => p.dropped.some((x) => x.asks === a && /No question of this combination asks/.test(x.why))));
   ok("QA-162 pass: every pick left out has its reason in words, and every pick is either landed or left out", p.dropped.every((x) => x.why.length > 20) && pLanded + p.dropped.length === picks);
-  ok("QA-162 pass: a pick named in other words than the question's own is never Ready, and says what the AI wrote", p.items.filter((x) => x.rules.some((r) => r.rule === "named_exactly" && !r.passed)).every((x) => x.confidence !== "ready" && /The AI wrote "/.test(x.reason ?? "")));
+  ok("QA-162 pass: a pick named in other words than the question's own is never Ready, and says what the AI wrote", p.items.filter((x) => x.rules.some((r) => r.rule === "named_exactly" && !r.passed)).every((x) => x.confidence !== "ready" && /in the AI's own words: "|The AI wrote "/.test(x.reason ?? "") && x.rules.some((r) => r.rule === "named_exactly" && /taken as/.test(r.why ?? ""))));
 
   // ---- C4.11 step 5: the saved conditional questions
   const cd = saved<CondAnswer>(SAVED.cond.draft), ck = saved<CondAnswer>(SAVED.cond.check);
