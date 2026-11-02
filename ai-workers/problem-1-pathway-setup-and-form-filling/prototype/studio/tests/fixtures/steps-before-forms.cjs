@@ -17,4 +17,12 @@ async function stepsBeforeForms(api, id, body = "data") {
   const saved = await send("PATCH", `/combinations/${id}/people`, { participants: lines, version: pe.version });
   if (saved.status !== 200) throw new Error(`stepsBeforeForms: saving the people list answered ${saved.status}`);
 }
-module.exports = { stepsBeforeForms };
+/** C11.12 (BR-7): give every applicant line of a combination its filing (as `filing` above) and save the people list,
+ *  as a person does before submitting a combination made by hand; a line with a mode keeps it. */
+async function setFilingModes(api, id, body = "data") {
+  const pe = (await api(`/combinations/${id}/workspace?tab=questionnaires`)).body.people;
+  const lines = pe.lines.map((x) => ({ role: x.role, min: x.min, max: x.max, applies: x.applies, ...(x.quote ? { quote: x.quote } : {}), ...(x.origin ? { origin: x.origin } : {}), ...filing(x) }));
+  const saved = await api(`/combinations/${id}/people`, { method: "PATCH", [body]: { participants: lines, version: pe.version } });
+  if (saved.status !== 200) throw new Error(`setFilingModes: saving the people list answered ${saved.status}`);
+}
+module.exports = { stepsBeforeForms, setFilingModes };
