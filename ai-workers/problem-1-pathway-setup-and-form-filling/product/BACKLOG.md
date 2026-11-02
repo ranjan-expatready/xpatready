@@ -87,6 +87,7 @@ A feature is done when a person can do it on the demo (:4400) and qa has tested 
 ## Next (M2, P-173: no scope cut; in order per area)
 | # | Area | Item | Source |
 |---|---|---|---|
+| N-LIFT | evidence (Mac, cheap model, US$0) | **Count lift-readiness violations (P-249 (4))**: run the team's own gates from the newest `code/` capture of ERv2 (content neutrality, hard-coded region, vendor-SDK import ban, personal-data field classification) against our engine folders, read-only | a table of violations per gate and per engine folder, with file and line, committed under `reports/`; refactor rows sized from it | P-249 |
 | X1a | screens | **Bug: a combination with 0 forms and 0 documents can be submitted, signed off and approved** (the release rule in `studio.ts`; found by the runtime builder in #113 on three combinations) | c10.1-plan.md "Found while building" |
 | X9a | runtime | Sample: add one off-list file with a readable edition (IMM 5476, 2021 edition) so held-file approval can be shown; the validator's K1 message names a raw form-field path (`IMM_5707[0].page1[0]…`) instead of the field's label | c10.1-plan.md "Found while building" |
 | X8a | forms | `check_cost_warning_browser.cjs` waits 30 s for "Start live AI draft" to enable on the Forms tab (line 111) and timed out once on the Mac under load (#141, run 41185122197 attempt 1; passed on attempt 2): make the wait follow the page's own ready signal, not a fixed time | CI run 41185122197 |
