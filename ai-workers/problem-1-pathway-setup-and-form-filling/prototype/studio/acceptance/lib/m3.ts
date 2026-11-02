@@ -109,7 +109,9 @@ export async function openCase(vv: string, people: Person[] = FAMILY, team?: { r
 
 export const agent = async (caseId: string) => (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, officerOf(caseId))).body;
 type Q = { subjectId: string; fact: string; value_type: string; collected_from: string; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; required: boolean; hidden: boolean; group: string | null; fills: { form: string; person: string; subject?: string }[]; answer: { id: string; confirmed: boolean } | null; rows: { answer: { id: string } | null }[] };
-const questions = (v: { sections?: { questions: Q[] }[] }) => (v?.sections ?? []).flatMap((s) => s.questions);
+// The questionnaire names the person on the section, not on each question: a question takes its section's person
+// (C6.4-9: a second answer to the same question was sent without its id and refused as stale).
+const questions = (v: { sections?: { subjectId?: string; questions: Q[] }[] }) => (v?.sections ?? []).flatMap((s) => s.questions.map((q) => ({ ...q, subjectId: q.subjectId ?? s.subjectId ?? "" })));
 export async function answer(caseId: string, subject: string, fact: string, value: unknown, actor = officerOf(caseId), extra: Record<string, unknown> = {}): Promise<Res> {
   const q = questions(await agent(caseId)).find((x) => x.subjectId === subject && x.fact === fact);
   return call("PUT", `/runtime/cases/${caseId}/answers/${subject}/${fact}`, { value, expectedId: q?.answer?.id ?? null, ...extra }, actor);
