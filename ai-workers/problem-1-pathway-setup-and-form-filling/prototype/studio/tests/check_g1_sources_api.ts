@@ -73,6 +73,15 @@ try {
 
   // ------------------------------------------------------------------ fingerprint (BR-9)
   const vv = idOf("vv.single");
+  // Review m4 on PR 2b: each fee-table number carries its line's quote kind for the count line's tooltip, never "Official source".
+  const vvFees = (await sources(vv)).numbers.filter((n: { state: string }) => n.state === "fee_table");
+  ok("C5.4 BR-4 (review m4 on PR 2b): the Visitor visa's fee-table numbers each carry their line's quote kind (\"IRCC's words\" …), never \"Official source\"",
+    vvFees.length > 0 && vvFees.every((n: { quote_kind?: string | null }) => typeof n.quote_kind === "string" && n.quote_kind.length > 0 && n.quote_kind !== "Official source"), vvFees.map((n: { quote_kind?: string | null }) => n.quote_kind));
+  // Devin on #615: an exemption age (14, 79) rests on its exemption's own source, not the fee line's.
+  const exempt = vvFees.filter((n: { address: string }) => n.address.startsWith("exempt."));
+  ok("C5.4 BR-4 (Devin on #615): an exemption age carries its exemption's own quote kind and quote (\"IRCC's words\", \"under the age of 14\"), a fee amount its line's",
+    exempt.length > 0 && exempt.every((n: { quote_kind?: string | null; item_quote?: string | null }) => n.quote_kind === "IRCC's words" && /under the age of 14/.test(n.item_quote ?? ""))
+    && vvFees.filter((n: { address: string }) => !n.address.startsWith("exempt.")).every((n: { item_quote?: string | null }) => !/under the age of 14/.test(n.item_quote ?? "")), exempt.map((n: { address: string; quote_kind?: string | null }) => [n.address, n.quote_kind]));
   const vvSha = (await call("GET", `/combinations/${vv}`)).body.draft.sha256;
   const vvCfg = (await call("GET", `/combinations/${vv}/config`)).body.snapshot;
   const n90 = s.numbers.find((n: { key: string }) => n.key === "wp.family/RW_PASSPORT_EXPIRY_90");
@@ -91,7 +100,13 @@ try {
 
   // ------------------------------------------------------------------ PUT: 409 old version, 403, 400 per field, 404, 409 value moved
   const again = await put(wp, n90, { address: n90.address, value: 90, none_published: { reason: "Another author's reason, same version read" }, version: 0 });
-  ok("C5.4 M2 fail: a second PUT with the same version read gets 409, naming who saved and when", again.status === 409 && /^Someone else saved this source while you had it open \(Configuration author, \d\d:\d\d UTC\)\. Reload theirs, or keep yours and save again\.$/.test(again.body.detail), again.body);
+  // Break M3 on PR 2b: the same author in another window is told so, never "someone else".
+  ok("C5.4 M2 fail: a second PUT with the same version read gets 409; by the same author it says \"You saved this source in another window\", with when", again.status === 409 && again.body.version === 1 && /^You saved this source in another window while this one was open \(\d\d:\d\d UTC\)\. Reload it, or keep this one and save again\.$/.test(again.body.detail), again.body);
+  const byLoad = s.numbers.find((n: { state: string; entry: { from_sample_load: boolean } | null }) => n.state === "cited" && n.entry?.from_sample_load);
+  const other = await put(wp, byLoad, { address: byLoad.address, value: byLoad.value, none_published: { reason: "Test data: read before the sample load saved it" }, version: 0 });
+  ok("C5.4 M2 fail: a PUT on an entry someone else saved (the sample load, version 1) with version 0 gets 409 naming them: \"Someone else saved this source … (The sample load, hh:mm UTC)\"", other.status === 409 && /^Someone else saved this source while you had it open \(The sample load, \d\d:\d\d UTC\)\. Reload theirs, or keep yours and save again\.$/.test(other.body.detail), other.body);
+  const mineNow = await put(wp, byLoad, { address: byLoad.address, value: byLoad.value, cited: byLoad.entry.cited, version: 1 });
+  ok("C5.4 review MJ-1 on PR 2b: once the author saves an entry the sample load wrote, it is no longer \"from the sample load\" (updated_by is the author)", mineNow.status === 200 && mineNow.body.entry.from_sample_load === false && mineNow.body.entry.updated_by === AUTHOR && mineNow.body.entry.created_by !== AUTHOR, mineNow.body);
   r = await put(wp, n90, { address: n90.address, value: 90, cited: { url: "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5488.html", page: "IMM 5488", quote: "Test data, not an official quote: at most 90", date: "2026-10-19" }, version: 1 });
   ok("C5.4 M2 pass: a PUT with the current version saves: 200, version 2, now cited; audit \"changed\"", r.status === 200 && r.body.entry.version === 2 && r.body.state === "cited" && ((await call("GET", "/activity", undefined, SME)).body as { entity: string; action: string }[]).some((e) => e.entity === "source entry" && e.action === "changed"), r.body?.entry);
   const n30 = s.numbers.find((n: { key: string }) => n.key === "wp.family/RW_PASSPORT_EXPIRY_30");
@@ -143,6 +158,10 @@ try {
   const r01 = s.numbers.find((n: { key: string; address: string }) => n.key === "wp.family/R-01" && n.address === "person.age_years|gte|1");
   const cfg = (await call("GET", `/combinations/${wp}/config`)).body.snapshot;
   const rule = cfg.rules.find((x: { id: string }) => x.id === "R-01");
+  // G1 PR 2b: the Source panel offers the item's own quote as the words that state the number.
+  const noQuote = s.numbers.filter((n: { item_quote?: string | null }) => n.item_quote === undefined);
+  ok("C5.4 §4 (PR 2b): each number carries its item's own quote (item_quote), read from the item it belongs to: R-01's is the rule's own source quote",
+    r01.item_quote === String(rule.source_quote).trim() && noQuote.length === 0, { got: r01.item_quote, want: rule.source_quote, missing: noQuote.length });
   const when19 = JSON.parse(JSON.stringify(rule.when).replace('{"op":"gte","field":"person.age_years","value":18}', '{"op":"gte","field":"person.age_years","value":19}'));
   r = await call("PATCH", `/combinations/${wp}/rules/R-01`, { condition: when19, whenPlain: rule.when_plain, thenPlain: rule.then, forWhom: rule.for_whom, sourceQuote: rule.source_quote });
   ok("setup: rule R-01's \"at least 18\" changed to 19 in the draft", r.status < 300, r.body);

@@ -22,6 +22,32 @@ export function feeLinesOf(combinationKey: string): FeeLineInput[] {
   return (c?.lines ?? []).map((k) => lines.find((l) => l?.key === k)).filter((l): l is FeeLineInput => !!l);
 }
 export const numbersOf = (s: Snapshot): PublishedNumber[] => publishedNumbers(s, { feeLines: feeLinesOf(s.combination.key) });
+/** Concept §4 (review m4 on PR 2b): the fee count line's tooltip names each line's quote kind ("IRCC's words", "summary
+ *  of the Lead-checked record"), never "Official source". */
+export function feeQuoteKind(s: Snapshot, hint: string): string | null {
+  const k = feeSourceOf(s, hint)?.quote_kind;
+  return typeof k === "string" ? k : null;
+}
+/** The source a fee number rests on, as the walk reads it (engine publishedNumbers): an exemption age ("fee:<key>.exempt.…")
+ *  its exemption's own source, any other fee number its line's source (Devin on #615). */
+function feeSourceOf(s: Snapshot, hint: string): { quote?: unknown; quote_kind?: unknown } | undefined {
+  const fee = /^fee:([^.]+)\.(.+)$/.exec(hint);
+  if (!fee) return undefined;
+  const l = feeLinesOf(s.combination.key).find((x) => x.key === fee[1]) as { source?: { quote?: unknown; quote_kind?: unknown }; exempt?: { source?: { quote?: unknown; quote_kind?: unknown } } } | undefined;
+  return fee[2].startsWith("exempt.") ? l?.exempt?.source : l?.source;
+}
+/** G1 PR 2b (concept §4: "the quote is filled in from the item's own quote"): the item's own source quote, read at the
+ *  number's JSON path hint (`forms[3].…`, `checks[12].…`, `eligibility.gates[0].…`); null when the item holds none. */
+export function itemQuoteOf(s: Snapshot, hint: string): string | null {
+  // A fee number's item is its fee-table line (hint "fee:<key>.<field>"): its own source quote.
+  const fee = /^fee:([^.]+)\./.exec(hint);
+  if (fee) { const q = feeSourceOf(s, hint)?.quote; return typeof q === "string" && q.trim() ? q.trim() : null; }
+  const m = /^(eligibility\.gates|[a-z_]+)\[(\d+)\]/.exec(hint);
+  if (!m) return null;
+  const list = m[1] === "eligibility.gates" ? (s as { eligibility?: { gates?: unknown[] } | null }).eligibility?.gates : (s as unknown as Record<string, unknown>)[m[1]];
+  const q = Array.isArray(list) ? (list[Number(m[2])] as { source_quote?: unknown } | undefined)?.source_quote : null;
+  return typeof q === "string" && q.trim() ? q.trim() : null;
+}
 
 /** BR-7: the gate, on a draft only (a released snapshot is never re-judged). The entries are the draft's own frozen
  *  `sources` (read once per workspace in buildSnapshots), so the combination page, the catalogue and Submit agree. */
@@ -35,7 +61,7 @@ type Row = Prisma.SourceEntryGetPayload<object>;
 const view = (r: Row): SourceEntryView => {
   const e = sourceEntryOf(r);
   return { value: r.value, cited: e.cited ? { url: e.cited.url, page: e.cited.page ?? null, quote: e.cited.quote, date: e.cited.date } : null, none_published: e.none_published ?? null, sample: r.sample,
-    version: r.version, created_by: r.createdBy, updated_by: r.updatedBy, updated_by_name: nameOf(r.updatedBy), updated_at: r.updatedAt.toISOString(), from_sample_load: r.createdBy === SAMPLE_CREATOR };
+    version: r.version, created_by: r.createdBy, updated_by: r.updatedBy, updated_by_name: nameOf(r.updatedBy), updated_at: r.updatedAt.toISOString(), from_sample_load: r.updatedBy === SAMPLE_CREATOR }; // review MJ-1 on PR 2b: once a person saves it, it is theirs
 };
 
 @Injectable()
@@ -56,7 +82,7 @@ export class SourceRegister {
     const all = numbersOf(snapshot);
     const numbers: SourceNumberView[] = all.filter((n) => !only || (n.kind === only.kind && n.key === only.key)).map((n) => {
       const r = byKey.get(entryKey(n)), st = numberState(n, r ? sourceEntryOf(r) : undefined, demo);
-      return { kind: n.kind, key: n.key, address: n.address, value: n.value, item: n.item, item_words: n.item_words, words: n.words, where: n.where, state: st.state, passes: st.passes, entry: r ? view(r) : null };
+      return { kind: n.kind, key: n.key, address: n.address, value: n.value, item: n.item, item_words: n.item_words, words: n.words, where: n.where, state: st.state, passes: st.passes, entry: r ? view(r) : null, item_quote: itemQuoteOf(snapshot, n.hint), ...(n.kind === "fee" ? { quote_kind: feeQuoteKind(snapshot, n.hint) } : {}) };
     });
     const used = new Set(all.map(entryKey));
     const unused = rows.filter((r) => !used.has(entryKey(sourceEntryOf(r))) && (!only || (r.itemKind === only.kind && r.itemKey === only.key))).map((r) => ({ kind: r.itemKind, key: r.itemKey, address: r.valuePath, value: r.value }));
@@ -96,7 +122,9 @@ export class SourceRegister {
     const conflict = async () => {
       const now = await this.db.sourceEntry.findUnique({ where });
       const at = now ? `${nameOf(now.updatedBy)}, ${now.updatedAt.toISOString().slice(11, 16)} UTC` : "it was removed";
-      throw new HttpException({ type: "https://expatready.local/problems/stale", title: "Changed by someone else", status: 409, detail: `Someone else saved this source while you had it open (${at}). Reload theirs, or keep yours and save again.`, version: now?.version ?? 0 }, HttpStatus.CONFLICT);
+      // Break M3 on PR 2b: the same author in another window is not "someone else".
+      const detail = now?.updatedBy === actor.id ? `You saved this source in another window while this one was open (${now.updatedAt.toISOString().slice(11, 16)} UTC). Reload it, or keep this one and save again.` : `Someone else saved this source while you had it open (${at}). Reload theirs, or keep yours and save again.`;
+      throw new HttpException({ type: "https://expatready.local/problems/stale", title: "Changed by someone else", status: 409, detail, version: now?.version ?? 0 }, HttpStatus.CONFLICT);
     };
     const existing = await this.db.sourceEntry.findUnique({ where });
     let row: Row;
