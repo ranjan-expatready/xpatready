@@ -48,7 +48,7 @@ export class Impact {
     const touchedKeys = [...new Set(rows.filter((r) => (r.change === "removed" || r.change === "reworded") && r.field).map((r) => r.field!))];
     const fields = touchedKeys.length ? await this.db.canonicalField.findMany({ where: { workspaceId: h.workspaceId, canonicalFieldKey: { in: touchedKeys } }, orderBy: { version: "desc" }, distinct: ["canonicalFieldKey"], select: { canonicalFieldKey: true, label: true, meaning: true } }) : [];
     // SH2 (P-258): the combinations that file the form now and their open cases, from the one where-used service.
-    const combos = await formCombinations(this.db, h.workspaceId, def.formKey);
+    const combos = (await formCombinations(this.db, h.workspaceId, def.formKey)).sort((x, y) => x.label.localeCompare(y.label));
     const cases = await openCases(this.db, combos.map((c) => c.id)).catch(() => 0);
     return {
       id: h.id, form: def.formKey, title: def.displayName, edition: h.editionLabel, library_edition: old?.editionLabel ?? null, uploaded_by: ACTORS.find((a) => a.id === h.createdBy)?.name ?? "A person", at: h.createdAt,

@@ -1,7 +1,8 @@
 // SH2 (P-258, inside G-CORE P-253): the one where-used service. It reads the rows; the working-out is engine/where-used.ts
-// (pure, P-249). Every "where is this used" answer comes from here: the shared library's used-in lists and lifecycle
-// guard (library-sources.ts, library-items.ts), a library form's uses (form-uses.ts), a new edition's impact review
-// (impact.ts) and G-CORE's impact preview. Features call it and never copy it (P-258).
+// (pure, P-249). Its callers: the shared library's used-in lists and lifecycle guard (library-sources.ts,
+// library-items.ts), a library form's uses (form-uses.ts) and a new edition's impact review (impact.ts); next, G-CORE's
+// impact preview. Other screens still read some uses themselves (lists of rules and checks, the reuse marks); they move
+// here when they change. New features call it and never copy it (P-258).
 import type { Prisma } from "@prisma/client";
 import { byItem, current, fieldUses, filingCombinations, formLineByCombination, releaseUses } from "../../engine/where-used.ts";
 import type { Db } from "./core.ts";
