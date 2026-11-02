@@ -352,8 +352,9 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
     // Review minors on 0d5589a4: the form's own words for the question; "warn" as every other check; and the note says
     // what the officer can do, and that it stays as a record while the child is on the case (the question is not asked).
     // The library's meaning, without its note on how the value is worked out (that is internal).
+    // Devin on #501: the answer may be the client's or entered by staff, so the words never say who gave it.
     const asked = (fieldOf(s, HAS_CHILDREN)?.meaning ?? "Whether the person has any children").replace(/,\s*derived from .*$/i, "");
-    checks.push({ id: `derived.${HAS_CHILDREN}.overrides_no`, severity: "warn", group: "derived", message: `${who.label} answered No to "${asked}", but a child is on this case, so the forms say Yes. Check with the client before filing. This note stays while the child is on the case: the forms take the Yes from the case, so there is no answer to change (a step-child counts as a child of the family: Unconfirmed, the immigration expert confirms).`, subjectId, about_label: who.label, fact: HAS_CHILDREN, section: null, illustrative: false });
+    checks.push({ id: `derived.${HAS_CHILDREN}.overrides_no`, severity: "warn", group: "derived", message: `${who.label}'s answer to "${asked}" is No, but a child is on this case, so the forms say Yes. Check with the client before filing. This note stays while the child is on the case: the forms take the Yes from the case, so there is no answer to change (a step-child counts as a child of the family: Unconfirmed, waiting for the immigration expert).`, subjectId, about_label: who.label, fact: HAS_CHILDREN, section: null, illustrative: false });
   }
   // P-47 tier 2 (C4.4 part 2): each section's error summary, GOV.UK pattern: every answer that fails its checks and every
   // section check that fired on the section, each naming the field (and row) it links to, in the order of the questions.
