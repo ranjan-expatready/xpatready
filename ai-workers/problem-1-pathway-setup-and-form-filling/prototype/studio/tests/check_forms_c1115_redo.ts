@@ -45,10 +45,11 @@ const C = encodeURIComponent("IMM 5257");
   const r0 = f0.body?.id ? await settle(f0.body.id) : null;
   if (!/^DRAFT\|/.test(line(vv, "IMM 5257"))) { console.error("setup: the finder did not attach IMM 5257", r0?.status, f0.body); process.exit(2); }
   const v5257 = line(vv, "IMM 5257");
+  const listBefore = ((await call("GET", `/combinations/${vv}/forms/find/latest`)).body?.forms ?? []).map((f: any) => `${f.code}:${f.state}`).sort().join(","); // eslint-disable-line @typescript-eslint/no-explicit-any
 
   // ------------------------------------------------ the plan first, per stage; nothing runs
   const n0 = batches();
-  const plans = Object.fromEntries(await Promise.all(["find", "read", "match"].map(async (s) => [s, await call("POST", `/combinations/${vv}/forms/${C}/redo`, { stage: s })])));
+  const plans: Record<string, Res> = Object.fromEntries(await Promise.all(["find", "read", "match"].map(async (s) => [s, await call("POST", `/combinations/${vv}/forms/${C}/redo`, { stage: s })])));
   ok("C11.15 Redo: each stage (find, read, match) answers its plan (steps, US$0 for saved answers) and starts nothing",
     ["find", "read", "match"].every((s) => plans[s].status === 200 && /^[0-9a-f]{64}$/.test(plans[s].body?.planSha256) && plans[s].body?.mode === "replay" && plans[s].body?.totals?.worst_usd === 0 && (plans[s].body?.steps ?? []).length === 6) && batches() === n0,
     Object.fromEntries(Object.entries(plans).map(([k, v]) => [k, [v.status, v.body?.mode, v.body?.totals?.worst_usd]])));
@@ -88,6 +89,12 @@ const C = encodeURIComponent("IMM 5257");
   const att = (e1?.steps ?? []).length ? (await call("GET", `/form-finder/runs/${s1.body.id}`)).body?.result?.attach ?? [] : [];
   ok("C11.15 Redo read (saved answers): the run ends, spends US$0, takes only IMM 5257, and its line stays as it was (already attached)",
     ["done", "done_with_problems"].includes(e1?.status) && e1?.usd?.spent === 0 && att.length === 1 && att[0]?.code === "IMM 5257" && att[0]?.line === "already" && line(vv, "IMM 5257") === v5257, { status: e1?.status, usd: e1?.usd, attach: att.map((a: any) => `${a.code}:${a.line}`), line: line(vv, "IMM 5257") }); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const run1 = (await call("GET", `/form-finder/runs/${s1.body.id}`)).body;
+  const others = (run1?.result?.decide ?? []).concat(run1?.result?.missing ?? [], run1?.result?.not_for ?? []).filter((x: any) => x.code !== "IMM 5257"); // eslint-disable-line @typescript-eslint/no-explicit-any
+  ok("C11.15 Redo (review M1): the run speaks of IMM 5257 only: its words say what AI decided and that the line is unchanged; no other form is reported",
+    /^IMM 5257: .*line is unchanged/.test(e1?.message ?? run1?.message ?? "") && run1?.result?.redo?.[0]?.code === "IMM 5257" && others.length === 0, { message: run1?.message, others: others.map((x: any) => x.code) }); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const after = ((await call("GET", `/combinations/${vv}/forms/find/latest`)).body?.forms ?? []).map((f: any) => `${f.code}:${f.state}`).sort().join(","); // eslint-disable-line @typescript-eslint/no-explicit-any
+  ok("C11.15 Redo (review M1): the Forms tab's finder list keeps every other form after a Redo of one (same rows as after the full find)", after === listBefore && after.split(",").length > 1, { before: listBefore, after });
   const s2 = await call("POST", `/combinations/${vv}/forms/${C}/redo`, { stage: "find", mode: "replay", planSha256: (await call("POST", `/combinations/${vv}/forms/${C}/redo`, { stage: "find" })).body?.planSha256 });
   const stop = s2.body?.id ? await call("POST", `/runs/${s2.body.id}/stop`) : { status: 0, body: null };
   ok("C11.15 Redo find, stopped: Stop answers with the run ended (Stopped, or Done when it ended first); nothing spent; the line unchanged",

@@ -39,7 +39,7 @@ type Stage = "find" | "read" | "match";
 const STAGES: [Stage, string, string][] = [
   ["find", "Find", "Find the application page on canada.ca again (not the one used before), then read it and decide again."],
   ["read", "Read", "Read the application page and guide used before again, then decide again (reading and matching run together today)."],
-  ["match", "Match", "Both AI rounds decide again, on the pages used before, whether this form applies and when."],
+  ["match", "Match", "Both AI rounds decide again, on the pages used before, whether this form applies and when (reading and matching run together today)."],
 ];
 const MODES: [Mode, string, string][] = [
   ["replay", "Saved", "Replays the answers AI gave for these exact pages before. Only combinations with saved answers can be found this way."],
@@ -96,7 +96,7 @@ export function FindDialog({ id, only, page, stages, onClose, onStarted }: { id:
   };
   const title = only?.length ? `Redo with AI: ${only.join(", ")}` : page ? START.pageButton : "Find this combination's forms";
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} title={title} description={`${FIND_DESCRIPTION[mode]} ${SAMPLE_NOTE}`}
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} title={title} description={redoCode ? `Redo with AI for ${redoCode} only: the run says what AI decided about it, and a form already on this combination keeps its line as it is. ${SAMPLE_NOTE}` : `${FIND_DESCRIPTION[mode]} ${SAMPLE_NOTE}`}
       footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void start()} busy={busy} disabled={!plan.data}><Sparkles /> Start</Button></>}>
       <div className="space-y-4" data-find-dialog>
         {redoCode ? (

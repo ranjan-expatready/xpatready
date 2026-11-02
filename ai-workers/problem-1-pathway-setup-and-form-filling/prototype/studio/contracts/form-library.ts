@@ -49,9 +49,9 @@ export const LibraryQuery = z.object({
 
 /** DELETE …/forms/:code and POST …/forms/:code/replace: the line version the person saw (409 when stale; S5 ask). */
 export const LineVersionBody = z.object({ version: z.number().int().min(1).optional() });
-/** C11.15 (P-123): Redo with AI on one form of a combination, per stage. "find" runs the form finder for this form only;
- *  "read" and "match" run its field-map draft (the form's boxes read on this computer, then AI matches each to a shared
- *  field: one run today). Without `planSha256` the call answers the plan and its cost and runs nothing; with the plan's
+/** C11.15 (P-123): Redo with AI on one form of a combination, per stage, on the form finder for this form only: "find"
+ *  finds the application page again; "read" and "match" read the page used before again and let both AI rounds decide
+ *  again (one pass of the finder today: api/src/form-redo.ts). Without `planSha256` the call answers the plan and its cost and runs nothing; with the plan's
  *  fingerprint it starts that plan (Stop: POST /runs/:id/stop). */
 export const REDO_STAGES = ["find", "read", "match"] as const;
 export type RedoStage = (typeof REDO_STAGES)[number];
