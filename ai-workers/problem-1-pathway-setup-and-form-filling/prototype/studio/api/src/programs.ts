@@ -145,6 +145,9 @@ export class Programs {
     const library = lib.filter((f) => f.status !== "RETIRED").map((f) => ({ key: f.canonicalFieldKey, valueType: f.valueType }));
     // C11.12 (review M1 of PR 3): the draft's "Filing for <role>" lines, as the release check reads them (studio problems()).
     const personRoles = await this.studio.personRoles(workspaceId);
+    // UX-A part 2 (break M1): what IRCC accepts per form, as the Review and release tab validates (studio.problems), so a
+    // combination's blocking problems are the same number here, on its setup strip and on its Review tab.
+    const accepts = await acceptsOf(this.db, workspaceId);
     const latest = new Map<string, (typeof releases)[number]>();
     for (const r of releases) if (!latest.has(r.combinationId)) latest.set(r.combinationId, r);
     // G2 (C5.5): the answer-key gate of every draft at once (one keys query), from stored runs only (BR-6).
@@ -190,7 +193,7 @@ export class Programs {
       const participants = c.participants as ParticipantLine[];
       const structure = await this.studio.structureProblems(c.id);
       // C11.12: a released snapshot is never re-judged for filing modes (pinned releases are kept, BR-7); the draft is.
-      const baseProblems = [...structure, ...filingProblems((snapshot.combination?.participants ?? []) as { role: string; label?: string; max: number; filingMode?: unknown }[], personRoles), ...validate(snapshot, library, derivedOf(snapshot))];
+      const baseProblems = [...structure, ...filingProblems((snapshot.combination?.participants ?? []) as { role: string; label?: string; max: number; filingMode?: unknown }[], personRoles), ...validate(snapshot, library, derivedOf(snapshot), accepts)];
       // Status is about what firms can use: the released snapshot when there is one; the draft only explains In setup.
       const relSnap = rel?.snapshot as unknown as Snapshot | undefined;
       const hasContent = snapshot.forms.length + snapshot.sections.length + snapshot.document_requirements.length + snapshot.rules.length > 0;
@@ -282,7 +285,7 @@ export class Programs {
    *  cached rows as the Programs page, for To review's "Needs you" (release blockers and each combination's next step). */
   async setupStates() {
     const { rows } = await this.rows();
-    return rows.filter((r) => r.leaf.combinationId && !r.leaf.retired).map((r) => ({ combinationId: r.leaf.combinationId!, path: r.leaf.path.join(" › "), setup: r.setup, live: r.leaf.live, blockers: r.blockers ?? { n: 0, first: null, empty: false } }));
+    return rows.filter((r) => r.leaf.combinationId && !r.leaf.retired).map((r) => ({ combinationId: r.leaf.combinationId!, path: [r.leaf.pathwayLabel, ...r.leaf.path].filter(Boolean).join(" › "), setup: r.setup, live: r.leaf.live, blockers: r.blockers ?? { n: 0, first: null, empty: false } }));
   }
 
   /** Each last-level name's combination state, for the Structure outline (counts, Live, has setup, retired). */

@@ -65,6 +65,8 @@ const PEOPLE = ["user-A", "user-B", "user-C"];
   const said = await vvRow().innerText();
   const n = Number((said.match(/(\d+) problems? to fix before release/) ?? [])[1] ?? -1);
   step("pass: the row names the first problem", /first: Filing for Spouse or partner/.test(said), said);
+  const found = (await api("/review-queue?filter=all&q=Temporary%20residence")).body.items.filter((i) => i.kind === "setup").map((i) => i.combination);
+  step("pass (break m1): the row's title has the Pathway, so searching it finds the row", found.includes(vv), found);
   const nav = await p.locator('a[href="/review"] [aria-label$="waiting for you"]').innerText().catch(() => "");
   step("pass: the menu's To review number is Needs you's", nav === String((await reviewNeeds("user-A")).counts.needs), nav);
   await axe("To review (author, blocked)");
