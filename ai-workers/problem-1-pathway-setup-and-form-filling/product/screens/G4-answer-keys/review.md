@@ -83,3 +83,309 @@ I read `git diff ea426ad4..3a3cf527 -- prototype/studio`. That holds the fixes (
 No Blocker or Major is open.
 
 **Verdict: Approve** (commit 3a3cf527)
+
+## Re-review 43487860
+I read `git diff 3a3cf527..43487860`: four small fixes from the Devin review, each with a fail line.
+- **`cannot_tell`.** `runFieldMap` (`engine/answer-keys.ts:232-234`) now gives a failing "cannot tell" line, naming the missing facts. It no longer compares boxes. The shape it reads, `applies: "cannot_tell"` with `missing`, matches `engine/render.ts:76,160`. A form that cannot be settled is never a pass, whether or not the key expects it. Correct.
+- **Object keys.** `valueProblem` now also checks object keys (invisible characters, at most 60 characters; array indexes are skipped). Correct.
+- **Inventory path.** `inventoryOrNull` resolves the path, then requires it to be inside `SOLUTION` and to end `.json` (`api/src/answer-keys.ts:66-69`). A `../` path gets 422 (check line). `fill.ts writeForm` still reads its path without this guard, but that code predates G4 and is outside this PR.
+- **Demo scope.** It now counts families, keys and runs (`api/src/demo.ts:431-432`). All three tables have `workspace_id`.
+- **Ran it** on a fresh copy on :4451. `check_g4_answer_keys` passed **76/76**. Then, on another fresh copy, `check_d1_reset_to_six` passed **25/25**.
+- **Still open, Minor:** the check is not rerunnable on the same copy. Its last block now also points `inventory_file` at `/tmp/outside.json` and still leaves `vv.single` retired. Restore both at the end.
+
+No Blocker or Major is open.
+
+**Verdict: Approve** (commit 43487860)
+
+## Part 2 review 860bf1a9
+Scope: the combination's Tests tab (list, Run, Sign, lines), the Families section and family editor, and the Expected editor. That is local branch `g4-part2-local`, `git diff 43487860..860bf1a9`, not pushed. Judged against concept §3–§5, challenge M5 (b), STANDARDS and EXPERIENCE. The concept has no board and still needs the tech lead's approval (P-223 (4)). Journey test: `journey-test-reviewer-2026-11-02-part2.md`, **8.5/10**.
+
+**Verdict: Block.** Two Majors, both with small fixes; no Blocker.
+
+### What I ran (`forms_g4r` :4451, `forms_g4rb` :4452; never :4400; live AI off; US$0)
+- **`vite build`:** built.
+- **Web `tsc --noEmit`:** exit 0.
+- **`check_g4_answer_keys`:** **87/87**, twice on the same copy, so part 1's "not rerunnable" Minor is fixed.
+- **`check_g4_tests_tab_browser`:** **37/37**, twice on fresh copies.
+- **`graph.mjs`:** G1, G2, G4 and G5 are 0. No G3 or G6 entry names an answer-key route or module.
+- **My own walk,** in Playwright Chromium as user-A, user-C and user-B:
+  - on a fresh copy;
+  - with the keyboard;
+  - at 400, 720 (200 %) and 1024 px;
+  - axe on six more states: no violation.
+- **New reads:** officer and client get 403 and nobody gets 401 on `GET /answer-keys/fields` and `GET …/answer-keys/boxes`.
+
+### Concept fit
+- **§4 Tests tab:** present.
+  - Families show the Sample badge, the people count and Edit.
+  - Each item shows each key's Draft · Sample / Signed state, Passed / Failed (n of m) / Not run with its reason, and Run.
+  - The lines table puts failures first and gives the filler's reason.
+  - Sign is for the expert only (greyed with its reason for the author). Change asks for a reason on a signed key.
+- **Expected editor (challenge M5 b):** met. It offers every mapped box in the form's order (161 on IMM 5257), with caption, meaning and whose fact it reads. A choice box picks from the form's own options, label beside code. Empty means "stays blank". There is no "fill from a run", and boxes a person fills are left out.
+- **§5 copy:** the empty state and the Sample tooltip match word for word.
+- **Deviations:** "Box (caption)" is headed "Value", and "Not written" appears only as the family picker. Neither breaks a rule.
+- **Part 1 Minor 3 is closed.** `contracts/answer-keys.ts` (zod) is parsed by the API, and the web uses its types (STANDARDS §6 [M] met).
+
+### Issues
+1. **Major (Must): no read-only state for people who may not act.**
+   - Breaks EXPERIENCE §4 [M] "read-only (… no permission)" and §2.8 [M] "Prevent errors before messaging them".
+   - The approver sees Write a family, Edit, Change, Run and Write expected values all enabled, and each is refused only after the click. The expert can type a whole family and then gets "does not hold the author duty".
+   - Where: `web/src/components/answer-keys.tsx:53-54`; `answer-key-editors.tsx:167, 174, 280`.
+   - Build-notes deviation 6 records this, but an [M] line cannot be waived.
+   - Fix: grey each action with its reason by duty (author for families; author or expert for keys and Run), as Sign already does through `useSessionView`. Keep the server's sentence for a race. Add a fail line per role to the browser check.
+2. **Major (Must): a 409 cannot be recovered in the app** (EXPERIENCE §4 [M] conflict state).
+   - Two tabs change the same key. After the second tab's 409, Cancel and reopen Change: it still shows the old values, and Save gives 409 again, every time. Only a browser reload gets out of it.
+   - Cause: `useSave` (`answer-key-editors.tsx:34-37`) invalidates nothing on error, and both editors are seeded from cached lists (`answer-keys.tsx:61`, `answer-key-editors.tsx:176`).
+   - The build notes say "closing and reopening loads the latest": it does not.
+   - Fix: on 409, invalidate the list and the families (or use the 409 body's `current`), plus a two-tab fail line.
+3. **Minor (Should): rule-set lines show codes.** They show `NOT_ELIGIBLE`, `not_met`, `not_answered` and "missing: person.passport_number" (`answer-keys.tsx:28-30`). Map them with `OUTCOME_WORDS` and `GATE_WORDS` and the field's label.
+4. **Minor (Should): the rule-set editor says "what the form should hold"** (`answer-key-editors.tsx:219`).
+5. **Minor (Should): the toast and the pill count different things.** The toast counts passes ("failed, 1 of 6 values"); the pill counts failures ("Failed (5 of 6)"). `answer-keys.tsx:42` vs `:50`.
+6. **Minor (Should): wrong stale reason after a family change.** It reads "Not run since the expected values changed"; it should name the family change (concept §5 stale copy).
+7. **Minor (Should): the field picker shows library keys.** The options read "person.family_name" (`answer-key-editors.tsx:130`; EXPERIENCE §5). Show the label and keep the key in the hover text.
+8. **Minor (Should): gaps in the tests (D16).**
+   - No browser line covers the rule-set editor or its run.
+   - The UI's "box a person fills is not offered" line cannot fail on IMM 5257, which maps no such box.
+   - The API's zod messages leak "Invalid input: expected nonoptional…" (not reachable from the screen).
+   - `libraryFields` says "none retired", but `effective(…, "draft")` can return retired rows (`engine/snapshot.ts:24`).
+9. **Minor (Should), carried from part 1 Minor 2:** the 16 amended IMM 5257 boxes carry no mark in the editor or the lines. An expert signing in the UI cannot tell them from E1's checked values.
+
+### Standards [M] (part 2)
+| Line | Result |
+|---|---|
+| Pick, don't type | Met (options, roles, sections and fields picked; free text only for text boxes) |
+| Contract first (zod) | Met |
+| Authorisation on the server | Met (new reads 403/401) |
+| Problem Details on the field | Met (errors on their fields in both editors) |
+| No request per row | Met (one list read; lines only when opened) |
+| axe on every state | Met |
+| Read-only and conflict states | **Not met:** Issues 1 and 2 |
+| Plain words | Partly met: Issues 3, 7 |
+| A rule's test fails when removed | Mostly met: Issue 8 |
+
+### D1–D20 (1–5)
+| # | Score | Evidence |
+|---|---|---|
+| D1 | 4 | §4 and M5 (b) built; small deviations from the concept |
+| D2 | 4 | 409 and duplicates refused |
+| D3 | 5 | Editor and run share `captionsOf` and `formOptions` |
+| D4 | 4 | Signature boxes excluded |
+| D5 | 3 | The 409 loop (Issue 2) |
+| D6 | 4 | Signed by and on, Back to Draft with its reason |
+| D7 | n/a | No AI |
+| D8 | 5 | Trail, one row of tabs |
+| D9 | 4 | |
+| D10 | 3 | Issues 3, 4, 5, 7 |
+| D11 | 3 | Issues 1, 2, 6 |
+| D12 | 4 | |
+| D13 | 5 | axe clean, keyboard, 400 px and 200 % zoom |
+| D14 | 4 | Team components |
+| D15 | 5 | Reads under 200 ms, run 336 ms |
+| D16 | 4 | Issue 8 |
+| D17 | simulated only | |
+| D18 | 3 | Issue 9 |
+| D19 | n/a | Until G2 |
+| D20 | simulated only | |
+
+### Could not check
+- A real screen reader, or an intended user's unaided walk.
+- Mac Chrome.
+- The PR body: it is not pushed yet.
+
+**Verdict: Block** (commit 860bf1a9). To fix: Issue 1 (read-only state by duty) and Issue 2 (409 recovery), each with a fail line. Minors 3–9 are to fix or list in the PR.
+
+## Re-review 10f90396
+I read `git diff 860bf1a9..10f90396`: the fixes are in `b64928f7`, and the records and screenshots are in `10f90396`.
+
+### What I ran
+- **Builds:** web rebuilt (`vite build`).
+- **`check_g4_answer_keys`:** **88/88** twice on one fresh copy (:4451).
+- **`check_g4_tests_tab_browser`:** **46/46** on two fresh copies (:4452).
+- **My own walk,** Playwright Chromium on a fresh :4451, as user-A, user-B and user-C.
+
+### My Majors
+- **Major 1, read-only by duty: fixed.**
+  - The approver gets the notice "Read-only for you" with who may do what.
+  - Write a family, Edit, Change, Run, Sign and Write expected values are greyed with `aria-disabled`, each with its reason as the hover text and as the button's description.
+  - The greyed controls stay focusable. A forced click or Enter does nothing, so no refusal toast.
+  - The approver still opens Lines.
+  - The expert has only Write a family and Edit greyed ("Only the configuration author writes test families."). The author has only Sign greyed.
+  - axe finds no violation on the approver's view.
+  - The check has a fail-proof line per role.
+- **Major 2, recovery after a 409: fixed.**
+  - Two tabs change the rule-set key. The second gets "Not saved … Load their version". The button loads the other tab's value ("Possibly eligible"), and the next save goes through.
+  - Cancel and reopen in the stale tab now shows the latest value.
+  - Both editors read the latest version when they open (`refetchOnMount: "always"`). The form keeps the version it opened with, so a refetch never overwrites the other person's change.
+  - The check has lines for a family and for a key.
+
+### Breaker items
+- **P2-M1, signed while being changed: fixed.** I opened Change, the expert signed in another tab, then I saved. The reason field appeared; with a reason the save went through and the key went back to Draft.
+- **P2-M3, Facts table too wide for the dialog:** the check's 48-fact line holds at 1440 and 1024 px.
+
+### My Minors
+- **3:** fixed. Rule-set lines read "Not eligible / Possibly eligible".
+- **4:** fixed. The rule-set editor's copy no longer talks about the form.
+- **5:** fixed. The toast says "failed, 1 of 1 values wrong" and the pill "Failed (1 of 1)", so both count failures.
+- **7:** fixed. The field picker shows the label, with the key underneath and on hover.
+- **8:** partly fixed. Retired fields are now filtered out.
+- **6, 9 and the rest of 8:** left, with reasons in `build-notes.md`. I accept them as Minors.
+- **Server change (break m6):** a signed key saved with the same values keeps its signature, and the check has a line for it. Correct: the reason check still comes first.
+
+### New Minor (Should)
+The 409 notice says the way out twice: "Reload their version, then make your change again. Load their version (your changes here are dropped), then make your change again." Keep one sentence.
+
+No Blocker or Major is open. The journey score rises from 8.5 to about 9: the feedback-and-state and error-recovery criteria now hold.
+
+**Verdict: Approve** (commit 10f90396)
+
+## Head 1fcfbd48
+The head is 10f90396 (approved above), plus 3aa54010 (records only), plus a merge of origin/main (part 1 #513 is in). The tech lead has approved the concept (Q1–Q3 as recommended).
+
+### What the merge changed
+I read `git diff 10f90396 1fcfbd48 -- '*studio*'`.
+- **Untouched by the merge:** the answer-key files (engine, api, contracts, web), `combination.tsx`, `form-values.ts`, `render.ts`, `snapshot.ts`, `options.ts`, `form-steps.ts`, `runtime/forms.ts`, `runtime/eligibility.ts`, the Prisma schema, `core.ts`, `demo.ts`, `lib/api.ts` and `controls.tsx`.
+- **`contracts/workspace.ts`:** only adds helpers (`irccWords`, `FIND_DESCRIPTION`, `endSentence`, `ONLINE_OPTION`). TABS is unchanged, so the Tests tab stays.
+- **`engine/runtime/case.ts`:** `caseView` adds one staff-only check (a worked-out "has children" Yes over a No). It changes no box coverage or value, and a run compares boxes, not checks.
+
+### What I ran
+In `/home/user/g4wt` on fresh copies, never :4400:
+- **Web build:** built.
+- **`check_g4_answer_keys`:** **88/88** (:4451).
+- **`check_g4_tests_tab_browser`:** **46/46** (:4452).
+
+No Blocker or Major is open. The Minors stay as recorded above.
+
+**Verdict: Approve** (commit 1fcfbd48)
+
+## Head 4783acc9
+I read `git diff 1fcfbd48 4783acc9`: four fixes from the Devin review in `answer-key-editors.tsx`, the `parts` flag on `GET /answer-keys/fields`, and my last Minor.
+
+### What I ran
+In `/home/user/g4wt`, web rebuilt, on fresh copies (never :4400):
+- **`check_g4_answer_keys`:** **88/88** (:4451).
+- **`check_g4_tests_tab_browser`:** **50/50** (:4452). It has a pass line for each of Devin's four findings.
+
+### Fixes I walked myself (as the expert, on :4452)
+- **(1) Field map, a person who stays home: fixed.**
+  - The E1 key's editor now offers the husband too, headed "not travelling: give values only if IMM 5257 applies to them".
+  - A value given for him is stored under `father`, and the mother's values are kept.
+  - The run then fails on one clear line: "IMM 5257 does not apply to EXAMPLE FATHER (Sample) in this combination". That is correct: the key expected a form the combination does not file for him.
+  - Rule-set keys still offer only travellers (code read).
+- **(2) Key for another edition: fixed.**
+  - I moved a key to "IMM 5257 (01-2020)" by API. Its run failed on the edition line.
+  - The editor then warned "Another edition … saving moves it to IMM 5257 (09-2023). Check every value against the new edition first."
+  - After the save: edition 09-2023, Draft, Not run. The next run has no edition line and fails only on the key's own left-out boxes.
+
+### Read in the code and covered by the check's lines
+- **(3)** A new phone or address fact gets the JSON box.
+- **(4)** Remove on a person asks first, naming their facts and "none apply" groups, then removes them too.
+- **My Minor:** the 409 notice now gives the way out once.
+
+### Not checked here
+The builder reports two more Devin defects in this head: the edition move when the new edition has removed boxes, and the phone "select …;" prefix in `byParts`. I did not check them. As I read the code, the first ends in a refused save (400), never in wrong data. The next head needs its own look.
+
+No Blocker or Major is open from my review.
+
+**Verdict: Approve** (commit 4783acc9)
+
+## Head eb0422a7
+I read `git diff 4783acc9 eb0422a7`: Devin's second pass is in `e1cfdff2`; `eb0422a7` holds records only.
+
+### The two fixes
+- **The edition move now drops values for boxes the new edition lacks.**
+  - It says which boxes first, in the "Another edition" notice, then drops them on save. Without an edition change nothing is dropped.
+  - The server would refuse those boxes anyway, so the save no longer fails on fields the form does not show.
+  - The notice names a dropped box by its form path ("form1[0].OldEditionBox[0]"). This is a rare state; Minor, Should: name it by caption where one is known.
+- **`writesParts` (`engine/field-format.ts`) is a pure addition.**
+  - It is three lines: a new export built on the existing `core()`. No existing function changed.
+  - `check_forms_c31_formats` on a fresh copy: **107 passed, 0 failed**.
+  - `GET /answer-keys/fields` now also marks a phone read part by part after "select primary/alternate phone;". A derived tick reading the same phone is not marked, and the check has lines for both.
+
+### What I ran
+In `/home/user/g4wt`, web rebuilt, on fresh copies (never :4400):
+- **`check_g4_answer_keys`:** **89/89** (:4451).
+- **`check_g4_tests_tab_browser`:** **51/51** (:4452), including the new line for the edition move with a dropped box.
+
+No Blocker or Major is open.
+
+**Verdict: Approve** (commit eb0422a7)
+
+## Head 917066dc
+I read `git diff eb0422a7 917066dc`: the founder's wording rule (P-63, via the tech lead).
+- A person never reads "box". Each form field shows its printed caption and a section; the data path is only an author's tooltip.
+- Fail lines read "IMM 5257, Family name (principal): expected '…', got '…'".
+- The filler's reasons have "box" replaced with "form field".
+- Run results do not change: only labels.
+
+### What I ran
+In `/home/user/g4wt`, web rebuilt, on fresh copies (never :4400):
+- **`check_g4_answer_keys`:** **91/91** (:4451).
+- **`check_g4_tests_tab_browser`:** **53/53** (:4452), including the new P-63 line: no visible "box" or form path.
+
+### Labels read for sense
+I ran the E1 two-person key on :4452 (66 lines) and read the `GET …/boxes` answer.
+- **Date of birth parts: fine.** "Date of birth: YYYY / MM / DD", section "Date of birth".
+- **Spouse's names: fine.** "Given name(s)" and "Family name", section "Given name(s) as shown on passport or travel document" (the meaning).
+- **Mailing address parts: fine.** "Street no. · Current mailing address".
+
+### Major (Must): residential-address fields are named as the mailing address
+This is a regression from eb0422a7.
+- **What happens.**
+  - `sectionOf` (`engine/answer-keys.ts`) keeps the nearest printed heading when it shares any non-generic word with the field's meaning.
+  - For the 8 residential-address fields (`ResidentialAddressRow1/2`, `contact[0].District`; meaning "Current residential (home) address"), the heading "Current mailing address" shares the word "current".
+  - So these fields read "Street no. · Current mailing address", "Postal code · Current mailing address", and so on.
+- **Effect in the Expected editor.**
+  - eb0422a7 showed the meaning under each caption ("Current residential (home) address · the form's subject"). It now shows only the section.
+  - For one person there are now two identical sets: Street no., Street name, City/Town, Country or Territory, Postal code, Province/State, Apt/Unit and District, all "· Current mailing address". The only difference is an asterisk on some captions.
+  - The run lines have the same two identical sets.
+  - These are exactly the fields of the expert questions in concept §6c: E1 leaves the residential address blank when it is the mailing address, and the map writes it. The expert cannot tell which set is which, so may enter or sign values against the wrong address.
+- **Same cause elsewhere.** The place-of-birth "* City/Town" reads "· Date of birth": the heading "* Date of birth" shares "birth".
+- **Fix.**
+  - Keep the heading only when it names the field's own meaning: for example, add "current" (and other qualifiers) to the generic words, or require the heading's own words to appear in the meaning. Otherwise use the meaning.
+  - Or show the meaning beside the section in both the editor and the lines, as eb0422a7 did.
+  - Add a fail line: no two offered fields for one person share a caption and section unless they read the same fact; a residential field never says "mailing"; the place-of-birth city never says "Date of birth".
+
+No Blocker. One Major.
+
+**Verdict: Block** (commit 917066dc). To fix: the Major above, with its fail line.
+
+## Head 53149ff8
+I read `git diff 917066dc 53149ff8`.
+- The heading guess (`sectionOf`) is gone.
+- `labelsOf` (`engine/answer-keys.ts`) gives every form field its printed caption plus the library field's meaning. Repeating rows add "(row n)", and look-alikes still left add "(n of m)" in the form's order.
+- The Expected editor and the run's lines use the same labels.
+- The lines' column reads "Rule" for a rule set.
+
+### What I ran
+In `/home/user/g4wt`, web rebuilt, on fresh copies (never :4400):
+- **`check_g4_answer_keys`:** **92/92** (:4451).
+- **`check_g4_tests_tab_browser`:** **54/54** (:4452).
+- Both now have no-duplicate-label lines.
+
+### Labels read myself (`GET …/boxes?form=IMM 5257`, 161 fields)
+- **Residential address:** reads "Street no. — Current residential (home) address" (and the same for Apt/Unit, City/Town, Country or Territory, Province/State, Postal code, District).
+- **Mailing address:** reads "Street no. — Current mailing address" (and the same for P.O. box, City/Town, …). The two sets are now distinct.
+- **Place of birth:** "City/Town — City or town of birth" and "Country or Territory — The country or territory where the person was born".
+- **Date of birth:** "YYYY / MM / DD — Date of birth".
+- **Phones:** "No. — Person's telephone number including country code (2 of 2)".
+- **No duplicates:** no two fields share a label and whose-fact. **My Major on 917066dc is fixed.**
+
+### Minor (Should), new
+- The spouse's fields on the principal's form read "Family name — Family name (surname) as shown on passport or travel document".
+- The editor shows whose fact each one reads ("the subject's spouse or partner"). A run line shows only the family person whose form it is, so a reader has only the printed caption ("Family name" vs "*Family name (as shown on your passport…)") to tell the spouse's name from the principal's.
+- Fix: add whose fact the field reads to a line's label when it is not the form's subject.
+
+No Blocker or Major is open.
+
+**Verdict: Approve** (commit 53149ff8)
+
+## Head 7c97d196
+I read `git diff 53149ff8 7c97d196`: one change in `labelsOf` (`engine/answer-keys.ts`), plus my 53149ff8 note committed.
+- **The change:** a form field whose printed caption starts with "*" keeps the form's "* " required marker in front of its label.
+- **Its check line:** every starred field the run names keeps "* ", and no other field gains it.
+- **What else changes:** labels only. Results, fingerprints and the look-alike numbering are as before; the marker only makes labels more distinct.
+- **Ran it:** `check_g4_answer_keys` on a fresh copy (:4451) passed **93/93**.
+
+No Blocker or Major is open.
+
+**Verdict: Approve** (commit 7c97d196)

@@ -1751,7 +1751,7 @@ model FilingApplicant {
   filingId  String @map("filing_id") @db.Uuid
   subjectId String @map("subject_id") @db.Uuid
   role      String
-  /// applying (more modes with sponsorship and permanent residence)
+  /// applying · declared_only (C11.12: named on the principal's application, not accompanying)
   mode      String
 
   filing Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
@@ -1995,4 +1995,38 @@ model AnswerKeyRun {
 
   @@index([keyId, ranAt])
   @@map("answer_key_run")
+}
+
+/// G-CORE (P-253, concept screens/G-CORE-guarded-change/concept.md v2): one change set per guarded change to a shared
+/// library item, by a person or the AI. It records the items, what the fixed rules check found, the review tier, the
+/// preview's fingerprint and who made it; the second-person review stays on library_change / field_merge (linked here).
+/// A direct rename keeps its before-image for its roll-back. Rows are written by the change's own transaction (B2, B3);
+/// B1 adds the table and the check (which writes nothing).
+model ChangeSet {
+  id            String   @id @default(uuid()) @db.Uuid
+  workspaceId   String   @map("workspace_id") @db.Uuid
+  /// person · ai · ai_edited (an AI item a person edited before accepting) · ai_draft (held, L-SA11)
+  madeBy        String   @map("made_by")
+  actor         String
+  /// The change set's items (contracts/change-set.ts ChangeItem[]).
+  items         Json
+  /// What the rules check found (CheckProblem[]); empty when it passed.
+  problems      Json     @default("[]")
+  /// direct · second_person
+  tier          String
+  expertAtRelease Boolean @default(false) @map("expert_at_release")
+  fingerprint   String   @db.VarChar(64)
+  /// applied (direct) · waiting (a second person) · rolled_back · undone (a refused change writes no row)
+  status        String
+  libraryChangeId String? @map("library_change_id") @db.Uuid
+  fieldMergeId  String?  @map("field_merge_id") @db.Uuid
+  proposalBatchId String? @map("proposal_batch_id") @db.Uuid
+  /// A direct rename's before-image (BR-6): what its roll-back puts back.
+  before        Json?
+  rolledBackBy  String?  @map("rolled_back_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([workspaceId, createdAt])
+  @@index([proposalBatchId])
+  @@map("change_set")
 }

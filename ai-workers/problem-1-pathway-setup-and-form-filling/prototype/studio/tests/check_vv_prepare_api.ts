@@ -133,9 +133,24 @@ const releases = () => Number(sql("select count(*) from config_release r join co
   const said = await call("PUT", `/runtime/cases/${caseId}/answers/${principalId}/person.has_children`, { value: false, expectedId: null }, OFFICER);
   const d4 = async (mode: string, actor: string) => (((await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=${mode}`, undefined, actor)).body?.checks ?? []) as { id: string; subjectId: string; message: string }[]).filter((c) => c.id === "derived.person.has_children.overrides_no");
   const d4Before = await d4("agent", OFFICER);
+  // QA-164 (golden journey 1, step 4): the client answers the spouse's "has any children" (No) before the child is on the
+  // case; the section it sits in is the one the officer confirms once the child is added.
+  type Sec = { subjectId: string; section: string; questions: { subjectId: string; fact: string; answer: { id: string } | null; rows?: { answer: { id: string } | null }[] }[]; group?: { none_apply?: { id?: string } | null } | null };
+  const secsOf = async () => ((await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, OFFICER)).body?.sections ?? []) as Sec[];
+  const spouseSays = await call("PUT", `/runtime/cases/${caseId}/answers/${spouse}/person.has_children`, { value: false, expectedId: null }, CLIENT);
+  const famSec = (await secsOf()).find((x) => x.subjectId === spouse && x.questions.some((q) => q.fact === "person.has_children"))?.section;
   await call("POST", `/runtime/cases/${caseId}/people`, { role: "child", displayName: "Sample Child P" }, OFFICER);
+  {
+    // The officer confirms that section as the screen does: every answer it shows is sent as seen (questionnaire.tsx).
+    const sec = (await secsOf()).find((x) => x.subjectId === spouse && x.section === famSec);
+    const seen = (sec?.questions ?? []).flatMap((q) => (q.rows ? q.rows.map((r) => r.answer) : [q.answer])).filter((x): x is { id: string } => !!x).map((x) => x.id);
+    const conf = await call("POST", `/runtime/cases/${caseId}/sections/${famSec}/confirm`, { subjectId: spouse, seen }, OFFICER);
+    const stillDeclared = sql(`select status from client_canonical_answer where subject_id='${spouse}' and canonical_field_key='person.has_children' and superseded_by_id is null`);
+    ok("QA-164 (pass and fail): with a child on the case, the officer confirms the spouse's section although the client's \"has any children\" answer in it is not shown (worked out from the case); before the fix: 409 \"changed\" person.has_children, every time", spouseSays.status < 300 && !!famSec && !!sec && !sec.questions.some((q) => q.fact === "person.has_children") && conf.status < 300, { put: spouseSays.status, section: famSec, confirm: conf.status, detail: conf.body?.detail, changed: conf.body?.changed });
+    ok("QA-164: the hidden answer is neither confirmed nor changed by that confirm (the officer never saw it)", stillDeclared === "DECLARED", stillDeclared);
+  }
   const d4After = await d4("agent", OFFICER), d4Client = await d4("sqr", CLIENT);
-  ok("D4 (P-229 (3), pass and fail): a No that a child on the case overrides is a check on the principal in the officer's case view; none before the child, none in the client's view", said.status < 300 && d4Before.length === 0 && d4After.length === 1 && d4After[0].subjectId === principalId && /'s answer to "Whether the person has any children[^"]*" is No, but a child is on this case/.test(d4After[0].message) && d4Client.length === 0, { said: said.status, before: d4Before.length, after: d4After.length, client: d4Client.length });
+  ok("D4 (P-229 (3), pass and fail): a No that a child on the case overrides is a check on that person in the officer's case view (the principal and, since the QA-164 step, the spouse: one each); none before the child, none in the client's view", said.status < 300 && d4Before.length === 0 && d4After.filter((x) => x.subjectId === principalId).length === 1 && d4After.length === 2 && d4After.some((x) => x.subjectId === spouse) /* QA-164 step: the spouse said No too */ && /'s answer to "Whether the person has any children[^"]*" is No, but a child is on this case/.test(d4After[0].message) && d4Client.length === 0, { said: said.status, before: d4Before.length, after: d4After.length, client: d4Client.length });
   const afterChild = await asksChildren();
   ok("C7.7 (review m1, pass and fail): \"has any children\" is asked with no child on the case, and not asked once the case holds a child", before === true && afterChild === false, { before, afterChild });
   const agentRep = (await qsOf("agent", OFFICER)).flatMap((x) => x.questions).filter((q) => q.subjectId === "representative");

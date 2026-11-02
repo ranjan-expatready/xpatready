@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>G1 board 2: the Source panel and its states (draft, Sample)</title>
+<style>
+  :root { --primary:#0862c5; --link:#054e9c; --surface:#f7f7f7; --raised:#fff; --border:#d9d9d9; --text:#2d2d2d; --muted:#595959; --danger:#b91c1c; --dangerbg:#fdecec; --warnbg:#fff4e6; --warnbd:#f5b46b; --ai:#e6f4ff; --ok:#1e7a46; --okbg:#e9f7ef; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.45 Inter, system-ui, sans-serif; color:var(--text); background:var(--surface); }
+  .bar { position:sticky; top:0; z-index:20; background:#fff; border-bottom:1px solid var(--border); padding:10px 16px; display:flex; gap:6px; flex-wrap:wrap; }
+  .bar b { flex-basis:100%; }
+  .bar button { border:1px solid var(--border); background:#fff; border-radius:999px; padding:4px 12px; cursor:pointer; font:inherit; }
+  .bar button[aria-pressed="true"] { border-color:var(--primary); color:var(--link); background:var(--ai); font-weight:600; }
+  .stage { display:flex; gap:16px; padding:16px; max-width:1180px; margin:0 auto; align-items:flex-start; }
+  .behind { flex:1; min-width:0; opacity:.55; }
+  .behind .card { background:#fff; border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:8px; }
+  aside.panel { width:min(540px, 100%); background:#fff; border:1px solid var(--border); border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.12); display:flex; flex-direction:column; max-height:calc(100vh - 90px); }
+  @media (max-width:820px) { .behind { display:none; } .stage { padding:0; } aside.panel { border-radius:0; max-height:none; } }
+  .ph { padding:14px 16px; border-bottom:1px solid var(--border); }
+  .ph h2 { font-size:18px; margin:0; font-weight:600; }
+  .pb { padding:12px 16px; overflow:auto; flex:1; }
+  .pf { padding:10px 16px; border-top:1px solid var(--border); display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+  .muted { color:var(--muted); font-size:12px; }
+  .pill { display:inline-block; border-radius:999px; padding:1px 8px; font-size:12px; border:1px solid var(--border); background:var(--surface); white-space:nowrap; }
+  .pill.danger { border-color:#f1a5a5; background:var(--dangerbg); color:var(--danger); }
+  .pill.warn { border-color:var(--warnbd); background:var(--warnbg); }
+  .pill.ok { border-color:#8fd1a8; background:var(--okbg); color:var(--ok); }
+  .pill.info { border-color:#9cc6f0; background:var(--ai); }
+  .num { border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:10px; }
+  .num h3 { font-size:14px; margin:0 0 2px; font-weight:600; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  fieldset { border:0; padding:0; margin:10px 0 0; }
+  legend { font-size:12px; color:var(--muted); margin-bottom:4px; }
+  .choice { display:flex; gap:8px; flex-wrap:wrap; }
+  .choice label { border:1px solid var(--border); border-radius:8px; padding:6px 10px; display:flex; gap:6px; align-items:center; cursor:pointer; }
+  .choice label.on { border-color:var(--primary); background:var(--ai); }
+  .f { display:block; margin-top:8px; font-size:12px; }
+  .f input, .f textarea, .f select { width:100%; margin-top:3px; font:14px Inter, system-ui, sans-serif; padding:6px 8px; border:1px solid var(--border); border-radius:6px; }
+  .f.err input, .f.err textarea { border-color:var(--danger); }
+  .err-msg { color:var(--danger); font-size:12px; margin-top:2px; }
+  .two { display:grid; grid-template-columns:1fr 160px; gap:8px; }
+  @media (max-width:480px) { .two { grid-template-columns:1fr; } }
+  .btn { border-radius:8px; padding:6px 12px; font:inherit; cursor:pointer; border:1px solid var(--border); background:#fff; min-height:32px; }
+  .btn.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .btn.link { border:0; background:none; color:var(--link); text-decoration:underline; padding:0; min-height:0; }
+  .btn:disabled { background:#e5e5e5; color:#737373; border-color:#d9d9d9; cursor:not-allowed; }
+  blockquote { margin:6px 0; padding-left:10px; border-left:2px solid var(--border); color:var(--muted); font-size:12px; }
+  .ann { font-size:12px; background:#fffbe6; border-left:3px solid #e0c27a; padding:6px 10px; margin:8px 0; }
+  .alert { border:1px solid var(--warnbd); background:var(--warnbg); border-radius:8px; padding:8px 10px; font-size:12px; margin-bottom:10px; }
+  .skel { height:14px; background:#ececec; border-radius:6px; margin:8px 0; }
+  [data-state] { display:none; }
+  [data-state].show { display:block; }
+  :focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+</style>
+</head>
+<body>
+<div class="bar" role="toolbar" aria-label="Board state">
+  <b>G1 board 2 v2 · Source panel (opens from Review and release, the rule dialog, a check's "Sources" and a form line's "From age"). No fee card: fee lines already carry their source (m4).</b>
+  <button aria-pressed="true" data-go="missing">Missing</button>
+  <button aria-pressed="false" data-go="cited">Official source</button>
+  <button aria-pressed="false" data-go="none">None published</button>
+  <button aria-pressed="false" data-go="stale">Changed since its source</button>
+  <button aria-pressed="false" data-go="errors">Field errors</button>
+  <button aria-pressed="false" data-go="readonly">Read-only</button>
+  <button aria-pressed="false" data-go="conflict">Conflict</button>
+  <button aria-pressed="false" data-go="empty">Empty / loading</button>
+  <button aria-pressed="false" data-go="rule">In the rule dialog</button>
+</div>
+<div class="stage">
+  <div class="behind" aria-hidden="true">
+    <div class="card"><b>Numbers without a source (15)</b><p class="muted">Check on "Common-law relationship of the principal applicant" · 1</p><p class="muted">Check on "Passport of each applicant" · 90</p></div>
+    <div class="card"><b>Validation of the draft</b></div>
+  </div>
+
+  <aside class="panel" role="dialog" aria-labelledby="ph-title">
+    <div class="ph">
+      <h2 id="ph-title">Sources of its numbers</h2>
+      <p class="muted" style="margin:2px 0 0" id="ph-item">Rule "Add form IMM 5707 Family Information for this person." · With an LMIA · Questionnaires › Rules</p>
+    </div>
+    <div class="pb">
+
+      <!-- missing -->
+      <div data-state="missing" class="show">
+        <div class="num">
+          <h3>Age years: at least 18 <span class="pill danger">No source</span></h3>
+          <fieldset><legend>Where does 18 come from?</legend>
+            <div class="choice" role="radiogroup">
+              <label class="on"><input type="radio" name="m1" checked> Official source</label>
+              <label><input type="radio" name="m1"> None published – set by ExpatReady</label>
+            </div>
+          </fieldset>
+          <label class="f">Official address (https)
+            <select aria-label="Pick from this combination's approved sources"><option>Pick from this combination's approved sources…</option><option>IMM 5488 Document checklist (canada.ca)</option><option>Guide 5487 page (canada.ca)</option><option>IMM 5707 form page (canada.ca)</option></select>
+            <input value="" placeholder="https://www.canada.ca/…" aria-label="Or paste an official https address">
+          </label>
+          <div class="two">
+            <label class="f">Page or section (optional, up to 200 characters)<input placeholder="Checklist, Family Information line"></label>
+            <label class="f">Date read<input value="2026-11-02"></label>
+          </div>
+          <label class="f">The words that state the number (up to 300 characters)
+            <textarea rows="3">Family Information (IMM 5707) Note: Must be completed by those aged 18 years or older or a minor travelling alone to Canada.</textarea>
+          </label>
+          <p class="muted">Filled in from the rule's own quote. Check that it states 18.</p>
+          <label class="f" style="display:flex;gap:6px;align-items:center"><input type="checkbox" checked style="width:auto"> Use the same source for the other 18 in this rule (Age years: less than 18)</label>
+        </div>
+        <div class="ann">The two choices stay side by side, and only the choice that is on shows its fields. The URL is picked from the approved sources (STANDARDS §3.2), or typed. The date read defaults to today. The words are filled in from the item's own quote, or from a validity check's <code>cite</code>. One save writes one <code>source_entry</code> per address, by meaning (<code>person.age_years|gte|1</code>, M3), with <code>version</code> for the conflict check (M2). The "same source" box writes the second row (<code>person.age_years|lt|1</code>).</div>
+      </div>
+
+      <!-- cited -->
+      <div data-state="cited">
+        <div class="num">
+          <h3>Age years: at least 18 <span class="pill ok">Official source</span> <span class="pill">From the sample load</span></h3>
+          <p style="margin:6px 0 0"><a href="#" style="color:var(--link)">IMM 5488 Document checklist</a> · checked 19 Oct 2026 · written by the sample load</p>
+          <blockquote>"Family Information (IMM 5707) Note: Must be completed by those aged 18 years or older or a minor travelling alone to Canada."</blockquote>
+          <button class="btn link">Change</button>
+        </div>
+        <div class="num">
+          <h3>Age years: less than 18 <span class="pill ok">Official source</span> <span class="pill">From the sample load</span></h3>
+          <p class="muted" style="margin:6px 0 0">Same source as above · checked 19 Oct 2026</p>
+          <button class="btn link">Change</button>
+        </div>
+        <div class="ann">This state is read first and its fields fold away. "Checked &lt;date&gt;" shows freshness. Next review and the orange "overdue" are Not built (SA-1B-39 rule 3).</div>
+      </div>
+
+      <!-- none published -->
+      <div data-state="none">
+        <div class="num">
+          <p class="muted" style="margin:0 0 8px">Check on "Passport of each applicant". This check stays Sample: it has no source quote of its own. A number's source does not change that.</p>
+          <h3>Passport days until expiry: at most 90 <span class="pill info" title="The government publishes nothing on this point; ExpatReady set the number.">None published – set by ExpatReady</span></h3>
+          <fieldset><legend>Where does 90 come from?</legend>
+            <div class="choice"><label><input type="radio" name="n1"> Official source</label><label class="on"><input type="radio" name="n1" checked> None published – set by ExpatReady</label></div>
+          </fieldset>
+          <label class="f">Why ExpatReady set this number (required)
+            <textarea rows="2">Early warning so the client can renew the passport before filing. IRCC publishes no lead time.</textarea>
+          </label>
+          <p class="muted">Use this only when the government publishes nothing on the point. If an official page states it, cite that page.</p>
+        </div>
+        <div class="ann">Decision 3 (tech lead): a reason is required, on the grounds of SA-1B-294 rule 6 and D18; ⚑ PR 1 adds <code>none_published_reason</code>. This is a source answer, not Sample, so it does not make a Demo release.</div>
+      </div>
+
+      <!-- stale -->
+      <div data-state="stale">
+        <div class="num" style="border-color:var(--warnbd)">
+          <h3>Passport days until expiry: at most 60 <span class="pill warn">Changed since its source</span></h3>
+          <p style="margin:6px 0 0">The source was written for <b>90</b>; the number is now <b>60</b>.</p>
+          <p class="muted">Before: None published – set by ExpatReady · "Early warning so the client can renew…" · 2 Nov 2026</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn">Still correct for 60</button><button class="btn">Write a new source</button></div>
+          <p class="muted">"Still correct for 60" saves the same source for 60, with today's date. Read it again before you choose this.</p>
+        </div>
+        <div class="ann">BR-6 (Decision 2, SA-1B-294 rule 4): a changed number counts as having no source and blocks the release. The canonical <code>value</code> (BR-5: <code>String(Number(x))</code>) is compared with the number at the same address.</div>
+      </div>
+
+      <!-- errors -->
+      <div data-state="errors">
+        <div class="alert" role="alert">2 fields need a fix before this can be saved.</div>
+        <div class="num">
+          <p class="muted" style="margin:0 0 8px">Document "Letter of explanation – exceptional situation, no valid travel document (Venezuelan passport)"</p>
+          <h3>Passport years since expiry: at least 5 <span class="pill danger">No source</span></h3>
+          <label class="f err">Official address (https)<input value="http://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/guide-5487-applying-work-permit-outside-canada.html" aria-describedby="e1"><span id="e1" class="err-msg">Use an https address.</span></label>
+          <div class="two"><label class="f">Page or section<input value="Venezuelan passports"></label><label class="f err">Date read<input value="2026-12-01" aria-describedby="e2"><span id="e2" class="err-msg">The date read cannot be in the future.</span></label></div>
+          <label class="f">The words that state the number<textarea rows="2">If it's been more than 5 years since the printed expiry date, your passport is considered expired.</textarea></label>
+        </div>
+        <div class="ann">Every error shows at once, on its own field (Problem Details from PUT, 400). Other errors: "Copy the words that state the number (up to 300 characters)." · "Say why ExpatReady set this number (at least 10 characters)."</div>
+      </div>
+
+      <!-- read-only -->
+      <div data-state="readonly">
+        <p class="muted">Only the configuration author adds sources. You are acting as Approver B (simulated).</p>
+        <div class="num"><h3>National identity days until expiry: at most 30 <span class="pill danger">No source</span></h3><p class="muted">No source yet. The author adds it on Review and release.</p></div>
+        <div class="ann">The same read-only view is used for a released version (frozen in its snapshot) and for anyone without the author duty. The server refuses a PUT with 403 either way.</div>
+      </div>
+
+      <!-- conflict -->
+      <div data-state="conflict">
+        <div class="alert" role="alert"><b>Someone else saved this source while you had it open (Configuration author, 10:42).</b> Their version: None published – set by ExpatReady. <span style="display:flex;gap:8px;margin-top:6px"><button class="btn">Reload theirs</button><button class="btn">Keep mine and save again</button></span></div>
+        <div class="num"><h3>Cohabitation years: less than 1 <span class="pill">Your unsaved choice: Official source</span></h3>
+          <blockquote>"done so continuously for a period of at least one year." Guide 5487 page</blockquote></div>
+        <div class="ann">409 on PUT when the <code>version</code> sent is old (M2: <code>version</code>, <code>updated_by</code>, <code>updated_at</code>, ⚑ PR 1), or when the number in the draft changed since the panel opened (then: "The number is now 2: check the source again").</div>
+      </div>
+
+      <!-- empty / loading -->
+      <div data-state="empty">
+        <div class="num"><h3>This item has no published numbers</h3><p class="muted">Nothing to source. A comparison with 0 ("already passed", "same day") is not a published number.</p></div>
+        <p class="muted" style="margin-top:16px">Loading:</p><div class="skel" style="width:70%"></div><div class="skel" style="width:90%"></div><div class="skel" style="width:50%"></div><span class="muted" role="status">Loading sources</span>
+      </div>
+
+      <!-- inside rule dialog -->
+      <div data-state="rule">
+        <p class="muted">Edit rule R-01 (the existing dialog, <code>configuration.tsx</code> RuleDialog), below "Condition in plain words":</p>
+        <div class="num"><h3>Sources of its numbers</h3>
+          <p style="margin:4px 0"><span class="pill ok">Official source</span> Age years: at least 18 · IMM 5488 checklist <button class="btn link">Change</button></p>
+          <p style="margin:4px 0"><span class="pill danger">No source</span> Age years: less than 18 <button class="btn link">Add source</button></p>
+          <p class="muted">A number you add or change here gets its source before release. Save the rule first, then add its source: a source is written for the number as saved.</p>
+        </div>
+        <div class="ann">The section lists the numbers of the saved draft version. "Add source" opens this same panel; no panel is stacked on the dialog, because the dialog closes on save. The checks list gets a "Sources" row action on any check that holds a number. A form line's "From age" gets a "Source" link under its field, and its hint changes from "Leave empty for any age. Sample." to "Leave empty for any age. Needs a source before release." (m3).</div>
+      </div>
+    </div>
+    <div class="pf"><button class="btn">Cancel</button><button class="btn primary">Save sources</button></div>
+  </aside>
+</div>
+<script>
+  const btns = document.querySelectorAll('[data-go]');
+  btns.forEach(b => b.addEventListener('click', () => {
+    btns.forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    document.querySelectorAll('[data-state]').forEach(s => s.classList.toggle('show', s.dataset.state === b.dataset.go));
+  }));
+  document.querySelectorAll('.choice').forEach(c => c.addEventListener('change', () => c.querySelectorAll('label').forEach(l => l.classList.toggle('on', l.querySelector('input').checked))));
+</script>
+</body>
+</html>

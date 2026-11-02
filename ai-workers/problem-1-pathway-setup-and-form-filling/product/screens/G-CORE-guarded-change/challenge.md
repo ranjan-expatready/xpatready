@@ -117,3 +117,13 @@ Challenger: a fresh agent that did not draft the concept. Read: `concept.md`, `d
 ## Agreement
 
 ## Build discoveries
+
+B1 (forms builder, 2 Nov, after the reviewer's and the breaker's rounds on b5f5180d: `review-b1.md`, `break-b1.md`):
+* **R1 matches today's rename door, not the concept's "1–120 characters, 3 letters".** A rename or an alias takes 2–80 characters, as `library-sources.ts` NameBody does, so a rename to "12" still passes. A new item's name takes 2–120 characters and needs at least one letter. Every name is refused with control, invisible or direction characters in it. Reason: the suites stay unchanged, and a person and the AI give the same answer.
+* **Only a question's condition goes through the check in B1.** That is the AI's condition proposal (C4.11). A form line, document line, rule or check condition is refused with R1 "changed on its own page" until those pages adopt the core (M3, "each library adopts the core").
+* **One change per item in a change set** (R4, breaker M3). This refuses cycles, chains and a merge plus a rename of the same field within one set, so the hop limit (SH3 #509 Q1, four merges) cannot be got round.
+* **P-266's raise covers every rename and alias of an item a release carries** (fields, sections, aliases), reading the founder's "P-253 as written" ("anything used by a released combination"). The founder's words name a field. If sections or aliases should stay direct, it is one row in `RISK_TABLE`/`RAISES`. In the sample every field and section is released, so today no rename is direct. That is the consequence the concept's Q1 named.
+* **The expert step follows today's release diff** (`validate.ts` needs_sme): rule, document line, check and form-line conditions, plus anything the AI made. It does not cover a person's question condition (review M5).
+* **"One change per item" also refuses two merges into the same surviving field in one set** (break round 2 n5), and a merge together with a condition that reads either field. Each can be sent as its own change set; it keeps every set's rewrite check about one swap.
+* **The contract refuses a condition over 40 levels or 2000 parts with a 400** (break round 2 M1), measured without recursion. Nothing past it (the check, the fingerprint, any verifier) recurses over a hostile tree. The engine's own limit stays 12 levels and 200 parts (R1).
+* **A condition is read only up to 12 levels and 200 parts**, and only in the closed predicate vocabulary (`validatePredicate` with `isNode`, passed in). Anything else is refused with R1 before any verifier runs, so no tree can crash the check (breaker M1, M2).

@@ -20,7 +20,7 @@ const call = async (method: string, path: string, body?: unknown, actor = "user-
 const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? "");
 const settle = async (id: string) => { let r = { status: 0, body: null as any }; for (let i = 0; i < 240; i++) { r = await call("GET", `/runs/${id}`); if (!["queued", "running", "stopping"].includes(r.body?.status)) return r; await new Promise((x) => setTimeout(x, 250)); } return r; };
-const P = (extra: any[] = []) => [{ role: "principal", min: 1, max: 1, applies: true }, { role: "spouse_or_partner", min: 0, max: 1, applies: true }, { role: "child", min: 0, max: 4, applies: true }, { role: "representative", min: 0, max: 1, applies: false }, ...extra];
+const P = (extra: any[] = []) => [{ role: "principal", min: 1, max: 1, applies: true }, { role: "spouse_or_partner", min: 0, max: 1, applies: true, filingMode: "files_own" }, { role: "child", min: 0, max: 4, applies: true, filingMode: "files_own" }, { role: "representative", min: 0, max: 1, applies: false }, ...extra];
 
 (async () => {
   let served = (await call("GET", "/session")).body?.workspace?.id;
@@ -186,7 +186,7 @@ const P = (extra: any[] = []) => [{ role: "principal", min: 1, max: 1, applies: 
   ok("C11.12 L10 fail: nor undone", r.status === 409 && /is retired/.test(words(r)), words(r));
   ok("C11.12 L10: the tab offers no Undo on a retired combination", (await people(vv)).canUndo === false);
   sql(`update combination set retired_at=null where id='${vv}'`);
-  r = await call("PATCH", `/combinations/${vv}/people`, { participants: [{ role: "principal", min: 1, max: 1, applies: true }, { role: "spouse_or_partner", min: 0, max: 1, applies: true }], version: pe.version });
+  r = await call("PATCH", `/combinations/${vv}/people`, { participants: [{ role: "principal", min: 1, max: 1, applies: true }, { role: "spouse_or_partner", min: 0, max: 1, applies: true, filingMode: "files_own" }], version: pe.version });
   ok("C11.12 L10 pass: once restored, the same save goes through", r.status === 200, words(r));
 
   // ---------------------------------------------------------------- L6 people Undo after a release

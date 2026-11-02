@@ -13,6 +13,7 @@
 // (an isolated copy: STUDIO_URL=http://localhost:<port> STUDIO_DB=xr_studio_<name>; the section step writes to that database)
 const path = require("node:path"); const fs = require("node:fs");
 const { chromium } = require("playwright");
+const { setFilingModes } = require("./fixtures/steps-before-forms.cjs");
 const URL = process.env.STUDIO_URL ?? "http://localhost:4400"; // an isolated copy: STUDIO_URL=http://localhost:<port>
 const ROOT = path.resolve(__dirname, "..", "..", "..", "..", "..");
 const OFFICIAL = path.join(ROOT, "ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/ircc");
@@ -384,6 +385,9 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
     await p.request.fetch(`${URL}/api/library/fields/${encodeURIComponent(x.item)}/placement`, { method: "POST", headers: { "x-actor": "user-A", "content-type": "application/json" }, data: { sectionKey: sec, collectedFrom: "staff_working_view", repeats: x.item.startsWith("case.") ? "once_per_case" : "per_person" } });
   const left = (await api(`/combinations/${scratch}`)).draft.problems.filter((q) => q.where === "Questionnaires").length;
   step("B6c (S5 BR-11): the answers the forms need but nobody was asked are named on Questionnaires; once the case officer fills them, none is left", left === 0, `${gapsShown} shown, ${left} left`);
+  // C11.12 BR-7: a new release needs each applicant role's filing; the author sets them (through the API: scaffolding here;
+  // check_c1112_filing_browser.cjs walks the Filing column on its screen).
+  await setFilingModes(async (pth, init = {}) => { const r = await p.request.fetch(`${URL}/api${pth}`, { headers: { "x-actor": "user-A", "content-type": "application/json" }, ...init }); return { status: r.status(), body: await r.json() }; }, scratch);
   await go(`/c/${scratch}/review`);
   await click(btn("Submit for review"));
   await as("user-C"); await click(btn("Select all I can sign")); await click(btn(/^Sign/));

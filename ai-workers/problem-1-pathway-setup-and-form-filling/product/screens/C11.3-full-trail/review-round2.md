@@ -1,0 +1,36 @@
+# Review round 2: C11.3 QA-150, full five-part trail (fixes after round 1 and the break report)
+
+Reviewer agent, 2 Nov 2026 · exact commit **da70b996** (branch `claude/vibrant-hopper-a48qgk`). The fixes are in c76a8602; the merge of origin/main brought nothing into the 8 files this row touches beyond c76a8602. Isolated copies `rev2_c113` :4443 and `rev2_s4` :4444 (fake launcher, canada-alt fixtures), never :4400. Live AI off, US$0. Nothing committed; the working tree was clean at the end.
+
+**Verdict (skill wording): Ship.** Journey score **9/10**, pass (`journey-test-reviewer-2026-11-02-round2.md`).
+
+## Round-1 Minors and breaker findings
+| # | Finding | Status | Evidence |
+|---|---|---|---|
+| R1 / B1 | The closed Used by filter did not say which combination it filters by | **Fixed** | Options are now "name · trail" and sorted (`library-forms.tsx:200`, shared `nameFirst` at :238). At 1024 the 224 px select shows "Visitor visa · Retail › Tempora…", "Super visa · …" and "With an LMIA · …", which are all different. No option carries "No sub-category". Filtering gives 5, 4 and 9 rows. The keyboard (ArrowDown) changes the filter. axe 0. |
+| R2 | The Used by cell was 8 to 10 lines at 1024 | **Fixed** | `line-clamp-2` (`library-forms.tsx:243`). Max 2 lines at 1440, 1024, 400 and 1024 at 200 % (512 CSS px). Every cell has the full trail in `title`, and "See where it is used" lists it in full. |
+| B2 | A long unbroken name spilled over Status | **Fixed** | `[overflow-wrap:anywhere]`. With a 119 × "S" category and "Familienzusammenführungs…richtlinien" as the program: no cell has `scrollWidth > clientWidth`. The table scroller stays 750/750 at 1024 and 1166/1166 at 1440 (it was 1438 at 1024 in the break report). axe 0. |
+| R3 | No test failed if `execute` stopped giving the AI its names | **Fixed** | `aiNamesOf` (`engine/structure.ts:99-101`) has unit pass and fail checks, including a plan stored before QA-150 (`check_c113_full_trail.ts:34-36`). The new finder check asserts the job ids (`check_forms_s4_finder.ts:148`). **Mutation spot-check:** with `names = plan.combination.trail` the finder suite fails (11 pass, 4 fail: the rules' sure match breaks first). Restored with `git checkout --`. |
+| R4 | "No sub-category" was shown in some places and hidden in others | **Fixed for every list in words** | `trailWords` (`engine/structure.ts:96-98`) is now used by `combinationTrails` (Used by, the filter, where-used, `can.*` messages, the retire list) and by the finder run's `scopeLabel`. Run card scope and AI work for a new run: "Retail › Temporary residence › Visitors › Visitor visa". The arrays (catalogue and plan `trail`) keep five parts. The remainder is acceptable: the shared visual `Trail` and the Program structure still show it **muted**, which is the visual system's rule (EXPERIENCE §1), not plain text. |
+| B3 | A "\|" in a name cut the run card's scope | **Fixed** | `runs.ts:74` and the stop audit line (`finder.ts:847`) cut at the first "\|" only. With "Super visa \| parents and grandparents", `/runs/:id` scope and AI work show the whole trail. The remaining `split("|")[0]` (`runs.ts:104`) reads the id, which is safe. |
+| B4 | Run labels are frozen at start | **Not changed. Acceptable.** | A run's scope is a record of what was run, like an audit line. The live lists (Used by, the plan, where-used) follow a rename at once, as P-104 asks. Runs stored before QA-150 keep a 3-part label. That data exists only in workspaces made before this change, and every view of them answers 200 (break report). Not a P-104 breach: the run list is history, not the combination's current name. |
+| N1 | The catalogue has its own copy of the trail rule (`api/src/programs.ts:147`) | **Not changed. Acceptable for this row, recorded as Minor 1.** | Both copies give the same five parts for every chain the service and the database trigger allow. The suite proves plan = card on live data (`check_c113_full_trail.ts:57`). They differ only on hand-written chains the service refuses. STANDARDS §7 [M] forbids duplicated logic between web and API. This is API against engine, so it does not breach the letter of that line, but it is the kind of double rule the line is there to stop. |
+
+## No regressions
+* **Suites:** `check_c113_full_trail.ts` 12/12 (was 8; 4 new rule checks). `check_forms_s4_finder.ts` 145/145, including the new C11.3 job-id check. Its job ids are `studio-finder-forms-temporary-residence-visitors-visitor-vis-…`, with no "retail-" and no placeholder. `graph.mjs --check` exit 0. `tsc` (api and web): no errors in the touched files.
+* **The AI's names are unchanged:** `ai_trail` is `["Temporary residence","Visitors","Visitor visa"]`, the same as before. A renamed name ("Super visa \| …") goes into `ai_trail` unchanged. `trailWords` touches only the label a person reads. `execute` still joins `names` from `aiNamesOf` for the job id, `sureMatch` and the guide match. So saved answers still match.
+* **Forms list:** no page-level sideways scroll at 1440, 1024 or 400, or at 200 % zoom (at 400 the table scrolls inside its own box, as before). axe WCAG 2.2 AA: 0 at every width, filtered and with long names. No console or page errors. Warm first view 672 to 705 ms (below 1 s).
+* **Library browser suite:** its LMIA option check was updated to the "name · trail" form (`check_forms_s4_library_browser.cjs:91`). I did not run the suite itself (`channel: "chrome"`); my own Playwright walk covered the same option text.
+
+## D1–D20 (changes from round 1 only)
+D5 5 (old plans' fallback now tested) · D10 5 (one rule for the placeholder in words) · D11 5 (the closed filter names the combination) · D12 4 (2 lines, but at 1024 a long name can fill both lines and push the trail into the tip) · D14 4 (`TrailText`, not the shared `Trail`; unchanged, and the "last level bold" gap is older than this row) · D16 5 (each rule has a pass and a fail check; mutation caught). The rest are as in round 1. D17 and D20 are simulated only.
+
+## Remaining findings (none Blocker or Major)
+1. **Minor · could (N1, follow-up).** `api/src/programs.ts:147` builds the trail itself instead of calling `fullTrail(chain)`. Fix: one line, so the cards and the lists can never drift apart. It does not block: the outputs are equal for all data the service accepts, and a test pins plan = card.
+2. **Nit · test.** `FIVE` in `check_c113_full_trail.ts:20` now also accepts 4 parts. A Used by label that lost its Pathway but kept a sub-category would still pass. The unit checks on `fullTrail` and the exact plan = card check cover this today. Comparing Used by to `trailWords(card.trail)` would be exact.
+3. **Note (break N2, unchanged).** A real sub-category named "No sub-category", or a name containing " › ", reads ambiguously in words. The service does not refuse either. This is outside QA-150; the Immigration programs cards already behave this way.
+
+## Could not check
+A real screen reader. An intended user's unaided walk (D17, D20). A live AI run (US$0). The library browser suite run as written (Chrome channel). The stop audit line after a real Stop (code read only: `finder.ts:847`).
+
+**Verdict: Approve.** No open Blocker or Major. All four round-1 Minors and breaker Minors 1 to 3 are fixed. Breaker Minor 4 and note N1 are acceptable as left: findings 1 to 3 above, none required for merge.

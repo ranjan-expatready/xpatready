@@ -14,6 +14,7 @@ import type { ProposalItem } from "../contracts/proposal-item.ts";
 type RoundReading = NonNullable<ProposalItem["rounds"]["draft"]>;
 import { factSources, type FactSourceView } from "./sources.ts";
 import type { Snapshot } from "./snapshot.ts";
+import { sourceKey } from "../contracts/resolver.ts"; // SH3 R8
 
 export const PQR_STEP = "pqr_picks";
 /** One pick as an AI round gives it (p2/prompts/pqr-picks-output.v1.schema.json). */
@@ -79,7 +80,7 @@ export function pqrPicksFromRounds(s: Snapshot, rounds: { draft: Round; check: R
       if (!isSentence(p.quote) || !text.includes(sameText(p.quote))) { dropped.push({ role: p.role, asks: p.asks, why: `Its sentence is not in ${guide.code}'s text, so it is not proposed (${which}).` }); continue; }
       const reason = p.why.trim();
       if (reason.length > 300 || (reason.match(/\p{L}/gu) ?? []).length < 3) { dropped.push({ role: p.role, asks: p.asks, why: `It has no reason in words of 3 to 300 characters (${which}).` }); continue; }
-      const k = `${f.role}|${f.fact}`;
+      const k = sourceKey(f.role, f.fact);
       if (!out.has(k)) out.set(k, { f, p });
     }
     return out;
