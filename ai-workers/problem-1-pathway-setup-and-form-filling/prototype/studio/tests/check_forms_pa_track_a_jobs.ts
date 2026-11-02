@@ -10,7 +10,8 @@
 // Files it writes (saved runs, stub runs) are removed after; the committed stub passes and canary digest are restored.
 //   zsh studio/tools/isolated.sh forms_pa 4453 start && tsx studio/tests/check_forms_pa_track_a_jobs.ts 4453 xr_studio_forms_pa
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Ajv } from "ajv";
 
@@ -27,6 +28,12 @@ const call = async (method: string, path: string, body?: unknown, actor = "user-
 };
 const sql = (q: string) => execFileSync("psql", [process.env.DATABASE_URL!, "-Atc", q], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 const written: string[] = [];
+// Break M2: the check's simulated live runs carry this stamp and tag. Stamped 1 Jan 2000, a leftover (a killed run) is
+// older than any real run and never outranks one; the tag is gitignored, so one is never committed; and a leftover from
+// an earlier killed run is removed when the check starts. Each run's own files are also removed on Ctrl-C or a stop.
+const FAKE = "-live-20000101t000000000z-pacheck";
+const cleanUp = () => { for (const f of written) rmSync(f.startsWith("/") ? f : join(PROTOTYPE, "..", f), { force: true }); for (const [f, b] of kept) { if (b === null) rmSync(f, { force: true }); else writeFileSync(f, b); } };
+for (const sig of ["SIGINT", "SIGTERM"] as const) process.on(sig, () => { cleanUp(); process.exit(130); });
 const kept = new Map<string, Buffer | null>(); // committed files a stub pass rewrites, restored after
 const keep = (f: string) => { if (!kept.has(f)) kept.set(f, existsSync(f) ? readFileSync(f) : null); };
 
@@ -38,6 +45,9 @@ const keep = (f: string) => { if (!kept.has(f)) kept.set(f, existsSync(f) ? read
   if (reset.status >= 300) { console.error("STOP  Reset to the six did not finish", reset.body); process.exit(2); }
   const vv = sql(`select id from combination where combination_key='vv.single'`);
   const tool = await import("../tools/track-a-jobs.ts");
+  for (const f of readdirSync(RUNS).filter((x) => x.includes(FAKE))) rmSync(join(RUNS, f), { force: true });
+  // Break m4: the stub passes reserve their US$0 in a scratch ledger of this copy, never in the shared one.
+  const scratchLedger = join(STUDIO, "var", `pa-check-ledger-${process.pid}`); mkdirSync(scratchLedger, { recursive: true });
 
   // ---------------------------------------------------------------- J: the committed jobs are the app's own
   const derived = await tool.deriveJobs();
@@ -65,7 +75,7 @@ const keep = (f: string) => { if (!kept.has(f)) kept.set(f, existsSync(f) ? read
   const stubRuns = new Map<string, any>();
   for (const d of derived) {
     keep(join(RUNS, "stub-pass", `${d.job.job_id}.json`));
-    const r = spawnSync(process.execPath, [join(P2, "launch.ts"), "--job", d.job.job_id, "--stub"], { cwd: ROOT, encoding: "utf8", timeout: 120_000 });
+    const r = spawnSync(process.execPath, [join(P2, "launch.ts"), "--job", d.job.job_id, "--stub"], { cwd: ROOT, encoding: "utf8", timeout: 120_000, env: { ...process.env, P2_LEDGER_DIR: scratchLedger } });
     let out: any = null; try { out = JSON.parse(r.stdout.trim().split("\n").pop() ?? ""); } catch { out = { refused: r.stderr.slice(-300) }; }
     if (out?.run_file) written.push(out.run_file);
     const rec = out?.run_file && existsSync(out.run_file) ? JSON.parse(readFileSync(out.run_file, "utf8")) : null;
@@ -73,7 +83,8 @@ const keep = (f: string) => { if (!kept.has(f)) kept.set(f, existsSync(f) ? read
     ok(`PA S pass: ${d.row} ${d.label}: the guarded launcher's stub pass exits 0, contract-valid, one stub call, US$0`, r.status === 0 && rec?.contract_valid === true && rec?.caller === "stub" && rec?.launch_evidence?.stub_calls === 1 && rec?.drafting_run?.usage?.cost_usd === 0 && JSON.parse(readFileSync(join(RUNS, "stub-pass", `${d.job.job_id}.json`), "utf8")).run_id === rec?.drafting_run?.run_id, { exit: r.status, refused: out?.refused, errors: rec?.contract_errors });
     ok(`PA K pass: ${d.row} ${d.label}: a recorded run of kind ${d.job.kind} is valid under the run contract`, !!rec && contract(rec.drafting_run) === true, contract.errors);
   }
-  ok("PA S pass: the four stub passes add nothing to what the ledger counts against the caps (US$0 reservations only)", new SpendLedger(LEDGER_DIR).committed() === before, before);
+  ok("PA S pass: the four stub passes add nothing to the shared ledger, and only US$0 to their scratch ledger", new SpendLedger(LEDGER_DIR).committed() === before && new SpendLedger(scratchLedger).committed() === 0, before);
+  rmSync(scratchLedger, { recursive: true, force: true });
   // S fail: the live gate (p2/pathcode.ts hasStubPass, checked by the launcher and again inside the drafting process)
   // refuses these stub passes once the screening sources differ: a live call then needs a new stub pass first.
   const { hasStubPass } = await import("../../p2/pathcode.ts");
@@ -84,16 +95,17 @@ const keep = (f: string) => { if (!kept.has(f)) kept.set(f, existsSync(f) ? read
   ok("PA K fail: a run of a kind the contract does not name is refused, so nothing unknown is ever replayed", contract(madeUp) === false && JSON.stringify(contract.errors).includes("/kind"), contract.errors?.[0]);
 
   // ---------------------------------------------------------------- R: the app's Replay uses exactly these recorded runs
-  // A launcher-shaped saved live run: the stub run's record (the same job, prompt and inputs), as a live run would end. It
-  // is stamped 31 Dec 2999, so it is the newest even after the Mac's real runs of these jobs are committed.
+  // A launcher-shaped saved live run: the stub run's record (the same job, prompt and inputs), as a live run would end,
+  // with the hash of its answer where the launcher puts it (the contract requires it for both kinds).
   const answer = (kind: string) => kind === "pqr_picks"
     ? { picks: [{ role: "principal", asks: "passport", quote: "valid travel document", why: "The officer checks it first." }], unresolved: [] }
     : { conditions: [{ role: "principal", asks: "travel history", depends_on: "travelled before", when: "yes", quote: "travel history", why: "Asked only after travel." }], unresolved: [] };
   const saveLive = (jobId: string, combination?: string) => {
     const rec = JSON.parse(JSON.stringify(stubRuns.get(jobId)));
     rec.caller = "live"; rec.raw_output = JSON.stringify(answer(rec.drafting_run.kind));
+    rec.drafting_run.output_sha256 = rec.launch_evidence.output_sha256 = createHash("sha256").update(rec.raw_output).digest("hex");
     if (combination) rec.drafting_run.inputs.combination = combination;
-    const f = join(RUNS, `${jobId}-live-29991231t235959000z-pa${Math.random().toString(36).slice(2, 8)}.json`);
+    const f = join(RUNS, `${jobId}${FAKE}${Math.random().toString(36).slice(2, 8)}.json`);
     writeFileSync(f, JSON.stringify(rec, null, 1) + "\n"); written.push(f);
     return `prototype/p2/runs/${f.split("/").pop()}`;
   };
@@ -121,10 +133,15 @@ const keep = (f: string) => { if (!kept.has(f)) kept.set(f, existsSync(f) ? read
   for (const f of wrong) { rmSync(join(PROTOTYPE, "..", f), { force: true }); }
 
   const good = [saveLive(pd), saveLive(pk), saveLive(cd), saveLive(ck)];
+  // Break M1: once the Mac's real runs of these jobs are committed, Replay takes the newest of them (the check's runs are
+  // older); either way the run used is one of the committed job's own, never another job's.
+  const { newestFirst } = await import("../engine/rounds.ts");
+  const expect = (jobId: string, mine: string) => { const real = readdirSync(RUNS).filter((f) => f.startsWith(`${jobId}-live-`) && !f.includes(FAKE)).sort(newestFirst); return real.length ? `prototype/p2/runs/${real[0]}` : mine; };
+  const want = [expect(pd, good[0]), expect(pk, good[1]), expect(cd, good[2]), expect(ck, good[3])];
   r = await pqrDraft();
-  ok("PA R pass: C4.7 Replay on Visitor visa uses exactly the recorded runs of the committed draft and checker jobs, US$0", r.status === 201 && r.body.from === "replay" && r.body.usd === 0 && JSON.stringify(r.body.run_files) === JSON.stringify([good[0], good[1]]), { files: r.body?.run_files, note: r.body?.note });
+  ok("PA R pass: C4.7 Replay on Visitor visa uses exactly the recorded runs of the committed draft and checker jobs, US$0", r.status === 201 && r.body.from === "replay" && r.body.usd === 0 && JSON.stringify(r.body.run_files) === JSON.stringify([want[0], want[1]]), { files: r.body?.run_files, note: r.body?.note });
   q = await condRounds();
-  ok("PA R pass: C4.11 step 5 Replay (the rounds draft-qd.ts runs) uses exactly the recorded runs of the committed draft and checker jobs", JSON.stringify(q) === JSON.stringify([good[2], good[3]]), q);
+  ok("PA R pass: C4.11 step 5 Replay (the rounds draft-qd.ts runs) uses exactly the recorded runs of the committed draft and checker jobs", JSON.stringify(q) === JSON.stringify([want[2], want[3]]), q);
 
   // ---------------------------------------------------------------- W: worst cases from the code's own estimators
   let total = 0;
@@ -138,8 +155,7 @@ const keep = (f: string) => { if (!kept.has(f)) kept.set(f, existsSync(f) ? read
   ok(`PA W fail: a job whose worst case (US$${cb.worst_usd.toFixed(2)}) is above its budget is flagged`, cb.fits_budget === false && cb.worst_usd > cb.budget_usd, cb);
   ok(`PA W pass: the four runs together: worst US$${total.toFixed(2)}, within the US$2.70 the PR states`, total > 0 && total <= 2.70, total);
 })().catch((e) => { console.error("FAIL  unexpected", e); fail++; }).finally(() => {
-  for (const f of written) rmSync(f.startsWith("/") ? f : join(PROTOTYPE, "..", f), { force: true });
-  for (const [f, b] of kept) { if (b === null) rmSync(f, { force: true }); else writeFileSync(f, b); }
+  cleanUp();
   const out = join(STUDIO, "var", "suites"); mkdirSync(out, { recursive: true });
   writeFileSync(join(out, "check_forms_pa_track_a_jobs.json"), JSON.stringify({ at: new Date().toISOString(), pass, fail, log }, null, 1));
   console.log(`\n${pass}/${pass + fail} passed`);

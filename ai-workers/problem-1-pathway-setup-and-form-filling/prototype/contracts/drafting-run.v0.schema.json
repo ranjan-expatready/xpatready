@@ -40,6 +40,6 @@
     { "if": { "properties": { "status": { "enum": ["completed", "completed_with_unresolved"] } } }, "then": { "required": ["usage", "ended_at"] } },
     { "if": { "properties": { "status": { "enum": ["completed", "completed_with_unresolved"] }, "kind": { "const": "field_map" } }, "required": ["status"] }, "then": { "required": ["entries"] } },
     { "if": { "properties": { "status": { "enum": ["completed", "completed_with_unresolved"] } }, "not": { "required": ["kind"] } }, "then": { "required": ["entries"] } },
-    { "if": { "properties": { "status": { "enum": ["completed", "completed_with_unresolved"] }, "kind": { "enum": ["requirements", "sections", "checks", "screen_map", "field_map_edition"] } }, "required": ["status", "kind"] }, "then": { "required": ["output_sha256"] } }
+    { "if": { "properties": { "status": { "enum": ["completed", "completed_with_unresolved"] }, "kind": { "enum": ["requirements", "sections", "checks", "screen_map", "field_map_edition", "pqr_picks", "qd_conditions"] } }, "required": ["status", "kind"] }, "then": { "required": ["output_sha256"] } }
   ]
 }
