@@ -227,7 +227,7 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   const calls = readFileSync(join(VAR, "fake-launch.log"), "utf8");
   r = await plan(wp, "live");
   const rp = await plan(wp, "rules");
-  ok("C4.7 L fail: without the switch AI now is refused in words before anything runs (409); the plan says it is off", r.status === 409 && /tech lead's Go/.test(words(r)) && rp.body?.live?.approved === false, words(r));
+  ok("C4.7 L fail: without the switch AI now is refused in words before anything runs (409); the plan says it is off", r.status === 409 && /not open yet: each paid run is approved first/.test(words(r)) && rp.body?.live?.approved === false, words(r));
   r = await call("POST", `/combinations/${wp}/pqr-picks/draft`, { mode: "live", planSha256: "0".repeat(64) });
   ok("C4.7 L fail: a live draft is refused (409) and the launcher is never asked", r.status === 409 && readFileSync(join(VAR, "fake-launch.log"), "utf8") === calls, r.status);
   // ---------------------------------------------------------------- Q4 (review M2): a bulk accept of 80 Ready picks

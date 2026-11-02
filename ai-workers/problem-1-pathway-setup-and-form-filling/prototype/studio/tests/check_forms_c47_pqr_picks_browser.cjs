@@ -138,7 +138,7 @@ const failing = { stub: { exit: 0, out: { ok: true } }, live: { exit: 1, err: "t
   let up = false; for (let i = 0; i < 240 && !up; i++) { up = await fetch(`${BASE}/api/session`, { headers: { "x-actor": "user-A" } }).then((x) => x.status === 200, () => false); if (!up) await new Promise((res) => setTimeout(res, 500)); }
   if (!up) throw new Error(`the copy did not come back after the restart: ${said}`);
   await go(); await chip().click(); await settle(); await open();
-  step("C4.7 S fail: Live greyed while the switch is off, with the reason", await dlg.locator('[data-pqr-mode="live"] input').isDisabled() && /not open[\s\S]*tech lead's Go/.test(await dlg.locator('[data-pqr-mode="live"]').innerText()));
+  step("C4.7 S fail: Live greyed while the switch is off, with the reason", await dlg.locator('[data-pqr-mode="live"] input').isDisabled() && /not open[\s\S]*approved first/.test(await dlg.locator('[data-pqr-mode="live"]').innerText()));
   step("C4.7 S fail: neither way open: Nothing can start says why, and Draft is off and points to it", /Nothing can start/.test(await dlg.locator("[data-pqr-none]").innerText()) && await start().isDisabled() && (await start().getAttribute("aria-describedby")) === "pqr-none");
   await state("nothing-can-start");
   step("no page error or console error on the way", errs.length === 0, errs.join(" | "));

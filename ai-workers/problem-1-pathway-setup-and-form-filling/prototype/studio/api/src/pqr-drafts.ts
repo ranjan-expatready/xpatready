@@ -35,12 +35,12 @@ export const PQR_AI: AiStep = {
   template: "pqr-picks.v1.md", check: "pqr-picks-check.v1.md", schema: "pqr-picks-output.v1.schema.json", effort: "low", max_output_tokens: 4000,
   shapeOk: pqrShapeOk,
   words: {
-    noSaved: "No saved AI answer for this guide, prompt and combination yet: it is recorded once in a Live run the tech lead approves.",
+    noSaved: "No saved AI answer for this guide, prompt and combination yet: it is recorded once in an approved Live run.",
     badSaved: "The saved AI answer could not be read, so it is not used.",
     nothingUsed: "Nothing of it is proposed.",
   },
 };
-export const LIVE_WAITING = "Live is not open on this copy: a paid run waits for the tech lead's Go, with its cost stated first.";
+export const LIVE_WAITING = "Live is not open yet: each paid run is approved first, with its cost stated.";
 const STEPS = {
   rules: [{ n: 1, label: "Find the facts this combination's rules read (rules)", uses_ai: false }, { n: 2, label: "Keep those a prospect can answer and a question asks (rules)", uses_ai: false }],
   ai: [
@@ -150,7 +150,7 @@ export class PqrDrafts {
       items = pqrPicksByRules(snapshot, c.id, job.id, randomUUID).map(({ id: _i, status: _s, decision: _d, ...x }) => x);
     } else {
       const g = await this.guide(c);
-      if (!g.input) { out.note = `${g.code} is not among the official files the AI may read, so only rules can draft these.`; }
+      if (!g.input) { out.note = `${g.code} is not among the official files the AI may read, so its picks cannot be drafted with Live or Saved.`; }
       else {
         const ctx: RoundContext = { trail: g.trail, contextKey: c.combinationKey, inputs: [g.input], mode: plan.mode, wanted: async () => true, batchId: job.id };
         // Review minor (#282): a round that throws ends this job as FAILED, never left running.
