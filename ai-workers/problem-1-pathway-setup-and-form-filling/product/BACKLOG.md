@@ -27,7 +27,7 @@ One owner per row and per shared file; never build another owner's rows. Under t
 ## Ready rows from P-230 (2 Nov; owners in the session table of `STATE.md`)
 | # | Area | Item | Done when (beyond the standard) | Source |
 |---|---|---|---|---|
-| R2 | runtime | **Fees as a dated data table** (P-230 (7)): move the fee values out of `engine/runtime/filings.ts` into the release's fee table (setup S7a), add spouse and PNP fees, and let filing modes and checklists stop being Visitor-visa-only in code | a fee change is a data edit with a test; Visitor visa totals unchanged | P-230 |
+| R2 | runtime | **Fees as a dated data table** (P-230 (7)): move the fee values out of `engine/runtime/filings.ts` into the release's fee table (setup S7a), add spouse and PNP fees, and let filing modes and checklists stop being Visitor-visa-only in code ; each fee line carries a basis: per application, per person by role, per position or family maximum (P-247) | a fee change is a data edit with a test; every fee line has a basis; Visitor visa totals unchanged (family maximum applied) | P-230, P-247 |
 | R3 | runtime | **A minor's travel answers** (P-230 (3)): "travels with" per child plus custody, five conditional document lines (with QA-149) | pass and fail tests for each case; FQ-4 closed | P-230 |
 | R4 | runtime | **An eligibility rule's own outcome** (P-230 (1)): a gate carries "when not met" (Not eligible or needs review) as data; the background gate is needs review | C6.9 tests cover both; copy says the representative reviews | P-230 |
 | L-doc | later | **Document rules fields** (P-230 (8)): copy kind, certified translation, validity window on document requirements (schema) | after the M2 gate | P-230 |
@@ -39,6 +39,7 @@ One owner per row and per shared file; never build another owner's rows. Under t
 | G3 | screens | **Demo release path and mark** (C5.6) | Sample content releases only in the demo workspace, marked "Demo release" on every screen that shows the release, excluded from real-publish counts; refused elsewhere | P-240 |
 | G4 | forms | **Answer-key family editor and runner** (C5.7) | a made-up family with expected values (Sample until the expert signs) runs against a map, scoring table or rule set and shows pass or fail per value; the Visitor visa IMM 5257 map has one passing family | P-240; team C6 "not built" |
 | G2 | forms | **Release refused: no passing signed answer-key test** (C5.5), after G4 | maps, scoring tables and rule sets without a passing expert-signed test are refused; a combination without a test only warns (W7) | P-240; SA-1B-296, -181, -199 |
+| G5 | screens | **Release needs a form line** (C5.1, F8/X1a rework, P-248) | a combination with documents but no form line shows a warning while configured and Release is refused (API 409, plain words); a PDF, a portal-screen edition or an online-only form counts; existing tests expecting documents-only to release are updated | P-248; SA-1B-90 |
 
 ## Demo first (founder, 2 Nov): in order, ahead of Now
 | # | Area | Item | Done when (beyond the standard) | Source |
