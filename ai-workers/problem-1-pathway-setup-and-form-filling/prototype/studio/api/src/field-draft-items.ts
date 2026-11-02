@@ -66,8 +66,8 @@ export function fieldItems(draft: ReadingOf, check: ReadingOf | null, ed: Editio
   const rule = (a: RoundAnswer<One>) => fieldRule(a.item.field);
   const cmp = compareRounds(answersOf(draft.output), answersOf(check?.output ?? null), rule);
   const chosen = [
-    ...cmp.agreed.map((a) => ({ key: a.key, one: a.item, agreement: "agreed" as const, why: null as string | null })),
-    ...cmp.decide.map((d) => ({ key: d.key, one: (d.draft ?? d.check)!, agreement: d.draft && d.check ? "differ" as const : "one_round" as const, why: check ? d.why : "Only the draft round has a saved reading of this form edition: a person decides (the checker round has not been recorded)." })),
+    ...cmp.agreed.map((a) => ({ key: a.key, one: a.item, inDraft: true, inCheck: true, agreement: "agreed" as const, why: null as string | null })),
+    ...cmp.decide.map((d) => ({ key: d.key, one: (d.draft ?? d.check)!, inDraft: !!d.draft, inCheck: !!d.check, agreement: d.draft && d.check ? "differ" as const : "one_round" as const, why: check ? d.why : "Only the draft round has a saved reading of this form edition: a person decides (the checker round has not been recorded)." })),
   ];
   const entries: Entry[] = chosen.flatMap((c) => c.one.entries);
   const compared = new Map<string, Item>(normalize(chosen.map((c) => c.one.field), entries, library, redirects).map((i) => [i.proposedKey, i]));
@@ -75,7 +75,6 @@ export function fieldItems(draft: ReadingOf, check: ReadingOf | null, ed: Editio
   const formText = squash(ed.formText);
   const labels = new Set<string>();
   const items: (Omit<NewProposal, "runId"> & Work)[] = [];
-  const has = (r: ReadingOf, id: string) => r.output.canonical_fields.some((x) => x.id === id);
   const readingOf = (r: ReadingOf | null, id: string) => {
     const f = r?.output.canonical_fields.find((x) => x.id === id);
     return f ? `${f.id} (${f.value_type}): ${f.meaning}`.slice(0, 300) : null;
@@ -91,11 +90,13 @@ export function fieldItems(draft: ReadingOf, check: ReadingOf | null, ed: Editio
     labels.add(normalizeLabel(label));
     const payload = { kind: "field" as const, label, aliases: [], meaning: f.meaning.trim().slice(0, 500), valueType: f.value_type.trim(), subject: f.id.split(".")[0], formBox: null };
     // P-170, both rounds: each reading that names the field must quote words printed on the form (review of #427).
-    const inDraft = has(draft, f.id) ? quoteIn(draft.output, f.id, formText) : null, inCheck = check && has(check, f.id) ? quoteIn(check.output, f.id, formText) : null;
+    // Only the readings that passed the rules count (a reading compareRounds dropped never fails a good one; Devin #427).
+    const inDraft = c.inDraft ? quoteIn(draft.output, f.id, formText) : null, inCheck = check && c.inCheck ? quoteIn(check.output, f.id, formText) : null;
     const quoted = [inDraft, inCheck].filter((x): x is { quote: string | null; found: boolean } => !!x);
     const found = quoted.length > 0 && quoted.every((x) => x.found);
-    const quote = (quoted.find((x) => x.found) ?? quoted.find((x) => x.quote))?.quote ?? null;
     const bad = quoted.find((x) => !x.found);
+    // The quote shown is the one the rule judged: a failing one when the rule fails, so "not found" is said of it (Devin #427).
+    const quote = (found ? quoted[0]?.quote : bad?.quote ?? quoted.find((x) => x.quote)?.quote) ?? null;
     const near = i.candidates.filter((x) => x.score >= NEAR_SCORE && x.key !== lib?.key).map((x) => x.key).slice(0, 10);
     const rules = [
       { rule: "field_name_and_type", passed: true, why: null },

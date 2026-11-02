@@ -222,7 +222,10 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
     // matched by), when it is a library key and still free; otherwise a key is made from the name, as for any field.
     const proposed = r.step === DRAFT_FIELDS_STEP ? (r.work as { proposedKey?: unknown } | null)?.proposedKey : undefined;
     const draftedKey = typeof proposed === "string" && proposed.length <= FIELD_ID_MAX && FIELD_ID.test(proposed) && !used.has(proposed) ? proposed : null;
-    const key = typeof ruleFact === "string" ? ruleFact : draftedKey ?? keyFor(f.subject ?? "case", f.label.replace(/\s*\([^)]*\)\s*\d*$/, "") || f.label, used);
+    // A drafted field whose proposed id is taken gets a key from that id's own name (its label may carry the area or a
+    // number added to keep names apart); every other field keeps its whole label, as before (Devin #427).
+    const proposedName = typeof proposed === "string" && proposed.includes(".") ? proposed.split(".").slice(1).join(" ").replace(/_/g, " ") : null;
+    const key = typeof ruleFact === "string" ? ruleFact : draftedKey ?? keyFor(f.subject ?? "case", proposedName ?? f.label, used);
     await landField(tx, l, { key, meaning: f.meaning, valueType: f.valueType, label: f.label, sourceRef: rule ? `Needed by ${rule.sentence}; ${sourceRef(r, l.actor)}` : sourceRef(r, l.actor) });
     return key;
   },

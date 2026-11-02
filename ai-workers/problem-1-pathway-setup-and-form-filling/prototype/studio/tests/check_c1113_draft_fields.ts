@@ -71,7 +71,9 @@ const ED = { printed: "IMM 0000 (01-2026)", file: "imm0000e.pdf", sha256: "a".re
   ok("C11.13 pass (review M2): the same field with nothing near it in the library is Ready", r.items[0].confidence === "ready", r.items[0].confidence);
   // Devin (#427): the checker round's quote counts too.
   r = fieldItems(reading(out(ED.printed, [fam], q)), reading(out(ED.printed, [fam], { "person.family_name": "Employee number" })), ED, []);
-  ok("P-170 fail (both rounds): the checker quoted words not on the form → Decide, never Ready, and the reason names the checker round", r.items[0].confidence === "decide" && r.items[0].source?.quoteFound === false && /checker round quoted \("Employee number"\)/.test(r.items[0].reason ?? ""), r.items[0].reason);
+  ok("P-170 fail (both rounds): the checker quoted words not on the form → Decide, never Ready, and the reason names the checker round", r.items[0].confidence === "decide" && r.items[0].source?.quoteFound === false && /checker round quoted \("Employee number"\)/.test(r.items[0].reason ?? "") && r.items[0].source?.quote === "Employee number", { reason: r.items[0].reason, source: r.items[0].source });
+  r = fieldItems(reading(out(ED.printed, [fam], q)), reading(out(ED.printed, [{ ...fam, meaning: "x" }], {})), ED, []);
+  ok("P-170 pass (Devin #427): a checker reading dropped by the rules never fails the good reading's quote (one round, quote found)", r.items.length === 1 && r.items[0].agreement === "one_round" && r.items[0].source?.quoteFound === true && r.items[0].rules.some((x) => x.rule === "quote_on_the_form" && x.passed) && r.dropped.length === 1, { src: r.items[0]?.source, rules: r.items[0]?.rules });
 
   // ─────────────────── the route, on an isolated copy
   const reset = await call("POST", "/demo/reset", { confirm: "RESET" });
