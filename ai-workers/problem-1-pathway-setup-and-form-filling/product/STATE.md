@@ -43,7 +43,7 @@ Started this chat (cloud, one row each, end when labelled): QA-163, QA-162, qa-b
 L-SA3 · L-SA6–L-SA11 · G5 · the P-236 rename · C11 · E1–E6 · design-only items · SH3/SH4 contracts go to the product owner with them.
 
 ## To archive (P-283)
-* **Nested sessions move with their parent in the sidebar** (18:35 UTC: moving the previous Lead into "To archive" took its 11 lanes with it, several still working; moved back to Ungrouped at once). So: move a Lead chat only when none of its lanes is still working; until then archive finished lanes one by one. Finished on the Mac: the paid runner (`local_a6af81b9-…`, copy clean, PRs merged; a fresh runner per Go).
+* **Nested sessions move with their parent in the sidebar** (18:35 UTC: moving the previous Lead into "To archive" took its 11 lanes with it, several still working; moved back to Ungrouped at once). So: move a Lead chat only when none of its lanes is still working; until then archive finished lanes one by one. A nested session cannot be moved alone, so the tech lead archives finished ones directly: the Mac paid runner was archived 18:50 UTC (copy clean, PRs merged; a fresh runner per Go).
 * Cloud (founder archives on claude.ai/code): the old forms L5 Track B, forms L8 and qa lanes (replaced by the QA-162, QA-163, qa-batch sessions); forms L4 Track A (closed, no PR); each one-row session started today once its PR has merged (check its hand-over first). qa-batch ends after golden journey 2; qa-batch-2 scores tonight's batches until about 01:00 UTC.
 
 ## Waiting for the founder

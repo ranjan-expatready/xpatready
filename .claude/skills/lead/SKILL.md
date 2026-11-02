@@ -52,7 +52,7 @@ Rows reaching Works · median approved-to-merged time · batch failure rate (tar
 * One row per session. Every brief carries the founder's decision IDs, a testable "Done when" and the standard rules: Sonnet helpers (P-278), breaker only for money, schema, permissions or new screens, diff-only re-review, label after Approve (P-277), merge main only on conflict (P-270), live AI off, questions as "Question for the tech lead" in a PR comment. Each session ends when its PR is labelled.
 * Before saying "55 by tonight", sort the open rows: likely Works on re-score, one small PR, waits on a fix or paid run, several PRs or held. Give the forecast from that.
 * When nothing merges, measure machine waits first (a batch's final `ci` job queues even after its shards pass). The guard refuses CI cancels: ask the founder, never work around it.
-* Sidebar: nested sessions move with their parent. Never move a Lead chat while any of its lanes still works; move finished sessions one by one into "To archive" (P-283), after checking for unpushed work.
+* Sidebar: nested sessions move only with their parent and cannot be moved alone. A finished session (PR merged, nothing unpushed) is archived directly by the Lead (founder, 2 Nov: "whatever it can archive, it can archive"); a cloud one the Lead cannot see goes on STATE's list for the founder. "To archive" holds only top-level sessions whose lanes have all finished (P-283).
 * Hand over at about 250k tokens (P-276): rewrite STATE first, then stop the 30-minute check (CronDelete), so two Leads never run checks at once.
 
 ## Talking to the founder
