@@ -67,6 +67,9 @@ export type PublishedOptions = {
   feeLines?: FeeLineInput[];
 };
 
+/** Who wrote the sample load's own entries (created_by; chip "From the sample load"): the same id as api/src/lifecycle.ts
+ *  SAMPLE_CREATOR, never a person (challenge m7). */
+export const SAMPLE_LOADER = "sample-inputs";
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const COMPARED = new Set(["eq", "neq", "gt", "gte", "lt", "lte"]);
 
@@ -259,6 +262,10 @@ export const entryOf = (f: FrozenSource): SourceEntry => ({ kind: f.kind, key: f
 
 /** BR-9: the "Source" lines of a change summary (validate.ts diff()): one per entry added, changed or removed between
  *  two frozen copies, in words (the item, the number, the answer), each for the immigration expert to sign. */
+/** Two frozen sources hold the same answer, whatever their key order (a release's snapshot comes back from jsonb with
+ *  its keys reordered). */
+const SOURCE_FIELDS = ["kind", "key", "address", "value", "url", "page", "quote", "date", "none_published", "sample"] as const;
+const sameSource = (a: FrozenSource, b: FrozenSource) => SOURCE_FIELDS.every((k) => (a[k] ?? null) === (b[k] ?? null));
 export function sourceChanges(prev: { sources?: FrozenSource[] } & WalkedSnapshot | null, next: { sources?: FrozenSource[] } & WalkedSnapshot): Change[] {
   const a = new Map((prev?.sources ?? []).map((x) => [entryKey(x), x])), b = new Map((next.sources ?? []).map((x) => [entryKey(x), x]));
   if (!a.size && !b.size) return [];
@@ -271,7 +278,7 @@ export function sourceChanges(prev: { sources?: FrozenSource[] } & WalkedSnapsho
   for (const [k, x] of b) {
     const was = a.get(k);
     if (!was) out.push({ kind: "Source", key: ref(x), change: "added", needs_sme: true, label: line(x) });
-    else if (JSON.stringify(was) !== JSON.stringify(x)) out.push({ kind: "Source", key: ref(x), change: "changed", needs_sme: true, label: line(x) });
+    else if (sameSource(was, x) === false) out.push({ kind: "Source", key: ref(x), change: "changed", needs_sme: true, label: line(x) });
   }
   for (const [k, x] of a) if (!b.has(k)) out.push({ kind: "Source", key: ref(x), change: "removed", needs_sme: true, label: line(x) });
   return out;

@@ -9,7 +9,7 @@ import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
 import { buildSnapshot, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
 import { slug } from "../../engine/import.ts";
 import { checkCondition, diff, ordinal, validate, isDemoSnapshot } from "../../engine/validate.ts";
-import { ACTORS, Audit, Db, fail, need, revise, RUNTIME_ACTORS, strip, Workspace, type Actor } from "./core.ts";
+import { ACTORS, Audit, Db, fail, isDemoWorkspace, need, revise, RUNTIME_ACTORS, strip, Workspace, WORKSPACE_KEY, type Actor } from "./core.ts";
 import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { recordAction, snapshotLines } from "./form-uses.ts";
 import { acceptsOf } from "../../engine/channels.ts";
@@ -21,6 +21,8 @@ import { filingProblems, filingWarnings, modeSent } from "../../engine/filing-mo
 import { LibrarySources, type SourceLine } from "./library-sources.ts";
 import { checkFormat, fieldFormat, formatWords, type MappedBox } from "../../engine/field-format.ts";
 import { releaseLabel } from "../../contracts/runtime.ts";
+import { draftSourceProblems } from "./source-register.ts";
+import { refuseBlocking } from "./refusal.ts";
 /** C3.6 (P-223, option (a)): a draft condition may read a fact the library lacks; validate() keeps it as an error that
  *  blocks release, and Questionnaires › "Facts a rule needs that no form asks" offers the add. Other errors still refuse. */
 const draftErrors = (errs: string[]) => errs.filter((e) => !/^reads [a-z][a-z0-9_]*\.[a-z0-9_.]+, which is not in the library$/.test(e));
@@ -88,7 +90,7 @@ export class Studio {
     // "Structure exists" counts any name, Pathways included (W1-03 B1: after Reset the Structure is empty in both tabs).
     const [programs, fields, releases, jobs, sample] = await Promise.all([this.db.programDef.count({ where: { workspaceId } }), this.db.canonicalField.count({ where: { workspaceId } }), this.db.configRelease.count({ where: { workspaceId } }), this.db.draftingJob.count({ where: { workspaceId } }), this.db.auditEvent.count({ where: { workspaceId, action: "loaded", entity: "sample inputs" } })]);
     // sampleLoaded: the sample inputs were loaded into this workspace, not merely "some program exists" (QA-12).
-    return { actor, actors: ACTORS, workspace: { key: "demo", label: "Demo workspace (disposable)", id: workspaceId }, counts: { programs, fields, releases, jobs }, sampleLoaded: sample > 0, preferences: await this.preferences(actor.id) };
+    return { actor, actors: ACTORS, workspace: { key: WORKSPACE_KEY, label: isDemoWorkspace() ? "Demo workspace (disposable)" : `Workspace ${WORKSPACE_KEY} (not the demo)`, demo: isDemoWorkspace(), id: workspaceId }, counts: { programs, fields, releases, jobs }, sampleLoaded: sample > 0, preferences: await this.preferences(actor.id) };
   }
 
   /** C11.10 (P-115): a person's own view choices. Only known keys and values are kept (contracts/session.ts). */
@@ -384,7 +386,9 @@ export class Studio {
     // engine/filing-modes.ts FILING_NOT_SET_BLOCKS).
     const roles = await this.personRoles(workspaceId);
     const filing = filingProblems((s.combination?.participants ?? []) as { role: string; label?: string; max: number; filingMode?: unknown }[], roles);
-    const all = [...structure, ...filing, ...emptyProblem(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...carried]; // L4: what IRCC accepts
+    // G1 BR-7 (challenge M1): every published number needs a source entry; the draft only, never a released snapshot.
+    const sources = s.mode === "draft" ? draftSourceProblems(s, isDemoWorkspace()) : [];
+    const all = [...structure, ...filing, ...sources, ...emptyProblem(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...carried]; // L4: what IRCC accepts
     // C2.12 (plan F3a-1, BR-10): each problem names the forms it touches, so a form's path shows its own: a Forms problem its form,
     // any other the forms whose field map reads that item as a fact; none otherwise.
     const formsOf = new Map<string, Set<string>>();
@@ -851,6 +855,7 @@ export class Studio {
     const last = await this.db.configRelease.findFirst({ where: { combinationId: id }, orderBy: { version: "desc" } });
     if (last?.sha256 === sha256) fail("Nothing has changed since the released version.");
     const errors = (await this.problems(c.workspaceId, snapshot, id)).filter((p) => p.level === "error");
+    refuseBlocking(errors, HttpStatus.BAD_REQUEST, "Fix the problems before submitting: "); // G1/G2 BR-8: every blocking item in errors[], never only the first
     if (errors.length) fail(`Fix ${errors.length} problem${errors.length > 1 ? "s" : ""} before submitting: ${errors.slice(0, 3).map(problemWords).join(" · ")}`); // S5: a coverage gap is said in words, never by its field code
     const changes = diff((last?.snapshot as any) ?? null, snapshot);
     // W1-02 (break M2): nothing to sign is nothing to release, even when the fingerprint moved (an older release's keys).
@@ -893,6 +898,7 @@ export class Studio {
     // Re-checked at approval, not only at submission: a row that has since fallen above a full combination, or a draft
     // that now has errors, is not released.
     const blocking = (await this.problems(c.workspaceId, snapshot, id)).filter((p) => p.level === "error");
+    refuseBlocking(blocking, HttpStatus.CONFLICT, "Release refused: "); // G1/G2 BR-8
     if (blocking.length) fail(`Release refused: ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${problemWords(blocking[0])})`, HttpStatus.CONFLICT);
     // The same review gate as the shared Release page (QA-1, review should 2).
     const gate = await this.releaseGate(id, sha256);
@@ -946,6 +952,7 @@ export class Studio {
       const c = await this.db.combination.findUniqueOrThrow({ where: { id }, include: { program: true } });
       const { snapshot, sha256 } = await buildSnapshot(this.db, workspaceId, id, "draft");
       const blocking = (await this.problems(workspaceId, snapshot, id)).filter((p) => p.level === "error");
+      refuseBlocking(blocking, HttpStatus.CONFLICT, `Release refused: "${c.label}": `); // G1/G2 BR-8
       if (blocking.length) fail(`Release refused: "${c.label}" has ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${problemWords(blocking[0])})`, HttpStatus.CONFLICT);
       const gate = await this.releaseGate(id, sha256);
       if (!gate.ok) { await this.audit.log(workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: "${c.label}": ${gate.why}`); fail(`Release refused: "${c.label}": ${gate.why}`, HttpStatus.CONFLICT); }

@@ -8,7 +8,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { slug } from "../engine/import.ts";
-import { canonicalValue, entryOf, frozenSources, numberState, publishedNumbers, sourceProblems, statesInDigits, type FeeLineInput, type PublishedNumber, type SourceEntry, type WalkedSnapshot } from "../engine/source-register.ts";
+import { canonicalValue, entryOf, frozenSources, numberState, publishedNumbers, SAMPLE_LOADER, sourceChanges, sourceProblems, statesInDigits, type FeeLineInput, type PublishedNumber, type SourceEntry, type WalkedSnapshot } from "../engine/source-register.ts";
 import { problemWords } from "../contracts/programs.ts";
 import { FEE_TABLE } from "../engine/runtime/filings.ts";
 import { WHERE_STEP } from "../engine/setup-checklist.ts";
@@ -156,6 +156,13 @@ ok("C5.4 M4 fail: statesInDigits does not find 18 in 180, 5 in 5487 or 5.5, one 
 const frozen = frozenSources([rw90], [sampleEntry, { kind: "rule", key: "wp.family/R-99", address: "x|gte|1", value: 3, none_published: { reason: "No longer used anywhere" } }]);
 ok("C5.4 BR-9 pass: only entries answering a published number are frozen, in one canonical shape, read back the same",
   frozen.length === 1 && frozen[0].sample === true && frozen[0].value === "90" && !("version" in frozen[0]) && sourceProblems([rw90], frozen.map(entryOf), { demo: true }).length === 0, frozen);
+
+const withSrc = (sources: ReturnType<typeof frozenSources>) => ({ ...release, sources });
+const reordered = frozen.map((f) => Object.fromEntries(Object.entries(f).reverse())) as typeof frozen;
+ok("C5.4 BR-9 pass: the same sources read back with their keys reordered (jsonb) are no change; none on either side, none listed", sourceChanges(withSrc(frozen), withSrc(reordered)).length === 0 && sourceChanges(release, release).length === 0);
+const one = sourceChanges(withSrc([]), withSrc(frozenSources([rw90], [{ kind: rw90.kind, key: rw90.key, address: rw90.address, value: 90, none_published: { reason: "ExpatReady's warning lead time" } }])));
+ok("C5.4 BR-9 fail: one entry added is one Source change, for the expert, in words (item, number, answer)", one.length === 1 && one[0].kind === "Source" && one[0].change === "added" && one[0].needs_sme && one[0].label.endsWith("Passport days until expiry: at most 90: None published – set by ExpatReady"), one);
+ok("C5.4 m7 pass: the sample load's entries carry the sample loader's id, the same as api/src/lifecycle.ts SAMPLE_CREATOR", new RegExp(`SAMPLE_CREATOR = "${SAMPLE_LOADER}"`).test(readFileSync(join(STUDIO, "api", "src", "lifecycle.ts"), "utf8")));
 
 // ---------------------------------------------------------------- M1 kept outside validate(), pure
 const src = readFileSync(join(STUDIO, "engine", "source-register.ts"), "utf8");

@@ -15,7 +15,18 @@ export const OFFICIAL = join(SOLUTION, "official-sources", "ircc");
 export const PY = join(ROOT, ".tools", "solution-1-prototype", ".venv", "bin", "python");
 export const NODE = process.execPath;
 export const DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://xr_studio@127.0.0.1:54329/xr_studio_demo";
-export const WORKSPACE_KEY = "demo";
+/** The demo workspace's key: the one workspace where Sample content passes, released as a Demo release (P-240, G3). */
+export const DEMO_WORKSPACE_KEY = "demo";
+/** This server's workspace (G1 and G2, tech lead on #558 and #568): "demo" unless STUDIO_WORKSPACE_KEY names another, so
+ *  an isolated copy can run as a non-demo workspace and prove a Sample answer is refused there. Lower case letters,
+ *  digits and _ only; anything else stops the start-up (never a silent fallback to the demo). */
+export const WORKSPACE_KEY = (() => {
+  const k = process.env.STUDIO_WORKSPACE_KEY ?? DEMO_WORKSPACE_KEY;
+  if (!/^[a-z0-9_]{1,40}$/.test(k)) throw new Error(`STUDIO_WORKSPACE_KEY "${k}": lower case letters, digits and _ only (1 to 40).`);
+  return k;
+})();
+/** Whether this server's workspace is the demo workspace (G1's Sample source condition; G2's Demo release). */
+export const isDemoWorkspace = () => WORKSPACE_KEY === DEMO_WORKSPACE_KEY;
 /** Working files (uploads, outputs, reset log). STUDIO_VAR lets an isolated copy (the 100-program scale database) keep its
  *  own files, so its reset can never touch the demo workspace's files. */
 export const VAR_ROOT = process.env.STUDIO_VAR ?? join(STUDIO, "var");
@@ -112,7 +123,7 @@ export class Workspace {
     return this.creating;
   }
   private async create(): Promise<string> {
-    const make = () => this.db.workspace.upsert({ where: { key: WORKSPACE_KEY }, update: {}, create: { key: WORKSPACE_KEY, label: "Demo workspace (disposable)" } });
+    const make = () => this.db.workspace.upsert({ where: { key: WORKSPACE_KEY }, update: {}, create: { key: WORKSPACE_KEY, label: isDemoWorkspace() ? "Demo workspace (disposable)" : `Workspace ${WORKSPACE_KEY} (not the demo)` } });
     const w = await make().catch((e: { code?: string }) => { if (e?.code === "P2002") return make(); throw e; });
     // S5 (M3): a workspace starts with the six built-in person roles (Reset keeps them; Sample until the expert confirms).
     if (!(await this.db.personRole.count({ where: { workspaceId: w.id } }))) await this.db.personRole.createMany({ skipDuplicates: true, data: STARTING_ROLES.map((r, i) => ({ workspaceId: w.id, roleKey: r.key, label: r.label, meaning: r.meaning, takesPartInCase: r.takesPartInCase, mayBeApplicant: r.mayBeApplicant, builtIn: true, displayOrder: i + 1 })) });
