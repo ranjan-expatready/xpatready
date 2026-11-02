@@ -17,9 +17,9 @@ export const MINOR = { birthDateField: "person.date_of_birth", underAge: 18 } as
 /** Invisible characters a person never means to type (break report m1–m4): C0 and C1 controls, DEL, zero-width marks
  *  (not the emoji joiner), line and paragraph separators, bidi overrides and isolates, the byte-order mark. Tab, line
  *  feed and carriage return stay allowed in answers (long text). */
-const INVISIBLE = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200b\u200e\u200f\u2028-\u202e\u2066-\u2069\ufeff]/;
+export const INVISIBLE = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200b\u200e\u200f\u2028-\u202e\u2066-\u2069\ufeff]/;
 /** Half of a surrogate pair on its own: not a character; PostgreSQL refuses it (a 500 before, break report m1). */
-const LONE = /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/;
+export const LONE = /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/;
 const clean = (x: string) => !INVISIBLE.test(x) && !/[\t\n\r]/.test(x) && !LONE.test(x);
 const text = (missing: string, min: number, max: number) => z.string({ message: missing }).trim().min(min, missing).max(max, `Keep it to ${max} characters.`).refine(clean, "Remove the control or invisible characters from this text.");
 /** An idempotency key: visible ASCII only, so it is stored and compared exactly. */
