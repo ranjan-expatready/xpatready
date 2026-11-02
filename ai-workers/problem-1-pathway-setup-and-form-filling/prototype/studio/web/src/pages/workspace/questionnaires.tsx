@@ -63,10 +63,11 @@ const MODE_WORDS: Record<LineMode, string> = { files_own: "Files own application
 function FilingCell({ l, i, editing, mayBeApplicant, name, words, warning, error, onMode }: { l: Line; i: number; editing: boolean; mayBeApplicant: boolean; name: string; words: ReturnType<typeof filingWords>; warning: string | null; error?: string; onMode: (m: LineMode | null) => void }) {
   const principal = l.role === "principal";
   const id = `filing-${i}`;
-  const choices: LineMode[] = mayBeApplicant ? ["files_own", "on_principal", "declared_only"] : ["co_files"];
+  // Review M2 (PR 3): only the sponsor co-files; the representative (and any other never-applicant role) files nothing.
+  const choices: LineMode[] = mayBeApplicant ? ["files_own", "on_principal", "declared_only"] : l.role === "sponsor" ? ["co_files"] : [];
   return (
     <div className="min-w-0">
-      {editing && !principal ? (
+      {editing && !principal && choices.length ? (
         <Select id={id} aria-label={`Filing for ${name}`} aria-invalid={!!error} aria-describedby={error ? `${id}-error` : undefined} className="h-8 max-w-64" value={l.filingMode ?? ""} onChange={(e) => onMode((e.target.value || null) as LineMode | null)}>
           <option value="">{mayBeApplicant ? "Choose how it is filed" : "Files nothing"}</option>
           {choices.map((m) => <option key={m} value={m}>{MODE_WORDS[m]}</option>)}
@@ -76,7 +77,7 @@ function FilingCell({ l, i, editing, mayBeApplicant, name, words, warning, error
       )}
       {principal ? <p className="text-xs text-text-muted">Always, for the principal</p> : words.ifNotTravelling ? <p className="text-xs text-text-muted" data-if-not-travelling>{words.ifNotTravelling}</p> : null}
       {!mayBeApplicant && l.filingMode === "co_files" ? <p className="text-xs text-text-muted">Sent with the principal's application; never alone</p> : null}
-      {warning ? <p className="mt-1 text-xs text-text-warn" data-filing-warning role="status">⚠ {warning.replace(/^[^:]+: [^.]+\. /, "")} You can still save.</p> : null}
+      {warning ? <p className="mt-1 text-xs text-text-warn" data-filing-warning role="status">⚠ {warning.replace(/^[^:]+: [^.]+\. /, "")}{editing ? " You can still save." : ""}</p> : null}
       {error ? <p id={`${id}-error`} role="alert" className="text-xs text-text-danger">{error}</p> : null}
     </div>
   );
@@ -119,7 +120,7 @@ export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
     const origin = pr.mode === "rules" ? "CODE_MATCH" : "AI_PROPOSAL";
     // C11.12 BR-8: the guide proposes people and counts, not filing modes, so each role keeps the mode it had.
     setLines((now) => { const base = editing ? now : toLines(v); const modeOf = (role: string) => base.find((l) => l.role === role)?.filingMode ?? null;
-      return [...base.filter((l) => !pr.people.some((x) => x.role === l.role)), ...pr.people.map((x): Line => ({ role: x.role, label: x.label, min: x.min, max: x.max, applies: x.applies, filingMode: modeOf(x.role), quote: x.quote, origin }))]; });
+      return [...base.filter((l) => !pr.people.some((x) => x.role === l.role)), ...pr.people.map((x): Line => ({ role: x.role, label: x.label, min: x.min, max: x.max, applies: appliesOf(modeOf(x.role), x.applies), filingMode: modeOf(x.role), quote: x.quote, origin }))]; });
     setEditing(true); setFilling(false);
   };
   React.useEffect(() => { if (!editing) setLines(toLines(v)); }, [v, editing]);
@@ -173,7 +174,7 @@ export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
       </div>
       {stale ? <Notice tone="warn" className="mt-3" title="Changed by someone else" action={<Button size="sm" variant="secondary" onClick={() => { setStale(null); setEditing(false); refresh(); }}>Reload their version</Button>}>{stale}</Notice> : null}
       {/* Board r2: under 760 px (phone, 200 % zoom) each row becomes a card with its field names. */}
-      <table className="mt-3 w-full text-sm max-[759px]:block max-[759px]:[&_thead]:hidden max-[759px]:[&_tbody]:block max-[759px]:[&_tr]:block max-[759px]:[&_tr]:py-2 max-[759px]:[&_td]:block max-[759px]:[&_td]:py-1 max-[759px]:[&_td]:max-w-none max-[759px]:[&_td[data-label]]:before:block max-[759px]:[&_td[data-label]]:before:text-xs max-[759px]:[&_td[data-label]]:before:text-text-muted max-[759px]:[&_td[data-label]]:before:content-[attr(data-label)]">
+      <table className="mt-3 w-full text-sm max-[759px]:block max-[759px]:[&_thead]:hidden max-[759px]:[&_tbody]:block max-[759px]:[&_tr]:block max-[759px]:[&_tr]:py-2 max-[759px]:[&_td]:block max-[759px]:[&_td]:py-1 max-[759px]:[&_td]:max-w-none max-[759px]:[&_td[data-label]]:before:block max-[759px]:[&_td[data-label]]:before:text-xs max-[759px]:[&_td[data-label]]:before:text-text-muted max-[759px]:[&_td[data-label]]:before:content-[attr(data-label)] [&_td]:[overflow-wrap:anywhere]">
         <thead><tr className="border-b border-border text-left text-xs text-text-muted">
           <th className="py-2 pr-3 font-medium">Person</th>
           <th className="py-2 pr-3 font-medium"><Tip tip={TIPS.many} focusable><span className="cursor-help underline decoration-dotted underline-offset-4">How many</span></Tip></th>
@@ -206,14 +207,14 @@ export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
       <WhatACaseGets gets={gets} />
       {editing ? (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
-          <span className="flex flex-wrap items-center gap-2">
+          <span className="flex min-w-0 flex-wrap items-center gap-2">
             {offered.length ? <AddPerson offered={offered} onAdd={(k) => { const r = role(k)!; setLines((ls) => [...ls, { role: k, label: r.label, min: 0, max: 1, applies: r.mayBeApplicant, filingMode: v.lines.find((x) => x.role === k)?.filingMode ?? null, origin: "HUMAN" }]); }} /> : <span className="text-xs text-text-muted">Every kind of person in the shared library is listed.</span>}
             <span className="text-xs text-text-muted">Picks from Shared library › Person roles. A new kind of person is added there.</span>
           </span>
-          <span className="flex gap-2"><Button variant="ghost" onClick={() => setFilling(true)}><BookOpen /> Fill from the guide</Button><Button variant="ghost" onClick={() => { setEditing(false); setErrors({}); }}>Cancel</Button><Button onClick={() => void save()} busy={busy}>Save</Button></span>
+          <span className="flex flex-wrap gap-2"><Button variant="ghost" onClick={() => setFilling(true)}><BookOpen /> Fill from the guide</Button><Button variant="ghost" onClick={() => { setEditing(false); setErrors({}); }}>Cancel</Button><Button onClick={() => void save()} busy={busy}>Save</Button></span>
         </div>
       ) : null}
-      <p className={cn("mt-3 text-xs text-text-muted", editing ? "" : "sr-only")}>Rules check on Save: exactly one principal applicant, who files their own · how many from 0 to 9, the fewest no more than the most · a sponsor or representative is never an applicant · every applicant role has a filing · removing a person a form names asks first.</p>
+      <p className={cn("mt-3 text-xs text-text-muted", editing ? "" : "sr-only")}>Rules check on Save: exactly one principal applicant, who files their own · how many from 0 to 9, the fewest no more than the most · a sponsor or representative is never an applicant · every applicant role needs a filing before release · removing a person a form names asks first.</p>
       {filling ? <FillFromGuide id={id} onClose={() => setFilling(false)} onUse={useProposal} /> : null}
       {confirm ? <Dialog open onOpenChange={(o) => !o && setConfirm(null)} title="Remove a person that forms name?" description={confirm.text} footer={<><Button variant="ghost" onClick={() => { const back = toLines(v).filter((l) => confirm.roles.includes(l.role) && !lines.some((x) => x.role === l.role)); setLines((ls) => [...ls, ...back]); setConfirm(null); }}>Keep the person</Button><Button variant="destructive" onClick={() => void save(true)} busy={busy}>Save anyway</Button></>}><p className="text-sm text-text-muted">Those forms stay in the combination but name nobody until you add the person back or change whose form it is.</p></Dialog> : null}
     </section>
@@ -292,8 +293,8 @@ function FillFromGuide({ id, onClose, onUse }: { id: string; onClose: () => void
 function AddPerson({ offered, onAdd }: { offered: { key: string; label: string; meaning: string }[]; onAdd: (k: string) => void }) {
   const [k, setK] = React.useState("");
   return (
-    <span className="flex items-center gap-2">
-      <Select aria-label="Person to add" className="h-8 w-56" value={k} onChange={(e) => setK(e.target.value)}><option value="">Choose a person…</option>{offered.map((r) => <option key={r.key} value={r.key} title={r.meaning}>{r.label}</option>)}</Select>
+    <span className="flex min-w-0 flex-wrap items-center gap-2">
+      <Select aria-label="Person to add" className="h-8 w-56 max-w-full" value={k} onChange={(e) => setK(e.target.value)}><option value="">Choose a person…</option>{offered.map((r) => <option key={r.key} value={r.key} title={r.meaning}>{r.label}</option>)}</Select>
       <Button size="sm" variant="secondary" disabled={!k} onClick={() => { onAdd(k); setK(""); }}><Plus /> Add a person</Button>
     </span>
   );

@@ -96,4 +96,7 @@ ok("C11.12 review M2 fail: with no default (another combination) the line files 
 ok("C11.12 review m1 fail: filingMode and filing that disagree are refused", first([P, { role: "child", min: 0, max: 1, applies: true, filingMode: "files_own", filing: "on_principal_applying" }]) === "Filing: send one choice (filingMode and filing disagree).");
 ok("C11.12 review m1 pass: filingMode and filing that agree are accepted", run([P, { role: "child", min: 0, max: 1, applies: true, filingMode: "on_principal", filing: "on_principal_applying" }]).errors.length === 0);
 
+// Review M2 of PR 3: only the sponsor co-files
+ok("C11.12 BR-4 fail (PR 3): a Representative set to Files the sponsorship is refused in words", first([P, { role: "representative", min: 1, max: 1, applies: false, filingMode: "co_files" }]) === "Representative takes part in the case but files no application: only the sponsor files the sponsorship.");
+
 process.exit(summary() ? 1 : 0);

@@ -110,6 +110,15 @@ type P = { derived: boolean; filings: { id: string; mode: string; owner?: { subj
   ok("C11.12 break m5 pass: the spouse's own filing can still be split out of a group with a sponsorship", r.status === 200 && (r.body as P).filings.find((f) => f.id === spouseFiling.id)?.group !== main2.group, r.body?.detail ?? r.status);
   ok("C11.12 review n1 fail: once only the principal's filing and the sponsorship remain, the group is not splittable", (r.body as P).groups?.find((g) => g.id === main2.group)?.splittable === false, (r.body as P).groups);
 
+  // Review M1 of PR 3 (n3): the setup checklist's people step shows a Fix item for a role with no filing mode, in the
+  // running app (GET …/summary), and none once every applicant role has one.
+  const peopleStep = async () => (await call("GET", `/combinations/${vv}/summary`, undefined, AUTHOR)).body?.setup?.steps?.find((x: { key: string }) => x.key === "people");
+  ok("C11.12 n3 pass: with every applicant role's mode set, the people step has no Fix item", !(await peopleStep())?.open?.some((i: { kind: string }) => i.kind === "fix_problems"), (await peopleStep())?.open);
+  const v3 = (await call("GET", `/combinations/${vv}/workspace?tab=questionnaires`, undefined, AUTHOR)).body?.people;
+  r = await call("PATCH", `/combinations/${vv}/people`, { participants: v3.lines.map((l: { role: string; label: string; min: number; max: number; applies: boolean; filingMode: string | null }) => ({ role: l.role, label: l.label, min: l.min, max: l.max, applies: l.role === "child" ? true : l.applies, ...(l.filingMode && l.role !== "child" ? { filingMode: l.filingMode } : {}) })), version: v3.version, confirmRemove: true }, AUTHOR);
+  const ps = await peopleStep();
+  ok("C11.12 n3 fail: the child with no mode → the people step shows 'Fix 1 problem' (focus: the people card)", ps?.state !== "done" && ps?.open?.some((i: { kind: string; focus?: string }) => i.kind === "fix_problems" && i.focus === "people:card"), ps);
+
   // The widened checks (migration 20261102160000_c1112_filing_modes): the new values hold, anything else is refused.
   const refused = (q: string) => { try { sql(q); return false; } catch { return true; } };
   ok("C11.12 migration fail: an applicant mode outside applying/declared_only is refused by the database", refused(`update filing_applicant set mode='sometimes' where subject_id='${K}'`));

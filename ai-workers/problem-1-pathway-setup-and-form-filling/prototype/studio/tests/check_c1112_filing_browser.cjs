@@ -80,8 +80,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.screenshot({ path: path.join(SHOTS, "03-filing-not-set-1440.png") });
 
   // 375 px and 200 % zoom: no sideways scroll on the page.
+  // Break M3 of PR 3: the longest label allowed (60 characters) still fits the card at 1024 px.
+  sql(`update combination set participants = (select jsonb_agg(case when x->>'role'='spouse_or_partner' then jsonb_set(x, '{label}', '"${"Spouse-or-common-law-partner-accompanying-the-principal-xyz".slice(0, 60)}"') else x end) from jsonb_array_elements(participants) x) where id='${id}'`);
   await open();
-  for (const [w, h, z, name] of [[375, 812, 1, "375"], [720, 900, 2, "200pct"]]) {
+  for (const [w, h, z, name] of [[1024, 900, 1, "1024-long-label"], [375, 812, 1, "375"], [720, 900, 2, "200pct"]]) {
     await p.setViewportSize({ width: w, height: h });
     await p.evaluate((zz) => { document.documentElement.style.zoom = String(zz); }, z);
     await p.waitForTimeout(300);
@@ -91,6 +93,13 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await p.screenshot({ path: path.join(SHOTS, `04-${name}.png`), fullPage: false });
     await p.evaluate(() => { document.documentElement.style.zoom = "1"; });
   }
+  // Review M3 of PR 3: while editing on a phone too (the Add person row and Cancel / Save wrap, Save stays whole).
+  await p.setViewportSize({ width: 375, height: 812 });
+  await who.getByRole("button", { name: "Edit" }).click();
+  const overEdit = await p.evaluate(() => { const W = document.documentElement.clientWidth; let m = 0; for (const e of document.querySelectorAll("[data-who-can-be], [data-who-can-be] *")) m = Math.max(m, e.getBoundingClientRect().right - W); return Math.round(m); });
+  const save = await who.getByRole("button", { name: "Save" }).boundingBox();
+  step("C11.12 pass (375, editing): the card fits and Save is whole on screen", overEdit <= 1 && !!save && save.x + save.width <= 375, overEdit);
+  await p.screenshot({ path: path.join(SHOTS, "05-375-editing.png") });
   step("no console errors", errs.length === 0, errs.join(" | "));
   await b.close();
   console.log(`\n${pass} passed, ${fail} failed`);
