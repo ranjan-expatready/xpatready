@@ -9,6 +9,7 @@ which needs the decoded barcodes; this slice records that it was not run. Prints
 """
 import hashlib
 import json
+import re
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -22,7 +23,8 @@ PASSED = {"Yes", "Oui"}  # the form's own words for its flag after a Validate th
 
 FLAG_LEAVES = ("ApplicationValidatedFlag[", "ApplicationValidatedFlagMirror[")
 DATE_PARTS = ("Year", "Month", "Day")
-# The one-field date as each form's own validateForm writes it (review m-3 on #572: IMM 1344 also has
+# The one-field date as each form's own validateForm writes it (utilDates.getToday(): YYYY-MM-DD; break m-7 on #592: a value
+# with no year in it is not a date) (review m-3 on #572: IMM 1344 also has
 # Barcodes.DateLastValidated, which no script sets, so only these paths count).
 SINGLE_DATE_PATHS = ("Page1[0].BC1[0].DateLastValidated[0]",                # IMM 0008: Page1.BC1.DateLastValidated
                      "Part1[0].Header[0].titleSF[0].DateLastValidated[0]")  # IMM 1344: Part1.Header.titleSF.DateLastValidated
@@ -58,7 +60,7 @@ def form_validation(pdf_bytes):
     flag = said[0] if said and all(v == said[0] for v in said) else (" / ".join(said) or None)
     kept = bool(flags) or b"ApplicationValidatedFlag" in parts.get("template", b"")
     ymd = {k: next((leaves[p] for p in ps if leaves[p]), "") for k, ps in date_parts.items()}
-    on = "-".join(ymd[k] for k in DATE_PARTS) if all(ymd.values()) else next((leaves[p] for p in single if leaves[p]), None)
+    on = "-".join(ymd[k] for k in DATE_PARTS) if all(ymd.values()) else next((leaves[p] for p in single if re.search(r"\b\d{4}\b", leaves[p] or "")), None)
     return {"kept_by_form": kept, "flag": flag, "date_last_validated": on,
             "passed": kept and bool(said) and len(set(said)) == 1 and said[0] in PASSED and on is not None}
 

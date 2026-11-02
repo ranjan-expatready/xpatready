@@ -11,7 +11,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { Response } from "express";
 import { createHash, randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { z } from "zod";
 import { GenerateCopy, LockCopy, LOCK_KINDS, notReady, type CaseForm, type CaseOnlineForm, type FormCopy } from "../../contracts/runtime.ts";
@@ -23,7 +23,7 @@ import { lineOf } from "../../engine/channels.ts";
 import type { BoxRow } from "../../engine/render.ts";
 import { actorOf, Audit, CaseRead, Db, fail, PROTOTYPE, PY, ROOT, VAR, VAR_ROOT, type Actor } from "./core.ts";
 import { formValues, type Inventory } from "../../engine/form-values.ts";
-import { mandatoryOpen, type OpenField } from "../../engine/runtime/mandatory.ts";
+import { mandatoryOpen, type CaseWords, type OpenField } from "../../engine/runtime/mandatory.ts";
 import { solutionFile, writeForm } from "./fill.ts";
 import { trialFor, type EditionMap } from "./fill-trials.ts";
 import { Runtime, type Reached } from "./runtime.ts";
@@ -78,21 +78,25 @@ export function plainWhy(why: string | null | undefined): string {
 const formPassed = (v: { readBack: unknown } | undefined) => (v?.readBack as { validation?: { passed?: boolean } } | null)?.validation?.passed === true;
 const NOT_FORM_CHECKED = "Read back before the form's own Validate result was checked: send the file you validated in Adobe again";
 /** QA-165 part 2: a form's field list, read once per file (the release's field map names it). */
-const inventories = new Map<string, Inventory>();
+const inventories = new Map<string, { at: number; inv: Inventory }>();
 const inventoryOf = (file: string): Inventory | null => {
   const abs = solutionFile(file); // never outside the solution folder (Devin on #592)
   if (!abs) return null;
-  if (!inventories.has(abs)) { try { inventories.set(abs, JSON.parse(readFileSync(abs, "utf8")) as Inventory); } catch { return null; } }
-  return inventories.get(abs)!;
+  // Break m-5 on #592: a file that is not a field list (no `fields` array) is no field list; never a 500 for the case.
+  // Review m-4 on #592: read again when the file changed, so the list and a copy (writeForm reads it fresh) agree.
+  let at = 0; try { at = statSync(abs).mtimeMs; } catch { return null; }
+  const hit = inventories.get(abs);
+  if (hit && hit.at === at) return hit.inv;
+  try { const inv = JSON.parse(readFileSync(abs, "utf8")) as Inventory; if (!Array.isArray(inv?.fields)) return null; inventories.set(abs, { at, inv }); return inv; } catch { return null; }
 };
 /** QA-165 part 2 (P-237, P-238): the mandatory form fields a copy made now would leave empty, with why (engine/runtime/
  *  mandatory.ts), from the same value step a copy runs. Empty when the form has no PDF map or field list. */
-function fieldsOpen(s: Snap, form: string, boxes: BoxRow[]): OpenField[] {
+function fieldsOpen(s: Snap, form: string, boxes: BoxRow[], words: CaseWords = {}): OpenField[] {
   const map = (s.field_maps as { form_number: string; channel?: string; inventory_file?: string; entries: { data_path: string; fact?: string | null; outcome?: string | null }[] }[]).find((m) => m.form_number === form && m.channel !== "ONLINE");
   const inv = map?.inventory_file ? inventoryOf(map.inventory_file) : null;
   if (!map || !inv) return [];
   const { boxes: results, values } = formValues(s as unknown as Parameters<typeof formValues>[0], map, inv, boxes);
-  return mandatoryOpen(inv, map.entries, results, values);
+  return mandatoryOpen(inv, map.entries, results, values, words);
 }
 const needsValidate = (s: Snap, form: string) => isBarcodeForm(form) && ["PDF_UPLOAD", "PAPER"].includes(channelIn(s, form));
 const OUT_OF_DATE = "Out of date: validate again";
@@ -132,6 +136,10 @@ export class CaseForms implements OnModuleInit {
     const titles = new Map((s.forms as { form_number: string; title?: string }[]).map((f) => [f.form_number, f.title ?? f.form_number]));
     const copies = await this.db.formInstance.findMany({ where: { caseId }, orderBy: { createdAt: "desc" }, include: { snapshot: true, validated: { orderBy: { readAt: "desc" }, take: 1 } } });
     const labels = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
+    // QA-165 part 2 (review M-1, M-2 on #592): the case's own question words, and the groups settled as "none apply".
+    const noneApply = new Map(view.sections.filter((x) => !!x.group && x.group.rows === 0 && !!x.group.none_apply?.value && x.group.none_apply.confirmed)
+      .flatMap((x) => x.questions.map((q) => [`${x.subjectId}|${q.fact}`, `"${x.title}"`] as [string, string])));
+    const caseWords: CaseWords = { labelOf: (fact) => labels.get(fact), noneApply };
     const forms: CaseForm[] = [];
     for (const p of people.filter((x) => x.role !== "case")) {
       for (const form of [...pdf].sort()) {
@@ -142,7 +150,7 @@ export class CaseForms implements OnModuleInit {
         const channel = channelIn(s, form);
         forms.push({ form, title: titles.get(form) ?? form, subject_id: p.subjectId, person: p.label, applies, trial_passed: trialOf(s, form).passed, trial_why: trialOf(s, form).why, channel, for_filing: channel !== "ONLINE", needs_validate: needsValidate(s, form),
           draft: { written_now: cov?.facts.length ?? 0, mapped: cov?.mapped ?? 0, unconfirmed: cov?.boxes.filter((b) => b.coverage === "answered on screen").length ?? 0 },
-          readiness: readiness(view, form, p.subjectId), fields_open: cov ? fieldsOpen(s, form, markNothingRecorded(cov.boxes, view)) : [], copies: mine.map((x) => this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, form, p.subjectId), channel === "ONLINE")) });
+          readiness: readiness(view, form, p.subjectId), fields_open: cov ? fieldsOpen(s, form, markNothingRecorded(cov.boxes, view), caseWords) : [], copies: mine.map((x) => this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, form, p.subjectId), channel === "ONLINE")) });
       }
     }
     // QA-40: a form filed Online is listed too (no PDF copy is made), with the people it applies to (P-113: the case

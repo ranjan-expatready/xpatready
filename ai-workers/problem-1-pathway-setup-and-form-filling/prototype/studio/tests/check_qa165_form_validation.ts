@@ -59,6 +59,8 @@ for (const [form, file] of [["IMM 0008", "imm0008e"], ["IMM 1344", "imm1344e"]] 
 }
 const barcodesDate = read(blank("imm1344e"), { "ApplicationValidatedFlagMirror[0]": "Yes", "ApplicationValidatedFlag[0]": "Yes", "Barcodes[0].DateLastValidated[0]": "2026-11-02" });
 ok("IMM 1344 fail (review m-3 on #572): a date only in Barcodes.DateLastValidated (no script sets it) is not the date last validated", !barcodesDate.passed && barcodesDate.date_last_validated === null, barcodesDate);
+const noDate = read(asValidated(blank("imm1344e")), { "Header[0].titleSF[0].DateLastValidated[0]": "not a date" });
+ok("IMM 1344 fail (break m-7 on #592): a date last validated with no year in it (\"not a date\") is not a date", !noDate.passed && noDate.date_last_validated === null, noDate);
 const oui = read(asValidated(blank("imm5257e")), { "ApplicationValidatedFlag[0]": "Oui" });
 ok("IMM 5257 pass: the French flag (Oui) counts as passed", oui.passed && oui.flag === "Oui", oui);
 const none = read(blank("imm5707e"));

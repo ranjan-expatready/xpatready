@@ -185,7 +185,8 @@ export type CaseForm = {
   needs_validate: boolean;
   /** QA-165 part 2 (P-237, P-238): each mandatory field of IRCC's form that a copy made now would leave empty, with why
    *  ("needs an answer", "no question asks it yet", "fill it in Adobe", "filled by hand"); listed before the file is
-   *  offered. It does not block "ready to file" (P-71): the form's own Validate in Adobe asks for each. */
+   *  offered. It does not block "ready to file": P-237 stops only a barcode form whose own Validate fails, and P-238 makes
+   *  missing facts a warning passed with a reason (L-SA3); the form's own Validate in Adobe asks for each. */
   fields_open: { box: string; label: string; reason: string; why: string }[];
 };
 /** QA-40: a form this case's release files Online: no PDF copy is made here, but the officer still sees it and for

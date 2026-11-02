@@ -5,7 +5,7 @@
 import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 import { promisify } from "node:util";
 import { formValues } from "../../engine/form-values.ts";
@@ -26,8 +26,10 @@ const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex")
  *  .json file (Devin on #592: a release is data, so a "../" path must never reach another file). Null when it is not. */
 export function solutionFile(rel: string | null | undefined): string | null {
   if (!rel || !/\.json$/i.test(rel)) return null;
-  const abs = resolve(SOLUTION, rel), root = resolve(SOLUTION);
-  return abs.startsWith(`${root}${sep}`) ? abs : null;
+  // Break m-5 on #592: the real path, links followed, must stay inside the solution folder (a committed link may point out).
+  const root = realpathSync(SOLUTION), abs = resolve(SOLUTION, rel);
+  let real: string; try { real = realpathSync(abs); } catch { return null; }
+  return real.startsWith(`${root}${sep}`) && !real.split(sep).includes("node_modules") ? real : null;
 }
 
 export async function writeForm(snapshot: Snapshot, cov: { boxes: BoxRow[] }, form: string, dir: string, base: string, opts: { notForFiling?: boolean } = {}) {

@@ -36,6 +36,18 @@ for (const detail of ["no question placement: nobody is asked for this value yet
   const o = mandatoryOpen(inv, [{ data_path: d, fact: "person.x", outcome: "mapped" }], [box(d, { coverage: "unresolved", detail })], { ...all, [d]: "" });
   ok(`fail (Devin on #592): a mapped field no answer can fill ("${detail.split(":")[0].split(";")[0]}") → "no question asks it yet", in render's words`, o[0]?.reason === "no question asks it yet" && o[0]?.why === detail, o);
 }
+const oFix = mandatoryOpen(inv, [{ data_path: a, fact: "person.x", outcome: "mapped" }], [box(a, { coverage: "answered on screen", fix: "confirmed with a problem, not written: Enter the street." } as Partial<BoxResult>)], one);
+ok("fail (break M-2 on #592): a confirmed answer with a problem (QA-122) says that problem, as the copy does, never \"not confirmed yet\"", oFix[0]?.reason === "needs an answer" && oFix[0]?.why === "confirmed with a problem, not written: Enter the street.", oFix);
+// Review M-1 on #592: a line a question fills is named by that question; derived Yes/No and not-a-fact keep the form's words.
+const q1 = mandatoryOpen(inv, [{ data_path: a, fact: "person.residence_country", outcome: "mapped", evidence_quote: "* Date of birth" }], [box(a)], one, { labelOf: (f) => (f === "person.residence_country" ? "Country of residence" : undefined) });
+ok("fail (review M-1 on #592): a mapped line is named by the case's own question, never by a wrong map quote (\"Date of birth\" on the country of residence)", q1[0]?.label === "Country of residence", q1[0]?.label);
+const q2 = mandatoryOpen(inv, [{ data_path: b, fact: null, outcome: "not_a_fact", evidence_quote: "Taiwan personal identification number" }], [], { ...all, [b]: "" }, { labelOf: () => "never this" });
+ok("pass: a not-a-fact line keeps the form's own words", q2[0]?.label === "Taiwan personal identification number", q2[0]?.label);
+const q3 = mandatoryOpen(inv, [{ data_path: c, evidence_quote: "Education Section Question 1. Have you had any post-secondary education (including university, college or apprenticeship training)?" }], [], { ...all, [c]: "" });
+ok("fail (review M-1 on #592): a question's number (\"Education Section Question 1.\") is not cut off as the sentence", /post-secondary education/.test(q3[0]?.label ?? ""), q3[0]?.label);
+// Review M-2 on #592: a row field of a group settled as "none apply" has no answer to give.
+const q4 = mandatoryOpen(inv, [{ data_path: d, fact: "person.employment_activity", outcome: "mapped" }], [box(d, { row: 0 })], { ...all, [d]: "" }, { noneApply: new Map([["principal|person.employment_activity", "\"Employment and activity history\""]]) });
+ok("fail (review M-2 on #592): after a confirmed \"none apply\", a required row field says so and the way out, never \"not answered yet\"", q4[0]?.reason === "fill it in Adobe" && /"none apply" is confirmed for "Employment and activity history"/.test(q4[0]?.why ?? "") && /take back "none apply"/.test(q4[0]?.why ?? ""), q4);
 const o5 = mandatoryOpen(inv, [{ data_path: a, fact: "person.x", outcome: "mapped" }], [box(a, { result: "by hand", why: "\"Z\" has no code" })], one);
 ok("pass: a value with no code in the form → \"filled by hand\", with why", o5.length === 1 && o5[0].reason === "filled by hand" && /no code/.test(o5[0].why), o5);
 const o6 = mandatoryOpen(inv, [{ data_path: a, fact: "person.x", outcome: "mapped" }], [box(a, { coverage: "answered on screen" })], one);
@@ -54,6 +66,14 @@ ok("fail: a field path never shows as the words", mandatoryOpen(inv, [], [], {})
 
 // Devin on #592 (security): a release's inventory_file is data; only a .json file inside the solution folder is read.
 ok("fail: an inventory_file that climbs out of the solution folder, or is not .json, is never read", solutionFile("../../../../etc/passwd.json") === null && solutionFile("/etc/hosts.json") === null && solutionFile("prototype/p1/inventory/imm5257e.inventory.pdf") === null && solutionFile(null) === null);
+{ // Break m-5 on #592: a link inside the solution folder that points out is not followed out; node_modules is never read.
+  const { symlinkSync, writeFileSync, rmSync, mkdtempSync } = await import("node:fs"); const { tmpdir } = await import("node:os");
+  const out = join(mkdtempSync(join(tmpdir(), "xr-out-")), "outside.json"); writeFileSync(out, JSON.stringify({ fields: [] }));
+  const link = join(import.meta.dirname, "..", "..", "p1", "inventory", `zz-link-${process.pid}.json`); symlinkSync(out, link);
+  try { ok("fail (break m-5 on #592): a link inside the solution folder pointing outside it is never read", solutionFile(`prototype/p1/inventory/zz-link-${process.pid}.json`) === null); }
+  finally { rmSync(link, { force: true }); rmSync(out, { force: true }); }
+  ok("fail (break m-5 on #592): a file under node_modules is never read as a field list", solutionFile("prototype/studio/node_modules/typescript/package.json") === null);
+}
 ok("pass: the release's own field list resolves inside the solution folder", !!solutionFile("prototype/p1/inventory/imm5257e.inventory.json")?.endsWith("/prototype/p1/inventory/imm5257e.inventory.json"));
 
 // Signatures and the oath are person steps (F2/F6), never listed here; buttons neither.
@@ -64,6 +84,10 @@ ok("fail: a signature box and a button are never listed; the text field is", os.
 // The lines a person reads (engine/runtime/open-lines.ts, used by the forms card).
 const L = (box: string, label = "Sex", reason = "no question asks it yet", why = "nothing in this release fills it") => ({ box, label, reason, why });
 const dob = openLines(["Year", "Month", "Day"].map((p) => L(`form1[0].Page1[0].PersonalDetails[0].DOB${p}[0]`, "Date of birth", "needs an answer", "not answered yet (Client A)")));
+const dobTwice = openLines([...["Year", "Month", "Day"].map((p) => L(`form1[0].Page1[0].PersonalDetails[0].DOB${p}[0]`, "Date of birth", "needs an answer", "x")), ...["Year", "Month", "Day"].map((p) => L(`form1[0].Page1[0].PersonalDetails[0].DateOfMarriage${p}[0]`, "Date of birth", "needs an answer", "x"))]);
+ok("pass (break m-2 on #592): a merged date line is named by its field, not its year box (\"DOB\", never \"DOB Year\")", dobTwice.length === 2 && dobTwice.some((x) => /form field: DOB\)$/.test(x.label)) && !dobTwice.some((x) => /DOB Year/.test(x.label)), dobTwice.map((x) => x.label));
+const yyyy = openLines([L("form1[0].Page3[0].Occupation[0].OccupationRow1[0].FromYear[0]", "YYYY", "needs an answer", "x")]);
+ok("pass (break m-2 on #592): a label that is only a date part says the field's name too", yyyy[0]?.label === "From (YYYY)", yyyy[0]?.label);
 ok("pass: a date's year, month and day are one line, counting 3 form fields", dob.length === 1 && dob[0].n === 3 && dob[0].label === "Date of birth", dob);
 const passport = openLines([L("form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].TaiwanPIN[0]", "Question 1d. Have you taken a test?", "fill it in Adobe"), L("form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IsraelPassportIndicator[0]", "Question 1d. Have you taken a test?", "fill it in Adobe")]);
 ok("fail (Devin on #592): two fields that share words are two lines, each named by its field", passport.length === 2 && passport[0].label.endsWith("(form field: Taiwan PIN)") && passport[1].label.endsWith("(form field: Israel Passport Indicator)"), passport.map((x) => x.label));

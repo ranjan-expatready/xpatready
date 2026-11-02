@@ -32,7 +32,7 @@ export function openLines(open: OpenFieldIn[]): OpenLine[] {
   const out = new Map<string, string>();
   for (const group of sameWords.values()) {
     if (group.length < 2) continue;
-    const field = (l: OpenLine) => words(bare(segs(l.box).at(-1) ?? ""));
+    const field = (l: OpenLine) => words(bare(segs(l.box).at(-1) ?? "").replace(DATE_PART, "")) || words(bare(segs(l.box).at(-1) ?? ""));
     const fields = new Map<string, OpenLine[]>();
     for (const l of group) fields.set(field(l), [...(fields.get(field(l)) ?? []), l]);
     for (const [name, same] of fields) {
@@ -48,5 +48,7 @@ export function openLines(open: OpenFieldIn[]): OpenLine[] {
       });
     }
   }
-  return lines.map((l) => (out.has(l.key) ? { ...l, label: out.get(l.key)! } : l));
+  // Break m-2 on #592: a label that is only a date part ("YYYY", "MM") says nothing; the field's own name says more.
+  const said = (l: OpenLine) => (/^(YYYY|MM|DD|Year|Month|Day)$/i.test(l.label.trim()) ? `${words(bare(segs(l.box).at(-1) ?? "").replace(DATE_PART, "")) || "Date"} (${l.label.trim()})` : l.label);
+  return lines.map((l) => (out.has(l.key) ? { ...l, label: out.get(l.key)! } : { ...l, label: said(l) }));
 }
