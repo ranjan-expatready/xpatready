@@ -27,7 +27,7 @@ M2 **34/56 Works** · 8 built, awaiting qa · 14 partial. R1 6/8 (C4.4 built; C7
 * Still quarantined: `check_forms_c36_rule_facts_browser.cjs` (C3.6 focus check; its fix row is open).
 
 ## Decisions waiting for the founder (detail in the night report §7)
-1. Paid replay trials for the 8 M2 rows that need a recorded live answer (P-223 (3), cap US$20). Recommend yes.
+1. ~~Paid replay trials~~ **Decided: P-225** (2 Nov), a standing budget of up to US$20 a day for library drafting runs. Each run needs the Lead's "Go" after its cost is stated in the PR; the Lead reports spend every morning. R-146 (8 forms' field maps, up to US$45) still needs the founder's own Go.
 2. C6.9 concept (approved overnight under P-223 (4)): Q1 disclaimer on the release (amends P-77 (2)), Q2 any staff may override or review in M3, Q3 fail vs missing (recommend "Not eligible, also needs …").
 3. #357 m3: a derived Yes over a client's No shows as a check to the officer (recommend yes). m4 (step-children): the Lead cites canada.ca.
 4. Move the full test run off GitHub's unreliable schedule (to GitHub machines or a Lead dispatch).
