@@ -259,7 +259,9 @@ export function ordinal(n: number) { const t = n % 100, u = n % 10; return `${n}
 /** C5.6 (P-240, row G3): a release is a "Demo release" when what it froze holds Sample content: a Sample combination
  *  (source_basis ILLUSTRATIVE) or any value marked Sample (a check saved without an official source is illustrative).
  *  Read from the release's own snapshot, so a later change to the combination never relabels a past release. */
-export function isDemoSnapshot(snap: { combination?: { source_basis?: string | null } | null; checks?: { illustrative?: boolean | null }[] | null } | null | undefined): boolean {
-  if (!snap) return false;
-  return snap.combination?.source_basis === "ILLUSTRATIVE" || (snap.checks ?? []).some((c) => !!c?.illustrative);
+export function isDemoSnapshot(raw: unknown): boolean {
+  if (!raw || typeof raw !== "object") return false;
+  const snap = raw as { combination?: { source_basis?: string | null } | null; checks?: unknown };
+  const checks = Array.isArray(snap.checks) ? (snap.checks as ({ illustrative?: boolean | null } | null)[]) : [];
+  return snap.combination?.source_basis === "ILLUSTRATIVE" || checks.some((c) => !!c?.illustrative);
 }
