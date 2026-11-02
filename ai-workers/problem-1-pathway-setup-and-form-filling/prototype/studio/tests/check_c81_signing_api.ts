@@ -3,13 +3,22 @@
 // of birth on the case. (2) Signing steps and the signed scan are refused on a form that is not signed by hand and
 // scanned on this application. (3) Changing a form's channel sets its signing steps aside (kept as history), so steps
 // done for the old channel never make it Ready. Sample data, no model call (US$0).
-//   zsh studio/tools/isolated.sh rt_c81 4438 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4438 xr_studio_rt_c81
-//   tsx studio/acceptance/lib/setup_vv_m3.ts 4438 xr_studio_rt_c81
-//   tsx --tsconfig studio/api/tsconfig.json studio/tests/check_c81_signing_api.ts 4438 xr_studio_rt_c81
-import { AUTHOR, OFFICER, REVIEWER, agent, answer, call, confirmAll, fillEverything, firms, generateCopy, itemsOf, needVisitorVisa, openCase, prepare, sendFile, signedScan, sql, yearsAgo } from "../acceptance/lib/m3.ts";
+// It runs the pack's own setup on its copy first when the copy has no release 2 of Visitor visa yet
+// (tests/runtime/setup_visitor_visa.ts, then acceptance/lib/setup_vv_m3.ts), so the suites runner can run it alone (CI on #617).
+//   zsh studio/tools/isolated.sh rt_c81 4438 start && tsx studio/tests/check_c81_signing_api.ts 4438 xr_studio_rt_c81
+import { spawnSync } from "node:child_process";
+import { join } from "node:path";
+import { AUTHOR, DB, OFFICER, PORT, REVIEWER, agent, answer, call, confirmAll, fillEverything, firms, generateCopy, itemsOf, needVisitorVisa, openCase, prepare, sendFile, signedScan, sql, yearsAgo } from "../acceptance/lib/m3.ts";
 import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
+// The pack's setup, once per copy: release 1 (setup_visitor_visa.ts), then release 2 with signers and channels (setup_vv_m3.ts).
+const releases = () => { try { return Number(sql(`select coalesce(max(r.version), 0) from config_release r join combination c on c.id = r.combination_id where c.combination_key = 'vv.single'`)); } catch { return 0; } };
+const studio = join(import.meta.dirname, ".."), tsx = join(studio, "node_modules", ".bin", "tsx");
+const setup = (file: string) => spawnSync(tsx, ["--tsconfig", join(studio, "api", "tsconfig.json"), join(studio, file), String(PORT), DB], { cwd: join(studio, ".."), stdio: "ignore", timeout: 900_000 });
+if (releases() < 1) setup("tests/runtime/setup_visitor_visa.ts");
+if (releases() < 2) setup("acceptance/lib/setup_vv_m3.ts"); // its own red lines (other rows' S2w, S7a) do not stop it
+ok("setup: the copy has Visitor visa release 2 (the pack's setup)", releases() >= 2, releases());
 const vv = needVisitorVisa();
 const f = await firms();
 
