@@ -39,7 +39,9 @@ export type AgeExempt = { underAge: number; overAge: number; source: FeeSource }
 /** A fee line: `roles` limits it to the filings of those roles (spouse and PNP fees); none means every filing. Without a
  *  family maximum the cap never applies (familyFrom is then beyond any household). */
 export type FeeRule = { key: string; label: string; basis?: FeeBasis; perPersonCents: number; familyMaxCents: number; familyFrom: number; source: FeeSource; exempt?: AgeExempt; roles?: string[] };
-type Rules = { label: string; modes: Map<string, CaseFiling["mode"]>; fees: FeeRule[]; groupWhy?: string };
+type Rules = { label: string; modes: Map<string, CaseFiling["mode"]>; fees: FeeRule[]; groupWhy?: string;
+  /** The table these rules were priced from (Devin on #455: the basis names that table, never the shipped one). */
+  table?: { as_of: string; read: string } };
 /** What the case adds (C6.12, the stored prepare view): each person's age in whole years (null: no date of birth yet),
  *  the filing modes the release says per role (M3-0; a role it leaves out falls back to the table below), and the
  *  submission group each person's filing is in (a split is stored; default the family group). */
@@ -59,7 +61,7 @@ export function rulesFrom(table: FeeTable, key: string): Rules | undefined {
     // Only the family_maximum basis caps a line (P-247): any other basis charges each person or application in full.
     familyMaxCents: l.basis === "family_maximum" ? Math.round(l.family_max!.cad * 100) : 0, familyFrom: l.basis === "family_maximum" ? l.family_max!.from_people : Number.MAX_SAFE_INTEGER,
     source: l.source, ...(l.exempt ? { exempt: { underAge: l.exempt.under_age, overAge: l.exempt.over_age, source: l.exempt.source } } : {}), ...(l.roles ? { roles: l.roles } : {}) }));
-  return { label: c.label, modes: new Map(Object.entries(c.modes ?? {})), fees, groupWhy: c.group_why };
+  return { label: c.label, modes: new Map(Object.entries(c.modes ?? {})), fees, groupWhy: c.group_why, table: { as_of: table.as_of, read: table.read } };
 }
 const RULES = { get: (key: string) => rulesFrom(FEE_TABLE, key) };
 
@@ -93,7 +95,11 @@ export function familyFee(rule: FeeRule, people: number): SubmissionGroup["total
   const listCents = rule.perPersonCents * people;
   const capApplied = people >= rule.familyFrom && listCents > rule.familyMaxCents;
   const totalCents = capApplied ? rule.familyMaxCents : listCents;
-  const why = capApplied
+  // P-247: a line on any basis but family_maximum has no cap, so its words never name one (Devin on #455).
+  const capped = !rule.basis || rule.basis === "family_maximum";
+  const why = !capped
+    ? `${people} × ${cad(rule.perPersonCents)} = ${cad(listCents)} (${rule.basis === "per_application" ? "per application" : "per person"}; no family maximum).`
+    : capApplied
     ? `${people} people applying together: the family maximum ${cad(rule.familyMaxCents)} applies instead of ${people} × ${cad(rule.perPersonCents)} = ${cad(listCents)}.`
     : people >= rule.familyFrom
       ? `${people} × ${cad(rule.perPersonCents)} = ${cad(listCents)}, not above the family maximum ${cad(rule.familyMaxCents)}.`
@@ -133,7 +139,9 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
     const all = filings.filter((f) => f.group === gid), mine = all;
     const totals: SubmissionGroup["totals"] = [];
     for (const rule of rules.fees) {
-      const mine = all.filter((f) => !rule.roles || rule.roles.includes(f.applicants[0].role));
+      // A per_application line is charged once per application: a filing on the principal's application (on_principal)
+      // is covered by it, never charged twice (Devin on #455).
+      const mine = all.filter((f) => (!rule.roles || rule.roles.includes(f.applicants[0].role)) && !(rule.basis === "per_application" && f.mode === "on_principal"));
       if (!mine.length) continue;
       const check = new Map(mine.map((f) => [f.id, ageCheck(rule, opts.ages?.get(f.applicants[0].subject))]));
       const paying = mine.filter((f) => { const c = check.get(f.id)!; return "pays" in c && c.pays; });
@@ -157,7 +165,7 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   }
   const body = { filings, groups, fees, not_filing: notFiling };
   return { derived: true, combination: combinationKey, label: rules.label, ...body, currency: "CAD",
-    basis: `Fees from the ${FEE_TABLE.lines[0]?.source.page ?? "fee table"} (fee table as of ${FEE_TABLE.as_of}, read ${FEE_TABLE.read}); Sample until the immigration expert confirms (P-171). ${ageWords(rules, !!opts.ages)} Paying is not built.`,
+    basis: `Fees from the ${rules.fees[0]?.source.page ?? "fee table"} (fee table as of ${rules.table?.as_of ?? FEE_TABLE.as_of}, read ${rules.table?.read ?? FEE_TABLE.read}); Sample until the immigration expert confirms (P-171). ${ageWords(rules, !!opts.ages)} Paying is not built.`,
     why: filings.length ? null : "Nobody on this case is applying, so there is no filing and no fee.",
     version: createHash("sha256").update(JSON.stringify(body)).digest("hex").slice(0, 16) };
 }
