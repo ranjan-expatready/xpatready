@@ -56,8 +56,12 @@ for p in approved:
     if p["title"].startswith(("qa:", "lead:")):
         alarm(f"#{p['number']} is a records PR carrying review: approved, so a push throws out its batch: remove the label, merge it directly")
 
-# 3. qa (P-250): approved PRs with no qa verdict comment.
+# 3. qa (P-250, narrowed by P-277): approved PRs touching money, schema or permissions with no qa verdict comment.
+RISKY = ("prisma/", "ledger", "paid", "permission", "launcher")
 for p in approved:
+    files = gh("pr", "view", str(p["number"]), "--json", "files", "--jq", ".files[].path")
+    if not any(k in files for k in RISKY):
+        continue
     body = gh("pr", "view", str(p["number"]), "--json", "comments", "--jq", "[.comments[].body|select(test(\"^\\\\**qa\";\"i\"))]|length").strip()
     if body in ("", "0"):
         print(f"wait  #{p['number']} has no qa verdict yet (P-250)")
