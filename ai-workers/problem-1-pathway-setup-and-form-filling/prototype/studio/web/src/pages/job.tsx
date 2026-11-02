@@ -24,9 +24,14 @@ const FILTERS = [["decide", "Needs a decision"], ["new", "New"], ["reuse", "Reus
 /** QA-75: what a step of AI work did, in words, by its kind (a rules step is never called an AI field map). */
 const STEP_NAME: Record<string, string> = { field_map: "AI-proposed field map", read_form: "Rules read the form's fields", checklist_draft: "proposed document requirements" };
 /** QA-75: the form a step worked on, by its edition or file; null when no form is linked. */
-const formName = (a: { edition?: string | null; fileName?: string | null } | null | undefined) => a?.edition ?? a?.fileName ?? null;
+const formName = (a: { edition?: string | null; fileName?: string | null } | null | undefined) => a?.edition?.trim() || a?.fileName?.trim() || null;
+/** QA-75 (break m2): a step with no name of its own says whether AI or rules did it. */
+const stepNameOf = (kind: string, mode: string) => STEP_NAME[kind] ?? (mode === "LOCAL" ? "A rules step" : "A step of AI work");
 /** QA-75: the trail "<combination> › Forms › <step>", never the retired "Sources and forms". */
-export function JobTrail({ id, combination, here }: { id: string; combination?: { label: string } | null; here: string }) {
+export function JobTrail({ id, combination, here }: { id: string; combination?: { id?: string; label: string } | null; here: string }) {
+  // QA-75 (break m1, m3): the trail follows the job's own combination, not the address; a step of no combination goes back to AI work.
+  if (!combination) return <nav aria-label="Where you are" className="flex flex-wrap items-center gap-1 text-xs text-text-muted"><Link to="/ai" className="hover:underline">AI work</Link><ChevronRight className="size-3" aria-hidden /><span>{here}</span></nav>;
+  id = combination.id ?? id;
   return <nav aria-label="Where you are" className="flex flex-wrap items-center gap-1 text-xs text-text-muted"><Link to={`/c/${id}`} className="hover:underline">{combination?.label ?? "Combination"}</Link><ChevronRight className="size-3" aria-hidden /><Link to={`/c/${id}/forms`} className="hover:underline">Forms</Link><ChevronRight className="size-3" aria-hidden /><span>{here}</span></nav>;
 }
 
@@ -54,29 +59,32 @@ export function JobPage() {
   }, []);
   const clean = useAction((outcome: "REUSE" | "NEW") => api(`/jobs/${jobId}/accept-clean`, { method: "POST", json: { outcome } }), { success: (r: any) => `${r.accepted} ${r.outcome === "REUSE" ? "exact reuse matches" : "new definitions"} accepted`, invalidate: [["job", jobId]] });
   if (j.isLoading) return <Spinner label="Loading the AI draft" />;
-  if (j.isError) return <ErrorState title="This AI draft could not be opened" description={(j.error as Error).message} />;
+  if (j.isError) return <ErrorState title="This step could not be opened" description={(j.error as Error).message} />;
   const job = j.data;
   if (job.kind === "checklist_draft") return <ChecklistJob job={job} combinationId={id!} />;
   const items = job.items as any[];
-  const isMap = job.kind === "field_map", stepName = STEP_NAME[job.kind] ?? "A step of AI work", form = formName(job.attachment);
+  const isMap = job.kind === "field_map", stepName = stepNameOf(job.kind, job.mode), form = formName(job.attachment);
+  const cid: string = job.combination?.id ?? id!; // QA-75 (break m1): links follow the job's combination
   const c = job.detail?.counts;
   const pending = items.filter((i) => i.decision === "PENDING");
   const shown = items.filter((i) => filter === "all" ? true : filter === "decided" ? i.decision !== "PENDING" : filter === "decide" ? needsOwn(i) : filter === "new" ? i.outcome === "NEW" : i.outcome === "REUSE");
   return (
     <div className="mx-auto max-w-7xl space-y-5 pb-24">
-      <JobTrail id={id!} combination={job.combination} here={isMap ? "AI field-map draft" : stepName} />
+      <JobTrail id={cid} combination={job.combination} here={isMap ? "AI field-map draft" : stepName} />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="flex items-center gap-2 text-xl font-semibold">{isMap ? <Sparkles className="size-5 text-[#7c3aed]" aria-hidden /> : null} {form ? `${form}: ${stepName}` : stepName}</h1>
+          <h1 className="flex items-center gap-2 text-xl font-semibold">{isMap ? <Sparkles className="size-5 shrink-0 text-[#7c3aed]" aria-hidden /> : null} {form ? `${form}: ${stepName}` : stepName}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-1.5"><ModePill mode={job.mode} /><StatusPill status={job.status} />{job.costUsd !== null && job.costUsd !== undefined ? <Pill>US${Number(job.costUsd).toFixed(2)}</Pill> : null}<Pill>{job.elapsed_s}s</Pill></div>
           {form ? null : <p className="mt-1 text-sm text-text-muted">No form is linked to this step.</p>}
           {isMap ? <p className="mt-2 max-w-3xl text-xs text-text-muted">{job.mode === "REPLAY" ? "A saved AI answer, replayed: no model was called now. " : job.mode === "LOCAL" ? "No AI was called for this step." : ""}{job.mode !== "LOCAL" ? "The AI sees only the public list of the form's fields; it never sees the library, a family or an answer key." : ""}{items.length ? " Rules, not AI, compare each proposal with the library below." : ""}</p>
             : <p className="mt-2 max-w-3xl text-xs text-text-muted">{job.mode === "LOCAL" ? "Rules did this step; no AI was called." : "A step of AI work."}</p>}
         </div>
       </div>
-      {job.status === "RUNNING" || job.status === "QUEUED" ? <Notice tone="ai" title="The AI is drafting" action={<Spinner label="Running" />}>{job.message} Steps so far: {(job.detail?.steps ?? []).map((s: any) => `${s.step} (exit ${s.exit})`).join(", ") || "starting"}. This page updates by itself.</Notice> : null}
-      {job.status === "NEEDS_PERSON" ? <Notice tone="warn" title="Needs you" action={<Button size="sm" variant="secondary" asChild><Link to={job.batchId ? `/ai/${job.batchId}` : `/c/${id}/forms`}>{job.batchId ? "Open the AI work" : "Open the Forms tab"}</Link></Button>}>{job.message ?? "This step stopped for a person to choose."}</Notice> : null}
-      {job.status === "BLOCKED" || job.status === "FAILED" ? <Notice tone={job.status === "BLOCKED" ? "warn" : "danger"} title={job.status === "BLOCKED" ? "Blocked: nothing was drafted" : "The draft failed"} action={<Button size="sm" variant="secondary" asChild><Link to={`/c/${id}/forms`}>Open the Forms tab</Link></Button>}>{job.message}</Notice> : null}
+      {/* QA-75 (break M1): no step codes or exit numbers; a rules step is never "the AI"; a queued step has no spinner. */}
+      {job.status === "RUNNING" || job.status === "QUEUED" ? <Notice tone={job.mode === "LOCAL" ? "info" : "ai"} title={job.status === "QUEUED" ? "Waiting to start" : job.mode === "LOCAL" ? "The rules are working" : "The AI is drafting"} action={job.status === "RUNNING" ? <Spinner label="Running" /> : undefined}>{job.message && !/^(Running|Queued)$/i.test(job.message) ? `${job.message} ` : ""}This page updates by itself.</Notice> : null}
+      {["WAITING", "SKIPPED", "CANCELLED", "PARTIAL"].includes(job.status) && job.message ? <p className="text-sm text-text-muted" data-step-message>{job.message}</p> : null}
+      {job.status === "NEEDS_PERSON" ? <Notice tone="warn" title="Waiting for you" action={<Button size="sm" variant="secondary" asChild><Link to={job.batchId ? `/ai/${job.batchId}` : `/c/${cid}/forms`}>{job.batchId ? "Open the AI work" : "Open the Forms tab"}</Link></Button>}>{job.message ?? "This step stopped for a person to choose."}</Notice> : null}
+      {job.status === "BLOCKED" || job.status === "FAILED" ? <Notice tone={job.status === "BLOCKED" ? "warn" : "danger"} title={job.status === "BLOCKED" ? "Blocked: nothing was drafted" : isMap ? "The draft failed" : "This step failed"} action={<Button size="sm" variant="secondary" asChild><Link to={`/c/${cid}/forms`}>Open the Forms tab</Link></Button>}>{job.message}</Notice> : null}
       {isMap && job.status === "COMPLETED" ? <Notice tone="info" title="Compared with the library as it was when the draft was read" action={<Button size="sm" variant="secondary" onClick={() => recompare.mutate(undefined)} busy={recompare.isPending}>Compare again (no AI call)</Button>}>{job.detail?.library_revision ? `The library then had ${job.detail.library_revision.fields} shared field versions. ` : ""}If the shared library changes before you apply, applying is refused as stale; comparing again keeps every decision that still holds and reopens the rest.{job.detail?.recompared ? ` Last compared again by ${job.detail.recompared.by}: ${job.detail.recompared.kept} kept, ${job.detail.recompared.reopened} reopened.` : ""}</Notice> : null}
       {c ? (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
@@ -104,8 +112,8 @@ export function JobPage() {
       {isMap && (job.status === "COMPLETED" || job.status === "APPLIED") ? (
         <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface-raised/95 px-6 py-3 backdrop-blur md:left-56">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
-            <p className="text-sm">{job.status === "APPLIED" ? "Applied to the draft. Next: preview the effect, then submit for review." : pending.length ? <><b>{pending.length}</b> proposal{pending.length > 1 ? "s" : ""} still to decide. Every proposal needs a decision before it reaches the draft.</> : "All proposals decided. Apply them to the combination's draft configuration."}</p>
-            {job.status === "APPLIED" ? <Button onClick={() => nav(`/c/${id}/preview`)}>Preview the draft</Button> : <Button disabled={!!pending.length} onClick={() => setApplyOpen(true)}><GitMerge /> Apply to draft</Button>}
+            <p className="text-sm">{job.status === "APPLIED" ? "Applied to the draft. Next: preview the effect, then submit for review." : pending.length ? <><b>{pending.length}</b> proposal{pending.length > 1 ? "s" : ""} still to decide. Every proposal needs a decision before it reaches the draft.</> : !items.length ? "Nothing was proposed, so there is nothing to apply." : "All proposals decided. Apply them to the combination's draft configuration."}</p>
+            {job.status === "APPLIED" ? <Button onClick={() => nav(`/c/${id}/preview`)}>Preview the draft</Button> : <Button disabled={!!pending.length || !items.length} onClick={() => setApplyOpen(true)}><GitMerge /> Apply to draft</Button>}
           </div>
         </div>
       ) : null}
@@ -265,7 +273,7 @@ export function FormFieldDecisions({ jobId, editionId, readOnly = false, focusOn
 /** K2 (Screen 02 slice 3): a checklist draft. Each proposal is a document requirement (or a section, rule or check) with
  *  the checklist's own words beside it; a person accepts or returns each, then applies them to the draft. */
 type ChecklistItem = { id: string; kind: string; decision: string; proposedMeaning: string; sourceQuote: string | null; payload: { document_type?: string; who?: string; base_or_conditional?: string; condition_plain?: string } | null };
-type ChecklistJobView = { id: string; status: string; mode: string; costUsd: number | null; message: string | null; attachment?: { edition: string | null } | null; combination?: { label: string } | null; items: ChecklistItem[]; detail?: { applied?: { added: number; skipped: string[] } } | null };
+type ChecklistJobView = { id: string; status: string; mode: string; costUsd: number | null; message: string | null; attachment?: { edition: string | null; fileName?: string | null } | null; combination?: { id?: string; label: string } | null; items: ChecklistItem[]; detail?: { applied?: { added: number; skipped: string[] } } | null };
 function ChecklistJob({ job, combinationId }: { job: ChecklistJobView; combinationId: string }) {
   const items = job.items;
   const decide = useAction((v: { id: string; decision: string; note?: string }) => api(`/jobs/${job.id}/items/${v.id}`, { method: "POST", json: { decision: v.decision, note: v.note } }), { invalidate: [["job", job.id]] });
@@ -275,7 +283,7 @@ function ChecklistJob({ job, combinationId }: { job: ChecklistJobView; combinati
   return (
     <div className="mx-auto max-w-5xl space-y-5">
       <JobTrail id={combinationId} combination={job.combination} here="Checklist draft" />
-      <div><h1 className="flex items-center gap-2 text-xl font-semibold"><Sparkles className="size-5 text-[#7c3aed]" /> {job.attachment?.edition ?? "Checklist"}: proposed document requirements</h1>
+      <div><h1 className="flex items-center gap-2 text-xl font-semibold"><Sparkles className="size-5 shrink-0 text-[#7c3aed]" aria-hidden /> {formName(job.attachment) ? `${formName(job.attachment)}: proposed document requirements` : "Proposed document requirements"}</h1>
         <div className="mt-2 flex flex-wrap gap-1.5"><ModePill mode={job.mode} /><StatusPill status={job.status} /><Pill>US${Number(job.costUsd ?? 0).toFixed(2)}</Pill></div>
         <p className="mt-2 max-w-3xl text-sm text-text-muted">{job.message}</p></div>
       {!items.length ? <Notice title="Nothing proposed">{job.mode === "REPLAY" ? "Every line of the saved reading is already on this combination, or was dropped by the rules (listed above)." : "The stub pass proves the path only; a live draft proposes each document requirement with the checklist's words beside it."}</Notice> : (
