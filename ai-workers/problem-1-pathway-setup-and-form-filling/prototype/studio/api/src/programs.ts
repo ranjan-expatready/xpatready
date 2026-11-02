@@ -359,10 +359,12 @@ export class Programs {
     } else for (const r of changed) why.set(r.leaf.combinationId!, { why: r.errors ? r.firstError : null });
     // Approved library changes travel with the shared draft and are released with it (Screen 02 slice 2, B1).
     const library = (await this.db.libraryChange.findMany({ where: { workspaceId, status: "APPROVED", action: { in: ["ADD", "RETIRE", "RESTORE"] } }, orderBy: { proposedAt: "asc" } })).map(changeView);
+    // C5.6 (P-240, G3): Sample content (a combination of sourceBasis ILLUSTRATIVE) releases as a "Demo release".
+    const demoIds = new Set((await this.db.combination.findMany({ where: { id: { in: changed.map((r) => r.leaf.combinationId!).filter(Boolean) }, sourceBasis: "ILLUSTRATIVE" }, select: { id: true } })).map((c) => c.id));
     return {
       changes: changed.reduce((s, r) => s + r.changes, 0) + library.length,
       library,
-      rows: changed.map((r) => { const w = why.get(r.leaf.combinationId!)!; return { combinationId: r.leaf.combinationId, label: r.leaf.label, path: r.leaf.path, changes: r.changes, held: !!w.why, why: w.why, self: !!w.self, released: !!r.leaf.release }; }),
+      rows: changed.map((r) => { const w = why.get(r.leaf.combinationId!)!; return { combinationId: r.leaf.combinationId, label: r.leaf.label, path: r.leaf.path, changes: r.changes, held: !!w.why, why: w.why, self: !!w.self, released: !!r.leaf.release, demo: demoIds.has(r.leaf.combinationId!) }; }),
       last: last ? { version: last.version, at: last.releasedAt, approver: last.approverId } : null,
       next: (last?.version ?? 0) + 1,
     };

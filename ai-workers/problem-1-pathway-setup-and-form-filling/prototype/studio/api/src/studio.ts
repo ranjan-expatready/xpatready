@@ -1016,7 +1016,9 @@ export class Studio {
   async releases(combinationId?: string) {
     const workspaceId = await this.ws.id();
     const rows = await this.db.configRelease.findMany({ where: { workspaceId, ...(combinationId ? { combinationId } : {}) }, orderBy: { releasedAt: "desc" }, include: { combination: true } });
-    return rows.map((r) => ({ id: r.id, combination: r.combination.label, combination_id: r.combinationId, version: r.version, sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: r.approverId, names: { author: peopleNames(r.authorId), submitter: peopleNames(r.submitterId), approver: peopleNames(r.approverId) }, summary: r.summary, basis: r.basis }));
+    return rows.map((r) => ({ id: r.id, combination: r.combination.label, combination_id: r.combinationId, version: r.version, sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: r.approverId, names: { author: peopleNames(r.authorId), submitter: peopleNames(r.submitterId), approver: peopleNames(r.approverId) }, summary: r.summary, basis: r.basis,
+      // C5.6 (P-240, G3): Sample content is a "Demo release", never counted as a real publish (derived on read).
+      demo: r.combination.sourceBasis === "ILLUSTRATIVE" }));
   }
 
   /** C6.11 review Major 1: firm staff read the configuration lines and their own firm's case lines only; another firm's
