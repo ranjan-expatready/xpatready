@@ -3,6 +3,7 @@
 updated: 2026-11-02 02:55 UTC (Lead of the 1–2 Nov night, still running; this page is the safety net, not a hand-over) · milestone: **M2 — Super Admin configuration**, plus the Visitor visa M3 path · how we work: `WAY-OF-WORKING.md` (lean model, P-224) · row owners: top of `BACKLOG.md` · night report: `reports/night-2026-11-01-02.md`
 
 ## Goals
+* **Demo first (founder, 2 Nov; BACKLOG "Demo first"):** D1 "Reset to the six" (P-226, runtime-2) · D2 Live or Saved at every AI start (P-227, forms-1 after D3) · D3 record and verify Visitor visa's Saved results (P-225, forms-1; closes QA-144) · the six combinations re-checked against canada.ca (Lead, research running).
 * **Today (2 Nov):** qa scores the 11 built rows; #356, #398, #401 merge; full test run green again; paid replay trials decided (M2 critical path).
 * **This week:** Visitor visa configured end to end (target 3 Nov: **at risk**, 177 release problems need AI drafting); Visitor visa case to application ready (5 Nov); M2 for six combinations (6 Nov, **at risk**).
 * **M2 gate:** the content publisher walk on the six combinations (qa).

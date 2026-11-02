@@ -24,6 +24,13 @@ One owner per row and per shared file; never build another owner's rows. Under t
 | qa-1 | after-merge | re-scores the rows each merged PR names |
 | qa-2 | Visitor visa | baseline walk, then journey walks |
 
+## Demo first (founder, 2 Nov): in order, ahead of Now
+| # | Area | Item | Done when (beyond the standard) | Source |
+|---|---|---|---|---|
+| D1 | runtime | **Reset to the six** (P-226): one Demo menu button = empty configuration + the six combinations with structure and PDFs; saved AI results kept | one click from any state gives the library empty and exactly the six; a saved result recorded before the reset still replays after it; pass and fail tests | P-226, C11.7, C10.1 |
+| D2 | forms | **Live or Saved at every AI start** (P-227): the finder, field map, checklist reading, drafting, Draft questions and documents and PQR picks offer exactly Live and Saved; Saved replays through the same live steps and progress; a failed Live run offers Saved | every AI entry point checked in a browser journey; Saved costs US$0 and shows the steps; a forced Live failure offers Saved | P-227, C11.8 |
+| D3 | forms | **Record and verify Visitor visa's Saved results** (P-225, P-227): IMM 5257 field map, sections and rules, Draft questions and documents, checklist reading, PQR picks; the Lead and qa check them before they are committed | QA-144 closed: from Reset to the six, Visitor visa is configured and released on screens using Saved only, at US$0; spend within P-225 or the founder's raise | P-225, P-227, QA-144 |
+
 ## Now
 | # | Area | Item | Done when (beyond the standard) | Source |
 |---|---|---|---|---|
