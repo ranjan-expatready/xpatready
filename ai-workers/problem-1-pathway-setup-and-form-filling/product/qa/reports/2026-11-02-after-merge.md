@@ -121,3 +121,4 @@ The :4400 demo (not reachable from the cloud) · a headed walk (no display) · Q
   * #471 G3: 11/11. #477 C11.14 part: s6_queue, 32 steps passed. #479 D1 browser: 25/25.
   * #436 new head (the Sponsor co-files): s7_load 23/23, c1112_modes 39/39.
   * #455's new head only merges main, so its verdict stands.
+* **#485 (P-227 Saved check, paid C2.6 reading of IMM 5484, US$0.504), head 179d80e9: pass.** On a fresh copy (fake launcher, no live switch), after Reset to the six, Visitor visa's checklist replayed at US$0 from this PR's run file, with the ledger byte-identical. Result: 20 requirement proposals, all waiting and Check (To review "Check 20", none Ready, 0 requirements written). The 11 Super Visa items and the drafted marriage condition wait for a person. Question: `n/a_processing_delay_notice` is dropped by the rules (named in the run's message), not shown on To review. Screenshot `p485-to-review.png`.
