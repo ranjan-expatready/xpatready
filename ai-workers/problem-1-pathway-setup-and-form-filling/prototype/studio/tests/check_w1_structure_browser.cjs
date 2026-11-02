@@ -452,6 +452,20 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   await p.locator("[data-tree]").waitFor();
   step("error: Retry loads the page", await p.locator("[data-tree]").count() === 1);
 
+  // Nightly 41365074483 (Mac, check_c1116): on Immigration programs the Add pop-up loads the structure when it opens;
+  // a name typed before that list arrived was wiped when the pop-up filled itself in, so Program stayed greyed. The
+  // list is held back 1.5 s here (as on a slow machine): what was typed stays, and the next level opens.
+  await p.goto(`${BASE}/`); await p.waitForLoadState("networkidle");
+  const slowList = async (r) => { if (r.request().method() === "GET") await new Promise((s) => setTimeout(s, 1500)); await r.continue(); };
+  await p.route("**/api/structure?*", slowList);
+  const listBack = p.waitForResponse((r) => /\/api\/structure\?/.test(r.url()) && r.request().method() === "GET", { timeout: 15000 });
+  await p.locator("[data-add-combination]").click(); await dialog().waitFor();
+  const pw = p.locator('[data-add-dialog] [data-field="pathway"] input[role="combobox"]');
+  await pw.fill("Typed before the list (late seed)");
+  await listBack; await p.waitForTimeout(300);
+  step("Add pop-up fail (late list): a name typed before the structure arrived stays, and Program opens", (await pw.inputValue()) === "Typed before the list (late seed)" && await p.locator('[data-add-dialog] [data-field="program"] input[role="combobox"]').isEnabled(), await pw.inputValue());
+  await p.unroute("**/api/structure?*", slowList);
+  await p.getByRole("button", { name: "Cancel" }).click(); await dialog().waitFor({ state: "detached" });
   step("no script error on any page", errs.length === 0, errs.join(" | "));
   await b.close();
   console.log(`\n${pass} passed, ${fail} failed`);

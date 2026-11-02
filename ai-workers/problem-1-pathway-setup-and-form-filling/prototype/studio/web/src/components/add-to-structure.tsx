@@ -70,7 +70,8 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
 
   // Prefilled from where it was opened (AD-8): Pathway type from the tab, then the levels above the one to add.
   React.useEffect(() => {
-    if (!open) { seeded.current = false; return; }
+    // Closed: nothing typed is carried into the next opening (the seed below keeps only what was typed in this one).
+    if (!open) { seeded.current = false; setText({ pathway: "", program: "", category: "", subCategory: "" }); setSel({ pathway: null, program: null, category: null, subCategory: null }); return; }
     // Seed from the list of the type it was opened for, never the other type's cached list (lead review, 28 Oct).
     if (seeded.current || !list.data || type !== initialType || list.data.pathwayType !== initialType) return;
     seeded.current = true;
@@ -85,7 +86,11 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
       const n = s[lv] ? nodes.find((x) => x.key === s[lv]) : undefined, parent = n?.parentKey ? nodes.find((x) => x.key === n.parentKey) : undefined;
       if (parent && !s[up]) { t[up] = parent.label; s[up] = parent.key; }
     }
-    setText(t); setSel(s); setKeep({}); setClose({}); setErrors({}); setProblem(null);
+    // Nightly 41365074483: the list can arrive after the person has started typing (it loads when the pop-up opens);
+    // a level they already typed or picked keeps their words instead of being wiped by the prefill.
+    setText((cur) => { const out = { ...t }; for (const lv of FIELDS) if (cur[lv]?.trim()) out[lv] = cur[lv]; return out; });
+    setSel((cur) => { const out = { ...s }; for (const lv of FIELDS) if (cur[lv]) out[lv] = cur[lv]; return out; });
+    setKeep({}); setClose({}); setErrors({}); setProblem(null);
     const cat = s.category ? nodes.find((x) => x.key === s.category) : undefined;
     setNone(!(prefill?.focus === "subCategory" || (cat && nodes.some((x) => x.parentKey === cat.key))));
     setLocs(cat?.allowedLocations.length ? cat.allowedLocations : ["inside_canada", "outside_canada"]);
