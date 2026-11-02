@@ -6,7 +6,7 @@ import { closingChange, recordAction, snapshotLines } from "./form-uses.ts";
 import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import type { ProgramDef } from "@prisma/client";
 import type { z } from "zod";
-import { AddLineBody, CatalogueQuery, cleanLabel, CreateCombinationBody, CreateNodeBody, DEFAULT_PARTICIPANTS, LEVEL_NAME, normalizeLabel, problemFromZod, ReleaseBody,
+import { AddLineBody, problemWords, CatalogueQuery, cleanLabel, CreateCombinationBody, CreateNodeBody, DEFAULT_PARTICIPANTS, LEVEL_NAME, normalizeLabel, problemFromZod, ReleaseBody,
   type CatalogueGroup, type CatalogueLeaf, type CatalogueNode, type CatalogueResponse, type CombinationSummary, type ParticipantLine, type Status } from "../../contracts/programs.ts";
 import { manifest } from "../../engine/import.ts";
 import { acceptsOf, channelProblems, channelsView, filingKind } from "../../engine/channels.ts";
@@ -30,6 +30,7 @@ import { Sources } from "./sources.ts";
 import { Studio } from "./studio.ts";
 import { draftSourceProblems } from "./source-register.ts";
 import { filingProblems } from "../../engine/filing-modes.ts";
+import { gatesOf, realBaseline, type Gate } from "./answer-key-gate.ts";
 
 /** Parses a request body or query with its contract; a mismatch is a 400 Problem Details with field errors. */
 export function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
@@ -107,7 +108,7 @@ export class Programs {
     const [nodes, combos, releases, jobs, items, lib, editions, heldItems, byKind, subs] = await Promise.all([
       this.db.programDef.findMany({ where: { workspaceId }, orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }] }),
       this.db.combination.findMany({ where: { workspaceId }, include: { attachments: { select: { id: true, kind: true, recognised: true, sha256: true, edition: true, createdAt: true, officialFile: true } } } }),
-      this.db.configRelease.findMany({ where: { workspaceId }, orderBy: { version: "desc" }, select: { combinationId: true, snapshot: true, releasedAt: true, packVersion: { select: { version: true } } } }),
+      this.db.configRelease.findMany({ where: { workspaceId }, orderBy: { version: "desc" }, select: { combinationId: true, snapshot: true, sha256: true, releasedAt: true, packVersion: { select: { version: true } } } }),
       this.db.draftingJob.findMany({ where: { workspaceId, kind: { in: ["field_map", "reuse_map"] } }, orderBy: { startedAt: "desc" }, select: { id: true, combinationId: true, attachmentId: true, status: true, batchId: true, kind: true, mode: true } }),
       this.db.proposalItem.groupBy({ by: ["runId"], where: { workspaceId, status: "waiting" }, _count: true }),
       this.db.canonicalField.findMany({ where: { workspaceId }, select: { canonicalFieldKey: true, valueType: true, status: true } }),
@@ -115,7 +116,7 @@ export class Programs {
       this.db.intakeItem.findMany({ where: { workspaceId, status: "HELD", outcome: "new_edition_held" }, select: { code: true, editionLabel: true, combinationId: true } }),
       // Setup checklist (concept §8): waiting proposals, one groupBy combination × form edition × kind.
       this.db.proposalItem.groupBy({ by: ["combinationId", "formEdition", "kind"], where: { workspaceId, status: "waiting" }, _count: true }),
-      this.db.reviewSubmission.findMany({ where: { workspaceId }, orderBy: { submittedAt: "desc" }, select: { combinationId: true, submittedBy: true } }),
+      this.db.reviewSubmission.findMany({ where: { workspaceId }, orderBy: { submittedAt: "desc" }, select: { combinationId: true, submittedBy: true, status: true, draftSha256: true } }),
     ]);
     const submittedBy = new Map<string, string>();
     for (const x of subs) if (!submittedBy.has(x.combinationId)) submittedBy.set(x.combinationId, x.submittedBy);
@@ -130,6 +131,12 @@ export class Programs {
     const personRoles = await this.studio.personRoles(workspaceId);
     const latest = new Map<string, (typeof releases)[number]>();
     for (const r of releases) if (!latest.has(r.combinationId)) latest.set(r.combinationId, r);
+    // G2 (C5.5): the answer-key gate of every draft at once (one keys query), from stored runs only (BR-6).
+    const lastSub = new Map<string, (typeof subs)[number]>();
+    for (const x of subs) if (!lastSub.has(x.combinationId)) lastSub.set(x.combinationId, x);
+    const relsOf = new Map<string, (typeof releases)[number][]>(); for (const r of releases) (relsOf.get(r.combinationId) ?? relsOf.set(r.combinationId, []).get(r.combinationId)!).push(r);
+    const keyGates = combos.length ? await gatesOf(this.db, combos.map((c) => { const d = snaps.get(c.id) as { snapshot: Snapshot; sha256: string }, r = latest.get(c.id), sub = lastSub.get(c.id);
+      return { combinationId: c.id, snapshot: d.snapshot, sha256: d.sha256, released: r ? { snapshot: r.snapshot, sha256: r.sha256 } : null, baseline: realBaseline(relsOf.get(c.id) ?? []), submitted: sub?.status === "SUBMITTED" && sub.draftSha256 === d.sha256 }; })) : new Map<string, Gate>();
     const mapped = new Set(editions.filter((e) => e.maps.length).map((e) => e.sha256));
     const pending = new Map(items.map((i) => [i.runId, i._count]));
     // The date each official file was downloaded (its leading ISO part: a hand fetch adds a note after it).
@@ -177,6 +184,9 @@ export class Programs {
       // changes never reads "Fix n problems" (tech lead on #568, G2 challenge; engine/setup-checklist.ts).
       const draftProblems = [...baseProblems, ...(changes > 0 || !rel ? draftSourceProblems(snapshot, demo) : [])];
       const relProblems = relSnap ? [...structure, ...validate(relSnap, library, derivedOf(relSnap))] : draftProblems;
+      // G2 (challenge M1): only a draft with something to release is judged, so a Live, unchanged row keeps step 5 done.
+      // Added to the draft's problems (the Release page holds the row on them), never to the released snapshot's.
+      if (changes > 0 || !rel) draftProblems.push(...(keyGates.get(c.id)?.problems ?? []));
       const mine = jobs.filter((x) => x.combinationId === c.id);
       const latestPerSource = new Map<string, (typeof mine)[number]>();
       for (const x of mine) if (x.attachmentId && !latestPerSource.has(x.attachmentId)) latestPerSource.set(x.attachmentId, x);
@@ -228,10 +238,12 @@ export class Programs {
         changes,
         review: { stage: reviewStage(gates.get(c.id)), submittedBy: submittedBy.get(c.id) ?? null, authors: [] },
       };
-      // G1 §4: a row held back only by numbers without a source says so with its count (the Release page's held reason).
+      // G1 §4: a row held back only by numbers without a source says so with its count (the Release page's held reason);
+      // otherwise its first own problem (G2: a test line names its key's label).
       const unsourced = errors.filter((x) => (x as { gate?: string }).gate === "no-source").length;
-      const firstError = unsourced && unsourced === errors.length ? `${unsourced} number${unsourced === 1 ? " has" : "s have"} no source entry: fix on Review and release.` : errors.find((x) => !(x as { gate?: string }).gate) ?? errors[0];
-      rows.push({ pathway, changes, errors: errors.length, firstError: typeof firstError === "string" ? firstError : firstError ? `${firstError.item}: ${firstError.message}` : null, hasContent, docNames,
+      const first = errors.find((x) => !(x as { gate?: string }).gate) ?? errors[0];
+      const firstError = unsourced && unsourced === errors.length ? `${unsourced} number${unsourced === 1 ? " has" : "s have"} no source entry: fix on Review and release.` : first ? `${first.where === "Tests" ? (first as { label?: string }).label || first.item : first.item}: ${first.message}` : null;
+      rows.push({ pathway, changes, errors: errors.length, firstError, hasContent, docNames,
         setup: setupChecklistOf(input, `${c.id}|${key}`),
         searchText: [...path, ...forms.map((f) => f.code), ...docNames].join(" "),
         leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, filed: filedOf(snapForms), progress, counts: hasContent ? rowCounts(snapshot, participants) : null, status, statusText: retired ? "Retired" : status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
@@ -427,7 +439,19 @@ export class Programs {
         throw problem(403, "A different person must release", `You changed or submitted ${mine.slice(0, 3).join(", ")}${mine.length > 3 ? ` and ${mine.length - 3} more` : ""}, so a different person releases ${mine.length === 1 ? "it" : "them"} (BR-14).`);
       }
       const shown = d.rows.slice(0, 5).map((r) => `${r.label}: ${r.why}`).join(" · ");
-      throw problem(409, "Every change is held back", `Nothing can be released yet. ${shown}${d.rows.length > 5 ? ` · and ${d.rows.length - 5} more (see Review and release)` : ""}`);
+      // G2 (breaker M1; BR-8, shared with G1): the refusal lists every blocking item of every held row in errors[] (a
+      // row held by its review step or by who releases says that, once).
+      // Devin on #568: each held row's problems come from the same check Submit and Approve use (studio.problems), read
+      // only on this refusal path; a row held by its review step or by who releases says that reason too.
+      const workspaceId = await this.ws.id();
+      const errors: Record<string, unknown>[] = [];
+      for (const r of d.rows) {
+        const { snapshot } = await buildSnapshot(this.db, workspaceId, r.combinationId!, "draft");
+        const own = (await this.studio.problems(workspaceId, snapshot, r.combinationId!)).filter((p) => p.level === "error");
+        for (const p of own) errors.push({ combination: r.label, where: p.where, item: p.item, label: (p as { label?: string }).label ?? null, forms: (p as { forms?: string[] }).forms ?? [], message: problemWords(p) });
+        if (!own.length || !r.why || !own.some((p) => r.why!.includes(p.message))) errors.push({ combination: r.label, where: "Review", item: r.label, label: r.label, forms: [], message: `${r.label}: ${r.why}` });
+      }
+      throw problem(409, "Every change is held back", `Nothing can be released yet. ${shown}${d.rows.length > 5 ? ` · and ${d.rows.length - 5} more (see Review and release)` : ""}`, { errors });
     }
     const out = await this.studio.releaseRows(actor, include.map((r) => r.combinationId!), d.library.map((l) => l.id));
     this.cache = null;

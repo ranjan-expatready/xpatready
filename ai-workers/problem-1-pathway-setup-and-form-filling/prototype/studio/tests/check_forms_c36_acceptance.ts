@@ -1,8 +1,8 @@
 // C3.6 (P-158 (5); P-95; P-149 (2)): "Add the fact this rule needs", the Day-0 acceptance checks (pack 2) moved into the
 // suites now they pass (P-220). The person names a rule and says the fact in words; the system builds the key; the item
 // waits in the one review queue as a rules field resting on that rule, with the duplicate checks of an AI item.
-// Not moved: the check "a document type named while adding a requirement waits as a library proposal" stays red in
-// acceptance/C3.6.test.ts until studio.ts saveRequirement proposes the type instead of writing it (owed, PR body).
+// "A document type named while adding a requirement waits as a library proposal" (acceptance/C3.6.test.ts, last check)
+// is proved with its passing and failing cases in tests/check_forms_c36_requirement_type.ts.
 // On an isolated copy with the suites' fixture (wp.family has rule R-01). No browser, no model call (US$0).
 //   zsh studio/tools/isolated.sh forms_c36a 4458 start && tsx studio/tests/check_forms_c36_acceptance.ts 4458 xr_studio_forms_c36a wp.family
 import { AUTHOR, pack2, run } from "../acceptance/lib/pack2.ts";

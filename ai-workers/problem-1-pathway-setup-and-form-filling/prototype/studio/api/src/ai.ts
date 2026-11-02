@@ -28,13 +28,18 @@ const partsOf = (detail: unknown) => ((detail as { a4?: { parts?: PartState[] } 
 type A4 = { total: number; reused: number; leftover: number };
 const a4Of = (detail: unknown): A4 | null => { const a = (detail as { a4?: A4 } | null)?.a4; return a ? { total: a.total, reused: a.reused, leftover: a.leftover } : null; };
 const partsLine = (all: ReturnType<typeof partsOf>) => { if (!all.length) return null; const n = (s: string) => all.filter((p) => p.status === s).length; return `${all.length} part${all.length === 1 ? "" : "s"} · ${[n("done") && `${n("done")} done`, n("failed") && `${n("failed")} failed`, n("running") && `${n("running")} running`, n("queued") && `${n("queued")} queued`, n("not started") && `${n("not started")} not started`].filter(Boolean).join(", ")}`; };
-import { overrideOf, Sources } from "./sources.ts";
+import { aiLive, overrideOf, Sources } from "./sources.ts";
 import { plainRunText } from "./plain-run-text.ts";
 import { runWorstUsd } from "../../engine/cost-check.ts";
 import { checkOverride, costPlanNow, endedOverrides, ledgerRead, overrideAllowed, recordOverride, spendOverride } from "./cost-gate.ts";
 import { SpendLedger } from "../../../p2/ledger.ts";
 import { OverrideStart, type OverrideRef } from "../../contracts/cost-check.ts";
 import { paidRetryAllowed, paidRunAllowed, paidRunsOf } from "./rounds.ts";
+/** C11.8 (P-175, one door rule as the finder): on a copy without the live switch no field-map step that would call the
+ *  model starts, by Start or by Retry; the words name the free choice this panel offers (review m3: not "rules only"). */
+export const FIELD_MAP_LIVE_OFF = "AI now is switched off on this copy: no paid AI call can start here. Choose Saved (US$0) to use the result of earlier real runs.";
+/** A field-map target that would send a model call: a live draft that is not every field reused (those are US$0). */
+const callsModel = (mode: string, t: { action: string; worst_usd: number }) => mode === "LIVE" && t.action === "draft" && t.worst_usd !== 0;
 
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 const MAX_PARALLEL = 2, MAX_ATTEMPTS_PER_SOURCE = 3;
@@ -164,7 +169,10 @@ export class Ai implements OnModuleInit {
     // P-179: the one cost check (the shared ledger's numbers) and the run key a Continue names. A form drafted in parts is
     // one run per part, each held to the run cap on its own (found by check_cost_warning_browser: "run" was flagged).
     const { cost_check, run_key } = costPlanNow("draft_field_maps", plan_sha256, { worst: totals.worst_usd, expected: totals.expected_usd, run: Math.max(0, ...targets.flatMap((t) => t.a4?.parts.length ? t.a4.parts.map((x) => x.worst_usd) : [t.worst_usd])), spentForms: targets.filter((t) => t.over_attempts).map((t) => t.source) }, await endedOverrides(this.db));
-    return { cost_check, run_key, max_paid_attempts_per_form: MAX_PAID_ATTEMPTS_PER_FORM, operation: "draft_field_maps", operation_label: "Draft field maps for added forms", capability_note: "AI drafts each form's field map (which fact fills each form field). Questions, sections and rules are not AI-drafted here (a checklist's document requirements are read below, under Checklists): people author them, and AI field maps only propose library fields.", scope: { ...scope, label }, mode, targets: targets.map((t) => ({ ...t, action_label: ACTION_TEXT[t.action] })), totals, ledger, per_run_cap_usd: RUN_CAP_USD, plan_sha256 };
+    // C11.8 AT-1 (P-175): live is off unless the server switch is on, said before anything starts (as the finder's plan);
+    // `blocked` is the one rule the panel and the door share: this live start would call the model and cannot.
+    const live = { on: aiLive(), why: aiLive() ? null : FIELD_MAP_LIVE_OFF, blocked: !aiLive() && targets.some((t) => callsModel(mode, t)) };
+    return { live, cost_check, run_key, max_paid_attempts_per_form: MAX_PAID_ATTEMPTS_PER_FORM, operation: "draft_field_maps", operation_label: "Draft field maps for added forms", capability_note: "AI drafts each form's field map (which fact fills each form field). Questions, sections and rules are not AI-drafted here (a checklist's document requirements are read below, under Checklists): people author them, and AI field maps only propose library fields.", scope: { ...scope, label }, mode, targets: targets.map((t) => ({ ...t, action_label: ACTION_TEXT[t.action] })), totals, ledger, per_run_cap_usd: RUN_CAP_USD, plan_sha256 };
   }
 
   /** Outside review 29 Oct (G4 per form): the paid live runs of each file (checksum), over every source that holds it, so
@@ -279,6 +287,10 @@ export class Ai implements OnModuleInit {
       if (plan.totals.worst_usd > 0 && plan.totals.worst_usd > plan.ledger.remaining_usd + 1e-9) fail(`The worst case (US$${plan.totals.worst_usd.toFixed(2)}) is above what is left of the experiment cap (US$${plan.ledger.remaining_usd.toFixed(2)} of US$${EXPERIMENT_CAP_USD}).`);
       if (!plan.cost_check.ok) fail(plan.cost_check.words);
     }
+    // C11.8 AT-2/AT-9b (P-175): a live start that would call the model is refused at the door on a copy without the switch:
+    // after the cost refusals (their own words stay), before anything is queued or reserved and before a Continue is used
+    // (it is used inside the transaction below); saved answers and reuse stay free in live mode.
+    if (b.mode === "LIVE" && !aiLive() && run.some((t) => callsModel(b.mode, t))) fail(FIELD_MAP_LIVE_OFF, HttpStatus.CONFLICT);
     const created = await this.db.$transaction(async (tx) => {
       const batch = await tx.aiBatch.create({ data: { workspaceId, idempotencyKey: b.idempotencyKey, operation: plan.operation, scopeKind: b.scope.kind, scopeLabel: plan.scope.label, mode: b.mode, status: "QUEUED", planSha256: plan.plan_sha256, plan: { ...plan, ...(override ? { override } : {}) } as any, spendLimitUsd: limit, worstCaseUsd: plan.totals.worst_usd, expectedUsd: plan.totals.expected_usd, startedBy: actor.id, message: `${run.length} step${run.length === 1 ? "" : "s"} queued` } });
       const ids: string[] = [];
@@ -487,6 +499,10 @@ export class Ai implements OnModuleInit {
       const pastCap = (planOv?.limits ?? []).includes("experiment");
       if (pastCap ? ledger.committed_usd + worst > OVERRIDE_CEILING_USD + 1e-9 : worst > ledger.remaining_usd + 1e-9) fail(pastCap ? `Retrying could take spend to US$${(ledger.committed_usd + worst).toFixed(2)}, past the US$${OVERRIDE_CEILING_USD.toFixed(2)} a Continue may allow. The founder must raise the cap.` : `Retrying could cost up to US$${worst.toFixed(2)}, more than is left of the experiment cap.`, HttpStatus.CONFLICT);
     } else if (worst > ledger.remaining_usd) fail(`Retrying could cost up to US$${worst.toFixed(2)}, more than is left of the experiment cap.`);
+    // C11.8 review m1 (P-175): Retry is a second door, checked last (the cost refusals keep their words). On a copy
+    // without the switch a live field-map step that would call the model is not queued again (it would fail and use up an
+    // attempt): refused before anything is queued or counted.
+    if (!aiLive() && redo.some((j) => j.kind === "field_map" && callsModel(j.mode, { action: "draft", worst_usd: worstEach?.find((t) => t.attachmentId === j.attachmentId)?.worst_usd ?? RUN_CAP_USD }))) fail(FIELD_MAP_LIVE_OFF, HttpStatus.CONFLICT);
     let ids: string[] = [];
     try {
       // PR #36 review: a retried draft takes the same file lock and re-check as a launch, so it never queues a second
