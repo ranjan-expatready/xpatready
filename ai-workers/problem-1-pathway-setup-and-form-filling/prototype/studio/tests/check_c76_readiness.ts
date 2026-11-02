@@ -4,7 +4,7 @@
 // is ready while anything blocks, and that no words carry a percentage. No database, no server, no model call (US$0).
 //   tsx studio/tests/check_c76_readiness.ts
 import fc from "fast-check";
-import { BLOCK_CODES, cannotPass, dayOf, filingReadiness, passKeys, passProblem, WARN_CODES, type Channel, type FilingInput, type FormItem, type Signature, type WarnCode } from "../engine/runtime/readiness.ts";
+import { BLOCK_CODES, cannotPass, dayOf, filingReadiness, passKeys, passProblem, signatureNeeded, WARN_CODES, type Channel, type FilingInput, type FormItem, type Signature, type WarnCode } from "../engine/runtime/readiness.ts";
 import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
@@ -41,6 +41,26 @@ r = filingReadiness(done({ forms: [i5257({ signature: "TYPED_NAME", signed: fals
 ok("C7.6 BR-9 1 pass: a typed name is no signature to wait for (IMM 5257 typed)", r.ready, r.blocks);
 r = filingReadiness(done({ forms: [i5257(), i5476({ signature: "PEN", signed: false, channel: "PAPER" })] }));
 ok("C7.6 BR-9 1 fail: a line signed in pen with no signature blocks too", codes(r.blocks).join() === "missing_signature" && /in pen/.test(r.blocks[0].words), r.blocks);
+
+// S1 (SA-1B-102 rule 3, AG16-60): a line whose signature is not set needs one; only "No signature" (signedBy none) means none.
+// A new line has the schema's defaults: signature NONE (prisma combination_form @default(NONE)) and no signedBy.
+const fresh = (o: Partial<FormItem> = {}) => i5476({ form: "IMM 5707", item: "i-5707", signature: "NONE", signed: false, signers: undefined, ...o });
+r = filingReadiness(done({ forms: [i5257(), fresh()] }));
+ok("S1 fail: a new PDF upload line (method not set, no signedBy) is never filed unsigned: \"missing signature\", saying how it is signed is not set", !r.ready && codes(r.blocks).join() === "missing_signature" && /IMM 5707/.test(r.blocks[0].words) && /not set/.test(r.blocks[0].words) && signatureNeeded({ channel: "PDF_UPLOAD", signature: "NONE" }), r.blocks);
+r = filingReadiness(done({ forms: [i5257(), fresh({ channel: "PAPER" })] }));
+ok("S1 fail: the same on Paper", !r.ready && codes(r.blocks).join() === "missing_signature");
+r = filingReadiness(done({ forms: [i5257(), fresh({ signedBy: "none" })] }));
+ok("S1 pass: \"No signature\" chosen on the line (signedBy none) needs none", r.ready && !signatureNeeded({ channel: "PDF_UPLOAD", signature: "NONE", signedBy: "none" }), r.blocks);
+r = filingReadiness(done({ forms: [i5257(), fresh({ signed: true })] }));
+ok("S1 pass: once signed, the unset line is ready", r.ready, r.blocks);
+r = filingReadiness(done({ forms: [i5257(), fresh({ channel: "ONLINE" })] }));
+ok("S1 pass: an Online line with no method is signed in the portal at submission: not waited for", r.ready && !signatureNeeded({ channel: "ONLINE", signature: "NONE" }), r.blocks);
+ok("S1 pass: a hand or pen signature the line names is waited for even with signedBy none (duplicate beats a miss)", signatureNeeded({ channel: "PDF_UPLOAD", signature: "HAND_SCANNED", signedBy: "none" }) && signatureNeeded({ channel: "PAPER", signature: "PEN", signedBy: "none" }) && !signatureNeeded({ channel: "PDF_UPLOAD", signature: "TYPED_NAME" }));
+try {
+  fc.assert(fc.property(fc.constantFrom<Channel>("PDF_UPLOAD", "PAPER"), fc.constantFrom<string | null | undefined>(undefined, null, "person", "parent_for_minor", "principal_for_family", "person_and_representative"),
+    (channel, signedBy) => !filingReadiness(done({ forms: [i5257(), fresh({ channel, signedBy })] })).ready), { numRuns: 200 });
+  ok("S1 property: an unsigned PDF upload or Paper line whose method is not set is never ready, whoever signs it (unless \"No signature\")", true);
+} catch (e) { ok("S1 property: an unsigned PDF upload or Paper line whose method is not set is never ready, whoever signs it (unless \"No signature\")", false, (e as Error).message.split("\n")[0]); }
 
 // BR-9 2 (P-144): barcode forms on PDF upload or Paper.
 r = filingReadiness(done({ forms: [i5257({ validatedCurrent: false }), i5476()] }));
@@ -157,7 +177,7 @@ const input = (fs: { needsValidate: boolean; validatedCurrent: boolean; signed: 
       readiness: f.reason ? { ready: false, missing: [{ fact: "x", label: "X", about: "A", reason: f.reason }] } : clean, edition: { label: "E", superseded: f.superseded, acceptedUntil: f.until } })) });
 // A form that needs anything at all (a fact, a signature, a validated copy, a newer edition) never lets the filing be ready.
 const needsWork = (f: { channel: Channel; reason: unknown; signature: Signature; signed: boolean; needsValidate: boolean; validatedCurrent: boolean; until: string | null; superseded: boolean; stale: boolean }) => f.channel !== "NOT_NEEDED"
-  && (!!f.reason || ((f.signature === "HAND_SCANNED" || f.signature === "PEN") && !f.signed) || (f.needsValidate && f.channel !== "ONLINE" && !f.validatedCurrent) || f.superseded || (!!f.until && TODAY > f.until) || (f.channel === "ONLINE" && f.stale));
+  && (!!f.reason || ((f.signature === "HAND_SCANNED" || f.signature === "PEN") && !f.signed) || (f.signature === "NONE" && (f.channel === "PDF_UPLOAD" || f.channel === "PAPER") && !f.signed) || (f.needsValidate && f.channel !== "ONLINE" && !f.validatedCurrent) || f.superseded || (!!f.until && TODAY > f.until) || (f.channel === "ONLINE" && f.stale));
 try { fc.assert(fc.property(fc.array(form, { maxLength: 4 }), fc.boolean(), fc.boolean(), (fs, reviewed, docMissing) => filingReadiness(input(fs, reviewed, docMissing)).ready === (reviewed && !docMissing && !fs.some(needsWork))), { numRuns: 600 }); ok("C7.6 property: ready exactly when reviewed, the passport is in and no form needs anything (an independent statement of the rules)", true); }
 catch (e) { ok("C7.6 property: ready exactly when reviewed, the passport is in and no form needs anything (an independent statement of the rules)", false, (e as Error).message.split("\n").slice(0, 3).join(" ")); }
 const prop = (name: string, p: (r: ReturnType<typeof filingReadiness>) => boolean) => {
