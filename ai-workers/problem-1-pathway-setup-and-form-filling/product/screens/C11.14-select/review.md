@@ -67,3 +67,13 @@ A real screen reader; an intended user's unaided walk (D17/D20 simulated only); 
 ("Choose the first 200" with Clear) on real data.
 
 **Verdict: Block** — fix M1 (record wording in `qa/built/C11.14.md`); m1 and m2 are Should.
+
+## Round 2 (16b08b2e)
+Diff `eeff3f40..16b08b2e`, web rebuilt, own copy `rev_c1114` on :4467. Suite `check_s6_queue_browser.cjs 4467 xr_studio_rev_c1114`: **32 PASS, 0 FAIL**, no page errors (run twice).
+- **M1 — fixed.** `qa/built/C11.14.md` now says "part … Still Partial": after Load sample every item is a field-map proposal decided on its form-field page, so no group offers Choose all / Clear the choice on the demo's data; fix is folding the field-map step into the queue. Matches the finding; qa will not read Load sample as the demo path. The lead still needs it raised in the PR.
+- **m1 — fixed.** Clear the choice focuses the band's `data-choose-all` button on the next frame (`proposals.tsx:91`, scoped by `closest("[data-band]")`, line 108); new suite step "focus moves to Choose all after clearing" passes.
+- **m2 — open, Should,** listed for the PR as agreed; does not block.
+
+Journey score unchanged in substance: Accessibility and sizes now 1 (focus kept); Task completed stays ½ (demo data, M1 recorded as Partial). **9.5 / 10 — pass.**
+
+**Verdict: Approve** (for 16b08b2e; no open Blocker or Major; m2 Should, in the PR).
