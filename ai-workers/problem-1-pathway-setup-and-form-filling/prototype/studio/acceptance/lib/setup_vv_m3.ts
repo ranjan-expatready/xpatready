@@ -51,22 +51,56 @@ await main("Setup", "Visitor visa release 2 for the M3 path (Super Admin, M2)", 
   ok("S5 (M3-0) every Visitor visa role files its own application (filing mode files_own, VV-R03), and the draft keeps it",
     r.status < 300 && (r.body?.participants ?? []).every((p: { applies?: boolean; filingMode?: string }) => (p.applies ? p.filingMode === "files_own" : !p.filingMode)), r.body?.detail ?? r.body?.participants);
 
-  // Documents per person (VV-R05, VV-R06, VV-R08; Sample beyond the quoted lines; FQ-4 for the minor's letter).
+  // Documents per person (VV-R05, VV-R06, VV-R08; Sample beyond the quoted lines). R3 (P-230 (3), closes FQ-4): a minor's
+  // travel answers, Researched (canada.ca minor-children page, 2025-01-23, read 2026-11-02): may change. Source:
+  // research_notes/visitor-visa-and-six-combinations-research-2026-11-02.md Q4, https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada/minor-children-travelling-canada.html
+  // ("The letter does not need to be certified."). Each line applies only under 18 (person.age_years, worked out on the
+  // application date) and reads "travels with" or "custody", two facts that arrive through C3.6 with their answer values.
+  const R3 = "Researched (canada.ca minor-children page, 2025-01-23, read 2026-11-02): may change";
+  const minor = (c: unknown) => ({ op: "and", subjectKind: "PERSON", args: [{ op: "lt", field: "person.age_years", value: 18 }, c] });
+  const travels = (v: string[]) => minor({ op: "in", field: "person.travels_with", value: v });
+  const custody = (v: string[]) => minor({ op: "in", field: "person.custody", value: v });
   const reqs: { name: string; who: string; mode: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: unknown; plain?: string }[] = [
     { name: "Passport or travel document", who: "each_applicant", mode: "COMBINATION_MANDATORY" },
     { name: "Proof of financial support", who: "principal_applicant", mode: "COMBINATION_MANDATORY" },
-    { name: "Letter of authorization for a minor", who: "each_dependent_child", mode: "ANSWER_CONDITIONAL", condition: { op: "eq", field: "person.travelling_alone_to_canada", value: true, subjectKind: "PERSON" }, plain: "when the child travels alone or without both parents (Sample, FQ-4)" },
+    { name: "Letter of authorization for a minor", who: "each_dependent_child", mode: "ANSWER_CONDITIONAL", condition: travels(["alone", "another_adult", "one_parent"]),
+      plain: `when a child under 18 travels alone or with another adult (signed by both parents or guardians, naming the adult responsible in Canada), or with one parent (from the parent not travelling); the letter does not need to be certified. ${R3}` },
+    { name: "Copy of the minor's birth certificate", who: "each_dependent_child", mode: "ANSWER_CONDITIONAL", condition: travels(["alone", "another_adult"]), plain: `when a child under 18 travels alone or with an adult who is not a parent. ${R3}` },
+    { name: "Copy of the absent parent's signed passport or national ID", who: "each_dependent_child", mode: "ANSWER_CONDITIONAL", condition: travels(["one_parent"]), plain: `when a child under 18 travels with one parent: the parent not travelling. ${R3}` },
+    { name: "Custody documents", who: "each_dependent_child", mode: "ANSWER_CONDITIONAL", condition: custody(["sole", "shared"]), plain: `when a child under 18 is in sole custody (the custody decree) or shared custody (the custody documents). ${R3}` },
+    { name: "Adoption or guardianship papers", who: "each_dependent_child", mode: "ANSWER_CONDITIONAL", condition: custody(["adopted", "guardian"]), plain: `when a child under 18 is adopted or under guardianship. ${R3}` },
     // VV-R16 (medical exam: a stay over 6 months AND a listed country, a public-health job or a super visa) needs a
     // country-history question the library does not have: FQ-11, not set up here.
   ];
-  // The minor's travel question is in the library but asked of nobody yet (FQ-4: "alone" only, not "with one parent").
-  r = await call("POST", "/library/fields/person.travelling_alone_to_canada/placement", { sectionKey: "your_visit", collectedFrom: "client_questionnaire", repeats: "per_person", tier: "case", questionText: "Is this person travelling to Canada alone? (Sample)" }, AUTHOR);
-  ok("S6a the travel-alone question is asked per person in Your visit (Sample, FQ-4)", r.status < 300, r.body?.detail ?? r.status);
   for (const q of reqs) {
     const key = q.name.toLowerCase().replace(/[^a-z]+/g, "_").replace(/^_|_$/g, "");
     const known = sql(`select count(*) from document_type where document_type_key='${key}'`) === "1";
     r = await call("POST", `/combinations/${vv}/requirements`, { ...(known ? { documentTypeKey: key } : { newTypeName: q.name, providedBy: "client" }), attachMode: q.mode, appliesToRoles: q.who, ...(q.condition ? { condition: q.condition, conditionPlain: q.plain } : {}) }, AUTHOR);
     ok(`S6 document requirement: ${q.name} (${q.who})`, r.status < 300, r.body?.detail ?? r.status);
+  }
+  // S6a (R3): the two facts the lines read arrive through C3.6 ("add the fact this rule needs", P-158) with their answer
+  // values, are accepted by the second person, then asked per person in Your visit. Values Researched (as above).
+  const facts = [
+    { fact: "person.travels_with", label: "Who the child travels with", meaning: `Who a child under 18 travels to Canada with. ${R3}`, values: ["Both parents", "One parent", "Another adult", "Alone"], question: "Who is this child travelling to Canada with?" },
+    { fact: "person.custody", label: "Custody of the child", meaning: `The custody arrangement for a child under 18. ${R3}`, values: ["Not applicable", "Shared", "Sole", "Adopted", "Guardian"], question: "What is this child's custody arrangement?" },
+  ];
+  const needed = ((await call("GET", `/combinations/${vv}/rule-facts`, undefined, AUTHOR)).body?.facts ?? []) as { fact: string; rules: { kind: string; key: string }[] }[];
+  for (const f of facts) {
+    const known = sql(`select count(*) from canonical_field where canonical_field_key='${f.fact}'`) !== "0";
+    if (!known) {
+      const rule = needed.find((x) => x.fact === f.fact)?.rules[0]?.key;
+      r = await call("POST", `/combinations/${vv}/rule-facts`, { fact: f.fact, rule, label: f.label, meaning: f.meaning, valueType: "code", values: f.values }, AUTHOR);
+      ok(`S6a (R3) ${f.fact} proposed with its ${f.values.length} answer values through C3.6`, r.status === 201, r.body?.detail ?? r.body?.message ?? r.status);
+      const pid = r.body?.proposalId;
+      r = await call("POST", "/review/proposals/decide", { ids: [pid], action: "accept" }, REVIEWER);
+      ok(`S6a (R3) ${f.fact} accepted by the second person`, r.status < 300, r.body?.detail ?? r.body?.message ?? r.status);
+      // The field's library change is credited to the person who accepted it (C3.6), so a third person approves it.
+      const ch = sql(`select id from library_change where kind='field' and key='${f.fact}' and status='WAITING' order by created_at desc limit 1`);
+      r = ch ? await call("POST", `/library/changes/${ch}/approve`, {}, APPROVER) : { status: 0, body: null } as typeof r;
+      ok(`S6a (R3) ${f.fact} approved into the library, its answer list with it`, r.status < 300, r.body?.detail ?? r.body?.message ?? r.status);
+    }
+    r = await call("POST", `/library/fields/${f.fact}/placement`, { sectionKey: "your_visit", collectedFrom: "client_questionnaire", repeats: "per_person", tier: "case", questionText: `${f.question} (Researched)` }, AUTHOR);
+    ok(`S6a (R3) "${f.question}" is asked per person in Your visit`, r.status < 300, r.body?.detail ?? r.status);
   }
 
   // M3-8 (not built): eligibility gates as data on the release (VV-R01, Sample conditions). Only what a fact can settle
