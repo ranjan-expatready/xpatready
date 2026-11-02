@@ -191,6 +191,8 @@ export function FactDrawer({ id, role, roleLabel, section, q, f, canAuthor, onCl
     <Panel open onOpenChange={(o) => !o && onClose()} title={title} description={`${roleLabel}${section ? ` · ${section}` : ""}`} badge={<RowStatus f={f} check={undefined} />}
       footer={editable ? <><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void save()} busy={busy} disabled={!changed} data-drawer-save>Save</Button></> : <><span className="text-xs text-text-muted">{canAuthor ? "" : SAY.readOnly}</span><Button variant="ghost" onClick={onClose}>Close</Button></>}>
       <div className="space-y-4 text-sm" data-fact-drawer>
+        {/* QA-82: the field's meaning (its definition) lives here, not in the Question column. */}
+        {q?.meaning ? <p className="text-text-muted" data-fact-meaning><span className="font-medium text-text">Meaning: </span>{q.meaning}</p> : null}
         {stale ? <Notice tone="warn" title="Changed by someone else" action={<Button size="sm" variant="secondary" onClick={() => { refresh(); onClose(); }}>Reload their version</Button>}>{stale}</Notice> : null}
         {f ? (
           <section aria-labelledby="d-source" className="space-y-2">
