@@ -1,84 +1,84 @@
-# G1 Release refused: no source entry (C5.4): concept draft (helper drafter, 2 Nov 2026)
+# G1 Release refused: no source entry (C5.4): concept draft v2 (helper drafter, 2 Nov 2026)
 
-Status: **draft for the tech lead** (skill screen-concept part A, steps 1–7). It is not `concept.md`. It is built on the data and engine design the tech lead agreed on PR #469 (2 Nov). Nothing here redesigns that design; points it leaves open are marked **Rec.** (recommendation) or **⚠** (a decision is missing or two decisions conflict).
-Row (BACKLOG, M2 additions): "a release with a number lacking a source entry or 'None published – set by ExpatReady' is refused, naming each item; API and screen tests" (P-240; SA-1B-290, SA-1B-193). Boards: `design/draft-g1-review-refusal.html`, `design/draft-g1-source-panel.html`.
+Status: **draft for the tech lead** (skill screen-concept part A, steps 1–7). It is not `concept.md`.
+- v2 fixes every Blocker and Major in `challenge.md` (B1, M1–M4) and takes the cheap Minors (m2–m8).
+- It is built on the design the tech lead agreed on PR #469. **⚑ PR 1** marks the three changes to his agreed table (M2, M3, the reason column); the migration needs his OK on them first. **Rec.** = recommendation.
+- Row (BACKLOG): "a release with a number lacking a source entry or 'None published – set by ExpatReady' is refused, naming each item; API and screen tests" (P-240; SA-1B-290, -193). Boards: `design/draft-g1-review-refusal.html`, `design/draft-g1-source-panel.html`.
 
 ## 1. Job and journey
-**Job:** before a release, the configuration author gives every published number its official source, or states that the government publishes nothing and ExpatReady set it, and the release is refused until each one has an answer. **Persona:** the configuration author (author duty) writes the answers; the immigration expert signs; the approver (never the author) releases. **Journey:** J5 setup, step "Review and release", in the Change set pattern. **SA-01B v2.1:** SA-1B-290 (register), SA-1B-39 rule 7 (missing source blocks publishing; its wording), SA-1B-193 rule 1 and §12, SA-1B-294 rules 1 and 6 (which numbers; "None published" is confirmed like any other). **Decisions:** P-240 (both gates; Sample is demo only; amends P-170 and C5.1), P-252 step 3 ("set by ExpatReady" plus a reason; held with its rows under P-251), P-170 (page, quote, date), P-26, P-33.
+**Job:** before a release, the configuration author gives every published number its official source, or states that the government publishes nothing and ExpatReady set it. Until each number has an answer, Submit and release are refused, naming each one.
+**Who and where:** the author (author duty) writes, the immigration expert signs, and a second person releases. Journey J5, step "Review and release", Change set pattern.
+**Sources:** SA-01B v2.1 SA-1B-290; SA-1B-39 rules 1, 6, 7; SA-1B-193 rule 1; SA-1B-294 rules 1, 4, 6. Decisions P-240 (both gates; Sample is demo only), P-170, P-26, P-33.
 
-## 2. Ten layers (what exists, team, new)
-- **Masters.** New: `source_entry`, the agreed table (PR 1, additive migration). Already in the app: (a) the fee lines in `samples/fee-table.json` each carry page, https URL, quote and date read, and CI enforces this (`tests/check_r2_fee_table.ts:31`). (b) `check_def.source_quote` and `predicate.source_quote` hold a quote with no URL or date, one per item, not per number. (c) Document validity checks hold `cite {page, url, read}` with no quote (`engine/runtime/case-checklist.ts:31`). (d) `check_def.illustrative` is the Sample flag that G3 reads (`engine/validate.ts:262 isDemoSnapshot`). (e) `approved_source` holds official files with their IRCC page.
-- **Team code.** `code/` is not in this cloud copy, so the team's code is **Unverified** here. SA-01B v2.1 SA-1B-290 §2 says the team's `pack-authoring` has no source list (code searched 24 Oct). Nothing to retrofit. Mapping for later: `source_entry.citation_url` maps to the team's `ContentSource.url`, and a none-published entry maps to the register's "None published – set by ExpatReady" entry.
-- **Links.** An entry points to a number by (kind, item key, value path). There is no foreign key, because items are versioned rows. The check runs at submit and release.
-- **Configuration.** None.
-- **Rules.** BR-1 to BR-10 below.
-- **Engine.** A new pure `engine/source-register.ts`: `publishedNumbers(snapshot, feeLines)` returns `{kind, key, path, value, words}`, and `sourceProblems(numbers, entries)` returns the problems. `validate()` takes the entries as an argument, so the engine does no I/O (STANDARDS §4).
-- **Contract.** `contracts/sources.ts` (zod).
-- **Screen.** Review and release refusal block with Fix; one Source panel; a Source block in the rule dialog; the Release page's held reason.
-- **AI assist.** None. AI filling the source when it drafts an item (SA-1B-291) is Not built.
-- **Governance.** Entries are frozen in the release snapshot, and a change to one goes to the expert (BR-7). Audit "source entry added / changed" (SA-1B-290 §9).
+## 2. Ten layers
+- **Masters:** new `source_entry` (PR 1). Already cited in the app: fee lines in `samples/fee-table.json` (CI enforces page, URL, quote and date: `tests/check_r2_fee_table.ts:31`), and usable document validity rules, which need `source_quote` + `cite {page,url,read}` (`case-checklist.ts:58-64`). Rules and checks hold one quote per item, with no URL or date. `check_def.illustrative` (Sample) is set once, at creation (`studio.ts:758`).
+- **Team code:** `code/` is not in this copy (**Unverified**); SA-1B-290 §2 says the team has no source list. Mapping for later (Not built): each distinct `citation_url` → a `ContentSource` (FORM, GUIDE or WEB_PAGE) · `citation_page` → `note` · `citation_quote` → `quote` · `citation_date` → `dateChecked` · `none_published` → the "None published – set by ExpatReady" label · `nextReview` Not built.
+- **Links:** (kind, item_key, value_path), no foreign key (items are versioned rows); checked on the draft. **Configuration:** none. **Rules:** BR-1 to BR-11.
+- **Engine:** a new pure `engine/source-register.ts`: `publishedNumbers(snapshot, feeLines)` → `{kind, key, address, value, item_words, words}` and `sourceProblems(numbers, entries)`, both **outside `validate()`** (M1).
+- **Contract:** `contracts/sources.ts` (zod). **Screen:** Review block, Source panel, RuleDialog section, Checks "Sources" action, "From age" link, Release page held reason.
+- **AI assist:** none (SA-1B-291, Not built). **Governance:** frozen in the snapshot, the expert signs changes, audit "source entry added / changed".
 
 ## 3. Business rules
-- **BR-1 Which numbers** (agreed scope; SA-1B-294 rule 1). In scope:
-  - every numeric literal in a released rule's condition (`predicate.predicate_json`) and a check's condition (`check_def.predicate_json`, document validity months included);
-  - **Rec.** the conditions of eligibility gates (`snapshot.eligibility`, kind `rule`): they are released rules with thresholds;
-  - **Rec.** a form line's "From age" (`min_age`, kind `threshold`), plus the biometrics exemption ages on the fee table;
-  - the fee lines the combination uses (`fee-table.json` `combinations[key].lines`: `per_person_cad`, `family_max.cad`, `family_max.from_people`, exemption ages; kind `fee`).
-
-  Out: form box limits, UI numbers, versions, positions and a form line's copies (not in the agreed scope). **Rec.** Also out: the literal `0` in a comparison, which means "already passed" or "same day" (for example `passport_days_until_expiry lt 0`), not a published value. On the imported work-permit release this keeps 15 numbers on 14 items (18 ×3, 90 ×5, 30 ×4, 5 ×2, 1 ×1) out of 42 literals. The tech lead confirms these Rec. edges.
-- **BR-2 One answer per number:** unique (workspace, kind, item_key, value_path). **Rec.** `item_key` = `<combination key>/<rule or check key>` because rule keys repeat across combinations (`R-01`, `engine/import.ts:104`). A gate is `<combination key>/gate:<key>` and a form line is `<combination key>/<form>`. A fee is the fee line's key.
-- **BR-3 Cited or None published, never both** (agreed constraint). Cited needs an https URL ("Use an https address.", SA-1B-290), a quote of at most 300 characters (SA-1B-39 rule 2), a date read of today or earlier (rule 4) and an optional page note of at most 200 characters. **⚠ None published needs a reason** (P-252 (3)), but the agreed table has no reason column. **Rec.** Add `none_published_reason text`, required when `none_published` (Q3).
-- **BR-4 Fee lines count as entries; no `source_entry` rows for them (Rec.).** The line, or its `exempt` block, already carries page, URL, quote and date, and CI refuses a line without them. Copying them into rows would make two records of one fact. R2 part 2 (S7a) moves fees into a stored table that is frozen with each release, and the source moves with it. The adapter reads them into the same list, read-only, "From the fee table". Three fee quotes are summaries, not IRCC's words (biometrics, spouse_dependent_child, pr_adult): G1 counts them, because G1 checks that a source is there. Whether a quote proves its value is the expert's per-number confirmation (SA-1B-294, Not built). The tech lead may swap in IRCC's words as an R2 data edit.
-- **BR-5 Stale (Rec., Q2):** if the entry's `value` ≠ the number now at its path, the number counts as having no entry. It is named "the source was written for 90; the number is now 60". "Still correct for 60" re-saves the entry with today's date, after the author looks at the quote.
-- **BR-6 Refused, naming each.** `problems()` (`api/src/studio.ts:379`) adds one error per number with no valid entry. `where` is the item's own place (Rules, Checks, Forms, Eligibility, Fees), so the setup checklist's `WHERE_STEP` routes it. Submit (`:847`), Approve (`:889`) and the shared release (`releaseRows`, `:941`) all refuse. The 409 Problem Details lists every number in `errors[]`. Today's text names only the first problem (`:896`, `:949`).
-- **BR-7 Frozen with the release (Rec.).** The snapshot carries `sources` for its numbers, only when there are any, so older fingerprints stay as they are (the `fact_sources` pattern, `engine/snapshot.ts:60`). A past release never changes when an entry changes (G3's M1/m1 lesson). An entry changed after submit makes the submission stale. `diff()` shows "Source" changes, and the expert signs them (SA-1B-39 §7, "stored inside the published version").
-- **BR-8 Fit with G3 (#471).** G1 runs in every workspace, the demo workspace included. A number with no entry is a gap, not Sample, and is never let through as a Demo release (Q1). An item marked Sample with complete entries is still a Demo release: `isDemoSnapshot` is unchanged. "None published – set by ExpatReady" is a source answer, not Sample. G1's refusal comes before G3's mark.
-- **BR-9 Who.** Only the author duty writes (PUT), checked on the server. Everyone else reads it. Staff only: firms and clients never see it (SA-1B-39 rule 5, SA1B-D104(c)).
-- **BR-10 Kept.** An entry is never deleted. An entry whose path no longer exists is ignored and listed as "No longer used" in its panel.
+- **BR-1 Which numbers (B1).** `publishedNumbers()` walks every condition the snapshot carries: `forms[].condition`, `document_requirements[].condition`, `placements[].condition`, `rules[].when`, `checks[].condition`, `eligibility.gates[].condition`. It also reads `forms[].min_age` (kind `threshold`) and the combination's fee lines.
+  - Keys carry the combination, because keys like `R-01` repeat (`import.ts:104`): a form-line condition is kind `rule`, key `<combination>/form:<number>`; a document line is `<combination>/doc:<lineage>`; a gate is `<combination>/gate:<key>`; a rule or check is `<combination>/<key>`.
+  - Out: `0` in a comparison ("already passed"), form box limits, UI numbers, versions, positions, copies.
+  - Count on the work-permit release: **19 numbers on 17 items**: 18 ×5 (two on the IMM 5707 form line), 90 ×5, 30 ×4, 5 ×4, 1 ×1. Dates add 8 if the founder question is answered yes. The import cites 8 of the 19 (18 ×5 and 5 ×3, where its quote states the number), so **11 remain after Reset**: 90 ×5, 30 ×4, 1 ×1, and the 5 on the "exceptional situation" letter.
+- **BR-2 Address by meaning (M3) ⚑ PR 1.** `value_path` holds `<field>|<op>|<k>`, the k-th leaf with that field and operator in the item's condition (e.g. `person.age_years|gte|1`). Other addresses: `min_age`, `months` (validity), and the fee field name. The JSON path is kept only as a hint. Inserting a clause keeps the address; changing `gte` to `gt` lists the number again.
+- **BR-3 Cited or None published (the agreed CHECK).** Cited: https URL ("Use an https address."), a quote of at most 300 characters, a date read of today or earlier, an optional page note of at most 200 characters. None published: a reason of at least 10 characters (Decision 3). **⚑ PR 1: `none_published_reason`**; the CHECK becomes citation XOR (none_published AND reason).
+- **BR-4 Records that already cite count; no rows are written for them.**
+  - A fee line counts. CI refuses one without a source, so the branch never refuses in the app; its fail test is engine-level only, with fixture lines. The `fee` kind stays unused until R2 S7a (the migration comment says so); "Fees" is not a `where`.
+  - A usable validity rule counts through its own `cite` + `source_quote` (m5). None are in the demo data.
+- **BR-5 One canonical value (m8):** `String(Number(x))`, or an ISO date, so 13757 and "13757.0" are equal.
+- **BR-6 A changed number has no source (Decision 2).** When the value ≠ the entry's value, it is refused: "written for 90; now 60". "Still correct for 60" saves the entry again after a look.
+- **BR-7 Where the gate runs (M1).** `sourceProblems()` runs on the **draft only**: beside `filingProblems` in `studio.problems()` (`:379`) and in `programs.ts` `draftProblems` (`:163`), **never in `relProblems`** (`:166`). A released row keeps its catalogue status. Entries are read once per workspace in `buildSnapshots()`, so both pages get the same `sources` and fingerprint. `where` is the item's own place (Forms, Documents, Rules, Checks, Eligibility), so `WHERE_STEP` routes it.
+- **BR-8 Refused, naming each.** Submit (`:847`, 400), Approve (`:889`, 409) and `releaseRows` (`:941`, 409) all refuse. The Problem Details `…/no-source` lists every number in `errors[]`; today's messages name only the first problem (`:896`, `:949`).
+- **BR-9 Frozen.** `snapshot.sources` is present only when there are entries (the `fact_sources` pattern), so other fingerprints stay as they are. `diff()` lists "Source" lines, and the expert signs them. A change after submit makes the submission stale (`gateOf()`).
+- **BR-10 Fit with G3 (Decision 1).**
+  - G1 refuses in every workspace, the demo included. A missing source is not Sample; "None published" is not Sample.
+  - `isDemoSnapshot` is unchanged. A check saved without a quote stays Sample after its number gets a source, and the panel says so (m3).
+  - **Not built in G1 (m2):** "a Sample value blocks a real release". It stays with G3's deferred part ("refused elsewhere" waits for a second workspace; tech lead 07:26).
+- **BR-11 Who and history.** Only the author duty writes, checked on the server; staff only. **⚑ PR 1 (M2): `version`, `updated_by`, `updated_at`**; a PUT with an old `version` gets 409. The product never deletes an entry; one whose address is gone shows "No longer used". **Reset deletes `source_entry`** (`demo.ts:474-489`, m7). An X2b line copy (`lines-bulk.ts`) does not carry its sources (SA-1B-39 rule 6): **Not built**, and the target's Review lists them.
 
 ## 4. Layout (EXPERIENCE §3)
-- **Review and release** (Change set pattern; board 1): a block "Numbers without a source (n)" sits above the validation list. It is grouped by item, one line per number in words, each with **Add source**, which opens the Source panel in place, so the page keeps its scroll. Submit stays greyed with "Fix the problems first". The approver gets a read-only panel with the line "The author adds the source".
-- **Source panel** (Side panel, 480–560 px, right; board 2): a pinned header with the item in words and where it lives, then one card per number. Each card shows its state chip and a two-way choice: **Official source** (URL, page, quote, date read) or **None published – set by ExpatReady** (reason). The footer has Cancel and Save.
-- **Where else the panel opens:**
-  - the rule dialog (`configuration.tsx` RuleDialog): a "Sources of its numbers" section under the condition;
-  - each check row with a number: a "Sources" row action. There is no check editor today: the checks list is read-only and checks are added by API only;
-  - a form line's "From age" (`workspace/forms.tsx:334`).
-- **Release page:** a held row reads "Held back: 3 numbers have no source", with "Fix on Review and release".
-- **Prefill, no AI:** the item's own quote, the validity `cite`, and **Rec.** a pick from this combination's approved sources for the URL (STANDARDS §3.2, pick don't type).
-- **States:** empty (no numbers: "Nothing to source"), missing, cited, none published, stale, field error, read-only (approver, or released), conflict (409: someone else saved), loading skeleton. At 400 px the panel goes full width.
+- **Review and release** (Change set; board 1): a "Numbers without a source (n)" block grouped by item; each line's **Add source** opens the Source panel in place. Submit stays greyed: "Fix the problems first". A count line reads "Fees from the fee table: n lines, each with its source"; its tooltip shows each line's `quote_kind`, never "Official source".
+- **Release page:** "Held back: 11 numbers have no source" · "Fix on Review and release".
+- **Source panel** (Side panel, 480–560 px; board 2): one card per number, **Official source** (URL, page, quote, date) or **None published – set by ExpatReady** (reason). The URL can be picked from the combination's approved sources (STANDARDS §3.2); the quote is filled in from the item's own quote. No fee card (m4, P-26).
+- **The panel also opens from:** the RuleDialog section "Sources of its numbers"; a "Sources" action on each check row that holds a number; a "Source" link under "From age", whose hint changes from "Sample." to "Needs a source before release." (m3).
+- **Words (m6), never field codes:** item = the rule's `then`, the check's message, "Form IMM 5707", or the document's name. Number = the field's short name (`engine/render.ts:164`, QA-82) + the operator in words + the value, e.g. "Age in whole years: at least 18".
+- **States:** missing, cited, none published, changed, field errors, read-only, conflict (409, with who and when from M2), empty, loading. The import's entries show "From the sample load". Full width at 400 px.
 
 ## 5. Copy
-- Refusal, per number: "<item>: <value> has no source entry. Add the official source, or mark 'None published – set by ExpatReady'." For example: "Rule 'Add form IMM 5707 for this person' (age is 18 or older): 18 has no source entry. …"
-- 409 detail: "Release refused: 15 numbers have no source entry. Each is listed on Review and release."
-- Stale: "<item>: the source was written for 90; the number is now 60. Check the source again, or mark 'None published – set by ExpatReady'."
-- Chips: No source · Official source · None published – set by ExpatReady · Changed since its source.
-- Tip on None published: "The government publishes nothing on this point; ExpatReady set the number. Say why."
-- Field errors: "Use an https address." · "Copy the words that state the number (up to 300 characters)." · "The date read cannot be in the future." · "Say why ExpatReady set this number (at least 10 characters)."
-- Empty: "This item has no published numbers." Approver: "Only the configuration author adds sources."
-- Fee line: "From the fee table · checked <date> · changed by the tech lead in the fee table".
+- **Refusal:** "<item>: <value> has no source entry. Add the official source, or mark 'None published – set by ExpatReady'." E.g. "Form IMM 5707: Age in whole years: at least 18 has no source entry. …"
+- **409:** "Release refused: 11 numbers have no source entry. Each is listed on Review and release."
+- **Changed:** "<item>: the source was written for 90; the number is now 60. Check the source again, or mark 'None published – set by ExpatReady'."
+- **Chips:** No source · Official source · None published – set by ExpatReady · Changed since its source · From the sample load.
+- **Sample note:** "This check stays Sample: it has no source quote of its own. A number's source does not change that."
+- **Field errors:** "Use an https address." · "Copy the words that state the number (up to 300 characters)." · "The date read cannot be in the future." · "Say why ExpatReady set this number (at least 10 characters)."
+- **Conflict:** "Someone else saved this source while you had it open (<role>, <time>). Reload theirs, or keep yours and save again." **Read-only:** "Only the configuration author adds sources." **Empty:** "This item has no published numbers."
 
 ## 6. Contract and tests
-- `GET /combinations/:id/sources` → `{ numbers: [{kind, key, path, value, item_words, words, where, state: missing|cited|none_published|stale|fee_table, entry?}], counts }`. This is one query for the entries plus the snapshot walk.
-- `GET /combinations/:id/sources/:kind/:key` → one item's numbers.
-- `PUT /combinations/:id/sources/:kind/:key` with body `{path, value, cited?: {url, page?, quote, date} | none_published?: {reason}, baseRevision?}` → 200 the entry · 400 Problem Details with errors on each field · 403 not the author · 404 no such item or path · 409 the value changed since the panel opened, or someone else saved.
-- The release 409 also carries `type …/no-source` and `errors[{item, value, where, fix:{tab, focus}}]`.
-- **Tests (pass + fail per BR):**
-  - engine `tests/check_g1_source_register.ts`: BR-1 to BR-5, BR-7 and BR-8;
-  - API `tests/check_g1_sources_api.ts`: BR-3, BR-6, BR-9 and BR-10, on both release routes and on submit;
-  - browser `check_g1_source_register_browser.cjs` (the journey below), with axe and the keyboard path at 1440, 1024 and 400 px.
-- **Journey:** "With an LMIA": edit the rule → Submit refused, the 15 numbers listed → Add source on 18 (cite IMM 5488's words) → None published on 90 (reason) → stale step (change 90 to 60) → all sourced → submit, sign, release. The release v-next snapshot holds the entries. Fees are tested on Visitor visa.
-- **Scale:** the walk over the imported release's 406 checks and 39 rules adds ≤ 50 ms to `/review`, and entries are read in one query (no N+1).
-- **Existing suites** that release a draft with numbers add their entries through the API, never by SQL (G3 review m5).
+- **Endpoints:**
+  - `GET /combinations/:id/sources` → `{numbers:[{kind, key, address, value, item_words, words, where, state: missing|cited|none_published|changed|fee_table|validity_cite, entry?}], counts}` (one query); `GET …/sources/:kind/:key`.
+  - `PUT …/sources/:kind/:key {address, value, cited?:{url,page?,quote,date} | none_published?:{reason}, version}` → 200 (version+1) · 400 per field · 403 approver · 404 no such address · 409 old version or the value moved.
+- **Engine suite `check_g1_source_register.ts`** (pass + fail per business rule): the IMM 5707 form line's 18 is listed and `lt 0` is not; an inserted clause keeps the address and `gte`→`gt` lists it again; "13757.0" is not stale; a fixture fee line without a source is refused.
+- **API suite `check_g1_sources_api.ts`:** all three routes refuse and a fully sourced draft releases; of two PUTs with the same version, the second gets 409; the released row keeps its catalogue status while its draft lists 11; with no entries the fingerprint is unchanged, and one entry adds one Source change.
+- **Browser `check_g1_source_register_browser.cjs`** on With an LMIA, axe and keyboard at 1440, 1024 and 400 px: edit a rule → Submit refused, 11 listed, the 18s showing "From the sample load" → cite the letter's 5 and the 1 year from guide 5487's words → None published on each 90 and 30 → change 90 to 60, refused again → all sourced → sign → release.
+- **Scale:** the walk over 406 checks and 39 rules adds ≤ 50 ms to `/review`; no N+1.
+- **Scaffolding (M4):** `importConfiguration()` writes its entries **before** Release 1's snapshot: cited only where the quote states the number in digits, with the manifest's URL and download date (19 Oct 2026), `created_by` = the sample loader. After Reset, no row shows "changed since Release 1". One test helper, `sourceEveryNumber(api, id, {cite|none})`, works through the API, never SQL; the build plan names every suite that submits a draft holding numbers.
+- **PRs:** PR 1 the table · **PR 2a** engine, API, helper and suite updates · **PR 2b** the screens.
 
 ## 6b. Capability or scaffolding (P-33) · Needed or Not built (P-26)
-- **Capability, Needed:** the `source_entry` table and the walk · the refusal on all three routes · the 409 list · the Review block with Fix · the Source panel (cited, none published, stale) · the Source section in the rule dialog · the Sources action on checks · the "From age" source · the fee-table adapter · snapshot `sources` and the expert's sign-off · the Release page held reason.
-- **Capability, Not built:** the register screen (SA-1B-290: kinds, weekly check) · next review and "overdue" in orange (SA-1B-39 rule 3) · per-number expert Confirm (SA-1B-294) · AI filling the source (SA-1B-291) · source markers on staff screens (SA-1B-193 rule 2) · a check editor.
-- Scaffolding, Needed: the import of the work-permit release writes cited entries only where its quote states the number in digits, using the manifest's URL and its download date (19 Oct 2026). For example, 18 from IMM 5488 and 5 from guide 5487. The 90s, 30s and "one year" stay without an entry, so the demo shows the gate. Scaffolding is never shown as a capability.
+- **Capability, Needed:** the table (with the ⚑ columns) · the walk over every condition · `sourceProblems()` on the draft · the three refusals and the 409 list · the Review block with Fix · the Source panel (cited, none published, changed, conflict) · the RuleDialog section · the Checks action · "From age" · the fee and validity adapters and the fee count line · `snapshot.sources` and the expert's sign-off · the Release page held reason · Reset clearing entries.
+- **Capability, Not built:** the register screen · next review and "overdue" · per-number expert Confirm (SA-1B-294) · AI filling the source · staff source markers · a check editor · the fee card · X2b copies carrying sources · "a Sample value blocks a real release" (G3's deferred part).
+- **Scaffolding, Needed:** the import's entries · the test helper.
 
-## 7. Questions (at most 3, recommendation first)
-1. **Demo workspace: does a number with no source also refuse there?** Rec.: **yes, refuse everywhere.** A missing source is a gap, not Sample, and P-240 adopts the gate without a demo exception. Alternative: let it pass as a Demo release. That would hide the gate in the only workspace we have.
-2. **A number changed after its source was written:** Rec.: **refuse it as "no source"**, with the stale words and a one-click "Still correct for 60" after a look. Alternative: warn only. That lets 60 release under a quote that says 90.
-3. **⚠ Reason for "None published":** P-252 (3) asks for a reason, but the agreed table has no column for it. Rec.: **add `none_published_reason` (required) in PR 1.** It costs one column, and SA-1B-294 rule 6 records that ExpatReady set the number. Alternative: no reason, which goes against P-252.
+## 7. Decisions and question
+**Decisions for the tech lead** (the challenger's answers; I recommend all three):
+1. **Refuse in every workspace.** Under P-240 only Sample content goes through as a Demo release, and a missing source is not Sample.
+2. **A changed number is refused** (SA-1B-294 rule 4: an edit clears the confirmation).
+3. **A reason is required for None published** ⚑ PR 1. The grounds are SA-1B-294 rule 6 and D18, not P-252 (a held proposal).
+
+**Founder question.** Do cut-off and in-force dates in conditions count as published numbers? **Rec.: yes.** SA-1B-294 lists in-force dates (rule 1) and cut-off dates (its outcome). The release holds 8: "passport issued before 7 June 2019" ×6 and "applications from 1 November 2024" ×2. If no, a rule needs a source for its 5 years but not for the 7 June 2019 beside it. The tech lead may settle this alone if he reads P-240 the same way.
 
 ## Definition of ready
-Acceptance test named (`check_g1_source_register_browser.cjs` plus the two suites above) · row text as BACKLOG G1 · Q1–Q3 answered and recorded in DECISIONS · Rec. edges of BR-1, BR-2, BR-4 and BR-7 confirmed by the tech lead · a fresh challenge written to `challenge.md` · boards clicked through, or the tech lead approves after the challenge (P-223 (4)).
+Acceptance tests named (`check_g1_source_register_browser.cjs` plus the engine and API suites) · row text as BACKLOG G1 · the tech lead's OK on the three ⚑ PR 1 changes and Decisions 1–3 · the founder question answered · the Lead response written in `challenge.md` · boards clicked through, or the tech lead approves after the challenge (P-223 (4)).
