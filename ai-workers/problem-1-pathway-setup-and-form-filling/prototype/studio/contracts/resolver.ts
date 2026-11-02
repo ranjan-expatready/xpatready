@@ -57,13 +57,14 @@
 //  (b) Whom a document's facts are about (holder, holder.spouse, parent_1/parent_2): engine/sources.ts:47-52 and its
 //      role-level twin other() at :267; C6.5's document reader needs it as a resolver rule. Also local there: isAgentFact
 //      (:91), WHO_OF_ROLE (:230, the reverse of WHO_ROLES) and `h === "case"` literals.
-//  (c) render's deciders call isFilingFact without the placement (:138, :156): a fact placed once_per_case whose id does
-//      not start "case." is keyed on the person there (as before SH3).
-//  (d) Copies outside the four places: R5 in api/src/runtime.ts:269 and :310 (prefix only; runtime lane L1's file
-//      until S4 merges; eligibility.ts, case-checklist.ts and programs.ts moved in the SH3 follow-up); a roleOf
-//      that says "the application" in engine/coverage.ts:32; the sourceKey template in engine/runtime/preview.ts:69,
-//      engine/runtime/case.ts:365, engine/validate.ts:244, engine/pqr-picks.ts:82, engine/coverage.ts:43; field scope by
-//      prefix in engine/import.ts:41, api/src/proposals.ts:214, engine/snapshot.ts:37 (subjectKindOf).
+//  (c) Calls of isFilingFact without the placement: render's deciders (:138, :156) and engine/runtime/case-checklist.ts
+//      (:126): a fact placed once_per_case whose id does not start "case." is keyed on the person there (as before SH3).
+//  (d) Copies still outside the resolver: R5 in api/src/runtime.ts:269 (with the placement) and :310 (prefix only), and
+//      the sourceKey template in engine/runtime/case.ts:365 (both files belong to runtime lane L1 until its S4 merges);
+//      R5 by prefix in engine/answer-keys.ts:105; field scope by prefix in engine/import.ts:41, api/src/proposals.ts:214
+//      and engine/snapshot.ts:37 (subjectKindOf), which wait for L-SA4 (C3.16's four scopes). Moved in the SH3
+//      follow-ups: eligibility.ts, case-checklist.ts, programs.ts (R5, R6b), coverage.ts (roleOf), and the sourceKey
+//      template in runtime/preview.ts, validate.ts, pqr-picks.ts and coverage.ts.
 
 /** C3.16 / SA-1B-130 rule 1: the four scopes a shared field may carry. */
 export const SCOPES = ["person", "filing", "household", "organisation"] as const;

@@ -120,3 +120,49 @@ Test-only since c00868d7: cc52f0b1 (role placeholders in the R6 fixture) and 750
 * **Minor r3-m1:** :156 with its `case.` branch removed still survives. The new check answers only a `person.` fact, so an answered `case.*` decider keyed on the filing is not pinned. One more known value in the same check would cover it; it can follow.
 
 **Verdict: Approve** (7506b899). No Blocker or Major is open.
+
+## Follow-up d1+d2 (62a89f22)
+Reviewer role, fresh context. Row: SH3 follow-ups d1 + d2 (the tech lead's answer on #509), `git diff origin/main...62a89f22`. I ran it in a throwaway worktree in the scratchpad. No UI, so **the journey test does not apply**; I scored the code and the tests instead (below).
+* **Runs** (from `prototype/`): `check_sh3_resolver` **59/59**, `runtime/check_case_engine` **69/69**, `check_vv_checklist` **60/60**. Also run: `check_screen01_rules` 67/0, `check_line_holders` 19/19, `check_c1112_modes` 39/39, `check_r2_fee_table` 45/45, `check_engine` 43/43, and `check_c69_runs`' pure part (40 PASS; its route part needs a database, so not run). `tsc -p api/tsconfig.json`: no errors in any changed file.
+* **(1) No behaviour change: confirmed by reading every replaced expression.**
+  * **d1** `eligibility.aboutOf` is now `valueHolder` itself (`===`), so all four uses (eligibility.ts:41, :56, :96, :119) get the same function. `valueHolder` (resolver.ts:111) matches the old `aboutOf` token for token:
+    * the same "answered" test: undefined, null and "" count as no answer; 0, false and " " count as answers;
+    * the same keys (`kkey` is `factKey`, and `"case"` is `FILING`);
+    * the same order: the person, then the filing, then the id rule;
+    * the same id rule: `isFilingFact(fact)` with no placement is `fact.startsWith("case.")`, prefix only, as before.
+    * A missing entry reads as undefined in both, and person === "case" gives the same answer.
+  * **d2** `case-checklist.ts:126`: `isFilingFact(f) ? FILING : about` is the old prefix-only expression.
+  * **d2** `programs.ts:17`: `isFilingFact(p.fact, p)` is `p.repeats === "once_per_case" || p.fact.startsWith("case.")`. The order and the short-circuit are the same: with a once-per-case placement, `fact` is never read in either version.
+* **(2) R6b** (contract :37, interface :148) matches `valueHolder`: own answer, else the filing's, else R5's id rule; one fact, no list row.
+* **(3) Tests:** R6b has a passing case (:77) and a failing case (:78); the failing case covers "", null, unanswered and both sides of the id rule. **17 mutants, 14 caught:**
+  * all 7 on `valueHolder`: the order swapped, the filing step removed, "" counted as an answer, null counted as an answer, unanswered always person, unanswered always filing, the placement passed;
+  * eligibility's `aboutOf` as its own copy or as a wrapper (by the identity check :79, and also by c69's M1 checks);
+  * the 3 programs.ts mutants (by `check_screen01_rules` BR-10);
+  * the typed-out copy put back (by :163);
+  * render.ts:156 with its `case.` branch removed (by :149). **That fixes r3-m1.**
+  * **Not caught:** the 3 behaviour mutants at case-checklist.ts:126 (see r4-m1).
+* **(4) The (d) list** is right that eligibility.ts, case-checklist.ts and programs.ts no longer hold a copy (grep: no `startsWith("case.")` left in them), and that runtime.ts:269 and :310 are still copies. Three small text gaps are listed in r4-m2.
+* **(5) Lift-ready (P-249):** engine/resolver.ts still imports only `../contracts/resolver.ts` (checked by the test, and by reading line 6). The new code uses only `factKey` and `FILING` from the contract.
+
+**Open, Minor (do not block; can follow):**
+* **r4-m1.** `case-checklist.ts:126` is pinned only by its source text.
+  * These mutants pass all 8 pure suites: always the person, always the filing, and the branches swapped.
+  * This gap was already on main (the same expression, and no behaviour test changed), so it is not a regression.
+  * Fix: one `check_vv_checklist` case where a line's condition reads a derived field with a `case.*` input: answered on the filing → listed as answered; unanswered → open.
+* **r4-m2.** Contract text, (c)/(d):
+  * case-checklist.ts:126 calls `isFilingFact` without the placement, like render's deciders. (d) says the file "moved", which reads as "all of R5". Add it to (c).
+  * "(prefix only)" is true of runtime.ts:310 only; :269 checks the placement as well. This wording was there before this commit.
+  * `engine/answer-keys.ts:105` is an R5 copy by prefix that the list leaves out. It has been missing since #509.
+* **r4-m3.** "What counts as an answer" is now written twice: resolver.ts:112 and eligibility.ts:38 (`present`).
+  * eligibility reads the value from the holder that `valueHolder` chose, then tests it with its own copy.
+  * If only one copy changed, an answered filing value could read as missing.
+  * Fix: export the predicate from the resolver (R6b already defines "no answer").
+* **r4-m4.** The r3-m1 check sits inside r2-m1's `ok` (:139-149). When it fails, the output shows r2-m1's label ("stays on the person"), which names the wrong rule. Split it out or rename it.
+
+**Score of the code and tests: 8.5/10.**
+* 1 each: task completed (d1 and d2 moved; runtime.ts left out as agreed), next step obvious, plain words, correct data, error recovery, fit and portability, speed.
+* ½ each: feedback (r4-m4), code quality (r4-m1, r4-m3), trust and sources (r4-m2).
+
+Could not check: c69's route part and CI on this commit.
+
+**Verdict: Approve** (62a89f22). No Blocker or Major is open; r4-m1 to r4-m4 are Minor.

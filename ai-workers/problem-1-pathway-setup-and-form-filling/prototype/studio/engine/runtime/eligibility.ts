@@ -8,7 +8,7 @@ import { canonical } from "../../../contracts/rules.ts";
 import { gateFacts, type Gate, type SnapshotEligibility, type WhenNotMet } from "../eligibility-gates.ts";
 import { evalCondition, kkey, type Known } from "../render.ts";
 import type { Snapshot } from "../snapshot.ts";
-import { valueHolder } from "../resolver.ts";
+import { present, valueHolder } from "../resolver.ts";
 
 /** The founder's answer to C6.9 Q3 (P-229 (3), 2 Nov): one failed rule gives Not eligible even while other facts are
  *  missing, and the missing facts are listed too. Our addition to AG-03's AG-3-13 for the team (AG-3-13 gives Not
@@ -35,7 +35,6 @@ export type ProgramResult = {
  *  (kept for tracing only; out of date compares values, BR-13). */
 export type Input = { fact: string; about: string; value: unknown; answerId: string | null };
 
-const present = (v: unknown) => v !== undefined && v !== null && v !== "";
 /** Whose value a gate fact is: the resolver's R6b (contracts/resolver.ts; SH3 follow-up d1). */
 export const aboutOf = valueHolder;
 const valueOf = (known: Known, fact: string, person: string) => known.get(kkey(aboutOf(known, fact, person), fact))?.value;
