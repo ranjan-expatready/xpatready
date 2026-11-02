@@ -31,6 +31,7 @@ const partsLine = (all: ReturnType<typeof partsOf>) => { if (!all.length) return
 import { overrideOf, Sources } from "./sources.ts";
 import { plainRunText } from "./plain-run-text.ts";
 import { runWorstUsd } from "../../engine/cost-check.ts";
+import { effective } from "../../engine/snapshot.ts";
 import { checkOverride, costPlanNow, endedOverrides, ledgerRead, overrideAllowed, recordOverride, spendOverride } from "./cost-gate.ts";
 import { SpendLedger } from "../../../p2/ledger.ts";
 import { OverrideStart, type OverrideRef } from "../../contracts/cost-check.ts";
@@ -80,7 +81,11 @@ export class Ai implements OnModuleInit {
     if (!["LIVE", "REPLAY", "STUB"].includes(mode)) fail("Choose live, replay or stub.");
     const workspaceId = await this.ws.id();
     const { combinationIds, attachmentId, label } = await this.resolve(workspaceId, scope);
-    const comps = await this.db.combination.findMany({ where: { id: { in: combinationIds } }, include: { program: true, attachments: { orderBy: { createdAt: "asc" } }, forms: { select: { lineageKey: true, status: true, version: true } } } });
+    const comps = await this.db.combination.findMany({ where: { id: { in: combinationIds } }, include: { program: true, attachments: { orderBy: { createdAt: "asc" } }, forms: { select: { lineageKey: true, status: true, version: true, channel: true, form: { select: { editions: { select: { id: true, channel: true, portalKey: true } } } } } } } });
+    // QA-163: a form already in a combination's configuration is skipped only when it has a field map (an edition the
+    // snapshot reads with at least one effective field-map entry, engine/snapshot.ts); a form listed without one (the six's
+    // IMM 5257 after Reset to the six) is drafted like any other, so Saved works at US$0.
+    const mapped = await this.mappedEditions(comps.flatMap((c) => c.forms.flatMap((f) => f.form.editions.map((e) => e.id))));
     // Only an edition with its boxes mapped can be reused: an upload registers its edition before any map exists.
     const editions = await this.db.formEdition.findMany({ where: { workspaceId, maps: { some: {} } }, select: { sha256: true, editionLabel: true } });
     const jobs = await this.db.draftingJob.findMany({ where: { workspaceId, kind: { in: ["field_map", "reuse_map"] } }, orderBy: { startedAt: "desc" }, select: { id: true, attachmentId: true, status: true, kind: true, fingerprint: true, runId: true, mode: true, costUsd: true } });
@@ -101,9 +106,12 @@ export class Ai implements OnModuleInit {
     const elsewhereOf = await this.mappingIndex(workspaceId, comps.flatMap((c) => c.attachments.map((a) => a.sha256)));
     for (const c of [...comps].sort((a, b) => order.get(a.id)! - order.get(b.id)!)) {
       const inConfig = new Set<string>();
-      const byLineage = new Map<string, { status: string; version: number }>();
+      const byLineage = new Map<string, (typeof c.forms)[number]>();
       for (const f of c.forms) { const cur = byLineage.get(f.lineageKey); if (!cur || f.version > cur.version) byLineage.set(f.lineageKey, f); }
-      for (const [k, f] of byLineage) if (f.status !== "RETIRED") inConfig.add(k);
+      // As the snapshot reads a line's editions: PDF ones, and an online version only on a line filed Online from this
+      // combination's portal.
+      const readsMap = (f: (typeof c.forms)[number]) => f.form.editions.some((e) => (e.channel !== "ONLINE" || (f.channel === "ONLINE" && e.portalKey === c.portalKey)) && mapped.has(e.id));
+      for (const [k, f] of byLineage) if (f.status !== "RETIRED" && readsMap(f)) inConfig.add(k);
       for (const a of c.attachments) {
         if (attachmentId && a.id !== attachmentId) continue;
         const base = { combinationId: c.id, combination: c.label, program: c.program.label, attachmentId: a.id, source: a.edition ?? a.fileName, expected_usd: null as number | null, worst_usd: 0 };
@@ -165,6 +173,14 @@ export class Ai implements OnModuleInit {
     // one run per part, each held to the run cap on its own (found by check_cost_warning_browser: "run" was flagged).
     const { cost_check, run_key } = costPlanNow("draft_field_maps", plan_sha256, { worst: totals.worst_usd, expected: totals.expected_usd, run: Math.max(0, ...targets.flatMap((t) => t.a4?.parts.length ? t.a4.parts.map((x) => x.worst_usd) : [t.worst_usd])), spentForms: targets.filter((t) => t.over_attempts).map((t) => t.source) }, await endedOverrides(this.db));
     return { cost_check, run_key, max_paid_attempts_per_form: MAX_PAID_ATTEMPTS_PER_FORM, operation: "draft_field_maps", operation_label: "Draft field maps for added forms", capability_note: "AI drafts each form's field map (which fact fills each form field). Questions, sections and rules are not AI-drafted here (a checklist's document requirements are read below, under Checklists): people author them, and AI field maps only propose library fields.", scope: { ...scope, label }, mode, targets: targets.map((t) => ({ ...t, action_label: ACTION_TEXT[t.action] })), totals, ledger, per_run_cap_usd: RUN_CAP_USD, plan_sha256 };
+  }
+
+  /** QA-163: the form editions holding at least one field-map entry in effect in the draft (engine/snapshot.ts effective,
+   *  the rows the snapshot's field_maps carry). One query for the whole plan. */
+  private async mappedEditions(editionIds: string[]) {
+    const ids = [...new Set(editionIds)];
+    const rows = ids.length ? await this.db.formFieldMap.findMany({ where: { formEditionId: { in: ids } }, select: { id: true, formEditionId: true, dataPath: true, version: true, status: true, supersedesId: true } }) : [];
+    return new Set(effective(rows, (m) => `${m.formEditionId}|${m.dataPath}`, "draft").map((m) => m.formEditionId));
   }
 
   /** Outside review 29 Oct (G4 per form): the paid live runs of each file (checksum), over every source that holds it, so
