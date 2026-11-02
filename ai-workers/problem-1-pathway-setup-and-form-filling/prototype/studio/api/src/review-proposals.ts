@@ -91,7 +91,7 @@ export class ReviewProposals {
   private view(r: Row, facts = new Map<string, string>()): QueueProposal {
     const p = r.payload as Record<string, any>, src = r.source as Record<string, any> | null, rounds = r.rounds as { draft?: unknown; check?: unknown }, id = r.identity as { near?: string[]; nearReason?: string | null };
     const reuse = r.reuse as { match: "reuse" | "new"; existingKey: string | null };
-    return { id: r.id, kind: r.kind, kind_word: PROPOSAL_KIND_WORDS[r.kind] ?? r.kind, title: r.kind === "pqr_pick" ? pickTitle(p, facts) : titleOf(p), meaning: p.meaning ?? p.proves ?? (r.kind === "pqr_pick" ? p.reason : null) ?? null, band: r.confidence as Band, agreement: r.agreement, agreement_word: AGREEMENT_WORDS[r.agreement] ?? r.agreement,
+    return { id: r.id, kind: r.kind, kind_word: PROPOSAL_KIND_WORDS[r.kind] ?? r.kind, title: r.kind === "pqr_pick" ? pickTitle(p, facts) : titleOf(p), meaning: p.meaning ?? p.proves ?? (r.kind === "pqr_pick" ? p.reason : null) ?? null, values: Array.isArray(p.values) ? p.values : null, band: r.confidence as Band, agreement: r.agreement, agreement_word: AGREEMENT_WORDS[r.agreement] ?? r.agreement,
       reason: r.reason, lands_on: r.landsOn as "library" | "combination", reuse: { match: reuse.match, existing_key: reuse.existingKey }, origin: r.origin as "ai" | "rules", step: r.step,
       readings: { draft: readingOf(rounds?.draft), check: readingOf(rounds?.check) },
       source: src ? { file: src.file, edition: src.edition ?? null, page: src.page ?? null, quote: src.quote, quote_found: !!src.quoteFound, rule: src.rule ?? null } : null,

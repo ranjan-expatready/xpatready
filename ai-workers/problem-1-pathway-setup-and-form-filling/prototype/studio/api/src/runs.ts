@@ -17,6 +17,7 @@ import { PeopleFromGuide, WHO_OPERATION, WHO_STEPS } from "./people-ai.ts";
 import { QD_OPERATION, QD_STEPS } from "../../engine/draft-qd.ts";
 import { STEP_OF, stepState } from "./draft-contract.ts";
 import { DraftQd } from "./draft-qd.ts";
+import { Sources } from "./sources.ts";
 
 const problem = (status: number, title: string, detail: string) => new HttpException({ type: `https://expatready.local/problems/${title.toLowerCase().replace(/[^a-z]+/g, "-")}`, title, status, detail }, status);
 const ACTIVE = ["QUEUED", "RUNNING"];
@@ -34,7 +35,7 @@ type Step = { n: number; kind: string; label: string; uses: "rules" | "ai"; stat
 
 @Injectable()
 export class Runs {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Finder) private readonly finder: Finder, @Inject(Ai) private readonly ai: Ai, @Inject(UploadRuns) private readonly uploads: UploadRuns, @Inject(PeopleFromGuide) private readonly people: PeopleFromGuide, @Inject(DraftQd) private readonly qd: DraftQd) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Finder) private readonly finder: Finder, @Inject(Ai) private readonly ai: Ai, @Inject(UploadRuns) private readonly uploads: UploadRuns, @Inject(PeopleFromGuide) private readonly people: PeopleFromGuide, @Inject(DraftQd) private readonly qd: DraftQd, @Inject(Sources) private readonly sources: Sources) {}
 
   private steps(b: AiBatch & { jobs: DraftingJob[] }): Step[] {
     const plan = (b.plan ?? {}) as { steps?: { kind: string; uses_ai?: boolean }[] };
@@ -73,7 +74,25 @@ export class Runs {
     return { id: b.id, operation: b.operation, label: LABEL[b.operation] ?? b.operation, scope: b.operation === FINDER_OPERATION ? b.scopeLabel.split("|")[1] ?? null : b.scopeLabel, status: st.code, status_word: st.word, message: plainRunText(b.message),
       step: cur ? { n: cur.n, m: steps.length, label: cur.label } : null, steps, started_at: b.startedAt, finished_at: b.finishedAt, elapsed_ms: (b.finishedAt ?? new Date()).getTime() - b.startedAt.getTime(), usual_ms: usual.ms, last_activity_at: new Date(last),
       usd: { spent: Math.round(b.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0) * 100) / 100, worst: b.worstCaseUsd, usual: usual.usd, about: b.operation === FINDER_OPERATION ? statedUsd(b, usual.usd).about : usual.usd }, can_stop: ACTIVE.includes(b.status) && !b.cancelRequested,
-      error: failedStep ? { what: b.message && plainRunText(b.message) !== failedStep.message ? plainRunText(b.message)! : `${failedStep.label}: see the step above.`, next: this.nextOf(b, href) } : null, href };
+      error: failedStep ? { what: b.message && plainRunText(b.message) !== failedStep.message ? plainRunText(b.message)! : `${failedStep.label}: see the step above.`, next: (await this.savedInstead(b)) ?? this.nextOf(b, href) } : null, href };
+  }
+
+  /** P-227 (D2 part 4): a Live field-map run that failed offers Saved when a valid saved result exists for a form it
+   *  could not draft: the link opens that form's Draft dialog on the Forms tab, already on Saved (US$0). */
+  private async savedInstead(b: AiBatch & { jobs: DraftingJob[] }): Promise<{ label: string; href: string } | null> {
+    if (b.operation !== "draft_field_maps" || b.mode !== "LIVE") return null;
+    // Review M1: only a form that itself ran Live (a Live run can use a Saved result for a form, A3); review m2: a failed
+    // form before a stopped one; with several forms the label names the form.
+    const order = ["FAILED", "BLOCKED", "CANCELLED"];
+    const failed = b.jobs.filter((x) => x.kind === "field_map" && x.mode === "LIVE" && order.includes(x.status) && x.attachmentId && x.combinationId).sort((x, y) => order.indexOf(x.status) - order.indexOf(y.status));
+    const many = b.jobs.filter((x) => x.kind === "field_map").length > 1;
+    for (const j of failed) {
+      const o = await this.sources.draftOptions(j.attachmentId!).catch(() => null);
+      if (!o?.saved_runs.some((r: { valid?: boolean }) => r.valid)) continue;
+      const form = many ? (await this.db.sourceAttachment.findUnique({ where: { id: j.attachmentId! }, select: { edition: true, fileName: true } }).catch(() => null)) : null;
+      return { label: form ? `Use Saved for ${(form.edition ?? form.fileName).replace(/\s*\(.*$/, "")} (US$0)` : "Use Saved (US$0)", href: `/c/${j.combinationId}/forms?draft=${j.attachmentId}` };
+    }
+    return null;
   }
 
   /** The one next step a stopped or waiting run offers (never a link to the page already open). */

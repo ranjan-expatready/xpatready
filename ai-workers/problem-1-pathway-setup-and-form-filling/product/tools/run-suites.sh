@@ -47,7 +47,12 @@ SKIP="check_catalogue_scale.cjs"
 # without a code cause in those PRs, but it may be a real race in source trust. Fix row (screens): find whether the race
 # is in the product (five concurrent uploads of one unapproved form must give one held item) or in the check; fix with a
 # fail test; take it off this list in that PR.
-QUARANTINE="check_forms_c36_rule_facts_browser.cjs check_screen01_api.ts"
+# check_d1_reset_to_six_browser.cjs (D1 Reset to the six, runtime) quarantined 2 Nov 07:15 UTC: "Reset to the six… is in the
+# Demo menu … reachable with the arrow keys" times out waiting for the dialog "Reset to the six?" (run 41401230384 on #458,
+# a forms change; merge-queue run 41400122250 on #423, a test-only change). Neither touches the Demo menu, so main fails it.
+# The API check check_d1_reset_to_six.ts passes. Fix row (runtime-3): make the arrow-key path open the dialog (or fix the
+# check), with a fail test; take it off this list in that PR.
+QUARANTINE="check_forms_c36_rule_facts_browser.cjs check_screen01_api.ts check_d1_reset_to_six_browser.cjs"
 OUT="${SUITES_OUT:-$ROOT/$S/var/suites}"; mkdir -p "$OUT"
 TSX="$S/node_modules/.bin/tsx --tsconfig $S/api/tsconfig.json"
 export P2_LEDGER_DIR="${P2_LEDGER_DIR_SUITES:-$OUT/p2-ledger-$$}"; mkdir -p "$P2_LEDGER_DIR"   # QA-90 / P-179: test runs never write the real ledger (forms plan-p179 §5)

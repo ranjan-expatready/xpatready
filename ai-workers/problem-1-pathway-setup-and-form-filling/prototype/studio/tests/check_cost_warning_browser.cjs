@@ -57,6 +57,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     // to just under the cap, so this start could pass it by half its worst case, and the panel's plan is out of date.
     await open(false);
     await p.waitForFunction(() => [...document.querySelectorAll("button")].some((x) => /^Start \d+ step/.test(x.textContent?.trim() ?? "") && !x.disabled), null, { timeout: 30_000 });
+    { const modes = await p.locator('fieldset[aria-label="How the AI runs"] input[type="radio"]').count(); const t = await p.locator('fieldset[aria-label="How the AI runs"]').innerText();
+      step("D2 (P-227): the AI start offers exactly Live and Saved, never the stub pass", modes === 2 && /Live/.test(t) && /Saved/.test(t) && !/Stub pass/i.test(t), { modes, t: t.slice(0, 160) }); }
     seed(120 - worst / 2);
     await p.getByRole("button", { name: /^Start \d+ step/ }).click();
     await warning.waitFor({ timeout: 30_000 });
@@ -120,7 +122,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await dd.locator('input[type="radio"]').first().check();
     await ready("Live chosen", "data-mode", "live");
     await ready("Start ready", "data-start-ready", "true");
-    const startLive = dd.getByRole("button", { name: "Start live AI draft" });
+    const startLive = dd.getByRole("button", { name: "Start Live" });
     const runsBefore = (await api("/ai/batches")).body.length;
     seed(worst / 2);
     await startLive.click();

@@ -12,6 +12,7 @@ import { noRetryOnRefusal, Questionnaire, useCaseView, type CaseInfo, type CaseP
 import { FormsPanel } from "./forms";
 import { CaseTeamChip, OpeningTeam, useFirm } from "./team";
 import { EmployerLinkFor, EmployerLinkLine } from "./employer";
+import { EligibilityCard, EligibilityPage } from "./eligibility";
 import { newestReleases } from "../../../contracts/runtime";
 
 /** Simulated case people (api/src/core.ts RUNTIME_ACTORS); the switch is demo chrome. */
@@ -60,6 +61,7 @@ export function RuntimeApp() {
           <Route index element={<CaseList />} />
           <Route path=":id" element={<CasePage />} />
           <Route path=":id/questionnaire" element={<ClientPage />} />
+          <Route path=":id/eligibility" element={<EligibilityPage />} />
           <Route path="*" element={<Notice title="Page not found"><Link className="text-text-link underline" to="/cases">Back to cases</Link></Notice>} />
         </Routes>
       </main>
@@ -174,6 +176,7 @@ function CasePage() {
           {people.map((p) => <li key={p.subject_id} className="flex min-w-0 max-w-full items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{p.label}</span><span className="text-xs text-text-muted">{ROLE[p.role]}</span>{p.applies ? null : <Pill title="Not travelling: asked only what the principal's forms need about them">Not travelling</Pill>}</li>)}
         </ul>
       </section>
+      <EligibilityCard caseId={c.id} people={c.people} />
       <FormsPanel caseId={c.id} />
       <Questionnaire caseId={c.id} mode="agent" />
       {adding ? <AddPersonDialog caseId={c.id} role={adding} close={() => setAdding(null)} /> : null}
