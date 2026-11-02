@@ -41,7 +41,6 @@ const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 const problem = (status: number, title: string, detail: string, extra: Record<string, unknown> = {}) =>
   new HttpException({ type: `https://expatready.local/problems/${title.toLowerCase().replace(/[^a-z]+/g, "-")}`, title, status, detail, ...extra }, status);
 
-export const QD_LIVE_WAITING = "AI now for this run waits for the founder's Go for the live trial (P-131). Use rules only, or saved AI answers, meanwhile (US$0).";
 /** Steps 2 and 5 are built in the next parts of C4.11; until then they say so on the card (never a pretend result). */
 export const NOT_YET: Partial<Record<QdKind, string>> = {
 };
@@ -204,7 +203,9 @@ export class DraftQd {
     const live = (k: string) => k === "qd_conditions" || k === "pqr_picks";
     const steps = QD_STEPS.map((s, i) => ({ n: i + 1, kind: s.kind, label: s.label,
       how: NOT_YET[s.kind] ? "not_yet" : mode === "rules" ? (s.kind === "pqr_picks" ? "rules" : s.ai ? "ai_only" : "rules") : s.ai ? (mode === "live" && live(s.kind) ? "live" : "saved") : "rules",
-      uses_ai: s.ai && mode !== "rules" }));
+      uses_ai: s.ai && mode !== "rules",
+      // Part 5b: each Live AI step's own worst case (the acceptance contract states it per step).
+      worst_usd: mode === "live" && g?.input ? (s.kind === "qd_conditions" ? round2(roundBudgetUsd(CONDITIONS_AI, false, [g.input], g.text.length) + roundBudgetUsd(CONDITIONS_AI, true, [g.input], g.text.length)) : s.kind === "pqr_picks" ? round2(this.pqr.worstUsd(g)) : 0) : 0 }));
     const fingerprint = JSON.stringify({ id: c.id, mode, facts: facts.total, roles: facts.roles.map((r) => `${r.role}:${r.facts}`), steps: steps.map((s) => s.how), worst, saved: mode === "replay" && saved ? [saved.qd_documents, ...saved.qd_conditions.files, ...saved.pqr_picks.files] : null });
     return { mode, combination: { id: c.id, label: c.label }, steps, facts, totals: { worst_usd: worst, remaining_usd: remaining },
       note: mode === "rules" ? "No AI: rules work out each step; what needs a person goes to To review."
