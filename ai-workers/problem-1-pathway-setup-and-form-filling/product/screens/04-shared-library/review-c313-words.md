@@ -43,3 +43,22 @@ Total 8.0. Raise: fix Major 1, show the words on the rows (next row, not this on
 
 ## Could not check
 No real screen reader or intended-user walk (D17, D20 stay with the founder). Only the Visitor visa fixture and the sample set were loaded (no multi-combination retire/restore flows). No cold-start timing.
+
+---
+
+# Round 2 (diff 46b31ac7..06df0e33, head 06df0e33, reviewer)
+
+**Verdict: Approve.** Every round-1 Major and Minor is closed; no new Blocker or Major.
+
+Ran (ports 4801-4803, `rv_` copies, stopped after; no live AI): pack `acceptance/C3.13.test.ts` 23/23 (unchanged); `check_c313_words_filters.ts` 32/32; `check_c313_search_browser.cjs` 12/12.
+
+| Round 1 | Result |
+|---|---|
+| Major 1 `?section=` after re-place | Closed. `studio.ts:453-455` keeps the newest question per field (rows version-desc, first seen wins), so `placement.section`, `?section=` and `usedBy.sections` now agree. New cases move a released field and check the new section lists it and the old one does not. The cases are real: they read `placement`, both `?section=` lists and an SQL oracle for `usedBy.sections`. The route's `repeats` requirement was handled in 06df0e33. `placement` is a visible bug fix (the Fields "Section" column now shows where the field is); no key was removed. Accepted. |
+| Major 2 built note | Closed. `qa/built/C3.13.md` now says API first and "the rows do not show the new counts and words yet". |
+| Minor 1 performance | Closed, and better than main. Same database, 15 calls, median: `/library/fields` main 111 and 104 ms vs this head 92 and 91 ms (max 126). `/library/sections` 41/39 vs 42/40 ms, `/library/document-types` 6-7 vs 6 ms. `usedInBoth` (`where-used.ts`) is one `itemCombinations` read and one `combination.findMany`; `usedInLabels` delegates to it with the same labels (ids of deleted combinations are dropped, as before). |
+| Minor 2 form code | Closed. `formCodeStarts` (`library-items.ts`) matches from the start of the code or the number, 3+ characters. Probed: "476" 0, "sch1" 0, "ab" 5 (text matches), "5476" and "IMM 5476" 24, "5257 sch1" 29. "imm" gives 136 of 164 (every field on an IMM form); that is the rule as written, not a defect. Same rule in `web/src/pages/library.tsx`. |
+| Minor 3 tautology | Closed for forms (now checked against SQL). The combinations assertion is honestly renamed ("matches its Used in list"). |
+| Minor 4 | Left to the PR note, as agreed. |
+
+Open, none blocking: the page still does not show `usedBy`, `status_words` or `origin_words` (the note says so; the screen half of BR-2 is a later row). Sections and Document types take no `?q=`, `?status=`, `?origin=` (declared). Journey score on this head: 9/10 (Correct data and Speed now full; Task completed and Trust and sources stay half because the page shows none of the new words; no criterion at 0). I did not re-run the builder's listed related suites.
