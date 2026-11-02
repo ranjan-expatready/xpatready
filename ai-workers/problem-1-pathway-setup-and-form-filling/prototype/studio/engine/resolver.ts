@@ -105,6 +105,16 @@ export function factsOf(known: Known, about: string): Record<string, unknown> {
   return out;
 }
 
+/** R6b: whose value a person's fact is read from: their own answer, else the filing's, else by R5's id rule. Moved from
+ *  engine/runtime/eligibility.ts (its aboutOf; review M1 on fd26c492: a fact asked once per case of the case subject
+ *  read as unanswered, a false Not met). */
+export function valueHolder(known: Known, fact: string, person: string): string {
+  const present = (v: unknown) => v !== undefined && v !== null && v !== "";
+  if (present(known.get(factKey(person, fact))?.value)) return person;
+  if (present(known.get(factKey(FILING, fact))?.value)) return FILING;
+  return isFilingFact(fact) ? FILING : person;
+}
+
 /** R7: who signs a form filed as PDF upload, signed by hand and scanned (C3.11; contracts/workspace.ts SIGNED_BY,
  *  Sample): the one rule for the Documents tab (sources.ts signedScanLines) and Preview (render). Returns each signer's
  *  id with the form rows (person ids, or FILING) they sign for. */
@@ -140,5 +150,5 @@ export const rolesNamedBy = (who: string): Role[] => WHO_ROLES[who as Who] ?? []
 /** The contract, satisfied by the functions above (one object for callers that take a resolver). */
 export const resolver: Resolver = {
   people: peopleFor, holders: subjectsFor, conditionSubjects, boxOwner: aboutOf, scopeOf, subjectOf, roleOf, partnerOf,
-  factsFor: factsOf, signers: formSigners, canonicalFact, rolesNamedBy,
+  factsFor: factsOf, valueHolder, signers: formSigners, canonicalFact, rolesNamedBy,
 };
