@@ -1,5 +1,5 @@
 // M2 queue item 4, Preview by person and by channel (runtime lane; C4.3, C4.6; board v2 frame 4; plan.md "Preview by
-// person and by channel"): the Preview tab walked in a real browser. At 1440 px the three sets (pre-qualification, what
+// person and by channel"): the Preview tab walked in a real browser. At 1440 px the three sets (Prospect questionnaire (PQR), what
 // the client is asked, the case officer's view) sit side by side; below 1280 px one shows at a time with a switch kept
 // in the address. The client view carries the information line of what documents fill; the forms are grouped by how
 // each is filed. A pass and a fail per rule; screenshots at 1440 and 1024 in
@@ -54,11 +54,11 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C4.3 pass: at 1440 px the three sets show side by side, with no switch", await visible("[data-set]") === 3 && await visible("[data-set-switch]") === 0, await visible("[data-set]"));
   const chipText = await p.locator('[data-person-chip="principal"]').innerText();
   const agentHead = await p.locator('[data-set="agent"] h2').innerText();
-  step("C4.3 one count pass: the principal's chip, the case officer's view and the Questionnaires tab say the same number", chipText.includes(`${chipOf.get("principal")} questions`) && agentHead.includes(`(${chipOf.get("principal")})`), `${chipText} | ${agentHead} | ${chipOf.get("principal")}`);
+  step("C4.3 one count pass: the principal's chip, the case officer's view and the Smart questionnaire (SQR) tab say the same number", chipText.includes(`${chipOf.get("principal")} questions`) && agentHead.includes(`(${chipOf.get("principal")})`), `${chipText} | ${agentHead} | ${chipOf.get("principal")}`);
   const doc = p.locator("[data-from-documents]");
   step("C4.3 Q1 pass: the client view says what the documents fill (\"Passport … fills n answers\"), information only (no upload control)", /Passport.* fills \d+ answers/.test(await doc.innerText()) && await doc.locator('input[type="file"], button').count() === 0, (await doc.innerText()).replace(/\s+/g, " "));
   step("C4.3 pass: every answer in the case officer's view names its source in words", await p.locator("[data-agent-fact]").count() === chipOf.get("principal") && !KEYS.test(await p.locator('[data-set="agent"]').innerText()));
-  step("C4.3 PQR fail: with nothing ticked the pre-qualification set says so and points to the Questionnaires tab", /Tick them on the Questionnaires tab/.test(await p.locator('[data-set="pqr"]').innerText()));
+  step("C4.3 PQR fail: with nothing ticked the Prospect questionnaire (PQR) set says so and points to the Smart questionnaire (SQR) tab", /Tick them on the Smart questionnaire \(SQR\) tab/.test(await p.locator('[data-set="pqr"]').innerText()));
   step("C4.6 pass: the principal's forms are grouped: a filled PDF to upload, and filed once for the application", await p.locator('[data-output-group="PDF_UPLOAD"] [data-preview-form]').count() >= 3 && await p.locator('[data-output-group="APPLICATION"] [data-preview-form="IMM 5476"]').count() === 1);
   step("C4.6 fail: a form appears in one group only", (await p.locator("[data-preview-form]").evaluateAll((els) => els.map((e) => e.getAttribute("data-preview-form")))).every((f, i, all) => all.indexOf(f) === i));
   step("C4.3/C4.6: no system key on the Preview tab", !KEYS.test((await panel().innerText()).replace(/https?:\S+/g, "")), (await panel().innerText()).match(KEYS)?.[0]);
@@ -67,9 +67,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // ======================================================== spouse: a PQR tick and the couple's form
   const L = (await api(`/combinations/${wp}/fact-sources`)).body;
   const f = L.facts.find((x) => x.role === "spouse_or_partner" && x.source === "CLIENT" && x.placed && !x.prequalification);
-  step("setup: a spouse's question ticked for pre-qualification (draft)", (await api(`/combinations/${wp}/fact-sources/spouse_or_partner/${encodeURIComponent(f.fact)}`, { method: "PUT", data: { prequalification: true, reason: "Sample: preview test", version: f.version } })).status === 200);
+  step("setup: a spouse's question ticked for the Prospect questionnaire (PQR) (draft)", (await api(`/combinations/${wp}/fact-sources/spouse_or_partner/${encodeURIComponent(f.fact)}`, { method: "PUT", data: { prequalification: true, reason: "Sample: preview test", version: f.version } })).status === 200);
   await p.locator('[data-person-chip="spouse"]').click(); await settle();
-  step("C4.3 PQR pass: the spouse's pre-qualification set lists the ticked question with where it comes from", /person=spouse/.test(p.url()) && (await p.locator(`[data-set="pqr"] [data-pqr-fact="${f.fact}"]`).innerText()).includes("Client"));
+  step("C4.3 PQR pass: the spouse's Prospect questionnaire (PQR) set lists the ticked question with where it comes from", /person=spouse/.test(p.url()) && (await p.locator(`[data-set="pqr"] [data-pqr-fact="${f.fact}"]`).innerText()).includes("Client"));
   step("C4.6 + Q3 pass: IMM 5409 is filed once for the couple, under the spouse", await p.locator('[data-output-group="COUPLE"] [data-preview-form="IMM 5409"]').count() === 1);
   await state("spouse-pqr-and-couple");
   await p.locator('[data-person-chip="principal"]').click(); await settle();

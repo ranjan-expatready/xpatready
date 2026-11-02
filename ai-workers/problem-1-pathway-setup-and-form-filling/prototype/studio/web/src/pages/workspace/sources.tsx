@@ -63,7 +63,7 @@ export function SourceStrip({ v }: { v: FactSourcesView | undefined }) {
       <span aria-hidden className="text-text-muted">+</span>
       <Part n={v.counts.agent} label="Case officer enters" tip="The representative's, the office's and the case's own facts." />
       <span className="mx-1 h-8 w-px bg-border" aria-hidden />
-      <Part n={v.counts.prequalification} label="Pre-qualification" tip="Asked of a prospect before the case starts; the answer is later confirmed." />
+      <Part n={v.counts.prequalification} label="Prospect questionnaire (PQR)" tip="Asked of a prospect before the case starts; the answer is later confirmed." />
       <span className="ml-auto text-sm" data-strip-state>{errors.length ? <span className="font-medium text-text-danger">{errors.length} release check{errors.length === 1 ? "" : "s"} to fix</span> : <span className="text-text-ok">✓ Every fact has one source</span>}</span>
       <p className="w-full text-xs text-text-muted">{v.basis}.</p>
     </section>
@@ -80,7 +80,7 @@ export function SourceChips({ rows, needs, value, onChange }: { rows: FactSource
   );
   return (
     <div role="group" aria-label="Where it comes from" className="flex flex-wrap gap-1.5">
-      {chip("all", "All sources")}{chip("DOCUMENT", `Document ${n("DOCUMENT")}`)}{chip("CLIENT", `Client ${n("CLIENT")}`)}{chip("AGENT", `Case officer ${n("AGENT")}`)}{chip("pqr", `Pre-qualification ${rows.filter((r) => r.prequalification).length}`)}{chip("needs", `Needs you · ${needs}`)}
+      {chip("all", "All sources")}{chip("DOCUMENT", `Document ${n("DOCUMENT")}`)}{chip("CLIENT", `Client ${n("CLIENT")}`)}{chip("AGENT", `Case officer ${n("AGENT")}`)}{chip("pqr", `Prospect questionnaire (PQR) ${rows.filter((r) => r.prequalification).length}`)}{chip("needs", `Needs you · ${needs}`)}
     </div>
   );
 }
@@ -227,10 +227,10 @@ export function FactDrawer({ id, role, roleLabel, section, q, f, canAuthor, onCl
         ) : null}
         {f ? (
           <section aria-labelledby="d-pq" className="space-y-2">
-            <h3 id="d-pq" className="font-semibold">Pre-qualification</h3>
+            <h3 id="d-pq" className="font-semibold">Prospect questionnaire (PQR)</h3>
             <label className={cn("flex items-start gap-2", pqWhy ? "text-text-muted" : "")}>
               <input type="checkbox" className="mt-1" checked={tick} disabled={!editable || !!pqWhy} onChange={(e) => setTick(e.target.checked)} aria-describedby={pqWhy ? "pq-why" : undefined} data-pq-tick />
-              <span>Ask in pre-qualification{pqWhy ? <span id="pq-why" className="block text-xs" data-option-why>{pqWhy}</span> : null}</span>
+              <span>Ask in the Prospect questionnaire (PQR){pqWhy ? <span id="pq-why" className="block text-xs" data-option-why>{pqWhy}</span> : null}</span>
             </label>
             {tick && !pqWhy ? <label className="block text-xs font-medium">Why <span className="font-normal text-text-muted">(shown to the second person)</span><Textarea className="mt-1 min-h-14" value={reason} disabled={!editable} onChange={(e) => setReason(e.target.value)} /></label> : null}
             {error?.field === "prequalification" ? <p role="alert" className="text-text-danger" data-drawer-error>{error.message}</p> : null}
@@ -317,8 +317,8 @@ export function BulkBar({ id, picked, onClear, onDone }: { id: string; picked: F
       <Select aria-label="Set where it comes from" className="h-8 w-60" value="" disabled={busy} onChange={(e) => { const v = e.target.value as AnswerSource | "RULES"; if (v) void run({ source: v }); }} data-bulk-source>
         <option value="">Set where it comes from…</option><option value="CLIENT">Client</option><option value="AGENT">Case officer</option><option value="RULES">Back to the rules' default</option>
       </Select>
-      <Select aria-label="Pre-qualification" className="h-8 w-52" value="" disabled={busy} onChange={(e) => { if (e.target.value) void run({ prequalification: e.target.value === "on" }); }} data-bulk-pq>
-        <option value="">Pre-qualification…</option><option value="on">Ask in pre-qualification</option><option value="off">Do not ask</option>
+      <Select aria-label="Prospect questionnaire (PQR)" className="h-8 w-52" value="" disabled={busy} onChange={(e) => { if (e.target.value) void run({ prequalification: e.target.value === "on" }); }} data-bulk-pq>
+        <option value="">Prospect questionnaire (PQR)…</option><option value="on">Ask in the Prospect questionnaire (PQR)</option><option value="off">Do not ask</option>
       </Select>
       <Button size="sm" variant="ghost" onClick={onClear}>Clear selection</Button>
       <span className="text-xs text-text-muted">Accept and Reject of AI proposals come with the AI step. No bulk remove, delete or retire.</span>

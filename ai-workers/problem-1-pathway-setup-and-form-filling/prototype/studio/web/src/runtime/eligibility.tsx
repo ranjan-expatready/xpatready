@@ -210,7 +210,7 @@ function Result({ caseId, a, r, runs, open }: { caseId: string; a: Assessment; r
                 <span className="block [overflow-wrap:anywhere]">{g.label}</span>
                 <span className="block text-xs text-text-muted [overflow-wrap:anywhere]">{g.facts.map((f) => `${factWords(f)}: ${shown(g.values[f])}${g.unconfirmed?.includes(f) ? " (not confirmed yet)" : ""}`).join(" · ")}</span>
                 {g.state === "not_met" && g.whenNotMet === "needs_review" ? <span className="block text-xs font-medium text-text-warn">The representative reviews this: never “Not eligible” on its own</span> : null}
-                {g.missing.length ? <Link to={`/cases/${caseId}`} className="text-xs text-text-link hover:underline">{g.missing.map(factWords).join(", ")} → Answer in the case view</Link> : null}
+                {g.missing.length ? <Link to={`/cases/${caseId}`} className="text-xs text-text-link hover:underline">{g.missing.map(factWords).join(", ")} → Answer in the Agent view</Link> : null}
               </span>
             </li>
           ))}

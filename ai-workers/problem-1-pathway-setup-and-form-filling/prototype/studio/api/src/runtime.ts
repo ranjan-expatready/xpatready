@@ -234,7 +234,7 @@ export class Runtime {
 
   async view(actor: Actor, caseId: string, mode: Mode) {
     const c = await this.reach(actor, caseId, "read");
-    if (mode === "agent" && !isOfficer(actor)) fail("The case view is for the case officer.", HttpStatus.FORBIDDEN);
+    if (mode === "agent" && !isOfficer(actor)) fail("The Agent view is for the case officer.", HttpStatus.FORBIDDEN);
     const { answers, rows, groups } = await this.state(c);
     return { case: await this.get(actor, caseId), ...caseView(this.snapshotOf(c), this.peopleOf(c), answers, rows, mode, new Date(), groups) };
   }
@@ -295,7 +295,7 @@ export class Runtime {
       if (unique(e)) { const now = await this.db.clientCanonicalAnswer.findFirst({ where: { subjectId, canonicalFieldKey: fieldKey, rowKey, supersededById: null } }); conflict("Someone answered this at the same moment; their answer is shown. Check it and save again.", { current: now ? { id: now.id, value: now.valueJson } : null }); }
       throw e;
     }
-    await this.audit.log(c.workspaceId, actor.id, "answered", "case fact", fieldKey, `${actor.name} ${b.expectedId ? "changed" : "answered"} ${fieldKey} on case ${short(caseId)} (${officer ? "case view" : "questionnaire"})`);
+    await this.audit.log(c.workspaceId, actor.id, "answered", "case fact", fieldKey, `${actor.name} ${b.expectedId ? "changed" : "answered"} ${fieldKey} on case ${short(caseId)} (${officer ? "Agent view" : "Client questionnaire"})`);
     const after = await this.view(actor, caseId, officer ? "agent" : "sqr");
     const q = after.sections.flatMap((x) => x.questions).find((x) => x.subjectId === subjectId && x.fact === fieldKey);
     const ans = rowKey ? q?.rows.find((x) => x.row === rowKey)?.answer : q?.answer;

@@ -270,7 +270,7 @@ export class LibrarySources {
     const out: Row[] = [];
     for (const r of current(preds, (r) => `${r.combinationId}|${r.predicateKey}`)) {
       const c = combo.get(r.combinationId) ?? null;
-      out.push({ id: `rule:${r.id}`, kind: "rule", kind_word: RULE_KIND.rule, when: r.whenPlain, then: r.thenPlain, lives_on: { combination: c, section: null, tab: "questionnaires", tab_word: "Questionnaires tab" }, used_in: c ? [c] : [], reads: reads(r.predicateJson), source: r.sourceQuote, unsourced: !r.sourceQuote, origin: r.origin, status: status(r) });
+      out.push({ id: `rule:${r.id}`, kind: "rule", kind_word: RULE_KIND.rule, when: r.whenPlain, then: r.thenPlain, lives_on: { combination: c, section: null, tab: "questionnaires", tab_word: "Smart questionnaire (SQR) tab" }, used_in: c ? [c] : [], reads: reads(r.predicateJson), source: r.sourceQuote, unsourced: !r.sourceQuote, origin: r.origin, status: status(r) });
     }
     for (const l of current(forms, (l) => `${l.combinationId}|${l.lineageKey}`).filter((l) => l.predicateJson || l.conditionPlain)) {
       const c = combo.get(l.combinationId) ?? null;

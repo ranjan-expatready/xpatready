@@ -160,7 +160,7 @@ function CasePage() {
           <p className="mt-1 text-sm text-text-muted">{v.summary.questions} questions for this household · {v.summary.answered} answered · {v.summary.confirmed} confirmed · {v.summary.missing} required not answered · {v.summary.not_asked} questions of the release not asked here (no form of this case reads them)</p>
         </div>
         <div className="rounded-lg border border-border bg-surface-raised p-3 text-sm">
-          <p className="font-medium">Client's questionnaire</p>
+          <p className="font-medium">Client questionnaire</p>
           <p className="text-xs text-text-muted">{client?.name ?? "The client"} answers on their phone, for everyone travelling.</p>
           <Link to={`/cases/${c.id}/questionnaire`} onClick={() => setActor(c.client)} className="mt-1.5 inline-flex items-center gap-1 text-[13px] font-medium text-text-link hover:underline">Open it as {client?.name ?? "the client"} (simulated)<ExternalLink className="size-3.5" aria-hidden /></Link>
         </div>
@@ -178,6 +178,7 @@ function CasePage() {
       </section>
       <EligibilityCard caseId={c.id} people={c.people} />
       <FormsPanel caseId={c.id} />
+      <h2 className="text-base font-semibold" data-agent-view-h>Agent view</h2>
       <Questionnaire caseId={c.id} mode="agent" />
       {adding ? <AddPersonDialog caseId={c.id} role={adding} close={() => setAdding(null)} /> : null}
     </div>

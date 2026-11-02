@@ -1,5 +1,5 @@
 // C4.7 (P-76, P-121, P-130 step 6, P-149 one door; forms lane, swarm builder B4): AI drafts a combination's
-// pre-qualification picks with a reason per pick into the one review queue; a person accepts or removes each. A passing
+// Prospect questionnaire (PQR) picks with a reason per pick into the one review queue; a person accepts or removes each. A passing
 // and a failing case per rule, through the API on an isolated copy with the sample loaded (Work permit, family: Guide
 // 5487). Saved AI answers are written for this check into p2/runs and removed after; AI now runs on the stand-in launcher
 // (tests/fixtures/fake-launch.mjs, P-192). NO model call: US$0.
@@ -142,7 +142,7 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   ok("C4.7 passages the rounds could not turn into one fact are listed", body.unresolved.length === 1, body.unresolved);
   const view = (await call("GET", `/review/proposals?group=${encodeURIComponent(`combination:${wp}`)}`)).body;
   const shown = [...(view?.group?.bands?.ready ?? []), ...(view?.group?.bands?.decide ?? []), ...(view?.bands?.ready ?? []), ...(view?.bands?.decide ?? [])].filter((x: any) => x.kind === "pqr_pick");
-  ok("C4.7 To review pass: each pick reads in words with its reason (\"Ask in pre-qualification: Date of birth (Principal applicant)\")", shown.some((x: any) => x.title === "Ask in pre-qualification: Date of birth (Principal applicant)" && x.meaning === "The officer tests it to decide eligibility, so a prospect is asked it first." && x.source?.quote === QUOTE), shown.map((x: any) => x.title));
+  ok("C4.7 To review pass: each pick reads in words with its reason (\"Ask in the Prospect questionnaire (PQR): Date of birth (Principal applicant)\")", shown.some((x: any) => x.title === "Ask in the Prospect questionnaire (PQR): Date of birth (Principal applicant)" && x.meaning === "The officer tests it to decide eligibility, so a prospect is asked it first." && x.source?.quote === QUOTE), shown.map((x: any) => x.title));
   ok("C4.7 To review fail: no pick shows a field key or a role key to a person", shown.length > 0 && shown.every((x: any) => !/\b[a-z_]+\.[a-z_]+\b|principal\b/.test(x.title)), shown.map((x: any) => x.title));
 
   // ---------------------------------------------------------------- Q4, Q1, Q3, Q5 through the queue
@@ -154,7 +154,7 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   const batch = r.body?.batchId;
   ok("C4.7 Q1 pass: accepting Ready picks writes each tick as a draft, origin AI, with the pick's reason", (r.status === 201 || r.status === 200) && tick("principal|person.date_of_birth") === "DRAFT|AI_PROPOSAL|true|The officer tests it to decide eligibility, so a prospect is asked it first." && tick("principal|person.criminal_history").startsWith("DRAFT|AI_PROPOSAL|true"), tick("principal|person.date_of_birth"));
   const fs = (await call("GET", `/combinations/${wp}/fact-sources`)).body;
-  ok("C4.7 Q1 pass: the Questionnaires tab now shows both as pre-qualification questions", fs.counts.prequalification === 2 && fs.facts.some((f: any) => f.fact === "person.date_of_birth" && f.role === "principal" && f.prequalification), fs.counts);
+  ok("C4.7 Q1 pass: the Smart questionnaire (SQR) tab now shows both as Prospect questionnaire (PQR) questions", fs.counts.prequalification === 2 && fs.facts.some((f: any) => f.fact === "person.date_of_birth" && f.role === "principal" && f.prequalification), fs.counts);
   r = await call("POST", "/review/proposals/decide", { ids: [dob[0]], action: "accept" });
   ok("C4.7 Q1 fail: a pick already decided is refused (409)", r.status === 409, words(r));
   r = await call("POST", `/review/proposals/undo/${batch}`, undefined, "user-B");

@@ -1,7 +1,7 @@
 // C4.1 acceptance (P-220 pack 2; P-130, P-216 (1)(2)): the SQR is built per person role from the facts the forms and
 // documents need; a fact a document supplies is not asked; each combination orders its sections with Move up / Move down,
 // the order goes out with its next review and release; the library's one section title is used everywhere.
-// Today the SQR per role and the fromDocuments skip work (Questionnaires tab, Preview); there is no section move, so this
+// Today the SQR per role and the fromDocuments skip work (Smart questionnaire (SQR) tab, Preview); there is no section move, so this
 // failed. ROUTE (built, #284): POST /combinations/:id/sections/:key/move {direction: "up"|"down", seen: [the order read]}; the move is
 // checked against the order the author was looking at (GET /combinations/:id/section-order), so a stale move is a 409.
 // IRCC: every family member completes their own forms (G5256, trace IRCC-P2-02) — so each applying role has its own
@@ -57,7 +57,7 @@ run(async () => {
   ok("C4.1 fail: a move from an older order is refused (409, in words); nothing moves", stale.status === 409 && words(stale).length > 10 && (await seenNow())[0] === second, words(stale));
   ok("C4.1 fail: only an author moves sections (approver 403)", r.status === 403, r.status);
   const sections = (await call("GET", `/combinations/${wp}/workspace?tab=questionnaires`)).body?.questionnaire?.sections ?? [];
-  ok("C4.1 pass: the Questionnaires tab shows the new order", sections.length > 0 && sections[0]?.id === second, sections.map((s: any) => s.id).slice(0, 3));
+  ok("C4.1 pass: the Smart questionnaire (SQR) tab shows the new order", sections.length > 0 && sections[0]?.id === second, sections.map((s: any) => s.id).slice(0, 3));
   const lib = sql(`select title from logical_section where section_key='${second}' order by version desc limit 1`);
   ok("C4.1 pass: the section keeps the library's one title (P-216 (2))", !!lib && sections[0]?.title === lib, { tab: sections[0]?.title, library: lib });
   const released = sql(`select (select string_agg(x->>'id', ',' order by n) from jsonb_array_elements(snapshot->'sections') with ordinality as t(x, n)) from config_release where combination_id='${wp}' order by version desc limit 1`).split(",");

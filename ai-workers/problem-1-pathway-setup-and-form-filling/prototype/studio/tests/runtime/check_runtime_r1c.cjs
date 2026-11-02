@@ -1,7 +1,7 @@
 // R1c renderer journey (runtime lane, plan §8 "questionnaire part of the journey") in a real browser, on the runtime
 // copy after setup_visitor_visa.ts: the officer opens a case and adds the family (1440 and 1024 px) → the client answers
 // on a phone (390 px): one part per screen, "answering for", field checks with an error summary, a repeating group,
-// leave and resume → the officer reviews in the case view, edits with the message naming the forms, confirms a section,
+// leave and resume → the officer reviews in the Agent view, edits with the message naming the forms, confirms a section,
 // meets a conflict. axe-core (WCAG 2.2 A/AA) on every state; data checked underneath through the API. No paid AI.
 // Screenshots: product/screens/R1-thin-slice/screenshots/r1c/.
 //   zsh studio/tools/isolated.sh runtime_r1 4430 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4430 xr_studio_runtime_r1 && node studio/tests/runtime/check_runtime_r1c.cjs 4430
@@ -94,7 +94,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   // ── 2. The client answers on a phone
   const c = await open("user-P", 390, 844);
   await c.goto(`${BASE}/cases/${caseId}/questionnaire`); await idle(c);
-  step("client: the overview says what to do and how saving works", await shows(c.getByRole("heading", { name: "Your questionnaire" })) && await shows(c.getByText(/0 of \d+ parts done/)));
+  step("client: the overview says what to do and how saving works", await shows(c.getByRole("heading", { name: "Client questionnaire" })) && await shows(c.getByText(/0 of \d+ parts done/)));
   await state(c, "client-overview", [390]);
   await c.getByRole("button", { name: /^Start/ }).click(); await idle(c);
   step("labels: answers read as the form's map labels them (\"Visitor visa\", not the code \"VisitorVisa\")", await shows(c.getByRole("group", { name: /visitor visa or a transit visa/ }).getByLabel("Visitor visa")) && await gone(c.getByText("VisitorVisa")));
@@ -215,7 +215,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("copy (review M5): the client never sees the configuration note about answer lists", await gone(c.getByText(/No fixed list for this answer yet|forms slice 2/)));
   // Leave and resume
   await c.getByRole("button", { name: "Save and come back later" }).click();
-  await shows(c.getByRole("heading", { level: 1, name: "Your questionnaire" })); // the save finished and the overview opened
+  await shows(c.getByRole("heading", { level: 1, name: "Client questionnaire" })); // the save finished and the overview opened
   await c.reload(); await idle(c);
   step("client: after leaving and coming back, the overview counts what is done and offers to continue", await shows(c.getByRole("button", { name: /Continue where you left off/ })) && await shows(c.getByText(/[1-9]\d* of \d+ parts done/)), await c.locator("main").textContent().then((t) => t?.slice(0, 160)));
   await state(c, "client-resume", [390]);
@@ -225,7 +225,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await c.goto(`${BASE}/cases/${caseId}`); await idle(c);
   step("roles fail: the client cannot open the officer's case page", await shows(c.getByText("This page is for the case officer")));
 
-  // ── 3. The officer reviews in the case view (a household of four children, the release's limit: review M6)
+  // ── 3. The officer reviews in the Agent view (a household of four children, the release's limit: review M6)
   for (const n of [2, 3, 4]) await call("POST", `/runtime/cases/${caseId}/people`, { role: "child", displayName: `Sample Child C${n} with a rather long name` }, "user-O");
   await o.reload(); await idle(o);
   await o.getByRole("tab", { name: /^Sample Spouse C/ }).click(); 
@@ -292,7 +292,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("review M3 pass: what blocks filing is listed on the page (question, whose, why), not only in a tooltip", await shows(imm.getByRole("listitem").filter({ hasText: /\(Sample Applicant C\): (not answered|not confirmed|needs a fix)$/ }).first()));
   step("review M1 fail-guard: IMM 5257's fill trial passed, so its copies are not marked \"Checked copy, not for filing\"", await gone(imm.getByText("Checked copy, not for filing")));
   // Lead, break M3: an empty required group blocks filing until "none apply" is answered and confirmed: the officer
-  // says it for the principal's education in the case view, then confirms the section.
+  // says it for the principal's education in the Agent view, then confirms the section.
   const edu = o.locator("section").filter({ has: o.getByRole("heading", { name: "Education history" }) }).filter({ hasText: "for Sample Applicant C" });
   step("M3 agent: the blocking list names the empty group (\"Entries in … : add them, or say none apply\")", await shows(imm.getByText(/Entries in "Education history": add them, or say none apply \(Sample Applicant C\): not answered/)));
   await o.getByRole("tab", { name: /^Sample Applicant C/ }).click();

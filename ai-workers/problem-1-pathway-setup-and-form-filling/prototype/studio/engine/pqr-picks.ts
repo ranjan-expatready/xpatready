@@ -71,7 +71,7 @@ export function pqrPicksFromRounds(s: Snapshot, rounds: { draft: Round; check: R
         const named = namedBy(all, p.role, p.asks), one = named.length === 1 ? named[0] : null;
         const why = named.length > 1 ? `"${p.asks}" could be ${named.length} questions of this person, so it is not guessed: pick it by hand (${which}).`
           : !one ? `No question of this combination asks "${p.asks}" of this person, so a prospect cannot be asked it (${which}).`
-          : one.prequalification ? `"${one.label}" is already asked in pre-qualification (${which}).`
+          : one.prequalification ? `"${one.label}" is already asked in the Prospect questionnaire (PQR) (${which}).`
           : one.source === "AGENT" ? `"${one.label}" comes from the case officer: a prospect is asked only what they can answer (${which}).`
           : `"${one.label}" is not asked by a question of this combination yet (${which}).`;
         dropped.push({ role: p.role, asks: p.asks, why }); continue;

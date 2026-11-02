@@ -42,7 +42,7 @@ await main("C6.4 storage", "request, upload, Not applicable, kept lines; QA-149"
   // QA-149: the deciding question stays on the case once answered.
   ok("QA-149 fail (before): unanswered, the child's \"travelling alone\" is asked (it decides the letter line)", await asked("agent", OFFICER));
   let r = await answer(c.id, K1, TRAVEL, "alone", CLIENT);
-  ok("QA-149 pass: after yes, the officer's case view still asks it, so it can be corrected", r.status < 300 && await asked("agent", OFFICER), r.status);
+  ok("QA-149 pass: after yes, the officer's Agent view still asks it, so it can be corrected", r.status < 300 && await asked("agent", OFFICER), r.status);
   ok("QA-149 pass: after yes, the client's questionnaire still asks it", await asked("sqr", CLIENT));
   let ps = await list();
   const letter = line(ps, K1, LETTER);
