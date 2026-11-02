@@ -13,6 +13,8 @@
 import { createHash } from "node:crypto";
 import type { CaseFiling, CaseFilings, FeeLine, FeeSource, NotFiling, SubmissionGroup } from "../../contracts/runtime.ts";
 import type { Participant } from "./case.ts";
+import type { LineMode } from "../../contracts/workspace.ts";
+import { filingPlan, notWorkedOut, type PlanPerson } from "../filing-modes.ts";
 
 /** IRCC fee list, as read and checked by the Lead on 29 Oct (product/screens/W1-baseline/immigration-facts-2026-10-29.md
  *  row 19; P-171). Not re-read on 1 Nov: canada.ca and ircc.canada.ca are outside this cloud session's network. */
@@ -28,11 +30,11 @@ export const BIOMETRICS_EXEMPT_SOURCE: FeeSource = { page: "When to give biometr
 /** A fee line nobody outside these ages pays (biometrics, VV-R15): under `underAge` or over `overAge`. */
 export type AgeExempt = { underAge: number; overAge: number; source: FeeSource };
 export type FeeRule = { key: string; label: string; perPersonCents: number; familyMaxCents: number; familyFrom: number; source: FeeSource; exempt?: AgeExempt };
-type Rules = { label: string; modes: Map<string, CaseFiling["mode"]>; fees: FeeRule[] };
+type Rules = { label: string; modes: Map<string, LineMode>; fees: FeeRule[] };
 /** What the case adds (C6.12, the stored prepare view): each person's age in whole years (null: no date of birth yet),
  *  the filing modes the release says per role (M3-0; a role it leaves out falls back to the table below), and the
  *  submission group each person's filing is in (a split is stored; default the family group). */
-export type FilingOptions = { ages?: Map<string, number | null>; modes?: Map<string, CaseFiling["mode"]>; groupOf?: (subject: string) => string; groupKind?: (group: string) => SubmissionGroup["kind"] };
+export type FilingOptions = { ages?: Map<string, number | null>; modes?: Map<string, LineMode | null>; label?: string; groupOf?: (subject: string) => string; groupKind?: (group: string) => SubmissionGroup["kind"] };
 export const FAMILY_GROUP = "group-family";
 
 /** Visitor visa (outside Canada): every role files its own application (BR-1); fees from the fee list (P-171). */
@@ -91,51 +93,81 @@ export function familyFee(rule: FeeRule, people: number): SubmissionGroup["total
 
 /** The case's filings, submission groups and fee lines, from the combination's key and the people on the case. Each
  *  group is priced on its own; an age-limited line counts only the people who pay it, and a person with no date of birth
- *  yet has a line that waits for it, never charged or exempt in silence (G15). */
+ *  yet has a line that waits for it, never charged or exempt in silence (G15).
+ *
+ *  C11.12 (P-233, concept r2 BR-6, BR-10): who is on which filing comes from the same plan as the studio's "What a case
+ *  gets" preview (engine/filing-modes.ts filingPlan): On the principal's and Declared only people are applicants on the
+ *  principal's filing (applying when travelling, declared only when not), a co-filing role (the sponsor) has its own
+ *  filing that is always in the principal's submission and never split. Fees count paying PEOPLE across a group's
+ *  filings, one line per applicant; a declared-only person has no fee line. A combination with filing modes in its
+ *  release but no fee rule gets its filings and groups with "Fees not worked out yet", never an amount. */
 export function deriveFilings(combinationKey: string, people: Participant[], rulesFor: (key: string) => Rules | undefined = (k) => RULES.get(k), opts: FilingOptions = {}): CaseFilings {
   const rules = rulesFor(combinationKey);
-  if (!rules) return { derived: false, combination: combinationKey, why: `Filings and fees are worked out for the Visitor visa only so far; this combination's are not derived yet. Nothing is guessed.` };
-  const modeOf = (role: string) => opts.modes?.get(role) ?? rules.modes.get(role);
+  const released = !!opts.modes?.size;
+  if (!rules && !released) return { derived: false, combination: combinationKey, why: `Filings and fees are worked out for the Visitor visa only so far; this combination's are not derived yet. Nothing is guessed.` };
+  const label = rules?.label ?? opts.label ?? combinationKey;
+  const fees0 = rules?.fees ?? [];
+  const modeOf = (role: string): LineMode | null | undefined => (role === "principal" ? "files_own" : opts.modes?.get(role) ?? rules?.modes.get(role));
   const persons = people.filter((p) => p.role !== "case");
   const notFiling: NotFiling[] = [];
-  const filers: Participant[] = [];
+  const planned: PlanPerson[] = [];
   for (const p of persons) {
-    if (!rules.modes.has(p.role) && !opts.modes?.has(p.role)) notFiling.push({ subject: p.subjectId, label: p.label, role: p.role, why: `The ${rules.label} has no filing for the role "${p.role}".` });
-    else if (!p.applies) notFiling.push({ subject: p.subjectId, label: p.label, role: p.role, why: "Not travelling (not applying on this case): no filing and no fee." });
-    else filers.push(p);
+    if (modeOf(p.role) === undefined) notFiling.push({ subject: p.subjectId, label: p.label, role: p.role, why: `${label}: no filing is set for a ${p.role.replace(/_/g, " ")} (Who can be in this application), so nothing is filed for ${p.label}.` });
+    else planned.push({ subject: p.subjectId, role: p.role, label: p.label, travelling: p.applies });
   }
+  const plan = filingPlan(planned, modeOf);
+  for (const n of plan.notFiling) notFiling.push({ subject: n.person.subject, label: n.person.label, role: n.person.role, why: n.why });
   const groupOf = opts.groupOf ?? (() => FAMILY_GROUP);
-  // Keyed by the person, so a filing keeps its id when someone else stops travelling.
-  const filings: CaseFiling[] = filers.map((p) => ({ id: `filing-${p.subjectId}`, combination: combinationKey, label: `${rules.label}: ${p.label}`, mode: modeOf(p.role)!,
-    applicants: [{ subject: p.subjectId, label: p.label, role: p.role, mode: "applying" }], group: groupOf(p.subjectId), status: "NOT_STARTED", number: null }));
+  const principal = plan.filings.find((f) => f.owner.role === "principal");
+  // Keyed by the owner, so a filing keeps its id when someone else stops travelling. A co-filed filing is always in the
+  // principal's group (it cannot be sent alone).
+  const filings: CaseFiling[] = plan.filings.map((f) => ({ id: f.id, combination: combinationKey, label: f.kind === "co_filed" ? `${label}: sponsorship (${f.owner.label})` : `${label}: ${f.owner.label}`,
+    mode: f.kind === "co_filed" ? "co_filed" : "files_own", owner: { subject: f.owner.subject, label: f.owner.label, role: f.owner.role },
+    applicants: f.applicants.map((a) => ({ subject: a.person.subject, label: a.person.label, role: a.person.role, mode: a.mode })),
+    group: f.kind === "co_filed" && principal ? groupOf(principal.owner.subject) : groupOf(f.owner.subject), status: "NOT_STARTED", number: null }));
   const groups: SubmissionGroup[] = [], fees: FeeLine[] = [];
   for (const gid of [...new Set(filings.map((f) => f.group))]) {
     const mine = filings.filter((f) => f.group === gid);
+    const payers = mine.flatMap((f) => f.applicants.filter((a) => a.mode === "applying").map((a) => ({ filing: f.id, who: a })));
     const totals: SubmissionGroup["totals"] = [];
-    for (const rule of rules.fees) {
-      const check = new Map(mine.map((f) => [f.id, ageCheck(rule, opts.ages?.get(f.applicants[0].subject))]));
-      const paying = mine.filter((f) => { const c = check.get(f.id)!; return "pays" in c && c.pays; });
+    for (const rule of fees0) {
+      const check = new Map(payers.map((x) => [x.who.subject, ageCheck(rule, opts.ages?.get(x.who.subject))]));
+      const paying = payers.filter((x) => { const c = check.get(x.who.subject)!; return "pays" in c && c.pays; });
       const t = familyFee(rule, paying.length);
       totals.push(t);
-      // The group's payer: the principal's filing when the principal pays this line, else the first that pays.
-      const lead = paying.find((f) => f.applicants[0].role === "principal") ?? paying[0];
-      for (const f of mine) {
-        const c = check.get(f.id)!, who = f.applicants[0], what = t.label.toLowerCase().replace(/ fee$/, "");
-        if ("waits" in c) fees.push({ filing: f.id, payer: who.subject, line: t.line, label: t.label, amount_cents: rule.perPersonCents, exempt: false, waiting: "person.date_of_birth", why: `Waits for ${who.label}'s date of birth: no ${what} under ${rule.exempt!.underAge} or over ${rule.exempt!.overAge}. Not counted until it is answered.`, source: rule.exempt!.source });
-        else if (!c.pays) fees.push({ filing: f.id, payer: who.subject, line: t.line, label: t.label, amount_cents: 0, exempt: true, why: c.why, source: rule.exempt!.source });
-        else if (!t.cap_applied) fees.push({ filing: f.id, payer: who.subject, line: t.line, label: t.label, amount_cents: t.per_person_cents, exempt: false, why: `${cad(t.per_person_cents)} for ${who.label}.` });
-        else if (f === lead) fees.push({ filing: f.id, payer: who.subject, line: t.line, label: t.label, amount_cents: t.total_cents, exempt: false, why: `Family maximum ${cad(t.total_cents)} for the ${t.people} people applying together, paid on this filing.` });
-        else fees.push({ filing: f.id, payer: lead!.applicants[0].subject, line: t.line, label: t.label, amount_cents: 0, exempt: true, why: `Covered by the family maximum on ${lead!.applicants[0].label}'s filing.` });
+      // The group's payer: the principal when the principal pays this line, else the first person who pays.
+      const lead = paying.find((x) => x.who.role === "principal") ?? paying[0];
+      const leadFiling = lead ? filings.find((f) => f.id === lead.filing)! : null;
+      for (const x of payers) {
+        const c = check.get(x.who.subject)!, who = x.who, what = t.label.toLowerCase().replace(/ fee$/, "");
+        if ("waits" in c) fees.push({ filing: x.filing, person: who.subject, payer: who.subject, line: t.line, label: t.label, amount_cents: rule.perPersonCents, exempt: false, waiting: "person.date_of_birth", why: `Waits for ${who.label}'s date of birth: no ${what} under ${rule.exempt!.underAge} or over ${rule.exempt!.overAge}. Not counted until it is answered.`, source: rule.exempt!.source });
+        else if (!c.pays) fees.push({ filing: x.filing, person: who.subject, payer: who.subject, line: t.line, label: t.label, amount_cents: 0, exempt: true, why: c.why, source: rule.exempt!.source });
+        else if (!t.cap_applied) fees.push({ filing: x.filing, person: who.subject, payer: who.subject, line: t.line, label: t.label, amount_cents: t.per_person_cents, exempt: false, why: `${cad(t.per_person_cents)} for ${who.label}.` });
+        else if (x === lead) fees.push({ filing: x.filing, person: who.subject, payer: who.subject, line: t.line, label: t.label, amount_cents: t.total_cents, exempt: false, why: `Family maximum ${cad(t.total_cents)} for the ${t.people} people applying together, paid on this filing.` });
+        else fees.push({ filing: x.filing, person: who.subject, payer: lead!.who.subject, line: t.line, label: t.label, amount_cents: 0, exempt: true, why: `Covered by the family maximum, paid by ${lead!.who.label} on ${leadFiling!.owner!.label}'s filing.` });
       }
     }
     const kind = opts.groupKind?.(gid) ?? "family";
-    groups.push({ id: gid, kind, label: mine.length === 1 ? "One submission" : `One submission for ${mine.length} people`, filings: mine.map((f) => f.id), splittable: mine.length > 1,
-      why: kind === "separate" ? "Split out with a reason: priced on its own, so the other group's family maximums do not cover it." : mine.length === 1 ? "One person applying." : "A family's visitor visa applications go together, at the same time and place, so the family maximums apply (BR-16).",
-      totals, total_cents: totals.reduce((s, t) => s + t.total_cents, 0) });
+    const coFiled = mine.some((f) => f.mode === "co_filed");
+    // Review m3: people applying (a declared-only person and the sponsor are named on it but are not counted).
+    const count = new Set(mine.flatMap((f) => f.applicants.filter((a) => a.mode === "applying").map((a) => a.subject))).size;
+    groups.push({ id: gid, kind, label: count <= 1 ? "One submission" : `One submission for ${count} people applying`, filings: mine.map((f) => f.id),
+      // Review n1: beside a sponsorship, another own filing (the spouse's) may still be split out; the pair never is.
+      splittable: mine.length > 1 && (!coFiled || mine.some((f) => f.mode !== "co_filed" && f.owner!.role !== "principal")),
+      why: kind === "separate" ? (fees0.length ? "Split out with a reason: priced on its own, so the other group's family maximums do not cover it." : "Split out with a reason: sent on its own.")
+        : coFiled ? "The sponsorship and the principal's application are sent together and cannot be split (IRCC: the principal \"will submit both applications together online\")."
+        : mine.length === 1 ? (mine[0].applicants.length > 1 ? "One application for the family." : "One person applying.")
+        : rules ? `A family's ${label.toLowerCase()} applications go together, at the same time and place, so the family maximums apply (BR-16).` : "These applications go together in one submission.",
+      // C11.12 BR-10 (review M2): no amount at all where the fees are not worked out, never 0.
+      totals, total_cents: fees0.length ? totals.reduce((s, t) => s + t.total_cents, 0) : null });
   }
+  // Break m3: a sponsorship's fees have no rule yet, even where the rest of the case's fees do: said, never left silent.
+  const feesKnown = fees0.length > 0 && !filings.some((f) => f.mode === "co_filed");
   const body = { filings, groups, fees, not_filing: notFiling };
-  return { derived: true, combination: combinationKey, label: rules.label, ...body, currency: "CAD",
-    basis: `Fees from the ${FEE_PAGE.page} (read ${FEE_PAGE.read}); Sample until the immigration expert confirms (P-171). ${opts.ages ? "Biometrics: none under 14 or over 79 (VV-R15), age as at today (FQ-7)." : "Biometrics exemptions (for example by age) are not checked yet: every person applying is charged."} Paying is not built.`,
+  return { derived: true, combination: combinationKey, label, ...body, currency: "CAD", fees_worked_out: feesKnown,
+    fees_why: feesKnown ? null : fees0.length ? `The sponsorship's fees are not worked out yet for ${label}; nothing is guessed. The other lines are worked out.` : notWorkedOut(label),
+    basis: fees0.length ? `Fees from the ${FEE_PAGE.page} (read ${FEE_PAGE.read}); Sample until the immigration expert confirms (P-171). ${opts.ages ? "Biometrics: none under 14 or over 79 (VV-R15), age as at today (FQ-7)." : "Biometrics exemptions (for example by age) are not checked yet: every person applying is charged."} Paying is not built.`
+      : `Filings from the release's filing modes (Sample until the immigration expert confirms). ${notWorkedOut(label)} Paying is not built.`,
     why: filings.length ? null : "Nobody on this case is applying, so there is no filing and no fee.",
     version: createHash("sha256").update(JSON.stringify(body)).digest("hex").slice(0, 16) };
 }

@@ -82,12 +82,12 @@ const co = previewFilings([P, sponsor()] as never, "Spouse sponsorship", false);
 ok("C11.12 preview pass: a co-filed sponsorship is a second filing that cannot be split", co.filings.length === 2 && co.submissions[0].splittable === false && /sent together/.test(co.gets), co.gets);
 ok("C11.12 preview fail: no principal → 'Add the principal applicant to see what a case gets.'", previewFilings([{ role: "child", min: 0, max: 1, applies: true, filingMode: "files_own" }], "x", true).gets === "Add the principal applicant to see what a case gets.");
 
-// Review M1 (PR 1): a released Declared only or co-filing line never reaches the case engine before PR 2 handles it
+// Review M1 of PR 1, PR 2 form: the case engine now handles every mode; only a mode that cannot hold is dropped
 const rm = releaseModes([{ role: "principal", filingMode: "files_own", applies: true }, { role: "spouse_or_partner", filingMode: "on_principal", applies: true }, { role: "child", filingMode: "declared_only", applies: false }, { role: "sponsor", filingMode: "co_files", applies: false }, { role: "representative", filingMode: "files_own", applies: false }]);
-ok("C11.12 review M1 pass: the case reads Files own and On the principal's from the release", rm.get("principal") === "files_own" && rm.get("spouse_or_partner") === "on_principal");
-ok("C11.12 review M1 fail: Declared only, co_files and a Representative's stored Files own never reach the case's filing mode", !rm.has("child") && !rm.has("sponsor") && !rm.has("representative"));
+ok("C11.12 PR 2 pass: the case reads all four modes from the release", rm.get("principal") === "files_own" && rm.get("spouse_or_partner") === "on_principal" && rm.get("child") === "declared_only" && rm.get("sponsor") === "co_files");
+ok("C11.12 PR 2 fail (B1): a Representative's stored Files own never reaches the case", !rm.has("representative"));
 const caseVv = deriveFilings("vv.single", [{ subjectId: "a", role: "principal", label: "A", applies: true }, { subjectId: "k", role: "child", label: "K", applies: true }], undefined, { modes: rm as never });
-ok("C11.12 review M1 pass: the Visitor visa case still derives (the child falls back to Files own), every filing mode one the database holds", caseVv.derived && caseVv.filings.every((f) => ["files_own", "on_principal"].includes(f.mode)));
+ok("C11.12 PR 2 pass: every filing mode the engine writes is one the widened database check holds", caseVv.derived && caseVv.filings.every((f) => ["files_own", "co_filed"].includes(f.mode)) && caseVv.filings.every((f) => f.applicants.every((a) => ["applying", "declared_only"].includes(a.mode))));
 // Review M2: the preview follows the case's built-in default for a line with no mode
 const noMode = previewFilings([{ ...P }, { role: "child", label: "Child", min: 0, max: 4, preview: 1, applies: true }] as never, "Visitor visa", true, (role) => defaultModeOf("vv.single", role));
 ok("C11.12 review M2 pass: Visitor visa child with no mode → the preview gives the child a filing, as the case does", noMode.filings.length === 2 && noMode.gets === "2 filings in one submission", noMode.gets);

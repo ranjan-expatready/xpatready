@@ -85,7 +85,9 @@ export type PlannedFiling = { id: string; owner: PlanPerson; kind: "own" | "fami
 export function filingPlan(people: PlanPerson[], modeOf: (role: string) => LineMode | null | undefined): { filings: PlannedFiling[]; notFiling: { person: PlanPerson; why: string }[] } {
   const filings: PlannedFiling[] = [], notFiling: { person: PlanPerson; why: string }[] = [];
   const principal = people.find((p) => p.role === "principal");
-  const main: PlannedFiling | null = principal ? { id: `filing-${principal.subject}`, owner: principal, kind: "own", applicants: [{ person: principal, mode: "applying" }] } : null;
+  // The runtime lets a principal be marked not travelling (C6.12 tests): then there is no principal's filing.
+  if (principal && !principal.travelling) notFiling.push({ person: principal, why: "Not travelling (not applying on this case): no filing and no fee." });
+  const main: PlannedFiling | null = principal?.travelling ? { id: `filing-${principal.subject}`, owner: principal, kind: "own", applicants: [{ person: principal, mode: "applying" }] } : null;
   if (main) filings.push(main);
   for (const p of people) {
     if (p === principal) continue;
@@ -123,12 +125,15 @@ export function previewFilings(lines: { role: string; label?: string; min: numbe
   return { filings: out, submissions: [{ filings: out.map((f) => f.id), splittable: out.length > 1 && !coFiled, words: together }], gets: together };
 }
 
-/** The release's modes the case's filings read. Review M1 (PR 1 of C11.12): until the case engine handles Declared only
- *  and co-filing (PR 2), only Files own and On the principal's reach it; any other mode falls back to the built-in
- *  default, so a released Declared only line never breaks a case's Prepare view. */
-export const RUNTIME_MODES: readonly LineMode[] = ["files_own", "on_principal"];
-export function releaseModes(participants: { role: string; applies?: boolean; filingMode?: unknown }[]): Map<string, "files_own" | "on_principal"> {
-  const out = new Map<string, "files_own" | "on_principal">();
-  for (const p of participants) if (isLineMode(p.filingMode) && RUNTIME_MODES.includes(p.filingMode) && p.applies !== false) out.set(p.role, p.filingMode as "files_own" | "on_principal");
+/** The release's filing mode per role, read once for the case's prepare view and its filings (concept §6, m2). A mode
+ *  is kept only where it can hold: an applicant mode on a line marked applicant or Declared only, co_files on a line
+ *  that is not; an applicant mode stored on a never-applicant line by earlier setup runs (challenge B1) is dropped. */
+export function releaseModes(participants: { role: string; applies?: boolean; filingMode?: unknown }[]): Map<string, LineMode> {
+  const out = new Map<string, LineMode>();
+  for (const p of participants) {
+    const m = p.filingMode;
+    if (!isLineMode(m)) continue;
+    if (m === "co_files" ? p.role !== "principal" && p.applies !== true : m === "declared_only" || p.applies !== false) out.set(p.role, m);
+  }
   return out;
 }
