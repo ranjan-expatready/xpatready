@@ -115,3 +115,9 @@ The :4400 demo (not reachable from the cloud) · a headed walk (no display) · Q
 * #423 and #434 change only tests; their checks passed before merge (24/24, 135/135).
 * Built files deleted: C3.6, S1. C6.4 is still waiting (M3; now qa's, since qa-m3 has stopped).
 * The database had stopped again before this round and was restarted as user postgres.
+* 08:20 UTC check (P-250): all pass, no Blocker or Major.
+  * #469 QA-82: `check_c41_questionnaire_roles.ts` 9/9.
+  * #470 D2 part 2 and #475 D2 part 4: forms_demo 23/23, cost_warning 27/27. Their live-switch and :4400 checks were not run.
+  * #471 G3: 11/11. #477 C11.14 part: s6_queue, 32 steps passed. #479 D1 browser: 25/25.
+  * #436 new head (the Sponsor co-files): s7_load 23/23, c1112_modes 39/39.
+  * #455's new head only merges main, so its verdict stands.
