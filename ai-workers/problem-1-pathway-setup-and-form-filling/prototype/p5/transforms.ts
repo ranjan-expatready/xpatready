@@ -58,16 +58,42 @@ export function codeFor(value: string, box: Box, inline?: Record<string, string>
 }
 
 const DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+/** C7.2 cause 2: a fact asked to the month (job and education rows, YYYY-MM) still gives its year and month boxes. */
+const MONTH = /^(\d{4})-(\d{2})$/;
+
+/** C7.2 cause 3: a Yes/No box derived from whether something is recorded (the 21 Oct IMM 5257 draft's wording). With
+ *  nothing recorded it is still a value ("N"), but only once a person confirmed that nothing applies: the caller marks
+ *  such a box (engine/runtime/forms.ts markNothingRecorded) and passes Context.nothingRecorded (api/src/fill.ts); with
+ *  an empty value and no such flag the box stays blank. */
+const RECORDED = /^derived:(?:any\(([\w.,\s]+)\) recorded|([\w.]+) recorded|valid ([\w.]+) recorded \(not expired\)|any post-secondary education record exists|any previous residence in past 5 years\b.*)$/;
+/** A transformation's steps: separated by ";" (P1/P2 maps) or "->" (the 21 Oct live IMM 5257 draft). Two spelling aliases
+ *  from that draft name existing executable steps: date_part:X = date:X, address_part:province_state = address_part:province. */
+const stepsOf = (transform: string | null | undefined) => String(transform ?? "as_is").split(/;|->/).map((s) => s.trim().replace(/^date_part:/, "date:").replace(/^address_part:province_state\b/, "address_part:province")).filter(Boolean);
+/** Whether a transformation is a "recorded" Yes/No derivation, and the other facts it names (any(a, b)). */
+export function recordedDerivation(transform: string | null | undefined): { facts: string[] } | null {
+  const m = stepsOf(transform).map((s) => RECORDED.exec(s)).find(Boolean);
+  return m ? { facts: (m[1] ?? m[2] ?? m[3] ?? "").split(",").map((f) => f.trim()).filter(Boolean) } : null;
+}
+const present = (x: unknown) => !(x === undefined || x === null || x === "" || x === false || (Array.isArray(x) && !x.length));
+/** Two confirmed values are the same answer: addresses by their one-line form, anything else by its trimmed text. */
+function same(a: unknown, b: unknown): boolean {
+  if ((a && typeof a === "object") || (b && typeof b === "object")) { const x = parseAddress(a), y = parseAddress(b); return !!x && !!y && oneLine(x).toUpperCase() === oneLine(y).toUpperCase(); }
+  return String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+}
+
+/** Other confirmed facts about the same person, for the derivations that compare two facts ("A equals B", any(A, B)). */
+export type Context = { fact?: (key: string) => unknown;
+  /** C7.2 cause 3: the caller vouches that a person confirmed nothing applies (a group's "none apply"): only then does an
+   *  empty value reach a "recorded" step and give "N". Without it an empty value stays blank, as for every other step. */
+  nothingRecorded?: boolean };
 
 /** Runs one transformation text on one value for one box. `rows` lets "select …" pick among a person's rows. */
-export function runTransform(transform: string | undefined, value: unknown, box: Box): Outcome {
-  // Steps are separated by ";" (P1/P2 maps) or "->" (the 21 Oct live IMM 5257 draft). Two spelling aliases from that
-  // draft name existing executable steps: date_part:X = date:X, address_part:province_state = address_part:province.
-  const steps = String(transform ?? "as_is").split(/;|->/).map((s) => s.trim().replace(/^date_part:/, "date:").replace(/^address_part:province_state\b/, "address_part:province")).filter(Boolean);
+export function runTransform(transform: string | undefined, value: unknown, box: Box, ctx: Context = {}): Outcome {
+  const steps = stepsOf(transform);
   const hand = (reason: string): Outcome => ({ ok: false, hand: true, reason, steps });
   const blank = (reason: string): Outcome => ({ ok: false, blank: true, reason, steps });
   let v: any = value;
-  if (v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length)) {
+  if ((v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length)) && !(ctx.nothingRecorded && steps[0] && RECORDED.test(steps[0]))) {
     // A derive-to-N/0 on a missing fact is still a value ("no other name recorded"); everything else stays blank.
     const d = steps.find((s) => s.startsWith("derive:"));
     if (d && /^derive:Y if any .+ (is|are) recorded, else N$/.test(d)) return { ok: true, value: "N", steps };
@@ -78,17 +104,41 @@ export function runTransform(transform: string | undefined, value: unknown, box:
     if ((m = /^select (primary|alternate) phone$/.exec(s))) { const rows = Array.isArray(v) ? v : [v]; v = rows.find((r: Phone) => (r.role ?? "primary") === m![1]); if (!v) return blank(`no ${m[1]} phone`); continue; }
     if (/^select prospective employer organisation$/.test(s)) { const rows = Array.isArray(v) ? v : [v]; v = rows.find((r: any) => (r?.role ?? "prospective employer") === "prospective employer"); if (v && typeof v === "object" && "value" in v) v = v.value; if (!v) return blank("no prospective employer"); continue; }
     if (s.startsWith("select ")) return hand(`record selection "${s}" is not in the executable set`);
+    // C7.2 cause 3: the "recorded" derivations give Yes or No (a missing value reaches here only when the caller passed it on purpose, see RECORDED).
+    if ((m = RECORDED.exec(s))) {
+      const any = present(v) || (m[1] ?? "").split(",").map((f) => f.trim()).filter(Boolean).some((f) => present(ctx.fact?.(f)));
+      if (m[3] && any) return hand(`${m[3]} is recorded; whether it is still valid (not expired) is checked by a person`);
+      v = any; continue;
+    }
+    // C7.2 cause 1: "A equals B" (applying from the country of residence; residential address same as mailing).
+    if ((m = /^derived:([\w.]+) equals ([\w.]+)$/.exec(s))) { const other = ctx.fact?.(m[2]); if (!present(other)) return hand(`${m[2]} is not confirmed, so it cannot be compared`); v = same(v, other); continue; }
+    // C7.2 cause 1: the phone switches ("country code of … is (not) 1 -> check_code:1/0").
+    if ((m = /^derived:country code of [\w.]+ is (not )?1$/.exec(s))) { const cc = String((v as Phone)?.country_code ?? "").replace(/\D/g, ""); if (!cc) return hand("phone has no country calling code"); v = (cc === "1") !== !!m[1]; continue; }
+    if ((m = /^number_as_text(?: \((?:[A-Z]{3}, )?max (\d+) char(?:s|acters)\))?$/.exec(s))) {
+      const t = typeof v === "number" ? String(v) : String(v).trim();
+      if (!/^\d+(\.\d{1,2})?$/.test(t)) return hand(`not an amount: ${t}`);
+      if (m[1] && t.length > Number(m[1])) return hand(`amount is ${t.length} characters; the box holds ${m[1]} (never truncated)`);
+      v = t; continue;
+    }
     if ((m = /^as_is(?: \(max (\d+) char(?:s|acters)\))?$/.exec(s))) {
       v = typeof v === "boolean" ? (v ? "Yes" : "No") : String(v);
       const max = Number(m[1] ?? box.max_chars ?? 0);
       if (max && v.length > max) return hand(`value is ${v.length} characters; the box holds ${max} (never truncated)`);
       continue;
     }
-    if ((m = /^date:(YYYY-MM-DD|YYYY|MM|DD)$/.exec(s))) { const d = DATE.exec(String(v)); if (!d) return hand(`not a full date: ${v}`); v = m[1] === "YYYY-MM-DD" ? d[0] : m[1] === "YYYY" ? d[1] : m[1] === "MM" ? d[2] : d[3]; continue; }
-    if ((m = /^yes_no_code:([^/]+)\/(.+)$/.exec(s))) { if (typeof v !== "boolean") return hand(`not a yes/no value: ${v}`); v = v ? m[1] : m[2]; continue; }
+    if ((m = /^date:(YYYY-MM-DD|YYYY|MM|DD)$/.exec(s))) {
+      const d = DATE.exec(String(v)), mo = (m[1] === "YYYY" || m[1] === "MM") && !d ? MONTH.exec(String(v)) : null;
+      if (mo) { v = m[1] === "YYYY" ? mo[1] : mo[2]; continue; }
+      if (!d) return hand(`not a full date: ${v}`); v = m[1] === "YYYY-MM-DD" ? d[0] : m[1] === "YYYY" ? d[1] : m[1] === "MM" ? d[2] : d[3]; continue;
+    }
+    if ((m = /^(?:yes_no_code|check_code):([^/]+)\/(.+)$/.exec(s))) { if (typeof v !== "boolean") return hand(`not a yes/no value: ${v}`); v = v ? m[1] : m[2]; continue; }
     if ((m = /^derive:Y if any .+ (?:is|are) recorded, else N$/.exec(s))) { v = (Array.isArray(v) ? v.length > 0 : v !== false && v !== "") ? "Y" : "N"; continue; }
     if ((m = /^derive:1 if (?:fax )?country calling code is (not )?1(?: \([^)]*\))?, else 0$/.exec(s))) { const cc = String((v as Phone).country_code ?? ""); if (!cc) return hand("phone has no country calling code"); v = (cc === "1") !== !!m[1] ? "1" : "0"; continue; }
-    if ((m = /^phone_part:(extension|country_calling_code|national_number)\b/.exec(s))) {
+    // C7.2 cause 1: the 21 Oct draft's names: "country_code" is the calling code; "international_number_without_plus" is the
+    // number after it, as E1 wrote it (23 Oct: IntlNumber "9800000001" beside NumberCountry "91"; Validate passed and the
+    // form's own +919800000001 was in its barcode), so it is the national number.
+    if ((m = /^phone_part:(extension|country_calling_code|country_code|national_number|international_number_without_plus)\b/.exec(s))) {
+      if (m[1] === "country_code") m[1] = "country_calling_code"; else if (m[1] === "international_number_without_plus") m[1] = "national_number";
       const p = v as Phone; const part = m[1] === "extension" ? p.extension : m[1] === "country_calling_code" ? p.country_code : p.number;
       if (!part) return blank(`no ${m[1]}`);
       if (m[1] !== "country_calling_code" && p.country_code === "1" && m[1] === "national_number") return blank("North American number goes in the area-code boxes");
@@ -96,7 +146,7 @@ export function runTransform(transform: string | undefined, value: unknown, box:
     }
     if (/^phone_part:nanp_/.test(s)) { const p = v as Phone; if (p.country_code !== "1") return blank("not a North American number"); return hand("North American number parts are not in the executable set yet"); }
     if ((m = /^address_part:(city|province|country|postal_code|street_number|street_name|apt_unit|district|po_box)\b/.exec(s))) { const a = parseAddress(v); const part = a?.[m[1] as keyof Address]; if (!part) return blank(`address has no ${m[1]}`); v = part; const max = /max (\d+) char/.exec(s); if (max && String(v).length > Number(max[1])) return hand(`${m[1]} longer than ${max[1]} characters`); continue; }
-    if ((m = /^address_single_line(?: \(max (\d+) chars\))?$/.exec(s))) { const a = parseAddress(v); if (!a) return hand("not an address"); v = typeof value === "string" ? value : oneLine(a); if (m[1] && v.length > Number(m[1])) return hand(`address longer than ${m[1]} characters`); continue; }
+    if ((m = /^address_single_line(?: \(max (\d+) char(?:s|acters)\))?$/.exec(s))) { const a = parseAddress(v); if (!a) return hand("not an address"); v = typeof value === "string" ? value : oneLine(a); if (m[1] && v.length > Number(m[1])) return hand(`address longer than ${m[1]} characters`); continue; }
     if (/^country_name_text$/.test(s)) { const c = ISO3[String(v).toUpperCase()] ?? String(v); v = c; continue; }
     if ((m = /^code_list:[\w.]+(?: \((.*)\))?$/.exec(s))) {
       const inline: Record<string, string> = {};

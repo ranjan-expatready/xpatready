@@ -179,13 +179,15 @@ function NextStep({ row, setup }: { row: CatalogueLeaf; setup: CombinationSummar
 }
 
 export function ModePill({ mode }: { mode: string }) {
-  const m: Record<string, [string, string, string]> = { LIVE: ["ai", "Live AI call", "A new call through the guarded route"], REPLAY: ["neutral", "Replay of a saved run", "Reuses a saved real run; no model call"], STUB: ["neutral", "Stub pass", "Path test, no AI content"], LOCAL: ["neutral", "On this computer", "No AI"] };
-  const [tone, label, title] = m[mode] ?? ["neutral", mode, mode];
+  const m: Record<string, [string, string, string]> = { LIVE: ["ai", "Live AI call", "A new call through the guarded route"], REPLAY: ["neutral", "Replay of a saved run", "Reuses a saved real run; no model call"], STUB: ["neutral", "Stub pass", "Path test, no AI content"], LOCAL: ["neutral", "Rules only, no AI", "Rules ran on this server; no AI call"] };
+  const [tone, label, title] = m[mode] ?? ["neutral", mode.toLowerCase().replace(/_/g, " "), "How this step ran"]; // QA-75 (break m5): never a raw code
   return <Pill tone={tone} title={title}>{label}</Pill>;
 }
 export function StatusPill({ status }: { status: string }) {
-  const tone = status === "COMPLETED" || status === "APPLIED" ? "ok" : status === "RUNNING" || status === "QUEUED" ? "info" : status === "CANCELLED" ? "neutral" : status === "BLOCKED" ? "warn" : status === "FAILED" ? "danger" : "neutral";
-  const label: Record<string, string> = { COMPLETED: "Completed", APPLIED: "Applied to draft", RUNNING: "Running", QUEUED: "Queued", BLOCKED: "Blocked", FAILED: "Failed", CANCELLED: "Cancelled" };
+  const tone = status === "COMPLETED" || status === "APPLIED" ? "ok" : status === "RUNNING" || status === "QUEUED" ? "info" : status === "CANCELLED" ? "neutral" : status === "BLOCKED" || status === "NEEDS_PERSON" ? "warn" : status === "FAILED" ? "danger" : "neutral";
+  // QA-75: every status a step can end in has words; no code reaches the screen.
+  const label: Record<string, string> = { COMPLETED: "Completed", APPLIED: "Applied to draft", RUNNING: "Running", QUEUED: "Queued", BLOCKED: "Blocked", FAILED: "Failed", CANCELLED: "Cancelled", NEEDS_PERSON: "Waiting for you", WAITING: "Waiting", SKIPPED: "Not needed", PARTIAL: "Done with problems" };
+  if (!(status in label)) return <Pill tone="neutral">{status ? status.toLowerCase().replace(/_/g, " ") : "No status"}</Pill>;
   return <Pill tone={tone}>{status === "RUNNING" ? <span className="size-2 animate-pulse rounded-full bg-current" /> : null}{label[status] ?? status}</Pill>;
 }
 export function useGo() { return useNavigate(); }
