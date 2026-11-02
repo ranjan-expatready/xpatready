@@ -29,7 +29,7 @@ import { snapshotHash } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { CaseForms } from "./fill-case.ts";
 import { Runtime, type Reached } from "./runtime.ts";
-import { signedState, signersOf } from "../../engine/runtime/signing.ts";
+import { minorFromAnswers, signedState, signersOf } from "../../engine/runtime/signing.ts";
 import { signStepsOf } from "./sign-steps.ts";
 
 type H = string | undefined;
@@ -186,6 +186,7 @@ export class CasePrepare {
     // C8.1: who signs each form item (SH3 R7, in words) and the steps done on a form signed by hand and scanned.
     const signPeople = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role, label: p.label, applies: p.applies }));
     const stepsOf = await signStepsOf(this.db, c.id);
+    const minor = minorFromAnswers(answers, today); // Devin on #617: an adult dependent child signs their own form
     const items = stored.items.map((i) => {
       const w = wantedOf(i), base = { id: i.id, kind: i.kind as "form" | "document" | "step", filing: i.filingId, subject: i.subjectId, person: label.get(i.subjectId) ?? "", version: i.version };
       if (i.kind === "form") {
@@ -200,7 +201,7 @@ export class CasePrepare {
           state: "out_of_date", reason: `Out of date: ${stale.map((x) => x.title).join(", ")} changed after it was entered in the portal. Enter the new answers, then tick it again.` };
         // Review M2: Done only when every section is entered, current and waits for nothing.
         const allEntered = !!sheet && sheet.sections.length > 0 && sheet.sections.every((x) => x.entered && !x.out_of_date && !x.waiting.length);
-        const signers = signersOf(signPeople, i.subjectId, lines.get(i.itemKey)?.who ?? "each_applicant", lines.get(i.itemKey)?.signed_by);
+        const signers = signersOf(signPeople, i.subjectId, lines.get(i.itemKey)?.who ?? "each_applicant", lines.get(i.itemKey)?.signed_by, minor);
         // C8.1: a form signed by hand and scanned is Ready once its signed scan is in, Done once uploaded to IRCC.
         const signed = !waits && ch.signature === "HAND_SCANNED" ? signedState(stepsOf.get(i.id) ?? {}, i.itemKey) : null;
         if (signed) return { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null, signers,
@@ -352,6 +353,8 @@ export class CasePrepare {
       if (!row || !row.active) return "stale" as const;
       if ((row.channel ?? before) === to) return "same" as const;
       await tx.filingItem.update({ where: { id: row.id }, data: { channel: to, channelReason: b.reason || null, channelBy: actor.id, channelAt: new Date(), version: row.version + 1 } });
+      // Devin on #617: signing steps done for the old channel never count for the new one (they are kept as history).
+      await tx.signStep.updateMany({ where: { itemId: row.id, supersededAt: null }, data: { supersededAt: new Date() } });
       return "changed" as const;
     });
     if (result === "stale") stale();

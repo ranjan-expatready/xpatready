@@ -4,6 +4,19 @@
 import { FILING } from "../../contracts/resolver.ts";
 import { formSigners, type Person } from "../resolver.ts";
 
+/** Devin on #617: whether a person is a minor (under 18) on `today`, from their own answered date of birth; undefined when
+ *  it is not answered (R7 then keeps a child a minor, as before). VV-R09: a child under 18 is signed for by a parent. */
+export function minorFromAnswers(answers: { subjectId: string; field: string; rowKey: string | null; value: unknown }[], today: Date): (id: string) => boolean | undefined {
+  const born = new Map<string, string>();
+  for (const a of answers) if (a.field === "person.date_of_birth" && a.rowKey === null && typeof a.value === "string" && /^\d{4}-\d{2}-\d{2}/.test(a.value)) born.set(a.subjectId, a.value.slice(0, 10));
+  return (id) => {
+    const d = born.get(id); if (!d) return undefined;
+    const [y, m, day] = d.split("-").map(Number);
+    const eighteen = new Date(Date.UTC(y + 18, m - 1, day));
+    return today < eighteen;
+  };
+}
+
 /** The steps of a form signed by hand and scanned, in order (C8.1-3). */
 export const SIGN_STEPS = ["print", "signed", "scan_received", "uploaded_to_ircc"] as const;
 export type SignStepKey = (typeof SIGN_STEPS)[number];
@@ -13,10 +26,10 @@ export const isSignStep = (k: string): k is SignStepKey => (SIGN_STEPS as readon
 /** Who signs one form item, in words (C8.1-1, C8.1-2): "person" (the person the form is about), "parent" (the principal
  *  signing for a child, by role as R7 decides it), "principal" (the principal signing for the family) and "representative".
  *  From R7 for this item's own row: the person signs their own; whoever else R7 names signs for them. */
-export function signersOf(people: Person[], subject: string, who: string, signedBy: string | null | undefined): string[] {
-  const signers = [...formSigners(people, who, signedBy)].filter(([, rows]) => rows.includes(subject) || (rows.includes(FILING) && people.find((p) => p.id === subject)?.role === "principal")).map(([id]) => id);
+export function signersOf(people: Person[], subject: string, who: string, signedBy: string | null | undefined, minor?: (id: string) => boolean | undefined): string[] {
+  const signers = [...formSigners(people, who, signedBy, minor)].filter(([, rows]) => rows.includes(subject) || (rows.includes(FILING) && people.find((p) => p.id === subject)?.role === "principal")).map(([id]) => id);
   const me = people.find((p) => p.id === subject), role = (id: string) => people.find((p) => p.id === id)?.role;
-  const words = signers.map((id) => id === subject ? "person" : role(id) === "representative" ? "representative" : role(id) === "principal" ? (me?.role === "child" ? "parent" : "principal") : role(id) ?? id);
+  const words = signers.map((id) => id === subject ? "person" : role(id) === "representative" ? "representative" : role(id) === "principal" ? (me?.role === "child" && (minor?.(subject) ?? true) ? "parent" : "principal") : role(id) ?? id);
   // The representative of record is on the case team, not among the case's people, so R7 cannot name them: a line signed
   // by "the person and the representative" names them here (who they are comes from the case team, C6.11).
   if (signedBy === "person_and_representative" && words.length) words.push("representative");

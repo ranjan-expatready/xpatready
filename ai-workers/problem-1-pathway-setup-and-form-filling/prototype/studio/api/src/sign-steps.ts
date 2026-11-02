@@ -10,7 +10,9 @@ import { dirname, join } from "node:path";
 import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Inject, Injectable, Param, Post, UploadedFiles, UseGuards, UseInterceptors } from "@nestjs/common";
 import { AnyFilesInterceptor } from "@nestjs/platform-express";
 import { cleanName, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_MB, MEDIA, mediaOf } from "../../contracts/documents.ts";
-import { isSignStep, SIGN_STEP_WORDS, SIGN_STEPS, signersOf, stepRefusal, type SignStepKey, type StepsDone } from "../../engine/runtime/signing.ts";
+import { isSignStep, minorFromAnswers, SIGN_STEP_WORDS, SIGN_STEPS, signersOf, stepRefusal, type SignStepKey, type StepsDone } from "../../engine/runtime/signing.ts";
+import { channelOf, type FormLine } from "../../engine/runtime/prepare.ts";
+import { changedFacts, formCoverage, type FormFact } from "../../engine/runtime/forms.ts";
 import { CaseActorGuard, utf8Name } from "./case-checklist.ts";
 import { actorOf, Audit, CaseRead, Db, fail, VAR, WORKSPACE_KEY, type Actor } from "./core.ts";
 import { Runtime } from "./runtime.ts";
@@ -38,8 +40,11 @@ export class SignSteps {
     if (!item) fail("No such item.", HttpStatus.NOT_FOUND);
     const c = await this.r.reach(actor, item!.caseId, "officer");
     if (item!.kind !== "form" || !item!.active) fail("Only a form on this application is signed.", HttpStatus.UNPROCESSABLE_ENTITY);
-    const line = (this.r.snapshotOf(c).forms as { form_number: string; who?: string; signed_by?: string | null }[]).find((l) => l.form_number === item!.itemKey);
-    return { c, item: item!, line };
+    const line = (this.r.snapshotOf(c).forms as FormLine[]).find((l) => l.form_number === item!.itemKey);
+    // Devin on #617: signing steps belong to a form signed by hand and scanned on this application (its channel today,
+    // the officer's choice, else the line's), as the prepare view decides it; any other form has none to do.
+    const handScanned = channelOf(line, undefined, null, item!.channel).signature === "HAND_SCANNED";
+    return { c, item: item!, line, handScanned };
   }
 
   /** GET /runtime/items/:id: the item with who signs and its steps (each done with who and when, or not yet). */
@@ -50,7 +55,7 @@ export class SignSteps {
     const scans = await this.db.signedScan.findMany({ where: { itemId: item.id }, orderBy: { uploadedAt: "asc" }, select: { id: true, fileName: true, mediaType: true, sizeBytes: true, sha256: true, uploadedBy: true, uploadedAt: true } });
     return {
       id: item.id, kind: item.kind, form: item.itemKey, filing: item.filingId, subject: item.subjectId, version: item.version,
-      signers: signersOf(people, item.subjectId, line?.who ?? "each_applicant", line?.signed_by),
+      signers: signersOf(people, item.subjectId, line?.who ?? "each_applicant", line?.signed_by, minorFromAnswers((await this.r.state(c)).answers, new Date())),
       sign_steps: SIGN_STEPS.map((key) => ({ key, words: SIGN_STEP_WORDS[key], done: done[key] ? { at: done[key]!.at, by: done[key]!.by, ...(key === "print" ? { copy: done[key]!.copy ?? null } : {}) } : null })),
       signed_scans: scans.map((x) => ({ id: x.id, file_name: x.fileName, media_type: x.mediaType, size_bytes: x.sizeBytes, sha256: x.sha256, uploaded_by: x.uploadedBy, uploaded_at: x.uploadedAt.toISOString() })),
     };
@@ -60,17 +65,24 @@ export class SignSteps {
   async step(actor: Actor, itemId: string, keyIn: string, body: unknown) {
     if (!isSignStep(keyIn)) fail(`No such step: the steps are ${SIGN_STEPS.map((k) => SIGN_STEP_WORDS[k]).join(", ")}.`, HttpStatus.NOT_FOUND);
     const key = keyIn as SignStepKey;
-    const { c, item } = await this.item(actor, itemId);
+    const { c, item, handScanned } = await this.item(actor, itemId);
+    if (!handScanned) fail(`${item.itemKey} is not signed by hand and scanned on this application, so it has no signing steps. Nothing was recorded.`, HttpStatus.CONFLICT);
     const done = (await signStepsOf(this.db, c.id)).get(item.id) ?? {};
     // Ready to file is C7.6's (L-SA3, held under P-251): the filing's stored status says it once that is built.
-    const refusal = stepRefusal(key, done, item.itemKey, { filingReady: item.filing.status === "READY_TO_FILE" });
+    const refusal = stepRefusal(key, done, item.itemKey, { filingReady: item.filing.status.toLowerCase() === "ready_to_file" } /* review m-3 on #617: C7.6's pack reads "ready_to_file"; the column stores upper case (NOT_STARTED) */);
     if (refusal) fail(refusal, HttpStatus.CONFLICT);
     let copyId: string | null = null;
     if (key === "print") {
       const b = (body ?? {}) as { copy?: unknown };
-      const copy = typeof b.copy === "string" && /^[0-9a-f-]{36}$/i.test(b.copy) ? await this.db.formInstance.findUnique({ where: { id: b.copy }, select: { id: true, caseId: true, subjectId: true, formNumber: true, status: true } }) : null;
+      const copy = typeof b.copy === "string" && /^[0-9a-f-]{36}$/i.test(b.copy) ? await this.db.formInstance.findUnique({ where: { id: b.copy }, select: { snapshot: { select: { factsJson: true } }, id: true, caseId: true, subjectId: true, formNumber: true, status: true } }) : null;
       if (!copy || copy.caseId !== c.id || copy.subjectId !== item.subjectId || copy.formNumber !== item.itemKey || copy.status !== "GENERATED")
         fail(`Print a generated copy of ${item.itemKey} for this person first: generate it, then send its id as "copy".`, HttpStatus.CONFLICT);
+      // Break M1 on #617: the copy printed must still say what the case says (C-10: a fact the form reads changed since
+      // it was made → out of date), so a person never signs a form with old answers.
+      const { answers, rows } = await this.r.state(c);
+      const cov = formCoverage(this.r.snapshotOf(c), this.r.peopleOf(c), answers, rows, item.itemKey, item.subjectId);
+      const changed = changedFacts(((copy!.snapshot?.factsJson ?? {}) as { facts?: FormFact[] }).facts ?? [], cov?.facts ?? []);
+      if (changed.length) fail(`This copy of ${item.itemKey} is out of date: ${changed.length} fact${changed.length === 1 ? "" : "s"} it shows changed since it was made. Generate a new copy and print that one. Nothing was recorded.`, HttpStatus.CONFLICT);
       copyId = copy!.id;
     }
     await this.save(c, item, key, actor, copyId);
@@ -86,7 +98,8 @@ export class SignSteps {
   /** POST /runtime/items/:id/signed-scan: the signed scan (one PDF, JPEG or PNG, judged by its bytes), stored with its
    *  checksum, never changed in place; it marks "Signed scan received". */
   async scan(actor: Actor, itemId: string, files: Upload[] | undefined) {
-    const { c, item } = await this.item(actor, itemId);
+    const { c, item, handScanned } = await this.item(actor, itemId);
+    if (!handScanned) fail(`${item.itemKey} is not signed by hand and scanned on this application, so it takes no signed scan. Nothing was stored.`, HttpStatus.CONFLICT);
     const f = (files ?? []).filter((x) => x.buffer);
     if (f.length !== 1 || f[0].fieldname !== "file") fail(`Send one file, in the field "file". Nothing was stored.`);
     const bytes = f[0].buffer!;
