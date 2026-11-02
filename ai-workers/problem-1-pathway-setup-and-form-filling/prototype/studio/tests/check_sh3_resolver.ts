@@ -9,6 +9,9 @@ import { BUILT_SCOPES, FILING, HELD_SCOPES, MERGE_HOPS, SCOPE_RULES, SCOPES, WHO
 import * as R from "../engine/resolver.ts";
 import * as render from "../engine/render.ts";
 import { linesNamingRemoved, rolesNamedBy } from "../engine/people.ts";
+import { documentFacts } from "../engine/sources.ts";
+import { resolveKey } from "../api/src/form-lines.ts";
+import type { Snapshot } from "../engine/snapshot.ts";
 import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
@@ -24,7 +27,7 @@ ok("SH3 R1: one person keeps the role as id; a child is always numbered; several
   [{ id: "principal", role: "principal", label: "Principal", applies: true }, { id: "child-1", role: "child", label: "Child", applies: true },
    { id: "spouse_or_partner-1", role: "spouse_or_partner", label: "Parent 1", applies: false }, { id: "spouse_or_partner-2", role: "spouse_or_partner", label: "Parent 2", applies: false }]));
 ok("SH3 R1 (fail): a line of 0, or a negative preview, gives nobody; preview wins over min", R.peopleFor([{ role: "child", label: "C", min: 0 }, { role: "x", label: "X", preview: -1, min: 3 }, { role: "y", label: "Y", preview: 0, min: 2 }]).length === 0);
-ok("SH3 R1: the filing's subject id is \"case\" (one case = one filing today)", FILING === "case");
+ok("SH3 R1: filing-scope values sit on one subject per case, \"case\", read by every filing on it (no filing id yet)", FILING === "case" && R.subjectOf(FILING).id === FILING);
 
 // ---- R2 line holders
 const holders = (who: string, kind?: string) => R.subjectsFor(fam, who, kind);
@@ -34,7 +37,10 @@ ok("SH3 R2: principal, partner (couple_once too), children, representative, spon
 ok("SH3 R2: a subject kind wins over the who (CASE → the filing; SPOUSE on a principal's line → the partner)", same(holders("principal_applicant", "CASE"), [FILING]) && same(holders("principal_applicant", "SPOUSE"), ["B"]) && same(holders("each_person", "DEPENDENT"), ["child-1", "child-2"]) && same(holders("case", "PRINCIPAL"), ["A"]));
 ok("SH3 R2 (fail): an unknown who, or a role nobody on the case has, names nobody", holders("cousin").length === 0 && R.subjectsFor(single, "spouse_or_partner").length === 0 && R.subjectsFor(single, "each_dependent_child", undefined).length === 0);
 ok("SH3 R2: the condition's subject never moves a line's holders (lineHolders = the who alone)", same(R.lineHolders(fam, "principal_applicant"), ["A"]));
-ok("SH3 R2: every who value the contract lists is one the studio accepts", Object.keys(WHO_HOLDERS).every((w) => ["each_applicant", "each_adult_18_plus", "principal_applicant", "spouse_or_partner", "couple_once", "each_dependent_child", "each_person", "case", "representative", "sponsor"].includes(w)));
+// Review m3: the studio's own list, read from its source (importing studio.ts would start its services).
+const studioWho = JSON.parse(/export const WHO = (\[[^\]]*\])/.exec(readFileSync(new URL("../api/src/studio.ts", import.meta.url), "utf8"))![1]) as string[];
+ok("SH3 R2: the contract's who values are the studio's list plus each_adult_18_plus (release data and the runtime only)", same([...studioWho, "each_adult_18_plus"].sort(), Object.keys(WHO_HOLDERS).sort()));
+ok("SH3 R2 (fail): each_adult_18_plus is not offered in the studio's list", !studioWho.includes("each_adult_18_plus"));
 
 // ---- R3 condition subjects
 const cs = (holder: string, kind?: string) => R.conditionSubjects(fam, holder, kind);
@@ -84,10 +90,18 @@ const chain = (n: number) => Object.fromEntries(Array.from({ length: n }, (_, i)
 ok("SH3 R9: an unmerged key answers itself; a merge redirects, along a chain", await R.canonicalFact("a", store({})) === "a" && await R.canonicalFact("a", store({ a: "b", b: "c" })) === "c");
 ok(`SH3 R9: a chain of ${MERGE_HOPS - 1} hops is followed to its end`, await R.canonicalFact("f0", store(chain(MERGE_HOPS - 1))) === `f${MERGE_HOPS - 1}`);
 ok(`SH3 R9 (fail): a chain of ${MERGE_HOPS} or more hops, or a loop, answers the key asked`, await R.canonicalFact("f0", store(chain(MERGE_HOPS))) === "f0" && await R.canonicalFact("a", store({ a: "b", b: "a" })) === "a");
+ok("SH3 R9: MERGE_HOPS is 5 (the store is asked at most 5 times, so at most 4 redirects are followed)", MERGE_HOPS === 5);
+ok("SH3 R9: form-lines.ts resolveKey asks the newest version of each field, through canonicalFact", await (async () => {
+  const asked: unknown[] = [];
+  const rows: Record<string, string | null> = { "person.old": "person.mid", "person.mid": "person.new", "person.new": null };
+  const db = { canonicalField: { findFirst: async (q: { where: { workspaceId: string; canonicalFieldKey: string }; orderBy: unknown }) => { asked.push(q); return { mergedIntoKey: rows[q.where.canonicalFieldKey] ?? null }; } } };
+  const got = await resolveKey(db as never, "w1", "person.old");
+  return got === "person.new" && asked.length === 3 && same(asked[0], { where: { workspaceId: "w1", canonicalFieldKey: "person.old" }, orderBy: { version: "desc" } });
+})());
 ok("SH3 R9: the store is asked one hop at a time, at most MERGE_HOPS times", await (async () => { let asks = 0; await R.canonicalFact("a", async () => { asks++; return "a"; }); return asks === MERGE_HOPS; })());
 
 // ---- R10 roles a who names, agreeing with R2
-ok("SH3 R10: partner, couple, children, representative and sponsor lines name their role; the others none", same(rolesNamedBy("couple_once"), ["spouse_or_partner"]) && same(rolesNamedBy("each_dependent_child"), ["child"]) && rolesNamedBy("each_applicant").length === 0 && rolesNamedBy("nonsense").length === 0);
+ok("SH3 R10: partner, couple, children, representative and sponsor lines name their role; the others none", same(rolesNamedBy("spouse_or_partner"), ["spouse_or_partner"]) && same(rolesNamedBy("couple_once"), ["spouse_or_partner"]) && same(rolesNamedBy("each_dependent_child"), ["child"]) && same(rolesNamedBy("representative"), ["representative"]) && same(rolesNamedBy("sponsor"), ["sponsor"]) && ["each_applicant", "principal_applicant", "each_person", "case", "each_adult_18_plus", "nonsense"].every((w) => rolesNamedBy(w).length === 0));
 ok("SH3 R10: removing the only partner warns on a partner's line, not on the principal's", same(linesNamingRemoved([{ role: "spouse_or_partner", max: 1 }], [{ role: "spouse_or_partner", max: 0 }], [{ form: "IMM 5409", who: "couple_once" }, { form: "IMM 5257", who: "principal_applicant" }]), [{ form: "IMM 5409", who: "couple_once", roles: ["spouse_or_partner"] }]));
 ok("SH3 R10 agrees with R2: a who that names roles holds exactly the people of those roles", (Object.keys(WHO_HOLDERS) as Who[]).every((w) => {
   const roles = WHO_ROLES[w]; if (!roles) return true;
@@ -99,6 +113,22 @@ ok("SH3 C3.16: the four scopes, person and filing built, household and organisat
 ok("SH3 C3.16: each scope maps to the team's FieldScope value (SA-1B-130 §7)", same(SCOPES.map((s) => SCOPE_RULES[s].team), ["PERSON", "FILING", "HOUSEHOLD", "ORGANISATION"]));
 ok("SH3 C3.16 (fail): no about-key resolves to a household or organisation subject yet", ["A", "B/parent_1", FILING, "organisation"].every((a) => (BUILT_SCOPES as readonly string[]).includes(R.subjectOf(a).scope)) && R.subjectOf(FILING).scope === "filing");
 
+// ---- Review m2: the call sites, pinned by what they answer (not only by their source)
+ok("SH3 sources.ts: a document's holder.spouse facts are the partner's (R4 partnerOf), a child's none, a parent's the relatives'", (() => {
+  const S = { document_requirements: [{ document_type_key: "mc", document_type: "Marriage certificate", who: "each_applicant", base_or_conditional: "base" }],
+    document_types: [{ key: "mc", name: "Marriage certificate", supplies_facts: ["person.name", "person.birth_place"], supplies_about: { "person.name": "holder.spouse", "person.birth_place": "holder.parent" } }] } as unknown as Snapshot;
+  const d = documentFacts(S, fam);
+  return !!d.get("B")?.get("person.name") && !!d.get("A")?.get("person.name") && !d.get("child-1")?.get("person.name") && !!d.get("A/parent_1")?.get("person.birth_place") && !!d.get("child-2/parent_2")?.get("person.birth_place");
+})());
+ok("SH3 render (c): a deciding fact is keyed by its id only: case.* on the filing; a once-per-case placement does not move it (as before SH3)", (() => {
+  const S = { combination: { key: "t", participants: [] }, canonical_fields: [{ id: "person.flag", value_type: "yes_no" }, { id: "case.mode", value_type: "code" }], derived_fields: [], field_maps: [], checks: [], rules: [], document_types: [], document_requirements: [],
+    sections: [{ id: "s1", title: "S" }], placements: [{ fact: "person.flag", section_id: "s1", repeats: "once_per_case", collected_from: "client_questionnaire" }, { fact: "case.mode", section_id: "s1", repeats: "once", collected_from: "client_questionnaire" }],
+    forms: [{ form_number: "F1", who: "principal_applicant", status: "conditional", condition: { op: "and", args: [{ op: "eq", field: "person.flag", value: true }, { op: "eq", field: "case.mode", value: "x" }] } }] } as unknown as Snapshot;
+  const r = render.render(S, single, new Map());
+  const about = (f: string) => r.deciders.filter((x) => x.fact === f).map((x) => x.about);
+  return same(about("person.flag"), ["A"]) && same(about("case.mode"), [FILING]);
+})());
+
 // ---- The four places call the resolver; the engine part is lift-ready
 const src = (f: string) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
 ok("SH3: render.ts re-exports the resolver's functions (no copy left)", render.aboutOf === R.aboutOf && render.subjectsFor === R.subjectsFor && render.peopleFor === R.peopleFor && render.formSigners === R.formSigners && render.conditionSubjects === R.conditionSubjects && render.lineHolders === R.lineHolders && !/function (aboutOf|subjectsFor|peopleFor|formSigners|factsOf)\b/.test(src("engine/render.ts")));
@@ -106,7 +136,10 @@ ok("SH3: people.ts, sources.ts, fact-sources.ts and form-lines.ts call the resol
   && /from "\.\/resolver\.ts"/.test(src("engine/sources.ts")) && !/const (spouseOf|roleOf)\b/.test(src("engine/sources.ts"))
   && /sourceKey/.test(src("api/src/fact-sources.ts")) && !/`\$\{\w*\.?role\}\|\$\{\w*\.?fact\}`/.test(src("api/src/fact-sources.ts"))
   && /canonicalFact\(/.test(src("api/src/form-lines.ts")) && !/i < 5/.test(src("api/src/form-lines.ts")));
-ok("SH3 (P-249): the contract and the engine resolver import nothing but each other", [src("contracts/resolver.ts"), src("engine/resolver.ts")].every((t) => [...t.matchAll(/^import .* from "([^"]+)"/gm)].every((m) => m[1] === "../contracts/resolver.ts")));
+// Review m5: every static import or re-export, on one line or several, and any dynamic import or require.
+const imports = (t: string) => [...t.matchAll(/\bfrom\s+["']([^"']+)["']|\bimport\s*\(\s*["']([^"']+)["']|\brequire\s*\(\s*["']([^"']+)["']|^\s*import\s+["']([^"']+)["']/gm)].map((m) => m[1] ?? m[2] ?? m[3] ?? m[4]);
+ok("SH3 (P-249): the contract imports nothing; the engine resolver imports only the contract", imports(src("contracts/resolver.ts")).length === 0 && imports(src("engine/resolver.ts")).length > 0 && imports(src("engine/resolver.ts")).every((m) => m === "../contracts/resolver.ts"));
+ok("SH3 (P-249) (fail): the import check sees a multi-line import and a dynamic one", same(imports('import {\n a,\n b } from "pg";\nconst x = await import("@prisma/client");'), ["pg", "@prisma/client"]));
 ok("SH3 (P-249): the resolver satisfies the contract's interface (one object)", R.resolver.boxOwner === R.aboutOf && R.resolver.holders === R.subjectsFor && R.resolver.factsFor === R.factsOf && R.resolver.canonicalFact === R.canonicalFact);
 
 summary();
