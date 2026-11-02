@@ -57,13 +57,23 @@ run(async () => {
   ok("C4.7 fail: that pick is refused at acceptance with the hand tick's words (422, 'comes from the case officer')", !!c && r.status === 422 && /case officer/i.test(words(r)) && ticks() === t0 + 1, words(r));
   const country = (await call("GET", `/combinations/${wp}/pqr/country`)).body;
   ok("C4.7 pass: an accepted pick is not in the country PQR until the combination is released (P-132)", !!a && !(country?.lines ?? []).some((l: any) => l.fact === key(a).factKey && (l.combinations ?? []).some((c: any) => c.id === wp)));
-  // The saved-AI path (step 6 replayed, US$0): picks come as AI items with both readings and IRCC's quote found.
+  ok("C4.7 pass: US$0 so far", picks.length > 0 && T.spent() === before);
+  // The saved-AI path (US$0): picks come as AI items with both readings and IRCC's quote found. It needs Track A's Saved
+  // result of the two PQR-picks rounds for this combination's guide (ai-runs' job PR prepares the run; P-225, P-227). Until
+  // that result is committed, the two checks say WAIT (never faked, never counted as passed) and the test exits 2.
   r = await call("POST", `/combinations/${wp}/pqr-picks/plan`, { mode: "replay" }, AUTHOR);
-  ok("C4.7 pass (P-227): the Saved plan says a Saved result exists for this combination's guide (Track A records it)", r.body?.saved?.available === true, r.body?.saved?.why ?? words(r));
-  const r2 = await call("POST", `/combinations/${wp}/pqr-picks/draft`, { mode: "replay", planSha256: r.body?.plan_sha256 }, AUTHOR);
-  ok("setup: the Saved draft ran at US$0", r2.status === 201 && r2.body?.usd === 0, r2.status >= 300 ? words(r2) : r2.body?.note);
-  const ai = (await T.queued(wp)).filter((x: any) => x.kind === "pqr_pick" && x.origin === "ai");
-  ok("C4.7 pass (saved AI): replayed picks are AI items with both readings and a quote found, each with its reason", ai.length > 0 && ai.every((x: any) => x.readings?.draft && x.readings?.check && x.source?.quote_found === true && String(x.readings.draft.payload?.reason ?? "").length >= 3), ai.length);
-  ok("C4.7 pass: US$0", picks.length > 0 && T.spent() === before);
+  const S1 = "C4.7 pass (P-227): the Saved plan says a Saved result exists for this combination's guide";
+  const S2 = "C4.7 pass (saved AI): replayed picks are AI items with both readings and a quote found, each with its reason";
+  if (r.status === 200 && r.body?.saved?.available === false) {
+    const on = `Track A's Saved PQR-picks result (${r.body.saved.why ?? "none yet"})`;
+    T.wait(S1, on); T.wait(S2, on);
+  } else {
+    ok(S1, r.body?.saved?.available === true, r.body?.saved?.why ?? words(r));
+    const r2 = await call("POST", `/combinations/${wp}/pqr-picks/draft`, { mode: "replay", planSha256: r.body?.plan_sha256 }, AUTHOR);
+    ok("setup: the Saved draft ran at US$0", r2.status === 201 && r2.body?.usd === 0, r2.status >= 300 ? words(r2) : r2.body?.note);
+    const ai = (await T.queued(wp)).filter((x: any) => x.kind === "pqr_pick" && x.origin === "ai");
+    ok(S2, ai.length > 0 && ai.every((x: any) => x.readings?.draft && x.readings?.check && x.source?.quote_found === true && String(x.readings.draft.payload?.reason ?? "").length >= 3), ai.length);
+    ok("C4.7 pass: US$0 with Saved", T.spent() === before);
+  }
   T.done();
 });
