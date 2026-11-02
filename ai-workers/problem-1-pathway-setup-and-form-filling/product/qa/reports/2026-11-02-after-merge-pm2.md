@@ -22,3 +22,6 @@ Main: 50df70dc. AI spend: US$0 (no key; the ledger was unchanged).
 Minors on #504 (follow-ups): `proposals.ts:117` workaround; rules and checks `used_in` still inside `library-sources.ts`; `impact.ts` `.catch(() => 0)` turns a database error into "0 open cases".
 Not tested: OPEN-only case counts (no data in another status).
 The tech lead ruled #504's Major (QA-161) a follow-up: SH2b, the next PR in the G-CORE lane.
+
+## Re-scored on main 7180f4d5 (after 8 merges, 12:00–12:24 UTC)
+C11.15 Partial (33/37, K11 browser 22/22) · C4.7 Partial (15/15 + 2 WAIT; real picks wait for Track A's run) · **C5.7 Not built → Partial** (G4 part 1, 76/76) · C11.7 Partial (saved maps 26/26, queue_tx 8/8, pack 18/21) · C7.7 Partial (D4: vv_prepare 38/38, case engine 69/69) · SH2 `check_sh2_where_used` 24/24. No new failure; each count equals the PR head's.
