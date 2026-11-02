@@ -88,7 +88,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await axe("filtered to guides"); await shot("04-filter-guides");
     await p.getByRole("button", { name: /^All/ }).click(); await sleep(300);
     const lmia = await p.getByLabel("Used by", { exact: true }).locator("option").filter({ hasText: "With an LMIA" }).first();
-    step("C11.11 (change 1): the Used by choices are each combination's place (Program › Category › Sub-category)", / › .* › With an LMIA$/.test(await lmia.textContent()), await lmia.textContent());
+    step("C11.11 (change 1), C11.3 QA-150: the Used by choices name each combination first, then its full place from the Pathway type (a closed filter still tells them apart)", /^With an LMIA · Retail › .* › /.test(await lmia.textContent()), await lmia.textContent());
     await p.getByLabel("Used by", { exact: true }).selectOption(await lmia.getAttribute("value")); await sleep(400);
     const wp = sql(`select id from combination where label='With an LMIA' limit 1`);
     const vvForms = sql(`select string_agg(lineage_key, ',') from (select distinct on (lineage_key) lineage_key, status from combination_form where combination_id='${wp}' order by lineage_key, version desc) x where status <> 'RETIRED'`).split(",").filter(Boolean);
