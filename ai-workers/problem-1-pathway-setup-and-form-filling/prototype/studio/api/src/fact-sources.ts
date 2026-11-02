@@ -12,6 +12,8 @@ import { ProposalItem } from "../../contracts/proposal-item.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { ACTORS, actorOf, Audit, Db, need, readerOf, type Actor } from "./core.ts";
 import { fillsOf, KIND as FILLS_KIND } from "./who-fills.ts";
+// SH3 (P-258): a choice of where an answer comes from is kept per role and fact (contracts/resolver.ts R8).
+import { sourceKey } from "../../contracts/resolver.ts";
 
 type H = string | undefined;
 const problem = (status: number, title: string, detail: string, extra: Record<string, unknown> = {}) =>
@@ -63,7 +65,7 @@ export class FactSources {
     // QA-114: an approved change is already in the draft placement; until the release the library still says who fills it
     // as released (the change's "before"), and the change itself says what comes with the next release.
     const released = (fact: string) => { const x = open.find((o) => o.key === fact && o.status === "APPROVED"); return x ? (x.matches as { before?: "CLIENT" | "CASE_OFFICER" }).before ?? null : undefined; };
-    const facts = factSources(snapshot).map((f) => { const n = newest.get(`${f.role}|${f.fact}`); const r = released(f.fact); return { ...f, fills: { library: r !== undefined ? r : libFills.get(f.fact) ?? null, change: fillsChange(f.fact) }, version: n?.version ?? 0, change: n ? { status: n.status === "DRAFT" ? "DRAFT" as const : "PUBLISHED" as const, by: n.updatedBy, at: n.updatedAt.toISOString(), batchId: n.batchId } : null }; });
+    const facts = factSources(snapshot).map((f) => { const n = newest.get(sourceKey(f.role, f.fact)); const r = released(f.fact); return { ...f, fills: { library: r !== undefined ? r : libFills.get(f.fact) ?? null, change: fillsChange(f.fact) }, version: n?.version ?? 0, change: n ? { status: n.status === "DRAFT" ? "DRAFT" as const : "PUBLISHED" as const, by: n.updatedBy, at: n.updatedAt.toISOString(), batchId: n.batchId } : null }; });
     const counts = { facts: facts.length, document: facts.filter((f) => f.source === "DOCUMENT").length, client: facts.filter((f) => f.source === "CLIENT").length, agent: facts.filter((f) => f.source === "AGENT").length, prequalification: facts.filter((f) => f.prequalification).length };
     return { counts, facts, prequalification: prequalification(snapshot), problems: factSourceProblems(snapshot), basis: "Sample until the immigration expert confirms" };
   }
@@ -75,7 +77,7 @@ export class FactSources {
     if (!parsed.success) throw new HttpException(problemFromZod(parsed.error), HttpStatus.BAD_REQUEST);
     const b = parsed.data;
     const c = await this.combination(id);
-    const lineageKey = `${role}|${fact}`;
+    const lineageKey = sourceKey(role, fact);
     const rows = await this.db.factSource.findMany({ where: { combinationId: id, lineageKey }, orderBy: { version: "desc" } });
     const newest = rows[0];
     const { snapshot } = await buildSnapshot(this.db, c.workspaceId, id, "draft");
@@ -109,12 +111,12 @@ export class FactSources {
     const parsed = UndoFactSource.safeParse(body);
     if (!parsed.success) throw new HttpException(problemFromZod(parsed.error), HttpStatus.BAD_REQUEST);
     const c = await this.combination(id);
-    const newest = await this.db.factSource.findFirst({ where: { combinationId: id, lineageKey: `${role}|${fact}` }, orderBy: { version: "desc" } });
+    const newest = await this.db.factSource.findFirst({ where: { combinationId: id, lineageKey: sourceKey(role, fact) }, orderBy: { version: "desc" } });
     if (!newest || newest.status !== "DRAFT") throw problem(409, newest ? "Released since" : "Nothing to undo", newest ? "That choice was released meanwhile: a release is never undone. Change it in a new draft." : "There is no choice on this fact to undo.");
     if (newest.version !== parsed.data.version) throw problem(409, "Changed since", "Someone changed this fact's source after you looked. Reload first.", { version: newest.version });
     if (newest.updatedBy !== actor.id) throw problem(409, "Not yours", NOT_YOURS);
     await this.db.factSource.delete({ where: { id: newest.id } });
-    await this.audit.log(c.workspaceId, actor.id, "undone", "fact source", `${role}|${fact}`, `${actor.name} undid their choice of where "${fact}" (${role}) comes from in "${c.label}"`, undefined, id);
+    await this.audit.log(c.workspaceId, actor.id, "undone", "fact source", sourceKey(role, fact), `${actor.name} undid their choice of where "${fact}" (${role}) comes from in "${c.label}"`, undefined, id);
     return (await this.list(id)).facts.find((x) => x.role === role && x.fact === fact) ?? null;
   }
 
@@ -126,8 +128,8 @@ export class FactSources {
     const newest = new Map<string, (typeof rows)[number]>(); for (const r of rows) if (!newest.has(r.combinationId)) newest.set(r.combinationId, r);
     const view = countryPqr([...newest.values()].map((r) => ({ combinationId: r.combinationId, version: r.version, snapshot: r.snapshot as unknown as Snapshot })));
     const { snapshot } = await buildSnapshot(this.db, c.workspaceId, id, "draft");
-    const asked = new Set(view.lines.filter((l) => l.combinations.some((x) => x.id === id)).map((l) => `${l.role}|${l.fact}`));
-    const draft = prequalification(snapshot).filter((t) => !asked.has(`${t.role}|${t.fact}`)).map((t) => ({ role: t.role, fact: t.fact, label: t.label }));
+    const asked = new Set(view.lines.filter((l) => l.combinations.some((x) => x.id === id)).map((l) => sourceKey(l.role, l.fact)));
+    const draft = prequalification(snapshot).filter((t) => !asked.has(sourceKey(t.role, t.fact))).map((t) => ({ role: t.role, fact: t.fact, label: t.label }));
     const gone = view.lines.filter((l) => l.combinations.some((x) => x.id === id) && !prequalification(snapshot).some((t) => t.role === l.role && t.fact === l.fact)).map((l) => ({ role: l.role, fact: l.fact, label: l.label }));
     return { ...view, released: newest.size, thisCombination: { draftAdds: draft, draftRemoves: gone }, basis: "Sample until the immigration expert confirms" };
   }
@@ -150,15 +152,15 @@ export async function bulkSet(db: Db, audit: Audit, actor: Actor, c: { id: strin
   if (!parsed.success) throw new HttpException(problemFromZod(parsed.error), HttpStatus.BAD_REQUEST);
   const b = parsed.data;
   const { snapshot } = await buildSnapshot(db, c.workspaceId, c.id, "draft");
-  const views = new Map(factSources(snapshot).map((f) => [`${f.role}|${f.fact}`, f]));
-  const keys = [...new Set(b.items.map((x) => `${x.role}|${x.fact}`))];
+  const views = new Map(factSources(snapshot).map((f) => [sourceKey(f.role, f.fact), f]));
+  const keys = [...new Set(b.items.map((x) => sourceKey(x.role, x.fact)))];
   const rows = await db.factSource.findMany({ where: { combinationId: c.id, lineageKey: { in: keys } }, orderBy: { version: "desc" } });
   const refused: { role: string; fact: string; label: string; message: string }[] = [];
   type Row = (typeof rows)[number];
   const save: { key: string; f: FactSourceView; newest: Row | undefined; published: Row | undefined; data: { source: string | null; documentTypeKey: string | null; prequalification: boolean; reason: string | null; sourceReason: string | null } }[] = [];
   const seen = new Set<string>();
   for (const it of b.items) {
-    const key = `${it.role}|${it.fact}`;
+    const key = sourceKey(it.role, it.fact);
     if (seen.has(key)) continue;
     seen.add(key);
     const f = views.get(key);
@@ -228,7 +230,7 @@ export async function acceptPqrPick(tx: Prisma.TransactionClient, actor: Actor, 
   if (!c) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
   if (c.retiredAt) throw problem(409, "Retired", `"${c.label}" is retired: its pre-qualification is not changed. Restore it on Structure first.`);
   const { role, factKey: fact, reason } = item.payload;
-  const lineageKey = `${role}|${fact}`;
+  const lineageKey = sourceKey(role, fact);
   const rows = await db.factSource.findMany({ where: { combinationId: id, lineageKey }, orderBy: { version: "desc" } });
   const newest = rows[0];
   const { snapshot } = await buildSnapshot(db, c.workspaceId, id, "draft");

@@ -59,7 +59,7 @@ for (const f of readdirSync(PROMPTS).filter((x) => x.endsWith(".schema.json") &&
 }
 
 // ---- B. stubs for every launched kind (p2/draft.ts reads p2/stubs/<kind>.json for every stub pass, and a live call needs one)
-for (const kind of ["find_guide", "find_forms", "who_can_be", "field_map"]) ok(`B the stub pass of job kind ${kind} has its stub answer`, existsSync(join(PROTO, "p2", "stubs", `${kind}.json`)), `p2/stubs/${kind}.json is missing: the stub pass ends in ENOENT, so AI now can never run and the person sees a server path`);
+for (const kind of ["find_guide", "find_forms", "who_can_be", "field_map", "pqr_picks", "qd_conditions"]) ok(`B the stub pass of job kind ${kind} has its stub answer`, existsSync(join(PROTO, "p2", "stubs", `${kind}.json`)), `p2/stubs/${kind}.json is missing: the stub pass ends in ENOENT, so AI now can never run and the person sees a server path`);
 
 // ---- C. provider errors through the real runner (stub caller, scratch ledger)
 const { runDrafting } = await import(join(PROTO, "p2", "runner.ts"));

@@ -70,14 +70,19 @@ export function pack2(id: string) {
   }
   /** The spend ledger's total before and after: a pack-2 test must never spend (US$0). */
   const spent = () => Number(sql("select coalesce(sum(cost_usd),0) from drafting_job") || 0);
+  /** A check that waits on an input another lane records (e.g. a Saved AI result, P-227): printed as WAIT with what it
+   *  waits on, never counted as passed. With no failure, done() then exits 2 ("setup missing"), as needQuestions does. */
+  const waits: { name: string; on: string }[] = [];
+  const wait = (name: string, on: string) => { waits.push({ name, on }); console.log(`WAIT  ${name} — waits on ${on}`); };
   function done() {
     const out = join(import.meta.dirname, "..", "..", "var", "acceptance"); mkdirSync(out, { recursive: true });
     const fail = log.filter((x) => !x.ok).length;
-    writeFileSync(join(out, `${id}.json`), JSON.stringify({ at: new Date().toISOString(), pass: log.length - fail, fail, log }, null, 1));
+    writeFileSync(join(out, `${id}.json`), JSON.stringify({ at: new Date().toISOString(), pass: log.length - fail, fail, waits, log }, null, 1));
     summary();
-    process.exit(fail ? 1 : 0);
+    if (waits.length) console.log(`${waits.length} waiting (not passed): ${waits.map((w) => w.on).filter((x, i, a) => a.indexOf(x) === i).join("; ")}`);
+    process.exit(fail ? 1 : waits.length ? 2 : 0);
   }
-  return { PORT, DB, call, sql, until, ok, words, ready, needQuestions, key, combo, attachment, queued, people, spent, done };
+  return { PORT, DB, call, sql, until, ok, wait, words, ready, needQuestions, key, combo, attachment, queued, people, spent, done };
 }
 
 /** Runs a test body, turning an unexpected throw into a failure (exit 1) rather than a pass. */
