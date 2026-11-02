@@ -15,6 +15,7 @@ import { UPLOAD_OPERATION, UPLOAD_STEPS, UploadRuns } from "./upload-run.ts";
 import { statedUsd } from "./finder-cost.ts";
 import { PeopleFromGuide, WHO_OPERATION, WHO_STEPS } from "./people-ai.ts";
 import { QD_OPERATION, QD_STEPS } from "../../engine/draft-qd.ts";
+import { STEP_OF, stepState } from "./draft-contract.ts";
 import { DraftQd } from "./draft-qd.ts";
 
 const problem = (status: number, title: string, detail: string) => new HttpException({ type: `https://expatready.local/problems/${title.toLowerCase().replace(/[^a-z]+/g, "-")}`, title, status, detail }, status);
@@ -59,7 +60,9 @@ export class Runs {
   async view(id: string) {
     const b = await this.db.aiBatch.findUnique({ where: { id }, include: { jobs: { orderBy: { startedAt: "asc" } } } });
     if (!b) throw problem(404, "Not found", "This run no longer exists (the demo workspace may have been reset).");
-    const steps = this.steps(b);
+    // C4.11 contract (part 4a): a Draft questions and documents run also names each step by its contract key and its
+    // outcome (done, nothing_to_do, failed, …); the run card's own fields are unchanged.
+    const steps = b.operation === QD_OPERATION ? this.steps(b).map((s) => ({ ...s, step: STEP_OF[s.kind] ?? s.kind, state: stepState(s.status) })) : this.steps(b);
     const st = runStatus(b);
     const usual = await this.usual(b);
     const cur = steps.find((s) => s.status === "RUNNING") ?? null;
