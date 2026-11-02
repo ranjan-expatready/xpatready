@@ -24,6 +24,23 @@ One owner per row and per shared file; never build another owner's rows. Under t
 | qa-1 | after-merge | re-scores the rows each merged PR names |
 | qa-2 | Visitor visa | baseline walk, then journey walks |
 
+## Ready rows from P-230 (2 Nov; owners in the session table of `STATE.md`)
+| # | Area | Item | Done when (beyond the standard) | Source |
+|---|---|---|---|---|
+| R2 | runtime | **Fees as a dated data table** (P-230 (7)): move the fee values out of `engine/runtime/filings.ts` into the release's fee table (setup S7a), add spouse and PNP fees, and let filing modes and checklists stop being Visitor-visa-only in code ; each fee line carries a basis: per application, per person by role, per position or family maximum (P-247) | a fee change is a data edit with a test; every fee line has a basis; Visitor visa totals unchanged (family maximum applied) | P-230, P-247 |
+| R3 | runtime | **A minor's travel answers** (P-230 (3)): "travels with" per child plus custody, five conditional document lines (with QA-149) | pass and fail tests for each case; FQ-4 closed | P-230 |
+| R4 | runtime | **An eligibility rule's own outcome** (P-230 (1)): a gate carries "when not met" (Not eligible or needs review) as data; the background gate is needs review | C6.9 tests cover both; copy says the representative reviews | P-230 |
+| L-doc | later | **Document rules fields** (P-230 (8)): copy kind, certified translation, validity window on document requirements (schema) | after the M2 gate | P-230 |
+
+## M2 additions from P-240 (2 Nov; founder "All 4 in M2"; after Demo first and the P-231 finishing order)
+| # | Area | Item | Done when (beyond the standard) | Source |
+|---|---|---|---|---|
+| G1 | screens | **Release refused: no source entry** (C5.4) | a release with a number lacking a source entry or "None published – set by ExpatReady" is refused, naming each item; API and screen tests | P-240; SA-1B-290, -193 |
+| G3 | screens | **Demo release path and mark** (C5.6) | Sample content releases only in the demo workspace, marked "Demo release" on every screen that shows the release, excluded from real-publish counts; refused elsewhere | P-240 |
+| G4 | forms | **Answer-key family editor and runner** (C5.7) | a made-up family with expected values (Sample until the expert signs) runs against a map, scoring table or rule set and shows pass or fail per value; the Visitor visa IMM 5257 map has one passing family | P-240; team C6 "not built" |
+| G2 | forms | **Release refused: no passing signed answer-key test** (C5.5), after G4 | maps, scoring tables and rule sets without a passing expert-signed test are refused; a combination without a test only warns (W7) | P-240; SA-1B-296, -181, -199 |
+| G5 | screens | **Release needs a form line** (C5.1, F8/X1a rework, P-248) | a combination with documents but no form line shows a warning while configured and Release is refused (API 409, plain words); a PDF, a portal-screen edition or an online-only form counts; existing tests expecting documents-only to release are updated | P-248; SA-1B-90 |
+
 ## Demo first (founder, 2 Nov): in order, ahead of Now
 | # | Area | Item | Done when (beyond the standard) | Source |
 |---|---|---|---|---|
@@ -98,7 +115,15 @@ A feature is done when a person can do it on the demo (:4400) and qa has tested 
 | L2 | W2 immigration expert: second-person approvals, release gate, Sample values confirmed (ASSUMPTIONS rows finalised) | WAVE-1 W2 |
 | L3 | W3 AI wherever designed: describe what you need, facts from documents, AI review, new-edition impact (R-111) | WAVE-1 W3 |
 | L4 | W5 client and prospect: PQR, SQR, sign (after M3, P-129) | WAVE-1 W5 |
-| L5 | W6 browser extension for online fill (parked; PR #37 findings: a repeated fill keeps Undo; portal option codes checked) (R-106) | WAVE-1 W6 |
+| L5 | M4 (P-245): our AI-assisted Chrome extension, rows E1 structure reader + AI match per screen version · E2 changed-screen detection and re-match review · E3 fill with the representative's per-screen check · E4 login and navigation helper (never credentials) · E5 vision fallback with masking (Canada/US zero retention) · E6 screen-map hand-over IMM 0008, 5669, 5406, 5562; start from `lead/parked-extension-2026-10-26`; STANDARDS §1 gate. Earlier: W6 browser extension for online fill (parked; PR #37 findings: a repeated fill keeps Undo; portal option codes checked) (R-106) | WAVE-1 W6 |
 | L6 | Requirements not yet scheduled: B1–B49 | [BACKLOG-requirements.md](BACKLOG-requirements.md) |
 | L7 | Founder: branch rule on `main` (R-100, founder switches on in GitHub) | REQUESTS R-100 |
+| L-SA3 | M3, runtime: ready-to-file checks per P-237. Only a barcode form failing its own Validate blocks; out-of-date or missing signature, edition or fee past accepted-until and no representative review become CRITICAL warnings passed with a recorded reason (who, when, reason); rule changes warn. Missing or conflicting facts also become a CRITICAL warning (P-238). Done when: C7.6 and C9.2 checks and every refusal-expecting test are reworked, each warning records who, when and the reason, and qa scores C7.6 | P-237, P-238; SA-01B v2.1 BR-4 |
+| L-SA4 | M3, forms: shared fields carry a **scope** (person · filing · household · organisation, SA-1B-130) and list entries keep stable ids (SA-1B-134) (P-239). Done when: a field's scope is set and shown in the library, an organisation- and a filing-scoped field resolve on a case, and repeats keep their ids across edits | P-239; SA-01B v2.1 |
+| L-SA5 | M4: one **Sample employer combination** with the employer–employee link and a shareable mark; updates SI-10 (P-239). No Corporate configuration is built | P-239 |
+| L-SA6 | M3, runtime: Declared answers fill (P-242). Done when: a client's typed answer fills its boxes at once, marked Declared; C6.3 and C6.6 checks updated; a conflict between two sources shows and is never chosen silently | P-242; SA-1B-260…264 |
+| L-SA7 | M3, runtime: "Confirm & use" per document (P-242, with C6.5). Done when: values read from one document stay proposals until one "Confirm & use" on that document, which records who and when | P-242 |
+| L-SA8 | M3, forms: must-verify-before-filing as a library field attribute set by the expert (P-242). Done when: the flag is set and shown in the library, and on a case it raises a CRITICAL warning on Ready to file, passable with a reason (P-237) | P-242 |
+| L-SA9 | M3, runtime: identity review collapse rule and correction count (P-243, with C6.5, C6.6). Done when: passport number, date of birth and expiry are collapsed only when the MRZ check digits passed; names and unchecked or handwritten values stay expanded; no one-click confirm for them; corrections on collapsed versus expanded fields are counted and reportable | P-243; SA-1B-263 |
+| L-SA10 | M3, runtime: officer entry for background questions and a re-confirm list at signing (P-244). Done when: staff record a background answer marked "Officer" with who and when; declarations refuse staff entry; no blank is defaulted; before signing the client sees and re-confirms every officer-recorded background answer | P-244 |
 
