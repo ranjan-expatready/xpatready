@@ -8,6 +8,8 @@ import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snaps
 import { newestEdition } from "../../engine/programs.ts";
 import { questionnairesView } from "../../engine/runtime/questionnaires.ts";
 import { previewFamily } from "../../engine/runtime/preview.ts";
+import { aliasOf, appliesOf, filingWarnings, filingWords, isLineMode, previewFilings } from "../../engine/filing-modes.ts";
+import { defaultModeOf, hasFeeRules } from "../../engine/runtime/filings.ts";
 import { wordsOnly } from "../../engine/render.ts";
 import { acceptsOf, allowedChannels, channelProblems, filingKind, filingMethod, lineOf, notAcceptedWords, notNeededWords, signatureOf } from "../../engine/channels.ts";
 import { ACCOUNT_WORDS, CHANNEL_WORDS, throughAccount, CHANNELS, SIGNATURE_FITS, SIGNATURE_WORDS, type Channel } from "../../contracts/forms.ts";
@@ -127,12 +129,20 @@ export class WorkspaceViews {
     const c = await this.db.combination.findUniqueOrThrow({ where: { id } });
     const roles = await this.studio.personRoles(workspaceId);
     const state = await this.studio.peopleState(id);
-    type Stored = { role: string; label?: string; min: number; max: number; applies?: boolean; preview?: number; quote?: string | null; origin?: "HUMAN" | "AI_PROPOSAL" | "SAMPLE" };
+    type Stored = { role: string; label?: string; min: number; max: number; applies?: boolean; preview?: number; filingMode?: unknown; quote?: string | null; origin?: "HUMAN" | "AI_PROPOSAL" | "SAMPLE" };
+    const feesKnown = hasFeeRules(c.combinationKey);
     const lines = (c.participants as Stored[]).map((p) => {
       const r = roles.find((x) => x.key === p.role);
-      return { role: p.role, label: p.label ?? r?.label ?? p.role, roleLabel: r?.label ?? p.role, meaning: r?.meaning ?? "", min: p.min, max: p.max, applies: p.applies !== false, preview: p.preview, quote: p.quote ?? null, origin: p.origin, mayBeApplicant: !!r?.mayBeApplicant, answeredBy: answeredBy(p.role) };
+      // C11.12 BR-3 (B1): a mode stored on a role that is never an applicant (earlier setup runs) is dropped on read.
+      const stored = isLineMode(p.filingMode) ? p.filingMode : null;
+      const filingMode = stored && !!r?.mayBeApplicant === (stored !== "co_files") ? stored : null;
+      const applies = appliesOf(filingMode, p.applies !== false) && !!r?.mayBeApplicant;
+      return { role: p.role, label: p.label ?? r?.label ?? p.role, roleLabel: r?.label ?? p.role, meaning: r?.meaning ?? "", min: p.min, max: p.max, applies, preview: p.preview, filingMode, filing: aliasOf(filingMode),
+        ...filingWords({ role: p.role, filingMode, applies }, !!r?.mayBeApplicant, feesKnown, c.label), quote: p.quote ?? null, origin: p.origin, mayBeApplicant: !!r?.mayBeApplicant, answeredBy: answeredBy(p.role) };
     });
-    return { ...state, lines, roles };
+    // C11.12 "What a case gets": the plan of filings for one case of each line's preview count (concept §4).
+    const plan = previewFilings(lines, c.label, feesKnown, (role) => defaultModeOf(c.combinationKey, role));
+    return { ...state, lines, roles, warnings: filingWarnings(c.combinationKey, lines), ...plan };
   }
 
   /** Preview: an unsaved case of one Sample family, read by caseView (never saved, never a real person). */
