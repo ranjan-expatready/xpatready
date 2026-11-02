@@ -4,7 +4,7 @@ Branch `g4-part2-local` (local, not pushed), 2 Nov 2026, forms builder; fixes af
 
 ## What a person can now do
 * **The author writes or changes a made-up family** on the combination's Tests tab (Families → "Write a family" / "Edit"): key (new only), name, reference date, people (id, role from the library's person roles, made-up name, travelling or stays home), facts (about: a person, the application, or a relative a form describes; a library field; row; a value control by the field's type), and "none apply" groups (a library section). Each refusal shows on its own field; a 409 says who saved and offers "Load their version"; a 403 (a race) shows the server's sentence.
-* **The expert (or the author) writes the expected values** per item ("Write expected values" for a family with no key yet; "Change" on a key): the Expected editor lists every mapped box of the form in the form's order, per travelling person, with its caption, the fact it reads and whose; a choice box is a list of the form's own options shown "label (code)"; a text box is typed; empty = stays blank. Boxes a person fills (signature, oath) are not offered. There is no "fill from a run". A signed key's change asks for a one-line reason and returns it to Draft.
+* **The expert (or the author) writes the expected values** per item ("Write expected values" for a family with no key yet; "Change" on a key): the Expected editor lists every mapped box of the form in the form's order, per person of the family (one who stays home is marked "not travelling": a form can apply to them), with its caption, the fact it reads and whose; a choice box is a list of the form's own options shown "label (code)"; a text box is typed; empty = stays blank. Boxes a person fills (signature, oath) are not offered. There is no "fill from a run". A signed key's change asks for a one-line reason and returns it to Draft.
 * **A rule-set key** (the eligibility rules) is written the same way: per travelling person an outcome and, optionally, each gate's state.
 
 ## Files changed
@@ -30,6 +30,7 @@ Branch `g4-part2-local` (local, not pushed), 2 Nov 2026, forms builder; fixes af
 | Check | Result |
 |---|---|
 | `check_g4_answer_keys.ts` on a fresh `forms_g4s` (:4457) | 88/88, exit 0 (860bf1a9: 87/87, also rerun on the same copy) |
+| After the Devin review on #525 (worktree `g4-part2-merge`), fresh copies | `check_g4_answer_keys.ts` (:4456) 88/88, exit 0; `check_g4_tests_tab_browser.ts` (:4458) 50/50, exit 0. Before the fixes the four new lines failed (Devin #1–#3 FAIL, #4 timed out on the refused save). Web tsc exit 0; `any` 426 (base 426); graph exit 0 |
 | `check_g4_tests_tab_browser.ts` on a fresh `forms_g4t` (:4459) | 46/46, exit 0 (axe: no WCAG A/AA violation on 9 states; no sideways scroll at 1024 px). Before the fixes the new lines failed: P2-M3 FAIL (201 elements past the dialog), P2-M2 timed out on the second 409 |
 | `tsc -p api/tsconfig.json` filtered to the G4 files | no error (other errors there pre-exist) |
 | `web: tsc --noEmit` | exit 0 |
@@ -60,6 +61,15 @@ Each rule has a pass and a fail line: §4 boxes (form order, options; a mapped s
 | m6 same values unsigned a signed key | the API keeps the signature when the values are unchanged | API: "a signed key changed to the same values keeps its signature" |
 | m7 reload lost an open editor | `beforeunload` asks while an editor has unsaved changes | — |
 | Review minors 3, 4, 5, 7 | rule-set lines in words; rule-set editor copy; the toast counts wrong values like the pill; the field picker shows labels (key below and on hover) | — |
+
+## Fixes after the Devin review on #525 (head 1fcfbd48)
+| Finding | Fix | Line in the browser check (fail before, pass now) |
+|---|---|---|
+| 1 the Expected editor offered only travelling people, though a field map can apply to one who stays home | a field map offers every person of the family (one who stays home marked "not travelling"); a person left empty is not sent; rule sets stay travellers only (C6.9 BR-7). Values of a person the server would refuse (no longer in the family; not travelling, for rules) are said before saving and removed by it, as the server refuses them | "a field map's editor offers the husband who stays home…" |
+| 2 a key for an older edition could not be moved | the editor says "Written for X; the map is now Y: saving moves it to Y" and sends the map's edition (a signed key still needs a reason) | "a key for another edition is shown as such; saving … moves it … and it runs" |
+| 3 a new phone fact was a one-line text box | `GET /answer-keys/fields` marks `parts` (composite, address, phone, or read part by part by a form's `phone…` transform); such a fact, or any stored object, gets the JSON box | "a new phone fact is written as parts" |
+| 4 Remove on a person left their facts, so Save was refused | Remove asks first, naming the count, then removes their facts (and `<id>/parent_1`, `/parent_2`, `/sibling` facts) and "none apply" groups | "Remove on the husband asks first, naming his facts…" |
+| Review last minor: the 409 notice gave the way out twice | the notice keeps the server's sentence and says only what "Load their version" drops | — |
 
 ## Not built / follow-ups (with reasons)
 * **m3 focus after Save, Cancel, Remove:** needs the shared `Dialog` (controls.tsx, all screens) to return focus to its opener; a shared-file change for its owner, not this slice.

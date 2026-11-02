@@ -237,3 +237,22 @@ The 409 notice says the way out twice: "Reload their version, then make your cha
 No Blocker or Major is open. The journey score rises from 8.5 to about 9: the feedback-and-state and error-recovery criteria now hold.
 
 **Verdict: Approve** (commit 10f90396)
+
+## Head 1fcfbd48
+The head is 10f90396 (approved above), plus 3aa54010 (records only), plus a merge of origin/main (part 1 #513 is in). The tech lead has approved the concept (Q1–Q3 as recommended).
+
+### What the merge changed
+I read `git diff 10f90396 1fcfbd48 -- '*studio*'`.
+- **Untouched by the merge:** the answer-key files (engine, api, contracts, web), `combination.tsx`, `form-values.ts`, `render.ts`, `snapshot.ts`, `options.ts`, `form-steps.ts`, `runtime/forms.ts`, `runtime/eligibility.ts`, the Prisma schema, `core.ts`, `demo.ts`, `lib/api.ts` and `controls.tsx`.
+- **`contracts/workspace.ts`:** only adds helpers (`irccWords`, `FIND_DESCRIPTION`, `endSentence`, `ONLINE_OPTION`). TABS is unchanged, so the Tests tab stays.
+- **`engine/runtime/case.ts`:** `caseView` adds one staff-only check (a worked-out "has children" Yes over a No). It changes no box coverage or value, and a run compares boxes, not checks.
+
+### What I ran
+In `/home/user/g4wt` on fresh copies, never :4400:
+- **Web build:** built.
+- **`check_g4_answer_keys`:** **88/88** (:4451).
+- **`check_g4_tests_tab_browser`:** **46/46** (:4452).
+
+No Blocker or Major is open. The Minors stay as recorded above.
+
+**Verdict: Approve** (commit 1fcfbd48)

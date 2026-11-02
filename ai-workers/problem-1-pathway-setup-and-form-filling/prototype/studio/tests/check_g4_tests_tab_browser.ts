@@ -253,8 +253,7 @@ const step = (name: string, ok: unknown, detail?: unknown) => { ok ? pass++ : fa
   await dlg.getByLabel("Name", { exact: true }).fill("Small family, my name (Sample)");
   await dlg.getByRole("button", { name: "Save the family" }).click();
   await dlg.getByText(/Changed by someone else/).waitFor({ timeout: 30000 });
-  p.once("dialog", (d) => void d.accept());
-  await dlg.getByRole("button", { name: "Cancel" }).click(); await closed();
+  await dlg.getByRole("button", { name: "Cancel" }).click(); await closed(); // Cancel closes without asking
   await panel.locator(`[data-family="${small}"]`).getByRole("button", { name: /^Edit the family/ }).click();
   await dlg.locator('[data-editor="family"]').waitFor({ timeout: 30000 });
   const reopened = await dlg.getByLabel("Name", { exact: true }).inputValue();
@@ -270,8 +269,7 @@ const step = (name: string, ok: unknown, detail?: unknown) => { ok ? pass++ : fa
   await dlg.locator(`[data-box="${PD}Name[0].GivenName[0]"] input`).fill("MINE");
   await dlg.getByRole("button", { name: "Save the expected values" }).click();
   await dlg.getByText(/Changed by someone else/).waitFor({ timeout: 30000 });
-  p.once("dialog", (d) => void d.accept());
-  await dlg.getByRole("button", { name: "Cancel" }).click(); await closed();
+  await dlg.getByRole("button", { name: "Cancel" }).click(); await closed(); // Cancel closes without asking
   await srow.getByRole("button", { name: "Change" }).click();
   await dlg.locator('[data-editor="expected"] [data-box]').first().waitFor({ timeout: 30000 });
   const kReopened = await dlg.locator(`[data-box="${PD}Name[0].GivenName[0]"] input`).inputValue();
@@ -295,6 +293,52 @@ const step = (name: string, ok: unknown, detail?: unknown) => { ok ? pass++ : fa
   await closed();
   const kAfter = (await api(`/answer-keys/${sk.id}`)).body;
   step("C5.7 BR-7 (break P2-M1): with the reason the change saves and the key is back to Draft", kAfter.state === "DRAFT" && kAfter.change_reason === "Second given name (test)", kAfter.state);
+
+  // ---------------------------------------------------------------------------------------------- Devin review on #525
+  await as("user-A"); await p.goto(`${BASE}/c/${vv}/tests`); await settle();
+  // 1: a field map's editor offers every person of the family (a form can apply to one who stays home); empty is not sent.
+  const r2 = panel.locator(`[data-key="${k2.body.id}"]`);
+  await r2.getByRole("button", { name: "Change" }).click();
+  await dlg.locator('[data-editor="expected"] [data-box]').first().waitFor({ timeout: 30000 });
+  const fatherSec = dlg.locator('[data-person="father"]');
+  const offeredFather = (await fatherSec.count()) === 1 && /not travelling/.test(await fatherSec.locator("h4").innerText());
+  await dlg.getByRole("button", { name: "Save the expected values" }).click(); await closed();
+  const k2now = (await api(`/answer-keys/${k2.body.id}`)).body;
+  step("C5.7 BR-2 (Devin #1): a field map's editor offers the husband who stays home, marked not travelling; saving sends no person left empty and keeps the mother's values", offeredFather && Object.keys(k2now.expected.people).join() === "mother" && Object.keys(k2now.expected.people.mother).length === Object.keys(less.people.mother).length && Object.entries(less.people.mother).every(([b, v]) => k2now.expected.people.mother[b] === v), JSON.stringify({ offeredFather, people: Object.keys(k2now.expected.people) }));
+
+  // 2: a key written for another edition says so in the editor; a save moves it to the map's edition, and it runs.
+  const famE = await api("/answer-keys/families", { method: "POST", data: { ...sample, key: `e1e-${run}`, label: "E1 household, old edition (Sample)" } });
+  const kE = await api(`/combinations/${vv}/answer-keys`, { method: "POST", actor: "user-C", data: { family_id: famE.body.id, item_kind: "field_map", item_ref: "IMM 5257", expected: { ...exp, edition: "IMM 5257 (01-2020)" } } });
+  await p.reload(); await settle();
+  const rE = panel.locator(`[data-key="${kE.body.id}"]`);
+  await rE.getByRole("button", { name: "Change" }).click();
+  await dlg.locator('[data-editor="expected"] [data-box]').first().waitFor({ timeout: 30000 });
+  const editionSaid = /Written for IMM 5257 \(01-2020\); the map is now IMM 5257 \(09-2023\): saving moves it/.test(await dlg.innerText());
+  await dlg.getByRole("button", { name: "Save the expected values" }).click(); await closed();
+  await rE.getByRole("button", { name: "Run" }).click();
+  await p.waitForFunction((id: string) => /Passed|Failed/.test(document.querySelector(`[data-key="${id}"]`)?.textContent ?? ""), kE.body.id, { timeout: 60000 });
+  const kEnow = (await api(`/answer-keys/${kE.body.id}`)).body;
+  step("C5.7 BR-6 (Devin #2): a key for another edition is shown as such; saving it through the editor moves it to the map's edition and it runs without the edition failure", editionSaid && kEnow.expected.edition === "IMM 5257 (09-2023)" && kEnow.run.state === "PASSED", JSON.stringify({ editionSaid, edition: kEnow.expected.edition, run: kEnow.run.state }));
+
+  // 3: a new phone fact gets the parts (JSON) control, as an address does.
+  await panel.locator(`[data-family="e1u-${run}"]`).getByRole("button", { name: /^Edit the family/ }).click();
+  await dlg.locator("[data-fact-row]").nth(47).waitFor({ timeout: 30000 });
+  await dlg.getByRole("button", { name: "Add a fact" }).click();
+  await dlg.getByLabel("Fact 49: field").selectOption("person.telephone_number");
+  const phoneTag = await dlg.getByLabel("Fact 49: value").evaluate((e) => e.tagName);
+  step("C5.7 BR-1 (Devin #3): a new phone fact is written as parts (the JSON box), not a one-line text box", phoneTag === "TEXTAREA", phoneTag);
+  await dlg.locator('[data-fact-row="48"]').getByRole("button", { name: "Remove" }).click();
+
+  // 4: removing a person removes their facts (and their relatives') and "none apply" groups, after saying how many.
+  const nFather = (sample.facts as { about: string }[]).filter((f) => f.about === "father" || f.about.startsWith("father/")).length;
+  let asked = "";
+  p.once("dialog", (d) => { asked = d.message(); void d.accept(); });
+  await dlg.locator('[data-person-row="1"]').getByRole("button", { name: "Remove" }).click();
+  await dlg.getByRole("button", { name: "Save the family" }).click();
+  await Promise.race([closed(), dlg.locator('[role="alert"]').first().waitFor({ timeout: 30000 })]);
+  const fam4 = (await api("/answer-keys/families")).body.families.find((f: { key: string }) => f.key === `e1u-${run}`);
+  step("C5.7 BR-1 (Devin #4): Remove on the husband asks first, naming his facts, then takes them with him; the family saves", new RegExp(`removes ${nFather} facts`).test(asked) && (await dlg.count()) === 0 && fam4.people.length === 1 && !fam4.facts.some((f: { about: string }) => f.about.split("/")[0] === "father"), JSON.stringify({ asked, people: fam4.people.length }));
+  if (await dlg.count()) { await dlg.getByRole("button", { name: "Cancel" }).click(); await closed(); }
   step("no page errors", errs.length === 0, errs.join(" | "));
   await b.close();
   console.log(`\n${pass}/${pass + fail} passed`);

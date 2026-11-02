@@ -1,7 +1,7 @@
 // G4 (forms lane, C5.7; concept screens/G4-answer-keys/concept.md §3–§5, challenge M5 b): the Tests tab's editors,
 // slice 2. Families: the author writes a made-up family (BR-1: people with library roles, facts on library fields, the
 // "none apply" groups), Sample until the expert signs. The Expected editor (BR-2, BR-4; STANDARDS §3.2 pick, don't
-// type): every mapped box of the form, per travelling person, in the form's order, with its caption and whose fact it
+// type): every mapped box of the form, per person of the family (a form can apply to one who stays home), in the form's order, with its caption and whose fact it
 // reads; a choice box picks from the form's own options ("label (code)"); empty = stays blank. It never offers "fill
 // from a run": the key must not copy the product's output. Boxes a person fills (signature, oath) are not offered.
 // The server decides who may save (author for families; author or expert for keys) and says why on 403. US$0, no AI.
@@ -69,8 +69,8 @@ function useLeaveGuard(dirty: boolean) {
 function Reading({ title, close, problem }: { title: string; close: () => void; problem?: string | null }) {
   return <Dialog open wide onOpenChange={(o) => { if (!o) close(); }} title={title} footer={<Button variant="ghost" onClick={close}>Close</Button>}>{problem ? <Notice tone="danger" title="Cannot open">{problem}</Notice> : <p className="text-sm text-text-muted">Loading the latest saved version…</p>}</Dialog>;
 }
-/** A 409 in words, with the way out: load their version (the edits here are dropped) or close and reopen. */
-const Stale = ({ text, reload }: { text: string; reload: () => void }) => <Notice tone="danger" title="Not saved" action={<Button type="button" size="sm" variant="outline" onClick={reload}>Load their version</Button>}>{text} Load their version (your changes here are dropped), then make your change again.</Notice>;
+/** A 409 in words (the server's sentence already says to reload): the button does it, and says what it drops. */
+const Stale = ({ text, reload }: { text: string; reload: () => void }) => <Notice tone="danger" title="Not saved" action={<Button type="button" size="sm" variant="outline" onClick={reload}>Load their version</Button>}>{text} Loading it drops your changes here.</Notice>;
 const Err = ({ id, text }: { id: string; text?: string }) => (text ? <p id={id} role="alert" className="mt-0.5 text-xs text-text-danger">{text}</p> : null);
 
 // ------------------------------------------------------------------------------------------------ families (BR-1)
@@ -78,7 +78,7 @@ type Kind = "choice" | "yesno" | "date" | "number" | "json" | "text";
 /** Break m1: a fact's control is chosen once, from its field (and, for a stored object such as a phone, from the value),
  *  never from the text being typed, so it does not change under the cursor. */
 const kindOf = (f: LibraryField | undefined, json: boolean): Kind =>
-  json ? "json" : f?.values?.length ? "choice" : f?.value_type === "yes_no" ? "yesno" : f?.value_type === "date" ? "date" : f?.value_type === "number" ? "number" : f?.value_type === "address" ? "json" : "text";
+  json || f?.parts ? "json" : f?.values?.length ? "choice" : f?.value_type === "yes_no" ? "yesno" : f?.value_type === "date" ? "date" : f?.value_type === "number" ? "number" : "text";
 type FactRow = { about: string; fact: string; row: string; raw: string; json: boolean };
 const rawOf = (v: unknown) => (v === undefined || v === null ? "" : typeof v === "object" ? JSON.stringify(v, null, 1) : String(v));
 function valueOf(kind: Kind, raw: string): { value: unknown; bad?: string } {
@@ -131,7 +131,7 @@ function FamilyForm({ combinationId, family: latest, signedKeys, close, roles, f
   useLeaveGuard(dirty);
   const [key, setKey] = React.useState(""), [label, setLabel] = React.useState(family?.label ?? ""), [ref, setRef] = React.useState(family?.reference_date ?? "");
   const [people, setPeople] = React.useState(family?.people ?? [{ id: "principal", role: "principal", label: "", applies: true }]);
-  const [facts, setFacts] = React.useState<FactRow[]>((family?.facts ?? []).map((f) => ({ about: f.about, fact: f.fact, row: f.row === null || f.row === undefined ? "" : String(f.row), raw: rawOf(f.value), json: (f.value !== null && typeof f.value === "object") || fieldOf.get(f.fact)?.value_type === "address" })));
+  const [facts, setFacts] = React.useState<FactRow[]>((family?.facts ?? []).map((f) => ({ about: f.about, fact: f.fact, row: f.row === null || f.row === undefined ? "" : String(f.row), raw: rawOf(f.value), json: f.value !== null && typeof f.value === "object" })));
   const [none, setNone] = React.useState(family?.none_apply ?? []);
   const [reason, setReason] = React.useState(""), [askReason, setAskReason] = React.useState(signedKeys > 0);
   const [errors, setErrors] = React.useState<Errors>({}), [top, setTop] = React.useState<string | null>(null);
@@ -154,6 +154,14 @@ function FamilyForm({ combinationId, family: latest, signedKeys, close, roles, f
   const shown = (f: string) => ["key", "label", "reference_date", "reason"].includes(f) || /^(people|facts|none_apply)\[\d+\]/.test(f);
   const others = rest(errors, shown);
   const setPerson = (i: number, patch: Partial<FamilyView["people"][number]>) => setPeople((ps) => ps.map((p, j) => (j === i ? { ...p, ...patch } : p)));
+  /** Devin review: a person goes with their facts (and their relatives': "<id>/parent_1", …) and "none apply" groups,
+   *  which the server would otherwise refuse as about nobody; a confirm names how many. */
+  const removePerson = (i: number) => {
+    const id = people[i].id, mine = (about: string) => about === id || about.startsWith(`${id}/`);
+    const nf = facts.filter((f) => mine(f.about)).length, nn = none.filter((n) => n.about === id).length;
+    if ((nf || nn) && !window.confirm(`Remove ${people[i].label || id}? This also removes ${nf} fact${nf === 1 ? "" : "s"} about them${nn ? ` and ${nn} "none apply" group${nn === 1 ? "" : "s"}` : ""}.`)) return;
+    setPeople((ps) => ps.filter((_, j) => j !== i)); setFacts((fs) => fs.filter((f) => !mine(f.about))); setNone((ns) => ns.filter((n) => n.about !== id)); setDirty(true);
+  };
   const setFact = (i: number, patch: Partial<FactRow>) => setFacts((fs) => fs.map((f, j) => (j === i ? { ...f, ...patch } : f)));
   return (
     <Dialog open wide guard onOpenChange={(o) => { if (!o) close(); }} title={family ? `Change the family "${family.key}"` : "Write a test family"}
@@ -176,7 +184,7 @@ function FamilyForm({ combinationId, family: latest, signedKeys, close, roles, f
               <div><Select aria-label={`Person ${i + 1}: role`} value={p.role} onChange={(e) => setPerson(i, { role: e.target.value })} aria-invalid={errors[`people[${i}].role`] ? true : undefined}>{roles.filter((r) => !r.retired || r.key === p.role).map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}</Select><Err id={`prole-${i}`} text={errors[`people[${i}].role`]} /></div>
               <div><Input aria-label={`Person ${i + 1}: made-up name`} placeholder="EXAMPLE NAME (Sample)" value={p.label} onChange={(e) => setPerson(i, { label: e.target.value })} maxLength={120} aria-invalid={errors[`people[${i}].label`] ? true : undefined} /><Err id={`plabel-${i}`} text={errors[`people[${i}].label`]} /></div>
               <Select aria-label={`Person ${i + 1}: travelling`} value={p.applies ? "yes" : "no"} onChange={(e) => setPerson(i, { applies: e.target.value === "yes" })}><option value="yes">Travelling</option><option value="no">Stays home</option></Select>
-              <Button type="button" size="sm" variant="ghost" disabled={people.length < 2} onClick={() => setPeople((ps) => ps.filter((_, j) => j !== i))}>Remove</Button>
+              <Button type="button" size="sm" variant="ghost" disabled={people.length < 2} onClick={() => removePerson(i)}>Remove</Button>
             </div>
           ))}
           <Button type="button" size="sm" variant="outline" onClick={() => setPeople((ps) => [...ps, { id: `person_${ps.length + 1}`, role: "spouse_or_partner", label: "", applies: true }])}>Add a person</Button>
@@ -189,7 +197,7 @@ function FamilyForm({ combinationId, family: latest, signedKeys, close, roles, f
             return (
               <div key={i} className="grid items-start gap-2 sm:grid-cols-[minmax(0,10rem)_minmax(0,1fr)_minmax(0,4.5rem)_minmax(0,1fr)_auto] [&>*]:min-w-0" data-fact-row={i}>
                 <div><Select aria-label={`Fact ${i + 1}: about`} value={f.about} onChange={(e) => setFact(i, { about: e.target.value })} aria-invalid={fe("about") ? true : undefined}><option value="">(choose)</option>{abouts.map(([v, w]) => <option key={v} value={v}>{w}</option>)}{f.about && !abouts.some(([v]) => v === f.about) ? <option value={f.about}>{f.about}</option> : null}</Select><Err id={`fa-${i}`} text={fe("about")} /></div>
-                <div><Select aria-label={`Fact ${i + 1}: field`} value={f.fact} onChange={(e) => setFact(i, { fact: e.target.value, raw: "", json: fieldOf.get(e.target.value)?.value_type === "address" })} aria-invalid={fe("fact") ? true : undefined}><option value="">(choose a field)</option>{fields.map((x) => <option key={x.id} value={x.id} title={x.id}>{x.label.length > 70 ? `${x.label.slice(0, 69)}…` : x.label}</option>)}{f.fact && !field ? <option value={f.fact}>{f.fact} (not in the library)</option> : null}</Select>
+                <div><Select aria-label={`Fact ${i + 1}: field`} value={f.fact} onChange={(e) => setFact(i, { fact: e.target.value, raw: "", json: false })} aria-invalid={fe("fact") ? true : undefined}><option value="">(choose a field)</option>{fields.map((x) => <option key={x.id} value={x.id} title={x.id}>{x.label.length > 70 ? `${x.label.slice(0, 69)}…` : x.label}</option>)}{f.fact && !field ? <option value={f.fact}>{f.fact} (not in the library)</option> : null}</Select>
                   {field ? <p className="mt-0.5 truncate text-xs text-text-muted" title={field.label}>{field.id}</p> : null}<Err id={`ff-${i}`} text={fe("fact") ?? errors[`facts[${i}]`]} /></div>
                 <div><Input aria-label={`Fact ${i + 1}: row`} type="number" min={0} max={49} placeholder="—" value={f.row} onChange={(e) => setFact(i, { row: e.target.value })} aria-invalid={fe("row") ? true : undefined} /><Err id={`fr-${i}`} text={fe("row")} /></div>
                 <div><FactValue kind={kinds[i]} field={field} raw={f.raw} set={(v) => setFact(i, { raw: v })} label={`Fact ${i + 1}: value`} error={fe("value")} noteId={`fv-${i}`} /><Err id={`fv-${i}`} text={fe("value")} /></div>
@@ -263,7 +271,9 @@ function KeyForm({ combinationId, item, family, existing: latest, close, reload 
   const map = item.item_kind === "field_map";
   const boxes = useApi<BoxesView>(["answer-key-boxes", combinationId, item.item_ref], map ? `/combinations/${combinationId}/answer-keys/boxes?form=${encodeURIComponent(item.item_ref)}` : null);
   const gates = useApi<{ gates: { key: string; label: string }[] }>(["combination", combinationId, "eligibility-gates"], map ? null : `/combinations/${combinationId}/eligibility-gates`);
-  const travelling = family.people.filter((p) => p.applies);
+  // Devin review: a form can apply to a person who stays home (a spouse's own form, "each person"), so a field map offers
+  // every person of the family; eligibility is for the people who travel (C6.9 BR-7). A person left empty is not sent.
+  const travelling = map ? family.people : family.people.filter((p) => p.applies);
   const had = (existing?.expected.people ?? {}) as Record<string, unknown>;
   const [values, setValues] = React.useState<MapPeople>(() => Object.fromEntries(travelling.map((p) => [p.id, { ...((map ? had[p.id] : null) as Record<string, string> | null ?? {}) }])));
   const [rules, setRules] = React.useState<RulePeople>(() => Object.fromEntries(travelling.map((p) => { const h = (!map ? had[p.id] : null) as { outcome?: Outcome; gates?: Record<string, GateState> } | null; return [p.id, { outcome: h?.outcome ?? "", gates: { ...(h?.gates ?? {}) } }]; })));
@@ -279,7 +289,7 @@ function KeyForm({ combinationId, item, family, existing: latest, close, reload 
     const people = map
       ? Object.fromEntries(Object.entries(values).map(([id, v]) => [id, Object.fromEntries(Object.entries(v).filter(([, x]) => x !== ""))]).filter(([, v]) => Object.keys(v as object).length))
       : Object.fromEntries(Object.entries(rules).filter(([, r]) => r.outcome).map(([id, r]) => [id, { outcome: r.outcome, ...(Object.values(r.gates).some(Boolean) ? { gates: Object.fromEntries(Object.entries(r.gates).filter(([, g]) => g)) } : {}) }]));
-    const expected = { people };
+    const expected = { ...(current ? { edition: current } : {}), people };
     const body = existing ? { expected, version: existing.version, ...(signed ? { reason } : {}) } : { family_id: family.id, item_kind: item.item_kind, item_ref: item.item_ref, expected };
     save.mutate(body, { onError: (e) => {
       const r = errorsOf(e), conflict = e instanceof ApiError && e.status === 409;
@@ -291,6 +301,8 @@ function KeyForm({ combinationId, item, family, existing: latest, close, reload 
       }
     } });
   };
+  // Devin review: a key written for another edition is moved to the map's edition by a save (it is said first).
+  const current = map ? boxes.data?.edition ?? item.edition ?? null : null, stored = map ? existing?.expected.edition ?? null : null;
   const offered = (boxes.data?.boxes ?? []).filter((b) => !b.by_a_person), byPerson = (boxes.data?.boxes ?? []).length - offered.length;
   const shown = (f: string) => f === "reason" || /^expected\.people\.[^.]+\./.test(f);
   const others = rest(errors, shown);
@@ -303,15 +315,16 @@ function KeyForm({ combinationId, item, family, existing: latest, close, reload 
         {stale ? <Stale text={stale} reload={reload} /> : null}
         {top ? <Notice tone="danger" title="Not saved">{top}</Notice> : null}
         {others.length ? <Notice tone="danger" title="Some details need fixing">{others.join(" ")}</Notice> : null}
-        {dropped.length ? <Notice tone="warn" title="Values for someone not travelling">The key has expected values for {dropped.join(", ")}, who {dropped.length === 1 ? "is" : "are"} not a travelling person of this family now. Saving removes them; Cancel keeps them, and the next run fails naming {dropped.length === 1 ? "that person" : "them"}.</Notice> : null}
+        {dropped.length ? <Notice tone="warn" title={map ? "Values for someone not in the family" : "Values for someone not travelling"}>The key has expected values for {dropped.join(", ")}, who {dropped.length === 1 ? "is" : "are"} not {map ? "a person" : "a travelling person"} of this family now. Saving removes them; Cancel keeps them, and the next run fails naming {dropped.length === 1 ? "that person" : "them"}.</Notice> : null}
+        {stored && current && stored !== current ? <Notice tone="warn" title="Another edition">Written for {stored}; the map is now {current}: saving moves it to {current}. Check every value against the new edition first.</Notice> : null}
         <p className="text-xs text-text-muted">Write what the {map ? "form should hold" : "rules should give"} for this family from the {map ? "form" : "rules"} and the facts, never from a run: a key copied from the product's output proves nothing. <Pill tone="warn" title={SAMPLE_TIP}>Sample</Pill></p>
         {loading ? <p className="text-sm text-text-muted">Loading the {map ? "form's boxes" : "eligibility rules"}…</p> : null}
         {map && boxes.isError ? <Notice tone="danger" title="The form's boxes could not be loaded">{(boxes.error as Error).message}</Notice> : null}
         {map && byPerson ? <p className="text-xs text-text-muted">{byPerson} box{byPerson === 1 ? "" : "es"} a person fills (a signature, the oath) {byPerson === 1 ? "is" : "are"} not offered: the product never writes {byPerson === 1 ? "it" : "them"}.</p> : null}
-        {!travelling.length ? <Notice tone="warn">Nobody in this family travels: there is nothing to expect.</Notice> : null}
+        {!travelling.length ? <Notice tone="warn">{map ? "This family has nobody in it." : "Nobody in this family travels: there is nothing to expect."}</Notice> : null}
         {travelling.map((p) => (
           <section key={p.id} aria-label={`Expected for ${p.label}`} className="space-y-1" data-person={p.id}>
-            <h4 className="text-sm font-semibold">{p.label}</h4>
+            <h4 className="text-sm font-semibold">{p.label}{!p.applies ? <span className="ml-2 font-normal text-text-muted">not travelling: give values only if {item.item_ref} applies to them</span> : null}</h4>
             {map ? (
               <div className="divide-y divide-border rounded-lg border border-border">
                 {offered.map((b) => {

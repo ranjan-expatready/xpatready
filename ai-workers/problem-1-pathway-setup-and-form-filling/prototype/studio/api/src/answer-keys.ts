@@ -124,11 +124,15 @@ export class AnswerKeys {
    *  and, for a choice field, its answer list's values. /library/fields names no answer list, so it is not reused. */
   async libraryFields() {
     const workspaceId = await this.ws.id();
-    const [rows, lists] = await Promise.all([this.db.canonicalField.findMany({ where: { workspaceId } }), this.db.answerList.findMany({ where: { workspaceId }, include: { values: { orderBy: { sortOrder: "asc" } } } })]);
+    const [rows, lists, phones] = await Promise.all([this.db.canonicalField.findMany({ where: { workspaceId } }), this.db.answerList.findMany({ where: { workspaceId }, include: { values: { orderBy: { sortOrder: "asc" } } } }),
+      // Devin review: a phone is stored as text in the library but written as parts ({country_code, number}); the
+      // forms that read it part by part say so in their transform ("phone:…", "phone_part:…").
+      this.db.formFieldMap.findMany({ where: { workspaceId, transform: { startsWith: "phone" } }, select: { canonicalFieldKey: true }, distinct: ["canonicalFieldKey"] })]);
+    const byParts = new Set(phones.map((p) => p.canonicalFieldKey).filter(Boolean));
     const values = new Map(effective(lists, (l) => l.answerListKey, "draft").map((l) => [l.answerListKey, l.values.map((v) => ({ key: v.valueKey, label: v.label }))]));
     return {
       fields: effective(rows, (r) => r.canonicalFieldKey, "draft").filter((f) => f.status !== "RETIRED").sort((a, b) => a.canonicalFieldKey.localeCompare(b.canonicalFieldKey))
-        .map((f) => ({ id: f.canonicalFieldKey, label: (f.labelChecked && f.label) || f.meaning, value_type: f.valueType, values: f.answerListKey ? values.get(f.answerListKey) ?? [] : null })),
+        .map((f) => ({ id: f.canonicalFieldKey, label: (f.labelChecked && f.label) || f.meaning, value_type: f.valueType, values: f.answerListKey ? values.get(f.answerListKey) ?? [] : null, parts: f.dataType === "COMPOSITE" || f.valueType === "address" || f.valueType === "phone" || byParts.has(f.canonicalFieldKey) })),
     };
   }
 

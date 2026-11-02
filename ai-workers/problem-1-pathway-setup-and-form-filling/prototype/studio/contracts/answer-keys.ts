@@ -50,6 +50,7 @@ export type RunView = { id: string; result: "PASSED" | "FAILED"; passed: number;
  *  form's order. A choice box carries the form's own options; `by_a_person` boxes (signature, oath) take no value. */
 export type KeyBox = { data_path: string; caption: string; meaning: string; fact: string | null; whose: string; row: number | null; options: { code: string; label: string }[]; by_a_person: boolean; by_a_person_why: string | null };
 export type BoxesView = { form: string; edition: string; boxes: KeyBox[] };
-/** GET /answer-keys/fields: the family editor's field picker (a choice field's answer list values; null otherwise). */
-export type LibraryField = { id: string; label: string; value_type: string; values: { key: string; label: string }[] | null };
+/** GET /answer-keys/fields: the family editor's field picker (a choice field's answer list values; null otherwise).
+ *  `parts`: the value is written as parts (an address, or a phone the forms read part by part). */
+export type LibraryField = { id: string; label: string; value_type: string; values: { key: string; label: string }[] | null; parts: boolean };
 export type FieldsView = { fields: LibraryField[] };
