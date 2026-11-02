@@ -91,7 +91,7 @@ const keys = (rows: Row[]) => new Set(rows.map((r) => r.key));
   // Review c313 M1: a field moved to another section is listed under its new section, never under the one it left.
   const mover = fields.find((r) => r.placement && r.status === "PUBLISHED")!, from = mover.placement.section;
   const to = sections.find((s) => s.key !== from && !s.retired)!.key;
-  const moved = await call("POST", `/library/fields/${encodeURIComponent(mover.key)}/placement`, { sectionKey: to, collectedFrom: mover.placement.collected_from });
+  const moved = await call("POST", `/library/fields/${encodeURIComponent(mover.key)}/placement`, { sectionKey: to, collectedFrom: mover.placement.collected_from, repeats: sql(`select repeats from section_question where canonical_field_key = '${mover.key}' order by version desc limit 1`) });
   const after = (await list("fields")).rows.find((r) => r.key === mover.key);
   const inTo = keys((await list("fields", `section=${encodeURIComponent(to)}`)).rows), inFrom = keys((await list("fields", `section=${encodeURIComponent(from)}`)).rows);
   ok("BR-3 pass: a re-placed field shows its new section and is listed under it", moved.status < 300 && after?.placement?.section === to && inTo.has(mover.key) && after?.usedBy.sections === sectionsSql(mover.key), { status: moved.status, placement: after?.placement, usedBy: after?.usedBy });
