@@ -90,7 +90,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await p.screenshot({ path: path.join(SHOTS, "panel-decide-1440.png") });
     await axe("the side panel");
     await panel.getByRole("button", { name: "Accept the checker's reading" }).click(); await settle();
-    step("C11.14: accepting the checker's reading lands that reading", sql(`select status || '|' || (payload->>'label') from proposal_item where id = '${ids.decide}'`) === "edited|Name on the birth certificate");
+    // #477 CI: the write can land after settle()'s fixed wait on a slow runner; poll for it, and still fail if it never lands.
+    const landed = await (async () => { for (let i = 0; i < 40; i++) { const v = sql(`select status || '|' || (payload->>'label') from proposal_item where id = '${ids.decide}'`); if (v === "edited|Name on the birth certificate") return v; await p.waitForTimeout(200); } return sql(`select status || '|' || (payload->>'label') from proposal_item where id = '${ids.decide}'`); })();
+    step("C11.14: accepting the checker's reading lands that reading", landed === "edited|Name on the birth certificate", landed);
     await band("check").getByRole("button", { name: "Open Height in centimetres" }).click();
     await p.getByRole("dialog").getByLabel(/Reason/).fill("Height is not asked on this form");
     await p.getByRole("dialog").getByRole("button", { name: "Reject" }).click(); await settle();
