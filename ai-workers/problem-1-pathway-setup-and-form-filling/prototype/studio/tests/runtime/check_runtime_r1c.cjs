@@ -290,6 +290,21 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("P-71 fail-guard: while facts are missing, Filed and Validated copy uploaded back are disabled and say why", await imm.getByRole("button", { name: "Filed" }).isDisabled() && await shows(imm.getByText(/Not yet: \d+ facts? to answer or confirm before filing: do that/)));
   await imm.getByText(/^What blocks filing \(\d+\)$/).click();
   step("review M3 pass: what blocks filing is listed on the page (question, whose, why), not only in a tooltip", await shows(imm.getByRole("listitem").filter({ hasText: /\(Sample Applicant C\): (not answered|not confirmed|needs a fix)$/ }).first()));
+  // QA-165 part 2: before the file is offered, the mandatory fields of IRCC's form a copy leaves empty are listed with why.
+  const openList = imm.locator("details[data-fields-open]");
+  await openList.locator("summary").click();
+  step("QA-165 part 2 pass: IMM 5257 lists the mandatory form fields still empty, each with why, in the form's words (never a field path)", await shows(openList.getByText(/^Mandatory on IRCC's form, still empty \(\d+\)/)) && await shows(openList.getByRole("listitem").filter({ hasText: /— (needs an answer|no question asks it yet|fill it in Adobe|filled by hand): / }).first()) && await gone(openList.getByText(/form1\[|\[0\]\./)));
+  { // Its own screenshots (not state(): that would renumber this check's committed set), sideways scroll and axe.
+    const own = o.viewportSize(), dir = path.join(SHOTS, "..", "..", "..", "QA-165", "screenshots"); fs.mkdirSync(dir, { recursive: true });
+    for (const w of [1440, 390]) {
+      await o.setViewportSize({ width: w, height: w < 500 ? 844 : 900 }); await frames(o);
+      await openList.screenshot({ path: path.join(dir, `forms-mandatory-open-${w}.png`) });
+      step(`QA-165 part 2: ${w} px: the list has no sideways scroll`, !(await o.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)));
+    }
+    await o.setViewportSize(own);
+    const r = await new AxeBuilder({ page: o }).include("details[data-fields-open]").withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
+    step("QA-165 part 2: the list passes axe (WCAG 2.2 AA)", r.violations.length === 0, r.violations.map((v) => v.id));
+  }
   step("review M1 fail-guard: IMM 5257's fill trial passed, so its copies are not marked \"Checked copy, not for filing\"", await gone(imm.getByText("Checked copy, not for filing")));
   // Lead, break M3: an empty required group blocks filing until "none apply" is answered and confirmed: the officer
   // says it for the principal's education in the Agent view, then confirms the section.

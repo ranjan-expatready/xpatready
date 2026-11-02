@@ -15,6 +15,13 @@ const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeri
 const busy = (c: FormCopy) => c.status === "QUEUED" || c.status === "RUNNING";
 
 /** The forms of one case. Under the questionnaire view's query key, so any answer change refreshes it too. */
+/** QA-165 part 2: one line per field the person sees (a date's year, month and day boxes are one "Date of birth"). */
+const openLines = (open: { box: string; label: string; reason: string; why: string }[]) => {
+  const by = new Map<string, { key: string; label: string; reason: string; why: string; n: number }>();
+  for (const o of open) { const k = `${o.label}|${o.reason}|${o.why}`; const x = by.get(k); if (x) x.n++; else by.set(k, { key: k, label: o.label, reason: o.reason, why: o.why, n: 1 }); }
+  return [...by.values()];
+};
+
 export function FormsPanel({ caseId }: { caseId: string }) {
   const actor = useActorId();
   const q = useApi<{ forms: CaseForm[]; online?: CaseOnlineForm[] }>(["runtime", "view", caseId, "forms", actor], `/runtime/cases/${caseId}/forms`, {
@@ -138,6 +145,13 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
         <details className="text-[13px]">
           <summary className="cursor-pointer text-text-link">What blocks filing ({missing.length})</summary>
           <ul className="mt-1 list-disc space-y-0.5 pl-6">{missing.map((m) => <li key={`${m.fact}|${m.about}`}>{m.label} <span className="text-text-muted">({inSentence(m.about)}): {m.reason}</span></li>)}</ul>
+        </details>
+      ) : null}
+      {/* QA-165 part 2 (P-237, P-238): each mandatory field of IRCC's form a copy leaves empty, with why, before the file is offered. */}
+      {f.fields_open?.length ? (
+        <details className="text-[13px]" data-fields-open>
+          <summary className="cursor-pointer text-text-link">Mandatory on IRCC's form, still empty ({openLines(f.fields_open).length}): Adobe's Validate asks for {openLines(f.fields_open).length === 1 ? "it" : "each"}</summary>
+          <ul className="mt-1 list-disc space-y-0.5 pl-6">{openLines(f.fields_open).map((o) => <li key={o.key}><span className="[overflow-wrap:anywhere]">{o.label}</span>{o.n > 1 ? <span className="text-text-muted"> ({o.n} form fields)</span> : null} <span className="text-text-muted">— {o.reason}: {o.why}</span></li>)}</ul>
         </details>
       ) : null}
       {latest ? <CopyLine c={latest} canLock={!!canLock} lockBlocked={lockBlocked} locking={locking} setLocking={setLocking} lock={lock} working={working} /> : null}
