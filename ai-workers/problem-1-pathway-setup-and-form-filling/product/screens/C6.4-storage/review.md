@@ -151,3 +151,38 @@ Diff: `git diff 2aeb1608..4370cb9d`; 7904aa77 in between holds only the round-2 
 **Journey score (round 3, API-only):** unchanged at **9 / 10**. It passes, with no criterion at 0. Accessibility and visual quality are ½ only because there is no screen.
 
 **Verdict: Approve** (for 4370cb9d9dcc8ed6082249c58e9e46928bf6d5ed). No open Blocker or Major. m-R3-1 goes to the PR's Minor list or the screen lane's notes.
+
+## Round 4: merge of origin/main at acb6663f42605a9ade3227d2c0eea3539cb0556f
+The parents are 64c15bdf (this branch) and 2c6cb092 (main with #358 C7.3 and the C6.9 eligibility work). Since then main has one more commit (bae3db4b, a suite quarantine), which touches no schema or engine file. Run on a fresh isolated copy `rev64` on :4425, started from acb6663f. US$0.
+
+1. **The schema union only adds lines.** `git diff 2c6cb092..acb6663f -- prisma/schema.prisma` has 59 additions and no removed line:
+   * `checklistLines` on Case, next to main's `enteredSections` and `assessments`;
+   * `checklistLines` and `documents` on AnswerSubject;
+   * the ChecklistLine and CaseDocument models.
+
+   The C6.4 model block (CaseDocument's restored closing brace included) is identical, line for line, to the one on 4370cb9d. Main's C6.9 models follow it unchanged.
+2. **Migration order is right.** `20261102040000_c73_entered_section` < `20261102120000_c69_eligibility` < `20261102140000_c64_document_storage`. On the fresh copy all three are finished in `_prisma_migrations` in that order, with no rollback. C6.4's migration only creates its own two tables, with FKs to `runtime_case` and `answer_subject`, so it does not depend on the C6.9 or C7.3 tables.
+3. **Main does not conflict with this PR's code.**
+   * Against main's parent, the merge changes only this branch's files: `case-checklist.ts`, `main.ts` (the 413 branch), `contracts/documents.ts`, `render.ts`, the migration, the schema and the tests. All are byte-identical to 4370cb9d, which I reviewed in round 3.
+   * Main's new `case-prepare.ts` calls the engine's derived `caseChecklist` (not touched here) and `render()`. Its forms and documents do not change with QA-149: the round-2 comparison showed every count identical to main.
+   * Main's C7.3 answer sheet reads the case view's sections. Those may now include an answered deciding question, which is the intended QA-149 behaviour.
+   * Checks on this copy:
+     * `check_c64_storage_api`: 48/48.
+     * `acceptance/C6.4`: 16/16.
+     * `check_engine`: 43/43.
+     * `check_vv_prepare_api`: 30/30, including the C6.12 24/24, C11.6 14/14 and C7.3 13/13 acceptance runs. It counts 30 here, not the builder's 32, because the copy already had the Visitor visa from the C6.4 check, so its two setup lines are skipped.
+   * I did not re-run `check_c69_gates`, `check_vv_checklist(_api)` or `check_vv_answer_sheet`. The builder reports them green on fresh copies, and none of them reads `checklist_line`, `case_document` or the changed routes.
+
+No new findings. The journey score is unchanged at **9 / 10**.
+
+**Verdict: Approve** (for acb6663f42605a9ade3227d2c0eea3539cb0556f). No open Blocker or Major.
+
+## Round 5: second merge of origin/main at c6c32f3c6d420f96a6216f209eeeb3125294a791
+* **This PR's files are unchanged by the merge.** `git diff acb6663f..c6c32f3c` leaves `case-checklist.ts`, `contracts/documents.ts`, the schema, the migration and the C6.4 check byte-identical.
+* **`render.ts` gains a type only.** Main's change there is the optional `nothing_recorded` field on `BoxRow`, so `keepAnswered`, `answeredDeciders` and the counts are untouched.
+* **No interaction from main's C7.2 change.** Its `markNothingRecorded` (`engine/runtime/forms.ts`) marks a box only when none of its facts has an answer. The answered deciding questions that QA-149 keeps on the case therefore cannot trigger it.
+* **Nothing else in main uses the changed code.** No other file calls `keepAnswered`, the new checklist routes or `CaseChecklists`, apart from its feature module.
+* **The `qa/built/C6.4.md` resolution is right.** Main deleted the file once qa had scored the derived checklist (P-221: qa deletes a record it re-scores). This PR finishes new work, so the file is added back with only the storage-slice paragraph.
+* **Checks:** `check_engine` 43/43, run by me. For the API suites I rely on the builder's green runs on c6c32f3c; the code they test is unchanged since round 4.
+
+**Verdict: Approve** (for c6c32f3c6d420f96a6216f209eeeb3125294a791). No open Blocker or Major, and no new findings.

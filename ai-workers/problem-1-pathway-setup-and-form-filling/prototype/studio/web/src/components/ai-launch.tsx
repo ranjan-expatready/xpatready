@@ -15,8 +15,8 @@ import { COST_WORDS } from "../../../contracts/cost-check";
 
 export type AiScope = { kind: "catalogue" | "program" | "combination" | "source"; ids: string[]; label?: string };
 const MODES = [
-  ["LIVE", "Live AI", "Reads each form with AI; unchanged forms reuse what was read before; the cost is shown below before it starts"],
-  ["REPLAY", "Replay saved runs", "No model call, US$0; uses earlier real runs, labelled as replays"],
+  ["LIVE", "Live", "Reads each form with AI; unchanged forms reuse what was read before; the cost is shown below before it starts"],
+  ["REPLAY", "Saved", "No model call, US$0: the saved result of earlier real runs, shown through the same steps"],
   ["STUB", "Stub pass", "No network, no cost, no AI content: proves the path only"],
 ] as const;
 const WORK_CHANGED = "The work changed since you reviewed it (a source, a draft or a running step changed). Review the updated plan, then start again.";
@@ -69,7 +69,7 @@ export function AiLaunchDialog({ scope, onClose, initialMode = "LIVE" }: { scope
             </label>
           ))}
         </fieldset>
-        {p ? <p className="rounded-lg border border-border bg-surface px-3 py-2 text-sm" data-cost-line>{mode === "LIVE" ? <>Expected {p.totals.expected_usd === null ? "unknown" : `US$${p.totals.expected_usd.toFixed(2)}`} · worst case US${p.totals.worst_usd.toFixed(2)} (each form capped at US${p.per_run_cap_usd}; at most {p.max_paid_attempts_per_form} paid attempts per form, a retry included) · Spent so far US${p.ledger.committed_usd.toFixed(2)} of US${p.ledger.cap_usd.toFixed(2)}.</> : mode === "REPLAY" ? "Replay of saved real runs: no model call, US$0." : "Stub pass: no network, no cost, no AI content."}</p> : null}
+        {p ? <p className="rounded-lg border border-border bg-surface px-3 py-2 text-sm" data-cost-line>{mode === "LIVE" ? <>Expected {p.totals.expected_usd === null ? "unknown" : `US$${p.totals.expected_usd.toFixed(2)}`} · worst case US${p.totals.worst_usd.toFixed(2)} (each form capped at US${p.per_run_cap_usd}; at most {p.max_paid_attempts_per_form} paid attempts per form, a retry included) · Spent so far US${p.ledger.committed_usd.toFixed(2)} of US${p.ledger.cap_usd.toFixed(2)}.</> : mode === "REPLAY" ? "Saved: no model call, US$0." : "Stub pass: no network, no cost, no AI content."}</p> : null}
         {p ? <p className="text-xs text-text-muted">{p.capability_note}</p> : null}
         {plan.isLoading ? <Spinner label="Working out what would run" /> : plan.isError ? <Notice tone="danger" title="The plan could not be made">{(plan.error as Error).message}</Notice> : p ? (
           <>
@@ -129,10 +129,10 @@ function Checklists({ combinationId, onOpen }: { combinationId: string; onOpen: 
   return (
     <section aria-labelledby="ck-h" className="space-y-2 rounded-lg border border-border p-3" data-checklists>
       <h3 id="ck-h" className="text-sm font-semibold">Checklists: document requirements</h3>
-      <p className="text-xs text-text-muted">AI reads each checklist's document requirements with its own words beside them; a person decides each one. Where AI has read a checklist before, its saved reading is replayed at US$0. A live reading waits for the founder's OK on its cost (Sample estimate under US$0.50, capped at US$5): until then the stub pass shows the path, with no AI content.</p>
+      <p className="text-xs text-text-muted">AI reads each checklist's document requirements with its own words beside them; a person decides each one. Where AI has read a checklist before, its Saved reading is used at US$0. A live reading waits for the founder's OK on its cost (Sample estimate under US$0.50, capped at US$5): until then the stub pass shows the path, with no AI content.</p>
       <ul className="space-y-1 text-sm">{checklists.map((a) => { const saved = savedOf(a.id); return (
-        <li key={a.id} className="flex flex-wrap items-center justify-between gap-2" data-checklist-row={a.edition ?? a.fileName}><span>{a.edition ?? a.fileName}{saved ? <span className="ml-2 text-xs text-text-muted">saved AI reading: {saved.lines} line{saved.lines === 1 ? "" : "s"}</span> : null}</span>
-          <span className="flex gap-2">{saved ? <Button size="sm" busy={busy === `${a.id}:replay`} onClick={() => void run(a.id, "replay")}>Replay the saved reading · US$0</Button> : null}
+        <li key={a.id} className="flex flex-wrap items-center justify-between gap-2" data-checklist-row={a.edition ?? a.fileName}><span>{a.edition ?? a.fileName}{saved ? <span className="ml-2 text-xs text-text-muted">Saved reading: {saved.lines} line{saved.lines === 1 ? "" : "s"}</span> : null}</span>
+          <span className="flex gap-2">{saved ? <Button size="sm" busy={busy === `${a.id}:replay`} onClick={() => void run(a.id, "replay")}>Saved · US$0</Button> : null}
             <Button size="sm" variant="secondary" busy={busy === `${a.id}:stub`} onClick={() => void run(a.id, "stub")}>Stub pass · US$0</Button></span></li>); })}</ul>
       {err ? <p role="alert" className="text-sm text-text-danger">{err}</p> : null}
     </section>

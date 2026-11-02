@@ -8,7 +8,7 @@ export type LibraryChangeView = {
   proposed_by: string | null; proposed_by_id: string; proposed_at: string; decided_by: string | null; decided_at: string | null; decision_note: string | null;
   released_in: number | null; combination_id: string | null;
 };
-export type LibraryChangeDetail = LibraryChangeView & { field: { key: string; label: string | null; meaning: string; value_type: string; group: string | null; status: string } | null;
+export type LibraryChangeDetail = LibraryChangeView & { field: { key: string; label: string | null; meaning: string; value_type: string; group: string | null; status: string; /** C3.6: the answer list the field carries, approved with it. */ answer_list?: { key: string; label: string; status: string; values: { code: string; label: string }[] } | null } | null;
   /** A structure name (P-128): the names a branch delete takes with it, and whether a retire or restore takes its combination. */
   goes_with: string[]; with_combination: boolean;
   /** ReviewCard (P-116 amended): the approval re-check, run now and shown before the click; null when it does not apply. */

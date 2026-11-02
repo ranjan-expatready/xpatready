@@ -175,7 +175,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   for (let i = 0; i < 120 && /QUEUED|RUNNING/.test(sql(`select status from ai_batch where scope_label like '${sid}|%' order by started_at desc limit 1`)); i++) await p.waitForTimeout(500);
   await p.reload(); await ready(); await panel.waitFor(); await p.waitForTimeout(800);
   const savedText = await panel.innerText();
-  step("M1: a saved answer is loaded by itself at US$0: the Forms tab says what AI found from saved answers, with no offer to pay", /AI found [1-9]\d* forms? for this combination/.test(savedText) && /saved AI answers, US\$0/.test(savedText) && await p.locator('main [data-find-forms="live"]').count() === 0 && sql(`select count(*) from ai_batch where scope_label like '${sid}|%' and mode = 'REPLAY'`) === "1", savedText.slice(0, 200));
+  step("M1: a saved answer is loaded by itself at US$0: the Forms tab says what AI found from saved answers, with no offer to pay", /AI found [1-9]\d* forms? for this combination/.test(savedText) && /· Saved, US\$0/.test(savedText) && await p.locator('main [data-find-forms="live"]').count() === 0 && sql(`select count(*) from ai_batch where scope_label like '${sid}|%' and mode = 'REPLAY'`) === "1", savedText.slice(0, 200));
   await p.evaluate(() => window.scrollTo(0, 0));
   await state("after-saved-replay", false); // a long page: the window (a full-page shot splits its fixed header)
   removeCopies();

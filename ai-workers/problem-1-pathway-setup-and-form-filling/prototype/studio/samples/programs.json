@@ -52,21 +52,24 @@
         "role": "principal",
         "label": "Principal applicant",
         "min": 1,
-        "max": 1
+        "max": 1,
+        "filingMode": "files_own"
        },
        {
         "role": "spouse_or_partner",
         "label": "Spouse or partner (travelling)",
         "min": 0,
         "max": 1,
-        "preview": 0
+        "preview": 0,
+        "filingMode": "files_own"
        },
        {
         "role": "child",
         "label": "Child (travelling)",
         "min": 0,
         "max": 4,
-        "preview": 0
+        "preview": 0,
+        "filingMode": "files_own"
        }
       ],
       "sources": [
@@ -93,14 +96,16 @@
         "role": "principal",
         "label": "Parent or grandparent",
         "min": 1,
-        "max": 1
+        "max": 1,
+        "filingMode": "files_own"
        },
        {
         "role": "spouse_or_partner",
         "label": "Spouse or partner (also visiting)",
         "min": 0,
         "max": 1,
-        "preview": 0
+        "preview": 0,
+        "filingMode": "files_own"
        }
       ],
       "sources": [
@@ -147,14 +152,16 @@
           "role": "principal",
           "label": "Principal applicant",
           "min": 1,
-          "max": 1
+          "max": 1,
+          "filingMode": "files_own"
          },
          {
           "role": "spouse_or_partner",
           "label": "Spouse or partner",
           "min": 0,
           "max": 1,
-          "preview": 1
+          "preview": 1,
+          "filingMode": "files_own"
          },
          {
           "role": "child",
@@ -186,10 +193,22 @@
         ],
         "import": "release",
         "drop_documents": [
-         { "document_type": "Copy of IMM 5802 offer of employment and proof of employer compliance fee payment", "why": "LMIA-exempt: an offer made through the Employer Portal" },
-         { "document_type": "Provincial/territorial confirmation of nomination and R204(c) letter", "why": "LMIA-exempt: a provincial nominee's exempt offer" },
-         { "document_type": "Employment contract (LMIA-exempt job)", "why": "LMIA-exempt job" },
-         { "document_type": "Proof of completion of program of study (final transcript, or institution letter / formal notice of graduation)", "why": "post-graduation work permit, an open work permit, not this sub-category" }
+         {
+          "document_type": "Copy of IMM 5802 offer of employment and proof of employer compliance fee payment",
+          "why": "LMIA-exempt: an offer made through the Employer Portal"
+         },
+         {
+          "document_type": "Provincial/territorial confirmation of nomination and R204(c) letter",
+          "why": "LMIA-exempt: a provincial nominee's exempt offer"
+         },
+         {
+          "document_type": "Employment contract (LMIA-exempt job)",
+          "why": "LMIA-exempt job"
+         },
+         {
+          "document_type": "Proof of completion of program of study (final transcript, or institution letter / formal notice of graduation)",
+          "why": "post-graduation work permit, an open work permit, not this sub-category"
+         }
         ],
         "note": "Sample: starts from the reviewed work-permit setup for applications from outside Canada (forms IMM 1295, IMM 5257 SCH1, IMM 5409, IMM 5475, IMM 5476, IMM 5707; checklists IMM 5488 and the New Delhi visa office's IMM 5905), with the document lines for a job with an LMIA (Copy of LMIA, Job offer letter). Lines for LMIA-exempt jobs and the post-graduation work permit are left out. Each line keeps its sentence from the IRCC checklist or page it comes from."
        }
@@ -282,7 +301,8 @@
         "role": "principal",
         "label": "Student",
         "min": 1,
-        "max": 1
+        "max": 1,
+        "filingMode": "files_own"
        },
        {
         "role": "representative",
@@ -336,7 +356,8 @@
           "role": "principal",
           "label": "Sponsored spouse or partner",
           "min": 1,
-          "max": 1
+          "max": 1,
+          "filingMode": "files_own"
          },
          {
           "role": "sponsor",
@@ -349,7 +370,8 @@
           "label": "Child",
           "min": 0,
           "max": 4,
-          "preview": 0
+          "preview": 0,
+          "filingMode": "on_principal"
          },
          {
           "role": "representative",
@@ -486,7 +508,8 @@
         "role": "principal",
         "label": "Employer (applicant)",
         "min": 1,
-        "max": 1
+        "max": 1,
+        "filingMode": "files_own"
        },
        {
         "role": "representative",
