@@ -129,10 +129,10 @@ function Checklists({ combinationId, onOpen }: { combinationId: string; onOpen: 
   return (
     <section aria-labelledby="ck-h" className="space-y-2 rounded-lg border border-border p-3" data-checklists>
       <h3 id="ck-h" className="text-sm font-semibold">Checklists: document requirements</h3>
-      <p className="text-xs text-text-muted">AI reads each checklist's document requirements with its own words beside them; a person decides each one. Where AI has read a checklist before, its saved reading is replayed at US$0. A live reading waits for the founder's OK on its cost (Sample estimate under US$0.50, capped at US$5): until then the stub pass shows the path, with no AI content.</p>
+      <p className="text-xs text-text-muted">AI reads each checklist's document requirements with its own words beside them; a person decides each one. Where AI has read a checklist before, its Saved reading is used at US$0. A live reading waits for the founder's OK on its cost (Sample estimate under US$0.50, capped at US$5): until then the stub pass shows the path, with no AI content.</p>
       <ul className="space-y-1 text-sm">{checklists.map((a) => { const saved = savedOf(a.id); return (
-        <li key={a.id} className="flex flex-wrap items-center justify-between gap-2" data-checklist-row={a.edition ?? a.fileName}><span>{a.edition ?? a.fileName}{saved ? <span className="ml-2 text-xs text-text-muted">saved AI reading: {saved.lines} line{saved.lines === 1 ? "" : "s"}</span> : null}</span>
-          <span className="flex gap-2">{saved ? <Button size="sm" busy={busy === `${a.id}:replay`} onClick={() => void run(a.id, "replay")}>Replay the saved reading · US$0</Button> : null}
+        <li key={a.id} className="flex flex-wrap items-center justify-between gap-2" data-checklist-row={a.edition ?? a.fileName}><span>{a.edition ?? a.fileName}{saved ? <span className="ml-2 text-xs text-text-muted">Saved reading: {saved.lines} line{saved.lines === 1 ? "" : "s"}</span> : null}</span>
+          <span className="flex gap-2">{saved ? <Button size="sm" busy={busy === `${a.id}:replay`} onClick={() => void run(a.id, "replay")}>Saved · US$0</Button> : null}
             <Button size="sm" variant="secondary" busy={busy === `${a.id}:stub`} onClick={() => void run(a.id, "stub")}>Stub pass · US$0</Button></span></li>); })}</ul>
       {err ? <p role="alert" className="text-sm text-text-danger">{err}</p> : null}
     </section>

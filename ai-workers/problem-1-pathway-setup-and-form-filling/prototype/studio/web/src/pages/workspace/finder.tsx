@@ -35,9 +35,9 @@ export const formsKeys = (id: string) => [["combination", id], ["combination-sum
 export const useFinderLatest = (id: string) => useApi<FinderLatest>(["combination", id, "finder"], `/combinations/${id}/forms/find/latest`, { refetchInterval: (q) => (q.state.data?.run && ACTIVE.has(q.state.data.run.status) ? 2000 : false) });
 
 const MODES: [Mode, string, string][] = [
-  ["replay", "Saved (US$0)", "Replays the answers AI gave for these exact pages before. Only combinations with saved answers can be found this way."],
+  ["replay", "Saved", "Replays the answers AI gave for these exact pages before. Only combinations with saved answers can be found this way."],
   ["rules", "Rules only (US$0)", "Reads the pages and lists the form numbers printed on them; attaches nothing."],
-  ["live", "Live (cost shown below)", "Two AI rounds read the pages and must agree; only forms both pick are attached."],
+  ["live", "Live", "Two AI rounds read the pages and must agree; only forms both pick are attached."],
 ];
 
 /** Find forms with AI: the plan and its cost first, then the run (Find again, and Redo for one form with `only`). With

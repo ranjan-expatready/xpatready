@@ -18,7 +18,7 @@ const MODES: [Mode, string, string][] = [
   ["rules", "Rules only", "No AI: rules work out each step. US$0."],
   ["replay", "Saved", "The answers AI gave before for this combination's files, replayed; a step with none saved says so. US$0."],
 ];
-const HOW: Record<Plan["steps"][number]["how"], [string, "ai" | "neutral" | undefined]> = { rules: ["rules", undefined], saved: ["Saved", "ai"], not_yet: ["not available yet", "neutral"], ai_only: ["AI work: with Saved", "neutral"] };
+const HOW: Record<Plan["steps"][number]["how"], [string, "ai" | "neutral" | undefined]> = { rules: ["rules", undefined], saved: ["Saved", "ai"], not_yet: ["not available yet", "neutral"], ai_only: ["AI work: Saved only", "neutral"] };
 
 export function DraftQuestionsDocuments({ id }: { id: string }) {
   const [open, setOpen] = React.useState(false);

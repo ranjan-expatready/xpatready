@@ -120,7 +120,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await dd.locator('input[type="radio"]').first().check();
     await ready("Live chosen", "data-mode", "live");
     await ready("Start ready", "data-start-ready", "true");
-    const startLive = dd.getByRole("button", { name: "Start live AI draft" });
+    const startLive = dd.getByRole("button", { name: "Start Live" });
     const runsBefore = (await api("/ai/batches")).body.length;
     seed(worst / 2);
     await startLive.click();

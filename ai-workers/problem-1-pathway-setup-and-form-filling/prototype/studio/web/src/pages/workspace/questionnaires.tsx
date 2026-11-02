@@ -162,8 +162,8 @@ export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
 type FillMode = "rules" | "replay" | "live";
 const FILL_MODES: [FillMode, string, string][] = [
   ["rules", "Rules only (US$0)", "No AI: rules find the guide's sentences that name each person. How many is a Sample default you check."],
-  ["replay", "Saved (US$0)", "Replays what AI answered for this exact guide before. Until a live trial records one, it says there is none."],
-  ["live", "Live (cost shown below)", "Two AI rounds read the guide; only lines both agree on, with their sentence in the guide, are proposed."],
+  ["replay", "Saved", "Replays what AI answered for this exact guide before. Until a live trial records one, it says there is none."],
+  ["live", "Live", "Two AI rounds read the guide; only lines both agree on, with their sentence in the guide, are proposed."],
 ];
 
 /** "Fill from the guide" (slice 3, P-121): the plan and its cost first, then the proposal with IRCC's words. */
