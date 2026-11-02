@@ -36,3 +36,7 @@ The tech lead ruled #504's Major (QA-161) a follow-up: SH2b, the next PR in the 
 
 ## Re-scored on main 7180f4d5 (after 8 merges, 12:00–12:24 UTC)
 C11.15 Partial (33/37, K11 browser 22/22) · C4.7 Partial (15/15 + 2 WAIT; real picks wait for Track A's run) · **C5.7 Not built → Partial** (G4 part 1, 76/76) · C11.7 Partial (saved maps 26/26, queue_tx 8/8, pack 18/21) · C7.7 Partial (D4: vv_prepare 38/38, case engine 69/69) · SH2 `check_sh2_where_used` 24/24. No new failure; each count equals the PR head's.
+
+## Re-scored on main 785d148e (within 30 min of #526, #530, #531)
+* **C4.7 Partial:** Visitor visa 5/19; the Saved run lands 2 of 23 picks (QA-162). wp.family 15/15 + 2 WAIT; picks check 60/60.
+* **C4.11 Partial:** acceptance 4/23 (refused after Reset: no form fields mapped). Via the configured checkpoint: step 5 lands 0 of 22 (QA-162); step 6 says "0 picks proposed" with no reason (new Minor, UX). draft_qd 73/73, contract 35/35.
