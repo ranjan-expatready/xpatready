@@ -40,7 +40,8 @@ def form_validation(pdf_bytes):
     """QA-165 (P-144, P-237): the form's own Validate result as the saved file keeps it. The form sets its flag to
     Yes/Oui and fills its date last validated only when Validate finds the form complete, and sets No and clears the
     date otherwise (validateForm and setDateLastValidated in each form's XFA template; see validation_leaves). Passed =
-    every flag that holds a value says Yes/Oui, at least one does, and the date is filled. A form that keeps no such
+    every flag that holds a value says the same Yes/Oui (break m3 on #572: never Yes and Oui mixed), at least one does,
+    and the date is filled. A form that keeps no such
     flag cannot show that Validate passed, so it never counts as validated from the file alone."""
     parts = {k: v.get_object().get_data() for k, v in E.xfa_streams(E.open_reader(pdf_bytes)).items()}
     data = E.data_root(ET.fromstring(parts["datasets"]))
@@ -52,7 +53,7 @@ def form_validation(pdf_bytes):
     ymd = {k: next((leaves[p] for p in ps if leaves[p]), "") for k, ps in date_parts.items()}
     on = "-".join(ymd[k] for k in DATE_PARTS) if all(ymd.values()) else next((leaves[p] for p in single if leaves[p]), None)
     return {"kept_by_form": kept, "flag": flag, "date_last_validated": on,
-            "passed": kept and bool(said) and all(v in PASSED for v in said) and on is not None}
+            "passed": kept and bool(said) and len(set(said)) == 1 and said[0] in PASSED and on is not None}
 
 
 def main():

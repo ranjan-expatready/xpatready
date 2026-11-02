@@ -288,10 +288,29 @@ async function main() {
     ok("QA-165 fail (Devin on #572): such a copy cannot be locked for filing (409, in words), nothing locked", lk.status === 409 && /before the form's own Validate result was checked/.test(lk.body?.detail ?? "") && sql(`select locked_at is null from form_instance where id='${locked1}'`) === "t", lk.body?.detail);
     const dl = await bytes(`/runtime/form-copies/${locked1}/file`, OFFICER);
     ok("QA-165 fail (Devin on #572): such a copy's file is not handed out as the validated one (the product's copy instead)", dl.status === 200 && sha(dl.body) === row1.sha && sha(dl.body) !== sha(validatedFile), dl.name);
-    again("read_back");
-    ok("QA-165 pass: a later read-back whose form result passed makes the copy current again", (await call("GET", `/runtime/form-copies/${locked1}`, undefined, OFFICER)).body?.validated?.current === true);
+    // Break M2 on #572: re-sending the file of a kept row that does not pass (an old row's: bytes changed, no result of the
+    // form's own) is refused, and the kept file stays as it was: the upload is read under its own pending name.
+    const oldFile = asValidated(copyFile, "none"), oldSha = sha(oldFile);
+    const oldPath = join(caseVar, `IMM5257-${locked1.slice(0, 8)}-${oldSha.slice(0, 12)}.pdf`);
+    writeFileSync(oldPath, oldFile);
+    sql(`insert into validated_copy (id, workspace_id, form_instance_id, path, sha256, facts_hash, read_back, read_by, read_at)
+      select gen_random_uuid(), workspace_id, form_instance_id, '${oldPath.replace(`${ROOT}/`, "")}', '${oldSha}', facts_hash, read_back - 'validation', read_by, now() from validated_copy where form_instance_id='${locked1}' order by read_at limit 1`);
+    const re = await sendValidated(locked1, oldFile, "imm5257-validated.pdf");
+    ok("QA-165 fail (break M2 on #572): re-sending a kept file that does not pass is refused (422) and the kept file is still there, unchanged; no pending file left", re.status === 422 && existsSync(oldPath) && sha(readFileSync(oldPath)) === oldSha && !readdirSync(caseVar).some((f) => f.endsWith(".pending")), re.body?.detail);
+    // Break M1 on #572: doing what the words say (send the validated file again) works when that file passes: a file kept
+    // before QA-165 is not "already read back", it is read back and recorded, and the copy is current again.
+    const ouiFile = asValidated(copyFile, "Oui"), ouiSha = sha(ouiFile);
+    const ouiPath = join(caseVar, `IMM5257-${locked1.slice(0, 8)}-${ouiSha.slice(0, 12)}.pdf`);
+    writeFileSync(ouiPath, ouiFile);
+    sql(`insert into validated_copy (id, workspace_id, form_instance_id, path, sha256, facts_hash, read_back, read_by, read_at)
+      select gen_random_uuid(), workspace_id, form_instance_id, '${ouiPath.replace(`${ROOT}/`, "")}', '${ouiSha}', facts_hash, read_back - 'validation', read_by, now() from validated_copy where form_instance_id='${locked1}' order by read_at limit 1`);
+    const stuck = (await call("GET", `/runtime/form-copies/${locked1}`, undefined, OFFICER)).body?.validated?.current;
+    const re2 = await sendValidated(locked1, ouiFile, "imm5257-validated.pdf");
+    ok("QA-165 pass (break M1 on #572): the same file, kept before QA-165 and passing, sent again is read back and recorded (201), and the copy is current again", stuck === false && re2.status === 201 && re2.body?.copy?.validated?.current === true && existsSync(ouiPath) && sha(readFileSync(ouiPath)) === ouiSha, { stuck, status: re2.status, detail: re2.body?.detail });
+    r = await sendValidated(locked1, ouiFile, "imm5257-validated.pdf");
+    ok("QA-128 still holds: that file sent once more is \"already read back\" (409), nothing added", r.status === 409 && /already read back/.test(r.body?.detail ?? ""), r.body?.detail);
   }
-  const validatedRows = sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`); // 3: the read-back and the two QA-165 rows
+  const validatedRows = sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`); // the read-back, the three QA-165 rows and the Oui file read back again
   r = await call("POST", `/runtime/form-copies/${locked1}/lock`, { kind: "validated_copy_uploaded" }, OFFICER);
   ok("RT-16 pass: the officer locks an up-to-date generated copy (\"validated copy uploaded back\")", r.status === 201 && r.body.locked?.kind === "validated_copy_uploaded", r.body);
   r = await call("POST", `/runtime/form-copies/${locked1}/lock`, { kind: "filed" }, OFFICER);

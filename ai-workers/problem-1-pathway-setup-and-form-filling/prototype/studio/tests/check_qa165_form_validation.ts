@@ -52,6 +52,8 @@ for (const [form, file] of [["IMM 5257", "imm5257e"], ["IMM 1295", "imm1295e"], 
 for (const [form, file] of [["IMM 0008", "imm0008e"], ["IMM 1344", "imm1344e"]] as const) {
   const mixed = read(asValidated(blank(file)), { "ApplicationValidatedFlagMirror[0]": "No" });
   ok(`${form} fail: its two flags disagree (Yes and No) is not validated`, !mixed.passed, mixed);
+  const mixedWords = read(asValidated(blank(file)), { "ApplicationValidatedFlag[0]": "Oui" });
+  ok(`${form} fail (break m3 on #572): its flags say Yes and Oui (each a passed word, but not the same) is not validated`, !mixedWords.passed, mixedWords);
   const mirrorOnly = read(asValidated(blank(file)), { "ApplicationValidatedFlag[0]": "" });
   ok(`${form} pass: the flag set by its Validate script (the mirror) says Yes and the copied flag is empty: validated`, mirrorOnly.passed, mirrorOnly);
 }

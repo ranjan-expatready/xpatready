@@ -3,7 +3,7 @@ into a copy's XFA data (its validated flag and date last validated, in the form'
 validation_leaves) and saves it as an incremental update, so the copy's written values are unchanged. It never
 generates the barcode: a file made here is SYNTHETIC and stands only for "the form's own Validate passed" (or not) in
 checks. Prints the output path.
-  .tools/solution-1-prototype/.venv/bin/python -I studio/tools/simulate_validate.py <copy.pdf> <out.pdf> [Yes|No|none] [nodate]
+  .tools/solution-1-prototype/.venv/bin/python -I studio/tools/simulate_validate.py <copy.pdf> <out.pdf> [Yes|Oui|No|none] [nodate]
 """
 import sys
 import xml.etree.ElementTree as ET
@@ -26,7 +26,7 @@ def main():
     leaves = [p for p, _ in E.leaves(E.data_root(ET.fromstring(parts["datasets"])))]
     flags, date_parts, single = validation_leaves(leaves)
     values = {p: flag for p in flags} if flag != "none" else {}
-    if with_date and flag == "Yes":
+    if with_date and flag in ("Yes", "Oui"):
         today = date.today()
         ymd = {"Year": f"{today.year:04d}", "Month": f"{today.month:02d}", "Day": f"{today.day:02d}"}
         values.update({p: ymd[k] for k, ps in date_parts.items() for p in ps})

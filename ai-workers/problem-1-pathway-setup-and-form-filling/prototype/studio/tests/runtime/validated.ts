@@ -12,7 +12,7 @@ import { join } from "node:path";
 const STUDIO = join(import.meta.dirname, "..", ".."), ROOT = join(STUDIO, "..", "..", "..", "..");
 const PY = join(ROOT, ".tools", "solution-1-prototype", ".venv", "bin", "python");
 
-export function asValidated(copy: Buffer, flag: "Yes" | "No" | "none" = "Yes", withDate = true): Buffer {
+export function asValidated(copy: Buffer, flag: "Yes" | "Oui" | "No" | "none" = "Yes", withDate = true): Buffer {
   const dir = mkdtempSync(join(tmpdir(), "xr-validate-"));
   try {
     const src = join(dir, "copy.pdf"), out = join(dir, "validated.pdf");
