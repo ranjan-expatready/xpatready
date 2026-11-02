@@ -1,8 +1,8 @@
 // W1 setup checklist, slice C1 (P-161 (2), board W1-setup-checklist/design/draft-setup-checklist.html §5): "Before forms"
 // at the top of the Forms tab holds step 1 (Official pages, read only until the forms lane's record, F2) and step 2 (the
-// people card, moved from Questionnaires); each line's mark and words are the setup checklist's; a ?focus= link lands on
+// people card, moved from Smart questionnaire (SQR)); each line's mark and words are the setup checklist's; a ?focus= link lands on
 // its line (scrolled to, focused, outlined 2 s, the address cleared); the card's Resume on the people step lands there;
-// Questionnaires and the Overview link to it. Sample inputs, no AI (US$0). Screenshots into
+// Smart questionnaire (SQR) and the Overview link to it. Sample inputs, no AI (US$0). Screenshots into
 // product/screens/W1-setup-checklist/screenshots/before-forms/.
 //   zsh studio/tools/isolated.sh screens_bf 4441 start && node studio/tests/check_w1_before_forms_browser.cjs 4441 xr_studio_screens_bf
 const path = require("node:path"); const fs = require("node:fs");
@@ -123,21 +123,21 @@ const MARK = { done: "✓", next: "●", todo: "○", ai: "◐", waiting: "⧗" 
     await p.waitForURL(/\/c\/[0-9a-f-]+\/forms/, { timeout: 15000 }).catch(() => {});
     await p.locator('[data-step="people"][data-focused]').waitFor({ timeout: 8000 }).catch(() => {});
     step("C11.10 pass: the card's Resume setup lands on Forms with the people line outlined (P-161 (2), the 30 Oct interim reverted)", /\/forms$/.test(new URL(p.url()).pathname) && await p.locator('[data-step="people"][data-focused]').count() === 1, p.url());
-    step("C11.10 fail case: it never lands on Questionnaires", !/questionnaires/.test(p.url()));
+    step("C11.10 fail case: it never lands on Smart questionnaire (SQR)", !/questionnaires/.test(p.url()));
     await shot("resume-lands-on-people");
   }
 
-  // ======================================================== Questionnaires and Overview link to it
+  // ======================================================== Smart questionnaire (SQR) and Overview link to it
   await go(`/c/${sv.combinationId}/questionnaires`);
   const moved = p.locator("[data-who-can-be-moved]");
-  step("P-161 (2) pass: Questionnaires no longer holds the people card; one line names the people and links to Forms", await p.locator("[data-who-can-be]").count() === 0 && await moved.getByRole("link", { name: "Change on Forms" }).count() === 1);
+  step("P-161 (2) pass: Smart questionnaire (SQR) no longer holds the people card; one line names the people and links to Forms", await p.locator("[data-who-can-be]").count() === 0 && await moved.getByRole("link", { name: "Change on Forms" }).count() === 1);
   await shot("questionnaires-pointer");
   await moved.getByRole("link", { name: "Change on Forms" }).click();
   await p.waitForURL(/\/forms/); await p.locator('[data-step="people"][data-focused]').waitFor({ timeout: 8000 }).catch(() => {});
   step("P-161 (2) pass: following it lands on the people line on Forms", await p.locator('[data-step="people"][data-focused]').count() === 1);
   await go(`/c/${sv.combinationId}/overview`);
   await p.locator("[data-setup-strip]").waitFor();
-  step("P-161 (2) pass (X1 C3): the Overview has no people card any more; its strip's people step links to Forms", await p.locator("[data-overview-people]").count() === 0 && await p.getByRole("link", { name: "Change in Questionnaires" }).count() === 0 && /\/forms(\?focus=people%3Acard)?$/.test(await p.locator('[data-step-row="people"] a').first().getAttribute("href")));
+  step("P-161 (2) pass (X1 C3): the Overview has no people card any more; its strip's people step links to Forms", await p.locator("[data-overview-people]").count() === 0 && await p.getByRole("link", { name: "Change in Smart questionnaire (SQR)" }).count() === 0 && /\/forms(\?focus=people%3Acard)?$/.test(await p.locator('[data-step-row="people"] a').first().getAttribute("href")));
 
   // ======================================================== read only, and save from Forms
   await as("user-B"); await go(`/c/${sv.combinationId}/forms`);

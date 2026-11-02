@@ -2030,3 +2030,34 @@ model ChangeSet {
   @@index([proposalBatchId])
   @@map("change_set")
 }
+
+/// G1 (C5.4; P-240; concept screens/G1-source-register, tech lead's approval on #558): the source of one published
+/// number in one item. Either an official citation (citationUrl + citationQuote + citationDate; citationPage optional)
+/// or "None published – set by ExpatReady" with its reason; never both (a check in SQL). itemKey carries the
+/// combination; valuePath is the address by meaning "<field>|<op>|<k>" (or "min_age" / "months"); value is the number
+/// the entry was written for (canonical text). sample: passes only in the demo workspace as a Demo release. version:
+/// a save with an old version gets 409. No relation to the item (items are versioned rows).
+model SourceEntry {
+  id                  String    @id @default(uuid()) @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid
+  itemKind            String    @map("item_kind")
+  itemKey             String    @map("item_key")
+  valuePath           String    @map("value_path")
+  value               String
+  citationUrl         String?   @map("citation_url")
+  citationPage        String?   @map("citation_page")
+  citationQuote       String?   @map("citation_quote")
+  citationDate        DateTime? @map("citation_date") @db.Date
+  nonePublished       Boolean   @default(false) @map("none_published")
+  nonePublishedReason String?   @map("none_published_reason")
+  sample              Boolean   @default(false)
+  version             Int       @default(1)
+  createdBy           String    @map("created_by")
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedBy           String    @map("updated_by")
+  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([workspaceId, itemKind, itemKey, valuePath])
+  @@map("source_entry")
+}
+

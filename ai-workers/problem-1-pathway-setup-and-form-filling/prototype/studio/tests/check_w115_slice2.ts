@@ -1,5 +1,5 @@
 // W1-15 Questions and documents, slice 2 (runtime lane; board v2 agreed P-147; plan.md "Slice 2 against board v2"):
-// the API under the Questionnaires tab: each row's status (its newest saved choice), the release checks carrying the
+// the API under the Smart questionnaire (SQR) tab: each row's status (its newest saved choice), the release checks carrying the
 // person role (for "Needs you"), the bulk change on ticked rows (each row re-checked against the same locks, refused
 // rows in words, one batch id) and its one Undo, and the case officer as a source (P-154 words; P-155(3): by default only
 // for the case officer's own facts, any other with a written reason reviewed at release, never declarations). A passing and a
@@ -81,7 +81,7 @@ const CODES = /\bP-\d+\b/;
   await call("DELETE", `/combinations/${wp}/fact-sources/${docs[0].role}/${encodeURIComponent(docs[0].fact)}`, { version: get(docs[0].role, docs[0].fact).version });
   L = await list();
   r = await bulk({ items: items([agentFact]), prequalification: true });
-  ok("lock fail (C4.2 M4): pre-qualification on an agent fact is refused in the bulk change too", r.body.saved === 0 && /prospect is asked only what they can answer/.test(r.body.refused[0]?.message ?? ""), r.body.refused);
+  ok("lock fail (C4.2 M4): Prospect questionnaire (PQR) on an agent fact is refused in the bulk change too", r.body.saved === 0 && /prospect is asked only what they can answer/.test(r.body.refused[0]?.message ?? ""), r.body.refused);
 
   // ---------------------------------------------------------------- bulk pass, mixed, Undo
   r = await bulk({ items: items([...docs, decl]), source: "CLIENT" });
