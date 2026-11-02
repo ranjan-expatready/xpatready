@@ -14,7 +14,7 @@ import type { BatchPart } from "../../../contracts/screen02";
 
 const STATUS: Record<string, [string, string]> = { QUEUED: ["neutral", "Queued"], RUNNING: ["ai", "Running"], COMPLETED: ["ok", "Done"], APPLIED: ["ok", "Added to draft"], PARTIAL: ["warn", "Done with problems"], FAILED: ["danger", "Failed"], BLOCKED: ["warn", "Blocked"], CANCELLED: ["neutral", "Cancelled"], NEEDS_PERSON: ["warn", "Waiting for you"], WAITING: ["neutral", "Waiting"], SKIPPED: ["neutral", "Skipped"], NOT_YET: ["neutral", "Not available yet"] }; // QA-62: no code on screen
 export const BatchStatus = ({ s }: { s: string }) => { const [t, l] = STATUS[s] ?? ["neutral", s]; return <Pill tone={t}>{l}</Pill>; };
-const MODE: Record<string, string> = { LIVE: "Live AI", REPLAY: "Replay of saved runs", STUB: "Stub pass", LOCAL: "No AI (library)", RULES: "Rules only (no AI)", live: "Live AI", replay: "Replay of saved runs", rules: "Rules only (no AI)" };
+const MODE: Record<string, string> = { LIVE: "Live", REPLAY: "Saved", STUB: "Stub pass", LOCAL: "No AI (library)", RULES: "Rules only (no AI)", live: "Live", replay: "Saved", rules: "Rules only (no AI)" };
 const active = (s: string) => s === "QUEUED" || s === "RUNNING";
 
 export function AiWorkPage() {
