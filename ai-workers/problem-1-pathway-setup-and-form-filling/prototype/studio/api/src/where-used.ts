@@ -6,6 +6,7 @@
 import type { Prisma } from "@prisma/client";
 import { byItem, current, fieldUses, filingCombinations, formLineByCombination, releaseUses } from "../../engine/where-used.ts";
 import type { Db } from "./core.ts";
+import { fullTrail, trailWords } from "../../engine/structure.ts";
 
 type Client = Db | Prisma.TransactionClient;
 /** The shared-library kinds that are used by combinations. */
@@ -67,18 +68,19 @@ export async function usedInLabels(db: Client, workspaceId: string, kind: UsedKi
   return new Map([...ids].map(([k, s]) => [k, [...new Set([...s].map((id) => label.get(id)).filter((l): l is string => !!l))].sort()] as [string, string[]]).filter(([, l]) => l.length));
 }
 
-/** Each combination's place as a trail, Program › Category › Sub-category (the Pathway is left out: the page is per type). */
+/** Each combination's place as its full trail in words, Pathway type › Pathway › Program › Category › Sub-category (P-104,
+ *  QA-150; engine/structure.ts fullTrail and trailWords: every list names a combination so). */
 export async function combinationTrails(db: Client, workspaceId: string): Promise<Map<string, string>> {
   const [nodes, combos] = await Promise.all([
-    db.programDef.findMany({ where: { workspaceId }, select: { programNodeKey: true, parentNodeKey: true, label: true, nodeKind: true } }),
+    db.programDef.findMany({ where: { workspaceId }, select: { programNodeKey: true, parentNodeKey: true, label: true, nodeKind: true, clientType: true } }),
     db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true, program: { select: { programNodeKey: true } } } }),
   ]);
   const by = new Map(nodes.map((n) => [n.programNodeKey, n]));
   const out = new Map<string, string>();
   for (const c of combos) {
-    const trail: string[] = [];
-    for (let n = by.get(c.program.programNodeKey); n; n = n.parentNodeKey ? by.get(n.parentNodeKey) : undefined) if (n.nodeKind !== "PATHWAY") trail.unshift(n.label);
-    out.set(c.id, trail.length ? trail.join(" › ") : c.label);
+    const chain: (typeof nodes)[number][] = [];
+    for (let n = by.get(c.program.programNodeKey); n; n = n.parentNodeKey ? by.get(n.parentNodeKey) : undefined) chain.unshift(n);
+    out.set(c.id, chain.length ? trailWords(fullTrail(chain)) : c.label);
   }
   return out;
 }

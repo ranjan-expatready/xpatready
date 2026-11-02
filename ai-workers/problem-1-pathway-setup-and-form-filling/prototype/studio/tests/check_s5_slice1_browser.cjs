@@ -128,7 +128,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await who.getByRole("button", { name: "Edit" }).click();
   const offered = await who.getByRole("combobox").locator("option").allInnerTexts();
   step("C11.12 M3: '+ Add a person' offers only roles that take part in a case and are not listed yet (Sponsor; never Parent)", offered.includes("Sponsor") && !offered.includes("Parent"), offered.join(", "));
-  await who.getByRole("combobox").selectOption("sponsor");
+  await who.getByLabel("Person to add").selectOption("sponsor"); // C11.12: each row now has its own Filing select
   await who.getByRole("button", { name: "Add a person" }).click();
   await who.getByRole("button", { name: "Save" }).click(); await settle();
   await who.locator('[data-person="sponsor"]').waitFor({ timeout: 15000 });

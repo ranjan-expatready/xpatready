@@ -124,6 +124,8 @@ export function setupChecklistOf(s: SetupInput, key = ""): SetupChecklist {
     // 2 People.
     if (proposalsBy.people) open.people.push(item("review_proposals", proposalsBy.people, `Review ${plural(proposalsBy.people, "people proposal")}`, "review:people"));
     else if (!s.people.saved || !s.people.applicants || !s.people.confirmed) open.people.push(item("confirm_people", 1, "Confirm who can apply", "people:card", { tier: s.people.tier, reason: s.people.reason }));
+    // C11.12 (review n3): a draft's own People problems ("Filing for <role>") are a Fix item on the people step.
+    if (problemsBy.people) open.people.push({ ...problemsItem(problemsBy.people, "people", false), focus: "people:card" });
     // 3 Forms, in the order of concept §4.
     if (!s.forms.lines && !s.forms.fromLibrary && !s.forms.draftable) open.forms.push(item("find_forms", 1, "Find forms", "forms:finder"));
     if (s.forms.fromLibrary) open.forms.push(item("add_forms_found", s.forms.fromLibrary, `Add ${plural(s.forms.fromLibrary, "form")} found`, "forms:sources"));

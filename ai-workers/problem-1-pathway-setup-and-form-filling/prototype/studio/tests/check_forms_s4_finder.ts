@@ -143,6 +143,9 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   ok("C11.15: the run ends \"Done with problems\" (PARTIAL), with what was attached, missing and to decide", run.status === "PARTIAL" && /attached or already there/.test(run.message), run.message);
   const liveJobs = readFileSync(join(VAR, "fake-launch.log"), "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l).job as string).filter((j) => j.startsWith("studio-finder-forms-"));
   ok("break M5: each finder job id carries the trail's fingerprint, so two sibling combinations never share one (Stop ends only its own run)", liveJobs.length >= 2 && liveJobs.every((j) => /-[0-9a-f]{8}$/.test(j)), liveJobs.slice(0, 2));
+  // C11.3 QA-150 (review m3): the run gives the AI the names it gave before (Pathway › Program › Category), never the five
+  // parts a person reads; a job id is made from them, so a change would show here.
+  ok("C11.3 QA-150: the AI rounds are given the same names as before QA-150 (no Pathway type, no placeholder)", liveJobs.length >= 2 && liveJobs.some((j) => /-temporary-residence-visitors-/.test(j)) && liveJobs.every((j) => !/retail|corporate|no-sub-category/.test(j)), liveJobs.slice(0, 2));
   ok("review M7: no job file is left in the source tree after the rounds (the run record keeps it)", !(existsSync(join(P2, "jobs")) ? readdirSync(join(P2, "jobs")) : []).some((f) => f.startsWith("studio-finder-") && !jobsBefore.has(f)));
   ok("break minor: step 1 used the remembered page (no AI call), so it is not tagged AI", (await call("GET", `/runs/${run.id}`)).body.steps?.[0]?.uses === "rules");
   ok("review M7: the run records the pages the AI read (their files and fingerprints)", Array.isArray(res.ai_inputs) && res.ai_inputs.length >= 1 && res.ai_inputs.every((x: any) => x.file && /^[0-9a-f]{64}$/.test(x.sha256)), res.ai_inputs);
@@ -167,7 +170,7 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   const row = (c: string) => r.body.rows.find((x: any) => x.code === c);
   ok("C11.11: the library is one list with type counts, guides and checklists in it (P-118 Q3)", r.status === 200 && r.body.counts.guide >= 1 && r.body.counts.checklist >= 1 && row("Guide 5256")?.type === "guide" && row("IMM 5484")?.type === "checklist", r.body.counts);
   ok("C11.11: a downloaded form shows where it came from and when canada.ca was checked; IRCC accepts stays unset when the page says nothing about it (never invented)", row("IRM 0002")?.origin === "DOWNLOADED" && /^https:\/\/www\.canada\.ca\//.test(row("IRM 0002")?.downloaded_from ?? "") && !!row("IRM 0002")?.checked_at && row("IRM 0002")?.accepts === null && row("IRM 0002")?.accepts_basis === null, row("IRM 0002"));
-  ok("C11.11: \"Used by\" names the combinations whose draft lists it, marked picked by AI", row("IRM 0002")?.used_by?.some((u: any) => /(^| › )Visitor visa$/.test(u.label) && u.picked_by_ai), row("IRM 0002")?.used_by);
+  ok("C11.11: \"Used by\" names the combinations whose draft lists it, marked picked by AI", row("IRM 0002")?.used_by?.some((u: any) => /(^| › )Visitor visa( › No sub-category)?$/.test(u.label) && u.picked_by_ai), row("IRM 0002")?.used_by);
   ok("C11.11 (M6): the status filter shows \"Newer file on canada.ca\" for IMM 5409", (await call("GET", "/library/forms/list?status=newer_file")).body.rows.map((x: any) => x.code).includes("IMM 5409"));
   ok("C11.11: filters combine: type=guide lists guides only; search finds by number", (await call("GET", "/library/forms/list?type=guide")).body.rows.every((x: any) => x.type === "guide") && (await call("GET", "/library/forms/list?q=5645")).body.rows.length === 1);
   ok("C11.11: a filter value outside the list is refused (400)", (await call("GET", "/library/forms/list?status=lost")).status === 400);
@@ -180,7 +183,8 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   run = (await finish(r.body.id)).body;
   ok("C11.8: replay with no saved answer for these pages stops with the reason and attaches nothing (US$0)", run.status === "FAILED" && /No saved AI answer/.test(run.steps[2].message) && run.usd.spent === 0, run.steps?.[2]?.message);
   // Break M7, round 2 N4: saved answers are found by everything the AI was given (pages, prompt, trail), not by file name.
-  const vvTrail = sql(`select split_part(scope_label, '|', 2) from ai_batch where id='${run.id}'`).replace(/^[^›]+›/, "Individual ›"); // round 3 R3-2: a renamed upper level still replays
+  // QA-150: the run's scope now names the full five-part trail for people; the names the AI was given are the plan's ai_trail.
+  const vvTrail = sql(`select array_to_string(array(select jsonb_array_elements_text(plan->'combination'->'ai_trail')), ' › ') from ai_batch where id='${run.id}'`).replace(/^[^›]+›/, "Individual ›"); // round 3 R3-2: a renamed upper level still replays
   // Lead decision 28 Oct: an answer belongs to the combination itself, by its key (the job's combination), not its names.
   const vvKey = sql(`select combination_key from combination where id='${vv}'`);
   const empty = { forms: [], unresolved: [] };
@@ -267,7 +271,7 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
 
   // --- Lifecycle (P-116): where used; delete only unused and never released; retire only released; a second person
   r = await call("GET", `/library/forms/${C5645}/uses`);
-  ok("C11.11: where used lists the Visitor visa draft and blocks delete", r.status === 200 && r.body.uses.some((u: any) => /(^| › )Visitor visa$/.test(u.label) && u.blocks) && /Still used|never deleted/.test(r.body.can.delete), r.body.can);
+  ok("C11.11: where used lists the Visitor visa draft and blocks delete", r.status === 200 && r.body.uses.some((u: any) => /(^| › )Visitor visa( › No sub-category)?$/.test(u.label) && u.blocks) && /Still used|never deleted/.test(r.body.can.delete), r.body.can);
   r = await call("DELETE", `/library/forms/${C5645}`, { reason: "Not needed" });
   ok("C11.11: delete of a used form is refused with each use (409)", r.status === 409 && r.body.uses?.length > 0, r.body.detail);
   // Review must 1 (P-51): IRM 0002 came from canada.ca (an official download): kept, retired, never deleted.
@@ -483,7 +487,7 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   ok("review pass: a step with no AI call to name has no Details", svRun.steps?.[0]?.details === null, svRun.steps?.[0]?.details);
   ok("QA-62 fail: a replay with nothing saved never says AI could not pick the page, and has one full stop",svRun.status === "NEEDS_PERSON" && !/AI could not/.test(guideMsg) && !/\.\./.test(guideMsg) && /Choose the application page/.test(guideMsg), guideMsg);
   const listed = ((await call("GET", "/ai/batches")).body as any[]).find((b) => b.id === svId); // eslint-disable-line @typescript-eslint/no-explicit-any
-  ok("QA-62 pass: AI work names the finder run by its place (no database id, no pipe)", !!listed && !/\|/.test(listed.scopeLabel) && !/[0-9a-f]{8}-[0-9a-f]{4}-/.test(listed.scopeLabel) && /Super visa$/.test(listed.scopeLabel), listed?.scopeLabel);
+  ok("QA-62 pass: AI work names the finder run by its place (no database id, no pipe)", !!listed && !/\|/.test(listed.scopeLabel) && !/[0-9a-f]{8}-[0-9a-f]{4}-/.test(listed.scopeLabel) && /Super visa( › No sub-category)?$/.test(listed.scopeLabel), listed?.scopeLabel);
   ok("QA-62: the run's own page names it the same way", !/\|/.test((await call("GET", `/ai/batches/${svId}`)).body.scopeLabel ?? "|"));
   const card = (await call("GET", `/runs/${svId}`)).body;
   ok("QA-63 pass (S3 item 5): the waiting run's card leads somewhere real (the page choice on the combination's Forms tab), never its own address", card.error?.next?.href === `/c/${sv}/forms?find=page` && !card.error.next.href.startsWith("/ai/") && card.error.next.label === "Choose the application page", card.error);
