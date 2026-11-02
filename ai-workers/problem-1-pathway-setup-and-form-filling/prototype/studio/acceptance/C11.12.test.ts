@@ -89,8 +89,8 @@ run(async () => {
   const parts = JSON.stringify(sample).match(/"participants":\[[^\]]*\]/g) ?? [];
   // P-209 renames the bare "Applicant" only; a label typed on purpose ("Student", "Worker", "Employer (applicant)") is
   // kept, as "(travelling)" is (L7; qa on #445, 2 Nov). The Visitor visa principal reads "Principal applicant" (QA-143).
-  const vv = parts.find((p) => /"label":"Principal applicant"/.test(p));
-  ok("C11.12 pass (P-209, QA-143): the Demo sample (samples/wave1.json) has no bare 'Applicant' label, and a principal reads 'Principal applicant'", parts.length > 0 && !!vv && !/"label":"Applicant"/.test(JSON.stringify(sample)), parts.map((p) => /"role":"principal","label":"([^"]*)"/.exec(p)?.[1]));
+  const principalNamed = parts.find((p) => /"label":"Principal applicant"/.test(p));
+  ok("C11.12 pass (P-209, QA-143): the Demo sample (samples/wave1.json) has no bare 'Applicant' label, and a principal reads 'Principal applicant'", parts.length > 0 && !!principalNamed && !/"label":"Applicant"/.test(JSON.stringify(sample)), parts.map((p) => /"role":"principal","label":"([^"]*)"/.exec(p)?.[1]));
   ok("C11.12 fail (P-209): a sample with a bare 'Applicant' label is caught", /"label":"Applicant"/.test(JSON.stringify(sample).replace('"label":"Principal applicant"', '"label":"Applicant"')));
   ok("C11.12 pass (P-209): '(travelling)' is kept on the family labels (the L7 example)", /\(travelling\)/.test(JSON.stringify(sample)));
   T.done();
