@@ -9,6 +9,7 @@ const path = require("node:path"); const fs = require("node:fs");
 const { chromium } = require("playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
 const { speed } = require("./speed_budget.cjs"); // P-184: speed budgets judged only when the Mac is not busy
+const { sourceEveryNumber } = require("./fixtures/source-every-number.cjs"); // G1 (C5.4): a release needs every number sourced
 const PORT = Number(process.argv[2] ?? 4404), BASE = `http://localhost:${PORT}`;
 const ROOT = path.resolve(__dirname, "..", "..", "..");
 const OFFICIAL = path.join(ROOT, "official-sources", "ircc");
@@ -88,6 +89,7 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   require("node:child_process").execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${process.argv[3] ?? "xr_studio_s01ui"}`, "-Atc", `update combination set participants = (select jsonb_agg(case when x->>'role' in ('spouse_or_partner','child') then x || '{"filingMode":"files_own"}'::jsonb else x end) from jsonb_array_elements(participants) x) where id='${ss.id}'`]);
   await api(`/combinations/${ss.id}/lines`, { method: "POST", data: { kind: "FORM", formKey: "IMM 1295" } });
   // A release needs its review first (QA-1): the author submits, the content reviewer signs any expert change.
+  await sourceEveryNumber(BASE, ss.id); // G1 (C5.4): the release's numbers need a source first
   await api(`/combinations/${ss.id}/submit`, { method: "POST", data: {} });
   const ssSme = ((await api(`/combinations/${ss.id}/review`)).body.submission?.changeSummary ?? []).filter((x) => x.needs_sme).map((x) => `${x.kind}|${x.key}`);
   if (ssSme.length) await api(`/combinations/${ss.id}/signoff`, { method: "POST", actor: "user-C", data: { items: ssSme, action: "signed" } });
@@ -364,6 +366,7 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   step("QA-1: with nothing reviewed, the approver has nothing to release (button off)", await p.getByRole("button", { name: "Nothing ready to release" }).isDisabled());
   await state("release-page-held-not-submitted");
   await as("user-A");
+  await sourceEveryNumber(BASE, st.combinationId); // G1 (C5.4): the release's numbers need a source first
   await api(`/combinations/${st.combinationId}/submit`, { method: "POST", data: {} });
   const stSme = ((await api(`/combinations/${st.combinationId}/review`)).body.submission?.changeSummary ?? []).filter((x) => x.needs_sme).map((x) => `${x.kind}|${x.key}`);
   if (stSme.length) await api(`/combinations/${st.combinationId}/signoff`, { method: "POST", actor: "user-C", data: { items: stSme, action: "signed" } });

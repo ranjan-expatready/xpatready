@@ -7,6 +7,7 @@
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
+const { sourceEveryNumber } = require("./fixtures/source-every-number.cjs"); // G1 (C5.4): a release needs every number sourced
 const PORT = Number(process.argv[2] ?? 4436), DB = process.argv[3] ?? "xr_studio_runtime_pqr";
 const BASE = `http://localhost:${PORT}`;
 const ROOT = path.resolve(__dirname, "..", "..", "..");
@@ -69,6 +70,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C4.2 fail: another person's PQR does not show the principal's tick", await shownRows().count() === 0, await shownRows().count());
 
   // ======================================================== one release (C4.8)
+  await sourceEveryNumber(BASE, wp); // G1 (C5.4): the release's numbers need a source first
   let r = await api(`/combinations/${wp}/submit`, { method: "POST", data: {} });
   const review = (await api(`/combinations/${wp}/review`)).body;
   const sme = ((review?.submission?.changeSummary ?? [])).filter((x) => x.needs_sme).map((x) => `${x.kind}|${x.key}`);

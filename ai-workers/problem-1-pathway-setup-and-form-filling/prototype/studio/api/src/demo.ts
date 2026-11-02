@@ -23,6 +23,7 @@ import { linkSampleGuides } from "./guide-sources.ts";
 import { libraryRevision, Sources } from "./sources.ts";
 import { Screen02 } from "./screen02.ts";
 import { Studio } from "./studio.ts";
+import { seedSampleSources } from "./source-register.ts";
 /** C10.1 row 1 (X9a): the off-list file the configured checkpoint uploads (Sample): IMM 5476's 2021 edition, the file row 17
  *  also uses (official-sources/ircc manifest, P-32), saved again so its checksum is on no list; its IRCC page on canada.ca. */
 export const OFF_LIST_COPY = { official: "previous-editions/imm5476e-2021.pdf", name: "imm5476e-2021-from-email.pdf", page: "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5476.html" };
@@ -370,6 +371,9 @@ export class Demo {
       if (!(await this.db.combinationForm.count({ where: { combinationId: c.id } }))) { blocked.push(`${c.label}: not submitted, no form is on it yet (the form finder has no saved answer for its canada.ca page, or none was confirmed).`); continue; }
       try {
         await timed("review and release", async () => {
+          // G1 (tech lead on #558): the six are Sample, so the seed answers their numbers with Sample entries (passes only in
+          // the demo workspace, as a Demo release); a number nobody answered would refuse the submit.
+          await seedSampleSources(this.db, c.id);
           const sub = await this.studio.submit(author, c.id, "Submitted by the sample loader (C10.1 checkpoint).");
           const items = (sub.changeSummary as { kind: string; key: string }[]).map((x) => `${x.kind}|${x.key}`);
           if (items.length) await this.studio.signoff(sme, c.id, { items, action: "signed", note: "Signed by the sample loader as the SME (C10.1 checkpoint)." });
@@ -430,6 +434,8 @@ export class Demo {
       "canada.ca files saved by the finder and form line changes": (await t.officialDownload.count({ where: ws })) + (await t.formLineAction.count({ where: ws })),
       // G4 (forms lane): test families, their answer keys and runs
       "Answer-key families, keys and runs": (await t.testFamily.count({ where: ws })) + (await t.answerKey.count({ where: ws })) + (await t.answerKeyRun.count({ where: ws })),
+      // G1 (screens lane): the source entries of published numbers
+      "Source entries of published numbers": await t.sourceEntry.count({ where: ws }),
     };
     const builtIn = await t.personRole.count({ where: { ...ws, builtIn: true } });
     const dir = VAR("demo");
@@ -491,6 +497,7 @@ export class Demo {
       await tx.recaptureTask.deleteMany({ where: ws }); await tx.extensionSession.deleteMany({ where: ws }); await tx.extensionPairing.deleteMany({ where: ws }); // F2 (forms lane, parked by W1-02): the browser extension's tasks, sessions and codes left from before the park; a reset signs every extension out
       await tx.personRole.deleteMany({ where: ws }); // S5 (Lead check L9): person roles have no foreign key to the workspace
       await tx.officialDownload.deleteMany({ where: ws }); await tx.formLineAction.deleteMany({ where: ws }); // S7 (P-108): canada.ca files the finder saved and Forms tab line changes have no foreign key either
+      await tx.sourceEntry.deleteMany({ where: ws }); // G1 BR-11 (challenge m7): source entries have no foreign key; never re-attached to the re-imported keys
       await tx.workspace.delete({ where: { id: workspaceId } });
       // L9: and any left by a reset made before this fix.
       await tx.$executeRaw`DELETE FROM person_role r WHERE NOT EXISTS (SELECT 1 FROM workspace w WHERE w.id = r.workspace_id)`;

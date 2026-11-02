@@ -10,6 +10,7 @@
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
+const { sourceEveryNumber } = require("./fixtures/source-every-number.cjs"); // G1 (C5.4): a release needs every number sourced
 const PORT = Number(process.argv[2] ?? 4435), DB = process.argv[3] ?? "xr_studio_runtime_s5e";
 const BASE = `http://localhost:${PORT}`;
 const ROOT = path.resolve(__dirname, "..", "..", "..");
@@ -177,6 +178,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C6.1 QA-38 fail-guard: with one release the New case list names release 1", l1 === "With an LMIA · release 1", l1);
   // Release 2: IMM 1295 filed Online (later wave), through the same submit, sign-off and second-person approval.
   await api(`/combinations/${C}/forms/${encodeURIComponent("IMM 1295")}/channel`, { method: "PATCH", data: { channel: "ONLINE", from: "PDF_UPLOAD" } });
+  await sourceEveryNumber(BASE, C); // G1 (C5.4): the release's numbers need a source first
   await api(`/combinations/${C}/submit`, { method: "POST", data: { note: "IMM 1295 filed Online (later wave)" } });
   const sub2 = (await api(`/combinations/${C}/review`, { actor: "user-C" })).body?.submission;
   await api(`/combinations/${C}/signoff`, { method: "POST", data: { items: (sub2?.changeSummary ?? []).map((x) => `${x.kind}|${x.key}`), action: "signed" }, actor: "user-C" });

@@ -7,6 +7,7 @@ const path = require("node:path"); const fs = require("node:fs"); const { execFi
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
 const { tabCounts, tabOfFocus } = require("../contracts/setup-checklist.ts");
+const { sourceEveryNumber } = require("./fixtures/source-every-number.cjs"); // G1 (C5.4)
 const PORT = Number(process.argv[2] ?? 4442), DB = process.argv[3] ?? "xr_studio_screens_x1";
 const BASE = `http://localhost:${PORT}`;
 const ROOT = path.resolve(__dirname, "..", "..", "..");
@@ -83,6 +84,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C11.10 X1: the outline goes after 2 s", await p.locator('[data-focus="documents:lines"][data-focused]').count() === 0);
 
   const wp = sql("select id from combination where combination_key='wp.family'");
+  // G1 (C5.4): once its draft differs from Release 1, the work permit's unsourced numbers are problems too (Documents and
+  // Questionnaires); they are answered first so the problems below are this check's own.
+  await sourceEveryNumber(BASE, wp);
   // Review M1, M2: a document line's condition naming a field that does not exist is a Documents problem; "Fix 1 problem"
   // lands on the notice that lists it (never on a chip showing 0), and the Not ready key lands there too.
   step("C11.10 X1 fail (setup): no documents problems notice while there is nothing to fix", await (async () => { await p.goto(`${BASE}/c/${wp}/documents`); await p.locator("[data-documents]").waitFor(); return (await p.locator("[data-part-problems]").count()) === 0; })());
