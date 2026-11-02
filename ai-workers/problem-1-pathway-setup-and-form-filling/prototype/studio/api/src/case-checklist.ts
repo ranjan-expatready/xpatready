@@ -8,7 +8,7 @@
 // applicable with a reason. A line that was requested, has a file or is Not applicable stays on the person's list when
 // the answers no longer call for it (kept), so nothing asked for or received silently disappears. Audit lines name the
 // document type, the person's role and the case by its short id, never a file's contents (RT-17).
-import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Inject, Injectable, Param, Post, UploadedFiles, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Inject, Injectable, Param, Post, UploadedFiles, UseGuards, UseInterceptors, type CanActivate, type ExecutionContext } from "@nestjs/common";
 import { AnyFilesInterceptor } from "@nestjs/platform-express";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -129,15 +129,16 @@ export class CaseChecklists {
 
   private async setState(actor: Actor, lineId: string, from: readonly LineState[], to: LineState, reason: string | null, words: string, seen?: number) {
     const { c, row, shown, person, id } = await this.line(actor, lineId, "officer");
-    if (row.state === to && to === "requested") return this.moved(c, id); // asking again for what is already asked: nothing changes
-    // Break M3: the version the person saw, when sent, must still be the line's: never overwrite a newer state.
+    // Break M3: the version the person saw, when sent, must still be the line's: never overwrite a newer state. Checked
+    // first, so a stale view is told the line changed even when it is already Requested (Devin review).
     if (seen !== undefined && seen !== row.version) fail(`${shown.label} for ${person.label} changed after you opened it (it is ${STATE_WORDS[row.state as LineState]} now): read the checklist again to see its state now, then try again. Nothing was changed.`, HttpStatus.CONFLICT);
+    if (row.state === to && to === "requested") return this.moved(c, id); // asking again for what is already asked: nothing changes
     if (!from.includes(row.state as LineState)) fail(`${shown.label} for ${person.label} is ${STATE_WORDS[row.state as LineState]}: it cannot be marked ${STATE_WORDS[to]} now. Nothing was changed.`, HttpStatus.CONFLICT);
     const n = await this.db.checklistLine.updateMany({ where: { id, version: row.version }, data: { state: to, stateReason: reason, stateBy: actor.id, stateAt: new Date(), version: { increment: 1 } } });
     if (n.count !== 1) {
       // Break m4: the same request at the same moment (a double click) is one request, not a conflict.
       const now = await this.db.checklistLine.findUnique({ where: { id }, select: { state: true } });
-      if (to === "requested" && now?.state === "requested") return this.moved(c, id);
+      if (to === "requested" && now?.state === "requested" && seen === undefined) return this.moved(c, id);
       fail("Someone changed this line after you opened it: read the checklist again to see its state now, then try again.", HttpStatus.CONFLICT);
     }
     await this.audit.log(c.workspaceId, actor.id, words, "checklist line", id, `${actor.name} ${words} ${shown.label} for the ${person.role} on case ${short(c.id)} (${STATE_WORDS[row.state as LineState]} to ${STATE_WORDS[to]})`);
@@ -166,8 +167,9 @@ export class CaseChecklists {
     if (!UPLOAD_FROM.includes(row.state as LineState)) fail(`${shown.label} for ${person.label} is Not applicable: request it again before uploading. Nothing was stored.`, HttpStatus.CONFLICT);
     const docId = randomUUID(), sha256 = createHash("sha256").update(bytes).digest("hex");
     const rel = join("people", row.subjectId, "documents", `${docId}.${MEDIA[media!]}`), abs = join(DOCS(), rel);
-    mkdirSync(dirname(abs), { recursive: true }); writeFileSync(abs, bytes);
     try {
+      // Inside the clean-up (Devin review): a write that fails half way (a full disk) leaves no partial file.
+      mkdirSync(dirname(abs), { recursive: true }); writeFileSync(abs, bytes);
       await this.db.$transaction(async (tx) => {
         // One upload at a time per line: the row's version is the lock (a second upload in the same moment is refused).
         const n = await tx.checklistLine.updateMany({ where: { id, version: row.version }, data: { state: "received", stateReason: null, stateBy: actor.id, stateAt: new Date(), version: { increment: 1 } } });
@@ -193,6 +195,20 @@ export class CaseChecklists {
   }
 }
 
+/** Runs before the upload is read (guards come before interceptors): someone with no case duty (configuration people)
+ *  is refused without the server first holding up to 20 MB of their file (breaker m10, Devin review). The case itself is
+ *  checked after, by Runtime.reach. */
+@Injectable()
+export class CaseActorGuard implements CanActivate {
+  canActivate(ctx: ExecutionContext) {
+    const h = ctx.switchToHttp().getRequest<{ headers: Record<string, string | string[] | undefined> }>().headers["x-actor"];
+    const a = actorOf(Array.isArray(h) ? h[0] : h);
+    const duties = a.duties as readonly string[];
+    if (!duties.includes("case") && !duties.includes("answer")) fail(`${a.name} (simulated) works on configuration, not on cases.`, HttpStatus.FORBIDDEN);
+    return true;
+  }
+}
+
 @CaseRead()
 @Controller("api/runtime")
 export class CaseChecklistsController {
@@ -201,6 +217,6 @@ export class CaseChecklistsController {
   @Post("checklist-lines/:id/request") @HttpCode(200) request(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.x.request(actorOf(a), id, b); }
   @Post("checklist-lines/:id/not-applicable") @HttpCode(200) notApplicable(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.x.notApplicable(actorOf(a), id, b); }
   // The limit is one byte over 20 MB so a file of exactly 20 MB is taken (break m5); the route's own check refuses more.
-  @Post("checklist-lines/:id/documents") @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: MAX_DOCUMENT_BYTES + 1, files: 1 } }))
+  @Post("checklist-lines/:id/documents") @UseGuards(CaseActorGuard) @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: MAX_DOCUMENT_BYTES + 1, files: 1 } }))
   upload(@Headers("x-actor") a: H, @Param("id") id: string, @UploadedFiles() files: Upload[], @Body() b: unknown) { return this.x.upload(actorOf(a), id, files, b); }
 }

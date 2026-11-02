@@ -66,6 +66,10 @@ await main("C6.4 storage", "request, upload, Not applicable, kept lines; QA-149"
   ok("C6.4 fail: an unknown or malformed line id is not found (404)", (await call("POST", `/runtime/checklist-lines/00000000-0000-4000-8000-000000000000/request`, {}, OFFICER)).status === 404 && (await call("POST", `/runtime/checklist-lines/${pass.derived_id}/request`, {}, OFFICER)).status === 404);
   r = await call("POST", `/runtime/checklist-lines/${pass.id}/request`, {}, OFFICER);
   const again = await call("POST", `/runtime/checklist-lines/${pass.id}/request`, {}, OFFICER);
+  ok("C6.4 fail: asking again from an old view of the line (version 1, now 2) is told it changed (409), not 200", (await call("POST", `/runtime/checklist-lines/${pass.id}/request`, { version: pass.version }, OFFICER)).status === 409);
+  const neg = await call("POST", `/runtime/checklist-lines/${pass.id}/request`, { version: -1 }, OFFICER);
+  ok("C6.4 fail: a version that is not a whole number from 0 is refused in plain words (400)", neg.status === 400 && /whole number from 0/.test(JSON.stringify(neg.body)), neg.body);
+  ok("C6.4 pass: an empty or null version is \"not sent\" (200), never read as 0", (await call("POST", `/runtime/checklist-lines/${pass.id}/request`, { version: "" }, OFFICER)).status === 200 && (await call("POST", `/runtime/checklist-lines/${pass.id}/request`, { version: null }, OFFICER)).status === 200);
   ok("C6.4 pass: requesting twice is one request (200, Requested, one audit line)", r.status === 200 && again.status === 200 && again.body?.state === "requested" && sql(`select count(*) from audit_event where entity_key='${pass.id}' and action='requested'`) === "1", again.body);
 
   // Upload.

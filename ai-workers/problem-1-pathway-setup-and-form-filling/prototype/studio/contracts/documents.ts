@@ -19,7 +19,11 @@ export const MAX_REASON = 500;
  *  right-to-left override can make "gpj.exe" read as "exe.jpg"). Removed from reasons and file names (break m7, m8). */
 export const INVISIBLE = /[\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFEFF]/g;
 /** The line's version the person saw (optional): sent, a line changed since is refused, not overwritten (break M3). */
-export const SeenVersion = z.object({ version: z.coerce.number({ message: "Send the version of the line you saw." }).int("Send the version of the line you saw.").min(0).optional() });
+// Empty or null is "not sent" (review m-R2-1: it was read as 0, a false conflict); anything else is a whole number from 0
+// in plain words (m-R2-2).
+const VERSION_WORDS = "Send the version of the line you saw, a whole number from 0, or leave it out.";
+export const SeenVersion = z.object({ version: z.preprocess((v) => (v === "" || v === null ? undefined : typeof v === "string" && /^\d+$/.test(v.trim()) ? Number(v) : v),
+  z.number({ message: VERSION_WORDS }).int(VERSION_WORDS).min(0, VERSION_WORDS).optional()) });
 export const NotApplicable = SeenVersion.extend({
   reason: z.string({ message: "Give a reason why this document is not applicable." }).transform((x) => x.replace(INVISIBLE, "").trim())
     .pipe(z.string().min(1, "Give a reason why this document is not applicable.").max(MAX_REASON, `A reason is at most ${MAX_REASON} characters.`)),
