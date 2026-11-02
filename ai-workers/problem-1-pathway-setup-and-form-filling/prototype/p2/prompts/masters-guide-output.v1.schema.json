@@ -1,0 +1,112 @@
+{
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "checks",
+  "unresolved"
+ ],
+ "properties": {
+  "checks": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "group",
+     "sentence",
+     "reads",
+     "subject_kind",
+     "tree_json",
+     "severity",
+     "needs_calculation",
+     "quote",
+     "examples"
+    ],
+    "properties": {
+     "group": {
+      "enum": [
+       "official_rule",
+       "cross_record",
+       "readiness_warning"
+      ]
+     },
+     "sentence": {
+      "type": "string"
+     },
+     "reads": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "subject_kind": {
+      "type": "string"
+     },
+     "tree_json": {
+      "type": "string",
+      "description": "the check as a condition tree, JSON text, in the 11-operator vocabulary; every field is one of reads in lower snake case; TRUE when the answers pass"
+     },
+     "severity": {
+      "enum": [
+       "block",
+       "warn",
+       "advise",
+       "sme_pending"
+      ]
+     },
+     "needs_calculation": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "quote": {
+      "type": "string"
+     },
+     "examples": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "additionalProperties": false,
+       "required": [
+        "facts_json",
+        "expected"
+       ],
+       "properties": {
+        "facts_json": {
+         "type": "string"
+        },
+        "expected": {
+         "type": "boolean"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "unresolved": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "passage",
+     "reason"
+    ],
+    "properties": {
+     "passage": {
+      "type": "string"
+     },
+     "reason": {
+      "type": "string"
+     }
+    }
+   }
+  }
+ }
+}
