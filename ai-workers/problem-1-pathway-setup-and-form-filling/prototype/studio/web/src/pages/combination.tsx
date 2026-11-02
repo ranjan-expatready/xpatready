@@ -96,7 +96,7 @@ export function CombinationPage() {
       </nav>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold">{c.label}</h1>{row ? <StatusChip status={row.status} text={STATUS_WORD[row.status as keyof typeof STATUS_WORD]} /> : null}</div>
+          <div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold">{c.label}</h1>{row ? <StatusChip status={row.status} text={STATUS_WORD[row.status as keyof typeof STATUS_WORD]} /> : null}{last?.demo ? <span data-demo-release><Pill tone="warn" title="Sample content: a demo release, never counted as a real publish.">Demo release</Pill></span> : null}</div>
           <p className="mt-1 text-sm text-text-muted">{facts}</p>
         </div>
         {row ? <NextStep row={row} setup={sum.data?.setup ?? null} /> : null}
