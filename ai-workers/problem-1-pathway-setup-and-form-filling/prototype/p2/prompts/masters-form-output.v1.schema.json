@@ -1,0 +1,140 @@
+{
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "checks",
+  "document_types",
+  "unresolved"
+ ],
+ "properties": {
+  "checks": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "sentence",
+     "reads",
+     "subject_kind",
+     "tree_json",
+     "quote",
+     "examples"
+    ],
+    "properties": {
+     "sentence": {
+      "type": "string"
+     },
+     "reads": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "subject_kind": {
+      "type": "string"
+     },
+     "tree_json": {
+      "type": "string",
+      "description": "the check as a condition tree, JSON text, in the 11-operator vocabulary; TRUE when the answers pass"
+     },
+     "quote": {
+      "type": "string"
+     },
+     "examples": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "additionalProperties": false,
+       "required": [
+        "facts_json",
+        "expected"
+       ],
+       "properties": {
+        "facts_json": {
+         "type": "string"
+        },
+        "expected": {
+         "type": "boolean"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "document_types": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "name",
+     "proves",
+     "category",
+     "supplies",
+     "reader",
+     "identity_document",
+     "quote"
+    ],
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "proves": {
+      "type": "string"
+     },
+     "category": {
+      "enum": [
+       "identity",
+       "civil_status",
+       "travel",
+       "financial",
+       "employment",
+       "education",
+       "other"
+      ]
+     },
+     "supplies": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "reader": {
+      "enum": [
+       "coded_lines",
+       "printed_layout",
+       "letter_or_record",
+       "person_only"
+      ]
+     },
+     "identity_document": {
+      "type": "boolean"
+     },
+     "quote": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "unresolved": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "passage",
+     "reason"
+    ],
+    "properties": {
+     "passage": {
+      "type": "string"
+     },
+     "reason": {
+      "type": "string"
+     }
+    }
+   }
+  }
+ }
+}
