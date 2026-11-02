@@ -102,7 +102,7 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   // Only the derived definitions this combination reads (Lead check item 3): the library holds every definition, and
   // one nobody here uses is not this combination's warning.
   const reads = derivedRead(s);
-  out.push(...gateProblems(s.eligibility, placed, reads, types, derived, (f) => `"${(s.derived_fields as { id: string; plain?: string | null }[]).find((d) => d.id === f)?.plain?.trim().replace(/\.$/, "") || factWords(s, f)}"`)); // C6.9 BR-5
+  out.push(...gateProblems(s.eligibility, placed, reads, types, derived, (f) => `"${(s.derived_fields as { id: string; plain?: string | null }[]).find((d) => d.id === f)?.plain?.trim().replace(/\.$/, "") || factWords(s, f)}"`, s.placements)); // C6.9 BR-5
   for (const d of derivedRows) if (reads.has(d.id) && !CALCULATIONS[d.calculation]) out.push({ level: "warning", where: "Derived fields", item: d.id, message: `Calculation ${d.calculation} has no tested helper: recorded, never evaluated.` });
   out.push(...channelProblems(s, accepts));
   out.push(...oathMappedProblems(s.field_maps, inventoryFields)); // C-11 (P-171 c): a mapped oath box is by a person

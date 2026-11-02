@@ -27,6 +27,13 @@ Real: storage, checks, review lines, release freeze, audit rows. Sample: gate la
 8. `assessment.config_release_id` has no foreign key, as `form_instance.config_release_id` (a release is never deleted).
 9. `FAIL_BEATS_MISSING` is not defined here: it belongs to part 2's adapter (binding condition 1, AG-03 as written, `false`).
 
+11. **Break report on e3a01067 (M1, m1–m6):**
+    * At release, a gate fact must be asked of every traveller with no condition (not shown or hidden by a condition, not optional): `criminal_history_details` (asked only after a yes) and `uci` (optional) are release errors in words. The first placement of a fact is the one judged, as the renderer uses it.
+    * At save, every compared value must fit its fact's type (a yes/no fact takes true or false; a number a number; a date YYYY-MM-DD; other facts text). An `and` asking one fact to equal two different values is refused as a rule that can never be true. The same checks run again at release.
+    * **Not caught (said, not hidden):** a contradiction across `or`/`not`, ranges that cannot meet (`gt 5` and `lt 3`), a gate that contradicts another gate, an answer-list code not on the fact's list, and a person.* fact asked once per case rather than per person.
+    * The change summary shows each rule in words with its values ("person.criminal_history is false"), before and after when it changed; a reorder alone is the line "Gates reordered".
+    * Text: labels and lines are one line of printable text by the runtime contract's rule (`contracts/runtime.ts` INVISIBLE, LONE, now exported): NUL, controls, zero-width marks, bidi overrides, lone surrogates and line breaks are refused 400 on the field (the disclaimer may hold line breaks). A label or line with no letter and no digit counts as empty. Lengths count characters (code points). Duplicate labels, and duplicate judgement lines, ignoring case, spacing and Unicode form, are refused. A condition deeper than 20 levels is refused before ajv; the disclaimer is at most 2,000 characters.
+
 ## Checks run (STANDARDS sections)
 * §2 data: one expand-only migration with written rollback; applied by `prisma migrate deploy` on a fresh isolated copy; client regenerated.
 * §3 rules: every BR has a pass and a fail line in `check_c69_gates.ts` (labels name C6.9 and the BR); setup S7 and S8 pass (S2w, S5 and S7a fail in that file for reasons outside this row: M3-0, the fee table, a signer warning; unchanged by this build).

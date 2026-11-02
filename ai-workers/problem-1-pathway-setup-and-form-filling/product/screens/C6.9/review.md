@@ -83,3 +83,31 @@ Recorded in `build-notes.md` "Team-name mapping" (AG-03 §3.2 gate list, AG-3-32
 Journey score: **8/10** (pass, no 0), in `journey-test-reviewer-2026-11-02.md`.
 
 **Verdict: Block** on 5120b6f2. Fix issue 1 (Major). Minors 2–7 are optional for this PR.
+
+## Round 2 (head e3a01067)
+Fix commit 07e389af, then a merge of main that brings in only `tests/check_c119_library_items_browser.cjs` (#394). That file is identical to `origin/main`'s (0 diff lines), and main is an ancestor. Fresh isolated copy `c69rev` on :4437 (never :4400); live AI off; US$0.
+
+**What I ran:**
+- `check_c69_gates.ts`: **65/65**.
+- `setup_visitor_visa.ts`: 13/13. In `setup_vv_m3.ts`, S7 and all three S8 lines pass; S2w, S5 and S7a fail for the same outside reasons as before.
+- `check_engine.ts`: 41/41.
+- `graph.mjs --check`: exit 0, G3 down from 5 to 4. Both eligibility-gates routes are now tested by `check_c69_gates.ts`.
+
+**Round 1 issues:**
+- **Major 1 (BR-5, derived gate fact): fixed.**
+  - `engine/eligibility-gates.ts` `gateProblems` refuses a derived fact that is not a library fact. The message names it in plain words, using the derived field's own description through `validate.ts:105`.
+  - **My round 1 scenario, re-tried live:** the PUT of a gate on `person.nomination_days_until_expiry` → 200 (saved, as designed). The draft now lists an error: "This gate reads "Days from the application date to the nomination certificate expiry; …", a value worked out from other answers, not one a case is asked …". Submit is refused 400 with the same words.
+  - **Mutation:** I disabled the new branch, and both new BR-5 fail lines (pure and API) failed (63/65). I restored the file with `git checkout`.
+  - The snapshot order is unchanged, with a comment giving the reason (`snapshot.ts:171-173`). That is acceptable now that derived gates never release.
+- **Minor 2 (race): fixed.** Four PUTs at once give exactly one 200 and three 409s (test line).
+- **Minor 3: fixed.** `concept.md:79` now says `false` until the founder answers Q3, per condition 1.
+- **Minor 4: fixed.** The retired-combination 409 is tested. The test retires a spare combination by SQL and restores it: test-only, acceptable.
+- **Minor 5: fixed.** A disclaimer with no gate and no judgement line → 400 on `disclaimer`. I checked it live on the copy.
+- **Minor 6: fixed.** The GET uses a literal path, and the graph now sees it.
+- **Minor 7: fixed.** A changed gate reads "Gate: <old> → <new>", plus "(rule changed)" when its condition changed. Both are tested.
+
+**New issues:** none. The S7 relabel, the migration and schema, permissions and fingerprints are unchanged since round 1, and their lines still pass.
+
+**Journey score:** 9/10. "Correct data" goes from ½ to 1: journey 9 now holds. The UI criteria stay ½ until part 3.
+
+**Verdict: Approve** on e3a01067. There is no open Blocker or Major. The label still waits for the tech lead's word on the migration slot (condition 2).
