@@ -99,6 +99,8 @@ export function runExamples(t: Tree, examples: Example[], to: (f: string) => str
   }
   if (parsed.length < 2) return { why: "it has fewer than two worked examples a person can check (P-149 (5))" };
   const kept = parsed.slice(0, 3);
+  // Break B5: one passing and one failing example, both holding, so a check that is always true or never true is never Ready.
+  if (!kept.some((e) => e.expected) || !kept.some((e) => !e.expected)) return { why: "its examples do not show both a passing and a failing case, so a person cannot see the check work (P-149 (5))" };
   let wrong: string | null = null;
   kept.forEach((e, i) => {
     if (wrong) return;
@@ -131,6 +133,10 @@ function merge<P extends ProposalPayload>(d: Map<string, Kept<P>>, k: Map<string
   return out;
 }
 
+const READERS = ["coded_lines", "printed_layout", "letter_or_record", "person_only"] as const;
+type Reader = (typeof READERS)[number];
+const NOT_AI: string[] = ["coded_lines", "printed_layout", "person_only"];
+
 export type FormSource = { file: string; sha256: string; edition: string; printed: string;
   /** Visible boxes of this edition (hidden, barcode and machine boxes left out by the caller) with their printed words. */
   boxes: { path: string; words: string }[] };
@@ -138,8 +144,10 @@ export type FormSource = { file: string; sha256: string; edition: string; printe
 /** C3.4 form step: a form edition's checks and document types from its two rounds (M1–M5). */
 export function formMastersFromRounds(rounds: { draft: MRound<FormAnswer>; check: MRound<FormAnswer> }, f: FormSource, at: { runId: string }) {
   const boxes = new Set(f.boxes.map((b) => b.path));
-  const printed = sameText(f.boxes.map((b) => b.words).join(" \n "));
-  const quoteFound = (q: string) => q.trim().split(/\s+/).length >= 2 && printed.includes(sameText(q));
+  // M1 (break minor): the quote is whole words of ONE box's printed caption or heading, at least two words and ten letters
+  // ("Passport number"), never a fragment found across captions ("ort numb", "of the").
+  const printed = f.boxes.map((b) => ` ${plain(b.words)} `);
+  const quoteFound = (q: string) => { const w = plain(q); return w.split(" ").length >= 2 && (w.match(/[a-z]/g) ?? []).length >= 10 && printed.some((p) => p.includes(` ${w} `)); };
   const dropped: Dropped[] = [];
   const checks = (r: MRound<FormAnswer>, which: string) => {
     const out = new Map<string, Kept<Extract<ProposalPayload, { kind: "form_check" }>>>();
@@ -156,7 +164,7 @@ export function formMastersFromRounds(rounds: { draft: MRound<FormAnswer>; check
       if ("why" in ex) { drop(`Not proposed: ${ex.why}`); continue; }
       const sorted = [...reads].sort();
       const key = keyOf(`${f.edition}|${sorted.join(",")}`);
-      if (out.has(key)) continue;
+      if (out.has(key)) { drop("Another check of this reading reads the same boxes; the first is kept"); continue; }
       out.set(key, { key, same: canonical(t.root as never), quote: c.quote, reading: `${sentence} (${ROLE_WORDS[c.subject_kind] ?? c.subject_kind.toLowerCase()})`, problem: ex.wrong,
         payload: { kind: "form_check", sentence, tree: t.root, reads: sorted, examples: ex.examples },
         rules: [{ rule: "quote_printed_on_form", passed: true, why: null }, { rule: "condition_in_11_operators", passed: true, why: null }, { rule: "examples_hold", passed: !ex.wrong, why: ex.wrong?.slice(0, 300) ?? null }], work: { boxes: sorted } });
@@ -171,25 +179,41 @@ export function formMastersFromRounds(rounds: { draft: MRound<FormAnswer>; check
       if (name.length < 1 || name.length > 120 || proves.length < 3 || proves.length > 200) { drop("It has no name, or does not say what it proves"); continue; }
       if (!quoteFound(d.quote)) { drop(`Its words are not printed on ${f.printed}, so it is not proposed`); continue; }
       const supplies = [...new Set(d.supplies)].filter((p) => boxes.has(p));
-      // M5 (P-134): an identity document is never read by AI vision; a reader the contract does not know is a person's.
-      const known = ["coded_lines", "printed_layout", "letter_or_record", "person_only"].includes(d.reader);
-      const aiRead = d.identity_document && !["coded_lines", "printed_layout", "person_only"].includes(d.reader);
-      const reader = (aiRead || !known ? "person_only" : d.reader) as "coded_lines" | "printed_layout" | "letter_or_record" | "person_only";
       const key = plain(name);
-      if (!key || out.has(key)) continue;
-      out.set(key, { key, same: `${key}|${reader}|${d.identity_document}`, quote: d.quote, reading: `${name}: proves ${proves}`, problem: aiRead ? "An identity document is never read by AI (P-134): its reader is set to a person; check it." : null,
-        payload: { kind: "document_type", name, proves, category: d.category.slice(0, 60), suppliesFacts: [], readerKind: reader, identityDocument: d.identity_document },
-        rules: [{ rule: "quote_printed_on_form", passed: true, why: null }, { rule: "identity_not_read_by_ai", passed: !aiRead, why: aiRead ? "The AI named a reader that is not allowed for an identity document." : null }],
-        work: { boxes: supplies.slice(0, 50) } });
+      if (!key) continue;
+      if (out.has(key)) { drop(`"${name}" is named twice in one reading; the first is kept`); continue; }
+      out.set(key, { key, same: `${key}|${d.reader}`, quote: d.quote, reading: `${name}: proves ${proves}`, problem: null,
+        payload: { kind: "document_type", name, proves, category: d.category.slice(0, 60), suppliesFacts: [], readerKind: d.reader as Reader, identityDocument: d.identity_document },
+        rules: [{ rule: "quote_printed_on_form", passed: true, why: null }], work: { boxes: supplies.slice(0, 50) } });
     }
     return out;
   };
+  /** M5 (P-134; review M2): a document type is an identity document when either reading says so or its category is
+   *  identity, never on one model flag; then its reader is never AI (coded lines, printed layout or a person). A reader
+   *  the contract does not know is a person's. Applied to both readings, so the payload a person accepts holds it. */
+  const identityGuard = (a: ReturnType<typeof docs>, b: ReturnType<typeof docs>) => {
+    for (const key of new Set([...a.keys(), ...b.keys()])) {
+      const xs = [a.get(key), b.get(key)].filter((x): x is NonNullable<typeof x> => !!x);
+      const identity = xs.some((x) => x.payload.identityDocument || /identity/i.test(x.payload.category));
+      for (const x of xs) {
+        const known = (READERS as readonly string[]).includes(x.payload.readerKind);
+        const aiRead = identity && !NOT_AI.includes(x.payload.readerKind);
+        if (aiRead || !known) x.payload.readerKind = "person_only";
+        x.payload.identityDocument = identity;
+        x.same = `${key}|${x.payload.readerKind}|${identity}`;
+        x.rules.push({ rule: "identity_not_read_by_ai", passed: !aiRead, why: aiRead ? "The AI named a reader that is not allowed for an identity document." : null });
+        if (aiRead) x.problem = "An identity document is never read by AI (P-134): its reader is set to a person; check it.";
+      }
+    }
+  };
   const source = (quote: string) => ({ file: f.file.slice(0, 300), sha256: f.sha256, edition: f.edition.slice(0, 60), page: null, quote: quote.slice(0, 1000), quoteFound: true, rule: null });
   const scope = { formEdition: f.edition.slice(0, 60), combinationId: null };
-  const items = [
+  const items: NewItem[] = [
     ...merge(checks(rounds.draft, "first reading"), checks(rounds.check, "second reading"), rounds, { kind: "form_check", runId: at.runId, step: MASTERS_FORM_STEP, scope, landsOn: "library" }, source, (p) => p.sentence),
-    ...merge(docs(rounds.draft, "first reading"), docs(rounds.check, "second reading"), rounds, { kind: "document_type", runId: at.runId, step: MASTERS_FORM_STEP, scope, landsOn: "library" }, source, (p) => p.name),
   ];
+  const dd = docs(rounds.draft, "first reading"), dk = docs(rounds.check, "second reading");
+  identityGuard(dd, dk);
+  items.push(...merge(dd, dk, rounds, { kind: "document_type", runId: at.runId, step: MASTERS_FORM_STEP, scope, landsOn: "library" }, source, (p) => p.name));
   return { items, dropped, unresolved: unresolvedOf(rounds) };
 }
 
@@ -239,7 +263,7 @@ export function guideMastersFromRounds(rounds: { draft: MRound<GuideAnswer>; che
         : missing.length ? `Decide: ${missing.slice(0, 3).map((m) => `"${m}"`).join(", ")} ${missing.length === 1 ? "is" : "are"} not a question of the library yet, so the check reads ${missing.length === 1 ? "it" : "them"} in words.` : ex.wrong;
       const kind = cross ? "cross_check" : "form_check";
       const key = keyOf(`${kind}|${readKeys.join(",")}`);
-      if (out.has(key)) continue;
+      if (out.has(key)) { drop("Another check of this reading reads the same answers; the first is kept"); continue; }
       const severity = cross ? "warn" : ["block", "warn", "advise"].includes(c.severity) ? c.severity : "warn";
       const payload: Payload = cross ? { kind: "cross_check", sentence, tree: root, reads: readKeys, severity: "warn", examples: ex.examples } : { kind: "form_check", sentence, tree: root, reads: readKeys, examples: ex.examples };
       out.set(key, { key, same: canonical(root as never), quote: c.quote, reading: `${sentence} (${severity}${cross && c.severity === "block" ? ": a cross-answer check only warns" : ""})`, problem, payload,

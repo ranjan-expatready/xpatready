@@ -27,24 +27,16 @@ const call = async (method: string, path: string, body?: unknown, actor = "user-
 };
 const sql = (q: string) => execFileSync("psql", [process.env.DATABASE_URL!, "-Atc", q], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 // As the PA check (break M2): simulated live runs are stamped 1 Jan 2000 (never outrank a real run) and tagged (gitignored).
-const FAKE = "-live-20000101t000000000z-pacheck", MINE = `${FAKE}${process.pid}x`;
+// Each simulated run has its own time on 1 Jan 2000, in the order recorded: Saved pairs a checker with the draft recorded
+// just before it (break B1), as the paid runner records them. The tag keeps them gitignored (.gitignore: 20000101t*-pacheck).
+let seq = 0;
+const stamp = () => `-live-20000101t${String(++seq).padStart(9, "0")}z-pacheck${process.pid}x`;
 const written: string[] = [], kept = new Map<string, Buffer | null>();
 const keep = (f: string) => { if (!kept.has(f)) kept.set(f, existsSync(f) ? readFileSync(f) : null); };
 const cleanUp = () => { for (const f of written) rmSync(f, { force: true }); for (const [f, b] of kept) { if (b === null) rmSync(f, { force: true }); else writeFileSync(f, b); } };
 for (const [sig, code] of [["SIGINT", 130], ["SIGTERM", 143]] as const) process.on(sig, () => { cleanUp(); process.exit(code); });
 
-// The two answers a recorded run carries: IMM 5257's own printed words and boxes; guide 5256's own sentence.
-const CHOICE = "form1[0].Page3[0].PageWrapper[0].BackgroundInfo3[0].Choice[0]", DETAILS = "form1[0].Page3[0].PageWrapper[0].BackgroundInfo3[0].details[0]";
-const PASSPORT = "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].PassportNum[0].PassportNum[0]";
-const formCheck = { sentence: "When a criminal offence is declared, its details are given", reads: [CHOICE, DETAILS], subject_kind: "PRINCIPAL",
-  tree_json: JSON.stringify({ op: "or", args: [{ op: "neq", field: CHOICE, value: "Yes" }, { op: "exists", field: DETAILS }] }), quote: "If you answered “yes” to question 3a) above, please provide details.",
-  examples: [{ facts_json: JSON.stringify({ [CHOICE]: "No" }), expected: true }, { facts_json: JSON.stringify({ [CHOICE]: "Yes" }), expected: false }, { facts_json: JSON.stringify({ [CHOICE]: "Yes", [DETAILS]: "A fine in 2015" }), expected: true }] };
-const passport = { name: "Passport", proves: "identity and nationality", category: "identity", supplies: [PASSPORT], reader: "coded_lines", identity_document: true, quote: "Passport number" };
-const FORM_ANSWER = { checks: [formCheck], document_types: [passport], unresolved: [{ passage: "Dates of previous marriage", reason: "two dates compared: not in the 11 operators" }] };
-const guideCheck = { group: "official_rule", sentence: "The passport number is given as shown on the passport", reads: ["Passport number"], subject_kind: "PRINCIPAL", tree_json: JSON.stringify({ op: "exists", field: "passport_number" }),
-  severity: "block", needs_calculation: null, quote: "Type your valid passport or travel document number exactly as shown on the document.",
-  examples: [{ facts_json: JSON.stringify({ passport_number: "AB123456" }), expected: true }, { facts_json: JSON.stringify({}), expected: false }] };
-const GUIDE_ANSWER = { checks: [guideCheck], unresolved: [] };
+import { CHOICE, DETAILS, FORM_ANSWER, formCheck, GUIDE_ANSWER, guideCheck, passport } from "./fixtures/c34-answers.ts";
 
 (async () => {
   // ---------------------------------------------------------------- E: the rules over the rounds (pure, no server)
@@ -70,8 +62,8 @@ const GUIDE_ANSWER = { checks: [guideCheck], unresolved: [] };
   ok("C3.4 E fail: a condition outside the 11 operators is not proposed (M2)", !e.items.length && /11 operators/.test(e.dropped[0]?.why ?? ""), e.dropped[0]);
   e = bad({ examples: [formCheck.examples[0]] });
   ok("C3.4 E fail: a check with fewer than two worked examples is not proposed (P-149 (5), M3)", !e.items.length && /fewer than two/.test(e.dropped[0]?.why ?? ""), e.dropped[0]);
-  e = bad({ examples: [formCheck.examples[0], { ...formCheck.examples[1], expected: true }] });
-  ok("C3.4 E fail: an example that its condition answers otherwise makes the check Check, naming the example (M3)", e.items[0]?.confidence === "check" && /Example 2/.test(e.items[0]?.reason ?? ""), e.items[0]?.reason);
+  e = bad({ examples: [formCheck.examples[0], formCheck.examples[1], { ...formCheck.examples[2], expected: false }] });
+  ok("C3.4 E fail: an example that its condition answers otherwise makes the check Check, naming the example (M3)", e.items[0]?.confidence === "check" && /Example 3/.test(e.items[0]?.reason ?? ""), e.items[0]?.reason);
   e = both(FORM_ANSWER, { ...FORM_ANSWER, checks: [{ ...formCheck, tree_json: JSON.stringify({ op: "exists", field: DETAILS }), examples: [{ facts_json: JSON.stringify({ [DETAILS]: "x" }), expected: true }, { facts_json: "{}", expected: false }] }] });
   const differ = e.items.find((x) => x.kind === "form_check");
   ok("C3.4 E fail: the same boxes with another condition is Check, both readings kept (M4)", differ?.agreement === "differ" && differ?.confidence === "check" && !!differ?.rounds.draft && !!differ?.rounds.check, differ?.agreement);
@@ -79,6 +71,19 @@ const GUIDE_ANSWER = { checks: [guideCheck], unresolved: [] };
   ok("C3.4 E fail: an item only one round gives is Decide (M4)", e.items.length === 2 && e.items.every((x) => x.confidence === "decide" && x.agreement === "one_round" && x.rounds.check === null), e.items.map((x) => x.confidence));
   e = both({ ...FORM_ANSWER, checks: [], document_types: [{ ...passport, reader: "letter_or_record" }] });
   ok("C3.4 E fail: an identity document the AI would read is set to a person's reading and flagged Check (P-134, M5)", (e.items[0]?.payload as any)?.readerKind === "person_only" && e.items[0]?.confidence === "check" && e.items[0]?.rules.some((x) => x.rule === "identity_not_read_by_ai" && !x.passed), e.items[0]?.payload);
+  e = both({ ...FORM_ANSWER, checks: [], document_types: [{ ...passport, reader: "letter_or_record", identity_document: false }] });
+  ok("C3.4 E fail (review M2): an identity-category document both readings call not identity is still never AI-read (P-134)", (e.items[0]?.payload as any)?.readerKind === "person_only" && (e.items[0]?.payload as any)?.identityDocument === true && e.items[0]?.confidence === "check", e.items[0]?.payload);
+  e = both({ ...FORM_ANSWER, checks: [], document_types: [{ ...passport, category: "travel", reader: "letter_or_record", identity_document: false }] }, { ...FORM_ANSWER, checks: [], document_types: [{ ...passport, category: "travel" }] });
+  ok("C3.4 E fail (review M2): when only the checker says identity, the draft's payload a person accepts is not AI-read either (P-134)", (e.items[0]?.payload as any)?.readerKind === "person_only" && (e.items[0]?.payload as any)?.identityDocument === true && (e.items[0]?.rounds.draft?.payload as any)?.readerKind === "person_only" && e.items[0]?.confidence !== "ready", { payload: e.items[0]?.payload, confidence: e.items[0]?.confidence });
+  e = both({ ...FORM_ANSWER, checks: [], document_types: [{ ...passport, category: "financial", name: "Bank statement", proves: "funds for the stay", reader: "letter_or_record", identity_document: false, quote: "Passport number" }] });
+  ok("C3.4 E pass: a document that is not an identity document keeps its letter reader", (e.items[0]?.payload as any)?.readerKind === "letter_or_record" && (e.items[0]?.payload as any)?.identityDocument === false && e.items[0]?.confidence === "ready", e.items[0]?.payload);
+  e = bad({ tree_json: JSON.stringify({ op: "and", args: [{ op: "eq", field: CHOICE, value: "Yes" }, { op: "eq", field: CHOICE, value: "No" }] }), examples: [{ facts_json: JSON.stringify({ [CHOICE]: "Yes" }), expected: false }, { facts_json: JSON.stringify({ [CHOICE]: "No" }), expected: false }] });
+  ok("C3.4 E fail (break B5): a check that can never pass, with only failing examples, is not proposed", !e.items.length && /both a passing and a failing/.test(e.dropped[0]?.why ?? ""), e.dropped[0]);
+  e = bad({ tree_json: JSON.stringify({ op: "or", args: [{ op: "exists", field: CHOICE }, { op: "not", arg: { op: "exists", field: CHOICE } }] }), examples: [{ facts_json: JSON.stringify({ [CHOICE]: "Yes" }), expected: true }, { facts_json: "{}", expected: true }] });
+  ok("C3.4 E fail (break B5): a check that always passes, with only passing examples, is not proposed", !e.items.length && /both a passing and a failing/.test(e.dropped[0]?.why ?? ""), e.dropped[0]);
+  e = bad({ quote: "ort numb" });
+  const e2 = bad({ quote: "of the" });
+  ok("C3.4 E fail (break minor): a fragment of the form's words (\"ort numb\", \"of the\") is not its quote (M1)", !e.items.length && !e2.items.length, [e.dropped[0]?.why, e2.dropped[0]?.why]);
   ok("C3.4 E fail: an answer of the wrong shape is never used (shape check)", !m.formShapeOk({ checks: [{ sentence: "x" }], document_types: [], unresolved: [] }) && m.formShapeOk(FORM_ANSWER) && m.guideShapeOk(GUIDE_ANSWER) && !m.guideShapeOk(FORM_ANSWER));
   const guideText = String(JSON.parse(readFileSync(join(PROTOTYPE, "p1", "inventory", "guide-5256.text.inventory.json"), "utf8")).text);
   const GS = { file: "prototype/p1/inventory/guide-5256.text.inventory.json", sha256: "0".repeat(64), text: guideText, code: "Guide 5256" };
@@ -142,7 +147,7 @@ const GUIDE_ANSWER = { checks: [guideCheck], unresolved: [] };
     rec.caller = "live"; rec.raw_output = JSON.stringify(answer);
     rec.drafting_run.output_sha256 = rec.launch_evidence.output_sha256 = createHash("sha256").update(rec.raw_output).digest("hex");
     if (edition) rec.drafting_run.inputs.combination = edition;
-    const f = join(RUNS, `${jobId}${MINE}${Math.random().toString(36).slice(2, 8)}.json`);
+    const f = join(RUNS, `${jobId}${stamp()}${Math.random().toString(36).slice(2, 8)}.json`);
     writeFileSync(f, JSON.stringify(rec, null, 1) + "\n"); written.push(f);
     return f;
   };
@@ -176,6 +181,28 @@ const GUIDE_ANSWER = { checks: [guideCheck], unresolved: [] };
   const gi: any[] = [...(fromGuide.ready ?? []), ...(fromGuide.check ?? []), ...(fromGuide.decide ?? [])].filter((i) => ["form_check", "cross_check"].includes(i.kind) && /5256/.test(i.source?.file ?? ""));
   ok("C3.4 S pass: Saved on Visitor visa's guide 5256 proposes its checks on the combination, resting on the guide's sentence, US$0", x.status === 201 && x.body?.usd === 0 && gi.length === 1 && gi[0].source?.quote_found === true, { status: x.status, n: gi.length, note: x.body?.message });
   ok("C3.4 S pass: the guide's Saved draft spent US$0", spent() === spent0 && new SpendLedger(LEDGER_DIR).committed() === ledger0);
+
+  // Break B1: two recorded runs of the same committed jobs; the newer one's checker is of the wrong shape. Saved must use
+  // both rounds of the older run, never the older checker with the newer draft.
+  sql(`delete from proposal_item where step='masters_guide'; delete from drafting_job where kind='masters_edition' and detail->>'guide' is not null`);
+  for (const f of readdirSync(RUNS).filter((x) => x.startsWith("studio-masters-guide") && x.includes("pacheck"))) rmSync(join(RUNS, f), { force: true });
+  const run1d = record(gd, GUIDE_ANSWER), run1k = record(gk, GUIDE_ANSWER);
+  const run2d = record(gd, { checks: [{ ...guideCheck, sentence: "The newer run's draft" }], unresolved: [] }), run2k = record(gk, { wrong: "shape" });
+  const gplan = await call("POST", `/attachments/${guide}/draft-masters/plan`, { mode: "replay" });
+  const short = (f: string) => `prototype/p2/runs/${f.split("/").pop()}`;
+  ok("C3.4 B1 fail→pass: Saved pairs the older run's checker with that run's own draft, never the newer run's draft", gplan.body?.saved?.available === true && JSON.stringify(gplan.body?.saved?.files) === JSON.stringify([short(run1d), short(run1k)]), { files: gplan.body?.saved?.files, newer: [short(run2d), short(run2k)] });
+  // Break B2: a Saved draft with nothing usable is not the source's one draft: a later good recorded run drafts it.
+  sql(`delete from proposal_item where step='masters_guide'; delete from drafting_job where kind='masters_edition' and detail->>'guide' is not null`);
+  for (const f of readdirSync(RUNS).filter((x) => x.startsWith("studio-masters-guide") && x.includes("pacheck"))) rmSync(join(RUNS, f), { force: true });
+  const useless = { checks: [{ ...guideCheck, quote: "A sentence the guide does not hold anywhere at all." }], unresolved: [] };
+  record(gd, useless); record(gk, useless);
+  const first = await call("POST", `/attachments/${guide}/draft-masters`, { mode: "replay" });
+  ok("C3.4 B2 pass: a Saved draft whose items are all left out ends with nothing proposed and says it can be drafted again", first.status === 201 && first.body?.proposals === 0 && /can be drafted again/.test(first.body?.message ?? ""), first.body?.message);
+  record(gd, GUIDE_ANSWER); record(gk, GUIDE_ANSWER);
+  const second = await call("POST", `/attachments/${guide}/draft-masters`, { mode: "replay" });
+  ok("C3.4 B2 fail→pass: a later good recorded run drafts the guide (the empty draft never blocks it)", second.status === 201 && second.body?.id !== first.body?.id && second.body?.proposals === 1, { id: second.body?.id, proposals: second.body?.proposals });
+  const viewerPlan = await call("POST", `/attachments/${guide}/draft-masters/plan`, { mode: "replay" }, "user-C");
+  ok("C3.4 fail (break minor): the plan, which names run files and the AI cap, is refused to a viewer", viewerPlan.status === 403, viewerPlan.status);
 })().catch((e) => { console.error("FAIL  unexpected", e); fail++; }).finally(() => {
   cleanUp();
   const out = join(STUDIO, "var", "suites"); mkdirSync(out, { recursive: true });

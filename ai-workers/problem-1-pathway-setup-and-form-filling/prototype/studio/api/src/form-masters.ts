@@ -9,16 +9,16 @@
 // after its plan states the worst case (cost first). Once per edition (P-138): a second click returns the one draft.
 // Every item is Sample until the immigration expert confirms (AGENTS rule 4); a second person approves it (P-120).
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Body, Controller, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { formMastersFromRounds, formShapeOk, guideMastersFromRounds, guideShapeOk, MASTERS_FORM_STEP, MASTERS_GUIDE_STEP, type FormAnswer, type GuideAnswer, type MRound } from "../../engine/masters-ai.ts";
-import { editionContextKey } from "../../engine/rounds.ts";
+import { editionContextKey, replayPattern } from "../../engine/rounds.ts";
 import { actorOf, Audit, Db, fail, need, SOLUTION, type Actor } from "./core.ts";
 import { LIVE_WAITING, PqrDrafts } from "./pqr-drafts.ts";
 import { identityKeyOf, insertProposals, QUEUE_TX, sameInLibrary, type NewProposal, type Work } from "./proposals.ts";
-import { pairOf, roundBudgetUsd, StepRunner, type AiStep, type RoundContext, type RoundOut } from "./rounds.ts";
+import { pairOf, roundBudgetUsd, RUNS, runTime, StepRunner, type AiStep, type RoundContext, type RoundOut } from "./rounds.ts";
 import { aiLive, Sources } from "./sources.ts";
 
 export const MASTERS_STEP = "masters_edition";
@@ -115,8 +115,9 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 const problem = (status: number, title: string, detail: string, extra: Record<string, unknown> = {}) =>
   new HttpException({ type: `https://expatready.local/problems/${title.toLowerCase().replace(/[^a-z]+/g, "-")}`, title, status, detail, ...extra }, status);
 const NOTHING_CHARGED = /[,:;]? *(so )?nothing (was|is) (sent and nothing was )?charged\.?/i;
-/** An AI draft still RUNNING this long after it started is taken as stopped (a server restart; C4.7 break B3). */
-const RUNNING_FOR_MS = 15 * 60_000;
+/** An AI draft still RUNNING this long after it started is taken as stopped (a server restart; C4.7 break B3). Two rounds
+ *  of two attempts at 300 000 ms each, plus their stub passes, fit inside it (review minor 1: 15 minutes did not). */
+const RUNNING_FOR_MS = 30 * 60_000;
 
 type Attachment = { id: string; workspaceId: string; combinationId: string; kind: string; fileName: string; sha256: string; recognised: boolean; edition: string | null; inventoryFile: string | null };
 /** What one AI draft reads: a form edition (its inventory) or a combination's guide (its text). */
@@ -161,7 +162,11 @@ export class FormMasters {
     const ctx: RoundContext = { trail: t.trail, contextKey: t.contextKey, inputs: [t.input], mode: "replay", wanted: async () => true };
     const k = await this.runner.round<T>(t.step, true, ctx);
     if (!k.ok) return { d: k, k: null };
-    const d = await this.runner.round<T>(t.step, false, { ...ctx, replayPair: pairOf(t.step, true, k.runFile) });
+    // Break B1: the draft of the same run is the one recorded after the checker round before it (of any outcome) and
+    // before this checker: the paid runner records a run's draft, then its checker.
+    const stem = pairOf(t.step, true, k.runFile), before = runTime(k.runFile);
+    const after = (existsSync(RUNS) ? readdirSync(RUNS) : []).filter((f) => replayPattern(t.step.jobBase, true).test(f) && pairOf(t.step, true, f) === stem && runTime(f) < before).map(runTime).sort().pop() ?? "";
+    const d = await this.runner.round<T>(t.step, false, { ...ctx, replayPair: stem, replayWindow: { after, before } });
     return { d: d.ok ? d : { ok: false, costUsd: 0, reason: "The newest saved checker reading has no first reading from the same run, so it is not used." }, k };
   }
   async saved(t: Target): Promise<SavedState> {
@@ -261,11 +266,12 @@ export class FormMasters {
     const ws = t.a.workspaceId, combinationId = t.kind === "guide" ? t.combination.id : t.a.combinationId;
     const once = t.kind === "form" ? { context: t.contextKey } : { context: `guide:${t.combination.id}:${t.code}` };
     const isAi = [{ detail: { path: ["ai"], equals: true } }, { detail: { path: ["context"], equals: once.context } }];
+    const usableDone = [...isAi, { detail: { path: ["usable"], equals: true } }];
     // One AI draft per edition (or per combination's guide), looked up and started under one lock: a second click returns
     // the one draft; one running now refuses a second (never two paid runs side by side).
     const started = await this.db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`masters_ai:${ws}:${once.context}`}))`;
-      const done = await tx.draftingJob.findFirst({ where: { workspaceId: ws, kind: MASTERS_STEP, status: "COMPLETED", AND: isAi }, orderBy: { startedAt: "desc" } });
+      const done = await tx.draftingJob.findFirst({ where: { workspaceId: ws, kind: MASTERS_STEP, status: "COMPLETED", AND: usableDone }, orderBy: { startedAt: "desc" } });
       if (done) return { done };
       const going = await tx.draftingJob.findFirst({ where: { workspaceId: ws, kind: MASTERS_STEP, status: "RUNNING", startedAt: { gte: new Date(Date.now() - RUNNING_FOR_MS) }, AND: isAi }, select: { id: true } });
       if (going) throw problem(409, "Already drafting", "This source is already being drafted with AI. Wait for that run to end, then look at To review.", { runId: going.id });
@@ -274,6 +280,9 @@ export class FormMasters {
     });
     if ("done" in started) return { ...started.done!, proposals: 0, group: t.group, already: true };
     const job = started.job!;
+    // Review M1: what the rounds cost and recorded, kept outside the try, so whatever throws after a paid round still
+    // records its cost and run files (and a later Saved can replay them); a job that completed is never demoted.
+    let paid = { usd: 0, runFiles: [] as string[] }, completed = false;
     try {
       const fail0 = { ok: false as const, costUsd: 0, reason: "The AI step stopped on this computer, so nothing of it is used." };
       let d: RoundOut<FormAnswer | GuideAnswer>, k: RoundOut<FormAnswer | GuideAnswer> | null;
@@ -285,6 +294,7 @@ export class FormMasters {
       }
       const usd = round2(d.costUsd + (k?.costUsd ?? 0));
       const runFiles = [d.ok ? d.runFile : null, k?.ok ? k.runFile : null].filter((x): x is string => !!x);
+      paid = { usd, runFiles };
       if (!d.ok || !k?.ok) {
         let note = (!d.ok ? d.reason : k && !k.ok ? `The first AI round ran, but the checker round did not: ${k.reason.charAt(0).toLowerCase()}${k.reason.slice(1)}` : null) ?? "The AI step did not finish.";
         // C4.7 break B2: a round that ran stays charged; the note never says "nothing was charged" then.
@@ -317,15 +327,24 @@ export class FormMasters {
         await insertProposals(tx, ws, items);
         const counts = Object.fromEntries(["section", "answer_list", "form_check", "cross_check", "document_type"].map((kd) => [kd, items.filter((i) => i.kind === kd).length]));
         const note = `${from === "live" ? "Live" : "Saved"} AI draft of ${t.kind === "form" ? t.edition : `${t.code} for "${t.combination.label}"`} (US$${usd.toFixed(2)}): ${items.length} proposal${items.length === 1 ? "" : "s"} for To review${res.dropped.length ? `, ${res.dropped.length} left out with the reason` : ""}${res.unresolved.length ? `, ${res.unresolved.length} passage${res.unresolved.length === 1 ? "" : "s"} the AI could not turn into an item` : ""}. Sample until the immigration expert confirms.`;
-        const ended = await tx.draftingJob.update({ where: { id: job.id }, data: { status: "COMPLETED", costUsd: usd, finishedAt: new Date(), runFile: runFiles[0] ?? null, message: note.slice(0, 1000),
-          detail: { ...(job.detail as object), ...(rules && t.kind === "form" ? { edition: t.edition, sections: rules.sections.length, answerLists: rules.lists.length, tooLong: rules.tooLong } : {}), from, counts, dropped: res.dropped.slice(0, 100), unresolved: res.unresolved.slice(0, 100), run_files: runFiles } } });
+        // Break B2: a draft with no usable AI item is not "the one draft" of its source (usable: false), so a later
+        // Saved result or a new Live run (its cost shown first) can still draft it; its words say so.
+        const usable = res.items.length > 0;
+        const ended = await tx.draftingJob.update({ where: { id: job.id }, data: { status: "COMPLETED", costUsd: usd, finishedAt: new Date(), runFile: runFiles[0] ?? null,
+          message: (usable ? note : `${note} No AI item was usable, so this source can be drafted again.`).slice(0, 1000),
+          detail: { ...(job.detail as object), usable, ...(rules && t.kind === "form" ? { edition: t.edition, sections: rules.sections.length, answerLists: rules.lists.length, tooLong: rules.tooLong } : {}), from, counts, dropped: res.dropped.slice(0, 100), unresolved: res.unresolved.slice(0, 100), run_files: runFiles } } });
         return { job: ended, made: items.length };
       }, QUEUE_TX);
-      await this.audit.log(ws, actor.id, "proposed", "masters draft", t.kind === "form" ? t.edition : t.code, `${actor.name} drafted ${t.kind === "form" ? `${t.edition}'s masters` : `${t.code}'s checks`} with AI (${from === "live" ? "Live" : "Saved"}, US$${usd.toFixed(2)}): ${out.made} to review`, { runId: job.id, mode, run_files: runFiles }, combinationId);
+      completed = true;
+      // The audit line is not part of the money path: its failure is logged, never turned into a failed paid run.
+      await this.audit.log(ws, actor.id, "proposed", "masters draft", t.kind === "form" ? t.edition : t.code, `${actor.name} drafted ${t.kind === "form" ? `${t.edition}'s masters` : `${t.code}'s checks`} with AI (${from === "live" ? "Live" : "Saved"}, US$${usd.toFixed(2)}): ${out.made} to review`, { runId: job.id, mode, run_files: runFiles }, combinationId).catch((x) => console.warn(`masters ${job.id}: audit not written:`, String(x).slice(0, 200)));
       return { ...out.job, proposals: out.made, group: t.group, usd, from };
     } catch (e) {
+      if (completed) throw e;
       // Whatever stops this draft ends its job as FAILED, so "Already drafting" never blocks the source for a run that is gone.
-      await this.db.draftingJob.update({ where: { id: job.id }, data: { status: "FAILED", finishedAt: new Date(), message: "This draft stopped on this computer before it ended; nothing of it is proposed." } }).catch((x) => console.warn(`masters ${job.id}: could not end the job:`, String(x).slice(0, 200)));
+      const cost = paid.usd > 0 ? ` This run cost US$${paid.usd.toFixed(2)} (counted)${paid.runFiles.length === 2 ? "; its recorded answers can be used with Saved (US$0)" : ""}.` : "";
+      await this.db.draftingJob.update({ where: { id: job.id }, data: { status: "FAILED", finishedAt: new Date(), costUsd: paid.usd, runFile: paid.runFiles[0] ?? null,
+        message: `This draft stopped on this computer before it ended; nothing of it is proposed.${cost}`, detail: { ...(job.detail as object), run_files: paid.runFiles } } }).catch((x) => console.warn(`masters ${job.id}: could not end the job:`, String(x).slice(0, 200)));
       throw e;
     }
   }
@@ -346,6 +365,7 @@ export class FormMasters {
 @Controller("api")
 export class FormMastersController {
   constructor(@Inject(FormMasters) private readonly m: FormMasters) {}
-  @Post("attachments/:id/draft-masters/plan") @HttpCode(200) plan(@Headers("x-actor") a: string | undefined, @Param("id") id: string, @Body() b: unknown) { actorOf(a); return this.m.plan(id, (b ?? {}) as { mode?: unknown }); }
+  // Break minor: the plan names source files, run files and the AI cap, so only those who may draft read it.
+  @Post("attachments/:id/draft-masters/plan") @HttpCode(200) plan(@Headers("x-actor") a: string | undefined, @Param("id") id: string, @Body() b: unknown) { need(actorOf(a), "author"); return this.m.plan(id, (b ?? {}) as { mode?: unknown }); }
   @Post("attachments/:id/draft-masters") draft(@Headers("x-actor") a: string | undefined, @Param("id") id: string, @Body() b: unknown) { return this.m.draft(actorOf(a), id, (b ?? {}) as { mode?: unknown; planSha256?: unknown }); }
 }
