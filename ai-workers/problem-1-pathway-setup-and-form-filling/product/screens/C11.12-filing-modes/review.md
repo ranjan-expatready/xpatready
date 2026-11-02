@@ -87,3 +87,33 @@ Re-scored in `journey-test-reviewer-2026-11-02.md` (round 2).
 - 200 % zoom, a full keyboard-only walk, and a screen reader.
 
 **Verdict: Approve** on `92e25d3d`. No Blocker or Major is open. Put n1 and n2 in the PR body with m3 and m4.
+
+## Round 3: `653b9044` (verdict unchanged: Approve)
+**What changed since round 2:**
+- `0c6d4d11` adds `People: { step: "people" }` to `WHERE_STEP` (`engine/setup-checklist.ts:20–21`). It fixes CI shard 1: `check_setup_checklist` requires every validator `where` to have a step.
+- `653b9044` merges origin/main.
+
+**Checklist mapping:** correct. "Filing for <role>" is about the people step.
+- The checklist counts only `level: "error"` problems (`setup-checklist.ts:102, 106`).
+- So while `FILING_NOT_SET_BLOCKS` is false the line adds no checklist item, and nothing changes on screen.
+
+**Merge:** no PR 1 file changed between `92e25d3d` and `653b9044`, except `acceptance/lib/setup_vv_m3.ts`.
+- The files checked: filing-modes, people, studio, workspace, case-prepare, case-filings, contracts/workspace, questionnaires.tsx, C11.12.test.ts, both samples, runtime/filings, programs and check_c1112_modes.
+- In `setup_vv_m3.ts`, main added `whenNotMet: "needs_review"` to the `vv.no_convictions` gate (P-230). The C11.12 edit (no `filingMode` on the Representative, B1) is intact.
+
+**Evidence:** the builder's results on `653b9044` (port 4446):
+- `check_setup_checklist` 63/63.
+- `check_d1_reset_to_six` 25/25.
+- `check_c1112_modes` 39/39.
+- `C11.12.test.ts` 18/19 (line 90, as on main).
+- The web build passes.
+
+I read the diff but did not re-run these.
+
+**New Minor (record for PR 3):**
+- **n3:** when PR 3 makes the release check's "Filing for <role>" line blocking, a draft's People error now counts towards the people step.
+- But the people step pushes no "Fix problems" item for a draft's own problems: only forms, questions and documents, and release do (`setup-checklist.ts:126–146`). A release's People problems do get an item (`:117`).
+- Under the old fallback the same error went to the release step, which does push one.
+- PR 3 should add a people "Fix problems" item, or the draft's blocking line will not appear in the checklist. Not a problem now, because the line is a warning.
+
+**Verdict: Approve** on `653b9044`. No Blocker or Major is open. List n1, n2 and n3, with m3 and m4, in the PR body.
