@@ -110,3 +110,8 @@
 * m3 (carried) is unchanged.
 
 **Verdict round 2: Approve** on **07aa599e**. No Blocker or Major is open. m3 and m4 go in the PR body. Journey score: **10/10**. Trust and sources rises to 1 because M1 is closed. The journeys were not re-walked: no journey has a sponsor, so 07aa599e does not change their path.
+
+**Round 3 · 228c765d (merge of origin/main f215b06c, QA-82 #469): Approve.**
+* The merge carries both sides' hunks in the four shared files unchanged. Main's QA-82 hunks (`asked` in `contracts/workspace.ts`, `engine/render.ts`, `engine/runtime/questionnaires.ts`, the "No question written yet" note in `questionnaires.tsx`) are line-for-line equal to its own diff from the merge base. C11.12's Filing column hunks are equal to theirs.
+* Re-checked here: `tsc` web 0 errors and api 13 (unchanged, untouched test files); `check_c1112_modes` 44/44, `check_r2_fee_table` 67/67.
+* The money path did not change, so my round-2 Approve and 10/10 journey score carry to 228c765d.
