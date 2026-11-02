@@ -57,7 +57,8 @@ function valueProblem(v: unknown): string | null {
     const [n, d] = stack.pop()!;
     if (d > LIMITS.depth) return "This value is nested too deeply for a form.";
     if (typeof n === "string" && unclean(n)) return "This value holds control or invisible characters.";
-    if (n && typeof n === "object") for (const x of Object.values(n)) stack.push([x, d + 1]);
+    // Devin review (PR #513): an object's keys are text too.
+    if (n && typeof n === "object") for (const [k, x] of Object.entries(n)) { if (!Array.isArray(n) && (unclean(k) || [...k].length > 60)) return "This value has a part whose name holds control or invisible characters, or is too long."; stack.push([x, d + 1]); }
   }
   return null;
 }
@@ -228,6 +229,9 @@ export function runFieldMap(s: Snapshot, family: Family, form: string, inv: Inve
   for (const p of family.people) {
     const want = own(expected.people, p.id);
     const cov = formCoverage(s, c.people, c.answers, c.rows, form, p.id, c.today);
+    // Devin review (PR #513): a form whose condition cannot be told for this family (a fact it reads is missing) is
+    // never a pass: the family must settle whether the form applies.
+    if (cov && cov.applies === "cannot_tell") { lines.push({ person: p.id, person_label: p.label, target: form, label: `${form} for ${p.label}`, expected: want ? "applies" : "does not apply", got: "cannot tell", pass: false, why: `Whether ${form} applies to ${p.label} cannot be told: the family has no answer for ${(cov as { missing?: string[] }).missing?.join(", ") || "a fact its condition reads"}.` }); continue; }
     const applies = !!cov && cov.applies !== false;
     if (!applies) {
       if (want) lines.push({ person: p.id, person_label: p.label, target: form, label: `${form} for ${p.label}`, expected: "applies", got: "does not apply", pass: false, why: `${form} does not apply to ${p.label} in this combination.` });

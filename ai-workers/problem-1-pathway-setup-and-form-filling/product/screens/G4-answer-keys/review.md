@@ -63,3 +63,23 @@ Recorded: concept §2b (team `TestFamily`/`AnswerKey`/`AnswerKeyRun` → ours, w
 The PR body (to confirm it lists the 16 expert questions); any UI (part 2); a real expert's reading of the amended values. Running the other suites also rewrote tracked evidence files in this copy (`studio/evidence/forms-slice2*`, `p2/runs/stub-pass/*`, `p2/screening/canary-digest.json`). Other tracked files changed during the session too (W1 screenshots, ai-orchestration evidence). Restoring them was refused by permission, so they are left modified and uncommitted.
 
 **Verdict: Approve**
+
+## Re-review 3a3cf527
+I read `git diff ea426ad4..3a3cf527 -- prototype/studio`. That holds the fixes (`f2ea8988..3a3cf527`: `engine/answer-keys.ts`, `api/src/answer-keys.ts` and the check) and the merge of origin/main.
+- **The merge breaks nothing G4 relies on.** Its only change to an engine file the runner reads is `engine/render.ts`: a new `asked` flag on questionnaire rows and a `factName` helper. Neither touches box coverage. Its other changes (`contracts/workspace.ts`, `runtime/questionnaires.ts`, web pages, qa checks) are not imported by G4. No migration, schema, `fill.ts` or `form-values.ts` changes.
+- **Ran it** on fresh copies on :4451. `check_g4_answer_keys` passed **73/73** on four runs, three of them on fresh copies. `check_c72_imm5257_fill` 38/38, `check_forms_slice2b` 36/36. `graph.mjs` names no G4 route or module.
+- **Break M1 fixed.** The family save now locks the family's keys (`SELECT … FOR UPDATE`), refuses a sign that landed first unless a reason is given, and unsigns and versions every key in one `UPDATE` (`api/src/answer-keys.ts:103-106`). My own 20 tries of a family save racing a sign: **0 keys left Signed after their family changed** and 0 empty reasons. With no reason, a sign that wins gets the family save refused (400); with a reason, the key returns to Draft as "Family changed: race".
+- **Break M2 fixed.** `gone()` (`engine/answer-keys.ts:248-252`) adds a failing line for expected values about a person no longer in the family (or no longer travelling, for rules). Live, I replaced the principal: the run failed on that person's line.
+- **My Minors.**
+  - **1 fixed:** an update that names no edition keeps the key's own (`api/src/answer-keys.ts:176-177`), with a fail line in the check.
+  - **4 fixed:** two-at-once sign and family-save lines, the approver-run 403, and the retired-combination 409 for change and sign.
+  - **5 fixed** with M1.
+  - **6 fixed:** a line's label is now the heading plus the caption.
+  - **2** is moved to the PR's expert questions and **3** (zod contract) to part 2, as recorded. That is accepted for part 1: the [M] contract line must be met in part 2.
+- **Break minors.** m1 (the PUT guard includes the state), m2 (422 with no form field list), m3 (edition capped at 60), m4, m5, m7 (depth, NUL, invisible text and line separators refused), m6 (one error, stops early), m8 (`constructor` refused; own keys only), m10, m11 (partly: a principal who stays home, person fields about `case`, a "none apply" given twice) and m12 (400 on `family_id`) are each fixed with a check line. One gap: m9's run on a retired combination still returns 200. It changes no key and is a read-like action, so it is not a finding.
+- **New Minor (Should): the check is no longer rerunnable on the same copy.** Its last lines set IMM 5257's `inventory_file` to NULL and retire `vv.single` without putting them back (`check_g4_answer_keys.ts`, last block). A second run on the same copy crashes at `:39`, and a later suite on that copy (`check_c72` gave 409) fails. Fix: restore both at the end. Not blocking: the suites start a fresh copy.
+- **Note:** the engine now imports `contracts/runtime.ts` (zod) for `INVISIBLE`/`LONE`, so add it to the lift package list in concept §2b.
+
+No Blocker or Major is open.
+
+**Verdict: Approve** (commit 3a3cf527)

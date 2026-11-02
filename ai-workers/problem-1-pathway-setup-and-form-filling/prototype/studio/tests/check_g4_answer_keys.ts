@@ -125,6 +125,11 @@ ok("C5.7 BR-1 fail (break m6): 10,000 facts are refused once, before any fact is
 ok("C5.7 BR-2 fail (break m3): an edition of a million characters is refused", checkExpected(s, "field_map", FORM, family, { ...key, edition: "x".repeat(1_000_000) }, inv).errors.some((e) => e.field === "expected.edition"));
 ok("C5.7 BR-7 fail (break m7): a reason of invisible characters only, or with a line separator, is refused", !!changeProblem("SIGNED", "\u200b") && !!changeProblem("SIGNED", "line one\u2028line two"));
 
+const undecided = clone(s); const line = (undecided.forms as { form_number: string; condition?: unknown; status?: string }[]).find((f) => f.form_number === FORM)!; line.condition = { op: "eq", field: "person.uci", value: "1234" }; line.status = "conditional";
+const und = runFieldMap(undecided, family, FORM, inv, key);
+ok("C5.7 BR-4 fail (Devin review): a form whose condition the family cannot settle is never a pass", und.result === "FAILED" && und.lines.some((l) => l.got === "cannot tell" && /cannot be told/.test(l.why ?? "")), und.lines.filter((l) => !l.pass).slice(0, 2));
+ok("C5.7 BR-1 fail (Devin review): a fact value with an invisible character in a part's name is refused", checkFamily({ ...sample, facts: [{ about: "mother", fact: "person.mailing_address", value: { "city\u200b": "PUNE" } }] }, fields, roles).errors.some((e) => e.field === "facts[0].value"));
+
 // BR-5: fingerprints
 const fp = fingerprintOf(s, "field_map", FORM, inv), last = { result: "PASSED", itemFingerprint: pass.fingerprint.item, inputsFingerprint: pass.fingerprint.inputs, keyVersion: 1 };
 ok("C5.7 BR-5: the last run on the item as it is reads Passed", runState(last, fp, 1).state === "PASSED" && fp.item === pass.fingerprint.item);
@@ -244,6 +249,9 @@ const ed0 = sql(`select e.id from form_edition e join gov_form_def g on g.id = e
 sql(`update form_edition set inventory_file = null where id = '${ed0}' returning id`);
 const noInv = await call("POST", `/combinations/${vv}/answer-keys`, { family_id: f4.id, item_kind: "field_map", item_ref: FORM, expected: key }, AUTHOR);
 ok("C5.7 API fail (break m2): a map key is refused while the form's field list is not recorded (422)", noInv.status === 422, noInv.body);
+sql(`update form_edition set inventory_file = '../../../../../../../../tmp/outside.json' where id = '${ed0}' returning id`);
+const esc = await call("POST", `/combinations/${vv}/answer-keys`, { family_id: f4.id, item_kind: "field_map", item_ref: FORM, expected: key }, AUTHOR);
+ok("C5.7 API fail (Devin review): a form field list path outside the solution folder is never read (422)", esc.status === 422, esc.status);
 sql(`update combination set retired_at = now() where id = '${vv}' returning id`);
 ok("C5.7 API fail (break m9): on a retired combination a key is not changed or signed (409)", (await call("PUT", `/answer-keys/${k4.id}`, { expected: rules, version: 2, reason: "x" }, AUTHOR)).status === 409 && (await call("POST", `/answer-keys/${k4.id}/sign`, { version: 2 }, EXPERT)).status === 409);
 const missing = await call("GET", "/answer-keys/00000000-0000-0000-0000-000000000000", undefined, AUTHOR);

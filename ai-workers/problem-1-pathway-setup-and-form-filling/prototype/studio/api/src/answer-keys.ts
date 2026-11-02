@@ -5,7 +5,7 @@
 // Audit lines name the family key, the item and the counts: never a family's values (SA-1B-296 field 9).
 import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Put } from "@nestjs/common";
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve, sep } from "node:path";
 import { Prisma } from "@prisma/client";
 import { buildSnapshot, type Snapshot } from "../../engine/snapshot.ts";
 import { blank, changeProblem, checkExpected, checkFamily, fingerprintOf, ITEM_KINDS, NO_SCORING, runFieldMap, runRuleSet, runState, SAMPLE_WORDS, signProblem, unclean, type Family, type FieldError, type ItemKind, type MapExpected, type RuleExpected } from "../../engine/answer-keys.ts";
@@ -63,7 +63,10 @@ export class AnswerKeys {
   private inventoryOrNull(s: Snapshot, form: string): Inventory | null {
     const m = (s.field_maps as { form_number: string; channel?: string; inventory_file?: string | null }[]).find((x) => x.form_number === form && x.channel !== "ONLINE");
     if (!m?.inventory_file) return null;
-    try { return JSON.parse(readFileSync(join(SOLUTION, m.inventory_file), "utf8")) as Inventory; } catch { return null; }
+    // Devin review (PR #513): the field list is read only from inside the solution folder, and only a .json file.
+    const path = resolve(SOLUTION, m.inventory_file);
+    if (!path.startsWith(resolve(SOLUTION) + sep) || !path.endsWith(".json")) return null;
+    try { return JSON.parse(readFileSync(path, "utf8")) as Inventory; } catch { return null; }
   }
 
   // ------------------------------------------------------------------------------------------------ families (BR-1)

@@ -428,6 +428,8 @@ export class Demo {
       "Person roles added here": await t.personRole.count({ where: { ...ws, builtIn: false } }),
       // S7 (P-108): Reset empties everything, these two included
       "canada.ca files saved by the finder and form line changes": (await t.officialDownload.count({ where: ws })) + (await t.formLineAction.count({ where: ws })),
+      // G4 (forms lane): test families, their answer keys and runs
+      "Answer-key families, keys and runs": (await t.testFamily.count({ where: ws })) + (await t.answerKey.count({ where: ws })) + (await t.answerKeyRun.count({ where: ws })),
     };
     const builtIn = await t.personRole.count({ where: { ...ws, builtIn: true } });
     const dir = VAR("demo");
