@@ -389,12 +389,18 @@ export class Runtime {
     if (!fields.size) fail("No such section in this case's release.", HttpStatus.NOT_FOUND);
     const seen = new Set(b.seen);
     const at = new Date();
+    // QA-164 (golden journey 1, step 4): a confirm covers the questions the officer's view lists for this person and
+    // section. A fact the view leaves out (a worked-out "has any children" once a child is on the case, C7.7 and D4) can
+    // never be seen on screen, so its stored answer is neither asked as seen nor confirmed: it never blocks the section.
+    const { answers: now, rows: nowRows, groups: nowGroups } = await this.state(c);
+    const listed = new Set(caseView(s, this.peopleOf(c), now, nowRows, "agent", at, nowGroups).sections
+      .filter((x) => x.subjectId === b.subjectId && x.section === section).flatMap((x) => x.questions.map((q) => q.fact)));
     const confirmed = await this.db.$transaction(async (tx) => {
       // A removed row's answers stay stored (history) but are no longer read (PR 7 review D1): only answers outside a
       // row or in a live row are current; a seen id of a removed row's answer is not "changed".
       const stored = await tx.clientCanonicalAnswer.findMany({ where: { subjectId: b.subjectId, supersededById: null, canonicalFieldKey: { in: [...fields] } } });
       const live = new Set((await tx.clientFactRecord.findMany({ where: { subjectId: b.subjectId, supersededById: null, tombstone: false }, select: { rowKey: true } })).map((r) => r.rowKey));
-      const current = stored.filter((a) => a.rowKey === null || live.has(a.rowKey));
+      const current = stored.filter((a) => (a.rowKey === null || live.has(a.rowKey)) && listed.has(a.canonicalFieldKey));
       // The section's "none apply", when it is a repeating group (Lead, break M3), is confirmed with its answers.
       // With entries, the entries answer the group: its earlier "entries apply" is neither shown nor confirmed (review m6).
       const entries = await tx.clientFactRecord.count({ where: { subjectId: b.subjectId, groupKey: section, supersededById: null, tombstone: false } });
