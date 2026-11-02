@@ -92,11 +92,14 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
     writeFileSync(join(RUNS, f), JSON.stringify({ caller: "live", contract_valid: true, launch_evidence: { template_sha256: sha(readFileSync(join(PROMPTS, check ? "pqr-picks-check.v1.md" : "pqr-picks.v1.md"))) }, drafting_run: { status: "completed", inputs: { official_files: inputs, combination: "wp.family" }, usage: { cost_usd: 0.4 } }, raw_output: JSON.stringify({ picks, unresolved: [] }) }));
     written.push(join(RUNS, f));
   };
-  save(false, [pick("Date of birth", "The guide tests age-related eligibility.")]); save(true, [pick("Date of birth", "The guide tests age-related eligibility.")]);
+  // QA-162: plus one pick no question of this combination asks, which is left out and shown with its reason on the card.
+  save(false, [pick("Date of birth", "The guide tests age-related eligibility."), pick("Favourite colour", "Not a question of this combination.")]); save(true, [pick("Date of birth", "The guide tests age-related eligibility.")]);
   r = await run("replay");
   const s6saved = step(r, "pqr_picks");
   ok("C4.11 S6 pass: saved AI answers are replayed into the queue at US$0, as AI items", r.status === 201 && r.body.proposed > 0 && r.body.usd === 0 && s6saved?.status === "COMPLETED" && waiting("ai") === r.body.proposed, { proposed: r.body.proposed, ai: waiting("ai"), s6saved });
   card = await call("GET", `/runs/${r.body.runId}`);
+  const s6card = card.body.steps?.find((s: J) => s.kind === "pqr_picks");
+  ok("C4.11 S6 fail (QA-162): a saved pick no question asks is left out, and the card's step 6 says so with its reason, never a bare count", /1 left out with the reason/.test(s6card?.message ?? "") && /Favourite colour: No question of this combination asks "Favourite colour"/.test(s6card?.details ?? ""), { message: s6card?.message, details: s6card?.details });
   ok("C4.11 S6 pass: the card shows step 6 as AI work but spent US$0, never as a live run", card.body.steps?.find((s: J) => s.kind === "pqr_picks")?.uses === "ai" && card.body.usd.spent === 0 && sql(`select mode from ai_batch where id='${r.body.runId}'`) === "REPLAY", card.body.steps?.find((s: J) => s.kind === "pqr_picks"));
 
   // ---------------------------------------------------------------- R + S6 rules: the whole run, rules only

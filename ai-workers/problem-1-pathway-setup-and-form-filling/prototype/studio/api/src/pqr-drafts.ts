@@ -232,7 +232,9 @@ export class PqrDrafts {
       out.already = items.filter((x) => waiting.has(x.identity.key)).length;
       out.removed = items.filter((x) => !waiting.has(x.identity.key) && gone(x)).length;
       await insertProposals(tx, c.workspaceId, fresh);
-      await tx.draftingJob.update({ where: { id: job.id }, data: { status: out.cancelled ? "CANCELLED" : out.note && !items.length ? "FAILED" : "COMPLETED", costUsd: out.usd, finishedAt: new Date(), runFile: out.run_files[0] ?? null, message: out.note || `${fresh.length} pick${fresh.length === 1 ? "" : "s"} proposed`, detail: { dropped: out.dropped, unresolved: out.unresolved, run_files: out.run_files } } });
+      await tx.draftingJob.update({ where: { id: job.id }, data: { status: out.cancelled ? "CANCELLED" : out.note && !items.length ? "FAILED" : "COMPLETED", costUsd: out.usd, finishedAt: new Date(), runFile: out.run_files[0] ?? null, message: out.note || `${fresh.length} pick${fresh.length === 1 ? "" : "s"} proposed${out.dropped.length ? `, ${out.dropped.length} left out with the reason` : ""}`,
+        // QA-162: the run card shows each left-out pick with its reason (runs.ts details), never only a count.
+        detail: { dropped: out.dropped, unresolved: out.unresolved, run_files: out.run_files, details: out.dropped.length ? out.dropped.map((x) => `${x.asks}: ${x.why}`).join("\n") : null } } });
     });
     out.proposed = fresh.length;
     out.ready = fresh.filter((x) => x.confidence === "ready").length; out.check = fresh.filter((x) => x.confidence === "check").length; out.decide = fresh.filter((x) => x.confidence === "decide").length;
