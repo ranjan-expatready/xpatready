@@ -197,7 +197,7 @@ export function FormsPage() {
             {chip(type === "checklist", "Checklists", c.checklist, () => setType("checklist"), "IRCC document checklists: read by AI for the documents list; never filled.")}
           </div>
           <label className="flex items-center gap-2 text-sm"><span className="font-medium">Used by</span>
-            <Select aria-label="Used by" value={usedBy} onChange={(e) => setUsedBy(e.target.value)} className="w-56"><option value="">Any combination</option>{(lib.data?.combinations ?? []).map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</Select>
+            <Select aria-label="Used by" value={usedBy} onChange={(e) => setUsedBy(e.target.value)} className="w-56"><option value="">Any combination</option>{(lib.data?.combinations ?? []).map((x) => { const { last, above } = nameFirst(x.label); return { id: x.id, text: above ? `${last} · ${above}` : last ?? x.label }; }).sort((a, b) => a.text.localeCompare(b.text)).map((x) => <option key={x.id} value={x.id}>{x.text}</option>)}</Select>
           </label>
           <div className="flex flex-wrap items-center gap-2"><span className="text-sm font-medium">Status</span>
             {chip(status === "needs_ok", "Needs your OK", c.needs_ok, () => setStatus(status === "needs_ok" ? "" : "needs_ok"), STATUS.needs_ok.tip)}
@@ -233,10 +233,14 @@ export function FormsPage() {
 
 const RUNS_KEY = "library-forms-runs";
 
-/** A combination's trail, its last part first (what tells them apart), the rest muted: "With an LMIA · Work permit › Employer-specific". */
+/** A combination's trail with its name first (what tells them apart), the rest after it: "Visitor visa · Retail ›
+ *  Temporary residence › Visitors" (P-104, QA-150). Used by the cell and the Used by filter alike. */
+const nameFirst = (label: string) => { const parts = label.split(" › "), last = parts.pop(); return { last, above: parts.join(" › ") }; };
+/** The cell: at most two lines (EXPERIENCE §1), the full trail in its tip and in "See where it is used"; a long unbroken
+ *  name wraps inside the cell, never over Status (break m2). */
 function TrailText({ label }: { label: string }) {
-  const parts = label.split(" › "), last = parts.pop();
-  return <span className="line-clamp-2" title={label}>{last}{parts.length ? <span className="text-text-muted"> · {parts.join(" › ")}</span> : null}</span>;
+  const { last, above } = nameFirst(label);
+  return <span data-trail className="line-clamp-2 [overflow-wrap:anywhere] xl:min-w-56" title={label}>{last}{above ? <span className="text-text-muted"> · {above}</span> : null}</span>;
 }
 
 /** The IRCC accepts cell: the value, then who said it (AI · Sample, a person · Sample, the expert); a change waiting shows. */

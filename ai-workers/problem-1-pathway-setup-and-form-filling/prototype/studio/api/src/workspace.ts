@@ -13,7 +13,7 @@ import { defaultModeOf, hasFeeRules } from "../../engine/runtime/filings.ts";
 import { wordsOnly } from "../../engine/render.ts";
 import { acceptsOf, allowedChannels, channelProblems, filingKind, filingMethod, lineOf, notAcceptedWords, notNeededWords, signatureOf } from "../../engine/channels.ts";
 import { ACCOUNT_WORDS, CHANNEL_WORDS, throughAccount, CHANNELS, SIGNATURE_FITS, SIGNATURE_WORDS, type Channel } from "../../contracts/forms.ts";
-import { answeredBy, irccWords, ourWords, signedByLabel, tabOf, type LastFormChange, type RemovedForm, type FamilyKey, type OnlyIf, type PeopleView, type QuestionnairesView, type WorkspaceFormLine, type WorkspaceView } from "../../contracts/workspace.ts";
+import { type LineMode, answeredBy, irccWords, ourWords, signedByLabel, tabOf, type LastFormChange, type RemovedForm, type FamilyKey, type OnlyIf, type PeopleView, type QuestionnairesView, type WorkspaceFormLine, type WorkspaceView } from "../../contracts/workspace.ts";
 import { actorOf, Db, fail, readerOf, type Actor } from "./core.ts";
 import { FormProgressService } from "./form-progress.ts";
 import { chipOf, type FormStepChip } from "../../contracts/form-progress.ts";
@@ -142,7 +142,8 @@ export class WorkspaceViews {
     });
     // C11.12 "What a case gets": the plan of filings for one case of each line's preview count (concept §4).
     const plan = previewFilings(lines, c.label, feesKnown, (role) => defaultModeOf(c.combinationKey, role));
-    return { ...state, lines, roles, warnings: filingWarnings(c.combinationKey, lines), ...plan };
+    const defaults = Object.fromEntries(roles.map((r) => [r.key, defaultModeOf(c.combinationKey, r.key)]).filter(([, m]) => !!m)) as Record<string, LineMode>;
+    return { ...state, lines, roles, warnings: filingWarnings(c.combinationKey, lines), ...plan, combinationKey: c.combinationKey, combinationLabel: c.label, feesKnown, defaults };
   }
 
   /** Preview: an unsaved case of one Sample family, read by caseView (never saved, never a real person). */

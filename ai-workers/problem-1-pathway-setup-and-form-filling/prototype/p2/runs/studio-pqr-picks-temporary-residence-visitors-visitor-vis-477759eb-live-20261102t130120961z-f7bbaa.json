@@ -1,0 +1,119 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-pqr-picks-temporary-residence-visitors-visitor-vis-477759eb-live-20261102t130120961z-f7bbaa",
+  "idempotency_key": "04049243a4001a4f39f85740e81c6815ce1b0ccf38c6774e332f130ef58c96f9",
+  "contract_version": "drafting-run/v0",
+  "kind": "pqr_picks",
+  "output_sha256": "8b4cd1c249a96cd54e237d20cacfb616daf78947de1b17698bd17eb8942859ec",
+  "inputs": {
+   "combination": "vv.single",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/guide-5256.text.inventory.json",
+     "sha256": "c6bc458e9381a53f71ae15015330eee769ce91a18cfc00a7daad1dad65ab16c2"
+    }
+   ],
+   "configuration_version": "c47-pqr-picks"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "low",
+   "timeout_ms": 300000,
+   "max_attempts": 2,
+   "budget_usd": 1,
+   "max_output_tokens": 4000,
+   "prompt_version": "pqr-picks.v1.md",
+   "prompt_sha256": "b00611f191c1f664d4cb91db2f0642b4fa4a4a474298202b22386be9cd926a0a"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 16900,
+    "output_tokens": 1242,
+    "duration_ms": 12550
+   }
+  ],
+  "usage": {
+   "input_tokens": 16900,
+   "output_tokens": 1242,
+   "cost_usd": 0.09244,
+   "duration_ms": 12550
+  },
+  "started_at": "2026-11-02T13:01:20.962Z",
+  "ended_at": "2026-11-02T13:01:33.721Z"
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": null,
+ "launch_evidence": {
+  "path_code_sha256": "0ddf133469c12347a1f983c9dd56efe9a188f78791305912a1f722eb42e745c8",
+  "template_sha256": "dfa3376730e9c84ebaa30820e587d02352592997666083cdf1c1a83cfc13bf1d",
+  "schema_file": "pqr-picks-output.v1.schema.json",
+  "schema_sha256": "27a912c884dfc8b79caea3198c3248b557b566208d4a58190da7666557b21e72",
+  "known": {
+   "combination_trail": "Temporary residence › Visitors › Visitor visa"
+  },
+  "screened": true,
+  "output_sha256": "8b4cd1c249a96cd54e237d20cacfb616daf78947de1b17698bd17eb8942859ec",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/Users/ranjansingh/Desktop/Xpatready/.claude/worktrees/paid-runner-48310b/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "6b17960f0151e3955bc1ba0fc76e82a629db7cb1b65f7063569f0cbb3980719b",
+  "request_bytes": 56387,
+  "stub_calls": null,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/.tools/p2-ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 47.73256399999999
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/guide-5256.text.inventory.json",
+    "sha256": "c6bc458e9381a53f71ae15015330eee769ce91a18cfc00a7daad1dad65ab16c2",
+    "kind": "inventory"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "76cbec9355d2b598f200ac2f831a6689ecda7990c925bf388a74a9c2db9b5b89",
+   "digest_made_at": "2026-11-02T13:01:20.962Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "7f1478d1bede5980cc7baad08bbccecc",
+   "ticket_expires_at": "2026-11-02T13:03:20.962Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"picks\":[{\"role\":\"principal\",\"asks\":\"Country of citizenship\",\"quote\":\"Persons who are not Canadian citizens or permanent residents of Canada may require a visa to enter Canada.\",\"why\":\"Citizenship decides whether a visitor visa is needed at all.\"},{\"role\":\"principal\",\"asks\":\"Ever a Canadian permanent resident\",\"quote\":\"We cannot issue you a TRV if you are a permanent resident.\",\"why\":\"A current permanent resident cannot be issued this visa.\"},{\"role\":\"principal\",\"asks\":\"Purpose of visit\",\"quote\":\"You must show the officer that you meet the requirements of the Immigration and Refugee Protection Act (IRPA) and the Immigration and Refugee Protection Regulations and that you will be in Canada for a temporary stay.\",\"why\":\"The visit must be a temporary stay for a visitor purpose.\"},{\"role\":\"principal\",\"asks\":\"Planned dates of stay\",\"quote\":\"satisfy an officer that you will leave Canada at the end of your stay,\",\"why\":\"The officer must be satisfied the person will leave at the end of the stay.\"},{\"role\":\"principal\",\"asks\":\"Funds available for stay\",\"quote\":\"show that you have enough money to maintain yourself and your family members in Canada and to return home,\",\"why\":\"The person must be able to support themselves and family and return home.\"},{\"role\":\"principal\",\"asks\":\"Intention to work or study\",\"quote\":\"not intend to work or study in Canada unless authorized to do so,\",\"why\":\"Visitors may not work or study without authorization.\"},{\"role\":\"principal\",\"asks\":\"Criminal history\",\"quote\":\"be law abiding and have no record of criminal activity,\",\"why\":\"A criminal record can make the person inadmissible.\"},{\"role\":\"principal\",\"asks\":\"Security-related background\",\"quote\":\"not be a risk to the security of Canada,\",\"why\":\"A security risk can make the person inadmissible.\"},{\"role\":\"principal\",\"asks\":\"Health conditions\",\"quote\":\"be in good health (complete a medical examination if required).\",\"why\":\"Health is tested and may require a medical exam.\"},{\"role\":\"principal\",\"asks\":\"Recent countries of residence\",\"quote\":\"in the one year immediately before the date you want to enter Canada. (This applies even if you are a citizen of a country that does not need a visa to enter Canada.)\",\"why\":\"Recent long stays in certain countries can trigger a medical exam requirement.\"},{\"role\":\"principal\",\"asks\":\"Valid passport\",\"quote\":\"If your passport is expired, it can’t be used to apply for temporary residence.\",\"why\":\"An expired passport cannot generally be used to apply.\"},{\"role\":\"spouse_or_partner\",\"asks\":\"Accompanying spouse or partner\",\"quote\":\"Your spouse or common-law partner and children must meet all of the requirements for temporary residence in Canada.\",\"why\":\"An accompanying spouse or partner must meet the same requirements.\"},{\"role\":\"child\",\"asks\":\"Accompanying children\",\"quote\":\"Your spouse or common-law partner and children must meet all of the requirements for temporary residence in Canada.\",\"why\":\"Accompanying children must meet the same requirements.\"}],\"unresolved\":[{\"passage\":\"provide any additional document requested by the officer to establish your admissibility, and\",\"reason\":\"Depends on officer requests; not a fact the prospect can state in advance.\"},{\"passage\":\"Regardless of the length of time you are in Canada, you will need a medical exam if you wish to work in one of the following fields:\",\"reason\":\"Relates to work in designated occupations, which is outside a visitor visa; may be a medical-exam trigger rather than eligibility.\"},{\"passage\":\"Minors (under 18 years of age) travelling alone or with a person other than their parents or legal guardians should have a letter of authorization\",\"reason\":\"Stated as 'should', a document recommendation; unclear whether it is an eligibility test.\"}]}"
+}

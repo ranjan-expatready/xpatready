@@ -39,6 +39,8 @@ function DraftDialog({ id, onClose }: { id: string; onClose: () => void }) {
   const plan = mode === "live" ? livePlan : base;
   const closed = (m: Mode) => !base.data || (m === "live" ? !liveOpen : !savedOpen);
   const nothing = base.isSuccess && closed("live") && closed("replay");
+  // C4.11 review m2: a Live worst case above what is left of the cap is said before the click, and Live cannot start.
+  const overCap = mode === "live" && !!plan.data && plan.data.totals.worst_usd > plan.data.totals.remaining_usd + 1e-9;
   const [result, setResult] = React.useState<Result | null>(null);
   const [busy, setBusy] = React.useState(false), [error, setError] = React.useState<string | null>(null);
   // Break B10: the result is announced and takes focus; after "Use Saved" focus goes to the Saved choice, not to Draft.
@@ -62,7 +64,7 @@ function DraftDialog({ id, onClose }: { id: string; onClose: () => void }) {
   const to = `/review/proposals?group=${encodeURIComponent(`combination:${id}`)}`;
   const footer = result
     ? <><Button variant="ghost" onClick={onClose}>Done</Button>{result.offer_saved ? <Button variant="secondary" onClick={useSaved} data-pqr-use-saved>Use Saved (US$0)</Button> : null}{result.proposed || result.already ? <Button asChild><Link to={to} data-pqr-open-review>Open To review</Link></Button> : null}</>
-    : <><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void run()} busy={busy} disabled={!plan.data || closed(mode)} aria-describedby={(base.isSuccess || base.isError) && closed(mode) ? "pqr-none" : undefined} data-pqr-start data-mode={mode}><Sparkles /> {mode === "replay" ? "Draft with Saved (US$0)" : "Draft Live"}</Button></>;
+    : <><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void run()} busy={busy} disabled={!plan.data || closed(mode) || overCap} aria-describedby={(base.isSuccess || base.isError) && closed(mode) ? "pqr-none" : overCap ? "pqr-cost" : undefined} data-pqr-start data-mode={mode}><Sparkles /> {closed(mode) ? "Draft" : mode === "replay" ? "Draft with Saved (US$0)" : "Draft Live"}</Button></>;
   return (
     <Dialog open wide onOpenChange={(o) => { if (!o) onClose(); }} title="Draft pre-qualification picks" description="Each pick goes to To review with its reason; you accept or remove each there. Nothing is asked until a pick is accepted. Sample until the immigration expert confirms." footer={footer}>
       {result ? (
@@ -79,7 +81,7 @@ function DraftDialog({ id, onClose }: { id: string; onClose: () => void }) {
             {MODES.map(([m, label, hint]) => {
               const off = closed(m);
               const why = !base.data ? null : m === "live" ? (liveOpen ? null : base.data.live.why) : (savedOpen ? null : base.data.saved?.why ?? null);
-              return <label key={m} className={`flex gap-2 text-sm${off ? " text-text-muted" : ""}`} data-pqr-mode={m}><input type="radio" name="pqr-mode" ref={m === "replay" ? savedRef : undefined} checked={mode === m} onChange={() => setMode(m)} disabled={off} className="mt-1" /><span><span className="font-medium">{label}{off && base.data ? (m === "live" ? " (not open)" : " (none yet)") : ""}</span><br /><span className="text-xs text-text-muted">{why ?? hint}</span></span></label>;
+              return <label key={m} className={`flex gap-2 text-sm${off ? " text-text-muted" : ""}`} data-pqr-mode={m}><input type="radio" name="pqr-mode" ref={m === "replay" ? savedRef : undefined} checked={mode === m && !off} onChange={() => setMode(m)} disabled={off} className="mt-1" /><span><span className="font-medium">{label}{off && base.data ? (m === "live" ? " (not open)" : " (none yet)") : ""}</span><br /><span className="text-xs text-text-muted">{why ?? hint}</span></span></label>;
             })}
           </fieldset>
           {base.isPending ? <p className="text-sm text-text-muted">Working out the steps and their cost…</p>
@@ -92,7 +94,7 @@ function DraftDialog({ id, onClose }: { id: string; onClose: () => void }) {
             <div className="rounded-lg border border-border p-3 text-sm">
               {plan.data.guide ? <p className="mb-1 text-xs text-text-muted">Reads {plan.data.guide.code}: {plan.data.guide.title}.</p> : null}
               <ol className="list-decimal space-y-0.5 pl-5">{plan.data.steps.map((x) => <li key={x.n}>{x.label} {x.uses_ai ? <Pill tone="ai">AI</Pill> : <Pill>rules</Pill>}</li>)}</ol>
-              <p className="mt-2 font-medium" data-pqr-cost>{mode === "live" ? `At most US$${plan.data.totals.worst_usd.toFixed(2)}, inside the AI spending cap (US$${plan.data.totals.remaining_usd.toFixed(2)} left).` : "Cost: US$0 (no AI call)."}</p>
+              <p className="mt-2 font-medium" id="pqr-cost" data-pqr-cost>{mode !== "live" ? "Cost: US$0 (no AI call)." : overCap ? `At most US$${plan.data.totals.worst_usd.toFixed(2)}: over what is left of the AI spending cap (US$${plan.data.totals.remaining_usd.toFixed(2)}), so Live cannot start.` : `At most US$${plan.data.totals.worst_usd.toFixed(2)}, inside the AI spending cap (US$${plan.data.totals.remaining_usd.toFixed(2)} left).`}</p>
               <p className="mt-1 text-xs text-text-muted">{plan.data.note} {plan.data.candidates} question{plan.data.candidates === 1 ? "" : "s"} a prospect could be asked.</p>
             </div>
           ) : null}

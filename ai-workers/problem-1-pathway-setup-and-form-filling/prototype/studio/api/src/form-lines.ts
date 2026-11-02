@@ -4,15 +4,12 @@ import { Prisma } from "@prisma/client";
 import { HttpStatus } from "@nestjs/common";
 import { Db, fail } from "./core.ts";
 import { WHO } from "./studio.ts";
+import { canonicalFact } from "../../engine/resolver.ts";
 
-/** A field id merged into another redirects to it (P-65); any other id is returned as it is. */
+/** A field id merged into another redirects to it (P-65); any other id is returned as it is. SH3: the chain rule is the
+ *  resolver's (contracts/resolver.ts R9); this answers one hop from the newest version of the field. */
 export async function resolveKey(db: Db, workspaceId: string, key: string) {
-  for (let i = 0, k = key; i < 5; i++) {
-    const r = await db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: k }, orderBy: { version: "desc" } });
-    if (!r?.mergedIntoKey) return k;
-    k = r.mergedIntoKey;
-  }
-  return key;
+  return canonicalFact(key, async (k) => (await db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: k }, orderBy: { version: "desc" } }))?.mergedIntoKey);
 }
 
 /** Puts a library form on a combination as a draft line (QA-13), or answers "already" when its newest version is on it.

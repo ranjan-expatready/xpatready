@@ -21,7 +21,7 @@ import { actorOf, Audit, Db, need, SOLUTION, type Actor } from "./core.ts";
 import { inventoryFor } from "./finder.ts";
 import { whoCanBeTrail } from "./people-ai.ts";
 import { insertProposals } from "./proposals.ts";
-import { pairOf, StepRunner, worstRoundUsd, type AiStep, type RoundContext, type RoundOut } from "./rounds.ts";
+import { pairOf, roundBudgetUsd, StepRunner, type AiStep, type RoundContext, type RoundOut } from "./rounds.ts";
 import { aiLive, Sources } from "./sources.ts";
 
 type H = string | undefined;
@@ -102,6 +102,11 @@ export class PqrDrafts {
     return d.ok && k?.ok ? { available: true, why: null, files: [d.runFile, k.runFile] } : { available: false, why: (!d.ok ? d.reason : null) ?? PQR_AI.words.noSaved, files: [] };
   }
 
+  /** The most the two Live rounds can reserve (C4.11 review m1: the launcher's own per-round budget). */
+  worstUsd(g: Guide): number { return g.input ? roundBudgetUsd(PQR_AI, false, [g.input], g.text.length) + roundBudgetUsd(PQR_AI, true, [g.input], g.text.length) : 0; }
+  /** C4.11 review M1: the launcher job of the live round running now for this draft's job, so a run's Stop can end it. */
+  liveJob(jobId: string) { return this.runner.liveJob(jobId); }
+
   /** What would run, and the most it can cost, said before anything runs. */
   async plan(id: string, body: unknown) {
     const b = PqrDraftBody.safeParse(body ?? {});
@@ -110,7 +115,7 @@ export class PqrDrafts {
     const mode = b.data.mode;
     if (mode === "live" && !aiLive()) throw problem(409, "AI now is not approved yet", LIVE_WAITING);
     const g = mode === "rules" ? null : await this.guide(c);
-    const worst = mode === "live" && g ? round2(2 * worstRoundUsd(PQR_AI, g.text.length)) : 0;
+    const worst = mode === "live" && g ? round2(this.worstUsd(g)) : 0;
     const snapshot = (await buildSnapshot(this.db, c.workspaceId, c.id, "draft")).snapshot;
     const candidates = pqrCandidates(snapshot).length;
     const remaining = this.sources.ledger().remaining_usd;
@@ -126,7 +131,8 @@ export class PqrDrafts {
 
   /** Runs the plan: picks go into the one review queue (never ticked here). */
   /** `opts.jobId` (C4.11): the step of a "Draft questions and documents" run this draft writes, instead of its own job. */
-  async draft(actor: Actor, id: string, body: unknown, opts: { jobId?: string } = {}) {
+  /** `opts.stopped` (C4.11 review M1): the run's Stop, read before each live call; a stopped round ends this draft Cancelled. */
+  async draft(actor: Actor, id: string, body: unknown, opts: { jobId?: string; stopped?: () => Promise<boolean> } = {}) {
     need(actor, "author");
     const plan = await this.plan(id, body);
     const b = PqrDraftBody.parse(body);
@@ -137,16 +143,17 @@ export class PqrDrafts {
     const jobData = { mode: plan.mode === "rules" ? "LOCAL" : plan.mode.toUpperCase(), status: "RUNNING", message: "Drafting pre-qualification picks" };
     // Break B3: one pre-qualification draft at a time per combination (a reload and a second Live start never run two paid
     // rounds side by side). The check and the new job are made under one lock per combination.
-    const job = opts.jobId ? await this.db.draftingJob.update({ where: { id: opts.jobId }, data: jobData })
-      : await this.db.$transaction(async (tx) => {
+    // C4.11 review m5: a "Draft questions and documents" step (opts.jobId) is held to the same rule against a draft of its own.
+    const job = await this.db.$transaction(async (tx) => {
         await tx.$executeRawUnsafe(`select pg_advisory_xact_lock(hashtext($1))`, `pqr_picks_run:${c.id}`);
-        const going = await tx.draftingJob.findFirst({ where: { combinationId: c.id, kind: PQR_STEP, status: "RUNNING", startedAt: { gte: new Date(Date.now() - RUNNING_FOR_MS) } }, select: { id: true } });
+        const going = await tx.draftingJob.findFirst({ where: { combinationId: c.id, kind: PQR_STEP, status: "RUNNING", startedAt: { gte: new Date(Date.now() - RUNNING_FOR_MS) }, ...(opts.jobId ? { id: { not: opts.jobId } } : {}) }, select: { id: true } });
         if (going) throw problem(409, "Already drafting", "Pre-qualification picks are already being drafted for this combination. Wait for that run to end, then look at To review.", { runId: going.id });
-        return tx.draftingJob.create({ data: { workspaceId: c.workspaceId, combinationId: c.id, kind: PQR_STEP, startedBy: actor.id, ...jobData } });
+        return opts.jobId ? tx.draftingJob.update({ where: { id: opts.jobId }, data: jobData })
+          : tx.draftingJob.create({ data: { workspaceId: c.workspaceId, combinationId: c.id, kind: PQR_STEP, startedBy: actor.id, ...jobData } });
       });
     // Review round 2 n2: from here on, a throw ends this job as FAILED (catch below).
     try {
-    const out = { runId: job.id, mode: plan.mode, from: plan.mode === "rules" ? "rules" as string | null : null, offer_saved: false, proposed: 0, ready: 0, decide: 0, check: 0, already: 0, removed: 0, dropped: [] as { role: string; asks: string; why: string }[], unresolved: [] as { passage: string; reason: string }[], usd: 0, run_files: [] as string[], note: "" };
+    const out = { runId: job.id, mode: plan.mode, from: plan.mode === "rules" ? "rules" as string | null : null, offer_saved: false, cancelled: false, proposed: 0, ready: 0, decide: 0, check: 0, already: 0, removed: 0, dropped: [] as { role: string; asks: string; why: string }[], unresolved: [] as { passage: string; reason: string }[], usd: 0, run_files: [] as string[], note: "" };
     let items: ReturnType<typeof pqrPicksFromRounds>["items"] = [];
     if (plan.mode === "rules") {
       items = pqrPicksByRules(snapshot, c.id, job.id, randomUUID).map(({ id: _i, status: _s, decision: _d, ...x }) => x);
@@ -154,7 +161,7 @@ export class PqrDrafts {
       const g = await this.guide(c);
       if (!g.input) { out.note = `${g.code} is not among the official files the AI may read, so its picks cannot be drafted with Live or Saved.`; }
       else {
-        const ctx: RoundContext = { trail: g.trail, contextKey: c.combinationKey, inputs: [g.input], mode: plan.mode, wanted: async () => true, batchId: job.id };
+        const ctx: RoundContext = { trail: g.trail, contextKey: c.combinationKey, inputs: [g.input], mode: plan.mode, wanted: async () => !(await opts.stopped?.()), batchId: job.id };
         // Review minor (#282): a round that throws ends this job as FAILED, never left running.
         const safe = async (isCheck: boolean) => { try { return await this.runner.round<PqrAnswer>(PQR_AI, isCheck, ctx); } catch (e) { console.warn(`pqr picks ${job.id}:`, String(e).slice(0, 400)); return { ok: false as const, costUsd: 0, reason: "The AI step stopped on this computer, so nothing of it is used." }; } };
         // Saved: both rounds of one saved run (break B1). Live: a first round, then a blind checker round.
@@ -169,7 +176,9 @@ export class PqrDrafts {
           // Break B2: a round that did run stays charged; the note never says "nothing was charged" then.
           if (out.usd > 0) out.note = `${out.note.replace(NOTHING_CHARGED, "").replace(/\.?$/, ".")} This run cost US$${out.usd.toFixed(2)} (counted); nothing of it is used.`;
           // P-227 (D2 part 4): a failed Live run offers Saved when a Saved result exists; a failed Saved run never does.
-          if (plan.mode === "live" && (await this.saved(c, g)).available) { out.offer_saved = true; out.note = `${out.note.replace(/\.?$/, ".")} A Saved result exists for this guide: use Saved (US$0).`; }
+          const stop = (x: RoundOut<PqrAnswer> | null) => !!x && !x.ok && !!x.cancelled;
+          out.cancelled = stop(d) || stop(k);
+          if (plan.mode === "live" && !out.cancelled && (await this.saved(c, g)).available) { out.offer_saved = true; out.note = `${out.note.replace(/\.?$/, ".")} A Saved result exists for this guide: use Saved (US$0).`; }
         }
         else {
           out.from = d.from === "live" || k.from === "live" ? "live" : "replay";
@@ -193,7 +202,7 @@ export class PqrDrafts {
       out.already = items.filter((x) => waiting.has(x.identity.key)).length;
       out.removed = items.filter((x) => !waiting.has(x.identity.key) && gone(x)).length;
       await insertProposals(tx, c.workspaceId, fresh);
-      await tx.draftingJob.update({ where: { id: job.id }, data: { status: out.note && !items.length ? "FAILED" : "COMPLETED", costUsd: out.usd, finishedAt: new Date(), runFile: out.run_files[0] ?? null, message: out.note || `${fresh.length} pick${fresh.length === 1 ? "" : "s"} proposed`, detail: { dropped: out.dropped, unresolved: out.unresolved, run_files: out.run_files } } });
+      await tx.draftingJob.update({ where: { id: job.id }, data: { status: out.cancelled ? "CANCELLED" : out.note && !items.length ? "FAILED" : "COMPLETED", costUsd: out.usd, finishedAt: new Date(), runFile: out.run_files[0] ?? null, message: out.note || `${fresh.length} pick${fresh.length === 1 ? "" : "s"} proposed`, detail: { dropped: out.dropped, unresolved: out.unresolved, run_files: out.run_files } } });
     });
     out.proposed = fresh.length;
     out.ready = fresh.filter((x) => x.confidence === "ready").length; out.check = fresh.filter((x) => x.confidence === "check").length; out.decide = fresh.filter((x) => x.confidence === "decide").length;

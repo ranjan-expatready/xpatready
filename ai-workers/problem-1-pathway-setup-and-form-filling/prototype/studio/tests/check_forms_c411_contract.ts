@@ -7,7 +7,9 @@
 //   R  run: a plan not shown is refused (409); the same idempotency key is one run; BR-12 the spend limit is checked
 //   S  /api/runs/:id names each step by its key with its outcome (done, nothing_to_do, …)
 //   O  BR-10 (part 4c): a saved reading of an earlier text of the checklist is out of date, named, never replayed
-//   zsh studio/tools/isolated.sh forms_c411k 4455 start && tsx studio/tests/check_forms_c411_contract.ts 4455 xr_studio_forms_c411k
+//   L5 part 5b (P-227): with the live switch open (stand-in launcher only, P-192) a Live plan states each AI step's worst
+//      case and its total, and the run is held to the spend limit; at the end the copy restarts without the switch.
+//   zsh studio/tools/isolated.sh forms_c411k 4455 start STUDIO_AI_LIVE=approved STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_forms_c411_contract.ts 4455 xr_studio_forms_c411k
 import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -80,16 +82,25 @@ const asPlan = (ai: string) => STEPS.map((step) => ({ step, mode: AI.has(step) ?
   r = await P(asPlan("replay").slice(0, 3));
   ok("C4.11 V fail: a part of the run is refused for now (400: plan every step)", r.status === 400 && /comes_from/.test(words(r)), [r.status, words(r)]);
 
-  // L: live waits for the founder's Go
-  r = await P(STEPS.map((step) => ({ step, mode: AI.has(step) ? "live" : "rules" })));
-  ok("C4.11 L pass: a plan with live steps is shown with live.approved false, its live costs not invented (null, in words)", r.status === 200 && r.body?.live?.approved === false && r.body.steps?.filter((s: J) => s.mode === "live").every((s: J) => s.cost?.worst === null && /founder/.test(s.cost?.why ?? "")) && r.body.totals?.worst_usd === null, [r.status, words(r), r.body?.live]);
-  const batchesBefore = sql("select count(*) from ai_batch");
-  const liveRun = await call("POST", `/combinations/${wp}/draft`, { planSha256: r.body?.plan_sha256 ?? "0".repeat(64), idempotencyKey: randomUUID(), spendLimitUsd: 0.01 });
-  ok("C4.11 L fail (BR-12): running a live plan is refused before any call (409: use saved results or rules only)", liveRun.status === 409 && /saved results or rules only/.test(words(liveRun)) && sql("select count(*) from ai_batch") === batchesBefore, [liveRun.status, words(liveRun)]);
+  // L5 (part 5b): Live open (stand-in launcher only): each AI step's worst case first, the run held to the spend limit.
+  {
+    const VAR = join(import.meta.dirname, "..", "var", `isolated-${DB.replace(/^xr_studio_/, "")}`); mkdirSync(VAR, { recursive: true });
+    const failing = { stub: { exit: 0, out: { ok: true } }, live: { exit: 1, err: "the service did not answer (stand-in)" } };
+    writeFileSync(join(VAR, "fake-launch.json"), JSON.stringify({ jobs: { "studio-qd-conditions-check": failing, "studio-qd-conditions": failing, "studio-pqr-picks-check": failing, "studio-pqr-picks": failing } }));
+    r = await P(asPlan("live"));
+    const st = (k: string) => (r.body?.steps ?? []).find((s: J) => s.step === k)?.cost ?? {};
+    const sum = Math.round((r.body?.steps ?? []).reduce((a: number, s: J) => a + (s.cost?.worst ?? 0), 0) * 100) / 100;
+    ok("C4.11 L5 pass: with Live open, a Live plan states each AI step's worst case (conditions and picks above US$0, documents and checker US$0) and the total", r.status === 200 && r.body?.live?.approved === true && st("conditions").worst > 0 && st("pqr_picks").worst > 0 && st("documents").worst === 0 && st("checker").worst === 0 && r.body.totals?.worst_usd === sum && sum > 0, [r.status, words(r), r.body?.steps?.map((s: J) => [s.step, s.cost?.worst])]);
+    const lp = r.body, nb = sql("select count(*) from ai_batch");
+    r = await call("POST", `/combinations/${wp}/draft`, { planSha256: lp?.plan_sha256 ?? "0".repeat(64), idempotencyKey: randomUUID(), spendLimitUsd: Math.max(0, (lp?.totals?.worst_usd ?? 1) - 0.01) });
+    ok("C4.11 L5 fail (BR-12): a Live run with a spend limit below its worst case is refused before any call (409), nothing starts", r.status === 409 && /over the limit/.test(words(r)) && sql("select count(*) from ai_batch") === nb, [r.status, words(r)]);
+    r = await call("POST", `/combinations/${wp}/draft`, { planSha256: lp?.plan_sha256 ?? "0".repeat(64), idempotencyKey: randomUUID(), spendLimitUsd: lp?.totals?.worst_usd ?? 0 });
+    ok("C4.11 L5 pass: with the limit at its worst case, the Live run starts as one LIVE run", r.status === 201 && sql(`select mode from ai_batch where id='${r.body?.runId}'`) === "LIVE", [r.status, words(r)]);
+    for (let i = 0; i < 120 && r.body?.runId && !["done", "done_with_problems", "failed", "stopped"].includes((await call("GET", `/runs/${r.body.runId}`)).body?.status); i++) await new Promise((res) => setTimeout(res, 250));
+    r = await P(STEPS.map((step) => ({ step, mode: "live" })));
+    ok("C4.11 L5 fail: with Live open, a rules step asked live is refused (400: it is worked out by the rules)", r.status === 400 && /worked out by the rules/.test(words(r)), [r.status, words(r)]);
+  }
 
-  const b0 = sql("select count(*) from ai_batch");
-  r = await P(STEPS.map((step) => ({ step, mode: "live" })));
-  ok("C4.11 L fail (review M1): every step asked live gets the live answer first (409, live.approved false, naming the rules steps); nothing starts", r.status === 409 && r.body?.live?.approved === false && /founder/.test(words(r)) && /facts/.test(words(r)) && sql("select count(*) from ai_batch") === b0, [r.status, words(r)]);
   // R and A: the run
   const key = randomUUID();
   r = await call("POST", `/combinations/${wp}/draft`, { planSha256: "0".repeat(64), idempotencyKey: key, spendLimitUsd: 0 });
@@ -126,6 +137,21 @@ const asPlan = (ai: string) => STEPS.map((step) => ({ step, mode: AI.has(step) ?
   for (let i = 0; i < 120 && !["done", "done_with_problems", "failed", "stopped"].includes((await call("GET", `/runs/${rr.body?.runId}`)).body?.status); i++) await new Promise((res) => setTimeout(res, 500));
   const twin = await Promise.all([0, 1].map(() => call("POST", `/combinations/${wp}/draft`, { planSha256: rulesPlan.plan_sha256, idempotencyKey: k3, spendLimitUsd: 0 })));
   ok("C4.11 R pass (review m5): two identical clicks at the same moment are one run (same run id, one batch)", twin.every((x) => x.status === 201) && twin[0].body?.runId === twin[1].body?.runId && sql(`select count(*) from ai_batch where idempotency_key='qd-key-${wp}-${k3}'`) === "1", twin.map((x) => [x.status, x.body?.runId, words(x)]));
+  // L (Live closed): the same copy restarted without the live switch: a live plan is shown, never runs.
+  {
+    let said = "";
+    try { execFileSync("zsh", [join(import.meta.dirname, "..", "tools", "isolated.sh"), DB.replace(/^xr_studio_/, ""), String(PORT), "restart"], { cwd: join(import.meta.dirname, "..", "..", "..", "..", ".."), encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }); } catch (e: any) { said = String(e?.stderr ?? e).slice(-400); }
+    let up = false; for (let i = 0; i < 240 && !up; i++) { up = await fetch(`http://localhost:${PORT}/api/session`, { headers: { "x-actor": "user-A" } }).then((x) => x.status === 200, () => false); if (!up) await new Promise((res) => setTimeout(res, 500)); }
+    if (!up) throw new Error(`the copy did not come back after the restart: ${said}`);
+    r = await P(STEPS.map((step) => ({ step, mode: AI.has(step) ? "live" : "rules" })));
+    ok("C4.11 L pass: with Live closed, a plan with live steps is shown with live.approved false, its live costs not invented (null, in words)", r.status === 200 && r.body?.live?.approved === false && r.body.steps?.filter((s: J) => s.mode === "live").every((s: J) => s.cost?.worst === null && /not open/.test(s.cost?.why ?? "")) && r.body.totals?.worst_usd === null, [r.status, words(r), r.body?.live]);
+    const batchesBefore = sql("select count(*) from ai_batch");
+    const liveRun = await call("POST", `/combinations/${wp}/draft`, { planSha256: r.body?.plan_sha256 ?? "0".repeat(64), idempotencyKey: randomUUID(), spendLimitUsd: 0.01 });
+    ok("C4.11 L fail (BR-12): with Live closed, running a live plan is refused before any call (409: use saved results or rules only)", liveRun.status === 409 && /saved results or rules only/.test(words(liveRun)) && sql("select count(*) from ai_batch") === batchesBefore, [liveRun.status, words(liveRun)]);
+    const b0 = sql("select count(*) from ai_batch");
+    r = await P(STEPS.map((step) => ({ step, mode: "live" })));
+    ok("C4.11 L fail (review M1): with Live closed, every step asked live gets the live answer first (409, live.approved false, naming the rules steps); nothing starts", r.status === 409 && r.body?.live?.approved === false && /not open/.test(words(r)) && /facts/.test(words(r)) && sql("select count(*) from ai_batch") === b0, [r.status, words(r)]);
+  }
   ok("C4.11: the whole check spent US$0 (no model call)", sql("select coalesce(sum(cost_usd),0) from drafting_job") === spentBefore || Number(sql("select coalesce(sum(cost_usd),0) from drafting_job")) === 0);
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
