@@ -20,20 +20,39 @@ import e5_roundtrip as E  # noqa: E402
 PASSED = {"Yes", "Oui"}  # the form's own words for its flag after a Validate that passed (its message table, Yes_ENU / Yes_FRA)
 
 
+FLAG_LEAVES = ("ApplicationValidatedFlag[", "ApplicationValidatedFlagMirror[")
+DATE_PARTS = ("Year", "Month", "Day")
+
+
+def validation_leaves(paths):
+    """Where a form keeps its own Validate result, in its data paths. Two shapes, both IRCC's (templates read 2 Nov 2026):
+    IMM 5257, IMM 5257 Schedule 1 and IMM 1295 keep ApplicationValidatedFlag and a DateLastValidated with Year, Month and
+    Day; IMM 0008 and IMM 1344 set ApplicationValidatedFlagMirror (ApplicationValidatedFlag copies it by a calculate
+    script) and keep DateLastValidated as one field (validateForm: DateLastValidated.rawValue = utilDates.getToday())."""
+    last = lambda p: p.split(".")[-1]
+    flags = [p for p in paths if last(p).startswith(FLAG_LEAVES)]
+    parts = {k: [p for p in paths if ".DateLastValidated[" in p and last(p).startswith(k + "[")] for k in DATE_PARTS}
+    single = [p for p in paths if last(p).startswith("DateLastValidated[")]
+    return flags, parts, single
+
+
 def form_validation(pdf_bytes):
-    """QA-165 (P-144, P-237): the form's own Validate result as the saved file keeps it. IRCC's IMM 5257, IMM 5257
-    Schedule 1 and IMM 1295 set ApplicationValidatedFlag to Yes/Oui and fill DateLastValidated (Year, Month, Day)
-    only when Validate finds the form complete, and set No and clear the date otherwise (their validateForm and
-    setDateLastValidated scripts, prototype/expected/source-text/*.xfa-template.txt, read 2 Nov 2026). A form that
-    keeps no such flag cannot show that Validate passed, so it never counts as validated from the file alone."""
+    """QA-165 (P-144, P-237): the form's own Validate result as the saved file keeps it. The form sets its flag to
+    Yes/Oui and fills its date last validated only when Validate finds the form complete, and sets No and clears the
+    date otherwise (validateForm and setDateLastValidated in each form's XFA template; see validation_leaves). Passed =
+    every flag that holds a value says Yes/Oui, at least one does, and the date is filled. A form that keeps no such
+    flag cannot show that Validate passed, so it never counts as validated from the file alone."""
     parts = {k: v.get_object().get_data() for k, v in E.xfa_streams(E.open_reader(pdf_bytes)).items()}
     data = E.data_root(ET.fromstring(parts["datasets"]))
     leaves = dict(E.leaves(data)) if data is not None else {}
-    flag = next((v for p, v in leaves.items() if p.split(".")[-1].startswith("ApplicationValidatedFlag[")), None)
-    kept = flag is not None or b"ApplicationValidatedFlag" in parts.get("template", b"")
-    date = {k: next((v for p, v in leaves.items() if ".DateLastValidated[" in p and p.split(".")[-1].startswith(k + "[")), "") for k in ("Year", "Month", "Day")}
-    on = f"{date['Year']}-{date['Month']}-{date['Day']}" if all(date.values()) else None
-    return {"kept_by_form": kept, "flag": flag or None, "date_last_validated": on, "passed": kept and (flag or "") in PASSED and on is not None}
+    flags, date_parts, single = validation_leaves(list(leaves))
+    said = [leaves[p] for p in flags if leaves[p]]
+    flag = said[0] if said and all(v == said[0] for v in said) else (" / ".join(said) or None)
+    kept = bool(flags) or b"ApplicationValidatedFlag" in parts.get("template", b"")
+    ymd = {k: next((leaves[p] for p in ps if leaves[p]), "") for k, ps in date_parts.items()}
+    on = "-".join(ymd[k] for k in DATE_PARTS) if all(ymd.values()) else next((leaves[p] for p in single if leaves[p]), None)
+    return {"kept_by_form": kept, "flag": flag, "date_last_validated": on,
+            "passed": kept and bool(said) and all(v in PASSED for v in said) and on is not None}
 
 
 def main():
@@ -60,4 +79,5 @@ def main():
                       "why": None if ok else f"{rb['written'] - rb['read_back_equal']} of the {rb['written']} values the product wrote differ in this file."}))
 
 
-main()
+if __name__ == "__main__":
+    main()
