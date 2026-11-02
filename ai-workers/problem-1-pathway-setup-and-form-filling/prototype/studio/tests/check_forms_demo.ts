@@ -77,7 +77,9 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
     const draft = p.getByRole("dialog");
     await draft.getByText("not open yet for a form approved in the product").waitFor();
     const radios = draft.getByRole("radio");
-    ok("C3.1: review-3 Minor 4 an approved-in-product form's draft dialog starts on the stub pass; Live is disabled with the reason", await radios.nth(0).isDisabled() && await radios.nth(2).isChecked() && /Run stub pass/.test(await draft.innerText()));
+    await draft.locator('[data-draft-start][data-options-loaded="true"]').waitFor();
+    const start = draft.locator("[data-draft-start]");
+    ok("C3.1 + D2 (P-227): an approved-in-product form's dialog offers exactly Live and Saved; Live is closed with its reason, Saved is chosen, and with no Saved result Start is disabled and says why", await radios.count() === 2 && await radios.nth(0).isDisabled() && await radios.nth(1).isChecked() && await start.isDisabled() && await start.getAttribute("data-start-ready") === "false" && /Nothing can start for this form yet/.test(await draft.innerText()) && !/stub pass/i.test(await draft.innerText()), [await radios.count(), await draft.innerText().then((t) => t.slice(0, 300))]);
   } finally { await browser.close(); }
 
   r = await call("POST", "/demo/forms-story", { combinationId: vv });
