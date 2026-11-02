@@ -43,11 +43,18 @@ export function filingWarnings(combinationKey: string, lines: { role: string; la
 type RoleFacts = { key: string; label: string; mayBeApplicant: boolean };
 /** BR-7 release check: the roles that may be applicants, can be on a case and have no filing mode. The principal always
  *  files their own (BR-2), so it needs none. Stored lines saved before C11.12 have no mode: a new release asks for it. */
-export function filingNotSet(lines: { role: string; label?: string; max: number; applies?: boolean; filingMode?: unknown }[], roles: RoleFacts[]): string[] {
+export function filingNotSet(lines: { role: string; label?: string; min?: number; max: number; applies?: boolean; filingMode?: unknown }[], roles: RoleFacts[]): string[] {
   return lines.filter((l) => l.role !== "principal" && l.max > 0 && roles.find((r) => r.key === l.role)?.mayBeApplicant && !isLineMode(l.filingMode))
     .map((l) => l.label || roles.find((r) => r.key === l.role)?.label || l.role);
 }
-export const filingNotSetWords = (label: string) => `Filing for ${label}: choose how this person's application goes to IRCC (Forms › Who can be in this application).`;
+export const filingNotSetWords = "Not set: choose how this person's application goes to IRCC (Forms › Who can be in this application).";
+/** Switched off until the editor can set a mode (PR 3 of C11.12): until then a missing mode is a warning, so no draft
+ *  saved before C11.12 becomes unreleasable with no way to fix it on the screen ("unfinished work merges switched off"). */
+export const FILING_NOT_SET_BLOCKS = false;
+/** The release check's lines (BR-7): one per role with no mode; an error once FILING_NOT_SET_BLOCKS is on. */
+export function filingProblems(lines: Parameters<typeof filingNotSet>[0], roles: RoleFacts[], blocks = FILING_NOT_SET_BLOCKS) {
+  return filingNotSet(lines, roles).map((label) => ({ level: blocks ? "error" as const : "warning" as const, where: "People", item: `Filing for ${label}`, message: filingNotSetWords }));
+}
 
 /** The P-119 card sentence (questionnaires.tsx TIPS.card), word for word, and the filing tip (concept §5). */
 export const APPLICANT_TIP = "Each person marked as applicant gets their own forms, questions and documents.";

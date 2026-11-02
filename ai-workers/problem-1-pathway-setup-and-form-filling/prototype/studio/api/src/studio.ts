@@ -17,7 +17,7 @@ import { cleanLabel, normalizeLabel, problemFromZod, problemWords } from "../../
 import { PreferencesBody, PROGRAMS_VIEWS, type Preferences, type ProgramsView } from "../../contracts/session.ts";
 import { DocumentLineEdit, FormLineEdit, PeopleBody, UndoBody, type PersonRoleView } from "../../contracts/workspace.ts";
 import { checkPeople, linesNamingRemoved } from "../../engine/people.ts";
-import { filingNotSet, filingNotSetWords, filingWarnings, modeSent } from "../../engine/filing-modes.ts";
+import { filingProblems, filingWarnings, modeSent } from "../../engine/filing-modes.ts";
 import { LibrarySources, type SourceLine } from "./library-sources.ts";
 import { checkFormat, fieldFormat, formatWords, type MappedBox } from "../../engine/field-format.ts";
 import { releaseLabel } from "../../contracts/runtime.ts";
@@ -380,10 +380,10 @@ export class Studio {
     const structure = combinationId ? await this.structureProblems(combinationId) : [];
     const lib = (await this.db.canonicalField.findMany({ where: { workspaceId }, select: { canonicalFieldKey: true, valueType: true, status: true } })).filter((f) => f.status !== "RETIRED").map((f) => ({ key: f.canonicalFieldKey, valueType: f.valueType }));
     const carried = combinationId ? (await this.undecidedFormFields(combinationId, "PUBLISHED")).map((f) => ({ level: "warning" as const, where: "Forms", item: f.form, message: `Not decided yet (from an earlier release): ${f.n} form field${f.n === 1 ? "" : "s"}${forExample(f.example)}. Decide them when this edition is drafted again.` })) : [];
-    // C11.12 BR-7: a new release needs a filing mode on every role that may be an applicant (pinned releases are kept).
+    // C11.12 BR-7: a new release names every role that may be an applicant with no filing mode (pinned releases are kept);
+    // a warning until the editor can set the mode (engine/filing-modes.ts FILING_NOT_SET_BLOCKS).
     const roles = await this.personRoles(workspaceId);
-    const filing = filingNotSet((s.combination?.participants ?? []) as { role: string; label?: string; max: number; filingMode?: unknown }[], roles)
-      .map((label) => ({ level: "error" as const, where: "People", item: `Filing for ${label}`, message: filingNotSetWords(label) }));
+    const filing = filingProblems((s.combination?.participants ?? []) as { role: string; label?: string; max: number; filingMode?: unknown }[], roles);
     const all = [...structure, ...filing, ...emptyProblem(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...carried]; // L4: what IRCC accepts
     // C2.12 (plan F3a-1, BR-10): each problem names the forms it touches, so a form's path shows its own: a Forms problem its form,
     // any other the forms whose field map reads that item as a fact; none otherwise.

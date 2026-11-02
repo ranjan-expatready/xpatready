@@ -6,7 +6,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { checkPeople } from "../engine/people.ts";
-import { filingNotSet, filingOf, filingPlan, filingWarnings, filingWords, modeSent, previewFilings } from "../engine/filing-modes.ts";
+import { FILING_NOT_SET_BLOCKS, filingNotSet, filingOf, filingPlan, filingProblems, filingWarnings, filingWords, modeSent, previewFilings } from "../engine/filing-modes.ts";
 import { missingItems } from "../engine/programs.ts";
 import { PeopleLine, type LineMode } from "../contracts/workspace.ts";
 import { recorder } from "./runtime/api.ts";
@@ -42,7 +42,7 @@ const sponsor = (min = 1, max = 1, m = "co_files"): In => ({ role: "sponsor", mi
 ok("C11.12 BR-4 pass: Sponsor 1 to 1 co-files", run([P, sponsor()]).errors.length === 0 && line([P, sponsor()], "sponsor")?.filingMode === "co_files" && line([P, sponsor()], "sponsor")?.applies === false);
 ok("C11.12 BR-4 fail: Sponsor 0 to 2 co-files is refused in words", first([P, sponsor(0, 2)]) === "One sponsor co-files: set how many to 1 to 1.");
 ok("C11.12 BR-4 fail: a role that may be an applicant cannot co-file", /Only a person who is never an applicant/.test(first([P, { role: "child", min: 0, max: 1, applies: false, filingMode: "co_files" }])));
-ok("C11.12 BR-4 pass: a Sponsor with no mode files nothing (one filing: C11.12.test.ts:66–72)", previewFilings([{ ...P, preview: 1 }, { role: "sponsor", min: 1, max: 1, applies: false }], "Spouse sponsorship", false).filings.length === 1);
+ok("C11.12 BR-4 pass: a Sponsor with no mode files nothing (one filing: C11.12.test.ts:66–72)", previewFilings([{ ...P, preview: 1 }, { role: "sponsor", min: 1, max: 1, applies: false }] as never, "Spouse sponsorship", false).filings.length === 1);
 
 // BR-5 the mode decides "applicant"
 ok("C11.12 BR-5 pass: Files own and On the principal's are applicants; Declared only is not", line([P, { role: "child", min: 0, max: 1, applies: false, filingMode: "on_principal" }], "child", false)?.applies === true && line([P, { role: "child", min: 0, max: 1, applies: false, filingMode: "declared_only" }], "child")?.applies === false);
@@ -63,6 +63,7 @@ ok("C11.12 BR-7 pass: Visitor visa child On the principal's warns with the guide
 ok("C11.12 BR-7 pass (m5): Declared only on Visitor visa warns too; Express Entry does not", filingWarnings("vv.single", [{ role: "child", filingMode: "declared_only" }]).length === 1 && filingWarnings("pnp.express_entry", [{ role: "child", filingMode: "on_principal" }]).length === 0);
 ok("C11.12 BR-7 fail: an applicant role with no mode is missing before a new release", filingNotSet([P, { role: "child", label: "Child", min: 0, max: 4 }], roles).join() === "Child");
 ok("C11.12 BR-7 pass: the principal, a representative and a role at most 0 need no mode", filingNotSet([{ ...P, filingMode: undefined }, rep(), { role: "child", min: 0, max: 0 }], roles).length === 0);
+ok("C11.12 BR-7 pass: until the Filing column ships (PR 3) the line is a warning; switched on it blocks", !FILING_NOT_SET_BLOCKS && filingProblems([P, { role: "child", label: "Child", min: 0, max: 4 }], roles)[0]?.level === "warning" && filingProblems([P, { role: "child", label: "Child", min: 0, max: 4 }], roles, true)[0]?.level === "error" && filingProblems([P, { role: "child", label: "Child", min: 0, max: 4 }], roles)[0]?.item === "Filing for Child");
 const missing = missingItems({ forms: [{ form_number: "IMM 5257", form_kind: "document" }], field_maps: [], sections: [], placements: [], canonical_fields: [], derived_fields: [], rules: [], checks: [], document_requirements: [] } as never, [], [{ level: "error", where: "People", item: "Filing for Child", message: "x" }]);
 ok("C11.12 BR-7 fail: the missing list names it: 'Filing for Child: not set'", missing.some((m) => m.code === "filing_not_set" && /Filing for Child: not set/.test(m.text)) && !missing.some((m) => m.code === "rule_problem"), missing);
 
@@ -73,10 +74,10 @@ const lists = JSON.stringify(sample).match(/"participants":\[[^\]]*\]/g) ?? [];
 ok("C11.12 BR-8 pass: every family line of the Demo sample (wave1.json) has a filing mode", lists.length === 6 && lists.every((l) => (JSON.parse(l.slice(15)) as In[]).every((p) => p.role === "representative" || p.filingMode)));
 
 // BR-10 fees never guessed; the preview's words
-const pv = previewFilings([{ ...P, label: "Principal applicant" }, { role: "child", label: "Child", min: 0, max: 4, preview: 2, applies: true, filingMode: "on_principal" }], "Provincial nominee", false);
+const pv = previewFilings([{ ...P, label: "Principal applicant" }, { role: "child", label: "Child", min: 0, max: 4, preview: 2, applies: true, filingMode: "on_principal" }] as never, "Provincial nominee", false);
 ok("C11.12 BR-10 pass: a combination with no fee rule says 'not worked out yet', never CAD 0", pv.filings[0].fee === "Fees not worked out yet for Provincial nominee; nothing is guessed." && !/CAD 0/.test(JSON.stringify(pv)));
 ok("C11.12 preview pass: on the principal's: '1 filing', 3 people on it", pv.gets === "1 filing" && pv.filings[0].people === 3 && pv.filings[0].roles.join() === "principal,child");
-const co = previewFilings([P, sponsor() as never], "Spouse sponsorship", false);
+const co = previewFilings([P, sponsor()] as never, "Spouse sponsorship", false);
 ok("C11.12 preview pass: a co-filed sponsorship is a second filing that cannot be split", co.filings.length === 2 && co.submissions[0].splittable === false && /sent together/.test(co.gets), co.gets);
 ok("C11.12 preview fail: no principal → 'Add the principal applicant to see what a case gets.'", previewFilings([{ role: "child", min: 0, max: 1, applies: true, filingMode: "files_own" }], "x", true).gets === "Add the principal applicant to see what a case gets.");
 

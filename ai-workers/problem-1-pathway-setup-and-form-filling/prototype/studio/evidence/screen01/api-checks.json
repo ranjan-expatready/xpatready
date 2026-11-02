@@ -1,12 +1,12 @@
 {
- "at": "2026-11-01T17:16:02.161Z",
- "pass": 135,
- "fail": 0,
+ "at": "2026-11-02T05:15:21.759Z",
+ "pass": 118,
+ "fail": 17,
  "log": [
   {
    "name": "setup: sample inputs load",
    "ok": true,
-   "detail": 5.15
+   "detail": 6.403
   },
   {
    "name": "BR-1 pass: Individual shows only Individual programs; Corporate only Corporate",
@@ -85,8 +85,8 @@
    "name": "idempotent create: two clicks at once give one combination",
    "ok": true,
    "detail": [
-    201,
-    200
+    200,
+    201
    ]
   },
   {
@@ -224,63 +224,39 @@
   },
   {
    "name": "QA-1 setup: the author submits it for review",
-   "ok": true
+   "ok": false,
+   "detail": "Fix 2 problems before submitting: Filing for Spouse or partner: Filing for Spouse or partner: choose how this person's application goes to IRCC (Forms › Who can be in this application). · Filing for Child: Filing for Child: choose how this person's application goes to IRCC (Forms › Who can be in this application)."
   },
   {
    "name": "QA-1: submitted but the expert change unsigned is still held back, with the reason",
-   "ok": true,
-   "detail": "24 changes need the content reviewer's SME sign-off."
+   "ok": false,
+   "detail": "Not submitted for review: submit it on its Review and release tab."
   },
   {
    "name": "break m1 fail: a sign-off or return must name at least one change",
    "ok": true,
-   "detail": "Choose the changes you sign or return."
+   "detail": "Nothing is waiting for review."
   },
   {
    "name": "break m1 fail: the person who submitted does not sign their own submission",
-   "ok": true,
-   "detail": "You submitted this, so a different person signs it."
+   "ok": false,
+   "detail": "Nothing is waiting for review."
   },
   {
    "name": "QA-1 fail: the shared release refuses unsigned expert changes",
    "ok": true,
-   "detail": "Nothing can be released yet. Spouse of a student: 24 changes need the content reviewer's SME sign-off."
+   "detail": "Nothing can be released yet. Spouse of a student: Not submitted for review: submit it on its Review and release tab."
   },
   {
    "name": "QA-1 setup: the content reviewer signs the expert changes",
-   "ok": true,
-   "detail": [
-    "Document requirement|birth_certificate_of_accompanying_dependent_child:principal_applicant",
-    "Document type|birth_certificate_of_accompanying_dependent_child",
-    "Derived definition|case.applying_country_differs_from_citizenship",
-    "Derived definition|case.spouse_or_partner_count",
-    "Derived definition|person.age_years",
-    "Derived definition|person.education_row_duration_days",
-    "Derived definition|person.employment_history_gap_months",
-    "Derived definition|person.employment_row_duration_days",
-    "Derived definition|person.intended_employment_duration_days",
-    "Derived definition|person.intended_employment_start_days_from_application",
-    "Derived definition|person.national_id_days_until_expiry",
-    "Derived definition|person.nomination_days_until_expiry",
-    "Derived definition|person.passport_days_until_expiry",
-    "Derived definition|person.passport_issue_days_after_birth",
-    "Derived definition|person.passport_validity_days",
-    "Derived definition|person.passport_years_since_expiry",
-    "Derived definition|person.residence_differs_from_citizenship",
-    "Derived definition|person.residence_status_days_until_expiry",
-    "Derived definition|person.residence_status_row_duration_days",
-    "Derived definition|person.travel_row_duration_days",
-    "Derived definition|person.us_pr_card_days_until_expiry",
-    "Derived definition|person.venezuelan_extended_passport_expiry",
-    "Derived definition|relationship.cohabitation_years",
-    "Derived definition|relationship.start_vs_cohabitation_days"
-   ]
+   "ok": false,
+   "detail": []
   },
   {
    "name": "QA-1 pass: submitted and signed, the combination will be released",
-   "ok": true,
+   "ok": false,
    "detail": {
-    "combinationId": "fa61c9de-f2b5-498f-9c96-418cbf8193b1",
+    "combinationId": "f2dd3087-be55-47a8-83b5-f1b5d3594715",
     "label": "Spouse of a student",
     "path": [
      "Work permits",
@@ -288,24 +264,24 @@
      "Spouse of a student"
     ],
     "changes": 172,
-    "held": false,
-    "why": null,
+    "held": true,
+    "why": "Not submitted for review: submit it on its Review and release tab.",
     "self": false,
     "released": false
    }
   },
   {
    "name": "QA-1 fail: changed after it was submitted is held back on the Release page and refused by the combination's own release",
-   "ok": true,
+   "ok": false,
    "detail": [
-    "The draft changed after it was submitted: submit it again on its Review and release tab.",
-    "Release refused: The draft changed after it was submitted: submit it again on its Review and release tab."
+    "Not submitted for review: submit it on its Review and release tab.",
+    "Release refused: 2 problems (Filing for Spouse or partner: Filing for Spouse or partner: choose how this person's application goes to IRCC (Forms › Who can be in this application).)"
    ]
   },
   {
    "name": "QA-1 pass: back to exactly what was submitted, it is ready again",
-   "ok": true,
-   "detail": null
+   "ok": false,
+   "detail": "Not submitted for review: submit it on its Review and release tab."
   },
   {
    "name": "BR-14 fail: the author cannot release (the server refuses)",
@@ -319,51 +295,47 @@
   },
   {
    "name": "BR-14 fail: someone who changed the draft cannot release it (self-approval refused)",
-   "ok": true,
-   "detail": "You changed or submitted Spouse of a student, so a different person releases it (BR-14)."
+   "ok": false,
+   "detail": "Nothing can be released yet. Spouse of a student: Not submitted for review: submit it on its Review and release tab."
   },
   {
    "name": "break M2: for the approver who submitted it, the Release page holds the row back and says why (never \"Will be released\")",
-   "ok": true,
-   "detail": "You submitted it, so a different person releases it (BR-14)."
+   "ok": false,
+   "detail": "Not submitted for review: submit it on its Review and release tab."
   },
   {
    "name": "BR-14 fail: the person who submitted it cannot release it",
-   "ok": true,
-   "detail": "You changed or submitted Spouse of a student, so a different person releases it (BR-14)."
+   "ok": false,
+   "detail": "Nothing can be released yet. Spouse of a student: Not submitted for review: submit it on its Review and release tab."
   },
   {
    "name": "P-23/BR-14 pass: a different person releases the reviewed draft as Release 2",
-   "ok": true,
+   "ok": false,
    "detail": {
-    "pack": 2,
-    "rows": [
-     {
-      "label": "Spouse of a student",
-      "version": 1
-     }
-    ],
-    "library": [],
-    "held": []
+    "type": "https://expatready.local/problems/every-change-is-held-back",
+    "title": "Every change is held back",
+    "status": 409,
+    "detail": "Nothing can be released yet. Spouse of a student: Not submitted for review: submit it on its Review and release tab.",
+    "message": "Nothing can be released yet. Spouse of a student: Not submitted for review: submit it on its Review and release tab."
    }
   },
   {
    "name": "QA-1: the release records the real submitter and approver, and the submission is closed as approved",
-   "ok": true
+   "ok": false
   },
   {
    "name": "QA-13: removing a released form is a removal in the draft (a retired new version), not a no-op",
-   "ok": true,
-   "detail": "1:PUBLISHED,2:RETIRED"
+   "ok": false,
+   "detail": "1:RETIRED"
   },
   {
    "name": "CHECK must 2: added back before the removal is released, the released line stands again unchanged (no draft change)",
-   "ok": true,
-   "detail": "1:PUBLISHED"
+   "ok": false,
+   "detail": "1:DRAFT"
   },
   {
    "name": "BR-8 fail: released but not startable is Not ready, with each missing item",
-   "ok": true,
+   "ok": false,
    "detail": [
     "No questions yet for Principal applicant, Spouse or partner, Child. Next step: Add questions (Configuration › Questions and sections)."
    ]
@@ -375,19 +347,19 @@
   },
   {
    "name": "P-23: the draft is empty after the release",
-   "ok": true
+   "ok": false
   },
   {
    "name": "filters: Not ready shows exactly that row with its program and category",
-   "ok": true,
+   "ok": false,
    "detail": {
     "needs": 0,
-    "live": 2,
+    "live": 1,
     "all": 23,
     "ready": 1,
-    "not_ready": 1,
-    "in_setup": 5,
-    "in_progress": 5,
+    "not_ready": 0,
+    "in_setup": 6,
+    "in_progress": 6,
     "not_started": 16,
     "ai_proposals": 0,
     "retired": 0
@@ -676,7 +648,7 @@
    "name": "F1 pass (INDIVIDUAL) P-180: the Live count equals the rows whose chip shows Live, and the Live filter lists exactly them",
    "ok": true,
    "detail": {
-    "live": 2,
+    "live": 1,
     "shown": 1
    }
   },
@@ -698,12 +670,12 @@
    "ok": true,
    "detail": {
     "needs": 0,
-    "live": 2,
+    "live": 1,
     "all": 23,
     "ready": 1,
-    "not_ready": 1,
-    "in_setup": 5,
-    "in_progress": 5,
+    "not_ready": 0,
+    "in_setup": 6,
+    "in_progress": 6,
     "not_started": 16,
     "ai_proposals": 0,
     "retired": 0
@@ -977,7 +949,7 @@
   {
    "name": "performance: a filtered catalogue answers in under 200 ms with the sample data",
    "ok": true,
-   "detail": "3 ms · load 6.4 on 8 cores"
+   "detail": "5 ms · load 2.4 on 4 cores"
   },
   {
    "name": "QA-6 fail: a name of symbols only is refused on its field in plain words; nothing is created",
@@ -1012,7 +984,7 @@
     "label": "With an LMIA",
     "combinations": 1,
     "hasSetup": true,
-    "combinationId": "2017a6a9-de0c-4105-a13f-a114fb871daa"
+    "combinationId": "0e13445f-0c29-4eb5-ac05-ab319e1ce095"
    }
   },
   {
@@ -1023,17 +995,17 @@
   {
    "name": "QA-5 pass: a time the app writes is stored as the real moment, whatever the database's own zone",
    "ok": true,
-   "detail": "0 s; database zone Asia/Kolkata"
+   "detail": "0 s; database zone America/Toronto"
   },
   {
    "name": "QA-5: the app still shows it at the real time",
    "ok": true,
-   "detail": "2026-11-01T17:15:53.105Z"
+   "detail": "2026-11-02T05:15:13.764Z"
   },
   {
    "name": "QA-5 condition: the database's own zone is not UTC on this machine, so the check above is a real test of the fix",
    "ok": true,
-   "detail": "Asia/Kolkata"
+   "detail": "America/Toronto"
   },
   {
    "name": "QA-12 pass: after the sample load the Demo menu says the sample inputs are loaded",
@@ -1046,7 +1018,7 @@
    "detail": [
     [
      201,
-     7.361
+     6.775
     ],
     [
      409,
