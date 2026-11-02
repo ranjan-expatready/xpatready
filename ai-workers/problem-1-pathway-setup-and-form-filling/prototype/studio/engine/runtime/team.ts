@@ -6,8 +6,9 @@
 
 export type Duty = "case" | "represent" | "firm_admin";
 export type Licence = { body: string; category: string; number: string };
-export type FirmUser = { id: string; name: string; duties: Duty[]; licence: Licence | null };
-export type Firm = { key: string; name: string; solo: boolean; defaultRepresentative?: string; users: FirmUser[] };
+export type FirmUser = { id: string; name: string; duties: Duty[]; licence: Licence | null; family_name?: string; given_names?: string; email?: string };
+export type Office = { unit?: string | null; street_number?: string | null; street_name?: string | null; city?: string | null; province_state?: string | null; postal_code?: string | null; country?: string | null; phone?: { country_code: string; number: string } | null };
+export type Firm = { key: string; name: string; solo: boolean; defaultRepresentative?: string; office?: Office; users: FirmUser[] };
 export type TeamRole = "LEAD_REPRESENTATIVE" | "OFFICER";
 export type Member = { userId: string; role: TeamRole; assignedBy: string; assignedAt: Date; endedAt: Date | null; endedBy: string | null; endReason: string | null };
 
@@ -68,6 +69,41 @@ export function representativeFacts(firm: Firm, members: Member[]): Record<strin
     "representative.membership_id": u.licence.number,
     "representative.licensing_province": null,
   };
+}
+
+/** C7.7 (G25): the representative of record's contact facts on IMM 5476 (name, e-mail, the firm's office address and
+ *  phone), from the firm record, keyed by the library's person facts. A case has no representative participant: these
+ *  facts are about "representative" (the renderer's own key for that role) and count as confirmed, because the firm
+ *  record, not the client, is their source. A missing value is left out (asked as before). Sample values. */
+export const REPRESENTATIVE = "representative", FIRM_RECORD = "firm_record";
+export function representativeContact(firm: Firm, members: Member[]): Record<string, unknown> | null {
+  const rep = representativeOf(members), u = rep ? userIn(firm, rep.userId) : null;
+  if (!u) return null;
+  const o = firm.office ?? {};
+  const all: Record<string, unknown> = {
+    "person.family_name": u.family_name, "person.given_names": u.given_names, "person.email_address": u.email,
+    "person.mailing_address_unit": o.unit, "person.mailing_address_street_number": o.street_number, "person.mailing_address_street_name": o.street_name,
+    "person.mailing_address_city": o.city, "person.mailing_address_province_state": o.province_state, "person.mailing_address_postal_code": o.postal_code,
+    "person.mailing_address_country": o.country, "person.telephone_number": o.phone,
+  };
+  return Object.fromEntries(Object.entries(all).filter(([, v]) => v !== undefined && v !== null && v !== ""));
+}
+
+/** A value with its object keys in the order PostgreSQL's jsonb returns them (shorter keys first, then by bytes), so a
+ *  firm-record value compares equal to the same value read back from a stored copy (review B1: the phone object). */
+export function inStoredOrder(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(inStoredOrder);
+  if (!v || typeof v !== "object") return v;
+  const keys = Object.keys(v).sort((a, b) => Buffer.byteLength(a) - Buffer.byteLength(b) || Buffer.compare(Buffer.from(a), Buffer.from(b)));
+  return Object.fromEntries(keys.map((k) => [k, inStoredOrder((v as Record<string, unknown>)[k])]));
+}
+
+/** The same facts as confirmed answers about the representative (channel "firm_record", by the representative of
+ *  record), so the case view, readiness and the filler read them like any other confirmed fact. Never stored. */
+export function representativeAnswers(firm: Firm, members: Member[]): { id: string; subjectId: string; field: string; rowKey: null; value: unknown; status: "VERIFIED"; channel: string; actor: string; at: string; origin: null }[] {
+  const rep = representativeOf(members), facts = representativeContact(firm, members);
+  if (!rep || !facts) return [];
+  return Object.entries(facts).map(([field, value]) => ({ id: `${FIRM_RECORD}:${rep.userId}:${field}`, subjectId: REPRESENTATIVE, field, rowKey: null, value: inStoredOrder(value), status: "VERIFIED", channel: FIRM_RECORD, actor: rep.userId, at: rep.assignedAt.toISOString(), origin: null }));
 }
 
 /** BR-20: a change of representative of record asks for a new IMM 5476, and the one signed with the earlier
