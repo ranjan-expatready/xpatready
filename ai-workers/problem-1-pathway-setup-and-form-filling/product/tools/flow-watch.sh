@@ -32,6 +32,8 @@ for p in approved:
     labels = [l["name"] for l in p["labels"]]
     if "dequeued" in labels:
         alarm(f"#{p['number']} was dequeued (conflict or failed batch) {age} min after approval: Lead fixes now ({p['title'][:50]})")
+    elif "queued" in labels and age <= 120:
+        print(f"wait  #{p['number']} queued {age} min (alarm after 120 while the queue moves)")
     elif age > 60:
         alarm(f"#{p['number']} approved {age} min ago and not merged (target under 60): find what holds it ({p['title'][:50]})")
 ok(f"{len(approved)} approved PRs waiting; oldest {oldest} min since its label") if oldest <= 60 else None
@@ -46,8 +48,13 @@ runs = json.loads(gh("run", "list", "--limit", "100", "--json", "databaseId,stat
 queued = [r for r in runs if r["status"] == "queued"]
 (alarm if len(queued) > 8 else ok)(f"{len(queued)} CI runs queued (GitHub free plan: 20 machines at once, 4 per run)")
 open_heads = {p["headRefName"] for p in prs}
-waste = [r for r in runs if r["status"] != "completed" and (r["headBranch"].startswith("lead/") or (r["headBranch"].startswith("mergify/") and r["headBranch"] not in open_heads))]
-(alarm if waste else ok)(f"{len(waste)} CI runs on records branches or closed queue drafts" + (": cancel " + " ".join(str(r["databaseId"]) for r in waste) if waste else ""))
+waste = [r for r in runs if r["status"] != "completed" and r["headBranch"] != "main" and (r["headBranch"].startswith("lead/") or r["headBranch"] not in open_heads)]
+(alarm if waste else ok)(f"{len(waste)} CI runs on records branches or branches with no open PR" + (": cancel " + " ".join(str(r["databaseId"]) for r in waste) if waste else ""))
+
+# 2b. Records PRs (qa:, lead:) must never sit in the Mergify queue: a push to them throws out the batch (2 Nov 07:35).
+for p in approved:
+    if p["title"].startswith(("qa:", "lead:")):
+        alarm(f"#{p['number']} is a records PR carrying review: approved, so a push throws out its batch: remove the label, merge it directly")
 
 # 3. qa (P-250): approved PRs with no qa verdict comment.
 for p in approved:
