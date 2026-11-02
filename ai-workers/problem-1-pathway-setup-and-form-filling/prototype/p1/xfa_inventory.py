@@ -139,6 +139,7 @@ def inventory(fname, reason):
     groups = []  # repeated or row-like containers
     script_total = collections.Counter()
     presence_scripts = []
+    scope_seen = collections.defaultdict(collections.Counter)  # data scope path -> same-name counts (walk)
     containers = ("subform", "subformSet", "area", "exclGroup")
 
     def caption(el):
@@ -188,7 +189,10 @@ def inventory(fname, reason):
     def walk(el, som, data, data_ok, row_hint, heading=None):
         here = heading_of(el) or heading
         seen_som = collections.Counter()
-        seen_data = collections.Counter()
+        # Same-named siblings are counted per data scope, not per template container (row PD): an unnamed subform is
+        # transparent, so its children compete with its parent's for the parent scope's indices (IMM 5532's shipped
+        # data has page1.yesNo[0..20] and Table2[0..1] for boxes spread over several unnamed subforms).
+        seen_data = scope_seen[data]
         for c in el:
             tag = c.tag.replace(ns, "")
             if tag in ("pageSet", "proto"):
