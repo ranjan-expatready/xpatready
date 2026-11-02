@@ -124,3 +124,27 @@ Live and Saved only. Live only with the switch: after a restart without it, 409 
 * Every other criterion stays at 1.
 
 **Verdict: Approve** (commit 4a09887b). No Blocker or Major is open. n1–n4 and L7–L11 are for follow-ups. n2 should be fixed before the paid Visitor visa Live run, so the founder's US$ figure matches the ledger.
+
+---
+
+## Round 3 on 85d6bf35 (2 Nov): **Approve**
+Scope: `git diff 4a09887b..85d6bf35 -- …/prototype/studio`, 7 files: the two dialogs, `draft-qd.ts` and three tests. I read the code and reran nothing, because the changes are small and the builder's results cover them (c411 API 73/73, c411 browser 50/50, c47 browser 63/63, c47 API 60/60, contract 31/31).
+
+* **qa minor 1 on #506 (both dialogs): fixed.**
+  * A greyed way is never shown checked (`checked={mode === m && !off}`).
+  * A closed mode's button reads "Draft".
+  * Both browser walks assert no checked choice and "Draft" in the nothing-can-start state.
+  * One small effect, which is acceptable: while the first plan loads, every way counts as closed, so the button reads "Draft" (disabled) for that moment.
+* **n3: fixed.** When over the cap, Draft's `aria-describedby` is `qd-cost` / `pqr-cost`, and the cost line now carries that id. "Nothing can start" still wins when the mode is closed.
+* **n1: fixed.** A crashed round reads "The AI step stopped on this computer." The L3 message is now "…the checker round did not: the AI step stopped on this computer. This step cost US$0.42 (counted); nothing of it is used." The phrase is no longer doubled.
+* **n4, browser part: done.** The pgrep check added to the API suite does not test the rule yet. It is still Minor.
+  * Why: the pgrep at `check_forms_c411_draft_qd.ts:311` runs only after `result()` has waited for the run to end. The round awaits the launcher's `close`, so by then the stand-in has exited whether or not Stop ended it. Without `stopLaunches` the 4 s sleep simply finishes first, and the check still passes.
+  * *Fix:* either assert the step message "the call was ended", which comes only from a signal (`rounds.ts:153`), or run pgrep right after the Stop call, well inside the 4 s sleep. Round 2 already showed by probe that the process is ended (175 ms, "the call was ended"), so the behaviour is right; only the test is weak.
+  * pgrep `-f` also matches other copies' stand-in launchers for the same job prefix. In CI each copy runs alone, so this is low risk.
+* **n2: not fixed here.** It is raised to the tech lead as its own row in shared `rounds.ts`. I agree with that: it touches every AI step, and it should land before the paid Visitor visa Live run.
+
+**Journey score: 9.5/10, which passes.** n3 raises accessibility to 1, and n2 keeps trust and sources at ½. Every other criterion is 1.
+
+**Correction to my earlier sums.** The criteria were right but the totals were added wrong. Round 1's table (½ on plain words, feedback, correct data and trust) adds up to 8.0, not 7.5. Round 2's (½ on trust and accessibility) adds up to 9.0, not 8.5. Round 1's Block stands, because M1 was a Major on its own. The same 7.5 appears in `journey-test-reviewer-c411-live-5a-2026-11-02.md`, which is committed on the branch.
+
+**Verdict: Approve** (commit 85d6bf35). No Blocker or Major is open. The n4 test strengthening, n2 (own row), and L7–L11 are follow-ups.
