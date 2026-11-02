@@ -36,3 +36,27 @@
 
 ## Not reached and not applicable
 Opening a new case from the pinned release: only author, approver and reviewer actors exist on the copy, and PR 2's break report covers pinned cases. axe was not re-run (the PR's own check reports it clean). Uploads, 100 programs and 400 combinations do not touch this card.
+
+## Round 2 · fixes at 806e7f11 (same branch, not switched, nothing committed)
+
+**Copy:** a fresh `brk3` on :4443. I rebuilt the web from 806e7f11 and loaded the sample with `POST /api/demo/load`. The copy is now stopped, and its database and files are dropped. US$0. Later, HEAD moved to 29f69df7, but that commit only changes review files, so the code tested is 806e7f11.
+
+| Was | Re-attack | Result |
+|---|---|---|
+| M1 "Use these lines" | Child saved as Declared only, then Fill from the guide › Rules only › Fill › Use these lines › Save (browser). | **Held.** Save gives 200. The child stays `declared_only` with `applies: false`, and the guide's sentences are kept as `CODE_MATCH`. |
+| M2 Fix item and Missing | With an LMIA (Live) with spouse and child saved with no filing; Super visa (never released) with the spouse saved with no filing. | **Held.** Step 2 reads "To do · **Fix 2 problems**" (With an LMIA) and "Fix 1 problem" (Super visa). The catalogue's `missing` has `filing_not_set`: "Filing for Spouse or partner (also visiting): not set. Next step: set the filing (Forms › Who can be in this application)." *Left over (Minor):* Fix goes to /forms and focuses the people strip above the forms, but the Who can be card stays **folded**. Its one-liner does not say which role lacks a filing, so the author still needs "Show and edit" to find "⚠ Filing not set". With an LMIA's Step 5 still offers "Submit for review", which the server refuses. |
+| M3 long labels at 1024 px | The same 60-character French and Cyrillic labels, read and edit, at 1024 px. | **Held.** No sideways scroll (1024 = 1024), and nothing spills past the card. 200 % zoom (640 CSS px) also holds. |
+| M4 Representative co-files | Editor: the options on each never-applicant row. API: Representative 1 to 1 `co_files`; the child and the principal `co_files`. | **Held.** The Representative row shows fixed words and no select. Sponsor offers "Files nothing" and "Files the sponsorship (sent with the principal's application)". The Representative save gets a 400: "Representative takes part in the case but files no application: only the sponsor files the sponsorship." Sponsor 1 to 1 saves; Sponsor 0 to 2 gets a 400 on How many. |
+| m5 375 px editing footer | 375 px, edit mode, sample labels. | **Held.** No sideways scroll (375 = 375), and Save is fully visible. |
+| m6 long label at 375 px | The 60-character Cyrillic label at 375 px. | **Held** inside the unfolded card. *Left over (Minor):* the **folded** one-liner (`data-people-words`, `questionnaires.tsx` folded branch) does not wrap: the page scrolls to 529 px at 375 px. |
+| m7 footer words | Read the footer, then save a child with no filing. | **Held.** The footer reads "every applicant role needs a filing before release", and the save gives 200 to match it. |
+| m9 "You can still save" | A child On the principal's, viewed as user-A reading, user-A editing and user-C. | **Held.** The phrase shows only while editing. |
+| m11 the preview's split words | Browser against server with a sponsor. | **Held.** Both read "4 filings sent together: … + Sponsor: the sponsorship (cannot be sent alone)". |
+
+**New in round 2 (both Minor):**
+* **A Representative co-filing line stored before this fix leaves the editor stuck.** I set it by SQL, as a 636237ba save would have left it. The read view keeps it: "Files the sponsorship", and the preview counts "Representative: the sponsorship" (`api/src/workspace.ts` read filter keeps `co_files` on any never-applicant role). The editor shows fixed words with no select. Every editor save, even one that only changes a child's count, gets a 400 on the Representative line until the person is removed. The draft's problems name nothing. This is reachable only from data saved with 636237ba (local, never merged).
+* **A co-filing mode on the wrong role also counts toward "one co-filing line".** Child `co_files` gets the right message on the child, plus a second error on the real Sponsor line: "Only one person files the sponsorship: keep one co-filing line." The same happens with the principal. `engine/people.ts`: `coFilers++` runs before the role is judged.
+
+**Not re-checked (not claimed fixed):** m8 (the preview leaves out roles with no filing set without saying so), m10 (focus falls to the page body after Edit and Cancel), m12 (removing a role and adding it back restores the saved filing).
+
+**Round 2 total:** all four Majors hold. No Blocker or Major remains. Four Minors are left over or new: the folded card after Fix, the folded one-liner at 375 px, the Representative co-filing line stored before the fix, and the extra co-filer error.
