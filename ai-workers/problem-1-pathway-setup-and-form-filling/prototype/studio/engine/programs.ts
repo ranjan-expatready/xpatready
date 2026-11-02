@@ -73,7 +73,9 @@ export function missingItems(s: Snapshot, participants: Participant[], problems:
   if (filing.length) { const cause = `${plural(filing.length, "form")} cannot be filed as set (first: ${filing[0].message})`; out.push({ code: "filing_problem", step: "Change how it is filed", cause, text: `${cause} Next step: change how ${filing.length === 1 ? "it is" : "they are"} filed (Overview › Forms), or add what it needs.` }); }
   // C11.12 BR-7: a role that may be an applicant with no filing mode, named with its step.
   const people = problems.filter((p) => p.level === "error" && p.where === "People");
-  if (people.length) { const cause = `${people.map((p) => p.item).join(", ")}: not set.`; out.push({ code: "filing_not_set", step: "Set the filing", cause, text: `${cause} Next step: set the filing (Forms › Who can be in this application).` }); }
+  // Through line() (merge of #500, Lead check item 1): while a setup step waits, it is this line's next step too, so the
+  // row, the header and every missing line name one step.
+  if (people.length) out.push(line("filing_not_set", `${people.map((p) => p.item).join(", ")}: not set.`, "Set the filing", " (Forms › Who can be in this application)"));
   const errors = problems.filter((p) => p.level === "error" && !isFiling(p) && p.where !== "People");
   if (errors.length) { const cause = `${errors.length} rule${errors.length === 1 ? " does" : "s do"} not resolve (first: ${errors[0].item}: ${errors[0].message}).`; out.push({ code: "rule_problem", step: "Fix on the Configuration tab", cause, text: `${cause} Next step: fix ${errors.length === 1 ? "it" : "them"} on the Configuration tab.` }); }
   const shared = sharedStep(out);
