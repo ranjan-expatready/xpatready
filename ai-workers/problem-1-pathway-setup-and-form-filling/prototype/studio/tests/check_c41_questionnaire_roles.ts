@@ -45,8 +45,10 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
   const unwritten = qs.filter((x: any) => x.asked === false);
   ok("QA-82 fail: no question on the Questions tab reads as the field's definition", qs.length > 0 && !qs.some((x: any) => x.wording === x.meaning && x.meaning.length > 40), qs.filter((x: any) => x.wording === x.meaning).map((x: any) => x.wording).slice(0, 2));
   ok("QA-82 pass: a question with nothing written shows the field's short name and is marked so (asked: false)", unwritten.length > 0 && unwritten.every((x: any) => x.wording.length <= 60 && !/[_.]/.test(x.wording)), unwritten.slice(0, 3).map((x: any) => [x.fact, x.wording]));
+  // Review of #469 (B1): the client's questionnaire and Preview keep the meaning (it carries the legal scope of yes/no
+  // background questions) until a real question is written.
   const pvq = (pv?.questionnaire?.sections ?? []).flatMap((x: any) => x.questions ?? []);
-  ok("QA-82 fail (Preview): no question in Preview is the field's definition", pvq.length > 0 && !pvq.some((x: any) => x.label === x.meaning && x.meaning.length > 40), pvq.filter((x: any) => x.label === x.meaning).map((x: any) => x.label).slice(0, 2));
+  ok("QA-82 (review B1): Preview and the client keep the meaning for an unwritten question (its legal scope), never the bare short name", pvq.length > 0 && pvq.some((x: any) => x.label === x.meaning && x.meaning.length > 40), pvq.slice(0, 2).map((x: any) => [x.fact, x.label]));
   console.log(`${pass}/${pass + fail} passed`);
   process.exit(fail ? 1 : 0);
 })();

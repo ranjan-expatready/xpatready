@@ -163,8 +163,9 @@ const both = (a: Cond, b: Cond): Cond => a.applies === false || b.applies === fa
 export const NO_RULE = "(no rule yet)";
 /** QA-82: a field's name in words from its key ("person.official_language" → "Official language"), as Shared library
  *  names fields. A question with no written wording shows this, never the field's meaning (its definition). */
-const ABBREVIATIONS = new Set(["dli", "eta", "id", "ircc", "lmia", "noc", "pgwp", "pr", "sin", "uci"]);
-export const factName = (key: string) => { const w = (key.split(".").pop() ?? key).split("_").map((x) => ABBREVIATIONS.has(x) ? x.toUpperCase() : x).join(" "); return w.charAt(0).toUpperCase() + w.slice(1); };
+const ABBREVIATIONS = new Set(["dli", "eta", "id", "ircc", "lmia", "noc", "pgwp", "pr", "sin", "tb", "trv", "uci", "us", "uscis"]);
+const PROPER: Record<string, string> = { canada: "Canada", canadian: "Canadian" };
+export const factName = (key: string) => { const w = (key.split(".").pop() ?? key).split("_").map((x) => ABBREVIATIONS.has(x) ? x.toUpperCase() : PROPER[x] ?? x).join(" "); return w.charAt(0).toUpperCase() + w.slice(1); };
 export const wordsOnly = (line: { status?: string; condition?: unknown; condition_plain?: string | null }) => line.status === "conditional" && !line.condition;
 
 export function render(s: Snapshot, people: Person[], known: Known, opts: { documentFacts?: Map<string, string[]>; today?: Date } = {}) {
@@ -324,7 +325,7 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
     }
     const kv = known.get(kkey(about, fact)) ?? (rows.length ? known.get(kkey(about, fact, rows[0])) : undefined);
     if (kv && status !== "hidden by a condition") status = kv.status === "confirmed" ? "confirmed" : "answered";
-    questions.push({ fact, label: p.question_text?.trim() || factName(fact), asked: !!p.question_text?.trim(), meaning: f?.meaning ?? fact, value_type: f?.value_type ?? "text", about, about_label: label(about), section: p.section_id, section_title: sectionTitle.get(p.section_id) ?? p.section_id, collected_from: p.collected_from, status, value: kv?.value, why, rows, decides, rule_only: !needs.has(key), required });
+    questions.push({ fact, label: p.question_text || f?.meaning || fact, asked: !!p.question_text?.trim(), meaning: f?.meaning ?? fact, value_type: f?.value_type ?? "text", about, about_label: label(about), section: p.section_id, section_title: sectionTitle.get(p.section_id) ?? p.section_id, collected_from: p.collected_from, status, value: kv?.value, why, rows, decides, rule_only: !needs.has(key), required });
   };
   for (const d of [...deciders.values(), ...answeredDeciders.values()]) pushQ(d.fact, d.about, `decides ${[...d.decides].slice(0, 3).join("; ")}`, [], [...d.decides], false);
   for (const n of needs.values()) pushQ(n.fact, n.about, `read by ${[...n.forms].join(", ")} (${n.boxes} form field${n.boxes > 1 ? "s" : ""})`, [...n.rows].sort(), [], n.maybe);
