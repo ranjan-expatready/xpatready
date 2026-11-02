@@ -32,6 +32,22 @@ One owner per row and per shared file; never build another owner's rows. Under t
 | R4 | runtime | **An eligibility rule's own outcome** (P-230 (1)): a gate carries "when not met" (Not eligible or needs review) as data; the background gate is needs review | C6.9 tests cover both; copy says the representative reviews | P-230 |
 | L-doc | later | **Document rules fields** (P-230 (8)): copy kind, certified translation, validity window on document requirements (schema) | after the M2 gate | P-230 |
 
+## Held by the product owner of SA-01B (P-251): nobody builds these until the ruling
+L-SA3 (C1 ready to file) · L-SA6, L-SA7, L-SA8, L-SA9, L-SA10 (C2–C4, C7–C9) · the P-236 rename of C6.9 (C6) · C11 · no-row holds: SA1B-D100, SA1B-D72/D66, SA1B-D29, SA1B-D77, SA1B-D93, SA1B-D89/D107, SA1B-D75. Design-only (concept sent to the product owner before any build): pin per filing, a case with several combinations, an organisation subject for employer facts, household and filing scopes (L-SA4 waits for these), PartyRelationship "whose fact". Protect list B1–B19 of the product owner's report (section 5): keep as built.
+
+## Do now (P-251; no decision needed; checked on main 278eb3e9 by the SA-01B session)
+| # | Area | Item | Done when (beyond the standard) | Source |
+|---|---|---|---|---|
+| S1 | runtime | **Signature default**: `prisma/schema.prisma:532 signature @default(NONE)`; `engine/runtime/readiness.ts:118` treats NONE as no signature | new form lines default to needing a signature; a test proves an unset line is never filed unsigned | SA-1B-102 rule 3 |
+| S2 | forms | **Trial per edition**: `api/src/fill-case.ts:82-85` reads `evidence-lane/E1/<form>/STATUS.md` | the trial is recorded per edition and map version; a new edition shows "Checked copy, not for filing" until its own trial passes | SA-1B-174 |
+| S3 | runtime | **No hidden today**: `engine/render.ts:167 opts.today ?? new Date()`, `engine/runtime/filings.ts:26,134` | minimum age and the biometrics exemption use the case's application or target filing date, else today, stated on screen, as `case-checklist.ts:112-115` does | SA-1B-194 |
+| S4 | runtime | **Startable at case opening**: `api/src/runtime.ts:79-86` against `engine/programs.ts:48-77` | opening a case on a Not-ready row is refused with the missing items listed (separate from P-248, release) | SA-1B-90 |
+| S5 | Lead | **Withdrawn items out**: B12 starter to-dos (SA1B-D118); B4 and `domain/MASTERS.md` "warning lead times 90/30" (SA-1B-23) | each removed with a pointer to what withdrew it | SA1B-D118, SA-1B-23 |
+| S6 | evidence | **Scale numbers**: `evidence/scale-100/check_catalogue_scale.json` 111/393 against PRODUCT.md §7 105/371 | one set of numbers; note that 1,023 ms cached is over the spec's 300 ms read budget | SA-01B v2.1 |
+| S7 | screens | **Zod**: the `fail()` chains in `api/src/studio.ts`; `any` in `web/src/components/conditions.tsx:9` | validation by schema; no `any` there | STANDARDS |
+| S8 | evidence | **Re-trace SA-01B**: redo `product/history/TRACE-SA01B-2026-10-23.md` card by card against v2.1 (start from the product owner's report, Appendix A) | every v2.1 card traced to a C-row, a hold or "team only" | SA-01B v2.1 |
+| S9 | forms | **"For post"**: `contracts/forms.ts:91 { key: "for_post", label: "For the post applied for" }` | means the mailing address tagged "send post here" (spec fix 2 Nov) | SA-1B-11 |
+
 ## M2 additions from P-240 (2 Nov; founder "All 4 in M2"; after Demo first and the P-231 finishing order)
 | # | Area | Item | Done when (beyond the standard) | Source |
 |---|---|---|---|---|

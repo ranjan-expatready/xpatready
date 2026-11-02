@@ -50,6 +50,7 @@ IMM 5257 field map: **verified for Saved at US$0** (21 Oct run reused; after #42
 | A12 | Fast-track (forms-3, forms-4, C11.12 board) | done |
 | A13 | Visual progress report for the founder's founder | dashboard published (private; share from its menu) |
 | A16 | Pull the latest SA-01B; review it end to end incl. the Chrome extension; every conflicting or overlapping decision; a high-level split of what the team builds vs the POC; grill one question at a time; decisions into BACKLOG at M2/M3/M4 | snapshot 2026-11-02-1054 synced to `domain/requirements-2026-11-02/`; **done**: P-235–P-245, P-247–P-249 decided by the founder, P-246 by the Lead (M2 now 60 rows; rows G1–G5, L-SA3–L-SA10, E1–E6); the SA-01B session's analysis file comes next by the session "SA01B scope and handover review"; Lead records |
+| A18 | Product owner's SA-01B note: record holds, do-now rows, draft the reply ("Yes, do both") | holds and S1–S9 in BACKLOG (P-251); runtime-3 and runtime-5 told; reply drafted by the SA-01B session |
 | A17 | qa before merge (P-250): "Yes, qa before merge" | in force; qa and qa-m3 briefed |
 | A15 | Weekly plan: full speed until 93%, then keep 7% for the last hand-over and all updates (P-234) | in force; Lead sends "STOP: 93%" |
 | A14 | Close finished sessions, tidy the sidebar | local ones archived by the old Lead; cloud ones need the founder on claude.ai/code |
