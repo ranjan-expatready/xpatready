@@ -24,8 +24,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const fits = () => p.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1);
   try {
     await p.goto(BASE); await p.evaluate(() => { try { localStorage.setItem("xr-actor", "user-A"); } catch { /* ignore */ } });
-    // Nightly 41381724752 (Mac): a cold copy can take longer than Playwright's 30 s request default to load the sample,
-    // as check_screen01_browser and check_studio_browser already allow (180 s, setup only, not a timed budget).
+    // Nightly 41381724752 (Mac): the sample load answered something other than 201 on a fresh copy (cause not known yet);
+    // the step now records [status, detail] so the next run shows why. 180 s as the other suites allow for this setup.
     const loaded = await api("/demo/load", { method: "POST", timeout: 180000 });
     step("setup: sample inputs loaded", loaded.status === 201, [loaded.status, loaded.body?.detail]);
     const combos = (await api("/library/reuse/sections")).body.combinations;
