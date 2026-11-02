@@ -60,6 +60,14 @@ export function differing(boxes: { box: string; caption?: string | null; meaning
   return ` ${all === 1 ? "The value that differs" : "The values that differ"}: ${shown.join("; ")}${all > shown.length ? `; and ${all - shown.length} more` : ""}.`;
 }
 
+/** G24 (QA-139, C7.7): why a box is left to write by hand, in plain words: the filler's own step names (for example
+ *  "derive_inverse:…", "phone_part:…") never reach a person. */
+export function plainWhy(why: string | null | undefined): string {
+  const w = (why ?? "").trim();
+  if (/is not in the executable set/.test(w)) return "The product cannot work this box out from the case's answers yet: write it by hand.";
+  return w.replace(/\b(derived?|derive_inverse|phone_part|address_part|date_part|code_list|yes_no_code|select):[^\s,;]*/g, "a calculation").replace(/[a-z]+\.[a-z_]+\([^)]*\)/g, "a calculation");
+}
+
 /** C-9 (P-144): a barcode form filed by PDF upload or on paper needs a current validated copy before it is filed. */
 const needsValidate = (s: Snap, form: string) => isBarcodeForm(form) && ["PDF_UPLOAD", "PAPER"].includes(channelIn(s, form));
 const OUT_OF_DATE = "Out of date: validate again";
@@ -118,7 +126,7 @@ export class CaseForms implements OnModuleInit {
         const channel = channelIn(s, form);
         forms.push({ form, title: titles.get(form) ?? form, subject_id: p.subjectId, person: p.label, applies, trial_passed: trialPassed(form), channel, for_filing: channel !== "ONLINE", needs_validate: needsValidate(s, form),
           draft: { written_now: cov?.facts.length ?? 0, mapped: cov?.mapped ?? 0, unconfirmed: cov?.boxes.filter((b) => b.coverage === "answered on screen").length ?? 0 },
-          readiness: readiness(view, form, p.subjectId), copies: mine.map((x) => this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, form, p.subjectId))) });
+          readiness: readiness(view, form, p.subjectId), copies: mine.map((x) => this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, form, p.subjectId), channel === "ONLINE")) });
       }
     }
     // QA-40: a form filed Online is listed too (no PDF copy is made), with the people it applies to (P-113: the case
@@ -133,16 +141,16 @@ export class CaseForms implements OnModuleInit {
   }
 
   /** A copy with its state today; changed facts are named by their question (labels), never by their keys. */
-  private copyOf(x: Awaited<ReturnType<Db["formInstance"]["findMany"]>>[number] & { snapshot: { factsJson: unknown }; validated?: { readAt: Date; readBy: string; factsHash: string; readBack: unknown }[] }, today: FormFact[], labels = new Map<string, string>(), todayGroups: GroupFact[] = []): FormCopy {
+  private copyOf(x: Awaited<ReturnType<Db["formInstance"]["findMany"]>>[number] & { snapshot: { factsJson: unknown }; validated?: { readAt: Date; readBy: string; factsHash: string; readBack: unknown }[] }, today: FormFact[], labels = new Map<string, string>(), todayGroups: GroupFact[] = [], notForFiling = false): FormCopy {
     // C-10: a validated copy is current while the form's facts are what they were when it was read back.
     const v = x.validated?.[0], vrb = v?.readBack as { written?: number; read_back_equal?: number } | undefined, current = !!v && v.factsHash === inputHash(today);
     const stored = x.snapshot.factsJson as Stored, then = stored.facts;
     const changed = x.status === "GENERATED" ? [...changedFacts(then, today).map((f) => labels.get(f) ?? f), ...changedGroups(stored.groups, todayGroups)] : [];
     const result = x.resultJson as { counts?: FormCopy["counts"]; intact?: boolean; person_steps?: string[]; boxes?: { fact: string | null; result: string; why: string | null }[] } | null;
-    const byHand = (result?.boxes ?? []).filter((b) => b.result === "by hand").map((b) => ({ label: (b.fact && labels.get(b.fact)) || "A form field", why: b.why ?? "" }));
+    const byHand = (result?.boxes ?? []).filter((b) => b.result === "by hand").map((b) => ({ label: (b.fact && labels.get(b.fact)) || "A form field", why: plainWhy(b.why) }));
     return { id: x.id, status: x.status as FormCopy["status"], created_at: x.createdAt.toISOString(), created_by: x.createdBy, finished_at: x.finishedAt?.toISOString() ?? null, error: x.error,
       locked: x.lockedAt ? { kind: x.lockedKind as keyof typeof LOCK_KINDS, at: x.lockedAt.toISOString(), by: x.lockedBy! } : null,
-      out_of_date: changed.length > 0, stale: !!x.lockedAt && changed.length > 0, changed, counts: result?.counts ?? null, intact: result?.intact ?? null, person_steps: result?.person_steps ?? [],
+      out_of_date: changed.length > 0, stale: !!x.lockedAt && changed.length > 0, changed, counts: result?.counts ?? null, intact: result?.intact ?? null, person_steps: result?.person_steps ?? [], copy_not_for_filing: notForFiling, source: "ircc_pdf",
       by_hand: byHand, file_ok: x.status === "GENERATED" && !!x.path && existsSync(join(ROOT, x.path)),
       validated: v ? { at: v.readAt.toISOString(), by: v.readBy, current, words: current ? "Validated copy read back" : OUT_OF_DATE, read_back: { written: vrb?.written ?? 0, equal: vrb?.read_back_equal ?? 0 } } : null };
   }
@@ -238,7 +246,7 @@ export class CaseForms implements OnModuleInit {
     const cov = formCoverage(s, people, answers, rows, x.formNumber, x.subjectId);
     const view = caseView(s, people, answers, rows, "agent", new Date(), groups);
     const labels = new Map(view.sections.flatMap((v) => v.questions).map((q) => [q.fact, q.label]));
-    return this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, x.formNumber, x.subjectId));
+    return this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, x.formNumber, x.subjectId), channelIn(s, x.formNumber) === "ONLINE");
   }
 
   /** RT-16: lock a generated, up-to-date copy once ("validated copy uploaded back" or "filed"). The officer only; an out

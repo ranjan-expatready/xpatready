@@ -1,7 +1,7 @@
-// C6.12, C11.6 API checks (M3-B, runtime lane): a Visitor visa case's "Prepare application" view on an isolated copy.
+// C6.12, C11.6, C7.3 API checks (M3-B and M3-E, runtime lane): a Visitor visa case's "Prepare application" view on an isolated copy.
 // It releases the Visitor visa twice through the screens' own routes when its copy has none (setup_visitor_visa.ts, then
 // pack 4's acceptance/lib/setup_vv_m3.ts: IRCC account, IMM 5476, channels, filing modes, documents), runs pack 4's
-// acceptance tests C6.12 and C11.6 (moved into the suites by the PR that makes them pass, acceptance/README.md), and adds
+// acceptance tests C6.12, C11.6 and C7.3 (moved into the suites by the PR that makes them pass, acceptance/README.md), and adds
 // the edges they leave out: who may split, ids that are not ids, a document has no channel, two reads at once make one
 // family group, and the older /filings view prices the same ages. Each rule has a passing and a failing case. No model
 // call (US$0). Values Sample until the immigration expert confirms. Setup lines owned by other rows (S2w G8, S7 M3-8,
@@ -10,6 +10,7 @@
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { client, recorder } from "./runtime/api.ts";
+import * as m3 from "../acceptance/lib/m3.ts"; // pack 4's helpers (answer, confirm), on this same copy (argv port, db)
 
 const PORT = Number(process.argv[2] ?? 4432), DB = process.argv[3] ?? "xr_studio_runtime_prep";
 const { call, sql } = client(PORT, DB);
@@ -27,7 +28,7 @@ const releases = () => Number(sql("select count(*) from config_release r join co
     ok("setup: release 2 (pack 4 setup_vv_m3.ts) with every role's filing mode (S5, M3-0) and the three form channels (S4)", releases() === 2 && line("S5").startsWith("PASS") && r.stdout.split("\n").filter((l) => / S4 /.test(l)).every((l) => l.startsWith("PASS")), r.stdout.split("\n").filter((l) => l.startsWith("FAIL")).map((l) => l.slice(6, 60)));
   }
   // Pack 4's acceptance tests, each line shown here; the test's exit code is the verdict.
-  for (const t of ["C6.12", "C11.6"]) {
+  for (const t of ["C6.12", "C11.6", "C7.3"]) {
     const r = tsx(`acceptance/${t}.test.ts`);
     for (const l of r.stdout.split("\n").filter((x) => x.startsWith("FAIL"))) console.log(`  ${t}: ${l}`);
     ok(`${t}: pack 4's acceptance test passes in full (${(r.stdout.trim().split("\n").pop() ?? "").trim()})`, r.status === 0, r.stderr.slice(-300) || undefined);
@@ -91,6 +92,32 @@ const releases = () => Number(sql("select count(*) from config_release r join co
   ok("C11.6 (break m1): the same channel again changes nothing: no new version, no audit line", r.status === 200 && r.body.changed === false && r.body.version === rs.version && sql(`select count(*) from audit_event where entity='item' and entity_key='${i5257?.id}'`) === "1", r.body?.changed);
   r = await call("PATCH", `/runtime/items/${i5257?.id}/channel`, { channel: "PDF_UPLOAD", reason: "bad\u0000reason", version: rs.version }, OFFICER);
   ok("C11.6 (break m2, fail): a reason with a control character is a 400 on the reason, nothing saved", r.status === 400 && /plain text/.test(JSON.stringify(r.body)) && sql(`select channel from filing_item where id='${i5257?.id}'`) === "PAPER", r.status);
+  // C7.3 edges: a PDF upload form has no answer sheet; a section that is not on the sheet is not found; the tick's audit
+  // line names the section and the form, never a value.
+  const i5257p = q.items.find((i: { form?: string; channel?: string }) => i.form === "IMM 5257");
+  ok("C7.3 (fail): a PDF upload form item has no answer sheet (409, in words)", (await call("GET", `/runtime/items/${i5257p?.id}/answer-sheet`, undefined, OFFICER)).status === 409);
+  const i5707p = q.items.find((i: { form?: string; subject: string }) => i.form === "IMM 5707" && i.subject === principal);
+  ok("C7.3 (fail): a section that is not on the sheet is not found (404)", (await call("POST", `/runtime/items/${i5707p?.id}/screens/SectionZ/entered`, {}, OFFICER)).status === 404);
+  const sheetA = async () => (await call("GET", `/runtime/items/${i5707p?.id}/answer-sheet`, undefined, OFFICER)).body?.sections?.[0];
+  r = await call("POST", `/runtime/items/${i5707p?.id}/screens/SectionA/entered`, {}, OFFICER);
+  ok("C7.3 (review M3, fail): a tick without the section's version is a 400; with an older one a 409 (Reload)", r.status === 400 && (await call("POST", `/runtime/items/${i5707p?.id}/screens/SectionA/entered`, { version: "0" }, OFFICER)).status === 409, r.status);
+  r = await call("POST", `/runtime/items/${i5707p?.id}/screens/SectionA/entered`, { version: (await sheetA())?.version }, OFFICER);
+  ok("C7.3: the tick is audited by section and form, without values", r.status === 201 && /ticked "Applicant, spouse and parents" of IMM 5707 as entered in the portal/.test(sql(`select coalesce(string_agg(summary, ' '), '') from audit_event where entity='item' and entity_key='${i5707p?.id}'`) ?? "") && !/Sample Client P/.test(sql(`select coalesce(string_agg(summary, ' '), '') from audit_event where entity='item' and entity_key='${i5707p?.id}'`) ?? ""), r.status);
+  // Review M2: ticking every section while facts still wait never makes the item Done.
+  for (const k of ["SectionB", "SectionC"]) { const v = (await call("GET", `/runtime/items/${i5707p?.id}/answer-sheet`, undefined, OFFICER)).body?.sections?.find((x: { key: string }) => x.key === k)?.version; await call("POST", `/runtime/items/${i5707p?.id}/screens/${k}/entered`, { version: v }, OFFICER); }
+  const allTicked = (await call("GET", `/runtime/items/${i5707p?.id}/answer-sheet`, undefined, OFFICER)).body?.sections ?? [];
+  const itemNow = (await call("GET", `/runtime/cases/${caseId}/prepare`, undefined, OFFICER)).body?.items?.find((i: { id: string }) => i.id === i5707p?.id);
+  ok("C7.3 (review M2, fail): every section ticked but facts still waiting: the item is not Done", allTicked.length === 3 && allTicked.every((x: { entered: unknown }) => !!x.entered) && allTicked.some((x: { waiting: unknown[] }) => x.waiting.length > 0) && itemNow?.state !== "done", itemNow?.state);
+  // Review M1: an out-of-date section ticked again freezes the new answers; the old tick stays as history.
+  await m3.answer(caseId, principal, "person.family_name", "SAMPLEFN", OFFICER); await m3.confirmAll(caseId, principal);
+  let a1 = await sheetA();
+  r = await call("POST", `/runtime/items/${i5707p?.id}/screens/SectionA/entered`, { version: a1?.version }, OFFICER);
+  await m3.answer(caseId, principal, "person.family_name", "SAMPLEFN2", OFFICER); await m3.confirmAll(caseId, principal);
+  a1 = await sheetA();
+  const outOfDate = a1?.out_of_date === true;
+  r = await call("POST", `/runtime/items/${i5707p?.id}/screens/SectionA/entered`, { version: a1?.version }, OFFICER);
+  a1 = await sheetA();
+  ok("C7.3 (review M1): an out-of-date section ticked again is current again (201), and the earlier ticks stay as history", outOfDate && r.status === 201 && a1?.out_of_date === false && sql(`select count(*) from entered_section where item_id='${i5707p?.id}' and section_key='SectionA' and superseded_at is not null`) === "2" && sql(`select count(*) from entered_section where item_id='${i5707p?.id}' and section_key='SectionA' and superseded_at is null`) === "1", { outOfDate, status: r.status });
   const fl = (await call("GET", `/runtime/cases/${caseId}/filings`, undefined, OFFICER)).body;
   const cents = (x: { fees: { line?: string; key?: string; amount_cents: number; waiting?: string }[] }, k: string) => x.fees.filter((f) => (f.key ?? f.line) === k && !f.waiting).reduce((n, f) => n + f.amount_cents, 0);
   ok("C6.12: the /filings view (#283) prices the same as the prepare view: same ages, same split groups", fl.groups?.length === after.groups.length && ["visitor_visa", "biometrics"].every((k) => cents(fl, k) === cents(after, k)) && cents(fl, "biometrics") === 85_00, { filings: fl.groups?.length, prepare: after.groups.length });

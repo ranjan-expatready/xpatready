@@ -4,6 +4,8 @@
 // the text to copy; "Entered in the portal" per section freezes that section's answers. A changed fact after "Entered"
 // marks the section out of date (C9.2-5).
 // Breadth, after Visitor visa: the live portal screen order (W6, parked), online-only forms ordered by the drafted form.
+// Built (runtime lane, C7.3 PR): a tick sends the section's `version` from the sheet it read (M3-CONTRACT: "every write
+// carries a version (409 → Reload)"), so it freezes what the officer saw; the rules are unchanged.
 //   tsx studio/acceptance/C7.3.test.ts 4440 xr_studio_accept
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -36,11 +38,12 @@ await main("C7.3", "Answer sheet for an Online line (IMM 5707)", async () => {
   const sec = s?.sections[0]?.key;
   r = await call("POST", `/runtime/items/${item?.id}/screens/${sec}/entered`, {}, CLIENT);
   ok("C7.3-8 fail: a client cannot tick \"Entered in the portal\" (403)", r.status === 403, r.status);
-  r = await call("POST", `/runtime/items/${item?.id}/screens/${sec}/entered`, {}, OFFICER);
+  const ver = (s?.sections[0] as { version?: string } | undefined)?.version;
+  r = await call("POST", `/runtime/items/${item?.id}/screens/${sec}/entered`, { version: ver }, OFFICER);
   ({ s } = await sheet());
   ok("C7.3-9 pass: \"Entered in the portal\" ticks Section A with who and when", r.status === 201 && s?.sections[0]?.entered?.by === OFFICER, r.body);
   ok("C7.3-10 pass (data): the tick freezes the answers it showed (an answer snapshot)", !!sql(`select facts_json from answer_snapshot where id=(select snapshot_id from entered_section where item_id='${item?.id}' and section_key='${sec}')`));
-  r = await call("POST", `/runtime/items/${item?.id}/screens/${sec}/entered`, {}, OFFICER);
+  r = await call("POST", `/runtime/items/${item?.id}/screens/${sec}/entered`, { version: ver }, OFFICER);
   ok("C7.3-11 pass: ticking again changes nothing (one tick, 200 not 201)", r.status === 200 && sql(`select count(*) from entered_section where item_id='${item?.id}' and section_key='${sec}'`) === "1");
   await answer(c.id, P, "person.family_name", "SAMPLEDX"); await confirmAll(c.id, P);
   ({ s } = await sheet());

@@ -15,6 +15,8 @@ export const WHERE_STEP: Record<string, { step: StepKey; part?: "documents" | "q
   Checks: { step: "questions_documents", part: "questions" },
   "Derived fields": { step: "questions_documents", part: "questions" },
   Library: { step: "questions_documents", part: "questions" },
+  // C6.9 part 1: a gate's problems are about facts the questionnaire asks (BR-5).
+  Eligibility: { step: "questions_documents", part: "questions" },
 };
 export const stepOfWhere = (where: string) => WHERE_STEP[where] ?? { step: "release" as StepKey };
 

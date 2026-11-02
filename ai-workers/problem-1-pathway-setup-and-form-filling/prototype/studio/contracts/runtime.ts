@@ -17,9 +17,9 @@ export const MINOR = { birthDateField: "person.date_of_birth", underAge: 18 } as
 /** Invisible characters a person never means to type (break report m1–m4): C0 and C1 controls, DEL, zero-width marks
  *  (not the emoji joiner), line and paragraph separators, bidi overrides and isolates, the byte-order mark. Tab, line
  *  feed and carriage return stay allowed in answers (long text). */
-const INVISIBLE = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200b\u200e\u200f\u2028-\u202e\u2066-\u2069\ufeff]/;
+export const INVISIBLE = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200b\u200e\u200f\u2028-\u202e\u2066-\u2069\ufeff]/;
 /** Half of a surrogate pair on its own: not a character; PostgreSQL refuses it (a 500 before, break report m1). */
-const LONE = /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/;
+export const LONE = /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/;
 const clean = (x: string) => !INVISIBLE.test(x) && !/[\t\n\r]/.test(x) && !LONE.test(x);
 const text = (missing: string, min: number, max: number) => z.string({ message: missing }).trim().min(min, missing).max(max, `Keep it to ${max} characters.`).refine(clean, "Remove the control or invisible characters from this text.");
 /** An idempotency key: visible ASCII only, so it is stored and compared exactly. */
@@ -157,6 +157,9 @@ export type FormCopy = {
   id: string; status: "QUEUED" | "RUNNING" | "GENERATED" | "FAILED"; created_at: string; created_by: string; finished_at: string | null; error: string | null;
   locked: { kind: keyof typeof LOCK_KINDS; at: string; by: string } | null; out_of_date: boolean; stale: boolean; changed: string[];
   counts: { written: number; by_hand: number; blank: number; not_written: number; by_a_person: number } | null; intact: boolean | null; person_steps: string[];
+  /** P-145 (C7.7): a copy of a form the case's release files Online: IRCC's own PDF ("ircc_pdf") filled from the same
+   *  confirmed facts, marked "Copy, not for filing", never locked, filed or counted. */
+  copy_not_for_filing: boolean; source: "ircc_pdf";
   /** Form fields the officer writes by hand in Adobe, each with its question and why (review M3). */
   by_hand: { label: string; why: string }[];
   /** The copy's file is on disk and unchanged; false: it cannot be handed over (break m1). */
