@@ -50,7 +50,7 @@ M2 **34/56 Works** · 8 built, awaiting qa · 14 partial. R1 6/8 (C4.4 built; C7
 4. **Clean-up:** two stale 31 Oct copies (PRs #151, #165 merged); the safety check refused removing them.
 
 ## Follow-up rows to shape (Lead)
-QA-145 part 2 → forms · C11.3 AI "did you mean" → forms after X6 · contract migration dropping `filing_item.form_key` · the stray C4.11 part 4a built file (removed by qa in #405) · re-check the VV-R01 quotes on canada.ca · TAXONOMY and the immigration-structure skill disagree with P-112 on spouse and PNP sub-categories (evidence favours P-112): update the skill.
+QA-145 part 2 → forms · C11.3 AI "did you mean" → forms after X6 · contract migration dropping `filing_item.form_key` · the stray `qa/built/C4.11-part4a.md` · re-check the VV-R01 quotes on canada.ca · TAXONOMY and the immigration-structure skill disagree with P-112 on spouse and PNP sub-categories (evidence favours P-112): update the skill.
 
 ## Lessons (night report v2 §8, lead skill "Not drifting")
 Read the newest decisions word for word · every founder ask goes in the table above · one owner per table · tooling bugs look like flaky tests · start qa before the founder leaves · builders answer in PR comments.
