@@ -43,7 +43,7 @@ const uniq = Date.now().toString(36);
   ok("QA-167 step 1: the guarded check rates this rename 'second person' (P-266)", chk.body?.tier?.tier === "second_person", chk.body?.tier);
   let r = await call("PATCH", `/library/fields/${FIELD}/name`, { name: NEW, expected: chk.body?.fingerprint });
   ok("QA-167 fixed (C11.13 pass): one author's rename of a released field does not take effect alone: 202, waits for a second person, the name unchanged",
-    r.status === 202 && r.body.applied === false && r.body.status === "WAITING" && r.body.tier === "second_person" && label(FIELD) === before, { status: r.status, body: r.body, before, after: label(FIELD) });
+    r.status === 202 && r.body.applied === false && r.body.status === "WAITING" && r.body.tier === "second_person" && r.body.name === NEW && label(FIELD) === before, { status: r.status, body: r.body, before, after: label(FIELD) });
   const changeId = r.body?.change_id, setId = r.body?.change_set;
   ok("G-CORE BR-4 pass: it is a WAITING rename on To review, with the name before and after", sql(`select status || '|' || action || '|' || label || '|' || (matches->>'before') from library_change where id = '${changeId}'`) === `WAITING|RENAME|${NEW}|${shownOf(FIELD, before)}`, sql(`select row_to_json(c) from library_change c where id = '${changeId}'`));
   ok("G-CORE BR-5 pass: its change set is recorded: made by a person, the author, waiting, linked to the library change, tier and fingerprint",
@@ -80,6 +80,8 @@ const uniq = Date.now().toString(36);
   const fresh = await check([{ action: "rename", kind: "field", key: draft, name: `Draft again ${uniq}` }]);
   r = await call("PATCH", `/library/fields/${draft}/name`, { name: `Draft again ${uniq}`, expected: "0".repeat(64) });
   ok("G-CORE BR-3 fail: a stale fingerprint answers 409 'look again' with the fresh check, nothing written", r.status === 409 && r.body?.title === "Look again" && /changed since you opened it/.test(r.body?.detail) && r.body?.check?.fingerprint === fresh.body?.fingerprint && sets() === n2 && label(draft) === `Draft name ${uniq}|t`, [r.status, r.body?.title]);
+  r = await call("PATCH", `/library/fields/${draft}/name`, { name: `Draft again ${uniq}`, expected: "" });
+  ok("Break B2 m7 fail: an empty fingerprint is stale too ('look again'), never a skipped check", r.status === 409 && r.body?.title === "Look again" && label(draft) === `Draft name ${uniq}|t`, [r.status, r.body?.title]);
   r = await call("PATCH", `/library/fields/${draft}/name`, { name: `Draft again ${uniq}`, expected: fresh.body?.fingerprint });
   ok("G-CORE BR-3 pass: the current fingerprint confirms the rename", r.status === 200 && label(draft) === `Draft again ${uniq}|t`, [r.status, r.body?.detail]);
   const again = r.body?.change_set;

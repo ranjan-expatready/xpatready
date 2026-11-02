@@ -124,8 +124,8 @@ function RenameChange({ change }: { change: LibraryChangeDetail }) {
   return (
     <div className="space-y-3" data-change-rename>
       <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm">
-        <dt className="text-text-muted">Name now</dt><dd>{r.before}</dd>
-        <dt className="text-text-muted">{r.undo ? "Back to" : "Proposed name"}</dt><dd className="font-semibold">{r.after}</dd>
+        <dt className="text-text-muted">Name now</dt><dd className="break-words">{r.before}</dd>
+        <dt className="text-text-muted">{r.undo ? "Back to" : "Proposed name"}</dt><dd className="break-words font-semibold">{r.after}</dd>
         <dd className="col-span-2 text-xs text-text-muted">A released combination uses it, so a second person approves the new name. Approving checks it again and makes a draft version; releases already made do not change.</dd>
       </dl>
       {change.status === "WAITING" ? <ChangePreview check={check} /> : null}

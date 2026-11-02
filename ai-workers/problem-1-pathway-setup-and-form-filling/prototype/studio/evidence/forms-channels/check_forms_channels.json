@@ -1,5 +1,5 @@
 {
- "at": "2026-11-02T20:14:14.025Z",
+ "at": "2026-11-02T20:25:50.587Z",
  "port": 4452,
  "database": "xr_studio_fb2forms_f1",
  "paid_calls": 0,
@@ -536,8 +536,8 @@
    "ok": true,
    "detail": {
     "statuses": [
-     409,
-     200
+     200,
+     409
     ],
     "hist": "1"
    }
@@ -760,7 +760,7 @@
     "origin": "HUMAN",
     "quote": null,
     "added": "Added from the library by a person",
-    "revision": "2026-11-02T20:14:04.518Z",
+    "revision": "2026-11-02T20:25:42.104Z",
     "status": "DRAFT",
     "version": 1
    }
@@ -984,13 +984,13 @@
    "ok": true,
    "detail": [
     {
-     "combination": "605f34e5-d9f1-46bc-ac45-7488556534af",
+     "combination": "6a46ece5-bfbb-427e-9b10-67c67e4c59e5",
      "label": "Visitor visa",
      "channel": "PDF_UPLOAD",
      "words": "IMM 5707 is filed as PDF upload, but the Form library records that IRCC accepts it only as Online. Choose a way IRCC accepts."
     },
     {
-     "combination": "dd4bbba0-b2c6-4e24-83dd-8a35f64ebc06",
+     "combination": "8adb4deb-7c67-42fd-b945-8c003adc3067",
      "label": "With an LMIA",
      "channel": "PDF_UPLOAD",
      "words": "IMM 5707 is filed as PDF upload, but the Form library records that IRCC accepts it only as Online. Choose a way IRCC accepts."
@@ -1293,7 +1293,7 @@
      "code": "IMM 1295",
      "outcome": "ready",
      "why": null,
-     "change_id": "772d16bb-8d17-48c3-9b66-e6a70cf684c2"
+     "change_id": "526f5c88-9d1e-499b-9698-67bfe90d0c02"
     },
     {
      "code": "IMM 1295",

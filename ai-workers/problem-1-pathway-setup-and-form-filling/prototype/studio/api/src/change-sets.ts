@@ -129,7 +129,8 @@ export class ChangeSets {
   async guard(items: ChangeItem[], madeBy: MadeBy, expected?: string | null, workspaceId?: string, db: Client = this.db): Promise<CheckResult> {
     const r = await this.check(items, madeBy, workspaceId, db);
     if (!r.ok) throw new HttpException({ type: "https://expatready.local/problems/change-refused", title: "Not changed", status: HttpStatus.CONFLICT, detail: `${r.problems.map((p) => p.message).join(" ")} Nothing was changed.`, problems: r.problems, check: r }, HttpStatus.CONFLICT);
-    if (expected && expected !== r.fingerprint) throw new HttpException({ type: "https://expatready.local/problems/look-again", title: "Look again", status: HttpStatus.CONFLICT, detail: STALE, check: r }, HttpStatus.CONFLICT);
+    if (expected != null && expected !== r.fingerprint) // break m7: an empty fingerprint is stale too, never "no check"
+      throw new HttpException({ type: "https://expatready.local/problems/look-again", title: "Look again", status: HttpStatus.CONFLICT, detail: STALE, check: r }, HttpStatus.CONFLICT);
     return r;
   }
 

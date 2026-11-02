@@ -33,6 +33,7 @@ type Restore = { label: string | null; labelChecked: boolean } | { title: string
 export type RenameImage = { before: { shown: string; words?: string; restore: Restore; version: number }; after: { id: string; version: number; name: string; at: string } };
 type Current = { rows: { id: string; version: number; status: string; updatedAt: Date }[]; newest: { id: string; version: number; status: string; updatedAt: Date; mergedIntoKey?: string | null }; group: string; shown: string;
   /** The name in words for a person (review B2 m1): an unconfirmed field's label, else its key's last part, never the key. */ words: string; restore: Restore };
+/** `name` is the name asked for (break m5: the same on 200 and 202); `applied` says whether it is the name now. */
 export type RenameResult = { key: string; kind: Kind; name: string; applied: boolean; status: string; version: number | null; tier: string; words: string; change_set: string; change_id: string | null };
 
 @Injectable()
@@ -55,7 +56,7 @@ export class Renames implements OnModuleInit {
   }
 
   /** C3.15 through the door (BR-1). The caller has checked the duty, the body, and that the item exists and is active. */
-  async rename(actor: Actor, kind: Kind, key: string, name: string, expected?: string | null, undo?: { of: string; restore: Restore }): Promise<RenameResult> {
+  async rename(actor: Actor, kind: Kind, key: string, name: string, expected?: string | null, undo?: { of: string; restore: Restore; words?: string }): Promise<RenameResult> {
     const workspaceId = await this.ws.id();
     const cur = await this.current(this.db, kind, workspaceId, key);
     if (!cur) throw problem(404, "Not found", `${key} is not in the shared library.`);
@@ -86,13 +87,13 @@ export class Renames implements OnModuleInit {
     if (open) throw problem(409, "Already waiting", `"${cur.shown}" has another change open on To review (${open.action.toLowerCase().replace(/_/g, " ")}, ${open.status.toLowerCase()}): it is decided first.`);
     const { change, set } = await this.db.$transaction(async (tx) => {
       const change = await tx.libraryChange.create({ data: { workspaceId, kind, key, label: name, action: "RENAME", status: "WAITING", proposedBy: actor.id,
-        reason: undo ? `Undo the rename to "${cur.shown}": back to "${name}".` : `Rename "${cur.shown}" to "${name}".`,
+        reason: undo ? `Undo the rename to "${cur.words}": back to "${undo.words ?? name}".` : `Rename "${cur.words}" to "${name}".`,
         matches: { before: cur.shown, before_words: cur.words, after: name, restore, undo_of: undo?.of ?? null } as Prisma.InputJsonValue } });
       const set = await this.sets.record(tx, workspaceId, actor.id, items, "person", r, "waiting", { libraryChangeId: change.id });
       return { change, set };
     });
     await this.audit.log(workspaceId, actor.id, "proposed", kind, key, `${actor.name} proposed ${undo ? "undoing a rename: " : ""}renaming ${NOUN[kind]} "${cur.shown}" to "${name}": a released combination uses it, so it waits for a second person`, { change_set: set.id, change: change.id });
-    return { key, kind, name: cur.shown, applied: false, status: "WAITING", version: null, tier: "second_person", words: r.tier.words, change_set: set.id, change_id: change.id };
+    return { key, kind, name, applied: false, status: "WAITING", version: null, tier: "second_person", words: r.tier.words, change_set: set.id, change_id: change.id };
   }
 
   /** Review B2 m4: the check ran before the transaction; inside it, the item must still be the version that was checked
@@ -169,7 +170,7 @@ export class Renames implements OnModuleInit {
     // not a change of it: the roll-back then makes a new draft version.
     if (cur.newest.id !== img.after.id || cur.shown !== img.after.name)
       throw problem(409, "Changed since", `"${img.after.name}" was changed again after this rename (it is now "${cur.shown}", version ${cur.newest.version}), so the rename is not rolled back. Rename it from its page instead.`);
-    return this.rename(actor, kind, it.key, img.before.shown, expected, { of: set.id, restore: img.before.restore });
+    return this.rename(actor, kind, it.key, img.before.shown, expected, { of: set.id, restore: img.before.restore, words: img.before.words });
   }
 
   /** The newest applied rename of one item, for "Undo rename" on its page; null when there is none. */
