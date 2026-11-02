@@ -10,6 +10,7 @@ import { lineOf } from "../channels.ts";
 import { MINOR } from "../../contracts/runtime.ts";
 import { FAMILIES, type FamilyKey, type OutputGroup, type PreviewSets, type PreviewView } from "../../contracts/workspace.ts";
 import { documentFacts, factSources, prequalification, SOURCE_WORDS, suppliesOf } from "../sources.ts";
+import { sourceKey } from "../../contracts/resolver.ts"; // SH3 R8
 
 type Line = { role: string; label?: string; min?: number; max?: number; applies?: boolean };
 const limits = (participants: Line[], role: string) => { const p = participants.find((x) => x.role === role); return { min: p?.min ?? 0, max: p?.max ?? 0, label: p?.label, applies: p?.applies !== false }; };
@@ -66,14 +67,14 @@ export function previewFamily(s: Snapshot, family: FamilyKey | "", person: strin
   const sample = sampleBirthDates(s, people, today), answers = [...sample, ...tweakAnswers(kept, today)];
   const r = render(s, renderPeople, knownOf(s, people, answers, [], today).known, { today });
   // Where each fact's answer comes from, per person role (W1-15 slice 1, P-130): the rules' default or a person's choice.
-  const sources = new Map(factSources(s).map((f) => [`${f.role}|${f.fact}`, f]));
+  const sources = new Map(factSources(s).map((f) => [sourceKey(f.role, f.fact), f]));
   const roleOf = (subjectId: string) => people.find((p) => p.subjectId === subjectId)?.role ?? subjectId;
   const docFacts = documentFacts(s, renderPeople);
   const partnerOf = (id: string) => { const me = roleOf(id), other = me === "principal" ? "spouse_or_partner" : me === "spouse_or_partner" ? "principal" : null; return other ? people.find((p) => p.role === other)?.subjectId ?? null : null; };
   // Lead Q2: the client view skips a fact a document supplies when that document is needed from its holder for this family
   // (the holder, or the partner for a partner's fact); otherwise the question is the fallback and is asked (P-130).
   const fromDocument = (subjectId: string, fact: string): string | null => {
-    const f = sources.get(`${roleOf(subjectId)}|${fact}`);
+    const f = sources.get(sourceKey(roleOf(subjectId), fact));
     if (f?.source !== "DOCUMENT" || !f.document) return null;
     const key = f.document.key, name = f.document.name;
     if (!(docFacts.get(subjectId)?.get(fact) ?? []).some((x) => x.key === key)) return null;
@@ -116,7 +117,7 @@ export function previewFamily(s: Snapshot, family: FamilyKey | "", person: strin
   const formDef = new Map((s.forms as { form_number: string; who: string; condition?: { subjectKind?: string } | null }[]).map((f) => [f.form_number, f]));
   const groupOf = (form: string, ch: Channel): OutputGroup => { const d = formDef.get(form); return d?.who === "case" || d?.condition?.subjectKind === "CASE" ? "APPLICATION" : d?.who === "couple_once" ? "COUPLE" : ch; };
   const fromWords = (subjectId: string, fact: string, collected: string) => {
-    const f = sources.get(`${roleOf(subjectId)}|${fact}`);
+    const f = sources.get(sourceKey(roleOf(subjectId), fact));
     if (!f) return collected === "client_questionnaire" || collected === "profile_record" ? SOURCE_WORDS.CLIENT : SOURCE_WORDS.AGENT;
     return f.source === "DOCUMENT" ? `${SOURCE_WORDS.DOCUMENT} · ${f.document?.name ?? "a document"}` : SOURCE_WORDS[f.source];
   };

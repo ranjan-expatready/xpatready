@@ -105,11 +105,12 @@ export function factsOf(known: Known, about: string): Record<string, unknown> {
   return out;
 }
 
+/** R6b: what counts as an answer: anything but undefined, null or an empty string (0, false and " " are answers). */
+export const present = (v: unknown) => v !== undefined && v !== null && v !== "";
 /** R6b: whose value a person's fact is read from: their own answer, else the filing's, else by R5's id rule. Moved from
  *  engine/runtime/eligibility.ts (its aboutOf; review M1 on fd26c492: a fact asked once per case of the case subject
  *  read as unanswered, a false Not met). */
 export function valueHolder(known: Known, fact: string, person: string): string {
-  const present = (v: unknown) => v !== undefined && v !== null && v !== "";
   if (present(known.get(factKey(person, fact))?.value)) return person;
   if (present(known.get(factKey(FILING, fact))?.value)) return FILING;
   return isFilingFact(fact) ? FILING : person;
