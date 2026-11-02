@@ -220,7 +220,7 @@ function Toaster() {
     <div className="pointer-events-none fixed inset-x-4 bottom-4 z-[100] flex flex-col gap-2 sm:left-auto sm:w-96" aria-live="polite">
       {t.list.map((x) => (
         <div key={x.id} className={cn("pointer-events-auto flex items-start gap-3 rounded-lg border border-border border-l-4 bg-surface-raised px-4 py-3 text-sm shadow-lg", x.tone === "ok" ? "border-l-ok" : x.tone === "danger" ? "border-l-danger" : "border-l-primary")}>
-          <p className="flex-1">{x.text}</p><button className="text-text-muted" aria-label="Dismiss" onClick={() => t.drop(x.id)}><X className="size-4" /></button>
+          <p className="min-w-0 flex-1 [overflow-wrap:anywhere]">{x.text}</p><button className="shrink-0 text-text-muted" aria-label="Dismiss" onClick={() => t.drop(x.id)}><X className="size-4" /></button>
         </div>
       ))}
     </div>

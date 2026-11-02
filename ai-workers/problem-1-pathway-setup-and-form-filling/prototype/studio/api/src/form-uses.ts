@@ -5,45 +5,27 @@ import type { Use, UsesView } from "../../contracts/structure.ts";
 import type { Prisma } from "@prisma/client";
 import { manifest } from "../../engine/import.ts";
 import { ACTORS, type Db } from "./core.ts";
+import { combinationTrails, formLines, formReleases } from "./where-used.ts";
 
 const problem = (status: number, title: string, detail: string) => new HttpException({ type: `https://expatready.local/problems/${title.toLowerCase().replace(/[^a-z]+/g, "-")}`, title, status, detail }, status);
 const OPEN = ["WAITING", "RETURNED", "APPROVED"];
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
 
-/** Where a library form is used (P-116, L3): combinations whose draft lists it, releases that carry it, held files. */
-/** Each combination's place as a trail, Program › Category › Sub-category (the Pathway is left out: the page is per type). */
-export async function combinationTrails(db: Db, workspaceId: string): Promise<Map<string, string>> {
-  const [nodes, combos] = await Promise.all([
-    db.programDef.findMany({ where: { workspaceId }, select: { programNodeKey: true, parentNodeKey: true, label: true, nodeKind: true } }),
-    db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true, program: { select: { programNodeKey: true } } } }),
-  ]);
-  const by = new Map(nodes.map((n) => [n.programNodeKey, n]));
-  const out = new Map<string, string>();
-  for (const c of combos) {
-    const trail: string[] = [];
-    for (let n = by.get(c.program.programNodeKey); n; n = n.parentNodeKey ? by.get(n.parentNodeKey) : undefined) if (n.nodeKind !== "PATHWAY") trail.unshift(n.label);
-    out.set(c.id, trail.length ? trail.join(" › ") : c.label);
-  }
-  return out;
-}
+/** Each combination's place as its full trail in words (P-104, QA-150): in the one where-used service (SH2, api/src/where-used.ts). */
+export { combinationTrails };
 
 /** Where a library form is used (P-116), and what may be done with it now. `except` leaves one change out of the open-change
  *  check: the returned change that is being sent again (Lead, PR #67 review). */
 export async function formUses(db: Db, workspaceId: string, code: string, except?: string): Promise<UsesView> {
   const def = await db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: code } } });
   if (!def) throw problem(404, "Not in the library", `${code} is not in the library.`);
-  const lines = await db.combinationForm.findMany({ where: { workspaceId, lineageKey: code }, orderBy: { version: "desc" }, include: { combination: { select: { id: true, label: true } } } });
-  const newest = new Map<string, (typeof lines)[number]>();
-  for (const l of lines) if (!newest.has(l.combinationId)) newest.set(l.combinationId, l);
-  const released = await db.$queryRaw<{ combination_id: string; version: number; latest: number; label: string }[]>`
-    SELECT r.combination_id, r.version, (SELECT max(version) FROM config_release x WHERE x.combination_id = r.combination_id) AS latest, c.label
-    FROM config_release r JOIN combination c ON c.id = r.combination_id
-    WHERE r.workspace_id = ${workspaceId}::uuid AND r.snapshot->'forms' @> jsonb_build_array(jsonb_build_object('form_number', ${code}::text))`;
+  // SH2 (P-258): the lines and releases come from the one where-used service.
+  const [newest, released] = await Promise.all([formLines(db, workspaceId, code), formReleases(db, workspaceId, code)]);
   const uses: Use[] = [];
   const trails = await combinationTrails(db, workspaceId);
   for (const [cid, l] of newest) if (l.status !== "RETIRED") uses.push({ kind: "combination", label: trails.get(cid) ?? l.combination.label, href: `/c/${cid}/forms`, blocks: true, why: l.status === "DRAFT" ? "Its current draft lists this form: remove it there first" : "It files this form" });
-  for (const r of released.filter((x) => Number(x.version) === Number(x.latest))) uses.push({ kind: "release", label: `${trails.get(r.combination_id) ?? r.label} · release ${r.version}`, href: `/c/${r.combination_id}/review`, blocks: true, why: "Its latest release files this form: a later release must drop it first" });
-  for (const r of released.filter((x) => Number(x.version) !== Number(x.latest))) uses.push({ kind: "release", label: `${trails.get(r.combination_id) ?? r.label} · release ${r.version}`, href: `/c/${r.combination_id}/review`, blocks: false, why: "An earlier release keeps this form for its cases" });
+  for (const r of released.filter((x) => x.latest)) uses.push({ kind: "release", label: `${trails.get(r.combinationId) ?? r.label} · release ${r.version}`, href: `/c/${r.combinationId}/review`, blocks: true, why: "Its latest release files this form: a later release must drop it first" });
+  for (const r of released.filter((x) => !x.latest)) uses.push({ kind: "release", label: `${trails.get(r.combinationId) ?? r.label} · release ${r.version}`, href: `/c/${r.combinationId}/review`, blocks: false, why: "An earlier release keeps this form for its cases" });
   // Review must 1: a combination that has one of its files attached as a source (its fields are read from it) uses it too.
   const editions = await db.formEdition.findMany({ where: { workspaceId, govFormDefId: def.id }, select: { sha256: true } });
   const shas = editions.map((e) => e.sha256).filter((x): x is string => !!x);

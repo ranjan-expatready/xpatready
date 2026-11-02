@@ -8,6 +8,7 @@ import { canonical } from "../../../contracts/rules.ts";
 import { gateFacts, type Gate, type SnapshotEligibility, type WhenNotMet } from "../eligibility-gates.ts";
 import { evalCondition, kkey, type Known } from "../render.ts";
 import type { Snapshot } from "../snapshot.ts";
+import { present, valueHolder } from "../resolver.ts";
 
 /** The founder's answer to C6.9 Q3 (P-229 (3), 2 Nov): one failed rule gives Not eligible even while other facts are
  *  missing, and the missing facts are listed too. Our addition to AG-03's AG-3-13 for the team (AG-3-13 gives Not
@@ -34,16 +35,8 @@ export type ProgramResult = {
  *  (kept for tracing only; out of date compares values, BR-13). */
 export type Input = { fact: string; about: string; value: unknown; answerId: string | null };
 
-const present = (v: unknown) => v !== undefined && v !== null && v !== "";
-/** Whose value a gate fact is, read as the rules read it (render.ts factsOf gives each person the case's facts too):
- *  the person's own answer, else the case's, whatever the fact's prefix. A fact asked once per case of the case subject
- *  (relationship.start_date, representative.*) is the case's (review M1 on fd26c492: it read as unanswered, a false Not
- *  met). Unanswered: a `case.*` fact is the case's, every other one the person's. */
-export function aboutOf(known: Known, fact: string, person: string): string {
-  if (present(known.get(kkey(person, fact))?.value)) return person;
-  if (present(known.get(kkey("case", fact))?.value)) return "case";
-  return fact.startsWith("case.") ? "case" : person;
-}
+/** Whose value a gate fact is: the resolver's R6b (contracts/resolver.ts; SH3 follow-up d1). */
+export const aboutOf = valueHolder;
 const valueOf = (known: Known, fact: string, person: string) => known.get(kkey(aboutOf(known, fact, person), fact))?.value;
 
 /** BR-9: every `exists f` leaf on a fact the person has not answered becomes a leaf that `evaluate` reads as "cannot

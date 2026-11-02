@@ -12,6 +12,7 @@ export const TABS = [
   { key: "questionnaires", label: "Questionnaires" },
   { key: "documents", label: "Documents" },
   { key: "preview", label: "Preview" },
+  { key: "tests", label: "Tests" }, // G4 (forms lane, C5.7): answer-key tests
   { key: "review", label: "Review and release" },
 ] as const;
 export type TabKey = (typeof TABS)[number]["key"];
@@ -23,8 +24,25 @@ export const tabOf = (t: string | undefined, area?: string | null): TabKey =>
 
 /** IRCC's words as a person reads them (drift check 6). The checklist reader joined a line and the note under it with
  *  no break ("…, if applicableNote: Complete this form…"), so the note's label reads as a code glued to a word: it is
- *  shown as two sentences. The stored quote stays as read (the release fingerprint covers it). */
-export const irccWords = (q: string | null | undefined): string | null => (q && !ourWords(q) ? q.replace(/([a-z)])(Note|Notes|Important):\s*/g, "$1. $2: ") : null);
+ *  shown as two sentences. The stored quote stays as read (the release fingerprint covers it).
+ *  QA-107: the page reader also kept a link's screen-reader text ("Declaration (IMM 5646) (opens in a new tab) . Pages 1"):
+ *  that text is not IRCC's sentence, so it is dropped with the space it left before a full stop, comma or semicolon
+ *  (only there: review m3, "Version 1 .5" elsewhere is kept as read). */
+export const irccWords = (q: string | null | undefined): string | null => (q && !ourWords(q)
+  ? q.replace(/\s*\(opens in a new (?:tab|window)\)(?:\s+(?=[.,;]))?/gi, "").replace(/([a-z)])(Note|Notes|Important):\s*/g, "$1. $2: ")
+  : null);
+/** QA-105: the dialog's description says what the chosen way does (Rules only uses no AI and attaches nothing). */
+export const FIND_DESCRIPTION: Record<"replay" | "rules" | "live", string> = {
+  replay: "The answers AI gave before for these exact canada.ca pages are replayed at US$0; the forms both rounds agreed on are attached.",
+  rules: "Reads the application's canada.ca pages and lists every form number printed on them for you to add by hand. No AI, nothing is attached, US$0.",
+  live: "AI reads the application's canada.ca pages and its guide, names each form with IRCC's words, and attaches the ones both rounds agree on.",
+};
+/** QA-107: "today at 11:15 p.m." already ends a sentence; never a second full stop. */
+export const endSentence = (t: string) => (/[.!?]$/.test(t) ? t : `${t}.`);
+
+/** QA-78: the channel choice says what Online means today in a person's words (P-113: the case officer types it into the
+ *  portal from the answer sheet), never the plan word "later wave". */
+export const ONLINE_OPTION = " (typed in by hand for now)";
 /** Lead check L11: the words the product itself writes on a line added by a person ("IMM 5257: added from the library"),
  *  which are never shown as IRCC's; said instead as how the line was added. */
 const OURS = /: (added from the library|reused from the library|uploaded for this combination)$/;
@@ -86,6 +104,10 @@ export type PeopleView = {
   submissions: { filings: string[]; splittable: boolean; words: string }[];
   /** In words: "3 filings in one submission". */
   gets: string;
+  /** C11.12 PR 3: what the editor needs to work out the preview and the warnings as the author edits (the same pure
+   *  functions as the server, engine/filing-modes.ts): the combination, whether its fees are worked out, and the
+   *  built-in filing mode a case falls back to per role (Sample). */
+  combinationKey: string; combinationLabel: string; feesKnown: boolean; defaults: Record<string, LineMode>;
 };
 /** C11.12 (concept §6): the read-only words of a line's filing mode. */
 export type FilingWords = { filingWords: string; ifNotTravelling: string | null; fees: string | null; tip: string | null };

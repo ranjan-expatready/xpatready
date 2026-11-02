@@ -9,6 +9,7 @@
 //     different parts is flagged as a near-duplicate for a person (never merged silently).
 import { canonical } from "../../contracts/rules.ts";
 import { normLabel } from "./twin.ts";
+import { nearWhy } from "./near.ts";
 import { checkedOutput, type FieldMapAnswer, type FieldMapEntry, type RunEnvelope } from "./ai-run.ts";
 
 export type InvField = { data_path?: string | null; caption?: string | null; section?: string | null; in_row?: string | null; [k: string]: unknown };
@@ -27,6 +28,17 @@ export type DraftPlan = { total: number; reused: Reused[]; leftover: number; par
 export const MAX_PART_FIELDS = 60;
 /** Output tokens a part may need: about 300 per form field (IMM 1295: 242 fields, 53–63 thousand), plus headroom. */
 export const partOutputTokens = (fields: number) => Math.min(64_000, 4_000 + 300 * fields);
+
+/** R-146 (2 Nov): a whole-form draft writes about 230 output tokens per form field (26 live runs), so a form of 240 fields
+ *  or more needs 55k+ of the 64k limit (IMM 1344's 233 fields used 58-64k; IMM 0008 and 5532 need about 72k). Those forms
+ *  get 128k (Opus 5.5's output limit; the runner streams) and a timeout for about 128k at ~140 tokens a second. Parts keep
+ *  partOutputTokens. Anything that is not an inventory with a list of fields counts 0 fields (break m5). */
+export const LARGE_FORM_FIELDS = 240;
+export function wholeFormOutput(inv: unknown): { fields: number; max_output_tokens: number; timeout_ms: number } {
+  const list = (inv as { fields?: unknown } | null)?.fields;
+  const fields = Array.isArray(list) ? list.filter((f) => typeof (f as InvField | null)?.data_path === "string" && (f as InvField).data_path).length : 0;
+  return fields >= LARGE_FORM_FIELDS ? { fields, max_output_tokens: 128_000, timeout_ms: 1_500_000 } : { fields, max_output_tokens: 64_000, timeout_ms: 900_000 };
+}
 
 /** The section group of a form field: the first two parts of its section ("Part1.CoSigner.CosignDetails" → "Part1.CoSigner"). */
 export const sectionOf = (f: InvField) => ((f.section ?? "").split(".").slice(0, 2).join(".") || String(f.data_path ?? "").split(".").slice(0, 2).join(".") || "form");
@@ -72,7 +84,6 @@ export function planDraft(inv: { fields: InvField[]; groups?: InvGroup[] }, prio
 }
 
 export type NearDuplicate = { a: string; b: string; parts: [number, number]; why: string };
-const words = (id: string) => id.split(".").slice(1).join("_").split("_").filter((w) => w && !["of", "the", "a", "an"].includes(w));
 const normMeaning = (m: string) => m.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
 
 /** One answer from the parts' answers (in part order) and the reused entries, with near-duplicate proposals flagged. A
@@ -86,12 +97,9 @@ export function mergeParts(answers: { part: number; answer: FieldMapAnswer; fiel
     if (had) { if (normMeaning(had.meaning) !== normMeaning(c.meaning) || had.value_type !== c.value_type) near.push({ a: c.id, b: c.id, parts: [had.part, part], why: `the same name with another meaning or type in part ${part} ("${c.meaning}", ${c.value_type})` }); continue; }
     for (const o of fields.values()) {
       if (o.part === part || o.id.split(".")[0] !== c.id.split(".")[0]) continue;
-      const wa = new Set(words(o.id)), wb = new Set(words(c.id));
-      const shared = [...wa].filter((w) => wb.has(w)).length;
-      const sameWords = shared === wa.size && shared === wb.size;
-      const contained = shared >= 2 && (shared === wa.size || shared === wb.size);
-      const sameMeaning = normMeaning(o.meaning) === normMeaning(c.meaning);
-      if (sameWords || contained || sameMeaning) near.push({ a: o.id, b: c.id, parts: [o.part, part], why: sameMeaning ? "the same meaning under two names" : sameWords ? "the same words in another order" : "one name holds the other" });
+      // QA-159: the one near-duplicate rule (engine/near.ts), shared with G-CORE's R3 and the proposal queue.
+      const why = nearWhy(o.id, c.id, { a: o.meaning, b: c.meaning });
+      if (why) near.push({ a: o.id, b: c.id, parts: [o.part, part], why });
     }
     fields.set(c.id, { ...c, part });
   }

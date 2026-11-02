@@ -1,0 +1,119 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-qd-conditions-temporary-residence-visitors-visitor-vis-477759eb-live-20261102t130144620z-2e8c49",
+  "idempotency_key": "077fc7a71c2a32b0081e24bdb1b13bd7b2a83ce29ec3c03370f0ea5061d855df",
+  "contract_version": "drafting-run/v0",
+  "kind": "qd_conditions",
+  "output_sha256": "7b26a67c3b5ff3cfae23cdcc322e9c9d2d20fc8dd7cb28c1b959ba38badfff04",
+  "inputs": {
+   "combination": "vv.single",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/guide-5256.text.inventory.json",
+     "sha256": "c6bc458e9381a53f71ae15015330eee769ce91a18cfc00a7daad1dad65ab16c2"
+    }
+   ],
+   "configuration_version": "c411-conditions"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "low",
+   "timeout_ms": 300000,
+   "max_attempts": 2,
+   "budget_usd": 1,
+   "max_output_tokens": 6000,
+   "prompt_version": "conditions.v1.md",
+   "prompt_sha256": "c49b2e54d7e9470fdf6efa55867b09ec1b13ab4a407a062090284a517d76e210"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 16950,
+    "output_tokens": 1433,
+    "duration_ms": 13328
+   }
+  ],
+  "usage": {
+   "input_tokens": 16950,
+   "output_tokens": 1433,
+   "cost_usd": 0.09646,
+   "duration_ms": 13328
+  },
+  "started_at": "2026-11-02T13:01:44.622Z",
+  "ended_at": "2026-11-02T13:01:58.157Z"
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": null,
+ "launch_evidence": {
+  "path_code_sha256": "8493879a2abda396e26a05f0e1f5c856f696934c2df5b33c2f75b51a79227b86",
+  "template_sha256": "d29d4935b2fe3c799bae091e007b2265f1fb48f8639548c9b3bedfa29c2b4bbb",
+  "schema_file": "conditions-output.v1.schema.json",
+  "schema_sha256": "b587a347134e2bb13369ff6b5c5d65914d8f19ff6abb86a1e6941175aee22bad",
+  "known": {
+   "combination_trail": "Temporary residence › Visitors › Visitor visa"
+  },
+  "screened": true,
+  "output_sha256": "7b26a67c3b5ff3cfae23cdcc322e9c9d2d20fc8dd7cb28c1b959ba38badfff04",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/Users/ranjansingh/Desktop/Xpatready/.claude/worktrees/paid-runner-48310b/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "7bd7b094b55c0adda940db1ead5d412bce188b7498b563c92d5f007f3b3a98bf",
+  "request_bytes": 56535,
+  "stub_calls": null,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/.tools/p2-ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 47.91782399999999
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/guide-5256.text.inventory.json",
+    "sha256": "c6bc458e9381a53f71ae15015330eee769ce91a18cfc00a7daad1dad65ab16c2",
+    "kind": "inventory"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "0196adec3c9bff4cbe711e5d1fb4f15e16f25cc8ac6f75d00bc11d4d39af0b58",
+   "digest_made_at": "2026-11-02T13:01:44.621Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "566bc4f34b4e88aa9c27c6ddab0358f3",
+   "ticket_expires_at": "2026-11-02T13:03:44.621Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"conditions\":[{\"role\":\"principal\",\"asks\":\"Other family names used\",\"depends_on\":\"Ever used other name\",\"when\":\"yes\",\"quote\":\"If you checked “Yes”, type any other family name that you have ever used.\",\"why\":\"Other family names are asked only if you have used another name.\"},{\"role\":\"principal\",\"asks\":\"Other given names used\",\"depends_on\":\"Ever used other name\",\"when\":\"yes\",\"quote\":\"If you checked “Yes”, type any other given name (first, second, or more) that you have ever used.\",\"why\":\"Other given names are asked only if you have used another name.\"},{\"role\":\"principal\",\"asks\":\"Other country of residence details\",\"depends_on\":\"Lived elsewhere past five years\",\"when\":\"yes\",\"quote\":\"If you checked “Yes”, choose the correct information:\",\"why\":\"Details of other countries are asked only if you lived elsewhere for more than six months in the past five years.\"},{\"role\":\"principal\",\"asks\":\"Country applying from details\",\"depends_on\":\"Applying from residence country\",\"when\":\"no\",\"quote\":\"If you checked “No”, choose the correct information:\",\"why\":\"Details of the country you apply from are asked only if it is not where you live.\"},{\"role\":\"principal\",\"asks\":\"Other immigration status description\",\"depends_on\":\"Immigration status\",\"when\":\"other\",\"quote\":\"Other: You must fill out this section if you chose “Other” as a status.\",\"why\":\"A description is needed only when your status is Other.\"},{\"role\":\"principal\",\"asks\":\"Previous spouse or partner details\",\"depends_on\":\"Previously married or common-law\",\"when\":\"yes\",\"quote\":\"Check the box to tell us if you have ever been married or in a common-law relationship. If you checked “Yes”, enter the following information:\",\"why\":\"Former spouse or partner details are asked only if you had such a relationship before.\"},{\"role\":\"principal\",\"asks\":\"Residential address\",\"depends_on\":\"Residence same as mailing\",\"when\":\"no\",\"quote\":\"If “No”, type the following information:\",\"why\":\"A separate home address is asked only if it differs from your mailing address.\"},{\"role\":\"principal\",\"asks\":\"Details of visit purpose\",\"depends_on\":\"Purpose of visit\",\"when\":\"other\",\"quote\":\"Note: If you selected “other” in question 1a), provide details in 1b)\",\"why\":\"Details are needed only when the purpose of visit is Other.\"},{\"role\":\"principal\",\"asks\":\"Highest post-secondary education details\",\"depends_on\":\"Any post-secondary education\",\"when\":\"yes\",\"quote\":\"If you checked “Yes”, give us full details of your highest level of post-secondary education:\",\"why\":\"Education details are asked only if you have post-secondary education.\"},{\"role\":\"principal\",\"asks\":\"Military service dates and countries\",\"depends_on\":\"Served in military or police\",\"when\":\"yes\",\"quote\":\"If you answered “Yes” to question 4a), please provide your dates of service and the countries or territories where you served.\",\"why\":\"Service details are asked only if you served.\"},{\"role\":\"principal\",\"asks\":\"Common-law union declaration\",\"depends_on\":\"Current marital status\",\"when\":\"common-law\",\"quote\":\"If you are in a common-law union, you must also request and fill out the Statutory Declaration of Common-law Union [IMM 5409] form and include it with your application. If you are married, you must send a photocopy of your marriage licence or certificate with your application.\",\"why\":\"The declaration form is needed only for common-law partners.\"}],\"unresolved\":[{\"passage\":\"If you checked “Yes” to any of the above questions, provide details and the name of the family member, if applicable.\",\"reason\":\"Two deciding questions (tuberculosis, and physical or mental disorder) decide the details.\"},{\"passage\":\"If you checked “Yes” to one of the above questions, provide details.\",\"reason\":\"Three deciding questions (overstay or unauthorized work/study, refusals, previous applications) decide the details.\"},{\"passage\":\"Enter the date (year, month and day) you were married or you entered into your current common-law relationship.\",\"reason\":\"The guide does not state the condition explicitly; it implies two deciding answers (married or common-law).\"},{\"passage\":\"Check “Yes” or “No” to tell us if you have a national identity document.\",\"reason\":\"The follow-up document questions are not explicitly stated as conditional on yes.\"},{\"passage\":\"Check “Yes” or “No” to tell us if you are a lawful Permanent Resident of the United States with a valid alien registration card (green card).\",\"reason\":\"The follow-up green card questions are not explicitly stated as conditional on yes.\"}]}"
+}

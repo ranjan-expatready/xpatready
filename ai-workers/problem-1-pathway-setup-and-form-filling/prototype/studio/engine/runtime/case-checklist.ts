@@ -11,6 +11,8 @@ import { ageInYears } from "../../../contracts/rules.ts";
 import { MINOR } from "../../contracts/runtime.ts";
 import { lineCondition, lineHolders, type Known, type Person } from "../render.ts";
 import type { Snapshot } from "../snapshot.ts";
+import { isFilingFact } from "../resolver.ts";
+import { FILING } from "../../contracts/resolver.ts";
 import type { Participant } from "./case.ts";
 import { FEE_TABLE } from "./filings.ts";
 
@@ -121,7 +123,7 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
     const out = new Map<string, Missing>();
     for (const k of keys) {
       const d = derived.find((x) => x.id === k);
-      const has = (f: string) => known.has(`${f.startsWith("case.") ? "case" : about}|${f}`);
+      const has = (f: string) => known.has(`${isFilingFact(f) ? FILING : about}|${f}`); // SH3 R5 (id rule)
       const all = d ? [...(d.inputs ?? []), ...(d.reference ? [d.reference] : [])] : [k];
       const open = all.filter((f) => !has(f));
       for (const f of open.length ? open : all) out.set(f, { key: f, question: words(f), answered: !open.length });

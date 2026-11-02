@@ -111,7 +111,7 @@ ok("fail (qa part A): more than 16 union-type properties are refused", lintSchem
 
 // --- QA-85 (qa part B): each job kind the Studio launches has the stub answer its stub pass reads (p2/stubs/<kind>.json)
 const STUBS = join(PROMPTS, "..", "stubs");
-const kinds = ["find_guide", "find_forms", "who_can_be", "field_map"];
+const kinds = ["find_guide", "find_forms", "who_can_be", "field_map", "pqr_picks", "qd_conditions"];
 const missing = kinds.filter((k) => { try { JSON.parse(readFileSync(join(STUBS, `${k}.json`), "utf8")); return false; } catch { return true; } });
 ok("QA-85 pass: every launched kind's stub answer exists and is JSON (who_can_be included: before, its stub pass ended in a missing file)", missing.length === 0, missing);
 ok("QA-85 fail: a kind with no stub answer is found (the check would name it)", !kinds.concat("no_such_kind").every((k) => { try { readFileSync(join(STUBS, `${k}.json`)); return true; } catch { return false; } }));

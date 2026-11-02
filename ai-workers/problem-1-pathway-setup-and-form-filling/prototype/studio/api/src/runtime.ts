@@ -16,6 +16,7 @@ import { firmByKey, firmOfActor, STAND_IN } from "./firms.ts";
 import { aiLive } from "./sources.ts";
 import { openingTeam, representativeAnswers, type Member } from "../../engine/runtime/team.ts";
 import { employerLinkOffer } from "../../engine/runtime/employer.ts";
+import { Programs } from "./programs.ts";
 
 type H = string | undefined;
 function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
@@ -38,7 +39,7 @@ export type Reached = Awaited<ReturnType<Runtime["reach"]>>;
 
 @Injectable()
 export class Runtime {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Programs) private readonly programs: Programs) {}
 
   /** The case, if this person may reach it: the officer any case of the workspace, a client only their own (others are
    *  "not found", as the team's cross-tenant rule). Configuration people hold neither duty. The pin must still match
@@ -85,6 +86,10 @@ export class Runtime {
     if (combination!.retiredAt) fail(`"${combination!.label}" was retired by a release: new cases are not opened on it. Cases already open keep their release.`, HttpStatus.CONFLICT);
     const release = await this.db.configRelease.findFirst({ where: { combinationId: b.combinationId }, orderBy: { version: "desc" } });
     if (!release) fail(`"${combination!.label}" has no released version yet: a case opens only on a released configuration.`, HttpStatus.CONFLICT);
+    // S4 (SA-1B-90): a case opens only on a startable release. The case officer reads a plain sentence (review M2 on
+    // ea7f28b2: no field paths or keys, no author's step); the catalogue's own lines go in `missing` for the authors.
+    const missing = await this.programs.startableMissing(b.combinationId, release!);
+    if (missing.length) throw new HttpException({ type: "https://expatready.local/problems/not-startable", title: "Not ready for cases", status: 409, detail: `"${combination!.label}" is not ready for new cases: ${missing.length === 1 ? "1 item" : `${missing.length} items`} to fix in Immigration programs, by the people who set it up. Cases already open are not affected.`, missing: missing.map((m) => ({ code: m.code, text: m.text, step: m.step })) }, HttpStatus.CONFLICT);
     let client: Actor | null = null;
     try { client = actorOf(b.clientActor); } catch { /* reported below as a field error */ }
     if (!client || !(client.duties as readonly string[]).includes("answer")) fieldError("clientActor", "Choose a client login (the client who answers the questionnaire).");
@@ -154,8 +159,12 @@ export class Runtime {
   async addPerson(actor: Actor, caseId: string, body: unknown) {
     const c = await this.reach(actor, caseId, "officer");
     const b = parse(NewPerson, body);
-    const limits = (this.snapshotOf(c).combination.participants ?? []) as { role: string; max?: number; label?: string }[];
+    const limits = (this.snapshotOf(c).combination.participants ?? []) as { role: string; max?: number; label?: string; filingMode?: string }[];
     const limit = limits.find((p) => p.role === b.role);
+    // C11.12 BR-6: a role released as Declared only starts as not travelling when the request does not say.
+    if (limit?.filingMode === "declared_only" && (body as { applies?: unknown } | null)?.applies === undefined) b.applies = false;
+    // Break M2: a co-filing role (the sponsor) is never a travelling applicant; its sponsorship goes with the principal's.
+    if (limit?.filingMode === "co_files") b.applies = false;
     // S5 (M3): any role the pinned release lists, within its maximum; anything else is refused (P-119).
     // QA-135: the role in the release's own words, never its internal name; the application itself is not a person.
     // Review m3: the examples are the roles this release really lets a person add (never a fixed list).
@@ -199,6 +208,9 @@ export class Runtime {
     const b = parse(UpdatePerson, body);
     const p = c.participants.find((x) => x.subjectId === subjectId && x.role !== "case" && x.role !== "principal");
     if (!p) fail("Only a spouse, partner or child on this case can be marked travelling or not.", HttpStatus.NOT_FOUND);
+    // C11.12 BR-6: a co-filing role (the sponsor) is not travelling or not: its application always goes with the principal's.
+    const line = ((this.snapshotOf(c).combination.participants ?? []) as { role: string; filingMode?: string; label?: string }[]).find((x) => x.role === p!.role);
+    if (line?.filingMode === "co_files") fail(`The ${(line.label ?? "sponsor").toLowerCase()}'s application is always sent with the principal's.`, HttpStatus.UNPROCESSABLE_ENTITY);
     await this.db.caseParticipant.update({ where: { id: p!.id }, data: { applies: b.applies } });
     await this.audit.log(c.workspaceId, actor.id, "changed", "person", caseId, `${actor.name} marked a ${p!.role.replace(/_/g, " ")} on case ${short(caseId)} as ${b.applies ? "travelling" : "not travelling"}`);
     return { subject_id: subjectId, applies: b.applies };
@@ -382,12 +394,18 @@ export class Runtime {
     if (!fields.size) fail("No such section in this case's release.", HttpStatus.NOT_FOUND);
     const seen = new Set(b.seen);
     const at = new Date();
+    // QA-164 (golden journey 1, step 4): a confirm covers the questions the officer's view lists for this person and
+    // section. A fact the view leaves out (a worked-out "has any children" once a child is on the case, C7.7 and D4) can
+    // never be seen on screen, so its stored answer is neither asked as seen nor confirmed: it never blocks the section.
+    const { answers: now, rows: nowRows, groups: nowGroups } = await this.state(c);
+    const listed = new Set(caseView(s, this.peopleOf(c), now, nowRows, "agent", at, nowGroups).sections
+      .filter((x) => x.subjectId === b.subjectId && x.section === section).flatMap((x) => x.questions.map((q) => q.fact)));
     const confirmed = await this.db.$transaction(async (tx) => {
       // A removed row's answers stay stored (history) but are no longer read (PR 7 review D1): only answers outside a
       // row or in a live row are current; a seen id of a removed row's answer is not "changed".
       const stored = await tx.clientCanonicalAnswer.findMany({ where: { subjectId: b.subjectId, supersededById: null, canonicalFieldKey: { in: [...fields] } } });
       const live = new Set((await tx.clientFactRecord.findMany({ where: { subjectId: b.subjectId, supersededById: null, tombstone: false }, select: { rowKey: true } })).map((r) => r.rowKey));
-      const current = stored.filter((a) => a.rowKey === null || live.has(a.rowKey));
+      const current = stored.filter((a) => (a.rowKey === null || live.has(a.rowKey)) && listed.has(a.canonicalFieldKey));
       // The section's "none apply", when it is a repeating group (Lead, break M3), is confirmed with its answers.
       // With entries, the entries answer the group: its earlier "entries apply" is neither shown nor confirmed (review m6).
       const entries = await tx.clientFactRecord.count({ where: { subjectId: b.subjectId, groupKey: section, supersededById: null, tombstone: false } });

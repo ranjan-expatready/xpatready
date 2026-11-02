@@ -9,8 +9,8 @@ import type { Use, UsesView } from "../../contracts/structure.ts";
 import { WHY } from "../../contracts/lifecycle.ts";
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { ACTORS, type Db } from "./core.ts";
-import { combinationTrails } from "./form-uses.ts";
-import { current, LibrarySources } from "./library-sources.ts";
+import { current } from "../../engine/where-used.ts";
+import { combinationTrails, documentTypeUseKinds, itemCombinations, itemReleases } from "./where-used.ts";
 
 export const ITEM_KINDS = ["field", "document_type", "section"] as const;
 export type ItemKind = (typeof ITEM_KINDS)[number];
@@ -50,33 +50,29 @@ export async function itemUses(db: Db, workspaceId: string, kind: ItemKind, key:
   const st = stateOf(versions);
   // Break round 2 (Major 1): a merged field only redirects (F1, concept M4): it is never retired, restored or deleted.
   const merged = kind === "field" ? (versions as { mergedIntoKey?: string | null }[]).find((r) => r.mergedIntoKey)?.mergedIntoKey ?? null : null;
-  // Only its database is read here (usedInIds needs no workspace service or audit).
-  const lib = new LibrarySources(db, undefined as never, undefined as never);
+  // SH2 (P-258): the combinations using it come from the one where-used service.
   const [ids, trails, combos] = await Promise.all([
-    lib.usedInIds(kind, workspaceId).then(async (m) => {
-      const s = new Set(m.get(key) ?? []);
-      // Break M4: a document type is also used as another line's alternative, and as the document a fact is read from.
-      if (kind === "document_type") {
-        const [reqs, facts] = await Promise.all([
-          db.documentRequirement.findMany({ where: { workspaceId }, select: { combinationId: true, lineageKey: true, version: true, status: true, alternatives: true } }),
-          db.factSource.findMany({ where: { workspaceId }, select: { combinationId: true, lineageKey: true, version: true, status: true, documentTypeKey: true } }),
-        ]);
-        for (const r of current(reqs, (r) => `${r.combinationId}|${r.lineageKey}`)) if (Array.isArray(r.alternatives) && (r.alternatives as unknown[]).includes(key)) s.add(r.combinationId);
-        for (const f of current(facts, (f) => `${f.combinationId}|${f.lineageKey}`)) if (f.documentTypeKey === key) s.add(f.combinationId);
-      }
-      return s;
-    }),
+    // SH2b: every use, a document type's alternatives and fact sources included, comes from the one service.
+    itemCombinations(db, workspaceId, kind).then((m) => new Set(m.get(key) ?? [])),
     combinationTrails(db, workspaceId),
     db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true, retiredAt: true } }),
   ]);
   const combo = new Map(combos.map((c) => [c.id, c]));
+  // SH2b review m4: say how a combination uses a document type (a line, another line's alternative, the document a fact
+  // is read from), so the person knows what to change there.
+  const how = kind === "document_type" ? await documentTypeUseKinds(db, workspaceId, key) : new Map<string, Set<string>>();
+  const docWhy = (id: string) => {
+    const k = how.get(id) ?? new Set(["line"]);
+    const words = [k.has("line") && "its document checklist lists it", k.has("alternative") && "a checklist line takes it as an alternative", k.has("fact") && "a fact is read from it"].filter(Boolean) as string[];
+    return `${words.join("; ").replace(/^./, (c) => c.toUpperCase())}: change that there first`;
+  };
   const uses: Use[] = [];
   for (const id of [...ids].sort((a, b) => (trails.get(a) ?? "").localeCompare(trails.get(b) ?? ""))) {
     const c = combo.get(id); if (!c) continue;
     const label = trails.get(id) ?? c.label;
     // Break M3: a retired combination's draft still names it, so it blocks a delete (never a retire: it keeps it).
     uses.push(c.retiredAt ? { kind: "combination", label, href: `/c/${id}`, blocks: true, retireOk: true, why: "Combination retired: it keeps it, so it can be retired, not deleted" }
-      : { kind: "combination", label, href: kind === "document_type" ? `/c/${id}/documents` : `/c/${id}`, blocks: true, why: kind === "document_type" ? "Its document checklist lists it: remove the line there first" : kind === "section" ? "Its questionnaire uses it: remove it there first" : "Its setup reads it: remove it there first" });
+      : { kind: "combination", label, href: kind === "document_type" ? `/c/${id}/documents` : `/c/${id}`, blocks: true, why: kind === "document_type" ? docWhy(id) : kind === "section" ? "Its questionnaire uses it: remove it there first" : "Its setup reads it: remove it there first" });
   }
   // A field read by a form field of a library form no combination uses yet: it blocks a delete, never a retire.
   if (kind === "field") {
@@ -103,10 +99,8 @@ export async function itemUses(db: Db, workspaceId: string, kind: ItemKind, key:
     if (qs.length) uses.push({ kind: "child", label: `${qs.length} question${qs.length === 1 ? "" : "s"} placed in it`, href: "/library/fields", blocks: true, retireOk: true, why: "Questions are placed in it: it can be retired, not deleted" });
   }
   // Releases keep it, never changed (L2): listed, never blocking.
-  const path = kind === "field" ? "canonical_fields" : kind === "section" ? "sections" : "document_types", prop = kind === "document_type" ? "key" : "id";
-  const released = await db.$queryRaw<{ combination_id: string; version: number }[]>`
-    SELECT r.combination_id, r.version FROM config_release r WHERE r.workspace_id = ${workspaceId}::uuid AND r.snapshot->${path} @> jsonb_build_array(jsonb_build_object(${prop}::text, ${key}::text)) ORDER BY r.version DESC`;
-  const newest = new Map<string, number>(); for (const r of released) if (!newest.has(r.combination_id)) newest.set(r.combination_id, Number(r.version));
+  const released = await itemReleases(db, workspaceId, kind, key);
+  const newest = new Map<string, number>(); for (const r of released) if (!newest.has(r.combinationId)) newest.set(r.combinationId, r.version);
   for (const [cid, v] of newest) uses.push({ kind: "release", label: `${trails.get(cid) ?? combo.get(cid)?.label ?? "A combination"} · release ${v}`, href: `/c/${cid}/review`, blocks: false, why: "Kept by its releases and their open cases (never changed)" });
   // Break round 2 (Major 3): a waiting change of who fills its question is an open change of the field too.
   // Round 3 Major 4: the author's own new item still waiting (its ADD, by them) is part of their own draft, not a block.

@@ -44,7 +44,15 @@ export type RoundOut<T> = { ok: true; output: T; costUsd: number; from: "live" |
  *  (`edition:<code>:<edition>`, engine/rounds.ts editionContextKey). `trail` is the plain place name the job carries. */
 export type RoundContext = { trail: string; contextKey: string; inputs: { file: string; sha256: string }[]; mode: "live" | "replay" | "rules"; wanted: () => Promise<boolean>; batchId?: string;
   /** P-179: the person's Continue this run was started with; passed to each live call (the ledger checks it). */
-  override?: { id: string; run_key: string } };
+  override?: { id: string; run_key: string };
+  /** C4.7 break B1 (2 Nov): replay only a saved run of this job stem (pairOf), so a draft and its checker round come from
+   *  the same live run, never two runs mixed. Unset: the newest usable run, as before. */
+  replayPair?: string };
+
+/** The job stem a saved run file shares with the other round of the same live run: the file name without its round base
+ *  ("<jobBase>-" or "<jobBase>-check-") and without its "-live-<time>-<suffix>.json" tail. */
+export const pairOf = (step: Pick<AiStep, "jobBase">, isCheck: boolean, file: string) =>
+  file.replace(/^.*\//, "").replace(new RegExp(`^${step.jobBase}-${isCheck ? "check-" : ""}`), "").replace(/-live-\d{8}t\d{9}z-[a-z0-9]+\.json$/, "");
 
 /** Lead 29 Oct (G4): may a form's run number `attempt` be retried? A live form has one budget of paid attempts across its
  *  runs (p2/policy.ts), each run counted at the most it could use; a stub run costs nothing and is never counted. */
@@ -69,9 +77,25 @@ export function sizedBudgetUsd(step: Pick<AiStep, "max_output_tokens" | "budget_
 /** A round's worst case as the ledger reserves it: inputs bounded by characters, both attempts, never above the run cap. */
 export const worstRoundUsd = (step: AiStep, inputChars: number) => Math.min(RUN_CAP_USD, costUsd(MODEL, inputTokenBound("x".repeat(inputChars)), step.max_output_tokens) * 2);
 
+/** C4.11 review m1: the most one round can reserve, as the launcher's job carries it (sizedBudgetUsd over the whole request
+ *  in bytes, both attempts); never below worstRoundUsd. What a plan states as its worst case. */
+export const roundBudgetUsd = (step: AiStep, isCheck: boolean, inputs: { file: string }[], inputChars: number) =>
+  Math.max(worstRoundUsd(step, inputChars), sizedBudgetUsd(step, requestBytesOf(isCheck ? step.check : step.template, inputs)));
+
 /** The bytes a round sends: its prompt and its input files (paths are the solution's), plus room for the schema and wrapper. */
 const requestBytesOf = (template: string, inputs: { file: string }[]) =>
   inputs.reduce((n, i) => { try { return n + statSync(join(SOLUTION, i.file)).size; } catch { return n; } }, 0) + (() => { try { return statSync(join(PROMPTS, template)).size; } catch { return 0; } })() + 8_000;
+
+/** The launcher job of one live round, exactly as `round` writes it (PA: the paid runner's committed job files are made
+ *  with this, so a result recorded on the Mac through p2/launch.ts is the run this round's replay finds). */
+export function roundJob(step: AiStep, isCheck: boolean, ctx: Pick<RoundContext, "trail" | "contextKey" | "inputs" | "batchId">) {
+  const template = isCheck ? step.check : step.template;
+  // The launcher admits one known fact (p2/launch.ts knownOk): a combination's trail, or a printed form edition.
+  const edition = editionOfContextKey(ctx.contextKey);
+  return { job_id: jobIdFor(step.jobBase, isCheck, ctx.trail, ctx.batchId), kind: step.kind, combination: ctx.contextKey, configuration_version: step.configurationVersion, template, output_schema: step.schema, inputs: ctx.inputs,
+    settings: { provider_route: ROUTE, model: MODEL, effort: step.effort, timeout_ms: step.timeout_ms ?? 300_000, max_attempts: MAX_ATTEMPTS, budget_usd: sizedBudgetUsd(step, requestBytesOf(template, ctx.inputs)), max_output_tokens: step.max_output_tokens },
+    known: edition ? { form_edition: `${edition.code} (${edition.edition})` } : { combination_trail: ctx.trail } };
+}
 
 const readRun = (f: string): SavedRun | null => { try { return { ...JSON.parse(readFileSync(join(RUNS, f), "utf8")), file: f }; } catch { return null; } };
 
@@ -103,7 +127,7 @@ export class StepRunner {
       const mine = replayPattern(step.jobBase, isCheck);
       // The current prompt's answer first; else one of an earlier version the step still replays (plan §4), labelled.
       const prompts = [{ sha256: want.templateSha256, label: "" }, ...(step.replays ?? []).map((v) => ({ sha256: sha(readFileSync(join(PROMPTS, isCheck ? v.check : v.template))), label: v.label }))];
-      const runs = (existsSync(RUNS) ? readdirSync(RUNS).filter((f) => mine.test(f)).sort(newestFirst) : []).map(readRun);
+      const runs = (existsSync(RUNS) ? readdirSync(RUNS).filter((f) => mine.test(f) && (ctx.replayPair === undefined || pairOf(step, isCheck, f) === ctx.replayPair)).sort(newestFirst) : []).map(readRun);
       const usable = (x: SavedRun | null, p: { sha256: string }): x is SavedRun => !!x && isSameSavedRun(x, { ...want, templateSha256: p.sha256 }) && (() => { try { return step.shapeOk(JSON.parse(String(x.raw_output))); } catch { return false; } })();
       let r: SavedRun | undefined, label = "";
       for (const p of prompts) { r = runs.find((x): x is SavedRun => usable(x, p)); if (r) { label = promptOfRun(r, prompts) ?? ""; break; } }
@@ -112,11 +136,7 @@ export class StepRunner {
       if (!step.shapeOk(saved)) return { ok: false, costUsd: 0, reason: step.words.badSaved };
       return { ok: true, output: saved, costUsd: 0, from: "replay", runFile: `prototype/p2/runs/${r.file}`, ...(label ? { earlier: label } : {}) };
     }
-    // The launcher admits one known fact (p2/launch.ts knownOk): a combination's trail, or a printed form edition.
-    const edition = editionOfContextKey(ctx.contextKey);
-    const job = { job_id: jobId, kind: step.kind, combination: ctx.contextKey, configuration_version: step.configurationVersion, template, output_schema: step.schema, inputs: ctx.inputs,
-      settings: { provider_route: ROUTE, model: MODEL, effort: step.effort, timeout_ms: step.timeout_ms ?? 300_000, max_attempts: MAX_ATTEMPTS, budget_usd: sizedBudgetUsd(step, requestBytesOf(template, ctx.inputs)), max_output_tokens: step.max_output_tokens },
-      known: edition ? { form_edition: `${edition.code} (${edition.edition})` } : { combination_trail: ctx.trail } };
+    const job = roundJob(step, isCheck, ctx);
     mkdirSync(JOBS, { recursive: true });
     writeFileSync(join(JOBS, `${jobId}.json`), JSON.stringify(job, null, 1) + "\n");
     if (ctx.batchId) this.liveJobs.set(ctx.batchId, jobId);

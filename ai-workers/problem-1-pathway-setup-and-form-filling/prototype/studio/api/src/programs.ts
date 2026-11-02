@@ -28,6 +28,7 @@ import { changeView, itemsOf, unapprovedAdds, unapprovedWhy } from "./library-ch
 import { openNodeKeys, startWhy } from "./lifecycle.ts";
 import { Sources } from "./sources.ts";
 import { Studio } from "./studio.ts";
+import { filingProblems } from "../../engine/filing-modes.ts";
 
 /** Parses a request body or query with its contract; a mismatch is a 400 Problem Details with field errors. */
 export function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
@@ -122,6 +123,8 @@ export class Programs {
     // Review step (addendum A3): the current draft passed review, read with the same gate the release uses.
     const gates = combos.length ? await this.studio.releaseGates(combos.map((c) => ({ combinationId: c.id, sha256: (snaps.get(c.id) as { sha256: string }).sha256 }))) : new Map();
     const library = lib.filter((f) => f.status !== "RETIRED").map((f) => ({ key: f.canonicalFieldKey, valueType: f.valueType }));
+    // C11.12 (review M1 of PR 3): the draft's "Filing for <role>" lines, as the release check reads them (studio problems()).
+    const personRoles = await this.studio.personRoles(workspaceId);
     const latest = new Map<string, (typeof releases)[number]>();
     for (const r of releases) if (!latest.has(r.combinationId)) latest.set(r.combinationId, r);
     const mapped = new Set(editions.filter((e) => e.maps.length).map((e) => e.sha256));
@@ -160,7 +163,8 @@ export class Programs {
       const rel = latest.get(c.id);
       const participants = c.participants as ParticipantLine[];
       const structure = await this.studio.structureProblems(c.id);
-      const draftProblems = [...structure, ...validate(snapshot, library, derivedOf(snapshot))];
+      // C11.12: a released snapshot is never re-judged for filing modes (pinned releases are kept, BR-7); the draft is.
+      const draftProblems = [...structure, ...filingProblems((snapshot.combination?.participants ?? []) as { role: string; label?: string; max: number; filingMode?: unknown }[], personRoles), ...validate(snapshot, library, derivedOf(snapshot))];
       // Status is about what firms can use: the released snapshot when there is one; the draft only explains In setup.
       const relSnap = rel?.snapshot as unknown as Snapshot | undefined;
       const relProblems = relSnap ? [...structure, ...validate(relSnap, library, derivedOf(relSnap))] : draftProblems;
@@ -233,6 +237,20 @@ export class Programs {
   async leafStates(actor?: Actor) {
     const { rows } = await this.rows();
     return new Map(rows.map((r) => [r.leaf.nodeKey, { combinationId: r.leaf.combinationId, live: r.leaf.live, needs: actor ? !r.leaf.retired && !!forViewer(r.setup, actor).needsYou : r.leaf.needsYou, retired: r.leaf.retired, status: r.leaf.status, statusText: r.leaf.statusText }]));
+  }
+
+  /** S4 (SA-1B-90): what keeps a combination's newest release from being startable, read from the release alone: its
+   *  snapshot through `missingItems`, every rule against the live library (`validate`), and the row's place in the
+   *  structure. The draft's undecided form fields (`structureProblems`' K1 lines) are left out on purpose: they are work
+   *  in the next draft, which the release gate checks; they never stop cases on a release that has not changed (review
+   *  M1 on ea7f28b2). Empty = startable. The lines are the catalogue's words, for authors. */
+  async startableMissing(combinationId: string, release: { snapshot: unknown }) {
+    const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId }, select: { workspaceId: true, participants: true } });
+    const lib = await this.db.canonicalField.findMany({ where: { workspaceId: c.workspaceId }, select: { canonicalFieldKey: true, valueType: true, status: true } });
+    const library = lib.filter((f) => f.status !== "RETIRED").map((f) => ({ key: f.canonicalFieldKey, valueType: f.valueType }));
+    const relSnap = release.snapshot as unknown as Snapshot;
+    const rowLevel = (await this.studio.structureProblems(combinationId)).filter((p) => p.where === "Row");
+    return missingItems(relSnap, c.participants as ParticipantLine[], [...rowLevel, ...validate(relSnap, library, derivedOf(relSnap))]);
   }
 
   /** GET /catalogue: one request for the whole tree of one pathway, filtered and searched on the server. */

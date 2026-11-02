@@ -1,0 +1,220 @@
+# Review: SH3, the resolver contract (shared service, no screen; P-258)
+
+Reviewer role. I did not build this. 2 Nov 2026.
+* **Reviewed commit: 7a7c5139** on `claude/admiring-galileo-i2ece1` (`git diff origin/main...7a7c5139`). I read everything through git. Mutations ran only in a throwaway copy in the scratchpad, never in the working tree. No server, no port, US$0.
+* The branch has since moved to f8b0cbac, a merge of main (QA-82). It touches no SH3 file except render.ts, which gains a field-name helper, so render.ts lines from 64 on move down by 5. All file:line references below are at 7a7c5139.
+* Sources I checked against: the BACKLOG SH3 row, P-258, P-251, P-249, and SA-1B-130 and SA-1B-215 (`domain/requirements-2026-11-02/.../SA-01B-content-pack-configurator_v2.1_2026-10-27.md`).
+* **Journey test: does not apply** (no UI, so no journey to walk). Instead I scored the code and the tests out of 10 on the same ten criteria: **8/10** (table below). No separate journey-test report.
+
+**Verdict: Block.** The move itself is right: I found **no behaviour change**. The problem is the contract text. It says things the code does not do, and it leaves out rules that are still in the four places, without the follow-up list the row asks for. Both Majors are fixed by changing text only. No code has to change.
+
+## Runs
+* `check_sh3_resolver.ts` **48/48**, `check_line_holders.ts` **19/19**, `check_engine.ts` **43/43**, all from `prototype/` as instructed.
+* `tsc -p api/tsconfig.json`: no new errors. The test-file errors are the same as on main. `count-any.mjs --against origin/main`: **424, down from 427**.
+* **My own old-against-new check:** I loaded origin/main's functions next to the branch's and compared **15,062,933 calls with 0 differences**. Covered: peopleFor, subjectsFor (13 who values × 9 subject kinds), lineHolders, conditionSubjects, aboutOf (11 persons × 7 facts × 6 placements × 5 rows), formSigners (8 signedBy values), signsForOthers, factsOf, kkey, partnerOf/spouseOf, roleOf, rolesNamedBy, linesNamingRemoved, the merge chain (3,000 random graphs with loops) and, on `tests/fixtures/screen01-work-permit-release.json`, the whole output of factSources, checklist, signedScanLines, factSourceProblems, prequalification and render.
+* **Line by line:** every moved function matches main token for token. The only edits are the named constants (`ROLE.*`, `FILING`) and `partnerOf`, which replaces render's inline spouse switch and sources' `spouseOf`; both did the same thing. Each inline swap is the same expression: `isFilingFact(m)` with no placement is the old `startsWith("case.")` (render.ts:133, :151), `isFilingFact(p.fact, p)` is the old two-part test (:231), and `sourceKey` is the old template. `resolveKey` keeps 5 lookups and still answers the asked key. A side gain: sources.ts no longer imports render.ts, so that import cycle is gone.
+* **Mutations** in the copy, one rule removed at a time: **24 of 30 caught.** These survived all three suites: MERGE_HOPS 5→6, sponsor removed from WHO_ROLES, the render.ts call-site swaps, sources.ts `holder.spouse`, and the form-lines `resolveKey` wiring. See m2.
+
+## Issues
+**Major (fix before Approve)**
+1. **R1, R5 and SCOPE_RULES describe the filing wrongly.**
+   * R1 says "One case is one filing today". The code already makes several filings per case: `engine/filing-modes.ts:84-97` (`filingPlan`, ids `filing-${subject}`) and `engine/runtime/filings.ts` (C6.12).
+   * What is built as "filing" scope is really a once-per-case store: the subject `"case"`, read by every filing of that case. But `SCOPE_RULES.filing.lives` states SA-1B-130 rule 3 ("on that filing only; a later filing asks again") as if it were built.
+   * SA-1B-215 makes the unit "one subject on one filing". The `Resolver` interface has no filing argument, and `Subject.filing.id` can only be `"case"`. Yet C7.7, C8.1 and C8.2 work per filing.
+   * Fix (text only): say that a filing value is stored once per case today and that every filing on the case reads it. Mark `SCOPE_RULES` as the SA-1B-130 target. State that a filing id comes with the held P-251 "filing scopes" design and SH4 (pin per filing).
+2. **Rules still worked out in the four places: not moved, and not listed for a follow-up.** The row says "the four places call it, or the PR lists exactly what moves in a follow-up". There is no list.
+   * (a) R3 is true for **document lines only** (`lineCondition`). Other line types decide differently:
+     * forms decide their condition on the form's own person (`render.ts:93`, `:157`);
+     * rules take their holders from the condition's subject kind (`:194`);
+     * questions use the person the answer is about (`:211`);
+     * checks run for everyone with applies, so an applying representative or sponsor is included, unlike R2's each_applicant (`:249`);
+     * `applicants` at `:229` is a second copy of R2's each_applicant.
+     So "a line's condition" in R3 is wider than the code, and C7.7 will mix forms and documents.
+   * (b) The "a document supplies facts about whom" rule (holder, holder.spouse, parent_1/parent_2) stays in `sources.ts:47-52` and its role-level twin `other()` in `:267`. This is the rule the C6.5 document reader needs, and the contract does not have it. Also still local: `isAgentFact` (`:91`, the `organisation.` prefix), `WHO_OF_ROLE` (`:230`, the reverse of WHO_ROLES), and the `h === "case"` literals.
+   * (c) render's deciders call `isFilingFact` without the placement (`:133`, `:151`). So a fact placed once_per_case whose id does not start with `case.` is keyed on the person there. R5 says it is a filing fact.
+   * (d) The same rules are copied outside the four places. R5: `runtime/eligibility.ts:45` (it has its own `aboutOf`), `runtime/case-checklist.ts:124`, `api/src/runtime.ts:269` and `:310`, `engine/programs.ts:16`. `coverage.ts:32` has a `roleOf` that returns "the application". The `sourceKey` template appears at `runtime/preview.ts:69`, `runtime/case.ts:365`, `validate.ts:244`, `pqr-picks.ts:82` and `coverage.ts:43`.
+   * Fix (text only): add a "Not yet through the resolver (follow-up)" block to the `contracts/resolver.ts` header listing (a)–(d) with file:line. Narrow R3 to document lines, or state per line type what decides the condition.
+
+**Minor**
+* **m1. R9 wording does not match the code.** It says "followed at most MERGE_HOPS times; a chain longer than that answers the asked key". In fact a chain of exactly 5 redirects also answers the asked key: the code looks up 5 times and follows at most 4 redirects. The test name ("5 or more") is the accurate one. Reword R9 to match.
+* **m2. Some rules are not pinned by any test.**
+  * The tests build their chains from `MERGE_HOPS`, so changing 5 to 6 passes. Assert `MERGE_HOPS === 5`.
+  * The R10 test title names sponsor, representative and partner but asserts only couple_once and each_dependent_child. Removing sponsor passes. Add those three.
+  * The call-site swaps are checked only by source regex. Commit the old-against-new harness the build note cites ("2,559,123 inputs"), or a whole-output equality on the fixture snapshot.
+* **m3. `check_sh3_resolver.ts:37` proves nothing, and its claim is wrong.** It compares WHO_HOLDERS to a copy typed into the test. Its claim "one the studio accepts" is false: `api/src/studio.ts:44` WHO does not include `each_adult_18_plus`, which only release data and the runtime use (`case-checklist.ts:149`). Import WHO instead, and word that value accordingly.
+* **m4. R2 contradicts itself.** It says "never from its condition's subject", then "A subject kind given with it wins". Say that only rules pass a subject kind (`render.ts:194`) and that `lineHolders` never does.
+* **m5. The P-249 import check is narrow.** Its regex (`check_sh3_resolver.ts:109`) only matches single-line `import … from` lines; `export … from` and dynamic imports pass unseen. Widen it.
+
+## Questions asked
+1. **No behaviour change:** yes, by line-by-line reading and 15M calls compared.
+2. **Contract accurate and the right shape for M3:**
+   * R4, R6, R7, R8 and R10 are accurate.
+   * R1, R5 and SCOPE_RULES are wrong about filings (M1).
+   * R3 is too broad (M2a). R9 wording is off (m1).
+   * The shape fits C8.1 signers and C7.5 fact views. C6.5 lacks the "supplies about" rule (M2b). C7.7 and C8.2 lack a filing id (M1).
+3. **A passing and a failing case per rule:** yes, R1–R10 each have both. The gaps are in m2.
+4. **Still computed outside the resolver:** see M2.
+5. **Lift-ready:** yes.
+   * The engine resolver imports only the contract, and the contract imports nothing.
+   * No database or vendor call: R9 asks its store through a callback.
+   * No country value: the IMM numbers appear in tests only.
+   * Role keys are the library's person roles, and sponsor is marked Sample.
+
+## D1–D20 (engine-only item; D8–D14 and D17 have no screen to judge)
+D1 3/5: four scopes shaped, person and filing built, but filing misdescribed (M1) · D2 5/5: no stored data or keys change (sourceKey and factKey are identical) · D3 4/5: one copy of the rules plus re-exports, copies remain (M2) · D4 4/5: rules unchanged, R3 and R5 reach overstated · D5 5/5: pure, no new failure path, import cycle removed · D6 n/a · D7 n/a (no AI) · D8–D14 n/a · D15 5/5: no added queries (resolveKey still makes 5 lookups at most) · D16 4/5: 24 of 30 mutants caught, see m2 · D17 simulated only, n/a · D18 3/5: the contract cites SA-1B-130 but states its target as built · D19 n/a for a shared service · D20 simulated only, n/a.
+
+## Score of the code and tests (out of 10; the journey test does not apply)
+| Criterion, read for a shared service | Score | Evidence |
+|---|---|---|
+| Task completed | ½ | Contract, tests and callers are in; the follow-up list is missing (M2) |
+| Next step obvious for the M3 rows | ½ | C6.5, C7.7 and C8.2 cannot tell what is missing (M1, M2b) |
+| Plain words | ½ | Mostly clear; R2, R3 and R9 overstate or contradict (m1, m4, M2a) |
+| Feedback and state (test output) | 1 | Each check names its rule and its pass or fail case |
+| Correct data (no behaviour change) | 1 | 0 differences in 15,062,933 old-against-new calls |
+| Error recovery (edge cases) | 1 | Loops, missing people, null persons, negative counts all pinned |
+| Fit and portability (P-249) | 1 | Pure; the store comes in through a callback; imports only the contract |
+| Speed | 1 | No new queries or loops |
+| Code quality | 1 | Import cycle removed; 3 fewer `any`; old names kept as re-exports |
+| Trust and sources | ½ | SA-1B-130 target stated as built (M1) |
+| **Total** | **8/10** | A pass on the score, but two Majors are open |
+
+## What I could not check
+* Suites that need a server (`check_preview_sets`, `check_w115_slice1/2`, `check_c3_11_signed_scan`, `check_pqr`): the brief said no server. The builder's `run-suites --changed` result is theirs to relay.
+* `graph.mjs`: it always writes `qa/graph.json`, and I may write only this file. SH3 adds no page or route.
+* Only one release fixture snapshot exists for the whole-output comparison.
+
+**Verdict: Block.** To fix:
+* **Major M1:** correct the filing wording in R1, R5 and SCOPE_RULES in `contracts/resolver.ts`.
+* **Major M2:** add the follow-up list (a)–(d) and narrow R3.
+* **Minor m1–m5:** may follow, or ride along.
+
+## Round 2 (c00868d7)
+* **What I read:** `git diff 7a7c5139 c00868d7 -- …/studio`. Since round 1, the head adds three things:
+  * f8b0cbac, a merge of main. Its only SH3-file change is QA-82's field-name helper in render.ts; the moved functions are untouched.
+  * qa/built/SH3.md.
+  * c00868d7 itself, which changes only `contracts/resolver.ts` (comments) and `tests/check_sh3_resolver.ts`.
+  * engine/resolver.ts, sources.ts, people.ts, fact-sources.ts and form-lines.ts are byte-identical to 7a7c5139, so round 1's 15M-call result still holds.
+* **Runs:** `check_sh3_resolver` **54/54**, `check_line_holders` 19/19, `check_engine` 43/43. `tsc`: no new errors (the same four old test files only).
+* **M1, fixed.** R1, R5, `FILING` and `SCOPE_RULES` now say a filing value is stored once per case and that every filing on it reads it. `SCOPE_RULES` is marked as the SA-1B-130 target. "No filing id yet" points to P-251 and SH4. This matches `filing-modes.ts` and `runtime/filings.ts`.
+* **M2, fixed.**
+  * The "Not yet through the resolver" block (a)–(d) has every file:line I raised. I checked each one on the head and all are correct.
+  * It also adds the field-scope-by-prefix copies (`import.ts:41`, `proposals.ts:214`, `snapshot.ts:37`).
+  * R3 is narrowed to document lines, and R2 now says only rules pass a subject kind (m4).
+* **m1, fixed.** R9 now says "asked at most MERGE_HOPS times, at most MERGE_HOPS − 1 redirects".
+* **m3, fixed.** WHO is read from the studio.ts source, with its own fail case.
+* **m5, fixed.** The import check covers multi-line imports, re-exports, `import()` and `require`, and has a fail case.
+* **m2, mostly fixed.** I reran my 30 mutants plus one new one on the head: **30 of 31 caught** (round 1: 24 of 30). Newly caught: MERGE_HOPS 6, sponsor out of WHO_ROLES, the `resolveKey` wiring (fake db, 3 asks, newest version first), `holder.spouse` and parents through `documentFacts`, and render's open-decider key.
+* The builder's reason for not committing the old-against-new harness is fair: main's old copies no longer exist after the merge. Both comparison results are recorded in the PR.
+* **Open, Minor (does not block):**
+  * r2-m1. Two render.ts call-site swaps still survive every pure suite: `render.ts:156` (the answered-decider key) and `:236` (the placements loop's `isFilingFact(p.fact, p)`). Both are provably the main expression. Fix: one check each, e.g. an answered `person.flag` placed once_per_case stays keyed on the person, and a once_per_case placement is asked once, on "case".
+* **Score of the code and tests: 9.5/10.** "Next step obvious", "plain words" and "trust and sources" move to 1: M3 rows can now see what is built, what is held and what is still outside the resolver. "Task completed" stays at ½ for r2-m1.
+
+* **Head moved to cc52f0b1.** It changes only `tests/check_sh3_resolver.ts:70-72`: the three personal names in the R6 fixture values become "principal-name", "partner-name" and "parent-name" (AGENTS rule 5). The values stay distinct, so R6 still tells the people apart. 54/54 on cc52f0b1, and both R6 mutants are still caught.
+
+**Verdict: Approve** (cc52f0b1, and c00868d7 before it). No Blocker or Major is open; r2-m1 can follow.
+
+## Round 3 (7506b899)
+Test-only since c00868d7: cc52f0b1 (role placeholders in the R6 fixture) and 7506b899, which adds the r2-m1 check. engine, contracts and api are unchanged.
+* `check_sh3_resolver` is **55/55** on the head.
+* My two call-site mutants are now caught: render.ts:236 (placements loop) and :156 with the placement passed in. That fixes r2-m1.
+* **Minor r3-m1:** :156 with its `case.` branch removed still survives. The new check answers only a `person.` fact, so an answered `case.*` decider keyed on the filing is not pinned. One more known value in the same check would cover it; it can follow.
+
+**Verdict: Approve** (7506b899). No Blocker or Major is open.
+
+## Follow-up d1+d2 (62a89f22)
+Reviewer role, fresh context. Row: SH3 follow-ups d1 + d2 (the tech lead's answer on #509), `git diff origin/main...62a89f22`. I ran it in a throwaway worktree in the scratchpad. No UI, so **the journey test does not apply**; I scored the code and the tests instead (below).
+* **Runs** (from `prototype/`): `check_sh3_resolver` **59/59**, `runtime/check_case_engine` **69/69**, `check_vv_checklist` **60/60**. Also run: `check_screen01_rules` 67/0, `check_line_holders` 19/19, `check_c1112_modes` 39/39, `check_r2_fee_table` 45/45, `check_engine` 43/43, and `check_c69_runs`' pure part (40 PASS; its route part needs a database, so not run). `tsc -p api/tsconfig.json`: no errors in any changed file.
+* **(1) No behaviour change: confirmed by reading every replaced expression.**
+  * **d1** `eligibility.aboutOf` is now `valueHolder` itself (`===`), so all four uses (eligibility.ts:41, :56, :96, :119) get the same function. `valueHolder` (resolver.ts:111) matches the old `aboutOf` token for token:
+    * the same "answered" test: undefined, null and "" count as no answer; 0, false and " " count as answers;
+    * the same keys (`kkey` is `factKey`, and `"case"` is `FILING`);
+    * the same order: the person, then the filing, then the id rule;
+    * the same id rule: `isFilingFact(fact)` with no placement is `fact.startsWith("case.")`, prefix only, as before.
+    * A missing entry reads as undefined in both, and person === "case" gives the same answer.
+  * **d2** `case-checklist.ts:126`: `isFilingFact(f) ? FILING : about` is the old prefix-only expression.
+  * **d2** `programs.ts:17`: `isFilingFact(p.fact, p)` is `p.repeats === "once_per_case" || p.fact.startsWith("case.")`. The order and the short-circuit are the same: with a once-per-case placement, `fact` is never read in either version.
+* **(2) R6b** (contract :37, interface :148) matches `valueHolder`: own answer, else the filing's, else R5's id rule; one fact, no list row.
+* **(3) Tests:** R6b has a passing case (:77) and a failing case (:78); the failing case covers "", null, unanswered and both sides of the id rule. **17 mutants, 14 caught:**
+  * all 7 on `valueHolder`: the order swapped, the filing step removed, "" counted as an answer, null counted as an answer, unanswered always person, unanswered always filing, the placement passed;
+  * eligibility's `aboutOf` as its own copy or as a wrapper (by the identity check :79, and also by c69's M1 checks);
+  * the 3 programs.ts mutants (by `check_screen01_rules` BR-10);
+  * the typed-out copy put back (by :163);
+  * render.ts:156 with its `case.` branch removed (by :149). **That fixes r3-m1.**
+  * **Not caught:** the 3 behaviour mutants at case-checklist.ts:126 (see r4-m1).
+* **(4) The (d) list** is right that eligibility.ts, case-checklist.ts and programs.ts no longer hold a copy (grep: no `startsWith("case.")` left in them), and that runtime.ts:269 and :310 are still copies. Three small text gaps are listed in r4-m2.
+* **(5) Lift-ready (P-249):** engine/resolver.ts still imports only `../contracts/resolver.ts` (checked by the test, and by reading line 6). The new code uses only `factKey` and `FILING` from the contract.
+
+**Open, Minor (do not block; can follow):**
+* **r4-m1.** `case-checklist.ts:126` is pinned only by its source text.
+  * These mutants pass all 8 pure suites: always the person, always the filing, and the branches swapped.
+  * This gap was already on main (the same expression, and no behaviour test changed), so it is not a regression.
+  * Fix: one `check_vv_checklist` case where a line's condition reads a derived field with a `case.*` input: answered on the filing → listed as answered; unanswered → open.
+* **r4-m2.** Contract text, (c)/(d):
+  * case-checklist.ts:126 calls `isFilingFact` without the placement, like render's deciders. (d) says the file "moved", which reads as "all of R5". Add it to (c).
+  * "(prefix only)" is true of runtime.ts:310 only; :269 checks the placement as well. This wording was there before this commit.
+  * `engine/answer-keys.ts:105` is an R5 copy by prefix that the list leaves out. It has been missing since #509.
+* **r4-m3.** "What counts as an answer" is now written twice: resolver.ts:112 and eligibility.ts:38 (`present`).
+  * eligibility reads the value from the holder that `valueHolder` chose, then tests it with its own copy.
+  * If only one copy changed, an answered filing value could read as missing.
+  * Fix: export the predicate from the resolver (R6b already defines "no answer").
+* **r4-m4.** The r3-m1 check sits inside r2-m1's `ok` (:139-149). When it fails, the output shows r2-m1's label ("stays on the person"), which names the wrong rule. Split it out or rename it.
+
+**Score of the code and tests: 8.5/10.**
+* 1 each: task completed (d1 and d2 moved; runtime.ts left out as agreed), next step obvious, plain words, correct data, error recovery, fit and portability, speed.
+* ½ each: feedback (r4-m4), code quality (r4-m1, r4-m3), trust and sources (r4-m2).
+
+Could not check: c69's route part and CI on this commit.
+
+**Verdict: Approve** (62a89f22). No Blocker or Major is open; r4-m1 to r4-m4 are Minor.
+
+## Tidy-up (cacf7905)
+Reviewer role, fresh context. Row: SH3 tidy-up (shared service, no screen), `git diff origin/main...cacf7905`. Mutants ran in a throwaway worktree in the scratchpad, never in the working tree. No server, no port. No UI, so **the journey test does not apply**: I scored the code and the tests instead (below), and there is no separate report.
+* **Runs** (from `prototype/`): `check_sh3_resolver` **63/63**, `check_engine` 43/43, `check_screen01_rules` 67/0, `check_vv_checklist` 60/60, `check_forms_proposal_contract` 22/0. Also run: `check_line_holders` 19/19 and `runtime/check_case_engine` 69/69 (eligibility.ts changed). `tsc -p api/tsconfig.json`: no errors in any changed file.
+* **(1) No behaviour change: confirmed.** I read every replaced expression and ran an old-against-new harness: **33,174 comparisons, 0 differences**.
+  * `coverage.ts:35`: the filing branch comes first, so the resolver's own `FILING` branch is never reached. What is left is main's expression token for token: `find(id === about.split("/")[0])?.role ?? about`. That covers relatives (`A/parent_1` → A's role), an unknown key (the key itself), `case/x`, `/`, ids containing "/", and people whose role is "", null or undefined.
+  * `sourceKey(r, f)` is the same template behind a call. The arguments are evaluated in the same order. undefined, null, numbers, objects, "|" and "" stringify the same way. (A Symbol throws in both.) The four changed sites pass the same two arguments in the same order (`preview.ts:70`, `validate.ts:245` both maps, `pqr-picks.ts:83`, `coverage.ts:46`).
+  * `present` is moved unchanged and imported where it was a local copy. The harness covered 18 odd values, 0 differences.
+* **(2) The (c)/(d) text, line by line on cacf7905.** r4-m2's three points are fixed:
+  * `case-checklist.ts:126` is now in (c);
+  * `runtime.ts:269` says "with the placement" and `:310` "prefix only";
+  * `answer-keys.ts:105` is listed.
+  These are correct: render.ts :138 and :156, import.ts:41, proposals.ts:214, snapshot.ts:37. So are the (a)/(b) anchors, whose files are unchanged since the SH3 merge. Two points are wrong (M1, m1).
+* **(3) The new checks:** 16 mutants, 14 caught.
+  * Caught: each of the four templates put back; coverage's local roleOf put back; "the application" dropped; eligibility's local `present` put back; `present` accepting ""; `present = !!v`; roleOf's fallback set to ""; roleOf without the relative split; and the sourceKey format.
+  * render.ts:156 without its `case.` branch now fails **only** the split check, under its own r3-m1 label. **r4-m4 is fixed.** The always-filing mutant fails r2-m1's check and QA-149.
+  * Survived: `validate.ts` with sourceKey's arguments swapped (no pure suite reads the diff's `key`), and `preview.ts:77`'s reader changed (preview's tests need a server). Both gaps predate this PR; the second one is why M1 matters.
+  * The tidy-up checks are source regexes (m2). r4-m1 is left open, as stated.
+* **(4) Lift-ready (P-249): yes.** engine/resolver.ts still imports only `../contracts/resolver.ts` (line 6, and its check passes). The new export `present` is pure. coverage.ts → resolver.ts adds no cycle.
+
+**Major (fix before Approve)**
+* **M1. preview.ts is only half moved, and the contract and the check both say it is done.**
+  * `engine/runtime/preview.ts:70` now builds the `sources` map with `sourceKey`. But its two readers still type the template out: `:77` (`fromDocument`) and `:120` (`fromWords`), both `` sources.get(`${roleOf(subjectId)}|${fact}`) ``.
+  * Yet contract (d) says the template in runtime/preview.ts "moved". The check at `check_sh3_resolver.ts:170` says preview.ts "keep[s] no role|fact template". It passes because its regex only sees `${x.role}|${x.fact}` and `${role}|${b.fact}`.
+  * The risk is the drift SH3 exists to stop. If R8 changes (for example, a filing id is added under P-251/SH4), the writer follows and the two readers do not. Every Preview fact would then lose its document or officer source, silently: mutant m16 survives every pure suite.
+  * Fix (no behaviour change): `sources.get(sourceKey(roleOf(subjectId), fact))` at :77 and :120. Widen the check to `/\$\{[^}]*role[^}]*\}\|\$\{/` over the four files. On cacf7905 that regex matches exactly preview.ts:77 and :120, and nothing else.
+
+**Minor**
+* **m1. (d) cites `engine/runtime/case.ts:365`; the template is at `:378`** (`ticked`). It was already `:378` at the SH3 merge (332f2c4d), so the round-1 number was wrong from the start. Also, the block's header still reads "file:line on SH3's merge with main", but (c) now cites post-d2 lines (case-checklist.ts:126 was :124 there). Fix: `:378`, and "file:line on cacf7905" (or on the merge of this PR).
+* **m2. Not in the inventory:** runtime-people copies of R4 keyed on `subjectId`, namely `roleOf` and `partnerOf` at `runtime/preview.ts:71`, `:73`, and `roleOf` at `runtime/case.ts:379` (L1's file). Either list them under (d) or say why they are not copies. This is text only; no new move is asked.
+* **m3. The r4-m3 check's title** says "one rule for what counts as an answer". It covers eligibility only, which was r4-m3's scope and is fine. But the same predicate is still typed out in `contracts/runtime.ts:76` (answer input) and `runtime/team.ts:89`. Either narrow the title to eligibility or name those two places in (d).
+
+**Score of the code and tests: 8/10.**
+* 1 each: next step obvious, plain words, feedback (r4-m4 split, each check names its rule), correct data (0 differences), edge cases, fit and portability, speed.
+* ½ each: task completed (M1), code quality (the half move, and source-regex checks), trust and sources (the (d) claim and the line number, M1 and m1).
+
+Could not check: preview's server-backed suites (`check_preview_sets`), CI on this commit, and `graph.mjs` (it writes `qa/graph.json`; this row adds no page or route).
+
+**Verdict: Block** (cacf7905). To fix: **M1**, the two preview.ts readers through `sourceKey` and a check that sees them. m1 to m3 may ride along.
+
+## Round 2 (a2d870ec)
+* **What changed** since cacf7905 (`git diff cacf7905 a2d870ec`): `preview.ts`, the contract header, two check lines, and the review section above.
+* **Runs:** `check_sh3_resolver` 63/63, `check_engine` 43/43, `check_screen01_rules` 67/0, `check_vv_checklist` 60/60, `check_forms_proposal_contract` 22/0, `runtime/check_case_engine` 69/69.
+* **M1, fixed.** Both preview.ts readers (:77, :120) now call `sourceKey(roleOf(subjectId), fact)`, the same expression, so behaviour is unchanged. The check uses the widened regex. In a throwaway worktree, putting back either reader, the map (:70) or coverage's template fails it.
+* **m1, fixed:** case.ts:378.
+* **m2, fixed:** the subject-id copies are listed and move with SH4.
+* **m3, fixed:** the r4-m3 title is narrowed, and (e) is added.
+* **Nit:** the header now names base 4cc6d2be, but `preview.ts:71`, `:73` are the head's lines (`:70`, `:72` on 4cc6d2be). The other numbers are the same on both. It can follow.
+* **Score of the code and tests: 9.5/10.** "Task completed" and "trust and sources" move to 1. "Code quality" stays at ½: the tidy-up checks are still source regexes, and r4-m1 is still open as stated.
+* **Correction:** the cacf7905 section's total should read 8.5/10, not 8/10 (seven criteria at 1, three at ½). Its verdict does not change.
+
+**Verdict: Approve** (a2d870ec). No Blocker or Major is open.

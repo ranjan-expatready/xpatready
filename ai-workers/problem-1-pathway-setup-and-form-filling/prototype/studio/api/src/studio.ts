@@ -380,8 +380,8 @@ export class Studio {
     const structure = combinationId ? await this.structureProblems(combinationId) : [];
     const lib = (await this.db.canonicalField.findMany({ where: { workspaceId }, select: { canonicalFieldKey: true, valueType: true, status: true } })).filter((f) => f.status !== "RETIRED").map((f) => ({ key: f.canonicalFieldKey, valueType: f.valueType }));
     const carried = combinationId ? (await this.undecidedFormFields(combinationId, "PUBLISHED")).map((f) => ({ level: "warning" as const, where: "Forms", item: f.form, message: `Not decided yet (from an earlier release): ${f.n} form field${f.n === 1 ? "" : "s"}${forExample(f.example)}. Decide them when this edition is drafted again.` })) : [];
-    // C11.12 BR-7: a new release names every role that may be an applicant with no filing mode (pinned releases are kept);
-    // a warning until the editor can set the mode (engine/filing-modes.ts FILING_NOT_SET_BLOCKS).
+    // C11.12 BR-7: a new release needs a filing mode on every role that may be an applicant (pinned releases are kept;
+    // engine/filing-modes.ts FILING_NOT_SET_BLOCKS).
     const roles = await this.personRoles(workspaceId);
     const filing = filingProblems((s.combination?.participants ?? []) as { role: string; label?: string; max: number; filingMode?: unknown }[], roles);
     const all = [...structure, ...filing, ...emptyProblem(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...carried]; // L4: what IRCC accepts
@@ -1043,12 +1043,13 @@ export class Studio {
         return !!id && own.has(id);
       }).slice(0, limit);
     }
-    return kept.map((e) => ({ ...e, who: peopleNames(e.actor) }));
+    // C8.2 (breaker M1 on #553): government identifiers never travel in the feed; the audit row keeps them (AG-7-95).
+    return kept.map((e) => ({ ...e, ...(e.entity === "application number" ? { detail: null } : {}), who: peopleNames(e.actor) }));
   }
 }
 
 /** The audit entities written by case work (runtime.ts, fill-case.ts, team.ts). */
-const CASE_ENTITIES = new Set(["case", "person", "case fact", "row", "group", "section", "form copy", "item", "submission group"]);
+const CASE_ENTITIES = new Set(["case", "person", "case fact", "row", "group", "section", "form copy", "item", "submission group", "application number" /* C8.2 */]);
 
 /** QA-74: the simulated people's names for stored ids (one id, or several joined by commas), never "user-A" on screen. */
 const PEOPLE: readonly { id: string; name: string }[] = [...ACTORS, ...RUNTIME_ACTORS];
