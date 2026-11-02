@@ -70,11 +70,21 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       const seen = await offTitle.waitFor({ timeout: 30_000 }).then(() => true, () => false);
       const startBtn = p.getByRole("button", { name: /^Start \d+ step/ });
       const words = (await panel.textContent()) ?? "";
-      step("C11.8 P-175 fail (J2 step 10): with live AI off, Draft setup says AI is switched off and to choose Saved (US$0), and Live's Start is disabled; nothing started", ai?.live === false && seen && (await startBtn.isDisabled()) && /switched off on this copy: no paid AI call can start here\. Choose Saved \(US\$0\)/.test(words) && !/rules only/i.test(words) && (await api("/ai/batches")).body.length === 0, JSON.stringify({ ai, seen, words: words.slice(0, 300) }));
+      step("C11.8 P-175 fail (J2 step 10): with live AI off, Draft setup says live AI is off and to choose Saved (US$0), and Live's Start is disabled; nothing started", ai?.live === false && seen && (await startBtn.isDisabled()) && /Live AI is off on this copy\s*No paid AI call can start here\. Choose Saved \(US\$0\)/.test(words) && !/rules only/i.test(words) && (await api("/ai/batches")).body.length === 0, JSON.stringify({ ai, seen, words: words.slice(0, 300) }));
       await axe("Draft setup, live AI off"); await shot("00-live-off");
       await p.locator('fieldset[aria-label="How the AI runs"] input[type="radio"]').nth(1).check();
       const gone = await offTitle.waitFor({ state: "detached", timeout: 30_000 }).then(() => true, () => false);
       step("C11.8 P-175 pass: choosing Saved (no model call, US$0) takes the live-off notice away", gone);
+      // Break m1: the Forms tab's own Draft with AI dialog (one form) does not offer Live either.
+      await p.goto(`${BASE}/c/${vv}/forms`);
+      const frow = p.locator('[data-pending^="IMM 5409"]');
+      await frow.getByRole("button", { name: "Read form" }).click();
+      await frow.getByRole("button", { name: "Draft with AI" }).click({ timeout: 30_000 });
+      const fd = p.getByRole("dialog", { name: /^Draft the field map of IMM 5409/ });
+      await fd.locator('[data-draft-start][data-options-loaded="true"]').waitFor({ timeout: 90_000 });
+      await fd.locator('input[type="radio"]').first().check();
+      const fOff = await fd.getByText("Live AI is off on this copy", { exact: true }).waitFor({ timeout: 30_000 }).then(() => true, () => false);
+      step("C11.8 P-175 fail (break m1): on the Forms tab, Draft with AI › Live says live AI is off and its Start is disabled; nothing started", fOff && (await fd.locator("[data-draft-start]").isDisabled()) && (await api("/ai/batches")).body.length === 0, JSON.stringify({ fOff, text: ((await fd.textContent()) ?? "").slice(0, 200) }));
       ["the cost warning before a live start (Draft setup)", "Cancel starts nothing", "focus back on Start", "Escape before the warning is ready", "Continue records the override and starts the run", "the Forms tab's Draft with AI warning", "its Cancel and Escape", "its spend figure read again", "its Continue starts the run", "past the ceiling, no Continue"].forEach((n) => skip(`C11.8 P-179 ${n}`));
     }
     if (STANDIN) {
