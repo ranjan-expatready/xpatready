@@ -158,6 +158,8 @@ export class Runtime {
     const limit = limits.find((p) => p.role === b.role);
     // C11.12 BR-6: a role released as Declared only starts as not travelling when the request does not say.
     if (limit?.filingMode === "declared_only" && (body as { applies?: unknown } | null)?.applies === undefined) b.applies = false;
+    // Break M2: a co-filing role (the sponsor) is never a travelling applicant; its sponsorship goes with the principal's.
+    if (limit?.filingMode === "co_files") b.applies = false;
     // S5 (M3): any role the pinned release lists, within its maximum; anything else is refused (P-119).
     // QA-135: the role in the release's own words, never its internal name; the application itself is not a person.
     // Review m3: the examples are the roles this release really lets a person add (never a fixed list).

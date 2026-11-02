@@ -87,8 +87,11 @@ export class CasePrepare {
     const onFiling = new Map<string, string>();
     for (const f of first.filings) { if (f.mode === "co_filed") onFiling.set(f.owner!.subject, f.owner!.subject); for (const a of f.applicants) if (a.mode === "applying") onFiling.set(a.subject, f.owner!.subject); }
     const owners = first.filings.map((f) => f.owner!.subject);
+    // Break M2: a co-filing sponsor gets the forms that name them, never an applicant's biometrics step.
+    const coFilers = new Set(first.filings.filter((f) => f.mode === "co_filed").map((f) => f.owner!.subject));
     const filers = [...onFiling.keys()];
-    const wanted = wantedItems(filers, r.forms as never, docs as never, feeRule(own!.combinationKey, "biometrics"), ages);
+    const wanted = [...wantedItems(filers.filter((x) => !coFilers.has(x)), r.forms as never, docs as never, feeRule(own!.combinationKey, "biometrics"), ages),
+      ...wantedItems(filers.filter((x) => coFilers.has(x)), r.forms as never, new Map(), undefined, ages)];
     const wantApplicants = (owner: string) => first.filings.find((f) => f.owner!.subject === owner)!.applicants;
 
     // #325 break B1: a read with nothing new to store takes no lock; only a read with something to store takes the case's
@@ -163,7 +166,8 @@ export class CasePrepare {
     // C11.12 (challenge M1, concept §6): each applicant's own mode (applying or declared only), never the filing's.
     const filings = done.filings.map((f) => ({ id: fid(f.id), combination: f.combination, label: f.label, mode: f.mode, owner: f.owner, applicants: f.applicants.map((a) => ({ subject: a.subject, label: a.label, role: a.role, mode: a.mode })), group: f.group, status: f.status, number: f.number }));
     const groups = done.groups.map((g) => ({ ...g, filings: g.filings.map(fid), reason: stored.groups.find((x) => x.id === g.id)?.reason ?? null }));
-    const fees = done.fees.map((f) => ({ filing: fid(f.filing), subject: stored.filings.find((x) => x.id === fid(f.filing))?.subjectId ?? null, payer: f.payer, key: f.line, line: f.label, amount: f.amount_cents / 100, amount_cents: f.amount_cents, amount_words: cad(f.amount_cents), exempt: f.exempt, reason: f.why, ...(f.waiting ? { waiting: f.waiting } : {}),
+    // Review M1: `subject` is the person the line is for (several people share the principal's filing), never the owner.
+    const fees = done.fees.map((f) => ({ filing: fid(f.filing), subject: f.person, payer: f.payer, key: f.line, line: f.label, amount: f.amount_cents / 100, amount_cents: f.amount_cents, amount_words: cad(f.amount_cents), exempt: f.exempt, reason: f.why, ...(f.waiting ? { waiting: f.waiting } : {}),
       source: (f.source ?? done.groups.find((g) => g.filings.includes(f.filing))?.totals.find((t) => t.line === f.line)?.source)?.url ?? "Sample", source_detail: f.source ?? done.groups.find((g) => g.filings.includes(f.filing))?.totals.find((t) => t.line === f.line)?.source ?? null }));
 
     // Items in the view: each with one state; a form with its channel, what IRCC accepts and the signature that follows.
@@ -230,8 +234,10 @@ export class CasePrepare {
       const members = await tx.filing.findMany({ where: { submissionGroupId: g!.id, active: true }, select: { id: true, subjectId: true, mode: true } });
       const f = members.find((x) => x.id === b.filing);
       if (!f) return "not_in_group" as const;
-      // C11.12 BR-4: a sponsorship is sent with the principal's application; neither is split from the other.
-      if (members.some((x) => x.mode === "co_filed")) return "co_filed" as const;
+      // C11.12 BR-4: a sponsorship is sent with the principal's application; neither is split from the other (break m5:
+      // anyone else's own filing still may be).
+      const principalSubject = c.participants.find((p) => p.role === "principal")?.subjectId;
+      if (members.some((x) => x.mode === "co_filed") && (f.mode === "co_filed" || f.subjectId === principalSubject)) return "co_filed" as const;
       if (members.length < 2) return "alone" as const;
       const own = await tx.submissionGroup.create({ data: { workspaceId: c.workspaceId, caseId: c.id, kind: "SEPARATE", reason: b.reason!, createdBy: actor.id } });
       await tx.filing.update({ where: { id: f.id }, data: { submissionGroupId: own.id } });

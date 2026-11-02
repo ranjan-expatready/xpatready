@@ -13,6 +13,7 @@
 --   DELETE FROM "filing_applicant" WHERE "mode" = 'declared_only';
 --   ALTER TABLE "filing" DROP CONSTRAINT "filing_mode_check", ADD CONSTRAINT "filing_mode_check" CHECK ("mode" IN ('files_own', 'on_principal'));
 --   ALTER TABLE "filing_applicant" DROP CONSTRAINT "filing_applicant_mode_check", ADD CONSTRAINT "filing_applicant_mode_check" CHECK ("mode" IN ('applying'));
+--   DELETE FROM "_prisma_migrations" WHERE "migration_name" = '20261102160000_c1112_filing_modes';  -- so a roll-forward applies it again
 -- (The older code then re-derives one filing per applying person on the next read; ids of filings it re-creates are new.)
 
 ALTER TABLE "filing" DROP CONSTRAINT "filing_mode_check";

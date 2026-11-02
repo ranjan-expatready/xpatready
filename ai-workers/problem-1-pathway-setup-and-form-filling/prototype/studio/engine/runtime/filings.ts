@@ -112,7 +112,7 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   const notFiling: NotFiling[] = [];
   const planned: PlanPerson[] = [];
   for (const p of persons) {
-    if (modeOf(p.role) === undefined) notFiling.push({ subject: p.subjectId, label: p.label, role: p.role, why: `The ${label} has no filing for the role "${p.role}".` });
+    if (modeOf(p.role) === undefined) notFiling.push({ subject: p.subjectId, label: p.label, role: p.role, why: `${label}: no filing is set for a ${p.role.replace(/_/g, " ")} (Who can be in this application), so nothing is filed for ${p.label}.` });
     else planned.push({ subject: p.subjectId, role: p.role, label: p.label, travelling: p.applies });
   }
   const plan = filingPlan(planned, modeOf);
@@ -137,28 +137,34 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
       totals.push(t);
       // The group's payer: the principal when the principal pays this line, else the first person who pays.
       const lead = paying.find((x) => x.who.role === "principal") ?? paying[0];
+      const leadFiling = lead ? filings.find((f) => f.id === lead.filing)! : null;
       for (const x of payers) {
         const c = check.get(x.who.subject)!, who = x.who, what = t.label.toLowerCase().replace(/ fee$/, "");
-        if ("waits" in c) fees.push({ filing: x.filing, payer: who.subject, line: t.line, label: t.label, amount_cents: rule.perPersonCents, exempt: false, waiting: "person.date_of_birth", why: `Waits for ${who.label}'s date of birth: no ${what} under ${rule.exempt!.underAge} or over ${rule.exempt!.overAge}. Not counted until it is answered.`, source: rule.exempt!.source });
-        else if (!c.pays) fees.push({ filing: x.filing, payer: who.subject, line: t.line, label: t.label, amount_cents: 0, exempt: true, why: c.why, source: rule.exempt!.source });
-        else if (!t.cap_applied) fees.push({ filing: x.filing, payer: who.subject, line: t.line, label: t.label, amount_cents: t.per_person_cents, exempt: false, why: `${cad(t.per_person_cents)} for ${who.label}.` });
-        else if (x === lead) fees.push({ filing: x.filing, payer: who.subject, line: t.line, label: t.label, amount_cents: t.total_cents, exempt: false, why: `Family maximum ${cad(t.total_cents)} for the ${t.people} people applying together, paid on this filing.` });
-        else fees.push({ filing: x.filing, payer: lead!.who.subject, line: t.line, label: t.label, amount_cents: 0, exempt: true, why: `Covered by the family maximum on ${lead!.who.label}'s filing.` });
+        if ("waits" in c) fees.push({ filing: x.filing, person: who.subject, payer: who.subject, line: t.line, label: t.label, amount_cents: rule.perPersonCents, exempt: false, waiting: "person.date_of_birth", why: `Waits for ${who.label}'s date of birth: no ${what} under ${rule.exempt!.underAge} or over ${rule.exempt!.overAge}. Not counted until it is answered.`, source: rule.exempt!.source });
+        else if (!c.pays) fees.push({ filing: x.filing, person: who.subject, payer: who.subject, line: t.line, label: t.label, amount_cents: 0, exempt: true, why: c.why, source: rule.exempt!.source });
+        else if (!t.cap_applied) fees.push({ filing: x.filing, person: who.subject, payer: who.subject, line: t.line, label: t.label, amount_cents: t.per_person_cents, exempt: false, why: `${cad(t.per_person_cents)} for ${who.label}.` });
+        else if (x === lead) fees.push({ filing: x.filing, person: who.subject, payer: who.subject, line: t.line, label: t.label, amount_cents: t.total_cents, exempt: false, why: `Family maximum ${cad(t.total_cents)} for the ${t.people} people applying together, paid on this filing.` });
+        else fees.push({ filing: x.filing, person: who.subject, payer: lead!.who.subject, line: t.line, label: t.label, amount_cents: 0, exempt: true, why: `Covered by the family maximum, paid by ${lead!.who.label} on ${leadFiling!.owner!.label}'s filing.` });
       }
     }
     const kind = opts.groupKind?.(gid) ?? "family";
     const coFiled = mine.some((f) => f.mode === "co_filed");
-    const count = new Set(mine.flatMap((f) => [f.owner!.subject, ...f.applicants.map((a) => a.subject)])).size;
-    groups.push({ id: gid, kind, label: count === 1 ? "One submission" : `One submission for ${count} people`, filings: mine.map((f) => f.id), splittable: mine.length > 1 && !coFiled,
+    // Review m3: people applying (a declared-only person and the sponsor are named on it but are not counted).
+    const count = new Set(mine.flatMap((f) => f.applicants.filter((a) => a.mode === "applying").map((a) => a.subject))).size;
+    groups.push({ id: gid, kind, label: count <= 1 ? "One submission" : `One submission for ${count} people applying`, filings: mine.map((f) => f.id), splittable: mine.length > 1 && !coFiled,
       why: kind === "separate" ? "Split out with a reason: priced on its own, so the other group's family maximums do not cover it."
         : coFiled ? "The sponsorship and the principal's application are sent together and cannot be split (IRCC: the principal \"will submit both applications together online\")."
-        : mine.length === 1 ? (mine[0].applicants.length > 1 ? "One application for the family." : "One person applying.") : "A family's visitor visa applications go together, at the same time and place, so the family maximums apply (BR-16).",
-      totals, total_cents: totals.reduce((s, t) => s + t.total_cents, 0) });
+        : mine.length === 1 ? (mine[0].applicants.length > 1 ? "One application for the family." : "One person applying.")
+        : rules ? `A family's ${label.toLowerCase()} applications go together, at the same time and place, so the family maximums apply (BR-16).` : "These applications go together in one submission.",
+      // C11.12 BR-10 (review M2): no amount at all where the fees are not worked out, never 0.
+      totals, total_cents: fees0.length ? totals.reduce((s, t) => s + t.total_cents, 0) : null });
   }
-  const feesKnown = fees0.length > 0;
+  // Break m3: a sponsorship's fees have no rule yet, even where the rest of the case's fees do: said, never left silent.
+  const feesKnown = fees0.length > 0 && !filings.some((f) => f.mode === "co_filed");
   const body = { filings, groups, fees, not_filing: notFiling };
-  return { derived: true, combination: combinationKey, label, ...body, currency: "CAD", fees_worked_out: feesKnown, fees_why: feesKnown ? null : notWorkedOut(label),
-    basis: feesKnown ? `Fees from the ${FEE_PAGE.page} (read ${FEE_PAGE.read}); Sample until the immigration expert confirms (P-171). ${opts.ages ? "Biometrics: none under 14 or over 79 (VV-R15), age as at today (FQ-7)." : "Biometrics exemptions (for example by age) are not checked yet: every person applying is charged."} Paying is not built.`
+  return { derived: true, combination: combinationKey, label, ...body, currency: "CAD", fees_worked_out: feesKnown,
+    fees_why: feesKnown ? null : fees0.length ? `The sponsorship's fees are not worked out yet for ${label}; nothing is guessed. The other lines are worked out.` : notWorkedOut(label),
+    basis: fees0.length ? `Fees from the ${FEE_PAGE.page} (read ${FEE_PAGE.read}); Sample until the immigration expert confirms (P-171). ${opts.ages ? "Biometrics: none under 14 or over 79 (VV-R15), age as at today (FQ-7)." : "Biometrics exemptions (for example by age) are not checked yet: every person applying is charged."} Paying is not built.`
       : `Filings from the release's filing modes (Sample until the immigration expert confirms). ${notWorkedOut(label)} Paying is not built.`,
     why: filings.length ? null : "Nobody on this case is applying, so there is no filing and no fee.",
     version: createHash("sha256").update(JSON.stringify(body)).digest("hex").slice(0, 16) };

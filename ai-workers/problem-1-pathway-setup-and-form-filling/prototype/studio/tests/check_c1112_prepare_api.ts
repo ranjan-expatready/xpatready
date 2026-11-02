@@ -70,6 +70,45 @@ type P = { derived: boolean; filings: { id: string; mode: string; owner?: { subj
   p = await prep();
   ok("C11.12 BR-6 pass: travelling again → applying, same filing id", main().id === id0 && child()?.mode === "applying" && p.items.some((i) => i.subject === K && i.kind === "form" && i.filing === id0));
 
+  // Release 2 of this check: a co-filing Sponsor (1 to 1) and the child Declared only (review M3: each server rule tested).
+  const v2 = (await call("GET", `/combinations/${vv}/workspace?tab=questionnaires`, undefined, AUTHOR)).body?.people;
+  const lines2 = [...(v2?.lines ?? []).filter((l: { role: string }) => l.role !== "sponsor").map((l: { role: string; label: string; min: number; max: number; applies: boolean; mayBeApplicant: boolean }) =>
+    ({ role: l.role, label: l.label, min: l.min, max: l.max, applies: l.role === "child" ? false : l.applies, ...(l.mayBeApplicant ? { filingMode: l.role === "child" ? "declared_only" : "files_own" } : {}) })),
+    { role: "sponsor", label: "Sponsor", min: 1, max: 1, applies: false, filingMode: "co_files" }];
+  r = await call("PATCH", `/combinations/${vv}/people`, { participants: lines2, version: v2?.version ?? 0, confirmRemove: true }, AUTHOR);
+  ok("setup 2: Sponsor co-files, child Declared only (saved, with the Guide 5256 warning)", r.status < 300, r.body?.detail);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    for (const c of (await call("GET", "/library/changes?status=WAITING", undefined, REVIEWER)).body ?? []) await call("POST", `/library/changes/${c.id}/approve`, {}, REVIEWER);
+    await call("POST", `/combinations/${vv}/submit`, { note: "C11.12: sponsor co-files (Sample)" }, AUTHOR);
+    const sub = (await call("GET", `/combinations/${vv}/review`, undefined, REVIEWER)).body?.submission;
+    await call("POST", `/combinations/${vv}/signoff`, { items: (sub?.changeSummary ?? []).map((x: { kind: string; key: string }) => `${x.kind}|${x.key}`), action: "signed" }, REVIEWER);
+    r = await call("POST", `/combinations/${vv}/approve`, undefined, APPROVER);
+    if (!/changed while it was being released/.test(r.body?.detail ?? "")) break;
+  }
+  ok("setup 2: released", r.status < 300, r.body?.detail);
+  const id2: string = (await call("POST", "/runtime/cases", { combinationId: vv, reference: `C1112B-${run}`, clientActor: CLIENT, principal: { displayName: "Sample Client B" } }, OFFICER)).body?.id;
+  const S2 = (await call("POST", `/runtime/cases/${id2}/people`, { role: "spouse_or_partner", displayName: "Sample Spouse B" }, OFFICER)).body?.subject_id;
+  const kidAdd = (await call("POST", `/runtime/cases/${id2}/people`, { role: "child", displayName: "Sample Child B1" }, OFFICER)).body;
+  const spAdd = (await call("POST", `/runtime/cases/${id2}/people`, { role: "sponsor", displayName: "Sample Sponsor B", applies: true }, OFFICER)).body;
+  ok("C11.12 BR-6 pass: a child of a Declared only role, added without saying, starts as not travelling", kidAdd?.applies === false, kidAdd);
+  ok("C11.12 BR-6 / break M2 pass: a co-filing sponsor is stored as not travelling even when the request says travelling", spAdd?.applies === false, spAdd);
+  const p2 = (await call("GET", `/runtime/cases/${id2}/prepare`, undefined, OFFICER)).body as P;
+  const A2 = ((await call("GET", `/runtime/cases/${id2}`, undefined, OFFICER)).body.people as { role: string; subject_id: string }[]).find((x) => x.role === "principal")!.subject_id;
+  const main2 = p2.filings.find((f) => f.owner?.subject === A2)!, spons = p2.filings.find((f) => f.mode === "co_filed");
+  ok("C11.12 BR-4 pass: the sponsorship is its own co_filed filing in the principal's group, not splittable", !!spons && spons.owner?.subject === spAdd?.subject_id && spons.group === main2.group && p2.groups.find((g) => g.id === main2.group)?.splittable === false, p2.filings.map((f) => `${f.mode}:${f.owner?.role}:${f.group.slice(0, 6)}`));
+  ok("C11.12 break M2 fail: the sponsor gets no applicant's biometrics step and no applicant's forms", !p2.items.some((i) => i.subject === spAdd?.subject_id && (i.kind === "step" || i.kind === "document")), p2.items.filter((i) => i.subject === spAdd?.subject_id));
+  ok("C11.12 BR-6 pass: the declared-only child is on the principal's filing, declared only", main2.applicants.some((a) => a.subject === kidAdd?.subject_id && a.mode === "declared_only"));
+  r = await call("PATCH", `/runtime/cases/${id2}/people/${spAdd?.subject_id}`, { applies: true }, OFFICER);
+  ok("C11.12 BR-6 fail: the sponsor's travelling switch is refused (422, in words)", r.status === 422 && /always sent with the principal's/.test(r.body?.detail ?? ""), r.body);
+  const ver = (await call("GET", `/runtime/cases/${id2}/prepare`, undefined, OFFICER)).body?.version;
+  r = await call("POST", `/runtime/groups/${main2.group}/split`, { filing: spons!.id, reason: "test", version: ver }, OFFICER);
+  ok("C11.12 BR-4 fail: splitting the sponsorship out is refused (409, in words)", r.status === 409 && /sent together and cannot be split/.test(r.body?.detail ?? ""), r.body);
+  r = await call("POST", `/runtime/groups/${main2.group}/split`, { filing: main2.id, reason: "test", version: ver }, OFFICER);
+  ok("C11.12 BR-4 fail: splitting the principal's filing away from the sponsorship is refused (409)", r.status === 409, r.body);
+  const spouseFiling = p2.filings.find((f) => f.owner?.subject === S2)!;
+  r = await call("POST", `/runtime/groups/${main2.group}/split`, { filing: spouseFiling.id, reason: "Travelling later (test)", version: ver }, OFFICER);
+  ok("C11.12 break m5 pass: the spouse's own filing can still be split out of a group with a sponsorship", r.status === 200 && (r.body as P).filings.find((f) => f.id === spouseFiling.id)?.group !== main2.group, r.body?.detail ?? r.status);
+
   // The widened checks (migration 20261102160000_c1112_filing_modes): the new values hold, anything else is refused.
   const refused = (q: string) => { try { sql(q); return false; } catch { return true; } };
   ok("C11.12 migration fail: an applicant mode outside applying/declared_only is refused by the database", refused(`update filing_applicant set mode='sometimes' where subject_id='${K}'`));

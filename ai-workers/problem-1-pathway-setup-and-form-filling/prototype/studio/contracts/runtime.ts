@@ -228,9 +228,11 @@ export type CaseFiling = { id: string; combination: string; label: string; mode:
   status: "NOT_STARTED"; number: string | null };
 export type SubmissionGroup = { id: string; kind: "family" | "separate"; label: string; filings: string[]; splittable: boolean; why: string;
   totals: { line: string; label: string; people: number; per_person_cents: number; list_cents: number; family_max_cents: number; family_from: number; total_cents: number; cap_applied: boolean; why: string; source: FeeSource }[];
-  total_cents: number };
+  /** C11.12 BR-10: null when the combination's fees are not worked out (never CAD 0). */
+  total_cents: number | null };
 /** `waiting`: the fact the line waits for (not counted until answered, G15); `source`: an exemption's own IRCC page. */
-export type FeeLine = { filing: string; payer: string; line: string; label: string; amount_cents: number; exempt: boolean; why: string; waiting?: string; source?: FeeSource };
+/** `person`: whose fee line it is (C11.12: several people share the principal's filing; `payer` is who pays it). */
+export type FeeLine = { filing: string; person: string; payer: string; line: string; label: string; amount_cents: number; exempt: boolean; why: string; waiting?: string; source?: FeeSource };
 export type NotFiling = { subject: string; label: string; role: string; why: string };
 export type CaseFilings =
   | { derived: true; combination: string; label: string; filings: CaseFiling[]; groups: SubmissionGroup[]; fees: FeeLine[]; not_filing: NotFiling[]; currency: "CAD";
