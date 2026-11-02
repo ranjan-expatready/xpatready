@@ -8,7 +8,7 @@
 //   tsx --tsconfig studio/api/tsconfig.json studio/tests/runtime/check_c611_team.ts 4431 xr_studio_runtime_m3a
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { cannotAssign, cannotBeOfficer, cannotRepresent, imm5476, openingTeam, representativeFacts, type Firm, type Member } from "../../engine/runtime/team.ts";
+import { cannotAssign, cannotBeOfficer, cannotRepresent, imm5476, openingTeam, representativeAnswers, representativeContact, representativeFacts, type Firm, type Member } from "../../engine/runtime/team.ts";
 import { RUNTIME_ACTORS } from "../../api/src/core.ts";
 import { client, recorder } from "./api.ts";
 
@@ -52,6 +52,11 @@ function pure() {
   const f = representativeFacts(firm, one);
   ok("C6.11: IMM 5476's representative part fills from the representative of record (licence number and category)", f?.["representative.membership_id"] === "R000000" && f?.["representative.representative_category"] === "rcic");
   ok("C6.11 fail: no representative of record, nothing to fill", representativeFacts(firm, []) === null);
+  // C7.7 (G25): IMM 5476's representative block (name, e-mail, office address and phone) from the firm record.
+  const rc = representativeContact(firm, one), ra = representativeAnswers(firm, one);
+  ok("C7.7 pass: the representative's name, e-mail, office address and phone come from the firm record, as confirmed answers about the representative", rc?.["person.family_name"] === "Representative" && typeof rc?.["person.email_address"] === "string" && rc?.["person.mailing_address_city"] === "Toronto" && (rc?.["person.telephone_number"] as { country_code?: string })?.country_code === "1" && ra.length === Object.keys(rc ?? {}).length && ra.every((a) => a.subjectId === "representative" && a.status === "VERIFIED" && a.channel === "firm_record" && a.actor === REP));
+  const bare: Firm = { ...firm, office: { ...firm.office, unit: null }, users: firm.users.map((u) => ({ ...u, email: undefined })) };
+  ok("C7.7 fail: no representative of record gives no answers; a value the firm record lacks is left out (asked as before), never blank", representativeAnswers(firm, []).length === 0 && representativeContact(firm, []) === null && !("person.email_address" in (representativeContact(bare, one) ?? {})) && !("person.mailing_address_unit" in (representativeContact(bare, one) ?? {})));
   ok("C6.11 fail: the first representative asks for no new IMM 5476", imm5476(one).new_needed === false);
   const two5476: Member[] = [{ ...one[0], endedAt: at(5), endedBy: REP, endReason: "Sample reason" }, { userId: "user-T", role: "LEAD_REPRESENTATIVE", assignedBy: REP, assignedAt: at(5), endedAt: null, endedBy: null, endReason: null }];
   const ch = imm5476(two5476);
