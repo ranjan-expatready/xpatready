@@ -27,7 +27,7 @@ const api = async (url, init = {}) => { const r = await fetch(`${BASE}/api${url}
     await p.goto(`${BASE}/c/${sv.combinationId}/forms`);
     const finder = p.locator("[data-finder]");
     await finder.waitFor({ state: "visible", timeout: 15000 });
-    await p.waitForFunction(() => /[Oo]n this combination|AI found|No form find yet|Waiting for you/.test(document.querySelector("[data-finder]")?.textContent ?? ""), undefined, { timeout: 15000 });
+    await p.waitForFunction(() => /On this combination: \d|AI found|No form find yet|Waiting for you/.test(document.querySelector("[data-finder]")?.textContent ?? ""), undefined, { timeout: 15000 });
     const text = await finder.innerText();
     step("QA-78 pass: forms added without an AI find show their count and how they came", /On this combination: \d+ forms?( · \d+ set up)?/.test(text) /* UX-A part 1: the one forms words */ && /Added without an AI find/.test(text), text.slice(0, 200));
     step("QA-78 fail-guard: no \"No form find yet\" above attached forms", !/No form find yet/.test(text), text.slice(0, 200));

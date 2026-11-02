@@ -161,3 +161,7 @@ US$0 throughout.
 **Journey score unchanged: 9.5 / 10.** The re-add and Undo journey and the failed-count recovery both held.
 
 **Verdict: Approve** on ffc2ef74 (e964defb's code). No Blocker or Major is open. Put n4 in the PR body; m8 and breaks 4–6 stay as listed follow-ups.
+
+**Round 3c, 8126e2c7: Approve.** `git diff f9a5880a 8126e2c7` changes only two regexes in `tests/check_qa78_words_browser.cjs`, so the product code is still e964defb's, which was approved above.
+* The check now expects the one forms words ("On this combination: N forms · N set up"). It passed 4/4 twice on `rev_uxa1b` (:4446).
+* Minor: the new wait pattern `[Oo]n this combination` also matches the loading title "Forms on this combination". The check could therefore read the panel before the count arrives. The same race existed before this change. Waiting for `/On this combination: \d/` would close it.
