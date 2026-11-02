@@ -169,7 +169,9 @@ ok("C5.4 m6 pass (QA-82): an item whose own words name a field code reads its sh
 
 // Devin on #587: a citation's words state this number (digits, or words from one to ninety-nine), never another.
 ok("C5.4 BR-3 pass (Devin on #587): digits, English words and IRCC's date forms state the number", statesValue("at least 18 years of age", "18") && statesValue("valid for five years", "5") && statesValue("within ninety days", "90") && statesValue("Twenty-one days", "21") && statesValue("on or after November 1, 2024", "2024-11-01"));
-ok("C5.4 BR-3 fail (Devin on #587): words for another number never state this one (21 for 18; 180 for 18; \"fifty\" for 5)", !statesValue("Applicants must be at least 21 years old", "18") && !statesValue("within 180 days", "18") && !statesValue("fifty days", "5") && !statesValue("", "18"));
+ok("C5.4 BR-3 fail (Devin on #587): words for another number never state this one (21 for 18; 180 for 18; \"fifty\" for 5)", !statesValue("Applicants must be at least 21 years old", "18") && !statesValue("within 180 days", "18") && !statesValue("fifty days", "5") && !statesValue("", "18")
+  // Devin on #587 (second round): never part of a bigger written number
+  && !statesValue("within twenty-one days", "20") && !statesValue("within twenty one days", "20") && !statesValue("five hundred dollars", "5") && !statesValue("twenty-five years", "5") && !statesValue("one hundred and five days", "5") && statesValue("within twenty days, or five years", "5") && statesValue("within twenty days", "20"));
 
 // ---------------------------------------------------------------- M1 kept outside validate(), pure
 const src = readFileSync(join(STUDIO, "engine", "source-register.ts"), "utf8");

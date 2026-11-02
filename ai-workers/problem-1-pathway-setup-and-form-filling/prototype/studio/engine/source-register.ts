@@ -260,7 +260,11 @@ function inWords(value: string): string | null {
 export function statesValue(quote: unknown, value: string): boolean {
   if (statesInDigits(quote, value)) return true;
   const w = inWords(value);
-  return !!w && new RegExp(`\\b${w}\\b`, "i").test(text(quote));
+  if (!w) return false;
+  // Devin on #587: the whole written number, never part of a bigger one: "twenty-one" never states 20, "five hundred"
+  // or "twenty-five" never state 5 (no number word joined before or after it by a hyphen, a space or "and").
+  const NUM = `(?:${[...ONES.slice(1), ...TENS.slice(2), "hundred", "thousand", "million"].join("|")})`;
+  return new RegExp(`(?<!\\b(?:${NUM}|and)[-\\s]+)\\b${w}\\b(?![-\\s]+${NUM}\\b)`, "i").test(text(quote));
 }
 
 /** BR-9: the entries frozen with a snapshot: those that answer a number it publishes, in one canonical shape and order
