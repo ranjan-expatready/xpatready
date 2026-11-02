@@ -31,7 +31,9 @@ export function checkPeople(list: PeopleLine[], roles: Role[], strict = true): {
     const name = p.label?.trim() || r?.label || p.role;
     const sent = modeSent(p);
     let mode: LineMode | null = null;
-    if (sent != null && !isLineMode(sent)) errors.push({ field: at("filingMode"), message: FILING_CHOICE }); // BR-1
+    // Review m1: the pack's alias and the field must not disagree (the alias goes when C11.12.test.ts is renamed).
+    if (p.filingMode != null && p.filing != null && modeSent({ filing: p.filing }) !== p.filingMode) errors.push({ field: at("filingMode"), message: "Filing: send one choice (filingMode and filing disagree)." });
+    else if (sent != null && !isLineMode(sent)) errors.push({ field: at("filingMode"), message: FILING_CHOICE }); // BR-1
     else if (isLineMode(sent)) mode = sent;
     if (p.role === PRINCIPAL && mode && mode !== "files_own") errors.push({ field: at("filingMode"), message: "The principal applicant always files their own application." }); // BR-2
     if (mode && mode !== "co_files" && r && !r.mayBeApplicant) { // BR-3: strict refuses; stored lines and older callers drop it (B1)

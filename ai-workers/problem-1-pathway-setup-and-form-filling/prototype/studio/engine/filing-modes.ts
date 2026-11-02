@@ -47,7 +47,7 @@ export function filingNotSet(lines: { role: string; label?: string; min?: number
   return lines.filter((l) => l.role !== "principal" && l.max > 0 && roles.find((r) => r.key === l.role)?.mayBeApplicant && !isLineMode(l.filingMode))
     .map((l) => l.label || roles.find((r) => r.key === l.role)?.label || l.role);
 }
-export const filingNotSetWords = "Not set: choose how this person's application goes to IRCC (Forms › Who can be in this application).";
+export const filingNotSetWords = "Filing not set: until the Filing column is on this screen, a case uses the combination's built-in default (Sample); a new release will ask for it then.";
 /** Switched off until the editor can set a mode (PR 3 of C11.12): until then a missing mode is a warning, so no draft
  *  saved before C11.12 becomes unreleasable with no way to fix it on the screen ("unfinished work merges switched off"). */
 export const FILING_NOT_SET_BLOCKS = false;
@@ -103,13 +103,15 @@ export function filingPlan(people: PlanPerson[], modeOf: (role: string) => LineM
 const n = (k: number, one: string, many = `${one}s`) => `${k} ${k === 1 ? one : many}`;
 /** "What a case gets" (concept §4): the plan for one case of each line's preview count, in words. The same plan the
  *  case's filings use, so the two never disagree (m4). */
-export function previewFilings(lines: { role: string; label?: string; min: number; max: number; preview?: number; applies: boolean; filingMode?: LineMode | null }[], combination: string, feesKnown: boolean) {
+export function previewFilings(lines: { role: string; label?: string; min: number; max: number; preview?: number; applies: boolean; filingMode?: LineMode | null }[], combination: string, feesKnown: boolean, fallback: (role: string) => LineMode | undefined = () => undefined) {
   const people: PlanPerson[] = [];
   for (const l of lines) {
     const count = l.role === "principal" ? 1 : Math.max(l.min, Math.min(l.max, l.preview ?? (l.min || 1)));
     for (let k = 1; k <= count; k++) people.push({ subject: `${l.role}-${k}`, role: l.role, label: count > 1 ? `${l.label ?? l.role} ${k}` : l.label ?? l.role, travelling: l.filingMode !== "declared_only" });
   }
-  const modeOf = (role: string) => { const l = lines.find((x) => x.role === role); return role === "principal" ? "files_own" : l?.filingMode ?? null; };
+  // Review M2: a line with no mode (saved before C11.12, or its Applicant tick changed) follows the same built-in default
+  // the case falls back to (engine/runtime/filings.ts), so the preview and the case never disagree.
+  const modeOf = (role: string) => { const l = lines.find((x) => x.role === role); return role === "principal" ? "files_own" : l?.filingMode ?? fallback(role) ?? null; };
   const { filings } = filingPlan(people, modeOf);
   if (!filings.length || !people.some((p) => p.role === "principal")) return { filings: [] as PreviewFiling[], submissions: [] as { filings: string[]; splittable: boolean; words: string }[], gets: "Add the principal applicant to see what a case gets." };
   const out: PreviewFiling[] = filings.map((f) => {
