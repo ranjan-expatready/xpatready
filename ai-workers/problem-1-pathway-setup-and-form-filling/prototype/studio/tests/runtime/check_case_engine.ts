@@ -91,7 +91,7 @@ ok("pass and fail: the client's questionnaire has the client's fields, never doc
 const req = (answers: Answer[]) => qs(caseView(S, people, answers, [], "agent", TODAY)).find((q) => q.subjectId === "p" && q.fact === "person.criminal_history_details")!.required;
 ok("pass and fail: details are optional after no and required after yes (rule read from the release)", req([ans("p", "person.criminal_history", false)]) === false && req([ans("p", "person.criminal_history", true)]) === true && req([]) === false);
 const missing = (answers: Answer[]) => caseView(S, people, answers, [], "agent", TODAY).sections.find((x) => x.subjectId === "p" && x.section === "personal")!.missing;
-ok("pass: after no, the details are not missing; fail: after yes, they are", !missing([ans("p", "person.criminal_history", false)]).includes("Details") && missing([ans("p", "person.criminal_history", true)]).includes("Details"));
+ok("pass: after no, the details are not missing; fail: after yes, they are", /* QA-82: an unwritten question is named by its field, not its meaning */ !missing([ans("p", "person.criminal_history", false)]).includes("Criminal history details") && missing([ans("p", "person.criminal_history", true)]).includes("Criminal history details"));
 
 ok("pass and fail: a question marked optional with no condition is optional; one with no effect is required", (() => { const q = qs(caseView(S, people, [], [], "agent", TODAY)); return q.find((x) => x.subjectId === "p" && x.fact === "person.phone")!.required === false && q.find((x) => x.subjectId === "p" && x.fact === "person.marital_status")!.required === true; })());
 

@@ -390,7 +390,7 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
     return (
       <tr key={fact} data-question data-fact={fact} className={cn(picked.has(fact) ? "bg-primary/5" : "")}>
         {canAuthor ? <td className="w-8"><input type="checkbox" aria-label={`Select ${label}`} disabled={!f} checked={picked.has(fact)} onChange={(e) => toggle([fact], e.target.checked)} data-row-tick /></td> : null}
-        <td className="max-w-md"><button type="button" className="text-left font-medium hover:text-text-link hover:underline" aria-label={`Details of: ${label}`} onClick={() => setShown({ fact, q: x, section })}>{label}</button>{x?.group ? <span className="text-xs text-text-muted"> · asked for each entry</span> : null}{x && !x.required ? <span className="text-xs text-text-muted"> (optional)</span> : null}</td>
+        <td className="max-w-md"><button type="button" className="text-left font-medium hover:text-text-link hover:underline" aria-label={`Details of: ${label}`} onClick={() => setShown({ fact, q: x, section })}>{label}</button>{x && x.asked === false ? <span className="ml-1.5 text-xs text-text-muted" data-no-question title="The field's name is shown until someone writes the question to the client.">No question written yet</span> : null}{x?.group ? <span className="text-xs text-text-muted"> · asked for each entry</span> : null}{x && !x.required ? <span className="text-xs text-text-muted"> (optional)</span> : null}</td>
         <td><ComesFrom f={f} fallbackless={!!f && f.source === "DOCUMENT" && !f.placed} /></td>
         <td><PreQual f={f} /></td>
         <td className="max-w-56 text-xs">{x?.onlyIf ?? <span className="text-text-muted">{x ? "Always" : "—"}</span>}</td>

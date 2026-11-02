@@ -39,6 +39,14 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
   const fromDocs = (pv?.sets?.sqr?.fromDocuments ?? []).flatMap((d: any) => d.facts);
   const asked = new Set((pv?.questionnaire?.sections ?? []).flatMap((s: any) => (s.questions ?? []).flatMap((x: any) => [x.label, x.meaning])));
   ok("C4.1 pass: a fact the passport supplies is not asked of the principal", fromDocs.length > 0 && asked.size > 0 && !fromDocs.some((f: string) => asked.has(f)), fromDocs.slice(0, 3));
+  // QA-82: a question with no written wording shows the field's short name, never its meaning (the definition); the
+  // Questions tab marks it "No question written yet" (asked: false). Preview asks the same words.
+  const qs = sections.flatMap((x: any) => x.questions ?? []);
+  const unwritten = qs.filter((x: any) => x.asked === false);
+  ok("QA-82 fail: no question on the Questions tab reads as the field's definition", qs.length > 0 && !qs.some((x: any) => x.wording === x.meaning && x.meaning.length > 40), qs.filter((x: any) => x.wording === x.meaning).map((x: any) => x.wording).slice(0, 2));
+  ok("QA-82 pass: a question with nothing written shows the field's short name and is marked so (asked: false)", unwritten.length > 0 && unwritten.every((x: any) => x.wording.length <= 60 && !/[_.]/.test(x.wording)), unwritten.slice(0, 3).map((x: any) => [x.fact, x.wording]));
+  const pvq = (pv?.questionnaire?.sections ?? []).flatMap((x: any) => x.questions ?? []);
+  ok("QA-82 fail (Preview): no question in Preview is the field's definition", pvq.length > 0 && !pvq.some((x: any) => x.label === x.meaning && x.meaning.length > 40), pvq.filter((x: any) => x.label === x.meaning).map((x: any) => x.label).slice(0, 2));
   console.log(`${pass}/${pass + fail} passed`);
   process.exit(fail ? 1 : 0);
 })();
