@@ -3,12 +3,17 @@
 // a run reads the combination's draft through the pure runner (engine/answer-keys.ts) and stores every line; the
 // immigration expert signs the expected values. Registered in features/answer-keys.ts (P-214). No model call (US$0).
 // Audit lines name the family key, the item and the counts: never a family's values (SA-1B-296 field 9).
-import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Put } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Put, Query } from "@nestjs/common";
 import { readFileSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 import { Prisma } from "@prisma/client";
-import { buildSnapshot, type Snapshot } from "../../engine/snapshot.ts";
-import { blank, changeProblem, checkExpected, checkFamily, fingerprintOf, ITEM_KINDS, NO_SCORING, runFieldMap, runRuleSet, runState, SAMPLE_WORDS, signProblem, unclean, type Family, type FieldError, type ItemKind, type MapExpected, type RuleExpected } from "../../engine/answer-keys.ts";
+import type { z } from "zod";
+import { FamilyBody, KeyCreateBody, KeyUpdateBody, SignBody } from "../../contracts/answer-keys.ts";
+import { problemFromZod } from "../../contracts/programs.ts";
+import { canonical } from "../../../contracts/rules.ts";
+import { buildSnapshot, effective, type Snapshot } from "../../engine/snapshot.ts";
+import { writesParts } from "../../engine/field-format.ts";
+import { blank, changeProblem, checkExpected, checkFamily, fingerprintOf, ITEM_KINDS, keyBoxes, NO_SCORING, runFieldMap, runRuleSet, runState, SAMPLE_WORDS, signProblem, unclean, type Family, type FieldError, type ItemKind, type MapExpected, type RuleExpected } from "../../engine/answer-keys.ts";
 import type { Inventory } from "../../engine/form-values.ts";
 import { ACTORS, Audit, Db, fail, need, readerOf, SOLUTION, Workspace, type Actor } from "./core.ts";
 
@@ -16,6 +21,8 @@ const nameOf = (id: string | null | undefined) => [...ACTORS].find((a) => a.id =
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const invalid = (errors: FieldError[]): never => { throw new HttpException({ type: "https://expatready.local/problems/validation", title: "Some details need fixing", status: 400, detail: errors.map((e) => e.message).join(" "), errors }, HttpStatus.BAD_REQUEST); };
 const conflict = (detail: string, extra: object = {}): never => { throw new HttpException({ type: "https://expatready.local/problems/stale", title: "Changed by someone else", status: 409, detail, ...extra }, HttpStatus.CONFLICT); };
+/** STANDARDS §6 (review minor 3): the request's shape first (contracts/answer-keys.ts), then the engine's item rules. */
+const parse = <S extends z.ZodType>(schema: S, input: unknown): z.infer<S> => { const r = schema.safeParse(input ?? {}); if (!r.success) throw new HttpException(problemFromZod(r.error), HttpStatus.BAD_REQUEST); return r.data; };
 const obj = (b: unknown) => (b && typeof b === "object" && !Array.isArray(b) ? b : {}) as Record<string, unknown>;
 const holds = (a: Actor, duty: string) => (a.duties as readonly string[]).includes(duty);
 const at = (d: Date | null | undefined) => (d ? d.toISOString() : null);
@@ -78,7 +85,7 @@ export class AnswerKeys {
   async createFamily(actor: Actor, body: unknown) {
     need(actor, "author");
     const workspaceId = await this.ws.id();
-    const { family, errors } = checkFamily(body, await this.fields(workspaceId), await this.roles(workspaceId));
+    const { family, errors } = checkFamily(parse(FamilyBody, body), await this.fields(workspaceId), await this.roles(workspaceId));
     if (errors.length) invalid(errors);
     if (await this.db.testFamily.findUnique({ where: { workspaceId_familyKey: { workspaceId, familyKey: family.key } } })) invalid([{ field: "key", message: `A family with the key "${family.key}" exists already: choose another key or change that family.` }]);
     const r = await this.db.testFamily.create({ data: { workspaceId, familyKey: family.key, label: family.label, referenceDate: family.reference_date, people: family.people, facts: family.facts as object[], noneApply: family.none_apply, updatedBy: actor.id } });
@@ -91,7 +98,7 @@ export class AnswerKeys {
   async updateFamily(actor: Actor, id: string, body: unknown) {
     need(actor, "author");
     const f = await this.family(id);
-    const b = obj(body);
+    const b = parse(FamilyBody, body) as Record<string, unknown>;
     const { family, errors } = checkFamily({ ...b, key: f.familyKey }, await this.fields(f.workspaceId), await this.roles(f.workspaceId));
     if (errors.length) invalid(errors);
     if (b.version !== f.version) conflict(`${nameOf(f.updatedBy)} saved this family at ${f.updatedAt.toISOString().slice(11, 16)} UTC. Reload their version, then make your change again.`, { current: familyView(f) });
@@ -112,6 +119,34 @@ export class AnswerKeys {
     if (!done) conflict("Someone saved this family a moment ago. Reload their version, then make your change again.");
     await this.audit.log(f.workspaceId, actor.id, "updated", "answer-key family", f.familyKey, `${actor.name} changed the test family "${f.familyKey}"${signed ? `; ${signed} signed key${signed === 1 ? "" : "s"} back to Draft` : ""}`, reason ? { reason } : undefined);
     return familyView((await this.family(id)) as FamilyRow);
+  }
+
+  /** The family editor's field picker (BR-1): the library's fields a fact may name (none retired), with the value type
+   *  and, for a choice field, its answer list's values. /library/fields names no answer list, so it is not reused. */
+  async libraryFields() {
+    const workspaceId = await this.ws.id();
+    const [rows, lists, phones] = await Promise.all([this.db.canonicalField.findMany({ where: { workspaceId } }), this.db.answerList.findMany({ where: { workspaceId }, include: { values: { orderBy: { sortOrder: "asc" } } } }),
+      // Devin review: a phone is stored as text in the library but written as parts ({country_code, number}); the
+      // forms that read it part by part say so in their transform ("phone:…", "phone_part:…").
+      // Devin review (2nd pass): after an optional "select primary phone;" choice (engine/field-format.ts writesParts).
+      this.db.formFieldMap.findMany({ where: { workspaceId, OR: [{ transform: { contains: "phone" } }, { transform: { contains: "address_part" } }] }, select: { canonicalFieldKey: true, transform: true } })]);
+    const byParts = new Set(phones.filter((p) => writesParts(p.transform)).map((p) => p.canonicalFieldKey).filter(Boolean));
+    const values = new Map(effective(lists, (l) => l.answerListKey, "draft").map((l) => [l.answerListKey, l.values.map((v) => ({ key: v.valueKey, label: v.label }))]));
+    return {
+      fields: effective(rows, (r) => r.canonicalFieldKey, "draft").filter((f) => f.status !== "RETIRED").sort((a, b) => a.canonicalFieldKey.localeCompare(b.canonicalFieldKey))
+        .map((f) => ({ id: f.canonicalFieldKey, label: (f.labelChecked && f.label) || f.meaning, value_type: f.valueType, values: f.answerListKey ? values.get(f.answerListKey) ?? [] : null, parts: f.dataType === "COMPOSITE" || f.valueType === "address" || f.valueType === "phone" || byParts.has(f.canonicalFieldKey) })),
+    };
+  }
+
+  /** Concept §4 (challenge M5 b): the Expected editor's boxes of one form's map in this combination's draft, read
+   *  through the engine (keyBoxes); never a run's output. */
+  async boxes(combinationId: string, form: unknown) {
+    const c = await this.combination(combinationId);
+    const ref = typeof form === "string" ? form.trim() : "";
+    if (!ref) invalid([{ field: "form", message: "Name the form (?form=IMM 5257)." }]);
+    const s = await this.draft(c.workspaceId, c.id);
+    if (!pdfHas(s, ref)) fail(`${ref} has no PDF field map in this combination.`, HttpStatus.NOT_FOUND);
+    return keyBoxes(s, ref, this.inventory(s, ref))!;
   }
 
   // ------------------------------------------------------------------------------------------------ keys (BR-2, BR-7)
@@ -153,7 +188,7 @@ export class AnswerKeys {
     this.writer(actor);
     const c = await this.combination(combinationId);
     if (c.retiredAt) fail(`"${c.label}" is retired: no new answer key is written for it.`, HttpStatus.CONFLICT);
-    const b = obj(body);
+    const b = parse(KeyCreateBody, body) as Record<string, unknown>;
     const kind = b.item_kind as ItemKind, ref = typeof b.item_ref === "string" ? b.item_ref.trim() : "";
     if (!(ITEM_KINDS as readonly string[]).includes(kind)) invalid([{ field: "item_kind", message: "Choose what the key tests: field_map (a form's field map) or rule_set (the eligibility rules)." }]);
     if (typeof b.family_id !== "string" || !UUID.test(b.family_id)) invalid([{ field: "family_id", message: "Choose the test family (its id)." }]);
@@ -173,7 +208,7 @@ export class AnswerKeys {
     this.writer(actor);
     const k = await this.key(id);
     if (k.combination.retiredAt) fail(`"${k.combination.label}" is retired: its answer keys are not changed.`, HttpStatus.CONFLICT);
-    const b = obj(body);
+    const b = parse(KeyUpdateBody, body) as Record<string, unknown>;
     const s = await this.draft(k.workspaceId, k.combinationId);
     // Review minor 1 (BR-6): a change that names no edition keeps the key's own; it never moves to the map's edition.
     const given = obj(b.expected), kept = k.itemKind === "field_map" && !(typeof given.edition === "string" && given.edition.trim()) ? { ...given, edition: (k.expected as MapExpected).edition } : b.expected;
@@ -182,6 +217,8 @@ export class AnswerKeys {
     if (b.version !== k.version) conflict(`${nameOf(k.updatedBy)} saved these expected values at ${k.updatedAt.toISOString().slice(11, 16)} UTC. Reload their version, then make your change again.`);
     const why = changeProblem(k.state, b.reason);
     if (why) invalid([{ field: "reason", message: why }]);
+    // Break m6: a signed key "changed" to the very same values keeps its signature (nothing to sign again).
+    if (k.state === "SIGNED" && canonical(expected as never) === canonical(k.expected as never)) return this.get(id);
     const reason = k.state === "SIGNED" ? String(b.reason).trim() : null;
     // Break m1: the state read is part of the guard, so a sign landing during this change makes it a 409, never an
     // unsigning without a reason.
@@ -195,7 +232,7 @@ export class AnswerKeys {
   async sign(actor: Actor, id: string, body: unknown) {
     const k = await this.key(id);
     if (k.combination.retiredAt) fail(`"${k.combination.label}" is retired: its answer keys are not signed.`, HttpStatus.CONFLICT);
-    const why = signProblem(k, actor, obj(body).version);
+    const why = signProblem(k, actor, parse(SignBody, body).version);
     if (why) throw new HttpException({ type: "https://expatready.local/problems/sign", title: "Not signed", status: holds(actor, "sme") ? 409 : 403, detail: why }, holds(actor, "sme") ? HttpStatus.CONFLICT : HttpStatus.FORBIDDEN);
     const n = await this.db.answerKey.updateMany({ where: { id, version: k.version, state: "DRAFT" }, data: { state: "SIGNED", signedByUserId: actor.id, signedAt: new Date() } }); // the PUT guard reads the state too (break m1)
     if (!n.count) conflict("These expected values changed a moment ago: reload, read them again, then sign.");
@@ -223,6 +260,8 @@ export class AnswerKeysController {
   @Get("answer-keys/families") families(@Headers("x-actor") a: H) { readerOf(a); return this.k.families(); }
   @Post("answer-keys/families") createFamily(@Headers("x-actor") a: H, @Body() b: unknown) { return this.k.createFamily(readerOf(a), b); }
   @Put("answer-keys/families/:id") updateFamily(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.k.updateFamily(readerOf(a), id, b); }
+  @Get("answer-keys/fields") fields(@Headers("x-actor") a: H) { readerOf(a); return this.k.libraryFields(); }
+  @Get("combinations/:id/answer-keys/boxes") boxes(@Headers("x-actor") a: H, @Param("id") id: string, @Query("form") form: unknown) { readerOf(a); return this.k.boxes(id, form); }
   @Get("combinations/:id/answer-keys") list(@Headers("x-actor") a: H, @Param("id") id: string) { readerOf(a); return this.k.list(id); }
   @Post("combinations/:id/answer-keys") create(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.k.create(readerOf(a), id, b); }
   @Get("answer-keys/:id") get(@Headers("x-actor") a: H, @Param("id") id: string) { readerOf(a); return this.k.get(id); }
