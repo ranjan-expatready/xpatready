@@ -35,6 +35,12 @@ One owner per row and per shared file; never build another owner's rows. Under t
 ## M3 wave after the weekly-plan reset (founder, 2 Nov: "After the reset"; start 5 Nov 23:00 UTC)
 C7.7 deliverables list (take over #357, part 1) · C8.1 signed scans and entered ticks · C8.2 filing record · C6.5 document reader (passport by rules first, then OCR through the STANDARDS §1 gate; P-256 brings "Fill this from my documents" with it) · C7.5 independent AI review (paid runs within P-225). Held rows (P-251) stay held. The tech lead shapes each row's "Done when" before the reset.
 
+## Paid-AI rows: two parallel tracks (founder, 2 Nov: pick them up first on the new account, in parallel)
+| # | Area | Item | Done when (beyond the standard) | Source |
+|---|---|---|---|---|
+| PA | forms "ai-runs" + Mac paid runner + qa | **Track A, data:** one PR with every remaining job file (C3.4 sections, rules, answer lists; C4.7 PQR picks; C4.11 step 5; C9.1 impact; R-146 field maps of IMM 1294, 5646, 5710, 0008, 5406, 5562, 5532, 5604), each with usual and worst cost; runs one by one on the tech lead's Go; one result PR per row | each result contract-valid, quotes found in its inventory (tech lead), qa verdict on its PR (P-227), merged; spend within P-232 and R-146 | P-225, P-227, P-229 (4), P-232 |
+| PB | forms (one session per row) | **Track B, product gaps:** C3.4 AI step in the app · C4.7 picks screen (draft, accept, remove) · C4.11 live wiring · C11.8 progress, Stop, live cost (QA-98, QA-106, QA-111) · C11.15 Majors QA-101–103 (K11) | each row reaches Works in qa using Track A's Saved result through Live or Saved (P-227) | P-227, P-231 |
+
 ## Shared services (P-258, minimal)
 | # | Area | Item | Done when (beyond the standard) | Source |
 |---|---|---|---|---|
