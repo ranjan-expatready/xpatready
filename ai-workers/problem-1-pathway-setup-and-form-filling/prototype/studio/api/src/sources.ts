@@ -600,7 +600,7 @@ export class Sources {
     const libKeys = new Set(library.map((l) => l.key));
     // D3: the edition is a fact of the file (p2/convert.ts), never the model's reading: a saved answer that misread it (the
     // 21 Oct IMM 5257 run says 06-2018 for the 09-2023 file) still lands on the file's edition; the reading stays on the job.
-    const fileEdition = (await this.printedEdition(a)) ?? a.edition ?? out.form_edition ?? null;
+    const fileEdition = (await this.printedEdition(a)) ?? null; // printedEdition falls back to the attachment's own label
     const quoteOf = (q?: string) => (q && /^[0-9a-f]{64}$/.test(a.sha256) ? { file: a.fileName.slice(0, 300), sha256: a.sha256, edition: a.edition?.slice(0, 60) ?? null, page: null, quote: q.slice(0, 1000), quoteFound: true, rule: null } : null);
     const proposals: (NewProposal & Work)[] = items.map((i) => {
       const near = i.candidates.filter((c) => c.score >= 0.55).map((c) => c.key).slice(0, 10);

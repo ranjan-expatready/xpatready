@@ -3,13 +3,13 @@
 // answer says "IMM 5257 (06-2018)" while the file is (09-2023), so its proposals must carry the file's edition, or the
 // Form library counts none of them for IMM 5257 (09-2023) ("Not mapped yet" beside 84 waiting proposals). The model's
 // reading stays visible on the job. No model call; the ledger is not written.
-//   zsh studio/tools/isolated.sh forms_d3 4474 start && tsx studio/tests/check_d3_saved_edition.ts 4474 xr_studio_forms_d3
+//   zsh studio/tools/isolated.sh forms_d3 4468 start && tsx studio/tests/check_d3_saved_edition.ts 4468 xr_studio_forms_d3
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { LEDGER_DIR } from "../../p2/policy.ts";
 
-const PORT = Number(process.argv[2] ?? 4474), DB = process.argv[3] ?? "xr_studio_forms_d3";
+const PORT = Number(process.argv[2] ?? 4468), DB = process.argv[3] ?? "xr_studio_forms_d3";
 let pass = 0, fail = 0;
 const ok = (name: string, c: boolean, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
 const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
@@ -54,6 +54,19 @@ const SAVED = "studio-fieldmap-imm5257e-live-20261021t060247723z.json";
   const lib = await call("GET", "/library/forms/list");
   const row = (lib.body?.rows ?? []).find((r: any) => r.code === "IMM 5257");
   ok("D3 fail-first: the Form library shows IMM 5257's AI draft waiting (84 to review), not \"Not mapped yet\"", row?.field_map?.kind === "proposed" && /84 to review/.test(row?.field_map?.words ?? ""), row?.field_map);
+
+  // The Demo menu's sample (six): every replayed field-map proposal carries a library edition (before the fix they carried
+  // the model's text, e.g. "IMM 1344 (07-2014)" for the 09-2024 file, and every replayed form read "Not mapped yet").
+  await call("POST", "/demo/reset", { confirm: "RESET" });
+  const six = await call("POST", "/demo/load", { sample: "six" });
+  ok("D3 setup: the Demo menu's sample (six) loads", six.status < 300, six.body?.message);
+  const stray = sql(`select distinct p.form_edition from proposal_item p where p.step = 'field_map' and p.status = 'waiting' and not exists (select 1 from form_edition e where e.edition_label = p.form_edition)`);
+  const waiting = Number(sql(`select count(*) from proposal_item where step = 'field_map' and status = 'waiting'`));
+  ok("D3 fail-first (six): every waiting field-map proposal names an edition the library holds (none named by the model)", waiting > 0 && stray === "", { waiting, stray });
+  const rows6 = ((await call("GET", "/library/forms/list")).body?.rows ?? []) as { code: string; field_map: { kind: string; words: string } }[];
+  const proposedForms = sql(`select distinct split_part(form_edition, ' (', 1) from proposal_item where step = 'field_map' and status = 'waiting'`).split("\n").filter(Boolean);
+  const notShown = proposedForms.filter((c) => !/AI draft · \d+ to review|waits? for review/i.test(rows6.find((r) => r.code === c)?.field_map.words ?? ""));
+  ok("D3 (six): each form with waiting AI proposals says so in the Form library, never \"Not mapped yet\"", proposedForms.length > 0 && notShown.length === 0, { proposedForms, notShown: notShown.map((c) => [c, rows6.find((r) => r.code === c)?.field_map.words]) });
 
   ok("D3: no model call: the spend ledger is unchanged", ledger() === before);
   console.log(`\n${pass} passed, ${fail} failed`);
