@@ -55,3 +55,25 @@ After each save, `GET …/workspace?tab=questionnaires` shows only the change ma
 1. Refuse the release, or map the modes, so Prepare never gives a 500 (M1).
 2. Make the preview use the case's fallback for unmoded lines, or name them (M2).
 3. Refuse a body whose `filing` and `filingMode` disagree.
+
+## Round 2 (re-check on `92e25d3d`, fixes in `9dbf504b`)
+I re-ran journeys 7, 8 and 9 on a fresh copy on :4441.
+- **Journey 7 now holds.** With the child Declared only, release 3 is approved and the case's Prepare answers 200. `/filings` answers 200 with every filing `files_own`/`applying`.
+- **Journey 8 now holds.** After an untick and a re-tick, the preview says "3 filings in one submission", the same as the case.
+- **Bad input still holds.** A body whose `filing` and `filingMode` disagree is now refused with 400.
+- **The editor change** (ticking Applicant on a Declared only line clears the mode) is read in the code but not walked in the browser. The screen has no Declared only line to start from.
+- **What remains:** until PR 2 the preview shows PR 2's plan for On the principal's and Declared only lines set by API (review n1). This is a Minor.
+
+| Criterion | Round 1 | Round 2 | Evidence |
+|---|---|---|---|
+| Task completed | 1 | 1 | Journeys 1–4 |
+| Next step obvious | ½ | ½ | No Filing control until PR 3 (by design); the warning now says so |
+| Plain words | 1 | 1 | |
+| Feedback and state | 1 | 1 | |
+| Correct data | ½ | 1 | M2 fixed; n1 is reachable only through the API |
+| Error recovery | ½ | 1 | M1 fixed: Prepare answers 200 |
+| Accessibility and screen sizes | 1 | 1 | axe clean at 400, 1024 and 1440 px (round 1) |
+| Speed | 1 | 1 | |
+| Visual quality | ½ | ½ | The screen is unchanged until PR 3 |
+| Trust and sources | ½ | 1 | The preview matches the case; Sample labelled; fees never CAD 0 |
+| **Total** | 7.5 | **9 / 10** | Pass; no criterion at 0 |

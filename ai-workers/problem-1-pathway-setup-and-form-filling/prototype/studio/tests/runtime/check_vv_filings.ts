@@ -25,7 +25,7 @@ const sum = (r: D, k?: string) => r.fees.filter((f) => !k || f.line === k).reduc
   ok("C6.12 BR-1: the case itself is never a filing", !r.filings.some((f) => f.applicants[0].role === "case") && !r.not_filing.some((f) => f.role === "case"));
   ok("C6.12 BR-1: each filing has its own application-number box, empty until recorded, and starts Not started", r.filings.every((f) => f.number === null && f.status === "NOT_STARTED" && f.combination === "vv.single"));
   const odd = d([person(0, "principal"), { ...person(1, "child"), role: "representative" as Participant["role"] }]);
-  ok("C6.12 BR-1 (fail): a role with no visitor filing gets none and says why", odd.filings.length === 1 && odd.not_filing.length === 1 && /no filing for the role "representative"/.test(odd.not_filing[0].why), JSON.stringify(odd.not_filing));
+  ok("C6.12 BR-1 (fail): a role with no visitor filing gets none and says why", odd.filings.length === 1 && odd.not_filing.length === 1 && /no filing is set for a representative/.test(odd.not_filing[0].why), JSON.stringify(odd.not_filing));
   const built = d([person(0, "principal"), { ...person(1, "child"), role: "constructor" as Participant["role"] }, { ...person(2, "child"), role: "toString" as Participant["role"] }]);
   ok("C6.12 BR-1 (fail): role names that are built-in object names are not filings (break m3)", built.filings.length === 1 && built.not_filing.length === 2);
   const a = d(family(4)), b = d([person(0, "principal"), person(1, "spouse_or_partner", false), person(2, "child"), person(3, "child")]);
@@ -68,7 +68,7 @@ const sum = (r: D, k?: string) => r.fees.filter((f) => !k || f.line === k).reduc
 // BR-18: fee lines per filing: a capped line on the principal's filing, the others exempt; they add up to the group's total.
 {
   const r = d(family(6)), vv = lines(r, "visitor_visa");
-  ok("C6.12 BR-18 (review M1): with the cap, the principal's filing carries CAD 500 and the other five are exempt at CAD 0", vv.length === 6 && vv.find((f) => f.filing === "filing-s-0")!.amount_cents === 500_00 && vv.filter((f) => f.exempt).length === 5 && vv.filter((f) => f.exempt).every((f) => f.amount_cents === 0 && f.payer === "s-0" && /Covered by the family maximum on Client A's filing/.test(f.why)));
+  ok("C6.12 BR-18 (review M1): with the cap, the principal's filing carries CAD 500 and the other five are exempt at CAD 0", vv.length === 6 && vv.find((f) => f.filing === "filing-s-0")!.amount_cents === 500_00 && vv.filter((f) => f.exempt).length === 5 && vv.filter((f) => f.exempt).every((f) => f.amount_cents === 0 && f.payer === "s-0" && /Covered by the family maximum, paid by Client A on Client A's filing/.test(f.why)));
   ok("C6.12 BR-18 (review M1): the filings' lines add up to the group total (CAD 670)", sum(r) === r.groups[0].total_cents && sum(r) === 670_00, sum(r));
   const four = d(family(4));
   ok("C6.12 BR-18 (fail): without the visitor cap, each filing pays its own CAD 100, nobody exempt", lines(four, "visitor_visa").every((f) => f.amount_cents === 100_00 && !f.exempt && f.payer === f.filing.replace("filing-", "")));
@@ -89,6 +89,42 @@ const sum = (r: D, k?: string) => r.fees.filter((f) => !k || f.line === k).reduc
   for (const k of ["constructor", "toString", "__proto__"]) ok(`C6.12 (break m3): the key "${k}" is not derived, never a crash`, deriveFilings(k, family(1)).derived === false);
   ok("C6.12: the Visitor visa is derived", deriveFilings("vv.single", family(2)).derived === true);
   ok("C6.12: the version changes when the people change and stays the same otherwise", d(family(2)).version === d(family(2)).version && d(family(2)).version !== d(family(3)).version);
+}
+// C11.12 (P-233; concept r2 BR-6, BR-10, challenge M2, M3): people on the principal's filing, fees per person, co-filing.
+{
+  const modes = (m: Record<string, string>) => ({ modes: new Map(Object.entries(m)) as never });
+  const vvChild = deriveFilings("vv.single", family(4), undefined, modes({ child: "on_principal" })) as D;
+  const main = vvChild.filings.find((f) => f.owner?.role === "principal")!;
+  ok("C11.12 M2 pass: Visitor visa children On the principal's: 3 filings become 2, the visa fee still counts 4 people", vvChild.filings.length === 2 && main.applicants.length === 3 && total(vvChild, "visitor_visa")?.people === 4 && lines(vvChild, "visitor_visa").length === 4, vvChild.groups[0]?.totals);
+  ok("C11.12 M2 pass: each person on a filing has their own fee line; below the cap each is paid by the person", lines(vvChild, "biometrics").filter((f) => f.filing === main.id).length === 3 && lines(vvChild, "visitor_visa").filter((f) => f.filing === main.id).map((f) => f.payer).sort().join() === main.applicants.map((a) => a.subject).sort().join());
+  const withAges = deriveFilings("vv.single", family(4), undefined, { ...modes({ child: "on_principal" }), ages: new Map([["s-0", 40], ["s-1", 40], ["s-2", 10], ["s-3", 15]]) }) as D;
+  ok("C11.12 M2 fail: a 10-year-old on the principal's filing is exempt from biometrics (the age is the person's, never applicants[0]'s)", withAges.fees.find((f) => f.line === "biometrics" && f.payer === "s-2")?.exempt === true && total(withAges, "biometrics")?.people === 3);
+  const ee = [person(0, "principal"), person(1, "spouse_or_partner"), person(2, "child"), person(3, "child", false)];
+  const pnp = deriveFilings("pnp.express_entry", ee, undefined, { ...modes({ spouse_or_partner: "on_principal", child: "on_principal" }), label: "Express Entry stream" }) as D;
+  ok("C11.12 BR-6 pass: Express Entry (Sample modes): 1 filing, 4 applicants, the last declared only", pnp.derived && pnp.filings.length === 1 && pnp.filings[0].applicants.length === 4 && pnp.filings[0].applicants[3].mode === "declared_only");
+  ok("C11.12 BR-10 pass: no fee rule → no fee line and 'Fees not worked out yet', never CAD 0", pnp.fees.length === 0 && pnp.fees_worked_out === false && pnp.fees_why === "Fees not worked out yet for Express Entry stream; nothing is guessed." && !/CAD 0/.test(JSON.stringify(pnp)));
+  ok("C11.12 BR-10 fail: a declared-only person on a combination with fees gets no fee line", (() => { const x = deriveFilings("vv.single", [person(0, "principal"), person(1, "child", false)], undefined, modes({ child: "declared_only" })) as D; return x.filings[0].applicants[1]?.mode === "declared_only" && !x.fees.some((f) => f.payer === "s-1"); })());
+  const fs = deriveFilings("fs.spouse", [person(0, "principal"), person(1, "child"), person(4, "sponsor")], undefined, { ...modes({ child: "on_principal", sponsor: "co_files" }), label: "Spouse sponsorship" }) as D;
+  ok("C11.12 BR-4 pass: Spouse sponsorship → 2 filings (PR + sponsorship) in one group, splittable false", fs.filings.length === 2 && fs.filings.some((f) => f.mode === "co_filed" && f.owner?.role === "sponsor") && fs.groups.length === 1 && fs.groups[0].splittable === false);
+  const fsSplit = deriveFilings("fs.spouse", [person(0, "principal"), person(4, "sponsor")], undefined, { ...modes({ sponsor: "co_files" }), groupOf: (x) => (x === "s-4" ? "g-own" : "g-fam") }) as D;
+  ok("C11.12 BR-4 fail: a co-filed sponsorship never lands in a group of its own (it follows the principal's)", fsSplit.groups.length === 1 && fsSplit.groups[0].id === "g-fam");
+  // Review M1 (PR 2): a capped line on the principal's filing says whose it is (person) apart from who pays it.
+  const capped = deriveFilings("vv.single", family(6), undefined, modes({ child: "on_principal" })) as D;
+  const kid = capped.fees.find((f) => f.line === "biometrics" && f.person === "s-3");
+  ok("C11.12 review M1 pass: a covered line names its person and the payer apart", !!kid && kid.payer === "s-0" && kid.filing === "filing-s-0" && /paid by Client A on Client A's filing/.test(kid.why), kid);
+  ok("C11.12 review M1 fail: every applicant on a filing has exactly one line per fee, keyed by person (never two for the principal)", capped.fees.filter((f) => f.line === "visitor_visa").map((f) => f.person).sort().join() === ["s-0", "s-1", "s-2", "s-3", "s-4", "s-5"].join());
+  // Review M2: no total where fees are not worked out
+  ok("C11.12 review M2 pass: a group with no fee rule has total null, never 0", pnp.groups.every((g) => g.total_cents === null && g.totals.length === 0));
+  ok("C11.12 review M2 fail: a group with fee rules keeps its number", typeof vvChild.groups[0].total_cents === "number" && vvChild.groups[0].total_cents! > 0);
+  // Break m3: a sponsorship on a combination whose other fees are worked out says its own are not
+  const vvSp = deriveFilings("vv.single", [person(0, "principal"), person(4, "sponsor")], undefined, modes({ sponsor: "co_files" })) as D;
+  ok("C11.12 break m3 pass: the sponsorship's fees are said to be not worked out yet", vvSp.fees_worked_out === false && /sponsorship's fees are not worked out yet/.test(vvSp.fees_why ?? "") && typeof vvSp.groups[0].total_cents === "number");
+  const fsSpouse = deriveFilings("fs.spouse", [person(0, "principal"), person(1, "spouse_or_partner"), person(4, "sponsor")], undefined, modes({ spouse_or_partner: "files_own", sponsor: "co_files" })) as D;
+  ok("C11.12 review n1 pass: beside a sponsorship, a group with another own filing stays splittable (that filing may leave)", fsSpouse.groups[0].splittable === true && fsSpouse.filings.length === 3);
+  ok("C11.12 review n1 fail: the principal and the sponsorship alone are not splittable", fs.groups[0].splittable === false);
+  const wpSplit = deriveFilings("wp.family", family(2), undefined, { ...modes({ spouse_or_partner: "files_own" }), groupOf: (x) => (x === "s-1" ? "g-own" : "g-fam"), groupKind: (g) => (g === "g-own" ? "separate" : "family") }) as D;
+  ok("C11.12 break round 2: a split group with no fee rule says nothing about family maximums", wpSplit.groups.find((g) => g.id === "g-own")?.why === "Split out with a reason: sent on its own.");
+  ok("C11.12 BR-4 pass: a sponsor with no mode files nothing (1 filing, C11.12.test.ts:66–72)", (deriveFilings("fs.spouse", [person(0, "principal"), person(4, "sponsor")], undefined, modes({ principal: "files_own", sponsor: null as never })) as D).filings.length === 1);
 }
 // The threshold decides on its own (review m3): a made-up rule where per-person × people is above the maximum below the threshold.
 {
@@ -112,5 +148,26 @@ try {
   }), { numRuns: 400 });
   ok("C6.12 property: 400 households: one filing per applying person, fees within the maximums, lines add up", true);
 } catch (e) { ok("C6.12 property: 400 households: one filing per applying person, fees within the maximums, lines add up", false, String((e as Error).message).slice(0, 400)); }
+
+// C11.12 review m2: the same property with the release's modes drawn at random: fee lines are one per applying person
+// (keyed by person), declared-only people have none, and every group's lines add up to its totals.
+try {
+  fc.assert(fc.property(fc.array(fc.record({ role: fc.constantFrom("spouse_or_partner", "child"), applies: fc.boolean() }), { maxLength: 10 }),
+    fc.constantFrom("files_own", "on_principal", "declared_only"), fc.constantFrom("files_own", "on_principal", "declared_only"), (rest, spouseMode, childMode) => {
+    const people = [person(0, "principal"), ...rest.map((x, i) => person(i + 1, x.role as Participant["role"], x.applies))];
+    const r = deriveFilings("vv.single", people, undefined, { modes: new Map([["spouse_or_partner", spouseMode], ["child", childMode]]) as never }) as D;
+    // Whatever the mode, a travelling person applies (on their own filing or the principal's); the principal always does.
+    const applying = people.filter((p) => p.role === "principal" || p.applies);
+    const onFilings = r.filings.flatMap((f) => f.applicants.filter((a) => a.mode === "applying").map((a) => a.subject));
+    if (onFilings.sort().join() !== applying.map((p) => p.subjectId).sort().join()) return false;
+    for (const line of ["visitor_visa", "biometrics"]) {
+      if (r.fees.filter((f) => f.line === line).map((f) => f.person).sort().join() !== onFilings.join()) return false;
+      if (r.groups.reduce((t, g) => t + (g.totals.find((x) => x.line === line)?.total_cents ?? 0), 0) !== sum(r, line)) return false;
+    }
+    const declared = r.filings.flatMap((f) => f.applicants.filter((a) => a.mode === "declared_only").map((a) => a.subject));
+    return declared.every((s) => !r.fees.some((f) => f.person === s));
+  }), { numRuns: 300 });
+  ok("C11.12 property: 300 households with random modes: one fee line per applying person, none for declared only, lines add up", true);
+} catch (e) { ok("C11.12 property: 300 households with random modes: one fee line per applying person, none for declared only, lines add up", false, String((e as Error).message).slice(0, 400)); }
 
 process.exitCode = summary() ? 1 : 0;
