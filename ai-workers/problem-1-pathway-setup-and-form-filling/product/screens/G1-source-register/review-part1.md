@@ -90,3 +90,15 @@ The rubric is applied to the engine's output (refusal messages and lists). A jou
 * Both boards: read as text only. `code/` (team mapping): Unverified. D17 and D20: stay with the founder.
 
 **Verdict: Block.** To fix: MJ-1 (with its fail test). Then fix Minors 1–5 or list them in the PR, and update the build notes and PR body to 47b79213.
+
+## Round 2: commit **c47044b8** (answers the review of 47b79213)
+I reran everything at c47044b8: suite **28/28** (exit 0), `graph.mjs --check` exit 0, `count-any` 423 (same as the base).
+* **MJ-1 fixed.** `source-register.ts:106-109`: numeric text on gt/gte/lt/lte is now a published number, canonicalised (`"18"` → `18`). Text on eq/neq stays an answer code. The fail check fails when the fix is reverted (27/28 on a scratch mutant). A second mutant that also counts text on eq turns the real-release count red (23/28), so codes like `"01"` stay out.
+* **Minor 1 fixed.** All three earlier survivors now fail the suite: a number under `not`, dropping `eq`/`neq`, and k counting only numeric leaves (`case.funds_cad|gte|2`). Positional k, skipping document lines and the pre-Devin order still fail too: **8/8 mutants fail**.
+* **Minors 2, 3 and the extra flags:** recorded for the tech lead in build notes 9–12, with recommendations. Nothing is built for them, which is right for part 1 (P-26).
+* **Minor 4 fixed:** concept status is "v2, waiting for the tech lead's approval"; "Age years" in concept §4–§5 and both boards (no "Age in whole years" left); build notes say 28/28.
+* **Minor 5 fixed:** BR-2 now says a same-field, same-operator clause inserted before a number shifts k and lists it again, never silently.
+* **Still open, not a code finding:** the readiness conditions in WAY-OF-WORKING step 1 (the tech lead's OK on the three ⚑ points and Decisions 1–3; the dates question). The PR body already holds the label for that OK.
+* Score: correct data rises to 1 → **8 of 8 applicable = 10/10** (accessibility and visual quality still N/A, no screen).
+
+**Verdict (c47044b8): Approve** for the engine and records of part 1. No Blocker or Major is open. The label still waits for the tech lead's OK on the three ⚑ points, as the PR says.
