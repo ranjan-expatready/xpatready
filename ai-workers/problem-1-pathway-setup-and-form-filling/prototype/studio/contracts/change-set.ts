@@ -56,5 +56,8 @@ export type PreviewItem = {
   releases: { combination: string; version: number }[];
   open_cases: { combination: string; release: number | null; cases: number }[];
 };
-export type CheckResult = { ok: boolean; problems: CheckProblem[]; /** More problems were found than are listed (break n3). */ truncated: boolean; not_checked: string[]; tier: TierResult; preview: PreviewItem[]; fingerprint: string };
+export type CheckResult = { ok: boolean; problems: CheckProblem[]; /** More problems were found than are listed (break n3). */ truncated: boolean; not_checked: string[]; tier: TierResult; preview: PreviewItem[]; fingerprint: string;
+  /** BR-5 (B2): who makes this change set; recorded on its change_set row and shown in the panel. */ made_by: MadeBy };
+/** BR-5: the made-by mark in words. */
+export const MADE_BY_WORDS: Record<MadeBy, string> = { person: "Made by a person", ai: "Made by the AI", ai_edited: "Made by the AI, edited by a person", ai_draft: "Drafted by the AI" };
 export const NOT_CHECKED = ["Ranges that can never meet (more than 5 and less than 3)", "Contradictions across \"or\" and \"not\"", "Coverage gaps (an answer no rule covers)"];
