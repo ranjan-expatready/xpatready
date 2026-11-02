@@ -60,7 +60,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await settle();
   const row = p.locator('[data-line="IMM 5257"]');
   step("C11.15 pass: the forms AI picked are lines, marked \"Picked by AI · Sample\" with IRCC's words", await row.count() === 1 && /Picked by AI · Sample/.test(await row.innerText()) && /"[^"]{20,}/.test(await row.innerText()));
-  step("C11.15: the finder line says what the find did, saved answers at US$0, and that it is Sample", /AI found \d+ forms?/.test(await finder.innerText()) && /saved AI answers, US\$0/.test(await finder.innerText()) && /Sample until the immigration expert confirms/.test(await finder.innerText()), (await finder.innerText()).split("\n").slice(0, 2).join(" | "));
+  step("C11.15: the finder line says what the find did, saved answers at US$0, and that it is Sample", /AI found \d+ forms?/.test(await finder.innerText()) && /Saved, US\$0/.test(await finder.innerText()) && /Sample until the immigration expert confirms/.test(await finder.innerText()), (await finder.innerText()).split("\n").slice(0, 2).join(" | "));
   await state("forms-found-by-ai");
 
   // ======================================================== Remove from this combination, the shared toast and the one Undo
@@ -98,12 +98,12 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // on a copy without the switch fails here (review m2).
   const liveOn = (await api(`/combinations/${vv}/forms/find/plan`, { method: "POST", data: { mode: "live" } })).body?.live?.on === true;
   if (!liveOn) {
-    step("C11.15 Lead Critical: with AI now switched off on this copy, Find again greys AI now and says why in words", await again.getByRole("radio", { name: /^AI now/ }).isDisabled() && /AI now is switched off on this copy/.test(await again.locator('[data-mode="live"]').innerText()), await again.locator('[data-mode="live"]').innerText());
+    step("C11.15 Lead Critical: with AI now switched off on this copy, Find again greys AI now and says why in words", await again.getByRole("radio", { name: /^Live/ }).isDisabled() && /AI now is switched off on this copy/.test(await again.locator('[data-mode="live"]').innerText()), await again.locator('[data-mode="live"]').innerText());
   } else {
-    await again.getByRole("radio", { name: /^AI now/ }).check(); await p.waitForTimeout(800);
+    await again.getByRole("radio", { name: /^Live/ }).check(); await p.waitForTimeout(800);
     step("C11.15 plan: choosing AI now says the most it can cost, inside the cap", /at most US\$\d+\.\d\d/i.test(await again.locator("[data-find-cost]").innerText().catch(() => "")), await again.locator("[data-find-cost]").innerText().catch(() => ""));
   }
-  await again.getByRole("radio", { name: /^Use saved AI answers/ }).check(); await again.locator("[data-find-plan]").waitFor(); await p.waitForTimeout(800);
+  await again.getByRole("radio", { name: /^Saved/ }).check(); await again.locator("[data-find-plan]").waitFor(); await p.waitForTimeout(800);
   await state("find-again-plan");
   const before = (await api(`/combinations/${vv}/forms/find/latest`)).body.run?.id;
   await again.getByRole("button", { name: "Start" }).click();
@@ -133,8 +133,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const fill = p.getByRole("dialog"); await fill.locator("[data-people-cost]").waitFor({ timeout: 30000 }).catch(() => {});
   step("C11.12 plan: Fill from the guide names the guide and says the cost first (rules only: US$0)", /Guide 5256/.test(await fill.innerText()) && /Cost: US\$0/.test(await fill.locator("[data-people-cost]").innerText().catch(() => "")));
   // Lead check L2: AI now is greyed (not in the slice 3 Go) until the founder approves a live trial.
-  step("C11.12 L2: AI now is greyed and says it waits for the founder's Go for a live trial", await fill.getByRole("radio", { name: /^AI now/ }).isDisabled() && /not approved yet/.test(await fill.locator('[data-fill-mode="live"]').innerText()) && /founder's Go for a live trial/.test(await fill.locator('[data-fill-mode="live"]').innerText()));
-  await fill.getByRole("radio", { name: /^Use saved AI answers/ }).check(); await p.waitForTimeout(800);
+  step("C11.12 L2: AI now is greyed and says it waits for the founder's Go for a live trial", await fill.getByRole("radio", { name: /^Live/ }).isDisabled() && /not approved yet/.test(await fill.locator('[data-fill-mode="live"]').innerText()) && /founder's Go for a live trial/.test(await fill.locator('[data-fill-mode="live"]').innerText()));
+  await fill.getByRole("radio", { name: /^Saved/ }).check(); await p.waitForTimeout(800);
   await fill.getByRole("button", { name: "Fill" }).click(); await fill.locator("[data-people-proposal]").waitFor({ timeout: 30000 }).catch(() => {});
   step("C11.12 fail: with no saved AI answer yet it says so and proposes nothing", /No saved AI answer/.test(await fill.innerText()) && await fill.getByRole("button", { name: "Use these lines" }).isDisabled());
   await fill.getByRole("button", { name: "Back" }).click();

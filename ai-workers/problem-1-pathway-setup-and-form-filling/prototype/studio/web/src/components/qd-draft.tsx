@@ -16,9 +16,9 @@ type Finding = { rule: string; level: "error" | "warning"; message: string };
 type Result = { runId: string; status: string; proposed: number; findings: Finding[]; rules: Record<string, string>; note: string };
 const MODES: [Mode, string, string][] = [
   ["rules", "Rules only", "No AI: rules work out each step. US$0."],
-  ["replay", "Saved AI answers", "The answers AI gave before for this combination's files, replayed; a step with none saved says so. US$0."],
+  ["replay", "Saved", "The answers AI gave before for this combination's files, replayed; a step with none saved says so. US$0."],
 ];
-const HOW: Record<Plan["steps"][number]["how"], [string, "ai" | "neutral" | undefined]> = { rules: ["rules", undefined], saved: ["saved AI answers", "ai"], not_yet: ["not available yet", "neutral"], ai_only: ["AI work: with saved AI answers", "neutral"] };
+const HOW: Record<Plan["steps"][number]["how"], [string, "ai" | "neutral" | undefined]> = { rules: ["rules", undefined], saved: ["Saved", "ai"], not_yet: ["not available yet", "neutral"], ai_only: ["AI work: with Saved", "neutral"] };
 
 export function DraftQuestionsDocuments({ id }: { id: string }) {
   const [open, setOpen] = React.useState(false);
@@ -78,7 +78,7 @@ function QdDialog({ id, onClose }: { id: string; onClose: () => void }) {
         <div className="space-y-4" data-qd-plan>
           <fieldset className="space-y-2"><legend className="text-xs font-medium">How to draft</legend>
             {MODES.map(([m, label, hint]) => <label key={m} className="flex gap-2 text-sm" data-qd-mode={m}><input type="radio" name="qd-mode" checked={mode === m} onChange={() => setMode(m)} className="mt-1" /><span><span className="font-medium">{label}</span><br /><span className="text-xs text-text-muted">{hint}</span></span></label>)}
-            <p className="flex gap-2 text-sm text-text-muted" data-qd-mode="live"><input type="radio" disabled aria-label="AI now (not approved yet)" className="mt-1" /><span><span className="font-medium">AI now (not approved yet)</span><br /><span className="text-xs">{plan.data?.live.why ?? "Waits for the founder's Go for the live trial."}</span></span></p>
+            <p className="flex gap-2 text-sm text-text-muted" data-qd-mode="live"><input type="radio" disabled aria-label="Live (not approved yet)" className="mt-1" /><span><span className="font-medium">Live (not approved yet)</span><br /><span className="text-xs">{plan.data?.live.why ?? "Waits for the founder's Go for the live trial."}</span></span></p>
           </fieldset>
           {plan.isPending ? <p className="text-sm text-text-muted">Working out the steps and their cost…</p> : plan.error ? <Notice tone="warn" title="It cannot be drafted yet">{plan.error.message}</Notice> : plan.data ? (
             <div className="rounded-lg border border-border p-3 text-sm">

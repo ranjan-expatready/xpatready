@@ -162,8 +162,8 @@ export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
 type FillMode = "rules" | "replay" | "live";
 const FILL_MODES: [FillMode, string, string][] = [
   ["rules", "Rules only (US$0)", "No AI: rules find the guide's sentences that name each person. How many is a Sample default you check."],
-  ["replay", "Use saved AI answers (US$0)", "Replays what AI answered for this exact guide before. Until a live trial records one, it says there is none."],
-  ["live", "AI now (cost shown below)", "Two AI rounds read the guide; only lines both agree on, with their sentence in the guide, are proposed."],
+  ["replay", "Saved (US$0)", "Replays what AI answered for this exact guide before. Until a live trial records one, it says there is none."],
+  ["live", "Live (cost shown below)", "Two AI rounds read the guide; only lines both agree on, with their sentence in the guide, are proposed."],
 ];
 
 /** "Fill from the guide" (slice 3, P-121): the plan and its cost first, then the proposal with IRCC's words. */
@@ -212,7 +212,7 @@ function FillFromGuide({ id, onClose, onUse }: { id: string; onClose: () => void
       ) : (
         <div className="space-y-4" data-people-plan>
           <fieldset className="space-y-2"><legend className="text-xs font-medium">How to fill it</legend>
-            {FILL_MODES.map(([m, label, hint]) => { const off = m === "live" && !live.approved; return <label key={m} className={`flex gap-2 text-sm${off ? " text-text-muted" : ""}`} data-fill-mode={m}><input type="radio" name="fill-mode" checked={mode === m} onChange={() => setMode(m)} disabled={off} className="mt-1" /><span><span className="font-medium">{off ? "AI now (not approved yet)" : label}</span><br /><span className="text-xs text-text-muted">{off ? live.why ?? "Checking whether AI now is approved…" : hint}</span></span></label>; })}
+            {FILL_MODES.map(([m, label, hint]) => { const off = m === "live" && !live.approved; return <label key={m} className={`flex gap-2 text-sm${off ? " text-text-muted" : ""}`} data-fill-mode={m}><input type="radio" name="fill-mode" checked={mode === m} onChange={() => setMode(m)} disabled={off} className="mt-1" /><span><span className="font-medium">{off ? "Live (not approved yet)" : label}</span><br /><span className="text-xs text-text-muted">{off ? live.why ?? "Checking whether AI now is approved…" : hint}</span></span></label>; })}
           </fieldset>
           {plan.isPending ? <p className="text-sm text-text-muted">Working out the steps and their cost…</p> : plan.error ? <Notice tone="warn" title="It cannot be filled yet">{plan.error.message}</Notice> : plan.data ? (
             <div className="rounded-lg border border-border p-3 text-sm">

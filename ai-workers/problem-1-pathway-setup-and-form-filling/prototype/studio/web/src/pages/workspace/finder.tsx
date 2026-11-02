@@ -35,9 +35,9 @@ export const formsKeys = (id: string) => [["combination", id], ["combination-sum
 export const useFinderLatest = (id: string) => useApi<FinderLatest>(["combination", id, "finder"], `/combinations/${id}/forms/find/latest`, { refetchInterval: (q) => (q.state.data?.run && ACTIVE.has(q.state.data.run.status) ? 2000 : false) });
 
 const MODES: [Mode, string, string][] = [
-  ["replay", "Use saved AI answers (US$0)", "Replays the answers AI gave for these exact pages before. Only combinations with saved answers can be found this way."],
+  ["replay", "Saved (US$0)", "Replays the answers AI gave for these exact pages before. Only combinations with saved answers can be found this way."],
   ["rules", "Rules only (US$0)", "Reads the pages and lists the form numbers printed on them; attaches nothing."],
-  ["live", "AI now (cost shown below)", "Two AI rounds read the pages and must agree; only forms both pick are attached."],
+  ["live", "Live (cost shown below)", "Two AI rounds read the pages and must agree; only forms both pick are attached."],
 ];
 
 /** Find forms with AI: the plan and its cost first, then the run (Find again, and Redo for one form with `only`). With
@@ -125,7 +125,7 @@ export function FinderPanel({ id, latest, onRedo, onChoosePage, removed = [], li
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="text-sm">
           <p className="font-medium">{waitsForPage ? START.pageTitle : run ? `AI found ${attached} form${attached === 1 ? "" : "s"} for this combination${notFound ? `, ${notFound} not found` : ""}${decide ? `, ${decide} to decide` : ""}` : lineCount ? `${lineCount} form${lineCount === 1 ? "" : "s"} on this combination` : "No form find yet"}</p>
-          <p className="text-xs text-text-muted" data-finder-status>{waitsForPage ? `${START.pageBody} ` : run ? `Last find ${run.finished_at ? fmtWhen(run.finished_at) : "running now"}${run.mode === "replay" ? " · saved AI answers, US$0" : run.mode === "rules" ? " · rules only, US$0" : ""}. ` : lineCount ? "Added without an AI find. Nothing was spent on finding forms yet. " : `${START.body} `}Which forms apply is Sample until the immigration expert confirms.</p>
+          <p className="text-xs text-text-muted" data-finder-status>{waitsForPage ? `${START.pageBody} ` : run ? `Last find ${run.finished_at ? fmtWhen(run.finished_at) : "running now"}${run.mode === "replay" ? " · Saved, US$0" : run.mode === "rules" ? " · rules only, US$0" : ""}. ` : lineCount ? "Added without an AI find. Nothing was spent on finding forms yet. " : `${START.body} `}Which forms apply is Sample until the immigration expert confirms.</p>
         </div>
         {/* Lead split (28 Oct): the first find is started from Start setup (screens lane, S3): its "Find forms with AI"
             button is this slot. Once a find exists, Find again (or choosing the page it waits for) is this list's one action. */}

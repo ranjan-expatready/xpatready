@@ -187,7 +187,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   // guarded AI path for the added form IMM 5257
   await go(`/c/${vv}/forms`);
   await click(p.getByRole("row", { name: /IMM 5257/ }).getByRole("button", { name: "Draft with AI" }));
-  await p.getByRole("dialog").getByText(LIVE ? "Live AI call" : "Stub pass only").click();
+  await p.getByRole("dialog").getByText(LIVE ? /^Live$/ : "Stub pass only").click();
   await click(p.getByRole("dialog").getByRole("button", { name: LIVE ? "Start live AI draft" : "Run stub pass" }));
   for (let i = 0; i < 120; i++) { const d = await api(`/combinations/${vv}`); const j = d.jobs.find((x) => x.kind === "field_map"); if (j && j.status !== "RUNNING" && j.status !== "QUEUED") break; await p.waitForTimeout(2000); }
   const vvd = await api(`/combinations/${vv}`); const job = vvd.jobs.find((x) => x.kind === "field_map");
@@ -309,7 +309,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
     await link.click(); await idle();
   };
   await draftReplay("IMM 1295");
-  await p.getByText("Replay of a saved run").first().waitFor();
+  await p.getByText("Saved", { exact: true }).first().waitFor();
   const j1295 = await api(`/jobs/${p.url().split("/jobs/")[1]}`);
   step("B3: the IMM 1295 draft is a labelled replay of a saved real run; against an empty library every field is new", j1295.mode === "REPLAY" && /Replay of saved run|Saved AI answer.*no model call, US\$0/.test(j1295.message) && j1295.detail.counts.reuse === 0 && j1295.detail.counts.new === j1295.items.length, `${j1295.mode} · ${j1295.items.length} items · "${String(j1295.message).slice(0, 90)}" · ${j1295.runId}: ${JSON.stringify(j1295.detail.counts)}`);
   await shot("B3-imm1295-proposals.png");

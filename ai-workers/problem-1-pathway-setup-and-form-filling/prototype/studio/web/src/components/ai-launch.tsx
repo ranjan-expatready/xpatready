@@ -15,8 +15,8 @@ import { COST_WORDS } from "../../../contracts/cost-check";
 
 export type AiScope = { kind: "catalogue" | "program" | "combination" | "source"; ids: string[]; label?: string };
 const MODES = [
-  ["LIVE", "Live AI", "Reads each form with AI; unchanged forms reuse what was read before; the cost is shown below before it starts"],
-  ["REPLAY", "Replay saved runs", "No model call, US$0; uses earlier real runs, labelled as replays"],
+  ["LIVE", "Live", "Reads each form with AI; unchanged forms reuse what was read before; the cost is shown below before it starts"],
+  ["REPLAY", "Saved", "No model call, US$0: the saved result of earlier real runs, shown through the same steps"],
   ["STUB", "Stub pass", "No network, no cost, no AI content: proves the path only"],
 ] as const;
 const WORK_CHANGED = "The work changed since you reviewed it (a source, a draft or a running step changed). Review the updated plan, then start again.";
@@ -69,7 +69,7 @@ export function AiLaunchDialog({ scope, onClose, initialMode = "LIVE" }: { scope
             </label>
           ))}
         </fieldset>
-        {p ? <p className="rounded-lg border border-border bg-surface px-3 py-2 text-sm" data-cost-line>{mode === "LIVE" ? <>Expected {p.totals.expected_usd === null ? "unknown" : `US$${p.totals.expected_usd.toFixed(2)}`} · worst case US${p.totals.worst_usd.toFixed(2)} (each form capped at US${p.per_run_cap_usd}; at most {p.max_paid_attempts_per_form} paid attempts per form, a retry included) · Spent so far US${p.ledger.committed_usd.toFixed(2)} of US${p.ledger.cap_usd.toFixed(2)}.</> : mode === "REPLAY" ? "Replay of saved real runs: no model call, US$0." : "Stub pass: no network, no cost, no AI content."}</p> : null}
+        {p ? <p className="rounded-lg border border-border bg-surface px-3 py-2 text-sm" data-cost-line>{mode === "LIVE" ? <>Expected {p.totals.expected_usd === null ? "unknown" : `US$${p.totals.expected_usd.toFixed(2)}`} · worst case US${p.totals.worst_usd.toFixed(2)} (each form capped at US${p.per_run_cap_usd}; at most {p.max_paid_attempts_per_form} paid attempts per form, a retry included) · Spent so far US${p.ledger.committed_usd.toFixed(2)} of US${p.ledger.cap_usd.toFixed(2)}.</> : mode === "REPLAY" ? "Saved: no model call, US$0." : "Stub pass: no network, no cost, no AI content."}</p> : null}
         {p ? <p className="text-xs text-text-muted">{p.capability_note}</p> : null}
         {plan.isLoading ? <Spinner label="Working out what would run" /> : plan.isError ? <Notice tone="danger" title="The plan could not be made">{(plan.error as Error).message}</Notice> : p ? (
           <>
