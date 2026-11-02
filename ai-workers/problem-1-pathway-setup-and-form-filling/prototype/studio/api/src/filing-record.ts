@@ -7,18 +7,13 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Body, Controller, Get, Headers, HttpStatus, Inject, Injectable, Param, Put } from "@nestjs/common";
-import { z } from "zod";
+import { SetApplicationNumber as SetNumber } from "../../contracts/filing-record.ts";
 import { checkApplicationNumber, duplicateWarning, type NumberRule } from "../../engine/runtime/filing-record.ts";
 import { actorOf, Audit, CaseRead, Db, fail, STUDIO, type Actor } from "./core.ts";
 import { Runtime } from "./runtime.ts";
 
 type H = string | undefined;
 const RULES = JSON.parse(readFileSync(join(STUDIO, "samples", "filing-numbers.json"), "utf8")) as { basis: string; applicationNumber: NumberRule };
-const SetNumber = z.object({
-  value: z.string({ error: "Send the application number as text, or null to clear it." }).max(40, "An application number is at most 40 characters.").nullable(),
-  /** The number read (null when there was none): a different one now is a 409. */
-  before: z.string().max(40).nullable(),
-});
 const UCI = "person.uci";
 
 @Injectable()
@@ -55,13 +50,18 @@ export class FilingRecord {
     if ((parsed.data!.before ?? null) !== (f!.applicationNumber ?? null)) fail("Someone changed this filing's application number after you read it: read the filing record again, then try again. Nothing was saved.", HttpStatus.CONFLICT);
     const others = value ? await this.db.filing.findMany({ where: { workspaceId: f!.workspaceId, applicationNumber: value, NOT: { id: f!.id }, case: { firmKey: c.firmKey } }, select: { case: { select: { reference: true } } } }) : [];
     if (value !== (f!.applicationNumber ?? null)) {
-      // The old value is the lock: a change made meanwhile leaves nothing updated (409), never overwritten.
-      const n = await this.db.filing.updateMany({ where: { id: f!.id, applicationNumber: f!.applicationNumber }, data: { applicationNumber: value } });
-      if (n.count !== 1) fail("Someone changed this filing's application number after you read it: read the filing record again, then try again. Nothing was saved.", HttpStatus.CONFLICT);
       const person = this.r.peopleOf(c).find((p) => p.subjectId === f!.subjectId)?.label ?? "a person";
-      // Government identifiers stay out of the summary line (AG-7-95 safety); the audit detail keeps before and after.
-      await this.audit.log(c.workspaceId, actor.id, value ? (f!.applicationNumber ? "changed" : "added") : "cleared", "application number", f!.id,
-        `${actor.name} ${value ? (f!.applicationNumber ? "changed" : "added") : "cleared"} the application number on ${person}'s filing (case ${c.reference})`, { before: f!.applicationNumber, after: value });
+      const did = value ? (f!.applicationNumber ? "changed" : "added") : "cleared";
+      // The number and its audit line are one change (Devin on #553): both or neither.
+      await this.db.$transaction(async (tx) => {
+        // The old value is the lock: a change made meanwhile leaves nothing updated (409), never overwritten.
+        const n = await tx.filing.updateMany({ where: { id: f!.id, applicationNumber: f!.applicationNumber }, data: { applicationNumber: value } });
+        if (n.count !== 1) fail("Someone changed this filing's application number after you read it: read the filing record again, then try again. Nothing was saved.", HttpStatus.CONFLICT);
+        // Government identifiers stay out of the summary line (AG-7-95 safety); the audit detail keeps before and after.
+        // "case <first 8 of its id>" lets the activity feed show the line to this firm only (studio.ts CASE_ENTITIES).
+        await new Audit(tx as unknown as Db).log(c.workspaceId, actor.id, did, "application number", f!.id,
+          `${actor.name} ${did} the application number on ${person}'s filing (case ${c.id.slice(0, 8)}, ${c.reference})`, { before: f!.applicationNumber, after: value });
+      });
     }
     return { ...(await this.read(actor, c.id)), warning: duplicateWarning(others.map((o) => o.case)) };
   }

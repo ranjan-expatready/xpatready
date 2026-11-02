@@ -49,6 +49,12 @@ type Rec = { our_reference: string; filings: { id: string; person: string; appli
   const audit = sql(`select summary || '|' || (detail->>'before') || '|' || (detail->>'after') from audit_event where entity='application number' and entity_key='${fP?.id}' order by at desc limit 1`) ?? sql(`select summary || '|' || (detail->>'before') || '|' || (detail->>'after') from audit_event where entity='application number' and entity_key='${fP?.id}' order by created_at desc limit 1`) ?? "";
   ok("C8.2 AG-7-95 safety: the change is audited with before and after, and the number is not in the audit's words", /changed the application number/.test(audit) && audit.endsWith("|W123456789|W223456789") && !/W\d/.test(audit.split("|")[0]), audit);
 
+  // Devin on #553 (security): the activity feed shows the change to this firm's staff only, never to another firm's.
+  type Ev = { entity: string; entityKey: string | null; detail?: { before?: string | null; after?: string | null } | null };
+  const feed = async (actor: string) => { const x = await call("GET", "/activity", undefined, actor); return (x.status === 200 ? x.body as Ev[] : []).filter((e) => e.entity === "application number" && e.entityKey === fP?.id); };
+  ok("C8.2 pass: the firm's own officer sees the number's change in the activity feed", (await feed(officer)).length >= 2);
+  ok("C8.2 fail (C6.11, security): another firm's staff never see this case's application-number lines (nor their before and after)", (await feed("user-S")).length === 0);
+
   // AG-7-95 r4: the same number on another case of the firm warns and saves.
   const c2 = await m3.openCase(vv, [{ role: "principal", name: "Sample Client B", dob: m3.yearsAgo(30) }], { representative: f.rep, caseOfficers: [officer] });
   await m3.prepare(c2.id, officer);
