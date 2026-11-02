@@ -19,6 +19,13 @@ const run = Date.now().toString(36);
   const caseId: string = r.body?.id;
   const filings = (who = OFFICER) => call("GET", `/runtime/cases/${caseId}/filings`, undefined, who);
 
+  // G15, VV-R15 (#356): biometrics depends on age (none under 14 or over 79), so with no date of birth its line waits.
+  const yearsAgo = (y: number) => { const d = new Date(); d.setUTCFullYear(d.getUTCFullYear() - y); return d.toISOString().slice(0, 10); };
+  const dob = (subject: string, years: number) => call("PUT", `/runtime/cases/${caseId}/answers/${subject}/person.date_of_birth`, { value: yearsAgo(years), expectedId: null }, OFFICER);
+  const principal = sql(`select subject_id from case_participant where case_id='${caseId}' and role='principal'`);
+  r = await filings();
+  ok("C6.12 (G15) fail: with no date of birth the biometrics line waits and is not in the total (CAD 100 only)", r.status === 200 && r.body.groups[0].total_cents === 100_00 && r.body.fees.some((f: { line: string; waiting?: unknown }) => f.line === "biometrics" && !!f.waiting), r.body?.groups?.[0]?.total_cents);
+  await dob(principal, 40);
   r = await filings();
   ok("C6.12 pass: one person → one Visitor visa filing, CAD 100 and biometrics CAD 85, from the pinned release", r.status === 200 && r.body.derived === true && r.body.filings.length === 1 && r.body.groups[0].total_cents === 185_00 && r.body.release_version >= 1 && r.body.combination === "vv.single", r.body);
   ok("C6.12: the case row is never a filing", !r.body.filings.some((f: { applicants: { role: string }[] }) => f.applicants[0].role === "case") && !r.body.not_filing.some((f: { role: string }) => f.role === "case"));
@@ -26,7 +33,8 @@ const run = Date.now().toString(36);
 
   // Grow the family to six: the CAD 500 maximum applies.
   const spouse = (await call("POST", `/runtime/cases/${caseId}/people`, { role: "spouse_or_partner", displayName: "Sample Spouse A" }, OFFICER)).body?.subject_id as string;
-  for (let i = 1; i <= 4; i++) await call("POST", `/runtime/cases/${caseId}/people`, { role: "child", displayName: `Sample Child ${i}` }, OFFICER);
+  await dob(spouse, 38);
+  for (let i = 1; i <= 4; i++) await dob((await call("POST", `/runtime/cases/${caseId}/people`, { role: "child", displayName: `Sample Child ${i}` }, OFFICER)).body?.subject_id, 15 + i);
   r = await filings();
   const vvFee = (b: { groups: { totals: { line: string; total_cents: number; cap_applied: boolean }[] }[] }) => b.groups[0].totals.find((f) => f.line === "visitor_visa")!;
   const feeSum = (b: { fees: { amount_cents: number }[] }) => b.fees.reduce((s, f) => s + f.amount_cents, 0);
