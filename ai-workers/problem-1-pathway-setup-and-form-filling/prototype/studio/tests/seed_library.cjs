@@ -4,7 +4,8 @@
 // and an activity line (the catalogue caches rows keyed on activity counts). Never run against the demo database.
 // Each function takes the check's own `sql(text)` runner (psql -Atc on its copy) and returns the item's key.
 const q = (v) => (v === null || v === undefined ? "null" : `'${String(v).replace(/'/g, "''")}'`);
-const WS = "(select id from workspace where key = 'demo')";
+// G2: an isolated copy holds one workspace, the demo one or another (STUDIO_WORKSPACE_KEY): the seed goes into it.
+const WS = "(select id from workspace order by created_at limit 1)";
 const DATA_TYPE = { text: "STRING", yes_no: "BOOLEAN", date: "DATE", code: "ENUM", country: "ENUM", address: "COMPOSITE", number: "NUMBER", phone: "COMPOSITE", email: "STRING" };
 const SUBJECT = { person: "PERSON", relationship: "RELATIONSHIP", case: "CASE", organisation: "ORGANISATION", representative: "REPRESENTATIVE" };
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 60);

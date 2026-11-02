@@ -269,7 +269,8 @@ function KeyForm({ combinationId, item, family, existing: latest, close, reload 
   const [dirty, setDirty] = React.useState(false), [stale, setStale] = React.useState<string | null>(null);
   useLeaveGuard(dirty);
   const map = item.item_kind === "field_map";
-  const boxes = useApi<BoxesView>(["answer-key-boxes", combinationId, item.item_ref], map ? `/combinations/${combinationId}/answer-keys/boxes?form=${encodeURIComponent(item.item_ref)}` : null);
+  // G2 (Devin on #568): the boxes of this item's own edition (a combination may hold several editions of a form).
+  const boxes = useApi<BoxesView>(["answer-key-boxes", combinationId, item.item_ref, item.edition ?? ""], map ? `/combinations/${combinationId}/answer-keys/boxes?form=${encodeURIComponent(item.item_ref)}${item.edition ? `&edition=${encodeURIComponent(item.edition)}` : ""}` : null);
   const gates = useApi<{ gates: { key: string; label: string }[] }>(["combination", combinationId, "eligibility-gates"], map ? null : `/combinations/${combinationId}/eligibility-gates`);
   // Devin review: a form can apply to a person who stays home (a spouse's own form, "each person"), so a field map offers
   // every person of the family; eligibility is for the people who travel (C6.9 BR-7). A person left empty is not sent.
