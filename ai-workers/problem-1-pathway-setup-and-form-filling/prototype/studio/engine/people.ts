@@ -2,6 +2,7 @@
 // library's person roles (one list for the editor, the validator and the runtime; no role list in code). Pure.
 import { FILING_CHOICE, type LineMode, type PeopleLine, type PersonRoleView } from "../contracts/workspace.ts";
 import { appliesOf, isLineMode, modeSent } from "./filing-modes.ts";
+import { rolesNamedBy as named } from "./resolver.ts";
 
 export type PeopleError = { field: string; message: string };
 type Role = Pick<PersonRoleView, "key" | "label" | "takesPartInCase" | "mayBeApplicant" | "retired">;
@@ -57,16 +58,15 @@ export function checkPeople(list: PeopleLine[], roles: Role[], strict = true): {
   return { errors, lines };
 }
 
-/** The roles a form line's "who fills it" names by role (removing one of them leaves the line with nobody). */
-const NAMES: Record<string, string[]> = { spouse_or_partner: ["spouse_or_partner"], couple_once: ["spouse_or_partner"], each_dependent_child: ["child"], representative: ["representative"], sponsor: ["sponsor"] };
-/** X2b (BR-C1 "the line's person is not in that application"): the roles a line's "who" needs in a combination. */
-export const rolesNamedBy = (who: string): string[] => NAMES[who] ?? [];
+/** X2b (BR-C1 "the line's person is not in that application"): the roles a line's "who" needs in a combination
+ *  (removing one of them leaves the line with nobody). SH3: the one table is the resolver's (contracts/resolver.ts R10). */
+export const rolesNamedBy = (who: string): string[] => named(who);
 
 /** Form lines that name a person this save removes (or sets to at most 0): the save asks first (M4). */
 export function linesNamingRemoved(before: { role: string; max: number }[], after: { role: string; max: number }[], lines: { form: string; who: string }[]) {
   const kept = new Set(after.filter((p) => p.max > 0).map((p) => p.role));
   const removed = before.filter((p) => p.max > 0 && !kept.has(p.role)).map((p) => p.role);
-  return lines.filter((l) => (NAMES[l.who] ?? []).some((r) => removed.includes(r))).map((l) => ({ ...l, roles: (NAMES[l.who] ?? []).filter((r) => removed.includes(r)) }));
+  return lines.filter((l) => named(l.who).some((r) => removed.includes(r))).map((l) => ({ ...l, roles: named(l.who).filter((r) => removed.includes(r)) }));
 }
 
 type GuideLine = { role: string; min: number; max: number; applies: boolean; quote: string; why: string | null };

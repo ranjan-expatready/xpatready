@@ -1,0 +1,73 @@
+// SH2 (P-258, inside G-CORE P-253): where a library item is used, worked out once. Pure (P-249 lift-ready): no database,
+// no framework, no vendor call; api/src/where-used.ts reads the rows and passes them in. Callers: the shared library's
+// used-in lists and lifecycle guard (library-sources.ts, library-items.ts), a library form's uses (form-uses.ts), a new
+// edition's impact review (impact.ts), and G-CORE's impact preview.
+import { newestEdition } from "./programs.ts";
+
+type Versioned = { version: number; status: string };
+
+/** Each row's newest version, whatever its status (a retired newest one is still the newest: it hides the older ones). */
+export const newestBy = <T extends { version: number }>(rows: T[], idOf: (r: T) => string): T[] => {
+  const top = new Map<string, T>(); for (const r of rows) { const k = idOf(r), t = top.get(k); if (!t || r.version > t.version) top.set(k, r); }
+  return [...top.values()];
+};
+/** PR #96 finding (a): only each row's newest version counts, and only while that version is a draft or published. */
+export const current = <T extends Versioned>(rows: T[], idOf: (r: T) => string): T[] =>
+  newestBy(rows, idOf).filter((r) => r.status === "PUBLISHED" || r.status === "DRAFT");
+
+/** The shared fields a condition reads (the engine's own reading, engine/validate.ts). */
+export const fieldsOf = (c: unknown) => (c ? [...JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]) : []);
+
+/** The rows a field's or an answer list's uses are read from (each table's own columns, as the database holds them). */
+export type FieldUseRows = {
+  /** Current mapped form fields with their edition. */
+  boxes: { canonicalFieldKey: string | null; edition: { id: string; govFormDefId: string; channel: string; editionLabel: string; published?: string | null } }[];
+  lines: (Versioned & { combinationId: string; lineageKey: string; govFormDefId: string; predicateJson: unknown })[];
+  rules: (Versioned & { combinationId: string; predicateKey: string; predicateJson: unknown })[];
+  docs: (Versioned & { combinationId: string; lineageKey: string; predicateJson: unknown })[];
+  checks: (Versioned & { combinationId: string; checkKey: string; predicateJson: unknown })[];
+  questions: (Versioned & { lineageKey: string; sectionKey: string; canonicalFieldKey: string; predicateJson: unknown })[];
+  picks: { sectionKey: string; combinationId: string }[];
+};
+
+/** Every (field, combination) pair where a combination uses a shared field: its form reads it (on the form's current
+ *  edition per channel), or its form conditions, rules, document lines or checks read it, or its questionnaire asks it
+ *  (a question in a section the combination selects, or that question's condition) (PR #96 finding (b)). */
+export function fieldUses(r: FieldUseRows): [string, string][] {
+  const uses: [string, string][] = [];
+  const formLines = current(r.lines, (l) => `${l.combinationId}|${l.lineageKey}`);
+  const combosOf = new Map<string, string[]>(); for (const l of formLines) combosOf.set(l.govFormDefId, [...(combosOf.get(l.govFormDefId) ?? []), l.combinationId]);
+  // PR #108 minor (a): a combination fills its form's current edition (per channel: the newest one mapped; a newer
+  // edition not mapped yet leaves the older in use), so a field mapped only on a superseded edition is not used there.
+  const chan = (e: FieldUseRows["boxes"][number]["edition"]) => `${e.govFormDefId}|${e.channel}`;
+  const editions = [...new Map(r.boxes.map((b) => [b.edition.id, b.edition])).values()];
+  const currentOf = new Map<string, string>(); for (const k of new Set(editions.map(chan))) currentOf.set(k, newestEdition(editions.filter((e) => chan(e) === k))!.id);
+  for (const b of r.boxes) if (b.canonicalFieldKey && currentOf.get(chan(b.edition)) === b.edition.id) for (const c of combosOf.get(b.edition.govFormDefId) ?? []) uses.push([b.canonicalFieldKey, c]);
+  for (const l of formLines) for (const f of fieldsOf(l.predicateJson)) uses.push([f, l.combinationId]);
+  for (const x of current(r.rules, (x) => `${x.combinationId}|${x.predicateKey}`)) for (const f of fieldsOf(x.predicateJson)) uses.push([f, x.combinationId]);
+  for (const d of current(r.docs, (d) => `${d.combinationId}|${d.lineageKey}`)) for (const f of fieldsOf(d.predicateJson)) uses.push([f, d.combinationId]);
+  for (const k of current(r.checks, (k) => `${k.combinationId}|${k.checkKey}`)) for (const f of fieldsOf(k.predicateJson)) uses.push([f, k.combinationId]);
+  const combosOfSection = new Map<string, string[]>(); for (const p of r.picks) combosOfSection.set(p.sectionKey, [...(combosOfSection.get(p.sectionKey) ?? []), p.combinationId]);
+  for (const q of current(r.questions, (q) => q.lineageKey)) for (const f of [q.canonicalFieldKey, ...fieldsOf(q.predicateJson)]) for (const c of combosOfSection.get(q.sectionKey) ?? []) uses.push([f, c]);
+  return uses;
+}
+
+/** Pairs into item key → the combinations using it. `keyOf` turns a pair's key into the item's (a field into its answer
+ *  list); a pair with no item is left out. */
+export function byItem(pairs: Iterable<[string, string]>, keyOf: (k: string) => string | null | undefined = (k) => k): Map<string, Set<string>> {
+  const out = new Map<string, Set<string>>();
+  for (const [k, c] of pairs) { const key = keyOf(k); if (!key) continue; const s = out.get(key) ?? new Set(); s.add(c); out.set(key, s); }
+  return out;
+}
+
+/** A library form's line on each combination: the newest version of the combination's line for it, retired or not. */
+export const formLineByCombination = <T extends { combinationId: string; version: number }>(lines: T[]): Map<string, T> =>
+  new Map(newestBy(lines, (l) => l.combinationId).map((l) => [l.combinationId, l]));
+
+/** The combinations whose newest line files the form (not retired). */
+export const filingCombinations = <T extends { combinationId: string; version: number; status: string }>(lines: T[]): T[] =>
+  [...formLineByCombination(lines).values()].filter((l) => l.status !== "RETIRED");
+
+/** Releases that carry an item, per combination: each release with whether it is that combination's latest. */
+export const releaseUses = (rows: { combinationId: string; version: number; latest: number }[]) =>
+  rows.map((r) => ({ combinationId: r.combinationId, version: Number(r.version), latest: Number(r.version) === Number(r.latest) }));

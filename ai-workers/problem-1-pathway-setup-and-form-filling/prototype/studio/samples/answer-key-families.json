@@ -1,0 +1,69 @@
+{
+  "label": "Sample: made-up test families for answer-key tests (G4, C5.7; P-240). Never a client. Expected values are Sample until the immigration expert signs them. Legal: Unconfirmed: no counsel.",
+  "source": "The household of evidence lane E1's checked IMM 5257 (09-2023) fill (prototype/evidence-lane/E1/imm5257/values.complete.json, which passed Adobe Validate on 23 Oct 2026): Client A's mother visits her son in Toronto; her husband stays home and is named on her form. The facts below are that household written as the library's fields; the expected values of a key come from E1's checked values, never from this product's own output.",
+  "families": [
+    {
+      "key": "e1-mother-visit",
+      "label": "E1 household: the mother visits, her husband stays home (Sample)",
+      "reference_date": "2026-11-02",
+      "people": [
+        { "id": "mother", "role": "principal", "label": "EXAMPLE MOTHER (Sample)", "applies": true },
+        { "id": "father", "role": "spouse_or_partner", "label": "EXAMPLE FATHER (Sample)", "applies": false }
+      ],
+      "facts": [
+        { "about": "case", "fact": "case.service_language", "value": "english" },
+        { "about": "case", "fact": "case.visa_type_requested", "value": "VisitorVisa" },
+        { "about": "case", "fact": "case.visit_purpose", "value": "family_visit" },
+        { "about": "case", "fact": "case.intended_stay_from", "value": "2027-06-01" },
+        { "about": "case", "fact": "case.intended_stay_to", "value": "2027-08-31" },
+        { "about": "case", "fact": "case.funds_available_cad", "value": 5000 },
+        { "about": "case", "fact": "case.visit_contact_name", "row": 0, "value": "CLIENTA EXAMPLE" },
+        { "about": "case", "fact": "case.visit_contact_relationship", "row": 0, "value": "SON" },
+        { "about": "case", "fact": "case.visit_contact_address_in_canada", "row": 0, "value": { "street_number": "100", "street_name": "SAMPLE STREET", "city": "TORONTO", "province": "ON", "postal_code": "M5V 0A1", "country": "Canada" } },
+        { "about": "case", "fact": "relationship.start_date", "value": "1985-11-20" },
+        { "about": "mother", "fact": "person.family_name", "value": "EXAMPLE" },
+        { "about": "mother", "fact": "person.given_names", "value": "MOTHER" },
+        { "about": "mother", "fact": "person.sex", "value": "f_female" },
+        { "about": "mother", "fact": "person.date_of_birth", "value": "1962-07-08" },
+        { "about": "mother", "fact": "person.place_of_birth_city", "value": "NEW DELHI" },
+        { "about": "mother", "fact": "person.country_of_birth", "value": "India" },
+        { "about": "mother", "fact": "person.citizenship", "value": "india" },
+        { "about": "mother", "fact": "person.current_residence_country", "value": "india" },
+        { "about": "mother", "fact": "person.current_residence_status", "value": "citizen" },
+        { "about": "mother", "fact": "person.applying_from_country", "value": "india" },
+        { "about": "mother", "fact": "person.marital_status", "value": "married" },
+        { "about": "mother", "fact": "relationship.previously_married_or_common_law", "value": false },
+        { "about": "mother", "fact": "person.passport_number", "value": "Z7654321" },
+        { "about": "mother", "fact": "person.passport_country_of_issue", "value": "india" },
+        { "about": "mother", "fact": "person.passport_issue_date", "value": "2019-05-10" },
+        { "about": "mother", "fact": "person.passport_expiry_date", "value": "2029-05-09" },
+        { "about": "mother", "fact": "person.native_language", "value": "hindi" },
+        { "about": "mother", "fact": "person.official_language_ability", "value": "english" },
+        { "about": "mother", "fact": "person.language_test_taken", "value": false },
+        { "about": "mother", "fact": "person.mailing_address", "value": { "street_number": "12", "street_name": "EXAMPLE ROAD", "city": "NEW DELHI", "postal_code": "110001", "country": "India" } },
+        { "about": "mother", "fact": "person.residential_address", "value": { "street_number": "12", "street_name": "EXAMPLE ROAD", "city": "NEW DELHI", "postal_code": "110001", "country": "India" } },
+        { "about": "mother", "fact": "person.telephone_type", "value": "cellular" },
+        { "about": "mother", "fact": "person.telephone_number", "value": { "country_code": "91", "number": "9800000001" } },
+        { "about": "mother", "fact": "person.email", "value": "mother@example.com" },
+        { "about": "mother", "fact": "person.employment_activity", "row": 0, "value": "RETIRED" },
+        { "about": "mother", "fact": "person.employment_employer_name", "row": 0, "value": "NOT APPLICABLE" },
+        { "about": "mother", "fact": "person.employment_from_date", "row": 0, "value": "2022-07" },
+        { "about": "mother", "fact": "person.occupation_city", "row": 0, "value": "NEW DELHI" },
+        { "about": "mother", "fact": "person.occupation_country", "row": 0, "value": "india" },
+        { "about": "mother", "fact": "person.disorder_requiring_services", "value": false },
+        { "about": "mother", "fact": "person.status_violation_canada", "value": false },
+        { "about": "mother", "fact": "person.refused_visa_or_entry", "value": false },
+        { "about": "mother", "fact": "person.previously_applied_to_canada", "value": false },
+        { "about": "mother", "fact": "person.criminal_history", "value": false },
+        { "about": "mother", "fact": "person.military_service", "value": false },
+        { "about": "mother", "fact": "person.violent_organisation_association", "value": false },
+        { "about": "father", "fact": "person.family_name", "value": "EXAMPLE" },
+        { "about": "father", "fact": "person.given_names", "value": "FATHER" }
+      ],
+      "none_apply": [
+        { "about": "mother", "group": "education_history" },
+        { "about": "mother", "group": "previous_countries_of_residence" }
+      ]
+    }
+  ]
+}
