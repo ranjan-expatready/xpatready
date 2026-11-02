@@ -13,6 +13,7 @@ type Json = Parameters<typeof canonical>[0];
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { actorOf, Audit, Db, fail, need, readerOf, type Actor } from "./core.ts";
 import { insertProposals } from "./proposals.ts";
+import { answerValues } from "./answer-values.ts";
 import { keyFor } from "./library-changes.ts";
 import { LibrarySources } from "./library-sources.ts";
 
@@ -35,6 +36,36 @@ export function factsRead(tree: unknown): string[] {
   };
   walk(tree);
   return [...out];
+}
+
+/** C3.6 (break R2-M2): the words a rule compares a fact with (eq, in, …), so a choice's values can be checked against
+ *  them: a rule that tests a value the list lacks would never hold. */
+export function valuesCompared(tree: unknown, fact: string): string[] {
+  const out = new Set<string>();
+  // Devin review (yellow): a value is needed only where its absence makes the test impossible: a positive eq or in, or
+  // a neq under a not. A not flips the sense (contracts/rules.ts evaluate); a positive neq or a negated eq needs none.
+  const walk = (n: unknown, neg: boolean) => {
+    if (!n || typeof n !== "object") return;
+    const o = n as { op?: unknown; field?: unknown; value?: unknown; values?: unknown; args?: unknown; arg?: unknown };
+    const needs = (!neg && (o.op === "eq" || o.op === "in")) || (neg && o.op === "neq");
+    if (o.field === fact && needs) for (const v of [o.value, o.values].flat()) if (typeof v === "string") out.add(v);
+    const flip = o.op === "not" ? !neg : neg;
+    (Array.isArray(o.args) ? o.args : []).forEach((a) => walk(a, flip)); if (o.arg) walk(o.arg, flip);
+  };
+  walk(tree, false);
+  return [...out];
+}
+/** Refuses a choice whose values miss a value a rule compares the fact with; every rule of the combination that reads
+ *  the fact counts, not only the one named (Devin review, red). Returns the values all those rules need. */
+function ruleValuesKnown(all: RuleRef[], fact: string, values: { code: string; label: string }[] | undefined): string[] {
+  const needed = [...new Set(all.flatMap((r) => valuesCompared(r.tree, fact)))];
+  if (!values) return needed;
+  const codes = new Set(values.map((v) => v.code));
+  for (const r of all) {
+    const missing = valuesCompared(r.tree, fact).filter((v) => !codes.has(v));
+    if (missing.length) fail(`${r.sentence.split(":")[0]} compares ${fact} with ${missing.map((m) => `"${m}"`).join(", ")}, which is not among the answer values (${values.map((v) => v.code).join(", ")}): add it as a value, or correct the rule.`);
+  }
+  return needed;
 }
 
 const clip = (s: string) => (s.length > 300 ? `${s.slice(0, 297)}...` : s);
@@ -65,12 +96,17 @@ export function missingRuleFacts(rules: RuleRef[], library: Set<string>, derived
   return [...by].sort(([a], [b]) => a.localeCompare(b)).map(([fact, rs]) => ({ fact, rules: rs }));
 }
 
+/** C3.6 (Lead, 2 Nov; runtime-3's R3): the answer values a choice fact carries (api/src/answer-values.ts). */
+export { answerValues, CHOICE_TYPES } from "./answer-values.ts";
+const ValueLabels = z.array(z.string({ error: "Write each answer value as words." }).max(200, "Keep each answer value under 200 characters."), { error: "Write the answer values as a list of words, one per value." }).max(400, "At most 400 answer values.").optional();
+
 export const AddRuleFact = z.object({
   fact: z.string({ error: "Name the fact the rule reads." }).trim().min(1, "Name the fact the rule reads.").max(120),
   rule: z.string({ error: "Name the rule that needs this fact: a fact no form asks is added only for a rule that reads it." }).trim().min(1, "Name the rule that needs this fact: a fact no form asks is added only for a rule that reads it.").max(200),
   label: z.string({ error: "Give the fact a name a person reads." }).trim().min(2, "Give the fact a name a person reads (2 characters or more).").max(120),
   meaning: z.string({ error: "Say what the fact means." }).trim().min(10, "Say what the fact means, in a sentence (10 characters or more).").max(500),
   valueType: z.enum(RULE_FACT_TYPES as [string, ...string[]], { message: `Choose the answer type: ${RULE_FACT_TYPES.join(", ")}.` }),
+  values: ValueLabels,
 }).strict();
 
 /** The add by a rule's key (Day-0 acceptance C3.6, P-158 (5)): the person names the rule and says the fact in words;
@@ -81,6 +117,7 @@ export const AddFactForRule = z.object({
   meaning: z.string({ error: "Say what the fact means." }).trim().min(10, "Say what the fact means, in a sentence (10 characters or more).").max(500),
   valueType: z.enum(RULE_FACT_TYPES as [string, ...string[]], { message: `Choose the answer type: ${RULE_FACT_TYPES.join(", ")}.` }),
   subject: z.enum(FACT_SUBJECTS, { message: `Say whom the fact is about: ${FACT_SUBJECTS.join(", ")}.` }).default("person"),
+  values: ValueLabels,
   nearReason: z.string().trim().min(10, "Say in a sentence why it is not the same as the field it is close to (10 characters or more).").max(300).optional(),
 }).strict();
 
@@ -133,11 +170,13 @@ export class RuleFacts {
     const parsed = AddRuleFact.safeParse(body ?? {});
     if (!parsed.success) fail(parsed.error.issues[0]?.message ?? "Name the rule and describe the fact.");
     const b = parsed.data!;
+    const values = answerValues(b.valueType, b.values);
     const c = await this.combination(id);
     const { rules, library, missing, waitingFor } = await this.state(c);
     const rule = rules.find((r) => r.key === b.rule);
     if (!rule) fail(`No condition, rule or check "${b.rule}" in this combination: a fact no form asks is added only for a rule that reads it.`);
     if (!factsRead(rule!.tree).includes(b.fact)) fail(`${rule!.sentence.split(":")[0]} does not read ${b.fact}: name the rule that needs it.`);
+    const ruleValues = ruleValuesKnown(rules.filter((r) => factsRead(r.tree).includes(b.fact)), b.fact, values);
     if (library.has(b.fact)) fail(`${b.fact} is already in the library: the rule can use it as it is.`, HttpStatus.CONFLICT);
     // MA3 (review c36 r3): a retired field keeps its key, so it cannot be added again: it is restored.
     if (await this.db.canonicalField.findFirst({ where: { workspaceId: c.workspaceId, canonicalFieldKey: b.fact, status: "RETIRED", mergedIntoKey: null }, select: { id: true } }))
@@ -160,13 +199,13 @@ export class RuleFacts {
       message: `${actor.name} named ${rule!.sentence.split(":")[0]} as needing ${b.fact}: one library proposal (rules only, no AI, US$0).`, detail: { operation: "rule_fact", rule: rule!.key, ruleKind: rule!.kind, fact: b.fact } } });
     const [proposalId] = await insertProposals(tx, c.workspaceId, [{
       kind: "field", runId: job.id, step: "rule_fact", scope: { formEdition: null, combinationId: c.id }, landsOn: "library", reuse: { match: "new", existingKey: null },
-      payload: { kind: "field", label: b.label, aliases: [], meaning: b.meaning, valueType: b.valueType, subject, formBox: null },
+      payload: { kind: "field", label: b.label, aliases: [], meaning: b.meaning, valueType: b.valueType, subject, ...(values ? { values } : {}), formBox: null },
       source: { file: `rule ${rule!.key} (${c.combinationKey})`, sha256, edition: null, page: null, quote: rule!.sentence, quoteFound: true, rule: { key: rule!.key, sentence: rule!.sentence } },
       rounds: { draft: null, check: null },
       rules: [{ rule: "named_rule_reads_fact", passed: true, why: null }, { rule: "not_in_library", passed: true, why: null }],
       agreement: "rules_only", confidence: "check", reason: "Added for a rule, with a meaning a person wrote: a second person checks the name and meaning.",
       origin: "rules", identity: { key: normalizeLabel(b.label), near: [], nearReason: null }, relatesTo: null, revision: null, basis: "SAMPLE",
-      work: { ruleFact: b.fact, ruleKind: rule!.kind },
+      work: { ruleFact: b.fact, ruleKind: rule!.kind, ruleValues }, // review m-r3a: re-checked at landing
     }]);
     return { proposalId };
     }, { timeout: 30_000, maxWait: 10_000 });
@@ -180,6 +219,7 @@ export class RuleFacts {
     const parsed = AddFactForRule.safeParse(body ?? {});
     if (!parsed.success) fail(parsed.error.issues[0]?.message ?? "Name the fact in words.");
     const b = parsed.data!;
+    const values = answerValues(b.valueType, b.values);
     const c = await this.combination(id);
     const { snapshot } = await buildSnapshot(this.db, c.workspaceId, c.id, "draft");
     const rule = namedRules(snapshot).find((r) => r.key === ruleKey);
@@ -202,6 +242,7 @@ export class RuleFacts {
     // it again from the item as decided (name and subject may be edited at accept), so it never freezes.
     const all = await this.db.canonicalField.findMany({ where: { workspaceId: c.workspaceId }, select: { canonicalFieldKey: true } });
     const key = keyFor(b.subject, b.label, new Set(all.map((f) => f.canonicalFieldKey)));
+    const ruleValues = ruleValuesKnown(namedRules(snapshot).filter((r) => factsRead(r.tree).includes(key)), key, values); // break R2-M2: rules that already read the built key
     const sha256 = createHash("sha256").update(canonical((rule!.tree ?? {}) as Json)).digest("hex");
     const name = rule!.sentence.split(":")[0];
     const { proposalId } = await this.db.$transaction(async (tx) => {
@@ -212,13 +253,13 @@ export class RuleFacts {
         message: `${actor.name} named ${name} as needing "${b.label}": one library proposal (rules only, no AI, US$0).`, detail: { operation: "rule_fact", rule: rule!.key, ruleKind: rule!.kind, fact: key } } });
       const [proposalId] = await insertProposals(tx, c.workspaceId, [{
         kind: "field", runId: job.id, step: "rule_fact", scope: { formEdition: null, combinationId: c.id }, landsOn: "library", reuse: { match: "new", existingKey: null },
-        payload: { kind: "field", label: b.label, aliases: [], meaning: b.meaning, valueType: b.valueType, subject: b.subject, formBox: null },
+        payload: { kind: "field", label: b.label, aliases: [], meaning: b.meaning, valueType: b.valueType, subject: b.subject, ...(values ? { values } : {}), formBox: null },
         source: { file: `rule ${rule!.key} (${c.combinationKey})`, sha256, edition: null, page: null, quote: rule!.sentence, quoteFound: true, rule: { key: rule!.key, sentence: rule!.sentence } },
         rounds: { draft: null, check: null },
         rules: [{ rule: "named_rule_exists", passed: true, why: null }, { rule: "not_in_library", passed: true, why: null }, ...(near.length ? [{ rule: "near_duplicate_reason", passed: true, why: b.nearReason ?? null }] : [])],
         agreement: "rules_only", confidence: "check", reason: "Added for a rule, with a meaning a person wrote; not meaning-checked (P-95): a second person checks the name and meaning.",
         origin: "rules", identity: { key: normalizeLabel(b.label), near, nearReason: b.nearReason ?? null }, relatesTo: null, revision: null, basis: "SAMPLE",
-        work: { forRule: rule!.key, ruleKind: rule!.kind, keyPreview: key },
+        work: { forRule: rule!.key, ruleKind: rule!.kind, keyPreview: key, ruleValues },
       }]);
       return { proposalId };
     }, { timeout: 30_000, maxWait: 10_000 });

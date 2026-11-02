@@ -38,6 +38,15 @@ export const ourWords = (q: string | null | undefined): string | null => {
 /** One person role of the shared library (GET /library/roles). */
 export type PersonRoleView = { key: string; label: string; meaning: string; takesPartInCase: boolean; mayBeApplicant: boolean; basis: string; builtIn: boolean; retired: boolean };
 
+/** C11.12 (P-135, P-233): a line's filing mode. Files own application · On the principal's application · Declared only
+ *  (not accompanying), for roles that may be applicants; co_files only for a never-applicant role (the sponsor). */
+export const LINE_MODES = ["files_own", "on_principal", "declared_only", "co_files"] as const;
+export type LineMode = (typeof LINE_MODES)[number];
+export const FILING_CHOICE = "Filing: choose Files own application, On the principal's application or Declared only.";
+/** The acceptance pack's names (C11.12.test.ts) → the line modes. */
+export const FILING_ALIAS = { own_application: "files_own", on_principal_applying: "on_principal", declared_only: "declared_only" } as const satisfies Record<string, LineMode>;
+export const ALIAS_OF: Partial<Record<LineMode, keyof typeof FILING_ALIAS>> = { files_own: "own_application", on_principal: "on_principal_applying", declared_only: "declared_only" };
+
 /** One line of "Who can be in this application". `quote` and `origin` say where it came from (AI from the guide in
  *  slice 3, or a person); `basis` is Sample until the immigration expert confirms the numbers. */
 export const PeopleLine = z.object({
@@ -47,9 +56,11 @@ export const PeopleLine = z.object({
   max: z.number({ error: "How many: the most is a whole number from 0 to 9." }).int("How many: the most is a whole number from 0 to 9.").min(0, "How many: the most is a whole number from 0 to 9.").max(9, "How many: the most is a whole number from 0 to 9."),
   applies: z.boolean({ error: "Say whether this person files their own application." }),
   preview: z.number().int().min(0).max(9).optional(),
-  // M3-0 (r5c BR-1, P-135): how this person's application is filed: their own filing, or on the principal's. Released
-  // with the people, read by the case's filings (C6.12); left out, the case uses the combination's built-in default.
-  filingMode: z.enum(["files_own", "on_principal"], { error: "Filing: choose \"Files their own application\" or \"On the principal's application\"." }).optional(),
+  // C11.12 (P-135, P-233): how this person's application is filed. Released with the people, read by the case's filings
+  // (C6.12); left out on a line saved before C11.12, the case uses the combination's built-in default (Sample).
+  filingMode: z.enum(LINE_MODES, { error: FILING_CHOICE }).nullable().optional(),
+  /** The acceptance pack's own names for the same choice (C11.12.test.ts); read as filingMode when that is not sent. */
+  filing: z.enum(["own_application", "on_principal_applying", "declared_only"], { error: FILING_CHOICE }).nullable().optional(),
   quote: z.string().trim().max(400).nullable().optional(),
   origin: z.enum(["HUMAN", "AI_PROPOSAL", "CODE_MATCH", "SAMPLE"]).optional(), // CODE_MATCH: found by rules from the guide, no AI (Lead check L3)
 });
@@ -66,9 +77,20 @@ export const UndoBody = z.object({ version: z.number({ error: "Reload the page: 
 /** What the Questionnaires tab shows for "Who can be in this application". */
 export type PeopleView = {
   version: number; savedBy: string | null; savedAt: string | null; canUndo: boolean;
-  lines: (PeopleLine & { label: string; roleLabel: string; meaning: string; mayBeApplicant: boolean; answeredBy: string })[];
+  lines: (PeopleLine & { label: string; roleLabel: string; meaning: string; mayBeApplicant: boolean; answeredBy: string } & FilingWords)[];
   roles: PersonRoleView[];
+  /** C11.12 BR-7: saved, but worth a look (a mode IRCC's guide contradicts). */
+  warnings: string[];
+  /** C11.12 "What a case gets": the filings a case of the preview family gets, and how they are sent. */
+  filings: PreviewFiling[];
+  submissions: { filings: string[]; splittable: boolean; words: string }[];
+  /** In words: "3 filings in one submission". */
+  gets: string;
 };
+/** C11.12 (concept §6): the read-only words of a line's filing mode. */
+export type FilingWords = { filingWords: string; ifNotTravelling: string | null; fees: string | null; tip: string | null };
+/** One filing of the preview: whose it is (`principal` is that person's role) and the roles on it. */
+export type PreviewFiling = { id: string; principal: string; roles: string[]; kind: "own" | "family" | "co_filed"; people: number; declaredOnly: number; fee: string; words: string };
 
 /** P-78 (MINOR, Sample age): who types a person's answers. Read-only here; not a per-combination setting (m6). */
 export const answeredBy = (role: string) => (role === "child" ? "Principal, under 18" : role === "representative" ? "The firm" : "Themselves");

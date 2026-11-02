@@ -14,7 +14,7 @@ import type { BatchPart } from "../../../contracts/screen02";
 
 const STATUS: Record<string, [string, string]> = { QUEUED: ["neutral", "Queued"], RUNNING: ["ai", "Running"], COMPLETED: ["ok", "Done"], APPLIED: ["ok", "Added to draft"], PARTIAL: ["warn", "Done with problems"], FAILED: ["danger", "Failed"], BLOCKED: ["warn", "Blocked"], CANCELLED: ["neutral", "Cancelled"], NEEDS_PERSON: ["warn", "Waiting for you"], WAITING: ["neutral", "Waiting"], SKIPPED: ["neutral", "Skipped"], NOT_YET: ["neutral", "Not available yet"] }; // QA-62: no code on screen
 export const BatchStatus = ({ s }: { s: string }) => { const [t, l] = STATUS[s] ?? ["neutral", s]; return <Pill tone={t}>{l}</Pill>; };
-const MODE: Record<string, string> = { LIVE: "Live AI", REPLAY: "Replay of saved runs", STUB: "Stub pass", LOCAL: "No AI (library)", RULES: "Rules only (no AI)", live: "Live AI", replay: "Replay of saved runs", rules: "Rules only (no AI)" };
+const MODE: Record<string, string> = { LIVE: "Live", REPLAY: "Saved", STUB: "Stub pass", LOCAL: "No AI (library)", RULES: "Rules only (no AI)", live: "Live", replay: "Saved", rules: "Rules only (no AI)" };
 const active = (s: string) => s === "QUEUED" || s === "RUNNING";
 
 export function AiWorkPage() {
@@ -73,7 +73,7 @@ export function AiBatchPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-semibold"><Sparkles className="size-5 text-[#7c3aed]" /> {d.operation_label}</h1>
-          <p className="mt-1 text-sm text-text-muted">{d.scopeLabel} · {d.mode === "LIVE" && d.jobs.length && (d.jobs as { mode: string; kind: string }[]).every((j) => j.mode !== "LIVE" || j.kind === "reuse_map") ? "No model call: saved answers and the library reused (US$0)" : MODE[d.mode]} · started by {d.started_by_name}, {fmtWhen(d.startedAt)}</p>
+          <p className="mt-1 text-sm text-text-muted">{d.scopeLabel} · {d.mode === "LIVE" && d.jobs.length && (d.jobs as { mode: string; kind: string }[]).every((j) => j.mode !== "LIVE" || j.kind === "reuse_map") ? "Saved and the library reused: no model call (US$0)" : MODE[d.mode]} · started by {d.started_by_name}, {fmtWhen(d.startedAt)}</p>
           <div className="mt-2 flex flex-wrap gap-1.5"><BatchStatus s={d.status} /><Pill>{d.jobs.length} step{d.jobs.length === 1 ? "" : "s"}</Pill><Pill>Spent US${d.spent_usd.toFixed(2)} · worst case US${d.worstCaseUsd.toFixed(2)} · limit US${d.spendLimitUsd.toFixed(2)}</Pill></div>
         </div>
         <div className="flex gap-2">

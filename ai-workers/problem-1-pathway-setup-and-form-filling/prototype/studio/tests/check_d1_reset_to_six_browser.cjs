@@ -49,14 +49,28 @@ const post = (p, body) => fetch(`${BASE}/api${p}`, { method: "POST", headers: { 
   await p.goto(BASE); await p.waitForLoadState("networkidle");
 
   // By keyboard: focus Demo, open it, move down to the item, choose it.
+  // Red-main fix (LeadX, 2 Nov; runs 41401230384, 41400122250): the keys were pressed and the focus read at once, so a
+  // focus that lags (or never enters the menu) failed with no reason, then hung on the dialog. Each key now waits for
+  // the focus to settle, the path it took is shown, and a miss stops the keyboard path in words instead of hanging.
   await p.getByRole("button", { name: "Demo" }).focus();
   await p.keyboard.press("Enter");
   await p.getByRole("menu").waitFor();
-  let reached = false;
-  for (let i = 0; i < 8 && !reached; i++) { await p.keyboard.press("ArrowDown"); reached = /Reset to the six/.test(await p.evaluate(() => document.activeElement?.textContent ?? "")); }
-  step("D1: Reset to the six… is in the Demo menu, next to Reset demo…, reachable with the arrow keys", reached && await p.getByRole("menuitem", { name: /Reset demo…/ }).count() === 1);
+  const focusText = () => p.evaluate(() => (document.activeElement?.textContent ?? "").trim());
+  const inMenu = await p.waitForFunction(() => !!document.activeElement?.closest("[role=menu]"), null, { timeout: 5000 }).then(() => true, () => false);
+  const focusPath = [await focusText()], items = await p.getByRole("menuitem").allInnerTexts();
+  let reached = inMenu && /Reset to the six/.test(focusPath[0]);
+  for (let i = 0; inMenu && i < items.length && !reached; i++) {
+    await p.keyboard.press("ArrowDown");
+    // The focus moves to the next item; at the last item it stays (the menu does not wrap), which ends the walk.
+    const moved = await p.waitForFunction((b) => (document.activeElement?.textContent ?? "").trim() !== b && !!document.activeElement?.closest("[role=menu]"), focusPath[focusPath.length - 1], { timeout: 3000 }).then(() => true, () => false);
+    if (!moved) break;
+    focusPath.push(await focusText()); reached = /Reset to the six/.test(focusPath[focusPath.length - 1]);
+  }
+  step("D1: Reset to the six… is in the Demo menu, next to Reset demo…, reachable with the arrow keys", reached && await p.getByRole("menuitem", { name: /Reset demo…/ }).count() === 1,
+    JSON.stringify({ focus_entered_menu: inMenu, focus_path: focusPath, items }));
+  if (!reached) { console.log("STOP  the keyboard path did not reach Reset to the six…; the dialog checks need it (see the focus path above)"); await b.close(); process.exit(1); }
   await p.keyboard.press("Enter");
-  await dialog().getByText("Reset to the six?").waitFor();
+  await dialog().getByText("Reset to the six?").waitFor({ timeout: 10000 });
   const t = await dialog().innerText();
   step("D1 (P-226): the dialog says plainly what goes (all configuration, the shared library, checks, rules, questionnaires, releases)", /Goes/.test(t) && /All configuration: structure, combinations, the shared library \(fields, sections, document types\), the Form library, checks, rules, questionnaires and releases/.test(t), t.slice(0, 200));
   step("D1 (P-226): ... what comes back (the six, 5 Retail + 1 Corporate, their official PDFs, saved answers replayed)", /Comes back/.test(t) && /The six combinations: 5 Retail \+ 1 Corporate/.test(t) && /official PDFs/.test(t) && /saved AI answers replayed/.test(t));

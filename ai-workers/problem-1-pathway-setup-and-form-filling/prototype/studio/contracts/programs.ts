@@ -105,7 +105,7 @@ export function problemFromZod(e: z.ZodError, title = "Some details need fixing"
 // ------------------------------------------------------------------ catalogue response (GET /catalogue)
 /** One cause per line; step is the action that moves it, in the next step's words (the row's next step while a setup
  *  step is waiting), and text is the whole sentence shown (without the step when every line shares it: sharedStep). */
-export type MissingItem = { code: "no_forms" | "form_without_edition" | "role_without_questions" | "filing_problem" | "rule_problem" | "not_started"; step: string; text: string };
+export type MissingItem = { code: "no_forms" | "form_without_edition" | "role_without_questions" | "filing_problem" | "rule_problem" | "not_started" | "filing_not_set"; step: string; text: string };
 /** The one step every missing line shares, when there is more than one line and they all name it; null otherwise. The
  *  lines then carry only their causes and the screen names the step once under the list (Lead note 23 Oct). */
 export function sharedStep(missing: { step: string }[]): string | null {
