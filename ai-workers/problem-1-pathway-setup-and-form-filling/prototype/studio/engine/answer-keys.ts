@@ -222,8 +222,10 @@ export function runFieldMap(s: Snapshot, family: Family, form: string, inv: Inve
   const nameOf = (id: string) => family.people.find((p) => p.id === id)?.label ?? id;
   if (!m) return finish([{ person: "", person_label: "", target: form, label: form, expected: "a PDF field map", got: "none", pass: false, why: `${form} has no PDF field map in this combination.` }], fp);
   if (expected.edition !== m.form_edition) return finish([{ person: "", person_label: "", target: "edition", label: `${form} edition`, expected: expected.edition, got: m.form_edition, pass: false, why: `This key is for edition ${expected.edition}; the map is edition ${m.form_edition}. One good edition proves nothing about another.` }], fp);
-  // Review minor 6: a caption alone can be "YYYY"; the line says the form's heading too ("Date of birth: YYYY").
-  const caption = new Map(m.entries.map((e) => [e.data_path, [e.heading, e.caption].filter((x) => x && x.trim()).join(": ")]));
+  // Review minor 6: a caption alone can be "YYYY"; a short one is said with its field's meaning ("Date of birth: YYYY").
+  // The map's heading is a path ("Page1.PersonalDetails"), never words, so it is not used.
+  const meaning = new Map((s.canonical_fields as { id: string; meaning?: string; label?: string }[]).map((f) => [f.id, f.label || f.meaning || ""]));
+  const caption = new Map(m.entries.map((e) => { const c = (e.caption ?? "").trim(), w = e.fact ? meaning.get(e.fact) : ""; return [e.data_path, c.length > 4 || !w ? c || w || e.data_path : `${w}: ${c}`]; }));
   const c = asCase(s, family);
   const view = caseView(s, c.people, c.answers, c.rows, "agent", c.today, c.groups);
   for (const p of family.people) {

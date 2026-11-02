@@ -3,8 +3,6 @@
 // or an expected value against the item it tests (BR-1, BR-2: boxes on the map, gates in the rule set, people in the
 // family) are in engine/answer-keys.ts, so the API and the tests share them (STANDARDS §6: contract first, zod).
 import { z } from "zod";
-import type { GateState, Outcome } from "../engine/runtime/eligibility.ts";
-import type { Line } from "../engine/answer-keys.ts";
 import { INVISIBLE, LONE } from "./runtime.ts";
 
 const version = z.number({ error: "Reload the page: the version you read is not a number." }).int();
@@ -31,7 +29,11 @@ export const KeyUpdateBody = z.object({ expected: KeyCreateBody.shape.expected, 
 /** POST /answer-keys/:id/sign: the version the expert read (BR-7). */
 export const SignBody = z.object({ version });
 
-/** What the API answers. */
+/** What the API answers. Written out here (not imported from the engine) so the web reads no engine file; the engine's
+ *  own types (engine/answer-keys.ts Line, engine/runtime/eligibility.ts Outcome and GateState) are the same shapes. */
+export type Outcome = "LIKELY_ELIGIBLE" | "ELIGIBLE_BELOW_CUTOFF" | "POSSIBLY_ELIGIBLE" | "NOT_ELIGIBLE";
+export type GateState = "met" | "not_met" | "not_answered";
+export type Line = { person: string; person_label: string; target: string; label: string; expected: string; got: string; pass: boolean; why?: string };
 export type FamilyView = { id: string; key: string; label: string; reference_date: string; people: { id: string; role: string; label: string; applies: boolean }[];
   facts: { about: string; fact: string; row?: number | null; value: unknown }[]; none_apply: { about: string; group: string }[]; version: number; sample: string; saved_by: string | null; saved_at: string | null };
 export type RunState = "NOT_RUN" | "PASSED" | "FAILED";

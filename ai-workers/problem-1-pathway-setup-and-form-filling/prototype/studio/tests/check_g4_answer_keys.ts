@@ -17,13 +17,14 @@ import { buildSnapshot, type Snapshot } from "../engine/snapshot.ts";
 import { changeProblem, checkExpected, checkFamily, fingerprintOf, NO_SCORING, runFieldMap, runRuleSet, runState, signProblem, type Family, type MapExpected } from "../engine/answer-keys.ts";
 import type { Inventory } from "../engine/form-values.ts";
 import { client, recorder } from "./runtime/api.ts";
+import { AMENDED, e1Keys, P, sample } from "./g4_e1_key.ts";
 
 const PORT = Number(process.argv[2] ?? 4450), DB = process.argv[3] ?? "xr_studio_forms_g4";
 const { call, sql } = client(PORT, DB);
 const { ok, summary } = recorder();
 const STUDIO = join(dirname(fileURLToPath(import.meta.url)), "..");
 const AUTHOR = "user-A", EXPERT = "user-C", APPROVER = "user-B", OFFICER = "user-O";
-const FORM = "IMM 5257", P = "form1[0].";
+const FORM = "IMM 5257";
 const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
 
 // ------------------------------------------------------------------------------------------------ the inputs
@@ -37,30 +38,9 @@ const snap = async () => (await buildSnapshot(db as never, ws, vv, "draft")).sna
 let s: Snapshot = await snap();
 const map = (s.field_maps as { form_number: string; form_edition: string; inventory_file: string; entries: { data_path: string; fact?: string | null; person?: string | null; caption?: string | null }[] }[]).find((m) => m.form_number === FORM)!;
 const inv = JSON.parse(readFileSync(join(STUDIO, "..", "..", map.inventory_file), "utf8")) as Inventory;
-const sample = JSON.parse(readFileSync(join(STUDIO, "samples", "answer-key-families.json"), "utf8")).families[0];
 const fields = new Set((s.canonical_fields as { id: string }[]).map((f) => f.id)), roles = new Set(["principal", "spouse_or_partner", "child"]);
-const e1 = JSON.parse(readFileSync(join(STUDIO, "..", "evidence-lane", "E1", "imm5257", "values.complete.json"), "utf8")).values as Record<string, string>;
 
-/** Where today's IMM 5257 map gives something other than E1's checked fill. Each is an open point for the immigration
- *  expert (the PR's Questions); the key holds what the map gives today, and the E1 run below fails on exactly these. */
-const AMENDED: Record<string, { value: string; why: string }> = {
-  "Page1[0].PersonalDetails[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]": { value: "", why: "E1 writes N; no question asks other names yet (C7.2)" },
-  "Page2[0].natID[0].q1[0].natIDIndicator[0]": { value: "", why: "E1 writes N; no question asks a national identity document yet (C7.2)" },
-  "Page2[0].USCard[0].q1[0].usCardIndicator[0]": { value: "", why: "E1 writes N; no question asks a US card yet (C7.2)" },
-  "Page2[0].MaritalStatus[0].SectionA[0].Passport[0].TaiwanPIN[0]": { value: "", why: "E1 writes N; the release publishes this box as not a fact" },
-  "Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IsraelPassportIndicator[0]": { value: "", why: "E1 writes N; the release publishes this box as not a fact" },
-  "Page3[0].Signature[0].Consent0[0].Choice[0]": { value: "", why: "E1 writes N; the release publishes the consent box as not a fact" },
-  "Page3[0].BackgroundInfo[0].Choice[0]": { value: "", why: "E1 writes N (tuberculosis question); the map has no fact on this box" },
-  "Page3[0].PageWrapper[0].GovPosition[0].Choice[0]": { value: "", why: "E1 writes N (government position); the map has no fact on this box" },
-  "Page3[0].DetailsOfVisit[0].Contacts_Row1[0].AddressInCanada[0].AddressInCanada[0]": { value: "100 SAMPLE STREET, TORONTO, ON M5V 0A1, Canada", why: "E1 writes \"100 SAMPLE STREET, TORONTO ON M5V 0A1\"; the map's one-line address adds commas and the country" },
-  "Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Country[0]": { value: "205", why: "E1 leaves it blank when the country where applying is the country of residence; the map writes it" },
-  "Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].CanadaUS[0]": { value: "0", why: "E1 leaves the Canada/US switch unset; the map writes it off" },
-  ...Object.fromEntries(["ResidentialAddressRow1[0].CityTown[0].CityTown[0]", "ResidentialAddressRow1[0].StreetName[0].Streetname[0]", "ResidentialAddressRow1[0].StreetNum[0].StreetNum[0]", "ResidentialAddressRow2[0].Country[0].Country[0]", "ResidentialAddressRow2[0].PostalCode[0].PostalCode[0]"]
-    .map((b) => [`Page2[0].ContactInformation[0].contact[0].${b}`, { value: ({ "ResidentialAddressRow1[0].CityTown[0].CityTown[0]": "NEW DELHI", "ResidentialAddressRow1[0].StreetName[0].Streetname[0]": "EXAMPLE ROAD", "ResidentialAddressRow1[0].StreetNum[0].StreetNum[0]": "12", "ResidentialAddressRow2[0].Country[0].Country[0]": "205", "ResidentialAddressRow2[0].PostalCode[0].PostalCode[0]": "110001" } as Record<string, string>)[b], why: "E1 leaves the residential address blank when it is the mailing address (Y); the map writes it too" }])),
-};
-const e1Key: MapExpected = { edition: map.form_edition, people: { mother: { ...e1 } } };
-const key: MapExpected = { edition: map.form_edition, people: { mother: { ...e1, ...Object.fromEntries(Object.entries(AMENDED).map(([b, a]) => [P + b, a.value])) } } };
-for (const [b, a] of Object.entries(AMENDED)) if (a.value === "") delete key.people.mother[P + b]; // a box not in the key must stay blank (BR-4)
+const { e1Key, key } = e1Keys(map.form_edition);
 
 // ------------------------------------------------------------------------------------------------ Part A: engine
 // P-249: the engine files read no database, file, network or model (their imports only).
