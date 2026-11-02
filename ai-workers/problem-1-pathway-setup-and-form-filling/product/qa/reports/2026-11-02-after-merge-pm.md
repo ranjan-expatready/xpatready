@@ -5,7 +5,7 @@ Session: a new qa cloud session (finish program P-260, P-264, P-265). Main: **12
 ## Verdict
 * **Main 12647032:** 1 row moves to Works (**C5.6**). Five re-scored rows stay Partial with named gaps: **C2.6, C6.4, C7.7** (was "Not built"), **C11.7, C11.14**.
 * **No Blocker or Critical on main.**
-* **New findings:** 2 Major (QA-156, QA-157) and 3 Minor (QA-158–160). QA-82 drops from Major to Minor once #469 merges.
+* **New findings:** 2 Major (QA-156, QA-157) and 3 Minor (QA-158–160). QA-82 is now Minor: #469 merged and its tab part was retested on main ae5a5605 (9/9).
 
 ## Verdicts on PRs (P-250 / P-227), each commented on the PR
 | PR | Head | Verdict | Evidence |
