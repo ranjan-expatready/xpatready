@@ -8,7 +8,7 @@ import { itemFingerprint, runFieldMap, runRuleSet, runState, type ItemKind, type
 import { answerKeyGate, evidenceOf, testableItems, type GateKey, type GateProblem, type ItemVerdict } from "../../engine/answer-key-gate.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { isDemoSnapshot } from "../../engine/validate.ts";
-import { fieldListOf, familyOf } from "./answer-keys.ts";
+import { editionOf, fieldListOf, familyOf } from "./answer-keys.ts";
 import { ACTORS, type Actor, type Audit, type Db, WORKSPACE_KEY } from "./core.ts";
 
 /** BR-3 (the tech lead on #558 and #568): only the demo workspace may release Sample content, as a Demo release. */
@@ -27,7 +27,7 @@ const failureWords = (lines: unknown): string | null => {
   return `${l.label ?? "A value"}${l.person_label ? ` (${l.person_label})` : ""}: expected "${l.expected ?? ""}", got "${l.got ?? ""}".`;
 };
 
-export type Gate = { demo: boolean; judged: boolean; items: ItemVerdict[]; problems: GateProblem[]; evidence: ReturnType<typeof evidenceOf> };
+export type Gate = { demo: boolean; judged: boolean; items: ItemVerdict[]; problems: GateProblem[]; evidence: ReturnType<typeof evidenceOf>; /** every key judged (BR-6) */ keys: { key_id: string; version: number; state: string }[] };
 type Input = { combinationId: string; snapshot: Snapshot; sha256: string; released: { snapshot: unknown; sha256: string } | null; submitted: boolean };
 
 /** The keys of each combination with their last run judged against this draft (runState: key version, item and inputs
@@ -37,16 +37,16 @@ async function statesOf(db: Db, rows: Input[]): Promise<Map<string, GateKey[]>> 
   const by = new Map(rows.map((r) => [r.combinationId, r]));
   const judged = keys.map((k: KeyRow) => {
     const r = by.get(k.combinationId)!, last = k.runs[0] ?? null;
-    const list = k.itemKind === "field_map" ? fieldListOf(r.snapshot, k.itemRef) : null;
+    const ed = editionOf(k), list = k.itemKind === "field_map" ? fieldListOf(r.snapshot, k.itemRef, ed) : null;
     // A map with no form field list cannot be run (BR-5 "cannot be tested"); its key reads "Not run".
-    const st = k.itemKind === "field_map" && !list ? { state: "NOT_RUN" as const, why: "Its form field list is not recorded." } : runState(last, { item: itemFp(r.snapshot, k.itemKind, k.itemRef), inputs: inputsFp(r.sha256, list?.hash) }, k.version);
+    const st = k.itemKind === "field_map" && !list ? { state: "NOT_RUN" as const, why: "Its form field list is not recorded." } : runState(last, { item: itemFp(r.snapshot, k.itemKind, k.itemRef, ed), inputs: inputsFp(r.sha256, list?.hash) }, k.version);
     return { k, last, st };
   });
   const failedRuns = judged.filter((j) => j.st.state === "FAILED" && j.last).map((j) => j.last!.id);
   const lines = new Map(failedRuns.length ? (await db.answerKeyRun.findMany({ where: { id: { in: failedRuns } }, select: { id: true, lines: true } })).map((x) => [x.id, x.lines]) : []);
   const out = new Map<string, GateKey[]>(rows.map((r) => [r.combinationId, []]));
   for (const { k, last, st } of judged) out.get(k.combinationId)!.push({
-    key_id: k.id, item_kind: k.itemKind, item_ref: k.itemRef, family: k.family.label, state: k.state, version: k.version, signed_by: nameOf(k.signedByUserId), signed_at: k.signedAt?.toISOString() ?? null, change_reason: k.changeReason,
+    key_id: k.id, item_kind: k.itemKind, item_ref: k.itemRef, edition: editionOf(k), family: k.family.label, state: k.state, version: k.version, signed_by: nameOf(k.signedByUserId), signed_at: k.signedAt?.toISOString() ?? null, change_reason: k.changeReason,
     run: { state: st.state, why: st.why, passed: last?.passed ?? 0, failed: last?.failed ?? 0, first_failure: st.state === "FAILED" && last ? failureWords(lines.get(last.id)) : null, run_id: last?.id ?? null },
   });
   return out;
@@ -54,7 +54,7 @@ async function statesOf(db: Db, rows: Input[]): Promise<Map<string, GateKey[]>> 
 
 // The two fingerprints a run stores (engine/answer-keys.ts fingerprintOf), from hashes already held: the item part is
 // cheap; the inputs part is the draft's sha256 (buildSnapshot's, the same as snapshotHash) and the field list's hash.
-const itemFp = (s: Snapshot, kind: string, ref: string) => itemFingerprint(s, kind as ItemKind, ref);
+const itemFp = (s: Snapshot, kind: string, ref: string, edition: string | null) => itemFingerprint(s, kind as ItemKind, ref, edition);
 const inputsFp = (snap: string, inv?: string) => (inv ? sha256(`${snap}|${inv}`) : snap);
 
 /** The gate for many drafts at once (the catalogue, the shared Release page): one keys query. A draft identical to its
@@ -65,10 +65,10 @@ export async function gatesOf(db: Db, rows: Input[]): Promise<Map<string, Gate>>
   const out = new Map<string, Gate>();
   for (const r of rows) {
     const demo = demoRelease(r.snapshot);
-    if (!states.has(r.combinationId)) { out.set(r.combinationId, { demo, judged: false, items: [], problems: [], evidence: [] }); continue; }
-    const items = testableItems(r.snapshot, (r.released?.snapshot ?? null) as Snapshot | null, (form) => !!fieldListOf(r.snapshot, form));
-    const g = answerKeyGate(items, states.get(r.combinationId)!, { demo, submitted: r.submitted });
-    out.set(r.combinationId, { demo, judged: true, items: g.items, problems: g.problems, evidence: evidenceOf(g.items) });
+    if (!states.has(r.combinationId)) { out.set(r.combinationId, { demo, judged: false, items: [], problems: [], evidence: [], keys: [] }); continue; }
+    const items = testableItems(r.snapshot, (r.released?.snapshot ?? null) as Snapshot | null, (form, edition) => !!fieldListOf(r.snapshot, form, edition));
+    const keys = states.get(r.combinationId)!, g = answerKeyGate(items, keys, { demo, submitted: r.submitted });
+    out.set(r.combinationId, { demo, judged: true, items: g.items, problems: g.problems, evidence: evidenceOf(g.items), keys: keys.map((k) => ({ key_id: k.key_id, version: k.version, state: k.state })) });
   }
   return out;
 }
@@ -89,7 +89,7 @@ export async function runKeys(db: Db, audit: Audit, actor: Actor, c: { id: strin
   const keys = await db.answerKey.findMany({ where: { combinationId: c.id }, include: { family: true }, orderBy: { updatedAt: "asc" } });
   let passed = 0, failed = 0;
   for (const k of keys) {
-    const list = k.itemKind === "field_map" ? fieldListOf(snapshot, k.itemRef) : null;
+    const list = k.itemKind === "field_map" ? fieldListOf(snapshot, k.itemRef, editionOf(k)) : null;
     if (k.itemKind === "field_map" && !list) continue;
     const known = { snapshot: sha256, inventory: list?.hash };
     const r = k.itemKind === "field_map" ? runFieldMap(snapshot, familyOf(k.family), k.itemRef, list!.inv, k.expected as MapExpected, known) : runRuleSet(snapshot, familyOf(k.family), k.expected as RuleExpected, known);
@@ -100,11 +100,11 @@ export async function runKeys(db: Db, audit: Audit, actor: Actor, c: { id: strin
   return { ran: passed + failed, passed, failed };
 }
 
-/** BR-6 (challenge m8): inside the release transaction, the keys judged are re-read FOR SHARE; a key signed, unsigned
- *  or changed since (another version or state) makes the release a 409, so the frozen evidence is what was judged. */
-export async function keysUnchanged(tx: Prisma.TransactionClient, combinationId: string, judged: { key_id?: string; key_version?: number; state?: string }[]): Promise<boolean> {
+/** BR-6 (challenge m8; Devin on #568): inside the release transaction the combination's keys are re-read FOR SHARE
+ *  and must be exactly the keys judged (the same ids, versions and states): a key added, removed, signed, unsigned or
+ *  changed since makes the release a 409, so the frozen evidence is what was judged. A key written after this read is
+ *  written after the release. */
+export async function keysUnchanged(tx: Prisma.TransactionClient, combinationId: string, judged: { key_id: string; version: number; state: string }[]): Promise<boolean> {
   const now = await tx.$queryRaw<{ id: string; version: number; state: string }[]>`SELECT "id"::text AS "id", "version", "state" FROM "answer_key" WHERE "combination_id" = ${combinationId}::uuid FOR SHARE`;
-  const want = judged.filter((e) => e.key_id);
-  if (now.length < want.length) return false;
-  return want.every((e) => now.some((k) => k.id === e.key_id && k.version === e.key_version && k.state === e.state));
+  return now.length === judged.length && judged.every((e) => now.some((k) => k.id === e.key_id && k.version === e.version && k.state === e.state));
 }

@@ -147,19 +147,21 @@ export function asCase(s: Snapshot, f: Family) {
   return { people, answers, rows, groups, today: new Date(at) };
 }
 
-const pdfMap = (s: Snapshot, form: string) => (s.field_maps as { form_number: string; form_edition: string; channel?: string; entries: { data_path: string; caption?: string | null; heading?: string | null; outcome?: string; fact?: string | null }[] }[]).find((m) => m.form_number === form && m.channel !== "ONLINE");
+/** A form's PDF field map; with `edition`, that edition's (G2, Devin on #568: a snapshot carries every mapped PDF
+ *  edition of a form, oldest first, so "the first one" would test and fingerprint an older edition than the key's). */
+const pdfMap = (s: Snapshot, form: string, edition?: string | null) => (s.field_maps as { form_number: string; form_edition: string; channel?: string; entries: { data_path: string; caption?: string | null; heading?: string | null; outcome?: string; fact?: string | null }[] }[]).find((m) => m.form_number === form && m.channel !== "ONLINE" && (!edition || m.form_edition === edition));
 
 /** BR-5 (challenge M2): the fingerprint of the item a key tests, and of everything the run read: the whole snapshot
  *  (answer lists, form lines, derived fields, placements, formats) and, for a map, the form field list (the snapshot
  *  names it only by its path). Wider than needed, never narrower: a change elsewhere reads "Not run", never a stale Passed. */
 export function fingerprintOf(s: Snapshot, kind: ItemKind, ref: string, inv?: Inventory | null, known?: Known): Fingerprint {
   const snap = known?.snapshot ?? snapshotHash(s);
-  return { item: itemFingerprint(s, kind, ref), inputs: inv ? sha256(`${snap}|${known?.inventory ?? inventoryHash(inv)}`) : snap };
+  return { item: itemFingerprint(s, kind, ref, known?.edition), inputs: inv ? sha256(`${snap}|${known?.inventory ?? inventoryHash(inv)}`) : snap };
 }
 /** G2 (C5.5, concept BR-2): the item part alone (form, edition and entries; or the gates), so a release can tell an item
  *  new or changed since the released snapshot without hashing the whole snapshot. */
-export function itemFingerprint(s: Snapshot, kind: ItemKind, ref: string): string {
-  const item = kind === "field_map" ? (() => { const m = pdfMap(s, ref); return m ? { form: m.form_number, edition: m.form_edition, entries: m.entries } : null; })() : kind === "rule_set" ? (s.eligibility?.gates ?? null) : null;
+export function itemFingerprint(s: Snapshot, kind: ItemKind, ref: string, edition?: string | null): string {
+  const item = kind === "field_map" ? (() => { const m = pdfMap(s, ref, edition); return m ? { form: m.form_number, edition: m.form_edition, entries: m.entries } : null; })() : kind === "rule_set" ? (s.eligibility?.gates ?? null) : null;
   // G2 (build discovery 1): the content only, as the snapshot hash reads it (engine/snapshot.ts content()): a release
   // turns each entry's status from Draft to Published and keeps its version count, which is bookkeeping, not the map.
   return sha256(canonical(content({ kind, ref, item }) as never));
@@ -167,7 +169,7 @@ export function itemFingerprint(s: Snapshot, kind: ItemKind, ref: string): strin
 export const inventoryHash = (inv: Inventory) => sha256(canonical(inv as never));
 /** G2 (challenge m5): hashes the caller already holds (the draft's sha256, a form field list's hash), so one gate pass
  *  hashes the snapshot once, not once per key. Omitted, they are worked out here as before. */
-export type Known = { snapshot?: string; inventory?: string };
+export type Known = { snapshot?: string; inventory?: string; /** a field map's edition (the key's): that edition's map */ edition?: string | null };
 
 /** BR-2: an expected result as typed, checked against the item it tests (every box on the map, every gate in the set,
  *  every person in the family). */
@@ -301,7 +303,9 @@ export function keyBoxes(s: Snapshot, form: string, inv: Inventory): { form: str
  *  form field the run writes that the key does not list fails ("written, not expected": a wrong-person wire); a person
  *  the form applies to with no expected values fails on each form field written for them. */
 export function runFieldMap(s: Snapshot, family: Family, form: string, inv: Inventory, expected: MapExpected, hashes?: Known): RunResult {
-  const fp = fingerprintOf(s, "field_map", form, inv, hashes), m = pdfMap(s, form), lines: Line[] = [];
+  // G2 (Devin on #568): the key's own edition is run when the combination has it; otherwise the edition check below
+  // fails in words (BR-6).
+  const m = pdfMap(s, form, expected.edition) ?? pdfMap(s, form), fp = fingerprintOf(s, "field_map", form, inv, { ...hashes, edition: m?.form_edition }), lines: Line[] = [];
   const nameOf = (id: string) => family.people.find((p) => p.id === id)?.label ?? id;
   if (!m) return finish([{ person: "", person_label: "", target: form, label: form, expected: "a PDF field map", got: "none", pass: false, why: `${form} has no PDF field map in this combination.` }], fp);
   if (expected.edition !== m.form_edition) return finish([{ person: "", person_label: "", target: "edition", label: `${form} edition`, expected: expected.edition, got: m.form_edition, pass: false, why: `This key is for edition ${expected.edition}; the map is edition ${m.form_edition}. One good edition proves nothing about another.` }], fp);

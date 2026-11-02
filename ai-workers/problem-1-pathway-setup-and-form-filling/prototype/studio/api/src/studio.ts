@@ -933,7 +933,7 @@ export class Studio {
     }
     const changes = sub.changeSummary as any[];
     const release = await this.db.$transaction(async (tx) => {
-      if (!(await keysUnchanged(tx, id, keyGate.evidence))) staleKeys(c.label); // G2 BR-6 (challenge m8)
+      if (!(await keysUnchanged(tx, id, keyGate.keys))) staleKeys(c.label); // G2 BR-6 (challenge m8)
       const pack = await this.newPackVersion(tx, c.workspaceId, authors, actor.id, { rows: 1, via: "combination review" });
       const out = await this.publishRow(tx, c, snapshot, sha256, { packVersionId: pack.id, authors, submitter: sub.submittedBy, approver: actor.id, summary: { changes: changes.length, sme_signed: changes.filter((x) => x.needs_sme).length, counts: this.counts(snapshot), ...keyEvidence(keyGate) } });
       await tx.reviewSubmission.update({ where: { id: sub.id }, data: { status: "APPROVED", decidedBy: actor.id, decidedAt: new Date() } });
@@ -996,7 +996,7 @@ export class Studio {
       const pack = await this.newPackVersion(tx, workspaceId, authors, actor.id, { rows: prepared.length, via: "shared draft" });
       const rows = [];
       for (const p of prepared) {
-        if (!(await keysUnchanged(tx, p.c.id, p.keyGate.evidence))) staleKeys(p.c.label); // G2 BR-6 (challenge m8)
+        if (!(await keysUnchanged(tx, p.c.id, p.keyGate.keys))) staleKeys(p.c.label); // G2 BR-6 (challenge m8)
         const changes = p.sub.changeSummary as { needs_sme?: boolean }[];
         const r = await this.publishRow(tx, p.c, p.snapshot, p.sha256, { packVersionId: pack.id, authors: p.authors, submitter: p.sub.submittedBy, approver: actor.id, summary: { changes: changes.length, sme_signed: changes.filter((x) => x.needs_sme).length, counts: this.counts(p.snapshot), ...keyEvidence(p.keyGate) } });
         await tx.reviewSubmission.update({ where: { id: p.sub.id }, data: { status: "APPROVED", decidedBy: actor.id, decidedAt: new Date() } });

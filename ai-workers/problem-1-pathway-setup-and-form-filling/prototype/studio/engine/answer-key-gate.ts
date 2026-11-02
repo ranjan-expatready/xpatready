@@ -12,7 +12,7 @@ export type GateKind = Exclude<ItemKind, "scoring">;
 /** One testable item of the draft (BR-1): a PDF field map with entries, or the eligibility rules when they have gates. */
 export type GateItem = { item_kind: GateKind; item_ref: string; label: string; edition: string | null; form: string | null; changed: boolean; testable: boolean };
 /** One key as the gate reads it: its state, and its last run judged against this draft (engine/answer-keys.ts runState). */
-export type GateKey = { key_id: string; item_kind: string; item_ref: string; family: string; state: string; version: number; signed_by: string | null; signed_at: string | null; change_reason: string | null;
+export type GateKey = { key_id: string; item_kind: string; item_ref: string; /** a field-map key's edition */ edition: string | null; family: string; state: string; version: number; signed_by: string | null; signed_at: string | null; change_reason: string | null;
   run: { state: "NOT_RUN" | "PASSED" | "FAILED"; why: string; passed: number; failed: number; first_failure: string | null; run_id: string | null } };
 export type ItemResult = "passed" | "failed" | "not_run" | "unsigned" | "no_test" | "cannot_test" | "untested_released";
 export type ItemVerdict = GateItem & { gated: boolean; result: ItemResult; keys: GateKey[] };
@@ -24,10 +24,12 @@ const pdfMaps = (s: Snapshot) => (s.field_maps as MapLine[]).filter((m) => m.cha
 /** BR-1, BR-2: the draft's testable items, each marked new or changed against the released snapshot by its item
  *  fingerprint (a new edition is a new item, SA-1B-296 r5; with nothing released every item is new). Online maps
  *  (parked), scoring tables (none exist) and other items (E8) are not tested here (concept §6b). */
-export function testableItems(s: Snapshot, released: Snapshot | null, hasFieldList: (form: string) => boolean): GateItem[] {
-  const changed = (kind: GateKind, ref: string) => !released || itemFingerprint(s, kind, ref) !== itemFingerprint(released, kind, ref);
+export function testableItems(s: Snapshot, released: Snapshot | null, hasFieldList: (form: string, edition: string) => boolean): GateItem[] {
+  // Per edition (Devin on #568): a snapshot carries every mapped PDF edition of a form; each is its own item, compared
+  // with the same edition in the released snapshot (an edition the release did not have is new).
+  const changed = (kind: GateKind, ref: string, edition: string | null = null) => !released || itemFingerprint(s, kind, ref, edition) !== itemFingerprint(released, kind, ref, edition);
   return [
-    ...pdfMaps(s).map((m) => ({ item_kind: "field_map" as const, item_ref: m.form_number, label: `${m.form_number} field map`, edition: m.form_edition, form: m.form_number, changed: changed("field_map", m.form_number), testable: hasFieldList(m.form_number) })),
+    ...pdfMaps(s).map((m) => ({ item_kind: "field_map" as const, item_ref: m.form_number, label: `${m.form_number} field map`, edition: m.form_edition, form: m.form_number, changed: changed("field_map", m.form_number, m.form_edition), testable: hasFieldList(m.form_number, m.form_edition) })),
     ...(s.eligibility?.gates?.length ? [{ item_kind: "rule_set" as const, item_ref: "eligibility", label: "Eligibility rules", edition: null, form: null, changed: changed("rule_set", "eligibility"), testable: true }] : []),
   ];
 }
@@ -42,7 +44,8 @@ export function answerKeyGate(items: GateItem[], keys: GateKey[], o: { demo: boo
   const sample = o.demo ? "warning" as const : "error" as const;
   const say = (level: "error" | "warning", it: GateItem, message: string) => problems.push({ level, where: "Tests", item: it.item_ref, label: it.label, forms: it.form ? [it.form] : [], message });
   const verdicts = items.map((it): ItemVerdict => {
-    const mine = keys.filter((k) => k.item_kind === it.item_kind && k.item_ref === it.item_ref);
+    // A field-map key belongs to the edition it was written for (SA-1B-296 r5: one good edition proves nothing about another).
+    const mine = keys.filter((k) => k.item_kind === it.item_kind && k.item_ref === it.item_ref && (it.item_kind !== "field_map" || k.edition === it.edition));
     const gated = it.changed || mine.length > 0;
     const v = (result: ItemResult): ItemVerdict => ({ ...it, gated, result, keys: mine });
     if (!gated) { say("warning", it, "released before the answer-key gate; untested."); return v("untested_released"); }

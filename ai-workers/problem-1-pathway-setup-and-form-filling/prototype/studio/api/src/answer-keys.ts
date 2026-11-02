@@ -30,14 +30,18 @@ type FamilyRow = { id: string; familyKey: string; label: string; referenceDate: 
 export const familyOf = (r: FamilyRow): Family => ({ key: r.familyKey, label: r.label, reference_date: r.referenceDate, people: r.people as Family["people"], facts: r.facts as Family["facts"], none_apply: (r.noneApply ?? []) as Family["none_apply"] });
 const familyView = (r: FamilyRow) => ({ id: r.id, ...familyOf(r), version: r.version, sample: SAMPLE_WORDS, saved_by: nameOf(r.updatedBy), saved_at: at(r.updatedAt) });
 const pdfHas = (s: Snapshot, form: string) => (s.field_maps as { form_number: string; channel?: string }[]).some((m) => m.form_number === form && m.channel !== "ONLINE");
+/** A field-map key's edition (the one it was written for), or null for a rule-set key. */
+export const editionOf = (k: { itemKind: string; expected: unknown }) => (k.itemKind === "field_map" ? ((k.expected as MapExpected | null)?.edition ?? null) : null);
 const itemWords = (kind: string, ref: string) => (kind === "rule_set" ? "the eligibility rules" : `the ${ref} field map`);
 
 /** The form field list of a form's PDF map (the edition's inventory file), as the filler reads it (api/src/fill.ts
  *  writeForm); null when none is recorded. G2 (challenge m5): read once per file version and kept with its hash, so a
  *  release gate pass over many keys reads and hashes each list once. */
 const LISTS = new Map<string, { stamp: string; inv: Inventory; hash: string }>();
-export function fieldListOf(s: Snapshot, form: string): { inv: Inventory; hash: string } | null {
-  const m = (s.field_maps as { form_number: string; channel?: string; inventory_file?: string | null }[]).find((x) => x.form_number === form && x.channel !== "ONLINE");
+export function fieldListOf(s: Snapshot, form: string, edition?: string | null): { inv: Inventory; hash: string } | null {
+  // With `edition`, that edition's list (G2, Devin on #568): a combination may hold several mapped PDF editions.
+  const all = (s.field_maps as { form_number: string; form_edition?: string; channel?: string; inventory_file?: string | null }[]).filter((x) => x.form_number === form && x.channel !== "ONLINE");
+  const m = (edition ? all.find((x) => x.form_edition === edition) : undefined) ?? all[0];
   if (!m?.inventory_file) return null;
   // Devin review (PR #513): the field list is read only from inside the solution folder, and only a .json file.
   const path = resolve(SOLUTION, m.inventory_file);
@@ -86,7 +90,7 @@ export class AnswerKeys {
     if (!inv) fail(`${form}'s form field list is not recorded, so its map cannot be tested.`, HttpStatus.UNPROCESSABLE_ENTITY);
     return inv!;
   }
-  private inventoryOrNull(s: Snapshot, form: string): Inventory | null { return fieldListOf(s, form)?.inv ?? null; }
+  private inventoryOrNull(s: Snapshot, form: string, edition?: string | null): Inventory | null { return fieldListOf(s, form, edition)?.inv ?? null; }
 
   // ------------------------------------------------------------------------------------------------ families (BR-1)
   async families() {
@@ -171,10 +175,10 @@ export class AnswerKeys {
       ...(s.eligibility?.gates?.length ? [{ item_kind: "rule_set" as const, item_ref: "eligibility", label: "Eligibility rules", edition: null }] : []),
     ];
     const keys = await this.db.answerKey.findMany({ where: { combinationId }, include: { family: true, runs: { orderBy: { ranAt: "desc" }, take: 1 } }, orderBy: { updatedAt: "asc" } });
-    const fp = new Map(items.map((i) => [`${i.item_kind}|${i.item_ref}`, fingerprintOf(s, i.item_kind, i.item_ref, i.item_kind === "field_map" ? this.inventoryOrNull(s, i.item_ref) : null)]));
+    const fp = new Map(items.map((i) => [`${i.item_kind}|${i.item_ref}|${i.edition ?? ""}`, fingerprintOf(s, i.item_kind, i.item_ref, i.item_kind === "field_map" ? this.inventoryOrNull(s, i.item_ref, i.edition) : null, { edition: i.edition })]));
     return {
       combination: { id: c.id, label: c.label }, sample: SAMPLE_WORDS, scoring: NO_SCORING, items,
-      keys: keys.map((k) => this.keyView(k, k.runs[0] ?? null, fp.get(`${k.itemKind}|${k.itemRef}`) ?? fingerprintOf(s, k.itemKind as ItemKind, k.itemRef))),
+      keys: keys.map((k) => { const ed = editionOf(k); return this.keyView(k, k.runs[0] ?? null, fp.get(`${k.itemKind}|${k.itemRef}|${ed ?? ""}`) ?? fingerprintOf(s, k.itemKind as ItemKind, k.itemRef, null, { edition: ed })); }),
     };
   }
 
@@ -190,7 +194,7 @@ export class AnswerKeys {
   async get(id: string) {
     const k = await this.key(id);
     const s = await this.draft(k.workspaceId, k.combinationId);
-    return this.keyView(k, k.runs[0] ?? null, fingerprintOf(s, k.itemKind as ItemKind, k.itemRef, k.itemKind === "field_map" ? this.inventoryOrNull(s, k.itemRef) : null), true);
+    return this.keyView(k, k.runs[0] ?? null, fingerprintOf(s, k.itemKind as ItemKind, k.itemRef, k.itemKind === "field_map" ? this.inventoryOrNull(s, k.itemRef, editionOf(k)) : null, { edition: editionOf(k) }), true);
   }
 
   /** Challenge M3 (SA-1B-296 r2: "entered and signed by the expert"): the expert or the author enters expected values. */
@@ -258,7 +262,7 @@ export class AnswerKeys {
     const k = await this.key(id);
     const s = await this.draft(k.workspaceId, k.combinationId);
     const family = familyOf(k.family);
-    const r = k.itemKind === "field_map" ? runFieldMap(s, family, k.itemRef, this.inventory(s, k.itemRef), k.expected as MapExpected) : runRuleSet(s, family, k.expected as RuleExpected);
+    const r = k.itemKind === "field_map" ? runFieldMap(s, family, k.itemRef, this.inventoryOrNull(s, k.itemRef, editionOf(k)) ?? this.inventory(s, k.itemRef), k.expected as MapExpected) : runRuleSet(s, family, k.expected as RuleExpected);
     const row = await this.db.answerKeyRun.create({ data: { workspaceId: k.workspaceId, keyId: k.id, keyVersion: k.version, itemFingerprint: r.fingerprint.item, inputsFingerprint: r.fingerprint.inputs, result: r.result, lines: r.lines as object[], passed: r.passed, failed: r.failed, ranBy: actor.id } });
     await this.audit.log(k.workspaceId, actor.id, "ran", "answer key", `${k.family.familyKey}:${k.itemRef}`, `${actor.name} ran the family "${k.family.familyKey}" against ${itemWords(k.itemKind, k.itemRef)}: ${r.result === "PASSED" ? "passed" : "failed"}, ${r.passed} of ${r.passed + r.failed} values`, undefined, k.combinationId);
     return { id: row.id, result: r.result, passed: r.passed, failed: r.failed, lines: r.lines, key: this.keyView(k, row, r.fingerprint) };

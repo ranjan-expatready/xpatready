@@ -64,10 +64,17 @@ ok("C5.5 BR-5 (cannot be tested): a map with no form field list is marked so", t
 
 // BR-4, BR-5: the levels table, one cell at a time
 const item = (o: Partial<GateItem> = {}): GateItem => ({ item_kind: "field_map", item_ref: "IMM 5707", label: "IMM 5707 field map", edition: "IMM 5707 (01-2023)", form: "IMM 5707", changed: true, testable: true, ...o });
-const key = (state: "DRAFT" | "SIGNED", run: "PASSED" | "FAILED" | "NOT_RUN", o: Partial<GateKey> = {}): GateKey => ({ key_id: `k-${state}-${run}-${Math.random()}`, item_kind: "field_map", item_ref: "IMM 5707", family: "E1 household (Sample)", state, version: 1, signed_by: state === "SIGNED" ? "Content reviewer" : null, signed_at: null, change_reason: null,
+const key = (state: "DRAFT" | "SIGNED", run: "PASSED" | "FAILED" | "NOT_RUN", o: Partial<GateKey> = {}): GateKey => ({ key_id: `k-${state}-${run}-${Math.random()}`, item_kind: "field_map", item_ref: "IMM 5707", edition: "IMM 5707 (01-2023)", family: "E1 household (Sample)", state, version: 1, signed_by: state === "SIGNED" ? "Content reviewer" : null, signed_at: null, change_reason: null,
   run: { state: run, why: run === "NOT_RUN" ? "Not run since the combination changed." : "", passed: run === "FAILED" ? 40 : 50, failed: run === "FAILED" ? 2 : 0, first_failure: run === "FAILED" ? 'Family name (EXAMPLE MOTHER (Sample)): expected "EXAMPLE", got "OTHER".' : null, run_id: "r1" }, ...o });
 const real = { demo: false, submitted: false }, demo = { demo: true, submitted: false };
 const lv = (g: ReturnType<typeof answerKeyGate>) => g.problems.map((p) => `${p.level}:${p.message}`);
+// Devin on #568: a snapshot carries every mapped PDF edition of a form (oldest first); each edition is its own item.
+const twoEd = clone(s); { const maps = twoEd.field_maps as { form_number: string; form_edition: string; entries: unknown[] }[]; const old = maps.find((x) => x.form_number === "IMM 5257")!; maps.splice(maps.indexOf(old) + 1, 0, { ...clone(old), form_edition: "IMM 5257 (01-2027)" }); }
+const itTwo = testableItems(twoEd, rel, all).filter((i) => i.item_ref === "IMM 5257");
+ok("C5.5 BR-2 fail (Devin on #568): a second mapped edition added after the released one is its own item, new; the released edition stays unchanged", itTwo.length === 2 && itTwo.find((i) => i.edition === "IMM 5257 (01-2027)")?.changed === true && itTwo.find((i) => i.edition !== "IMM 5257 (01-2027)")?.changed === false, itTwo.map((i) => [i.edition, i.changed]));
+const oldKey = key("SIGNED", "PASSED", { item_ref: "IMM 5257", edition: itTwo.find((i) => !i.changed)?.edition ?? null });
+const gTwo = answerKeyGate(itTwo, [oldKey], real);
+ok("C5.5 BR-4 fail (SA-1B-296 r5): a signed passing key for the old edition does not pass the new edition (E7 names it)", gTwo.items.find((i) => i.edition === "IMM 5257 (01-2027)")?.result === "no_test" && gTwo.items.find((i) => i.edition !== "IMM 5257 (01-2027)")?.result === "passed" && gTwo.problems.some((p) => p.level === "error" && /no answer-key test/.test(p.message)), gTwo.items.map((i) => [i.edition, i.result]));
 let g = answerKeyGate([item()], [], real);
 ok("C5.5 BR-5 E7: a new map with no test on a real release is an error naming it, on Tests, with its form", g.problems.length === 1 && g.problems[0].level === "error" && g.problems[0].where === "Tests" && g.problems[0].label === "IMM 5707 field map" && /^no answer-key test\./.test(g.problems[0].message) && g.problems[0].forms[0] === "IMM 5707" && g.items[0].result === "no_test", lv(g));
 g = answerKeyGate([item()], [], demo);
@@ -160,6 +167,14 @@ r = await call("POST", `/combinations/${vv}/approve`, undefined, APPROVER);
 const sum1 = JSON.parse(sql(`select summary from config_release where combination_id = '${vv}' order by version desc limit 1`) || "{}");
 ok("C5.5 Done when: the Visitor visa Demo release still goes through (an unsigned passing key; IMM 5707 untested as released)", r.status === 201 && runs() === a0 + 1, r.body?.detail ?? r.body);
 ok("C5.5 BR-9: the release's summary freezes the key it rests on (Draft, passed, its run) and no ungated item", Array.isArray(sum1.answer_keys) && sum1.answer_keys.length === 1 && sum1.answer_keys[0].key_id === kid && sum1.answer_keys[0].state === "DRAFT" && sum1.answer_keys[0].run === "PASSED" && !!sum1.answer_keys[0].run_id, sum1.answer_keys);
+// BR-6 (Devin on #568): in the release transaction the keys must be exactly those judged: one more, one fewer, or one
+// at another version or state is refused.
+const { keysUnchanged } = await import("../api/src/answer-key-gate.ts");
+const judged = JSON.parse(sql(`select coalesce(json_agg(json_build_object('key_id', id::text, 'version', version, 'state', state)), '[]') from answer_key where combination_id = '${vv}'`)) as { key_id: string; version: number; state: string }[];
+const inTx = (j: typeof judged) => db.$transaction((tx) => keysUnchanged(tx as never, vv, j));
+ok("C5.5 BR-6: the keys as judged pass the in-transaction check", await inTx(judged));
+ok("C5.5 BR-6 fail (Devin on #568): a key added after judging (the judged set is one short) is refused", !(await inTx([])) && judged.length === 1);
+ok("C5.5 BR-6 fail: a key at another version or state than judged is refused", !(await inTx(judged.map((x) => ({ ...x, version: x.version + 1 })))) && !(await inTx(judged.map((x) => ({ ...x, state: x.state === "SIGNED" ? "DRAFT" : "SIGNED" })))));
 ok("C5.5 BR-9: the release is a Demo release on the Releases list (G3)", (await call("GET", `/releases?combination=${vv}`, undefined, APPROVER)).body.find((x: { version: number }) => x.version === r.body.version)?.demo === true);
 
 // A failing key refuses even a Demo release (Q3), naming the value
