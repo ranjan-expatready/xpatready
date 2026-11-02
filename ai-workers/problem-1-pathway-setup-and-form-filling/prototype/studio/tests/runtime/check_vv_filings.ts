@@ -119,6 +119,11 @@ const sum = (r: D, k?: string) => r.fees.filter((f) => !k || f.line === k).reduc
   // Break m3: a sponsorship on a combination whose other fees are worked out says its own are not
   const vvSp = deriveFilings("vv.single", [person(0, "principal"), person(4, "sponsor")], undefined, modes({ sponsor: "co_files" })) as D;
   ok("C11.12 break m3 pass: the sponsorship's fees are said to be not worked out yet", vvSp.fees_worked_out === false && /sponsorship's fees are not worked out yet/.test(vvSp.fees_why ?? "") && typeof vvSp.groups[0].total_cents === "number");
+  const fsSpouse = deriveFilings("fs.spouse", [person(0, "principal"), person(1, "spouse_or_partner"), person(4, "sponsor")], undefined, modes({ spouse_or_partner: "files_own", sponsor: "co_files" })) as D;
+  ok("C11.12 review n1 pass: beside a sponsorship, a group with another own filing stays splittable (that filing may leave)", fsSpouse.groups[0].splittable === true && fsSpouse.filings.length === 3);
+  ok("C11.12 review n1 fail: the principal and the sponsorship alone are not splittable", fs.groups[0].splittable === false);
+  const wpSplit = deriveFilings("wp.family", family(2), undefined, { ...modes({ spouse_or_partner: "files_own" }), groupOf: (x) => (x === "s-1" ? "g-own" : "g-fam"), groupKind: (g) => (g === "g-own" ? "separate" : "family") }) as D;
+  ok("C11.12 break round 2: a split group with no fee rule says nothing about family maximums", wpSplit.groups.find((g) => g.id === "g-own")?.why === "Split out with a reason: sent on its own.");
   ok("C11.12 BR-4 pass: a sponsor with no mode files nothing (1 filing, C11.12.test.ts:66–72)", (deriveFilings("fs.spouse", [person(0, "principal"), person(4, "sponsor")], undefined, modes({ principal: "files_own", sponsor: null as never })) as D).filings.length === 1);
 }
 // The threshold decides on its own (review m3): a made-up rule where per-person × people is above the maximum below the threshold.

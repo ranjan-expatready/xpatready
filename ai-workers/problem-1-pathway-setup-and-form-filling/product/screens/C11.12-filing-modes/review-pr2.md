@@ -86,3 +86,35 @@ This property would have caught M1.
 **Not checked:** an upgrade of a database already holding pre-C11.12 rows (code path read only; copies started fresh); pack 4 in full (builder's run matching main relied on; my `setup_vv_m3` re-run failed 4 lines not about filings: signer check, gates version, `PUT /library/fees`, approval); `C11.12.test.ts`; a real screen reader and an intended user's walk.
 
 **Verdict: Block.** Fix M1, M2 and M3 (Minors optional), then re-review on the new commit.
+
+## Round 2 (re-review on `61f168b7`; code identical at `5c922635`, which adds only `break-report-pr2.md`)
+Fix delta read: `53604e3c` (engine, api, contracts, tests, migration header). The merge of PR 1's head and main was not judged. Copy :4443 (`xr_studio_revpr2r2`, fresh). US$0.
+
+**Re-run:**
+- Pure suites: `check_vv_filings` 52/52 (both properties included), `check_vv_prepare` 32/32, `check_c1112_modes` 39/39.
+- `check_c1112_prepare_api` 26/26. The 27th line, "setup: released by setup_visitor_visa", runs only on a copy with no release.
+- `tsc`: no error in any touched file.
+- `total_cents` has no reader outside the engine and the tests.
+- One environment note: my first two runs on :4443 hit ECONNREFUSED because the copy I had started had stopped. After `isolated.sh … restart`, the run was clean.
+
+| Round 1 | Round 2 | Evidence |
+|---|---|---|
+| M1 fee line names no person | **Closed** | `FeeLine.person` set on every line. The stored `fees[].subject` is the person: live, 6 lines with 6 distinct (line, subject) pairs, and the child's line names the child. The covered line reads "paid by <payer> on <owner>'s filing". Tests: "review M1 pass/fail" and the random-modes property, keyed by person. |
+| M2 a 0 total where fees are not worked out | **Closed** | `total_cents: number \| null`, null when there is no fee rule. "review M2 pass/fail". A sponsorship on a combination with fees says `fees_worked_out: false` with words, and keeps its numbers for the other lines. |
+| M3 four server rules untested | **Closed** | Each rule now has a pass and a fail: the Declared only start, the sponsor stored not travelling, `co_filed` in the principal's group, the 422, the 409 for both the sponsorship and the principal's filing. The spouse's own filing still splits (200). |
+| m1 C6.12-3 edit not recorded | Closed | `PACK-4-visitor-visa.md` "Edits to the tests" |
+| m2 property without modes | Closed | 300 households with random spouse and child modes |
+| m3 words | Closed | "One submission for N people applying" counts only people applying. The no-filing reason is in words. |
+| m4 version without applicant rows | Open, Minor | Accepted in the PR. Items still move the version today. |
+
+**New, Minor:**
+- **n1.** A group holding a sponsorship says `splittable: false` (`filings.ts:116`). The server now lets the spouse's own filing split out of it (`case-prepare.ts:240`; live 200, break m5). The flag and the server disagree. No web reader exists yet. Fix before PR 3 reads it, either with a per-filing `splittable` or by making the group's flag true when another own filing exists.
+- The breaker's 8 and 9 stay as Minors, as stated in the PR: a channel choice from PR 1 dropped on the move, and a principal marked not travelling, which no API can set.
+
+**Journey score round 2: 9 / 10.**
+- Correct data rises to 1 (M1, M2).
+- Plain words rises to 1 (the covered-line words and the group count).
+- Trust and sources rises to 1 (no 0 total, the sponsorship's fees said).
+- Next step obvious stays at ½ and visual quality stays at ½: no screen until PR 3.
+
+**Verdict: Approve** for `61f168b7` (code identical at `5c922635`). No open Blocker or Major. Minors m4 and n1 and the breaker's 8 and 9 stay open.

@@ -95,7 +95,7 @@ type P = { derived: boolean; filings: { id: string; mode: string; owner?: { subj
   const p2 = (await call("GET", `/runtime/cases/${id2}/prepare`, undefined, OFFICER)).body as P;
   const A2 = ((await call("GET", `/runtime/cases/${id2}`, undefined, OFFICER)).body.people as { role: string; subject_id: string }[]).find((x) => x.role === "principal")!.subject_id;
   const main2 = p2.filings.find((f) => f.owner?.subject === A2)!, spons = p2.filings.find((f) => f.mode === "co_filed");
-  ok("C11.12 BR-4 pass: the sponsorship is its own co_filed filing in the principal's group, not splittable", !!spons && spons.owner?.subject === spAdd?.subject_id && spons.group === main2.group && p2.groups.find((g) => g.id === main2.group)?.splittable === false, p2.filings.map((f) => `${f.mode}:${f.owner?.role}:${f.group.slice(0, 6)}`));
+  ok("C11.12 BR-4 pass: the sponsorship is its own co_filed filing in the principal's group (still splittable: the spouse's own filing may leave, review n1)", !!spons && spons.owner?.subject === spAdd?.subject_id && spons.group === main2.group && p2.groups.find((g) => g.id === main2.group)?.splittable === true, p2.filings.map((f) => `${f.mode}:${f.owner?.role}:${f.group.slice(0, 6)}`));
   ok("C11.12 break M2 fail: the sponsor gets no applicant's biometrics step and no applicant's forms", !p2.items.some((i) => i.subject === spAdd?.subject_id && (i.kind === "step" || i.kind === "document")), p2.items.filter((i) => i.subject === spAdd?.subject_id));
   ok("C11.12 BR-6 pass: the declared-only child is on the principal's filing, declared only", main2.applicants.some((a) => a.subject === kidAdd?.subject_id && a.mode === "declared_only"));
   r = await call("PATCH", `/runtime/cases/${id2}/people/${spAdd?.subject_id}`, { applies: true }, OFFICER);
@@ -108,6 +108,7 @@ type P = { derived: boolean; filings: { id: string; mode: string; owner?: { subj
   const spouseFiling = p2.filings.find((f) => f.owner?.subject === S2)!;
   r = await call("POST", `/runtime/groups/${main2.group}/split`, { filing: spouseFiling.id, reason: "Travelling later (test)", version: ver }, OFFICER);
   ok("C11.12 break m5 pass: the spouse's own filing can still be split out of a group with a sponsorship", r.status === 200 && (r.body as P).filings.find((f) => f.id === spouseFiling.id)?.group !== main2.group, r.body?.detail ?? r.status);
+  ok("C11.12 review n1 fail: once only the principal's filing and the sponsorship remain, the group is not splittable", (r.body as P).groups?.find((g) => g.id === main2.group)?.splittable === false, (r.body as P).groups);
 
   // The widened checks (migration 20261102160000_c1112_filing_modes): the new values hold, anything else is refused.
   const refused = (q: string) => { try { sql(q); return false; } catch { return true; } };

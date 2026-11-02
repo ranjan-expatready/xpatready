@@ -151,8 +151,10 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
     const coFiled = mine.some((f) => f.mode === "co_filed");
     // Review m3: people applying (a declared-only person and the sponsor are named on it but are not counted).
     const count = new Set(mine.flatMap((f) => f.applicants.filter((a) => a.mode === "applying").map((a) => a.subject))).size;
-    groups.push({ id: gid, kind, label: count <= 1 ? "One submission" : `One submission for ${count} people applying`, filings: mine.map((f) => f.id), splittable: mine.length > 1 && !coFiled,
-      why: kind === "separate" ? "Split out with a reason: priced on its own, so the other group's family maximums do not cover it."
+    groups.push({ id: gid, kind, label: count <= 1 ? "One submission" : `One submission for ${count} people applying`, filings: mine.map((f) => f.id),
+      // Review n1: beside a sponsorship, another own filing (the spouse's) may still be split out; the pair never is.
+      splittable: mine.length > 1 && (!coFiled || mine.some((f) => f.mode !== "co_filed" && f.owner!.role !== "principal")),
+      why: kind === "separate" ? (fees0.length ? "Split out with a reason: priced on its own, so the other group's family maximums do not cover it." : "Split out with a reason: sent on its own.")
         : coFiled ? "The sponsorship and the principal's application are sent together and cannot be split (IRCC: the principal \"will submit both applications together online\")."
         : mine.length === 1 ? (mine[0].applicants.length > 1 ? "One application for the family." : "One person applying.")
         : rules ? `A family's ${label.toLowerCase()} applications go together, at the same time and place, so the family maximums apply (BR-16).` : "These applications go together in one submission.",
