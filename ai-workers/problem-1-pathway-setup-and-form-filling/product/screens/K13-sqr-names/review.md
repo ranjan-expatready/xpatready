@@ -1,0 +1,41 @@
+# K13 review: Smart questionnaire names on screen (P-271, P-272)
+
+Reviewer: fresh `screen-reviewer` context, did not build this row. Commit reviewed: **cedb021e** (branch `k13-sqr-names`, base origin/main 3dc373af), 2 Nov.
+Judged against: the K13 backlog row and P-271/P-272 on `origin/lead/2026-11-02-records-7`, plus its PRODUCT.md glossary row (Smart questionnaire (SQR) · Prospect questionnaire (PQR) · Client questionnaire · Agent view; avoid "questionnaire module, intake form, case view"). There is no concept.md: this is a words-only row. Copies used: isolated `rev_k13` on :4443 and `rev_*` on :4444 (web rebuilt first). US$0.
+
+## Verdict: Block (Ship after fixes)
+Most of the renaming is careful: keys, routes and audit kinds stay, and the six suites I re-ran are green. But two old names are still on screens a person reaches, and the K13 check cannot see them. Because of a blind spot in its static scan, it stays green when a label is reverted. The row's "Done when" ("finds only these names") is not met yet.
+
+## What I ran
+* `check_k13_names_browser.cjs` 4443: **114 passed, 0 failed**. Suites, each on a fresh copy on :4444, all exit 0: `check_preview_sets_browser` 24/24 · `check_x1_tabs_focus_browser` 48/48 · `runtime/check_runtime_r1c` (after setup_visitor_visa) 125/125 · `check_pqr_browser` 20/20 · `check_w115_slice2_browser` 58/58 · `check_forms_c47_pqr_picks_browser` (fake launcher, per its usage line) 62/62.
+* `graph.mjs --check` exit 0. `count-any.mjs`: 423 (baseline 433). Web `tsc --noEmit`: clean.
+* Journey walk as author, case officer and client (see `journey-test-reviewer-2026-11-02.md`, **9.5/10**). Also 200 % zoom at 1024 px (512 CSS px) on the Smart questionnaire tab, the preview, the case and the client page: no sideways scroll.
+* Mutation test of the check's static scan (copied verbatim, files restored with `git checkout --`).
+
+## Builder's choices
+1. Keys, routes, ids, data values and audit kinds unchanged; `where: "Questionnaires"` shown through `review.tsx` KIND_WORD: **agreed** (keys separate from labels, STANDARDS §33). The same treatment was not given to the audit entity "pre-qualification" (finding 2).
+2. `p2/prompts` text unchanged because saved runs are keyed on it: **agreed** (the replay keys must stay; prompts are not screen words).
+3. Column header "PQR", full name on chips and headings: **agreed**. The abbreviation is part of the glossary name, and the header sits next to the "Prospect questionnaire (PQR)" chip and strip.
+4. The forms panel heading becomes "Prepare application", and C7.7 is not built: **agreed**. P-272 names the part; the deliverables list is outside this row.
+5. New "Agent view" h2 above the staff questionnaire: **agreed**. Heading order on the case is h1 › People › Eligibility › Prepare application › Agent view, and axe is clean.
+6. Client page h1 "Client questionnaire": **agreed** (verified at 400 px, axe clean).
+7. Two-part check: **sound idea, too weak as built** (findings 3 and 4). Skipping the sideways-scroll check on Program structure: agreed (K13 does not touch that page).
+8. ~40 suites and 2 packs relabelled, `tests/qa/` left to qa: **agreed**. Heads-up for the tech lead: `tests/qa/check_qa_r1c_walk.cjs:104`, `check_qa_r1d_walk.cjs:111,136` wait for the heading "Your questionnaire", and `check_qa_am_1101b_walk.cjs:117` expects "Pre-qualification" in the bulk toast. These qa walks are not in `run-suites.sh`, so main stays green, but qa's walks will fail after merge until qa updates them.
+
+## Findings (ranked)
+1. **Major (Must): "Questionnaires" is still on a screen.** At `web/src/components/conditions.tsx:90` the warning reads "…release waits until the fact is added from **Questionnaires** › Facts a rule needs." Reproduced at :4443: Visitor visa › Forms › Change (IMM 5707 line) › Only if… › Add a comparison › Field `person.not_in_library`. The same builder is used on the library, configuration and forms screens. Fix: "…from the Smart questionnaire (SQR) tab › Facts a rule needs."
+2. **Major (Must): "pre-qualification" is still on a screen.** On the Activity page (`web/src/pages/history.tsx:32`) the Item column shows the raw audit entity, and `api/src/pqr-drafts.ts:202` logs the entity "pre-qualification". `ITEM_WORD` (`history.tsx:10`) does not map it. Reproduced on the C4.7 suite's data (3 such lines): the row reads "…drafted Prospect questionnaire (PQR) picks for "With an LMIA" … · **pre-qualification**". Fix: keep the stored entity and add `"pre-qualification": "Prospect questionnaire (PQR)"` to ITEM_WORD (the same approach as choice 1).
+3. **Major (Must): the check's fail test does not fail when the rule is removed** (STANDARDS §46 [M]). The static scan's JSX alternative `>([^<>{}\n]{3,})<` only reads text that directly follows a `>`. Text that follows a `{expr}` is never read, and that is why finding 1 passes. Mutation: I reverted `runtime/eligibility.tsx` to "→ Answer in the case view". The scan stayed silent, and the walk does not reach that link either (no eligibility run). The same mutation in `sources.tsx` and `questionnaire.tsx` was caught. Neither the walk nor the scan reaches audit entity words (finding 2). Fix: also scan JSX text between `}` and `<` or `{`, scan the audit entity literals that the Activity page shows, and add a fail case built on a known-bad fixture string so the scan proves it can fail.
+4. **Minor (Should): the preview walk uses the wrong query parameter.** `check_k13_names_browser.cjs` visits `/preview?view=pqr|client|agent`, but the page reads `?set=` (`web/src/pages/workspace/preview.tsx:57`). Below 1280 px only the Client questionnaire set is shown, so the PQR and Agent view sets are never walked at 1024 or 400 px. Fix: `?set=pqr` and `?set=agent`.
+5. **Minor (Should): a third name for a PQR pick.** To review shows kind "Program question pick" (`contracts/review-proposals.ts:19`, rendered at `web/src/pages/proposals.tsx:120,163`). The draft button that creates the pick says "Draft Prospect questionnaire (PQR) picks". Fix: "Prospect questionnaire (PQR) pick". This is a shared contract, so name it in the PR's first line.
+6. **Minor (Should): stale expected words in an acceptance journey.** `acceptance/journeys/J4-questionnaires-to-release.md:38` expects "…: pre-qualification" on Review; the screen now reads "…: Prospect questionnaire (PQR)" (seen on Review and release at :4443).
+7. **Minor (optional): informal names for the view.** `runtime/cases.tsx:211` notice title "This is the client's questionnaire", `cases.tsx:147` "your questionnaire", and `runtime/questionnaire.tsx:811` "the client's questionnaire". "This is the Client questionnaire" would match the glossary; the sentence uses can stay.
+
+## D1–D20 (only what this row touches)
+D1 ½: P-271/P-272 names are present on the tab, views, case and client page; 2 old names remain (F1, F2) · D2 1: no data path changed; one tick saved = one `fact_source` row plus one audit line · D3 1: one word per key (TAB_WORD, SETS) · D4 n/a: no rule change · D5 1: no behaviour change; the suites are green · D6 1: audit kinds kept, summaries now in the new words · D7 1: Rules and AI pills untouched · D8 1: tab name, breadcrumbs and case headings orient · D9 1: empty PQR state says "Tick them on the Smart questionnaire (SQR) tab" · D10 ½: plain words except F1, F2, F5 · D11 1: save toast plus Undo unchanged · D12 1: long names wrap cleanly at 400 px; the tab strip scrolls as before · D13 1: axe clean on 5 states I walked plus the check's pages; keyboard reaches the tab and the Agent view; 1024, 400 and 200 % with no sideways scroll · D14 1: AG-08/AG-07 names are the team's · D15 1: pages under 1.5 s at network idle; no new requests · D16 ½: F3 (the fail test cannot fail for a class of strings) · D17 simulated only · D18 1: Sample labels intact · D19 1: configure › preview › case › client walked · D20 simulated only.
+
+## Could not check
+A real screen reader; an intended user's unaided walk (D17, D20 stay with the founder). Live AI (off; the fake launcher only). "Program question pick" on To review was read in code only: no pick was left waiting after the C4.7 suite.
+
+## To fix before Approve
+Findings 1, 2 and 3, each with a fail test. List findings 4–7 in the PR or fix them.
