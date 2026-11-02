@@ -47,6 +47,8 @@ const RULES = new Map<string, Rules>([
   }],
 ]);
 
+/** C11.12: whether a combination's fees are worked out at all (else its words say "not worked out yet"). */
+export const hasFeeRules = (combinationKey: string) => !!RULES.get(combinationKey)?.fees.length;
 /** The fee rule of a combination by its key (biometrics: its ages, VV-R15), for the items and words that need it. */
 export const feeRule = (combinationKey: string, key: string): FeeRule | undefined => RULES.get(combinationKey)?.fees.find((f) => f.key === key);
 
