@@ -466,6 +466,35 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   step("Add pop-up fail (late list): a name typed before the structure arrived stays, and Program opens", (await pw.inputValue()) === "Typed before the list (late seed)" && await p.locator('[data-add-dialog] [data-field="program"] input[role="combobox"]').isEnabled(), await pw.inputValue());
   await p.unroute("**/api/structure?*", slowList);
   await p.getByRole("button", { name: "Cancel" }).click(); await dialog().waitFor({ state: "detached" });
+  // Review of #398 (B1, M1): typed early, an existing Pathway is used (Add writes under it, never 409 "already exists"),
+  // and with the Pathway and Program filters a different Pathway typed early is kept whole (the prefilled Program goes).
+  const nodesNow = (await api("/structure?pathwayType=INDIVIDUAL")).body.nodes.filter((n) => !n.retired);
+  const pwNode = nodesNow.find((n) => n.level === "pathway" && nodesNow.some((c) => c.parentKey === n.key && c.level === "program"));
+  const progNode = nodesNow.find((n) => n.parentKey === pwNode.key && n.level === "program" && /\.visitors$/.test(n.key)) ?? nodesNow.find((n) => n.parentKey === pwNode.key && n.level === "program");
+  const lateOpen = async (qs) => {
+    await p.goto(`${BASE}/${qs}`); await p.waitForLoadState("networkidle"); await p.route("**/api/structure?*", slowList);
+    const back = p.waitForResponse((r) => /\/api\/structure\?/.test(r.url()) && r.request().method() === "GET", { timeout: 15000 });
+    await p.locator("[data-add-combination]").click(); await dialog().waitFor(); return back;
+  };
+  const fldL = (lv) => p.locator(`[data-add-dialog] [data-field="${lv}"] input[role="combobox"]`);
+  let back = await lateOpen("");
+  await fldL("pathway").fill(pwNode.label); await back; await p.waitForTimeout(500); await p.unroute("**/api/structure?*", slowList);
+  await fldL("program").fill(progNode.label); await p.waitForTimeout(400);
+  await fldL("category").fill("Late seed category"); await p.waitForTimeout(500);
+  const sent = p.waitForResponse((r) => r.url().endsWith("/api/structure/path") && r.request().method() === "POST", { timeout: 15000 });
+  await p.locator("[data-add-submit]").click(); const res = await sent; const resBody = await res.json().catch(() => ({}));
+  const madeCat = (await api("/structure?pathwayType=INDIVIDUAL")).body.nodes.find((n) => n.level === "category" && n.label === "Late seed category");
+  step("Add pop-up fail (late list, review M1): an existing Pathway and Program typed early are used; Add writes under them (no 409)", res.status() === 201 && madeCat?.parentKey === progNode.key, [res.status(), madeCat?.parentKey, resBody?.detail]);
+  await dialog().waitFor({ state: "detached" }).catch(() => undefined);
+  back = await lateOpen(`?p=${encodeURIComponent(pwNode.key)}&prog=${encodeURIComponent(progNode.key)}`);
+  await fldL("pathway").fill("Brand new pathway (late seed)"); await back; await p.waitForTimeout(500); await p.unroute("**/api/structure?*", slowList);
+  if (!(await fldL("program").inputValue())) { await fldL("program").fill("Late seed program B"); await p.waitForTimeout(400); }
+  await fldL("category").fill("Late seed category B"); await p.waitForTimeout(600);
+  const sentB = p.waitForRequest((r) => r.url().endsWith("/api/structure/path") && r.method() === "POST", { timeout: 15000 });
+  await p.locator("[data-add-submit]").click(); const bodyB = JSON.parse((await sentB).postData() ?? "{}");
+  step("Add pop-up fail (late list, review B1): with filters, a different Pathway typed early is what Add sends (never the prefilled Pathway's key)", bodyB.pathway?.label === "Brand new pathway (late seed)" && !bodyB.pathway?.key && !bodyB.program?.key, JSON.stringify({ pathway: bodyB.pathway, program: bodyB.program }));
+  await p.waitForTimeout(500);
+  if (await dialog().count()) { await p.getByRole("button", { name: "Cancel" }).click(); await dialog().waitFor({ state: "detached" }); }
   step("no script error on any page", errs.length === 0, errs.join(" | "));
   await b.close();
   console.log(`\n${pass} passed, ${fail} failed`);

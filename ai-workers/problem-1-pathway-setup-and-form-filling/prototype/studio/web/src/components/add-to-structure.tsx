@@ -86,15 +86,26 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
       const n = s[lv] ? nodes.find((x) => x.key === s[lv]) : undefined, parent = n?.parentKey ? nodes.find((x) => x.key === n.parentKey) : undefined;
       if (parent && !s[up]) { t[up] = parent.label; s[up] = parent.key; }
     }
-    // Nightly 41365074483: the list can arrive after the person has started typing (it loads when the pop-up opens);
-    // a level they already typed or picked keeps their words instead of being wiped by the prefill.
-    setText((cur) => { const out = { ...t }; for (const lv of FIELDS) if (cur[lv]?.trim()) out[lv] = cur[lv]; return out; });
-    setSel((cur) => { const out = { ...s }; for (const lv of FIELDS) if (cur[lv]) out[lv] = cur[lv]; return out; });
+    // Nightly 41365074483 (review of #398): the list can arrive after the person has started typing (it loads when the
+    // pop-up opens). Until then only Pathway is open, so whatever was typed is a path from the top: it is kept whole
+    // and the prefill is not mixed into it. Each typed level is matched to an existing name under its resolved parent,
+    // as typing does once the list is there (an existing name is used, never sent again as new).
+    if (FIELDS.some((lv) => text[lv].trim() || sel[lv])) {
+      for (const lv of FIELDS) { t[lv] = text[lv]; s[lv] = sel[lv]; }
+      let parent: string | null = null;
+      for (const lv of FIELDS) {
+        if (!t[lv].trim()) { for (const b of FIELDS.slice(FIELDS.indexOf(lv))) { t[b] = ""; s[b] = null; } break; }
+        if (!s[lv]) s[lv] = nodes.find((n) => n.level === lv && norm(n.label) === norm(t[lv]) && (parent ? n.parentKey === parent : n.parentKey === null && n.pathwayType === type))?.key ?? null;
+        if (!s[lv]) break; // a new name: the levels under it are new too, as typed
+        parent = s[lv];
+      }
+    }
+    setText(t); setSel(s);
     setKeep({}); setClose({}); setErrors({}); setProblem(null);
     const cat = s.category ? nodes.find((x) => x.key === s.category) : undefined;
     setNone(!(prefill?.focus === "subCategory" || (cat && nodes.some((x) => x.parentKey === cat.key))));
     setLocs(cat?.allowedLocations.length ? cat.allowedLocations : ["inside_canada", "outside_canada"]);
-    const focus = prefill?.focus ?? FIELDS.find((lv) => !s[lv]) ?? "pathway";
+    const focus = (FIELDS.some((lv) => text[lv].trim()) ? FIELDS.find((lv) => !t[lv].trim()) : prefill?.focus ?? FIELDS.find((lv) => !s[lv])) ?? "pathway";
     setAim(focus); aimPending.current = focus; startAt.current = focus;
   }, [open, list.data, type, initialType]);
   // The field to start in gets focus in the first render where it is enabled: after the dialog's own first-field focus,
