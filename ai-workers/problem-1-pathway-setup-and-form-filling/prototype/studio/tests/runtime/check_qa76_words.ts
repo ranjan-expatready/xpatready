@@ -27,6 +27,13 @@ for (const rel of ["web/src/runtime/forms.tsx", "api/src/fill-case.ts"]) {
   ok(`QA-76 pass: ${rel} shows no decision code to the officer`, texts.length > 20 && !texts.some((t) => CODE.test(t)), texts.filter((t) => CODE.test(t)));
   ok(`QA-76 pass: ${rel} shows no team word ("evidence lane", "fill trial")`, !texts.some((t) => TEAM.test(t)), texts.filter((t) => TEAM.test(t)));
 }
+// QA-76 slice b: the case page's notes and headings carry no plan stage ("forms slice 2") either.
+const PLAN = /\b(?:forms|runtime|screens) slice\b|\bslice \d/i;
+for (const rel of ["engine/runtime/case.ts", "web/src/runtime/questionnaire.tsx"]) {
+  const texts = shownText(rel, readFileSync(join(ROOT, rel), "utf8"));
+  ok(`QA-76 pass: ${rel} shows no plan stage ("forms slice 2") and no decision code`, texts.length > 20 && !texts.some((t) => PLAN.test(t) || CODE.test(t)), texts.filter((t) => PLAN.test(t) || CODE.test(t)));
+}
+ok("QA-76 fail: the old note's words are caught", PLAN.test("No answer list yet (forms slice 2): the officer checks this answer"));
 const forms = shownText("forms.tsx", readFileSync(join(ROOT, "web/src/runtime/forms.tsx"), "utf8"));
 ok("QA-76 pass: the checked-copy chip says why in plain words", forms.includes("This form's filling is not proven yet, so the copy is for checking only"));
 // The scan must catch what QA-76 saw, and the forms the review of #225 found, while leaving comments and imports alone.

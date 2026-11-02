@@ -212,7 +212,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await c.getByRole("region", { name: "About Sample Applicant C" }).getByRole("button", { name: /Residence and immigration status/ }).click(); await idle(c);
   step("residence (review M2): the country where the client lives now is asked once for the person, with the release's countries offered", await shows(c.getByLabel("Country or territory where you live now")) && await c.getByLabel("Country or territory where you live now").evaluate((e) => e.tagName === "SELECT" || !!e.getAttribute("list")) && await gone(c.getByRole("heading", { name: "Entries" })));
   step("countries (review M5): a country with no answer list yet offers the release's countries while typing", !!(await c.getByLabel("Country or territory you are applying from").getAttribute("list")));
-  step("copy (review M5): the client never sees the configuration note about answer lists", await gone(c.getByText(/forms slice 2/)));
+  step("copy (review M5): the client never sees the configuration note about answer lists", await gone(c.getByText(/No fixed list for this answer yet|forms slice 2/)));
   // Leave and resume
   await c.getByRole("button", { name: "Save and come back later" }).click();
   await shows(c.getByRole("heading", { level: 1, name: "Your questionnaire" })); // the save finished and the overview opened
@@ -234,7 +234,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await o.getByRole("tab", { name: /^The application/ }).click(); 
   const visitSec = o.locator("section").filter({ has: o.getByRole("heading", { name: "Your visit" }) });
   await visitSec.getByRole("button", { name: /Confirm section/ }).click(); await idle(o);
-  step("agent pass: Confirm section confirms the visit's answers (Confirmed, history kept)", await shows(o.getByText(/Your visit for The application: \d+ answers? confirmed/)) && await shows(visitSec.getByText("Confirmed", { exact: true }).first()));
+  step("agent pass: Confirm section confirms the visit's answers (Confirmed, history kept)", await shows(o.getByText(/Your visit for the application: \d+ answers? confirmed/)) && await shows(visitSec.getByText("Confirmed", { exact: true }).first()));
   step("agent source (review M4): a confirmed answer still says who first answered it", await shows(visitSec.getByText(/questionnaire · Client A · .* · confirmed by Case officer/).first()));
   step("readability (Lead, R1d): an answer read by the whole household says \"fills IMM 5257 for N people\", with each person on hover", await shows(visitSec.getByText(/fills IMM 5257 for 6 people/).first()) && /Sample Child C4/.test((await visitSec.getByText(/fills IMM 5257 for 6 people/).first().getAttribute("title")) ?? ""));
   step("agent copy: no label reads \"(optional) (optional)\"", !(await o.locator("main").textContent()).includes("(optional) (optional)"));
