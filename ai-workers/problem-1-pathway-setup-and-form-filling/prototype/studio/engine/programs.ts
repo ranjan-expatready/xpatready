@@ -5,6 +5,7 @@
 import { sharedStep, type MissingItem, type NextAction, type Status } from "../contracts/programs.ts";
 import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
+import { isFilingFact } from "./resolver.ts";
 
 type Participant = { role: string; label: string; min: number; max: number; applies?: boolean };
 /** The parts of a snapshot these rules read (the snapshot's own lists are untyped until the team's contract lands). */
@@ -13,7 +14,7 @@ type FormLine = { form_number: string; form_kind?: string | null; channel?: stri
 type FieldMap = { form_number: string; entries: unknown[] };
 type DocumentLine = { base_or_conditional: string };
 const applicants = (ps: Participant[]) => ps.filter((p) => p.role !== "representative" && p.applies !== false && p.max > 0);
-const isCaseLevel = (p: { repeats: string; fact: string }) => p.repeats === "once_per_case" || p.fact.startsWith("case.");
+const isCaseLevel = (p: { repeats: string; fact: string }) => isFilingFact(p.fact, p); // SH3 R5
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 /** Questions a person is asked: placements in the questionnaire's sections that are asked of each person. */
