@@ -11,7 +11,7 @@ const problem = (status: number, title: string, detail: string) => new HttpExcep
 const OPEN = ["WAITING", "RETURNED", "APPROVED"];
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
 
-/** Each combination's place as a trail: now in the one where-used service (SH2, api/src/where-used.ts). */
+/** Each combination's place as its full trail in words (P-104, QA-150): in the one where-used service (SH2, api/src/where-used.ts). */
 export { combinationTrails };
 
 /** Where a library form is used (P-116), and what may be done with it now. `except` leaves one change out of the open-change
