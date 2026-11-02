@@ -66,3 +66,51 @@ API-only journeys, because this slice has no screen (journey-test steps 2, 3 and
 A browser journey (there is no screen yet). The behaviour of Approved, Being checked and Rejected (no routes). Real storage (SI-14 stand-in). A real rollback run.
 
 **Verdict: Block.** Fix Major 1 and Major 2, each with a fail test. Fix the Minors or list them in the PR.
+
+## Round 2: delta review at 2aeb1608982fdb7bcbed2e3a083588a19dd336bf
+Diff: `git diff cbd26765..2aeb1608`. Run on a fresh isolated copy `rev64` on :4425 (`xr_studio_rev64`), started from 2aeb1608. US$0.
+
+**Checks:**
+* `check_c64_storage_api.ts`: 45/45.
+* `acceptance/C6.4.test.ts`: 16/16.
+* `check_engine.ts`: 43/43.
+* I re-ran my round-1 probes and a main-vs-head engine comparison.
+
+**Major 1: fixed.**
+* `main.ts:179-181` now gives this route its own 413 words. Probes:
+  * 20 MB + 10 bytes: 413, "The file is larger than 20 MB. Nothing was stored."
+  * Two files: 413, "Send one file at a time. Nothing was stored."
+  * Exactly 20 MB: 201 Received (multer limit at `MAX + 1`, `case-checklist.ts:202`).
+* The new fail tests check the words (including "not 25 MB"), and there is a pass test at exactly 20 MB.
+
+**Major 2: fixed.**
+* Answered facts go into a separate `answeredDeciders` map (`render.ts:241-250`). They are asked (`pushQ`) but not counted.
+* Calculated fields are dropped from `readsOf`.
+* Released Visitor visa, main against head, with no answers / all 16 yes/no answered no / all answered yes: deciding_questions, unanswered deciding, to ask, answered, questions, documents needed and forms applying are now identical. The preview stat drops 26 to 10, as on main.
+* `check_engine.ts:117-121` adds a pass test and a fail test. The fail test checks count 1 before and 0 after, and would fail if answered facts went back into `deciders`.
+
+**Minors from round 1:**
+1. Fixed: the 409 words now say "read the checklist again".
+2. Fixed: a Not applicable line has `required: false` (probe: received to Not applicable gives `required: false`).
+3. Fixed: six identical requests at once all give 200 (tested). The re-read on a version miss is at `case-checklist.ts:140-142`.
+4. Accepted: the audit lines stay outside the transaction, as elsewhere in the runtime lane. I do not disagree for this slice. It remains a known gap for the audit trail as a whole, not a finding for this PR.
+5. Fixed: the rollback note deletes the `_prisma_migrations` row.
+6. Fixed: tests now cover upload by a configuration person (403) and another firm's officer (404), a stale version (409, nothing stored), and files on disk equal to document rows after refused uploads.
+
+**Breaker fixes, checked:**
+* Kept lines for a person marked not travelling (`case-checklist.ts:96-103`): tested, and still actionable.
+* UTF-8 file names and removal of the right-to-left control: tested with a Cyrillic/Chinese name and U+202E.
+* Optional `version` on all three routes: 409 when stale. The guard holds under races (8 uploads at once: one 201; Not applicable and upload at once: one 200, one 409, no file left).
+* Uppercase ids: 200.
+* Zero-width-only reason: 400.
+
+**New findings (Minor, none blocking):**
+* **m-R2-1:** `SeenVersion` (`contracts/documents.ts`) uses `z.coerce.number`, so `{"version": ""}` and `{"version": null}` (and an empty multipart field) become 0. They are refused with 409 "changed after you opened it" although nothing changed. Treat empty or null as absent, or refuse it with 400.
+* **m-R2-2:** `{"version": -1}` gives zod's default "Too small: expected number to be >=0" instead of plain words. Give `.min(0, ...)` its own message.
+
+**Journey score (round 2, API-only as in round 1):**
+* Task 1, next step 1, plain words 1, feedback and state 1, correct data 1, error recovery 1, speed 1, trust and sources 1.
+* Accessibility and screen sizes ½ and visual quality ½: there is no screen, so they do not apply.
+* **9 / 10.** Passes, with no criterion at 0.
+
+**Verdict: Approve** (for 2aeb1608982fdb7bcbed2e3a083588a19dd336bf). No open Blocker or Major. List m-R2-1 and m-R2-2 in the PR, or fix them in the area's Minor PR.
