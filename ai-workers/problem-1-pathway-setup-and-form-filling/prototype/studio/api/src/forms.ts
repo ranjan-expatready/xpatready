@@ -329,6 +329,9 @@ export class Forms {
     // G-CORE B2 (BR-2): the fixed rules check runs again at approval; a change that fails is refused in words, and a
     // stale preview answers "look again"; nothing moves. (Run before the transaction: it reads every combination's draft.)
     const items: ChangeItem[] = [{ action: "merge", kind: "field", key: from, into: to }];
+    // A field retired or merged since the proposal keeps its own words (review 7, break M5), before the full check.
+    const newest = async (k: string) => this.db.canonicalField.findFirst({ where: { workspaceId: ws, canonicalFieldKey: k }, orderBy: { version: "desc" } });
+    for (const k of [to, from]) { const f = await newest(k); if (!f || f.status === "RETIRED" || f.mergedIntoKey) conflict(`${k} was ${f?.mergedIntoKey ? `merged into ${f.mergedIntoKey}` : "retired"} after this merge was proposed: nothing was changed; reject this merge.`); }
     const checked = await this.sets.guard(items, "person", b.expected, ws);
     const swap = <T>(j: T): T => (j == null ? j : (JSON.parse(JSON.stringify(j).split(`"field":"${from}"`).join(`"field":"${to}"`)) as T));
     const reads = (j: unknown) => !!j && JSON.stringify(j).includes(`"field":"${from}"`);

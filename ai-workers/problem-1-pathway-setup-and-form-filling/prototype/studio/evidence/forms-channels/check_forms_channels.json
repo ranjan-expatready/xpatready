@@ -1,10 +1,10 @@
 {
- "at": "2026-10-30T04:58:03.425Z",
- "port": 16450,
- "database": "xr_studio_forms_forms_f1",
+ "at": "2026-11-02T20:14:14.025Z",
+ "port": 4452,
+ "database": "xr_studio_fb2forms_f1",
  "paid_calls": 0,
  "fixtures": "Sample (tests/fixtures/intake/README.md)",
- "pass": 106,
+ "pass": 105,
  "fail": 0,
  "log": [
   {
@@ -312,8 +312,8 @@
    "name": "C1.6: a configuration without channels keeps its fingerprint (draft equals its release)",
    "ok": true,
    "detail": {
-    "wpRelease": "b228b666d2cff37844faaa3100343a36186de03a6037158018265ffc92c116e5",
-    "wpDraft": "b228b666d2cff37844faaa3100343a36186de03a6037158018265ffc92c116e5"
+    "wpRelease": "40d553cc02f1ed97c736cbea83abb740e1504db0cb6ae23f745e0f05aef9ce06",
+    "wpDraft": "40d553cc02f1ed97c736cbea83abb740e1504db0cb6ae23f745e0f05aef9ce06"
    }
   },
   {
@@ -536,8 +536,8 @@
    "ok": true,
    "detail": {
     "statuses": [
-     200,
-     409
+     409,
+     200
     ],
     "hist": "1"
    }
@@ -702,9 +702,11 @@
     "title": "Family Information",
     "document": false,
     "edition": "IMM 5707 (01-2023)",
+    "libraryEdition": "IMM 5707 (01-2023)",
     "boxes": 40,
     "who": "each_applicant",
     "minAge": null,
+    "copies": 1,
     "onlyIf": {
      "kind": "always"
     },
@@ -758,7 +760,7 @@
     "origin": "HUMAN",
     "quote": null,
     "added": "Added from the library by a person",
-    "revision": "2026-10-30T04:57:55.152Z",
+    "revision": "2026-11-02T20:14:04.518Z",
     "status": "DRAFT",
     "version": 1
    }
@@ -982,13 +984,13 @@
    "ok": true,
    "detail": [
     {
-     "combination": "ba470b9f-80c1-4bcb-9808-214ff66c3b6c",
+     "combination": "605f34e5-d9f1-46bc-ac45-7488556534af",
      "label": "Visitor visa",
      "channel": "PDF_UPLOAD",
      "words": "IMM 5707 is filed as PDF upload, but the Form library records that IRCC accepts it only as Online. Choose a way IRCC accepts."
     },
     {
-     "combination": "6f104e9c-d18c-49f9-b56a-db3b63d15125",
+     "combination": "dd4bbba0-b2c6-4e24-83dd-8a35f64ebc06",
      "label": "With an LMIA",
      "channel": "PDF_UPLOAD",
      "words": "IMM 5707 is filed as PDF upload, but the Form library records that IRCC accepts it only as Online. Choose a way IRCC accepts."
@@ -1006,12 +1008,9 @@
    "detail": "This was proposed for IMM 5707 (01-1999); the library's current edition is now IMM 5707 (01-2023). Return it with that reason, and propose what IRCC accepts for the new edition."
   },
   {
-   "name": "C3.8: answer list fail: fewer than two values is refused",
-   "ok": true
-  },
-  {
-   "name": "C3.8: answer list: created once (Sample); a second list with the same key, or two values with one label, is refused",
-   "ok": true
+   "name": "C3.8 P-158 fail: an answer list is not typed in by hand (410), and nothing is written",
+   "ok": true,
+   "detail": 410
   },
   {
    "name": "C3.8: answer list: person.sex takes its values from it",
@@ -1045,7 +1044,7 @@
   {
    "name": "C3.8: answer list fail: a free-text field is not turned into a choice field",
    "ok": true,
-   "detail": "person.family_name holds free text; only a choice field (a code, a country or yes/no) takes an answer list."
+   "detail": "person.family_name holds free text; only a choice field (a code, a country, yes/no or multi choice) takes an answer list."
   },
   {
    "name": "C3.8: PDF option maps: IMM 5707's marital status form fields take their codes from their code lists (Married = 5), drafted without AI",
@@ -1195,7 +1194,7 @@
    "detail": []
   },
   {
-   "name": "C3.5: setup: a second field with the same meaning is added by a person (the duplicate a merge removes)",
+   "name": "C3.5: setup: a second field with the same meaning comes from another source (the duplicate a merge removes)",
    "ok": true
   },
   {
@@ -1230,7 +1229,7 @@
    "name": "C3.5: merge fail: a merged-away field is not edited back to a draft and takes no new label (it only redirects)",
    "ok": true,
    "detail": [
-    "person.town_of_birth was merged into person.place_of_birth_city: change that field instead.",
+    "The field \"Town of birth\" is retired: it takes no new use or change. Restore it in Shared library › Fields first, or choose another.",
     "person.town_of_birth was merged into person.place_of_birth_city: add the label there."
    ]
   },
@@ -1294,7 +1293,7 @@
      "code": "IMM 1295",
      "outcome": "ready",
      "why": null,
-     "change_id": "a6522b65-65a6-471c-9b9f-4803c5d70603"
+     "change_id": "772d16bb-8d17-48c3-9b66-e6a70cf684c2"
     },
     {
      "code": "IMM 1295",
