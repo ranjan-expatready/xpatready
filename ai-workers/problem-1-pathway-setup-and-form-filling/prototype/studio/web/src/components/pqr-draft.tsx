@@ -13,8 +13,8 @@ type Plan = { mode: Mode; guide: { code: string; title: string } | null; steps: 
 type Result = { runId: string; from: string | null; proposed: number; ready: number; check: number; decide: number; already: number; dropped: { role: string; asks: string; why: string }[]; unresolved: { passage: string; reason: string }[]; usd: number; note: string };
 const MODES: [Mode, string, string][] = [
   ["rules", "Rules only", "No AI: the facts this combination's rules read. US$0."],
-  ["replay", "Saved AI answers", "The answers AI gave before for this exact guide and prompt, replayed. US$0."],
-  ["live", "AI now", "Two AI rounds read the guide; Ready only when both pick the same question."],
+  ["replay", "Saved", "The answers AI gave before for this exact guide and prompt, replayed. US$0."],
+  ["live", "Live", "Two AI rounds read the guide; Ready only when both pick the same question."],
 ];
 
 export function DraftPqrPicks({ id }: { id: string }) {
@@ -52,14 +52,14 @@ function DraftDialog({ id, onClose }: { id: string; onClose: () => void }) {
       {result ? (
         <div className="space-y-3 text-sm" data-pqr-result>
           <p>{result.note}</p>
-          {result.proposed ? <p data-pqr-counts>Ready to accept {result.ready} · Check {result.check} · Decide {result.decide}{result.from === "replay" ? " · saved AI answers, US$0" : result.from === "live" ? ` · AI now, US$${result.usd.toFixed(2)}` : " · rules, US$0"}</p> : null}
+          {result.proposed ? <p data-pqr-counts>Ready to accept {result.ready} · Check {result.check} · Decide {result.decide}{result.from === "replay" ? " · Saved, US$0" : result.from === "live" ? ` · Live, US$${result.usd.toFixed(2)}` : " · rules, US$0"}</p> : null}
           {result.dropped.length ? <Notice tone="info" title={`Left out (${result.dropped.length})`}><ul className="space-y-0.5">{result.dropped.map((x, i) => <li key={i}>{x.asks}: {x.why}</li>)}</ul></Notice> : null}
           {result.unresolved.length ? <p className="text-xs text-text-muted">Passages for a person to read: {result.unresolved.map((x) => `"${x.passage}" (${x.reason})`).join(" · ")}</p> : null}
         </div>
       ) : (
         <div className="space-y-4" data-pqr-plan>
           <fieldset className="space-y-2"><legend className="text-xs font-medium">How to draft them</legend>
-            {MODES.map(([m, label, hint]) => { const off = m === "live" && !live.approved; return <label key={m} className={`flex gap-2 text-sm${off ? " text-text-muted" : ""}`} data-pqr-mode={m}><input type="radio" name="pqr-mode" checked={mode === m} onChange={() => setMode(m)} disabled={off} className="mt-1" /><span><span className="font-medium">{off ? "AI now (not approved yet)" : label}</span><br /><span className="text-xs text-text-muted">{off ? live.why ?? "Checking whether AI now is approved…" : hint}</span></span></label>; })}
+            {MODES.map(([m, label, hint]) => { const off = m === "live" && !live.approved; return <label key={m} className={`flex gap-2 text-sm${off ? " text-text-muted" : ""}`} data-pqr-mode={m}><input type="radio" name="pqr-mode" checked={mode === m} onChange={() => setMode(m)} disabled={off} className="mt-1" /><span><span className="font-medium">{off ? "Live (not approved yet)" : label}</span><br /><span className="text-xs text-text-muted">{off ? live.why ?? "Checking whether AI now is approved…" : hint}</span></span></label>; })}
           </fieldset>
           {plan.isPending ? <p className="text-sm text-text-muted">Working out the steps and their cost…</p> : plan.error ? <Notice tone="warn" title="It cannot be drafted this way yet">{plan.error.message}</Notice> : plan.data ? (
             <div className="rounded-lg border border-border p-3 text-sm">
