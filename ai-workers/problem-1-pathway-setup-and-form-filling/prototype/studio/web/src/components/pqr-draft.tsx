@@ -14,7 +14,7 @@ type Plan = { mode: Mode; guide: { code: string; title: string } | null; steps: 
 type Result = { runId: string; from: string | null; offer_saved?: boolean; proposed: number; ready: number; check: number; decide: number; already: number; dropped: { role: string; asks: string; why: string }[]; unresolved: { passage: string; reason: string }[]; usd: number; note: string };
 const MODES: [Mode, string, string][] = [
   ["live", "Live", "Two AI rounds read the guide now; Ready only when both pick the same question. Cost shown first."],
-  ["replay", "Saved", "The checked answers of both AI rounds for this guide, replayed through the same steps. US$0."],
+  ["replay", "Saved", "Both AI rounds of one earlier Live run for this guide, replayed through the same steps. US$0."],
 ];
 
 export function DraftPqrPicks({ id }: { id: string }) {
@@ -41,6 +41,10 @@ function DraftDialog({ id, onClose }: { id: string; onClose: () => void }) {
   const nothing = base.isSuccess && closed("live") && closed("replay");
   const [result, setResult] = React.useState<Result | null>(null);
   const [busy, setBusy] = React.useState(false), [error, setError] = React.useState<string | null>(null);
+  // Break B10: the result is announced and takes focus; after "Use Saved" focus goes to the Saved choice, not to Draft.
+  const resultRef = React.useRef<HTMLDivElement>(null), savedRef = React.useRef<HTMLInputElement>(null), [toSaved, setToSaved] = React.useState(false);
+  React.useEffect(() => { if (result) resultRef.current?.focus(); }, [result]);
+  React.useEffect(() => { if (toSaved && !result && base.data) { savedRef.current?.focus(); setToSaved(false); } }, [toSaved, result, base.data]);
   const run = async () => {
     if (!plan.data || closed(mode)) return;
     setBusy(true); setError(null);
@@ -54,7 +58,7 @@ function DraftDialog({ id, onClose }: { id: string; onClose: () => void }) {
     } finally { setBusy(false); }
   };
   // P-227 (D2 part 4): after a failed Live run with a Saved result, one click goes back to the plan on Saved.
-  const useSaved = () => { setResult(null); setError(null); setMode("replay"); void qc.invalidateQueries({ queryKey: ["pqr-plan", id] }); };
+  const useSaved = () => { setResult(null); setError(null); setMode("replay"); setToSaved(true); void qc.invalidateQueries({ queryKey: ["pqr-plan", id] }); };
   const to = `/review/proposals?group=${encodeURIComponent(`combination:${id}`)}`;
   const footer = result
     ? <><Button variant="ghost" onClick={onClose}>Done</Button>{result.offer_saved ? <Button variant="secondary" onClick={useSaved} data-pqr-use-saved>Use Saved (US$0)</Button> : null}{result.proposed || result.already ? <Button asChild><Link to={to} data-pqr-open-review>Open To review</Link></Button> : null}</>
@@ -62,8 +66,9 @@ function DraftDialog({ id, onClose }: { id: string; onClose: () => void }) {
   return (
     <Dialog open wide onOpenChange={(o) => { if (!o) onClose(); }} title="Draft pre-qualification picks" description="Each pick goes to To review with its reason; you accept or remove each there. Nothing is asked until a pick is accepted. Sample until the immigration expert confirms." footer={footer}>
       {result ? (
-        <div className="space-y-3 text-sm" data-pqr-result>
+        <div className="space-y-3 text-sm outline-none" data-pqr-result ref={resultRef} tabIndex={-1} role="status">
           <p data-pqr-note>{result.note}</p>
+          {!result.proposed && result.usd > 0 ? <p data-pqr-spent>Live, US${result.usd.toFixed(2)} counted.</p> : null}
           {result.proposed ? <p data-pqr-counts>Ready to accept {result.ready} · Check {result.check} · Decide {result.decide}{result.from === "replay" ? " · Saved, US$0" : result.from === "live" ? ` · Live, US$${result.usd.toFixed(2)}` : " · rules, US$0"}</p> : null}
           {result.dropped.length ? <Notice tone="info" title={`Left out (${result.dropped.length})`}><ul className="space-y-0.5">{result.dropped.map((x, i) => <li key={i}>{x.asks}: {x.why}</li>)}</ul></Notice> : null}
           {result.unresolved.length ? <p className="text-xs text-text-muted">Passages for a person to read: {result.unresolved.map((x) => `"${x.passage}" (${x.reason})`).join(" · ")}</p> : null}
@@ -74,7 +79,7 @@ function DraftDialog({ id, onClose }: { id: string; onClose: () => void }) {
             {MODES.map(([m, label, hint]) => {
               const off = closed(m);
               const why = !base.data ? null : m === "live" ? (liveOpen ? null : base.data.live.why) : (savedOpen ? null : base.data.saved?.why ?? null);
-              return <label key={m} className={`flex gap-2 text-sm${off ? " text-text-muted" : ""}`} data-pqr-mode={m}><input type="radio" name="pqr-mode" checked={mode === m} onChange={() => setMode(m)} disabled={off} className="mt-1" /><span><span className="font-medium">{label}{off && base.data ? (m === "live" ? " (not open)" : " (none yet)") : ""}</span><br /><span className="text-xs text-text-muted">{why ?? hint}</span></span></label>;
+              return <label key={m} className={`flex gap-2 text-sm${off ? " text-text-muted" : ""}`} data-pqr-mode={m}><input type="radio" name="pqr-mode" ref={m === "replay" ? savedRef : undefined} checked={mode === m} onChange={() => setMode(m)} disabled={off} className="mt-1" /><span><span className="font-medium">{label}{off && base.data ? (m === "live" ? " (not open)" : " (none yet)") : ""}</span><br /><span className="text-xs text-text-muted">{why ?? hint}</span></span></label>;
             })}
           </fieldset>
           {base.isPending ? <p className="text-sm text-text-muted">Working out the steps and their cost…</p>

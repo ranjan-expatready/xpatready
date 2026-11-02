@@ -74,6 +74,7 @@ const failing = { stub: { exit: 0, out: { ok: true } }, live: { exit: 1, err: "t
   step("C4.7 P pass: Live is chosen and its worst case shows before anything runs", (await start().getAttribute("data-mode")) === "live" && /At most US\$\d/.test(await dlg.locator("[data-pqr-cost]").innerText()), await dlg.locator("[data-pqr-cost]").innerText());
   await state("plan-live-none-saved");
   await start().click(); await dlg.locator("[data-pqr-result]").waitFor();
+  step("C4.7 B10 pass: the result is announced (status) and takes focus", (await dlg.locator("[data-pqr-result]").getAttribute("role")) === "status" && await p.evaluate(() => document.activeElement?.hasAttribute("data-pqr-result")));
   step("C4.7 F fail: a failed Live run with no Saved result says so and offers nothing", /did not run/.test(await dlg.locator("[data-pqr-note]").innerText()) && !(await dlg.locator("[data-pqr-use-saved]").count()) && !(await dlg.locator("[data-pqr-open-review]").count()), await dlg.locator("[data-pqr-note]").innerText());
   await state("live-failed-none-saved");
   await dlg.getByRole("button", { name: "Done" }).click();
@@ -97,6 +98,7 @@ const failing = { stub: { exit: 0, out: { ok: true } }, live: { exit: 1, err: "t
   step("C4.7 F pass (P-227): a failed Live run offers Use Saved (US$0) because a Saved result exists", await dlg.locator("[data-pqr-use-saved]").isVisible() && /use Saved \(US\$0\)/.test(await dlg.locator("[data-pqr-note]").innerText()), await dlg.locator("[data-pqr-note]").innerText());
   await state("live-failed-offers-saved");
   await dlg.locator("[data-pqr-use-saved]").click(); await dlg.locator("[data-pqr-cost]").waitFor(); await settle();
+  step("C4.7 B10 pass: after Use Saved, focus is on the Saved choice (a second Enter never starts a run)", await p.evaluate(() => document.activeElement?.closest("[data-pqr-mode]")?.getAttribute("data-pqr-mode") === "replay"));
   step("C4.7 F pass: Use Saved goes back to the plan on Saved: the guide it reads, its AI steps and US$0", (await start().getAttribute("data-mode")) === "replay" && /Reads Guide 5487/.test(await dlg.innerText()) && /US\$0/.test(await dlg.locator("[data-pqr-cost]").innerText()) && (await dlg.locator("ol li").count()) === 4);
   await state("plan-saved");
   await start().click(); await dlg.locator("[data-pqr-counts]").waitFor();
