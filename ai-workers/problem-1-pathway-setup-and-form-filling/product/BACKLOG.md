@@ -33,7 +33,7 @@ One owner per row and per shared file; never build another owner's rows. Under t
 | L-doc | later | **Document rules fields** (P-230 (8)): copy kind, certified translation, validity window on document requirements (schema) | after the M2 gate | P-230 |
 
 ## Held by the product owner of SA-01B (P-251): nobody builds these until the ruling
-L-SA3 (C1 ready to file) · L-SA6, L-SA7, L-SA8, L-SA9, L-SA10 (C2–C4, C7–C9) · the P-236 rename of C6.9 (C6) · C11 · no-row holds: SA1B-D100, SA1B-D72/D66, SA1B-D29, SA1B-D77, SA1B-D93, SA1B-D89/D107, SA1B-D75. Design-only (concept sent to the product owner before any build): pin per filing, a case with several combinations, an organisation subject for employer facts, household and filing scopes (L-SA4 waits for these), PartyRelationship "whose fact". Protect list B1–B19 of the product owner's report (section 5): keep as built.
+L-SA3 (C1 ready to file) · G5 (P-248 startable) · P-245 extension rows E1–E6 · L-SA6, L-SA7, L-SA8, L-SA9, L-SA10 (C2–C4, C7–C9) · the P-236 rename of C6.9 (C6) · C11 · no-row holds: SA1B-D100, SA1B-D72/D66, SA1B-D29, SA1B-D77, SA1B-D93, SA1B-D89/D107, SA1B-D75. Design-only (concept sent to the product owner before any build): pin per filing, a case with several combinations, an organisation subject for employer facts, household and filing scopes (L-SA4 waits for these), PartyRelationship "whose fact". Protect list B1–B19 of the product owner's report (section 5): keep as built.
 
 ## Do now (P-251; no decision needed; checked on main 278eb3e9 by the SA-01B session)
 | # | Area | Item | Done when (beyond the standard) | Source |
