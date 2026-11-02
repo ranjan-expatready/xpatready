@@ -9,7 +9,7 @@ import type { Prisma } from "@prisma/client";
 import { canonical, validatePredicate } from "../../../contracts/rules.ts";
 import { ChangeSetBody, NOT_CHECKED, type ChangeItem, type CheckResult, type MadeBy, type PreviewItem } from "../../contracts/change-set.ts";
 import { normalizeLabel, problemFromZod } from "../../contracts/programs.ts";
-import { capProblems, checkChangeSet, listId, riskOf, type Context, type Library, type OrderCheck } from "../../engine/change-set.ts";
+import { capProblems, checkChangeSet, listId, riskOf, swapMergedField, type Context, type Library, type OrderCheck } from "../../engine/change-set.ts";
 import { valueProblems } from "../../engine/eligibility-gates.ts";
 import { buildSnapshot } from "../../engine/snapshot.ts";
 import { askedInOrder, isNode } from "../../engine/validate.ts";
@@ -102,7 +102,7 @@ export class ChangeSets {
       // Challenge M4 and review B1 M2, M3: every current condition a merge rewrites, before and after the swap (R5–R7),
       // and the question order on every combination reading the field, before and after (R8).
       if (it.action === "merge") {
-        const swap = <T>(j: T): T => (j == null ? j : JSON.parse(JSON.stringify(j).split(`"field":"${it.key}"`).join(`"field":"${it.into}"`)));
+        const swap = <T>(j: T): T => swapMergedField(j, it.key, it.into);
         rewrites[i] = fieldReaders(rows, it.key).map((r) => ({ where: `${READER_WORDS[r.kind]} ${r.key} on ${trails.get(r.combinationId) ?? "a combination"}`, before: r.tree, after: swap(r.tree) }));
         order[i] = await orderOn([...(fieldUsers.get(it.key) ?? [])], (s) => swap(s));
       }

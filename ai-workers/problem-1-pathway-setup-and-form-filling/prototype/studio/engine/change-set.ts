@@ -172,6 +172,13 @@ function treeProblems(i: number, tree: unknown, ctx: Context, v: Verifiers, wher
   return out;
 }
 
+/** What a merge does to a snapshot or a condition (forms.ts approveMerge): every condition reference to the merged field
+ *  and every question that asks it move to the surviving field (a review thread on #556: R8 must see both). */
+export function swapMergedField<T>(j: T, from: string, to: string): T {
+  if (j == null) return j;
+  return JSON.parse(JSON.stringify(j).split(`"field":"${from}"`).join(`"field":"${to}"`).split(`"fact":"${from}"`).join(`"fact":"${to}"`)) as T;
+}
+
 /** A merged-field chain is at most this many merges long (SH3 resolver contract, #509 Q1: it follows at most 5 keys). */
 export const MERGE_HOPS_MAX = 4;
 /** The longest chain of merged fields that ends at `key` (0 when nothing was merged into it). */
@@ -182,7 +189,10 @@ export function mergeDepth(fields: LibField[], key: string, seen = new Set<strin
 /** The library keys an item changes (a merge changes both fields). */
 // A condition changes its question's field and reads the fields it names (break round 2 n1: a merge of A and a
 // condition reading A, or on A's question, in one set).
-const keysOf = (it: ChangeItem) => (it.action === "merge" ? [`field:${it.key}`, `field:${it.into}`] : it.action === "set_condition" ? [...new Set([`field:${it.key}`, ...(nodes(it.tree) ?? []).filter((n) => typeof n.field === "string").map((n) => `field:${n.field}`)])] : [`${it.kind}:${it.key}`]);
+// What an item writes, and what it reads (a review thread on #556: two conditions reading one field are independent; a
+// merge of a field must not meet another item that writes or reads either field).
+const writesOf = (it: ChangeItem) => (it.action === "merge" ? [`field:${it.key}`, `field:${it.into}`] : it.action === "set_condition" ? [`condition:${it.key}`] : [`${it.kind}:${it.key}`]);
+const readsOf = (it: ChangeItem) => (it.action === "set_condition" ? [...new Set([`field:${it.key}`, ...(nodes(it.tree) ?? []).filter((n) => typeof n.field === "string").map((n) => `field:${n.field}`)])] : []);
 
 /** The fixed rules check (P-253 step 2), in order; every rule runs and every error refuses. */
 export function checkChangeSet(items: ChangeItem[], madeBy: MadeBy, ctx: Context, v: Verifiers): CheckProblem[] {
@@ -213,14 +223,21 @@ export function checkChangeSet(items: ChangeItem[], madeBy: MadeBy, ctx: Context
     // R3 near duplicate (QA-159, engine/near.ts): a new field close to a library field, or to one another proposal is
     // adding, needs a reason that names it (why it does not fit); it is never direct and never Ready.
     else if ((it.action === "accept_proposal" || it.action === "create") && it.kind === "field") {
-      const near = nearMatches({ key: it.key, name: it.name }, [...lib.fields.filter((f) => LIVE(f.status) && !f.mergedInto).map((f) => ({ key: f.key, name: fieldName(f) })), ...(ctx.pendingNew ?? [])]);
+      // A review thread on #556: every live name of a field counts (as the exact check reads them), one entry per field.
+      const near: { key: string | null; name: string; names: string[]; why: string }[] = [];
+      for (const f of lib.fields.filter((f) => LIVE(f.status) && !f.mergedInto)) {
+        const names = [...new Set([fieldName(f), ...f.names])];
+        const hit = names.map((n) => nearMatches({ key: it.key, name: it.name }, [{ key: f.key, name: n }])[0]).find(Boolean);
+        if (hit) near.push({ key: f.key, name: hit.name, names, why: hit.why });
+      }
+      for (const n of nearMatches({ key: it.key, name: it.name }, ctx.pendingNew ?? [])) near.push({ ...n, names: [n.name] });
       // Review r4-M1, r5-m1: compared as whole words (lower case, NFKC, every run of other characters one space), the
       // item's own name and key taken out of the reason first, so "The full name, as on travel document, is asked…"
       // does not count as naming "Full name", and "page" does not name "Age".
       const seq = (x: string) => ` ${x.toLowerCase().normalize("NFKC").replace(/[^\p{L}\p{N}]+/gu, " ").trim()} `;
       const own = [it.name, it.key, it.key.split(".").slice(1).join(" ")].map(seq).filter((x) => x.trim().length > 1);
       const reason = own.reduce((r, o) => r.split(o).join(" "), seq(it.reason ?? ""));
-      for (const n of near) if (!reason.includes(seq(n.name)) && !(n.key && reason.includes(seq(n.key)))) add("R3", i, `"${it.name}" is close to ${n.name} (${n.why}): reuse ${n.name}, or say in the reason why it does not fit.`);
+      for (const n of near) if (!n.names.some((x) => reason.includes(seq(x))) && !(n.key && reason.includes(seq(n.key)))) add("R3", i, `"${it.name}" is close to ${n.name} (${n.why}): reuse ${n.name}, or say in the reason why it does not fit.`);
     }
     // R4 references intact.
     if (it.action === "accept_proposal" || it.action === "create") {
@@ -263,11 +280,20 @@ export function checkChangeSet(items: ChangeItem[], madeBy: MadeBy, ctx: Context
     for (const o of ctx.order?.[i] ?? []) { const before = new Set(o.before); for (const m of new Set(o.after)) if (ORDER.test(m) && !before.has(m)) add("R8", i, `${m}${o.combination ? ` (${o.combination})` : ""}`); }
   });
   // R3 and R4 across the items of one set (breaker M3): one change per item, and no new name given twice.
-  const seenName = new Map<string, number>(), seenKey = new Map<string, number>();
+  const seenName = new Map<string, number>();
   items.forEach((it, i) => {
     const k = nameKey(it, lib);
     if (k) { if (seenName.has(k)) add("R3", i, `"${it.action === "alias" ? it.alias : (it as { name: string }).name}" is given twice in this change (items ${seenName.get(k)! + 1} and ${i + 1}): keep one.`); else seenName.set(k, i); }
-    for (const key of keysOf(it)) { if (seenKey.has(key) && seenKey.get(key) !== i) { add("R4", i, `Items ${seenKey.get(key)! + 1} and ${i + 1} both change ${key.split(":")[0] === "field" ? nameOfKey(lib, key.slice(6)) : key.slice(key.indexOf(":") + 1)}: one change per item in a change set (send the next one after this one).`); break; } seenKey.set(key, i); }
+    const clash = items.findIndex((o, j) => {
+      if (j >= i) return false;
+      const w = writesOf(it), wo = writesOf(o);
+      const touch = (a: string[], b: string[]) => a.find((k) => b.includes(k));
+      return touch(w, wo) || (it.action === "merge" && touch(w, readsOf(o))) || (o.action === "merge" && touch(wo, readsOf(it)));
+    });
+    if (clash >= 0) {
+      const o = items[clash], key = [...writesOf(it), ...readsOf(it)].find((k) => [...writesOf(o), ...readsOf(o)].includes(k)) ?? writesOf(it)[0];
+      add("R4", i, `Items ${clash + 1} and ${i + 1} both change ${key.startsWith("field:") ? nameOfKey(lib, key.slice(6)) : key.slice(key.indexOf(":") + 1)}: one change per item in a change set (send the next one after this one).`);
+    }
   });
   void madeBy;
   return out;

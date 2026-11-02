@@ -7,11 +7,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { canonical, validatePredicate } from "../../contracts/rules.ts";
 import { ChangeSetBody, RAW_TREE_MAX, treeTooLarge, type ChangeItem, type MadeBy } from "../contracts/change-set.ts";
-import { capProblems, checkChangeSet, DUPLICATE_SCOPE, PROBLEMS_PER_ITEM, EXPERT_TARGETS, listId, MERGE_HOPS_MAX, mergeDepth, PROBLEMS_MAX, RISK_TABLE, riskOf, TREE_MAX, VALUE_TYPES, type Context, type LibField, type Library } from "../engine/change-set.ts";
+import { capProblems, swapMergedField, checkChangeSet, DUPLICATE_SCOPE, PROBLEMS_PER_ITEM, EXPERT_TARGETS, listId, MERGE_HOPS_MAX, mergeDepth, PROBLEMS_MAX, RISK_TABLE, riskOf, TREE_MAX, VALUE_TYPES, type Context, type LibField, type Library } from "../engine/change-set.ts";
 import { valueProblems } from "../engine/eligibility-gates.ts";
 import { nearMatches, nearWhy } from "../engine/near.ts";
 import { VALUE_TYPE_TO_DATA_TYPE } from "../engine/snapshot.ts";
-import { isNode } from "../engine/validate.ts";
+import { askedInOrder, isNode } from "../engine/validate.ts";
 
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${!c && detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 400)}` : ""}`); };
@@ -200,6 +200,17 @@ ok("G-CORE R3 near fail (review r5-m1): words that only contain the near name (\
 ok("G-CORE R3 near pass (review r5-m1): naming the near field as words, with punctuation around it, passes", !nearBirth("Not Birth place (the person's own): the mother's, from IMM 5406"));
 ok("G-CORE R3 near pass: a new field near nothing passes", !rules([height]).includes("R3"));
 ok("G-CORE tier: a near-duplicate new field is never direct (a new item waits for a second person)", riskOf([travelName], "ai", new Set()).tier === "second_person");
+
+// ───────── Review threads on #556 (Devin): fixed with a failing case each
+const snap = { placements: [{ fact: "person.a", condition: { subjectKind: "PERSON", op: "eq", field: "person.b", value: true }, condition_effect: "SHOW" }, { fact: "person.b" }], document_types: [], derived_fields: [], field_maps: [], forms: [], rules: [], document_requirements: [], canonical_fields: [{ id: "person.a", meaning: "A" }, { id: "person.b", meaning: "B" }] } as unknown as Parameters<typeof askedInOrder>[0];
+const loops = (x: typeof snap) => askedInOrder(x).map((p) => p.message).filter((m) => /decide each other in a loop/.test(m));
+ok("G-CORE R8 merge (thread 1) pass: the merge simulation moves the merged field's questions too (fact), not only conditions", (() => { const after = swapMergedField(snap, "person.a", "person.b"); return after.placements.every((p) => p.fact === "person.b"); })());
+ok("G-CORE R8 merge (thread 1) fail: merging A into B, where A's question is shown when B is true, makes B decide itself: the loop is found", loops(snap).length === 0 && loops(swapMergedField(snap, "person.a", "person.b")).length > 0);
+ok("G-CORE R8 merge (thread 1): rewriting conditions alone (the old simulation) would have missed it", loops(JSON.parse(JSON.stringify(snap).split('"field":"person.a"').join('"field":"person.b"'))).length === 0);
+ok("G-CORE R3 near (thread 2) fail: a new field near a field's OLDER live name, with a reason naming neither, is refused", check([{ action: "accept_proposal", kind: "field", key: "case.full_name_note", name: "Full Name on travel record", valueType: "text", aliases: [], source: src, reason: "From IMM 5604" }]).some((p) => p.rule === "R3" && /is close to/.test(p.message)));
+ok("G-CORE R3 near (thread 2) pass: naming any one live name of that field passes (one entry per field)", !check([{ action: "accept_proposal", kind: "field", key: "case.full_name_note", name: "Full Name on travel record", valueType: "text", aliases: [], source: src, reason: "Not Whole name (draft): the name as printed on the record" }]).some((p) => p.rule === "R3"));
+ok("G-CORE R4 (thread 3) pass: two conditions on different questions reading the same field are independent", !both([cond({ op: "eq", field: "person.age", value: 3 }, "person.has_children"), cond({ op: "eq", field: "person.age", value: 4 }, "person.marital_status")]));
+ok("G-CORE R4 (thread 3) fail: two conditions on the same question in one set still clash", both([cond({ op: "eq", field: "person.age", value: 3 }), cond({ op: "eq", field: "person.age", value: 4 })]));
 // ───────── STANDARDS §7 properties
 const prop = (name: string, p: fc.IProperty<unknown[]>) => { let err = ""; try { fc.assert(p, { numRuns: 200 }); } catch (e) { err = String(e).slice(0, 300); } ok(name, !err, err); };
 const anyItem = fc.oneof(

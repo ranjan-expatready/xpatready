@@ -68,7 +68,7 @@ const guarded = async (key: string) => ((await call("GET", `/library/document-ty
   r = await call("POST", `/library/document-types/${encodeURIComponent(FACT)}/retire`, { reason: "Not needed by any setup any more." });
   ok("SH2b fail: retiring a type a fact is read from is refused (409), saying a fact is read from it", r.status === 409 && (r.body?.uses ?? []).some((u: { why: string }) => /fact/.test(u.why)), [r.status, r.body?.uses]);
 
-  // Devin's thread on #522: a PUBLISHED line whose newer version is RETIRED no longer counts its alternative (the status
+  // The review bot's thread on #522: a PUBLISHED line whose newer version is RETIRED no longer counts its alternative (the status
   // filter keeps RETIRED rows, so the newest version per line is the retired one, and `current` drops it).
   const GONE = "sh2b_retired_line_alternative";
   sql(`insert into document_type (id, workspace_id, document_type_key, name, category, version, status, origin, updated_by) select gen_random_uuid(), id, '${GONE}', 'SH2b test ${GONE} (Sample)', 'client', 1, 'PUBLISHED', 'HUMAN', 'user-A' from workspace where key='demo'`);
