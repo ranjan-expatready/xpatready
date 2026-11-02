@@ -22,7 +22,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   try {
     await p.goto(BASE); await p.evaluate(() => { try { localStorage.setItem("xr-actor", "user-A"); } catch { /* ignore */ } });
     const loaded = await api("/demo/load", { method: "POST" });
-    step("setup: sample inputs loaded (or already on this copy)", loaded.status === 201 || loaded.status === 409, loaded.status);
+    // #509 run 41432845567: a 409 from the workspace race (a duplicate, P2002) was read as "already loaded" and the Fields
+    // table stayed empty. Only the load's own "already has names" refusal means the sample is already on this copy.
+    step("setup: sample inputs loaded (or already on this copy)", loaded.status === 201 || (loaded.status === 409 && /already has names/.test(loaded.body?.detail ?? "")), [loaded.status, loaded.body?.detail]);
     for (const [w, h] of [[1440, 900], [1024, 768]]) {
       await p.setViewportSize({ width: w, height: h });
       await go("/library/fields");
