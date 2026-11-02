@@ -4,9 +4,10 @@
 //   DATABASE_URL=<an isolated copy after Demo › Reset to the six> tsx --tsconfig studio/api/tsconfig.json studio/tools/track-a-jobs.ts --write
 //   tsx --tsconfig studio/api/tsconfig.json studio/tools/track-a-jobs.ts            plan: per job its worst and usual cost, run order, caps
 // Worst = what p2/runner.ts reserves (its line 60: the finished request's bytes + 2,000 as input tokens, the job's output
-// limit, times its attempts); usual = one attempt at the input tokens per byte and the output measured on 30 Oct over the
-// same guide (who-can-be, 2 rounds); an estimate, labelled so. The job files are only the launcher's input.
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+// limit, times its attempts); usual = one attempt at the input tokens per byte measured on 30 Oct over the same guide
+// (who-can-be, 2 rounds) and twice that run's larger output
+// (picks and conditions write more lines); an estimate, labelled so. The job files are only the launcher's input.
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { admitRun } from "../../p2/guard.ts";
@@ -67,6 +68,7 @@ export function costsOf(job: Job) {
   const bytes = Buffer.byteLength(JSON.stringify(req), "utf8");
   const model = String(job.settings.model), out = Number(job.settings.max_output_tokens), attempts = Number(job.settings.max_attempts);
   const perAttempt = costUsd(model, inputTokenBound(JSON.stringify(req)), out);
+  // One attempt; output at twice the measured who-can-be answer (a margin: picks and conditions each carry a quote and a reason).
   const usual = costUsd(model, Math.round(bytes * measuredTokensPerByte()), MEASURED.outputTokens * 2);
   return { request_bytes: bytes, per_attempt_worst_usd: perAttempt, worst_usd: perAttempt * attempts, usual_usd: usual, budget_usd: Number(job.settings.budget_usd), fits_budget: perAttempt * attempts <= Number(job.settings.budget_usd) + 1e-9, under_run_cap: perAttempt * attempts <= RUN_CAP_USD + 1e-9 };
 }
@@ -95,18 +97,21 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
       console.log(`wrote p2/jobs/${job.job_id}.json  (${label})`);
     }
   }
+  // A job is priced only when it is exactly the app's: for this combination, and its id is the one engine/rounds.ts jobIdFor
+  // gives for its own trail and this batch word (never a file merely found by its prefix: another combination's job).
+  const { jobIdFor } = await import("../engine/rounds.ts");
   const jobs = await trackAJobs();
-  const files = (await import("node:fs")).readdirSync(JOBS);
   let worst = 0, usual = 0;
   console.log(`\nTrack A jobs for ${COMBINATION}, in run order (no model call; worst = the runner's reservation, usual = estimate):`);
   for (const t of jobs) {
     const prefix = `${t.isCheck ? `${t.step.jobBase}-check` : t.step.jobBase}-`;
-    const f = files.find((x) => x.startsWith(prefix) && x.endsWith(`.json`) && (t.isCheck || !x.startsWith(`${t.step.jobBase}-check-`)));
-    if (!f) { console.log(`  ${t.row} ${t.label}: no job file yet (run with --write)`); continue; }
-    const job = JSON.parse(readFileSync(join(JOBS, f), "utf8")) as Job, c = costsOf(job);
+    const job = readdirSync(JOBS).filter((x) => x.startsWith(prefix) && x.endsWith(".json")).map((x) => JSON.parse(readFileSync(join(JOBS, x), "utf8")) as Job)
+      .find((j) => j.combination === COMBINATION && j.template === (t.isCheck ? t.step.check : t.step.template) && j.job_id === jobIdFor(t.step.jobBase, t.isCheck, String(j.known?.combination_trail ?? ""), BATCH));
+    if (!job) { console.log(`  ${t.row} ${t.label}: no job file yet (run with --write on a copy after Reset to the six)`); continue; }
+    const c = costsOf(job);
     worst += c.worst_usd; usual += c.usual_usd;
     console.log(`  ${t.row} ${t.label}: ${job.job_id}  worst ${usd(c.worst_usd)} (${job.settings.max_attempts} × ${usd(c.per_attempt_worst_usd)}; request ${c.request_bytes} bytes, output ≤ ${job.settings.max_output_tokens})  usual ~${usd(c.usual_usd)}  budget ${usd(c.budget_usd)}${c.fits_budget ? "" : "  ← ABOVE ITS BUDGET"}`);
   }
   console.log(`  total: worst ${usd(worst)}, usual ~${usd(usual)}`);
-  console.log(`Caps the cost check applies to every start (p2/policy.ts, p2/ledger.ts): run cap ${usd(RUN_CAP_USD)}; experiment ${usd(EXPERIMENT_CAP_USD)} and Wave 1 ${usd(WAVE1_CAP_USD)}, both counted since ${WAVE1_START.slice(0, 10)}; the real ledger is on the Mac (.tools/p2-ledger).`);
+  console.log(`Caps the cost check applies to every start (p2/policy.ts, p2/ledger.ts): run cap ${usd(RUN_CAP_USD)}; experiment ${usd(EXPERIMENT_CAP_USD)} over every run the ledger holds; Wave 1 ${usd(WAVE1_CAP_USD)} counted since ${WAVE1_START.slice(0, 10)}; the real ledger is on the Mac (.tools/p2-ledger).`);
 }
