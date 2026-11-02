@@ -9,7 +9,7 @@ import type { Prisma } from "@prisma/client";
 import { canonical, validatePredicate } from "../../../contracts/rules.ts";
 import { ChangeSetBody, NOT_CHECKED, type ChangeItem, type CheckResult, type MadeBy, type PreviewItem } from "../../contracts/change-set.ts";
 import { normalizeLabel, problemFromZod } from "../../contracts/programs.ts";
-import { checkChangeSet, listId, riskOf, type Context, type Library, type OrderCheck } from "../../engine/change-set.ts";
+import { capProblems, checkChangeSet, listId, riskOf, type Context, type Library, type OrderCheck } from "../../engine/change-set.ts";
 import { valueProblems } from "../../engine/eligibility-gates.ts";
 import { buildSnapshot } from "../../engine/snapshot.ts";
 import { askedInOrder, isNode } from "../../engine/validate.ts";
@@ -108,12 +108,12 @@ export class ChangeSets {
       }
     }
     const ctx: Context = { library, released, derived: new Set(derived.map((d) => d.derivedKey)), riding, existing, order, rewrites };
-    const problems = checkChangeSet(items, madeBy, ctx, VERIFIERS);
+    const { problems, truncated } = capProblems(checkChangeSet(items, madeBy, ctx, VERIFIERS));
     const tier = riskOf(items, madeBy, released);
     const preview = await this.preview(db, ws, items, library, rows, trails, releasesOf);
     // Review m1, breaker M7: the same change on the same library is the same fingerprint, whatever the row or key order.
     const fingerprint = createHash("sha256").update(canonical(JSON.parse(JSON.stringify({ items, problems, tier, preview })) as never)).digest("hex");
-    return { ok: !problems.length, problems, not_checked: NOT_CHECKED, tier, preview, fingerprint };
+    return { ok: !problems.length, problems, truncated, not_checked: NOT_CHECKED, tier, preview, fingerprint };
   }
 
   /** P-253 step 4: per item, every touched section, form, rule, combination, release and open case, and before → after. */

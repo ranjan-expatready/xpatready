@@ -41,14 +41,14 @@ const LIVE = (s: string) => s === "DRAFT" || s === "PUBLISHED";
 const letters = (s: string) => (s.match(/\p{L}/gu) ?? []).length;
 const fieldName = (f: LibField) => f.label || f.key;
 /** A library key: lower-case words with dots and underscores ("person.family_name", "passport"). */
-export const KEY = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$/;
-/** Control, invisible and direction characters (contracts/runtime.ts INVISIBLE, copied: that file is not pure). */
-const UNSEEN = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200b\u200e\u200f\u2028-\u202e\u2066-\u2069\ufeff]/;
+export const KEY = /^[a-z0-9][a-z0-9_]*(\.[a-z0-9_]+)*$/; // "2nd_passport" too (proposals slugKey; break n4)
+/** Control, invisible, direction and blank-looking characters (contracts/programs.ts cleanLabel drops the same classes). */
+const UNSEEN = /[\p{Cc}\p{Cf}\p{Default_Ignorable_Code_Point}\u2800]/u; // break round 2 n2: every control, format and ignorable character, and the blank braille cell
 /** A condition the check reads at all (breaker M1): at most this deep and this many parts; anything larger is refused
  *  before any verifier runs, so no tree can crash or stall the check. */
 export const TREE_MAX = { depth: 12, nodes: 200 };
-/** The most problems one check returns (breaker minor: a 50-item set cannot answer megabytes). */
-export const PROBLEMS_MAX = 200;
+/** The most problems one check returns, and per item (breaker minor, round 2 n3: every item keeps its first problems). */
+export const PROBLEMS_MAX = 200, PROBLEMS_PER_ITEM = 10;
 /** The library's kinds of answer (engine/snapshot.ts VALUE_TYPE_TO_DATA_TYPE; a test keeps the two the same). */
 export const VALUE_TYPES = new Set(["text", "yes_no", "date", "code", "country", "address", "number", "phone", "email", "long_text", "multi_choice", "person_name", "period_history", "declaration"]);
 /** Field codes in a verifier's words become the fields' names (EXPERIENCE: names, never codes). */
@@ -126,9 +126,13 @@ function conditionShape(tree: unknown, v: Verifiers): { parts: Node[] | null; wh
 // ───────────────────────────────────────────────── R5–R7 on one condition tree (R8 is the question order)
 /** R7: an "is" or "is one of" with a value not on the field's list, which can never be true. Codes are compared exactly,
  *  as the evaluator does (contracts/rules.ts). "is not" with such a value is always true, so it is not this rule. */
-function neverTrue(parts: Node[], lib: Library): string[] {
+function neverTrue(tree: unknown, lib: Library): string[] {
   const out: string[] = [];
-  for (const n of parts) {
+  // Only a part the whole condition needs: the root and what "and" joins below it. Under "or" another part can still
+  // make it true, and under "not" an "is" that can never be true makes the whole always true (break round 2).
+  const needed: Node[] = []; const stack = [tree as Node];
+  while (stack.length) { const n = stack.pop(); if (!n || typeof n !== "object") continue; needed.push(n); if (n.op === "and" && Array.isArray(n.args)) stack.push(...(n.args as Node[])); }
+  for (const n of needed) {
     if (!n.field || (n.op !== "eq" && n.op !== "in")) continue;
     const f = lib.fields.find((x) => x.key === n.field); const list = f?.answerListKey ? lib.answerLists.find((l) => l.key === f.answerListKey) : undefined;
     if (!f || !list?.values.length) continue;
@@ -161,7 +165,7 @@ function treeProblems(i: number, tree: unknown, ctx: Context, v: Verifiers, wher
   }
   for (const m of v.valueProblems(tree, types, ctx.derived)) out.push({ rule: "R5", item: i, message: `The condition ${named(m, ctx.library)}${at}.` });
   for (const m of repeatedPart(shape.parts, v)) out.push({ rule: "R6", item: i, message: `${m.replace(/\.$/, "")}${at}.` });
-  for (const m of neverTrue(shape.parts, ctx.library)) out.push({ rule: "R7", item: i, message: `${m.replace(/\.$/, "")}${at}.` });
+  for (const m of neverTrue(tree, ctx.library)) out.push({ rule: "R7", item: i, message: `${m.replace(/\.$/, "")}${at}.` });
   return out;
 }
 
@@ -173,7 +177,9 @@ export function mergeDepth(fields: LibField[], key: string, seen = new Set<strin
   return Math.max(0, ...fields.filter((f) => f.mergedInto === key).map((f) => 1 + mergeDepth(fields, f.key, seen)));
 }
 /** The library keys an item changes (a merge changes both fields). */
-const keysOf = (it: ChangeItem) => (it.action === "merge" ? [`field:${it.key}`, `field:${it.into}`] : [`${it.kind === "condition" ? "condition" : it.kind}:${it.key}`]);
+// A condition changes its question's field and reads the fields it names (break round 2 n1: a merge of A and a
+// condition reading A, or on A's question, in one set).
+const keysOf = (it: ChangeItem) => (it.action === "merge" ? [`field:${it.key}`, `field:${it.into}`] : it.action === "set_condition" ? [...new Set([`field:${it.key}`, ...(nodes(it.tree) ?? []).filter((n) => typeof n.field === "string").map((n) => `field:${n.field}`)])] : [`${it.kind}:${it.key}`]);
 
 /** The fixed rules check (P-253 step 2), in order; every rule runs and every error refuses. */
 export function checkChangeSet(items: ChangeItem[], madeBy: MadeBy, ctx: Context, v: Verifiers): CheckProblem[] {
@@ -196,13 +202,14 @@ export function checkChangeSet(items: ChangeItem[], madeBy: MadeBy, ctx: Context
     if (it.action === "accept_proposal" || it.action === "create") {
       if (!it.source) add("R2", i, `"${it.name}" needs a source: a form box, an official page with its quote, or "set by ExpatReady".`);
       const r = (it.reason ?? "").trim();
-      if (r.length > 300 || letters(r) < 3) add("R2", i, `"${it.name}" needs a reason in words (3 to 300 characters): why nothing in the library fits.`);
+      if (UNSEEN.test(r.replace(/[\n\t]/g, " "))) add("R2", i, "Remove the control or invisible characters from the reason.");
+      else if (r.length > 300 || letters(r) < 3) add("R2", i, `"${it.name}" needs a reason in words (3 to 300 characters): why nothing in the library fits.`);
     }
     // R3 no exact duplicate.
     const dup = duplicate(it, ctx); if (dup) add("R3", i, dup);
     // R4 references intact.
     if (it.action === "accept_proposal" || it.action === "create") {
-      const taken = it.kind === "field" ? lib.fields.some((f) => f.key === it.key) : it.kind === "section" ? lib.sections.some((s) => s.key === it.key) : it.kind === "answer_list" ? lib.answerLists.some((l) => l.key === it.key) : lib.documentTypes.some((d) => d.key === it.key);
+      const taken = it.kind === "field" ? lib.fields.some((f) => f.key === it.key) || ctx.derived.has(it.key) : it.kind === "section" ? lib.sections.some((s) => s.key === it.key) : it.kind === "answer_list" ? lib.answerLists.some((l) => l.key === it.key) : lib.documentTypes.some((d) => d.key === it.key);
       if (taken) add("R4", i, `The key ${it.key} is already taken in the library: a new item needs a new key.`);
     }
     if (it.action === "rename" || it.action === "alias" || it.action === "merge") {
@@ -231,6 +238,8 @@ export function checkChangeSet(items: ChangeItem[], madeBy: MadeBy, ctx: Context
     }
     if (it.action === "set_condition" && it.target === "question") {
       if (ctx.existing?.[i] === null) add("R4", i, `No question asks ${nameOfKey(lib, it.key)} in the library, so its condition has nowhere to go.`);
+      const asked = lib.fields.find((f) => f.key === it.key);
+      if (asked && (asked.mergedInto || !LIVE(asked.status))) add("R4", i, `${fieldName(asked)} is ${asked.mergedInto ? `merged into ${nameOfKey(lib, asked.mergedInto)}` : "retired"}: its question takes no new condition.`);
       const tp = treeProblems(i, it.tree, ctx, v); out.push(...tp);
       // R6 the same condition already on the target (only for a tree that is a condition at all).
       if (!tp.some((p) => p.rule === "R1")) { const mine = v.canonical(it.tree as never); if ((ctx.existing?.[i] ?? []).some((e) => e && v.canonical(e as never) === mine)) add("R6", i, "The same condition is already on it: nothing would change."); }
@@ -246,7 +255,13 @@ export function checkChangeSet(items: ChangeItem[], madeBy: MadeBy, ctx: Context
     for (const key of keysOf(it)) { if (seenKey.has(key) && seenKey.get(key) !== i) { add("R4", i, `Items ${seenKey.get(key)! + 1} and ${i + 1} both change ${key.split(":")[0] === "field" ? nameOfKey(lib, key.slice(6)) : key.slice(key.indexOf(":") + 1)}: one change per item in a change set (send the next one after this one).`); break; } seenKey.set(key, i); }
   });
   void madeBy;
-  return out.slice(0, PROBLEMS_MAX);
+  return out;
+}
+/** At most PROBLEMS_PER_ITEM per item and PROBLEMS_MAX in all, in item order; `truncated` says more were found. */
+export function capProblems(ps: CheckProblem[]): { problems: CheckProblem[]; truncated: boolean } {
+  const per = new Map<number, number>(), kept: CheckProblem[] = [];
+  for (const p of [...ps].sort((a, b) => a.item - b.item)) { const n = per.get(p.item) ?? 0; if (n < PROBLEMS_PER_ITEM && kept.length < PROBLEMS_MAX) { kept.push(p); per.set(p.item, n + 1); } }
+  return { problems: kept, truncated: kept.length < ps.length };
 }
 
 // ───────────────────────────────────────────────── review by risk (P-253 step 6, P-266), one table, fixed in code
@@ -276,7 +291,8 @@ export const RAISES = {
  *  requirements, checks, a form line with a condition, and anything the AI made; not a person's question condition). No
  *  gate at approval (P-253 Q3, tech lead on PR #504; review B1 M5). */
 export const EXPERT_TARGETS = new Set(["rule", "document_line", "check", "form_line"]);
-const expertSigns = (it: ChangeItem, madeBy: MadeBy) => madeBy !== "person" || (it.action === "set_condition" && EXPERT_TARGETS.has(it.target));
+// An accepted proposal is the AI's item, whoever sends the check (break round 2).
+const expertSigns = (it: ChangeItem, madeBy: MadeBy) => madeBy !== "person" || it.action === "accept_proposal" || (it.action === "set_condition" && EXPERT_TARGETS.has(it.target));
 export const TIER_WORDS: Record<Tier, string> = { direct: "Applies now as a draft; logged, and shown at the next release review.", second_person: "Waits for a second person to approve." };
 
 export function riskOf(items: ChangeItem[], madeBy: MadeBy, released: Set<string>): TierResult {

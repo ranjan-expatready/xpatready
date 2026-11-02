@@ -6,8 +6,8 @@ import fc from "fast-check";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { canonical, validatePredicate } from "../../contracts/rules.ts";
-import type { ChangeItem, MadeBy } from "../contracts/change-set.ts";
-import { checkChangeSet, DUPLICATE_SCOPE, EXPERT_TARGETS, listId, MERGE_HOPS_MAX, mergeDepth, PROBLEMS_MAX, RISK_TABLE, riskOf, TREE_MAX, VALUE_TYPES, type Context, type LibField, type Library } from "../engine/change-set.ts";
+import { ChangeSetBody, RAW_TREE_MAX, treeTooLarge, type ChangeItem, type MadeBy } from "../contracts/change-set.ts";
+import { capProblems, checkChangeSet, DUPLICATE_SCOPE, PROBLEMS_PER_ITEM, EXPERT_TARGETS, listId, MERGE_HOPS_MAX, mergeDepth, PROBLEMS_MAX, RISK_TABLE, riskOf, TREE_MAX, VALUE_TYPES, type Context, type LibField, type Library } from "../engine/change-set.ts";
 import { valueProblems } from "../engine/eligibility-gates.ts";
 import { VALUE_TYPE_TO_DATA_TYPE } from "../engine/snapshot.ts";
 import { isNode } from "../engine/validate.ts";
@@ -150,11 +150,31 @@ ok("G-CORE tier: a person's question condition and a person's rename have no exp
 ok("G-CORE tier: the AI's question condition does have it (an AI-made item)", riskOf([condOn("question")], "ai", new Set()).expert_at_release);
 ok("G-CORE tier: the set's tier is its riskiest item's", riskOf([item("field:rename"), item("field:merge")], "person", new Set()).tier === "second_person");
 ok("G-CORE tier: the words say who acts next", /second person/.test(riskOf([item("field:merge")], "person", new Set()).words) && /immigration expert signs it at release/.test(riskOf([condOn("rule")], "person", new Set()).words));
-ok("G-CORE: one check returns at most PROBLEMS_MAX problems", check(Array.from({ length: 50 }, (_, k) => ({ action: "rename", kind: "field", key: `person.nobody_${k}`, name: "x" }) as ChangeItem)).length <= PROBLEMS_MAX && PROBLEMS_MAX === 200);
+ok("G-CORE: one check returns at most PROBLEMS_MAX problems", capProblems(check(Array.from({ length: 50 }, (_, k) => ({ action: "rename", kind: "field", key: `person.nobody_${k}`, name: "x" }) as ChangeItem))).problems.length <= PROBLEMS_MAX && PROBLEMS_MAX === 200);
 
 // ───────── Person and AI: the same check for the same action and items
 ok("G-CORE: a person and the AI get the same check for the same items (only the tier differs)", JSON.stringify(check([height, cond({ op: "eq", field: "person.age", value: "x" })], ctx(), "person")) === JSON.stringify(check([height, cond({ op: "eq", field: "person.age", value: "x" })], ctx(), "ai")));
 
+
+// ───────── Break round 2 (a21393c2): fixed with a failing case each
+ok("G-CORE contract fail: a 10 000-deep tree is refused by the contract (a 400), measured without recursion (round 2 M1)", (() => { let t: object = { op: "eq", field: "person.age", value: 1 }; for (let k = 0; k < 10_000; k++) t = { op: "not", arg: t }; return treeTooLarge(root(t)) && !ChangeSetBody.safeParse({ items: [{ action: "set_condition", kind: "condition", key: "person.age", target: "question", tree: root(t) }] }).success; })());
+ok("G-CORE contract pass: a real-sized tree passes the contract (the engine's 12 levels sit well inside it)", !treeTooLarge(root({ op: "and", args: [{ op: "eq", field: "person.age", value: 1 }, { op: "not", arg: { op: "eq", field: "person.age", value: 2 } }] })) && RAW_TREE_MAX.depth > TREE_MAX.depth * 2);
+ok("G-CORE R7 pass: \"not (is off-list)\" is always true, so not R7 (round 2)", !rules([cond({ op: "not", arg: { op: "eq", field: "person.country_of_birth", value: "ATLANTIS" } })]).includes("R7"));
+ok("G-CORE R7 pass: \"off-list or on-list\" can be true, so not R7 (round 2)", !rules([cond({ op: "or", args: [{ op: "eq", field: "person.country_of_birth", value: "ATLANTIS" }, { op: "eq", field: "person.country_of_birth", value: "CAN" }] })]).includes("R7"));
+ok("G-CORE R7 fail: \"off-list and anything\" can never be true", rules([cond({ op: "and", args: [{ op: "eq", field: "person.country_of_birth", value: "ATLANTIS" }, { op: "eq", field: "person.age", value: 3 }] })]).includes("R7"));
+ok("G-CORE R1 fail: a name that only looks blank (U+3164, U+2800), or with a soft hyphen or word joiner, is refused (round 2 n2)", ["ㅤㅤ", "⠀ab", "Fam­ily", "Fam⁠ily", "Fam\nily"].every((n) => rules([{ action: "rename", kind: "field", key: "person.given_name", name: n }]).includes("R1")));
+ok("G-CORE R2 fail: a reason with a NUL character is refused (round 2 n2)", rules([{ ...height, reason: "No field holds\u0000 the height" }]).includes("R2"));
+ok("G-CORE R1 pass: a key starting with a digit, as proposals' slugKey makes (\"2nd_passport\"), is a library key (round 2 n4)", !rules([{ action: "accept_proposal", kind: "document_type", key: "2nd_passport", name: "Second passport", proves: "identity", aliases: [], source: src, reason: "From the checklist" }]).includes("R1"));
+ok("G-CORE R4 fail: a new field on a worked-out fact's key is refused (round 2 n4)", rules([{ ...height, key: "person.age_years" }], ctx({ derived: new Set(["person.age_years"]) })).includes("R4"));
+ok("G-CORE R4 fail: a merge of A plus a condition reading A, or on A's question, in one set is refused (round 2 n1)",
+  both([{ action: "merge", kind: "field", key: "person.civil_status", into: "person.marital_status" }, cond({ op: "eq", field: "person.civil_status", value: "SINGLE" })]) && both([{ action: "merge", kind: "field", key: "person.has_children", into: "person.age" }, cond({ op: "eq", field: "person.age", value: 3 })]));
+ok("G-CORE R4 fail: a condition on a retired field's question is refused (round 2 n1)", check([cond({ op: "eq", field: "person.age", value: 3 }, "person.old_name")]).some((p) => p.rule === "R4" && /retired: its question takes no new condition/.test(p.message)));
+ok("G-CORE tier: an accepted proposal is the AI's item for the expert step, whoever sends the check (round 2)", riskOf([item("field:accept_proposal")], "person", new Set()).expert_at_release);
+ok("G-CORE cap: every item keeps its first problems, and truncated says more were found (round 2 n3)", (() => {
+  const ps = [...Array.from({ length: 300 }, () => ({ rule: "R1" as const, item: 0, message: "x" })), { rule: "R1" as const, item: 7, message: "y" }];
+  const c = capProblems(ps); return c.truncated && c.problems.filter((p) => p.item === 0).length === PROBLEMS_PER_ITEM && c.problems.some((p) => p.item === 7);
+})());
+ok("G-CORE cap pass: a short list is kept whole, not truncated", !capProblems([{ rule: "R1", item: 0, message: "x" }]).truncated);
 // ───────── STANDARDS §7 properties
 const prop = (name: string, p: fc.IProperty<unknown[]>) => { let err = ""; try { fc.assert(p, { numRuns: 200 }); } catch (e) { err = String(e).slice(0, 300); } ok(name, !err, err); };
 const anyItem = fc.oneof(

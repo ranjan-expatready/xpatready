@@ -99,6 +99,11 @@ const check = (items: unknown[], actor: string | null = "user-A") => call("POST"
   sql("update predicate set status = status; update check_def set updated_at = updated_at; update section_question set status = status");
   const f2 = (await check([{ action: "rename", kind: "field", key: ruled, name: "Same change (Sample)" }])).body?.fingerprint;
   ok("G-CORE BR-3 pass: a write that changes nothing (rows reordered) keeps the same fingerprint", f1 && f1 === f2, [f1, f2]);
+  { // The body is written as text: JSON.stringify itself cannot write a 10 000-deep tree (the breaker's 190 KB body).
+    const N = 10_000, tree = `{"subjectKind":"PERSON","op":"not","arg":${'{"op":"not","arg":'.repeat(N - 1)}{"op":"eq","field":"${cf}","value":"${code}"}${"}".repeat(N)}`;
+    const raw = await fetch(`http://localhost:${PORT}/api/change-sets/check`, { method: "POST", headers: { "x-actor": "user-A", "content-type": "application/json" }, body: `{"items":[{"action":"set_condition","kind":"condition","key":"${q}","target":"question","tree":${tree}}]}` });
+    const text = await raw.text();
+    ok("G-CORE fail: a 10 000-deep condition is a 400 in words, never a server error (break round 2 M1)", raw.status === 400 && /too large to read/.test(text), [raw.status, text.slice(0, 200)]); }
   r = await check([{ action: "set_condition", kind: "condition", key: q, target: "question", tree: { op: "and", args: 5, subjectKind: "PERSON" } }]);
   ok("G-CORE R1 fail: a hostile condition is refused in words (200, R1), never a server error (breaker M1)", r.status === 200 && r.body?.problems?.some((x: { rule: string }) => x.rule === "R1"), r);
 
