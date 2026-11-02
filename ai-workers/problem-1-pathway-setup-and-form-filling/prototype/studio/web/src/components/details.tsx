@@ -13,7 +13,7 @@ export function AdminDetails({ items, className }: { items: [string, React.React
     <details className={cn("text-xs text-text-muted", className)} data-admin-details>
       <summary className="cursor-pointer rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-primary">Details (for admins)</summary>
       <dl className="mt-1 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5">
-        {shown.map(([k, v]) => <React.Fragment key={k}><dt>{k}</dt><dd className="mono break-all">{v}</dd></React.Fragment>)}
+        {shown.map(([k, v]) => <React.Fragment key={k}><dt>{k}</dt><dd className="mono break-words [overflow-wrap:anywhere]">{v}</dd></React.Fragment>)}
       </dl>
     </details>
   );

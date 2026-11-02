@@ -5,9 +5,12 @@ import * as React from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button, Input, Select, Textarea } from "@/components/ui/controls";
+import { fieldName } from "@/lib/field-name";
 
 export type Tree = any;
-export type FieldInfo = { key: string; meaning: string; value_type: string };
+export type FieldInfo = { key: string; meaning: string; value_type: string; name?: string | null };
+/** UX-A part 4 (break M3): a field is offered and shown by its name; the condition still stores its key. */
+const baseName = (f: FieldInfo) => f.name || fieldName(f.key);
 const OPS: [string, string][] = [["eq", "is"], ["neq", "is not"], ["in", "is one of"], ["gt", "is after / more than"], ["gte", "is on or after / at least"], ["lt", "is before / less than"], ["lte", "is on or before / at most"], ["exists", "is answered"]];
 const SUBJECTS: [string, string][] = [["EACH_APPLICANT", "each applicant"], ["CASE", "the application (once)"], ["PRINCIPAL", "the principal applicant"], ["SPOUSE", "the spouse or partner"], ["DEPENDENT", "each child"], ["EACH_PERSON", "each person"]];
 export const subjectLabel = (k?: string) => SUBJECTS.find(([v]) => v === k)?.[1] ?? k ?? "";
@@ -61,6 +64,12 @@ export function ConditionBuilder({ value, onChange, fields, defaultSubject = "EA
     if (!leaves.length) return onChange(null);
     onChange(leaves.length === 1 ? { subjectKind: sub, ...leaves[0] } : { subjectKind: sub, op: comb, args: leaves });
   };
+  // The field box shows a known field's name; a name typed or chosen becomes its key (a key typed still works; a value
+  // that is not a library field, such as a derived age, stays as typed).
+  // Two fields with one name are told apart by whom they are about ("Date of birth (spouse)").
+  const nameOf = React.useMemo(() => { const n = new Map<string, number>(); for (const f of fields) n.set(baseName(f), (n.get(baseName(f)) ?? 0) + 1); return (f: FieldInfo) => (n.get(baseName(f)) ?? 0) > 1 ? `${baseName(f)} (${(f.key.split(".")[0] ?? "").replace(/_/g, " ")})` : baseName(f); }, [fields]);
+  const shownField = (k: string) => { const f = fields.find((x) => x.key === k); return f ? nameOf(f) : k; };
+  const keyOf = (t: string) => { const v = t.trim().toLowerCase(); return fields.find((x) => x.key === t.trim())?.key ?? fields.find((x) => nameOf(x).toLowerCase() === v)?.key ?? t; };
   if (json) return (
     <div className="flex flex-col gap-2">
       <Textarea className="mono min-h-32" value={text} onChange={(e) => { setText(e.target.value); try { onChange(JSON.parse(e.target.value)); } catch { setErrors(["not valid JSON yet"]); } }} aria-label="Condition as JSON" />
@@ -75,19 +84,19 @@ export function ConditionBuilder({ value, onChange, fields, defaultSubject = "EA
         <span className="text-text-muted">when</span>
         <Select className="w-auto" value={combine} onChange={(e) => build(subject, e.target.value, rows)} aria-label="Combine">{[["and", "all of these are true"], ["or", "any of these is true"]].map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select>
       </div>
-      <datalist id={listId}>{fields.map((f) => <option key={f.key} value={f.key}>{f.meaning}</option>)}</datalist>
+      <datalist id={listId}>{fields.map((f) => <option key={f.key} value={nameOf(f)}>{f.meaning}</option>)}</datalist>
       {rows.map((r, i) => {
         const t = typeOf(r.field);
         const set = (p: Partial<Row>) => build(subject, combine, rows.map((x, j) => (j === i ? { ...x, ...p } : x)));
         return (
           <div key={i} className="grid grid-cols-[1fr_auto_1fr_auto] items-center gap-2">
-            <Input list={listId} value={r.field} placeholder="field, e.g. person.marital_status" onChange={(e) => set({ field: e.target.value.trim() })} aria-label="Field" className="mono" />
+            <Input list={listId} value={shownField(r.field)} placeholder="field, e.g. Marital status" onChange={(e) => set({ field: keyOf(e.target.value) })} aria-label="Field" />
             <Select className="w-44" value={r.op} onChange={(e) => set({ op: e.target.value })} aria-label="Comparison">{OPS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select>
             {r.op === "exists" ? <span className="text-xs text-text-muted">(no value)</span>
               : t === "yes_no" && r.op !== "in" ? <Select value={r.value} onChange={(e) => set({ value: e.target.value })} aria-label="Value"><option value="">choose</option><option value="true">yes</option><option value="false">no</option></Select>
               : <Input type={t === "date" && r.op !== "in" ? "date" : "text"} value={r.value} placeholder={r.op === "in" ? "values, separated by commas" : t === "number" ? "number" : "value"} onChange={(e) => set({ value: e.target.value })} aria-label="Value" />}
             <Button size="icon" variant="ghost" aria-label="Remove this comparison" onClick={() => build(subject, combine, rows.filter((_, j) => j !== i))}><Trash2 /></Button>
-            {r.field && !fields.some((f) => f.key === r.field) ? <p className="col-span-4 -mt-1 text-xs text-text-warn">{r.field} is not a library field yet (derived values such as age are allowed). The draft saves; release waits until the fact is added from Smart questionnaire (SQR) › Facts a rule needs.</p> : r.field ? <p className="col-span-4 -mt-1 text-xs text-text-muted">{fields.find((f) => f.key === r.field)?.meaning} · {t}</p> : null}
+            {r.field && !fields.some((f) => f.key === r.field) ? <p className="col-span-4 -mt-1 text-xs text-text-warn">"{r.field}" is not a library field yet (derived values such as age are allowed). The draft saves; release waits until the fact is added from Smart questionnaire (SQR) › Facts a rule needs.</p> : r.field ? <p className="col-span-4 -mt-1 text-xs text-text-muted">{fields.find((f) => f.key === r.field)?.meaning} · {t}</p> : null}
           </div>
         );
       })}

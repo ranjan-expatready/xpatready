@@ -21,9 +21,8 @@ const TYPE_WORD: Record<string, string> = { text: "Text", date: "Date", yes_no: 
 const TYPES = Object.keys(TYPE_WORD);
 const COLLECTED: [string, string][] = [["client_questionnaire", "Client questionnaire"], ["verified_document", "A verified document"], ["staff_working_view", "The case officer (Agent view)"], ["profile_record", "Client profile"], ["existing_record", "Existing record"]];
 const collectedWord = (k: string) => COLLECTED.find(([x]) => x === k)?.[1] ?? k.replace(/_/g, " ");
-/** QA-39, QA-71: a field's name in words from its key ("person.family_name" → "Family name"); the key itself stays small. */
-const ABBREVIATIONS = new Set(["dli", "eta", "id", "ircc", "lmia", "noc", "pgwp", "pr", "sin", "uci"]);
-export const fieldName = (key: string) => { const w = (key.split(".").pop() ?? key).split("_").map((x) => ABBREVIATIONS.has(x) ? x.toUpperCase() : x).join(" "); return w.charAt(0).toUpperCase() + w.slice(1); };
+import { fieldName } from "@/lib/field-name";
+export { fieldName }; // QA-39, QA-71 (one copy in lib/field-name.ts)
 /** QA-71: lists show a draft or AI-proposed mark only; the version and "Imported release" are on the item's page. */
 const ListPill = ({ origin, status }: { origin?: string; status?: string }) => <OriginPill origin={origin === "IMPORTED_RELEASE" ? undefined : origin} status={status} />;
 const CATEGORY_WORD: Record<string, string> = { client: "Client", employer: "Employer", government: "Government", other: "Someone else" };
@@ -41,7 +40,7 @@ const FormatCell = ({ f }: { f?: FormatLine }) => f?.text ? <span data-format>{f
 type FieldFormatView = { rules: { check: string; words: string; part: string | null; part_words: string | null; sources: { form: string; box: string; quote: string | null; from: string }[] }[]; not_checked: { function: string; form: string; quote: string | null; why: string }[]; read: boolean };
 const FROM_WORD: Record<string, string> = { pdf_box: "the PDF form field", form_script: "the form's own check", field_map: "the field map" };
 /** GET /library/:kind/:key/sources (api/src/library-sources.ts). */
-type SourcesView = { name: string; sources: { kind: string; text: string; quote?: string | null }[]; unsourced: boolean; used_in: string[] };
+type SourcesView = { name: string; sources: { kind: string; text: string; quote?: string | null; ref?: string | null }[]; unsourced: boolean; used_in: string[] };
 /** Where used (C3.13): the combinations by name, the first two and a count. */
 // C3.13 BR-3: the search also finds a field by one of its aliases, or by the start of the code or number of a form that
 // fills it, with or without its space ("imm5257" or "5257" finds IMM 5257; 3 characters at least), as
@@ -178,14 +177,16 @@ export function FieldPage() {
       </section>
       <section data-sources className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
         <h2 className="font-semibold">Where it comes from</h2>
-        {src.isLoading ? <Spinner label="Loading sources" /> : src.data?.unsourced ? <Notice tone="warn">No source recorded: this field was not read from a form field, a checklist line or a rule.</Notice> : <ul className="mt-2 space-y-1 text-sm">{(src.data?.sources ?? []).slice(0, 30).map((l) => <li key={l.text}>{l.text}{l.quote ? <span className="text-xs text-text-muted"> · {l.kind === "release" ? l.quote : `"${l.quote}"`}</span> : null}</li>)}</ul>}
+        {src.isLoading ? <Spinner label="Loading sources" /> : src.data?.unsourced ? <Notice tone="warn">No source recorded: this field was not read from a form field, a checklist line or a rule.</Notice> : <><ul className="mt-2 space-y-1 text-sm">{(src.data?.sources ?? []).slice(0, 30).map((l) => <li key={`${l.text}|${l.quote ?? ""}`}>{l.text}{l.quote ? <span className="text-xs text-text-muted"> · {l.kind === "release" ? l.quote : `"${l.quote}"`}</span> : null}</li>)}</ul>
+          {/* UX-A part 4 review M1: the release's hash, the AI runs and a form field's data path are under Details. */}
+          <AdminDetails className="mt-2" items={[["Source references", (src.data?.sources ?? []).some((l) => l.ref) ? <ul>{(src.data?.sources ?? []).slice(0, 30).flatMap((l) => (l.ref ?? "").split("\n").filter(Boolean)).map((r) => <li key={r}>{r}</li>)}</ul> : null]]} /></>}
         <p className="mt-3 text-sm"><span className="text-text-muted">Used in combinations:</span> {src.data?.used_in?.length ? src.data.used_in.join(", ") : "none"}</p>
       </section>
       <section className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
         <h2 className="font-semibold">Form fields that read it, and whose value each form field needs</h2>
         {!v.used_by.length ? <p className="mt-2 text-sm text-text-muted">No form field reads this field.</p> : v.used_by.map((u: any) => (
           <div key={u.edition} className="mt-3"><p className="text-sm font-medium">{u.edition} · {u.boxes.length} form field{u.boxes.length > 1 ? "s" : ""}</p>
-            <Table dense className="mt-1" head={["Form field", "Whose value", "Row", "Transformation", "Status"]}>{u.boxes.slice(0, 50).map((b: any) => <tr key={b.data_path}><td className="max-w-md text-xs">{b.caption || <span className="text-text-muted" title={b.data_path}>A form field with no label on the form</span>}</td><td className="text-xs">{PERSON[b.person] ?? b.person}</td><td className="text-xs">{b.row === null ? "—" : b.row + 1}</td><td className="mono text-xs">{b.transform}</td><td><OriginPill origin={b.origin} status={b.status} /></td></tr>)}</Table>
+            <Table dense className="mt-1" head={["Form field", "Whose value", "Row", "Transformation", "Status"]}>{u.boxes.slice(0, 50).map((b: any) => <tr key={b.data_path}><td className="max-w-md text-xs">{b.caption || <><span className="text-text-muted">A form field with no label on the form</span><AdminDetails items={[["Form field path", b.data_path]]} /></>}</td><td className="text-xs">{PERSON[b.person] ?? b.person}</td><td className="text-xs">{b.row === null ? "—" : b.row + 1}</td><td className="mono text-xs">{b.transform}</td><td><OriginPill origin={b.origin} status={b.status} /></td></tr>)}</Table>
           </div>
         ))}
         {v.supplied_by_documents.length ? <p className="mt-3 text-sm">A supported document can supply it: {v.supplied_by_documents.join(", ")} <span className="text-xs text-text-muted">(a proposal until reading the document proves it on a case)</span></p> : null}
