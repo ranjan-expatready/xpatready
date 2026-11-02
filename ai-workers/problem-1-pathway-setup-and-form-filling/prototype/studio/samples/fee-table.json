@@ -1,5 +1,5 @@
 {
- "about": "R2 (P-230 (7)): the dated fee table, data and never code. Each line cites IRCC's page, quote and date (P-170). Status: Researched (source, date): may change; Sample until the immigration expert confirms (P-171). Sources: research_notes/visitor-visa-and-six-combinations-research-2026-11-02.md rows 1a, 1b, 1c; product/screens/W1-baseline/immigration-facts-2026-10-29.md row 19. A fee change is an edit to this file with its test (tests/runtime/check_vv_filings.ts). Part 2 of R2 moves it into a stored library table frozen with each release (setup S7a, PUT /library/fees).",
+ "about": "R2 (P-230 (7)): the dated fee table, data and never code. Each line cites IRCC's page, quote and date (P-170). Status: Researched (source, date): may change; Sample until the immigration expert confirms (P-171). Sources: research_notes/visitor-visa-and-six-combinations-research-2026-11-02.md rows 1a, 1b, 1c; product/screens/W1-baseline/immigration-facts-2026-10-29.md row 19. Each line carries its basis (P-247): per_application (once per application filed), per_person_by_role (each person of the named roles), per_position (not worked out yet), or family_maximum (each person, capped once enough people apply together). A fee change is an edit to this file with its test (tests/runtime/check_vv_filings.ts). Part 2 of R2 moves it into a stored library table frozen with each release (setup S7a, PUT /library/fees).",
  "as_of": "2026-09-21",
  "read": "2026-11-02",
  "status": "Researched (source, date): may change",
@@ -8,6 +8,7 @@
    "key": "visitor_visa",
    "label": "Visitor visa fee",
    "status": "Researched (IRCC fee list, 2026-11-02): may change",
+   "basis": "family_maximum",
    "per_person_cad": 100,
    "family_max": {
     "cad": 500,
@@ -26,6 +27,7 @@
    "key": "biometrics",
    "label": "Biometrics fee",
    "status": "Researched (IRCC fee list, 2026-11-02): may change",
+   "basis": "family_maximum",
    "per_person_cad": 85,
    "family_max": {
     "cad": 170,
@@ -56,6 +58,7 @@
    "key": "spouse_sponsorship",
    "label": "Spouse or partner sponsorship fee",
    "status": "Researched (IRCC fee list, 2026-11-02): may change",
+   "basis": "per_person_by_role",
    "per_person_cad": 1260,
    "roles": [
     "principal"
@@ -73,6 +76,7 @@
    "key": "spouse_dependent_child",
    "label": "Dependent child fee (sponsorship)",
    "status": "Researched (IRCC fee list, 2026-11-02): may change",
+   "basis": "per_person_by_role",
    "per_person_cad": 180,
    "roles": [
     "child"
@@ -90,6 +94,7 @@
    "key": "pr_adult",
    "label": "Permanent residence fee (adult)",
    "status": "Researched (IRCC fee list, 2026-11-02): may change",
+   "basis": "per_person_by_role",
    "per_person_cad": 1590,
    "roles": [
     "principal",
@@ -108,6 +113,7 @@
    "key": "pr_dependent_child",
    "label": "Dependent child fee (permanent residence)",
    "status": "Researched (IRCC fee list, 2026-11-02): may change",
+   "basis": "per_person_by_role",
    "per_person_cad": 270,
    "roles": [
     "child"

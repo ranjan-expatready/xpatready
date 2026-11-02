@@ -18,7 +18,11 @@ import FEES from "../../samples/fee-table.json" with { type: "json" };
 /** R2 (P-230 (7)): the dated fee table is data (samples/fee-table.json: amounts, family maximums, ages and each line's
  *  source with page, quote and date), never code; a fee change is an edit there with its test. Part 2 moves it into a
  *  stored library table frozen with each release (setup S7a). */
-type TableLine = { key: string; label: string; status: string; per_person_cad: number; family_max?: { cad: number; from_people: number } | null; roles?: string[];
+/** P-247 (founder, 2 Nov): how a fee line is charged. per_position is not worked out yet: a combination using it is not
+ *  derived, never guessed. */
+export const FEE_BASES = ["per_application", "per_person_by_role", "per_position", "family_maximum"] as const;
+export type FeeBasis = (typeof FEE_BASES)[number];
+type TableLine = { key: string; label: string; status: string; basis: FeeBasis; per_person_cad: number; family_max?: { cad: number; from_people: number } | null; roles?: string[];
   exempt?: { under_age: number; over_age: number; source: FeeSource } | null; source: FeeSource };
 type TableCombination = { label: string; lines: string[]; checklist?: boolean; modes?: Record<string, CaseFiling["mode"]>; group_why?: string };
 export type FeeTable = { as_of: string; read: string; status: string; lines: TableLine[]; combinations: Record<string, TableCombination> };
@@ -34,7 +38,7 @@ export const BIOMETRICS_EXEMPT_SOURCE: FeeSource = line("biometrics").exempt!.so
 export type AgeExempt = { underAge: number; overAge: number; source: FeeSource };
 /** A fee line: `roles` limits it to the filings of those roles (spouse and PNP fees); none means every filing. Without a
  *  family maximum the cap never applies (familyFrom is then beyond any household). */
-export type FeeRule = { key: string; label: string; perPersonCents: number; familyMaxCents: number; familyFrom: number; source: FeeSource; exempt?: AgeExempt; roles?: string[] };
+export type FeeRule = { key: string; label: string; basis?: FeeBasis; perPersonCents: number; familyMaxCents: number; familyFrom: number; source: FeeSource; exempt?: AgeExempt; roles?: string[] };
 type Rules = { label: string; modes: Map<string, CaseFiling["mode"]>; fees: FeeRule[]; groupWhy?: string };
 /** What the case adds (C6.12, the stored prepare view): each person's age in whole years (null: no date of birth yet),
  *  the filing modes the release says per role (M3-0; a role it leaves out falls back to the table below), and the
@@ -46,8 +50,14 @@ export const FAMILY_GROUP = "group-family";
 export function rulesFrom(table: FeeTable, key: string): Rules | undefined {
   const c = Object.hasOwn(table.combinations, key) ? table.combinations[key] : undefined;
   if (!c) return undefined;
-  const fees = c.lines.map((k) => table.lines.find((l) => l.key === k)).filter((l): l is TableLine => !!l).map((l): FeeRule => ({
-    key: l.key, label: l.label, perPersonCents: Math.round(l.per_person_cad * 100), familyMaxCents: Math.round((l.family_max?.cad ?? 0) * 100), familyFrom: l.family_max?.from_people ?? Number.MAX_SAFE_INTEGER,
+  const lines = c.lines.map((k) => table.lines.find((l) => l.key === k));
+  // A line the engine cannot charge soundly makes the combination not derived: a missing line, a basis not worked out
+  // (per_position), a family maximum without its cap, or a per-role line naming no role.
+  if (lines.some((l) => !l || !FEE_BASES.includes(l.basis) || l.basis === "per_position" || (l.basis === "family_maximum" && !l.family_max) || (l.basis === "per_person_by_role" && !l.roles?.length))) return undefined;
+  const fees = (lines as TableLine[]).map((l): FeeRule => ({
+    key: l.key, label: l.label, basis: l.basis, perPersonCents: Math.round(l.per_person_cad * 100),
+    // Only the family_maximum basis caps a line (P-247): any other basis charges each person or application in full.
+    familyMaxCents: l.basis === "family_maximum" ? Math.round(l.family_max!.cad * 100) : 0, familyFrom: l.basis === "family_maximum" ? l.family_max!.from_people : Number.MAX_SAFE_INTEGER,
     source: l.source, ...(l.exempt ? { exempt: { underAge: l.exempt.under_age, overAge: l.exempt.over_age, source: l.exempt.source } } : {}), ...(l.roles ? { roles: l.roles } : {}) }));
   return { label: c.label, modes: new Map(Object.entries(c.modes ?? {})), fees, groupWhy: c.group_why };
 }

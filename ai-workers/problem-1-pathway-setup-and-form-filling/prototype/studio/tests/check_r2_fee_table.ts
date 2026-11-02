@@ -3,7 +3,7 @@
 // in code before (CAD 100 each, CAD 500 for 5 or more; biometrics CAD 85, CAD 170 for 2 or more, none under 14 or over
 // 79). Each rule has a pass and a fail. Pure: no server, no database; US$0.
 //   tsx studio/tests/check_r2_fee_table.ts
-import { deriveFilings, FEE_TABLE, feeRule, rulesFrom, type FeeTable } from "../engine/runtime/filings.ts";
+import { deriveFilings, FEE_BASES, FEE_TABLE, feeRule, rulesFrom, type FeeTable } from "../engine/runtime/filings.ts";
 import { DERIVED_FOR } from "../engine/runtime/case-checklist.ts";
 import type { Participant } from "../engine/runtime/case.ts";
 import { recorder } from "./runtime/api.ts";
@@ -30,9 +30,20 @@ ok("R2 fail: an edited age in the table changes the words and who pays (a 13-yea
   && total(deriveFilings("vv.single", [...family(1, 0), person("C0", "child")], undefined, { ages: new Map([["P", 30], ["C0", 13]]) }), "biometrics") === 85_00);
 ok("R2 P-170: every fee line in the table cites a page, a URL, words and a date read", FEE_TABLE.lines.every((l) => l.source.page && /^https:\/\//.test(l.source.url) && l.source.quote.length > 10 && /^\d{4}-\d{2}-\d{2}$/.test(l.source.read)) && /^\d{4}-\d{2}-\d{2}$/.test(FEE_TABLE.as_of));
 
+const viaData = (key: string, people: Participant[], table: FeeTable) => deriveFilings(key, people, (k) => rulesFrom(table, k));
+// ── P-247: every line carries its basis; the cap is the "family_maximum" basis, not code
+ok("R2 P-247: every fee line has a basis (per application, per person by role, per position, family maximum)", FEE_TABLE.lines.every((l) => FEE_BASES.includes(l.basis)), FEE_TABLE.lines.map((l) => `${l.key}:${l.basis}`));
+ok("R2 P-247: the Visitor visa and biometrics lines are on the family maximum basis, with their cap in the table", ["visitor_visa", "biometrics"].every((k) => { const l = FEE_TABLE.lines.find((x) => x.key === k)!; return l.basis === "family_maximum" && !!l.family_max; }));
+const six = family(2, 4);
+ok("R2 P-247: the case total applies the family maximum: six people pay CAD 500 (not 600) + CAD 170", total(deriveFilings("vv.single", six), "visitor_visa") === 500_00 && total(deriveFilings("vv.single", six), "biometrics") === 170_00, [total(deriveFilings("vv.single", six), "visitor_visa"), total(deriveFilings("vv.single", six), "biometrics")]);
+const noCap: FeeTable = { ...FEE_TABLE, lines: FEE_TABLE.lines.map((l) => (l.key === "visitor_visa" ? { ...l, basis: "per_person_by_role" as const, roles: ["principal", "spouse_or_partner", "child"] } : l)) };
+ok("R2 P-247 fail: the same line on the per-person basis is never capped: six people pay CAD 600", total(viaData("vv.single", six, noCap), "visitor_visa") === 600_00, total(viaData("vv.single", six, noCap), "visitor_visa"));
+const broken = (edit: Partial<FeeTable["lines"][number]>): FeeTable => ({ ...FEE_TABLE, lines: FEE_TABLE.lines.map((l) => (l.key === "visitor_visa" ? { ...l, ...edit } : l)) });
+ok("R2 P-247 fail: a line on a basis not worked out (per position), a family maximum without its cap, or a per-role line naming no role is not derived, never guessed",
+  rulesFrom(broken({ basis: "per_position" }), "vv.single") === undefined && rulesFrom(broken({ family_max: null }), "vv.single") === undefined && rulesFrom(broken({ basis: "per_person_by_role", roles: [] }), "vv.single") === undefined);
+
 // ── A fee change is a data edit (no code): the same engine, an edited table
 const edited: FeeTable = { ...FEE_TABLE, lines: FEE_TABLE.lines.map((l) => (l.key === "visitor_visa" ? { ...l, per_person_cad: 120, family_max: { cad: 600, from_people: 5 } } : l)) };
-const viaData = (key: string, people: Participant[], table: FeeTable) => deriveFilings(key, people, (k) => rulesFrom(table, k));
 ok("R2: a changed amount in the table changes the fee (one person CAD 120, five capped at CAD 600)", total(viaData("vv.single", family(1, 0), edited), "visitor_visa") === 120_00 && total(viaData("vv.single", family(2, 3), edited), "visitor_visa") === 600_00);
 ok("R2 fail: the shipped table is untouched by that edit (CAD 100 still)", total(deriveFilings("vv.single", family(1, 0)), "visitor_visa") === 100_00);
 
