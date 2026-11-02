@@ -118,7 +118,9 @@ const sum = (r: D, k?: string) => r.fees.filter((f) => !k || f.line === k).reduc
   ok("C11.12 review M2 fail: a group with fee rules keeps its number", typeof vvChild.groups[0].total_cents === "number" && vvChild.groups[0].total_cents! > 0);
   // Break m3: a sponsorship on a combination whose other fees are worked out says its own are not
   const vvSp = deriveFilings("vv.single", [person(0, "principal"), person(4, "sponsor")], undefined, modes({ sponsor: "co_files" })) as D;
-  ok("C11.12 break m3 pass: the sponsorship's fees are said to be not worked out yet", vvSp.fees_worked_out === false && /sponsorship's fees are not worked out yet/.test(vvSp.fees_why ?? "") && typeof vvSp.groups[0].total_cents === "number");
+  // Review on #500 M1: with a co-filed sponsorship no table line is charged (the table cannot say who pays the
+  // sponsorship's fees); the filings stand, the total is null and the words say why (was: other lines priced).
+  ok("C11.12 break m3 (review on #500 M1) pass: with a sponsorship on the case, no fee line, total null, and the words say who pays is not built", vvSp.fees_worked_out === false && vvSp.fees.length === 0 && vvSp.groups.every((g) => g.total_cents === null) && /with a sponsorship: who pays the sponsorship's fees is not built/.test(vvSp.fees_why ?? "") && vvSp.filings.some((f) => f.mode === "co_filed"), { why: vvSp.fees_why, totals: vvSp.groups.map((g) => g.total_cents) });
   const fsSpouse = deriveFilings("fs.spouse", [person(0, "principal"), person(1, "spouse_or_partner"), person(4, "sponsor")], undefined, modes({ spouse_or_partner: "files_own", sponsor: "co_files" })) as D;
   ok("C11.12 review n1 pass: beside a sponsorship, a group with another own filing stays splittable (that filing may leave)", fsSpouse.groups[0].splittable === true && fsSpouse.filings.length === 3);
   ok("C11.12 review n1 fail: the principal and the sponsorship alone are not splittable", fs.groups[0].splittable === false);
