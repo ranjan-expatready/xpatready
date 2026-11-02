@@ -16,7 +16,7 @@ import { fail, need, type Actor, type Audit, type Db } from "./core.ts";
 import { keyFor } from "./library-changes.ts";
 import { checkedFieldValues, dropFieldList, type AnswerValue } from "./answer-values.ts";
 import { acceptPqrPick } from "./fact-sources.ts";
-import { itemCombinations } from "./where-used.ts";
+import { usedInLabels } from "./where-used.ts";
 
 type Tx = Prisma.TransactionClient;
 type Client = Db | Tx;
@@ -115,9 +115,7 @@ export async function whereUsedWords(db: Client, workspaceId: string, kind: stri
   const k = (["field", "section", "document_type", "answer_list"] as const).find((x) => x === kind);
   if (!k) return "";
   // SH2b (qa minor 1 on #504): read from the one where-used service, not through a LibrarySources built without its services.
-  const [ids, combos] = await Promise.all([itemCombinations(db, workspaceId, k), db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true } })]);
-  const label = new Map(combos.map((c) => [c.id, c.label]));
-  const used = [...new Set([...(ids.get(key) ?? [])].map((id) => label.get(id)).filter((l): l is string => !!l))].sort();
+  const used = (await usedInLabels(db, workspaceId, k)).get(key) ?? [];
   return used.length ? `, used in ${used.slice(0, 5).join(", ")}${used.length > 5 ? ` and ${used.length - 5} more` : ""}` : ", used in no combination yet";
 }
 

@@ -10,7 +10,7 @@ import { WHY } from "../../contracts/lifecycle.ts";
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { ACTORS, type Db } from "./core.ts";
 import { current } from "../../engine/where-used.ts";
-import { combinationTrails, itemCombinations, itemReleases } from "./where-used.ts";
+import { combinationTrails, documentTypeUseKinds, itemCombinations, itemReleases } from "./where-used.ts";
 
 export const ITEM_KINDS = ["field", "document_type", "section"] as const;
 export type ItemKind = (typeof ITEM_KINDS)[number];
@@ -58,13 +58,21 @@ export async function itemUses(db: Db, workspaceId: string, kind: ItemKind, key:
     db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true, retiredAt: true } }),
   ]);
   const combo = new Map(combos.map((c) => [c.id, c]));
+  // SH2b review m4: say how a combination uses a document type (a line, another line's alternative, the document a fact
+  // is read from), so the person knows what to change there.
+  const how = kind === "document_type" ? await documentTypeUseKinds(db, workspaceId, key) : new Map<string, Set<string>>();
+  const docWhy = (id: string) => {
+    const k = how.get(id) ?? new Set(["line"]);
+    const words = [k.has("line") && "its document checklist lists it", k.has("alternative") && "a checklist line takes it as an alternative", k.has("fact") && "a fact is read from it"].filter(Boolean) as string[];
+    return `${words.join("; ").replace(/^./, (c) => c.toUpperCase())}: change that there first`;
+  };
   const uses: Use[] = [];
   for (const id of [...ids].sort((a, b) => (trails.get(a) ?? "").localeCompare(trails.get(b) ?? ""))) {
     const c = combo.get(id); if (!c) continue;
     const label = trails.get(id) ?? c.label;
     // Break M3: a retired combination's draft still names it, so it blocks a delete (never a retire: it keeps it).
     uses.push(c.retiredAt ? { kind: "combination", label, href: `/c/${id}`, blocks: true, retireOk: true, why: "Combination retired: it keeps it, so it can be retired, not deleted" }
-      : { kind: "combination", label, href: kind === "document_type" ? `/c/${id}/documents` : `/c/${id}`, blocks: true, why: kind === "document_type" ? "Its document checklist lists it: remove the line there first" : kind === "section" ? "Its questionnaire uses it: remove it there first" : "Its setup reads it: remove it there first" });
+      : { kind: "combination", label, href: kind === "document_type" ? `/c/${id}/documents` : `/c/${id}`, blocks: true, why: kind === "document_type" ? docWhy(id) : kind === "section" ? "Its questionnaire uses it: remove it there first" : "Its setup reads it: remove it there first" });
   }
   // A field read by a form field of a library form no combination uses yet: it blocks a delete, never a retire.
   if (kind === "field") {
