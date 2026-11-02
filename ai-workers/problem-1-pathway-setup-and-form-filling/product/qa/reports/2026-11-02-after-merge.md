@@ -105,3 +105,4 @@ The :4400 demo (not reachable from the cloud) · a headed walk (no display) · Q
 * K10 (C11.10): QA-120 and QA-121 closed (`check_x1_tabs_focus_browser.cjs` 48/48); QA-129 is the founder's question.
 * K1 (C2.12) and K4 (C4.1): already met (round 1 evidence), so both rows stay Works.
 * K3 (C3.12): the Published date shows at all three widths, with no sideways scroll and axe clean. C3.12 stays Partial on QA-148.
+* 07:35 UTC check: #468 D3 (C2.6 launcher job, 33ba1f96) passes. The stub pass reproduces (exit 0) and `check_forms_s4_canada.ts` is 80/80. Minor: the stub run rewrites the tracked `p2/screening/canary-digest.json` (QA-145 part 2 class). #457's new head 65a9f9ca only changes a suite list, so its verdict stands.
