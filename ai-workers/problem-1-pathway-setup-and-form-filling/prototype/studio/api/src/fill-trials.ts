@@ -5,7 +5,7 @@
 // The E1 trials of 23 Oct ran P1's values through p5/fill.py, not through the studio's field map, so their map version
 // is not recorded (map_version null): they count for their edition only. A trial recorded from now on names the map
 // version it ran on, and counts only while the map is unchanged (S2, Lead's call in #458).
-// Pure apart from reading those two files; no decorators, so a check loads it directly.
+// No decorators and no I/O beyond reading those two files, so a check loads it directly.
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
@@ -39,6 +39,7 @@ export function verdictPasses(statusText: string): boolean {
 export type TrialAnswer = { passed: boolean; why: string | null; record: TrialRecord | null };
 export const TRIAL_WORDS = {
   noEdition: (form: string) => `${form}: this copy's form edition is not known, so its filling is not proven: for checking only, not for filing.`,
+  otherFile: (form: string, edition: string) => `${form}: this copy's file of edition ${edition} is not the file the fill trial ran on, so its filling is not proven: for checking only, not for filing until a trial of this file passes.`,
   none: (form: string, edition: string) => `${form}: no fill trial is recorded for edition ${edition}, so this copy is for checking only, not for filing.`,
   otherMap: (form: string, edition: string, on: string) => `${form}: the fill trial of edition ${edition} (${on}) ran on an earlier version of its field map; the map has changed since, so this copy is for checking only, not for filing until a new trial passes.`,
   notPassed: (form: string, edition: string) => `${form}: the fill trial of edition ${edition} did not pass from the product's file, so this copy is for checking only, not for filing.`,
@@ -50,7 +51,8 @@ export function trialFor(m: EditionMap | null | undefined, trials: TrialRecord[]
   if (!m?.form_sha256) return { passed: false, why: TRIAL_WORDS.noEdition(form), record: null };
   const edition = m.form_edition ?? m.form_sha256.slice(0, 12);
   const mine = trials.filter((t) => t.form === m.form_number && t.form_sha256 === m.form_sha256);
-  if (!mine.length) return { passed: false, why: TRIAL_WORDS.none(form, edition), record: null };
+  // Review minor 2: the same printed edition with another file (canada.ca serves a newer file under one label) is said so.
+  if (!mine.length) return { passed: false, why: trials.some((t) => t.form === m.form_number && t.edition === m.form_edition) ? TRIAL_WORDS.otherFile(form, edition) : TRIAL_WORDS.none(form, edition), record: null };
   const version = mapVersion(m.entries);
   // A record with its map version counts only for that map; one without (the E1 trials) counts for its edition.
   const same = mine.find((t) => t.map_version === version) ?? mine.find((t) => t.map_version === null);

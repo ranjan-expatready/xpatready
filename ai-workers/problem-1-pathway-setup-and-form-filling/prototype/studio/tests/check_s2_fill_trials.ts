@@ -20,7 +20,8 @@ const map = (form: string, s: string | null, e = entries): EditionMap => ({ form
 ok("S2 pass: every recorded trial names an edition of the official manifest by its SHA-256, and its evidence record exists and quotes that checksum", trials.length >= 6 && trials.every((t) => {
   const m = manifest.find((i) => i.sha256 === t.form_sha256 && i.path.startsWith("forms/"));
   const file = join(SOLUTION, t.status_file);
-  return !!m && m.edition === t.edition && existsSync(file) && readFileSync(file, "utf8").includes(t.form_sha256.slice(0, 8));
+  const text = existsSync(file) ? readFileSync(file, "utf8") : "";
+  return !!m && m.edition === t.edition && text.includes(t.form_sha256.slice(0, 8)) && text.includes(t.form_sha256.slice(-4));
 }), trials.map((t) => t.form));
 ok("S2 pass: the E1 trials ran P1's values through p5/fill.py, so none claims a studio map version (map_version null)", trials.every((t) => t.map_version === null));
 
@@ -29,6 +30,8 @@ ok("S2 pass: IMM 1295's recorded edition, whose trial passed, is fileable", tria
 const newer = trialFor(map("IMM 1295", "f".repeat(64)));
 ok("S2 fail (SA-1B-174): a new edition of IMM 1295 is \"Checked copy, not for filing\" until its own trial passes, said in words", !newer.passed && /no fill trial is recorded for edition/.test(newer.why ?? ""), newer);
 const old5257 = trialFor(map("IMM 5257", manifest.find((i) => i.path === "previous-editions/imm5257e-pre-2023.pdf")!.sha256));
+const sameLabel = trialFor({ ...map("IMM 1295", "e".repeat(64)), form_edition: "IMM 1295 (09-2023)" });
+ok("S2 fail (review minor 2): another file under the same printed edition is not proven, and the words say the file differs", !sameLabel.passed && /is not the file the fill trial ran on/.test(sameLabel.why ?? ""), sameLabel);
 ok("S2 fail: IMM 5257's earlier edition never inherits the 09-2023 edition's pass", !old5257.passed && trialFor(map("IMM 5257", sha("IMM 5257"))).passed, old5257);
 ok("S2 fail: a copy whose edition is not known is never fileable", !trialFor(map("IMM 1295", null)).passed && /edition is not known/.test(trialFor(map("IMM 1295", null)).why ?? ""));
 const i1344 = trialFor(map("IMM 1344", sha("IMM 1344")));
@@ -42,7 +45,7 @@ ok("S2 pass: a trial recorded with its map version counts while the map is uncha
 const changed = trialFor(map("IMM 7777", "b".repeat(64), [{ ...entries[0], fact: "person.surname" }, entries[1]]), reg);
 ok("S2 fail (SA-1B-174): once a mapped box changes, that trial no longer counts and the words say the map changed", !changed.passed && /earlier version of its field map/.test(changed.why ?? ""), changed);
 ok("S2 pass: bookkeeping (captions, confidence, the AI's quote, item versions, entry order) does not change the map version", mapVersion([{ ...entries[1], caption: "Date of birth", confidence: "high" } as never, { ...entries[0], item_version: 7 } as never]) === mapVersion(entries));
-ok("S2 fail: what a box writes (transform, person, row, condition, option map) changes the map version", ["transform", "person", "row", "condition", "option_map"].every((k) => mapVersion([{ ...entries[0], [k]: "x" }, entries[1]]) !== mapVersion(entries)));
+ok("S2 fail: what a box writes (transform, person, row, condition, option map, outcome, its form field) changes the map version", ["transform", "person", "row", "condition", "option_map", "outcome", "data_path"].every((k) => mapVersion([{ ...entries[0], [k]: "x" }, entries[1]]) !== mapVersion(entries)));
 ok("P-65 (a): the verdict rule reads \"Passes …\" and \"The product's part passes …\", never \"… does not pass …\"", verdictPasses("## Verdict\n**Passes from the product's file alone.**") && verdictPasses("## Verdict\n**The product's part passes. Validate needs one step.**") && !verdictPasses("## Verdict\n**Passes in Adobe; does not pass from the product's file alone.**") && !verdictPasses("no verdict"));
 
 console.log(`\n${pass} passed, ${fail} failed`);
