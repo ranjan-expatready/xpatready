@@ -378,3 +378,14 @@ In `/home/user/g4wt`, web rebuilt, on fresh copies (never :4400):
 No Blocker or Major is open.
 
 **Verdict: Approve** (commit 53149ff8)
+
+## Head 7c97d196
+I read `git diff 53149ff8 7c97d196`: one change in `labelsOf` (`engine/answer-keys.ts`), plus my 53149ff8 note committed.
+- **The change:** a form field whose printed caption starts with "*" keeps the form's "* " required marker in front of its label.
+- **Its check line:** every starred field the run names keeps "* ", and no other field gains it.
+- **What else changes:** labels only. Results, fingerprints and the look-alike numbering are as before; the marker only makes labels more distinct.
+- **Ran it:** `check_g4_answer_keys` on a fresh copy (:4451) passed **93/93**.
+
+No Blocker or Major is open.
+
+**Verdict: Approve** (commit 7c97d196)
