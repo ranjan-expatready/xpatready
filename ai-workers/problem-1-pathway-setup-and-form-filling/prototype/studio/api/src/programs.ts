@@ -236,6 +236,18 @@ export class Programs {
   }
 
   /** GET /catalogue: one request for the whole tree of one pathway, filtered and searched on the server. */
+  /** S4 (SA-1B-90): what keeps a combination's newest release from being startable, read exactly as the catalogue reads
+   *  it (the release's snapshot, the combination's structure, every rule against the live library). Empty = Live: a case
+   *  may open on it. The words are the catalogue's own "missing" lines (engine/programs.ts missingItems). */
+  async startableMissing(combinationId: string, release: { snapshot: unknown }) {
+    const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId }, select: { workspaceId: true, participants: true } });
+    const lib = await this.db.canonicalField.findMany({ where: { workspaceId: c.workspaceId }, select: { canonicalFieldKey: true, valueType: true, status: true } });
+    const library = lib.filter((f) => f.status !== "RETIRED").map((f) => ({ key: f.canonicalFieldKey, valueType: f.valueType }));
+    const relSnap = release.snapshot as unknown as Snapshot;
+    const problems = [...(await this.studio.structureProblems(combinationId)), ...validate(relSnap, library, derivedOf(relSnap))];
+    return missingItems(relSnap, c.participants as ParticipantLine[], problems);
+  }
+
   async catalogue(query: unknown, actor?: Actor): Promise<CatalogueResponse> {
     const t0 = performance.now();
     const q = parse(CatalogueQuery, query);

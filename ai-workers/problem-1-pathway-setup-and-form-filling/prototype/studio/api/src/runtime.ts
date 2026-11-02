@@ -16,6 +16,7 @@ import { firmByKey, firmOfActor, STAND_IN } from "./firms.ts";
 import { aiLive } from "./sources.ts";
 import { openingTeam, representativeAnswers, type Member } from "../../engine/runtime/team.ts";
 import { employerLinkOffer } from "../../engine/runtime/employer.ts";
+import { Programs } from "./programs.ts";
 
 type H = string | undefined;
 function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
@@ -38,7 +39,7 @@ export type Reached = Awaited<ReturnType<Runtime["reach"]>>;
 
 @Injectable()
 export class Runtime {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Programs) private readonly programs: Programs) {}
 
   /** The case, if this person may reach it: the officer any case of the workspace, a client only their own (others are
    *  "not found", as the team's cross-tenant rule). Configuration people hold neither duty. The pin must still match
@@ -85,6 +86,10 @@ export class Runtime {
     if (combination!.retiredAt) fail(`"${combination!.label}" was retired by a release: new cases are not opened on it. Cases already open keep their release.`, HttpStatus.CONFLICT);
     const release = await this.db.configRelease.findFirst({ where: { combinationId: b.combinationId }, orderBy: { version: "desc" } });
     if (!release) fail(`"${combination!.label}" has no released version yet: a case opens only on a released configuration.`, HttpStatus.CONFLICT);
+    // S4 (SA-1B-90): a case opens only on a startable ("Live") release. A release the catalogue shows as Not ready is
+    // refused with its missing items, in the catalogue's words, so the person sees what to fix and where.
+    const missing = await this.programs.startableMissing(b.combinationId, release!);
+    if (missing.length) throw new HttpException({ type: "https://expatready.local/problems/not-startable", title: "Not ready for cases", status: 409, detail: `"${combination!.label}" is released but not ready for cases (Not ready in Immigration programs): ${missing.map((m) => m.text).join(" ")}`, missing: missing.map((m) => ({ code: m.code, text: m.text, step: m.step })) }, HttpStatus.CONFLICT);
     let client: Actor | null = null;
     try { client = actorOf(b.clientActor); } catch { /* reported below as a field error */ }
     if (!client || !(client.duties as readonly string[]).includes("answer")) fieldError("clientActor", "Choose a client login (the client who answers the questionnaire).");
