@@ -3,6 +3,7 @@
 // combination); forViewer adds who must act (the duty and tier table of §5), which the server's 403s read too.
 import { itemHref, STEP_KEYS, STEP_LABEL, STEP_TAB, type ChipStatus, type Counts, type ItemKind, type OpenItem, type SetupChecklist, type Step, type StepKey, type Tier, type ViewerOverlay } from "../contracts/setup-checklist.ts";
 import { PROPOSAL_KINDS, type ProposalKind } from "../contracts/proposal-item.ts";
+import { formsWords, questionsWords } from "../contracts/counts.ts";
 
 /** Validator `where` → the step whose open item it is (concept §6). Every `where` literal in engine/ has a row; any other
  *  value falls back to step 5 (a check fails when a new literal has no row). */
@@ -69,7 +70,7 @@ export type SetupInput = {
   people: { roles: number; applicants: number; saved: boolean; confirmed?: { by: string | null; as: Tier } | null; tier: Tier; reason?: string };
   /** Forms: draft lines; library forms found for its sources (added without AI); attached sources AI can draft; data
    *  forms with no fields mapped; attached sources not yet set up. */
-  forms: { lines: number; fromLibrary: number; draftable: number; unmapped: number; sources: number };
+  forms: { lines: number; fromLibrary: number; draftable: number; unmapped: number; sources: number; onCombination?: number };
   /** Waiting proposals about this combination, by kind. */
   proposals: Partial<Record<ProposalKind, number>>;
   /** Draft errors (structure and validator). */
@@ -109,7 +110,7 @@ export function setupChecklistOf(s: SetupInput, key = ""): SetupChecklist {
   const relPart = { documents: 0, questions: 0 };
   for (const p of relErrors) { const t = stepOfWhere(p.where); relBy[t.step]++; if (t.part) relPart[t.part]++; }
   const notReady = relErrors.length > 0;
-  const counts: Counts = { forms: s.forms.lines, people: s.people.roles, applicants: s.people.applicants, documents: s.documents.lines, questions: s.questions, proposals: proposalsBy, problems: problemsBy, held: s.held };
+  const counts: Counts = { forms: s.forms.onCombination ?? s.forms.lines + s.forms.sources, formsSetUp: s.forms.lines, people: s.people.roles, applicants: s.people.applicants, documents: s.documents.lines, questions: s.questions, proposals: proposalsBy, problems: problemsBy, held: s.held };
 
   const open: Record<StepKey, OpenItem[]> = { pages: [], people: [], forms: [], questions_documents: [], release: [] };
   // Release problems first, on their own steps (Not ready, §6).
@@ -197,8 +198,8 @@ function summaryOf(k: StepKey, s: SetupInput, c: Counts, done: boolean): string 
   if (!s.combinationId) return "Not started";
   if (k === "pages") return s.pages.state === "no_record" ? "No official pages record yet" : s.pages.state === "proposed" ? "Proposed by the rules, not confirmed" : `Confirmed by the ${s.pages.as === "author" ? "configuration author · sure" : "immigration expert · not sure"}`;
   if (k === "people") return `${plural(c.people, "person role")}, ${plural(c.applicants, "applicant role")}`;
-  if (k === "forms") return `${plural(c.forms, "form")}${c.held ? ` · ${plural(c.held, "new edition")} held` : ""}`;
-  if (k === "questions_documents") return `${plural(c.documents, "document")} · ${plural(c.questions, "question")}`;
+  if (k === "forms") return `${formsWords({ total: c.forms, setUp: c.formsSetUp })}${c.held ? ` · ${plural(c.held, "new edition")} held` : ""}`;
+  if (k === "questions_documents") return `${plural(c.documents, "document")} · ${questionsWords(c.questions)}`;
   return done ? `Released as Release ${s.release!.number}` : s.release ? `${plural(s.changes, "change")} since Release ${s.release.number}` : "Not released yet";
 }
 

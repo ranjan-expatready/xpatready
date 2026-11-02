@@ -12,6 +12,7 @@ import { ONLINE_LATER_WAVE } from "../../../../contracts/runtime";
 import { PreviewQuestions } from "@/runtime/questionnaire";
 import { Notice, Pill } from "@/components/ui/controls";
 import { cn } from "@/lib/utils";
+import { questionsWords } from "../../../../contracts/counts";
 
 /** C4.6: the preview's extra words per form (engine/runtime/preview.ts outputOf); optional, so an older response reads. */
 type FormOut = PreviewForm & { signature?: string; signatureWords?: string; toSign?: boolean; laterWave?: string | null; checklist?: boolean };
@@ -38,7 +39,8 @@ export function usePreviewParams() {
 /** C4.3 (board v2 frame 4): the three sets for one person, side by side from 1280 px, one at a time with a switch below. */
 const SETS = [
   { key: "pqr", title: (p: PreviewView) => `Prospect questionnaire (PQR) · ${p.sets.pqr.length}` },
-  { key: "sqr", title: (p: PreviewView) => `Client questionnaire · ${p.sets.sqr.asked}` },
+  // UX-A part 1 (contracts/counts.ts): "asked" is part of the person's questions (the SQR tab's chip), said as such.
+  { key: "sqr", title: (p: PreviewView) => `Client questionnaire · ${p.sets.sqr.asked} of ${questionsWords(p.sets.agent.questions)}` },
   { key: "agent", title: (p: PreviewView) => `Agent view · ${p.sets.agent.questions}` },
 ] as const;
 type SetKey = (typeof SETS)[number]["key"];
@@ -96,7 +98,7 @@ export function PreviewTab({ id, p, empty, fetching, hasRelease }: { id: string;
         </section>
         <section aria-labelledby="pv-q" className={cn("space-y-2", shown !== "sqr" && "hidden xl:block")} data-set="sqr">
           <h2 id="pv-q" className="font-semibold">{SETS[1].title(p)}</h2>
-          <p className="text-xs text-text-muted" data-sqr-sub>The questions {who.label} answers on the case's link</p>
+          <p className="text-xs text-text-muted" data-sqr-sub>The questions {who.label} answers on the case's link; the others come from documents or the case officer, or a rule skips them for these Sample answers.</p>
           {p.sets.sqr.fromDocuments.length ? (
             <div className="rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm" data-from-documents>
               <p className="font-medium">From {who.label}'s documents</p>
@@ -112,7 +114,7 @@ export function PreviewTab({ id, p, empty, fetching, hasRelease }: { id: string;
         </section>
         <section aria-labelledby="pv-agent" className={cn("rounded-xl border border-border bg-surface-raised p-4", shown !== "agent" && "hidden xl:block")} data-set="agent">
           <h2 id="pv-agent" className="font-semibold">{SETS[2].title(p)}</h2>
-          <p className="mt-1 text-xs text-text-muted">Every question for {who.label}, with where its answer comes from. The same count as the Smart questionnaire (SQR) tab.</p>
+          <p className="mt-1 text-xs text-text-muted">Every question for {who.label} in this Sample family, with where its answer comes from. Counted as the Smart questionnaire (SQR) tab counts them; that tab reads the largest household the combination allows, so a person's number can differ with the family chosen here.</p>
           <div className="mt-2 max-h-[36rem] space-y-3 overflow-y-auto pr-1" tabIndex={0} role="region" aria-label={`Every question for ${who.label}`}>
             {p.sets.agent.sections.map((x) => (
               <div key={`${x.about}|${x.section}`} data-agent-section={x.section}>

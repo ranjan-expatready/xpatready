@@ -223,8 +223,8 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   step("item 1 P-180 (X1 C3, QA-119): Visitor visa — the row says Resume setup; the header's step is the strip's ● Next item; the Forms row names the one form found; no missing list", vvRowStep === "Resume setup" && vvHeadStep === "Confirm the checklist page" && vvNextRow.includes(vvHeadStep) && /Add 1 form found/.test(vvForms) && await p.getByRole("region", { name: /Missing before firms can use it/ }).count() === 0, `${vvRowStep} | ${vvHeadStep} | ${vvNextRow} | ${vvForms}`);
   // Lead check items 3 and 5: no warnings on a combination with no setup; the Questions tile says what it counts.
   const vvTiles = await p.locator("main").textContent();
-  step("item 3: a combination with no setup shows no warnings (\"no problems\")", !/\d+ warnings?/.test(vvTiles) && /no problems/.test(vvTiles));
-  step("item 5: the Questions tile names what its number counts", /questions across all people \(each person role counted\)/.test(vvTiles));
+  step("item 3: a combination with no setup shows no warnings (\"no rule or check problems\", UX-A1 review m2)", !/\d+ warnings?/.test(vvTiles) && /no rule or check problems/.test(vvTiles));
+  step("item 5 (UX-A part 1): the Questions tile names what its number counts", /across all people/.test(vvTiles));
   const body = await p.locator("main").textContent();
   step("item 7: no technical key on the main path", !/individual\.visitors|vv\.single/.test(body));
   step("item 7: no floating \"AI for this combination\" button (one AI place: the next step)", await p.getByRole("button", { name: /AI for this combination/ }).count() === 0);
