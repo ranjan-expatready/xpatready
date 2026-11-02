@@ -1,53 +1,54 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-02 15:45 UTC by the tech lead, **handing over for tokens (P-276)**: the weekly plan was at 26% after about 5 hours; this chat reached 654k tokens (rule: hand over at about 250k). · milestone: **M2 — Super Admin configuration** (gate 59/60 with held parts named, P-265; about 11–12 Nov, estimate) plus M3 per row (P-261) · how we work: `WAY-OF-WORKING.md` (P-224, amended by P-250, P-259, P-267, P-270, P-275) · decisions to read word for word: DECISIONS P-264 … P-276
+updated: 2026-11-02 18:15 UTC by the tech lead, **handing over at about 245k tokens (P-276)** · milestone: **M2 — Super Admin configuration**, gate 59/60 with held parts named (P-265); tech lead's estimate now **about 4 Nov** if the parallel push holds (P-280), against P-255's 11–12 Nov · M3 per row (P-261) · how we work: `WAY-OF-WORKING.md` (P-224, amended by P-250, P-259, P-267, P-270, P-275, P-277, P-278) · decisions to read word for word: DECISIONS **P-270 … P-282**
 
 ## Start here (fresh `/lead` on the Mac)
-1. `bash product/tools/lane.sh whoami` → lead; read DECISIONS P-264…P-276 word for word, then this page and the lead skill.
-2. **Token plan (P-276) and its research** (`design/token-efficiency-2026-11-02.md`, causes ranked with sources): first job, bring the founder the two decisions it names (qa per batch instead of every PR head; Sonnet for subagents and ordinary rows), one at a time with impact; apply the no-quality-loss items at once (events instead of a recurring prompt, one row per builder session, diff-only re-reviews, breaker only for money/schema/permissions/new screens).
-   **Token plan (P-276):** at most 6 active builders; one check every 30 minutes (CronCreate); hand over again at about 250k tokens; spend at most about 12% of the weekly plan per day (`get_usage`), reported at each check; stop rules P-257 stand.
-3. **Cloud lanes are not woken by the tech lead's messages** (2 Nov, the founder confirmed nothing was held): judge a lane by its pushes; when a lane sits idle with work left, give the founder a one-line paste per lane (works from the phone at claude.ai/code) or start a fresh session per row from a desktop-typed message.
-4. Each check: session list, `bash product/tools/flow-watch.sh` (exit code), merge batches, qa verdicts, rows reaching Works and the golden-journey score first (P-273/P-274 memory: outcome and UX are the tech lead's), merge counts second. Records merge directly only when no batch is checking; cancel CI only by explicit run id on a named branch (2 Nov incident).
+1. `bash product/tools/lane.sh whoami` → lead; read DECISIONS P-270…P-282 word for word, then this page and the lead skill.
+2. **Active rules tonight:** no token stop, report the weekly plan at each check, the founder says when to stop (P-281); the tech lead Gos each paid run M2 needs, cost quoted first, within US$25 a day (P-232) and R-146's US$50 (P-281); qa scores `main` per merge batch, per-PR head only for money, schema, permissions, new screens (P-277); Sonnet for every subagent, a one-day pilot to judge on 3 Nov against qa scores and golden journey 2 (P-278); one row per builder session; GitHub Pro bought (P-282: 40 machines).
+3. **Start sessions only in a turn the founder typed** (the app refuses starts from a cron check: propose a card instead). Cards start locally on the Mac; a typed-turn start with `target: "cloud"` starts in the cloud.
+4. Each check (CronCreate, 30 minutes, minute 13 and 43): `bash product/tools/flow-watch.sh` (RED count), `get_usage`, merges, qa batch verdicts, comments starting "Question for the tech lead". Records PRs merge directly only when no batch is checking; cancel CI only by explicit run id (the permission guard refused a cancel at 17:55: ask the founder, never work around it).
+5. **Next improvement to bring the founder (tech lead's recommendation):** qa scores the Mergify batch branch *before* it lands, once per batch, so bugs are caught pre-merge at about P-277's token cost.
 
-## Progress (qa on main, 15:40 UTC)
-M2 **41/60 Works**, 17 partial, 2 not built · M3 2/17 Works, 7 partial, 8 not built. **Since 10:40 UTC: 22 builder PRs merged** (D4, SH2, SH3 and two follow-ups, C11.15 Minors, PQR picks screen C4.7, C4.11 live wiring, PF, G4 parts 1 and 2 (answer-key families, Tests tab), C11.12 PR 2+3, QA-150, R3 fix (FQ-4), launcher run record PC, AI jobs, 128k fix, saved results: 4+0 R-146 maps (#502; #528 with 3 more in the queue), PQR picks #530, step 5 #531). AI spend today **US$9.12** of P-232's US$25; R-146 US$8.24 of US$50.
-**Golden journey 1 (qa, ~15:00, #542): 4 of 8 steps; IMM 5257 values 78/78 correct (158/161 mapped).** Blockers: **QA-163 Critical** (after Reset to the six a listed form without a field map is refused for Saved drafting), **QA-162 Critical** (saved AI items dropped on apply: PQR picks 2/23, step 5 0/22; #531 "Not Saved"), **QA-164 Major** (Confirm stuck on 409 from a hidden worked-out question), **QA-165 Major** (6 of 46 mandatory IMM 5257 fields never written; "validated" without validation), QA-159 Major (near-duplicates rated Ready). Next journey about 18:00 UTC.
-**UX baseline 5.5/10** (`screens/UX-baseline-2026-11-02/`): rows UX-A (in M2, new lane), UX-D, UX-E (in M2), UX-C, UX-F (after the gate) — P-273, P-274.
+## Progress (qa on main 8f2b3975, #567, 17:30 UTC)
+M2 **43/60 Works**, 15 Partial, 2 Not built (C5.4, C5.5). Up since 15:40: C3.12, C11.12, C5.7; down: C3.13 (pack runs again, 8/23: BR-2, BR-3, BR-10 never built). M3: 2 Works (C6.9, C6.11), 8 Partial (C6.12, C6.4, C7.6, C7.7, C7.3, C11.5, C11.6, C8.2 slice 1), 7 Not built (C1.3, C3.16, C6.5, C7.5, C8.1, C9.2, C10.2). AI spend today US$9.12. Weekly plan 34% at 17:30 UTC. Golden journey 1: 4/8 (#542); journey 2 by the qa-batch session at about 18:00–19:00 UTC.
+**Forecast (estimates):** 48–50 by ~21:00 UTC once the approved PRs merge and qa scores them; 52–54 by 3 Nov morning; 59 about 4 Nov.
 
-## Lanes (P-276: six builders, each with its written queue; the founder pastes a restart line when one goes idle)
-| Lane | Session | Queue |
+## M2 rows not Works, and who has them
+| Row | In flight | Then |
 |---|---|---|
-| forms L5 Track B | cloud | **QA-162** → UX-E (AI question wording; one paid run, quote first) |
-| forms L8 | cloud | **QA-163** → PD (IMM 5532 inventory paths, then its re-run on the Go, about US$1.55) → #523 C3.6 → C11.14 leftovers |
-| forms L9 G-CORE | cloud | #522 SH2b (in queue) → G-CORE B1 (one new table; migration read by the tech lead) with QA-159 → B2 → B3 |
-| forms L3 gates | cloud | G2 (C5.5) → G1 (C5.4, taken from screens L2) |
-| screens L10 UX | cloud | UX-A (five PRs) → UX-D → K13 (names, P-271/P-272; taken from screens L7) |
-| runtime M3-A | cloud | QA-164 → QA-165 → C8.2 → C8.1 → C7.7 rest → C6.5 |
-| qa | cloud | P-250 verdicts; labels paid-result PRs (P-275); re-score within 30 minutes of a merge; golden journey every 3 hours |
-| Mac paid runner | local, `local_a6af81b9-88ca-453c-802e-ace74067e76a` | idle until the next Go: IMM 5532 after PD; C3.4/C9.1 jobs; UX-E wording |
-**Closing after their open PR merges (no new rows):** runtime L1 (#543; its S4, #495/T1, S1, S3 go back to BACKLOG), screens L2 (#544; G1 to L3, K12 to BACKLOG), screens L7 (#545; K13 to L10, K10/K1/K4 to BACKLOG), forms L4 Track A (no open PR; PD to L8, C3.4/C9.1 jobs and PE to BACKLOG). The founder archives them on claude.ai/code once their PR has merged.
+| C4.7, C4.11 | #566 QA-162 (approved) + #563 QA-163 (approved) | qa re-score; C4.11 may need PF/paid re-run |
+| C11.3 | #564 (approved, queued) | qa |
+| C11.15 | #565 (approved; qa head check, run path) | qa |
+| C2.6 | #574 (approved) | qa |
+| C3.6 | #573 (tech lead read `studio.ts`, accepted) | label after reviewer; follow-ups C3.6-F1/F2 in BACKLOG |
+| C11.8 | #570 (reviewer Block M1; tech lead allowed the fake-launcher pairing in two checks, or a dated follow-up row) | label, qa head check (money path) |
+| C3.13 | fresh session requested 18:10 (`c313-forms`) | — |
+| C11.7 | #576 PD (approved) | IMM 5532 paid re-run on the tech lead's Go (about US$1.55, worst US$3.22) on the Mac paid runner |
+| C3.4 | local session `local_506439b7-511d-4f01-b6dc-22bc1592202d` (C3.4 AI step + job files, PB) | paid runs on the Go (about US$1–1.5 each) |
+| C9.1 | row C9.1-AI: shape the AI impact step first (#576 option a) | the next tech lead shapes it |
+| C5.4 | #569 G1 PR 1 migration (SQL read, approved) → wiring PRs by the G1 session | — |
+| C5.5 | #568 G2 concept approved (E7 error; new-or-changed scope; failing key refuses a Demo release) | build PRs |
+| C11.14 | G-CORE B2/B3 (B1 merged #556) | — |
+| C10.1 | needs a released Visitor visa (QA-144): after QA-163 and Saved results | — |
+| C11.13 | only the held "did you mean" part left: ask qa to score "Works, held part excluded" (P-265) | — |
+| C5.1 | held (SA-01B product owner, P-251) | — |
+Also approved, no M2 row change: #557 K13 names (tech lead merged main in for a conflict), #554 UX-A part 1, #562 S4, #572 QA-165 part 1.
 
-## Open PRs (15:40 UTC)
-In merge batches: #541 SH3 tidy-up, #543 C3.13 setup fix (takes it off QUARANTINE), #545 K3, #544 C11.12 rest, #522 SH2b · approved, waiting: #528 (R-146 IMM 5710, 1294, 0008; qa labels it, P-275) · draft: #523 C3.6, #417 D3 spend plan · stale: #495 T1 part 1 (owner closed).
+## Sessions (all report by PR; the tech lead steers every one, whichever Lead started it)
+Started this chat (cloud, one row each, end when labelled): QA-163, QA-162, qa-batch, C3.6, C11.8, C2.6, C11.3, C11.15, G2, PD, C3.13 · local: C3.4 AI step · from the previous Lead, still pushing: runtime (QA-164 merged, S4 #562, QA-165 #572), screens UX-A (#554), screens G1 (#558 merged, #569), forms G-CORE (#556 merged, B2/B3), screens K13 (#557), runtime C8.2 (#553 merged) · Mac paid runner `local_a6af81b9-88ca-453c-802e-ace74067e76a`, idle until a Go.
+**M3 plan (for the founder when M2 merges thin out, about 3 Nov):** add two runtime builders per P-261: C8.1 → C7.7 rest → C9.2, and C6.5 → C7.5 (both paid AI: quote first); C1.3 and C3.16 need concepts first.
 
 ## Holds (P-251, the product owner of SA-01B): nobody builds these
-L-SA3 (ready to file) · L-SA6–L-SA11 · G5 · the P-236 rename · C11 · E1–E6 (extension) · design-only items (pin per filing, several combinations per case, organisation subject, scopes, whose fact) · SH3/SH4 contracts go to the product owner with them. The founder sends the reply drafted by the SA-01B session.
+L-SA3 · L-SA6–L-SA11 · G5 · the P-236 rename · C11 · E1–E6 · design-only items · SH3/SH4 contracts go to the product owner with them.
 
 ## Waiting for the founder
 1. **Open a new chat and type `/lead`** (this hand-over).
-2. **Paste the restart line into each of the six lanes** when idle (lines in the tech lead's last message; the next tech lead writes new ones).
-3. **Send the SA-01B product owner** the reply drafted on the Mac (`archive/2026-11-02-founder-drafts/`), the SH3 contract (#509), the G-CORE concept (#504) and the note `design/note-to-sa01b-po-2026-11-02-sqr.md` (P-271): the only way G5 (the 60th row) and the held parts unblock.
-4. **Archive on claude.ai/code** the four closing lanes once their PR merges, and earlier stopped sessions.
-5. **Public repository (P-263):** kept public; machine paths in run files (row PE) go after the M2 gate.
-6. **Tell the team** they drop their "Fill this screen" (P-245), pending the product owner's ruling.
+2. **Archive** the previous Lead chat on the Mac (Remote Control attached, so the tech lead could not) and the old forms L5, forms L8 and qa lanes on claude.ai/code.
+3. **Send the SA-01B product owner** the reply drafted on the Mac (`archive/2026-11-02-founder-drafts/`), the SH3 contract (#509), the G-CORE concept (#504) and `design/note-to-sa01b-po-2026-11-02-sqr.md`: the only way G5 and the held parts unblock.
+4. Tell the team they drop their "Fill this screen" (P-245), pending the product owner's ruling.
 
-## Founder asks of 2 Nov (all answered; P-228 (9))
-**New tech lead chat, 16:20 UTC:** A46 token savers: qa per merge batch (P-277) ✓, one-day Sonnet pilot (P-278) ✓ · A47 G1 dates count (P-279) ✓ · fresh one-row cloud sessions started for QA-163, QA-162 and qa-batch (golden journey 2 about 18:00 UTC); old L5/L8/qa lanes are not to be restarted · A48 (founder, ~16:55 UTC, spoken): (a) do you need anything from me or keep watching; (b) keep me posted, efficient and fast without lowering quality; (c) "complete the entire build today"; (d) close, archive or delete idle lanes of either Lead after a proper hand-over; (e) M2 stuck near 40: reach at least 55 in 2–3 hours: answered with evidence (about 47 by ~20:00 UTC, 59 in about 2 days); founder chose six more one-row builders (P-280) ✓; idle lanes: old Lead on the Mac cannot be archived while Remote Control is attached (founder archives it from the sidebar), cloud lanes are archived by the founder on claude.ai/code ·
-A38 speed rating and how to know the product delivers its outcome: rows to Works and the golden journey reported first ✓ · A39 UI/UX "the way it provides it" is the tech lead's, with best-in-class recommendations: UX baseline and P-273/P-274 ✓ · A40 Smart questionnaire names, prospect runtime is the team's: P-271; case tab "Prepare application": P-272 ✓ · A41 merge main only on conflict: P-270 ✓ · A42 are we missing something (machines): P-269, GitHub Pro on hold ✓ · A43 builders idle: P-267 build ahead ✓ · A44 qa labels paid-result PRs: P-275 ✓ · A45 token use 26% in hours: P-276 ✓ ·
-A37 why builders idle / free machines / 4-hour progress: answered 11:55 UTC (P-267 build ahead; P-268 GitHub Pro, the founder buys it). **Forecast, estimates, reported hourly:** 13:00 UTC about 8–10 approved PRs merged, R-146 batch 2 running, M2 42–43 · 14:00 C11.12, R3 fix, SH2b, K3 in review; 8 demo forms saved; PQR and step-5 runs done, M2 43–45 · 15:00 C11.12, C3.12, C4.7 Works; G4 screen and G-CORE B1 in review; C8.2 started, M2 45–47 · 16:00 C11.7 Works; C11.14 and C3.6 in review, M2 47–49 · M2 gate about 11–12 Nov unchanged ✓ ·
-A35 (founder, ~10:37 UTC, after the laptop shut down): "resume … as per plan, and finish everything": resumed; cloud lanes kept running, five idle ones got their next step; the nightly re-run (cancelled by the shutdown) re-dispatched ✓ · A36 G-CORE Q1, rename in a released combination: "Second person" (P-266) ✓ ·
-A31 finish plan (P-260 step 1): shared, "Launch as planned" (P-264) ✓ · A32 held rows in the M2 gate: "59/60, held parts named" (P-265) ✓ · A33 launch wave 1: started ~11:00 UTC (6 cloud sessions) ✓ · A34 (founder, ~11:10 UTC, going out): "you have all the rights and approvals … feel free to create a nested session … complete 60 out of 60 … whenever … every shared services are built, you start building the M3 as well … keep asking me questions": wave 2 started at once while the founder was at the desktop (L7 screens small, L8 forms small, L9 G-CORE with SH2, M3-A SH3 then M3 rows, and the Mac paid runner on the tech lead's Go); L6's rows (C3.4 AI step, C11.8, C9.1) go to L4/L5/L8 by message as their queues empty ✓ ·
-A3 Reset to the six: merged #407 · A4 Live or Saved: part 1 merged #435, parts 2–4 forms-1 · A5 Visitor visa saved for demos: C2.6 saved (#485), the rest is Track A · A16 SA-01B review: P-235–P-252 · A15/A23 close: P-257 · A17 qa before merge: P-250 · A18 holds: P-251 · A19 keep and fix: flow-watch, hourly records · A20 guarded change: P-253 · A21 big-impact rule: P-254 · A22 M3 wave after the reset (C7.7, C8.1, C8.2, C6.5, C7.5; the account switch may start it earlier) · A24 shared services: P-258 · A25 no idle builder: P-259 · A26 replacements: Track A and B sessions above · A30 at the close, close **every** lane of this account (all builders, qa, the paid runner and the Mac helpers) once each has pushed its work and left a Handover; nothing stays open for the new account (founder) · A29 at the close, archive the paid runner, evidence-c72, the old Lead and SA01B on the Mac and remove the `exciting-pascal-e76970` worktree (founder: "Yes, at the close") · A28 plan M3 in parallel at the right stage, use every token well: P-261 · A27 finish everything fast, discuss first, then a long-running parallel program: P-260, the next tech lead's first job.
+## Founder asks of 2 Nov, this chat (P-228 (9))
+A46 token savers: qa per batch (P-277) ✓, Sonnet pilot (P-278) ✓ · A47 G1 dates count (P-279) ✓ · A48 55 in 2–3 hours, the whole build today, close idle lanes: answered with evidence (not reachable without a lower bar), six more one-row builders (P-280) ✓ · A49 no token stop, paid-run Go within US$25 a day (P-281) ✓ · A50 machines: GitHub Pro bought (P-282) ✓ · A51 Wave 1 (= M2) today? no, about 4 Nov (estimate); "11–12" is P-255's gate date; why bugs after merge and how to reduce (item 5 above); who leads (the tech lead alone, every session); when to switch (now) ✓ · A52 breakdown of built / half-built / not built and the M3 plan: this page ✓. Earlier asks of 2 Nov (A3–A45): git history of this file.
 
-## Lessons of 2 Nov (memory and lead skill)
-Records merges and pushes to queued records PRs reset Mergify's batches: batch records, merge when quiet, never label them · watch sessions, not only PRs; a cloud builder pushes only to its own branch, so parallel work needs one session per row · a broken check on main fails every batch: quarantine under P-214 at once · state the time, cost and quality impact before recording a choice (P-254) · numbers from tools, never from prose. · **2 Nov afternoon:** a background script in zsh (`set -- $var` does not split) cancelled every CI run: cancel only explicit run ids on a named branch · idle cloud lanes ignore the tech lead's messages: restart by the founder's paste or a fresh session · the golden journey found two Criticals that per-row checks had passed: outcome checks beat merge counts · this chat ran to 654k tokens: hand over at about 250k (P-276).
+## Lessons of 2 Nov evening
+A records commit pushed after its PR merged is stranded (P-281 was): check the PR is open before each push · Mergify's final `ci` job waits for a machine even after its shards pass: measure machine waits before blaming builders · sessions cannot be started from a cron turn.
