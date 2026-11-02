@@ -106,7 +106,8 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
     setNone(!(prefill?.focus === "subCategory" || (cat && nodes.some((x) => x.parentKey === cat.key))));
     setLocs(cat?.allowedLocations.length ? cat.allowedLocations : ["inside_canada", "outside_canada"]);
     const focus = (FIELDS.some((lv) => text[lv].trim()) ? FIELDS.find((lv) => !t[lv].trim()) : prefill?.focus ?? FIELDS.find((lv) => !s[lv])) ?? "pathway";
-    setAim(focus); aimPending.current = focus; startAt.current = focus;
+    // Review of #398 (M2): when the person was already typing, the cursor stays where they are; the aim is only noted.
+    setAim(focus); aimPending.current = FIELDS.some((lv) => text[lv].trim()) ? null : focus; startAt.current = focus;
   }, [open, list.data, type, initialType]);
   // The field to start in gets focus in the first render where it is enabled: after the dialog's own first-field focus,
   // never a frame later (drift check: under load the dialog's focus could land last, on Pathway).

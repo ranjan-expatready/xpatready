@@ -474,19 +474,19 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const lateOpen = async (qs) => {
     await p.goto(`${BASE}/${qs}`); await p.waitForLoadState("networkidle"); await p.route("**/api/structure?*", slowList);
     const back = p.waitForResponse((r) => /\/api\/structure\?/.test(r.url()) && r.request().method() === "GET", { timeout: 15000 });
-    await p.locator("[data-add-combination]").click(); await dialog().waitFor(); return back;
+    await p.locator("[data-add-combination]").click(); await dialog().waitFor(); return { back };
   };
   const fldL = (lv) => p.locator(`[data-add-dialog] [data-field="${lv}"] input[role="combobox"]`);
-  let back = await lateOpen("");
+  let { back } = await lateOpen("");
   await fldL("pathway").fill(pwNode.label); await back; await p.waitForTimeout(500); await p.unroute("**/api/structure?*", slowList);
   await fldL("program").fill(progNode.label); await p.waitForTimeout(400);
   await fldL("category").fill("Late seed category"); await p.waitForTimeout(500);
   const sent = p.waitForResponse((r) => r.url().endsWith("/api/structure/path") && r.request().method() === "POST", { timeout: 15000 });
   await p.locator("[data-add-submit]").click(); const res = await sent; const resBody = await res.json().catch(() => ({}));
   const madeCat = (await api("/structure?pathwayType=INDIVIDUAL")).body.nodes.find((n) => n.level === "category" && n.label === "Late seed category");
-  step("Add pop-up fail (late list, review M1): an existing Pathway and Program typed early are used; Add writes under them (no 409)", res.status() === 201 && madeCat?.parentKey === progNode.key, [res.status(), madeCat?.parentKey, resBody?.detail]);
+  step("Add pop-up fail (late list, review M1): an existing Pathway and Program typed early are used; Add writes under them (no 409)", res.status() === 201 && madeCat?.parentKey === progNode.key && JSON.parse(res.request().postData() ?? "{}").pathway?.key === pwNode.key, [res.status(), madeCat?.parentKey, resBody?.detail]);
   await dialog().waitFor({ state: "detached" }).catch(() => undefined);
-  back = await lateOpen(`?p=${encodeURIComponent(pwNode.key)}&prog=${encodeURIComponent(progNode.key)}`);
+  ({ back } = await lateOpen(`?p=${encodeURIComponent(pwNode.key)}&prog=${encodeURIComponent(progNode.key)}`));
   await fldL("pathway").fill("Brand new pathway (late seed)"); await back; await p.waitForTimeout(500); await p.unroute("**/api/structure?*", slowList);
   if (!(await fldL("program").inputValue())) { await fldL("program").fill("Late seed program B"); await p.waitForTimeout(400); }
   await fldL("category").fill("Late seed category B"); await p.waitForTimeout(600);
@@ -495,6 +495,13 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   step("Add pop-up fail (late list, review B1): with filters, a different Pathway typed early is what Add sends (never the prefilled Pathway's key)", bodyB.pathway?.label === "Brand new pathway (late seed)" && !bodyB.pathway?.key && !bodyB.program?.key, JSON.stringify({ pathway: bodyB.pathway, program: bodyB.program }));
   await p.waitForTimeout(500);
   if (await dialog().count()) { await p.getByRole("button", { name: "Cancel" }).click(); await dialog().waitFor({ state: "detached" }); }
+  // Review of #398 (M2): typing across the list's arrival keeps the whole word in Pathway and the cursor there.
+  ({ back } = await lateOpen(""));
+  await fldL("pathway").click(); await fldL("pathway").pressSequentially("Typed across", { delay: 20 });
+  await back; await p.waitForTimeout(200); await fldL("pathway").pressSequentially(" the arrival", { delay: 20 });
+  await p.unroute("**/api/structure?*", slowList);
+  step("Add pop-up fail (late list, review M2): typing across the list's arrival stays in Pathway, whole word, cursor there", (await fldL("pathway").inputValue()) === "Typed across the arrival" && (await fldL("program").inputValue()) === "" && await fldL("pathway").evaluate((e) => e === document.activeElement), [await fldL("pathway").inputValue(), await fldL("program").inputValue()]);
+  await p.getByRole("button", { name: "Cancel" }).click(); await dialog().waitFor({ state: "detached" });
   step("no script error on any page", errs.length === 0, errs.join(" | "));
   await b.close();
   console.log(`\n${pass} passed, ${fail} failed`);
