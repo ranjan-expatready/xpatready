@@ -50,13 +50,14 @@ CREATE UNIQUE INDEX "source_entry_workspace_id_item_kind_item_key_value_path_key
 --       page note (≤ 200 characters);
 --   (b) "None published – set by ExpatReady" with its reason (≥ 10 characters);
 --   (c) Sample, with neither: honest demo content, which passes only in the demo workspace as a Demo release (G3).
--- "The date read is not in the future" is the API's check (a CHECK cannot read the clock).
+-- "Blank" is any whitespace (tabs and line breaks too, as the engine's trim()): Devin on #569. "The date read is not in
+-- the future" is the API's check (a CHECK cannot read the clock).
 ALTER TABLE "source_entry" ADD CONSTRAINT "source_entry_item_kind_check" CHECK ("item_kind" IN ('check', 'rule', 'fee', 'threshold'));
-ALTER TABLE "source_entry" ADD CONSTRAINT "source_entry_keys_check" CHECK (btrim("item_key") <> '' AND btrim("value_path") <> '' AND btrim("value") <> '');
+ALTER TABLE "source_entry" ADD CONSTRAINT "source_entry_keys_check" CHECK ("item_key" ~ '[^[:space:]]' AND "value_path" ~ '[^[:space:]]' AND "value" ~ '[^[:space:]]');
 ALTER TABLE "source_entry" ADD CONSTRAINT "source_entry_citation_check" CHECK (
   ("citation_url" IS NULL OR "citation_url" ~ '^https://[^[:space:]]+$')
-  AND ("citation_quote" IS NULL OR (btrim("citation_quote") <> '' AND char_length("citation_quote") <= 300))
-  AND ("citation_page" IS NULL OR (btrim("citation_page") <> '' AND char_length("citation_page") <= 200))
+  AND ("citation_quote" IS NULL OR ("citation_quote" ~ '[^[:space:]]' AND char_length("citation_quote") <= 300))
+  AND ("citation_page" IS NULL OR ("citation_page" ~ '[^[:space:]]' AND char_length("citation_page") <= 200))
 );
 ALTER TABLE "source_entry" ADD CONSTRAINT "source_entry_answer_check" CHECK (
   -- (a) cited
@@ -64,7 +65,7 @@ ALTER TABLE "source_entry" ADD CONSTRAINT "source_entry_answer_check" CHECK (
     AND "none_published" = false AND "none_published_reason" IS NULL AND "sample" = false)
   OR
   -- (b) None published, with its reason
-  ("none_published" = true AND "none_published_reason" IS NOT NULL AND char_length(btrim("none_published_reason")) >= 10
+  ("none_published" = true AND "none_published_reason" IS NOT NULL AND char_length(regexp_replace("none_published_reason", '^[[:space:]]+|[[:space:]]+$', '', 'g')) >= 10
     AND "citation_url" IS NULL AND "citation_page" IS NULL AND "citation_quote" IS NULL AND "citation_date" IS NULL AND "sample" = false)
   OR
   -- (c) Sample, with no source claimed

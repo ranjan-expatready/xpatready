@@ -36,7 +36,7 @@ Status: **v2, waiting for the tech lead's approval** (P-223 (4): an independent 
 - **BR-10 Fit with G3 (Decision 1; the tech lead's condition on #558).** An entry may be marked **Sample** (no source claimed): it passes only in the demo workspace and only as a Demo release; anywhere else it is refused as Sample. A number with no entry is refused everywhere.
   - G1 refuses in every workspace, the demo included. A missing source is not Sample; "None published" is not Sample.
   - `isDemoSnapshot` is unchanged. A check saved without a quote stays Sample after its number gets a source, and the panel says so (m3).
-  - **Not built in G1 (m2):** "a Sample value blocks a real release". It stays with G3's deferred part ("refused elsewhere" waits for a second workspace; tech lead 07:26).
+  - **Built in G1 for source entries (the tech lead's Done-when on #558, which supersedes m2):** a Sample *entry* is refused outside the demo workspace, each item named; the demo's Visitor visa still releases as a Demo release. Other Sample *content* (a check marked illustrative) stays with G3's deferred part.
 - **BR-11 Who and history.** Only the author duty writes, checked on the server; staff only. **⚑ PR 1 (M2): `version`, `updated_by`, `updated_at`**; a PUT with an old `version` gets 409. The product never deletes an entry; one whose address is gone shows "No longer used". **Reset deletes `source_entry`** (`demo.ts:474-489`, m7). An X2b line copy (`lines-bulk.ts`) does not carry its sources (SA-1B-39 rule 6): **Not built**, and the target's Review lists them.
 
 ## 4. Layout (EXPERIENCE §3)

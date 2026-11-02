@@ -98,3 +98,17 @@ Measured against concept BR-2, BR-3, BR-10 and BR-11, the tech lead's ⚑ points
 * **MJ-2:** one-clause fail cases, and a version test.
 
 Then fix Minor 1, or list it in the PR with the reason it waits for the API.
+
+## Round 2: head **f13c4228** (answers MJ-1, MJ-2 and Minor 1)
+I reran on a fresh database (`xr_studio_rv569b`) from a `git archive` of f13c4228: `migrate deploy` OK; suite **19/19**; the rollback in the comment works and redeploys cleanly; no drift for `source_entry`; database dropped.
+* **MJ-1 fixed.** `source_entry_answer_check` is three-way: (a) cited, not Sample, no reason; (b) None published with a trimmed reason of 10+ characters, no citation field, not Sample; (c) `sample = true`, with no citation field, no flag and no reason. Concept BR-3 and BR-10 now define Sample as "no source claimed", never None published.
+* **MJ-2 fixed.** Every clause has a one-field-off fail case; version 0 is refused. **My own mutants: 13 of 13 fail the suite** (18/19 each):
+  * answer check: (a) URL not null, (a) not Sample, (a) flag off; (b) btrim, (b) not Sample; (c) flag off, (c) no reason;
+  * citation check: `https?`, the no-space class widened to `.+`, the quote's btrim, page ≤ 200;
+  * keys check: value not blank, address not blank.
+  * With everything restored: 19/19.
+* **Minor 1 fixed.** `source_entry_citation_check` refuses non-https or spaced URLs, blank or over-long quotes and pages; `source_entry_keys_check` refuses blank keys and value. "Date not in the future" stays the API's, stated in the comment.
+* **Minor (records, for PR 2a; not blocking):** concept BR-10's old bullet "Not built in G1 (m2): a Sample value blocks a real release … waits for a second workspace" (`concept.md:39`) now contradicts its new first line and the tech lead's Done-when (the same content in a non-demo workspace is refused, each item named). Rewrite it when PR 2a wires the condition.
+* Minors 2–3 of round 1 stay as wiring notes for PR 2a.
+
+**Verdict (f13c4228): Approve.** No Blocker or Major is open.
