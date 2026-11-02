@@ -26,7 +26,12 @@ Rows: C2.6, C3.4, C4.7, C4.11, C9.1, C11.7 (8 forms, R-146), C11.8, C11.15. Mone
 | #495 | T1 part 1, speed budgets (runtime) | review, then the label; T1 part 2 is the full run on GitHub |
 | #417 | D3 spend plan (draft) | the paid-run log; Track A continues from it |
 
-Stopped rows to restart from their Handovers: D2 part 3 (forms), C11.14 rest and S7 (forms), K11 Majors and S9 done (forms), G1 source register (screens, answers on #469), D4 and S4 (runtime), C11.12 PR 3 (screens).
+**Rows to pick up, from each lane's Handover (checked by the tech lead at 09:50 UTC; read the Handover before starting, so nothing is redone):**
+* **D4 and S4 are BUILT and APPROVED, not yet in PRs** (runtime-5): branch `claude/friendly-newton-urm088` at 81e799bf. D4 = commits 5b4dca12…0790d975 (reviewer Approve, 9/10), S4 = a4d361db…81e799bf on top (Approve, 8.5/10). Open D4 first from 0790d975, then S4; the exact commands are in the Handover on #484. **Do not rebuild them.**
+* **C11.12 PR 2 + PR 3** are both on #478's branch (head e291b8c7), which conflicts with main; the next steps are in #478's Handover (resolve, reviewer on the head, label). The SQL of PR 2 is already read OK.
+* **D2 part 3 needs no code** (already true on main, forms-1 on #475); D2 is done. forms' next row: C4.11 part 4b, **answered by the tech lead on #390** (option (b)).
+* **K11 (C11.15 Majors QA-101–103) is verify-only:** fixed by #274 and closed by qa on 1 Nov (forms-4 on #482); `/next forms K11` only confirms.
+* **C11.14** leftovers and **S7** (forms-2, Handover on #477) · **G1** source register (screens-1, answers on #469) · **T1** part 1 #495 needs the reviewer, then part 2 (runtime-4) · **R3** #493 approved, merging.
 
 ## Sessions
 All lanes of the old account are closed (P-262). The Mac sessions (paid runner, evidence, SA-01B review, old Lead) are archived and the evidence worktree is removed (13 GB free). **The founder archives the cloud sessions on claude.ai/code** (the list is in the founder's message of 2 Nov 09:50 UTC). On the new account start sessions from the desktop app, never over Remote Control.
@@ -36,7 +41,7 @@ L-SA3 (ready to file) · L-SA6–L-SA11 · G5 · the P-236 rename · C11 · E1�
 
 ## Waiting for the founder
 1. **Log in with the new account at the stop** and start the sessions above from the desktop (Track A first).
-2. **Send the reply to the SA-01B product owner** (draft by the SA-01B session; it names a person, so it is not in the repository).
+2. **Send the reply to the SA-01B product owner**: the draft is on the Mac at `archive/2026-11-02-founder-drafts/` (it names a person, so it is never pushed).
 3. **Archive on claude.ai/code** the stopped cloud sessions ("runtime: #336…", "runtime: Visitor visa path…", forms-3, runtime-4, qa-m3) and, on the Mac, the old Lead, SA01B and evidence-c72 sessions once the paid runner is done (its worktree `exciting-pascal-e76970`, 3.8 GB, then frees disk: 9.7 GB free now, alarm under 10).
 4. **Public repository (P-263):** kept public for now with the exposure known (commercial documents and the team's requirements copy are readable); revisit private when the founder asks.
 5. **Tell the team** they drop their "Fill this screen" (P-245), pending the product owner's ruling.
