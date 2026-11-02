@@ -35,3 +35,6 @@ Sound: no Blocker, Critical or Major found in the batch. **M2 +2 Works: C11.15 a
 
 ## Batch 3 (0d129be5 → 214db197: #576 PD)
 * **C11.7 stays Partial.** `check_forms_pd_unique_paths.ts` 10/10 and `check_forms_pd_apply_replayed.ts` 8/8 (IMM 5532's unnamed XFA subforms get unique data paths). `acceptance/C11.7.test.ts` 18/21, the same three part-B steps red as before (Provincial nominee from paper twins, nomination certificate, IMM 5669/5406 Online). IMM 5532's saved map waits for its paid re-run on the tech lead's Go. No bugs.
+
+## Batch 4 (214db197 → 4031894d: #579 T1 part 1, test-only)
+* No capability row: `tests/speed_budget.cjs` only judges speed budgets on a GitHub machine when `SPEED_JUDGE=1`. `check_speed_budget.ts` 9/9, and 9/9 with `RUNNER_ENVIRONMENT=github-hosted`. No bugs.
