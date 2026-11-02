@@ -49,6 +49,18 @@ export const LibraryQuery = z.object({
 
 /** DELETE …/forms/:code and POST …/forms/:code/replace: the line version the person saw (409 when stale; S5 ask). */
 export const LineVersionBody = z.object({ version: z.number().int().min(1).optional() });
+/** C11.15 (P-123): Redo with AI on one form of a combination, per stage, on the form finder for this form only: "find"
+ *  finds the application page again; "read" and "match" read the page used before again and let both AI rounds decide
+ *  again (one pass of the finder today: api/src/form-redo.ts). Without `planSha256` the call answers the plan and its cost and runs nothing; with the plan's
+ *  fingerprint it starts that plan (Stop: POST /runs/:id/stop). */
+export const REDO_STAGES = ["find", "read", "match"] as const;
+export type RedoStage = (typeof REDO_STAGES)[number];
+export const RedoBody = z.object({
+  stage: z.enum(REDO_STAGES, { message: "Choose the stage to redo: find, read or match." }),
+  mode: z.enum(FINDER_MODES, { message: "Choose how: live AI, saved AI answers or rules only." }).optional(),
+  planSha256: z.string().regex(/^[0-9a-f]{64}$/, "Look at the plan first: its fingerprint is not valid.").optional(),
+  idempotencyKey: z.string().trim().min(8).max(120).optional(),
+});
 /** POST …/forms/undo: the change the person saw as "last" (409 when someone made a newer one; S5 ask). */
 export const UndoBody = z.object({ changeId: z.string().uuid().optional() });
 
