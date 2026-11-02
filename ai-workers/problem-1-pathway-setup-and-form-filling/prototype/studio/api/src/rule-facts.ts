@@ -38,6 +38,27 @@ export function factsRead(tree: unknown): string[] {
   return [...out];
 }
 
+/** C3.6 (break R2-M2): the words a rule compares a fact with (eq, in, …), so a choice's values can be checked against
+ *  them: a rule that tests a value the list lacks would never hold. */
+export function valuesCompared(tree: unknown, fact: string): string[] {
+  const out = new Set<string>();
+  const walk = (n: unknown) => {
+    if (!n || typeof n !== "object") return;
+    const o = n as { field?: unknown; value?: unknown; values?: unknown; args?: unknown; arg?: unknown };
+    if (o.field === fact) for (const v of [o.value, o.values].flat()) if (typeof v === "string") out.add(v);
+    (Array.isArray(o.args) ? o.args : []).forEach(walk); if (o.arg) walk(o.arg);
+  };
+  walk(tree);
+  return [...out];
+}
+/** Refuses a choice whose values miss a value the rule compares the fact with. */
+function ruleValuesKnown(rule: RuleRef, fact: string, values: { code: string; label: string }[] | undefined) {
+  if (!values) return;
+  const codes = new Set(values.map((v) => v.code));
+  const missing = valuesCompared(rule.tree, fact).filter((v) => !codes.has(v));
+  if (missing.length) fail(`${rule.sentence.split(":")[0]} compares ${fact} with ${missing.map((m) => `"${m}"`).join(", ")}, which is not among the answer values (${values.map((v) => v.code).join(", ")}): add it as a value, or correct the rule.`);
+}
+
 const clip = (s: string) => (s.length > 300 ? `${s.slice(0, 297)}...` : s);
 /** The combination's rules that carry a condition, with a plain sentence each (never empty: the key stands in). */
 export function rulesOf(s: Snapshot): RuleRef[] {
@@ -146,6 +167,7 @@ export class RuleFacts {
     const rule = rules.find((r) => r.key === b.rule);
     if (!rule) fail(`No condition, rule or check "${b.rule}" in this combination: a fact no form asks is added only for a rule that reads it.`);
     if (!factsRead(rule!.tree).includes(b.fact)) fail(`${rule!.sentence.split(":")[0]} does not read ${b.fact}: name the rule that needs it.`);
+    ruleValuesKnown(rule!, b.fact, values);
     if (library.has(b.fact)) fail(`${b.fact} is already in the library: the rule can use it as it is.`, HttpStatus.CONFLICT);
     // MA3 (review c36 r3): a retired field keeps its key, so it cannot be added again: it is restored.
     if (await this.db.canonicalField.findFirst({ where: { workspaceId: c.workspaceId, canonicalFieldKey: b.fact, status: "RETIRED", mergedIntoKey: null }, select: { id: true } }))
@@ -211,6 +233,7 @@ export class RuleFacts {
     // it again from the item as decided (name and subject may be edited at accept), so it never freezes.
     const all = await this.db.canonicalField.findMany({ where: { workspaceId: c.workspaceId }, select: { canonicalFieldKey: true } });
     const key = keyFor(b.subject, b.label, new Set(all.map((f) => f.canonicalFieldKey)));
+    ruleValuesKnown(rule!, key, values); // break R2-M2: when the rule already reads the built key
     const sha256 = createHash("sha256").update(canonical((rule!.tree ?? {}) as Json)).digest("hex");
     const name = rule!.sentence.split(":")[0];
     const { proposalId } = await this.db.$transaction(async (tx) => {

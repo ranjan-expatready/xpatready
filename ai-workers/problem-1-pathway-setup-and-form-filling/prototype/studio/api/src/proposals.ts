@@ -53,6 +53,15 @@ export function identityKeyOf(p: ProposalPayload, given: string): string {
   }
 }
 
+/** C3.6 (break R2-M1): a draft list that rides with a not-yet-approved field (no ADD of its own) is not a library item
+ *  another proposal may reuse: it can still be undone or withdrawn with its field. */
+async function ridingLists(db: Client, workspaceId: string): Promise<Set<string>> {
+  const drafts = await db.answerList.findMany({ where: { workspaceId, status: "DRAFT" }, select: { answerListKey: true } });
+  if (!drafts.length) return new Set();
+  const own = new Set((await db.libraryChange.findMany({ where: { workspaceId, kind: "answer_list", key: { in: drafts.map((d) => d.answerListKey) } }, select: { key: true } })).map((c) => c.key));
+  return new Set(drafts.map((d) => d.answerListKey).filter((k) => !own.has(k)));
+}
+
 /** The library item an identity key already names (an exact duplicate), or null. */
 export async function sameInLibrary(db: Client, workspaceId: string, p: ProposalPayload): Promise<string | null> {
   const want = identityKeyOf(p, "");
@@ -67,7 +76,8 @@ export async function sameInLibrary(db: Client, workspaceId: string, p: Proposal
   }
   if (p.kind === "answer_list") {
     const rows = await db.answerList.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] } }, include: { values: { select: { valueKey: true } } } });
-    return rows.find((r) => listIdentity(r.values.map((v) => v.valueKey)) === want)?.answerListKey ?? null;
+    const riding = await ridingLists(db, workspaceId);
+    return rows.find((r) => !riding.has(r.answerListKey) && listIdentity(r.values.map((v) => v.valueKey)) === want)?.answerListKey ?? null;
   }
   if (p.kind === "document_type") {
     // The same identity as identityKeyOf: a name and what it proves (two proofs under one name are two items).
@@ -84,7 +94,7 @@ async function usableInLibrary(db: Client, workspaceId: string, kind: string, ke
   switch (kind) {
     case "field": return !!(await db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: key, status: live, mergedIntoKey: null }, select: { id: true } }));
     case "section": return !!(await db.logicalSection.findFirst({ where: { workspaceId, sectionKey: key, status: live }, select: { id: true } }));
-    case "answer_list": return !!(await db.answerList.findFirst({ where: { workspaceId, answerListKey: key, status: live }, select: { id: true } }));
+    case "answer_list": return !(await ridingLists(db, workspaceId)).has(key) && !!(await db.answerList.findFirst({ where: { workspaceId, answerListKey: key, status: live }, select: { id: true } }));
     case "document_type": return !!(await db.documentType.findFirst({ where: { workspaceId, documentTypeKey: key, status: live }, select: { id: true } }));
     case "person_role": return !!(await db.personRole.findFirst({ where: { workspaceId, roleKey: key, retiredAt: null }, select: { id: true } }));
     default: return false;
@@ -238,7 +248,7 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
     const key = typeof ruleFact === "string" ? ruleFact : keyFor(f.subject ?? "case", f.label, used);
     // C3.6 (Lead, 2 Nov): a choice fact's answer values land as its answer list, checked again here so an edit on To
     // review passes the add's rules (break M2); the list rides with the field (api/src/answer-values.ts).
-    const values = checkedFieldValues(f.valueType, f.values, typeof ruleFact === "string");
+    const values = checkedFieldValues(f.valueType, f.values, r.step === "rule_fact"); // both add routes (review m-r2a)
     const answerListKey = values ? await landAnswerList(tx, l.ws, l.actor.id, f.label, values, slugKey) : null;
     await landField(tx, l, { key, meaning: f.meaning, valueType: f.valueType, label: f.label, answerListKey, sourceRef: rule ? `Needed by ${rule.sentence}; ${sourceRef(r, l.actor)}` : sourceRef(r, l.actor) });
     return key;

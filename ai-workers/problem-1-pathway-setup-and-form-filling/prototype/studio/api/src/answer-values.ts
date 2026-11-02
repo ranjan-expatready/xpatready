@@ -21,7 +21,8 @@ export function answerValues(valueType: string, labels: readonly string[] | unde
   if (!labels?.length) fail("A choice needs its answer values: write two or more, one per line.");
   const out: AnswerValue[] = [], codes = new Set<string>();
   labels!.forEach((raw, i) => {
-    const label = String(raw).replace(/[\s ]+/g, " ").trim();
+    // Break m-d: invisible and direction-control characters are dropped, so a blank or look-alike value cannot land.
+    const label = String(raw).replace(/[\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/g, "").replace(/[\s\u00a0]+/g, " ").trim();
     if (!label) fail(`Answer value ${i + 1} is empty: give it a name, or remove it.`);
     const twin = out.find((o) => sameWords(o.label) === sameWords(label));
     if (twin) fail(`"${label}" is listed twice: give each answer value once.`);

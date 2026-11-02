@@ -82,7 +82,7 @@ export function LibraryChangePage() {
           <dt className="text-text-muted">Name</dt><dd className="font-semibold">{x.field.label}</dd>
           <dt className="text-text-muted">Meaning</dt><dd>{x.field.meaning}</dd>
           <dt className="text-text-muted">Kind of value</dt><dd>{x.field.value_type}</dd>
-          {x.field.answer_list?.values.length ? <><dt className="text-text-muted">Answer values</dt><dd data-answer-values>{x.field.answer_list.values.map((v) => v.label).join(" · ")}{x.field.answer_list.status === "DRAFT" ? " (new list, approved with this field)" : " (an existing list)"}</dd></> : null}
+          {x.field.answer_list?.values.length ? <><dt className="text-text-muted">Answer values</dt><dd data-answer-values><p className="text-xs text-text-muted">{x.field.answer_list.values.length} values · {x.field.answer_list.status === "DRAFT" ? "a new list, approved with this field" : "a released list"}</p><ul className="mt-1 max-h-48 list-disc overflow-auto pl-5">{x.field.answer_list.values.map((v) => <li key={v.code}>{v.label}</li>)}</ul></dd></> : null}
           <dt className="text-text-muted">Group</dt><dd>{x.field.group}</dd>
         </dl>
       ) : null}

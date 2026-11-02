@@ -142,6 +142,33 @@ const TRAVELS = ["Both parents", "One parent", "Another adult", "Alone"], CUSTOD
   r = await call("POST", "/review/proposals/decide", { ids: [gid], action: "edit", payload: { ...gp, valueType: "code", values: [{ code: "sun", label: "A guardian" }, { code: "moon", label: "No guardian" }] } }, "user-C");
   const gl = sql("select string_agg(v.value_key, ',' order by v.sort_order) from canonical_field f join answer_list l on l.answer_list_key=f.answer_list_key join answer_list_value v on v.answer_list_id=l.id where f.canonical_field_key='person.has_guardian'");
   ok("C3.6 pass (break M2): an edit's codes are rebuilt from its words (a typed code never lands)", gl === "a_guardian,no_guardian", { status: r.status, gl, m: msg(r) });
+
+  // ─────────────────── break R2-M2: values that miss what the rule compares are refused (the rule would never hold)
+  rule("r_c36_alone", `{"field":"person.travels_alone_with","op":"eq","value":"alone"}`, "ask for the consent letter");
+  r = await call("POST", `/combinations/${combo}/rule-facts`, { fact: "person.travels_alone_with", rule: "r_c36_alone", label: "Travels without whom", meaning: "Whom the child travels without (Sample).", valueType: "code", values: ["Both parents", "One parent"] });
+  ok("C3.6 fail (break R2-M2): values that lack the value the rule compares are refused, naming it", r.status === 400 && /compares person\.travels_alone_with with "alone"/.test(msg(r)), msg(r));
+  ok("C3.6 fail (break m-d): an invisible-only value is empty", /Answer value 2 is empty/.test(String(refused(() => answerValues("code", ["Yes", "\u200b"])))));
+
+  // ─────────────────── break R2-M1: a draft list riding with its field is not reused by a form's list, so Undo is safe
+  rule("r_c36_lang", `{"field":"person.c36_lang","op":"eq","value":"english"}`, "ask for the language test");
+  r = await call("POST", `/combinations/${combo}/rule-facts`, { fact: "person.c36_lang", rule: "r_c36_lang", label: "Language for letters", meaning: "The language the person wants letters in (Sample).", valueType: "code", values: ["English", "French"] });
+  const lid = r.body?.proposalId as string;
+  const la = await call("POST", "/review/proposals/decide", { ids: [lid], action: "accept" }, "user-C");
+  const llist = sql("select answer_list_key from canonical_field where canonical_field_key='person.c36_lang'");
+  const att = sql("select id from source_attachment where lower(file_name) like '%imm5257e.pdf' order by created_at limit 1");
+  r = await call("POST", `/attachments/${att}/draft-masters`, { mode: "rules" }, "user-A");
+  ok("setup: the rules read IMM 5257's choices", r.status === 201 || r.status === 200, msg(r));
+  const reuses = sql(`select count(*) from proposal_item where kind='answer_list' and reuse->>'existingKey'='${llist}'`);
+  ok("C3.6 fail (break R2-M1): a form's list never reuses a draft list waiting with its field", !!llist && reuses === "0", { llist, reuses });
+  r = await call("POST", `/review/proposals/undo/${la.body?.batchId}`, undefined, "user-C");
+  ok("C3.6 pass (break R2-M1): Undo takes the field's own list back and nothing points at it", (r.status === 201 || r.status === 200) && sql(`select count(*) from answer_list where answer_list_key='${llist}'`) === "0" && sql(`select count(*) from proposal_item where decided_key='${llist}'`) === "0", msg(r));
+
+  // ─────────────────── review m-r2a: an edit on the add-by-rule route cannot make a choice with no values
+  rule("r_c36_party", `{"field":"person.c36_party","op":"exists"}`, "ask who comes along");
+  r = await call("POST", `/combinations/${combo}/rules/r_c36_party/fact`, { label: "Has a travel party", meaning: "Whether others travel with the child (Sample).", valueType: "yes_no", subject: "person" });
+  const pp = r.body?.proposalId as string;
+  r = await call("POST", "/review/proposals/decide", { ids: [pp], action: "edit", payload: { ...JSON.parse(sql(`select payload from proposal_item where id='${pp}'`)), valueType: "code" } }, "user-C");
+  ok("C3.6 fail (review m-r2a): on the add-by-rule route an edit to a choice with no values is refused", r.status === 400 && /needs its answer values/.test(msg(r)), msg(r));
   console.log(`\n${pass} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.error("FAIL  unexpected", e); process.exit(1); });

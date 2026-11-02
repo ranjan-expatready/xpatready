@@ -42,3 +42,26 @@ Most valuable fixes:
 3. Make Undo check fields that reuse the list (M1): raises data and recovery.
 
 Not tested: a real screen reader, an intended user's unaided walk (D17/D20), runtime R3 using the list.
+
+## Round 2 (b09bad01)
+Same copy on :4466, re-walked by script and headless Chromium. Data was checked in the database after each journey.
+- J5 split decision (now: return the field): **held.** The combination approve is refused in words. Field and list stay DRAFT. Withdraw removes both. With the field approved, the field and its list release together.
+- J6 second person reads the list: **held.** The change page shows the values and whether the list is new or existing. axe 0 at 1024, 640 (200 %) and 400 px, no sideways scroll, no page errors.
+- J7 recovery across batches: **held for fields** (a draft list is never reused by a field). **Failed across kinds:** a form's list accepted as reuse of a C3.6 draft list is left dangling by Undo (review R2-M1).
+- J8 edit by API: **held** on route 1. Route 2 can still land a choice with no list (m-r2a).
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | Author, reviewer and approver paths, and both release routes, work. |
+| Next step obvious | 1 | Unchanged. |
+| Plain words | 1 | Release refusal and value refusals are in words. |
+| Feedback and state | 1 | "(new list, approved with this field)" on the change page. |
+| Correct data | ½ | R2-M1 dangling list key; m-r2a choice without a list. |
+| Error recovery | ½ | Undo can orphan a form's accepted list (R2-M1). |
+| Accessibility and screen sizes | 1 | axe 0; 400/1024 px and 200 % with no sideways scroll. |
+| Speed | 1 | Within the budgets. |
+| Visual quality | 1 | Team look; values shown in the existing definition list. |
+| Trust and sources | 1 | The approver sees what they approve; values are Sample. |
+
+**Total: 9 / 10. Pass** (no 0). Most valuable fix: R2-M1 (raises data and recovery).
+Not tested: a real screen reader, an intended user's unaided walk (D17/D20).

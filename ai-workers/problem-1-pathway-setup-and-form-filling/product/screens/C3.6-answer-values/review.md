@@ -72,3 +72,44 @@ Fix: show the values on the list ADD's change page, and show which list the fiel
 
 ## Could not check
 A real screen reader. An intended user's unaided walk. Runtime R3 using the list (another lane).
+
+## Round 2 (b09bad01)
+
+Same copy `rev_c36` on :4466, web rebuilt, live AI off, US$0. Fix diff `bf057573..b09bad01` (merge of #412 ignored).
+Suites on :4466 (each after a demo reset): c36 answer values 38/38, its browser 8/8, p149 73/73, rule facts 42/42, c36 acceptance 17/17, c1113 21/21, c34 29/29, screen02 slice2 53/53 (the file has 53 checks, not 62), queue_tx 8/8. No committed file was rewritten by a test.
+Note: while I reviewed, uncommitted edits appeared in this tree (`api/src/proposals.ts` `ridingLists`, `api/src/rule-facts.ts` `valuesCompared`, and the breaker's round 2 in break-report.md). They are not part of b09bad01. This verdict is for b09bad01 only.
+
+**Verdict: Block** (1 Major open). In skill terms: *Ship after fixes*.
+
+### Round-1 findings
+- **B1 fixed.** The list has no ADD of its own and rides with its field. Combination route (studio.ts:1004) with the field RETURNED: submit 201, SME sign-off 201, approve → 409 "Release refused: it uses "Who the child travels with", a new shared field that is returned to the author". Field and list stay DRAFT. With the field APPROVED, the combination release publishes field and list together (`lists:1`) and the ADD becomes RELEASED. Pack release does the same (`publishLibraryChanges` → `releaseFieldList`). Withdraw of the returned field removes the field and its list (0 rows each).
+- **M1 fixed for fields.** Only a PUBLISHED list with the same codes, words and order is reused (`landAnswerList`), so a second field never shares a draft list. `dropFieldList` keeps a list another field still names. See R2-M1 for the remaining hole.
+- **M2 fixed.** `/review/change/<field ADD>` shows "Answer values: Cat · Dog · Москва (new list, approved with this field)", or "(an existing list)". axe 0, no sideways scroll at 1024 px, 640 px at 200 %, or 400 px, no page errors (screenshot in my scratchpad).
+- **m1 fixed for route 1.** An edit is checked again by `checkedFieldValues`: values on yes/no are refused, a choice with no values is refused, and the codes are rebuilt from the words. See m-r2a for route 2.
+- m2 and m6 are gone with the design change. m5 is covered by the new tests (release, return, reuse, edit).
+
+### Major
+**R2-M1. A form's answer list reuses a C3.6 draft list that has no ADD, and Undo then deletes it under the accepted item.** I reproduced this on :4466 (also break R2-M1):
+1. Accept `person.zz_x` with the values English/French. This creates DRAFT `zz_probe_answers`, with no ADD.
+2. Run the rules pass on IMM 5257. "Preference language" is proposed as `reuse` of `zz_probe_answers`. Accept it (201, `landedAs: zz_probe_answers`).
+3. Undo the step-1 batch → `{"undone":1}`.
+
+Result: the list has 0 rows, and the form item stays `accepted` with `decided_key = zz_probe_answers`. Before this, the form's list also "reused" a list nobody had approved, and it would never reach the library on its own.
+
+Cause:
+- `sameInLibrary` and `usableInLibrary` still treat any DRAFT list as a library item (proposals.ts:68-70, :87).
+- `dropFieldList` counts only field users (answer-values.ts `dropFieldList`).
+
+Fix: a draft list with no `answer_list` ADD is not reusable by another proposal. Also, Undo and withdraw keep (or refuse in words) a list that an accepted item names. Add a test that fails when either rule is removed.
+
+### Minor
+- m-r2a. Route 2 (`/rules/:key/fact`) sets no `work.ruleFact`, so `needsValues` is false (proposals.ts:241). An edit of such an item to `code` with no values lands `person.pick_kind|code|(none)`, a choice without a list. API only: rules items have no edit button. Fix: also require values when `r.step === "rule_fact"`.
+- m-r2b. Once released, a list that was new on that change reads "(an existing list)" on the change page. The words are right for the approver before release and slightly off afterwards.
+- The breaker's round 2 also lists R2-M2 (rule value not among the values) and m-a to m-e. I did not re-score them here.
+
+### Dimensions (changed since round 1)
+- Second-person approval: **met**. The release is gated through the field, and the approver sees the values.
+- Data integrity: **not met** (R2-M1).
+- Keys never typed: met on add and on the route-1 edit.
+
+### Journey score (reviewer): 9 / 10, pass (see journey file, Round 2). The verdict is still Block because R2-M1 is open.
