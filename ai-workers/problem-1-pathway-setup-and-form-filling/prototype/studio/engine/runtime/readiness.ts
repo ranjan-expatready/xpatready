@@ -120,7 +120,8 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
     if (signatureNeeded(f) && !f.signed) {
       const how = f.signature === "HAND_SCANNED" ? "signed by hand and its scan uploaded" : f.signature === "PEN" ? "signed in pen"
         : "signed (how it is signed is not set on the form line yet; until it is, the signature is waited for)";
-      block({ code: "missing_signature", ...at, owes: f.signerOwes ?? "client", words: `${ofWho(f)} must be ${how}${f.signers?.length ? ` by ${list(f.signers)}` : ""}.` });
+      // S1 review m3: when the line does not say how it is signed, staff set that first (the client cannot), so staff owe it.
+      block({ code: "missing_signature", ...at, owes: f.signature === "NONE" ? "staff" : f.signerOwes ?? "client", words: `${ofWho(f)} must be ${how}${f.signers?.length ? ` by ${list(f.signers)}` : ""}.` });
     }
     // BR-9 2 (P-144): IRCC returns a barcode form unprocessed without its Validate.
     if (f.needsValidate && (f.channel === "PDF_UPLOAD" || f.channel === "PAPER") && !f.validatedCurrent)

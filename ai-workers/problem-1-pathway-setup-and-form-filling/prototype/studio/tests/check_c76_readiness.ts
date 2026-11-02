@@ -49,6 +49,8 @@ r = filingReadiness(done({ forms: [i5257(), fresh()] }));
 ok("S1 fail: a new PDF upload line (method not set, no signedBy) is never filed unsigned: \"missing signature\", saying how it is signed is not set", !r.ready && codes(r.blocks).join() === "missing_signature" && /IMM 5707/.test(r.blocks[0].words) && /not set/.test(r.blocks[0].words) && signatureNeeded({ channel: "PDF_UPLOAD", signature: "NONE" }), r.blocks);
 r = filingReadiness(done({ forms: [i5257(), fresh({ channel: "PAPER" })] }));
 ok("S1 fail: the same on Paper", !r.ready && codes(r.blocks).join() === "missing_signature");
+r = filingReadiness(done({ forms: [i5257(), fresh()] }));
+ok("S1 review m3 pass: a signature whose method is not set is owed by staff (they set how it is signed); a named hand signature stays the client's", r.blocks[0]?.owes === "staff" && filingReadiness(done({ forms: [i5257(), i5476({ signed: false })] })).blocks[0]?.owes === "client", r.blocks.map((b) => b.owes));
 r = filingReadiness(done({ forms: [i5257(), fresh({ signedBy: "none" })] }));
 ok("S1 pass: \"No signature\" chosen on the line (signedBy none) needs none", r.ready && !signatureNeeded({ channel: "PDF_UPLOAD", signature: "NONE", signedBy: "none" }), r.blocks);
 r = filingReadiness(done({ forms: [i5257(), fresh({ signed: true })] }));
