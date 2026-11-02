@@ -7,6 +7,7 @@ import { fingerprintLine } from "./channels.ts";
 import type { FormEdition, PrismaClient } from "@prisma/client";
 import { canonical, sha256 } from "../../contracts/rules.ts";
 import { compareEditions } from "./programs.ts";
+import { gateFacts, snapshotEligibility, type SnapshotEligibility } from "./eligibility-gates.ts";
 
 export type Mode = "draft" | "published";
 type Versioned = { status: string; version: number; id?: string; supersedesId?: string | null };
@@ -57,6 +58,9 @@ export type Snapshot = {
   /** W1-15 slice 1: a person's choices over the rules' source per fact and person role, and the Pre-qualification
    *  ticks; present only when the combination has any (engine/sources.ts), so other configurations keep their fingerprint. */
   fact_sources?: { role: string; fact: string; source: "DOCUMENT" | "CLIENT" | "AGENT" | null; document_type: string | null; prequalification: boolean; reason: string | null; source_reason?: string; origin: string }[];
+  /** C6.9 part 1 (BR-1, BR-6): the eligibility gates, officer's judgement lines and disclaimer, frozen with the release;
+   *  present only when the combination has gates or judgement lines, so other configurations keep their fingerprint. */
+  eligibility?: SnapshotEligibility;
   row_versions: Record<string, string>;
 };
 
@@ -164,6 +168,11 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
   // W1-15 (P-97): a placement in a section only the client answers says so (only then, so the fingerprint keeps).
   const clientOnly = new Set(effSections.filter((x: any) => x.clientOnly).map((x: any) => x.sectionKey));
   for (const p of placements) used.add(p.canonicalFieldKey);
+  // C6.9 BR-5: the facts the gates read travel with the release (their words), added after placements and after the
+  // derived-input expansion on purpose: a gate never places a question or pulls in a derived value's inputs by itself.
+  // The release check (engine/eligibility-gates.ts gateProblems) refuses a gate fact no case is asked, a derived one too.
+  const eligibility = snapshotEligibility(comp.eligibility);
+  for (const f of gateFacts(eligibility)) used.add(f);
 
   const snapshot: Snapshot = {
     contract_version: "combination-config/v0",
@@ -184,6 +193,7 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
     derived_fields: [...derived].sort((a, b) => a.derivedKey.localeCompare(b.derivedKey)).map((d) => ({ id: d.derivedKey, calculation: d.calculation, inputs: d.inputs, reference: d.reference, plain: d.plain, executable: d.executable })),
     checks: effChecks.sort((a, b) => a.checkKey.localeCompare(b.checkKey)).map((c) => ({ id: c.checkKey, group: c.checkGroup, applies_to: c.appliesTo, condition: c.predicateJson, severity: c.severity, message: c.message, source_quote: c.sourceQuote, illustrative: c.illustrative, item_version: c.version })),
     ...(effSources.length ? { fact_sources: effSources.sort((a: any, b: any) => a.lineageKey.localeCompare(b.lineageKey)).map((r: any) => { note("fact source", r.lineageKey, r); return { role: r.role, fact: r.canonicalFieldKey, source: r.source ?? null, document_type: r.documentTypeKey ?? null, prequalification: r.prequalification, reason: r.reason ?? null, ...(r.sourceReason ? { source_reason: r.sourceReason } : {}), origin: r.origin }; }) } : {}),
+    ...(eligibility ? { eligibility } : {}),
     row_versions: rv,
   };
   const { row_versions: _rv, mode: _m, ...hashed } = snapshot;

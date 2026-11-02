@@ -28,6 +28,15 @@ One owner per row and per shared file; never build another owner's rows. Under t
 | R4 | runtime | **An eligibility rule's own outcome** (P-230 (1)): a gate carries "when not met" (Not eligible or needs review) as data; the background gate is needs review | C6.9 tests cover both; copy says the representative reviews | P-230 |
 | L-doc | later | **Document rules fields** (P-230 (8)): copy kind, certified translation, validity window on document requirements (schema) | after the M2 gate | P-230 |
 
+## Demo first (founder, 2 Nov): in order, ahead of Now
+| # | Area | Item | Done when (beyond the standard) | Source |
+|---|---|---|---|---|
+| D1 | runtime | **Reset to the six** (P-226): one Demo menu button = empty configuration + the six combinations with structure and PDFs; saved AI results kept | one click from any state gives the library empty and exactly the six; a saved result recorded before the reset still replays after it; pass and fail tests | P-226, C11.7, C10.1 |
+| D2 | forms | **Live or Saved at every AI start** (P-227): the finder, field map, checklist reading, drafting, Draft questions and documents and PQR picks offer exactly Live and Saved; Saved replays through the same live steps and progress; a failed Live run offers Saved | every AI entry point checked in a browser journey; Saved costs US$0 and shows the steps; a forced Live failure offers Saved | P-227, C11.8 |
+| D3 | forms | **Record and verify Visitor visa's Saved results** (P-225, P-227): IMM 5257 field map, sections and rules, Draft questions and documents, checklist reading, PQR picks; the Lead and qa check them before they are committed | QA-144 closed: from Reset to the six, Visitor visa is configured and released on screens using Saved only, at US$0; spend within P-225 or the founder's raise | P-225, P-227, QA-144 |
+| T1 | runtime | **Full test run on GitHub machines** (P-228 (6)): `nightly.yml` runs on GitHub Linux machines in shards, keeps the speed budgets, and is started by schedule and by the Lead | a run on GitHub finishes green on main; the Mac runner is no longer needed for it | P-228 |
+| D4 | runtime | **#357 m3** (P-229 (3)): a derived Yes that overrides a client's No shows as a check to the officer | pass and fail tests; shown on the case page | P-229 |
+
 ## Now
 | # | Area | Item | Done when (beyond the standard) | Source |
 |---|---|---|---|---|
