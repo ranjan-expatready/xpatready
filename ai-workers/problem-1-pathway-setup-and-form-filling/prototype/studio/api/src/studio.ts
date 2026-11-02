@@ -744,6 +744,10 @@ export class Studio {
     const typeKeys = [typeKey!, ...alternatives];
     const row = await this.db.$transaction(async (tx) => {
       await lockItem(tx, workspaceId, "document_type", typeKeys); await refuseRetired(tx, workspaceId, "document_type", typeKeys);
+      // C3.6 (review round 3): read again under the lock, so a type an Undo removed meanwhile is never written onto a line.
+      const still = new Set((await tx.documentType.findMany({ where: { workspaceId, documentTypeKey: { in: typeKeys } }, select: { documentTypeKey: true } })).map((t) => t.documentTypeKey));
+      const gone = typeKeys.find((k) => !still.has(k));
+      if (gone) fail(gone === typeKey ? "Choose a document type, or name a new one: this one is no longer in the library." : `An alternative must be a document type in the library: ${gone} is not.`);
       if (!lineage) {
         let key = `${typeKey}:${b.appliesToRoles}`;
         if (await tx.documentRequirement.findFirst({ where: { combinationId, lineageKey: key } })) key = `${key}:${Date.now().toString(36)}`;

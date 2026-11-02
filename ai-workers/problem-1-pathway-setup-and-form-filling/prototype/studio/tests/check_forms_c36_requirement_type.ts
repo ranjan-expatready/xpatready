@@ -133,6 +133,22 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   r = await call("POST", `/review/proposals/undo/${und2Acc.body?.batchId}`, {}, "user-B");
   ok("C3.6 pass (break M1): Undo of the accept still works while no line uses the type (the type goes, the proposal waits again)", r.status === 201 && sql(`select count(*) from document_type where document_type_key = '${und2Acc.body?.items?.[0]?.landedAs}'`) === "0" && sql(`select status from proposal_item where id = '${und2.body?.proposalId}'`) === "waiting", [r.status, words(r)]);
 
+  // Review round 3 (#573): Undo and a line add at the same moment never leave a line on a type that is gone.
+  let bothWon = 0, rounds = 0;
+  for (let i = 0; i < 16; i++) {
+    const n = await call("POST", `/combinations/${wp}/requirements`, { ...line, documentTypeName: `Proof of a raced thing ${i} (Sample)` });
+    const a = await call("POST", "/review/proposals/decide", { ids: [n.body?.proposalId], action: "accept" }, "user-B");
+    const k = a.body?.items?.[0]?.landedAs;
+    if (!k) continue;
+    rounds++;
+    const u = call("POST", `/review/proposals/undo/${a.body?.batchId}`, {}, "user-B");
+    await new Promise((res) => setTimeout(res, i % 4 * 5));
+    const [ur, lr] = await Promise.all([u, call("POST", `/combinations/${wp}/requirements`, { ...line, documentTypeKey: k })]);
+    if (ur.status === 201 && lr.status === 201) bothWon++;
+  }
+  const orphans = sql("select count(*) from document_requirement r where r.status <> 'RETIRED' and not exists (select 1 from document_type t where t.workspace_id = r.workspace_id and t.document_type_key = r.document_type_key)");
+  ok("C3.6 fail (review round 3): Undo racing a line add never both succeed, and no live line names a type that is gone (16 rounds)", rounds === 16 && bothWon === 0 && orphans === "0", { rounds, bothWon, orphans });
+
   // Break m (#573): text fields are text.
   for (const [label, extra] of [["an object as the name", { documentTypeName: { a: 1 } }], ["a number as what it proves", { documentTypeName: "Proof of a typed thing (Sample)", proves: 42 }], ["a number as the source quote", { documentTypeName: "Proof of a typed thing (Sample)", sourceQuote: 7 }]] as const) {
     r = await call("POST", `/combinations/${wp}/requirements`, { ...line, ...extra });
