@@ -65,3 +65,9 @@ Failure scenario: none today, because the deterministic S1 checks fail every tim
 
 ## Could not check
 End-to-end behaviour (readiness is not wired). Real IRCC portal signing (Sample; Unconfirmed: no counsel).
+
+## Round 2 — b138f21c (2 Nov)
+**Verdict: Approve** (no open Blocker or Major).
+- **m3: fixed.** readiness.ts:124: `owes: f.signature === "NONE" ? "staff" : f.signerOwes ?? "client"`. New check "S1 review m3 pass" (check_c76_readiness.ts:52-53): the unset line is owed by staff, and IMM 5476 signed by hand stays with the client. With the old `owes` put back, the check fails, because it asserts "staff". `npx tsx tests/check_c76_readiness.ts`: **64/64 passed**; the "staff first" order check still passes.
+- New note (Minor, no action): on a NONE line, staff now overrides any `signerOwes` the caller passes. This is right while the method is unset, since staff must set it first.
+- m1, m2 and m4 go in the PR body, as the coordinator said; m1 (the wording) goes to the forms lane. The review.md committed in b138f21c matches round 1.
