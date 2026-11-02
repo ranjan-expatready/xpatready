@@ -1,21 +1,47 @@
 // C6.4 (M3-B, runtime lane; P-171; M3 case view r5c "checklist per person"): a case's document checklist, one list per
-// person, from its pinned release's requirements and rechecked against the case's answers on every read (nothing stored).
+// person, from its pinned release's requirements and rechecked against the case's answers on every read.
 // The case officer reads it; a client and configuration people do not (deny by default, as runtime.ts). Visitor visa
 // only in this slice: other combinations answer "not derived yet". Sample until the immigration expert confirms. US$0.
-import { Controller, Get, Headers, HttpStatus, Inject, Injectable, Param } from "@nestjs/common";
-import { caseChecklist } from "../../engine/runtime/case-checklist.ts";
+// Storage slice (M3-C; SI-14 stand-in for the team's storage): a line the person needs is kept as a checklist_line row
+// (written on read, so it keeps its id and state when the answers take it away and bring it back); the officer requests
+// it, the officer or the case's client uploads it (the file is the person's: case_document), or the officer marks it Not
+// applicable with a reason. A line that was requested, has a file or is Not applicable stays on the person's list when
+// the answers no longer call for it (kept), so nothing asked for or received silently disappears. Audit lines name the
+// document type, the person's role and the case by its short id, never a file's contents (RT-17).
+import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Inject, Injectable, Param, Post, UploadedFiles, UseInterceptors } from "@nestjs/common";
+import { AnyFilesInterceptor } from "@nestjs/platform-express";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { HttpException } from "@nestjs/common";
+import { problemFromZod } from "../../contracts/programs.ts";
+import { cleanName, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_MB, MEDIA, mediaOf, NOT_APPLICABLE_FROM, NotApplicable, REQUEST_FROM, STATE_WORDS, UPLOAD_FROM, type LineState, type StoredDocument } from "../../contracts/documents.ts";
+import { caseChecklist, type PersonLine } from "../../engine/runtime/case-checklist.ts";
 import { checkValue, knownOf } from "../../engine/runtime/case.ts";
-import { actorOf, CaseRead, Db, fail, type Actor } from "./core.ts";
-import { Runtime } from "./runtime.ts";
+import { actorOf, Audit, CaseRead, Db, fail, VAR, WORKSPACE_KEY, type Actor } from "./core.ts";
+import { Runtime, type Reached } from "./runtime.ts";
 
 type H = string | undefined;
+type Upload = { fieldname?: string; originalname?: string; buffer?: Buffer; size?: number };
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const short = (id: string) => id.slice(0, 8);
+/** A checklist line as the API answers it: the derived line with its stored id, state and documents (M3-CONTRACT C6.4). */
+export type StoredLine = Omit<PersonLine, "state" | "documents"> & { state: LineState; state_words: string; state_reason: string | null; state_by: string | null; state_at: string | null;
+  version: number; documents: StoredDocument[]; kept: boolean; derived_id: string };
+
+/** The working files' folder for documents (the person's own, by the row id). */
+const DOCS = () => VAR(WORKSPACE_KEY);
 
 @Injectable()
 export class CaseChecklists {
-  constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db) {}
+  constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit) {}
 
   async list(actor: Actor, caseId: string) {
-    const c = await this.r.reach(actor, caseId, "officer");
+    return this.stored(await this.r.reach(actor, caseId, "officer"));
+  }
+
+  /** The derived checklist (nothing stored), as #325. */
+  private async derive(c: Reached) {
     const s = this.r.snapshotOf(c), pin = c.pins[0];
     // The release must describe the case's own combination (as case-filings.ts): never another combination's lines.
     const own = await this.db.combination.findUnique({ where: { id: c.combinationId }, select: { combinationKey: true } });
@@ -27,6 +53,113 @@ export class CaseChecklists {
     const { known } = knownOf(s, people, answers.filter((x) => checkValue(s, x.field, x.value, today).length === 0), rows, today);
     return { case_id: c.id, reference: c.reference, release_version: pin.release.version, today: today.toISOString().slice(0, 10), ...caseChecklist(s, own!.combinationKey, people, known, today) };
   }
+
+  /** The derived checklist with its stored lines: every needed line gets its row (created once, then kept). */
+  private async stored(c: Reached) {
+    const d = await this.derive(c);
+    if (!d.derived) return d;
+    const needed = d.people.flatMap((p) => p.lines.map((l) => ({ workspaceId: c.workspaceId, caseId: c.id, subjectId: p.subject, documentType: l.document.key, lineage: l.lineage })));
+    if (needed.length) await this.db.checklistLine.createMany({ data: needed, skipDuplicates: true });
+    const rows = await this.db.checklistLine.findMany({ where: { caseId: c.id } });
+    const subjects = d.people.map((p) => p.subject);
+    const docs = await this.db.caseDocument.findMany({ where: { subjectId: { in: subjects } }, orderBy: [{ uploadedAt: "asc" }, { id: "asc" }] });
+    const rowOf = new Map(rows.map((x) => [`${x.subjectId}|${x.documentType}`, x]));
+    const docsOf = (subject: string, type: string): StoredDocument[] => docs.filter((x) => x.subjectId === subject && x.documentType === type).map((x) => ({
+      id: x.id, current: x.current, file_name: x.fileName, media_type: x.mediaType, size_bytes: x.sizeBytes, sha256: x.sha256, uploaded_by: x.uploadedBy,
+      uploaded_at: x.uploadedAt.toISOString(), superseded_at: x.supersededAt?.toISOString() ?? null }));
+    const people = d.people.map((p) => {
+      const out = (l: PersonLine, kept: boolean): StoredLine => {
+        const row = rowOf.get(`${p.subject}|${l.document.key}`), documents = docsOf(p.subject, l.document.key);
+        const state = (row?.state ?? "not_requested") as LineState;
+        const reason = kept ? `${l.reason} Kept on the list: it is ${STATE_WORDS[state]}${documents.length ? " and has a file" : ""}, so it is not dropped when the answers change.` : l.reason;
+        return { ...l, id: row?.id ?? l.id, derived_id: l.id, reason, required: kept ? false : l.required, state, state_words: STATE_WORDS[state], state_reason: row?.stateReason ?? null,
+          state_by: row?.stateBy ?? null, state_at: row?.stateAt?.toISOString() ?? null, version: row?.version ?? 0, documents, kept };
+      };
+      // A line no longer needed that was acted on (requested, a file, Not applicable) stays on the person's list.
+      const acted = (l: PersonLine) => { const row = rowOf.get(`${p.subject}|${l.document.key}`); return !!row && (row.state !== "not_requested" || docsOf(p.subject, l.document.key).length > 0); };
+      const keptWaiting = p.waiting.filter(acted), keptNot = p.not_needed.filter(acted);
+      const lines = [...p.lines.map((l) => out(l, false)), ...keptWaiting.map((l) => out(l, true)), ...keptNot.map((l) => out(l, true))];
+      return { ...p, lines, waiting: p.waiting.filter((l) => !acted(l)).map((l) => out(l, false)), not_needed: p.not_needed.filter((l) => !acted(l)).map((l) => out(l, false)) };
+    });
+    return { ...d, people };
+  }
+
+  /** The stored line by its id on a case this person may reach, and the line as the checklist now shows it. A line the
+   *  answers no longer call for and nobody acted on is not on the list: it cannot be acted on (409). */
+  private async line(actor: Actor, id: string, want: "answer" | "officer") {
+    if (!UUID.test(id)) fail("No such checklist line.", HttpStatus.NOT_FOUND);
+    const workspaceId = (await this.db.case.findFirst({ where: { checklistLines: { some: { id } } }, select: { workspaceId: true } }))?.workspaceId;
+    const row = workspaceId ? await this.db.checklistLine.findFirst({ where: { id, workspaceId } }) : null;
+    if (!row) fail("No such checklist line.", HttpStatus.NOT_FOUND);
+    const c = await this.r.reach(actor, row!.caseId, want);
+    const list = await this.stored(c);
+    const person = list.derived ? list.people.find((p) => p.subject === row!.subjectId) : undefined;
+    const shown = person?.lines.find((l) => l.id === id);
+    if (!shown) fail(`This document is not on ${person?.label ?? "the person"}'s list now: the answers no longer call for it. Nothing was changed.`, HttpStatus.CONFLICT);
+    return { c, row: row!, shown: shown!, person: person! };
+  }
+
+  private async moved(c: Reached, id: string) {
+    const list = await this.stored(c);
+    return list.derived ? list.people.flatMap((p) => p.lines).find((l) => l.id === id)! : null;
+  }
+
+  private async setState(actor: Actor, id: string, from: readonly LineState[], to: LineState, reason: string | null, words: string) {
+    const { c, row, shown, person } = await this.line(actor, id, "officer");
+    if (row.state === to && to === "requested") return this.moved(c, id); // asking again for what is already asked: nothing changes
+    if (!from.includes(row.state as LineState)) fail(`${shown.label} for ${person.label} is ${STATE_WORDS[row.state as LineState]}: it cannot be marked ${STATE_WORDS[to]} now. Nothing was changed.`, HttpStatus.CONFLICT);
+    const n = await this.db.checklistLine.updateMany({ where: { id, version: row.version }, data: { state: to, stateReason: reason, stateBy: actor.id, stateAt: new Date(), version: { increment: 1 } } });
+    if (n.count !== 1) fail("Someone changed this line after you opened it; the newer state is shown. Check it and try again.", HttpStatus.CONFLICT);
+    await this.audit.log(c.workspaceId, actor.id, words, "checklist line", id, `${actor.name} ${words} ${shown.label} for the ${person.role} on case ${short(c.id)} (${STATE_WORDS[row.state as LineState]} to ${STATE_WORDS[to]})`);
+    return this.moved(c, id);
+  }
+
+  request(actor: Actor, id: string) { return this.setState(actor, id, REQUEST_FROM, "requested", null, "requested"); }
+
+  notApplicable(actor: Actor, id: string, body: unknown) {
+    const r = NotApplicable.safeParse(body ?? {});
+    if (!r.success) throw new HttpException(problemFromZod(r.error), HttpStatus.BAD_REQUEST);
+    return this.setState(actor, id, NOT_APPLICABLE_FROM, "not_applicable", r.data.reason, "marked not applicable");
+  }
+
+  /** One file on the line: stored as the person's, the person's earlier file of this type kept as history. */
+  async upload(actor: Actor, id: string, files: Upload[] | undefined) {
+    const { c, row, shown, person } = await this.line(actor, id, "answer");
+    const f = (files ?? []).filter((x) => x.buffer);
+    if (f.length !== 1 || f[0].fieldname !== "file") fail(`Send one file, in the field "file". Nothing was stored.`);
+    const bytes = f[0].buffer!;
+    if (!bytes.length) fail("The file is empty. Nothing was stored.");
+    if (bytes.length > MAX_DOCUMENT_BYTES) fail(`The file is larger than ${MAX_DOCUMENT_MB} MB. Nothing was stored.`, HttpStatus.PAYLOAD_TOO_LARGE);
+    const media = mediaOf(bytes);
+    if (!media) fail("Send a PDF, JPEG or PNG file (judged by the file itself, not its name). Nothing was stored.", HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+    if (!UPLOAD_FROM.includes(row.state as LineState)) fail(`${shown.label} for ${person.label} is Not applicable: request it again before uploading. Nothing was stored.`, HttpStatus.CONFLICT);
+    const docId = randomUUID(), sha256 = createHash("sha256").update(bytes).digest("hex");
+    const rel = join("people", row.subjectId, "documents", `${docId}.${MEDIA[media!]}`), abs = join(DOCS(), rel);
+    mkdirSync(dirname(abs), { recursive: true }); writeFileSync(abs, bytes);
+    try {
+      await this.db.$transaction(async (tx) => {
+        // One upload at a time per line: the row's version is the lock (a second upload in the same moment is refused).
+        const n = await tx.checklistLine.updateMany({ where: { id, version: row.version }, data: { state: "received", stateReason: null, stateBy: actor.id, stateAt: new Date(), version: { increment: 1 } } });
+        if (n.count !== 1) fail("Someone changed this line after you opened it; the newer state is shown. Check it and try again. Nothing was stored.", HttpStatus.CONFLICT);
+        const now = new Date();
+        await tx.caseDocument.updateMany({ where: { subjectId: row.subjectId, documentType: row.documentType, current: true }, data: { current: false, supersededAt: now } });
+        await tx.caseDocument.create({ data: { id: docId, workspaceId: c.workspaceId, subjectId: row.subjectId, documentType: row.documentType, checklistLineId: id, fileName: cleanName(f[0].originalname),
+          mediaType: media!, sizeBytes: bytes.length, sha256, path: rel, uploadedBy: actor.id, uploadedAt: now } });
+      });
+    } catch (e) { rmSync(abs, { force: true }); throw e; } // a refused upload leaves no file behind
+    await this.audit.log(c.workspaceId, actor.id, "uploaded", "case document", docId, `${actor.name} uploaded ${shown.label} for the ${person.role} on case ${short(c.id)} (${MEDIA[media!].toUpperCase()}, ${bytes.length} bytes)`);
+    const line = await this.moved(c, id);
+    return { ...line, document: line?.documents.find((x) => x.id === docId) ?? null };
+  }
+
+  /** A stored document's bytes, checked against its sha256 (for C6.5's reading; no route). */
+  async bytesOf(documentId: string): Promise<Buffer> {
+    const d = await this.db.caseDocument.findUnique({ where: { id: documentId } });
+    if (!d) fail("No such document.", HttpStatus.NOT_FOUND);
+    const b = readFileSync(join(DOCS(), d!.path));
+    if (createHash("sha256").update(b).digest("hex") !== d!.sha256) fail("This document's file changed on disk since it was uploaded; upload it again.", HttpStatus.CONFLICT);
+    return b;
+  }
 }
 
 @CaseRead()
@@ -34,4 +167,8 @@ export class CaseChecklists {
 export class CaseChecklistsController {
   constructor(@Inject(CaseChecklists) private readonly x: CaseChecklists) {}
   @Get("cases/:id/checklist") list(@Headers("x-actor") a: H, @Param("id") id: string) { return this.x.list(actorOf(a), id); }
+  @Post("checklist-lines/:id/request") @HttpCode(200) request(@Headers("x-actor") a: H, @Param("id") id: string) { return this.x.request(actorOf(a), id); }
+  @Post("checklist-lines/:id/not-applicable") @HttpCode(200) notApplicable(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.x.notApplicable(actorOf(a), id, b); }
+  @Post("checklist-lines/:id/documents") @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: MAX_DOCUMENT_BYTES, files: 1 } }))
+  upload(@Headers("x-actor") a: H, @Param("id") id: string, @UploadedFiles() files: Upload[]) { return this.x.upload(actorOf(a), id, files); }
 }

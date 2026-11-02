@@ -226,7 +226,23 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   // ------------------------------------------------------------ conditions: facts that decide what applies
   const deciders = new Map<string, { fact: string; about: string; decides: Set<string> }>();
   const addDecider = (missing: string[], about: string, what: string) => { for (const m of missing) { if (m.startsWith("(")) continue; const a = m.startsWith("case.") ? "case" : about; const k = `${a}|${m}`; const d = deciders.get(k) ?? { fact: m, about: a, decides: new Set<string>() }; d.decides.add(what); deciders.set(k, d); } };
+  // QA-149: an answered fact that a condition reads still decides it, decided or not, so it stays on the case and can be
+  // changed (a child's "travelling alone" answered yes added a line, then the question was gone and could not be undone).
+  // A calculated field is kept by the answers it is worked out from. Unanswered facts a decided condition does not need
+  // are not asked (they decide nothing now).
+  const inputsOf = new Map(((s.derived_fields ?? []) as { id: string; inputs?: string[]; reference?: string }[]).map((d) => [d.id, [...(d.inputs ?? []), ...(d.reference ? [d.reference] : [])]]));
+  const readsOf = (tree: unknown): string[] => {
+    const out = new Set<string>(), walk = (f: string) => { if (out.has(f)) return; out.add(f); for (const x of inputsOf.get(f) ?? []) walk(x); };
+    for (const m of JSON.stringify(tree ?? null).matchAll(/"field":"([^"]+)"/g)) walk(m[1]);
+    return [...out];
+  };
+  const keepAnswered = (tree: unknown, subjects: string[] | "document", what: string) => {
+    if (!tree || subjects === "document") return;
+    const reads = readsOf(tree);
+    for (const about of subjects) addDecider(reads.filter((f) => known.has(kkey(f.startsWith("case.") ? "case" : about, f))), about, what);
+  };
   for (const f of forms) if (f.applies === "cannot_tell") addDecider(f.missing, f.person, `whether ${f.form} applies to ${f.person_label}`);
+  for (const f of s.forms) if (f.condition) for (const row of forms.filter((x) => x.form === f.form_number)) keepAnswered(f.condition, [f.condition.subjectKind === "CASE" ? "case" : row.person], `whether ${f.form_number} applies to ${row.person_label}`);
 
   // ------------------------------------------------------------ document checklist
   // Q2 (#325): whose list a line is on comes from its own "who" (lineHolders); its condition is decided on its subject.
@@ -234,6 +250,7 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
     return lineHolders(people, d.who).map((person) => {
       const c = lineCondition(s, known, people, person, d.condition);
       if (c.applies === "cannot_tell") addDecider(c.missing, c.about ?? person, `whether "${d.document_type}" is needed`);
+      keepAnswered(d.condition, d.condition ? conditionSubjects(people, person, d.condition.subjectKind) : [], `whether "${d.document_type}" is needed`);
       return { lineage: d.lineage, requirement: d.document_type, document_type_key: (d as { document_type_key?: string }).document_type_key ?? null, person, person_label: label(person), base_or_conditional: d.base_or_conditional, provided_by: d.provided_by, applies: c.applies, missing: c.missing,
         status: c.applies === false ? "Not needed" : c.applies === "cannot_tell" ? "Cannot tell yet" : "Needed", why: d.condition_plain ?? (d.base_or_conditional === "base" ? "required for every person it names" : d.note ?? ""), source_quote: d.source_quote, origin: d.origin, item_status: d.status };
     });
@@ -263,7 +280,7 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   const rules = s.rules.map((r) => {
     const kind = r.when?.subjectKind;
     const subjects = kind === "CASE" ? ["case"] : subjectsFor(people, r.for_whom, kind === "EACH_APPLICANT" || kind === "EACH_PERSON" ? undefined : kind);
-    const results = subjects.map((person) => { const c = evalCondition(s, known, r.when, person); if (c.applies === "cannot_tell") addDecider(c.missing, person, r.then); return { person, person_label: label(person), applies: c.applies, missing: c.missing }; });
+    const results = subjects.map((person) => { const c = evalCondition(s, known, r.when, person); if (c.applies === "cannot_tell") addDecider(c.missing, person, r.then); keepAnswered(r.when, [person], r.then); return { person, person_label: label(person), applies: c.applies, missing: c.missing }; });
     return { id: r.id, then: r.then, when_plain: r.when_plain, for_whom: r.for_whom, results, origin: r.origin, item_status: r.status };
   });
 
@@ -287,6 +304,7 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
       // Grounding audit finding 3: a question's own condition is decided by other answers; those questions are asked
       // (for the same person, or once for the case) so the dependent question can become reachable.
       if (c.applies === "cannot_tell") addDecider(c.missing, subject, `whether "${p.question_text || f?.meaning || fact}" is asked`);
+      keepAnswered(p.condition, [subject], `whether "${p.question_text || f?.meaning || fact}" is asked`);
     }
     const kv = known.get(kkey(about, fact)) ?? (rows.length ? known.get(kkey(about, fact, rows[0])) : undefined);
     if (kv && status !== "hidden by a condition") status = kv.status === "confirmed" ? "confirmed" : "answered";
