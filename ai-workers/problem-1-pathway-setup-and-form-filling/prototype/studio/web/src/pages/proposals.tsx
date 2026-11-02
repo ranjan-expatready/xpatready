@@ -64,7 +64,7 @@ export function ProposalsPage() {
         {view.isPending ? <Skeleton className="h-64" /> : view.isError ? <ErrorState title="The proposals could not be loaded" description={view.error.message} action={<Button variant="secondary" onClick={() => view.refetch()}>Try again</Button>} />
           : !groups.length ? <EmptyState title="Nothing to review" description="No proposal is waiting. New ones appear here when AI drafts a form or the rules propose an item." />
           : (
-            <div className="grid gap-4 lg:grid-cols-[18rem_1fr]">
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
               <nav aria-label="Groups" className="flex flex-col gap-1.5">
                 {groups.map((x) => (
                   <button key={x.id} type="button" aria-current={x.id === asked ? "true" : undefined} onClick={() => setSp({ group: x.id })}
