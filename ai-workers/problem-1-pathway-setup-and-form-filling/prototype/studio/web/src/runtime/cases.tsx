@@ -181,8 +181,8 @@ function CasePage() {
       </section>
       <EligibilityCard caseId={c.id} people={c.people} />
       <FormsPanel caseId={c.id} />
-      <section id="agent-view" aria-labelledby="agent-view-h" className="scroll-mt-4 space-y-3"><h2 id="agent-view-h" className="text-base font-semibold" data-agent-view-h>Agent view</h2>
-      <Questionnaire caseId={c.id} mode="agent" /></section>
+      <div id="agent-view" className="scroll-mt-4 space-y-3"><h2 id="agent-view-h" className="text-base font-semibold" data-agent-view-h>Agent view</h2>
+      <Questionnaire caseId={c.id} mode="agent" /></div>
       {adding ? <AddPersonDialog caseId={c.id} role={adding} close={() => setAdding(null)} /> : null}
     </div>
   );
