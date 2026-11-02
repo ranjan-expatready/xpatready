@@ -6,6 +6,7 @@
 // hand-made snapshots. Pure: no database, no server, no model call (US$0).
 //   tsx studio/tests/check_g1_source_register.ts
 import { readFileSync } from "node:fs";
+import fc from "fast-check";
 import { join } from "node:path";
 import { slug } from "../engine/import.ts";
 import { statesValue, canonicalValue, entryOf, frozenSources, numberState, publishedNumbers, SAMPLE_LOADER, sourceChanges, sourceProblems, statesInDigits, type FeeLineInput, type PublishedNumber, type SourceEntry, type WalkedSnapshot } from "../engine/source-register.ts";
@@ -193,6 +194,31 @@ const odd: WalkedSnapshot = { combination: { key: "t.odd" }, rules: [
 const on = publishedNumbers(odd), atO = (key: string) => on.filter((n) => n.key === `t.odd/${key}`);
 ok("C5.4 BR-1 fail (break B1 on #587): a date stored with a time, or a trailing space, is the same published date and is held without a source", atO("R-D1").length === 1 && atO("R-D1")[0].value === "2019-06-07" && atO("R-D2").length === 1 && atO("R-D2")[0].value === "2019-06-07" && sourceProblems([...atO("R-D1"), ...atO("R-D2")], []).length === 2, on.map((n) => `${n.key} ${n.address} ${n.value}`));
 ok("C5.4 BR-1 fail (break M1 on #587): each number in an \"in\" list is published (0 left out), addressed by its place; codes in a list are not", atO("R-L1").map((n) => `${n.address}=${n.value}`).join() === "person.age_years|in|1.1=18,person.age_years|in|1.2=19,person.age_years|in|1.4=21" && atO("R-L2").length === 0, atO("R-L1").map((n) => n.address));
+
+// STANDARDS §7 [M] (property tests when the engine changes; Devin on #587): over generated "in" lists and conditions,
+// (1) a list publishes exactly its non-zero numbers and its dates, in order, and never its codes; (2) adding a clause
+// on another field leaves every address and value as it was; (3) a date with a time or spaces is the same date.
+const member = fc.oneof(fc.integer({ min: -500, max: 500 }), fc.constantFrom("01", "02", "yes", "CA"), fc.date({ min: new Date("1990-01-01"), max: new Date("2030-12-31"), noInvalidDate: true }).map((d) => d.toISOString().slice(0, 10)));
+const prop = (label: string, run: () => void) => { try { run(); ok(label, true); } catch (e) { ok(label, false, String((e as Error).message).slice(0, 400)); } };
+prop("C5.4 BR-1/BR-2 property (300 lists): an \"in\" list publishes exactly its non-zero numbers and its dates, in order, addressed by place", () => fc.assert(fc.property(fc.array(member, { maxLength: 12 }), (list) => {
+  const got = publishedNumbers({ combination: { key: "t.p" }, rules: [{ id: "R-P", when: { op: "in", field: "person.age_years", value: list }, then: "P", for_whom: "principal" }] } as unknown as WalkedSnapshot);
+  const want = list.map((v, i) => ({ v, i })).filter(({ v }) => (typeof v === "number" && v !== 0) || (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)));
+  return got.length === want.length && got.every((n, j) => n.address === `person.age_years|in|1.${want[j].i + 1}` && n.value === canonicalValue(want[j].v));
+}), { numRuns: 300 }));
+const leaf = fc.record({ op: fc.constantFrom("gte", "lt", "eq", "in"), field: fc.constantFrom("person.age_years", "case.trip_days", "case.funds_cad"), value: fc.oneof(fc.integer({ min: 1, max: 99 }), fc.array(fc.integer({ min: 1, max: 99 }), { maxLength: 4 })) });
+prop("C5.4 BR-2 property (300 trees): adding a clause on another field never moves an address or a value", () => fc.assert(fc.property(fc.array(leaf, { minLength: 1, maxLength: 6 }), fc.integer({ min: 1, max: 99 }), fc.nat(6), (leaves, extra, at) => {
+  const tree = (args: unknown[]) => ({ combination: { key: "t.p" }, rules: [{ id: "R-T", when: { op: "and", args }, then: "T", for_whom: "case" }] } as unknown as WalkedSnapshot);
+  const fix = leaves.map((l) => ({ ...l, value: l.op === "in" ? (Array.isArray(l.value) ? l.value : [l.value]) : (Array.isArray(l.value) ? l.value[0] ?? 1 : l.value) }));
+  const before = publishedNumbers(tree(fix)).map((n) => `${n.address}=${n.value}`);
+  const withExtra = [...fix]; withExtra.splice(Math.min(at, fix.length), 0, { op: "gte", field: "person.other_field", value: extra });
+  const after = publishedNumbers(tree(withExtra)).filter((n) => !n.address.startsWith("person.other_field")).map((n) => `${n.address}=${n.value}`);
+  return JSON.stringify(before.sort()) === JSON.stringify(after.sort());
+}), { numRuns: 300 }));
+prop("C5.4 BR-5 property (300 dates): a date with a time or spaces around it is the same published date", () => fc.assert(fc.property(fc.date({ min: new Date("1990-01-01"), max: new Date("2030-12-31"), noInvalidDate: true }), fc.constantFrom("", "T00:00:00Z", "T12:30:00.000Z"), fc.constantFrom("", " ", "  "), (d, time, pad) => {
+  const iso = d.toISOString().slice(0, 10);
+  const got = publishedNumbers({ combination: { key: "t.p" }, rules: [{ id: "R-D", when: { op: "gte", field: "person.passport_issue_date", value: `${pad}${iso}${time}${pad}` }, then: "D", for_whom: "principal" }] } as unknown as WalkedSnapshot);
+  return got.length === 1 && got[0].value === iso;
+}), { numRuns: 300 }));
 
 // ---------------------------------------------------------------- M1 kept outside validate(), pure
 const src = readFileSync(join(STUDIO, "engine", "source-register.ts"), "utf8");
