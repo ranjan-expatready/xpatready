@@ -69,8 +69,18 @@ function KeyRow({ k, combinationId, item, family }: { k: KeyView; combinationId:
 }
 
 /** The Tests tab: items × families (BR-2), each key's state and last run (BR-5), Run (BR-3, BR-4), Sign (BR-7). */
+/** G2 (C5.5): the anchor Review and release's "Fix on Tests" opens (`#tests-<kind>-<ref>`). */
+export const testAnchor = (kind: string, ref: string) => `tests-${kind}-${ref.replace(/[^A-Za-z0-9]+/g, "-")}`;
+
 export function TestsTab({ id }: { id: string }) {
   const v = useApi<AnswerKeysView>(["combination", id, "answer-keys"], `/combinations/${id}/answer-keys`);
+  // G2: arriving from "Fix on Tests", the item's section is scrolled to and takes focus (keyboard users land on it).
+  React.useEffect(() => {
+    const h = window.location.hash.slice(1);
+    if (!h || !v.data) return;
+    const el = document.getElementById(h);
+    if (el) { el.scrollIntoView({ block: "start" }); el.focus(); }
+  }, [v.data]);
   const fams = useApi<{ families: FamilyView[] }>(["answer-key-families"], "/answer-keys/families");
   const families = fams.data?.families ?? [], may = useDuties();
   if (v.isLoading) return <p className="text-sm text-text-muted">Loading the tests…</p>;
@@ -85,7 +95,7 @@ export function TestsTab({ id }: { id: string }) {
       {d.items.map((it) => {
         const keys = d.keys.filter((k) => k.item_kind === it.item_kind && k.item_ref === it.item_ref);
         return (
-          <section key={`${it.item_kind}|${it.item_ref}`} aria-label={it.label} className="space-y-2">
+          <section key={`${it.item_kind}|${it.item_ref}`} id={testAnchor(it.item_kind, it.item_ref)} tabIndex={-1} aria-label={it.label} className="space-y-2 rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
             <h3 className="text-sm font-semibold">{it.label}{it.edition ? <span className="ml-2 font-normal text-text-muted">{it.edition}</span> : null}</h3>
             {keys.length ? <ul className="space-y-2">{keys.map((k) => <KeyRow key={k.id} k={k} combinationId={id} item={it} family={families.find((f) => f.id === k.family.id)} />)}</ul>
               : <p className="text-sm text-text-muted">No test family has expected values for this item yet. Without a passing signed test it cannot be released (G2).</p>}

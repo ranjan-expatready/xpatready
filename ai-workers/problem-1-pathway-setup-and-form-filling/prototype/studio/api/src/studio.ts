@@ -21,6 +21,22 @@ import { filingProblems, filingWarnings, modeSent } from "../../engine/filing-mo
 import { LibrarySources, type SourceLine } from "./library-sources.ts";
 import { checkFormat, fieldFormat, formatWords, type MappedBox } from "../../engine/field-format.ts";
 import { releaseLabel } from "../../contracts/runtime.ts";
+import { gateOf as keyGateOf, keysUnchanged, runKeys, type Gate as KeyGate } from "./answer-key-gate.ts";
+import type { Problem } from "../../engine/validate.ts";
+/** G2 (C5.5, BR-8; shared with G1 BR-8): a refusal carries every blocking problem in `errors[]`, each in words; `detail`
+ *  (and `message`, read by older callers) keeps the sentence the screens and checks already show. */
+/** G2 BR-9: the keys a release rests on, frozen in its summary (only when the gate judged it). */
+const keyEvidence = (g: KeyGate) => (g.judged ? { answer_keys: g.evidence } : {});
+const staleKeys = (label: string): never => { throw new HttpException({ type: "https://expatready.local/problems/stale", title: "Changed by someone else", status: 409, statusCode: 409, detail: `Release refused: an answer-key test of "${label}" was changed or signed a moment ago. Open Review and release again.`, message: `Release refused: an answer-key test of "${label}" was changed or signed a moment ago. Open Review and release again.` }, HttpStatus.CONFLICT); };
+/** G2 BR-9 (challenge m7): a key's expected values changed since the last release named it (another key version). */
+const changedSince = (summary: unknown, k: { key_id: string; version: number; change_reason: string | null }) => {
+  const before = ((summary as { answer_keys?: { key_id?: string; key_version?: number }[] } | null)?.answer_keys ?? []).find((e) => e.key_id === k.key_id);
+  return before && before.key_version !== k.version ? { reason: k.change_reason } : null;
+};
+const refuse = (detail: string, problems: (Problem & { forms?: string[] })[], status = HttpStatus.BAD_REQUEST): never => {
+  throw new HttpException({ type: "https://expatready.local/problems/draft-problems", title: status === HttpStatus.CONFLICT ? "Release refused" : "Fix the problems first", status, statusCode: status, detail, message: detail,
+    errors: problems.map((p) => ({ where: p.where, item: p.item, label: p.label ?? null, forms: p.forms ?? [], message: problemWords(p) })) }, status);
+};
 /** C3.6 (P-223, option (a)): a draft condition may read a fact the library lacks; validate() keeps it as an error that
  *  blocks release, and Questionnaires › "Facts a rule needs that no form asks" offers the add. Other errors still refuse. */
 const draftErrors = (errs: string[]) => errs.filter((e) => !/^reads [a-z][a-z0-9_]*\.[a-z0-9_.]+, which is not in the library$/.test(e));
@@ -359,7 +375,8 @@ export class Studio {
     const { snapshot, sha256 } = await buildSnapshot(this.db, c.workspaceId, id, "draft");
     const last = c.releases[0];
     const changes = diff((last?.snapshot as any) ?? null, snapshot);
-    const problems = await this.problems(c.workspaceId, snapshot, id);
+    const gate = await keyGateOf(this.db, id, snapshot, sha256); // G2 (C5.5): answer-key tests, read only
+    const problems = await this.problems(c.workspaceId, snapshot, id, gate);
     const sub = await this.db.reviewSubmission.findFirst({ where: { combinationId: id }, orderBy: { submittedAt: "desc" } });
     return {
       combination: { id: c.id, key: c.combinationKey, label: c.label, description: c.description, participants: c.participants, source_basis: c.sourceBasis, basis_note: await this.basisNote(c), created_by: c.createdBy },
@@ -367,7 +384,9 @@ export class Studio {
       path: chain.map((n) => ({ key: n.programNodeKey, label: n.label, level: LEVEL[n.nodeKind].name })), allowed_locations: c.program.allowedLocations,
       attachments: c.attachments, jobs: c.jobs.map((j) => ({ ...j, detail: undefined })),
       releases: c.releases.map((r) => ({ id: r.id, version: r.version, demo: isDemoSnapshot(r.snapshot), release: r.packVersion?.version ?? r.version, label: releaseLabel(r), sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: ACTORS.find((x) => x.id === r.approverId)?.name ?? "Approver", summary: r.summary, basis: r.basis })),
-      draft: { sha256, matches_release: !!last && last.sha256 === sha256, changes, problems, counts: this.counts(snapshot) },
+      draft: { sha256, matches_release: !!last && last.sha256 === sha256, changes, problems, counts: this.counts(snapshot),
+        // G2 BR-9: what a release would rest on (per item and key), and whether it would be a Demo release.
+        answer_keys: { demo: gate.demo, judged: gate.judged, items: gate.items.map((i) => ({ ...i, keys: i.keys.map((k) => ({ ...k, changed_since_release: changedSince(last?.summary, k) })) })) } },
       submission: sub ? { ...sub, stale: sub.status === "SUBMITTED" && sub.draftSha256 !== sha256 } : null,
     };
   }
@@ -376,7 +395,7 @@ export class Studio {
     return { fields: s.canonical_fields.length, sections: s.sections.length, placements: s.placements.length, forms: s.forms.length, map_boxes: s.field_maps.reduce((a, m) => a + m.entries.length, 0), document_requirements: s.document_requirements.length, rules: s.rules.length, checks: s.checks.length };
   }
 
-  async problems(workspaceId: string, s: Snapshot, combinationId?: string) {
+  async problems(workspaceId: string, s: Snapshot, combinationId?: string, gate?: KeyGate) {
     const structure = combinationId ? await this.structureProblems(combinationId) : [];
     const lib = (await this.db.canonicalField.findMany({ where: { workspaceId }, select: { canonicalFieldKey: true, valueType: true, status: true } })).filter((f) => f.status !== "RETIRED").map((f) => ({ key: f.canonicalFieldKey, valueType: f.valueType }));
     const carried = combinationId ? (await this.undecidedFormFields(combinationId, "PUBLISHED")).map((f) => ({ level: "warning" as const, where: "Forms", item: f.form, message: `Not decided yet (from an earlier release): ${f.n} form field${f.n === 1 ? "" : "s"}${forExample(f.example)}. Decide them when this edition is drafted again.` })) : [];
@@ -384,12 +403,14 @@ export class Studio {
     // engine/filing-modes.ts FILING_NOT_SET_BLOCKS).
     const roles = await this.personRoles(workspaceId);
     const filing = filingProblems((s.combination?.participants ?? []) as { role: string; label?: string; max: number; filingMode?: unknown }[], roles);
-    const all = [...structure, ...filing, ...emptyProblem(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...carried]; // L4: what IRCC accepts
+    // G2 (C5.5): the answer-key gate's lines, in the same list as every other problem (one list on Review and release).
+    const tests = combinationId ? (gate ?? (await keyGateOf(this.db, combinationId, s, (await buildSnapshot(this.db, workspaceId, combinationId, "draft")).sha256))).problems : [];
+    const all = [...structure, ...filing, ...emptyProblem(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...carried, ...tests]; // L4: what IRCC accepts
     // C2.12 (plan F3a-1, BR-10): each problem names the forms it touches, so a form's path shows its own: a Forms problem its form,
     // any other the forms whose field map reads that item as a fact; none otherwise.
     const formsOf = new Map<string, Set<string>>();
     for (const m of s.field_maps) for (const e of m.entries) if (e.fact) (formsOf.get(e.fact) ?? formsOf.set(e.fact, new Set()).get(e.fact)!).add(m.form_number);
-    return all.map((p) => ({ ...p, forms: p.where === "Forms" ? [p.item] : [...(formsOf.get(p.item) ?? [])].sort() }));
+    return all.map((p) => ({ ...p, forms: p.where === "Forms" ? [p.item] : p.where === "Tests" ? ((p as { forms?: string[] }).forms ?? []) : [...(formsOf.get(p.item) ?? [])].sort() }));
   }
 
   async config(id: string, mode: Mode) {
@@ -850,8 +871,9 @@ export class Studio {
     const { snapshot, sha256 } = await buildSnapshot(this.db, c.workspaceId, id, "draft");
     const last = await this.db.configRelease.findFirst({ where: { combinationId: id }, orderBy: { version: "desc" } });
     if (last?.sha256 === sha256) fail("Nothing has changed since the released version.");
-    const errors = (await this.problems(c.workspaceId, snapshot, id)).filter((p) => p.level === "error");
-    if (errors.length) fail(`Fix ${errors.length} problem${errors.length > 1 ? "s" : ""} before submitting: ${errors.slice(0, 3).map(problemWords).join(" · ")}`); // S5: a coverage gap is said in words, never by its field code
+    await runKeys(this.db, this.audit, actor, c, snapshot, sha256); // G2 BR-6 (SA-1B-296 r3): the tests run at Submit
+    const errors = (await this.problems(c.workspaceId, snapshot, id, await keyGateOf(this.db, id, snapshot, sha256))).filter((p) => p.level === "error");
+    if (errors.length) refuse(`Fix ${errors.length} problem${errors.length > 1 ? "s" : ""} before submitting: ${errors.slice(0, 3).map(problemWords).join(" · ")}`, errors); // S5: a coverage gap is said in words, never by its field code
     const changes = diff((last?.snapshot as any) ?? null, snapshot);
     // W1-02 (break M2): nothing to sign is nothing to release, even when the fingerprint moved (an older release's keys).
     // Refused before anything is written (PR #39 review): a waiting submission is never withdrawn by a refused one.
@@ -892,8 +914,11 @@ export class Studio {
     const { snapshot, sha256 } = await buildSnapshot(this.db, c.workspaceId, id, "draft");
     // Re-checked at approval, not only at submission: a row that has since fallen above a full combination, or a draft
     // that now has errors, is not released.
-    const blocking = (await this.problems(c.workspaceId, snapshot, id)).filter((p) => p.level === "error");
-    if (blocking.length) fail(`Release refused: ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${problemWords(blocking[0])})`, HttpStatus.CONFLICT);
+    // G2 BR-6: the tests run again at release, on this exact draft, before it is judged.
+    await runKeys(this.db, this.audit, actor, c, snapshot, sha256);
+    const keyGate = await keyGateOf(this.db, id, snapshot, sha256);
+    const blocking = (await this.problems(c.workspaceId, snapshot, id, keyGate)).filter((p) => p.level === "error");
+    if (blocking.length) refuse(`Release refused: ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${problemWords(blocking[0])})`, blocking, HttpStatus.CONFLICT);
     // The same review gate as the shared Release page (QA-1, review should 2).
     const gate = await this.releaseGate(id, sha256);
     if (!gate.ok) { await this.audit.log(c.workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: ${gate.why}`); fail(`Release refused: ${gate.why}`, HttpStatus.CONFLICT); }
@@ -908,8 +933,9 @@ export class Studio {
     }
     const changes = sub.changeSummary as any[];
     const release = await this.db.$transaction(async (tx) => {
+      if (!(await keysUnchanged(tx, id, keyGate.evidence))) staleKeys(c.label); // G2 BR-6 (challenge m8)
       const pack = await this.newPackVersion(tx, c.workspaceId, authors, actor.id, { rows: 1, via: "combination review" });
-      const out = await this.publishRow(tx, c, snapshot, sha256, { packVersionId: pack.id, authors, submitter: sub.submittedBy, approver: actor.id, summary: { changes: changes.length, sme_signed: changes.filter((x) => x.needs_sme).length, counts: this.counts(snapshot) } });
+      const out = await this.publishRow(tx, c, snapshot, sha256, { packVersionId: pack.id, authors, submitter: sub.submittedBy, approver: actor.id, summary: { changes: changes.length, sme_signed: changes.filter((x) => x.needs_sme).length, counts: this.counts(snapshot), ...keyEvidence(keyGate) } });
       await tx.reviewSubmission.update({ where: { id: sub.id }, data: { status: "APPROVED", decidedBy: actor.id, decidedAt: new Date() } });
       const library = await publishLibraryChanges(tx, c.workspaceId, pack.version, { items: itemsOf(snapshot) });
       return { ...out, pack: pack.version, library };
@@ -941,17 +967,19 @@ export class Studio {
   async releaseRows(actor: Actor, ids: string[], libraryIds?: string[]) {
     need(actor, "approve");
     const workspaceId = await this.ws.id();
-    const prepared: { c: { id: string; workspaceId: string; sourceBasis: string; label: string }; snapshot: Snapshot; sha256: string; authors: string[]; sub: ReviewSubmission }[] = [];
+    const prepared: { c: { id: string; workspaceId: string; sourceBasis: string; label: string }; snapshot: Snapshot; sha256: string; authors: string[]; sub: ReviewSubmission; keyGate: KeyGate }[] = [];
     for (const id of ids) {
       const c = await this.db.combination.findUniqueOrThrow({ where: { id }, include: { program: true } });
       const { snapshot, sha256 } = await buildSnapshot(this.db, workspaceId, id, "draft");
-      const blocking = (await this.problems(workspaceId, snapshot, id)).filter((p) => p.level === "error");
-      if (blocking.length) fail(`Release refused: "${c.label}" has ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${problemWords(blocking[0])})`, HttpStatus.CONFLICT);
+      await runKeys(this.db, this.audit, actor, c, snapshot, sha256); // G2 BR-6: the tests run again at release
+      const keyGate = await keyGateOf(this.db, id, snapshot, sha256);
+      const blocking = (await this.problems(workspaceId, snapshot, id, keyGate)).filter((p) => p.level === "error");
+      if (blocking.length) refuse(`Release refused: "${c.label}" has ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${problemWords(blocking[0])})`, blocking, HttpStatus.CONFLICT);
       const gate = await this.releaseGate(id, sha256);
       if (!gate.ok) { await this.audit.log(workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: "${c.label}": ${gate.why}`); fail(`Release refused: "${c.label}": ${gate.why}`, HttpStatus.CONFLICT); }
       const waiting = await unapprovedAdds(this.db, workspaceId, itemsOf(snapshot));
       if (waiting.length) fail(`Release refused: "${c.label}": ${unapprovedWhy(waiting)}.`, HttpStatus.CONFLICT);
-      prepared.push({ c, snapshot, sha256, authors: await this.draftAuthors(id, snapshot, workspaceId), sub: (gate as { sub: ReviewSubmission }).sub });
+      prepared.push({ c, snapshot, sha256, authors: await this.draftAuthors(id, snapshot, workspaceId), sub: (gate as { sub: ReviewSubmission }).sub, keyGate });
     }
     const submitted = prepared.filter((p) => p.sub.submittedBy === actor.id).map((p) => p.c.label);
     if (submitted.length) {
@@ -968,8 +996,9 @@ export class Studio {
       const pack = await this.newPackVersion(tx, workspaceId, authors, actor.id, { rows: prepared.length, via: "shared draft" });
       const rows = [];
       for (const p of prepared) {
+        if (!(await keysUnchanged(tx, p.c.id, p.keyGate.evidence))) staleKeys(p.c.label); // G2 BR-6 (challenge m8)
         const changes = p.sub.changeSummary as { needs_sme?: boolean }[];
-        const r = await this.publishRow(tx, p.c, p.snapshot, p.sha256, { packVersionId: pack.id, authors: p.authors, submitter: p.sub.submittedBy, approver: actor.id, summary: { changes: changes.length, sme_signed: changes.filter((x) => x.needs_sme).length, counts: this.counts(p.snapshot) } });
+        const r = await this.publishRow(tx, p.c, p.snapshot, p.sha256, { packVersionId: pack.id, authors: p.authors, submitter: p.sub.submittedBy, approver: actor.id, summary: { changes: changes.length, sme_signed: changes.filter((x) => x.needs_sme).length, counts: this.counts(p.snapshot), ...keyEvidence(p.keyGate) } });
         await tx.reviewSubmission.update({ where: { id: p.sub.id }, data: { status: "APPROVED", decidedBy: actor.id, decidedAt: new Date() } });
         rows.push({ label: p.c.label, version: r.version });
       }

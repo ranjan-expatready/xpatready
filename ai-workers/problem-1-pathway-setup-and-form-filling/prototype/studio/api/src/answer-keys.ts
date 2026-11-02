@@ -4,7 +4,7 @@
 // immigration expert signs the expected values. Registered in features/answer-keys.ts (P-214). No model call (US$0).
 // Audit lines name the family key, the item and the counts: never a family's values (SA-1B-296 field 9).
 import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Put, Query } from "@nestjs/common";
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 import { Prisma } from "@prisma/client";
 import type { z } from "zod";
@@ -13,7 +13,7 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { canonical } from "../../../contracts/rules.ts";
 import { buildSnapshot, effective, type Snapshot } from "../../engine/snapshot.ts";
 import { writesParts } from "../../engine/field-format.ts";
-import { blank, changeProblem, checkExpected, checkFamily, fingerprintOf, ITEM_KINDS, keyBoxes, NO_SCORING, runFieldMap, runRuleSet, runState, SAMPLE_WORDS, signProblem, unclean, type Family, type FieldError, type ItemKind, type MapExpected, type RuleExpected } from "../../engine/answer-keys.ts";
+import { blank, changeProblem, checkExpected, checkFamily, fingerprintOf, inventoryHash, ITEM_KINDS, keyBoxes, NO_SCORING, runFieldMap, runRuleSet, runState, SAMPLE_WORDS, signProblem, unclean, type Family, type FieldError, type ItemKind, type MapExpected, type RuleExpected } from "../../engine/answer-keys.ts";
 import type { Inventory } from "../../engine/form-values.ts";
 import { ACTORS, Audit, Db, fail, need, readerOf, SOLUTION, Workspace, type Actor } from "./core.ts";
 
@@ -27,10 +27,29 @@ const obj = (b: unknown) => (b && typeof b === "object" && !Array.isArray(b) ? b
 const holds = (a: Actor, duty: string) => (a.duties as readonly string[]).includes(duty);
 const at = (d: Date | null | undefined) => (d ? d.toISOString() : null);
 type FamilyRow = { id: string; familyKey: string; label: string; referenceDate: string; people: unknown; facts: unknown; noneApply: unknown; version: number; updatedBy: string; updatedAt: Date };
-const familyOf = (r: FamilyRow): Family => ({ key: r.familyKey, label: r.label, reference_date: r.referenceDate, people: r.people as Family["people"], facts: r.facts as Family["facts"], none_apply: (r.noneApply ?? []) as Family["none_apply"] });
+export const familyOf = (r: FamilyRow): Family => ({ key: r.familyKey, label: r.label, reference_date: r.referenceDate, people: r.people as Family["people"], facts: r.facts as Family["facts"], none_apply: (r.noneApply ?? []) as Family["none_apply"] });
 const familyView = (r: FamilyRow) => ({ id: r.id, ...familyOf(r), version: r.version, sample: SAMPLE_WORDS, saved_by: nameOf(r.updatedBy), saved_at: at(r.updatedAt) });
 const pdfHas = (s: Snapshot, form: string) => (s.field_maps as { form_number: string; channel?: string }[]).some((m) => m.form_number === form && m.channel !== "ONLINE");
 const itemWords = (kind: string, ref: string) => (kind === "rule_set" ? "the eligibility rules" : `the ${ref} field map`);
+
+/** The form field list of a form's PDF map (the edition's inventory file), as the filler reads it (api/src/fill.ts
+ *  writeForm); null when none is recorded. G2 (challenge m5): read once per file version and kept with its hash, so a
+ *  release gate pass over many keys reads and hashes each list once. */
+const LISTS = new Map<string, { stamp: string; inv: Inventory; hash: string }>();
+export function fieldListOf(s: Snapshot, form: string): { inv: Inventory; hash: string } | null {
+  const m = (s.field_maps as { form_number: string; channel?: string; inventory_file?: string | null }[]).find((x) => x.form_number === form && x.channel !== "ONLINE");
+  if (!m?.inventory_file) return null;
+  // Devin review (PR #513): the field list is read only from inside the solution folder, and only a .json file.
+  const path = resolve(SOLUTION, m.inventory_file);
+  if (!path.startsWith(resolve(SOLUTION) + sep) || !path.endsWith(".json")) return null;
+  try {
+    const st = statSync(path), stamp = `${st.mtimeMs}|${st.size}`, hit = LISTS.get(path);
+    if (hit?.stamp === stamp) return hit;
+    const inv = JSON.parse(readFileSync(path, "utf8")) as Inventory, out = { stamp, inv, hash: inventoryHash(inv) };
+    LISTS.set(path, out);
+    return out;
+  } catch { return null; }
+}
 
 @Injectable()
 export class AnswerKeys {
@@ -67,14 +86,7 @@ export class AnswerKeys {
     if (!inv) fail(`${form}'s form field list is not recorded, so its map cannot be tested.`, HttpStatus.UNPROCESSABLE_ENTITY);
     return inv!;
   }
-  private inventoryOrNull(s: Snapshot, form: string): Inventory | null {
-    const m = (s.field_maps as { form_number: string; channel?: string; inventory_file?: string | null }[]).find((x) => x.form_number === form && x.channel !== "ONLINE");
-    if (!m?.inventory_file) return null;
-    // Devin review (PR #513): the field list is read only from inside the solution folder, and only a .json file.
-    const path = resolve(SOLUTION, m.inventory_file);
-    if (!path.startsWith(resolve(SOLUTION) + sep) || !path.endsWith(".json")) return null;
-    try { return JSON.parse(readFileSync(path, "utf8")) as Inventory; } catch { return null; }
-  }
+  private inventoryOrNull(s: Snapshot, form: string): Inventory | null { return fieldListOf(s, form)?.inv ?? null; }
 
   // ------------------------------------------------------------------------------------------------ families (BR-1)
   async families() {

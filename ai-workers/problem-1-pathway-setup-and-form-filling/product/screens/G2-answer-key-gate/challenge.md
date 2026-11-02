@@ -93,10 +93,10 @@ No Blocker. The design is right in its shape: the judgement is a pure function o
 (The concept's Q1, error or warning, is answered by P-240 and the card; Q2, approver sees keys with the draft, is answered by m7 above, as written plus the "changed since" marker.)
 
 ## Lead response
-_(left empty)_
+Tech lead on #568 (2 Nov, 17:30 UTC): concept v2 approved (P-223 (4)); build it. (1) Error (E7) for a gated map, scoring table or rule set with no passing signed key on a real release; W7 stays the combination-level warning (P-240, SA-1B-296 r4/r8). (2) Scope: items new or changed since the last release, plus every item that already has a key (SA-1B-296 r4's revert path) — the builder's recommendation, not the challenger's "every map". (3) A failing key also refuses a Demo release: yes. Shared pieces with G1 (`errors[]` refusal, `STUDIO_WORKSPACE_KEY`, `draftProblems` only when `changes > 0 || !rel`): whichever lands first builds them; passed to G1 on #569.
 
 ## Agreement
-_(left empty)_
+All Majors and Minors taken in concept v2 §8; founder question 1 answered by the tech lead as "new or changed" (BR-2).
 
 ## Build discoveries
 _(left empty)_

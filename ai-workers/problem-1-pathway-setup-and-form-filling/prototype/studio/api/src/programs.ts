@@ -29,6 +29,7 @@ import { openNodeKeys, startWhy } from "./lifecycle.ts";
 import { Sources } from "./sources.ts";
 import { Studio } from "./studio.ts";
 import { filingProblems } from "../../engine/filing-modes.ts";
+import { gatesOf, type Gate } from "./answer-key-gate.ts";
 
 /** Parses a request body or query with its contract; a mismatch is a 400 Problem Details with field errors. */
 export function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
@@ -104,7 +105,7 @@ export class Programs {
     const [nodes, combos, releases, jobs, items, lib, editions, heldItems, byKind, subs] = await Promise.all([
       this.db.programDef.findMany({ where: { workspaceId }, orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }] }),
       this.db.combination.findMany({ where: { workspaceId }, include: { attachments: { select: { id: true, kind: true, recognised: true, sha256: true, edition: true, createdAt: true, officialFile: true } } } }),
-      this.db.configRelease.findMany({ where: { workspaceId }, orderBy: { version: "desc" }, select: { combinationId: true, snapshot: true, releasedAt: true, packVersion: { select: { version: true } } } }),
+      this.db.configRelease.findMany({ where: { workspaceId }, orderBy: { version: "desc" }, select: { combinationId: true, snapshot: true, sha256: true, releasedAt: true, packVersion: { select: { version: true } } } }),
       this.db.draftingJob.findMany({ where: { workspaceId, kind: { in: ["field_map", "reuse_map"] } }, orderBy: { startedAt: "desc" }, select: { id: true, combinationId: true, attachmentId: true, status: true, batchId: true, kind: true, mode: true } }),
       this.db.proposalItem.groupBy({ by: ["runId"], where: { workspaceId, status: "waiting" }, _count: true }),
       this.db.canonicalField.findMany({ where: { workspaceId }, select: { canonicalFieldKey: true, valueType: true, status: true } }),
@@ -112,7 +113,7 @@ export class Programs {
       this.db.intakeItem.findMany({ where: { workspaceId, status: "HELD", outcome: "new_edition_held" }, select: { code: true, editionLabel: true, combinationId: true } }),
       // Setup checklist (concept §8): waiting proposals, one groupBy combination × form edition × kind.
       this.db.proposalItem.groupBy({ by: ["combinationId", "formEdition", "kind"], where: { workspaceId, status: "waiting" }, _count: true }),
-      this.db.reviewSubmission.findMany({ where: { workspaceId }, orderBy: { submittedAt: "desc" }, select: { combinationId: true, submittedBy: true } }),
+      this.db.reviewSubmission.findMany({ where: { workspaceId }, orderBy: { submittedAt: "desc" }, select: { combinationId: true, submittedBy: true, status: true, draftSha256: true } }),
     ]);
     const submittedBy = new Map<string, string>();
     for (const x of subs) if (!submittedBy.has(x.combinationId)) submittedBy.set(x.combinationId, x.submittedBy);
@@ -127,6 +128,11 @@ export class Programs {
     const personRoles = await this.studio.personRoles(workspaceId);
     const latest = new Map<string, (typeof releases)[number]>();
     for (const r of releases) if (!latest.has(r.combinationId)) latest.set(r.combinationId, r);
+    // G2 (C5.5): the answer-key gate of every draft at once (one keys query), from stored runs only (BR-6).
+    const lastSub = new Map<string, (typeof subs)[number]>();
+    for (const x of subs) if (!lastSub.has(x.combinationId)) lastSub.set(x.combinationId, x);
+    const keyGates = combos.length ? await gatesOf(this.db, combos.map((c) => { const d = snaps.get(c.id) as { snapshot: Snapshot; sha256: string }, r = latest.get(c.id), sub = lastSub.get(c.id);
+      return { combinationId: c.id, snapshot: d.snapshot, sha256: d.sha256, released: r ? { snapshot: r.snapshot, sha256: r.sha256 } : null, submitted: sub?.status === "SUBMITTED" && sub.draftSha256 === d.sha256 }; })) : new Map<string, Gate>();
     const mapped = new Set(editions.filter((e) => e.maps.length).map((e) => e.sha256));
     const pending = new Map(items.map((i) => [i.runId, i._count]));
     // The date each official file was downloaded (its leading ISO part: a hand fetch adds a note after it).
@@ -170,6 +176,9 @@ export class Programs {
       const relProblems = relSnap ? [...structure, ...validate(relSnap, library, derivedOf(relSnap))] : draftProblems;
       const hasContent = snapshot.forms.length + snapshot.sections.length + snapshot.document_requirements.length + snapshot.rules.length > 0;
       const changes = hasContent ? diff(relSnap ?? null, snapshot).length : 0;
+      // G2 (challenge M1): only a draft with something to release is judged, so a Live, unchanged row keeps step 5 done.
+      // Added to the draft's problems (the Release page holds the row on them), never to the released snapshot's.
+      if (changes > 0 || !rel) draftProblems.push(...(keyGates.get(c.id)?.problems ?? []));
       const mine = jobs.filter((x) => x.combinationId === c.id);
       const latestPerSource = new Map<string, (typeof mine)[number]>();
       for (const x of mine) if (x.attachmentId && !latestPerSource.has(x.attachmentId)) latestPerSource.set(x.attachmentId, x);
