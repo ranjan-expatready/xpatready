@@ -49,6 +49,11 @@ open_heads = {p["headRefName"] for p in prs}
 waste = [r for r in runs if r["status"] != "completed" and r["headBranch"] != "main" and (r["headBranch"].startswith("lead/") or r["headBranch"] not in open_heads)]
 (alarm if waste else ok)(f"{len(waste)} CI runs on records branches or branches with no open PR" + (": cancel " + " ".join(str(r["databaseId"]) for r in waste) if waste else ""))
 
+# 2b. Records PRs (qa:, lead:) must never sit in the Mergify queue: a push to them throws out the batch (2 Nov 07:35).
+for p in approved:
+    if p["title"].startswith(("qa:", "lead:")):
+        alarm(f"#{p['number']} is a records PR carrying review: approved, so a push throws out its batch: remove the label, merge it directly")
+
 # 3. qa (P-250): approved PRs with no qa verdict comment.
 for p in approved:
     body = gh("pr", "view", str(p["number"]), "--json", "comments", "--jq", "[.comments[].body|select(test(\"^\\\\**qa\";\"i\"))]|length").strip()
