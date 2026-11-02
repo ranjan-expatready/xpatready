@@ -111,3 +111,52 @@ Fix commit 07e389af, then a merge of main that brings in only `tests/check_c119_
 **Journey score:** 9/10. "Correct data" goes from ½ to 1: journey 9 now holds. The UI criteria stay ½ until part 3.
 
 **Verdict: Approve** on e3a01067. There is no open Blocker or Major. The label still waits for the tech lead's word on the migration slot (condition 2).
+
+## Round 3 (head b05f5d45)
+Fix commit 02d873a6 answers `break-report.md` (M1, m1–m6). Then a merge of main brings in only `tests/check_c44_question_types_browser.cjs` (#395); it is identical to `origin/main`'s. Fresh isolated copy `c69rev` on :4437 (never :4400); live AI off; US$0.
+
+**What I ran:**
+- `check_c69_gates.ts`: **87/87**.
+- `setup_visitor_visa.ts`: 13/13. In `setup_vv_m3.ts`, S7 and all three S8 lines pass; S2w, S5 and S7a fail for the same outside reasons as before.
+- `check_engine.ts`: 41/41. `graph.mjs --check`: exit 0.
+
+**The breaker's repros, re-run through the API (scratch script; every one answered in words):**
+- **M1, now refused:**
+  - `vv.contra`, `vv.hidden` (the details question asked only after a yes) and `vv.uci` (optional) each save 200. The draft then lists a release error naming the condition or "optional", and submit gets 400.
+  - `eq criminal_history "false"` and `eq "maybe"` → 400 "…but it is a yes/no question: use true or false".
+  - An `and` with `eq true` and `eq false` on the same fact → 400 "…both true and false, so it can never be true".
+- **m1:** NUL in a label, a judgement line, the disclaimer or a condition value, and a raw lone surrogate in a label or judgement line, each → 400 on its field. There are no 500s left.
+- **m2:** depth 1000 (`not` and `and`), 995 and 21 → 400 "nested too deep: at most 20 levels". Depth 19 → 200.
+- **m3:** 2001 characters and 4.76 M characters → 400 "Keep the disclaimer to 2000 characters". 2000 characters, and a disclaimer with line breaks, → 200.
+- **m4:** a reorder alone now gives the line `Eligibility|gate_order` "Gates reordered: …", and submit gives 201 (it was 400 "Nothing has changed"). A reorder no longer slips into the next release unreviewed.
+- **m5:** zero-width, BEL/ANSI, RLO, `\n`, `\r\n` and `\t` in a label → 400. A judgement line of combining marks only → 400 "cannot be empty". A line break in a judgement line → 400.
+- **m6:** labels that read the same ignoring case and spacing → 400. Judgement lines that are the same apart from case or spaces → 400 on lines 1 and 2. 100 emoji in a label and 61 in a judgement line → 200; 161 emoji → 400 (lengths now count characters).
+
+**No false refusals:**
+- S7's own gates save and release, and the Visitor visa draft lists no Eligibility problem after S8.
+- On all 6 combinations of the copy, no draft shows an Eligibility problem. `gateProblems` returns nothing without `snapshot.eligibility`, so other drafts and releases are untouched.
+- The suite's fingerprint lines (every release re-hashes to its stored sha; another combination's draft sha is unchanged) still pass.
+- Value types in the library are text, yes_no, date, code, country, address and number. `misfit` treats code, country and address as text, which fits what a gate compares.
+
+**`contracts/runtime.ts`:** the only change is `export` on `INVISIBLE` and `LONE` (`:20`, `:22`). The regexes and `clean`/`text` are byte-identical. There is no barrel re-export and no clashing name; the only new importer is `engine/eligibility-gates.ts`. Additive and harmless.
+
+**Mutation:**
+- Disabling the placement check (M1a) fails 4 lines (83/87).
+- Disabling the value check *at release* fails nothing, because only the save-time check is tested (minor R3-1).
+
+**Build-notes item 11, "not caught":**
+- Contradictions across `or`/`not`, ranges that cannot meet, one gate contradicting another, an answer-list code not on its list, and a person fact asked once per case.
+- **Acceptable for part 1.** These are the same limits the existing rule checks have for placements and rules, and they are stated, not hidden.
+- The expert now signs each gate with its rule shown in words and values, before and after (`conditionWords`), so the SME sign-off can catch them.
+- The answer-list code is the most likely in real authoring. It is worth a follow-up row with the immigration expert, not a block here.
+
+**New minors:**
+- **R3-1:** add one fail line for the value check at release (for example, a library field whose type changed after the save). Today, removing the release-time `valueProblems` passes 87/87.
+- **R3-2:** the change-summary rule words use field codes ("person.criminal_history is false"). The SME reads codes on the Review tab (D10, C3.8 names facts by meaning). Use `factWords` there.
+- **R3-3:** the duplicate refusal quotes the *new* text ("Gate 1 already reads "passport  ANSWERED""). Quoting gate 1's own label would read better.
+
+**New Blocker or Major:** none.
+
+**Journey score:** stays 9/10. "Correct data" holds: no gate that can never be true, or that can never be answered, reaches a release in any repro.
+
+**Verdict: Approve** on b05f5d45. There is no open Blocker or Major. The label still waits for the tech lead's word on the migration slot (condition 2).
