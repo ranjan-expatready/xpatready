@@ -5,11 +5,19 @@ import * as React from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, useSessionView } from "@/lib/api";
-import { Button, Field, Input, Select } from "@/components/ui/controls";
+import { Button, Field, Input, Select, Textarea } from "@/components/ui/controls";
 
 type RuleRef = { kind: string; key: string; sentence: string };
 type RuleFact = { fact: string; rules: { kind: string; key: string; sentence: string }[]; waitingProposal: string | null };
-const TYPE_WORDS: Record<string, string> = { text: "Text", yes_no: "Yes or no", date: "Date", code: "A list to choose from", country: "Country", address: "Address in parts", number: "Number", phone: "Phone", email: "Email" };
+const TYPE_WORDS: Record<string, string> = { text: "Text", yes_no: "Yes or no", date: "Date", code: "A list to choose from", multi_choice: "Several from a list", country: "Country", address: "Address in parts", number: "Number", phone: "Phone", email: "Email" };
+
+/** C3.6 (Lead, 2 Nov): a choice fact carries its answer values, one per line; the codes are built on the server. */
+const CHOICE = new Set(["code", "multi_choice"]);
+const valuesOf = (t: string, text: string) => (CHOICE.has(t) ? { values: text.split("\n").map((v) => v.trim()).filter(Boolean) } : {});
+function ValuesField({ valueType, text, onChange }: { valueType: string; text: string; onChange: (t: string) => void }) {
+  if (!CHOICE.has(valueType)) return null;
+  return <Field label="Answer values, one per line" className="sm:col-span-2"><Textarea data-answer-values rows={4} value={text} maxLength={90000} onChange={(e) => onChange(e.target.value)} placeholder={"Both parents\nOne parent\nAnother adult\nAlone"} /></Field>;
+}
 
 export function RuleFacts({ combinationId }: { combinationId: string }) {
   const q = useQuery<{ facts: RuleFact[]; types: string[]; rules?: RuleRef[]; subjects?: string[] }>({ queryKey: ["rule-facts", combinationId], queryFn: () => api(`/combinations/${combinationId}/rule-facts`) });
@@ -29,11 +37,11 @@ export function RuleFacts({ combinationId }: { combinationId: string }) {
 function FactRow({ combinationId, f, types, canAuthor }: { combinationId: string; f: RuleFact; types: string[]; canAuthor: boolean }) {
   const qc = useQueryClient();
   const [open, setOpen] = React.useState(false), [busy, setBusy] = React.useState(false), [err, setErr] = React.useState<string | null>(null);
-  const [rule, setRule] = React.useState(f.rules[0]?.key ?? ""), [label, setLabel] = React.useState(""), [meaning, setMeaning] = React.useState(""), [valueType, setType] = React.useState("");
+  const [rule, setRule] = React.useState(f.rules[0]?.key ?? ""), [label, setLabel] = React.useState(""), [meaning, setMeaning] = React.useState(""), [valueType, setType] = React.useState(""), [valuesText, setValues] = React.useState("");
   const id = `rf-${f.fact.replace(/[^a-z0-9]+/g, "-")}`;
   const add = async () => {
     setBusy(true); setErr(null);
-    try { await api(`/combinations/${combinationId}/rule-facts`, { method: "POST", json: { fact: f.fact, rule, label, meaning, valueType } }); setOpen(false); await qc.invalidateQueries({ queryKey: ["rule-facts", combinationId] }); requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-rule-fact="${f.fact}"] a`)?.focus()); }
+    try { await api(`/combinations/${combinationId}/rule-facts`, { method: "POST", json: { fact: f.fact, rule, label, meaning, valueType, ...valuesOf(valueType, valuesText) } }); setOpen(false); await qc.invalidateQueries({ queryKey: ["rule-facts", combinationId] }); requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-rule-fact="${f.fact}"] a`)?.focus()); }
     catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   };
   return (
@@ -50,6 +58,7 @@ function FactRow({ combinationId, f, types, canAuthor }: { combinationId: string
           <Field label="Name a person reads"><Input value={label} maxLength={120} onChange={(e) => setLabel(e.target.value)} /></Field>
           <Field label="Answer type"><Select value={valueType} onChange={(e) => setType(e.target.value)}><option value="">Choose…</option>{types.map((t) => <option key={t} value={t}>{TYPE_WORDS[t] ?? t}</option>)}</Select></Field>
           <Field label="What it means" className="sm:col-span-2"><Input value={meaning} maxLength={500} onChange={(e) => setMeaning(e.target.value)} /></Field>
+          <ValuesField valueType={valueType} text={valuesText} onChange={setValues} />
           <div className="sm:col-span-2"><Button size="sm" busy={busy} onClick={() => void add()}>Propose it · US$0</Button></div>
           {err ? <p role="alert" className="text-sm text-text-danger sm:col-span-2">{err}</p> : null}
         </div>
@@ -63,12 +72,12 @@ const SUBJECT_WORDS: Record<string, string> = { person: "A person in the applica
 /** C3.6 (Day-0 acceptance): name a rule and say the new fact in words; the system builds the key (never typed). */
 function NewFact({ combinationId, rules, types, subjects }: { combinationId: string; rules: RuleRef[]; types: string[]; subjects: string[] }) {
   const [open, setOpen] = React.useState(false), [busy, setBusy] = React.useState(false), [err, setErr] = React.useState<string | null>(null), [done, setDone] = React.useState<string | null>(null);
-  const [rule, setRule] = React.useState(rules[0]?.key ?? ""), [label, setLabel] = React.useState(""), [meaning, setMeaning] = React.useState(""), [valueType, setType] = React.useState(""), [subject, setSubject] = React.useState(subjects[0] ?? "person"), [nearReason, setNear] = React.useState("");
+  const [rule, setRule] = React.useState(rules[0]?.key ?? ""), [label, setLabel] = React.useState(""), [meaning, setMeaning] = React.useState(""), [valueType, setType] = React.useState(""), [valuesText, setValues] = React.useState(""), [subject, setSubject] = React.useState(subjects[0] ?? "person"), [nearReason, setNear] = React.useState("");
   const [near, setNearAsked] = React.useState(false);
   const add = async () => {
     setBusy(true); setErr(null);
     try {
-      const r = await api<{ key: string }>(`/combinations/${combinationId}/rules/${encodeURIComponent(rule)}/fact`, { method: "POST", json: { label, meaning, valueType, subject, ...(near && nearReason.trim() ? { nearReason } : {}) } });
+      const r = await api<{ key: string }>(`/combinations/${combinationId}/rules/${encodeURIComponent(rule)}/fact`, { method: "POST", json: { label, meaning, valueType, subject, ...valuesOf(valueType, valuesText), ...(near && nearReason.trim() ? { nearReason } : {}) } });
       setDone(`Proposed (key ${r.key} when accepted as it stands): it waits on To review › Proposals (not meaning-checked; a second person approves it).`); setOpen(false); setLabel(""); setMeaning(""); setNear(""); setNearAsked(false);
       requestAnimationFrame(() => document.querySelector<HTMLElement>("[data-new-fact-done] a")?.focus());
     } catch (e) { const m = (e as Error).message; setErr(m); const isNear = /is close to/.test(m); if (isNear) setNearAsked(true);
@@ -89,6 +98,7 @@ function NewFact({ combinationId, rules, types, subjects }: { combinationId: str
           <Field label="About whom"><Select value={subject} onChange={(e) => setSubject(e.target.value)}>{subjects.map((s) => <option key={s} value={s}>{SUBJECT_WORDS[s] ?? s}</option>)}</Select></Field>
           <Field label="Answer type"><Select value={valueType} onChange={(e) => setType(e.target.value)}><option value="">Choose…</option>{types.map((t) => <option key={t} value={t}>{TYPE_WORDS[t] ?? t}</option>)}</Select></Field>
           <Field label="What it means"><Input value={meaning} maxLength={500} onChange={(e) => setMeaning(e.target.value)} /></Field>
+          <ValuesField valueType={valueType} text={valuesText} onChange={setValues} />
           {near ? <Field label="Why it is not the same as the close field" className="sm:col-span-2"><Input data-near-reason value={nearReason} maxLength={300} onChange={(e) => setNear(e.target.value)} /></Field> : null}
           <div className="sm:col-span-2"><Button size="sm" busy={busy} onClick={() => void add()}>Propose it · US$0</Button></div>
           {err ? <p id="rf-new-err" tabIndex={-1} role="alert" className="text-sm text-text-danger sm:col-span-2">{err}</p> : null}
