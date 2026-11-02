@@ -1,7 +1,7 @@
 // AI work (D280): every scoped launch with its steps, persisted on the server, so a reload or another screen never loses
 // it. Progress is per step and stated as it is (queued, running, done, failed, cancelled); no invented percentage or ETA.
 import * as React from "react";
-import { RunCard } from "@/components/run-card";
+import { RunCard, type RunView } from "@/components/run-card";
 import { fmtWhen } from "@/components/status";
 import { Link, useParams } from "react-router-dom";
 import { ChevronRight, CircleStop, RotateCw, Sparkles } from "lucide-react";
@@ -51,8 +51,8 @@ export function AiBatchPage() {
   const retry = useAction(() => api(`/ai/batches/${batchId}/retry`, { method: "POST" }), { success: "Retrying the failed steps only", invalidate: [["ai-batch", batchId], ["ai-batches"], ["catalogue"]] });
   // C11.8 review m4 (AT-3 on the page): an ended field-map run with a failure says what went wrong in words (the run
   // view's error line), not only the count; its way out on this page is the Retry button or the Saved link.
-  const ended = !!b.data && b.data.operation === "draft_field_maps" && !active(b.data.status) && !b.data.jobs.some((j: any) => active(j.status));
-  const view = useApi<any>(["run-view", batchId, b.data?.status, b.data?.jobs?.length], ended ? `/runs/${batchId}` : null);
+  const ended = !!b.data && b.data.operation === "draft_field_maps" && !active(b.data.status) && !(b.data.jobs as { status: string }[]).some((j) => active(j.status));
+  const view = useApi<RunView>(["run-view", batchId, b.data?.status, b.data?.jobs?.length], ended ? `/runs/${batchId}` : null);
   if (b.isLoading) return <Spinner label="Loading AI work" />;
   if (b.isError) return <ErrorState title="This AI work could not be opened" description={(b.error as Error).message} action={<Link className="text-text-link underline" to="/ai">All AI work</Link>} />;
   const d = b.data;
