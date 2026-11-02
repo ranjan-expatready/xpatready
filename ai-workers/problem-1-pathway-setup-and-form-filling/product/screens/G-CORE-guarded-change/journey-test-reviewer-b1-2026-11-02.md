@@ -63,3 +63,23 @@ Commit: **b5f5180d** against 74bbb717. B1 has no screen: the panel "What this ch
 4. Use names in the condition preview and the merge messages, and correct the chain advice (plain words, next step).
 
 Could not test: a browser walk, keyboard use, 1024 px and 200 % zoom (no UI until B2), and a real screen reader. D17/D20 stay with the founder.
+
+## Re-score on a21393c2
+I walked journeys 1–10 again through the API on a fresh isolated copy, with the same planted rows.
+* Journeys 3, 4 and 5 now refuse, with R3, R5 and R8, in names and with where each problem is.
+* Journey 9 keeps the same fingerprint after a no-op row update.
+* Journey 10: a person's question condition no longer claims the expert step.
+* The break-it probe of two renames in different groups to one name now passes.
+* A condition's before → after now reads in words ("Always asked" → "Applying For Pgwp is true").
+
+| Criterion | Was | Now | Evidence |
+|---|---|---|---|
+| Task completed | ½ | 1 | Renames, merges (draft rows, loops) and question conditions are all checked |
+| Next step obvious | ½ | 1 | The chain message says what is followed. R3 and R4 say what to do |
+| Plain words | ½ | 1 | Condition words and merge messages use names |
+| Correct data | ½ | 1 | The review probes give the expected answers. Nothing is written |
+| Trust and sources | ½ | 1 | The expert step follows today's release diff. The fingerprint is canonical |
+| Feedback · errors · speed | 1 · 1 · 1 | unchanged | 0.10–0.22 s per check |
+| Accessibility · visual quality | ½ · ½ | unchanged | No screen in B1 |
+
+**8.5/10, pass** (8 or more, no 0). To raise the two halves: walk B2's panel at 1024 px and 200 % zoom with the keyboard only, and run axe on it.

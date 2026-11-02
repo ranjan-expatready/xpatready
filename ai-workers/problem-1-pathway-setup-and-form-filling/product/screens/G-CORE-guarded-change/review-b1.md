@@ -76,3 +76,37 @@ None.
 * SH3's `contracts/resolver.ts` was read on #509's head (0c800ed1), which is not merged.
 
 **Verdict: Block.** Fix Majors 1–5: R3 keeps today's version scope and list identity; the merge rewrite reads the current version; R8 runs on merges; a failing test for each of the six rules; and the expert words follow `needs_sme` per target. Fix m1–m12, or list them in the PR (m1 and m7 before B2).
+
+## Re-review on a21393c2 (fixes on top of b5f5180d)
+**What I ran** (US$0, isolated `forms_gcore_rv` on :4457, now stopped):
+* `check_gcore_engine.ts` **93/93**. `check_gcore_check_api.ts` **30/30**.
+* My probes again, on a fresh copy:
+  * M1: the draft rename over a published name is now refused with R3, as `PATCH …/name` does.
+  * M2: the planted R-24 v2 DRAFT gives R5 "Applying For Pgwp to be both true and false (Rule R-24 …)".
+  * M3: the self-deciding question after a merge gives R8 "Questions decide each other in a loop".
+  * M5: a person's question condition gives `expert_at_release: false`.
+  * m1: the no-op `UPDATE` keeps the same fingerprint.
+  * m5: two renames in different groups to one name now pass.
+* 15 mutants on a scratch copy of the new engine, all killed:
+  * the six rules of Major 4, the version names (M1), the riding lists, R8 per combination, the expert targets, `neq` and one change per item;
+  * removing the tree guard crashes the suite.
+  * `n > 0` in the "only new" filter is an equivalent mutant (the `slice(before)` already does the filtering). Dropping the filter entirely is killed by the new test at check_gcore_engine.ts:136-139.
+* Every one of the sample's 116 stored conditions fits the guard (largest: depth 3, 9 parts) and passes `validatePredicate`, apart from 14 JSON `null`s, which are never rewritten. So the guard refuses no real merge.
+* Timing: 0.10–0.22 s per check.
+
+**Majors 1–5: fixed.** Each probe above now gives the expected answer, and each rule has a failing test.
+* M1: live-version `names`/`liveTitles`/`liveIds`, exact codes, riding lists (api/src/change-sets.ts:38-48, engine/change-set.ts:74-94).
+* M2: the tree comes from `Reader.tree` (engine/where-used.ts:78-85).
+* M3: R8 on a merge, per combination (api :104-108, engine :239).
+* M4: tests at check_gcore_engine.ts.
+* M5: `EXPERT_TARGETS` (engine :278-279).
+
+**Minors:**
+* m1–m8 and m10–m12 are taken. `challenge.md` § Build discoveries records R1, P-266, question-only conditions and the expert targets.
+* **Open: m9 in part.** Snapshots are now read once per check, but `itemReleases` and `openCasesByRelease` still run per subject (api :81, :138). Acceptable for B1 (under 0.25 s for 50 items); list it in the PR.
+* **New nit r2-n1** (engine/change-set.ts:80): the R3 twin is named by its newest label. A rename onto an older published name reads "\"Biometrics Required\" is already the name of Biometrics needed (Sample)". Today's door names the matching version's label. Optional: "… is already a name of the field Biometrics needed (Sample)".
+* I did not re-run the other suites the builder lists (c119, s6_p149, c411_contract and the rest); the builder's run is the evidence. `proposals.ts` changes only by `export`.
+
+Journey score: **8.5/10, pass** (it was 6.5). See the re-score in `journey-test-reviewer-b1-2026-11-02.md`.
+
+**Verdict: Approve** (a21393c2; no open Blocker or Major; m9 (in part) and r2-n1 to be listed in the PR)
