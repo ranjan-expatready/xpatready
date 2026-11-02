@@ -168,8 +168,9 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
   // W1-15 (P-97): a placement in a section only the client answers says so (only then, so the fingerprint keeps).
   const clientOnly = new Set(effSections.filter((x: any) => x.clientOnly).map((x: any) => x.sectionKey));
   for (const p of placements) used.add(p.canonicalFieldKey);
-  // C6.9 BR-5: the facts the gates read travel with the release (their words), added after placements so a gate never
-  // places a question by itself: the release check (engine/eligibility-gates.ts) refuses a gate fact no case is asked.
+  // C6.9 BR-5: the facts the gates read travel with the release (their words), added after placements and after the
+  // derived-input expansion on purpose: a gate never places a question or pulls in a derived value's inputs by itself.
+  // The release check (engine/eligibility-gates.ts gateProblems) refuses a gate fact no case is asked, a derived one too.
   const eligibility = snapshotEligibility(comp.eligibility);
   for (const f of gateFacts(eligibility)) used.add(f);
 

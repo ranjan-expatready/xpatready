@@ -19,8 +19,9 @@ Real: storage, checks, review lines, release freeze, audit rows. Sample: gate la
 1. **Order of refusals:** field errors (400) are checked before the version (409), so a person sees what to fix first. Both still refuse.
 2. **Change-summary keys:** `Eligibility|<gate key>`, `Eligibility|officers_judgement`, `Eligibility|disclaimer` (labels "Gate: …", "Officer's judgement, not checked by rules: …", "Disclaimer: …"); all `needs_sme: true`.
 3. **Stored shape** adds `at` (the save time) to `{gates, judgement, disclaimer, version, by}`, so GET answers `savedAt` without reading the audit log.
-4. **No gates and no judgement lines** (an emptied save) gives no `snapshot.eligibility`: the combination reads as having none.
-5. **BR-5 is strict:** a gate fact must be placed and read by a form box or rule. A derived fact or one only a document supplies is refused at release (no such gate exists; a follow-up if ever needed).
+4. **No gates and no judgement lines** (an emptied save) gives no `snapshot.eligibility`: the combination reads as having none. A disclaimer sent with neither is refused on the field (review minor 5), never stored and dropped.
+5. **BR-5 is strict:** a gate fact must be placed and read by a form box or rule. A derived (worked-out) fact is refused at release in its own words, and so is one only a document supplies (review Major on 5120b6f2: the first build let a derived fact through). Allowing derived gates whose inputs are asked would be a later choice.
+10. **A changed gate line** reads "Gate: <old label> → <new label>", plus "(rule changed)" when its condition changed (review minor 7).
 6. **Retired combination:** a PUT is refused 409, as for "Who can be in this application".
 7. **GET** is a configuration read (Studio people only; a client gets 403), as every other `/combinations` read.
 8. `assessment.config_release_id` has no foreign key, as `form_instance.config_release_id` (a release is never deleted).

@@ -56,6 +56,9 @@ export function checkGates(input: { gates: { key?: unknown; label?: unknown; con
   if (input.disclaimer != null) {
     disclaimer = typeof input.disclaimer === "string" ? input.disclaimer.trim() : "";
     if (disclaimer.length < DISCLAIMER_MIN) errors.push({ field: "disclaimer", message: `A disclaimer needs more than ${DISCLAIMER_MIN - 1} characters; leave it out to use the default.` });
+    // A release carries a disclaimer only with gates or judgement lines (snapshotEligibility), so one alone is refused
+    // here rather than stored and then dropped without a word (review minor 5).
+    else if (!gates.length && !judgement.length) errors.push({ field: "disclaimer", message: "A disclaimer goes with eligibility gates: add a gate or an officer's judgement line, or leave the disclaimer out." });
   }
   return { gates, judgement, disclaimer, errors };
 }
@@ -80,8 +83,13 @@ export function gateProblems(e: SnapshotEligibility | undefined, placed: Set<str
   const out: { level: "error"; where: "Eligibility"; item: string; message: string }[] = [];
   for (const g of e?.gates ?? []) {
     for (const x of checkCondition(g.condition, fieldTypes, derived)) out.push({ level: "error", where: "Eligibility", item: g.key, message: `"${g.label}": the rule ${x}.` });
-    for (const f of gateFacts({ gates: [g] })) if (fieldTypes.has(f) && !(placed.has(f) && read.has(f)))
-      out.push({ level: "error", where: "Eligibility", item: g.key, message: `This gate reads ${words(f)}, which no case of this application is asked ("${g.label}"). Ask it in this application's questionnaire for a form box or rule that reads it, or change the gate.` });
+    for (const f of gateFacts({ gates: [g] })) {
+      // Only a plain asked fact can settle a gate: a derived (worked-out) value is never asked of anyone, so it is refused
+      // too (review Major on 5120b6f2; allowing derived gates whose inputs are asked would be a later, separate choice).
+      if (derived.has(f) && !fieldTypes.has(f)) out.push({ level: "error", where: "Eligibility", item: g.key, message: `This gate reads ${words(f)}, a value worked out from other answers, not one a case is asked ("${g.label}"). A gate reads only answers to this application's questions: use the question it is worked out from, or change the gate.` });
+      else if (fieldTypes.has(f) && !(placed.has(f) && read.has(f))) out.push({ level: "error", where: "Eligibility", item: g.key, message: `This gate reads ${words(f)}, which no case of this application is asked ("${g.label}"). Ask it in this application's questionnaire for a form box or rule that reads it, or change the gate.` });
+      // A fact in neither list is already named by checkCondition above ("not in the library").
+    }
   }
   return out;
 }
@@ -92,7 +100,14 @@ export function eligibilityChanges(prev: SnapshotEligibility | undefined, next: 
   const out: { kind: "Eligibility"; key: string; change: "added" | "changed" | "removed"; needs_sme: true; label: string }[] = [];
   const line = (key: string, change: "added" | "changed" | "removed", label: string) => out.push({ kind: "Eligibility", key, change, needs_sme: true, label });
   const a = new Map((prev?.gates ?? []).map((g) => [g.key, g])), b = new Map((next?.gates ?? []).map((g) => [g.key, g]));
-  for (const [k, g] of b) if (!a.has(k)) line(k, "added", `Gate: ${g.label}`); else if (canonical(a.get(k) as never) !== canonical(g as never)) line(k, "changed", `Gate: ${g.label}`);
+  for (const [k, g] of b) {
+    const was = a.get(k);
+    if (!was) { line(k, "added", `Gate: ${g.label}`); continue; }
+    if (canonical(was as never) === canonical(g as never)) continue;
+    // Review minor 7: the SME sees what was there before (the old label) and whether the rule itself changed.
+    const rule = canonical(was.condition as never) !== canonical(g.condition as never);
+    line(k, "changed", `Gate: ${was.label === g.label ? g.label : `${was.label} → ${g.label}`}${rule ? " (rule changed)" : ""}`);
+  }
   for (const [k, g] of a) if (!b.has(k)) line(k, "removed", `Gate: ${g.label}`);
   const ja = prev?.judgement ?? [], jb = next?.judgement ?? [];
   if (canonical(ja) !== canonical(jb)) line("officers_judgement", !ja.length ? "added" : !jb.length ? "removed" : "changed", jb.length ? `Officer's judgement, not checked by rules: ${jb.join("; ")}` : "Officer's judgement: no lines");

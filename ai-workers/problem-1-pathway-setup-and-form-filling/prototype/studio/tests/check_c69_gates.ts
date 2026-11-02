@@ -53,7 +53,7 @@ const none = new Set<string>();
   ok("C6.9 BR-2 fail: a condition checkCondition rejects → refused on gates.4.condition", f.includes("gates.4.condition"), f);
   ok("C6.9 BR-2 fail: a judgement line empty or over 120 characters → refused on its field (120 is fine)", f.includes("judgement.0") && f.includes("judgement.1") && !f.includes("judgement.2"), f.filter((x) => x.startsWith("judgement")));
   ok("C6.9 BR-2 fail: a disclaimer of 20 characters → refused on disclaimer", f.includes("disclaimer"), f);
-  const longer = checkGates({ gates: [], judgement: [], disclaimer: "x".repeat(21) }, types, none);
+  const longer = checkGates({ gates: [], judgement: ["Has enough money for the stay"], disclaimer: "x".repeat(21) }, types, none);
   ok("C6.9 BR-2 pass: a disclaimer of 21 characters is kept", !longer.errors.length && longer.disclaimer === "x".repeat(21), longer.errors);
 }
 {
@@ -71,11 +71,21 @@ const none = new Set<string>();
   const p = gateProblems(e, placed, read, types, none, words);
   ok("C6.9 BR-5 fail: a gate fact placed but read by nothing → an error naming the fact (\"This gate reads …, which no case of this application is asked\")", p.length === 1 && p[0].level === "error" && p[0].item === "vv.no_convictions" && /This gate reads "person\.criminal_history", which no case of this application is asked/.test(p[0].message), p);
   ok("C6.9 BR-5 fail: a gate fact not placed at all → an error", gateProblems(e, new Set(["person.criminal_history"]), placed, types, none, words).some((x) => /passport_number/.test(x.message)));
+  const derivedGate = snapshotEligibility({ gates: [{ key: "x.derived", label: "Reads a worked-out value", condition: { op: "gte", field: "person.nomination_days_until_expiry", value: 1, subjectKind: "PERSON" } }], judgement: [], disclaimer: null });
+  const pd = gateProblems(derivedGate, placed, placed, types, new Set(["person.nomination_days_until_expiry"]), words);
+  ok("C6.9 BR-5 fail: a gate on a derived (worked-out) fact → a release error in plain words, never a silent pass", pd.length === 1 && pd[0].level === "error" && /worked out/.test(pd[0].message), pd);
+  ok("C6.9 BR-5 fail: a gate on a fact the library no longer has → a release error", gateProblems(snapshotEligibility({ gates: [{ key: "x.gone", label: "Gone", condition: { op: "exists", field: "person.gone_fact", subjectKind: "PERSON" } }], judgement: [], disclaimer: null }), placed, placed, types, none, words).length >= 1);
+  const lone = checkGates({ gates: [], judgement: [], disclaimer: "A disclaimer of the firm's own, long enough." }, types, none);
+  ok("C6.9 BR-6 fail: a disclaimer with no gate and no judgement line is refused on the field (never dropped silently)", lone.errors.length === 1 && lone.errors[0].field === "disclaimer", lone.errors);
   ok("C6.9 BR-5: the gate facts are listed once each, in gate order", JSON.stringify(gateFacts(e)) === JSON.stringify(["person.passport_number", "person.passport_expiry_date", "person.criminal_history"]), gateFacts(e));
 
   const first = eligibilityChanges(undefined, e);
   ok("C6.9 BR-4 pass: a first release lists one Eligibility line per gate, one for Officer's judgement and one for Disclaimer, each needing the SME", first.length === 4 && first.every((x) => x.kind === "Eligibility" && x.needs_sme && x.change === "added") && first.map((x) => x.key).join(",") === "vv.travel_document,vv.no_convictions,officers_judgement,disclaimer", first);
   const moved = eligibilityChanges(e, { ...e!, gates: [{ ...e!.gates[0], label: "Relabelled (Sample)" }], judgement: JUDGEMENT.slice(0, 3) });
+  const was = moved.find((x) => x.key === "vv.travel_document")?.label ?? "";
+  ok("C6.9 BR-4 pass: a changed gate's line shows the old and the new label", was.includes(e!.gates[0].label) && was.includes("→ Relabelled (Sample)"), was);
+  const rule = eligibilityChanges(e, { ...e!, gates: [{ ...e!.gates[0], condition: { op: "exists", field: "person.passport_number", subjectKind: "PERSON" } }, e!.gates[1]] }).find((x) => x.key === "vv.travel_document")?.label ?? "";
+  ok("C6.9 BR-4 pass: a gate whose rule changed says \"rule changed\"", /rule changed/.test(rule), rule);
   ok("C6.9 BR-4 pass: a changed gate, a removed gate and changed judgement lines are each named", moved.some((x) => x.key === "vv.travel_document" && x.change === "changed") && moved.some((x) => x.key === "vv.no_convictions" && x.change === "removed") && moved.some((x) => x.key === "officers_judgement" && x.change === "changed") && !moved.some((x) => x.key === "disclaimer"), moved);
   ok("C6.9 BR-4 fail: the same gates again → no Eligibility line", eligibilityChanges(e, JSON.parse(JSON.stringify(e))).length === 0);
   // diff() carries them, and no "Configuration: eligibility changed" catch-all line doubles them.
@@ -126,7 +136,7 @@ const none = new Set<string>();
   ok("C6.9 BR-2a fail: subjectKind CASE → 400 \"Eligibility is checked per person\" on the field", r.status === 400 && fieldErrors(r.body).includes("gates.0.condition") && /Eligibility is checked per person/.test(r.body?.detail ?? ""), r.body);
 
   // BR-3: the first save needs no version; a later save without the current version, or with an old one, is a 409.
-  let v = Number((await call("GET", url, undefined, AUTHOR)).body?.version ?? 0);
+  let v = Number((await call("GET", `/combinations/${vv}/eligibility-gates`, undefined, AUTHOR)).body?.version ?? 0);
   if (v === 0) {
     r = await call("PUT", url, { gates: GATES, judgement: JUDGEMENT }, AUTHOR);
     ok("C6.9 BR-3 pass: the first save needs no version (S7's body) → 200, version 1", r.status === 200 && r.body?.version === 1, r.body);
@@ -144,6 +154,18 @@ const none = new Set<string>();
   const audit = JSON.parse(sql(`select detail from audit_event where combination_id='${vv}' and entity='eligibility' order by at desc limit 1`) || "null");
   ok("C6.9 BR-3 pass: each save writes one audit row holding the list before it", Number(sql(`select count(*) from audit_event where combination_id='${vv}' and entity='eligibility'`)) === audits + 1 && audit?.before?.version === v && audit?.after?.version === v + 1, audit && { before: audit.before?.version, after: audit.after?.version });
   v++;
+  const race = await Promise.all([0, 1, 2, 3].map(() => call("PUT", url, { gates: relabel, judgement: JUDGEMENT, version: v }, AUTHOR)));
+  ok("C6.9 BR-3 fail: four saves at once on the same version → exactly one 200, the other three 409", race.filter((x) => x.status === 200).length === 1 && race.filter((x) => x.status === 409).length === 3, race.map((x) => x.status));
+  v++;
+  const spare = sql("select id from combination where combination_key<>'vv.single' and retired_at is null order by combination_key limit 1");
+  if (spare) {
+    sql(`update combination set retired_at = now() where id='${spare}'`); // test-only: stands in for a retire released on Structure
+    r = await call("PUT", `/combinations/${spare}/eligibility-gates`, { gates: GATES, judgement: JUDGEMENT }, AUTHOR);
+    sql(`update combination set retired_at = null where id='${spare}'`);
+    ok("C6.9 BR-1 fail: a retired combination's gates are not changed (409, \"is retired\")", r.status === 409 && /is retired/.test(r.body?.detail ?? ""), r.body?.detail ?? r.status);
+  }
+  r = await call("PUT", url, { gates: [], judgement: [], disclaimer: "A disclaimer of the firm's own, long enough.", version: v }, AUTHOR);
+  ok("C6.9 BR-6 fail: a disclaimer with no gate and no judgement line → 400 on disclaimer", r.status === 400 && fieldErrors(r.body).includes("disclaimer"), r.body?.detail ?? r.status);
   const got = (await call("GET", url, undefined, AUTHOR)).body;
   ok("C6.9 BR-1 pass: GET answers the draft's gates and what the newest release carries", got?.version === v && got?.gates?.[0]?.label === relabel[0].label && (got.released === null || Array.isArray(got.released?.gates)), { version: got?.version, released: got?.released?.release ?? null });
   ok("C6.9 BR-1 fail: a client cannot read the gates (403)", (await call("GET", url, undefined, CLIENT)).status === 403);
@@ -151,7 +173,8 @@ const none = new Set<string>();
   // BR-5: a gate that reads a fact no case of Visitor visa is asked blocks submit.
   const placedNow = new Set(((await call("GET", `/combinations/${vv}/config`, undefined, AUTHOR)).body?.snapshot?.placements ?? []).map((p: { fact: string }) => p.fact));
   const unasked = sql("select canonical_field_key from canonical_field where canonical_field_key like 'person.%' and status<>'RETIRED' order by canonical_field_key").split("\n").find((k) => k && !placedNow.has(k));
-  r = await call("PUT", url, { gates: [...relabel, { key: "vv.unasked", label: "Reads a fact nobody is asked (C6.9 check)", condition: { op: "exists", field: unasked } }], judgement: JUDGEMENT, version: v }, AUTHOR);
+  const derivedKey = sql("select derived_key from derived_field order by derived_key").split("\n").find((k) => k.startsWith("person.") && !placedNow.has(k));
+  r = await call("PUT", url, { gates: [...relabel, ...(derivedKey ? [{ key: "vv.derived", label: "Reads a worked-out value (C6.9 check)", condition: { op: "exists", field: derivedKey } }] : []), { key: "vv.unasked", label: "Reads a fact nobody is asked (C6.9 check)", condition: { op: "exists", field: unasked } }], judgement: JUDGEMENT, version: v }, AUTHOR);
   ok("C6.9 BR-5: a gate on a library fact nobody is asked is saved (the release check judges it)", r.status === 200, r.body?.detail ?? r.status);
   v++;
   const probs = ((await call("GET", `/combinations/${vv}`, undefined, AUTHOR)).body?.draft?.problems ?? []) as { level: string; where: string; item: string; message: string }[];
@@ -159,7 +182,9 @@ const none = new Set<string>();
   ok("C6.9 BR-5 fail: the release check names it as an error: \"This gate reads …, which no case of this application is asked\"", p5?.level === "error" && /This gate reads .*which no case of this application is asked/.test(p5.message), p5 ?? probs.filter((x) => x.where === "Eligibility"));
   r = await call("POST", `/combinations/${vv}/submit`, { note: "C6.9 check: must be refused" }, AUTHOR);
   ok("C6.9 BR-5 fail: submit is refused while that gate stands", r.status === 400 && /gate reads/.test(r.body?.message ?? r.body?.detail ?? ""), r.body?.message ?? r.body?.detail ?? r.status);
-  ok("C6.9 BR-5 pass: the Visitor visa gate facts (placed, read by IMM 5257) raise no release problem", !probs.some((x) => x.where === "Eligibility" && x.item !== "vv.unasked"), probs.filter((x) => x.where === "Eligibility"));
+  const pd = probs.find((x) => x.where === "Eligibility" && x.item === "vv.derived");
+  ok(`C6.9 BR-5 fail: a gate on a derived fact (${derivedKey}) is a release error naming it as worked out`, !!derivedKey && pd?.level === "error" && /worked out/.test(pd.message), pd ?? derivedKey);
+  ok("C6.9 BR-5 pass: the Visitor visa gate facts (placed, read by IMM 5257) raise no release problem", !probs.some((x) => x.where === "Eligibility" && !["vv.unasked", "vv.derived"].includes(x.item)), probs.filter((x) => x.where === "Eligibility"));
   r = await call("PUT", url, { gates: relabel, judgement: JUDGEMENT, version: v }, AUTHOR);
   v++;
 
