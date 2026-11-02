@@ -9,8 +9,8 @@ import type { Use, UsesView } from "../../contracts/structure.ts";
 import { WHY } from "../../contracts/lifecycle.ts";
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { ACTORS, type Db } from "./core.ts";
-import { combinationTrails } from "./form-uses.ts";
-import { current, LibrarySources } from "./library-sources.ts";
+import { current } from "../../engine/where-used.ts";
+import { combinationTrails, itemCombinations, itemReleases } from "./where-used.ts";
 
 export const ITEM_KINDS = ["field", "document_type", "section"] as const;
 export type ItemKind = (typeof ITEM_KINDS)[number];
@@ -50,10 +50,9 @@ export async function itemUses(db: Db, workspaceId: string, kind: ItemKind, key:
   const st = stateOf(versions);
   // Break round 2 (Major 1): a merged field only redirects (F1, concept M4): it is never retired, restored or deleted.
   const merged = kind === "field" ? (versions as { mergedIntoKey?: string | null }[]).find((r) => r.mergedIntoKey)?.mergedIntoKey ?? null : null;
-  // Only its database is read here (usedInIds needs no workspace service or audit).
-  const lib = new LibrarySources(db, undefined as never, undefined as never);
+  // SH2 (P-258): the combinations using it come from the one where-used service.
   const [ids, trails, combos] = await Promise.all([
-    lib.usedInIds(kind, workspaceId).then(async (m) => {
+    itemCombinations(db, workspaceId, kind).then(async (m) => {
       const s = new Set(m.get(key) ?? []);
       // Break M4: a document type is also used as another line's alternative, and as the document a fact is read from.
       if (kind === "document_type") {
@@ -103,10 +102,8 @@ export async function itemUses(db: Db, workspaceId: string, kind: ItemKind, key:
     if (qs.length) uses.push({ kind: "child", label: `${qs.length} question${qs.length === 1 ? "" : "s"} placed in it`, href: "/library/fields", blocks: true, retireOk: true, why: "Questions are placed in it: it can be retired, not deleted" });
   }
   // Releases keep it, never changed (L2): listed, never blocking.
-  const path = kind === "field" ? "canonical_fields" : kind === "section" ? "sections" : "document_types", prop = kind === "document_type" ? "key" : "id";
-  const released = await db.$queryRaw<{ combination_id: string; version: number }[]>`
-    SELECT r.combination_id, r.version FROM config_release r WHERE r.workspace_id = ${workspaceId}::uuid AND r.snapshot->${path} @> jsonb_build_array(jsonb_build_object(${prop}::text, ${key}::text)) ORDER BY r.version DESC`;
-  const newest = new Map<string, number>(); for (const r of released) if (!newest.has(r.combination_id)) newest.set(r.combination_id, Number(r.version));
+  const released = await itemReleases(db, workspaceId, kind, key);
+  const newest = new Map<string, number>(); for (const r of released) if (!newest.has(r.combinationId)) newest.set(r.combinationId, r.version);
   for (const [cid, v] of newest) uses.push({ kind: "release", label: `${trails.get(cid) ?? combo.get(cid)?.label ?? "A combination"} · release ${v}`, href: `/c/${cid}/review`, blocks: false, why: "Kept by its releases and their open cases (never changed)" });
   // Break round 2 (Major 3): a waiting change of who fills its question is an open change of the field too.
   // Round 3 Major 4: the author's own new item still waiting (its ADD, by them) is part of their own draft, not a block.
