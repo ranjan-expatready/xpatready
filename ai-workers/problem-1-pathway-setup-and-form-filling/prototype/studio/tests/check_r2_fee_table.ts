@@ -78,7 +78,7 @@ const bad: [string, (t: FeeTable) => FeeTable][] = [
   ["a combination with no lines", (t) => ({ ...t, combinations: { ...t.combinations, "vv.single": { ...t.combinations["vv.single"], lines: [] } } })],
   ["an empty roles list", lineEdit({ roles: [] })], ["roles as text", lineEdit({ roles: "principal" })],
   ["a cap with no amount", lineEdit({ family_max: { from_people: 5 } })], ["a cap of zero", lineEdit({ family_max: { cad: 0, from_people: 5 } })], ["a cap from zero people", lineEdit({ family_max: { cad: 500, from_people: 0 } })],
-  ["a sub-cent amount", lineEdit({ per_person_cad: 0.001 })], ["a sub-cent cap", lineEdit({ family_max: { cad: 0.001, from_people: 5 } })],
+  ["a sub-cent amount", lineEdit({ per_person_cad: 0.001 })], ["a sub-cent cap", lineEdit({ family_max: { cad: 0.001, from_people: 5 } })], ["a cap just above zero", lineEdit({ family_max: { cad: 0.000000001, from_people: 5 } })], ["an amount just above a whole cent", lineEdit({ per_person_cad: 100.000000001 })],
   ["an exemption without ages", (t) => ({ ...t, lines: t.lines.map((l) => (l.key === "biometrics" ? { ...l, exempt: { source: l.exempt!.source } } as typeof l : l)) })],
 ];
 for (const [what, edit] of bad) ok(`R2 (break r1) fail: ${what} makes the Visitor visa not derived, never a wrong total`, vvWith(edit) === undefined);

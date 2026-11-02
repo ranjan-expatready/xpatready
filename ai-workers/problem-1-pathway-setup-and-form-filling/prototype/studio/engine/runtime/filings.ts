@@ -43,7 +43,7 @@ export const BIOMETRICS_EXEMPT_SOURCE = line("biometrics")?.exempt?.source as Fe
 export function soundLine(l: TableLine | undefined): l is TableLine {
   if (!l || typeof l !== "object" || typeof l.key !== "string" || !FEE_BASES.includes(l.basis) || l.basis === "per_position") return false;
   // Amounts are whole cents: a sub-cent value would round to a different (even zero) fee (outside check on #455).
-  const cents = (cad: unknown) => typeof cad === "number" && Number.isFinite(cad) && cad >= 0 && Number.isSafeInteger(Math.round(cad * 100)) && Math.abs(cad * 100 - Math.round(cad * 100)) < 1e-6;
+  const cents = (cad: unknown) => typeof cad === "number" && Number.isFinite(cad) && cad >= 0 && /^\d+(\.\d{1,2})?$/.test(String(cad)) && Number.isSafeInteger(Math.round(cad * 100));
   if (!cents(l.per_person_cad)) return false;
   if (l.roles !== undefined && (!Array.isArray(l.roles) || !l.roles.length || l.roles.some((r) => typeof r !== "string"))) return false;
   if (l.basis === "per_person_by_role" && !l.roles?.length) return false;
