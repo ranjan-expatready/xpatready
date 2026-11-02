@@ -133,6 +133,9 @@ export function runTransform(transform: string | undefined, value: unknown, box:
     }
     if ((m = /^(?:yes_no_code|check_code):([^/]+)\/(.+)$/.exec(s))) { if (typeof v !== "boolean") return hand(`not a yes/no value: ${v}`); v = v ? m[1] : m[2]; continue; }
     if ((m = /^derive:Y if any .+ (?:is|are) recorded, else N$/.exec(s))) { v = (Array.isArray(v) ? v.length > 0 : v !== false && v !== "") ? "Y" : "N"; continue; }
+    // C7.7 (G25): an inverted yes/no box, "derive_inverse:1 when the subject has no child records (…), 0 when any child
+    // exists": the first code when the fact is No, the second when it is Yes. Only a yes/no value; anything else by hand.
+    if ((m = /^derive_inverse:(\w+) when [^,]+?(?: \([^)]*\))?, (\w+) when .+$/.exec(s))) { const yn = typeof v === "boolean" ? v : /^(y|yes|true)$/i.test(String(v)) ? true : /^(n|no|false)$/i.test(String(v)) ? false : null; if (yn === null) return hand(`not a yes/no value: ${v}`); v = yn ? m[2] : m[1]; continue; }
     if ((m = /^derive:1 if (?:fax )?country calling code is (not )?1(?: \([^)]*\))?, else 0$/.exec(s))) { const cc = String((v as Phone).country_code ?? ""); if (!cc) return hand("phone has no country calling code"); v = (cc === "1") !== !!m[1] ? "1" : "0"; continue; }
     // C7.2 cause 1: the 21 Oct draft's names: "country_code" is the calling code; "international_number_without_plus" is the
     // number after it, as E1 wrote it (23 Oct: IntlNumber "9800000001" beside NumberCountry "91"; Validate passed and the
@@ -144,10 +147,12 @@ export function runTransform(transform: string | undefined, value: unknown, box:
       if (m[1] !== "country_calling_code" && p.country_code === "1" && m[1] === "national_number") return blank("North American number goes in the area-code boxes");
       v = String(part).replace(/\D/g, ""); continue;
     }
+    // C7.7 (IMM 5476's representative phone): the country calling code's digits, and the number's digits (area code included).
+    if ((m = /^phone:(country_code_digits|area_code_and_number)$/.exec(s))) { const p = v as Phone; const part = m[1] === "country_code_digits" ? p?.country_code : p?.number; if (!part) return blank(`no ${m[1] === "country_code_digits" ? "country calling code" : "number"}`); v = String(part).replace(/\D/g, ""); continue; }
     if (/^phone_part:nanp_/.test(s)) { const p = v as Phone; if (p.country_code !== "1") return blank("not a North American number"); return hand("North American number parts are not in the executable set yet"); }
     if ((m = /^address_part:(city|province|country|postal_code|street_number|street_name|apt_unit|district|po_box)\b/.exec(s))) { const a = parseAddress(v); const part = a?.[m[1] as keyof Address]; if (!part) return blank(`address has no ${m[1]}`); v = part; const max = /max (\d+) char/.exec(s); if (max && String(v).length > Number(max[1])) return hand(`${m[1]} longer than ${max[1]} characters`); continue; }
     if ((m = /^address_single_line(?: \(max (\d+) char(?:s|acters)\))?$/.exec(s))) { const a = parseAddress(v); if (!a) return hand("not an address"); v = typeof value === "string" ? value : oneLine(a); if (m[1] && v.length > Number(m[1])) return hand(`address longer than ${m[1]} characters`); continue; }
-    if (/^country_name_text$/.test(s)) { const c = ISO3[String(v).toUpperCase()] ?? String(v); v = c; continue; }
+    if ((m = /^country_name_text(?: \(max (\d+) char(?:s|acters)\))?$/.exec(s))) { const c = ISO3[String(v).toUpperCase()] ?? String(v); if (m[1] && c.length > Number(m[1])) return hand(`country name longer than ${m[1]} characters`); v = c; continue; }
     if ((m = /^code_list:[\w.]+(?: \((.*)\))?$/.exec(s))) {
       const inline: Record<string, string> = {};
       for (const pair of (m[1] ?? "").split(",")) { const q = /^\s*([^=|]+?)\s*=\s*(\w+)\s*$/.exec(pair); if (q) inline[q[1]] = q[2]; }
