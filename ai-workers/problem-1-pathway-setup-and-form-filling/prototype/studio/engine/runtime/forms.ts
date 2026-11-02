@@ -29,12 +29,13 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
   return { ...cov, boxes, facts: factsOf(boxes) };
 }
 
-/** C7.2 cause 3 (P-72): a derived "is anything recorded?" Yes/No box (other names used, lived elsewhere, national
- *  identity document, US card, post-secondary education) is "N" when nothing was recorded and a person said so: every
- *  fact it names was asked of that person (not hidden), none has an answer, and each section asking them is settled:
- *  a repeating group with no entries whose "none apply" is confirmed, or a section whose answers are all confirmed
- *  (at least one) with none invalid. Anything else stays "not written", as before. Marked on a copy's boxes only, so
- *  the facts a copy read and its hash are unchanged (an answer added later is still a changed fact). */
+/** C7.2 cause 3 (P-72): a derived "is anything recorded?" Yes/No box is "N" only when a person answered "none apply"
+ *  and it is confirmed: every fact it names was asked of that person (not hidden) in a repeating group that has no
+ *  entries and whose "none apply" is confirmed (IMM 5257: post-secondary education, previous countries of residence).
+ *  An empty question in a confirmed section is not an answer (Confirm section vouches only for the answers shown;
+ *  review r1 B1), so "other names", the national identity document and the US card stay "not written" until a question
+ *  asks them (forms question in the PR). Marked on a copy's boxes only; a later entry or a changed "none apply" makes
+ *  the copy out of date through its group facts (changedGroups). */
 export function markNothingRecorded(boxes: BoxRow[], view: QuestionnaireView): BoxRow[] {
   return boxes.map((b) => {
     const d = b.coverage === "confirmed fact" || !b.fact || !b.about || b.about === "case" ? null : recordedDerivation(b.transform);
@@ -43,12 +44,10 @@ export function markNothingRecorded(boxes: BoxRow[], view: QuestionnaireView): B
     const asked = view.sections.flatMap((s) => s.questions.filter((q) => q.subjectId === subject && facts.has(q.fact)).map((q) => ({ s, q })));
     if (!asked.length || asked.some(({ q }) => q.hidden) || new Set(asked.map(({ q }) => q.fact)).size !== facts.size) return b;
     if (asked.some(({ q }) => q.answer || q.rows.some((r) => r.answer))) return b;
-    const settled = (s: QuestionnaireView["sections"][number]) => s.group
-      ? s.group.rows === 0 && !!s.group.none_apply?.value && s.group.none_apply.confirmed
-      : s.answered > 0 && s.confirmed === s.answered && s.invalid === 0;
+    const settled = (s: QuestionnaireView["sections"][number]) => !!s.group && s.group.rows === 0 && !!s.group.none_apply?.value && s.group.none_apply.confirmed;
     if (!asked.every(({ s }) => settled(s))) return b;
     const titles = [...new Set(asked.map(({ s }) => s.title))].join(", ");
-    return { ...b, nothing_recorded: true as const, detail: `nothing recorded; confirmed in ${titles}` };
+    return { ...b, nothing_recorded: true as const, detail: `nothing recorded: "none apply" confirmed in ${titles}` };
   });
 }
 

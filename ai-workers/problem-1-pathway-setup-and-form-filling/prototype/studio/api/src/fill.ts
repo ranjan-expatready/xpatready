@@ -55,8 +55,8 @@ export async function writeForm(snapshot: Snapshot, cov: { boxes: BoxRow[] }, fo
     // A text form field (no codes in its transform and no choices of its own) writes the value's label, never its key.
     const own = box.get(r.box) ?? {};
     const text = list && !hasCodes(r.transform) && !(Array.isArray(own.options_resolved) && own.options_resolved.length);
-    const o = runTransform(r.transform ?? "as_is", r.nothing_recorded ? null : text ? labelForText(r.value, list) : r.value, own, { fact: (k) => confirmed.get(`${r.about}|${k}`) });
-    if (o.ok) { write(r.box, o.value); return { ...r, result: "written", written: values[r.box] }; }
+    const o = runTransform(r.transform ?? "as_is", r.nothing_recorded ? null : text ? labelForText(r.value, list) : r.value, own, { fact: (k) => confirmed.get(`${r.about}|${k}`), nothingRecorded: !!r.nothing_recorded });
+    if (o.ok) { write(r.box, o.value); return { ...r, result: "written", written: values[r.box], ...(r.nothing_recorded ? { why: r.detail } : {}) }; }
     return { ...r, result: "hand" in o ? "by hand" : "blank", why: o.reason };
   });
   // F1 slice 2 (evidence lane F1, F2, F4): what a person does on the filled PDF before the form's own Validate passes.

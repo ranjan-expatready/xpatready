@@ -2,10 +2,13 @@
 // passed Adobe Validate, filled them all). Three causes fixed: (1) the 21 Oct draft's transformation steps the executor
 // did not run (phone parts, the amount as text, the one-line address in Canada, the "equals" and phone switches);
 // (2) month-only dates (YYYY-MM) for the year and month boxes; (3) the "is anything recorded?" Yes/No boxes, written "N"
-// once a person confirmed nothing applies. Part A: each rule passes and fails on its own (no server). Part B: the Sample
-// family's Visitor visa case (the same facts as #409's make_case.ts) fills 43 of 46 mandatory form fields with none by hand;
-// the 3 left are the boxes the release publishes as "not a fact" (a forms and expert question, unchanged here). Before
-// "none apply" and the sections are confirmed, the derived boxes stay "not written" (fail guard). Sample data; US$0.
+// only when a person answered "none apply" for their group and it is confirmed (review r1 B1: an empty question in a
+// confirmed section is not an answer). Part A: each rule passes and fails on its own (no server). Part B: the Sample
+// family's Visitor visa case (the same facts as #409's make_case.ts) fills 40 of 46 mandatory form fields with none by
+// hand; the 6 left are the 3 boxes the release publishes as "not a fact" and the 3 Yes/No boxes no question asks yet
+// (other names, national identity document, US card): forms and expert questions in the PR, unchanged here. Fail guards:
+// before "none apply" is confirmed the derived boxes stay "not written"; an entry added after the copy makes it out of
+// date. Sample data; US$0.
 //   zsh studio/tools/isolated.sh runtime_c72 4434 start && tsx studio/tests/check_c72_imm5257_fill.ts 4434 xr_studio_runtime_c72
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -26,7 +29,8 @@ const val = (o: ReturnType<typeof runTransform>) => (o.ok ? o.value : "hand" in 
 
 // ---------------------------------------------------------------- Part A: the executor's new steps (p5/transforms.ts)
 const india = { country_code: "91", number: "98000 00000" }, nanp = { country_code: "1", number: "4165550100" };
-const T = (t: string, v: unknown, ctx = {}) => val(runTransform(t, v, {}, ctx));
+const T = (t: string, v: unknown, ctx: Parameters<typeof runTransform>[3] = {}) => val(runTransform(t, v, {}, ctx));
+const NONE = { nothingRecorded: true };
 ok("C7.2 cause 1: phone_part:country_code gives the calling code's digits", T("phone_part:country_code", india) === "91", T("phone_part:country_code", india));
 ok("C7.2 cause 1 fail: a phone with no calling code leaves its box blank", /^blank/.test(T("phone_part:country_code", { number: "1" })));
 ok("C7.2 cause 1: phone_part:international_number_without_plus gives the number after the code (E1: 9800000001 beside 91)", T("phone_part:international_number_without_plus", india) === "9800000000", T("phone_part:international_number_without_plus", india));
@@ -48,10 +52,11 @@ ok("C7.2 cause 1 fail: \"equals\" with the other fact not confirmed goes by hand
 ok("C7.2 cause 2: date_part:YYYY and date_part:MM read a month-only date (2021-06)", T("date_part:YYYY", "2021-06") === "2021" && T("date_part:MM", "2021-06") === "06" && T("date_part:MM", "2021-06-15") === "06");
 ok("C7.2 cause 2 fail: a day or a full date is never made up from a month-only date", /^hand/.test(T("date_part:DD", "2021-06")) && /^hand/.test(T("date:YYYY-MM-DD", "2021-06")) && /^hand/.test(T("date_part:YYYY", "June 2021")));
 const alias = "derived:any(person.other_family_name, person.other_given_names) recorded -> yes_no_code:Y/N";
-ok("C7.2 cause 3: \"recorded\" gives N for nothing, Y for a value", T(alias, null) === "N" && T(alias, "SINGH") === "Y" && T("derived:any post-secondary education record exists -> yes_no_code:Y/N", null) === "N");
-ok("C7.2 cause 3: any(a, b) reads the other fact too: only a given name used before gives Y", T(alias, null, { fact: (k: string) => (k === "person.other_given_names" ? "RANI" : undefined) }) === "Y");
+ok("C7.2 cause 3: \"recorded\" gives N for a confirmed nothing, Y for a value", T(alias, null, NONE) === "N" && T(alias, "SINGH") === "Y" && T("derived:any post-secondary education record exists -> yes_no_code:Y/N", null, NONE) === "N");
+ok("C7.2 cause 3 fail: an empty value the caller did not vouch for stays blank, never \"N\" (review r1 m3: p5/engine.ts passes undefined)", /^blank/.test(T(alias, null)) && /^blank/.test(T(alias, undefined)));
+ok("C7.2 cause 3: any(a, b) reads the other fact too: only a given name used before gives Y", T(alias, null, { ...NONE, fact: (k: string) => (k === "person.other_given_names" ? "RANI" : undefined) }) === "Y");
 const card = "derived:valid person.us_green_card_number recorded (not expired) -> yes_no_code:Y/N";
-ok("C7.2 cause 3 fail: a recorded US card is never called valid by the executor (its expiry is checked by a person)", T(card, null) === "N" && /^hand/.test(T(card, "A123456789")));
+ok("C7.2 cause 3 fail: a recorded US card is never called valid by the executor (its expiry is checked by a person)", T(card, null, NONE) === "N" && /^hand/.test(T(card, "A123456789")));
 
 // markNothingRecorded (engine/runtime/forms.ts): only a confirmed "nothing applies" turns an empty derived box into "N".
 const box = (fact: string, transform: string): BoxRow => ({ box: `b.${fact}`, caption: "", fact, meaning: null, about: "p", about_label: "A", row: null, coverage: "client question", detail: "Section", transform });
@@ -59,16 +64,13 @@ const q = (fact: string, extra: object = {}) => ({ subjectId: "p", fact, hidden:
 const sec = (questions: object[], extra: object = {}) => ({ subjectId: "p", section: "s", title: "Personal details", questions, answered: 3, confirmed: 3, invalid: 0, group: null, ...extra });
 const mark = (sections: object[], b = box("person.other_family_name", alias)) => markNothingRecorded([b], { sections } as unknown as QuestionnaireView)[0].nothing_recorded === true;
 const both = [q("person.other_family_name"), q("person.other_given_names")];
-ok("C7.2 cause 3: an empty \"other names\" in a confirmed section is nothing recorded", mark([sec(both)]));
-ok("C7.2 cause 3 fail: a section with an answer not yet confirmed is not", !mark([sec(both, { confirmed: 2 })]));
-ok("C7.2 cause 3 fail: a section with an invalid answer, or no answer at all, is not", !mark([sec(both, { invalid: 1 })]) && !mark([sec(both, { answered: 0, confirmed: 0 })]));
-ok("C7.2 cause 3 fail: a name answered (even unconfirmed) is not nothing", !mark([sec([q("person.other_family_name"), q("person.other_given_names", { answer: { id: "x" } })])]));
-ok("C7.2 cause 3 fail: a fact the person was never asked (or hidden) is not nothing", !mark([sec([q("person.other_family_name")])]) && !mark([sec([q("person.other_family_name", { hidden: true }), q("person.other_given_names")])]));
+ok("C7.2 cause 3 fail (review r1 B1): an empty \"other names\" in a section confirmed in full is still not an answer", !mark([sec(both)]) && !mark([sec(both, { confirmed: 2 })]));
 const edu = box("person.education_institution", "derived:any post-secondary education record exists -> yes_no_code:Y/N");
 const group = (none: object | null, rows = 0) => sec([q("person.education_institution")], { title: "Education history", group: { required: false, client: true, rows, none_apply: none } });
 ok("C7.2 cause 3: a group whose \"none apply\" is confirmed is nothing recorded", mark([group({ value: true, confirmed: true })], edu));
+ok("C7.2 cause 3 fail: an entry answered (even unconfirmed), a hidden question, or a fact never asked is not nothing", !mark([sec([q("person.education_institution", { rows: [{ answer: { id: "x" } }] })], { group: { rows: 0, none_apply: { value: true, confirmed: true } } })], edu) && !mark([sec([q("person.education_institution", { hidden: true })], { group: { rows: 0, none_apply: { value: true, confirmed: true } } })], edu) && !mark([sec([q("person.education_city")], { group: { rows: 0, none_apply: { value: true, confirmed: true } } })], edu));
 ok("C7.2 cause 3 fail: \"none apply\" not confirmed, not answered, or with entries is not", !mark([group({ value: true, confirmed: false })], edu) && !mark([group(null)], edu) && !mark([group({ value: true, confirmed: true }, 1)], edu));
-ok("C7.2 cause 3 fail: a confirmed fact or a box that is not a \"recorded\" switch is never marked", !mark([sec(both)], { ...box("person.other_family_name", alias), coverage: "confirmed fact", value: "X" }) && !mark([sec(both)], box("person.other_family_name", "as_is")));
+ok("C7.2 cause 3 fail: a confirmed fact or a box that is not a \"recorded\" switch is never marked", !mark([group({ value: true, confirmed: true })], { ...edu, coverage: "confirmed fact", value: "X" }) && !mark([group({ value: true, confirmed: true })], { ...edu, transform: "as_is" }));
 
 // ---------------------------------------------------------------- Part B: the Sample family's case, end to end
 type Opt = { key: string; label?: string };
@@ -142,10 +144,11 @@ type Box = { box: string; fact: string | null; result: string; why: string | nul
   await put(SP, "person.family_name", S["person.family_name"]); await put(SP, "person.given_names", S["person.given_names"]);
   ok("setup: every Sample answer is accepted", failed.length === 0, failed);
 
-  const DERIVED = ["Page1[0].PersonalDetails[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]", "Page1[0].PersonalDetails[0].PCRIndicator[0]", "Page2[0].natID[0].q1[0].natIDIndicator[0]", "Page2[0].USCard[0].q1[0].usCardIndicator[0]", "Page3[0].Education[0].EducationIndicator[0]"].map((p) => `form1[0].${p}`);
+  const DERIVED = ["Page1[0].PersonalDetails[0].PCRIndicator[0]", "Page3[0].Education[0].EducationIndicator[0]"].map((p) => `form1[0].${p}`);
+  const NOT_ASKED = ["Page1[0].PersonalDetails[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]", "Page2[0].natID[0].q1[0].natIDIndicator[0]", "Page2[0].USCard[0].q1[0].usCardIndicator[0]"].map((p) => `form1[0].${p}`);
   // Fail guard first: nothing confirmed yet, and "none apply" not answered: the derived switches are never written.
   const before = await generate(1);
-  ok("C7.2 cause 3 fail: before anyone confirms that nothing applies, the 5 derived Yes/No boxes stay \"not written\"", before.status === "GENERATED" && DERIVED.every((b) => before.byBox.get(b)?.result === "not written"), DERIVED.map((b) => before.byBox.get(b)?.result));
+  ok("C7.2 cause 3 fail: before anyone confirms \"none apply\", the lived-elsewhere and education Yes/No boxes stay \"not written\"", before.status === "GENERATED" && DERIVED.every((b) => before.byBox.get(b)?.result === "not written"), DERIVED.map((b) => before.byBox.get(b)?.result));
 
   await none(P, "education_history"); await none(P, "previous_countries_of_residence");
   await confirmAll();
@@ -159,8 +162,8 @@ type Box = { box: string; fact: string | null; result: string; why: string | nul
   const mandatory = inv.fields.filter((x) => x.required && x.data_path).map((x) => x.data_path!);
   const empty = mandatory.filter((p) => !after.values[p]);
   const NOT_A_FACT = ["Page2[0].MaritalStatus[0].SectionA[0].Passport[0].TaiwanPIN[0]", "Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IsraelPassportIndicator[0]", "Page3[0].Signature[0].Consent0[0].Choice[0]"].map((p) => `form1[0].${p}`);
-  ok("C7.2: the app's copy fills 43 of IMM 5257's 46 mandatory form fields (was 32, #409); the 3 left are exactly the boxes published as \"not a fact\" (Question in the PR)",
-    mandatory.length === 46 && empty.length === 3 && empty.every((p) => NOT_A_FACT.includes(p)), { mandatory: mandatory.length, filled: mandatory.length - empty.length, empty });
+  ok("C7.2: the app's copy fills 40 of IMM 5257's 46 mandatory form fields (was 32, #409); the 6 left are exactly the 3 boxes published as \"not a fact\" and the 3 Yes/No boxes no question asks yet (Questions in the PR)",
+    mandatory.length === 46 && empty.length === 6 && empty.every((p) => NOT_A_FACT.includes(p) || NOT_ASKED.includes(p)), { mandatory: mandatory.length, filled: mandatory.length - empty.length, empty });
   ok("C7.2: no form field of the copy is left by hand (was 20, #409)", after.boxes.filter((b) => b.result === "by hand").length === 0, after.boxes.filter((b) => b.result === "by hand").map((b) => `${b.box.split(".").slice(-2).join(".")}: ${b.why}`));
   const at = (p: string) => after.values[`form1[0].${p}`];
   const phoneBoxes = "Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0]";
@@ -171,6 +174,18 @@ type Box = { box: string; fact: string | null; result: string; why: string | nul
     Object.fromEntries(Object.entries(after.values).filter(([k]) => /Phone\[0\]\.(NumberCountry|IntlNumber|Other)|Funds|AddressInCanada|SameAs/.test(k)).map(([k, v]) => [k.split(".").slice(-2).join("."), v])));
   const dates = Object.entries(after.values).filter(([k]) => /Occupation\[0\]\.OccupationRow\d\[0\]\.(From|To)(Year|Month)\[0\]$/.test(k));
   ok("C7.2 cause 2: the 12 year and month boxes of the three job rows are written from month-only dates", dates.length === 12 && dates.every(([k, v]) => (/Year/.test(k) ? /^\d{4}$/ : /^\d{2}$/).test(v)), Object.fromEntries(dates.map(([k, v]) => [k.split(".").slice(-2).join("."), v])));
-  ok("C7.2 cause 3: other names, lived elsewhere, national identity document, US card and education are written \"N\" once nothing applies is confirmed", DERIVED.every((b) => after.values[b] === "N"), DERIVED.map((b) => after.values[b]));
+  ok("C7.2 cause 3: lived elsewhere and education are written \"N\" once \"none apply\" is confirmed, with that as the reason", DERIVED.every((b) => after.values[b] === "N" && /none apply/.test(after.byBox.get(b)?.why ?? "")), DERIVED.map((b) => [after.values[b], after.byBox.get(b)?.why]));
+  ok("C7.2 cause 3 fail (review r1 B1): other names, national identity document and US card are never \"N\" from an empty question in a confirmed section", NOT_ASKED.every((b) => after.byBox.get(b)?.result === "not written" && !after.values[b]), NOT_ASKED.map((b) => after.byBox.get(b)?.result));
+  // Review r1 M2: a fact behind an "N" answered after the copy makes that copy out of date (here: an education entry).
+  const copyId = sql(`select id from form_instance where case_id = '${caseId}' order by created_at desc limit 1`);
+  const fresh = (await call("GET", `/runtime/form-copies/${copyId}`, undefined, OFFICER)).body;
+  // An entry needs "none apply" taken back first (the API refuses a row while it stands): either step dates the copy.
+  const eduSec = (await view()).find((x) => x.subjectId === P && x.section === "education_history");
+  const undo = await call("PUT", `/runtime/cases/${caseId}/groups/${P}/education_history/none-apply`, { noneApply: false, expectedId: eduSec?.group?.none_apply?.id ?? null }, OFFICER);
+  const row = await newRow(P, "education_history");
+  failed.length = 0; await put(P, "person.education_institution", "SAMPLE UNIVERSITY", row);
+  const later = (await call("GET", `/runtime/form-copies/${copyId}`, undefined, OFFICER)).body;
+  ok("C7.2 cause 3 fail (review r1 M2): \"none apply\" taken back and an education entry added after the copy (unconfirmed) make the copy that says \"N\" out of date",
+    undo.status < 300 && !!row && failed.length === 0 && fresh?.out_of_date === false && later?.out_of_date === true, { undo: undo.status, row, failed, before: fresh?.out_of_date, after: later?.out_of_date, changed: later?.changed });
   summary();
 })().catch((e) => { console.error(e); process.exit(2); });

@@ -63,10 +63,12 @@ const MONTH = /^(\d{4})-(\d{2})$/;
 
 /** C7.2 cause 3: a Yes/No box derived from whether something is recorded (the 21 Oct IMM 5257 draft's wording). With
  *  nothing recorded it is still a value ("N"), but only once a person confirmed that nothing applies: the caller marks
- *  such a box (engine/runtime/forms.ts markNothingRecorded) and only then hands the writer an empty value for it
- *  (api/src/fill.ts); a box whose fact was never confirmed stays "not written" there and never reaches this executor. */
+ *  such a box (engine/runtime/forms.ts markNothingRecorded) and passes Context.nothingRecorded (api/src/fill.ts); with
+ *  an empty value and no such flag the box stays blank. */
 const RECORDED = /^derived:(?:any\(([\w.,\s]+)\) recorded|([\w.]+) recorded|valid ([\w.]+) recorded \(not expired\)|any post-secondary education record exists|any previous residence in past 5 years\b.*)$/;
-const stepsOf = (transform: string | null | undefined) => String(transform ?? "as_is").split(/;|->/).map((s) => s.trim()).filter(Boolean);
+/** A transformation's steps: separated by ";" (P1/P2 maps) or "->" (the 21 Oct live IMM 5257 draft). Two spelling aliases
+ *  from that draft name existing executable steps: date_part:X = date:X, address_part:province_state = address_part:province. */
+const stepsOf = (transform: string | null | undefined) => String(transform ?? "as_is").split(/;|->/).map((s) => s.trim().replace(/^date_part:/, "date:").replace(/^address_part:province_state\b/, "address_part:province")).filter(Boolean);
 /** Whether a transformation is a "recorded" Yes/No derivation, and the other facts it names (any(a, b)). */
 export function recordedDerivation(transform: string | null | undefined): { facts: string[] } | null {
   const m = stepsOf(transform).map((s) => RECORDED.exec(s)).find(Boolean);
@@ -80,17 +82,18 @@ function same(a: unknown, b: unknown): boolean {
 }
 
 /** Other confirmed facts about the same person, for the derivations that compare two facts ("A equals B", any(A, B)). */
-export type Context = { fact?: (key: string) => unknown };
+export type Context = { fact?: (key: string) => unknown;
+  /** C7.2 cause 3: the caller vouches that a person confirmed nothing applies (a group's "none apply"): only then does an
+   *  empty value reach a "recorded" step and give "N". Without it an empty value stays blank, as for every other step. */
+  nothingRecorded?: boolean };
 
 /** Runs one transformation text on one value for one box. `rows` lets "select …" pick among a person's rows. */
 export function runTransform(transform: string | undefined, value: unknown, box: Box, ctx: Context = {}): Outcome {
-  // Steps are separated by ";" (P1/P2 maps) or "->" (the 21 Oct live IMM 5257 draft). Two spelling aliases from that
-  // draft name existing executable steps: date_part:X = date:X, address_part:province_state = address_part:province.
-  const steps = String(transform ?? "as_is").split(/;|->/).map((s) => s.trim().replace(/^date_part:/, "date:").replace(/^address_part:province_state\b/, "address_part:province")).filter(Boolean);
+  const steps = stepsOf(transform);
   const hand = (reason: string): Outcome => ({ ok: false, hand: true, reason, steps });
   const blank = (reason: string): Outcome => ({ ok: false, blank: true, reason, steps });
   let v: any = value;
-  if ((v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length)) && !(steps[0] && RECORDED.test(steps[0]))) {
+  if ((v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length)) && !(ctx.nothingRecorded && steps[0] && RECORDED.test(steps[0]))) {
     // A derive-to-N/0 on a missing fact is still a value ("no other name recorded"); everything else stays blank.
     const d = steps.find((s) => s.startsWith("derive:"));
     if (d && /^derive:Y if any .+ (is|are) recorded, else N$/.test(d)) return { ok: true, value: "N", steps };
