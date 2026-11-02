@@ -51,6 +51,24 @@ Built to concept v2 as approved (Q1 error, Q2 new or changed plus every item wit
 9. **Reviewer m1:** "new or changed" is measured against the latest **real** release. A Demo release never counts as one, so maps first released in a demo stay new until a real release carries them.
 10. **Reviewer m2:** Approve and the shared release run the keys only after their cheap refusals.
 
+11. **Breaker M1 (fixed):** the shared release's "Every change is held back" refusal now carries `errors[]`: every blocking item of every held row, each with its combination.
+12. **Breaker M2 (not changed; for the tech lead):** adding a check with no quote (Sample) makes a real combination's draft a Demo release.
+    * That is G3's rule from the snapshot, and P-240's "only the demo workspace may release Sample content, as a Demo release".
+    * The release is marked, never counted as real, and a failing key still refuses it.
+    * Outside the demo workspace it cannot happen (`check_g2_answer_key_gate_firm.ts`).
+    * Recommendation: a later row that warns the author when a check would turn a real combination's next release into a Demo release.
+13. **Breaker Minors:**
+    * **Fixed:**
+      * a long unbroken value in a refusal line now wraps;
+      * a key that tests no value fails in words, not "0 of 0 values";
+      * Approve on a draft never submitted no longer runs keys (m2's order).
+    * **Listed, not fixed:**
+      * families sharing a label read the same;
+      * there is no cap on keys per item;
+      * a key added after Submit holds the Release page row, while Approve re-runs it;
+      * G3's chip shows in a non-demo workspace;
+      * the scale was measured outside the server (about 10 ms per changed combination with 6 maps).
+
 ## Checks
 * `check_g2_answer_key_gate.ts` 59/59
 * `check_g2_answer_key_gate_firm.ts` 13/13

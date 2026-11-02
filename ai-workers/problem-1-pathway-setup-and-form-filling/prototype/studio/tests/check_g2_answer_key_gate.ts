@@ -97,6 +97,8 @@ g = answerKeyGate([item()], [key("DRAFT", "PASSED")], demo);
 ok("C5.5 BR-5 (Demo release): an unsigned passing key is a Sample warning", g.problems.length === 1 && g.problems[0].level === "warning" && /is Sample \(not signed/.test(g.problems[0].message), lv(g));
 g = answerKeyGate([item()], [key("SIGNED", "FAILED")], demo);
 ok("C5.5 BR-5 fail (Q3): a failing key refuses a Demo release too, naming the values and the first failure", g.problems.length === 1 && g.problems[0].level === "error" && /failed: 2 of 42 values\. Family name/.test(g.problems[0].message) && g.items[0].result === "failed", lv(g));
+g = answerKeyGate([item()], [key("DRAFT", "FAILED", { run: { state: "FAILED", why: "", passed: 0, failed: 0, first_failure: null, run_id: "r0" } })], real);
+ok("C5.5 BR-5 fail (breaker minor): a key that tests no value fails in words, never \"0 of 0 values\"", g.problems.some((p) => p.level === "error" && /failed: it tests no value\./.test(p.message)) && !g.problems.some((p) => /0 of 0/.test(p.message)), lv(g));
 g = answerKeyGate([item()], [key("SIGNED", "PASSED"), key("DRAFT", "FAILED")], real);
 ok("C5.5 BR-4 fail: every key must pass: one signed pass and one failing key refuse", g.problems.some((p) => p.level === "error" && /failed/.test(p.message)) && g.items[0].result === "failed", lv(g));
 g = answerKeyGate([item()], [key("SIGNED", "PASSED"), key("DRAFT", "PASSED")], real);
@@ -219,7 +221,7 @@ r = await call("POST", `/combinations/${vv}/approve`, undefined, APPROVER);
 const bad2 = (r.body?.errors ?? []).filter((x: { where: string }) => x.where === "Tests");
 ok("C5.5 BR-6, BR-7, BR-8: Approve runs the tests again and refuses (409) naming the failing value in errors[]", r.status === 409 && runs() === a1 + 1 && /^Release refused: \d+ problem/.test(r.body.detail) && bad2.some((x: { message: string }) => /expected "NOT-THE-NAME"/.test(x.message)), r.body);
 r = await call("POST", "/pack/release", { expectedChanges: shared.changes }, APPROVER);
-ok("C5.5 BR-5 (m3): the shared release refuses too: every change is held back", r.status === 409, r.body?.detail);
+ok("C5.5 BR-5 (m3), BR-8 (breaker M1): the shared release refuses too, and errors[] names the Visitor visa's failing IMM 5257 value", r.status === 409 && (r.body?.errors ?? []).some((x: { combination: string; where: string; message: string }) => x.combination === "Visitor visa" && x.where === "Tests" && /expected "NOT-THE-NAME"/.test(x.message)), { detail: r.body?.detail, errors: (r.body?.errors ?? []).slice(0, 3) });
 
 // Put right and signed: the release goes through and records the signed key; a later change shows on Review (m7)
 cur = (await call("GET", `/answer-keys/${kid}`, undefined, AUTHOR)).body;
