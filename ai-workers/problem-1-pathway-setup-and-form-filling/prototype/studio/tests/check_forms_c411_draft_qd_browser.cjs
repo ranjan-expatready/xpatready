@@ -80,7 +80,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await state("run-done");
   await dlg.getByRole("link", { name: "Open To review" }).click();
   await p.waitForURL(/\/review\/proposals/); await settle();
-  step("C4.11 pass: Open To review lands on this combination's items", /pre-qualification/i.test(await p.locator("main").innerText()));
+  // CI (#469): on a slow runner the list can render after settle(); wait for it (up to 15 s), then judge, with what showed.
+  await p.waitForFunction(() => /pre-qualification/i.test(document.querySelector("main")?.innerText ?? ""), null, { timeout: 15000 }).catch(() => {});
+  const landed = await p.locator("main").innerText();
+  step("C4.11 pass: Open To review lands on this combination's items", /pre-qualification/i.test(landed), `${p.url()} — ${landed.slice(0, 300)}`);
   step("no page error or console error on the way", errs.length === 0, errs.join(" | "));
   await b.close();
   console.log(`\n${pass}/${pass + fail} passed`);
