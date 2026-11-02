@@ -7,6 +7,9 @@ import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, In
 import { readFileSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 import { Prisma } from "@prisma/client";
+import type { z } from "zod";
+import { FamilyBody, KeyCreateBody, KeyUpdateBody, SignBody } from "../../contracts/answer-keys.ts";
+import { problemFromZod } from "../../contracts/programs.ts";
 import { buildSnapshot, type Snapshot } from "../../engine/snapshot.ts";
 import { blank, changeProblem, checkExpected, checkFamily, fingerprintOf, ITEM_KINDS, NO_SCORING, runFieldMap, runRuleSet, runState, SAMPLE_WORDS, signProblem, unclean, type Family, type FieldError, type ItemKind, type MapExpected, type RuleExpected } from "../../engine/answer-keys.ts";
 import type { Inventory } from "../../engine/form-values.ts";
@@ -16,6 +19,8 @@ const nameOf = (id: string | null | undefined) => [...ACTORS].find((a) => a.id =
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const invalid = (errors: FieldError[]): never => { throw new HttpException({ type: "https://expatready.local/problems/validation", title: "Some details need fixing", status: 400, detail: errors.map((e) => e.message).join(" "), errors }, HttpStatus.BAD_REQUEST); };
 const conflict = (detail: string, extra: object = {}): never => { throw new HttpException({ type: "https://expatready.local/problems/stale", title: "Changed by someone else", status: 409, detail, ...extra }, HttpStatus.CONFLICT); };
+/** STANDARDS §6 (review minor 3): the request's shape first (contracts/answer-keys.ts), then the engine's item rules. */
+const parse = <S extends z.ZodType>(schema: S, input: unknown): z.infer<S> => { const r = schema.safeParse(input ?? {}); if (!r.success) throw new HttpException(problemFromZod(r.error), HttpStatus.BAD_REQUEST); return r.data; };
 const obj = (b: unknown) => (b && typeof b === "object" && !Array.isArray(b) ? b : {}) as Record<string, unknown>;
 const holds = (a: Actor, duty: string) => (a.duties as readonly string[]).includes(duty);
 const at = (d: Date | null | undefined) => (d ? d.toISOString() : null);
@@ -78,7 +83,7 @@ export class AnswerKeys {
   async createFamily(actor: Actor, body: unknown) {
     need(actor, "author");
     const workspaceId = await this.ws.id();
-    const { family, errors } = checkFamily(body, await this.fields(workspaceId), await this.roles(workspaceId));
+    const { family, errors } = checkFamily(parse(FamilyBody, body), await this.fields(workspaceId), await this.roles(workspaceId));
     if (errors.length) invalid(errors);
     if (await this.db.testFamily.findUnique({ where: { workspaceId_familyKey: { workspaceId, familyKey: family.key } } })) invalid([{ field: "key", message: `A family with the key "${family.key}" exists already: choose another key or change that family.` }]);
     const r = await this.db.testFamily.create({ data: { workspaceId, familyKey: family.key, label: family.label, referenceDate: family.reference_date, people: family.people, facts: family.facts as object[], noneApply: family.none_apply, updatedBy: actor.id } });
@@ -91,7 +96,7 @@ export class AnswerKeys {
   async updateFamily(actor: Actor, id: string, body: unknown) {
     need(actor, "author");
     const f = await this.family(id);
-    const b = obj(body);
+    const b = parse(FamilyBody, body) as Record<string, unknown>;
     const { family, errors } = checkFamily({ ...b, key: f.familyKey }, await this.fields(f.workspaceId), await this.roles(f.workspaceId));
     if (errors.length) invalid(errors);
     if (b.version !== f.version) conflict(`${nameOf(f.updatedBy)} saved this family at ${f.updatedAt.toISOString().slice(11, 16)} UTC. Reload their version, then make your change again.`, { current: familyView(f) });
@@ -153,7 +158,7 @@ export class AnswerKeys {
     this.writer(actor);
     const c = await this.combination(combinationId);
     if (c.retiredAt) fail(`"${c.label}" is retired: no new answer key is written for it.`, HttpStatus.CONFLICT);
-    const b = obj(body);
+    const b = parse(KeyCreateBody, body) as Record<string, unknown>;
     const kind = b.item_kind as ItemKind, ref = typeof b.item_ref === "string" ? b.item_ref.trim() : "";
     if (!(ITEM_KINDS as readonly string[]).includes(kind)) invalid([{ field: "item_kind", message: "Choose what the key tests: field_map (a form's field map) or rule_set (the eligibility rules)." }]);
     if (typeof b.family_id !== "string" || !UUID.test(b.family_id)) invalid([{ field: "family_id", message: "Choose the test family (its id)." }]);
@@ -173,7 +178,7 @@ export class AnswerKeys {
     this.writer(actor);
     const k = await this.key(id);
     if (k.combination.retiredAt) fail(`"${k.combination.label}" is retired: its answer keys are not changed.`, HttpStatus.CONFLICT);
-    const b = obj(body);
+    const b = parse(KeyUpdateBody, body) as Record<string, unknown>;
     const s = await this.draft(k.workspaceId, k.combinationId);
     // Review minor 1 (BR-6): a change that names no edition keeps the key's own; it never moves to the map's edition.
     const given = obj(b.expected), kept = k.itemKind === "field_map" && !(typeof given.edition === "string" && given.edition.trim()) ? { ...given, edition: (k.expected as MapExpected).edition } : b.expected;
@@ -195,7 +200,7 @@ export class AnswerKeys {
   async sign(actor: Actor, id: string, body: unknown) {
     const k = await this.key(id);
     if (k.combination.retiredAt) fail(`"${k.combination.label}" is retired: its answer keys are not signed.`, HttpStatus.CONFLICT);
-    const why = signProblem(k, actor, obj(body).version);
+    const why = signProblem(k, actor, parse(SignBody, body).version);
     if (why) throw new HttpException({ type: "https://expatready.local/problems/sign", title: "Not signed", status: holds(actor, "sme") ? 409 : 403, detail: why }, holds(actor, "sme") ? HttpStatus.CONFLICT : HttpStatus.FORBIDDEN);
     const n = await this.db.answerKey.updateMany({ where: { id, version: k.version, state: "DRAFT" }, data: { state: "SIGNED", signedByUserId: actor.id, signedAt: new Date() } }); // the PUT guard reads the state too (break m1)
     if (!n.count) conflict("These expected values changed a moment ago: reload, read them again, then sign.");

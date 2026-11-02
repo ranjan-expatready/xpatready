@@ -254,6 +254,10 @@ const esc = await call("POST", `/combinations/${vv}/answer-keys`, { family_id: f
 ok("C5.7 API fail (Devin review): a form field list path outside the solution folder is never read (422)", esc.status === 422, esc.status);
 sql(`update combination set retired_at = now() where id = '${vv}' returning id`);
 ok("C5.7 API fail (break m9): on a retired combination a key is not changed or signed (409)", (await call("PUT", `/answer-keys/${k4.id}`, { expected: rules, version: 2, reason: "x" }, AUTHOR)).status === 409 && (await call("POST", `/answer-keys/${k4.id}/sign`, { version: 2 }, EXPERT)).status === 409);
+// Review minor (re-review 3a3cf527): the copy is put back, so the check can run again on it.
+sql(`update combination set retired_at = null where id = '${vv}' returning id`);
+sql(`update form_edition set inventory_file = '${map.inventory_file}' where id = '${ed0}' returning id`);
+ok("C5.7 API fail (STANDARDS §6): a body of the wrong shape is refused by the contract, on the field (400)", (await call("POST", `/answer-keys/${k4.id}/sign`, { version: "2" }, EXPERT)).body.errors?.[0]?.field === "version" && (await call("POST", "/answer-keys/families", { label: "X", reference_date: "2026-01-01", people: "nobody" }, AUTHOR)).body.errors?.[0]?.field === "people");
 const missing = await call("GET", "/answer-keys/00000000-0000-0000-0000-000000000000", undefined, AUTHOR);
 ok("C5.7 API fail: an unknown key or a malformed id is 404", missing.status === 404 && (await call("GET", "/answer-keys/not-a-uuid", undefined, AUTHOR)).status === 404);
 
