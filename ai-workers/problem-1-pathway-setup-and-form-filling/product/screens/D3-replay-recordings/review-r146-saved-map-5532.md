@@ -117,3 +117,29 @@ The Minors m1 to m5 above stand (m5 concerned my own first test runs; do not com
 * **Blockers:** none.
 * **Majors:** none.
 * **Minors:** m1 to m5 as above; the stale row-12 sentence (main's, not blocking).
+
+---
+
+## Re-review on 0ae77d14
+
+* **Change read:** `git diff 61965282..0ae77d14` (three files: the review file, `check_c10_1_configured.ts`, `check_s7_load.ts`; the `*.ts` diff is the two tests). Reading only: no suite, server or isolated copy run by me; no tracked file edited. US$0.
+* **Correction to my merge review.** I approved 61965282 on the condition that the replay checks were green, and I wrote that the empty waiting list "is unchanged". That was wrong. I noted main's new job `studio-fieldmap-imm5645e.json` but did not follow it through: QA-163 (commit `49da2f96`) added IMM 5645 (01-2021) to the six, it has a job and no saved run (`p2/runs` holds no `imm5645` file), so exactly one form waits for Draft with AI again. The coordinator's runs on 61965282 (s7_load 22/1, c10_1 26/1) caught what my reading missed.
+
+| Check | Result |
+|---|---|
+| Cause | Matches the repo: main adds the IMM 5645 job and no run file for it. The waiting list is the plan's non-reusable targets (demo.ts 252), so it holds that one form. |
+| `check_s7_load.ts` | Now `JSON.stringify(waiting_for_draft_with_ai) === JSON.stringify(["IMM 5645 (01-2021)"])`. Exact on the name and on the length. Fail sides: a lost or mismatched saved run adds its form (list differs); a saved run for IMM 5645 landing later also fails it, which is the intended prompt to update the line. The label equals the job's `known.form_edition`. |
+| `check_c10_1_configured.ts` row 3 | `jobs === 15 && status === "partial" && shows.startsWith(`${jobs} saved`) && why` matches `^1 forms have no saved AI answer and wait for Draft with AI, a paid run the founder approves: IMM 5645 \(01-2021\)\.$`. I compared it character by character with the sentence in `demo.ts` 348 (`${n} forms have no saved AI answer and wait for Draft with AI, a paid run the founder approves: ${names.join(", ")}.`): it is the same, "1 forms" included (the product's own plural wording, not this PR's to change). A lost replay changes `jobs` and the sentence, so both sides fail. |
+| Comments | Both updated and accurate (fifteen saved, IMM 5645 alone waiting). |
+| Everything else | Unchanged since 61965282: my run file, stub pass, digest, `check_queue_tx.ts` (fifteen forms; it does not assert the waiting list), no product code. |
+| Reported results (not run by me) | s7_load 23/23 and c10_1 27/27 on 0ae77d14; ledger unchanged at 180,011 bytes; earlier on 61965282, PD apply 8/8 and queue_tx 8/8. |
+
+**Minor (new, not blocking):** the row-3 sentence reads "1 forms have…" (no singular). It is `demo.ts` wording from before this work and the test now pins it, so a reword of `demo.ts` would need the test changed with it.
+
+Minors m1 to m5 and the stale row-12 sentence above stand.
+
+**Verdict on 0ae77d14: Approve**, conditional on CI being green on this head.
+
+* **Blockers:** none.
+* **Majors:** none.
+* **Minors:** m1 to m5, the stale row-12 sentence, and "1 forms" (all non-blocking).
