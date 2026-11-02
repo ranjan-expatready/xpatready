@@ -143,3 +143,39 @@ Minors m1 to m5 and the stale row-12 sentence above stand.
 * **Blockers:** none.
 * **Majors:** none.
 * **Minors:** m1 to m5, the stale row-12 sentence, and "1 forms" (all non-blocking).
+
+---
+
+## Re-review of merge 375897d8
+
+* **Change read:** `git show --cc 375897d8` (parents `b348127f` and `origin/main` `d9488d5e`), `git diff b348127f..375897d8` (42 files under `prototype/`), and greps of the merged tree. Reading only: no suite, server or isolated copy run by me; no tracked file edited. US$0.
+* **What main brought:** C3.4 (#585) and C2.6 (#574): library masters (four new `studio-masters-*` jobs with stub passes, prompts, schemas and stubs; `form-masters.ts`, `masters-ai.ts`), the checklist/review-queue "one door" work (`checklist.ts`, `proposals.ts`, `saved-readings.ts`, `rounds.ts`, `draft-qd.ts`, `review-queue.ts`, `sources.ts` +5 lines), tests for those, and `qa/check_qa_p227_imm5532_saved.ts` (QA's check of this PR's run).
+
+**1. Keeping our `canary-digest.json` is right.**
+
+| Question | Evidence |
+|---|---|
+| Does a check or the stub gate read the committed digest? | No. `launch.ts` 50 writes it afresh on every launch ("the latest, kept as evidence of what the screen looks like") and a launch compares only the digest SHA and nonce it just wrote with what the child screened (110). The drafting process reads its own per-run ticket (`draft.ts` 49, `ticketFile(runId)`), never `DIGEST_FILE`. `hasStubPass` (`pathcode.ts`) reads the stub-pass file's path-code SHA and `screening_sources` only. `check_ai_launch_paths.ts`, `check_forms_c34_ai.ts` and `check_forms_pa_track_a_jobs.ts` only save and restore the file (`keep`/`writeFileSync(CANARY, before.canary)`); `tests/check_p2_launch.ts` compares a launch's own ticket. Nothing compares the committed file's content with anything. |
+| Which side is the later evidence? | Ours: made 20:04:03.873Z by the IMM 5532 live launch; its SHA-256 (`74e89c59…`) is the `screening.digest_sha256` that run's record carries, as reviewed before. Main's is 18:25:46Z from a C3.4 stub launch (`studio-masters-form-check-…-stub-20261102t182546802z`), earlier, so ours is the "latest" the file is meant to be. |
+| Cost of the choice | None for any gate. The C3.4 stub's run record names its own digest SHA, and a later launch rewrites the file anyway. |
+
+**2. Do main's incoming changes touch what this PR depends on? No.**
+
+| Check | Result |
+|---|---|
+| Path-code files behind the IMM 5532 stub pass | **None changed** since `b348127f`: `launch/draft/runner/guard/isolation/ledger/policy/prompt/convert/screen/pathcode.ts`, `contracts/fact-key.ts`, `portal-capture.ts`, `portal-capture.v1.schema.json`, `rules.ts`, `field-map.v2.md`, `field-map-output.v2.schema.json`, `studio-fieldmap-imm5532e.json` and the IMM 5532 inventory are all identical. So `pathCodeSha` is still `907f4c24…` and the stub gate (`hasStubPass`) still holds. |
+| `contracts/drafting-run.v0.schema.json` | Changed, but only by adding `masters_form` and `masters_guide` to the `kind` enum (and to the `output_sha256` rule). `kind` for IMM 5532 is `field_map`, so its run file validates as before. The file is not in `pathCodeSha`. |
+| Replay counts and the six's waiting list | `demo.ts`, `ai.ts` and the field-map plan are unchanged. `sources.ts` adds two guards that refuse a `checklist_draft` job; they do not touch `field_map`. `proposals.ts` keeps `ON_ITS_PAGE = {field_map}` and removes only `checklist_draft`. The new masters jobs are kind `masters_form`/`masters_guide`, which the replay count (`kind = 'field_map'`) and the waiting list (non-reusable field-map targets) never include. The count stays 15, the waiting list stays `["IMM 5645 (01-2021)"]`. |
+| My three tests and the replay count | `check_queue_tx.ts`, `check_s7_load.ts` and `check_c10_1_configured.ts` are identical to `b348127f` (main changed none of them). Greps of the merged tree for `replayed`, `waiting_for_draft_with_ai`, `fifteen`/`fourteen`, `5532` and `5645` find no new place that hard-codes a count or a waiting form. |
+| QA's new `check_qa_p227_imm5532_saved.ts` | Compatible: it needs `replayed >= 14` and IMM 5532 absent from the waiting list (true: 15, and only IMM 5645 waits), 314 entries with 75/229/10, US$1.607568, and exactly one saved live run file for the job. It reads my committed files, which are unchanged. |
+| My files | Run file, stub pass and job: unchanged since `8c39c2a0`. The only change in `canary-digest.json` against `origin/main` is the file kept as ours. |
+
+**What I could not check:** the suites and CI on this head (the coordinator is running them). The new masters tests (`check_forms_c34_ai.ts` and others) are main's and not mine to re-run.
+
+Minors m1 to m5, the stale row-12 sentence and the "1 forms" wording stand; nothing new.
+
+**Verdict on 375897d8: Approve**, conditional on the coordinator's runs and CI being green on this head.
+
+* **Blockers:** none.
+* **Majors:** none.
+* **Minors:** as above, none new.
