@@ -42,10 +42,20 @@ Rows reaching Works · median approved-to-merged time · batch failure rate (tar
 
 ## Habits
 * Judge a check by its exit code, never by the tail of its output.
+* A lane is working only if it pushed in the last 90 minutes; never trust "still pushing" in STATE (2 Nov: G-CORE B2 sat ~3 h with no builder). `flow-watch.sh` 4b/4c flag labelled PRs with red CI and unfinished M2 rows nobody is on; act on each at that check.
 * Before pushing to a PR's branch, check that the PR is still open (it may have merged itself).
 * Base advice on all the history there is, never one sample.
 * Before deleting a cache or tool, search the repository for paths into it.
 * Context: `get_usage` gives each Mac session's share; report all of them when asked, with what to do.
+
+## Sessions and tokens (2 Nov evening)
+* Start sessions only in a turn the founder typed, with `target: "cloud"`; a cron turn can only leave a card, and a card starts on the Mac.
+* One row per session. Every brief carries the founder's decision IDs, a testable "Done when" and the standard rules: Sonnet helpers (P-278), breaker only for money, schema, permissions or new screens, diff-only re-review, label after Approve (P-277), merge main only on conflict (P-270), live AI off, questions as "Question for the tech lead" in a PR comment. Each session ends when its PR is labelled.
+* Before saying "55 by tonight", sort the open rows: likely Works on re-score, one small PR, waits on a fix or paid run, several PRs or held. Give the forecast from that.
+* When nothing merges, measure machine waits first (a batch's final `ci` job queues even after its shards pass). The guard refuses CI cancels: ask the founder, never work around it.
+* Sidebar: nested sessions move only with their parent and cannot be moved alone. A finished session (PR merged, nothing unpushed) is archived directly by the Lead (founder, 2 Nov: "whatever it can archive, it can archive"); a cloud one the Lead cannot see goes on STATE's list for the founder. "To archive" holds only top-level sessions whose lanes have all finished (P-283). Cloud sessions are invisible to the Lead. Simplest rule (founder, 3 Nov): when every lane under a parent session (an old Lead) has merged or been replaced, the Lead tells the founder **in chat**, in one line, "Archive <parent title> now"; archiving the parent archives its finished nested sessions with it. Until then, nothing is archived and the founder reads no file for it.
+* Disk (founder, 2 Nov): after archiving, remove that session's worktrees (`git worktree list`, including scratchpad `wt-*` copies); first commit any uncommitted record (reviews) to a records branch and check the head is on origin; never remove `demo-main` or a running session's copy; `git worktree prune`; report free disk.
+* Hand over at about 250k tokens (P-276): rewrite STATE first, stop your check (CronDelete), then **start the next Lead yourself** in a founder-typed turn (local, `use_worktree: false`, prompt `/lead` + "Lead N has handed over"), and rename both: "Lead N · <date> <UTC start>", highest number = current (founder, 2 Nov). STATE "Leads, in order" lists the chain. A cron turn cannot start it: past 250k overnight, keep going and hand over at the founder's next typed turn.
 
 ## Talking to the founder
 Plain business words, short. Say what changed and what merged, what is visible on the demo, and at most three asks, each with a recommendation. Write unasked only for a decision, a risk or a spend.
