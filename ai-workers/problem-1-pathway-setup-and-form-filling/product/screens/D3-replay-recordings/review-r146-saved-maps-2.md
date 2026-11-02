@@ -115,3 +115,41 @@ A re-review needs only three things:
 The IMM 5710, 1294 and 0008 run files need no change.
 
 Commit reviewed: `298a472d0d928e273964dc0126bef4ebcd81538d`.
+
+---
+
+## Re-review at head `6eaf04ffbc0871dc6f09f223145119fb035e04e4`
+
+The tech lead chose option (a) for M1. The commit on top of `298a472d` changes three files:
+* it deletes the IMM 5532 live run;
+* it sets `check_queue_tx.ts` back to 13 forms;
+* it adds this review record.
+
+The IMM 5710, 1294 and 0008 run files, their stub passes and the canary digest are byte-identical to `298a472d`. The IMM 5532 stub pass stays in the PR; on its own it makes nothing Saved. The re-review cost US$0 and used only port 4459.
+
+| Re-check | Result |
+|---|---|
+| M1: the IMM 5532 run is gone | No `imm5532e-live` file is tracked or present in `p2/runs/`, and `savedRuns` finds 0 candidates for it. After "Load sample six", 0 field-map jobs exist for IMM 5532, and the load reports `waiting_for_draft_with_ai: ["IMM 5532 (02-2021)"]` |
+| M1: Apply works for every saved draft this PR adds | Isolated copy on 4459 (`rev_apply2`, dropped afterwards). I loaded the six, returned every proposal as the second person, then pressed Apply as the author. Results: **IMM 0008 201 APPLIED, 298 boxes**; **IMM 1294 201 APPLIED, 245**; **IMM 5710 201 APPLIED, 242** |
+| M1: no other inventory repeats a data path | I scanned all 35 `p1/inventory/*.inventory.json` files: only IMM 5532 repeats paths (20). This confirms the PR's statement for the 14 forms in the sample |
+| Checks (1)–(3), (5) for the three remaining runs | Same as above: contract-valid, untouched, input SHA and edition right, quotes verbatim, Replay picks each, `hasStubPass` ok. Push guard `clean` over `7180f4d5..6eaf04ff`. The PR merges cleanly onto current `main`, and `main` has touched no p2, p1-inventory or contract file |
+| (4) Test | The `check_queue_tx.ts` change stays exact: 13 names, siblings = SAVED − IMM 5707 (12), no `>=`. `tsx studio/tests/check_queue_tx.ts 4459 rev_qtx4` gave **8/8 PASS**: replayed 13, 454 proposals waiting, ledger unchanged |
+| (6) Costs | The update in the PR body matches the ledger. The 3 saved runs cost US$5.311436 (1.528012 + 1.581800 + 2.201624). The batch spent US$6.862204, with IMM 5532's US$1.550768 still in the ledger |
+| m1 | The update at the top of the body corrects the numbers: 20 paths shared by 44 entries, 290 unique, and no longer "expected" |
+
+### Still open (minors, none blocks)
+
+* **m5 (new). The PR body below the update block was not updated, so it still describes the old head.**
+  * The "Saved run files" table still lists IMM 5532's run.
+  * "Two count differences, both expected" still carries the old 5532 text.
+  * "Test change" still says fourteen forms, 497 proposals and an empty waiting list.
+  * "Files" still says "the 4 live runs".
+  * The re-check command still globs `imm{5710,1294,5532,0008}e-…`. With the 5532 file gone, bash passes that pattern through as literal text, so the command stops on that missing path before IMM 0008 is checked.
+
+  Fix it with a body edit: drop 5532 from the glob and the table, and give the numbers as 13 forms and 454 proposals. No code change is needed.
+* **m2 and m3** are as above (follow-up rows; m3 left with IMM 5532).
+* **m4: CI.** Approval holds only with green CI on `6eaf04ff`. This review does not replace CI.
+
+M1 is closed and no Blocker or Major is open.
+
+**Verdict: Approve.** Commit reviewed: `6eaf04ffbc0871dc6f09f223145119fb035e04e4`.
