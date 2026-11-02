@@ -56,7 +56,10 @@ SKIP="check_catalogue_scale.cjs"
 # loaded" fails with 409 "Already in progress or already exists", then a 30 s wait on the Combination chooser (nightly
 # 41381724752 on main; run 41419363380 on #493, a data-only R3 change). #423 added diagnostics; the cause is open. Fix row:
 # runtime lane L1 (finish plan P-264), with a fail test; take it off this list in that PR.
-QUARANTINE="check_c313_reuse_browser.cjs check_forms_c36_rule_facts_browser.cjs check_screen01_api.ts check_d1_reset_to_six_browser.cjs"
+# Back on 2 Nov (runtime L1): the cause was Workspace.id() racing on an empty database (Prisma's upsert with an empty
+# update is a plain INSERT, so the page's first calls and the sample load each created the workspace; the losers' P2002
+# answered 409). api/src/core.ts now shares one creation; fail test tests/check_workspace_first_calls.ts (5/9 before, 9/9).
+QUARANTINE="check_forms_c36_rule_facts_browser.cjs check_screen01_api.ts check_d1_reset_to_six_browser.cjs"
 OUT="${SUITES_OUT:-$ROOT/$S/var/suites}"; mkdir -p "$OUT"
 TSX="$S/node_modules/.bin/tsx --tsconfig $S/api/tsconfig.json"
 export P2_LEDGER_DIR="${P2_LEDGER_DIR_SUITES:-$OUT/p2-ledger-$$}"; mkdir -p "$P2_LEDGER_DIR"   # QA-90 / P-179: test runs never write the real ledger (forms plan-p179 §5)
