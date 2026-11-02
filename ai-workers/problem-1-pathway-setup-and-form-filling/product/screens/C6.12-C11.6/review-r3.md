@@ -80,3 +80,49 @@ None.
 * Note for the builder: this worktree shows 8 modified evidence and p2 run files, timestamped 00:45–00:47. They are not from my runs, which used separate worktrees and only the prepare and filings suites. Do not commit them by mistake.
 
 **Verdict: Changes needed** for 80da83d0. Fix M1. m1–m4 are recommended.
+
+---
+
+# Round 4: commit 641f3713 (fixes `git diff 80da83d0 641f3713`)
+
+Reviewer agent, 2 Nov 2026. Fresh isolated copies: :4442 (`xr_studio_rev356`) and :4443 (`xr_studio_rev356f`). US$0, never :4400. Both copies are stopped afterwards.
+
+## Runs
+* `check_vv_prepare_api` **25/25** (C6.12 24/24, C11.6 14/14).
+* `check_vv_prepare_store_api` **33/33**, including B1: 120 reads at once, all 200.
+* Pure suites: `check_vv_prepare` **32/32**, `check_vv_prepare_store` **11/11**, `runtime/check_vv_filings` **37/37**.
+* `runtime/check_vv_filings_api` on a fresh copy after `setup_visitor_visa.ts`: **13/13**.
+* `tsc`: no errors in the changed files.
+* The migration's change is header comments only, so round 3's upgrade and rollback results stand. Its checksum changed, but no main database has applied it yet.
+
+## Round 3 findings
+* **M1: closed.**
+  * The suite answers dates of birth (adults 40 and 38, children 16–19). The CAD 185 and CAD 670 totals with the CAD 170 biometrics maximum are checked again.
+  * A new fail check proves that, with no date of birth, the biometrics line waits and the total is CAD 100.
+* **m1: closed.** The view's version is `versionOf(stored.filings, stored.items)`, made from the rows shown. Writes still check `storedVersion` under the lock, with the same function.
+  * I wrote a race probe: 8 readers in a loop (782 reads) while one writer switched one item's channel 40 times.
+  * 41 versions were seen. **0 versions came with two different channels.** All reads answered 200.
+  * A write using a version read before a change: 409.
+* **m2: closed.** `FOR NO KEY UPDATE` in all three places (read-write path, split, channel). It still excludes them from one another and from fill-case's `FOR UPDATE`.
+* **m3: closed.** `schema.prisma` comment: "FAMILY … · SEPARATE …".
+* **m4: closed.** The rollback text says item ids and chosen channels do not survive, while filings and groups keep their ids. It says to stop the app first.
+
+## The breaker's round 3 items, as they touch this review
+* **Breaker M1** (stale version) is the same race as my m1.
+  * The fast path's three reads are now one RepeatableRead batch on one connection, with no lock, and the version comes from those rows. The probe above shows it holds.
+  * A short batch transaction per read does not reopen #325's pool problem: no shared-client read happens inside it. The 120-read burst and the 24 first-reads test pass.
+* **Breaker M2** (the migration is not compatible with old code) is the tech lead's explicit instruction: convert in the same migration, one deploy. The header now says this plainly, and the builder has escalated it to the Lead.
+  * I don't treat it as a review Major, because it is the Lead's call.
+  * The prototype restarts as one deploy.
+  * The rollback runs with the app stopped and worked as written (round 3).
+* **Breaker m1/m2** (reason filter): I checked them on the channel route.
+  * Allowed (200): ZWJ in an emoji sequence, and ZWNJ in Persian text.
+  * Refused (400): a reason of only dots ("Write the reason in words"); U+2028, U+3164 filler, C1 U+0085, U+061C, U+2060; a lone surrogate sent as raw JSON `\ud800`.
+* The breaker's remaining Minors (m3 item order, m4–m10) are left and listed in the PR, as the builder says.
+  * m3 sorts by `createdAt, id` the same way #325 did, so it is not a regression.
+  * None of them is a correctness gap that blocks this item.
+
+## Open
+No Blocker. No Major. Minors are left as listed in the PR.
+
+**Verdict: Approve** for 641f3713.
