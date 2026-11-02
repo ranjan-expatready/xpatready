@@ -94,3 +94,19 @@
 * The web bundle served was the shared `web/dist`; I did not rebuild it.
 
 **Verdict: Block.** To fix: **M1** (M2 reachable through the release's modes), with a failing test, plus the founder question on who "principal" is in a sponsorship. m1–m3 may go in the PR body.
+
+## Round 2 · 07aa599e (diff from c0211908, pure suites, the M1 probe)
+* **M1 is closed.** It is fixed with option (a): with any co-filed filing on the case, no table line is charged. `total_cents` is null, `fees_worked_out` is false, and `fees_why` says "who pays the sponsorship's fees is not built".
+  * My probe (R2's spouse table, with the release bringing a co-filing sponsor) now gives no fee line, a null total and those words. It was a CAD 1,260 charge on the sponsored principal.
+  * The failing check is paired with a passing one: the same table with no sponsor still prices CAD 1,260 from data.
+  * This reverses PR 2's break m3 for Visitor visa with a sponsor (`check_vv_filings` was restated to match). It is open to the tech lead as a PR question, as it should be. The founder question on who "principal" is in a sponsorship still stands.
+* **m1 is closed.** `check_c1112_modes` checks the waiting-step line and its own-step line: 44/44.
+* **m2 is closed.** Two new checks in `check_r2_fee_table` cover the per-application line limited to roles and the covering count without declared-only people: 67/67.
+* **Pure suites on 07aa599e:** `check_r2_fee_table` 67/67, `check_vv_filings` 55/55, `check_vv_prepare` 32/32, `check_c1112_modes` 44/44, `check_engine` 43/43. I did not re-run the API suites (the builder reports 30/30, 35/35, 37/37).
+* **New Minor m4 (Should, PR body):** with a co-filing Sponsor line, the screen and the split refusal still speak of fees the case no longer charges.
+  * "What a case gets" (`previewFilings`, `engine/filing-modes.ts:120`) still says "Fees for 1 person on this filing (Sample amounts…)" on the own filings, while the case now says none are worked out.
+  * The split refusal (`api/src/case-prepare.ts:230`) still names the family maximum the split would lose.
+  * Fix: use the case's rule in both places (a co-filed filing → `notWorkedOut`).
+* m3 (carried) is unchanged.
+
+**Verdict round 2: Approve** on **07aa599e**. No Blocker or Major is open. m3 and m4 go in the PR body. Journey score: **10/10**. Trust and sources rises to 1 because M1 is closed. The journeys were not re-walked: no journey has a sponsor, so 07aa599e does not change their path.
