@@ -1,19 +1,21 @@
-// C6.9 part 2 (M3-D, concept screens/C6.9/concept.md BR-7, BR-8, BR-13, BR-14, BR-17; stand-in SI-1): eligibility runs.
+// C6.9 parts 2 and 3 (M3-D, concept screens/C6.9/concept.md BR-7, BR-8, BR-13…BR-17; stand-in SI-1): eligibility runs,
+// and an officer's override and review beside a run (part 3; any staff of the firm, P-229 (2)).
 // A run reads one travelling person's answers against the case's pinned release's gates (engine/runtime/eligibility.ts)
 // and is stored once, frozen (table assessment; a trigger refuses any UPDATE). Out of date is worked out on every read.
 // Staff of the case's firm only (Runtime.reach "officer"): a client gets 403, another firm's case 404. Rules only: no
 // model call, no spend ledger row (US$0). Answer values never go into audit text (STANDARDS §5). Registered in
 // features/eligibility.ts (P-214).
-import { Body, Controller, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Query } from "@nestjs/common";
 import type { Assessment as Row, AssessmentOverride, AssessmentReview } from "@prisma/client";
 import { randomUUID } from "node:crypto";
-import { AssessmentRunBody } from "../../contracts/eligibility.ts";
+import { AssessmentOverrideBody, AssessmentReviewBody, AssessmentRunBody } from "../../contracts/eligibility.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { checkValue, knownOf } from "../../engine/runtime/case.ts";
-import { assess, DISCLAIMER_LOCALE, inputsOf, nowOf, outOfDate, STAND_IN, type Input, type ProgramResult } from "../../engine/runtime/eligibility.ts";
+import { assess, DISCLAIMER_LOCALE, inputsOf, nowOf, outOfDate, STAND_IN, withUnconfirmedNow, type Input, type ProgramResult } from "../../engine/runtime/eligibility.ts";
 import type { SnapshotEligibility } from "../../engine/eligibility-gates.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { Runtime, type Reached } from "./runtime.ts";
+import { firmOfActor } from "./firms.ts";
 
 type H = string | undefined;
 /** What result_json holds: AG-03's Assessment envelope (§7), frozen with the row. */
@@ -92,20 +94,77 @@ export class Assessments {
     if (person !== undefined) { if (!c.participants.some((p) => p.subjectId === person && p.role !== "case")) fieldError("person", "That person is not on this case."); }
     const rows = await this.db.assessment.findMany({ where: { caseId: c.id, ...(person ? { subjectId: person } : {}) }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], include: { overrides: { orderBy: { createdAt: "asc" } }, review: true } });
     const { known } = await this.knownNow(c);
-    return { stand_in: STAND_IN.id, stand_in_words: STAND_IN.words, assessments: rows.map((x) => this.view(x, x.overrides, x.review, this.fresh(x, known, c))) };
+    const gates = (this.r.snapshotOf(c).eligibility as SnapshotEligibility | undefined)?.gates?.length ?? 0;
+    return { stand_in: STAND_IN.id, stand_in_words: STAND_IN.words, has_rules: gates > 0, assessments: rows.map((x) => this.view(x, x.overrides, x.review, this.fresh(x, known, c))) };
   }
 
-  /** GET one run, for staff of the case's firm. */
+  /** GET one run, for staff of the case's firm. A client is told 403 whatever the id, as on every eligibility route
+   *  (BR-7); staff are told an unknown id does not exist. */
   async one(actor: Actor, id: string) {
+    const { x, env } = await this.reachRun(actor, id);
+    return this.view(x, x.overrides, x.review, env);
+  }
+
+  /** The run and its case, for staff of the case's firm (as GET one), with out of date worked out now. */
+  private async reachRun(actor: Actor, id: string) {
     const x = UUID.test(id) ? await this.db.assessment.findUnique({ where: { id }, include: { overrides: { orderBy: { createdAt: "asc" } }, review: true } }) : null;
     if (!x) {
-      // A client is told 403 whatever the id, as on every eligibility route (BR-7); staff are told it does not exist.
       if (!(actor.duties as readonly string[]).includes("case")) fail("Only the case officer can do this.", HttpStatus.FORBIDDEN);
       fail("No such eligibility check.", HttpStatus.NOT_FOUND);
     }
     const c = await this.r.reach(actor, x!.caseId, "officer");
     const { known } = await this.knownNow(c);
-    return this.view(x!, x!.overrides, x!.review, this.fresh(x!, known, c));
+    return { x: x!, c, env: this.fresh(x!, known, c) };
+  }
+
+  /** P-229 (2): who signs an override or a review. "Reviewed by" for a licensed representative, "Seen by" otherwise. */
+  private stampOf(actor: Actor) {
+    const u = firmOfActor(actor)?.users.find((y) => y.id === actor.id);
+    const licensed = !!(u?.duties.includes("represent") && u.licence?.number);
+    return { by: actor.id, name: u?.name ?? actor.name, duty: licensed ? "Representative" : "Case officer", licence: licensed ? u!.licence : null, stamp: licensed ? "Reviewed" as const : "Seen" as const };
+  }
+
+  /** BR-15: an override sits beside the result; the engine's outcome never changes. Allowed on an out-of-date run. */
+  async override(actor: Actor, id: string, body: unknown) {
+    const { x, c, env } = await this.reachRun(actor, id);
+    const parsed = AssessmentOverrideBody.safeParse(body ?? {});
+    if (!parsed.success) throw new HttpException(problemFromZod(parsed.error), HttpStatus.BAD_REQUEST);
+    const b = parsed.data;
+    const result = env.results.find((r) => r.programKey === b.programKey);
+    if (!result) fieldError("programKey", "This check has no result for that application.");
+    if (result!.outcome !== b.fromOutcome) refused("The result changed since you opened it. Reload to see it.");
+    const st = this.stampOf(actor);
+    const stamp = { name: st.name, duty: st.duty, licence: st.licence, outOfDate: env.out_of_date };
+    // Break M1 and m1 on 2572b9b0: one lock per run, so a double submit writes one override (the same one comes back);
+    // and an override goes only onto the person's latest check (a newer check since the drawer opened: 409).
+    const done = await this.db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`assessment-override:${x.id}`}))`;
+      const newer = await tx.assessment.findFirst({ where: { caseId: x.caseId, subjectId: x.subjectId, createdAt: { gt: x.createdAt } }, select: { id: true } });
+      if (newer) refused("The result changed since you opened it: a newer check exists for this person. Reload to see it.");
+      const same = await tx.assessmentOverride.findFirst({ where: { assessmentId: x.id, createdBy: actor.id, programKey: b.programKey, label: b.label, reason: b.reason } });
+      if (same) return { o: same, repeated: true };
+      return { o: await tx.assessmentOverride.create({ data: { assessmentId: x.id, programKey: b.programKey, fromOutcome: b.fromOutcome, label: b.label, reason: b.reason, stamp: stamp as never, createdBy: actor.id } }), repeated: false };
+    });
+    const o = done.o;
+    if (done.repeated) return { id: o.id, programKey: o.programKey, fromOutcome: o.fromOutcome, label: o.label, reason: o.reason, by: o.createdBy, at: o.createdAt.toISOString(), ...(o.stamp as object), repeated: true };
+    await this.audit.log(c.workspaceId, actor.id, "created", "assessment_override", x.id, `${st.name} overrode the eligibility result ${b.fromOutcome.toLowerCase().replace(/_/g, " ")} on case ${short(c.id)} with "${b.label}" (the result itself is unchanged)`, { programKey: b.programKey, before: b.fromOutcome, after: b.label, outOfDate: env.out_of_date });
+    return { id: o.id, programKey: o.programKey, fromOutcome: o.fromOutcome, label: o.label, reason: o.reason, by: actor.id, at: o.createdAt.toISOString(), ...stamp };
+  }
+
+  /** BR-16: Mark reviewed, once per run; a second review is refused naming who and when. */
+  async review(actor: Actor, id: string, body: unknown) {
+    const { x, c, env } = await this.reachRun(actor, id);
+    const parsed = AssessmentReviewBody.safeParse(body ?? {});
+    if (!parsed.success) throw new HttpException(problemFromZod(parsed.error), HttpStatus.BAD_REQUEST);
+    const already = (r: { reviewedAt: Date; stamp: unknown }) => refused(`Already ${((r.stamp as { stamp?: string }).stamp ?? "Reviewed") === "Seen" ? "seen" : "reviewed"} by ${(r.stamp as { name?: string }).name ?? "someone"} on ${r.reviewedAt.toISOString().slice(0, 16).replace("T", " ")} UTC.`);
+    if (x.review) already(x.review);
+    const st = this.stampOf(actor);
+    const stamp = { name: st.name, duty: st.duty, licence: st.licence, stamp: st.stamp, outOfDate: env.out_of_date };
+    let r;
+    try { r = await this.db.assessmentReview.create({ data: { assessmentId: x.id, reviewedBy: actor.id, note: parsed.data.note || null, stamp: stamp as never } }); }
+    catch (e) { if ((e as { code?: string }).code === "P2002") already((await this.db.assessmentReview.findUnique({ where: { assessmentId: x.id } }))!); throw e; }
+    await this.audit.log(c.workspaceId, actor.id, "reviewed", "assessment", x.id, `${st.stamp === "Reviewed" ? "Reviewed" : "Seen"} by ${st.name}: the eligibility check on case ${short(c.id)}${env.out_of_date ? " (out of date when marked)" : ""}`, { stamp: st.stamp, outOfDate: env.out_of_date });
+    return { reviewedBy: r.reviewedBy, reviewedAt: r.reviewedAt.toISOString(), reviewNote: r.note, ...stamp };
   }
 
   private fresh(x: Row, known: Parameters<typeof nowOf>[0], c: Reached) {
@@ -113,7 +172,7 @@ export class Assessments {
     const o = outOfDate(env.inputs ?? [], nowOf(known, x.subjectId), c.pins[0].configReleaseId === x.configReleaseId);
     // Break m3 on fd26c492: a person no longer travelling (or removed) makes the run out of date, said in words.
     const travelling = c.participants.some((p) => p.subjectId === x.subjectId && p.applies);
-    return { ...env, ...o, ...(travelling ? {} : { out_of_date: true, not_travelling: true }) };
+    return { ...env, results: (env.results ?? []).map((r) => withUnconfirmedNow(r, known, x.subjectId)), ...o, ...(travelling ? {} : { out_of_date: true, not_travelling: true }) };
   }
 
   private view(x: Row, overrides: AssessmentOverride[], review: AssessmentReview | null, env: Envelope & ReturnType<typeof outOfDate>) {
@@ -133,4 +192,6 @@ export class AssessmentsController {
   @Post("cases/:id/assessments") run(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.x.run(actorOf(a), id, b); }
   @Get("cases/:id/assessments") list(@Headers("x-actor") a: H, @Param("id") id: string, @Query("person") person?: string) { return this.x.list(actorOf(a), id, person); }
   @Get("assessments/:aid") one(@Headers("x-actor") a: H, @Param("aid") aid: string) { return this.x.one(actorOf(a), aid); }
+  @Post("assessments/:aid/override") override(@Headers("x-actor") a: H, @Param("aid") aid: string, @Body() b: unknown) { return this.x.override(actorOf(a), aid, b); }
+  @Post("assessments/:aid/review") @HttpCode(200) review(@Headers("x-actor") a: H, @Param("aid") aid: string, @Body() b: unknown) { return this.x.review(actorOf(a), aid, b); }
 }

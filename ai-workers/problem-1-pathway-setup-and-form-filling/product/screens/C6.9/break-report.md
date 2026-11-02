@@ -93,3 +93,69 @@ Setup: isolated `brk_c69` on :4431, fresh database; `check_c69_runs.ts` **60/60*
 - **Facts:** "8000", 8000 and " 8000 " all read 8000, and re-answering the same number leaves a run up to date. "8000.00", "8,000", "7999.5", "abc" and "-1e9" fail their own check and count as missing, never Met. `case.*` facts read as `about:"case"`. Confirm section never marks a run out of date. A changed, added or invalidated value names `was` and `now`.
 - **Outcomes:** an `or` with one branch true is Met while the other branch is missing. `not` and needs_review combinations give the expected result. A needs_review gate not met plus a not_eligible gate not met gives NOT_ELIGIBLE with both lists. A release with no gates gives 409.
 - **No score and no AI:** no `ai_batch` row was written, nothing returned a 500 (0 errors in `api.log`), and audit rows carry no answer value.
+
+# Part 3 (2572b9b0): override, review and the staff eligibility page (BR-15, BR-16, §4–§5)
+Setup: isolated `brk_c69` on :4431, fresh database, web built from this commit; `check_c69_runs.ts` **89/89**. I opened case f27411ec (two travellers, release 2 with gates) and used case 9430f6a3, pinned to release 1, which has no gates. Requests were sent with `fetch`. The browser was Chrome through Playwright at 1024 px, and at 512 px with scale 2 for 200 %. Live AI off, US$0. **Verdict: 1 Major, 5 Minor. No Blocker.**
+
+**M1 (Major). Overrides are not idempotent: a double-click, Enter pressed twice or a concurrent POST writes duplicate rows.** This breaks STANDARDS §4 [M] "Idempotent creates".
+- **API:** 20 identical override POSTs at once gave 20 × 201, 20 `assessment_override` rows and 20 audit rows.
+- **Page:** in the Override drawer, pressing Enter three times in the Label field gave **3 rows**. A double-click on "Keep the override" gave **2 rows**.
+- **Expected:** one row, and the repeat refused or answered with the same row.
+- **Cause:**
+  - `submit` calls `go.mutate` even while the request is pending (`web/src/runtime/eligibility.tsx:211`; the `busy` flag only disables the button).
+  - The service is a plain `create` with no key and no lock (`api/src/assessments.ts:130`). Part 2's run route takes an advisory lock for the same pattern.
+- **Effect:** every copy shows under the badge. In the run I tested, 31 override boxes pushed "Rules checked" off the first screen (screenshot `elig-1024.png`).
+- **Same cause on review:** a double-click on "Mark reviewed" stores one row, which is correct, but then shows the error "Already seen by Case officer (Sample) on … UTC." straight after the success toast.
+
+**m1. An override sent from a stale page lands on the old run and does not show on the page.**
+- **Repro:** open the Override drawer on run A. In another session, user-R runs again, which makes run B the latest. Submit the drawer.
+- **Actual:** 201 and the toast "Override kept beside the result". The page now shows run B with no override; the override is on run A and shows only as the "Overridden" pill in History.
+- **Why the guard misses it:** the 409 check compares `fromOutcome` with the frozen run's own outcome (`assessments.ts:125`). A drawer always sends the outcome of the run it opened, so this 409 can never fire from the page.
+- **Expected:** a 409 "The result changed since you opened it", or at least a message that the override went on an earlier check.
+
+**m2. A release without gates still shows "Run eligibility check".**
+- **Repro:** case 9430f6a3 (release 1, no gates).
+- **Expected (§5):** the text "This application's release has no eligibility rules yet…" and no button.
+- **Actual:** the button is shown. The text appears only after a click, as "Nothing was run: …" (409). The page never reads whether the release has gates (`eligibility.tsx:107,124`).
+
+**m3. Closing a drawer with Esc (or Cancel) puts focus on `<body>`, not on the button that opened it.**
+- **Repro, keyboard only:** focus "Override result…", press Enter, then Esc. `document.activeElement` is BODY. The History drawer does the same.
+- **Effect:** a keyboard user starts again from the top of the page (WCAG 2.4.3).
+- **Why:** each drawer mounts a new `Panel` with `open` already true and has no Dialog trigger, so Radix has nothing to return focus to (`eligibility.tsx:136-139`).
+- **Inside the drawer, focus is trapped correctly:** 12 Tabs stayed in the dialog.
+
+**m4. A long unbroken label or reason runs out of the card.**
+- **Repro:** an 80-character label `x…x`, or a 500-character reason with no spaces.
+- **Actual:** the page's `scrollWidth` is 3154 px at 1024 px and 2790 px at 200 % (`elig-1024.png`, `elig-200pct.png`).
+- **Why:** the override `<p>` (`eligibility.tsx:150`) lacks `[overflow-wrap:anywhere]`, which its neighbours have. The "Run by … reason … note" line (`:180`) lacks it too.
+
+**m5. Override text checks are weaker than the run reason fixed in part 2 m4, and the reason field accepts a newline it then refuses.**
+- **Weaker checks:**
+  - These are accepted (201): label `"."`, reason `"—"`, and a label of three combining marks only. The page shows an empty-looking override line.
+  - Lengths count UTF-16 units: 41 emoji in a label give "Keep a label … to 80 characters". The cause is `contracts/eligibility.ts:32`, which uses `.max`, not code points, and has no letter-or-digit check.
+- **Newline:**
+  - The override reason is a `Textarea`, so Enter types a newline.
+  - The API then refuses it with "Write it as one line of plain text." (400 on `reason`).
+  - A review note, by contrast, keeps `\n` (200), but the page shows it on one line.
+- **Copy (not counted):** the 409 says "on 2026-11-02 06:34 UTC", while the page shows local time "Nov 2, 2026, 06:34 a.m." (§5 copy is "on 2 Nov 14:20").
+
+**What held.**
+- **Concurrent reviews:** 10 at once from user-O, user-R and user-T gave one 200, nine 409s ("Already seen by … UTC") and one row. There was no 500.
+- **Roles (override and review):**
+  - user-P, user-Q, user-A, user-B and user-C get 403. user-S (the other firm) gets 404. An empty or unknown actor gets 401.
+  - On an unknown or malformed id, a client gets 403 and staff get 404. An upper-case aid works.
+- **Stamps:**
+  - user-R and user-T are stamped "Reviewed" with their licence; user-O is stamped "Seen" with licence null.
+  - Extra keys (`createdBy`, `stamp`, `id`) are stripped, so the stamp cannot be spoofed.
+- **Body refusals, each 400 on its field:**
+  - an empty body, `[]`, non-JSON, a null label, 81 characters, spaces only, NUL, U+202E and a lone surrogate;
+  - a reason of 501 characters or containing `\n`;
+  - a `programKey` that is wrong, upper-case, padded or 100 000 characters long.
+- **Other refusals and edges:** a `fromOutcome` that is stale or junk gives 409, and a numeric one gives 400. On notes, NUL, 501 characters and a number give 400.
+- **XSS:** `<img onerror>` and `<script>` in the label, reason and note render as text, with no dialog fired. Non-English text and RTL text display.
+- **Audit:** overrides and reviews each write an audit row with no answer values (before is the outcome, after is the label). The engine's outcome stays visible beside the overrides.
+- **Visibility:**
+  - The client sees no card. The page says "This page is for the firm's staff" and makes no assessments request.
+  - user-S gets "No such case" and a 404 on the list.
+  - user-T sees the card and the page.
+- **Keyboard and logs:** ↑↓ in the People listbox moves the selection and focus. There were 0 errors in `api.log`.
