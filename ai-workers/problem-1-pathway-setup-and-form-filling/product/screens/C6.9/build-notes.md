@@ -71,3 +71,9 @@ D1 job fit 8 · D2 rules as data 9 · D3 correctness 8 · D4 contract 8 · D5 se
 ## Checks
 * `tests/check_c69_runs.ts`: 50/50 on a fresh copy (sets up release 1, proves the 409 with no gates there, then runs the M3 setup).
 * `acceptance/C6.9.test.ts`: C6.9-1…10, 14, 15 pass; C6.9-11…13 wait for part 3 (override and review).
+
+## R4: a gate's own outcome when not met (P-230 (1), the tech lead's message of 2 Nov)
+* `whenNotMet` on a gate, as data: `not_eligible` (default, not stored, so earlier releases keep their fingerprints) or `needs_review`. Saved by the PUT (refused on `gates.N.whenNotMet` otherwise), carried in `snapshot.eligibility`, and a change is an "Eligibility" change-summary line in words.
+* The adapter lists a `needs_review` gate not met in `reviewGates` (our addition), never in `failedGates`: the result is Possibly eligible. The gate's own state stays Not met (honest). `FAIL_BEATS_MISSING` applies to `not_eligible` gates only.
+* **Data and test changed with it:** S7 (`acceptance/lib/setup_vv_m3.ts`) gives `vv.no_convictions` `whenNotMet: "needs_review"`; **C6.9-7** now expects Possibly eligible with the gate in `reviewGates` (was Not eligible). Labels unchanged (Sample).
+* Tests: 9 pure pass/fail lines and 1 route line in `check_c69_runs.ts` (60/60); `check_c69_gates.ts` 87/87 with S7's new body.

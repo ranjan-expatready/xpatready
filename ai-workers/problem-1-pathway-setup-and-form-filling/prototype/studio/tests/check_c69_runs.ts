@@ -4,6 +4,7 @@
 // then the M3 setup (acceptance/lib/setup_vv_m3.ts; its S7 and S8 lines release the gates). No browser, no model call (US$0).
 //   zsh studio/tools/isolated.sh runtime_c69r 4434 start && tsx studio/tests/check_c69_runs.ts 4434 xr_studio_runtime_c69r
 import { evaluate } from "../../contracts/rules.ts";
+import { checkGates, eligibilityChanges, snapshotEligibility } from "../engine/eligibility-gates.ts";
 import { assess, FAIL_BEATS_MISSING, gateResult, inputsOf, nowOf, outOfDate, rewriteMissing } from "../engine/runtime/eligibility.ts";
 import { kkey, type Known } from "../engine/render.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
@@ -47,6 +48,29 @@ await main("C6.9 part 2", "Eligibility runs (stand-in SI-1 adapter and routes)",
     ok("C6.9 BR-12 pass: the 4 judgement lines are copied onto the result", all.judgement.join("|") === JUDGEMENT.join("|"));
     ok("C6.9 BR-12 fail: judgement lines never change the outcome (none, or other words, same outcome)", assess(snap(GATES, []), knownOf(ALL), P)!.outcome === all.outcome && assess(snap(GATES, ["Has no money at all"]), knownOf(ALL), P)!.outcome === all.outcome);
     ok("C6.9 BR-18 pass: the result is for the case's own combination only", all.programKey === "vv.single" && assess(snap(), knownOf(ALL), P)!.programKey === "vv.single");
+  }
+  {
+    // P-230 (1), BACKLOG R4: "when not met" as data on the gate.
+    const REVIEW = [GATES[0], { ...GATES[1], whenNotMet: "needs_review" as const }];
+    const types = new Map([["person.passport_number", "text"], ["person.passport_expiry_date", "date"], ["person.criminal_history", "yes_no"]]);
+    const saved = checkGates({ gates: [...REVIEW, { key: "x.plain", label: "Plain gate", condition: { op: "exists", field: "person.passport_number" }, whenNotMet: "not_eligible" }], judgement: [] }, types, new Set());
+    ok("C6.9 R4 pass: a gate saves \"when not met\" = needs_review; the default (not_eligible) is not stored, so older fingerprints keep", !saved.errors.length && saved.gates[1].whenNotMet === "needs_review" && !("whenNotMet" in saved.gates[0]) && !("whenNotMet" in saved.gates[2]), saved.errors);
+    const badWhen = checkGates({ gates: [{ ...GATES[1], whenNotMet: "maybe" }], judgement: [] }, types, new Set());
+    ok("C6.9 R4 fail: any other \"when not met\" is refused on the field gates.0.whenNotMet", badWhen.errors.some((e) => e.field === "gates.0.whenNotMet"), badWhen.errors);
+    const snapped = snapshotEligibility({ gates: saved.gates, judgement: [], disclaimer: null });
+    ok("C6.9 R4 pass: the release carries it (snapshot.eligibility), and a gate without it carries nothing", snapped?.gates[1].whenNotMet === "needs_review" && !("whenNotMet" in (snapped?.gates[0] ?? {})));
+    const lines = eligibilityChanges(snapshotEligibility({ gates: [GATES[1]], judgement: [], disclaimer: null }), snapshotEligibility({ gates: [REVIEW[1]], judgement: [], disclaimer: null }));
+    ok("C6.9 R4 pass: changing it is a change-summary line for the expert, in words", lines.length === 1 && lines[0].change === "changed" && /when not met: the representative reviews it; was: not eligible/.test(lines[0].label), lines);
+    const r = (gates: typeof REVIEW, f: Record<string, unknown>) => assess(snap(gates as never), knownOf(f), P)!;
+    const rv = r(REVIEW, { ...ALL, "person.criminal_history": true });
+    ok("C6.9 R4 pass: a needs_review gate not met → Possibly eligible, listed in reviewGates (not failedGates), the gate still Not met", rv.outcome === "POSSIBLY_ELIGIBLE" && rv.reviewGates.join() === "vv.no_convictions" && !rv.failedGates.length && rv.gates[1].state === "not_met" && rv.gates[1].whenNotMet === "needs_review", rv);
+    const hard = r(GATES as never, { ...ALL, "person.criminal_history": true });
+    ok("C6.9 R4 fail: the same answer on a default gate is Not eligible (the outcome set is unchanged)", hard.outcome === "NOT_ELIGIBLE" && hard.failedGates.join() === "vv.no_convictions" && !hard.reviewGates.length);
+    const rvMissing = r(REVIEW, { "person.criminal_history": true });
+    ok("C6.9 R4 pass: needs_review not met while facts are missing → Possibly eligible with both lists (FAIL_BEATS_MISSING applies to not_eligible gates only)", rvMissing.outcome === "POSSIBLY_ELIGIBLE" && rvMissing.missingInputs.length === 2 && rvMissing.reviewGates.length === 1);
+    const both = r([{ key: "x.doc", label: "Has a passport number", condition: { subjectKind: "PERSON", op: "eq", field: "person.passport_number", value: "SAMPLEP99" } } as never, REVIEW[1]], { ...ALL, "person.criminal_history": true });
+    ok("C6.9 R4 fail: a not_eligible gate not met beside a needs_review one → Not eligible, each in its own list", both.outcome === "NOT_ELIGIBLE" && both.failedGates.join() === "x.doc" && both.reviewGates.join() === "vv.no_convictions");
+    ok("C6.9 R4 pass: every gate met → Likely eligible, nothing to review", r(REVIEW, ALL).outcome === "LIKELY_ELIGIBLE" && !r(REVIEW, ALL).reviewGates.length);
   }
   {
     const k = knownOf(ALL), ins = inputsOf(snap(), k, P, (_a, f) => `id-${f}`);
@@ -117,6 +141,7 @@ await main("C6.9 part 2", "Eligibility runs (stand-in SI-1 adapter and routes)",
   r = await run(A, { reason: "Facts added (Sample)" });
   const bad = r.body?.results?.[0];
   ok("C6.9 BR-9 fail: an expiry date that is not a real date counts as missing: Not answered, never Met", bad?.outcome === "POSSIBLY_ELIGIBLE" && bad?.missingInputs?.join() === "person.passport_expiry_date" && bad?.gates?.[0]?.state === "not_answered", bad);
+  ok("C6.9 R4 pass: the released Visitor visa background gate carries \"when not met\" = needs_review (S7, P-230 (1))", sql(`select r.snapshot->'eligibility'->'gates'->1->>'whenNotMet' from config_release r join combination k on k.id=r.combination_id where k.combination_key='vv.single' order by r.version desc limit 1`) === "needs_review");
   await answer(c.id, A, "person.passport_expiry_date", inDays(3 * 365));
   r = await run(A, { reason: "Expiry date corrected (Sample)" });
   const good = r.body;

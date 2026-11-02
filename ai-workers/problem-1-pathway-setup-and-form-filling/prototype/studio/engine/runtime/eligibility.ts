@@ -5,7 +5,7 @@
 // here so it reads "cannot tell" instead of false (AG-3-12: never a false Not eligible). When the team's AG-03 Qualifier
 // is connected (SI-2) it replaces this file; the result shape stays.
 import { canonical } from "../../../contracts/rules.ts";
-import { gateFacts, type Gate, type SnapshotEligibility } from "../eligibility-gates.ts";
+import { gateFacts, type Gate, type SnapshotEligibility, type WhenNotMet } from "../eligibility-gates.ts";
 import { evalCondition, kkey, type Known } from "../render.ts";
 import type { Snapshot } from "../snapshot.ts";
 
@@ -18,12 +18,14 @@ export const DISCLAIMER_LOCALE = "en-CA";
 
 export type Outcome = "LIKELY_ELIGIBLE" | "ELIGIBLE_BELOW_CUTOFF" | "POSSIBLY_ELIGIBLE" | "NOT_ELIGIBLE";
 export type GateState = "met" | "not_met" | "not_answered";
-export type GateResult = { key: string; label: string; state: GateState; facts: string[]; values: Record<string, unknown>; missing: string[] };
+export type GateResult = { key: string; label: string; state: GateState; facts: string[]; values: Record<string, unknown>; missing: string[]; whenNotMet: WhenNotMet };
 /** AG-03 §7 AssessmentProgramResult, plus our `gates` and `judgement` (concept §1 "Our additions"). */
 export type ProgramResult = {
   programKey: string; programLabel: string; outcome: Outcome;
   score: null; maxScore: null; passMark: null; selectionModel: null; competitivenessBand: null; gapToPass: null;
   failedGates: string[]; missingInputs: string[]; breakdown: Record<string, never>; recommendations: never[];
+  /** Ours (P-230 (1)): gates not met whose "when not met" is needs_review; the representative reviews them. */
+  reviewGates: string[];
   gates: GateResult[]; judgement: string[];
 };
 /** One fact a run read: whose (`case` or the person's subject id), its value (null when unanswered) and the answer id
@@ -53,16 +55,20 @@ export function gateResult(s: Snapshot, known: Known, gate: Gate, person: string
   const state: GateState = e.applies === true ? "met" : e.applies === false ? "not_met" : "not_answered";
   // A rule that cannot run at all (a calculation with no helper) waits on the facts it reads: never a verdict.
   const missing = state !== "not_answered" ? [] : e.missing.filter((m) => facts.includes(m)).length ? e.missing.filter((m) => facts.includes(m)) : facts.filter((f) => !present(values[f]));
-  return { key: gate.key, label: gate.label, state, facts, values, missing };
+  return { key: gate.key, label: gate.label, state, facts, values, missing, whenNotMet: gate.whenNotMet === "needs_review" ? "needs_review" : "not_eligible" };
 }
 
 /** BR-10: the outcome from the gate states. Both lists are always filled; `FAIL_BEATS_MISSING` decides the one case the
- *  team's text leaves open (a failed gate while another fact is missing). */
-export function outcomeOf(gates: GateResult[], failBeatsMissing = FAIL_BEATS_MISSING): { outcome: Outcome; failedGates: string[]; missingInputs: string[] } {
-  const failedGates = gates.filter((g) => g.state === "not_met").map((g) => g.key);
+ *  team's text leaves open (a failed gate while another fact is missing). P-230 (1): a gate not met whose "when not met"
+ *  is needs_review never gives Not eligible: it is listed in `reviewGates` (not `failedGates`) and the result is Possibly
+ *  eligible, the representative reviewing it. The outcome set is unchanged. */
+export function outcomeOf(gates: GateResult[], failBeatsMissing = FAIL_BEATS_MISSING): { outcome: Outcome; failedGates: string[]; missingInputs: string[]; reviewGates: string[] } {
+  const notMet = gates.filter((g) => g.state === "not_met");
+  const failedGates = notMet.filter((g) => g.whenNotMet !== "needs_review").map((g) => g.key);
+  const reviewGates = notMet.filter((g) => g.whenNotMet === "needs_review").map((g) => g.key);
   const missingInputs = [...new Set(gates.filter((g) => g.state === "not_answered").flatMap((g) => g.missing))];
-  const outcome: Outcome = failedGates.length && (failBeatsMissing || !missingInputs.length) ? "NOT_ELIGIBLE" : missingInputs.length ? "POSSIBLY_ELIGIBLE" : "LIKELY_ELIGIBLE";
-  return { outcome, failedGates, missingInputs };
+  const outcome: Outcome = failedGates.length && (failBeatsMissing || !missingInputs.length) ? "NOT_ELIGIBLE" : missingInputs.length || reviewGates.length ? "POSSIBLY_ELIGIBLE" : "LIKELY_ELIGIBLE";
+  return { outcome, failedGates, missingInputs, reviewGates };
 }
 
 /** BR-9…BR-12, BR-18: the one result for the case's own combination. Never a score (SI-1, BR-11); the officer's

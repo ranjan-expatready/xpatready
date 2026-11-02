@@ -7,7 +7,7 @@ import { INVISIBLE, LONE } from "./runtime.ts";
 
 /** PUT /combinations/:id/eligibility-gates. `version` is the one read; the first save needs none (BR-3). */
 export const EligibilityGatesBody = z.object({
-  gates: z.array(z.object({ key: z.unknown().optional(), label: z.unknown().optional(), condition: z.unknown().optional() }, { error: "Each gate is { key, label, condition }." }), { error: "Send the list of gates." }).max(30, "At most 30 gates."),
+  gates: z.array(z.object({ key: z.unknown().optional(), label: z.unknown().optional(), condition: z.unknown().optional(), whenNotMet: z.unknown().optional() }, { error: "Each gate is { key, label, condition, whenNotMet? }." }), { error: "Send the list of gates." }).max(30, "At most 30 gates."),
   judgement: z.array(z.unknown(), { error: "Send the officer's judgement lines as a list." }).max(20, "At most 20 officer's judgement lines.").default([]),
   disclaimer: z.unknown().optional(),
   version: z.number({ error: "Reload the page: the version you read is not a number." }).int().optional(),
