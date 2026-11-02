@@ -7,7 +7,8 @@
 import { canonical, sha256 } from "../../contracts/rules.ts";
 import { INVISIBLE, LONE } from "../contracts/runtime.ts";
 import { byAPerson } from "./form-steps.ts";
-import { formValues, type Inventory } from "./form-values.ts";
+import { formValues, type Inventory, type InventoryBox } from "./form-values.ts";
+import { pdfOptions } from "./options.ts";
 import type { BoxRow } from "./render.ts";
 import { snapshotHash, type Snapshot } from "./snapshot.ts";
 import { caseView, knownOf, type Answer, type GroupAnswer, type Participant, type Row } from "./runtime/case.ts";
@@ -214,6 +215,56 @@ const finish = (lines: Line[], fingerprint: Fingerprint): RunResult => {
   return { result: failed || !lines.length ? "FAILED" : "PASSED", lines: [...lines.filter((l) => !l.pass), ...lines.filter((l) => l.pass)], passed: lines.length - failed, failed, fingerprint };
 };
 
+/** Review minor 6: a caption alone can be "YYYY"; a short one is said with its field's meaning ("Date of birth: YYYY").
+ *  The map's heading is a path ("Page1.PersonalDetails"), never words, so it is not used. Shared by a run's lines and
+ *  the Expected editor, so both name a box the same way. */
+const meaningsOf = (s: Snapshot) => new Map((s.canonical_fields as { id: string; meaning?: string; label?: string }[]).map((f) => [f.id, f.label || f.meaning || ""]));
+function captionsOf(s: Snapshot, m: { entries: { data_path: string; caption?: string | null; fact?: string | null }[] }): Map<string, string> {
+  const meaning = meaningsOf(s);
+  return new Map(m.entries.map((e) => { const c = (e.caption ?? "").trim(), w = e.fact ? meaning.get(e.fact) : ""; return [e.data_path, c.length > 4 || !w ? c || w || e.data_path : `${w}: ${c}`]; }));
+}
+
+/** A form field's own choices (code, label) as the form defines them: its resolved list or its map's code list
+ *  (engine/options.ts pdfOptions, as the filler reads them), else the field list's own: a drop-down's labels and codes
+ *  (two lists side by side), a yes/no group's [label, code] pairs, a tick box's on, off and neither values. None: a text
+ *  box. A blank code is left out (an empty box is "stays blank" in the editor). */
+export function formOptions(box: InventoryBox, transform: string | null | undefined): { code: string; label: string }[] {
+  const own = pdfOptions(box, transform);
+  if (own.length) return own;
+  const o = (Array.isArray(box.options) ? (box.options as unknown[]) : []).filter(Array.isArray).map((x) => (x as unknown[]).map((y) => String(y ?? "")));
+  const tidy = (code: string, label: string) => ({ code, label: label.replace(/^\*\s*/, "").trim() || code });
+  let out: { code: string; label: string }[] = [];
+  if (box.ui === "checkButton" && o[0]) out = o[0].map((code, i) => ({ code, label: ["Ticked", "Not ticked", "Neither"][i] ?? code }));
+  else if (box.ui === "choiceList" && o.length === 2 && o[0].length === o[1].length) out = o[1].map((code, i) => tidy(code, o[0][i]));
+  else if (box.ui === "exclGroup" && o.every((x) => x.length === 2)) out = o.map((x) => tidy(x[1], x[0]));
+  return out.filter((x) => x.code.trim() !== "");
+}
+
+/** One box the Expected editor offers (concept §4, challenge M5 b). `whose`: the map's person (form_subject, the
+ *  subject's spouse, …, "none" for the application); `by_a_person`: a signature or the oath, which no key holds. */
+export type KeyBox = { data_path: string; caption: string; meaning: string; fact: string | null; whose: string; row: number | null; options: { code: string; label: string }[]; by_a_person: boolean; by_a_person_why: string | null };
+/** BR-2, BR-4, §4 (STANDARDS §3.2 pick, don't type): every mapped box of a form's PDF map, in the form's own order (its
+ *  field list; a box the list lacks after, in map order), with its caption, the fact it reads and whose, and the form's
+ *  own options for a choice box. It reads the map and the form only, never a run: the key must not copy the product's
+ *  output. null: the combination has no PDF map of that form. */
+export function keyBoxes(s: Snapshot, form: string, inv: Inventory): { form: string; edition: string; boxes: KeyBox[] } | null {
+  const m = pdfMap(s, form);
+  if (!m) return null;
+  const caption = captionsOf(s, m), meaning = meaningsOf(s);
+  const at = new Map(inv.fields.map((f, i) => [f.data_path ?? "", i] as const)), boxOf = new Map(inv.fields.filter((f) => f.data_path).map((f) => [f.data_path!, f] as const));
+  const entries = (m.entries as { data_path: string; outcome?: string; fact?: string | null; person?: string | null; row?: number | null; transform?: string | null }[])
+    .map((e, i) => ({ e, i })).filter(({ e }) => e.outcome === "mapped")
+    .sort((a, b) => (at.get(a.e.data_path) ?? inv.fields.length + a.i) - (at.get(b.e.data_path) ?? inv.fields.length + b.i));
+  return {
+    form: m.form_number, edition: m.form_edition,
+    boxes: entries.map(({ e }) => {
+      const box = boxOf.get(e.data_path) ?? { data_path: e.data_path };
+      const why = byAPerson(inv.fields, box);
+      return { data_path: e.data_path, caption: caption.get(e.data_path) || e.data_path, meaning: e.fact ? meaning.get(e.fact) ?? "" : "", fact: e.fact ?? null, whose: e.person ?? "none", row: e.row ?? null, options: formOptions(box, e.transform), by_a_person: !!why, by_a_person_why: why };
+    }),
+  };
+}
+
 /** BR-3, BR-4, BR-6: a field map run. Every form field the key lists is compared with what the filler would write; a
  *  form field the run writes that the key does not list fails ("written, not expected": a wrong-person wire); a person
  *  the form applies to with no expected values fails on each form field written for them. */
@@ -222,8 +273,7 @@ export function runFieldMap(s: Snapshot, family: Family, form: string, inv: Inve
   const nameOf = (id: string) => family.people.find((p) => p.id === id)?.label ?? id;
   if (!m) return finish([{ person: "", person_label: "", target: form, label: form, expected: "a PDF field map", got: "none", pass: false, why: `${form} has no PDF field map in this combination.` }], fp);
   if (expected.edition !== m.form_edition) return finish([{ person: "", person_label: "", target: "edition", label: `${form} edition`, expected: expected.edition, got: m.form_edition, pass: false, why: `This key is for edition ${expected.edition}; the map is edition ${m.form_edition}. One good edition proves nothing about another.` }], fp);
-  // Review minor 6: a caption alone can be "YYYY"; the line says the form's heading too ("Date of birth: YYYY").
-  const caption = new Map(m.entries.map((e) => [e.data_path, [e.heading, e.caption].filter((x) => x && x.trim()).join(": ")]));
+  const caption = captionsOf(s, m);
   const c = asCase(s, family);
   const view = caseView(s, c.people, c.answers, c.rows, "agent", c.today, c.groups);
   for (const p of family.people) {

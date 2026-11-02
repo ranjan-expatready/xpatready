@@ -12,6 +12,7 @@ export const TABS = [
   { key: "questionnaires", label: "Questionnaires" },
   { key: "documents", label: "Documents" },
   { key: "preview", label: "Preview" },
+  { key: "tests", label: "Tests" }, // G4 (forms lane, C5.7): answer-key tests
   { key: "review", label: "Review and release" },
 ] as const;
 export type TabKey = (typeof TABS)[number]["key"];
