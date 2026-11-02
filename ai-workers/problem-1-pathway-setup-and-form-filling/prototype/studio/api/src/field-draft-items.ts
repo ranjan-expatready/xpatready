@@ -14,8 +14,12 @@ import type { NewProposal, Work } from "./proposals.ts";
 import type { FieldMapOutput } from "./field-drafts.ts";
 
 export const DRAFT_FIELDS_STEP = "field_map_edition";
-/** A field id the library can hold: an area and a name in lower case ("person.family_name"). */
-const FIELD_ID = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/;
+/** A field id the library can hold, as the step's prompt asks (p2/prompts/field-map.v2.md): an area and a name in lower
+ *  case, at most 80 characters ("person.family_name"); the area at most 40 (the contract's subject holds 60). */
+export const FIELD_ID = /^[a-z][a-z_]{0,39}\.[a-z][a-z0-9_]*$/;
+export const FIELD_ID_MAX = 80;
+/** A library field this close (engine/normalize.ts score) is a near match: the item is never Ready and says why. */
+export const NEAR_SCORE = 0.35;
 
 /** One reading as the queue keeps it (contracts/proposal-item.ts RoundReading), less the payload made per item. */
 export type ReadingOf = { output: FieldMapOutput; from: "live" | "replay"; runFile: string; costUsd: number };
@@ -26,22 +30,36 @@ type One = { field: ProposedField; entries: FieldMapOutput["entries"] };
 
 /** The rules every reading of a field passes, or the plain reason it fails (then that reading is never used). */
 export function fieldRule(f: ProposedField): string | null {
-  if (!FIELD_ID.test(f.id ?? "")) return `"${String(f.id ?? "").slice(0, 60)}" is not a field name the library can hold (an area and a name, such as person.family_name).`;
+  if (typeof f.id !== "string" || f.id.length > FIELD_ID_MAX || !FIELD_ID.test(f.id)) return `"${String(f.id ?? "").slice(0, 60)}" is not a field name the library can hold (an area and a name, such as person.family_name).`;
   if (typeof f.meaning !== "string" || f.meaning.trim().length < 3) return `${f.id} has no meaning in words.`;
   if (typeof f.value_type !== "string" || !f.value_type.trim() || f.value_type.length > 40) return `${f.id} has no value type.`;
   return null;
 }
 
-/** "person.family_name" → "Family name"; an area other than the person or the case is named after it ("Family name (sponsor)"). */
+const areaWords = (id: string) => id.split(".")[0].replace(/_/g, " ");
+/** "person.family_name" → "Family name"; an area other than the person or the case is named after it ("Family name (sponsor)").
+ *  The label is what a person reads; the library key is the proposed id itself (proposals.ts field lander). */
 export function labelOf(id: string): string {
   const [area, ...rest] = id.split(".");
   const w = rest.join(" ").replace(/_/g, " ").trim();
   const name = w ? w[0].toUpperCase() + w.slice(1) : id;
-  return (["person", "case"].includes(area) ? name : `${name} (${area.replace(/_/g, " ")})`).slice(0, 120);
+  return (["person", "case"].includes(area) ? name : `${name} (${areaWords(id)})`).slice(0, 120);
+}
+/** A name no other item of the batch has under the identity rule (normalizeLabel, so spaces and dots do not count):
+ *  the plain name, then with its area, then numbered; always within the contract's 120 characters. Break M1. */
+export function uniqueLabel(id: string, taken: Set<string>, base = labelOf(id)): string {
+  const tries = [base, /\(/.test(base) ? null : `${base.slice(0, 100)} (${areaWords(id).slice(0, 16)})`].filter((x): x is string => !!x);
+  for (const t of tries) if (!taken.has(normalizeLabel(t))) return t;
+  for (let n = 2; ; n++) { const t = `${tries[tries.length - 1].slice(0, 112)} ${n}`; if (!taken.has(normalizeLabel(t))) return t; }
 }
 
 const answersOf = (o: FieldMapOutput | null): RoundAnswer<One>[] => (o?.canonical_fields ?? []).map((f) => ({ key: String(f.id), reading: String(f.value_type ?? "").trim().toLowerCase(), item: { field: f, entries: o!.entries.filter((e) => e.fact === f.id) } }));
 const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+/** The first words of the form a reading quoted for a field, and whether they are printed on the form. */
+const quoteIn = (o: FieldMapOutput, id: string, formText: string) => {
+  const q = o.entries.filter((e) => e.fact === id).map((e) => String(e.evidence_quote ?? "").trim()).find(Boolean) ?? null;
+  return { quote: q, found: !!q && squash(q).length > 0 && formText.includes(squash(q)) };
+};
 
 /** The two readings → field proposals (runId is the caller's), plus the readings dropped by the rules with their reason. */
 export function fieldItems(draft: ReadingOf, check: ReadingOf | null, ed: EditionFacts, library: LibraryField[], redirects: Map<string, string> = new Map()): { items: (Omit<NewProposal, "runId"> & Work)[]; dropped: { key: string; why: string }[] } {
@@ -57,6 +75,7 @@ export function fieldItems(draft: ReadingOf, check: ReadingOf | null, ed: Editio
   const formText = squash(ed.formText);
   const labels = new Set<string>();
   const items: (Omit<NewProposal, "runId"> & Work)[] = [];
+  const has = (r: ReadingOf, id: string) => r.output.canonical_fields.some((x) => x.id === id);
   const readingOf = (r: ReadingOf | null, id: string) => {
     const f = r?.output.canonical_fields.find((x) => x.id === id);
     return f ? `${f.id} (${f.value_type}): ${f.meaning}`.slice(0, 300) : null;
@@ -67,21 +86,25 @@ export function fieldItems(draft: ReadingOf, check: ReadingOf | null, ed: Editio
     const f = c.one.field;
     const reuses = !!i.recommendation.key && (i.recommendation.action === "reuse" || (i.recommendation.action === "decide" && libKeys.has(i.recommendation.key)));
     const lib = reuses ? library.find((l) => l.key === i.recommendation.key) : undefined;
-    // One item per name in a batch: a second field under the same name keeps its own id in its name.
-    let label = labelOf(f.id);
-    if (labels.has(normalizeLabel(label))) label = `${label} · ${f.id}`.slice(0, 120);
+    // One item per name in a batch (break M1): a second field under the same name gets its area, then a number.
+    const label = uniqueLabel(f.id, labels);
     labels.add(normalizeLabel(label));
     const payload = { kind: "field" as const, label, aliases: [], meaning: f.meaning.trim().slice(0, 500), valueType: f.value_type.trim(), subject: f.id.split(".")[0], formBox: null };
-    const quote = c.one.entries.map((e) => String(e.evidence_quote ?? "").trim()).find(Boolean) ?? null;
-    const found = !!quote && squash(quote).length > 0 && formText.includes(squash(quote));
-    const near = i.candidates.filter((x) => x.score >= 0.55 && x.key !== lib?.key).map((x) => x.key).slice(0, 10);
+    // P-170, both rounds: each reading that names the field must quote words printed on the form (review of #427).
+    const inDraft = has(draft, f.id) ? quoteIn(draft.output, f.id, formText) : null, inCheck = check && has(check, f.id) ? quoteIn(check.output, f.id, formText) : null;
+    const quoted = [inDraft, inCheck].filter((x): x is { quote: string | null; found: boolean } => !!x);
+    const found = quoted.length > 0 && quoted.every((x) => x.found);
+    const quote = (quoted.find((x) => x.found) ?? quoted.find((x) => x.quote))?.quote ?? null;
+    const bad = quoted.find((x) => !x.found);
+    const near = i.candidates.filter((x) => x.score >= NEAR_SCORE && x.key !== lib?.key).map((x) => x.key).slice(0, 10);
     const rules = [
       { rule: "field_name_and_type", passed: true, why: null },
-      { rule: "quote_on_the_form", passed: found, why: found ? null : quote ? "The words the AI quoted are not printed on this form edition." : "The AI quoted no words of the form for this field." },
+      { rule: "quote_on_the_form", passed: found, why: found ? null : bad?.quote ? `The words ${bad === inCheck ? "the checker round" : "the AI"} quoted ("${bad.quote.slice(0, 120)}") are not printed on this form edition.`.slice(0, 300) : "The AI quoted no words of the form for this field." },
     ];
-    const plain = (i.outcome === "REUSE" || (i.outcome === "NEW" && !near.length));
+    const plain = i.outcome === "REUSE" || (i.outcome === "NEW" && !near.length);
     const confidence = c.agreement === "agreed" && found && plain ? "ready" as const : c.agreement === "agreed" && found && i.outcome === "NEW" ? "check" as const : "decide" as const;
-    const reason = confidence === "ready" ? null : [c.why, found ? null : rules[1].why, i.outcome === "NEW" && !near.length ? null : i.reason].filter(Boolean).join(" ").slice(0, 500) || null;
+    const whyParts = { round: c.why, quote: found ? null : rules[1].why, match: plain ? null : i.reason };
+    const reason = confidence === "ready" ? null : [whyParts.round, whyParts.quote, whyParts.match].filter(Boolean).join(" ").slice(0, 500) || null;
     const reading = (r: ReadingOf | null) => { const t = readingOf(r, f.id); return t && r ? { reading: t, payload, from: r.from, runFile: r.runFile.slice(0, 300), costUsd: r.costUsd } : null; };
     items.push({
       kind: "field", step: DRAFT_FIELDS_STEP, scope: { formEdition: ed.printed.slice(0, 60), combinationId: null }, landsOn: "library",
@@ -89,7 +112,7 @@ export function fieldItems(draft: ReadingOf, check: ReadingOf | null, ed: Editio
       source: quote ? { file: ed.file.slice(0, 300), sha256: ed.sha256, edition: ed.printed.slice(0, 60), page: null, quote: quote.slice(0, 1000), quoteFound: found, rule: null } : null,
       rounds: { draft: reading(draft), check: reading(check) }, rules, agreement: c.agreement, confidence, reason, origin: "ai",
       identity: { key: normalizeLabel(label), near, nearReason: near.length ? i.reason.slice(0, 300) : null }, relatesTo: null, revision: null, basis: "SAMPLE",
-      work: { proposedKey: f.id, outcome: i.outcome, matchedKey: i.matchedKey, candidates: i.candidates.slice(0, 5), boxes: i.boxes.slice(0, 50) },
+      work: { proposedKey: f.id, whyParts, outcome: i.outcome, matchedKey: i.matchedKey, candidates: i.candidates.slice(0, 5), boxes: i.boxes.slice(0, 50) },
     });
   }
   return { items, dropped: cmp.dropped };

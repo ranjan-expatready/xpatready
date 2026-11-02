@@ -6,7 +6,8 @@
 //   C11.13 drafted once per edition, matched reuse or new · C11.8 replay at US$0 · P-138 live only on a click (off here)
 //   zsh studio/tools/isolated.sh forms_c1113df 4451 start && tsx studio/tests/check_c1113_draft_fields.ts 4451
 import { sampleEditions, type FieldMapOutput } from "../api/src/field-drafts.ts";
-import { fieldItems, fieldRule, labelOf, type ReadingOf } from "../api/src/field-draft-items.ts";
+import { fieldItems, fieldRule, labelOf, uniqueLabel, type ReadingOf } from "../api/src/field-draft-items.ts";
+import { normalizeLabel } from "../contracts/programs.ts";
 import { fieldMap, savedReadings } from "./field_draft_fixtures.ts";
 
 const PORT = Number(process.argv[2] ?? 4451);
@@ -51,7 +52,26 @@ const ED = { printed: "IMM 0000 (01-2026)", file: "imm0000e.pdf", sha256: "a".re
   ok("C11.13 pass (P-120): a field the library already holds is matched reuse of that field, and stays Ready", reuse.reuse.match === "reuse" && reuse.reuse.existingKey === "person.family_name" && reuse.confidence === "ready", reuse.reuse);
   ok("C11.13 fail (P-120): a field close to a library field is never Ready; the near match and its one-line reason go with it", close.confidence !== "ready" && (close.identity.near.includes("person.birth_country") || close.reuse.existingKey === "person.birth_country") && !!(close.identity.nearReason ?? close.reason), { c: close.confidence, id: close.identity, reuse: close.reuse, reason: close.reason });
   r = fieldItems(reading(out(ED.printed, [fam, { ...fam, id: "case.family_name", meaning: "The family name the application is filed under" }], q)), null, ED, []);
-  ok("C11.13 pass: two fields of one draft whose names would collide stay two items (the second keeps its id in its name)", r.items.length === 2 && new Set(r.items.map((i) => i.identity.key)).size === 2 && r.items.some((i) => i.payload.kind === "field" && i.payload.label === "Family name · case.family_name"), r.items.map((i) => i.payload.kind === "field" && i.payload.label));
+  ok("C11.13 pass: two fields of one draft whose names would collide stay two items, the second named with its area (no system name)", r.items.length === 2 && new Set(r.items.map((i) => i.identity.key)).size === 2 && r.items.some((i) => i.payload.kind === "field" && i.payload.label === "Family name (case)"), r.items.map((i) => i.payload.kind === "field" && i.payload.label));
+  // Break M1: names equal under the identity rule (spaces, dots and underscores do not count) or after the 120-character cut.
+  const tricky: F[] = ["person.ab", "person.abpersonab", "person.a_b"].map((id) => ({ id, meaning: `Meaning of ${id}`, value_type: "text" }));
+  r = fieldItems(reading(out(ED.printed, tricky, {})), null, ED, []);
+  ok("C11.13 fail (break M1): names that differ only in spaces or dots never give two items one identity", r.items.length === 3 && new Set(r.items.map((i) => i.identity.key)).size === 3 && r.items.every((i) => i.payload.kind === "field" && i.payload.label.length <= 120), r.items.map((i) => i.payload.kind === "field" && i.payload.label));
+  const longs: F[] = ["a", "b"].map((x) => ({ id: `person.${"x".repeat(70)}_${x}`, meaning: "A long one", value_type: "text" }));
+  const t = new Set<string>(); const l1 = uniqueLabel(longs[0].id, t); t.add(normalizeLabel(l1)); const l2 = uniqueLabel(longs[1].id, new Set([...t, normalizeLabel(labelOf(longs[1].id).slice(0, 60))]));
+  r = fieldItems(reading(out(ED.printed, longs, {})), null, ED, []);
+  ok("C11.13 fail (break M1): two long names cut to the same 120 characters stay two items", r.items.length === 2 && new Set(r.items.map((i) => i.identity.key)).size === 2 && l1 !== l2, r.items.map((i) => i.identity.key.slice(-12)));
+  ok("C11.13 fail (break M2): an area longer than 40 letters, a nested name, or an id over 80 characters fails the rules (it never reaches the contract)", !!fieldRule({ ...fam, id: `${"a".repeat(70)}.name` }) && !!fieldRule({ ...fam, id: "person.passport.number" }) && !!fieldRule({ ...fam, id: `person.${"n".repeat(80)}` }) && fieldRule({ ...fam, id: "relationship.date_of_marriage" }) === null);
+  // Review M2: a new field close to a library field, kept distinct (another period), is Check, never Ready.
+  const lib2 = [{ key: "person.previous_country_of_residence", meaning: "A country where the person lived before", valueType: "country", status: "PUBLISHED" }];
+  const cor: F = { id: "person.country_of_residence", meaning: "The country where the person lives now", value_type: "country" };
+  r = fieldItems(reading(out(ED.printed, [cor], { [cor.id]: "Country of birth" })), reading(out(ED.printed, [cor], { [cor.id]: "Country of birth" })), ED, lib2);
+  ok("C11.13 fail (review M2): a new field with a near library match reads Check, with the match and its reason", r.items[0].reuse.match === "new" && r.items[0].confidence === "check" && r.items[0].identity.near.includes("person.previous_country_of_residence") && /kept distinct/.test(r.items[0].identity.nearReason ?? ""), { c: r.items[0].confidence, id: r.items[0].identity });
+  r = fieldItems(reading(out(ED.printed, [cor], { [cor.id]: "Country of birth" })), reading(out(ED.printed, [cor], { [cor.id]: "Country of birth" })), ED, []);
+  ok("C11.13 pass (review M2): the same field with nothing near it in the library is Ready", r.items[0].confidence === "ready", r.items[0].confidence);
+  // Devin (#427): the checker round's quote counts too.
+  r = fieldItems(reading(out(ED.printed, [fam], q)), reading(out(ED.printed, [fam], { "person.family_name": "Employee number" })), ED, []);
+  ok("P-170 fail (both rounds): the checker quoted words not on the form → Decide, never Ready, and the reason names the checker round", r.items[0].confidence === "decide" && r.items[0].source?.quoteFound === false && /checker round quoted \("Employee number"\)/.test(r.items[0].reason ?? ""), r.items[0].reason);
 
   // ─────────────────── the route, on an isolated copy
   const reset = await call("POST", "/demo/reset", { confirm: "RESET" });
@@ -68,7 +88,9 @@ const ED = { printed: "IMM 0000 (01-2026)", file: "imm0000e.pdf", sha256: "a".re
   p = await call("POST", `/library/forms/${enc("IMM 5409")}/draft-fields`, { mode: "guess" });
   ok("C11.13 fail: an unknown mode is refused with the two choices", p.status === 400 && /"replay"/.test(p.body.message), p.body);
   g = await call("GET", `/library/forms/${enc("IMM 5488")}/draft-fields`);
-  ok("C11.13 fail: a checklist is not drafted into fields (it has no boxes)", g.status === 409 && /not a form with boxes/.test(g.body.message), g.body);
+  ok("C11.13 fail: a checklist is not drafted into fields (it has no boxes): said in words, an ordinary state (200)", g.status === 200 && g.body.state === "cannot" && /not a form with boxes/.test(g.body.words), g.body);
+  p = await call("POST", `/library/forms/${enc("IMM 5488")}/draft-fields`, {});
+  ok("C11.13 fail: drafting a checklist is refused (409)", p.status === 409 && /not a form with boxes/.test(p.body.message), p.body);
   g = await call("GET", `/library/forms/${enc("IMM 9999")}/draft-fields`);
   ok("C11.13 fail: a form not in the library is 404", g.status === 404, g.status);
   g = await call("GET", `/library/forms/${enc("IMM 5409")}/draft-fields`, undefined, "nobody");
@@ -106,6 +128,34 @@ const ED = { printed: "IMM 0000 (01-2026)", file: "imm0000e.pdf", sha256: "a".re
     const readyIds = ((queue.body.group?.bands?.ready ?? []) as { id: string }[]).map((x) => x.id);
     const acc = readyIds.length ? await call("POST", "/review/proposals/decide", { ids: [readyIds[0]], action: "accept" }) : { status: 0, body: "no ready id found" };
     ok("C11.13 pass (P-120): accepting a Ready drafted field puts it on the library for a second person", acc.status === 201, acc.body);
+
+    // Break M3 and review M1: a library name of another area is never "the same field"; an accepted field keeps its proposed key.
+    const e5476 = sampleEditions().find((e) => e.code === "IMM 5476")!;
+    const f5476: F[] = [{ id: "person.name", meaning: "The person's full name as on the passport", value_type: "text" }, { id: "relationship.date_of_marriage", meaning: "The date the two people married", value_type: "date" }, { id: "person.start_date", meaning: "The date the person starts the job", value_type: "text" }];
+    const q5476 = { "person.name": "Family name (Surname)", "relationship.date_of_marriage": "2. Your date of birth (YYYY-MM-DD)", "person.start_date": "Application number (if known)" };
+    save(e5476, false, fieldMap(e5476.printed, f5476, q5476), 4);
+    save(e5476, true, fieldMap(e5476.printed, f5476, q5476), 5);
+    p = await call("POST", `/library/forms/${enc("IMM 5476")}/draft-fields`, {});
+    const g5476 = await call("GET", `/review/proposals?group=${enc(`edition:${e5476.printed}`)}`);
+    const all5476 = Object.values((g5476.body.group?.bands ?? {}) as Record<string, { id: string; title: string; reuse: { match: string; existing_key: string | null } }[]>).flat();
+    ok("C11.13 fail (break M3): no drafted field is proposed as the reuse of a library field of another area (person.name is not organisation.name)", p.status === 201 && all5476.length === 3 && all5476.every((x) => x.reuse.match === "new" || !/^(organisation|relationship)\./.test(x.reuse.existing_key ?? "") || x.title.includes("marri")), all5476.map((x) => [x.title, x.reuse]));
+    const marriage = all5476.find((x) => /marriage/i.test(x.title));
+    const accM = marriage ? await call("POST", "/review/proposals/decide", { ids: [marriage.id], action: "accept" }) : { status: 0, body: "no item" };
+    ok("C11.13 pass (review M1): an accepted relationship field keeps its proposed key (relationship.date_of_marriage, no area written twice)", accM.status === 201 && accM.body.items?.[0]?.landedAs === "relationship.date_of_marriage", accM.body);
+    const pname = all5476.find((x) => /^Name/.test(x.title));
+    const accN = pname ? await call("POST", "/review/proposals/decide", { ids: [pname.id], action: "accept", reason: "The person's own name on this form." }) : { status: 0, body: "no item" };
+    ok("C11.13 fail (break M3): accepting the person's name lands as person.name, never on organisation.name", accN.status === 201 && accN.body.items?.[0]?.landedAs === "person.name", accN.body);
+
+    // Break m1 and m4: a draft with no usable field, or far more fields than boxes, is refused and does not use up the edition.
+    const e1295 = sampleEditions().find((e) => e.code === "IMM 1295")!, eSch1 = sampleEditions().find((e) => e.code === "IMM 5257 SCH1")!;
+    save(eSch1, false, fieldMap(eSch1.printed, [{ id: "FamilyName", meaning: "x family name", value_type: "text" }], {}), 6);
+    p = await call("POST", `/library/forms/${enc("IMM 5257 SCH1")}/draft-fields`, {});
+    g = await call("GET", `/library/forms/${enc("IMM 5257 SCH1")}/draft-fields`);
+    ok("C11.13 fail (break m1): no field passing the rules → 409 with the reason, and the edition is not marked drafted", p.status === 409 && /No field of the saved AI draft/.test(p.body.message) && /not a field name/.test(p.body.message) && g.body.state === "saved", [p.body.message, g.body.state]);
+    const many: F[] = Array.from({ length: 2 * e1295.fields + 1 }, (_, n) => ({ id: `person.f${n}`, meaning: `Field ${n}`, value_type: "text" }));
+    save(e1295, false, fieldMap(e1295.printed, many, {}), 7);
+    p = await call("POST", `/library/forms/${enc("IMM 1295")}/draft-fields`, {});
+    ok("C11.13 fail (break m4): a draft naming far more fields than the form has boxes is refused before the queue", p.status === 409 && /far fewer boxes/.test(p.body.message), p.body);
   } finally { saved.clear(); }
 
   console.log(`\n${pass} passed, ${fail} failed`);

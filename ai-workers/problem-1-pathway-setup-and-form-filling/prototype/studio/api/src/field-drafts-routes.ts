@@ -7,12 +7,13 @@
 //   POST /api/library/forms/:code/draft-fields   { mode: "replay" } puts the saved draft's fields on the review queue
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { Body, Controller, Get, Headers, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
 import { costWords } from "../../contracts/start-setup.ts";
 import { normaliseCode } from "../../contracts/form-library.ts";
 import { actorOf, Audit, Db, fail, need, readerOf, SOLUTION, Workspace, type Actor } from "./core.ts";
 import { draftEdition, editionKey, roundCost, sampleEditions, FIELD_DRAFT_WORDS, type EditionSource } from "./field-drafts.ts";
-import { DRAFT_FIELDS_STEP, fieldItems, type ReadingOf } from "./field-draft-items.ts";
+import { DRAFT_FIELDS_STEP, fieldItems, uniqueLabel, type ReadingOf } from "./field-draft-items.ts";
+import { normalizeLabel } from "../../contracts/programs.ts";
 import { FormLibrary } from "./form-library.ts";
 import { insertProposals, QUEUE_TX, sameInLibrary, type NewProposal, type Work } from "./proposals.ts";
 import { StepRunner } from "./rounds.ts";
@@ -29,7 +30,11 @@ export const DRAFT_FIELDS_WORDS = {
   notRead: (edition: string) => `${edition} has no box reading of exactly this file on this computer, so there is nothing to draft: read the form first.`,
   notForm: (code: string) => `${code} is not a form with boxes: only forms are drafted into fields (a checklist is drafted into document lines).`,
   noSaved: (cost: string) => FIELD_DRAFT_WORDS.noSaved.replace("about US$x · at most US$y", cost),
+  nothingPassed: (edition: string, why: string[]) => `No field of the saved AI draft of ${edition} passed the rules, so nothing was put on To review and the edition is not marked drafted.${why.length ? ` For example: ${why.slice(0, 3).join(" ")}` : ""}`.slice(0, 900),
+  tooMany: (edition: string, n: number, max: number) => `The saved AI draft of ${edition} names ${n} fields for a form of far fewer boxes (at most ${max} are read), so it was not used: a person maps the boxes.`,
 };
+/** At most this many fields are read from one draft of a form (break m4: one draft never holds the queue's lock for long). */
+export const maxFields = (boxes: number) => Math.max(50, boxes * 2);
 
 type Resolved = { workspaceId: string; code: string; edition: EditionSource; file: string; sha256: string };
 
@@ -72,7 +77,12 @@ export class FieldDrafts {
 
   /** What Draft fields would do now, at US$0 (only saved files are read). */
   async plan(code: string) {
-    const r = await this.resolve(code);
+    // Review minor: "not read", "a checklist", "no edition" are ordinary states of a form, answered in words (200), not errors.
+    let r: Resolved;
+    try { r = await this.resolve(code); } catch (e) {
+      if (e instanceof HttpException && e.getStatus() === HttpStatus.CONFLICT) return { code, edition: null, state: "cannot" as const, words: String(e.message) };
+      throw e;
+    }
     const cost = this.costOf(r.edition);
     const rounds = await draftEdition(this.runner, r.edition, "replay", async () => false);
     const drafted = await this.view(r, await this.earlier(r.workspaceId, r.edition.printed));
@@ -98,6 +108,8 @@ export class FieldDrafts {
     let formText = "";
     try { formText = ((JSON.parse(readFileSync(join(SOLUTION, r.edition.inventory), "utf8")) as { fields?: { caption?: string | null; heading?: string | null; tooltip?: string | null }[] }).fields ?? []).map((f) => `${f.caption ?? ""} ${f.heading ?? ""} ${f.tooltip ?? ""}`).join(" \n "); } catch { /* no words: every quote is Decide */ }
     const printed = r.edition.printed;
+    const max = maxFields(r.edition.fields);
+    for (const x of [rounds.draft, rounds.check]) if (x.ok && x.output.canonical_fields.length > max) fail(DRAFT_FIELDS_WORDS.tooMany(printed, x.output.canonical_fields.length, max), HttpStatus.CONFLICT);
     const out = await this.db.$transaction(async (tx) => {
       // P-138: one draft per edition, looked up and written under one lock, so two clicks at once share one draft.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`draft-fields:${r.workspaceId}:${printed}`}))`;
@@ -107,15 +119,33 @@ export class FieldDrafts {
       const seen = new Set<string>(), library: LibraryField[] = [], redirects = new Map<string, string>();
       for (const x of rows) if (!seen.has(x.canonicalFieldKey)) { seen.add(x.canonicalFieldKey); if (x.mergedIntoKey) redirects.set(x.canonicalFieldKey, x.mergedIntoKey); else if (x.status !== "RETIRED") library.push({ key: x.canonicalFieldKey, meaning: x.meaning, valueType: x.valueType, status: x.status, aliases: x.aliases }); }
       const { items, dropped } = fieldItems(asReading(rounds.draft)!, asReading(rounds.check), { printed, file: r.file, sha256: r.sha256, formText }, library, redirects);
+      // Break m1: a draft with no usable field does not use up the edition's one draft; the reasons are said.
+      if (!items.length) fail(DRAFT_FIELDS_WORDS.nothingPassed(printed, [...new Set(dropped.map((x) => x.why))]), HttpStatus.CONFLICT);
       const job = await tx.draftingJob.create({ data: { workspaceId: r.workspaceId, combinationId: null, kind: DRAFT_FIELDS_STEP, mode: "REPLAY", status: "COMPLETED", costUsd: 0, startedBy: actor.id, finishedAt: new Date(),
         runFile: rounds.draft.ok ? rounds.draft.runFile : null,
         message: `Saved AI draft of ${printed} (US$0, no AI call): ${items.length} field${items.length === 1 ? "" : "s"} proposed on To review${rounds.check.ok ? ", read by both rounds" : ", from the draft round only (each waits as Decide)"}.${dropped.length ? ` Not proposed (failed the rules): ${dropped.length}.` : ""}`.slice(0, 1000),
         detail: { operation: "draft_fields", edition: printed, key: editionKey(r.edition), mode: "replay", draftRun: rounds.draft.ok ? rounds.draft.runFile : null, checkRun: rounds.check.ok ? rounds.check.runFile : null, proposals: items.length, dropped: dropped.slice(0, 50) } } });
-      // An exact name already in the library is that field (insertProposals refuses a "new" twin): proposed as its reuse.
+      // An exact name already in the library (insertProposals refuses a "new" twin, break M3): the same field only when
+      // its area and its value type are the same, proposed as its reuse; otherwise the new field is named apart (its area,
+      // then a number) so it stays new and never lands on another area's field.
+      const byKey = new Map(library.map((l) => [l.key, l]));
+      const taken = new Set(items.map((x) => x.identity.key));
       const ready: (NewProposal & Work)[] = [];
       for (const it of items) {
-        const twin = it.reuse.match === "new" ? await sameInLibrary(tx, r.workspaceId, it.payload) : null;
-        ready.push(twin ? { ...it, runId: job.id, reuse: { match: "reuse", existingKey: twin }, confidence: it.confidence === "ready" ? "check" : it.confidence, reason: `Same name as the library field ${twin}: reuse it.${it.reason ? ` ${it.reason}` : ""}`.slice(0, 500) } : { ...it, runId: job.id });
+        if (it.reuse.match !== "new" || it.payload.kind !== "field") { ready.push({ ...it, runId: job.id }); continue; }
+        const proposed = String((it.work as { proposedKey?: string }).proposedKey ?? "");
+        let payload = it.payload, twin = await sameInLibrary(tx, r.workspaceId, payload);
+        const same = (k: string) => k.split(".")[0] === proposed.split(".")[0] && byKey.get(k)?.valueType === payload.valueType;
+        while (twin && !same(twin)) {
+          taken.delete(normalizeLabel(payload.label));
+          const label = uniqueLabel(proposed, new Set([...taken, normalizeLabel(payload.label)]), payload.label);
+          payload = { ...payload, label }; taken.add(normalizeLabel(label));
+          twin = await sameInLibrary(tx, r.workspaceId, payload);
+        }
+        const parts = (it.work as { whyParts?: { round: string | null; quote: string | null } }).whyParts;
+        if (twin) ready.push({ ...it, runId: job.id, reuse: { match: "reuse", existingKey: twin }, identity: { ...it.identity, near: [], nearReason: null }, confidence: it.confidence === "ready" ? "check" : it.confidence,
+          reason: [`Same name, area and type as the library field ${twin}: reuse it.`, parts?.round, parts?.quote].filter(Boolean).join(" ").slice(0, 500) });
+        else ready.push({ ...it, runId: job.id, payload, identity: { ...it.identity, key: normalizeLabel(payload.label) }, rounds: { draft: it.rounds.draft && { ...it.rounds.draft, payload }, check: it.rounds.check && { ...it.rounds.check, payload } } });
       }
       await insertProposals(tx, r.workspaceId, ready);
       return { job, made: ready.length, again: false };
