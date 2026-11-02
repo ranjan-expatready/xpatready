@@ -30,7 +30,7 @@ const STOP_TIP = "Ends this run now. Steps already finished keep their results. 
 /** About first, then the ceiling, then what it spent (P-123 cost line), in the same words as the button that started it
  *  (S3 early look (4)): "about US$0.31 · at most US$5.58 · US$0.00 spent". */
 export function costLine(r: Pick<RunView, "usd"> & { steps?: RunView["steps"] }, active: boolean) {
-  if (r.usd.worst === 0 && r.usd.spent === 0) return r.steps?.some((s) => s.uses === "ai") ? "US$0 · saved AI answers, no new call" : "US$0 · rules only, no AI";
+  if (r.usd.worst === 0 && r.usd.spent === 0) return r.steps?.some((s) => s.uses === "ai") ? "US$0 · Saved, no new call" : "US$0 · rules only, no AI";
   return `${costWords(r.usd.about !== undefined ? r.usd.about : r.usd.usual, r.usd.worst)} · US$${r.usd.spent.toFixed(2)} ${active ? "so far" : "spent"}`;
 }
 
