@@ -168,3 +168,42 @@ I reviewed `git diff c841b8c9 86816a18`.
 ### To fix for Approve
 * MJ-R2, with its tests.
 * r2-1 to r2-4: fix, or list them in the PR for the tech lead.
+
+## Round 3: head **c98f1808** (diff 0ec051ff..c98f1808: MJ-R2, r2-3, r2-4)
+* **Suites:** engine **51/51**; API **50/50** on a fresh isolated copy (:4471, stopped and dropped). After Reset, 17 of 27 are still held and the import still cites 10.
+* **Probes:** a scratch script calling `statesInDigits`, `Cited` and `NonePublished` directly, outside the repo.
+
+### Verdict (c98f1808): **Approve**. No Blocker or Major is open. Journey score **9.4/10** (7.5 of 8 applicable: correct data back to 1; plain words stays ½).
+
+* **MJ-R2 is fixed** (`engine/source-register.ts:261-270`).
+  * **Now accepted:** "$14,690.", "($14,690)", "$14 690" (narrow no-break space), "$1,000,000" for 1000000, and "$1,085.00".
+  * **Still refused:**
+    * 14690 in "$14,690.50" and in "14, 690";
+    * 1000 in "$1,000,000";
+    * 1085 in "1085.000";
+    * 12.5 in "12.50", and 2.5 in "2,5 %" (decimal comma).
+    * These all fail closed, which is the safe direction.
+  * The import's 10 citations are unchanged ("aged 18 years", "more than 5 years").
+  * The new pass and fail checks cover each part of the expression; the builder reports four mutants killed.
+* **r2-3 is fixed.** Each limit answers in its own words, and concept §5 lists them:
+  * 501 characters → "Keep the reason to 500 characters.";
+  * ten emoji → "Write the reason in words.";
+  * 9 characters or 9 emoji → the at-least-10 sentence;
+  * 1989 → "The date read cannot be before 1990.";
+  * 30 February → the YYYY-MM-DD sentence.
+  * Only 600 emoji gets two messages (no words, and too long), which is correct.
+* **r2-4 is fixed.** Refused:
+  * `user:pw@` and `user@`;
+  * `10.0.0.1`, `0x7f.1`, `2130706433` (normalised to an IPv4 address);
+  * `[::1]` and `[::ffff:1.2.3.4]`;
+  * a trailing-dot host (harmless).
+
+  Still accepted: `1.2.3.4.nip.io` (a domain name), punycode and upper-case hosts.
+* **r2-1 and r2-2:** posted to the tech lead as questions on #587 (19:33 UTC), with recommendations. That is the right place (P-26). The PR body's "Questions: None open" line is now out of date; point it to that comment.
+
+### Minors (non-blocking; list them in the PR or a later row)
+* **r3-1 · The lookbehind blocks more than the stated cost.** `(?<!\d G)` refuses a number after *any* number and one space, not only after a group of three.
+  * "IMM 5707 18 years", "Schedule 1 18 years" and "within 30 60 or 90 days" no longer state 18 or 60. ("page 3, 18 years" and "30, 60 or 90" still do.)
+  * The same holds for "aged 18 100 days" on the other side.
+  * Rare in IRCC prose, and it fails closed. A real group before the number is 1–3 digits that are not themselves preceded by a digit, so it could be narrowed to `(?<!(?:^|[^\d.,])\d{1,3}G)`. Mention the cost in the code comment if it is kept.
+* **r3-2 · Wording in the r2-2 question.** It says the author "picks 'None published'" when IRCC writes the number only in other words or units ("one year" for 12 months). That answer would be untrue, because IRCC does publish it. When the tech lead decides r2-2, the refusal could tell the author to copy words that state the number in the rule's own unit, or else wait for the later row.

@@ -180,6 +180,9 @@ ok("C5.4 BR-3 (Devin round 4 on #587): a negative threshold keeps its edges: -10
   statesInDigits("a threshold of -10 points", "-10") && statesInDigits("a threshold of \u221210 points", "-10") && statesInDigits("at -1,000", "-1000")
   && !statesInDigits("The threshold is -100", "-10") && !statesInDigits("The threshold is -10.5", "-10") && !statesInDigits("The threshold is 10", "-10")
   && statesInDigits("x is 1e-7 here", "1e-7") && !statesInDigits("x is 1e-70 here", "1e-7"));
+ok("C5.4 BR-3 (review r3-1 on #587): a number after another number and a space is stated unless the two read as one grouped number (18 in \"IMM 5707 18 years\" and \"Schedule 1 18 years\", 60 in \"within 30 60 or 90 days\"; never 690 in \"14 690\" or \"1 234 690\")",
+  statesInDigits("IMM 5707 18 years", "18") && statesInDigits("Schedule 1 18 years", "18") && statesInDigits("within 30 60 or 90 days", "60") && statesInDigits("IMM 5707 690 dollars", "690")
+  && !statesInDigits("14 690 $", "690") && !statesInDigits("1 234 690 $", "690") && !statesInDigits("1\u202f234\u202f690 $", "690") && !statesInDigits("1,234,690", "690"));
 ok("C5.4 BR-3 pass (Devin on #587): digits, English words and IRCC's date forms state the number", statesValue("at least 18 years of age", "18") && statesValue("valid for five years", "5") && statesValue("within ninety days", "90") && statesValue("Twenty-one days", "21") && statesValue("on or after November 1, 2024", "2024-11-01"));
 ok("C5.4 BR-3 fail (Devin on #587): words for another number never state this one (21 for 18; 180 for 18; \"fifty\" for 5)", !statesValue("Applicants must be at least 21 years old", "18") && !statesValue("within 180 days", "18") && !statesValue("fifty days", "5") && !statesValue("", "18")
   // Devin on #587 (second round): never part of a bigger written number

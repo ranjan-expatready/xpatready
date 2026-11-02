@@ -269,7 +269,10 @@ export function statesInDigits(quote: unknown, value: string): boolean {
   const groups: string[] = [];
   for (let i = num[2].length; i > 0; i -= 3) groups.unshift(num[2].slice(Math.max(0, i - 3), i));
   const body = (num[1] ? "[-\\u2212]" : "") + groups.join(`${G}?`) + (num[3] ? num[3].replace(".", "\\.") : "(?:\\.00?)?");
-  return new RegExp(`(?<![\\d.,])(?<!\\d${G})${body}(?![\\d]|[.,]\\d|${G}\\d{3}(?!\\d))`).test(q);
+  // Review r3-1 on #587: a mark before the number makes it a group only when its first group has three digits and a
+  // group of one to three digits stands before the mark ("14 690", never "IMM 5707 18" or "within 30 60 days").
+  const tail = groups[0].length === 3 && !num[1] ? `(?<!(?:^|[^\\d.,])\\d{1,3}${G})` : "";
+  return new RegExp(`(?<![\\d.,])${tail}${body}(?![\\d]|[.,]\\d|${G}\\d{3}(?!\\d))`).test(q);
 }
 
 const ONES = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];
