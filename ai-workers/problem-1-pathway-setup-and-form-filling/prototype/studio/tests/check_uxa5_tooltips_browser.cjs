@@ -31,7 +31,19 @@ const visible = (p) => p.locator("main").innerText();
   const vv = sql("select id from combination where combination_key='vv.single'"), lm = sql("select id from combination where combination_key='wp.family'");
   const axe = async (name) => { const r = await new AxeBuilder({ page: p }).include("main").withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze(); step(`axe: ${name} has no WCAG A/AA violation`, r.violations.length === 0, r.violations.map((v) => `${v.id}: ${v.nodes[0]?.target?.join(" ")}`).join(" | ")); };
   // Reached by the Tab key like a person (a tooltip opens on keyboard focus, not on a script's focus()).
-  const tipOf = async (loc) => { await loc.evaluate((e) => { const all = [...document.querySelectorAll('button, a[href], input, select, [tabindex="0"]')].filter((x) => !x.hasAttribute("disabled")); const i = all.indexOf(e); (all[i - 1] ?? document.body).focus(); }); await p.keyboard.press("Tab"); const t = p.getByRole("tooltip"); await t.first().waitFor({ timeout: 4000 }).catch(() => undefined); const s = (await t.first().textContent().catch(() => "")) ?? ""; await p.keyboard.press("Escape").catch(() => undefined); return s; };
+  // Break m7: the element before may have its own tip, still closing: wait for no tip first, then for this one's words.
+  const tipOf = async (loc, words) => {
+    await loc.evaluate((e) => { const all = [...document.querySelectorAll('button, a[href], input, select, [tabindex="0"]')].filter((x) => !x.hasAttribute("disabled")); const i = all.indexOf(e); (all[i - 1] ?? document.body).focus(); });
+    // A wait fails loudly (review M1): if a tip stays open or this one never shows, the step says which.
+    await p.keyboard.press("Escape");
+    if (!(await p.getByRole("tooltip").first().waitFor({ state: "detached", timeout: 3000 }).then(() => true, () => false))) return `TIMEOUT: a tip was still open before Tab (${await p.getByRole("tooltip").first().textContent()})`;
+    await p.keyboard.press("Tab");
+    const t = p.getByRole("tooltip").filter({ hasText: words }).first();
+    if (!(await t.waitFor({ timeout: 4000 }).then(() => true, () => false))) return `TIMEOUT: no tip with ${words} after Tab`;
+    const s = (await t.textContent()) ?? ""; await p.keyboard.press("Escape"); return s;
+  };
+  // Break m3: Enter on the greyed control keeps its reason open (before, it closed the tip and nothing was said).
+  const tipAfterEnter = async (loc, words) => { await loc.focus(); await p.keyboard.press("Enter"); const t = p.getByRole("tooltip").filter({ hasText: words }).first(); const ok = await t.waitFor({ timeout: 4000 }).then(() => true, () => false); await p.keyboard.press("Escape"); return ok; };
 
   // ------------------------------------------------------------------ Program structure: "Can't retire yet / Can't delete"
   await p.goto(`${BASE}/structure`); await p.locator("[data-row]").first().waitFor({ timeout: 20000 });
@@ -42,13 +54,14 @@ const visible = (p) => p.locator("main").innerText();
   const g = greyed.first(), gid = await g.getAttribute("aria-describedby");
   const desc = gid ? await p.locator(`[id="${gid}"]`).textContent() : "";
   step("pass: the greyed action's description says why in words (screen readers)", /^Can't (retire yet|delete)/.test(desc ?? ""), desc);
-  const tip = await tipOf(g);
+  const tip = await tipOf(g, /^Can't (retire yet|delete)/);
   step("pass: the same reason is its tooltip on keyboard focus", /^Can't (retire yet|delete)/.test(tip) && /details \(Edit\) list each use/.test(tip), tip);
   const panels = await p.locator("[data-impact-panel]").count();
   await g.click({ force: true });
   step("fail case: clicking the greyed action opens nothing", await p.locator("[data-impact-panel]").count() === panels);
   await p.locator(`[data-row]:has([id="${gid}"]) [data-edit]`).first().click();
-  await p.locator("[data-blocked-line]").first().waitFor({ timeout: 10000 }).catch(() => undefined);
+  const lineShown = await p.locator("[data-blocked-line]").first().waitFor({ timeout: 10000 }).then(() => true, () => false);
+  step("setup: the details (Edit) open with their reason line", lineShown);
   step("pass: the details (Edit) say the reason in words, with each use", /^Can't (retire yet|delete)/.test((await p.locator("[data-blocked-line]").first().textContent().catch(() => "")) ?? ""));
   await axe("Program structure");
   await p.screenshot({ path: path.join(SHOTS, "uxa5-01-structure-1440.png"), fullPage: false });
@@ -60,7 +73,9 @@ const visible = (p) => p.locator("main").innerText();
   const rb = p.locator("[data-remove-blocked]").first();
   step("pass: a section that asks this person something has a greyed Remove", await rb.count() === 1 && (await rb.getAttribute("aria-disabled")) === "true");
   const rid = await rb.getAttribute("aria-describedby");
-  step("pass: its description and tooltip say why", /placed in it in the shared library/.test((await p.locator(`[id="${rid}"]`).textContent()) ?? "") && /placed in it in the shared library/.test(await tipOf(rb)));
+  step("pass: its description and tooltip say why", /placed in it in the shared library/.test((await p.locator(`[id="${rid}"]`).textContent()) ?? "") && /placed in it in the shared library/.test(await tipOf(rb, /placed in it in the shared library/)));
+  step("fail case (break m1): the description is one sentence (never \"question s\" or \"stay s\")", !/question s\b|stay s\b/.test((await p.locator(`[id="${rid}"]`).evaluate((e) => e.textContent)) ?? ""));
+  step("fail case (break m3): Enter on the greyed Remove keeps its reason open", await tipAfterEnter(rb, /placed in it in the shared library/));
   await rb.click({ force: true });
   step("fail case: clicking the greyed Remove opens no dialog", await p.getByRole("dialog").count() === 0);
   await axe("Questionnaires");
@@ -72,7 +87,8 @@ const visible = (p) => p.locator("main").innerText();
   step("fail case: no \"Attached from the Form library: not set up as a line yet…\" sentence on the rows", !/Attached from the Form library: not set up/.test(ftext));
   const why = p.locator("[data-pending-why] button").first();
   step("pass: the row says \"Attached, not set up yet\"", (await p.locator("[data-pending-why]").first().innerText()).trim() === "Attached, not set up yet");
-  step("pass: the explanation is a tip reachable by keyboard", /not set up as a line yet/.test(await tipOf(why)));
+  step("pass: the explanation is a tip reachable by keyboard", /not set up as a line yet/.test(await tipOf(why, /not set up as a line yet/)));
+  step("fail case (break m3): Enter on \"Attached, not set up yet\" keeps the explanation open", await tipAfterEnter(why, /not set up as a line yet/));
   await axe("Forms");
   await p.screenshot({ path: path.join(SHOTS, "uxa5-03-forms-1440.png"), fullPage: false });
 
@@ -88,6 +104,29 @@ const visible = (p) => p.locator("main").innerText();
     await p.goto(`${BASE}/structure`); await p.locator("[data-row]").first().waitFor({ timeout: 20000 });
     step(`${w} px structure: no reason paragraph under the rows (the rows' own width is finding 9's)`, !/Can't (retire yet|delete):/.test(await visible(p)));
   }
+
+  // Break m2: on a phone (touch, 400 px) a tap shows the reason; there is no hover.
+  {
+    const phone = await b.newContext({ viewport: { width: 400, height: 860 }, hasTouch: true, isMobile: true, reducedMotion: "reduce" });
+    const q = await phone.newPage();
+    await q.goto(BASE); await q.evaluate(() => { try { localStorage.setItem("xr-actor", "user-A"); } catch { /* ignore */ } });
+    for (const [url, ready, target, words, name] of [[`/c/${vv}/forms`, "[data-pending]", "[data-pending-why] button", /not set up as a line yet/, "Forms: Attached, not set up yet"], [`/c/${lm}/questionnaires`, "[data-role-chip]", "[data-remove-blocked]", /placed in it in the shared library/, "Questionnaires: greyed Remove"], ["/structure", "[data-row]", '[data-row] [data-action][aria-disabled="true"]', /^Can't (retire yet|delete)/, "Program structure: greyed action"]]) {
+      await q.goto(`${BASE}${url}`); await q.locator(ready).first().waitFor({ timeout: 20000 });
+      const el = q.locator(target).first(); await el.scrollIntoViewIfNeeded(); await el.tap({ force: true }); // aria-disabled: Playwright waits for "enabled" otherwise
+      const shown = await q.getByRole("tooltip").filter({ hasText: words }).first().waitFor({ timeout: 4000 }).then(() => true, () => false);
+      step(`fail case (break m2): a tap on a phone shows the reason (${name})`, shown);
+      if (url === "/structure") step("fail case: the tap on a greyed action opens no panel", await q.locator("[data-impact-panel]").count() === 0);
+    }
+    await q.screenshot({ path: path.join(SHOTS, "uxa5-05-structure-tap-400.png"), fullPage: false });
+    await phone.close();
+  }
+  // Break m4: a reader (no author duty) hears why each greyed action is greyed.
+  await p.setViewportSize({ width: 1440, height: 900 });
+  await p.evaluate(() => { try { localStorage.setItem("xr-actor", "user-B"); } catch { /* ignore */ } });
+  await p.goto(`${BASE}/structure`); await p.locator("[data-row]").first().waitFor({ timeout: 20000 });
+  const dangling = await p.locator('[data-row] [data-action][aria-disabled="true"]').evaluateAll((els) => els.filter((e) => { const id = e.getAttribute("aria-describedby"); return !id || !document.getElementById(id)?.textContent?.trim(); }).length);
+  step("fail case (break m4): as an approver, every greyed action has a description that exists", dangling === 0 && await p.locator('[data-row] [data-action][aria-disabled="true"]').count() > 0, dangling);
+  await p.evaluate(() => { try { localStorage.setItem("xr-actor", "user-A"); } catch { /* ignore */ } });
 
   step("no page error or console error on the walk", errs.length === 0, errs.slice(0, 3));
   await b.close();

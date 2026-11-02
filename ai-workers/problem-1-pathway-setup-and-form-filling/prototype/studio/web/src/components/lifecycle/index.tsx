@@ -17,8 +17,8 @@ const ICON: Record<LifecycleWord, React.ReactNode> = {
   RESTORE: <RotateCcw className="size-3.5" aria-hidden />, WITHDRAW: <Undo2 className="size-3.5" aria-hidden />,
 };
 
-/** Edit and the row's one written action. A greyed action keeps its place, is described by its BlockedLine
- *  (aria-describedby) and opens nothing. */
+/** Edit and the row's one written action. A greyed action keeps its place, opens nothing, and carries its reason as
+ *  its tooltip (on hover, focus, tap, Enter or Space) and its description (`reasonId`, UX-A part 5). */
 export function RowAction({ kind, why, tip, canEdit, name, tabIndex, reasonId, onEdit, onAction, editTip }: {
   kind: LifecycleWord; why: string | null; tip: string; canEdit: boolean; name: string; tabIndex?: number; reasonId?: string;
   onEdit: () => void; onAction: () => void; editTip: string;
@@ -28,7 +28,7 @@ export function RowAction({ kind, why, tip, canEdit, name, tabIndex, reasonId, o
       <Tip tip={editTip}>
         <button type="button" tabIndex={tabIndex} onClick={onEdit} data-edit className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium text-text-muted outline-none hover:bg-text/5 hover:text-text-link focus-visible:ring-[3px] focus-visible:ring-ring/50">{canEdit ? <Pencil className="size-3.5" aria-hidden /> : <Eye className="size-3.5" aria-hidden />}{canEdit ? "Edit" : "View"}<span className="sr-only"> {name}</span></button>
       </Tip>
-      <Tip tip={why ?? tip}>
+      <Tip tip={why ?? tip} explain={!!why}>
         <button type="button" tabIndex={tabIndex} aria-disabled={why ? true : undefined} aria-describedby={why ? reasonId : undefined} onClick={() => { if (!why) onAction(); }} data-action={kind}
           className={cn("inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", why ? "cursor-not-allowed text-text-muted/60" : kind === "WITHDRAW" ? "text-text-warn hover:bg-text/5" : "text-text-muted hover:bg-text/5 hover:text-text-link")}>{ICON[kind]}{ACTION_LABEL[kind]}<span className="sr-only"> {name}</span></button>
       </Tip>

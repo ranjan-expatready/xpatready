@@ -413,7 +413,8 @@ function Row({ n, num, selected, current, justAdded, canAuthor, words, onEdit, o
           {SAY.returnedNote(n.pending.by, n.pending.note)}
           {canAuthor && n.pending.mine ? <button type="button" onClick={onSendAgain} className="ml-2 rounded font-semibold text-text-link underline underline-offset-2 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" data-send-again>Send again</button> : null}
         </p>) : null}
-      {canAuthor && a.why ? <span id={reasonId} hidden data-blocked-why>{a.why} Its details (Edit) list each use.</span> : null}
+      {/* Break m4: every greyed action is described, a reader's (no author duty) too. */}
+      {why ? <span id={reasonId} hidden data-blocked-why>{canAuthor && a.why ? `${why} Its details (Edit) list each use.` : why}</span> : null}
     </div>
   );
 }

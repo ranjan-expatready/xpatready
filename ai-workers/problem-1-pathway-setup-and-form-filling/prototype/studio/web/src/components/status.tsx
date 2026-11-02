@@ -12,9 +12,23 @@ export function TipProvider({ children }: { children: React.ReactNode }) {
 
 /** A tooltip on a focusable trigger. Content describes the trigger (aria-describedby); it never names it. `focusable`
  *  makes a plain element reachable by keyboard (a number sets its tabIndex, for rows of a treegrid). */
-export function Tip({ tip, children, focusable }: { tip: React.ReactNode; children: React.ReactElement; focusable?: boolean | number }) {
+export function Tip({ tip, children, focusable, explain }: { tip: React.ReactNode; children: React.ReactElement; focusable?: boolean | number; explain?: boolean }) {
   const child = focusable !== undefined && focusable !== false ? React.cloneElement(children as React.ReactElement<any>, { tabIndex: focusable === true ? 0 : focusable }) : children;
+  if (explain) return <ExplainTip tip={tip}>{child}</ExplainTip>;
   return <Tooltip><TooltipTrigger asChild>{child}</TooltipTrigger><TooltipContent>{tip}</TooltipContent></Tooltip>;
+}
+
+/** UX-A part 5 (break m2, m3): the tip that carries a greyed control's only explanation also opens on a tap and on
+ *  Enter or Space (a phone has no hover; activating the control must not close the reason). Escape or a tap elsewhere
+ *  closes it. */
+function ExplainTip({ tip, children }: { tip: React.ReactNode; children: React.ReactElement }) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <Tooltip open={open} onOpenChange={setOpen}>
+      <TooltipTrigger asChild onClick={(e) => { e.preventDefault(); setOpen(true); }}>{children}</TooltipTrigger>
+      <TooltipContent onPointerDownOutside={() => setOpen(false)}>{tip}</TooltipContent>
+    </Tooltip>
+  );
 }
 
 export const STATUS_TIP: Record<Status, string> = {
