@@ -46,7 +46,8 @@ export function QuestionnairesTab({ id, people, questionnaire, available }: { id
 }
 
 type Line = PeopleLine & { label: string };
-const toLines = (v: PeopleView): Line[] => v.lines.map((l) => ({ role: l.role, label: l.label, min: l.min, max: l.max, applies: l.applies, preview: l.preview, quote: l.quote ?? null, origin: l.origin }));
+// C11.12 BR-8: the filing mode travels with the line, so a save, Undo, "Use these lines" and Add person never drop it.
+const toLines = (v: PeopleView): Line[] => v.lines.map((l) => ({ role: l.role, label: l.label, min: l.min, max: l.max, applies: l.applies, preview: l.preview, filingMode: l.filingMode ?? null, quote: l.quote ?? null, origin: l.origin }));
 /** The folded line's plain words (board P-161 (2), Lead C1 decision 4): "Principal applicant (always) · Dependent child,
  *  0–5 (optional)"; exact counts and who files their own application stay in Show and edit. A role whose most is 0
  *  cannot be in the application, so the folded line leaves it out (#139 review). */
@@ -68,7 +69,9 @@ export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
   // Lead check L8: it starts from the editor's lines, so unsaved edits stay; L3: rules-only lines are the rules', not AI's.
   const useProposal = (pr: PeopleProposal) => {
     const origin = pr.mode === "rules" ? "CODE_MATCH" : "AI_PROPOSAL";
-    setLines((now) => [...(editing ? now : toLines(v)).filter((l) => !pr.people.some((x) => x.role === l.role)), ...pr.people.map((x): Line => ({ role: x.role, label: x.label, min: x.min, max: x.max, applies: x.applies, quote: x.quote, origin }))]);
+    // C11.12 BR-8: the guide proposes people and counts, not filing modes, so each role keeps the mode it had.
+    setLines((now) => { const base = editing ? now : toLines(v); const modeOf = (role: string) => base.find((l) => l.role === role)?.filingMode ?? null;
+      return [...base.filter((l) => !pr.people.some((x) => x.role === l.role)), ...pr.people.map((x): Line => ({ role: x.role, label: x.label, min: x.min, max: x.max, applies: x.applies, filingMode: modeOf(x.role), quote: x.quote, origin }))]; });
     setEditing(true); setFilling(false);
   };
   React.useEffect(() => { if (!editing) setLines(toLines(v)); }, [v, editing]);
@@ -133,7 +136,7 @@ export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
                 <td className="py-2 pr-3">{editing && !principal ? (
                   <span className="flex items-center gap-1.5"><Input aria-label={`Fewest ${nameOf(l)}`} className="h-8 w-14" inputMode="numeric" value={String(l.min)} onChange={(e) => set(i, { min: Number(e.target.value.replace(/\D/g, "").slice(0, 1) || 0) })} /><span className="text-text-muted">to</span><Input aria-label={`Most ${nameOf(l)}`} className="h-8 w-14" inputMode="numeric" value={String(l.max)} onChange={(e) => set(i, { max: Number(e.target.value.replace(/\D/g, "").slice(0, 1) || 0) })} /></span>
                 ) : howMany(l)}{err(i, "max") || err(i, "min") ? <p role="alert" className="text-xs text-text-danger">{err(i, "max") ?? err(i, "min")}</p> : null}</td>
-                <td className="py-2 pr-3">{editing && !principal && r?.mayBeApplicant ? <label className="flex items-center gap-2"><input type="checkbox" checked={l.applies} onChange={(e) => set(i, { applies: e.target.checked })} aria-label={`${nameOf(l)} files their own application`} /> {l.applies ? "Yes" : "No"}</label> : l.applies ? "Yes" : <span className="text-text-muted">—</span>}{err(i, "applies") ? <p role="alert" className="text-xs text-text-danger">{err(i, "applies")}</p> : null}</td>
+                <td className="py-2 pr-3">{editing && !principal && r?.mayBeApplicant ? <label className="flex items-center gap-2"><input type="checkbox" checked={l.applies} onChange={(e) => set(i, { applies: e.target.checked, ...((!e.target.checked && (l.filingMode === "files_own" || l.filingMode === "on_principal")) || (e.target.checked && l.filingMode === "declared_only") ? { filingMode: null } : {}) })} aria-label={`${nameOf(l)} files their own application`} /> {l.applies ? "Yes" : "No"}</label> : l.applies ? "Yes" : <span className="text-text-muted">—</span>}{err(i, "applies") ? <p role="alert" className="text-xs text-text-danger">{err(i, "applies")}</p> : null}</td>
                 <td className="py-2 pr-3 text-text-muted">{v.lines.find((x) => x.role === l.role)?.answeredBy ?? (l.role === "child" ? "Principal, under 18" : "Themselves")}</td>
                 <td className="max-w-72 py-2 pr-3 text-xs text-text-muted">{l.quote ? `"${l.quote}"` : l.origin === "AI_PROPOSAL" || l.origin === "CODE_MATCH" ? "" : "—"}{l.origin === "AI_PROPOSAL" ? <Pill tone="ai" className="ml-1">AI</Pill> : l.origin === "CODE_MATCH" ? <span data-origin-rules><Pill className="ml-1" title="Found by rules in the guide's sentences; no AI">Rules</Pill></span> : null}</td>
                 {editing ? <td className="py-2">{principal ? null : <Button size="icon" variant="ghost" aria-label={`Remove ${nameOf(l)}`} onClick={() => setLines((ls) => ls.filter((_, j) => j !== i))}><X /></Button>}</td> : null}
@@ -146,7 +149,7 @@ export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
       {editing ? (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
           <span className="flex flex-wrap items-center gap-2">
-            {offered.length ? <AddPerson offered={offered} onAdd={(k) => { const r = role(k)!; setLines((ls) => [...ls, { role: k, label: r.label, min: 0, max: 1, applies: r.mayBeApplicant, origin: "HUMAN" }]); }} /> : <span className="text-xs text-text-muted">Every kind of person in the shared library is listed.</span>}
+            {offered.length ? <AddPerson offered={offered} onAdd={(k) => { const r = role(k)!; setLines((ls) => [...ls, { role: k, label: r.label, min: 0, max: 1, applies: r.mayBeApplicant, filingMode: v.lines.find((x) => x.role === k)?.filingMode ?? null, origin: "HUMAN" }]); }} /> : <span className="text-xs text-text-muted">Every kind of person in the shared library is listed.</span>}
             <span className="text-xs text-text-muted">Picks from Shared library › Person roles. A new kind of person is added there.</span>
           </span>
           <span className="flex gap-2"><Button variant="ghost" onClick={() => setFilling(true)}><BookOpen /> Fill from the guide</Button><Button variant="ghost" onClick={() => { setEditing(false); setErrors({}); }}>Cancel</Button><Button onClick={() => void save()} busy={busy}>Save</Button></span>
