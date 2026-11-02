@@ -10,6 +10,7 @@ import { ListChecks } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Button, Dialog, Notice, Pill } from "@/components/ui/controls";
 import { RunCard, type RunView } from "@/components/run-card";
+import { factsByPerson, factsWords, personFactsWords } from "../../../contracts/counts";
 
 type Mode = "replay" | "live";
 type Plan = { mode: Mode; steps: { n: number; kind: string; label: string; how: "rules" | "saved" | "live" | "not_yet" | "ai_only"; uses_ai: boolean }[]; facts: { total: number; roles: { role: string; label: string; facts: number }[] }; totals: { worst_usd: number; remaining_usd: number }; note: string; live: { approved: boolean; why: string | null }; saved: { available: boolean; why: string | null; steps: Record<string, boolean> } | null; plan_sha256: string };
@@ -107,7 +108,7 @@ function QdDialog({ id, onClose }: { id: string; onClose: () => void }) {
             : plan.error ? <Notice tone="warn" title="It cannot be drafted this way yet">{plan.error.message}</Notice>
             : plan.data ? (
             <div className="rounded-lg border border-border p-3 text-sm">
-              <p className="mb-1 text-xs text-text-muted">{plan.data.facts.total} fact{plan.data.facts.total === 1 ? "" : "s"} the forms need: {plan.data.facts.roles.map((r) => `${r.label} ${r.facts}`).join(" · ")}.</p>
+              <p className="mb-1 text-xs text-text-muted" data-qd-facts>{factsWords(plan.data.facts.total)}: {factsByPerson(plan.data.facts.roles).map((r) => `${r.label} ${personFactsWords(r.facts, r.application).replace(/ form facts?/, "")}`).join(" · ")}.</p>
               <ol className="list-decimal space-y-0.5 pl-5" data-qd-steps>{plan.data.steps.map((x) => <li key={x.n} data-qd-step={x.kind}>{x.label} {mode === "replay" && x.uses_ai && plan.data?.saved && !plan.data.saved.steps[x.kind] ? <><Pill tone="neutral">None saved</Pill><span className="text-xs text-text-muted"> (proposes nothing)</span></> : <Pill tone={HOW[x.how][1]}>{HOW[x.how][0]}</Pill>}</li>)}</ol>
               <p className="mt-2 font-medium" id="qd-cost" data-qd-cost>{mode !== "live" ? "Cost: US$0 (no AI call)." : overCap ? `At most US$${plan.data.totals.worst_usd.toFixed(2)}: over what is left of the AI spending cap (US$${plan.data.totals.remaining_usd.toFixed(2)}), so Live cannot start.` : `At most US$${plan.data.totals.worst_usd.toFixed(2)}, inside the AI spending cap (US$${plan.data.totals.remaining_usd.toFixed(2)} left).`}</p>
               <p className="mt-1 text-xs text-text-muted">{plan.data.note}</p>

@@ -58,8 +58,10 @@ export type Step = z.infer<typeof Step>;
 export const CHIP_STATUSES = ["NOT_STARTED", "IN_PROGRESS", "NOT_READY", "LIVE", "RETIRED"] as const;
 export type ChipStatus = (typeof CHIP_STATUSES)[number];
 
+/** UX-A part 1 (contracts/counts.ts): `forms` counts the forms on the combination (lines and attached forms not set up
+ *  yet, each once), `formsSetUp` its lines; `questions` the one question count (the Questionnaires chips' sum). */
 export const Counts = z.object({
-  forms: z.number().int().min(0), people: z.number().int().min(0), applicants: z.number().int().min(0), documents: z.number().int().min(0), questions: z.number().int().min(0),
+  forms: z.number().int().min(0), formsSetUp: z.number().int().min(0), people: z.number().int().min(0), applicants: z.number().int().min(0), documents: z.number().int().min(0), questions: z.number().int().min(0),
   proposals: z.record(z.enum(STEP_KEYS), z.number().int().min(0)), problems: z.record(z.enum(STEP_KEYS), z.number().int().min(0)), held: z.number().int().min(0),
 });
 export type Counts = z.infer<typeof Counts>;
@@ -113,6 +115,13 @@ export const tabOfFocus = (focus: string, stepTab?: string): BadgeTab | null => 
 export function tabCounts(setup: { steps: { tab?: string; open: { focus: string; count: number }[] }[] } | null | undefined): Record<BadgeTab, number> {
   const out: Record<BadgeTab, number> = { forms: 0, documents: 0, questionnaires: 0 };
   for (const s of setup?.steps ?? []) for (const i of s.open) { const t = tabOfFocus(i.focus, s.tab); if (t) out[t] += i.count; }
+  return out;
+}
+/** UX-A part 1 (review m1): the steps whose open items land on each tab, in step order, so a tab's badge can say whose
+ *  items it counts ("Official pages, Who can be in this application"). */
+export function tabSteps(setup: { steps: { key: StepKey; tab?: string; open: { focus: string }[] }[] } | null | undefined): Record<BadgeTab, StepKey[]> {
+  const out: Record<BadgeTab, StepKey[]> = { forms: [], documents: [], questionnaires: [] };
+  for (const s of setup?.steps ?? []) for (const i of s.open) { const t = tabOfFocus(i.focus, s.tab); if (t && !out[t].includes(s.key)) out[t].push(s.key); }
   return out;
 }
 /** X1 slice C3: where an open item's link goes, one definition for the engine's `next.href` and the Overview strip.

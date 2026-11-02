@@ -63,7 +63,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const line = await p.locator("[data-coverage]").innerText();
   const num = (re, t) => Number((t.match(re) ?? [])[1] ?? -1);
   const [cd, cc, ca] = [num(/Document (\d+)/, chips), num(/Client (\d+)/, chips), num(/Case officer (\d+)/, chips)];
-  const [ld, lc, la, ln] = [num(/(\d+) from documents/, line), num(/(\d+) asked of the client/, line), num(/(\d+) entered by the case officer/, line), num(/need (\d+) answers/, line)];
+  const [ld, lc, la, ln] = [num(/(\d+) from documents/, line), num(/(\d+) asked of the client/, line), num(/(\d+) entered by the case officer/, line), num(/(\d+) form facts/, line) /* UX-A part 1: the one facts words */];
   step("S2-1 pass: the person's line says documents · client · case officer with the chips' numbers, and they add up", ld === cd && lc === cc && la === ca && ln === cd + cc + ca, `${line} | chips ${cd}/${cc}/${ca}`);
   step("S2-1 fail: the line no longer uses the older split (\"filled by the case officer\")", !/filled by the case officer/.test(line), line);
   await state("questionnaires-strip-and-rows");
