@@ -89,3 +89,31 @@ The Minors m1 to m5 stand as written (m1: 229 of 314 unresolved is an honest fol
 * **Blockers:** none.
 * **Majors:** none (M1 closed).
 * **Minors:** m1 to m5 as above, none blocks.
+
+---
+
+## Re-review of merge 61965282
+
+* **Change read:** `git show --cc 61965282` (merge of `origin/main` `d04d2572` into `9560dd3d`'s line, first parent `f431cc82`) and `git diff f431cc82..61965282` over `prototype/studio/tests/`. Reading only: **no suite, server or isolated copy was run** (the coordinator runs the four replay checks), and no tracked file was edited. US$0, no model call.
+* **What main brought:** QA-163 (#568/#570): the plan no longer skips a listed form that has no field map, so the six now also replays the saved answer of `imm5257e.pdf` (the Visitor visa's IMM 5257). That makes **fifteen** saved forms with this PR's `imm5532e.pdf`.
+
+| Check | Result |
+|---|---|
+| Net change against `origin/main` (`d04d2572`) | Six files: the IMM 5532 run file, its stub pass, `canary-digest.json`, and the three tests. `git merge-tree` with `origin/main` is clean. |
+| My files since `8c39c2a0` | The run file, the stub pass, the canary digest, the job and the inventory of IMM 5532 are byte-identical to the commit I approved. The only p2 file main added is the new job `studio-fieldmap-imm5645e.json`; main changed none of `launch.ts`, `draft.ts`, `runner.ts`, `guard.ts`, `isolation.ts`, `ledger.ts`, `policy.ts`, `prompt.ts`, `convert.ts`, `screen.ts`, `pathcode.ts`, the contracts' `fact-key.ts`/`portal-capture`/`rules`, or the prompt and schema. The path-code SHA that the stub pass and the live run record (`907f4c24…`) therefore still holds, so the stub gate stands. |
+| `check_queue_tx.ts` conflict resolution | Correct. `SAVED` is main's fourteen (with `imm5257e.pdf` after `imm5257_1e.pdf`) plus `imm5532e.pdf` between `imm5476e` and `imm5562e`: fifteen names, in the file-name order the test's own query uses (`order by a.file_name`). The strings now read "the fifteen forms" and "its fourteen siblings", still no `>=`, and the header and doc comments keep both histories (QA-163 and R-146). The test still asserts `replayed === SAVED.length` and siblings = `SAVED` minus IMM 5707. |
+| `check_c10_1_configured.ts` row 3 | `jobs === 15`, status "done", `why` null, `shows` starts with the count. Still exact, still has the fail side (a lost replay gives 14 and a "partial" row naming the form). |
+| `check_s7_load.ts` | Wording only; the empty-list assertion is unchanged. |
+| Other tests on main's side | Searched the merged tree for `replayed`, `waiting_for_draft_with_ai`, `fourteen`/`thirteen`, 13/14 beside saved/draft/replay, and `5532`: only the three files above hard-code the count or a waiting form. The rest use `>= 6`/`>= 3` or the load's own list (`check_forms_pd_apply_replayed.ts`, `check_forms_pd_unique_paths.ts`). `check_qa163_listed_form_saved.ts` (main's new test) counts neither replays nor waiting forms. |
+
+**Observation, not a finding on this change.** `demo.ts` row 12 of the configured checkpoint still says "IMM 5257 has no saved field-map answer under today's 5-part drafting: it waits for the founder's paid run", and `check_c10_1_configured.ts` still asserts it. After QA-163 the sample replays an IMM 5257 saved answer (the whole-form one of 21 Oct), so that sentence now reads stale. It is main's wording, it is not from this PR, and a test passes on it; a forms or qa row can reword both together.
+
+**What I could not check here:** that the four replay checks and CI pass on `61965282` (the coordinator is running them). In particular, QA-163 adds the IMM 5257 replay to the list that `check_forms_pd_apply_replayed.ts` applies; that check takes its list from the load, so it covers it without a change, and its result is the one to read.
+
+The Minors m1 to m5 above stand (m5 concerned my own first test runs; do not commit those leftovers).
+
+**Verdict on 61965282: Approve**, on the condition that the coordinator's replay checks (`check_queue_tx.ts` 8/8 with fifteen forms, `check_c10_1_configured.ts` 27/27 with `jobs === 15`, `check_s7_load.ts`, `check_forms_pd_apply_replayed.ts`) and CI are green on this head; any red one reopens it.
+
+* **Blockers:** none.
+* **Majors:** none.
+* **Minors:** m1 to m5 as above; the stale row-12 sentence (main's, not blocking).
