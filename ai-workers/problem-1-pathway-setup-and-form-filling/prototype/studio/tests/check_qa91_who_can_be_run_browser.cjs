@@ -56,7 +56,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await who.getByRole("button", { name: "Fill from the guide" }).click();
   const fill = p.getByRole("dialog"); await fill.locator("[data-people-cost]").waitFor({ timeout: 30000 }).catch(() => {});
   await p.waitForFunction(() => !document.querySelector('[data-fill-mode="live"] input')?.disabled, null, { timeout: 10000 }).catch(() => {});
-  await fill.getByLabel(/AI now/).check(); await p.waitForTimeout(800);
+  await fill.getByLabel(/^Live/).check(); await p.waitForTimeout(800);
   await fill.getByRole("button", { name: "Fill" }).click();
   const card = fill.locator("[data-people-run] [data-run-status]");
   await card.waitFor({ timeout: 15000 }).catch(() => {});
