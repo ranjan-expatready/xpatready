@@ -22,13 +22,13 @@ import { ACTION_LABEL, RETURNED_LABEL, SAY, TIP, WAITING_LABEL, WHY } from "../.
 import { Skeleton } from "@/components/ui/skeleton";
 import type { FieldMapState } from "../../../contracts/form-library";
 
-type Row = { code: string; title: string; type: "form" | "guide" | "checklist"; edition: string | null; /** C3.12: the date the file says it was published (not the printed edition); null when it names none. */ published?: string | null; published_state?: PublishedState; canada_updated: string | null; accepts: string | null; accepts_basis: string | null; accepts_quote: string | null; accepts_waiting: boolean;
+type Row = { code: string; title: string; type: "form" | "guide" | "checklist"; edition: string | null; /** C3.12 (K3, QA-148): IRCC's month for the edition, printed on it, else its canada.ca page; never the file's date. */ published?: string | null; published_from?: "printed" | "canada_page" | null; published_state?: "date" | "none" | "not_a_month"; /** The PDF's own date (#313), shown apart as "File saved". */ file_date?: string | null; file_date_state?: FileDateState; canada_updated: string | null; accepts: string | null; accepts_basis: string | null; accepts_quote: string | null; accepts_waiting: boolean;
   /** C3.12: the field map of its current edition (contracts/form-library.ts fieldMapState). */
   field_map: FieldMapState;
   /** P-143 (C-3): one record per IRCC account (ANY: every account), each with its basis and IRCC's line. */
   accepts_accounts?: { account: string; account_words: string; channels: string[]; words: string; basis: string; quote: string | null; source_url: string | null }[];
   origin: string | null; downloaded_from: string | null; checked_at: string | null; form_page_url: string | null; fingerprint: string | null; attachment_id: string | null;
-  used_by: { id: string; label: string; picked_by_ai: boolean; as_source?: boolean }[]; status: "ready" | "needs_ok" | "newer_file" | "no_file" | "retired"; listed_by_ircc?: boolean; newer_on_index?: boolean; lifecycle_waiting: "DELETE" | "RETIRE" | "RESTORE" | null; lifecycle_approved?: boolean; lifecycle_returned?: boolean; older_editions: { label: string; published?: string | null; published_state?: PublishedState; kept_by: string }[]; action: { kind: "DELETE" | "RETIRE" | "RESTORE" | "WITHDRAW"; why: string | null; change_id: string | null } };
+  used_by: { id: string; label: string; picked_by_ai: boolean; as_source?: boolean }[]; status: "ready" | "needs_ok" | "newer_file" | "no_file" | "retired"; listed_by_ircc?: boolean; newer_on_index?: boolean; lifecycle_waiting: "DELETE" | "RETIRE" | "RESTORE" | null; lifecycle_approved?: boolean; lifecycle_returned?: boolean; older_editions: { label: string; published?: string | null; published_from?: "printed" | "canada_page" | null; published_state?: "date" | "none" | "not_a_month"; file_date?: string | null; file_date_state?: FileDateState; kept_by: string }[]; action: { kind: "DELETE" | "RETIRE" | "RESTORE" | "WITHDRAW"; why: string | null; change_id: string | null } };
 type List = { rows: Row[]; counts: Record<string, number>; combinations: { id: string; label: string }[]; sample_note: string; remembered_deletions?: { code: string; deleted_by: string; deleted_at: string }[] };
 export type Uses = { label: string; released: boolean; retired: boolean; uses: { kind: string; label: string; href: string | null; blocks: boolean; why: string }[]; can: { delete: string | null; retire: string | null; restore: string | null }; pending: { id: string; action: string; by: string | null } | null; history: { at: string; by: string | null; what: string }[] };
 
@@ -43,13 +43,18 @@ const BASIS: Record<string, { tag: string; tip: string }> = {
   FOUNDER_SAMPLE: { tag: "Founder P-171 · Sample", tip: "The founder's answer where IRCC's pages say nothing (P-171). No IRCC line to quote. Sample until the immigration expert confirms." },
 };
 /** A guide's date is canada.ca's own "Date modified" when the page prints one; otherwise when the studio read it. */
-/** C3.12: a form edition's published date in words: the date the file itself gives, never the printed edition. Break
- *  (456fb7d0) M2: a file not read yet, or one that could not be read, is said as such, never as "no date in the file". */
-type PublishedState = "date" | "none" | "unread" | "unreadable";
-const NO_DATE: Record<PublishedState, string> = { date: "", none: "Date not in the file", unread: "Date not read yet", unreadable: "Date could not be read from the file" };
-const publishedText = (d: string | null | undefined, s: PublishedState | undefined) => (d ? `Published ${d}` : NO_DATE[s ?? "none"] || NO_DATE.none);
-/** Review m1: the date itself never breaks at its hyphens ("2026-" / "06-04"); the words around it may wrap. */
-const PublishedLine = ({ d, s }: { d: string | null | undefined; s: PublishedState | undefined }) => (d ? <>Published <span className="whitespace-nowrap" data-published-date>{d}</span></> : <>{publishedText(d, s)}</>);
+/** C3.12 (K3, QA-148): "Published" is IRCC's month for the edition: printed on the form, else its canada.ca page's "Last
+ *  updated" (AGENTS rule 4), never the PDF file's own date; with neither, it says so and never guesses. */
+const NO_PUBLISHED = { none: "No edition date printed on it or on canada.ca", not_a_month: "Its printed edition date is not a real month" } as const;
+const publishedText = (d: string | null | undefined, s?: "date" | "none" | "not_a_month") => (d ? `Published ${d}` : NO_PUBLISHED[s === "not_a_month" ? "not_a_month" : "none"]);
+const FROM: Record<"printed" | "canada_page", string> = { printed: "printed on the form", canada_page: "canada.ca page, Last updated" };
+/** Review m1: the date itself never breaks at its hyphens; the words around it may wrap. */
+const PublishedLine = ({ d, s }: { d: string | null | undefined; s?: "date" | "none" | "not_a_month" }) => (d ? <>Published <span className="whitespace-nowrap" data-published-date>{d}</span></> : <>{publishedText(d, s)}</>);
+/** The PDF file's own date (#313; break 456fb7d0 M2: not read yet or unreadable is said as such, never as "no date"). */
+type FileDateState = "date" | "none" | "unread" | "unreadable";
+const FILE_NO_DATE: Record<FileDateState, string> = { date: "", none: "The PDF names no date of its own", unread: "The PDF's own date is not read yet", unreadable: "The PDF's own date could not be read" };
+/** Review m3: said as what it is, the PDF's own date, and that it is not when IRCC published the edition. */
+const fileDateText = (d: string | null | undefined, s: FileDateState | undefined) => (d ? `File saved ${d}: the PDF's own date, not when IRCC published it` : FILE_NO_DATE[s ?? "none"] || FILE_NO_DATE.none);
 const editionText = (r: Row) => (r.type === "guide" ? (r.canada_updated ? `Updated on canada.ca ${r.canada_updated}` : r.checked_at ? `Read from canada.ca on ${new Date(r.checked_at).toISOString().slice(0, 10)}` : "Date not known") : r.edition ? r.edition.replace(`${r.code} `, "").replace(/[()]/g, "") : null);
 const ACCEPTS_TIP = "What IRCC accepts for this form, for each IRCC account or for every account: Online, PDF upload, Paper, or Not needed (the account asks it itself; said for one account only). Guides and checklists are not filed: AI reads them. AI reads it from IRCC's page, the sample loads it with IRCC's own line from the page, or a person sets it with a second person's OK; Sample until the immigration expert confirms. Online filling needs the browser extension (later wave).";
 const STATUS: Record<Row["status"], { word: string; tone: string; tip: string }> = {
@@ -357,11 +362,11 @@ function FormDrawer({ row, onClose, canAuthor }: { row: Row; onClose: () => void
     <Panel open onOpenChange={(o) => !o && onClose()} title={`${row.code} · ${row.title}`} description={`${TYPE_WORD[row.type]}${row.edition ? ` · ${row.edition}` : ""}`} badge={<Pill tone={STATUS[row.status].tone}>{STATUS[row.status].word}</Pill>}>
       <section className="space-y-1 text-sm" aria-labelledby="fd-def"><h3 id="fd-def" className="font-semibold">Definition</h3>
         <p>{row.type === "guide" ? editionText(row) : <>Current edition: {row.edition ?? "none usable yet"}{row.canada_updated ? ` · canada.ca last updated ${row.canada_updated}` : ""}</>}</p>
-        {row.type !== "guide" && row.edition ? <p data-published-panel>{row.published ? <>Published {row.published} <span className="text-text-muted">(the date in the file)</span></> : <span className="text-text-muted">{publishedText(null, row.published_state)}</span>}</p> : null}
+        {row.type !== "guide" && row.edition ? <p data-published-panel>{row.published ? <>Published {row.published} <span className="text-text-muted">({FROM[row.published_from ?? "printed"]})</span></> : <span className="text-text-muted">{publishedText(null, row.published_state)}</span>}<span className="block text-xs text-text-muted" data-file-date>{fileDateText(row.file_date, row.file_date_state)}</span></p> : null}
         <p>{row.type === "guide" ? "Read from its canada.ca page" : row.origin ? ORIGIN[row.origin] ?? row.origin : "Where it came from is not recorded"}{row.downloaded_from && row.type !== "guide" ? <> · <a className="text-text-link underline" href={row.downloaded_from} target="_blank" rel="noreferrer">PDF link</a></> : null}</p>
         {row.form_page_url ? <p><a className="text-text-link underline" href={row.form_page_url} target="_blank" rel="noreferrer">{/\.pdf$/i.test(row.form_page_url) ? "Its file on IRCC's site (no form page)" : "Its page on canada.ca"}</a>{/\.pdf$/i.test(row.form_page_url) ? null : <> · checked {when(row.checked_at)}</>}</p> : <p className="text-text-muted">No canada.ca page recorded yet.</p>}
         {row.type === "form" ? <p data-field-map-panel={row.field_map.kind}>Field map: {row.field_map.words}<span className="block text-xs text-text-muted">{row.field_map.tip}</span></p> : null}
-        {row.older_editions.map((e) => <p key={e.label} className="text-text-muted" data-kept-by><span className="font-medium text-text">Earlier edition {e.label.replace(`${row.code} `, "")}</span> · <span data-published-older>{e.published ? `published ${e.published}` : publishedText(null, e.published_state).replace(/^D/, "d")}</span> · {e.kept_by}</p>)}
+        {row.older_editions.map((e) => <p key={e.label} className="text-text-muted" data-kept-by><span className="font-medium text-text">Earlier edition {e.label.replace(`${row.code} `, "")}</span> · <span data-published-older>{e.published ? `published ${e.published} (${FROM[e.published_from ?? "printed"]})` : publishedText(null, e.published_state).replace(/^(N|I)/, (c) => c.toLowerCase())}</span>{e.file_date ? <> · file saved {e.file_date}</> : null} · {e.kept_by}</p>)}
         <details><summary className="cursor-pointer text-text-muted">Details</summary><p className="mono break-all text-xs">File fingerprint (SHA-256): {row.fingerprint ?? "none"}</p></details>
       </section>
       <section className="mt-4 space-y-2 text-sm" aria-labelledby="fd-acc"><h3 id="fd-acc" className="font-semibold">What IRCC accepts</h3>
