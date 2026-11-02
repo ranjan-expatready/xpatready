@@ -53,7 +53,7 @@ Status: **v2, waiting for the tech lead's approval** (P-223 (4): an independent 
 - **Changed:** "<item>: the source was written for 90; the number is now 60. Check the source again, or mark 'None published – set by ExpatReady'."
 - **Chips:** No source · Official source · None published – set by ExpatReady · Changed since its source · From the sample load.
 - **Sample note:** "This check stays Sample: it has no source quote of its own. A number's source does not change that."
-- **Field errors:** "Use an https address." · "Copy the words that state the number (up to 300 characters)." · "The date read cannot be in the future." · "Say why ExpatReady set this number (at least 10 characters)."
+- **Field errors:** "Use an https address." · "Copy the words that state the number (up to 300 characters)." · "The date read cannot be in the future." · "Say why ExpatReady set this number (at least 10 characters)." · "Keep the reason to 500 characters." · "Write the reason in words." · "The date read cannot be before 1990." · "Give the date read as a date (YYYY-MM-DD)." (review r2-3 on #587: each limit speaks its own words; an address with a user name, a password or an IP host answers "Use an https address.", r2-4)
 - **Conflict:** "Someone else saved this source while you had it open (<role>, <time>). Reload theirs, or keep yours and save again." **Read-only:** "Only the configuration author adds sources." **Empty:** "This item has no published numbers."
 
 ## 6. Contract and tests

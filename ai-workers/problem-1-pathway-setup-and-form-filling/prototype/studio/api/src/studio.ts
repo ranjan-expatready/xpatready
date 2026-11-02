@@ -7,12 +7,12 @@ import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { Prisma, type ReviewSubmission } from "@prisma/client";
 import { canRelease } from "../../../contracts/rules.ts";
 import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
-import { buildSnapshot, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
+import { buildSnapshot, snapshotHash, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
 import { slug } from "../../engine/import.ts";
 import { identityKeyOf, insertProposals } from "./proposals.ts";
 import { nameKey, namedDocumentType, waitingDocumentType } from "./document-type-names.ts";
 import { checkCondition, diff, ordinal, validate, isDemoSnapshot } from "../../engine/validate.ts";
-import { ACTORS, Audit, Db, fail, need, revise, RUNTIME_ACTORS, strip, Workspace, type Actor } from "./core.ts";
+import { ACTORS, Audit, Db, fail, isDemoWorkspace, need, revise, RUNTIME_ACTORS, strip, Workspace, WORKSPACE_KEY, type Actor } from "./core.ts";
 import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { recordAction, snapshotLines } from "./form-uses.ts";
 import { acceptsOf } from "../../engine/channels.ts";
@@ -25,6 +25,8 @@ import { LibrarySources, type SourceLine } from "./library-sources.ts";
 import { aiLive, usesFakeLauncher } from "./sources.ts";
 import { checkFormat, fieldFormat, formatWords, type MappedBox } from "../../engine/field-format.ts";
 import { releaseLabel } from "../../contracts/runtime.ts";
+import { draftSourceProblems } from "./source-register.ts";
+import { refuseBlocking } from "./refusal.ts";
 import { gateOf as keyGateOf, keysUnchanged, runKeys, type Gate as KeyGate } from "./answer-key-gate.ts";
 import type { Problem } from "../../engine/validate.ts";
 /** G2 (C5.5, BR-8; shared with G1 BR-8): a refusal carries every blocking problem in `errors[]`, each in words; `detail`
@@ -110,7 +112,7 @@ export class Studio {
     // "Structure exists" counts any name, Pathways included (W1-03 B1: after Reset the Structure is empty in both tabs).
     const [programs, fields, releases, jobs, sample] = await Promise.all([this.db.programDef.count({ where: { workspaceId } }), this.db.canonicalField.count({ where: { workspaceId } }), this.db.configRelease.count({ where: { workspaceId } }), this.db.draftingJob.count({ where: { workspaceId } }), this.db.auditEvent.count({ where: { workspaceId, action: "loaded", entity: "sample inputs" } })]);
     // sampleLoaded: the sample inputs were loaded into this workspace, not merely "some program exists" (QA-12).
-    return { actor, actors: ACTORS, workspace: { key: "demo", label: "Demo workspace (disposable)", id: workspaceId }, counts: { programs, fields, releases, jobs }, sampleLoaded: sample > 0, preferences: await this.preferences(actor.id),
+    return { actor, actors: ACTORS, workspace: { key: WORKSPACE_KEY, label: isDemoWorkspace() ? "Demo workspace (disposable)" : `Workspace ${WORKSPACE_KEY} (not the demo)`, demo: isDemoWorkspace(), id: workspaceId }, counts: { programs, fields, releases, jobs }, sampleLoaded: sample > 0, preferences: await this.preferences(actor.id),
       // C11.8 (additive): whether live AI is on and which launcher this copy uses, so a check can tell a copy whose live
       // calls go to the stand-in launcher (nothing reaches a model) from one without the switch. Read only; sets nothing.
       ai: { live: aiLive(), launcher: usesFakeLauncher() ? "stand-in" : "guarded" } };
@@ -412,9 +414,16 @@ export class Studio {
     // engine/filing-modes.ts FILING_NOT_SET_BLOCKS).
     const roles = await this.personRoles(workspaceId);
     const filing = filingProblems((s.combination?.participants ?? []) as { role: string; label?: string; max: number; filingMode?: unknown }[], roles);
+    // G1 BR-7 (challenge M1): every published number needs a source entry; the draft only, never a released snapshot.
+    // Only a draft that will be submitted (it differs from its release, or there is none): a Live row with no draft
+    // changes lists none, as on the catalogue (tech lead on #568; EXPERIENCE §2.5, one status everywhere).
+    const last = s.mode === "draft" && combinationId ? await this.db.configRelease.findFirst({ where: { combinationId }, orderBy: { version: "desc" }, select: { sha256: true } }) : null;
+    const sources = s.mode === "draft" && (!last || last.sha256 !== snapshotHash(s)) ? draftSourceProblems(s, isDemoWorkspace()) : [];
+    // G1: the numbers without a source come after the validator's own errors, so a list cut at its first lines still
+    // shows those (the Review tab shows eight).
     // G2 (C5.5): the answer-key gate's lines, in the same list as every other problem (one list on Review and release).
     const tests = combinationId ? (gate ?? (await keyGateOf(this.db, combinationId, s, (await buildSnapshot(this.db, workspaceId, combinationId, "draft")).sha256))).problems : [];
-    const all = [...structure, ...filing, ...emptyProblem(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...carried, ...tests]; // L4: what IRCC accepts
+    const all = [...structure, ...filing, ...emptyProblem(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...sources, ...carried, ...tests]; // L4: what IRCC accepts
     // C2.12 (plan F3a-1, BR-10): each problem names the forms it touches, so a form's path shows its own: a Forms problem its form,
     // any other the forms whose field map reads that item as a fact; none otherwise.
     const formsOf = new Map<string, Set<string>>();
@@ -957,6 +966,7 @@ export class Studio {
     if (last?.sha256 === sha256) fail("Nothing has changed since the released version.");
     await runKeys(this.db, this.audit, actor, c, snapshot, sha256); // G2 BR-6 (SA-1B-296 r3): the tests run at Submit
     const errors = (await this.problems(c.workspaceId, snapshot, id, await keyGateOf(this.db, id, snapshot, sha256))).filter((p) => p.level === "error");
+    refuseBlocking(errors, HttpStatus.BAD_REQUEST, "Fix the problems before submitting: "); // G1 BR-8: every blocking item in errors[], never only the first
     if (errors.length) refuse(`Fix ${errors.length} problem${errors.length > 1 ? "s" : ""} before submitting: ${errors.slice(0, 3).map(problemWords).join(" · ")}`, errors); // S5: a coverage gap is said in words, never by its field code
     const changes = diff((last?.snapshot as any) ?? null, snapshot);
     // W1-02 (break M2): nothing to sign is nothing to release, even when the fingerprint moved (an older release's keys).
@@ -1001,6 +1011,7 @@ export class Studio {
     // G2 (reviewer m2; check_f8_empty_release): the draft's own problems first, as before, without the answer-key lines
     // (they are judged after the tests run, below); then the review and self-approval refusals; only then the tests run.
     const own = (await this.problems(c.workspaceId, snapshot, id, NO_KEY_GATE)).filter((p) => p.level === "error");
+    refuseBlocking(own, HttpStatus.CONFLICT, "Release refused: "); // G1 BR-8
     if (own.length) refuse(`Release refused: ${own.length} problem${own.length > 1 ? "s" : ""} (${problemWords(own[0])})`, own, HttpStatus.CONFLICT);
     // The same review gate as the shared Release page (QA-1, review should 2).
     const gate = await this.releaseGate(id, sha256);
@@ -1061,6 +1072,7 @@ export class Studio {
       const { snapshot, sha256 } = await buildSnapshot(this.db, workspaceId, id, "draft");
       // G2 (reviewer m2): the draft's own problems first, without the answer-key lines; the tests run after the cheap refusals.
       const own = (await this.problems(workspaceId, snapshot, id, NO_KEY_GATE)).filter((p) => p.level === "error");
+      refuseBlocking(own, HttpStatus.CONFLICT, `Release refused: "${c.label}": `); // G1 BR-8
       if (own.length) refuse(`Release refused: "${c.label}" has ${own.length} problem${own.length > 1 ? "s" : ""} (${problemWords(own[0])})`, own, HttpStatus.CONFLICT);
       const gate = await this.releaseGate(id, sha256);
       if (!gate.ok) { await this.audit.log(workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: "${c.label}": ${gate.why}`); fail(`Release refused: "${c.label}": ${gate.why}`, HttpStatus.CONFLICT); }

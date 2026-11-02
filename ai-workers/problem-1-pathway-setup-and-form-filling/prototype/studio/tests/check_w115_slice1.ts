@@ -11,6 +11,7 @@ import { coverageGaps } from "../engine/coverage.ts";
 import { peopleFor } from "../engine/render.ts";
 import { documentFacts, factSourceProblems, factSources, suppliesOf } from "../engine/sources.ts";
 import { diff } from "../engine/validate.ts";
+import { sourceEveryNumber } from "./fixtures/source-every-number.cjs"; // G1 (C5.4): a release needs every number sourced
 
 const PORT = Number(process.argv[2] ?? 4434), DB = process.argv[3] ?? "xr_studio_runtime_w115";
 const log: any[] = []; let pass = 0, fail = 0;
@@ -143,6 +144,7 @@ const PASSPORT = "passport_or_travel_document_information_page_photocopy";
   r = await call("POST", `/combinations/${wp}/submit`, {});
   ok("C4.10 fail: submitting for review is refused with that error", r.status === 400 && /only the client gives it/.test(words(r)), words(r).slice(0, 160));
   sql(`delete from fact_source where combination_id='${wp}' and lineage_key='${decl!.role}|${decl!.fact}'`);
+  await sourceEveryNumber(PORT, wp); // G1 (C5.4): the release's numbers need a source before it is submitted
   r = await call("POST", `/combinations/${wp}/submit`, {});
   const review = (await call("GET", `/combinations/${wp}/review`)).body;
   const sme = ((review.submission?.changeSummary ?? []) as any[]).filter((x) => x.needs_sme).map((x) => `${x.kind}|${x.key}`);

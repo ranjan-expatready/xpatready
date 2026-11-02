@@ -19,6 +19,7 @@ import type { Inventory } from "../engine/form-values.ts";
 import { answerKeyGate, evidenceOf, testableItems, type GateItem, type GateKey } from "../engine/answer-key-gate.ts";
 import { isDemoSnapshot } from "../engine/validate.ts";
 import { client, recorder } from "./runtime/api.ts";
+import { sourceEveryNumber } from "./fixtures/source-every-number.cjs"; // G1 (#587): numbers without a source refuse first, so each submit answers them
 import { e1Keys, P, sample } from "./g4_e1_key.ts";
 
 const PORT = Number(process.argv[2] ?? 4449), DB = process.argv[3] ?? "xr_studio_screens_g2";
@@ -171,7 +172,7 @@ ok("C5.5 BR-9 API: the review block lists IMM 5257 with its family and IMM 5707 
 
 // Submit runs the tests (SA-1B-296 r3); a Demo release goes through with the unsigned passing key
 const r0 = runs();
-r = await call("POST", `/combinations/${vv}/submit`, { note: "G2 check: Demo release with an unsigned passing key" }, AUTHOR);
+await sourceEveryNumber(PORT, vv); r = await call("POST", `/combinations/${vv}/submit`, { note: "G2 check: Demo release with an unsigned passing key" }, AUTHOR);
 ok("C5.5 BR-6: Submit runs every key on the exact draft and stores the run (by the person submitting)", r.status === 201 && runs() === r0 + 1 && sql(`select ran_by || '|' || result from answer_key_run where key_id = '${kid}' order by ran_at desc limit 1`) === `${AUTHOR}|PASSED`, r.body?.detail ?? r.status);
 ok("C5.5 BR-6: one audit line for the pass, never one per key", sql(`select count(*) from audit_event where workspace_id = '${ws}' and entity = 'answer-key tests' and action = 'ran' and actor = '${AUTHOR}'`) === "1" && /1 passed, 0 failed/.test(sql(`select summary from audit_event where entity = 'answer-key tests' and actor = '${AUTHOR}' order by at desc limit 1`)));
 await signAll(vv);
@@ -202,7 +203,7 @@ const wrong: MapExpected = clone(e1); const FN = `${P}Page1[0].PersonalDetails[0
 let cur = (await call("GET", `/answer-keys/${kid}`, undefined, AUTHOR)).body;
 r = await call("PUT", `/answer-keys/${kid}`, { expected: wrong, version: cur.version }, EXPERT);
 await touch(vv);
-r = await call("POST", `/combinations/${vv}/submit`, {}, AUTHOR);
+await sourceEveryNumber(PORT, vv); r = await call("POST", `/combinations/${vv}/submit`, {}, AUTHOR);
 const bad = (r.body?.errors ?? []).find((x: { where: string }) => x.where === "Tests");
 ok("C5.5 BR-5 fail (Q3), BR-8: a failing key refuses the Demo release's Submit (400), errors[] naming IMM 5257, the count and the value", r.status === 400 && /^Fix \d+ problem/.test(r.body.detail) && bad?.label === "IMM 5257 field map" && bad.forms?.[0] === "IMM 5257" && /failed: 1 of \d+ values\./.test(bad.message) && /expected "NOT-THE-NAME"/.test(bad.message), r.body);
 ok("C5.5 BR-8: the refusal keeps its sentence in message too (older callers)", r.body?.message === r.body?.detail);
@@ -213,7 +214,7 @@ await call("PUT", `/answer-keys/${kid}`, { expected: e1, version: cur.version },
 cur = (await call("GET", `/answer-keys/${kid}`, undefined, AUTHOR)).body;
 r = await call("POST", `/answer-keys/${kid}/sign`, { version: cur.version }, EXPERT);
 ok("C5.5 setup: the expert puts the key right and signs it", r.status === 200 && r.body.state === "SIGNED", r.body?.detail);
-r = await call("POST", `/combinations/${vv}/submit`, {}, AUTHOR);
+await sourceEveryNumber(PORT, vv); r = await call("POST", `/combinations/${vv}/submit`, {}, AUTHOR);
 ok("C5.5 BR-4: with the signed key passing, Submit is accepted", r.status === 201, r.body?.detail);
 await signAll(vv);
 cur = (await call("GET", `/answer-keys/${kid}`, undefined, AUTHOR)).body;
@@ -255,7 +256,7 @@ v = await view(wp);
 const e5257 = tests(v).find((p) => p.label === "IMM 5257 field map");
 ok("C5.5 Done when, BR-5 E7: on With an LMIA (real) the new IMM 5257 map with no test is an error naming it", v.draft.answer_keys.demo === false && e5257?.level === "error" && /^no answer-key test\. Write a test family/.test(e5257.message) && e5257.forms[0] === "IMM 5257", tests(v));
 ok("C5.5 BR-2: With an LMIA's unchanged untested maps only warn (released before the gate)", tests(v).filter((p) => /released before the answer-key gate/.test(p.message)).every((p) => p.level === "warning") && tests(v).some((p) => /released before/.test(p.message)), tests(v).map((p) => `${p.level} ${p.label}`));
-r = await call("POST", `/combinations/${wp}/submit`, {}, AUTHOR);
+await sourceEveryNumber(PORT, wp); r = await call("POST", `/combinations/${wp}/submit`, {}, AUTHOR);
 ok("C5.5 Done when, BR-8: With an LMIA's Submit is refused (400) and errors[] names IMM 5257 field map", r.status === 400 && (r.body.errors ?? []).some((x: { where: string; label: string; message: string }) => x.where === "Tests" && x.label === "IMM 5257 field map" && /no answer-key test/.test(x.message)), { status: r.status, errors: (r.body?.errors ?? []).filter((x: { where: string }) => x.where === "Tests") });
 r = await touch(wp, false);
 v = await view(wp);

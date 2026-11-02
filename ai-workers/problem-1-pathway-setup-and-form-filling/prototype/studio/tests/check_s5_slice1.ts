@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { tabOf } from "../contracts/workspace.ts";
 import { newestReleases } from "../contracts/runtime.ts";
 import { checkPeople, linesNamingRemoved } from "../engine/people.ts";
+import { sourceEveryNumber } from "./fixtures/source-every-number.cjs"; // G1 (C5.4): a release needs every number sourced
 
 const PORT = Number(process.argv[2] ?? 4431), DB = process.argv[3] ?? "xr_studio_runtime_s5";
 const log: any[] = []; let pass = 0, fail = 0;
@@ -137,6 +138,7 @@ const P = (extra: any[] = [], child = false) => [{ role: "principal", min: 1, ma
   ok("setup: IMM 1295 filed Online (as a portal-only form would be, P-113)", r.status === 200, r.body?.detail ?? r.status);
   r = await call("POST", `/combinations/${C}/submit`, {}, "user-C");
   ok("D-2 fail: the content reviewer cannot submit (only the author submits)", r.status === 403, r.status);
+  await sourceEveryNumber(PORT, C); // G1 (C5.4): the release's numbers need a source before it is submitted
   r = await call("POST", `/combinations/${C}/submit`, {});
   ok("D-2 pass: the author submits the draft for review", r.status === 201, r.body?.detail ?? r.status);
   r = await fetch(`http://localhost:${PORT}/api/combinations/${C}/signoff`, { method: "POST", headers: { "x-actor": "user-C" } }).then(async (x) => ({ status: x.status, body: await x.json().catch(() => null) }));
