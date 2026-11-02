@@ -7,62 +7,13 @@ import type { Snapshot } from "./snapshot.ts";
 import { documentFacts, SIGNED_SCAN } from "./sources.ts";
 import { lineOf } from "./channels.ts";
 
-/** A person role key from the shared library's person roles (S5, M3); principal, spouse_or_partner, child,
- *  representative and sponsor keep their meaning in the rules below. */
-export type Role = string;
-export type Person = { id: string; role: Role; label: string; applies: boolean };
-/** Known values: key `${about}|${fact}` or `${about}|${fact}|${row}`. status: confirmed (existing sample record or
- *  staff-verified) or answered (a preview answer typed on screen; never confirmed). */
-export type Known = Map<string, { value: unknown; status: "confirmed" | "answered"; source: string }>;
-export const kkey = (about: string, fact: string, row?: number | null) => `${about}|${fact}${row === undefined || row === null ? "" : `|${row}`}`;
+// SH3 (P-258): who a line, a condition, a box and a signature are about comes from the one resolver (engine/resolver.ts,
+// contract contracts/resolver.ts); its functions are re-exported here for their callers.
+import { aboutOf, conditionSubjects, factsOf, formSigners, isFilingFact, kkey, lineHolders, peopleFor, signsForOthers, subjectsFor, type Known, type Person } from "./resolver.ts";
+import { FILING } from "../contracts/resolver.ts";
+export { aboutOf, conditionSubjects, formSigners, kkey, lineHolders, peopleFor, signsForOthers, subjectsFor };
+export type { Known, Person, Role } from "./resolver.ts";
 
-export function peopleFor(participants: any[]): Person[] {
-  const out: Person[] = [];
-  for (const p of participants ?? []) {
-    const n = Math.max(p.preview ?? p.min ?? 0, 0);
-    for (let i = 0; i < n; i++) out.push({ id: n > 1 || p.role === "child" ? `${p.role}-${i + 1}` : p.role, role: p.role, label: n > 1 ? `${p.label} ${i + 1}` : p.label, applies: p.applies !== false });
-  }
-  return out;
-}
-
-const find = (people: Person[], role: Role) => people.filter((p) => p.role === role);
-export function subjectsFor(people: Person[], who: string, subjectKind?: string): string[] {
-  const principal = find(people, "principal").map((p) => p.id), partner = find(people, "spouse_or_partner").map((p) => p.id), children = find(people, "child").map((p) => p.id);
-  const applicants = people.filter((p) => p.applies && p.role !== "representative").map((p) => p.id);
-  if (subjectKind === "CASE") return ["case"];
-  if (subjectKind === "PRINCIPAL") return principal;
-  if (subjectKind === "SPOUSE") return partner;
-  if (subjectKind === "DEPENDENT") return children;
-  switch (who) {
-    case "each_applicant": case "each_adult_18_plus": return applicants;
-    case "principal_applicant": return principal;
-    case "spouse_or_partner": case "couple_once": return partner;
-    case "each_dependent_child": return children;
-    case "each_person": return people.filter((p) => p.role !== "representative" && p.role !== "sponsor").map((p) => p.id);
-    case "representative": return find(people, "representative").map((p) => p.id);
-    case "sponsor": return find(people, "sponsor").map((p) => p.id); // S5: Sample role, the immigration expert confirms
-    case "case": return ["case"];
-    default: return [];
-  }
-}
-
-/** One rule for whose list a document line goes on (BR-3 "conditions on that person's facts"; C6.4 review R3, Q2 on
- *  #325): the line's own "whose document" names its holders, never its condition's subject. A case-level line stays
- *  "case" here; each caller places it (Preview and the Documents tab list it under the case, a case's checklist under
- *  the principal). Used by render (Preview), engine/sources.ts (the Documents tab) and engine/runtime/case-checklist.ts. */
-export function lineHolders(people: Person[], who: string): string[] {
-  return subjectsFor(people, who);
-}
-/** On whose answers a line's condition is decided, for one holder: CASE → the case; PRINCIPAL or SPOUSE → that person
- *  (none on the case: nobody, so the line is not needed); DEPENDENT → the holder when a child, else every child (any one
- *  is enough); EACH_APPLICANT, EACH_PERSON or none → the holder. DOCUMENT → a document's contents decide it (uploads, C6.5). */
-export function conditionSubjects(people: Person[], holder: string, kind: string | undefined): string[] | "document" {
-  if (kind === "DOCUMENT") return "document";
-  if (kind === "CASE") return ["case"];
-  const role = kind === "PRINCIPAL" ? "principal" : kind === "SPOUSE" ? "spouse_or_partner" : kind === "DEPENDENT" ? "child" : null;
-  if (!role || people.find((p) => p.id === holder)?.role === role) return [holder === "case" ? (people.find((p) => p.role === "principal")?.id ?? "case") : holder];
-  return find(people, role).map((p) => p.id);
-}
 /** A line's condition for one holder: true when it holds on any of its subjects, false when it fails on all, else
  *  cannot tell (with the missing facts of the first undecided subject). */
 export function lineCondition(s: Snapshot, known: Known, people: Person[], holder: string, tree: { subjectKind?: string } | null | undefined): Cond & { about?: string; document?: true; nobody?: string } {
@@ -76,35 +27,6 @@ export function lineCondition(s: Snapshot, known: Known, people: Person[], holde
   return open ? { applies: "cannot_tell", missing: open.missing, about: open.about } : { applies: false, missing: [] };
 }
 
-/** Who signs a form filed as PDF upload, signed by hand and scanned (C3.11; contracts/workspace.ts SIGNED_BY, Sample): the
- *  one rule for the Documents tab (sources.ts signedScanLines) and Preview by person and the case (render), X9b / #113
- *  review m6. The form is about each person its "who" names (the form rows' own list; its condition never narrows who it
- *  is about, it decides whether it applies); a case form is about the principal. Not set or "the person" = each person it
- *  is about; "a parent, for a minor" = the principal for a child, the person otherwise; "the principal, for the family" =
- *  the principal; "the person and the representative" = both; "no signature" = nobody. Returns each signer's id with the
- *  form rows (person ids, or "case") they sign for. */
-export function formSigners(people: Person[], who: string, signedBy: string | null | undefined): Map<string, string[]> {
-  const by = signedBy ?? "person", out = new Map<string, string[]>();
-  if (by === "none") return out;
-  const principal = people.find((p) => p.role === "principal")?.id;
-  const reps = people.filter((p) => p.role === "representative").map((p) => p.id);
-  for (const row of subjectsFor(people, who)) {
-    const about = row === "case" ? principal : row.split("/")[0];
-    if (!about) continue;
-    const signsFor = by === "principal_for_family" || (by === "parent_for_minor" && people.find((p) => p.id === about)?.role === "child") ? principal : about;
-    for (const id of [signsFor, ...(by === "person_and_representative" ? reps : [])]) if (id) out.set(id, [...(out.get(id) ?? []), row]);
-  }
-  return out;
-}
-/** True when a signer signs a form for someone other than themselves (the reason's "for the family members it is about"). */
-export const signsForOthers = (signer: string, rows: string[]) => rows.some((x) => x !== "case" && x.split("/")[0] !== signer);
-
-function factsOf(known: Known, about: string): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const [k, v] of known) { const [a, f, row] = k.split("|"); if (row === undefined && (a === "case" || a === about)) out[f] = v.value; }
-  return out;
-}
-
 export type Cond = { applies: Truth; missing: string[] };
 export function evalCondition(s: Snapshot, known: Known, tree: any, about: string): Cond {
   if (!tree) return { applies: true, missing: [] };
@@ -115,28 +37,6 @@ export function evalCondition(s: Snapshot, known: Known, tree: any, about: strin
   catch (e) { return { applies: "cannot_tell", missing: [`(not executable: ${(e as Error).message.slice(0, 80)})`] }; }
 }
 
-/** Whose value a box reads, relative to the form's subject (the AI states it relative to the subject; the case decides
- *  who that is). Returns null when that person is not on the case. */
-export function aboutOf(people: Person[], subject: string, entry: any, placement: any): string | null {
-  const fact: string = entry.fact ?? "";
-  if (placement?.repeats === "once_per_case" || fact.startsWith("case.")) return "case";
-  if (fact.startsWith("organisation.")) return subject; // the prospective employer of the form's subject (P5 finding D33)
-  const subj = people.find((p) => p.id === subject);
-  switch (entry.person) {
-    case "form_subject": return subject;
-    case "subject_spouse_or_partner": {
-      if (subj?.role === "principal") return find(people, "spouse_or_partner")[0]?.id ?? null;
-      if (subj?.role === "spouse_or_partner") return find(people, "principal")[0]?.id ?? null;
-      return null;
-    }
-    case "subject_child": { const kids = find(people, "child"); const r = entry.row ?? 0; return kids[r]?.id ?? (kids.length ? null : null); }
-    case "subject_parent_1": case "subject_parent_2": return `${subject}/${entry.person.slice(8)}`;
-    case "subject_sibling": return `${subject}/sibling`;
-    case "representative": return find(people, "representative")[0]?.id ?? "representative";
-    case "none": case null: case undefined: return "case";
-    default: return null;
-  }
-}
 
 export type Coverage = "confirmed fact" | "answered on screen" | "document reading" | "client question" | "client profile" | "staff working view" | "unresolved";
 export type BoxRow = { box: string; caption: string; fact: string | null; meaning: string | null; about: string | null; about_label: string; row: number | null; coverage: Coverage; detail: string; value?: unknown; transform?: string | null; origin?: string;
@@ -230,7 +130,7 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
 
   // ------------------------------------------------------------ conditions: facts that decide what applies
   const deciders = new Map<string, { fact: string; about: string; decides: Set<string> }>();
-  const addDecider = (missing: string[], about: string, what: string) => { for (const m of missing) { if (m.startsWith("(")) continue; const a = m.startsWith("case.") ? "case" : about; const k = `${a}|${m}`; const d = deciders.get(k) ?? { fact: m, about: a, decides: new Set<string>() }; d.decides.add(what); deciders.set(k, d); } };
+  const addDecider = (missing: string[], about: string, what: string) => { for (const m of missing) { if (m.startsWith("(")) continue; const a = isFilingFact(m) ? FILING : about; const k = `${a}|${m}`; const d = deciders.get(k) ?? { fact: m, about: a, decides: new Set<string>() }; d.decides.add(what); deciders.set(k, d); } };
   // QA-149: an answered fact that a condition reads still decides it, decided or not, so it stays on the case and can be
   // changed (a child's "travelling alone" answered yes added a line, then the question was gone and could not be undone).
   // A calculated field is kept by the answers it is worked out from. Unanswered facts a decided condition does not need
@@ -248,7 +148,7 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
     if (!tree || subjects === "document") return;
     const reads = readsOf(tree);
     for (const about of subjects) for (const f of reads) {
-      const a = f.startsWith("case.") ? "case" : about, k = kkey(a, f);
+      const a = isFilingFact(f) ? FILING : about, k = kkey(a, f);
       if (!known.has(k)) continue;
       const d = answeredDeciders.get(k) ?? { fact: f, about: a, decides: new Set<string>() }; d.decides.add(what); answeredDeciders.set(k, d);
     }
@@ -328,7 +228,7 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   // them yet, each with its reason (SA-1B-59). Once per case, or for each person who applies.
   const applicants = people.filter((x) => x.applies && x.role !== "representative").map((x) => x.id);
   const selected = new Set(s.sections.map((x) => x.id));
-  for (const p of s.placements) if (selected.has(p.section_id) && !p.rule_only) for (const about of p.repeats === "once_per_case" || p.fact.startsWith("case.") ? ["case"] : applicants)
+  for (const p of s.placements) if (selected.has(p.section_id) && !p.rule_only) for (const about of isFilingFact(p.fact, p) ? [FILING] : applicants)
     pushQ(p.fact, about, `asked in "${sectionTitle.get(p.section_id) ?? p.section_id}", a section this row selects`, [], [], false);
   // Deciding questions last, repeatedly: a question's condition can add deciders, whose own conditions can add more.
   // "seen" stops repeats, so a circular chain ends (and the validator reports it before release).
