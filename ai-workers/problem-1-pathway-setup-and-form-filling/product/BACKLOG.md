@@ -105,4 +105,5 @@ A feature is done when a person can do it on the demo (:4400) and qa has tested 
 | L5 | W6 browser extension for online fill (parked; PR #37 findings: a repeated fill keeps Undo; portal option codes checked) (R-106) | WAVE-1 W6 |
 | L6 | Requirements not yet scheduled: B1–B49 | [BACKLOG-requirements.md](BACKLOG-requirements.md) |
 | L7 | Founder: branch rule on `main` (R-100, founder switches on in GitHub) | REQUESTS R-100 |
+| L-SA3 | M3, runtime: ready-to-file checks per P-237. Only a barcode form failing its own Validate blocks; out-of-date or missing signature, edition or fee past accepted-until and no representative review become CRITICAL warnings passed with a recorded reason (who, when, reason); rule changes warn. Done when: C7.6 and C9.2 checks and every refusal-expecting test are reworked and qa scores C7.6. Waits for the founder's P-71 answer | P-237; SA-01B v2.1 BR-4 |
 
