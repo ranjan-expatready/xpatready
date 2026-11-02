@@ -4,6 +4,7 @@
 // read files at load, so the API passes them in as `Verifiers`; this module imports only shapes and the label rule.
 import { normalizeLabel } from "../contracts/programs.ts";
 import type { ChangeItem, CheckProblem, MadeBy, RuleId, Tier, TierResult } from "../contracts/change-set.ts";
+import { nearMatches } from "./near.ts";
 import { fieldsOf } from "./where-used.ts";
 
 /** The newest version of each library item, as the API reads it, with the names every live (draft or published) version
@@ -26,6 +27,8 @@ export type Context = {
   derived: Set<string>;
   /** Draft answer lists that ride with a draft field (proposals.ts ridingLists): not reusable, so not a duplicate. */
   riding?: Set<string>;
+  /** New fields other proposals are waiting to add (QA-159: a near duplicate of one of them is caught too). */
+  pendingNew?: { key: string | null; name: string; meaning?: string | null }[];
   /** Per set_condition item: the condition on its target now (R6), or null when the target does not exist. */
   existing?: (unknown[] | null | undefined)[];
   /** Per item: R8's question order on each affected combination's draft, before and after the change. */
@@ -207,6 +210,13 @@ export function checkChangeSet(items: ChangeItem[], madeBy: MadeBy, ctx: Context
     }
     // R3 no exact duplicate.
     const dup = duplicate(it, ctx); if (dup) add("R3", i, dup);
+    // R3 near duplicate (QA-159, engine/near.ts): a new field close to a library field, or to one another proposal is
+    // adding, needs a reason that names it (why it does not fit); it is never direct and never Ready.
+    else if ((it.action === "accept_proposal" || it.action === "create") && it.kind === "field") {
+      const near = nearMatches({ key: it.key, name: it.name }, [...lib.fields.filter((f) => LIVE(f.status) && !f.mergedInto).map((f) => ({ key: f.key, name: fieldName(f) })), ...(ctx.pendingNew ?? [])]);
+      const reason = (it.reason ?? "").toLowerCase();
+      for (const n of near) if (!reason.includes(n.name.toLowerCase()) && !(n.key && reason.includes(n.key.toLowerCase()))) add("R3", i, `"${it.name}" is close to ${n.name} (${n.why}): reuse ${n.name}, or say in the reason why it does not fit.`);
+    }
     // R4 references intact.
     if (it.action === "accept_proposal" || it.action === "create") {
       const taken = it.kind === "field" ? lib.fields.some((f) => f.key === it.key) || ctx.derived.has(it.key) : it.kind === "section" ? lib.sections.some((s) => s.key === it.key) : it.kind === "answer_list" ? lib.answerLists.some((l) => l.key === it.key) : lib.documentTypes.some((d) => d.key === it.key);

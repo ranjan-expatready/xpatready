@@ -9,6 +9,7 @@ import { canonical, validatePredicate } from "../../contracts/rules.ts";
 import { ChangeSetBody, RAW_TREE_MAX, treeTooLarge, type ChangeItem, type MadeBy } from "../contracts/change-set.ts";
 import { capProblems, checkChangeSet, DUPLICATE_SCOPE, PROBLEMS_PER_ITEM, EXPERT_TARGETS, listId, MERGE_HOPS_MAX, mergeDepth, PROBLEMS_MAX, RISK_TABLE, riskOf, TREE_MAX, VALUE_TYPES, type Context, type LibField, type Library } from "../engine/change-set.ts";
 import { valueProblems } from "../engine/eligibility-gates.ts";
+import { nearMatches, nearWhy } from "../engine/near.ts";
 import { VALUE_TYPE_TO_DATA_TYPE } from "../engine/snapshot.ts";
 import { isNode } from "../engine/validate.ts";
 
@@ -175,6 +176,19 @@ ok("G-CORE cap: every item keeps its first problems, and truncated says more wer
   const c = capProblems(ps); return c.truncated && c.problems.filter((p) => p.item === 0).length === PROBLEMS_PER_ITEM && c.problems.some((p) => p.item === 7);
 })());
 ok("G-CORE cap pass: a short list is kept whole, not truncated", !capProblems([{ rule: "R1", item: 0, message: "x" }]).truncated);
+
+// ───────── QA-159 (Major): a near duplicate needs a reason that names it, and is never Ready (engine/near.ts, R3)
+ok("G-CORE near pass: QA-159's pair is near (one name holds the other), by key and by name", nearWhy("person.full_name_as_on_travel_document", "person.full_name") === "one name holds the other" && nearWhy("Full name as on travel document", "Full name") === "one name holds the other");
+ok("G-CORE near pass: the same words in another order, and the same meaning under two names, are near", nearWhy("Name of family", "Family name") === "the same words in another order" && nearWhy("Surname", "Last name", { a: "The family name.", b: "the family name" }) === "the same meaning under two names");
+ok("G-CORE near fail: names sharing one word only are not near (Family name / Given name)", nearWhy("Family name", "Given name") === null && nearWhy("person.family_name", "person.given_name") === null);
+ok("G-CORE near fail: an exact same key or name is left to the exact check", nearMatches({ key: "person.age", name: "Age" }, [{ key: "person.age", name: "Age" }]).length === 0);
+ok("G-CORE near: keys are compared within one group only (case.full_name is not near person.full_name_as_on_travel_document by key)", nearMatches({ key: "case.full_name", name: "Case reference" }, [{ key: "person.full_name_as_on_travel_document", name: "Travel name" }]).length === 0);
+const travelName: ChangeItem = { action: "accept_proposal", kind: "field", key: "person.full_name_as_on_travel_document", name: "Full name as on travel document", valueType: "text", aliases: [], source: src, reason: "IMM 5604 asks for the name exactly as printed" };
+ok("G-CORE R3 near fail: a new field near a library field (QA-159), with a reason that does not name it, is refused", check([travelName]).some((p) => p.rule === "R3" && /is close to Whole name \(draft\) \(one name holds the other\)/.test(p.message)), check([travelName]));
+ok("G-CORE R3 near pass: the same field with a reason that says why the near one does not fit passes R3", !rules([{ ...travelName, reason: "Whole name (draft) holds the current name; this is the name exactly as printed on the travel document" }]).includes("R3"));
+ok("G-CORE R3 near fail: a new field near one another proposal is waiting to add is refused too", check([{ ...travelName, key: "person.travel_doc_name", name: "Name on travel document as printed", reason: "From IMM 5604" }], ctx({ pendingNew: [{ key: "person.printed_name", name: "Printed name on travel document" }] })).some((p) => p.rule === "R3" && /Printed name on travel document/.test(p.message)));
+ok("G-CORE R3 near pass: a new field near nothing passes", !rules([height]).includes("R3"));
+ok("G-CORE tier: a near-duplicate new field is never direct (a new item waits for a second person)", riskOf([travelName], "ai", new Set()).tier === "second_person");
 // ───────── STANDARDS §7 properties
 const prop = (name: string, p: fc.IProperty<unknown[]>) => { let err = ""; try { fc.assert(p, { numRuns: 200 }); } catch (e) { err = String(e).slice(0, 300); } ok(name, !err, err); };
 const anyItem = fc.oneof(

@@ -17,6 +17,7 @@ import { keyFor } from "./library-changes.ts";
 import { checkedFieldValues, dropFieldList, type AnswerValue } from "./answer-values.ts";
 import { acceptPqrPick } from "./fact-sources.ts";
 import { usedInLabels } from "./where-used.ts";
+import { nearMatches } from "../../engine/near.ts";
 
 type Tx = Prisma.TransactionClient;
 type Client = Db | Tx;
@@ -106,6 +107,12 @@ async function usableInLibrary(db: Client, workspaceId: string, kind: string, ke
 
 const plainIssues = (e: { issues: { path: PropertyKey[]; message: string }[] }) => e.issues.slice(0, 3).map((i) => `${i.path.join(".") || "item"}: ${i.message}`).join("; ");
 
+/** The new fields other proposals are waiting to add to the library (QA-159: a near duplicate of one is caught too). */
+export async function pendingNewFields(db: Client, workspaceId: string, except?: string[]): Promise<{ key: string | null; name: string; meaning: string | null }[]> {
+  const rows = await db.proposalItem.findMany({ where: { workspaceId, kind: "field", landsOn: "library", status: "waiting", reuse: { path: ["match"], equals: "new" }, ...(except?.length ? { id: { notIn: except } } : {}) }, select: { payload: true, work: true } });
+  return rows.map((r) => ({ key: ((r.work as { proposedKey?: string } | null)?.proposedKey) ?? null, name: String((r.payload as { label?: unknown }).label ?? ""), meaning: ((r.payload as { meaning?: string }).meaning) ?? null })).filter((x) => x.name);
+}
+
 /** The one door: parses each item against contract v2, checks its identity, and writes them together (all or none).
  *  Refused: a malformed item (400), two items of one batch with the same identity, or a new library item that already
  *  exists in the library (409: reuse it instead). A waiting item of another run is caught again at approval. */
@@ -128,6 +135,7 @@ export async function insertProposals(db: Client, workspaceId: string, items: (N
   // workspace inside a transaction, so two editions read at once still make one "new" item.
   await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`proposal-door:${workspaceId}`}))`;
   const firstNew = new Map<string, { id: string; edition: string | null }>();
+  const batchNew: { key: string | null; name: string; meaning: string | null }[] = [];
   for (const [n, it] of items.entries()) {
     const { choice, decidedKey, work: given, ...item } = it; let work = given;
     const parsed = ProposalItem.safeParse({ ...item, id: randomUUID(), status: "waiting", decision: null });
@@ -149,6 +157,17 @@ export async function insertProposals(db: Client, workspaceId: string, items: (N
         if (x.confidence === "ready") x.confidence = "check";
         x.reason = `The same item is drafted for ${(first.edition ?? "another form").trim()}. Whichever is accepted first adds it to the library; this one then reuses it.${x.reason ? ` ${x.reason}` : ""}`.slice(0, 500);
       } else if (!firstNew.has(ident)) firstNew.set(ident, { id: x.id, edition: x.scope.formEdition });
+    }
+    // QA-159 (G-CORE B1 R3): a new field near a library field, or near another new field waiting (in this batch or an
+    // earlier run), is found here on the server with the one rule (engine/near.ts), not only when the producer says so.
+    if (x.kind === "field" && x.landsOn === "library" && x.reuse.match === "new") {
+      const p = x.payload as { label: string; meaning?: string };
+      const me = { key: ((work as { proposedKey?: string } | null)?.proposedKey) ?? null, name: p.label, meaning: p.meaning ?? null };
+      const lib = (await db.canonicalField.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] }, mergedIntoKey: null }, select: { canonicalFieldKey: true, label: true, meaning: true } }))
+        .map((f) => ({ key: f.canonicalFieldKey, name: f.label || f.canonicalFieldKey, meaning: f.meaning }));
+      const near = nearMatches(me, [...lib, ...(await pendingNewFields(db, workspaceId)), ...batchNew]);
+      if (near.length) x.identity = { ...x.identity, near: [...new Set([...x.identity.near, ...near.map((n) => n.name)])].slice(0, 10), nearReason: x.identity.nearReason ?? near[0].why };
+      batchNew.push(me);
     }
     // C11.13 (BAND_TIPS): an item close to a library item is never Ready: a person reads the near match and its reason.
     if (x.identity.near.length && x.confidence === "ready") { x.confidence = "check"; x.reason = `Close to ${x.identity.near.slice(0, 3).join(", ")}: ${x.identity.nearReason}${x.reason ? ` ${x.reason}` : ""}`.slice(0, 500); }

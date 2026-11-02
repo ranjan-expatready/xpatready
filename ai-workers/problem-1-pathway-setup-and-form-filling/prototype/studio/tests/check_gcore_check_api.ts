@@ -120,6 +120,33 @@ const check = (items: unknown[], actor: string | null = "user-A") => call("POST"
   r = await check([{ action: "rename", kind: "field", key: FIELD, name: "Last name (Sample)" }], null);
   ok("G-CORE fail: no person, no check (the reader is required)", r.status === 401 || r.status === 403, r.status);
 
+  // ─────────── QA-159 (Major): a near-duplicate new field is never Ready in the queue, whoever drafted it
+  process.env.DATABASE_URL = `postgresql://xr_studio@127.0.0.1:54329/${DB}`;
+  const { Db } = await import("../api/src/core.ts");
+  const P = await import("../api/src/proposals.ts");
+  const { randomUUID } = await import("node:crypto");
+  const db = new Db();
+  const ws = (await db.workspace.findUniqueOrThrow({ where: { key: "demo" } })).id;
+  const runId = randomUUID();
+  await db.draftingJob.create({ data: { id: runId, workspaceId: ws, combinationId: rel, kind: "masters_edition", mode: "REPLAY", status: "COMPLETED", startedBy: "user-A", finishedAt: new Date() } });
+  const pay = (label: string) => ({ kind: "field" as const, label, aliases: [], meaning: `${label} of the person, as on the form (Sample).`, valueType: "text", subject: "person", formBox: null });
+  const reading = (label: string) => ({ reading: label, payload: pay(label), from: "replay" as const, runFile: "runs/acceptance.json", costUsd: 0 });
+  const item = (label: string, key: string, edition: string) => ({ kind: "field" as const, runId, step: "masters_edition", scope: { formEdition: edition, combinationId: null }, landsOn: "library" as const,
+    reuse: { match: "new" as const, existingKey: null }, payload: pay(label), source: null, rounds: { draft: reading(label), check: reading(label) }, rules: [{ rule: "quote_found", passed: true, why: null }], agreement: "agreed" as const,
+    confidence: "ready" as const, reason: null, origin: "ai" as const, identity: { key: P.identityKeyOf(pay(label), ""), near: [] as string[], nearReason: null as string | null }, relatesTo: null, revision: null, basis: "SAMPLE" as const, work: { proposedKey: key } });
+  const [first] = await P.insertProposals(db, ws, [item("Zorvex tally mark (QA-159 Sample)", "person.qa159_zorvex_tally_mark", "IMM 5409 (06-2019)")]);
+  const [second] = await P.insertProposals(db, ws, [item("Zorvex tally mark as on travel document (QA-159 Sample)", "person.qa159_zorvex_tally_mark_as_on_travel_document", "IMM 5604 (01-2021)")]);
+  const [plain] = await P.insertProposals(db, ws, [item("Pellucid chroma QA159", "person.qa159_pellucid_chroma", "IMM 5604 (01-2021)")]);
+  const row = async (id: string) => db.proposalItem.findUniqueOrThrow({ where: { id }, select: { confidence: true, reason: true, identity: true } });
+  const s1 = await row(second), s0 = await row(first), s2 = await row(plain);
+  ok("G-CORE QA-159 fail: a new field near another waiting new field (an earlier run) lands as Check, never Ready, naming it", s1.confidence === "check" && /Close to Zorvex tally mark \(QA-159 Sample\)/.test(s1.reason ?? "") && (s1.identity as { near: string[] }).near.includes("Zorvex tally mark (QA-159 Sample)"), s1);
+  ok("G-CORE QA-159 pass: the first of the two (nothing near it yet) and an unrelated new field stay Ready", s0.confidence === "ready" && s2.confidence === "ready", [s0.confidence, s2.confidence, s2.reason]);
+  const [, third] = await P.insertProposals(db, ws, [item("Quindle stamp printed (QA-159 Sample)", "person.qa159_quindle_stamp_printed", "IMM 5646 (01-2021)"), item("Quindle stamp printed on page (QA-159 Sample)", "person.qa159_quindle_stamp_printed_page", "IMM 5646 (01-2021)")]);
+  ok("G-CORE QA-159 fail: a near duplicate inside one batch is caught too", (await row(third)).confidence === "check", await row(third));
+  r = await check([{ action: "accept_proposal", kind: "field", key: "person.qa159_zorvex_tally", name: "Zorvex tally mark on travel document", valueType: "text", aliases: [], source: { kind: "form_box", ref: "IMM 5604 box 1" }, reason: "From the form" }]);
+  ok("G-CORE R3 near fail through the API: the check names the waiting near field and asks for a reason that names it", r.body?.problems?.some((x: { rule: string; message: string }) => x.rule === "R3" && /is close to Zorvex tally mark/.test(x.message)), r.body?.problems);
+  await db.$disconnect();
+
   console.log(`\n${pass}/${pass + fail} passed`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

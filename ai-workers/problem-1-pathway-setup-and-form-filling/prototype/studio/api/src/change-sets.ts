@@ -17,7 +17,7 @@ import type { Snapshot } from "../../engine/snapshot.ts";
 import { current, fieldReaders, newestBy } from "../../engine/where-used.ts";
 import { Db, readerOf, Workspace } from "./core.ts";
 import { noFreeAdd } from "./library-sources.ts";
-import { ridingLists } from "./proposals.ts";
+import { pendingNewFields, ridingLists } from "./proposals.ts";
 import { combinationTrails, itemCombinations, itemReleases, mappedBoxes, openCasesByRelease } from "./where-used.ts";
 
 type Client = Db | Prisma.TransactionClient;
@@ -107,7 +107,7 @@ export class ChangeSets {
         order[i] = await orderOn([...(fieldUsers.get(it.key) ?? [])], (s) => swap(s));
       }
     }
-    const ctx: Context = { library, released, derived: new Set(derived.map((d) => d.derivedKey)), riding, existing, order, rewrites };
+    const ctx: Context = { library, released, derived: new Set(derived.map((d) => d.derivedKey)), riding, existing, order, rewrites, pendingNew: await pendingNewFields(db, ws) };
     const { problems, truncated } = capProblems(checkChangeSet(items, madeBy, ctx, VERIFIERS));
     const tier = riskOf(items, madeBy, released);
     const preview = await this.preview(db, ws, items, library, rows, trails, releasesOf);
