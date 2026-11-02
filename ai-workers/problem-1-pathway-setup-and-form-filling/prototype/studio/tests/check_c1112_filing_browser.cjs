@@ -60,18 +60,18 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 
   // Undo, then Add person after a remove: the mode comes back with the line.
   await who.getByRole("button", { name: /Undo last change/ }).click();
-  await p.waitForFunction((m) => true, null); await p.waitForTimeout(800);
+  await p.waitForFunction(() => !document.querySelector('[aria-busy="true"]'), null, { timeout: 15000 }); await p.waitForTimeout(800);
   step("C11.12 BR-8 pass: Undo restores the child's earlier mode (Files own)", modeOf("child") === "files_own", modeOf("child"));
   await open();
   await who.getByRole("button", { name: "Edit" }).click();
   await who.getByLabel(/^Filing for Spouse/).selectOption("declared_only");
   await who.getByRole("button", { name: /^Remove Child/ }).click();
-  const add = who.getByRole("button", { name: /Add/ }).first();
-  if (await add.count()) { await add.click(); const item = p.getByRole("menuitem", { name: /^Child/ }).or(p.getByRole("option", { name: /^Child/ })).first(); if (await item.count()) await item.click(); }
+  await who.getByLabel("Person to add").selectOption("child");
+  await who.getByRole("button", { name: "Add a person" }).click();
   await who.getByRole("button", { name: "Save" }).click();
   const confirm = p.getByRole("button", { name: "Save anyway" }); if (await confirm.count()) await confirm.click();
   await p.waitForTimeout(1200);
-  step("C11.12 BR-8 pass: a role removed and added back in the same edit keeps its saved mode; the edited one is stored", modeOf("spouse_or_partner") === "declared_only" && ["files_own", ""].includes(modeOf("child")), `${modeOf("spouse_or_partner")} / ${modeOf("child")}`);
+  step("C11.12 BR-8 pass: a role removed and added back in the same edit keeps its saved mode; the edited one is stored", modeOf("spouse_or_partner") === "declared_only" && modeOf("child") === "files_own", `${modeOf("spouse_or_partner")} / ${modeOf("child")}`);
 
   // A role with no mode: "Filing not set" on the line (BR-7, and the release waits for it).
   sql(`update combination set participants = (select jsonb_agg(case when x->>'role'='child' then x - 'filingMode' else x end) from jsonb_array_elements(participants) x) where id='${id}'`);
