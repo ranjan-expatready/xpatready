@@ -116,8 +116,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.locator('[data-person-chip="child-1"]').click(); await settle();
   // Under a loaded runner the address and the person's questions arrive after settle(): wait for them (the step still checks both).
   await p.waitForURL(/person=child-1/, { timeout: 15000 }).catch(() => {});
-  await panel().getByText(/What Child 1 is asked/).first().waitFor({ timeout: 15000 }).catch(() => {});
-  step("C4.3: choosing a child shows that child's questions and forms (the address keeps the person)", /person=child-1/.test(p.url()) && /What Child 1 is asked/.test(await panel().innerText()));
+  await panel().getByText(/The questions Child 1 answers/).first().waitFor({ timeout: 15000 }).catch(() => {});
+  step("C4.3: choosing a child shows that child's questions and forms (the address keeps the person)", /person=child-1/.test(p.url()) && /The questions Child 1 answers/.test(await panel().innerText()));
 
   // ======================================================== Who can be in this application (C11.12, M3, M4)
   // Slice C1 (P-161 (2)): the people card sits in Before forms on the Forms tab.

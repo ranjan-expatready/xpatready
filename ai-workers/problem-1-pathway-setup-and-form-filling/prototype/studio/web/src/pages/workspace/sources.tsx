@@ -317,7 +317,7 @@ export function BulkBar({ id, picked, onClear, onDone }: { id: string; picked: F
       <Select aria-label="Set where it comes from" className="h-8 w-60" value="" disabled={busy} onChange={(e) => { const v = e.target.value as AnswerSource | "RULES"; if (v) void run({ source: v }); }} data-bulk-source>
         <option value="">Set where it comes from…</option><option value="CLIENT">Client</option><option value="AGENT">Case officer</option><option value="RULES">Back to the rules' default</option>
       </Select>
-      <Select aria-label="Prospect questionnaire (PQR)" className="h-8 w-52" value="" disabled={busy} onChange={(e) => { if (e.target.value) void run({ prequalification: e.target.value === "on" }); }} data-bulk-pq>
+      <Select aria-label="Prospect questionnaire (PQR)" className="h-8 w-72 max-w-full" value="" disabled={busy} onChange={(e) => { if (e.target.value) void run({ prequalification: e.target.value === "on" }); }} data-bulk-pq>
         <option value="">Prospect questionnaire (PQR)…</option><option value="on">Ask in the Prospect questionnaire (PQR)</option><option value="off">Do not ask</option>
       </Select>
       <Button size="sm" variant="ghost" onClick={onClear}>Clear selection</Button>

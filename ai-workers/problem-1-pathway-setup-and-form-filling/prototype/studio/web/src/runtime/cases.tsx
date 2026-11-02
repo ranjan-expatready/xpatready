@@ -2,7 +2,7 @@
 // /cases: the officer's case list, one case (people + agent view), and the client's questionnaire (SQR, phone first).
 // The people are simulated (demo chrome: the "Acting as" switch is not for porting); the server decides what each may do.
 import * as React from "react";
-import { Link, Route, Routes, useNavigate, useParams } from "react-router-dom";
+import { Link, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ExternalLink, Plus, UserPlus, X } from "lucide-react";
 import { api, ApiError, getActor, setActor, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Field, Input, Notice, Pill, Select, Table } from "@/components/ui/controls";
@@ -144,7 +144,10 @@ function CasePage() {
   const actor = useActorId();
   const view = useCaseView(id!, "agent");
   const [adding, setAdding] = React.useState<"spouse_or_partner" | "child" | null>(null);
-  if (!isOfficer(actor)) return <Notice title="This page is for the case officer">As a client, open <Link className="text-text-link underline" to={`/cases/${id}/questionnaire`}>your questionnaire</Link>.</Notice>;
+  // K13 (break m7): "Answer in the Agent view" (eligibility) lands on the Agent view, not the top of the case page.
+  const { hash } = useLocation(), loaded = !!view.data;
+  React.useEffect(() => { if (loaded && hash === "#agent-view") document.getElementById("agent-view")?.scrollIntoView({ block: "start" }); }, [loaded, hash]);
+  if (!isOfficer(actor)) return <Notice title="This page is for the case officer">As a client, open <Link className="text-text-link underline" to={`/cases/${id}/questionnaire`}>your Client questionnaire</Link>.</Notice>;
   if (view.isLoading) return <div className="space-y-3"><Skeleton className="h-8 w-1/3" /><Skeleton className="h-24 w-full" /></div>;
   if (view.isError) return <Notice tone="danger" title="This case could not be opened">{(view.error as Error).message}</Notice>;
   const v = view.data!, c = v.case, people = c.people.filter((p) => p.role !== "case");
@@ -178,8 +181,8 @@ function CasePage() {
       </section>
       <EligibilityCard caseId={c.id} people={c.people} />
       <FormsPanel caseId={c.id} />
-      <h2 className="text-base font-semibold" data-agent-view-h>Agent view</h2>
-      <Questionnaire caseId={c.id} mode="agent" />
+      <section id="agent-view" aria-labelledby="agent-view-h" className="scroll-mt-4 space-y-3"><h2 id="agent-view-h" className="text-base font-semibold" data-agent-view-h>Agent view</h2>
+      <Questionnaire caseId={c.id} mode="agent" /></section>
       {adding ? <AddPersonDialog caseId={c.id} role={adding} close={() => setAdding(null)} /> : null}
     </div>
   );
@@ -192,7 +195,7 @@ function AddPersonDialog({ caseId, role, close }: { caseId: string; role: "spous
   const add = useAction(() => api(`/runtime/cases/${caseId}/people`, { method: "POST", json: { role, displayName: name, idempotencyKey: key } }), { success: `${role === "child" ? "Child" : "Spouse or partner"} added: their questions are now asked`, invalidate: [["runtime"]], onDone: close });
   const submit = () => add.mutate(undefined, { onError: (e) => setError(e instanceof ApiError ? e.field("displayName") ?? e.message : e.message) });
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) close(); }} title={role === "child" ? "Add a child" : "Add a spouse or partner"} description="Within the limits of this case's release. Their questions are added to the client's questionnaire at once."
+    <Dialog open onOpenChange={(o) => { if (!o) close(); }} title={role === "child" ? "Add a child" : "Add a spouse or partner"} description="Within the limits of this case's release. Their questions are added to the Client questionnaire at once."
       footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={add.isPending} onClick={submit}>Add</Button></>}>
       <form onSubmit={(e) => { e.preventDefault(); submit(); }}>
         <Field label="Name" hint="Sample names only in the prototype" error={error}><Input value={name} onChange={(e) => { setName(e.target.value); setError(null); }} autoFocus /></Field>
@@ -208,7 +211,7 @@ function ClientPage() {
   const { id } = useParams();
   const actor = useActorId();
   if (!isClient(actor)) return (
-    <Notice title="This is the client's questionnaire" action={<Button size="sm" variant="secondary" onClick={() => setActor("user-P")}>Act as Client A</Button>}>
+    <Notice title="This is the Client questionnaire" action={<Button size="sm" variant="secondary" onClick={() => setActor("user-P")}>Act as Client A</Button>}>
       As the case officer, review and change answers on <Link className="text-text-link underline" to={`/cases/${id}`}>the case page</Link>.
     </Notice>
   );

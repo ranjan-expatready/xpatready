@@ -808,7 +808,7 @@ export function PreviewQuestions({ view, person }: { view: QuestionnaireView; pe
   const keyOfPart = (s: (typeof parts)[number]) => `${s.subjectId}|${s.section}`;
   const [openKey, setOpenKey] = React.useState<string | null>(null);
   const open = parts.find((s) => keyOfPart(s) === openKey) ?? parts[0];
-  if (!parts.length) return <Notice tone="info" title="Nothing to ask">This person answers nothing in the client's questionnaire for this family.</Notice>;
+  if (!parts.length) return <Notice tone="info" title="Nothing to ask">This person answers nothing in the Client questionnaire for this family.</Notice>;
   const asked = (s: (typeof parts)[number]) => s.questions.filter((q) => !q.hidden);
   // Drift check 4: a section asked once for the application and again about the person shares its title; the name then
   // says whom each is about, so the jump list never shows the same name twice.

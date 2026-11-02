@@ -103,7 +103,8 @@ export function CombinationPage() {
         {row ? <NextStep row={row} setup={sum.data?.setup ?? null} /> : null}
       </div>
       {c.basis_note ? <Notice tone={c.source_basis === "ILLUSTRATIVE" ? "warn" : "info"}>{c.basis_note}</Notice> : null}
-      <div role="tablist" aria-label="Combination" className="flex gap-1 overflow-x-auto border-b border-border">
+      {/* K13 break M1: the tabs wrap instead of scrolling, so no tab or badge is ever cut off at any width or zoom. */}
+      <div role="tablist" aria-label="Combination" className="flex flex-wrap gap-x-1 border-b border-border">
         {TABS.map((t) => {
           // QA-120: one badge style for every count on a tab, a space before it, and one name read aloud and shown as the
           // tip: "Forms 4 setup items open", "Review and release 1 problem" (the visible text starts it exactly, WCAG 2.5.3).

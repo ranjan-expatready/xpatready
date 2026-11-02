@@ -24,8 +24,24 @@ const OLD = [
   [/\bQuestionnaires\b/, "the Questionnaires tab"],
   [/(?<!(Smart|Client|Prospect) )\bQuestionnaire\b(?! \()/, "Questionnaire as a module or tab name"],
   [/\bpre-qualification\b/i, "pre-qualification (now Prospect questionnaire, PQR)"],
+  [/\bWhat the client is asked\b/i, "What the client is asked (now Client questionnaire)"],
+  [/\bCase officer's view\b/i, "Case officer's view (now Agent view)"],
+  [/\bYour questionnaire\b/, "Your questionnaire (now Client questionnaire)"],
+  [/\bclient's questionnaire\b/i, "the client's questionnaire as a name (now Client questionnaire)"],
+  [/\bProgram question pick\b/i, "Program question pick (now Prospect questionnaire (PQR) pick)"],
 ];
-const KEYS = new Set(["Questionnaires"]);
+/** Stored data values compared in code, never shown as written: a problem's `where` key (shown through review.tsx KIND_WORD)
+ *  and an audit row's item word (shown through history.tsx ITEM_WORD). */
+const KEYS = new Set(["Questionnaires", "pre-qualification"]);
+/** The words a person reads in a source file: every string literal and every piece of JSX text, also between {expr}s. */
+const sourceWords = (src, jsx = true) => {
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "").replace(/([^:])\/\/ .*$/gm, "$1");
+  const out = [];
+  for (const m of code.matchAll(/(["'`])((?:\\.|(?!\1).)*?)\1/g)) if (!KEYS.has(m[2])) out.push(m[2]);
+  // JSX text (.tsx only): what sits between a tag or an {expr} and the next one, when it reads as words, not code.
+  if (jsx) for (const m of code.matchAll(/[>}]([^<>{}\n]{3,})(?=[<{])/g)) if (!/=>|===|!==|&&|\|\||;\s*$|^\s*[)\]]/.test(m[1])) out.push(m[1]);
+  return out;
+};
 const oldIn = (t) => OLD.filter(([re]) => re.test(t)).map(([re, why]) => `${why}: "${(t.match(re.global ? re : new RegExp(re.source, re.flags + "g")) ?? [])[0]}" in "${t.slice(Math.max(0, t.search(re) - 40), t.search(re) + 60).replace(/\s+/g, " ")}"`);
 
 (async () => {
@@ -68,13 +84,26 @@ const oldIn = (t) => OLD.filter(([re]) => re.test(t)).map(([re, why]) => `${why}
 
   // ── Configuration, library, review and history pages (author), every combination tab.
   await visit("Program structure", "/structure", "user-A", { scroll: false });
-  for (const [name, url] of [["Immigration programs", "/"], ["To review", "/review"], ["Fields", "/library/fields"], ["Sections", "/library/sections"], ["Document types", "/library/documents"], ["Forms library", "/library/forms"], ["Checks", "/library/checks"], ["Rules", "/library/rules"], ["AI work", "/ai"], ["Releases", "/releases"], ["Activity", "/activity"]]) await visit(name, url);
+  for (const [name, url] of [["Immigration programs", "/"], ["To review", "/review"], ["Fields", "/library/fields"], ["Sections", "/library/sections"], ["Document types", "/library/documents"], ["Forms library", "/library/forms"], ["Checks", "/library/checks"], ["Rules", "/library/rules"], ["AI work", "/ai"], ["Releases", "/releases"]]) await visit(name, url);
+  // Break M2: a PQR draft (rules, US$0) writes its audit row, so the Activity page shows a PQR item to read.
+  const plan = await api(`/combinations/${vv}/pqr-picks/plan`, { method: "POST", actor: "user-A", data: { mode: "rules" } });
+  const draft = plan.status < 300 ? await api(`/combinations/${vv}/pqr-picks/draft`, { method: "POST", actor: "user-A", data: { mode: "rules", planSha256: plan.body?.plan_sha256 } }) : plan;
+  step("setup: a PQR draft (rules, US$0) ran, so Activity has a PQR row", draft.status < 300 && sql("select count(*) from audit_event where entity = 'pre-qualification'") !== "0", `${plan.status} ${draft.status} ${JSON.stringify(draft.body).slice(0, 160)}`);
+  const act = await visit("Activity", "/activity");
+  step("K13 pass: Activity names a PQR draft's item \"Prospect questionnaire (PQR)\"", /Prospect questionnaire \(PQR\)/.test(act));
   const tabs = await (async () => { await as("user-A"); await p.goto(`${BASE}/c/${vv}`); await settle(); return p.getByRole("tab").allInnerTexts(); })();
   step("K13 pass: the combination's tabs name the module \"Smart questionnaire (SQR)\"", tabs.some((t) => /^Smart questionnaire \(SQR\)/.test(t.trim())), tabs.join(" | "));
+  // Break M1: every tab, with its badges, sits wholly inside the tab bar and the window at every width (720 = 200 % of 1440).
+  for (const w of [1440, 1024, 720, 400]) {
+    await p.setViewportSize({ width: w, height: 900 }); await p.waitForTimeout(250);
+    const cut = await p.evaluate(() => { const bar = document.querySelector('[role="tablist"]').getBoundingClientRect(); return [...document.querySelectorAll('[role="tablist"] [role="tab"]')].filter((t) => { const r = t.getBoundingClientRect(); return r.left < bar.left - 1 || r.right > Math.min(bar.right, window.innerWidth) + 1; }).map((t) => t.textContent); });
+    step(`K13 break M1 fail: at ${w} px no combination tab or badge is cut off`, cut.length === 0, cut.join(" | "));
+  }
+  await p.setViewportSize({ width: 1440, height: 900 });
   for (const key of ["overview", "forms", "questionnaires", "documents", "preview", "review"]) await visit(`combination: ${key === "questionnaires" ? "Smart questionnaire" : key}`, `/c/${vv}/${key}`);
   const sqr = await visit("combination: Smart questionnaire (views)", `/c/${vv}/questionnaires`);
   step("K13 pass: the Smart questionnaire names its prospect view \"Prospect questionnaire (PQR)\"", /Prospect questionnaire \(PQR\)/.test(sqr), sqr.match(/.{0,60}PQR.{0,60}/)?.[0]);
-  for (const view of ["pqr", "client", "agent"]) await visit(`combination: preview ${view}`, `/c/${vv}/preview?view=${view}`);
+  for (const set of ["pqr", "sqr", "agent"]) await visit(`combination: preview ${set}`, `/c/${vv}/preview?set=${set}`);
   const prev = await visit("combination: preview", `/c/${vv}/preview`);
   step("K13 pass: the preview names the three views by their names", ["Prospect questionnaire (PQR)", "Client questionnaire", "Agent view"].every((v) => prev.includes(v)), ["Prospect questionnaire (PQR)", "Client questionnaire", "Agent view"].filter((v) => !prev.includes(v)).join(", "));
 
@@ -98,14 +127,12 @@ const oldIn = (t) => OLD.filter(([re]) => re.test(t)).map(([re, why]) => `${why}
   const words = [];
   const walk = (dir) => { for (const f of fs.readdirSync(dir, { withFileTypes: true })) { const fp = path.join(dir, f.name); if (f.isDirectory()) walk(fp); else if (/\.(ts|tsx)$/.test(f.name)) words.push([fp, fs.readFileSync(fp, "utf8")]); } };
   walk(path.join(STUDIO, "web", "src")); walk(path.join(STUDIO, "api", "src")); walk(path.join(STUDIO, "contracts")); walk(path.join(STUDIO, "engine"));
-  const literal = /(["'`])((?:\\.|(?!\1).)*?)\1|>([^<>{}\n]{3,})</g;
   const hits = [];
-  for (const [fp, src] of words) {
-    const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "").replace(/([^:])\/\/ .*$/gm, "$1");
-    // KEYS: data values compared in code, never shown as written (a problem's `where` key "Questionnaires" is shown through
-    // the review page's KIND_WORD as the module's name).
-    for (const m of code.matchAll(literal)) { const t = m[2] ?? m[3] ?? ""; if (KEYS.has(t)) continue; if (/\s/.test(t) || /^[A-Z]/.test(t)) for (const f of oldIn(t)) hits.push(`${path.relative(STUDIO, fp)}: ${f}`); }
-  }
+  for (const [fp, src] of words) for (const t of sourceWords(src, fp.endsWith(".tsx"))) for (const f of oldIn(t)) hits.push(`${path.relative(STUDIO, fp)}: ${f}`);
+  // Review M3 (STANDARDS §46): the scan must fail on a planted old name in each shape it reads (a literal, JSX text after an
+  // {expr}, a case view link), else a blind scan would pass.
+  const planted = ['<p>{r.field} is added from Questionnaires › Facts a rule needs.</p>', '<Link to={x}>{a} → Answer in the case view</Link>', 'fail("Only a pre-qualification pick");', 'title="What the client is asked"'];
+  step("K13 fail case: the code scan finds each planted old name (JSX text after {expr}, a link, a literal, a title)", planted.every((src) => sourceWords(src).some((t) => oldIn(t).length > 0)), planted.filter((src) => !sourceWords(src).some((t) => oldIn(t).length > 0)).join(" | "));
   step("K13 fail: no API error or web word in the code uses an old name", hits.length === 0, hits.slice(0, 30).join("\n      "));
   // The full lists for whoever fixes them (the step lines above are cut short): var/ is never committed.
   fs.mkdirSync(path.join(STUDIO, "var"), { recursive: true });

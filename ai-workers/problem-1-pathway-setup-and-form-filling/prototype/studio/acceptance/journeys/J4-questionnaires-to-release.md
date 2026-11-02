@@ -35,7 +35,7 @@ Each step: what the person does → what they must see (and what the data must h
 16a. **Set IMM 5707 to Online.** → It moves under *Filled on the portal (Online)* with a note that portal filling comes in a later wave (P-102).
 
 ## F. One review and release (C4.8)
-17. **As the author, Send for review.** → Review lists every change in words: the PQR tick ("…: pre-qualification"), the section order, alongside forms and documents. There is no separate *Approve PQR* or *Release questionnaire* button anywhere.
+17. **As the author, Send for review.** → Review lists every change in words: the PQR tick ("…: Prospect questionnaire (PQR)", P-271), the section order, alongside forms and documents. There is no separate *Approve PQR* or *Release questionnaire* button anywhere.
 18. **As the content reviewer (expert duty), sign every line; as the approver, Release.** → One release; the country PQR now shows the tick under this combination.
 
 ## G. Back on Immigration programs (C11.10)

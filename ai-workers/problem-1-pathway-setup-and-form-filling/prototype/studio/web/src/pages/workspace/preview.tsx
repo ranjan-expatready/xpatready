@@ -89,14 +89,14 @@ export function PreviewTab({ id, p, empty, fetching, hasRelease }: { id: string;
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,26rem)_minmax(0,1fr)]" data-sets>
         <section aria-labelledby="pv-pqr" className={cn("rounded-xl border border-border bg-surface-raised p-4", shown !== "pqr" && "hidden xl:block")} data-set="pqr">
           <h2 id="pv-pqr" className="font-semibold">{SETS[0].title(p)}</h2>
-          <p className="mt-1 text-xs text-text-muted">What a prospect is asked first, before an application starts. They confirm these answers later in the full questionnaire; no result is shown to them.</p>
+          <p className="mt-1 text-xs text-text-muted">What a prospect is asked first, before an application starts. They confirm these answers later in the Client questionnaire; no result is shown to them.</p>
           {!p.sets.pqr.length ? <p className="mt-2 text-sm text-text-muted" data-pqr-empty>No Prospect questionnaire (PQR) question is ticked for {who.label}. Tick them on the Smart questionnaire (SQR) tab.</p> : (
             <ul className="mt-2 space-y-1.5 text-sm">{p.sets.pqr.map((q) => <li key={q.fact} className="flex flex-wrap items-center gap-1.5" data-pqr-fact={q.fact}><span>{q.label}</span><Pill tone={q.from === "Client" ? "neutral" : "info"}>{q.from}</Pill></li>)}</ul>
           )}
         </section>
         <section aria-labelledby="pv-q" className={cn("space-y-2", shown !== "sqr" && "hidden xl:block")} data-set="sqr">
           <h2 id="pv-q" className="font-semibold">{SETS[1].title(p)}</h2>
-          <p className="text-xs text-text-muted" data-sqr-sub>What {who.label} is asked</p>
+          <p className="text-xs text-text-muted" data-sqr-sub>The questions {who.label} answers on the case's link</p>
           {p.sets.sqr.fromDocuments.length ? (
             <div className="rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm" data-from-documents>
               <p className="font-medium">From {who.label}'s documents</p>
