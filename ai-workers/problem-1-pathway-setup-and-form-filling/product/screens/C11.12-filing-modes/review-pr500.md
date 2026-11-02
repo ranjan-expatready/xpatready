@@ -123,3 +123,23 @@
   * The suites that use the helper still assert the next step after step 2.
 * I re-ran `check_qa119_next_step_browser`: 30/30 on :4471.
 * Minor (Should): the helper hard-codes `["spouse_or_partner","child"]` (`tests/fixtures/steps-before-forms.cjs:9`). The people view already sends `mayBeApplicant` per line (`api/src/workspace.ts:141`), and keying on it would follow the role library.
+
+**Round 5 · c818a9a9 (tests only): Approve.**
+* What changed: before Submit, `check_screen02_slice1` and `check_studio_browser` now set each applicant role's filing through `setFilingModes`. This is the same choice as round 4, saved through the API and marked as scaffolding. The Filing column itself is walked in `check_c1112_filing_browser`. C11.12 BR-7 requires this step of the author, so no check is weakened.
+* `check_studio_browser` still tests everything it did: B6c (questionnaire gaps) runs before the new save and is unchanged, and Submit, sign, B7 release and C1 run after it unchanged.
+* I read the diff and did not re-run these two suites. Your local results are `check_studio_browser` 51/51 and `check_screen02_slice1` all passed.
+* Minor (Should), 1: the fixture saves each line without `label` and `preview`, as main's `stepsBeforeForms` already did. `checkPeople` (`engine/people.ts:31`) then resets a typed label to the library's. A person's Save keeps both, so carrying them would make the fixture faithful.
+* Minor (Should), 2: in `check_screen02_slice1`, the people save can add changes that need the SME duty. This can switch the already-conditional C5.3 step from "approver releases" to "content reviewer signs". That is still a test, but the branch it takes may have changed; name it in the PR body.
+
+**Round 6 · 07b688d8 (merge of origin/main 96bfb10d + migration rename): Approve.**
+* **The merge (680a2aa6) is clean.** In `contracts/workspace.ts`, `engine/people.ts` and `prisma/schema.prisma`, each side's hunks arrive line for line.
+  * `checkPeople`'s filing-mode handling (`modeSent`, `appliesOf`, the BR-3/BR-4 errors) is untouched.
+  * SH3 only replaces the `NAMES` table with the resolver's `WHO_ROLES`, which still maps `sponsor`.
+  * SH3's `peopleFor` reads `applies`, which `checkPeople` already stores from the mode (BR-5: declared only gives `applies: false`). So the resolver and C11.12 agree.
+* **The rename is sound.** I tested it on a scratch database: apply all migrations up to c818a9a9 (old name `20261102160000_c1112_filing_modes`), then `migrate deploy` with 07b688d8.
+  * G4 and `20261102170000_c1112_filing_modes` both applied, exit 0.
+  * The SQL (drop and re-add two checks) re-runs without harm: both constraints end as intended.
+  * `migrate status` reports "Database schema is up to date!". The orphaned old row is ignored.
+  * The only content changes are the folder name and the two comments.
+* **No new reader of the people lines drops `filingMode`.** Nothing in main's new code re-saves the people list. G4 test families carry `{role, label, applies}` and never write people lines.
+* **Suites on 07b688d8:** `check_c1112_modes` 44/44, `check_r2_fee_table` 67/67, `check_vv_filings` 55/55, `check_vv_prepare` 32/32, `check_engine` 43/43, `check_sh3_resolver` 55/55; web `tsc` 0 errors. G4 and the API suites are left to your running batch.
