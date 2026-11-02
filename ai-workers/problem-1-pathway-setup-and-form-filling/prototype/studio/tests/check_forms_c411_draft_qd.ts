@@ -133,6 +133,7 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   const ended = await result((await going).body.runId);
   ok("C4.11 R pass: Stop ends the run between steps; later steps are not run", !!stopped && stopped.status < 300 && ended.body.status === "stopped" && ended.body.steps.at(-1)?.status === "CANCELLED" && ended.body.steps[0]?.status !== "WAITING" && sql(`select status from ai_batch where id='${ended.body.runId}'`) === "CANCELLED", { stop: stopped?.status, status: ended.body.status, steps: ended.body.steps?.map((s: J) => s.status) });
   ok("C4.11 R pass (break M1): the activity log says who stopped the run", sql(`select count(*) from audit_event where action='stopped' and entity_key='${ended.body.runId}'`) === "1", sql(`select string_agg(summary, ' | ') from audit_event where entity_key='${ended.body.runId}'`));
+  ok("C4.11 R pass (break L6): a stopped run says so in its note", /Stopped by a person/.test(ended.body.note ?? ""), ended.body.note);
   r = await call("POST", `/runs/${ended.body.runId}/stop`);
   ok("C4.11 R fail: a run that has ended cannot be stopped again (409)", r.status === 409 && /already ended/.test(words(r)), words(r));
 
@@ -291,6 +292,47 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
     r = await run("live");
     ok("C4.11 LV F fail: failed Live steps with no Saved result offer nothing", r.status === 201 && r.body.offer_saved === false && !/use Saved/.test(r.body.note) && !/use Saved/.test(step(r, "qd_conditions")?.message ?? ""), r.body.note);
     for (const [f, t] of aside) renameSync(t, f);
+    // Review M1 / break L1: Stop during a Live round ends that call; the checker round is never sent; the step is Cancelled.
+    const slow = (out: unknown) => ({ stub: { exit: 0, out: { ok: true } }, live: { exit: 0, record: rec(out), sleep_ms: 4000 } });
+    const liveLines = (prefix: string) => { try { return readFileSync(join(VAR, "fake-launch.log"), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)).filter((x: J) => x.mode === "live" && String(x.job).startsWith(prefix)).length; } catch { return 0; } };
+    const stopDuring = async (prefix: string) => {
+      const p0 = (await plan("live")).body.plan_sha256;
+      const s0 = await call("POST", `/combinations/${wp}/draft-qd`, { mode: "live", planSha256: p0 });
+      for (let i = 0; i < 300 && liveLines(prefix) === 0; i++) await new Promise((res) => setTimeout(res, 50));
+      const st = await call("POST", `/runs/${s0.body.runId}/stop`);
+      return { st, x: await result(s0.body.runId) };
+    };
+    for (const [kind, draftJob, checkJob] of [["pqr_picks", "studio-pqr-picks-", "studio-pqr-picks-check-"], ["qd_conditions", "studio-qd-conditions-", "studio-qd-conditions-check-"]] as const) {
+      scenario({ "studio-qd-conditions-check": good(condOut), "studio-qd-conditions": kind === "qd_conditions" ? slow(condOut) : good(condOut), "studio-pqr-picks-check": good(pickOut), "studio-pqr-picks": kind === "pqr_picks" ? slow(pickOut) : good(pickOut) });
+      const before6 = sql(`select count(*) from proposal_item where combination_id='${wp}'`);
+      const { st, x } = await stopDuring(draftJob.replace(/-$/, "-") + "");
+      const checks = liveLines(checkJob), cancelled = step(x, kind)?.status;
+      ok(`C4.11 M1 fail: Stop during ${kind === "pqr_picks" ? "step 6" : "step 5"}'s first Live round ends it: the checker round is never sent, the step is Cancelled, nothing of it is proposed`, st.status < 300 && checks === 0 && cancelled === "CANCELLED" && x.body.status === "stopped" && (kind !== "pqr_picks" || sql(`select count(*) from proposal_item where combination_id='${wp}'`) === before6), { checks, cancelled, status: x.body.status, msg: step(x, kind)?.message });
+    }
+    // Break L2 / review m5: step 6 is held to C4.7's one draft at a time: with a picks draft running, it does not run.
+    const other = sql(`insert into drafting_job (id, workspace_id, combination_id, kind, mode, status, started_by, message) select gen_random_uuid(), workspace_id, id, 'pqr_picks', 'LIVE', 'RUNNING', 'user-A', 'test: a picks draft running' from combination where id='${wp}' returning id`).split("\n")[0];
+    scenario({ "studio-qd-conditions-check": good(condOut), "studio-qd-conditions": good(condOut), "studio-pqr-picks-check": good(pickOut), "studio-pqr-picks": good(pickOut) });
+    r = await run("live");
+    ok("C4.11 L2 fail: with a picks draft already running, step 6 of a Live run does not run (already being drafted), and no picks round is sent", step(r, "pqr_picks")?.status === "FAILED" && /already being drafted/.test(step(r, "pqr_picks")?.message ?? "") && liveLines("studio-pqr-picks") === 0, step(r, "pqr_picks")?.message);
+    sql(`update drafting_job set status='COMPLETED', finished_at=now() where id='${other}'`);
+    scenario({ "studio-qd-conditions-check": good(condOut), "studio-qd-conditions": good(condOut), "studio-pqr-picks-check": good(pickOut), "studio-pqr-picks": good(pickOut) });
+    r = await run("live");
+    ok("C4.11 L2 pass: once that draft has ended, step 6 runs", step(r, "pqr_picks")?.status === "COMPLETED" && liveLines("studio-pqr-picks") === 2, step(r, "pqr_picks")?.message);
+    // Break L3: a checker round that throws after a paid first round: the cost stays counted and said.
+    scenario({ ...allFail, "studio-qd-conditions": good(condOut, 0.42), "studio-qd-conditions-check": { stub: { exit: 0, out: { ok: true } }, live: { exit: 0, out: { run_file: "/nonexistent/c411-unreadable.json" } } } });
+    r = await run("live");
+    ok("C4.11 L3 fail: a checker round that breaks after a paid first round keeps the cost counted and said (step, job, run)", /US\$0\.42 \(counted\)/.test(step(r, "qd_conditions")?.message ?? "") && Number(sql(`select coalesce(cost_usd,0) from drafting_job where batch_id='${r.body.runId}' and kind='qd_conditions'`)) === 0.42 && r.body.usd >= 0.42, step(r, "qd_conditions")?.message);
+    // Review m1: the stated worst case is what the launcher's jobs can reserve (each round's own budget), never less.
+    {
+      const { roundBudgetUsd, sizedBudgetUsd, worstRoundUsd } = await import("../api/src/rounds.ts");
+      const { PQR_AI } = await import("../api/src/pqr-drafts.ts"), { CONDITIONS_AI } = await import("../api/src/draft-qd.ts");
+      const g = (await call("POST", `/combinations/${wp}/pqr-picks/plan`, { mode: "replay" })).body.guide.file as string;
+      const len = String(JSON.parse(readFileSync(join(SOLUTION, g), "utf8")).text ?? "").length, ins = [{ file: g }];
+      const sum = [CONDITIONS_AI, PQR_AI].reduce((n, st) => n + roundBudgetUsd(st, false, ins, len) + roundBudgetUsd(st, true, ins, len), 0);
+      const p5 = (await plan("live")).body.totals.worst_usd;
+      ok("C4.11 m1 pass: Live's stated worst case is the sum of its four rounds' launcher budgets", Math.abs(p5 - Math.round(sum * 100) / 100) < 0.011, { p5, sum });
+      ok("C4.11 m1 fail: a round's stated budget is never below the launcher's own or the character bound", roundBudgetUsd(PQR_AI, false, ins, len) >= worstRoundUsd(PQR_AI, len) && roundBudgetUsd(PQR_AI, false, ins, len) >= sizedBudgetUsd(PQR_AI, 0));
+    }
     // L fail: the same copy restarted without the live switch: Live is refused before anything runs.
     let said = "";
     try { execFileSync("zsh", [join(STUDIO, "tools", "isolated.sh"), DB.replace(/^xr_studio_/, ""), String(PORT), "restart", "STUDIO_SLOW_QD_STEP=150", "STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs"], { cwd: join(SOLUTION, "..", ".."), encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }); } catch (e: any) { said = String(e?.stderr ?? e).slice(-400); }

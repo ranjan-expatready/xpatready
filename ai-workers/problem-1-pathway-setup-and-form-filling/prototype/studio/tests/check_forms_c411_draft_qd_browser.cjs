@@ -79,7 +79,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C4.11 S pass (P-227): exactly two ways are offered, Live and Saved", JSON.stringify(modes) === JSON.stringify(["live", "replay"]), modes.join(","));
   step("C4.11 S fail (P-227): no third way (rules only) is shown to a person", !/Rules only/i.test(await dlg.locator("fieldset").innerText()));
   step("C4.11 P pass: with a Saved result, Saved is chosen first: seven steps and US$0 before anything runs", (await start().getAttribute("data-mode")) === "replay" && /US\$0/.test(await dlg.locator("[data-qd-cost]").innerText()) && (await dlg.locator("[data-qd-steps] li").count()) === 7);
-  step("C4.11 S fail: a step with nothing saved says it proposes nothing (step 5 here)", /none saved/.test(await dlg.locator('[data-qd-step="qd_conditions"]').innerText()));
+  step("C4.11 S fail: a step with nothing saved says it proposes nothing (step 5 here)", /None saved[\s\S]*proposes nothing/.test(await dlg.locator('[data-qd-step="qd_conditions"]').innerText()));
   step("C4.11 no system key shows in the plan", !KEYS.test(await dlg.locator("[data-qd-plan]").innerText()), (await dlg.locator("[data-qd-plan]").innerText()).match(KEYS)?.[0]);
   await state("plan-saved");
   await dlg.locator('[data-qd-mode="live"] input').check(); await dlg.locator("[data-qd-cost]").waitFor(); await settle();

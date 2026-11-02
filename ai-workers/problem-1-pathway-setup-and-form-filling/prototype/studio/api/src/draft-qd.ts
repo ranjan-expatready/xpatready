@@ -19,7 +19,7 @@ import { LIVE_WAITING, PqrDrafts, PQR_AI, type SavedState } from "./pqr-drafts.t
 import { Checklists } from "./checklist.ts";
 import { linesOf, savedReading, staleReading } from "./saved-readings.ts";
 import { insertProposals } from "./proposals.ts";
-import { pairOf, StepRunner, worstRoundUsd, type AiStep, type RoundContext, type RoundOut } from "./rounds.ts";
+import { pairOf, roundBudgetUsd, StepRunner, type AiStep, type RoundContext, type RoundOut } from "./rounds.ts";
 import { aiLive, Sources } from "./sources.ts";
 import { conditionsFromRounds, conditionsShapeOk, CONDITIONS_STEP, type CondAnswer, type CondRound } from "../../engine/qd-conditions.ts";
 
@@ -57,7 +57,9 @@ export const QdBody = z.object({ mode: z.enum(["rules", "replay", "live"]), plan
 
 @Injectable()
 export class DraftQd {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(PqrDrafts) private readonly pqr: PqrDrafts, @Inject(Checklists) private readonly checklists: Checklists, @Inject(Sources) private readonly sources: Sources, @Inject(Audit) private readonly audit: Audit) {}
+  /** One step runner for step 5's rounds, so Stop can find the live call running now for a run (review M1). */
+  private readonly runner: StepRunner;
+  constructor(@Inject(Db) private readonly db: Db, @Inject(PqrDrafts) private readonly pqr: PqrDrafts, @Inject(Checklists) private readonly checklists: Checklists, @Inject(Sources) private readonly sources: Sources, @Inject(Audit) private readonly audit: Audit) { this.runner = new StepRunner(sources); }
 
   /** A run left running by a stopped server can never finish: it says so, and no longer blocks a new run (as people-ai does). */
   async onModuleInit() {
@@ -71,6 +73,11 @@ export class DraftQd {
   async stop(actor: Actor, id: string) {
     need(actor, "author");
     const b = await this.db.aiBatch.update({ where: { id }, data: { cancelRequested: true, message: "Stopping" } });
+    // Review M1: a live call running now for this run (step 5's, or step 6's through C4.7's producer) is ended too, as the
+    // finder's and the AI work page's Stop do; the round then says it was stopped and keeps its cost counted.
+    const pqrJob = (await this.db.draftingJob.findFirst({ where: { batchId: id, kind: "pqr_picks" }, select: { id: true } }))?.id;
+    const live = [this.runner.liveJob(id), pqrJob ? this.pqr.liveJob(pqrJob) : undefined].filter((x): x is string => !!x);
+    if (live.length) this.sources.stopLaunches((jobId) => live.includes(jobId));
     await this.audit.log(b.workspaceId, actor.id, "stopped", "questions and documents", id, `${actor.name} stopped drafting questions and documents for "${b.scopeLabel}"`);
   }
 
@@ -133,10 +140,11 @@ export class DraftQd {
     let d: RoundOut<CondAnswer>, k: RoundOut<CondAnswer> | null;
     if (mode === "replay") ({ d, k } = await this.savedConditionRounds(c, { ...g, input: g.input }, batchId));
     else {
-      const runner = new StepRunner(this.sources);
       const ctx: RoundContext = { trail: g.trail, contextKey: c.combinationKey, inputs: [g.input], mode: "live", wanted: async () => !(await stopped()), batchId };
-      d = await runner.round<CondAnswer>(CONDITIONS_AI, false, ctx);
-      k = d.ok ? await runner.round<CondAnswer>(CONDITIONS_AI, true, ctx) : null;
+      // Break L3: a round that throws ends as a failed round, so a paid first round's cost is still counted and said.
+      const safe = async (isCheck: boolean): Promise<RoundOut<CondAnswer>> => { try { return await this.runner.round<CondAnswer>(CONDITIONS_AI, isCheck, ctx); } catch (e) { console.warn(`[draft-qd] conditions ${batchId}:`, String(e).slice(0, 300)); return { ok: false, costUsd: 0, reason: "The AI step stopped on this computer, so nothing of it is used." }; } };
+      d = await safe(false);
+      k = d.ok && !(await stopped()) ? await safe(true) : d.ok ? { ok: false, cancelled: true, costUsd: 0, reason: "Stopped before the checker round was sent: nothing more was charged." } : null;
     }
     const usd = round2(d.costUsd + (k?.costUsd ?? 0));
     if (!d.ok || !k?.ok) {
@@ -191,7 +199,7 @@ export class DraftQd {
     const none = { available: false, why: guideWhy, files: [] as string[] };
     const saved = mode === "rules" ? null : { qd_documents: docs, qd_conditions: g ? await this.conditionsSaved(c, g) : none, pqr_picks: g ? await this.pqr.saved(c, g) : none };
     const anySaved = !!saved && (saved.qd_documents || saved.qd_conditions.available || saved.pqr_picks.available);
-    const worst = mode === "live" && g ? round2(2 * worstRoundUsd(CONDITIONS_AI, g.text.length) + 2 * worstRoundUsd(PQR_AI, g.text.length)) : 0;
+    const worst = mode === "live" && g?.input ? round2(roundBudgetUsd(CONDITIONS_AI, false, [g.input], g.text.length) + roundBudgetUsd(CONDITIONS_AI, true, [g.input], g.text.length) + this.pqr.worstUsd(g)) : 0;
     const remaining = this.sources.ledger().remaining_usd;
     const live = (k: string) => k === "qd_conditions" || k === "pqr_picks";
     const steps = QD_STEPS.map((s, i) => ({ n: i + 1, kind: s.kind, label: s.label,
@@ -267,7 +275,10 @@ export class DraftQd {
         if (await stopped()) {
           await this.db.draftingJob.updateMany({ where: { batchId: batch.id, status: { in: ["WAITING", "RUNNING"] } }, data: { status: "CANCELLED", finishedAt: new Date(), message: "Not run: the run was stopped." } });
           await this.db.aiBatch.update({ where: { id: batch.id }, data: { status: "CANCELLED", finishedAt: new Date(), message: "Stopped by a person; the steps already done stand." } });
-          out.status = "stopped"; break;
+          out.status = "stopped";
+          // Break L6: a stopped run says so, with what it spent.
+          out.note = `Stopped by a person; the steps already done stand.${out.usd > 0 ? ` This run cost US$${out.usd.toFixed(2)} (counted).` : ""}`;
+          break;
         }
         await start(s.kind);
         await slowForTest();
@@ -296,7 +307,7 @@ export class DraftQd {
           // C4.7's producer, unchanged: its rules, its dedupe under a lock and its queue items; it writes this step's job.
           try {
             const pp = await this.pqr.plan(c.id, { mode: plan.mode });
-            const r = await this.pqr.draft(actor, c.id, { mode: plan.mode, planSha256: pp.plan_sha256 }, { jobId: jobs.get("pqr_picks")! });
+            const r = await this.pqr.draft(actor, c.id, { mode: plan.mode, planSha256: pp.plan_sha256 }, { jobId: jobs.get("pqr_picks")!, stopped });
             out.proposed += r.proposed; out.usd = round2(out.usd + r.usd); out.offer_saved ||= r.offer_saved;
           } catch (e) {
             if (!(e instanceof HttpException)) throw e;
@@ -321,7 +332,7 @@ export class DraftQd {
     if (out.status === "done") {
       const late = await stopped();
       if (failed) out.status = "done_with_problems";
-      const bad = done.filter((j) => j.status === "FAILED").map((j) => `${QD_STEPS.find((x) => x.kind === j.kind)?.label ?? j.kind}: ${j.message ?? "it did not finish"}`);
+      const bad = done.filter((j) => j.status === "FAILED").map((j) => `${QD_STEPS.find((x) => x.kind === j.kind)?.label ?? j.kind}: ${(j.message ?? "it did not finish").replace(/\.?$/, ".")}`);
       out.note = `${out.proposed} item${out.proposed === 1 ? "" : "s"} for To review; ${checkWords(out.findings).replace(/^./, (x) => x.toLowerCase())}${notYet ? ` ${notYet} step${notYet === 1 ? " is" : "s are"} not available yet.` : ""}${bad.length ? ` Not done: ${bad.join(" ")}` : ""}${late ? " Stop came after the last step had started, so every step finished." : ""}${plan.mode === "live" ? ` Live, US$${out.usd.toFixed(2)}.` : plan.mode === "replay" ? " Saved, US$0." : ""}${out.offer_saved ? " A Saved result exists for a step that failed: use Saved (US$0)." : ""}`;
       await this.db.aiBatch.update({ where: { id: batch.id }, data: { status: failed ? "PARTIAL" : "COMPLETED", finishedAt: new Date(), message: out.note } });
     }
