@@ -50,7 +50,13 @@ export type RoundContext = { trail: string; contextKey: string; inputs: { file: 
   replayPair?: string;
   /** QA-162 break M2: replay only answers to this prompt version (its replays label; "" for the current one), so a
    *  draft round is never paired with a checker round of another prompt version. Unset: any replayable version. */
-  replayPrompt?: string };
+  replayPrompt?: string;
+  /** C3.4 break B1 (3 Nov): every run of one committed job shares its stem, so the stem alone can pair a checker with a
+   *  later run's draft. When set, only a saved run stamped after `after` and before `before` ("-live-<time>") is replayed. */
+  replayWindow?: { after: string; before: string } };
+
+/** A saved run file's time stamp ("20261102t130134336z"), as named by the launcher; "" when it has none. */
+export const runTime = (file: string) => /-live-(\d{8}t\d{9}z)-[a-z0-9]+\.json$/.exec(file)?.[1] ?? "";
 
 /** The job stem a saved run file shares with the other round of the same live run: the file name without its round base
  *  ("<jobBase>-" or "<jobBase>-check-") and without its "-live-<time>-<suffix>.json" tail. */
@@ -130,7 +136,8 @@ export class StepRunner {
       const mine = replayPattern(step.jobBase, isCheck);
       // The current prompt's answer first; else one of an earlier version the step still replays (plan §4), labelled.
       const prompts = [{ sha256: want.templateSha256, label: "", inputs: undefined as number | undefined }, ...(step.replays ?? []).map((v) => ({ sha256: sha(readFileSync(join(PROMPTS, isCheck ? v.check : v.template))), label: v.label, inputs: v.inputs }))];
-      const runs = (existsSync(RUNS) ? readdirSync(RUNS).filter((f) => mine.test(f) && (ctx.replayPair === undefined || pairOf(step, isCheck, f) === ctx.replayPair)).sort(newestFirst) : []).map(readRun);
+      const runs = (existsSync(RUNS) ? readdirSync(RUNS).filter((f) => mine.test(f) && (ctx.replayPair === undefined || pairOf(step, isCheck, f) === ctx.replayPair)
+        && (!ctx.replayWindow || (runTime(f) > ctx.replayWindow.after && runTime(f) < ctx.replayWindow.before))).sort(newestFirst) : []).map(readRun);
       const usable = (x: SavedRun | null, p: { sha256: string; inputs?: number }): x is SavedRun => !!x && isSameSavedRun(x, { ...want, templateSha256: p.sha256, inputs: p.inputs === undefined ? want.inputs : want.inputs.slice(0, p.inputs) }) && (() => { try { return step.shapeOk(JSON.parse(String(x.raw_output))); } catch { return false; } })();
       let r: SavedRun | undefined, label = "";
       for (const p of prompts.filter((x) => ctx.replayPrompt === undefined || x.label === ctx.replayPrompt)) { r = runs.find((x): x is SavedRun => usable(x, p)); if (r) { label = promptOfRun(r, prompts) ?? ""; break; } }
