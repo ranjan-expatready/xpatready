@@ -1,9 +1,12 @@
-# qa after-merge — 2 Nov 2026, main 59d2da74 (after #397)
+# qa after-merge — 2 Nov 2026, main 59d2da74 (after #397), retest on 54019473 (after #398, #401)
 
 Mode `/qa after-merge` in a cloud copy (lane qa, branch `claude/optimistic-goodall-d6gcl6`). Live AI off on every copy (no STUDIO_*_LIVE), no priced button clicked: **US$0**. Ports 4470–4479 only; the :4400 demo was not used (not reachable from the cloud). Screenshots: `2026-11-02-after-merge/`.
 
 ## Verdict
-**Ready for what is claimed, with one Major bug.** Every `qa/built/` row is scored (12 files deleted), plus C11.3 and C11.7. Moved to **Works**: C11.1, C11.9, C11.10, C2.12, C3.3, C4.1, C4.4. Stay **Partial** (the built part works, the rest is declared not built): C11.3, C11.7, C11.13, C3.4, C4.11, C6.4, C6.12, C7.6. New: **QA-149 (Bug · Major, C6.4/runtime)**, QA-150 (Gap · Minor, C11.3). Closed: **QA-73**, **QA-145**.
+**Ready for what is claimed, with one Major bug.** Every non-M3 `qa/built/` row is scored (10 files deleted), plus C11.3 and C11.7. Moved to **Works**: C11.1, C11.9, C11.10, C2.12, C3.3, C4.1, C4.4. Stay **Partial** (the built part works, the rest is declared not built): C11.3, C11.7, C11.13, C3.4, C4.11. New: **QA-149 (Bug · Major, C6.4/runtime)**, QA-150 (Gap · Minor, C11.3). Closed: **QA-73**, **QA-145**.
+
+**The Lead's message (2 Nov):** the M3 Visitor visa rows (C6.4, C6.12, C11.6, C7.x, C6.9) belong to qa-m3. I had run their packs already; their CAPABILITIES rows and `qa/built/C6.4.md`, `C6.12.md` (and the new `C11.6.md` from #356) are left exactly as on main for qa-m3. My M3 results stay below **as input for qa-m3, not as scores**, and QA-149 stays open (found on C6.4's pack; qa-m3 retests it). C3.12 has no `qa/built` file: scored Partial on 1 Nov (ee72cf3c, QA-148 waits for a decision) and no app change has touched it since, so it is unchanged.
+**Retest on 54019473** (main after #356, #398, #401): C4.11 `check_forms_c411_contract.ts` 31/31 (with #401's new check), `check_forms_c411_draft_qd.ts` 55/55, `_browser.cjs` 19/19; C11.3 pack 19/27, the same failures as on 59d2da74. `check_c1116_one_way_in_browser.cjs` 30/31: its usage line starts the copy with `STUDIO_AI_LIVE=approved` (fake launcher); qa never sets a live switch, so without it the page rightly offers "Find form numbers by rules (free)". Not a bug; CI runs it as written.
 
 ## How it was tested
 * **Underneath:** each capability's acceptance pack and the suites the builders moved, each on its own fresh isolated copy (`isolated.sh`, two waves of nine copies), then the builders' browser checks on fresh copies. Main reaches `main` only through Mergify batches whose checks are green; the full `run-suites.sh` was not rerun here (cost; the Lead asked to test what changed).
@@ -25,9 +28,9 @@ Mode `/qa after-merge` in a cloud copy (lane qa, branch `claude/optimistic-gooda
 | C4.1 | Works | `c41_section_order` 32/32, `c41_questionnaire_roles` 6/6, `c41_section_order_browser` 29/29 alone (it timed out once on the Undo toast while nine copies shared 4 CPUs). Visitor visa waits for C4.11's questions |
 | C4.4 | Works | pack 28/28; browser 33/33 and 19/19 |
 | C4.11 | Partial | `c411_contract` 30/30, `c411_draft_qd_browser` 19/19; pack 4/23 ("Visitor visa has no form fields mapped to facts yet"; needs the P-131 trial) |
-| C6.4 | Partial | pack 8/16: the derived list per person works; **QA-149**; request/upload/history/Not applicable not built (404) |
-| C6.12 | Partial | pack 16/24: filings, group, fees and family maximums with IRCC source; split and biometrics age rules not built; setup_vv_m3 S7/S7a: no eligibility-gates or fee-table route |
-| C7.6 | Partial | `check_c76_readiness.ts` 56/56 (engine); pack 1/23: no readiness, review, upload or Ready-to-file routes yet |
+| C6.4 (qa-m3's; input only) | — | pack 8/16: the derived list per person works; **QA-149**; request/upload/history/Not applicable not built (404) |
+| C6.12 (qa-m3's; input only) | — | pack 16/24: filings, group, fees and family maximums with IRCC source; split and biometrics age rules not built; setup_vv_m3 S7/S7a: no eligibility-gates or fee-table route |
+| C7.6 (qa-m3's; input only) | — | `check_c76_readiness.ts` 56/56 (engine); pack 1/23: no readiness, review, upload or Ready-to-file routes yet |
 
 ## Retests
 * **QA-73 — closed.** `check_screens_qa_1029_browser.cjs` (22 items, every Item ≤ 60 characters or clamped, 20 long definitions in the tip, no role name or whole definition) and `check_review_item_words.ts` 7/7; six-sample Visitor visa Review at three widths, no sideways scroll.
@@ -50,7 +53,7 @@ The :4400 demo (not reachable from the cloud) · a headed walk (no display) · Q
 ## Questions for the Lead
 1. **C11.3 pack AT-9** calls `POST /demo/load` with no body, which loads the suites' old fixture; the Demo menu loads `{"sample":"six"}`, which has every P-112 name. *Recommendation:* change the pack to load the six (a test fix, forms lane) and count AT-9 as passing.
 2. **C11.13 pack's last check** reads the Release page before the second person approves; the Release page lists approved library changes only, so the builder's suite approves first. *Recommendation:* accept the suite's order and amend the pack (P-120 says "shown at release": after approval is when it is released).
-3. **QA-149** — the fix belongs in the runtime lane. *Recommendation:* keep a question in the case while it has an answer and still decides a line, form or question, whether or not that line is open; hold C6.4 merges on the checklist until retested.
+3. **QA-149** — for qa-m3 and the runtime lane. *Recommendation:* keep a question in the case while it has an answer and still decides a line, form or question, whether or not that line is open; hold C6.4 merges on the checklist until retested.
 
 ## Suggestions
 * `lane.sh bind qa` in a cloud copy should stay on the session's branch (or at least build `web/dist` after the merge with main), so qa never walks an old build. *Needed for the proof · Scaffolding.*
