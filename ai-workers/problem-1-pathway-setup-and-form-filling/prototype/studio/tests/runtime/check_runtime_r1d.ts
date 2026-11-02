@@ -450,6 +450,8 @@ async function main() {
   const lockOnline = onlineCopy ? await call("POST", `/runtime/form-copies/${onlineCopy}/lock`, { kind: "filed" }, OFFICER) : { status: 0, body: null };
   ok("C11.6 P-145 pass: a case whose release files IMM 5257 Online offers a PDF copy marked not for filing",
     (ol as (Form & { for_filing?: boolean })[]).some((x) => x.form === "IMM 5257" && x.for_filing === false) && r.status === 202, { forms: ol.map((x) => x.form), status: r.status, detail: r.body?.detail });
+  const onlineForm = (ol as (Form & { for_filing?: boolean; fields_open?: unknown[] })[]).find((x) => x.form === "IMM 5257" && x.for_filing === false);
+  ok("QA-165 part 2 (Devin on #592): the Online form's PDF copy (not for filing, but downloadable) also lists the mandatory fields it leaves empty", (onlineForm?.fields_open?.length ?? 0) > 0, onlineForm?.fields_open?.length);
   ok("C11.6 P-145 fail: that copy is never filed or uploaded (409 in words)", lockOnline.status === 409 && /copy, not for filing/.test(lockOnline.body?.detail ?? ""), [lockOnline.body?.detail, sql(`select status || ' ' || coalesce(error, '') from form_instance where id='${onlineCopy}'`)]);
   ok("PR #12 review 1 pass-guard: the case's other PDF forms are still offered, and the real release is the latest again", ol.length > 0 && sql(`select id from config_release where combination_id='${vv}' order by version desc limit 1`) === rel.id, ol.map((x) => x.form));
   // P-65 (a), review M1: the fill trial verdict gates filing, per form.

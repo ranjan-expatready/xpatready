@@ -8,6 +8,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import fc from "fast-check";
 import { mandatoryOpen } from "../engine/runtime/mandatory.ts";
+import { solutionFile } from "../api/src/fill.ts";
 import type { BoxResult, Inventory } from "../engine/form-values.ts";
 import { recorder } from "./runtime/api.ts";
 
@@ -30,6 +31,10 @@ const o3 = mandatoryOpen(inv, [], [], { ...all, [c]: "" });
 ok("pass: a field nothing maps → \"no question asks it yet\"", o3.length === 1 && o3[0].reason === "no question asks it yet", o3);
 const o4 = mandatoryOpen(inv, [{ data_path: d, fact: "person.x", outcome: "mapped" }], [box(d, { coverage: "unresolved", detail: "collected from a document, but no supported document type supplies it" })], { ...all, [d]: "" });
 ok("fail (r1c screenshot): a mapped fact read from a document is still answerable → \"needs an answer\", never \"no question asks it yet\"", o4.length === 1 && o4[0].reason === "needs an answer" && o4[0].why === "not answered yet (Client A)", o4);
+for (const detail of ["no question placement: nobody is asked for this value yet", "the form field reads a field that is not in the library", "that person is not part of this combination; the form field stays blank"]) {
+  const o = mandatoryOpen(inv, [{ data_path: d, fact: "person.x", outcome: "mapped" }], [box(d, { coverage: "unresolved", detail })], { ...all, [d]: "" });
+  ok(`fail (Devin on #592): a mapped field no answer can fill ("${detail.split(":")[0].split(";")[0]}") → "no question asks it yet", in render's words`, o[0]?.reason === "no question asks it yet" && o[0]?.why === detail, o);
+}
 const o5 = mandatoryOpen(inv, [{ data_path: a, fact: "person.x", outcome: "mapped" }], [box(a, { result: "by hand", why: "\"Z\" has no code" })], one);
 ok("pass: a value with no code in the form → \"filled by hand\", with why", o5.length === 1 && o5[0].reason === "filled by hand" && /no code/.test(o5[0].why), o5);
 const o6 = mandatoryOpen(inv, [{ data_path: a, fact: "person.x", outcome: "mapped" }], [box(a, { coverage: "answered on screen" })], one);
@@ -45,6 +50,10 @@ ok("fail: a question number alone (\"Question 1d.\") is not taken as the sentenc
 const o10 = mandatoryOpen(inv, [{ data_path: a, evidence_quote: "* Date of birth" }], [], one);
 ok("pass: the form's own \"*\" mark is left off the words", o10[0]?.label === "Date of birth", o10[0]?.label);
 ok("fail: a field path never shows as the words", mandatoryOpen(inv, [], [], {}).every((x) => !/form1\[|\[0\]\./.test(x.label)));
+
+// Devin on #592 (security): a release's inventory_file is data; only a .json file inside the solution folder is read.
+ok("fail: an inventory_file that climbs out of the solution folder, or is not .json, is never read", solutionFile("../../../../etc/passwd.json") === null && solutionFile("/etc/hosts.json") === null && solutionFile("prototype/p1/inventory/imm5257e.inventory.pdf") === null && solutionFile(null) === null);
+ok("pass: the release's own field list resolves inside the solution folder", !!solutionFile("prototype/p1/inventory/imm5257e.inventory.json")?.endsWith("/prototype/p1/inventory/imm5257e.inventory.json"));
 
 // Signatures and the oath are person steps (F2/F6), never listed here; buttons neither.
 const sigInv: Inventory = { fields: [{ data_path: "form1[0].P[0].Signature[0].Sign[0]", caption: "Signature of applicant", required: true, ui: "signature" }, { data_path: "form1[0].P[0].Add[0]", caption: "Add", required: true, ui: "button" }, { data_path: "form1[0].P[0].Name[0]", caption: "Family name", required: true, ui: "textEdit" }] };

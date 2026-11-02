@@ -6,7 +6,7 @@ import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve, sep } from "node:path";
 import { promisify } from "node:util";
 import { formValues } from "../../engine/form-values.ts";
 import { personSteps } from "../../engine/form-steps.ts";
@@ -22,6 +22,14 @@ const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex")
  *  the form field's own format or code, signatures and the oath never written, the official copy written append-only by
  *  p5/fill.py and read back. Shared by the configuration preview (sample facts) and a case (its confirmed answers,
  *  runtime lane S-11). Writes <dir>/<base>.pdf, .request.json and .report.json. */
+/** A form's field list named by a release (`inventory_file`), read only from inside the solution folder and only as a
+ *  .json file (Devin on #592: a release is data, so a "../" path must never reach another file). Null when it is not. */
+export function solutionFile(rel: string | null | undefined): string | null {
+  if (!rel || !/\.json$/i.test(rel)) return null;
+  const abs = resolve(SOLUTION, rel), root = resolve(SOLUTION);
+  return abs.startsWith(`${root}${sep}`) ? abs : null;
+}
+
 export async function writeForm(snapshot: Snapshot, cov: { boxes: BoxRow[] }, form: string, dir: string, base: string, opts: { notForFiling?: boolean } = {}) {
   // F1: the PDF edition. A line filed Online is never filled as a PDF, even when the library also has its PDF (review 18);
   // online filling needs the browser extension (later wave, W1-02, P-102).
@@ -31,7 +39,9 @@ export async function writeForm(snapshot: Snapshot, cov: { boxes: BoxRow[] }, fo
   if (line?.channel === "ONLINE" && !opts.notForFiling) fail(`${form} is filed Online here: it needs the browser extension (later wave), so the product does not fill it. File it as a PDF upload to fill its PDF.`, HttpStatus.CONFLICT);
   const map = snapshot.field_maps.find((m: { form_number: string; channel?: string }) => m.form_number === form && m.channel !== "ONLINE");
   if (!map?.official_file || !map.inventory_file) fail("This form's official file or form field list is not recorded; it cannot be filled.");
-  const inv = JSON.parse(readFileSync(join(SOLUTION, map.inventory_file), "utf8"));
+  const invFile = solutionFile(map.inventory_file);
+  if (!invFile) fail("This form's form field list is not in the product's own files; it cannot be filled.");
+  const inv = JSON.parse(readFileSync(invFile!, "utf8"));
   const box = new Map<string, any>(inv.fields.filter((x: any) => x.data_path).map((x: any) => [x.data_path, x]));
   // G4 (C5.7): the value step is engine code (engine/form-values.ts), shared with the answer-key runner.
   const { boxes, values } = formValues(snapshot, map, inv, cov.boxes);

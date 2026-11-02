@@ -31,6 +31,9 @@ const wordsOf = (e: MapEntry | undefined, caption: string | null | undefined, pa
   return one.length < t.length && !/[.?!]$/.test(one) ? `${one.trimEnd()}…` : one;
 };
 
+/** render's "unresolved" details that no answer on this case can fill (engine/render.ts coverage). */
+const UNASKABLE = /no question placement|not in the library|not part of this combination/;
+
 export function mandatoryOpen(inv: Inventory, entries: MapEntry[], boxes: BoxResult[], values: Record<string, string>): OpenField[] {
   const entryOf = new Map(entries.map((e) => [e.data_path, e]));
   const boxOf = new Map(boxes.map((b) => [b.box, b]));
@@ -47,6 +50,9 @@ export function mandatoryOpen(inv: Inventory, entries: MapEntry[], boxes: BoxRes
     else if (b && /^derived:.*\brecorded\b/.test(b.transform ?? "") && !b.nothing_recorded) out.push({ box: path, label, reason: "no question asks it yet", why: "the form's Yes/No: Yes is written when the answer is recorded, and no question records a No yet" });
     // A mapped fact can be answered, whichever source the release names for it (a document reading the case has not
     // got is typed by the officer: r1c's walk), so it "needs an answer"; only an unmapped field has no question.
+    // Devin on #592: a mapped fact that no question asks (no placement), that is not in the library, or about a person
+    // not on the case cannot be answered: "no question asks it yet", with render's own words.
+    else if (b && b.coverage === "unresolved" && UNASKABLE.test(b.detail ?? "")) out.push({ box: path, label, reason: "no question asks it yet", why: b.detail });
     else if (b && e?.fact) out.push({ box: path, label, reason: "needs an answer", why: b.coverage === "answered on screen" ? "answered, not confirmed yet" : b.coverage === "unresolved" ? `not answered yet (${b.about_label})` : `not answered yet (${b.about_label}: ${b.detail})` });
     else out.push({ box: path, label, reason: "no question asks it yet", why: "nothing in this release fills it" });
   }
