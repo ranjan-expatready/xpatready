@@ -204,6 +204,7 @@ export class Finder implements OnModuleInit {
   // ------------------------------------------------------------------ plan and launch
   /** What a run will do, what it may cost and the fingerprint the launch must repeat (the person saw this plan). */
   async plan(combinationId: string, body: unknown, opts: { fresh?: boolean } = {}) {
+    combinationId = combinationId.toLowerCase(); // C11.15 break B1: one combination, one spelling (locks and run keys use it)
     const b = parse(FinderBody, body);
     const c = await trailOf(this.db, combinationId);
     if (b.pageUrl) { const u = officialUrl(b.pageUrl); if (!u.ok) throw problem(400, "Only canada.ca pages", `${u.why} Paste the address of the official application or guide page on canada.ca.`, { errors: [{ field: "pageUrl", message: u.why }] }); }
@@ -257,6 +258,7 @@ export class Finder implements OnModuleInit {
 
   /** Launch: the same plan fingerprint, one run per combination at a time, the same key returns the same run. */
   async launch(actor: Actor, combinationId: string, body: unknown, opts: { fresh?: boolean } = {}) {
+    combinationId = combinationId.toLowerCase(); // C11.15 break B1: one combination, one spelling (locks and run keys use it)
     need(actor, "author");
     const b = parse(FinderLaunchBody, body);
     const workspaceId = await this.ws.id();
@@ -892,6 +894,7 @@ export class Finder implements OnModuleInit {
    *  are added to S5's six states: the two AI rounds disagreed (a person decides, P-121), or the page names it as a
    *  separate application. */
   async latestForms(combinationId: string) {
+    combinationId = combinationId.toLowerCase(); // C11.15 break B1: one combination, one spelling (locks and run keys use it)
     const run = await this.latest(combinationId);
     if (!run) return { run: null, forms: [] };
     // C11.15 review M1: the list is the newest find of the whole combination; a newer run for some forms only (Redo,
@@ -932,6 +935,7 @@ export class Finder implements OnModuleInit {
 
   /** The combination's newest finder run (S5's Forms tab reads this; slice 1 serves it to the scripted journey). */
   async latest(combinationId: string) {
+    combinationId = combinationId.toLowerCase(); // C11.15 break B1: one combination, one spelling (locks and run keys use it)
     const b = await this.db.aiBatch.findFirst({ where: { operation: FINDER_OPERATION, scopeLabel: { startsWith: `${combinationId}|` } }, orderBy: { startedAt: "desc" } });
     return b ? this.view(b.id) : null;
   }

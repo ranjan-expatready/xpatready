@@ -14,7 +14,7 @@ import { Body, Controller, Headers, HttpCode, HttpException, Inject, Injectable,
 import { createHash, randomUUID } from "node:crypto";
 import { RedoBody, normaliseCode, type RedoStage } from "../../contracts/form-library.ts";
 import { START } from "../../contracts/start-setup.ts";
-import { actorOf, Db, need, Workspace, type Actor } from "./core.ts";
+import { actorOf, Audit, Db, need, Workspace, type Actor } from "./core.ts";
 import { Finder } from "./finder.ts";
 import { aiLive } from "./sources.ts";
 
@@ -28,10 +28,14 @@ const WHAT: Record<RedoStage, string> = {
 
 @Injectable()
 export class FormRedo {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Finder) private readonly finder: Finder) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Finder) private readonly finder: Finder, @Inject(Audit) private readonly audit: Audit) {}
 
-  async redo(actor: Actor, combinationId: string, code: string, body: unknown) {
+  async redo(actor: Actor, id: string, code: string, body: unknown) {
     need(actor, "author");
+    // Break B1: one spelling of the combination's id, so the finder's one-run lock and keys see one combination.
+    const combinationId = id.toLowerCase();
+    // Break B6: a form number is short; anything else is refused without echoing it back.
+    if (!/^[A-Z0-9][A-Z0-9 ]{1,30}$/i.test(code)) throw problem(400, "Check the request", "That is not a form number: a form number looks like IMM 5257.");
     const r = RedoBody.safeParse(body ?? {});
     if (!r.success) throw problem(400, "Check the request", r.error.issues[0]?.message ?? "Choose the stage to redo: find, read or match.");
     const b = r.data;
@@ -40,6 +44,8 @@ export class FormRedo {
     const mode = b.mode ?? (aiLive() ? "live" : "replay");
     const fresh = b.stage === "find";
     const plan = await this.finder.plan(combinationId, { mode, only: [code] }, { fresh });
+    // Break B4: read and match reuse the page an earlier find used; with none, only Find can look for one.
+    if (!fresh && !plan.page_url) throw problem(409, "No page from an earlier find", `This combination has no application page from an earlier find yet, so there is nothing to read or match again: choose Find for ${code}.`);
     // The fingerprint names the stage too: a plan seen for "read" never starts "find".
     const planSha256 = createHash("sha256").update(`${b.stage}|${code}|${plan.plan_sha256}`).digest("hex");
     const words = { stage: b.stage, code, what: WHAT[b.stage], mode, steps: plan.steps, totals: plan.totals, ledger: plan.ledger, live: plan.live, note: plan.note, cost_check: plan.cost_check, page_url: plan.page_url };
@@ -48,11 +54,20 @@ export class FormRedo {
     // Live AI starts only when the server's live switch is open (P-192): refused before anything is written.
     if (mode === "live" && !aiLive()) throw problem(409, "AI now is switched off", START.liveOff);
     if (b.planSha256 !== planSha256) throw problem(409, "Look at the plan again", "Something changed since you looked at the plan (the stage, the pages, the mode or the cost). Look at it again before starting.");
+    // Break B2: a launch key already used by another run (another form, stage or find) is refused, never answered with it.
+    let again: { planSha256: string } | null = null;
+    if (b.idempotencyKey) {
+      again = await this.db.aiBatch.findUnique({ where: { workspaceId_idempotencyKey: { workspaceId: await this.ws.id(), idempotencyKey: b.idempotencyKey } }, select: { planSha256: true } });
+      if (again && again.planSha256 !== plan.plan_sha256) throw problem(409, "Key already used", "This launch key belongs to another run. Look at the plan again to start a new one.");
+    }
     const run = await this.finder.launch(actor, combinationId, { mode, only: [code], planSha256: plan.plan_sha256, idempotencyKey: b.idempotencyKey ?? `redo:${b.stage}:${randomUUID()}` }, { fresh });
+    // Break B5: the audit says which form and which stage (the finder's own line says the run started); a start sent
+    // again with its key is the same run, logged once.
+    if (!again) await this.audit.log(await this.ws.id(), actor.id, "redo", "form", code, `${actor.name} started Redo with AI (${b.stage}) for ${code} (${mode === "live" ? "live AI" : mode === "replay" ? "saved AI answers, US$0" : "rules only, US$0"})`, { stage: b.stage, run_id: run.id }, combinationId);
     return { ...words, planSha256, id: run.id, runId: run.id, status: run.status };
   }
 
-  /** The form must be on this combination now: a removed one is added back first, a form never on it is found or added. */
+  /** Refused unless the form is on this combination now: a removed one (409: add it back first), one never on it (404). */
   private async lineOf(combinationId: string, code: string) {
     const workspaceId = await this.ws.id();
     if (!/^[0-9a-f-]{36}$/i.test(combinationId) || !(await this.db.combination.count({ where: { id: combinationId, workspaceId } }))) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");

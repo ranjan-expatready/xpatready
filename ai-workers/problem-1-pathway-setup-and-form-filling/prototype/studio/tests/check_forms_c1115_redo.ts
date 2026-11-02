@@ -100,6 +100,23 @@ const C = encodeURIComponent("IMM 5257");
   ok("C11.15 Redo find, stopped: Stop answers with the run ended (Stopped, or Done when it ended first); nothing spent; the line unchanged",
     s2.status === 200 && ["stopped", "done", "done_with_problems"].includes(stop.body?.status) && (stop.body?.usd?.spent ?? 0) === 0 && line(vv, "IMM 5257") === v5257, { start: s2.status, stop: [stop.status, stop.body?.status] });
 
+  // ------------------------------------------------ break round (B1, B2, B4, B5, B6)
+  ok("C11.15 Redo (break B5): the audit names the form and the stage", sql(`select count(*) from audit_event where action='redo' and entity_key='IMM 5257' and summary like '%Redo with AI (read) for IMM 5257%'`) === "1");
+  const pf = (await call("POST", `/combinations/${vv}/forms/${C}/redo`, { stage: "find" })).body?.planSha256;
+  r = await call("POST", `/combinations/${vv}/forms/${C}/redo`, { stage: "find", mode: "replay", planSha256: pf, idempotencyKey: key });
+  ok("C11.15 Redo refusal (break B2): a launch key already used by another run (here the read run) is refused (409), never answered with that run", r.status === 409 && plain(r.body) && r.body?.id === undefined, [r.status, r.body?.detail]);
+  const nB = batches();
+  const both = await Promise.all([vv, vv.toUpperCase()].map((id) => call("POST", `/combinations/${id}/forms/${C}/redo`, { stage: "find", mode: "replay", planSha256: pf })));
+  ok("C11.15 Redo refusal (break B1): two starts at once, the id in lower and upper case, give one run and a plain 409 (one combination, one run at a time)",
+    both.map((x) => x.status).sort().join() === "200,409" && Number(batches()) === Number(nB) + 1 && plain(both.find((x) => x.status === 409)?.body), both.map((x) => [x.status, x.body?.detail ?? x.body?.id]));
+  for (const x of both) if (x.body?.id) await settle(x.body.id);
+  r = await call("POST", `/combinations/${vv}/forms/${encodeURIComponent("IMM 5257 \u202e' or 1=1 --" + "x".repeat(200))}/redo`, { stage: "find" });
+  ok("C11.15 Redo refusal (break B6): a code that is not a form number is refused (400) without being echoed back", r.status === 400 && plain(r.body) && !/1=1|xxxx/.test(r.body?.detail), [r.status, r.body?.detail]);
+  const bare = sql(`select c.id from combination c where exists (select 1 from combination_form f where f.combination_id = c.id and f.status <> 'RETIRED') and not exists (select 1 from ai_batch b where b.operation = 'find_forms' and b.scope_label like c.id || '|%') limit 1`);
+  const bareCode = bare ? sql(`select lineage_key from combination_form where combination_id='${bare}' and status <> 'RETIRED' order by lineage_key limit 1`) : "";
+  r = bare ? await call("POST", `/combinations/${bare}/forms/${encodeURIComponent(bareCode)}/redo`, { stage: "read" }) : { status: 0, body: null };
+  ok("C11.15 Redo refusal (break B4): read or match on a combination with no page from an earlier find is refused in words (409: choose Find), never a page search", r.status === 409 && plain(r.body) && /choose Find/.test(r.body?.detail), { combination: bare, code: bareCode, status: r.status, detail: r.body?.detail });
+
   // ------------------------------------------------ Replace: compares with canada.ca, never AI
   const n1 = batches();
   r = await call("POST", `/combinations/${vv}/forms/${C}/replace`, { version: Number(v5257.split("|")[1]) });
