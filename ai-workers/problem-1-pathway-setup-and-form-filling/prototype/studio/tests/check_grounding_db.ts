@@ -95,7 +95,7 @@ const sql = (q: string) => execFileSync(PSQL, [`postgresql://xr_studio@127.0.0.1
   r = await call("PATCH", `/combinations/${id}`, { label: "Visitor visa (renamed)", expectedLabel: row.label });
   ok("C11.16: a rename in the setup is refused in plain words (rename it on Program structure); the name is unchanged", r.status === 400 && /Program structure/.test(r.body.message) && sql(`select label from combination where id='${id}'`) === nameBefore, { status: r.status, message: r.body.message });
   // A people change after submission makes the submission stale (the draft moved on).
-  r = await call("PATCH", `/combinations/${id}`, { participants: [{ role: "principal", label: "Applicant", min: 1, max: 1 }, { role: "spouse_or_partner", label: "Spouse or partner", min: 0, max: 1, preview: 1 }, { role: "child", label: "Child", min: 0, max: 3, preview: 0 }] });
+  r = await call("PATCH", `/combinations/${id}`, { participants: [{ role: "principal", label: "Applicant", min: 1, max: 1 }, { role: "spouse_or_partner", label: "Spouse or partner", min: 0, max: 1, preview: 1, filingMode: "files_own" }, { role: "child", label: "Child", min: 0, max: 3, preview: 0, filingMode: "files_own" }] });
   const sub3 = await call("POST", `/combinations/${id}/submit`, {});
   ok("setup: a people change is submitted for release", sub3.status === 201, sub3.body?.message);
   r = await call("PATCH", `/combinations/${id}`, { participants: [{ role: "principal", label: "Applicant", min: 1, max: 1 }, { role: "spouse_or_partner", label: "Spouse or partner", min: 0, max: 1, preview: 1, filingMode: "files_own" }] });
