@@ -32,6 +32,8 @@ for p in approved:
     labels = [l["name"] for l in p["labels"]]
     if "dequeued" in labels:
         alarm(f"#{p['number']} was dequeued (conflict or failed batch) {age} min after approval: Lead fixes now ({p['title'][:50]})")
+    elif "queued" in labels and age <= 120:
+        print(f"wait  #{p['number']} queued {age} min (alarm after 120 while the queue moves)")
     elif age > 60:
         alarm(f"#{p['number']} approved {age} min ago and not merged (target under 60): find what holds it ({p['title'][:50]})")
 ok(f"{len(approved)} approved PRs waiting; oldest {oldest} min since its label") if oldest <= 60 else None
