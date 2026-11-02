@@ -1,149 +1,100 @@
-// C6.12 /prepare API checks (M3-B2, runtime lane; r5c BR-1, BR-16, BR-18, contract §6): GET /api/runtime/cases/:id/prepare
-// on a released Visitor visa. The filings, the family submission group and the form items are derived from the case and
-// stored the first time, so each keeps its id across reads, people who stop applying and forms that stop applying; fee
-// lines add up to what is paid; who may read it; 409 and "not derived". Each rule has a passing and a failing case. The
-// check releases the Visitor visa itself (setup_visitor_visa.ts) when its copy has none. No model call (US$0).
-//   zsh studio/tools/isolated.sh runtime_vp 4432 start && tsx studio/tests/check_vv_prepare_api.ts 4432 xr_studio_runtime_vp
-import { execFileSync } from "node:child_process";
+// C6.12, C11.6 API checks (M3-B, runtime lane): a Visitor visa case's "Prepare application" view on an isolated copy.
+// It releases the Visitor visa twice through the screens' own routes when its copy has none (setup_visitor_visa.ts, then
+// pack 4's acceptance/lib/setup_vv_m3.ts: IRCC account, IMM 5476, channels, filing modes, documents), runs pack 4's
+// acceptance tests C6.12 and C11.6 (moved into the suites by the PR that makes them pass, acceptance/README.md), and adds
+// the edges they leave out: who may split, ids that are not ids, a document has no channel, two reads at once make one
+// family group, and the older /filings view prices the same ages. Each rule has a passing and a failing case. No model
+// call (US$0). Values Sample until the immigration expert confirms. Setup lines owned by other rows (S2w G8, S7 M3-8,
+// S7a W4) may fail there; this check needs only release 2 with its filing modes (S5) and channels (S4).
+//   zsh studio/tools/isolated.sh runtime_prep 4432 start && tsx studio/tests/check_vv_prepare_api.ts 4432 xr_studio_runtime_prep
+import { spawnSync } from "node:child_process";
 import { join } from "node:path";
-import { snapshotHash } from "../engine/snapshot.ts";
 import { client, recorder } from "./runtime/api.ts";
 
-const PORT = Number(process.argv[2] ?? 4432), DB = process.argv[3] ?? "xr_studio_runtime_vp";
+const PORT = Number(process.argv[2] ?? 4432), DB = process.argv[3] ?? "xr_studio_runtime_prep";
 const { call, sql } = client(PORT, DB);
 const { ok, summary } = recorder();
 const OFFICER = "user-O", CLIENT = "user-P", AUTHOR = "user-A";
-const run = Date.now().toString(36);
-type Item = { id: string; kind: string; form: string; filing: string; subject: string; channel: string; accepts: string[]; signature: string; state: string; reason: string; version: number };
-type Fee = { filing: string; subject: string; payer: string; line: string; amount: number; exempt: boolean; reason: string; source: string };
-type P = { derived: boolean; version: string; portal: string | null; filings: { id: string; applicants: { subject: string; role: string; mode: string }[]; group: string }[]; groups: { id: string; kind: string; filings: string[]; splittable: boolean }[]; items: Item[]; fees: Fee[]; not_filing: { subject: string }[] };
+const STUDIO = join(import.meta.dirname, "..");
+const tsx = (file: string) => spawnSync(join(STUDIO, "node_modules", ".bin", "tsx"), ["--tsconfig", join(STUDIO, "api", "tsconfig.json"), join(STUDIO, file), String(PORT), DB], { encoding: "utf8", timeout: 900_000 });
+const releases = () => Number(sql("select count(*) from config_release r join combination k on k.id = r.combination_id where k.combination_key='vv.single'") ?? 0);
 
 (async () => {
-  const released = () => sql("select count(*) from config_release r join combination k on k.id = r.combination_id where k.combination_key='vv.single'") !== "0";
-  if (!released()) {
-    const studio = join(import.meta.dirname, "..");
-    execFileSync(join(studio, "node_modules", ".bin", "tsx"), ["--tsconfig", join(studio, "api", "tsconfig.json"), join(studio, "tests", "runtime", "setup_visitor_visa.ts"), String(PORT), DB], { stdio: ["ignore", "ignore", "inherit"], timeout: 600_000 });
-    ok("setup: the Visitor visa released on this copy by setup_visitor_visa.ts", released());
+  if (releases() === 0) { const r = tsx("tests/runtime/setup_visitor_visa.ts"); ok("setup: release 1 of the Visitor visa (setup_visitor_visa.ts)", r.status === 0 && releases() === 1, r.stdout.split("\n").filter((l) => l.startsWith("FAIL")).slice(0, 3)); }
+  if (releases() === 1) {
+    const r = tsx("acceptance/lib/setup_vv_m3.ts");
+    const line = (id: string) => r.stdout.split("\n").find((l) => l.includes(` ${id} `)) ?? "";
+    ok("setup: release 2 (pack 4 setup_vv_m3.ts) with every role's filing mode (S5, M3-0) and the three form channels (S4)", releases() === 2 && line("S5").startsWith("PASS") && r.stdout.split("\n").filter((l) => / S4 /.test(l)).every((l) => l.startsWith("PASS")), r.stdout.split("\n").filter((l) => l.startsWith("FAIL")).map((l) => l.slice(6, 60)));
   }
+  // Pack 4's acceptance tests, each line shown here; the test's exit code is the verdict.
+  for (const t of ["C6.12", "C11.6"]) {
+    const r = tsx(`acceptance/${t}.test.ts`);
+    for (const l of r.stdout.split("\n").filter((x) => x.startsWith("FAIL"))) console.log(`  ${t}: ${l}`);
+    ok(`${t}: pack 4's acceptance test passes in full (${(r.stdout.trim().split("\n").pop() ?? "").trim()})`, r.status === 0, r.stderr.slice(-300) || undefined);
+  }
+
+  // Edges the acceptance tests leave out, on one Visitor visa case of two adults.
   const vv = sql("select id from combination where combination_key='vv.single'");
-  const open = async (ref: string, people: { role: string; name: string }[]) => {
-    const r = await call("POST", "/runtime/cases", { combinationId: vv, reference: `${ref}-${run}`, clientActor: CLIENT, principal: { displayName: "Sample Client A" } }, OFFICER);
-    const id: string = r.body?.id; const subjects: Record<string, string> = {};
-    for (const p of people) subjects[p.name] = (await call("POST", `/runtime/cases/${id}/people`, { role: p.role, displayName: p.name }, OFFICER)).body?.subject_id;
-    subjects["Sample Client A"] = ((await call("GET", `/runtime/cases/${id}`, undefined, OFFICER)).body.people as { role: string; subject_id: string }[]).find((x) => x.role === "principal")!.subject_id;
-    return { id, subjects };
-  };
-  const prep = async (id: string, who = OFFICER) => { const r = await call("GET", `/runtime/cases/${id}/prepare`, undefined, who); return { r, p: r.status === 200 ? r.body as P : null }; };
-  const filingOf = (p: P | null, s: string) => p?.filings.find((f) => f.applicants[0].subject === s);
-  const sum = (p: P | null, re: RegExp) => (p?.fees ?? []).filter((f) => re.test(f.line)).reduce((t, f) => t + (f.exempt ? 0 : f.amount), 0);
+  const opened = await call("POST", "/runtime/cases", { combinationId: vv, reference: `PREP-${Date.now().toString(36)}`, clientActor: CLIENT, principal: { displayName: "Sample Client P" } }, OFFICER);
+  const caseId: string = opened.body?.id;
+  const spouse = (await call("POST", `/runtime/cases/${caseId}/people`, { role: "spouse_or_partner", displayName: "Sample Spouse P" }, OFFICER)).body?.subject_id;
+  // Two reads at the same moment on a new case: one family group, one filing per person (the case row is locked).
+  const both = await Promise.all([call("GET", `/runtime/cases/${caseId}/prepare`, undefined, OFFICER), call("GET", `/runtime/cases/${caseId}/prepare`, undefined, OFFICER)]);
+  ok("C6.12: two reads at once both answer, and store one family group and two filings", both.every((r) => r.status === 200) && sql(`select count(*) from submission_group where case_id='${caseId}'`) === "1" && sql(`select count(*) from filing where case_id='${caseId}'`) === "2", both.map((r) => r.status));
+  const p = both[0].body;
+  ok("C6.12 (fail): a person with no date of birth yet: their biometrics line waits for it, and the view's total does not count it", p.fees.filter((f: { key: string; waiting?: string }) => f.key === "biometrics").every((f: { waiting?: string }) => f.waiting === "person.date_of_birth"));
+  ok("C6.12 (fail): configuration people cannot read the prepare view (403)", (await call("GET", `/runtime/cases/${caseId}/prepare`, undefined, AUTHOR)).status === 403);
+  ok("C6.12 (fail): a case id that is not an id is not found (404), never a server error", (await call("GET", "/runtime/cases/not-a-case/prepare", undefined, OFFICER)).status === 404);
+  const g = p.groups[0]?.id, f2 = p.filings.find((f: { applicants: { subject: string }[] }) => f.applicants[0].subject === spouse)?.id;
+  let r = await call("POST", `/runtime/groups/${g}/split`, { filing: f2, reason: "Sample", version: p.version }, CLIENT);
+  ok("C6.12 (fail): a client cannot split a submission group (403)", r.status === 403, r.status);
+  r = await call("POST", "/runtime/groups/not-a-group/split", { filing: f2, reason: "Sample", version: p.version }, OFFICER);
+  ok("C6.12 (fail): a group id that is not an id is not found (404)", r.status === 404, r.status);
+  r = await call("POST", `/runtime/groups/${g}/split`, { filing: f2, reason: "Sample: travels later", version: "0" }, OFFICER);
+  ok("C6.12 (fail): a split from an older read is refused (409, Reload), nothing moved", r.status === 409 && sql(`select count(*) from submission_group where case_id='${caseId}'`) === "1", r.status);
+  r = await call("POST", `/runtime/groups/${g}/split`, { filing: f2, reason: "Sample: travels later", version: p.version }, OFFICER);
+  ok("C6.12: a split with a reason makes a separate group that keeps the reason, and is audited without client values", r.status === 200 && r.body.groups.length === 2 && r.body.groups.some((x: { kind: string; reason: string | null }) => x.kind === "separate" && x.reason === "Sample: travels later") && /split the spouse or partner's filing out/.test(sql(`select coalesce(string_agg(summary, ' '), '') from audit_event where entity='submission group' and entity_key='${g}'`) ?? ""), r.body?.groups);
+  r = await call("POST", `/runtime/groups/${r.body.groups.find((x: { kind: string }) => x.kind === "separate").id}/split`, { filing: f2, reason: "again", version: r.body.version }, OFFICER);
+  ok("C6.12 (fail): a group of one has nothing to split (409)", r.status === 409, r.status);
+  const q = (await call("GET", `/runtime/cases/${caseId}/prepare`, undefined, OFFICER)).body;
+  const doc = q.items.find((i: { kind: string }) => i.kind === "document");
+  r = await call("PATCH", `/runtime/items/${doc?.id}/channel`, { channel: "PDF_UPLOAD", version: q.version }, OFFICER);
+  ok("C11.6 (fail): a document item has no channel (422)", !!doc && r.status === 422, r.status);
+  r = await call("PATCH", "/runtime/items/not-an-item/channel", { channel: "PDF_UPLOAD", version: q.version }, OFFICER);
+  ok("C11.6 (fail): an item id that is not an id is not found (404)", r.status === 404, r.status);
+  const form = q.items.find((i: { kind: string; form?: string }) => i.form === "IMM 5257");
+  r = await call("PATCH", `/runtime/items/${form?.id}/channel`, { channel: "PDF_UPLOAD", version: q.version }, OFFICER);
+  ok("C11.6 (break m1): choosing the channel the item already has is a 200 that changes nothing (nothing stored, no new version)", r.status === 200 && r.body.changed === false && r.body.item?.channel === "PDF_UPLOAD" && r.body.version === q.version && sql(`select coalesce(channel::text, 'none') from filing_item where id='${form?.id}'`) === "none", r.body?.changed);
+  // The older /filings view (#283) agrees with the prepare view on ages: answer both dates of birth, then compare.
+  const answerDob = async (subject: string, dob: string) => { const qs = (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, OFFICER)).body?.sections?.flatMap((x: { questions: { subjectId: string; fact: string; answer: { id: string } | null }[] }) => x.questions) ?? []; const a = qs.find((x: { subjectId: string; fact: string }) => x.subjectId === subject && x.fact === "person.date_of_birth"); return call("PUT", `/runtime/cases/${caseId}/answers/${subject}/person.date_of_birth`, { value: dob, expectedId: a?.answer?.id ?? null }, OFFICER); };
+  const principal = opened.body?.people?.find((x: { role: string }) => x.role === "principal")?.subject_id;
+  await answerDob(principal, "1950-01-01"); await answerDob(spouse, "1940-01-01");
+  const after = (await call("GET", `/runtime/cases/${caseId}/prepare`, undefined, OFFICER)).body;
+  ok("C6.12 VV-R15: a person over 79 has an exempt biometrics line with IRCC's words; one aged 76 pays CAD 85", after.fees.some((f: { key: string; subject: string; exempt: boolean; reason: string }) => f.key === "biometrics" && f.subject === spouse && f.exempt && /over the age of 79/.test(f.reason)) && after.fees.some((f: { key: string; subject: string; amount: number }) => f.key === "biometrics" && f.subject === principal && f.amount === 85));
+  // Review M1, break M1: two splits from one read, sent at once on a group of two: one passes, the family group is never emptied.
+  const race = await call("POST", "/runtime/cases", { combinationId: vv, reference: `RACE-${Date.now().toString(36)}`, clientActor: CLIENT, principal: { displayName: "Sample Client R" } }, OFFICER);
+  await call("POST", `/runtime/cases/${race.body?.id}/people`, { role: "spouse_or_partner", displayName: "Sample Spouse R" }, OFFICER);
+  const rp = (await call("GET", `/runtime/cases/${race.body?.id}/prepare`, undefined, OFFICER)).body;
+  const both2 = await Promise.all(rp.filings.map((f: { id: string }) => call("POST", `/runtime/groups/${rp.groups[0].id}/split`, { filing: f.id, reason: "Sample: race", version: rp.version }, OFFICER)));
+  ok("C6.12 (fail): two splits from one read at once: exactly one passes, the other is 409, and the family group keeps a filing", both2.filter((x) => x.status === 200).length === 1 && both2.filter((x) => x.status === 409).length === 1 && sql(`select count(*) from filing f join submission_group g on g.id=f.submission_group_id where f.case_id='${race.body?.id}' and g.kind='FAMILY'`) === "1", both2.map((x) => x.status));
+  // Review M2, break B1: reasons stay on their rows: never in an audit line, and another firm never reads these lines.
+  const PRIVATE = "Sample private reason 7Q";
+  const rq = (await call("GET", `/runtime/cases/${race.body?.id}/prepare`, undefined, OFFICER)).body;
+  const i5257 = rq.items.find((i: { form?: string }) => i.form === "IMM 5257");
+  r = await call("PATCH", `/runtime/items/${i5257?.id}/channel`, { channel: "PAPER", reason: PRIVATE, version: rq.version }, OFFICER);
+  ok("C11.6: Paper with a reason is saved on the item, reason included", r.status === 200 && sql(`select channel_reason from filing_item where id='${i5257?.id}'`) === PRIVATE, r.status);
+  ok("C6.12, C11.6 (fail): no audit line holds a split or Paper reason, in its words or its detail", sql(`select count(*) from audit_event where (summary like '%Sample: race%' or summary like '%${PRIVATE}%' or detail::text like '%${PRIVATE}%' or detail::text like '%Sample: race%')`) === "0");
+  const feed = (await call("GET", "/activity", undefined, "user-S")).body;
+  ok("C6.12, C11.6 (fail): the solo firm's staff never read the Sample firm's item or group lines in the activity feed", Array.isArray(feed) && !feed.some((e: { entity: string }) => ["item", "submission group"].includes(e.entity)), Array.isArray(feed) ? feed.length : feed);
+  const rs = (await call("GET", `/runtime/cases/${race.body?.id}/prepare`, undefined, OFFICER)).body;
+  r = await call("PATCH", `/runtime/items/${i5257?.id}/channel`, { channel: "PAPER", reason: "again", version: rs.version }, OFFICER);
+  ok("C11.6 (break m1): the same channel again changes nothing: no new version, no audit line", r.status === 200 && r.body.changed === false && r.body.version === rs.version && sql(`select count(*) from audit_event where entity='item' and entity_key='${i5257?.id}'`) === "1", r.body?.changed);
+  r = await call("PATCH", `/runtime/items/${i5257?.id}/channel`, { channel: "PDF_UPLOAD", reason: "bad\u0000reason", version: rs.version }, OFFICER);
+  ok("C11.6 (break m2, fail): a reason with a control character is a 400 on the reason, nothing saved", r.status === 400 && /plain text/.test(JSON.stringify(r.body)) && sql(`select channel from filing_item where id='${i5257?.id}'`) === "PAPER", r.status);
+  const fl = (await call("GET", `/runtime/cases/${caseId}/filings`, undefined, OFFICER)).body;
+  const cents = (x: { fees: { line?: string; key?: string; amount_cents: number; waiting?: string }[] }, k: string) => x.fees.filter((f) => (f.key ?? f.line) === k && !f.waiting).reduce((n, f) => n + f.amount_cents, 0);
+  ok("C6.12: the /filings view (#283) prices the same as the prepare view: same ages, same split groups", fl.groups?.length === after.groups.length && ["visitor_visa", "biometrics"].every((k) => cents(fl, k) === cents(after, k)) && cents(fl, "biometrics") === 85_00, { filings: fl.groups?.length, prepare: after.groups.length });
+  ok("C6.12: the item list follows: no biometrics step for the person over 79", !after.items.some((i: { kind: string; subject: string }) => i.kind === "step" && i.subject === spouse) && after.items.some((i: { kind: string; subject: string }) => i.kind === "step" && i.subject === principal));
 
-  const c = await open("VP", [{ role: "spouse_or_partner", name: "Sample Spouse A" }, { role: "child", name: "Sample Child A1" }]);
-  const A = c.subjects["Sample Client A"], S = c.subjects["Sample Spouse A"], K = c.subjects["Sample Child A1"];
-  let { r, p } = await prep(c.id);
-  ok("C6.12 pass: the case officer reads /prepare (200), derived for the Visitor visa", r.status === 200 && p?.derived === true, r.body);
-  ok("C6.12 fail: a client cannot read it (403)", (await prep(c.id, CLIENT)).r.status === 403);
-  ok("C6.12 fail: a configuration person cannot (403)", (await prep(c.id, AUTHOR)).r.status === 403);
-  ok("C6.12 fail: an unknown case is not found (404)", (await prep("00000000-0000-4000-8000-000000000000")).r.status === 404);
-  ok("C6.12 BR-1 pass: three people, three filings, one applicant each, files_own", p?.filings.length === 3 && p.filings.every((f) => f.applicants.length === 1 && f.applicants[0].mode === "files_own") && [A, S, K].every((s) => !!filingOf(p, s)), p?.filings);
-  ok("C6.12 BR-16 pass: one family submission group with all three, splittable", p?.groups.length === 1 && p.groups[0].kind === "family" && p.groups[0].filings.length === 3 && p.groups[0].splittable === true, p?.groups);
-  ok("C6.12 pass (data): filing, filing_applicant and submission_group rows match the view", sql(`select count(*) from filing where case_id='${c.id}' and active`) === "3" && sql(`select count(*) from filing_applicant fa join filing f on f.id=fa.filing_id where f.case_id='${c.id}'`) === "3" && sql(`select count(*) from submission_group where case_id='${c.id}'`) === "1");
-  ok("C6.12 fail: nobody creates a filing by hand (POST …/filings is no route: 404 or 405)", [404, 405].includes((await call("POST", `/runtime/cases/${c.id}/filings`, { subject: A }, OFFICER)).status));
-
-  // Ids and version are stable over reads.
-  const first = p!;
-  ({ p } = await prep(c.id));
-  ok("C6.12 pass: a second read keeps every filing, group and item id and the version", JSON.stringify(p?.filings.map((f) => f.id)) === JSON.stringify(first.filings.map((f) => f.id)) && p?.groups[0].id === first.groups[0].id && JSON.stringify(p?.items.map((i) => i.id)) === JSON.stringify(first.items.map((i) => i.id)) && p?.version === first.version);
-  const xmins = () => sql(`select string_agg(x, ',' order by x) from (select xmin::text || id::text x from filing where case_id='${c.id}' union all select i.xmin::text || i.id::text from filing_item i join filing f on f.id=i.filing_id where f.case_id='${c.id}') t`);
-  const before = xmins(); await prep(c.id);
-  ok("C6.12 review M1: a read with nothing new writes nothing (no row rewritten: xmin unchanged)", !!before && xmins() === before);
-  ok("C6.12 fail (data): the second read stored nothing twice", sql(`select count(*) from filing where case_id='${c.id}'`) === "3" && sql(`select count(*) from filing_item i join filing f on f.id=i.filing_id where f.case_id='${c.id}'`) === String(first.items.length));
-
-  // Items: each filing's forms, the combination line's channel, what IRCC accepts, the signature, the reason.
-  const its = (s: string) => (p?.items ?? []).filter((i) => i.subject === s);
-  ok("C6.12 items pass: each person files their own IMM 5257 on their own filing", [A, S, K].every((s) => its(s).some((i) => i.form === "IMM 5257" && i.filing === filingOf(p, s)?.id)), p?.items.map((i) => `${i.form}:${i.subject.slice(0, 4)}`));
-  ok("C6.12 items: each item starts on its combination line's channel, lists the channels IRCC accepts and its signature, and says why it is there", (p?.items ?? []).every((i) => i.channel === sql(`select coalesce(x->>'channel','PDF_UPLOAD') from pack_work_pin w join config_release r on r.id=w.config_release_id, jsonb_array_elements(r.snapshot->'forms') x where w.case_id='${c.id}' and x->>'form_number'='${i.form}'`) && i.accepts.length >= 1 && i.accepts.includes(i.channel) && !!i.signature && i.reason.length > 10));
-  const inRelease = new Set(sql(`select string_agg(x->>'form_number', ',') from pack_work_pin w join config_release r on r.id=w.config_release_id, jsonb_array_elements(r.snapshot->'forms') x where w.case_id='${c.id}'`).split(","));
-  ok("C6.12 items (fail): no item names a form outside the case's release, or a person without a filing", (p?.items ?? []).every((i) => inRelease.has(i.form) && p!.filings.some((f) => f.id === i.filing && f.applicants[0].subject === i.subject)));
-
-  // Someone stops applying: no filing, fee or item; back again: the same filing and items.
-  const fileK = filingOf(p, K)!.id, itemsK = its(K).map((i) => i.id).sort();
-  await call("PATCH", `/runtime/cases/${c.id}/people/${K}`, { applies: false }, OFFICER);
-  ({ p } = await prep(c.id));
-  ok("C6.12 fail: a child not travelling has no filing, item or fee, and is listed with the reason", p?.filings.length === 2 && !filingOf(p, K) && !its(K).length && !(p?.fees ?? []).some((f) => f.subject === K) && (p?.not_filing ?? []).some((n) => n.subject === K && /not travelling/i.test((n as { why?: string }).why ?? "")));
-  ok("C6.12 pass (data): the filing is kept inactive, not deleted", sql(`select active from filing where id='${fileK}'`) === "f");
-  await call("PATCH", `/runtime/cases/${c.id}/people/${K}`, { applies: true }, OFFICER);
-  ({ p } = await prep(c.id));
-  ok("C6.12 pass: travelling again, the child gets the same filing and the same items back", filingOf(p, K)?.id === fileK && JSON.stringify(its(K).map((i) => i.id).sort()) === JSON.stringify(itemsK));
-  ok("C6.12 pass: the other filings kept their ids throughout", [A, S].every((s) => filingOf(p, s)?.id === first.filings.find((f) => f.applicants[0].subject === s)?.id));
-
-  // Review m1: a form that stops applying keeps its item (inactive) and gets it back with the same id and channel.
-  const relC = sql(`select r.id from config_release r join pack_work_pin w on w.config_release_id = r.id where w.case_id = '${c.id}'`);
-  const snap = sql(`select snapshot->'forms' from config_release where id='${relC}'`);
-  const item5707 = its(A).find((i) => i.form === "IMM 5707")?.id;
-  // As a release without IMM 5707 would be: the snapshot and its fingerprint change together (break B2 refuses one alone).
-  const refit = () => { const h = snapshotHash(JSON.parse(sql(`select snapshot::text from config_release where id='${relC}'`))); sql(`update config_release set sha256='${h}' where id='${relC}'`); pinHash(h); };
-  // Test scaffolding only, on this isolated copy: the pin is frozen by a trigger (runtime_pin_frozen), so the check lifts
-  // it for the one statement that stands in for "this case's release has no IMM 5707", and puts it back at once.
-  const pinHash = (h: string) => sql(`alter table pack_work_pin disable trigger trg_pack_work_pin_frozen; update pack_work_pin set content_hash='${h}' where config_release_id='${relC}'; alter table pack_work_pin enable trigger trg_pack_work_pin_frozen`);
-  const oldHash = sql(`select sha256 from config_release where id='${relC}'`);
-  sql(`update config_release set snapshot = jsonb_set(snapshot, '{forms}', (select jsonb_agg(x) from jsonb_array_elements(snapshot->'forms') x where x->>'form_number' <> 'IMM 5707')) where id='${relC}'`);
-  refit();
-  try {
-    ({ r, p } = await prep(c.id));
-    ok("C6.12 review m1 (fail): a form that no longer applies is not listed; its item is kept inactive, not deleted", !!item5707 && !(p?.items ?? []).some((i) => i.form === "IMM 5707") && sql(`select active from filing_item where id='${item5707}'`) === "f", { r: r.status, body: r.status === 200 ? p?.items?.map((i) => i.form) : r.body });
-  } finally { sql(`update config_release set snapshot = jsonb_set(snapshot, '{forms}', '${snap.replace(/'/g, "''")}'::jsonb), sha256='${oldHash}' where id='${relC}'`); pinHash(oldHash); }
-  // Break B2: a snapshot edited without its fingerprint is refused (409) and nothing is stored from it.
-  const itemsBefore = sql(`select count(*) from filing_item i join filing f on f.id=i.filing_id where f.case_id='${c.id}'`);
-  sql(`update config_release set snapshot = jsonb_set(snapshot, '{forms,0,form_number}', '"IMM 5257 renamed"') where id='${relC}'`);
-  try {
-    r = (await prep(c.id)).r;
-    ok("C6.12 break B2 (fail): a release snapshot edited after release is refused (409) and nothing is stored from it", r.status === 409 && /fingerprint/.test(r.body?.detail ?? "") && sql(`select count(*) from filing_item i join filing f on f.id=i.filing_id where f.case_id='${c.id}'`) === itemsBefore, r.body);
-  } finally { sql(`update config_release set snapshot = jsonb_set(snapshot, '{forms}', '${snap.replace(/'/g, "''")}'::jsonb) where id='${relC}'`); }
-  ok("C6.12 break B4 (fail): HEAD is refused (405), never answered by storing rows", (await fetch(`http://127.0.0.1:${PORT}/api/runtime/cases/${c.id}/prepare`, { method: "HEAD", headers: { "x-actor": OFFICER } })).status === 405);
-  ({ p } = await prep(c.id));
-  ok("C6.12 review m1 pass: when it applies again the same item comes back", its(A).find((i) => i.form === "IMM 5707")?.id === item5707);
-
-  // Fees: what the lines add up to is what is paid; six people reach the family maximum, on the principal's filing.
-  ok("C6.12 BR-18 pass: three people: visitor visa CAD 300, biometrics CAD 170 (the family maximum from 2), each line cites the fee list", sum(p, /visitor visa/i) === 300 && sum(p, /biometrics/i) === 170 && (p?.fees ?? []).every((f) => /ircc\.canada\.ca/.test(f.source) && !!f.reason));
-  const six = await open("VP6", [{ role: "spouse_or_partner", name: "Sample Spouse B" }, ...[1, 2, 3, 4].map((n) => ({ role: "child", name: `Sample Child B${n}` }))]);
-  const q = (await prep(six.id)).p;
-  const lead = filingOf(q, six.subjects["Sample Client A"])?.id;
-  ok("C6.12 BR-18 pass: six people pay the CAD 500 maximum once, on the principal's filing; the other five are exempt with the reason", sum(q, /visitor visa/i) === 500 && (q?.fees ?? []).filter((f) => /visitor visa/i.test(f.line) && !f.exempt).every((f) => f.filing === lead) && (q?.fees ?? []).filter((f) => /visitor visa/i.test(f.line) && f.exempt).length === 5, q?.fees);
-  ok("C6.12 BR-18 (fail): no fee line names a filing that is not in the view", (q?.fees ?? []).every((f) => q!.filings.some((x) => x.id === f.filing)));
-
-  // Two first reads at once make one group and one filing per person.
-  const twin = await open("VPT", [{ role: "spouse_or_partner", name: "Sample Spouse C" }]);
-  const both = await Promise.all([prep(twin.id), prep(twin.id), prep(twin.id)]);
-  ok("C6.12 pass (concurrency): three first reads at once store one group and two filings, and agree", both.every((x) => x.r.status === 200) && sql(`select count(*) from submission_group where case_id='${twin.id}'`) === "1" && sql(`select count(*) from filing where case_id='${twin.id}'`) === "2" && new Set(both.map((x) => x.p?.version)).size === 1, both.map((x) => x.r.status));
-
-  // Break B1: many reads at once on one case all answer, and other routes stay quick.
-  const burst = await Promise.all(Array.from({ length: 120 }, () => call("GET", `/runtime/cases/${twin.id}/prepare`, undefined, OFFICER)));
-  ok("C6.12 break B1: 120 reads at once on one case all answer 200 (no transaction for a read with nothing new)", burst.every((x) => x.status === 200), [...new Set(burst.map((x) => x.status))]);
-
-  // Review round 2 M1: reads that each have something to store, arriving together, never use up the connections.
-  const fresh = await open("VPF", [{ role: "spouse_or_partner", name: "Sample Spouse F" }]);
-  const firsts = await Promise.all(Array.from({ length: 24 }, () => prep(fresh.id)));
-  ok("C6.12 review R2-M1: 24 first reads at once on one new case all answer 200, one group and two filings stored", firsts.every((x) => x.r.status === 200) && sql(`select count(*) from submission_group where case_id='${fresh.id}'`) === "1" && sql(`select count(*) from filing where case_id='${fresh.id}'`) === "2", [...new Set(firsts.map((x) => x.r.status))]);
-  const many = await Promise.all(Array.from({ length: 12 }, (_, i) => open(`VPM${i}`, [])));
-  const t0 = Date.now();
-  const reads = await Promise.all(many.map((m) => prep(m.id)));
-  ok("C6.12 review R2-M1: 12 new cases read at once all answer 200 within seconds, one group each", reads.every((x) => x.r.status === 200) && Date.now() - t0 < 8000 && many.every((m) => sql(`select count(*) from submission_group where case_id='${m.id}'`) === "1"), { statuses: [...new Set(reads.map((x) => x.r.status))], ms: Date.now() - t0 });
-  const order = (await prep(six.id)).p?.filings.map((f) => f.applicants[0].subject);
-  ok("C6.12 review R2-m1: filings follow the order of the people on the case", JSON.stringify(order) === JSON.stringify(["Sample Client A", "Sample Spouse B", "Sample Child B1", "Sample Child B2", "Sample Child B3", "Sample Child B4"].map((n) => six.subjects[n])), order);
-
-  // 409 when the release no longer names the case's combination; another combination: not derived yet.
-  const rel = sql(`select r.id from config_release r join pack_work_pin w on w.config_release_id = r.id where w.case_id = '${c.id}'`);
-  sql(`update config_release set snapshot = jsonb_set(snapshot, '{combination,key}', '"wp.family"') where id = '${rel}'`);
-  try {
-    r = (await prep(c.id)).r;
-    ok("C6.12 fail: a release that no longer names the case's combination is refused (409), nothing prepared", r.status === 409 && /does not describe the case's own combination/.test(r.body?.detail ?? ""), r.body);
-  } finally { sql(`update config_release set snapshot = jsonb_set(snapshot, '{combination,key}', '"vv.single"') where id = '${rel}'`); }
-  ok("C6.12 pass: it reads again once the release is as released", (await prep(c.id)).r.status === 200);
-  const wp = sql("select c.id from combination c where c.combination_key='wp.family' and exists (select 1 from config_release r where r.combination_id=c.id)");
-  if (wp) {
-    const other = (await call("POST", "/runtime/cases", { combinationId: wp, reference: `VP-WP-${run}`, clientActor: CLIENT, principal: { displayName: "Sample Client W" } }, OFFICER)).body?.id as string;
-    const o = await prep(other);
-    ok("C6.12 fail: another combination is not derived yet, says so, and stores nothing", o.r.status === 200 && o.r.body.derived === false && /not derived yet/.test(o.r.body.why) && sql(`select count(*) from filing where case_id='${other}'`) === "0", o.r.body);
-  } else ok("C6.12 fail: another combination is not derived yet (no other released combination on this copy)", false, "release wp.family first");
   process.exitCode = summary() ? 1 : 0;
-})().catch((e) => { console.error(e); process.exit(1); });
+})().catch((e) => { console.error(e); process.exitCode = 1; });
