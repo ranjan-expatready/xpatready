@@ -95,8 +95,12 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await as("user-C"); await p.goto(`${BASE}/c/${vv}/forms?setup=${encodeURIComponent("IMM 5707")}`); await wait('[data-setup-rail="IMM 5707"]', "the waiting rail");
     await axe("a rail waiting on someone else (content reviewer, Visitor visa IMM 5707)");
     await as("user-A"); await p.goto(`${BASE}/c/${lmia}/forms?setup=${encodeURIComponent("IMM 5409")}`); await wait('[data-setup-rail="IMM 5409"]', "the done rail");
-    step("C2.12 pass: With an LMIA's IMM 5409 is all done (Every step is done)", /Every step is done/.test(await p.getByRole("dialog").textContent()));
-    await axe("a rail with every step done (With an LMIA IMM 5409)");
+    // IRCC-F08 (this PR): the sample's IMM 5409 carries form fields still undecided from an earlier release, so step 6 is
+    // not "done" any more; the rail names them and offers the author the next step. The done path is the pure check in
+    // check_forms_c212_complete.ts (no sample form is complete under this rule).
+    const rail5409 = await p.getByRole("dialog").textContent();
+    step("C2.12 IRCC-F08 fail (browser): With an LMIA's IMM 5409 is not said complete while carried form fields are undecided; the rail names them and offers Decide the form fields", !/Every step is done/.test(rail5409) && /form fields? not decided yet \(from an earlier release\)/.test(rail5409) && (await p.getByRole("dialog").getByRole("link", { name: "Decide the form fields" }).count()) >= 1, rail5409.slice(0, 300));
+    await axe("a rail waiting on carried form fields (With an LMIA IMM 5409)");
     await p.keyboard.press("Escape");
     // Review Major 3: a row action refreshes that row's chip (Add from library on the attached IMM 5707 of Super visa).
     await p.goto(`${BASE}/c/${sv}/forms`); await wait('[data-step-chip="IMM 5707"][data-current="map"]', "IMM 5707 at step 2");
