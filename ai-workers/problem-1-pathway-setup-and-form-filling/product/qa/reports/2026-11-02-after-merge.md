@@ -66,3 +66,29 @@ The :4400 demo (not reachable from the cloud) · a headed walk (no display) · Q
 * **C7.2 → Partial** (#414). `check_c72_imm5257_fill.ts` 36/36: the Sample family's IMM 5257 fills 40 of 46 mandatory fields, none by hand. Still open: the 6 mandatory boxes no question asks (#414's Questions, forms row) and Adobe Validate plus the barcode read-back (Mac only, the evidence lane).
 * **C11.7:** waits for #407 (Reset to the six, P-226); it will be scored when that merges.
 * Records: merged qa-m3's QA-151 to QA-153 and C11.6 with this round's rows, keeping both sides; qa-m3's C6.4 row cites QA-149.
+
+## Round 4 — P-250 before-merge scoring, then main 0dbcbd84 (LeadX, 2 Nov morning)
+**Before merge, on each approved PR's head commit** (its own worktree and fresh isolated copy, US$0); the verdict is commented on each PR. None had a Blocker or Major.
+
+| PR | Head | Result |
+|---|---|---|
+| #407 D1 Reset to the six | 8b55f569 | d1 25/25, d1 browser 25/25, s7_reset 4/4, qa145 8/8; walked twice (see C11.7) |
+| #427 C11.13 Draft fields | 44f04033 | 42/42, browser 14/14 |
+| #428 QA-76 | 99425a77 | qa76_words 10/10, case_engine 61/61, r1c 125/125 (after setup_visitor_visa) |
+| #429 D3 edition label | 4711bd95 | d3_saved_edition 11/11, c34_masters 29/29, c312_field_map 48/48 |
+| #426 C3.6 answer values | b168543d | 50/50, browser 12/12 |
+| #423 c313 fix | 8e04cf19 | 24/24 alone. Minor: under the load of five copies its sample load got 409 "Already in progress …" (a repeated request) |
+| #434 screen01 race | e6e5a277 | 135/135 |
+| #435 D2 part 1 | fd06266f | c33 failed run browser 22/22, s5_slice3 35/35. Two checks need `STUDIO_AI_LIVE=approved`; qa never sets it, so they were not run |
+| #436 samples (P-230) | 7c1eb50d | s7_load 23/23 |
+| #409 C7.2 evidence | 04b305c3 | records only. Minor: the README's 32/46 predates #414 (40/46 now) |
+
+**After merge, on main 0dbcbd84:**
+* C11.7: Partial (P-226 Reset to the six done; part B red).
+* C11.3: Partial (names done after Reset to the six; QA-150 and AI "did you mean" open).
+* C11.13: Partial (Draft fields 42/42; AI "did you mean" off, P-95).
+* C3.3: Works (K2: `check_ai_drafting.ts` 48/48 in a throwaway worktree, 14/14, 22/22, screens read as a person).
+* C4.5: Works under P-256 (34/34, 35/35; the per-section document fill moves to M3 with C6.5).
+* C5.1: Partial (P-248 not built yet, G5; the F8 check still allows documents only).
+* QA-76: Minor (was Major); only the representative's heading is still unseen.
+* Built files deleted: C11.13, C11.7-D1. Left for qa-m3: C6.4.
