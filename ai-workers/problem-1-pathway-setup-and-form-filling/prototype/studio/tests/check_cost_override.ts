@@ -1,9 +1,15 @@
 // P-179 (C11.8): the API side of a cost warning a person may continue past. Every forms plan carries `cost_check` and
 // `run_key`; POST /ai/overrides records a person's Continue (author only, the plan made again must match, never past
 // US$132); a launch over a limit starts only with an unused Continue for that run (once, within 10 minutes); attempts per
-// form (Q2) allow exactly one more run per click. The check starts its own isolated copy with no live AI switch and the
-// queue held, on a scratch ledger of its own that it seeds (test spend and test overrides never reach the ledger every
-// copy shares, QA-90): no AI call, no launcher, US$0. Every rule has a passing and a failing case.
+// form (Q2) allow exactly one more run per click. The check starts its own isolated copy with the queue held, on a
+// scratch ledger of its own that it seeds (test spend and test overrides never reach the ledger every copy shares, QA-90).
+// Every rule has a passing and a failing case.
+// C11.8 (P-175 one door rule; review M1; P-192 pairing approved by the tech lead for this check, 2 Nov): a live field-map
+// start is refused at the door on a copy without the live switch, so this check's own copy starts with
+// STUDIO_AI_LIVE=approved paired with STUDIO_FAKE_LAUNCHER (the test fixture), STUDIO_HOLD_QUEUE=1 and the scratch
+// ledger: live starts are queued and held, never sent; nothing can reach a model; US$0. Guard: the check aborts before
+// any start unless the copy reports live on with the stand-in launcher (GET /session → ai). The door with the switch off
+// is checked in check_forms_c118_acceptance.ts (AT-3b, AT-9b). Never on a shared copy or the demo.
 //   tsx --tsconfig studio/api/tsconfig.json studio/tests/check_cost_override.ts [port=4454] [name=forms_co]
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -15,7 +21,10 @@ const PORT = Number(process.argv[2] ?? 4454), NAME = process.argv[3] ?? "forms_c
 const SCRATCH = mkdtempSync(join(tmpdir(), "p2-ledger-p179-"));
 const LEDGER = join(SCRATCH, "spend.jsonl");
 const ISOLATED = join(import.meta.dirname, "..", "tools", "isolated.sh");
-execFileSync("zsh", [ISOLATED, NAME, String(PORT), "start", `P2_LEDGER_DIR=${SCRATCH}`, "STUDIO_HOLD_QUEUE=1"], { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, STUDIO_AI_LIVE: "" } });
+// P-192 guard, part 1: the live switch is only ever passed together with the fake launcher (this fixture, absolute path).
+const FAKE = join(import.meta.dirname, "fixtures", "fake-launch.mjs");
+if (!existsSync(FAKE)) { console.log(`FAIL  guard: the fake launcher ${FAKE} is missing; the live switch is never set without it`); rmSync(SCRATCH, { recursive: true, force: true }); process.exit(1); }
+execFileSync("zsh", [ISOLATED, NAME, String(PORT), "start", `P2_LEDGER_DIR=${SCRATCH}`, "STUDIO_HOLD_QUEUE=1", "STUDIO_AI_LIVE=approved", `STUDIO_FAKE_LAUNCHER=${FAKE}`], { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, STUDIO_AI_LIVE: "", STUDIO_FAKE_LAUNCHER: "" } });
 const stop = () => { try { execFileSync("zsh", [ISOLATED, NAME, String(PORT), "stop"], { stdio: "ignore" }); } catch { /* already stopped */ } rmSync(SCRATCH, { recursive: true, force: true }); };
 const lines = () => (existsSync(LEDGER) ? readFileSync(LEDGER, "utf8") : "").split("\n").filter(Boolean).map((l) => JSON.parse(l) as Record<string, any>); // eslint-disable-line @typescript-eslint/no-explicit-any -- ledger lines are read loosely
 let seq = 0;
@@ -39,6 +48,12 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   ok("C11.8 P-179 pass: a live launch carries --override-id and --run-key", launchArgs("L", "job", "live", [], ov).join(" ") === `L --job job --live --override-id override-1-ab --run-key ${"a".repeat(40)}`);
   ok("C11.8 P-179 fail: the free stub pass never carries an override, and a launch with none carries nothing", !launchArgs("L", "job", "stub", [], ov).includes("--override-id") && !launchArgs("L", "job", "live", []).includes("--override-id"));
   ok("C11.8 P-179 pass: a run's plan names its override; a plan with none or a broken one names nothing", overrideOf({ override: { ...ov, limits: ["run"] } })?.id === ov.id && overrideOf({}) === undefined && overrideOf({ override: { id: "x" } }) === undefined && overrideOf(null) === undefined);
+
+  // P-192 guard, part 2: before any start, the copy itself must report live on with the stand-in launcher. Anything else
+  // (the fake launcher not honoured, the guarded launcher, a shared copy or the demo answering this port) aborts here.
+  const ai = (await call("GET", "/session")).body?.ai;
+  if (!(ai?.live === true && ai?.launcher === "stand-in")) { console.log(`FAIL  guard: the copy does not report live on with the stand-in launcher (GET /session → ai: ${JSON.stringify(ai)}); stopped before any start`); stop(); process.exit(1); }
+  ok("P-192 guard: this check's own copy reports live on with the stand-in launcher (queue held, scratch ledger)", true);
 
   // ──────────────────────────────────────────── setup: IMM 5409 on the Visitor visa, one whole-form live draft (as check_ai_launch_paths)
   await call("POST", "/demo/load");
@@ -285,8 +300,9 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   ok("C11.8 P-179 pass: rules only costs US$0 and fits even past the ceiling", rp.cost_check?.ok === true && rp.cost_check.worst_usd === 0, rp.cost_check);
   r = await call("POST", "/ai/overrides", { run_key: fp.run_key, worst_usd: fp.cost_check.worst_usd, limits: fp.cost_check.over.map((o: any) => o.limit), start: { kind: "find_forms", combinationId: vv, mode: "live" } }); // eslint-disable-line @typescript-eslint/no-explicit-any
   ok("C11.8 P-179 fail: a finder Continue past US$132 is refused too (409), nothing recorded", r.status === 409 && /founder must raise the cap/.test(msg(r)), { status: r.status, m: msg(r) });
+  const usedO3 = lines().filter((l) => l.type === "override_use" && l.id === o3).length;
   r = await call("POST", `/combinations/${vv}/forms/find`, { mode: "live", planSha256: fp.plan_sha256, idempotencyKey: `p179-find-${Date.now()}`, overrideId: o3 });
-  ok("C11.8 P-179 fail: with no live AI switch the finder refuses before any Continue is used (US$0)", r.status === 409 && lines().filter((l) => l.type === "override_use" && l.id === o3).length === 1, { status: r.status, m: msg(r) });
+  ok("C11.8 P-179 fail: past US$132 the live finder start carrying a Continue is refused (409, the founder must raise the cap) and no Continue is used (US$0)", r.status === 409 && /founder must raise the cap/.test(msg(r)) && lines().filter((l) => l.type === "override_use" && l.id === o3).length === usedO3, { status: r.status, m: msg(r) });
   r = await call("POST", "/ai/overrides", { run_key: fp.run_key, worst_usd: fp.cost_check.worst_usd, limits: ["run"], start: { kind: "find_page" } });
   ok("C11.8 P-179 fail: a Continue for an unknown kind of start is a plain 400", r.status === 400 && /Say which start/.test(msg(r)), { status: r.status, m: msg(r) });
 
