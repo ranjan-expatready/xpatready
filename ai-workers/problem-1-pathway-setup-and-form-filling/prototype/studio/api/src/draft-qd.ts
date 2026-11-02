@@ -13,7 +13,7 @@ import { checkWords, documentFacts, factsPerRole, qdChecks, QD_OPERATION, QD_RUL
 import { actorOf, Audit, Db, need, readerOf, type Actor } from "./core.ts";
 import { PqrDrafts } from "./pqr-drafts.ts";
 import { Checklists } from "./checklist.ts";
-import { linesOf, savedReading } from "./saved-readings.ts";
+import { linesOf, savedReading, staleReading } from "./saved-readings.ts";
 import { insertProposals } from "./proposals.ts";
 import { StepRunner, type AiStep, type RoundContext } from "./rounds.ts";
 import { Sources } from "./sources.ts";
@@ -76,7 +76,8 @@ export class DraftQd {
     let proposed = 0; const said: string[] = [], jobs: string[] = [];
     for (const a of atts) {
       const name = a.edition ?? a.fileName, r = savedReading(a.officialFile);
-      if (!r) { said.push(`${name}: no saved AI reading yet (it is recorded in the founder-approved live trial, P-131)`); continue; }
+      // #397 m2 (BR-10): a reading of an earlier text is named as out of date, as the plan says, and is not replayed.
+      if (!r) { said.push(staleReading(a.officialFile) ? `${name}: its saved AI reading is of an earlier text, so it is out of date and not replayed (a new reading is recorded in the founder-approved live trial, P-131)` : `${name}: no saved AI reading yet (it is recorded in the founder-approved live trial, P-131)`); continue; }
       // Review m4 (part 2): "replayed before" only when the replay hands back an earlier draft, not because one was applied.
       const prior = new Set((await this.db.draftingJob.findMany({ where: { attachmentId: a.id, kind: "checklist_draft", mode: "REPLAY" }, select: { id: true } })).map((j) => j.id));
       const job = await this.checklists.replay(actor, a);
