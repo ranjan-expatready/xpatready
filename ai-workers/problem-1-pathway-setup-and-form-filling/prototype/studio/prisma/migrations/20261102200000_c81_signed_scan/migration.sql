@@ -9,7 +9,7 @@
 --     read, as C6.4's case_document (stand-in SI-14).
 -- Rollback (STANDARDS §5): stop the app, then in one transaction:
 --   DROP TABLE "signed_scan"; DROP TABLE "sign_step"; DROP FUNCTION "signed_scan_append_only"();
---   DELETE FROM "_prisma_migrations" WHERE "migration_name" = '20261102170000_c81_signed_scan';
+--   DELETE FROM "_prisma_migrations" WHERE "migration_name" = '20261102200000_c81_signed_scan';
 -- Signing steps and scans are lost by a rollback (the files stay in var/ until a Reset); items fall back to their state
 -- worked out from the facts.
 
