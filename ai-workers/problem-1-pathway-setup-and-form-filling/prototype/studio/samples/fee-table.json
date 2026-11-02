@@ -1,0 +1,147 @@
+{
+ "about": "R2 (P-230 (7)): the dated fee table, data and never code. Each line cites IRCC's page, quote and date (P-170). Status: Researched (source, date): may change; Sample until the immigration expert confirms (P-171). Sources: research_notes/visitor-visa-and-six-combinations-research-2026-11-02.md rows 1a, 1b, 1c; product/screens/W1-baseline/immigration-facts-2026-10-29.md row 19. Each line carries its basis (P-247): per_application (once per application filed), per_person_by_role (each person of the named roles), per_position (not worked out yet), or family_maximum (each person, capped once enough people apply together). A fee change is an edit to this file with its test (tests/check_r2_fee_table.ts, run by CI). Part 2 of R2 moves it into a stored library table frozen with each release (setup S7a, PUT /library/fees).",
+ "as_of": "2026-09-21",
+ "read": "2026-11-02",
+ "status": "Researched (source, date): may change",
+ "lines": [
+  {
+   "key": "visitor_visa",
+   "label": "Visitor visa fee",
+   "status": "Researched (IRCC fee list, 2026-11-02): may change",
+   "basis": "family_maximum",
+   "per_person_cad": 100,
+   "family_max": {
+    "cad": 500,
+    "from_people": 5
+   },
+   "source": {
+    "page": "IRCC fee list",
+    "url": "https://ircc.canada.ca/english/information/fees/fees.asp",
+    "quote": "maximum fee for a family of 5 or more people applying at the same time and place",
+    "quote_kind": "IRCC's words",
+    "read": "2026-11-02",
+    "checked": "IRCC fee list page date 2026-09-21; Lead research 2 Nov (research file row 1a; P-230 (7)); amounts Sample until the immigration expert confirms (P-171)"
+   }
+  },
+  {
+   "key": "biometrics",
+   "label": "Biometrics fee",
+   "status": "Researched (IRCC fee list, 2026-11-02): may change",
+   "basis": "family_maximum",
+   "per_person_cad": 85,
+   "family_max": {
+    "cad": 170,
+    "from_people": 2
+   },
+   "exempt": {
+    "under_age": 14,
+    "over_age": 79,
+    "source": {
+     "page": "When to give biometrics: temporary residents",
+     "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/biometrics/when-to-give-temporary-residence.html",
+     "quote": "a child under the age of 14; an applicant over the age of 79",
+     "quote_kind": "IRCC's words",
+     "read": "2026-03-30 (page date)",
+     "checked": "compliance-trace.md VV-R15; age as at today until the group is recorded (FQ-7 open)"
+    }
+   },
+   "source": {
+    "page": "IRCC fee list",
+    "url": "https://ircc.canada.ca/english/information/fees/fees.asp",
+    "quote": "biometrics CAD 85, CAD 170 for a family of 2 or more",
+    "quote_kind": "summary of the Lead-checked record",
+    "read": "2026-11-02",
+    "checked": "IRCC fee list page date 2026-09-21; Lead research 2 Nov (research file row 1b; P-230 (7)); amounts Sample until the immigration expert confirms (P-171)"
+   }
+  },
+  {
+   "key": "spouse_sponsorship",
+   "label": "Spouse or partner sponsorship fee",
+   "status": "Researched (IRCC fee list, 2026-11-02): may change",
+   "basis": "per_person_by_role",
+   "per_person_cad": 1260,
+   "roles": [
+    "principal"
+   ],
+   "source": {
+    "page": "IRCC fee list",
+    "url": "https://ircc.canada.ca/english/information/fees/fees.asp",
+    "quote": "Sponsor your spouse or partner $1,260.00",
+    "quote_kind": "IRCC's words",
+    "read": "2026-11-02",
+    "checked": "IRCC fee list page date 2026-09-21; Lead research 2 Nov (research file row 1c: sponsorship, processing and the right of permanent residence fee together); Sample until the immigration expert confirms (P-171)"
+   }
+  },
+  {
+   "key": "spouse_dependent_child",
+   "label": "Dependent child fee (sponsorship)",
+   "status": "Researched (IRCC fee list, 2026-11-02): may change",
+   "basis": "per_person_by_role",
+   "per_person_cad": 180,
+   "roles": [
+    "child"
+   ],
+   "source": {
+    "page": "IRCC fee list",
+    "url": "https://ircc.canada.ca/english/information/fees/fees.asp",
+    "quote": "dependent child CAD 180",
+    "quote_kind": "summary of the research file",
+    "read": "2026-11-02",
+    "checked": "IRCC fee list page date 2026-09-21; Lead research 2 Nov (research file row 1c); the row's quoted $270.00 is the economic class's child fee: to confirm (question in the R2 PR)"
+   }
+  },
+  {
+   "key": "pr_adult",
+   "label": "Permanent residence fee (adult)",
+   "status": "Researched (IRCC fee list, 2026-11-02): may change",
+   "basis": "per_person_by_role",
+   "per_person_cad": 1590,
+   "roles": [
+    "principal",
+    "spouse_or_partner"
+   ],
+   "source": {
+    "page": "IRCC fee list",
+    "url": "https://ircc.canada.ca/english/information/fees/fees.asp",
+    "quote": "CAD 1,590 per adult (CAD 990 without the right of permanent residence fee)",
+    "quote_kind": "summary of the research file",
+    "read": "2026-11-02",
+    "checked": "IRCC fee list page date 2026-09-21; Lead research 2 Nov (research file row 1c); Sample until the immigration expert confirms (P-171)"
+   }
+  },
+  {
+   "key": "pr_dependent_child",
+   "label": "Dependent child fee (permanent residence)",
+   "status": "Researched (IRCC fee list, 2026-11-02): may change",
+   "basis": "per_person_by_role",
+   "per_person_cad": 270,
+   "roles": [
+    "child"
+   ],
+   "source": {
+    "page": "IRCC fee list",
+    "url": "https://ircc.canada.ca/english/information/fees/fees.asp",
+    "quote": "Include a dependent child $270.00",
+    "quote_kind": "IRCC's words",
+    "read": "2026-11-02",
+    "checked": "IRCC fee list page date 2026-09-21; Lead research 2 Nov (research file row 1c); Sample until the immigration expert confirms (P-171)"
+   }
+  }
+ ],
+ "combinations": {
+  "vv.single": {
+   "label": "Visitor visa",
+   "lines": [
+    "visitor_visa",
+    "biometrics"
+   ],
+   "checklist": true,
+   "modes": {
+    "principal": "files_own",
+    "spouse_or_partner": "files_own",
+    "child": "files_own"
+   },
+   "group_why": "A family's visitor visa applications go together, at the same time and place, so the family maximums apply (BR-16)."
+  }
+ }
+}

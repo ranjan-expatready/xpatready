@@ -224,7 +224,7 @@ export type CombinationView = {
   path: { key: string; label: string; level: string }[];
   allowed_locations: string[];
   jobs: { id: string; kind: string; mode: string; status: string; message: string | null; startedAt: string }[];
-  releases: { id: string; release: number; status: string; released_at: string; approver: string; basis: string | null }[];
+  releases: { id: string; release: number; status: string; released_at: string; approver: string; basis: string | null; /** C5.6: Sample content, a Demo release */ demo?: boolean }[];
   draft: { problems: ProblemLine[]; counts: { forms: number; map_boxes: number; sections: number; fields: number; document_requirements: number; rules: number; checks: number } };
   submission: { status: string; stale: boolean } | null;
 };

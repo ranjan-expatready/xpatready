@@ -175,6 +175,8 @@ export type CaseForm = {
   readiness: Readiness; copies: FormCopy[];
   /** The evidence lane's fill trial for this form passed (P-65 (a)); until it does a copy is "Checked copy, not for filing". */
   trial_passed: boolean;
+  /** S2 (SA-1B-174): why the filling is not proven for this edition and field map, in words; null when it is. */
+  trial_why?: string | null;
   /** The form no longer applies to this person (for example marked not travelling); its copies stay listed (break M4). */
   applies: boolean;
   /** P-143: the line's channel; P-145: a form filed Online gets a "Copy, not for filing" (never locked or filed). */

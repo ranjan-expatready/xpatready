@@ -66,3 +66,65 @@ The :4400 demo (not reachable from the cloud) · a headed walk (no display) · Q
 * **C7.2 → Partial** (#414). `check_c72_imm5257_fill.ts` 36/36: the Sample family's IMM 5257 fills 40 of 46 mandatory fields, none by hand. Still open: the 6 mandatory boxes no question asks (#414's Questions, forms row) and Adobe Validate plus the barcode read-back (Mac only, the evidence lane).
 * **C11.7:** waits for #407 (Reset to the six, P-226); it will be scored when that merges.
 * Records: merged qa-m3's QA-151 to QA-153 and C11.6 with this round's rows, keeping both sides; qa-m3's C6.4 row cites QA-149.
+
+## Round 4 — P-250 before-merge scoring, then main 0dbcbd84 (LeadX, 2 Nov morning)
+**Before merge, on each approved PR's head commit** (its own worktree and fresh isolated copy, US$0); the verdict is commented on each PR. None had a Blocker or Major.
+
+| PR | Head | Result |
+|---|---|---|
+| #407 D1 Reset to the six | 8b55f569 | d1 25/25, d1 browser 25/25, s7_reset 4/4, qa145 8/8; walked twice (see C11.7) |
+| #427 C11.13 Draft fields | 44f04033 | 42/42, browser 14/14 |
+| #428 QA-76 | 99425a77 | qa76_words 10/10, case_engine 61/61, r1c 125/125 (after setup_visitor_visa) |
+| #429 D3 edition label | 4711bd95 | d3_saved_edition 11/11, c34_masters 29/29, c312_field_map 48/48 |
+| #426 C3.6 answer values | b168543d | 50/50, browser 12/12 |
+| #423 c313 fix | 8e04cf19 | 24/24 alone. Minor: under the load of five copies its sample load got 409 "Already in progress …" (a repeated request) |
+| #434 screen01 race | e6e5a277 | 135/135 |
+| #435 D2 part 1 | fd06266f | c33 failed run browser 22/22, s5_slice3 35/35. Two checks need `STUDIO_AI_LIVE=approved`; qa never sets it, so they were not run |
+| #436 samples (P-230) | 7c1eb50d | s7_load 23/23 |
+| #409 C7.2 evidence | 04b305c3 | records only. Minor: the README's 32/46 predates #414 (40/46 now) |
+
+**After merge, on main 0dbcbd84:**
+* C11.7: Partial (P-226 Reset to the six done; part B red).
+* C11.3: Partial (names done after Reset to the six; QA-150 and AI "did you mean" open).
+* C11.13: Partial (Draft fields 42/42; AI "did you mean" off, P-95).
+* C3.3: Works (K2: `check_ai_drafting.ts` 48/48 in a throwaway worktree, 14/14, 22/22, screens read as a person).
+* C4.5: Works under P-256 (34/34, 35/35; the per-section document fill moves to M3 with C6.5).
+* C5.1: Partial (P-248 not built yet, G5; the F8 check still allows documents only).
+* QA-76: Minor (was Major); only the representative's heading is still unseen.
+* Built files deleted: C11.13, C11.7-D1. Left for qa-m3: C6.4.
+
+## Round 5 — P-250 verdicts, qa-m3's PRs, and K10/K1/K3/K4 on main 21d988b7 (LeadX)
+**Before-merge verdicts** (each PR's head, its own worktree, a fresh copy, US$0; commented on each PR). No Blocker or Major.
+* #457 C6.9 part 3 (16ad016f; qa-m3's, taken over): `check_c69_runs.ts` 98/98, `check_c69_page_browser.cjs` 43/43, `acceptance/C6.9.test.ts` **15/15** after the Visitor visa setup.
+* #445 C11.12 PR 1 (653b9044): `check_c1112_modes.ts` 39/39. Pack 18/19: its one fail asks every principal to read "Principal applicant", which is stricter than P-209 (Question on the PR).
+* #455 R2 fees (64fc85b8): `check_r2_fee_table.ts` 45/45, `check_vv_prepare.ts` 32/32.
+* #456 S1 (216d7f0d): `check_c76_readiness.ts` 64/64. #458 S9 (04c8ace4): `check_forms_f1p.ts` 18/18.
+* New heads on #435, #426 and #436: only main merges, records, or a check that needs the live switch, so the verdicts stand.
+
+**On main 21d988b7:**
+* K10 (C11.10): QA-120 and QA-121 closed (`check_x1_tabs_focus_browser.cjs` 48/48); QA-129 is the founder's question.
+* K1 (C2.12) and K4 (C4.1): already met (round 1 evidence), so both rows stay Works.
+* K3 (C3.12): the Published date shows at all three widths, with no sideways scroll and axe clean. C3.12 stays Partial on QA-148.
+* 07:35 UTC check: #468 D3 (C2.6 launcher job, 33ba1f96) passes. The stub pass reproduces (exit 0) and `check_forms_s4_canada.ts` is 80/80. Minor: the stub run rewrites the tracked `p2/screening/canary-digest.json` (QA-145 part 2 class). #457's new head 65a9f9ca only changes a suite list, so its verdict stands.
+
+## Round 6 — after-merge re-checks on main c5240a3b (#423, #434, #435, #445, #456 merged 08:02–08:03; #426 earlier)
+* C11.8 (#435 D2 part 1): pack 12/4/2, the same as its 1 Nov baseline. **New QA-154 (Gap · Major, forms):** a LIVE field-map draft on a copy without the switch is queued (201) instead of refused at the door, and the plan carries no live flag. Partial.
+* C11.12 (#445 PR 1): 39/39; pack 18/19 (the P-209 pack Question). Partial (PRs 2–3 to come).
+* C3.6 (#426): answer values 50/50; pack 17/18 on wp.family (a document type named while adding a requirement is refused, not proposed). Partial.
+* S1 (#456) on C7.6: readiness 64/64 (rules level). Partial.
+* #423 and #434 change only tests; their checks passed before merge (24/24, 135/135).
+* Built files deleted: C3.6, S1. C6.4 is still waiting (M3; now qa's, since qa-m3 has stopped).
+* The database had stopped again before this round and was restarted as user postgres.
+* 08:20 UTC check (P-250): all pass, no Blocker or Major.
+  * #469 QA-82: `check_c41_questionnaire_roles.ts` 9/9.
+  * #470 D2 part 2 and #475 D2 part 4: forms_demo 23/23, cost_warning 27/27. Their live-switch and :4400 checks were not run.
+  * #471 G3: 11/11. #477 C11.14 part: s6_queue, 32 steps passed. #479 D1 browser: 25/25.
+  * #436 new head (the Sponsor co-files): s7_load 23/23, c1112_modes 39/39.
+  * #455's new head only merges main, so its verdict stands.
+* **#485 (P-227 Saved check, paid C2.6 reading of IMM 5484, US$0.504), head 179d80e9: pass.** On a fresh copy (fake launcher, no live switch), after Reset to the six, Visitor visa's checklist replayed at US$0 from this PR's run file, with the ledger byte-identical. Result: 20 requirement proposals, all waiting and Check (To review "Check 20", none Ready, 0 requirements written). The 11 Super Visa items and the drafted marriage condition wait for a person. Question: `n/a_processing_delay_notice` is dropped by the rules (named in the run's message), not shown on To review. Screenshot `p485-to-review.png`.
+* After merge on main bd877d09: **C6.9 → Works** (#457 completes it; pack 15/15). S9 (#458): `check_forms_f1p.ts` 18/18 (no capability row; BACKLOG S9). #468: `check_forms_s4_canada.ts` 80/80. Built file C6.9 deleted.
+* 09:00 UTC check (P-250), all pass with no Blocker or Major:
+  * #478 C11.12 PR 2 (migration, tested alone with its own client): modes 41/41, prepare 32/32, filings 55/55, prepare_api 28/28, prepare_store_api 35/35, **C6.12 pack 24/24**. The migration only widens two check constraints.
+  * #484 C7.7 part 1: 37/37, 63/63, c611_team 59/59. #482 S2: s2_fill_trials 14/14, r1d 86/86.
+  * #436's new head is a review record only.
+* After merge (#470, #475 D2 parts 2 and 4) on main 045af590: the C11.8 pack is unchanged at 12/4/2 (AT-1, AT-2, AT-3, AT-9b), so QA-154 stays open and C11.8 Partial.
