@@ -42,7 +42,8 @@ export function checkPeople(list: PeopleLine[], roles: Role[], strict = true): {
       mode = null;
     }
     if (mode === "co_files") { // BR-4
-      if (r?.mayBeApplicant || p.role === PRINCIPAL) errors.push({ field: at("filingMode"), message: `${name} may be an applicant: choose Files own application, On the principal's application or Declared only. Only a person who is never an applicant (a sponsor) files the sponsorship.` });
+      if (p.role !== "sponsor" && !r?.mayBeApplicant && p.role !== PRINCIPAL) errors.push({ field: at("filingMode"), message: `${name} takes part in the case but files no application: only the sponsor files the sponsorship.` });
+      else if (r?.mayBeApplicant || p.role === PRINCIPAL) errors.push({ field: at("filingMode"), message: `${name} may be an applicant: choose Files own application, On the principal's application or Declared only. Only a person who is never an applicant (a sponsor) files the sponsorship.` });
       else if (p.min !== 1 || p.max !== 1) errors.push({ field: at("max"), message: `One ${name.toLowerCase()} co-files: set how many to 1 to 1.` });
       if (coFilers++) errors.push({ field: at("filingMode"), message: "Only one person files the sponsorship: keep one co-filing line." });
     }
