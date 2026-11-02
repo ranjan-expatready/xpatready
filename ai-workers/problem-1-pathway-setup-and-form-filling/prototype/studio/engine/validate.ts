@@ -13,6 +13,7 @@ import { factSourceProblems, factWords, who } from "./sources.ts";
 import { oathMappedProblems } from "./form-steps.ts";
 import { eligibilityChanges, gateProblems } from "./eligibility-gates.ts";
 import { sourceKey } from "../contracts/resolver.ts"; // SH3 R8
+import { sourceChanges } from "./source-register.ts"; // G1 BR-9: the "Source" lines only; the gate stays out of validate()
 
 // C-11: a field map's form field list, read once per file (paths are relative to the Solution 1 folder, as in fill.ts).
 const SOLUTION = join(import.meta.dirname, "..", "..", "..");
@@ -248,8 +249,9 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
     for (const [key, x] of a) if (!b.has(key)) out.push({ kind: "Where an answer comes from", key, change: "removed", needs_sme: true, label: line(prev!, x, "back to the rules' source, not in the Prospect questionnaire (PQR)") });
   }
   out.push(...eligibilityChanges(prev?.eligibility, next.eligibility)); // C6.9 BR-4
+  out.push(...sourceChanges(prev as never, next as never)); // G1 BR-9: a source added, changed or removed, for the expert
   // Completeness guard: any other part of the released content that differs is listed rather than silently passed.
-  const covered = new Set(["canonical_fields", "sections", "placements", "forms", "document_requirements", "rules", "checks", "field_maps", "combination", "document_types", "derived_fields", "fact_sources", "eligibility", "mode", "row_versions"]);
+  const covered = new Set(["canonical_fields", "sections", "placements", "forms", "document_requirements", "rules", "checks", "field_maps", "combination", "document_types", "derived_fields", "fact_sources", "eligibility", "sources", "mode", "row_versions"]);
   for (const k of new Set([...Object.keys(prev ?? {}), ...Object.keys(next)])) if (prev && !covered.has(k) && canonical((prev as any)[k] ?? null) !== canonical((next as any)[k] ?? null)) out.push({ kind: "Configuration", key: k, change: "changed", needs_sme: true, label: `${k} changed` });
   return out;
 }
@@ -258,11 +260,14 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
 export function ordinal(n: number) { const t = n % 100, u = n % 10; return `${n}${t >= 11 && t <= 13 ? "th" : u === 1 ? "st" : u === 2 ? "nd" : u === 3 ? "rd" : "th"}`; }
 
 /** C5.6 (P-240, row G3): a release is a "Demo release" when what it froze holds Sample content: a Sample combination
- *  (source_basis ILLUSTRATIVE) or any value marked Sample (a check saved without an official source is illustrative).
+ *  (source_basis ILLUSTRATIVE) or any value marked Sample (a check saved without an official source is illustrative; a
+ *  number whose source entry is Sample, G1).
  *  Read from the release's own snapshot, so a later change to the combination never relabels a past release. */
 export function isDemoSnapshot(raw: unknown): boolean {
   if (!raw || typeof raw !== "object") return false;
   const snap = raw as { combination?: { source_basis?: string | null } | null; checks?: unknown };
   const checks = Array.isArray(snap.checks) ? (snap.checks as ({ illustrative?: boolean | null } | null)[]) : [];
-  return snap.combination?.source_basis === "ILLUSTRATIVE" || checks.some((c) => !!c?.illustrative);
+  // G1 (tech lead's condition on Decision 1, #558): a number answered only by a Sample source entry is Sample content.
+  const sources = Array.isArray((raw as { sources?: unknown }).sources) ? ((raw as { sources: ({ sample?: boolean } | null)[] }).sources) : [];
+  return snap.combination?.source_basis === "ILLUSTRATIVE" || checks.some((c) => !!c?.illustrative) || sources.some((x) => !!x?.sample);
 }

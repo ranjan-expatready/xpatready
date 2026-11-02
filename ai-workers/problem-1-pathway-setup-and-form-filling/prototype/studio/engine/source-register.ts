@@ -2,10 +2,11 @@
 // release publishes, and which of them have no source entry. Pure (no database, no file, no model call): the caller
 // passes the snapshot, the combination's fee lines and the stored entries. Kept outside validate() on purpose
 // (challenge M1): a released snapshot is never re-judged, so this runs on the draft only, beside filingProblems.
-// Not wired into the API or the release path yet (the source_entry table waits for the tech lead, PR 1).
+// Wired in PR 2a: api/src/studio.ts problems() and api/src/programs.ts draftProblems (the draft only), engine/snapshot.ts
+// (the entries frozen as snapshot.sources) and engine/import.ts (the sample load's own citations).
 import { factName } from "./render.ts";
 import { duplicateValidity, validityProblems } from "./runtime/case-checklist.ts";
-import type { Problem } from "./validate.ts";
+import type { Change, Problem } from "./validate.ts";
 
 /** The agreed kinds of the source register (tech lead, PR #469). A form-line, document-line, question or gate
  *  condition is a `rule`; "From age" is a `threshold`; a fee line is a `fee`. */
@@ -19,14 +20,20 @@ type Where = "Forms" | "Documents" | "Questions" | "Rules" | "Checks" | "Eligibi
  *  and debugging only (never matched). `sourced_by`: a record that already cites it (BR-4), so no entry is needed. */
 export type PublishedNumber = {
   kind: NumberKind; key: string; address: string; value: string; where: Where; item_words: string; words: string; hint: string;
+  /** The item as validate() names it in a problem's `item` (a form number, a document's name, a rule or check id, a gate
+   *  key, a question's fact, a fee line's key), so a problem routes and filters like every other (C2.12). */
+  item: string;
   sourced_by?: "fee_table" | "validity_cite";
 };
 
-/** A stored source entry (the source_entry row, PR 1): cited (URL, page, quote, date read) or "None published". */
+/** A stored source entry (the source_entry row, PR 1): exactly one answer: cited (URL, page, quote, date read), "None
+ *  published" with its reason, or Sample (the demo seed's honest answer: passes only in the demo workspace, and the
+ *  release that freezes it is a Demo release; tech lead's condition on Decision 1, #558; reviewer MJ-1 on #569). */
 export type SourceEntry = {
   kind: string; key: string; address: string; value: string | number;
   cited?: { url: string; page?: string | null; quote: string; date: string } | null;
-  none_published?: { reason: string } | boolean | null;
+  none_published?: { reason: string } | null;
+  sample?: boolean;
 };
 
 /** A fee line as samples/fee-table.json holds it (engine/runtime/filings.ts TableLine), read loosely: a line may be a
@@ -130,17 +137,17 @@ const feeSourced = (s: FeeSourceLike) => !!s && ["page", "url", "quote", "read"]
  *  files), UI numbers, versions, positions and copies. */
 export function publishedNumbers(s: WalkedSnapshot, opts: PublishedOptions = {}): PublishedNumber[] {
   const dates = opts.dates !== false, combo = s.combination.key, out: PublishedNumber[] = [];
-  const add = (kind: NumberKind, key: string, where: Where, item_words: string, tree: unknown, hintRoot: string) => {
-    for (const n of conditionNumbers(tree, dates)) out.push({ kind, key: `${combo}/${key}`, address: n.address, value: n.value, where, item_words, words: n.words, hint: `${hintRoot}.${n.hint}` });
+  const add = (kind: NumberKind, key: string, where: Where, item: string, item_words: string, tree: unknown, hintRoot: string) => {
+    for (const n of conditionNumbers(tree, dates)) out.push({ kind, key: `${combo}/${key}`, address: n.address, value: n.value, where, item, item_words, words: n.words, hint: `${hintRoot}.${n.hint}` });
   };
   (s.forms ?? []).forEach((f, i) => {
     const words = `Form ${f.form_number}`;
-    add("rule", `form:${f.form_number}`, "Forms", words, f.condition, `forms[${i}]`);
-    if (typeof f.min_age === "number" && f.min_age > 0) out.push({ kind: "threshold", key: `${combo}/form:${f.form_number}`, address: "min_age", value: canonicalValue(f.min_age), where: "Forms", item_words: words, words: `From age: ${canonicalValue(f.min_age)}`, hint: `forms[${i}].min_age` });
+    add("rule", `form:${f.form_number}`, "Forms", f.form_number, words, f.condition, `forms[${i}]`);
+    if (typeof f.min_age === "number" && f.min_age > 0) out.push({ kind: "threshold", key: `${combo}/form:${f.form_number}`, address: "min_age", value: canonicalValue(f.min_age), where: "Forms", item: f.form_number, item_words: words, words: `From age: ${canonicalValue(f.min_age)}`, hint: `forms[${i}].min_age` });
   });
-  (s.document_requirements ?? []).forEach((d, i) => add("rule", `doc:${d.lineage ?? d.document_type_key ?? d.document_type ?? i}`, "Documents", text(d.document_type) || text(d.document_type_key), d.condition, `document_requirements[${i}]`));
-  (s.placements ?? []).forEach((p, i) => add("rule", `question:${p.lineage ?? p.fact ?? i}`, "Questions", text(p.question_text) || (p.fact ? factName(p.fact) : ""), p.condition, `placements[${i}]`));
-  (s.rules ?? []).forEach((r, i) => add("rule", r.id, "Rules", itemText(r.then) || r.id, r.when, `rules[${i}]`));
+  (s.document_requirements ?? []).forEach((d, i) => add("rule", `doc:${d.lineage ?? d.document_type_key ?? d.document_type ?? i}`, "Documents", text(d.document_type) || text(d.document_type_key) || String(d.lineage ?? i), text(d.document_type) || text(d.document_type_key), d.condition, `document_requirements[${i}]`));
+  (s.placements ?? []).forEach((p, i) => add("rule", `question:${p.lineage ?? p.fact ?? i}`, "Questions", p.fact ?? String(p.lineage ?? i), text(p.question_text) || (p.fact ? factName(p.fact) : ""), p.condition, `placements[${i}]`));
+  (s.rules ?? []).forEach((r, i) => add("rule", r.id, "Rules", r.id, itemText(r.then) || r.id, r.when, `rules[${i}]`));
   // C6.4: a document validity rule is not a field comparison; its months are its number, and a usable rule (with its
   // own quote, page, https address and date read) already cites them (BR-4, challenge m5).
   const fields = new Set((s.canonical_fields ?? []).map((f) => f.id)), types = new Set((s.document_types ?? []).map((t) => t.key));
@@ -148,20 +155,22 @@ export function publishedNumbers(s: WalkedSnapshot, opts: PublishedOptions = {})
   const twice = new Set(duplicateValidity(checkRows));
   checkRows.forEach((c, i) => {
     const words = itemText(c.message) || c.id;
-    if (c.group !== "document_validity") return add("check", c.id, "Checks", words, c.condition, `checks[${i}]`);
+    if (c.group !== "document_validity") return add("check", c.id, "Checks", c.id, words, c.condition, `checks[${i}]`);
     const months = isObj(c.condition) ? c.condition.months : undefined;
     if (typeof months !== "number" || !Number.isFinite(months) || months === 0) return;
-    const usable = validityProblems(c, (f) => fields.has(f), types).length === 0 && !(c.applies_to && twice.has(c.applies_to));
-    out.push({ kind: "check", key: `${combo}/${c.id}`, address: "months", value: canonicalValue(months), where: "Checks", item_words: words, words: `Issued within months: at most ${canonicalValue(months)}`, hint: `checks[${i}].condition.months`, ...(usable ? { sourced_by: "validity_cite" as const } : {}) });
+    // Tech lead's decision 4 on #558 (build note 10): a usable rule counts as cited only when its own quote holds its
+    // months in digits, so a rule moved from 6 to 12 months whose quote still says 6 is listed again.
+    const usable = validityProblems(c, (f) => fields.has(f), types).length === 0 && !(c.applies_to && twice.has(c.applies_to)) && statesInDigits(c.source_quote, canonicalValue(months));
+    out.push({ kind: "check", key: `${combo}/${c.id}`, address: "months", value: canonicalValue(months), where: "Checks", item: c.id, item_words: words, words: `Issued within months: at most ${canonicalValue(months)}`, hint: `checks[${i}].condition.months`, ...(usable ? { sourced_by: "validity_cite" as const } : {}) });
   });
-  (s.eligibility?.gates ?? []).forEach((g, i) => add("rule", `gate:${g.key}`, "Eligibility", text(g.label) || g.key, g.condition, `eligibility.gates[${i}]`));
+  (s.eligibility?.gates ?? []).forEach((g, i) => add("rule", `gate:${g.key}`, "Eligibility", g.key, text(g.label) || g.key, g.condition, `eligibility.gates[${i}]`));
   // BR-4: fee lines carry their own source in the fee table. They follow the filing modes of "Who can be in this
   // application", so a fee problem routes to that step (challenge m4: "Fees" is not a where).
   for (const l of opts.feeLines ?? []) {
     const fee = (address: string, v: unknown, src: FeeSourceLike, label: string) => {
       if (typeof v !== "number" || !Number.isFinite(v) || v === 0) return;
       const value = canonicalValue(v);
-      out.push({ kind: "fee", key: `${combo}/fee:${l.key}`, address, value, where: "People", item_words: text(l.label) || l.key, words: `${label}: ${value}`, hint: `fee:${l.key}.${address}`, ...(feeSourced(src) ? { sourced_by: "fee_table" as const } : {}) });
+      out.push({ kind: "fee", key: `${combo}/fee:${l.key}`, address, value, where: "People", item: l.key, item_words: text(l.label) || l.key, words: `${label}: ${value}`, hint: `fee:${l.key}.${address}`, ...(feeSourced(src) ? { sourced_by: "fee_table" as const } : {}) });
     };
     fee("per_person_cad", l.per_person_cad, l.source, "Per person (CAD)");
     fee("family_max.cad", l.family_max?.cad, l.source, "Family maximum (CAD)");
@@ -173,31 +182,97 @@ export function publishedNumbers(s: WalkedSnapshot, opts: PublishedOptions = {})
 }
 
 const NONE = "'None published – set by ExpatReady'";
-/** §5 copy, one place. */
-export const NO_SOURCE = (item: string, words: string) => `${item}: ${words} has no source entry. Add the official source, or mark ${NONE}.`;
-export const CHANGED = (item: string, was: string, now: string) => `${item}: the source was written for ${was}; the number is now ${now}. Check the source again, or mark ${NONE}.`;
+/** §5 copy, one place: the whole sentence (problemWords() gives it from a problem: its label, then its message). */
+export const NO_SOURCE = (item: string, words: string) => `${item}: ${NO_SOURCE_TAIL(words)}`;
+export const CHANGED = (item: string, was: string, now: string) => `${item}: ${CHANGED_TAIL(was, now)}`;
+export const SAMPLE_ONLY = (item: string, words: string) => `${item}: ${SAMPLE_TAIL(words)}`;
+const NO_SOURCE_TAIL = (words: string) => `${words} has no source entry. Add the official source, or mark ${NONE}.`;
+const CHANGED_TAIL = (was: string, now: string) => `the source was written for ${was}; the number is now ${now}. Check the source again, or mark ${NONE}.`;
+/** The tech lead's condition on Decision 1 (#558): a Sample entry is refused outside the demo workspace, said so. */
+const SAMPLE_TAIL = (words: string) => `${words} has only a Sample source, which passes only in the demo workspace as a Demo release. Add the official source, or mark ${NONE}.`;
 
-export type SourceProblem = Problem & { level: "error"; kind: NumberKind; key: string; address: string; state: "missing" | "changed" };
-const answered = (e: SourceEntry) => !!(e.cited && text(e.cited.url) && text(e.cited.quote) && text(e.cited.date)) || !!e.none_published;
+/** Where a number stands (§6 GET …/sources `state`; "sample" is the tech lead's Sample entry). */
+export type NumberState = "missing" | "cited" | "none_published" | "sample" | "changed" | "fee_table" | "validity_cite";
+export type SourceProblem = Problem & { level: "error"; kind: NumberKind; key: string; address: string; value: string; state: "missing" | "changed" | "sample" };
+const answered = (e: SourceEntry) => !!(e.cited && text(e.cited.url) && text(e.cited.quote) && text(e.cited.date)) || text(e.none_published?.reason).length >= 10;
+const sampleOnly = (e: SourceEntry) => !!e.sample && !answered(e);
+export const entryKey = (x: { kind: string; key: string; address: string }) => `${x.kind}\u0000${x.key}\u0000${x.address}`;
 
-/** BR-6, BR-8: each published number with no entry, or whose entry was written for another value, is an error naming
- *  the item and the number. A number a record already cites (a fee line with its source, a usable validity rule) needs
- *  no entry (BR-4). Every problem is listed, never only the first. */
-export function sourceProblems(numbers: PublishedNumber[], entries: SourceEntry[]): SourceProblem[] {
-  const by = new Map(entries.map((e) => [`${e.kind}\u0000${e.key}\u0000${e.address}`, e]));
+/** One number's state against its entry. `demo`: the workspace is the demo workspace, where a Sample entry passes. A
+ *  record that cites its own number (BR-4) wins over an older register entry (Devin on #558). */
+export function numberState(n: PublishedNumber, e: SourceEntry | undefined, demo = false): { state: NumberState; passes: boolean; was?: string } {
+  if (n.sourced_by) return { state: n.sourced_by, passes: true };
+  if (!e || (!answered(e) && !e.sample)) return { state: "missing", passes: false };
+  const was = canonicalValue(e.value);
+  if (was !== n.value) return { state: "changed", passes: false, was };
+  if (sampleOnly(e)) return { state: "sample", passes: demo };
+  return { state: e.cited && text(e.cited.url) ? "cited" : "none_published", passes: true };
+}
+
+/** BR-6, BR-8: each published number with no entry, whose entry was written for another value, or (outside the demo
+ *  workspace) whose only answer is Sample, is an error naming the item and the number. `message` is the sentence after
+ *  the item's words (`label`), so problemWords() reads §5's sentence. Every problem is listed, never only the first. */
+export function sourceProblems(numbers: PublishedNumber[], entries: SourceEntry[], opts: { demo?: boolean } = {}): SourceProblem[] {
+  const by = new Map(entries.map((e) => [entryKey(e), e]));
   const out: SourceProblem[] = [];
   for (const n of numbers) {
-    const e = by.get(`${n.kind}\u0000${n.key}\u0000${n.address}`);
-    const base = { level: "error" as const, where: n.where, item: n.key, label: n.item_words, kind: n.kind, key: n.key, address: n.address };
-    // A record that cites its own number (BR-4) wins over an older register entry (Devin on #558: a validity rule that
-    // gained its citation and new months stayed refused by its stale entry).
-    if (n.sourced_by) continue;
-    if (e && answered(e)) {
-      const was = canonicalValue(e.value);
-      if (was !== n.value) out.push({ ...base, state: "changed", message: CHANGED(n.item_words, was, n.value) });
-      continue;
-    }
-    out.push({ ...base, state: "missing", message: NO_SOURCE(n.item_words, n.words) });
+    const st = numberState(n, by.get(entryKey(n)), !!opts.demo);
+    if (st.passes) continue;
+    const base = { level: "error" as const, where: n.where, item: n.item, label: n.item_words, kind: n.kind, key: n.key, address: n.address, value: n.value };
+    if (st.state === "changed") out.push({ ...base, state: "changed", message: CHANGED_TAIL(st.was!, n.value) });
+    else if (st.state === "sample") out.push({ ...base, state: "sample", message: SAMPLE_TAIL(n.words) });
+    else out.push({ ...base, state: "missing", message: NO_SOURCE_TAIL(n.words) });
   }
+  return out;
+}
+
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+/** Whether a quote states a value in digits (M4 scaffolding; decision 4): a number as its own digits ("18 years", not
+ *  "180" or "eighteen"), a date as IRCC writes it with its day and year in digits ("November 1, 2024", "1 November
+ *  2024") or as its ISO text. */
+export function statesInDigits(quote: unknown, value: string): boolean {
+  const q = text(quote);
+  if (!q || !value) return false;
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (iso) {
+    const [y, m, d] = [iso[1], MONTHS[Number(iso[2]) - 1], String(Number(iso[3]))];
+    return q.includes(value) || new RegExp(`\\b${m}\\s+${d},?\\s+${y}\\b`).test(q) || new RegExp(`\\b${d}\\s+${m},?\\s+${y}\\b`).test(q);
+  }
+  return new RegExp(`(?<![\\d.,])${value.replace(/\./g, "\\.")}(?![\\d]|[.,]\\d)`).test(q);
+}
+
+/** BR-9: the entries frozen with a snapshot: those that answer a number it publishes, in one canonical shape and order
+ *  (no version, no who or when: bookkeeping), so the fingerprint moves only when a source does. */
+export type FrozenSource = { kind: string; key: string; address: string; value: string; url?: string; page?: string; quote?: string; date?: string; none_published?: string; sample?: true };
+export function frozenSources(numbers: PublishedNumber[], entries: SourceEntry[]): FrozenSource[] {
+  const used = new Set(numbers.map(entryKey));
+  return entries.filter((e) => used.has(entryKey(e))).map((e): FrozenSource => ({
+    kind: e.kind, key: e.key, address: e.address, value: canonicalValue(e.value),
+    ...(e.cited ? { url: e.cited.url, ...(text(e.cited.page) ? { page: text(e.cited.page) } : {}), quote: e.cited.quote, date: canonicalValue(e.cited.date) } : {}),
+    ...(e.none_published ? { none_published: e.none_published.reason } : {}),
+    ...(e.sample ? { sample: true as const } : {}),
+  })).sort((a, b) => entryKey(a).localeCompare(entryKey(b)));
+}
+/** A frozen source read back as an entry (the gate reads the draft's own snapshot.sources). */
+export const entryOf = (f: FrozenSource): SourceEntry => ({ kind: f.kind, key: f.key, address: f.address, value: f.value,
+  cited: f.url ? { url: f.url, page: f.page ?? null, quote: f.quote ?? "", date: f.date ?? "" } : null, none_published: f.none_published ? { reason: f.none_published } : null, sample: !!f.sample });
+
+/** BR-9: the "Source" lines of a change summary (validate.ts diff()): one per entry added, changed or removed between
+ *  two frozen copies, in words (the item, the number, the answer), each for the immigration expert to sign. */
+export function sourceChanges(prev: { sources?: FrozenSource[] } & WalkedSnapshot | null, next: { sources?: FrozenSource[] } & WalkedSnapshot): Change[] {
+  const a = new Map((prev?.sources ?? []).map((x) => [entryKey(x), x])), b = new Map((next.sources ?? []).map((x) => [entryKey(x), x]));
+  if (!a.size && !b.size) return [];
+  const words = new Map<string, PublishedNumber>();
+  for (const s of [prev, next]) if (s) for (const n of publishedNumbers(s)) words.set(entryKey(n), n);
+  const answer = (x: FrozenSource) => (x.url ? `Official source${x.page ? ` (${x.page})` : ""}` : x.none_published ? "None published – set by ExpatReady" : "Sample");
+  const line = (x: FrozenSource) => { const n = words.get(entryKey(x)); return `${n ? `${n.item_words}: ${n.words}` : `${x.key} ${x.address}: ${x.value}`}: ${answer(x)}`; };
+  const ref = (x: FrozenSource) => `${x.key}|${x.address}`;
+  const out: Change[] = [];
+  for (const [k, x] of b) {
+    const was = a.get(k);
+    if (!was) out.push({ kind: "Source", key: ref(x), change: "added", needs_sme: true, label: line(x) });
+    else if (JSON.stringify(was) !== JSON.stringify(x)) out.push({ kind: "Source", key: ref(x), change: "changed", needs_sme: true, label: line(x) });
+  }
+  for (const [k, x] of a) if (!b.has(k)) out.push({ kind: "Source", key: ref(x), change: "removed", needs_sme: true, label: line(x) });
   return out;
 }

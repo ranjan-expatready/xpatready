@@ -8,7 +8,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { slug } from "../engine/import.ts";
-import { canonicalValue, publishedNumbers, sourceProblems, type FeeLineInput, type PublishedNumber, type SourceEntry, type WalkedSnapshot } from "../engine/source-register.ts";
+import { canonicalValue, entryOf, frozenSources, numberState, publishedNumbers, sourceProblems, statesInDigits, type FeeLineInput, type PublishedNumber, type SourceEntry, type WalkedSnapshot } from "../engine/source-register.ts";
+import { problemWords } from "../contracts/programs.ts";
 import { FEE_TABLE } from "../engine/runtime/filings.ts";
 import { WHERE_STEP } from "../engine/setup-checklist.ts";
 import { recorder } from "./runtime/api.ts";
@@ -86,7 +87,7 @@ ok("C5.4 BR-2 fail: changing gte to gt lists that 18 again as having no source (
 const gate = sm.find((n) => n.key === "vv.single/gate:vv.funds")!;
 ok("C5.4 BR-5 pass: an entry written as \"13757.0\" (or \" 13757 \") is the same value as 13757, not stale",
   canonicalValue("13757.0") === "13757" && canonicalValue(13757) === "13757" && sourceProblems([gate], [{ kind: "rule", key: gate.key, address: gate.address, value: " 13757.0 ", none_published: { reason: "ExpatReady's own working figure for the demo" } }]).length === 0);
-ok("C5.4 BR-5 fail: a different number (13757.5) is a different value; a date stays its ISO text", canonicalValue("13757.5") !== "13757" && sourceProblems([gate], [{ kind: "rule", key: gate.key, address: gate.address, value: "13757.5", none_published: true }]).length === 1 && canonicalValue("2019-06-07T00:00:00Z") === "2019-06-07");
+ok("C5.4 BR-5 fail: a different number (13757.5) is a different value; a date stays its ISO text", canonicalValue("13757.5") !== "13757" && sourceProblems([gate], [{ kind: "rule", key: gate.key, address: gate.address, value: "13757.5", none_published: { reason: "ExpatReady's own working figure" } }]).length === 1 && canonicalValue("2019-06-07T00:00:00Z") === "2019-06-07");
 
 // ---------------------------------------------------------------- BR-6, BR-8 refused, naming each, in §5's words
 const missing = sourceProblems(nums, []);
@@ -94,19 +95,19 @@ const rw90 = nums.find((n) => n.key === "wp.family/RW_PASSPORT_EXPIRY_90")!;
 ok("C5.4 BR-6 pass: with every number cited or None published, nothing is refused", sourceProblems(nums, nums.map((n, i) => ({ kind: n.kind, key: n.key, address: n.address, value: Number(n.value), ...(i % 2 ? { cited: cite } : { none_published: { reason: "ExpatReady's warning lead time" } }) }))).length === 0);
 ok("C5.4 BR-6 fail: with no entries all 19 are refused, each named, in the concept's exact words",
   missing.length === 19 && missing.every((p) => p.level === "error" && p.state === "missing")
-  && missing.some((p) => p.message === "Form IMM 5707: Age years: at least 18 has no source entry. Add the official source, or mark 'None published – set by ExpatReady'." && p.where === "Forms" && p.item === "wp.family/form:IMM 5707"),
-  missing.filter((p) => p.where === "Forms").map((p) => p.message));
+  && missing.some((p) => problemWords(p) === "Form IMM 5707: Age years: at least 18 has no source entry. Add the official source, or mark 'None published – set by ExpatReady'." && p.where === "Forms" && p.key === "wp.family/form:IMM 5707" && p.item === "IMM 5707"),
+  missing.filter((p) => p.where === "Forms").map(problemWords));
 const changed = sourceProblems([{ ...rw90, value: "60" }], [{ kind: rw90.kind, key: rw90.key, address: rw90.address, value: 90, none_published: { reason: "ExpatReady's warning lead time" } }]);
 ok("C5.4 BR-6 fail: an entry written for 90 while the number is now 60 is refused with the \"Changed\" sentence",
-  changed.length === 1 && changed[0].state === "changed" && changed[0].message === `${rw90.item_words}: the source was written for 90; the number is now 60. Check the source again, or mark 'None published – set by ExpatReady'.`, changed[0]?.message);
-ok("C5.4 BR-6 fail: an entry for another combination's key does not source this one (keys carry the combination)", sourceProblems([rw90], [{ kind: rw90.kind, key: "wp.single/RW_PASSPORT_EXPIRY_90", address: rw90.address, value: 90, none_published: true }]).length === 1);
+  changed.length === 1 && changed[0].state === "changed" && problemWords(changed[0]) === `${rw90.item_words}: the source was written for 90; the number is now 60. Check the source again, or mark 'None published – set by ExpatReady'.`, changed[0]?.message);
+ok("C5.4 BR-6 fail: an entry for another combination's key does not source this one (keys carry the combination)", sourceProblems([rw90], [{ kind: rw90.kind, key: "wp.single/RW_PASSPORT_EXPIRY_90", address: rw90.address, value: 90, none_published: { reason: "ExpatReady's warning lead time" } }]).length === 1);
 
 // ---------------------------------------------------------------- BR-4 records that already cite (fee lines, validity)
 const fees = publishedNumbers({ combination: { key: "vv.single" } }, { feeLines: FEE_TABLE.lines as FeeLineInput[] });
 ok("C5.4 BR-4 pass: every fee-table line's numbers are listed as kind fee and count as sourced (page, URL, quote, date read): none refused",
   fees.length >= 6 && fees.every((n) => n.kind === "fee" && n.sourced_by === "fee_table") && sourceProblems(fees, []).length === 0 && fees.some((n) => n.key === "vv.single/fee:visitor_visa" && n.address === "per_person_cad" && n.value === "100"), tally(fees));
 const unsourced = publishedNumbers({ combination: { key: "vv.single" } }, { feeLines: [{ key: "app_fee", label: "Application fee", per_person_cad: 155, source: { page: "IRCC fee list", url: "https://ircc.canada.ca/english/information/fees/fees.asp", quote: "", read: "2026-11-02" } }] });
-ok("C5.4 BR-4 fail: a fixture fee line whose source has no quote is refused, named (engine level only: CI refuses it in the table)", sourceProblems(unsourced, []).map((p) => p.message).join() === "Application fee: Per person (CAD): 155 has no source entry. Add the official source, or mark 'None published – set by ExpatReady'.");
+ok("C5.4 BR-4 fail: a fixture fee line whose source has no quote is refused, named (engine level only: CI refuses it in the table)", sourceProblems(unsourced, []).map(problemWords).join() === "Application fee: Per person (CAD): 155 has no source entry. Add the official source, or mark 'None published – set by ExpatReady'.");
 const usable: WalkedSnapshot = { ...small, canonical_fields: [{ id: "case.application_date" }], document_types: [{ key: "police_certificate" }], checks: [{ ...small.checks![0], source_quote: "issued no more than 6 months before", condition: { op: "issued_within_months", months: 6, before: "case.application_date", cite: { page: "Guide 5256", url: "https://www.canada.ca/guide-5256", read: "2026-10-19" } } }] };
 const dv = publishedNumbers(usable).find((n) => n.address === "months")!;
 ok("C5.4 BR-4 pass: a usable document validity rule's months count through its own cite; the same rule without its cite is refused (m5)", dv.sourced_by === "validity_cite" && sourceProblems([dv], []).length === 0 && sourceProblems(sm.filter((n) => n.address === "months"), []).length === 1);
@@ -137,9 +138,29 @@ ok("C5.4 BR-1 fail (review on #558): a number under \"not\" is walked", at("R-T2
 ok("C5.4 BR-1 fail (review on #558): a number compared with eq counts", at("R-T3").length === 1 && at("R-T3")[0].address === "case.children|eq|1");
 ok("C5.4 BR-2 fail (review on #558): k counts every leaf of the same field and operator, 0 included, so the 5000 is the second", at("R-T4").length === 1 && at("R-T4")[0].address === "case.funds_cad|gte|2", at("R-T4").map((n) => n.address));
 
+// ---------------------------------------------------------------- PR 2a: Sample entries, validity digits, frozen sources
+// Tech lead's condition on Decision 1 (#558) and the reviewer's MJ-1 on #569: a Sample entry (no citation, not None
+// published) passes only in the demo workspace; anywhere else it is refused, said as Sample.
+const sampleEntry: SourceEntry = { kind: rw90.kind, key: rw90.key, address: rw90.address, value: "90", sample: true };
+ok("C5.4 Decision 1 pass: a number whose entry is Sample passes in the demo workspace", sourceProblems([rw90], [sampleEntry], { demo: true }).length === 0 && numberState(rw90, sampleEntry, true).state === "sample");
+const outside = sourceProblems([rw90], [sampleEntry]);
+ok("C5.4 Decision 1 fail: the same Sample entry outside the demo workspace is refused, named, in words that say Sample",
+  outside.length === 1 && outside[0].state === "sample" && problemWords(outside[0]) === `${rw90.item_words}: Passport days until expiry: at most 90 has only a Sample source, which passes only in the demo workspace as a Demo release. Add the official source, or mark 'None published – set by ExpatReady'.`, outside.map(problemWords));
+ok("C5.4 Decision 1 fail: a number with no entry is refused in the demo workspace too", sourceProblems([rw90], [], { demo: true }).length === 1);
+ok("C5.4 BR-3 fail: \"None published\" with a reason under 10 characters is no answer", sourceProblems([rw90], [{ ...sampleEntry, sample: false, none_published: { reason: "short" } }]).length === 1);
+const quoteSix = { ...usable, checks: [{ ...usable.checks![0], source_quote: "issued no more than six months before" }] } as WalkedSnapshot;
+ok("C5.4 decision 4 fail (#558, build note 10): a usable validity rule whose quote says its months in words, not digits, is listed as needing a source",
+  publishedNumbers(quoteSix).find((n) => n.address === "months")!.sourced_by === undefined && sourceProblems(publishedNumbers(quoteSix).filter((n) => n.address === "months"), []).length === 1);
+ok("C5.4 M4 pass: statesInDigits finds 18 in \"aged 18 years\" and 1 November 2024 written \"November 1, 2024\"", statesInDigits("aged 18 years or older", "18") && statesInDigits("submitted on or after November 1, 2024", "2024-11-01") && statesInDigits("from 1 November 2024", "2024-11-01") && statesInDigits("5 years past", "5"));
+ok("C5.4 M4 fail: statesInDigits does not find 18 in 180, 5 in 5487 or 5.5, one in \"one year\", or 7 June 2019 in a quote without it", !statesInDigits("within 180 days", "18") && !statesInDigits("guide 5487", "5") && !statesInDigits("5.5 years", "5") && !statesInDigits("at least one year", "1") && !statesInDigits("If your passport is expired", "2019-06-07"));
+const frozen = frozenSources([rw90], [sampleEntry, { kind: "rule", key: "wp.family/R-99", address: "x|gte|1", value: 3, none_published: { reason: "No longer used anywhere" } }]);
+ok("C5.4 BR-9 pass: only entries answering a published number are frozen, in one canonical shape, read back the same",
+  frozen.length === 1 && frozen[0].sample === true && frozen[0].value === "90" && !("version" in frozen[0]) && sourceProblems([rw90], frozen.map(entryOf), { demo: true }).length === 0, frozen);
+
 // ---------------------------------------------------------------- M1 kept outside validate(), pure
 const src = readFileSync(join(STUDIO, "engine", "source-register.ts"), "utf8");
-ok("C5.4 M1 pass: source-register.ts reads no file or database and only takes validate.ts's Problem type", !/node:fs|@prisma|fetch\(/.test(src) && !/^import \{[^}]*\} from "\.\/validate\.ts"/m.test(src) && /^import type \{ Problem \} from "\.\/validate\.ts"/m.test(src));
-ok("C5.4 M1 fail: validate.ts does not call the source gate (a released snapshot is never re-judged)", !/source-register|sourceProblems/.test(readFileSync(join(STUDIO, "engine", "validate.ts"), "utf8")));
+ok("C5.4 M1 pass: source-register.ts reads no file or database and only takes validate.ts's Problem type", !/node:fs|@prisma|fetch\(/.test(src) && !/^import \{[^}]*\} from "\.\/validate\.ts"/m.test(src) && /^import type \{ Change, Problem \} from "\.\/validate\.ts"/m.test(src));
+const validateSrc = readFileSync(join(STUDIO, "engine", "validate.ts"), "utf8");
+ok("C5.4 M1 fail: validate.ts does not call the source gate (a released snapshot is never re-judged); it takes only the Source change lines (BR-9)", !/sourceProblems|publishedNumbers|numberState/.test(validateSrc) && /^import \{ sourceChanges \} from "\.\/source-register\.ts";/m.test(validateSrc));
 
 process.exit(summary() ? 1 : 0);
