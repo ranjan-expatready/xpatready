@@ -179,7 +179,7 @@ function NextStep({ row, setup }: { row: CatalogueLeaf; setup: CombinationSummar
 }
 
 export function ModePill({ mode }: { mode: string }) {
-  const m: Record<string, [string, string, string]> = { LIVE: ["ai", "Live AI call", "A new call through the guarded route"], REPLAY: ["neutral", "Replay of a saved run", "Reuses a saved real run; no model call"], STUB: ["neutral", "Stub pass", "Path test, no AI content"], LOCAL: ["neutral", "Rules only, no AI", "Rules ran on this server; no AI call"] };
+  const m: Record<string, [string, string, string]> = { LIVE: ["ai", "Live", "A new call through the guarded route"], REPLAY: ["neutral", "Saved", "Reuses a saved real run; no model call"], STUB: ["neutral", "Stub pass", "Path test, no AI content"], LOCAL: ["neutral", "Rules only, no AI", "Rules ran on this server; no AI call"] };
   const [tone, label, title] = m[mode] ?? ["neutral", mode.toLowerCase().replace(/_/g, " "), "How this step ran"]; // QA-75 (break m5): never a raw code
   return <Pill tone={tone} title={title}>{label}</Pill>;
 }
