@@ -21,7 +21,7 @@ const call = async (method: string, path: string, body?: unknown, actor = "user-
 };
 const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 const field = (r: { body: any }, f: string) => (r.body?.errors ?? []).find((e: any) => e.field === f)?.message as string | undefined;
-const P = (extra: any[] = [], child = false) => [{ role: "principal", min: 1, max: 1, applies: true }, { role: "spouse_or_partner", min: 0, max: 1, applies: true }, { role: "child", min: 0, max: 4, applies: child }, { role: "representative", min: 0, max: 1, applies: false }, ...extra];
+const P = (extra: any[] = [], child = false) => [{ role: "principal", min: 1, max: 1, applies: true }, { role: "spouse_or_partner", min: 0, max: 1, applies: true, filingMode: "files_own" }, { role: "child", min: 0, max: 4, applies: child, filingMode: child ? "files_own" : "declared_only" }, { role: "representative", min: 0, max: 1, applies: false }, ...extra];
 
 (async () => {
   const served = (await call("GET", "/session")).body?.workspace?.id;
@@ -61,7 +61,7 @@ const P = (extra: any[] = [], child = false) => [{ role: "principal", min: 1, ma
   ok("C11.12 fail: Parent (forms only) is refused on its field, in plain words", r.status === 400 && /forms only/.test(field(r, "participants[4].role") ?? ""), field(r, "participants[4].role"));
   r = await call("PATCH", `/combinations/${C}/people`, { participants: P([{ role: "sponsor", min: 0, max: 1, applies: true }]), version: 1 });
   ok("C11.12 fail: a sponsor ticked as applicant is refused", r.status === 400 && /never an applicant/.test(field(r, "participants[4].applies") ?? ""), field(r, "participants[4].applies"));
-  r = await call("PATCH", `/combinations/${C}/people`, { participants: [{ role: "spouse_or_partner", min: 0, max: 1, applies: true }], version: 1 });
+  r = await call("PATCH", `/combinations/${C}/people`, { participants: [{ role: "spouse_or_partner", min: 0, max: 1, applies: true, filingMode: "files_own" }], version: 1 });
   ok("C11.12 fail: no principal applicant is refused", r.status === 400 && /principal applicant/.test(r.body.detail), r.body.detail);
   r = await call("PATCH", `/combinations/${C}/people`, { participants: P().map((p) => (p.role === "child" ? { ...p, min: 3, max: 1 } : p)), version: 1 });
   ok("C11.12 fail: the fewest above the most is refused on the line", r.status === 400 && !!field(r, "participants[2].max"), field(r, "participants[2].max"));
