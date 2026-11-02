@@ -25,9 +25,10 @@ export const tabOf = (t: string | undefined, area?: string | null): TabKey =>
  *  no break ("…, if applicableNote: Complete this form…"), so the note's label reads as a code glued to a word: it is
  *  shown as two sentences. The stored quote stays as read (the release fingerprint covers it).
  *  QA-107: the page reader also kept a link's screen-reader text ("Declaration (IMM 5646) (opens in a new tab) . Pages 1"):
- *  that text is not IRCC's sentence, so it is dropped with the space it left before a full stop, comma or semicolon. */
+ *  that text is not IRCC's sentence, so it is dropped with the space it left before a full stop, comma or semicolon
+ *  (only there: review m3, "Version 1 .5" elsewhere is kept as read). */
 export const irccWords = (q: string | null | undefined): string | null => (q && !ourWords(q)
-  ? q.replace(/\s*\(opens in a new (?:tab|window)\)/gi, "").replace(/\s+([.,;])/g, "$1").replace(/([a-z)])(Note|Notes|Important):\s*/g, "$1. $2: ")
+  ? q.replace(/\s*\(opens in a new (?:tab|window)\)(?:\s+(?=[.,;]))?/gi, "").replace(/([a-z)])(Note|Notes|Important):\s*/g, "$1. $2: ")
   : null);
 /** QA-105: the dialog's description says what the chosen way does (Rules only uses no AI and attaches nothing). */
 export const FIND_DESCRIPTION: Record<"replay" | "rules" | "live", string> = {

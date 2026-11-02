@@ -14,6 +14,8 @@ ok("C11.15 QA-107 pass: any case, tab or window; the comma follows the form numb
 const c = irccWords("Complete this form if you have a spouse.");
 ok("C11.15 QA-107 fail: a sentence with no link text is shown unchanged", c === "Complete this form if you have a spouse.", c);
 ok("C11.15 QA-107 fail: the product's own words are still never IRCC's (L11)", irccWords("IMM 5409 (05-2024): added from the library") === null);
+const e = irccWords("Use version 1 .5 of the form (opens in a new tab), if applicable");
+ok("C11.15 QA-107 fail (review m3): a space before a full stop away from the link text is kept as read", e === "Use version 1 .5 of the form, if applicable", e);
 const d = irccWords("Use this form, if applicableNote: Complete this form only once.");
 ok("C11.15 QA-107 fail: the note split of drift check 6 still applies", d === "Use this form, if applicable. Note: Complete this form only once.", d);
 

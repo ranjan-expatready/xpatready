@@ -104,6 +104,15 @@ const focused = (p) => p.evaluate(() => { const a = document.activeElement; retu
     const backAfterCancel = await p.waitForFunction(() => document.activeElement?.getAttribute("data-find-forms") === "again", null, { timeout: 3000 }).then(() => true, () => false);
     step("C11.15 QA-110 fail (page): Cancel also puts focus back on Find again, never the page body", backAfterCancel, await focused(p));
 
+    // Review m1: "Redo with AI" from a line's menu: the menu item is gone when the dialog closes, so focus goes to the
+    // line's menu button (Actions for IMM 5707).
+    const menuBtn = p.getByRole("button", { name: "Actions for IMM 5707" });
+    await menuBtn.focus(); await p.keyboard.press("Enter");
+    await p.getByRole("menuitem", { name: /Redo with AI/ }).waitFor(); await p.getByRole("menuitem", { name: /Redo with AI/ }).focus(); await p.keyboard.press("Enter");
+    await dlg.waitFor(); await p.keyboard.press("Escape"); await dlg.waitFor({ state: "detached" });
+    const backOnMenu = await p.waitForFunction(() => document.activeElement?.getAttribute("aria-label") === "Actions for IMM 5707", null, { timeout: 3000 }).then(() => true, () => false);
+    step("C11.15 QA-110 pass (page, review m1): Redo with AI from a line's menu, then Escape: focus is on that line's menu button", backOnMenu, await p.evaluate(() => `${document.activeElement?.tagName} ${document.activeElement?.getAttribute("aria-label") ?? ""}`));
+
     // QA-111: a live find started elsewhere; the tab is reloaded while it runs, then left alone until it ends.
     step("C11.15 QA-111 setup: IMM 1294 is not a line yet", (await p.locator('[data-line="IMM 1294"]').count()) === 0);
     const runId = await start(sp, "live", "k11-live-1");
@@ -125,8 +134,14 @@ const focused = (p) => p.evaluate(() => { const a = document.activeElement; retu
     // QA-107: one full stop after the time; IRCC's words without link text.
     const status = await p.locator("[data-finder-status]").innerText();
     step("C11.15 QA-107 pass (page): 'Last find today at … a.m./p.m.' ends with one full stop", /Last find today at \d{1,2}:\d\d [ap]\.m\. /.test(status) && !/\.\./.test(status), status);
-    const words = (await p.locator("main").innerText()).match(/IRCC's words[^\n]*/g) ?? [];
-    step("C11.15 QA-107 fail (page): no IRCC's words on the tab keep '(opens in a new tab)' or a space before a full stop", !words.some((w) => /opens in a new (tab|window)|\s\.\s/i.test(w)), words.slice(0, 5));
+    // Review m2: the recorded pages carry no link text, so the quote the page reader kept on 29 Oct is put on IMM 1294's
+    // line as it was read ("… (opens in a new tab) . Pages 1 to 3 …"); the stored quote stays as read, the page drops it.
+    const seeded = "Application for a study permit (IMM 1294) (opens in a new tab) . Pages 1 to 3 must be completed.";
+    sql(`update combination_form set source_quote='${seeded}' where id=(select id from combination_form where combination_id='${sp}' and lineage_key='IMM 1294' order by version desc limit 1)`);
+    await p.reload(); await p.locator('[data-line="IMM 1294"]').waitFor({ timeout: 15_000 });
+    const lineText = (await p.locator('[data-line="IMM 1294"]').innerText()).replace(/\s+/g, " ");
+    step("C11.15 QA-107 pass (page): the line shows IRCC's sentence without the link text", /Application for a study permit \(IMM 1294\)\. Pages 1 to 3 must be completed\./.test(lineText), lineText.slice(0, 300));
+    step("C11.15 QA-107 fail (page): '(opens in a new tab)' is never shown, though it is stored as read", !/opens in a new tab/i.test(lineText) && sql(`select count(*) from combination_form where combination_id='${sp}' and lineage_key='IMM 1294' and source_quote like '%(opens in a new tab)%'`) !== "0", lineText.slice(0, 300));
 
     const ax = await new AxeBuilder({ page: p }).include("main").withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
     step("axe (WCAG 2.2 AA): Study permit's Forms tab after the find", ax.violations.length === 0, ax.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`).join(" ; "));

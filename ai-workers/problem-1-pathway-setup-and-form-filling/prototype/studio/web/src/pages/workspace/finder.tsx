@@ -59,7 +59,12 @@ export function FindDialog({ id, only, page, onClose, onStarted }: { id: string;
   React.useEffect(() => { if (liveOff && mode === "live") setMode(page ? "rules" : "replay"); }, [liveOff, mode, page]);
   // QA-110: the dialog has no Radix trigger, so on Escape or Cancel focus fell to the page body. Focus goes back to what
   // opened it (Find again, or the line's menu button) when that is still on the page and nothing else took focus.
-  const [opener] = React.useState(() => (typeof document !== "undefined" ? (document.activeElement as HTMLElement | null) : null));
+  // Review m1: opened from a line's menu ("Redo with AI"), the menu item is gone by then: its menu's button takes focus.
+  const [opener] = React.useState(() => {
+    const a = typeof document !== "undefined" ? (document.activeElement as HTMLElement | null) : null;
+    const menu = a?.closest('[role="menu"]'), by = menu?.getAttribute("aria-labelledby");
+    return (by ? document.getElementById(by) : null) ?? a;
+  });
   React.useEffect(() => () => { setTimeout(() => { const a = document.activeElement; if ((!a || a === document.body) && opener?.isConnected && !(opener as HTMLButtonElement).disabled) opener.focus(); }, 0); }, [opener]);
   const cost = useCostGate(); // P-179: over a limit, the cost warning first (Continue or Cancel)
   const start = async () => {
