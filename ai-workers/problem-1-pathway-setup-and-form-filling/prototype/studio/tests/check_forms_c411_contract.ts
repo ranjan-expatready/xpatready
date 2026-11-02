@@ -42,6 +42,8 @@ const asPlan = (ai: string) => STEPS.map((step) => ({ step, mode: AI.has(step) ?
     ok("C4.11 O fail (BR-10): a saved reading of an earlier text is out of date (named) and is never replayed", !!staleReading("ckl.pdf", { runs, root }) && savedReading("ckl.pdf", { runs, root }) === null, staleReading("ckl.pdf", { runs, root }));
     saved("c1-requirements-live-20261002t000000000z.json", now);
     ok("C4.11 O pass (BR-10): with a saved reading of the current text, it replays and nothing is out of date", savedReading("ckl.pdf", { runs, root })?.sha256 === now && staleReading("ckl.pdf", { runs, root }) === null);
+    rmSync(join(root, inv));
+    ok("C4.11 O fail (#397 m1): with the checklist's text missing on this computer, nothing is called out of date (it cannot be said)", staleReading("ckl.pdf", { runs, root }) === null && savedReading("ckl.pdf", { runs, root }) === null);
     rmSync(root, { recursive: true, force: true });
   }
   const served = (await call("GET", "/session")).body?.workspace?.id;
