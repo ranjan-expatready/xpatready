@@ -56,14 +56,21 @@ const keyOf = (s: string) => (s.length <= 300 ? s : `${s.slice(0, 200)}#${create
 const ROLE_WORDS: Record<string, string> = { PRINCIPAL: "the person applying", SPOUSE: "the spouse or partner", DEPENDENT: "each child", EACH_APPLICANT: "each person applying" };
 
 /** The fields a condition reads (leaves only). */
+/** A condition node read loosely (an AI's tree before it is checked against the contract). */
+type Loose = { field?: unknown; args?: unknown; arg?: unknown; [k: string]: unknown };
+const looseOf = (x: unknown): Loose | null => (x && typeof x === "object" && !Array.isArray(x) ? (x as Loose) : null);
 export function fieldsOf(n: unknown): string[] {
   const out: string[] = [];
-  const walk = (x: any) => { if (!x || typeof x !== "object") return; if (str(x.field)) out.push(x.field); (x.args ?? []).forEach(walk); if (x.arg) walk(x.arg); };
+  const walk = (x: unknown) => { const o = looseOf(x); if (!o) return; if (typeof o.field === "string") out.push(o.field); if (Array.isArray(o.args)) o.args.forEach(walk); if (o.arg) walk(o.arg); };
   walk(n);
   return [...new Set(out)];
 }
 /** Rewrites a condition's fields (and leaves the rest as it is). */
-const renamed = (n: any, to: (f: string) => string): any => !n || typeof n !== "object" ? n : { ...n, ...(str(n.field) ? { field: to(n.field) } : {}), ...(Array.isArray(n.args) ? { args: n.args.map((a: any) => renamed(a, to)) } : {}), ...(n.arg ? { arg: renamed(n.arg, to) } : {}) };
+function renamed<T>(n: T, to: (f: string) => string): T {
+  const o = looseOf(n);
+  if (!o) return n;
+  return { ...o, ...(typeof o.field === "string" ? { field: to(o.field) } : {}), ...(Array.isArray(o.args) ? { args: o.args.map((a) => renamed(a, to)) } : {}), ...(o.arg ? { arg: renamed(o.arg, to) } : {}) } as T;
+}
 
 type Tree = { root: Record<string, unknown>; node: PredicateNode };
 /** M2: the tree as the contract wants it (subjectKind on the root, a strict node of the 11 operators), or why not. */
@@ -222,7 +229,7 @@ export function guideMastersFromRounds(rounds: { draft: MRound<GuideAnswer>; che
       const mapped = new Map(reads.map((x) => [snake(x), factOf(x)]));
       const missing = reads.filter((x) => !mapped.get(snake(x)));
       const to = (f: string) => mapped.get(f) ?? f;
-      const root = renamed(t.root, to), node = renamed(t.node, to) as PredicateNode;
+      const root = renamed(t.root, to), node = renamed(t.node, to);
       const ex = runExamples({ root, node }, c.examples, to);
       if ("why" in ex) { drop(`Not proposed: ${ex.why}`); continue; }
       const readKeys = [...new Set(reads.map((x) => to(snake(x)).slice(0, 120)))].sort();
