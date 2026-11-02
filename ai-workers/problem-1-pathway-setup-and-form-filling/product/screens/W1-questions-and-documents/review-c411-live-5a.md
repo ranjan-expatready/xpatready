@@ -148,3 +148,36 @@ Scope: `git diff 4a09887b..85d6bf35 -- …/prototype/studio`, 7 files: the two d
 **Correction to my earlier sums.** The criteria were right but the totals were added wrong. Round 1's table (½ on plain words, feedback, correct data and trust) adds up to 8.0, not 7.5. Round 2's (½ on trust and accessibility) adds up to 9.0, not 8.5. Round 1's Block stands, because M1 was a Major on its own. The same 7.5 appears in `journey-test-reviewer-c411-live-5a-2026-11-02.md`, which is committed on the branch.
 
 **Verdict: Approve** (commit 85d6bf35). No Blocker or Major is open. The n4 test strengthening, n2 (own row), and L7–L11 are follow-ups.
+
+---
+
+## Part 5b on f8a6fe90 (2 Nov): **Approve**
+Scope: `git diff e0a8b8fb..f8a6fe90`, which covers the acceptance contract (`api/src/draft-contract.ts`), a per-step `worst_usd` in `draft-qd.ts`, and `check_forms_c411_contract.ts`. 1b179125 adds only `qa/built/C4.11.md`.
+
+Rules as before: :4455 only, the fake launcher with the switch only on the usage line, my test ledger in my scratchpad, US$0, no code edited.
+
+**Suite:** `check_forms_c411_contract.ts` **35/35**, run by me on HEAD. The four L5 checks and the three closed-Live checks all pass. Afterwards I stopped the copy, dropped its database, and copied the builder's `var/suites/*.json` back.
+
+### What holds
+* **Live open (fake launcher), all seven steps planned with the AI steps Live.**
+  * conditions: worst US$2.00, "The most its two AI rounds can reserve; the usual cost is not estimated yet".
+  * pqr_picks: worst US$2.00, same words.
+  * documents: worst US$0, "uses its saved checklist reading", with its saved reading named (IMM 5488, 2026-10-20).
+  * checker: worst US$0.
+  * The totals are `worst_usd 4`, `usual_usd null` and `remaining_usd 60`, the same as the engine's plan from 5a. `live.approved` is true.
+* **BR-12 spend limit.** A limit 1 cent under the worst case gets 409 "over the limit" and nothing starts. A limit at the worst case starts one LIVE batch.
+* **AI spending cap (my probe).** With my test ledger at US$1.50 left and a limit of US$10, the run got 409 "Not started: the worst case (US$4.00) is above what is left of the AI spending cap (US$1.50). Nothing was started." The batch count stayed at 4. The contract hands over to `qd.run`, which re-checks its own plan checksum and the cap, so every 5a guard (Stop, one run per combination, one picks draft) also applies to Live runs started through the contract.
+* **Rules steps asked Live.** Open: 400 "worked out by the rules". Closed: the old 409, now in P-227's words (`LIVE_WAITING`). Closed-Live plans still show costs as null with "Not estimated: Live is not open on this copy." and never run.
+* **Plans after a restart.** Plans live only in memory, so a plan made with the switch open cannot run after a restart without it (409 "Look at the plan again").
+
+### Minors (Should; do not block)
+* **p1. The checker step's flags contradict each other.** In a Live plan, `checker` has `uses_ai: true` and `mode: live`, but its cost says "US$0: worked out without an AI call."
+  * Concept §4 step 7 is the independent checker round plus rules. Here the blind checker rounds are inside steps 5 and 6 and are costed there.
+  * *Fix:* say that in the words, e.g. "US$0 here: the blind checker rounds are counted under conditions and pqr_picks; this step is the rules check" (`draft-contract.ts:83`).
+* **p2. Old wording still in the documents step.** `saved()` still says "recorded in the founder-approved live trial (P-131)" for the out-of-date and none states (`draft-contract.ts:100-101`). A Live plan now shows this block too. The engine's 5a words are "an approved Live run of the checklist, on its page". *Fix:* use the same words.
+* **p3. A wrong reason when the guide is not among the AI-readable files.** Found by reading the code; not probed. In that case `worst_usd` is 0 for conditions and picks (`draft-qd.ts` steps map, `g?.input`), so the contract says "US$0: worked out without an AI call." for steps that will in fact fail with "not among the official files the AI may read". *Fix:* say that reason instead.
+* **p4. A missing test.** The contract suite does not cover the AI spending cap refusal through `/draft`; my probe above shows it holds. *Fix:* add one fail check with a scratch ledger.
+
+**Journey:** not rescored. 5b is an API contract with no screen change, and the 5a dialog score (9.5/10) is unaffected.
+
+**Verdict: Approve** (commit f8a6fe90, with 1b179125 on top). No Blocker or Major is open. p1–p4 are follow-ups, as are the earlier n2 (its own row, before the paid Visitor visa run) and L7–L11.

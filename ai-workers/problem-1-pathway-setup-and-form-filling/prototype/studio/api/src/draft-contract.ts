@@ -80,7 +80,7 @@ export class DraftContract {
       const step = s.step as ContractStep, n = CONTRACT_STEPS.indexOf(step) + 1, e = engine.steps.find((x) => x.kind === KIND_OF[step]);
       const cost = s.mode !== "live" ? { usual: 0, worst: 0, currency: "USD" }
         : !open ? { usual: null, worst: null, currency: "USD", why: "Not estimated: Live is not open on this copy." }
-        : { usual: null, worst: e?.worst_usd ?? 0, currency: "USD", why: (e?.worst_usd ?? 0) > 0 ? "The most its two AI rounds can reserve; the usual cost is not estimated yet." : step === "documents" ? "US$0: in a Live run this step uses its saved checklist reading (the checklist's Live reading is on its page)." : "US$0: worked out without an AI call." };
+        : { usual: null, worst: e?.worst_usd ?? 0, currency: "USD", why: (e?.worst_usd ?? 0) > 0 ? "The most its two AI rounds can reserve; the usual cost is not estimated yet." : step === "documents" ? "US$0: in a Live run this step uses its saved checklist reading (the checklist's Live reading is on its page)." : step === "checker" ? "US$0 here: the blind checker rounds are counted under conditions and pqr_picks; the rest is rules." : "US$0: worked out without an AI call." };
       return { step, n, label: e?.label ?? step, mode: s.mode, uses_ai: AI_STEPS.has(step) && s.mode !== "rules", cost, saved: s.mode === "replay" || (open && step === "documents") ? this.saved(step, checklists) : null };
     });
     const worst = live.length && !open ? null : Math.round(steps.reduce((a, s) => a + (s.cost.worst ?? 0), 0) * 100) / 100;
@@ -97,8 +97,8 @@ export class DraftContract {
       const found = checklists.map((a) => ({ a, r: savedReading(a.officialFile) })).filter((x) => x.r);
       // BR-10: a saved reading of an older text of this checklist is out of date: named, never offered as Replay.
       const stale = !found.length ? checklists.map((a) => ({ a, r: staleReading(a.officialFile) })).find((x) => x.r) : undefined;
-      if (stale) return { usd: 0, state: "out_of_date", date: null, edition: stale.a.edition ?? stale.a.fileName, run_file: stale.r!.runFile, why: `The saved AI reading was of an earlier text of ${stale.a.edition ?? stale.a.fileName}, so it is not replayed. A new reading is recorded in the founder-approved live trial (P-131); meanwhile this step proposes nothing.` };
-      if (!found.length) return { usd: 0, state: "none", date: null, edition: null, why: checklists.length ? "No saved AI reading of this combination's checklist yet: it is recorded in the founder-approved live trial (P-131)." : "No official document checklist among this combination's sources yet." };
+      if (stale) return { usd: 0, state: "out_of_date", date: null, edition: stale.a.edition ?? stale.a.fileName, run_file: stale.r!.runFile, why: `The saved AI reading was of an earlier text of ${stale.a.edition ?? stale.a.fileName}, so it is not replayed. A new reading is recorded in an approved Live run of the checklist, on its page; meanwhile this step proposes nothing.` };
+      if (!found.length) return { usd: 0, state: "none", date: null, edition: null, why: checklists.length ? "No saved AI reading of this combination's checklist yet: it is recorded in an approved Live run of the checklist, on its page." : "No official document checklist among this combination's sources yet." };
       const date = /(\d{8})t/i.exec(found[0].r!.runFile)?.[1];
       return { usd: 0, state: "current", date: date ? `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}` : null, edition: found[0].a.edition ?? found[0].a.fileName, run_file: found[0].r!.runFile };
     }
