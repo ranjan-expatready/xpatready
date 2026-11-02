@@ -39,3 +39,7 @@ Line unchanged (DRAFT, v1), spend ledger unchanged, no second line added. But `G
 Real screen reader; an intended user's unaided walk (D17, D20 stay with the founder); live AI; Stop by click; double click and reload mid-run.
 
 Verdict for this item: not passed (6.5/10).
+
+
+## Re-walk at 82cf8e1f (reviewer)
+Main journey again (Visitor visa, six loaded, Forms tab, line menu on IMM 5409, Redo with AI, Match, Saved, Start): the finder strip reads "AI found 7 forms for this combination, 1 to decide" before and after, the one row listed is unchanged, no console errors. The wrong result in journey 1 is gone. Error journey: Redo (Read) on a combination with no earlier find shows "This find cannot start ... choose Find for IMM 1295"; choosing Find shows the plan and enables Start. Remaining: the outcome sentence of a Redo is only in the run record (feedback and state, 1/2), and the title above for read/match (plain words, 1/2). Score **9/10**, pass. Not tested: screen reader, keyboard-only whole path, live mode.
