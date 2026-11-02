@@ -90,7 +90,7 @@ L-SA3 (C1 ready to file) · X3's guarded Add and L-SA11 (C2, P-252) · G5 (P-248
 ## M2 additions from P-240 (2 Nov; founder "All 4 in M2"; after Demo first and the P-231 finishing order)
 | # | Area | Item | Done when (beyond the standard) | Source |
 |---|---|---|---|---|
-| G1 | screens | **Release refused: no source entry** (C5.4) | a release with a number lacking a source entry or "None published – set by ExpatReady" is refused, naming each item; API and screen tests | P-240; SA-1B-290, -193 |
+| G1 | screens | **Release refused: no source entry** (C5.4) | a release with a number lacking a source entry or "None published – set by ExpatReady" is refused, naming each item; API and screen tests | P-240, P-279 (dates count); SA-1B-290, -193 |
 | G3 | screens | **Demo release path and mark** (C5.6) | Sample content releases only in the demo workspace, marked "Demo release" on every screen that shows the release, excluded from real-publish counts; refused elsewhere | P-240 |
 | G4 | forms | **Answer-key family editor and runner** (C5.7) | a made-up family with expected values (Sample until the expert signs) runs against a map, scoring table or rule set and shows pass or fail per value; the Visitor visa IMM 5257 map has one passing family | P-240; team C6 "not built" |
 | G2 | forms | **Release refused: no passing signed answer-key test** (C5.5), after G4 | maps, scoring tables and rule sets without a passing expert-signed test are refused; a combination without a test only warns (W7) | P-240; SA-1B-296, -181, -199 |
