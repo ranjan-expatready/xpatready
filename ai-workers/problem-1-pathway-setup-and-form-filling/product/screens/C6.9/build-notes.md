@@ -50,3 +50,24 @@ D1 job fit 8 · D2 rules as data 9 · D3 correctness 8 · D4 contract 8 · D5 se
 * Labels and conditions stay Sample; canada.ca not re-opened from the cloud (concept §10): the tech lead re-opens it on the Mac before merge.
 * No gate-authoring screen and no Undo (concept "Not built").
 * A gate on a derived fact is refused at release (choice 5).
+
+# Part 2: the runs (BR-7…BR-14, BR-17, BR-18)
+
+## As built
+* **Adapter** `engine/runtime/eligibility.ts` (pure, stand-in SI-1): `rewriteMissing` (BR-9's `exists` rewrite), `gateResult`, `outcomeOf`, `assess`, `inputsOf`, `outOfDate`. **`FAIL_BEATS_MISSING = true`** (P-229 (3)); the shared `evaluate` is unchanged.
+* **Routes** `api/src/assessments.ts`, registered in `api/src/features/eligibility.ts` with part 1's: `POST /runtime/cases/:id/assessments`, `GET /runtime/cases/:id/assessments[?person=]`, `GET /runtime/assessments/:aid`. No migration: part 1 made the tables.
+* **Contract:** `AssessmentRunBody` added to `contracts/eligibility.ts` (person; reason up to 300 characters, one line, no invisible characters).
+
+## Choices where the concept left room
+1. **Facts read:** only answers their own checks accept (`checkValue`), as the C6.4 checklist reads them; an invalid value counts as missing (AG-03 §9).
+2. **`packVersion`** is the release's version and **`packId`** its `packVersionId` (challenge Minor 6); `releaseId` is kept too.
+3. **`rulesAsOfByProgram`** is the release's `releasedAt` date, in UTC.
+4. **The envelope also stores `person` and `inputs`** (concept BR-8), so out of date needs no other table. `out_of_date`, `changed[]` and `release_changed` are worked out on every read and never written.
+5. **A reason of spaces only is no reason** (trimmed). A first run may carry a reason; it is kept.
+6. **`GET /runtime/assessments/:aid`** answers 403 to a client whatever the id (as every eligibility route does), 404 to staff for an unknown or malformed id, and 404 to another firm's staff (through `reach`).
+7. **The view already carries `overrides[]` and the review fields** (read from part 1's tables, empty until part 3), so part 3 only adds the writes and the page.
+8. **Audit:** one row per run, naming the case and the person by short id and the outcome; no answer value (STANDARDS §5).
+
+## Checks
+* `tests/check_c69_runs.ts`: 50/50 on a fresh copy (sets up release 1, proves the 409 with no gates there, then runs the M3 setup).
+* `acceptance/C6.9.test.ts`: C6.9-1…10, 14, 15 pass; C6.9-11…13 wait for part 3 (override and review).

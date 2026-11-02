@@ -1,0 +1,146 @@
+// C6.9 part 2 (M3-D, concept screens/C6.9/concept.md BR-7…BR-14, BR-17, BR-18; stand-in SI-1): eligibility runs. A pass
+// and a fail per rule: first the pure adapter (engine/runtime/eligibility.ts), then the routes on an isolated copy that
+// it sets up when empty: the Visitor visa release 1 (tests/runtime/setup_visitor_visa.ts, no gates: a run is refused),
+// then the M3 setup (acceptance/lib/setup_vv_m3.ts; its S7 and S8 lines release the gates). No browser, no model call (US$0).
+//   zsh studio/tools/isolated.sh runtime_c69r 4434 start && tsx studio/tests/check_c69_runs.ts 4434 xr_studio_runtime_c69r
+import { evaluate } from "../../contracts/rules.ts";
+import { assess, FAIL_BEATS_MISSING, gateResult, inputsOf, nowOf, outOfDate, rewriteMissing } from "../engine/runtime/eligibility.ts";
+import { kkey, type Known } from "../engine/render.ts";
+import type { Snapshot } from "../engine/snapshot.ts";
+import { spawnSync } from "node:child_process";
+import { join } from "node:path";
+import { CLIENT, DB, PORT, OFFICER, answer, call, confirmAll, main, needVisitorVisa, ok, openCase, sql, yearsAgo, inDays } from "../acceptance/lib/m3.ts";
+
+const P = "subject-1";
+const GATES = [
+  { key: "vv.travel_document", label: "Passport number and expiry date answered (Sample)", condition: { subjectKind: "PERSON", op: "and", args: [{ op: "exists", field: "person.passport_number" }, { op: "exists", field: "person.passport_expiry_date" }] } },
+  { key: "vv.no_convictions", label: "Answered no to the criminal history question (Sample)", condition: { subjectKind: "PERSON", op: "eq", field: "person.criminal_history", value: false } },
+];
+const JUDGEMENT = ["Has enough money for the stay", "Is in good health", "Ties that will take the person back home", "Will leave Canada at the end of the visit"];
+const snap = (gates = GATES, judgement = JUDGEMENT) => ({ combination: { key: "vv.single", label: "Visitor visa" }, derived_fields: [], eligibility: { gates, judgement, disclaimer: "Indicative only (Sample disclaimer for this check)." } }) as unknown as Snapshot;
+const knownOf = (facts: Record<string, unknown>, about = P): Known => new Map(Object.entries(facts).map(([f, v]) => [kkey(f.startsWith("case.") ? "case" : about, f), { value: v, status: "answered" as const, source: "check" }]));
+const ALL = { "person.passport_number": "SAMPLEP12", "person.passport_expiry_date": "2030-01-01", "person.criminal_history": false };
+
+await main("C6.9 part 2", "Eligibility runs (stand-in SI-1 adapter and routes)", async () => {
+  // ------------------------------------------------------------------ pure adapter
+  {
+    const or = { key: "x.doc", label: "A travel document (Sample)", condition: { subjectKind: "PERSON", op: "or", args: [{ op: "exists", field: "person.passport_number" }, { op: "exists", field: "person.refugee_travel_document_number" }] } };
+    ok("C6.9 BR-9 pass: an \"or\" gate with a passport only is Met (one branch true settles it)", gateResult(snap(), knownOf({ "person.passport_number": "SAMPLEP12" }), or, P).state === "met");
+    const g = gateResult(snap(), knownOf({ "person.passport_number": "SAMPLEP12" }), GATES[0], P);
+    ok("C6.9 BR-9 fail: an unanswered expiry date reads Not answered (never Not met) and is listed as missing", g.state === "not_answered" && g.missing.join() === "person.passport_expiry_date", g);
+    ok("C6.9 BR-9 (why the rewrite): the shared evaluate alone reads that gate as false, a false Not eligible", evaluate({ op: "exists", field: "person.passport_expiry_date" }, {}).result === false && evaluate(rewriteMissing({ op: "exists", field: "person.passport_expiry_date" }, () => true) as never, {}).result === "cannot_tell");
+    ok("C6.9 BR-9 pass: each gate shows the values it read (null when unanswered)", g.values["person.passport_number"] === "SAMPLEP12" && g.values["person.passport_expiry_date"] === null, g.values);
+    ok("C6.9 BR-9 pass: a case.* fact reads the case's value through a person's gate", gateResult(snap(), knownOf({ "case.funds_available_cad": 8000 }), { key: "x.case", label: "Case fact", condition: { subjectKind: "PERSON", op: "exists", field: "case.funds_available_cad" } }, P).state === "met");
+  }
+  {
+    const r = (f: Record<string, unknown>, s = FAIL_BEATS_MISSING) => assess(snap(), knownOf(f), P, s)!;
+    ok("C6.9 BR-10 pass: every gate met → Likely eligible, both lists empty", r(ALL).outcome === "LIKELY_ELIGIBLE" && !r(ALL).failedGates.length && !r(ALL).missingInputs.length);
+    ok("C6.9 BR-10 pass: a gate not met with every fact answered → Not eligible, naming the gate", r({ ...ALL, "person.criminal_history": true }).outcome === "NOT_ELIGIBLE" && r({ ...ALL, "person.criminal_history": true }).failedGates.join() === "vv.no_convictions");
+    ok("C6.9 BR-10 pass: facts missing and nothing failed → Possibly eligible, missing facts in gate order", r({}).outcome === "POSSIBLY_ELIGIBLE" && r({}).missingInputs.join() === "person.passport_number,person.passport_expiry_date,person.criminal_history", r({}).missingInputs);
+    const both = r({ "person.criminal_history": true });
+    ok("C6.9 BR-10 (P-229 (3)): FAIL_BEATS_MISSING is true: a failed gate while a fact is missing → Not eligible, both lists filled", FAIL_BEATS_MISSING === true && both.outcome === "NOT_ELIGIBLE" && both.failedGates.join() === "vv.no_convictions" && both.missingInputs.join() === "person.passport_number,person.passport_expiry_date", both);
+    ok("C6.9 BR-10 fail: with the switch off (AG-03 as written) the same facts read Possibly eligible, still with both lists", r({ "person.criminal_history": true }, false).outcome === "POSSIBLY_ELIGIBLE" && r({ "person.criminal_history": true }, false).failedGates.length === 1);
+    ok("C6.9 BR-10 fail: a release with no gate gives no result (never Likely eligible)", assess(snap([]), knownOf(ALL), P) === null && assess({ ...snap(), eligibility: undefined } as unknown as Snapshot, knownOf(ALL), P) === null);
+    const all = r(ALL);
+    ok("C6.9 BR-11 pass: no score, no cut-off, no breakdown, no advice", all.score === null && all.maxScore === null && all.passMark === null && all.gapToPass === null && !Object.keys(all.breakdown).length && !all.recommendations.length);
+    ok("C6.9 BR-11 fail: the adapter never answers Eligible, below the cut-off, whatever the facts", [ALL, {}, { "person.criminal_history": true }].every((f) => r(f).outcome !== "ELIGIBLE_BELOW_CUTOFF"));
+    ok("C6.9 BR-12 pass: the 4 judgement lines are copied onto the result", all.judgement.join("|") === JUDGEMENT.join("|"));
+    ok("C6.9 BR-12 fail: judgement lines never change the outcome (none, or other words, same outcome)", assess(snap(GATES, []), knownOf(ALL), P)!.outcome === all.outcome && assess(snap(GATES, ["Has no money at all"]), knownOf(ALL), P)!.outcome === all.outcome);
+    ok("C6.9 BR-18 pass: the result is for the case's own combination only", all.programKey === "vv.single" && assess(snap(), knownOf(ALL), P)!.programKey === "vv.single");
+  }
+  {
+    const k = knownOf(ALL), ins = inputsOf(snap(), k, P, (_a, f) => `id-${f}`);
+    ok("C6.9 BR-8 pass: the inputs list every gate fact once with its value and answer id", ins.length === 3 && ins.every((i) => i.about === P && i.answerId === `id-${i.fact}`) && ins[0].value === "SAMPLEP12", ins);
+    ok("C6.9 BR-13 pass: the same values (a new answer id, as Confirm section writes) → not out of date", outOfDate(ins, nowOf(knownOf({ ...ALL })), true).out_of_date === false);
+    const ch = outOfDate(ins, nowOf(knownOf({ ...ALL, "person.passport_number": "SAMPLEP13" })), true);
+    ok("C6.9 BR-13 fail: a changed value → out of date, naming the fact, was and now", ch.out_of_date && ch.changed.length === 1 && ch.changed[0].was === "SAMPLEP12" && ch.changed[0].now === "SAMPLEP13", ch);
+    ok("C6.9 BR-13 fail: a removed answer, or a fact answered since, → out of date", outOfDate(ins, nowOf(knownOf({ "person.passport_number": "SAMPLEP12" })), true).changed.length === 2 && outOfDate(inputsOf(snap(), knownOf({}), P, () => null), nowOf(k), true).changed.length === 3);
+    ok("C6.9 BR-13 fail: the case's pin moved to another release → out of date, values unchanged", (() => { const x = outOfDate(ins, nowOf(k), false); return x.out_of_date && x.release_changed && !x.changed.length; })());
+    ok("C6.9 BR-13 pass: a number answered as 8000 or 8000 again compares equal (canonical values)", !outOfDate([{ fact: "case.f", about: "case", value: 8000, answerId: null }], () => 8000, true).out_of_date);
+  }
+
+  // ------------------------------------------------------------------ routes
+  const vvRelease = () => sql("select count(*) from config_release r join combination k on k.id = r.combination_id where k.combination_key='vv.single'") ?? "0";
+  if (vvRelease() === "0") {
+    const studio = join(import.meta.dirname, "..");
+    const tsx = (file: string) => spawnSync(join(studio, "node_modules", ".bin", "tsx"), ["--tsconfig", join(studio, "api", "tsconfig.json"), join(studio, file), String(PORT), DB], { encoding: "utf8", timeout: 600_000, maxBuffer: 1 << 26 });
+    ok("setup: the Visitor visa release 1 on this copy (setup_visitor_visa.ts)", tsx("tests/runtime/setup_visitor_visa.ts").status === 0 && vvRelease() === "1", vvRelease());
+    const c1 = await openCase(needVisitorVisa(), [{ role: "principal", name: "Sample Client Z", dob: yearsAgo(30) }]);
+    const r1 = await call("POST", `/runtime/cases/${c1.id}/assessments`, { person: c1.subjects["Sample Client Z"] }, OFFICER);
+    ok("C6.9 BR-10 fail: a case on a release with no gates is refused 409: \"This application's release has no eligibility rules yet\" (never Likely eligible)", r1.status === 409 && /has no eligibility rules yet/.test(r1.body?.detail ?? "") && sql(`select count(*) from assessment where case_id='${c1.id}'`) === "0", r1.body);
+    const m3 = tsx("acceptance/lib/setup_vv_m3.ts").stdout ?? "";
+    ok("setup: M3 setup S7 and S8 pass (gates saved and released)", ["S7 (M3-8)", "S8 release 2"].every((k) => m3.split("\n").some((l) => l.startsWith("PASS") && l.includes(k))));
+  }
+  const vv = needVisitorVisa();
+  if (!sql(`select 1 from config_release r join combination c on c.id=r.combination_id where c.combination_key='vv.single' and r.snapshot ? 'eligibility' limit 1`)) { ok("setup: the Visitor visa release carries eligibility gates (run tests/check_c69_gates.ts first)", false); return; }
+  const spend0 = sql("select count(*) from ai_batch");
+  const c = await openCase(vv, [{ role: "principal", name: "Sample Client A", dob: yearsAgo(40) }, { role: "spouse_or_partner", name: "Sample Spouse A", dob: yearsAgo(38) }, { role: "child", name: "Sample Child A1", dob: yearsAgo(10), applies: false }]);
+  const A = c.subjects["Sample Client A"], S = c.subjects["Sample Spouse A"], K = c.subjects["Sample Child A1"];
+  const run = (person: string, extra: Record<string, unknown> = {}, actor = OFFICER) => call("POST", `/runtime/cases/${c.id}/assessments`, { person, ...extra }, actor);
+  const list = async (q = "") => (await call("GET", `/runtime/cases/${c.id}/assessments${q}`, undefined, OFFICER)).body;
+  const fields = (b: { errors?: { field: string }[] }) => (b?.errors ?? []).map((e) => e.field);
+
+  let r = await run(A, {}, CLIENT);
+  ok("C6.9 BR-7 fail: a client cannot run (403), list (403) or read one (403)", r.status === 403 && (await call("GET", `/runtime/cases/${c.id}/assessments`, undefined, CLIENT)).status === 403 && (await call("GET", `/runtime/assessments/${"0".repeat(8)}-0000-0000-0000-${"0".repeat(12)}`, undefined, CLIENT)).status === 403, r.status);
+  r = await run(A, {}, "user-S");
+  ok("C6.9 BR-7 fail: staff of another firm get 404 (the case does not exist for them)", r.status === 404 && (await call("GET", `/runtime/cases/${c.id}/assessments`, undefined, "user-S")).status === 404, r.status);
+  r = await run(c.caseSubject);
+  ok("C6.9 BR-7 fail: the case subject is refused on the field person (400)", r.status === 400 && fields(r.body).includes("person"), r.body);
+  r = await run(K);
+  ok("C6.9 BR-7 fail: a person not travelling (applies: false) is refused: \"Not travelling on this application\"", r.status === 400 && /Not travelling on this application/.test(r.body?.detail ?? ""), r.body);
+  r = await run("00000000-0000-0000-0000-000000000000");
+  ok("C6.9 BR-7 fail: someone not on the case is refused on person (400)", r.status === 400 && fields(r.body).includes("person"), r.body);
+
+  r = await run(A);
+  const first = r.body;
+  ok("C6.9 BR-7 pass: the case officer runs a check for a traveller (201)", r.status === 201 && first?.person === A, r.status);
+  ok("C6.9 BR-8 pass: the envelope carries the pin, rules as at, the disclaimer, who and when, MANUAL, source stand-in", first?.releaseId && first?.packVersion >= 1 && /^\d{4}-\d{2}-\d{2}$/.test(first?.rulesAsOfByProgram?.["vv.single"] ?? "") && first?.disclaimerLocale === "en-CA" && first?.runType === "MANUAL" && first?.source === "stand-in" && first?.createdBy === OFFICER && first?.inputs?.length === 3, first);
+  ok("C6.9 BR-8 pass: the row's result_json is the envelope, with created_at the row's own", sql(`select result_json->>'createdAt' from assessment where id='${first?.id}'`) === first?.createdAt && sql(`select run_type from assessment where id='${first?.id}'`) === "MANUAL");
+  const frozen = sql(`select result_json::text from assessment where id='${first?.id}'`);
+  const upd = sql(`update assessment set reason='changed' where id='${first?.id}' returning id`);
+  ok("C6.9 BR-8 fail: an UPDATE on assessment is refused by the trigger; the row is byte-identical", upd === null && sql(`select result_json::text from assessment where id='${first?.id}'`) === frozen && sql(`select reason from assessment where id='${first?.id}'`) === "");
+  ok("C6.9 BR-8 pass: the run wrote one audit row, with no answer value in its words", sql(`select count(*) from audit_event where entity='assessment' and entity_key='${first?.id}'`) === "1");
+
+  r = await run(A);
+  ok("C6.9 BR-14 fail: a second run without a reason is refused on the field reason (400)", r.status === 400 && fields(r.body).includes("reason"), r.body);
+  r = await run(A, { reason: "   " });
+  ok("C6.9 BR-14 fail: a reason of spaces only is no reason (400 on reason)", r.status === 400 && fields(r.body).includes("reason"), r.body);
+  r = await run(A, { reason: "Checking again​" });
+  ok("C6.9 BR-14 fail: a reason with invisible characters is refused on the field", r.status === 400 && fields(r.body).includes("reason"), r.body);
+  r = await run(A, { reason: "Nothing changed, checking again (Sample)" });
+  ok("C6.9 BR-14 pass: a later run with a reason, while nothing changed, is allowed (201, RERUN)", r.status === 201 && r.body?.runType === "RERUN" && r.body?.reason === "Nothing changed, checking again (Sample)", r.body?.runType);
+
+  // BR-9 on the route: an answer its own checks reject counts as missing (AG-03 §9).
+  await answer(c.id, A, "person.passport_number", "SAMPLEP12");
+  await answer(c.id, A, "person.passport_expiry_date", "2031-02-30");
+  await answer(c.id, A, "person.criminal_history", false);
+  r = await run(A, { reason: "Facts added (Sample)" });
+  const bad = r.body?.results?.[0];
+  ok("C6.9 BR-9 fail: an expiry date that is not a real date counts as missing: Not answered, never Met", bad?.outcome === "POSSIBLY_ELIGIBLE" && bad?.missingInputs?.join() === "person.passport_expiry_date" && bad?.gates?.[0]?.state === "not_answered", bad);
+  await answer(c.id, A, "person.passport_expiry_date", inDays(3 * 365));
+  r = await run(A, { reason: "Expiry date corrected (Sample)" });
+  const good = r.body;
+  ok("C6.9 BR-9 pass: with every fact answered and valid, every gate is Met: Likely eligible", good?.results?.[0]?.outcome === "LIKELY_ELIGIBLE" && good?.results?.[0]?.gates?.every((g: { state: string }) => g.state === "met"), good?.results?.[0]);
+
+  await confirmAll(c.id, A);
+  let l = await list(`?person=${A}`);
+  ok("C6.9 BR-13 pass: Confirm section on the facts a run read (a new row, same value) leaves it up to date", l?.assessments?.find((x: { id: string }) => x.id === good?.id)?.out_of_date === false, l?.assessments?.map((x: { out_of_date: boolean }) => x.out_of_date));
+  await answer(c.id, A, "person.passport_number", "SAMPLEP13");
+  l = await list(`?person=${A}`);
+  const stale = l?.assessments?.find((x: { id: string }) => x.id === good?.id);
+  ok("C6.9 BR-13 fail: a changed passport number marks the earlier run out of date, naming the change (never written to the row)", stale?.out_of_date === true && stale?.changed?.[0]?.fact === "person.passport_number" && stale?.changed?.[0]?.was === "SAMPLEP12" && stale?.changed?.[0]?.now === "SAMPLEP13" && !/out_of_date/.test(sql(`select result_json::text from assessment where id='${good?.id}'`) ?? "out_of_date"), stale?.changed);
+
+  r = await run(S);
+  ok("C6.9 BR-14 pass: the first run for another person needs no reason (MANUAL)", r.status === 201 && r.body?.runType === "MANUAL", r.status);
+  l = await list();
+  const times = (l?.assessments ?? []).map((x: { createdAt: string }) => x.createdAt);
+  ok("C6.9 list pass: with no person, every person's runs come back, newest first, with stand_in SI-1", l?.stand_in === "SI-1" && new Set(l.assessments.map((x: { person: string }) => x.person)).size === 2 && l.assessments.length === 5 && times.every((t: string, i: number) => i === 0 || times[i - 1] >= t), { n: l?.assessments?.length });
+  r = await call("GET", `/runtime/cases/${c.id}/assessments?person=nobody`, undefined, OFFICER);
+  ok("C6.9 list fail: an unknown person on the list is refused (400 on person)", r.status === 400 && fields(r.body).includes("person"), r.status);
+  r = await call("GET", `/runtime/assessments/${good?.id}`, undefined, OFFICER);
+  ok("C6.9 GET one pass: the officer reads one run, worked out now (out of date)", r.status === 200 && r.body?.id === good?.id && r.body?.out_of_date === true && Array.isArray(r.body?.overrides), r.status);
+  ok("C6.9 GET one fail: another firm's staff get 404; a malformed id 404", (await call("GET", `/runtime/assessments/${good?.id}`, undefined, "user-S")).status === 404 && (await call("GET", "/runtime/assessments/not-an-id", undefined, OFFICER)).status === 404);
+  ok("C6.9 BR-17 pass: rules only: no model call (no ai_batch row, the spend record) in any run", sql("select count(*) from ai_batch") === spend0);
+  const t0 = Date.now(); await list(); const ms = Date.now() - t0;
+  ok("C6.9 scale: the list of 5 runs for 2 people answers in under 300 ms", ms < 300, ms);
+});
