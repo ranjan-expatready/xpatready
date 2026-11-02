@@ -164,6 +164,16 @@ type Box = { box: string; fact: string | null; result: string; why: string | nul
   const NOT_A_FACT = ["Page2[0].MaritalStatus[0].SectionA[0].Passport[0].TaiwanPIN[0]", "Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IsraelPassportIndicator[0]", "Page3[0].Signature[0].Consent0[0].Choice[0]"].map((p) => `form1[0].${p}`);
   ok("C7.2: the app's copy fills 40 of IMM 5257's 46 mandatory form fields (was 32, #409); the 6 left are exactly the 3 boxes published as \"not a fact\" and the 3 Yes/No boxes no question asks yet (Questions in the PR)",
     mandatory.length === 46 && empty.length === 6 && empty.every((p) => NOT_A_FACT.includes(p) || NOT_ASKED.includes(p)), { mandatory: mandatory.length, filled: mandatory.length - empty.length, empty });
+  // QA-165 part 2 (P-237, P-238): before the file is offered, the form lists exactly the mandatory fields a copy leaves empty, each with why.
+  {
+    const f = ((await call("GET", `/runtime/cases/${caseId}/forms`, undefined, OFFICER)).body.forms as { form: string; subject_id: string; fields_open: { box: string; label: string; reason: string; why: string }[] }[]).find((x) => x.form === "IMM 5257" && x.subject_id === P);
+    const open = f?.fields_open ?? [];
+    ok("QA-165 part 2: IMM 5257 lists exactly the 6 mandatory form fields its copy leaves empty, before the file is offered", open.length === empty.length && open.every((o) => empty.includes(o.box)), { open: open.map((o) => o.box), empty });
+    const reasonOf = new Map(open.map((o) => [o.box, o.reason]));
+    ok("QA-165 part 2: the 3 boxes published as \"not a fact\" say \"fill it in Adobe\"; the 3 Yes/No boxes no question asks say \"no question asks it yet\", never \"needs an answer\" (no answer can write their No)",
+      NOT_A_FACT.every((p) => reasonOf.get(p) === "fill it in Adobe") && NOT_ASKED.every((p) => reasonOf.get(p) === "no question asks it yet"), open.map((o) => [o.box.split(".").slice(-2).join("."), o.reason, o.label]));
+    ok("QA-165 part 2: the words are the form's, never a field path", open.every((o) => o.label.length > 3 && !/form1\[|\[0\]\./.test(o.label)), open.map((o) => o.label));
+  }
   ok("C7.2: no form field of the copy is left by hand (was 20, #409)", after.boxes.filter((b) => b.result === "by hand").length === 0, after.boxes.filter((b) => b.result === "by hand").map((b) => `${b.box.split(".").slice(-2).join(".")}: ${b.why}`));
   const at = (p: string) => after.values[`form1[0].${p}`];
   const phoneBoxes = "Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0]";

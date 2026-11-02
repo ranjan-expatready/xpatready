@@ -206,14 +206,14 @@ async function main() {
   // in this isolated copy's var folder, tools/isolated.sh VARDIR).
   const caseVar = join(STUDIO, "var", `isolated-${DB.replace(/^xr_studio_/, "")}`, "workspaces", "demo", "cases", caseId, "validated");
   const keptNoFile = (sent: Buffer) => existsSync(join(STUDIO, "var", `isolated-${DB.replace(/^xr_studio_/, "")}`)) && (!existsSync(caseVar) || !readdirSync(caseVar).some((f) => f.includes(sha(sent).slice(0, 12))));
-  const refusedAsUnvalidated = (x: { status: number; body: { detail?: string } | null }, sent: Buffer) => x.status === 422 && /Validate has not passed/.test(x.body?.detail ?? "") && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "0" && keptNoFile(sent);
+  const refusedAsUnvalidated = (x: { status: number; body: { detail?: string } | null }, sent: Buffer) => x.status === 422 && /Validate has not (passed|finished)/.test(x.body?.detail ?? "") && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "0" && keptNoFile(sent);
   let sent = Buffer.concat([copyFile, Buffer.from("\n% Saved after Validate (simulated in this check)\n")]);
   r = await sendValidated(locked1, sent, "imm5257-validated.pdf");
   ok("QA-165 fail: a copy with bytes appended but no Validate result of the form's own (qa's golden journey 1) is not taken as validated (422), nothing recorded, no file kept", refusedAsUnvalidated(r, sent), r.body?.detail);
   r = await sendValidated(locked1, sent = asValidated(copyFile, "No"), "imm5257-validated.pdf");
-  ok("QA-165 fail: the form's own mark says No (Validate found it incomplete): refused in words naming the mark, nothing recorded, no file kept", refusedAsUnvalidated(r, sent) && /"No"/.test(r.body?.detail ?? ""), r.body?.detail);
+  ok("QA-165 fail: the form's own mark says No (Validate found it incomplete): refused in words naming the mark, nothing recorded, no file kept", refusedAsUnvalidated(r, sent) && /"No"/.test(r.body?.detail ?? "") && !/date last validated/.test(r.body?.detail ?? ""), r.body?.detail);
   r = await sendValidated(locked1, sent = asValidated(copyFile, "Yes", false), "imm5257-validated.pdf");
-  ok("QA-165 fail: the mark says Yes but the form kept no date last validated (its script sets both): refused, nothing recorded, no file kept", refusedAsUnvalidated(r, sent) && /no date last validated/.test(r.body?.detail ?? ""), r.body?.detail);
+  ok("QA-165 fail: the mark says Yes but the form kept no date last validated (its script sets both): refused, nothing recorded, no file kept", refusedAsUnvalidated(r, sent) && /has not finished/.test(r.body?.detail ?? "") && /no date last validated/.test(r.body?.detail ?? "") && !/has not passed/.test(r.body?.detail ?? ""), r.body?.detail);
   r = await call("POST", `/runtime/form-copies/${locked1}/validated`, {}, OFFICER);
   ok("C11.6 C-9 fail: sending no file is refused in words (400), nothing recorded", r.status === 400 && /validated PDF/.test(r.body?.detail ?? "") && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "0", r.body?.detail);
   r = await sendValidated(locked1, Buffer.from("not a pdf"), "notes.txt");
@@ -450,6 +450,8 @@ async function main() {
   const lockOnline = onlineCopy ? await call("POST", `/runtime/form-copies/${onlineCopy}/lock`, { kind: "filed" }, OFFICER) : { status: 0, body: null };
   ok("C11.6 P-145 pass: a case whose release files IMM 5257 Online offers a PDF copy marked not for filing",
     (ol as (Form & { for_filing?: boolean })[]).some((x) => x.form === "IMM 5257" && x.for_filing === false) && r.status === 202, { forms: ol.map((x) => x.form), status: r.status, detail: r.body?.detail });
+  const onlineForm = (ol as (Form & { for_filing?: boolean; fields_open?: unknown[] })[]).find((x) => x.form === "IMM 5257" && x.for_filing === false);
+  ok("QA-165 part 2 (Devin on #592): the Online form's PDF copy (not for filing, but downloadable) also lists the mandatory fields it leaves empty", (onlineForm?.fields_open?.length ?? 0) > 0, onlineForm?.fields_open?.length);
   ok("C11.6 P-145 fail: that copy is never filed or uploaded (409 in words)", lockOnline.status === 409 && /copy, not for filing/.test(lockOnline.body?.detail ?? ""), [lockOnline.body?.detail, sql(`select status || ' ' || coalesce(error, '') from form_instance where id='${onlineCopy}'`)]);
   ok("PR #12 review 1 pass-guard: the case's other PDF forms are still offered, and the real release is the latest again", ol.length > 0 && sql(`select id from config_release where combination_id='${vv}' order by version desc limit 1`) === rel.id, ol.map((x) => x.form));
   // P-65 (a), review M1: the fill trial verdict gates filing, per form.
