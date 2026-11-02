@@ -1262,6 +1262,7 @@ model Case {
   groups       SubmissionGroup[]
   filings      Filing[]
   assessments  Assessment[] // C6.9
+  filingItems  FilingItem[]
 
   /// C6.11 break M2, M3: a reference and an idempotency key are unique within a firm, so one firm neither collides with
   /// nor learns of another firm's cases.
@@ -1672,8 +1673,12 @@ model SubmissionGroup {
   id          String   @id @default(uuid()) @db.Uuid
   workspaceId String   @map("workspace_id") @db.Uuid
   caseId      String   @map("case_id") @db.Uuid
-  /// family (one submission at the same time and place)
+  /// FAMILY (one submission at the same time and place) · SEPARATE (a filing split out, with its reason)
   kind        String
+  /// C6.12 split (BR-16): why a SEPARATE group was split out (required for SEPARATE, never in an audit line).
+  reason      String?
+  /// Who made the group (the read that first derived it, or the officer who split).
+  createdBy   String?  @map("created_by")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   case    Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
@@ -1727,20 +1732,30 @@ model FilingApplicant {
 model FilingItem {
   id            String         @id @default(uuid()) @db.Uuid
   workspaceId   String         @map("workspace_id") @db.Uuid
+  caseId        String         @map("case_id") @db.Uuid
   filingId      String         @map("filing_id") @db.Uuid
-  /// form (document and step items come with C6.4 storage and C7.7)
+  /// form, document (the checklist's, C6.4) or step (an IRCC step such as biometrics)
   kind          String
-  formKey       String         @map("form_key")
+  /// The form number, document type or step key (C11.6, C7.7).
+  itemKey       String         @map("item_key")
+  /// Kept from #325 (C6.12 M3-B2): read by no code now; dropped in a later contract migration.
+  formKey       String?        @map("form_key")
   subjectId     String         @map("subject_id") @db.Uuid
-  channel       FilingChannel
+  /// C11.6: the channel the case officer chose inside what IRCC accepts; null = the combination line's channel.
+  channel       FilingChannel?
   channelReason String?        @map("channel_reason")
+  channelBy     String?        @map("channel_by")
+  channelAt     DateTime?      @map("channel_at") @db.Timestamptz
+  /// false while the item does not apply (it keeps its id and channel when it applies again).
   active        Boolean        @default(true)
   version       Int            @default(1)
   createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
 
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
   filing Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
 
-  @@unique([filingId, kind, formKey, subjectId])
+  @@unique([filingId, kind, itemKey, subjectId])
+  @@index([caseId])
   @@map("filing_item")
 }
 

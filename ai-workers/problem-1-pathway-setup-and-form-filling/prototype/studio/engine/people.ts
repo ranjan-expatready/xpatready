@@ -25,6 +25,7 @@ export function checkPeople(list: PeopleLine[], roles: Role[], strict = true): {
     if (p.max < p.min) errors.push({ field: at("max"), message: `${r?.label ?? p.role}: the most cannot be fewer than the fewest (${p.min}).` });
     if (p.role === PRINCIPAL && (p.min !== 1 || p.max !== 1)) errors.push({ field: at("min"), message: "There is exactly one principal applicant on every case." });
     if (p.role === PRINCIPAL && !p.applies) errors.push({ field: at("applies"), message: "The principal applicant always files their own application." });
+    if (p.role === PRINCIPAL && p.filingMode === "on_principal") errors.push({ field: at("filingMode"), message: "The principal applicant always files their own application." });
     let applies = p.applies;
     if (applies && r && !r.mayBeApplicant) { if (strict) errors.push({ field: at("applies"), message: `${r.label} is never an applicant: they take part in the case but file no application of their own.` }); applies = false; }
     return { ...p, applies, label: p.label?.trim() || r?.label || p.role }; // Lead check L7: a typed label is kept

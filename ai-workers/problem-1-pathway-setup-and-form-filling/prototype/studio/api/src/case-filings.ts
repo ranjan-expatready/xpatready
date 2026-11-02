@@ -3,7 +3,9 @@
 // hand). The case officer reads them; a client and configuration people do not (deny by default, as runtime.ts). Visitor
 // visa only in this slice: other combinations answer "not derived yet". Amounts Sample until the expert confirms. US$0.
 import { Controller, Get, Headers, HttpStatus, Inject, Injectable, Param } from "@nestjs/common";
-import { deriveFilings } from "../../engine/runtime/filings.ts";
+import type { CaseFiling } from "../../contracts/runtime.ts";
+import { checkValue } from "../../engine/runtime/case.ts";
+import { ageOn, deriveFilings, FAMILY_GROUP } from "../../engine/runtime/filings.ts";
 import { actorOf, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { Runtime } from "./runtime.ts";
 
@@ -20,7 +22,18 @@ export class CaseFilings {
     // release row edited underneath would otherwise price the case as another combination).
     const own = await this.db.combination.findUnique({ where: { id: c.combinationId }, select: { combinationKey: true } });
     if (!own || s?.combination?.key !== own.combinationKey) fail("This case's release does not describe the case's own combination; no filing or fee was worked out. Ask the Lead.", HttpStatus.CONFLICT);
-    return { case_id: c.id, reference: c.reference, release_version: pin.release.version, ...deriveFilings(own!.combinationKey, this.r.peopleOf(c)) };
+    // C6.12 (prepare view): the same ages, filing modes and stored submission groups as GET …/prepare, so the two never
+    // price a case differently (read only: the prepare view stores the filings).
+    const people = this.r.peopleOf(c), today = new Date();
+    const { answers } = await this.r.state(c);
+    const ages = new Map(people.filter((p) => p.role !== "case").map((p) => [p.subjectId, ageOn(answers.find((a) => a.subjectId === p.subjectId && a.field === "person.date_of_birth" && !a.rowKey && checkValue(s, a.field, a.value, today).length === 0)?.value as string | undefined, today)]));
+    const modes = new Map(((s.combination.participants ?? []) as { role: string; filingMode?: CaseFiling["mode"] }[]).filter((p) => p.filingMode).map((p) => [p.role, p.filingMode!]));
+    const rows = await this.db.filing.findMany({ where: { caseId: c.id, active: true }, include: { group: { select: { kind: true } } } });
+    // Review m5: the stored group's own id, as GET …/prepare shows it ("group-family" only before the first prepare read).
+    const groupOf = new Map(rows.map((f) => [f.subjectId, f.submissionGroupId]));
+    const kindOf = new Map(rows.map((f) => [f.submissionGroupId, f.group.kind === "FAMILY" ? "family" as const : "separate" as const]));
+    const family = rows.find((f) => f.group.kind === "FAMILY")?.submissionGroupId ?? FAMILY_GROUP;
+    return { case_id: c.id, reference: c.reference, release_version: pin.release.version, ...deriveFilings(own!.combinationKey, people, undefined, { ages, modes, groupOf: (x) => groupOf.get(x) ?? family, groupKind: (g) => kindOf.get(g) ?? "family" }) };
   }
 }
 
