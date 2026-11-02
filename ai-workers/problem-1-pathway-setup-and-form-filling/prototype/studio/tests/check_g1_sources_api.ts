@@ -110,6 +110,11 @@ try {
   ok("C5.4 BR-3 fail: no answer (or both) is refused: choose one", b.status === 400 && b.errors.some((e) => e.message === "Choose one answer: the official source, or 'None published – set by ExpatReady'."), b);
   r = await put(wp, n30, { address: "person.passport_days_until_expiry|lte|9", value: 30, none_published: { reason: "ExpatReady's own warning lead time" }, version: 0 });
   ok("C5.4 404: an address the item does not publish", r.status === 404, r.body);
+  // Devin on #587 (red): a citation's words must state this number, never another one; in digits or in words.
+  b = await bad({ address: n30.address, value: 30, cited: { url: "https://www.canada.ca/x", quote: "Test data, not an official quote: at most 21 days before expiry", date: "2026-10-19" }, version: 0 });
+  ok("C5.4 BR-3 fail (Devin on #587): a quote that states another number (21 for 30) is refused on its field, and nothing is stored", b.status === 400 && b.errors.some((e) => e.field === "cited.quote" && e.message === "These words do not state 30. Copy the words that state the number.") && (await sources(wp)).numbers.find((n: { key: string }) => n.key === "wp.family/RW_PASSPORT_EXPIRY_30").state === "missing", b);
+  r = await put(wp, n30, { address: n30.address, value: 30, cited: { url: "https://www.canada.ca/x", quote: "Test data, not an official quote: within thirty days of expiry", date: "2026-10-19" }, version: 0 });
+  ok("C5.4 BR-3 pass (Devin on #587): words that state the number in English (\"thirty days\") are accepted", r.status === 200 && r.body.state === "cited", r.body);
   r = await put(wp, n30, { address: n30.address, value: 45, none_published: { reason: "ExpatReady's own warning lead time" }, version: 0 });
   ok("C5.4 BR-6 fail: a value that is not the number now (45 for 30) gets 409 with the number as it is", r.status === 409 && r.body.value === "30" && /the number is now 30, not 45/.test(r.body.detail), r.body);
 
@@ -181,6 +186,12 @@ try {
   ok("C5.4 Decision 1 fail: in the demo workspace too, a number with no entry refuses Submit, named", r.status === 400 && listed(r).length === 1 && listed(r)[0].message === `Form IMM 5707: From age: 18 has no source entry. ${NONE}`, r.body);
   r = await call("POST", `/combinations/${wp}/sources/sample`, undefined, AUTHOR);
   ok("C5.4 Decision 1 fail: the demo seed never answers a source-backed combination with Sample", r.status === 404 || r.status === 409, r.status);
+  // Devin on #587: a retired combination is read only for the Sample seed too, as for PUT.
+  sql(`update combination set retired_at = now() where id = '${v}'`);
+  r = await call("POST", `/combinations/${v}/sources/sample`, undefined, AUTHOR);
+  const wroteRetired = sql(`select count(*) from source_entry where item_key like 'wp.%' and sample`);
+  sql(`update combination set retired_at = null where id = '${v}'`);
+  ok("C5.4 BR-11 fail (Devin on #587): the Sample seed on a retired combination is refused (409) and writes nothing", r.status === 409 && /is retired/.test(r.body.detail ?? "") && wroteRetired === "0", { status: r.status, wroteRetired });
   r = await call("POST", `/combinations/${v}/sources/sample`, undefined, AUTHOR);
   s = await sources(v);
   const sampled = s.numbers.find((n: { address: string }) => n.address === "min_age");

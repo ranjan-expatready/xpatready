@@ -8,7 +8,7 @@ import { Prisma } from "@prisma/client";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { SourceBody, type SourceEntryView, type SourceNumberView, type SourcesView, NUMBER_STATES } from "../../contracts/sources.ts";
 import { buildSnapshot, sourceEntryOf, type Snapshot } from "../../engine/snapshot.ts";
-import { canonicalValue, SAMPLE_LOADER as SAMPLE_CREATOR, entryKey, entryOf, numberState, publishedNumbers, sourceProblems, type FeeLineInput, type PublishedNumber, type SourceProblem } from "../../engine/source-register.ts";
+import { canonicalValue, SAMPLE_LOADER as SAMPLE_CREATOR, entryKey, entryOf, numberState, publishedNumbers, sourceProblems, statesValue, type FeeLineInput, type PublishedNumber, type SourceProblem } from "../../engine/source-register.ts";
 import { FEE_TABLE } from "../../engine/runtime/filings.ts";
 import { ACTORS, Audit, Db, fail, isDemoWorkspace, need, readerOf, Workspace, type Actor } from "./core.ts";
 
@@ -87,6 +87,8 @@ export class SourceRegister {
     if (!n) fail("This item has no such published number (it may have changed: reload).", HttpStatus.NOT_FOUND);
     if (n!.sourced_by) fail(`${n!.item_words}: ${n!.words} is already cited by its own record (${n!.sourced_by === "fee_table" ? "the fee table" : "its validity rule's own source"}); it needs no entry.`, HttpStatus.CONFLICT);
     if (canonicalValue(b.value) !== n!.value) throw new HttpException({ type: "https://expatready.local/problems/stale", title: "The number moved", status: 409, detail: `${n!.item_words}: the number is now ${n!.value}, not ${canonicalValue(b.value)}. Reload, check its source, then save again.`, value: n!.value }, HttpStatus.CONFLICT);
+    // Devin on #587: the words must state this number (digits, or words from one to ninety-nine), never another one.
+    if (b.cited && !statesValue(b.cited.quote, n!.value)) throw new HttpException({ type: "https://expatready.local/problems/validation", title: "Some details need fixing", status: 400, detail: `These words do not state ${n!.value}. Copy the words that state the number.`, errors: [{ field: "cited.quote", message: `These words do not state ${n!.value}. Copy the words that state the number.` }] }, HttpStatus.BAD_REQUEST);
     const where = { workspaceId_itemKind_itemKey_valuePath: { workspaceId: c.workspaceId, itemKind: kind, itemKey: key, valuePath: b.address } };
     const answer = b.cited
       ? { citationUrl: b.cited.url, citationPage: b.cited.page?.trim() || null, citationQuote: b.cited.quote, citationDate: new Date(`${b.cited.date}T00:00:00Z`), nonePublished: false, nonePublishedReason: null, sample: false }
@@ -121,6 +123,8 @@ export class SourceRegister {
   async sample(actor: Actor, id: string) {
     need(actor, "author");
     const c = await this.combination(id);
+    // Devin on #587: a retired combination is read only here too, as in save().
+    if (c.retiredAt) fail(`"${c.label}" is retired: its sources are not changed. Restore it on Structure first.`, HttpStatus.CONFLICT);
     if (!isDemoWorkspace()) fail("Sample answers exist only in the demo workspace. Add the official source, or mark 'None published – set by ExpatReady'.", HttpStatus.CONFLICT);
     if (c.sourceBasis !== "ILLUSTRATIVE") fail(`"${c.label}" is source-backed, not Sample: give each number its official source, or mark 'None published – set by ExpatReady'.`, HttpStatus.CONFLICT);
     const written = await seedSampleSources(this.db, id);

@@ -246,6 +246,23 @@ export function statesInDigits(quote: unknown, value: string): boolean {
   return new RegExp(`(?<![\\d.,])${value.replace(/\./g, "\\.")}(?![\\d]|[.,]\\d)`).test(q);
 }
 
+const ONES = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];
+const TENS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+/** A whole number from 1 to 99 in English words ("five", "ninety", "twenty-one"); null outside that range. */
+function inWords(value: string): string | null {
+  const n = Number(value);
+  if (!Number.isInteger(n) || n < 1 || n > 99) return null;
+  return n < 20 ? ONES[n] : n % 10 ? `${TENS[Math.floor(n / 10)]}[- ]${ONES[n % 10]}` : TENS[n / 10];
+}
+/** Devin on #587 (BR-3, concept §5 "Copy the words that state the number"): whether a citation's words state this
+ *  number, in digits (as statesInDigits) or, for a whole number from 1 to 99, in English words ("five years", "ninety
+ *  days", "twenty-one"), which IRCC often writes. A quote for another number never sources this one. */
+export function statesValue(quote: unknown, value: string): boolean {
+  if (statesInDigits(quote, value)) return true;
+  const w = inWords(value);
+  return !!w && new RegExp(`\\b${w}\\b`, "i").test(text(quote));
+}
+
 /** BR-9: the entries frozen with a snapshot: those that answer a number it publishes, in one canonical shape and order
  *  (no version, no who or when: bookkeeping), so the fingerprint moves only when a source does. */
 export type FrozenSource = { kind: string; key: string; address: string; value: string; url?: string; page?: string; quote?: string; date?: string; none_published?: string; sample?: true };
