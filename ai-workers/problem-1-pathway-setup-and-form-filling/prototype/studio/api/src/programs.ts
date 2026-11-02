@@ -28,7 +28,7 @@ import { officialPagesOf as readOfficialPages } from "./official-pages.ts";
 import { changeView, itemsOf, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { openNodeKeys, startWhy } from "./lifecycle.ts";
 import { Sources } from "./sources.ts";
-import { Studio } from "./studio.ts";
+import { emptyProblem, Studio } from "./studio.ts";
 import { draftSourceProblems } from "./source-register.ts";
 import { filingProblems } from "../../engine/filing-modes.ts";
 import { attachedNotSetUp, removedLines } from "../../contracts/counts.ts";
@@ -48,6 +48,9 @@ type SnapForm = { form_number: string; form_kind?: string | null; channel?: Chan
 
 type Row = {
   leaf: CatalogueLeaf; pathway: string; changes: number; errors: number; firstError: string | null; hasContent: boolean;
+  /** UX-A part 2: the draft's release-blocking errors as its Review and release tab counts them (with "Nothing to release
+   *  yet" when it has no forms and no documents), and the first of them in words. */
+  blockers?: { n: number; first: string | null; empty: boolean };
   searchText: string; docNames: string[];
   /** W1 setup checklist (slice A): the same for every viewer; forViewer adds the duty overlay after the cache. */
   setup: SetupChecklist;
@@ -261,7 +264,10 @@ export class Programs {
       const unsourced = errors.filter((x) => (x as { gate?: string }).gate === "no-source").length;
       const first = errors.find((x) => !(x as { gate?: string }).gate) ?? errors[0];
       const firstError = unsourced && unsourced === errors.length ? `${unsourced} number${unsourced === 1 ? " has" : "s have"} no source entry: fix on Review and release.` : first ? `${first.where === "Tests" ? (first as { label?: string }).label || first.item : first.item}: ${first.message}` : null;
-      rows.push({ pathway, changes, errors: errors.length, firstError, hasContent, docNames,
+      // UX-A part 2: what blocks the release, with "nothing to release yet" when the draft is empty (To review reads it).
+      const blocking = [...errors, ...emptyProblem(snapshot)];
+      const said = (p: { item: string; message: string }) => `${p.item ? `${p.item}: ` : ""}${p.message.split(":")[0]}`;
+      rows.push({ pathway, changes, errors: errors.length, firstError, hasContent, docNames, blockers: { n: blocking.length, first: blocking[0] ? said(blocking[0]) : null, empty: blocking.length > errors.length },
         setup: setupChecklistOf(input, `${c.id}|${key}`),
         searchText: [...path, ...forms.map((f) => f.code), ...docNames].join(" "),
         leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, filed: filedOf(snapForms), progress, counts, status, statusText: retired ? "Retired" : status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
@@ -270,6 +276,13 @@ export class Programs {
     }
     this.cache = { key, rows, nodes, at: Math.round(performance.now() - t0) };
     return this.cache;
+  }
+
+  /** UX-A part 2 (P-273; UX baseline finding 2): each started, not retired combination's setup checklist, from the same
+   *  cached rows as the Programs page, for To review's "Needs you" (release blockers and each combination's next step). */
+  async setupStates() {
+    const { rows } = await this.rows();
+    return rows.filter((r) => r.leaf.combinationId && !r.leaf.retired).map((r) => ({ combinationId: r.leaf.combinationId!, path: r.leaf.path.join(" › "), setup: r.setup, live: r.leaf.live, blockers: r.blockers ?? { n: 0, first: null, empty: false } }));
   }
 
   /** Each last-level name's combination state, for the Structure outline (counts, Live, has setup, retired). */

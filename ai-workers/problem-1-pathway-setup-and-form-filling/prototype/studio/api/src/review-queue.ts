@@ -18,6 +18,15 @@ const LISTED_AS_JOBS = new Set(["field_map"]);
 import { groupOf } from "./review-proposals.ts";
 import { isLifecycleKind } from "./lifecycle.ts";
 import { normaliseCode } from "../../contracts/form-library.ts";
+import { Programs } from "./programs.ts";
+import { forViewer, mayAct } from "../../engine/setup-checklist.ts";
+import { nextStepHref, STEP_LABEL, type ItemKind, type SetupChecklist } from "../../contracts/setup-checklist.ts";
+
+/** UX-A part 2: next steps that already have their own row here (AI proposals, AI work running, a new edition held,
+ *  a submission to sign or release), so a combination's setup row never repeats them. */
+const LISTED_ELSEWHERE: readonly ItemKind[] = ["review_proposals", "view_ai", "review_edition", "sign", "release"];
+/** The setup checklist's Fix items (any step), where a blocker is fixed. */
+const fixItemsOf = (setup: SetupChecklist) => setup.steps.flatMap((s) => s.open.filter((i) => i.kind === "fix_problems").map((i) => ({ item: i, step: s.key, tab: s.tab ?? "review" })));
 
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
 const holds = (a: Actor, duty: string) => (a.duties as readonly string[]).includes(duty);
@@ -27,7 +36,7 @@ const ORDER: Record<QueueItem["state"], number> = { needs: 0, waiting: 1, runnin
 
 @Injectable()
 export class ReviewQueueService {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Studio) private readonly studio: Studio) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Studio) private readonly studio: Studio, @Inject(Programs) private readonly programs: Programs) {}
 
   async list(actor: Actor, query: unknown): Promise<ReviewQueue> {
     const p = ReviewQueueQuery.safeParse(query ?? {});
@@ -46,7 +55,9 @@ export class ReviewQueueService {
     for (const i of all) kinds[i.kind] = (kinds[i.kind] ?? 0) + 1;
     // Oldest first within each state (board view 1: "Rows are sorted oldest first within Needs you").
     const items = found.filter((i) => filter === "all" || i.state === filter).sort((a, b) => ORDER[a.state] - ORDER[b.state] || a.at.localeCompare(b.at));
-    return { items, counts, kinds };
+    // UX-A part 2: combinations whose release is blocked, whoever fixes it (none under ?form=: those rows belong to no form).
+    const blocked = code ? 0 : all.filter((i) => i.kind === "setup" && i.id.endsWith(":blocked")).length;
+    return { items, counts, kinds, blocked };
   }
 
   /** Every open item for this person (also read by the guided path, api/src/form-progress.ts: one source, plan D3). */
@@ -54,7 +65,7 @@ export class ReviewQueueService {
     const workspaceId = await this.ws.id();
     const [nodes, combos, jobs, pending, queued, batches, subs, merges, held, changes] = await Promise.all([
       this.db.programDef.findMany({ where: { workspaceId }, select: { id: true, programNodeKey: true, parentNodeKey: true, nodeKind: true, label: true } }),
-      this.db.combination.findMany({ where: { workspaceId }, select: { id: true, programDefId: true, label: true } }),
+      this.db.combination.findMany({ where: { workspaceId }, select: { id: true, programDefId: true, label: true, createdAt: true } }),
       this.db.draftingJob.findMany({ where: { workspaceId, kind: { in: ["field_map", "reuse_map"] } }, orderBy: { startedAt: "desc" }, select: { id: true, combinationId: true, attachmentId: true, kind: true, mode: true, status: true, costUsd: true, startedBy: true, startedAt: true, finishedAt: true, detail: true } }),
       this.db.proposalItem.groupBy({ by: ["runId"], where: { workspaceId, status: "waiting" }, _count: true }),
       this.db.proposalItem.findMany({ where: { workspaceId, status: "waiting", step: { notIn: [...ON_ITS_PAGE].filter((x) => LISTED_AS_JOBS.has(x)) } }, orderBy: { createdAt: "asc" }, select: { formEdition: true, combinationId: true, runId: true, confidence: true, createdAt: true } }),
@@ -246,6 +257,35 @@ export class ReviewQueueService {
       const batchForms = [...new Set(b.jobs.map((j) => formOfFile(j.attachmentId ? atts.get(j.attachmentId) : undefined)).filter((x): x is string => !!x))].sort();
       out.push({ id: `batch:${b.id}`, kind: "running", title: b.scopeLabel, by: nameOf(b.startedBy), at: b.startedAt.toISOString(), cost_usd: Math.round(spent * 100) / 100, forms: batchForms, combination: null,
         what: `${b.status === "QUEUED" ? "Queued" : "Running"}: ${done} of ${plural(b.jobs.length, "step")} finished · worst case US$${b.worstCaseUsd.toFixed(2)}.`, state: "running" as const, waiting_on: null, next: { label: "View progress", href: `/ai/${b.id}`, note: null } });
+    }
+
+    // UX-A part 2 (P-273; UX baseline finding 2): each combination's release blockers and its next step, read from its
+    // setup checklist (the one the Programs card, the Overview and the page header read), so "Needs you" never says
+    // nothing waits while a combination's release is blocked. One row per combination; a step listed above (AI proposals,
+    // AI running, a held edition, a submission) is not repeated. Not about one form (forms []), so a form's guided path
+    // never counts it.
+    const since = new Map(combos.map((c) => [c.id, c.createdAt]));
+    for (const s of await this.programs.setupStates()) {
+      // The draft's errors as its Review and release tab counts them ("Nothing to release yet" included).
+      const n = s.blockers.n, fix = fixItemsOf(s.setup)[0];
+      const next = s.setup.next && s.setup.next.item.kind !== "fix_problems" && !LISTED_ELSEWHERE.includes(s.setup.next.item.kind) ? s.setup.next : null;
+      if (!n && !next) continue;
+      const tabOf = (step: string) => s.setup.steps.find((x) => x.key === step)?.tab ?? "forms";
+      const what = [n ? `${plural(n, "problem")} ${n === 1 ? "blocks" : "block"} release${s.live ? " of its next version" : ""}${s.blockers.first ? ` (first: ${s.blockers.first})` : ""}` : "", next ? `Next step · ${STEP_LABEL[next.step]}: ${next.item.text}` : ""].filter(Boolean).join(". ");
+      const base = { id: `setup:${s.combinationId}${n ? ":blocked" : ""}`, kind: "setup" as const, title: s.path, by: null, at: (since.get(s.combinationId) ?? new Date(0)).toISOString(), cost_usd: null, what: `${what}.`, forms: [], combination: s.combinationId };
+      const v = forViewer(s.setup, actor);
+      // An empty draft's only blocker ("Nothing to release yet") is fixed by setting it up: its next step decides the row.
+      if (n && !(n === 1 && s.blockers.empty && next)) {
+        // The configuration author fixes them: on the Fix item's place when the checklist has one, else through the next
+        // step when that is theirs (an empty draft is fixed by setting it up), else on the Review and release tab.
+        const author = mayAct({ kind: "fix_problems" }, actor);
+        const go = fix ? { label: fix.item.text.split(":")[0], href: nextStepHref(s.combinationId, { item: fix.item, step: fix.step }, fix.tab) }
+          : next && v.filled ? { label: next.item.text, href: nextStepHref(s.combinationId, next, tabOf(next.step)) } : { label: `See ${plural(n, "problem")}`, href: `/c/${s.combinationId}/review` };
+        out.push({ ...base, ...(author ? { state: "needs" as const, waiting_on: null, next: { ...go, note: null } } : { state: "waiting" as const, waiting_on: `The configuration author fixes ${n === 1 ? "it" : "them"}.`, next: null }) });
+        continue;
+      }
+      out.push({ ...base, ...(v.filled ? { state: "needs" as const, waiting_on: null, next: { label: next!.item.text, href: nextStepHref(s.combinationId, next!, tabOf(next!.step)), note: null } }
+        : { state: "waiting" as const, waiting_on: v.nextLine, next: null }) });
     }
     return out;
   }

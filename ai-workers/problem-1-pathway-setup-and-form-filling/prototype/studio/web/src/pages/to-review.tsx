@@ -16,7 +16,7 @@ import { normaliseCode } from "../../../contracts/form-library";
 import { withReturn } from "@/pages/workspace/setup-rail";
 
 const VIEWS = [["needs", "Needs you"], ["waiting", "Waiting for others"], ["running", "Running"], ["all", "All"]] as const;
-const KIND_TONE: Record<QueueKind, string> = { proposals: "ai", ai_proposals: "ai", release: "info", library_change: "info", form_fields: "warn", new_edition: "warn", held_file: "warn", merge: "neutral", running: "ai" };
+const KIND_TONE: Record<QueueKind, string> = { setup: "warn", proposals: "ai", ai_proposals: "ai", release: "info", library_change: "info", form_fields: "warn", new_edition: "warn", held_file: "warn", merge: "neutral", running: "ai" };
 const STATE: Record<QueueItem["state"], [string, string]> = { needs: ["warn", "Needs you"], waiting: ["neutral", "Waiting for others"], running: ["ai", "Running"] };
 
 export function ToReviewPage() {
@@ -58,7 +58,7 @@ export function ToReviewPage() {
             {typed ? <button type="button" className="absolute right-1 top-1 rounded p-1.5 text-text-muted hover:bg-text/5" aria-label="Clear search" onClick={() => { setTyped(""); set({ q: null }); }}><X className="size-4" /></button> : null}
           </div>
         </div>
-        <p className="-mt-2 text-sm text-text-muted">Everything that waits for a person: AI proposals, combinations to review and release, new editions, held files and merges. Nothing reaches a release until a person decides.</p>
+        <p className="-mt-2 text-sm text-text-muted">Everything that waits for a person: each combination's next setup step and the problems that block its release, AI proposals, combinations to review and release, new editions, held files and merges. Nothing reaches a release until a person decides.</p>
 
         {form ? <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/40 bg-primary/5 px-3 py-2 text-sm" data-form-filter={form}>
           <span>Only <b className="font-semibold">{form.length > 40 ? `${form.slice(0, 40)}…` : form}</b>{combo ? " on this combination, and the shared library's items for it" : ", on every combination"}.</span>
@@ -96,7 +96,8 @@ export function ToReviewPage() {
           : !d!.items.length ? (
             form && !q && !kind ? <EmptyState title={`Nothing for ${form.length > 40 ? `${form.slice(0, 40)}…` : form} in ${VIEWS.find(([k]) => k === filter)![1]}`} description={`${filter !== "all" && d!.counts.all ? `${d!.counts.all} other item${d!.counts.all === 1 ? "" : "s"} of this form ${d!.counts.all === 1 ? "is" : "are"} under All. ` : ""}Items of other forms are not shown.`} action={<Button variant="secondary" onClick={showEvery}>Show every form</Button>} />
             : q || kind ? <EmptyState title="Nothing matches" description={`No item ${q ? `matches "${q}"` : ""}${q && kind ? " and " : ""}${kind ? `is a ${KIND_WORDS[kind].toLowerCase()}` : ""} in ${VIEWS.find(([k]) => k === filter)![1]}.`} action={<Button variant="secondary" onClick={() => { setTyped(""); set({ q: null, kind: null, f: "all" }); }}>Show all</Button>} />
-              : filter === "needs" ? <EmptyState title="Nothing waits for you" description={`When you add sources to a combination, its AI draft, new editions and approvals appear here.${d!.counts.waiting ? ` ${d!.counts.waiting} item${d!.counts.waiting === 1 ? " waits" : "s wait"} for someone else.` : ""}`} action={<Button asChild variant="secondary"><Link to="/">Open Immigration programs</Link></Button>} />
+              // UX-A part 2: never "Nothing waits for you" while a combination's release is blocked (someone else fixes it).
+              : filter === "needs" ? <EmptyState title={d!.blocked ? `Nothing waits for you, but ${d!.blocked} combination${d!.blocked === 1 ? "'s release is" : "s' releases are"} blocked` : "Nothing waits for you"} description={`${d!.blocked ? `Its problems are fixed by someone else: see them under Waiting for others. ` : "When you add sources to a combination, its next steps, AI draft, new editions and approvals appear here."}${d!.counts.waiting ? ` ${d!.counts.waiting} item${d!.counts.waiting === 1 ? " waits" : "s wait"} for someone else.` : ""}`} action={d!.blocked ? <Button variant="secondary" onClick={() => set({ f: "waiting" })}>Show Waiting for others</Button> : <Button asChild variant="secondary"><Link to="/">Open Immigration programs</Link></Button>} />
               : <EmptyState title={filter === "running" ? "No AI work is running" : filter === "waiting" ? "Nothing waits for someone else" : "Nothing to review"} description="Items appear here as sources are added, drafted and submitted." />
           ) : <Rows items={d!.items} way={form && combo ? { form, combo } : null} />}
         {d?.items.length ? <p className="text-xs text-text-muted">Oldest first within each group. Each row shows only the step you can take; the studio checks it again when you take it.</p> : null}
