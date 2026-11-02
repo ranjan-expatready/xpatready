@@ -21,11 +21,11 @@ export async function mappedBoxes(db: Client, workspaceId: string) {
 }
 
 /** Item key → the ids of the combinations using it (C3.13 where used; C11.9's lifecycle guard). A section is used where a
- *  combination selects it, a document type where a current checklist line lists it, a field where engine fieldUses says,
- *  and an answer list where one of its fields is. */
+ *  combination selects it; a document type where a current checklist line lists it, takes it as an alternative, or a
+ *  fact is read from it (SH2b); a field where engine fieldUses says; and an answer list where one of its fields is. */
 export async function itemCombinations(db: Client, workspaceId: string, kind: UsedKind): Promise<Map<string, Set<string>>> {
   if (kind === "section") return byItem((await db.sqrSectionSelection.findMany({ where: { workspaceId } })).map((s) => [s.sectionKey, s.combinationId]));
-  if (kind === "document_type") return byItem(current(await db.documentRequirement.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }), (r) => `${r.combinationId}|${r.lineageKey}`).map((r) => [r.documentTypeKey, r.combinationId]));
+  if (kind === "document_type") return byItem([...(await documentTypeUses(db, workspaceId))].map(([k, c]) => [k, c] as [string, string]));
   const [boxes, lines, rules, docs, checks, questions, picks] = await Promise.all([
     mappedBoxes(db, workspaceId),
     db.combinationForm.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }),
@@ -40,6 +40,32 @@ export async function itemCombinations(db: Client, workspaceId: string, kind: Us
   const listOf = new Map<string, string | null>();
   for (const f of await db.canonicalField.findMany({ where: { workspaceId }, orderBy: { version: "asc" } })) listOf.set(f.canonicalFieldKey, f.answerListKey);
   return byItem(pairs, (f) => listOf.get(f));
+}
+
+/** Every use of every document type: [type, combination, how] (a line lists it, a line's alternative, a fact's source). */
+async function documentTypeUses(db: Client, workspaceId: string): Promise<[string, string, "line" | "alternative" | "fact"][]> {
+  const [reqs, facts] = await Promise.all([
+    db.documentRequirement.findMany({ where: { workspaceId, status: { in: [...LIVE] } }, select: { combinationId: true, lineageKey: true, version: true, status: true, documentTypeKey: true, alternatives: true } }),
+    db.factSource.findMany({ where: { workspaceId, status: { in: [...LIVE] } }, select: { combinationId: true, lineageKey: true, version: true, status: true, documentTypeKey: true } }),
+  ]);
+  const lines = current(reqs, (r) => `${r.combinationId}|${r.lineageKey}`);
+  return [
+    ...lines.map((r) => [r.documentTypeKey, r.combinationId, "line"] as [string, string, "line"]),
+    ...lines.flatMap((r) => (Array.isArray(r.alternatives) ? (r.alternatives as unknown[]) : []).filter((k): k is string => typeof k === "string").map((k) => [k, r.combinationId, "alternative"] as [string, string, "alternative"])),
+    ...current(facts, (f) => `${f.combinationId}|${f.lineageKey}`).filter((f) => f.documentTypeKey).map((f) => [f.documentTypeKey!, f.combinationId, "fact"] as [string, string, "fact"]),
+  ];
+}
+/** For one document type: each combination using it and how (the guard says it in words). */
+export async function documentTypeUseKinds(db: Client, workspaceId: string, key: string): Promise<Map<string, Set<string>>> {
+  const out = new Map<string, Set<string>>();
+  for (const [k, c, how] of await documentTypeUses(db, workspaceId)) if (k === key) out.set(c, (out.get(c) ?? new Set()).add(how));
+  return out;
+}
+/** Item key → the labels of the combinations using it, sorted (Library › Used in; a duplicate refusal's words). */
+export async function usedInLabels(db: Client, workspaceId: string, kind: UsedKind): Promise<Map<string, string[]>> {
+  const [ids, combos] = await Promise.all([itemCombinations(db, workspaceId, kind), db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true } })]);
+  const label = new Map(combos.map((c) => [c.id, c.label]));
+  return new Map([...ids].map(([k, s]) => [k, [...new Set([...s].map((id) => label.get(id)).filter((l): l is string => !!l))].sort()] as [string, string[]]).filter(([, l]) => l.length));
 }
 
 /** Each combination's place as its full trail in words, Pathway type › Pathway › Program › Category › Sub-category (P-104,
