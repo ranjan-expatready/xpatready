@@ -13,6 +13,7 @@ import { useMutation } from "@tanstack/react-query";
 import { api, queryClient, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { RunCard } from "@/components/run-card";
 import { AiLaunchDialog } from "@/components/ai-launch";
+import { DraftFields } from "@/components/draft-fields";
 import { Tip, TipProvider } from "@/components/status";
 import { Button, Dialog, Field, Input, Notice, Panel, Pill, Select, Table, Textarea } from "@/components/ui/controls";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -327,6 +328,8 @@ function RowActions({ row, canAuthor, onWhereUsed }: { row: Row; canAuthor: bool
           <DropdownMenu.Content align="end" sideOffset={4} className="z-50 min-w-[300px] rounded-lg border border-border bg-surface-raised p-1 text-sm shadow-lg">
             <DropdownMenu.Item className={item} disabled={!canAuthor || row.type === "guide" || row.status === "retired"} onSelect={() => check.mutate(undefined)}>Replace with a new edition…</DropdownMenu.Item>
             <DropdownMenu.Item className={item} disabled={!canAuthor || !row.attachment_id || row.type !== "form"} onSelect={() => setReread(true)}>Re-read with AI (fields and boxes)</DropdownMenu.Item>
+            {/* C11.13 (P-138): Draft fields lives in the form's drawer, with its saved-or-not state and cost. */}
+            <DropdownMenu.Item className={item} disabled={row.type !== "form" || !row.edition} onSelect={onWhereUsed}>Draft fields with AI…</DropdownMenu.Item>
             <DropdownMenu.Item className={item} onSelect={onWhereUsed}>See where it is used ({row.used_by.length})</DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
@@ -365,6 +368,7 @@ function FormDrawer({ row, onClose, canAuthor }: { row: Row; onClose: () => void
           : row.accepts_quote ? <p className="text-text-muted">{row.accepts_basis === "PERSON_SAMPLE" ? "" : "IRCC's words: "}“{row.accepts_quote}”</p> : null}
         {row.type === "form" && canAuthor && !row.accepts_waiting && row.status !== "retired" ? <SetAccepts row={row} /> : null}
       </section>
+      {row.type === "form" && row.edition ? <DraftFields code={row.code} canAuthor={canAuthor} /> : null}
       <section className="mt-4 space-y-1" aria-labelledby="fd-use"><h3 id="fd-use" className="text-sm font-semibold">Where it is used</h3>
         {uses.isLoading ? <p className="text-sm text-text-muted">Loading…</p> : <UsesList uses={uses.data} />}
         {row.used_by.some((u) => u.picked_by_ai) ? <p className="text-xs text-text-muted">Picked by AI on {row.used_by.filter((u) => u.picked_by_ai).map((u) => u.label).join(", ")} · Sample until the immigration expert signs it off at release review.</p> : null}
