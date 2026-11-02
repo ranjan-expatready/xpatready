@@ -3,7 +3,7 @@
 // in code before (CAD 100 each, CAD 500 for 5 or more; biometrics CAD 85, CAD 170 for 2 or more, none under 14 or over
 // 79). Each rule has a pass and a fail. Pure: no server, no database; US$0.
 //   tsx studio/tests/check_r2_fee_table.ts
-import { deriveFilings, FEE_BASES, FEE_TABLE, feeRule, rulesFrom, type FeeTable } from "../engine/runtime/filings.ts";
+import { ageCheck, deriveFilings, FEE_BASES, FEE_TABLE, feeRule, rulesFrom, type FeeTable } from "../engine/runtime/filings.ts";
 import { DERIVED_FOR } from "../engine/runtime/case-checklist.ts";
 import type { Participant } from "../engine/runtime/case.ts";
 import { recorder } from "./runtime/api.ts";
@@ -85,6 +85,10 @@ for (const [what, edit] of bad) ok(`R2 (break r1) fail: ${what} makes the Visito
 ok("R2 (break r1): the shipped table passes the same checks (Visitor visa derived)", vvWith((t) => t) !== undefined);
 const allDeps: FeeTable = { ...perApp, combinations: { "t.app": { label: "Test", lines: ["app_fee"], modes: { principal: "on_principal", child: "on_principal" } } } };
 ok("R2 (break r1 B16) fail: everyone on another's application with that person not applying: not derived, never guessed", deriveFilings("t.app", family(1, 2), (k) => rulesFrom(allDeps, k)).derived === false);
+
+const r12 = rulesFrom(younger, "vv.single")!.fees.find((f) => f.key === "biometrics")!;
+const why12 = (ageCheck(r12, 10) as { why: string }).why;
+ok("R2 (review r1 m6) fail: an edited age speaks with the table's limit and the source's own words, never a made-up IRCC quote", /^Under 12:/.test(why12) && why12.includes(`"${r12.exempt!.source.quote}"`) && !/the age of 12/.test(why12), why12);
 
 // ── The checklist's combinations are data
 ok("R2: the checklist is worked out for the combinations the table marks (Visitor visa today)", DERIVED_FOR.has("vv.single"));

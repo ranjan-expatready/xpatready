@@ -107,8 +107,10 @@ export function ageCheck(rule: FeeRule, age: number | null | undefined): { pays:
   if (!rule.exempt || age === undefined) return { pays: true };
   if (age === null) return { waits: true };
   const what = rule.label.toLowerCase().replace(/ fee$/, "");
-  if (age < rule.exempt.underAge) return { pays: false, why: `Under ${rule.exempt.underAge}: no ${what} (IRCC: "a child under the age of ${rule.exempt.underAge}").` };
-  if (age > rule.exempt.overAge) return { pays: false, why: `Over ${rule.exempt.overAge}: no ${what} (IRCC: "an applicant over the age of ${rule.exempt.overAge}").` };
+  // The source's own words, never a sentence made from the table's numbers (review r1 m6).
+  const said = `(${rule.exempt.source.page}: "${rule.exempt.source.quote}")`;
+  if (age < rule.exempt.underAge) return { pays: false, why: `Under ${rule.exempt.underAge}: no ${what} ${said}.` };
+  if (age > rule.exempt.overAge) return { pays: false, why: `Over ${rule.exempt.overAge}: no ${what} ${said}.` };
   return { pays: true };
 }
 
