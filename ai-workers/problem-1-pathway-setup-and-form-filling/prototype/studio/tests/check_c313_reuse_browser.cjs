@@ -16,7 +16,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const b = await chromium.launch({ headless: true, ...(process.platform === "darwin" ? { channel: "chrome" } : fs.existsSync("/opt/pw-browsers/chromium") ? { executablePath: "/opt/pw-browsers/chromium" } : {}) });
   const p = await (await b.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" })).newPage();
   const errs = []; p.on("pageerror", (e) => errs.push(e.message));
-  const api = async (pth, init = {}) => { const r = await p.request.fetch(`${BASE}/api${pth}`, { method: init.method ?? "GET", headers: { "x-actor": "user-A", "content-type": "application/json" }, data: init.data }); return { status: r.status(), body: await r.json().catch(() => null) }; };
+  const api = async (pth, init = {}) => { const r = await p.request.fetch(`${BASE}/api${pth}`, { method: init.method ?? "GET", headers: { "x-actor": "user-A", "content-type": "application/json" }, data: init.data, ...(init.timeout ? { timeout: init.timeout } : {}) }); return { status: r.status(), body: await r.json().catch(() => null) }; };
   const go = async (u) => { await p.goto(`${BASE}${u}`); await p.waitForLoadState("networkidle"); await p.waitForFunction(() => !!document.querySelector("main h1"), null, { timeout: 30000 }); };
   const settle = async () => { await p.waitForLoadState("networkidle"); await p.waitForTimeout(300); };
   const main = () => p.locator("main").innerText();
@@ -24,7 +24,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const fits = () => p.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1);
   try {
     await p.goto(BASE); await p.evaluate(() => { try { localStorage.setItem("xr-actor", "user-A"); } catch { /* ignore */ } });
-    step("setup: sample inputs loaded", (await api("/demo/load", { method: "POST" })).status === 201);
+    // Nightly 41381724752 (Mac): the sample load answered something other than 201 on a fresh copy (cause not known yet);
+    // the step now records [status, detail] so the next run shows why. 180 s as the other suites allow for this setup.
+    const loaded = await api("/demo/load", { method: "POST", timeout: 180000 });
+    step("setup: sample inputs loaded", loaded.status === 201, [loaded.status, loaded.body?.detail]);
     const combos = (await api("/library/reuse/sections")).body.combinations;
     const vv = combos.find((c) => c.key === "vv.single");
     const s0 = (await api("/library/sections")).body.find((s) => s.used_in.includes("With an LMIA"));
