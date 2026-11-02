@@ -69,6 +69,9 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   try {
     // ── The client, on a phone ──
     const c = await open(CLIENT, 390, 844);
+    // Guard (red main, Mac run 41365074483): the history's save is held back 1.5 s, as on a slower machine, so a step that
+    // reads the data before the page's save has landed fails here every time, not at random.
+    await c.route(`**/api/runtime/cases/*/answers/*/${F.history}`, async (r) => { if (r.request().method() === "PUT") await new Promise((ok) => setTimeout(ok, 1500)); await r.continue(); });
     await c.goto(`${BASE}/cases/${caseId}/questionnaire`); await idle(c);
     await c.getByRole("button", { name: /^Personal details/ }).first().click(); await idle(c);
     const long = c.getByLabel("Tell us about the visit (Sample)");
@@ -106,7 +109,12 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
     await row2.getByLabel("What you did").fill("Sample study");
     step("client: the gaps are shown in plain words as the person types (Feb 2019 to May 2020)", await shows(hist.getByText(/Gaps in the 10 years to today: Feb 2019 to May 2020 is not covered/)));
     await state(c, "client-history-gap-words", [390, 1024]);
-    await c.getByRole("button", { name: "Save and continue" }).click(); await idle(c);
+    // The data is read only once the page's save of the history has answered: networkidle is already reached on this
+    // page, so idle() alone returns at once and the read below raced the save (red main, Mac run 41365074483).
+    const histSaved = c.waitForResponse((r) => r.request().method() === "PUT" && r.url().endsWith(`/${F.history}`), { timeout: WAIT });
+    await c.getByRole("button", { name: "Save and continue" }).click();
+    step("client: the history's save answers (200)", (await histSaved.then((r) => r.status(), () => 0)) === 200);
+    await idle(c);
 
     const [aLong, aMulti, aName, aHist, aDecl] = await Promise.all([F.long, F.multi, F.name, F.history, F.decl].map(answer));
     step("data: the answers are stored as answered (text, the chosen keys, the name's parts, the periods, the declaration)", /Niagara/.test(aLong?.value ?? "") && JSON.stringify(aMulti?.value) === JSON.stringify(["tourism", "family"]) && aName?.value?.no_given_name === true && aName?.value?.given_names === "" && aName?.value?.family_name === "Sampled" && Array.isArray(aHist?.value) && aHist.value.length === 2 && aHist.value[1].to === "" && aDecl?.value === true, { aMulti: aMulti?.value, aName: aName?.value, aHist: aHist?.value, aDecl: aDecl?.value });
