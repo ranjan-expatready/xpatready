@@ -262,9 +262,11 @@ export function statesValue(quote: unknown, value: string): boolean {
   const w = inWords(value);
   if (!w) return false;
   // Devin on #587: the whole written number, never part of a bigger one: "twenty-one" never states 20, "five hundred"
-  // or "twenty-five" never state 5 (no number word joined before or after it by a hyphen, a space or "and").
+  // or "twenty-five" never state 5 (no number word joined before or after it by a hyphen or a space). "and" joins a
+  // compound only after hundred/thousand/million ("one hundred and five"); in a range ("between two and five years")
+  // it separates two numbers, so the five there is stated.
   const NUM = `(?:${[...ONES.slice(1), ...TENS.slice(2), "hundred", "thousand", "million"].join("|")})`;
-  return new RegExp(`(?<!\\b(?:${NUM}|and)[-\\s]+)\\b${w}\\b(?![-\\s]+${NUM}\\b)`, "i").test(text(quote));
+  return new RegExp(`(?<!\\b${NUM}[-\\s]+)(?<!\\b(?:hundred|thousand|million)\\s+and\\s+)\\b${w}\\b(?![-\\s]+${NUM}\\b)`, "i").test(text(quote));
 }
 
 /** BR-9: the entries frozen with a snapshot: those that answer a number it publishes, in one canonical shape and order
