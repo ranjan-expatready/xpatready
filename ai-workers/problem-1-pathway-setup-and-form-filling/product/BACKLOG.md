@@ -23,6 +23,10 @@ One owner per row and per shared file; never build another owner's rows. Under t
 | Test writers (Mac, Day 0) | acceptance tests | Pack 1 J1–J2 · Pack 2 J3–J4 · Pack 3 J5–J6 · Pack 4 Visitor visa M3 path → `prototype/studio/acceptance/`, `acceptance/journeys/`, the compliance trace table; builders adopt their rows' tests |
 | qa-1 | after-merge | re-scores the rows each merged PR names |
 | qa-2 | Visitor visa | baseline walk, then journey walks |
+| R2 | runtime | **Fees as a dated data table** (P-230 (7)): move the fee values out of `engine/runtime/filings.ts` into the release's fee table (setup S7a), add spouse and PNP fees, and let filing modes and checklists stop being Visitor-visa-only in code | a fee change is a data edit with a test; Visitor visa totals unchanged | P-230 |
+| R3 | runtime | **A minor's travel answers** (P-230 (3)): "travels with" per child plus custody, five conditional document lines (with QA-149) | pass and fail tests for each case; FQ-4 closed | P-230 |
+| R4 | runtime | **An eligibility rule's own outcome** (P-230 (1)): a gate carries "when not met" (Not eligible or needs review) as data; the background gate is needs review | C6.9 tests cover both; copy says the representative reviews | P-230 |
+| L-doc | later | **Document rules fields** (P-230 (8)): copy kind, certified translation, validity window on document requirements (schema) | after the M2 gate | P-230 |
 
 ## Demo first (founder, 2 Nov): in order, ahead of Now
 | # | Area | Item | Done when (beyond the standard) | Source |
