@@ -152,3 +152,20 @@ No Blocker or Major is open. Screen-review terms: **Ship**. The journey score is
 * Rule-removal runs (I could not edit code).
 
 **Verdict: Approve** (commit 7cc07509). Minors n1, n2, m3, m4 (Esc), m5 and m7 are for the PR or a follow-up.
+
+---
+
+## Round 3 on 3c377911 (2 Nov): **Approve**
+Scope: `git diff 7cc07509..3c377911 -- …/prototype/studio`, which is commit 1457e031 plus a merge of origin/main.
+
+* **The merge is clean.** All 10 studio files the merge changed carry exactly origin/main's changes, line for line against the merge base. None touches `pqr-drafts.ts`, `rounds.ts`, `pqr-draft.tsx`, `proposals.tsx`, `pack2.ts` or the C4.7 tests.
+* **n1 is fixed** (`pqr-drafts.ts:167-168`). When the first round ran and only the checker round failed, the note now begins "The first AI round ran, but the checker round did not: …" and goes on to state the cost. Seen in the suite: "…the checker round did not: the AI step did not run. This run cost US$0.37 (counted); nothing of it is used." A failure of both rounds keeps its own reason.
+* **n2 is fixed** (`pqr-drafts.ts:147-209`).
+  * Everything after the job is created now sits in a try/catch. A throw ends the job as FAILED with a plain message, logged, and is then rethrown. A refused job update is only logged, so it never hides the first error.
+  * "Already drafting" and "Look at the plan again" are both refused before the job exists, so they leave nothing behind.
+  * When C4.11's run drives this step (`opts.jobId`), C4.11's own catch still records its step.
+* Note (not a finding): the try also covers the audit write after the picks are inserted. If that one write failed, the job would show FAILED although its picks are on To review. It is very unlikely, and the error still reaches the person.
+* I reran `check_forms_c47_pqr_picks.ts` once on a fresh copy of 3c377911 (port 4455, fake launcher, US$0): **60/60**. I reran nothing else; the code outside this file is main's. I checked first that no other session was writing to `p2/runs`. Afterwards no tracked file had changed, and the copy and its database are removed.
+* Still open from round 2 (Minors, none blocks): m3, m4 (Esc focus), m5 and m7.
+
+**Verdict: Approve** (commit 3c377911). Journey score unchanged: 9/10 (round 2).

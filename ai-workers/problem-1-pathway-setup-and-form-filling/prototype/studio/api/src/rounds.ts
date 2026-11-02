@@ -77,6 +77,11 @@ export function sizedBudgetUsd(step: Pick<AiStep, "max_output_tokens" | "budget_
 /** A round's worst case as the ledger reserves it: inputs bounded by characters, both attempts, never above the run cap. */
 export const worstRoundUsd = (step: AiStep, inputChars: number) => Math.min(RUN_CAP_USD, costUsd(MODEL, inputTokenBound("x".repeat(inputChars)), step.max_output_tokens) * 2);
 
+/** C4.11 review m1: the most one round can reserve, as the launcher's job carries it (sizedBudgetUsd over the whole request
+ *  in bytes, both attempts); never below worstRoundUsd. What a plan states as its worst case. */
+export const roundBudgetUsd = (step: AiStep, isCheck: boolean, inputs: { file: string }[], inputChars: number) =>
+  Math.max(worstRoundUsd(step, inputChars), sizedBudgetUsd(step, requestBytesOf(isCheck ? step.check : step.template, inputs)));
+
 /** The bytes a round sends: its prompt and its input files (paths are the solution's), plus room for the schema and wrapper. */
 const requestBytesOf = (template: string, inputs: { file: string }[]) =>
   inputs.reduce((n, i) => { try { return n + statSync(join(SOLUTION, i.file)).size; } catch { return n; } }, 0) + (() => { try { return statSync(join(PROMPTS, template)).size; } catch { return 0; } })() + 8_000;
