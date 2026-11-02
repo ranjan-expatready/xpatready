@@ -3,15 +3,17 @@
 // checklist "No field map", a form with no usable edition "No edition yet". The pure rule (contracts/form-library.ts
 // fieldMapState) with a pass and a fail per rule, then the API on the sample against the database's own rows. US$0 (one
 // saved AI answer replayed, no model call).
-// C3.12 published date (FormEdition.published, migration 20261101150000): each edition shows the date its own file says it
-// was published (not the printed edition), a file with no date says so, an older edition keeps its own date, and editions
-// made before the column are read once and kept. A pass and a fail per rule, against the database's own column.
+// C3.12 dates. K3 (QA-148, AGENTS rule 4): "Published" is IRCC's month for the edition, printed on the form, else its
+// canada.ca page's Last updated (engine/library-index.ts fileMonth), never the PDF's own date. The file's own date
+// (FormEdition.published, migration 20261101150000, #313) is kept and shown apart as "File saved": a file with no date
+// says so, an older edition keeps its own, and editions made before the column are read once and kept. A pass and a fail
+// per rule, against the database's own column.
 //   zsh studio/tools/isolated.sh forms_c312 4450 start && tsx studio/tests/check_forms_c312_field_map.ts 4450 xr_studio_forms_c312
 import { execFileSync, execSync } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { fieldMapState } from "../contracts/form-library.ts";
-import { publishedOf } from "../engine/published-date.ts";
+import { ircPublished, publishedOf } from "../engine/published-date.ts";
 
 const PORT = Number(process.argv[2] ?? 4450), DB = process.argv[3] ?? "xr_studio_forms_c312";
 let pass = 0, fail = 0;
@@ -61,6 +63,10 @@ type Row = { code: string; type: string; edition: string | null; field_map: Fm }
   ok("C3.12 break M2 fail: a file that could not be read ('?') says 'unreadable'", publishedOf("?").published_state === "unreadable");
   ok("C3.12 published rule pass: a PDF that names no date ('') says 'none'", publishedOf("").published_state === "none");
   ok("C3.12 break m1 fail: impossible or far dates are never shown (2023-02-30, 0000-00-00, 2099-12-31)", ["2023-02-30", "0000-00-00", "2099-12-31", "9999-13-99"].every((v) => publishedOf(v).published === null));
+  ok("C3.12 K3 rule pass: the month printed on the form is IRCC's published month", JSON.stringify(ircPublished({ editionLabel: "IMM 5476 (11-2025)", canadaUpdated: "2025-11" })) === JSON.stringify({ published: "2025-11", published_from: "printed", published_state: "date" }));
+  ok("C3.12 K3 rule pass: with no month printed in the label, canada.ca's Last updated month is used and named as such", JSON.stringify(ircPublished({ editionLabel: "IMM 5802", canadaUpdated: "2024-03" })) === JSON.stringify({ published: "2024-03", published_from: "canada_page", published_state: "date" }));
+  ok("C3.12 K3 rule fail: a page edited later never makes an old file read as new (printed 05-2021 wins over a 2025-09 page)", ircPublished({ editionLabel: "IMM 5475 (05-2021)", canadaUpdated: "2025-09" }).published === "2021-05");
+  ok("C3.12 K3 rule fail: with neither, nothing is guessed (none)", JSON.stringify(ircPublished({ editionLabel: "Guide 5256 (read 2026-11-02)", canadaUpdated: null })) === JSON.stringify({ published: null, published_from: null, published_state: "none" }));
 
   // ── the API on the sample (US$0)
   await call("POST", "/demo/reset", { confirm: "RESET" });
@@ -112,48 +118,55 @@ type Row = { code: string; type: string; edition: string | null; field_map: Fm }
     }
   }
 
-  // ── C3.12 published date: the date the file says it was published (FormEdition.published), US$0 (rules, no AI)
-  type Pub = Row & { published: string | null; published_state: string; older_editions: { label: string; published: string | null; published_state: string }[] };
+  // ── C3.12 the file's own date (FormEdition.published, #313), now shown apart as "File saved" (K3, QA-148), US$0
+  type Pub = Row & { published: string | null; published_from: string | null; published_state: string; file_date: string | null; file_date_state: string; older_editions: { label: string; published: string | null; published_from: string | null; file_date: string | null; file_date_state: string }[] };
   const pubRows = async () => (await call("GET", "/library/forms/list")).body.rows as Pub[];
   let pr = await pubRows();
   const r1295 = pr.find((r) => r.code === "IMM 1295")!, r5707 = pr.find((r) => r.code === "IMM 5707")!;
-  ok("C3.12 published pass: a sample form shows the date its file gives (IMM 1295: 2026-06-04), the same as the column", r1295.published === "2026-06-04" && sql("select published from form_edition where edition_label = 'IMM 1295 (09-2023)'") === "2026-06-04", r1295.published);
-  ok("C3.12 published fail: the published date is not the printed edition (IMM 5707 is edition 01-2023, published 2025-04-11)", r5707.edition === "IMM 5707 (01-2023)" && r5707.published === "2025-04-11", [r5707.edition, r5707.published]);
-  ok("C3.12 published pass: every form edition made before the column was read once and kept (no row left unread)", sql("select count(*) from form_edition where published is null and channel = 'PDF'") === "0");
-  ok("C3.12 published fail: a guide with no date in its page is kept as read with no date (''), shown as none", sql("select count(*) from form_edition e join gov_form_def d on d.id = e.gov_form_def_id where d.form_kind = 'guide' and e.published = ''") !== "0" && pr.filter((r) => r.type === "guide").every((r) => r.published === null));
+  // K3 (QA-148; pack C3.12 AT-3; AGENTS rule 4): "Published" is IRCC's month, printed on the form, else canada.ca's page.
+  ok("C3.12 K3 pass: Published is the month printed on the form (IMM 1295 (09-2023): 2023-09, printed), never its file's date", r1295.published === "2023-09" && r1295.published_from === "printed" && r1295.file_date === "2026-06-04", [r1295.published, r1295.published_from, r1295.file_date]);
+  ok("C3.12 K3 fail: a file saved long after its edition (IMM 5707: 2025-04-11) never reads as published then", r5707.published === "2023-01" && r5707.published !== r5707.file_date?.slice(0, 7), [r5707.published, r5707.file_date]);
+  const chk = pr.find((r) => r.code === "IMM 5488")!;
+  ok("C3.12 K3 pass: a checklist whose canada.ca copy has no Last updated still shows its printed edition month (IMM 5488: 2024-10)", chk.published === "2024-10" && chk.published_from === "printed", [chk.published, chk.published_from]);
+  ok("C3.12 K3 pass: every dated form and checklist row has an IRCC month; no guide claims one", pr.filter((r) => r.type !== "guide" && r.edition).every((r) => /^\d{4}-\d{2}$/.test(r.published ?? "")) && pr.filter((r) => r.type === "guide").every((r) => r.published === null), pr.filter((r) => r.type !== "guide" && r.edition && !r.published).map((r) => r.code));
+  ok("C3.12 file date pass: a sample form keeps the date its file gives (IMM 1295: 2026-06-04), the same as the column", r1295.file_date === "2026-06-04" && sql("select published from form_edition where edition_label = 'IMM 1295 (09-2023)'") === "2026-06-04", r1295.file_date);
+  ok("C3.12 file date fail: the file's date is not the printed edition (IMM 5707 is edition 01-2023, file saved 2025-04-11)", r5707.edition === "IMM 5707 (01-2023)" && r5707.file_date === "2025-04-11", [r5707.edition, r5707.file_date]);
+  ok("C3.12 file date pass: every form edition made before the column was read once and kept (no row left unread)", sql("select count(*) from form_edition where published is null and channel = 'PDF'") === "0");
+  ok("C3.12 file date fail: a guide with no date in its page is kept as read with no date (''), shown as none", sql("select count(*) from form_edition e join gov_form_def d on d.id = e.gov_form_def_id where d.form_kind = 'guide' and e.published = ''") !== "0" && pr.filter((r) => r.type === "guide").every((r) => r.file_date === null && r.published === null));
   // An uploaded PDF (door 2, the intake): its date is set when it is added, from the reader that already read its identity.
   const IRCC = join(import.meta.dirname, "..", "..", "..", "official-sources", "ircc");
   const fd = new FormData(); fd.append("files", new Blob([new Uint8Array(readFileSync(join(IRCC, "forms", "imm5604e.pdf")))], { type: "application/pdf" }), "imm5604e.pdf");
   const up = await (await fetch(`http://localhost:${PORT}/api/intake`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd })).json() as { results?: { outcome: string; edition: string | null }[] };
   const added = up.results?.[0];
-  ok("C3.12 published pass: an uploaded PDF keeps the date its file gives the moment it is added (IMM 5604: 2023-02-27)", !!added?.edition && sql(`select published from form_edition where edition_label = '${added.edition}'`) === "2023-02-27", { added, col: added?.edition ? sql(`select coalesce(published, 'NULL') from form_edition where edition_label = '${added.edition}'`) : null });
+  ok("C3.12 file date pass: an uploaded PDF keeps the date its file gives the moment it is added (IMM 5604: 2023-02-27)", !!added?.edition && sql(`select published from form_edition where edition_label = '${added.edition}'`) === "2023-02-27", { added, col: added?.edition ? sql(`select coalesce(published, 'NULL') from form_edition where edition_label = '${added.edition}'`) : null });
   pr = await pubRows();
-  ok("C3.12 published pass: the Forms list shows the uploaded form's date", pr.find((r) => r.code === "IMM 5604")?.published === "2023-02-27", pr.find((r) => r.code === "IMM 5604"));
+  ok("C3.12 file date pass: the Forms list shows the uploaded form's date", pr.find((r) => r.code === "IMM 5604")?.file_date === "2023-02-27", pr.find((r) => r.code === "IMM 5604"));
   // A file that names no date: kept as '' (read), shown as none, and not read again on the next list.
   sql("update form_edition set published = '' where edition_label = 'IMM 5409 (01-2023)'");
   pr = await pubRows();
-  ok("C3.12 published pass: a file that names no date is shown as none (the page says 'Date not in the file')", pr.find((r) => r.code === "IMM 5409")?.published === null, pr.find((r) => r.code === "IMM 5409")?.published);
-  ok("C3.12 published fail: a file read once with no date is not read again on every list (stays '')", sql("select published from form_edition where edition_label = 'IMM 5409 (01-2023)'") === "");
+  ok("C3.12 file date pass: a file that names no date is shown as none (the page says 'Date not in the file')", pr.find((r) => r.code === "IMM 5409")?.file_date === null, pr.find((r) => r.code === "IMM 5409")?.file_date);
+  ok("C3.12 file date fail: a file read once with no date is not read again on every list (stays '')", sql("select published from form_edition where edition_label = 'IMM 5409 (01-2023)'") === "");
   sql("update form_edition set published = 'not a date' where edition_label = 'IMM 5475 (05-2021)'");
-  ok("C3.12 published fail: anything but a YYYY-MM-DD date is never shown as a date", (await pubRows()).find((r) => r.code === "IMM 5475")?.published === null);
+  ok("C3.12 file date fail: anything but a YYYY-MM-DD date is never shown as a date", (await pubRows()).find((r) => r.code === "IMM 5475")?.file_date === null);
   sql("update form_edition set published = '9999-13-99' where edition_label = 'IMM 5475 (05-2021)'");
-  ok("C3.12 break m1 fail: an impossible date (9999-13-99) from a file's clock is never shown as a date", (await pubRows()).find((r) => r.code === "IMM 5475")?.published === null);
+  ok("C3.12 break m1 fail: an impossible date (9999-13-99) from a file's clock is never shown as a date", (await pubRows()).find((r) => r.code === "IMM 5475")?.file_date === null);
   sql("update form_edition set published = '?' where edition_label = 'IMM 5475 (05-2021)'");
   const unreadable = (await pubRows()).find((r) => r.code === "IMM 5475")!;
-  ok("C3.12 break M2 fail: a file that could not be read says so ('unreadable'), never 'no date in the file'", unreadable.published === null && unreadable.published_state === "unreadable" && sql("select published from form_edition where edition_label = 'IMM 5475 (05-2021)'") === "?", unreadable.published_state);
-  ok("C3.12 break M2 pass: a file with no date says 'none', one with a date 'date'", pr.find((r) => r.code === "IMM 5409")?.published_state === "none" && pr.find((r) => r.code === "IMM 1295")?.published_state === "date");
+  ok("C3.12 break M2 fail: a file that could not be read says so ('unreadable'), never 'no date in the file'", unreadable.file_date === null && unreadable.file_date_state === "unreadable" && sql("select published from form_edition where edition_label = 'IMM 5475 (05-2021)'") === "?", unreadable.file_date_state);
+  ok("C3.12 break M2 pass: a file with no date says 'none', one with a date 'date'", pr.find((r) => r.code === "IMM 5409")?.file_date_state === "none" && pr.find((r) => r.code === "IMM 1295")?.file_date_state === "date");
   // An older edition keeps its own date (test input: IMM 5257's committed previous edition joins as an earlier edition,
   // unread, the way rows made before the column are).
   const ws = sql("select workspace_id from form_edition where edition_label = 'IMM 5257 (09-2023)'"), def = sql("select gov_form_def_id from form_edition where edition_label = 'IMM 5257 (09-2023)'");
   sql(`insert into form_edition (id, workspace_id, gov_form_def_id, edition_label, official_file, sha256) values (gen_random_uuid(), '${ws}', '${def}', 'IMM 5257 (06-2018)', 'imm5257e-pre-2023.pdf', 'd512ef649902eadc400c667cf6ad41bba0d905e2a54245a339be6c25a2d80f11')`);
   pr = await pubRows();
   const v = pr.find((r) => r.code === "IMM 5257")!, older = v.older_editions.find((e) => e.label === "IMM 5257 (06-2018)");
-  ok("C3.12 published pass: an older edition shows its own file's date (IMM 5257 (06-2018): 2019-04-18), read once and kept", older?.published === "2019-04-18" && sql("select published from form_edition where edition_label = 'IMM 5257 (06-2018)'") === "2019-04-18", v.older_editions);
-  ok("C3.12 published fail: the current edition keeps its own date, not the older one's", v.edition === "IMM 5257 (09-2023)" && v.published === "2026-06-04", [v.edition, v.published]);
+  ok("C3.12 file date pass: an older edition shows its own file's date (IMM 5257 (06-2018): 2019-04-18), read once and kept", older?.file_date === "2019-04-18" && sql("select published from form_edition where edition_label = 'IMM 5257 (06-2018)'") === "2019-04-18", v.older_editions);
+  ok("C3.12 K3 pass: an older edition shows its own printed month as published (IMM 5257 (06-2018): 2018-06), not its file's date", older?.published === "2018-06" && older?.published_from === "printed", older);
+  ok("C3.12 file date fail: the current edition keeps its own date, not the older one's", v.edition === "IMM 5257 (09-2023)" && v.file_date === "2026-06-04", [v.edition, v.file_date]);
   // A file not on disk is left unread (null), never marked as having no date.
   sql(`insert into form_edition (id, workspace_id, gov_form_def_id, edition_label, stored_path) values (gen_random_uuid(), '${ws}', '${def}', 'IMM 5257 (01-2017)', 'var/nowhere/missing.pdf')`);
   await pubRows();
-  ok("C3.12 published fail: a file missing from disk stays unread (null, tried again later), never '' (no date)", sql("select coalesce(published, 'NULL') from form_edition where edition_label = 'IMM 5257 (01-2017)'") === "NULL");
+  ok("C3.12 file date fail: a file missing from disk stays unread (null, tried again later), never '' (no date)", sql("select coalesce(published, 'NULL') from form_edition where edition_label = 'IMM 5257 (01-2017)'") === "NULL");
   // Break M1: a stored file that never answers (a pipe) is not read at all, the list answers at once, and the other
   // unread files are still read (test input: a FIFO under this copy's own var folder, and an unread edition beside it).
   const fifoDir = join(import.meta.dirname, "..", "var", "c312-fifo"); rmSync(fifoDir, { recursive: true, force: true }); mkdirSync(fifoDir, { recursive: true });
