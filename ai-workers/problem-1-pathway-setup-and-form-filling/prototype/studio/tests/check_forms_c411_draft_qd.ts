@@ -307,6 +307,9 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
       const before6 = sql(`select count(*) from proposal_item where combination_id='${wp}'`);
       const { st, x } = await stopDuring(draftJob.replace(/-$/, "-") + "");
       const checks = liveLines(checkJob), cancelled = step(x, kind)?.status;
+      // Review round 2 n4: Stop ends the launcher process itself (the stand-in sleeps 4 s; it is gone well before).
+      const alive = (() => { try { return execFileSync("pgrep", ["-f", `fake-launch.mjs --job ${draftJob}`], { encoding: "utf8" }).trim().split("\n").filter(Boolean).length; } catch { return 0; } })();
+      ok(`C4.11 M1 pass: Stop ends ${kind === "pqr_picks" ? "step 6" : "step 5"}'s running launcher call (no stand-in launcher left running)`, alive === 0, alive);
       ok(`C4.11 M1 fail: Stop during ${kind === "pqr_picks" ? "step 6" : "step 5"}'s first Live round ends it: the checker round is never sent, the step is Cancelled, nothing of it is proposed`, st.status < 300 && checks === 0 && cancelled === "CANCELLED" && x.body.status === "stopped" && (kind !== "pqr_picks" || sql(`select count(*) from proposal_item where combination_id='${wp}'`) === before6), { checks, cancelled, status: x.body.status, msg: step(x, kind)?.message });
     }
     // Break L2 / review m5: step 6 is held to C4.7's one draft at a time: with a picks draft running, it does not run.

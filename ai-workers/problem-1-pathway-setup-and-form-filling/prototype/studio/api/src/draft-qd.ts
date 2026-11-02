@@ -142,7 +142,7 @@ export class DraftQd {
     else {
       const ctx: RoundContext = { trail: g.trail, contextKey: c.combinationKey, inputs: [g.input], mode: "live", wanted: async () => !(await stopped()), batchId };
       // Break L3: a round that throws ends as a failed round, so a paid first round's cost is still counted and said.
-      const safe = async (isCheck: boolean): Promise<RoundOut<CondAnswer>> => { try { return await this.runner.round<CondAnswer>(CONDITIONS_AI, isCheck, ctx); } catch (e) { console.warn(`[draft-qd] conditions ${batchId}:`, String(e).slice(0, 300)); return { ok: false, costUsd: 0, reason: "The AI step stopped on this computer, so nothing of it is used." }; } };
+      const safe = async (isCheck: boolean): Promise<RoundOut<CondAnswer>> => { try { return await this.runner.round<CondAnswer>(CONDITIONS_AI, isCheck, ctx); } catch (e) { console.warn(`[draft-qd] conditions ${batchId}:`, String(e).slice(0, 300)); return { ok: false, costUsd: 0, reason: "The AI step stopped on this computer." }; } };
       d = await safe(false);
       k = d.ok && !(await stopped()) ? await safe(true) : d.ok ? { ok: false, cancelled: true, costUsd: 0, reason: "Stopped before the checker round was sent: nothing more was charged." } : null;
     }

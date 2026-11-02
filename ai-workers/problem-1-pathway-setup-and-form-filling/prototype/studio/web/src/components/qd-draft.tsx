@@ -78,7 +78,7 @@ function QdDialog({ id, onClose }: { id: string; onClose: () => void }) {
   const ran = !!result && result.status !== "running";
   const footer = result
     ? <><Button variant="ghost" onClick={onClose}>Done</Button>{ran && result.offer_saved ? <Button variant="secondary" onClick={useSaved} data-qd-use-saved>Use Saved (US$0)</Button> : null}{result.proposed ? <Button asChild><Link to={to} data-qd-open-review>Open To review</Link></Button> : null}</>
-    : <><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void run()} busy={busy} disabled={!plan.data || closed(mode) || overCap} aria-describedby={(base.isSuccess || base.isError) && closed(mode) ? "qd-none" : undefined} data-qd-start data-mode={mode}><ListChecks /> {mode === "replay" ? "Draft with Saved (US$0)" : "Draft Live"}</Button></>;
+    : <><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void run()} busy={busy} disabled={!plan.data || closed(mode) || overCap} aria-describedby={(base.isSuccess || base.isError) && closed(mode) ? "qd-none" : overCap ? "qd-cost" : undefined} data-qd-start data-mode={mode}><ListChecks /> {closed(mode) ? "Draft" : mode === "replay" ? "Draft with Saved (US$0)" : "Draft Live"}</Button></>;
   return (
     <Dialog open wide onOpenChange={(o) => { if (!o) onClose(); }} title="Draft questions and documents" description="One run of seven steps. What needs a person goes to To review, where you accept or remove each; nothing changes the draft until then. Sample until the immigration expert confirms." footer={footer}>
       {result ? (
@@ -96,7 +96,7 @@ function QdDialog({ id, onClose }: { id: string; onClose: () => void }) {
           <fieldset className="space-y-2"><legend className="text-xs font-medium">How to draft</legend>
             {MODES.map(([m, label, hint]) => {
               const off = closed(m), why = !base.data ? null : m === "live" ? (liveOpen ? null : base.data.live.why) : (savedOpen ? null : base.data.saved?.why ?? null);
-              return <label key={m} className={`flex gap-2 text-sm${off ? " text-text-muted" : ""}`} data-qd-mode={m}><input type="radio" name="qd-mode" ref={m === "replay" ? savedRef : undefined} checked={mode === m} onChange={() => setMode(m)} disabled={off} className="mt-1" /><span><span className="font-medium">{label}{off && base.data ? (m === "live" ? " (not open)" : " (none yet)") : ""}</span><br /><span className="text-xs text-text-muted">{why ?? hint}</span></span></label>;
+              return <label key={m} className={`flex gap-2 text-sm${off ? " text-text-muted" : ""}`} data-qd-mode={m}><input type="radio" name="qd-mode" ref={m === "replay" ? savedRef : undefined} checked={mode === m && !off} onChange={() => setMode(m)} disabled={off} className="mt-1" /><span><span className="font-medium">{label}{off && base.data ? (m === "live" ? " (not open)" : " (none yet)") : ""}</span><br /><span className="text-xs text-text-muted">{why ?? hint}</span></span></label>;
             })}
           </fieldset>
           {base.isPending ? <p className="text-sm text-text-muted">Working out the steps and their cost…</p>
@@ -109,7 +109,7 @@ function QdDialog({ id, onClose }: { id: string; onClose: () => void }) {
             <div className="rounded-lg border border-border p-3 text-sm">
               <p className="mb-1 text-xs text-text-muted">{plan.data.facts.total} fact{plan.data.facts.total === 1 ? "" : "s"} the forms need: {plan.data.facts.roles.map((r) => `${r.label} ${r.facts}`).join(" · ")}.</p>
               <ol className="list-decimal space-y-0.5 pl-5" data-qd-steps>{plan.data.steps.map((x) => <li key={x.n} data-qd-step={x.kind}>{x.label} {mode === "replay" && x.uses_ai && plan.data?.saved && !plan.data.saved.steps[x.kind] ? <><Pill tone="neutral">None saved</Pill><span className="text-xs text-text-muted"> (proposes nothing)</span></> : <Pill tone={HOW[x.how][1]}>{HOW[x.how][0]}</Pill>}</li>)}</ol>
-              <p className="mt-2 font-medium" data-qd-cost>{mode !== "live" ? "Cost: US$0 (no AI call)." : overCap ? `At most US$${plan.data.totals.worst_usd.toFixed(2)}: over what is left of the AI spending cap (US$${plan.data.totals.remaining_usd.toFixed(2)}), so Live cannot start.` : `At most US$${plan.data.totals.worst_usd.toFixed(2)}, inside the AI spending cap (US$${plan.data.totals.remaining_usd.toFixed(2)} left).`}</p>
+              <p className="mt-2 font-medium" id="qd-cost" data-qd-cost>{mode !== "live" ? "Cost: US$0 (no AI call)." : overCap ? `At most US$${plan.data.totals.worst_usd.toFixed(2)}: over what is left of the AI spending cap (US$${plan.data.totals.remaining_usd.toFixed(2)}), so Live cannot start.` : `At most US$${plan.data.totals.worst_usd.toFixed(2)}, inside the AI spending cap (US$${plan.data.totals.remaining_usd.toFixed(2)} left).`}</p>
               <p className="mt-1 text-xs text-text-muted">{plan.data.note}</p>
             </div>
           ) : null}

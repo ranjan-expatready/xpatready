@@ -70,3 +70,57 @@ D1 4: P-227 and claims met except Stop in step 6 · D2 4: one run per combinatio
 The suites rewrote 9 committed screenshots, which I restored with `git checkout`. They also rewrote `studio/var/suites/check_forms_c411_draft_qd.json` and `check_forms_c47_pqr_picks.json`. Those are git-ignored, so I could not restore them from git: they now hold my runs (63/63, 60/60). My copies (rv411a/b/c/k) are stopped and their databases dropped.
 
 **Verdict: Block.** Fix: **M1**. Minors m1–m5 are for the PR or a follow-up (m1 and m2 also apply to C4.7).
+
+---
+
+## Round 2 on 4a09887b (2 Nov): **Approve**
+Scope:
+* The fixes: `git diff c154cd6c..4a09887b` (code, tests, and the break report `break-report-c411-live-5a.md`).
+* The verdict: the whole of `3c377911..4a09887b`.
+
+Same rules as round 1: :4455 and :4456 only, the fake launcher only, my test ledger in my scratchpad, US$0, no code edited.
+
+**Suites, run at 4a09887b by me:**
+* `check_forms_c411_draft_qd.ts`: **71/71**
+* `check_forms_c411_draft_qd_browser.cjs`: **49/49**
+* `check_forms_c411_contract.ts`: **31/31**
+* `check_forms_c47_pqr_picks.ts`: **60/60**
+
+**Restored afterwards:** the 11 screenshots the browser suite rewrote (`git checkout`), and the builder's `var/suites/*.json` (copied back from my backup). Copies stopped, databases dropped.
+
+### My findings and the breaker's Majors
+| Item | Result at 4a09887b |
+|---|---|
+| **M1 / L1, Stop** | **Fixed.** Step 6 now passes the run's `stopped` into `pqr.draft` (`draft-qd.ts:310`, `pqr-drafts.ts:164`). `DraftQd.stop` ends the running launch of step 5 (one shared runner) and of step 6 (`pqr.liveJob`) through `stopLaunches` (`draft-qd.ts:76-80`). Step 5 also checks Stop between its rounds. Suite M1 fail ×2: the checker is never sent, the step is CANCELLED and nothing is proposed. My browser probe (step 6's first round sleeping 20 s): "Stopped" showed 175 ms after the click. The step reads "Stopped while the AI call ran: the call was ended", so the process was ended and did not finish its sleep. The launcher log has no `studio-pqr-picks-check`, and the note reads "Stopped by a person; … This run cost US$0.60 (counted)." No Saved offer. |
+| **m5 / L2, one picks draft at a time** | **Fixed.** The `opts.jobId` path runs C4.7's lock and RUNNING check, leaving out its own job (`pqr-drafts.ts:147-153`). The QD step's job is already RUNNING before the lock, so both orders are refused. Suite L2 fail/pass. |
+| **L3, cost on a crash** | **Fixed.** Step 5's Live rounds are wrapped. Suite L3: the step, the job (0.42) and the run all keep US$0.42. |
+| **m1, stated worst case** | **Fixed.** `roundBudgetUsd` = max(character bound, `sizedBudgetUsd` over the request bytes), which is the per-round run cap the ledger enforces, so it is a true ceiling (`rounds.ts:80-83`). wp.family now states US$4.00: each round is at the US$1 floor, above the ~US$2.18 the ledger could really reserve. Conservative, as "at most" allows. C4.7 uses the same function. |
+| **m2 / L4, over the cap** | **Fixed in both dialogs.** With US$1.50 left: "At most US$4.00: over what is left of the AI spending cap (US$1.50), so Live cannot start." Draft Live is disabled. |
+| **L5, L6, m3, m4** | **Fixed.** A refusal re-reads the plans. A stopped run's note says "Stopped by a person" with its cost. Joined reasons end in full stops. A step with nothing saved shows a neutral "None saved" pill (browser S fail). |
+
+### Whole branch: claims re-checked
+Live and Saved only. Live only with the switch: after a restart without it, 409 and the launcher is never asked. Saved pairs one run. A failed Live step offers Saved only when one exists and never after Stop. A paid round's cost is said. Step 2 is Saved in both ways. One LIVE batch with the worst case recorded. Keyboard path and 1440, 1024 and 400 px all held as in round 1.
+
+### Minors (Should; do not block; follow-up rows)
+* **n1. Words.** A checker round that throws after a paid first round reads "…so nothing of it is used. This step cost US$0.42 (counted); nothing of it is used.": the clause is said twice (`draft-qd.ts:145` reason plus `:153`). *Fix:* drop the clause from the wrapped reason.
+* **n2. A round ended by Stop is counted at US$0 here, but the ledger keeps its reservation.**
+  * `rounds.ts:153` returns `costUsd: 0`, yet the step's own words say "It stays counted at its reserved worst case". So the run note ("This run cost US$0.60"), the card ("US$0.60 spent") and the job cost leave it out, while the real ledger keeps up to that round's reservation (about US$0.5–0.6 here).
+  * This predates the branch: shared `rounds.ts`, same for the finder.
+  * *Fix:* return the round's budget as its counted cost, or have the note say "plus one call ended by Stop, counted at its reserved worst case".
+* **n3. The disabled Draft Live is not tied to its reason.** When over the cap, Draft Live has no `aria-describedby` pointing to the cost line (`qd-draft.tsx:81`; `pqr-draft.tsx:67`), unlike "Nothing can start".
+* **n4. Gaps in the tests.**
+  * No suite asserts that Stop ends the launcher process. Removing `stopLaunches` from `stop()` still passes M1, because the checker round is refused after the sleep.
+  * No browser step covers the over-cap state.
+* **L7–L11** are recorded in the break report and are still open. Each is Minor, and I agree with that rating.
+
+**Journey score, round 2: 8.5/10, which passes.**
+* Raised from round 1:
+  * Feedback and state (1): Stop is shown in 175 ms and is true.
+  * Correct data (1): nothing is proposed after Stop.
+  * Plain words (1): m3 and m4 fixed. n1 is a small repeat.
+* Still at ½:
+  * Trust and sources: n2, a killed call is missing from "spent".
+  * Accessibility and screen sizes: n3.
+* Every other criterion stays at 1.
+
+**Verdict: Approve** (commit 4a09887b). No Blocker or Major is open. n1–n4 and L7–L11 are for follow-ups. n2 should be fixed before the paid Visitor visa Live run, so the founder's US$ figure matches the ledger.
