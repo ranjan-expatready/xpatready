@@ -291,7 +291,10 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
     const used = new Set((await tx.documentType.findMany({ where: { workspaceId: l.ws }, select: { documentTypeKey: true } })).map((x) => `x.${x.documentTypeKey}`));
     const key = slugKey(d.name, used);
     await tx.documentType.create({ data: { workspaceId: l.ws, documentTypeKey: key, name: d.name, category: d.category || "client", suppliesFacts: d.suppliesFacts,
-      readerProfile: { readerKind: d.readerKind, identityDocument: d.identityDocument, proves: d.proves }, version: 1, status: "DRAFT", origin: "AI_PROPOSAL", updatedBy: l.actor.id } });
+      readerProfile: { readerKind: d.readerKind, identityDocument: d.identityDocument, proves: d.proves }, version: 1, status: "DRAFT",
+      // C3.6: a type a person named while adding a requirement is the person's (made by: person), as before it went through
+      // the queue; its author is the namer (decide passes them as proposedBy), so their own-draft Delete stays (C11.9).
+      ...(r.step === "requirement_type" ? { origin: "HUMAN" as const, updatedBy: l.proposedBy ?? l.actor.id } : { origin: "AI_PROPOSAL" as const, updatedBy: l.actor.id }) } });
     await waitingAdd(tx, l, "document_type", key, d.name);
     return key;
   },

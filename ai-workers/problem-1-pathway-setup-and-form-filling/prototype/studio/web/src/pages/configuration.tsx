@@ -7,6 +7,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { ConditionBuilder, plainCondition, type FieldInfo } from "@/components/conditions";
 import { cn } from "@/lib/utils";
 import { irccWords } from "../../../contracts/workspace";
+import { normalizeLabel } from "../../../contracts/programs";
 
 export const WHO: [string, string][] = [["each_applicant", "Each applicant"], ["principal_applicant", "Principal applicant"], ["spouse_or_partner", "Spouse or partner"], ["couple_once", "Once per couple"], ["each_dependent_child", "Each child"], ["each_person", "Each person"], ["case", "The application (once)"], ["representative", "The representative"], ["sponsor", "The sponsor"]];
 export const whoLabel = (w: string) => WHO.find(([v]) => v === w)?.[1] ?? w;
@@ -73,21 +74,27 @@ function Documents({ id, s, fields }: { id: string; s: any; fields: any }) {
   );
 }
 
+/** What saving a line answers: the line, or (C3.6) a new type name waiting as a library proposal. */
+type SaveAnswer = { status?: string; message?: string; proposalId?: string } | undefined;
 /** Add or edit one checklist line (also the Documents tab's "+ Add a document" and its drawer's Edit, W1-15 slice 3). */
 export function RequirementDialog({ id, r, fields, onClose, onSaved }: { id: string; r: any; fields: any; onClose: () => void; onSaved?: () => void }) {
   const revs = React.useContext(RevCtx);
-  const types = useApi<any[]>(["doc-types"], "/library/document-types");
+  // C3.6 (P-158): a new type name waits as a library proposal; the dialog stays open with the line's details kept, looks
+  // for the type every few seconds, and chooses it once it is accepted, so the author only saves the line.
+  const [waiting, setWaiting] = React.useState<{ message: string; name: string } | null>(null);
+  const types = useApi<any[]>(["doc-types"], "/library/document-types", { refetchInterval: waiting ? 5000 : false, refetchOnWindowFocus: !!waiting });
   const isNew = !r.lineage;
   const [f, setF] = React.useState<any>({ alternatives: r.alternatives ?? [], documentTypeKey: r.document_type_key ?? "", newTypeName: "", appliesToRoles: r.who ?? "each_applicant", attachMode: r.base_or_conditional === "conditional" ? "ANSWER_CONDITIONAL" : "COMBINATION_MANDATORY", condition: r.condition ?? null, conditionPlain: r.condition_plain ?? "", providedBy: r.provided_by ?? "client", sourceQuote: r.source_quote ?? "", sourceFile: r.source_file ?? "", note: r.note ?? "" });
   const set = (p: any) => setF((x: any) => ({ ...x, ...p }));
-  // C3.6 (P-158): a new type name waits as a library proposal; the dialog stays open with the line's details kept.
-  const [waiting, setWaiting] = React.useState<string | null>(null);
-  const save = useAction((b: any) => api(isNew ? `/combinations/${id}/requirements` : `/combinations/${id}/requirements/${encodeURIComponent(r.lineage)}`, { method: isNew ? "POST" : "PATCH", json: isNew ? b : { ...b, baseRevision: revs[`requirement:${r.lineage}`] } }), { success: (res: any) => (res?.status === "waiting" ? res.message : isNew ? "Document requirement added to the draft" : "Document requirement saved to the draft"), invalidate: [["config", id], ["combination", id], ["preview"], ["doc-types"], ["checklist", id], ["fact-sources", id], ["proposals"], ["review-queue"]], onDone: (res: any) => { if (res?.status === "waiting") { setWaiting(res.message); set({ newTypeName: "" }); return; } onSaved?.(); onClose(); } });
+  const landed = waiting ? (types.data ?? []).find((t) => !t.retired && normalizeLabel(t.name) === normalizeLabel(waiting.name)) : undefined;
+  React.useEffect(() => { if (landed && !f.documentTypeKey) set({ documentTypeKey: landed.documentTypeKey, newTypeName: "" }); }, [landed?.documentTypeKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const save = useAction((b: any) => api(isNew ? `/combinations/${id}/requirements` : `/combinations/${id}/requirements/${encodeURIComponent(r.lineage)}`, { method: isNew ? "POST" : "PATCH", json: isNew ? b : { ...b, baseRevision: revs[`requirement:${r.lineage}`] } }), { success: (res: SaveAnswer) => (res?.status === "waiting" && res.message ? res.message : isNew ? "Document requirement added to the draft" : "Document requirement saved to the draft"), invalidate: [["config", id], ["combination", id], ["preview"], ["doc-types"], ["checklist", id], ["fact-sources", id], ["proposals"], ["review-queue"]], onDone: (res: SaveAnswer) => { if (res?.status === "waiting") { setWaiting({ message: res.message ?? "", name: f.newTypeName }); set({ newTypeName: "" }); return; } onSaved?.(); onClose(); } });
   return (
     <Dialog guard wide open onOpenChange={(o) => !o && onClose()} title={isNew ? "Add a document requirement" : `Edit: ${r.document_type}`} description="Base requirements apply to everyone they name; conditional ones only when their condition is true for that person."
       footer={<>{!isNew ? <Button variant="destructive" className="mr-auto" onClick={() => save.mutate({ retire: true })}><Trash2 /> Remove</Button> : null}<Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => save.mutate(f)} busy={save.isPending}>Save to draft</Button></>}>
       <div className="space-y-4">
-        {waiting ? <Notice tone="info" title="The new type waits for a second person" action={<Link className="whitespace-nowrap text-text-link underline" to="/review/proposals">Open To review › Proposals</Link>}><span data-requirement-type-waiting>{waiting} The other details below are kept while this stays open.</span></Notice> : null}
+        {waiting && landed ? <Notice tone="ok" title="The new type was accepted"><span data-requirement-type-accepted>"{landed.name}" is now in the library and chosen above: save the line.</span></Notice>
+          : waiting ? <Notice tone="info" title="The new type waits for a second person" action={<Link className="whitespace-nowrap text-text-link underline" to={`/review/proposals?group=${encodeURIComponent(`combination:${id}`)}`}>Open To review › Proposals</Link>}><span data-requirement-type-waiting>{waiting.message} The other details below are kept while this stays open.</span></Notice> : null}
         <div className="grid grid-cols-2 gap-3">
           <Field label="Document type" hint="Reuse a library type, or name a new one below."><Select value={f.documentTypeKey} onChange={(e) => set({ documentTypeKey: e.target.value, newTypeName: "" })}><option value="">(a new type)</option>{(types.data ?? []).filter((t) => !t.retired || t.documentTypeKey === f.documentTypeKey).map((t) => <option key={t.documentTypeKey} value={t.documentTypeKey}>{t.name}</option>)}</Select></Field>
           <Field label="New document type name" hint="A new type waits for a second person on To review › Proposals; once accepted, choose it above and save."><Input value={f.newTypeName} disabled={!!f.documentTypeKey} onChange={(e) => set({ newTypeName: e.target.value })} placeholder="Proof of financial support" /></Field>

@@ -99,6 +99,7 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   // namer keeps "Delete your own unapproved type" (C11.9); the author's source quote reaches the second person.
   const quoted = await nameAndAccept(wp, "Proof of a quoted thing (Sample)", { sourceQuote: "Sample quote typed by the author" });
   ok("C3.6 pass (#523 Q1): accepted by user-B, the type's ADD still names user-A (who named it) as its proposer", !!quoted.key && sql(`select proposed_by from library_change where kind = 'document_type' and key = '${quoted.key}'`) === "user-A", [quoted.named.status, quoted.key]);
+  ok("C3.6 pass (#523 Q1): the type is made by a person (origin HUMAN, author user-A), not marked AI-proposed", sql(`select origin || '|' || updated_by from document_type where document_type_key = '${quoted.key}'`) === "HUMAN|user-A", sql(`select origin || '|' || updated_by from document_type where document_type_key = '${quoted.key}'`));
   ok("C3.6 pass: the second person reads the author's source quote in the proposal's reason", /Sample quote typed by the author/.test(sql(`select reason from proposal_item where id = '${quoted.named.body?.proposalId}'`)));
   const other = await call("POST", `/combinations/${wp}/requirements`, { ...line, documentTypeName: "Proof of a plain thing (Sample)" });
   r = await call("POST", "/review/proposals/decide", { ids: [other.body?.proposalId], action: "accept" }, "user-B");
