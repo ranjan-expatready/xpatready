@@ -43,6 +43,7 @@ import { LIVE_RUN, newestFirst, StepRunner, worstRoundUsd, type AiStep, type Rou
 import { otherPages } from "../../engine/rounds.ts";
 import { MAX_ATTEMPTS, OVERRIDE_TTL_MS } from "../../../p2/policy.ts";
 import { forgetDeletion } from "./library-deletions.ts";
+import { fullTrail } from "../../engine/structure.ts";
 
 const run = promisify(execFile);
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
@@ -131,14 +132,16 @@ const countsOf = (d: unknown) => (d && typeof d === "object" ? (d as { done?: nu
 export const detailsOf = (d: unknown): string | null => (d && typeof d === "object" && typeof (d as { details?: unknown }).details === "string" ? (d as { details: string }).details : null);
 
 /** Where a combination sits, by names (the AI's only known fact besides the pages). */
-export async function trailOf(db: Db, combinationId: string): Promise<{ id: string; workspaceId: string; label: string; trail: string[] }> {
+/** `trail` is what the AI is given and what its saved answers were made with, so it never changes; `full_trail` is the
+ *  five-part trail a person reads (P-104, QA-150). */
+export async function trailOf(db: Db, combinationId: string): Promise<{ id: string; workspaceId: string; label: string; trail: string[]; full_trail: string[] }> {
   const c = await db.combination.findUnique({ where: { id: combinationId }, include: { program: true } });
   if (!c) throw problem(404, "Not found", "That combination does not exist.");
-  const nodes = await db.programDef.findMany({ where: { workspaceId: c.workspaceId }, select: { programNodeKey: true, parentNodeKey: true, label: true } });
+  const nodes = await db.programDef.findMany({ where: { workspaceId: c.workspaceId }, select: { programNodeKey: true, parentNodeKey: true, label: true, nodeKind: true, clientType: true } });
   const by = new Map(nodes.map((n) => [n.programNodeKey, n]));
-  const trail: string[] = [];
-  for (let n = by.get(c.program.programNodeKey); n; n = n.parentNodeKey ? by.get(n.parentNodeKey) : undefined) trail.unshift(n.label);
-  return { id: c.id, workspaceId: c.workspaceId, label: c.label, trail };
+  const chain: (typeof nodes)[number][] = [];
+  for (let n = by.get(c.program.programNodeKey); n; n = n.parentNodeKey ? by.get(n.parentNodeKey) : undefined) chain.unshift(n);
+  return { id: c.id, workspaceId: c.workspaceId, label: c.label, trail: chain.map((n) => n.label), full_trail: fullTrail(chain) };
 }
 
 /** A text inventory under p1/inventory made from a manifest file whose URL is this page (the guard admits only these). */
@@ -202,7 +205,7 @@ export class Finder implements OnModuleInit {
     const expected = b.mode === "live" ? this.expectedUsd(c.trail) : 0;
     // S3 early look (4): the one "about" (finder-cost.ts), the same on the Find button, this plan and the run card.
     const about = b.mode === "live" ? aboutUsd(expected, await lastFinishedUsd(this.db, await this.ws.id(), FINDER_OPERATION, "LIVE"), true) : 0;
-    const plan = { operation: FINDER_OPERATION, operation_label: "Find this combination's forms", combination: { id: c.id, label: c.label, trail: c.trail }, mode: b.mode, page_url: b.pageUrl ?? remembered?.package ?? null, only: b.only ?? null, steps,
+    const plan = { operation: FINDER_OPERATION, operation_label: "Find this combination's forms", combination: { id: c.id, label: c.label, trail: c.full_trail, ai_trail: c.trail }, mode: b.mode, page_url: b.pageUrl ?? remembered?.package ?? null, only: b.only ?? null, steps,
       totals: { worst_usd: worst, expected_usd: expected, about_usd: about, ai_rounds: rounds.length }, ledger, live: { on: aiLive(), why: aiLive() ? null : START.liveOff },
       note: b.mode === "rules" ? "Rules only: every form number printed on the pages is listed for you to attach by hand; nothing is attached, because AI did not decide which apply." : b.mode === "replay" ? "Saved AI answers for these exact pages are replayed: US$0. A page with no saved answer stops with the reason." : `Live AI: two rounds per question, at most US$${worst.toFixed(2)} (usually much less; at most ${MAX_ATTEMPTS} paid attempts per round). Downloads from canada.ca cost nothing.`,
       targets: [] as unknown[] };
@@ -307,7 +310,9 @@ export class Finder implements OnModuleInit {
     if (ov) { this.overrides.set(batchId, ov); setTimeout(() => this.overrides.delete(batchId), OVERRIDE_TTL_MS + 60 * 60_000).unref(); }
     const mode: FinderMode = plan.mode;
     const combinationId: string = plan.combination.id;
-    const trail = (plan.combination.trail as string[]).join(" › ");
+    // The names the AI is given (a plan stored before QA-150 has only `trail`, which then held them).
+    const names: string[] = plan.combination.ai_trail ?? plan.combination.trail;
+    const trail = names.join(" › ");
     // The combination itself (its key): what a saved answer belongs to (Lead decision 28 Oct).
     const combinationKey = (await this.db.combination.findUnique({ where: { id: combinationId }, select: { combinationKey: true } }))?.combinationKey ?? combinationId;
     const actor = ACTORS.find((a) => a.id === b.startedBy) ?? ACTORS[0];
@@ -320,7 +325,7 @@ export class Finder implements OnModuleInit {
       await set("Reading canada.ca's list of application packages");
       const got = await this.canada.get(INDEX_URL, "html");
       const idx = parseFormsIndex(got.bytes.toString("utf8"));
-      const sure = this.sureMatch(plan.combination.trail, idx.packages);
+      const sure = this.sureMatch(names, idx.packages);
       if (sure.match) return { status: "COMPLETED", message: `Rules found a sure match: "${sure.match.title}". No AI call was made.`, detail: { candidates: sure.candidates }, value: { url: sure.match.url, title: sure.match.title } };
       if (mode === "rules") return { status: "NEEDS_PERSON", message: "Rules found no sure match and AI is off: choose the application page.", detail: { candidates: sure.candidates }, value: { url: "", title: null, candidates: sure.candidates } };
       const inv = inventoryFor(INDEX_URL);
@@ -355,7 +360,7 @@ export class Finder implements OnModuleInit {
       pages.push({ url: index.value.url, title: index.value.title ?? (/<title>([^<]*)<\/title>/i.exec(html)?.[1] ?? "Application page").replace(/\s*-\s*Canada\.ca\s*$/i, "").trim(), kind: "package", text: pageText(html), sha256: pkg.sha256, inventory: inventoryFor(index.value.url) });
       // A page may link more than one guide (the study permit page also links the inside-Canada guide): the one whose
       // name shares most words with the trail is read; a tie keeps the first.
-      const want = new Set(words(plan.combination.trail.slice(1).join(" ")));
+      const want = new Set(words(names.slice(1).join(" ")));
       const guides = pageLinks(html, index.value.url).filter((l) => /\/guide-\d+/.test(l.url) || /^guide \d+/i.test(l.text));
       const guide = guides.map((l, i) => ({ l, i, s: words(`${l.text} ${l.url.split("/").pop()}`).filter((w) => want.has(w)).length })).sort((a, b) => b.s - a.s || a.i - b.i)[0]?.l;
       if (guide) {

@@ -233,10 +233,12 @@ export function FormsPage() {
 
 const RUNS_KEY = "library-forms-runs";
 
-/** A combination's trail, its last part first (what tells them apart), the rest muted: "With an LMIA · Work permit › Employer-specific". */
+/** A combination's full trail (P-104, QA-150), its name first (what tells them apart), the rest muted, as on Immigration
+ *  programs: "Visitor visa · Retail › Temporary residence › Visitors" ("No sub-category" is in the tip, not repeated). */
 function TrailText({ label }: { label: string }) {
-  const parts = label.split(" › "), last = parts.pop();
-  return <span className="line-clamp-2" title={label}>{last}{parts.length ? <span className="text-text-muted"> · {parts.join(" › ")}</span> : null}</span>;
+  const parts = label.split(" › ").filter((p) => p !== "No sub-category"), last = parts.pop();
+  // The trail wraps on its own small line under the name (never clipped: it is the full trail a person asked for).
+  return <span data-trail title={label}><span className="block">{last}</span>{parts.length ? <span className="block text-xs text-text-muted"><span className="sr-only">, in </span>{parts.join(" › ")}</span> : null}</span>;
 }
 
 /** The IRCC accepts cell: the value, then who said it (AI · Sample, a person · Sample, the expert); a change waiting shows. */

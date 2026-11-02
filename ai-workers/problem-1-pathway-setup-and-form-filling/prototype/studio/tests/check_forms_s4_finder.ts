@@ -180,7 +180,8 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   run = (await finish(r.body.id)).body;
   ok("C11.8: replay with no saved answer for these pages stops with the reason and attaches nothing (US$0)", run.status === "FAILED" && /No saved AI answer/.test(run.steps[2].message) && run.usd.spent === 0, run.steps?.[2]?.message);
   // Break M7, round 2 N4: saved answers are found by everything the AI was given (pages, prompt, trail), not by file name.
-  const vvTrail = sql(`select split_part(scope_label, '|', 2) from ai_batch where id='${run.id}'`).replace(/^[^›]+›/, "Individual ›"); // round 3 R3-2: a renamed upper level still replays
+  // QA-150: the run's scope now names the full five-part trail for people; the names the AI was given are the plan's ai_trail.
+  const vvTrail = sql(`select array_to_string(array(select jsonb_array_elements_text(plan->'combination'->'ai_trail')), ' › ') from ai_batch where id='${run.id}'`).replace(/^[^›]+›/, "Individual ›"); // round 3 R3-2: a renamed upper level still replays
   // Lead decision 28 Oct: an answer belongs to the combination itself, by its key (the job's combination), not its names.
   const vvKey = sql(`select combination_key from combination where id='${vv}'`);
   const empty = { forms: [], unresolved: [] };

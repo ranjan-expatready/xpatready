@@ -1,7 +1,8 @@
 // W1-03/04 pure rules (no database): the free "did you mean" check (BR-5), the four setup steps a card shows
-// (addendum A3) and the "Filed:" words (addendum A4). Tested in tests/check_w1_structure.ts.
+// (addendum A3), the "Filed:" words (addendum A4) and the full five-part trail (P-104, QA-150). Tested in
+// tests/check_w1_structure.ts and tests/check_c113_full_trail.ts.
 import { normalizeLabel, type MissingItem, type NextAction } from "../contracts/programs.ts";
-import { SETUP_STEPS, type SetupProgress } from "../contracts/structure.ts";
+import { PATHWAY_TYPE_LABEL, SETUP_STEPS, type PathwayType, type SetupProgress } from "../contracts/structure.ts";
 
 /** Letters a name needs changed to become another (Levenshtein), stopping early past `max`. */
 export function editDistance(a: string, b: string, max = 3): number {
@@ -78,4 +79,13 @@ export function progressFollows(p: SetupProgress, next: NextAction | null, missi
   const stage = !next ? null : next.kind === "see_missing" ? (missing.length ? Math.min(...missing.map((m) => MISSING_STAGE[m.code] ?? 2)) : null) : STAGE_OF[next.kind] ?? null;
   if (!stage) return p;
   return { step: stage, of: 4, done: [0, 1, 2, 3].map((i) => i < stage - 1), live: false, label: `Step ${stage} of 4: ${SETUP_STEPS[stage - 1]}` };
+}
+
+/** P-104 (QA-150): a combination's place as the full five-part trail, Pathway type › Pathway › Program › Category ›
+ *  Sub-category ("No sub-category" when the combination sits on a category), the same words as the Immigration
+ *  programs cards (api/src/programs.ts). `chain` runs from the Pathway down to the combination's own name. */
+export function fullTrail(chain: { label: string; nodeKind: string; clientType?: string | null }[]): string[] {
+  const pw = chain.find((n) => n.nodeKind === "PATHWAY");
+  const type = PATHWAY_TYPE_LABEL[(pw?.clientType ?? "INDIVIDUAL") as PathwayType] ?? PATHWAY_TYPE_LABEL.INDIVIDUAL;
+  return [type, ...chain.map((n) => n.label), ...(chain.at(-1)?.nodeKind === "STREAM" ? ["No sub-category"] : [])];
 }
