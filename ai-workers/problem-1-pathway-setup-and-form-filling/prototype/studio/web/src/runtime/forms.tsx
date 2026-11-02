@@ -10,11 +10,13 @@ import { Button, Notice, Pill } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { inSentence, LOCK_KINDS, notReady, ONLINE_LATER_WAVE, type CaseForm, type CaseOnlineForm, type FormCopy } from "../../../contracts/runtime";
 import { noRetryOnRefusal } from "./questionnaire";
+import { openLines } from "../../../engine/runtime/open-lines";
 
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 const busy = (c: FormCopy) => c.status === "QUEUED" || c.status === "RUNNING";
 
 /** The forms of one case. Under the questionnaire view's query key, so any answer change refreshes it too. */
+
 export function FormsPanel({ caseId }: { caseId: string }) {
   const actor = useActorId();
   const q = useApi<{ forms: CaseForm[]; online?: CaseOnlineForm[] }>(["runtime", "view", caseId, "forms", actor], `/runtime/cases/${caseId}/forms`, {
@@ -136,8 +138,15 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
       <p className="text-[13px] text-text-muted">Confirmed answers for {f.draft.written_now} of {f.draft.mapped} form fields{f.draft.unconfirmed ? `; ${f.draft.unconfirmed} answered but not confirmed ${f.draft.unconfirmed === 1 ? "stays" : "stay"} blank` : ""}. A copy also lists the form fields to write by hand.</p>
       {missing.length ? (
         <details className="text-[13px]">
-          <summary className="cursor-pointer text-text-link">What blocks filing ({missing.length})</summary>
+          <summary className="flex min-h-6 cursor-pointer items-center text-text-link">What blocks filing ({missing.length})</summary>
           <ul className="mt-1 list-disc space-y-0.5 pl-6">{missing.map((m) => <li key={`${m.fact}|${m.about}`}>{m.label} <span className="text-text-muted">({inSentence(m.about)}): {m.reason}</span></li>)}</ul>
+        </details>
+      ) : null}
+      {/* QA-165 part 2 (P-237, P-238): each mandatory field of IRCC's form a copy leaves empty, with why, before the file is offered. */}
+      {f.fields_open?.length ? (
+        <details className="text-[13px]" data-fields-open>
+          <summary className="flex min-h-6 cursor-pointer items-center text-text-link">Marked mandatory on IRCC's form, still empty ({openLines(f.fields_open).length}): Adobe's Validate asks for {openLines(f.fields_open).length === 1 ? "it" : "each"}, and may ask for more that its own checks make mandatory</summary>
+          <ul className="mt-1 list-disc space-y-0.5 pl-6">{openLines(f.fields_open).map((o) => <li key={o.key}><span className="[overflow-wrap:anywhere]">{o.label}</span>{o.n > 1 ? <span className="text-text-muted"> ({o.n} form fields)</span> : null} <span className="text-text-muted [overflow-wrap:anywhere]">— {o.reason}: {o.why}</span></li>)}</ul>
         </details>
       ) : null}
       {latest ? <CopyLine c={latest} canLock={!!canLock} lockBlocked={lockBlocked} locking={locking} setLocking={setLocking} lock={lock} working={working} /> : null}
