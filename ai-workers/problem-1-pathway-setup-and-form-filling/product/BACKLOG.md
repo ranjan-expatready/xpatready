@@ -23,6 +23,10 @@ One owner per row and per shared file; never build another owner's rows. Under t
 | Test writers (Mac, Day 0) | acceptance tests | Pack 1 J1–J2 · Pack 2 J3–J4 · Pack 3 J5–J6 · Pack 4 Visitor visa M3 path → `prototype/studio/acceptance/`, `acceptance/journeys/`, the compliance trace table; builders adopt their rows' tests |
 | qa-1 | after-merge | re-scores the rows each merged PR names |
 | qa-2 | Visitor visa | baseline walk, then journey walks |
+
+## Ready rows from P-230 (2 Nov; owners in the session table of `STATE.md`)
+| # | Area | Item | Done when (beyond the standard) | Source |
+|---|---|---|---|---|
 | R2 | runtime | **Fees as a dated data table** (P-230 (7)): move the fee values out of `engine/runtime/filings.ts` into the release's fee table (setup S7a), add spouse and PNP fees, and let filing modes and checklists stop being Visitor-visa-only in code | a fee change is a data edit with a test; Visitor visa totals unchanged | P-230 |
 | R3 | runtime | **A minor's travel answers** (P-230 (3)): "travels with" per child plus custody, five conditional document lines (with QA-149) | pass and fail tests for each case; FQ-4 closed | P-230 |
 | R4 | runtime | **An eligibility rule's own outcome** (P-230 (1)): a gate carries "when not met" (Not eligible or needs review) as data; the background gate is needs review | C6.9 tests cover both; copy says the representative reviews | P-230 |
@@ -106,4 +110,6 @@ A feature is done when a person can do it on the demo (:4400) and qa has tested 
 | L6 | Requirements not yet scheduled: B1–B49 | [BACKLOG-requirements.md](BACKLOG-requirements.md) |
 | L7 | Founder: branch rule on `main` (R-100, founder switches on in GitHub) | REQUESTS R-100 |
 | L-SA3 | M3, runtime: ready-to-file checks per P-237. Only a barcode form failing its own Validate blocks; out-of-date or missing signature, edition or fee past accepted-until and no representative review become CRITICAL warnings passed with a recorded reason (who, when, reason); rule changes warn. Missing or conflicting facts also become a CRITICAL warning (P-238). Done when: C7.6 and C9.2 checks and every refusal-expecting test are reworked, each warning records who, when and the reason, and qa scores C7.6 | P-237, P-238; SA-01B v2.1 BR-4 |
+| L-SA4 | M3, forms: shared fields carry a **scope** (person · filing · household · organisation, SA-1B-130) and list entries keep stable ids (SA-1B-134) (P-239). Done when: a field's scope is set and shown in the library, an organisation- and a filing-scoped field resolve on a case, and repeats keep their ids across edits | P-239; SA-01B v2.1 |
+| L-SA5 | M4: one **Sample employer combination** with the employer–employee link and a shareable mark; updates SI-10 (P-239). No Corporate configuration is built | P-239 |
 
