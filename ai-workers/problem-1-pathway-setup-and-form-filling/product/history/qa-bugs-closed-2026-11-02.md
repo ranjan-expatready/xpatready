@@ -23,3 +23,15 @@ Row as it stood in `qa/BUGS.md`:
 Row as it stood in `qa/reports/bugs-open-detail.md`:
 
 | QA-145 | Bug · Minor | C11.7 | **61f561d7** | Steps: an isolated copy; Demo › Load sample (`POST /demo/load {"sample":"six"}`); `git status --ignored` in the clone. Expected: a load writes only to the copy's database and its `var/` folder. Actual: new untracked `prototype/p1/inventory/imm{0008,1294,5406,5532,5562,5604,5645,5646,5710}e.inventory.json` and `prototype/p2/jobs/studio-fieldmap-*.json` (12), and `prototype/p2/jobs/studio-fieldmap-imm5476e.json` modified. `check_forms_c31_formats.ts` then fails 99/100 ("every inventoried form has its formats read"), and passes 100/100 with those 9 files moved aside. Seen again 1 Nov evening (acceptance runs on 56e3dfd5): running the packs also rewrites tracked files: `prototype/p2/runs/stub-pass/studio-fieldmap-imm5257e-p1of5…p5of5-*.json`, `prototype/p2/screening/canary-digest.json` and `prototype/p2/jobs/studio-fieldmap-imm5476e.json`. |
+
+## QA-75 — closed 2 Nov 2026 (after-merge 278eb3e9)
+
+Closed by the qa lane on main **278eb3e9** (fixed by #412): `tests/check_forms_qa75_job_page_browser.cjs` 21/21 on a fresh copy; walked as the author on a copy with the six loaded (AI work › the six's field-map run › Review proposals) at 1440, 1024 and 400 px: the heading names the form ("IMM 5707 (01-2023): AI-proposed field map"), the trail is "Outside Canada › Forms", the basis line is plain ("A saved AI answer, replayed: no model was called now"), "below" has the comparison below it, no status code, no "On this computer", no "prototype-only", no "Sources and forms"; no sideways scroll, no page error (screenshots `qa/reports/2026-11-02-after-merge/qa75-job-*.png`). The builder's listed Minors (Completed vs Done wording, links from the address when no combination) stay with #412's follow-up.
+
+Row as it stood in `qa/BUGS.md`:
+
+| QA-75 | UX · Major | C2.x AI field map job page · PRODUCT §4 | f7cb40d9 | A field-map job page (`/c/:id/jobs/:id`, from AI work) shows status `NEEDS_PERSON`, heading "Form: AI-proposed field map" with no form named, chip "On this computer", "a … | forms | Open |
+
+Row as it stood in `qa/reports/bugs-open-detail.md`:
+
+| QA-75 | UX · Major | C2.x AI field map job page · PRODUCT §4 | **f7cb40d9** | A field-map job page (`/c/:id/jobs/:id`, from AI work) shows status `NEEDS_PERSON`, heading "Form: AI-proposed field map" with no form named, chip "On this computer", "a prototype-only exception to the AI-processing rule; not the product's provider route", says "the comparison with the library below" with nothing below, and its trail starts "Sources and forms" (the tab is now Forms). Fix: "Needs you" with the step to take; name the form; plain basis line; show the comparison or link to it; trail "<combination> › Forms" | `ws/`ev-job.png | forms | Open |

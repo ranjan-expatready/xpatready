@@ -60,3 +60,9 @@ The :4400 demo (not reachable from the cloud) · a headed walk (no display) · Q
 * A test that restores a retired section and a retired document type through the second person. *Later · Capability.*
 * `graph.mjs` should count `api/src/features/*.ts` as imported (registered at start). *Later · Scaffolding.*
 * A Problem Details refusal for a body that is not JSON says "Unexpected token 'l', "list" is not valid JSON"; plain words would be better. *Later · Capability.*
+
+## Round 3 — main 278eb3e9 (05:00 UTC: #412 and #414 merged; #407 not yet)
+* **QA-75 — closed** (#412). `check_forms_qa75_job_page_browser.cjs` 21/21. Walked as the author on a copy with the six loaded: AI work › field-map run › Review proposals at 1440/1024/400 px. The heading names the form, the trail is "Outside Canada › Forms", the basis line is plain, and "below" has the comparison under it. No status code, "On this computer", "prototype-only" or "Sources and forms"; no sideways scroll (`qa75-job-*.png`).
+* **C7.2 → Partial** (#414). `check_c72_imm5257_fill.ts` 36/36: the Sample family's IMM 5257 fills 40 of 46 mandatory fields, none by hand. Still open: the 6 mandatory boxes no question asks (#414's Questions, forms row) and Adobe Validate plus the barcode read-back (Mac only, the evidence lane).
+* **C11.7:** waits for #407 (Reset to the six, P-226); it will be scored when that merges.
+* Records: merged qa-m3's QA-151 to QA-153 and C11.6 with this round's rows, keeping both sides; qa-m3's C6.4 row cites QA-149.
