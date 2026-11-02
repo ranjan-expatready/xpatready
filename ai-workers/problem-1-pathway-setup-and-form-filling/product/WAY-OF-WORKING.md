@@ -22,8 +22,9 @@ The Mac runs only the tech lead and the :4400 demo (plus evidence work on reques
 4. **Review.** The reviewer agent once, at the end, on the exact commit; the breaker too for screens, money, permissions, schema. Fix every Blocker and Major with a fail test; fix the Minors or list them in the PR.
 5. **Merge.** Merge `origin/main` in, re-run the touched suites, push, then add the label `review: approved`: Mergify queues and merges it. Any later push needs a new review and the label again. Records-only PRs are merged by the tech lead directly.
 6. **Done.** The row's acceptance test is green on `main`, the demo shows it, and qa has passed it: no row counts as Works without qa (quality is never traded for speed).
+   **qa before merge (P-250):** qa scores a PR as soon as it carries `review: approved`, on the PR's own head commit while it waits in the queue, and comments its verdict on the PR. A Blocker or Major found there → qa comments, and the tech lead removes the label (the builder fixes it before merge). Minors become follow-up rows. qa's scores go into one qa records PR that the tech lead merges directly, at most about hourly when no queue batch is checking. qa re-checks on `main` only what the merge could change (the row's acceptance test after merge).
 
-**WIP:** a builder starts a new row only when its last one has merged; meanwhile it fixes its red checks and review findings.
+**WIP:** a builder starts a new row only when its last one has merged; meanwhile it fixes its red checks and review findings. Open Majors in an area come before its new rows (P-228). **Finish before starting (P-231):** order by nearness to Works (qa only → one saved AI run → small gaps → new); no new capability while its area has a workable half-done one, unless it is on the strategic path; at most one PR in build and one in review per builder.
 
 ## Every PR
 * **Title** names the capability IDs it moves (`forms: C11.15 — …`); the first line says "migration" or names a changed shared contract.
@@ -35,7 +36,7 @@ The Mac runs only the tech lead and the :4400 demo (plus evidence work on reques
 * Screens use skill **screen-build**. Minor bugs go in one PR per area per day.
 
 ## Shared files
-Schema: one migration in flight at a time, read by the tech lead. `contracts/`: owned by the area that created each (`contracts/workspace.ts`: the forms-in row owner). `api/src/studio.ts`: additive only. Changes to any of them are named in the PR's first line.
+Schema: one migration in flight at a time, read by the tech lead; two when both only add new tables or columns to different tables (P-228). One owner per table. `contracts/`: owned by the area that created each (`contracts/workspace.ts`: the forms-in row owner). `api/src/studio.ts`: additive only. Changes to any of them are named in the PR's first line.
 
 ## Where checks run
 Every PR and every merge-queue batch runs its affected suites on 4 GitHub Linux machines at once (free: the repository is public). The nightly full run judges speed budgets (P-215); it stays on the Mac until moved to GitHub. Mergify checks up to 3 batches at once (up to 6 PRs each, 2-minute fill). Fallbacks, repository variables: `PR_RUNNER=mac`, `BATCH_RUNNER=mac`.

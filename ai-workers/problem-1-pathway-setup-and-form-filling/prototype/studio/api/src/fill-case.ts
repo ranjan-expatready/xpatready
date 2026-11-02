@@ -17,7 +17,7 @@ import type { z } from "zod";
 import { GenerateCopy, LockCopy, LOCK_KINDS, notReady, type CaseForm, type CaseOnlineForm, type FormCopy } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { caseView } from "../../engine/runtime/case.ts";
-import { changedFacts, changedGroups, copyOnlyForms, formCoverage, groupFacts, inputHash, pdfForms, readiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
+import { changedFacts, changedGroups, copyOnlyForms, formCoverage, groupFacts, inputHash, markNothingRecorded, pdfForms, readiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
 import { answerSheetOnly, CHANNEL_WORDS, isBarcodeForm, NOT_FOR_FILING, type Channel } from "../../contracts/forms.ts";
 import { lineOf } from "../../engine/channels.ts";
 import type { BoxRow } from "../../engine/render.ts";
@@ -170,7 +170,8 @@ export class CaseForms implements OnModuleInit {
     if (!pdfForms(s).has(form) && !copyOnlyForms(s).has(form)) fail(channelIn(s, form) === "ONLINE" ? `${form} is filed Online and IRCC's PDF of it is not in this case's release: its answers go on the answer sheet.` : `${form} has no PDF to fill in this case's release.`, channelIn(s, form) === "ONLINE" ? HttpStatus.UNPROCESSABLE_ENTITY : HttpStatus.NOT_FOUND);
     const cov = formCoverage(s, people, answers, rows, form, subjectId);
     if (!cov || cov.applies === false) fail(`${form} does not apply to that person on this case.`, HttpStatus.UNPROCESSABLE_ENTITY);
-    const stored: Stored = { facts: cov!.facts, boxes: cov!.boxes, groups: groupFacts(caseView(s, people, answers, rows, "agent", new Date(), groups), form, subjectId) };
+    const view = caseView(s, people, answers, rows, "agent", new Date(), groups);
+    const stored: Stored = { facts: cov!.facts, boxes: markNothingRecorded(cov!.boxes, view), groups: groupFacts(view, form, subjectId) };
     let copy;
     try {
       copy = await this.db.$transaction(async (tx) => {
@@ -222,7 +223,7 @@ export class CaseForms implements OnModuleInit {
       const counts = { written: by("written"), by_hand: by("by hand"), blank: by("blank"), not_written: by("not written"), by_a_person: by("by a person") };
       await this.db.formInstance.update({ where: { id }, data: { status: "GENERATED", path: r.out.replace(`${ROOT}/`, ""), sha256: createHash("sha256").update(readFileSync(r.out)).digest("hex"), finishedAt: new Date(),
         resultJson: { counts, intact: r.report.intact, read_back_equal: r.report.read_back_equal, written: r.report.written, signatures: r.report.signatures, person_steps: r.steps.map((p) => p.say), report_file: r.reportFile,
-          boxes: r.boxes.map((b: { box: string; fact: string | null; result: string; why?: string }) => ({ box: b.box, fact: b.fact, result: b.result, why: b.why ?? null })) } } });
+          boxes: r.boxes.map((b: { box: string; fact: string | null; result: string; why?: string; nothing_recorded?: true }) => ({ box: b.box, fact: b.fact, result: b.result, why: b.why ?? null, ...(b.nothing_recorded ? { nothing_recorded: true } : {}) })) } } });
       await this.audit.log(x.workspaceId, x.createdBy, "generated", "form copy", x.formNumber, `Copy ${short(id)} of ${x.formNumber} on case ${short(x.caseId)} generated: ${counts.written} form fields written, read back ${r.report.read_back_equal}/${r.report.written}, intact`);
     } catch (e) {
       const why = e instanceof HttpException ? String((e.getResponse() as { detail?: string; message?: string }).detail ?? e.message) : (e as Error).message;

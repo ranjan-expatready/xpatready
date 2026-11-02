@@ -6,6 +6,8 @@ import fc from "fast-check";
 import { ageOn, caseView, HAS_CHILDREN, hasChildrenOf, checkValue, confirmation, optionsOf, knownOf, shapeOf, type Answer, type GroupAnswer, type Participant, type Row } from "../../engine/runtime/case.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { changedFacts, changedGroups, factsOf, formCoverage, groupFacts, inputHash, readiness, type FormFact } from "../../engine/runtime/forms.ts";
+import { render } from "../../engine/render.ts";
+import { inSentence } from "../../contracts/runtime.ts";
 import { recorder } from "./api.ts";
 
 const { ok, summary } = recorder();
@@ -247,4 +249,18 @@ ok("fail: an answer of a removed row is never read", ![...removed.keys()].some((
   ok("C7.7 pass: with a child on the case, the principal and the spouse have children (Yes, confirmed), overriding an answer of No; the child has none derived", known.get(`p|${HAS_CHILDREN}`)?.value === true && known.get(`p|${HAS_CHILDREN}`)?.status === "confirmed" && known.get(`s|${HAS_CHILDREN}`)?.value === true && !hasChildrenOf(fam).has("k"));
   const alone = hasChildrenOf(fam.filter((x) => x.role !== "child"));
   ok("C7.7 fail: with no child on the case nothing is derived (a child may not be on this application): the answer stands", alone.size === 0 && knownOf(S, fam.slice(0, 1), [ans("p", HAS_CHILDREN, false)], [], TODAY).known.get(`p|${HAS_CHILDREN}`)?.value === false); }
+
+// ── QA-76: plain words for the officer: no plan or team word, and a role's name, never its key
+const noList = { ...S, field_maps: S.field_maps.map((m) => ({ ...m, entries: m.entries.map((e) => (e.fact === "case.visa_type" ? { ...e, transform: "code_list:t.visa_type" } : e)) })) } as unknown as Snapshot;
+const noteOf = (fact: string) => qs(caseView(noList, household(false, 0), [], [], "agent", TODAY)).find((q) => q.fact === fact)?.note;
+ok("QA-76 pass: a choice with no fixed list tells the officer in plain words, true for a country typed with suggestions too", noteOf("case.visa_type") === "No fixed list for this answer yet: check it before confirming the section.", noteOf("case.visa_type"));
+ok("QA-76 fail: a choice with its own list gets no note", noteOf("person.marital_status") == null, noteOf("person.marital_status"));
+ok("QA-76 pass: a role label reads in a sentence as \"the application\" / \"the representative\" (\"About the representative\")", inSentence("The application") === "the application" && inSentence("The representative") === "the representative");
+ok("QA-76 fail: a person's own name is never changed, even one starting with \"The\"", inSentence("The Smiths") === "The Smiths" && inSentence("Client A") === "Client A");
+const withRep = { ...S, field_maps: S.field_maps.map((m) => ({ ...m, entries: [...m.entries, { data_path: "r", outcome: "mapped", fact: "representative.membership_id", person: "representative", row: null, transform: "as_is" }] })) } as unknown as Snapshot;
+const repBox = (people: Parameters<typeof render>[1]) => render(withRep, people, new Map(), { today: TODAY }).coverage.flatMap((c) => c.boxes).find((b) => b.box === "r");
+const solo = [{ id: "p", role: "principal" as const, label: "Applicant", applies: true }];
+ok("QA-76 pass: with no representative on the case, a form field about the representative names \"The representative\"", repBox(solo)?.about_label === "The representative", repBox(solo)?.about_label);
+ok("QA-76 fail-guard: with a representative on the case, it names that person, as before", repBox([...solo, { id: "r1", role: "representative" as const, label: "Rep A", applies: false }])?.about_label === "Rep A", repBox([...solo, { id: "r1", role: "representative" as const, label: "Rep A", applies: false }])?.about_label);
+
 process.exitCode = summary() ? 1 : 0;

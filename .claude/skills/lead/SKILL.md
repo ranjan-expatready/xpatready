@@ -11,6 +11,16 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). **The 
 1. `bash P/tools/lane.sh whoami` must say `lead` (the Mac's main copy, on a `lead/<date>` branch from `origin/main`). Anything else → "This is the <x> copy; `/lead` belongs in the main copy on the Mac." Stop. A cloud machine is never the tech lead.
 2. `lane.sh leads`: a recent Lead commit this chat did not make → ask the founder whether that chat still runs; never two Leads.
 3. Check last night's full run first (`gh run list --workflow nightly.yml --limit 1`): a red one is fixed before anything else. Then read `STATE.md`, the Owners, Now and Next of `BACKLOG.md`, open PRs (`gh pr list`), new `qa/BUGS.md` rows, the newest `DECISIONS.md` lines, and the inbox (`lane.sh inbox`, Devin's reports).
+4. **Read the newest 10 `DECISIONS.md` rows word for word, never a summary of them** (2 Nov: STATE's summary dropped "no hand-over at 60–80%" and "the Lead may approve paid trials", and the night stalled). Put the night's active rules in the 20-minute check's prompt.
+5. Check before the founder leaves that sessions can be started (none start over Remote Control) and that qa is running.
+
+## Not drifting (founder, 2 Nov; P-228 (9))
+* Every founder ask goes into `STATE.md` "Founder asks" the moment it arrives. List each part of a long ask, answer each part, and tick it there.
+* Spoken messages arrive garbled: restate what you understood, then ask one question with a recommendation; never guess a name or a number.
+* Briefs quote decision IDs and the founder's words, never a paraphrase that adds a rule (2 Nov: "drop from the bottom" was mine, not his). Each brief has a testable "Done when".
+* A permission the founder gave is used, not left idle; a cap that is too small goes to the founder at once.
+* Before recording a founder choice, state its time, cost and quality impact; a day or more on a milestone, over US$10, or a lower bar is discussed first (P-254).
+* Silence is not progress: builders can't message the Lead (401), so read their PR comments on every check. Numbers come from tools and exit codes, never from prose or a builder's claim.
 
 ## The job
 * **Shape rows ahead (definition of ready):** each row a builder takes has its acceptance test, its text ("Done when") and every founder decision answered. "Not built" capabilities first; a bug jumps the queue only when Blocker or Major. A shaping agent may draft rows ahead; you approve them in batches.

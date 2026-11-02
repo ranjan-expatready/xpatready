@@ -1,53 +1,65 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-01 19:05 UTC (overnight Lead hand-over to a fresh Lead, founder's ask) · milestone: **M2 — Super Admin configuration**, plus the Visitor visa M3 path · how we work: **`WAY-OF-WORKING.md` (lean model, P-224)** · row owners: top of `BACKLOG.md`
+updated: 2026-11-02 05:35 UTC (**new Lead "LeadX" took over at 05:20 UTC**; every live session adopted by message; P-234 pace: full speed to 93% of the weekly plan, then STOP and hand over) · milestone: **M2 — Super Admin configuration**, plus the Visitor visa M3 path · how we work: `WAY-OF-WORKING.md` (P-224, amended by P-228 and P-231) · decisions to read word for word: DECISIONS P-223 … P-234 · reports: `reports/night-2026-11-01-02.md` (v2), `reports/plan-24h-2026-11-02.md` · dashboard: https://claude.ai/artifact/R4q1suvZsTqJ29QToJxdao (snapshot 04:30 UTC)
 
 ## Start here (fresh `/lead`)
-1. Founder's first message: "Resume from STATE. Run builders and qa in the cloud, one fresh session per row. Process frozen until 15 Nov."
-2. Read `WAY-OF-WORKING.md` (merged in #347), then this page. Run `/usage` in the first hour to see where the plan goes (token analysis: session notes, factory-recommendation-2026-11-01).
-3. Start builders **in the cloud**, one fresh session per row, under yourself; size by the measures (add while batch failures < 10% and approved→merged < 1 h). One qa in the cloud. The Mac runs only the Lead and the :4400 demo.
-4. Watch with event monitors and one 20-minute check; no minute-level sweeps. Hand over at about 250k tokens.
+0. **First job (founder, 2 Nov): clean up and take over every session of the old Lead.** List them all (`ListAgents` for cloud and local, `list_sessions {"linked": true}`). For each: is it working, does it have an open PR, unpushed work or a Handover? **Dead, finished or not responding** → make sure its work is pushed and its PR has a Handover, then close it (local: `archive_session`; cloud: give the founder the exact titles to archive on claude.ai/code, one at a time). **Alive with work left** → message it that you are its new Lead (your session name) and restate its queue from the table below; from then on it reports to you. Nothing stays under the old Lead. Already known: vv-runtime and runtime-2 (cloud) stopped near 90% → founder archives; evidence-c72 (local) is finished, but archive it only after paid-runner-2 is done (they share a worktree); paid-runner-2 (local) is ready, waiting for a Go per run on #417 (launcher route only).
+1. Read DECISIONS P-223…P-233 **word for word**, then this page and the lead skill's "Not drifting".
+2. The founder's working style (memory): one question at a time with a recommendation and pros and cons; never a bulk list; the Lead decides immigration answers from research (P-230) and runs disk clean-ups itself.
+3. Adopt the sessions below by name (`ListAgents`); create your own 20-minute check (CronCreate). The old Lead's check is cancelled at hand-over.
+4. Two records PRs of the old Lead are labelled and will conflict with each other on DECISIONS when one merges: **#413** (P-230, P-232) and **#425** (P-233). Merge main into the second one (keep both sides' rows), then re-label.
 
-## Progress (from `progress.sh` on main, 1 Nov 19:00 UTC; qa has not yet scored tonight's merges)
-M2 30/56 Works · R1 6/8 · M3 1/16. qa-2's #353 (queued) moves C1.5, C3.1, C3.13, C11.16 to Works. Merged tonight and awaiting qa: C3.12 (#313), C3.6 (#329), C6.11 (#330), C11.1 (#339), C3.1 (#316), C3.13 (#318), C11.16 (#326).
+## Progress (`progress.sh` on main, 04:59 UTC)
+M2 **34/56 Works** · 8 built, awaiting qa · 14 partial. R1 6/8 (C7.2 not tested: #414 raised the app's IMM 5257 fill to 40 of 46 mandatory; Adobe Validate runs on the Mac after the rest). M3 1/16 · 7 partial (qa-m3 found gaps in C6.4, C6.12, C11.6, C7.3) · 8 not built. **Half-done: 28 capabilities, 12–14 open PRs** (baseline 04:10 UTC). 39 PRs merged since 1 Nov 19:20 UTC. AI spend US$0 today (ledger since 26 Oct: US$3.13). **Weekly plan 79%** (resets 5 Nov 23:00 UTC; it rose about 4 points an hour with 12 sessions: at 92% builders finish and stop; consider fewer sessions).
+**Dates (*estimates*):** M2 now 60 rows plus G-CORE; gate about 11–12 Nov (P-255, founder kept the additions knowing the impact); builders stop at 95% and everything is closed by 98% of the weekly plan (P-257), so the founder can continue from a new account.
 
-## Open PRs and their next step (every branch pushed; Handover comments on each)
-| PR | Row | State | Next step |
-|---|---|---|---|
-| #353 | qa after-merge | queued | merges itself |
-| #340 | C11.10 | queued | merges itself |
-| #349 | C2.12 | approved | re-label once its GitHub check is green |
-| #319 | C4.11 part 1 | approved; main merged in | check green → re-label; then parts 2a/2b/3 (local commits listed in its Handover) as one PR; part 3 = option (a) on #319 |
-| #325 | C6.4 (+ holders fix) | needs reviewer on current head | reviewer → label. Carries old #283 (C6.12 filings and fees) |
-| #356 | C6.12 /prepare + C11.6 | draft, approved r2, **migration read: OK**, DIRTY | after #325 merges: merge main, run-suites --changed, ready, label |
-| #358 | C7.3 answer sheet | draft, approved r3, **migration read: OK** | merges **after #356** (one migration at a time) |
-| #357 | C7.7 part 1 | draft, 15/18 | build the two agreed fixes: IMM 5476 representative block from the firm record; `person.has_children` derived + `derive_inverse` in `p5/transforms.ts`; 18th check waits on C7.6 readiness |
-| #350 | C7.6 part 1 readiness engine | open | review → label; #357's last check needs it |
-| #336 | C4.4 parts 1+2 (carries #321) | approved, DIRTY | merge main (likely `api/src/main.ts` module list), checks, label; then C6.9 |
-| #331 | C11.9 | round-3 fixes, no Approve yet | reviewer → label |
-| #351 | C3.3 | open | review → label |
-| #344 | C11.13 | open | review → label |
-| #345 | C3.4 (part, draft) | draft | finish the row (one PR) |
-| #348 | C4.1 (replaces #195) | draft | reviewer → label (section order already on main via #284) |
-| #347 | lean rules (P-224) | **merged** | — |
+## Sessions (cloud ones answer in PR comments; they can't message the Lead, 401)
+| Session | Now → next |
+|---|---|
+| runtime-3 | #407 Reset to the six (queued) → QA-149 → **#408 C6.4 storage (migration; holds a slot; merge main, "ready for label", Lead reads SQL)** → R3 a child's travel answers (needs C3.6) → C7.6 rest |
+| runtime-4 | #428 QA-76 (approved) → R2 fees as data (P-230 (7)) → T1 full run on GitHub |
+| runtime-5 | #418 C6.9 part 2 (approved; R4 rule outcome: background question = needs review) → part 3 → D4 (#357 m3) → C11.5 pre-fill |
+| forms-1 | D2 Live or Saved (P-227) |
+| forms-2 | #426 C3.6 with answer values (for R3) → C11.14 |
+| forms-3 | D3 (#417 plan): #429 edition label (approved) → QA-144 "Saved reaches the field-map review" → C2.6 live reading → C3.4 AI step → C4.11 live wiring; told to push its stash |
+| forms-4 | #427 C11.13 Draft fields |
+| c1112 (new) | C11.12 filing modes, 3 PRs (P-233); PR 2 is a migration (second slot) |
+| screens-1 | #423 c313 full-run fix (queued) → QA-82 → screen01 race (quarantined in #410) → six-combination data fixes (P-230: Sponsor role, spouse forms, IMM 5645/5707 one line) |
+| qa-night | #405 M2 round (needs a rebase) → M2 built rows |
+| qa-m3 | Visitor visa M3 rows as they merge |
+| **paid-runner-2 (Mac, local_27a91d86-…)** | waits for the Lead's "Go" on #417 per run; runs through `.tools/p2-ledger`; records cost; commits Saved only after the Lead's "verified" |
+| stopped | vv-runtime, runtime-2 (Handovers on #358, #391), evidence-c72 (#409 labelled) |
 
-## Visitor visa path order
-C6.11 ✓ merged → C6.12 + C6.4 (#325) → /prepare + C11.6 (#356) → C7.3 (#358) · C7.6 (#350) → C7.7 (#357) → C8.1 signing → C8.2 filing record → C9.2 → C10.2 demo story. Parallel: C6.5 (reads documents; after #325), C6.9 (eligibility; B3c's next).
+## Paid runs (P-225, P-232: today US$25, R-146 up to US$50)
+IMM 5257 field map: **verified for Saved at US$0** (21 Oct run reused; after #429). Remaining Visitor visa runs, each with its "Go" after its blocker PR merges: C2.6 (~US$1.3 worst), C4.7 (US$1.18), C4.11 step 5, C3.4 (worst not yet stated). Then R-146 (US$45.08). After the runs: walk Visitor visa to a release on screens (QA-144).
 
-## Known issues to fix first
-* **`api/src/main.ts` module list** conflicts whenever two PRs add a controller (4 conflicts on 1 Nov). Fix: each feature registers its module in its own file (or a generated list) so PRs stop touching one line.
-* **GitHub job slots:** every PR now runs 4 shards; a free account runs about 20 jobs at once, so batches can wait behind PR checks. With fewer builders it is fine; if not, run PR checks on 2 shards.
-* **Schema drift on main** (`DROP canonical_field_name`), raised in #356's Questions.
-* `check_forms_c31_formats.ts` is quarantined (#333): take it out of `QUARANTINE` now that #316 is merged.
-* **Batch b489cc2d79 (#353 + #340) failed** on `check_forms_c36_rule_facts_browser.cjs` "after Propose, focus lands on the row's To review link" (C3.6, merged in #329): either #340 (C11.10) changes that page's focus, or the check is timing-sensitive. Mergify is splitting the batch; if #340 alone fails it, #340's owner fixes it; if it fails on main too, quarantine with a fix row.
-* Measure batch failures for 24 h after #337 (was 37% of finished batches since 31 Oct).
+## Fix first
+* Full run red on one check (`check_c313_reuse_browser.cjs`); fix #423 queued. After it merges, start the full run by hand and judge by its conclusion (GitHub skipped the 21:00 UTC schedule on 1 Nov).
+* Quarantined: `check_forms_c36_rule_facts_browser.cjs`, `check_screen01_api.ts` (fix rows open).
+* Disk: 6.4 GB free at 05:00 UTC (alarm under 10 GB). Two old copies were removed; the next candidate is the evidence worktree `exciting-pascal-e76970` once paid-runner-2 is done (it reuses it).
 
-## Decisions waiting for the founder
-* Sonnet 5.5 trial (two builders): both reached a PR; slower to a finished PR than Opus builders; small sample — decide after more rows.
-* Moving the nightly full run to GitHub (free now).
+## Founder asks (P-228 (9))
+| # | Ask (2 Nov) | Status |
+|---|---|---|
+| A3 | Reset to the six (P-226) | #407 queued |
+| A4 | Live or Saved (P-227) | forms-1 building |
+| A5 | Visitor visa configured with AI, saved for demos (QA-144) | forms-3 + paid-runner; IMM 5257 reused at US$0 |
+| A6 | Six combinations fixed from research | P-230 in #413; screens-1 routed |
+| A9 | Fresh Lead for the next 24 hours | **now** |
+| A10 | Morning report of spend and progress | daily (today: US$0, 39 merges, 34/56) |
+| A11 | Finish before starting (P-231) | in force; C8.1, C8.2 paused |
+| A12 | Fast-track (forms-3, forms-4, C11.12 board) | done |
+| A13 | Visual progress report for the founder's founder | dashboard published (private; share from its menu) |
+| A16 | Pull the latest SA-01B; review it end to end incl. the Chrome extension; every conflicting or overlapping decision; a high-level split of what the team builds vs the POC; grill one question at a time; decisions into BACKLOG at M2/M3/M4 | snapshot 2026-11-02-1054 synced to `domain/requirements-2026-11-02/`; **done**: P-235–P-245, P-247–P-249 decided by the founder, P-246 by the Lead (M2 now 60 rows; rows G1–G5, L-SA3–L-SA10, E1–E6); the SA-01B session's analysis file comes next by the session "SA01B scope and handover review"; Lead records |
+| A23 | Close at 97–98% so a new account can continue every piece of work | P-257: builders stop at 95%, closed by 98%; all work pushed, Handovers on PRs, STATE restart page | Lead |
+| A22 | When does M3 building start; what parallel work | M3's Visitor visa path already runs alongside M2; founder: "After the reset": the M3 wave (C7.7 with #357, C8.1, C8.2, the C6.5 reader, C7.5) starts right after the weekly plan resets on 5 Nov 23:00 UTC; until then, finish what is in flight | Lead |
+| A21 | Raise big-impact choices (time, cost, quality) before recording them | P-254; lead skill line added | Lead |
+| A20 | One uniform, guarded add/adjust flow everywhere, AI helping, industry practice; everything into BACKLOG | baselined P-253 (by risk; core built now, row G-CORE); every decision P-230–P-252 checked to have a row (gaps P-233, P-235, P-246 added) | Lead |
+| A19 | Rate progress; fast-track without losing quality, or keep as is | rated 5/10 (building good, landing poor); founder: "Yes, keep and fix": same model + flow-watch alarms every check, qa before merge (P-250), records hourly | Lead |
+| A18 | Product owner's SA-01B note: record holds, do-now rows, draft the reply ("Yes, do both") | holds and S1–S9 in BACKLOG (P-251); runtime-3 and runtime-5 told; reply drafted by the SA-01B session |
+| A17 | qa before merge (P-250): "Yes, qa before merge" | in force; qa and qa-m3 briefed |
+| A15 | Weekly plan: full speed until 93%, then keep 7% for the last hand-over and all updates (P-234) | in force; Lead sends "STOP: 93%" |
+| A14 | Close finished sessions, tidy the sidebar | local ones archived by the old Lead; cloud ones need the founder on claude.ai/code |
 
-## Resources (1 Nov 19:00 UTC)
-Disk 11 GB free (alarm under 10 GB; 1.9 GB of old snapshots moved to `~/Archive`); weekly plan about 64% (resets 5 Nov). Repository is public; Mergify Open Source plan; 3 batches at once (#341); every PR runs its suites on GitHub (#337).
-
-## Lessons of the night (detail: the session notes folder, files overnight-lead-log and factory-recommendation-2026-11-01)
-Verify numbers before advising (a fresh verifier found 5 wrong claims) · archive sessions by exact name, never by position · a long, often-woken Lead session is the biggest token sink · the queue, not building, was the bottleneck (81–85% of PR time) · builders run in the cloud, never on the Mac.
+## Lessons of the day (lead skill "Not drifting")
+Read the night's decisions word for word before the first brief · every founder ask goes in the table above · one owner per table · tooling bugs look like flaky tests · builders' stashes must be pushed · records PRs written in parallel conflict on DECISIONS: batch them into one · start qa and fresh sessions while the founder is at the desktop · watch disk and the weekly plan every check. · **the Lead's records merges reset Mergify's batches (04:49–06:05 UTC: 0 product merges with 13 approved): keep founder answers on one open records branch, merge it about hourly when no queue draft is checking, and cancel CI runs on records branches**
