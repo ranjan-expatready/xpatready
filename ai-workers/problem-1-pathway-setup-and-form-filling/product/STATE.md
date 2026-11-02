@@ -36,14 +36,14 @@ M2 **43/60 Works**, 15 Partial, 2 Not built (C5.4, C5.5). Up since 15:40: C3.12,
 Also approved, no M2 row change: #557 K13 names (tech lead merged main in for a conflict), #554 UX-A part 1, #562 S4, #572 QA-165 part 1.
 
 ## Sessions (all report by PR; the tech lead steers every one, whichever Lead started it)
-Started this chat (cloud, one row each, end when labelled): QA-163, QA-162, qa-batch, C3.6, C11.8, C2.6, C11.3, C11.15, G2, PD, C3.13 · local: C3.4 AI step · from the previous Lead, still pushing: runtime (QA-164 merged, S4 #562, QA-165 #572), screens UX-A (#554), screens G1 (#558 merged, #569), forms G-CORE (#556 merged, B2/B3), screens K13 (#557), runtime C8.2 (#553 merged) · Mac paid runner `local_a6af81b9-88ca-453c-802e-ace74067e76a`, idle until a Go.
+Started this chat (cloud, one row each, end when labelled): QA-163, QA-162, qa-batch, C3.6, C11.8, C2.6, C11.3, C11.15, G2, PD, C3.13 · local: C3.4 AI step · from the previous Lead, still pushing: runtime (QA-164 merged, S4 #562, QA-165 #572), screens UX-A (#554), screens G1 (#558 merged, #569), forms G-CORE (#556 merged, B2/B3), screens K13 (#557), runtime C8.2 (#553 merged) · Mac paid runner: finished (To archive); start a fresh one per Go.
 **M3 plan (for the founder when M2 merges thin out, about 3 Nov):** add two runtime builders per P-261: C8.1 → C7.7 rest → C9.2, and C6.5 → C7.5 (both paid AI: quote first); C1.3 and C3.16 need concepts first.
 
 ## Holds (P-251, the product owner of SA-01B): nobody builds these
 L-SA3 · L-SA6–L-SA11 · G5 · the P-236 rename · C11 · E1–E6 · design-only items · SH3/SH4 contracts go to the product owner with them.
 
 ## To archive (P-283)
-* Mac, in the sidebar group "To archive": the previous Lead chat (`local_17ac4d7f-…`). This chat moves there once the new Lead runs.
+* Mac, in the sidebar group "To archive": the previous Lead chat (`local_17ac4d7f-…`) and the Mac paid runner (`local_a6af81b9-…`: copy clean, nothing unpushed, its PRs merged; the next paid run on a Go gets a fresh one-row local session, P-276). The old Lead's cloud builders are not in the group and keep working. This chat moves there once the new Lead runs.
 * Cloud (founder archives on claude.ai/code): the old forms L5 Track B, forms L8 and qa lanes (replaced by the QA-162, QA-163, qa-batch sessions); forms L4 Track A (closed, no PR); each one-row session started today once its PR has merged (check its hand-over first). qa-batch ends after golden journey 2; qa-batch-2 scores tonight's batches until about 01:00 UTC.
 
 ## Waiting for the founder
