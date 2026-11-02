@@ -163,7 +163,7 @@ type FillMode = "rules" | "replay" | "live";
 const FILL_MODES: [FillMode, string, string][] = [
   ["rules", "Rules only (US$0)", "No AI: rules find the guide's sentences that name each person. How many is a Sample default you check."],
   ["replay", "Saved", "Replays what AI answered for this exact guide before. Until a live trial records one, it says there is none."],
-  ["live", "Live", "Two AI rounds read the guide; only lines both agree on, with their sentence in the guide, are proposed."],
+  ["live", "Live", "Two AI rounds read the guide; only lines both agree on, with their sentence in the guide, are proposed. The cost is shown below before it starts."],
 ];
 
 /** "Fill from the guide" (slice 3, P-121): the plan and its cost first, then the proposal with IRCC's words. */

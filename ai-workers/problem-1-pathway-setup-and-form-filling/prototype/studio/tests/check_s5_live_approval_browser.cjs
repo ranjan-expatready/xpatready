@@ -32,7 +32,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await who.getByRole("button", { name: "Fill from the guide" }).click();
   const fill = p.getByRole("dialog"); await fill.locator("[data-people-cost]").waitFor({ timeout: 30000 }).catch(() => {});
   await p.waitForFunction(() => !document.querySelector('[data-fill-mode="live"] input')?.disabled, null, { timeout: 10000 }).catch(() => {});
-  step("C11.12 L2 pass: the page follows the server: AI now is open and says its cost is shown", !(await fill.getByLabel(/^Live/).isDisabled()) && /cost shown below/.test(await fill.locator('[data-fill-mode="live"]').innerText()) && !/not approved/.test(await fill.locator('[data-fill-mode="live"]').innerText()));
+  step("C11.12 L2 pass: the page follows the server: Live is open and says its cost is shown before it starts", !(await fill.getByLabel(/^Live/).isDisabled()) && /cost is shown below before it starts/.test(await fill.locator('[data-fill-mode="live"]').innerText()) && !/not approved/.test(await fill.locator('[data-fill-mode="live"]').innerText()));
   await fill.getByLabel(/^Live/).check(); await p.waitForTimeout(800);
   step("C11.12 L2: choosing it shows the worst case first (nothing is run here)", /At most US\$\d+\.\d\d/.test(await fill.locator("[data-people-cost]").innerText().catch(() => "")), await fill.locator("[data-people-cost]").innerText().catch(() => ""));
   await fill.getByRole("button", { name: "Cancel" }).click();

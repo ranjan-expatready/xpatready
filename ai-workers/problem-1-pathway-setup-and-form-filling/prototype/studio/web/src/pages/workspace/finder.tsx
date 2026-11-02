@@ -37,7 +37,7 @@ export const useFinderLatest = (id: string) => useApi<FinderLatest>(["combinatio
 const MODES: [Mode, string, string][] = [
   ["replay", "Saved", "Replays the answers AI gave for these exact pages before. Only combinations with saved answers can be found this way."],
   ["rules", "Rules only (US$0)", "Reads the pages and lists the form numbers printed on them; attaches nothing."],
-  ["live", "Live", "Two AI rounds read the pages and must agree; only forms both pick are attached."],
+  ["live", "Live", "Two AI rounds read the pages and must agree; only forms both pick are attached. The cost is shown below before it starts."],
 ];
 
 /** Find forms with AI: the plan and its cost first, then the run (Find again, and Redo for one form with `only`). With
