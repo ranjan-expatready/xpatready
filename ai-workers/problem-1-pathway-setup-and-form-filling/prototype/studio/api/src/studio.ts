@@ -732,7 +732,7 @@ export class Studio {
   /** UX-A part 4 (break R2-M2): every calculated value a condition may read (the check accepts them), with its plain words. */
   async derivedValues() {
     const workspaceId = await this.ws.id();
-    return (await this.db.derivedField.findMany({ where: { workspaceId }, orderBy: { derivedKey: "asc" } })).map((d) => ({ key: d.derivedKey, plain: d.plain ?? d.calculation }));
+    return (await this.db.derivedField.findMany({ where: { workspaceId }, orderBy: { derivedKey: "asc" } })).map((d) => ({ key: d.derivedKey, plain: d.plain ?? d.calculation, executable: d.executable }));
   }
 
   /** The engine's condition check, with a retired field named as retired, never "not in the library" (C11.9 review minor). */

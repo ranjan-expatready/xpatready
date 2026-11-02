@@ -109,7 +109,20 @@ const leak = (t) => (t.match(KEY) ?? t.match(INTERNAL) ?? t.match(HASH))?.[0];
       await p.waitForTimeout(600); // the editor's own check runs 250 ms after a change
       step("pass: a calculated value chosen by name says what it calculates, with no \"not a library field\" warning and no error", /Calculated: /.test(await row.innerText()) && !/not a library field|not in the library/.test(await p.locator("main").innerText()), (await row.innerText()).slice(0, 200));
     }
+    // Break R3-M2: "Add a comparison" shows a second row. Break R3-M1: clearing the first box to retype it keeps the
+    // second comparison as it was (before, the rows below moved up under the text being typed and were overwritten).
+    await p.getByRole("button", { name: "Add a comparison" }).click();
+    const boxes = p.getByLabel("Field", { exact: true });
+    step("fail case (break R3-M2): \"Add a comparison\" adds a second row", await boxes.count() === 2, await boxes.count());
+    const plain = offered.filter((o) => !/\(calculated\)$/.test(o));
+    await boxes.nth(1).fill(plain[1]);
+    await boxes.nth(0).click(); await p.keyboard.press("ControlOrMeta+a"); await p.keyboard.press("Backspace");
+    step("pass: the cleared first box stays empty and the second still names its field", (await boxes.nth(0).inputValue()) === "" && (await boxes.nth(1).inputValue()) === plain[1], [await boxes.nth(0).inputValue(), await boxes.nth(1).inputValue()]);
+    await p.keyboard.type(plain[2], { delay: 3 }); await p.keyboard.press("Tab");
+    step("fail case (break R3-M1): retyping the first comparison keeps two rows, each with its own field", await boxes.count() === 2 && (await boxes.nth(0).inputValue()) === plain[2] && (await boxes.nth(1).inputValue()) === plain[1], [await boxes.nth(0).inputValue(), await boxes.nth(1).inputValue()]);
     await p.getByRole("button", { name: "Edit as JSON" }).click();
+    const tree = JSON.parse(await p.getByLabel("Condition as JSON").inputValue());
+    step("pass: the condition sent holds both comparisons, two different keys", tree.args?.length === 2 && tree.args[0].field !== tree.args[1].field && tree.args.every((x) => KEY.test(x.field)), tree);
     step("pass: the condition stores the field's key (advanced JSON view)", KEY.test(await p.getByLabel("Condition as JSON").inputValue()), (await p.getByLabel("Condition as JSON").inputValue()).slice(0, 120));
   }
   for (const [w, h] of [[1024, 768], [400, 860]]) {

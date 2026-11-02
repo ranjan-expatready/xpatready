@@ -44,20 +44,38 @@ const typed = (raw: string, type: string): any => {
   return raw;
 };
 
+/** A calculated value's answer type from the words of its key (review r3-n1, break r3-m4: whole words, so "country" is
+ *  not "count"); the derived table holds no type. */
+export const derivedType = (key: string) => {
+  const w = (key.split(".").pop() ?? key).split("_");
+  if (w.includes("differs") || w[0] === "is" || w[0] === "has") return "yes_no";
+  if (w.includes("date")) return "date";
+  return w.some((x) => ["days", "age", "years", "months", "count", "number"].includes(x)) ? "number" : "text";
+};
+
 export function ConditionBuilder({ value, onChange, fields, defaultSubject = "EACH_APPLICANT" }: { value: Tree; onChange: (t: Tree | null) => void; fields: FieldInfo[]; defaultSubject?: string }) {
   const [json, setJson] = React.useState(!isFlat(value));
   const [text, setText] = React.useState(value ? JSON.stringify(value, null, 1) : "");
   const [errors, setErrors] = React.useState<string[]>([]);
-  const subject = value?.subjectKind ?? defaultSubject;
-  const { combine, rows } = toRows(value);
-  // Break R2-M2: calculated values (age, days until expiry) are offered by name beside the library's fields.
-  const derivedQ = useApi<{ key: string; plain: string }[]>(["library-derived"], "/library/derived", { staleTime: 60_000 });
-  const derived: FieldInfo[] = React.useMemo(() => (derivedQ.data ?? []).map((d) => ({ key: d.key, meaning: d.plain, value_type: /days|age|years|months|count|number/.test(d.key) ? "number" : "text", name: `${fieldName(d.key)} (calculated)` })), [derivedQ.data]);
-  const offered = React.useMemo(() => [...fields, ...derived], [fields, derived]);
-  const typeOf = (k: string) => offered.find((f) => f.key === k)?.value_type ?? (k.includes("days") || k.includes("age") || k.includes("years") ? "number" : "text");
   // Break R2-M1: while a person types, the box keeps exactly what they typed (a name that is the start of another, such
   // as "Email" in "Email address", never swaps the text); the condition stores the key of a whole name only.
   const [typing, setTyping] = React.useState<Record<number, string>>({});
+  // Break R3-M1, R3-M2: the editor keeps its own rows, an empty one included, so clearing a field box to retype it never
+  // moves the rows below up under the text being typed, and "Add a comparison" shows its new row. The condition sent out
+  // leaves empty rows out; a condition that changes from outside (Edit as JSON, a reload) is read in again.
+  const norm = (t: Tree) => JSON.stringify(t ?? null);
+  const [local, setLocal] = React.useState(() => ({ subject: (value?.subjectKind ?? defaultSubject) as string, ...toRows(value) }));
+  const emitted = React.useRef(norm(value));
+  React.useEffect(() => {
+    if (norm(value) === emitted.current) return;
+    emitted.current = norm(value); setLocal({ subject: value?.subjectKind ?? defaultSubject, ...toRows(value) }); setTyping({});
+  }, [norm(value)]);
+  const { subject, combine, rows } = local;
+  // Break R2-M2: calculated values (age, days until expiry) are offered by name beside the library's fields.
+  const derivedQ = useApi<{ key: string; plain: string; executable?: boolean }[]>(["library-derived"], "/library/derived", { staleTime: 60_000 });
+  const derived: (FieldInfo & { executable?: boolean })[] = React.useMemo(() => (derivedQ.data ?? []).map((d) => ({ key: d.key, meaning: d.plain, value_type: derivedType(d.key), executable: d.executable !== false, name: `${fieldName(d.key)} (calculated)` })), [derivedQ.data]);
+  const offered = React.useMemo(() => [...fields, ...derived], [fields, derived]);
+  const typeOf = (k: string) => offered.find((f) => f.key === k)?.value_type ?? derivedType(k);
   const listId = React.useId();
 
   React.useEffect(() => {
@@ -66,10 +84,13 @@ export function ConditionBuilder({ value, onChange, fields, defaultSubject = "EA
     return () => clearTimeout(h);
   }, [JSON.stringify(value)]);
 
-  const build = (sub: string, comb: string, rs: Row[]) => {
+  const build = (sub: string, comb: string, rsIn: Row[]) => {
+    const rs = rsIn.length ? rsIn : [{ field: "", op: "eq", value: "" }];
+    setLocal({ subject: sub, combine: comb === "or" ? "or" : "and", rows: rs });
+    const send = (t: Tree | null) => { emitted.current = norm(t); onChange(t); };
     const leaves = rs.filter((r) => r.field).map((r) => (r.op === "exists" ? { op: "exists", field: r.field } : r.op === "in" ? { op: "in", field: r.field, value: r.value.split(",").map((x) => typed(x.trim(), typeOf(r.field))).filter((x) => x !== "") } : { op: r.op, field: r.field, value: typed(r.value, typeOf(r.field)) }));
-    if (!leaves.length) return onChange(null);
-    onChange(leaves.length === 1 ? { subjectKind: sub, ...leaves[0] } : { subjectKind: sub, op: comb, args: leaves });
+    if (!leaves.length) return send(null);
+    send(leaves.length === 1 ? { subjectKind: sub, ...leaves[0] } : { subjectKind: sub, op: comb, args: leaves });
   };
   // The field box shows a known field's name; a name typed or chosen becomes its key (a key typed still works; a value
   // that is not a library field, such as a derived age, stays as typed).
@@ -106,7 +127,7 @@ export function ConditionBuilder({ value, onChange, fields, defaultSubject = "EA
               : <Input type={t === "date" && r.op !== "in" ? "date" : "text"} value={r.value} placeholder={r.op === "in" ? "values, separated by commas" : t === "number" ? "number" : "value"} onChange={(e) => set({ value: e.target.value })} aria-label="Value" />}
             <Button size="icon" variant="ghost" aria-label="Remove this comparison" onClick={() => build(subject, combine, rows.filter((_, j) => j !== i))}><Trash2 /></Button>
             {!r.field ? null
-              : derived.some((f) => f.key === r.field) ? <p className="col-span-4 -mt-1 text-xs text-text-muted">Calculated: {derived.find((f) => f.key === r.field)?.meaning}</p>
+              : derived.some((f) => f.key === r.field) ? <p className={`col-span-4 -mt-1 text-xs ${derived.find((f) => f.key === r.field)?.executable ? "text-text-muted" : "text-text-warn"}`}>Calculated: {derived.find((f) => f.key === r.field)?.meaning}{derived.find((f) => f.key === r.field)?.executable ? "" : " Not worked out by the studio yet, so a condition on it cannot be decided on a case."}</p>
               : fields.some((f) => f.key === r.field) ? <p className="col-span-4 -mt-1 text-xs text-text-muted">{fields.find((f) => f.key === r.field)?.meaning} · {t}</p>
               : sameName(typing[i] ?? r.field).length > 1 ? <p className="col-span-4 -mt-1 text-xs text-text-warn">{sameName(typing[i] ?? r.field).length} fields are named "{(typing[i] ?? r.field).trim()}": choose one from the list ({sameName(typing[i] ?? r.field).map(nameOf).join(" or ")}).</p>
               : <p className="col-span-4 -mt-1 text-xs text-text-warn">"{shownField(r.field)}" is not a library field or a calculated value yet. The draft saves; release waits until the fact is added from Smart questionnaire (SQR) › Facts a rule needs, or a calculated value is chosen from the list.</p>}
