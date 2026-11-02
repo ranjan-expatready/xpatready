@@ -6,11 +6,11 @@ import { z } from "zod";
 
 export const QUEUE_FILTERS = ["needs", "waiting", "running", "all"] as const;
 export type QueueFilter = (typeof QUEUE_FILTERS)[number];
-export const QUEUE_KINDS = ["proposals", "ai_proposals", "release", "library_change", "form_fields", "merge", "held_file", "new_edition", "running"] as const;
+export const QUEUE_KINDS = ["setup", "proposals", "ai_proposals", "release", "library_change", "form_fields", "merge", "held_file", "new_edition", "running"] as const;
 export type QueueKind = (typeof QUEUE_KINDS)[number];
 /** The Kind filter's words, in the board's order (board view 1). */
 export const KIND_WORDS: Record<QueueKind, string> = {
-  proposals: "Proposals", ai_proposals: "AI proposals", release: "Review and release", library_change: "Shared library", form_fields: "Form fields", new_edition: "New edition",
+  setup: "Setup step", proposals: "Proposals", ai_proposals: "AI proposals", release: "Review and release", library_change: "Shared library", form_fields: "Form fields", new_edition: "New edition",
   held_file: "Held file", merge: "Merge", running: "Running",
 };
 
@@ -53,4 +53,8 @@ export type QueueItem = {
    *  edition, a shared field, a merge). */
   combination: string | null;
 };
-export type ReviewQueue = { items: QueueItem[]; counts: Record<QueueFilter, number>; kinds: Partial<Record<QueueKind, number>> };
+/** UX-A part 2: `blocked`, the combinations whose draft has problems that block release (whoever fixes them), so the
+ *  empty "Needs you" never says nothing waits while a release is blocked. */
+/** UX-A part 2 (review M3): `notSetUp`, the combinations whose only blocking problem is "Nothing to release yet" (no
+ *  form, no document): their next step is a building step, on Immigration programs, never Needs you (P-180, N8). */
+export type ReviewQueue = { items: QueueItem[]; counts: Record<QueueFilter, number>; kinds: Partial<Record<QueueKind, number>>; blocked: number; notSetUp: number };
