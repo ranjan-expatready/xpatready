@@ -143,3 +143,22 @@ Suites on :4466 (each after a demo reset): c36 answer values 44/44, its browser 
 - Accessibility: **not met** (R3-M1).
 
 ### Journey score (reviewer): 9.5 / 10, pass (see journey file, Round 3). The verdict is still Block because R3-M1 is open.
+
+## Round 4 (285f45e2)
+
+Reviewed at **285f45e2** (7d5d3d54 plus one commit). Fresh copy `rev_c36` on :4466 (`tools/isolated.sh`), web rebuilt, live AI off, US$0. No files rewritten by the suites (git status clean).
+Suites on :4466: c36 answer values 46/46, its browser 12/12, c36 rule facts 42/42 (regression spot-check: it covers the changed `rule-facts.ts`).
+
+**Verdict: Approve** (no open Blocker or Major). In skill terms: *Ship*.
+
+### Round-3 findings
+- **R3-M1 fixed.** My probe (scratchpad `r4.cjs`): a 400-value field change opened by user-B gives axe 0 at 1024 px, 640 px (200 %) and 400 px. Tab reaches the list (named "Answer values"), `:focus-visible` shows the 3 px ring, and ArrowDown/PageDown scroll it (scrollTop 368). No sideways scroll, Approve at y = 817 / 837 / 918, no page errors. The new browser step runs axe on a 60-value list.
+- **m-r3a fixed on both routes.** Route 1 is covered by the new test. Route 2 (`/combinations/:id/rules/:key/fact`): `work.ruleValues = ["alone"]` is stored. An edit to Both parents/One parent → 400 "Rule r_r4_three compares this fact with "alone", which is not among the answer values…", and an edit that keeps Alone → 201. Proposals made before this commit have no `ruleValues` and skip the check (acceptable: they are draft data only).
+- **m-r3b fixed.** U+00AD is dropped; `Alone` and `Al­one` are refused as listed twice.
+- Still open, listed in the PR as agreed: m-a, m-b, m-c, m-r3c.
+
+### Dimensions (changed since round 3)
+- Accessibility: **met**.
+- Data integrity: **met**, including the API edit routes.
+
+### Journey score (reviewer): 10 / 10, pass (see journey file, Round 4).

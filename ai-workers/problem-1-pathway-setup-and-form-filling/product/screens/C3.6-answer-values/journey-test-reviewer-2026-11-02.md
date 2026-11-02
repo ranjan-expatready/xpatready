@@ -86,3 +86,23 @@ Same copy on :4466, scripts and headless Chromium. Data was checked in the datab
 | Trust and sources | 1 | Unchanged. |
 
 **Total: 9.5 / 10. Pass.** Most valuable fix: make the scroll box focusable and give it a name (R3-M1).
+
+## Round 4 (285f45e2)
+Fresh copy on :4466, scripts and headless Chromium. Data was checked in the database.
+- J6 second person reads a long list (400 values): axe 0 at 1024, 640 (200 %) and 400 px. Keyboard: Tab reaches the named list, the focus ring shows, and the arrow keys scroll it. **Held.**
+- J8 edit by API: an edit that drops the value the rule compares is refused in words on both add routes; an edit that keeps it lands. **Held.**
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | Unchanged. |
+| Next step obvious | 1 | Unchanged. |
+| Plain words | 1 | Refusals name the rule, the value and the codes. |
+| Feedback and state | 1 | Unchanged. |
+| Correct data | 1 | m-r3a and m-r3b closed. |
+| Error recovery | 1 | Unchanged. |
+| Accessibility and screen sizes | 1 | R3-M1 closed: axe 0 on the long list at all three sizes; keyboard scroll works. |
+| Speed | 1 | Within the budgets. |
+| Visual quality | 1 | The focus ring matches the app's ring. |
+| Trust and sources | 1 | Unchanged. |
+
+**Total: 10 / 10. Pass.** Not tested: a real screen reader, an intended user's unaided walk (D17/D20). Known and open: m-a, m-b, m-c, m-r3c.
