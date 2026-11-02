@@ -105,8 +105,8 @@ const step = (name: string, ok: unknown, detail?: unknown) => { ok ? pass++ : fa
   await p.waitForFunction((id: string) => /Failed/.test(document.querySelector(`[data-key="${id}"]`)?.textContent ?? ""), k2.body.id, { timeout: 60000 });
   await settle();
   const first = row2.locator("[data-line]").first();
-  step("C5.7 BR-4 fail: a key with a box left out reads Failed (1 of …) and its first line is that box, with the reason", /Failed \(1 of \d+\)/.test(await row2.innerText()) && (await first.getAttribute("data-line")) === "fail" && /Date of birth: YYYY/.test(await first.innerText()) && /written, not expected/.test(await first.innerText()), await first.innerText());
-  const said5Text = await row2.locator('[data-line="fail"]').first().innerText(), said5 = /IMM 5257, Date of birth: YYYY \(EXAMPLE MOTHER \(Sample\)\): expected nothing \(not in the key\), got '1962'/.test(said5Text);
+  step("C5.7 BR-4 fail: a key with a box left out reads Failed (1 of …) and its first line is that box, with the reason", /Failed \(1 of \d+\)/.test(await row2.innerText()) && (await first.getAttribute("data-line")) === "fail" && /YYYY — Date of birth/.test(await first.innerText()) && /written, not expected/.test(await first.innerText()), await first.innerText());
+  const said5Text = await row2.locator('[data-line="fail"]').first().innerText(), said5 = /IMM 5257, YYYY — Date of birth \(EXAMPLE MOTHER \(Sample\)\): expected nothing \(not in the key\), got '1962'/.test(said5Text);
   await state("failed-lines");
 
   await as("user-C"); await p.goto(`${BASE}/c/${vv}/tests`); await settle();
@@ -203,6 +203,11 @@ const step = (name: string, ok: unknown, detail?: unknown) => { ok ? pass++ : fa
   await dlg.locator(`[data-box="${PD}Name[0].FamilyName[0]"] input`).fill("EXAMPLE");
   await dlg.locator(`[data-box="${PD}Name[0].GivenName[0]"] input`).fill("PRINCIPAL");
   await sexSel.selectOption({ label: "F Female (Female)" });
+  // Review of 917066dc: in the editor no two different form fields of one person read the same.
+  const shownLabels = await dlg.locator('[data-person="principal"] [data-box]').evaluateAll((els) => els.map((e) => [e.getAttribute("data-box"), (e.querySelector("span") as HTMLElement | null)?.innerText ?? ""]));
+  const sameLabel = shownLabels.filter(([b, l], i) => shownLabels.findIndex(([b2, l2]) => l2 === l && b2 !== b) >= 0 && i >= 0).map(([, l]) => l);
+  const cityOf = (part: string) => shownLabels.find(([b]) => (b ?? "").includes(part))?.[1] ?? "";
+  step("C5.7 §4 (review of 917066dc): in the Expected editor no two form fields of one person read the same; the residential and mailing City/Town differ", shownLabels.length > 100 && !sameLabel.length && cityOf("ResidentialAddressRow1[0].CityTown") !== cityOf("AddressRow2[0].CityTow") && /residential/i.test(cityOf("ResidentialAddressRow1[0].CityTown")), JSON.stringify({ same: [...new Set(sameLabel)].slice(0, 4), res: cityOf("ResidentialAddressRow1[0].CityTown"), mail: cityOf("AddressRow2[0].CityTow") }));
   await state("expected-editor", '[role="dialog"]');
   await dlg.getByRole("button", { name: "Save the expected values" }).click();
   await closed();
@@ -371,7 +376,7 @@ const step = (name: string, ok: unknown, detail?: unknown) => { ok ? pass++ : fa
   if (await dlg.count()) { await dlg.getByRole("button", { name: "Cancel" }).click(); await closed(); }
   const refused63 = refusals.filter((x) => P63.test(x));
   step("C5.7 P-63: no visible text in the Tests tab or its editors, and no refusal the API sent, says \"box\" or shows a form1[0] path (tooltips aside)", said63.length === 0 && refused63.length === 0 && refusals.length > 0, JSON.stringify({ said: said63.slice(0, 6), refused: refused63.slice(0, 3), refusals: refusals.length }));
-  step("C5.7 §5: a failing line says it in one sentence (\"IMM 5257, <form field> (<person>): expected …, got …\")", /IMM 5257, Date of birth: YYYY \(EXAMPLE MOTHER \(Sample\)\): expected nothing \(not in the key\), got '1962'/.test(await panel.innerText()) || said5, said5Text);
+  step("C5.7 §5: a failing line says it in one sentence (\"IMM 5257, <form field> (<person>): expected …, got …\")", /IMM 5257, YYYY — Date of birth \(EXAMPLE MOTHER \(Sample\)\): expected nothing \(not in the key\), got '1962'/.test(await panel.innerText()) || said5, said5Text);
   step("no page errors", errs.length === 0, errs.join(" | "));
   await b.close();
   console.log(`\n${pass}/${pass + fail} passed`);

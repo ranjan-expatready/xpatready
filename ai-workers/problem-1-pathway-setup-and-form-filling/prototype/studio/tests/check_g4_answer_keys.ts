@@ -273,10 +273,18 @@ ok("C5.7 API fail (STANDARDS §6): a body of the wrong shape is refused by the c
 const missing = await call("GET", "/answer-keys/00000000-0000-0000-0000-000000000000", undefined, AUTHOR);
 ok("C5.7 API fail: an unknown key or a malformed id is 404", missing.status === 404 && (await call("GET", "/answer-keys/not-a-uuid", undefined, AUTHOR)).status === 404);
 
+// Review of 917066dc: no two different form fields of the map read the same (the editor shows every one under each
+// person), and the residential and the mailing City/Town differ.
+const labelled = keyBoxes(s, FORM, inv)!.boxes, byLabel = new Map<string, string[]>();
+for (const b of labelled) byLabel.set(b.caption, [...(byLabel.get(b.caption) ?? []), b.data_path]);
+const twins = [...byLabel].filter(([, d]) => d.length > 1);
+const city = (fact: string) => labelled.find((b) => b.fact === fact && /City\/Town/.test(b.caption))?.caption ?? "";
+const runLabels = runFieldMap(s, family, FORM, inv, key).lines.filter((l) => l.person === "mother"), runTwins = runLabels.filter((l, i) => runLabels.findIndex((x) => x.label === l.label && x.target !== l.target) >= 0 && i >= 0);
+ok("C5.7 §4 (review of 917066dc): no two IMM 5257 form fields read the same in the editor or the run's lines; residential and mailing City/Town differ, place of birth reads as such", !twins.length && !runTwins.length && city("person.residential_address") !== city("person.mailing_address") && /residential/i.test(city("person.residential_address")) && /mailing/i.test(city("person.mailing_address")) && /birth/i.test(city("person.place_of_birth_city")), { twins: twins.slice(0, 3), runTwins: runTwins.slice(0, 2).map((l) => l.label), res: city("person.residential_address"), mail: city("person.mailing_address"), pob: city("person.place_of_birth_city") });
 const bad63 = refusals.filter((x) => /\bbox(es)?\b|form1\[0\]\./i.test(x));
 ok("C5.7 P-63: no refusal the API sent in this check says \"box\" or shows a form1[0] path", refusals.length > 20 && bad63.length === 0, { refusals: refusals.length, bad: bad63.slice(0, 3) });
 const words = runFieldMap(s, family, FORM, inv, less).lines.filter((l) => !l.pass);
-ok("C5.7 P-63, §5: a failing line names the form field by its caption, never a path, and says it in one sentence", words.every((l) => !/form1\[0\]|\bbox/i.test(`${l.label} ${l.section ?? ""} ${l.why ?? ""} ${l.says ?? ""}`)) && /^IMM 5257, Date of birth: YYYY \(EXAMPLE MOTHER \(Sample\)\): expected nothing \(not in the key\), got '1962'$/.test(words[0]?.says ?? ""), words[0]);
+ok("C5.7 P-63, §5: a failing line names the form field by its caption, never a path, and says it in one sentence", words.every((l) => !/form1\[0\]|\bbox/i.test(`${l.label} ${l.why ?? ""} ${l.says ?? ""}`)) && /^IMM 5257, YYYY — Date of birth \(EXAMPLE MOTHER \(Sample\)\): expected nothing \(not in the key\), got '1962'$/.test(words[0]?.says ?? ""), words[0]);
 await db.$disconnect();
 console.log("\nAmended boxes (open points for the immigration expert):");
 for (const [b, a] of Object.entries(AMENDED)) console.log(`  ${b}: ${a.why}`);

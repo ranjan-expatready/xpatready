@@ -24,12 +24,12 @@ function KeyLines({ id }: { id: string }) {
   const lines = k.data.run.last?.lines ?? [];
   if (!lines.length) return <p className="text-sm text-text-muted">Not run yet: press Run to compare this family's expected values with what the {k.data.item_kind === "rule_set" ? "rules give" : "map writes"}.</p>;
   return (
-    <Table dense label={`Lines of ${k.data.family.label} for ${k.data.item_ref}`} head={["Result", "Form field", "Person", "Expected", "Got", "Why"]}>
+    <Table dense label={`Lines of ${k.data.family.label} for ${k.data.item_ref}`} head={["Result", k.data.item_kind === "rule_set" ? "Rule" : "Form field", "Person", "Expected", "Got", "Why"]}>
       {lines.map((l, i) => (
         <tr key={`${l.person}|${l.target}|${i}`} data-line={l.pass ? "pass" : "fail"}>
           <td className="py-1 pr-3"><Pill tone={l.pass ? "ok" : "danger"}>{l.pass ? "Pass" : "Fail"}</Pill></td>
-          {/* P-63: the printed caption and its section; the data path only as an author's tooltip */}
-          <td className="py-1 pr-3" title={author && /\[\d+\]/.test(l.target) ? l.target : undefined}>{l.label}{l.section && !l.label.toLowerCase().includes(l.section.toLowerCase()) ? <span className="block text-xs text-text-muted">{l.section}</span> : null}</td>
+          {/* P-63: the printed caption with its meaning; the data path only as an author's tooltip */}
+          <td className="py-1 pr-3" title={author && /\[\d+\]/.test(l.target) ? l.target : undefined}>{l.label}</td>
           <td className="py-1 pr-3">{l.person_label}</td>
           <td className="py-1 pr-3 font-mono text-xs">{said(k.data!.item_kind, l.expected)}</td>
           <td className="py-1 pr-3 font-mono text-xs">{said(k.data!.item_kind, l.got)}</td>

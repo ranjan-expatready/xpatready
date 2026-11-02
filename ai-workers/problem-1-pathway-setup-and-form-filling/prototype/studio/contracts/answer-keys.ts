@@ -33,7 +33,7 @@ export const SignBody = z.object({ version });
  *  own types (engine/answer-keys.ts Line, engine/runtime/eligibility.ts Outcome and GateState) are the same shapes. */
 export type Outcome = "LIKELY_ELIGIBLE" | "ELIGIBLE_BELOW_CUTOFF" | "POSSIBLY_ELIGIBLE" | "NOT_ELIGIBLE";
 export type GateState = "met" | "not_met" | "not_answered";
-export type Line = { person: string; person_label: string; target: string; label: string; section?: string; expected: string; got: string; pass: boolean; why?: string; says?: string };
+export type Line = { person: string; person_label: string; target: string; label: string; expected: string; got: string; pass: boolean; why?: string; says?: string };
 export type FamilyView = { id: string; key: string; label: string; reference_date: string; people: { id: string; role: string; label: string; applies: boolean }[];
   facts: { about: string; fact: string; row?: number | null; value: unknown }[]; none_apply: { about: string; group: string }[]; version: number; sample: string; saved_by: string | null; saved_at: string | null };
 export type RunState = "NOT_RUN" | "PASSED" | "FAILED";
@@ -48,7 +48,7 @@ export type AnswerKeysView = { combination: { id: string; label: string }; sampl
 export type RunView = { id: string; result: "PASSED" | "FAILED"; passed: number; failed: number; lines: Line[]; key: KeyView };
 /** GET /combinations/:id/answer-keys/boxes?form=…: the Expected editor's boxes (engine/answer-keys.ts KeyBox), in the
  *  form's order. A choice box carries the form's own options; `by_a_person` boxes (signature, oath) take no value. */
-export type KeyBox = { data_path: string; caption: string; section: string; meaning: string; fact: string | null; whose: string; row: number | null; options: { code: string; label: string }[]; by_a_person: boolean; by_a_person_why: string | null };
+export type KeyBox = { data_path: string; caption: string; meaning: string; fact: string | null; whose: string; row: number | null; options: { code: string; label: string }[]; by_a_person: boolean; by_a_person_why: string | null };
 export type BoxesView = { form: string; edition: string; boxes: KeyBox[]; captions: Record<string, string> };
 /** GET /answer-keys/fields: the family editor's field picker (a choice field's answer list values; null otherwise).
  *  `parts`: the value is written as parts (an address, or a phone the forms read part by part). */

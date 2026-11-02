@@ -337,8 +337,8 @@ function KeyForm({ combinationId, item, family, existing: latest, close, reload 
                   const name = `${b.caption} (${p.label})`;
                   return (
                     <div key={b.data_path} className="grid items-start gap-2 px-3 py-1.5 sm:grid-cols-[1fr_16rem]" data-box={b.data_path}>
-                      <div className="min-w-0 text-sm"><span className="[overflow-wrap:anywhere]" title={author ? b.data_path : undefined}>{b.caption}</span>{b.row !== null ? <span className="ml-1 text-xs text-text-muted">row {b.row + 1}</span> : null}
-                        <span className="block text-xs text-text-muted [overflow-wrap:anywhere]">{b.section && !b.caption.toLowerCase().includes(b.section.toLowerCase()) ? `${b.section} · ` : b.section ? "" : "no fact · "}{PERSON[b.whose] ?? b.whose.replace(/_/g, " ")}</span></div>
+                      <div className="min-w-0 text-sm"><span className="[overflow-wrap:anywhere]" title={author ? b.data_path : undefined}>{b.caption}</span>
+                        <span className="block text-xs text-text-muted [overflow-wrap:anywhere]">{PERSON[b.whose] ?? b.whose.replace(/_/g, " ")}</span></div>
                       <div>
                         {b.options.length ? (
                           <Select aria-label={name} value={v} onChange={(e) => set(e.target.value)} aria-invalid={err ? true : undefined} aria-describedby={err ? nid : undefined}>

@@ -309,3 +309,42 @@ In `/home/user/g4wt`, web rebuilt, on fresh copies (never :4400):
 No Blocker or Major is open.
 
 **Verdict: Approve** (commit eb0422a7)
+
+## Head 917066dc
+I read `git diff eb0422a7 917066dc`: the founder's wording rule (P-63, via the tech lead).
+- A person never reads "box". Each form field shows its printed caption and a section; the data path is only an author's tooltip.
+- Fail lines read "IMM 5257, Family name (principal): expected '…', got '…'".
+- The filler's reasons have "box" replaced with "form field".
+- Run results do not change: only labels.
+
+### What I ran
+In `/home/user/g4wt`, web rebuilt, on fresh copies (never :4400):
+- **`check_g4_answer_keys`:** **91/91** (:4451).
+- **`check_g4_tests_tab_browser`:** **53/53** (:4452), including the new P-63 line: no visible "box" or form path.
+
+### Labels read for sense
+I ran the E1 two-person key on :4452 (66 lines) and read the `GET …/boxes` answer.
+- **Date of birth parts: fine.** "Date of birth: YYYY / MM / DD", section "Date of birth".
+- **Spouse's names: fine.** "Given name(s)" and "Family name", section "Given name(s) as shown on passport or travel document" (the meaning).
+- **Mailing address parts: fine.** "Street no. · Current mailing address".
+
+### Major (Must): residential-address fields are named as the mailing address
+This is a regression from eb0422a7.
+- **What happens.**
+  - `sectionOf` (`engine/answer-keys.ts`) keeps the nearest printed heading when it shares any non-generic word with the field's meaning.
+  - For the 8 residential-address fields (`ResidentialAddressRow1/2`, `contact[0].District`; meaning "Current residential (home) address"), the heading "Current mailing address" shares the word "current".
+  - So these fields read "Street no. · Current mailing address", "Postal code · Current mailing address", and so on.
+- **Effect in the Expected editor.**
+  - eb0422a7 showed the meaning under each caption ("Current residential (home) address · the form's subject"). It now shows only the section.
+  - For one person there are now two identical sets: Street no., Street name, City/Town, Country or Territory, Postal code, Province/State, Apt/Unit and District, all "· Current mailing address". The only difference is an asterisk on some captions.
+  - The run lines have the same two identical sets.
+  - These are exactly the fields of the expert questions in concept §6c: E1 leaves the residential address blank when it is the mailing address, and the map writes it. The expert cannot tell which set is which, so may enter or sign values against the wrong address.
+- **Same cause elsewhere.** The place-of-birth "* City/Town" reads "· Date of birth": the heading "* Date of birth" shares "birth".
+- **Fix.**
+  - Keep the heading only when it names the field's own meaning: for example, add "current" (and other qualifiers) to the generic words, or require the heading's own words to appear in the meaning. Otherwise use the meaning.
+  - Or show the meaning beside the section in both the editor and the lines, as eb0422a7 did.
+  - Add a fail line: no two offered fields for one person share a caption and section unless they read the same fact; a residential field never says "mailing"; the place-of-birth city never says "Date of birth".
+
+No Blocker. One Major.
+
+**Verdict: Block** (commit 917066dc). To fix: the Major above, with its fail line.
