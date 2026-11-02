@@ -14,6 +14,7 @@ import { fmtWhen } from "@/components/status";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCostGate } from "@/components/cost-warning";
 import { COST_WORDS, type CostCheck } from "../../../contracts/cost-check";
+import { attachedNotSetUp } from "../../../contracts/counts";
 
 /** One attached source as GET /combinations/:id lists it, and one reading or drafting step. */
 export type Attachment = { id: string; combinationId: string; kind: string; fileName: string; edition: string | null; status: string; statusDetail: string | null; recognised: boolean; uploadedVia: string; bytes: number };
@@ -76,8 +77,9 @@ export function ReadingSteps({ d, a }: { d: Combo; a: Attachment | undefined }) 
 }
 
 /** Forms attached but not set up as lines yet: one row each, with the step they wait for. */
+/** UX-A part 1 (break 3): the API's rule (contracts/counts.ts attachedNotSetUp), so the rows are the count. */
 export function pendingForms(d: Combo, lineCodes: string[]) {
-  return d.attachments.filter((a) => a.kind === "Form" && !lineCodes.includes(codeOf(a)));
+  return attachedNotSetUp(d.attachments, lineCodes);
 }
 
 /** Checklists, guides and pages that are not form lines: one compact line (read for documents and citations, never filed). */

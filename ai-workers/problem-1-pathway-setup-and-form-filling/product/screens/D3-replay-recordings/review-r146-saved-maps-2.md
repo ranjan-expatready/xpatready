@@ -153,3 +153,18 @@ The IMM 5710, 1294 and 0008 run files, their stub passes and the canary digest a
 M1 is closed and no Blocker or Major is open.
 
 **Verdict: Approve.** Commit reviewed: `6eaf04ffbc0871dc6f09f223145119fb035e04e4`.
+
+## Re-review at head 1ebaab62
+
+What changed since `6eaf04ff`: merge `d35fc5e5` (second parent `079ef107`, which is origin/main now and includes #530 and #531), and `1ebaab62`, which commits this file. Checked independently in a separate checkout; the branch was not switched.
+
+1. **Files.** `git diff origin/main 1ebaab62 --name-status` lists 9 files, all #528's own: the 3 live runs (IMM 0008, 1294 and 5710), 4 stub passes (0008, 1294, 5532, 5710), `check_queue_tx.ts` and this review. `canary-digest.json` has no diff from main.
+2. **Unchanged since approval.** The 3 runs, the 4 stub passes and `check_queue_tx.ts` have no diff from `6eaf04ff`. Main did not touch any of them since the old merge base (`7180f4d5`), so the merge brought nothing into #528's files. Only this review file changed.
+3. **SAVED list.** I applied `sources.ts` `savedRuns` (prefix match, valid and untruncated, same inventory SHA-256) to every form in `samples/wave1.json`. That gives the 13 named forms plus IMM 5257 (`imm5257e.pdf`, 1 valid run). IMM 5257 is not a field-map step of the six: the plan routes it to the library or skips it. It is in neither the replayed list nor the waiting list, the same as at `6eaf04ff`. So the list is exact.
+4. **Check re-run** on the merged code: port 4459, name `paid_runner_qtx2`, no `*_LIVE` variable set. It passed **8/8**: 13 replayed, 454 waiting, only IMM 5532 waiting for "Draft with AI", and the spend ledger unchanged (US$0).
+5. **m5 is closed.** The PR body now gives 13 forms and 454 proposals, and the glob is `imm{5710,1294,0008}e`.
+6. **m4: CI.** When I read the PR, the shards on `1ebaab62` were still pending. Approval holds only with green CI on this commit.
+
+No Blocker or Major is open.
+
+**Verdict: Approve.** Commit reviewed: `1ebaab6201858dd7a7f727c1bf42a7b7fe5d0c30`.

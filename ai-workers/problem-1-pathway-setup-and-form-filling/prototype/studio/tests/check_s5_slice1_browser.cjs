@@ -50,7 +50,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // ======================================================== tabs and old addresses (BR-1, m5)
   await go("overview");
   const tabs = await p.getByRole("tablist", { name: "Combination" }).getByRole("tab").allInnerTexts();
-  step("BR-1: one row of seven tabs in setup order (G4 adds Tests, #525)", tabs.map((t) => t.replace(/\d+$/, "").trim()).join(" · ") === "Overview · Forms · Smart questionnaire (SQR) · Documents · Preview · Tests · Review and release", tabs.join(" · "));
+  step("BR-1: one row of seven tabs in setup order (G4 adds Tests, #525)", tabs.map((t) => t.replace(/\s*\d+ to (do|fix)( \d+ to fix)?$/, "").replace(/\d+$/, "").trim()).join(" · ") === "Overview · Forms · Smart questionnaire (SQR) · Documents · Preview · Tests · Review and release", tabs.join(" · "));
   await p.goto(`${BASE}/c/${C}/sources`); await p.waitForURL(/\/forms$/);
   step("BR-1 fail → redirect: the old Sources and forms address opens Forms", /\/c\/[^/]+\/forms$/.test(p.url()), p.url());
   await p.goto(`${BASE}/c/${C}/configuration?area=documents`); await p.waitForURL(/\/documents/);

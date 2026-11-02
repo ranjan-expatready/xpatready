@@ -52,7 +52,7 @@ const keep = (f: string) => { if (!kept.has(f)) kept.set(f, existsSync(f) ? read
   const scratchLedger = join(STUDIO, "var", `pa-check-ledger-${process.pid}`); mkdirSync(scratchLedger, { recursive: true });
 
   // ---------------------------------------------------------------- J: the committed jobs are the app's own
-  const derived = await tool.deriveJobs();
+  const derived = (await tool.deriveJobs()).filter((d) => d.row !== "C3.4"); // C3.4's four: tests/check_forms_c34_ai.ts
   ok("PA J pass: four jobs (C4.7 and C4.11 step 5, each a draft and a checker round), all for Visitor visa (vv.single, guide 5256)", derived.length === 4 && derived.every((d) => d.job.combination === "vv.single" && d.job.inputs.length === 1 && d.job.inputs[0].file === "prototype/p1/inventory/guide-5256.text.inventory.json" && d.job.known?.combination_trail === "Temporary residence › Visitors › Visitor visa"), derived.map((d) => d.job.job_id));
   for (const d of derived) {
     const f = join(JOBS, `${d.job.job_id}.json`);
