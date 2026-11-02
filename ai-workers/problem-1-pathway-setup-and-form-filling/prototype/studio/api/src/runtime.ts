@@ -154,8 +154,10 @@ export class Runtime {
   async addPerson(actor: Actor, caseId: string, body: unknown) {
     const c = await this.reach(actor, caseId, "officer");
     const b = parse(NewPerson, body);
-    const limits = (this.snapshotOf(c).combination.participants ?? []) as { role: string; max?: number; label?: string }[];
+    const limits = (this.snapshotOf(c).combination.participants ?? []) as { role: string; max?: number; label?: string; filingMode?: string }[];
     const limit = limits.find((p) => p.role === b.role);
+    // C11.12 BR-6: a role released as Declared only starts as not travelling when the request does not say.
+    if (limit?.filingMode === "declared_only" && (body as { applies?: unknown } | null)?.applies === undefined) b.applies = false;
     // S5 (M3): any role the pinned release lists, within its maximum; anything else is refused (P-119).
     // QA-135: the role in the release's own words, never its internal name; the application itself is not a person.
     // Review m3: the examples are the roles this release really lets a person add (never a fixed list).
@@ -199,6 +201,9 @@ export class Runtime {
     const b = parse(UpdatePerson, body);
     const p = c.participants.find((x) => x.subjectId === subjectId && x.role !== "case" && x.role !== "principal");
     if (!p) fail("Only a spouse, partner or child on this case can be marked travelling or not.", HttpStatus.NOT_FOUND);
+    // C11.12 BR-6: a co-filing role (the sponsor) is not travelling or not: its application always goes with the principal's.
+    const line = ((this.snapshotOf(c).combination.participants ?? []) as { role: string; filingMode?: string; label?: string }[]).find((x) => x.role === p!.role);
+    if (line?.filingMode === "co_files") fail(`The ${(line.label ?? "sponsor").toLowerCase()}'s application is always sent with the principal's.`, HttpStatus.UNPROCESSABLE_ENTITY);
     await this.db.caseParticipant.update({ where: { id: p!.id }, data: { applies: b.applies } });
     await this.audit.log(c.workspaceId, actor.id, "changed", "person", caseId, `${actor.name} marked a ${p!.role.replace(/_/g, " ")} on case ${short(caseId)} as ${b.applies ? "travelling" : "not travelling"}`);
     return { subject_id: subjectId, applies: b.applies };

@@ -90,6 +90,26 @@ const sum = (r: D, k?: string) => r.fees.filter((f) => !k || f.line === k).reduc
   ok("C6.12: the Visitor visa is derived", deriveFilings("vv.single", family(2)).derived === true);
   ok("C6.12: the version changes when the people change and stays the same otherwise", d(family(2)).version === d(family(2)).version && d(family(2)).version !== d(family(3)).version);
 }
+// C11.12 (P-233; concept r2 BR-6, BR-10, challenge M2, M3): people on the principal's filing, fees per person, co-filing.
+{
+  const modes = (m: Record<string, string>) => ({ modes: new Map(Object.entries(m)) as never });
+  const vvChild = deriveFilings("vv.single", family(4), undefined, modes({ child: "on_principal" })) as D;
+  const main = vvChild.filings.find((f) => f.owner?.role === "principal")!;
+  ok("C11.12 M2 pass: Visitor visa children On the principal's: 3 filings become 2, the visa fee still counts 4 people", vvChild.filings.length === 2 && main.applicants.length === 3 && total(vvChild, "visitor_visa")?.people === 4 && lines(vvChild, "visitor_visa").length === 4, vvChild.groups[0]?.totals);
+  ok("C11.12 M2 pass: each person on a filing has their own fee line; below the cap each is paid by the person", lines(vvChild, "biometrics").filter((f) => f.filing === main.id).length === 3 && lines(vvChild, "visitor_visa").filter((f) => f.filing === main.id).map((f) => f.payer).sort().join() === main.applicants.map((a) => a.subject).sort().join());
+  const withAges = deriveFilings("vv.single", family(4), undefined, { ...modes({ child: "on_principal" }), ages: new Map([["s-0", 40], ["s-1", 40], ["s-2", 10], ["s-3", 15]]) }) as D;
+  ok("C11.12 M2 fail: a 10-year-old on the principal's filing is exempt from biometrics (the age is the person's, never applicants[0]'s)", withAges.fees.find((f) => f.line === "biometrics" && f.payer === "s-2")?.exempt === true && total(withAges, "biometrics")?.people === 3);
+  const ee = [person(0, "principal"), person(1, "spouse_or_partner"), person(2, "child"), person(3, "child", false)];
+  const pnp = deriveFilings("pnp.express_entry", ee, undefined, { ...modes({ spouse_or_partner: "on_principal", child: "on_principal" }), label: "Express Entry stream" }) as D;
+  ok("C11.12 BR-6 pass: Express Entry (Sample modes): 1 filing, 4 applicants, the last declared only", pnp.derived && pnp.filings.length === 1 && pnp.filings[0].applicants.length === 4 && pnp.filings[0].applicants[3].mode === "declared_only");
+  ok("C11.12 BR-10 pass: no fee rule → no fee line and 'Fees not worked out yet', never CAD 0", pnp.fees.length === 0 && pnp.fees_worked_out === false && pnp.fees_why === "Fees not worked out yet for Express Entry stream; nothing is guessed." && !/CAD 0/.test(JSON.stringify(pnp)));
+  ok("C11.12 BR-10 fail: a declared-only person on a combination with fees gets no fee line", (() => { const x = deriveFilings("vv.single", [person(0, "principal"), person(1, "child", false)], undefined, modes({ child: "declared_only" })) as D; return x.filings[0].applicants[1]?.mode === "declared_only" && !x.fees.some((f) => f.payer === "s-1"); })());
+  const fs = deriveFilings("fs.spouse", [person(0, "principal"), person(1, "child"), person(4, "sponsor")], undefined, { ...modes({ child: "on_principal", sponsor: "co_files" }), label: "Spouse sponsorship" }) as D;
+  ok("C11.12 BR-4 pass: Spouse sponsorship → 2 filings (PR + sponsorship) in one group, splittable false", fs.filings.length === 2 && fs.filings.some((f) => f.mode === "co_filed" && f.owner?.role === "sponsor") && fs.groups.length === 1 && fs.groups[0].splittable === false);
+  const fsSplit = deriveFilings("fs.spouse", [person(0, "principal"), person(4, "sponsor")], undefined, { ...modes({ sponsor: "co_files" }), groupOf: (x) => (x === "s-4" ? "g-own" : "g-fam") }) as D;
+  ok("C11.12 BR-4 fail: a co-filed sponsorship never lands in a group of its own (it follows the principal's)", fsSplit.groups.length === 1 && fsSplit.groups[0].id === "g-fam");
+  ok("C11.12 BR-4 pass: a sponsor with no mode files nothing (1 filing, C11.12.test.ts:66–72)", (deriveFilings("fs.spouse", [person(0, "principal"), person(4, "sponsor")], undefined, modes({ principal: "files_own", sponsor: null as never })) as D).filings.length === 1);
+}
 // The threshold decides on its own (review m3): a made-up rule where per-person × people is above the maximum below the threshold.
 {
   const rule = { key: "t", label: "Test fee", perPersonCents: 100_00, familyMaxCents: 150_00, familyFrom: 3, source: VISITOR_FEE_SOURCE };
