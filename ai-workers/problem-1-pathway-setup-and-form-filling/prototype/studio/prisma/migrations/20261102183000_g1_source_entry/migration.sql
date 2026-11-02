@@ -44,13 +44,31 @@ CREATE TABLE "source_entry" (
 -- CreateIndex
 CREATE UNIQUE INDEX "source_entry_workspace_id_item_kind_item_key_value_path_key" ON "source_entry"("workspace_id", "item_kind", "item_key", "value_path");
 
--- The agreed checks (concept BR-3, the tech lead's ⚑ changes on #558): a known kind; exactly one of a citation (URL,
--- words and date) or "None published" with a reason of at least 10 characters.
+-- The agreed checks (concept BR-3, BR-10, the tech lead's ⚑ changes and his Sample condition on #558; review MJ-1/MJ-2
+-- and minor 1 on #569): a known kind; non-blank keys and value; and exactly one answer:
+--   (a) an official citation: https URL, the words that state the number (≤ 300 characters), the date read, an optional
+--       page note (≤ 200 characters);
+--   (b) "None published – set by ExpatReady" with its reason (≥ 10 characters);
+--   (c) Sample, with neither: honest demo content, which passes only in the demo workspace as a Demo release (G3).
+-- "The date read is not in the future" is the API's check (a CHECK cannot read the clock).
 ALTER TABLE "source_entry" ADD CONSTRAINT "source_entry_item_kind_check" CHECK ("item_kind" IN ('check', 'rule', 'fee', 'threshold'));
+ALTER TABLE "source_entry" ADD CONSTRAINT "source_entry_keys_check" CHECK (btrim("item_key") <> '' AND btrim("value_path") <> '' AND btrim("value") <> '');
+ALTER TABLE "source_entry" ADD CONSTRAINT "source_entry_citation_check" CHECK (
+  ("citation_url" IS NULL OR "citation_url" ~ '^https://[^[:space:]]+$')
+  AND ("citation_quote" IS NULL OR (btrim("citation_quote") <> '' AND char_length("citation_quote") <= 300))
+  AND ("citation_page" IS NULL OR (btrim("citation_page") <> '' AND char_length("citation_page") <= 200))
+);
 ALTER TABLE "source_entry" ADD CONSTRAINT "source_entry_answer_check" CHECK (
-  ("none_published" = false AND "citation_url" IS NOT NULL AND "citation_quote" IS NOT NULL AND "citation_date" IS NOT NULL AND "none_published_reason" IS NULL)
+  -- (a) cited
+  ("citation_url" IS NOT NULL AND "citation_quote" IS NOT NULL AND "citation_date" IS NOT NULL
+    AND "none_published" = false AND "none_published_reason" IS NULL AND "sample" = false)
   OR
+  -- (b) None published, with its reason
   ("none_published" = true AND "none_published_reason" IS NOT NULL AND char_length(btrim("none_published_reason")) >= 10
+    AND "citation_url" IS NULL AND "citation_page" IS NULL AND "citation_quote" IS NULL AND "citation_date" IS NULL AND "sample" = false)
+  OR
+  -- (c) Sample, with no source claimed
+  ("sample" = true AND "none_published" = false AND "none_published_reason" IS NULL
     AND "citation_url" IS NULL AND "citation_page" IS NULL AND "citation_quote" IS NULL AND "citation_date" IS NULL)
 );
 ALTER TABLE "source_entry" ADD CONSTRAINT "source_entry_version_check" CHECK ("version" >= 1);
