@@ -38,11 +38,11 @@ await main("C6.4", "Document checklist per person (Visitor visa)", async () => {
   ok("C6.4-7 fail (R3): with \"travels with\" and custody unanswered, the child has a passport line and none of the five minor lines", has(l, K1, /passport/i) && minorLines.every((re) => !has(l, K1, re)), of(l, K1).map((x) => x.label));
   const travels = async (v: string) => { await answer(c.id, K1, "person.travels_with", v, CLIENT); return (await get()).l; }; // the principal answers for a minor (P-78)
   l = await travels("alone");
-  ok("C6.4-8 pass (R3): travelling alone, the child gets the letter of authorization and a copy of the birth certificate, each saying why (Researched)", has(l, K1, LETTER) && has(l, K1, BIRTH) && !has(l, K1, ABSENT) && /alone/i.test(of(l, K1).find((x) => LETTER.test(x.label))?.reason ?? "") && /Researched/.test(of(l, K1).find((x) => BIRTH.test(x.label))?.quote ?? ""), of(l, K1).map((x) => x.label));
+  ok("C6.4-8 pass (R3): travelling alone, the child gets the letter of authorization and a copy of the birth certificate, each saying why, the birth certificate quoting canada.ca", has(l, K1, LETTER) && has(l, K1, BIRTH) && !has(l, K1, ABSENT) && /alone/i.test(of(l, K1).find((x) => LETTER.test(x.label))?.reason ?? "") && /"a copy of their birth certificate"/.test(of(l, K1).find((x) => BIRTH.test(x.label))?.quote ?? ""), of(l, K1).map((x) => x.label));
   l = await travels("another_adult");
-  ok("C6.4-8a pass (R3): with another adult, the same two lines (the letter names the adult responsible in Canada)", has(l, K1, LETTER) && has(l, K1, BIRTH) && !has(l, K1, ABSENT) && /adult responsible/i.test(of(l, K1).find((x) => LETTER.test(x.label))?.reason ?? ""), of(l, K1).map((x) => x.label));
+  ok("C6.4-8a pass and fail (R3, Devin on #521: canada.ca's own words): with another adult, the letter (naming the adult responsible in Canada) and the parents' ID copies, no birth certificate", has(l, K1, LETTER) && has(l, K1, ABSENT) && !has(l, K1, BIRTH) && /adult responsible/i.test(of(l, K1).find((x) => LETTER.test(x.label))?.reason ?? ""), of(l, K1).map((x) => x.label));
   l = await travels("one_parent");
-  ok("C6.4-8b pass (R3, review r1 M1): with one parent and custody not answered yet, the letter from the absent parent and a copy of that parent's signed passport or ID, no birth certificate", has(l, K1, LETTER) && has(l, K1, ABSENT) && !has(l, K1, BIRTH), of(l, K1).map((x) => x.label));
+  ok("C6.4-8b pass (R3; canada.ca \"travelling with one parent only\"): with one parent, the letter from the absent parent, a copy of that parent's signed passport or ID and a copy of the birth certificate", has(l, K1, LETTER) && has(l, K1, ABSENT) && has(l, K1, BIRTH), of(l, K1).map((x) => x.label));
   l = await travels("both_parents");
   ok("C6.4-8c fail (R3): with both parents, none of the three travel lines", !has(l, K1, LETTER) && !has(l, K1, BIRTH) && !has(l, K1, ABSENT), of(l, K1).map((x) => x.label));
   const custody = async (v: string) => { await answer(c.id, K1, "person.custody", v, CLIENT); return (await get()).l; };
@@ -52,10 +52,11 @@ await main("C6.4", "Document checklist per person (Visitor visa)", async () => {
   ok("C6.4-8e pass (R3): adopted, the adoption or guardianship papers, not the custody documents", has(l, K1, ADOPT) && !has(l, K1, CUSTODY), of(l, K1).map((x) => x.label));
   l = await custody("guardian");
   ok("C6.4-8e2 pass (R3): under guardianship, the adoption or guardianship papers, not the custody documents", has(l, K1, ADOPT) && !has(l, K1, CUSTODY), of(l, K1).map((x) => x.label));
-  // Devin review on #493: with the parent who has sole custody, no absent parent's letter or ID; the custody decree instead.
+  // Devin on #521 (red): "sole" does not say which parent holds custody; the parent who stays behind may be the sole
+  // custodian, so their ID is never dropped. The letter may then be signed by the custodian only, with the custody decree.
   await travels("one_parent");
   l = await custody("sole");
-  ok("C6.4-8h pass and fail (R3, research Q4): with one parent who has sole custody, the letter (from that parent) and the custody documents, but no absent parent's ID", has(l, K1, LETTER) && !has(l, K1, ABSENT) && has(l, K1, CUSTODY) && /sole custody, from the parent who has it/.test(of(l, K1).find((x) => LETTER.test(x.label))?.reason ?? ""), of(l, K1).map((x) => x.label));
+  ok("C6.4-8h pass (R3, Devin on #521): with one parent and sole custody (held by either parent), the letter, the custody documents, and the absent parent's ID still asked", has(l, K1, LETTER) && has(l, K1, ABSENT) && has(l, K1, CUSTODY) && /sole custody, from the parent who has it/.test(of(l, K1).find((x) => LETTER.test(x.label))?.reason ?? ""), of(l, K1).map((x) => x.label));
   l = await custody("shared");
   ok("C6.4-8i pass (R3): with one parent and shared custody, the absent parent's letter and ID are asked again, beside the custody documents", has(l, K1, LETTER) && has(l, K1, ABSENT) && has(l, K1, CUSTODY), of(l, K1).map((x) => x.label));
   await travels("both_parents");
@@ -77,9 +78,9 @@ await main("C6.4", "Document checklist per person (Visitor visa)", async () => {
   // quote. Minor 2 (P-170): each line quotes what it rests on, with the page and date.
   await travels("one_parent"); await custody("shared"); l = (await get()).l;
   const line = (re: RegExp) => of(l, K1).find((x) => re.test(x.label));
-  const five = [line(LETTER), line(ABSENT), line(CUSTODY)];
+  const five = [line(LETTER), line(ABSENT), line(CUSTODY), line(BIRTH)];
   ok("C6.4-9a pass (R3, qa Minor 1): each minor line's reason is short and plain (no URL, no quote), its source beside it", five.every((x) => !!x && x.reason.length < 220 && !/https?:|"/.test(x.reason) && !!x.quote), five.map((x) => [x?.reason.length, x?.reason]));
-  ok("C6.4-9b pass (R3, qa Minor 2, P-170): the absent parent's ID quotes IMM 5881 page 2, the custody documents IMM 5484 page 1, the letter canada.ca; \"does not need to be certified\" is on the letter only", /IMM 5881 E \(05-2026\).*page 2: "You must provide a copy of the page of the passport/.test(line(ABSENT)?.quote ?? "") && /IMM 5484 \(05-2026\).*page 1: "Minors travelling alone or with one parent must provide custody documents/.test(line(CUSTODY)?.quote ?? "") && /does not need to be certified/.test(line(LETTER)?.quote ?? "") && ![line(ABSENT), line(CUSTODY)].some((x) => /certified/.test(x?.quote ?? "")), five.map((x) => x?.quote));
+  ok("C6.4-9b pass (R3, qa Minor 2 and Devin on #521, P-170): each line quotes the instruction that calls for its document: the letter and the absent parent's ID IMM 5881 page 2, the custody documents IMM 5484 page 1, the birth certificate canada.ca; \"does not need to be certified\" is on the letter only; no line says \"no quote held\"", /page 2[^"]*: "Minors travelling alone or with a person other than their parents or legal guardians must have a letter of authorization/.test(line(LETTER)?.quote ?? "") && /page 2[^"]*: "You must provide a copy of the page of the passport/.test(line(ABSENT)?.quote ?? "") && /IMM 5484 \(05-2026\).*page 1: "Minors travelling alone or with one parent must provide custody documents/.test(line(CUSTODY)?.quote ?? "") && /"a copy of the child’s birth certificate"/.test(line(BIRTH)?.quote ?? "") && /does not need to be certified/.test(line(LETTER)?.quote ?? "") && ![line(ABSENT), line(CUSTODY), line(BIRTH)].some((x) => /certified/.test(x?.quote ?? "")) && !five.some((x) => /no quote held/.test(x?.quote ?? "")), five.map((x) => x?.quote));
   await travels("both_parents"); await custody("not_applicable");
 
   // qa Major on #493: a minor can be the principal applicant (a teenager visiting relatives files their own visitor visa).

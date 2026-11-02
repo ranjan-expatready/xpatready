@@ -57,35 +57,35 @@ await main("Setup", "Visitor visa release 2 for the M3 path (Super Admin, M2)", 
   // ("The letter does not need to be certified."). Each line applies only under 18 (person.age_years, worked out on the
   // application date) and reads "travels with" or "custody", two facts that arrive through C3.6 with their answer values.
   // qa on #493 (Minors 1 and 2): the reason a line shows is short ("Needed: <plain>."); the source goes beside it, in the
-  // line's quote (sourceQuote, with the page and date) and its link (sourceFile), never in the reason. P-170: each line
-  // quotes the source it rests on; the birth certificate and adoption lines rest on the canada.ca page alone (no quote held).
+  // line's quote (sourceQuote, with the page and date) and its link (sourceFile), never in the reason. P-170 (Devin on #521):
+  // each line quotes the official instruction that calls for its document, word for word (curly apostrophes kept).
   const PAGE = "https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada/minor-children-travelling-canada.html";
   const IMM5881 = "https://ircc.canada.ca/english/pdf/kits/forms/IMM5881E.pdf", IMM5484 = "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5484/01-05-2026/imm5484e.pdf";
-  const ON_PAGE = "Researched: canada.ca, Minor children travelling to Canada (page dated 2025-01-23, read 2026-11-02); may change";
+  const ON_PAGE = "canada.ca, Minor children travelling to Canada (page dated 2025-01-23, read 2026-11-02); official page, may change";
+  const N5881 = "IMM 5881 E (05-2026), New Delhi visa office checklist, page 2 (downloaded 2026-10-19; a visa office instruction, may change)";
   const CITE = {
-    letter: { sourceQuote: `"The letter does not need to be certified." ${ON_PAGE}.`, sourceFile: PAGE },
-    birth: { sourceQuote: `${ON_PAGE}: a copy of the birth certificate when the child travels alone or with an adult who is not a parent (research note Q4; no quote held).`, sourceFile: PAGE },
-    absentId: { sourceQuote: "IMM 5881 E (05-2026), New Delhi visa office checklist, page 2: \"You must provide a copy of the page of the passport or other government-issued identification document showing the name, photo and signature of each non-accompanying parent.\" (downloaded 2026-10-19). Visa office instruction; may change.", sourceFile: IMM5881 },
-    custody: { sourceQuote: "IMM 5484 (05-2026), Document checklist for a temporary resident visa, page 1: \"Minors travelling alone or with one parent must provide custody documents or a letter of authorization from the other non accompanying parent or a letter of authorization signed by both parents or legal guardians.\" (downloaded 2026-10-19).", sourceFile: IMM5484 },
-    adopt: { sourceQuote: `${ON_PAGE}: the adoption or guardianship papers when the child is adopted or under guardianship (research note Q4; no quote held).`, sourceFile: PAGE },
+    letter: { sourceQuote: `${N5881}: "Minors travelling alone or with a person other than their parents or legal guardians must have a letter of authorization signed by both parents and legal guardians; it must also include the name of the adult who will be responsible for the children in Canada. Minors travelling with only one parent or legal guardian must have a letter of authorization from the non-accompanying parent or guardian." ${ON_PAGE}, under "If the parents are separated or divorced and one of them has sole custody of the child": "The letter of authorization may be signed by that parent only, and they should bring a copy of the custody decree." and "The letter does not need to be certified."`, sourceFile: IMM5881 },
+    birth: { sourceQuote: `${ON_PAGE}: under "If a minor child is travelling alone": "a copy of their birth certificate"; under "If a minor child is travelling with one parent only": "a copy of the child’s birth certificate".`, sourceFile: PAGE },
+    absentId: { sourceQuote: `${N5881}: "You must provide a copy of the page of the passport or other government-issued identification document showing the name, photo and signature of each non-accompanying parent." ${ON_PAGE}, under "If a minor child is travelling with a person other than their parents or legal guardians": "A photocopy of the parents’ or legal guardians’ signed passports or national identity cards should be attached to the letter."`, sourceFile: IMM5881 },
+    custody: { sourceQuote: `IMM 5484 (05-2026), Document checklist for a temporary resident visa, page 1: "Minors travelling alone or with one parent must provide custody documents or a letter of authorization from the other non accompanying parent or a letter of authorization signed by both parents or legal guardians." (downloaded 2026-10-19). ${ON_PAGE}: "The parent travelling with the child should carry copies of the legal custody documents."; "they should bring a copy of the custody decree."`, sourceFile: IMM5484 },
+    adopt: { sourceQuote: `${ON_PAGE}, under "If a minor child is travelling with a legal guardian or adoptive parents": "The child should have a copy of the guardianship papers or the adoption papers (whichever one applies)."`, sourceFile: PAGE },
   };
   // qa Major on #493: a minor can be the principal applicant (a teenager visiting relatives files their own visitor visa),
   // so the five lines go on every applicant; the age guard (person.age_years < 18) keeps them off adults.
   const minor = (c: unknown) => ({ op: "and", subjectKind: "PERSON", args: [{ op: "lt", field: "person.age_years", value: 18 }, c] });
   const travels = (v: string[]) => minor({ op: "in", field: "person.travels_with", value: v });
   const custody = (v: string[]) => minor({ op: "in", field: "person.custody", value: v });
-  // With one parent who has sole custody, the letter comes from that parent and the custody decree goes with it, so the
-  // absent parent's ID is not asked (research Q4: "Sole custody: the letter from that parent plus a copy of the custody
-  // decree"; Devin review on #493, both rounds).
-  // Review r1 M1: custody not answered yet counts as "not sole" (the usual married-parents case still asks for the ID).
-  const oneParentNotSole = { op: "and", args: [{ op: "in", field: "person.travels_with", value: ["one_parent"] }, { op: "or", args: [{ op: "not", arg: { op: "exists", field: "person.custody" } }, { op: "not", arg: { op: "in", field: "person.custody", value: ["sole"] } }] }] };
+  // Devin on #521 (red): "sole" custody does not say which parent holds it, so the parent who stays behind may be the sole
+  // custodian; the absent parent's ID is therefore always asked when a parent is not travelling (never dropped on "sole").
+  // The official words (above) also ask the parents' ID copies when the child travels with another adult, and the birth
+  // certificate when the child travels alone or with one parent (not with another adult): the conditions follow them.
   const reqs: { name: string; who: string; mode: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: unknown; plain?: string; cite?: { sourceQuote: string; sourceFile: string } }[] = [
     { name: "Passport or travel document", who: "each_applicant", mode: "COMBINATION_MANDATORY" },
     { name: "Proof of financial support", who: "principal_applicant", mode: "COMBINATION_MANDATORY" },
     { name: "Letter of authorization for a minor", who: "each_applicant", mode: "ANSWER_CONDITIONAL", condition: travels(["alone", "another_adult", "one_parent"]),
       plain: "a child under 18 travelling alone, with another adult (signed by both parents, naming the adult responsible in Canada) or with one parent (from the other parent; with sole custody, from the parent who has it)", cite: CITE.letter },
-    { name: "Copy of the minor's birth certificate", who: "each_applicant", mode: "ANSWER_CONDITIONAL", condition: travels(["alone", "another_adult"]), plain: "a child under 18 travelling alone or with an adult who is not a parent", cite: CITE.birth },
-    { name: "Copy of the absent parent's signed passport or national ID", who: "each_applicant", mode: "ANSWER_CONDITIONAL", condition: minor(oneParentNotSole), plain: "a child under 18 travelling with one parent who does not have sole custody: the other parent's ID", cite: CITE.absentId },
+    { name: "Copy of the minor's birth certificate", who: "each_applicant", mode: "ANSWER_CONDITIONAL", condition: travels(["alone", "one_parent"]), plain: "a child under 18 travelling alone or with one parent", cite: CITE.birth },
+    { name: "Copy of the absent parent's signed passport or national ID", who: "each_applicant", mode: "ANSWER_CONDITIONAL", condition: travels(["one_parent", "another_adult"]), plain: "a child under 18 travelling with one parent or with another adult: each parent not travelling", cite: CITE.absentId },
     { name: "Custody documents", who: "each_applicant", mode: "ANSWER_CONDITIONAL", condition: custody(["sole", "shared"]), plain: "a child under 18 in sole custody (the custody decree) or shared custody", cite: CITE.custody },
     { name: "Adoption or guardianship papers", who: "each_applicant", mode: "ANSWER_CONDITIONAL", condition: custody(["adopted", "guardian"]), plain: "a child under 18 who is adopted or under guardianship", cite: CITE.adopt },
     // VV-R16 (medical exam: a stay over 6 months AND a listed country, a public-health job or a super visa) needs a
