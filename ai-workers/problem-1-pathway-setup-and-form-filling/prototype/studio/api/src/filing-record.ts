@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Body, Controller, Get, Headers, HttpStatus, Inject, Injectable, Param, Put } from "@nestjs/common";
 import { SetApplicationNumber as SetNumber } from "../../contracts/filing-record.ts";
-import { checkApplicationNumber, duplicateWarning, type NumberRule } from "../../engine/runtime/filing-record.ts";
+import { checkApplicationNumber, duplicateWarning, normaliseNumber, type NumberRule } from "../../engine/runtime/filing-record.ts";
 import { actorOf, Audit, CaseRead, Db, fail, STUDIO, type Actor } from "./core.ts";
 import { Runtime } from "./runtime.ts";
 
@@ -47,8 +47,10 @@ export class FilingRecord {
     const checked = checkApplicationNumber(parsed.data!.value, RULES.applicationNumber);
     if ("error" in checked) fail(checked.error, HttpStatus.UNPROCESSABLE_ENTITY);
     const value = (checked as { value: string | null }).value;
-    if ((parsed.data!.before ?? null) !== (f!.applicationNumber ?? null)) fail("Someone changed this filing's application number after you read it: read the filing record again, then try again. Nothing was saved.", HttpStatus.CONFLICT);
-    const others = value ? await this.db.filing.findMany({ where: { workspaceId: f!.workspaceId, applicationNumber: value, NOT: { id: f!.id }, case: { firmKey: c.firmKey } }, select: { case: { select: { reference: true } } } }) : [];
+    // Breaker m3 on #553: "before" is read as the number is stored (blank = none; case, spaces and hyphens ignored).
+    const before = parsed.data!.before && parsed.data!.before.trim() ? normaliseNumber(parsed.data!.before) : null;
+    if (before !== (f!.applicationNumber ?? null)) fail("Someone changed this filing's application number after you read it: read the filing record again, then try again. Nothing was saved.", HttpStatus.CONFLICT);
+    const others = value ? await this.db.filing.findMany({ where: { workspaceId: f!.workspaceId, applicationNumber: value, NOT: { id: f!.id }, case: { firmKey: c.firmKey } }, select: { caseId: true, case: { select: { reference: true } } } }) : [];
     if (value !== (f!.applicationNumber ?? null)) {
       const person = this.r.peopleOf(c).find((p) => p.subjectId === f!.subjectId)?.label ?? "a person";
       const did = value ? (f!.applicationNumber ? "changed" : "added") : "cleared";
@@ -58,12 +60,16 @@ export class FilingRecord {
         const n = await tx.filing.updateMany({ where: { id: f!.id, applicationNumber: f!.applicationNumber }, data: { applicationNumber: value } });
         if (n.count !== 1) fail("Someone changed this filing's application number after you read it: read the filing record again, then try again. Nothing was saved.", HttpStatus.CONFLICT);
         // Government identifiers stay out of the summary line (AG-7-95 safety); the audit detail keeps before and after.
-        // "case <first 8 of its id>" lets the activity feed show the line to this firm only (studio.ts CASE_ENTITIES).
+        // "case <first 8 of its id>" lets the activity feed show the line to this firm only (studio.ts CASE_ENTITIES). It
+        // comes first, before any name a person typed, so a name that reads "case 1234abcd" cannot be taken for it (Devin).
         await new Audit(tx as unknown as Db).log(c.workspaceId, actor.id, did, "application number", f!.id,
-          `${actor.name} ${did} the application number on ${person}'s filing (case ${c.id.slice(0, 8)}, ${c.reference})`, { before: f!.applicationNumber, after: value });
+          `On case ${c.id.slice(0, 8)} (${c.reference}): ${actor.name} ${did} the application number on ${person}'s filing`, { before: f!.applicationNumber, after: value });
       });
     }
-    return { ...(await this.read(actor, c.id)), warning: duplicateWarning(others.map((o) => o.case)) };
+    // Breaker m2 on #553: the same number on this case's own other filing says so, never "Already on case <this case>".
+    const sameCase = others.some((o) => o.caseId === c.id), elsewhere = others.filter((o) => o.caseId !== c.id).map((o) => o.case);
+    const warning = [sameCase ? "Already on another filing of this case." : null, duplicateWarning(elsewhere)].filter(Boolean).join(" ") || null;
+    return { ...(await this.read(actor, c.id)), warning };
   }
 }
 

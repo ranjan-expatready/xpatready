@@ -1043,7 +1043,8 @@ export class Studio {
         return !!id && own.has(id);
       }).slice(0, limit);
     }
-    return kept.map((e) => ({ ...e, who: peopleNames(e.actor) }));
+    // C8.2 (breaker M1 on #553): government identifiers never travel in the feed; the audit row keeps them (AG-7-95).
+    return kept.map((e) => ({ ...e, ...(e.entity === "application number" ? { detail: null } : {}), who: peopleNames(e.actor) }));
   }
 }
 

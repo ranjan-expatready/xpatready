@@ -11,6 +11,9 @@ export const normaliseNumber = (raw: string) => raw.replace(/[\s-]+/g, "").toUpp
 /** A filing's application number: null clears it; otherwise the normalised value, or why it is refused (never warned). */
 export function checkApplicationNumber(raw: string | null | undefined, rule: NumberRule): { value: string | null } | { error: string } {
   if (raw === null || raw === undefined || !raw.trim()) return { value: null };
+  // Breaker m5 on #553: only plain letters and digits, checked BEFORE upper-casing ("ſ" would otherwise become "S").
+  const bare = raw.replace(/[\s-]+/g, "");
+  if (/[^\x21-\x7E]/.test(bare) || bare.length > 20) return { error: `Application numbers look like ${rule.example} (${rule.words}).` };
   const value = normaliseNumber(raw);
   return new RegExp(rule.pattern).test(value) ? { value } : { error: `Application numbers look like ${rule.example} (${rule.words}).` };
 }

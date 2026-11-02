@@ -54,13 +54,31 @@ type Rec = { our_reference: string; filings: { id: string; person: string; appli
   const feed = async (actor: string) => { const x = await call("GET", "/activity", undefined, actor); return (x.status === 200 ? x.body as Ev[] : []).filter((e) => e.entity === "application number" && e.entityKey === fP?.id); };
   ok("C8.2 pass: the firm's own officer sees the number's change in the activity feed", (await feed(officer)).length >= 2);
   ok("C8.2 fail (C6.11, security): another firm's staff never see this case's application-number lines (nor their before and after)", (await feed("user-S")).length === 0);
+  // Breaker M1 on #553: configuration people read every line of the feed, but never a government identifier in it.
+  const cfg = await feed("user-A");
+  ok("C8.2 fail (security, AG-7-95 safety): the activity feed never carries the numbers, for configuration people either (the audit row keeps them)", cfg.length >= 2 && cfg.every((e) => !e.detail) && (await feed(officer)).every((e) => !e.detail) && sql(`select count(*) from audit_event where entity='application number' and entity_key='${fP?.id}' and detail->>'after' is not null`) !== "0", cfg.map((e) => e.detail));
 
   // AG-7-95 r4: the same number on another case of the firm warns and saves.
-  const c2 = await m3.openCase(vv, [{ role: "principal", name: "Sample Client B", dob: m3.yearsAgo(30) }], { representative: f.rep, caseOfficers: [officer] });
+  // Devin on #553: a person whose name reads like a case marker ("case ffffffff") must not move the line to another case.
+  const c2 = await m3.openCase(vv, [{ role: "principal", name: "Sample case ffffffff", dob: m3.yearsAgo(30) }], { representative: f.rep, caseOfficers: [officer] });
   await m3.prepare(c2.id, officer);
   const f2 = ((await call("GET", `/runtime/cases/${c2.id}/filing-record`, undefined, officer)).body as Rec).filings[0];
   r = await put(f2?.id, "W223456789", null);
+  const feed2 = ((await call("GET", "/activity", undefined, officer)).body as { entity: string; entityKey: string | null }[]).filter((e) => e.entity === "application number" && e.entityKey === f2?.id);
+  ok("C8.2 pass (security): a person named \"Sample case ffffffff\" does not hide the line from the own firm (the case marker comes first)", feed2.length === 1, feed2.length);
   ok("C8.2 AG-7-95 r4 pass: the same number on another case warns with that case's reference, and is saved", r.status === 200 && (r.body as Rec).warning === `Already on case ${c.body?.reference}.` && sql(`select application_number from filing where id='${f2?.id}'`) === "W223456789", r.body);
+  // Reviewer M2 on #553: the duplicate warning stays inside the firm: another firm saving the same number hears nothing.
+  const solo = "user-S";
+  const cs = await call("POST", "/runtime/cases", { combinationId: vv, reference: `C82-SOLO-${Date.now().toString(36)}`, clientActor: m3.CLIENT, principal: { displayName: "Sample Client S" }, representative: solo, caseOfficers: [solo] }, solo);
+  await call("GET", `/runtime/cases/${cs.body?.id}/prepare`, undefined, solo);
+  const fSolo = ((await call("GET", `/runtime/cases/${cs.body?.id}/filing-record`, undefined, solo)).body as Rec | null)?.filings[0];
+  r = await put(fSolo?.id, "W223456789", null, solo);
+  ok("C8.2 AG-7-95 r4 fail (firm, C6.11): the same number on another firm's filing gives that firm no warning and names none of our cases", cs.status < 300 && r.status === 200 && (r.body as Rec).warning === null && !JSON.stringify(r.body).includes(c.body?.reference ?? "@@"), { open: cs.status, put: r.status, warning: (r.body as Rec | null)?.warning });
+  // Reviewer m1 on #553: a filing no longer on the application (its person stopped applying) is not changed.
+  sql(`update filing set active=false where id='${fS?.id}'`);
+  r = await put(fS?.id, "V300000003", null);
+  ok("C8.2 fail: a filing that is no longer on the application is not changed (409)", r.status === 409 && sql(`select coalesce(application_number,'none') from filing where id='${fS?.id}'`) === "none", r.status);
+  sql(`update filing set active=true where id='${fS?.id}'`);
   r = await put(fS?.id, "V300000002", null);
   ok("C8.2 AG-7-95 r4 fail: a number on no other filing gives no warning", r.status === 200 && (r.body as Rec).warning === null, r.body);
   r = await put(fS?.id, null, "V300000002");
