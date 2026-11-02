@@ -7,6 +7,7 @@ import type { Snapshot } from "../snapshot.ts";
 import { caseView, knownOf, type Answer, type Participant } from "./case.ts";
 import { CHANNEL_WORDS, SIGNATURE_WORDS, type Channel, type Signature } from "../../contracts/forms.ts";
 import { lineOf } from "../channels.ts";
+import { questionsFor } from "./question-count.ts";
 import { MINOR } from "../../contracts/runtime.ts";
 import { FAMILIES, type FamilyKey, type OutputGroup, type PreviewSets, type PreviewView } from "../../contracts/workspace.ts";
 import { documentFacts, factSources, prequalification, SOURCE_WORDS, suppliesOf } from "../sources.ts";
@@ -105,7 +106,8 @@ export function previewFamily(s: Snapshot, family: FamilyKey | "", person: strin
   const mine = (id: string) => (x: string) => x === id || (id === "principal" && x === "case");
   // The one count (journey item 8): every question for the person in the agent view, hidden ones included, as the
   // Questionnaires tab counts its chip; `asked` is what the client is asked of them.
-  const count = (v: typeof questionnaire, id: string, shown: boolean) => v.sections.filter((x) => mine(id)(x.subjectId)).reduce((n, x) => n + x.questions.filter((q) => !shown || !q.hidden).length, 0);
+  // UX-A part 1: counted by the one function the Questionnaires chips use (each fact once per section).
+  const count = (v: typeof questionnaire, id: string, shown: boolean) => questionsFor(v, id, shown);
   const forPerson = (id: string) => ({
     documents: r.checklist.filter((d) => mine(id)(d.person) && d.status !== "Not needed"),
     forms: r.forms.filter((f) => mine(id)(f.person) && f.applies !== false),
