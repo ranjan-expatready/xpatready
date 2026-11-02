@@ -21,7 +21,10 @@ import { client, recorder } from "./runtime/api.ts";
 import { AMENDED, e1Keys, P, sample } from "./g4_e1_key.ts";
 
 const PORT = Number(process.argv[2] ?? 4450), DB = process.argv[3] ?? "xr_studio_forms_g4";
-const { call, sql } = client(PORT, DB);
+const { call: call0, sql } = client(PORT, DB);
+// P-63: every refusal this check triggers is read for "box" or a data path in its words (the field names stay paths).
+const refusals: string[] = [];
+const call = async (...a: Parameters<typeof call0>) => { const r = await call0(...a); if (r.status >= 400 && r.body && typeof r.body === "object") refusals.push([r.body.detail, typeof r.body.message === "string" ? r.body.message : "", ...((r.body.errors ?? []) as { message: string }[]).map((e) => e.message)].filter(Boolean).join(" ")); return r; };
 const { ok, summary } = recorder();
 const STUDIO = join(dirname(fileURLToPath(import.meta.url)), "..");
 const AUTHOR = "user-A", EXPERT = "user-C", APPROVER = "user-B", OFFICER = "user-O";
@@ -270,6 +273,10 @@ ok("C5.7 API fail (STANDARDS §6): a body of the wrong shape is refused by the c
 const missing = await call("GET", "/answer-keys/00000000-0000-0000-0000-000000000000", undefined, AUTHOR);
 ok("C5.7 API fail: an unknown key or a malformed id is 404", missing.status === 404 && (await call("GET", "/answer-keys/not-a-uuid", undefined, AUTHOR)).status === 404);
 
+const bad63 = refusals.filter((x) => /\bbox(es)?\b|form1\[0\]\./i.test(x));
+ok("C5.7 P-63: no refusal the API sent in this check says \"box\" or shows a form1[0] path", refusals.length > 20 && bad63.length === 0, { refusals: refusals.length, bad: bad63.slice(0, 3) });
+const words = runFieldMap(s, family, FORM, inv, less).lines.filter((l) => !l.pass);
+ok("C5.7 P-63, §5: a failing line names the form field by its caption, never a path, and says it in one sentence", words.every((l) => !/form1\[0\]|\bbox/i.test(`${l.label} ${l.section ?? ""} ${l.why ?? ""} ${l.says ?? ""}`)) && /^IMM 5257, Date of birth: YYYY \(EXAMPLE MOTHER \(Sample\)\): expected nothing \(not in the key\), got '1962'$/.test(words[0]?.says ?? ""), words[0]);
 await db.$disconnect();
 console.log("\nAmended boxes (open points for the immigration expert):");
 for (const [b, a] of Object.entries(AMENDED)) console.log(`  ${b}: ${a.why}`);

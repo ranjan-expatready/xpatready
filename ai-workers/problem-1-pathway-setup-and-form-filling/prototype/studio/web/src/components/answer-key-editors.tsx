@@ -191,7 +191,7 @@ function FamilyForm({ combinationId, family: latest, signedKeys, close, roles, f
         </fieldset>
 
         <fieldset className="min-w-0 space-y-2"><legend className="text-sm font-semibold">Facts</legend>
-          <p className="text-xs text-text-muted">Each fact is a library field about a person, the application, or a relative a form describes. Rows count from 0 for repeating answers (education, travel). An address or a phone is written as its parts in JSON (a small box for now).</p>
+          <p className="text-xs text-text-muted">Each fact is a library field about a person, the application, or a relative a form describes. Rows count from 0 for repeating answers (education, travel). An address or a phone is written as its parts in JSON (a small text area for now).</p>
           {facts.map((f, i) => {
             const fe = (k: string) => errors[`facts[${i}].${k}`], field = fieldOf.get(f.fact);
             return (
@@ -209,7 +209,7 @@ function FamilyForm({ combinationId, family: latest, signedKeys, close, roles, f
         </fieldset>
 
         <fieldset className="min-w-0 space-y-2"><legend className="text-sm font-semibold">"None apply"</legend>
-          <p className="text-xs text-text-muted">A repeating group the person confirmed has nothing to list (the form's "N" boxes).</p>
+          <p className="text-xs text-text-muted">A repeating group the person confirmed has nothing to list (the form's "N" answers).</p>
           {none.map((n, i) => (
             <div key={i} className="grid items-start gap-2 sm:grid-cols-[minmax(0,10rem)_minmax(0,1fr)_auto] [&>*]:min-w-0" data-none-row={i}>
               <Select aria-label={`None apply ${i + 1}: person`} value={n.about} onChange={(e) => setNone((ns) => ns.map((x, j) => (j === i ? { ...x, about: e.target.value } : x)))}>{people.map((p) => <option key={p.id} value={p.id}>{p.label || p.id}</option>)}</Select>
@@ -264,7 +264,7 @@ export function KeyEditor({ combinationId, item, family, existing, close }: { co
 }
 
 function KeyForm({ combinationId, item, family, existing: latest, close, reload }: { combinationId: string; item: TestItem; family: FamilyView; existing: KeyView | null; close: () => void; reload: () => void }) {
-  const qc = useQueryClient();
+  const qc = useQueryClient(), author = useDuties().family;
   const [existing] = React.useState(latest); // the version read when the form opened (see FamilyForm)
   const [dirty, setDirty] = React.useState(false), [stale, setStale] = React.useState<string | null>(null);
   useLeaveGuard(dirty);
@@ -307,24 +307,24 @@ function KeyForm({ combinationId, item, family, existing: latest, close, reload 
   // Devin review (2nd pass): moving to the map's edition keeps only the boxes that edition has; the rest are said, then
   // dropped on save (the server would refuse them). Without an edition change nothing is dropped here.
   const moving = !!(stored && current && stored !== current && boxes.data), known = new Set(offered.map((b) => b.data_path));
-  const lost = moving ? Object.entries(values).flatMap(([id, v]) => Object.entries(v).filter(([b, x]) => x !== "" && !known.has(b)).map(([b]) => `${b} (${family.people.find((x) => x.id === id)?.label ?? id})`)) : [];
+  const lost = moving ? Object.entries(values).flatMap(([id, v]) => Object.entries(v).filter(([b, x]) => x !== "" && !known.has(b)).map(([b]) => `${boxes.data?.captions[b] ?? "a form field no longer on the form"} (${family.people.find((x) => x.id === id)?.label ?? id})`)) : [];
   const shown = (f: string) => f === "reason" || /^expected\.people\.[^.]+\./.test(f);
   const others = rest(errors, shown);
   const loading = map ? boxes.isLoading : gates.isLoading;
   return (
     <Dialog open wide guard onOpenChange={(o) => { if (!o) close(); }} title={`${existing ? "Change" : "Write"} the expected values: ${family.label}`}
-      description={map ? `${item.label} (${boxes.data?.edition ?? item.edition ?? ""}). What each box must hold, as written in the form field (codes, "N", the year boxes). Leave a box empty when it must stay blank.` : "What the eligibility rules must give each travelling person."}
+      description={map ? `${item.label} (${boxes.data?.edition ?? item.edition ?? ""}). What each form field must hold, as written in it (codes, "N", the year form fields). Leave a form field empty when it must stay blank.` : "What the eligibility rules must give each travelling person."}
       footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={save.isPending} disabled={loading} onClick={submit}>Save the expected values</Button></>}>
       <form className="space-y-4" aria-label="Expected values" onChangeCapture={() => setDirty(true)} onSubmit={(e) => { e.preventDefault(); submit(); }} data-editor="expected">
         {stale ? <Stale text={stale} reload={reload} /> : null}
         {top ? <Notice tone="danger" title="Not saved">{top}</Notice> : null}
         {others.length ? <Notice tone="danger" title="Some details need fixing">{others.join(" ")}</Notice> : null}
         {dropped.length ? <Notice tone="warn" title={map ? "Values for someone not in the family" : "Values for someone not travelling"}>The key has expected values for {dropped.join(", ")}, who {dropped.length === 1 ? "is" : "are"} not {map ? "a person" : "a travelling person"} of this family now. Saving removes them; Cancel keeps them, and the next run fails naming {dropped.length === 1 ? "that person" : "them"}.</Notice> : null}
-        {stored && current && stored !== current ? <Notice tone="warn" title="Another edition">Written for {stored}; the map is now {current}: saving moves it to {current}. Check every value against the new edition first.{lost.length ? ` ${lost.length} value${lost.length === 1 ? "" : "s"} for boxes the new edition no longer has will be dropped: ${lost.join(", ")}.` : ""}</Notice> : null}
+        {stored && current && stored !== current ? <Notice tone="warn" title="Another edition">Written for {stored}; the map is now {current}: saving moves it to {current}. Check every value against the new edition first.{lost.length ? ` ${lost.length} value${lost.length === 1 ? "" : "s"} for form fields the new edition no longer has will be dropped: ${lost.join(", ")}.` : ""}</Notice> : null}
         <p className="text-xs text-text-muted">Write what the {map ? "form should hold" : "rules should give"} for this family from the {map ? "form" : "rules"} and the facts, never from a run: a key copied from the product's output proves nothing. <Pill tone="warn" title={SAMPLE_TIP}>Sample</Pill></p>
-        {loading ? <p className="text-sm text-text-muted">Loading the {map ? "form's boxes" : "eligibility rules"}…</p> : null}
-        {map && boxes.isError ? <Notice tone="danger" title="The form's boxes could not be loaded">{(boxes.error as Error).message}</Notice> : null}
-        {map && byPerson ? <p className="text-xs text-text-muted">{byPerson} box{byPerson === 1 ? "" : "es"} a person fills (a signature, the oath) {byPerson === 1 ? "is" : "are"} not offered: the product never writes {byPerson === 1 ? "it" : "them"}.</p> : null}
+        {loading ? <p className="text-sm text-text-muted">Loading the {map ? "form's fields" : "eligibility rules"}…</p> : null}
+        {map && boxes.isError ? <Notice tone="danger" title="The form's fields could not be loaded">{(boxes.error as Error).message}</Notice> : null}
+        {map && byPerson ? <p className="text-xs text-text-muted">{byPerson} form field{byPerson === 1 ? "" : "s"} a person fills (a signature, the oath) {byPerson === 1 ? "is" : "are"} not offered: the product never writes {byPerson === 1 ? "it" : "them"}.</p> : null}
         {!travelling.length ? <Notice tone="warn">{map ? "This family has nobody in it." : "Nobody in this family travels: there is nothing to expect."}</Notice> : null}
         {travelling.map((p) => (
           <section key={p.id} aria-label={`Expected for ${p.label}`} className="space-y-1" data-person={p.id}>
@@ -337,8 +337,8 @@ function KeyForm({ combinationId, item, family, existing: latest, close, reload 
                   const name = `${b.caption} (${p.label})`;
                   return (
                     <div key={b.data_path} className="grid items-start gap-2 px-3 py-1.5 sm:grid-cols-[1fr_16rem]" data-box={b.data_path}>
-                      <div className="min-w-0 text-sm"><span className="[overflow-wrap:anywhere]">{b.caption}</span>{b.row !== null ? <span className="ml-1 text-xs text-text-muted">row {b.row + 1}</span> : null}
-                        <span className="block text-xs text-text-muted [overflow-wrap:anywhere]">{b.meaning || b.fact || "no fact"} · {PERSON[b.whose] ?? b.whose.replace(/_/g, " ")}</span></div>
+                      <div className="min-w-0 text-sm"><span className="[overflow-wrap:anywhere]" title={author ? b.data_path : undefined}>{b.caption}</span>{b.row !== null ? <span className="ml-1 text-xs text-text-muted">row {b.row + 1}</span> : null}
+                        <span className="block text-xs text-text-muted [overflow-wrap:anywhere]">{b.section && !b.caption.toLowerCase().includes(b.section.toLowerCase()) ? `${b.section} · ` : b.section ? "" : "no fact · "}{PERSON[b.whose] ?? b.whose.replace(/_/g, " ")}</span></div>
                       <div>
                         {b.options.length ? (
                           <Select aria-label={name} value={v} onChange={(e) => set(e.target.value)} aria-invalid={err ? true : undefined} aria-describedby={err ? nid : undefined}>

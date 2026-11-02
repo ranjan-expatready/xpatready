@@ -287,3 +287,25 @@ The builder reports two more Devin defects in this head: the edition move when t
 No Blocker or Major is open from my review.
 
 **Verdict: Approve** (commit 4783acc9)
+
+## Head eb0422a7
+I read `git diff 4783acc9 eb0422a7`: Devin's second pass is in `e1cfdff2`; `eb0422a7` holds records only.
+
+### The two fixes
+- **The edition move now drops values for boxes the new edition lacks.**
+  - It says which boxes first, in the "Another edition" notice, then drops them on save. Without an edition change nothing is dropped.
+  - The server would refuse those boxes anyway, so the save no longer fails on fields the form does not show.
+  - The notice names a dropped box by its form path ("form1[0].OldEditionBox[0]"). This is a rare state; Minor, Should: name it by caption where one is known.
+- **`writesParts` (`engine/field-format.ts`) is a pure addition.**
+  - It is three lines: a new export built on the existing `core()`. No existing function changed.
+  - `check_forms_c31_formats` on a fresh copy: **107 passed, 0 failed**.
+  - `GET /answer-keys/fields` now also marks a phone read part by part after "select primary/alternate phone;". A derived tick reading the same phone is not marked, and the check has lines for both.
+
+### What I ran
+In `/home/user/g4wt`, web rebuilt, on fresh copies (never :4400):
+- **`check_g4_answer_keys`:** **89/89** (:4451).
+- **`check_g4_tests_tab_browser`:** **51/51** (:4452), including the new line for the edition move with a dropped box.
+
+No Blocker or Major is open.
+
+**Verdict: Approve** (commit eb0422a7)

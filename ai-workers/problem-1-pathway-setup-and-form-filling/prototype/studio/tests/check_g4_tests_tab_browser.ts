@@ -42,10 +42,20 @@ const step = (name: string, ok: unknown, detail?: unknown) => { ok ? pass++ : fa
   const as = async (actor: string) => { await p.evaluate((a: string) => { try { localStorage.setItem("xr-actor", a); } catch { /* ignore */ } }, actor); await p.reload(); };
   // Waits fail loudly when they time out (no catch after a wait).
   const settle = async () => { await p.waitForFunction(() => !document.querySelector('[aria-busy="true"]') && !/Loading the/.test(document.body.innerText), null, { timeout: 30000 }); };
+  // P-63 (the founder's glossary): a person reads "form field" / "field map", never "box", and never a data path. Every
+  // state below is read for it (visible text of the tab and any open dialog; tooltips are not visible text), and every
+  // refusal the API sent the page. "P.O. box" is the form's own printed caption, so it is set aside.
+  const P63 = /\bbox(es)?\b|form1\[0\]\./i, said63: string[] = [], refusals: string[] = [];
+  const look = async (where: string) => {
+    const text = await p.evaluate(() => [...document.querySelectorAll('[role="tabpanel"], [role="dialog"]')].map((e) => (e as HTMLElement).innerText).join("\n"));
+    for (const line of text.split("\n")) if (P63.test(line.replace(/\bP\.?\s?O\.?\s+box\b/gi, ""))) said63.push(`${where}: ${line.slice(0, 120)}`);
+  };
+  p.on("response", async (r) => { if (r.url().includes("/api/") && r.status() >= 400) { const b = await r.json().catch(() => null) as { detail?: string; message?: unknown; errors?: { message: string }[] } | null; if (b) refusals.push([b.detail, typeof b.message === "string" ? b.message : "", ...(b.errors ?? []).map((e) => e.message)].filter(Boolean).join(" ")); } });
   let n = 0;
   const state = async (name: string, scope = '[role="tabpanel"]') => {
     n++; const base = `${String(n).padStart(2, "0")}-${name}`;
     await settle();
+    await look(name);
     await p.screenshot({ path: path.join(SHOTS, `${base}-1440.png`), fullPage: true });
     const r = await new AxeBuilder({ page: p }).include(scope).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
     step(`axe: ${name} has no WCAG A/AA violation`, r.violations.length === 0, r.violations.map((v) => `${v.id} (${v.nodes.length}): ${v.nodes[0]?.target?.join(" ")}`).join(" | "));
@@ -87,7 +97,7 @@ const step = (name: string, ok: unknown, detail?: unknown) => { ok ? pass++ : fa
 
   // A key with one box left out: Failed (1 of …), the failure first and named.
   const less = JSON.parse(JSON.stringify(exp)); delete less.people.mother["form1[0].Page1[0].PersonalDetails[0].DOBYear[0]"];
-  const fam2 = await api("/answer-keys/families", { method: "POST", data: { ...sample, key: `e1u-${run}`, label: "E1 household, one box left out (Sample)" } });
+  const fam2 = await api("/answer-keys/families", { method: "POST", data: { ...sample, key: `e1u-${run}`, label: "E1 household, one form field left out (Sample)" } });
   const k2 = await api(`/combinations/${vv}/answer-keys`, { method: "POST", actor: "user-C", data: { family_id: fam2.body.id, item_kind: "field_map", item_ref: "IMM 5257", expected: less } });
   await p.reload(); await settle();
   const row2 = panel.locator(`[data-key="${k2.body.id}"]`);
@@ -96,6 +106,7 @@ const step = (name: string, ok: unknown, detail?: unknown) => { ok ? pass++ : fa
   await settle();
   const first = row2.locator("[data-line]").first();
   step("C5.7 BR-4 fail: a key with a box left out reads Failed (1 of …) and its first line is that box, with the reason", /Failed \(1 of \d+\)/.test(await row2.innerText()) && (await first.getAttribute("data-line")) === "fail" && /Date of birth: YYYY/.test(await first.innerText()) && /written, not expected/.test(await first.innerText()), await first.innerText());
+  const said5Text = await row2.locator('[data-line="fail"]').first().innerText(), said5 = /IMM 5257, Date of birth: YYYY \(EXAMPLE MOTHER \(Sample\)\): expected nothing \(not in the key\), got '1962'/.test(said5Text);
   await state("failed-lines");
 
   await as("user-C"); await p.goto(`${BASE}/c/${vv}/tests`); await settle();
@@ -111,7 +122,7 @@ const step = (name: string, ok: unknown, detail?: unknown) => { ok ? pass++ : fa
   const closed = async () => { await dlg.waitFor({ state: "detached", timeout: 30000 }); };
   const fillFamily = async (key: string) => {
     await dlg.getByLabel("Key", { exact: true }).fill(key);
-    await dlg.getByLabel("Name", { exact: true }).fill("Small family, three boxes (Sample)");
+    await dlg.getByLabel("Name", { exact: true }).fill("Small family, three form fields (Sample)");
     await dlg.getByLabel("Reference date", { exact: true }).fill("2026-11-02");
     await dlg.getByLabel("Person 1: made-up name").fill("EXAMPLE PRINCIPAL (Sample)");
     const facts: [string, string, "fill" | "select"][] = [["person.family_name", "EXAMPLE", "fill"], ["person.given_names", "PRINCIPAL", "fill"], ["person.sex", "F Female", "select"], ["person.date_of_birth", "1980-05-17", "fill"]];
@@ -155,7 +166,7 @@ const step = (name: string, ok: unknown, detail?: unknown) => { ok ? pass++ : fa
   };
   await as("user-B"); await p.goto(`${BASE}/c/${vv}/tests`); await settle();
   await panel.getByText("Read-only for you").waitFor({ timeout: 30000 });
-  const e1uRow = panel.locator('[data-key]').filter({ hasText: "one box left out" }).first();
+  const e1uRow = panel.locator('[data-key]').filter({ hasText: "one form field left out" }).first();
   const asApprover = {
     note: /Read-only for you/.test(await panel.innerText()),
     writeFamily: await greyed(panel.getByRole("button", { name: "Write a family" }), /Only the configuration author writes test families/),
@@ -179,7 +190,7 @@ const step = (name: string, ok: unknown, detail?: unknown) => { ok ? pass++ : fa
 
   await as("user-C"); await p.goto(`${BASE}/c/${vv}/tests`); await settle();
   const imm = panel.getByRole("region", { name: "IMM 5257 field map" });
-  await imm.getByLabel("Family for IMM 5257 field map").selectOption({ label: "Small family, three boxes (Sample)" });
+  await imm.getByLabel("Family for IMM 5257 field map").selectOption({ label: "Small family, three form fields (Sample)" });
   await imm.getByRole("button", { name: "Write expected values" }).click();
   await dlg.locator('[data-editor="expected"]').waitFor({ timeout: 30000 });
   await dlg.locator("[data-box]").first().waitFor({ timeout: 30000 });
@@ -238,6 +249,7 @@ const step = (name: string, ok: unknown, detail?: unknown) => { ok ? pass++ : fa
   await panel.getByRole("button", { name: `Edit the family ${sample.label}` }).first().click();
   await dlg.locator("[data-fact-row]").nth(47).waitFor({ timeout: 30000 });
   await p.waitForFunction(() => !/Loading/.test(document.querySelector('[role="dialog"]')?.textContent ?? ""), null, { timeout: 30000 });
+  await look("family editor, 48 facts");
   const o1440 = await overflow();
   await p.setViewportSize({ width: 1024, height: 768 }); await p.waitForTimeout(250);
   const o1024 = await overflow();
@@ -259,7 +271,7 @@ const step = (name: string, ok: unknown, detail?: unknown) => { ok ? pass++ : fa
   await panel.locator(`[data-family="${small}"]`).getByRole("button", { name: /^Edit the family/ }).click();
   await dlg.locator('[data-editor="family"]').waitFor({ timeout: 30000 });
   const reopened = await dlg.getByLabel("Name", { exact: true }).inputValue();
-  await dlg.getByLabel("Name", { exact: true }).fill("Small family, three boxes (Sample)");
+  await dlg.getByLabel("Name", { exact: true }).fill("Small family, three form fields (Sample)");
   await dlg.getByRole("button", { name: "Save the family" }).click();
   await closed();
   step("C5.7 BR-8 (break P2-M2): after a 409 on a family, Cancel and reopen shows their version and the next save goes through", theirs.status === 200 && reopened === "Small family, renamed elsewhere (Sample)", reopened);
@@ -323,14 +335,15 @@ const step = (name: string, ok: unknown, detail?: unknown) => { ok ? pass++ : fa
   step("C5.7 BR-6 (Devin #2): a key for another edition is shown as such; saving it through the editor moves it to the map's edition and it runs without the edition failure", editionSaid && kEnow.expected.edition === "IMM 5257 (09-2023)" && kEnow.run.state === "PASSED", JSON.stringify({ editionSaid, edition: kEnow.expected.edition, run: kEnow.run.state }));
 
   // 2b (Devin, 2nd pass): moving an old-edition key drops, after saying so, the values for boxes the map no longer has.
-  const famF = await api("/answer-keys/families", { method: "POST", data: { ...sample, key: `e1f-${run}`, label: "E1 household, old edition with a gone box (Sample)" } });
+  const famF = await api("/answer-keys/families", { method: "POST", data: { ...sample, key: `e1f-${run}`, label: "E1 household, old edition with a gone form field (Sample)" } });
   const kF = await api(`/combinations/${vv}/answer-keys`, { method: "POST", actor: "user-C", data: { family_id: famF.body.id, item_kind: "field_map", item_ref: "IMM 5257", expected: { ...exp, edition: "IMM 5257 (01-2020)" } } });
   sql(`update answer_key set expected = jsonb_set(expected, '{people,mother,form1[0].OldEditionBox[0]}', '"X"') where id = '${kF.body.id}' returning id`);
   await p.reload(); await settle();
   const rF = panel.locator(`[data-key="${kF.body.id}"]`);
   await rF.getByRole("button", { name: "Change" }).click();
   await dlg.locator('[data-editor="expected"] [data-box]').first().waitFor({ timeout: 30000 });
-  const lostSaid = /1 value for boxes the new edition no longer has will be dropped: form1\[0\]\.OldEditionBox\[0\]/.test(await dlg.innerText());
+  const lostSaid = /1 value for form fields the new edition no longer has will be dropped: a form field no longer on the form \(EXAMPLE MOTHER/.test(await dlg.innerText());
+  await look("edition-move notice");
   await dlg.getByRole("button", { name: "Save the expected values" }).click();
   await savedOrRefused();
   const kFnow = (await api(`/answer-keys/${kF.body.id}`)).body;
@@ -356,6 +369,9 @@ const step = (name: string, ok: unknown, detail?: unknown) => { ok ? pass++ : fa
   const fam4 = (await api("/answer-keys/families")).body.families.find((f: { key: string }) => f.key === `e1u-${run}`);
   step("C5.7 BR-1 (Devin #4): Remove on the husband asks first, naming his facts, then takes them with him; the family saves", new RegExp(`removes ${nFather} facts`).test(asked) && (await dlg.count()) === 0 && fam4.people.length === 1 && !fam4.facts.some((f: { about: string }) => f.about.split("/")[0] === "father"), JSON.stringify({ asked, people: fam4.people.length }));
   if (await dlg.count()) { await dlg.getByRole("button", { name: "Cancel" }).click(); await closed(); }
+  const refused63 = refusals.filter((x) => P63.test(x));
+  step("C5.7 P-63: no visible text in the Tests tab or its editors, and no refusal the API sent, says \"box\" or shows a form1[0] path (tooltips aside)", said63.length === 0 && refused63.length === 0 && refusals.length > 0, JSON.stringify({ said: said63.slice(0, 6), refused: refused63.slice(0, 3), refusals: refusals.length }));
+  step("C5.7 §5: a failing line says it in one sentence (\"IMM 5257, <form field> (<person>): expected …, got …\")", /IMM 5257, Date of birth: YYYY \(EXAMPLE MOTHER \(Sample\)\): expected nothing \(not in the key\), got '1962'/.test(await panel.innerText()) || said5, said5Text);
   step("no page errors", errs.length === 0, errs.join(" | "));
   await b.close();
   console.log(`\n${pass}/${pass + fail} passed`);

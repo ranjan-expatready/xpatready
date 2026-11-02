@@ -18,20 +18,22 @@ const said = (kind: string, x: string) => (x === "" ? "(blank)" : kind === "rule
 /** BR-4: one key's lines, failures first (the API orders them), with the filler's reason when a value differs. */
 function KeyLines({ id }: { id: string }) {
   const k = useApi<KeyView>(["answer-key", id], `/answer-keys/${id}`);
+  const author = useDuties().family;
   if (k.isLoading) return <p className="text-sm text-text-muted">Loading the lines…</p>;
   if (k.isError || !k.data) return <Notice tone="danger" title="The lines could not be loaded">Try again in a moment.</Notice>;
   const lines = k.data.run.last?.lines ?? [];
   if (!lines.length) return <p className="text-sm text-text-muted">Not run yet: press Run to compare this family's expected values with what the {k.data.item_kind === "rule_set" ? "rules give" : "map writes"}.</p>;
   return (
-    <Table dense label={`Lines of ${k.data.family.label} for ${k.data.item_ref}`} head={["Result", "Value", "Person", "Expected", "Got", "Why"]}>
+    <Table dense label={`Lines of ${k.data.family.label} for ${k.data.item_ref}`} head={["Result", "Form field", "Person", "Expected", "Got", "Why"]}>
       {lines.map((l, i) => (
         <tr key={`${l.person}|${l.target}|${i}`} data-line={l.pass ? "pass" : "fail"}>
           <td className="py-1 pr-3"><Pill tone={l.pass ? "ok" : "danger"}>{l.pass ? "Pass" : "Fail"}</Pill></td>
-          <td className="py-1 pr-3" title={l.target}>{l.label}</td>
+          {/* P-63: the printed caption and its section; the data path only as an author's tooltip */}
+          <td className="py-1 pr-3" title={author && /\[\d+\]/.test(l.target) ? l.target : undefined}>{l.label}{l.section && !l.label.toLowerCase().includes(l.section.toLowerCase()) ? <span className="block text-xs text-text-muted">{l.section}</span> : null}</td>
           <td className="py-1 pr-3">{l.person_label}</td>
           <td className="py-1 pr-3 font-mono text-xs">{said(k.data!.item_kind, l.expected)}</td>
           <td className="py-1 pr-3 font-mono text-xs">{said(k.data!.item_kind, l.got)}</td>
-          <td className="py-1 text-xs text-text-muted">{l.why ?? ""}</td>
+          <td className="py-1 text-xs text-text-muted">{l.says ? <span className="block text-text">{l.says}</span> : null}{l.why ?? ""}</td>
         </tr>
       ))}
     </Table>
