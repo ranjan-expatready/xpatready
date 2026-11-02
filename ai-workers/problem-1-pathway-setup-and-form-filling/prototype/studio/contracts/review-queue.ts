@@ -55,4 +55,6 @@ export type QueueItem = {
 };
 /** UX-A part 2: `blocked`, the combinations whose draft has problems that block release (whoever fixes them), so the
  *  empty "Needs you" never says nothing waits while a release is blocked. */
-export type ReviewQueue = { items: QueueItem[]; counts: Record<QueueFilter, number>; kinds: Partial<Record<QueueKind, number>>; blocked: number };
+/** UX-A part 2 (review M3): `notSetUp`, the combinations whose only blocking problem is "Nothing to release yet" (no
+ *  form, no document): their next step is a building step, on Immigration programs, never Needs you (P-180, N8). */
+export type ReviewQueue = { items: QueueItem[]; counts: Record<QueueFilter, number>; kinds: Partial<Record<QueueKind, number>>; blocked: number; notSetUp: number };

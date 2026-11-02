@@ -53,6 +53,16 @@ const PEOPLE = ["user-A", "user-B", "user-C"];
   await agree("as loaded");
   const all0 = (await api("/review-queue?filter=all")).body;
   step("fail case (review n2): a combination with nothing set up is not called blocked", all0.blocked === 0 && !all0.items.some((i) => i.kind === "setup"), { blocked: all0.blocked, setup: all0.items.filter((i) => i.kind === "setup").map((i) => i.title) });
+  // Review M3: on the demo as loaded, combinations with nothing set up show "1 to fix" (Nothing to release yet); nobody reads
+  // a bare "Nothing waits for you" beside that red count.
+  step("setup (review M3): some combinations have nothing to release yet", all0.notSetUp > 0, all0.notSetUp);
+  for (const actor of PEOPLE) {
+    await as(actor); await openReview();
+    const text = await p.locator("main").innerText();
+    step(`fail case (review M3, ${actor}): the empty Needs you says how many have nothing to release yet and where their next step is`, new RegExp(`Nothing waits for you, but ${all0.notSetUp} combinations? (has|have) nothing to release yet`).test(text) && /next step is on Immigration programs/.test(text) && !/^Nothing waits for you$/m.test(text), text.match(/Nothing waits for you[^\n]*/)?.[0]);
+  }
+  await p.screenshot({ path: path.join(SHOTS, "uxa2-00-not-set-up-1440.png"), fullPage: false });
+  await as("user-A");
 
   // ------------------------------------------------------------------ a release-blocking error on Visitor visa
   const people = (await api(`/combinations/${vv}/workspace?tab=forms`)).body.people;

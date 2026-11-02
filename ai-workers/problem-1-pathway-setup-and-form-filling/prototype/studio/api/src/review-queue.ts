@@ -25,6 +25,8 @@ import { nextStepHref, STEP_LABEL, type ItemKind } from "../../contracts/setup-c
 /** UX-A part 2: next steps that already have their own row here (AI proposals, AI work running, a new edition held,
  *  a submission to sign or release), so a combination's setup row never repeats them. */
 const LISTED_ELSEWHERE: readonly ItemKind[] = ["review_proposals", "view_ai", "review_edition", "sign", "release"];
+/** Steps no screen offers yet (N8: the checklist page's confirmation, who can apply): never named as a row's next step. */
+const NO_SCREEN_YET: readonly ItemKind[] = ["confirm_pages", "choose_pages", "confirm_people"];
 
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
 const holds = (a: Actor, duty: string) => (a.duties as readonly string[]).includes(duty);
@@ -55,7 +57,9 @@ export class ReviewQueueService {
     const items = found.filter((i) => filter === "all" || i.state === filter).sort((a, b) => ORDER[a.state] - ORDER[b.state] || a.at.localeCompare(b.at));
     // UX-A part 2: combinations whose release is blocked, whoever fixes it (none under ?form=: those rows belong to no form).
     const blocked = code ? 0 : all.filter((i) => i.kind === "setup" && i.id.endsWith(":blocked")).length;
-    return { items, counts, kinds, blocked };
+    // Review M3: combinations whose only red "to fix" is "Nothing to release yet" are counted for the empty state.
+    const notSetUp = code ? 0 : (await this.programs.setupStates()).filter((s) => s.blockers.n === 1 && s.blockers.empty).length;
+    return { items, counts, kinds, blocked, notSetUp };
   }
 
   /** Every open item for this person (also read by the guided path, api/src/form-progress.ts: one source, plan D3). */
@@ -270,7 +274,8 @@ export class ReviewQueueService {
       if (!own.length && !fixable) continue;
       const n = s.blockers.n, next = s.setup.next;
       const what = [n ? `${plural(n, "problem")} to fix before release${s.live ? " of its next version" : ""}${s.blockers.first ? ` (first: ${s.blockers.first})` : ""}` : "",
-        next ? `Next step · ${STEP_LABEL[next.step]}: ${next.item.text}` : ""].filter(Boolean).join(". ");
+        // Review n5: a step no screen offers yet (N8) is not named as the next step here.
+        next && !NO_SCREEN_YET.includes(next.item.kind) ? `Next step · ${STEP_LABEL[next.step]}: ${next.item.text}` : ""].filter(Boolean).join(". ");
       const base = { id: `setup:${s.combinationId}${fixable ? ":blocked" : ""}`, kind: "setup" as const, title: s.path, by: null, at: (since.get(s.combinationId) ?? new Date(0)).toISOString(), cost_usd: null, what: `${what}.`, forms: [], combination: s.combinationId };
       if (own.length) {
         const go = own[0];
