@@ -22,8 +22,10 @@ const rows = [
   { lineageKey: "IMM 5475", status: "RETIRED", updatedAt: day(3), version: 2 },
   { lineageKey: "IMM 5409", status: "DRAFT", updatedAt: day(3), version: 1 },
 ];
-const release = day(2);
-ok("removed pass: a removal after the last release is in this draft (Undo)", removedInDraft(rows, release).map((r) => r.lineageKey).join() === "IMM 5475");
+const released = ["IMM 5475", "IMM 5409"]; // the latest release has IMM 5475; IMM 1295 left with an earlier one
+ok("removed pass: a removal of a form the latest release has is in this draft (Undo)", removedInDraft(rows, released).map((r) => r.lineageKey).join() === "IMM 5475");
+ok("removed fail case (re-break N2): a form the release no longer has is not \"removed in this draft\", whatever its line's date", !removedInDraft([{ lineageKey: "IMM 1295", status: "RETIRED", updatedAt: day(9) }], released).length);
+ok("removed: with nothing released, every removal is in this draft", removedInDraft(rows, null).length === 2);
 ok("removed fail case (break 2): a removal released before is still removed, never attached-and-waiting", removedLines(rows).map((r) => r.lineageKey).sort().join() === "IMM 1295,IMM 5475");
 
 // Attached, not set up (break 3).
@@ -36,6 +38,14 @@ const att = [
 const pending = attachedNotSetUp(att, ["IMM 5257", ...removedLines(rows).map((r) => r.lineageKey)]);
 ok("attached pass: one row per form number not yet a line, a form approved in the product included (re-break N1)", pending.map((a) => a.edition).join() === "IMM 5409 (09-2023),IMM 5645 (03-2024)", pending);
 ok("attached fail case (break 3): the same form attached twice is one form; an unknown file and a checklist are none; a removed form is not waiting", pending.length === 2);
+
+// Devin review: two editions of one form attached: the newest stands for it (as the Forms tab's attachmentFor).
+const two = attachedNotSetUp([
+  { kind: "Form", edition: "IMM 5257 (09-2023)", createdAt: "2026-11-01T10:00:00Z", id: "new" },
+  { kind: "Form", edition: "IMM 5257 (01-2023)", createdAt: "2026-10-01T10:00:00Z", id: "old" },
+], []);
+ok("attached pass (newest edition): an older edition listed after a newer one never hides it", two.length === 1 && two[0].id === "new", two);
+ok("attached fail case: listed oldest first, the newest still wins", attachedNotSetUp([{ kind: "Form", edition: "IMM 5257 (01-2023)", createdAt: "2026-10-01T10:00:00Z", id: "old" }, { kind: "Form", edition: "IMM 5257 (09-2023)", createdAt: "2026-11-01T10:00:00Z", id: "new" }], [])[0].id === "new");
 
 // Form facts per person.
 const roles = [{ role: "spouse_or_partner", label: "Spouse or partner", facts: 101 }, { role: "principal", label: "Principal applicant", facts: 98 }, { role: "case", label: "The application", facts: 22 }, { role: "child", label: "Child", facts: 97 }];

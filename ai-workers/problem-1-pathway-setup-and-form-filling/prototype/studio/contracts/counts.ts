@@ -27,8 +27,11 @@ export function formsWords(c: FormsCount): string {
  *  set up nor waiting to be set up, even while its file stays attached: the Forms tab lists it under "Removed in this
  *  draft" and no count includes it. One rule for the API's count (programs.ts) and the tab's list (workspace.ts).
  *  `rows`: the combination's form line versions, newest first. */
-export function removedInDraft<T extends { lineageKey: string; status: string; updatedAt: Date }>(rows: T[], releasedAt: Date | null | undefined): T[] {
-  return removedLines(rows).filter((r) => !releasedAt || r.updatedAt > releasedAt);
+export function removedInDraft<T extends { lineageKey: string; status: string }>(rows: T[], released: Iterable<string> | null | undefined): T[] {
+  // Re-break N2: a removal is "in this draft" when the latest release still has the form (or nothing is released yet),
+  // the same test as the Review tab's draft changes; never by the line's date, which Undo rewrites.
+  const inRelease = released ? new Set(released) : null;
+  return removedLines(rows).filter((r) => !inRelease || inRelease.has(r.lineageKey));
 }
 /** Break 2: every form whose newest line is removed, in this draft or before an earlier release. None is "attached and
  *  waiting to be set up" again because its file stays attached; adding it from the library brings its line back. */
@@ -41,15 +44,19 @@ export function removedLines<T extends { lineageKey: string; status: string }>(r
  *  removed form. A file is a "Form" only when it is on the official list or a second person approved it in the product
  *  (P-80, stored with recognised = false; re-break N1); an unknown file is another kind (api/src/sources.ts). The API's
  *  count (programs.ts) and the Forms tab's rows (sources.tsx pendingForms) use it. */
-export function attachedNotSetUp<A extends { kind: string; edition?: string | null; officialFile?: string | null; id?: string }>(attachments: A[], taken: Iterable<string>): A[] {
-  const skip = new Set(taken), seen = new Set<string>(), out: A[] = [];
+export function attachedNotSetUp<A extends { kind: string; edition?: string | null; officialFile?: string | null; id?: string; createdAt?: Date | string }>(attachments: A[], taken: Iterable<string>): A[] {
+  const skip = new Set(taken), by = new Map<string, A>();
+  const at = (a: A) => (a.createdAt ? new Date(a.createdAt).getTime() : 0);
   for (const a of attachments) {
     // One per form number; a file with no edition read yet is its own form (re-review N1: never merged into one "").
     const code = (a.edition ?? a.officialFile ?? a.id ?? "").split(" (")[0];
-    if (a.kind !== "Form" || skip.has(code) || seen.has(code)) continue;
-    seen.add(code); out.push(a);
+    if (a.kind !== "Form" || skip.has(code)) continue;
+    // Devin review: the newest attachment of a form stands for it (as the Forms tab's attachmentFor), so an older,
+    // unmapped edition never hides a newer one the library already maps. Ties: the later in the list.
+    const had = by.get(code);
+    if (!had || at(a) >= at(had)) by.set(code, a);
   }
-  return out;
+  return [...by.values()];
 }
 
 /** Questions for one person role, or for the whole combination (each person role counted). */

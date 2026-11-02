@@ -91,8 +91,10 @@ export class WorkspaceViews {
     const problems = channelProblems(snapshot, accepts).map((x) => ({ level: x.level === "error" ? "error" as const : "warning" as const, item: x.item, message: x.message }));
     // P-116 (drift check 8): a form removed since the last release can be put back (Undo) while the draft is open; adding
     // it again from the library restores the same line (api/src/form-lines.ts addFormLine).
-    const since = (await this.db.configRelease.findFirst({ where: { combinationId: id }, orderBy: { version: "desc" }, select: { releasedAt: true } }))?.releasedAt;
-    const gone = removedInDraft(rows, since); // UX-A part 1: the same rule as the forms count (contracts/counts.ts)
+    const rel = await this.db.configRelease.findFirst({ where: { combinationId: id }, orderBy: { version: "desc" }, select: { releasedAt: true, snapshot: true } });
+    const since = rel?.releasedAt;
+    // UX-A part 1 (re-break N2): removed in this draft = removed and still in the latest release (contracts/counts.ts).
+    const gone = removedInDraft(rows, rel ? ((rel.snapshot as { forms?: { form_number: string }[] } | null)?.forms ?? []).map((f) => f.form_number) : null);
     const goneEver = removedLines(rows).map((r) => r.lineageKey); // break 2: removed before a release too
     const titles = new Map((await this.db.govFormDef.findMany({ where: { id: { in: gone.map((r) => r.govFormDefId) } }, select: { id: true, displayName: true } })).map((f) => [f.id, f.displayName]));
     const removed = gone.map((r): RemovedForm => ({ code: r.lineageKey, title: titles.get(r.govFormDefId) ?? "", at: r.updatedAt.toISOString() }));
