@@ -43,7 +43,7 @@ export function savedReading(officialFile: string | null, where: { runs?: string
 export function staleReading(officialFile: string | null, where: { runs?: string; root?: string } = {}): { runFile: string; sha256: string } | null {
   if (!officialFile) return null;
   const inventory = inventoryOf(officialFile), RUNS = where.runs ?? RUNS_DIR;
-  let now = ""; try { now = createHash("sha256").update(readFileSync(join(where.root ?? SOLUTION, inventory))).digest("hex"); } catch { /* no text on this computer: every saved one is out of date */ }
+  let now = ""; try { now = createHash("sha256").update(readFileSync(join(where.root ?? SOLUTION, inventory))).digest("hex"); } catch { return null; /* #397 m1: the text is not on this computer, so nothing can be said to be of an earlier text */ }
   let files: string[]; try { files = readdirSync(RUNS).filter((f) => /-requirements-live-.*\.json$/.test(f)).sort().reverse(); } catch { return null; }
   let stale: { runFile: string; sha256: string } | null = null;
   for (const f of files) {
