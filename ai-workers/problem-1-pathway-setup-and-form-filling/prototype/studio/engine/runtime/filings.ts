@@ -88,6 +88,10 @@ export function rulesFrom(table: FeeTable, key: string): Rules | undefined {
 }
 const RULES = { get: (key: string) => rulesFrom(FEE_TABLE, key) };
 
+/** C11.12 review M2: the built-in filing mode a case falls back to for a role its release gives none (Sample). */
+export const defaultModeOf = (combinationKey: string, role: string) => RULES.get(combinationKey)?.modes.get(role);
+/** C11.12: whether a combination's fees are worked out at all (else its words say "not worked out yet"). */
+export const hasFeeRules = (combinationKey: string) => !!RULES.get(combinationKey)?.fees.length;
 /** The fee rule of a combination by its key (biometrics: its ages, VV-R15), for the items and words that need it. */
 export const feeRule = (combinationKey: string, key: string): FeeRule | undefined => RULES.get(combinationKey)?.fees.find((f) => f.key === key);
 

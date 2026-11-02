@@ -240,7 +240,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // The run card (W1-07): steps, cost, the next step.
   await p.goto(`${BASE}/ai/${rep.l.body.id}`); await p.locator("[data-run-status]").first().waitFor({ timeout: 30000 });
   const card = await text(p, "[data-run-status]");
-  step("P-110 run card: the replay run shows its 6 steps, US$0 and 'saved AI answers, no new call'", (card.match(/US\$0/g) ?? []).length >= 1 && /saved AI answers/.test(card) && await p.locator("[data-run-status] li").count() >= 6, card.slice(0, 220));
+  step("P-110 run card: the replay run shows its 6 steps, US$0 and 'Saved, no new call'", (card.match(/US\$0/g) ?? []).length >= 1 && /Saved, no new call/.test(card) && await p.locator("[data-run-status] li").count() >= 6, card.slice(0, 220));
   await axe(p, "Run card (replay) at 1440 px");
   await shot(p, "s4-run-card-replay");
   await p.goto(`${BASE}/ai/${svRep.l.body.id}`); await p.locator("[data-run-status]").first().waitFor();
