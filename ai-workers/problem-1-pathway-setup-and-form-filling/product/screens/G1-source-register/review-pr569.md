@@ -112,3 +112,5 @@ I reran on a fresh database (`xr_studio_rv569b`) from a `git archive` of f13c422
 * Minors 2–3 of round 1 stay as wiring notes for PR 2a.
 
 **Verdict (f13c4228): Approve.** No Blocker or Major is open.
+
+**Round 3, head 3f3db012: Approve.** Fresh database `xr_studio_rv569c`: deploy OK, 19/19. Putting `btrim` back fails the suite: on the keys 18/19, on the reason 18/19 (restored: 19/19). The concept BR-10 line now matches the tech lead's Done-when. One non-blocking note: the database collation is C, so `[[:space:]]` does not count NBSP or U+3000 as blank, while the engine's JS `trim()` strips them. That is the safe direction (the engine still lists such a quote as unanswered), but the migration comment's "as the engine's trim()" covers ASCII whitespace only.
