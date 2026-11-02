@@ -129,6 +129,15 @@ ok("SH3 render (c): a deciding fact is keyed by its id only: case.* on the filin
   return same(about("person.flag"), ["A"]) && same(about("case.mode"), [FILING]);
 })());
 
+ok("SH3 render (review r2-m1): an answered deciding fact placed once per case stays on the person; the placement asks it once on the filing too", (() => {
+  const S = { combination: { key: "t", participants: [] }, canonical_fields: [{ id: "person.flag", value_type: "yes_no" }], derived_fields: [], field_maps: [], checks: [], rules: [], document_types: [], document_requirements: [],
+    sections: [{ id: "s1", title: "S" }], placements: [{ fact: "person.flag", section_id: "s1", repeats: "once_per_case", collected_from: "client_questionnaire" }],
+    forms: [{ form_number: "F1", who: "principal_applicant", status: "conditional", condition: { op: "eq", field: "person.flag", value: true } }] } as unknown as Snapshot;
+  const k: Known = new Map([["A|person.flag", { value: true, status: "answered", source: "t" }]]);
+  const abouts = render.render(S, single, k).questions.filter((q) => q.fact === "person.flag").map((q) => q.about).sort();
+  return same(abouts, ["A", FILING]);
+})());
+
 // ---- The four places call the resolver; the engine part is lift-ready
 const src = (f: string) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
 ok("SH3: render.ts re-exports the resolver's functions (no copy left)", render.aboutOf === R.aboutOf && render.subjectsFor === R.subjectsFor && render.peopleFor === R.peopleFor && render.formSigners === R.formSigners && render.conditionSubjects === R.conditionSubjects && render.lineHolders === R.lineHolders && !/function (aboutOf|subjectsFor|peopleFor|formSigners|factsOf)\b/.test(src("engine/render.ts")));

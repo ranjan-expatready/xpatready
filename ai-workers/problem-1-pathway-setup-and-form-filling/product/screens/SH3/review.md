@@ -87,3 +87,28 @@ D1 3/5: four scopes shaped, person and filing built, but filing misdescribed (M1
 * **Major M1:** correct the filing wording in R1, R5 and SCOPE_RULES in `contracts/resolver.ts`.
 * **Major M2:** add the follow-up list (a)–(d) and narrow R3.
 * **Minor m1–m5:** may follow, or ride along.
+
+## Round 2 (c00868d7)
+* **What I read:** `git diff 7a7c5139 c00868d7 -- …/studio`. Since round 1, the head adds three things:
+  * f8b0cbac, a merge of main. Its only SH3-file change is QA-82's field-name helper in render.ts; the moved functions are untouched.
+  * qa/built/SH3.md.
+  * c00868d7 itself, which changes only `contracts/resolver.ts` (comments) and `tests/check_sh3_resolver.ts`.
+  * engine/resolver.ts, sources.ts, people.ts, fact-sources.ts and form-lines.ts are byte-identical to 7a7c5139, so round 1's 15M-call result still holds.
+* **Runs:** `check_sh3_resolver` **54/54**, `check_line_holders` 19/19, `check_engine` 43/43. `tsc`: no new errors (the same four old test files only).
+* **M1, fixed.** R1, R5, `FILING` and `SCOPE_RULES` now say a filing value is stored once per case and that every filing on it reads it. `SCOPE_RULES` is marked as the SA-1B-130 target. "No filing id yet" points to P-251 and SH4. This matches `filing-modes.ts` and `runtime/filings.ts`.
+* **M2, fixed.**
+  * The "Not yet through the resolver" block (a)–(d) has every file:line I raised. I checked each one on the head and all are correct.
+  * It also adds the field-scope-by-prefix copies (`import.ts:41`, `proposals.ts:214`, `snapshot.ts:37`).
+  * R3 is narrowed to document lines, and R2 now says only rules pass a subject kind (m4).
+* **m1, fixed.** R9 now says "asked at most MERGE_HOPS times, at most MERGE_HOPS − 1 redirects".
+* **m3, fixed.** WHO is read from the studio.ts source, with its own fail case.
+* **m5, fixed.** The import check covers multi-line imports, re-exports, `import()` and `require`, and has a fail case.
+* **m2, mostly fixed.** I reran my 30 mutants plus one new one on the head: **30 of 31 caught** (round 1: 24 of 30). Newly caught: MERGE_HOPS 6, sponsor out of WHO_ROLES, the `resolveKey` wiring (fake db, 3 asks, newest version first), `holder.spouse` and parents through `documentFacts`, and render's open-decider key.
+* The builder's reason for not committing the old-against-new harness is fair: main's old copies no longer exist after the merge. Both comparison results are recorded in the PR.
+* **Open, Minor (does not block):**
+  * r2-m1. Two render.ts call-site swaps still survive every pure suite: `render.ts:156` (the answered-decider key) and `:236` (the placements loop's `isFilingFact(p.fact, p)`). Both are provably the main expression. Fix: one check each, e.g. an answered `person.flag` placed once_per_case stays keyed on the person, and a once_per_case placement is asked once, on "case".
+* **Score of the code and tests: 9.5/10.** "Next step obvious", "plain words" and "trust and sources" move to 1: M3 rows can now see what is built, what is held and what is still outside the resolver. "Task completed" stays at ½ for r2-m1.
+
+* **Head moved to cc52f0b1.** It changes only `tests/check_sh3_resolver.ts:70-72`: the R6 fixture values "Ann", "Ben" and "Pat" become "principal-name", "partner-name" and "parent-name" (AGENTS rule 5). The values stay distinct, so R6 still tells the people apart. 54/54 on cc52f0b1, and both R6 mutants are still caught.
+
+**Verdict: Approve** (cc52f0b1, and c00868d7 before it). No Blocker or Major is open; r2-m1 can follow.
