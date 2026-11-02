@@ -37,24 +37,25 @@ await main("C6.4", "Document checklist per person (Visitor visa)", async () => {
   ({ l } = await get());
   ok("C6.4-7 fail (R3): with \"travels with\" and custody unanswered, the child has a passport line and none of the five minor lines", has(l, K1, /passport/i) && minorLines.every((re) => !has(l, K1, re)), of(l, K1).map((x) => x.label));
   const travels = async (v: string) => { await answer(c.id, K1, "person.travels_with", v, CLIENT); return (await get()).l; }; // the principal answers for a minor (P-78)
-  await answer(c.id, K1, "person.custody", "not_applicable", CLIENT); // the one-parent lines read custody too (sole custody has no absent parent)
   l = await travels("alone");
   ok("C6.4-8 pass (R3): travelling alone, the child gets the letter of authorization and a copy of the birth certificate, each saying why (Researched)", has(l, K1, LETTER) && has(l, K1, BIRTH) && !has(l, K1, ABSENT) && /alone/i.test(of(l, K1).find((x) => LETTER.test(x.label))?.reason ?? "") && /Researched/.test(of(l, K1).find((x) => BIRTH.test(x.label))?.reason ?? ""), of(l, K1).map((x) => x.label));
   l = await travels("another_adult");
   ok("C6.4-8a pass (R3): with another adult, the same two lines (the letter names the adult responsible in Canada)", has(l, K1, LETTER) && has(l, K1, BIRTH) && !has(l, K1, ABSENT) && /adult responsible/i.test(of(l, K1).find((x) => LETTER.test(x.label))?.reason ?? ""), of(l, K1).map((x) => x.label));
   l = await travels("one_parent");
-  ok("C6.4-8b pass (R3): with one parent, the letter from the absent parent and a copy of that parent's signed passport or ID, no birth certificate", has(l, K1, LETTER) && has(l, K1, ABSENT) && !has(l, K1, BIRTH), of(l, K1).map((x) => x.label));
+  ok("C6.4-8b pass (R3, review r1 M1): with one parent and custody not answered yet, the letter from the absent parent and a copy of that parent's signed passport or ID, no birth certificate", has(l, K1, LETTER) && has(l, K1, ABSENT) && !has(l, K1, BIRTH), of(l, K1).map((x) => x.label));
   l = await travels("both_parents");
   ok("C6.4-8c fail (R3): with both parents, none of the three travel lines", !has(l, K1, LETTER) && !has(l, K1, BIRTH) && !has(l, K1, ABSENT), of(l, K1).map((x) => x.label));
   const custody = async (v: string) => { await answer(c.id, K1, "person.custody", v, CLIENT); return (await get()).l; };
   l = await custody("sole");
   ok("C6.4-8d pass (R3): sole custody adds the custody documents; shared custody too", has(l, K1, CUSTODY) && !has(l, K1, ADOPT) && has(await custody("shared"), K1, CUSTODY), of(l, K1).map((x) => x.label));
+  l = await custody("adopted");
+  ok("C6.4-8e pass (R3): adopted, the adoption or guardianship papers, not the custody documents", has(l, K1, ADOPT) && !has(l, K1, CUSTODY), of(l, K1).map((x) => x.label));
   l = await custody("guardian");
-  ok("C6.4-8e pass (R3): under guardianship (or adopted), the adoption or guardianship papers, not the custody documents", has(l, K1, ADOPT) && !has(l, K1, CUSTODY), of(l, K1).map((x) => x.label));
+  ok("C6.4-8e2 pass (R3): under guardianship, the adoption or guardianship papers, not the custody documents", has(l, K1, ADOPT) && !has(l, K1, CUSTODY), of(l, K1).map((x) => x.label));
   // Devin review on #493: with the parent who has sole custody, no absent parent's letter or ID; the custody decree instead.
   await travels("one_parent");
   l = await custody("sole");
-  ok("C6.4-8h fail (R3, research Q4): with one parent who has sole custody, no absent parent's letter or ID; the custody documents instead", !has(l, K1, LETTER) && !has(l, K1, ABSENT) && has(l, K1, CUSTODY), of(l, K1).map((x) => x.label));
+  ok("C6.4-8h pass and fail (R3, research Q4): with one parent who has sole custody, the letter (from that parent) and the custody documents, but no absent parent's ID", has(l, K1, LETTER) && !has(l, K1, ABSENT) && has(l, K1, CUSTODY) && /sole custody, from the parent who has it/.test(of(l, K1).find((x) => LETTER.test(x.label))?.reason ?? ""), of(l, K1).map((x) => x.label));
   l = await custody("shared");
   ok("C6.4-8i pass (R3): with one parent and shared custody, the absent parent's letter and ID are asked again, beside the custody documents", has(l, K1, LETTER) && has(l, K1, ABSENT) && has(l, K1, CUSTODY), of(l, K1).map((x) => x.label));
   await travels("both_parents");
@@ -65,7 +66,9 @@ await main("C6.4", "Document checklist per person (Visitor visa)", async () => {
   await answer(c.id, K2, "person.date_of_birth", yearsAgo(19), OFFICER);
   await answer(c.id, K2, "person.travels_with", "alone", OFFICER, { onBehalfOf: K2, reason: "Entered from the person's signed form (Sample)" });
   ({ l } = await get());
-  ok("C6.4-8g fail (R3): a dependent child of 19 travelling alone gets no letter or birth certificate line (the lines are for under 18)", !has(l, K2, LETTER) && !has(l, K2, BIRTH), of(l, K2).map((x) => x.label));
+  await answer(c.id, K2, "person.custody", "sole", OFFICER, { onBehalfOf: K2, reason: "Entered from the person's signed form (Sample)" });
+  ({ l } = await get());
+  ok("C6.4-8g fail (R3): a dependent child of 19 travelling alone, sole custody, gets none of the five minor lines (they are for under 18)", minorLines.every((re) => !has(l, K2, re)), of(l, K2).map((x) => x.label));
   // QA-149: the answer stays on the case, so it can be changed back; nothing requested yet, so nothing is kept.
   await travels("alone");
   l = await travels("both_parents");

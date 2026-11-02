@@ -56,18 +56,20 @@ await main("Setup", "Visitor visa release 2 for the M3 path (Super Admin, M2)", 
   // research_notes/visitor-visa-and-six-combinations-research-2026-11-02.md Q4, https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada/minor-children-travelling-canada.html
   // ("The letter does not need to be certified."). Each line applies only under 18 (person.age_years, worked out on the
   // application date) and reads "travels with" or "custody", two facts that arrive through C3.6 with their answer values.
-  const R3 = "Researched (canada.ca minor-children page, 2025-01-23, read 2026-11-02): may change";
+  const R3 = "Researched (canada.ca minor-children page, https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada/minor-children-travelling-canada.html, 2025-01-23, read 2026-11-02: \"The letter does not need to be certified.\"): may change";
   const minor = (c: unknown) => ({ op: "and", subjectKind: "PERSON", args: [{ op: "lt", field: "person.age_years", value: 18 }, c] });
   const travels = (v: string[]) => minor({ op: "in", field: "person.travels_with", value: v });
   const custody = (v: string[]) => minor({ op: "in", field: "person.custody", value: v });
-  // With one parent who has sole custody, there is no absent parent to sign: the custody decree stands instead
-  // (research Q4: "Sole custody: the letter from that parent plus a copy of the custody decree"; Devin review on #493).
-  const oneParentNotSole = { op: "and", args: [{ op: "in", field: "person.travels_with", value: ["one_parent"] }, { op: "not", arg: { op: "in", field: "person.custody", value: ["sole"] } }] };
+  // With one parent who has sole custody, the letter comes from that parent and the custody decree goes with it, so the
+  // absent parent's ID is not asked (research Q4: "Sole custody: the letter from that parent plus a copy of the custody
+  // decree"; Devin review on #493, both rounds).
+  // Review r1 M1: custody not answered yet counts as "not sole" (the usual married-parents case still asks for the ID).
+  const oneParentNotSole = { op: "and", args: [{ op: "in", field: "person.travels_with", value: ["one_parent"] }, { op: "or", args: [{ op: "not", arg: { op: "exists", field: "person.custody" } }, { op: "not", arg: { op: "in", field: "person.custody", value: ["sole"] } }] }] };
   const reqs: { name: string; who: string; mode: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: unknown; plain?: string }[] = [
     { name: "Passport or travel document", who: "each_applicant", mode: "COMBINATION_MANDATORY" },
     { name: "Proof of financial support", who: "principal_applicant", mode: "COMBINATION_MANDATORY" },
-    { name: "Letter of authorization for a minor", who: "each_dependent_child", mode: "ANSWER_CONDITIONAL", condition: minor({ op: "or", args: [{ op: "in", field: "person.travels_with", value: ["alone", "another_adult"] }, oneParentNotSole] }),
-      plain: `when a child under 18 travels alone or with another adult (signed by both parents or guardians, naming the adult responsible in Canada), or with one parent who does not have sole custody (from the parent not travelling); the letter does not need to be certified. ${R3}` },
+    { name: "Letter of authorization for a minor", who: "each_dependent_child", mode: "ANSWER_CONDITIONAL", condition: travels(["alone", "another_adult", "one_parent"]),
+      plain: `when a child under 18 travels alone or with another adult (signed by both parents or guardians, naming the adult responsible in Canada), or with one parent (from the parent not travelling; with sole custody, from the parent who has it, beside the custody decree); the letter does not need to be certified. ${R3}` },
     { name: "Copy of the minor's birth certificate", who: "each_dependent_child", mode: "ANSWER_CONDITIONAL", condition: travels(["alone", "another_adult"]), plain: `when a child under 18 travels alone or with an adult who is not a parent. ${R3}` },
     { name: "Copy of the absent parent's signed passport or national ID", who: "each_dependent_child", mode: "ANSWER_CONDITIONAL", condition: minor(oneParentNotSole), plain: `when a child under 18 travels with one parent who does not have sole custody: the parent not travelling. ${R3}` },
     { name: "Custody documents", who: "each_dependent_child", mode: "ANSWER_CONDITIONAL", condition: custody(["sole", "shared"]), plain: `when a child under 18 is in sole custody (the custody decree) or shared custody (the custody documents). ${R3}` },
@@ -102,7 +104,7 @@ await main("Setup", "Visitor visa release 2 for the M3 path (Super Admin, M2)", 
       r = ch ? await call("POST", `/library/changes/${ch}/approve`, {}, APPROVER) : { status: 0, body: null } as typeof r;
       ok(`S6a (R3) ${f.fact} approved into the library, its answer list with it`, !!ch && r.status < 300, r.body?.detail ?? r.body?.message ?? r.status);
     }
-    r = await call("POST", `/library/fields/${f.fact}/placement`, { sectionKey: "your_visit", collectedFrom: "client_questionnaire", repeats: "per_person", tier: "case", questionText: `${f.question} (Researched)` }, AUTHOR);
+    r = await call("POST", `/library/fields/${f.fact}/placement`, { sectionKey: "your_visit", collectedFrom: "client_questionnaire", repeats: "per_person", tier: "case", questionText: f.question }, AUTHOR);
     ok(`S6a (R3) "${f.question}" is asked per person in Your visit`, r.status < 300, r.body?.detail ?? r.status);
   }
 
