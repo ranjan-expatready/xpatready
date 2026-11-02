@@ -1,0 +1,32 @@
+# Break report: QA-75 fix on the AI job page `/c/:id/jobs/:jobId` (commit e5efc549)
+
+Scope: `job.tsx`, `combination.tsx` (ModePill, StatusPill), `sources.ts` `job()`. Isolated copy `brk_qa75` on :4467, demo reset and load, web rebuilt at e5efc549, live AI off, no priced button pressed. 23 jobs inserted by SQL (ids `00000000-…-0000000000NN`, kinds field_map, read_form, checklist_draft, finder_propose, upload_identity, reuse_map, who_draft, masters_edition, rule_fact; statuses NEEDS_PERSON, WAITING, SKIPPED, PARTIAL, BLOCKED, FAILED, RUNNING, QUEUED, APPLIED, `done`, `ODD_STATUS_X`, empty), plus the 10 real read_form jobs. Each page opened in Chromium at 1280 px and 400 px.
+
+## Blocker
+None.
+
+## Major
+**M1. The running and queued notice still shows system codes and says "The AI is drafting" on rules steps.** `job.tsx:77` prints `detail.steps` as `${s.step} (exit ${s.exit})`. Real field-map steps are named `stub pass` and `live call` (`sources.ts:517,526`), so a running job shows "stub pass (exit 0), live call (exit 1)". This page can be reached while a job runs: `ai.ts` `mappingIndex` links queued and running jobs ("Being mapped in X: the AI draft is running"). On a read_form job (job 13, LOCAL, RUNNING) the page shows "Rules did this step; no AI was called." and right below it "The AI is drafting … Steps so far: pdf_inventory (exit 0), xfa_extract (exit 2)". A QUEUED job (job 23) shows a "Running" spinner next to a "Queued" pill.
+Reproduce: open `/c/7b8c…3413/jobs/00000000-0000-0000-0000-000000000013`. Expected: plain words, with no step codes or exit codes, and no AI wording on a rules step. Screenshot: scratchpad `j13-1280.png`.
+
+## Minor
+1. **Wrong combination in the URL gives a trail that disagrees with itself.** The crumb label comes from the job (`job.combination.label`), but both crumb links and "Open the Forms tab" use the URL id (`job.tsx:67,78-79`). Opening job 1 (Visitor visa) under `/c/<Super visa id>/…` shows "Visitor visa", which links to Super visa's Forms tab. With `/c/nope/jobs/…` the page shows the job and every link goes to `/c/nope`. The API (`main.ts:111`) never checks the job against `:id`. Expected: build the links from `job.combinationId`, or say "not in this combination".
+2. **Kinds other than field_map, read_form and checklist_draft fall back to "A step of AI work"**, including rules steps: reuse_map, masters_edition, rule_fact and upload_identity, all LOCAL (jobs 14, 19, 22, 10). The heading says "A step of AI work" while the line under it says "Rules did this step; no AI was called." (`job.tsx:61`). A failed upload check is titled "The draft failed" (`:79`). For an unknown job id, the error says "This AI draft could not be opened" (`:57`). For finder_propose (job 9), the heading and the body are the same sentence, "A step of AI work". These pages are not linked from the UI today; only a URL reaches them.
+3. **A job with no combination** (upload step, job 10) shows the trail "Combination › Forms", which points to whatever combination is in the URL.
+4. **The checklist page was not brought in line** (`job.tsx:277-278`). With no attachment it shows the heading "Checklist: proposed document requirements", which is the same bare-fallback pattern QA-75 reported as "Form:", and there is no "No form is linked". It always shows the Sparkles icon. NEEDS_PERSON shows no "Needs you" notice (job 8). Today checklist jobs are always created with an attachment, so the missing-attachment case cannot happen in practice.
+5. **Unknown mode or status shows the raw code.** Mode `WEIRD_MODE` appears exactly as stored (`combination.tsx:183`). Status `ODD_STATUS_X` appears as "odd status x" and `done` as "done", both in a neutral pill (`:190`). An empty status shows no status pill at all (job 21).
+6. **WAITING shows only a pill.** The job's message, "Waits for the step before it", is not shown, because messages appear only for NEEDS_PERSON, BLOCKED, FAILED, RUNNING and QUEUED (job 2).
+7. **"No form is linked" appears when a form was linked.** If the job's attachment row is gone (job 11, dangling `attachment_id`), the page says no form is linked; the form was removed, not missing. If an attachment has `edition = ''`, `formName` (`job.tsx:27`, `??`) does not fall through to `fileName`, so "guide-5256.html" is ignored (job 20).
+8. **A completed field map with 0 proposals** (jobs 11, 20) says "All proposals decided. Apply them to the combination's draft configuration." and enables "Apply to draft" with nothing to apply (`job.tsx:107`). The QA-75 "below" wording is gone, but this bar still promises proposals that do not exist.
+9. **The fix's own test fixture cannot occur in practice.** `check_forms_qa75_job_page_browser.cjs` inserts a LOCAL field_map. Batches accept only LIVE, REPLAY or STUB (`ai.ts:80`), so the code never creates one. The page it checks reads "AI-proposed field map", with the Sparkles icon and the trail "AI field-map draft", next to "Rules only, no AI" and "No AI was called for this step": the heading and the chips contradict each other.
+10. **At 400 px the Sparkles icon is squeezed** to about 4 px when a long edition wraps the heading (job 12). It needs `shrink-0`. Screenshot: scratchpad `j12-400.png`.
+
+## What held
+* No NEEDS_PERSON, WAITING, SKIPPED, PARTIAL, BLOCKED, FAILED, APPLIED or QUEUED code reached the screen. They read "Needs you", "Waiting", "Skipped", "Done with problems" and so on, and the BLOCKED, FAILED and NEEDS_PERSON notices show the job's message with a working link to the Forms tab, or to the AI work page when a batch exists.
+* The heading names the edition on every field-map and read_form job that has an attachment. With no attachment, the field-map heading drops the bare "Form:" and says "No form is linked to this step."
+* The trail reads "<combination> › Forms › …", the Forms link opens `/c/:id/forms`, and "Sources and forms" appears nowhere.
+* All 10 real read_form jobs read "Rules read the form's fields", "Rules only, no AI", "Completed", with no AI wording and no Apply bar.
+* The basis line no longer contains "prototype-only", "provider route" or "below" unless proposals are shown.
+* At 400 px nothing scrolls sideways, including the 103-character IMM 5881 edition and a 115-character unbroken combination label (the trail wraps).
+* No page errors on any case. A missing job id, or an id that is not a UUID, gives a plain "Not found" state.
+* The API rejects a request with no person (401) and a client persona (403) on `GET /jobs/:id`.
