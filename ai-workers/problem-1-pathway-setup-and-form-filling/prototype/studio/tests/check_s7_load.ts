@@ -75,7 +75,9 @@ const sampleOk = (f: Parameters<typeof trailsOf>[0]) => { const t = trailsOf(f);
   const waiting = n(`select count(*) from proposal_item where workspace_id='${ws}' and status='waiting' and origin='ai'`);
   ok("C11.7 (P-149): saved AI field-map answers are replayed through the one door as waiting proposals, origin ai", l.body.drafts.replayed >= 3 && waiting > 0 && waiting === l.body.drafts.proposals_waiting, l.body.drafts);
   ok("C11.7: replayed drafts are recorded as saved answers (mode replay, US$0)", n(`select count(*) from drafting_job where workspace_id='${ws}' and kind='field_map' and mode='REPLAY' and status='COMPLETED'`) === l.body.drafts.replayed, l.body.drafts.status);
-  ok("P-138: a form without a saved AI answer waits for Draft with AI, listed by name", Array.isArray(l.body.drafts.waiting_for_draft_with_ai) && l.body.drafts.waiting_for_draft_with_ai.length > 0, l.body.drafts.waiting_for_draft_with_ai);
+  // R-146: since IMM 5532's saved run (fourteen forms, check_queue_tx.ts) every form of the six has a saved answer, so the
+  // list is there and empty; a saved run lost or no longer matching its job names its form here again and fails this.
+  ok("P-138: a form without a saved AI answer waits for Draft with AI, listed by name (none in the six since R-146's fourteen saved maps)", Array.isArray(l.body.drafts.waiting_for_draft_with_ai) && l.body.drafts.waiting_for_draft_with_ai.length === 0, l.body.drafts.waiting_for_draft_with_ai);
   // The form finder, replayed per combination from its recorded canada.ca page.
   const vv = l.body.finder.find((f: any) => /Visitor visa/.test(f.combination));
   ok("C11.7: the form finder is replayed on the Visitor visa (saved AI answers, US$0) and picks its forms", ["COMPLETED", "PARTIAL"].includes(vv?.status) && n(`select count(*) from ai_batch where workspace_id='${ws}' and operation='find_forms' and mode='REPLAY'`) === 5, l.body.finder);
