@@ -4,7 +4,7 @@
 // immigration expert signs the expected values. Registered in features/answer-keys.ts (P-214). No model call (US$0).
 // Audit lines name the family key, the item and the counts: never a family's values (SA-1B-296 field 9).
 import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Put, Query } from "@nestjs/common";
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 import { Prisma } from "@prisma/client";
 import type { z } from "zod";
@@ -13,7 +13,7 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { canonical } from "../../../contracts/rules.ts";
 import { buildSnapshot, effective, type Snapshot } from "../../engine/snapshot.ts";
 import { writesParts } from "../../engine/field-format.ts";
-import { blank, changeProblem, checkExpected, checkFamily, fingerprintOf, ITEM_KINDS, keyBoxes, NO_SCORING, runFieldMap, runRuleSet, runState, SAMPLE_WORDS, signProblem, unclean, type Family, type FieldError, type ItemKind, type MapExpected, type RuleExpected } from "../../engine/answer-keys.ts";
+import { blank, changeProblem, checkExpected, checkFamily, fingerprintOf, inventoryHash, ITEM_KINDS, keyBoxes, NO_SCORING, runFieldMap, runRuleSet, runState, SAMPLE_WORDS, signProblem, unclean, type Family, type FieldError, type ItemKind, type MapExpected, type RuleExpected } from "../../engine/answer-keys.ts";
 import type { Inventory } from "../../engine/form-values.ts";
 import { ACTORS, Audit, Db, fail, need, readerOf, SOLUTION, Workspace, type Actor } from "./core.ts";
 
@@ -27,10 +27,34 @@ const obj = (b: unknown) => (b && typeof b === "object" && !Array.isArray(b) ? b
 const holds = (a: Actor, duty: string) => (a.duties as readonly string[]).includes(duty);
 const at = (d: Date | null | undefined) => (d ? d.toISOString() : null);
 type FamilyRow = { id: string; familyKey: string; label: string; referenceDate: string; people: unknown; facts: unknown; noneApply: unknown; version: number; updatedBy: string; updatedAt: Date };
-const familyOf = (r: FamilyRow): Family => ({ key: r.familyKey, label: r.label, reference_date: r.referenceDate, people: r.people as Family["people"], facts: r.facts as Family["facts"], none_apply: (r.noneApply ?? []) as Family["none_apply"] });
+export const familyOf = (r: FamilyRow): Family => ({ key: r.familyKey, label: r.label, reference_date: r.referenceDate, people: r.people as Family["people"], facts: r.facts as Family["facts"], none_apply: (r.noneApply ?? []) as Family["none_apply"] });
 const familyView = (r: FamilyRow) => ({ id: r.id, ...familyOf(r), version: r.version, sample: SAMPLE_WORDS, saved_by: nameOf(r.updatedBy), saved_at: at(r.updatedAt) });
 const pdfHas = (s: Snapshot, form: string) => (s.field_maps as { form_number: string; channel?: string }[]).some((m) => m.form_number === form && m.channel !== "ONLINE");
+const editionIn = (expected: unknown) => { const e = obj(expected).edition; return typeof e === "string" && e.trim() ? e.trim() : null; };
+/** A field-map key's edition (the one it was written for), or null for a rule-set key. */
+export const editionOf = (k: { itemKind: string; expected: unknown }) => (k.itemKind === "field_map" ? ((k.expected as MapExpected | null)?.edition ?? null) : null);
 const itemWords = (kind: string, ref: string) => (kind === "rule_set" ? "the eligibility rules" : `the ${ref} field map`);
+
+/** The form field list of a form's PDF map (the edition's inventory file), as the filler reads it (api/src/fill.ts
+ *  writeForm); null when none is recorded. G2 (challenge m5): read once per file version and kept with its hash, so a
+ *  release gate pass over many keys reads and hashes each list once. */
+const LISTS = new Map<string, { stamp: string; inv: Inventory; hash: string }>();
+export function fieldListOf(s: Snapshot, form: string, edition?: string | null): { inv: Inventory; hash: string } | null {
+  // With `edition`, that edition's list (G2, Devin on #568): a combination may hold several mapped PDF editions.
+  const all = (s.field_maps as { form_number: string; form_edition?: string; channel?: string; inventory_file?: string | null }[]).filter((x) => x.form_number === form && x.channel !== "ONLINE");
+  const m = (edition ? all.find((x) => x.form_edition === edition) : undefined) ?? all[0];
+  if (!m?.inventory_file) return null;
+  // Devin review (PR #513): the field list is read only from inside the solution folder, and only a .json file.
+  const path = resolve(SOLUTION, m.inventory_file);
+  if (!path.startsWith(resolve(SOLUTION) + sep) || !path.endsWith(".json")) return null;
+  try {
+    const st = statSync(path), stamp = `${st.mtimeMs}|${st.size}`, hit = LISTS.get(path);
+    if (hit?.stamp === stamp) return hit;
+    const inv = JSON.parse(readFileSync(path, "utf8")) as Inventory, out = { stamp, inv, hash: inventoryHash(inv) };
+    LISTS.set(path, out);
+    return out;
+  } catch { return null; }
+}
 
 @Injectable()
 export class AnswerKeys {
@@ -67,13 +91,16 @@ export class AnswerKeys {
     if (!inv) fail(`${form}'s form field list is not recorded, so its map cannot be tested.`, HttpStatus.UNPROCESSABLE_ENTITY);
     return inv!;
   }
-  private inventoryOrNull(s: Snapshot, form: string): Inventory | null {
-    const m = (s.field_maps as { form_number: string; channel?: string; inventory_file?: string | null }[]).find((x) => x.form_number === form && x.channel !== "ONLINE");
-    if (!m?.inventory_file) return null;
-    // Devin review (PR #513): the field list is read only from inside the solution folder, and only a .json file.
-    const path = resolve(SOLUTION, m.inventory_file);
-    if (!path.startsWith(resolve(SOLUTION) + sep) || !path.endsWith(".json")) return null;
-    try { return JSON.parse(readFileSync(path, "utf8")) as Inventory; } catch { return null; }
+  private inventoryOrNull(s: Snapshot, form: string, edition?: string | null): Inventory | null { return fieldListOf(s, form, edition)?.inv ?? null; }
+  /** G2 (Devin on #568, 3rd pass): the field list of the edition asked for, never another edition's: an edition the
+   *  combination has whose list is not recorded is refused in words (422); an edition it lacks, or none named, reads
+   *  the form's first map's list as before. */
+  private listFor(s: Snapshot, form: string, edition: string | null): Inventory {
+    const has = edition && (s.field_maps as { form_number: string; form_edition?: string; channel?: string }[]).some((m) => m.form_number === form && m.form_edition === edition && m.channel !== "ONLINE");
+    if (!has) return this.inventory(s, form);
+    const inv = this.inventoryOrNull(s, form, edition);
+    if (!inv) fail(`${form} (${edition})'s form field list is not recorded, so its map cannot be tested.`, HttpStatus.UNPROCESSABLE_ENTITY);
+    return inv!;
   }
 
   // ------------------------------------------------------------------------------------------------ families (BR-1)
@@ -140,13 +167,17 @@ export class AnswerKeys {
 
   /** Concept §4 (challenge M5 b): the Expected editor's boxes of one form's map in this combination's draft, read
    *  through the engine (keyBoxes); never a run's output. */
-  async boxes(combinationId: string, form: unknown) {
+  async boxes(combinationId: string, form: unknown, edition?: unknown) {
     const c = await this.combination(combinationId);
     const ref = typeof form === "string" ? form.trim() : "";
     if (!ref) invalid([{ field: "form", message: "Name the form (?form=IMM 5257)." }]);
     const s = await this.draft(c.workspaceId, c.id);
     if (!pdfHas(s, ref)) fail(`${ref} has no PDF field map in this combination.`, HttpStatus.NOT_FOUND);
-    return keyBoxes(s, ref, this.inventory(s, ref))!;
+    // G2 (Devin on #568): ?edition= picks that edition's map and form field list (a combination may hold several).
+    const ed = typeof edition === "string" && edition.trim() ? edition.trim() : null;
+    const out = keyBoxes(s, ref, this.listFor(s, ref, ed), ed);
+    if (!out) fail(`${ref} has no PDF field map of the edition ${ed} in this combination.`, HttpStatus.NOT_FOUND);
+    return out!;
   }
 
   // ------------------------------------------------------------------------------------------------ keys (BR-2, BR-7)
@@ -159,10 +190,10 @@ export class AnswerKeys {
       ...(s.eligibility?.gates?.length ? [{ item_kind: "rule_set" as const, item_ref: "eligibility", label: "Eligibility rules", edition: null }] : []),
     ];
     const keys = await this.db.answerKey.findMany({ where: { combinationId }, include: { family: true, runs: { orderBy: { ranAt: "desc" }, take: 1 } }, orderBy: { updatedAt: "asc" } });
-    const fp = new Map(items.map((i) => [`${i.item_kind}|${i.item_ref}`, fingerprintOf(s, i.item_kind, i.item_ref, i.item_kind === "field_map" ? this.inventoryOrNull(s, i.item_ref) : null)]));
+    const fp = new Map(items.map((i) => [`${i.item_kind}|${i.item_ref}|${i.edition ?? ""}`, fingerprintOf(s, i.item_kind, i.item_ref, i.item_kind === "field_map" ? this.inventoryOrNull(s, i.item_ref, i.edition) : null, { edition: i.edition })]));
     return {
       combination: { id: c.id, label: c.label }, sample: SAMPLE_WORDS, scoring: NO_SCORING, items,
-      keys: keys.map((k) => this.keyView(k, k.runs[0] ?? null, fp.get(`${k.itemKind}|${k.itemRef}`) ?? fingerprintOf(s, k.itemKind as ItemKind, k.itemRef))),
+      keys: keys.map((k) => { const ed = editionOf(k); return this.keyView(k, k.runs[0] ?? null, fp.get(`${k.itemKind}|${k.itemRef}|${ed ?? ""}`) ?? fingerprintOf(s, k.itemKind as ItemKind, k.itemRef, null, { edition: ed })); }),
     };
   }
 
@@ -178,7 +209,7 @@ export class AnswerKeys {
   async get(id: string) {
     const k = await this.key(id);
     const s = await this.draft(k.workspaceId, k.combinationId);
-    return this.keyView(k, k.runs[0] ?? null, fingerprintOf(s, k.itemKind as ItemKind, k.itemRef, k.itemKind === "field_map" ? this.inventoryOrNull(s, k.itemRef) : null), true);
+    return this.keyView(k, k.runs[0] ?? null, fingerprintOf(s, k.itemKind as ItemKind, k.itemRef, k.itemKind === "field_map" ? this.inventoryOrNull(s, k.itemRef, editionOf(k)) : null, { edition: editionOf(k) }), true);
   }
 
   /** Challenge M3 (SA-1B-296 r2: "entered and signed by the expert"): the expert or the author enters expected values. */
@@ -195,7 +226,7 @@ export class AnswerKeys {
     const f = await this.family(b.family_id as string);
     const s = await this.draft(c.workspaceId, c.id);
     // Break m2: a map key needs the form's field list (it says which boxes a person fills), as a run does.
-    const { expected, errors } = checkExpected(s, kind, ref, familyOf(f), b.expected, kind === "field_map" && pdfHas(s, ref) ? this.inventory(s, ref) : null);
+    const { expected, errors } = checkExpected(s, kind, ref, familyOf(f), b.expected, kind === "field_map" && pdfHas(s, ref) ? this.listFor(s, ref, editionIn(b.expected)) : null);
     if (errors.length) invalid(errors);
     if (await this.db.answerKey.findUnique({ where: { familyId_combinationId_itemKind_itemRef: { familyId: f.id, combinationId, itemKind: kind, itemRef: ref } } })) invalid([{ field: "family_id", message: `The family "${f.familyKey}" already has a key for ${itemWords(kind, ref)} here: change that one.` }]);
     const k = await this.db.answerKey.create({ data: { workspaceId: c.workspaceId, familyId: f.id, combinationId, itemKind: kind, itemRef: ref, expected: expected as object, updatedBy: actor.id } });
@@ -212,7 +243,7 @@ export class AnswerKeys {
     const s = await this.draft(k.workspaceId, k.combinationId);
     // Review minor 1 (BR-6): a change that names no edition keeps the key's own; it never moves to the map's edition.
     const given = obj(b.expected), kept = k.itemKind === "field_map" && !(typeof given.edition === "string" && given.edition.trim()) ? { ...given, edition: (k.expected as MapExpected).edition } : b.expected;
-    const { expected, errors } = checkExpected(s, k.itemKind as ItemKind, k.itemRef, familyOf(k.family), kept, k.itemKind === "field_map" && pdfHas(s, k.itemRef) ? this.inventory(s, k.itemRef) : null);
+    const { expected, errors } = checkExpected(s, k.itemKind as ItemKind, k.itemRef, familyOf(k.family), kept, k.itemKind === "field_map" && pdfHas(s, k.itemRef) ? this.listFor(s, k.itemRef, editionIn(kept)) : null);
     if (errors.length) invalid(errors);
     if (b.version !== k.version) conflict(`${nameOf(k.updatedBy)} saved these expected values at ${k.updatedAt.toISOString().slice(11, 16)} UTC. Reload their version, then make your change again.`);
     const why = changeProblem(k.state, b.reason);
@@ -246,7 +277,7 @@ export class AnswerKeys {
     const k = await this.key(id);
     const s = await this.draft(k.workspaceId, k.combinationId);
     const family = familyOf(k.family);
-    const r = k.itemKind === "field_map" ? runFieldMap(s, family, k.itemRef, this.inventory(s, k.itemRef), k.expected as MapExpected) : runRuleSet(s, family, k.expected as RuleExpected);
+    const r = k.itemKind === "field_map" ? runFieldMap(s, family, k.itemRef, this.inventoryOrNull(s, k.itemRef, editionOf(k)) ?? this.inventory(s, k.itemRef), k.expected as MapExpected) : runRuleSet(s, family, k.expected as RuleExpected);
     const row = await this.db.answerKeyRun.create({ data: { workspaceId: k.workspaceId, keyId: k.id, keyVersion: k.version, itemFingerprint: r.fingerprint.item, inputsFingerprint: r.fingerprint.inputs, result: r.result, lines: r.lines as object[], passed: r.passed, failed: r.failed, ranBy: actor.id } });
     await this.audit.log(k.workspaceId, actor.id, "ran", "answer key", `${k.family.familyKey}:${k.itemRef}`, `${actor.name} ran the family "${k.family.familyKey}" against ${itemWords(k.itemKind, k.itemRef)}: ${r.result === "PASSED" ? "passed" : "failed"}, ${r.passed} of ${r.passed + r.failed} values`, undefined, k.combinationId);
     return { id: row.id, result: r.result, passed: r.passed, failed: r.failed, lines: r.lines, key: this.keyView(k, row, r.fingerprint) };
@@ -261,7 +292,7 @@ export class AnswerKeysController {
   @Post("answer-keys/families") createFamily(@Headers("x-actor") a: H, @Body() b: unknown) { return this.k.createFamily(readerOf(a), b); }
   @Put("answer-keys/families/:id") updateFamily(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.k.updateFamily(readerOf(a), id, b); }
   @Get("answer-keys/fields") fields(@Headers("x-actor") a: H) { readerOf(a); return this.k.libraryFields(); }
-  @Get("combinations/:id/answer-keys/boxes") boxes(@Headers("x-actor") a: H, @Param("id") id: string, @Query("form") form: unknown) { readerOf(a); return this.k.boxes(id, form); }
+  @Get("combinations/:id/answer-keys/boxes") boxes(@Headers("x-actor") a: H, @Param("id") id: string, @Query("form") form: unknown, @Query("edition") edition: unknown) { readerOf(a); return this.k.boxes(id, form, edition); }
   @Get("combinations/:id/answer-keys") list(@Headers("x-actor") a: H, @Param("id") id: string) { readerOf(a); return this.k.list(id); }
   @Post("combinations/:id/answer-keys") create(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.k.create(readerOf(a), id, b); }
   @Get("answer-keys/:id") get(@Headers("x-actor") a: H, @Param("id") id: string) { readerOf(a); return this.k.get(id); }
