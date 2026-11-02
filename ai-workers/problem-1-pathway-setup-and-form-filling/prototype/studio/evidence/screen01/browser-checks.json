@@ -1,9 +1,9 @@
 {
- "at": "2026-11-02T05:23:08.743Z",
+ "at": "2026-11-01T03:31:47.245Z",
  "timings": {
-  "cold_first_view_ms": 624,
-  "first_view_ms": 185,
-  "filter_ms": 36
+  "cold_first_view_ms": 517,
+  "first_view_ms": 170,
+  "filter_ms": 42
  },
  "pass": 116,
  "fail": 0,
@@ -11,7 +11,7 @@
   {
    "name": "setup: sample inputs load through the form intake",
    "ok": true,
-   "detail": "6.616"
+   "detail": "6.514"
   },
   {
    "name": "setup: one replay of a saved real AI run on Super visa (no model call, US$0)",
@@ -26,7 +26,7 @@
   {
    "name": "performance: first view under 1 s with the sample data (app files cached)",
    "ok": true,
-   "detail": "185 ms (cold browser 624 ms) · load 3.1 on 4 cores"
+   "detail": "170 ms (cold browser 517 ms)"
   },
   {
    "name": "BR-13 / P-180 Q2: All is the default; the chips are All · Not started · In progress · Live, each with a count",
@@ -77,7 +77,7 @@
   {
    "name": "performance: changing the view answers under 200 ms",
    "ok": true,
-   "detail": "36 ms · load 3.0 on 4 cores"
+   "detail": "42 ms"
   },
   {
    "name": "F1: Live shows every row that is Live",
@@ -154,7 +154,7 @@
   {
    "name": "regression: \"Clear search\" keeps the All view after the search box settles (no stale URL rewrite)",
    "ok": true,
-   "detail": "http://localhost:15404/"
+   "detail": "http://localhost:4443/"
   },
   {
    "name": "item 5: Corporate shows the demo names (LMIA › High-wage position, Low-wage position, Global Talent Stream, In-home caregiver)",
@@ -173,7 +173,7 @@
   {
    "name": "keyboard: one tab stop, ↑/↓/Home/End move, Enter opens the combination page (P-50)",
    "ok": true,
-   "detail": "Visitor visa → http://localhost:15404/c/9f8067c8-7f3b-4098-aa0a-dddaba1ee163"
+   "detail": "Visitor visa → http://localhost:4443/c/41d34a4e-302b-4868-9b2f-74b3ae6b0f82"
   },
   {
    "name": "P-50: Back keeps the view (All), highlights the opened row and restores the scroll",
@@ -223,7 +223,7 @@
   {
    "name": "item 7: the facts sit in one muted line under the title",
    "ok": true,
-   "detail": "Not released yet · cases opened outside Canada · people: Principal applicant (always); Spouse or partner (travelling) (optional); Child (travelling), 0–4 (optional) · Sample"
+   "detail": "Not released yet · cases opened outside Canada · people: Applicant, Spouse or partner (travelling) (optional), Child (travelling) (0–4) · Sample"
   },
   {
    "name": "item 1 → S5: no \"+ Add form\" on the Overview (it only reports)",
@@ -254,7 +254,7 @@
   {
    "name": "item 9 / #5: one way in, many files, one card per file (added · older edition not used · already in the library)",
    "ok": true,
-   "detail": "44 (09-2024) added to the library as a new form (read from the file).Added to the library. | youKept aside as an older edition: it is not used. See it on To review.See it on To review | y: IMM 5707 (01-2023). Nothing duplicated.Already in the library: nothing was added twice."
+   "detail": "44 (09-2024) added to the library as a new form (read from the file).Added to the library. | To review; then a second person compares and approves it.Record the IRCC page it came from | y: IMM 5707 (01-2023). Nothing duplicated.Already in the library: nothing was added twice."
   },
   {
    "name": "item 9: what the file says is shown (code, edition and title, read by rules)",
@@ -353,7 +353,7 @@
   {
    "name": "item 3: the warnings on a Live row are this combination's own and link to Review and release",
    "ok": true,
-   "detail": "16 shown, 16 own"
+   "detail": "15 shown, 15 own"
   },
   {
    "name": "axe: combination-page-live-unverified-source-held has no WCAG A/AA violation",
@@ -510,7 +510,7 @@
   {
    "name": "C1.6: someone without the author duty sees the channels but cannot change them",
    "ok": true,
-   "detail": "{\"boxes\":[],\"pdf\":true,\"add\":0,\"text\":\"Before forms●Official pages: Proposed by the rules, not confirmed · Confirm the checklist page○Who can be in this application · Principal applicant (always) · Spouse or partner (optional) · Child, 0–4 (optional) · Representative (optional) Show8 forms on this combinationAdded without an AI find. Nothing was spent on finding forms yet. Which forms apply is Sam"
+   "detail": "{\"boxes\":[],\"pdf\":true,\"add\":0,\"text\":\"Before forms●Official pages: Proposed by the rules, not confirmed · Confirm the checklist page○Who can be in this application · Principal applicant (always) · Spouse or partner (optional) · Child, 0–4 (optional) · Representative (optional) ShowNo form find yetIts forms and checklists come from canada.ca into the Form library and attach here. Nothing was spent"
   },
   {
    "name": "C1.6 P-102: the sources tab no longer offers what drafting reads online",
@@ -523,7 +523,7 @@
   {
    "name": "QA-17: a step run on another day shows its date (\"Oct 21, …\"); one run today says \"today\"",
    "ok": true,
-   "detail": "Oct 21, 5:23 p.m.Ste | today at 5:21 a. | today at 5:21 a."
+   "detail": "Oct 21, 5:23 p.m. Ch | today at 3:30 a. | today at 3:30 a."
   },
   {
    "name": "P-63: no page says \"box\" or \"box map\" (form field, field map)",

@@ -1,8 +1,8 @@
 {
-  "at": "2026-11-02T05:13:26.178Z",
-  "port": 15434,
-  "pass": 44,
-  "fail": 5,
+  "at": "2026-10-29T15:20:39.917Z",
+  "port": 4473,
+  "pass": 49,
+  "fail": 0,
   "log": [
     {
       "name": "C11.12 L9 pass: after a reset only the new workspace's six person roles remain",
@@ -94,15 +94,16 @@
       "ok": true,
       "detail": [
         "IMM 1295 is filed as Online, but the Form library records that IRCC accepts it only as a PDF upload. Choose a way IRCC accepts.",
+        "IMM 1295: \"Signed by hand and scanned\" does not fit a line filed as Online. A Online line is no signature or typed name.",
         "IMM 1295 is filed Online: it needs the browser extension (later wave), so the product does not fill it yet. File it as a PDF upload to fill its PDF.",
         "IMM 1295: 37 rows of its lists (for example \"Question 8 B Row 1 Country or Territory. If you replied…\") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library.",
-        "Not decided yet (from an earlier release): 16 form fields (for example \"*\"). Decide them when this edition is drafted again."
+        "Not decided yet (from an earlier release): 16 form fields (for example *). Decide them when this edition is drafted again."
       ]
     },
     {
       "name": "C1.6 L4 fail: submitting for review is refused while it is so",
       "ok": true,
-      "detail": "Fix 2 problems before submitting: Filing for Child: Filing for Child: choose how this person's application goes to IRCC (Forms › Who can be "
+      "detail": "Fix 2 problems before submitting: IMM 1295: IMM 1295 is filed as Online, but the Form library records that IRCC accepts it only as a PDF upl"
     },
     {
       "name": "C1.6 L4 pass: filed as a PDF upload again, the error is gone",
@@ -138,13 +139,7 @@
         "why": "always required for this combination; from age 18",
         "channel": "PDF_UPLOAD",
         "channelWords": "PDF upload",
-        "noRule": false,
-        "group": "PDF_UPLOAD",
-        "signature": "NONE",
-        "signatureWords": "No signature",
-        "toSign": false,
-        "laterWave": null,
-        "checklist": false
+        "noRule": false
       }
     },
     {
@@ -167,9 +162,7 @@
     {
       "name": "C11.6 L5 pass: With an LMIA asks the date of birth (Personal details), so its age-gated IMM 1295 has no such error",
       "ok": true,
-      "detail": [
-        "Filing for Child: choose how this person's application goes to IRCC (Forms › Who can be in this application)."
-      ]
+      "detail": []
     },
     {
       "name": "C11.6 L5 pass: and a case decides it from that answer (the child, 8, does not get IMM 1295; the principal does)",
@@ -235,7 +228,7 @@
       "ok": true,
       "detail": {
         "worst_usd": 0,
-        "remaining_usd": 60
+        "remaining_usd": 58
       }
     },
     {
@@ -314,47 +307,39 @@
       "name": "C11.6 QA-69 pass (before a release): the Forms tab offers Undo of the last change on its forms",
       "ok": true,
       "detail": {
-        "id": "c4073d9e-47f5-4799-8f90-645fb0a1cde9",
+        "id": "d3661bdd-6df4-469c-a696-1574f3b06adb",
         "action": "edit",
         "codes": [
           "IMM 1295"
         ],
         "by": "user-A",
-        "at": "2026-11-02T05:13:24.043Z"
+        "at": "2026-10-29T15:20:37.943Z"
       }
     },
     {
       "name": "setup: the change is released (submitted, signed off, approved by a different person)",
-      "ok": false,
-      "detail": "Release refused: 2 problems (Filing for Spouse or partner: Filing for Spouse or partner: choose how this person's application goes to IRCC (Forms › Who can be in this application).)"
+      "ok": true,
+      "detail": 2
     },
     {
       "name": "C11.12 L6: after the release the tab offers no Undo",
-      "ok": false,
-      "detail": true
+      "ok": true,
+      "detail": false
     },
     {
       "name": "C11.12 L6 fail: Undo of a save that was released since is refused (409, a release is never undone)",
-      "ok": false,
-      "detail": ""
+      "ok": true,
+      "detail": "Released since: that change was released meanwhile, and a release is never undone. Change who can be in a new draft."
     },
     {
       "name": "C11.6 QA-69: after the release the Forms tab offers no Undo",
-      "ok": false,
-      "detail": {
-        "id": "c4073d9e-47f5-4799-8f90-645fb0a1cde9",
-        "action": "edit",
-        "codes": [
-          "IMM 1295"
-        ],
-        "by": "user-A",
-        "at": "2026-11-02T05:13:24.043Z"
-      }
+      "ok": true,
+      "detail": null
     },
     {
       "name": "C11.6 QA-69 fail: Undo of a forms change made before the release is refused (409 Released since)",
-      "ok": false,
-      "detail": "201 "
+      "ok": true,
+      "detail": "409 That change was released meanwhile: a release is never undone. Change it in a new draft."
     }
   ]
 }
