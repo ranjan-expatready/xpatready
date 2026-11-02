@@ -41,18 +41,21 @@ export async function writeForm(snapshot: Snapshot, cov: { boxes: BoxRow[] }, fo
   const values: Record<string, string> = {};
   // F1 slice 2 (evidence lane F2, F3): a signature is never typed by the product; values go in the form's own format.
   const write = (path: string, v: string) => (values[path] = inFormFormat(box.get(path) ?? {}, v));
+  // C7.2 cause 1: the derivations that compare two facts read the other one from the same person's confirmed facts.
+  const confirmed = new Map<string, unknown>(cov.boxes.filter((b) => b.coverage === "confirmed fact" && b.fact && (b.row === null || b.row === undefined)).map((b) => [`${b.about}|${b.fact}`, b.value]));
   // F1 slice 2 and 2b (evidence lane F2, F6): a signature or the oath block is never written, whatever is mapped to it.
   const boxes = cov.boxes.map((r: any) => {
     const person = byAPerson(inv.fields, box.get(r.box) ?? { data_path: r.box });
     if (person) return { ...r, result: "by a person", why: person };
-    if (r.coverage !== "confirmed fact") return { ...r, result: "not written", why: r.fix ?? (r.coverage === "answered on screen" ? "answered on screen, not confirmed" : r.detail) };
+    // C7.2 cause 3: a Yes/No "is anything recorded?" box is written "N" when a person confirmed that nothing applies.
+    if (r.coverage !== "confirmed fact" && !r.nothing_recorded) return { ...r, result: "not written", why: r.fix ?? (r.coverage === "answered on screen" ? "answered on screen, not confirmed" : r.detail) };
     // A form field on an answer list takes its own code from its option map (the team's ENUM map, onMissing REFUSE).
     const e = entryOf.get(r.box), list = e?.fact ? listOf.get(e.fact) : undefined;
     if (e?.option_map && list) { const code = codeForValue(r.value, e.option_map, list); if (code === null) return { ...r, result: "by hand", why: `"${r.value}" has no code in this form field's option map` }; write(r.box, code); return { ...r, result: "written", written: values[r.box] }; }
     // A text form field (no codes in its transform and no choices of its own) writes the value's label, never its key.
     const own = box.get(r.box) ?? {};
     const text = list && !hasCodes(r.transform) && !(Array.isArray(own.options_resolved) && own.options_resolved.length);
-    const o = runTransform(r.transform ?? "as_is", text ? labelForText(r.value, list) : r.value, own);
+    const o = runTransform(r.transform ?? "as_is", r.nothing_recorded ? null : text ? labelForText(r.value, list) : r.value, own, { fact: (k) => confirmed.get(`${r.about}|${k}`) });
     if (o.ok) { write(r.box, o.value); return { ...r, result: "written", written: values[r.box] }; }
     return { ...r, result: "hand" in o ? "by hand" : "blank", why: o.reason };
   });
