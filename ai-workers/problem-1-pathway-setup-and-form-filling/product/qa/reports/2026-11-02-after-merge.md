@@ -106,3 +106,12 @@ The :4400 demo (not reachable from the cloud) · a headed walk (no display) · Q
 * K1 (C2.12) and K4 (C4.1): already met (round 1 evidence), so both rows stay Works.
 * K3 (C3.12): the Published date shows at all three widths, with no sideways scroll and axe clean. C3.12 stays Partial on QA-148.
 * 07:35 UTC check: #468 D3 (C2.6 launcher job, 33ba1f96) passes. The stub pass reproduces (exit 0) and `check_forms_s4_canada.ts` is 80/80. Minor: the stub run rewrites the tracked `p2/screening/canary-digest.json` (QA-145 part 2 class). #457's new head 65a9f9ca only changes a suite list, so its verdict stands.
+
+## Round 6 — after-merge re-checks on main c5240a3b (#423, #434, #435, #445, #456 merged 08:02–08:03; #426 earlier)
+* C11.8 (#435 D2 part 1): pack 12/4/2, the same as its 1 Nov baseline. **New QA-154 (Gap · Major, forms):** a LIVE field-map draft on a copy without the switch is queued (201) instead of refused at the door, and the plan carries no live flag. Partial.
+* C11.12 (#445 PR 1): 39/39; pack 18/19 (the P-209 pack Question). Partial (PRs 2–3 to come).
+* C3.6 (#426): answer values 50/50; pack 17/18 on wp.family (a document type named while adding a requirement is refused, not proposed). Partial.
+* S1 (#456) on C7.6: readiness 64/64 (rules level). Partial.
+* #423 and #434 change only tests; their checks passed before merge (24/24, 135/135).
+* Built files deleted: C3.6, S1. C6.4 is still waiting (M3; now qa's, since qa-m3 has stopped).
+* The database had stopped again before this round and was restarted as user postgres.
