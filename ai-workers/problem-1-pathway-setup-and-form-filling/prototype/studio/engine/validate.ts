@@ -255,3 +255,13 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
 
 /** "1st", "2nd", "3rd", "11th": a section's place said in words (C4.1; Review line and history line). */
 export function ordinal(n: number) { const t = n % 100, u = n % 10; return `${n}${t >= 11 && t <= 13 ? "th" : u === 1 ? "st" : u === 2 ? "nd" : u === 3 ? "rd" : "th"}`; }
+
+/** C5.6 (P-240, row G3): a release is a "Demo release" when what it froze holds Sample content: a Sample combination
+ *  (source_basis ILLUSTRATIVE) or any value marked Sample (a check saved without an official source is illustrative).
+ *  Read from the release's own snapshot, so a later change to the combination never relabels a past release. */
+export function isDemoSnapshot(raw: unknown): boolean {
+  if (!raw || typeof raw !== "object") return false;
+  const snap = raw as { combination?: { source_basis?: string | null } | null; checks?: unknown };
+  const checks = Array.isArray(snap.checks) ? (snap.checks as ({ illustrative?: boolean | null } | null)[]) : [];
+  return snap.combination?.source_basis === "ILLUSTRATIVE" || checks.some((c) => !!c?.illustrative);
+}

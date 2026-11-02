@@ -54,7 +54,7 @@ run(async () => {
   // P-119: applicants get their own forms, questions and documents; the line says so (the tooltip's words).
   ok("C11.12 pass (P-119): each applying line says it gets its own forms, questions and documents", (v?.lines ?? []).filter((l: any) => l.applies).length >= 3 && (v?.lines ?? []).filter((l: any) => l.applies).every((l: any) => /own forms, questions and documents/i.test(String(l.tip ?? l.help ?? ""))), (v?.lines ?? []).map((l: any) => l.tip ?? l.help ?? null));
   r = await save(vv, visitors.map((l) => (l.role === "child" ? { ...l, filing: "on_principal_applying" } : l)));
-  ok("C11.12 fail (Sample, for the immigration expert: P-135 gives program types as examples only): on a temporary residence combination a child cannot be on the principal's filing (400, in words)", r.status === 400 && words(r).length > 10, words(r));
+  ok("C11.12 warn (P-233 (3): warn, never refuse; Sample, for the immigration expert): on a temporary residence combination a child on the principal's filing is saved with a warning in words", r.status < 300 && (r.body?.warnings ?? []).some((w: string) => w.length > 10), r.status >= 300 ? words(r) : r.body?.warnings);
   r = await save(vv, visitors.map((l) => (l.role === "principal" ? { ...l, filing: "declared_only" } : l)));
   ok("C11.12 fail: the principal must file their own application (400, in words)", r.status === 400 && /principal/i.test(words(r)), words(r));
   r = await save(vv, visitors.map((l) => (l.role === "representative" ? { ...l, filing: "declared_only" } : l)));

@@ -175,6 +175,8 @@ export type CaseForm = {
   readiness: Readiness; copies: FormCopy[];
   /** The evidence lane's fill trial for this form passed (P-65 (a)); until it does a copy is "Checked copy, not for filing". */
   trial_passed: boolean;
+  /** S2 (SA-1B-174): why the filling is not proven for this edition and field map, in words; null when it is. */
+  trial_why?: string | null;
   /** The form no longer applies to this person (for example marked not travelling); its copies stay listed (break M4). */
   applies: boolean;
   /** P-143: the line's channel; P-145: a form filed Online gets a "Copy, not for filing" (never locked or filed). */
@@ -201,6 +203,11 @@ export function newestReleases<T extends { combination_id: string; version: numb
  *  or confirmed with a problem (it would be written wrong); and a required repeating group with no entries unless
  *  "none apply" is confirmed for it (Lead, break M3), named by its section (fact "group:<section>"). */
 export type Readiness = { ready: boolean; missing: { fact: string; label: string; about: string; reason: "not answered" | "not confirmed" | "needs a fix" | "a check fired" }[] };
+/** QA-76: the role labels a part can carry when no person stands behind it ("The application", "The representative"),
+ *  written in the middle of a sentence ("About the representative", "for the representative"); a person's own name,
+ *  even one starting with "The", is kept as it is. */
+export const ROLE_PART_LABELS = new Set(["The application", "The representative"]);
+export const inSentence = (label: string) => (ROLE_PART_LABELS.has(label) ? label.replace(/^The /, "the ") : label);
 /** How a required repeating group with no entries is named where it blocks filing. */
 export const groupLabel = (title: string) => `Entries in "${title}": add them, or say none apply`;
 

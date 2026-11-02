@@ -43,12 +43,13 @@ await main("Setup", "Visitor visa release 2 for the M3 path (Super Admin, M2)", 
     ok(`S4 ${form}: ${channel}, ${signature} (Sample, FQ-2)`, r.status < 300, r.body?.detail ?? r.status);
   }
 
-  // M3-0 (not built): the filing mode per role. VV-R03: each family member completes their own application.
+  // M3-0 / C11.12 (P-233): the filing mode per role. VV-R03: each family member completes their own application. Only
+  // a role that may be an applicant takes a mode: the Representative files nothing (BR-3, challenge B1).
   const people = (await call("GET", `/combinations/${vv}/config`, undefined, AUTHOR)).body?.snapshot?.combination?.participants ?? [];
   const version = Number(sql(`select participants_version from combination where id='${vv}'`) ?? 0);
-  r = await call("PATCH", `/combinations/${vv}/people`, { participants: people.map((p: Record<string, unknown>) => ({ role: p.role, label: p.label, min: p.min, max: p.max, applies: p.applies, filingMode: "files_own" })), version }, AUTHOR);
+  r = await call("PATCH", `/combinations/${vv}/people`, { participants: people.map((p: Record<string, unknown>) => ({ role: p.role, label: p.label, min: p.min, max: p.max, applies: p.applies, ...(p.applies ? { filingMode: "files_own" } : {}) })), version }, AUTHOR);
   ok("S5 (M3-0) every Visitor visa role files its own application (filing mode files_own, VV-R03), and the draft keeps it",
-    r.status < 300 && (r.body?.participants ?? []).every((p: { filingMode?: string }) => p.filingMode === "files_own"), r.body?.detail ?? r.body?.participants);
+    r.status < 300 && (r.body?.participants ?? []).every((p: { applies?: boolean; filingMode?: string }) => (p.applies ? p.filingMode === "files_own" : !p.filingMode)), r.body?.detail ?? r.body?.participants);
 
   // Documents per person (VV-R05, VV-R06, VV-R08; Sample beyond the quoted lines; FQ-4 for the minor's letter).
   const reqs: { name: string; who: string; mode: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: unknown; plain?: string }[] = [
@@ -74,7 +75,10 @@ await main("Setup", "Visitor visa release 2 for the M3 path (Super Admin, M2)", 
   // wider question (committed, arrested, charged or convicted): Sample.
   const gates = [
     { key: "vv.travel_document", label: "Passport number and expiry date answered (Sample)", condition: { op: "and", args: [{ op: "exists", field: "person.passport_number" }, { op: "exists", field: "person.passport_expiry_date" }] } },
-    { key: "vv.no_convictions", label: "Answered no to the criminal history question (Sample)", condition: { op: "eq", field: "person.criminal_history", value: false } },
+    // P-230 (1) (researched 2 Nov): the background question covers committed, arrested, charged or convicted, and
+    // rehabilitation, record suspension and a temporary resident permit exist, so a Yes asks for the representative's
+    // review, never a hard Not eligible ("when not met" as data).
+    { key: "vv.no_convictions", label: "Answered no to the criminal history question (Sample)", condition: { op: "eq", field: "person.criminal_history", value: false }, whenNotMet: "needs_review" },
   ];
   const judgement = ["Has enough money for the stay", "Is in good health", "Ties that will take the person back home", "Will leave Canada at the end of the visit"];
   r = await call("PUT", `/combinations/${vv}/eligibility-gates`, { gates, judgement }, AUTHOR);

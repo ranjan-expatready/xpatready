@@ -10,9 +10,11 @@ import { createHash, randomUUID } from "node:crypto";
 import type { Prisma, ProposalItem as Row } from "@prisma/client";
 import { ProposalItem, ProposalPayload, type ProposalKind } from "../../contracts/proposal-item.ts";
 import { normalizeLabel } from "../../contracts/programs.ts";
+import { DRAFT_FIELDS_STEP, FIELD_ID, FIELD_ID_MAX } from "./field-draft-items.ts";
 import { subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
 import { fail, need, type Actor, type Audit, type Db } from "./core.ts";
 import { keyFor } from "./library-changes.ts";
+import { checkedFieldValues, dropFieldList, type AnswerValue } from "./answer-values.ts";
 import { acceptPqrPick } from "./fact-sources.ts";
 import { LibrarySources } from "./library-sources.ts";
 
@@ -52,6 +54,17 @@ export function identityKeyOf(p: ProposalPayload, given: string): string {
   }
 }
 
+/** C3.6 (break R2-M1): a draft list that a draft field names and that has no ADD of its own rides with that field; it is not a library item
+ *  another proposal may reuse: it can still be undone or withdrawn with its field. */
+async function ridingLists(db: Client, workspaceId: string): Promise<Set<string>> {
+  const named = await db.canonicalField.findMany({ where: { workspaceId, status: "DRAFT", answerListKey: { not: null } }, select: { answerListKey: true } });
+  if (!named.length) return new Set();
+  const drafts = await db.answerList.findMany({ where: { workspaceId, status: "DRAFT", answerListKey: { in: named.map((f) => f.answerListKey!) } }, select: { answerListKey: true } });
+  if (!drafts.length) return new Set();
+  const own = new Set((await db.libraryChange.findMany({ where: { workspaceId, kind: "answer_list", key: { in: drafts.map((d) => d.answerListKey) } }, select: { key: true } })).map((c) => c.key));
+  return new Set(drafts.map((d) => d.answerListKey).filter((k) => !own.has(k)));
+}
+
 /** The library item an identity key already names (an exact duplicate), or null. */
 export async function sameInLibrary(db: Client, workspaceId: string, p: ProposalPayload): Promise<string | null> {
   const want = identityKeyOf(p, "");
@@ -66,7 +79,8 @@ export async function sameInLibrary(db: Client, workspaceId: string, p: Proposal
   }
   if (p.kind === "answer_list") {
     const rows = await db.answerList.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] } }, include: { values: { select: { valueKey: true } } } });
-    return rows.find((r) => listIdentity(r.values.map((v) => v.valueKey)) === want)?.answerListKey ?? null;
+    const riding = await ridingLists(db, workspaceId);
+    return rows.find((r) => !riding.has(r.answerListKey) && listIdentity(r.values.map((v) => v.valueKey)) === want)?.answerListKey ?? null;
   }
   if (p.kind === "document_type") {
     // The same identity as identityKeyOf: a name and what it proves (two proofs under one name are two items).
@@ -83,7 +97,7 @@ async function usableInLibrary(db: Client, workspaceId: string, kind: string, ke
   switch (kind) {
     case "field": return !!(await db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: key, status: live, mergedIntoKey: null }, select: { id: true } }));
     case "section": return !!(await db.logicalSection.findFirst({ where: { workspaceId, sectionKey: key, status: live }, select: { id: true } }));
-    case "answer_list": return !!(await db.answerList.findFirst({ where: { workspaceId, answerListKey: key, status: live }, select: { id: true } }));
+    case "answer_list": return !(await ridingLists(db, workspaceId)).has(key) && !!(await db.answerList.findFirst({ where: { workspaceId, answerListKey: key, status: live }, select: { id: true } }));
     case "document_type": return !!(await db.documentType.findFirst({ where: { workspaceId, documentTypeKey: key, status: live }, select: { id: true } }));
     case "person_role": return !!(await db.personRole.findFirst({ where: { workspaceId, roleKey: key, retiredAt: null }, select: { id: true } }));
     default: return false;
@@ -179,9 +193,26 @@ const waitingAdd = (tx: Tx, l: Landing, kind: string, key: string, label: string
   sourceJobId: l.sourceJobId ?? null, combinationId: l.combinationId ?? null, proposalItemId: l.itemId, batchId: l.batchId } });
 
 /** A new shared field as a draft row plus its ADD waiting for a second person. Also the field-map apply's writer. */
-export async function landField(tx: Tx, l: Landing, f: { key: string; meaning: string; valueType: string; label?: string | null; sourceRef: string }) {
+const sameList = (a: { valueKey: string; label: string; sortOrder: number }[], b: readonly AnswerValue[]) =>
+  a.length === b.length && [...a].sort((x, y) => x.sortOrder - y.sortOrder).every((v, i) => v.valueKey === b[i].code && v.label === b[i].label);
+
+/** The list a field's values land as: the released list with the same values (codes, words and order; break m3) is
+ *  reused; else a new draft list that rides with the field (no ADD of its own: break B1). */
+async function landAnswerList(tx: Tx, ws: string, actorId: string, label: string, values: readonly AnswerValue[], keyOf: (label: string, used: Set<string>) => string): Promise<string> {
+  const released = await tx.answerList.findMany({ where: { workspaceId: ws, status: "PUBLISHED" }, include: { values: { select: { valueKey: true, label: true, sortOrder: true } } } });
+  const same = released.find((x) => sameList(x.values, values));
+  if (same) return same.answerListKey;
+  const used = new Set((await tx.answerList.findMany({ where: { workspaceId: ws }, select: { answerListKey: true } })).map((x) => `x.${x.answerListKey}`));
+  const key = keyOf(`${label} answers`, used);
+  await tx.answerList.create({ data: { workspaceId: ws, answerListKey: key, version: 1, status: "DRAFT", label: `${label}: answers`, origin: "AI_PROPOSAL", updatedBy: actorId,
+    values: { create: values.map((v, i) => ({ valueKey: v.code, label: v.label, sortOrder: i + 1 })) } } });
+  return key;
+}
+
+export async function landField(tx: Tx, l: Landing, f: { key: string; meaning: string; valueType: string; label?: string | null; answerListKey?: string | null; sourceRef: string }) {
   const made = await tx.canonicalField.create({ data: { workspaceId: l.ws, canonicalFieldKey: f.key, version: 1, status: "DRAFT", meaning: f.meaning, valueType: f.valueType, dataType: (VALUE_TYPE_TO_DATA_TYPE as Record<string, string>)[f.valueType] ?? "STRING",
     scope: f.key.startsWith("case.") ? "CASE_LEVEL" : "CLIENT_LEVEL", subjectKind: subjectKindOf(f.key), origin: "AI_PROPOSAL", sourceRef: f.sourceRef, updatedBy: l.actor.id,
+    ...(f.answerListKey ? { answerListKey: f.answerListKey } : {}),
     ...(f.label ? { label: f.label, groupKey: f.key.split(".")[0], labelChecked: true } : {}) } as Prisma.CanonicalFieldUncheckedCreateInput });
   await waitingAdd(tx, l, "field", f.key, f.label ?? made.label ?? null);
   return made;
@@ -217,8 +248,23 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
       const retired = await tx.canonicalField.findFirst({ where: { workspaceId: l.ws, canonicalFieldKey: ruleFact, status: "RETIRED", mergedIntoKey: null }, select: { id: true } });
       fail(retired ? `${ruleFact} is a retired library field: reject this one and restore it in Library › Fields.` : `${ruleFact} is already in the library (added since it was proposed): reject this one; the rule can use it as it is.`, HttpStatus.CONFLICT);
     }
-    const key = typeof ruleFact === "string" ? ruleFact : keyFor(f.subject ?? "case", f.label, used);
-    await landField(tx, l, { key, meaning: f.meaning, valueType: f.valueType, label: f.label, sourceRef: rule ? `Needed by ${rule.sentence}; ${sourceRef(r, l.actor)}` : sourceRef(r, l.actor) });
+    // C11.13 (review of #427): a field drafted from a form edition keeps the id the AI proposed (the key later drafts are
+    // matched by), when it is a library key and still free; otherwise a key is made from the name, as for any field.
+    const proposed = r.step === DRAFT_FIELDS_STEP ? (r.work as { proposedKey?: unknown } | null)?.proposedKey : undefined;
+    const draftedKey = typeof proposed === "string" && proposed.length <= FIELD_ID_MAX && FIELD_ID.test(proposed) && !used.has(proposed) ? proposed : null;
+    // A drafted field whose proposed id is taken gets a key from that id's own name (its label may carry the area or a
+    // number added to keep names apart); every other field keeps its whole label, as before (Devin #427).
+    const proposedName = typeof proposed === "string" && proposed.includes(".") ? proposed.split(".").slice(1).join(" ").replace(/_/g, " ") : null;
+    const key = typeof ruleFact === "string" ? ruleFact : draftedKey ?? keyFor(f.subject ?? "case", proposedName ?? f.label, used);
+    // C3.6 (Lead, 2 Nov): a choice fact's answer values land as its answer list, checked again here so an edit on To
+    // review passes the add's rules (break M2); the list rides with the field (api/src/answer-values.ts).
+    const values = checkedFieldValues(f.valueType, f.values, r.step === "rule_fact"); // both add routes (review m-r2a)
+    // Review m-r3a: an edit cannot drop a value the rule compares the fact with.
+    const ruleValues = (r.work as { ruleValues?: unknown } | null)?.ruleValues;
+    const lacking = values && Array.isArray(ruleValues) ? ruleValues.filter((v): v is string => typeof v === "string" && !values.some((x) => x.code === v)) : [];
+    if (lacking.length) fail(`${rule?.sentence.split(":")[0] ?? "The rule"} compares this fact with ${lacking.map((m) => `"${m}"`).join(", ")}, which is not among the answer values (${values!.map((v) => v.code).join(", ")}): add it as a value, or reject this one.`);
+    const answerListKey = values ? await landAnswerList(tx, l.ws, l.actor.id, f.label, values, slugKey) : null;
+    await landField(tx, l, { key, meaning: f.meaning, valueType: f.valueType, label: f.label, answerListKey, sourceRef: rule ? `Needed by ${rule.sentence}; ${sourceRef(r, l.actor)}` : sourceRef(r, l.actor) });
     return key;
   },
   async section(tx, r, p, l) {
@@ -428,7 +474,10 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
       await tx.factSource.delete({ where: { id: pqr.pqrRowId } });
       if (pqr.pqrBefore) await tx.factSource.create({ data: { ...(pqr.pqrBefore as Prisma.FactSourceUncheckedCreateInput), updatedAt: new Date(String(pqr.pqrBefore.updatedAt)) } });
     }
+    // C3.6 (break B2): a field's own draft list goes with it, unless another field uses it.
+    const lists = await tx.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: adds.filter((c) => c.kind === "field").map((c) => c.key) }, status: "DRAFT", version: 1 }, select: { answerListKey: true } });
     for (const c of adds) await LANDED[c.kind]?.(tx, workspaceId, c.key);
+    for (const x of lists) await dropFieldList(tx, workspaceId, x.answerListKey);
     await tx.libraryChange.deleteMany({ where: { workspaceId, batchId } });
     for (const r of rows) {
       const { beforeEdit, landedStamp, pqr, ...work } = (r.work ?? {}) as { beforeEdit?: ProposalPayload; landedStamp?: string; pqr?: unknown };

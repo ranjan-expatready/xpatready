@@ -73,7 +73,7 @@ export function filedOf(lines: { form_kind?: string | null; channel?: string | n
  *  questions, filing or rules. Release: waiting to be released. No next step keeps the calculated bar (Live, or waiting
  *  on someone else). */
 const STAGE_OF: Partial<Record<NextAction["kind"], number>> = { start: 1, add_forms: 1, add_from_library: 1, see_new_edition: 1, draft_ai: 2, view_progress: 2, review_proposals: 2, release: 4 };
-const MISSING_STAGE: Record<MissingItem["code"], number> = { not_started: 1, no_forms: 1, form_without_edition: 1, filing_problem: 2, role_without_questions: 2, rule_problem: 2 };
+const MISSING_STAGE: Record<MissingItem["code"], number> = { not_started: 1, no_forms: 1, form_without_edition: 1, filing_problem: 2, role_without_questions: 2, rule_problem: 2, filing_not_set: 1 };
 export function progressFollows(p: SetupProgress, next: NextAction | null, missing: { code: MissingItem["code"] }[]): SetupProgress {
   const stage = !next ? null : next.kind === "see_missing" ? (missing.length ? Math.min(...missing.map((m) => MISSING_STAGE[m.code] ?? 2)) : null) : STAGE_OF[next.kind] ?? null;
   if (!stage) return p;

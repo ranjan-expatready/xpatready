@@ -19,6 +19,7 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). **The 
 * Spoken messages arrive garbled: restate what you understood, then ask one question with a recommendation; never guess a name or a number.
 * Briefs quote decision IDs and the founder's words, never a paraphrase that adds a rule (2 Nov: "drop from the bottom" was mine, not his). Each brief has a testable "Done when".
 * A permission the founder gave is used, not left idle; a cap that is too small goes to the founder at once.
+* Before recording a founder choice, state its time, cost and quality impact; a day or more on a milestone, over 10 US dollars, or a lower bar is discussed first (P-254).
 * Silence is not progress: builders can't message the Lead (401), so read their PR comments on every check. Numbers come from tools and exit codes, never from prose or a builder's claim.
 
 ## The job

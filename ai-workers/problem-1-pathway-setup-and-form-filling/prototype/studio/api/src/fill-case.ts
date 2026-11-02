@@ -23,6 +23,7 @@ import { lineOf } from "../../engine/channels.ts";
 import type { BoxRow } from "../../engine/render.ts";
 import { actorOf, Audit, CaseRead, Db, fail, PROTOTYPE, PY, ROOT, VAR, VAR_ROOT, type Actor } from "./core.ts";
 import { writeForm } from "./fill.ts";
+import { trialFor, type EditionMap } from "./fill-trials.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 
 type H = string | undefined;
@@ -75,19 +76,10 @@ const OUT_OF_DATE = "Out of date: validate again";
 const COPY_FILE = { name: "This copy's file", made: "made", again: "generate a new copy" };
 const VALIDATED_FILE = { name: "This copy's validated file", made: "read back", again: "validate the copy again and read it back" };
 
-/** P-65 (a), review M1: a form's fill trial verdict, read from the evidence lane's own record
- *  (evidence-lane/E1/<form>/STATUS.md, its "## Verdict": "Passes …" or "The product's part passes …", never "… does not
- *  pass …"). No record or
- *  another verdict: copies are "Checked copy, not for filing" and cannot be locked. */
-const TRIALS = join(PROTOTYPE, "evidence-lane", "E1");
-export function trialPassed(form: string): boolean {
-  try {
-    const text = readFileSync(join(TRIALS, form.toLowerCase().replace(/\s+/g, ""), "STATUS.md"), "utf8");
-    const verdict = /## Verdict[^\n]*\n+\*\*([^*]+)\*\*/.exec(text)?.[1] ?? "";
-    // "Passes in Adobe … does not pass from the product's file alone" (IMM 1344) is not a pass of the product's file.
-    return (/^Passes\b/.test(verdict) || /^The product's part passes\b/.test(verdict)) && !/\bdoes not pass\b/.test(verdict);
-  } catch { return false; }
-}
+/** P-65 (a), review M1, S2 (SA-1B-174): a form's fill trial counts for one form edition and one field map version
+ *  (api/src/fill-trials.ts, the register samples/fill-trials.json, the verdict in evidence-lane/E1/<form>/STATUS.md).
+ *  Not proven for this edition and map: copies are "Checked copy, not for filing" and cannot be locked. */
+export const trialOf = (s: Snap, form: string) => trialFor((s.field_maps as EditionMap[]).find((m) => m.form_number === form));
 
 @Injectable()
 export class CaseForms implements OnModuleInit {
@@ -124,7 +116,7 @@ export class CaseForms implements OnModuleInit {
         const mine = copies.filter((x) => x.formNumber === form && x.subjectId === p.subjectId);
         if (!applies && !mine.length) continue; // a form that stops applying keeps its copies in view (break M4)
         const channel = channelIn(s, form);
-        forms.push({ form, title: titles.get(form) ?? form, subject_id: p.subjectId, person: p.label, applies, trial_passed: trialPassed(form), channel, for_filing: channel !== "ONLINE", needs_validate: needsValidate(s, form),
+        forms.push({ form, title: titles.get(form) ?? form, subject_id: p.subjectId, person: p.label, applies, trial_passed: trialOf(s, form).passed, trial_why: trialOf(s, form).why, channel, for_filing: channel !== "ONLINE", needs_validate: needsValidate(s, form),
           draft: { written_now: cov?.facts.length ?? 0, mapped: cov?.mapped ?? 0, unconfirmed: cov?.boxes.filter((b) => b.coverage === "answered on screen").length ?? 0 },
           readiness: readiness(view, form, p.subjectId), copies: mine.map((x) => this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, form, p.subjectId), channel === "ONLINE")) });
       }
@@ -223,7 +215,7 @@ export class CaseForms implements OnModuleInit {
       const counts = { written: by("written"), by_hand: by("by hand"), blank: by("blank"), not_written: by("not written"), by_a_person: by("by a person") };
       await this.db.formInstance.update({ where: { id }, data: { status: "GENERATED", path: r.out.replace(`${ROOT}/`, ""), sha256: createHash("sha256").update(readFileSync(r.out)).digest("hex"), finishedAt: new Date(),
         resultJson: { counts, intact: r.report.intact, read_back_equal: r.report.read_back_equal, written: r.report.written, signatures: r.report.signatures, person_steps: r.steps.map((p) => p.say), report_file: r.reportFile,
-          boxes: r.boxes.map((b: { box: string; fact: string | null; result: string; why?: string }) => ({ box: b.box, fact: b.fact, result: b.result, why: b.why ?? null })) } } });
+          boxes: r.boxes.map((b: { box: string; fact: string | null; result: string; why?: string; nothing_recorded?: true }) => ({ box: b.box, fact: b.fact, result: b.result, why: b.why ?? null, ...(b.nothing_recorded ? { nothing_recorded: true } : {}) })) } } });
       await this.audit.log(x.workspaceId, x.createdBy, "generated", "form copy", x.formNumber, `Copy ${short(id)} of ${x.formNumber} on case ${short(x.caseId)} generated: ${counts.written} form fields written, read back ${r.report.read_back_equal}/${r.report.written}, intact`);
     } catch (e) {
       const why = e instanceof HttpException ? String((e.getResponse() as { detail?: string; message?: string }).detail ?? e.message) : (e as Error).message;
@@ -267,7 +259,8 @@ export class CaseForms implements OnModuleInit {
     // P-71 (Lead, R1d early look): a copy is filed or uploaded back only when its form is ready to file.
     const ready = readiness(lockView, x.formNumber, x.subjectId);
     if (!ready.ready) conflict(notReady(ready.missing.length));
-    if (!trialPassed(x.formNumber)) conflict(`${x.formNumber}: this form's filling is not proven yet, so this copy is for checking only, not for filing.`);
+    const trial = trialOf(this.runtime.snapshotOf(c), x.formNumber);
+    if (!trial.passed) conflict(trial.why!);
     // Only the file that was made is ever locked: it must still be there with the bytes recorded (PR #12 review 2), since
     // a locked copy can never be corrected afterwards.
     this.checkedFile(x, HttpStatus.CONFLICT);

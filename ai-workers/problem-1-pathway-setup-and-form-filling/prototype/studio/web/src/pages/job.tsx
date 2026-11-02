@@ -76,7 +76,7 @@ export function JobPage() {
           <h1 className="flex items-center gap-2 text-xl font-semibold">{isMap ? <Sparkles className="size-5 shrink-0 text-[#7c3aed]" aria-hidden /> : null} {form ? `${form}: ${stepName}` : stepName}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-1.5"><ModePill mode={job.mode} /><StatusPill status={job.status} />{job.costUsd !== null && job.costUsd !== undefined ? <Pill>US${Number(job.costUsd).toFixed(2)}</Pill> : null}<Pill>{job.elapsed_s}s</Pill></div>
           {form ? null : <p className="mt-1 text-sm text-text-muted">No form is linked to this step.</p>}
-          {isMap ? <p className="mt-2 max-w-3xl text-xs text-text-muted">{job.mode === "REPLAY" ? "A saved AI answer, replayed: no model was called now. " : job.mode === "LOCAL" ? "No AI was called for this step." : ""}{job.mode !== "LOCAL" ? "The AI sees only the public list of the form's fields; it never sees the library, a family or an answer key." : ""}{items.length ? " Rules, not AI, compare each proposal with the library below." : ""}</p>
+          {isMap ? <p className="mt-2 max-w-3xl text-xs text-text-muted">{job.mode === "REPLAY" ? "Saved: no model was called now. " : job.mode === "LOCAL" ? "No AI was called for this step." : ""}{job.mode !== "LOCAL" ? "The AI sees only the public list of the form's fields; it never sees the library, a family or an answer key." : ""}{items.length ? " Rules, not AI, compare each proposal with the library below." : ""}</p>
             : <p className="mt-2 max-w-3xl text-xs text-text-muted">{job.mode === "LOCAL" ? "Rules did this step; no AI was called." : "A step of AI work."}</p>}
         </div>
       </div>

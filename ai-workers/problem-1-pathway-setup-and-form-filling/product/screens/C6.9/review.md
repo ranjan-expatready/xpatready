@@ -160,3 +160,193 @@ Fix commit 02d873a6 answers `break-report.md` (M1, m1–m6). Then a merge of mai
 **Journey score:** stays 9/10. "Correct data" holds: no gate that can never be true, or that can never be answered, reaches a release in any repro.
 
 **Verdict: Approve** on b05f5d45. There is no open Blocker or Major. The label still waits for the tech lead's word on the migration slot (condition 2).
+
+## Part 2 review (fd26c492)
+Scope: BR-7…BR-14, BR-17, BR-18, the §6 run routes and R4 (P-230 (1)). Diff `origin/main..fd26c492` (4db71982, fd26c492). Fresh isolated copy `rev_c69` on :4439 (never :4400); live AI off; US$0 (no `ai_batch` row). There is no UI in this part. Part 3 (override, review, the page) is out of scope, so C6.9-11…13 are expected to fail.
+
+**What I ran (each on a fresh copy):**
+- `check_c69_runs.ts`: **60/60**. `check_c69_gates.ts`: **87/87**. `check_vv_prepare_api.ts`: **32/32**.
+- `acceptance/C6.9.test.ts`: **12/15**. C6.9-11…13 fail with 404, as expected (the part 3 routes do not exist yet).
+- `graph.mjs`: no gap names an assessment route or C6.9.
+- My own probes, from scratch scripts (`scratchpad/probe/*.mts`):
+  - A client gets 403 on GET one with a **real** run id. An author gets 403 on POST and on GET one. No `x-actor` gets 401.
+  - Confirm section does write new answer ids (I compared them), and the run stays up to date. Re-answering the same value also keeps it up to date.
+  - The audit text is "…ran an eligibility check on case 5e70564d for person fcc41f91 (first run): possibly eligible". It holds no answer value.
+  - Reasons: 301 characters → 400 `reason`; a line break → 400; a non-English reason → 201. A `person` that is not text → 400 `person`.
+  - An UPDATE is refused by the trigger. DELETE is allowed, by design, so a case's deletion still removes its runs.
+
+**What holds:**
+- BR-7: clients get 403 on every route and another firm 404, both via `reach`. The case subject, someone not on the case, and a person with `applies: false` are each refused 400 on `person`. The pin-mismatch 409 comes from `reach`.
+- BR-8: the envelope matches the concept and the trigger freezes the row. The trigger test is not vacuous: without the trigger, `reason` would read `changed`.
+- BR-9:
+  - The `exists` rewrite means an unanswered passport is Not answered, never Not met.
+  - An invalid date counts as missing (`checkValue` filter). The shared `evaluate` is unchanged.
+  - Removing the rewrite or the filter fails `check_c69_runs.ts:31` and `:143`.
+- BR-10: `FAIL_BEATS_MISSING = true` (P-229 (3)) applies to `not_eligible` gates only (`eligibility.ts:70`). No gates → 409, and no row is written.
+- BR-11, BR-12, BR-17 and BR-18 hold.
+- BR-13 compares values, never answer ids. It is worked out on every read and never written: `out_of_date` is not in `result_json`.
+- BR-14: a first run needs no reason. A later run needs a non-empty one, trimmed.
+
+**R4 / C6.9-7: faithful to P-230 (1).**
+- P-230 (1) says the background question "gives needs the representative's review, never a hard Not eligible". The test now asserts all four of:
+  - the outcome is POSSIBLY_ELIGIBLE;
+  - `vv.no_convictions` is in `reviewGates`;
+  - it is *not* in `failedGates`;
+  - the gate's own state is still `not_met`.
+- That is stricter than the old line, and it matches BACKLOG R4: "a gate carries 'when not met' … as data; the background gate is needs review".
+- `whenNotMet` is data:
+  - It is stored only when set to `needs_review`, so older fingerprints are unchanged. Any other value is refused on `gates.N.whenNotMet`.
+  - It is carried in `snapshot.eligibility`, and a change to it is a change-summary line in words.
+- The default (`not_eligible`) path is still tested both ways in the pure tests (`check_c69_runs.ts:68,72`).
+- R4's "copy says the representative reviews" belongs to the page (part 3).
+
+### Majors
+**M1. False "Not met" / NOT_ELIGIBLE on an answered once-per-case fact without the `case.` prefix (AG-3-12).**
+- Cause: `engine/runtime/eligibility.ts:36-38` (`aboutOf`/`valueOf`) decides whose fact it is from the prefix (`case.*` → case, everything else → person).
+- But answers are keyed by **who answered** (`knownOf`: the case subject's answers are about `"case"`), and `evalCondition`'s `factsOf` gives a person the case's facts whatever their prefix.
+- On a Visitor visa case, `relationship.start_date` and `representative.*` are placed `once_per_case` and asked of the **case subject**. I checked this with the agent view on :4439.
+- So for `exists relationship.start_date` answered `2020-01-01`:
+  - `valueOf` sees it as missing and rewrites it to the sentinel;
+  - `evaluate` sees it present, so `eq "__missing__"` is false;
+  - the result is **state `not_met`, outcome NOT_ELIGIBLE**, `values` null, `inputs[].about` the person.
+- Repro (pure, real keying): `scratchpad/probe/pure.mts` prints `{"outcome":"NOT_ELIGIBLE","state":"not_met","values":{"relationship.start_date":null},…}`.
+- Same cause, second effect: for any operator on such a fact, `inputs` records `null`, so `out_of_date` never sees that fact change (BR-13).
+- Reachable through data: part 1 lets such a gate save and release (its round 3 "not caught" list includes "a person fact asked once per case"). It is not reachable with S7's two gates.
+- Fix: read the value where `evaluate` reads it. Use the person's key, then `kkey("case", f)`, in `valueOf`, `inputsOf` (record that `about`) and `nowOf`. Add a pass and a fail line using a once-per-case non-`case.` fact. Refusing such gates at PUT or release would also do.
+
+**M2. Two simultaneous first runs both succeed with no reason (BR-14; STANDARDS §2 [M] "Idempotent creates").**
+- Cause: `api/src/assessments.ts:66-76` counts earlier runs, then creates, with no transaction or lock.
+- Repro: `Promise.all` of two `POST /runtime/cases/:id/assessments {person}`, which a double click on part 3's button will do. Both return **201**, and the case has 2 `MANUAL` rows with `reason` null. The second one is a later run that has no reason.
+- Fix: do the count and create in one transaction under `pg_advisory_xact_lock(hashtext('assessment:'||case||':'||person))`, as `ai.ts:211` does. Add a race test.
+
+### Minors
+- **m1:** the line "…with no answer value in its words" only counts audit rows (`check_c69_runs.ts:126`). Assert that the summary does not contain the answered values. My probe shows that it holds today.
+- **m2:** the client 403 on GET one is tested only with a non-existent id (`check_c69_runs.ts:108`). Add a real id. My probe shows 403 today.
+- **m3:** the scale line covers 5 runs for 2 people (`:169-170`); the concept asks for 4 people × 10 runs in under 300 ms. The queries are not per-row: one `findMany` with includes, plus one read of today's answers.
+- **m4:** the concept is not updated for R4 in two places:
+  - §6 "Assessment fields" and "ours" (`concept.md:178,182`) do not list `reviewGates` or the gates' `whenNotMet`;
+  - §8 row 10 (`:229`) still reads "a fail with all answered → Not eligible `vv.no_convictions`".
+- **Not a finding:** with S7, no Visitor visa gate can now reach NOT_ELIGIBLE. The travel document gate is `exists`-only, so it is Met or Not answered. The pure tests cover NOT_ELIGIBLE.
+
+**Not checked:** the UI (part 3), a real screen reader, and canada.ca wording (Sample).
+
+**Journey score:** 8/10 (`journey-test-reviewer-2026-11-02-part2.md`). Correct data and error recovery are ½ because of M1 and M2; the UI criteria are ½ until part 3.
+
+**Verdict: Block** on fd26c492. Fix M1 and M2, each with its test. The minors can go in the same PR or follow.
+
+## Part 2 review round 2 (36163fad)
+*(Restored. This section was written uncommitted on 36163fad and was lost from the working tree when the merge below was made in the same clone. Its content is unchanged.)*
+
+Delta `fd26c492..36163fad`. Fresh copy `rev_c69` on :4439; live AI off; US$0.
+
+**What I ran:**
+- `check_c69_runs.ts`: **75/75**, then 72/72 on the same copy. The 40-at-once race line passed both times.
+- `check_c69_gates.ts`: **87/87**. `check_vv_prepare_api.ts`: **32/32**. Each ran on a fresh copy.
+- Acceptance: **12/15**. C6.9-11…13 are part 3.
+- `graph.mjs --check`: exit 0.
+
+**Round 1 fixes:**
+- **M1, fixed.** `aboutOf` reads the person's own answer, else the case's, whatever the prefix. `inputsOf` and `nowOf` read the same way. `scratchpad/probe/pure.mts` now gives `LIKELY_ELIGIBLE`, gate Met, `about: "case"`. There are 4 new test lines.
+- **M2, fixed.** The count and the insert run in one `$transaction` under `pg_advisory_xact_lock`, and the `reason` refusal rolls back. My 2-at-once probe gives 400 + 201. `race100.mts`, 100 mixed POSTs at once across 2 people, gives 35 × 201 and 65 × 400 on `reason`, **no 5xx**, and exactly 2 MANUAL rows.
+- **m1–m4, fixed.**
+  - m1: the audit check searches the summary and the detail for values, and requires at least one row.
+  - m2: a client reading a real run id gets 403.
+  - m3: 4 people × 10 runs are listed in under 300 ms.
+  - m4: concept §6 and §8 cover R4.
+
+**Breaker's fixes, checked:**
+- m1: a gate not met lists the facts it could not read.
+- m3: a person marked not travelling gives `not_travelling: true` and out of date.
+- m4: characters are counted and a reason needs a letter or digit.
+
+**New minors (not blocking):**
+- **r2-1:** when both the person and the case have answered the same fact, `aboutOf` shows the person's value. `factsOf` (`render.ts:104`), which the verdict uses, takes the last one in Map order, so the run could show a value other than the one judged. It is rare.
+- **r2-2:** the row-fact limit (breaker m2, asked in the PR) compares row 0 only, so it can give a false **Not met**, not only Not answered. Visitor visa has no such gate. Follow-up: refuse row-fact gates at release.
+- **r2-3:** `not_travelling` is not in concept §6.
+
+**Journey score:** 9/10. Correct data and error recovery go back to 1. The UI criteria stay ½ until part 3.
+
+**Verdict: Approve** on 36163fad.
+
+## Part 2 delta (2fe5fc84)
+2fe5fc84 is a merge of origin/main (6cb61e23: #410 QA-75 job page, #412 quarantine of `check_screen01_api.ts`) into 36163fad.
+
+**Checks:**
+- `git diff 36163fad 2fe5fc84` over the part 2 files is **empty**: `engine/`, `contracts/`, `prisma/`, `acceptance/C6.9.test.ts`, `acceptance/lib/`, `tests/check_c69_*`, `screens/C6.9/`, and `api/` except `sources.ts`.
+- The merge brings only QA-75's files:
+  - `api/src/sources.ts` (+1 read of the job's combination label);
+  - `web/src/pages/{job,ai,combination}.tsx`;
+  - a browser check and its review notes;
+  - `run-suites.sh`, which adds `check_screen01_api.ts` to the quarantine only. No C6.9 check is skipped.
+- `git diff 6cb61e23 2fe5fc84` lists only the 14 part 2 files, so the merge is exactly main plus part 2, with no stray resolution.
+
+**Quick re-run on a fresh copy on :4439:** `check_c69_runs` **75/75**; acceptance C6.9 **12/15** (11–13 are part 3).
+
+**Verdict: Approve** on 2fe5fc84. No Blocker or Major is open. The minors r2-1…r2-3 stand as follow-ups.
+
+## Part 3 review (2572b9b0)
+Scope: override, review and the page (BR-15, BR-16, BR-18, §4–§6), P-229 (2), P-230 (1), BR-9 marks. P-236 is on hold and not asked for. Diff `origin/main..2572b9b0`. Isolated copy `rev_c69` on :4439 (never :4400), live AI off, US$0.
+
+**Builder's results, re-run on fresh copies, all confirmed:**
+- `check_c69_runs` 89/89; `check_c69_gates` 87/87;
+- `check_c69_page_browser` 38/38 (37 s). It rewrites `screens/C6.9/screenshots/`, so I restored them with `git checkout`;
+- acceptance C6.9 15/15, after `setup_visitor_visa` and `setup_vv_m3`. S7a fails there for the fee table, as before, outside this row;
+- `vite build` is clean; `graph.mjs --check` shows no gap on any C6.9 route or page.
+
+**My own walk:** keyboard only, 640×400 CSS px at device scale 2 (a 1280×800 window at 200 %), as the case officer, then the representative. Script: scratchpad `walk/walk.cjs`. I also raced 20 reviews (`walk/race.mjs`).
+
+**What held:**
+- **Honest copy.** A conviction answered yes with the passport still missing reads "Possibly eligible — needs 2 facts; the representative reviews this". It is never Not eligible: P-230 (1) and `FAIL_BEATS_MISSING` apply to `not_eligible` gates only.
+- **Not eligible wording.** It always carries "on this application's rules as written … The representative reviews this, and IRCC decides". The disclaimer is always shown. Judgement lines sit under their own heading.
+- **Override (BR-15).** The rules' outcome stays visible beside "Officer's override: …". There is one row and one audit row. An out-of-date run is allowed and the override records that. Refusals:
+  - an empty or over-80 label, or an empty reason → 400 on the field;
+  - a wrong `programKey` → 400;
+  - a stale `fromOutcome` → 409, in the concept's words;
+  - a client → 403; another firm's staff → 404.
+- **Review (BR-16, P-229 (2)).**
+  - The server stamps from `samples/firms.json`: user-R and user-T get "Reviewed" with their licence; user-O gets "Seen" with licence null.
+  - 20 reviews at once give one 200 and nineteen 409s, each "Already reviewed by Second representative (Sample) on … UTC". The `P2002` path works.
+  - A note of 501 characters → 400.
+- **BR-9.** "(not confirmed yet)" shows on answered, unconfirmed values. The pure fail line would catch a filter that ignores status.
+- **Client view.** No card and no verdict. The page says "This page is for the firm's staff", and the server returns 403. Another firm's staff see "No such case."
+- **Layout and accessibility.**
+  - No sideways scroll at 1024 px or 200 %. axe is clean on every state, mine included.
+  - The people list works as a listbox with ↑↓. State is shown by shape and text, not colour alone.
+  - Drawers open with focus on their first field and trap Tab.
+- **Not vacuous.** Each browser step asserts on text the change would remove (for example "Seen by Case officer" comes from the server's stamp, not the preview), and the override count is read in SQL.
+
+### Major
+- **M1. Keyboard focus is lost after every action on the page** (EXPERIENCE [M] 12; WCAG 2.2 AA 2.4.3, the stated bar; concept §4 "keyboard: the whole journey runs without a mouse"). Repro at :4439 as the case officer, keyboard only:
+  - (a) Run eligibility check → focus goes to `body`. The button turns busy and is then replaced.
+  - (b) Run again → Escape → focus goes to `body`, not to Run again.
+  - (c) The same after submitting Run again, Keep the override and Mark reviewed.
+
+  Each time, the person has to Tab 6–10 stops from the top of the page to get back. At 200 % they lose their place.
+  
+  Cause: `Panel` (`components/ui/controls.tsx:108`) has no `DialogPrimitive.Trigger`, so Radix's close handler focuses a null `triggerRef`. On top of that, the drawers are unmounted rather than closed (`eligibility.tsx:151-154`), and after a review the trigger is disabled (`:213`).
+  
+  Fix, in this page: keep a ref to the opening button and focus it on close. When it is now disabled (after a review) or replaced (after the first run), focus the result heading `#result` (give it `tabIndex={-1}`). Add a browser step that asserts `document.activeElement` after closing each drawer.
+
+### Minors (fix or list in the PR)
+- m1. The override reason is a `Textarea` (`:248`), but the contract refuses line breaks (`contracts/eligibility.ts:32`, "Write it as one line of plain text."). Repro: press Enter in the reason → refused. Use an `Input`, or allow line breaks for the reason.
+- m2. An override reason of "..." is accepted (201), while a run reason needs a letter or a digit (`contracts/eligibility.ts:28` vs `:32`). The run's refine should apply here too.
+- m3. Label, reason and note lengths count UTF-16 units: 80 emoji in a label → 400. Part 2 (break m4) counts characters.
+- m4. The label is prefilled with "Refer to the representative" (`:236`). A person who only writes a reason saves a label they never chose. Start it empty, with the suggestions in the list.
+- m5. Errors not shown on their field:
+  - a note refusal shows in a Notice above the form, not on the Note field (`:260`, `:266`);
+  - an override 400 that is not about `label` or `reason` shows nothing at all (`:239`: `other` only on 409).
+- m6. "(not confirmed yet)" is frozen with the run (`engine/runtime/eligibility.ts:62`). After Confirm section, which by design does not make the run out of date (BR-13), the page still says the fact is not confirmed. Add "when checked", or work it out on read.
+- m7. Concept §5 "No gates on the release" says "No button". The page still offers Run eligibility check, and only after a click does it show the 409 in "Nothing was run". The concept's second sentence ("An author adds them…") is also missing.
+- m8. Missing-fact links go to the case page (`:197`), not to the person's question (§4).
+- m9. Staff and names are hard-coded (`:30`): the card, the page and "Run by" ignore `firms.json`. The review preview reads "Reviewed by Representative", but the stamp is saved as "Representative (Sample)".
+- m10. The review sentence reads "For the representative's review: Answered no to the criminal history question (Sample)" when the person answered yes. The gate label describes the rule, not the finding. Add "not met:" before the label.
+- m11. Dates show as "Nov 2, 2026, 06:35 a.m." (en-CA), where the concept shows "2 Nov 2026 14:05".
+
+### D1–D20 (part 3)
+D1 job fit 8 · D2 rules as data 9 · D3 correctness 8 · D4 contract 8 (m5) · D5 security 9 · D6 audit 8 · D7 versioning 9 · D8 tests 8 (no focus assertion) · D9 layout 8 · D10 words 8 (m10) · D11 states 7 (m7) · D12 feedback 7 (M1) · D13 accessibility 6 (M1) · D14 errors 7 (m1, m5) · D15 look 8 · D16 speed 9 · D17 and D20 simulated only · D18 cost US$0 · D19 reuse 8.
+
+**Journey score: 9/10, pass** (`journey-test-reviewer-2026-11-02-part3.md`).
+
+**Could not check:** a real screen reader; an intended user's unaided walk; the Read-only (filed, C9.2) state, which is not built yet; the no-gates state in the browser, because a fresh case pins release 2 (checked in code and through `check_c69_runs`).
+
+**Verdict: Block** on 2572b9b0. To fix: **M1** (return focus after the first run and after each drawer closes, with a browser assertion). Fix the minors or list them in the PR.

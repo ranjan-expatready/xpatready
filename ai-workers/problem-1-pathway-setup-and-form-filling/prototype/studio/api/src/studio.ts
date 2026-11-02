@@ -8,7 +8,7 @@ import { canRelease } from "../../../contracts/rules.ts";
 import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
 import { buildSnapshot, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
 import { slug } from "../../engine/import.ts";
-import { checkCondition, diff, ordinal, validate } from "../../engine/validate.ts";
+import { checkCondition, diff, ordinal, validate, isDemoSnapshot } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, need, revise, RUNTIME_ACTORS, strip, Workspace, type Actor } from "./core.ts";
 import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { recordAction, snapshotLines } from "./form-uses.ts";
@@ -17,6 +17,7 @@ import { cleanLabel, normalizeLabel, problemFromZod, problemWords } from "../../
 import { PreferencesBody, PROGRAMS_VIEWS, type Preferences, type ProgramsView } from "../../contracts/session.ts";
 import { DocumentLineEdit, FormLineEdit, PeopleBody, UndoBody, type PersonRoleView } from "../../contracts/workspace.ts";
 import { checkPeople, linesNamingRemoved } from "../../engine/people.ts";
+import { filingProblems, filingWarnings, modeSent } from "../../engine/filing-modes.ts";
 import { LibrarySources, type SourceLine } from "./library-sources.ts";
 import { checkFormat, fieldFormat, formatWords, type MappedBox } from "../../engine/field-format.ts";
 import { releaseLabel } from "../../contracts/runtime.ts";
@@ -216,7 +217,8 @@ export class Studio {
    *  an applicant tick on a role that may not be an applicant is set to "no" rather than refused. */
   async checkParticipants(workspaceId: string, list: any[], strict = false) {
     if (!Array.isArray(list) || !list.length) fail("Add at least the principal applicant.");
-    const lines = list.map((p) => ({ ...p, min: Number(p.min ?? 0), max: Number(p.max ?? 1), applies: p.applies !== false }));
+    // C11.12 BR-5: a line sent without a tick takes it from its mode (Declared only, co-filing: no), else yes as before.
+    const lines = list.map((p) => ({ ...p, min: Number(p.min ?? 0), max: Number(p.max ?? 1), applies: typeof p.applies === "boolean" ? p.applies : !["declared_only", "co_files"].includes(String(modeSent(p))) }));
     if (lines.some((p) => !Number.isInteger(p.min) || !Number.isInteger(p.max) || p.min < 0 || p.max > 9)) fail("The number of people must be a whole number between 0 and 9, minimum no more than maximum.");
     const { errors, lines: ok } = checkPeople(lines, await this.personRoles(workspaceId), strict);
     if (errors.length) throw new HttpException({ type: "https://expatready.local/problems/validation", title: "Some details need fixing", status: 400, detail: errors[0].message, errors }, HttpStatus.BAD_REQUEST);
@@ -248,7 +250,8 @@ export class Studio {
       const hit = linesNamingRemoved(c!.participants as any[], participants, lines);
       if (hit.length) throw new HttpException({ type: "https://expatready.local/problems/confirm", title: "Confirm the change", status: 409, detail: `${hit.map((h) => h.form).join(", ")} ${hit.length === 1 ? "names" : "name"} a person you removed (${[...new Set(hit.flatMap((h) => h.roles))].map((r) => participantsLabel(c!.participants as any[], r)).join(", ")}). Save anyway, or keep the person.`, confirm: true, lines: hit }, HttpStatus.CONFLICT);
     }
-    return this.writePeople(actor, c!, participants, "updated");
+    // C11.12 BR-7 (P-233 (3)): a mode IRCC's guide contradicts is saved with a warning, never refused.
+    return { ...(await this.writePeople(actor, c!, participants, "updated")), warnings: filingWarnings(c!.combinationKey, participants) };
   }
 
   /** Undo the last save of "Who can be in this application", while nothing was saved after it. */
@@ -363,7 +366,7 @@ export class Studio {
       program: { key: (programNode ?? c.program).programNodeKey, label: (programNode ?? c.program).label, kind: (programNode ?? c.program).nodeKind, source_basis: (programNode ?? c.program).sourceBasis }, pathway: parent ? { key: parent.programNodeKey, label: parent.label, client_type: parent.clientType } : null,
       path: chain.map((n) => ({ key: n.programNodeKey, label: n.label, level: LEVEL[n.nodeKind].name })), allowed_locations: c.program.allowedLocations,
       attachments: c.attachments, jobs: c.jobs.map((j) => ({ ...j, detail: undefined })),
-      releases: c.releases.map((r) => ({ id: r.id, version: r.version, release: r.packVersion?.version ?? r.version, label: releaseLabel(r), sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: ACTORS.find((x) => x.id === r.approverId)?.name ?? "Approver", summary: r.summary, basis: r.basis })),
+      releases: c.releases.map((r) => ({ id: r.id, version: r.version, demo: isDemoSnapshot(r.snapshot), release: r.packVersion?.version ?? r.version, label: releaseLabel(r), sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: ACTORS.find((x) => x.id === r.approverId)?.name ?? "Approver", summary: r.summary, basis: r.basis })),
       draft: { sha256, matches_release: !!last && last.sha256 === sha256, changes, problems, counts: this.counts(snapshot) },
       submission: sub ? { ...sub, stale: sub.status === "SUBMITTED" && sub.draftSha256 !== sha256 } : null,
     };
@@ -377,7 +380,11 @@ export class Studio {
     const structure = combinationId ? await this.structureProblems(combinationId) : [];
     const lib = (await this.db.canonicalField.findMany({ where: { workspaceId }, select: { canonicalFieldKey: true, valueType: true, status: true } })).filter((f) => f.status !== "RETIRED").map((f) => ({ key: f.canonicalFieldKey, valueType: f.valueType }));
     const carried = combinationId ? (await this.undecidedFormFields(combinationId, "PUBLISHED")).map((f) => ({ level: "warning" as const, where: "Forms", item: f.form, message: `Not decided yet (from an earlier release): ${f.n} form field${f.n === 1 ? "" : "s"}${forExample(f.example)}. Decide them when this edition is drafted again.` })) : [];
-    const all = [...structure, ...emptyProblem(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...carried]; // L4: what IRCC accepts
+    // C11.12 BR-7: a new release names every role that may be an applicant with no filing mode (pinned releases are kept);
+    // a warning until the editor can set the mode (engine/filing-modes.ts FILING_NOT_SET_BLOCKS).
+    const roles = await this.personRoles(workspaceId);
+    const filing = filingProblems((s.combination?.participants ?? []) as { role: string; label?: string; max: number; filingMode?: unknown }[], roles);
+    const all = [...structure, ...filing, ...emptyProblem(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...carried]; // L4: what IRCC accepts
     // C2.12 (plan F3a-1, BR-10): each problem names the forms it touches, so a form's path shows its own: a Forms problem its form,
     // any other the forms whose field map reads that item as a fact; none otherwise.
     const formsOf = new Map<string, Set<string>>();
@@ -1016,7 +1023,9 @@ export class Studio {
   async releases(combinationId?: string) {
     const workspaceId = await this.ws.id();
     const rows = await this.db.configRelease.findMany({ where: { workspaceId, ...(combinationId ? { combinationId } : {}) }, orderBy: { releasedAt: "desc" }, include: { combination: true } });
-    return rows.map((r) => ({ id: r.id, combination: r.combination.label, combination_id: r.combinationId, version: r.version, sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: r.approverId, names: { author: peopleNames(r.authorId), submitter: peopleNames(r.submitterId), approver: peopleNames(r.approverId) }, summary: r.summary, basis: r.basis }));
+    return rows.map((r) => ({ id: r.id, combination: r.combination.label, combination_id: r.combinationId, version: r.version, sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: r.approverId, names: { author: peopleNames(r.authorId), submitter: peopleNames(r.submitterId), approver: peopleNames(r.approverId) }, summary: r.summary, basis: r.basis,
+      // C5.6 (P-240, G3): Sample content is a "Demo release", never counted as a real publish (derived on read).
+      demo: isDemoSnapshot(r.snapshot) }));
   }
 
   /** C6.11 review Major 1: firm staff read the configuration lines and their own firm's case lines only; another firm's

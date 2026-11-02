@@ -50,3 +50,76 @@ D1 job fit 8 · D2 rules as data 9 · D3 correctness 8 · D4 contract 8 · D5 se
 * Labels and conditions stay Sample; canada.ca not re-opened from the cloud (concept §10): the tech lead re-opens it on the Mac before merge.
 * No gate-authoring screen and no Undo (concept "Not built").
 * A gate on a derived fact is refused at release (choice 5).
+
+# Part 2: the runs (BR-7…BR-14, BR-17, BR-18)
+
+## As built
+* **Adapter** `engine/runtime/eligibility.ts` (pure, stand-in SI-1): `rewriteMissing` (BR-9's `exists` rewrite), `gateResult`, `outcomeOf`, `assess`, `inputsOf`, `outOfDate`. **`FAIL_BEATS_MISSING = true`** (P-229 (3)); the shared `evaluate` is unchanged.
+* **Routes** `api/src/assessments.ts`, registered in `api/src/features/eligibility.ts` with part 1's: `POST /runtime/cases/:id/assessments`, `GET /runtime/cases/:id/assessments[?person=]`, `GET /runtime/assessments/:aid`. No migration: part 1 made the tables.
+* **Contract:** `AssessmentRunBody` added to `contracts/eligibility.ts` (person; reason up to 300 characters, one line, no invisible characters).
+
+## Choices where the concept left room
+1. **Facts read:** only answers their own checks accept (`checkValue`), as the C6.4 checklist reads them; an invalid value counts as missing (AG-03 §9).
+2. **`packVersion`** is the release's version and **`packId`** its `packVersionId` (challenge Minor 6); `releaseId` is kept too.
+3. **`rulesAsOfByProgram`** is the release's `releasedAt` date, in UTC.
+4. **The envelope also stores `person` and `inputs`** (concept BR-8), so out of date needs no other table. `out_of_date`, `changed[]` and `release_changed` are worked out on every read and never written.
+5. **A reason of spaces only is no reason** (trimmed). A first run may carry a reason; it is kept.
+6. **`GET /runtime/assessments/:aid`** answers 403 to a client whatever the id (as every eligibility route does), 404 to staff for an unknown or malformed id, and 404 to another firm's staff (through `reach`).
+7. **The view already carries `overrides[]` and the review fields** (read from part 1's tables, empty until part 3), so part 3 only adds the writes and the page.
+8. **Audit:** one row per run, naming the case and the person by short id and the outcome; no answer value (STANDARDS §5).
+
+## Checks
+* `tests/check_c69_runs.ts`: 50/50 on a fresh copy (sets up release 1, proves the 409 with no gates there, then runs the M3 setup).
+* `acceptance/C6.9.test.ts`: C6.9-1…10, 14, 15 pass; C6.9-11…13 wait for part 3 (override and review).
+
+## R4: a gate's own outcome when not met (P-230 (1), the tech lead's message of 2 Nov)
+* `whenNotMet` on a gate, as data: `not_eligible` (default, not stored, so earlier releases keep their fingerprints) or `needs_review`. Saved by the PUT (refused on `gates.N.whenNotMet` otherwise), carried in `snapshot.eligibility`, and a change is an "Eligibility" change-summary line in words.
+* The adapter lists a `needs_review` gate not met in `reviewGates` (our addition), never in `failedGates`: the result is Possibly eligible. The gate's own state stays Not met (honest). `FAIL_BEATS_MISSING` applies to `not_eligible` gates only.
+* **Data and test changed with it:** S7 (`acceptance/lib/setup_vv_m3.ts`) gives `vv.no_convictions` `whenNotMet: "needs_review"`; **C6.9-7** now expects Possibly eligible with the gate in `reviewGates` (was Not eligible). Labels unchanged (Sample).
+* Tests: 9 pure pass/fail lines and 1 route line in `check_c69_runs.ts` (60/60); `check_c69_gates.ts` 87/87 with S7's new body.
+
+## Part 2, review round 1 (fd26c492: reviewer Block, breaker 1 Major) and the fixes
+* **M1 (reviewer), a false Not met on an answered fact:** the adapter now reads a gate fact as the rules read it, the person's answer first and then the case's, whatever the prefix. Out of date re-reads it the same way. Before, `relationship.start_date` and `representative.*` (asked once per case, of the case subject) read as unanswered. Tests: 4 lines "C6.9 M1".
+* **M2 (reviewer) = M1 (breaker), simultaneous first runs skipping the reason:** the count of earlier runs and the insert now run in one transaction under `pg_advisory_xact_lock` per case and person. Test: 40 POSTs at once give one 201 and 39 refusals on `reason`. Against the old code the same test fails (several MANUAL rows).
+* **Breaker m1:** a gate not met still lists the facts it could not read (P-229 (3)).
+* **Breaker m3:** a person marked not travelling after a run makes that run out of date (`not_travelling: true`).
+* **Breaker m4:** the reason counts characters (an emoji is one, 300 at most) and needs a letter or a digit.
+* **Reviewer m1–m3:**
+  * the audit check now searches every run's audit text for the answer values;
+  * a client reading a real run's id gets 403 (tested);
+  * scale is tested as 4 people × 10 runs, in under 300 ms.
+* **Reviewer m4:** concept §6 and §8 updated for R4.
+* **Left, as a known limit (breaker m2):** a gate on a repeating-row fact reads the first row only, the way the questionnaire's rules read a box with no row; row facts carry no answer id. Visitor visa has no such gate. Refusing such gates at release is a follow-up, asked in the PR.
+* Tests: `check_c69_runs` 75/75, `check_c69_gates` 87/87, `check_vv_prepare_api` 32/32, acceptance C6.9 12/15 (11–13 are part 3).
+
+# Part 3: override, review and the page (BR-15, BR-16, BR-18, §4–§5)
+* **Scope:** P-229 and P-230 (1), with the current words and outcomes. **P-236** (renaming to "Case check from confirmed facts" and using the team's three outcome words) is **on hold**: the SA-01B product owner has paused the PQR and assessment area, per the tech lead's correction of 2 Nov. Applying it later changes copy only (the words in `web/src/runtime/eligibility.tsx` `outcomeWords`, the titles and the browser check's patterns); the API keeps AG-03's codes either way.
+* **API:** `POST /runtime/assessments/:aid/override` and `/review` in `api/src/assessments.ts`. The stamp comes from the firm's record: "Reviewed" for a licensed representative, "Seen" otherwise (P-229 (2)).
+* **Page and card:** `web/src/runtime/eligibility.tsx`, plus three lines in `cases.tsx` (the import, the route and the card).
+* **BR-9 "Not confirmed yet":** the adapter lists, per gate, the answered facts that are not confirmed (`unconfirmed`), and the page marks each one "(not confirmed yet)".
+* **Tests:** `check_c69_page_browser.cjs` 38/38, `check_c69_runs` 89/89, acceptance C6.9 15/15.
+
+## Part 3, review round 1 (2572b9b0: reviewer Block, breaker 1 Major) and the fixes
+* **Reviewer M1, focus lost after each action (WCAG 2.4.3):** focus now goes back to the button that started the action, or to the result's heading when that button is gone or switched off (after Run eligibility check, and after Mark reviewed). The browser check asserts where focus is after Run, Run again, Esc, Keep the override and Mark reviewed.
+* **Breaker M1, duplicate overrides:**
+  * the API takes a lock per run, and an identical override from the same person returns the one already kept (20 at once: one row, one audit row);
+  * the page ignores a submit while one is in flight.
+* **Breaker m1:** an override on a check that a newer one has replaced is refused 409 ("a newer check exists").
+* **Breaker m2 = review minor 7:** the list says `has_rules`. With no rules the page shows "This application's release has no eligibility rules yet…" and no Run button.
+* **Breaker m3:** Esc returns focus to the opener (the same fix as reviewer M1).
+* **Breaker m4:** long unbroken labels, reasons and notes wrap.
+* **Breaker m5 = review minors 1–3:**
+  * label, reason and note lengths count characters, and the label and reason need a letter or digit;
+  * Enter in the override reason submits instead of starting a line the API would refuse;
+  * a review note keeps its line breaks.
+* **Review minor 4:** the label starts empty, with suggestions.
+* **Review minor 5:** a note refusal shows on the Note field, and any other refusal shows in the drawer.
+* **Review minor 6:** "(not confirmed yet)" is worked out when the run is read, so Confirm section clears it (the stored row is unchanged).
+* **Review minor 9 (part):** the review preview uses the firm record's name.
+* **Review minor 10:** "For the representative's review, a rule not met: …".
+* **Review minor 11:** dates read "2 Nov 2026, 14:05".
+* **Left, listed in the PR:**
+  * review minor 8: the missing-fact links open the case page, not the exact question (the questionnaire has no per-question anchor yet);
+  * review minor 9 (rest): "Run by" names come from the page's list of simulated people;
+  * breaker copy note: a 409 names the time in UTC.
+* **Tests:** `check_c69_runs` 98/98, `check_c69_page_browser` 43/43 twice, acceptance C6.9 15/15.
