@@ -8,7 +8,7 @@ import { canRelease } from "../../../contracts/rules.ts";
 import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
 import { buildSnapshot, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
 import { slug } from "../../engine/import.ts";
-import { checkCondition, diff, ordinal, validate } from "../../engine/validate.ts";
+import { checkCondition, diff, ordinal, validate, isDemoSnapshot } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, need, revise, RUNTIME_ACTORS, strip, Workspace, type Actor } from "./core.ts";
 import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { recordAction, snapshotLines } from "./form-uses.ts";
@@ -363,7 +363,7 @@ export class Studio {
       program: { key: (programNode ?? c.program).programNodeKey, label: (programNode ?? c.program).label, kind: (programNode ?? c.program).nodeKind, source_basis: (programNode ?? c.program).sourceBasis }, pathway: parent ? { key: parent.programNodeKey, label: parent.label, client_type: parent.clientType } : null,
       path: chain.map((n) => ({ key: n.programNodeKey, label: n.label, level: LEVEL[n.nodeKind].name })), allowed_locations: c.program.allowedLocations,
       attachments: c.attachments, jobs: c.jobs.map((j) => ({ ...j, detail: undefined })),
-      releases: c.releases.map((r) => ({ id: r.id, version: r.version, release: r.packVersion?.version ?? r.version, label: releaseLabel(r), sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: ACTORS.find((x) => x.id === r.approverId)?.name ?? "Approver", summary: r.summary, basis: r.basis })),
+      releases: c.releases.map((r) => ({ id: r.id, version: r.version, demo: isDemoSnapshot(r.snapshot as any), release: r.packVersion?.version ?? r.version, label: releaseLabel(r), sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: ACTORS.find((x) => x.id === r.approverId)?.name ?? "Approver", summary: r.summary, basis: r.basis })),
       draft: { sha256, matches_release: !!last && last.sha256 === sha256, changes, problems, counts: this.counts(snapshot) },
       submission: sub ? { ...sub, stale: sub.status === "SUBMITTED" && sub.draftSha256 !== sha256 } : null,
     };
@@ -1018,7 +1018,7 @@ export class Studio {
     const rows = await this.db.configRelease.findMany({ where: { workspaceId, ...(combinationId ? { combinationId } : {}) }, orderBy: { releasedAt: "desc" }, include: { combination: true } });
     return rows.map((r) => ({ id: r.id, combination: r.combination.label, combination_id: r.combinationId, version: r.version, sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: r.approverId, names: { author: peopleNames(r.authorId), submitter: peopleNames(r.submitterId), approver: peopleNames(r.approverId) }, summary: r.summary, basis: r.basis,
       // C5.6 (P-240, G3): Sample content is a "Demo release", never counted as a real publish (derived on read).
-      demo: r.combination.sourceBasis === "ILLUSTRATIVE" }));
+      demo: isDemoSnapshot(r.snapshot as any) }));
   }
 
   /** C6.11 review Major 1: firm staff read the configuration lines and their own firm's case lines only; another firm's

@@ -47,7 +47,7 @@ export function ReleasePage() {
           {x.rows.length ? <Table head={["Combination", "Changes", "In this release"]}>
             {x.rows.map((r: any) => (
               <tr key={r.combinationId}>
-                <td><Link className="font-medium text-text-link hover:underline" to={`/c/${r.combinationId}/review`}>{r.label}</Link>{r.demo ? <> <span data-demo-release><Pill tone="warn" title="Sample content: a demo release, never counted as a real publish (P-240).">Demo release</Pill></span></> : null}<p className="text-xs text-text-muted">{r.path.join(" › ")}{r.released ? "" : " · first release"}</p></td>
+                <td><Link className="font-medium text-text-link hover:underline" to={`/c/${r.combinationId}/review`}>{r.label}</Link>{r.demo ? <> <span data-demo-release><Pill tone="warn" title="Sample content: a demo release, never counted as a real publish.">Demo release</Pill></span></> : null}<p className="text-xs text-text-muted">{r.path.join(" › ")}{r.released ? "" : " · first release"}</p></td>
                 <td className="tabular-nums">{r.changes}</td>
                 <td>{r.held ? <span className="text-text-danger">Held back: {r.why}</span> : <span className="text-text-ok">Will be released</span>}</td>
               </tr>

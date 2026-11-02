@@ -1,6 +1,7 @@
 // C5.6 (P-240, row G3): Sample content (a combination of sourceBasis ILLUSTRATIVE) releases as a "Demo release": the
 // mark shows on Releases and on the combination's header, and Releases counts it apart from real publishes. Derived on
-// read, so the check flips one released combination's basis and reads again (pass and fail). No model call (US$0).
+// from the release's own frozen snapshot (a Sample combination, or any check marked Sample), so the check changes the
+// released snapshot and reads again (pass and fail; review of #471, M1). No model call (US$0).
 //   zsh studio/tools/isolated.sh screens_g3 4447 start && node studio/tests/check_g3_demo_release_browser.cjs 4447 xr_studio_screens_g3
 const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
@@ -22,13 +23,19 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     let rel = (await api("/releases")).body;
     const one = rel.find((x) => x.status === "RELEASED");
     step("setup: a released combination exists", !!one, rel.map((x) => x.combination));
-    const basis = (b2) => sql(`update combination set source_basis='${b2}' where id='${one.combination_id}'`);
+    const W = `where id='${one.id}'`;
+    // The snapshot is large: edit it inside the database (jsonb_set), never through the command line.
+    const basis = (b2) => sql(`update config_release set snapshot = jsonb_set(jsonb_set(snapshot, '{combination,source_basis}', '"${b2}"'), '{checks}', (select coalesce(jsonb_agg(c || '{"illustrative": false}'), '[]'::jsonb) from jsonb_array_elements(coalesce(snapshot->'checks', '[]'::jsonb)) c)) ${W}`);
+    const addSampleCheck = () => sql(`update config_release set snapshot = jsonb_set(snapshot, '{checks}', coalesce(snapshot->'checks', '[]'::jsonb) || '[{"id": "sample_check_g3", "illustrative": true}]'::jsonb) ${W}`);
     basis("SOURCE_BACKED"); rel = (await api("/releases")).body;
     step("C5.6 fail: a source-backed release is not a Demo release (API)", rel.find((x) => x.id === one.id).demo === false);
     await p.goto(`${BASE}/releases`); await p.locator("[data-release-counts]").waitFor();
     step("C5.6 fail: Releases shows no Demo release mark and counts it as a real release", (await p.locator("[data-demo-release]").count()) === 0 && /^1 real release · 0 demo releases/.test(await p.locator("[data-release-counts]").innerText()), await p.locator("[data-release-counts]").innerText());
+    // Review of #471 M1: a value marked Sample (a check saved without an official source) in a source-backed release.
+    basis("SOURCE_BACKED"); addSampleCheck(); rel = (await api("/releases")).body;
+    step("C5.6 pass (review M1): a check marked Sample in a source-backed release makes a Demo release", rel.find((x) => x.id === one.id).demo === true);
     basis("ILLUSTRATIVE"); rel = (await api("/releases")).body;
-    step("C5.6 pass: Sample content (sourceBasis ILLUSTRATIVE) makes a Demo release (API, derived on read)", rel.find((x) => x.id === one.id).demo === true);
+    step("C5.6 pass: a release whose snapshot is Sample content (source_basis ILLUSTRATIVE) is a Demo release", rel.find((x) => x.id === one.id).demo === true);
     await p.goto(`${BASE}/releases`); await p.locator("[data-release-counts]").waitFor();
     step("C5.6 pass: Releases marks it \"Demo release\" and leaves it out of the real-publish count", (await p.locator("[data-demo-release]").count()) === 1 && /^0 real releases · 1 demo release/.test(await p.locator("[data-release-counts]").innerText()), await p.locator("[data-release-counts]").innerText());
     const v = (await new AxeBuilder({ page: p }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze()).violations;
