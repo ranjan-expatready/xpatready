@@ -108,11 +108,15 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await q.getByRole("button", { name: "Open all sections" }).click(); await settle();
   const qText = await q.innerText();
   step("fix 3: the questions show their wording; no field code and no \"(uses the field meaning)\" on the main path", (await p.locator("[data-question]").count()) > 20 && !CODE.test(qText) && !/uses the field meaning/.test(qText), (qText.match(CODE) ?? [""])[0]);
-  step("C4.1: one chip per person with a question count; who fills each question and the forms that need it are shown", await p.locator("[data-role-chip]").count() === 4 && /Client|Case officer/.test(qText) && /IMM \d{4}/.test(qText));
+  // QA-82 (#469): the row no longer shows the field's meaning, which once carried an "IMM nnnn" by chance; the forms
+  // that need a question are its Details panel's "Used by" line (checked below, after the panel opens).
+  step("C4.1: one chip per person with a question count; who fills each question is shown", await p.locator("[data-role-chip]").count() === 4 && /Client|Case officer/.test(qText));
   step("coverage: the person's line says how many answers the forms need and who gives them (none asked of nobody on the sample)", /the forms need \d+ answers for this person · \d+ from documents · \d+ asked of the client · \d+ entered by the case officer/.test(await p.locator("[data-coverage]").innerText()) && !/asked of nobody/.test(await p.locator("[data-coverage]").innerText()));
   await p.locator("[data-question]").first().getByRole("button", { name: /^Details of/ }).click();
   const det = p.getByRole("dialog");
   step("fix 3 (QA-94): the field code stays behind the side panel's library link, never as text", /Open this answer in the shared library/.test(await det.innerText()) && !CODE.test(await det.locator("[data-question-details]").innerText()) && CODE.test(decodeURIComponent(await det.locator("[data-library-link]").getAttribute("href") ?? "")));
+  const usedBy = await det.locator("[data-question-details]").innerText();
+  step("C4.1: the forms that need a question are shown (its Details: Used by IMM nnnn)", /Used by\s+IMM \d{4}/.test(usedBy), usedBy.replace(/\s+/g, " ").slice(0, 200));
   await state("question-details");
   await det.getByRole("button", { name: "Close" }).first().click();
   await p.locator('[data-role-chip="spouse_or_partner"]').click(); await settle();
