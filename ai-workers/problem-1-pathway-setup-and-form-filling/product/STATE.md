@@ -11,6 +11,7 @@ updated: 2026-11-02 05:35 UTC (**new Lead "LeadX" took over at 05:20 UTC**; ever
 
 ## Progress (`progress.sh` on main, 04:59 UTC)
 M2 **34/56 Works** · 8 built, awaiting qa · 14 partial. R1 6/8 (C7.2 not tested: #414 raised the app's IMM 5257 fill to 40 of 46 mandatory; Adobe Validate runs on the Mac after the rest). M3 1/16 · 7 partial (qa-m3 found gaps in C6.4, C6.12, C11.6, C7.3) · 8 not built. **Half-done: 28 capabilities, 12–14 open PRs** (baseline 04:10 UTC). 39 PRs merged since 1 Nov 19:20 UTC. AI spend US$0 today (ledger since 26 Oct: US$3.13). **Weekly plan 79%** (resets 5 Nov 23:00 UTC; it rose about 4 points an hour with 12 sessions: at 92% builders finish and stop; consider fewer sessions).
+**Dates (*estimates*):** M2 now 60 rows plus G-CORE; gate about 11–12 Nov (P-255, founder kept the additions knowing the impact); builders stop at 93% of the weekly plan until the 5 Nov 23:00 UTC reset (P-234).
 
 ## Sessions (cloud ones answer in PR comments; they can't message the Lead, 401)
 | Session | Now → next |
