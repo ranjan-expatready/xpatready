@@ -111,6 +111,15 @@ const usable: WalkedSnapshot = { ...small, canonical_fields: [{ id: "case.applic
 const dv = publishedNumbers(usable).find((n) => n.address === "months")!;
 ok("C5.4 BR-4 pass: a usable document validity rule's months count through its own cite; the same rule without its cite is refused (m5)", dv.sourced_by === "validity_cite" && sourceProblems([dv], []).length === 0 && sourceProblems(sm.filter((n) => n.address === "months"), []).length === 1);
 
+// Devin on #558: a stale register entry never blocks a number its own record now cites (6 months registered, then the
+// rule gains its cite and becomes 12 months); without the cite the same stale entry is still refused as changed.
+const twelve: WalkedSnapshot = { ...usable, checks: [{ ...usable.checks![0], source_quote: "issued no more than 12 months before", condition: { ...(usable.checks![0] as { condition: object }).condition, months: 12 } }] } as WalkedSnapshot;
+const dv12 = publishedNumbers(twelve).find((n) => n.address === "months")!;
+const stale = [{ kind: dv12.kind, key: dv12.key, address: "months", value: "6", cited: { url: "https://www.canada.ca/guide-5256", quote: "issued no more than 6 months before", date: "2026-10-19" } }];
+ok("C5.4 BR-4 pass (Devin on #558): a validity rule that cites its own 12 months is not refused by its old 6-month register entry", dv12.value === "12" && dv12.sourced_by === "validity_cite" && sourceProblems([dv12], stale).length === 0, sourceProblems([dv12], stale));
+const dv12bare = { ...dv12, sourced_by: undefined };
+ok("C5.4 BR-6 fail (Devin on #558): without its own cite, the same stale 6-month entry still refuses the 12 as changed", sourceProblems([dv12bare], stale).length === 1 && sourceProblems([dv12bare], stale)[0].state === "changed");
+
 // ---------------------------------------------------------------- M1 kept outside validate(), pure
 const src = readFileSync(join(STUDIO, "engine", "source-register.ts"), "utf8");
 ok("C5.4 M1 pass: source-register.ts reads no file or database and only takes validate.ts's Problem type", !/node:fs|@prisma|fetch\(/.test(src) && !/^import \{[^}]*\} from "\.\/validate\.ts"/m.test(src) && /^import type \{ Problem \} from "\.\/validate\.ts"/m.test(src));

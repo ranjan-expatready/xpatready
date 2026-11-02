@@ -185,12 +185,14 @@ export function sourceProblems(numbers: PublishedNumber[], entries: SourceEntry[
   for (const n of numbers) {
     const e = by.get(`${n.kind}\u0000${n.key}\u0000${n.address}`);
     const base = { level: "error" as const, where: n.where, item: n.key, label: n.item_words, kind: n.kind, key: n.key, address: n.address };
+    // A record that cites its own number (BR-4) wins over an older register entry (Devin on #558: a validity rule that
+    // gained its citation and new months stayed refused by its stale entry).
+    if (n.sourced_by) continue;
     if (e && answered(e)) {
       const was = canonicalValue(e.value);
       if (was !== n.value) out.push({ ...base, state: "changed", message: CHANGED(n.item_words, was, n.value) });
       continue;
     }
-    if (n.sourced_by) continue;
     out.push({ ...base, state: "missing", message: NO_SOURCE(n.item_words, n.words) });
   }
   return out;
