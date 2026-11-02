@@ -4,6 +4,9 @@ Older rows (closed up to 26 Oct): `history/qa-bugs-closed-to-2026-10-26.md`.
 
 | # | Type · Severity | Capability | Found | Closed on | How it was retested |
 |---|---|---|---|---|---|
+| QA-163 | Bug · Critical | C11.7, C2.x field maps, C4.11, C4.7 | 785d148e (golden journey 1, step 2); main 2ef4f15d (golden journey 2, step 2) still | main 2562de17 (#563), 2 Nov | `check_qa163` 12/12 on main, and the product path walked through the API: after Reset to the six, Forms › IMM 5257 › Draft with AI › Saved completes as a REPLAY at US$0 (84 proposals), apply writes 242 map rows |
+| QA-170 | Gap · Minor | C11.13, C11.14 (G-CORE) | 9c516267 (after-merge batch 1) | main 2562de17 (#602 G-CORE B2), 2 Nov | `tests/qa/check_qa_c1113_rename_released.ts` 4/4 on main: the rename waits (202, label unchanged) until a second person approves; `check_gcore_b2_door` 51/51 |
+| QA-157 | Gap · Major | C2.6 | 12647032 (after-merge pm) | main 2562de17 (#574), 2 Nov | `acceptance/C2.6.test.ts` 32/32 on main (every red step in the row is green, including the old apply door answering 410); `check_forms_c26_checklist.ts` 39/39 |
 | QA-164 | Bug · Major | C4.4, C6.x | 785d148e (golden 1) | main 2ef4f15d (0cf3e058), 2 Nov | golden journey 2, step 4: the client typed 44 parts for three people; every Confirm went through, 174 answered and 174 confirmed, no 409 |
 | QA-156 | Gap · Major | C6.4 | #493 head 4dcf9e10 | main 079ef107 (#521), 2 Nov | `tests/qa/check_qa_r3_minor_principal.ts` 4/4 on main: a principal of 15 travelling alone is asked who with and gets the letter and the birth certificate copy; adults get none; C6.4 acceptance 30/30 |
 | QA-98 | Gap · Minor | C11.15, C11.8 | deda0e6b | #512 head eff1b5a2 (code for QA-98 as on main 50df70dc), 2 Nov | `check_w1_start_setup_browser.cjs` 43/43 including its QA-98 lines (the live plan states each run's cost), qa subagent on an isolated copy, US$0; #512 changes no QA-98 code, so main carries the fix |
