@@ -4,7 +4,7 @@
 // library forms (QA-64, P-116 amended 28 Oct), an approved retire or restore takes effect at approval; an approved
 // delete removes the never-released item at once (L1). A field's ADD keeps its own path (library-changes.ts).
 import { HttpException } from "@nestjs/common";
-import type { LibraryChange, Prisma } from "@prisma/client";
+import type { LibraryChange, Origin, Prisma } from "@prisma/client";
 import type { Use, UsesView } from "../../contracts/structure.ts";
 import { WHY } from "../../contracts/lifecycle.ts";
 import { normalizeLabel } from "../../contracts/programs.ts";
@@ -198,12 +198,52 @@ export async function openItemChanges(db: Db, workspaceId: string, kind: ItemKin
   return out;
 }
 
+/** C3.13 BR-2 (Screen 04 concept, STANDARDS §3.5): a list row's status worked out in words, beside the raw status: a change
+ *  waiting for the second person (its ADD, delete, retire or restore) says so; then Retired, Released (any version left
+ *  draft), else Draft. A returned change is back with its author, so the row keeps its own state. */
+export const STATUS_WORDS = ["Released", "Draft", "Waiting for a second person", "Retired"] as const;
+export function statusWords(st: { retired: boolean; released: boolean }, open?: { status: string }): (typeof STATUS_WORDS)[number] {
+  return open?.status === "WAITING" ? "Waiting for a second person" : st.retired ? "Retired" : st.released ? "Released" : "Draft";
+}
+/** C3.13 BR-2: who made an item, in words (AI or a person; the sample setup's items came from a reviewed release). */
+const ORIGIN_WORDS: Record<Origin, string> = { // typed by the enum: a new origin must be given its words here
+  AI_PROPOSAL: "AI · proposed, accepted by a person",
+  AI_FOUND: "AI · picked by the form finder",
+  HUMAN: "Person",
+  CODE_MATCH: "Person · accepted a match found without AI",
+  IMPORTED_RELEASE: "From a reviewed release",
+};
+export const originWords = (origin: Origin) => ORIGIN_WORDS[origin];
+
+/** C3.13 BR-3 and BR-10 (Screen 04 §6, `GET /library/:kind?q=&section=&status=&origin=`): one filter for a library list.
+ *  q matches the item's own words (name, meaning, key, aliases) or, ignoring spaces and case, a form code of a form that
+ *  fills it ("imm5707" finds IMM 5707). status: released · draft · waiting · retired · all; without it the list leaves
+ *  retired items out, as pickers need (C11.9; `retired=all` or `retired=only` still work). origin: ai · person · release. */
+const STATUS_PARAM: Record<string, (typeof STATUS_WORDS)[number] | "all"> = { released: "Released", draft: "Draft", waiting: "Waiting for a second person", retired: "Retired", all: "all" };
+const ORIGIN_PARAM: Record<string, Origin[]> = { ai: ["AI_PROPOSAL", "AI_FOUND"], person: ["HUMAN", "CODE_MATCH"], release: ["IMPORTED_RELEASE"] };
+const compact = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+type ListQuery = { q?: string; retired?: string; section?: string; status?: string; origin?: string };
+export function libraryFilter<R extends { retired: boolean; status_words: string; origin: Origin }>(q: ListQuery, texts: (r: R) => string[], forms: (r: R) => string[] = () => [], section?: (r: R) => string | null) {
+  const status = q.status?.trim().toLowerCase() || undefined, origin = q.origin?.trim().toLowerCase() || undefined;
+  if (status && !STATUS_PARAM[status]) throw problem(400, "Unknown status", `There is no status "${q.status}": use released, draft, waiting, retired or all.`);
+  if (origin && !ORIGIN_PARAM[origin]) throw problem(400, "Unknown origin", `There is no origin "${q.origin}": use ai, person or release.`);
+  const needle = (q.q ?? "").trim().toLowerCase(), code = compact(needle);
+  return (r: R) => {
+    // Retired items show only under Retired (BR-10); a retired item with a restore waiting is still under Retired.
+    const shown = status === "all" ? true : status === "retired" ? r.retired : status ? r.status_words === STATUS_PARAM[status] : q.retired === "all" ? true : q.retired === "only" ? r.retired : !r.retired;
+    if (!shown) return false;
+    if (origin && !ORIGIN_PARAM[origin].includes(r.origin)) return false;
+    if (q.section && section && section(r) !== q.section) return false;
+    return !needle || texts(r).some((t) => t.toLowerCase().includes(needle)) || (!!code && forms(r).some((f) => compact(f).includes(code)));
+  };
+}
+
 /** C11.9: a list row's lifecycle state (P-116 row action): the one written action from the state and its open change.
  *  The guard's decision (and every use) is read when the row's action is opened (GET …/uses, where used first). */
 export function itemState(v: Version[], open?: { id: string; action: string; status: string; by: string | null; by_id: string }, kind: ItemKind = "field") {
   const st = stateOf(v);
   // A document type's waiting ADD keeps its state's action, greyed on the row (its addition is decided on To review).
-  return { retired: st.retired, released: st.released, row_action: open && !(open.action === "ADD" && kind !== "field") ? "WITHDRAW" : st.retired ? "RESTORE" : st.released ? "RETIRE" : "DELETE", change: open ?? null };
+  return { retired: st.retired, released: st.released, status_words: statusWords(st, open), row_action: open && !(open.action === "ADD" && kind !== "field") ? "WITHDRAW" : st.retired ? "RESTORE" : st.released ? "RETIRE" : "DELETE", change: open ?? null };
 }
 
 // ── C11.9 (P-116 amended, pack 3): the author's own draft deleted at once, and its Undo ──

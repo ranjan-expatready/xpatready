@@ -41,6 +41,10 @@ const FROM_WORD: Record<string, string> = { pdf_box: "the PDF form field", form_
 /** GET /library/:kind/:key/sources (api/src/library-sources.ts). */
 type SourcesView = { name: string; sources: { kind: string; text: string; quote?: string | null }[]; unsourced: boolean; used_in: string[] };
 /** Where used (C3.13): the combinations by name, the first two and a count. */
+// C3.13 BR-3: the search also finds a field by one of its aliases, or by the code of a form that fills it, typed with or
+// without its space ("imm5257" finds IMM 5257), as GET /library/fields?q= does.
+const compact = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+const findsByAliasOrForm = (f: { aliases?: string[]; forms: string[] }, q: string) => (f.aliases ?? []).some((a) => a.toLowerCase().includes(q.toLowerCase())) || (!!compact(q) && f.forms.some((c) => compact(c).includes(compact(q))));
 const usedWords = (used: string[] | undefined) => !used?.length ? <span className="text-text-muted">none</span> : <span title={used.join(", ")}>{used.slice(0, 2).join(", ")}{used.length > 2 ? ` and ${used.length - 2} more` : ""}</span>;
 
 /** GET /library/reuse/:kind (api/src/library-sources.ts, C3.13, Screen 04 BR-4). */
@@ -79,12 +83,12 @@ export function FieldsPage() {
   const canAuthor = useCanAuthor();
   const life = useItemLifecycle("fields", () => list.refetch(), canAuthor);
   // C11.9 (BR-10): a retired field is listed only under "Retired".
-  const rows = (list.data ?? []).filter((f) => (only === "retired" ? f.retired : !f.retired)).filter((f) => reuse.keep(f.key) && (!q || f.key.includes(q.toLowerCase()) || (f.name ?? fieldName(f.key)).toLowerCase().includes(q.toLowerCase()) || f.meaning.toLowerCase().includes(q.toLowerCase())) && (only === "all" || only === "retired" || (only === "draft" && f.has_draft) || (only === "ai" && f.origin === "AI_PROPOSAL") || (only === "unplaced" && !f.placement) || (only === "shared" && f.forms.length > 1)));
+  const rows = (list.data ?? []).filter((f) => (only === "retired" ? f.retired : !f.retired)).filter((f) => reuse.keep(f.key) && (!q || f.key.includes(q.toLowerCase()) || (f.name ?? fieldName(f.key)).toLowerCase().includes(q.toLowerCase()) || f.meaning.toLowerCase().includes(q.toLowerCase()) || findsByAliasOrForm(f, q)) && (only === "all" || only === "retired" || (only === "draft" && f.has_draft) || (only === "ai" && f.origin === "AI_PROPOSAL") || (only === "unplaced" && !f.placement) || (only === "shared" && f.forms.length > 1)));
   return (
     <TipProvider><div className="mx-auto max-w-7xl space-y-4">
       <div><h1 className="text-xl font-semibold">Fields</h1><p className="mt-1 text-sm text-text-muted">One definition per meaning, shared by every form and program. Values about people and cases are never stored here.</p><Origin>each field is read from a form field (proposed by AI, confirmed by a person), a document checklist line, or a rule that needs it. Nothing is added by hand.</Origin></div>
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative w-96"><Search className="absolute left-2.5 top-2.5 size-4 text-text-muted" /><Input className="pl-8" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a field or its meaning" aria-label="Search fields" /></div>
+        <div className="relative w-96"><Search className="absolute left-2.5 top-2.5 size-4 text-text-muted" /><Input className="pl-8" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a field, its meaning, an alias or a form code" aria-label="Search fields" /></div>
         <Select className="w-64" value={only} onChange={(e) => setOnly(e.target.value)} aria-label="Filter"><option value="all">All fields</option><option value="shared">Used by more than one form</option><option value="draft">With a draft change</option><option value="ai">AI-proposed</option><option value="unplaced">Not asked anywhere</option><option value="retired">Retired</option></Select>
         <ReuseBar reuse={reuse} noun="field" />
         <span className="text-xs text-text-muted">{rows.length} of {list.data?.length ?? 0}</span>
