@@ -1,39 +1,36 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-02 21:55 UTC by **Lead 4** (took over from Lead 3 at 20:10 UTC; check at minutes 13 and 43, job a02fd171) · milestone: **M2 — Super Admin configuration**, gate 59/60 with held parts named (P-265, P-284); estimate **about 4 Nov** · M3 per row (P-261) · how we work: `WAY-OF-WORKING.md` · decisions to read word for word: DECISIONS **P-275 … P-285**
+updated: 2026-11-02 23:25 UTC by **Lead 4**, handing over to **Lead 5** (P-286, ~230k tokens) · milestone: **M2 — Super Admin configuration**, gate 59/60 with held parts named (P-265, P-284); estimate **about 4 Nov** · M3 per row (P-261) · how we work: `WAY-OF-WORKING.md` · decisions to read word for word: DECISIONS **P-275 … P-285**
 
 ## Leads, in order (founder, 2 Nov: "keep naming … so that I know who is the latest lead"; highest number = current)
-Lead 1 (`local_17ac4d7f…`, 2 Nov morning) → Lead 2 (`local_0bd306e3…`, ~15:40–18:35 UTC) → Lead 3 (`local_b0474939…`, 18:36–20:10 UTC) → **Lead 4** (started by Lead 3, 20:10 UTC, local, shares the main copy) → Lead 5 · standby (`local_c490b934-7479-4dd1-815a-af7e3fbfba23`) → Lead 6 · standby (`local_235884ee-b9da-4ec3-a2b1-7ee8d8f98a2d`). **P-286:** at about 250k the current Lead rewrites STATE, CronDeletes its check, renames itself "… (ended)" and sends the next standby "take over now" (works from a cron turn). Each Lead renames itself "Lead N · <date> <UTC start>" and, when handing over, starts Lead N+1 itself in a founder-typed turn, then stops its own check (CronDelete). A cron turn cannot start a session: if the context passes about 250k overnight, keep going (1M window) and hand over in the founder's next typed turn.
+Lead 1 (`local_17ac4d7f…`, 2 Nov morning) → Lead 2 (`local_0bd306e3…`, ~15:40–18:35 UTC) → Lead 3 (`local_b0474939…`, 18:36–20:10 UTC) → Lead 4 (20:10–23:25 UTC, ended) → **Lead 5** (took over 23:25 UTC) · standby (`local_c490b934-7479-4dd1-815a-af7e3fbfba23`) → Lead 6 · standby (`local_235884ee-b9da-4ec3-a2b1-7ee8d8f98a2d`). **P-286:** at about 250k the current Lead rewrites STATE, CronDeletes its check, renames itself "… (ended)" and sends the next standby "take over now" (works from a cron turn). Each Lead renames itself "Lead N · <date> <UTC start>" and, when handing over, starts Lead N+1 itself in a founder-typed turn, then stops its own check (CronDelete). A cron turn cannot start a session: if the context passes about 250k overnight, keep going (1M window) and hand over in the founder's next typed turn.
 
-## Start here (Lead 4)
-1. `bash product/tools/lane.sh whoami` → lead. **Lead 3 has handed over and cancelled its check**: its commits on `lead/2026-11-02-b` are not another running Lead; do not ask the founder (asleep). Read DECISIONS P-275…P-285 word for word, then this page and the lead skill.
-2. **Overnight (P-285, founder asleep ~20:00–02:00 UTC):** act with all approvals; 30-minute checks (minutes 13 and 43); tokens free below 80% of the weekly plan (44% at 19:53) but none wasted (founder: "please don't waste tokens"); at 80% nothing new starts, builders push and stop, STATE rewritten. Paid AI: the tech lead approves up to **US$50 total tonight**, usual + worst cost in records first (Go comment on the PR), runs only on a Mac paid-runner session. Records PRs merge at least hourly even during a batch. qa per batch (P-277); Sonnet subagents (P-278); merge main only on conflict (P-270).
-3. **Restarting work:** local Mac sessions wake on SendMessage; idle cloud ones often don't. Cron turns can't start sessions: leave an own_initiative card and list it under "For the founder's morning".
-4. `flow-watch.sh` now also flags labelled PRs with red CI or a conflict (4b) and unfinished M2 rows nobody has pushed to in 90 min (4c; HELD and WAITS lists in the script). Act on every RED each check. A lane counts as working only if it pushed in 90 min.
-5. Records: #578 merged 20:53 UTC; the current records branch is `lead/2026-11-02-c` (pushed hourly, P-285).
+## Start here (Lead 5)
+1. `bash product/tools/lane.sh whoami` → lead. Lead 4 has handed over (P-286) and deleted its check; its commits are not another running Lead. Rename yourself "Lead 5 · 2 Nov 23:25 UTC", create your 30-minute check (minutes 13 and 43), and read DECISIONS P-276…P-286 word for word.
+2. **Overnight (P-285):** all approvals; tokens free below 80% of the weekly plan (50% at 22:52) with none wasted; paid AI up to US$50 total tonight (US$1.61 used: IMM 5532), cost in records first, Mac paid-runner sessions only; records PRs merge at least hourly; qa per batch (P-277); Sonnet subagents (P-278); merge main only on conflict (P-270).
+3. **Cron turns cannot start sessions.** Two cards wait for the founder: **C9.1-AI builder** and **C3.4 paid runner** (Go posted on #585). Start them in the founder's next typed turn if not started.
+4. Records: branch `lead/2026-11-02-d` (this hand-over), PR open; merge it when CI is green (check-docs and decision-impact pass).
+5. qa (cloud "qa: score tonight's merge batches (P-277)") wakes on messages but slowly; it was asked for the #617 head check (C8.1 migration; the tech lead read it: additive, OK) and to score #615/#616. Merge its records PRs directly.
+6. Your hand-over: at about 250k, rewrite STATE, CronDelete, rename yourself "(ended)", SendMessage Lead 6 (`local_235884ee-b9da-4ec3-a2b1-7ee8d8f98a2d`) "take over now".
 
-## Progress (21:55 UTC)
-M2 on main's scorecard **49/60** (qa's #581, #605, #606 merged; was 41 at 20:05). Merged since 20:10 UTC, qa to score: #563 QA-163 (C11.7, C2.12, C4.11), #570 (C11.8), #568 (G2, C5.5 scored Works), #585 (C3.4), #574 (C2.6). Queued: #602 G-CORE B2 (C11.13, C11.14) + #587 G1 + #554 UX-A (batch #611), #592 QA-165, #603 IMM 5532 saved run (qa Saved check passed 21:33). AI spend 2 Nov **US$10.72** (IMM 5532 US$1.61 tonight). Weekly plan 48%. **Target by ~02:00 UTC: 50+.**
+## Progress (23:25 UTC)
+M2 on main's scorecard **50/60** (target reached at 22:53 UTC, qa #619; 41 at 20:05). Merged tonight (20:10–23:22): #563, #568, #570, #574, #585, #554, #587, #592, #602, #603, #615, #616 and records #578, #581, #605, #606, #613, #619. Open: #617 C8.1 (M3; waits on qa's head check). AI spend 2 Nov **US$10.72** (tonight US$1.61). Weekly plan 50%.
 
-## M2 rows not Works, and who has them (20:05 UTC)
-| Row | In flight | Then |
-|---|---|---|
-| C2.6 | #574 conflict → cloud `c26-conflict` | re-label, queue |
-| C11.7, C4.11 | #563 QA-163 (cloud `qa163-ci-fix`, conflict resolved 19:55, needs re-approve + label); IMM 5532 paid re-run (local `paid-imm5532`, Go 20:02 on #576, worst US$3.22) | qa labels the result PR (P-275) |
-| C3.4 | #585 conflict → local C3.4 session messaged 19:58 | then its paid runs on the tech lead's Go (about US$1–1.5 each, quote first) |
-| C11.8 | #570 in batch #591 | qa head check (money path) |
-| C3.6, C3.13 | merged (#573, #584) | qa score |
-| C11.3 | P-284: "Works, held part excluded" | qa score |
-| C5.4 | G1: #587 PR 2a approved; G1 lane (cloud "screens L2") | more PRs |
-| C5.5 | G2 #568 queued | build PRs |
-| C11.13, C11.14 | G-CORE B2 (cloud `gcore-b2`, started 20:00) | B3 |
-| C9.1 | row C9.1-AI **Ready** (Lead 4, 20:40 UTC; brief `design/c91-ai-row-2026-11-02.md`); no builder yet: a card is left for the founder (this turn could not start a session) | PR 1 US$0, then one paid run on the tech lead's Go |
-| C10.1 | waits on #563 (needs a released Visitor visa, QA-144) | — |
-| C5.1 | held (P-251, P-265) | — |
-Also approved/queued, no M2 row change: #554 UX-A part 1 (batch #591).
+## M2 rows not Works, and what each needs (23:25 UTC)
+| Row | Needs |
+|---|---|
+| C3.4 | four paid runs: Go on #585 (worst US$5.78, usual ~US$0.97); card "C3.4 paid runs on the Mac runner" |
+| C9.1 | builder: card "C9.1-AI" (brief `design/c91-ai-row-2026-11-02.md`), then one paid run |
+| C11.7 | paid field maps of IMM 1294, 5646, 5710, 0008, 5406, 5562, 5604 (quote from `track-a-jobs.ts`, then Go); IMM 5532 done (#603) |
+| C11.8 | the live gate J2 L1/L2 (one real live run: progress, Stop, cost) |
+| C5.4 | G1 PR 2b #615 merged 23:22: qa re-score |
+| C11.13, C11.14 | #602 merged 21:52: qa re-score; the notes on main still list gaps (Draft fields not wired, Load sample 0 proposals): read qa's verdict, shape a row if real |
+| C4.11 | qa re-score after #563 (QA-163) |
+| C10.1 | waits on a released Visitor visa (QA-144) |
+| C5.1 | held (P-251, P-265) |
 
 ## Sessions
-This night's (one row each): `qa163-ci-fix`, `c36-ci-fix` (done), `c118-finish` (done), `gcore-b2`, `c26-conflict` (cloud); `paid-imm5532` and the C3.4 AI step (local). qa: "qa: score tonight's merge batches (P-277)" (cloud, running). Earlier lanes from Leads 1–2: see `ListAgents`; screens L2 (G1) and runtime M3-A still running.
+Local: Lead 5 (current), Lead 6 · standby. Archived tonight: the IMM 5532 paid runner, the C3.4 builder. Cloud, running at 20:20 UTC: qa batches, screens L2 (G1), runtime M3-A, G-CORE B2, QA-163 fix; idle ones as listed by `ListAgents`. **Archive Lead 2 · 2 Nov 15:40 UTC (ended)** and **Lead 3 · 2 Nov 18:36 UTC (ended)** once their lanes are done (tell the founder in chat, P-283).
 
 ## Holds (P-251, the product owner of SA-01B): nobody builds these
 L-SA3 · L-SA6–L-SA11 · G5 · the P-236 rename · C11 · E1–E6 · design-only items · SH3/SH4 contracts go to the product owner with them.
@@ -44,6 +41,9 @@ L-SA3 · L-SA6–L-SA11 · G5 · the P-236 rename · C11 · E1–E6 · design-on
 
 ## For the founder's morning
 * **C9.1-AI builder** (forms, one row): card left by Lead 4 at 20:45 UTC; start it, or Lead 4 starts it at your next typed message.
+* **C3.4 paid runner** (Mac, card left 22:30 UTC): the Go is posted on #585 (worst US$5.78, usual about US$0.97, four jobs); start the card and the runner records the saved runs; qa labels the result PR.
+* **Paid runs still needed for M2 (all need a Mac paid-runner session, which a check cannot start):** C11.7: field maps of IMM 1294, 5646, 5710, 0008, 5406, 5562, 5604 (jobs in `p2/jobs/`; quote usual and worst from `track-a-jobs.ts` before the Go; IMM 5532 done in #603) · C11.8: the live gate J2 L1/L2 (progress, Stop and cost on one real live run) · C9.1: after the C9.1-AI builder's PR 1 · C3.4: Go posted on #585.
+* **M2 50/60 on main at 22:53 UTC** (qa #619). Not Works: C3.4, C4.11, C5.1 (held), C5.4 (G1 PR 2b in batch #618), C9.1, C10.1, C11.7, C11.8, C11.13, C11.14.
 
 ## Waiting for the founder
 1. **Open a new chat and type `/lead`** (this hand-over).
