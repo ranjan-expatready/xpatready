@@ -51,7 +51,7 @@ const TIPS = {
 
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
 
-export function FormsTab({ id, lines, filing, filingDetail, account = null, accountKey = null, problems, removed = [], fromLibrary = [], lastChange = null, progress = {} }: { id: string; lines: WorkspaceFormLine[]; filing: string; filingDetail: string; account?: string | null; accountKey?: string | null; problems: { level: "error" | "warning"; item: string; message: string }[]; removed?: RemovedForm[]; fromLibrary?: string[]; lastChange?: LastFormChange | null; progress?: Record<string, FormStepChip> }) {
+export function FormsTab({ id, lines, filing, filingDetail, account = null, accountKey = null, problems, removed = [], removedEver = [], fromLibrary = [], lastChange = null, progress = {} }: { id: string; lines: WorkspaceFormLine[]; filing: string; filingDetail: string; account?: string | null; accountKey?: string | null; problems: { level: "error" | "warning"; item: string; message: string }[]; removed?: RemovedForm[]; removedEver?: string[]; fromLibrary?: string[]; lastChange?: LastFormChange | null; progress?: Record<string, FormStepChip> }) {
   const { canAuthor, known } = useSessionView();
   const [open, setOpen] = React.useState<WorkspaceFormLine | null>(null);
   const [adding, setAdding] = React.useState(false);
@@ -91,7 +91,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
   const combo = d.data as unknown as Combo | undefined;
   const codes = lines.map((l) => l.code);
   // A form removed in this draft is under "Removed in this draft" (Undo), not a form waiting to be set up.
-  const pending = combo ? pendingForms(combo, [...codes, ...removed.map((r) => r.code)]) : [];
+  const pending = combo ? pendingForms(combo, [...codes, ...removed.map((r) => r.code), ...removedEver]) : [];
   // X1 / #206 finding 6: the setup checklist's forms items land here (?focus=forms:sources, forms:lines, forms:problems,
   // forms:held): scrolled to, focused, outlined 2 s, the address cleared (components/focus-item). Nothing lands while the
   // tab loads.
@@ -124,7 +124,8 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
   // 0 forms" above them; what each waits for is said in the same steps as the rows (and the page's next step).
   const inLibrary = (a: { id: string; status: string }) => a.status === "IN_LIBRARY" || fromLibrary.includes(a.id);
   const ready = pending.filter(inLibrary).length, toDraft = pending.length - ready;
-  const count = formsCount ? formsWords(formsCount) : "…";
+  // Review m5: while the summary loads the line says so; if it fails, it says so with Retry (never a silent "…").
+  const count = formsCount ? formsWords(formsCount) : sumForFocus.isError ? <span className="text-text-danger" data-count-failed>forms count not loaded <button type="button" className="font-medium text-text-link underline" onClick={() => void sumForFocus.refetch()}>Retry</button></span> : "counting forms…";
   return (
     <div className="space-y-4">
       <DoneSinceNotice shown={doneSince} />

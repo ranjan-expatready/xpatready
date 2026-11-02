@@ -2,7 +2,7 @@ import * as React from "react";
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { type CatalogueLeaf, type CombinationSummary, type CombinationView, type NextAction } from "../../../contracts/programs";
 import { tabOf, TABS, type WorkspaceView } from "../../../contracts/workspace";
-import { nextStepHref, STEP_LABEL, tabCounts, type BadgeTab, type ItemKind } from "../../../contracts/setup-checklist";
+import { nextStepHref, STEP_LABEL, tabCounts, tabSteps, type BadgeTab, type ItemKind } from "../../../contracts/setup-checklist";
 import { ArrowRight, ChevronRight, Sparkles } from "lucide-react";
 import { CATALOGUE_URL_KEY, STATUS_WORD } from "@/pages/programs";
 import { StepTip, useNextStep } from "@/components/next-step";
@@ -68,7 +68,7 @@ export function CombinationPage() {
   const changes = sum.data?.changes ?? 0;
   const errorCount = d.draft.problems.filter((p) => p.level === "error").length;
   // X1 (slice C2): each setup tab says how many open setup items land on it, from the summary's checklist.
-  const badges = tabCounts(sum.data?.setup);
+  const badges = tabCounts(sum.data?.setup), steps = tabSteps(sum.data?.setup);
   // Back to the list exactly as it was left (pathway, filters, sort, search; scroll restored there), this row highlighted.
   const backTo = (() => { try { return sessionStorage.getItem(CATALOGUE_URL_KEY) ?? "/"; } catch { return "/"; } })();
   const pw = d.pathway?.client_type === "CORPORATE" ? "pw=CORPORATE&" : "";
@@ -110,7 +110,10 @@ export function CombinationPage() {
           // number read as forms; the tab's name is exactly its text (WCAG 2.5.3) and the tip says it in full.
           const open = t.key in badges ? badges[t.key as BadgeTab] : 0, problems = t.key === "review" ? errorCount : 0;
           const name = tabName(t.label, open, problems);
-          return <Link key={t.key} role="tab" aria-selected={tab === t.key} aria-label={name} title={name !== t.label ? tabTip(t.label, open, problems) : undefined} data-tab={t.key} to={`/c/${id}/${t.key}`} className={cn("whitespace-nowrap border-b-2 px-3 py-2 text-sm", tab === t.key ? "border-primary font-medium text-text" : "border-transparent text-text-muted hover:text-text")}>{t.label}{open ? <>{" "}<StepBadge n={open} /></> : null}{problems ? <>{" "}<StepBadge n={problems} tone="danger" /></> : null}</Link>;
+          // Review m1: the tip names the steps the items belong to, and is the tab's description, so a keyboard or screen
+          // reader user hears it too (a title alone is not reachable).
+          const tip = name !== t.label ? tabTip(t.label, open, problems, (steps[t.key as BadgeTab] ?? []).map((k) => STEP_LABEL[k])) : undefined;
+          return <React.Fragment key={t.key}><Link role="tab" aria-selected={tab === t.key} aria-label={name} title={tip} aria-describedby={tip ? `tab-tip-${t.key}` : undefined} data-tab={t.key} to={`/c/${id}/${t.key}`} className={cn("whitespace-nowrap border-b-2 px-3 py-2 text-sm", tab === t.key ? "border-primary font-medium text-text" : "border-transparent text-text-muted hover:text-text")}>{t.label}{open ? <>{" "}<StepBadge n={open} /></> : null}{problems ? <>{" "}<StepBadge n={problems} tone="danger" /></> : null}</Link>{tip ? <span id={`tab-tip-${t.key}`} hidden>{tip}</span> : null}</React.Fragment>;
         })}
       </div>
       <div role="tabpanel" aria-label={TABS.find((t) => t.key === tab)!.label}>
@@ -137,7 +140,7 @@ function WorkspaceTab({ id, tab, hasRelease }: { id: string; tab: "forms" | "que
   if (w.isLoading) return <Spinner label={`Loading ${tab}`} />;
   if (w.isError || !w.data) return <ErrorState title="This tab could not be loaded" description={(w.error as Error | null)?.message ?? "No answer from the studio."} action={<button className="text-text-link underline" onClick={() => void w.refetch()}>Try again</button>} />;
   const v = w.data;
-  if (v.tab === "forms") return <div className="space-y-6"><BeforeForms id={id} people={v.people} /><FormsTab id={id} lines={v.lines} filing={v.filing} filingDetail={v.filingDetail} account={v.account ?? null} accountKey={v.accountKey ?? null} problems={v.problems} removed={v.removed} fromLibrary={v.fromLibrary} lastChange={v.lastChange} progress={v.progress} /></div>;
+  if (v.tab === "forms") return <div className="space-y-6"><BeforeForms id={id} people={v.people} /><FormsTab id={id} lines={v.lines} filing={v.filing} filingDetail={v.filingDetail} account={v.account ?? null} accountKey={v.accountKey ?? null} problems={v.problems} removed={v.removed} removedEver={v.removedEver} fromLibrary={v.fromLibrary} lastChange={v.lastChange} progress={v.progress} /></div>;
   if (v.tab === "questionnaires") return <QuestionnairesTab id={id} people={v.people} questionnaire={v.questionnaire} available={v.available} />;
   if (v.tab === "preview") return <PreviewTab id={id} p={v.preview} empty={v.empty} fetching={w.isFetching} hasRelease={hasRelease} />;
   return null;
@@ -206,8 +209,8 @@ export function tabName(label: string, open: number, problems: number) {
   const parts = [open ? toDoWords(open) : "", problems ? toFixWords(problems) : ""].filter(Boolean);
   return parts.length ? `${label} ${parts.join(" ")}` : label;
 }
-/** The tip: what the badge counts, in full. */
-export function tabTip(label: string, open: number, problems: number) {
-  const parts = [open ? `${plural(open, "setup item")} open on ${label}` : "", problems ? `${plural(problems, "problem")} to fix before release` : ""].filter(Boolean);
+/** The tip: what the badge counts, in full, and the steps the open items belong to. */
+export function tabTip(label: string, open: number, problems: number, steps: string[] = []) {
+  const parts = [open ? `${plural(open, "setup item")} open on ${label}${steps.length ? ` (${steps.join(", ")})` : ""}` : "", problems ? `${plural(problems, "problem")} to fix before release` : ""].filter(Boolean);
   return parts.join("; ");
 }

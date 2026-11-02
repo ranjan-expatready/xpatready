@@ -117,6 +117,13 @@ export function tabCounts(setup: { steps: { tab?: string; open: { focus: string;
   for (const s of setup?.steps ?? []) for (const i of s.open) { const t = tabOfFocus(i.focus, s.tab); if (t) out[t] += i.count; }
   return out;
 }
+/** UX-A part 1 (review m1): the steps whose open items land on each tab, in step order, so a tab's badge can say whose
+ *  items it counts ("Official pages, Who can be in this application"). */
+export function tabSteps(setup: { steps: { key: StepKey; tab?: string; open: { focus: string }[] }[] } | null | undefined): Record<BadgeTab, StepKey[]> {
+  const out: Record<BadgeTab, StepKey[]> = { forms: [], documents: [], questionnaires: [] };
+  for (const s of setup?.steps ?? []) for (const i of s.open) { const t = tabOfFocus(i.focus, s.tab); if (t && !out[t].includes(s.key)) out[t].push(s.key); }
+  return out;
+}
 /** X1 slice C3: where an open item's link goes, one definition for the engine's `next.href` and the Overview strip.
  *  A proposal opens the review queue filtered to the combination and step (F4), AI progress the jobs page, anything
  *  else lands on its place (`?focus=`) on the tab that holds it (`tabOfFocus`; the step's own tab otherwise). */

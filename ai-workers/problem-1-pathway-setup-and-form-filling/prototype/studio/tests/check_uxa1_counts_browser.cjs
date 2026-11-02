@@ -16,7 +16,7 @@ const ROOT = path.resolve(__dirname, "..", "..", "..");
 const SHOTS = path.join(ROOT, "product", "screens", "UX-A", "screenshots"); fs.mkdirSync(SHOTS, { recursive: true });
 const sql = (q) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 let fail = 0, pass = 0;
-const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${String(typeof detail === "string" ? detail : JSON.stringify(detail)).slice(0, 260)}` : ""}`); };
+const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : "FAIL"}  UX-A1: ${name}${detail !== undefined ? ` — ${String(typeof detail === "string" ? detail : JSON.stringify(detail)).slice(0, 260)}` : ""}`); };
 const formsWords = (c) => c.setUp >= c.total ? `${c.total} form${c.total === 1 ? "" : "s"}` : `${c.total} form${c.total === 1 ? "" : "s"} · ${c.setUp} set up`;
 
 (async () => {
@@ -47,12 +47,17 @@ const formsWords = (c) => c.setUp >= c.total ? `${c.total} form${c.total === 1 ?
     step(`${label}: the Overview's Forms tile shows the same number`, new RegExp(`^Forms\\s+${sum.setup.counts.forms}\\b`).test(tile) && (sum.setup.counts.formsSetUp < sum.setup.counts.forms ? tile.includes(`${sum.setup.counts.formsSetUp} set up`) : !/set up/.test(tile)), tile);
     await axe(`${label} Overview`);
     await open(id, "forms"); await p.locator("[data-filing]").waitFor();
-    await p.waitForFunction(() => !/·\s*…\s*·/.test(document.querySelector("[data-filing]")?.textContent ?? ""), null, { timeout: 15000 });
+    await p.waitForFunction(() => !/counting forms…/.test(document.querySelector("[data-filing]")?.textContent ?? ""), null, { timeout: 15000 });
     const filing = await p.locator("[data-filing]").innerText();
     step(`${label}: the Forms tab's filing line says the same forms`, filing.includes(`· ${want} ·`), { filing, want });
     const head = await main();
     step(`${label}: no screen calls a setup-items count "forms" (no "attached, N set up", no bare tab number)`, !/forms? attached, \d+ set up/.test(head) && (await tabs().getByRole("tab").allInnerTexts()).every((t) => !/\d\s*$/.test(t.trim())), (await tabs().getByRole("tab").allInnerTexts()).join(" | "));
     await axe(`${label} Forms`);
+    // Review M1: the release check's words follow the same definition: never "no forms" while forms are on it.
+    await open(id, "review"); await p.getByText(/Validation of the draft|Changes in the draft/).first().waitFor({ timeout: 15000 });
+    const rel = await main();
+    step(`${label}: Review and release never says "no forms" while forms are on the combination`, sum.setup.counts.forms === 0 || !/has no forms|no forms and/.test(rel), rel.match(/Nothing to release yet[^\n]*/)?.[0] ?? "(no empty-release line)");
+    if (sum.setup.counts.formsSetUp === 0 && sum.setup.counts.forms > 0) step(`${label} fail case: with forms attached and none set up, the release check says none is set up`, /no form is set up on this combination/.test(rel), rel.match(/Nothing to release yet[^\n]*/)?.[0]);
     return { sum, want };
   };
 
@@ -65,9 +70,10 @@ const formsWords = (c) => c.setUp >= c.total ? `${c.total} form${c.total === 1 ?
 
   // ------------------------------------------------------------------ tab badges say what they count
   await open(vv, "overview"); await p.locator("[data-step-badge]").first().waitFor();
-  const names = await tabs().getByRole("tab").evaluateAll((els) => els.map((e) => ({ name: e.getAttribute("aria-label"), text: e.textContent.trim(), tip: e.getAttribute("title"), n: Number(e.querySelector("[data-step-badge]")?.getAttribute("data-step-badge") ?? 0) })));
+  const names = await tabs().getByRole("tab").evaluateAll((els) => els.map((e) => ({ name: e.getAttribute("aria-label"), text: e.textContent.trim(), tip: e.getAttribute("title"), desc: e.getAttribute("aria-describedby") ? document.getElementById(e.getAttribute("aria-describedby"))?.textContent ?? null : null, n: Number(e.querySelector("[data-step-badge]")?.getAttribute("data-step-badge") ?? 0) })));
   const badged = names.filter((x) => x.n);
   step("badges pass: every badge's text says \"to do\" or \"to fix\", the tab's name is its text, and the tip says it in full", badged.length > 0 && badged.every((x) => /\d+ to (do|fix)$/.test(x.text) && x.name === x.text && /(setup items? open on|problems? to fix before release)/.test(x.tip ?? "")), names);
+  step("badges pass (review m1): each tip names the steps its items belong to, and is the tab's description for keyboard and screen readers", badged.filter((x) => /to do/.test(x.text)).every((x) => /\((Official pages|Who can be in this application|Forms|Questions and documents)[^)]*\)/.test(x.tip ?? "") && x.desc === x.tip), badged);
   step("badges fail: a tab with nothing open has no number and no tip", names.filter((x) => !x.n).every((x) => !/\d/.test(x.text) && !x.tip), names.filter((x) => !x.n));
   await p.screenshot({ path: path.join(SHOTS, "uxa1-02-tab-badges-1440.png"), clip: { x: 0, y: 0, width: 1440, height: 520 } });
 
@@ -142,13 +148,27 @@ const formsWords = (c) => c.setUp >= c.total ? `${c.total} form${c.total === 1 ?
   step(`setup: ${code} is removed from LMIA's draft`, rm.status < 300, rm.status);
   const after = (await api(`/combinations/${lm}/summary`)).body.setup.counts;
   await open(lm, "forms"); await p.locator("[data-filing]").waitFor();
-  await p.waitForFunction(() => !/·\s*…\s*·/.test(document.querySelector("[data-filing]")?.textContent ?? ""), null, { timeout: 15000 });
+  await p.waitForFunction(() => !/counting forms…/.test(document.querySelector("[data-filing]")?.textContent ?? ""), null, { timeout: 15000 });
   const filing2 = await p.locator("[data-filing]").innerText();
   step("removal fail case: a form removed in the draft leaves the count (never counted as attached and waiting), on the server and the Forms tab alike", after.forms === before.forms - 1 && after.formsSetUp === before.formsSetUp - 1 && filing2.includes(`· ${formsWords({ total: after.forms, setUp: after.formsSetUp })} ·`), { before, after, filing2 });
   // Undo puts it back: every count returns together.
   await api(`/combinations/${lm}/forms`, { method: "POST", data: { formKey: code } });
   const back = (await api(`/combinations/${lm}/summary`)).body.setup.counts;
   step("removal: adding it back returns every forms count together", back.forms === before.forms && back.formsSetUp === before.formsSetUp, { before, back });
+
+  // Break 1: a role allowed with no spouse (a single parent) keeps its chip and its count, as the form facts count it.
+  const people = (await api(`/combinations/${lm}/workspace?tab=forms`)).body.people;
+  const lines = people.lines.map((l) => ({ role: l.role, label: l.label, min: l.min, max: l.max, applies: l.applies, filing: l.filing ?? null }));
+  const single = lines.map((l) => (l.role === "spouse_or_partner" ? { ...l, min: 0, max: 0 } : l));
+  const sp = await api(`/combinations/${lm}/people`, { method: "PATCH", data: { participants: single, version: people.version, confirmRemove: true } });
+  step("setup (break 1): LMIA allows children but no spouse", sp.status < 300, sp.status);
+  const q1 = (await api(`/combinations/${lm}/workspace?tab=questionnaires`)).body.questionnaire;
+  const s1 = (await api(`/combinations/${lm}/summary`)).body;
+  const plan = (await api(`/combinations/${lm}/draft-qd/plan`, { method: "POST", data: { mode: "replay" } })).body;
+  const factRoles = (plan?.facts?.roles ?? []).filter((r) => r.role !== "case" && r.facts > 0).map((r) => r.role);
+  step("break 1 fail case: every person role the form facts count has a Questionnaires chip, and the Overview total is the chips' sum", factRoles.length > 0 && factRoles.every((r) => q1.roles.some((x) => x.role === r && x.questions > 0)) && s1.row.counts.questions === q1.roles.reduce((n, r) => n + r.questions, 0), { factRoles, chips: q1.roles.map((r) => `${r.role}:${r.questions}`), total: s1.row.counts.questions });
+  const now = (await api(`/combinations/${lm}/workspace?tab=forms`)).body.people;
+  await api(`/combinations/${lm}/people`, { method: "PATCH", data: { participants: lines, version: now.version } });
 
   const errBefore = errs.length;
   step("no page error or console error on the walk", errBefore === 0, errs.slice(0, 3));

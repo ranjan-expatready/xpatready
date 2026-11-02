@@ -19,7 +19,7 @@ import { FormProgressService } from "./form-progress.ts";
 import { chipOf, type FormStepChip } from "../../contracts/form-progress.ts";
 import { Studio } from "./studio.ts";
 import { PeopleFromGuide } from "./people-ai.ts";
-import { removedInDraft } from "../../contracts/counts.ts";
+import { removedInDraft, removedLines } from "../../contracts/counts.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 type Q = { tab?: string; family?: string; person?: string; tweaks?: string; release?: string; role?: string };
@@ -56,7 +56,7 @@ export class WorkspaceViews {
   }
 
   /** The Forms tab: each line of the draft with its settings, what IRCC accepts and its revision token. */
-  private async forms(id: string, workspaceId: string): Promise<{ lines: WorkspaceFormLine[]; filing: string; filingDetail: string; account: string | null; accountKey: string | null; problems: { level: "error" | "warning"; item: string; message: string }[]; removed: RemovedForm[]; fromLibrary: string[]; lastChange: LastFormChange | null }> {
+  private async forms(id: string, workspaceId: string): Promise<{ lines: WorkspaceFormLine[]; filing: string; filingDetail: string; account: string | null; accountKey: string | null; problems: { level: "error" | "warning"; item: string; message: string }[]; removed: RemovedForm[]; removedEver: string[]; fromLibrary: string[]; lastChange: LastFormChange | null }> {
     const { snapshot } = await buildSnapshot(this.db, workspaceId, id, "draft");
     const accepts = await acceptsOf(this.db, workspaceId);
     const revisions = await this.studio.revisions(id);
@@ -93,6 +93,7 @@ export class WorkspaceViews {
     // it again from the library restores the same line (api/src/form-lines.ts addFormLine).
     const since = (await this.db.configRelease.findFirst({ where: { combinationId: id }, orderBy: { version: "desc" }, select: { releasedAt: true } }))?.releasedAt;
     const gone = removedInDraft(rows, since); // UX-A part 1: the same rule as the forms count (contracts/counts.ts)
+    const goneEver = removedLines(rows).map((r) => r.lineageKey); // break 2: removed before a release too
     const titles = new Map((await this.db.govFormDef.findMany({ where: { id: { in: gone.map((r) => r.govFormDefId) } }, select: { id: true, displayName: true } })).map((f) => [f.id, f.displayName]));
     const removed = gone.map((r): RemovedForm => ({ code: r.lineageKey, title: titles.get(r.govFormDefId) ?? "", at: r.updatedAt.toISOString() }));
     // Drift check 5: an attached form whose file the library has already matched is added from the library, no AI; the
@@ -105,7 +106,7 @@ export class WorkspaceViews {
     const last = await this.db.formLineAction.findFirst({ where: { combinationId: id, undoneAt: null, ...(since ? { at: { gt: since } } : {}) }, orderBy: { at: "desc" } });
     const lastChange: LastFormChange | null = last ? { id: last.id, action: last.action as LastFormChange["action"], codes: ((last.detail as { codes?: string[] })?.codes ?? []), by: last.by, at: last.at.toISOString() } : null;
     const portal = snapshot.combination.portal ?? null;
-    return { lines, filing: filingKind(snapshot.forms as SnapForm[]), filingDetail: filingMethod(snapshot.forms as SnapForm[]), account: portal ? ACCOUNT_WORDS[portal as "ANY"] ?? portal : null, accountKey: portal, problems, removed, fromLibrary: files.filter((f) => matched.has(f.sha256)).map((f) => f.id), lastChange };
+    return { lines, filing: filingKind(snapshot.forms as SnapForm[]), filingDetail: filingMethod(snapshot.forms as SnapForm[]), account: portal ? ACCOUNT_WORDS[portal as "ANY"] ?? portal : null, accountKey: portal, problems, removed, removedEver: goneEver, fromLibrary: files.filter((f) => matched.has(f.sha256)).map((f) => f.id), lastChange };
   }
 
   /** Questionnaires (slice 2): one person role's questions as a case asks them, with coverage; the library sections the

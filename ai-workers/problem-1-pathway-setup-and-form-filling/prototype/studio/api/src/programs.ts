@@ -30,7 +30,7 @@ import { openNodeKeys, startWhy } from "./lifecycle.ts";
 import { Sources } from "./sources.ts";
 import { Studio } from "./studio.ts";
 import { filingProblems } from "../../engine/filing-modes.ts";
-import { removedInDraft } from "../../contracts/counts.ts";
+import { attachedNotSetUp, removedLines } from "../../contracts/counts.ts";
 
 /** Parses a request body or query with its contract; a mismatch is a 400 Problem Details with field errors. */
 export function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
@@ -78,6 +78,15 @@ export class Programs {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources) {}
 
   private cache: { key: string; rows: Row[]; nodes: ProgramDef[]; at: number } | null = null;
+  /** UX-A part 1 (review m6): the question count per draft fingerprint and day (sample birth dates read the day), so a
+   *  rebuild after an edit recounts only the combinations whose draft changed. Bounded. */
+  private questionsBy = new Map<string, ReturnType<typeof questionCounts>>();
+  private questionsOf(snapshot: Snapshot, sha256: string) {
+    const key = `${sha256}|${new Date().toISOString().slice(0, 10)}`;
+    let q = this.questionsBy.get(key);
+    if (!q) { q = questionCounts(snapshot); if (this.questionsBy.size > 500) this.questionsBy.clear(); this.questionsBy.set(key, q); }
+    return q;
+  }
 
   /** Names the migration could not key in SQL (other scripts) get the app's own BR-6 key once per process (QA-14,
    *  break round 3). A name that would duplicate an earlier one keeps no key, as the migration does for duplicates. */
@@ -163,7 +172,7 @@ export class Programs {
           setup: setupChecklistOf(notStartedInput(retired), `${n.programNodeKey}|${key}`) });
         continue;
       }
-      const { snapshot } = snaps.get(c.id)! as { snapshot: Snapshot };
+      const { snapshot, sha256 } = snaps.get(c.id)! as { snapshot: Snapshot; sha256: string };
       const rel = latest.get(c.id);
       const participants = c.participants as ParticipantLine[];
       const structure = await this.studio.structureProblems(c.id);
@@ -181,8 +190,8 @@ export class Programs {
       const running = mine.find((x) => (x.status === "QUEUED" || x.status === "RUNNING") && x.batchId)?.batchId ?? null;
       const snapForms = snapshot.forms as SnapForm[];
       // UX-A part 1 (contracts/counts.ts): a form removed in this draft is not an attached form waiting to be set up.
-      const formCodes = new Set([...snapForms.map((f) => f.form_number), ...removedInDraft(lineRows.filter((x) => x.combinationId === c.id), rel?.releasedAt).map((x) => x.lineageKey)]);
-      const sourceForms = c.attachments.filter((x) => x.recognised && x.kind === "Form" && !formCodes.has((x.edition ?? "").split(" (")[0]));
+      const formCodes = new Set([...snapForms.map((f) => f.form_number), ...removedLines(lineRows.filter((x) => x.combinationId === c.id)).map((x) => x.lineageKey)]);
+      const sourceForms = attachedNotSetUp(c.attachments, formCodes);
       const draftable = sourceForms.filter((x) => !mapped.has(x.sha256) && !["COMPLETED", "QUEUED", "RUNNING", "APPLIED"].includes(latestPerSource.get(x.id)?.status ?? "")).length;
       const fromLibrary = [...new Set(sourceForms.filter((x) => mapped.has(x.sha256)).map((x) => (x.edition ?? "").split(" (")[0]))];
       const forms = [...snapForms.map((f) => { const document = (f.form_kind ?? "data_form") !== "data_form"; return { code: f.form_number, document, channel: f.channel ?? "PDF_UPLOAD", drafted: document || (snapshot.field_maps as { form_number: string }[]).some((m) => m.form_number === f.form_number) }; }), ...sourceForms.map((x) => ({ code: (x.edition ?? x.officialFile ?? "Form").split(" (")[0], drafted: false, document: false, inLibrary: mapped.has(x.sha256) }))]
@@ -205,7 +214,7 @@ export class Programs {
       const proposalsOf: Partial<Record<ProposalKind, number>> = {};
       for (const g of byKind) if (g.combinationId === c.id || (!g.combinationId && g.formEdition && (codes.has(g.formEdition) || codes.has(g.formEdition.split(" (")[0])))) proposalsOf[g.kind as ProposalKind] = (proposalsOf[g.kind as ProposalKind] ?? 0) + g._count;
       // UX-A part 1 (contracts/counts.ts): the one question count, the Questionnaires chips' per role and their sum.
-      const qc = hasContent ? questionCounts(snapshot) : null;
+      const qc = hasContent ? this.questionsOf(snapshot, sha256) : null;
       const counts = hasContent ? { ...rowCounts(snapshot, participants), questions: qc!.total, questionsByRole: qc!.roles } : null;
       const roles = participants.filter((p) => p.max > 0);
       const applicantRoles = roles.filter((p) => p.role !== "representative" && p.applies !== false);
@@ -220,7 +229,8 @@ export class Programs {
         // participantsConfirmedAs is not stored yet (P-176, Q1 open): a saved list counts as confirmed, at the tier of the
         // person who saved it (the expert's duty: expert; anyone else: author).
         people: { roles: roles.length, applicants: applicantRoles.length, saved: !!by, confirmed: by ? { by, as: (ACTORS.find((a) => a.id === by)?.duties as readonly string[] | undefined)?.includes("sme") ? "expert" : "author" } : null, tier: "expert", reason: "Not confirmed yet" },
-        forms: { lines: snapForms.length, fromLibrary: fromLibrary.length, draftable, unmapped, sources: setup.sources },
+        // UX-A part 1 (review m4): the forms on it are the card's own list (`forms`, each form once by code).
+        forms: { lines: snapForms.length, fromLibrary: fromLibrary.length, draftable, unmapped, sources: setup.sources, onCombination: forms.length },
         proposals: proposalsOf, problems: draftProblems,
         documents: { lines: docLines.length, rolesWithout: docLines.length ? applicantRoles.filter((r) => !docLines.some((d) => covers(d, r.role))).length : 0 },
         questions: qc?.total ?? 0,

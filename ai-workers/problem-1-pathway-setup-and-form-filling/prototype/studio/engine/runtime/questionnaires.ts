@@ -21,7 +21,18 @@ export function largest(s: Snapshot) {
   const participants = (s.combination.participants ?? []) as Line[];
   const fams = familiesFor(participants);
   const family = (fams.at(-1)?.key ?? "single") as FamilyKey;
-  return { participants, family, people: familyPeople(participants, family) };
+  // UX-A part 1 (break 1): the Sample families have no single parent with children, so a combination allowing a child
+  // but no spouse lost its Child chip and every count of the child's questions while the form facts (coverage's largest
+  // household: each role allowed, two children at most) still counted them. The missing people join here, as coverage
+  // reads the household, so questions and form facts count the same people.
+  const people = familyPeople(participants, family);
+  const lim = (role: string) => participants.find((p) => p.role === role);
+  const sp = lim("spouse_or_partner"), ch = lim("child");
+  if ((sp?.max ?? 0) > 0 && !people.some((p) => p.role === "spouse_or_partner")) people.splice(2, 0, { subjectId: "spouse", role: "spouse_or_partner", label: sp?.label ?? "Spouse or partner", applies: sp?.applies !== false });
+  const kids = Math.min(ch?.max ?? 0, 2), have = people.filter((p) => p.role === "child").length;
+  const at = people.findIndex((p) => !["case", "principal", "spouse_or_partner", "child"].includes(p.role));
+  for (let i = have; i < kids; i++) people.splice(at < 0 ? people.length : at + (i - have), 0, { subjectId: `child-${i + 1}`, role: "child", label: `${ch?.label ?? "Child"} ${i + 1}`, applies: ch?.applies !== false });
+  return { participants, family, people };
 }
 
 /** One person per role (the first of each) of the largest family, read through caseView in agent mode, so every

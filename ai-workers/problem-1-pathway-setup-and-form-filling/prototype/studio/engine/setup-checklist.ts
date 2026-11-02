@@ -70,7 +70,7 @@ export type SetupInput = {
   people: { roles: number; applicants: number; saved: boolean; confirmed?: { by: string | null; as: Tier } | null; tier: Tier; reason?: string };
   /** Forms: draft lines; library forms found for its sources (added without AI); attached sources AI can draft; data
    *  forms with no fields mapped; attached sources not yet set up. */
-  forms: { lines: number; fromLibrary: number; draftable: number; unmapped: number; sources: number };
+  forms: { lines: number; fromLibrary: number; draftable: number; unmapped: number; sources: number; onCombination?: number };
   /** Waiting proposals about this combination, by kind. */
   proposals: Partial<Record<ProposalKind, number>>;
   /** Draft errors (structure and validator). */
@@ -110,7 +110,7 @@ export function setupChecklistOf(s: SetupInput, key = ""): SetupChecklist {
   const relPart = { documents: 0, questions: 0 };
   for (const p of relErrors) { const t = stepOfWhere(p.where); relBy[t.step]++; if (t.part) relPart[t.part]++; }
   const notReady = relErrors.length > 0;
-  const counts: Counts = { forms: s.forms.lines + s.forms.sources, formsSetUp: s.forms.lines, people: s.people.roles, applicants: s.people.applicants, documents: s.documents.lines, questions: s.questions, proposals: proposalsBy, problems: problemsBy, held: s.held };
+  const counts: Counts = { forms: s.forms.onCombination ?? s.forms.lines + s.forms.sources, formsSetUp: s.forms.lines, people: s.people.roles, applicants: s.people.applicants, documents: s.documents.lines, questions: s.questions, proposals: proposalsBy, problems: problemsBy, held: s.held };
 
   const open: Record<StepKey, OpenItem[]> = { pages: [], people: [], forms: [], questions_documents: [], release: [] };
   // Release problems first, on their own steps (Not ready, §6).
