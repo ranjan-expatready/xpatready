@@ -123,3 +123,8 @@ The :4400 demo (not reachable from the cloud) · a headed walk (no display) · Q
   * #455's new head only merges main, so its verdict stands.
 * **#485 (P-227 Saved check, paid C2.6 reading of IMM 5484, US$0.504), head 179d80e9: pass.** On a fresh copy (fake launcher, no live switch), after Reset to the six, Visitor visa's checklist replayed at US$0 from this PR's run file, with the ledger byte-identical. Result: 20 requirement proposals, all waiting and Check (To review "Check 20", none Ready, 0 requirements written). The 11 Super Visa items and the drafted marriage condition wait for a person. Question: `n/a_processing_delay_notice` is dropped by the rules (named in the run's message), not shown on To review. Screenshot `p485-to-review.png`.
 * After merge on main bd877d09: **C6.9 → Works** (#457 completes it; pack 15/15). S9 (#458): `check_forms_f1p.ts` 18/18 (no capability row; BACKLOG S9). #468: `check_forms_s4_canada.ts` 80/80. Built file C6.9 deleted.
+* 09:00 UTC check (P-250), all pass with no Blocker or Major:
+  * #478 C11.12 PR 2 (migration, tested alone with its own client): modes 41/41, prepare 32/32, filings 55/55, prepare_api 28/28, prepare_store_api 35/35, **C6.12 pack 24/24**. The migration only widens two check constraints.
+  * #484 C7.7 part 1: 37/37, 63/63, c611_team 59/59. #482 S2: s2_fill_trials 14/14, r1d 86/86.
+  * #436's new head is a review record only.
+* After merge (#470, #475 D2 parts 2 and 4) on main 045af590: the C11.8 pack is unchanged at 12/4/2 (AT-1, AT-2, AT-3, AT-9b), so QA-154 stays open and C11.8 Partial.
