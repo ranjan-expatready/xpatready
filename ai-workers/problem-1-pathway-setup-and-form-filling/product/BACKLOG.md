@@ -32,6 +32,17 @@ One owner per row and per shared file; never build another owner's rows. Under t
 | R4 | runtime | **An eligibility rule's own outcome** (P-230 (1)): a gate carries "when not met" (Not eligible or needs review) as data; the background gate is needs review | C6.9 tests cover both; copy says the representative reviews | P-230 |
 | L-doc | later | **Document rules fields** (P-230 (8)): copy kind, certified translation, validity window on document requirements (schema) | after the M2 gate | P-230 |
 
+## Finish the partials (P-231; shaped 2 Nov from qa's "Missing" notes on main; founder: "Yes, shape them")
+| # | Area | Item | Done when (beyond the standard) | Source |
+|---|---|---|---|---|
+| K10 | screens (screens-1) | **C11.10 open bugs** QA-120 ("Review and release1" seen again), QA-121, QA-129 | each bug's repro in qa/BUGS.md passes as a test; qa closes them | C11.10 |
+| K1 | screens (screens-1) | **C2.12: To review reads `?form=`** (today no form parameter is read in web/src to-review pages) | opening To review from a form's guided path shows only that form's items, with a clear "Show all"; reload keeps it | C2.12 |
+| K3 | screens (screens-1) | **C3.12: a "Published" date in the Forms list** | each form shows its published date (column at 1440, line under the title at 1024 and 400, no sideways scroll, axe clean) | C3.12 |
+| K4 | screens (screens-1) | **C4.1: section order per combination**: today "Move up or down" is disabled with "The order is set in the library section" (questionnaires.tsx:328, sources.tsx:30) | Move up and down work per combination, released with it, without changing the library order | C4.1, P-216 |
+| K11 | forms (forms-4, after S2) | **C11.15 Majors QA-101, QA-102, QA-103** (Start setup's form finder) | each Major's repro passes as a test at US$0 (fake launcher); qa closes them; Minors QA-78, 98, 105, 107, 110, 111 listed in the PR | C11.15 |
+| K2 | qa | **C3.3: a person's walk of a failed AI run that keeps its good entries**, and `check_ai_drafting.ts` run in an isolated copy (it rewrites saved runs under p2/runs) | walk recorded; the check's exit code 0; C3.3 re-scored | C3.3 |
+Not ready now: C4.5 "Fill this from my documents" (with "Confirm & use", held under P-251) · C9.1 AI impact on a new edition (needs a paid run; after D3) · C10.1 rows 9–12 (wait for the Visitor visa release, D3) · C11.3 ("did you mean" after X6; sample names to re-check after D1 #407 merged; qa) · C11.9 retire and restore on Fields, Document types, Checks (goes through G-CORE, P-253).
+
 ## Held by the product owner of SA-01B (P-251): nobody builds these until the ruling
 L-SA3 (C1 ready to file) · X3's guarded Add and L-SA11 (C2, P-252) · G5 (P-248 startable) · P-245 extension rows E1–E6 · L-SA6, L-SA7, L-SA8, L-SA9, L-SA10 (C2–C4, C7–C9) · the P-236 rename of C6.9 (C6) · C11 · no-row holds: SA1B-D100, SA1B-D72/D66, SA1B-D29, SA1B-D77, SA1B-D93, SA1B-D89/D107, SA1B-D75. Design-only (concept sent to the product owner before any build): pin per filing, a case with several combinations, an organisation subject for employer facts, household and filing scopes (L-SA4 waits for these), PartyRelationship "whose fact". Protect list B1–B19 of the product owner's report (section 5): keep as built.
 
