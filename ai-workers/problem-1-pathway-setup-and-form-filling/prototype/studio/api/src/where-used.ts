@@ -63,9 +63,16 @@ export async function documentTypeUseKinds(db: Client, workspaceId: string, key:
 }
 /** Item key → the labels of the combinations using it, sorted (Library › Used in; a duplicate refusal's words). */
 export async function usedInLabels(db: Client, workspaceId: string, kind: UsedKind): Promise<Map<string, string[]>> {
-  const [ids, combos] = await Promise.all([itemCombinations(db, workspaceId, kind), db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true } })]);
+  return (await usedInBoth(db, workspaceId, kind)).labels;
+}
+/** C3.13 (BR-2): one where-used read for a list page: each item's combination ids that still exist (its usedBy count)
+ *  and their labels (its Used in list), so the count and the list come from the same read. */
+export async function usedInBoth(db: Client, workspaceId: string, kind: UsedKind): Promise<{ ids: Map<string, Set<string>>; labels: Map<string, string[]> }> {
+  const [all, combos] = await Promise.all([itemCombinations(db, workspaceId, kind), db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true } })]);
   const label = new Map(combos.map((c) => [c.id, c.label]));
-  return new Map([...ids].map(([k, s]) => [k, [...new Set([...s].map((id) => label.get(id)).filter((l): l is string => !!l))].sort()] as [string, string[]]).filter(([, l]) => l.length));
+  const ids = new Map([...all].map(([k, s]) => [k, new Set([...s].filter((id) => label.has(id)))] as [string, Set<string>]));
+  const labels = new Map([...ids].map(([k, s]) => [k, [...new Set([...s].map((id) => label.get(id)!))].sort()] as [string, string[]]).filter(([, l]) => l.length));
+  return { ids, labels };
 }
 
 /** Each combination's place as its full trail in words, Pathway type › Pathway › Program › Category › Sub-category (P-104,
@@ -116,4 +123,19 @@ export async function itemReleases(db: Client, workspaceId: string, kind: "field
 /** The open cases on these combinations (each stays on the release it started on). */
 export async function openCases(db: Client, combinationIds: string[]): Promise<number> {
   return combinationIds.length ? db.case.count({ where: { combinationId: { in: combinationIds }, status: "OPEN" } }) : 0;
+}
+
+/** The open cases on these combinations, per pinned release (each case stays on the release it was opened on; every case
+ *  pins at open, runtime.ts). A case with no pin yet is counted with `release: null`. */
+export async function openCasesByRelease(db: Client, combinationIds: string[]): Promise<{ combinationId: string; release: number | null; cases: number }[]> {
+  if (!combinationIds.length) return [];
+  const [cases, pins] = await Promise.all([
+    db.case.findMany({ where: { combinationId: { in: combinationIds }, status: "OPEN" }, select: { id: true, combinationId: true } }),
+    db.packWorkPin.findMany({ where: { combinationId: { in: combinationIds } }, select: { caseId: true, configReleaseId: true } }),
+  ]);
+  const versions = new Map((await db.configRelease.findMany({ where: { id: { in: [...new Set(pins.map((p) => p.configReleaseId))] } }, select: { id: true, version: true } })).map((r) => [r.id, r.version]));
+  const releaseOf = new Map(pins.map((p) => [p.caseId, versions.get(p.configReleaseId) ?? null]));
+  const counts = new Map<string, { combinationId: string; release: number | null; cases: number }>();
+  for (const c of cases) { const release = releaseOf.get(c.id) ?? null, k = `${c.combinationId}|${release}`; const row = counts.get(k) ?? { combinationId: c.combinationId, release, cases: 0 }; row.cases++; counts.set(k, row); }
+  return [...counts.values()].sort((a, b) => a.combinationId.localeCompare(b.combinationId) || (a.release ?? 0) - (b.release ?? 0));
 }

@@ -1,4 +1,4 @@
-// C3.6 (Lead, 2 Nov; runtime-3's R3) in a real browser: on Questionnaires › "Facts a rule needs that no form asks", a
+// C3.6 (Lead, 2 Nov; runtime-3's R3) in a real browser: on Smart questionnaire (SQR) › "Facts a rule needs that no form asks", a
 // choice fact shows "Answer values, one per line"; a repeated value is refused in words and nothing is proposed; the
 // list is proposed with the fact, and the second person reads it on To review › Proposals. A non-choice shows no values
 // box. axe (WCAG 2.2 AA) on the open form. US$0, no model call. Values are Sample (AGENTS rule 4).

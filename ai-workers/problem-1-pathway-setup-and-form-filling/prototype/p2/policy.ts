@@ -44,6 +44,9 @@ export const PARTS_DIR = join(PROTOTYPE, "p2", "parts");
 /** F1 slice 2: approved portal screen inventories (P-66 portal twins) for the screen_map job. The guard admits one only
  *  when a second person approved it and its fingerprint is the one recomputed from its structure. */
 export const SCREEN_INVENTORIES = join(PROTOTYPE, "p2", "screen-inventories");
+/** QA-162: a combination's question list (role, key and label of each question it asks), written by the studio so an AI
+ *  round names a question by its key instead of inventing a name (p2/guard.ts admitQuestionList). */
+export const QUESTION_LISTS = join(PROTOTYPE, "p2", "question-lists");
 /** P-80: forms a second person approved in the product (held, not on the official manifest). At approval the Studio
  *  writes, per copy and per workspace, the approval record, the approved PDF and (on "read the form") its inventory into
  *  <studio working folder>/workspaces/demo/approved-sources, so a demo reset clears them with the database row and test
