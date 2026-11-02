@@ -43,10 +43,11 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     for (const m of cat.matchAll(/"combinationId":"([0-9a-f-]{36})"/g)) { const s = (await api("GET", `/combinations/${m[1]}/sources`)).body; if (s?.combination?.key === "wp.family") { wp = m[1]; break; } }
     step("setup: With an LMIA (wp.family) found", !!wp);
     const cfg = (await api("GET", `/combinations/${wp}/config`)).body.snapshot; const rule = cfg.rules.find((x) => x.id === "R-01");
-    const when19 = JSON.parse(JSON.stringify(rule.when).replace('{"op":"gte","field":"person.age_years","value":18}', '{"op":"gte","field":"person.age_years","value":19}'));
-    step("setup: rule R-01's \"at least 18\" changed to 19 in the draft", (await api("PATCH", `/combinations/${wp}/rules/R-01`, { condition: when19, whenPlain: rule.when_plain, thenPlain: rule.then, forWhom: rule.for_whom, sourceQuote: rule.source_quote })).status < 300);
+    // Both of R-01's 18s become 19 ("at least 19" and "less than 19"), so the item holds the same number twice (the twin save).
+    const when19 = JSON.parse(JSON.stringify(rule.when).replace('{"op":"gte","field":"person.age_years","value":18}', '{"op":"gte","field":"person.age_years","value":19}').replace('{"op":"lt","field":"person.age_years","value":18}', '{"op":"lt","field":"person.age_years","value":19}'));
+    step("setup: rule R-01's two 18s (\"at least 18\", \"less than 18\") changed to 19 in the draft", (await api("PATCH", `/combinations/${wp}/rules/R-01`, { condition: when19, whenPlain: rule.when_plain, thenPlain: rule.then, forWhom: rule.for_whom, sourceQuote: rule.source_quote })).status < 300);
     const s0 = (await api("GET", `/combinations/${wp}/sources`)).body, n0 = s0.counts.held_back;
-    const r01 = s0.numbers.find((n) => n.key === "wp.family/R-01" && n.address === "person.age_years|gte|1");
+    const r01 = s0.numbers.find((n) => n.key === "wp.family/R-01" && n.address === "person.age_years|gte|1"), r01lt = s0.numbers.find((n) => n.key === "wp.family/R-01" && n.address === "person.age_years|lt|1");
     const n90 = s0.numbers.find((n) => n.state === "missing" && n.value === "90"), n5 = s0.numbers.find((n) => n.state === "missing" && n.value === "5");
 
     // ------------------------------------------------------------------ board 1: the block, at three widths
@@ -70,6 +71,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await add5.focus(); await p.keyboard.press("Enter"); await card(n5.address).waitFor(); await p.waitForTimeout(200);
     step("C5.4 keyboard: Enter on Add source opens the Source panel with focus inside it", await p.evaluate(() => !!document.activeElement?.closest("[role=dialog]")));
     const c5 = card(n5.address);
+    step("C5.4 §4 (review m6): the words start as the item's own quote (item_quote)", !!n5.item_quote && (await field(c5, "The words that state the number").inputValue()) === n5.item_quote, n5.item_quote);
     step("C5.4 §4: a missing number opens on Official source, with the item's own quote filled in and today's date", (await c5.getByRole("radio", { name: "Official source" }).isChecked()) && (await field(c5, "Date read").inputValue()) === new Date().toISOString().slice(0, 10));
     await field(c5, "Official address").fill("http://www.canada.ca/x"); await field(c5, "The words that state the number").fill("Test data, not an official quote: at least five years ago");
     await field(c5, "Date read").fill("1989-05-01");
@@ -88,11 +90,23 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await p.screenshot({ path: path.join(SHOTS, "panel-cited-1440.png") });
     await closePanel();
     step("C5.4 keyboard: Escape closes the panel", (await p.locator("[role=dialog]").count()) === 0);
+    await p.waitForTimeout(300);
+    const focusAfterSave = await p.evaluate(() => ({ inBlock: !!document.activeElement?.closest("[data-unsourced]"), tag: document.activeElement?.tagName, label: document.activeElement?.getAttribute("aria-label") ?? document.activeElement?.textContent?.slice(0, 60) }));
+    step("C5.4 review MJ-2 (WCAG 2.4.3): after its number left the list, focus goes to the next number's button in the block, never the page", focusAfterSave.inBlock && focusAfterSave.tag === "BUTTON", focusAfterSave);
+    const b90 = block().locator(`[data-unsourced-item="${n90.key}"] [data-unsourced-number="${n90.address}"] button`);
+    if (await b90.count() === 0) await block().getByRole("button", { name: /^Show all \d+ items$/ }).click();
+    await b90.focus(); await p.keyboard.press("Enter"); await card(n90.address).waitFor(); await p.keyboard.press("Escape"); await p.locator("[data-source-panel]").waitFor({ state: "detached" }); await p.waitForTimeout(200);
+    step("C5.4 review MJ-2: Escape without saving returns focus to the button that opened the panel", await p.evaluate((a) => document.activeElement?.getAttribute("aria-label") === a, `Add source: ${n90.words}`));
     step("C5.4 §4 pass: the cited number leaves the block, and the count drops by one", (await block().innerText()).includes(`Numbers without a source (${n0 - 1})`) && (await held(wp)) === n0 - 1);
 
     // ------------------------------------------------------------------ None published, with its reason
     await openFor(n90);
     const c90 = card(n90.address);
+    // Break M4: a typed source is not thrown away without asking.
+    await c90.getByRole("radio", { name: NONE }).check(); await field(c90, "Why ExpatReady set this number").fill("Typed, not saved yet");
+    let asked = ""; p.once("dialog", (dlg) => { asked = dlg.message(); void dlg.dismiss(); });
+    await p.keyboard.press("Escape"); await p.waitForTimeout(300);
+    step("C5.4 break M4: Escape with a typed, unsaved source asks first; answering no keeps the panel and the words", asked.startsWith("Discard the source you typed?") && await p.locator("[data-source-panel]").count() === 1 && (await field(c90, "Why ExpatReady set this number").inputValue()) === "Typed, not saved yet", asked);
     await c90.getByRole("radio", { name: NONE }).check();
     await field(c90, "Why ExpatReady set this number").fill("too short"); await c90.getByRole("button", { name: "Save source" }).click(); await settle();
     step("C5.4 §5 fail: a reason under 10 characters answers its own words", (await c90.innerText()).includes("Say why ExpatReady set this number (at least 10 characters)."));
@@ -111,8 +125,27 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await cr.getByRole("button", { name: "Still correct for 19" }).click(); await settle();
     step("C5.4 BR-6 fail: \"Still correct for 19\" with words that state 18 is refused, and the editor opens on the words", (await cr.innerText()).includes("These words do not state 19.") && await cr.locator("[data-source-editor]").count() === 1, await cr.innerText());
     await field(cr, "The words that state the number").fill("Test data, not an official quote: aged 19 years or older");
+    const twin = cr.getByRole("checkbox", { name: /Use the same source for the other 19 in this item/ });
+    step("C5.4 board 2 (review m6): the item's other 19 is offered as a twin", await twin.count() === 1);
+    await twin.check();
     await cr.getByRole("button", { name: "Save source" }).click(); await settle();
     step("C5.4 BR-6 pass: new words that state 19 save, and the card is cited again", (await card(r01.address).getAttribute("data-state")) === "cited");
+    step("C5.4 board 2 (review m6): the twin save wrote the other 19 too", (await card(r01lt.address).getAttribute("data-state")) === "cited");
+    const mine1 = await card(r01.address).innerText();
+    step("C5.4 review MJ-1: once the author saves it, the card no longer credits the sample load (no chip, \"by Configuration author\")", !mine1.includes("From the sample load") && !mine1.includes("written by the sample load") && /by Configuration author/.test(mine1), mine1);
+    // The number moves while the panel is open (review m2): the 409 says the number changed, never "someone else".
+    const when21 = JSON.parse(JSON.stringify(when19).replace('{"op":"gte","field":"person.age_years","value":19}', '{"op":"gte","field":"person.age_years","value":21}'));
+    step("setup: R-01's \"at least 19\" moved to 21 while the panel is open", (await api("PATCH", `/combinations/${wp}/rules/R-01`, { condition: when21, whenPlain: rule.when_plain, thenPlain: rule.then, forWhom: rule.for_whom, sourceQuote: rule.source_quote })).status < 300);
+    await card(r01.address).getByRole("button", { name: "Change" }).click();
+    await card(r01.address).getByRole("button", { name: "Save source" }).click(); await settle();
+    const mv = await card(r01.address).innerText();
+    step("C5.4 review m2: a number that moved answers \"The number changed\" with Reload, never \"Saved by someone else\" or Keep mine", mv.includes("The number changed") && !mv.includes("Saved by someone else") && await card(r01.address).getByRole("button", { name: "Keep mine and save again" }).count() === 0 && await card(r01.address).getByRole("button", { name: "Reload", exact: true }).count() === 1, mv);
+    await card(r01.address).getByRole("button", { name: "Reload", exact: true }).click(); await settle();
+    step("C5.4 review m2: after Reload the card shows the number as it is now (changed: written for 19; now 21)", (await card(r01.address).getAttribute("data-state")) === "changed" && (await card(r01.address).innerText()).includes("the number is now 21"));
+    await card(r01.address).getByRole("button", { name: "Write a new source" }).click();
+    await field(card(r01.address), "The words that state the number").fill("Test data, not an official quote: aged 21 years or older");
+    await card(r01.address).getByRole("button", { name: "Save source" }).click(); await settle();
+    step("C5.4 BR-6 pass: words that state 21 save", (await card(r01.address).getAttribute("data-state")) === "cited");
     await closePanel();
 
     // ------------------------------------------------------------------ conflict (409): someone else saved while it was open
@@ -125,7 +158,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     step("setup: another author saves the same number first (200)", other.status === 200);
     await cc.getByRole("button", { name: "Save source" }).click(); await settle();
     const ct = await cc.innerText();
-    step("C5.4 §5 conflict: the panel says someone else saved it, with who and when, and offers Reload theirs and Keep mine", ct.includes("Someone else saved this source while you had it open (") && await cc.getByRole("button", { name: "Reload theirs" }).count() === 1 && await cc.getByRole("button", { name: "Keep mine and save again" }).count() === 1, ct);
+    step("C5.4 §5 conflict (the same author in another window, break M3): the panel says so with when, and offers Reload the saved one and Keep mine", ct.includes("You saved this source in another window while this one was open (") && await cc.getByRole("button", { name: "Reload the saved one" }).count() === 1 && await cc.getByRole("button", { name: "Keep mine and save again" }).count() === 1, ct);
+    step("C5.4 break M3: the conflict shows what the other save holds before Keep mine", (await cc.locator("[data-source-theirs]").innerText().catch(() => "")).includes("Test data: theirs, saved first."));
     await axe("the Source panel in conflict", "[role=dialog]");
     await p.screenshot({ path: path.join(SHOTS, "panel-conflict-1440.png") });
     await cc.getByRole("button", { name: "Keep mine and save again" }).click(); await settle();
@@ -136,7 +170,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     // ------------------------------------------------------------------ read only for a non-author (the immigration expert)
     await as("user-C"); await review(wp);
     const left = (await api("GET", `/combinations/${wp}/sources`)).body.numbers.find((n) => !n.passes);
+    step("C5.4 review m1: a non-author is offered View, never Add source or Check source", await block().getByRole("button", { name: /^(Add source|Check source)/ }).count() === 0 && await block().getByRole("button", { name: /^View: / }).count() > 0);
     await openFor(left);
+    step("C5.4 review m1: a missing number reads \"No source yet\" for a non-author", await card(left.address).locator("[data-source-none-yet]").count() === 1);
     const ro = await panel().innerText();
     step("C5.4 BR-11: for a non-author the panel is read only: no Save, and it says who adds sources", ro.length > 0 && (await p.locator("[role=dialog]").innerText()).includes("Only the configuration author adds sources.") && await panel().getByRole("button", { name: /Save source|Change/ }).count() === 0);
     await p.screenshot({ path: path.join(SHOTS, "panel-read-only-1440.png") });
@@ -154,7 +190,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await sourceEveryNumber(PORT, wp);
     await review(wp);
     const at = await p.locator("[data-sources-all-set]").innerText().catch(() => "");
-    step("C5.4 pass: with every number answered, the block says every published number has its source, and Submit is offered", /Every published number has its source/.test(at) && await p.locator("[data-unsourced]").count() === 0 && !(await p.getByRole("button", { name: /Submit for review/ }).isDisabled()), at);
+    step("C5.4 pass: with every number answered, the block says every published number has its source, and Submit is offered", /Every published number has its answer: an official source or "None published – set by ExpatReady" \(\d+, \d+ of them from the sample load\)/.test(at) && await p.locator("[data-unsourced]").count() === 0 && !(await p.getByRole("button", { name: /Submit for review/ }).isDisabled()), at);
     await axe("Review and release with every number sourced", "main");
     await p.screenshot({ path: path.join(SHOTS, "review-all-sourced-1440.png") });
     step("no page errors", errs.length === 0, errs.join(" | "));

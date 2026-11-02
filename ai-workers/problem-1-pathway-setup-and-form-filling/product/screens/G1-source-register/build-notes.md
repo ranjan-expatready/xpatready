@@ -100,3 +100,27 @@ API.
 * **Checks:** `tests/check_g1_source_register_browser.cjs` **41/41** (1440, 1024 and 400 px; axe on the block, the
   panel with errors, the conflict and the all-sourced state; keyboard in and out). API suite 51/51 (`item_quote`).
   `check_s5_slice2_browser` 63/63 (it reads the validation list). Web `tsc` 0; `count-any` 422 (unchanged).
+
+### PR 2b, after the reviewer (Block, 7.5/10) and the breaker (4 Majors), both on b9743d5a
+* **MJ-1 / break M2:** "From the sample load" now means *last saved* by the sample load (`updated_by`), so a person's
+  save is credited to them. API check plus browser check.
+* **MJ-2 / break M1 (WCAG 2.4.3):** closing the panel returns focus to the button that opened it, or to the next
+  button when that number left the list, or to the heading. `Panel` takes `returnFocus`. The panel now renders also
+  when the last number is answered, so saving the last one no longer makes it vanish. Browser checks after a save and
+  after Escape.
+* **Break M3:** a save conflict shows what the other save holds ("Saved now: …") before Keep mine; the same author in
+  another window is told "You saved this source in another window", never "someone else". API checks for both.
+* **Break M4:** a typed, unsaved source asks "Discard the source you typed? It is not saved." before Escape, the
+  overlay, the X or Close throws it away. `Panel` takes `confirmClose`. Browser check.
+* **Minors fixed:** View (read only) for a non-author, and "No source yet" on a missing card (review m1, break m4); a
+  moved number answers "The number changed" with Reload (review m2, break m3); a changed line names its number (review
+  m3); the fee count line's tooltip names each line's quote kind (review m4; API `quote_kind`); the all-set line says
+  "has its answer: an official source or 'None published …'", with how many came from the sample load (review m5,
+  break m8); a failed twin save is named (break m2); long words wrap (break m1); the date read defaults to the
+  person's own day and the server accepts up to UTC+14 (break m5); the page note stops at 200 (break m6); the link
+  reads its host (break m7); focus moves to the first field once the numbers load (break m9); same-named buttons are
+  told apart by their item (break m4). Tests added for the item quote, the twin save, the moved 409 and focus
+  (review m6).
+* **Noted for PR 2a's rules (not this PR):** French and Arabic-digit quotes are refused; a quote of zero-width
+  characters around a digit is accepted; number words show dates as 2019-06-07.
+* Browser 55/55, API 54/54.

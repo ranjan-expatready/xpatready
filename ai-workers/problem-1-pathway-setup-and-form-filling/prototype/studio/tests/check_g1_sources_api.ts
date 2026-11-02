@@ -73,6 +73,10 @@ try {
 
   // ------------------------------------------------------------------ fingerprint (BR-9)
   const vv = idOf("vv.single");
+  // Review m4 on PR 2b: each fee-table number carries its line's quote kind for the count line's tooltip, never "Official source".
+  const vvFees = (await sources(vv)).numbers.filter((n: { state: string }) => n.state === "fee_table");
+  ok("C5.4 BR-4 (review m4 on PR 2b): the Visitor visa's fee-table numbers each carry their line's quote kind (\"IRCC's words\" …), never \"Official source\"",
+    vvFees.length > 0 && vvFees.every((n: { quote_kind?: string | null }) => typeof n.quote_kind === "string" && n.quote_kind.length > 0 && n.quote_kind !== "Official source"), vvFees.map((n: { quote_kind?: string | null }) => n.quote_kind));
   const vvSha = (await call("GET", `/combinations/${vv}`)).body.draft.sha256;
   const vvCfg = (await call("GET", `/combinations/${vv}/config`)).body.snapshot;
   const n90 = s.numbers.find((n: { key: string }) => n.key === "wp.family/RW_PASSPORT_EXPIRY_90");
@@ -91,7 +95,13 @@ try {
 
   // ------------------------------------------------------------------ PUT: 409 old version, 403, 400 per field, 404, 409 value moved
   const again = await put(wp, n90, { address: n90.address, value: 90, none_published: { reason: "Another author's reason, same version read" }, version: 0 });
-  ok("C5.4 M2 fail: a second PUT with the same version read gets 409, naming who saved and when", again.status === 409 && /^Someone else saved this source while you had it open \(Configuration author, \d\d:\d\d UTC\)\. Reload theirs, or keep yours and save again\.$/.test(again.body.detail), again.body);
+  // Break M3 on PR 2b: the same author in another window is told so, never "someone else".
+  ok("C5.4 M2 fail: a second PUT with the same version read gets 409; by the same author it says \"You saved this source in another window\", with when", again.status === 409 && again.body.version === 1 && /^You saved this source in another window while this one was open \(\d\d:\d\d UTC\)\. Reload it, or keep this one and save again\.$/.test(again.body.detail), again.body);
+  const byLoad = s.numbers.find((n: { state: string; entry: { from_sample_load: boolean } | null }) => n.state === "cited" && n.entry?.from_sample_load);
+  const other = await put(wp, byLoad, { address: byLoad.address, value: byLoad.value, none_published: { reason: "Test data: read before the sample load saved it" }, version: 0 });
+  ok("C5.4 M2 fail: a PUT on an entry someone else saved (the sample load, version 1) with version 0 gets 409 naming them: \"Someone else saved this source … (The sample load, hh:mm UTC)\"", other.status === 409 && /^Someone else saved this source while you had it open \(The sample load, \d\d:\d\d UTC\)\. Reload theirs, or keep yours and save again\.$/.test(other.body.detail), other.body);
+  const mineNow = await put(wp, byLoad, { address: byLoad.address, value: byLoad.value, cited: byLoad.entry.cited, version: 1 });
+  ok("C5.4 review MJ-1 on PR 2b: once the author saves an entry the sample load wrote, it is no longer \"from the sample load\" (updated_by is the author)", mineNow.status === 200 && mineNow.body.entry.from_sample_load === false && mineNow.body.entry.updated_by === AUTHOR && mineNow.body.entry.created_by !== AUTHOR, mineNow.body);
   r = await put(wp, n90, { address: n90.address, value: 90, cited: { url: "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5488.html", page: "IMM 5488", quote: "Test data, not an official quote: at most 90", date: "2026-10-19" }, version: 1 });
   ok("C5.4 M2 pass: a PUT with the current version saves: 200, version 2, now cited; audit \"changed\"", r.status === 200 && r.body.entry.version === 2 && r.body.state === "cited" && ((await call("GET", "/activity", undefined, SME)).body as { entity: string; action: string }[]).some((e) => e.entity === "source entry" && e.action === "changed"), r.body?.entry);
   const n30 = s.numbers.find((n: { key: string }) => n.key === "wp.family/RW_PASSPORT_EXPIRY_30");

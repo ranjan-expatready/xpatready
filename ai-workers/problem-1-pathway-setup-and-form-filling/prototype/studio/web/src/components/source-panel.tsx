@@ -5,7 +5,7 @@
 // and usable validity rules already cite their numbers and show read only (BR-4; no fee card, m4).
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import type { SourceNumberView, SourcesView } from "../../../contracts/source-register";
+import type { SourceEntryView, SourceNumberView, SourcesView } from "../../../contracts/source-register";
 import { api, ApiError, useApi, useSessionView, useToast } from "@/lib/api";
 import { Button, Field, Input, Notice, Panel, Pill, Textarea } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
@@ -28,27 +28,42 @@ export const SOURCE_SAY = {
 /** Build note 2 (PR 2a): a check's item words are its message, about 200 characters; the panel and the list show the
  *  first sentence only, the whole text on hover. */
 export const firstSentence = (s: string) => { const m = /^(.{12,}?[.!?])(\s|$)/.exec(s.trim()); return m ? m[1] : s.trim(); };
-const today = () => new Date().toISOString().slice(0, 10);
+/** The person's own calendar day (break m5: the UTC day refused "today" east of UTC); the server allows up to 14 hours
+ *  ahead of UTC, the furthest time zone. */
+const today = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 10); };
 export const sourcesPath = (id: string, kind?: string, key?: string) => `/combinations/${id}/sources${kind && key ? `/${encodeURIComponent(kind)}/${encodeURIComponent(key)}` : ""}`;
 
 export type SourceItem = { kind: string; key: string; item_words: string; where: string };
 
 /** The right-hand panel for one item's numbers. `onSaved` lets the caller refresh its own lists. */
-export function SourcePanel({ id, item, onClose }: { id: string; item: SourceItem | null; onClose: () => void }) {
+export function SourcePanel({ id, item, onClose, returnFocus }: { id: string; item: SourceItem | null; onClose: () => void; returnFocus?: () => HTMLElement | null | undefined }) {
   const { canAuthor } = useSessionView();
   const q = useApi<SourcesView>(["sources", id, item?.kind, item?.key], item ? sourcesPath(id, item.kind, item.key) : null, { staleTime: 0 });
   // URLs this combination already cites, offered as choices (STANDARDS §3.2: the approved sources the release uses).
   const all = useApi<SourcesView>(["sources", id], item ? sourcesPath(id) : null);
   const urls = [...new Set((all.data?.numbers ?? []).map((n) => n.entry?.cited?.url).filter((u): u is string => !!u))];
   const numbers = q.data?.numbers ?? [];
+  // Break M4: a source typed but not saved is not thrown away without asking (Escape, the overlay, the X or Close).
+  const dirty = React.useRef(new Set<string>());
+  const setDirty = React.useCallback((address: string, on: boolean) => { on ? dirty.current.add(address) : dirty.current.delete(address); }, []);
+  React.useEffect(() => { if (!item) dirty.current.clear(); }, [item]);
+  const confirmClose = () => !dirty.current.size || window.confirm("Discard the source you typed? It is not saved.");
+  const close = () => { if (confirmClose()) { dirty.current.clear(); onClose(); } };
+  // Break m9: the panel opens before its numbers load, so focus first sits on the panel itself; once they load it moves
+  // to the first field (or button), as every other panel does.
+  React.useEffect(() => {
+    if (!q.data) return;
+    const t = window.setTimeout(() => { const box = document.querySelector<HTMLElement>("[data-source-panel]"); const a = document.activeElement; if (box && a && a.getAttribute("role") === "dialog") box.querySelector<HTMLElement>("input:not([disabled]), textarea, select, button")?.focus(); }, 0);
+    return () => window.clearTimeout(t);
+  }, [q.data]);
   return (
-    <Panel open={!!item} onOpenChange={(o) => { if (!o) onClose(); }} title="Sources of its numbers" bodyLabel="Sources of its numbers"
+    <Panel open={!!item} onOpenChange={(o) => { if (!o) { dirty.current.clear(); onClose(); } }} confirmClose={confirmClose} returnFocus={returnFocus} title="Sources of its numbers" bodyLabel="Sources of its numbers"
       description={item ? <><span title={item.item_words}>{firstSentence(item.item_words)}</span> · {item.where}</> : undefined}
-      footer={<><Button variant="ghost" onClick={onClose}>Close</Button><span className="text-xs text-text-muted">{canAuthor ? "Each number saves on its own." : SOURCE_SAY.readOnly}</span></>}>
+      footer={<><Button variant="ghost" onClick={close}>Close</Button><span className="text-xs text-text-muted">{canAuthor ? "Each number saves on its own." : SOURCE_SAY.readOnly}</span></>}>
       <div className="space-y-4 text-sm" data-source-panel>
         {q.isLoading ? <Spinner label="Loading the sources" /> : q.isError ? <Notice tone="danger" title="The sources could not be loaded">{(q.error as Error).message}</Notice>
           : !numbers.length ? <p className="text-text-muted" data-source-empty>{SOURCE_SAY.empty}</p>
-          : numbers.map((n) => <NumberCard key={`${n.address}`} id={id} n={n} canAuthor={canAuthor} urls={urls} siblings={numbers} />)}
+          : numbers.map((n) => <NumberCard key={`${n.address}`} id={id} n={n} canAuthor={canAuthor} urls={urls} siblings={numbers} setDirty={setDirty} />)}
         <datalist id="source-urls">{urls.map((u) => <option key={u} value={u} />)}</datalist>
       </div>
     </Panel>
@@ -62,18 +77,23 @@ const draftOf = (n: SourceNumberView): Draft => ({
   date: n.state === "changed" ? today() : n.entry?.cited?.date ?? today(), reason: n.entry?.none_published?.reason ?? "",
 });
 
-function NumberCard({ id, n, canAuthor, urls, siblings }: { id: string; n: SourceNumberView; canAuthor: boolean; urls: string[]; siblings: SourceNumberView[] }) {
+function NumberCard({ id, n, canAuthor, urls, siblings, setDirty }: { id: string; n: SourceNumberView; canAuthor: boolean; urls: string[]; siblings: SourceNumberView[]; setDirty: (address: string, on: boolean) => void }) {
   const qc = useQueryClient(); const toast = useToast();
   const answered = n.state === "cited" || n.state === "none_published" || n.state === "sample";
   const [editing, setEditing] = React.useState(n.state === "missing");
   const [d, setD] = React.useState<Draft>(() => draftOf(n));
   const [errs, setErrs] = React.useState<Record<string, string>>({});
-  const [conflict, setConflict] = React.useState<{ detail: string; version: number } | null>(null);
+  // A 409 is either someone else's save (version: Keep mine is offered) or the number itself moved (value: reload only;
+  // review m2 on PR 2b: no one saved, so it never says "someone else").
+  // Break M3: a save conflict shows what the other save holds, so Keep mine never overwrites an answer unseen.
+  const [conflict, setConflict] = React.useState<{ detail: string; version: number; moved?: boolean; theirs?: SourceEntryView | null } | null>(null);
   const [busy, setBusy] = React.useState(false);
   // The same number elsewhere in this item (the IMM 5707 line's 18 twice): one save may write both (board 2).
   const twins = siblings.filter((x) => x.address !== n.address && x.value === n.value && !x.passes && x.state !== "fee_table" && x.state !== "validity_cite");
   const [alsoTwins, setAlsoTwins] = React.useState(false);
   React.useEffect(() => { setD(draftOf(n)); setEditing(n.state === "missing"); setErrs({}); setConflict(null); }, [n.state, n.entry?.version, n.value]);
+  const typed = editing && JSON.stringify(d) !== JSON.stringify(draftOf(n));
+  React.useEffect(() => { setDirty(n.address, typed); return () => setDirty(n.address, false); }, [typed, n.address, setDirty]);
   const set = (k: keyof Draft) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setD((x) => ({ ...x, [k]: e.target.value }));
   const body = (x: SourceNumberView, version: number) => ({ address: x.address, value: x.value, version,
     ...(d.mode === "cited" ? { cited: { url: d.url, page: d.page.trim() || null, quote: d.quote, date: d.date } } : { none_published: { reason: d.reason } }) });
@@ -82,13 +102,18 @@ function NumberCard({ id, n, canAuthor, urls, siblings }: { id: string; n: Sourc
     setBusy(true); setErrs({}); setConflict(null);
     try {
       await api(sourcesPath(id, n.kind, n.key), { method: "PUT", json: body(n, version) });
-      let also = 0;
-      if (alsoTwins) for (const t of twins) { try { await api(sourcesPath(id, t.kind, t.key), { method: "PUT", json: body(t, t.entry?.version ?? 0) }); also++; } catch (e) { toast.push({ tone: "danger", text: `${t.words}: ${(e as Error).message}` }); } }
-      toast.push({ tone: "ok", text: `Source saved: ${n.words}${also ? ` and ${also} more` : ""}` });
+      let also = 0; const missed: string[] = [];
+      if (alsoTwins) for (const t of twins) { try { await api(sourcesPath(id, t.kind, t.key), { method: "PUT", json: body(t, t.entry?.version ?? 0) }); also++; } catch { missed.push(t.words); } }
+      // Break m2: a twin that did not save is named, and its card (now refreshed) is where to try again.
+      toast.push({ tone: missed.length ? "danger" : "ok", text: `Source saved: ${n.words}${also ? ` and ${also} more` : ""}.${missed.length ? ` Not saved: ${missed.join("; ")}. Open its card below and save it again.` : ""}` });
       setEditing(false); setAlsoTwins(false); await done();
     } catch (e) {
       const err = e as ApiError;
-      if (err.status === 409 && typeof (err.problem as { version?: unknown }).version === "number") setConflict({ detail: err.message, version: (err.problem as { version: number }).version });
+      if (err.status === 409 && typeof (err.problem as { value?: unknown }).value === "string") setConflict({ detail: err.message, version: -1, moved: true });
+      else if (err.status === 409 && typeof (err.problem as { version?: unknown }).version === "number") {
+        const theirs = await api<SourcesView>(sourcesPath(id, n.kind, n.key)).then((v) => v.numbers.find((x) => x.address === n.address)?.entry ?? null).catch(() => null);
+        setConflict({ detail: err.message, version: (err.problem as { version: number }).version, theirs });
+      }
       else if (err.status === 409) { setConflict({ detail: err.message, version: -1 }); }
       // "Still correct for 60" with words that state 90 is refused on the words: open the editor so the error shows there.
       else if (err.problem?.errors?.length) { setErrs(Object.fromEntries(err.problem.errors.map((x) => [x.field, x.message]))); setEditing(true); }
@@ -112,11 +137,13 @@ function NumberCard({ id, n, canAuthor, urls, siblings }: { id: string; n: Sourc
           <p>The source was written for <b>{n.entry?.value}</b>; the number is now <b>{n.value}</b>.</p>
           <p className="text-xs text-text-muted">Before: <Answer n={n} /></p>
         </div>
-      ) : answered && !editing ? <div className="mt-2 text-xs"><Answer n={n} /></div> : null}
+      ) : answered && !editing ? <div className="mt-2 text-xs"><Answer n={n} /></div>
+        : n.state === "missing" && !canAuthor ? <p className="mt-2 text-xs text-text-muted" data-source-none-yet>No source yet. The configuration author adds it.</p> : null}
       {conflict ? (
-        <Notice tone="warn" className="mt-2" title="Saved by someone else">{conflict.detail}
+        <Notice tone="warn" className="mt-2" title={conflict.moved ? "The number changed" : conflict.version >= 0 ? "Saved while you had it open" : "Not saved"}>{conflict.detail}
+          {conflict.theirs ? <p className="mt-1 text-xs" data-source-theirs>Saved now: <Answer n={{ ...n, entry: conflict.theirs }} /></p> : null}
           <div className="mt-2 flex gap-2">
-            <Button size="sm" variant="secondary" onClick={() => { setConflict(null); void done(); }}>Reload theirs</Button>
+            <Button size="sm" variant="secondary" onClick={() => { setConflict(null); void done(); }}>{conflict.moved ? "Reload" : "Reload the saved one"}</Button>
             {conflict.version >= 0 ? <Button size="sm" onClick={() => void save(conflict.version)} busy={busy}>Keep mine and save again</Button> : null}
           </div>
         </Notice>
@@ -140,7 +167,7 @@ function NumberCard({ id, n, canAuthor, urls, siblings }: { id: string; n: Sourc
                 <Field label="Official address (https)" hint={urls.length ? "Pick one this combination already cites, or type the page's address." : undefined} error={errs["cited.url"]}>
                   <Input value={d.url} onChange={set("url")} list="source-urls" inputMode="url" autoComplete="off" placeholder="https://www.canada.ca/…" />
                 </Field>
-                <Field label="Page or section (optional, up to 200 characters)" error={errs["cited.page"]}><Input value={d.page} onChange={set("page")} maxLength={400} /></Field>
+                <Field label="Page or section (optional, up to 200 characters)" error={errs["cited.page"]}><Input value={d.page} onChange={set("page")} maxLength={200} /></Field>
                 <Field label="Date read" error={errs["cited.date"]}><Input type="date" value={d.date} onChange={set("date")} max={today()} /></Field>
                 <Field label="The words that state the number (up to 300 characters)" error={errs["cited.quote"]}
                   hint={n.item_quote && d.quote === n.item_quote ? `Filled in from the item's own quote. It must state ${n.value}; if it does not, copy the page's words that do.` : `Copy the words from the page that state ${n.value}.`}>
@@ -181,7 +208,9 @@ function Answer({ n }: { n: SourceNumberView }) {
   const e = n.entry;
   if (!e) return <span>No source yet.</span>;
   const who = e.from_sample_load ? "written by the sample load" : `by ${e.updated_by_name}`;
-  if (e.cited) return <span><a className="text-text-link underline" href={e.cited.url} target="_blank" rel="noreferrer noopener">{e.cited.page || new URL(e.cited.url).hostname}</a> · checked {fmtDate(e.cited.date)} · {who}<br /><q className="text-text-muted">{e.cited.quote}</q></span>;
-  if (e.none_published) return <span>None published – set by ExpatReady · {fmtDate(e.updated_at)} · {who}<br /><span className="text-text-muted">{e.none_published.reason}</span></span>;
+  // Break m7: the link reads the host it goes to; m1: long unbroken words wrap, never widen the panel.
+  const host = (() => { try { return new URL(e.cited?.url ?? "").hostname; } catch { return e.cited?.url ?? ""; } })();
+  if (e.cited) return <span className="[overflow-wrap:anywhere]"><a className="text-text-link underline" href={e.cited.url} target="_blank" rel="noreferrer noopener">{host}</a>{e.cited.page ? ` · ${e.cited.page}` : ""} · checked {fmtDate(e.cited.date)} · {who}<br /><q className="text-text-muted">{e.cited.quote}</q></span>;
+  if (e.none_published) return <span className="[overflow-wrap:anywhere]">None published – set by ExpatReady · {fmtDate(e.updated_at)} · {who}<br /><span className="text-text-muted">{e.none_published.reason}</span></span>;
   return <span>Sample: no source claimed · {who}</span>;
 }

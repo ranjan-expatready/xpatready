@@ -23,7 +23,9 @@ export const SOURCE_WORDS = {
   version: "Reload the page: the version you read is not a number.",
 } as const;
 
-const today = () => new Date().toISOString().slice(0, 10);
+/** The latest calendar day anywhere now (UTC+14), so an author east of UTC may give their own today (break m5 on PR 2b);
+ *  a later date is in the future everywhere. */
+const today = () => new Date(Date.now() + 14 * 3600_000).toISOString().slice(0, 10);
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const realDate = (x: string) => ISO.test(x) && !Number.isNaN(Date.parse(`${x}T00:00:00Z`)) && new Date(`${x}T00:00:00Z`).toISOString().slice(0, 10) === x;
 
@@ -58,7 +60,7 @@ export const NUMBER_KINDS = ["rule", "check", "threshold", "fee"] as const;
 export const NUMBER_STATES = ["missing", "cited", "none_published", "sample", "changed", "fee_table", "validity_cite"] as const;
 export type NumberStateName = (typeof NUMBER_STATES)[number];
 
-/** One stored answer as the screens read it. `from_sample_load`: written by the sample loader (chip "From the sample
+/** One stored answer as the screens read it. `from_sample_load`: last saved by the sample loader (review MJ-1 on PR 2b: a person's save makes it theirs) (chip "From the sample
  *  load"), never shown as a person's sourcing. */
 export type SourceEntryView = {
   value: string; cited: { url: string; page: string | null; quote: string; date: string } | null; none_published: { reason: string } | null; sample: boolean;
@@ -71,6 +73,8 @@ export type SourceNumberView = {
   /** G1 PR 2b: the item's own source quote, which the Source panel offers as the words that state the number. Absent on a
    *  PUT's answer. */
   item_quote?: string | null;
+  /** A fee number only: its fee-table line's quote kind ("IRCC's words", …), for the count line's tooltip (§4). */
+  quote_kind?: string | null;
 };
 /** GET /combinations/:id/sources. `unused`: entries whose number is gone ("No longer used"); `held_back`: the numbers
  *  that refuse Submit, Approve and release now. */
