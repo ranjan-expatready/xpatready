@@ -50,11 +50,11 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C11.10 X1 pass: the Forms tab shows the number of open setup items that land on it", want.forms > 0 && bf.n === want.forms, { want, got: bf });
   step("C11.10 X1 pass: the Documents tab shows its number", want.documents > 0 && bd.n === want.documents, { want, got: bd });
   step("C11.10 X1 fail: a tab with nothing open shows no badge", want.questionnaires === 0 && bq.n === 0, { want, got: bq });
-  step("C11.10 X1: the badge is read as words by a screen reader (the tab's name), while the tab's text stays 'Forms 4'", /^Forms \d+ setup items? open$/.test(await p.getByRole("tab", { name: /^Forms/ }).getAttribute("aria-label")) && /^Forms\s*\d+$/.test((await p.getByRole("tab", { name: /^Forms/ }).innerText()).trim()));
+  step("C11.10 X1 (UX-A part 1): the badge says what it counts, the tab's name is exactly its text ('Forms 4 to do')", /^Forms \d+ to do$/.test(await p.getByRole("tab", { name: /^Forms/ }).getAttribute("aria-label")) && /^Forms\s*\d+ to do$/.test((await p.getByRole("tab", { name: /^Forms/ }).innerText()).trim()));
   await p.screenshot({ path: path.join(SHOTS, "01-tab-badges-1440.png"), clip: { x: 0, y: 0, width: 1440, height: 520 } });
   // QA-120: every count on a tab has one badge style and a space before it, and the tab's name says it in words.
   const fTab = p.getByRole("tab", { name: /^Forms/ });
-  step("QA-120 pass: a setup-items tab is named in words and keeps its visible text first, with the same tip", (await fTab.getAttribute("aria-label")) === (await fTab.getAttribute("title")) && /^Forms \d+ setup items? open$/.test(await fTab.getAttribute("title") ?? ""));
+  step("QA-120 pass (UX-A part 1): a setup-items tab is named by its visible text, and its tip says what the badge counts in full, naming the steps (review m1)", /^Forms \d+ to do$/.test(await fTab.getAttribute("aria-label") ?? "") && /^\d+ setup items? open on Forms \((Official pages|Who can be in this application|Forms)(, [^)]+)?\)$/.test(await fTab.getAttribute("title") ?? ""));
   let reviewTab = null;
   for (const key of ["sv.super_visa", "vv.single", "sp.student", "fs.outside", "lm.high_wage", "wp.family"]) {
     await p.goto(`${BASE}/c/${sql(`select id from combination where combination_key='${key}'`)}/overview`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
@@ -64,8 +64,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   }
   step("QA-120 setup: a sample combination has a problem to fix on Review and release", !!reviewTab, reviewTab);
   if (reviewTab) {
-    step("QA-120 pass: Review and release reads \"Review and release 1 problem\" (never \"Review and release1\"), the same as its tip", /^Review and release \d+ problems?$/.test(reviewTab.name ?? "") && reviewTab.tip === reviewTab.name, reviewTab);
-    step("QA-120 pass: its visible text has a space before the count", /^Review and release \d+$/.test(reviewTab.text) && !/release\d/.test(reviewTab.text), reviewTab.text);
+    step("QA-120 pass (UX-A part 1): Review and release reads \"Review and release 1 to fix\" (never \"Review and release1\"), its tip says it in full", /^Review and release \d+ to fix$/.test(reviewTab.name ?? "") && /^\d+ problems? to fix before release$/.test(reviewTab.tip ?? ""), reviewTab);
+    step("QA-120 pass: its visible text has a space before the count", /^Review and release \d+ to fix$/.test(reviewTab.text) && !/release\d/.test(reviewTab.text), reviewTab.text);
     step("QA-120 pass: one badge shape for both counts (rounded-full px-1.5 text-xs), danger in colour only", !!reviewTab.warnCls ? reviewTab.cls.replace(/bg-\S+|text-text-\S+/g, "").trim() === reviewTab.warnCls.replace(/bg-\S+|text-text-\S+/g, "").trim() : /rounded-full px-1\.5 text-xs/.test(reviewTab.cls), reviewTab);
   }
   const plainTab = p.getByRole("tab", { name: /^Overview/ });
