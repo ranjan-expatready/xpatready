@@ -67,9 +67,9 @@ ok("SH3 R5: an organisation. fact is organisation-scoped (held) and read on the 
 ok("SH3 R5 (fail): any other fact is a person fact; nothing is household-scoped yet", R.scopeOf("person.date_of_birth") === "person" && R.scopeOf("") === "person" && R.scopeOf("household.marriage_date") === "person");
 
 // ---- R6 facts a subject sees
-const known: Known = new Map(Object.entries({ "A|person.name": "Ann", "B|person.name": "Ben", "case|case.purpose": "visit", "A|person.job|0": "row", "A/parent_1|person.name": "Pat" }).map(([k, value]) => [k, { value, status: "answered" as const, source: "t" }]));
-ok("SH3 R6: a person sees their own facts and the filing's", same(R.factsOf(known, "A"), { "person.name": "Ann", "case.purpose": "visit" }));
-ok("SH3 R6 (fail): never another person's, never a list row; a relative sees only their own and the filing's", R.factsOf(known, "B")["person.name"] === "Ben" && !("person.job" in R.factsOf(known, "A")) && same(R.factsOf(known, "A/parent_1"), { "case.purpose": "visit", "person.name": "Pat" }) && same(R.factsOf(known, FILING), { "case.purpose": "visit" }));
+const known: Known = new Map(Object.entries({ "A|person.name": "principal-name", "B|person.name": "partner-name", "case|case.purpose": "visit", "A|person.job|0": "row", "A/parent_1|person.name": "parent-name" }).map(([k, value]) => [k, { value, status: "answered" as const, source: "t" }]));
+ok("SH3 R6: a person sees their own facts and the filing's", same(R.factsOf(known, "A"), { "person.name": "principal-name", "case.purpose": "visit" }));
+ok("SH3 R6 (fail): never another person's, never a list row; a relative sees only their own and the filing's", R.factsOf(known, "B")["person.name"] === "partner-name" && !("person.job" in R.factsOf(known, "A")) && same(R.factsOf(known, "A/parent_1"), { "case.purpose": "visit", "person.name": "parent-name" }) && same(R.factsOf(known, FILING), { "case.purpose": "visit" }));
 
 // ---- R7 signers
 const sign = (who: string, by: string | null | undefined, people = fam) => R.formSigners(people, who, by);
