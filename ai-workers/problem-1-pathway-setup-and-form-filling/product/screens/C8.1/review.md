@@ -66,3 +66,12 @@ Fresh worktree at `a31b1dfe`, port 4439, own database; setup 13/13, `setup_vv_m3
 * **Still open from round 1:** M1 (413 wording, confirmed again: "larger than 25 MB"), M4, M5 (the new test covers the fixes but not other-firm, author or the race), M6, M7. All Minor.
 
 **Round 2 verdict: Approve** for `a31b1dfe` (no Blocker or Major). The Round 1 journey score stands: **8.5 / 10**, nothing in the diff lowers a criterion (the stale-copy and non-hand-signed refusals read in plain words).
+
+## Round 3 (diff-only, P-278): `a31b1dfe` to `126b8070`
+Fresh worktree at `126b8070`, port 4439, own database. Setup 13/13; `setup_vv_m3` 44/46 (S2w and S7a, as in round 2); `C8.1.test.ts` **13/14** (only C8.1-13, held); `check_c81_signing.ts` **18/18**; `check_sh3_resolver.ts` 63/63; `check_c81_signing_api.ts` **9/9**. I did not re-run the builder's prepare suites or its "year-only age mutant gives 16/18" run.
+
+* **`print` checks repeating groups (closed).** The print branch now builds the case view and adds `changedGroups(stored.groups, groupFacts(view, form, subject))` to the fact changes, the same pair `lock` uses (`fill-case.ts:288-289`). I walked it by request: IMM 5476's copy keeps the group `intended_work` with "none apply" confirmed; I withdrew that answer through `PUT …/groups/:subject/intended_work/none-apply`; `print` from the old copy then answered 409 "This copy of IMM 5476 is out of date: 1 change since it was made. Generate a new copy and print that one. Nothing was recorded." and no step row was written. The words are now "N change(s)" rather than "N fact(s)", which fits facts and groups together. The builder's API test does not walk this path (still 9 lines); the pure test does not either. Minor **N4**: add the group case to `check_c81_signing_api.ts` so removing the `changedGroups` line fails a test.
+* **Age from a real date (closed).** `minorFromAnswers` now uses the case's `ageOn`, so `2000-01-99`, a future date, a non-date or no answer gives no age and R7 keeps the child a minor ("parent"); 18/18 shows the impossible, future and missing cases and the 20- and 9-year-old. One side effect, safe by direction: `ageOn` takes only a plain `YYYY-MM-DD`, so a date-of-birth answer stored with a time part is also "no age" and the child stays a minor.
+* Still open, all Minor: M1 (413 wording), M4, M5, M6, M7, N1 to N4 above. Nothing in the diff touches them or adds a Blocker or Major.
+
+**Round 3 verdict: Approve** for `126b8070`. Journey score unchanged: **8.5 / 10**.

@@ -6,7 +6,7 @@
 //   zsh studio/tools/isolated.sh rt_c81 4438 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4438 xr_studio_rt_c81
 //   tsx studio/acceptance/lib/setup_vv_m3.ts 4438 xr_studio_rt_c81
 //   tsx --tsconfig studio/api/tsconfig.json studio/tests/check_c81_signing_api.ts 4438 xr_studio_rt_c81
-import { AUTHOR, OFFICER, REVIEWER, answer, call, confirmAll, fillEverything, firms, generateCopy, itemsOf, needVisitorVisa, openCase, prepare, sendFile, signedScan, sql, yearsAgo } from "../acceptance/lib/m3.ts";
+import { AUTHOR, OFFICER, REVIEWER, agent, answer, call, confirmAll, fillEverything, firms, generateCopy, itemsOf, needVisitorVisa, openCase, prepare, sendFile, signedScan, sql, yearsAgo } from "../acceptance/lib/m3.ts";
 import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
@@ -67,5 +67,13 @@ else {
   p = (await prepare(c.id)).p;
   const back = await call("PATCH", `/runtime/items/${it.id}/channel`, { channel: it.channel, reason: "Sample: back to the first channel", version: (p as unknown as { version: string }).version }, OFFICER);
   ok("fail (Devin on #617): changing back does not bring the old steps back: the form is signed again for this channel", back.status === 200 && (await done()).length === 0, { status: back.status, done: await done() });
+  // Review N4 on #617: a copy whose repeating group changed since it was made (here IMM 5476 reads "intended_work"; its
+  // "none apply" taken back) is out of date, and is never printed for signing, as `lock` refuses it.
+  const groupCopy = await generateCopy(c.id, it.form!, P);
+  const sec = ((await agent(c.id))?.sections ?? []).find((x: { subjectId: string; section: string }) => x.subjectId === P && x.section === "intended_work");
+  const undo = await call("PUT", `/runtime/cases/${c.id}/groups/${P}/intended_work/none-apply`, { noneApply: false, expectedId: sec?.group?.none_apply?.id ?? null }, OFFICER);
+  const g = await call("POST", `/runtime/items/${it.id}/sign-steps/print`, { copy: groupCopy }, OFFICER);
+  ok(`fail (review N4 on #617): printing ${it.form} from a copy made before its repeating group changed ("none apply" taken back) is refused (409, out of date), nothing recorded`,
+    undo.status < 300 && g.status === 409 && /out of date/.test(g.body?.detail ?? "") && sql(`select count(*) from sign_step where item_id='${it.id}' and superseded_at is null`) === "0", [undo.status, g.status, g.body?.detail]);
 }
 summary();
