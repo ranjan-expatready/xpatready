@@ -40,3 +40,6 @@ C11.15 Partial (33/37, K11 browser 22/22) · C4.7 Partial (15/15 + 2 WAIT; real 
 ## Re-scored on main 785d148e (within 30 min of #526, #530, #531)
 * **C4.7 Partial:** Visitor visa 5/19; the Saved run lands 2 of 23 picks (QA-162). wp.family 15/15 + 2 WAIT; picks check 60/60.
 * **C4.11 Partial:** acceptance 4/23 (refused after Reset: no form fields mapped). Via the configured checkpoint: step 5 lands 0 of 22 (QA-162); step 6 says "0 picks proposed" with no reason (new Minor, UX). draft_qd 73/73, contract 35/35.
+
+## Re-scored on main 079ef107 (#500, #505, #521 merged)
+C11.3 Partial (trail 12/12; acceptance 21/27, AT-5 and AT-9.x) · C11.12 Partial (18/19, was 15/19; the one red step is the sample principal label) · C6.4 Partial (Visitor visa part works: 30/30, storage 48/48, minor principal 4/4; QA-156 closed; waivers, the Express Entry block and the case screen not built).
