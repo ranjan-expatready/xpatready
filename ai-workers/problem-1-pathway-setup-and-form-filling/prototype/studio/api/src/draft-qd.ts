@@ -161,8 +161,10 @@ export class DraftQd {
     const batch = await this.db.$transaction(async (tx) => {
     await tx.$executeRawUnsafe(`select pg_advisory_xact_lock(hashtext($1))`, `draft_qd:${c.id}`);
     const keyed = opts.idempotencyKey ? `qd-key-${c.id}-${opts.idempotencyKey}` : null;
-    const same = keyed ? await tx.aiBatch.findFirst({ where: { workspaceId: c.workspaceId, idempotencyKey: keyed }, select: { id: true } }) : null;
-    if (same) return { again: same.id };
+    const same = keyed ? await tx.aiBatch.findFirst({ where: { workspaceId: c.workspaceId, idempotencyKey: keyed }, select: { id: true, planSha256: true, status: true } }) : null;
+    // Review m2: a key already used for another plan is a mistake, never a quiet return of the other run.
+    if (same && same.planSha256 !== plan.plan_sha256) throw problem(409, "Key used for another plan", "This idempotency key started a run of another plan: use a new key for this plan.", { runId: same.id });
+    if (same) return { again: same.id, status: same.status };
     const running = await tx.aiBatch.findFirst({ where: { workspaceId: c.workspaceId, operation: QD_OPERATION, plan: { path: ["combination", "id"], equals: c.id }, status: { in: ["QUEUED", "RUNNING"] } }, select: { id: true, startedAt: true } });
     // A run that has not moved for STALE_MS (its server stopped mid-run and was not restarted cleanly) ends as Failed
     // instead of blocking this combination for good (review M3; onModuleInit does the same at start).
@@ -174,7 +176,7 @@ export class DraftQd {
       mode: plan.mode === "rules" ? "LOCAL" : "REPLAY", status: "RUNNING", planSha256: plan.plan_sha256,
       plan: { operation: QD_OPERATION, operation_label: "Draft questions and documents", combination: { id: c.id }, mode: plan.mode, steps: plan.steps.map((s) => ({ kind: s.kind, uses_ai: s.uses_ai, how: s.how })) }, spendLimitUsd: 0, worstCaseUsd: 0, expectedUsd: 0, startedBy: actor.id, message: "Drafting questions and documents" } });
     });
-    if ("again" in batch) return { runId: batch.again, status: "running", again: true };
+    if ("again" in batch) return { runId: batch.again, status: ["QUEUED", "RUNNING"].includes(batch.status) ? "running" : batch.status.toLowerCase(), again: true };
     await this.db.draftingJob.createMany({ data: QD_STEPS.map((s, i) => ({ workspaceId: c.workspaceId, combinationId: c.id, batchId: batch.id, kind: s.kind, mode: plan.mode === "rules" ? "LOCAL" : "REPLAY", status: "WAITING", message: "Waits for the step before it", startedBy: actor.id, startedAt: new Date(Date.now() + i) })) });
     // Break/review M1: the steps run in the background, so the run card (with Stop) shows at once where it was started.
     void this.execute(batch.id, actor, c, plan).catch((e) => console.warn(`[draft-qd] run ${batch.id}: ${String((e as Error).message ?? e).slice(0, 300)}`));

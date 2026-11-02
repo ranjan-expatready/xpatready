@@ -55,6 +55,10 @@ export class DraftContract {
     if (missing.length) throw problem(400, "A step's inputs are not planned", `${missing.join("; ")}: plan those steps too.`);
     // Part 4a runs the whole run (the engine has no partial run yet): every step is planned.
     if (asked.length !== CONTRACT_STEPS.length) throw problem(400, "Plan every step", `This run drafts all seven steps together for now; plan ${CONTRACT_STEPS.filter((s) => !have.has(s)).join(", ")} too.`);
+    // Review M1: a rules step asked for live is first of all a live request: it gets the live answer (409, live not
+    // approved), naming the rules steps too, so a person asking for "everything live" learns that AI now waits.
+    const liveRules = asked.filter((s) => !AI_STEPS.has(s.step as ContractStep) && s.mode === "live").map((s) => s.step);
+    if (liveRules.length) throw problem(409, "AI now is not approved yet", `${QD_LIVE_WAITING} Also, ${liveRules.join(", ")} ${liveRules.length === 1 ? "is" : "are"} worked out by the rules (no AI): plan ${liveRules.length === 1 ? "it" : "them"} as rules.`, { live: { approved: false, why: QD_LIVE_WAITING, steps: asked.filter((s) => s.mode === "live").map((s) => s.step) } });
     const ruleWrong = asked.filter((s) => !AI_STEPS.has(s.step as ContractStep) && s.mode !== "rules");
     if (ruleWrong.length) throw problem(400, "Rules steps", `${ruleWrong.map((s) => s.step).join(", ")} ${ruleWrong.length === 1 ? "is" : "are"} worked out by the rules (no AI): plan ${ruleWrong.length === 1 ? "it" : "them"} as rules.`);
     const c = await this.db.combination.findUnique({ where: { id: /^[0-9a-f-]{36}$/i.test(id) ? id : "00000000-0000-0000-0000-000000000000" } });
@@ -96,10 +100,10 @@ export class DraftContract {
     const b = RunBody.safeParse(body ?? {});
     if (!b.success) throw problem(400, "Check the request", "Send the plan's fingerprint (planSha256), an idempotency key and the spend limit in US$.");
     const p = this.plans.get(b.data.planSha256);
-    if (!p || p.combinationId !== id || Date.now() - p.at > PLAN_TTL_MS) throw problem(409, "Look at the plan again", "This is not a plan shown for this combination in the last hour (or the forms, people or steps changed): plan again before it runs.");
+    if (!p || p.combinationId !== id.toLowerCase() || Date.now() - p.at > PLAN_TTL_MS) throw problem(409, "Look at the plan again", "This is not a plan shown for this combination in the last hour (or the forms, people or steps changed): plan again before it runs.");
     if (p.mode === "live" || p.worst === null) throw problem(409, "AI now is not approved yet", `This plan has live steps: ${QD_LIVE_WAITING} Nothing was called; use saved results or rules only.`, { live: { approved: false } });
     if (p.worst > b.data.spendLimitUsd) throw problem(409, "Over the spend limit", `The worst case, US$${p.worst.toFixed(2)}, is over the limit of US$${b.data.spendLimitUsd.toFixed(2)}: use saved results or rules only, or raise the limit.`);
-    const r = await this.qd.run(actor, id, { mode: p.mode, planSha256: p.engineSha }, { idempotencyKey: b.data.idempotencyKey });
+    const r = await this.qd.run(actor, p.combinationId, { mode: p.mode, planSha256: p.engineSha }, { idempotencyKey: b.data.idempotencyKey });
     return { runId: r.runId, status: r.status, again: "again" in r ? true : undefined };
   }
 }

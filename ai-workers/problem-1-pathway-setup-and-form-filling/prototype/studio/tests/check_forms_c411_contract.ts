@@ -66,6 +66,9 @@ const asPlan = (ai: string) => STEPS.map((step) => ({ step, mode: AI.has(step) ?
   const liveRun = await call("POST", `/combinations/${wp}/draft`, { planSha256: r.body?.plan_sha256 ?? "0".repeat(64), idempotencyKey: randomUUID(), spendLimitUsd: 0.01 });
   ok("C4.11 L fail (BR-12): running a live plan is refused before any call (409: use saved results or rules only)", liveRun.status === 409 && /saved results or rules only/.test(words(liveRun)) && sql("select count(*) from ai_batch") === batchesBefore, [liveRun.status, words(liveRun)]);
 
+  const b0 = sql("select count(*) from ai_batch");
+  r = await P(STEPS.map((step) => ({ step, mode: "live" })));
+  ok("C4.11 L fail (review M1): every step asked live gets the live answer first (409, live.approved false, naming the rules steps); nothing starts", r.status === 409 && r.body?.live?.approved === false && /founder/.test(words(r)) && /facts/.test(words(r)) && sql("select count(*) from ai_batch") === b0, [r.status, words(r)]);
   // R and A: the run
   const key = randomUUID();
   r = await call("POST", `/combinations/${wp}/draft`, { planSha256: "0".repeat(64), idempotencyKey: key, spendLimitUsd: 0 });
@@ -79,6 +82,8 @@ const asPlan = (ai: string) => STEPS.map((step) => ({ step, mode: AI.has(step) ?
   ok("C4.11 R pass: the shown plan runs (201) with a run id, within a US$0 spend limit (BR-12)", r.status === 201 && /^[0-9a-f-]{36}$/.test(String(runId)), [r.status, words(r)]);
   const again = await call("POST", `/combinations/${wp}/draft`, { planSha256: plan.plan_sha256, idempotencyKey: key, spendLimitUsd: 0 });
   ok("C4.11 R pass: the same click twice (same idempotency key) is the same run, not a second one", again.body?.runId === runId && Number(sql(`select count(*) from ai_batch where idempotency_key like 'qd-key-${wp}-${key}'`)) === 1, [again.status, again.body]);
+  const reused = await call("POST", `/combinations/${wp}/draft`, { planSha256: rulesPlan.plan_sha256, idempotencyKey: key, spendLimitUsd: 0 });
+  ok("C4.11 R fail (review m2): a key already used for another plan is refused (409), never a quiet return of the other run", reused.status === 409 && /another plan/.test(words(reused)), [reused.status, words(reused)]);
   // S: the run view names each step by its key with its outcome
   let view: J = {};
   for (let i = 0; i < 120; i++) { view = (await call("GET", `/runs/${runId}`)).body; if (["done", "done_with_problems", "failed", "stopped"].includes(view.status)) break; await new Promise((res) => setTimeout(res, 500)); }
@@ -95,6 +100,11 @@ const asPlan = (ai: string) => STEPS.map((step) => ({ step, mode: AI.has(step) ?
   if (rr.status === 201) for (let i = 0; i < 120; i++) { v2 = (await call("GET", `/runs/${rr.body.runId}`)).body; if (["done", "done_with_problems", "failed", "stopped"].includes(v2.status)) break; await new Promise((res) => setTimeout(res, 500)); }
   ok("C4.11 S fail: with rules only, documents and conditions are nothing_to_do (reading IRCC's text is AI work)", (v2.steps ?? []).filter((s: J) => ["documents", "conditions"].includes(s.step)).every((s: J) => s.state === "nothing_to_do") && (v2.steps ?? []).length === 7, [rr.status, words(rr), (v2.steps ?? []).map((s: J) => `${s.step}:${s.state}`)]);
 
+  // Review m5: two identical clicks at the same moment are one run.
+  const k3 = randomUUID();
+  for (let i = 0; i < 120 && !["done", "done_with_problems", "failed", "stopped"].includes((await call("GET", `/runs/${rr.body?.runId}`)).body?.status); i++) await new Promise((res) => setTimeout(res, 500));
+  const twin = await Promise.all([0, 1].map(() => call("POST", `/combinations/${wp}/draft`, { planSha256: rulesPlan.plan_sha256, idempotencyKey: k3, spendLimitUsd: 0 })));
+  ok("C4.11 R pass (review m5): two identical clicks at the same moment are one run (same run id, one batch)", twin.every((x) => x.status === 201) && twin[0].body?.runId === twin[1].body?.runId && sql(`select count(*) from ai_batch where idempotency_key='qd-key-${wp}-${k3}'`) === "1", twin.map((x) => [x.status, x.body?.runId, words(x)]));
   ok("C4.11: the whole check spent US$0 (no model call)", sql("select coalesce(sum(cost_usd),0) from drafting_job") === spentBefore || Number(sql("select coalesce(sum(cost_usd),0) from drafting_job")) === 0);
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
