@@ -10,8 +10,8 @@ import { AnyFilesInterceptor } from "@nestjs/platform-express";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { Response } from "express";
-import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { createHash, randomUUID } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { z } from "zod";
 import { GenerateCopy, LockCopy, LOCK_KINDS, notReady, type CaseForm, type CaseOnlineForm, type FormCopy } from "../../contracts/runtime.ts";
@@ -70,6 +70,11 @@ export function plainWhy(why: string | null | undefined): string {
 }
 
 /** C-9 (P-144): a barcode form filed by PDF upload or on paper needs a current validated copy before it is filed. */
+/** QA-165 (P-144, P-237): a validated copy counts only when the form's own Validate result had passed when it was read
+ *  back (read_validated.py form_validation, kept in its read-back). A row recorded before QA-165 has no such result: it
+ *  never counts as validated, and the person sends the validated file again (the copy view, `lock` and `file` alike). */
+const formPassed = (v: { readBack: unknown } | undefined) => (v?.readBack as { validation?: { passed?: boolean } } | null)?.validation?.passed === true;
+const NOT_FORM_CHECKED = "Read back before the form's own Validate result was checked: send the file you validated in Adobe again";
 const needsValidate = (s: Snap, form: string) => isBarcodeForm(form) && ["PDF_UPLOAD", "PAPER"].includes(channelIn(s, form));
 const OUT_OF_DATE = "Out of date: validate again";
 /** What a file check names in its refusal: the generated copy, or the validated copy read back (C-9). */
@@ -135,7 +140,7 @@ export class CaseForms implements OnModuleInit {
   /** A copy with its state today; changed facts are named by their question (labels), never by their keys. */
   private copyOf(x: Awaited<ReturnType<Db["formInstance"]["findMany"]>>[number] & { snapshot: { factsJson: unknown }; validated?: { readAt: Date; readBy: string; factsHash: string; readBack: unknown }[] }, today: FormFact[], labels = new Map<string, string>(), todayGroups: GroupFact[] = [], notForFiling = false): FormCopy {
     // C-10: a validated copy is current while the form's facts are what they were when it was read back.
-    const v = x.validated?.[0], vrb = v?.readBack as { written?: number; read_back_equal?: number } | undefined, current = !!v && v.factsHash === inputHash(today);
+    const v = x.validated?.[0], vrb = v?.readBack as { written?: number; read_back_equal?: number } | undefined, current = !!v && formPassed(v) && v.factsHash === inputHash(today);
     const stored = x.snapshot.factsJson as Stored, then = stored.facts;
     const changed = x.status === "GENERATED" ? [...changedFacts(then, today).map((f) => labels.get(f) ?? f), ...changedGroups(stored.groups, todayGroups)] : [];
     const result = x.resultJson as { counts?: FormCopy["counts"]; intact?: boolean; person_steps?: string[]; boxes?: { fact: string | null; result: string; why: string | null }[] } | null;
@@ -144,7 +149,7 @@ export class CaseForms implements OnModuleInit {
       locked: x.lockedAt ? { kind: x.lockedKind as keyof typeof LOCK_KINDS, at: x.lockedAt.toISOString(), by: x.lockedBy! } : null,
       out_of_date: changed.length > 0, stale: !!x.lockedAt && changed.length > 0, changed, counts: result?.counts ?? null, intact: result?.intact ?? null, person_steps: result?.person_steps ?? [], copy_not_for_filing: notForFiling, source: "ircc_pdf",
       by_hand: byHand, file_ok: x.status === "GENERATED" && !!x.path && existsSync(join(ROOT, x.path)),
-      validated: v ? { at: v.readAt.toISOString(), by: v.readBy, current, words: current ? "Validated copy read back" : OUT_OF_DATE, read_back: { written: vrb?.written ?? 0, equal: vrb?.read_back_equal ?? 0 } } : null };
+      validated: v ? { at: v.readAt.toISOString(), by: v.readBy, current, words: !formPassed(v) ? NOT_FORM_CHECKED : current ? "Validated copy read back" : OUT_OF_DATE, read_back: { written: vrb?.written ?? 0, equal: vrb?.read_back_equal ?? 0 } } : null };
   }
 
   /** RT-13: a new copy of one form for one person, from the confirmed facts as they are now (frozen with the copy).
@@ -269,6 +274,7 @@ export class CaseForms implements OnModuleInit {
     if (needsValidate(s, x.formNumber)) {
       const v = x.validated[0];
       if (!v) conflict(`${x.formNumber} is a barcode form filed as ${CHANNEL_WORDS[channelIn(s, x.formNumber)]}: Validate it in Adobe, save it and read the validated copy back here before it is filed (IRCC returns it unprocessed otherwise).`);
+      if (!formPassed(v)) conflict(`${x.formNumber}'s validated copy was read back before the form's own Validate result was checked, so it does not show that Validate passed. Send the file you validated in Adobe again, then lock it.`);
       if (v!.factsHash !== inputHash(cov?.facts ?? [])) conflict(`${x.formNumber}'s validated copy is out of date: a fact on the form changed after it was validated. Make a new copy, validate it again and read it back.`);
     }
     const n = await this.db.formInstance.updateMany({ where: { id, status: "GENERATED", lockedAt: null }, data: { lockedKind: b.kind, lockedAt: new Date(), lockedBy: actor.id } });
@@ -299,22 +305,34 @@ export class CaseForms implements OnModuleInit {
     if (sha === x.sha256) fail(`This is the copy the product made, unchanged: it was not validated. Open it in Adobe, press Validate, save it and send the saved file. Nothing was recorded.`, HttpStatus.UNPROCESSABLE_ENTITY);
     const dir = join(VAR("demo"), "cases", x.caseId, "validated"); mkdirSync(dir, { recursive: true });
     const path = join(dir, `${x.formNumber.replace(/\s+/g, "")}-${short(x.id)}-${sha.slice(0, 12)}.pdf`);
-    writeFileSync(path, f!.buffer!);
+    // Break M2 on #572: the upload is read from its own pending name and takes the checksum name only when it is recorded,
+    // so a refused or repeated send never removes the file a kept row points to (same bytes, same name).
+    const pending = `${path}.${randomUUID()}.pending`;
+    writeFileSync(pending, f!.buffer!);
     const request = join(ROOT, x.path!.replace(/\.pdf$/, ".request.json"));
-    let rb: { ok: boolean; why: string | null; written?: number; read_back_equal?: number; mismatches?: unknown[] };
-    try { const { stdout } = await run(PY, ["-I", join(PROTOTYPE, "studio", "tools", "read_validated.py"), path, join(ROOT, x.path!), request], { cwd: ROOT, timeout: 120_000, maxBuffer: 10 * 1024 * 1024 }); rb = JSON.parse(stdout.trim().split("\n").pop()!); }
+    let rb: { ok: boolean; why: string | null; written?: number; read_back_equal?: number; mismatches?: unknown[]; validation?: { kept_by_form: boolean; flag: string | null; date_last_validated: string | null; passed: boolean } };
+    try { const { stdout } = await run(PY, ["-I", join(PROTOTYPE, "studio", "tools", "read_validated.py"), pending, join(ROOT, x.path!), request], { cwd: ROOT, timeout: 120_000, maxBuffer: 10 * 1024 * 1024 }); rb = JSON.parse(stdout.trim().split("\n").pop()!); }
     catch { rb = { ok: false, why: "The file could not be read back." }; }
+    // QA-165 (P-144, P-237): "validated" only from the form's own Validate result kept in the file (its validated flag
+    // Yes and its date last validated set, tools/read_validated.py form_validation), never from an upload alone.
+    const passed = rb.ok && rb.validation?.passed === true;
     // Refused uploads are not left in the working files (break minor).
-    if (!rb.ok) rmSync(path, { force: true });
+    if (!passed) rmSync(pending, { force: true });
     if (!rb.ok) fail(`Not read back: ${rb.why ?? "the file does not hold the values this copy wrote."}${differing((x.snapshot.factsJson as Stored).boxes, rb.mismatches, rb.written !== undefined && rb.read_back_equal !== undefined ? rb.written - rb.read_back_equal : undefined)} Nothing was recorded; validate this copy in Adobe, save it and send it again.`, HttpStatus.UNPROCESSABLE_ENTITY);
+    if (!rb.validation?.passed) fail(rb.validation?.kept_by_form === false
+      ? `${x.formNumber} keeps no record of its own Validate in the file, so this file cannot show that Validate passed. Nothing was recorded.`
+      : `Adobe's Validate has not passed on this file: the form's own mark says ${rb.validation?.flag ? `"${rb.validation.flag.slice(0, 60)}"` : "nothing"}${rb.validation?.flag && !rb.validation?.date_last_validated ? " and no date last validated" : ""}. In Adobe, press Validate, fix what it marks red until it says the form is complete, save, and send that file. Nothing was recorded.`, HttpStatus.UNPROCESSABLE_ENTITY);
     // QA-128 (P-65: kept once): the same validated file sent twice at once (a double click) is kept once. The copy's row is
     // locked, so the second send waits for the first and then finds its line.
     const v = await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM form_instance WHERE id = ${x.id}::uuid FOR UPDATE`;
-      const kept = await tx.validatedCopy.findFirst({ where: { formInstanceId: x.id, sha256: sha }, select: { id: true } });
-      if (kept) throw new HttpException({ type: "https://expatready.local/problems/validated-copy", title: "Already read back", status: 409, detail: `This validated file is already read back and kept for this copy of ${x.formNumber}; nothing was added.`, existingId: kept.id }, HttpStatus.CONFLICT);
+      // Break M1 on #572: only a kept row that itself passed is "already read back". The same file kept before QA-165 (no
+      // result of the form's own) is read back again and recorded, as its words ask ("send the file … again").
+      const kept = (await tx.validatedCopy.findMany({ where: { formInstanceId: x.id, sha256: sha }, select: { id: true, readBack: true } })).find(formPassed);
+      if (kept) { rmSync(pending, { force: true }); throw new HttpException({ type: "https://expatready.local/problems/validated-copy", title: "Already read back", status: 409, detail: `This validated file is already read back and kept for this copy of ${x.formNumber}; nothing was added.`, existingId: kept.id }, HttpStatus.CONFLICT); }
+      renameSync(pending, path);
       return tx.validatedCopy.create({ data: { workspaceId: c.workspaceId, formInstanceId: x.id, path: path.replace(`${ROOT}/`, ""), sha256: sha, factsHash: inputHash(cov?.facts ?? []), readBack: rb as object, readBy: actor.id } });
-    });
+    }).finally(() => rmSync(pending, { force: true })); // a pending file left by any failure is removed (renamed when kept)
     await this.audit.log(c.workspaceId, actor.id, "validated", "form copy", x.formNumber, `${actor.name} read back a validated copy of ${x.formNumber} (copy ${short(x.id)}) on case ${short(x.caseId)}: ${rb.read_back_equal}/${rb.written} values equal`);
     return { id: v.id, copy: await this.copy(actor, id) };
   }
@@ -340,7 +358,7 @@ export class CaseForms implements OnModuleInit {
     if (x.status !== "GENERATED" || !x.path) fail("This copy has no file.", HttpStatus.NOT_FOUND);
     const form = x.formNumber.replace(/\s+/g, ""), s = this.runtime.snapshotOf(c);
     const v = x.validated[0];
-    if (!original && v && needsValidate(s, x.formNumber)) { // the same rule as `lock` (a barcode form on PDF upload or paper)
+    if (!original && v && formPassed(v) && needsValidate(s, x.formNumber)) { // the same rule as `lock` (a barcode form on PDF upload or paper; QA-165)
       const { answers, rows } = await this.runtime.state(c);
       const cov = formCoverage(s, this.runtime.peopleOf(c), answers, rows, x.formNumber, x.subjectId);
       // C-10: current while the form's facts are what they were when it was read back (as `copyOf` shows it).
