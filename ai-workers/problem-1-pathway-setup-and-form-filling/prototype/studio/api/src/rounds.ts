@@ -33,7 +33,7 @@ export type AiStep = {
   budget_usd?: number; timeout_ms?: number;
   /** W1-10 slice 1 (plan §4): earlier prompt versions whose saved runs this step still replays, each with the words a
    *  person sees ("saved before channels"); any other version is never replayed. */
-  replays?: { template: string; check: string; label: string }[];
+  replays?: { template: string; check: string; label: string; /** QA-162: how many of the round's inputs that version read (the first n; all when unset) */ inputs?: number }[];
   /** Saved runs made before job keys existed, by file name → combination key (reviewed list). */
   legacyKeys?: Record<string, string>;
   words: { noSaved: string; badSaved: string; nothingUsed: string };
@@ -47,7 +47,10 @@ export type RoundContext = { trail: string; contextKey: string; inputs: { file: 
   override?: { id: string; run_key: string };
   /** C4.7 break B1 (2 Nov): replay only a saved run of this job stem (pairOf), so a draft and its checker round come from
    *  the same live run, never two runs mixed. Unset: the newest usable run, as before. */
-  replayPair?: string };
+  replayPair?: string;
+  /** QA-162 break M2: replay only answers to this prompt version (its replays label; "" for the current one), so a
+   *  draft round is never paired with a checker round of another prompt version. Unset: any replayable version. */
+  replayPrompt?: string };
 
 /** The job stem a saved run file shares with the other round of the same live run: the file name without its round base
  *  ("<jobBase>-" or "<jobBase>-check-") and without its "-live-<time>-<suffix>.json" tail. */
@@ -126,11 +129,11 @@ export class StepRunner {
       // Round 2 m-a: an unreadable or wrong-shape answer is skipped and an older good one is used.
       const mine = replayPattern(step.jobBase, isCheck);
       // The current prompt's answer first; else one of an earlier version the step still replays (plan §4), labelled.
-      const prompts = [{ sha256: want.templateSha256, label: "" }, ...(step.replays ?? []).map((v) => ({ sha256: sha(readFileSync(join(PROMPTS, isCheck ? v.check : v.template))), label: v.label }))];
+      const prompts = [{ sha256: want.templateSha256, label: "", inputs: undefined as number | undefined }, ...(step.replays ?? []).map((v) => ({ sha256: sha(readFileSync(join(PROMPTS, isCheck ? v.check : v.template))), label: v.label, inputs: v.inputs }))];
       const runs = (existsSync(RUNS) ? readdirSync(RUNS).filter((f) => mine.test(f) && (ctx.replayPair === undefined || pairOf(step, isCheck, f) === ctx.replayPair)).sort(newestFirst) : []).map(readRun);
-      const usable = (x: SavedRun | null, p: { sha256: string }): x is SavedRun => !!x && isSameSavedRun(x, { ...want, templateSha256: p.sha256 }) && (() => { try { return step.shapeOk(JSON.parse(String(x.raw_output))); } catch { return false; } })();
+      const usable = (x: SavedRun | null, p: { sha256: string; inputs?: number }): x is SavedRun => !!x && isSameSavedRun(x, { ...want, templateSha256: p.sha256, inputs: p.inputs === undefined ? want.inputs : want.inputs.slice(0, p.inputs) }) && (() => { try { return step.shapeOk(JSON.parse(String(x.raw_output))); } catch { return false; } })();
       let r: SavedRun | undefined, label = "";
-      for (const p of prompts) { r = runs.find((x): x is SavedRun => usable(x, p)); if (r) { label = promptOfRun(r, prompts) ?? ""; break; } }
+      for (const p of prompts.filter((x) => ctx.replayPrompt === undefined || x.label === ctx.replayPrompt)) { r = runs.find((x): x is SavedRun => usable(x, p)); if (r) { label = promptOfRun(r, prompts) ?? ""; break; } }
       if (!r) return { ok: false, costUsd: 0, reason: step.words.noSaved };
       const saved = JSON.parse(String(r.raw_output)) as T;
       if (!step.shapeOk(saved)) return { ok: false, costUsd: 0, reason: step.words.badSaved };

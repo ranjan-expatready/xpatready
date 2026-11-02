@@ -402,7 +402,10 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
     const used = new Set((await tx.documentType.findMany({ where: { workspaceId: l.ws }, select: { documentTypeKey: true } })).map((x) => `x.${x.documentTypeKey}`));
     const key = slugKey(d.name, used);
     await tx.documentType.create({ data: { workspaceId: l.ws, documentTypeKey: key, name: d.name, category: d.category || "client", suppliesFacts: d.suppliesFacts,
-      readerProfile: { readerKind: d.readerKind, identityDocument: d.identityDocument, proves: d.proves }, version: 1, status: "DRAFT", origin: "AI_PROPOSAL", updatedBy: l.actor.id } });
+      readerProfile: { readerKind: d.readerKind, identityDocument: d.identityDocument, proves: d.proves }, version: 1, status: "DRAFT",
+      // C3.6: a type a person named while adding a requirement is the person's (made by: person), as before it went through
+      // the queue; its author is the namer (decide passes them as proposedBy), so their own-draft Delete stays (C11.9).
+      ...(r.step === "requirement_type" ? { origin: "HUMAN" as const, updatedBy: l.proposedBy ?? l.actor.id } : { origin: "AI_PROPOSAL" as const, updatedBy: l.actor.id }) } });
     await waitingAdd(tx, l, "document_type", key, d.name);
     return key;
   },
@@ -416,7 +419,7 @@ async function landPqrPick(tx: Tx, r: Row, p: ProposalPayload, l: Landing): Prom
   if (p.kind !== "pqr_pick") fail("Wrong payload.");
   // Break B5: an edit changes only a pick's reason; the question and the person it ticks are the pick itself.
   const was = r.payload as { factKey?: string; role?: string };
-  if ((p as { factKey: string }).factKey !== was.factKey || (p as { role: string }).role !== was.role) fail("An edit changes only the pick's reason. To ask another question, remove this pick and tick that question on the Questionnaires tab.", HttpStatus.CONFLICT);
+  if ((p as { factKey: string }).factKey !== was.factKey || (p as { role: string }).role !== was.role) fail("An edit changes only the pick's reason. To ask another question, remove this pick and tick that question on the Smart questionnaire (SQR) tab.", HttpStatus.CONFLICT);
   const lineageKey = `${(p as { role: string }).role}|${(p as { factKey: string }).factKey}`;
   const before = r.combinationId ? await tx.factSource.findFirst({ where: { combinationId: r.combinationId, lineageKey }, orderBy: { version: "desc" } }) : null;
   const item = { id: r.id, kind: r.kind, runId: r.runId, step: r.step, scope: { formEdition: r.formEdition, combinationId: r.combinationId }, landsOn: r.landsOn, reuse: r.reuse, payload: p,
@@ -537,7 +540,10 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         } else {
           const land = LANDERS[r.kind as ProposalKind];
           if (!land) fail(`A ${r.kind.replace(/_/g, " ")} proposal is accepted with its own step, not yet on this queue.`, HttpStatus.CONFLICT);
-          landedAs = await land!(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: withNearReason(reason ?? r.reason, r.identity), proposedBy: actor.id, combinationId: r.combinationId, sourceJobId: r.runId });
+          // C3.6 (#523 Question 1): a type a person named while adding a requirement keeps that person as its proposer (as
+          // before it went through the queue), read from the server's own run, so their "Delete your own unapproved type" stays.
+          const namer = r.step === "requirement_type" && r.runId ? (await tx.draftingJob.findFirst({ where: { id: r.runId, workspaceId, kind: "requirement_type" }, select: { startedBy: true } }))?.startedBy : null;
+          landedAs = await land!(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: withNearReason(reason ?? r.reason, r.identity), proposedBy: namer ?? actor.id, combinationId: r.combinationId, sourceJobId: r.runId });
         }
       }
       // What a library lander wrote, as it stands now: Undo refuses once it has changed (PR #96 review (1)).
@@ -578,14 +584,19 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     const users = keys.length ? await tx.proposalItem.findMany({ where: { workspaceId, status: { in: ["accepted", "edited"] }, decidedKey: { in: keys }, reuse: { path: ["match"], equals: "reuse" }, NOT: { batchId } }, select: { kind: true, decidedKey: true, formEdition: true } }) : [];
     const user = users.find((u) => added.some((r) => r.kind === u.kind && r.decidedKey === u.decidedKey));
     if (user) fail(`${user.decidedKey} is now reused by an item accepted for ${user.formEdition ?? "another source"}, so Undo would take it away under that item. Nothing was undone: undo that decision first, or retire the item in the shared library.`, HttpStatus.CONFLICT);
-    // C2.6 break M1: a document type this batch added that a document line outside this batch now uses is not taken away
-    // under that line (another combination's line, or a line accepted in a later decision).
-    const typeAdds = adds.filter((c) => c.kind === "document_type").map((c) => c.key);
-    if (typeAdds.length) {
+    // C3.6 (break M1 on #573) and C2.6 (break M1 on #574): a document type this batch added that a line outside this
+    // batch now uses (as its type or an alternative) is not taken away under that line. The lines this batch wrote itself
+    // (a C2.6 checklist line accepted with its new type) go with it, so one Undo still takes both back. The line door
+    // takes the same per-item lock (studio.ts saveRequirement, library-items.ts lockItem).
+    const typeKeys = [...new Set([...adds.filter((c) => c.kind === "document_type").map((c) => c.key), ...added.filter((r) => r.kind === "document_type").map((r) => r.decidedKey!)])].sort();
+    if (typeKeys.length) {
+      await lockItem(tx, workspaceId, "document_type", typeKeys);
       const own = new Set(rows.filter((r) => r.kind === "requirement_line" && r.decidedKey && r.combinationId).flatMap((r) => r.decidedKey!.split(",").map((k) => `${r.combinationId}|${k}`)));
-      const using = (await tx.documentRequirement.findMany({ where: { workspaceId, documentTypeKey: { in: typeAdds } }, select: { combinationId: true, lineageKey: true, documentTypeKey: true, combination: { select: { label: true } } } }))
-        .find((d) => !own.has(`${d.combinationId}|${d.lineageKey}`));
-      if (using) fail(`${using.documentTypeKey} is now used by a document line on ${using.combination.label}, so Undo would take it away under that line. Nothing was undone: undo that line's decision first, or retire the type in the shared library.`, HttpStatus.CONFLICT);
+      for (const k of typeKeys) {
+        const using = (await tx.documentRequirement.findMany({ where: { workspaceId, status: { not: "RETIRED" }, OR: [{ documentTypeKey: k }, { alternatives: { array_contains: [k] } }] }, select: { combinationId: true, lineageKey: true, combination: { select: { label: true } } } }))
+          .find((d) => !own.has(`${d.combinationId}|${d.lineageKey}`));
+        if (using) fail(`The document type ${k} is already used by a checklist line on ${using.combination.label}, so Undo would take it away under that line. Nothing was undone: remove that line (or undo its decision) first, or retire the type in the shared library.`, HttpStatus.CONFLICT);
+      }
     }
     // PR #96 review (1): an item edited after the accept is not erased by Undo; the library keeps the person's edit.
     for (const r of rows) {
@@ -599,7 +610,7 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
       const { pqr } = (r.work ?? {}) as { pqr?: PqrWork & { stamp: string } };
       if (!pqr || !r.decidedKey) continue;
       if (JSON.stringify(await pqrStamp(tx, r.combinationId, r.decidedKey)) !== pqr.stamp)
-        fail(`A pre-qualification tick this decision made was changed or released after it was accepted, so Undo would erase that change. Nothing was undone: change it on the Questionnaires tab instead.`, HttpStatus.CONFLICT);
+        fail(`A Prospect questionnaire (PQR) tick this decision made was changed or released after it was accepted, so Undo would erase that change. Nothing was undone: change it on the Smart questionnaire (SQR) tab instead.`, HttpStatus.CONFLICT);
       await tx.factSource.delete({ where: { id: pqr.pqrRowId } });
       if (pqr.pqrBefore) await tx.factSource.create({ data: { ...(pqr.pqrBefore as Prisma.FactSourceUncheckedCreateInput), updatedAt: new Date(String(pqr.pqrBefore.updatedAt)) } });
     }

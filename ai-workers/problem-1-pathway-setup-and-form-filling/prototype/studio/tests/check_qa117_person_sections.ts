@@ -1,4 +1,4 @@
-// QA-117 (qa after-merge 30 Oct, 5f6c8deb): Questionnaires › Spouse or partner listed "Application details · 0 questions
+// QA-117 (qa after-merge 30 Oct, 5f6c8deb): Smart questionnaire (SQR) › Spouse or partner listed "Application details · 0 questions
 // for Spouse or partner": a section that asks another person (or the application, with the principal) showed as an empty
 // section of this person. Now a person sees the sections that ask them, plus the chosen sections that ask nobody at all
 // (P-174: the section choice decides which empty sections show; that is where one is removed). Through the API on every

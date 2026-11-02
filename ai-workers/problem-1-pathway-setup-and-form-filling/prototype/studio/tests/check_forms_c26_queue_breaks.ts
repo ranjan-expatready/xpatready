@@ -43,7 +43,7 @@ async function main() {
   const batchY = r.body?.batchId;
   ok("setup: the type accepted alone, then its line in a second decision (it uses that type)", !!batchX && !!batchY && sql(`select document_type_key from document_requirement where combination_id='${vv}' and lineage_key like 'fee_payment%'`) === feeKey, { feeKey, status: r.status, words: r.words });
   r = await call("POST", `/review/proposals/undo/${batchX}`, {});
-  ok("C2.6 M1 fail: undoing the type's decision while a line of another decision uses it answers 409 in words; the type stays", r.status === 409 && /used by a document line on Visitor visa/.test(r.words) && sql(`select count(*) from document_type where document_type_key='${feeKey}'`) === "1", r.words);
+  ok("C2.6 M1 fail: undoing the type's decision while a line of another decision uses it answers 409 in words; the type stays", r.status === 409 && /used by a checklist line on Visitor visa/.test(r.words) && sql(`select count(*) from document_type where document_type_key='${feeKey}'`) === "1", r.words);
   r = await call("POST", `/review/proposals/undo/${batchY}`, {});
   const r2 = await call("POST", `/review/proposals/undo/${batchX}`, {});
   ok("C2.6 M1 pass: undoing the line first, then the type, takes both back", r.status === 201 && r2.status === 201 && sql(`select count(*) from document_type where document_type_key='${feeKey}'`) === "0" && sql(`select count(*) from document_requirement where combination_id='${vv}' and lineage_key like 'fee_payment%'`) === "0", { line: r.status, type: r2.status, words: r2.words });

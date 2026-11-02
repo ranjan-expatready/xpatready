@@ -177,7 +177,12 @@ const REASON = "Test: a different meaning from the library field that could fit.
   ok("C5.3 (Lead item 2): a new section waits as an ADD for a second person", sql(`select status from library_change where kind='section' and key='${secKey}'`) === "WAITING", secKey);
   await call("POST", `/combinations/${sv}/sections/${secKey}`);
   r = await call("POST", `/combinations/${sv}/requirements`, { newTypeName: "Brk document", attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant", providedBy: "client" });
-  ok("C5.3 (Lead item 2): a document type named with a requirement waits as an ADD", r.status === 201 && sql("select status from library_change where kind='document_type' and label='Brk document'") === "WAITING", r.body?.detail ?? r.status);
+  // C3.6 (P-158): it now waits as a library proposal on To review (202); its ADD is written when a second person accepts it.
+  ok("C5.3 (Lead item 2): a document type named with a requirement waits for a second person (a library proposal, 202)", r.status === 202 && sql("select status from proposal_item where kind='document_type' and payload->>'name'='Brk document'") === "waiting" && sql("select count(*) from document_type where name='Brk document'") === "0", r.body?.detail ?? r.status);
+  // Accepted on To review (its ADD now waits for the second person, as before), then the line is added with it.
+  const brkKey = (await call("POST", "/review/proposals/decide", { ids: [r.body?.proposalId], action: "accept" }, "user-B")).body?.items?.[0]?.landedAs;
+  r = await call("POST", `/combinations/${sv}/requirements`, { documentTypeKey: brkKey, attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant", providedBy: "client" });
+  ok("C5.3 (Lead item 2): once accepted, its ADD waits for a second person and the line is added with it", r.status === 201 && sql("select status from library_change where kind='document_type' and label='Brk document'") === "WAITING", r.body?.detail ?? r.status);
   r = await call("POST", `/combinations/${sv}/submit`, {});
   const sme3 = ((await call("GET", `/combinations/${sv}/review`)).body.submission?.changeSummary ?? []).filter((x: any) => x.needs_sme).map((x: any) => `${x.kind}|${x.key}`);
   if (sme3.length) await call("POST", `/combinations/${sv}/signoff`, { items: sme3, action: "signed" }, "user-C");

@@ -1,4 +1,4 @@
-// QA-92 to QA-95 (qa lane, 29 Oct; Questionnaires tab), runtime lane fix pass: a pass and a fail per finding, in a real
+// QA-92 to QA-95 (qa lane, 29 Oct; Smart questionnaire (SQR) tab), runtime lane fix pass: a pass and a fail per finding, in a real
 // browser and through the API. QA-92 a case question's details save under the case's own role; QA-93 "Remove from
 // questionnaire" asks first and then offers one Undo that puts the section back in its place (P-116); QA-94 no system
 // name on screen or in the refusals; QA-95 a too-short reason says how much to write, linked to its box. US$0.

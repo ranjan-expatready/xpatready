@@ -1,7 +1,7 @@
 // R1c renderer journey (runtime lane, plan §8 "questionnaire part of the journey") in a real browser, on the runtime
 // copy after setup_visitor_visa.ts: the officer opens a case and adds the family (1440 and 1024 px) → the client answers
 // on a phone (390 px): one part per screen, "answering for", field checks with an error summary, a repeating group,
-// leave and resume → the officer reviews in the case view, edits with the message naming the forms, confirms a section,
+// leave and resume → the officer reviews in the Agent view, edits with the message naming the forms, confirms a section,
 // meets a conflict. axe-core (WCAG 2.2 A/AA) on every state; data checked underneath through the API. No paid AI.
 // Screenshots: product/screens/R1-thin-slice/screenshots/r1c/.
 //   zsh studio/tools/isolated.sh runtime_r1 4430 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4430 xr_studio_runtime_r1 && node studio/tests/runtime/check_runtime_r1c.cjs 4430
@@ -94,7 +94,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   // ── 2. The client answers on a phone
   const c = await open("user-P", 390, 844);
   await c.goto(`${BASE}/cases/${caseId}/questionnaire`); await idle(c);
-  step("client: the overview says what to do and how saving works", await shows(c.getByRole("heading", { name: "Your questionnaire" })) && await shows(c.getByText(/0 of \d+ parts done/)));
+  step("client: the overview says what to do and how saving works", await shows(c.getByRole("heading", { name: "Client questionnaire" })) && await shows(c.getByText(/0 of \d+ parts done/)));
   await state(c, "client-overview", [390]);
   await c.getByRole("button", { name: /^Start/ }).click(); await idle(c);
   step("labels: answers read as the form's map labels them (\"Visitor visa\", not the code \"VisitorVisa\")", await shows(c.getByRole("group", { name: /visitor visa or a transit visa/ }).getByLabel("Visitor visa")) && await gone(c.getByText("VisitorVisa")));
@@ -215,7 +215,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("copy (review M5): the client never sees the configuration note about answer lists", await gone(c.getByText(/No fixed list for this answer yet|forms slice 2/)));
   // Leave and resume
   await c.getByRole("button", { name: "Save and come back later" }).click();
-  await shows(c.getByRole("heading", { level: 1, name: "Your questionnaire" })); // the save finished and the overview opened
+  await shows(c.getByRole("heading", { level: 1, name: "Client questionnaire" })); // the save finished and the overview opened
   await c.reload(); await idle(c);
   step("client: after leaving and coming back, the overview counts what is done and offers to continue", await shows(c.getByRole("button", { name: /Continue where you left off/ })) && await shows(c.getByText(/[1-9]\d* of \d+ parts done/)), await c.locator("main").textContent().then((t) => t?.slice(0, 160)));
   await state(c, "client-resume", [390]);
@@ -225,7 +225,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await c.goto(`${BASE}/cases/${caseId}`); await idle(c);
   step("roles fail: the client cannot open the officer's case page", await shows(c.getByText("This page is for the case officer")));
 
-  // ── 3. The officer reviews in the case view (a household of four children, the release's limit: review M6)
+  // ── 3. The officer reviews in the Agent view (a household of four children, the release's limit: review M6)
   for (const n of [2, 3, 4]) await call("POST", `/runtime/cases/${caseId}/people`, { role: "child", displayName: `Sample Child C${n} with a rather long name` }, "user-O");
   await o.reload(); await idle(o);
   await o.getByRole("tab", { name: /^Sample Spouse C/ }).click(); 
@@ -278,7 +278,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
 
   // ── 4. R1d: forms filled from confirmed facts; never overwritten (RT-13…RT-16)
   await o.goto(`${BASE}/cases/${caseId}`); await idle(o);
-  const forms = o.locator("section", { has: o.getByRole("heading", { name: "Forms", exact: true }) });
+  const forms = o.locator("section", { has: o.getByRole("heading", { name: "Prepare application", exact: true }) });
   const imm = forms.getByRole("listitem").filter({ has: o.getByRole("heading", { name: /IMM 5257 for Sample Applicant C/ }) });
   step("forms: IMM 5257 for the principal says what a copy made now writes and what blocks filing", await shows(imm.getByText(/Confirmed answers for \d+ of \d+ form fields/)) && await shows(imm.getByText(/facts? to answer or confirm before filing|Ready to file/)));
   await imm.getByRole("button", { name: "Generate a copy" }).click();
@@ -292,7 +292,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("review M3 pass: what blocks filing is listed on the page (question, whose, why), not only in a tooltip", await shows(imm.getByRole("listitem").filter({ hasText: /\(Sample Applicant C\): (not answered|not confirmed|needs a fix)$/ }).first()));
   step("review M1 fail-guard: IMM 5257's fill trial passed, so its copies are not marked \"Checked copy, not for filing\"", await gone(imm.getByText("Checked copy, not for filing")));
   // Lead, break M3: an empty required group blocks filing until "none apply" is answered and confirmed: the officer
-  // says it for the principal's education in the case view, then confirms the section.
+  // says it for the principal's education in the Agent view, then confirms the section.
   const edu = o.locator("section").filter({ has: o.getByRole("heading", { name: "Education history" }) }).filter({ hasText: "for Sample Applicant C" });
   step("M3 agent: the blocking list names the empty group (\"Entries in … : add them, or say none apply\")", await shows(imm.getByText(/Entries in "Education history": add them, or say none apply \(Sample Applicant C\): not answered/)));
   await o.getByRole("tab", { name: /^Sample Applicant C/ }).click();
@@ -336,11 +336,18 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("P-71 pass / C-9 fail-guard (break M2): with every required fact confirmed, IMM 5257 says \"Validate before filing\" (not \"Ready to file\") and the earlier copy is out of date", await shows(imm.getByText("Validate before filing")) && await gone(imm.getByText("Ready to file")) && await shows(imm.getByText("Out of date")));
   await imm.getByRole("button", { name: "Generate a new copy" }).click();
   await shows(imm.getByText("Generated", { exact: true }));
-  // The officer validates the new copy in Adobe and reads it back (simulated: the copy plus an appended save; values unchanged).
+  // The officer validates the new copy in Adobe and reads it back (simulated: the form's own Validate result written in; values unchanged).
   const fl5257 = (await call("GET", `/runtime/cases/${caseId}/forms`, undefined, "user-O")).body.forms.find((f) => f.form === "IMM 5257" && f.person === "Sample Applicant C");
   const newCopy = fl5257.copies[0].id;
   const bytes = Buffer.from(await (await fetch(`${BASE}/api/runtime/form-copies/${newCopy}/file`, { headers: { "x-actor": "user-O" } })).arrayBuffer());
-  const fd = new FormData(); fd.append("file", new Blob([Buffer.concat([bytes, Buffer.from("\n% Saved after Validate (simulated in this check)\n")])]), "imm5257-validated.pdf");
+  // QA-165: the form's own Validate result written into the copy (tools/simulate_validate.py), never bytes appended.
+  const vdir = require("node:fs").mkdtempSync(require("node:path").join(require("node:os").tmpdir(), "xr-validate-"));
+  require("node:fs").writeFileSync(require("node:path").join(vdir, "copy.pdf"), bytes);
+  const py = require("node:path").join(__dirname, "..", "..", "..", "..", "..", "..", ".tools", "solution-1-prototype", ".venv", "bin", "python");
+  const sv = require("node:child_process").spawnSync(py, ["-I", require("node:path").join(__dirname, "..", "..", "tools", "simulate_validate.py"), require("node:path").join(vdir, "copy.pdf"), require("node:path").join(vdir, "validated.pdf"), "Yes"], { encoding: "utf8", timeout: 120000 });
+  if (sv.status !== 0) throw new Error(`simulate_validate.py failed: ${(sv.stderr || sv.stdout).slice(-300)}`);
+  const validatedBytes = require("node:fs").readFileSync(require("node:path").join(vdir, "validated.pdf")); require("node:fs").rmSync(vdir, { recursive: true, force: true });
+  const fd = new FormData(); fd.append("file", new Blob([validatedBytes]), "imm5257-validated.pdf");
   const vr = await fetch(`${BASE}/api/runtime/form-copies/${newCopy}/validated`, { method: "POST", headers: { "x-actor": "user-O" }, body: fd });
   await o.reload(); await idle(o);
   step("C-9 pass (break M2): once the validated copy is read back, IMM 5257 is \"Ready to file\"", vr.status === 201 && await shows(imm.getByText("Ready to file")) && await gone(imm.getByText("Validate before filing")), vr.status);
