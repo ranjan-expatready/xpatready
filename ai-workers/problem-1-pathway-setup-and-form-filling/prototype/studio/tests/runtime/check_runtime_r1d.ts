@@ -67,7 +67,11 @@ async function main() {
   const written = (row.result.boxes as { fact: string | null; result: string }[]).filter((b) => b.result === "written").map((b) => b.fact);
   // C7.2 cause 3: a "lived elsewhere?" or "education?" Yes/No is written "N" from a confirmed "none apply" (a group answer,
   // kept with the copy's groups), not from a fact: those boxes say so, and every other written box is a confirmed fact.
-  const fromNone = (row.result.boxes as { result: string; why: string | null }[]).filter((b) => b.result === "written" && /^nothing recorded: "none apply" confirmed/.test(b.why ?? "")).length;
+  // Review of #414 m1: found by the copy's own flag, and each one is an "N" whose fact the copy did not read.
+  const noneBoxes = (row.result.boxes as { box: string; fact: string | null; result: string; nothing_recorded?: true }[]).filter((b) => b.result === "written" && b.nothing_recorded);
+  const readFacts = new Set((row.facts.facts as { box: string }[]).map((f) => f.box));
+  const req = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "..", "..", "..", "..", row.path.replace(/\.pdf$/, ".request.json")), "utf8")).values as Record<string, string>;
+  const fromNone = noneBoxes.every((b) => req[b.box] === "N" && !readFacts.has(b.box)) ? noneBoxes.length : -1;
   ok("RT-13 pass: exactly the confirmed facts were written (principal's names, birth date, passport; the application's facts), plus any Yes/No from a confirmed \"none apply\"", ["person.family_name", "person.given_names", "person.date_of_birth", "person.passport_number"].every((x) => written.includes(x)) && row.facts.facts.length === row.result.counts.written - fromNone + row.result.counts.by_hand + row.result.counts.blank, { written: written.length, fromNone, facts: row.facts.facts.length });
   ok("RT-13 fail (P-72): the spouse's marital status answered by the principal is not confirmed, so the spouse's copy would not write it", (await formOf("IMM 5257", spouse)).draft.unconfirmed >= 1);
   ok("RT-13 pass: the file on disk is the one recorded (sha256), and only the officer downloads it", await (async () => { const d = await bytes(`/runtime/form-copies/${first}/file`, OFFICER); return d.status === 200 && sha(d.body) === row.sha && sha(readFileSync(join(ROOT, row.path))) === row.sha && d.body.subarray(0, 5).toString() === "%PDF-"; })() && (await bytes(`/runtime/form-copies/${first}/file`, CLIENT)).status === 403);
