@@ -278,7 +278,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
 
   // ── 4. R1d: forms filled from confirmed facts; never overwritten (RT-13…RT-16)
   await o.goto(`${BASE}/cases/${caseId}`); await idle(o);
-  const forms = o.locator("section", { has: o.getByRole("heading", { name: "Forms", exact: true }) });
+  const forms = o.locator("section", { has: o.getByRole("heading", { name: "Prepare application", exact: true }) });
   const imm = forms.getByRole("listitem").filter({ has: o.getByRole("heading", { name: /IMM 5257 for Sample Applicant C/ }) });
   step("forms: IMM 5257 for the principal says what a copy made now writes and what blocks filing", await shows(imm.getByText(/Confirmed answers for \d+ of \d+ form fields/)) && await shows(imm.getByText(/facts? to answer or confirm before filing|Ready to file/)));
   await imm.getByRole("button", { name: "Generate a copy" }).click();

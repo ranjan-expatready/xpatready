@@ -54,7 +54,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C4.3 pass: at 1440 px the three sets show side by side, with no switch", await visible("[data-set]") === 3 && await visible("[data-set-switch]") === 0, await visible("[data-set]"));
   const chipText = await p.locator('[data-person-chip="principal"]').innerText();
   const agentHead = await p.locator('[data-set="agent"] h2').innerText();
-  step("C4.3 one count pass: the principal's chip, the case officer's view and the Smart questionnaire (SQR) tab say the same number", chipText.includes(`${chipOf.get("principal")} questions`) && agentHead.includes(`(${chipOf.get("principal")})`), `${chipText} | ${agentHead} | ${chipOf.get("principal")}`);
+  step("C4.3 one count pass: the principal's chip, the case officer's view and the Smart questionnaire (SQR) tab say the same number", chipText.includes(`${chipOf.get("principal")} questions`) && agentHead.includes(`· ${chipOf.get("principal")}`), `${chipText} | ${agentHead} | ${chipOf.get("principal")}`);
   const doc = p.locator("[data-from-documents]");
   step("C4.3 Q1 pass: the client view says what the documents fill (\"Passport … fills n answers\"), information only (no upload control)", /Passport.* fills \d+ answers/.test(await doc.innerText()) && await doc.locator('input[type="file"], button').count() === 0, (await doc.innerText()).replace(/\s+/g, " "));
   step("C4.3 pass: every answer in the case officer's view names its source in words", await p.locator("[data-agent-fact]").count() === chipOf.get("principal") && !KEYS.test(await p.locator('[data-set="agent"]').innerText()));
