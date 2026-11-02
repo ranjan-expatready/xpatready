@@ -186,9 +186,21 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
 
   // guarded AI path for the added form IMM 5257
   await go(`/c/${vv}/forms`);
-  await click(p.getByRole("row", { name: /IMM 5257/ }).getByRole("button", { name: "Draft with AI" }));
-  await p.getByRole("dialog").getByText(LIVE ? /^Live$/ : "Stub pass only").click();
-  await click(p.getByRole("dialog").getByRole("button", { name: LIVE ? "Start Live" : "Run stub pass" }));
+  if (LIVE) {
+    await click(p.getByRole("row", { name: /IMM 5257/ }).getByRole("button", { name: "Draft with AI" }));
+    await p.getByRole("dialog").getByText(/^Live$/).click();
+    await click(p.getByRole("dialog").getByRole("button", { name: "Start Live" }));
+  } else {
+    // P-227 (D2 part 2): the stub pass is no longer offered to a person; this check starts it through the API (US$0).
+    const att = (await api(`/combinations/${vv}/attachments`)).find((x) => /imm5257e/i.test(x.fileName ?? x.file_name ?? ""));
+    await api(`/attachments/${att.id}/draft`, { method: "POST", data: { mode: "stub", idempotencyKey: `stub-${Date.now()}` } });
+    const dlg = p.getByRole("row", { name: /IMM 5257/ }).getByRole("button", { name: "Draft with AI" });
+    await click(dlg);
+    await p.getByRole("dialog").locator('[data-draft-start][data-options-loaded="true"]').waitFor({ timeout: 60_000 });
+    const choices = await p.getByRole("dialog").locator('input[type="radio"]').evaluateAll((xs) => xs.map((x) => (x.closest("label")?.querySelector("b")?.textContent ?? "").trim()));
+    await p.keyboard.press("Escape");
+    step("D2 (P-227): the field-map dialog offers exactly Live and Saved, never Stub pass only", JSON.stringify(choices) === JSON.stringify(["Live", "Saved"]), choices);
+  }
   for (let i = 0; i < 120; i++) { const d = await api(`/combinations/${vv}`); const j = d.jobs.find((x) => x.kind === "field_map"); if (j && j.status !== "RUNNING" && j.status !== "QUEUED") break; await p.waitForTimeout(2000); }
   const vvd = await api(`/combinations/${vv}`); const job = vvd.jobs.find((x) => x.kind === "field_map");
   step(`A8: IMM 5257 through the guarded AI path (${LIVE ? "live" : "stub pass"}) ends in an honest state`, job && ["COMPLETED", "BLOCKED"].includes(job.status), `${/Access to this API has been restricted/.test(job?.message ?? "") ? "known QA-8 (the AI step's child process is refused file access in this copy; not faked): " : ""}${job?.mode} ${job?.status}: ${job?.message?.slice(0, 160)}`);
