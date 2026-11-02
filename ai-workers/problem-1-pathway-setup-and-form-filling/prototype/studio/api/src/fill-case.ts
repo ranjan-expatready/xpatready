@@ -17,7 +17,7 @@ import type { z } from "zod";
 import { GenerateCopy, LockCopy, LOCK_KINDS, notReady, type CaseForm, type CaseOnlineForm, type FormCopy } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { caseView } from "../../engine/runtime/case.ts";
-import { changedFacts, changedGroups, copyOnlyForms, formCoverage, groupFacts, inputHash, pdfForms, readiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
+import { changedFacts, changedGroups, copyOnlyForms, formCoverage, groupFacts, inputHash, markNothingRecorded, pdfForms, readiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
 import { answerSheetOnly, CHANNEL_WORDS, isBarcodeForm, NOT_FOR_FILING, type Channel } from "../../contracts/forms.ts";
 import { lineOf } from "../../engine/channels.ts";
 import type { BoxRow } from "../../engine/render.ts";
@@ -170,7 +170,8 @@ export class CaseForms implements OnModuleInit {
     if (!pdfForms(s).has(form) && !copyOnlyForms(s).has(form)) fail(channelIn(s, form) === "ONLINE" ? `${form} is filed Online and IRCC's PDF of it is not in this case's release: its answers go on the answer sheet.` : `${form} has no PDF to fill in this case's release.`, channelIn(s, form) === "ONLINE" ? HttpStatus.UNPROCESSABLE_ENTITY : HttpStatus.NOT_FOUND);
     const cov = formCoverage(s, people, answers, rows, form, subjectId);
     if (!cov || cov.applies === false) fail(`${form} does not apply to that person on this case.`, HttpStatus.UNPROCESSABLE_ENTITY);
-    const stored: Stored = { facts: cov!.facts, boxes: cov!.boxes, groups: groupFacts(caseView(s, people, answers, rows, "agent", new Date(), groups), form, subjectId) };
+    const view = caseView(s, people, answers, rows, "agent", new Date(), groups);
+    const stored: Stored = { facts: cov!.facts, boxes: markNothingRecorded(cov!.boxes, view), groups: groupFacts(view, form, subjectId) };
     let copy;
     try {
       copy = await this.db.$transaction(async (tx) => {
