@@ -3,7 +3,7 @@
 // signing. The routes are proved by acceptance/C8.1.test.ts on an isolated copy. No database (US$0).
 //   tsx studio/tests/check_c81_signing.ts
 import { readFileSync } from "node:fs";
-import { SIGN_STEPS, signedState, signersOf, stepRefusal } from "../engine/runtime/signing.ts";
+import { minorFromAnswers, SIGN_STEPS, signedState, signersOf, stepRefusal } from "../engine/runtime/signing.ts";
 import type { Person } from "../engine/resolver.ts";
 import { recorder } from "./runtime/api.ts";
 
@@ -32,4 +32,14 @@ ok("C8.1 state: the scan in → Ready; uploaded → Done", signedState(scanned, 
 ok("C8.1 state (fail): printed or signed only leaves the state worked out from the facts", signedState({}, "F") === null && signedState(signed, "F") === null);
 
 ok("C8.1 (SH3): signing.ts reads who signs from the resolver and keeps no copy of R7", /from "\.\.\/resolver\.ts"/.test(readFileSync(new URL("../engine/runtime/signing.ts", import.meta.url), "utf8")) && !/parent_for_minor/.test(readFileSync(new URL("../engine/runtime/signing.ts", import.meta.url), "utf8")));
+// Devin on #617: whether a child is a minor comes from the case's own validated age; an impossible or future date is no age.
+{
+  const today = new Date(Date.UTC(2026, 10, 2));
+  const dob = (id: string, v: unknown) => ({ subjectId: id, field: "person.date_of_birth", rowKey: null, value: v });
+  const m = minorFromAnswers([dob("a", "2006-01-01"), dob("b", "2017-05-05"), dob("c", "2000-01-99"), dob("d", "2030-01-01"), dob("e", "not a date")], today);
+  ok("pass (Devin on #617): a 20-year-old is not a minor; a 9-year-old is", m("a") === false && m("b") === true, [m("a"), m("b")]);
+  ok("fail (Devin on #617, a31b1dfe): an impossible date (2000-01-99), a future date or no date is no age: unknown, so R7 keeps the child a minor (\"parent\")", m("c") === undefined && m("d") === undefined && m("e") === undefined && m("z") === undefined, [m("c"), m("d"), m("e"), m("z")]);
+  const fam: Person[] = [{ id: "principal", role: "principal", label: "P", applies: true }, { id: "child-1", role: "child", label: "C", applies: true }];
+  ok("pass: with an impossible date the child's IMM 5257 is still signed by a parent", JSON.stringify(signersOf(fam, "child-1", "each_applicant", "parent_for_minor", minorFromAnswers([dob("child-1", "2000-01-99")], today))) === JSON.stringify(["parent"]));
+}
 summary();

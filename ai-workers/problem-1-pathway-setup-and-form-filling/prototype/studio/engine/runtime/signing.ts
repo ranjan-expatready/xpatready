@@ -3,18 +3,16 @@
 // resolver's one rule (SH3 R7, engine/resolver.ts formSigners); nothing here repeats it. Pure: no database (P-249).
 import { FILING } from "../../contracts/resolver.ts";
 import { formSigners, type Person } from "../resolver.ts";
+import { ageOn } from "./case.ts";
 
 /** Devin on #617: whether a person is a minor (under 18) on `today`, from their own answered date of birth; undefined when
  *  it is not answered (R7 then keeps a child a minor, as before). VV-R09: a child under 18 is signed for by a parent. */
 export function minorFromAnswers(answers: { subjectId: string; field: string; rowKey: string | null; value: unknown }[], today: Date): (id: string) => boolean | undefined {
-  const born = new Map<string, string>();
-  for (const a of answers) if (a.field === "person.date_of_birth" && a.rowKey === null && typeof a.value === "string" && /^\d{4}-\d{2}-\d{2}/.test(a.value)) born.set(a.subjectId, a.value.slice(0, 10));
-  return (id) => {
-    const d = born.get(id); if (!d) return undefined;
-    const [y, m, day] = d.split("-").map(Number);
-    const eighteen = new Date(Date.UTC(y + 18, m - 1, day));
-    return today < eighteen;
-  };
+  // Devin on #617 (a31b1dfe): the case's own validated age (ageOn: an impossible or future date is no age), never a date
+  // rolled over by Date.UTC ("2000-01-99" is not April 2000).
+  const age = new Map<string, number | null>();
+  for (const a of answers) if (a.field === "person.date_of_birth" && a.rowKey === null) age.set(a.subjectId, ageOn(a.value, today));
+  return (id) => { const n = age.get(id); return n === null || n === undefined ? undefined : n < 18; };
 }
 
 /** The steps of a form signed by hand and scanned, in order (C8.1-3). */

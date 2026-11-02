@@ -12,7 +12,8 @@ import { AnyFilesInterceptor } from "@nestjs/platform-express";
 import { cleanName, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_MB, MEDIA, mediaOf } from "../../contracts/documents.ts";
 import { isSignStep, minorFromAnswers, SIGN_STEP_WORDS, SIGN_STEPS, signersOf, stepRefusal, type SignStepKey, type StepsDone } from "../../engine/runtime/signing.ts";
 import { channelOf, type FormLine } from "../../engine/runtime/prepare.ts";
-import { changedFacts, formCoverage, type FormFact } from "../../engine/runtime/forms.ts";
+import { changedFacts, changedGroups, formCoverage, groupFacts, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
+import { caseView } from "../../engine/runtime/case.ts";
 import { CaseActorGuard, utf8Name } from "./case-checklist.ts";
 import { actorOf, Audit, CaseRead, Db, fail, VAR, WORKSPACE_KEY, type Actor } from "./core.ts";
 import { Runtime } from "./runtime.ts";
@@ -79,10 +80,14 @@ export class SignSteps {
         fail(`Print a generated copy of ${item.itemKey} for this person first: generate it, then send its id as "copy".`, HttpStatus.CONFLICT);
       // Break M1 on #617: the copy printed must still say what the case says (C-10: a fact the form reads changed since
       // it was made → out of date), so a person never signs a form with old answers.
-      const { answers, rows } = await this.r.state(c);
-      const cov = formCoverage(this.r.snapshotOf(c), this.r.peopleOf(c), answers, rows, item.itemKey, item.subjectId);
-      const changed = changedFacts(((copy!.snapshot?.factsJson ?? {}) as { facts?: FormFact[] }).facts ?? [], cov?.facts ?? []);
-      if (changed.length) fail(`This copy of ${item.itemKey} is out of date: ${changed.length} fact${changed.length === 1 ? "" : "s"} it shows changed since it was made. Generate a new copy and print that one. Nothing was recorded.`, HttpStatus.CONFLICT);
+      // Devin on #617 (a31b1dfe): and the repeating groups it reads ("none apply" taken back, an entry added), as `lock` does.
+      const { answers, rows, groups } = await this.r.state(c);
+      const snap = this.r.snapshotOf(c), people = this.r.peopleOf(c);
+      const cov = formCoverage(snap, people, answers, rows, item.itemKey, item.subjectId);
+      const stored = (copy!.snapshot?.factsJson ?? {}) as { facts?: FormFact[]; groups?: GroupFact[] };
+      const view = caseView(snap, people, answers, rows, "agent", new Date(), groups);
+      const changed = [...changedFacts(stored.facts ?? [], cov?.facts ?? []), ...changedGroups(stored.groups, groupFacts(view, item.itemKey, item.subjectId))];
+      if (changed.length) fail(`This copy of ${item.itemKey} is out of date: ${changed.length} change${changed.length === 1 ? "" : "s"} since it was made. Generate a new copy and print that one. Nothing was recorded.`, HttpStatus.CONFLICT);
       copyId = copy!.id;
     }
     await this.save(c, item, key, actor, copyId);
