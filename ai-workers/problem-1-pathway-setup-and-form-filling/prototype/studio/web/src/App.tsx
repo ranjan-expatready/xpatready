@@ -3,6 +3,7 @@ import { RunChip } from "@/components/run-card";
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { Activity, BookOpen, Boxes, CheckSquare, ChevronDown, Scale, Database, FileStack, FileText, Inbox, Layers, ListTree, Moon, RotateCcw, Sparkles, Sun, Upload, X } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, getActor, setActor, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Input, Notice, Pill, Table } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
@@ -180,7 +181,7 @@ function ThemeToggle() {
 }
 
 /** What POST /demo/load {"sample":"six"} answers (api/src/demo.ts loadSix). */
-type SixLoad = { timings?: Record<string, number>; seconds: number; combinations: { id: string; label: string; files: number }[]; drafts: { replayed: number; proposals_waiting: number; waiting_for_draft_with_ai: string[]; status: string }; missing: { combination: string; code: string; why: string }[]; log: string[] };
+type SixLoad = { reset?: { removed_rows: number; removed_files: number; preserved_unchanged: boolean; seconds: number }; timings?: Record<string, number>; seconds: number; combinations: { id: string; label: string; files: number }[]; drafts: { replayed: number; proposals_waiting: number; waiting_for_draft_with_ai: string[]; status: string }; missing: { combination: string; code: string; why: string }[]; log: string[] };
 
 /** C10.1: what POST /demo/load {"sample":"configured"} answers: the six load, then one row per DEMO.md mechanism. */
 type CheckpointRow = { row: string; title: string; status: "done" | "partial" | "waiting" | "not built yet" | "out"; shows: string; why: string | null };
@@ -190,6 +191,7 @@ const ROW_WORD: Record<CheckpointRow["status"], string> = { done: "Done", partia
 
 function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExist: boolean }) {
   const [resetOpen, setResetOpen] = React.useState(false);
+  const [sixOpen, setSixOpen] = React.useState(false);
   const navTo = useNavigate();
   const [loadOpen, setLoadOpen] = React.useState(false);
   const [loaded6, setLoaded6] = React.useState<SixLoad | null>(null);
@@ -210,11 +212,13 @@ function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExis
             <DropdownMenu.Item className={item} disabled={loaded || programsExist} onSelect={() => setLoadOpen(true)}><Upload className="size-4" />{loaded ? "Sample loaded (reset to load again)" : programsExist ? "Load sample (the Structure has names: reset first)" : "Load sample…"}</DropdownMenu.Item>
             <DropdownMenu.Item className={item} disabled={loaded || programsExist} onSelect={() => setConfOpen(true)}><Upload className="size-4" />{loaded || programsExist ? "Load the configured checkpoint (reset first)" : "Load the configured checkpoint…"}</DropdownMenu.Item>
             <DropdownMenu.Item className={item} onSelect={() => setResetOpen(true)}><RotateCcw className="size-4" />Reset demo…</DropdownMenu.Item>
+            <DropdownMenu.Item className={item} onSelect={() => setSixOpen(true)}><RotateCcw className="size-4" />Reset to the six…</DropdownMenu.Item>
             <DropdownMenu.Item className={item} onSelect={() => navTo("/cases")}><FileText className="size-4" />Open the case area (runtime preview)</DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
       <ResetDialog open={resetOpen} onOpenChange={setResetOpen} />
+      <ResetToSixDialog open={sixOpen} onOpenChange={setSixOpen} onDone={(r) => { setLoaded6(r); navTo("/"); }} />
       <Dialog open={loadOpen} onOpenChange={(o) => { if (!load.isPending) setLoadOpen(o); }} title="Load the sample starting point?" description="Everything after this goes through the real screens and rules. US$0: no live AI call."
         footer={<><Button variant="ghost" disabled={load.isPending} onClick={() => setLoadOpen(false)}>Cancel</Button><Button busy={load.isPending} onClick={() => load.mutate(undefined)}><Upload /> Load sample</Button></>}>
         <ul className="list-disc space-y-1 pl-5 text-sm" data-load-brings>
@@ -252,9 +256,10 @@ function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExis
           </div>
         ) : null}
       </Dialog>
-      <Dialog open={!!loaded6} onOpenChange={() => setLoaded6(null)} wide title="Sample starting point loaded" description="The same services as the screens. Nothing was approved, released or filled; no live AI call was made (US$0)." footer={<Button onClick={() => setLoaded6(null)}>Continue</Button>}>
+      <Dialog open={!!loaded6} onOpenChange={() => setLoaded6(null)} wide title={loaded6?.reset ? "Reset to the six: done" : "Sample starting point loaded"} description="The same services as the screens. Nothing was approved, released or filled; no live AI call was made (US$0)." footer={<Button onClick={() => setLoaded6(null)}>Continue</Button>}>
         {loaded6 ? (
           <div className="space-y-3 text-sm" data-load-result>
+            {loaded6.reset ? <Notice tone={loaded6.reset.preserved_unchanged ? "ok" : "danger"} title={`Emptied: ${loaded6.reset.removed_rows} rows and ${loaded6.reset.removed_files} working files removed`}><span data-six-kept>{loaded6.reset.preserved_unchanged ? "Saved AI results, official PDF copies and the spend record are byte-identical before and after." : "Saved AI results or other kept evidence CHANGED: investigate before continuing."} Then the six were loaded in {loaded6.seconds.toFixed(1)} s.</span></Notice> : null}
             <div className="grid grid-cols-2 gap-x-6 gap-y-1">
               {[["Combinations", loaded6.combinations.length], ["Official files on them", loaded6.combinations.reduce((a, c) => a + c.files, 0)], ["AI proposals waiting for review", loaded6.drafts.proposals_waiting], ["Forms waiting for Draft with AI", loaded6.drafts.waiting_for_draft_with_ai.length]].map(([k, v]) => <div key={k} className="flex justify-between border-b border-border py-1"><span className="text-text-muted">{k}</span><span className="font-medium" data-count={k}>{v}</span></div>)}
             </div>
@@ -293,6 +298,34 @@ function ResetDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: 
           <label className="block text-sm">Type <b>RESET</b> to confirm<Input className="mt-1 w-48" value={confirm} onChange={(e) => setConfirm(e.target.value)} aria-label="Type RESET to confirm" /></label>
         </div>
       ) : null}
+    </Dialog>
+  );
+}
+
+/** D1 (P-226): Demo › Reset to the six. One confirmation, one request: Reset's emptying, then Load sample's six. */
+function ResetToSixDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenChange: (o: boolean) => void; onDone: (r: SixLoad) => void }) {
+  const [confirm, setConfirm] = React.useState("");
+  const [failed, setFailed] = React.useState<string | null>(null);
+  const qc = useQueryClient();
+  const once = React.useRef(false); // a double click sends one request
+  const toast = useToast();
+  // Its own mutation, not useAction: a failure is told once, inside the dialog (below), not also in a toast over its buttons.
+  const run = useMutation<SixLoad, Error>({ mutationFn: () => api<SixLoad>("/demo/reset-to-six", { method: "POST", json: { confirm } }),
+    onSuccess: (r) => { void qc.invalidateQueries(); toast.push({ tone: "ok", text: `Reset to the six in ${((r.reset?.seconds ?? 0) + r.seconds).toFixed(1)} s` }); setConfirm(""); onOpenChange(false); onDone(r); } });
+  // D1 review 2: a failure midway has still emptied the configuration, so every screen reads again, and the server's
+  // words stay in the dialog (open, RESET still typed) ready for a retry, not only in a passing toast.
+  const go = () => { if (once.current || confirm !== "RESET") return; once.current = true; setFailed(null); run.mutate(undefined, { onError: (e) => { setFailed(e.message); void qc.invalidateQueries(); }, onSettled: () => { once.current = false; } }); };
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!run.isPending) { onOpenChange(o); if (!o) { setConfirm(""); setFailed(null); } } }} wide title="Reset to the six?" description="One step: empties all configuration, then loads the six agreed combinations with their structure and official PDFs. US$0: no live AI call."
+      footer={<><Button variant="ghost" disabled={run.isPending} onClick={() => onOpenChange(false)}>Cancel</Button><Button variant="destructive" disabled={confirm !== "RESET"} busy={run.isPending} onClick={go}><RotateCcw /> {failed ? "Try again" : "Reset to the six"}</Button></>}>
+      {failed ? <Notice tone="danger" title="Reset to the six stopped"><span data-six-failed>{failed}</span></Notice> : null}
+      <div className={cn("grid gap-4 text-sm sm:grid-cols-3", failed && "mt-3")} data-six-dialog>
+        <div><p className="mb-1 font-medium">Goes</p><ul className="list-disc space-y-1 pl-5" data-six-goes><li>All configuration: structure, combinations, the shared library (fields, sections, document types), the Form library, checks, rules, questionnaires and releases</li><li>Cases and the activity record</li></ul></div>
+        <div><p className="mb-1 font-medium">Comes back</p><ul className="list-disc space-y-1 pl-5" data-six-comes><li>The six combinations: 5 Retail + 1 Corporate <Pill tone="warn">Sample</Pill></li><li>Their official PDFs in the Form library (from saved copies)</li><li>Form finder and saved AI answers replayed, waiting for people to review</li><li>A form without a saved AI answer waits for Draft with AI; a file without a saved copy shows as "Not found · Upload PDF"</li></ul></div>
+        <div><p className="mb-1 font-medium">Kept</p><ul className="list-disc space-y-1 pl-5" data-six-kept-list><li>Saved AI results (recorded answers), so they replay at US$0</li><li>The official PDF copies and the spend record, checked unchanged</li></ul></div>
+      </div>
+      <p className="mt-3 text-sm text-text-muted">Nothing is released: a second person approves every library item. To show building from nothing, use Reset demo instead. This takes about half a minute.</p>
+      <label className="mt-3 flex flex-col gap-1.5 text-sm"><span>Type <b>RESET</b> to confirm</span><Input className="w-48" value={confirm} onChange={(e) => setConfirm(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") go(); }} aria-label="Type RESET to confirm" /></label>
     </Dialog>
   );
 }
