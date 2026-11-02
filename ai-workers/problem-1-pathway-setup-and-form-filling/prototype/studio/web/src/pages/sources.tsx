@@ -4,7 +4,7 @@
 // form lines show as one compact "Sources" line. The Sources tab, its desktop upload and "Attach a sample file" are gone
 // (P-118 Q2: forms enter only through the Form library). Slice 3 turns this into the form finder's stage strip (W1-07).
 import * as React from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Play, Recycle, ScanLine, Sparkles } from "lucide-react";
 import { api, ApiError, useAction, useApi, useSessionView, useToast } from "@/lib/api";
 import { Button, Dialog, Field, Notice, Pill, Select } from "@/components/ui/controls";
@@ -43,7 +43,9 @@ export function ReadingActions({ d, a }: { d: Combo; a: Attachment }) {
   const { canAuthor } = useSessionView();
   const id = d.combination.id;
   const qc = useQueryClient();
-  const [drafting, setDrafting] = React.useState(false);
+  // P-227 (D2 part 4): a failed Live run's "Use Saved (US$0)" opens this form's Draft dialog (?draft=<attachment>), on Saved.
+  const [sp, setSp] = useSearchParams();
+  const [drafting, setDrafting] = React.useState(sp.get("draft") === a.id);
   const read = useAction(() => api(`/attachments/${a.id}/read`, { method: "POST" }), { success: (r: { summary: { entry_fields_bound: number } }) => `Form read: ${r.summary.entry_fields_bound} form fields`, invalidate: [["combination", id]] });
   const reuse = useAction(() => api(`/attachments/${a.id}/reuse`, { method: "POST", json: {} }), { success: (r: { form: string }) => `${r.form} added from the library; no AI drafting needed`, invalidate: [["combination", id], ["preview"]] });
   if (!canAuthor) return null;
@@ -54,7 +56,7 @@ export function ReadingActions({ d, a }: { d: Combo; a: Attachment }) {
       {a.status === "READ" || (a.status === "DRAFTED" && !ai) ? <Button size="sm" onClick={() => setDrafting(true)}><Sparkles /> Draft with AI</Button> : null}
       {a.status === "DRAFTED" && ai ? <Button size="sm" asChild><Link to={`/c/${id}/jobs/${ai.id}`}><Sparkles /> Review AI proposals</Link></Button> : null}
       {a.status === "IN_LIBRARY" && a.kind === "Form" ? <ReuseButton id={id} code={codeOf(a)} onReuse={() => reuse.mutate(undefined)} busy={reuse.isPending} /> : null}
-      {drafting ? <DraftDialog a={a} onClose={() => { setDrafting(false); void qc.invalidateQueries({ queryKey: ["combination", id] }); }} /> : null}
+      {drafting ? <DraftDialog a={a} onClose={() => { setDrafting(false); if (sp.get("draft")) { const n = new URLSearchParams(sp); n.delete("draft"); setSp(n, { replace: true }); } void qc.invalidateQueries({ queryKey: ["combination", id] }); }} /> : null}
     </>
   );
 }
