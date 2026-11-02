@@ -52,19 +52,8 @@ export async function itemUses(db: Db, workspaceId: string, kind: ItemKind, key:
   const merged = kind === "field" ? (versions as { mergedIntoKey?: string | null }[]).find((r) => r.mergedIntoKey)?.mergedIntoKey ?? null : null;
   // SH2 (P-258): the combinations using it come from the one where-used service.
   const [ids, trails, combos] = await Promise.all([
-    itemCombinations(db, workspaceId, kind).then(async (m) => {
-      const s = new Set(m.get(key) ?? []);
-      // Break M4: a document type is also used as another line's alternative, and as the document a fact is read from.
-      if (kind === "document_type") {
-        const [reqs, facts] = await Promise.all([
-          db.documentRequirement.findMany({ where: { workspaceId }, select: { combinationId: true, lineageKey: true, version: true, status: true, alternatives: true } }),
-          db.factSource.findMany({ where: { workspaceId }, select: { combinationId: true, lineageKey: true, version: true, status: true, documentTypeKey: true } }),
-        ]);
-        for (const r of current(reqs, (r) => `${r.combinationId}|${r.lineageKey}`)) if (Array.isArray(r.alternatives) && (r.alternatives as unknown[]).includes(key)) s.add(r.combinationId);
-        for (const f of current(facts, (f) => `${f.combinationId}|${f.lineageKey}`)) if (f.documentTypeKey === key) s.add(f.combinationId);
-      }
-      return s;
-    }),
+    // SH2b: every use, a document type's alternatives and fact sources included, comes from the one service.
+    itemCombinations(db, workspaceId, kind).then((m) => new Set(m.get(key) ?? [])),
     combinationTrails(db, workspaceId),
     db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true, retiredAt: true } }),
   ]);

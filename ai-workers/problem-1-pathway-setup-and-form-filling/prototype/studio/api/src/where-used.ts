@@ -24,7 +24,20 @@ export async function mappedBoxes(db: Client, workspaceId: string) {
  *  and an answer list where one of its fields is. */
 export async function itemCombinations(db: Client, workspaceId: string, kind: UsedKind): Promise<Map<string, Set<string>>> {
   if (kind === "section") return byItem((await db.sqrSectionSelection.findMany({ where: { workspaceId } })).map((s) => [s.sectionKey, s.combinationId]));
-  if (kind === "document_type") return byItem(current(await db.documentRequirement.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }), (r) => `${r.combinationId}|${r.lineageKey}`).map((r) => [r.documentTypeKey, r.combinationId]));
+  if (kind === "document_type") {
+    // A document type is used where a current checklist line lists it, where it is another line's alternative, and
+    // where a fact is read from it (break M4 of C11.9; SH2b, qa's Major on #504: one answer for the list and the guard).
+    const [reqs, facts] = await Promise.all([
+      db.documentRequirement.findMany({ where: { workspaceId, status: { in: [...LIVE] } }, select: { combinationId: true, lineageKey: true, version: true, status: true, documentTypeKey: true, alternatives: true } }),
+      db.factSource.findMany({ where: { workspaceId, status: { in: [...LIVE] } }, select: { combinationId: true, lineageKey: true, version: true, status: true, documentTypeKey: true } }),
+    ]);
+    const lines = current(reqs, (r) => `${r.combinationId}|${r.lineageKey}`);
+    return byItem([
+      ...lines.map((r) => [r.documentTypeKey, r.combinationId] as [string, string]),
+      ...lines.flatMap((r) => (Array.isArray(r.alternatives) ? (r.alternatives as unknown[]) : []).filter((k): k is string => typeof k === "string").map((k) => [k, r.combinationId] as [string, string])),
+      ...current(facts, (f) => `${f.combinationId}|${f.lineageKey}`).filter((f) => f.documentTypeKey).map((f) => [f.documentTypeKey!, f.combinationId] as [string, string]),
+    ]);
+  }
   const [boxes, lines, rules, docs, checks, questions, picks] = await Promise.all([
     mappedBoxes(db, workspaceId),
     db.combinationForm.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }),
