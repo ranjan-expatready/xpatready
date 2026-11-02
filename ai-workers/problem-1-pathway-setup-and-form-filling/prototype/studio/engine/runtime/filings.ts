@@ -27,12 +27,29 @@ type TableLine = { key: string; label: string; status: string; basis: FeeBasis; 
 type TableCombination = { label: string; lines: string[]; checklist?: boolean; modes?: Record<string, CaseFiling["mode"]>; group_why?: string };
 export type FeeTable = { as_of: string; read: string; status: string; lines: TableLine[]; combinations: Record<string, TableCombination> };
 export const FEE_TABLE = FEES as unknown as FeeTable;
-const line = (key: string) => FEE_TABLE.lines.find((l) => l.key === key)!;
-export const VISITOR_FEE_SOURCE: FeeSource = line("visitor_visa").source;
-export const BIOMETRICS_FEE_SOURCE: FeeSource = line("biometrics").source;
+// A line removed from the table leaves these undefined; the module never throws on load (break r1 B: a deleted line
+// stopped the whole API).
+const line = (key: string) => (Array.isArray(FEE_TABLE.lines) ? FEE_TABLE.lines.find((l) => l?.key === key) : undefined);
+export const VISITOR_FEE_SOURCE = line("visitor_visa")?.source as FeeSource;
+export const BIOMETRICS_FEE_SOURCE = line("biometrics")?.source as FeeSource;
 /** VV-R15 (compliance-trace): who gives no biometrics, in IRCC's words with the page and its date. "Over 79" is read as
  *  80 or older, and age is counted as at today until the group is recorded (FQ-7, open). */
-export const BIOMETRICS_EXEMPT_SOURCE: FeeSource = line("biometrics").exempt!.source;
+export const BIOMETRICS_EXEMPT_SOURCE = line("biometrics")?.exempt?.source as FeeSource;
+
+/** Whether a fee line can be charged soundly (break r1, R2): an amount that is a number of zero or more, a basis the
+ *  engine works out (not per_position), a family maximum with a positive amount from 2 people when the basis is
+ *  family_maximum, a non-empty list of roles when it is per_person_by_role (and a list whenever roles are given), and
+ *  whole-number age limits for an exemption. Anything else makes its combination not derived: never a wrong total. */
+export function soundLine(l: TableLine | undefined): l is TableLine {
+  if (!l || typeof l !== "object" || typeof l.key !== "string" || !FEE_BASES.includes(l.basis) || l.basis === "per_position") return false;
+  if (typeof l.per_person_cad !== "number" || !Number.isFinite(l.per_person_cad) || l.per_person_cad < 0) return false;
+  if (l.roles !== undefined && (!Array.isArray(l.roles) || !l.roles.length || l.roles.some((r) => typeof r !== "string"))) return false;
+  if (l.basis === "per_person_by_role" && !l.roles?.length) return false;
+  const m = l.family_max;
+  if (l.basis === "family_maximum" && !(m && typeof m.cad === "number" && m.cad > 0 && Number.isInteger(m.from_people) && m.from_people >= 2)) return false;
+  if (l.exempt && !(Number.isInteger(l.exempt.under_age) && Number.isInteger(l.exempt.over_age) && l.exempt.source)) return false;
+  return true;
+}
 
 /** A fee line nobody outside these ages pays (biometrics, VV-R15): under `underAge` or over `overAge`. */
 export type AgeExempt = { underAge: number; overAge: number; source: FeeSource };
@@ -52,10 +69,14 @@ export const FAMILY_GROUP = "group-family";
 export function rulesFrom(table: FeeTable, key: string): Rules | undefined {
   const c = Object.hasOwn(table.combinations, key) ? table.combinations[key] : undefined;
   if (!c) return undefined;
+  // A combination lists its lines once each, at least one; the table holds each key once (break r1 B).
+  if (!Array.isArray(c.lines) || !c.lines.length || new Set(c.lines).size !== c.lines.length || !Array.isArray(table.lines)) return undefined;
+  const keys = table.lines.map((l) => l?.key);
+  if (new Set(keys).size !== keys.length) return undefined;
   const lines = c.lines.map((k) => table.lines.find((l) => l.key === k));
+  if (!lines.every(soundLine)) return undefined;
   // A line the engine cannot charge soundly makes the combination not derived: a missing line, a basis not worked out
   // (per_position), a family maximum without its cap, or a per-role line naming no role.
-  if (lines.some((l) => !l || !FEE_BASES.includes(l.basis) || l.basis === "per_position" || (l.basis === "family_maximum" && !l.family_max) || (l.basis === "per_person_by_role" && !l.roles?.length))) return undefined;
   const fees = (lines as TableLine[]).map((l): FeeRule => ({
     key: l.key, label: l.label, basis: l.basis, perPersonCents: Math.round(l.per_person_cad * 100),
     // Only the family_maximum basis caps a line (P-247): any other basis charges each person or application in full.
@@ -130,6 +151,10 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
     else if (!p.applies) notFiling.push({ subject: p.subjectId, label: p.label, role: p.role, why: "Not travelling (not applying on this case): no filing and no fee." });
     else filers.push(p);
   }
+  // Break r1 B16: on_principal filings with no application of their own on the case (the principal not travelling) have
+  // no application to be charged on: a per_application line then is not derived, never guessed.
+  if (rules.fees.some((f) => f.basis === "per_application") && filers.length && filers.every((p) => modeOf(p.role) === "on_principal"))
+    return { derived: false, combination: combinationKey, why: "Everyone applying is on another person's application, and that person is not applying: the application fee cannot be worked out. Nothing is guessed." };
   const groupOf = opts.groupOf ?? (() => FAMILY_GROUP);
   // Keyed by the person, so a filing keeps its id when someone else stops travelling.
   const filings: CaseFiling[] = filers.map((p) => ({ id: `filing-${p.subjectId}`, combination: combinationKey, label: `${rules.label}: ${p.label}`, mode: modeOf(p.role)!,
@@ -143,7 +168,10 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
       // is covered by it when that application is in the same group, never charged twice; split out alone, it pays its
       // own (outside check on #455).
       const ownInGroup = all.some((f) => f.mode !== "on_principal");
-      const mine = all.filter((f) => (!rule.roles || rule.roles.includes(f.applicants[0].role)) && !(rule.basis === "per_application" && f.mode === "on_principal" && ownInGroup));
+      const matching = all.filter((f) => !rule.roles || rule.roles.includes(f.applicants[0].role));
+      // With no own application in the group, its on_principal filings are still one application: charged once.
+      const firstDependent = matching.find((f) => f.mode === "on_principal");
+      const mine = rule.basis !== "per_application" ? matching : matching.filter((f) => f.mode !== "on_principal" || (!ownInGroup && f === firstDependent));
       if (!mine.length) continue;
       const check = new Map(mine.map((f) => [f.id, ageCheck(rule, opts.ages?.get(f.applicants[0].subject))]));
       const paying = mine.filter((f) => { const c = check.get(f.id)!; return "pays" in c && c.pays; });

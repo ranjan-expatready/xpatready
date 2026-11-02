@@ -18,7 +18,7 @@ import type { CaseFiling } from "../../contracts/runtime.ts";
 import { acceptsOf } from "../../engine/channels.ts";
 import { caseChecklist } from "../../engine/runtime/case-checklist.ts";
 import { caseView, checkValue, knownOf } from "../../engine/runtime/case.ts";
-import { ageOn, cad, deriveFilings, FAMILY_GROUP, feeRule } from "../../engine/runtime/filings.ts";
+import { ageOn, cad, deriveFilings, FAMILY_GROUP, FEE_TABLE, feeRule, rulesFrom } from "../../engine/runtime/filings.ts";
 import { formCoverage, readiness as formReadiness } from "../../engine/runtime/forms.ts";
 import { answerSheet, sectionHash, type Sheet } from "../../engine/runtime/answer-sheet.ts";
 import { BIOMETRICS_STEP, channelChange, channelOf, prepareVersion, wantedItems, type FormLine } from "../../engine/runtime/prepare.ts";
@@ -199,7 +199,7 @@ export class CasePrepare {
     const now = await this.build(actor, c);
     const group = now.groups.find((x) => x.id === g!.id);
     if (!b.reason) {
-      const rules = ["visitor_visa", "biometrics"].map((k) => feeRule(now.combination ?? "", k)).filter((x) => !!x);
+      const rules = (rulesFrom(FEE_TABLE, now.combination ?? "")?.fees ?? []).filter((x) => x.basis === "family_maximum"); // break r1: the capped lines from the table, never keys in code
       refuse(400, "reason", `Give a reason to split this filing out: it is then priced on its own, and the family maximum (${rules.map((r) => `${r!.label} ${cad(r!.familyMaxCents)} for ${r!.familyFrom} or more`).join(", ")}) of ${group ? "this group" : "the family"} no longer covers it.`);
     }
     const moved = await this.db.$transaction(async (tx) => {
