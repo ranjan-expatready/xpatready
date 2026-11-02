@@ -267,7 +267,7 @@ export class CasePrepare {
     const item = await this.db.filingItem.findUnique({ where: { id: idOf(itemId, "item") } });
     if (!item) fail("No such item.", HttpStatus.NOT_FOUND);
     const c = await this.r.reach(actor, item!.caseId, "officer");
-    if (item!.kind !== "form" || item!.removedAt) refuse(422, "item", "Only a form on this application has an answer sheet.");
+    if (item!.kind !== "form" || !item!.active) refuse(422, "item", "Only a form on this application has an answer sheet.");
     const line = (this.r.snapshotOf(c).forms as FormLine[]).find((l) => l.form_number === item!.itemKey);
     const channel = item!.channel ?? channelOf(line, undefined, null, null).line_channel;
     if (channel !== "ONLINE") refuse(409, "item", `${item!.itemKey} is filed as ${CHANNEL_WORDS[channel as keyof typeof CHANNEL_WORDS]}: its PDF is the deliverable, so it has no answer sheet.`);
