@@ -62,7 +62,8 @@ class StudioController {
   @Patch("combinations/:id") updateComp(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.s.updateCombination(actorOf(a), id, b); }
   @Get("combinations/:id/config") config(@Param("id") id: string, @Query("mode") mode: any) { return this.s.config(id, mode === "published" ? "published" : "draft"); }
   @Get("combinations/:id/preview") preview(@Param("id") id: string, @Query() q: any) { return this.s.preview(id, q); }
-  @Post("combinations/:id/requirements") addReq(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.s.saveRequirement(actorOf(a), id, null, b); }
+  // C3.6 (P-158): a new document type named here waits as a library proposal (202 Accepted, with its id), no line yet.
+  @Post("combinations/:id/requirements") addReq(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any, @Res({ passthrough: true }) res: any) { return this.s.saveRequirement(actorOf(a), id, null, b).then((r) => { if (r && "proposalId" in r) res.status(202); return r; }); }
   @Patch("combinations/:id/requirements/:lineage") updReq(@Headers("x-actor") a: H, @Param("id") id: string, @Param("lineage") l: string, @Body() b: any) { return this.s.saveRequirement(actorOf(a), id, l, b); }
   @Post("combinations/:id/checks") addCheck(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.saveCheck(actorOf(a), id, b); }
   @Post("combinations/:id/rules") addRule(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.s.saveRule(actorOf(a), id, null, b); }
