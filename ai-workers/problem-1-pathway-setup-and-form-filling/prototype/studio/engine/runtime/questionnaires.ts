@@ -4,7 +4,7 @@
 // question's placement, read-only here: C4.9 changes it in the library), the rule on it and the forms that need it.
 // Coverage per person: asked of the client, filled by the case officer, and the gaps that block release. Field codes
 // travel only for the side panel. Pure.
-import { render, type Person } from "../render.ts";
+import { factName, render, type Person } from "../render.ts";
 import type { Snapshot } from "../snapshot.ts";
 import { coverageGaps } from "../coverage.ts";
 import { caseView, knownOf, type Participant } from "./case.ts";
@@ -50,7 +50,7 @@ export function questionnairesView(s: Snapshot, roleIn: string | undefined, wher
       if (sec.questions.some((x) => x.fact === q.fact)) continue;
       const p = place.get(q.fact), f = field.get(q.fact);
       sec.questions.push({
-        fact: q.fact, wording: p?.question_text?.trim() || q.label, meaning: f?.meaning ?? q.label, help: p?.help_text ?? null, answerType: f?.value_type ?? "text",
+        fact: q.fact, wording: p?.question_text?.trim() || factName(q.fact), asked: !!p?.question_text?.trim(), meaning: f?.meaning ?? q.label, help: p?.help_text ?? null, answerType: f?.value_type ?? "text",
         filledBy: filledByOf(p), onlyIf: p?.condition_plain ? `${(p.condition_effect ?? "SHOW") === "HIDE" ? "Hidden when" : "Only if"} ${p.condition_plain}` : null,
         neededBy: [...new Set(q.fills.map((x) => x.form))], group: !!q.group, required: q.required, whereUsed: whereUsed.get(q.fact) ?? 0, collectedFrom: p?.collected_from ?? null,
       });
