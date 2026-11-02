@@ -125,7 +125,7 @@ const why = { reason: "Not needed by any setup any more." };
   const line = { attachMode: "COMBINATION_MANDATORY", appliesToRoles: "principal_applicant", providedBy: "client" };
   r = await call("POST", `/combinations/${comboId}/requirements`, { ...line, documentTypeKey: "c119_unused_type" });
   ok("C11.9 M1 fail: a retired document type is not added to a checklist (409), nothing written", r.status === 409 && /is retired/.test(r.body?.detail) && Number(sql("select count(*) from document_requirement where document_type_key='c119_unused_type'")) === 0, [r.status, r.body?.detail]);
-  r = await call("POST", `/combinations/${comboId}/requirements`, { ...line, newTypeName: "c119 unused type" });
+  r = await call("POST", `/combinations/${comboId}/requirements`, { ...line, newTypeName: "c11.9 TEST c119 unused type" }); // C3.6: the retired type's own name (any case or spacing), not a key look-alike
   ok("C11.9 M1 fail: naming a new type that is a retired one reuses nothing (409)", r.status === 409 && /is retired/.test(r.body?.detail), [r.status, r.body?.detail]);
   const anyType = usedType.documentTypeKey;
   r = await call("POST", `/combinations/${comboId}/requirements`, { ...line, documentTypeKey: anyType, alternatives: ["c119_unused_type"] });
