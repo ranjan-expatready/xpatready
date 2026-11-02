@@ -67,8 +67,17 @@ const q = (s: string) => s.replace(/'/g, "''");
   // in review; every thirteenth row gets an injected invalid condition (shortcut (3), a labelled draft problem).
   let released = 0, drafted = 0, inReview = 0, problems = 0;
   const refused: string[] = [];
+  // C3.6 (P-158): a new type name waits as a library proposal; the second person accepts it (a DRAFT type with its ADD
+  // waiting, as the direct write made before), then every row's line uses its key. Review of #523 M2: fails loudly.
+  const typed = async (name: string) => {
+    const named = await call("POST", `/combinations/${rows[0].id}/requirements`, { newTypeName: name, attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant", sourceQuote: "SYNTHETIC" });
+    const key = named?.status === "waiting" ? (await call("POST", "/review/proposals/decide", { ids: [named.proposalId], action: "accept" }, "user-B"))?.items?.[0]?.landedAs : null;
+    if (!key) throw new Error(`setup: "${name}" was not proposed and accepted: ${JSON.stringify(named).slice(0, 200)}`);
+    return key as string;
+  };
+  const [passportKey, bankKey] = [await typed("Passport (synthetic)"), await typed("Bank statement (synthetic)")];
   for (const r of rows) {
-    await call("POST", `/combinations/${r.id}/requirements`, { newTypeName: "Passport (synthetic)", attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant", sourceQuote: "SYNTHETIC" });
+    await call("POST", `/combinations/${r.id}/requirements`, { documentTypeKey: passportKey, attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant", sourceQuote: "SYNTHETIC" });
     if (r.n % 3 === 0) {
       try {
         await call("POST", `/combinations/${r.id}/submit`, {});
@@ -77,7 +86,7 @@ const q = (s: string) => s.replace(/'/g, "''");
         if (sme.length) await call("POST", `/combinations/${r.id}/signoff`, { items: sme, action: "signed" }, "user-C");
         await call("POST", `/combinations/${r.id}/approve`, {}, "user-B"); released++;
       } catch (e) { refused.push(`${r.key}: ${(e as Error).message}`); continue; }
-      if (r.n % 9 === 0) { await call("POST", `/combinations/${r.id}/requirements`, { newTypeName: "Bank statement (synthetic)", attachMode: "COMBINATION_MANDATORY", appliesToRoles: "principal_applicant", sourceQuote: "SYNTHETIC" }); drafted++; }
+      if (r.n % 9 === 0) { await call("POST", `/combinations/${r.id}/requirements`, { documentTypeKey: bankKey, attachMode: "COMBINATION_MANDATORY", appliesToRoles: "principal_applicant", sourceQuote: "SYNTHETIC" }); drafted++; }
     } else if (r.n % 11 === 0) { await call("POST", `/combinations/${r.id}/submit`, {}); inReview++; }
     if (r.n % 13 === 0) { sql(`update document_requirement set attach_mode='ANSWER_CONDITIONAL', predicate_json='{"op":"eq","field":"person.synthetic_missing_field","value":true}'::jsonb, condition_plain='SYNTHETIC injected defect' where combination_id='${r.id}' and status='DRAFT' and id=(select id from document_requirement where combination_id='${r.id}' and status='DRAFT' limit 1)`); problems++; }
   }
