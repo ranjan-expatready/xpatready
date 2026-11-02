@@ -343,6 +343,14 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
     const subjectId = c.person === "case" ? caseSubject.subjectId : c.person, fact = c.applies_to && placementOf(s, c.applies_to) ? c.applies_to : null;
     return { id: c.id, severity: c.severity, group: c.group, message: c.message, subjectId, about_label: c.person === "case" ? caseSubject.label : c.person_label, fact, section: fact ? placementOf(s, fact)!.section_id : null, illustrative: c.illustrative };
   }).filter((c) => mode === "agent" || (c.section !== null && shown.has(`${c.subjectId}|${c.section}`)));
+  // D4 (P-229 (3), #357 m3): a worked-out Yes on "has any children" that overrides the client's own No is never silent:
+  // the officer sees it as a check on that person (the question itself is not asked then). Staff view only.
+  if (mode === "agent") for (const [subjectId] of hasChildrenOf(people)) {
+    const said = answers.find((a) => a.subjectId === subjectId && a.field === HAS_CHILDREN && !a.rowKey);
+    if (said?.value !== false) continue;
+    const who = people.find((p) => p.subjectId === subjectId)!;
+    checks.push({ id: `derived.${HAS_CHILDREN}.overrides_no`, severity: "warning", group: "derived", message: `${who.label} answered No to "has any children", but a child is on this case, so the forms say Yes. Check with the client before filing (a step-child counts as a child of the family: Unconfirmed, the immigration expert confirms).`, subjectId, about_label: who.label, fact: HAS_CHILDREN, section: null, illustrative: false });
+  }
   // P-47 tier 2 (C4.4 part 2): each section's error summary, GOV.UK pattern: every answer that fails its checks and every
   // section check that fired on the section, each naming the field (and row) it links to, in the order of the questions.
   const withProblems = sections.map((sec) => {

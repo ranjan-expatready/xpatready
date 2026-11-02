@@ -250,6 +250,15 @@ ok("fail: an answer of a removed row is never read", ![...removed.keys()].some((
   const alone = hasChildrenOf(fam.filter((x) => x.role !== "child"));
   ok("C7.7 fail: with no child on the case nothing is derived (a child may not be on this application): the answer stands", alone.size === 0 && knownOf(S, fam.slice(0, 1), [ans("p", HAS_CHILDREN, false)], [], TODAY).known.get(`p|${HAS_CHILDREN}`)?.value === false); }
 
+// D4 (P-229 (3), #357 m3): a derived Yes over the client's own No is shown to the officer as a check, never silently.
+{ const fam: Participant[] = [{ subjectId: "c0", role: "case", label: "The application", applies: true }, { subjectId: "p", role: "principal", label: "Client P", applies: true }, { subjectId: "k", role: "child", label: "K", applies: true }];
+  const d4 = (people: Participant[], answers: Answer[], mode: "agent" | "sqr" = "agent") => caseView(S, people, answers, [], mode, TODAY).checks.filter((c) => c.id === `derived.${HAS_CHILDREN}.overrides_no`);
+  const hit = d4(fam, [ans("p", HAS_CHILDREN, false)]);
+  ok("D4 pass: the client answered No, a child is on the case → one officer check on that person, naming the clash in words", hit.length === 1 && hit[0].subjectId === "p" && hit[0].fact === HAS_CHILDREN && /answered No to "has any children", but a child is on this case, so the forms say Yes/.test(hit[0].message), hit);
+  ok("D4 fail: an answer of Yes, or no answer, gives no check (nothing is overridden)", d4(fam, [ans("p", HAS_CHILDREN, true)]).length === 0 && d4(fam, []).length === 0);
+  ok("D4 fail: with no child on the case the No stands and no check fires", d4(fam.filter((x) => x.role !== "child"), [ans("p", HAS_CHILDREN, false)]).length === 0);
+  ok("D4 fail: the client's own questionnaire never shows the check (staff only)", d4(fam, [ans("p", HAS_CHILDREN, false)], "sqr").length === 0); }
+
 // ── QA-76: plain words for the officer: no plan or team word, and a role's name, never its key
 const noList = { ...S, field_maps: S.field_maps.map((m) => ({ ...m, entries: m.entries.map((e) => (e.fact === "case.visa_type" ? { ...e, transform: "code_list:t.visa_type" } : e)) })) } as unknown as Snapshot;
 const noteOf = (fact: string) => qs(caseView(noList, household(false, 0), [], [], "agent", TODAY)).find((q) => q.fact === fact)?.note;

@@ -129,7 +129,13 @@ const releases = () => Number(sql("select count(*) from config_release r join co
   const asksChildren = async () => (await qsOf("agent", OFFICER)).flatMap((x) => x.questions).some((q) => q.fact === "person.has_children" && [principalId, spouse].includes(q.subjectId));
   const principalId = sql(`select subject_id from case_participant where case_id='${caseId}' and role='principal'`);
   const before = await asksChildren();
+  // D4 (P-229 (3)): the principal says No to "has any children" before a child is added to the case.
+  const said = await call("PUT", `/runtime/cases/${caseId}/answers/${principalId}/person.has_children`, { value: false, expectedId: null }, OFFICER);
+  const d4 = async (mode: string, actor: string) => (((await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=${mode}`, undefined, actor)).body?.checks ?? []) as { id: string; subjectId: string; message: string }[]).filter((c) => c.id === "derived.person.has_children.overrides_no");
+  const d4Before = await d4("agent", OFFICER);
   await call("POST", `/runtime/cases/${caseId}/people`, { role: "child", displayName: "Sample Child P" }, OFFICER);
+  const d4After = await d4("agent", OFFICER), d4Client = await d4("sqr", CLIENT);
+  ok("D4 (P-229 (3), pass and fail): a No that a child on the case overrides is a check on the principal in the officer's case view; none before the child, none in the client's view", said.status < 300 && d4Before.length === 0 && d4After.length === 1 && d4After[0].subjectId === principalId && /answered No to "has any children"/.test(d4After[0].message) && d4Client.length === 0, { said: said.status, before: d4Before.length, after: d4After.length, client: d4Client.length });
   const afterChild = await asksChildren();
   ok("C7.7 (review m1, pass and fail): \"has any children\" is asked with no child on the case, and not asked once the case holds a child", before === true && afterChild === false, { before, afterChild });
   const agentRep = (await qsOf("agent", OFFICER)).flatMap((x) => x.questions).filter((q) => q.subjectId === "representative");
