@@ -11,6 +11,7 @@
 // No live AI (US$0).
 //   zsh studio/tools/isolated.sh accept 4448 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4448 xr_studio_accept \
 //     && tsx studio/acceptance/C7.2.test.ts 4448 xr_studio_accept
+import { asValidated } from "../tests/runtime/validated.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { client, recorder } from "../tests/runtime/api.ts";
@@ -38,8 +39,8 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   const pdf = dl && dl.status === 200 ? Buffer.from(await dl.arrayBuffer()) : null;
   ok("C7.2 setup (C7.1, on main): the case's IMM 5257 copy is generated from the release and downloads", g.status < 300 && pdf !== null && pdf.subarray(0, 5).toString() === "%PDF-", { status: g.status, words: words(g) });
   if (pdf) {
-    // Adobe's Validate saves incrementally; here the save is simulated by appending, so no barcode page is drawn.
-    const simulated = Buffer.concat([pdf, Buffer.from("\n% Saved after Validate (simulated: no barcode page)\n")]);
+    // Adobe's Validate saves incrementally; here its result is simulated in the form's own flag (QA-165), so no barcode page is drawn.
+    const simulated = asValidated(pdf);
     const fd = new FormData(); fd.append("file", new Blob([new Uint8Array(simulated)]), "imm5257-validated.pdf");
     const res = await fetch(`http://127.0.0.1:${PORT}/api/runtime/form-copies/${copy}/validated`, { method: "POST", headers: { "x-actor": OFFICER }, body: fd });
     const up = { status: res.status, body: await res.json().catch(() => null) };

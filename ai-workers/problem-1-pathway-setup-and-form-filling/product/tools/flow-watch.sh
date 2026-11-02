@@ -73,6 +73,49 @@ for p in real:
     if a > 90 and "review: approved" not in [l["name"] for l in p["labels"]]:
         alarm(f"#{p['number']} quiet for {a} min and not approved: its builder is stopped or blocked ({p['title'][:50]})")
 
+# 4b. Labelled PRs whose own check is red: the builder ended at the label and nobody fixes it (2 Nov: #563, #573 sat 70–110 min).
+for p in approved:
+    v = json.loads(gh("pr", "view", str(p["number"]), "--json", "statusCheckRollup,mergeable"))
+    ci = ([c.get("conclusion") for c in v["statusCheckRollup"] if c.get("name") == "ci"] or [""])[-1]
+    if ci == "FAILURE":
+        alarm(f"#{p['number']} is labelled but its own ci is red: its builder has ended; start a fixer ({p['title'][:50]})")
+    if v["mergeable"] == "CONFLICTING" and "dequeued" not in [l["name"] for l in p["labels"]]:
+        alarm(f"#{p['number']} is labelled but conflicts with main, so it can't queue: its builder merges main in (P-270) ({p['title'][:50]})")
+
+# 4c. Unfinished M2 rows with no one on them (2 Nov: G-CORE B2 had no builder for ~3 h after B1 merged, while STATE said
+# "still pushing"). A row is covered by an open product PR naming it, or a branch push naming it in the last 90 minutes.
+# Works = Works on main or in an open qa records PR. HELD and WAITS are the tech lead's to keep current.
+import re
+HELD = {"C5.1": "held for the SA-01B product owner (P-251, P-265)"}
+WAITS = {"C10.1": 563}  # row: the open PR it waits on (C10.1 needs a released Visitor visa, after QA-163)
+def git(*a): return subprocess.run(["git", "-C", tools, *a], capture_output=True, text=True).stdout
+git("fetch", "-q", "origin")
+caps = git("rev-parse", "--show-prefix").strip().replace("tools/", "qa/CAPABILITIES.md")
+def rows(ref):
+    out = {}
+    for line in git("show", f"{ref}:{caps}").splitlines():
+        c = [x.strip() for x in line.split("|")]
+        if len(c) > 6 and re.fullmatch(r"C\d+\.\d+", c[1]) and c[4] == "M2": out[c[1]] = c[5]
+    return out
+status = rows("origin/main")
+recs = [p for p in real if p["title"].startswith(("qa:", "lead:"))]
+for p in recs:
+    for k, v in rows("origin/" + p["headRefName"]).items():
+        if v == "Works": status[k] = "Works"
+bodies = json.loads(gh("pr", "list", "--limit", "60", "--json", "number,title,body,headRefName"))
+work = " ".join(b["title"] + " " + (b["body"] or "") for b in bodies if not b["headRefName"].startswith("mergify/") and not b["title"].startswith(("qa:", "lead:")))
+cut = int(now.timestamp()) - 90 * 60
+for line in git("for-each-ref", "--format=%(committerdate:unix) %(subject)", "refs/remotes/origin").splitlines():
+    t, _, s = line.partition(" ")
+    if int(t) >= cut and not s.startswith(("qa:", "lead:", "Merge")): work += " " + s
+open_nums = {p["number"] for p in real}
+idle = []
+for row, st in sorted(status.items()):
+    if st == "Works" or row in HELD: continue
+    if WAITS.get(row) in open_nums: continue
+    if not re.search(rf"\b{re.escape(row)}\b", work): idle.append(row)
+(alarm if idle else ok)(f"{len([r for r in status.values() if r != 'Works'])} M2 rows not Works; with no PR or push in 90 min: " + (", ".join(idle) + " — start or shape a row for each" if idle else "none"))
+
 # 5. main: the newest full run and demo update.
 for wf in ("nightly.yml", "demo-update.yml"):
     r = json.loads(gh("run", "list", "--workflow", wf, "--limit", "1", "--json", "conclusion,status,createdAt") or "[]")

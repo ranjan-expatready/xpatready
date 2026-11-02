@@ -4,22 +4,36 @@
 // with the sample loaded by this check; no browser, no model call.
 //   zsh studio/tools/isolated.sh screens_race 4447 start && tsx studio/tests/check_screen01_release_race.ts 4447 xr_studio_screens_race
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 const PORT = Number(process.argv[2] ?? 4447), DB = process.argv[3] ?? "xr_studio_screens_race";
-const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
+const PSQL = ["/opt/homebrew/opt/postgresql@18/bin/psql", "/usr/lib/postgresql/18/bin/psql"].find((p) => existsSync(p)) ?? "psql";
+const sql = (q: string) => execFileSync(PSQL, [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 const call = async (method: string, path: string, body?: unknown, actor = "user-A") => { const r = await fetch(`http://localhost:${PORT}/api${path}`, { method, headers: { "x-actor": actor, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) }); return { status: r.status, body: await r.json().catch(() => null) }; };
 (async () => {
   await call("POST", "/demo/load");
   const id = sql("select c.id from combination c join program_def p on p.id=c.program_def_id where p.program_node_key='individual.work_permits.employer_specific.with_lmia'");
   let bad = 0;
+  // C3.6 (P-158): a new type name waits as a library proposal (202); the second person accepts it (a DRAFT type with its
+  // ADD waiting, as the direct write made before), then lines are added with its key. Review of #523 M2: every setup step
+  // must hold, so the race below tests real lines.
+  const line = (documentTypeKey: string) => ({ documentTypeKey, attachMode: "COMBINATION_MANDATORY", appliesToRoles: "principal_applicant" });
+  const typed = async (name: string) => {
+    const named = await call("POST", `/combinations/${id}/requirements`, { newTypeName: name, attachMode: "COMBINATION_MANDATORY", appliesToRoles: "principal_applicant" });
+    const key = named.status === 202 ? (await call("POST", "/review/proposals/decide", { ids: [named.body?.proposalId], action: "accept" }, "user-B")).body?.items?.[0]?.landedAs : null;
+    if (!key) throw new Error(`setup: "${name}" was not proposed and accepted (${named.status} ${JSON.stringify(named.body).slice(0, 200)})`);
+    return key as string;
+  };
   for (const delay of [0, 5, 15, 30, 60, 120, 250]) {
-    await call("POST", `/combinations/${id}/requirements`, { newTypeName: `Race base ${delay}`, attachMode: "COMBINATION_MANDATORY", appliesToRoles: "principal_applicant" });
+    const base = await call("POST", `/combinations/${id}/requirements`, line(await typed(`Race base ${delay}`)));
+    if (base.status !== 201) throw new Error(`setup: the base line was not added (${base.status} ${JSON.stringify(base.body).slice(0, 200)})`);
+    const lateKey = await typed(`Race late ${delay}`);
     await call("POST", `/combinations/${id}/submit`, {});
     const sme = ((await call("GET", `/combinations/${id}/review`)).body.submission?.changeSummary ?? []).filter((x: any) => x.needs_sme).map((x: any) => `${x.kind}|${x.key}`);
     await call("POST", `/combinations/${id}/signoff`, { items: sme, action: "signed" }, "user-C");
     const d = (await call("GET", "/draft", undefined, "user-B")).body;
     const rel = call("POST", "/pack/release", { expectedChanges: d.changes }, "user-B");
     await new Promise((r) => setTimeout(r, delay));
-    const late = call("POST", `/combinations/${id}/requirements`, { newTypeName: `Race late ${delay}`, attachMode: "COMBINATION_MANDATORY", appliesToRoles: "principal_applicant" });
+    const late = call("POST", `/combinations/${id}/requirements`, line(lateKey));
     const [a, b] = await Promise.all([rel, late]);
     const published = sql(`select coalesce(string_agg(lineage_key, ','), '') from document_requirement where combination_id='${id}' and status='PUBLISHED'`).split(",").filter(Boolean);
     const snap = sql(`select snapshot::text from config_release where combination_id='${id}' order by version desc limit 1`);

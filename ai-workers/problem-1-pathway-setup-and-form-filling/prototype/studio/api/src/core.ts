@@ -17,14 +17,9 @@ export const NODE = process.execPath;
 export const DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://xr_studio@127.0.0.1:54329/xr_studio_demo";
 /** The demo workspace's key: the one workspace where Sample content passes, released as a Demo release (P-240, G3). */
 export const DEMO_WORKSPACE_KEY = "demo";
-/** This server's workspace (G1 and G2, tech lead on #558 and #568): "demo" unless STUDIO_WORKSPACE_KEY names another, so
- *  an isolated copy can run as a non-demo workspace and prove a Sample answer is refused there. Lower case letters,
- *  digits and _ only; anything else stops the start-up (never a silent fallback to the demo). */
-export const WORKSPACE_KEY = (() => {
-  const k = process.env.STUDIO_WORKSPACE_KEY ?? DEMO_WORKSPACE_KEY;
-  if (!/^[a-z0-9_]{1,40}$/.test(k)) throw new Error(`STUDIO_WORKSPACE_KEY "${k}": lower case letters, digits and _ only (1 to 40).`);
-  return k;
-})();
+/** G2/G1 (the tech lead on #558, #568): an isolated copy may run as another, non-demo workspace
+ *  (STUDIO_WORKSPACE_KEY=firm), where Sample content never releases (P-240). Default and every demo copy: "demo". */
+export const WORKSPACE_KEY = (() => { const k = process.env.STUDIO_WORKSPACE_KEY?.trim() || "demo"; if (!/^[a-z][a-z0-9_-]{0,39}$/.test(k)) throw new Error(`STUDIO_WORKSPACE_KEY "${k}": use lower-case letters, digits, _ or -`); return k; })();
 /** Whether this server's workspace is the demo workspace (G1's Sample source condition; G2's Demo release). */
 export const isDemoWorkspace = () => WORKSPACE_KEY === DEMO_WORKSPACE_KEY;
 /** Working files (uploads, outputs, reset log). STUDIO_VAR lets an isolated copy (the 100-program scale database) keep its
