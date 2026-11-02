@@ -15,6 +15,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCostGate } from "@/components/cost-warning";
 import { COST_WORDS, type CostCheck } from "../../../contracts/cost-check";
 import { attachedNotSetUp } from "../../../contracts/counts";
+import { AdminDetails } from "@/components/details";
 
 /** One attached source as GET /combinations/:id lists it, and one reading or drafting step. */
 export type Attachment = { id: string; combinationId: string; kind: string; fileName: string; edition: string | null; status: string; statusDetail: string | null; recognised: boolean; uploadedVia: string; bytes: number };
@@ -110,6 +111,12 @@ function ReuseButton({ id, code, onReuse, busy }: { id: string; code: string; on
 }
 
 type SavedRun = { file: string; run_id: string; valid: boolean; recheckable: boolean; rechecked: boolean; at?: string; cost_usd?: number | null };
+/** UX-A part 4 (EXPERIENCE §5): a saved AI answer is named by its form and date, never by its run file. */
+const formOf = (a: { edition?: string | null; fileName?: string }) => (a.edition ?? a.fileName ?? "This form").split(" (")[0];
+export function savedName(form: string, r: Pick<SavedRun, "at" | "cost_usd" | "recheckable" | "rechecked">) {
+  const when = r.at && !Number.isNaN(new Date(r.at).getTime()) ? new Date(r.at).toLocaleString("en-CA", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" }) : "date not recorded";
+  return `${form} · saved ${when}${r.cost_usd != null ? ` · paid US$${r.cost_usd.toFixed(2)} then` : ""}${r.recheckable ? " · re-checked first" : r.rechecked ? " · re-checked" : ""}`;
+}
 type DraftOptions = { saved_runs: SavedRun[]; ledger?: { committed_usd: number; cap_usd: number; remaining_usd: number; wave?: { name: string; cap_usd: number; spent_usd: number } }; key_present: boolean; job_id: string };
 
 // X8a: the Start button says when it is ready (data-options-loaded: the saved answers are in, so the mode will not switch
@@ -166,12 +173,14 @@ function DraftDialog({ a, onClose }: { a: Attachment; onClose: () => void }) {
     <Dialog open onOpenChange={(o) => !o && onClose()} title={`Draft the field map of ${a.edition}`} description="The AI reads the list of the form's fields (public official content only) and proposes, for every form field, whose fact fills it and which library field it is. People decide every proposal before anything reaches the draft."
       footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void start()} busy={busy} disabled={nothingToStart(mode) || liveOff || (mode === "live" && plan.isFetching)} aria-describedby={nothingToStart(mode) ? "draft-none" : undefined} data-draft-start data-mode={mode} data-options-loaded={opts.isSuccess || opts.isError ? "true" : "false"} data-start-ready={!busy && (opts.isSuccess || opts.isError) && !(mode === "live" && plan.isFetching) && !nothingToStart(mode) ? "true" : "false"}><Play /> {mode === "replay" ? "Use Saved (US$0)" : "Start Live"}</Button></>}>
       <div className="space-y-3 text-sm">
-        <label className="flex items-start gap-2"><input type="radio" checked={mode === "live"} onChange={() => setMode("live")} className="mt-1" disabled={liveClosed} /><span>{liveClosed ? <><b>Live</b>: not open yet for a form approved in the product (only for files on the official list); use Saved when there is one.</> : <><b>Live</b> through the guarded route: a safety check first, then Claude Opus 5.5, up to US$5 for this run. {/* Break 3 m2: what is left is the smaller of the cap's and the wave's room: both are named. */}{l ? `Spent so far US$${l.committed_usd.toFixed(2)} of the US$${l.cap_usd.toFixed(2)} experiment cap${l.wave ? ` · ${l.wave.name}: US$${l.wave.spent_usd.toFixed(2)} of US$${l.wave.cap_usd.toFixed(2)}` : ""}; US$${Math.max(0, l.remaining_usd).toFixed(2)} left before a cap.` : ""} {opts.data && !opts.data.key_present ? <span className="text-text-danger">The API key file is missing: a live call will be refused.</span> : null}</>}</span></label>
-        <label className="flex items-start gap-2"><input type="radio" checked={mode === "replay"} onChange={() => setMode("replay")} className="mt-1" disabled={!saved.length} /><span><b>Saved</b> (no model call, US$0): an earlier real answer for this same form, checked with today's rules before use and labelled wherever it is shown.{saved.length ? <Select className="mt-1" value={runFile} onChange={(e) => setRunFile(e.target.value)}>{saved.map((r) => <option key={r.file} value={r.file}>{r.run_id} · {r.at?.slice(0, 16)} · paid US${r.cost_usd?.toFixed(2)} then{r.recheckable ? " · re-checked first" : r.rechecked ? " · re-checked" : ""}</option>)}</Select> : <span className="block text-xs text-text-muted">No saved AI answer for this form yet.</span>}</span></label>
+        <label className="flex items-start gap-2"><input type="radio" checked={mode === "live"} onChange={() => setMode("live")} className="mt-1" disabled={liveClosed} /><span>{liveClosed ? <><b>Live</b>: not open yet for a form approved in the product (only for files on the official list); use Saved when there is one.</> : <><b>Live</b> through the guarded route: a safety check first, then the AI model, up to US$5 for this run. {/* UX-A part 4: the model, the caps and the wave's budget lines are under Details; the main path keeps what is left. */}{l ? `US$${Math.max(0, l.remaining_usd).toFixed(2)} left before the AI spending cap.` : ""} {opts.data && !opts.data.key_present ? <span className="text-text-danger">The API key file is missing: a live call will be refused.</span> : null}</>}</span></label>
+        <label className="flex items-start gap-2"><input type="radio" checked={mode === "replay"} onChange={() => setMode("replay")} className="mt-1" disabled={!saved.length} /><span><b>Saved</b> (no model call, US$0): an earlier real answer for this same form, checked with today's rules before use and labelled wherever it is shown.{saved.length ? <Select className="mt-1" value={runFile} onChange={(e) => setRunFile(e.target.value)}>{saved.map((r) => <option key={r.file} value={r.file}>{savedName(formOf(a), r)}</option>)}</Select> : <span className="block text-xs text-text-muted">No saved AI answer for this form yet.</span>}</span></label>
         {opts.isSuccess && nothingToStart(mode) ? <p id="draft-none" className="text-sm" role="status" data-draft-none>Nothing can start for this form yet: {liveClosed ? "Live is not open for it" : "it has no Saved result, so choose Live"}{liveClosed && !saved.length ? ", and it has no Saved result" : ""}.</p> : null}
         {liveOff ? <Notice tone="warn" title="Live AI is off on this copy">{LIVE_OFF_NEXT}</Notice> : null}
         {cost.dialog}
-        <Field label="Job" hint="Inputs: this form's inventory only (allowlisted); expected answers and family values are screened out of the prompt."><code className="mono block rounded bg-surface px-2 py-1">{opts.data?.job_id}</code></Field>
+        <p className="text-xs text-text-muted">The AI reads this form's own field list only; expected answers and family values are kept out of what it reads.</p>
+        <AdminDetails items={[["Job", opts.data?.job_id], ["Saved run file", mode === "replay" ? saved.find((r) => r.file === runFile)?.run_id : null],
+          ["Spending", l ? `US$${l.committed_usd.toFixed(2)} of the US$${l.cap_usd.toFixed(2)} experiment cap${l.wave ? ` · ${l.wave.name}: US$${l.wave.spent_usd.toFixed(2)} of US$${l.wave.cap_usd.toFixed(2)}` : ""}` : null]]} />
       </div>
     </Dialog>
   );

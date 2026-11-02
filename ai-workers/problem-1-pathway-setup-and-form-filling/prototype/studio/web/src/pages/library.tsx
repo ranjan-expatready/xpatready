@@ -12,6 +12,7 @@ import { PERSON } from "@/pages/job";
 import { nameOf } from "@/pages/review";
 import { ItemStatusNote, useCanAuthor, useItemLifecycle } from "@/pages/library-item-actions";
 import { TipProvider } from "@/components/status";
+import { AdminDetails } from "@/components/details";
 
 /** QA-39: value types in words (the stored code stays the value). */
 const TYPE_WORD: Record<string, string> = { text: "Text", date: "Date", yes_no: "Yes or no", code: "List of choices", country: "Country", number: "Number", address: "Address", phone: "Phone number", email: "Email address",
@@ -98,7 +99,7 @@ export function FieldsPage() {
       </div>
       {list.isLoading || reuse.waiting ? <Spinner label="Loading fields" /> : !list.data?.length ? <EmptyState title="The library is empty" description="Load sample inputs, or add a form with AI drafting; reviewed fields land here." /> : reuse.items && !Object.keys(reuse.items).length ? <NoneInCombination reuse={reuse} noun="field" /> : (
         <Table head={["Field", "Meaning, format and source", "Type", "Forms", "Asked in", "Status"]}>
-          {rows.slice(0, 400).map((f) => <tr key={f.key} data-item={f.key}><td><Link className="font-medium text-text-link hover:underline" to={`/library/fields/${encodeURIComponent(f.key)}`}>{f.name ?? fieldName(f.key)}</Link><p className="mono break-all text-[11px] text-text-muted">{f.key}</p></td><td className="max-w-md text-xs">{f.meaning}<p className="mt-1 text-[11px]"><span className="text-text-muted">Format: </span><FormatCell f={f.format} /></p><SourceNote r={f} /></td><td className="text-xs">{TYPE_WORD[f.value_type] ?? f.value_type}</td><td className="text-xs">{f.forms.join(", ") || <span className="text-text-muted">none</span>}<span className="text-text-muted"> · {f.boxes} form field{f.boxes === 1 ? "" : "s"}{f.used_in?.length ? ` · ${f.used_in.length} combination${f.used_in.length === 1 ? "" : "s"}` : ""}</span></td><td className="text-xs">{f.placement ? `${f.placement.section.replace(/_/g, " ")} · ${collectedWord(f.placement.collected_from)}` : <span className="text-text-warn">not placed</span>}</td><td><div className="flex flex-wrap gap-1"><ReuseMark reuse={reuse} k={f.key} />{f.retired ? <Pill>Retired</Pill> : <ListPill origin={f.origin} status={f.status} />}</div><ItemStatusNote r={f} /><div className="mt-1.5">{life.action({ ...f, name: f.name ?? fieldName(f.key) }, () => navigate(`/library/fields/${encodeURIComponent(f.key)}`))}</div></td></tr>)}
+          {rows.slice(0, 400).map((f) => <tr key={f.key} data-item={f.key}><td><Link className="font-medium text-text-link hover:underline" to={`/library/fields/${encodeURIComponent(f.key)}`}>{f.name ?? fieldName(f.key)}</Link></td><td className="max-w-md text-xs">{f.meaning}<p className="mt-1 text-[11px]"><span className="text-text-muted">Format: </span><FormatCell f={f.format} /></p><SourceNote r={f} /></td><td className="text-xs">{TYPE_WORD[f.value_type] ?? f.value_type}</td><td className="text-xs">{f.forms.join(", ") || <span className="text-text-muted">none</span>}<span className="text-text-muted"> · {f.boxes} form field{f.boxes === 1 ? "" : "s"}{f.used_in?.length ? ` · ${f.used_in.length} combination${f.used_in.length === 1 ? "" : "s"}` : ""}</span></td><td className="text-xs">{f.placement ? `${f.placement.section.replace(/_/g, " ")} · ${collectedWord(f.placement.collected_from)}` : <span className="text-text-warn">not placed</span>}</td><td><div className="flex flex-wrap gap-1"><ReuseMark reuse={reuse} k={f.key} />{f.retired ? <Pill>Retired</Pill> : <ListPill origin={f.origin} status={f.status} />}</div><ItemStatusNote r={f} /><div className="mt-1.5">{life.action({ ...f, name: f.name ?? fieldName(f.key) }, () => navigate(`/library/fields/${encodeURIComponent(f.key)}`))}</div></td></tr>)}
         </Table>
       )}
       {life.node}
@@ -135,7 +136,8 @@ export function FieldPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-5">
       <nav className="flex items-center gap-1 text-xs text-text-muted"><Link to="/library/fields" className="hover:underline">Fields</Link><ChevronRight className="size-3" /><span>{shown}</span></nav>
-      <div><h1 className="text-xl font-semibold">{shown}</h1><p className="mono text-xs text-text-muted">{key}</p><p className="mt-1 text-sm">{cur.meaning}</p><div className="mt-2 flex gap-1"><Pill>v{cur.version}</Pill>{retiredNow ? <Pill>Retired</Pill> : <OriginPill origin={cur.origin} status={cur.status} />}<Pill>{cur.scope === "CASE_LEVEL" ? "once per case" : "about a person"}</Pill></div></div>
+      {/* UX-A part 4 (EXPERIENCE §5): the field's key is under Details, not under its name. */}
+      <div><h1 className="text-xl font-semibold">{shown}</h1><p className="mt-1 text-sm">{cur.meaning}</p><div className="mt-2 flex gap-1"><Pill>v{cur.version}</Pill>{retiredNow ? <Pill>Retired</Pill> : <OriginPill origin={cur.origin} status={cur.status} />}<Pill>{cur.scope === "CASE_LEVEL" ? "once per case" : "about a person"}</Pill></div><AdminDetails className="mt-2" items={[["Field key", key]]} /></div>
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="space-y-3 rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
           <h2 className="font-semibold">Definition</h2>
@@ -183,7 +185,7 @@ export function FieldPage() {
         <h2 className="font-semibold">Form fields that read it, and whose value each form field needs</h2>
         {!v.used_by.length ? <p className="mt-2 text-sm text-text-muted">No form field reads this field.</p> : v.used_by.map((u: any) => (
           <div key={u.edition} className="mt-3"><p className="text-sm font-medium">{u.edition} · {u.boxes.length} form field{u.boxes.length > 1 ? "s" : ""}</p>
-            <Table dense className="mt-1" head={["Form field", "Whose value", "Row", "Transformation", "Status"]}>{u.boxes.slice(0, 50).map((b: any) => <tr key={b.data_path}><td className="max-w-md text-xs">{b.caption || <span className="mono">{b.data_path}</span>}</td><td className="text-xs">{PERSON[b.person] ?? b.person}</td><td className="text-xs">{b.row === null ? "—" : b.row + 1}</td><td className="mono text-xs">{b.transform}</td><td><OriginPill origin={b.origin} status={b.status} /></td></tr>)}</Table>
+            <Table dense className="mt-1" head={["Form field", "Whose value", "Row", "Transformation", "Status"]}>{u.boxes.slice(0, 50).map((b: any) => <tr key={b.data_path}><td className="max-w-md text-xs">{b.caption || <span className="text-text-muted" title={b.data_path}>A form field with no label on the form</span>}</td><td className="text-xs">{PERSON[b.person] ?? b.person}</td><td className="text-xs">{b.row === null ? "—" : b.row + 1}</td><td className="mono text-xs">{b.transform}</td><td><OriginPill origin={b.origin} status={b.status} /></td></tr>)}</Table>
           </div>
         ))}
         {v.supplied_by_documents.length ? <p className="mt-3 text-sm">A supported document can supply it: {v.supplied_by_documents.join(", ")} <span className="text-xs text-text-muted">(a proposal until reading the document proves it on a case)</span></p> : null}

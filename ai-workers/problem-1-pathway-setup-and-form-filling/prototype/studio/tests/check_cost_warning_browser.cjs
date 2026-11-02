@@ -189,10 +189,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const spentNow = lines().filter((l) => l.type === "reserve").reduce((t, l) => t + l.worst_usd, 0).toFixed(2);
     // X8a: the figure is read again by a request after Start; wait for it to arrive (it may take a while under load) rather
     // than read the dialog after a fixed pause.
-    const figure = `Spent so far US$${spentNow} of the US$120.00`;
+    const figure = `US$${spentNow} of the US$120.00`; // UX-A part 4: under the dialog's Details (for admins)
     const fresh = await p.waitForFunction((t) => [...document.querySelectorAll('[role="dialog"]')].some((d) => (d.textContent ?? "").includes(t)), figure, { timeout: 60_000 }).then(() => true, () => false);
     step("C11.8 N6 review (10a0e90e) 2: after Start, the dialog's spend figure is read again (the ledger's, as the warning's; before: the figure from when it opened)", fresh, `${spentNow} | ${await dd.textContent()}`);
-    step("C11.8 N6 review n4 + break 3 m2: the form's dialog says spend in cents, names the wave, and what is left before a cap (never 'US$60 left of the experiment cap') (US$x.xx, never US$119.5)", /Spent so far US\$\d+\.\d\d of the US\$120\.00 experiment cap · Wave 1: US\$\d+\.\d\d of US\$60\.00; US\$\d+\.\d\d left before a cap\./.test(await dd.textContent()), await dd.textContent());
+    step("C11.8 N6 review n4 + break 3 m2: the form's dialog says spend in cents, names the wave, and what is left before a cap (never 'US$60 left of the experiment cap') (US$x.xx, never US$119.5)", /US\$\d+\.\d\d left before the AI spending cap\./.test(await dd.textContent()) && /US\$\d+\.\d\d of the US\$120\.00 experiment cap · Wave 1: US\$\d+\.\d\d of US\$60\.00/.test(await dd.locator('[data-admin-details]').textContent()), await dd.textContent());
     await startLive.click();
     await warning.waitFor();
     await p.locator("[data-cost-continue]").click();
