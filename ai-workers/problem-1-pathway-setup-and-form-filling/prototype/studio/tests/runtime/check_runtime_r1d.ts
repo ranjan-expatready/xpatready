@@ -206,14 +206,14 @@ async function main() {
   // in this isolated copy's var folder, tools/isolated.sh VARDIR).
   const caseVar = join(STUDIO, "var", `isolated-${DB.replace(/^xr_studio_/, "")}`, "workspaces", "demo", "cases", caseId, "validated");
   const keptNoFile = (sent: Buffer) => existsSync(join(STUDIO, "var", `isolated-${DB.replace(/^xr_studio_/, "")}`)) && (!existsSync(caseVar) || !readdirSync(caseVar).some((f) => f.includes(sha(sent).slice(0, 12))));
-  const refusedAsUnvalidated = (x: { status: number; body: { detail?: string } | null }, sent: Buffer) => x.status === 422 && /Validate has not passed/.test(x.body?.detail ?? "") && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "0" && keptNoFile(sent);
+  const refusedAsUnvalidated = (x: { status: number; body: { detail?: string } | null }, sent: Buffer) => x.status === 422 && /Validate has not (passed|finished)/.test(x.body?.detail ?? "") && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "0" && keptNoFile(sent);
   let sent = Buffer.concat([copyFile, Buffer.from("\n% Saved after Validate (simulated in this check)\n")]);
   r = await sendValidated(locked1, sent, "imm5257-validated.pdf");
   ok("QA-165 fail: a copy with bytes appended but no Validate result of the form's own (qa's golden journey 1) is not taken as validated (422), nothing recorded, no file kept", refusedAsUnvalidated(r, sent), r.body?.detail);
   r = await sendValidated(locked1, sent = asValidated(copyFile, "No"), "imm5257-validated.pdf");
-  ok("QA-165 fail: the form's own mark says No (Validate found it incomplete): refused in words naming the mark, nothing recorded, no file kept", refusedAsUnvalidated(r, sent) && /"No"/.test(r.body?.detail ?? ""), r.body?.detail);
+  ok("QA-165 fail: the form's own mark says No (Validate found it incomplete): refused in words naming the mark, nothing recorded, no file kept", refusedAsUnvalidated(r, sent) && /"No"/.test(r.body?.detail ?? "") && !/date last validated/.test(r.body?.detail ?? ""), r.body?.detail);
   r = await sendValidated(locked1, sent = asValidated(copyFile, "Yes", false), "imm5257-validated.pdf");
-  ok("QA-165 fail: the mark says Yes but the form kept no date last validated (its script sets both): refused, nothing recorded, no file kept", refusedAsUnvalidated(r, sent) && /no date last validated/.test(r.body?.detail ?? ""), r.body?.detail);
+  ok("QA-165 fail: the mark says Yes but the form kept no date last validated (its script sets both): refused, nothing recorded, no file kept", refusedAsUnvalidated(r, sent) && /has not finished/.test(r.body?.detail ?? "") && /no date last validated/.test(r.body?.detail ?? "") && !/has not passed/.test(r.body?.detail ?? ""), r.body?.detail);
   r = await call("POST", `/runtime/form-copies/${locked1}/validated`, {}, OFFICER);
   ok("C11.6 C-9 fail: sending no file is refused in words (400), nothing recorded", r.status === 400 && /validated PDF/.test(r.body?.detail ?? "") && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "0", r.body?.detail);
   r = await sendValidated(locked1, Buffer.from("not a pdf"), "notes.txt");

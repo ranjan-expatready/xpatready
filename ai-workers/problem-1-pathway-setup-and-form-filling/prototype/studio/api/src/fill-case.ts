@@ -321,7 +321,10 @@ export class CaseForms implements OnModuleInit {
     if (!rb.ok) fail(`Not read back: ${rb.why ?? "the file does not hold the values this copy wrote."}${differing((x.snapshot.factsJson as Stored).boxes, rb.mismatches, rb.written !== undefined && rb.read_back_equal !== undefined ? rb.written - rb.read_back_equal : undefined)} Nothing was recorded; validate this copy in Adobe, save it and send it again.`, HttpStatus.UNPROCESSABLE_ENTITY);
     if (!rb.validation?.passed) fail(rb.validation?.kept_by_form === false
       ? `${x.formNumber} keeps no record of its own Validate in the file, so this file cannot show that Validate passed. Nothing was recorded.`
-      : `Adobe's Validate has not passed on this file: the form's own mark says ${rb.validation?.flag ? `"${rb.validation.flag.slice(0, 60)}"` : "nothing"}${rb.validation?.flag && !rb.validation?.date_last_validated ? " and no date last validated" : ""}. In Adobe, press Validate, fix what it marks red until it says the form is complete, save, and send that file. Nothing was recorded.`, HttpStatus.UNPROCESSABLE_ENTITY);
+      : ["Yes", "Oui"].includes(rb.validation?.flag ?? "") && !rb.validation?.date_last_validated
+        // Review m-2 on #572: the mark passed but the date its Validate sets with it is missing, so Validate did not finish.
+        ? `Adobe's Validate has not finished on this file: the form's own mark says "${rb.validation!.flag}" but it kept no date last validated (its Validate sets both). In Adobe, press Validate again, save, and send that file. Nothing was recorded.`
+        : `Adobe's Validate has not passed on this file: the form's own mark says ${rb.validation?.flag ? `"${rb.validation.flag.slice(0, 60)}"` : "nothing"}. In Adobe, press Validate, fix what it marks red until it says the form is complete, save, and send that file. Nothing was recorded.`, HttpStatus.UNPROCESSABLE_ENTITY);
     // QA-128 (P-65: kept once): the same validated file sent twice at once (a double click) is kept once. The copy's row is
     // locked, so the second send waits for the first and then finds its line.
     const v = await this.db.$transaction(async (tx) => {
@@ -330,8 +333,10 @@ export class CaseForms implements OnModuleInit {
       // result of the form's own) is read back again and recorded, as its words ask ("send the file … again").
       const kept = (await tx.validatedCopy.findMany({ where: { formInstanceId: x.id, sha256: sha }, select: { id: true, readBack: true } })).find(formPassed);
       if (kept) { rmSync(pending, { force: true }); throw new HttpException({ type: "https://expatready.local/problems/validated-copy", title: "Already read back", status: 409, detail: `This validated file is already read back and kept for this copy of ${x.formNumber}; nothing was added.`, existingId: kept.id }, HttpStatus.CONFLICT); }
+      // Review m-4 on #572: the row first, then the file takes its name; a failed rename rolls the row back.
+      const row = await tx.validatedCopy.create({ data: { workspaceId: c.workspaceId, formInstanceId: x.id, path: path.replace(`${ROOT}/`, ""), sha256: sha, factsHash: inputHash(cov?.facts ?? []), readBack: rb as object, readBy: actor.id } });
       renameSync(pending, path);
-      return tx.validatedCopy.create({ data: { workspaceId: c.workspaceId, formInstanceId: x.id, path: path.replace(`${ROOT}/`, ""), sha256: sha, factsHash: inputHash(cov?.facts ?? []), readBack: rb as object, readBy: actor.id } });
+      return row;
     }).finally(() => rmSync(pending, { force: true })); // a pending file left by any failure is removed (renamed when kept)
     await this.audit.log(c.workspaceId, actor.id, "validated", "form copy", x.formNumber, `${actor.name} read back a validated copy of ${x.formNumber} (copy ${short(x.id)}) on case ${short(x.caseId)}: ${rb.read_back_equal}/${rb.written} values equal`);
     return { id: v.id, copy: await this.copy(actor, id) };
