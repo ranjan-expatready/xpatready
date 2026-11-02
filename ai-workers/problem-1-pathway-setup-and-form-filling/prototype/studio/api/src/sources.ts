@@ -698,6 +698,8 @@ export class Sources {
 
   private async decideChecked(actor: Actor, jobId: string, itemId: string, b: { decision: "ACCEPTED" | "CHANGED" | "RETURNED" | "PENDING" | "NEW"; key?: string; note?: string; meaning?: string; valueType?: string; label?: string; reason?: string }) {
     const job = await this.db.draftingJob.findUniqueOrThrow({ where: { id: jobId } });
+    // C2.6 (QA-157, P-149 one door): a checklist's lines are decided on the review queue, never here.
+    if (job.kind === "checklist_draft") fail("A checklist's document lines are decided one by one on the review queue (To review), where accepting one writes it to the draft. Nothing was changed here.", HttpStatus.GONE);
     if (job.status === "APPLIED") fail("This draft is already applied to the configuration; change the definitions in the library instead.", HttpStatus.CONFLICT);
     const raw = await this.db.proposalItem.findUnique({ where: { id: itemId } });
     if (!raw) fail("This proposal does not exist.", HttpStatus.NOT_FOUND);
@@ -764,6 +766,9 @@ export class Sources {
    *  field. Ambiguous and conflicting items always need their own decision. */
   async acceptClean(actor: Actor, jobId: string, outcome: "REUSE" | "NEW" = "REUSE") {
     need(actor, "review");
+    // C2.6 (review Major 1 on #574, P-149 one door): a checklist's lines are never accepted together here.
+    const kind = (await this.db.draftingJob.findUnique({ where: { id: jobId }, select: { kind: true } }))?.kind;
+    if (kind === "checklist_draft") fail("A checklist's document lines are decided one by one on the review queue (To review), where accepting one writes it to the draft. Nothing was changed here.", HttpStatus.GONE);
     const items = (await this.db.proposalItem.findMany({ where: { runId: jobId, status: "waiting" } })).map(reviewRow).filter((i) => i.outcome === outcome && (outcome === "REUSE" || !(i.candidates as any[]).some((c) => c.score >= 0.55)));
     for (const i of items) await recordChoice(this.db, i.id, { choice: "ACCEPTED", decidedKey: outcome === "REUSE" ? i.matchedKey : i.proposedKey, by: actor.id, reason: outcome === "REUSE" ? "accepted with the other exact reuse matches" : "accepted with the other new definitions that have no similar library field" });
     const job = await this.db.draftingJob.findUniqueOrThrow({ where: { id: jobId } });
