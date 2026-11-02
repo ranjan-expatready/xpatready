@@ -16,6 +16,7 @@ import { PrismaClient } from "@prisma/client";
 import { buildSnapshot, type Snapshot } from "../engine/snapshot.ts";
 import { changeProblem, checkExpected, checkFamily, fingerprintOf, keyBoxes, NO_SCORING, runFieldMap, runRuleSet, runState, signProblem, type Family, type MapExpected } from "../engine/answer-keys.ts";
 import type { Inventory } from "../engine/form-values.ts";
+import { writesParts } from "../engine/field-format.ts";
 import { client, recorder } from "./runtime/api.ts";
 import { AMENDED, e1Keys, P, sample } from "./g4_e1_key.ts";
 
@@ -178,6 +179,8 @@ ok("C5.7 §4 API fail: a case person cannot read the boxes (403); a form not in 
 const lf = await call("GET", "/answer-keys/fields", undefined, AUTHOR);
 const lfMs = lf.body?.fields?.find((f: { id: string }) => f.id === "person.marital_status");
 ok("C5.7 BR-1 API: GET /answer-keys/fields lists the library's fields with their type and, for a choice field, its answer list's values", lf.status === 200 && lf.body.fields.length >= 50 && lfMs?.values?.length > 3 && lf.body.fields.find((f: { id: string }) => f.id === "person.family_name")?.values === null, lfMs);
+const lfPhone = lf.body?.fields?.find((f: { id: string }) => f.id === "person.phone_number");
+ok("C5.7 BR-1 (Devin review, 2nd pass): a text-typed phone read part by part after \"select primary phone;\" or \"select alternate phone;\" is marked parts; a name is not", writesParts("select primary phone; phone_part:extension (max 5 chars)") && writesParts("select alternate phone; phone_part:nanp_area_code (3 digits)") && !writesParts("select alternate phone; derive:1 if country calling code is 1, else 0") && lfPhone?.value_type === "text" && lfPhone?.parts === true && lf.body.fields.find((f: { id: string }) => f.id === "person.family_name")?.parts === false, lfPhone);
 ok("C5.7 BR-1 API fail: a case person cannot read the field picker (403)", (await call("GET", "/answer-keys/fields", undefined, OFFICER)).status === 403);
 const SIG = `${P}Page3[0].Signature[0].TextField2[0]`;
 const kSig = await call("POST", `/combinations/${vv}/answer-keys`, { family_id: fid, item_kind: "field_map", item_ref: FORM, expected: { people: { mother: { [SIG]: "EXAMPLE MOTHER" } } } }, EXPERT);

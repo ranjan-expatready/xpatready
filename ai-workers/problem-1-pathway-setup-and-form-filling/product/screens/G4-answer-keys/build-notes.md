@@ -30,7 +30,7 @@ Branch `g4-part2-local` (local, not pushed), 2 Nov 2026, forms builder; fixes af
 | Check | Result |
 |---|---|
 | `check_g4_answer_keys.ts` on a fresh `forms_g4s` (:4457) | 88/88, exit 0 (860bf1a9: 87/87, also rerun on the same copy) |
-| After the Devin review on #525 (worktree `g4-part2-merge`), fresh copies | `check_g4_answer_keys.ts` (:4456) 88/88, exit 0; `check_g4_tests_tab_browser.ts` (:4458) 50/50, exit 0. Before the fixes the four new lines failed (Devin #1–#3 FAIL, #4 timed out on the refused save). Web tsc exit 0; `any` 426 (base 426); graph exit 0 |
+| After the Devin review on #525 (worktree `g4-part2-merge`), fresh copies | `check_g4_answer_keys.ts` (:4456) 89/89, exit 0; `check_g4_tests_tab_browser.ts` (:4458) 51/51, exit 0 (after the 2nd pass). Before the fixes the four new lines failed (Devin #1–#3 FAIL, #4 timed out on the refused save). Web tsc exit 0; `any` 426 (base 426); graph exit 0 |
 | `check_g4_tests_tab_browser.ts` on a fresh `forms_g4t` (:4459) | 46/46, exit 0 (axe: no WCAG A/AA violation on 9 states; no sideways scroll at 1024 px). Before the fixes the new lines failed: P2-M3 FAIL (201 elements past the dialog), P2-M2 timed out on the second 409 |
 | `tsc -p api/tsconfig.json` filtered to the G4 files | no error (other errors there pre-exist) |
 | `web: tsc --noEmit` | exit 0 |
@@ -69,6 +69,8 @@ Each rule has a pass and a fail line: §4 boxes (form order, options; a mapped s
 | 2 a key for an older edition could not be moved | the editor says "Written for X; the map is now Y: saving moves it to Y" and sends the map's edition (a signed key still needs a reason) | "a key for another edition is shown as such; saving … moves it … and it runs" |
 | 3 a new phone fact was a one-line text box | `GET /answer-keys/fields` marks `parts` (composite, address, phone, or read part by part by a form's `phone…` transform); such a fact, or any stored object, gets the JSON box | "a new phone fact is written as parts" |
 | 4 Remove on a person left their facts, so Save was refused | Remove asks first, naming the count, then removes their facts (and `<id>/parent_1`, `/parent_2`, `/sibling` facts) and "none apply" groups | "Remove on the husband asks first, naming his facts…" |
+| 2nd pass (4783acc9): moving an edition still sent values for boxes the map no longer has | the editor names them ("n values for boxes the new edition no longer has will be dropped: …") and sends only the map's boxes; without an edition change nothing is dropped | "moving an old-edition key says which value … drops it, and saves" (fail before: refused, dialog stayed open) |
+| 2nd pass: "select primary/alternate phone; phone_part:…" did not mark a phone as parts | `engine/field-format.ts writesParts` (the same "select …;" normalisation as the format) decides `parts` | API: "a text-typed phone read part by part after select primary/alternate phone is marked parts" (89/89; fail before) |
 | Review last minor: the 409 notice gave the way out twice | the notice keeps the server's sentence and says only what "Load their version" drops | — |
 
 ## Not built / follow-ups (with reasons)

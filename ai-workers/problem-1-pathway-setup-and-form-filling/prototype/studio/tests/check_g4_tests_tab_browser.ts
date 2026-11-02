@@ -106,6 +106,8 @@ const step = (name: string, ok: unknown, detail?: unknown) => { ok ? pass++ : fa
 
   // ---------------------------------------------------------------------------------------------- slice 2: the editors
   const dlg = p.getByRole("dialog");
+  /** A save that closes the dialog, or one refused in it (said on a field or above the form): fails loudly on neither. */
+  const savedOrRefused = () => p.waitForFunction(() => { const d = document.querySelector('[role="dialog"]'); return !d || !!d.querySelector('[role="alert"], [aria-invalid="true"]'); }, null, { timeout: 30000 });
   const closed = async () => { await dlg.waitFor({ state: "detached", timeout: 30000 }); };
   const fillFamily = async (key: string) => {
     await dlg.getByLabel("Key", { exact: true }).fill(key);
@@ -320,6 +322,21 @@ const step = (name: string, ok: unknown, detail?: unknown) => { ok ? pass++ : fa
   const kEnow = (await api(`/answer-keys/${kE.body.id}`)).body;
   step("C5.7 BR-6 (Devin #2): a key for another edition is shown as such; saving it through the editor moves it to the map's edition and it runs without the edition failure", editionSaid && kEnow.expected.edition === "IMM 5257 (09-2023)" && kEnow.run.state === "PASSED", JSON.stringify({ editionSaid, edition: kEnow.expected.edition, run: kEnow.run.state }));
 
+  // 2b (Devin, 2nd pass): moving an old-edition key drops, after saying so, the values for boxes the map no longer has.
+  const famF = await api("/answer-keys/families", { method: "POST", data: { ...sample, key: `e1f-${run}`, label: "E1 household, old edition with a gone box (Sample)" } });
+  const kF = await api(`/combinations/${vv}/answer-keys`, { method: "POST", actor: "user-C", data: { family_id: famF.body.id, item_kind: "field_map", item_ref: "IMM 5257", expected: { ...exp, edition: "IMM 5257 (01-2020)" } } });
+  sql(`update answer_key set expected = jsonb_set(expected, '{people,mother,form1[0].OldEditionBox[0]}', '"X"') where id = '${kF.body.id}' returning id`);
+  await p.reload(); await settle();
+  const rF = panel.locator(`[data-key="${kF.body.id}"]`);
+  await rF.getByRole("button", { name: "Change" }).click();
+  await dlg.locator('[data-editor="expected"] [data-box]').first().waitFor({ timeout: 30000 });
+  const lostSaid = /1 value for boxes the new edition no longer has will be dropped: form1\[0\]\.OldEditionBox\[0\]/.test(await dlg.innerText());
+  await dlg.getByRole("button", { name: "Save the expected values" }).click();
+  await savedOrRefused();
+  const kFnow = (await api(`/answer-keys/${kF.body.id}`)).body;
+  step("C5.7 BR-6 (Devin, 2nd pass): moving an old-edition key says which value the new edition has no box for, drops it, and saves", lostSaid && (await dlg.count()) === 0 && kFnow.expected.edition === "IMM 5257 (09-2023)" && !("form1[0].OldEditionBox[0]" in kFnow.expected.people.mother) && Object.keys(kFnow.expected.people.mother).length === Object.keys(exp.people.mother).length, JSON.stringify({ lostSaid, open: await dlg.count(), edition: kFnow.expected.edition }));
+  if (await dlg.count()) { await dlg.getByRole("button", { name: "Cancel" }).click(); await closed(); }
+
   // 3: a new phone fact gets the parts (JSON) control, as an address does.
   await panel.locator(`[data-family="e1u-${run}"]`).getByRole("button", { name: /^Edit the family/ }).click();
   await dlg.locator("[data-fact-row]").nth(47).waitFor({ timeout: 30000 });
@@ -335,7 +352,7 @@ const step = (name: string, ok: unknown, detail?: unknown) => { ok ? pass++ : fa
   p.once("dialog", (d) => { asked = d.message(); void d.accept(); });
   await dlg.locator('[data-person-row="1"]').getByRole("button", { name: "Remove" }).click();
   await dlg.getByRole("button", { name: "Save the family" }).click();
-  await Promise.race([closed(), dlg.locator('[role="alert"]').first().waitFor({ timeout: 30000 })]);
+  await savedOrRefused();
   const fam4 = (await api("/answer-keys/families")).body.families.find((f: { key: string }) => f.key === `e1u-${run}`);
   step("C5.7 BR-1 (Devin #4): Remove on the husband asks first, naming his facts, then takes them with him; the family saves", new RegExp(`removes ${nFather} facts`).test(asked) && (await dlg.count()) === 0 && fam4.people.length === 1 && !fam4.facts.some((f: { about: string }) => f.about.split("/")[0] === "father"), JSON.stringify({ asked, people: fam4.people.length }));
   if (await dlg.count()) { await dlg.getByRole("button", { name: "Cancel" }).click(); await closed(); }

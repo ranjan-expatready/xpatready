@@ -287,7 +287,7 @@ function KeyForm({ combinationId, item, family, existing: latest, close, reload 
   const submit = () => {
     if (save.isPending) return;
     const people = map
-      ? Object.fromEntries(Object.entries(values).map(([id, v]) => [id, Object.fromEntries(Object.entries(v).filter(([, x]) => x !== ""))]).filter(([, v]) => Object.keys(v as object).length))
+      ? Object.fromEntries(Object.entries(values).map(([id, v]) => [id, Object.fromEntries(Object.entries(v).filter(([b, x]) => x !== "" && (!moving || known.has(b))))]).filter(([, v]) => Object.keys(v as object).length))
       : Object.fromEntries(Object.entries(rules).filter(([, r]) => r.outcome).map(([id, r]) => [id, { outcome: r.outcome, ...(Object.values(r.gates).some(Boolean) ? { gates: Object.fromEntries(Object.entries(r.gates).filter(([, g]) => g)) } : {}) }]));
     const expected = { ...(current ? { edition: current } : {}), people };
     const body = existing ? { expected, version: existing.version, ...(signed ? { reason } : {}) } : { family_id: family.id, item_kind: item.item_kind, item_ref: item.item_ref, expected };
@@ -304,6 +304,10 @@ function KeyForm({ combinationId, item, family, existing: latest, close, reload 
   // Devin review: a key written for another edition is moved to the map's edition by a save (it is said first).
   const current = map ? boxes.data?.edition ?? item.edition ?? null : null, stored = map ? existing?.expected.edition ?? null : null;
   const offered = (boxes.data?.boxes ?? []).filter((b) => !b.by_a_person), byPerson = (boxes.data?.boxes ?? []).length - offered.length;
+  // Devin review (2nd pass): moving to the map's edition keeps only the boxes that edition has; the rest are said, then
+  // dropped on save (the server would refuse them). Without an edition change nothing is dropped here.
+  const moving = !!(stored && current && stored !== current && boxes.data), known = new Set(offered.map((b) => b.data_path));
+  const lost = moving ? Object.entries(values).flatMap(([id, v]) => Object.entries(v).filter(([b, x]) => x !== "" && !known.has(b)).map(([b]) => `${b} (${family.people.find((x) => x.id === id)?.label ?? id})`)) : [];
   const shown = (f: string) => f === "reason" || /^expected\.people\.[^.]+\./.test(f);
   const others = rest(errors, shown);
   const loading = map ? boxes.isLoading : gates.isLoading;
@@ -316,7 +320,7 @@ function KeyForm({ combinationId, item, family, existing: latest, close, reload 
         {top ? <Notice tone="danger" title="Not saved">{top}</Notice> : null}
         {others.length ? <Notice tone="danger" title="Some details need fixing">{others.join(" ")}</Notice> : null}
         {dropped.length ? <Notice tone="warn" title={map ? "Values for someone not in the family" : "Values for someone not travelling"}>The key has expected values for {dropped.join(", ")}, who {dropped.length === 1 ? "is" : "are"} not {map ? "a person" : "a travelling person"} of this family now. Saving removes them; Cancel keeps them, and the next run fails naming {dropped.length === 1 ? "that person" : "them"}.</Notice> : null}
-        {stored && current && stored !== current ? <Notice tone="warn" title="Another edition">Written for {stored}; the map is now {current}: saving moves it to {current}. Check every value against the new edition first.</Notice> : null}
+        {stored && current && stored !== current ? <Notice tone="warn" title="Another edition">Written for {stored}; the map is now {current}: saving moves it to {current}. Check every value against the new edition first.{lost.length ? ` ${lost.length} value${lost.length === 1 ? "" : "s"} for boxes the new edition no longer has will be dropped: ${lost.join(", ")}.` : ""}</Notice> : null}
         <p className="text-xs text-text-muted">Write what the {map ? "form should hold" : "rules should give"} for this family from the {map ? "form" : "rules"} and the facts, never from a run: a key copied from the product's output proves nothing. <Pill tone="warn" title={SAMPLE_TIP}>Sample</Pill></p>
         {loading ? <p className="text-sm text-text-muted">Loading the {map ? "form's boxes" : "eligibility rules"}…</p> : null}
         {map && boxes.isError ? <Notice tone="danger" title="The form's boxes could not be loaded">{(boxes.error as Error).message}</Notice> : null}

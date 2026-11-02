@@ -12,6 +12,7 @@ import { FamilyBody, KeyCreateBody, KeyUpdateBody, SignBody } from "../../contra
 import { problemFromZod } from "../../contracts/programs.ts";
 import { canonical } from "../../../contracts/rules.ts";
 import { buildSnapshot, effective, type Snapshot } from "../../engine/snapshot.ts";
+import { writesParts } from "../../engine/field-format.ts";
 import { blank, changeProblem, checkExpected, checkFamily, fingerprintOf, ITEM_KINDS, keyBoxes, NO_SCORING, runFieldMap, runRuleSet, runState, SAMPLE_WORDS, signProblem, unclean, type Family, type FieldError, type ItemKind, type MapExpected, type RuleExpected } from "../../engine/answer-keys.ts";
 import type { Inventory } from "../../engine/form-values.ts";
 import { ACTORS, Audit, Db, fail, need, readerOf, SOLUTION, Workspace, type Actor } from "./core.ts";
@@ -127,8 +128,9 @@ export class AnswerKeys {
     const [rows, lists, phones] = await Promise.all([this.db.canonicalField.findMany({ where: { workspaceId } }), this.db.answerList.findMany({ where: { workspaceId }, include: { values: { orderBy: { sortOrder: "asc" } } } }),
       // Devin review: a phone is stored as text in the library but written as parts ({country_code, number}); the
       // forms that read it part by part say so in their transform ("phone:…", "phone_part:…").
-      this.db.formFieldMap.findMany({ where: { workspaceId, transform: { startsWith: "phone" } }, select: { canonicalFieldKey: true }, distinct: ["canonicalFieldKey"] })]);
-    const byParts = new Set(phones.map((p) => p.canonicalFieldKey).filter(Boolean));
+      // Devin review (2nd pass): after an optional "select primary phone;" choice (engine/field-format.ts writesParts).
+      this.db.formFieldMap.findMany({ where: { workspaceId, OR: [{ transform: { contains: "phone" } }, { transform: { contains: "address_part" } }] }, select: { canonicalFieldKey: true, transform: true } })]);
+    const byParts = new Set(phones.filter((p) => writesParts(p.transform)).map((p) => p.canonicalFieldKey).filter(Boolean));
     const values = new Map(effective(lists, (l) => l.answerListKey, "draft").map((l) => [l.answerListKey, l.values.map((v) => ({ key: v.valueKey, label: v.label }))]));
     return {
       fields: effective(rows, (r) => r.canonicalFieldKey, "draft").filter((f) => f.status !== "RETIRED").sort((a, b) => a.canonicalFieldKey.localeCompare(b.canonicalFieldKey))
