@@ -5,7 +5,7 @@
 // (`ai_trail`): saved answers are found by everything the AI was given, so that input must not change. A pass and a
 // fail per rule. No model call, no launch, no canada.ca (US$0).
 //   zsh studio/tools/isolated.sh scr_c113 4442 start && tsx studio/tests/check_c113_full_trail.ts 4442 xr_studio_scr_c113
-import { fullTrail } from "../engine/structure.ts";
+import { aiNamesOf, fullTrail, trailWords } from "../engine/structure.ts";
 
 const PORT = Number(process.argv[2] ?? 4442), DB = process.argv[3] ?? "xr_studio_scr_c113";
 let pass = 0, fail = 0;
@@ -15,8 +15,10 @@ const call = async (method: string, path: string, body?: unknown): Promise<Res> 
   const r = await fetch(`http://localhost:${PORT}/api${path}`, { method, headers: { "x-actor": "user-A", "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
   return { status: r.status, body: await r.json().catch(() => null) };
 };
-/** Pathway type › Pathway › Program › Category › Sub-category: exactly five named parts, the type first. */
-const FIVE = (t: string) => { const p = t.split(" › "); return p.length === 5 && ["Retail", "Corporate and employers"].includes(p[0]) && p.every((x) => x.trim().length > 0); };
+/** Pathway type › Pathway › Program › Category › Sub-category: the five named parts, the type first (in words a category
+ *  with no sub-category ends at the category: the "No sub-category" placeholder is not shown, as on the cards). */
+const FIVE = (t: string) => { const p = t.split(" › "); return (p.length === 5 || (p.length === 4 && !t.endsWith("No sub-category"))) && ["Retail", "Corporate and employers"].includes(p[0]) && p.every((x) => x.trim().length > 0); };
+const FIVE_PARTS = (p: string[]) => p.length === 5 && ["Retail", "Corporate and employers"].includes(p[0]) && p.every((x) => x.trim().length > 0);
 
 (async () => {
   // Rules, without a server: the helper every list uses.
@@ -26,6 +28,12 @@ const FIVE = (t: string) => { const p = t.split(" › "); return p.length === 5 
   ok("C11.3 QA-150 pass: a sub-category ends with its own name (no placeholder) and a corporate pathway names its type",
     fullTrail(chain("CORPORATE", ["Temporary residence", "PATHWAY"], ["LMIA", "PROGRAM"], ["High-wage position", "STREAM"], ["Inside Canada", "CATEGORY"])).join(" › ") === "Corporate and employers › Temporary residence › LMIA › High-wage position › Inside Canada");
   ok("C11.3 QA-150 fail: the trail the lists used before (no Pathway type, no Pathway, no sub-category) is not a full trail", !FIVE("Visitors › Visitor visa") && !FIVE("Temporary residence › Visitors › Visitor visa"));
+  // Review m4: one rule for the words; the arrays keep all five parts.
+  ok("C11.3 review m4 pass: in words the \"No sub-category\" placeholder is not shown (as on the Immigration programs cards)", trailWords(["Retail", "Temporary residence", "Visitors", "Visitor visa", "No sub-category"]) === "Retail › Temporary residence › Visitors › Visitor visa");
+  ok("C11.3 review m4 fail: a real sub-category is always shown, and a name only reads as the placeholder in the last place", trailWords(["Retail", "Temporary residence", "Study permits", "Study permit", "Outside Canada"]).endsWith("› Outside Canada") && trailWords(["Retail", "No sub-category", "P", "C", "S"]).split(" › ").length === 5);
+  // Review m3: the names the run gives the AI, for a plan made now and for one stored before QA-150.
+  ok("C11.3 review m3 pass: a plan made now gives the AI its ai_trail, never the five parts", aiNamesOf({ trail: ["Retail", "Temporary residence", "Visitors", "Visitor visa", "No sub-category"], ai_trail: ["Temporary residence", "Visitors", "Visitor visa"] }).join(" › ") === "Temporary residence › Visitors › Visitor visa");
+  ok("C11.3 review m3 fail: a plan stored before QA-150 (no ai_trail) gives the AI its trail, which then held the same names", aiNamesOf({ trail: ["Temporary residence", "Visitors", "Visitor visa"] }).join(" › ") === "Temporary residence › Visitors › Visitor visa");
 
   if ((await call("POST", "/demo/reset", { confirm: "RESET" })).status >= 300) { console.error("STOP  demo reset refused"); process.exit(2); }
   const l = await call("POST", "/demo/load", {});
@@ -47,7 +55,7 @@ const FIVE = (t: string) => { const p = t.split(" › "); return p.length === 5 
   if (!vv) { console.error("STOP  no Visitor visa combination in the sample"); process.exit(2); }
   const plan = (await call("POST", `/combinations/${vv.combinationId}/forms/find/plan`, { mode: "rules" })).body as { combination?: { trail: string[]; ai_trail: string[] } };
   ok("C11.3 QA-150 pass: the form finder's plan names the combination by the same five parts as its Immigration programs card",
-    plan?.combination?.trail?.join(" › ") === vv.trail.join(" › ") && FIVE(plan.combination.trail.join(" › ")), { plan: plan?.combination?.trail, card: vv.trail });
+    plan?.combination?.trail?.join(" › ") === vv.trail.join(" › ") && FIVE_PARTS(plan.combination.trail), { plan: plan?.combination?.trail, card: vv.trail });
   ok("C11.3 QA-150 fail: the AI is still given the names it was given before (Pathway › Program › Category, no type, no placeholder), so saved answers still replay",
     plan?.combination?.ai_trail?.join(" › ") === "Temporary residence › Visitors › Visitor visa", plan?.combination?.ai_trail);
 

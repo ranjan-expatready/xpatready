@@ -87,5 +87,16 @@ export function progressFollows(p: SetupProgress, next: NextAction | null, missi
 export function fullTrail(chain: { label: string; nodeKind: string; clientType?: string | null }[]): string[] {
   const pw = chain.find((n) => n.nodeKind === "PATHWAY");
   const type = PATHWAY_TYPE_LABEL[(pw?.clientType ?? "INDIVIDUAL") as PathwayType] ?? PATHWAY_TYPE_LABEL.INDIVIDUAL;
-  return [type, ...chain.map((n) => n.label), ...(chain.at(-1)?.nodeKind === "STREAM" ? ["No sub-category"] : [])];
+  return [type, ...chain.map((n) => n.label), ...(chain.at(-1)?.nodeKind === "STREAM" ? [NO_SUB] : [])];
+}
+const NO_SUB = "No sub-category";
+/** The one rule for a trail a person reads (review m4): the five parts joined with " › ", without the "No sub-category"
+ *  placeholder, as the Immigration programs cards show it. Arrays (the catalogue's and the finder plan's `trail`) keep it. */
+export function trailWords(parts: string[]): string {
+  return parts.filter((p, i) => !(p === NO_SUB && i === parts.length - 1)).join(" › ");
+}
+/** The names the form finder gives the AI (QA-150): the plan's `ai_trail`; a plan stored before QA-150 has only `trail`,
+ *  which then held exactly those names. Saved answers are matched on what the AI was given, so this never changes. */
+export function aiNamesOf(combination: { trail: string[]; ai_trail?: string[] }): string[] {
+  return combination.ai_trail ?? combination.trail;
 }

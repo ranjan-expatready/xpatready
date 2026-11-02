@@ -143,6 +143,9 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   ok("C11.15: the run ends \"Done with problems\" (PARTIAL), with what was attached, missing and to decide", run.status === "PARTIAL" && /attached or already there/.test(run.message), run.message);
   const liveJobs = readFileSync(join(VAR, "fake-launch.log"), "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l).job as string).filter((j) => j.startsWith("studio-finder-forms-"));
   ok("break M5: each finder job id carries the trail's fingerprint, so two sibling combinations never share one (Stop ends only its own run)", liveJobs.length >= 2 && liveJobs.every((j) => /-[0-9a-f]{8}$/.test(j)), liveJobs.slice(0, 2));
+  // C11.3 QA-150 (review m3): the run gives the AI the names it gave before (Pathway › Program › Category), never the five
+  // parts a person reads; a job id is made from them, so a change would show here.
+  ok("C11.3 QA-150: the AI rounds are given the same names as before QA-150 (no Pathway type, no placeholder)", liveJobs.length >= 2 && liveJobs.some((j) => /-temporary-residence-visitors-/.test(j)) && liveJobs.every((j) => !/retail|corporate|no-sub-category/.test(j)), liveJobs.slice(0, 2));
   ok("review M7: no job file is left in the source tree after the rounds (the run record keeps it)", !(existsSync(join(P2, "jobs")) ? readdirSync(join(P2, "jobs")) : []).some((f) => f.startsWith("studio-finder-") && !jobsBefore.has(f)));
   ok("break minor: step 1 used the remembered page (no AI call), so it is not tagged AI", (await call("GET", `/runs/${run.id}`)).body.steps?.[0]?.uses === "rules");
   ok("review M7: the run records the pages the AI read (their files and fingerprints)", Array.isArray(res.ai_inputs) && res.ai_inputs.length >= 1 && res.ai_inputs.every((x: any) => x.file && /^[0-9a-f]{64}$/.test(x.sha256)), res.ai_inputs);

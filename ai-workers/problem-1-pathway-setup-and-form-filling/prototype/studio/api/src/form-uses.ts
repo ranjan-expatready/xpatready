@@ -2,7 +2,7 @@
 // form-library.ts so the lifecycle (api/src/lifecycle.ts) can use it without an import cycle.
 import { HttpException } from "@nestjs/common";
 import type { Use, UsesView } from "../../contracts/structure.ts";
-import { fullTrail } from "../../engine/structure.ts";
+import { fullTrail, trailWords } from "../../engine/structure.ts";
 import type { Prisma } from "@prisma/client";
 import { manifest } from "../../engine/import.ts";
 import { ACTORS, type Db } from "./core.ts";
@@ -12,7 +12,7 @@ const OPEN = ["WAITING", "RETURNED", "APPROVED"];
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
 
 /** Where a library form is used (P-116, L3): combinations whose draft lists it, releases that carry it, held files. */
-/** Each combination's place as its full five-part trail joined with " › " (P-104; every list names it so). */
+/** Each combination's place as its full trail in words (P-104; every list names it so; engine/structure.ts trailWords). */
 export async function combinationTrails(db: Db, workspaceId: string): Promise<Map<string, string>> {
   const [nodes, combos] = await Promise.all([
     db.programDef.findMany({ where: { workspaceId }, select: { programNodeKey: true, parentNodeKey: true, label: true, nodeKind: true, clientType: true } }),
@@ -23,7 +23,7 @@ export async function combinationTrails(db: Db, workspaceId: string): Promise<Ma
   for (const c of combos) {
     const chain: (typeof nodes)[number][] = [];
     for (let n = by.get(c.program.programNodeKey); n; n = n.parentNodeKey ? by.get(n.parentNodeKey) : undefined) chain.unshift(n);
-    out.set(c.id, chain.length ? fullTrail(chain).join(" › ") : c.label);
+    out.set(c.id, chain.length ? trailWords(fullTrail(chain)) : c.label);
   }
   return out;
 }

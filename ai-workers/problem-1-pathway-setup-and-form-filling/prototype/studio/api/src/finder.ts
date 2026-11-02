@@ -43,7 +43,7 @@ import { LIVE_RUN, newestFirst, StepRunner, worstRoundUsd, type AiStep, type Rou
 import { otherPages } from "../../engine/rounds.ts";
 import { MAX_ATTEMPTS, OVERRIDE_TTL_MS } from "../../../p2/policy.ts";
 import { forgetDeletion } from "./library-deletions.ts";
-import { fullTrail } from "../../engine/structure.ts";
+import { aiNamesOf, fullTrail, trailWords } from "../../engine/structure.ts";
 
 const run = promisify(execFile);
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
@@ -256,7 +256,7 @@ export class Finder implements OnModuleInit {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`finder:${combinationId}`}))`;
         const active = await tx.aiBatch.findFirst({ where: { workspaceId, operation: FINDER_OPERATION, scopeLabel: { startsWith: `${combinationId}|` }, status: { in: ["QUEUED", "RUNNING"] } } });
         if (active) throw problem(409, "Already finding", "The form finder is already running for this combination: watch it, or stop it first.", { runId: active.id });
-        const batch = await tx.aiBatch.create({ data: { workspaceId, idempotencyKey: b.idempotencyKey, operation: FINDER_OPERATION, scopeKind: "combination", scopeLabel: `${combinationId}|${plan.combination.trail.join(" › ")}`, mode: b.mode.toUpperCase(), status: "QUEUED", planSha256: plan.plan_sha256, plan: json(override ? { ...plan, override } : plan), spendLimitUsd: Math.max(plan.totals.worst_usd, 0.01), worstCaseUsd: plan.totals.worst_usd, expectedUsd: plan.totals.expected_usd, startedBy: actor.id, message: "Finding forms" } });
+        const batch = await tx.aiBatch.create({ data: { workspaceId, idempotencyKey: b.idempotencyKey, operation: FINDER_OPERATION, scopeKind: "combination", scopeLabel: `${combinationId}|${trailWords(plan.combination.trail)}`, mode: b.mode.toUpperCase(), status: "QUEUED", planSha256: plan.plan_sha256, plan: json(override ? { ...plan, override } : plan), spendLimitUsd: Math.max(plan.totals.worst_usd, 0.01), worstCaseUsd: plan.totals.worst_usd, expectedUsd: plan.totals.expected_usd, startedBy: actor.id, message: "Finding forms" } });
         await tx.draftingJob.createMany({ data: STEPS.map((s, i) => ({ workspaceId, combinationId, batchId: batch.id, kind: s.kind, mode: s.ai ? b.mode.toUpperCase() : "LOCAL", status: "WAITING", message: "Waits for the step before it", startedBy: actor.id, startedAt: new Date(Date.now() + i) })) });
         // Review m1: the Continue is used last, after "Already finding" and the key; a refusal of the use rolls this back.
         if (override) spendOverride(actor, override);
@@ -311,7 +311,7 @@ export class Finder implements OnModuleInit {
     const mode: FinderMode = plan.mode;
     const combinationId: string = plan.combination.id;
     // The names the AI is given (a plan stored before QA-150 has only `trail`, which then held them).
-    const names: string[] = plan.combination.ai_trail ?? plan.combination.trail;
+    const names: string[] = aiNamesOf(plan.combination);
     const trail = names.join(" › ");
     // The combination itself (its key): what a saved answer belongs to (Lead decision 28 Oct).
     const combinationKey = (await this.db.combination.findUnique({ where: { id: combinationId }, select: { combinationKey: true } }))?.combinationKey ?? combinationId;
@@ -844,7 +844,7 @@ export class Finder implements OnModuleInit {
     // M7: an AI round running now is ended (its launcher's process group): terminate, then force after 10 s.
     const live = this.rounds.liveJob(batchId);
     if (live) this.sources.stopLaunches((jobId) => jobId === live);
-    await this.audit.log(b.workspaceId, actor.id, "stopped", "form finder", batchId, `${actor.name} stopped the form finder for ${b.scopeLabel.split("|")[1] ?? "a combination"}`);
+    await this.audit.log(b.workspaceId, actor.id, "stopped", "form finder", batchId, `${actor.name} stopped the form finder for ${b.scopeLabel.includes("|") ? b.scopeLabel.slice(b.scopeLabel.indexOf("|") + 1) : "a combination"}`);
     return this.view(batchId);
   }
 
