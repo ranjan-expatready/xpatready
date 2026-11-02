@@ -4,6 +4,7 @@ Older rows (closed up to 26 Oct): `history/qa-bugs-closed-to-2026-10-26.md`.
 
 | # | Type · Severity | Capability | Found | Closed on | How it was retested |
 |---|---|---|---|---|---|
+| QA-156 | Gap · Major | C6.4 | #493 head 4dcf9e10 | main 079ef107 (#521), 2 Nov | `tests/qa/check_qa_r3_minor_principal.ts` 4/4 on main: a principal of 15 travelling alone is asked who with and gets the letter and the birth certificate copy; adults get none; C6.4 acceptance 30/30 |
 | QA-98 | Gap · Minor | C11.15, C11.8 | deda0e6b | #512 head eff1b5a2 (code for QA-98 as on main 50df70dc), 2 Nov | `check_w1_start_setup_browser.cjs` 43/43 including its QA-98 lines (the live plan states each run's cost), qa subagent on an isolated copy, US$0; #512 changes no QA-98 code, so main carries the fix |
 | QA-92 | Bug · Major | C4.10 | 52117004 | main 5f6c8deb (PR #94), 30 Oct | `check_qa_qn_1029.cjs` 39/41 on :4479: Save in the drawer on a case fact (Official language, pre-qualification on) stores the row under 'case'; runtime `check_qa92_95_browser` 23/23 |
 | QA-93 | UX · Major | C4.10, C11.9 | 52117004 | main 5f6c8deb (PR #94), 30 Oct | `check_qa_qn_1029.cjs`: no sample section offers Remove where it changes nothing (18 say why in words); runtime `check_qa92_95_browser` 23/23: Remove asks first (section, for whom, can be undone), Keep removes nothing, the toast names it, Undo puts it back in place |
