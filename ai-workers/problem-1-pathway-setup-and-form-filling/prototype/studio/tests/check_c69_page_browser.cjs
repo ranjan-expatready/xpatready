@@ -109,7 +109,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C6.9 page pass (BR-15): the override sits beside the result; the rules' own result stays visible", /Officer's override: Refer to the representative — Earlier refusal answered in full \(Sample\)/.test(await text()) && /Possibly eligible — the representative reviews this/.test(await text()) && sql(`select count(*) from assessment_override o join assessment a on a.id=o.assessment_id where a.case_id='${c.id}'`) === "1");
 
   await tabTo(/^Mark reviewed/); await p.keyboard.press("Enter"); await p.waitForSelector("[role=dialog]");
-  step("C6.9 page pass (P-229 (2)): the drawer previews the stamp \"Seen by Case officer\" (no licence)", /"Seen by Case officer"/.test(await p.locator("[role=dialog]").innerText()));
+  // The preview names the person as the firm's record does; that record arrives just after the drawer opens.
+  await p.waitForFunction(() => /"Seen by Case officer \(Sample\)"/.test(document.querySelector("[role=dialog]")?.textContent ?? ""), null, { timeout: 10000 });
+  step("C6.9 page pass (P-229 (2)): the drawer previews the stamp \"Seen by Case officer (Sample)\" (no licence, the firm's record)", /"Seen by Case officer \(Sample\)"/.test(await p.locator("[role=dialog]").innerText()));
   await state("review-drawer");
   await tabTo(/^Mark reviewed$/); await p.keyboard.press("Enter"); await p.waitForSelector("[role=dialog]", { state: "detached" }); await settle();
   step("C6.9 page pass (review M1): after Mark reviewed (now off), focus is on the result's heading", await focusIs() === "#result", await focusIs());
