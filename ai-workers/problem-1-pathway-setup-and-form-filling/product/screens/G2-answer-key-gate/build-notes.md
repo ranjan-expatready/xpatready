@@ -82,9 +82,17 @@ Built to concept v2 as approved (Q1 error, Q2 new or changed plus every item wit
     * Then come the review and self-approval refusals; only then do the tests run and the full judgement follow.
     * F8 is back to 12/12. The other 55 suites of that shard passed; shards 1, 3 and 4 were cancelled when shard 2 failed.
 
-## Checks
-* `check_g2_answer_key_gate.ts` 59/59
-* `check_g2_answer_key_gate_firm.ts` 13/13
-* `check_g2_answer_key_gate_browser.cjs` 15/15
-* Regression: `check_g4_answer_keys.ts` 93/93, `check_g4_tests_tab_browser.ts` 54/54, `check_setup_checklist.ts` 63/63
+17. **Round-3 review (Approve on 5867413a), Minors left for follow-up rows:**
+    * n1: `listFor`, m1's suffix and m4's order have no fail test. No API path creates a second mapped edition.
+    * n2: the fail side of the shared release's full `errors[]`, and a review-held row's "Review" line.
+    * n3: `releaseRows` runs keys before the self-approval 403. No user can reach this: the shared route holds the releaser's own rows first.
+
+## Checks (on 5867413a)
+* `check_g2_answer_key_gate.ts` 72/72, `check_g2_answer_key_gate_firm.ts` 13/13, `check_g2_answer_key_gate_browser.cjs` 15/15
+* Regression, local: `check_g4_answer_keys.ts` 93/93, `check_g4_tests_tab_browser.ts` 54/54, `check_setup_checklist.ts` 63/63, `check_f8_empty_release.ts` 12/12
+* **CI, the full run (every suite, 4 shards, 226 units): green.** This is the spike (challenge M2): no existing suite needed `tests/lib/release-ready.ts`, which only `check_g2_answer_key_gate_firm.ts` uses.
 * `graph.mjs --check` exit 0; `count-any` 423 (base 423)
+* Reviews:
+  * reviewer: round 1 Approve on 260e9660, round 2 Approve on dbbb8d7a, round 3 Approve on 5867413a;
+  * breaker: 2 Majors on 260e9660 (M1 fixed; M2 for the tech lead);
+  * Devin: every finding resolved or answered.
