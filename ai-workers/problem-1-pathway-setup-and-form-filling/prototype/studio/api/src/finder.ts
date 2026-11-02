@@ -183,11 +183,12 @@ export class Finder implements OnModuleInit {
 
   // ------------------------------------------------------------------ plan and launch
   /** What a run will do, what it may cost and the fingerprint the launch must repeat (the person saw this plan). */
-  async plan(combinationId: string, body: unknown) {
+  async plan(combinationId: string, body: unknown, opts: { fresh?: boolean } = {}) {
     const b = parse(FinderBody, body);
     const c = await trailOf(this.db, combinationId);
     if (b.pageUrl) { const u = officialUrl(b.pageUrl); if (!u.ok) throw problem(400, "Only canada.ca pages", `${u.why} Paste the address of the official application or guide page on canada.ca.`, { errors: [{ field: "pageUrl", message: u.why }] }); }
-    const remembered = b.pageUrl ? null : await this.rememberedPages(combinationId);
+    // C11.15 Redo with AI, stage "find" (P-123): the application page is found again, never the remembered one.
+    const remembered = b.pageUrl || opts.fresh ? null : await this.rememberedPages(combinationId);
     const ledger = this.sources.ledger();
     // Cost: each AI round's worst case as the ledger reserves it (inputs bounded by bytes, both attempts); replay and rules US$0.
     // QA-98: each AI step states the reserve it carries (the page pick's two rounds, then one forms round each), so the
@@ -235,7 +236,7 @@ export class Finder implements OnModuleInit {
   }
 
   /** Launch: the same plan fingerprint, one run per combination at a time, the same key returns the same run. */
-  async launch(actor: Actor, combinationId: string, body: unknown) {
+  async launch(actor: Actor, combinationId: string, body: unknown, opts: { fresh?: boolean } = {}) {
     need(actor, "author");
     const b = parse(FinderLaunchBody, body);
     const workspaceId = await this.ws.id();
@@ -243,7 +244,7 @@ export class Finder implements OnModuleInit {
     if (again && !again.scopeLabel.startsWith(`${combinationId}|`)) throw problem(409, "Key already used", "This launch key belongs to another run. Look at the plan again to start a new one.");
     if (again) return this.view(again.id);
     if (b.mode === "live" && !aiLive()) throw problem(409, "AI now is switched off", START.liveOff);
-    const plan = await this.plan(combinationId, { mode: b.mode, pageUrl: b.pageUrl, only: b.only });
+    const plan = await this.plan(combinationId, { mode: b.mode, pageUrl: b.pageUrl, only: b.only }, opts);
     if (plan.plan_sha256 !== b.planSha256) throw problem(409, "Look at the plan again", "Something changed since you looked at the plan (the pages, the mode or the cost). Look at it again before starting.");
     // P-179: over a limit, a start needs a person's Continue (checked here, used once inside the transaction below); without
     // one it is refused as before.
@@ -845,6 +846,13 @@ export class Finder implements OnModuleInit {
     const live = this.rounds.liveJob(batchId);
     if (live) this.sources.stopLaunches((jobId) => jobId === live);
     await this.audit.log(b.workspaceId, actor.id, "stopped", "form finder", batchId, `${actor.name} stopped the form finder for ${b.scopeLabel.includes("|") ? b.scopeLabel.slice(b.scopeLabel.indexOf("|") + 1) : "a combination"}`);
+    // C11.15 AT-24: the run ends at its next step boundary (well under a second without a live call): Stop answers with
+    // that end when it comes within 3 s, else "Stopping" as before (a live call's launcher may take up to 10 s to end).
+    for (const until = Date.now() + 3000; Date.now() < until;) {
+      const now = await this.db.aiBatch.findUnique({ where: { id: batchId }, select: { status: true } });
+      if (!now || !["QUEUED", "RUNNING"].includes(now.status)) break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
     return this.view(batchId);
   }
 

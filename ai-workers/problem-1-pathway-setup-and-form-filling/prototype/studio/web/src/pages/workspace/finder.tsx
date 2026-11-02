@@ -34,6 +34,13 @@ export const formsKeys = (id: string) => [["combination", id], ["combination-sum
 
 export const useFinderLatest = (id: string) => useApi<FinderLatest>(["combination", id, "finder"], `/combinations/${id}/forms/find/latest`, { refetchInterval: (q) => (q.state.data?.run && ACTIVE.has(q.state.data.run.status) ? 2000 : false) });
 
+type Stage = "find" | "read" | "match";
+/** C11.15 (P-123): the stages of Redo with AI on one form (api/src/form-redo.ts says what each runs). */
+const STAGES: [Stage, string, string][] = [
+  ["find", "Find", "Find the application page on canada.ca again (not the one used before), then read it and decide again."],
+  ["read", "Read", "Read the application page and guide used before again, then decide again (reading and matching run together today)."],
+  ["match", "Match", "Both AI rounds decide again, on the pages used before, whether this form applies and when."],
+];
 const MODES: [Mode, string, string][] = [
   ["replay", "Saved", "Replays the answers AI gave for these exact pages before. Only combinations with saved answers can be found this way."],
   ["rules", "Rules only (US$0)", "Reads the pages and lists the form numbers printed on them; attaches nothing."],
@@ -45,13 +52,18 @@ const SAMPLE_NOTE = "Which forms apply is Sample until the immigration expert co
 /** Find forms with AI: the plan and its cost first, then the run (Find again, and Redo for one form with `only`). With
  *  `page` (S3 item 5), the person first chooses the application page the last run could not pick: from the pages it saw,
  *  or another canada.ca address; the plan then reads only that page (the server refuses any other site). */
-export function FindDialog({ id, only, page, onClose, onStarted }: { id: string; only?: string[]; page?: PageChoice | null; onClose: () => void; onStarted: (runId: string) => void }) {
+export function FindDialog({ id, only, page, stages, onClose, onStarted }: { id: string; only?: string[]; page?: PageChoice | null; stages?: boolean; onClose: () => void; onStarted: (runId: string) => void }) {
   const [mode, setMode] = React.useState<Mode>(page ? "live" : "replay");
+  // C11.15 (P-123): Redo with AI on one line chooses its stage (POST …/forms/:code/redo); "match" is what Redo did before.
+  const redoCode = stages && only?.length === 1 && !page ? only[0] : null;
+  const [stage, setStage] = React.useState<Stage>("match");
   const [picked, setPicked] = React.useState<string>(page?.candidates[0]?.url ?? "");
   const [other, setOther] = React.useState("");
   const pageUrl = page ? (picked === "other" ? other.trim() : picked) || undefined : undefined;
   const key = React.useMemo(() => crypto.randomUUID(), []);
-  const plan = useQuery<Plan, ApiError>({ queryKey: ["finder-plan", id, mode, only?.join(",") ?? "", pageUrl ?? ""], queryFn: () => api<Plan>(`/combinations/${id}/forms/find/plan`, { method: "POST", json: { mode, ...(only ? { only } : {}), ...(pageUrl ? { pageUrl } : {}) } }), retry: false, enabled: !page || !!pageUrl });
+  const redoPath = redoCode ? `/combinations/${id}/forms/${encodeURIComponent(redoCode)}/redo` : null;
+  const plan = useQuery<Plan, ApiError>({ queryKey: ["finder-plan", id, mode, only?.join(",") ?? "", pageUrl ?? "", redoCode ? stage : ""],
+    queryFn: () => redoPath ? api<Plan>(redoPath, { method: "POST", json: { stage, mode } }) : api<Plan>(`/combinations/${id}/forms/find/plan`, { method: "POST", json: { mode, ...(only ? { only } : {}), ...(pageUrl ? { pageUrl } : {}) } }), retry: false, enabled: !page || !!pageUrl });
   const [busy, setBusy] = React.useState(false), [error, setError] = React.useState<string | null>(null);
   const qc = useQueryClient(), toast = useToast();
   // Lead Critical 29 Oct: with AI now switched off on this copy the live choice is greyed with the reason (any plan says it).
@@ -72,7 +84,8 @@ export function FindDialog({ id, only, page, onClose, onStarted }: { id: string;
     setBusy(true); setError(null);
     try {
       const body = { mode, ...(only ? { only } : {}), ...(pageUrl ? { pageUrl } : {}) };
-      const v = (await cost.gate(plan.data as unknown as Parameters<typeof cost.gate>[0], { kind: "find_forms", combinationId: id, ...body },
+      // A Redo is started as planned; over a cost limit the server refuses it in words (no Continue past a limit here).
+      const v = redoPath ? await api<{ id: string }>(redoPath, { method: "POST", json: { stage, mode, planSha256: plan.data.plan_sha256, idempotencyKey: `redo-${key}-${stage}-${mode}` } }) : (await cost.gate(plan.data as unknown as Parameters<typeof cost.gate>[0], { kind: "find_forms", combinationId: id, ...body },
         (overrideId) => api<{ id: string }>(`/combinations/${id}/forms/find`, { method: "POST", json: { ...body, planSha256: plan.data!.plan_sha256, idempotencyKey: `s5-${key}-${mode}-${pageUrl ?? ""}`, ...(overrideId ? { overrideId } : {}) } }))) as { id: string } | undefined;
       // Review m7: Cancel is the person's choice, not an error: the same info toast as Draft setup.
       if (!v) { toast.push({ tone: "info", text: COST_WORDS.cancelled }); return; }
@@ -86,6 +99,14 @@ export function FindDialog({ id, only, page, onClose, onStarted }: { id: string;
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} title={title} description={`${FIND_DESCRIPTION[mode]} ${SAMPLE_NOTE}`}
       footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void start()} busy={busy} disabled={!plan.data}><Sparkles /> Start</Button></>}>
       <div className="space-y-4" data-find-dialog>
+        {redoCode ? (
+          <fieldset className="space-y-2" data-redo-stage>
+            <legend className="text-xs font-medium">What to redo</legend>
+            {STAGES.map(([s, label, hint]) => (
+              <label key={s} className="flex gap-2 text-sm" data-stage={s}><input type="radio" name="redo-stage" checked={stage === s} onChange={() => setStage(s)} className="mt-1" /><span><span className="font-medium">{label}</span><br /><span className="text-xs text-text-muted">{hint}</span></span></label>
+            ))}
+          </fieldset>
+        ) : null}
         {page ? (
           <fieldset className="space-y-2" data-page-choice>
             <legend className="text-xs font-medium">{START.pageLegend}</legend>
