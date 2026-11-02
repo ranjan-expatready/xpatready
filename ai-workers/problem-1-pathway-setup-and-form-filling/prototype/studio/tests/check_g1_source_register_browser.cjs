@@ -87,9 +87,11 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await c5.getByRole("button", { name: "Save source" }).click(); await settle();
     step("C5.4 BR-3 fail: words that state another number (50 for 5) are refused on the words", (await c5.innerText()).includes("These words do not state 5. Copy the words that state the number."));
     await field(c5, "The words that state the number").fill("Test data, not an official quote: at least five years");
+    const badgeBefore = await p.locator('[data-tab="review"]').innerText();
+    const summaryAsked = p.waitForRequest((r) => /\/combinations\/[^/]+\/summary$/.test(r.url()), { timeout: 20000 }).then(() => true, () => false);
     await c5.getByRole("button", { name: "Save source" }).click(); await settle();
-    // Review r2 m1 on PR 2b: wait for the refetch to land, not a fixed pause.
-    await panel().locator(`[data-source-number="${n5.address}"][data-state="cited"]`).waitFor({ timeout: 15000 }).catch(() => {});
+    const badgeMoved = await p.waitForFunction((b) => document.querySelector('[data-tab="review"]')?.textContent !== b, badgeBefore, { timeout: 20000 }).then(() => true, () => false);
+    step("C5.4 (Devin on #615): a save refreshes the workspace's setup summary and the Review tab's problem count without a reload", (await summaryAsked) && badgeMoved, { badgeBefore, after: await p.locator('[data-tab="review"]').innerText() });
     step("C5.4 BR-3 pass: words that state 5 save; the card reads \"Official source\" with its page and date", await stateIs(n5.address, "cited") && /checked (19 Oct|Oct 19,) 2026/.test(await card(n5.address).innerText()), await card(n5.address).innerText());
     await p.screenshot({ path: path.join(SHOTS, "panel-cited-1440.png") });
     await closePanel();
@@ -194,9 +196,27 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await sourceEveryNumber(PORT, wp);
     await review(wp);
     const at = await p.locator("[data-sources-all-set]").innerText().catch(() => "");
-    step("C5.4 pass: with every number answered, the block says every published number has its source, and Submit is offered", /Every published number has its answer: an official source or "None published – set by ExpatReady" \(\d+, \d+ of them from the sample load\)/.test(at) && await p.locator("[data-unsourced]").count() === 0 && !(await p.getByRole("button", { name: /Submit for review/ }).isDisabled()), at);
+    step("C5.4 pass: with every number answered, the block says every published number has its source, and Submit is offered", /Every published number has its answer \(\d+, \d+ of them from the sample load\): an official source or "None published – set by ExpatReady"\./.test(at) && await p.locator("[data-unsourced]").count() === 0 && !(await p.getByRole("button", { name: /Submit for review/ }).isDisabled()), at);
     await axe("Review and release with every number sourced", "main");
     await p.screenshot({ path: path.join(SHOTS, "review-all-sourced-1440.png") });
+    // Devin on #615: a failed list says so, with Try again, never a silent gap; it comes back on retry.
+    let fail503 = true;
+    await p.route("**/api/combinations/*/sources", (route) => fail503 ? route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ title: "Unavailable", status: 503, detail: "The sources service is down (test)." }) }) : route.continue());
+    await p.reload(); await settle(); await p.locator("[data-unsourced-error]").waitFor({ timeout: 30000 });
+    step("C5.4 (Devin on #615): when the sources fail to load, Review says so with the server's words and Try again", (await p.locator("[data-unsourced-error]").innerText()).includes("The sources service is down (test).") && await p.getByRole("button", { name: "Try again" }).count() === 1);
+    await axe("Review and release with the sources error", "main");
+    fail503 = false; await p.getByRole("button", { name: "Try again" }).click(); await settle();
+    step("C5.4 (Devin on #615): Try again brings the list back", await p.locator("[data-sources-all-set], [data-unsourced]").count() === 1);
+    await p.unroute("**/api/combinations/*/sources");
+    // Devin on #615: Sample answers (demo workspace) are named as Sample in the all-set line, never as sourced.
+    await p.route("**/api/combinations/*/sources", async (route) => {
+      const r = await route.fetch(); const j = await r.json(); const n = j.numbers.find((x) => x.passes && x.entry && !x.entry.from_sample_load) ?? j.numbers.find((x) => x.passes && x.entry);
+      n.state = "sample"; n.entry = { ...n.entry, cited: null, none_published: null, sample: true }; j.counts.sample = 1;
+      await route.fulfill({ response: r, json: j });
+    });
+    await p.reload(); await settle(); await p.locator("[data-sources-all-set]").waitFor();
+    step("C5.4 (Devin on #615): with a Sample answer, the all-set line says \"1 only Sample, with no source claimed\" and \"the rest\" are sourced", /1 only Sample, with no source claimed \(they pass only in the demo workspace, as a Demo release\); the rest an official source/.test(await p.locator("[data-sources-all-set]").innerText()), await p.locator("[data-sources-all-set]").innerText());
+    await p.unroute("**/api/combinations/*/sources");
     step("no page errors", errs.length === 0, errs.join(" | "));
   } catch (e) { step("ran to the end", false, e.stack ?? e.message); }
   await b.close();

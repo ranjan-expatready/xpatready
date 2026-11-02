@@ -77,6 +77,11 @@ try {
   const vvFees = (await sources(vv)).numbers.filter((n: { state: string }) => n.state === "fee_table");
   ok("C5.4 BR-4 (review m4 on PR 2b): the Visitor visa's fee-table numbers each carry their line's quote kind (\"IRCC's words\" …), never \"Official source\"",
     vvFees.length > 0 && vvFees.every((n: { quote_kind?: string | null }) => typeof n.quote_kind === "string" && n.quote_kind.length > 0 && n.quote_kind !== "Official source"), vvFees.map((n: { quote_kind?: string | null }) => n.quote_kind));
+  // Devin on #615: an exemption age (14, 79) rests on its exemption's own source, not the fee line's.
+  const exempt = vvFees.filter((n: { address: string }) => n.address.startsWith("exempt."));
+  ok("C5.4 BR-4 (Devin on #615): an exemption age carries its exemption's own quote kind and quote (\"IRCC's words\", \"under the age of 14\"), a fee amount its line's",
+    exempt.length > 0 && exempt.every((n: { quote_kind?: string | null; item_quote?: string | null }) => n.quote_kind === "IRCC's words" && /under the age of 14/.test(n.item_quote ?? ""))
+    && vvFees.filter((n: { address: string }) => !n.address.startsWith("exempt.")).every((n: { item_quote?: string | null }) => !/under the age of 14/.test(n.item_quote ?? "")), exempt.map((n: { address: string; quote_kind?: string | null }) => [n.address, n.quote_kind]));
   const vvSha = (await call("GET", `/combinations/${vv}`)).body.draft.sha256;
   const vvCfg = (await call("GET", `/combinations/${vv}/config`)).body.snapshot;
   const n90 = s.numbers.find((n: { key: string }) => n.key === "wp.family/RW_PASSPORT_EXPIRY_90");

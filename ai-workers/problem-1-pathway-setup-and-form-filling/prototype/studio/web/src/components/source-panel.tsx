@@ -97,7 +97,9 @@ function NumberCard({ id, n, canAuthor, urls, siblings, setDirty }: { id: string
   const set = (k: keyof Draft) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setD((x) => ({ ...x, [k]: e.target.value }));
   const body = (x: SourceNumberView, version: number) => ({ address: x.address, value: x.value, version,
     ...(d.mode === "cited" ? { cited: { url: d.url, page: d.page.trim() || null, quote: d.quote, date: d.date } } : { none_published: { reason: d.reason } }) });
-  const done = async () => { for (const k of [["sources", id], ["review", id], ["combination", id], ["programs"], ["draft"]]) await qc.invalidateQueries({ queryKey: k }); };
+  // Devin on #615: the workspace's setup badges and next action (combination-summary) and the catalogue count source
+  // problems too, so a save refreshes them with Review and the Release page.
+  const done = async () => { for (const k of [["sources", id], ["review", id], ["combination", id], ["combination-summary", id], ["catalogue"], ["programs"], ["draft"]]) await qc.invalidateQueries({ queryKey: k }); };
   const save = async (version = n.entry?.version ?? 0) => {
     setBusy(true); setErrs({}); setConflict(null);
     try {

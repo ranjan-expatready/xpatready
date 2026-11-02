@@ -25,16 +25,23 @@ export const numbersOf = (s: Snapshot): PublishedNumber[] => publishedNumbers(s,
 /** Concept §4 (review m4 on PR 2b): the fee count line's tooltip names each line's quote kind ("IRCC's words", "summary
  *  of the Lead-checked record"), never "Official source". */
 export function feeQuoteKind(s: Snapshot, hint: string): string | null {
-  const fee = /^fee:([^.]+)\./.exec(hint);
-  const l = fee ? feeLinesOf(s.combination.key).find((x) => x.key === fee[1]) as { source?: { quote_kind?: unknown } } | undefined : undefined;
-  return typeof l?.source?.quote_kind === "string" ? l.source.quote_kind : null;
+  const k = feeSourceOf(s, hint)?.quote_kind;
+  return typeof k === "string" ? k : null;
+}
+/** The source a fee number rests on, as the walk reads it (engine publishedNumbers): an exemption age ("fee:<key>.exempt.…")
+ *  its exemption's own source, any other fee number its line's source (Devin on #615). */
+function feeSourceOf(s: Snapshot, hint: string): { quote?: unknown; quote_kind?: unknown } | undefined {
+  const fee = /^fee:([^.]+)\.(.+)$/.exec(hint);
+  if (!fee) return undefined;
+  const l = feeLinesOf(s.combination.key).find((x) => x.key === fee[1]) as { source?: { quote?: unknown; quote_kind?: unknown }; exempt?: { source?: { quote?: unknown; quote_kind?: unknown } } } | undefined;
+  return fee[2].startsWith("exempt.") ? l?.exempt?.source : l?.source;
 }
 /** G1 PR 2b (concept §4: "the quote is filled in from the item's own quote"): the item's own source quote, read at the
  *  number's JSON path hint (`forms[3].…`, `checks[12].…`, `eligibility.gates[0].…`); null when the item holds none. */
 export function itemQuoteOf(s: Snapshot, hint: string): string | null {
   // A fee number's item is its fee-table line (hint "fee:<key>.<field>"): its own source quote.
   const fee = /^fee:([^.]+)\./.exec(hint);
-  if (fee) { const l = feeLinesOf(s.combination.key).find((x) => x.key === fee[1]) as { source?: { quote?: unknown } } | undefined; const q = l?.source?.quote; return typeof q === "string" && q.trim() ? q.trim() : null; }
+  if (fee) { const q = feeSourceOf(s, hint)?.quote; return typeof q === "string" && q.trim() ? q.trim() : null; }
   const m = /^(eligibility\.gates|[a-z_]+)\[(\d+)\]/.exec(hint);
   if (!m) return null;
   const list = m[1] === "eligibility.gates" ? (s as { eligibility?: { gates?: unknown[] } | null }).eligibility?.gates : (s as unknown as Record<string, unknown>)[m[1]];

@@ -7,7 +7,7 @@
 import * as React from "react";
 import type { SourceNumberView, SourcesView } from "../../../contracts/source-register";
 import { useApi, useSessionView } from "@/lib/api";
-import { Button, Pill } from "@/components/ui/controls";
+import { Button, Notice, Pill } from "@/components/ui/controls";
 import { firstSentence, SOURCE_CHIP, SourcePanel, sourcesPath, type SourceItem } from "@/components/source-panel";
 
 const SHOWN = 6;
@@ -47,7 +47,10 @@ export function UnsourcedNumbers({ id, blocking }: { id: string; blocking: boole
     setOpen(item);
   };
   const panel = <SourcePanel id={id} item={open} onClose={() => setOpen(null)} returnFocus={returnFocus} />;
-  if (!q.data) return null;
+  // Devin on #615 (EXPERIENCE: every screen has its loading and error states): Review may list source problems while
+  // this list is still loading or failed to load, so say so and offer to try again, never a silent gap.
+  if (q.isPending) return <p className="rounded-lg border border-border bg-surface-raised px-4 py-3 text-sm text-text-muted" data-unsourced-loading>Loading the numbers and their sources…</p>;
+  if (!q.data) return <Notice tone="danger" title="The numbers and their sources could not be loaded" action={<Button size="sm" variant="secondary" onClick={() => void q.refetch()} busy={q.isFetching}>Try again</Button>}><span data-unsourced-error>{(q.error as Error | null)?.message ?? "No answer from the server."} Review and release still lists them; their Add source buttons come back with the list.</span></Notice>;
   const held = q.data.numbers.filter((n) => !n.passes);
   const groups = [...held.reduce((m, n) => { const k = `${n.kind}|${n.key}`; m.set(k, [...(m.get(k) ?? []), n]); return m; }, new Map<string, SourceNumberView[]>()).values()];
   const c = q.data.counts;
@@ -57,7 +60,7 @@ export function UnsourcedNumbers({ id, blocking }: { id: string; blocking: boole
   if (!held.length) return c.total ? (
     <>
       <p className="rounded-lg border border-border bg-surface-raised px-4 py-3 text-sm" tabIndex={-1} data-sources-all-set>
-        <Pill tone="ok">Sources</Pill> Every published number has its answer: an official source or "None published – set by ExpatReady" ({c.total}{fromLoad ? `, ${fromLoad} of them from the sample load` : ""}).{feeLine ? <span className="text-text-muted"> {feeLine}.</span> : null}
+        <Pill tone="ok">Sources</Pill> Every published number has its answer ({c.total}{fromLoad ? `, ${fromLoad} of them from the sample load` : ""}): {c.sample ? <><b data-sources-sample>{c.sample} only Sample, with no source claimed (they pass only in the demo workspace, as a Demo release)</b>; the rest </> : null}an official source or "None published – set by ExpatReady".{feeLine ? <span className="text-text-muted"> {feeLine}.</span> : null}
       </p>
       {panel}
     </>
