@@ -169,6 +169,9 @@ A feature is done when a person can do it on the demo (:4400) and qa has tested 
 | # | Item | Source |
 |---|---|---|
 | G1-F | G1 follow-ups (build notes 9 and 11 on #558, tech lead 2 Nov): the save check refuses text on an ordering operator (gt/gte/lt/lte); numeric `in` lists counted as published numbers; "plus 5 years" written only in words in a derived field | #558 (its build notes) |
+| C3.6-F1 | C3.6 follow-up (#573 Q3): where-used flags a retire of a document type, with its acceptance test and screen | #573 |
+| C3.6-F2 | C3.6 follow-up (#573 Q4): `check_screen01_release_race` approves the document type ADD first, so it tests a real release race rather than a refused release | #573 |
+| C9.1-AI | Shape first (tech lead): C9.1's AI impact step on a new edition — prompt, schema, inputs (comparison rows and where-used), key — then its job file with usual and worst cost (#576 option a) | #576 |
 | L1 | W4 M3 case view build (design r5c agreed 29 Oct; M3-0 filing modes to runtime first; printed-text OCR through the STANDARDS §1 gate; SI-2 chips) | WAVE-1 W4; lanes/m3 |
 | L2 | W2 immigration expert: second-person approvals, release gate, Sample values confirmed (ASSUMPTIONS rows finalised) | WAVE-1 W2 |
 | L3 | W3 AI wherever designed: describe what you need, facts from documents, AI review, new-edition impact (R-111) | WAVE-1 W3 |
