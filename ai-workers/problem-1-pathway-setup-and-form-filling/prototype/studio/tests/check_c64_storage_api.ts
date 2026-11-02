@@ -11,10 +11,10 @@ import { join } from "node:path";
 import { AUTHOR, CLIENT, CLIENT_B, FAMILY, OFFICER, PORT, DB, answer, call, main, ok, openCase, sql } from "../acceptance/lib/m3.ts";
 
 type Doc = { id: string; current: boolean; sha256: string; size_bytes: number; media_type: string };
-type Line = { id: string; derived_id: string; label: string; state: string; reason: string; required: boolean; kept: boolean; state_reason: string | null; documents: Doc[] };
+type Line = { id: string; version: number; derived_id: string; label: string; state: string; reason: string; required: boolean; kept: boolean; state_reason: string | null; documents: Doc[] };
 type P = { subject: string; lines: Line[]; waiting: Line[]; not_needed: Line[] };
 const studio = join(import.meta.dirname, "..");
-const LETTER = /authori[sz]ation/i, TRAVEL = "person.travelling_alone_to_canada";
+const MAX = 20 * 1024 * 1024, LETTER = /authori[sz]ation/i, TRAVEL = "person.travelling_alone_to_canada";
 
 const hasLetter = () => sql("select count(*) from document_type where document_type_key='letter_of_authorization_for_a_minor'") === "1";
 if (!hasLetter()) for (const f of ["tests/runtime/setup_visitor_visa.ts", "acceptance/lib/setup_vv_m3.ts"])
@@ -30,8 +30,8 @@ await main("C6.4 storage", "request, upload, Not applicable, kept lines; QA-149"
   const line = (ps: P[], s: string, re: RegExp) => of(ps, s)?.lines.find((x) => re.test(x.label));
   const asked = async (mode: string, actor: string) => ((await call("GET", `/runtime/cases/${c.id}/questionnaire?mode=${mode}`, undefined, actor)).body?.sections ?? [])
     .some((x: { subjectId: string; questions: { fact: string }[] }) => x.subjectId === K1 && x.questions.some((q) => q.fact === TRAVEL));
-  const up = async (lineId: string, files: { name: string; bytes: Uint8Array; field?: string }[], actor = OFFICER) => {
-    const fd = new FormData(); for (const f of files) fd.append(f.field ?? "file", new Blob([f.bytes]), f.name);
+  const up = async (lineId: string, files: { name: string; bytes: Uint8Array<ArrayBuffer>; field?: string }[], actor = OFFICER, extra: Record<string, string> = {}) => {
+    const fd = new FormData(); for (const [k, v] of Object.entries(extra)) fd.append(k, v); for (const f of files) fd.append(f.field ?? "file", new Blob([f.bytes]), f.name);
     const res = await fetch(`http://127.0.0.1:${PORT}/api/runtime/checklist-lines/${lineId}/documents`, { method: "POST", headers: { "x-actor": actor }, body: fd });
     return { status: res.status, body: await res.json().catch(() => null) };
   };
@@ -74,7 +74,13 @@ await main("C6.4 storage", "request, upload, Not applicable, kept lines; QA-149"
   u = await up(pass.id, [{ name: "empty.pdf", bytes: new Uint8Array() }]);
   ok("C6.4 fail: an empty file is refused (400)", u.status === 400, u.status);
   u = await up(pass.id, [{ name: "a.pdf", bytes: pdf("a") }, { name: "b.pdf", bytes: pdf("b") }]);
-  ok("C6.4 fail: two files at once are refused, nothing stored", u.status >= 400 && u.status < 500 && sql(`select count(*) from case_document where subject_id='${A}'`) === "0", u.status);
+  ok("C6.4 fail: two files at once are refused in this route's words (413, \"one file\"), nothing stored", u.status === 413 && /one file/i.test(String(u.body?.detail)) && sql(`select count(*) from case_document where subject_id='${A}'`) === "0", u.body);
+  const big = new Uint8Array(MAX + 1); big.set(pdf("big"));
+  u = await up(pass.id, [{ name: "big.pdf", bytes: big }]);
+  ok("C6.4 fail: a file over 20 MB is refused in this route's words (413, \"20 MB\"), nothing stored", u.status === 413 && /20 MB/.test(String(u.body?.detail)) && !/25 MB/.test(String(u.body?.detail)) && sql(`select count(*) from case_document where subject_id='${A}'`) === "0", u.body);
+  ok("C6.4 fail: a configuration person cannot upload (403); another firm's officer cannot reach the line (404)", (await up(pass.id, [{ name: "a.pdf", bytes: pdf("a") }], AUTHOR)).status === 403 && (await up(pass.id, [{ name: "a.pdf", bytes: pdf("a") }], "user-S")).status === 404);
+  u = await up(pass.id, [{ name: "a.pdf", bytes: pdf("a") }], OFFICER, { version: "0" });
+  ok("C6.4 fail: an upload from an old view of the line (version 0) is refused (409), nothing stored", u.status === 409 && sql(`select count(*) from case_document where subject_id='${A}'`) === "0", u.body);
   u = await up(pass.id, [{ name: "a.pdf", bytes: pdf("a"), field: "upload" }]);
   ok("C6.4 fail: a file in another field than \"file\" is refused (400)", u.status === 400, u.status);
   u = await up(pass.id, [{ name: "passport.pdf", bytes: pdf("x") }], CLIENT_B);
@@ -90,18 +96,25 @@ await main("C6.4 storage", "request, upload, Not applicable, kept lines; QA-149"
   ps = await list();
   const docs = line(ps, A, /passport/i)!.documents;
   ok("C6.4 pass: a new passport (PNG) keeps the old one as history: two documents, the new one current", u.status === 201 && docs.length === 2 && docs.filter((d) => d.current).map((d) => d.id).join() === u.body?.document?.id && docs.find((d) => !d.current)?.id === d1?.id, docs);
+  const exact = new Uint8Array(MAX); exact.set(pdf("exact"));
+  u = await up(pass.id.toUpperCase(), [{ name: "Паспорт-护照-\u202Egpj.pdf", bytes: exact }]);
+  ok("C6.4 pass: a file of exactly 20 MB is taken, on the line id in capitals, its name kept as typed (UTF-8) without the right-to-left control", u.status === 201 && u.body?.document?.size_bytes === MAX && sql(`select file_name from case_document where id='${u.body?.document?.id}'`) === "Паспорт-护照-gpj.pdf", u.status === 201 ? sql(`select file_name from case_document where id='${u.body?.document?.id}'`) : u.body);
+  const onDisk = Number(execFileSync("find", [join(studio, "var"), "-path", `*/workspaces/demo/people/${A}/documents/*`, "-type", "f"], { encoding: "utf8" }).trim().split("\n").filter(Boolean).length);
+  ok("C6.4 pass (data): refused uploads leave no file: files on disk = document rows", onDisk === Number(sql(`select count(*) from case_document where subject_id='${A}'`)), onDisk);
   r = await call("POST", `/runtime/checklist-lines/${pass.id}/request`, {}, OFFICER);
   ok("C6.4 fail: a received line cannot be requested again (409, still Received)", r.status === 409 && line(await list(), A, /passport/i)!.state === "received", r.status);
 
   // Not applicable.
   const sp = line(ps, S, /passport/i)!;
-  for (const [b, why] of [[{}, "no reason"], [{ reason: "   " }, "only spaces"], [{ reason: "x".repeat(501) }, "over 500 characters"]] as const) {
+  for (const [b, why] of [[{}, "no reason"], [{ reason: "   " }, "only spaces"], [{ reason: "\u200B\u200B" }, "only zero-width spaces"], [{ reason: "x".repeat(501) }, "over 500 characters"]] as const) {
     r = await call("POST", `/runtime/checklist-lines/${sp.id}/not-applicable`, b, OFFICER);
     ok(`C6.4 fail: Not applicable with ${why} is refused on the field (400)`, r.status === 400 && /reason/i.test(JSON.stringify(r.body)), r.status);
   }
+  r = await call("POST", `/runtime/checklist-lines/${sp.id}/not-applicable`, { reason: "Sample", version: sp.version + 1 }, OFFICER);
+  ok("C6.4 fail: Not applicable from a view of another version is refused (409), the line unchanged", r.status === 409 && sql(`select state from checklist_line where id='${sp.id}'`) === "not_requested", r.body);
   ok("C6.4 fail: a client cannot mark Not applicable (403)", (await call("POST", `/runtime/checklist-lines/${sp.id}/not-applicable`, { reason: "Sample" }, CLIENT)).status === 403);
-  r = await call("POST", `/runtime/checklist-lines/${sp.id}/not-applicable`, { reason: "  Sample: officer's test  " }, OFFICER);
-  ok("C6.4 pass: Not applicable with a reason (trimmed); the line stays on the list with it", r.status === 200 && r.body?.state === "not_applicable" && line(await list(), S, /passport/i)?.state_reason === "Sample: officer's test", r.body);
+  r = await call("POST", `/runtime/checklist-lines/${sp.id}/not-applicable`, { reason: "  Sample: officer's test  ", version: sp.version }, OFFICER);
+  ok("C6.4 pass: Not applicable with a reason (trimmed), sent with the version seen; the line stays on the list with it, not required", r.status === 200 && r.body?.state === "not_applicable" && r.body?.required === false && line(await list(), S, /passport/i)?.state_reason === "Sample: officer's test", r.body);
   u = await up(sp.id, [{ name: "p.pdf", bytes: pdf("s") }]);
   ok("C6.4 fail: uploading on a Not applicable line is refused (409), nothing stored", u.status === 409 && sql(`select count(*) from case_document where subject_id='${S}'`) === "0", u.status);
   r = await call("POST", `/runtime/checklist-lines/${sp.id}/request`, {}, OFFICER);
@@ -126,5 +139,14 @@ await main("C6.4 storage", "request, upload, Not applicable, kept lines; QA-149"
   await answer(c.id, k2, TRAVEL, false, CLIENT);
   r = await call("POST", `/runtime/checklist-lines/${l2.id}/request`, {}, OFFICER);
   ok("C6.4 fail: a line the answers took away and nobody acted on cannot be requested (409, words)", r.status === 409 && /not on .* list now/i.test(String(r.body?.detail)), r.body);
+  // Break m4: the same request at the same moment (a double click) is one request, never a false conflict.
+  const pp = line(await list(), A, /financial support/i)!;
+  const all = await Promise.all(Array.from({ length: 6 }, () => call("POST", `/runtime/checklist-lines/${pp.id}/request`, {}, OFFICER)));
+  ok("C6.4 pass: six identical requests at once all answer 200 Requested", all.every((x) => x.status === 200 && x.body?.state === "requested"), all.map((x) => x.status));
+  // Break M1: a person marked not travelling keeps the lines acted on for them.
+  r = await call("PATCH", `/runtime/cases/${c.id}/people/${S}`, { applies: false }, OFFICER);
+  const sk = line(await list(), S, /passport/i);
+  ok("C6.4 pass: the spouse marked not travelling keeps their requested passport line, kept, saying why", r.status < 300 && !!sk && sk.kept && sk.state === "requested" && /not travelling/i.test(sk.reason), [r.status, sk]);
+  ok("C6.4 pass: the kept line of a person not travelling can still be acted on (Not applicable, 200)", (await call("POST", `/runtime/checklist-lines/${sk?.id}/not-applicable`, { reason: "Sample: not travelling" }, OFFICER)).status === 200);
   ok("C6.4 fail: the checklist stays the officer's: the client reads 403 or 404", [403, 404].includes((await call("GET", `/runtime/cases/${c.id}/checklist`, undefined, CLIENT)).status));
 });

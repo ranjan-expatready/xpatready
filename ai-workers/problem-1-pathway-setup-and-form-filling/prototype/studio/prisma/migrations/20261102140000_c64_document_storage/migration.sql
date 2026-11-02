@@ -10,6 +10,7 @@
 --     the row id, checked by its sha256 before it is read.
 -- Rollback (STANDARDS §5): stop the app, then in one transaction:
 --   DROP TABLE "case_document"; DROP TABLE "checklist_line";
+--   DELETE FROM "_prisma_migrations" WHERE "migration_name" = '20261102140000_c64_document_storage';
 -- Requests, uploads and Not applicable reasons are lost by a rollback (the files stay in var/ until a Reset); the
 -- derived checklist is unaffected (it is worked out from the release on every read).
 

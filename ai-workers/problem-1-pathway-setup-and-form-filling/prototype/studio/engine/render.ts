@@ -234,12 +234,19 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   const readsOf = (tree: unknown): string[] => {
     const out = new Set<string>(), walk = (f: string) => { if (out.has(f)) return; out.add(f); for (const x of inputsOf.get(f) ?? []) walk(x); };
     for (const m of JSON.stringify(tree ?? null).matchAll(/"field":"([^"]+)"/g)) walk(m[1]);
-    return [...out];
+    return [...out].filter((f) => !inputsOf.has(f)); // a calculated field is asked through its inputs, never itself
   };
+  // Kept apart from `deciders` (review M2): they are asked, but are not "deciding questions" still to answer (the
+  // Preview's count and list stay as on main).
+  const answeredDeciders = new Map<string, { fact: string; about: string; decides: Set<string> }>();
   const keepAnswered = (tree: unknown, subjects: string[] | "document", what: string) => {
     if (!tree || subjects === "document") return;
     const reads = readsOf(tree);
-    for (const about of subjects) addDecider(reads.filter((f) => known.has(kkey(f.startsWith("case.") ? "case" : about, f))), about, what);
+    for (const about of subjects) for (const f of reads) {
+      const a = f.startsWith("case.") ? "case" : about, k = kkey(a, f);
+      if (!known.has(k)) continue;
+      const d = answeredDeciders.get(k) ?? { fact: f, about: a, decides: new Set<string>() }; d.decides.add(what); answeredDeciders.set(k, d);
+    }
   };
   for (const f of forms) if (f.applies === "cannot_tell") addDecider(f.missing, f.person, `whether ${f.form} applies to ${f.person_label}`);
   for (const f of s.forms) if (f.condition) for (const row of forms.filter((x) => x.form === f.form_number)) keepAnswered(f.condition, [f.condition.subjectKind === "CASE" ? "case" : row.person], `whether ${f.form_number} applies to ${row.person_label}`);
@@ -310,7 +317,7 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
     if (kv && status !== "hidden by a condition") status = kv.status === "confirmed" ? "confirmed" : "answered";
     questions.push({ fact, label: p.question_text || f?.meaning || fact, meaning: f?.meaning ?? fact, value_type: f?.value_type ?? "text", about, about_label: label(about), section: p.section_id, section_title: sectionTitle.get(p.section_id) ?? p.section_id, collected_from: p.collected_from, status, value: kv?.value, why, rows, decides, rule_only: !needs.has(key), required });
   };
-  for (const d of [...deciders.values()]) pushQ(d.fact, d.about, `decides ${[...d.decides].slice(0, 3).join("; ")}`, [], [...d.decides], false);
+  for (const d of [...deciders.values(), ...answeredDeciders.values()]) pushQ(d.fact, d.about, `decides ${[...d.decides].slice(0, 3).join("; ")}`, [], [...d.decides], false);
   for (const n of needs.values()) pushQ(n.fact, n.about, `read by ${[...n.forms].join(", ")} (${n.boxes} form field${n.boxes > 1 ? "s" : ""})`, [...n.rows].sort(), [], n.maybe);
   // A section the row selects is a line on the row (SA-1B-58): its placed questions are asked even when no form reads
   // them yet, each with its reason (SA-1B-59). Once per case, or for each person who applies.
@@ -322,7 +329,7 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   // "seen" stops repeats, so a circular chain ends (and the validator reports it before release).
   for (let pass = 0; pass < 20; pass++) {
     const before = seen.size;
-    for (const d of [...deciders.values()]) pushQ(d.fact, d.about, `decides ${[...d.decides].slice(0, 3).join("; ")}`, [], [...d.decides], false);
+    for (const d of [...deciders.values(), ...answeredDeciders.values()]) pushQ(d.fact, d.about, `decides ${[...d.decides].slice(0, 3).join("; ")}`, [], [...d.decides], false);
     if (seen.size === before) break;
   }
   // Within a section for one person, the release's placement order (F-R1c-1: "started on" before "ends on"); the label

@@ -15,9 +15,14 @@ export const UPLOAD_FROM: readonly LineState[] = ["not_requested", "requested", 
 export const NOT_APPLICABLE_FROM: readonly LineState[] = ["not_requested", "requested", "received", "being_checked", "approved", "rejected"];
 
 export const MAX_REASON = 500;
-export const NotApplicable = z.object({
-  reason: z.string({ message: "Give a reason why this document is not applicable." }).trim()
-    .min(1, "Give a reason why this document is not applicable.").max(MAX_REASON, `A reason is at most ${MAX_REASON} characters.`),
+/** Characters a person cannot see: zero-width spaces and joiners, the byte-order mark and bidirectional controls (a
+ *  right-to-left override can make "gpj.exe" read as "exe.jpg"). Removed from reasons and file names (break m7, m8). */
+export const INVISIBLE = /[\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFEFF]/g;
+/** The line's version the person saw (optional): sent, a line changed since is refused, not overwritten (break M3). */
+export const SeenVersion = z.object({ version: z.coerce.number({ message: "Send the version of the line you saw." }).int("Send the version of the line you saw.").min(0).optional() });
+export const NotApplicable = SeenVersion.extend({
+  reason: z.string({ message: "Give a reason why this document is not applicable." }).transform((x) => x.replace(INVISIBLE, "").trim())
+    .pipe(z.string().min(1, "Give a reason why this document is not applicable.").max(MAX_REASON, `A reason is at most ${MAX_REASON} characters.`)),
 });
 
 /** Uploads: one file up to 20 MB, a PDF, JPEG or PNG judged by its own bytes (never by its name or the browser's type). */
@@ -32,8 +37,7 @@ export function mediaOf(b: Uint8Array): Media | null {
 }
 /** A file name as shown back: its last path part, control and markup characters removed, at most 200 characters. */
 export function cleanName(name: string | undefined): string {
-  const n = String(name ?? "").split(/[\\/]/).pop()!.replace(/[\u0000-\u001f\u007f<>"]/g, "").trim().slice(0, 200);
-  return n || "document";
+  const n = String(name ?? "").split(/[\\/]/).pop()!.replace(/[\u0000-\u001f\u007f<>"]/g, "").replace(INVISIBLE, "").trim().slice(0, 200);
+  return n && !/^\.+$/.test(n) ? n : "document";
 }
-
 export type StoredDocument = { id: string; current: boolean; file_name: string; media_type: string; size_bytes: number; sha256: string; uploaded_by: string; uploaded_at: string; superseded_at: string | null };
