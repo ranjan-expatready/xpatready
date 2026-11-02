@@ -30,8 +30,6 @@ export const AssessmentRunBody = z.object({
 
 // ------------------------------------------------------------------ part 3: override and review (BR-15, BR-16)
 const text = (field: string, max: number) => z.string({ error: `Give ${field}.` }).trim().min(1, `Give ${field}.`).max(max, `Keep ${field} to ${max} characters.`).refine(oneLine, "Write it as one line of plain text.");
-/** Label suggestions on the override drawer (concept §4); any label up to 80 characters is accepted. */
-export const OVERRIDE_LABELS = ["Refer to the representative", "Not advisable in practice", "Borderline: worth exploring"] as const;
 /** POST /runtime/assessments/:aid/override. */
 export const AssessmentOverrideBody = z.object({
   programKey: z.string({ error: "Name the result being overridden." }).min(1, "Name the result being overridden."),

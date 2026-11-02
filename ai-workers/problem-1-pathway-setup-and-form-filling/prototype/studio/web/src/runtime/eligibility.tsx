@@ -1,0 +1,278 @@
+// C6.9 part 3 (M3-D, concept screens/C6.9/concept.md §4–§5, BR-15, BR-16; stand-in SI-1): the staff eligibility page
+// (/cases/:id/eligibility) and its card on the case page. Each traveller's latest check: the outcome, every rule with the
+// values it read, what is missing, the officer's judgement lines, the disclaimer, who ran it and when; out of date when a
+// fact changed since. Run again needs a reason; an override sits beside the result (the engine's outcome stays visible);
+// Mark reviewed stamps "Reviewed by" (licensed representative) or "Seen by" (P-229 (2)). Drawers, never modals. Staff only:
+// a client sees no card and no page. Rules only, no AI (US$0).
+import * as React from "react";
+import { Link, useParams } from "react-router-dom";
+import { ArrowLeft, Check, CircleHelp, History, X } from "lucide-react";
+import { api, ApiError, useAction, useActorId, useApi } from "@/lib/api";
+import { Button, Field, Input, Notice, Panel, Pill, Textarea } from "@/components/ui/controls";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StandIn } from "@/components/stand-in";
+import { cn } from "@/lib/utils";
+import { noRetryOnRefusal, useCaseView, type CasePerson } from "./questionnaire";
+import { useFirm } from "./team";
+
+type Gate = { key: string; label: string; state: "met" | "not_met" | "not_answered"; facts: string[]; values: Record<string, unknown>; missing: string[] };
+type Result = { programKey: string; programLabel: string; outcome: string; score: number | null; failedGates: string[]; missingInputs: string[]; gates: Gate[]; judgement: string[] };
+type Override = { id: string; programKey: string; fromOutcome: string; label: string; reason: string; by: string; name?: string; duty?: string; at: string; outOfDate?: boolean };
+export type Assessment = {
+  id: string; person: string; releaseId: string; packVersion: number; rulesAsOfByProgram: Record<string, string>; disclaimerText: string;
+  createdBy: string; createdAt: string; runType: "MANUAL" | "RERUN"; reason: string | null; results: Result[];
+  out_of_date: boolean; changed: { fact: string; about: string; was: unknown; now: unknown }[]; release_changed: boolean;
+  overrides: Override[]; reviewedBy: string | null; reviewedAt: string | null; reviewNote: string | null; reviewStamp?: { name?: string; stamp?: "Reviewed" | "Seen"; duty?: string };
+};
+type List = { stand_in: string; stand_in_words: string; assessments: Assessment[] };
+
+/** Simulated case people (api/src/core.ts RUNTIME_ACTORS), for "Run by". */
+const NAMES: Record<string, string> = { "user-O": "Case officer", "user-R": "Representative", "user-T": "Second representative", "user-S": "Solo representative" };
+const STAFF = new Set(Object.keys(NAMES));
+const nameOf = (id: string | null | undefined) => (id ? NAMES[id] ?? "Someone else" : "");
+const when = (iso: string) => new Date(iso).toLocaleString("en-CA", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+const day = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-CA", { day: "numeric", month: "short", year: "numeric" });
+/** A fact key in words: "person.passport_number" → "Passport number". */
+export const factWords = (f: string) => { const w = f.replace(/^[a-z]+\./, "").replace(/_/g, " "); return w.charAt(0).toUpperCase() + w.slice(1); };
+const shown = (v: unknown) => (v === null || v === undefined || v === "" ? "not answered" : v === true ? "Yes" : v === false ? "No" : typeof v === "object" ? JSON.stringify(v) : String(v));
+/** Label suggestions on the override drawer (concept §4); any label up to 80 characters is accepted. */
+const OVERRIDE_LABELS = ["Refer to the representative", "Not advisable in practice", "Borderline: worth exploring"] as const;
+const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
+
+export function outcomeWords(r: Result | undefined): { text: string; tone: "ok" | "warn" | "danger" | "neutral"; short: string } {
+  if (!r) return { text: "Not run", tone: "neutral", short: "Not run" };
+  if (r.outcome === "LIKELY_ELIGIBLE") return { text: "Likely eligible", tone: "ok", short: "Likely" };
+  if (r.outcome === "POSSIBLY_ELIGIBLE") return { text: `Possibly eligible — needs ${plural(r.missingInputs.length, "fact")}`, tone: "warn", short: "Possibly" };
+  if (r.outcome === "NOT_ELIGIBLE") return { text: "Not eligible on this application's rules as written", tone: "danger", short: "Not eligible" };
+  return { text: r.outcome, tone: "neutral", short: r.outcome };
+}
+
+const useAssessments = (caseId: string) => {
+  const actor = useActorId();
+  return useApi<List>(["runtime", "assessments", caseId, actor], STAFF.has(actor) ? `/runtime/cases/${caseId}/assessments` : null, { retry: noRetryOnRefusal });
+};
+const latestOf = (list: Assessment[] | undefined, person: string) => (list ?? []).find((a) => a.person === person);
+
+// ------------------------------------------------------------------ the card on the case page
+
+/** "Eligibility (staff only)": one line per traveller, under People on this case. Shows nothing to a client. */
+export function EligibilityCard({ caseId, people }: { caseId: string; people: CasePerson[] }) {
+  const actor = useActorId();
+  const q = useAssessments(caseId);
+  if (!STAFF.has(actor)) return null;
+  const travellers = people.filter((p) => p.role !== "case" && p.applies);
+  return (
+    <section aria-labelledby="eligibility" className="rounded-xl border border-border bg-surface-raised">
+      <header className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
+        <h2 id="eligibility" className="text-base font-semibold">Eligibility (staff only)</h2>
+        <StandIn id="SI-1" today="our own checks on this application's rules, three outcomes and no score" later="the team's AG-03 Qualifier fills this page and adds scores, cut-offs and advice" />
+        <span className="flex-1" />
+        <Link to={`/cases/${caseId}/eligibility`} className="text-[13px] font-medium text-text-link hover:underline">Open eligibility</Link>
+      </header>
+      {q.isLoading ? <div className="px-4 py-3"><Skeleton className="h-5 w-1/2" /></div> : q.isError ? <p className="px-4 py-3 text-sm text-text-danger">{(q.error as Error).message}</p> : (
+        <ul className="divide-y divide-border">
+          {travellers.map((p) => {
+            const a = latestOf(q.data?.assessments, p.subject_id), o = outcomeWords(a?.results[0]);
+            return <li key={p.subject_id} className="flex min-h-10 flex-wrap items-center gap-2 px-4 py-2 text-sm"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{p.label}</span><Pill tone={o.tone}>{o.short}</Pill>{a?.out_of_date ? <Pill tone="warn" title="A fact this check read has changed since">Out of date</Pill> : null}</li>;
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+// ------------------------------------------------------------------ the page
+
+export function EligibilityPage() {
+  const { id } = useParams();
+  const actor = useActorId();
+  const view = useCaseView(id!, "agent");
+  const q = useAssessments(id!);
+  const [chosen, setChosen] = React.useState<string | null>(null);
+  const [drawer, setDrawer] = React.useState<"run" | "override" | "review" | "history" | null>(null);
+  const [runError, setRunError] = React.useState<string | null>(null);
+  const listRef = React.useRef<HTMLUListElement>(null);
+  if (!STAFF.has(actor)) return <Notice title="This page is for the firm's staff">Eligibility checks are seen by the firm's staff only.</Notice>;
+  if (view.isLoading || q.isLoading) return <div className="space-y-3" aria-busy="true"><Skeleton className="h-8 w-1/3" /><Skeleton className="h-40 w-full" /></div>;
+  if (view.isError) return <Notice tone="danger" title="This case could not be opened">{(view.error as Error).message}</Notice>;
+  if (q.isError) return <Notice tone="danger" title="The eligibility checks could not be read">{(q.error as Error).message}</Notice>;
+  const c = view.data!.case, travellers = c.people.filter((p) => p.role !== "case" && p.applies);
+  const person = travellers.find((p) => p.subject_id === chosen) ?? travellers[0];
+  const runs = (q.data?.assessments ?? []).filter((a) => a.person === person?.subject_id);
+  const latest = runs[0], result = latest?.results[0];
+  const move = (e: React.KeyboardEvent) => {
+    const i = travellers.findIndex((p) => p.subject_id === person?.subject_id);
+    const next = e.key === "ArrowDown" ? i + 1 : e.key === "ArrowUp" ? i - 1 : -1;
+    if (next < 0 || next >= travellers.length) return;
+    e.preventDefault(); setChosen(travellers[next].subject_id); setRunError(null);
+    requestAnimationFrame(() => (listRef.current?.querySelectorAll<HTMLElement>("[role=option]")[next])?.focus());
+  };
+  return (
+    <div className="mx-auto max-w-7xl space-y-5">
+      <nav aria-label="Path" className="flex items-center gap-1 text-[13px] text-text-muted"><Link to="/cases" className="inline-flex items-center gap-1 hover:underline"><ArrowLeft className="size-3.5" aria-hidden />Cases</Link><span aria-hidden>›</span><Link to={`/cases/${c.id}`} className="hover:underline">{c.reference}</Link><span aria-hidden>›</span><span className="text-text">Eligibility</span></nav>
+      <div className="flex flex-wrap items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">Eligibility · {c.reference}<StandIn id="SI-1" today="our own checks on this application's rules, three outcomes and no score" later="the team's AG-03 Qualifier fills this page and adds scores, cut-offs and advice" /></h1>
+          <p className="mt-1 text-sm text-text-muted">{(q.data?.assessments ?? []).find((a) => a.results[0])?.results[0].programLabel ?? "This application"} · release {c.pin.release_version}{latest ? ` · rules as at ${day(Object.values(latest.rulesAsOfByProgram)[0])}` : ""} · staff only: the client never sees a verdict</p>
+        </div>
+        {person ? <RunButton caseId={c.id} person={person} first={!runs.length} onAgain={() => setDrawer("run")} onError={setRunError} /> : null}
+      </div>
+      {!travellers.length ? <Notice title="Nobody travels on this case yet">Add the people travelling on the case page first.</Notice> : (
+        <div className="grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
+          <section aria-labelledby="travellers" className="rounded-xl border border-border bg-surface-raised">
+            <h2 id="travellers" className="border-b border-border px-4 py-3 text-base font-semibold">People</h2>
+            <ul ref={listRef} role="listbox" aria-labelledby="travellers" className="p-1" onKeyDown={move}>
+              {travellers.map((p) => {
+                const a = latestOf(q.data?.assessments, p.subject_id), o = outcomeWords(a?.results[0]), on = p.subject_id === person?.subject_id;
+                return (
+                  <li key={p.subject_id} role="option" aria-selected={on} tabIndex={on ? 0 : -1} onClick={() => { setChosen(p.subject_id); setRunError(null); }}
+                    className={cn("flex min-h-11 cursor-pointer flex-col justify-center rounded-lg px-3 py-1.5 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", on ? "bg-primary/10" : "hover:bg-text/5")}>
+                    <span className="flex flex-wrap items-center gap-2"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{p.label}</span><Pill tone={o.tone}>{o.short}</Pill>{a?.out_of_date ? <Pill tone="warn">Out of date</Pill> : null}</span>
+                    {a?.results[0]?.missingInputs.length ? <span className="text-xs text-text-muted">needs {a.results[0].missingInputs.map(factWords).join(", ")}</span> : null}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+          <section aria-labelledby="result" className="min-w-0 rounded-xl border border-border bg-surface-raised">
+            <h2 id="result" className="border-b border-border px-4 py-3 text-base font-semibold [overflow-wrap:anywhere]">{person!.label} — {result?.programLabel ?? "this application"}</h2>
+            <div className="space-y-4 px-4 py-4">
+              {runError ? <Notice tone="danger" title="Nothing was run">{runError}</Notice> : null}
+              {!latest ? <p className="text-sm">No eligibility check yet for {person!.label}. It reads the answers on file against this application's rules; nothing is sent anywhere.</p>
+                : <Result caseId={c.id} a={latest} r={result!} runs={runs.length} open={setDrawer} />}
+            </div>
+          </section>
+        </div>
+      )}
+      {person && drawer === "run" ? <RunAgainDrawer caseId={c.id} person={person} close={() => setDrawer(null)} /> : null}
+      {latest && result && drawer === "override" ? <OverrideDrawer a={latest} r={result} close={() => setDrawer(null)} /> : null}
+      {latest && drawer === "review" ? <ReviewDrawer a={latest} actor={actor} close={() => setDrawer(null)} /> : null}
+      {person && drawer === "history" ? <HistoryDrawer person={person} runs={runs} close={() => setDrawer(null)} /> : null}
+    </div>
+  );
+}
+
+function RunButton({ caseId, person, first, onAgain, onError }: { caseId: string; person: CasePerson; first: boolean; onAgain: () => void; onError: (m: string | null) => void }) {
+  const run = useAction(() => api(`/runtime/cases/${caseId}/assessments`, { method: "POST", json: { person: person.subject_id } }), { success: "Eligibility checked", invalidate: [["runtime", "assessments", caseId]], onDone: () => onError(null) });
+  if (!first) return <Button onClick={onAgain}>Run again</Button>;
+  return <Button busy={run.isPending} onClick={() => run.mutate(undefined, { onError: (e) => onError(e.message) })}>Run eligibility check</Button>;
+}
+
+function Result({ caseId, a, r, runs, open }: { caseId: string; a: Assessment; r: Result; runs: number; open: (d: "override" | "review" | "history") => void }) {
+  const o = outcomeWords(r), labels = new Map(r.gates.map((g) => [g.key, g.label]));
+  const stamp = a.reviewStamp?.stamp === "Seen" ? "Seen by" : "Reviewed by";
+  return (
+    <>
+      {a.out_of_date ? (
+        <div role="status" className="rounded-lg border border-warn bg-warn/15 px-3 py-2 text-sm text-text-warn">
+          <p className="font-medium">Out of date: {a.changed.length ? a.changed.map((x) => `${factWords(x.fact)} changed from ${shown(x.was)} to ${shown(x.now)}`).join("; ") : "the case now uses another release"}, after this check.</p>
+          <p>Run again to see today's result. This result stays readable.</p>
+        </div>
+      ) : null}
+      <div className="flex flex-wrap items-center gap-2">
+        <Pill tone={o.tone} className="px-2 py-1 text-sm">{o.text}</Pill>
+        <span className="text-xs text-text-muted" title="Programs with a points score show it here when the team's Qualifier is connected">Score: none (this application has no points score)</span>
+      </div>
+      {r.outcome === "NOT_ELIGIBLE" ? <p className="text-sm">Fails: {r.failedGates.map((k) => labels.get(k) ?? k).join("; ")}{r.missingInputs.length ? `; also needs: ${r.missingInputs.map(factWords).join(", ")}` : ""}. The representative reviews this, and IRCC decides.</p> : null}
+      {a.overrides.map((x) => <p key={x.id} className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"><span className="font-medium">Officer's override: {x.label}</span> — {x.reason} <span className="text-xs text-text-muted">({x.name ?? nameOf(x.by)}, {when(x.at)}; the result above is the rules' own)</span></p>)}
+      <div>
+        <h3 className="mb-1 text-sm font-semibold">Rules checked</h3>
+        <ul className="divide-y divide-border rounded-lg border border-border">
+          {r.gates.map((g) => (
+            <li key={g.key} className="grid min-h-10 grid-cols-[8.5rem_minmax(0,1fr)] gap-2 px-3 py-2 text-sm">
+              <span className={cn("inline-flex items-center gap-1 font-medium", g.state === "met" ? "text-text-ok" : g.state === "not_met" ? "text-text-danger" : "text-text-warn")}>
+                {g.state === "met" ? <Check className="size-4" aria-hidden /> : g.state === "not_met" ? <X className="size-4" aria-hidden /> : <CircleHelp className="size-4" aria-hidden />}
+                {g.state === "met" ? "Met" : g.state === "not_met" ? "Not met" : "Not answered"}
+              </span>
+              <span className="min-w-0">
+                <span className="block [overflow-wrap:anywhere]">{g.label}</span>
+                <span className="block text-xs text-text-muted [overflow-wrap:anywhere]">{g.facts.map((f) => `${factWords(f)}: ${shown(g.values[f])}`).join(" · ")}</span>
+                {g.missing.length ? <Link to={`/cases/${caseId}`} className="text-xs text-text-link hover:underline">{g.missing.map(factWords).join(", ")} → Answer in the case view</Link> : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      {r.judgement.length ? (
+        <div>
+          <h3 className="mb-1 text-sm font-semibold" title="IRCC's officer decides these. Rules cannot check them, so they never change the result.">Officer's judgement, not checked by rules</h3>
+          <ul className="list-disc space-y-0.5 pl-5 text-sm">{r.judgement.map((j) => <li key={j}>{j}</li>)}</ul>
+        </div>
+      ) : null}
+      <div className="rounded-lg border border-border bg-surface px-3 py-2 text-xs text-text-muted"><p className="font-medium text-text">Disclaimer</p><p>{a.disclaimerText}</p></div>
+      <p className="text-xs text-text-muted">Run by {nameOf(a.createdBy)} · {when(a.createdAt)} · release {a.packVersion}{a.reason ? ` · reason: ${a.reason}` : ""}{a.reviewedAt ? ` · ${stamp} ${a.reviewStamp?.name ?? nameOf(a.reviewedBy)}, ${when(a.reviewedAt)}${a.reviewNote ? `: ${a.reviewNote}` : ""}` : ""}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="secondary" size="sm" onClick={() => open("override")}>Override result…</Button>
+        <Button variant="secondary" size="sm" disabled={!!a.reviewedAt} title={a.reviewedAt ? "Already marked" : undefined} onClick={() => open("review")}>Mark reviewed…</Button>
+        <span className="flex-1" />
+        <Button variant="ghost" size="sm" onClick={() => open("history")}><History aria-hidden />History ({plural(runs, "run")})</Button>
+      </div>
+    </>
+  );
+}
+
+function RunAgainDrawer({ caseId, person, close }: { caseId: string; person: CasePerson; close: () => void }) {
+  const [reason, setReason] = React.useState(""), [error, setError] = React.useState<string | null>(null);
+  const run = useAction(() => api(`/runtime/cases/${caseId}/assessments`, { method: "POST", json: { person: person.subject_id, reason } }), { success: "Eligibility checked again", invalidate: [["runtime", "assessments", caseId]], onDone: close });
+  const submit = () => run.mutate(undefined, { onError: (e) => setError(e instanceof ApiError ? e.field("reason") ?? e.message : e.message) });
+  return (
+    <Panel open onOpenChange={(o) => { if (!o) close(); }} title={`Run again for ${person.label}`} description="The earlier checks stay as they were; this one reads today's answers." footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={run.isPending} onClick={submit}>Run again</Button></>}>
+      <form onSubmit={(e) => { e.preventDefault(); submit(); }}>
+        <Field label="Reason" hint="Required, for example 'Passport renewed'." error={error}><Input value={reason} onChange={(e) => { setReason(e.target.value); setError(null); }} maxLength={300} /></Field>
+        <button type="submit" hidden />
+      </form>
+    </Panel>
+  );
+}
+
+function OverrideDrawer({ a, r, close }: { a: Assessment; r: Result; close: () => void }) {
+  const [label, setLabel] = React.useState<string>(OVERRIDE_LABELS[0]), [reason, setReason] = React.useState("");
+  const [errors, setErrors] = React.useState<{ label?: string | null; reason?: string | null; other?: string | null }>({});
+  const go = useAction(() => api(`/runtime/assessments/${a.id}/override`, { method: "POST", json: { programKey: r.programKey, fromOutcome: r.outcome, label, reason } }), { success: "Override kept beside the result", invalidate: [["runtime", "assessments"]], onDone: close });
+  const submit = () => go.mutate(undefined, { onError: (e) => setErrors(e instanceof ApiError ? { label: e.field("label"), reason: e.field("reason"), other: e.status === 409 ? e.message : null } : { other: e.message }) });
+  return (
+    <Panel open onOpenChange={(o) => { if (!o) close(); }} title="Override the result" description="The rules' result stays visible; your label and reason sit beside it, with your name." footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={go.isPending} onClick={submit}>Keep the override</Button></>}>
+      <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); submit(); }}>
+        {errors.other ? <Notice tone="danger">{errors.other}</Notice> : null}
+        {a.out_of_date ? <Notice tone="warn">This check is out of date; the override records that.</Notice> : null}
+        <Field label="Result being overridden"><Input value={outcomeWords(r).text} readOnly /></Field>
+        <Field label="Label" hint="Up to 80 characters." error={errors.label}><Input list="override-labels" value={label} onChange={(e) => { setLabel(e.target.value); setErrors({}); }} maxLength={80} /></Field>
+        <datalist id="override-labels">{OVERRIDE_LABELS.map((l) => <option key={l} value={l} />)}</datalist>
+        <Field label="Reason" hint="Required." error={errors.reason}><Textarea value={reason} onChange={(e) => { setReason(e.target.value); setErrors({}); }} maxLength={500} /></Field>
+        <button type="submit" hidden />
+      </form>
+    </Panel>
+  );
+}
+
+function ReviewDrawer({ a, actor, close }: { a: Assessment; actor: string; close: () => void }) {
+  const [note, setNote] = React.useState(""), [error, setError] = React.useState<string | null>(null);
+  // The preview only: the server decides the stamp from the firm's record (samples/firms.json, P-229 (2)).
+  const me = useFirm().data?.users.find((u) => u.id === actor), licensed = !!(me?.duties.includes("represent") && me.licence?.number);
+  const go = useAction(() => api(`/runtime/assessments/${a.id}/review`, { method: "POST", json: note ? { note } : {} }), { success: (x: { stamp: string }) => `${x.stamp === "Seen" ? "Seen" : "Reviewed"}: stamped on the check`, invalidate: [["runtime", "assessments"]], onDone: close });
+  const submit = () => go.mutate(undefined, { onError: (e) => setError(e instanceof ApiError ? e.field("note") ?? e.message : e.message) });
+  return (
+    <Panel open onOpenChange={(o) => { if (!o) close(); }} title="Mark reviewed" description="Once per check. The stamp names you, your duty and your licence." footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={go.isPending} onClick={submit}>Mark reviewed</Button></>}>
+      <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); submit(); }}>
+        {error ? <Notice tone="danger">{error}</Notice> : null}
+        <p className="text-sm">The stamp will read <span className="font-medium">"{licensed ? "Reviewed by" : "Seen by"} {nameOf(actor)}"</span>{licensed ? " (a licensed representative)" : " (no licence: a case officer's stamp)"}.</p>
+        <Field label="Note" hint="Optional."><Textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} /></Field>
+      </form>
+    </Panel>
+  );
+}
+
+function HistoryDrawer({ person, runs, close }: { person: CasePerson; runs: Assessment[]; close: () => void }) {
+  return (
+    <Panel open onOpenChange={(o) => { if (!o) close(); }} title={`History for ${person.label}`} description="Every check, newest first; none is ever changed." bodyLabel="Earlier checks">
+      <ol className="space-y-2">
+        {runs.map((a) => { const o = outcomeWords(a.results[0]); return (
+          <li key={a.id} className="rounded-lg border border-border px-3 py-2 text-sm">
+            <span className="flex flex-wrap items-center gap-2"><Pill tone={o.tone}>{o.short}</Pill>{a.out_of_date ? <Pill tone="warn">Out of date</Pill> : null}{a.overrides.length ? <Pill>Overridden</Pill> : null}{a.reviewedAt ? <Pill tone="info">{a.reviewStamp?.stamp === "Seen" ? "Seen" : "Reviewed"}</Pill> : null}</span>
+            <span className="mt-0.5 block text-xs text-text-muted">{nameOf(a.createdBy)} · {when(a.createdAt)}{a.reason ? ` · ${a.reason}` : ""}</span>
+          </li>
+        ); })}
+      </ol>
+    </Panel>
+  );
+}

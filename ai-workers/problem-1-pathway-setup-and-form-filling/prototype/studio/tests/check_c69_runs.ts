@@ -1,4 +1,4 @@
-// C6.9 part 2 (M3-D, concept screens/C6.9/concept.md BR-7…BR-14, BR-17, BR-18; stand-in SI-1): eligibility runs. A pass
+// C6.9 parts 2 and 3 (M3-D, concept screens/C6.9/concept.md BR-7…BR-18; stand-in SI-1): eligibility runs, override and review. A pass
 // and a fail per rule: first the pure adapter (engine/runtime/eligibility.ts), then the routes on an isolated copy that
 // it sets up when empty: the Visitor visa release 1 (tests/runtime/setup_visitor_visa.ts, no gates: a run is refused),
 // then the M3 setup (acceptance/lib/setup_vv_m3.ts; its S7 and S8 lines release the gates). No browser, no model call (US$0).
@@ -187,6 +187,33 @@ await main("C6.9 part 2", "Eligibility runs (stand-in SI-1 adapter and routes)",
   ok("C6.9 GET one fail: another firm's staff get 404; a malformed id 404", (await call("GET", `/runtime/assessments/${good?.id}`, undefined, "user-S")).status === 404 && (await call("GET", "/runtime/assessments/not-an-id", undefined, OFFICER)).status === 404);
   ok("C6.9 BR-8 pass: no audit row of any run holds an answer value (SAMPLEP12, SAMPLEP13, the expiry date)", sql(`select count(*) from audit_event where entity in ('assessment','assessment_override') and (summary like '%SAMPLEP1%' or summary like '%${inDays(3 * 365)}%' or detail::text like '%SAMPLEP1%')`) === "0" && sql(`select count(*) from audit_event where entity='assessment'`) !== "0");
   ok("C6.9 BR-17 pass: rules only: no model call (no ai_batch row, the spend record) in any run", sql("select count(*) from ai_batch") === spend0);
+
+  // ------------------------------------------------------------------ part 3: override and review (BR-15, BR-16; P-229 (2))
+  const ov = (body: Record<string, unknown>, actor = OFFICER, id = good?.id) => call("POST", `/runtime/assessments/${id}/override`, body, actor);
+  const base = { programKey: "vv.single", fromOutcome: "LIKELY_ELIGIBLE", label: "Refer to the representative", reason: "Earlier refusal (Sample)" };
+  r = await ov({ ...base, reason: " " });
+  ok("C6.9 BR-15 fail: an override with an empty reason is refused on the field reason (400)", r.status === 400 && fields(r.body).includes("reason"), r.body);
+  r = await ov({ ...base, label: "" });
+  ok("C6.9 BR-15 fail: an override with an empty label is refused on the field label (400)", r.status === 400 && fields(r.body).includes("label"), r.body);
+  r = await ov({ ...base, label: "x".repeat(81) });
+  ok("C6.9 BR-15 fail: a label over 80 characters is refused on label", r.status === 400 && fields(r.body).includes("label"), r.status);
+  r = await ov({ ...base, programKey: "other.program" });
+  ok("C6.9 BR-15 fail: a programKey not in the run is refused (400 on programKey)", r.status === 400 && fields(r.body).includes("programKey"), r.body);
+  r = await ov({ ...base, fromOutcome: "NOT_ELIGIBLE" });
+  ok("C6.9 BR-15 fail: a fromOutcome that is not the run's outcome is refused 409: \"The result changed since you opened it\"", r.status === 409 && /changed since you opened it/.test(r.body?.detail ?? ""), r.body);
+  ok("C6.9 BR-15 fail: a client cannot override (403); another firm's staff get 404", (await ov(base, CLIENT)).status === 403 && (await ov(base, "user-S")).status === 404);
+  const audit0 = Number(sql("select count(*) from audit_event where entity='assessment_override'"));
+  r = await ov(base);
+  ok("C6.9 BR-15 pass: an override on an out-of-date run is kept (201), with who, duty, licence and out of date; one audit row", r.status === 201 && r.body?.by === OFFICER && r.body?.duty === "Case officer" && r.body?.licence === null && r.body?.outOfDate === true && Number(sql("select count(*) from audit_event where entity='assessment_override'")) === audit0 + 1, r.body);
+  const after = (await call("GET", `/runtime/assessments/${good?.id}`, undefined, OFFICER)).body;
+  ok("C6.9 BR-15 pass: the engine's outcome is unchanged and the override shows beside it", after?.results?.[0]?.outcome === "LIKELY_ELIGIBLE" && after?.overrides?.length === 1 && after.overrides[0].label === "Refer to the representative" && sql(`select result_json::text from assessment where id='${good?.id}'`)?.includes("LIKELY_ELIGIBLE"));
+  r = await call("POST", `/runtime/assessments/${good?.id}/review`, { note: "Checked with the client (Sample)" }, "user-R");
+  ok("C6.9 BR-16 pass (P-229 (2)): a licensed representative's review is stamped \"Reviewed\" with the licence; 200; an audit row", r.status === 200 && r.body?.stamp === "Reviewed" && r.body?.reviewedBy === "user-R" && !!r.body?.licence?.number && r.body?.outOfDate === true && sql(`select count(*) from audit_event where entity='assessment' and entity_key='${good?.id}' and action='reviewed'`) === "1", r.body);
+  r = await call("POST", `/runtime/assessments/${good?.id}/review`, {}, OFFICER);
+  ok("C6.9 BR-16 fail: a second review is refused 409, naming who reviewed and when", r.status === 409 && /Already reviewed by Representative \(Sample\) on \d{4}-\d{2}-\d{2}/.test(r.body?.detail ?? ""), r.body?.detail);
+  r = await call("POST", `/runtime/assessments/${first?.id}/review`, {}, OFFICER);
+  ok("C6.9 BR-16 pass (P-229 (2)): the case officer (no licence) may review too, stamped \"Seen\"", r.status === 200 && r.body?.stamp === "Seen" && r.body?.licence === null && r.body?.reviewNote === null, r.body);
+  ok("C6.9 BR-16 fail: a client cannot review (403)", (await call("POST", `/runtime/assessments/${first?.id}/review`, {}, CLIENT)).status === 403);
   // Review M2 / break M1 on fd26c492: 40 first runs at once for a new person → one first run, the rest need a reason.
   const c2 = await openCase(vv, [{ role: "principal", name: "Sample Client R", dob: yearsAgo(41) }, { role: "spouse_or_partner", name: "Sample Spouse R", dob: yearsAgo(39) }, { role: "child", name: "Sample Child R1", dob: yearsAgo(12) }, { role: "child", name: "Sample Child R2", dob: yearsAgo(9) }]);
   const R = Object.values(c2.subjects);
