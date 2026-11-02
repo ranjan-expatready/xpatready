@@ -40,3 +40,4 @@ Written by the qa lane only; never app code. Each finding in `product/qa/BUGS.md
 Harness (scaffolding, never product):
 * `page-proxy.mjs` — forwards to a copy and serves the page for page addresses while QA-4 is open, so browser checks can run in a lane copy.
 * `coverage-preload.mjs` — lets a server started with `NODE_V8_COVERAGE` write coverage when stopped (c8 12.0.0, P-69).
+| `check_qa_vv_1102_probe.ts` | qa-m3 Visitor visa round 1 (2 Nov, 54019473): C6.4 checklist roles, ids and reasons in words; C6.12 /prepare roles and unknown case; C11.6 two channel changes at once (one 200, one 409), unknown item, long reason, IMM 5476 PDF upload only; QA-151 (a body that is not JSON answered in the parser's words) | `isolated.sh qa_vv 4476 start`; `tsx studio/tests/runtime/setup_visitor_visa.ts 4476 xr_studio_qa_vv`; `tsx studio/acceptance/lib/setup_vv_m3.ts 4476 xr_studio_qa_vv`; then `tsx studio/tests/qa/check_qa_vv_1102_probe.ts 4476 xr_studio_qa_vv` (US$0) |
