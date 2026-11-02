@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>G1 board 1: release refused, no source entry (draft, Sample)</title>
+<style>
+  :root { --primary:#0862c5; --link:#054e9c; --surface:#f7f7f7; --raised:#fff; --border:#d9d9d9; --text:#2d2d2d; --muted:#595959; --danger:#b91c1c; --dangerbg:#fdecec; --warnbg:#fff4e6; --warnbd:#f5b46b; --ai:#e6f4ff; --ok:#1e7a46; --okbg:#e9f7ef; }
+  * { box-sizing: border-box; }
+  body { margin:0; font: 14px/1.45 Inter, system-ui, sans-serif; color: var(--text); background: var(--surface); }
+  .bar { position: sticky; top: 0; z-index: 20; background:#fff; border-bottom:1px solid var(--border); padding:10px 16px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .bar b { margin-right:6px; flex-basis:100%; }
+  .bar button { border:1px solid var(--border); background:#fff; border-radius:999px; padding:4px 12px; cursor:pointer; font:inherit; }
+  .bar button[aria-pressed="true"] { border-color:var(--primary); color:var(--link); background:var(--ai); font-weight:600; }
+  main { max-width:1180px; margin:0 auto; padding:16px; }
+  .note { font-size:12px; color:var(--muted); border:1px dashed var(--border); border-radius:8px; padding:8px 10px; background:#fff; margin-bottom:12px; }
+  .crumbs { color:var(--link); font-size:12px; overflow-wrap:anywhere; }
+  h1 { font-size:24px; margin:6px 0 2px; font-weight:600; }
+  .facts { color:var(--muted); font-size:12px; }
+  .tabs { display:flex; gap:18px; border-bottom:1px solid var(--border); margin:16px 0 12px; overflow-x:auto; }
+  .tabs span { padding:8px 2px; color:var(--muted); white-space:nowrap; }
+  .tabs span.on { color:var(--text); border-bottom:2px solid var(--primary); font-weight:600; }
+  .card { background:var(--raised); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:12px; }
+  .card.bad { border-color:#f1a5a5; }
+  .steps { display:grid; gap:12px; grid-template-columns:repeat(3, minmax(0,1fr)); margin-bottom:12px; }
+  @media (max-width:720px) { .steps { grid-template-columns:1fr; } }
+  .btn { border-radius:8px; padding:6px 12px; font:inherit; cursor:pointer; border:1px solid var(--border); background:#fff; min-height:32px; }
+  .btn.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .btn.sm { padding:3px 10px; font-size:12px; min-height:28px; }
+  .btn:disabled { background:#e5e5e5; color:#737373; border-color:#d9d9d9; cursor:not-allowed; }
+  .muted { color:var(--muted); font-size:12px; }
+  .pill { display:inline-block; border-radius:999px; padding:1px 8px; font-size:12px; border:1px solid var(--border); background:var(--surface); white-space:nowrap; }
+  .pill.danger { border-color:#f1a5a5; background:var(--dangerbg); color:var(--danger); }
+  .pill.warn { border-color:var(--warnbd); background:var(--warnbg); }
+  .pill.ok { border-color:#8fd1a8; background:var(--okbg); color:var(--ok); }
+  .group { border-top:1px solid var(--border); padding:10px 0 4px; }
+  .group:first-of-type { border-top:0; }
+  .item { font-weight:600; }
+  .num { display:flex; gap:10px; align-items:flex-start; justify-content:space-between; padding:6px 0; flex-wrap:wrap; }
+  .num p { margin:0; flex:1 1 320px; }
+  .where { font-size:12px; color:var(--muted); }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .toast { border:1px solid #f1a5a5; background:var(--dangerbg); border-radius:8px; padding:10px 12px; margin-bottom:12px; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th, td { text-align:left; padding:8px; border-bottom:1px solid var(--border); vertical-align:top; }
+  th { color:var(--muted); font-weight:500; }
+  .tablewrap { overflow-x:auto; }
+  .ann { font-size:12px; background:#fffbe6; border-left:3px solid #e0c27a; padding:6px 10px; margin:8px 0; }
+  [data-state] { display:none; }
+  [data-state].show { display:block; }
+  :focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+</style>
+</head>
+<body>
+<div class="bar" role="toolbar" aria-label="Board state">
+  <b>G1 board 1 · Review and release · choose a state</b>
+  <button aria-pressed="true" data-go="author">1 Author: refused, numbers listed</button>
+  <button aria-pressed="false" data-go="approver">2 Approver: 409 after a source changed</button>
+  <button aria-pressed="false" data-go="done">3 All sourced</button>
+  <button aria-pressed="false" data-go="release">4 Release page: held back</button>
+</div>
+<main>
+  <p class="note">Draft board for the tech lead (helper drafter, 2 Nov 2026). Sample data comes from the imported work-permit release (<code>prototype/p3/releases/c1-v3</code>). Quotes are from the official files in <code>official-sources/ircc</code>, downloaded 19 Oct 2026. The 90 and 30 days are ExpatReady warning lead times with no official source. The Source panel itself is board 2.</p>
+  <div class="crumbs">Work permits › Employer-specific work permit › With an LMIA</div>
+  <h1>With an LMIA</h1>
+  <div class="facts">Draft · 4 changes since Release 3 · <span class="pill">Configuration author: Author A (simulated)</span></div>
+  <div class="tabs" aria-hidden="true"><span>Overview</span><span>Forms</span><span>Questionnaires</span><span>Documents</span><span>Preview</span><span class="on">Review and release</span></div>
+
+  <!-- 1 author -->
+  <section data-state="author" class="show" aria-label="Author: refused">
+    <div class="steps">
+      <div class="card"><b>1 Author submits</b><p class="muted">Configuration author (only the author submits)</p><p>4 draft changes; 15 problems to fix</p></div>
+      <div class="card"><b>2 The immigration expert signs the content</b><p class="muted">Content reviewer</p><p>Rules, document requirements, checks, sources and AI proposals need the expert's sign-off</p></div>
+      <div class="card"><b>3 A second person releases</b><p class="muted">Approver (never the author or submitter)</p><p>Last released: version 1, in Release 3</p></div>
+    </div>
+    <div class="card bad" data-no-source>
+      <div class="row" style="justify-content:space-between"><b>Numbers without a source (15)</b><span class="muted">Block submission and release · grouped by item</span></div>
+      <p class="muted" style="margin:4px 0 6px">Each published number needs its official source, or a note that the government publishes nothing and ExpatReady set it.</p>
+      <div class="group">
+        <p class="item">Rule "Add form IMM 5707 Family Information for this person" <span class="where">· Questionnaires › Rules</span></p>
+        <div class="num"><p><span class="pill danger">No source</span> 18 in "age is 18 or older" has no source entry. Add the official source, or mark "None published – set by ExpatReady".</p><button class="btn sm">Add source</button></div>
+        <div class="num"><p><span class="pill danger">No source</span> 18 in "under 18 and travelling alone" has no source entry. Add the official source, or mark "None published – set by ExpatReady".</p><button class="btn sm">Add source</button></div>
+      </div>
+      <div class="group">
+        <p class="item">Check "Passport expires within 90 days" <span class="where">· Questionnaires › Checks</span></p>
+        <div class="num"><p><span class="pill warn">Changed since its source</span> The source was written for 90; the number is now 60. Check the source again, or mark "None published – set by ExpatReady".</p><button class="btn sm">Check source</button></div>
+      </div>
+      <div class="group">
+        <p class="item">Check "Common-law partner: lived together at least 1 year" <span class="where">· Questionnaires › Checks</span></p>
+        <div class="num"><p><span class="pill danger">No source</span> 1 (years) has no source entry. Add the official source, or mark "None published – set by ExpatReady".</p><button class="btn sm">Add source</button></div>
+      </div>
+      <div class="group">
+        <p class="item">Form line IMM 5476 "From age" <span class="where">· Forms · Sample setting for this board</span></p>
+        <div class="num"><p><span class="pill danger">No source</span> 18 has no source entry. Add the official source, or mark "None published – set by ExpatReady".</p><button class="btn sm">Add source</button></div>
+      </div>
+      <button class="btn sm" style="margin-top:6px">Show all 15</button>
+      <div class="ann">"Add source" opens the Source panel in place (board 2), so the page keeps its scroll. When the last number is answered, this block is gone and Submit is enabled. Words name the item and the comparison, never a field code or rule code. The order is the draft's own order: forms, rules, checks.</div>
+    </div>
+    <div class="card"><b>Validation of the draft</b><p class="muted">0 other errors · 2 warnings (shown and recorded)</p></div>
+    <div class="card row" style="align-items:flex-end">
+      <label class="muted" style="flex:1 1 320px">Note (optional for submit and sign; required to return)<br><textarea style="width:100%;min-height:44px;margin-top:4px"></textarea></label>
+      <span><button class="btn" disabled aria-describedby="why-sub">Submit for review</button><br><span id="why-sub" class="muted">Fix the problems first: 15 numbers without a source</span></span>
+      <button class="btn primary" disabled>Approve and release</button>
+    </div>
+  </section>
+
+  <!-- 2 approver -->
+  <section data-state="approver" aria-label="Approver: refused">
+    <div class="toast" role="alert"><b>Release refused: 1 number has no source entry.</b> Each one is listed on Review and release. <span class="muted">(409 · <code>…/problems/no-source</code> · errors[] lists every number)</span></div>
+    <div class="card bad">
+      <div class="row" style="justify-content:space-between"><b>Numbers without a source (1)</b><span class="muted">Read-only for you: only the configuration author adds sources</span></div>
+      <div class="group">
+        <p class="item">Check "National identity document expires within 30 days" <span class="where">· Questionnaires › Checks</span></p>
+        <div class="num"><p><span class="pill danger">No source</span> 30 has no source entry. Add the official source, or mark "None published – set by ExpatReady".</p><button class="btn sm">View</button></div>
+      </div>
+      <div class="ann">This case is rare. Errors block Submit, so the author fixes them first. The approver sees this only when the record changed after review, for example an older suite or a direct API write. Under BR-7 a source change after submit makes the submission stale, so the usual words here are "The draft changed after it was submitted: submit it again".</div>
+    </div>
+    <div class="card row"><span class="muted" style="flex:1">Acting as Approver B (simulated)</span><button class="btn primary" disabled>Approve and release</button></div>
+  </section>
+
+  <!-- 3 done -->
+  <section data-state="done" aria-label="All sourced">
+    <div class="card" style="border-color:#8fd1a8"><b>Every published number has a source</b><p class="muted" style="margin:4px 0 0">15 numbers: 6 official sources · 9 None published – set by ExpatReady · 0 changed since their source. These go into the release with it.</p></div>
+    <div class="card"><b>Submitted changes compared with released version 1 (6)</b>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Kind</th><th>Item</th><th>Change</th><th>Needs</th></tr></thead>
+        <tbody>
+          <tr><td>Rule</td><td>Add form IMM 5707 Family Information for this person</td><td><span class="pill warn">changed</span></td><td>Immigration expert</td></tr>
+          <tr><td>Source</td><td>IMM 5707 rule · 18 · Official source: IMM 5488 checklist, read 19 Oct 2026</td><td><span class="pill">added</span></td><td>Immigration expert</td></tr>
+          <tr><td>Source</td><td>Passport expires within 90 days · 90 · None published – set by ExpatReady: "Early warning so the client can renew in time"</td><td><span class="pill">added</span></td><td>Immigration expert</td></tr>
+        </tbody>
+      </table></div>
+      <div class="ann">BR-7: sources are frozen with the release, and each one is one change line that the expert signs. A source changed after submit makes the submission stale.</div>
+    </div>
+    <div class="card row"><span class="muted" style="flex:1">The combination is Sample (Demo release mark from G3 stays; G1 does not change it)</span><span class="pill warn">Demo release</span><button class="btn primary">Approve and release</button></div>
+  </section>
+
+  <!-- 4 release page -->
+  <section data-state="release" aria-label="Release page">
+    <h2 style="font-size:18px;margin:0 0 8px">Release (shared draft)</h2>
+    <div class="card"><div class="tablewrap"><table>
+      <thead><tr><th>Combination</th><th>Changes</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>With an LMIA</td><td>4</td><td><span style="color:var(--danger)">Held back: 15 numbers have no source.</span> <a href="#" style="color:var(--link)">Fix on Review and release</a></td></tr>
+        <tr><td>Visitor visa <span class="pill warn">Demo release</span></td><td>9</td><td><span style="color:var(--ok)">Will be released</span><br><span class="muted">Fees from the fee table: 2 lines, each with its official source</span></td></tr>
+      </tbody>
+    </table></div>
+    <div class="ann">A held reason gives the count and a link. It replaces today's "first problem only" (<code>api/src/programs.ts</code>, held row). The shared release route (<code>releaseRows</code>) refuses with the same list.</div></div>
+  </section>
+</main>
+<script>
+  const btns = document.querySelectorAll('[data-go]');
+  btns.forEach(b => b.addEventListener('click', () => {
+    btns.forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    document.querySelectorAll('[data-state]').forEach(s => s.classList.toggle('show', s.dataset.state === b.dataset.go));
+  }));
+</script>
+</body>
+</html>
