@@ -87,8 +87,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C6.9 page fail: Run again without a reason is refused on the field, in words", /Give a reason for running again, such as 'Passport renewed'\./.test(await p.locator("[role=dialog]").innerText()));
   await state("run-again-reason");
   await p.keyboard.type("Facts added (Sample)"); await p.keyboard.press("Enter"); await p.waitForSelector("[role=dialog]", { state: "detached" }); await settle();
-  step("C6.9 page pass: Run again with a reason gives Not eligible, naming the failed rule and saying IRCC decides", /Not eligible on this application's rules as written/.test(await text()) && /Fails: Answered no to the criminal history question \(Sample\)\. The representative reviews this, and IRCC decides\./.test(await text()) && !/Out of date:/.test(await text()));
-  await state("not-eligible");
+  step("C6.9 page pass (P-230 (1)): Run again with a reason: the background rule is Not met and goes to the representative's review: Possibly eligible, never Not eligible", /Possibly eligible — the representative reviews this/.test(await text()) && /For the representative's review: Answered no to the criminal history question \(Sample\)\./.test(await text()) && /The representative reviews this: not a Not eligible on its own/.test(await text()) && !/Not eligible on this application's rules/.test(await text()) && !/Out of date:/.test(await text()));
+  await state("needs-review");
 
   await tabTo(/^Override result/); await p.keyboard.press("Enter"); await p.waitForSelector("[role=dialog]");
   await tabTo(/^Keep the override$/); await p.keyboard.press("Enter"); await p.waitForTimeout(600);
@@ -96,7 +96,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await state("override-drawer");
   await p.locator("[role=dialog] textarea").focus(); await p.keyboard.type("Earlier refusal answered in full (Sample)");
   await tabTo(/^Keep the override$/); await p.keyboard.press("Enter"); await p.waitForSelector("[role=dialog]", { state: "detached" }); await settle();
-  step("C6.9 page pass (BR-15): the override sits beside the result; the rules' own result stays visible", /Officer's override: Refer to the representative — Earlier refusal answered in full \(Sample\)/.test(await text()) && /Not eligible on this application's rules as written/.test(await text()) && sql(`select count(*) from assessment_override o join assessment a on a.id=o.assessment_id where a.case_id='${c.id}'`) === "1");
+  step("C6.9 page pass (BR-15): the override sits beside the result; the rules' own result stays visible", /Officer's override: Refer to the representative — Earlier refusal answered in full \(Sample\)/.test(await text()) && /Possibly eligible — the representative reviews this/.test(await text()) && sql(`select count(*) from assessment_override o join assessment a on a.id=o.assessment_id where a.case_id='${c.id}'`) === "1");
 
   await tabTo(/^Mark reviewed/); await p.keyboard.press("Enter"); await p.waitForSelector("[role=dialog]");
   step("C6.9 page pass (P-229 (2)): the drawer previews the stamp \"Seen by Case officer\" (no licence)", /"Seen by Case officer"/.test(await p.locator("[role=dialog]").innerText()));
@@ -110,13 +110,13 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 
   await tabTo(/^History/); await p.keyboard.press("Enter"); await p.waitForSelector("[role=dialog]");
   const hist = await p.locator("[role=dialog]").innerText();
-  step("C6.9 page pass: History lists both runs newest first, with Overridden and Seen on the latest", /History for Sample Client A/.test(hist) && (await p.locator("[role=dialog] li").count()) === 2 && /Not eligible[\s\S]*Overridden[\s\S]*Seen[\s\S]*Possibly/.test(hist));
+  step("C6.9 page pass: History lists both runs newest first, with Overridden and Seen on the latest", /History for Sample Client A/.test(hist) && (await p.locator("[role=dialog] li").count()) === 2 && /Possibly[\s\S]*Overridden[\s\S]*Seen[\s\S]*Possibly/.test(hist));
   await state("history");
   await p.keyboard.press("Escape");
 
   // 200 % zoom: a 1280 px window at 200 % is 640 CSS px wide.
   await p.setViewportSize({ width: 640, height: 900 }); await settle();
-  step("200 % zoom (640 px): no sideways page scroll; the result is still read", !(await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)) && /Not eligible/.test(await text()));
+  step("200 % zoom (640 px): no sideways page scroll; the result is still read", !(await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)) && /Possibly eligible/.test(await text()));
   await p.screenshot({ path: path.join(SHOTS, `${String(++n).padStart(2, "0")}-zoom-200.png`), fullPage: true });
   await p.setViewportSize({ width: 1440, height: 900 });
 
