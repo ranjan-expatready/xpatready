@@ -79,13 +79,15 @@ await main("Setup", "Visitor visa release 2 for the M3 path (Super Admin, M2)", 
   // custodian; the absent parent's ID is therefore always asked when a parent is not travelling (never dropped on "sole").
   // The official words (above) also ask the parents' ID copies when the child travels with another adult, and the birth
   // certificate when the child travels alone or with one parent (not with another adult): the conditions follow them.
+  // Devin on #521 (yellow): with another adult both parents stay behind; the one ID line says a copy for each, in one file
+  // (a line holds one file today; one line per parent is a follow-up row).
   const reqs: { name: string; who: string; mode: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: unknown; plain?: string; cite?: { sourceQuote: string; sourceFile: string } }[] = [
     { name: "Passport or travel document", who: "each_applicant", mode: "COMBINATION_MANDATORY" },
     { name: "Proof of financial support", who: "principal_applicant", mode: "COMBINATION_MANDATORY" },
     { name: "Letter of authorization for a minor", who: "each_applicant", mode: "ANSWER_CONDITIONAL", condition: travels(["alone", "another_adult", "one_parent"]),
       plain: "a child under 18 travelling alone, with another adult (signed by both parents, naming the adult responsible in Canada) or with one parent (from the other parent; with sole custody, from the parent who has it)", cite: CITE.letter },
     { name: "Copy of the minor's birth certificate", who: "each_applicant", mode: "ANSWER_CONDITIONAL", condition: travels(["alone", "one_parent"]), plain: "a child under 18 travelling alone or with one parent", cite: CITE.birth },
-    { name: "Copy of the absent parent's signed passport or national ID", who: "each_applicant", mode: "ANSWER_CONDITIONAL", condition: travels(["one_parent", "another_adult"]), plain: "a child under 18 travelling with one parent or with another adult: each parent not travelling", cite: CITE.absentId },
+    { name: "Copy of the absent parent's signed passport or national ID", who: "each_applicant", mode: "ANSWER_CONDITIONAL", condition: travels(["one_parent", "another_adult"]), plain: "a child under 18 travelling with one parent or with another adult: a copy for each parent not travelling (both parents when with another adult), in one file", cite: CITE.absentId },
     { name: "Custody documents", who: "each_applicant", mode: "ANSWER_CONDITIONAL", condition: custody(["sole", "shared"]), plain: "a child under 18 in sole custody (the custody decree) or shared custody", cite: CITE.custody },
     { name: "Adoption or guardianship papers", who: "each_applicant", mode: "ANSWER_CONDITIONAL", condition: custody(["adopted", "guardian"]), plain: "a child under 18 who is adopted or under guardianship", cite: CITE.adopt },
     // VV-R16 (medical exam: a stay over 6 months AND a listed country, a public-health job or a super visa) needs a
