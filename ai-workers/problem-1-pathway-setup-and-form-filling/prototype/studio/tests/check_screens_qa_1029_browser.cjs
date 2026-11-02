@@ -120,6 +120,11 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await go(`/c/${visitor}/review`);
     const rv = await main();
     step("QA-73: Review and release: no \"SME duty\", no \"Derived\", no \"no tested helper\"", !/SME duty|Derived definition|Derived fields|no tested helper/.test(rv), (rv.match(/SME duty|Derived[^\n]{0,40}|no tested helper/) ?? [])[0]);
+    // QA-73 retest 832ee5bd (F8): the Item column names each item in a few words; a calculation's long definition is in the tip.
+    const items = await p.locator("main table").filter({ has: p.locator("th", { hasText: /^Item$/ }) }).locator("tbody tr td:nth-child(3)").evaluateAll((els) => els.map((e) => ({ text: e.textContent.trim(), tip: e.getAttribute("title") ?? "", clamp: !!e.querySelector(".line-clamp-2") })));
+    const longTips = items.filter((x) => x.tip.length > 60);
+    step("QA-73 pass: every Item cell is 60 characters or fewer (or clamped), and a long definition is in its tip", items.length > 0 && items.every((x) => x.text.length <= 60 || x.clamp) && longTips.every((x) => x.clamp ? x.tip === x.text : (x.tip !== x.text && x.tip.length > x.text.length && / /.test(x.tip))), `${items.length} items, ${longTips.length} with a long definition in the tip; longest text ${Math.max(0, ...items.map((x) => x.text.length))}`);
+    step("QA-73 fail: no Item cell shows a system role name or a whole definition", !items.some((x) => /subject_[a-z_]+|\b[a-z]+_[a-z_]+\b/.test(x.text) || (x.text.length > 60 && !x.clamp)), items.find((x) => /subject_[a-z_]+/.test(x.text) || (x.text.length > 60 && !x.clamp))?.text);
     await axe("Review and release"); await p.screenshot({ path: path.join(SHOTS, "review-1440.png"), fullPage: true });
     // Tech lead 31 Oct (#117 Q1): a disabled primary button is plainly grey on every page, not a half-faded blue.
     const off = await p.getByRole("button", { name: /Approve and release/ }).evaluate((e) => { const c = getComputedStyle(e); return { off: e.disabled, bg: c.backgroundColor, opacity: c.opacity }; });
