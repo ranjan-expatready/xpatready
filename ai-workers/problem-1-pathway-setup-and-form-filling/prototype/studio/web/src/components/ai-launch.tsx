@@ -17,7 +17,6 @@ export type AiScope = { kind: "catalogue" | "program" | "combination" | "source"
 const MODES = [
   ["LIVE", "Live", "Reads each form with AI; unchanged forms reuse what was read before; the cost is shown below before it starts"],
   ["REPLAY", "Saved", "No model call, US$0: the saved result of earlier real runs, shown through the same steps"],
-  ["STUB", "Stub pass", "No network, no cost, no AI content: proves the path only"],
 ] as const;
 const WORK_CHANGED = "The work changed since you reviewed it (a source, a draft or a running step changed). Review the updated plan, then start again.";
 const TONE: Record<string, string> = { draft: "ai", reuse_saved_output: "info", reuse_library: "ok", skip: "neutral", not_eligible: "warn" };
@@ -117,7 +116,7 @@ function Count({ n, l, tone }: { n: React.ReactNode; l: string; tone?: string })
 
 /** K2 (Screen 02 slice 3) and C2.6: the combination's official checklists, read into document requirements on the same
  *  review path. A checklist with a saved real AI reading replays it (US$0); live waits for the founder's OK on its cost,
- *  so the others offer the stub pass only. */
+ *  so the others say so (P-227: only Live and Saved are shown; the stub pass stays an API path for tests). */
 function Checklists({ combinationId, onOpen }: { combinationId: string; onOpen: (jobId: string) => void }) {
   const list = useQuery<{ id: string; recognised: boolean; kind: string; edition: string | null; fileName: string }[]>({ queryKey: ["attachments", combinationId], queryFn: () => api(`/combinations/${combinationId}/attachments`) });
   const readings = useQuery<{ attachmentId: string; saved: boolean; lines: number }[]>({ queryKey: ["checklist-readings", combinationId], queryFn: () => api(`/combinations/${combinationId}/checklist-readings`) });
@@ -133,7 +132,7 @@ function Checklists({ combinationId, onOpen }: { combinationId: string; onOpen: 
       <ul className="space-y-1 text-sm">{checklists.map((a) => { const saved = savedOf(a.id); return (
         <li key={a.id} className="flex flex-wrap items-center justify-between gap-2" data-checklist-row={a.edition ?? a.fileName}><span>{a.edition ?? a.fileName}{saved ? <span className="ml-2 text-xs text-text-muted">Saved reading: {saved.lines} line{saved.lines === 1 ? "" : "s"}</span> : null}</span>
           <span className="flex gap-2">{saved ? <Button size="sm" busy={busy === `${a.id}:replay`} onClick={() => void run(a.id, "replay")}>Saved · US$0</Button> : null}
-            <Button size="sm" variant="secondary" busy={busy === `${a.id}:stub`} onClick={() => void run(a.id, "stub")}>Stub pass · US$0</Button></span></li>); })}</ul>
+            {saved ? null : <span className="text-xs text-text-muted" data-no-saved>No Saved reading yet; Live waits for the founder's OK on its cost.</span>}</span></li>); })}</ul>
       {err ? <p role="alert" className="text-sm text-text-danger">{err}</p> : null}
     </section>
   );

@@ -116,9 +116,10 @@ function DraftDialog({ a, onClose }: { a: Attachment; onClose: () => void }) {
   const runs: SavedRun[] = opts.data?.saved_runs ?? [];
   const saved = [...runs.filter((r) => r.valid), ...runs.filter((r) => r.recheckable)];
   // Review-3 Minor 4: a form approved in the product (not on the official manifest) is not open to a paid call yet (the
-  // founder's or the Lead's decision): its dialog starts on the stub pass and says why Live is closed.
+  // founder's or the Lead's decision): Live says why it is closed. P-227 (D2 part 2): only Live and Saved are shown; the
+  // stub pass stays an API path for tests (POST /attachments/:id/draft {mode:"stub"}), never offered to a person.
   const liveClosed = !a.recognised;
-  const [mode, setMode] = React.useState<"live" | "replay" | "stub">(liveClosed ? "stub" : "live");
+  const [mode, setMode] = React.useState<"live" | "replay">(liveClosed ? "replay" : "live");
   const [runFile, setRunFile] = React.useState("");
   React.useEffect(() => { if (saved.length && !runFile) { setRunFile(saved[0].file); setMode("replay"); } }, [saved.length]);
   const qc = useQueryClient();
@@ -142,7 +143,7 @@ function DraftDialog({ a, onClose }: { a: Attachment; onClose: () => void }) {
       const planAgain = async () => { void qc.invalidateQueries({ queryKey: ["draft-options", a.id] }); const r = await plan.refetch(); if (r.error) throw r.error; return r.data!; };
       const r = mode === "live" && plan.data ? await cost.gate(planAgain, { kind: "draft_field_maps", scope, mode: "LIVE", draftAgain: true }, launch) : await launch();
       if (r === undefined) { toast.push({ tone: "info", text: COST_WORDS.cancelled }); return; }
-      toast.push({ tone: "ok", text: mode === "replay" ? "Saved result used: proposals compared with the library" : mode === "live" ? "AI draft started" : "Stub pass started" });
+      toast.push({ tone: "ok", text: mode === "replay" ? "Saved result used: proposals compared with the library" : "AI draft started" });
       void qc.invalidateQueries({ queryKey: ["combination"] }); onClose();
     } catch (e) {
       toast.push({ tone: "danger", text: (e as Error).message });
@@ -154,11 +155,10 @@ function DraftDialog({ a, onClose }: { a: Attachment; onClose: () => void }) {
   const l = opts.data?.ledger;
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()} title={`Draft the field map of ${a.edition}`} description="The AI reads the list of the form's fields (public official content only) and proposes, for every form field, whose fact fills it and which library field it is. People decide every proposal before anything reaches the draft."
-      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void start()} busy={busy} disabled={mode === "live" && plan.isFetching} data-draft-start data-mode={mode} data-options-loaded={opts.isSuccess || opts.isError ? "true" : "false"} data-start-ready={!busy && (opts.isSuccess || opts.isError) && !(mode === "live" && plan.isFetching) ? "true" : "false"}><Play /> {mode === "replay" ? "Use Saved (US$0)" : mode === "live" ? "Start Live" : "Run stub pass"}</Button></>}>
+      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void start()} busy={busy} disabled={(mode === "live" && (plan.isFetching || liveClosed)) || (mode === "replay" && !saved.length)} data-draft-start data-mode={mode} data-options-loaded={opts.isSuccess || opts.isError ? "true" : "false"} data-start-ready={!busy && (opts.isSuccess || opts.isError) && !(mode === "live" && plan.isFetching) ? "true" : "false"}><Play /> {mode === "replay" ? "Use Saved (US$0)" : "Start Live"}</Button></>}>
       <div className="space-y-3 text-sm">
-        <label className="flex items-start gap-2"><input type="radio" checked={mode === "live"} onChange={() => setMode("live")} className="mt-1" disabled={liveClosed} /><span>{liveClosed ? <><b>Live</b>: not open yet for a form approved in the product (only for files on the official list); run the stub pass.</> : <><b>Live</b> through the guarded route: stub pass first, then Claude Opus 5.5, up to US$5 for this run. {/* Break 3 m2: what is left is the smaller of the cap's and the wave's room: both are named. */}{l ? `Spent so far US$${l.committed_usd.toFixed(2)} of the US$${l.cap_usd.toFixed(2)} experiment cap${l.wave ? ` · ${l.wave.name}: US$${l.wave.spent_usd.toFixed(2)} of US$${l.wave.cap_usd.toFixed(2)}` : ""}; US$${Math.max(0, l.remaining_usd).toFixed(2)} left before a cap.` : ""} {opts.data && !opts.data.key_present ? <span className="text-text-danger">The API key file is missing: a live call will be refused.</span> : null}</>}</span></label>
+        <label className="flex items-start gap-2"><input type="radio" checked={mode === "live"} onChange={() => setMode("live")} className="mt-1" disabled={liveClosed} /><span>{liveClosed ? <><b>Live</b>: not open yet for a form approved in the product (only for files on the official list); use Saved when there is one.</> : <><b>Live</b> through the guarded route: stub pass first, then Claude Opus 5.5, up to US$5 for this run. {/* Break 3 m2: what is left is the smaller of the cap's and the wave's room: both are named. */}{l ? `Spent so far US$${l.committed_usd.toFixed(2)} of the US$${l.cap_usd.toFixed(2)} experiment cap${l.wave ? ` · ${l.wave.name}: US$${l.wave.spent_usd.toFixed(2)} of US$${l.wave.cap_usd.toFixed(2)}` : ""}; US$${Math.max(0, l.remaining_usd).toFixed(2)} left before a cap.` : ""} {opts.data && !opts.data.key_present ? <span className="text-text-danger">The API key file is missing: a live call will be refused.</span> : null}</>}</span></label>
         <label className="flex items-start gap-2"><input type="radio" checked={mode === "replay"} onChange={() => setMode("replay")} className="mt-1" disabled={!saved.length} /><span><b>Saved</b> (no model call, US$0): an earlier real answer for this same form, checked with today's rules before use and labelled wherever it is shown.{saved.length ? <Select className="mt-1" value={runFile} onChange={(e) => setRunFile(e.target.value)}>{saved.map((r) => <option key={r.file} value={r.file}>{r.run_id} · {r.at?.slice(0, 16)} · paid US${r.cost_usd?.toFixed(2)} then{r.recheckable ? " · re-checked first" : r.rechecked ? " · re-checked" : ""}</option>)}</Select> : <span className="block text-xs text-text-muted">No saved AI answer for this form yet.</span>}</span></label>
-        <label className="flex items-start gap-2"><input type="radio" checked={mode === "stub"} onChange={() => setMode("stub")} className="mt-1" /><span><b>Stub pass only</b>: proves the guarded path end to end without network or cost; produces no AI content.</span></label>
         {cost.dialog}
         <Field label="Job" hint="Inputs: this form's inventory only (allowlisted); expected answers and family values are screened out of the prompt."><code className="mono block rounded bg-surface px-2 py-1">{opts.data?.job_id}</code></Field>
       </div>
