@@ -27,6 +27,7 @@ Main: 50df70dc. AI spend: US$0 (no key; the ledger was unchanged).
 | #528 | 6eaf04ff (IMM 5532 removed) | **Pass**, re-confirmed | queue_tx 8/8 (13 forms, 5532 not replayed); saved maps 20/20 for IMM 5710, 1294, 0008; D1 25/25 |
 | #522 | 7551279f (main merged) | **Pass**, re-confirmed | sh2b 15/15, sh2 24/24, c119 70/70, c313 21/21 |
 | #500 | 07b688d8 (migration renamed after G4) | **Pass**, re-confirmed | migration order c64 → g4 → c1112; 52 migrations apply fresh; an old-name database upgrades cleanly (harmless leftover row); c1112 modes 44/44, prepare api 30/30, filing browser 17/17, screen02 slice 1 passed, g4 76/76 |
+| #526 C4.11 wiring | af3ea5db | **Pass**, Minors (the demo route words; Live greyed with no reason); Live parts not scored | draft_qd 57/70 and contract 31/35 with the switch closed (the failures need Live; draft_qd stopped at line 336 `worst_usd`); browser stops at ticking Live; acceptance 4/23 = main. QA-162 unchanged: #531's saved result lands 0 of 22 on head and main |
 
 Minors on #504 (follow-ups): `proposals.ts:117` workaround; rules and checks `used_in` still inside `library-sources.ts`; `impact.ts` `.catch(() => 0)` turns a database error into "0 open cases".
 Not tested: OPEN-only case counts (no data in another status).
