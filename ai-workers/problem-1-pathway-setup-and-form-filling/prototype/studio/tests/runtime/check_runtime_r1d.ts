@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { request } from "node:http";
 import { join } from "node:path";
 import { client, recorder } from "./api.ts";
-import { trialPassed } from "../../api/src/fill-case.ts";
+import { trialFor, readTrials } from "../../api/src/fill-trials.ts";
 
 const PORT = Number(process.argv[2] ?? 4430), DB = process.argv[3] ?? "xr_studio_runtime_r1";
 const { call, sql, until } = client(PORT, DB);
@@ -405,7 +405,8 @@ async function main() {
   ok("PR #12 review 1 pass-guard: the case's other PDF forms are still offered, and the real release is the latest again", ol.length > 0 && sql(`select id from config_release where combination_id='${vv}' order by version desc limit 1`) === rel.id, ol.map((x) => x.form));
   // P-65 (a), review M1: the fill trial verdict gates filing, per form.
   ok("review M1: a form whose fill trial passed is fileable; one with no trial record, or a verdict that the product's file does not pass, is not",
-    trialPassed("IMM 5257") && !trialPassed("IMM 9999") && !trialPassed("IMM 1344"), { imm1344: trialPassed("IMM 1344") });
+    // S2 (SA-1B-174): by the form edition the copy is made from (its official file's SHA-256), not the form number.
+    ((ed) => trialFor({ form_number: "IMM 5257", form_sha256: ed("IMM 5257"), entries: [] }).passed && !trialFor({ form_number: "IMM 9999", form_sha256: "a".repeat(64), entries: [] }).passed && !trialFor({ form_number: "IMM 1344", form_sha256: ed("IMM 1344"), entries: [] }).passed)((f: string) => readTrials().find((t) => t.form === f)!.form_sha256), { imm1344: trialFor({ form_number: "IMM 1344", form_sha256: readTrials().find((t) => t.form === "IMM 1344")!.form_sha256, entries: [] }) });
   process.exitCode = summary() ? 1 : 0;
 }
 main().catch((e) => { console.error(e); process.exitCode = 1; });

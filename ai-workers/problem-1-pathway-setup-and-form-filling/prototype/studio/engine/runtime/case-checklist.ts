@@ -12,8 +12,11 @@ import { MINOR } from "../../contracts/runtime.ts";
 import { lineCondition, lineHolders, type Known, type Person } from "../render.ts";
 import type { Snapshot } from "../snapshot.ts";
 import type { Participant } from "./case.ts";
+import { FEE_TABLE } from "./filings.ts";
 
-export const DERIVED_FOR = new Set(["vv.single"]);
+/** R2 (P-230 (7)): the combinations whose checklist is worked out are data (samples/fee-table.json "checklist": true),
+ *  so another combination is a data edit once its requirements are checked, never code. */
+export const DERIVED_FOR = new Set(Object.entries(FEE_TABLE.combinations).filter(([, c]) => c.checklist).map(([k]) => k));
 /** The fact a Visitor visa's ages are worked out on (the release's person.age_years uses the same reference). */
 export const APPLICATION_DATE = "case.application_date";
 
@@ -102,7 +105,7 @@ export function issuedWithin(rule: Pick<ValidityRule, "months">, issuedOn: strin
 /** Each person's checklist on this case, from the release's requirements and what is known about each person. `known`
  *  holds only answers without problems (the caller drops the others, B-M2), so a rejected answer never decides a line. */
 export function caseChecklist(s: Snapshot, combinationKey: string, people: Participant[], answers: Known, today: Date): CaseChecklist {
-  if (!DERIVED_FOR.has(combinationKey)) return { derived: false, combination: combinationKey, why: "The document checklist per person is worked out for the Visitor visa only so far; this combination's is not derived yet. Nothing is guessed." };
+  if (!DERIVED_FOR.has(combinationKey)) return { derived: false, combination: combinationKey, why: "The document checklist per person is not derived yet for this combination (it is worked out once its requirements are checked). Nothing is guessed." };
   // Break M1: an answer saved with spaces around it (" 1980-01-01 ") passes its checks, which trim; it is read trimmed.
   const known: Known = new Map([...answers].map(([k, v]) => [k, typeof v.value === "string" ? { ...v, value: v.value.trim() } : v]));
   const persons: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Person["role"], label: p.label, applies: p.applies }));

@@ -35,6 +35,20 @@ One owner per row and per shared file; never build another owner's rows. Under t
 ## M3 wave after the weekly-plan reset (founder, 2 Nov: "After the reset"; start 5 Nov 23:00 UTC)
 C7.7 deliverables list (take over #357, part 1) · C8.1 signed scans and entered ticks · C8.2 filing record · C6.5 document reader (passport by rules first, then OCR through the STANDARDS §1 gate; P-256 brings "Fill this from my documents" with it) · C7.5 independent AI review (paid runs within P-225). Held rows (P-251) stay held. The tech lead shapes each row's "Done when" before the reset.
 
+## Paid-AI rows: two parallel tracks (founder, 2 Nov: pick them up first on the new account, in parallel)
+| # | Area | Item | Done when (beyond the standard) | Source |
+|---|---|---|---|---|
+| PA | forms "ai-runs" + Mac paid runner + qa | **Track A, data:** one PR with every remaining job file (C3.4 sections, rules, answer lists; C4.7 PQR picks; C4.11 step 5; C9.1 impact; R-146 field maps of IMM 1294, 5646, 5710, 0008, 5406, 5562, 5532, 5604), each with usual and worst cost; runs one by one on the tech lead's Go; one result PR per row | each result contract-valid, quotes found in its inventory (tech lead), qa verdict on its PR (P-227), merged; spend within P-232 and R-146 | P-225, P-227, P-229 (4), P-232 |
+| PB | forms (one session per row) | **Track B, product gaps:** C3.4 AI step in the app · C4.7 picks screen (draft, accept, remove) · C4.11 live wiring · C11.8 progress, Stop, live cost (QA-98, QA-106, QA-111) · C11.15 Majors QA-101–103 (K11) | each row reaches Works in qa using Track A's Saved result through Live or Saved (P-227) | P-227, P-231 |
+
+## Shared services (P-258, minimal)
+| # | Area | Item | Done when (beyond the standard) | Source |
+|---|---|---|---|---|
+| SH3 | Lead, then runtime | **Resolver contract**: which fact applies to which person on which filing, today spread over engine/people.ts, engine/render.ts, api/src/fact-sources.ts, api/src/form-lines.ts | the contract and its tests are in `contracts/`, agreed before the M3 wave and sent to the product owner; the M3 rows call it | P-258 |
+| SH2 | forms (inside G-CORE) | **One where-used service** replacing the three computations (api/src/impact.ts, form-uses.ts, library-sources.ts) | one service, the three callers use it, their tests unchanged and green | P-258, P-253 |
+| SH4 | Lead (with L-SA13) | **Release and pin-per-filing contract** | contract agreed with the product owner's pin design | P-258, P-246 |
+| SH1 | after the M2 gate | **Merge the condition helpers**: `fieldsOf` ×5, two validators (engine/validate.ts, engine/eligibility-gates.ts), condition words in two places | one helper each; existing tests unchanged and green | P-258 |
+
 ## Finish the partials (P-231; shaped 2 Nov from qa's "Missing" notes on main; founder: "Yes, shape them")
 | # | Area | Item | Done when (beyond the standard) | Source |
 |---|---|---|---|---|
@@ -55,7 +69,7 @@ L-SA3 (C1 ready to file) · X3's guarded Add and L-SA11 (C2, P-252) · G5 (P-248
 | S1 | runtime | **Signature default**: `prisma/schema.prisma:532 signature @default(NONE)`; `engine/runtime/readiness.ts:118` treats NONE as no signature | new form lines default to needing a signature; a test proves an unset line is never filed unsigned | SA-1B-102 rule 3 |
 | S2 | forms | **Trial per edition**: `api/src/fill-case.ts:82-85` reads `evidence-lane/E1/<form>/STATUS.md` | the trial is recorded per edition and map version; a new edition shows "Checked copy, not for filing" until its own trial passes | SA-1B-174 |
 | S3 | runtime | **No hidden today**: `engine/render.ts:167 opts.today ?? new Date()`, `engine/runtime/filings.ts:26,134` | minimum age and the biometrics exemption use the case's application or target filing date, else today, stated on screen, as `case-checklist.ts:112-115` does | SA-1B-194 |
-| S4 | runtime | **Startable at case opening**: `api/src/runtime.ts:79-86` against `engine/programs.ts:48-77` | opening a case on a Not-ready row is refused with the missing items listed (separate from P-248, release) | SA-1B-90 |
+| S4 | runtime | **BUILT, approved, PR pending** (branch `claude/friendly-newton-urm088`, 81e799bf; Handover on #484) — **Startable at case opening**: `api/src/runtime.ts:79-86` against `engine/programs.ts:48-77` | opening a case on a Not-ready row is refused with the missing items listed (separate from P-248, release) | SA-1B-90 |
 | S5 | Lead | **Withdrawn items out**: B12 starter to-dos (SA1B-D118); B4 and `domain/MASTERS.md` "warning lead times 90/30" (SA-1B-23) | each removed with a pointer to what withdrew it | SA1B-D118, SA-1B-23 |
 | S6 | evidence | **Scale numbers**: `evidence/scale-100/check_catalogue_scale.json` 111/393 against PRODUCT.md §7 105/371 | one set of numbers; note that 1,023 ms cached is over the spec's 300 ms read budget | SA-01B v2.1 |
 | S7 | screens | **Zod**: the `fail()` chains in `api/src/studio.ts`; `any` in `web/src/components/conditions.tsx:9` | validation by schema; no `any` there | STANDARDS |

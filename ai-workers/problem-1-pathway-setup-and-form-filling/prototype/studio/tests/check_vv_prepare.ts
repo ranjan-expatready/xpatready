@@ -28,7 +28,7 @@ ok("C6.12 age (fail): no date, or one not written as a date, is unknown (null), 
 // VV-R15: biometrics none under 14 or over 79 ("over 79" read as 80 or older, FQ-7).
 const BIO: FeeRule = { key: "biometrics", label: "Biometrics fee", perPersonCents: 85_00, familyMaxCents: 170_00, familyFrom: 2, source: BIOMETRICS_EXEMPT_SOURCE, exempt: { underAge: 14, overAge: 79, source: BIOMETRICS_EXEMPT_SOURCE } };
 ok("C6.12 VV-R15: 14 and 79 give biometrics", "pays" in ageCheck(BIO, 14) && (ageCheck(BIO, 14) as { pays: boolean }).pays && (ageCheck(BIO, 79) as { pays: boolean }).pays);
-ok("C6.12 VV-R15 (fail): 13 and 80 do not, each with IRCC's words", [13, 80].every((a) => { const c = ageCheck(BIO, a) as { pays: boolean; why?: string }; return c.pays === false && /IRCC: "a(n applicant| child) (over|under) the age of/.test(c.why ?? ""); }));
+ok("C6.12 VV-R15 (fail): 13 and 80 do not, each with IRCC's words", [13, 80].every((a) => { const c = ageCheck(BIO, a) as { pays: boolean; why?: string }; return c.pays === false && /: "a child under the age of 14; an applicant over the age of 79"/.test(c.why ?? "") /* the source's own words (R2 review r1 m6) */; }));
 ok("C6.12 G15: no date of birth yet waits for it", "waits" in ageCheck(BIO, null));
 
 // Fees with ages: a family of four (40, 38, 10, 15) pays visa CAD 400, biometrics CAD 170 for three.
