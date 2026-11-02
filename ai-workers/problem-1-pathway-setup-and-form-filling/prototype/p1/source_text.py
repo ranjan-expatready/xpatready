@@ -10,7 +10,8 @@ Each output is p1/inventory/<stem>.text.inventory.json: {"summary": {file, sha25
 The guard admits it only while its source hash matches the official manifest.
 
   .tools/solution-1-prototype/.venv/bin/python -I \
-    ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p1/source_text.py
+    ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p1/source_text.py [<path under official-sources/ircc> xfa|pdf|html]
+With a path and a kind, only that one file is derived (D3: checklists/imm5484e.pdf xfa, the Visitor visa checklist).
 """
 import hashlib
 import json
@@ -93,7 +94,8 @@ def html_text(path):
 
 def main():
     manifest = {i["path"]: i for i in json.loads((OFFICIAL / "manifest.json").read_text())["items"]}
-    for rel, kind in FILES:
+    files = [(sys.argv[1], sys.argv[2])] if len(sys.argv) == 3 else FILES
+    for rel, kind in files:
         src = OFFICIAL / rel
         h = hashlib.sha256(src.read_bytes()).hexdigest()
         if manifest[rel]["sha256"] != h:
