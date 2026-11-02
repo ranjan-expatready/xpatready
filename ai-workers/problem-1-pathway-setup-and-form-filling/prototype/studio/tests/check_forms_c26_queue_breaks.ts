@@ -47,6 +47,13 @@ async function main() {
   r = await call("POST", `/review/proposals/undo/${batchY}`, {});
   const r2 = await call("POST", `/review/proposals/undo/${batchX}`, {});
   ok("C2.6 M1 pass: undoing the line first, then the type, takes both back", r.status === 201 && r2.status === 201 && sql(`select count(*) from document_type where document_type_key='${feeKey}'`) === "0" && sql(`select count(*) from document_requirement where combination_id='${vv}' and lineage_key like 'fee_payment%'`) === "0", { line: r.status, type: r2.status, words: r2.words });
+  // Merge with C3.6 (#573, review m1 on the merge): the guard skips the lines its own batch wrote, so a line accepted
+  // together with its new type is still taken back, type and all, by one Undo.
+  r = await decide([feeLine], "accept");
+  const batchZ = r.body?.batchId;
+  ok("setup: the line accepted alone lands its new type in the same decision", r.status === 201 && sql(`select status from proposal_item where id='${feeType}'`) === "accepted" && sql(`select batch_id from proposal_item where id='${feeType}'`) === batchZ, { status: r.status, words: r.words });
+  r = await call("POST", `/review/proposals/undo/${batchZ}`, {});
+  ok("C2.6 M1 pass (merge): one Undo of a line accepted with its new type takes both back", r.status === 201 && sql(`select count(*) from document_type where document_type_key like 'fee_payment%'`) === "0" && sql(`select count(*) from document_requirement where combination_id='${vv}' and lineage_key like 'fee_payment%'`) === "0" && sql(`select status from proposal_item where id in ('${feeLine}','${feeType}')`).split("\n").every((s) => s === "waiting"), { status: r.status, words: r.words });
 
   // ---------------------------------------------------------------- M2: an edit naming a type the library lacks
   const mar = line("marriage_certificate_copy"), n0 = reqs();
