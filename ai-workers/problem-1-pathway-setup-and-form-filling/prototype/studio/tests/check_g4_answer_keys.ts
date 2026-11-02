@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { buildSnapshot, type Snapshot } from "../engine/snapshot.ts";
-import { changeProblem, checkExpected, checkFamily, fingerprintOf, NO_SCORING, runFieldMap, runRuleSet, runState, signProblem, type Family, type MapExpected } from "../engine/answer-keys.ts";
+import { changeProblem, checkExpected, checkFamily, fingerprintOf, keyBoxes, NO_SCORING, runFieldMap, runRuleSet, runState, signProblem, type Family, type MapExpected } from "../engine/answer-keys.ts";
 import type { Inventory } from "../engine/form-values.ts";
 import { client, recorder } from "./runtime/api.ts";
 import { AMENDED, e1Keys, P, sample } from "./g4_e1_key.ts";
@@ -72,6 +72,19 @@ const sMap = clone(s); if (sig) (sMap.field_maps as typeof map[]).find((m) => m.
 const exSig = sig ? checkExpected(sMap, "field_map", FORM, family, { people: { mother: { [sig]: "EXAMPLE" } } }, inv) : null;
 ok("C5.7 BR-2 fail (challenge M5 c): a box a person fills (a signature) cannot be given a value", !!exSig && exSig.errors.some((e) => /filled by a person/.test(e.message)), { sig, errors: exSig?.errors });
 ok("C5.7 BR-2 fail: a scoring key is refused in words (no scoring tables yet)", checkExpected(s, "scoring", "crs", family, {}).errors[0]?.message === NO_SCORING);
+
+// §4 Expected editor (challenge M5 b, STANDARDS §3.2): the boxes it offers, from the map and the form, never a run
+const MS = `${P}Page1[0].MaritalStatus[0].SectionA[0].MaritalStatus[0]`;
+const kb = keyBoxes(s, FORM, inv)!, mappedN = (map.entries as { outcome?: string }[]).filter((e) => e.outcome === "mapped").length;
+const invAt = new Map(inv.fields.map((f, i) => [f.data_path, i]));
+const ms = kb.boxes.find((b) => b.data_path === MS);
+ok(`C5.7 §4: the Expected editor offers every mapped IMM 5257 box (${kb.boxes.length}) in the form's order, each with its caption, fact and whose`, kb.boxes.length === mappedN && kb.boxes.every((b, i) => i === 0 || (invAt.get(b.data_path) ?? 1e9) > (invAt.get(kb.boxes[i - 1].data_path) ?? -1)) && kb.boxes.every((b) => b.caption && b.whose) && kb.edition === map.form_edition, { n: kb.boxes.length, mappedN });
+ok("C5.7 §4 (pick, don't type): a choice box carries the form's own options, label beside code (marital status: Married = 01)", !!ms?.options.some((o) => o.code === "01" && /Married/.test(o.label)) && kb.boxes.find((b) => /AliasNameIndicator\[0\]$/.test(b.data_path))?.options.map((o) => o.code).sort().join() === "N,Y", ms?.options.slice(0, 3));
+ok("C5.7 §4: a text box has no options (typed), and none of the map's mapped boxes is one a person fills", kb.boxes.find((b) => b.fact === "person.family_name" && b.whose === "form_subject")?.options.length === 0 && kb.boxes.every((b) => !b.by_a_person));
+const sMap2 = clone(s); if (sig) (sMap2.field_maps as typeof map[]).find((m) => m.form_number === FORM)!.entries.push({ data_path: sig, fact: "person.family_name", person: "form_subject", caption: "Signature", outcome: "mapped" } as typeof map.entries[number]);
+const kbSig = sig ? keyBoxes(sMap2, FORM, inv)!.boxes.find((b) => b.data_path === sig) : undefined;
+ok("C5.7 §4 fail (challenge M5 c): a signature box mapped by mistake is flagged as filled by a person, so the editor leaves it out", !!kbSig?.by_a_person && /signature/.test(kbSig.by_a_person_why ?? ""), kbSig);
+ok("C5.7 §4 fail: a form the combination has no PDF map of gives no boxes", keyBoxes(s, "IMM 0000", inv) === null);
 
 // BR-3, BR-4: the run
 const pass = runFieldMap(s, family, FORM, inv, key);
@@ -158,6 +171,17 @@ const list0 = (await call("GET", `/combinations/${vv}/answer-keys`, undefined, A
 ok("C5.7 API: the combination lists its testable items (the IMM 5257 map and the eligibility rules)", list0.items?.some((i: { item_ref: string }) => i.item_ref === FORM) && list0.items?.some((i: { item_kind: string }) => i.item_kind === "rule_set"), list0.items);
 const kBad = await call("POST", `/combinations/${vv}/answer-keys`, { family_id: fid, item_kind: "field_map", item_ref: FORM, expected: { people: { mother: { "form1[0].Nowhere[0]": "X" } } } }, AUTHOR);
 ok("C5.7 API fail: a key with a box the map does not have is refused on the field (400)", kBad.status === 400 && kBad.body.errors?.[0]?.field === "expected.people.mother.form1[0].Nowhere[0]", kBad.body);
+// §4 Expected editor through the API: the boxes endpoint and the field picker (reads); a signature box in a save is 400.
+const bx = await call("GET", `/combinations/${vv}/answer-keys/boxes?form=${encodeURIComponent(FORM)}`, undefined, APPROVER);
+ok("C5.7 §4 API: GET …/answer-keys/boxes?form=IMM 5257 gives the engine's boxes in the form's order, a choice box with its options", bx.status === 200 && bx.body.boxes.length === kb.boxes.length && bx.body.boxes.map((b: { data_path: string }) => b.data_path).join() === kb.boxes.map((b) => b.data_path).join() && bx.body.boxes.find((b: { data_path: string }) => b.data_path === MS)?.options.some((o: { code: string }) => o.code === "01"), { status: bx.status, n: bx.body?.boxes?.length });
+ok("C5.7 §4 API fail: a case person cannot read the boxes (403); a form not in the combination is 404; no form is 400 on the field", (await call("GET", `/combinations/${vv}/answer-keys/boxes?form=IMM%205257`, undefined, OFFICER)).status === 403 && (await call("GET", `/combinations/${vv}/answer-keys/boxes?form=IMM%200000`, undefined, AUTHOR)).status === 404 && (await call("GET", `/combinations/${vv}/answer-keys/boxes`, undefined, AUTHOR)).body.errors?.[0]?.field === "form");
+const lf = await call("GET", "/answer-keys/fields", undefined, AUTHOR);
+const lfMs = lf.body?.fields?.find((f: { id: string }) => f.id === "person.marital_status");
+ok("C5.7 BR-1 API: GET /answer-keys/fields lists the library's fields with their type and, for a choice field, its answer list's values", lf.status === 200 && lf.body.fields.length >= 50 && lfMs?.values?.length > 3 && lf.body.fields.find((f: { id: string }) => f.id === "person.family_name")?.values === null, lfMs);
+ok("C5.7 BR-1 API fail: a case person cannot read the field picker (403)", (await call("GET", "/answer-keys/fields", undefined, OFFICER)).status === 403);
+const SIG = `${P}Page3[0].Signature[0].TextField2[0]`;
+const kSig = await call("POST", `/combinations/${vv}/answer-keys`, { family_id: fid, item_kind: "field_map", item_ref: FORM, expected: { people: { mother: { [SIG]: "EXAMPLE MOTHER" } } } }, EXPERT);
+ok("C5.7 §4 API fail (challenge M5 c): saving a value for the applicant's signature box is refused on that box (400): a person signs it", kSig.status === 400 && kSig.body.errors?.[0]?.field === `expected.people.mother.${SIG}` && /filled by a person/.test(kSig.body.errors[0].message) && !bx.body.boxes.some((b: { data_path: string }) => b.data_path === SIG), kSig.body);
 const k = await call("POST", `/combinations/${vv}/answer-keys`, { family_id: fid, item_kind: "field_map", item_ref: FORM, expected: key }, EXPERT);
 ok("C5.7 API: the expert enters the expected values; the key is Draft, Sample, Not run", k.status === 201 && k.body.state === "DRAFT" && /Sample/.test(k.body.sample) && k.body.run.state === "NOT_RUN", k.body?.run ?? k.body);
 const kid: string = k.body.id;

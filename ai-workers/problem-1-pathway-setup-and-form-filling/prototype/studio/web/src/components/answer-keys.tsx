@@ -1,11 +1,13 @@
 // G4 (forms lane, C5.7; concept screens/G4-answer-keys/concept.md §4–§5): the combination's Tests tab, slice 1. Each
 // testable item (a form's field map, the eligibility rules) with each family's key: state (Draft · Signed), the last
 // run (Passed · Failed n of m · Not run, and why), Run, and the expert's Sign; a key opens its lines, failures first.
-// Writing families and expected values (the Expected editor, challenge M5 b) is slice 2. US$0: no AI here.
+// Slice 2 (answer-key-editors.tsx): the Families section, "Write expected values" per item and "Change" per key (the
+// Expected editor, challenge M5 b). US$0: no AI here.
 import * as React from "react";
-import type { AnswerKeysView, KeyView, RunState } from "../../../contracts/answer-keys";
+import type { AnswerKeysView, FamilyView, KeyView, RunState, TestItem } from "../../../contracts/answer-keys";
 import { api, useAction, useApi, useSessionView } from "@/lib/api";
 import { Button, Notice, Pill, Table } from "@/components/ui/controls";
+import { FamiliesSection, KeyEditor, WriteKey } from "@/components/answer-key-editors";
 
 const RUN_WORDS: Record<RunState, { label: string; tone: string }> = { PASSED: { label: "Passed", tone: "ok" }, FAILED: { label: "Failed", tone: "danger" }, NOT_RUN: { label: "Not run", tone: "neutral" } };
 
@@ -32,8 +34,8 @@ function KeyLines({ id }: { id: string }) {
   );
 }
 
-function KeyRow({ k, combinationId }: { k: KeyView; combinationId: string }) {
-  const [open, setOpen] = React.useState(false);
+function KeyRow({ k, combinationId, item, family }: { k: KeyView; combinationId: string; item: TestItem; family: FamilyView | undefined }) {
+  const [open, setOpen] = React.useState(false), [editing, setEditing] = React.useState(false);
   const { session } = useSessionView();
   const expert = (session.data?.actor?.duties ?? []).includes("sme");
   const inv = [["combination", combinationId, "answer-keys"], ["answer-key", k.id]];
@@ -48,6 +50,7 @@ function KeyRow({ k, combinationId }: { k: KeyView; combinationId: string }) {
         <Pill tone={words.tone} title={k.run.why}>{words.label}{k.run.state === "FAILED" && last ? ` (${last.failed} of ${last.passed + last.failed})` : ""}</Pill>
         <span className="text-xs text-text-muted">{k.run.why}</span>
         <span className="ml-auto flex gap-2">
+          <Button size="sm" variant="ghost" disabled={!family} title={!family ? "Loading the family…" : undefined} onClick={() => setEditing(true)}>Change</Button>
           <Button size="sm" variant="outline" busy={run.isPending} onClick={() => run.mutate(undefined)}>Run</Button>
           {k.state === "DRAFT" ? <Button size="sm" variant="secondary" disabled={!expert} title={!expert ? "Only the immigration expert signs expected values." : undefined} busy={sign.isPending} onClick={() => sign.mutate(undefined)}>Sign</Button> : null}
           <Button size="sm" variant="ghost" aria-expanded={open} onClick={() => setOpen((x) => !x)}>{open ? "Hide lines" : "Lines"}</Button>
@@ -55,6 +58,7 @@ function KeyRow({ k, combinationId }: { k: KeyView; combinationId: string }) {
       </div>
       {k.change_reason && k.state === "DRAFT" ? <p className="mt-1 text-xs text-text-muted">Back to Draft: {k.change_reason}</p> : null}
       {open ? <div className="mt-3 overflow-x-auto"><KeyLines id={k.id} /></div> : null}
+      {editing && family ? <KeyEditor combinationId={combinationId} item={item} family={family} existing={k} close={() => setEditing(false)} /> : null}
     </li>
   );
 }
@@ -62,20 +66,24 @@ function KeyRow({ k, combinationId }: { k: KeyView; combinationId: string }) {
 /** The Tests tab: items × families (BR-2), each key's state and last run (BR-5), Run (BR-3, BR-4), Sign (BR-7). */
 export function TestsTab({ id }: { id: string }) {
   const v = useApi<AnswerKeysView>(["combination", id, "answer-keys"], `/combinations/${id}/answer-keys`);
+  const fams = useApi<{ families: FamilyView[] }>(["answer-key-families"], "/answer-keys/families");
+  const families = fams.data?.families ?? [];
   if (v.isLoading) return <p className="text-sm text-text-muted">Loading the tests…</p>;
   if (v.isError || !v.data) return <Notice tone="danger" title="The tests could not be loaded">Try again in a moment.</Notice>;
   const d = v.data;
   return (
     <div className="space-y-4">
       <Notice tone="info" title="Answer-key tests">Made-up families, never a client. Expected values are Sample until the immigration expert signs them (P-240). A run fills the item for the family the way a case does and compares every value.</Notice>
+      <FamiliesSection combinationId={id} keys={d.keys} />
       {!d.items.length ? <Notice tone="warn" title="Nothing to test yet">This combination has no form field map and no eligibility rules yet.</Notice> : null}
       {d.items.map((it) => {
         const keys = d.keys.filter((k) => k.item_kind === it.item_kind && k.item_ref === it.item_ref);
         return (
           <section key={`${it.item_kind}|${it.item_ref}`} aria-label={it.label} className="space-y-2">
             <h3 className="text-sm font-semibold">{it.label}{it.edition ? <span className="ml-2 font-normal text-text-muted">{it.edition}</span> : null}</h3>
-            {keys.length ? <ul className="space-y-2">{keys.map((k) => <KeyRow key={k.id} k={k} combinationId={id} />)}</ul>
+            {keys.length ? <ul className="space-y-2">{keys.map((k) => <KeyRow key={k.id} k={k} combinationId={id} item={it} family={families.find((f) => f.id === k.family.id)} />)}</ul>
               : <p className="text-sm text-text-muted">No test family has expected values for this item yet. Without a passing signed test it cannot be released (G2).</p>}
+            <WriteKey combinationId={id} item={it} families={families} keys={keys} />
           </section>
         );
       })}

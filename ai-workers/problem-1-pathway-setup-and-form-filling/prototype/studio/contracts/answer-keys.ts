@@ -46,3 +46,10 @@ export type KeyView = {
 export type TestItem = { item_kind: "field_map" | "rule_set"; item_ref: string; label: string; edition: string | null };
 export type AnswerKeysView = { combination: { id: string; label: string }; sample: string; scoring: string; items: TestItem[]; keys: KeyView[] };
 export type RunView = { id: string; result: "PASSED" | "FAILED"; passed: number; failed: number; lines: Line[]; key: KeyView };
+/** GET /combinations/:id/answer-keys/boxes?form=…: the Expected editor's boxes (engine/answer-keys.ts KeyBox), in the
+ *  form's order. A choice box carries the form's own options; `by_a_person` boxes (signature, oath) take no value. */
+export type KeyBox = { data_path: string; caption: string; meaning: string; fact: string | null; whose: string; row: number | null; options: { code: string; label: string }[]; by_a_person: boolean; by_a_person_why: string | null };
+export type BoxesView = { form: string; edition: string; boxes: KeyBox[] };
+/** GET /answer-keys/fields: the family editor's field picker (a choice field's answer list values; null otherwise). */
+export type LibraryField = { id: string; label: string; value_type: string; values: { key: string; label: string }[] | null };
+export type FieldsView = { fields: LibraryField[] };

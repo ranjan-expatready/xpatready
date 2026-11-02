@@ -3,15 +3,15 @@
 // a run reads the combination's draft through the pure runner (engine/answer-keys.ts) and stores every line; the
 // immigration expert signs the expected values. Registered in features/answer-keys.ts (P-214). No model call (US$0).
 // Audit lines name the family key, the item and the counts: never a family's values (SA-1B-296 field 9).
-import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Put } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Put, Query } from "@nestjs/common";
 import { readFileSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 import { Prisma } from "@prisma/client";
 import type { z } from "zod";
 import { FamilyBody, KeyCreateBody, KeyUpdateBody, SignBody } from "../../contracts/answer-keys.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { buildSnapshot, type Snapshot } from "../../engine/snapshot.ts";
-import { blank, changeProblem, checkExpected, checkFamily, fingerprintOf, ITEM_KINDS, NO_SCORING, runFieldMap, runRuleSet, runState, SAMPLE_WORDS, signProblem, unclean, type Family, type FieldError, type ItemKind, type MapExpected, type RuleExpected } from "../../engine/answer-keys.ts";
+import { buildSnapshot, effective, type Snapshot } from "../../engine/snapshot.ts";
+import { blank, changeProblem, checkExpected, checkFamily, fingerprintOf, ITEM_KINDS, keyBoxes, NO_SCORING, runFieldMap, runRuleSet, runState, SAMPLE_WORDS, signProblem, unclean, type Family, type FieldError, type ItemKind, type MapExpected, type RuleExpected } from "../../engine/answer-keys.ts";
 import type { Inventory } from "../../engine/form-values.ts";
 import { ACTORS, Audit, Db, fail, need, readerOf, SOLUTION, Workspace, type Actor } from "./core.ts";
 
@@ -117,6 +117,29 @@ export class AnswerKeys {
     if (!done) conflict("Someone saved this family a moment ago. Reload their version, then make your change again.");
     await this.audit.log(f.workspaceId, actor.id, "updated", "answer-key family", f.familyKey, `${actor.name} changed the test family "${f.familyKey}"${signed ? `; ${signed} signed key${signed === 1 ? "" : "s"} back to Draft` : ""}`, reason ? { reason } : undefined);
     return familyView((await this.family(id)) as FamilyRow);
+  }
+
+  /** The family editor's field picker (BR-1): the library's fields a fact may name (none retired), with the value type
+   *  and, for a choice field, its answer list's values. /library/fields names no answer list, so it is not reused. */
+  async libraryFields() {
+    const workspaceId = await this.ws.id();
+    const [rows, lists] = await Promise.all([this.db.canonicalField.findMany({ where: { workspaceId } }), this.db.answerList.findMany({ where: { workspaceId }, include: { values: { orderBy: { sortOrder: "asc" } } } })]);
+    const values = new Map(effective(lists, (l) => l.answerListKey, "draft").map((l) => [l.answerListKey, l.values.map((v) => ({ key: v.valueKey, label: v.label }))]));
+    return {
+      fields: effective(rows, (r) => r.canonicalFieldKey, "draft").sort((a, b) => a.canonicalFieldKey.localeCompare(b.canonicalFieldKey))
+        .map((f) => ({ id: f.canonicalFieldKey, label: (f.labelChecked && f.label) || f.meaning, value_type: f.valueType, values: f.answerListKey ? values.get(f.answerListKey) ?? [] : null })),
+    };
+  }
+
+  /** Concept §4 (challenge M5 b): the Expected editor's boxes of one form's map in this combination's draft, read
+   *  through the engine (keyBoxes); never a run's output. */
+  async boxes(combinationId: string, form: unknown) {
+    const c = await this.combination(combinationId);
+    const ref = typeof form === "string" ? form.trim() : "";
+    if (!ref) invalid([{ field: "form", message: "Name the form (?form=IMM 5257)." }]);
+    const s = await this.draft(c.workspaceId, c.id);
+    if (!pdfHas(s, ref)) fail(`${ref} has no PDF field map in this combination.`, HttpStatus.NOT_FOUND);
+    return keyBoxes(s, ref, this.inventory(s, ref))!;
   }
 
   // ------------------------------------------------------------------------------------------------ keys (BR-2, BR-7)
@@ -228,6 +251,8 @@ export class AnswerKeysController {
   @Get("answer-keys/families") families(@Headers("x-actor") a: H) { readerOf(a); return this.k.families(); }
   @Post("answer-keys/families") createFamily(@Headers("x-actor") a: H, @Body() b: unknown) { return this.k.createFamily(readerOf(a), b); }
   @Put("answer-keys/families/:id") updateFamily(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.k.updateFamily(readerOf(a), id, b); }
+  @Get("answer-keys/fields") fields(@Headers("x-actor") a: H) { readerOf(a); return this.k.libraryFields(); }
+  @Get("combinations/:id/answer-keys/boxes") boxes(@Headers("x-actor") a: H, @Param("id") id: string, @Query("form") form: unknown) { readerOf(a); return this.k.boxes(id, form); }
   @Get("combinations/:id/answer-keys") list(@Headers("x-actor") a: H, @Param("id") id: string) { readerOf(a); return this.k.list(id); }
   @Post("combinations/:id/answer-keys") create(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.k.create(readerOf(a), id, b); }
   @Get("answer-keys/:id") get(@Headers("x-actor") a: H, @Param("id") id: string) { readerOf(a); return this.k.get(id); }
