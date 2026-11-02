@@ -118,7 +118,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     step("C11.11: Where it is used lists the LMIA combination and its release", /With an LMIA/.test(dt) && /release/.test(dt), dt.slice(dt.indexOf("Where it is used"), dt.indexOf("Where it is used") + 200));
     step("C3.12: the drawer's Definition says the field map of the current edition, with what it means", /Field map: \d+ of \d+ form fields decided/.test(dt) && /from an earlier release, not decided yet/.test(dt) && !/on To review/.test(dt.slice(dt.indexOf("Field map:"), dt.indexOf("Field map:") + 400)), dt.slice(0, 400));
     step("C3.12 K3 pass: the drawer says IRCC's month and where it is read (IMM 1295: Published 2023-09, printed on the form)", /Published 2023-09 \(printed on the form\)/.test(dt), dt.slice(0, 300));
-    step("C3.12 K3 pass: the file's own date is kept apart and said not to be IRCC's (file saved 2026-06-04)", /Not IRCC's date: file saved 2026-06-04/.test(dt), dt.slice(0, 400));
+    step("C3.12 K3 pass: the file's own date is kept apart and said not to be IRCC's (file saved 2026-06-04)", /File saved 2026-06-04: the PDF's own date, not when IRCC published it/.test(dt), dt.slice(0, 400));
     step("C3.12 K3 fail: the drawer never presents the PDF file's date as the published date", !/Published 2026-06-04/.test(dt));
     await axe("row drawer"); await shot("07-drawer");
     await p.keyboard.press("Escape"); await sleep(300);

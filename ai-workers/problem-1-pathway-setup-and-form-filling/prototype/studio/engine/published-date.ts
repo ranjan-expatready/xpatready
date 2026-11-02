@@ -22,12 +22,23 @@ export function publishedOf(v: string | null | undefined): { published: string |
   return { published: d, published_state: d ? "date" : v === null || v === undefined ? "unread" : v === "?" ? "unreadable" : "none" };
 }
 
-/** K3 (QA-148): IRCC's published month for an edition and where it was read: printed on the form, else canada.ca's page. */
+/** K3 (QA-148): IRCC's published month for a form or checklist edition and where it was read. The month printed on the
+ *  form first (the same order as fileMonth: a page edit never re-dates an old file); canada.ca's "Last updated" month only
+ *  when the label prints none (break m3: a label whose printed date is not a real month never borrows a page's date, which
+ *  may belong to another file). A guide has none (break M1: its page's "Date modified" is not an edition's publication). */
 export type PublishedFrom = "printed" | "canada_page";
-export function ircPublished(e: { canadaUpdated?: string | null; editionLabel: string }): { published: string | null; published_from: PublishedFrom | null; published_state: "date" | "none" } {
-  const month = fileMonth(e), lb = /\((\d{2})-(\d{4})\)\s*$/.exec(e.editionLabel);
-  const from: PublishedFrom | null = !month ? null : lb && `${lb[2]}-${lb[1]}` === month ? "printed" : "canada_page";
-  return { published: month, published_from: from, published_state: month ? "date" : "none" };
+export type IrcPublishedState = "date" | "none" | "not_a_month";
+export function ircPublished(e: { canadaUpdated?: string | null; editionLabel: string }, kind: "form" | "guide" | "checklist" = "form"): { published: string | null; published_from: PublishedFrom | null; published_state: IrcPublishedState } {
+  if (kind === "guide") return { published: null, published_from: null, published_state: "none" };
+  const lb = /\((\d{2})-(\d{4})\)\s*$/.exec(e.editionLabel);
+  if (lb) {
+    // Break m2: a printed month IRCC could print (01-12, 1990 to next year; fileMonth's "not after this month" is for index
+    // dating, not for saying what is printed).
+    const y = Number(lb[2]), mo = Number(lb[1]);
+    return mo >= 1 && mo <= 12 && y >= 1990 && y <= new Date().getUTCFullYear() + 1 ? { published: `${lb[2]}-${lb[1]}`, published_from: "printed", published_state: "date" } : { published: null, published_from: null, published_state: "not_a_month" };
+  }
+  const page = fileMonth({ editionLabel: e.editionLabel, canadaUpdated: e.canadaUpdated });
+  return page ? { published: page, published_from: "canada_page", published_state: "date" } : { published: null, published_from: null, published_state: "none" };
 }
 
 /** The file's own date (#313), kept apart from IRCC's: the same words as before, under its own names. */
