@@ -110,7 +110,7 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
   // until then the buttons say why.
   const lockable = latest && latest.status === "GENERATED" && !latest.locked && !latest.out_of_date && latest.file_ok;
   // P-145: a copy of a form filed Online is never filed; C-9 (P-144): a barcode form is filed only after its validated copy is read back.
-  const why = !f.for_filing ? `${f.form} is filed Online: this PDF is a copy, not for filing.` : !f.trial_passed ? `${f.form}: this form's filling is not proven yet, so this copy is for checking only, not for filing.` : !f.readiness.ready ? notReady(f.readiness.missing.length)
+  const why = !f.for_filing ? `${f.form} is filed Online: this PDF is a copy, not for filing.` : !f.trial_passed ? (f.trial_why ?? `${f.form}: this form's filling is not proven yet, so this copy is for checking only, not for filing.`) : !f.readiness.ready ? notReady(f.readiness.missing.length)
     : f.needs_validate && !latest?.validated?.current ? `Validate ${f.form} in Adobe, save it and read the validated copy back before it is filed.` : null;
   const canLock = lockable && !why;
   const lockBlocked = lockable && why ? why : null;

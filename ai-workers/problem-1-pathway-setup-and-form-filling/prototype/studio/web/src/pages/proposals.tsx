@@ -86,7 +86,9 @@ export function ProposalsPage() {
                       bulk={b === "ready" && readyOk.length ? (
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-sm text-text-muted" aria-live="polite">{picked.size ? `${plural(picked.size, "item")} chosen` : `${readyOk.length} can be accepted together`}{readyOk.length > max ? ` · at most ${max} at a time` : ""}</span>
-                          <Button size="sm" variant="secondary" onClick={() => setPicked(new Set(readyOk.slice(0, max).map((p) => p.id)))}>Choose {readyOk.length > max ? `the first ${max}` : `all ${readyOk.length}`}</Button>
+                          <Button size="sm" variant="secondary" data-choose-all onClick={() => setPicked(new Set(readyOk.slice(0, max).map((p) => p.id)))}>Choose {readyOk.length > max ? `the first ${max}` : `all ${readyOk.length}`}</Button>
+                          {/* C11.14 (P-121): Deselect all within the group, as Choose all selects within it. */}
+                          <Button size="sm" variant="ghost" disabled={!picked.size} onClick={(e) => { const band = e.currentTarget.closest("[data-band]"); setPicked(new Set()); requestAnimationFrame(() => band?.querySelector<HTMLButtonElement>("[data-choose-all]")?.focus()); }}>Clear the choice</Button>
                           <Button size="sm" busy={decideMany.isPending} disabled={!picked.size} onClick={() => decideMany.mutate([...picked])}><Check className="size-4" aria-hidden />Accept {picked.size ? plural(picked.size, "item") : ""}</Button>
                         </div>) : null} />
                   ))}
@@ -145,7 +147,7 @@ function UndoBar({ batchId, n, until, onGone }: { batchId: string; n: number; un
 function Reading({ label, r, rules = false }: { label: string; r: QueueProposal["readings"]["draft"]; rules?: boolean }) {
   return (
     <div className="rounded-lg border border-border bg-surface px-3 py-2">
-      <p className="text-xs font-medium text-text-muted">{label}{r ? ` · ${rules ? "rules, US$0" : r.from === "live" ? "live" : "saved run"}` : ""}</p>
+      <p className="text-xs font-medium text-text-muted">{label}{r ? ` · ${rules ? "rules, US$0" : r.from === "live" ? "Live" : "Saved"}` : ""}</p>
       <p className="mt-0.5 text-sm">{r ? r.text || "No words given." : "No reading."}</p>
     </div>
   );
