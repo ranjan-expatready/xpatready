@@ -41,3 +41,13 @@ Sound: no Blocker, Critical or Major found in the batch. **M2 +2 Works: C11.15 a
 
 ## Batch 5 (4031894d → c155ebf3: #584 C3.13 rest)
 * **C3.13 → Works.** `acceptance/C3.13.test.ts` 23/23 on Visitor visa configured (8/23 before #584, per qa-batch's #567). `check_c313_words_filters.ts` 32/32 and `check_c313_search_browser.cjs` 12/12. No bugs. Note for the tech lead: #567 also edits the C3.13 row (scored down before #584), so whichever records PR merges second keeps this score.
+
+## Batch 6 (c155ebf3 → 2dd05e62: #573 C3.6 part not held)
+* **C3.6 → Works, held part excluded (P-265)** (status "Works" so `progress.sh` counts it; the held part is named in the row). `acceptance/C3.6.test.ts` 18/18 on `wp.family` (was 17/18), `check_forms_c36_requirement_type.ts` 34/34, `_browser.cjs` 13/13. Held: guarded Add with AI co-pilot (P-252, P-253). No bugs.
+
+## Batch 7 (2dd05e62 → d98041e7: #572 QA-165 part 1)
+* **C7.2 stays Partial.** QA-165's "validated without validation" half is fixed through the endpoint, not only the reader: `tests/qa/check_qa_c72_validated_upload.ts` (new, 4/4) uploads the generated copy unchanged and with bytes appended (both 422, with the words to press Validate) and a copy whose own flag says Yes (validated). `check_qa165_form_validation.ts` 28/28.
+* `acceptance/C7.2.test.ts` 1/10: 6 steps need the Mac's Adobe run (J6 step 6), and the barcode report (P-46) is not given. **Pack debt:** #572 changed the pack's "never ready" step to upload a *simulated validated* copy while it still expects "never ready", so the step contradicts itself; its P-171 (1) step runs on a fresh case whose copy writes 0 values, so it proves nothing either way. *Suggestion (Needed for the proof, Scaffolding):* the runtime lane restores the un-validated upload in that step and runs P-171 (1) on a case with confirmed facts.
+* QA-165 stays open for the 3 Yes/No boxes and 6 of 46 empty mandatory fields.
+
+**M2 count:** this PR's file says 44/60 (`tools/progress.sh`); main's says 41. With #567 (C3.12, C11.12, C5.7) it should be **48/60** once both merge, keeping C3.13 Works.
