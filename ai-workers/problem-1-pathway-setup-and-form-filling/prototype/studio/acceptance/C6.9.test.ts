@@ -34,7 +34,9 @@ await main("C6.9", "Staff eligibility page (Visitor visa gates, stand-in SI-1)",
   await answer(c.id, c.caseSubject, "case.funds_available_cad", "8000");
   r = await assess(OFFICER, "Facts added");
   res = vvResult(r.body);
-  ok("C6.9-7 fail: a conviction answered yes gives Not eligible, naming the failed gate in plain words", res?.outcome === "NOT_ELIGIBLE" && (res?.failedGates ?? []).includes("vv.no_convictions"), res);
+  // P-230 (1) (BACKLOG R4): the background gate's "when not met" is needs_review (S7), so a Yes is never a hard Not
+  // eligible: Possibly eligible, the gate named for the representative's review (the outcome set is unchanged).
+  ok("C6.9-7 fail: a conviction answered yes is not met and goes to the representative's review: Possibly eligible, never Not eligible (P-230 (1))", res?.outcome === "POSSIBLY_ELIGIBLE" && ((res as Result & { reviewGates?: string[] })?.reviewGates ?? []).includes("vv.no_convictions") && !(res?.failedGates ?? []).includes("vv.no_convictions") && res!.gates.find((g) => g.key === "vv.no_convictions")?.state === "not_met", res);
   await answer(c.id, P, "person.criminal_history", false);
   const first = a?.id;
   const firstJson = sql(`select result_json::text from assessment where id='${first}'`);

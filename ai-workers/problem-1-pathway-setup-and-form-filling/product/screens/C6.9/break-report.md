@@ -65,3 +65,31 @@ Setup: isolated copy `brk391` on :4437 (never :4400), fresh database (`prisma mi
 - **Migration:** deploys on a fresh database. The trigger refuses UPDATE. Deleting a `runtime_case` cascades to `assessment` and `assessment_review`.
 - **Demo reset:** `POST /api/demo/reset {"confirm":"RESET"}` with gates and 9 eligibility releases present removed everything (`remaining_rows: 0`, preserved files unchanged). `demo/load six` then gives 6 combinations with `eligibility` null.
 - **Not applicable to part 1:** no UI, so keyboard, 1024 px, 200 % zoom, uploads and planted-instruction PDFs do not apply. The budgets do not apply either (GET 25–90 ms).
+
+# Part 2 (fd26c492): eligibility runs (BR-7…BR-14, BR-17, R4)
+Setup: isolated `brk_c69` on :4431, fresh database; `check_c69_runs.ts` **60/60**. I then released VV releases 3 and 4 as user-A/C/B with extra Sample gates (`case.funds_available_cad gte 8000`, an `or`, `not`, a row fact `person.education_institution`). Live AI off, US$0. Not reachable: a pin change (`pack_work_pin` is insert-only, ADOPT not built), so BR-13's "release changed" branch was not attacked. **Verdict: 1 Major, 4 Minor. No Blocker.**
+
+**M1 (Major). Concurrent runs skip BR-14: many MANUAL rows, no reason.** Repro: fresh case on release 2, 40 `fetch` POSTs at once with `{person}` and no reason (`Promise.all`). Gives **40 × 201**, 40 `assessment` rows `run_type MANUAL, reason NULL`, and 40 audit rows "(first run)". Expected: one 201 and 39 × 400 on `reason`. Each later run should be RERUN and need a reason. Cause: `count` then `create` with no lock or unique key (`api/src/assessments.ts:66-76`). `addRow` takes `pg_advisory_xact_lock` for the same pattern (`runtime.ts:319`). With 12 or 30 `curl`s the race did not show, so the suite cannot catch it.
+
+**m1. A missing fact inside a gate that is Not met is not listed.** The pure adapter, gate `and[exists person.passport_number, eq person.criminal_history false]`, passport unanswered, history `true`, gives `NOT_ELIGIBLE` with `missingInputs: []`. With `whenNotMet: needs_review` it gives `POSSIBLY_ELIGIBLE` with `missingInputs: []` and the gate in `reviewGates`. Expected (P-229 (3), BR-10): "the missing facts are listed too". Cause: `missing` is filled only for `not_answered` gates (`engine/runtime/eligibility.ts:57,69`).
+
+**m2. A gate on a row fact reads only the first live row, and the trace is lost.** Release 4 has gate `exists person.education_institution`. I added two education rows and answered only row 2: the gate is Not answered and `missingInputs` names a fact that is answered. Every row-fact input has `answerId: null`, because `ids` skips row answers (`assessments.ts:42`). Expected: either the release check refuses a gate on a per-row fact, or the gate reads any row. Removing row 1 did mark the earlier run out of date (`was "Sample Uni 1" → now "Sample Uni 2"`), which is correct.
+
+**m3. A person marked not travelling after a run still has a current-looking verdict.** I ran the spouse, then `PATCH …/people/:sp {applies:false}`. `GET ?person=sp` returns `MANUAL out_of_date:false`, outcome unchanged, and nothing says they no longer travel. A new run is refused 400 (correct). BR-7 says travellers only, and BR-13 does not cover a change to the person. For part 3: the card would show a verdict for a non-traveller.
+
+**m4. The reason is counted in UTF-16 units, and an "empty" reason is accepted.** 150 emoji → 201. 151 emoji → 400 "Keep the reason to 300 characters". Reasons `"."`, `"—"` and five combining marks only → **201** as a reason on a rerun. Part 1 treats a line with no letter or digit as empty and counts code points. `contracts/eligibility.ts:27` does neither.
+
+**Notes (not counted).**
+- `rulesAsOfByProgram` is the UTC date: release 4 was approved at 23:12 on 1 Nov (UTC−5) and reads `2026-11-02`. This is choice 3 and documented.
+- A gate `not exists f` on a missing `f` reads Not answered, by BR-9's rewrite.
+- An expired passport (`2001-01-01`) passes "answered", because a validity check is on the Not built line.
+- The list is not paged: 449 runs give 1.04 MB in 50–65 ms, within §9.
+
+**What held.**
+- **Roles:** user-P and user-Q get 403 on POST, list and one, including for an unknown id. user-A, user-B and user-C get 403. user-S gets 404 on POST, list and one. A missing or unknown actor gets 401. user-R and user-O are allowed.
+- **Ids:** a non-UUID, the zero UUID and a quote-injected id give 404. An upper-case case id or aid works.
+- **Bodies:** each of these gives 400 on its field: an empty body, `[]`, `{}`, a person that is `null`, a number or an array, a reason that is a number, NUL, U+202E, a lone surrogate, and a reason of spaces only. A non-JSON body gives 400 and a 6 MB body 413.
+- **People:** the case subject is refused 400 (BR-7). So are a person from another case, a person id padded with a space, and a person id in upper case. An unknown, empty, repeated or case-subject `?person=` gives 400. Extra keys (`runType`, `createdBy`, `results`) are ignored, so the run is still RERUN by user-O.
+- **Facts:** "8000", 8000 and " 8000 " all read 8000, and re-answering the same number leaves a run up to date. "8000.00", "8,000", "7999.5", "abc" and "-1e9" fail their own check and count as missing, never Met. `case.*` facts read as `about:"case"`. Confirm section never marks a run out of date. A changed, added or invalidated value names `was` and `now`.
+- **Outcomes:** an `or` with one branch true is Met while the other branch is missing. `not` and needs_review combinations give the expected result. A needs_review gate not met plus a not_eligible gate not met gives NOT_ELIGIBLE with both lists. A release with no gates gives 409.
+- **No score and no AI:** no `ai_batch` row was written, nothing returned a 500 (0 errors in `api.log`), and audit rows carry no answer value.
