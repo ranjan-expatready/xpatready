@@ -1263,6 +1263,7 @@ model Case {
   filings      Filing[]
   assessments  Assessment[] // C6.9
   filingItems  FilingItem[]
+  checklistLines ChecklistLine[]
   enteredSections EnteredSection[]
 
   /// C6.11 break M2, M3: a reference and an idempotency key are unique within a firm, so one firm neither collides with
@@ -1405,6 +1406,8 @@ model AnswerSubject {
   answers      ClientCanonicalAnswer[]
   records      ClientFactRecord[]
   groupAnswers ClientGroupAnswer[]
+  checklistLines ChecklistLine[]
+  documents    CaseDocument[]
 
   @@map("answer_subject")
 }
@@ -1800,6 +1803,62 @@ model PersonPreference {
 
   @@id([actor, key])
   @@map("person_preference")
+}
+
+/// C6.4 storage slice (M3-C; SI-14): one row per filing person x document on a case, written when the derived checklist
+/// says the person needs it; it keeps its id and state when the answers take the line away and bring it back.
+/// state: not_requested · requested · received · being_checked · approved · rejected · not_applicable (a check in SQL).
+model ChecklistLine {
+  id           String    @id @default(uuid()) @db.Uuid
+  workspaceId  String    @map("workspace_id") @db.Uuid
+  caseId       String    @map("case_id") @db.Uuid
+  subjectId    String    @map("subject_id") @db.Uuid
+  /// The document type key (one line per person and document type, as the derived checklist merges them).
+  documentType String    @map("document_type")
+  /// The requirement lineage the line was first written for (the derived line's lineage).
+  lineage      String
+  state        String    @default("not_requested")
+  /// Why the line is Not applicable (required for that state, a check in SQL).
+  stateReason  String?   @map("state_reason")
+  stateBy      String?   @map("state_by")
+  stateAt      DateTime? @map("state_at") @db.Timestamptz
+  version      Int       @default(1)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  case      Case           @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  subject   AnswerSubject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  documents CaseDocument[]
+
+  @@unique([caseId, subjectId, documentType])
+  @@map("checklist_line")
+}
+
+/// C6.4 storage slice: an uploaded document, owned by the person (not the case). One current file per person and
+/// document type (partial unique index case_document_one_current, in SQL); a new upload keeps the old one as history.
+model CaseDocument {
+  id              String    @id @default(uuid()) @db.Uuid
+  workspaceId     String    @map("workspace_id") @db.Uuid
+  subjectId       String    @map("subject_id") @db.Uuid
+  documentType    String    @map("document_type")
+  /// The checklist line it was uploaded on (kept for history; null if that line is gone).
+  checklistLineId String?   @map("checklist_line_id") @db.Uuid
+  fileName        String    @map("file_name")
+  /// application/pdf · image/jpeg · image/png (a check in SQL), from the file's own bytes.
+  mediaType       String    @map("media_type")
+  sizeBytes       Int       @map("size_bytes")
+  sha256          String    @db.VarChar(64)
+  /// Relative to the working files of the workspace (var/workspaces/<ws>/).
+  path            String
+  current         Boolean   @default(true)
+  uploadedBy      String    @map("uploaded_by")
+  uploadedAt      DateTime  @default(now()) @map("uploaded_at") @db.Timestamptz
+  supersededAt    DateTime? @map("superseded_at") @db.Timestamptz
+
+  subject AnswerSubject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  line    ChecklistLine? @relation(fields: [checklistLineId], references: [id], onDelete: SetNull)
+
+  @@index([subjectId, documentType])
+  @@map("case_document")
 }
 
 /// C6.9 (M3-D, SI-1; team AG-03 §7 Assessment): one eligibility run for one person on a case, frozen. result_json holds
