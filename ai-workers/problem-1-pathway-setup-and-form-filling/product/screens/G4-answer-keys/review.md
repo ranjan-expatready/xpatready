@@ -83,3 +83,157 @@ I read `git diff ea426ad4..3a3cf527 -- prototype/studio`. That holds the fixes (
 No Blocker or Major is open.
 
 **Verdict: Approve** (commit 3a3cf527)
+
+## Re-review 43487860
+I read `git diff 3a3cf527..43487860`: four small fixes from the Devin review, each with a fail line.
+- **`cannot_tell`.** `runFieldMap` (`engine/answer-keys.ts:232-234`) now gives a failing "cannot tell" line, naming the missing facts. It no longer compares boxes. The shape it reads, `applies: "cannot_tell"` with `missing`, matches `engine/render.ts:76,160`. A form that cannot be settled is never a pass, whether or not the key expects it. Correct.
+- **Object keys.** `valueProblem` now also checks object keys (invisible characters, at most 60 characters; array indexes are skipped). Correct.
+- **Inventory path.** `inventoryOrNull` resolves the path, then requires it to be inside `SOLUTION` and to end `.json` (`api/src/answer-keys.ts:66-69`). A `../` path gets 422 (check line). `fill.ts writeForm` still reads its path without this guard, but that code predates G4 and is outside this PR.
+- **Demo scope.** It now counts families, keys and runs (`api/src/demo.ts:431-432`). All three tables have `workspace_id`.
+- **Ran it** on a fresh copy on :4451. `check_g4_answer_keys` passed **76/76**. Then, on another fresh copy, `check_d1_reset_to_six` passed **25/25**.
+- **Still open, Minor:** the check is not rerunnable on the same copy. Its last block now also points `inventory_file` at `/tmp/outside.json` and still leaves `vv.single` retired. Restore both at the end.
+
+No Blocker or Major is open.
+
+**Verdict: Approve** (commit 43487860)
+
+## Part 2 review 860bf1a9
+Scope: the combination's Tests tab (list, Run, Sign, lines), the Families section and family editor, and the Expected editor. That is local branch `g4-part2-local`, `git diff 43487860..860bf1a9`, not pushed. Judged against concept §3–§5, challenge M5 (b), STANDARDS and EXPERIENCE. The concept has no board and still needs the tech lead's approval (P-223 (4)). Journey test: `journey-test-reviewer-2026-11-02-part2.md`, **8.5/10**.
+
+**Verdict: Block.** Two Majors, both with small fixes; no Blocker.
+
+### What I ran (`forms_g4r` :4451, `forms_g4rb` :4452; never :4400; live AI off; US$0)
+- **`vite build`:** built.
+- **Web `tsc --noEmit`:** exit 0.
+- **`check_g4_answer_keys`:** **87/87**, twice on the same copy, so part 1's "not rerunnable" Minor is fixed.
+- **`check_g4_tests_tab_browser`:** **37/37**, twice on fresh copies.
+- **`graph.mjs`:** G1, G2, G4 and G5 are 0. No G3 or G6 entry names an answer-key route or module.
+- **My own walk,** in Playwright Chromium as user-A, user-C and user-B:
+  - on a fresh copy;
+  - with the keyboard;
+  - at 400, 720 (200 %) and 1024 px;
+  - axe on six more states: no violation.
+- **New reads:** officer and client get 403 and nobody gets 401 on `GET /answer-keys/fields` and `GET …/answer-keys/boxes`.
+
+### Concept fit
+- **§4 Tests tab:** present.
+  - Families show the Sample badge, the people count and Edit.
+  - Each item shows each key's Draft · Sample / Signed state, Passed / Failed (n of m) / Not run with its reason, and Run.
+  - The lines table puts failures first and gives the filler's reason.
+  - Sign is for the expert only (greyed with its reason for the author). Change asks for a reason on a signed key.
+- **Expected editor (challenge M5 b):** met. It offers every mapped box in the form's order (161 on IMM 5257), with caption, meaning and whose fact it reads. A choice box picks from the form's own options, label beside code. Empty means "stays blank". There is no "fill from a run", and boxes a person fills are left out.
+- **§5 copy:** the empty state and the Sample tooltip match word for word.
+- **Deviations:** "Box (caption)" is headed "Value", and "Not written" appears only as the family picker. Neither breaks a rule.
+- **Part 1 Minor 3 is closed.** `contracts/answer-keys.ts` (zod) is parsed by the API, and the web uses its types (STANDARDS §6 [M] met).
+
+### Issues
+1. **Major (Must): no read-only state for people who may not act.**
+   - Breaks EXPERIENCE §4 [M] "read-only (… no permission)" and §2.8 [M] "Prevent errors before messaging them".
+   - The approver sees Write a family, Edit, Change, Run and Write expected values all enabled, and each is refused only after the click. The expert can type a whole family and then gets "does not hold the author duty".
+   - Where: `web/src/components/answer-keys.tsx:53-54`; `answer-key-editors.tsx:167, 174, 280`.
+   - Build-notes deviation 6 records this, but an [M] line cannot be waived.
+   - Fix: grey each action with its reason by duty (author for families; author or expert for keys and Run), as Sign already does through `useSessionView`. Keep the server's sentence for a race. Add a fail line per role to the browser check.
+2. **Major (Must): a 409 cannot be recovered in the app** (EXPERIENCE §4 [M] conflict state).
+   - Two tabs change the same key. After the second tab's 409, Cancel and reopen Change: it still shows the old values, and Save gives 409 again, every time. Only a browser reload gets out of it.
+   - Cause: `useSave` (`answer-key-editors.tsx:34-37`) invalidates nothing on error, and both editors are seeded from cached lists (`answer-keys.tsx:61`, `answer-key-editors.tsx:176`).
+   - The build notes say "closing and reopening loads the latest": it does not.
+   - Fix: on 409, invalidate the list and the families (or use the 409 body's `current`), plus a two-tab fail line.
+3. **Minor (Should): rule-set lines show codes.** They show `NOT_ELIGIBLE`, `not_met`, `not_answered` and "missing: person.passport_number" (`answer-keys.tsx:28-30`). Map them with `OUTCOME_WORDS` and `GATE_WORDS` and the field's label.
+4. **Minor (Should): the rule-set editor says "what the form should hold"** (`answer-key-editors.tsx:219`).
+5. **Minor (Should): the toast and the pill count different things.** The toast counts passes ("failed, 1 of 6 values"); the pill counts failures ("Failed (5 of 6)"). `answer-keys.tsx:42` vs `:50`.
+6. **Minor (Should): wrong stale reason after a family change.** It reads "Not run since the expected values changed"; it should name the family change (concept §5 stale copy).
+7. **Minor (Should): the field picker shows library keys.** The options read "person.family_name" (`answer-key-editors.tsx:130`; EXPERIENCE §5). Show the label and keep the key in the hover text.
+8. **Minor (Should): gaps in the tests (D16).**
+   - No browser line covers the rule-set editor or its run.
+   - The UI's "box a person fills is not offered" line cannot fail on IMM 5257, which maps no such box.
+   - The API's zod messages leak "Invalid input: expected nonoptional…" (not reachable from the screen).
+   - `libraryFields` says "none retired", but `effective(…, "draft")` can return retired rows (`engine/snapshot.ts:24`).
+9. **Minor (Should), carried from part 1 Minor 2:** the 16 amended IMM 5257 boxes carry no mark in the editor or the lines. An expert signing in the UI cannot tell them from E1's checked values.
+
+### Standards [M] (part 2)
+| Line | Result |
+|---|---|
+| Pick, don't type | Met (options, roles, sections and fields picked; free text only for text boxes) |
+| Contract first (zod) | Met |
+| Authorisation on the server | Met (new reads 403/401) |
+| Problem Details on the field | Met (errors on their fields in both editors) |
+| No request per row | Met (one list read; lines only when opened) |
+| axe on every state | Met |
+| Read-only and conflict states | **Not met:** Issues 1 and 2 |
+| Plain words | Partly met: Issues 3, 7 |
+| A rule's test fails when removed | Mostly met: Issue 8 |
+
+### D1–D20 (1–5)
+| # | Score | Evidence |
+|---|---|---|
+| D1 | 4 | §4 and M5 (b) built; small deviations from the concept |
+| D2 | 4 | 409 and duplicates refused |
+| D3 | 5 | Editor and run share `captionsOf` and `formOptions` |
+| D4 | 4 | Signature boxes excluded |
+| D5 | 3 | The 409 loop (Issue 2) |
+| D6 | 4 | Signed by and on, Back to Draft with its reason |
+| D7 | n/a | No AI |
+| D8 | 5 | Trail, one row of tabs |
+| D9 | 4 | |
+| D10 | 3 | Issues 3, 4, 5, 7 |
+| D11 | 3 | Issues 1, 2, 6 |
+| D12 | 4 | |
+| D13 | 5 | axe clean, keyboard, 400 px and 200 % zoom |
+| D14 | 4 | Team components |
+| D15 | 5 | Reads under 200 ms, run 336 ms |
+| D16 | 4 | Issue 8 |
+| D17 | simulated only | |
+| D18 | 3 | Issue 9 |
+| D19 | n/a | Until G2 |
+| D20 | simulated only | |
+
+### Could not check
+- A real screen reader, or an intended user's unaided walk.
+- Mac Chrome.
+- The PR body: it is not pushed yet.
+
+**Verdict: Block** (commit 860bf1a9). To fix: Issue 1 (read-only state by duty) and Issue 2 (409 recovery), each with a fail line. Minors 3–9 are to fix or list in the PR.
+
+## Re-review 10f90396
+I read `git diff 860bf1a9..10f90396`: the fixes are in `b64928f7`, and the records and screenshots are in `10f90396`.
+
+### What I ran
+- **Builds:** web rebuilt (`vite build`).
+- **`check_g4_answer_keys`:** **88/88** twice on one fresh copy (:4451).
+- **`check_g4_tests_tab_browser`:** **46/46** on two fresh copies (:4452).
+- **My own walk,** Playwright Chromium on a fresh :4451, as user-A, user-B and user-C.
+
+### My Majors
+- **Major 1, read-only by duty: fixed.**
+  - The approver gets the notice "Read-only for you" with who may do what.
+  - Write a family, Edit, Change, Run, Sign and Write expected values are greyed with `aria-disabled`, each with its reason as the hover text and as the button's description.
+  - The greyed controls stay focusable. A forced click or Enter does nothing, so no refusal toast.
+  - The approver still opens Lines.
+  - The expert has only Write a family and Edit greyed ("Only the configuration author writes test families."). The author has only Sign greyed.
+  - axe finds no violation on the approver's view.
+  - The check has a fail-proof line per role.
+- **Major 2, recovery after a 409: fixed.**
+  - Two tabs change the rule-set key. The second gets "Not saved … Load their version". The button loads the other tab's value ("Possibly eligible"), and the next save goes through.
+  - Cancel and reopen in the stale tab now shows the latest value.
+  - Both editors read the latest version when they open (`refetchOnMount: "always"`). The form keeps the version it opened with, so a refetch never overwrites the other person's change.
+  - The check has lines for a family and for a key.
+
+### Breaker items
+- **P2-M1, signed while being changed: fixed.** I opened Change, the expert signed in another tab, then I saved. The reason field appeared; with a reason the save went through and the key went back to Draft.
+- **P2-M3, Facts table too wide for the dialog:** the check's 48-fact line holds at 1440 and 1024 px.
+
+### My Minors
+- **3:** fixed. Rule-set lines read "Not eligible / Possibly eligible".
+- **4:** fixed. The rule-set editor's copy no longer talks about the form.
+- **5:** fixed. The toast says "failed, 1 of 1 values wrong" and the pill "Failed (1 of 1)", so both count failures.
+- **7:** fixed. The field picker shows the label, with the key underneath and on hover.
+- **8:** partly fixed. Retired fields are now filtered out.
+- **6, 9 and the rest of 8:** left, with reasons in `build-notes.md`. I accept them as Minors.
+- **Server change (break m6):** a signed key saved with the same values keeps its signature, and the check has a line for it. Correct: the reason check still comes first.
+
+### New Minor (Should)
+The 409 notice says the way out twice: "Reload their version, then make your change again. Load their version (your changes here are dropped), then make your change again." Keep one sentence.
+
+No Blocker or Major is open. The journey score rises from 8.5 to about 9: the feedback-and-state and error-recovery criteria now hold.
+
+**Verdict: Approve** (commit 10f90396)
