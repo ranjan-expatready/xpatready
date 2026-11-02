@@ -42,3 +42,30 @@ D1 5 (both P-226 halves plus kept results, tested) · D2 5 (nothing doubled; 409
 A real screen reader; an intended user's unaided walk (D17/D20 stay with the founder); CI on GitHub machines (I re-ran locally only); `check_qa145_clean_clone.ts` and `count-any.mjs` (not re-run).
 
 **Verdict: Block** on 123a1c5a. To fix: (1) move the failure-midway test off the tracked `samples/wave1.json` rename (and the `p2/jobs` plant) to a failure injected in the isolated database; (2) after a Reset to the six failure, refresh the page data and show the error inside the dialog.
+
+## Round 2: head 96b9cf3b (reviewer, 2 Nov)
+Run on a fresh private export of 96b9cf3b (`git archive`, web rebuilt), isolated copy on :4437 only, with a fresh database for each suite. Live AI off, US$0.
+Suites: `check_d1_reset_to_six.ts` 25/25 · `check_d1_reset_to_six_browser.cjs` 25/25 · `check_s7_reset.ts` 4/4 · `check_s7_load.ts` 21/21 · `check_s7_dialogs_browser.cjs` 12/12 · `check_qa145_clean_clone.ts` 8/8.
+
+**Round 1 Majors: both closed.**
+1. The failure-midway test no longer renames `wave1.json`. It refuses the 3rd combination with a trigger in the copy's own database and drops the trigger in `finally`. The fail-guard uses `mkdtemp`. After the run `samples/wave1.json` is present, and nothing is written in tracked folders.
+2. Re-walked J4 in the browser with my own trigger. The dialog stays open with a danger notice ("Reset to the six stopped …", role=alert), RESET still typed, and the button reads "Try again". There is no toast over it. All data is refreshed: the catalogue behind went from Retail 21 to the new state. Reopening clears the notice; a retry gives exactly 6. The 500 message is now in plain words, and the database error is only in the server log.
+
+**Breaker M1 race, re-tried** (fixture loaded; Reset to the six, then a blank Reset 1, 5, 10, 12 and 15 s later): the blank Reset got 409 "A sample load or Reset to the six is running…" each time, and Reset to the six got 201. Each run ended with 6 combinations, 1 workspace and 0 rows of a deleted workspace in any table. In the reverse order (blank Reset first, then Reset to the six and Load sample at +0.2 s), both got 409.
+
+**Orphan sweep (`demo.ts` `sweepOrphans`), checked for safety:**
+* **Which tables:** the column list gives 63 base tables with `workspace_id`, all `uuid NOT NULL`, with no views. So `NOT EXISTS` can never match a NULL or global row. Tables without a workspace id (`person_preference`, `answer_list_value`, `extension_code_try`, `filing_applicant`, `_prisma_migrations`) are never touched. The ledger and saved AI results are files, and `preserved_unchanged` was true.
+* **A live workspace:** I added a second workspace with a built-in `person_role` and a `gov_form_def`. Both survived a blank Reset and a Reset to the six. The demo's 6 built-in roles are recreated by `ws.id()` after the sweep.
+* **A request that writes during a reset:** `ws.id()` upserts a new workspace, and its rows are not deleted.
+* **Delete order:** I planted rows under a workspace id that does not exist: `program_def` with a `combination` that restricts its deletion, plus a `gov_form_def`. The next reset removed all three. The longest restrict chains in the schema are 3 tables (`pack_work_pin → config_release → pack_version`, `runtime_case → combination → program_def`), so 4 passes are enough. The workspace-less children cascade.
+* **Bounded and fast:** one pass is 63 deletes, 44 ms in total (largest 3.4 ms) on the six. There are at most 4 passes. A blank Reset took 0.27 s.
+* **Its only weakness:** `catch { blocked.push(t) }` swallows every error, so a table still blocked after 4 passes, or a non-foreign-key error, leaves its rows with no trace.
+
+**New minors (Should):**
+* Log any tables left after the last pass (`console.warn` or a field in the reset result), so "0 rows remain" can never be silently untrue again.
+* The ghost-row test covers only `gov_form_def` and `audit_event`. One restrict pair (`program_def` + `combination`) would prove the multi-pass order.
+* The blank Reset now refuses with 409 during a load. P-226 says "Reset itself is unchanged", so this one deliberate change should be named in the PR for the Lead.
+
+**Carried minor:** still no progress during the about 20 s run. **Journey score, round 2: 9.5/10** (plain words 1, feedback and state ½, error recovery 1; the rest as before).
+
+**Verdict: Approve** on 96b9cf3b. No open Blocker or Major.
