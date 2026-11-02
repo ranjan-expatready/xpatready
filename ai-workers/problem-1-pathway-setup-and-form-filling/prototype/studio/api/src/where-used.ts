@@ -117,3 +117,18 @@ export async function itemReleases(db: Client, workspaceId: string, kind: "field
 export async function openCases(db: Client, combinationIds: string[]): Promise<number> {
   return combinationIds.length ? db.case.count({ where: { combinationId: { in: combinationIds }, status: "OPEN" } }) : 0;
 }
+
+/** The open cases on these combinations, per pinned release (each case stays on the release it was opened on; every case
+ *  pins at open, runtime.ts). A case with no pin yet is counted with `release: null`. */
+export async function openCasesByRelease(db: Client, combinationIds: string[]): Promise<{ combinationId: string; release: number | null; cases: number }[]> {
+  if (!combinationIds.length) return [];
+  const [cases, pins] = await Promise.all([
+    db.case.findMany({ where: { combinationId: { in: combinationIds }, status: "OPEN" }, select: { id: true, combinationId: true } }),
+    db.packWorkPin.findMany({ where: { combinationId: { in: combinationIds } }, select: { caseId: true, configReleaseId: true } }),
+  ]);
+  const versions = new Map((await db.configRelease.findMany({ where: { id: { in: [...new Set(pins.map((p) => p.configReleaseId))] } }, select: { id: true, version: true } })).map((r) => [r.id, r.version]));
+  const releaseOf = new Map(pins.map((p) => [p.caseId, versions.get(p.configReleaseId) ?? null]));
+  const counts = new Map<string, { combinationId: string; release: number | null; cases: number }>();
+  for (const c of cases) { const release = releaseOf.get(c.id) ?? null, k = `${c.combinationId}|${release}`; const row = counts.get(k) ?? { combinationId: c.combinationId, release, cases: 0 }; row.cases++; counts.set(k, row); }
+  return [...counts.values()].sort((a, b) => a.combinationId.localeCompare(b.combinationId) || (a.release ?? 0) - (b.release ?? 0));
+}
