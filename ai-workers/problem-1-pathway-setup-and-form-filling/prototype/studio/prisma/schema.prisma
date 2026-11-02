@@ -1266,6 +1266,8 @@ model Case {
   filingItems  FilingItem[]
   checklistLines ChecklistLine[]
   enteredSections EnteredSection[]
+  signSteps   SignStep[]   // C8.1
+  signedScans SignedScan[] // C8.1
 
   /// C6.11 break M2, M3: a reference and an idempotency key are unique within a firm, so one firm neither collides with
   /// nor learns of another firm's cases.
@@ -1559,6 +1561,7 @@ model FormInstance {
   case      Case            @relation(fields: [caseId], references: [id], onDelete: Cascade)
   snapshot  AnswerSnapshot  @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
   validated ValidatedCopy[]
+  signSteps SignStep[] // C8.1: the print step names the copy printed
 
   @@unique([caseId, idempotencyKey])
   @@index([caseId, formNumber, subjectId, createdAt])
@@ -1787,6 +1790,8 @@ model FilingItem {
   case    Case             @relation(fields: [caseId], references: [id], onDelete: Cascade)
   filing  Filing           @relation(fields: [filingId], references: [id], onDelete: Cascade)
   entered EnteredSection[]
+  signSteps   SignStep[]   // C8.1
+  signedScans SignedScan[] // C8.1
 
   @@unique([filingId, kind, itemKey, subjectId])
   @@index([caseId])
@@ -2061,3 +2066,47 @@ model SourceEntry {
   @@map("source_entry")
 }
 
+
+/// C8.1 (M3-F; M3-CONTRACT C8.1): one step done on a form item signed by hand and scanned (print · signed · scan_received
+/// · uploaded_to_ircc), with who and when; "print" names the generated copy printed. One current row per item and step
+/// (partial unique index in the migration); superseded_at is for C9.2 (steps re-opened after a fact changes).
+model SignStep {
+  id           String    @id @default(uuid()) @db.Uuid
+  workspaceId  String    @map("workspace_id") @db.Uuid
+  caseId       String    @map("case_id") @db.Uuid
+  itemId       String    @map("item_id") @db.Uuid
+  key          String
+  copyId       String?   @map("copy_id") @db.Uuid
+  doneBy       String    @map("done_by")
+  doneAt       DateTime  @default(now()) @map("done_at") @db.Timestamptz
+  supersededAt DateTime? @map("superseded_at") @db.Timestamptz
+
+  case Case          @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  item FilingItem    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  copy FormInstance? @relation(fields: [copyId], references: [id], onDelete: Restrict)
+
+  @@index([itemId])
+  @@map("sign_step")
+}
+
+/// C8.1: a signed scan of a form item; append-only (a trigger refuses UPDATE). The file is in var/, named by the row id,
+/// checked by its sha256 before it is read (as C6.4's case_document; stand-in SI-14).
+model SignedScan {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  caseId      String   @map("case_id") @db.Uuid
+  itemId      String   @map("item_id") @db.Uuid
+  fileName    String   @map("file_name")
+  mediaType   String   @map("media_type")
+  sizeBytes   Int      @map("size_bytes")
+  sha256      String   @db.VarChar(64)
+  path        String
+  uploadedBy  String   @map("uploaded_by")
+  uploadedAt  DateTime @default(now()) @map("uploaded_at") @db.Timestamptz
+
+  case Case       @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  item FilingItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@map("signed_scan")
+}
