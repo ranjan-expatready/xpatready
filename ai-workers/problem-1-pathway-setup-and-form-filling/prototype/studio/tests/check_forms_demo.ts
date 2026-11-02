@@ -71,7 +71,9 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
     await p.goto(`http://localhost:${PORT}/c/${vv}/sources`); await p.waitForURL(/\/forms$/);
     await p.locator("[data-pending]").first().waitFor(); // S5 fix 1: an attached form not set up yet is its own row
     ok("SC-3 → S5 m5: no 'Attach a sample file' on the combination; the old Sources address opens Forms with reading and matching", await p.getByRole("button", { name: "Attach a sample file" }).count() === 0 && /\/forms$/.test(p.url()));
-    const row = p.locator("tr", { hasText: "imm1344e-check-copy.pdf" }).first(); // the row's status words change once it is read
+    // QA-78: the row names the edition, never the file name, so the check finds its own copy's row by its attachment.
+    const checkAtt = sql(`select a.id from source_attachment a join intake_item i on i.sha256 = a.sha256 where i.id='${checkHeld}' and a.combination_id='${vv}' limit 1`);
+    const row = p.locator(`tr[data-attachment="${checkAtt}"]`); // the row's status words change once it is read
     await row.getByRole("button", { name: "Read form" }).click();
     await row.getByRole("button", { name: "Draft with AI" }).click();
     const draft = p.getByRole("dialog");
