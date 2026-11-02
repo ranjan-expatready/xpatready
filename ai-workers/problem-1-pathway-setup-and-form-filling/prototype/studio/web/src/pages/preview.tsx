@@ -5,6 +5,7 @@ import { Button, Dialog, Input, Notice, Pill, Select, Stat, Table } from "@/comp
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { ONLINE_LATER } from "../../../contracts/forms";
+import { inSentence } from "../../../contracts/runtime";
 
 const COV: Record<string, [string, string]> = {
   "confirmed fact": ["ok", "bg-ok"], "answered on screen": ["info", "bg-primary"], "document reading": ["ai", "bg-[#7c3aed]"], "client question": ["info", "bg-primary/50"],
@@ -64,8 +65,8 @@ function Rendered({ v, tab, setTab, answer, id, mode, profile }: { v: any; tab: 
 function AnswerInput({ q, answer }: { q: any; answer: (a: string, f: string, x: any) => void }) {
   const [val, setVal] = React.useState("");
   const commit = (x: any) => answer(q.about, q.fact, x);
-  if (q.value_type === "yes_no") return <Select className="h-8 w-28" defaultValue="" onChange={(e) => commit(e.target.value === "" ? "" : e.target.value === "true")} aria-label={`Answer for ${q.about_label}: ${q.label}`}><option value="">answer…</option><option value="true">Yes</option><option value="false">No</option></Select>;
-  return <form onSubmit={(e) => { e.preventDefault(); commit(q.value_type === "number" ? Number(val) : val); }} className="flex gap-1"><Input className="h-8 w-40" type={q.value_type === "date" ? "date" : "text"} value={val} onChange={(e) => setVal(e.target.value)} placeholder="answer…" aria-label={`Answer for ${q.about_label}: ${q.label}`} /><Button size="sm" variant="secondary" type="submit">Set</Button></form>;
+  if (q.value_type === "yes_no") return <Select className="h-8 w-28" defaultValue="" onChange={(e) => commit(e.target.value === "" ? "" : e.target.value === "true")} aria-label={`Answer for ${inSentence(q.about_label)}: ${q.label}`}><option value="">answer…</option><option value="true">Yes</option><option value="false">No</option></Select>;
+  return <form onSubmit={(e) => { e.preventDefault(); commit(q.value_type === "number" ? Number(val) : val); }} className="flex gap-1"><Input className="h-8 w-40" type={q.value_type === "date" ? "date" : "text"} value={val} onChange={(e) => setVal(e.target.value)} placeholder="answer…" aria-label={`Answer for ${inSentence(q.about_label)}: ${q.label}`} /><Button size="sm" variant="secondary" type="submit">Set</Button></form>;
 }
 
 function Questions({ v, answer }: { v: any; answer: (a: string, f: string, x: any) => void }) {
