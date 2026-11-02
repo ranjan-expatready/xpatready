@@ -20,6 +20,8 @@ import { Intake } from "./intake.ts";
 import { Checklists } from "./checklist.ts";
 import { seedFormsStory } from "./forms-demo.ts";
 import { noFreeAdd } from "./library-sources.ts";
+import { ChangeSets } from "./change-sets.ts";
+import type { ChangeItem } from "../../contracts/change-set.ts";
 import { actorOf, ACTORS, Audit, Db, fail, need, revise, SOLUTION, strip, Workspace, type Actor } from "./core.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import type { z } from "zod";
@@ -46,7 +48,7 @@ function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
 
 @Injectable()
 export class Forms {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(ChangeSets) private readonly sets: ChangeSets) {}
 
   private editionView(e: FormEdition) { return { id: e.id, label: e.editionLabel, channel: e.channel, fingerprint: e.sha256, questions: e.dataBoundBoxes }; }
 
@@ -297,9 +299,19 @@ export class Forms {
     // One pending merge per field (break M5): a chain or a cycle of merges waits until the first is decided.
     const pending = await this.db.fieldMerge.findFirst({ where: { workspaceId, status: "PROPOSED", OR: [{ keepKey: { in: [b.keep, b.merge] } }, { mergeKey: { in: [b.keep, b.merge] } }] } });
     if (pending) conflict(pending.keepKey === b.keep && pending.mergeKey === b.merge ? "This merge is already waiting for a second person." : `${[b.keep, b.merge].find((k) => k === pending.keepKey || k === pending.mergeKey)} is already in a merge waiting for a second person (${pending.mergeKey} into ${pending.keepKey}): decide that one first.`);
+    // G-CORE B2 (BR-1, BR-2): through the change-set door: the fixed rules check (both fields active, same kind of answer
+    // and the same answer list, every condition the swap rewrites still sound, no new loop) refuses in words, nothing
+    // written; a stale preview answers "look again". A merge always waits for a second person (BR-4).
+    const items: ChangeItem[] = [{ action: "merge", kind: "field", key: b.merge, into: b.keep }];
+    const r = await this.sets.guard(items, "person", b.expected, workspaceId);
     let m;
-    try { m = await this.db.fieldMerge.create({ data: { workspaceId, keepKey: b.keep, mergeKey: b.merge, reason: b.reason, status: "PROPOSED", proposedBy: actor.id } }); }
-    catch (e) { if ((e as { code?: string }).code === "P2002") conflict(`${b.merge} is already in a merge waiting for a second person (proposed at the same moment).`); throw e; }
+    try {
+      m = await this.db.$transaction(async (tx) => {
+        const fm = await tx.fieldMerge.create({ data: { workspaceId, keepKey: b.keep, mergeKey: b.merge, reason: b.reason, status: "PROPOSED", proposedBy: actor.id } });
+        await this.sets.record(tx, workspaceId, actor.id, items, "person", r, "waiting", { fieldMergeId: fm.id });
+        return fm;
+      });
+    } catch (e) { if ((e as { code?: string }).code === "P2002") conflict(`${b.merge} is already in a merge waiting for a second person (proposed at the same moment).`); throw e; }
     await this.audit.log(workspaceId, actor.id, "proposed", "field merge", b.merge, `${actor.name} proposed merging ${b.merge} into ${b.keep}: ${b.reason}`);
     return m;
   }
@@ -314,6 +326,10 @@ export class Forms {
     if (m.status !== "PROPOSED") conflict(`This merge is already ${m.status.toLowerCase()}.`);
     if (m.proposedBy === actor.id) fail("A different person approves a merge (P-15, P-65).", HttpStatus.FORBIDDEN);
     const ws = m.workspaceId, from = m.mergeKey, to = m.keepKey;
+    // G-CORE B2 (BR-2): the fixed rules check runs again at approval; a change that fails is refused in words, and a
+    // stale preview answers "look again"; nothing moves. (Run before the transaction: it reads every combination's draft.)
+    const items: ChangeItem[] = [{ action: "merge", kind: "field", key: from, into: to }];
+    const checked = await this.sets.guard(items, "person", b.expected, ws);
     const swap = <T>(j: T): T => (j == null ? j : (JSON.parse(JSON.stringify(j).split(`"field":"${from}"`).join(`"field":"${to}"`)) as T));
     const reads = (j: unknown) => !!j && JSON.stringify(j).includes(`"field":"${from}"`);
     const moved: Record<string, number> = {}; const touched = new Set<string>();
@@ -354,6 +370,9 @@ export class Forms {
       const facts = await tx.sampleFact.updateMany({ where: { workspaceId: ws, canonicalFieldKey: from }, data: { canonicalFieldKey: to } }); if (facts.count) bump("sample facts (scaffolding)", facts.count);
       for (const f of await tx.combinationForm.findMany({ where: { workspaceId: ws }, select: { combinationId: true, form: { select: { editions: { select: { id: true } } } } } })) if (f.form.editions.some((e) => [...mapLineages].some((k) => k.startsWith(`${e.id}|`)))) touched.add(f.combinationId);
       await tx.fieldMerge.update({ where: { id }, data: { moved: moved as Prisma.InputJsonValue } });
+      // BR-5: its change set is applied (a merge proposed before B2 gets one now, made by its proposer).
+      const set = await tx.changeSet.updateMany({ where: { fieldMergeId: id, status: "waiting" }, data: { status: "applied", fingerprint: checked.fingerprint } });
+      if (!set.count) await this.sets.record(tx, ws, m.proposedBy, items, "person", checked, "applied", { fieldMergeId: id });
     });
     for (const c of touched) await this.audit.log(ws, actor.id, "merged", "field", from, `${actor.name} approved merging ${from} into ${to} (proposed by ${nameOf(m.proposedBy)}): this combination's draft now reads ${to}`, { moved }, c);
     await this.audit.log(ws, actor.id, "merged", "field", from, `${actor.name} approved merging ${from} into ${to} (proposed by ${nameOf(m.proposedBy)}): ${Object.entries(moved).map(([k, n]) => `${n} ${k}`).join(", ") || "nothing else read it"}; ${from} now redirects to ${to}; releases untouched`, { moved });

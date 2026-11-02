@@ -108,5 +108,6 @@ export const SetListPurpose = z.object({
 });
 export type ListPurpose = { kind: string; overflow: string };
 
-export const NewMerge = z.object({ keep: z.string().trim(), merge: z.string().trim(), reason: z.string().trim().min(10, "Say why the two fields mean the same.").max(1000) });
-export const DecideMerge = z.object({ note: z.string().trim().max(1000).optional() });
+// G-CORE B2 (BR-3): `expected` is the fingerprint of the preview "What this change touches" the person confirmed.
+export const NewMerge = z.object({ keep: z.string().trim(), merge: z.string().trim(), reason: z.string().trim().min(10, "Say why the two fields mean the same.").max(1000), expected: z.string().max(64).nullish() });
+export const DecideMerge = z.object({ note: z.string().trim().max(1000).optional(), expected: z.string().max(64).nullish() });

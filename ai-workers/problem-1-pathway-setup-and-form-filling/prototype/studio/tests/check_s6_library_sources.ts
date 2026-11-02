@@ -1,6 +1,6 @@
 // S6 Shared library, queue item (2a) (screens lane; P-158 delta items 1, 6 and 8; C3.6, C3.13, C3.15): no free add (the
-// three POSTs answer 410 and write nothing), every library item's sources and where it is used, and a direct, versioned
-// rename with the exact-duplicate check; PR #96 findings (a) only the newest form mapping is a source, (b) where used
+// three POSTs answer 410 and write nothing), every library item's sources and where it is used, and a versioned rename
+// with the exact-duplicate check (through the G-CORE door since B2: a released item's rename waits for a second person); PR #96 findings (a) only the newest form mapping is a source, (b) where used
 // reads rules, conditions and questions too, (c) checklist lines that differ in quote both stay, and QA-113's heading.
 // A passing and a failing case per rule, through the API on an isolated copy with
 // the sample inputs loaded (the demo is never touched). No browser, NO model call (US$0).
@@ -127,22 +127,27 @@ const count = (table: string) => Number(sql(`select count(*) from ${table}`));
   ok("QA-113 pass: the change's heading reads \"Change who fills a question: …\"", /^Change who fills a question: /.test(heading), heading || fills.body);
   ok("QA-113 fail: the heading never doubles the words (\"who fills who fills\")", !!heading && !/who fills who fills/i.test(heading), heading);
 
-  // ─────────────────── C3.15: rename, direct and versioned, with the exact-duplicate check
+  // ─────────────────── C3.15: rename, versioned, with the exact-duplicate check, through the G-CORE door (B2): every field
+  // and section of the sample is in a release, so (P-266) a second person approves its rename before it applies.
   const v0 = Number(sql("select max(version) from canonical_field where canonical_field_key='person.family_name'"));
   r = await call("PATCH", "/library/fields/person.family_name/name", { name: "Last name" });
+  const listedBefore = ((await call("GET", "/library/fields")).body as { key: string; name: string | null }[]).find((x) => x.key === "person.family_name");
+  ok("C3.15 + P-266: renaming a field a released combination uses waits for a second person (202), the name unchanged until then", r.status === 202 && r.body.status === "WAITING" && listedBefore?.name !== "Last name" && sql("select action || '|' || status from library_change where key='person.family_name'") === "RENAME|WAITING", [r.status, r.body, listedBefore?.name]);
+  const ap = await call("POST", `/library/changes/${r.body?.change_id}/approve`, {}, "user-B");
   const listed = ((await call("GET", "/library/fields")).body as { key: string; name: string | null }[]).find((x) => x.key === "person.family_name");
-  ok("C3.15 pass: an author renames a shared field directly: a new draft version, no second person, shown in the list", r.status === 200 && r.body.version === v0 + 1 && r.body.status === "DRAFT" && listed?.name === "Last name" && sql("select count(*) from library_change where key='person.family_name'") === "0", [r.body, listed?.name]);
-  ok("C3.15 pass: the rename is on the activity log in words", /renamed field person\.family_name from "person\.family_name" to "Last name"/.test(sql("select summary from audit_event where action='renamed' and entity_key='person.family_name' order by at desc limit 1")));
+  ok("C3.15 pass: approved by a second person, the rename is a new draft version, shown in the list", ap.status < 300 && Number(sql("select max(version) from canonical_field where canonical_field_key='person.family_name'")) === v0 + 1 && sql("select status from canonical_field where canonical_field_key='person.family_name' order by version desc limit 1") === "DRAFT" && listed?.name === "Last name", [ap.status, ap.body?.detail, listed?.name]);
+  ok("C3.15 pass: the rename is on the activity log in words", /approved renaming field person\.family_name from "person\.family_name" to "Last name"/.test(sql("select summary from audit_event where action='renamed' and entity_key='person.family_name' order by at desc limit 1")));
   r = await call("PATCH", "/library/fields/person.given_names/name", { name: "last-name" });
   ok("C3.15 fail: a name another field in the group has (case, spaces and punctuation aside) is refused, nothing written", r.status === 409 && /already the name of Last name/.test(r.body.detail) && sql("select label_checked from canonical_field where canonical_field_key='person.given_names' order by version desc limit 1") === "f", r.body.detail);
   r = await call("PATCH", "/library/fields/case.application_date/name", { name: "Last name" });
-  ok("C3.15 pass: the same name in another group (case, not person) is allowed", r.status === 200, r.body?.detail);
+  ok("C3.15 pass: the same name in another group (case, not person) is allowed (it applies, or waits for a second person when released)", r.status === 200 || r.status === 202, r.body?.detail);
   const [bad, short, notAuthor] = await Promise.all([call("PATCH", "/library/fields/person.not_there/name", { name: "Anything" }), call("PATCH", "/library/fields/person.uci/name", { name: " " }), call("PATCH", "/library/fields/person.uci/name", { name: "Client number" }, "user-B")]);
   ok("C3.15 fail: an unknown field 404, an empty name 400, a person without the author duty 403", bad.status === 404 && short.status === 400 && notAuthor.status === 403, [bad.status, short.status, notAuthor.status]);
   const sec = sections.find((x) => x.title === "Languages") ?? sections[0];
   r = await call("PATCH", `/library/sections/${sec.key}`, { name: "Languages spoken" });
+  if (r.status === 202) r = await call("POST", `/library/changes/${r.body.change_id}/approve`, {}, "user-B"); // released: a second person approves
   const secRow = ((await call("GET", "/library/sections")).body as { key: string; title: string; version: number }[]).find((x) => x.key === sec.key);
-  ok("C3.15 pass: an author renames a section directly (a new draft version), the list shows it", r.status === 200 && r.body.status === "DRAFT" && secRow?.title === "Languages spoken", secRow);
+  ok("C3.15 pass: an author renames a section (a new draft version), the list shows it", r.status < 300 && secRow?.title === "Languages spoken" && sql(`select status from logical_section where section_key='${sec.key}' order by version desc limit 1`) === "DRAFT", [r.status, secRow]);
   r = await call("PATCH", `/library/sections/${sec.key}`, { name: sections.find((x) => x.key !== sec.key)!.title.toUpperCase() });
   ok("C3.15 fail: another section's title is refused", r.status === 409 && /already a section called/.test(r.body.detail), r.body.detail);
   const added = seedSection(sql, { title: "Seeded section" });

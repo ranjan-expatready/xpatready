@@ -4,7 +4,8 @@
 // decision too, BR-9). Every decision returns to To review with a toast.
 import * as React from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api, useAction, useActorId, useApi } from "@/lib/api";
+import { api, ApiError, useAction, useActorId, useApi } from "@/lib/api";
+import { ChangePreview, useChangeCheck } from "@/ChangePreview";
 import { Button, Input, Notice, Panel, Pill, Textarea } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { ErrorState } from "@/components/ui/error-state";
@@ -77,6 +78,7 @@ export function LibraryChangePage() {
           <dd className="col-span-2 text-xs text-text-muted">Approving applies it to the form's current edition, marked "Set by a person · Sample" until the immigration expert confirms.</dd>
         </dl>
       ) : null}
+      {x.rename ? <RenameChange change={x} /> : null}
       {x.field ? (
         <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-field>
           <dt className="text-text-muted">Name</dt><dd className="font-semibold">{x.field.label}</dd>
@@ -96,7 +98,7 @@ export function LibraryChangePage() {
       </div>
       <details className="text-xs text-text-muted"><summary className="cursor-pointer">Details</summary><p className="mt-1">Key: <span className="mono">{x.key}</span> (generated from the group and the name)</p></details>
       {x.status === "RETURNED" && !mine ? <p className="text-sm text-text-muted" data-withdraw-not-mine>Only {x.proposed_by ?? "the person who proposed it"} can {LIFECYCLE_KINDS.includes(x.kind) ? "send it again" : "correct it"} or withdraw it.</p>
-        : x.status === "RETURNED" ? (LIFECYCLE_KINDS.includes(x.kind) ? <SendAgain change={x} /> : <Correct change={x} />) : x.status !== "WAITING" ? null : mine || !me.has("review")
+        : x.status === "RETURNED" ? (x.action === "RENAME" ? <><Notice title="Rename it again">A returned rename is not sent again from here: rename it again on its page, where the check runs again; or withdraw it.</Notice><Withdraw id={x.id} /></> : LIFECYCLE_KINDS.includes(x.kind) ? <SendAgain change={x} /> : <Correct change={x} />) : x.status !== "WAITING" ? null : mine || !me.has("review")
         ? <Notice title={mine ? "You proposed this" : "A content publisher decides"}>{mine ? "A different person approves it or returns it with a reason. Until then, a combination that uses it is not released." : "Switch to the Content reviewer or the Approver (simulated) to decide."}</Notice>
         : <>
           {/* ReviewCard (P-116 amended): the approval re-check, run now and said before the click. */}
@@ -110,7 +112,23 @@ export function LibraryChangePage() {
             : <div data-recheck="refused"><Notice tone="danger" title="Can't approve">{x.recheck.text} Return it with that reason.</Notice></div>) : null}
           <Decide yes="Approve" no="Return" busy={act.isPending} onYes={() => act.mutate({ d: "approve" })} onNo={(note) => act.mutate({ d: "return", note })} onlyNo={x.recheck && !x.recheck.ok ? x.recheck.text : undefined} />
         </>}
-      {x.status === "WAITING" && mine && me.has("author") && x.action === "ADD" ? <Withdraw id={x.id} /> : null}
+      {x.status === "WAITING" && mine && me.has("author") && (x.action === "ADD" || x.action === "RENAME") ? <Withdraw id={x.id} /> : null}
+    </div>
+  );
+}
+
+/** G-CORE B2 (P-266): a rename waiting for a second person: the name before and after, and what it touches (checked now). */
+function RenameChange({ change }: { change: LibraryChangeDetail }) {
+  const r = change.rename!;
+  const check = useChangeCheck([{ action: "rename", kind: change.kind as "field" | "section", key: change.key, name: r.after ?? "" }], change.status === "WAITING" && !!r.after);
+  return (
+    <div className="space-y-3" data-change-rename>
+      <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm">
+        <dt className="text-text-muted">Name now</dt><dd>{r.before}</dd>
+        <dt className="text-text-muted">{r.undo ? "Back to" : "Proposed name"}</dt><dd className="font-semibold">{r.after}</dd>
+        <dd className="col-span-2 text-xs text-text-muted">A released combination uses it, so a second person approves the new name. Approving checks it again and makes a draft version; releases already made do not change.</dd>
+      </dl>
+      {change.status === "WAITING" ? <ChangePreview check={check} /> : null}
     </div>
   );
 }
@@ -184,9 +202,13 @@ function Withdraw({ id }: { id: string }) {
 export function MergeReviewPage() {
   const { id } = useParams(); const nav = useNavigate(); const me = useMe();
   const m = useApi<MergeView>(["merge", id], `/library/merges/${id}`);
-  const approve = useAction((note?: string) => api(`/library/merges/${id}/approve`, { method: "POST", json: note ? { note } : {} }), { success: "Merged: the field that goes away now redirects", invalidate: [...inv, ["merge", id]], onDone: () => nav("/review") });
-  const reject = useAction((note: string) => api(`/library/merges/${id}/reject`, { method: "POST", json: { note } }), { success: "Merge rejected", invalidate: [...inv, ["merge", id]], onDone: () => nav("/review") });
   const x = m.data, mine = x?.proposed_by_id === me.id;
+  // G-CORE B2 (BR-2, BR-3): the approver sees what the merge touches, checked again now; approving sends its fingerprint.
+  const check = useChangeCheck(x ? [{ action: "merge", kind: "field", key: x.goes.key, into: x.stays.key }] : [], x?.status === "PROPOSED");
+  const [stale, setStale] = React.useState(false);
+  const approve = useAction((note?: string) => api(`/library/merges/${id}/approve`, { method: "POST", json: { ...(note ? { note } : {}), expected: check.data?.fingerprint } }), { success: "Merged: the field that goes away now redirects", invalidate: [...inv, ["merge", id]], onDone: () => nav("/review") });
+  const reject = useAction((note: string) => api(`/library/merges/${id}/reject`, { method: "POST", json: { note } }), { success: "Merge rejected", invalidate: [...inv, ["merge", id]], onDone: () => nav("/review") });
+  React.useEffect(() => { if (approve.error instanceof ApiError && approve.error.problem.title === "Look again") { setStale(true); void check.refetch(); } }, [approve.error]);
   const side = (f: MergeSide, word: string) => (
     <div className="flex-1 rounded-lg border border-border p-3 text-sm">
       <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">{word}</p>
@@ -205,9 +227,10 @@ export function MergeReviewPage() {
             <div className="flex flex-col gap-3 sm:flex-row" data-merge>{side(x.goes, "Goes away")}{side(x.stays, "Stays")}</div>
             <p className="text-sm">What moves: {x.goes.form_fields} form field{x.goes.form_fields === 1 ? "" : "s"} and {x.goes.questions} question{x.goes.questions === 1 ? "" : "s"} move to "{x.stays.label}"; its name becomes an alias that redirects. Releases already made do not change.</p>
             <p className="text-sm"><b>Reason:</b> {x.reason}</p>
+            {x.status === "PROPOSED" ? <ChangePreview check={check} stale={stale} /> : null}
             {x.status !== "PROPOSED" ? null : mine || !me.has("review")
               ? <Notice title={mine ? "You proposed this merge" : "A content publisher decides"}>{mine ? "A different person approves or rejects it." : "Switch to the Content reviewer or the Approver (simulated) to decide."}</Notice>
-              : <Decide yes="Approve the merge" no="Reject" busy={approve.isPending || reject.isPending} onYes={() => approve.mutate(undefined)} onNo={(n) => reject.mutate(n)} />}
+              : <Decide yes="Approve the merge" no="Reject" busy={approve.isPending || reject.isPending} disabledWhy={check.isFetching || !check.data ? "Checking what the merge touches…" : null} onYes={() => { setStale(false); approve.mutate(undefined); }} onNo={(n) => reject.mutate(n)} onlyNo={check.data && !check.data.ok ? "The checks refuse this merge now (listed above): reject it with that reason." : undefined} />}
           </div>
         )}
       </Panel>
