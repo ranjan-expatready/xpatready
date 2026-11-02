@@ -30,6 +30,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const block = () => p.locator("[data-unsourced]");
   const panel = () => p.locator("[data-source-panel]");
   const card = (address) => panel().locator(`[data-source-number="${address}"]`);
+  /** Review r2 m1 on PR 2b: a card's state after a save is read once the refetch has landed (up to 15 s), never at once. */
+  const stateIs = async (address, state) => { try { await panel().locator(`[data-source-number="${address}"][data-state="${state}"]`).waitFor({ timeout: 15000 }); return true; } catch { return false; } };
   const held = async (id) => (await api("GET", `/combinations/${id}/sources`)).body.counts.held_back;
   const review = async (id) => { await p.goto(`${BASE}/c/${id}/review`); await settle(); await p.waitForSelector("[data-unsourced], [data-sources-all-set]", { timeout: 30000 }); };
   const openFor = async (n) => { const more = block().getByRole("button", { name: /^Show all \d+ items$/ }); if (await more.count()) await more.click(); await block().locator(`[data-unsourced-item="${n.key}"] [data-unsourced-number="${n.address}"] button`).click(); await panel().locator(`[data-source-number="${n.address}"]`).waitFor(); await p.waitForTimeout(200); };
@@ -86,7 +88,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     step("C5.4 BR-3 fail: words that state another number (50 for 5) are refused on the words", (await c5.innerText()).includes("These words do not state 5. Copy the words that state the number."));
     await field(c5, "The words that state the number").fill("Test data, not an official quote: at least five years");
     await c5.getByRole("button", { name: "Save source" }).click(); await settle();
-    step("C5.4 BR-3 pass: words that state 5 save; the card reads \"Official source\" with its page and date", (await card(n5.address).getAttribute("data-state")) === "cited" && /checked (19 Oct|Oct 19,) 2026/.test(await card(n5.address).innerText()), await card(n5.address).innerText());
+    // Review r2 m1 on PR 2b: wait for the refetch to land, not a fixed pause.
+    await panel().locator(`[data-source-number="${n5.address}"][data-state="cited"]`).waitFor({ timeout: 15000 }).catch(() => {});
+    step("C5.4 BR-3 pass: words that state 5 save; the card reads \"Official source\" with its page and date", await stateIs(n5.address, "cited") && /checked (19 Oct|Oct 19,) 2026/.test(await card(n5.address).innerText()), await card(n5.address).innerText());
     await p.screenshot({ path: path.join(SHOTS, "panel-cited-1440.png") });
     await closePanel();
     step("C5.4 keyboard: Escape closes the panel", (await p.locator("[role=dialog]").count()) === 0);
@@ -113,7 +117,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     step("C5.4 §4: None published says when to use it", (await c90.innerText()).includes("Use this only when the government publishes nothing on the point."));
     await field(c90, "Why ExpatReady set this number").fill("Test data: ExpatReady's own early warning; IRCC publishes no lead time.");
     await c90.getByRole("button", { name: "Save source" }).click(); await settle();
-    step(`C5.4 BR-3 pass: "${NONE}" with its reason saves`, (await card(n90.address).getAttribute("data-state")) === "none_published");
+    step(`C5.4 BR-3 pass: "${NONE}" with its reason saves`, await stateIs(n90.address, "none_published"));
     await p.screenshot({ path: path.join(SHOTS, "panel-none-published-1440.png") });
     await closePanel();
 
@@ -129,8 +133,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     step("C5.4 board 2 (review m6): the item's other 19 is offered as a twin", await twin.count() === 1);
     await twin.check();
     await cr.getByRole("button", { name: "Save source" }).click(); await settle();
-    step("C5.4 BR-6 pass: new words that state 19 save, and the card is cited again", (await card(r01.address).getAttribute("data-state")) === "cited");
-    step("C5.4 board 2 (review m6): the twin save wrote the other 19 too", (await card(r01lt.address).getAttribute("data-state")) === "cited");
+    step("C5.4 BR-6 pass: new words that state 19 save, and the card is cited again", await stateIs(r01.address, "cited"));
+    step("C5.4 board 2 (review m6): the twin save wrote the other 19 too", await stateIs(r01lt.address, "cited"));
     const mine1 = await card(r01.address).innerText();
     step("C5.4 review MJ-1: once the author saves it, the card no longer credits the sample load (no chip, \"by Configuration author\")", !mine1.includes("From the sample load") && !mine1.includes("written by the sample load") && /by Configuration author/.test(mine1), mine1);
     // The number moves while the panel is open (review m2): the 409 says the number changed, never "someone else".
@@ -141,11 +145,11 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     const mv = await card(r01.address).innerText();
     step("C5.4 review m2: a number that moved answers \"The number changed\" with Reload, never \"Saved by someone else\" or Keep mine", mv.includes("The number changed") && !mv.includes("Saved by someone else") && await card(r01.address).getByRole("button", { name: "Keep mine and save again" }).count() === 0 && await card(r01.address).getByRole("button", { name: "Reload", exact: true }).count() === 1, mv);
     await card(r01.address).getByRole("button", { name: "Reload", exact: true }).click(); await settle();
-    step("C5.4 review m2: after Reload the card shows the number as it is now (changed: written for 19; now 21)", (await card(r01.address).getAttribute("data-state")) === "changed" && (await card(r01.address).innerText()).includes("the number is now 21"));
+    step("C5.4 review m2: after Reload the card shows the number as it is now (changed: written for 19; now 21)", await stateIs(r01.address, "changed") && (await card(r01.address).innerText()).includes("the number is now 21"));
     await card(r01.address).getByRole("button", { name: "Write a new source" }).click();
     await field(card(r01.address), "The words that state the number").fill("Test data, not an official quote: aged 21 years or older");
     await card(r01.address).getByRole("button", { name: "Save source" }).click(); await settle();
-    step("C5.4 BR-6 pass: words that state 21 save", (await card(r01.address).getAttribute("data-state")) === "cited");
+    step("C5.4 BR-6 pass: words that state 21 save", await stateIs(r01.address, "cited"));
     await closePanel();
 
     // ------------------------------------------------------------------ conflict (409): someone else saved while it was open

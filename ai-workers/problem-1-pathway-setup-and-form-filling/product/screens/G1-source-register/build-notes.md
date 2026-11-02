@@ -124,3 +124,6 @@ API.
 * **Noted for PR 2a's rules (not this PR):** French and Arabic-digit quotes are refused; a quote of zero-width
   characters around a digit is accepted; number words show dates as 2019-06-07.
 * Browser 55/55, API 54/54.
+* **Reviewer round 2 (Approve, 9.5/10 on 3aba0266):** its flaky-check Minor is fixed (a card's state is read once the
+  refetch lands). **Follow-up, not built:** the browser's Back still discards a typed, unsaved source without asking,
+  as the app's existing Dialog guard does; a `beforeunload` plus route block belongs in a shared row for every panel.

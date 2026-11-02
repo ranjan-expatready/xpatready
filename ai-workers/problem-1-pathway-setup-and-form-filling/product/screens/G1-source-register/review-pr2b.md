@@ -125,3 +125,70 @@ All completed. Findings are above.
 * Timing against STANDARDS §9.
 * The RuleDialog, Checks and "From age" entry points (PR 2c).
 * The CI run of this exact commit (it is not pushed).
+
+---
+
+# Round 2: re-review at **3aba0266** (diff `b9743d5a..3aba0266` only)
+
+Reviewer, 2 Nov 2026. I used my own copies on :4473 (browser) and :4474 (API suite), stopped both and dropped their databases afterwards. US$0, nothing committed. The suite's screenshot write was restored with `git checkout`.
+
+## Verdict: **Approve**. No Blocker or Major open. Three new Minors (fix or list in the PR). Journey score **9.5/10** (pass).
+
+## What I ran
+* `vite build`; web `tsc` 0 errors.
+* API suite `check_g1_sources_api.ts`: **54/54**.
+* Browser suite: **55/55 twice, 54/55 once** (see r2-m1).
+* My own walk (scratch `walk5.cjs`, `walk6.cjs`), as the author, the same author in a second window, and the approver.
+
+## Round 1 findings, each re-checked in the running app
+| Finding | Now | Evidence (my walk) |
+|---|---|---|
+| **MJ-1** sample-load credit | **Fixed** | `from_sample_load = updatedBy === SAMPLE_CREATOR` (`api/src/source-register.ts:57`). After the author rewrote R-01 the card reads "www.canada.ca · IMM 5488 (10-2024) · checked … · by Configuration author", with no chip. All-set line: "(27, 9 of them from the sample load)" |
+| **MJ-2** focus lost on close | **Fixed** | `Panel.returnFocus` plus `onCloseAutoFocus` (`ui/controls.tsx:117`). Escape returns to "Add source: Passport issue date…". After a save, focus stays in the panel on "Change"; Escape then goes to the next button. After the last number, the panel stays open, and Escape focuses the all-set line. Approver: back on "View: …". Opening focuses the first field (break m9) |
+| m1 read-only words | Fixed | The approver sees only **View**. Missing cards say "No source yet. The configuration author adds it." |
+| m2 moved-number 409 | Fixed | Title "The number changed", button "Reload" (`source-panel.tsx:206-210`) |
+| m3 changed line | Fixed | It starts with the number's words (`unsourced-numbers.tsx:23`) |
+| m4 fee tooltip | Fixed | Visitor visa: "Visitor visa fee: IRCC's words · Biometrics fee: summary of the Lead-checked record" |
+| m5 "more" | Fixed | "has its answer: an official source or 'None published – set by ExpatReady' (27, 9 of them …)" |
+| m6 test gaps | Fixed | New checks for the item quote, the twin, the moved 409 and focus |
+| Break M3 (theirs) | Held | "Saved now: None published … Test data: the other window's answer." appears before Keep mine. The same author is told "You saved this source in another window…" |
+| Break M4 (discard) | Held (Escape, overlay, X, Close) | Dismissing "Discard the source you typed? It is not saved." keeps the panel and the typed URL. Accepting closes it and returns focus. This uses the same `window.confirm` as the team's `Dialog` guard |
+| Break m1, m6, m7 | Held | A 250-character page note stops at 200. A long unbroken quote does not widen the panel (559/559). The link shows the host |
+
+Also checked:
+* Axe on `main` with everything sourced: 0 violations.
+* Submit is offered without a reload. No page errors.
+
+## Left open (Minors)
+1. **r2-m1 Flaky check.** "C5.4 BR-3 pass: words that state 5 save…" failed once in three runs.
+   * The card already read "Official source … checked Oct 19, 2026" in the failure detail, so it is a race with the refetch after the save: `settle()` is `networkidle` plus 250 ms (`check_g1_source_register_browser.cjs:89`).
+   * WAY-OF-WORKING says a wait must fail loudly, and a flaky check gets quarantined.
+   * Fix: wait for `[data-source-number="…"][data-state="cited"]` with a timeout, then read the text.
+2. **r2-m2 Back still discards a typed source without asking.** Break M4 named reload and Back too. In `walk6.cjs`: type a URL, then Back leaves for Overview with no question.
+   * This matches the app's existing `Dialog` guard, so it is not a Major.
+   * Fix: add a `beforeunload` while something is typed, and a route block (React Router `useBlocker`). Or list it in the PR as a follow-up.
+3. **r2-m3 A shared contract changed; the PR's first line must say so (WAY-OF-WORKING "Every PR").**
+   * `contracts/source-register.ts` now accepts a date read up to UTC+14 for everyone. That is a deliberate trade-off: a typed date up to about one day ahead now passes the server. It also gives `from_sample_load` a new meaning and adds `quote_kind`.
+   * Fix: name it in the first line; the tech lead reads it.
+
+Not this PR (noted by the builder for PR 2a's rules, agreed): French and Arabic-digit quotes, zero-width characters around a digit, dates shown in ISO form.
+
+## Journey score, round 2 (same ten journeys, plus a second window and Back)
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | Every number answered on the screen; Submit offered |
+| Next step obvious | 1 | Add, Check and View by role; the moved 409 says "Reload" |
+| Plain words | 1 | §5 words; the conflict wording now fits each case |
+| Feedback and state | 1 | Chips, toasts, a named twin failure, "Saved now: …" |
+| Correct data | 1 | Authorship right after a rewrite; Keep mine is stored as typed |
+| Error recovery | ½ | 409 and discard question held; Back loses typing (r2-m2) |
+| Accessibility and screen sizes | 1 | Focus returns in every case; axe 0; widths as in round 1 |
+| Speed | 1 | Unchanged: one request for the block, plus one to show "theirs" only on a 409 |
+| Visual quality | 1 | Long text wraps; layout unchanged |
+| Trust and sources | 1 | Host shown on every link; true authorship; fee quote kinds |
+
+**9.5/10, pass.**
+
+D1–D20 changes from round 1: D6 4, D13 4, D16 4 (r2-m1), D18 4. The other scores stand.
+
+**Verdict: Approve** for 3aba0266. The builder may label it `review: approved` for this commit. List r2-m1 to r2-m3 in the PR, or fix them (a later push needs a new review).
