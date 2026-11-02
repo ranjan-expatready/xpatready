@@ -256,3 +256,34 @@ In `/home/user/g4wt` on fresh copies, never :4400:
 No Blocker or Major is open. The Minors stay as recorded above.
 
 **Verdict: Approve** (commit 1fcfbd48)
+
+## Head 4783acc9
+I read `git diff 1fcfbd48 4783acc9`: four fixes from the Devin review in `answer-key-editors.tsx`, the `parts` flag on `GET /answer-keys/fields`, and my last Minor.
+
+### What I ran
+In `/home/user/g4wt`, web rebuilt, on fresh copies (never :4400):
+- **`check_g4_answer_keys`:** **88/88** (:4451).
+- **`check_g4_tests_tab_browser`:** **50/50** (:4452). It has a pass line for each of Devin's four findings.
+
+### Fixes I walked myself (as the expert, on :4452)
+- **(1) Field map, a person who stays home: fixed.**
+  - The E1 key's editor now offers the husband too, headed "not travelling: give values only if IMM 5257 applies to them".
+  - A value given for him is stored under `father`, and the mother's values are kept.
+  - The run then fails on one clear line: "IMM 5257 does not apply to EXAMPLE FATHER (Sample) in this combination". That is correct: the key expected a form the combination does not file for him.
+  - Rule-set keys still offer only travellers (code read).
+- **(2) Key for another edition: fixed.**
+  - I moved a key to "IMM 5257 (01-2020)" by API. Its run failed on the edition line.
+  - The editor then warned "Another edition … saving moves it to IMM 5257 (09-2023). Check every value against the new edition first."
+  - After the save: edition 09-2023, Draft, Not run. The next run has no edition line and fails only on the key's own left-out boxes.
+
+### Read in the code and covered by the check's lines
+- **(3)** A new phone or address fact gets the JSON box.
+- **(4)** Remove on a person asks first, naming their facts and "none apply" groups, then removes them too.
+- **My Minor:** the 409 notice now gives the way out once.
+
+### Not checked here
+The builder reports two more Devin defects in this head: the edition move when the new edition has removed boxes, and the phone "select …;" prefix in `byParts`. I did not check them. As I read the code, the first ends in a refused save (400), never in wrong data. The next head needs its own look.
+
+No Blocker or Major is open from my review.
+
+**Verdict: Approve** (commit 4783acc9)
