@@ -3,8 +3,8 @@
 // hand). The case officer reads them; a client and configuration people do not (deny by default, as runtime.ts). Visitor
 // visa only in this slice: other combinations answer "not derived yet". Amounts Sample until the expert confirms. US$0.
 import { Controller, Get, Headers, HttpStatus, Inject, Injectable, Param } from "@nestjs/common";
-import type { CaseFiling } from "../../contracts/runtime.ts";
 import { checkValue } from "../../engine/runtime/case.ts";
+import { releaseModes } from "../../engine/filing-modes.ts";
 import { ageOn, deriveFilings, FAMILY_GROUP } from "../../engine/runtime/filings.ts";
 import { actorOf, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { Runtime } from "./runtime.ts";
@@ -27,7 +27,7 @@ export class CaseFilings {
     const people = this.r.peopleOf(c), today = new Date();
     const { answers } = await this.r.state(c);
     const ages = new Map(people.filter((p) => p.role !== "case").map((p) => [p.subjectId, ageOn(answers.find((a) => a.subjectId === p.subjectId && a.field === "person.date_of_birth" && !a.rowKey && checkValue(s, a.field, a.value, today).length === 0)?.value as string | undefined, today)]));
-    const modes = new Map(((s.combination.participants ?? []) as { role: string; filingMode?: CaseFiling["mode"] }[]).filter((p) => p.filingMode).map((p) => [p.role, p.filingMode!]));
+    const modes = releaseModes(s.combination.participants ?? []); // C11.12 review M1: only the modes the case engine handles yet
     const rows = await this.db.filing.findMany({ where: { caseId: c.id, active: true }, include: { group: { select: { kind: true } } } });
     // Review m5: the stored group's own id, as GET …/prepare shows it ("group-family" only before the first prepare read).
     const groupOf = new Map(rows.map((f) => [f.subjectId, f.submissionGroupId]));

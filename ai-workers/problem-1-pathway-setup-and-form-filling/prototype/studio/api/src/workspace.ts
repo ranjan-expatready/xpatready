@@ -9,7 +9,7 @@ import { newestEdition } from "../../engine/programs.ts";
 import { questionnairesView } from "../../engine/runtime/questionnaires.ts";
 import { previewFamily } from "../../engine/runtime/preview.ts";
 import { aliasOf, appliesOf, filingWarnings, filingWords, isLineMode, previewFilings } from "../../engine/filing-modes.ts";
-import { hasFeeRules } from "../../engine/runtime/filings.ts";
+import { defaultModeOf, hasFeeRules } from "../../engine/runtime/filings.ts";
 import { wordsOnly } from "../../engine/render.ts";
 import { acceptsOf, allowedChannels, channelProblems, filingKind, filingMethod, lineOf, notAcceptedWords, notNeededWords, signatureOf } from "../../engine/channels.ts";
 import { ACCOUNT_WORDS, CHANNEL_WORDS, throughAccount, CHANNELS, SIGNATURE_FITS, SIGNATURE_WORDS, type Channel } from "../../contracts/forms.ts";
@@ -141,7 +141,7 @@ export class WorkspaceViews {
         ...filingWords({ role: p.role, filingMode, applies }, !!r?.mayBeApplicant, feesKnown, c.label), quote: p.quote ?? null, origin: p.origin, mayBeApplicant: !!r?.mayBeApplicant, answeredBy: answeredBy(p.role) };
     });
     // C11.12 "What a case gets": the plan of filings for one case of each line's preview count (concept §4).
-    const plan = previewFilings(lines, c.label, feesKnown);
+    const plan = previewFilings(lines, c.label, feesKnown, (role) => defaultModeOf(c.combinationKey, role));
     return { ...state, lines, roles, warnings: filingWarnings(c.combinationKey, lines), ...plan };
   }
 

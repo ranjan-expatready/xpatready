@@ -14,10 +14,10 @@ import PDF_SECTIONS from "../../contracts/pdf-sections.json" with { type: "json"
 import { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { CHANNEL_WORDS } from "../../contracts/forms.ts";
-import type { CaseFiling } from "../../contracts/runtime.ts";
 import { acceptsOf } from "../../engine/channels.ts";
 import { caseChecklist } from "../../engine/runtime/case-checklist.ts";
 import { caseView, checkValue, knownOf } from "../../engine/runtime/case.ts";
+import { releaseModes } from "../../engine/filing-modes.ts";
 import { ageOn, cad, deriveFilings, FAMILY_GROUP, feeRule } from "../../engine/runtime/filings.ts";
 import { formCoverage, readiness as formReadiness } from "../../engine/runtime/forms.ts";
 import { answerSheet, sectionHash, type Sheet } from "../../engine/runtime/answer-sheet.ts";
@@ -71,7 +71,7 @@ export class CasePrepare {
     const clean = answers.filter((x) => checkValue(s, x.field, x.value, today).length === 0);
     const ages = new Map(people.filter((p) => p.role !== "case").map((p) => [p.subjectId, ageOn(clean.find((a) => a.subjectId === p.subjectId && a.field === DOB && !a.rowKey)?.value as string | undefined, today)]));
     // M3-0: the filing mode per role is the release's ("Who can be in this application"); a role it leaves out uses the default.
-    const modes = new Map(((s.combination.participants ?? []) as { role: string; filingMode?: CaseFiling["mode"] }[]).filter((p) => p.filingMode).map((p) => [p.role, p.filingMode!]));
+    const modes = releaseModes(s.combination.participants ?? []); // C11.12 review M1: only the modes the case engine handles yet
     const first = deriveFilings(own!.combinationKey, people, undefined, { ages, modes });
     if (!first.derived) return { case_id: c.id, reference: c.reference, release_version: pin.release.version, derived: false, why: first.why, portal: own!.portalKey ?? null, filings: [], groups: [], items: [], fees: [], readiness: [], stage1: [], version: "0" };
 
