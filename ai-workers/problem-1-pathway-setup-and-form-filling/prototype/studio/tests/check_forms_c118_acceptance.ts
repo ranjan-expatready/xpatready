@@ -23,14 +23,12 @@
 // ledger and nothing queued ever runs; it restarts the copy as it was at the end and checks the shared ledger file is byte
 // for byte unchanged. The check never sets a live switch (it blanks STUDIO_AI_LIVE on every restart it makes, except in
 // the opt-in section, where it passes on only what the person running it gave).
-// Run (from prototype/studio):
-//   zsh tools/isolated.sh acc_c118 4573 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs
-//   ./node_modules/.bin/tsx acceptance/C11.8.test.ts 4573 xr_studio_acc_c118 ; zsh tools/isolated.sh acc_c118 4573 stop
-// Expected today (main 931cb99a, run 1 Nov 2026 on an isolated copy, US$0): 12 pass, 4 fail, 2 skipped — failing: AT-1
-// (the field-map plan carries no live on/off), AT-2 and AT-9b (a live draft on a copy without the switch is queued,
-// 201, instead of refused at the door like the finder), AT-3 (a failed run's error is "0 done, 1 failed …" with "See
-// the details"); skipped: AT-9c and AT-10a (the STAND-IN section: the copy reports no stand-in launcher and live
-// switch).
+// Adopted into the suites (C11.8 PR, 2 Nov): AT-1, AT-2, AT-3 and AT-9b pass since the field-map door applies P-175
+// (the plan says live on/off and why; a live start that would call the model is refused 409 before anything is queued or
+// a Continue used) and a failed run says what went wrong and its way out. Added with it: AT-3b, Retry is the same door.
+// Run (usage line for run-suites.sh):
+//   zsh studio/tools/isolated.sh forms_c118a 4458 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_forms_c118_acceptance.ts 4458 xr_studio_forms_c118a
+// Expected (2 Nov 2026, isolated copy, no live switch, US$0): 18 pass, 0 fail, 2 skipped (the STAND-IN section).
 // Exit: 0 all pass (SKIPs allowed) · 1 a check failed · 2 setup missing or refused (demo port or database, copy, sample).
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
@@ -38,7 +36,7 @@ import { appendFileSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmS
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { LEDGER_DIR } from "../../p2/policy.ts";
-import { checkCopy, needCombo, sqlFor, stop } from "./lib/pack1.ts";
+import { checkCopy, needCombo, sqlFor, stop } from "../acceptance/lib/pack1.ts";
 
 const PORT = Number(process.argv[2] ?? 4573), DB = process.argv[3] ?? "xr_studio_acc_c118", NAME = DB.replace(/^xr_studio_/, "");
 const STUDIO = join(import.meta.dirname, "..");
@@ -61,8 +59,9 @@ const until = async (fn: () => Promise<boolean>, ms = 120_000) => { const t = Da
 const words = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
 const setupMissing = (why: string) => { rmSync(SCRATCH, { recursive: true, force: true }); stop(why); };
 const liveCalls = () => (existsSync(FAKE_LOG) ? readFileSync(FAKE_LOG, "utf8").split("\n").filter((l) => l.includes('"mode":"live"')).length : 0);
-/** The machine's shared spend ledger, as bytes: it must not move during this check. */
-const sharedLedger = () => createHash("sha256").update(existsSync(LEDGER_DIR) ? readdirSync(LEDGER_DIR).sort().map((f) => { try { return f + readFileSync(join(LEDGER_DIR, f), "utf8"); } catch { return f; } }).join("|") : "none").digest("hex");
+/** The machine's shared spend ledger, as bytes: it must not move during this check. A folder created empty meanwhile (a
+ *  fresh machine: the server makes it when it first reads the ledger) holds no spend, the same as no folder. */
+const sharedLedger = () => createHash("sha256").update(existsSync(LEDGER_DIR) ? readdirSync(LEDGER_DIR).sort().map((f) => { try { return f + readFileSync(join(LEDGER_DIR, f), "utf8"); } catch { return f; } }).join("|") : "").digest("hex");
 const scratchLines = () => (existsSync(LEDGER) ? readFileSync(LEDGER, "utf8") : "").split("\n").filter(Boolean).map((l) => JSON.parse(l) as Record<string, any>); // eslint-disable-line @typescript-eslint/no-explicit-any
 /** Restarts this copy (same database). Never sets a live switch: blanked, except in the opt-in section, which passes on
  *  only what the person running the check gave. */
@@ -114,6 +113,16 @@ const seed = (usd: number) => appendFileSync(LEDGER, JSON.stringify({ type: "res
     if (!/failed|problems/.test(String(run1?.status))) setupMissing(`the stub step did not fail (run ${run1?.status}): start the copy with STUDIO_FAKE_LAUNCHER (see the run line)`);
     ok("C11.8 AT-3 a failed run's error says what went wrong in plain words and its next step is the way out, not only a count and \"See the details\"",
       !!run1?.error?.what && !/^\d+ done, \d+ failed/.test(run1.error.what) && !!run1.error.next?.label && !/^See the details$/i.test(run1.error.next.label) && !/ENOENT|errno|\/Users\/|at [A-Za-z.]+ \(/.test(`${run1.error.what}`), run1?.error);
+    // AT-3b (review m1): Retry is a second door: a failed live field-map step is not queued again without the switch.
+    // (as the reviewer's repro: the stub run made a live one by SQL, its plan's worst case a paid call's)
+    sql(`update drafting_job set mode='LIVE' where batch_id='${B1}'`); sql(`update ai_batch set mode='LIVE', plan = jsonb_set(plan, '{targets,0,worst_usd}', '1.5') where id='${B1}'`);
+    const q3 = queued(), rl = await call("POST", `/ai/batches/${B1}/retry`, {});
+    ok("C11.8 AT-3b one door rule for Retry: a failed live step on a copy without the switch is not retried (409, AI switched off); nothing queued, the launcher never asked", rl.status === 409 && /switched off/.test(words(rl)) && queued() === q3 && liveCalls() === live0, { status: rl.status, m: words(rl).slice(0, 160) });
+    sql(`update drafting_job set mode='STUB' where batch_id='${B1}'`); sql(`update ai_batch set mode='STUB', plan = jsonb_set(plan, '{targets,0,worst_usd}', '0') where id='${B1}'`);
+    const rs = await call("POST", `/ai/batches/${B1}/retry`, {});
+    if (rs.status === 201) await until(async () => !["queued", "running", "stopping"].includes((await call("GET", `/runs/${B1}`)).body?.status), 60_000);
+    const again = (await call("GET", `/runs/${B1}`)).body;
+    ok("C11.8 AT-3b pass: a free (stub) failed step is still retried (201) and the run names its latest attempt", rs.status === 201 && again?.steps?.length === 2 && !!again.steps[1].message && again.error?.what === `${again.steps[1].label}: ${again.steps[1].message}` && again.error.next?.label === "Retry the failed step", { status: rs.status, m: words(rs).slice(0, 160), error: again?.error });
     ok("C11.8 AT-4 the run card states its cost (spent US$0) and lists its steps with their kind (AI or rules)", run1?.usd?.spent === 0 && Array.isArray(run1?.steps) && run1.steps.length > 0 && run1.steps.every((s: { uses: string; label: string }) => ["ai", "rules"].includes(s.uses) && s.label), { usd: run1?.usd, steps: run1?.steps?.length });
   }
 
