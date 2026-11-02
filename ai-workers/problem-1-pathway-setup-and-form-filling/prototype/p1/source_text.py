@@ -94,6 +94,10 @@ def html_text(path):
 
 def main():
     manifest = {i["path"]: i for i in json.loads((OFFICIAL / "manifest.json").read_text())["items"]}
+    if len(sys.argv) not in (1, 3) or (len(sys.argv) == 3 and sys.argv[2] not in ("xfa", "pdf", "html")):
+        sys.exit("usage: source_text.py [<path under official-sources/ircc> xfa|pdf|html]")
+    if len(sys.argv) == 3 and sys.argv[1] not in manifest:
+        sys.exit(f"{sys.argv[1]}: not in the official manifest")
     files = [(sys.argv[1], sys.argv[2])] if len(sys.argv) == 3 else FILES
     for rel, kind in files:
         src = OFFICIAL / rel
