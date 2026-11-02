@@ -144,6 +144,8 @@ export class PqrDrafts {
         if (going) throw problem(409, "Already drafting", "Pre-qualification picks are already being drafted for this combination. Wait for that run to end, then look at To review.", { runId: going.id });
         return tx.draftingJob.create({ data: { workspaceId: c.workspaceId, combinationId: c.id, kind: PQR_STEP, startedBy: actor.id, ...jobData } });
       });
+    // Review round 2 n2: from here on, a throw ends this job as FAILED (catch below).
+    try {
     const out = { runId: job.id, mode: plan.mode, from: plan.mode === "rules" ? "rules" as string | null : null, offer_saved: false, proposed: 0, ready: 0, decide: 0, check: 0, already: 0, removed: 0, dropped: [] as { role: string; asks: string; why: string }[], unresolved: [] as { passage: string; reason: string }[], usd: 0, run_files: [] as string[], note: "" };
     let items: ReturnType<typeof pqrPicksFromRounds>["items"] = [];
     if (plan.mode === "rules") {
@@ -162,7 +164,8 @@ export class PqrDrafts {
         out.usd = round2(d.costUsd + (k?.costUsd ?? 0));
         out.run_files = [d.ok ? d.runFile : null, k?.ok ? k.runFile : null].filter((x): x is string => !!x);
         if (!d.ok || !k?.ok) {
-          out.note = (!d.ok ? d.reason : k && !k.ok ? k.reason : null) ?? "The AI step did not finish.";
+          // Review round 2 n1: when the first round ran and only the checker round failed, the note says so.
+          out.note = (!d.ok ? d.reason : k && !k.ok ? `The first AI round ran, but the checker round did not: ${k.reason.charAt(0).toLowerCase()}${k.reason.slice(1)}` : null) ?? "The AI step did not finish.";
           // Break B2: a round that did run stays charged; the note never says "nothing was charged" then.
           if (out.usd > 0) out.note = `${out.note.replace(NOTHING_CHARGED, "").replace(/\.?$/, ".")} This run cost US$${out.usd.toFixed(2)} (counted); nothing of it is used.`;
           // P-227 (D2 part 4): a failed Live run offers Saved when a Saved result exists; a failed Saved run never does.
@@ -198,6 +201,12 @@ export class PqrDrafts {
     out.note = out.note || `${fresh.length} pick${fresh.length === 1 ? "" : "s"} for To review${out.already ? ` (${out.already} already waiting there)` : ""}${out.removed ? `; ${out.removed} a person removed before are not proposed again` : ""}${out.dropped.length ? `, ${out.dropped.length} left out with the reason` : ""}. Nothing is asked until a person accepts a pick. Sample until the immigration expert confirms.`;
     await this.audit.log(c.workspaceId, actor.id, "proposed", "pre-qualification", c.combinationKey, `${actor.name} drafted pre-qualification picks for "${c.label}" (${how}, US$${out.usd.toFixed(2)}): ${fresh.length} to review`, { runId: job.id, mode: plan.mode, run_files: out.run_files }, c.id);
     return out;
+    } catch (e) {
+      // Review round 2 n2: whatever stops this draft ends its job as FAILED, so "Already drafting" never blocks the
+      // combination for a run that is no longer going.
+      await this.db.draftingJob.update({ where: { id: job.id }, data: { status: "FAILED", finishedAt: new Date(), message: "This draft stopped on this computer before it ended; nothing of it is proposed." } }).catch((x) => console.warn(`pqr picks ${job.id}: could not end the job:`, String(x).slice(0, 200)));
+      throw e;
+    }
   }
 }
 

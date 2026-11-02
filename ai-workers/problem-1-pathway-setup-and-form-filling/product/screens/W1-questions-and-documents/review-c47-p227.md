@@ -1,4 +1,6 @@
-# Review: C4.7 PQR picks, Live and Saved only (P-227), Track B, commit 4f20b492
+# Review: C4.7 PQR picks, Live and Saved only (P-227), Track B: round 1 on 4f20b492 (Block), round 2 on 7cc07509 (Approve)
+
+## Round 1 on 4f20b492 (record)
 
 Reviewer: an independent session that did not build this. Diff `origin/main..4f20b492` (1f45ad1d + 4f20b492). Copies were isolated on forms ports 4455–4458; :4400 was never used. Live AI stayed off: the live switch ran only with the fake launcher, as the usage lines pair them. No priced button was clicked, and spend was US$0. No code was edited.
 
@@ -97,3 +99,56 @@ Reviewer: an independent session that did not build this. Diff `origin/main..4f2
 While I reviewed, another session pushed 5f2c19cc and b7e3f4d0 onto this branch. b7e3f4d0 says it fixes break B1–B4, B6, B7 and B10. **I did not review those commits.** This verdict is for 4f20b492 only. b7e3f4d0 needs its own review before the `review: approved` label.
 
 **Verdict: Block** (4f20b492). Fix M1, M2 and M3. Minors m1–m7 can be done in the PR. Journey 7.5/10.
+
+---
+
+## Round 2 on 7cc07509 (2 Nov): **Verdict: Approve**
+Scope: diff `4f20b492..7cc07509` (5f2c19cc, b7e3f4d0, 7cc07509) for M1–M3 and the Minors, then the whole change against origin/main.
+* Setup: copies on forms ports 4455–4458; :4400 was never used. The live switch ran only with the fake launcher, so spend was US$0.
+* Before each run I checked that no other session was writing stand-in runs into `p2/runs`; a watcher found none.
+* Afterwards I restored the screenshots and `tests/check_pqr.json` my runs rewrote. Nothing is left in `p2/runs`, and my copies and databases are removed.
+
+No Blocker or Major is open. Screen-review terms: **Ship**. The journey score is **9/10, a pass** (round 2 in `journey-test-reviewer-c47-p227-2026-11-02.md`).
+
+### Suites at 7cc07509 (each on its own fresh copy)
+* `check_forms_c47_pqr_picks.ts`: **60/60**, including the new B1–B4 checks, each with a pass and a fail case.
+* `check_forms_c47_pqr_picks_browser.cjs`: **62/62**. axe is clean at 1440, 1024 and 400 px, with no sideways scroll.
+* `check_forms_c411_draft_qd.ts` **55/55** · `check_pqr.ts` **38/38** · `check_c48_sqr_release.ts` **25/25**.
+* `acceptance/C4.7.test.ts` (`wp.family`): **15/15, plus 2 WAIT, exit 2**.
+  * The two Saved checks print WAIT only when the plan answers 200 with `saved.available: false`. Any other answer still fails them.
+  * "setup: the Saved draft ran" moved inside the Saved branch; it was not dropped. A WAIT is never counted as a pass (`acceptance/lib/pack2.ts`).
+
+### Round-1 findings
+* **M1, fixed.** The note drops "nothing was charged" and adds "This run cost US$0.37 (counted); nothing of it is used." The dialog shows "Live, US$0.37 counted." even with 0 picks (`pqr-drafts.ts:167`, `pqr-draft.tsx`).
+  * I walked it with the keyboard: the result is a `role=status` region and takes focus, and axe is clean.
+  * The job row (FAILED, 0.37) and the audit line ("Live, US$0.37") agree.
+* **M2, fixed for what the code can ensure.** `savedRounds()` takes the newest usable checker round, then only the first round with the same job stem (`rounds.ts` `pairOf` and `replayPair`, additive).
+  * Pairing holds for product Live runs: both rounds use `jobIdFor(base, …, batchId = job.id)`, and `launch.ts:92` names the run `<jobId>-live-…`.
+  * The words no longer say "checked".
+  * Making Saved mean only results the tech lead and qa have checked is raised to the tech lead as a shared question (P-227 applies to every AI step), so it is not a finding for this row.
+* **M3, fixed.** The RUNNING check and the job create sit under one advisory lock per combination, and a second start answers 409 "Already drafting" (`pqr-drafts.ts:140-145`).
+  * Two tabs: the second tab's Draft Live showed "…already being drafted for this combination…", and the launcher was asked once.
+  * Once the first run ended, the second tab's Draft started normally.
+* **m1, fixed.** No P- numbers or process words on the main path ("Live is not open yet: each paid run is approved first, with its cost stated."). The over-cap refusal no longer points to Saved.
+* **m2, fixed (B4).** The Saved run files are in the plan checksum, and a changed Saved result gives 409.
+* **m4, partly fixed.** The result is announced and focused. After Use Saved, focus moves to the Saved choice, so a second Enter does not start a run. Esc still drops focus to `body`, which predates this change.
+* **m6, fixed.** The not-official note no longer names rules. The `rules` API path stays documented as API-only.
+* **Still open, Minors:**
+  * m3: Saved stays greyed until the dialog is reopened.
+  * m5: Client A and the case officer can read the plan (`readerOf`).
+  * m7: the To review table scrolls inside its box at 400 px, which is allowed for data tables.
+
+### New Minors (Should; none blocks)
+* n1. The paid-then-failed note contradicts itself: "The AI step did not run. This run cost US$0.37…". Stripping the clause leaves "did not run", although the first round ran (`pqr-drafts.ts:167`). *Fix:* say the checker round did not finish.
+* n2. A throw after the job is created leaves it RUNNING, and "Already drafting" then blocks the combination for 15 minutes. This can happen at `guide()` (`pqr-drafts.ts:152`) or in the insert transaction (`:184`); round throws are already caught. *Fix:* end the job as FAILED in a `finally`.
+
+### D1–D20 changes from round 1
+* D2 4 (one run at a time, Saved from one run) · D5 4 · D7 4 · D10 4 · D11 4 · D16 5 (pass and fail tests for B1–B4).
+* All others are as in round 1. D17 and D20 are simulated only.
+
+### Could not check
+* A real screen reader; a headed browser; a real Live call.
+* Track A's real Saved result: the 2 WAIT lines stay with qa.
+* Rule-removal runs (I could not edit code).
+
+**Verdict: Approve** (commit 7cc07509). Minors n1, n2, m3, m4 (Esc), m5 and m7 are for the PR or a follow-up.

@@ -74,3 +74,40 @@ From code reading, also reproduced by the break tester (`break-report-c47-p227.m
 * A real Live call.
 * Track A's real Saved result.
 * An intended user's unaided walk (D17 and D20 stay with the founder).
+
+---
+
+## Round 2 on 7cc07509 (2 Nov)
+
+**Setup.**
+* Fresh copies on :4455–4458 with the fake launcher only (US$0); nothing was written to `p2/runs`.
+* Script: `/tmp/claude-0/-home-user-xpatready/3ee89504-25b7-5a91-be6b-51bc34e108c1/scratchpad/walk/walk2.cjs`, plus the builder's suites: API 60/60, browser 62/62.
+
+**Journeys re-walked.**
+1. **Paid first round, then the checker round fails (keyboard only, 1024 px).**
+   * The result reads "The AI step did not run. This run cost US$0.37 (counted); nothing of it is used. Live, US$0.37 counted."
+   * The result is a `role=status` region and takes focus, and axe is clean.
+   * Job `LIVE|FAILED|0.37`; audit "(Live, US$0.37): 0 to review".
+2. **Two tabs: Draft Live in the first (slow), then Draft Live in the second.**
+   * The second tab shows "Pre-qualification picks are already being drafted for this combination. Wait for that run to end, then look at To review."
+   * The launcher was asked once. After the first run ended, the second tab's Draft started normally.
+3. **Failed Live, then Use Saved, then Draft with Saved** (browser suite, B10). After Use Saved, focus is on the Saved choice, so a second Enter does not start a run.
+4. **Nothing can start (400 px).** Plain words, with no decision numbers or process words; Draft is off and points to the reason.
+
+**Still seen:** Esc drops focus to `body` (predates this change); n1, the "did not run … cost US$0.37" contradiction.
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | Saved path to To review, accept and reject (62/62) |
+| Next step obvious | 1 | Use Saved; Open To review; Already drafting says what to do |
+| Plain words | 1 | No P- numbers or process words; Saved no longer claims "checked" |
+| Feedback and state | ½ | Spend shown and the result announced; n1 contradiction; Saved does not refresh while the dialog is open |
+| Correct data | 1 | Job, audit and US$ agree; Saved is one run's two rounds; one run at a time |
+| Error recovery | 1 | Failed Live leads to Use Saved; Already drafting, then a retry works |
+| Accessibility and screen sizes | ½ | axe clean at 1440, 1024 and 400 px; result focused; focus after Esc lost |
+| Speed | 1 | Each step under 1 s with the fake launcher |
+| Visual quality | 1 | Screenshots 01–08 clean at all widths |
+| Trust and sources | 1 | AI marked; reason, IRCC sentence and run files shown; the cost is stated truthfully |
+| **Total** | **9/10** | **Pass** (8 or more, no criterion at 0) |
+
+**Could not test:** a real screen reader, a headed browser, a real Live call, Track A's Saved result, an unaided user walk (D17 and D20).
