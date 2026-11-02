@@ -766,6 +766,9 @@ export class Sources {
    *  field. Ambiguous and conflicting items always need their own decision. */
   async acceptClean(actor: Actor, jobId: string, outcome: "REUSE" | "NEW" = "REUSE") {
     need(actor, "review");
+    // C2.6 (review Major 1 on #574, P-149 one door): a checklist's lines are never accepted together here.
+    const kind = (await this.db.draftingJob.findUnique({ where: { id: jobId }, select: { kind: true } }))?.kind;
+    if (kind === "checklist_draft") fail("A checklist's document lines are decided one by one on the review queue (To review), where accepting one writes it to the draft. Nothing was changed here.", HttpStatus.GONE);
     const items = (await this.db.proposalItem.findMany({ where: { runId: jobId, status: "waiting" } })).map(reviewRow).filter((i) => i.outcome === outcome && (outcome === "REUSE" || !(i.candidates as any[]).some((c) => c.score >= 0.55)));
     for (const i of items) await recordChoice(this.db, i.id, { choice: "ACCEPTED", decidedKey: outcome === "REUSE" ? i.matchedKey : i.proposedKey, by: actor.id, reason: outcome === "REUSE" ? "accepted with the other exact reuse matches" : "accepted with the other new definitions that have no similar library field" });
     const job = await this.db.draftingJob.findUniqueOrThrow({ where: { id: jobId } });

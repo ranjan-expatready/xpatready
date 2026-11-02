@@ -116,6 +116,9 @@ async function main() {
   r = await call("POST", `/jobs/${job.id}/items/${mine[0].id}`, { decision: "ACCEPTED" });
   ok("C2.6 R3 fail (QA-157): the checklist page's own decide is closed (410, saying to use the review queue); nothing changes", r.status === 410 && /review queue/.test(r.body?.message ?? "") && sql(`select status from proposal_item where id='${mine[0].id}'`) === "waiting", r.body?.message);
 
+  r = await call("POST", `/jobs/${job.id}/accept-clean`, { outcome: "NEW" });
+  ok("C2.6 R3 fail (review M1 on #574): accepting a checklist's lines together on its job page is closed too (410); nothing changes", r.status === 410 && /review queue/.test(r.body?.message ?? "") && sql(`select count(*) from proposal_item where run_id='${job.id}' and status<>'waiting'`) === "0", r.body?.message);
+
   // ─────────────────────────────── R5 accept on the queue (the old apply door is closed)
   const count = () => Number(sql(`select count(*) from document_requirement where combination_id='${combo}'`));
   const before = count();

@@ -75,7 +75,7 @@ export class Checklists {
     const typeOf = (n: string) => types.find((t) => t.documentTypeKey === n || t.name.toLowerCase() === n.toLowerCase() || t.name.toLowerCase() === typeName(n).toLowerCase());
     const lines = read.lines.filter((l) => {
       if (l.part && !partFits(l.part, trail)) { dropped.push(`${typeName(l.document_type)} (under the checklist's "${l.part}" part, another program than ${combo.label})`); return false; }
-      const t = typeOf(l.document_type); if (t && have.has(`${t.documentTypeKey}|${l.who}`)) { dropped.push(`${l.document_type} for ${l.who.replace(/_/g, " ")} (already on this combination)`); return false; }
+      const t = typeOf(l.document_type); if (t && have.has(`${t.documentTypeKey}|${l.who}`)) { dropped.push(`${typeName(l.document_type)} for ${l.who.replace(/_/g, " ")} (already on this combination)`); return false; }
       return true;
     });
     const source = (quote: string) => ({ file: r!.inventory, sha256: r!.sha256, edition: a.edition, page: null, quote, quoteFound: true, rule: null });
@@ -86,7 +86,7 @@ export class Checklists {
     for (const l of lines) if (!typeOf(l.document_type) && !newTypes.has(wordsOf(l.document_type))) newTypes.set(wordsOf(l.document_type), { payload: docTypeOf(l, name), quote: l.quote });
     const typeItems = (runId: string): NewProposal[] => [...newTypes.values()].map(({ payload, quote }) => ({ kind: "document_type", runId, step: "checklist_draft", scope: { formEdition: null, combinationId: a.combinationId }, landsOn: "library",
       reuse: { match: "new", existingKey: null }, payload, source: source(quote), rounds: round(`${payload.name}: ${payload.proves}`, payload), rules: quoteRule, agreement: "one_round", confidence: "check",
-      reason: `Not in the shared library yet: ${name} asks for it. One AI round, so check its name and what it proves; a second person approves it once accepted.${payload.identityDocument ? " An identity document: read by its machine-readable (coded) lines, never by AI vision (P-134)." : ""}`.slice(0, 500),
+      reason: `Not in the shared library yet: ${name} asks for it. One AI round, so check its name and what it proves; a second person approves it once accepted.${payload.identityDocument ? " An identity document: read by its machine-readable (coded) lines, never by AI vision." : ""}`.slice(0, 500),
       origin: "ai", identity: { key: identityKeyOf(payload, ""), near: [], nearReason: null }, relatesTo: null, revision: null, basis: "SAMPLE" }));
     const lineItems = (runId: string, typeIds: Map<string, string>): (NewProposal & Work)[] => lines.map((l) => {
       const key = `requirement_line:${a.combinationId}:${wordsOf(l.document_type)}:${l.who}`.slice(0, 300);
@@ -94,7 +94,7 @@ export class Checklists {
       const legacy: RequirementProposal = { document_type: l.document_type, who: l.who, base_or_conditional: l.base_or_conditional, condition_plain: l.condition_plain, condition_tree: l.condition_tree, provided_by: l.provided_by };
       const payload = { kind: "requirement_line" as const, documentType: match?.documentTypeKey ?? l.document_type, roles: [l.who], always: l.base_or_conditional === "base", condition: l.condition_plain ? { sentence: l.condition_plain, tree: l.condition_tree ?? null, sharedConditionKey: null, examples: [] } : null, alternativeGroup: null };
       const reading = `${typeName(l.document_type)}: ${l.office ? "the visa office decides" : l.condition_plain ?? "always"}, for ${l.who.replace(/_/g, " ")}`;
-      const why = l.office ? `${name} says "${l.note}": the checklist does not settle when it is needed, so a person decides (edit it to give its condition, or to make it always needed, then accept).${l.reason ? ` The AI's reading: ${l.reason}` : ""}` : l.reason;
+      const why = l.office ? `${name} says "${l.note}": the checklist does not settle when it is needed, so a person decides. ${l.condition_tree ? `Accept writes it with the AI's draft condition ("${l.condition_plain}"); if that is not right, reject it and add the line by hand on the combination's Documents.` : `It has no condition, so Accept is refused: reject it and add the line by hand on the combination's Documents, with when it is needed.`}${l.reason ? ` The AI's reading: ${l.reason}` : ""}` : l.reason;
       return { kind: "requirement_line", runId, step: "checklist_draft", scope: { formEdition: null, combinationId: a.combinationId }, landsOn: "combination",
         reuse: { match: match ? "reuse" : "new", existingKey: match?.documentTypeKey ?? null }, payload, source: source(l.quote), rounds: round(reading, payload), rules: quoteRule,
         agreement: "one_round", confidence: l.office ? "decide" : "check", reason: why ? why.slice(0, 500) : null, origin: "ai", identity: { key, near: [], nearReason: null },
@@ -142,7 +142,7 @@ const IDENTITY = /\bpassport\b|\btravel document\b/i;
 export function docTypeOf(l: ReadLine, checklist: string): DocTypePayload {
   // The document named, never its quote: "proof of legal status… listed on your passport" is not a passport (C2.6 shots).
   const identity = IDENTITY.test(l.document_type.replace(/_/g, " "));
-  const photo = /\bphoto/i.test(l.document_type);
+  const photo = /\bphoto/i.test(l.document_type.replace(/_/g, " ")); // break m2: "visa_application_photos"
   return { kind: "document_type", name: typeName(l.document_type).slice(0, 120), proves: cut(`What ${checklist} asks for: "${l.quote}"`, 200),
     category: l.provided_by === "other" ? "other" : "client", suppliesFacts: [], readerKind: identity ? "coded_lines" : photo ? "person_only" : "letter_or_record", identityDocument: identity };
 }

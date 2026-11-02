@@ -76,6 +76,11 @@ export const partFits = (part: string, trail: string) => {
   const p = PROGRAM_PARTS.find((x) => x.heading === part), words = new Set(wordsOf(trail).split(/[^a-z0-9]+/));
   return !!p && p.program.every((w) => words.has(w));
 };
+/** A document type key in words, as a person reads it ("us_nonimmigrant_visa_copy" → "US nonimmigrant visa copy"). */
+const said = (t: string) => { const w = t.replace(/[_\s]+/g, " ").trim(); return w ? (w[0].toUpperCase() + w.slice(1)).replace(/\bUs\b/, "US") : t; };
+/** An office line's draft condition without the AI's own commentary ("Draft condition: …", "The checklist states no
+ *  condition…"): only its sentences that say when, as the line will read (review Major 2 on #574). */
+const conditionWords = (c: string) => { const keep = c.replace(/^draft condition:\s*/i, "").split(/(?<=\.)\s+/).filter((x) => !/checklist|visa office|defers|not among the inputs/i.test(x)).join(" ").trim(); return keep ? keep[0].toUpperCase() + keep.slice(1) : null; };
 /** The checklist says the visa office decides (P-149: a person decides what the source does not settle). */
 const OFFICE = /refer to the (responsible )?visa office|visa specific instructions/i;
 /** A line that names no document ("Any additional documents required by the responsible visa office"). */
@@ -119,15 +124,15 @@ export function linesOf(r: Pick<SavedReading, "inventory" | "text" | "docs">, la
     // An office line keeps what the AI read as its condition only as a draft for the person who decides it.
     const cond = str(d.condition_plain, 300);
     const kind = d.base_or_conditional === "conditional" ? "conditional" : d.base_or_conditional === "base" ? "base" : null;
-    if (!type || !who || !kind || (kind === "conditional" && !office && (!cond || cond.length < 3))) { dropped.push(`${type ?? "a line"} (incomplete: no document type, person or condition)`); continue; }
-    if (!whole || !text.includes(wordsOf(whole))) { dropped.push(`${type} (its quote is not in ${label})`); continue; }
+    if (!type || !who || !kind || (kind === "conditional" && !office && (!cond || cond.length < 3))) { dropped.push(`${type ? said(type) : "a line"} (incomplete: no document type, person or condition)`); continue; }
+    if (!whole || !text.includes(wordsOf(whole))) { dropped.push(`${said(type)} (its quote is not in ${label})`); continue; }
     const { quote, note } = splitNote(whole);
-    if (NAMES_NO_DOCUMENT.test(quote)) { dropped.push(`${type} (it names no document: "${quote.slice(0, 80)}"; the visa office's own instructions say which, and a person adds them)`); continue; }
+    if (NAMES_NO_DOCUMENT.test(quote)) { dropped.push(`${said(type)} (it names no document: "${quote.slice(0, 80)}"; the visa office's own instructions say which, and a person adds them)`); continue; }
     const at = text.indexOf(wordsOf(quote)), part = [...parts].reverse().find((p) => p.at <= at)?.heading ?? null;
     const id = `${wordsOf(type)}|${who}`;
-    if (seen.has(id)) { dropped.push(`${type} for ${who.replace(/_/g, " ")} (the same line twice)`); continue; }
+    if (seen.has(id)) { dropped.push(`${said(type)} for ${who.replace(/_/g, " ")} (the same line twice)`); continue; }
     seen.add(id);
-    const c = kind === "conditional" && cond && cond.length >= 3 ? cond : null;
+    const c = kind === "conditional" && cond && cond.length >= 3 ? (office ? conditionWords(cond) : cond) : null;
     lines.push({ document_type: type, who, base_or_conditional: office ? "conditional" : kind, condition_plain: office ? c : kind === "conditional" ? cond : null, condition_tree: c ? treeOf(d.condition) : null, provided_by: str(d.provided_by, 40) ?? "client", quote, reason: str(d.reason, 300), note, office, part });
   }
   return { lines, dropped };

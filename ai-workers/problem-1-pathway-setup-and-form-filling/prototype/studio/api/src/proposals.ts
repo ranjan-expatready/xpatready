@@ -290,38 +290,48 @@ async function landRequirementLine(tx: Tx, r: Row, p: ProposalPayload, l: Landin
   const live = { in: ["DRAFT", "PUBLISHED"] as ("DRAFT" | "PUBLISHED")[] };
   const inLibrary = async (k: string) => (await tx.documentType.findFirst({ where: { workspaceId: l.ws, status: live, OR: [{ documentTypeKey: k }, { name: { equals: k, mode: "insensitive" } }, { name: { equals: say(k), mode: "insensitive" } }] }, orderBy: { version: "desc" }, select: { documentTypeKey: true } }))?.documentTypeKey ?? null;
   let typeKey = await inLibrary(q.documentType);
-  const t = !typeKey && r.relatesTo ? await tx.proposalItem.findUnique({ where: { id: r.relatesTo } }) : null;
+  // The type proposed beside the line counts only while the line still names it (break M2: an edit naming another type
+  // that the library lacks is refused, never quietly landed on the proposed one).
+  const named = (r.payload as { documentType?: unknown }).documentType === q.documentType;
+  const t = !typeKey && named && r.relatesTo ? await tx.proposalItem.findUnique({ where: { id: r.relatesTo } }) : null;
   if (t?.kind === "document_type") {
     const tn = String((t.payload as { name?: unknown }).name ?? q.documentType);
     if (t.status === "waiting") {
-      if ((t.reuse as { match?: string }).match === "new") { const twin = await sameInLibrary(tx, l.ws, t.payload as ProposalPayload); if (twin) fail(`"${tn}" is already in the library as ${twin} (added since it was proposed): reject the document type proposal, then edit this line to use ${twin}.`, HttpStatus.CONFLICT); }
+      if ((t.reuse as { match?: string }).match === "new") { const twin = await sameInLibrary(tx, l.ws, t.payload as ProposalPayload); if (twin) fail(`"${tn}" is already in the library as ${twin} (added since it was proposed): reject the document type proposal, then reject it and add the line by hand on the combination's Documents with ${twin}.`, HttpStatus.CONFLICT); }
       typeKey = await LANDERS.document_type!(tx, t, t.payload as ProposalPayload, { ...l, itemId: t.id, reason: `Accepted with its document line "${String((r.work as { label?: unknown } | null)?.label ?? q.documentType)}".` });
       await tx.proposalItem.update({ where: { id: t.id }, data: { status: "accepted", decidedBy: l.actor.id, decidedAt: new Date(), decisionReason: "Accepted with its document line.", batchId: l.batchId, decidedKey: typeKey,
         work: { ...((t.work ?? {}) as object), landedStamp: await stampOf(tx, l.ws, "document_type", typeKey!) } as Prisma.InputJsonValue } });
     } else if (["accepted", "edited"].includes(t.status) && t.decidedKey && (await usableInLibrary(tx, l.ws, "document_type", t.decidedKey))) typeKey = t.decidedKey;
-    else fail(`Its document type "${tn}" was ${t.status === "rejected" ? "rejected" : "taken back"}, so the line has none: edit the line to use a document type of the library, or reject it.`, HttpStatus.CONFLICT);
+    else fail(`Its document type "${tn}" was ${t.status === "rejected" ? "rejected" : "taken back"}, so the line has none: reject it and add the line by hand on the combination's Documents, with a document type of the library.`, HttpStatus.CONFLICT);
   }
-  if (!typeKey) fail(`"${say(q.documentType)}" is not a document type in the shared library: edit the line to use one that is, or reject it.`, HttpStatus.CONFLICT);
+  if (!typeKey) fail(`"${say(q.documentType)}" is not a document type in the shared library: reject it and add the line by hand on the combination's Documents, with a document type that is.`, HttpStatus.CONFLICT);
   await lockItem(tx, l.ws, "document_type", [typeKey]); await refuseRetired(tx, l.ws, "document_type", [typeKey]);
-  const bad = q.roles.find((x) => !LINE_WHO.includes(x));
-  if (bad) fail(`Whose document it is, "${say(bad)}", is not a choice: edit the line to name a person of Who can be.`);
+  const roles = [...new Set(q.roles)]; // break m1: a role named twice is one line
+  const bad = roles.find((x) => !LINE_WHO.includes(x));
+  if (bad) fail(`Whose document it is, "${say(bad)}", is not a choice: reject it and add the line by hand on the combination's Documents, for a person of Who can be.`);
   let tree: unknown = null;
   if (!q.always) {
     tree = q.condition?.tree;
-    if (!tree || typeof tree !== "object") fail(`Say when "${say(q.documentType)}" is needed before accepting it: edit it to give its condition, or to make it always needed. The checklist does not settle it.`, HttpStatus.CONFLICT);
+    if (!tree || typeof tree !== "object") fail(`"${say(q.documentType)}" has no condition yet, and the checklist does not settle when it is needed, so it cannot be accepted as it stands: reject it and add the line by hand on the combination's Documents, with when it is needed (or as always needed).`, HttpStatus.CONFLICT);
     // The requirement writer's check: a draft may read a fact the library does not have yet (release blocks it, P-223 (a)).
-    const fields = new Map((await tx.canonicalField.findMany({ where: { workspaceId: l.ws, status: { not: "RETIRED" } }, orderBy: { version: "asc" }, select: { canonicalFieldKey: true, valueType: true } })).map((f) => [f.canonicalFieldKey, f.valueType]));
+    const all = await tx.canonicalField.findMany({ where: { workspaceId: l.ws }, orderBy: { version: "asc" }, select: { canonicalFieldKey: true, valueType: true, status: true } });
+    const newest = new Map(all.map((f) => [f.canonicalFieldKey, f])); // each field's newest version (ordered by version)
+    const retired = new Set([...newest.values()].filter((f) => f.status === "RETIRED").map((f) => f.canonicalFieldKey));
+    const fields = new Map([...newest.values()].filter((f) => !retired.has(f.canonicalFieldKey)).map((f) => [f.canonicalFieldKey, f.valueType]));
     const derived = new Set((await tx.derivedField.findMany({ where: { workspaceId: l.ws }, select: { derivedKey: true } })).map((d) => d.derivedKey));
-    const errs = checkCondition(tree, fields, derived).filter((e) => !/^reads [a-z][a-z0-9_]*\.[a-z0-9_.]+, which is not in the library$/.test(e));
-    if (errs.length) fail(`Its condition does not fit the condition language yet (${errs[0]}): edit the condition, then accept.`);
+    // As the writer (studio.ts conditionErrors, C11.9 break M1): a retired field is named as retired and refused; a field
+    // not in the library at all is allowed in a draft (release blocks it).
+    const errs = checkCondition(tree, fields, derived).map((e) => { const m = /^reads (\S+), which is not in the library$/.exec(e); return m && retired.has(m[1]) ? `it reads "${m[1].split(".").pop()!.replace(/_/g, " ")}", a retired field: restore it in Shared library › Fields first, or choose another` : e; })
+      .filter((e) => !/^reads [a-z][a-z0-9_]*\.[a-z0-9_.]+, which is not in the library$/.test(e));
+    if (errs.length) fail(`Its condition does not fit the condition language yet (${errs[0]}): reject it and add the line by hand on the combination's Documents, with a condition that does.`);
   }
   const have = await linesOnCombination(tx, r.combinationId!);
-  const twice = q.roles.find((x) => have.has(`${typeKey}|${x}`));
+  const twice = roles.find((x) => have.has(`${typeKey}|${x}`));
   if (twice) fail(`"${say(q.documentType)}" for ${say(twice)} is already on this combination: reject this one.`, HttpStatus.CONFLICT);
   const w = (r.work ?? {}) as { officialFile?: string; providedBy?: string };
   const src = r.source as { quote?: string; file?: string } | null;
   const keys: string[] = [];
-  for (const role of q.roles) {
+  for (const role of roles) {
     let key = `${typeKey}:${role}`;
     if (await tx.documentRequirement.findFirst({ where: { combinationId: r.combinationId!, lineageKey: key }, select: { id: true } })) key = `${key}:${Date.now().toString(36)}`;
     await tx.documentRequirement.create({ data: { workspaceId: l.ws, combinationId: r.combinationId!, lineageKey: key, version: 1, status: "DRAFT", documentTypeKey: typeKey!, attachMode: q.always ? "COMBINATION_MANDATORY" : "ANSWER_CONDITIONAL",
@@ -477,7 +487,11 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
   if (reason && reason.length > 300) fail("Keep the reason under 300 characters.");
   const batchId = randomUUID();
   const landed = await db.$transaction(async (tx) => {
-    const rows = await tx.proposalItem.findMany({ where: { id: { in: ids }, workspaceId } });
+    // C2.6 break M3: the items are locked first, so an accept and a reject of the same item at the same moment cannot
+    // both succeed; the second waits, then reads the first's decision and is refused as already decided.
+    const valid = ids.filter((x) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x));
+    if (valid.length) await tx.$queryRaw`SELECT id FROM proposal_item WHERE id = ANY(${valid}::uuid[]) ORDER BY id FOR UPDATE`;
+    const rows = await tx.proposalItem.findMany({ where: { id: { in: valid }, workspaceId } });
     if (rows.length !== new Set(ids).size) fail("A proposal was not found (the demo may have been reset).", HttpStatus.NOT_FOUND);
     const done = rows.filter((r) => r.status !== "waiting");
     if (done.length) fail(`${done.length === 1 ? "A proposal is" : `${done.length} proposals are`} already decided (${done[0].status}); an approved item changes only as a revision.`, HttpStatus.CONFLICT);
@@ -564,11 +578,20 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     const users = keys.length ? await tx.proposalItem.findMany({ where: { workspaceId, status: { in: ["accepted", "edited"] }, decidedKey: { in: keys }, reuse: { path: ["match"], equals: "reuse" }, NOT: { batchId } }, select: { kind: true, decidedKey: true, formEdition: true } }) : [];
     const user = users.find((u) => added.some((r) => r.kind === u.kind && r.decidedKey === u.decidedKey));
     if (user) fail(`${user.decidedKey} is now reused by an item accepted for ${user.formEdition ?? "another source"}, so Undo would take it away under that item. Nothing was undone: undo that decision first, or retire the item in the shared library.`, HttpStatus.CONFLICT);
+    // C2.6 break M1: a document type this batch added that a document line outside this batch now uses is not taken away
+    // under that line (another combination's line, or a line accepted in a later decision).
+    const typeAdds = adds.filter((c) => c.kind === "document_type").map((c) => c.key);
+    if (typeAdds.length) {
+      const own = new Set(rows.filter((r) => r.kind === "requirement_line" && r.decidedKey && r.combinationId).flatMap((r) => r.decidedKey!.split(",").map((k) => `${r.combinationId}|${k}`)));
+      const using = (await tx.documentRequirement.findMany({ where: { workspaceId, documentTypeKey: { in: typeAdds } }, select: { combinationId: true, lineageKey: true, documentTypeKey: true, combination: { select: { label: true } } } }))
+        .find((d) => !own.has(`${d.combinationId}|${d.lineageKey}`));
+      if (using) fail(`${using.documentTypeKey} is now used by a document line on ${using.combination.label}, so Undo would take it away under that line. Nothing was undone: undo that line's decision first, or retire the type in the shared library.`, HttpStatus.CONFLICT);
+    }
     // PR #96 review (1): an item edited after the accept is not erased by Undo; the library keeps the person's edit.
     for (const r of rows) {
       const { landedStamp } = (r.work ?? {}) as { landedStamp?: string };
       if (landedStamp && r.decidedKey && (await stampOf(tx, workspaceId, r.kind, r.decidedKey, r.combinationId)) !== landedStamp)
-        fail(`"${nameOf(r.payload as ProposalPayload, r.identityKey)}" was changed after it was accepted, so Undo would erase that change. Nothing was undone: retire or delete it in the shared library instead.`, HttpStatus.CONFLICT);
+        fail(`"${nameOf(r.payload as ProposalPayload, r.identityKey)}" was changed after it was accepted, so Undo would erase that change. Nothing was undone: ${r.kind === "requirement_line" ? "change or remove the line on the combination's Documents instead" : "retire or delete it in the shared library instead"}.`, HttpStatus.CONFLICT);
     }
     // C4.7: an accepted pick's tick is taken back only while it is the draft the accept wrote (not changed or released
     // since); the draft it replaced comes back as it was.
