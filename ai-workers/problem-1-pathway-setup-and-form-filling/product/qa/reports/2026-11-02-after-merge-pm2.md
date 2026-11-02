@@ -32,6 +32,9 @@ Main: 50df70dc. AI spend: US$0 (no key; the ledger was unchanged).
 | #541 SH3 tidy-up | a2d870ec | **Pass** | sh3 resolver 63/63 and ~20 suites green (no server, copy, browser); mutation checks pin the change; walk clean; QA-162 not affected |
 | #525 G4 part 2 (Tests tab) | b5494090 | **Pass**, Minors (empty state doesn't say where to add; "cannot be released (G2)" not true yet; 400 px columns) | g4 answer keys 93/93, tests tab browser 54/54, s5 slice1 browser 52/52, D1 25/25; walk: family, expected values, run, sign, roles 403/401; no G5 built |
 | #528 R-146 batch 2 | 1ebaab62 | **P-227 pass; qa added `review: approved` (P-275, relayed by the tech lead)** | queue_tx 8/8, saved maps 20/20 (5710, 1294, 0008), D1 25/25; the reviewer's Approve is on 6eaf04ff; since then only the review record and main merges (the PR's own diff unchanged) |
+| #543 C3.13 setup race | 9a5a899e | **Pass**; c313 browser can leave QUARANTINE | workspace_first_calls 9/9 (main 6/9); c313 browser 24/24 ×2 fresh; c31 formats 15/15; order dependence on a used copy remains (Minor, logged) |
+| #544 C11.12 rest | f5dcb961 | **Pass** | C11.12 acceptance 20/20 (main 18/19); modes 44/44; QA-91 re-checked 21/21 + 10/10 (close after merge) |
+| #545 K3 "Published" | ec52921a | **Pass**, Minors (month shown up to 3 times; future month accepted) | C3.12 acceptance 17/17 (main 16/17); field map 61/61; library browser 113/113; QA-148 closes once question 1 is accepted |
 
 Minors on #504 (follow-ups): `proposals.ts:117` workaround; rules and checks `used_in` still inside `library-sources.ts`; `impact.ts` `.catch(() => 0)` turns a database error into "0 open cases".
 Not tested: OPEN-only case counts (no data in another status).
