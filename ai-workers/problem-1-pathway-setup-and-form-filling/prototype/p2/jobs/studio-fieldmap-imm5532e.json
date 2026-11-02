@@ -11,7 +11,7 @@
  "inputs": [
   {
    "file": "prototype/p1/inventory/imm5532e.inventory.json",
-   "sha256": "48b051b8b5ebe3f05d22947906014eb51920981aad14712b69ff30816f668886"
+   "sha256": "0237b7c883a21c710fe527def510431ea8189ecd13bdffa46a61abba07978209"
   }
  ],
  "settings": {
