@@ -327,7 +327,7 @@ async function landPqrPick(tx: Tx, r: Row, p: ProposalPayload, l: Landing): Prom
   if (p.kind !== "pqr_pick") fail("Wrong payload.");
   // Break B5: an edit changes only a pick's reason; the question and the person it ticks are the pick itself.
   const was = r.payload as { factKey?: string; role?: string };
-  if ((p as { factKey: string }).factKey !== was.factKey || (p as { role: string }).role !== was.role) fail("An edit changes only the pick's reason. To ask another question, remove this pick and tick that question on the Questionnaires tab.", HttpStatus.CONFLICT);
+  if ((p as { factKey: string }).factKey !== was.factKey || (p as { role: string }).role !== was.role) fail("An edit changes only the pick's reason. To ask another question, remove this pick and tick that question on the Smart questionnaire (SQR) tab.", HttpStatus.CONFLICT);
   const lineageKey = `${(p as { role: string }).role}|${(p as { factKey: string }).factKey}`;
   const before = r.combinationId ? await tx.factSource.findFirst({ where: { combinationId: r.combinationId, lineageKey }, orderBy: { version: "desc" } }) : null;
   const item = { id: r.id, kind: r.kind, runId: r.runId, step: r.step, scope: { formEdition: r.formEdition, combinationId: r.combinationId }, landsOn: r.landsOn, reuse: r.reuse, payload: p,
@@ -494,7 +494,7 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
       const { pqr } = (r.work ?? {}) as { pqr?: PqrWork & { stamp: string } };
       if (!pqr || !r.decidedKey) continue;
       if (JSON.stringify(await pqrStamp(tx, r.combinationId, r.decidedKey)) !== pqr.stamp)
-        fail(`A pre-qualification tick this decision made was changed or released after it was accepted, so Undo would erase that change. Nothing was undone: change it on the Questionnaires tab instead.`, HttpStatus.CONFLICT);
+        fail(`A Prospect questionnaire (PQR) tick this decision made was changed or released after it was accepted, so Undo would erase that change. Nothing was undone: change it on the Smart questionnaire (SQR) tab instead.`, HttpStatus.CONFLICT);
       await tx.factSource.delete({ where: { id: pqr.pqrRowId } });
       if (pqr.pqrBefore) await tx.factSource.create({ data: { ...(pqr.pqrBefore as Prisma.FactSourceUncheckedCreateInput), updatedAt: new Date(String(pqr.pqrBefore.updatedAt)) } });
     }

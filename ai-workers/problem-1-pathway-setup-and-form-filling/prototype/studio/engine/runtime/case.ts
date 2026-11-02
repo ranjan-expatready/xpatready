@@ -53,7 +53,7 @@ export function ageOn(birth: unknown, today: Date): number | null {
  *  adult or the officer confirms; everything else waits for "Confirm section". */
 export function confirmation(s: Snapshot, a: Answer, who: Participant | undefined, birthDate: unknown, today: Date): Confirmation {
   if (a.status === "VERIFIED") return { confirmed: true, why: CONFIRM_WORDS.officer };
-  if (a.channel !== "questionnaire") return { confirmed: false, why: `${CONFIRM_WORDS.waits} (entered in the case view)` };
+  if (a.channel !== "questionnaire") return { confirmed: false, why: `${CONFIRM_WORDS.waits} (entered by the case officer)` };
   if (!isClientField(s, a.field)) return { confirmed: false, why: `${CONFIRM_WORDS.waits} (a fact the officer confirms from a document or record)` };
   if (who?.role === "principal" || who?.role === "case") return { confirmed: true, why: CONFIRM_WORDS.client_own };
   if (who?.role === "child") {
@@ -382,8 +382,8 @@ export function pqrView(s: Snapshot, people: Participant[], view: CaseView) {
   const open = questions.filter((q) => (q.group ? !q.rows.length || q.rows.some((x) => !x.answer) : !q.answer)).length;
   const fixes = questions.filter((q) => (q.group ? q.rows.some((x) => x.answer?.problems.length) : q.answer?.problems.length)).length;
   const fired = view.checks.filter((c) => c.fact && questions.some((q) => q.fact === c.fact && q.subjectId === c.subjectId));
-  const result = !questions.length ? "No pre-qualification questions in this release yet: tick them on the combination's Questions and documents tab."
-    : open ? `${open} of ${questions.length} pre-qualification question${questions.length === 1 ? "" : "s"} still to answer before a result.`
+  const result = !questions.length ? "No Prospect questionnaire (PQR) questions in this release yet: tick them on the combination's Smart questionnaire (SQR) tab."
+    : open ? `${open} of ${questions.length} Prospect questionnaire (PQR) question${questions.length === 1 ? "" : "s"} still to answer before a result.`
     : fixes ? `${fixes} answer${fixes === 1 ? " needs" : "s need"} a fix before a result.`
     : fired.length ? `Needs a closer look: ${fired.map((c) => c.message).join(" ")} Next: talk it through with the representative.`
     : "Looks eligible so far · next: book a consultation. This is not a decision on the application.";

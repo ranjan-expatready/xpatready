@@ -376,7 +376,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const waitingAdds = await api("/library/changes?status=WAITING");
   for (const c of waitingAdds) await p.request.fetch(`${URL}/api/library/changes/${c.id}/approve`, { method: "POST", headers: { "x-actor": "user-C", "content-type": "application/json" }, data: {} });
   step("B6b: every form field decided (K1) and each new shared field approved by a second person (B1)", (await api("/library/changes?status=WAITING")).length === 0, `${decidedFF} form fields · ${waitingAdds.length} new fields approved`);
-  // S5 slice 2 coverage gate (BR-11): release waits while an answer the forms need is asked of nobody. The Questionnaires
+  // S5 slice 2 coverage gate (BR-11): release waits while an answer the forms need is asked of nobody. The Smart questionnaire (SQR)
   // tab names each one; the person has the case officer fill them (placed in a working view, the call the Fields page makes).
   await go(`/c/${scratch}/questionnaires`);
   const gapsShown = await p.locator("[data-gaps] li").count();
@@ -384,7 +384,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   for (const x of (await api(`/combinations/${scratch}`)).draft.problems.filter((q) => q.where === "Questionnaires"))
     await p.request.fetch(`${URL}/api/library/fields/${encodeURIComponent(x.item)}/placement`, { method: "POST", headers: { "x-actor": "user-A", "content-type": "application/json" }, data: { sectionKey: sec, collectedFrom: "staff_working_view", repeats: x.item.startsWith("case.") ? "once_per_case" : "per_person" } });
   const left = (await api(`/combinations/${scratch}`)).draft.problems.filter((q) => q.where === "Questionnaires").length;
-  step("B6c (S5 BR-11): the answers the forms need but nobody was asked are named on Questionnaires; once the case officer fills them, none is left", left === 0, `${gapsShown} shown, ${left} left`);
+  step("B6c (S5 BR-11): the answers the forms need but nobody was asked are named on Smart questionnaire (SQR); once the case officer fills them, none is left", left === 0, `${gapsShown} shown, ${left} left`);
   // C11.12 BR-7: a new release needs each applicant role's filing; the author sets them (through the API: scaffolding here;
   // check_c1112_filing_browser.cjs walks the Filing column on its screen).
   await setFilingModes(async (pth, init = {}) => { const r = await p.request.fetch(`${URL}/api${pth}`, { headers: { "x-actor": "user-A", "content-type": "application/json" }, ...init }); return { status: r.status(), body: await r.json() }; }, scratch);

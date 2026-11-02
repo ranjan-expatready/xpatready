@@ -1,6 +1,6 @@
 // W1-15 Questions and documents, slice 1 (runtime lane; P-130–P-132; challenge.md M1–M6, m1, m2 and the Lead response,
 // 29 Oct): where the answer to each fact comes from per person role (document › client › agent), the per-role coverage
-// fix, a person's choice over the rules and the Pre-qualification tick (FactSource), and the release rules (C4.10).
+// fix, a person's choice over the rules and the Prospect questionnaire (PQR) tick (FactSource), and the release rules (C4.10).
 // A passing and a failing case per rule: the engine on the sample's own draft snapshot (changed in memory), and the API
 // on an isolated copy with the sample loaded. Rules only: no AI call (US$0).
 //   zsh studio/tools/isolated.sh runtime_w115 4434 start && tsx studio/tests/check_w115_slice1.ts 4434 xr_studio_runtime_w115
@@ -87,13 +87,13 @@ const PASSPORT = "passport_or_travel_document_information_page_photocopy";
   const lockedDoc = clone(S0); lockedDoc.fact_sources = [{ role: decl!.role, fact: decl!.fact, source: "AGENT", document_type: null, prequalification: false, reason: null, origin: "HUMAN" }];
   ok("C4.10 m2 (P-97) fail: Agent on a client-only fact is refused at release", factSourceProblems(lockedDoc).some((p) => p.level === "error" && p.item === decl!.fact && /only the client gives it/.test(p.message)));
   const pqAgent = clone(S0); pqAgent.fact_sources = [{ role: rep!.role, fact: rep!.fact, source: null, document_type: null, prequalification: true, reason: null, origin: "HUMAN" }];
-  ok("C4.2 M4 fail: a pre-qualification tick on an agent fact is refused at release", factSourceProblems(pqAgent).some((p) => p.level === "error" && /prospect is asked only what they can answer/.test(p.message)));
+  ok("C4.2 M4 fail: a Prospect questionnaire (PQR) tick on an agent fact is refused at release", factSourceProblems(pqAgent).some((p) => p.level === "error" && /prospect is asked only what they can answer/.test(p.message)));
   const pqDoc = clone(S0); pqDoc.fact_sources = [{ role: "principal", fact: "person.date_of_birth", source: null, document_type: null, prequalification: true, reason: null, origin: "HUMAN" }];
   ok("C4.2 M4 (Q1) pass: a tick on the passport's date of birth (it has a question) is allowed", !factSourceProblems(pqDoc).some((p) => p.item === "person.date_of_birth" && p.level === "error") && get(factSources(pqDoc), "principal", "person.date_of_birth")?.prequalification === true);
   const d1 = diff(S0 as any, pqDoc);
   ok("C4.10 M5: a tick is one named line on Review, needing the immigration expert's sign-off", d1.filter((x) => x.kind === "Where an answer comes from").length === 1 && d1.find((x) => x.kind === "Where an answer comes from")!.needs_sme === true && !d1.some((x) => x.kind === "Configuration"), d1.map((x) => `${x.kind}: ${x.label}`));
   { const t = d1.find((x) => x.kind === "Where an answer comes from")!.label;
-    ok("Lead check W1 pass: the tick's Review line uses the fact's words and the role's label (\"…: pre-qualification\")", /^[A-Z][^:]* \([A-Z][^)]*\): pre-qualification$/.test(t), t);
+    ok("Lead check W1 pass: the tick's Review line uses the fact's words and the role's label (\"…: Prospect questionnaire (PQR)\")", /^[A-Z][^:]* \([A-Z][^)]*\): Prospect questionnaire \(PQR\)$/.test(t), t);
     ok("Lead check W1 fail: the tick's Review line shows no system key or role key", !KEYS.test(t), t); }
 
   // ---------------------------------------------------------------- API: list, choose, refuse, undo, release
@@ -126,14 +126,14 @@ const PASSPORT = "passport_or_travel_document_information_page_photocopy";
   ok("C4.10 m2 (P-97) fail: Agent on a declaration is refused at save (422)", r.status === 422 && /only the client gives it/.test(words(r)), words(r));
   ok("Lead check W3 fail: the refusal at save carries no decision code (P-…)", !/\(P-\d+\)|\bP-\d+\b/.test(JSON.stringify(r.body)), words(r));
   r = await put(rep!.role, rep!.fact, { prequalification: true, version: 0 });
-  ok("C4.2 M4 fail: a pre-qualification tick on an agent fact is refused at save (422)", r.status === 422 && r.body?.errors?.some((e: any) => e.field === "prequalification"), words(r));
+  ok("C4.2 M4 fail: a Prospect questionnaire (PQR) tick on an agent fact is refused at save (422)", r.status === 422 && r.body?.errors?.some((e: any) => e.field === "prequalification"), words(r));
   const unplaced = L.facts.find((f: any) => !f.placed && f.source !== "AGENT" && !f.clientOnly);
   if (unplaced) { r = await put(unplaced.role, unplaced.fact, { prequalification: true, version: 0 }); ok("C4.2 M4 fail: a tick on a fact no question asks is refused at save (422)", r.status === 422 && /No question asks/.test(words(r)), `${unplaced.fact}: ${words(r)}`); }
   // #197 review m3: the sample asks every fact, so say so instead of skipping silently; check_c42_marking_browser makes one fact unasked on purpose.
   else console.log("SKIP  C4.2 M4 fail (a tick on a fact no question asks): every sample fact has a question; check_c42_marking_browser.cjs proves it");
   r = await put("principal", "person.date_of_birth", { prequalification: true, reason: "Sample: the guide's age test", version: 0 });
   L = (await call("GET", `/combinations/${wp}/fact-sources`)).body;
-  ok("C4.2 M4 (Q1) pass: the passport's date of birth is ticked for pre-qualification; it stays a Document fact and is in the PQR", r.status === 200 && r.body?.source === "DOCUMENT" && r.body?.prequalification === true && L.counts.prequalification === 1 && L.prequalification.some((x: any) => x.fact === "person.date_of_birth" && x.source === "DOCUMENT"), L.prequalification);
+  ok("C4.2 M4 (Q1) pass: the passport's date of birth is ticked for the Prospect questionnaire (PQR); it stays a Document fact and is in the PQR", r.status === 200 && r.body?.source === "DOCUMENT" && r.body?.prequalification === true && L.counts.prequalification === 1 && L.prequalification.some((x: any) => x.fact === "person.date_of_birth" && x.source === "DOCUMENT"), L.prequalification);
   ok("C4.10 M1: the rules' own source is not stored as a choice (only the tick)", sql(`select coalesce(source,'-') || '|' || prequalification from fact_source where combination_id='${wp}' and lineage_key='principal|person.date_of_birth' order by version desc limit 1`) === "-|true");
   // Release: a choice nobody can reach blocks it (set in the data, as an older save would be).
   sql(`insert into fact_source (workspace_id, combination_id, lineage_key, role, canonical_field_key, source, version, status, origin, updated_by) values ('${served}', '${wp}', '${decl!.role}|${decl!.fact}', '${decl!.role}', '${decl!.fact}', 'AGENT', 1, 'DRAFT', 'HUMAN', 'user-A')`);
@@ -150,7 +150,7 @@ const PASSPORT = "passport_or_travel_document_information_page_photocopy";
   r = await call("POST", `/combinations/${wp}/approve`, {}, "user-B");
   ok("C4.10 pass: with the tick only, it is submitted, signed off and released (Release 2)", r.status === 201 && r.body?.version === 2, words(r) || r.body?.version);
   const rel = (await call("GET", `/combinations/${wp}/config?mode=published`)).body.snapshot;
-  ok("C4.2 pass: Release 2 carries the pre-qualification tick", (rel.fact_sources ?? []).some((x: any) => x.fact === "person.date_of_birth" && x.prequalification === true), rel.fact_sources);
+  ok("C4.2 pass: Release 2 carries the Prospect questionnaire (PQR) tick", (rel.fact_sources ?? []).some((x: any) => x.fact === "person.date_of_birth" && x.prequalification === true), rel.fact_sources);
   r = await call("DELETE", `/combinations/${wp}/fact-sources/principal/${encodeURIComponent("person.date_of_birth")}`, { version: 1 });
   ok("C4.10 Undo fail: a released choice is not undone (409 Released since)", r.status === 409 && /Released since|released meanwhile/.test(`${r.body?.title} ${words(r)}`), `${r.status} ${words(r)}`);
   sql(`update combination set retired_at=now() where id='${wp}'`);

@@ -12,7 +12,7 @@ const COV: Record<string, [string, string]> = {
   "client profile": ["neutral", "bg-text-muted/50"], "staff working view": ["neutral", "bg-text-muted/30"], unresolved: ["danger", "bg-danger"],
 };
 const APPLIES = (a: any) => (a === true ? <Pill tone="ok">Applies</Pill> : a === false ? <Pill>Does not apply</Pill> : <Pill tone="warn">Cannot tell yet</Pill>);
-const TABS = [["questions", "Questionnaire"], ["documents", "Document checklist"], ["forms", "Forms and coverage"], ["rules", "Rules and checks"]] as const;
+const TABS = [["questions", "Smart questionnaire (SQR)"], ["documents", "Document checklist"], ["forms", "Forms and coverage"], ["rules", "Rules and checks"]] as const;
 const participantCountLabel = (role: string, label: string) => role === "spouse_or_partner" ? "Spouses or partners travelling" : role === "child" ? "Children travelling" : `${label} count`;
 
 export function PreviewTab({ d }: { d: any }) {

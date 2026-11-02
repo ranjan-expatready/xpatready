@@ -18,7 +18,7 @@
 // C4.4 part 2 (section checks authored through the API, the error summary, tier 3, PQR mode).
 // Part 2 is built (C4.4 part 2, swarm B3c) and adopted into tests/check_c44_part2.ts. Changed here with it: the authored
 // check names its question by field key (case.funds_available_cad; the API refuses a phrase it cannot place); the PQR
-// check needs Pre-qualification ticks, which setup_c44_types.ts adds (Sample picks); a missing case or principal, or any
+// check needs Prospect questionnaire (PQR) ticks, which setup_c44_types.ts adds (Sample picks); a missing case or principal, or any
 // exception, is a FAIL line and exit 1, never a crash.
 //   zsh studio/tools/isolated.sh accept 4448 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4448 xr_studio_accept \
 //     && tsx studio/tests/runtime/setup_c44_types.ts 4448 xr_studio_accept && tsx studio/acceptance/C4.4.test.ts 4448 xr_studio_accept
@@ -125,8 +125,8 @@ const snapshot = { canonical_fields: TYPES.map(([t]) => ({ id: `person.sample_${
   const answersBefore = sql(`select count(*) || '§' || coalesce(max(effective_at)::text, '') from client_canonical_answer`);
   const review = await call("POST", `/runtime/cases/${caseId}/review`, {}, OFFICER);
   ok("C4.4 tier 3: the officer's independent review exists and, with live AI off, is refused in words at US$0, changing no answer", review.status >= 400 && review.status !== 404 && /live|founder|switch/i.test(words(review)) && sql(`select count(*) || '§' || coalesce(max(effective_at)::text, '') from client_canonical_answer`) === answersBefore, { status: review.status, words: words(review) });
-  // PQR mode (P-47 mode 1): only the questions flagged pre-qualification; ends with a plain result.
+  // PQR mode (P-47 mode 1): only the questions flagged Prospect questionnaire (PQR); ends with a plain result.
   const pqr = await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=pqr`, undefined, OFFICER);
-  ok("C4.4 PQR: the pre-qualification mode answers 200 with only questions flagged pre-qualification and a plain result line", pqr.status === 200 && Array.isArray(pqr.body?.questions) && pqr.body.questions.length > 0 && pqr.body.questions.every((q: { pre_qualification?: boolean }) => q.pre_qualification === true) && typeof pqr.body?.result === "string", { status: pqr.status, words: words(pqr) });
+  ok("C4.4 PQR: the Prospect questionnaire (PQR) mode answers 200 with only questions flagged Prospect questionnaire (PQR) and a plain result line", pqr.status === 200 && Array.isArray(pqr.body?.questions) && pqr.body.questions.length > 0 && pqr.body.questions.every((q: { pre_qualification?: boolean }) => q.pre_qualification === true) && typeof pqr.body?.result === "string", { status: pqr.status, words: words(pqr) });
   process.exit(summary() ? 1 : 0);
 })().catch((e) => { ok("C4.4: the run ends without an error (an exception is a failure, never a crash)", false, String(e)); summary(); process.exit(1); });
