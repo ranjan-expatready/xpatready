@@ -9,7 +9,7 @@ import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
 import { buildSnapshot, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
 import { slug } from "../../engine/import.ts";
 import { identityKeyOf, insertProposals } from "./proposals.ts";
-import { namedDocumentType } from "./document-type-names.ts";
+import { nameKey, namedDocumentType, waitingDocumentType } from "./document-type-names.ts";
 import { checkCondition, diff, ordinal, validate, isDemoSnapshot } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, need, revise, RUNTIME_ACTORS, strip, Workspace, type Actor } from "./core.ts";
 import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
@@ -682,6 +682,9 @@ export class Studio {
       await this.audit.log(workspaceId, actor.id, "retired", "document requirement", lineage, `${actor.name} removed document requirement ${lineage} from "${c.label}" (draft)`, undefined, combinationId);
       return row;
     }
+    // Break m (#573): text fields are text; a number or an object is refused in words, never a 500 or "[object Object]".
+    const TEXT: [string, unknown][] = [["The document type", b.documentTypeKey], ["The new document type's name", b.documentTypeName], ["The new document type's name", b.newTypeName], ["What it proves", b.proves], ["Provided by", b.providedBy], ["The source quote", b.sourceQuote]];
+    for (const [what, v] of TEXT) if (v !== undefined && v !== null && typeof v !== "string") fail(`${what} must be text.`);
     let typeKey = b.documentTypeKey;
     const MODES = ["COMBINATION_MANDATORY", "ANSWER_CONDITIONAL"];
     const lineProblems = async () => { // the line's own checks, run before a name is proposed too (review m2: nothing unchecked waits)
@@ -704,16 +707,16 @@ export class Studio {
         await lineProblems();
         // Review M1: the identity is the name and what it proves (P-149 (2)); the default proves names no combination, so
         // the same name from two combinations is one item.
-        const proves = (b.proves?.trim() || "Named by a person while adding a document requirement; the second person states what it proves.").slice(0, 200);
+        const proves = (b.proves?.trim() || "Not stated yet: the person who named it did not say; the second person may state it before accepting.").slice(0, 200);
         const payload = { kind: "document_type" as const, name: typeName, proves, category: (b.providedBy ?? "client").slice(0, 60), suppliesFacts: [], readerKind: "person_only" as const, identityDocument: false };
         const quote = b.sourceQuote?.trim() ? ` The author's source: "${b.sourceQuote.trim().slice(0, 300)}".` : "";
-        const norm = normalizeLabel(typeName);
+        const norm = nameKey(typeName);
         const proposalId = await this.db.$transaction(async (tx) => {
           await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`requirement-type:${workspaceId}:${norm}`}))`;
-          // Review M1: a waiting proposal for the same name (any letter case, spacing or punctuation, from any combination
-          // or from AI drafting) is this one.
-          const twin = await tx.proposalItem.findFirst({ where: { workspaceId, kind: "document_type", status: "waiting", identityKey: { startsWith: `${norm}|` } }, select: { payload: true } });
-          if (twin) fail(`A proposal to add the document type "${String((twin.payload as { name?: unknown }).name ?? typeName)}" is already waiting on To review › Proposals: decide it there, then add the line with it.`, HttpStatus.CONFLICT);
+          // Review M1: a waiting proposal for the same name (any letter case, spacing, punctuation or Latin accent, from any
+          // combination or from AI drafting) is this one.
+          const twin = await waitingDocumentType(tx, workspaceId, typeName);
+          if (twin !== null) fail(`A proposal to add the document type "${twin}" is already waiting on To review › Proposals: decide it there, then add the line with it.`, HttpStatus.CONFLICT);
           const job = await tx.draftingJob.create({ data: { workspaceId, combinationId, kind: "requirement_type", mode: "LOCAL", status: "COMPLETED", costUsd: 0, startedBy: actor.id, finishedAt: new Date(),
             message: `${actor.name} named a new document type while adding a requirement to "${c.label}": one library proposal (no AI, US$0).`, detail: { operation: "requirement_type", name: typeName } } });
           const [id] = await insertProposals(tx, workspaceId, [{

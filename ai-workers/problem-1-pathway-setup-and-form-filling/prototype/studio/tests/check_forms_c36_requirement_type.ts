@@ -106,6 +106,39 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   const ruleFact = sql("select proposed_by from library_change where kind = 'document_type' and label = 'Proof of a plain thing (Sample)'");
   ok("C3.6 pass: the namer is read from the server's own run, not from the request", ruleFact === "user-A", ruleFact);
 
+  // ─────────── Break of #573: M2 different names that share a key stay two types; Latin accents are one name
+  const bra = await nameAndAccept(wp, "Брак 2024");
+  r = await call("POST", `/combinations/${wp}/requirements`, { ...line, documentTypeName: "Паспорт 2024" });
+  ok("C3.6 fail (break M2): a different name whose key matches another type's (\"Паспорт 2024\" after \"Брак 2024\") is not that type: it waits as its own proposal (202)", !!bra.key && r.status === 202, [bra.key, r.status, words(r)]);
+  const longA = "Proof of the supporting bank records kept for the applicant covering four months A (Sample)";
+  const la = await nameAndAccept(wp, longA);
+  r = await call("POST", `/combinations/${wp}/requirements`, { ...line, documentTypeName: longA.replace(" A (Sample)", " B (Sample)") });
+  ok("C3.6 fail (break M2): two long names alike in their first 60 characters are two types (202, not a line on the first)", !!la.key && r.status === 202, [la.key, r.status, words(r)]);
+  const cafe = await nameAndAccept(wp, "Brk Café Note (Sample)");
+  r = await call("POST", `/combinations/${sp}/requirements`, { ...line, documentTypeName: "brk cafe note (sample)" });
+  ok("C3.6 pass (break m): a Latin-accent twin is the same type (201, the accepted key, nothing proposed)", !!cafe.key && r.status === 201 && r.body?.documentTypeKey === cafe.key, [cafe.key, r.status, r.body?.documentTypeKey, words(r)]);
+  r = await call("POST", `/combinations/${wp}/requirements`, { ...line, documentTypeName: "Brk Naïve Note (Sample)" });
+  const naive = await call("POST", `/combinations/${sp}/requirements`, { ...line, documentTypeName: "brk naive note (sample)" });
+  ok("C3.6 fail (break m): a Latin-accent twin of a waiting name is refused (409)", r.status === 202 && naive.status === 409 && /already waiting/.test(words(naive)), [r.status, naive.status, words(naive)]);
+
+  // Break M1 (#573): Undo of the accept never takes a type away from a line that now uses it.
+  const und = await call("POST", `/combinations/${wp}/requirements`, { ...line, documentTypeName: "Proof of an undone thing (Sample)" });
+  const undAcc = await call("POST", "/review/proposals/decide", { ids: [und.body?.proposalId], action: "accept" }, "user-B");
+  const undKey = undAcc.body?.items?.[0]?.landedAs;
+  const undLine = await call("POST", `/combinations/${wp}/requirements`, { ...line, documentTypeKey: undKey });
+  r = await call("POST", `/review/proposals/undo/${undAcc.body?.batchId}`, {}, "user-B");
+  ok("C3.6 fail (break M1): Undo of the accept is refused once a line uses the type (409, in words); the type and the line stay", undLine.status === 201 && r.status === 409 && /used by a checklist line/.test(words(r)) && sql(`select count(*) from document_type where document_type_key = '${undKey}'`) === "1", [undLine.status, r.status, words(r)]);
+  const und2 = await call("POST", `/combinations/${wp}/requirements`, { ...line, documentTypeName: "Proof of a second undone thing (Sample)" });
+  const und2Acc = await call("POST", "/review/proposals/decide", { ids: [und2.body?.proposalId], action: "accept" }, "user-B");
+  r = await call("POST", `/review/proposals/undo/${und2Acc.body?.batchId}`, {}, "user-B");
+  ok("C3.6 pass (break M1): Undo of the accept still works while no line uses the type (the type goes, the proposal waits again)", r.status === 201 && sql(`select count(*) from document_type where document_type_key = '${und2Acc.body?.items?.[0]?.landedAs}'`) === "0" && sql(`select status from proposal_item where id = '${und2.body?.proposalId}'`) === "waiting", [r.status, words(r)]);
+
+  // Break m (#573): text fields are text.
+  for (const [label, extra] of [["an object as the name", { documentTypeName: { a: 1 } }], ["a number as what it proves", { documentTypeName: "Proof of a typed thing (Sample)", proves: 42 }], ["a number as the source quote", { documentTypeName: "Proof of a typed thing (Sample)", sourceQuote: 7 }]] as const) {
+    r = await call("POST", `/combinations/${wp}/requirements`, { ...line, ...extra });
+    ok(`C3.6 fail (break m): ${label} is refused in words (400), nothing proposed`, r.status === 400 && /must be text/.test(words(r)) && sql("select count(*) from proposal_item where payload->>'name' in ('[object Object]', 'Proof of a typed thing (Sample)')") === "0", [r.status, words(r)]);
+  }
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

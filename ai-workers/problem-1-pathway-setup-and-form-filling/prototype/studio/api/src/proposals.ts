@@ -465,6 +465,14 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     const users = keys.length ? await tx.proposalItem.findMany({ where: { workspaceId, status: { in: ["accepted", "edited"] }, decidedKey: { in: keys }, reuse: { path: ["match"], equals: "reuse" }, NOT: { batchId } }, select: { kind: true, decidedKey: true, formEdition: true } }) : [];
     const user = users.find((u) => added.some((r) => r.kind === u.kind && r.decidedKey === u.decidedKey));
     if (user) fail(`${user.decidedKey} is now reused by an item accepted for ${user.formEdition ?? "another source"}, so Undo would take it away under that item. Nothing was undone: undo that decision first, or retire the item in the shared library.`, HttpStatus.CONFLICT);
+    // C3.6 (break M1 on #573): a document type a checklist line now uses (as its type or an alternative) is not taken away
+    // under that line. The line door takes the same per-item lock (studio.ts saveRequirement, library-items.ts lockItem).
+    const typeKeys = added.filter((r) => r.kind === "document_type").map((r) => r.decidedKey!).sort();
+    for (const k of typeKeys) await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`library-item:${workspaceId}:document_type:${k}`}))::text AS locked`;
+    for (const k of typeKeys) {
+      const line = await tx.documentRequirement.findFirst({ where: { workspaceId, status: { not: "RETIRED" }, OR: [{ documentTypeKey: k }, { alternatives: { array_contains: [k] } }] }, select: { combinationId: true } });
+      if (line) fail(`The document type ${k} is already used by a checklist line, so Undo would take it away under that line. Nothing was undone: remove the line first, or retire the type in the shared library.`, HttpStatus.CONFLICT);
+    }
     // PR #96 review (1): an item edited after the accept is not erased by Undo; the library keeps the person's edit.
     for (const r of rows) {
       const { landedStamp } = (r.work ?? {}) as { landedStamp?: string };
