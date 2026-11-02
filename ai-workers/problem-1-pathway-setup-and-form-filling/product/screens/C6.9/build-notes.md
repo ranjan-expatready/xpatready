@@ -98,3 +98,28 @@ D1 job fit 8 · D2 rules as data 9 · D3 correctness 8 · D4 contract 8 · D5 se
 * **Page and card:** `web/src/runtime/eligibility.tsx`, plus three lines in `cases.tsx` (the import, the route and the card).
 * **BR-9 "Not confirmed yet":** the adapter lists, per gate, the answered facts that are not confirmed (`unconfirmed`), and the page marks each one "(not confirmed yet)".
 * **Tests:** `check_c69_page_browser.cjs` 38/38, `check_c69_runs` 89/89, acceptance C6.9 15/15.
+
+## Part 3, review round 1 (2572b9b0: reviewer Block, breaker 1 Major) and the fixes
+* **Reviewer M1, focus lost after each action (WCAG 2.4.3):** focus now goes back to the button that started the action, or to the result's heading when that button is gone or switched off (after Run eligibility check, and after Mark reviewed). The browser check asserts where focus is after Run, Run again, Esc, Keep the override and Mark reviewed.
+* **Breaker M1, duplicate overrides:**
+  * the API takes a lock per run, and an identical override from the same person returns the one already kept (20 at once: one row, one audit row);
+  * the page ignores a submit while one is in flight.
+* **Breaker m1:** an override on a check that a newer one has replaced is refused 409 ("a newer check exists").
+* **Breaker m2 = review minor 7:** the list says `has_rules`. With no rules the page shows "This application's release has no eligibility rules yet…" and no Run button.
+* **Breaker m3:** Esc returns focus to the opener (the same fix as reviewer M1).
+* **Breaker m4:** long unbroken labels, reasons and notes wrap.
+* **Breaker m5 = review minors 1–3:**
+  * label, reason and note lengths count characters, and the label and reason need a letter or digit;
+  * Enter in the override reason submits instead of starting a line the API would refuse;
+  * a review note keeps its line breaks.
+* **Review minor 4:** the label starts empty, with suggestions.
+* **Review minor 5:** a note refusal shows on the Note field, and any other refusal shows in the drawer.
+* **Review minor 6:** "(not confirmed yet)" is worked out when the run is read, so Confirm section clears it (the stored row is unchanged).
+* **Review minor 9 (part):** the review preview uses the firm record's name.
+* **Review minor 10:** "For the representative's review, a rule not met: …".
+* **Review minor 11:** dates read "2 Nov 2026, 14:05".
+* **Left, listed in the PR:**
+  * review minor 8: the missing-fact links open the case page, not the exact question (the questionnaire has no per-question anchor yet);
+  * review minor 9 (rest): "Run by" names come from the page's list of simulated people;
+  * breaker copy note: a 409 names the time in UTC.
+* **Tests:** `check_c69_runs` 98/98, `check_c69_page_browser` 43/43 twice, acceptance C6.9 15/15.

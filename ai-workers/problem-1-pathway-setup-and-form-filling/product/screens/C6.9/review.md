@@ -283,3 +283,70 @@ Delta `fd26c492..36163fad`. Fresh copy `rev_c69` on :4439; live AI off; US$0.
 **Quick re-run on a fresh copy on :4439:** `check_c69_runs` **75/75**; acceptance C6.9 **12/15** (11–13 are part 3).
 
 **Verdict: Approve** on 2fe5fc84. No Blocker or Major is open. The minors r2-1…r2-3 stand as follow-ups.
+
+## Part 3 review (2572b9b0)
+Scope: override, review and the page (BR-15, BR-16, BR-18, §4–§6), P-229 (2), P-230 (1), BR-9 marks. P-236 is on hold and not asked for. Diff `origin/main..2572b9b0`. Isolated copy `rev_c69` on :4439 (never :4400), live AI off, US$0.
+
+**Builder's results, re-run on fresh copies, all confirmed:**
+- `check_c69_runs` 89/89; `check_c69_gates` 87/87;
+- `check_c69_page_browser` 38/38 (37 s). It rewrites `screens/C6.9/screenshots/`, so I restored them with `git checkout`;
+- acceptance C6.9 15/15, after `setup_visitor_visa` and `setup_vv_m3`. S7a fails there for the fee table, as before, outside this row;
+- `vite build` is clean; `graph.mjs --check` shows no gap on any C6.9 route or page.
+
+**My own walk:** keyboard only, 640×400 CSS px at device scale 2 (a 1280×800 window at 200 %), as the case officer, then the representative. Script: scratchpad `walk/walk.cjs`. I also raced 20 reviews (`walk/race.mjs`).
+
+**What held:**
+- **Honest copy.** A conviction answered yes with the passport still missing reads "Possibly eligible — needs 2 facts; the representative reviews this". It is never Not eligible: P-230 (1) and `FAIL_BEATS_MISSING` apply to `not_eligible` gates only.
+- **Not eligible wording.** It always carries "on this application's rules as written … The representative reviews this, and IRCC decides". The disclaimer is always shown. Judgement lines sit under their own heading.
+- **Override (BR-15).** The rules' outcome stays visible beside "Officer's override: …". There is one row and one audit row. An out-of-date run is allowed and the override records that. Refusals:
+  - an empty or over-80 label, or an empty reason → 400 on the field;
+  - a wrong `programKey` → 400;
+  - a stale `fromOutcome` → 409, in the concept's words;
+  - a client → 403; another firm's staff → 404.
+- **Review (BR-16, P-229 (2)).**
+  - The server stamps from `samples/firms.json`: user-R and user-T get "Reviewed" with their licence; user-O gets "Seen" with licence null.
+  - 20 reviews at once give one 200 and nineteen 409s, each "Already reviewed by Second representative (Sample) on … UTC". The `P2002` path works.
+  - A note of 501 characters → 400.
+- **BR-9.** "(not confirmed yet)" shows on answered, unconfirmed values. The pure fail line would catch a filter that ignores status.
+- **Client view.** No card and no verdict. The page says "This page is for the firm's staff", and the server returns 403. Another firm's staff see "No such case."
+- **Layout and accessibility.**
+  - No sideways scroll at 1024 px or 200 %. axe is clean on every state, mine included.
+  - The people list works as a listbox with ↑↓. State is shown by shape and text, not colour alone.
+  - Drawers open with focus on their first field and trap Tab.
+- **Not vacuous.** Each browser step asserts on text the change would remove (for example "Seen by Case officer" comes from the server's stamp, not the preview), and the override count is read in SQL.
+
+### Major
+- **M1. Keyboard focus is lost after every action on the page** (EXPERIENCE [M] 12; WCAG 2.2 AA 2.4.3, the stated bar; concept §4 "keyboard: the whole journey runs without a mouse"). Repro at :4439 as the case officer, keyboard only:
+  - (a) Run eligibility check → focus goes to `body`. The button turns busy and is then replaced.
+  - (b) Run again → Escape → focus goes to `body`, not to Run again.
+  - (c) The same after submitting Run again, Keep the override and Mark reviewed.
+
+  Each time, the person has to Tab 6–10 stops from the top of the page to get back. At 200 % they lose their place.
+  
+  Cause: `Panel` (`components/ui/controls.tsx:108`) has no `DialogPrimitive.Trigger`, so Radix's close handler focuses a null `triggerRef`. On top of that, the drawers are unmounted rather than closed (`eligibility.tsx:151-154`), and after a review the trigger is disabled (`:213`).
+  
+  Fix, in this page: keep a ref to the opening button and focus it on close. When it is now disabled (after a review) or replaced (after the first run), focus the result heading `#result` (give it `tabIndex={-1}`). Add a browser step that asserts `document.activeElement` after closing each drawer.
+
+### Minors (fix or list in the PR)
+- m1. The override reason is a `Textarea` (`:248`), but the contract refuses line breaks (`contracts/eligibility.ts:32`, "Write it as one line of plain text."). Repro: press Enter in the reason → refused. Use an `Input`, or allow line breaks for the reason.
+- m2. An override reason of "..." is accepted (201), while a run reason needs a letter or a digit (`contracts/eligibility.ts:28` vs `:32`). The run's refine should apply here too.
+- m3. Label, reason and note lengths count UTF-16 units: 80 emoji in a label → 400. Part 2 (break m4) counts characters.
+- m4. The label is prefilled with "Refer to the representative" (`:236`). A person who only writes a reason saves a label they never chose. Start it empty, with the suggestions in the list.
+- m5. Errors not shown on their field:
+  - a note refusal shows in a Notice above the form, not on the Note field (`:260`, `:266`);
+  - an override 400 that is not about `label` or `reason` shows nothing at all (`:239`: `other` only on 409).
+- m6. "(not confirmed yet)" is frozen with the run (`engine/runtime/eligibility.ts:62`). After Confirm section, which by design does not make the run out of date (BR-13), the page still says the fact is not confirmed. Add "when checked", or work it out on read.
+- m7. Concept §5 "No gates on the release" says "No button". The page still offers Run eligibility check, and only after a click does it show the 409 in "Nothing was run". The concept's second sentence ("An author adds them…") is also missing.
+- m8. Missing-fact links go to the case page (`:197`), not to the person's question (§4).
+- m9. Staff and names are hard-coded (`:30`): the card, the page and "Run by" ignore `firms.json`. The review preview reads "Reviewed by Representative", but the stamp is saved as "Representative (Sample)".
+- m10. The review sentence reads "For the representative's review: Answered no to the criminal history question (Sample)" when the person answered yes. The gate label describes the rule, not the finding. Add "not met:" before the label.
+- m11. Dates show as "Nov 2, 2026, 06:35 a.m." (en-CA), where the concept shows "2 Nov 2026 14:05".
+
+### D1–D20 (part 3)
+D1 job fit 8 · D2 rules as data 9 · D3 correctness 8 · D4 contract 8 (m5) · D5 security 9 · D6 audit 8 · D7 versioning 9 · D8 tests 8 (no focus assertion) · D9 layout 8 · D10 words 8 (m10) · D11 states 7 (m7) · D12 feedback 7 (M1) · D13 accessibility 6 (M1) · D14 errors 7 (m1, m5) · D15 look 8 · D16 speed 9 · D17 and D20 simulated only · D18 cost US$0 · D19 reuse 8.
+
+**Journey score: 9/10, pass** (`journey-test-reviewer-2026-11-02-part3.md`).
+
+**Could not check:** a real screen reader; an intended user's unaided walk; the Read-only (filed, C9.2) state, which is not built yet; the no-gates state in the browser, because a fresh case pins release 2 (checked in code and through `check_c69_runs`).
+
+**Verdict: Block** on 2572b9b0. To fix: **M1** (return focus after the first run and after each drawer closes, with a browser assertion). Fix the minors or list them in the PR.

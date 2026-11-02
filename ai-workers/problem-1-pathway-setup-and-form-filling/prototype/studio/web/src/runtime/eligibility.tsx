@@ -24,14 +24,14 @@ export type Assessment = {
   out_of_date: boolean; changed: { fact: string; about: string; was: unknown; now: unknown }[]; release_changed: boolean; not_travelling?: boolean;
   overrides: Override[]; reviewedBy: string | null; reviewedAt: string | null; reviewNote: string | null; reviewStamp?: { name?: string; stamp?: "Reviewed" | "Seen"; duty?: string };
 };
-type List = { stand_in: string; stand_in_words: string; assessments: Assessment[] };
+type List = { stand_in: string; stand_in_words: string; has_rules?: boolean; assessments: Assessment[] };
 
 /** Simulated case people (api/src/core.ts RUNTIME_ACTORS), for "Run by". */
 const NAMES: Record<string, string> = { "user-O": "Case officer", "user-R": "Representative", "user-T": "Second representative", "user-S": "Solo representative" };
 const STAFF = new Set(Object.keys(NAMES));
 const nameOf = (id: string | null | undefined) => (id ? NAMES[id] ?? "Someone else" : "");
-const when = (iso: string) => new Date(iso).toLocaleString("en-CA", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
-const day = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-CA", { day: "numeric", month: "short", year: "numeric" });
+const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+const day = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 /** A fact key in words: "person.passport_number" → "Passport number". */
 export const factWords = (f: string) => { const w = f.replace(/^[a-z]+\./, "").replace(/_/g, " "); return w.charAt(0).toUpperCase() + w.slice(1); };
 const shown = (v: unknown) => (v === null || v === undefined || v === "" ? "not answered" : v === true ? "Yes" : v === false ? "No" : typeof v === "object" ? JSON.stringify(v) : String(v));
@@ -51,6 +51,13 @@ export function outcomeWords(r: Result | undefined): { text: string; tone: "ok" 
   return { text: r.outcome, tone: "neutral", short: r.outcome };
 }
 
+/** Review M1 on 2572b9b0 (WCAG 2.4.3): after an action, focus goes back to the button that started it, or to the
+ *  result's heading when that button is gone or switched off (Run eligibility check becomes Run again; Mark reviewed
+ *  is off once marked). */
+function focusBack(el: HTMLElement | null) {
+  if (el && el.isConnected && !(el as HTMLButtonElement).disabled) { el.focus(); return; }
+  document.getElementById("result")?.focus();
+}
 const useAssessments = (caseId: string) => {
   const actor = useActorId();
   return useApi<List>(["runtime", "assessments", caseId, actor], STAFF.has(actor) ? `/runtime/cases/${caseId}/assessments` : null, { retry: noRetryOnRefusal });
@@ -93,7 +100,15 @@ export function EligibilityPage() {
   const view = useCaseView(id!, "agent");
   const q = useAssessments(id!);
   const [chosen, setChosen] = React.useState<string | null>(null);
-  const [drawer, setDrawer] = React.useState<"run" | "override" | "review" | "history" | null>(null);
+  const [drawer, setDrawerState] = React.useState<"run" | "override" | "review" | "history" | null>(null);
+  // Break m3 on 2572b9b0 (WCAG 2.4.3): a drawer gives focus back to the button that opened it.
+  const opener = React.useRef<HTMLElement | null>(null);
+  const setDrawer = (d: "run" | "override" | "review" | "history" | null) => {
+    if (d) opener.current = document.activeElement as HTMLElement | null;
+    setDrawerState(d);
+    // After the dialog library has put focus back itself on unmount (it does so on the next tick).
+    if (!d) setTimeout(() => focusBack(opener.current), 60);
+  };
   const [runError, setRunError] = React.useState<string | null>(null);
   const listRef = React.useRef<HTMLUListElement>(null);
   if (!STAFF.has(actor)) return <Notice title="This page is for the firm's staff">Eligibility checks are seen by the firm's staff only.</Notice>;
@@ -119,7 +134,7 @@ export function EligibilityPage() {
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">Eligibility · {c.reference}<StandIn id="SI-1" today="our own checks on this application's rules, three outcomes and no score" later="the team's AG-03 Qualifier fills this page and adds scores, cut-offs and advice" /></h1>
           <p className="mt-1 text-sm text-text-muted">{(q.data?.assessments ?? []).find((a) => a.results[0])?.results[0].programLabel ?? "This application"} · release {c.pin.release_version}{latest ? ` · rules as at ${day(Object.values(latest.rulesAsOfByProgram)[0])}` : ""} · staff only: the client never sees a verdict</p>
         </div>
-        {person ? <RunButton caseId={c.id} person={person} first={!runs.length} onAgain={() => setDrawer("run")} onError={setRunError} /> : null}
+        {person && q.data?.has_rules !== false ? <RunButton caseId={c.id} person={person} first={!runs.length} onAgain={() => setDrawer("run")} onError={setRunError} /> : null}
       </div>
       {!travellers.length ? <Notice title="Nobody travels on this case yet">Add the people travelling on the case page first.</Notice> : (
         <div className="grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
@@ -139,10 +154,11 @@ export function EligibilityPage() {
             </ul>
           </section>
           <section aria-labelledby="result" className="min-w-0 rounded-xl border border-border bg-surface-raised">
-            <h2 id="result" className="border-b border-border px-4 py-3 text-base font-semibold [overflow-wrap:anywhere]">{person!.label} — {result?.programLabel ?? "this application"}</h2>
+            <h2 id="result" tabIndex={-1} className="border-b border-border px-4 py-3 text-base font-semibold outline-none [overflow-wrap:anywhere] focus-visible:ring-[3px] focus-visible:ring-ring/50">{person!.label} — {result?.programLabel ?? "this application"}</h2>
             <div className="space-y-4 px-4 py-4">
               {runError ? <Notice tone="danger" title="Nothing was run">{runError}</Notice> : null}
-              {!latest ? <p className="text-sm">No eligibility check yet for {person!.label}. It reads the answers on file against this application's rules; nothing is sent anywhere.</p>
+              {q.data?.has_rules === false && !latest ? <Notice title="No eligibility rules yet">This application's release has no eligibility rules yet. An author adds them and a reviewer releases them.</Notice>
+                : !latest ? <p className="text-sm">No eligibility check yet for {person!.label}. It reads the answers on file against this application's rules; nothing is sent anywhere.</p>
                 : <Result caseId={c.id} a={latest} r={result!} runs={runs.length} open={setDrawer} />}
             </div>
           </section>
@@ -157,9 +173,9 @@ export function EligibilityPage() {
 }
 
 function RunButton({ caseId, person, first, onAgain, onError }: { caseId: string; person: CasePerson; first: boolean; onAgain: () => void; onError: (m: string | null) => void }) {
-  const run = useAction(() => api(`/runtime/cases/${caseId}/assessments`, { method: "POST", json: { person: person.subject_id } }), { success: "Eligibility checked", invalidate: [["runtime", "assessments", caseId]], onDone: () => onError(null) });
+  const run = useAction(() => api(`/runtime/cases/${caseId}/assessments`, { method: "POST", json: { person: person.subject_id } }), { success: "Eligibility checked", invalidate: [["runtime", "assessments", caseId]], onDone: () => { onError(null); setTimeout(() => focusBack(null), 50); } });
   if (!first) return <Button onClick={onAgain}>Run again</Button>;
-  return <Button busy={run.isPending} onClick={() => run.mutate(undefined, { onError: (e) => onError(e.message) })}>Run eligibility check</Button>;
+  return <Button busy={run.isPending} onClick={() => { if (!run.isPending) run.mutate(undefined, { onError: (e) => onError(e.message) }); }}>Run eligibility check</Button>;
 }
 
 function Result({ caseId, a, r, runs, open }: { caseId: string; a: Assessment; r: Result; runs: number; open: (d: "override" | "review" | "history") => void }) {
@@ -178,8 +194,8 @@ function Result({ caseId, a, r, runs, open }: { caseId: string; a: Assessment; r
         <span className="text-xs text-text-muted" title="Programs with a points score show it here when the team's Qualifier is connected">Score: none (this application has no points score)</span>
       </div>
       {r.outcome === "NOT_ELIGIBLE" ? <p className="text-sm">Fails: {r.failedGates.map((k) => labels.get(k) ?? k).join("; ")}{r.missingInputs.length ? `; also needs: ${r.missingInputs.map(factWords).join(", ")}` : ""}. The representative reviews this, and IRCC decides.</p> : null}
-      {r.reviewGates?.length ? <p className="text-sm">For the representative's review: {r.reviewGates.map((k) => labels.get(k) ?? k).join("; ")}. A rule like this never gives “Not eligible” on its own; the representative reviews it, and IRCC decides.</p> : null}
-      {a.overrides.map((x) => <p key={x.id} className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"><span className="font-medium">Officer's override: {x.label}</span> — {x.reason} <span className="text-xs text-text-muted">({x.name ?? nameOf(x.by)}, {when(x.at)}; the result above is the rules' own)</span></p>)}
+      {r.reviewGates?.length ? <p className="text-sm">For the representative's review, a rule not met: {r.reviewGates.map((k) => labels.get(k) ?? k).join("; ")}. A rule like this never gives “Not eligible” on its own; the representative reviews it, and IRCC decides.</p> : null}
+      {a.overrides.map((x) => <p key={x.id} className="rounded-lg border border-border bg-surface px-3 py-2 text-sm [overflow-wrap:anywhere]"><span className="font-medium">Officer's override: {x.label}</span> — {x.reason} <span className="text-xs text-text-muted">({x.name ?? nameOf(x.by)}, {when(x.at)}; the result above is the rules' own)</span></p>)}
       <div>
         <h3 className="mb-1 text-sm font-semibold">Rules checked</h3>
         <ul className="divide-y divide-border rounded-lg border border-border">
@@ -207,7 +223,7 @@ function Result({ caseId, a, r, runs, open }: { caseId: string; a: Assessment; r
         </div>
       ) : null}
       <div className="rounded-lg border border-border bg-surface px-3 py-2 text-xs text-text-muted"><p className="font-medium text-text">Disclaimer</p><p>{a.disclaimerText}</p></div>
-      <p className="text-xs text-text-muted">Run by {nameOf(a.createdBy)} · {when(a.createdAt)} · release {a.packVersion}{a.reason ? ` · reason: ${a.reason}` : ""}{a.reviewedAt ? ` · ${stamp} ${a.reviewStamp?.name ?? nameOf(a.reviewedBy)}, ${when(a.reviewedAt)}${a.reviewNote ? `: ${a.reviewNote}` : ""}` : ""}</p>
+      <p className="whitespace-pre-line text-xs text-text-muted [overflow-wrap:anywhere]">Run by {nameOf(a.createdBy)} · {when(a.createdAt)} · release {a.packVersion}{a.reason ? ` · reason: ${a.reason}` : ""}{a.reviewedAt ? ` · ${stamp} ${a.reviewStamp?.name ?? nameOf(a.reviewedBy)}, ${when(a.reviewedAt)}${a.reviewNote ? `: ${a.reviewNote}` : ""}` : ""}</p>
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="secondary" size="sm" onClick={() => open("override")}>Override result…</Button>
         <Button variant="secondary" size="sm" disabled={!!a.reviewedAt} title={a.reviewedAt ? "Already marked" : undefined} onClick={() => open("review")}>Mark reviewed…</Button>
@@ -221,7 +237,7 @@ function Result({ caseId, a, r, runs, open }: { caseId: string; a: Assessment; r
 function RunAgainDrawer({ caseId, person, close }: { caseId: string; person: CasePerson; close: () => void }) {
   const [reason, setReason] = React.useState(""), [error, setError] = React.useState<string | null>(null);
   const run = useAction(() => api(`/runtime/cases/${caseId}/assessments`, { method: "POST", json: { person: person.subject_id, reason } }), { success: "Eligibility checked again", invalidate: [["runtime", "assessments", caseId]], onDone: close });
-  const submit = () => run.mutate(undefined, { onError: (e) => setError(e instanceof ApiError ? e.field("reason") ?? e.message : e.message) });
+  const submit = () => { if (!run.isPending) run.mutate(undefined, { onError: (e) => setError(e instanceof ApiError ? e.field("reason") ?? e.message : e.message) }); };
   return (
     <Panel open onOpenChange={(o) => { if (!o) close(); }} title={`Run again for ${person.label}`} description="The earlier checks stay as they were; this one reads today's answers." footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={run.isPending} onClick={submit}>Run again</Button></>}>
       <form onSubmit={(e) => { e.preventDefault(); submit(); }}>
@@ -233,10 +249,10 @@ function RunAgainDrawer({ caseId, person, close }: { caseId: string; person: Cas
 }
 
 function OverrideDrawer({ a, r, close }: { a: Assessment; r: Result; close: () => void }) {
-  const [label, setLabel] = React.useState<string>(OVERRIDE_LABELS[0]), [reason, setReason] = React.useState("");
+  const [label, setLabel] = React.useState<string>(""), [reason, setReason] = React.useState("");
   const [errors, setErrors] = React.useState<{ label?: string | null; reason?: string | null; other?: string | null }>({});
   const go = useAction(() => api(`/runtime/assessments/${a.id}/override`, { method: "POST", json: { programKey: r.programKey, fromOutcome: r.outcome, label, reason } }), { success: "Override kept beside the result", invalidate: [["runtime", "assessments"]], onDone: close });
-  const submit = () => go.mutate(undefined, { onError: (e) => setErrors(e instanceof ApiError ? { label: e.field("label"), reason: e.field("reason"), other: e.status === 409 ? e.message : null } : { other: e.message }) });
+  const submit = () => !go.isPending && go.mutate(undefined, { onError: (e) => setErrors(e instanceof ApiError ? { label: e.field("label"), reason: e.field("reason"), other: e.field("label") || e.field("reason") ? null : e.message } : { other: e.message }) });
   return (
     <Panel open onOpenChange={(o) => { if (!o) close(); }} title="Override the result" description="The rules' result stays visible; your label and reason sit beside it, with your name." footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={go.isPending} onClick={submit}>Keep the override</Button></>}>
       <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); submit(); }}>
@@ -245,7 +261,7 @@ function OverrideDrawer({ a, r, close }: { a: Assessment; r: Result; close: () =
         <Field label="Result being overridden"><Input value={outcomeWords(r).text} readOnly /></Field>
         <Field label="Label" hint="Up to 80 characters." error={errors.label}><Input list="override-labels" value={label} onChange={(e) => { setLabel(e.target.value); setErrors({}); }} maxLength={80} /></Field>
         <datalist id="override-labels">{OVERRIDE_LABELS.map((l) => <option key={l} value={l} />)}</datalist>
-        <Field label="Reason" hint="Required." error={errors.reason}><Textarea value={reason} onChange={(e) => { setReason(e.target.value); setErrors({}); }} maxLength={500} /></Field>
+        <Field label="Reason" hint="Required." error={errors.reason}><Textarea value={reason} onChange={(e) => { setReason(e.target.value.replace(/[\r\n]+/g, " ")); setErrors({}); }} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); submit(); } }} maxLength={500} /></Field>
         <button type="submit" hidden />
       </form>
     </Panel>
@@ -257,13 +273,14 @@ function ReviewDrawer({ a, actor, close }: { a: Assessment; actor: string; close
   // The preview only: the server decides the stamp from the firm's record (samples/firms.json, P-229 (2)).
   const me = useFirm().data?.users.find((u) => u.id === actor), licensed = !!(me?.duties.includes("represent") && me.licence?.number);
   const go = useAction(() => api(`/runtime/assessments/${a.id}/review`, { method: "POST", json: note ? { note } : {} }), { success: (x: { stamp: string }) => `${x.stamp === "Seen" ? "Seen" : "Reviewed"}: stamped on the check`, invalidate: [["runtime", "assessments"]], onDone: close });
-  const submit = () => go.mutate(undefined, { onError: (e) => setError(e instanceof ApiError ? e.field("note") ?? e.message : e.message) });
+  const [other, setOther] = React.useState<string | null>(null);
+  const submit = () => { if (!go.isPending) go.mutate(undefined, { onError: (e) => { const f = e instanceof ApiError ? e.field("note") : null; setError(f); setOther(f ? null : e.message); } }); };
   return (
     <Panel open onOpenChange={(o) => { if (!o) close(); }} title="Mark reviewed" description="Once per check. The stamp names you, your duty and your licence." footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={go.isPending} onClick={submit}>Mark reviewed</Button></>}>
       <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); submit(); }}>
-        {error ? <Notice tone="danger">{error}</Notice> : null}
-        <p className="text-sm">The stamp will read <span className="font-medium">"{licensed ? "Reviewed by" : "Seen by"} {nameOf(actor)}"</span>{licensed ? " (a licensed representative)" : " (no licence: a case officer's stamp)"}.</p>
-        <Field label="Note" hint="Optional."><Textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} /></Field>
+        {other ? <Notice tone="danger">{other}</Notice> : null}
+        <p className="text-sm">The stamp will read <span className="font-medium">"{licensed ? "Reviewed by" : "Seen by"} {me?.name ?? nameOf(actor)}"</span>{licensed ? " (a licensed representative)" : " (no licence: a case officer's stamp)"}.</p>
+        <Field label="Note" hint="Optional." error={error}><Textarea value={note} onChange={(e) => { setNote(e.target.value); setError(null); }} maxLength={500} /></Field>
       </form>
     </Panel>
   );

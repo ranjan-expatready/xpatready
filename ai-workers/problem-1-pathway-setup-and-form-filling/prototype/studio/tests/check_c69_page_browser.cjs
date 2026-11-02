@@ -49,6 +49,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     throw new Error(`never reached ${re} by Tab (focus on: ${await p.evaluate(() => document.activeElement?.outerHTML.slice(0, 160))})`);
   };
   const text = () => p.locator("main").innerText();
+  const focusIs = () => p.evaluate(() => { const e = document.activeElement; return e?.id === "result" ? "#result" : (e?.textContent ?? "").trim(); });
 
   // A case with two travellers and one person not travelling.
   const ref = `C69P-${Date.now().toString(36)}`;
@@ -68,6 +69,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await state("empty");
 
   await tabTo(/Run eligibility check/); await p.keyboard.press("Enter"); await settle();
+  step("C6.9 page pass (review M1, WCAG 2.4.3): after Run eligibility check, focus is on the result's heading (the button became Run again)", await focusIs() === "#result", await focusIs());
   step("C6.9 page pass: Run eligibility check gives \"Possibly eligible — needs 3 facts\", each rule Not answered with the facts it reads", /Possibly eligible — needs 3 facts/.test(await text()) && (await p.getByText("Not answered", { exact: true }).count()) === 2 && /Passport number: not answered/.test(await text()));
   step("C6.9 page pass: the officer's judgement lines, the disclaimer and \"Run by Case officer\" are shown", /Officer's judgement, not checked by rules[\s\S]*Has enough money for the stay/.test(await text()) && /Disclaimer\s*Indicative only/.test(await text()) && /Run by Case officer/.test(await text()));
   await state("possibly");
@@ -88,22 +90,29 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C6.9 page fail: Run again without a reason is refused on the field, in words", /Give a reason for running again, such as 'Passport renewed'\./.test(await p.locator("[role=dialog]").innerText()));
   await state("run-again-reason");
   await p.keyboard.type("Facts added (Sample)"); await p.keyboard.press("Enter"); await p.waitForSelector("[role=dialog]", { state: "detached" }); await settle();
-  step("C6.9 page pass (P-230 (1)): Run again with a reason: the background rule is Not met and goes to the representative's review: Possibly eligible, never Not eligible", /Possibly eligible — the representative reviews this/.test(await text()) && /For the representative's review: Answered no to the criminal history question \(Sample\)\./.test(await text()) && /The representative reviews this: never “Not eligible” on its own/.test(await text()) && !/Not eligible on this application's rules/.test(await text()) && !/Out of date:/.test(await text()));
+  step("C6.9 page pass (review M1): after Run again, focus is back on \"Run again\"", await focusIs() === "Run again", await focusIs());
+  step("C6.9 page pass (P-230 (1)): Run again with a reason: the background rule is Not met and goes to the representative's review: Possibly eligible, never Not eligible", /Possibly eligible — the representative reviews this/.test(await text()) && /For the representative's review, a rule not met: Answered no to the criminal history question \(Sample\)\./.test(await text()) && /The representative reviews this: never “Not eligible” on its own/.test(await text()) && !/Not eligible on this application's rules/.test(await text()) && !/Out of date:/.test(await text()));
   step("C6.9 page pass (BR-9): answered but not confirmed values count and are marked \"(not confirmed yet)\"", /Passport number: SAMPLEP12 \(not confirmed yet\)/.test(await text()));
   await state("needs-review");
 
   await tabTo(/^Override result/); await p.keyboard.press("Enter"); await p.waitForSelector("[role=dialog]");
+  await p.keyboard.press("Escape"); await p.waitForSelector("[role=dialog]", { state: "detached" }); await p.waitForTimeout(100);
+  step("C6.9 page pass (break m3, WCAG 2.4.3): Esc closes the drawer and focus returns to \"Override result…\"", /^Override result/.test(await p.evaluate(() => document.activeElement?.textContent ?? "")));
+  await p.keyboard.press("Enter"); await p.waitForSelector("[role=dialog]");
   await tabTo(/^Keep the override$/); await p.keyboard.press("Enter"); await p.waitForTimeout(600);
   step("C6.9 page fail (BR-15): an override without a reason is refused on the field", /Give a reason for the override\./.test(await p.locator("[role=dialog]").innerText()) && sql(`select count(*) from assessment_override o join assessment a on a.id=o.assessment_id where a.case_id='${c.id}'`) === "0");
   await state("override-drawer");
+  await p.locator("[role=dialog] input[list=override-labels]").focus(); await p.keyboard.type("Refer to the representative");
   await p.locator("[role=dialog] textarea").focus(); await p.keyboard.type("Earlier refusal answered in full (Sample)");
   await tabTo(/^Keep the override$/); await p.keyboard.press("Enter"); await p.waitForSelector("[role=dialog]", { state: "detached" }); await settle();
+  step("C6.9 page pass (review M1): after Keep the override, focus is back on \"Override result…\"", /^Override result/.test(await focusIs()), await focusIs());
   step("C6.9 page pass (BR-15): the override sits beside the result; the rules' own result stays visible", /Officer's override: Refer to the representative — Earlier refusal answered in full \(Sample\)/.test(await text()) && /Possibly eligible — the representative reviews this/.test(await text()) && sql(`select count(*) from assessment_override o join assessment a on a.id=o.assessment_id where a.case_id='${c.id}'`) === "1");
 
   await tabTo(/^Mark reviewed/); await p.keyboard.press("Enter"); await p.waitForSelector("[role=dialog]");
   step("C6.9 page pass (P-229 (2)): the drawer previews the stamp \"Seen by Case officer\" (no licence)", /"Seen by Case officer"/.test(await p.locator("[role=dialog]").innerText()));
   await state("review-drawer");
   await tabTo(/^Mark reviewed$/); await p.keyboard.press("Enter"); await p.waitForSelector("[role=dialog]", { state: "detached" }); await settle();
+  step("C6.9 page pass (review M1): after Mark reviewed (now off), focus is on the result's heading", await focusIs() === "#result", await focusIs());
   step("C6.9 page pass (BR-16): marked: \"Seen by Case officer\" on the result; Mark reviewed is then off", /Seen by Case officer/.test(await text()) && await p.getByRole("button", { name: /^Mark reviewed/ }).isDisabled());
   const latest = (await api(`/runtime/cases/${c.id}/assessments?person=${A}`)).body.assessments[0];
   const again = await api(`/runtime/assessments/${latest.id}/review`, { method: "POST", data: {}, actor: "user-R" });

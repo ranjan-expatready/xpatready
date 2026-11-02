@@ -116,3 +116,13 @@ export function outOfDate(inputs: Input[], now: (fact: string) => unknown, sameR
 
 /** Today's value of a fact for this person, read the same way a run reads it (for outOfDate). */
 export const nowOf = (known: Known, person: string) => (fact: string) => valueOf(known, fact, person);
+
+/** BR-9, worked out when read (review minor 6 on 2572b9b0): a fact the run read unconfirmed and that is confirmed now
+ *  with the same value is no longer marked "not confirmed yet". Confirm section keeps a run up to date (BR-13), so
+ *  the mark must follow it too. The stored row is never changed. */
+export function withUnconfirmedNow(r: ProgramResult, known: Known, person: string): ProgramResult {
+  return { ...r, gates: r.gates.map((g) => ({ ...g, unconfirmed: (g.unconfirmed ?? []).filter((f) => {
+    const k = known.get(kkey(aboutOf(known, f, person), f));
+    return !(k && k.status === "confirmed" && canonical(k.value as never) === canonical(g.values[f] as never));
+  }) })) };
+}

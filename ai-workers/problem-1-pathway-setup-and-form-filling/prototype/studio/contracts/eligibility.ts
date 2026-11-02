@@ -29,7 +29,8 @@ export const AssessmentRunBody = z.object({
 });
 
 // ------------------------------------------------------------------ part 3: override and review (BR-15, BR-16)
-const text = (field: string, max: number) => z.string({ error: `Give ${field}.` }).trim().min(1, `Give ${field}.`).max(max, `Keep ${field} to ${max} characters.`).refine(oneLine, "Write it as one line of plain text.");
+// Break m5 on 2572b9b0: as the run reason, lengths count characters (an emoji is one) and text needs a letter or digit.
+const text = (field: string, max: number) => z.string({ error: `Give ${field}.` }).trim().min(1, `Give ${field}.`).refine((x) => [...x].length <= max, `Keep ${field} to ${max} characters.`).refine(oneLine, "Write it as one line of plain text.").refine((x) => !x || /[\p{L}\p{N}]/u.test(x), `Give ${field} in words.`);
 /** POST /runtime/assessments/:aid/override. */
 export const AssessmentOverrideBody = z.object({
   programKey: z.string({ error: "Name the result being overridden." }).min(1, "Name the result being overridden."),
@@ -39,5 +40,5 @@ export const AssessmentOverrideBody = z.object({
 });
 /** POST /runtime/assessments/:aid/review. */
 export const AssessmentReviewBody = z.object({
-  note: z.string({ error: "Write the note as text." }).trim().max(500, "Keep the note to 500 characters.").refine((x) => !INVISIBLE.test(x) && !LONE.test(x), "Write the note as plain text.").optional(),
+  note: z.string({ error: "Write the note as text." }).trim().refine((x) => [...x].length <= 500, "Keep the note to 500 characters.").refine((x) => !INVISIBLE.test(x) && !LONE.test(x), "Write the note as plain text.").optional(),
 });

@@ -117,6 +117,7 @@ await main("C6.9 part 2", "Eligibility runs (stand-in SI-1 adapter and routes)",
     ok("setup: the Visitor visa release 1 on this copy (setup_visitor_visa.ts)", tsx("tests/runtime/setup_visitor_visa.ts").status === 0 && vvRelease() === "1", vvRelease());
     const c1 = await openCase(needVisitorVisa(), [{ role: "principal", name: "Sample Client Z", dob: yearsAgo(30) }]);
     const r1 = await call("POST", `/runtime/cases/${c1.id}/assessments`, { person: c1.subjects["Sample Client Z"] }, OFFICER);
+    ok("C6.9 break m2 fail: on a release with no gates the list says so (has_rules: false), so the page offers no Run button", (await call("GET", `/runtime/cases/${c1.id}/assessments`, undefined, OFFICER)).body?.has_rules === false);
     ok("C6.9 BR-10 fail: a case on a release with no gates is refused 409: \"This application's release has no eligibility rules yet\" (never Likely eligible)", r1.status === 409 && /has no eligibility rules yet/.test(r1.body?.detail ?? "") && sql(`select count(*) from assessment where case_id='${c1.id}'`) === "0", r1.body);
     const m3 = tsx("acceptance/lib/setup_vv_m3.ts").stdout ?? "";
     ok("setup: M3 setup S7 and S8 pass (gates saved and released)", ["S7 (M3-8)", "S8 release 2"].every((k) => m3.split("\n").some((l) => l.startsWith("PASS") && l.includes(k))));
@@ -175,6 +176,9 @@ await main("C6.9 part 2", "Eligibility runs (stand-in SI-1 adapter and routes)",
 
   await confirmAll(c.id, A);
   let l = await list(`?person=${A}`);
+  const marked = (x: { results?: { gates: { unconfirmed?: string[] }[] }[] } | undefined) => (x?.results?.[0]?.gates ?? []).flatMap((g) => g.unconfirmed ?? []);
+  ok("C6.9 BR-9 pass (review minor 6): before Confirm section the run marks the officer's answers not confirmed yet", marked(good).length > 0, marked(good));
+  ok("C6.9 BR-9 fail (review minor 6): after Confirm section the same run, read again, marks none (worked out when read)", marked(l?.assessments?.find((x: { id: string }) => x.id === good?.id)).length === 0, marked(l?.assessments?.find((x: { id: string }) => x.id === good?.id)));
   ok("C6.9 BR-13 pass: Confirm section on the facts a run read (a new row, same value) leaves it up to date", l?.assessments?.find((x: { id: string }) => x.id === good?.id)?.out_of_date === false, l?.assessments?.map((x: { out_of_date: boolean }) => x.out_of_date));
   await answer(c.id, A, "person.passport_number", "SAMPLEP13");
   l = await list(`?person=${A}`);
@@ -213,6 +217,15 @@ await main("C6.9 part 2", "Eligibility runs (stand-in SI-1 adapter and routes)",
   r = await ov(base);
   ok("C6.9 BR-15 pass: an override on an out-of-date run is kept (201), with who, duty, licence and out of date; one audit row", r.status === 201 && r.body?.by === OFFICER && r.body?.duty === "Case officer" && r.body?.licence === null && r.body?.outOfDate === true && Number(sql("select count(*) from audit_event where entity='assessment_override'")) === audit0 + 1, r.body);
   const after = (await call("GET", `/runtime/assessments/${good?.id}`, undefined, OFFICER)).body;
+  // Break M1 on 2572b9b0: the same override sent 20 times at once is one row, and every answer names it.
+  const dup = await Promise.all(Array.from({ length: 20 }, () => ov(base)));
+  ok("C6.9 break M1 fail: 20 identical overrides at once → all 201 with the same id, one row, one audit row", dup.every((x) => x.status === 201) && new Set(dup.map((x) => x.body?.id)).size === 1 && dup[0].body?.id === r.body?.id && sql(`select count(*) from assessment_override where assessment_id='${good?.id}'`) === "1" && Number(sql("select count(*) from audit_event where entity='assessment_override'")) === audit0 + 1, dup.map((x) => x.status).join(""));
+  r = await ov({ ...base, label: "." });
+  ok("C6.9 break m5 fail: a label with no letter or digit is refused on label", r.status === 400 && fields(r.body).includes("label"), r.body);
+  r = await ov({ ...base, label: "😀".repeat(81) });
+  ok("C6.9 break m5 fail: 81 characters (emoji) is refused on label; lengths count characters", r.status === 400 && fields(r.body).includes("label"));
+  r = await ov({ ...base, label: "Borderline 😀" + "😀".repeat(68), reason: "Second view (Sample)" });
+  ok("C6.9 break m5 pass: an 80-character label with emoji is kept", r.status === 201, r.body?.detail ?? r.status);
   ok("C6.9 BR-15 pass: the engine's outcome is unchanged and the override shows beside it", after?.results?.[0]?.outcome === "LIKELY_ELIGIBLE" && after?.overrides?.length === 1 && after.overrides[0].label === "Refer to the representative" && sql(`select result_json::text from assessment where id='${good?.id}'`)?.includes("LIKELY_ELIGIBLE"));
   r = await call("POST", `/runtime/assessments/${good?.id}/review`, { note: "Checked with the client (Sample)" }, "user-R");
   ok("C6.9 BR-16 pass (P-229 (2)): a licensed representative's review is stamped \"Reviewed\" with the licence; 200; an audit row", r.status === 200 && r.body?.stamp === "Reviewed" && r.body?.reviewedBy === "user-R" && !!r.body?.licence?.number && r.body?.outOfDate === true && sql(`select count(*) from audit_event where entity='assessment' and entity_key='${good?.id}' and action='reviewed'`) === "1", r.body);
@@ -220,6 +233,11 @@ await main("C6.9 part 2", "Eligibility runs (stand-in SI-1 adapter and routes)",
   ok("C6.9 BR-16 fail: a second review is refused 409, naming who reviewed and when", r.status === 409 && /Already reviewed by Representative \(Sample\) on \d{4}-\d{2}-\d{2}/.test(r.body?.detail ?? ""), r.body?.detail);
   r = await call("POST", `/runtime/assessments/${first?.id}/review`, {}, OFFICER);
   ok("C6.9 BR-16 pass (P-229 (2)): the case officer (no licence) may review too, stamped \"Seen\"", r.status === 200 && r.body?.stamp === "Seen" && r.body?.licence === null && r.body?.reviewNote === null, r.body);
+  // Break m1 on 2572b9b0: an override sent from a page opened before a newer check goes nowhere silently: 409.
+  r = await run(A, { reason: "Newer check (Sample)" });
+  r = await ov({ ...base, label: "Late override", reason: "Opened before the newer check (Sample)" });
+  ok("C6.9 break m1 fail: an override on a check that a newer one replaced is refused 409 (\"a newer check exists\"); nothing written", r.status === 409 && /newer check exists/.test(r.body?.detail ?? "") && sql(`select count(*) from assessment_override where label='Late override'`) === "0", r.body);
+  ok("C6.9 break m2 pass: the list says the case's release has eligibility rules (has_rules)", (await list()).has_rules === true);
   ok("C6.9 BR-16 fail: a client cannot review (403)", (await call("POST", `/runtime/assessments/${first?.id}/review`, {}, CLIENT)).status === 403);
   // Review M2 / break M1 on fd26c492: 40 first runs at once for a new person → one first run, the rest need a reason.
   const c2 = await openCase(vv, [{ role: "principal", name: "Sample Client R", dob: yearsAgo(41) }, { role: "spouse_or_partner", name: "Sample Spouse R", dob: yearsAgo(39) }, { role: "child", name: "Sample Child R1", dob: yearsAgo(12) }, { role: "child", name: "Sample Child R2", dob: yearsAgo(9) }]);

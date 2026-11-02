@@ -11,7 +11,7 @@ import { randomUUID } from "node:crypto";
 import { AssessmentOverrideBody, AssessmentReviewBody, AssessmentRunBody } from "../../contracts/eligibility.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { checkValue, knownOf } from "../../engine/runtime/case.ts";
-import { assess, DISCLAIMER_LOCALE, inputsOf, nowOf, outOfDate, STAND_IN, type Input, type ProgramResult } from "../../engine/runtime/eligibility.ts";
+import { assess, DISCLAIMER_LOCALE, inputsOf, nowOf, outOfDate, STAND_IN, withUnconfirmedNow, type Input, type ProgramResult } from "../../engine/runtime/eligibility.ts";
 import type { SnapshotEligibility } from "../../engine/eligibility-gates.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { Runtime, type Reached } from "./runtime.ts";
@@ -94,7 +94,8 @@ export class Assessments {
     if (person !== undefined) { if (!c.participants.some((p) => p.subjectId === person && p.role !== "case")) fieldError("person", "That person is not on this case."); }
     const rows = await this.db.assessment.findMany({ where: { caseId: c.id, ...(person ? { subjectId: person } : {}) }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], include: { overrides: { orderBy: { createdAt: "asc" } }, review: true } });
     const { known } = await this.knownNow(c);
-    return { stand_in: STAND_IN.id, stand_in_words: STAND_IN.words, assessments: rows.map((x) => this.view(x, x.overrides, x.review, this.fresh(x, known, c))) };
+    const gates = (this.r.snapshotOf(c).eligibility as SnapshotEligibility | undefined)?.gates?.length ?? 0;
+    return { stand_in: STAND_IN.id, stand_in_words: STAND_IN.words, has_rules: gates > 0, assessments: rows.map((x) => this.view(x, x.overrides, x.review, this.fresh(x, known, c))) };
   }
 
   /** GET one run, for staff of the case's firm. A client is told 403 whatever the id, as on every eligibility route
@@ -134,7 +135,18 @@ export class Assessments {
     if (result!.outcome !== b.fromOutcome) refused("The result changed since you opened it. Reload to see it.");
     const st = this.stampOf(actor);
     const stamp = { name: st.name, duty: st.duty, licence: st.licence, outOfDate: env.out_of_date };
-    const o = await this.db.assessmentOverride.create({ data: { assessmentId: x.id, programKey: b.programKey, fromOutcome: b.fromOutcome, label: b.label, reason: b.reason, stamp: stamp as never, createdBy: actor.id } });
+    // Break M1 and m1 on 2572b9b0: one lock per run, so a double submit writes one override (the same one comes back);
+    // and an override goes only onto the person's latest check (a newer check since the drawer opened: 409).
+    const done = await this.db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`assessment-override:${x.id}`}))`;
+      const newer = await tx.assessment.findFirst({ where: { caseId: x.caseId, subjectId: x.subjectId, createdAt: { gt: x.createdAt } }, select: { id: true } });
+      if (newer) refused("The result changed since you opened it: a newer check exists for this person. Reload to see it.");
+      const same = await tx.assessmentOverride.findFirst({ where: { assessmentId: x.id, createdBy: actor.id, programKey: b.programKey, label: b.label, reason: b.reason } });
+      if (same) return { o: same, repeated: true };
+      return { o: await tx.assessmentOverride.create({ data: { assessmentId: x.id, programKey: b.programKey, fromOutcome: b.fromOutcome, label: b.label, reason: b.reason, stamp: stamp as never, createdBy: actor.id } }), repeated: false };
+    });
+    const o = done.o;
+    if (done.repeated) return { id: o.id, programKey: o.programKey, fromOutcome: o.fromOutcome, label: o.label, reason: o.reason, by: o.createdBy, at: o.createdAt.toISOString(), ...(o.stamp as object), repeated: true };
     await this.audit.log(c.workspaceId, actor.id, "created", "assessment_override", x.id, `${st.name} overrode the eligibility result ${b.fromOutcome.toLowerCase().replace(/_/g, " ")} on case ${short(c.id)} with "${b.label}" (the result itself is unchanged)`, { programKey: b.programKey, before: b.fromOutcome, after: b.label, outOfDate: env.out_of_date });
     return { id: o.id, programKey: o.programKey, fromOutcome: o.fromOutcome, label: o.label, reason: o.reason, by: actor.id, at: o.createdAt.toISOString(), ...stamp };
   }
@@ -160,7 +172,7 @@ export class Assessments {
     const o = outOfDate(env.inputs ?? [], nowOf(known, x.subjectId), c.pins[0].configReleaseId === x.configReleaseId);
     // Break m3 on fd26c492: a person no longer travelling (or removed) makes the run out of date, said in words.
     const travelling = c.participants.some((p) => p.subjectId === x.subjectId && p.applies);
-    return { ...env, ...o, ...(travelling ? {} : { out_of_date: true, not_travelling: true }) };
+    return { ...env, results: (env.results ?? []).map((r) => withUnconfirmedNow(r, known, x.subjectId)), ...o, ...(travelling ? {} : { out_of_date: true, not_travelling: true }) };
   }
 
   private view(x: Row, overrides: AssessmentOverride[], review: AssessmentReview | null, env: Envelope & ReturnType<typeof outOfDate>) {
