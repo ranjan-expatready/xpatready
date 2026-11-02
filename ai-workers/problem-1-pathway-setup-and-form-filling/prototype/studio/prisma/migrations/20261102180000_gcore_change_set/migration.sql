@@ -4,7 +4,7 @@
 -- row (its check endpoint only reads); B2 and B3 write rows inside the change's own transaction.
 -- Rollback (STANDARDS §5): stop the app, then in one transaction:
 --   DROP TABLE "change_set";
---   DELETE FROM "_prisma_migrations" WHERE "migration_name" = '20261102170000_gcore_change_set';
+--   DELETE FROM "_prisma_migrations" WHERE "migration_name" = '20261102180000_gcore_change_set';
 -- A rollback loses the change-set records only; the library rows, library_change and field_merge keep every change.
 
 CREATE TABLE "change_set" (
