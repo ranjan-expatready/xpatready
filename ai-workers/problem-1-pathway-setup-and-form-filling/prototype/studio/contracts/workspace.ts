@@ -171,7 +171,8 @@ export const filledByOf = (placement: { collected_from?: string } | undefined): 
 
 /** One question as the tab shows it: the wording first; the field code (`fact`) only for the side panel (fix 3). */
 export type QuestionnaireQuestion = {
-  fact: string; wording: string; meaning: string; help: string | null; answerType: string; filledBy: FilledBy; onlyIf: string | null;
+  /** QA-82: false when no question has been written; then `wording` is the field's short name, never its meaning. */
+  fact: string; wording: string; asked: boolean; meaning: string; help: string | null; answerType: string; filledBy: FilledBy; onlyIf: string | null;
   neededBy: string[]; group: boolean; required: boolean; whereUsed: number; collectedFrom: string | null;
 };
 export type QuestionnaireSection = { id: string; title: string; questions: QuestionnaireQuestion[] };
