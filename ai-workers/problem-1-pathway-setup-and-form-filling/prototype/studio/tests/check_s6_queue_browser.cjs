@@ -62,6 +62,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await band("ready").getByRole("button", { name: "Choose all 2" }).click();
     step("C11.14 pass: Choose all picks the group's two acceptable Ready items", (await band("ready").getByRole("checkbox", { checked: true }).count()) === 2 && /2 items chosen/.test(await band("ready").innerText()));
     await band("ready").getByRole("button", { name: "Clear the choice" }).click();
+    step("C11.14 pass (review m1): focus moves to Choose all after clearing", await p.evaluate(() => document.activeElement?.hasAttribute("data-choose-all") ?? false));
     step("C11.14 pass: Clear the choice deselects all; Accept is off again", (await band("ready").getByRole("checkbox", { checked: true }).count()) === 0 && await band("ready").getByRole("button", { name: /^Accept/ }).isDisabled());
 
     // Bulk accept, Undo, accept again
