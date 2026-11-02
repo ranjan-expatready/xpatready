@@ -8,6 +8,7 @@ import type { FormEdition, PrismaClient } from "@prisma/client";
 import { canonical, sha256 } from "../../contracts/rules.ts";
 import { compareEditions } from "./programs.ts";
 import { gateFacts, snapshotEligibility, type SnapshotEligibility } from "./eligibility-gates.ts";
+import { frozenSources, publishedNumbers, type FrozenSource, type SourceEntry } from "./source-register.ts";
 
 export type Mode = "draft" | "published";
 type Versioned = { status: string; version: number; id?: string; supersedesId?: string | null };
@@ -61,8 +62,18 @@ export type Snapshot = {
   /** C6.9 part 1 (BR-1, BR-6): the eligibility gates, officer's judgement lines and disclaimer, frozen with the release;
    *  present only when the combination has gates or judgement lines, so other configurations keep their fingerprint. */
   eligibility?: SnapshotEligibility;
+  /** G1 (C5.4) BR-9: the source entries of the numbers it publishes, frozen with the release; present only when there are
+   *  any (the fact_sources pattern), so other configurations keep their fingerprint. */
+  sources?: FrozenSource[];
   row_versions: Record<string, string>;
 };
+
+/** A source_entry row as the engine reads it (one shape for the snapshot, the gate and the API). */
+export const sourceEntryOf = (r: { itemKind: string; itemKey: string; valuePath: string; value: string; citationUrl: string | null; citationPage: string | null; citationQuote: string | null; citationDate: Date | null; nonePublished: boolean; nonePublishedReason: string | null; sample: boolean }): SourceEntry => ({
+  kind: r.itemKind, key: r.itemKey, address: r.valuePath, value: r.value,
+  cited: r.citationUrl ? { url: r.citationUrl, page: r.citationPage, quote: r.citationQuote ?? "", date: r.citationDate ? r.citationDate.toISOString().slice(0, 10) : "" } : null,
+  none_published: r.nonePublished ? { reason: r.nonePublishedReason ?? "" } : null, sample: r.sample,
+});
 
 /** The release fingerprint of a snapshot as stored: the same expression assemble() uses (C6.12 break B2: a route that
  *  stores what a release says re-checks the snapshot against its release's sha256, since a row can be edited underneath). */
@@ -81,7 +92,7 @@ export async function buildSnapshot(db: PrismaClient, workspaceId: string, combi
 export async function buildSnapshots(db: PrismaClient, workspaceId: string, combinationIds: string[], mode: Mode): Promise<Map<string, { snapshot: Snapshot; sha256: string }>> {
   const ws = { workspaceId };
   const inComp = { combinationId: { in: combinationIds } };
-  const [comps, nodes, fields, sections, questions, allSel, allForms, allReq, doctypes, allRules, derived, allChecks, answerLists, allSources] = await Promise.all([
+  const [comps, nodes, fields, sections, questions, allSel, allForms, allReq, doctypes, allRules, derived, allChecks, answerLists, allSources, allEntries] = await Promise.all([
     db.combination.findMany({ where: { id: { in: combinationIds } }, include: { program: true } }), db.programDef.findMany({ where: ws }),
     db.canonicalField.findMany({ where: ws }), db.logicalSection.findMany({ where: ws }), db.sectionQuestion.findMany({ where: ws }),
     db.sqrSectionSelection.findMany({ where: inComp, orderBy: [{ sectionOrder: "asc" }, { sectionKey: "asc" }] }), // C4.1 m1: ties read the same everywhere
@@ -90,6 +101,8 @@ export async function buildSnapshots(db: PrismaClient, workspaceId: string, comb
     db.predicate.findMany({ where: inComp }), db.derivedField.findMany({ where: ws }), db.check.findMany({ where: inComp }),
     db.answerList.findMany({ where: ws, include: { values: { orderBy: { sortOrder: "asc" } } } }),
     db.factSource.findMany({ where: inComp }),
+    // G1 BR-7: the workspace's source entries, read once for every combination (challenge M1: both pages agree).
+    db.sourceEntry.findMany({ where: ws }),
   ]);
   if (comps.length !== new Set(combinationIds).size) throw new Error("Combination not found");
   const allEditionIds = [...new Set(allForms.flatMap((f) => f.form.editions.map((e) => e.id)))];
@@ -105,11 +118,12 @@ export async function buildSnapshots(db: PrismaClient, workspaceId: string, comb
   const group = <T extends { combinationId: string }>(rows: T[]) => { const m = new Map<string, T[]>(); for (const r of rows) m.set(r.combinationId, [...(m.get(r.combinationId) ?? []), r]); return m; };
   const gSel = group(allSel), gForms = group(allForms), gReq = group(allReq), gRules = group(allRules), gChecks = group(allChecks), gSources = group(allSources);
   const by = <T extends { combinationId: string }>(g: Map<string, T[]>, id: string) => g.get(id) ?? [];
+  const entries = allEntries.map(sourceEntryOf);
   const out = new Map<string, { snapshot: Snapshot; sha256: string }>();
   for (const comp of comps) {
     // The row's full path, pathway first (SA-1B-55): Pathway › Program › Category › Sub-category.
     const chain: any[] = []; for (let n: any = comp.program; n; n = n.parentNodeKey ? nodes.find((x) => x.programNodeKey === n.parentNodeKey) : null) chain.unshift(n);
-    out.set(comp.id, assemble(comp, chain, mode, { fields, sections, questions, doctypes, derived, selections: by(gSel, comp.id), cforms: by(gForms, comp.id), requirements: by(gReq, comp.id), rules: by(gRules, comp.id), checks: by(gChecks, comp.id), sources: by(gSources, comp.id), allMaps, shared }));
+    out.set(comp.id, assemble(comp, chain, mode, { fields, sections, questions, doctypes, derived, selections: by(gSel, comp.id), cforms: by(gForms, comp.id), requirements: by(gReq, comp.id), rules: by(gRules, comp.id), checks: by(gChecks, comp.id), sources: by(gSources, comp.id), entries: entries.filter((e) => e.key.startsWith(`${comp.combinationKey}/`)), allMaps, shared }));
   }
   return out;
 }
@@ -130,7 +144,7 @@ const byFilingOrder = (order: unknown) => {
   const at = new Map((Array.isArray(order) ? order : []).map((k, i) => [String(k), i]));
   return (a: { lineageKey: string }, b: { lineageKey: string }) => (at.get(a.lineageKey) ?? Infinity) - (at.get(b.lineageKey) ?? Infinity) || a.lineageKey.localeCompare(b.lineageKey);
 };
-function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; sections: any[]; questions: any[]; doctypes: any[]; derived: any[]; selections: any[]; cforms: any[]; requirements: any[]; rules: any[]; checks: any[]; sources?: any[]; allMaps: any[]; shared: { lists: Map<string, { key: string; label: string }[]>; effFields: any[]; effSections: any[]; effQuestions: any[]; effTypes: any[]; entriesOf: (editionId: string) => any[] } }): { snapshot: Snapshot; sha256: string } {
+function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; sections: any[]; questions: any[]; doctypes: any[]; derived: any[]; selections: any[]; cforms: any[]; requirements: any[]; rules: any[]; checks: any[]; sources?: any[]; entries?: SourceEntry[]; allMaps: any[]; shared: { lists: Map<string, { key: string; label: string }[]>; effFields: any[]; effSections: any[]; effQuestions: any[]; effTypes: any[]; entriesOf: (editionId: string) => any[] } }): { snapshot: Snapshot; sha256: string } {
   const { derived, selections, cforms, requirements, rules, checks, allMaps, shared } = rows;
   const effSources = effective(rows.sources ?? [], (r: any) => r.lineageKey, mode).filter((r: any) => r.status !== "RETIRED" && (r.source || r.prequalification));
   const rv: Record<string, string> = {};
@@ -196,6 +210,8 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
     ...(eligibility ? { eligibility } : {}),
     row_versions: rv,
   };
+  // G1 BR-9: only entries that answer a number this snapshot publishes, and only when there are any.
+  if (rows.entries?.length) { const frozen = frozenSources(publishedNumbers(snapshot), rows.entries); if (frozen.length) snapshot.sources = frozen; }
   const { row_versions: _rv, mode: _m, ...hashed } = snapshot;
   // C-8 (W1-10 slice 1): a PDF upload signed by hand and scanned is fingerprinted in its old spelling, so a combination
   // released before the slice does not show "changed since release".

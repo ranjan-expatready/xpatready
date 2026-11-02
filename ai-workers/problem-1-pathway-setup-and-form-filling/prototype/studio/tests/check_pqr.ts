@@ -9,6 +9,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { countryPqr, factSources, pqrPicksByRules, prequalification } from "../engine/sources.ts";
 import { ProposalItem } from "../contracts/proposal-item.ts";
+import { sourceEveryNumber } from "./fixtures/source-every-number.cjs"; // G1 (C5.4): a release needs every number sourced
 
 const PORT = Number(process.argv[2] ?? 4436), DB = process.argv[3] ?? "xr_studio_runtime_pqr";
 const log: any[] = []; let pass = 0, fail = 0;
@@ -70,6 +71,7 @@ const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
     r = await call("POST", path, {});
     ok(`C4.8 fail: no separate PQR approval route (${path.split("/").pop()} is 404)`, r.status === 404, r.status);
   }
+  await sourceEveryNumber(PORT, wp); // G1 (C5.4): the release's numbers need a source before it is submitted
   r = await call("POST", `/combinations/${wp}/submit`, {});
   ok("C4.8 pass: the combination is submitted with its PQR, sources, forms and documents together", r.status === 201 || r.status === 200, words(r) || r.status);
   const review = (await call("GET", `/combinations/${wp}/review`)).body;

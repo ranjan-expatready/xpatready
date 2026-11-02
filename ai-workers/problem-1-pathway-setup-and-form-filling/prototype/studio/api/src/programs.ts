@@ -21,13 +21,14 @@ import { PATHWAY_TYPE_LABEL, type PathwayType } from "../../contracts/structure.
 import { diff, validate } from "../../engine/validate.ts";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { ACTORS, Audit, Db, need, ROOT, Workspace, type Actor } from "./core.ts";
+import { ACTORS, Audit, Db, isDemoWorkspace, need, ROOT, Workspace, type Actor } from "./core.ts";
 import { addFormLine } from "./form-lines.ts";
 import { officialPagesOf as readOfficialPages } from "./official-pages.ts";
 import { changeView, itemsOf, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { openNodeKeys, startWhy } from "./lifecycle.ts";
 import { Sources } from "./sources.ts";
 import { Studio } from "./studio.ts";
+import { draftSourceProblems } from "./source-register.ts";
 import { filingProblems } from "../../engine/filing-modes.ts";
 import { gatesOf, realBaseline, type Gate } from "./answer-key-gate.ts";
 
@@ -93,13 +94,15 @@ export class Programs {
   private async rows() {
     const workspaceId = await this.ws.id();
     await this.backfillNameKeys(workspaceId);
-    const [a, j, p, h] = await Promise.all([
+    const demo = isDemoWorkspace();
+    const [a, j, p, h, se] = await Promise.all([
       this.db.auditEvent.aggregate({ where: { workspaceId }, _count: true, _max: { at: true } }),
       this.db.draftingJob.aggregate({ where: { workspaceId }, _count: true, _max: { startedAt: true, finishedAt: true } }),
       this.db.proposalItem.groupBy({ by: ["status"], where: { workspaceId }, _count: true }),
       this.db.intakeItem.groupBy({ by: ["status"], where: { workspaceId }, _count: true }),
+      this.db.sourceEntry.aggregate({ where: { workspaceId }, _count: true, _max: { updatedAt: true } }), // G1: an entry written without an audit line (the sample load) still moves the revision
     ]);
-    const key = JSON.stringify([workspaceId, a._count, a._max.at, j._count, j._max.startedAt, j._max.finishedAt, p, h]);
+    const key = JSON.stringify([workspaceId, a._count, a._max.at, j._count, j._max.startedAt, j._max.finishedAt, p, h, se._count, se._max.updatedAt]);
     if (this.cache?.key === key) return this.cache;
     const t0 = performance.now();
     const [nodes, combos, releases, jobs, items, lib, editions, heldItems, byKind, subs] = await Promise.all([
@@ -171,12 +174,16 @@ export class Programs {
       const participants = c.participants as ParticipantLine[];
       const structure = await this.studio.structureProblems(c.id);
       // C11.12: a released snapshot is never re-judged for filing modes (pinned releases are kept, BR-7); the draft is.
-      const draftProblems = [...structure, ...filingProblems((snapshot.combination?.participants ?? []) as { role: string; label?: string; max: number; filingMode?: unknown }[], personRoles), ...validate(snapshot, library, derivedOf(snapshot))];
+      const baseProblems = [...structure, ...filingProblems((snapshot.combination?.participants ?? []) as { role: string; label?: string; max: number; filingMode?: unknown }[], personRoles), ...validate(snapshot, library, derivedOf(snapshot))];
       // Status is about what firms can use: the released snapshot when there is one; the draft only explains In setup.
       const relSnap = rel?.snapshot as unknown as Snapshot | undefined;
-      const relProblems = relSnap ? [...structure, ...validate(relSnap, library, derivedOf(relSnap))] : draftProblems;
       const hasContent = snapshot.forms.length + snapshot.sections.length + snapshot.document_requirements.length + snapshot.rules.length > 0;
       const changes = hasContent ? diff(relSnap ?? null, snapshot).length : 0;
+      // G1 BR-7 (challenge M1): numbers without a source hold the draft back, never relProblems (a release keeps its
+      // status); and only a draft that will be submitted (changes, or no release yet), so a Live row with no draft
+      // changes never reads "Fix n problems" (tech lead on #568, G2 challenge; engine/setup-checklist.ts).
+      const draftProblems = [...baseProblems, ...(changes > 0 || !rel ? draftSourceProblems(snapshot, demo) : [])];
+      const relProblems = relSnap ? [...structure, ...validate(relSnap, library, derivedOf(relSnap))] : draftProblems;
       // G2 (challenge M1): only a draft with something to release is judged, so a Live, unchanged row keeps step 5 done.
       // Added to the draft's problems (the Release page holds the row on them), never to the released snapshot's.
       if (changes > 0 || !rel) draftProblems.push(...(keyGates.get(c.id)?.problems ?? []));
@@ -231,7 +238,12 @@ export class Programs {
         changes,
         review: { stage: reviewStage(gates.get(c.id)), submittedBy: submittedBy.get(c.id) ?? null, authors: [] },
       };
-      rows.push({ pathway, changes, errors: errors.length, firstError: errors[0] ? `${errors[0].where === "Tests" ? (errors[0] as { label?: string }).label || errors[0].item : errors[0].item}: ${errors[0].message}` : null, hasContent, docNames,
+      // G1 §4: a row held back only by numbers without a source says so with its count (the Release page's held reason);
+      // otherwise its first own problem (G2: a test line names its key's label).
+      const unsourced = errors.filter((x) => (x as { gate?: string }).gate === "no-source").length;
+      const first = errors.find((x) => !(x as { gate?: string }).gate) ?? errors[0];
+      const firstError = unsourced && unsourced === errors.length ? `${unsourced} number${unsourced === 1 ? " has" : "s have"} no source entry: fix on Review and release.` : first ? `${first.where === "Tests" ? (first as { label?: string }).label || first.item : first.item}: ${first.message}` : null;
+      rows.push({ pathway, changes, errors: errors.length, firstError, hasContent, docNames,
         setup: setupChecklistOf(input, `${c.id}|${key}`),
         searchText: [...path, ...forms.map((f) => f.code), ...docNames].join(" "),
         leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, filed: filedOf(snapForms), progress, counts: hasContent ? rowCounts(snapshot, participants) : null, status, statusText: retired ? "Retired" : status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
@@ -391,7 +403,9 @@ export class Programs {
     const changedIds = changed.map((r) => r.leaf.combinationId!).filter(Boolean);
     // Not released yet, so no snapshot: a Sample combination, or any current check marked Sample (illustrative).
     const demoIds = new Set([...(await this.db.combination.findMany({ where: { id: { in: changedIds }, sourceBasis: "ILLUSTRATIVE" }, select: { id: true } })).map((c) => c.id),
-      ...(await this.db.check.findMany({ where: { combinationId: { in: changedIds }, illustrative: true, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { combinationId: true } })).map((c) => c.combinationId)]);
+      ...(await this.db.check.findMany({ where: { combinationId: { in: changedIds }, illustrative: true, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { combinationId: true } })).map((c) => c.combinationId),
+      // G1 (tech lead on #558): a number answered by a Sample source entry makes its release a Demo release.
+      ...await this.sampleSourced(workspaceId, changedIds)]);
     return {
       changes: changed.reduce((s, r) => s + r.changes, 0) + library.length,
       library,
@@ -399,6 +413,13 @@ export class Programs {
       last: last ? { version: last.version, at: last.releasedAt, approver: last.approverId } : null,
       next: (last?.version ?? 0) + 1,
     };
+  }
+
+  /** G1: the combinations among `ids` with a Sample source entry (its key carries the combination). One query each. */
+  private async sampleSourced(workspaceId: string, ids: string[]): Promise<string[]> {
+    if (!ids.length) return [];
+    const [combos, keys] = await Promise.all([this.db.combination.findMany({ where: { id: { in: ids } }, select: { id: true, combinationKey: true } }), this.db.sourceEntry.findMany({ where: { workspaceId, sample: true }, select: { itemKey: true } })]);
+    return combos.filter((c) => keys.some((k) => k.itemKey.startsWith(`${c.combinationKey}/`))).map((c) => c.id);
   }
 
   /** POST /pack/release: one release for the whole shared draft. Rows that are held back (a problem, review not done,

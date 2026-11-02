@@ -9,6 +9,7 @@ import { execFileSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { client, recorder } from "./runtime/api.ts";
+import { sourceEveryNumber } from "./fixtures/source-every-number.cjs"; // G1 (#587): numbers without a source refuse first, so each submit answers them
 import { e1Keys, sample } from "./g4_e1_key.ts";
 import { passEveryAnswerKey } from "./lib/release-ready.ts";
 
@@ -34,7 +35,7 @@ let v = await view();
 ok("C5.5 BR-3: the same Sample content is a real release here (not a Demo release)", v.draft.answer_keys.demo === false, v.draft.answer_keys);
 const errs = tests(v).filter((p) => p.level === "error").map((p) => p.label);
 ok("C5.5 Done when, BR-5 E7: both new maps with no test are errors, each named", errs.includes("IMM 5257 field map") && errs.includes("IMM 5707 field map"), tests(v));
-let r = await call("POST", `/combinations/${vv}/submit`, {}, AUTHOR);
+await sourceEveryNumber(PORT, vv); let r = await call("POST", `/combinations/${vv}/submit`, {}, AUTHOR);
 const named = (r.body?.errors ?? []).filter((x: { where: string }) => x.where === "Tests").map((x: { label: string }) => x.label);
 ok("C5.5 Done when, BR-8: Submit is refused (400) and errors[] names IMM 5257 and IMM 5707", r.status === 400 && named.includes("IMM 5257 field map") && named.includes("IMM 5707 field map"), r.body?.errors);
 
@@ -43,21 +44,21 @@ const ed = v.draft.answer_keys.items.find((i: { item_ref: string }) => i.item_re
 const fam = await call("POST", "/answer-keys/families", { ...sample, key: "e1-firm" }, AUTHOR);
 const k = await call("POST", `/combinations/${vv}/answer-keys`, { family_id: fam.body.id, item_kind: "field_map", item_ref: "IMM 5257", expected: e1Keys(ed).key }, EXPERT);
 ok("C5.5 setup: the expert writes the E1 key for IMM 5257", fam.status === 201 && k.status === 201, k.body?.detail ?? k.body);
-r = await call("POST", `/combinations/${vv}/submit`, {}, AUTHOR);
+await sourceEveryNumber(PORT, vv); r = await call("POST", `/combinations/${vv}/submit`, {}, AUTHOR);
 const msgs = (r.body?.errors ?? []).filter((x: { where: string }) => x.where === "Tests").map((x: { message: string }) => x.message);
 ok("C5.5 Done when, BR-5: a passing key not signed refuses a real release, naming it; IMM 5707 still has no test", r.status === 400 && msgs.some((m: string) => /^IMM 5257 field map: the answer-key test for ".*" is not signed\./.test(m)) && msgs.some((m: string) => /^IMM 5707 field map: no answer-key test/.test(m)) && !msgs.some((m: string) => /IMM 5257.*failed/.test(m)), msgs);
 ok("C5.5 BR-6: that Submit ran the key (stored, passed) before refusing", sql(`select result from answer_key_run where key_id = '${k.body.id}' order by ran_at desc limit 1`) === "PASSED");
 const cur = (await call("GET", `/answer-keys/${k.body.id}`, undefined, AUTHOR)).body;
 r = await call("POST", `/answer-keys/${k.body.id}/sign`, { version: cur.version }, EXPERT);
 ok("C5.5 setup: the expert signs the IMM 5257 key", r.status === 200 && r.body.state === "SIGNED", r.body?.detail);
-r = await call("POST", `/combinations/${vv}/submit`, {}, AUTHOR);
+await sourceEveryNumber(PORT, vv); r = await call("POST", `/combinations/${vv}/submit`, {}, AUTHOR);
 const left = (r.body?.errors ?? []).filter((x: { where: string }) => x.where === "Tests").map((x: { label: string }) => x.label);
 ok("C5.5 BR-4: signed and passing, IMM 5257 is no longer named; IMM 5707 still is", r.status === 400 && !left.includes("IMM 5257 field map") && left.includes("IMM 5707 field map"), left);
 
 // IMM 5707 made ready by the shared helper (scaffolding), then the real release goes through and records both keys
 const ready = await passEveryAnswerKey(call, vv, { author: AUTHOR, expert: EXPERT, familyKey: "release-helper-firm" });
 ok("C5.5 helper (P-33): tests/lib/release-ready.ts gives IMM 5707 a signed, passing key through the API", ready.ready.includes("IMM 5707") && !ready.failed.length, ready);
-r = await call("POST", `/combinations/${vv}/submit`, {}, AUTHOR);
+await sourceEveryNumber(PORT, vv); r = await call("POST", `/combinations/${vv}/submit`, {}, AUTHOR);
 const rest = (r.body?.errors ?? []).filter((x: { where: string }) => x.where === "Tests");
 ok("C5.5 BR-4: with both maps signed and passing, no answer-key line refuses Submit", !rest.length, { status: r.status, tests: rest, other: (r.body?.errors ?? []).slice(0, 3) });
 if (r.status === 201) {

@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { allowedChannels } from "../engine/channels.ts";
 import { ourWords, irccWords } from "../contracts/workspace.ts";
 import { checkPeople } from "../engine/people.ts";
+import { sourceEveryNumber } from "./fixtures/source-every-number.cjs"; // G1 (C5.4): a release needs every number sourced
 
 const PORT = Number(process.argv[2] ?? 4434), DB = process.argv[3] ?? "xr_studio_runtime_fix";
 const log: any[] = []; let pass = 0, fail = 0;
@@ -195,6 +196,7 @@ const P = (extra: any[] = []) => [{ role: "principal", min: 1, max: 1, applies: 
   pw = await people(wp);
   ok("C11.12 L6 pass (before a release): a save offers Undo", r.status === 200 && pw.canUndo === true, { status: r.status, canUndo: pw.canUndo });
   ok("C11.6 QA-69 pass (before a release): the Forms tab offers Undo of the last change on its forms", !!(await forms(wp)).lastChange, (await forms(wp)).lastChange);
+  await sourceEveryNumber(PORT, wp); // G1 (C5.4): the release's numbers need a source before it is submitted
   r = await call("POST", `/combinations/${wp}/submit`, {});
   const submitted = r.status === 201;
   const review = (await call("GET", `/combinations/${wp}/review`)).body;

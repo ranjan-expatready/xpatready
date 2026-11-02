@@ -4,6 +4,7 @@
 // older order is refused. A pass and a fail per rule, on an isolated copy with the sample loaded. Rules only: no AI (US$0).
 //   zsh studio/tools/isolated.sh runtime_c41 4432 start && tsx studio/tests/check_c41_section_order.ts 4432 xr_studio_runtime_c41
 import { execFileSync } from "node:child_process";
+import { sourceEveryNumber } from "./fixtures/source-every-number.cjs"; // G1 (C5.4): a release needs every number sourced
 
 const PORT = Number(process.argv[2] ?? 4432), DB = process.argv[3] ?? "xr_studio_runtime_c41";
 let pass = 0, fail = 0;
@@ -95,6 +96,7 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   ok("C4.1 R5 fail: the released questionnaire keeps the old order until the next release", (await released()).join() === rel0.join(), await released());
   r = await call("POST", `/combinations/${wp}/sections/order/approve`, {}, "user-B");
   ok("C4.1 R5 fail: there is no separate approval for the order (no route)", r.status === 404 || r.status === 400, r.status);
+  await sourceEveryNumber(PORT, wp); // G1 (C5.4): the release's numbers need a source before it is submitted
   r = await call("POST", `/combinations/${wp}/submit`, {});
   ok("C4.1 R5 pass: the combination is submitted with its order change", r.status === 201 || r.status === 200, words(r) || r.status);
   const review = (await call("GET", `/combinations/${wp}/review`)).body;
