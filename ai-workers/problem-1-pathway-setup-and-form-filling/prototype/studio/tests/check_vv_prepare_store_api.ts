@@ -45,7 +45,7 @@ type P = { derived: boolean; version: string; portal: string | null; filings: { 
   ok("C6.12 fail: a client cannot read it (403)", (await prep(c.id, CLIENT)).r.status === 403);
   ok("C6.12 fail: a configuration person cannot (403)", (await prep(c.id, AUTHOR)).r.status === 403);
   ok("C6.12 fail: an unknown case is not found (404)", (await prep("00000000-0000-4000-8000-000000000000")).r.status === 404);
-  ok("C6.12 BR-1 pass: three people, three filings, one applicant each, files_own", p?.filings.length === 3 && p.filings.every((f) => f.applicants.length === 1 && f.applicants[0].mode === "files_own") && [A, S, K].every((s) => !!filingOf(p, s)), p?.filings);
+  ok("C6.12 BR-1 pass: three people, three filings, one applicant each, files_own (C11.12: the applicant's own mode is applying)", p?.filings.length === 3 && p.filings.every((f) => f.applicants.length === 1 && (f as { mode?: string }).mode === "files_own" && f.applicants[0].mode === "applying") && [A, S, K].every((s) => !!filingOf(p, s)), p?.filings);
   ok("C6.12 BR-16 pass: one family submission group with all three, splittable", p?.groups.length === 1 && p.groups[0].kind === "family" && p.groups[0].filings.length === 3 && p.groups[0].splittable === true, p?.groups);
   ok("C6.12 pass (data): filing, filing_applicant and submission_group rows match the view", sql(`select count(*) from filing where case_id='${c.id}' and active`) === "3" && sql(`select count(*) from filing_applicant fa join filing f on f.id=fa.filing_id where f.case_id='${c.id}'`) === "3" && sql(`select count(*) from submission_group where case_id='${c.id}'`) === "1");
   ok("C6.12 fail: nobody creates a filing by hand (POST …/filings is no route: 404 or 405)", [404, 405].includes((await call("POST", `/runtime/cases/${c.id}/filings`, { subject: A }, OFFICER)).status));
@@ -147,7 +147,11 @@ type P = { derived: boolean; version: string; portal: string | null; filings: { 
   if (wp) {
     const other = (await call("POST", "/runtime/cases", { combinationId: wp, reference: `VP-WP-${run}`, clientActor: CLIENT, principal: { displayName: "Sample Client W" } }, OFFICER)).body?.id as string;
     const o = await prep(other);
-    ok("C6.12 fail: another combination is not derived yet, says so, and stores nothing", o.r.status === 200 && o.r.body.derived === false && /not derived yet/.test(o.r.body.why) && sql(`select count(*) from filing where case_id='${other}'`) === "0", o.r.body);
-  } else ok("C6.12 fail: another combination is not derived yet (no other released combination on this copy)", false, "release wp.family first");
+    // C11.12 (P-233, BR-10, challenge M3): a release with filing modes but no fee rule gets its filings, with "Fees not
+    // worked out yet" and no fee line, never CAD 0. A release with no modes and no rule stays "not derived yet"
+    // (tests/runtime/check_vv_filings.ts).
+    ok("C11.12 BR-10 pass: another combination with filing modes (wp.family, Sample) gets its filing, no fee line, 'Fees not worked out yet'", o.r.status === 200 && o.r.body.derived === true && o.r.body.filings?.length === 1 && (o.r.body.fees ?? []).length === 0 && o.r.body.fees_worked_out === false && /Fees not worked out yet/.test(o.r.body.fees_why ?? ""), o.r.body);
+    ok("C11.12 BR-10 fail: nothing on it reads as an amount (no CAD 0 anywhere)", !/CAD 0\b/.test(JSON.stringify(o.r.body)));
+  } else ok("C11.12 BR-10: another combination with filing modes (no other released combination on this copy)", false, "release wp.family first");
   process.exitCode = summary() ? 1 : 0;
 })().catch((e) => { console.error(e); process.exit(1); });

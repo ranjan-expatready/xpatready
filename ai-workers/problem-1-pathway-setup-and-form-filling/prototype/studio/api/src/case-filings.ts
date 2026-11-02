@@ -27,13 +27,13 @@ export class CaseFilings {
     const people = this.r.peopleOf(c), today = new Date();
     const { answers } = await this.r.state(c);
     const ages = new Map(people.filter((p) => p.role !== "case").map((p) => [p.subjectId, ageOn(answers.find((a) => a.subjectId === p.subjectId && a.field === "person.date_of_birth" && !a.rowKey && checkValue(s, a.field, a.value, today).length === 0)?.value as string | undefined, today)]));
-    const modes = releaseModes(s.combination.participants ?? []); // C11.12 review M1: only the modes the case engine handles yet
+    const modes = releaseModes(s.combination.participants ?? []); // C11.12: the same reading as GET …/prepare
     const rows = await this.db.filing.findMany({ where: { caseId: c.id, active: true }, include: { group: { select: { kind: true } } } });
     // Review m5: the stored group's own id, as GET …/prepare shows it ("group-family" only before the first prepare read).
     const groupOf = new Map(rows.map((f) => [f.subjectId, f.submissionGroupId]));
     const kindOf = new Map(rows.map((f) => [f.submissionGroupId, f.group.kind === "FAMILY" ? "family" as const : "separate" as const]));
     const family = rows.find((f) => f.group.kind === "FAMILY")?.submissionGroupId ?? FAMILY_GROUP;
-    return { case_id: c.id, reference: c.reference, release_version: pin.release.version, ...deriveFilings(own!.combinationKey, people, undefined, { ages, modes, groupOf: (x) => groupOf.get(x) ?? family, groupKind: (g) => kindOf.get(g) ?? "family" }) };
+    return { case_id: c.id, reference: c.reference, release_version: pin.release.version, ...deriveFilings(own!.combinationKey, people, undefined, { ages, modes, label: s.combination.label, groupOf: (x) => groupOf.get(x) ?? family, groupKind: (g) => kindOf.get(g) ?? "family" }) };
   }
 }
 

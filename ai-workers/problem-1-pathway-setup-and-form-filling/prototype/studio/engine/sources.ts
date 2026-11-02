@@ -2,7 +2,9 @@
 // each fact a combination's forms need comes from, per person role, worked out by rules from the snapshot:
 // a document on that role's checklist that supplies it › the client › the case officer. A person's choice over that default and
 // the Pre-qualification tick are the snapshot's `fact_sources` (only when set). Pure: no database, no AI (US$0).
-import { formSigners, lineHolders, signsForOthers, type Person } from "./render.ts";
+// SH3 (P-258): whose fact and who signs come from the one resolver (contracts/resolver.ts).
+import { formSigners, lineHolders, partnerOf, roleOf, signsForOthers, type Person } from "./resolver.ts";
+import { sourceKey } from "../contracts/resolver.ts";
 import { anyMapped, previewRender } from "./coverage.ts";
 import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
@@ -26,13 +28,6 @@ export function suppliesOf(t: DocType): { fact: string; about: About }[] {
   return (t.supplies_facts ?? []).map((fact) => ({ fact, about: (t.supplies_about?.[fact] as About) ?? "holder" }));
 }
 
-const spouseOf = (people: Person[], id: string) => {
-  const me = people.find((p) => p.id === id);
-  if (me?.role === "principal") return people.find((p) => p.role === "spouse_or_partner")?.id ?? null;
-  if (me?.role === "spouse_or_partner") return people.find((p) => p.role === "principal")?.id ?? null;
-  return null;
-};
-
 /** Challenge M3: which checklist documents supply which fact about whom (per person, never combination-wide): a
  *  passport asked only of the principal supplies only the principal's facts. */
 export function documentFacts(s: Snapshot, people: Person[]): Map<string, Map<string, Supplier[]>> {
@@ -52,7 +47,7 @@ export function documentFacts(s: Snapshot, people: Person[]): Map<string, Map<st
     const sup = { key: t.key, name: t.name, base: r.base_or_conditional === "base" };
     for (const h of holders) for (const { fact, about } of suppliesOf(t)) {
       if (about === "holder") add(h, fact, sup);
-      else if (about === "holder.spouse") add(h === "case" ? null : spouseOf(people, h), fact, sup);
+      else if (about === "holder.spouse") add(h === "case" ? null : partnerOf(people, h), fact, sup);
       else for (const n of ["parent_1", "parent_2"]) add(h === "case" ? null : `${h}/${n}`, fact, sup);
     }
   }
@@ -92,7 +87,6 @@ export function agentRefusal(f: Pick<FactSourceView, "ruleSource" | "clientOnly"
   return n >= REASON_MIN ? null : n ? CASE_OFFICER_REASON_SHORT : CASE_OFFICER_NEEDS_REASON;
 }
 
-const roleOf = (people: Person[], about: string) => about === "case" ? "case" : people.find((p) => p.id === about.split("/")[0])?.role ?? about;
 const AGENT_FROM = new Set(["staff_working_view", "existing_record"]);
 const isAgentFact = (fact: string) => fact.startsWith("representative.") || fact.startsWith("organisation.");
 
@@ -105,16 +99,16 @@ export function factSources(s: Snapshot): FactSourceView[] {
   const docs = documentFacts(s, people);
   const place = new Map<string, any>(); for (const p of s.placements as any[]) if (!place.has(p.fact)) place.set(p.fact, p);
   const meaning = new Map((s.canonical_fields as { id: string; meaning?: string }[]).map((f) => [f.id, f.meaning ?? f.id]));
-  const chosen = new Map((s.fact_sources ?? []).map((x) => [`${x.role}|${x.fact}`, x]));
+  const chosen = new Map((s.fact_sources ?? []).map((x) => [sourceKey(x.role, x.fact), x]));
   const need = new Map<string, { role: string; fact: string; abouts: Set<string>; forms: Set<string> }>();
   for (const c of r.coverage) for (const b of c.boxes) {
     if (!b.fact || !b.about) continue;
-    const role = roleOf(people, b.about), k = `${role}|${b.fact}`;
+    const role = roleOf(people, b.about), k = sourceKey(role, b.fact);
     const n = need.get(k) ?? { role, fact: b.fact, abouts: new Set<string>(), forms: new Set<string>() };
     n.abouts.add(b.about); n.forms.add(c.form); need.set(k, n);
   }
   // A tick or choice on a fact no form needs still shows, so it can be seen and cleared (validate warns).
-  for (const x of chosen.values()) if (!need.has(`${x.role}|${x.fact}`)) need.set(`${x.role}|${x.fact}`, { role: x.role, fact: x.fact, abouts: new Set(), forms: new Set() });
+  for (const x of chosen.values()) if (!need.has(sourceKey(x.role, x.fact))) need.set(sourceKey(x.role, x.fact), { role: x.role, fact: x.fact, abouts: new Set(), forms: new Set() });
   return [...need.values()].sort((a, b) => a.role.localeCompare(b.role) || a.fact.localeCompare(b.fact)).map((n) => {
     const p = place.get(n.fact);
     const suppliers = [...new Map([...n.abouts].flatMap((a) => docs.get(a)?.get(n.fact) ?? []).map((x) => [x.key, x])).values()].sort((a, b) => Number(b.base) - Number(a.base) || a.key.localeCompare(b.key));
@@ -122,7 +116,7 @@ export function factSources(s: Snapshot): FactSourceView[] {
     // Precedence (P-130): P-97 client-only › a document on this role's checklist › the agent's own facts › the client.
     const ruleSource: Source = clientOnly ? "CLIENT" : suppliers.length ? "DOCUMENT" : isAgentFact(n.fact) || n.role === "representative" || AGENT_FROM.has(p?.collected_from) ? "AGENT" : "CLIENT";
     const ruleDocument = ruleSource === "DOCUMENT" ? suppliers[0] : null;
-    const c = chosen.get(`${n.role}|${n.fact}`);
+    const c = chosen.get(sourceKey(n.role, n.fact));
     const source: Source = (c?.source as Source) ?? ruleSource;
     const document = source === "DOCUMENT" ? (c?.source === "DOCUMENT" ? suppliers.find((x) => x.key === c.document_type) ?? { key: c.document_type!, name: c.document_type!, base: false } : ruleDocument) : null;
     return { role: n.role, fact: n.fact, label: (meaning.get(n.fact) ?? n.fact).trim().replace(/\.$/, ""), forms: [...n.forms].sort(),
@@ -189,7 +183,7 @@ export function pqrPicksByRules(s: Snapshot, combinationId: string, runId: strin
     payload: { kind: "pqr_pick", factKey: f.fact, role: f.role, reason: `A rule of this combination reads it: ${readBy.get(f.fact)}.`.slice(0, 300) },
     source: null, rounds: { draft: null, check: null }, rules: [{ rule: "pqr_subset_of_sqr", passed: true, why: null }],
     agreement: "rules_only", confidence: "check", reason: "Proposed by the rules from what this combination's rules read; the immigration expert confirms at release.",
-    origin: "rules", identity: { key: `${f.role}|${f.fact}`, near: [], nearReason: null }, relatesTo: null, revision: null,
+    origin: "rules", identity: { key: sourceKey(f.role, f.fact), near: [], nearReason: null }, relatesTo: null, revision: null,
     status: "waiting", decision: null, basis: "SAMPLE",
   }));
 }
@@ -204,7 +198,7 @@ export function countryPqr(released: { combinationId: string; version: number; s
     const ticks = prequalification(r.snapshot);
     if (ticks.length) asking++;
     for (const t of ticks) {
-      const k = `${t.role}|${t.fact}`;
+      const k = sourceKey(t.role, t.fact);
       const line = lines.get(k) ?? { role: t.role, roleLabel: who(r.snapshot, t.role), fact: t.fact, label: factWords(r.snapshot, t.fact), combinations: [] };
       line.combinations.push({ id: r.combinationId, label: r.snapshot.combination.label, release: r.version });
       lines.set(k, line);
@@ -260,7 +254,7 @@ export function signedScanLines(s: Snapshot): ChecklistLine[] {
  *  this document). Order: the set position, then base before conditional, then the name. Pure: no database. */
 export function checklist(s: Snapshot): { role: string; label: string; lines: ChecklistLine[] }[] {
   const { people } = previewRender(s);
-  const sources = new Map(factSources(s).map((f) => [`${f.role}|${f.fact}`, f]));
+  const sources = new Map(factSources(s).map((f) => [sourceKey(f.role, f.fact), f]));
   const meaning = new Map((s.canonical_fields as { id: string; meaning?: string }[]).map((f) => [f.id, (f.meaning ?? f.id).trim().replace(/\.$/, "")]));
   const types = s.document_types as DocType[];
   const byRole = new Map<string, ChecklistLine[]>();
@@ -270,10 +264,10 @@ export function checklist(s: Snapshot): { role: string; label: string; lines: Ch
     const roles = [...new Set(holders.map((h) => roleOf(people, h)))];
     for (const role of roles) {
       const holder = holders.find((h) => roleOf(people, h) === role)!;
-      const other = (about: About) => about === "holder" ? role : about === "holder.spouse" ? (holder === "case" ? null : roleOf(people, spouseOf(people, holder) ?? "")) : null;
+      const other = (about: About) => about === "holder" ? role : about === "holder.spouse" ? (holder === "case" ? null : roleOf(people, partnerOf(people, holder) ?? "")) : null;
       const supplies = (t ? suppliesOf(t) : []).map(({ fact, about }) => {
         const aboutRole = other(about) || null;
-        const src = aboutRole ? sources.get(`${aboutRole}|${fact}`) : undefined;
+        const src = aboutRole ? sources.get(sourceKey(aboutRole, fact)) : undefined;
         return { fact, label: meaning.get(fact) ?? fact, about, aboutRole, takenOut: !!src && src.source === "DOCUMENT" && src.document?.key === t!.key };
       });
       const line: ChecklistLine = {

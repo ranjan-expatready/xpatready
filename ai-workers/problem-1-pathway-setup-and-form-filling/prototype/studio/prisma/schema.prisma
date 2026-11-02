@@ -1751,7 +1751,7 @@ model FilingApplicant {
   filingId  String @map("filing_id") @db.Uuid
   subjectId String @map("subject_id") @db.Uuid
   role      String
-  /// applying (more modes with sponsorship and permanent residence)
+  /// applying · declared_only (C11.12: named on the principal's application, not accompanying)
   mode      String
 
   filing Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
