@@ -14,7 +14,7 @@ import { EXPERIMENT_CAP_USD, LABEL, LEDGER_DIR, MAX_ATTEMPTS, PARTS_DIR, RUN_CAP
 import { canonical } from "../../../contracts/rules.ts";
 import { costUsd, SpendLedger } from "../../../p2/ledger.ts";
 import { effective, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
-import { assembleMerged, flagNearDuplicates, partOutputTokens, planDraft, type DraftPlan, type Prior } from "../../engine/parts.ts";
+import { assembleMerged, flagNearDuplicates, partOutputTokens, planDraft, wholeFormOutput, type DraftPlan, type Prior } from "../../engine/parts.ts";
 import { compareEditions } from "../../engine/programs.ts";
 import { pdfBoxFormats } from "../../engine/field-format.ts";
 import { checkedOutput, costBesideLimit, explainRun, failedOurCheck, isProviderLimit, sameDraftInputs, type DraftInputs, type FieldMapAnswer } from "../../engine/ai-run.ts";
@@ -255,10 +255,13 @@ export class Sources {
     const jobFile = join(JOBS, `${jobId}.json`);
     // v2 (23 Oct): the field naming rule in the prompt and the output schema (contracts/fact-key.ts), and the printed
     // edition read by the intake passed as a known fact (A6). v1 stays as the record of what earlier runs used.
+    const invBytes = readFileSync(inv);
+    // Break m5: an inventory that is not JSON gets the 64k settings here; its read or draft fails later, as before.
+    const out = wholeFormOutput((() => { try { return JSON.parse(invBytes.toString("utf8")); } catch { return null; } })());
     const want = { job_id: jobId, kind: "field_map", combination: "studio", configuration_version: "studio-add-form", template: "field-map.v2.md", output_schema: "field-map-output.v2.schema.json",
       ...(printedEdition && EDITION.test(printedEdition) ? { known: { form_edition: printedEdition } } : {}),
-      inputs: [{ file: a.inventoryFile, sha256: sha(readFileSync(inv)) }],
-      settings: { provider_route: "anthropic-api/aiw-d261-prototype-exception-aiw-d260", model: "claude-opus-5-5", effort: "high", timeout_ms: 900000, max_attempts: MAX_ATTEMPTS, budget_usd: 5, max_output_tokens: 64000 } }; // 64k: a full 242-box form needs 53-63k output (IMM 1295, 20 Oct); 32k truncated IMM 5257 (21 Oct 05:58Z)
+      inputs: [{ file: a.inventoryFile, sha256: sha(invBytes) }],
+      settings: { provider_route: "anthropic-api/aiw-d261-prototype-exception-aiw-d260", model: "claude-opus-5-5", effort: "high", timeout_ms: out.timeout_ms, max_attempts: MAX_ATTEMPTS, budget_usd: 5, max_output_tokens: out.max_output_tokens } }; // 64k: a full 242-box form needs 53-63k output (IMM 1295, 20 Oct); 32k truncated IMM 5257 (21 Oct 05:58Z); 128k from 240 fields (R-146)
     const have = existsSync(jobFile) ? readFileSync(jobFile, "utf8") : null;
     if (have !== JSON.stringify(want, null, 1) + "\n") writeFileSync(jobFile, JSON.stringify(want, null, 1) + "\n");
     const draftInputs: DraftInputs = { inputSha: want.inputs[0].sha256, templateSha: sha(readFileSync(join(PROMPTS, want.template))), schemaSha: sha(readFileSync(join(PROMPTS, want.output_schema))), model: want.settings.model, effort: want.settings.effort, maxOutputTokens: want.settings.max_output_tokens, known: want.known ?? null };
