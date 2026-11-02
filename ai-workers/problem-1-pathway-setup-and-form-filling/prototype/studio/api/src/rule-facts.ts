@@ -65,12 +65,37 @@ export function missingRuleFacts(rules: RuleRef[], library: Set<string>, derived
   return [...by].sort(([a], [b]) => a.localeCompare(b)).map(([fact, rs]) => ({ fact, rules: rs }));
 }
 
+/** C3.6 (Lead, 2 Nov; runtime-3's R3): the answer types that take a list of answer values. */
+export const CHOICE_TYPES = ["code", "multi_choice"] as const;
+const ValueLabels = z.array(z.string({ error: "Write each answer value as words." }).max(200, "Keep each answer value under 200 characters.")).max(400, "At most 400 answer values.").optional();
+/** Pure: the answer values a person wrote, as the list the proposal carries; the codes are built, never typed.
+ *  A choice needs two or more values; an empty or repeated value is refused in words; a non-choice takes none. */
+export function answerValues(valueType: string, labels: string[] | undefined): { code: string; label: string }[] | undefined {
+  const choice = (CHOICE_TYPES as readonly string[]).includes(valueType);
+  if (!choice) { if (labels?.length) fail(`Only a choice (${CHOICE_TYPES.join(" or ")}) takes answer values: remove them, or choose a choice as the answer type.`); return undefined; }
+  if (!labels?.length) fail("A choice needs its answer values: write two or more, one per line.");
+  const out: { code: string; label: string }[] = [];
+  labels!.forEach((raw, i) => {
+    const label = raw.trim().replace(/\s+/g, " ");
+    if (!label) fail(`Answer value ${i + 1} is empty: give it a name, or remove it.`);
+    const base = label.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 60);
+    const code = /^[a-z]/.test(base) ? base : `v_${base}`.slice(0, 61);
+    if (code === "v_") fail(`Answer value "${label}" has no letters or digits: give it a name a person reads.`);
+    const same = out.find((o) => o.code === code);
+    if (same) fail(same.label.toLowerCase() === label.toLowerCase() ? `"${label}" is listed twice: give each answer value once.` : `"${label}" and "${same.label}" are the same answer value: give each answer value once.`);
+    out.push({ code, label });
+  });
+  if (out.length < 2) fail("A choice needs two or more answer values.");
+  return out;
+}
+
 export const AddRuleFact = z.object({
   fact: z.string({ error: "Name the fact the rule reads." }).trim().min(1, "Name the fact the rule reads.").max(120),
   rule: z.string({ error: "Name the rule that needs this fact: a fact no form asks is added only for a rule that reads it." }).trim().min(1, "Name the rule that needs this fact: a fact no form asks is added only for a rule that reads it.").max(200),
   label: z.string({ error: "Give the fact a name a person reads." }).trim().min(2, "Give the fact a name a person reads (2 characters or more).").max(120),
   meaning: z.string({ error: "Say what the fact means." }).trim().min(10, "Say what the fact means, in a sentence (10 characters or more).").max(500),
   valueType: z.enum(RULE_FACT_TYPES as [string, ...string[]], { message: `Choose the answer type: ${RULE_FACT_TYPES.join(", ")}.` }),
+  values: ValueLabels,
 }).strict();
 
 /** The add by a rule's key (Day-0 acceptance C3.6, P-158 (5)): the person names the rule and says the fact in words;
@@ -81,6 +106,7 @@ export const AddFactForRule = z.object({
   meaning: z.string({ error: "Say what the fact means." }).trim().min(10, "Say what the fact means, in a sentence (10 characters or more).").max(500),
   valueType: z.enum(RULE_FACT_TYPES as [string, ...string[]], { message: `Choose the answer type: ${RULE_FACT_TYPES.join(", ")}.` }),
   subject: z.enum(FACT_SUBJECTS, { message: `Say whom the fact is about: ${FACT_SUBJECTS.join(", ")}.` }).default("person"),
+  values: ValueLabels,
   nearReason: z.string().trim().min(10, "Say in a sentence why it is not the same as the field it is close to (10 characters or more).").max(300).optional(),
 }).strict();
 
@@ -133,6 +159,7 @@ export class RuleFacts {
     const parsed = AddRuleFact.safeParse(body ?? {});
     if (!parsed.success) fail(parsed.error.issues[0]?.message ?? "Name the rule and describe the fact.");
     const b = parsed.data!;
+    const values = answerValues(b.valueType, b.values);
     const c = await this.combination(id);
     const { rules, library, missing, waitingFor } = await this.state(c);
     const rule = rules.find((r) => r.key === b.rule);
@@ -160,7 +187,7 @@ export class RuleFacts {
       message: `${actor.name} named ${rule!.sentence.split(":")[0]} as needing ${b.fact}: one library proposal (rules only, no AI, US$0).`, detail: { operation: "rule_fact", rule: rule!.key, ruleKind: rule!.kind, fact: b.fact } } });
     const [proposalId] = await insertProposals(tx, c.workspaceId, [{
       kind: "field", runId: job.id, step: "rule_fact", scope: { formEdition: null, combinationId: c.id }, landsOn: "library", reuse: { match: "new", existingKey: null },
-      payload: { kind: "field", label: b.label, aliases: [], meaning: b.meaning, valueType: b.valueType, subject, formBox: null },
+      payload: { kind: "field", label: b.label, aliases: [], meaning: b.meaning, valueType: b.valueType, subject, ...(values ? { values } : {}), formBox: null },
       source: { file: `rule ${rule!.key} (${c.combinationKey})`, sha256, edition: null, page: null, quote: rule!.sentence, quoteFound: true, rule: { key: rule!.key, sentence: rule!.sentence } },
       rounds: { draft: null, check: null },
       rules: [{ rule: "named_rule_reads_fact", passed: true, why: null }, { rule: "not_in_library", passed: true, why: null }],
@@ -180,6 +207,7 @@ export class RuleFacts {
     const parsed = AddFactForRule.safeParse(body ?? {});
     if (!parsed.success) fail(parsed.error.issues[0]?.message ?? "Name the fact in words.");
     const b = parsed.data!;
+    const values = answerValues(b.valueType, b.values);
     const c = await this.combination(id);
     const { snapshot } = await buildSnapshot(this.db, c.workspaceId, c.id, "draft");
     const rule = namedRules(snapshot).find((r) => r.key === ruleKey);
@@ -212,7 +240,7 @@ export class RuleFacts {
         message: `${actor.name} named ${name} as needing "${b.label}": one library proposal (rules only, no AI, US$0).`, detail: { operation: "rule_fact", rule: rule!.key, ruleKind: rule!.kind, fact: key } } });
       const [proposalId] = await insertProposals(tx, c.workspaceId, [{
         kind: "field", runId: job.id, step: "rule_fact", scope: { formEdition: null, combinationId: c.id }, landsOn: "library", reuse: { match: "new", existingKey: null },
-        payload: { kind: "field", label: b.label, aliases: [], meaning: b.meaning, valueType: b.valueType, subject: b.subject, formBox: null },
+        payload: { kind: "field", label: b.label, aliases: [], meaning: b.meaning, valueType: b.valueType, subject: b.subject, ...(values ? { values } : {}), formBox: null },
         source: { file: `rule ${rule!.key} (${c.combinationKey})`, sha256, edition: null, page: null, quote: rule!.sentence, quoteFound: true, rule: { key: rule!.key, sentence: rule!.sentence } },
         rounds: { draft: null, check: null },
         rules: [{ rule: "named_rule_exists", passed: true, why: null }, { rule: "not_in_library", passed: true, why: null }, ...(near.length ? [{ rule: "near_duplicate_reason", passed: true, why: b.nearReason ?? null }] : [])],

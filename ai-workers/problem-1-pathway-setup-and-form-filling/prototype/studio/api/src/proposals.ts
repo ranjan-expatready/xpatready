@@ -179,9 +179,24 @@ const waitingAdd = (tx: Tx, l: Landing, kind: string, key: string, label: string
   sourceJobId: l.sourceJobId ?? null, combinationId: l.combinationId ?? null, proposalItemId: l.itemId, batchId: l.batchId } });
 
 /** A new shared field as a draft row plus its ADD waiting for a second person. Also the field-map apply's writer. */
-export async function landField(tx: Tx, l: Landing, f: { key: string; meaning: string; valueType: string; label?: string | null; sourceRef: string }) {
+/** C3.6: a field's answer values as an answer list: the live list with the same codes, else a new draft one waiting. */
+async function landValues(tx: Tx, l: Landing, label: string, values: { code: string; label: string }[]): Promise<string> {
+  const want = listIdentity(values.map((v) => v.code));
+  const rows = await tx.answerList.findMany({ where: { workspaceId: l.ws, status: { in: ["DRAFT", "PUBLISHED"] } }, include: { values: { select: { valueKey: true } } } });
+  const same = rows.find((x) => listIdentity(x.values.map((v) => v.valueKey)) === want);
+  if (same) return same.answerListKey;
+  const used = new Set((await tx.answerList.findMany({ where: { workspaceId: l.ws }, select: { answerListKey: true } })).map((x) => `x.${x.answerListKey}`));
+  const key = slugKey(`${label} answers`, used);
+  await tx.answerList.create({ data: { workspaceId: l.ws, answerListKey: key, version: 1, status: "DRAFT", label: `${label}: answers`, origin: "AI_PROPOSAL", updatedBy: l.actor.id,
+    values: { create: values.map((v, i) => ({ valueKey: v.code, label: v.label, sortOrder: i + 1 })) } } });
+  await waitingAdd(tx, l, "answer_list", key, `${label}: answers`);
+  return key;
+}
+
+export async function landField(tx: Tx, l: Landing, f: { key: string; meaning: string; valueType: string; label?: string | null; answerListKey?: string | null; sourceRef: string }) {
   const made = await tx.canonicalField.create({ data: { workspaceId: l.ws, canonicalFieldKey: f.key, version: 1, status: "DRAFT", meaning: f.meaning, valueType: f.valueType, dataType: (VALUE_TYPE_TO_DATA_TYPE as Record<string, string>)[f.valueType] ?? "STRING",
     scope: f.key.startsWith("case.") ? "CASE_LEVEL" : "CLIENT_LEVEL", subjectKind: subjectKindOf(f.key), origin: "AI_PROPOSAL", sourceRef: f.sourceRef, updatedBy: l.actor.id,
+    ...(f.answerListKey ? { answerListKey: f.answerListKey } : {}),
     ...(f.label ? { label: f.label, groupKey: f.key.split(".")[0], labelChecked: true } : {}) } as Prisma.CanonicalFieldUncheckedCreateInput });
   await waitingAdd(tx, l, "field", f.key, f.label ?? made.label ?? null);
   return made;
@@ -218,7 +233,10 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
       fail(retired ? `${ruleFact} is a retired library field: reject this one and restore it in Library › Fields.` : `${ruleFact} is already in the library (added since it was proposed): reject this one; the rule can use it as it is.`, HttpStatus.CONFLICT);
     }
     const key = typeof ruleFact === "string" ? ruleFact : keyFor(f.subject ?? "case", f.label, used);
-    await landField(tx, l, { key, meaning: f.meaning, valueType: f.valueType, label: f.label, sourceRef: rule ? `Needed by ${rule.sentence}; ${sourceRef(r, l.actor)}` : sourceRef(r, l.actor) });
+    // C3.6 (Lead, 2 Nov): a choice fact's answer values land as its answer list: an identical live list is reused (the
+    // identity rule: the set of codes), else a new draft list waits for the second person beside the field.
+    const answerListKey = f.values?.length ? await landValues(tx, l, f.label, f.values) : null;
+    await landField(tx, l, { key, meaning: f.meaning, valueType: f.valueType, label: f.label, answerListKey, sourceRef: rule ? `Needed by ${rule.sentence}; ${sourceRef(r, l.actor)}` : sourceRef(r, l.actor) });
     return key;
   },
   async section(tx, r, p, l) {
