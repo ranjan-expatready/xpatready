@@ -68,6 +68,18 @@ const guarded = async (key: string) => ((await call("GET", `/library/document-ty
   r = await call("POST", `/library/document-types/${encodeURIComponent(FACT)}/retire`, { reason: "Not needed by any setup any more." });
   ok("SH2b fail: retiring a type a fact is read from is refused (409), saying a fact is read from it", r.status === 409 && (r.body?.uses ?? []).some((u: { why: string }) => /fact/.test(u.why)), [r.status, r.body?.uses]);
 
+  // Devin's thread on #522: a PUBLISHED line whose newer version is RETIRED no longer counts its alternative (the status
+  // filter keeps RETIRED rows, so the newest version per line is the retired one, and `current` drops it).
+  const GONE = "sh2b_retired_line_alternative";
+  sql(`insert into document_type (id, workspace_id, document_type_key, name, category, version, status, origin, updated_by) select gen_random_uuid(), id, '${GONE}', 'SH2b test ${GONE} (Sample)', 'client', 1, 'PUBLISHED', 'HUMAN', 'user-A' from workspace where key='demo'`);
+  const pub = sql("select d.id from document_requirement d where d.status = 'PUBLISHED' and d.version = (select max(version) from document_requirement x where x.combination_id = d.combination_id and x.lineage_key = d.lineage_key) order by d.combination_id, d.lineage_key limit 1");
+  sql(`update document_requirement set alternatives = coalesce(alternatives, '[]'::jsonb) || '["${GONE}"]'::jsonb where id = '${pub}'`);
+  ok("setup: a published line takes the test type as its alternative, so the type is used", (await listed(GONE)).length === 1 && (await guarded(GONE)).length === 1);
+  const cols = "workspace_id, combination_id, lineage_key, document_type_key, attach_mode, predicate_json, condition_plain, applies_to_roles, provided_by, is_required, position, alternatives, source_quote, source_file, note, origin";
+  sql(`insert into document_requirement (id, ${cols}, version, status, supersedes_id, updated_by) select gen_random_uuid(), ${cols}, version + 1, 'RETIRED', id, 'user-A' from document_requirement where id = '${pub}'`);
+  const g1 = await listed(GONE), g2 = await guarded(GONE);
+  ok("SH2b pass: once that line's newer version is retired, its old alternative counts nowhere (list and guard)", g1.length === 0 && g2.length === 0, { list: g1, uses: g2 });
+
   // Every document type: the two answers agree.
   const all = (await call("GET", "/library/document-types")).body as TypeRow[];
   const split: string[] = [];
