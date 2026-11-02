@@ -56,7 +56,21 @@ await main("Setup", "Visitor visa release 2 for the M3 path (Super Admin, M2)", 
   // research_notes/visitor-visa-and-six-combinations-research-2026-11-02.md Q4, https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada/minor-children-travelling-canada.html
   // ("The letter does not need to be certified."). Each line applies only under 18 (person.age_years, worked out on the
   // application date) and reads "travels with" or "custody", two facts that arrive through C3.6 with their answer values.
-  const R3 = "Researched (canada.ca minor-children page, https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada/minor-children-travelling-canada.html, 2025-01-23, read 2026-11-02: \"The letter does not need to be certified.\"): may change";
+  // qa on #493 (Minors 1 and 2): the reason a line shows is short ("Needed: <plain>."); the source goes beside it, in the
+  // line's quote (sourceQuote, with the page and date) and its link (sourceFile), never in the reason. P-170: each line
+  // quotes the source it rests on; the birth certificate and adoption lines rest on the canada.ca page alone (no quote held).
+  const PAGE = "https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada/minor-children-travelling-canada.html";
+  const IMM5881 = "https://ircc.canada.ca/english/pdf/kits/forms/IMM5881E.pdf", IMM5484 = "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5484/01-05-2026/imm5484e.pdf";
+  const ON_PAGE = "Researched: canada.ca, Minor children travelling to Canada (page dated 2025-01-23, read 2026-11-02); may change";
+  const CITE = {
+    letter: { sourceQuote: `"The letter does not need to be certified." ${ON_PAGE}.`, sourceFile: PAGE },
+    birth: { sourceQuote: `${ON_PAGE}: a copy of the birth certificate when the child travels alone or with an adult who is not a parent (research note Q4; no quote held).`, sourceFile: PAGE },
+    absentId: { sourceQuote: "IMM 5881 E (05-2026), New Delhi visa office checklist, page 2: \"You must provide a copy of the page of the passport or other government-issued identification document showing the name, photo and signature of each non-accompanying parent.\" (downloaded 2026-10-19). Visa office instruction; may change.", sourceFile: IMM5881 },
+    custody: { sourceQuote: "IMM 5484 (05-2026), Document checklist for a temporary resident visa, page 1: \"Minors travelling alone or with one parent must provide custody documents or a letter of authorization from the other non accompanying parent or a letter of authorization signed by both parents or legal guardians.\" (downloaded 2026-10-19).", sourceFile: IMM5484 },
+    adopt: { sourceQuote: `${ON_PAGE}: the adoption or guardianship papers when the child is adopted or under guardianship (research note Q4; no quote held).`, sourceFile: PAGE },
+  };
+  // qa Major on #493: a minor can be the principal applicant (a teenager visiting relatives files their own visitor visa),
+  // so the five lines go on every applicant; the age guard (person.age_years < 18) keeps them off adults.
   const minor = (c: unknown) => ({ op: "and", subjectKind: "PERSON", args: [{ op: "lt", field: "person.age_years", value: 18 }, c] });
   const travels = (v: string[]) => minor({ op: "in", field: "person.travels_with", value: v });
   const custody = (v: string[]) => minor({ op: "in", field: "person.custody", value: v });
@@ -65,29 +79,31 @@ await main("Setup", "Visitor visa release 2 for the M3 path (Super Admin, M2)", 
   // decree"; Devin review on #493, both rounds).
   // Review r1 M1: custody not answered yet counts as "not sole" (the usual married-parents case still asks for the ID).
   const oneParentNotSole = { op: "and", args: [{ op: "in", field: "person.travels_with", value: ["one_parent"] }, { op: "or", args: [{ op: "not", arg: { op: "exists", field: "person.custody" } }, { op: "not", arg: { op: "in", field: "person.custody", value: ["sole"] } }] }] };
-  const reqs: { name: string; who: string; mode: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: unknown; plain?: string }[] = [
+  const reqs: { name: string; who: string; mode: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: unknown; plain?: string; cite?: { sourceQuote: string; sourceFile: string } }[] = [
     { name: "Passport or travel document", who: "each_applicant", mode: "COMBINATION_MANDATORY" },
     { name: "Proof of financial support", who: "principal_applicant", mode: "COMBINATION_MANDATORY" },
-    { name: "Letter of authorization for a minor", who: "each_dependent_child", mode: "ANSWER_CONDITIONAL", condition: travels(["alone", "another_adult", "one_parent"]),
-      plain: `when a child under 18 travels alone or with another adult (signed by both parents or guardians, naming the adult responsible in Canada), or with one parent (from the parent not travelling; with sole custody, from the parent who has it, beside the custody decree); the letter does not need to be certified. ${R3}` },
-    { name: "Copy of the minor's birth certificate", who: "each_dependent_child", mode: "ANSWER_CONDITIONAL", condition: travels(["alone", "another_adult"]), plain: `when a child under 18 travels alone or with an adult who is not a parent. ${R3}` },
-    { name: "Copy of the absent parent's signed passport or national ID", who: "each_dependent_child", mode: "ANSWER_CONDITIONAL", condition: minor(oneParentNotSole), plain: `when a child under 18 travels with one parent who does not have sole custody: the parent not travelling. ${R3}` },
-    { name: "Custody documents", who: "each_dependent_child", mode: "ANSWER_CONDITIONAL", condition: custody(["sole", "shared"]), plain: `when a child under 18 is in sole custody (the custody decree) or shared custody (the custody documents). ${R3}` },
-    { name: "Adoption or guardianship papers", who: "each_dependent_child", mode: "ANSWER_CONDITIONAL", condition: custody(["adopted", "guardian"]), plain: `when a child under 18 is adopted or under guardianship. ${R3}` },
+    { name: "Letter of authorization for a minor", who: "each_applicant", mode: "ANSWER_CONDITIONAL", condition: travels(["alone", "another_adult", "one_parent"]),
+      plain: "a child under 18 travelling alone, with another adult (signed by both parents, naming the adult responsible in Canada) or with one parent (from the other parent; with sole custody, from the parent who has it)", cite: CITE.letter },
+    { name: "Copy of the minor's birth certificate", who: "each_applicant", mode: "ANSWER_CONDITIONAL", condition: travels(["alone", "another_adult"]), plain: "a child under 18 travelling alone or with an adult who is not a parent", cite: CITE.birth },
+    { name: "Copy of the absent parent's signed passport or national ID", who: "each_applicant", mode: "ANSWER_CONDITIONAL", condition: minor(oneParentNotSole), plain: "a child under 18 travelling with one parent who does not have sole custody: the other parent's ID", cite: CITE.absentId },
+    { name: "Custody documents", who: "each_applicant", mode: "ANSWER_CONDITIONAL", condition: custody(["sole", "shared"]), plain: "a child under 18 in sole custody (the custody decree) or shared custody", cite: CITE.custody },
+    { name: "Adoption or guardianship papers", who: "each_applicant", mode: "ANSWER_CONDITIONAL", condition: custody(["adopted", "guardian"]), plain: "a child under 18 who is adopted or under guardianship", cite: CITE.adopt },
     // VV-R16 (medical exam: a stay over 6 months AND a listed country, a public-health job or a super visa) needs a
     // country-history question the library does not have: FQ-11, not set up here.
   ];
   for (const q of reqs) {
     const key = q.name.toLowerCase().replace(/[^a-z]+/g, "_").replace(/^_|_$/g, "");
     const known = sql(`select count(*) from document_type where document_type_key='${key}'`) === "1";
-    r = await call("POST", `/combinations/${vv}/requirements`, { ...(known ? { documentTypeKey: key } : { newTypeName: q.name, providedBy: "client" }), attachMode: q.mode, appliesToRoles: q.who, ...(q.condition ? { condition: q.condition, conditionPlain: q.plain } : {}) }, AUTHOR);
+    r = await call("POST", `/combinations/${vv}/requirements`, { ...(known ? { documentTypeKey: key } : { newTypeName: q.name, providedBy: "client" }), attachMode: q.mode, appliesToRoles: q.who, ...(q.condition ? { condition: q.condition, conditionPlain: q.plain } : {}), ...(q.cite ?? {}) }, AUTHOR);
     ok(`S6 document requirement: ${q.name} (${q.who})`, r.status < 300, r.body?.detail ?? r.status);
   }
   // S6a (R3): the two facts the lines read arrive through C3.6 ("add the fact this rule needs", P-158) with their answer
   // values, are accepted by the second person, then asked per person in Your visit. Values Researched (as above).
+  // qa Major on #493: the lines are on every applicant, so until the application date settles each age every applicant
+  // may be asked (the release's age is worked out on that date); the words hold for an adult too.
   const facts = [
-    { fact: "person.travels_with", label: "Who the child travels with", meaning: `Who a child under 18 travels to Canada with. ${R3}`, values: ["Both parents", "One parent", "Another adult", "Alone"], question: "Who is this child travelling to Canada with?" },
-    { fact: "person.custody", label: "Custody of the child", meaning: `The custody arrangement for a child under 18. ${R3}`, values: ["Not applicable", "Shared", "Sole", "Adopted", "Guardian"], question: "What is this child's custody arrangement?" },
+    { fact: "person.travels_with", label: "Who the child travels with", meaning: `Who a child under 18 travels to Canada with. ${ON_PAGE}.`, values: ["Both parents", "One parent", "Another adult", "Alone"], question: "If under 18: who is this person travelling to Canada with?" },
+    { fact: "person.custody", label: "Custody of the child", meaning: `The custody arrangement for a child under 18. ${ON_PAGE}.`, values: ["Not applicable", "Shared", "Sole", "Adopted", "Guardian"], question: "If under 18: what is the custody arrangement for this person?" },
   ];
   const needed = ((await call("GET", `/combinations/${vv}/rule-facts`, undefined, AUTHOR)).body?.facts ?? []) as { fact: string; rules: { kind: string; key: string }[] }[];
   for (const f of facts) {

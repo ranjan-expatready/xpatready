@@ -11,7 +11,7 @@
 //   tsx studio/acceptance/C6.4.test.ts 4440 xr_studio_accept
 import { CLIENT, FAMILY, OFFICER, answer, call, main, needVisitorVisa, ok, openCase, sql, yearsAgo } from "./lib/m3.ts";
 
-type Line = { id: string; document_type: string; label: string; state: string; reason: string; required: boolean; documents?: { id: string; current: boolean }[] };
+type Line = { id: string; document_type: string; label: string; state: string; reason: string; required: boolean; quote?: string | null; documents?: { id: string; current: boolean }[] };
 type Checklist = { stand_in?: string; people: { subject: string; lines: Line[] }[] };
 const STATES = ["not_requested", "requested", "received", "being_checked", "approved", "rejected", "not_applicable"];
 
@@ -38,7 +38,7 @@ await main("C6.4", "Document checklist per person (Visitor visa)", async () => {
   ok("C6.4-7 fail (R3): with \"travels with\" and custody unanswered, the child has a passport line and none of the five minor lines", has(l, K1, /passport/i) && minorLines.every((re) => !has(l, K1, re)), of(l, K1).map((x) => x.label));
   const travels = async (v: string) => { await answer(c.id, K1, "person.travels_with", v, CLIENT); return (await get()).l; }; // the principal answers for a minor (P-78)
   l = await travels("alone");
-  ok("C6.4-8 pass (R3): travelling alone, the child gets the letter of authorization and a copy of the birth certificate, each saying why (Researched)", has(l, K1, LETTER) && has(l, K1, BIRTH) && !has(l, K1, ABSENT) && /alone/i.test(of(l, K1).find((x) => LETTER.test(x.label))?.reason ?? "") && /Researched/.test(of(l, K1).find((x) => BIRTH.test(x.label))?.reason ?? ""), of(l, K1).map((x) => x.label));
+  ok("C6.4-8 pass (R3): travelling alone, the child gets the letter of authorization and a copy of the birth certificate, each saying why (Researched)", has(l, K1, LETTER) && has(l, K1, BIRTH) && !has(l, K1, ABSENT) && /alone/i.test(of(l, K1).find((x) => LETTER.test(x.label))?.reason ?? "") && /Researched/.test(of(l, K1).find((x) => BIRTH.test(x.label))?.quote ?? ""), of(l, K1).map((x) => x.label));
   l = await travels("another_adult");
   ok("C6.4-8a pass (R3): with another adult, the same two lines (the letter names the adult responsible in Canada)", has(l, K1, LETTER) && has(l, K1, BIRTH) && !has(l, K1, ABSENT) && /adult responsible/i.test(of(l, K1).find((x) => LETTER.test(x.label))?.reason ?? ""), of(l, K1).map((x) => x.label));
   l = await travels("one_parent");
@@ -73,6 +73,33 @@ await main("C6.4", "Document checklist per person (Visitor visa)", async () => {
   await travels("alone");
   l = await travels("both_parents");
   ok("C6.4-9 pass (R3, QA-149): changing \"alone\" back to \"both parents\" takes the letter and birth certificate away again (nothing requested yet, so nothing kept)", has(l, K1, /passport/i) && !has(l, K1, LETTER) && !has(l, K1, BIRTH));
+  // qa on #493, Minor 1: the reason is short and plain, with no link or quote in it; the source sits beside it in the line's
+  // quote. Minor 2 (P-170): each line quotes what it rests on, with the page and date.
+  await travels("one_parent"); await custody("shared"); l = (await get()).l;
+  const line = (re: RegExp) => of(l, K1).find((x) => re.test(x.label));
+  const five = [line(LETTER), line(ABSENT), line(CUSTODY)];
+  ok("C6.4-9a pass (R3, qa Minor 1): each minor line's reason is short and plain (no URL, no quote), its source beside it", five.every((x) => !!x && x.reason.length < 220 && !/https?:|"/.test(x.reason) && !!x.quote), five.map((x) => [x?.reason.length, x?.reason]));
+  ok("C6.4-9b pass (R3, qa Minor 2, P-170): the absent parent's ID quotes IMM 5881 page 2, the custody documents IMM 5484 page 1, the letter canada.ca; \"does not need to be certified\" is on the letter only", /IMM 5881 E \(05-2026\).*page 2: "You must provide a copy of the page of the passport/.test(line(ABSENT)?.quote ?? "") && /IMM 5484 \(05-2026\).*page 1: "Minors travelling alone or with one parent must provide custody documents/.test(line(CUSTODY)?.quote ?? "") && /does not need to be certified/.test(line(LETTER)?.quote ?? "") && ![line(ABSENT), line(CUSTODY)].some((x) => /certified/.test(x?.quote ?? "")), five.map((x) => x?.quote));
+  await travels("both_parents"); await custody("not_applicable");
+
+  // qa Major on #493: a minor can be the principal applicant (a teenager visiting relatives files their own visitor visa).
+  { const solo = await openCase(vv, [{ role: "principal", name: "Sample Minor M", dob: yearsAgo(15) }]);
+    const M = solo.subjects["Sample Minor M"];
+    await answer(solo.id, solo.caseSubject, "case.application_date", new Date().toISOString().slice(0, 10), OFFICER);
+    const asked = ((await call("GET", `/runtime/cases/${solo.id}/questionnaire?mode=agent`, undefined, OFFICER)).body?.sections ?? []).flatMap((s: { questions: { subjectId: string; fact: string }[] }) => s.questions).some((q: { subjectId: string; fact: string }) => q.subjectId === M && q.fact === "person.travels_with");
+    r = await answer(solo.id, M, "person.travels_with", "alone", OFFICER);
+    const ml = (await call("GET", `/runtime/cases/${solo.id}/checklist`, undefined, OFFICER)).body as Checklist;
+    ok("C6.4-19 pass (R3, qa Major): a principal of 15 travelling alone is asked who they travel with and gets the letter of authorization and the birth certificate", asked && r.status < 300 && has(ml, M, LETTER) && has(ml, M, BIRTH) && !has(ml, M, ABSENT), { asked, put: r.status, lines: of(ml, M).map((x) => x.label) });
+    const adult = await openCase(vv, [{ role: "principal", name: "Sample Adult N", dob: yearsAgo(40) }]);
+    const N = adult.subjects["Sample Adult N"];
+    await answer(adult.id, adult.caseSubject, "case.application_date", new Date().toISOString().slice(0, 10), OFFICER);
+    const adultAsked = ((await call("GET", `/runtime/cases/${adult.id}/questionnaire?mode=agent`, undefined, OFFICER)).body?.sections ?? []).flatMap((s: { questions: { subjectId: string; fact: string }[] }) => s.questions).filter((q: { subjectId: string; fact: string }) => q.subjectId === N && /person\.(travels_with|custody)$/.test(q.fact)).length;
+    await answer(adult.id, N, "person.travels_with", "alone", OFFICER);
+    await answer(adult.id, N, "person.custody", "sole", OFFICER);
+    const al = (await call("GET", `/runtime/cases/${adult.id}/checklist`, undefined, OFFICER)).body as Checklist;
+    ok("C6.4-20 fail (R3, qa Major): a principal of 40 is not asked the two questions once the application date is in and, even with \"alone\" and sole custody stored, gets none of the five minor lines", adultAsked === 0 && has(al, N, /passport/i) && minorLines.every((re) => !has(al, N, re)), { adultAsked, lines: of(al, N).map((x) => [x.label, x.state]) });
+  }
+
   // Request, receive, not applicable; the document is the person's (SI-14 thin stand-in).
   const pass = of(l, P).find((x) => /passport/i.test(x.label));
   r = await call("POST", `/runtime/checklist-lines/${pass?.id}/request`, {}, OFFICER);
