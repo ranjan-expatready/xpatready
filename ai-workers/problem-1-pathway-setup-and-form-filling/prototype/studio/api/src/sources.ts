@@ -698,6 +698,8 @@ export class Sources {
 
   private async decideChecked(actor: Actor, jobId: string, itemId: string, b: { decision: "ACCEPTED" | "CHANGED" | "RETURNED" | "PENDING" | "NEW"; key?: string; note?: string; meaning?: string; valueType?: string; label?: string; reason?: string }) {
     const job = await this.db.draftingJob.findUniqueOrThrow({ where: { id: jobId } });
+    // C2.6 (QA-157, P-149 one door): a checklist's lines are decided on the review queue, never here.
+    if (job.kind === "checklist_draft") fail("A checklist's document lines are decided one by one on the review queue (To review), where accepting one writes it to the draft. Nothing was changed here.", HttpStatus.GONE);
     if (job.status === "APPLIED") fail("This draft is already applied to the configuration; change the definitions in the library instead.", HttpStatus.CONFLICT);
     const raw = await this.db.proposalItem.findUnique({ where: { id: itemId } });
     if (!raw) fail("This proposal does not exist.", HttpStatus.NOT_FOUND);

@@ -270,30 +270,35 @@ export function FormFieldDecisions({ jobId, editionId, readOnly = false, focusOn
   );
 }
 
-/** K2 (Screen 02 slice 3): a checklist draft. Each proposal is a document requirement (or a section, rule or check) with
- *  the checklist's own words beside it; a person accepts or returns each, then applies them to the draft. */
-type ChecklistItem = { id: string; kind: string; decision: string; proposedMeaning: string; sourceQuote: string | null; payload: { document_type?: string; who?: string; base_or_conditional?: string; condition_plain?: string } | null };
+/** K2 (Screen 02 slice 3): a checklist draft. Each proposal is a document requirement, or a document type the library
+ *  lacks, with the checklist's own words beside it. C2.6 (QA-157, P-149 one door): they are decided one by one on To
+ *  review, never here; this page shows what the draft proposed and where each one stands. */
+type ChecklistItem = { id: string; kind: string; decision: string; proposedMeaning: string; sourceQuote: string | null; status?: string; confidence?: string; payload: { document_type?: string; who?: string; base_or_conditional?: string; condition_plain?: string; name?: string; proves?: string } | null };
 type ChecklistJobView = { id: string; status: string; mode: string; costUsd: number | null; message: string | null; attachment?: { edition: string | null; fileName?: string | null } | null; combination?: { id?: string; label: string } | null; items: ChecklistItem[]; detail?: { applied?: { added: number; skipped: string[] } } | null };
+const STANDS: Record<string, { word: string; tone: "ok" | "warn" | "info" }> = { waiting: { word: "Waiting on To review", tone: "info" }, accepted: { word: "Accepted", tone: "ok" }, edited: { word: "Edited and accepted", tone: "ok" }, rejected: { word: "Rejected", tone: "warn" }, undone: { word: "Undone", tone: "info" } };
 function ChecklistJob({ job, combinationId }: { job: ChecklistJobView; combinationId: string }) {
   const items = job.items;
-  const decide = useAction((v: { id: string; decision: string; note?: string }) => api(`/jobs/${job.id}/items/${v.id}`, { method: "POST", json: { decision: v.decision, note: v.note } }), { invalidate: [["job", job.id]] });
-  const apply = useAction(() => api<{ added: number; skipped: string[] }>(`/jobs/${job.id}/apply-checklist`, { method: "POST" }), { success: (r) => `${r.added} document requirement${r.added === 1 ? "" : "s"} added to the draft${r.skipped.length ? `; not applied: ${r.skipped.length}` : ""}`, invalidate: [["job", job.id], ["combination"], ["draft"], ["catalogue"]] });
-  const pending = items.filter((i) => i.decision === "PENDING").length;
-  const [back, setBack] = React.useState<string | null>(null), [note, setNote] = React.useState("");
+  const waiting = items.filter((i) => (i.status ?? "waiting") === "waiting").length;
+  const queue = `/review/proposals?group=${encodeURIComponent(`combination:${combinationId}`)}`;
   return (
     <div className="mx-auto max-w-5xl space-y-5">
       <JobTrail id={combinationId} combination={job.combination} here="Checklist draft" />
       <div><h1 className="flex items-center gap-2 text-xl font-semibold"><Sparkles className="size-5 shrink-0 text-[#7c3aed]" aria-hidden /> {formName(job.attachment) ? `${formName(job.attachment)}: proposed document requirements` : "Proposed document requirements"}</h1>
         <div className="mt-2 flex flex-wrap gap-1.5"><ModePill mode={job.mode} /><StatusPill status={job.status} /><Pill>US${Number(job.costUsd ?? 0).toFixed(2)}</Pill></div>
         <p className="mt-2 max-w-3xl text-sm text-text-muted">{job.message}</p></div>
-      {!items.length ? <Notice title="Nothing proposed">{job.mode === "REPLAY" ? "Every line of the saved reading is already on this combination, or was dropped by the rules (listed above)." : "The stub pass proves the path only; a live draft proposes each document requirement with the checklist's words beside it."}</Notice> : (
-        <ul className="space-y-3">{items.map((i) => { const p = i.payload ?? {}; return (
+      {items.length && job.status !== "APPLIED" ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface-raised p-4" data-checklist-queue>
+          <p className="text-sm">{waiting ? `${waiting} of ${items.length} still wait. Each one is decided on To review, where accepting a line writes it to the draft and a new document type waits for a second person.` : "Every proposal is decided."}</p>
+          {waiting ? <Link to={queue} className="text-sm font-medium text-text-link underline">Decide them on To review</Link> : <Link to={`/c/${combinationId}`} className="text-sm text-text-link underline">Back to the combination</Link>}
+        </div>) : null}
+      {!items.length ? <Notice title="Nothing proposed">{job.mode === "REPLAY" ? "Every line of the saved reading is already on this combination, or was left out by the rules (listed above)." : "The stub pass proves the path only; a live draft proposes each document requirement with the checklist's words beside it."}</Notice> : (
+        <ul className="space-y-3">{items.map((i) => { const p = i.payload ?? {}; const st = STANDS[i.status ?? "waiting"] ?? STANDS.waiting; const type = i.kind === "document_type"; return (
           <li key={i.id} className="rounded-xl border border-border bg-surface-raised p-4" data-checklist-item={i.kind}>
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div><Pill tone="info">{i.kind.replace("_", " ")}</Pill> <b className="ml-1">{p.document_type ?? i.proposedMeaning}</b><p className="mt-1 text-sm">{p.who ? `For ${String(p.who).replace(/_/g, " ")}` : null}{p.base_or_conditional === "conditional" ? ` · ${p.condition_plain}` : " · always"}</p></div>
-              {i.decision !== "PENDING" ? <Pill tone={i.decision === "RETURNED" ? "warn" : "ok"}>{i.decision === "ACCEPTED" ? "Accepted" : "Returned"}</Pill> : job.status === "COMPLETED" ? <div className="flex gap-2"><Button size="sm" onClick={() => decide.mutate({ id: i.id, decision: "ACCEPTED" })}>Accept</Button><Button size="sm" variant="ghost" onClick={() => { setBack(back === i.id ? null : i.id); setNote(""); }}>Return</Button></div> : null}
+              <div><Pill tone="info">{type ? "new document type" : "document line"}</Pill> <b className="ml-1">{type ? p.name : String(p.document_type ?? i.proposedMeaning).replace(/_/g, " ")}</b>
+                <p className="mt-1 text-sm">{type ? p.proves : <>{p.who ? `For ${String(p.who).replace(/_/g, " ")}` : null}{i.confidence === "decide" ? " · the visa office decides: a person says when" : p.base_or_conditional === "conditional" ? ` · ${p.condition_plain}` : " · always"}</>}</p></div>
+              <Pill tone={st.tone}>{st.word}</Pill>
             </div>
-            {back === i.id ? <div className="mt-2 flex items-end gap-2"><Field label="Why it goes back" className="flex-1"><Input value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} /></Field><Button size="sm" variant="secondary" disabled={note.trim().length < 3} onClick={() => { decide.mutate({ id: i.id, decision: "RETURNED", note }); setBack(null); }}>Return it</Button></div> : null}
             {i.sourceQuote ? <blockquote className="mt-2 border-l-2 border-border pl-3 text-sm text-text-muted">"{i.sourceQuote}"</blockquote> : null}
           </li>); })}</ul>
       )}
@@ -305,7 +310,6 @@ function ChecklistJob({ job, combinationId }: { job: ChecklistJobView; combinati
           <Link to={`/c/${combinationId}`} className="text-sm text-text-link underline">Back to the combination</Link>
         </section>
       ) : null}
-      {job.status === "COMPLETED" && items.length ? <div className="flex items-center justify-end gap-3"><p className="text-sm text-text-muted">{pending ? `${pending} still to decide` : "Every proposal decided"}</p><Button disabled={!!pending} busy={apply.isPending} onClick={() => apply.mutate(undefined)}>Apply to the draft</Button></div> : null}
     </div>
   );
 }

@@ -59,7 +59,33 @@ export function staleReading(officialFile: string | null, where: { runs?: string
 }
 const str = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 
-export type ReadLine = RequirementProposal & { condition_plain: string | null; condition_tree: unknown; provided_by: string; quote: string; reason: string | null };
+/** QA-157 (C2.6): `office` is set when the checklist itself sends the line to the visa office ("Refer to the responsible
+ *  visa office for your region"): the checklist does not settle when it is needed, so a person decides. `part` is the
+ *  checklist part the line sits under when that part is another program's (see PROGRAM_PARTS). */
+export type ReadLine = RequirementProposal & { condition_plain: string | null; condition_tree: unknown; provided_by: string; quote: string; reason: string | null; note: string | null; office: boolean; part: string | null };
+
+/** QA-157 (C2.6): parts of a checklist that belong to another program than the checklist's own. IMM 5484 (05-2026)
+ *  page 2 is headed "PARENTS AND GRANDPARENTS SUPER VISA" (official-sources/ircc/checklists/imm5484e.pdf, page 2, read
+ *  2 Nov 2026): its documents are the Super visa's, never a Visitor visa's. A line under such a heading is proposed only
+ *  for a combination whose trail names every word of `program`. */
+export const PROGRAM_PARTS: { heading: string; program: string[] }[] = [
+  { heading: "PARENTS AND GRANDPARENTS SUPER VISA", program: ["super", "visa"] },
+];
+/** Whether a combination (its trail, Pathway › … › Combination, in words) is the program a checklist part is for. */
+export const partFits = (part: string, trail: string) => {
+  const p = PROGRAM_PARTS.find((x) => x.heading === part), words = new Set(wordsOf(trail).split(/[^a-z0-9]+/));
+  return !!p && p.program.every((w) => words.has(w));
+};
+/** The checklist says the visa office decides (P-149: a person decides what the source does not settle). */
+const OFFICE = /refer to the (responsible )?visa office|visa specific instructions/i;
+/** A line that names no document ("Any additional documents required by the responsible visa office"). */
+const NAMES_NO_DOCUMENT = /^any (other |additional )+documents?\b/i;
+/** The text a saved quote and the PDF share: the inventory glues a line to the "Note:" under it ("...guardians.Note: Refer
+ *  to..."), which the PDF prints on its own line. The document line is the words before the note; the note is kept apart. */
+export function splitNote(quote: string): { quote: string; note: string | null } {
+  const m = /^(.*?\S)\s*Note:\s*(.+)$/s.exec(quote);
+  return m ? { quote: m[1].trim(), note: m[2].trim() } : { quote, note: null };
+}
 /** The saved run's condition ({ subject_kind, tree_json: "…" }) as a condition-language root, as p2/assemble.ts toRoot
  *  makes it: the first live drafts named branch keys "conditions"/"condition", renamed to "args"/"arg" (discovery D18),
  *  and the subject kind goes on the root. Null when it has none or the text does not parse. */
@@ -85,15 +111,24 @@ export const treeOf = (c: unknown): unknown => {
  *  twice for the same person. Everything else is dropped with its reason in words. */
 export function linesOf(r: Pick<SavedReading, "inventory" | "text" | "docs">, label: string): { lines: ReadLine[]; dropped: string[] } {
   const text = wordsOf(r.text), lines: ReadLine[] = [], dropped: string[] = [], seen = new Set<string>();
+  // Where each other program's part starts in the checklist's text (words compared, as quotes are).
+  const parts = PROGRAM_PARTS.map((p) => ({ heading: p.heading, at: r.text.split("\n").some((l) => l.trim() === p.heading) ? text.indexOf(wordsOf(p.heading)) : -1 })).filter((p) => p.at >= 0).sort((a, b) => a.at - b.at);
   for (const d of r.docs.filter((x) => x.source_file === r.inventory)) {
-    const type = str(d.document_type, 120), who = str(d.who, 60), quote = str(d.source_quote, 1000), cond = str(d.condition_plain, 300);
+    const type = str(d.document_type, 120), who = str(d.who, 60), whole = str(d.source_quote, 1000);
+    const office = !!whole && OFFICE.test(splitNote(whole).note ?? "");
+    // An office line keeps what the AI read as its condition only as a draft for the person who decides it.
+    const cond = str(d.condition_plain, 300);
     const kind = d.base_or_conditional === "conditional" ? "conditional" : d.base_or_conditional === "base" ? "base" : null;
-    if (!type || !who || !kind || (kind === "conditional" && (!cond || cond.length < 3))) { dropped.push(`${type ?? "a line"} (incomplete: no document type, person or condition)`); continue; }
-    if (!quote || !text.includes(wordsOf(quote))) { dropped.push(`${type} (its quote is not in ${label})`); continue; }
+    if (!type || !who || !kind || (kind === "conditional" && !office && (!cond || cond.length < 3))) { dropped.push(`${type ?? "a line"} (incomplete: no document type, person or condition)`); continue; }
+    if (!whole || !text.includes(wordsOf(whole))) { dropped.push(`${type} (its quote is not in ${label})`); continue; }
+    const { quote, note } = splitNote(whole);
+    if (NAMES_NO_DOCUMENT.test(quote)) { dropped.push(`${type} (it names no document: "${quote.slice(0, 80)}"; the visa office's own instructions say which, and a person adds them)`); continue; }
+    const at = text.indexOf(wordsOf(quote)), part = [...parts].reverse().find((p) => p.at <= at)?.heading ?? null;
     const id = `${wordsOf(type)}|${who}`;
     if (seen.has(id)) { dropped.push(`${type} for ${who.replace(/_/g, " ")} (the same line twice)`); continue; }
     seen.add(id);
-    lines.push({ document_type: type, who, base_or_conditional: kind, condition_plain: kind === "conditional" ? cond : null, condition_tree: kind === "conditional" ? treeOf(d.condition) : null, provided_by: str(d.provided_by, 40) ?? "client", quote, reason: str(d.reason, 300) });
+    const c = kind === "conditional" && cond && cond.length >= 3 ? cond : null;
+    lines.push({ document_type: type, who, base_or_conditional: office ? "conditional" : kind, condition_plain: office ? c : kind === "conditional" ? cond : null, condition_tree: c ? treeOf(d.condition) : null, provided_by: str(d.provided_by, 40) ?? "client", quote, reason: str(d.reason, 300), note, office, part });
   }
   return { lines, dropped };
 }

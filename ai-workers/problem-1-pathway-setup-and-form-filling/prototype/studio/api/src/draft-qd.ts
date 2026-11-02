@@ -81,7 +81,7 @@ export class DraftQd {
   }
 
   /** Step 2 (C2.6's replay, unchanged; P-121): each official checklist of the combination with a saved real AI reading of
-   *  its exact text is replayed into requirement lines (listed on To review; decided and applied on the checklist's page).
+   *  its exact text is replayed into requirement lines, decided one by one on To review (QA-157: the one door).
    *  Rules only reads no checklist: reading one is AI work, so the step says so and is not run. In a Live run this step
    *  uses the saved reading too (live wiring 5a): a checklist's Live reading is C2.6's own step, on the checklist page. */
   private async documents(actor: Actor, c: { id: string }, mode: string): Promise<{ status: string; message: string; proposed: number; detail: Record<string, unknown> }> {
@@ -101,9 +101,9 @@ export class DraftQd {
       const before = prior.has(job.id);
       const n = before ? 0 : d.proposed ?? linesOf(r, name).lines.length;
       proposed += n;
-      said.push(before ? `${name}: replayed before; its ${d.proposed ?? 0} document requirement${d.proposed === 1 ? "" : "s"} are on To review or applied` : `${name}: ${n} document requirement${n === 1 ? "" : "s"} for To review${d.dropped?.length ? `, ${d.dropped.length} left out with the reason` : ""}`);
+      said.push(before ? `${name}: replayed before; its ${d.proposed ?? 0} document requirement${d.proposed === 1 ? "" : "s"} wait on To review` : `${name}: ${n} document requirement${n === 1 ? "" : "s"} for To review${d.dropped?.length ? `, ${d.dropped.length} left out with the reason` : ""}`);
     }
-    const message = `${said.join("; ")}. Saved AI reading, US$0; each line quotes the checklist. They are listed on To review, which opens the checklist's page, where they are decided and applied together.`;
+    const message = `${said.join("; ")}. Saved AI reading, US$0; each line quotes the checklist. They are decided one by one on To review; accepting one writes it to the draft.`;
     return { status: jobs.length ? "COMPLETED" : "FAILED", message, proposed, detail: { checklist_jobs: jobs } };
   }
 

@@ -1,32 +1,27 @@
 // Screen 02 slice 3, K2 (C3.4, C2.6): AI drafts document requirements (and later sections, rules and checks) from a
-// combination's official checklist, reviewed beside the source like a field-map draft, applied through the existing
-// writers. Live waits for the founder's OK on its cost (challenge point 3, Lead response: IMM 5483, Sample estimate under
-// US$0.50, cap US$5) and is refused with that reason. Two passes run at US$0:
-//  - stub: proves the path (job, review, apply) with no network and no AI content, so it proposes nothing;
+// combination's official checklist. Live waits for the founder's OK on its cost (challenge point 3, Lead response: IMM
+// 5483, Sample estimate under US$0.50, cap US$5) and is refused with that reason. Two passes run at US$0:
+//  - stub: proves the path with no network and no AI content, so it proposes nothing;
 //  - replay (C2.6, F4, P-219): the newest saved real AI reading of exactly this checklist edition (same inventory text,
-//    checked by checksum) is read into document requirement proposals in the one review queue. Only the lines the AI
-//    read from this checklist itself are proposed, and each one's quote must be found in the checklist's text, else it
-//    is dropped and listed (P-121). One AI round and no checker round, so every item reads "Check", never "Ready".
-//    Today the one saved reading is IMM 5488 (10-2024) (prototype/p2/runs/c1-requirements-live-*); IMM 5483 has none.
+//    checked by checksum) is read into document requirement proposals, and the document types the library lacks, in
+//    the one review queue (insertProposals, P-149). Only the lines the AI read from this checklist itself are proposed,
+//    each one's quote found in the checklist's text, else dropped and listed (P-121). One AI round and no checker round,
+//    so every item reads "Check" (or "Decide" where the checklist leaves it to the visa office), never "Ready".
+//    Saved readings today: IMM 5488 (10-2024) and IMM 5484 (05-2026) (prototype/p2/runs/*-requirements-live-*).
+// Accepting a line on To review writes it as a draft document line (proposals.ts LANDERS.requirement_line, QA-157); the
+// old apply door here answers 410.
 import { Body, Controller, Get, Headers, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
-import type { Prisma } from "@prisma/client";
 import { actorOf, Audit, Db, fail, need, Workspace, type Actor } from "./core.ts";
-import { Studio, WHO } from "./studio.ts";
-import { reviewRow } from "./proposals.ts";
-import { checkCondition } from "../../engine/validate.ts";
+import { Studio } from "./studio.ts";
+import { identityKeyOf, insertProposals, linesOnCombination, QUEUE_TX, type NewProposal, type Work } from "./proposals.ts";
+import { combinationTrails } from "./where-used.ts";
+import type { ProposalPayload } from "../../contracts/proposal-item.ts";
 
+export { linesOnCombination } from "./proposals.ts";
 export const CHECKLIST_KINDS = ["document_requirement", "section", "rule", "check"] as const;
 export { inventoryOf, linesOf, savedReading, treeOf, wordsOf, type ReadLine, type RequirementProposal, type SavedReading } from "./saved-readings.ts";
-import { linesOf, savedReading, wordsOf, type RequirementProposal } from "./saved-readings.ts";
+import { linesOf, partFits, savedReading, wordsOf, type ReadLine, type RequirementProposal } from "./saved-readings.ts";
 
-/** "document type key|person" of every requirement the combination has now (each lineage's newest version, unless
- *  retired): a checklist line already there is never written twice (#277 review M2). */
-export async function linesOnCombination(db: Db, combinationId: string): Promise<Set<string>> {
-  const rows = await db.documentRequirement.findMany({ where: { combinationId }, select: { lineageKey: true, version: true, status: true, documentTypeKey: true, appliesToRoles: true } });
-  const top = new Map<string, (typeof rows)[number]>();
-  for (const r of rows) { const t = top.get(r.lineageKey); if (!t || r.version > t.version) top.set(r.lineageKey, r); }
-  return new Set([...top.values()].filter((r) => r.status !== "RETIRED").map((r) => `${r.documentTypeKey}|${r.appliesToRoles}`));
-}
 
 @Injectable()
 export class Checklists {
@@ -61,96 +56,94 @@ export class Checklists {
     return list.map((a) => { const r = savedReading(a.officialFile); return { attachmentId: a.id, saved: !!r, runFile: r?.runFile ?? null, lines: r ? linesOf(r, a.officialFile ?? "").lines.length : 0 }; });
   }
 
-  /** C2.6: the saved reading replayed into requirement_line proposals (US$0). One open replay per checklist: a second
-   *  click returns it (break m9), under the same per-checklist lock as the stub pass. */
+  /** C2.6: the saved reading replayed into requirement_line proposals (US$0), written through the queue's one door
+   *  (insertProposals, P-149; QA-157). One open replay per checklist: while one still has lines waiting on To review, a
+   *  second click returns it (break m9), under the same per-checklist lock as the stub pass. Rules (QA-157):
+   *   - a line under another program's part of the checklist (IMM 5484 page 2, the Super visa's) is not proposed here;
+   *   - a line the checklist sends to the visa office ("Refer to the responsible visa office") waits as Decide, never as
+   *     always needed: a person decides it, with the visa office's instructions;
+   *   - a document type the library lacks is proposed to the library (P-149 (2): its name and what it proves), and an
+   *     identity document is read by its coded lines, never AI vision (P-134); its line waits beside it. */
   async replay(actor: Actor, a: { id: string; workspaceId: string; combinationId: string; edition: string | null; fileName: string; officialFile: string | null }) {
     const r = savedReading(a.officialFile);
     if (!r) fail(`No saved AI reading of ${a.edition ?? a.fileName} yet, so there is nothing to replay. A live reading waits for the founder's OK on its cost (Sample estimate under US$0.50, capped at US$5); the stub pass shows the path.`, HttpStatus.CONFLICT);
+    const name = a.edition ?? a.fileName, file = a.officialFile ?? a.fileName;
     const types = await this.db.documentType.findMany({ where: { workspaceId: a.workspaceId, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { documentTypeKey: true, name: true } });
-    const read = linesOf(r!, a.edition ?? a.fileName), dropped = read.dropped, have = await linesOnCombination(this.db, a.combinationId);
-    const typeOf = (name: string) => types.find((t) => t.documentTypeKey === name || t.name.toLowerCase() === name.toLowerCase());
-    const lines = read.lines.filter((l) => { const t = typeOf(l.document_type); if (t && have.has(`${t.documentTypeKey}|${l.who}`)) { dropped.push(`${l.document_type} for ${l.who.replace(/_/g, " ")} (already on this combination)`); return false; } return true; });
-    const items: Prisma.ProposalItemCreateManyInput[] = lines.map((l) => {
-      const key = `requirement_line:${a.combinationId}:${wordsOf(l.document_type)}:${l.who}`;
+    const combo = await this.db.combination.findUniqueOrThrow({ where: { id: a.combinationId }, select: { label: true } });
+    const trail = `${(await combinationTrails(this.db, a.workspaceId)).get(a.combinationId) ?? ""} ${combo.label}`;
+    const read = linesOf(r!, name), dropped = read.dropped, have = await linesOnCombination(this.db, a.combinationId);
+    const typeOf = (n: string) => types.find((t) => t.documentTypeKey === n || t.name.toLowerCase() === n.toLowerCase() || t.name.toLowerCase() === typeName(n).toLowerCase());
+    const lines = read.lines.filter((l) => {
+      if (l.part && !partFits(l.part, trail)) { dropped.push(`${typeName(l.document_type)} (under the checklist's "${l.part}" part, another program than ${combo.label})`); return false; }
+      const t = typeOf(l.document_type); if (t && have.has(`${t.documentTypeKey}|${l.who}`)) { dropped.push(`${l.document_type} for ${l.who.replace(/_/g, " ")} (already on this combination)`); return false; }
+      return true;
+    });
+    const source = (quote: string) => ({ file: r!.inventory, sha256: r!.sha256, edition: a.edition, page: null, quote, quoteFound: true, rule: null });
+    const quoteRule = [{ rule: "quote_in_source", passed: true, why: null }];
+    const round = (reading: string, payload: ProposalPayload) => ({ draft: { reading: reading.slice(0, 300), payload, from: "replay" as const, runFile: r!.runFile, costUsd: 0 }, check: null });
+    // One document type proposal per type the library lacks (the first line that names it carries its quote).
+    const newTypes = new Map<string, { payload: DocTypePayload; quote: string }>();
+    for (const l of lines) if (!typeOf(l.document_type) && !newTypes.has(wordsOf(l.document_type))) newTypes.set(wordsOf(l.document_type), { payload: docTypeOf(l, name), quote: l.quote });
+    const typeItems = (runId: string): NewProposal[] => [...newTypes.values()].map(({ payload, quote }) => ({ kind: "document_type", runId, step: "checklist_draft", scope: { formEdition: null, combinationId: a.combinationId }, landsOn: "library",
+      reuse: { match: "new", existingKey: null }, payload, source: source(quote), rounds: round(`${payload.name}: ${payload.proves}`, payload), rules: quoteRule, agreement: "one_round", confidence: "check",
+      reason: `Not in the shared library yet: ${name} asks for it. One AI round, so check its name and what it proves; a second person approves it once accepted.${payload.identityDocument ? " An identity document: read by its machine-readable (coded) lines, never by AI vision (P-134)." : ""}`.slice(0, 500),
+      origin: "ai", identity: { key: identityKeyOf(payload, ""), near: [], nearReason: null }, relatesTo: null, revision: null, basis: "SAMPLE" }));
+    const lineItems = (runId: string, typeIds: Map<string, string>): (NewProposal & Work)[] => lines.map((l) => {
+      const key = `requirement_line:${a.combinationId}:${wordsOf(l.document_type)}:${l.who}`.slice(0, 300);
       const match = typeOf(l.document_type);
       const legacy: RequirementProposal = { document_type: l.document_type, who: l.who, base_or_conditional: l.base_or_conditional, condition_plain: l.condition_plain, condition_tree: l.condition_tree, provided_by: l.provided_by };
-      const payload = { kind: "requirement_line", documentType: l.document_type, roles: [l.who], always: l.base_or_conditional === "base", condition: l.condition_plain ? { sentence: l.condition_plain, tree: l.condition_tree ?? null, sharedConditionKey: null, examples: [] } : null, alternativeGroup: null, ...legacy, label: `${l.document_type} · ${l.who.replace(/_/g, " ")}`.slice(0, 160) };
-      const reading = `${l.document_type}: ${l.condition_plain ?? "always"}, for ${l.who.replace(/_/g, " ")}`.slice(0, 300);
-      return { workspaceId: a.workspaceId, kind: "requirement_line", step: "checklist_draft", combinationId: a.combinationId, landsOn: "combination",
-        reuse: { match: match ? "reuse" : "new", existingKey: match?.documentTypeKey ?? null }, payload: payload as Prisma.InputJsonValue,
-        source: { file: r!.inventory, sha256: r!.sha256, edition: a.edition, page: null, quote: l.quote, quoteFound: true, rule: null },
-        rounds: { draft: { reading, payload, from: "replay", runFile: r!.runFile, costUsd: 0 }, check: null } as Prisma.InputJsonValue,
-        rules: [{ rule: "quote_in_source", passed: true, why: null }], agreement: "one_round", confidence: "check", reason: l.reason, origin: "ai",
-        identity: { key, near: [], nearReason: null }, identityKey: key, basis: "SAMPLE", work: { proposedKey: key, sourceQuote: l.quote, reason: l.reason ?? "" } };
+      const payload = { kind: "requirement_line" as const, documentType: match?.documentTypeKey ?? l.document_type, roles: [l.who], always: l.base_or_conditional === "base", condition: l.condition_plain ? { sentence: l.condition_plain, tree: l.condition_tree ?? null, sharedConditionKey: null, examples: [] } : null, alternativeGroup: null };
+      const reading = `${typeName(l.document_type)}: ${l.office ? "the visa office decides" : l.condition_plain ?? "always"}, for ${l.who.replace(/_/g, " ")}`;
+      const why = l.office ? `${name} says "${l.note}": the checklist does not settle when it is needed, so a person decides (edit it to give its condition, or to make it always needed, then accept).${l.reason ? ` The AI's reading: ${l.reason}` : ""}` : l.reason;
+      return { kind: "requirement_line", runId, step: "checklist_draft", scope: { formEdition: null, combinationId: a.combinationId }, landsOn: "combination",
+        reuse: { match: match ? "reuse" : "new", existingKey: match?.documentTypeKey ?? null }, payload, source: source(l.quote), rounds: round(reading, payload), rules: quoteRule,
+        agreement: "one_round", confidence: l.office ? "decide" : "check", reason: why ? why.slice(0, 500) : null, origin: "ai", identity: { key, near: [], nearReason: null },
+        relatesTo: match ? null : typeIds.get(wordsOf(l.document_type)) ?? null, revision: null, basis: "SAMPLE",
+        work: { proposedKey: key, sourceQuote: l.quote, reason: l.reason ?? "", officialFile: file, providedBy: l.provided_by, label: `${typeName(l.document_type)} · ${l.who.replace(/_/g, " ")}`.slice(0, 160), legacyPayload: { ...payload, ...legacy } } };
     });
-    const { job, made } = await this.db.$transaction(async (tx) => {
+    const { job, made, proposed } = await this.db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`checklist-draft:${a.id}`}))`;
-      const open = await tx.draftingJob.findFirst({ where: { attachmentId: a.id, kind: "checklist_draft", mode: "REPLAY", status: "COMPLETED" }, orderBy: { startedAt: "desc" } });
-      if (open) return { job: open, made: false };
+      // The open replay: one whose lines still wait on To review (once every line is decided, a new replay may run).
+      const open = await tx.draftingJob.findFirst({ where: { attachmentId: a.id, kind: "checklist_draft", mode: "REPLAY", status: "COMPLETED", proposals: { some: { status: "waiting" } } }, orderBy: { startedAt: "desc" } });
+      if (open) return { job: open, made: false, proposed: 0 };
       const job = await tx.draftingJob.create({ data: { workspaceId: a.workspaceId, combinationId: a.combinationId, attachmentId: a.id, kind: "checklist_draft", mode: "REPLAY", status: "COMPLETED", costUsd: 0, startedBy: actor.id, finishedAt: new Date(),
-        message: `Replayed the saved AI reading of ${a.edition ?? a.fileName} (US$0): ${items.length} document requirement${items.length === 1 ? "" : "s"} proposed with the checklist's own words beside each${dropped.length ? `; ${dropped.length} dropped by the rules: ${dropped.join("; ")}` : ""}. One AI round, no checker round yet, so each one reads Check. Every value is Sample until the immigration expert confirms it.`,
-        detail: { operation: "draft_from_checklist", source: a.edition, kinds: CHECKLIST_KINDS, runFile: r!.runFile, proposed: items.length, dropped } } });
-      if (items.length) await tx.proposalItem.createMany({ data: items.map((i) => ({ ...i, runId: job.id })) });
-      return { job, made: true };
-    });
-    if (made) await this.audit.log(a.workspaceId, actor.id, "started", "checklist draft", a.edition ?? a.fileName, `${actor.name} replayed the saved AI reading of ${a.edition ?? a.fileName}: ${items.length} document requirements proposed${dropped.length ? `, ${dropped.length} dropped` : ""} (US$0)`, undefined, a.combinationId);
+        message: "", detail: { operation: "draft_from_checklist", source: a.edition, kinds: CHECKLIST_KINDS, runFile: r!.runFile } } });
+      const ids = await insertProposals(tx, a.workspaceId, typeItems(job.id));
+      const typeIds = new Map([...newTypes.keys()].map((k, i) => [k, ids[i]] as [string, string]));
+      await insertProposals(tx, a.workspaceId, lineItems(job.id, typeIds));
+      const office = lines.filter((l) => l.office).length;
+      const message = `Replayed the saved AI reading of ${name} (US$0): ${lines.length} document requirement${lines.length === 1 ? "" : "s"} proposed with the checklist's own words beside each${newTypes.size ? `, and ${newTypes.size} document type${newTypes.size === 1 ? "" : "s"} the shared library lacks` : ""}${dropped.length ? `; ${dropped.length} left out by the rules: ${dropped.join("; ")}` : ""}. They are decided one by one on To review. One AI round, no checker round yet, so each one reads Check${office ? `, and the ${office} the checklist leaves to the visa office read Decide` : ""}. Every value is Sample until the immigration expert confirms it.`;
+      const done = await tx.draftingJob.update({ where: { id: job.id }, data: { message, detail: { operation: "draft_from_checklist", source: a.edition, kinds: CHECKLIST_KINDS, runFile: r!.runFile, proposed: lines.length, types: newTypes.size, dropped } } });
+      return { job: done, made: true, proposed: lines.length };
+    }, QUEUE_TX);
+    if (made) await this.audit.log(a.workspaceId, actor.id, "started", "checklist draft", name, `${actor.name} replayed the saved AI reading of ${name}: ${proposed} document requirements proposed${newTypes.size ? `, ${newTypes.size} new document types` : ""}${dropped.length ? `, ${dropped.length} left out` : ""} (US$0)`, undefined, a.combinationId);
     return job;
   }
 
-  /** Applies the accepted proposals of a checklist draft through the combination's own writers (draft rows; release
-   *  follows review). Document requirements only in this slice; other kinds are listed as not applied. */
+  /** The old door (P-149 one door; QA-157): a checklist draft was once applied here, straight to the draft. Its lines are
+   *  now decided one by one on To review, whose lander writes each through the same rules; this answers 410 and writes
+   *  nothing. A field-map draft is not a checklist draft (404, as before). */
   async apply(actor: Actor, jobId: string) {
     need(actor, "author");
-    const found = await this.db.draftingJob.findUnique({ where: { id: jobId }, include: { proposals: true } }).catch(() => null);
-    const job = found && { ...found, items: found.proposals.map(reviewRow) };
+    const job = await this.db.draftingJob.findUnique({ where: { id: jobId }, select: { kind: true, combinationId: true } }).catch(() => null);
     if (!job || job.kind !== "checklist_draft") fail("This is not a checklist draft.", HttpStatus.NOT_FOUND);
-    if (job!.status !== "COMPLETED") fail(job!.status === "APPLIED" ? "Already applied." : "The draft is not ready.", HttpStatus.CONFLICT);
-    const pending = job!.items.filter((i) => i.decision === "PENDING");
-    if (pending.length) fail(`${pending.length} proposal${pending.length === 1 ? " is" : "s are"} still undecided.`);
-    const a = await this.db.sourceAttachment.findUniqueOrThrow({ where: { id: job!.attachmentId! } });
-    const types = await this.db.documentType.findMany({ where: { workspaceId: job!.workspaceId, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { documentTypeKey: true, name: true } });
-    // Every accepted proposal is checked before anything is written (break M7: a malformed one failed half-way after the
-    // draft was already marked applied).
-    const lib = job!.items.some((x) => x.decision === "ACCEPTED" && (x.payload as Partial<RequirementProposal> | null)?.base_or_conditional === "conditional") ? await this.studio.libraryTypes(job!.workspaceId) : null;
-    const have = await linesOnCombination(this.db, job!.combinationId!);
-    const plan: { item: ReturnType<typeof reviewRow>; typeKey: string; p: RequirementProposal }[] = []; const skipped: string[] = []; const bad: string[] = [];
-    for (const i of job!.items.filter((x) => x.decision === "ACCEPTED")) {
-      if (i.kind !== "document_requirement") { skipped.push(`${i.proposedKey} (${i.kind.replace("_", " ")}: applied by hand in this slice)`); continue; }
-      const p = (i.payload ?? {}) as Partial<RequirementProposal>;
-      if (typeof p.document_type !== "string" || !p.document_type.trim() || typeof p.who !== "string" || !["base", "conditional"].includes(String(p.base_or_conditional)) || (p.condition_plain !== undefined && p.condition_plain !== null && typeof p.condition_plain !== "string")) { bad.push(i.proposedMeaning || i.proposedKey); continue; }
-      const type = types.find((t) => t.documentTypeKey === p.document_type || t.name.toLowerCase() === p.document_type!.toLowerCase());
-      if (!type) { skipped.push(`${p.document_type} (no such document type in the library yet)`); continue; }
-      if (have.has(`${type.documentTypeKey}|${p.who}`)) { skipped.push(`${p.document_type} (already on this combination for ${p.who.replace(/_/g, " ")})`); continue; }
-      if (!WHO.includes(p.who)) { skipped.push(`${p.document_type} (whose document it is, "${p.who}", is not a choice yet)`); continue; }
-      // A conditional line is written with its condition in the condition language, checked against the library's
-      // fields first (C2.6: never a half-applied draft, never a conditional line without its condition).
-      if (p.base_or_conditional === "conditional") {
-        if (!p.condition_tree || typeof p.condition_tree !== "object") { skipped.push(`${p.document_type} (conditional: write its condition by hand on the combination)`); continue; }
-        const errs = checkCondition(p.condition_tree, lib!.fields, lib!.derived);
-        if (errs.length) { skipped.push(`${p.document_type} (its condition does not fit the library yet: ${errs[0]})`); continue; }
-      }
-      have.add(`${type.documentTypeKey}|${p.who}`);
-      plan.push({ item: i, typeKey: type.documentTypeKey, p: p as RequirementProposal });
-    }
-    if (bad.length) fail(`${bad.length} accepted proposal${bad.length === 1 ? " is" : "s are"} incomplete (no document type, person or kind): return ${bad.length === 1 ? "it" : "them"}, then apply. For example: ${bad[0]}.`);
-    const claimed = await this.db.draftingJob.updateMany({ where: { id: jobId, status: "COMPLETED" }, data: { status: "APPLIED" } });
-    if (!claimed.count) fail("Already applied.", HttpStatus.CONFLICT);
-    let added = 0;
-    try {
-      for (const { item, typeKey, p } of plan) {
-        await this.studio.saveRequirement(actor, job!.combinationId!, null, { documentTypeKey: typeKey, attachMode: p.base_or_conditional === "conditional" ? "ANSWER_CONDITIONAL" : "COMBINATION_MANDATORY", conditionPlain: p.condition_plain ?? undefined, condition: p.base_or_conditional === "conditional" ? p.condition_tree : undefined, appliesToRoles: p.who, providedBy: p.provided_by ?? "client", sourceQuote: item.sourceQuote ?? undefined, sourceFile: a.officialFile ?? a.fileName });
-        added++;
-      }
-    } catch (e) {
-      // Nothing half-applied is left marked done: the draft can be applied again once the cause is fixed.
-      await this.db.draftingJob.update({ where: { id: jobId }, data: { status: "COMPLETED" } });
-      throw e;
-    }
-    await this.audit.log(job!.workspaceId, actor.id, "applied", "checklist draft", a.edition ?? a.fileName, `${actor.name} applied the reviewed checklist draft of ${a.edition ?? a.fileName}: ${added} document requirements added to the draft${skipped.length ? `; not applied: ${skipped.join(", ")}` : ""}`, undefined, job!.combinationId ?? undefined);
-    // #277 review M3: what was not applied, and why, stays on the checklist page (the job's own record).
-    await this.db.draftingJob.update({ where: { id: jobId }, data: { detail: { ...((job!.detail ?? {}) as Record<string, unknown>), applied: { added, skipped } } as Prisma.InputJsonValue } });
-    return { added, skipped };
+    fail(`A checklist's document lines are decided one by one on the review queue now (To review › ${job!.combinationId ? "this combination" : "its group"}), where accepting one writes it to the draft. Nothing was written here.`, HttpStatus.GONE);
   }
+}
+
+type DocTypePayload = Extract<ProposalPayload, { kind: "document_type" }>;
+/** "passport_information_page_copy" → "Passport information page copy" (a person reads names, never keys). */
+export const typeName = (t: string) => { const w = t.replace(/[_\s]+/g, " ").trim(); return w ? (w[0].toUpperCase() + w.slice(1)).replace(/\bUs\b/, "US") : t; };
+const cut = (t: string, n: number) => (t.length <= n ? t : `${t.slice(0, n - 2).trimEnd()}…"`);
+/** P-134: a passport or travel document is an identity document read by its coded (machine-readable) lines. */
+const IDENTITY = /\bpassport\b|\btravel document\b/i;
+/** The document type a checklist line names, as a library proposal (Sample): its name, what it proves (the checklist's
+ *  own words), and how it is read (P-133, P-134: identity documents by coded lines; photos by a person; else a record). */
+export function docTypeOf(l: ReadLine, checklist: string): DocTypePayload {
+  const identity = IDENTITY.test(l.document_type.replace(/_/g, " ")) || IDENTITY.test(l.quote);
+  const photo = /\bphoto/i.test(l.document_type);
+  return { kind: "document_type", name: typeName(l.document_type).slice(0, 120), proves: cut(`What ${checklist} asks for: "${l.quote}"`, 200),
+    category: l.provided_by === "other" ? "other" : "client", suppliesFacts: [], readerKind: identity ? "coded_lines" : photo ? "person_only" : "letter_or_record", identityDocument: identity };
 }
 
 @Controller("api")

@@ -13,8 +13,7 @@ import { fillsView } from "./who-fills.ts";
 import { conditionView, COND_KIND } from "./question-condition.ts";
 import { ON_ITS_PAGE } from "./proposals.ts";
 /** The ON_ITS_PAGE steps whose drafts already have their own row in this list (the field-map jobs below). A checklist
- *  draft's lines (C2.6) have no job row, so they keep their proposals row, whose page links each line to its checklist
- *  page (#277 re-review Major). */
+ *  draft's lines (C2.6) are decided on the queue itself and counted in its proposals row (QA-157). */
 const LISTED_AS_JOBS = new Set(["field_map"]);
 import { groupOf } from "./review-proposals.ts";
 import { isLifecycleKind } from "./lifecycle.ts";

@@ -196,18 +196,21 @@ function pdf(title: string, text: string) {
   r = await call("POST", `/attachments/${ck.id}/draft-checklist`, { mode: "stub" });
   ok("C3.4 K2: the stub pass proves the path with no AI content and no cost", r.status === 201 && r.body.kind === "checklist_draft" && r.body.status === "COMPLETED" && r.body.costUsd === 0, r.body?.message);
   const ckJob = r.body.id;
-  // Scaffolding (test input, not an AI answer): one proposal of kind document_requirement, as a live draft would add it.
-  const typeName = sql(`select name from document_type where status='PUBLISHED' order by document_type_key limit 1`);
-  sql(`insert into proposal_item (id, workspace_id, kind, run_id, step, lands_on, reuse, payload, source, rounds, agreement, confidence, origin, identity, identity_key, work)
-       select gen_random_uuid(), workspace_id, 'requirement_line', id, 'checklist_draft', 'combination', '{"match":"new","existingKey":null}', '{"document_type": "${typeName.replace(/'/g, "''").replace(/"/g, '\\"')}", "who": "each_applicant", "base_or_conditional": "base"}'::jsonb || '{"kind":"requirement_line"}', null, '{"draft":null,"check":null}', 'one_round', 'check', 'ai', '{"key":"requirement.test","near":[],"nearReason":null}', 'requirement.test', '{"proposedKey":"requirement.test","outcome":"NEW","reason":"test input","legacyKind":"document_requirement","legacyPayload":{"document_type": "${typeName.replace(/'/g, "''").replace(/"/g, '\\"')}", "who": "each_applicant", "base_or_conditional": "base"},"sourceQuote":"Test input: a quote from the checklist"}' from drafting_job where id='${ckJob}'`);
+  // Scaffolding (test input, not an AI answer): one requirement line in the queue's contract shape, as a replay adds it.
+  const typeName = sql(`select name from document_type where status='PUBLISHED' order by document_type_key limit 1`).replace(/'/g, "''").replace(/"/g, '\\"');
+  sql(`insert into proposal_item (id, workspace_id, kind, run_id, step, combination_id, lands_on, reuse, payload, source, rounds, agreement, confidence, origin, identity, identity_key, work)
+       select gen_random_uuid(), workspace_id, 'requirement_line', id, 'checklist_draft', combination_id, 'combination', '{"match":"new","existingKey":null}', '{"kind":"requirement_line","documentType":"${typeName}","roles":["each_applicant"],"always":true,"condition":null,"alternativeGroup":null}', '{"file":"test-checklist.pdf","quote":"Test input: a quote from the checklist"}', '{"draft":null,"check":null}', 'one_round', 'check', 'ai', '{"key":"requirement.test","near":[],"nearReason":null}', 'requirement.test', '{"proposedKey":"requirement.test","reason":"test input","officialFile":"test-checklist.pdf","sourceQuote":"Test input: a quote from the checklist"}' from drafting_job where id='${ckJob}'`);
+  const reqs = () => Number(sql(`select count(*) from document_requirement where combination_id='${sv}'`));
+  const n0 = reqs();
   r = await call("POST", `/jobs/${ckJob}/apply-checklist`);
-  ok("C3.4 fail: a checklist draft with an undecided proposal is not applied", r.status === 400, r.body?.detail);
+  ok("C3.4 fail (QA-157): the old apply door of a checklist draft answers 410 and writes nothing", r.status === 410 && reqs() === n0, r.body?.detail);
   const itemId = sql(`select id from proposal_item where run_id='${ckJob}'`);
-  await call("POST", `/jobs/${ckJob}/items/${itemId}`, { decision: "ACCEPTED" });
-  r = await call("POST", `/jobs/${ckJob}/apply-checklist`);
-  ok("C3.4 K2: an accepted proposal is written through the requirement writer as a draft row with its source quote", r.status === 201 && r.body.added === 1 && Number(sql(`select count(*) from document_requirement where combination_id='${sv}' and status='DRAFT' and source_quote='Test input: a quote from the checklist'`)) === 1, r.body);
-  r = await call("POST", `/jobs/${ckJob}/apply-checklist`);
-  ok("C3.4 fail: applying twice changes nothing (409)", r.status === 409, r.body?.detail);
+  r = await call("POST", `/jobs/${ckJob}/items/${itemId}`, { decision: "ACCEPTED" });
+  ok("C3.4 fail (QA-157): a checklist line is not decided on its job page (410), only on the review queue", r.status === 410 && sql(`select status from proposal_item where id='${itemId}'`) === "waiting", r.body?.detail);
+  r = await call("POST", "/review/proposals/decide", { ids: [itemId], action: "accept" });
+  ok("C3.4 K2: an accepted line is written through the queue's lander as a draft row with its source quote", r.status === 201 && reqs() === n0 + 1 && Number(sql(`select count(*) from document_requirement where combination_id='${sv}' and status='DRAFT' and source_quote='Test input: a quote from the checklist'`)) === 1, r.body);
+  r = await call("POST", "/review/proposals/decide", { ids: [itemId], action: "accept" });
+  ok("C3.4 fail: accepting twice changes nothing (409)", r.status === 409 && reqs() === n0 + 1, r.body?.detail);
 
   // ─────────────────────────────── A4 parts read-only (challenge point 5)
   const batches = (await call("GET", "/ai/batches")).body as any[];
