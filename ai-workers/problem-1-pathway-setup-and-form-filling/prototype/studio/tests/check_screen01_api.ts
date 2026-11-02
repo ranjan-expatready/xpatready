@@ -7,6 +7,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { rowCounts } from "../engine/programs.ts";
+import { questionCounts } from "../engine/runtime/questionnaires.ts";
 import { createRequire } from "node:module";
 const { speed } = createRequire(import.meta.url)("./speed_budget.cjs") as typeof import("./speed_budget.cjs"); // P-184
 
@@ -224,8 +225,10 @@ function pdf(title: string, text: string) {
 
   // ---------------------------------------------------------------- BR-10 counts on the catalogue equal the engine's
   const snap = JSON.parse(sql(`select r.snapshot from config_release r join combination c on c.id=r.combination_id where c.combination_key='wp.family'`));
-  const want = rowCounts(snap, snap.combination.participants);
-  ok("BR-10 pass: the row's counts are the engine's counts for that configuration", JSON.stringify(wp.counts) === JSON.stringify(want), { row: wp.counts, want });
+  // UX-A part 1 (P-273, contracts/counts.ts): questions are the one question count (the Questionnaires chips' sum, per role).
+  const qc = questionCounts(snap);
+  const want = { ...rowCounts(snap, snap.combination.participants), questions: qc.total, questionsByRole: qc.roles };
+  ok("BR-10 pass (UX-A part 1): the row's counts are the engine's counts for that configuration, questions the chips' sum", JSON.stringify(wp.counts) === JSON.stringify(want), { row: wp.counts, want });
   ok("BR-10 fail: a row with nothing set up shows no numbers (not zeros)", (await leaf("individual.visitors.extend_stay")).counts === null);
 
   // ---------------------------------------------------------------- BR-11 freshness
