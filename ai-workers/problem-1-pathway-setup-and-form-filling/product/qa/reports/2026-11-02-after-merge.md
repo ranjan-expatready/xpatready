@@ -92,3 +92,16 @@ The :4400 demo (not reachable from the cloud) · a headed walk (no display) · Q
 * C5.1: Partial (P-248 not built yet, G5; the F8 check still allows documents only).
 * QA-76: Minor (was Major); only the representative's heading is still unseen.
 * Built files deleted: C11.13, C11.7-D1. Left for qa-m3: C6.4.
+
+## Round 5 — P-250 verdicts, qa-m3's PRs, and K10/K1/K3/K4 on main 21d988b7 (LeadX)
+**Before-merge verdicts** (each PR's head, its own worktree, a fresh copy, US$0; commented on each PR). No Blocker or Major.
+* #457 C6.9 part 3 (16ad016f; qa-m3's, taken over): `check_c69_runs.ts` 98/98, `check_c69_page_browser.cjs` 43/43, `acceptance/C6.9.test.ts` **15/15** after the Visitor visa setup.
+* #445 C11.12 PR 1 (653b9044): `check_c1112_modes.ts` 39/39. Pack 18/19: its one fail asks every principal to read "Principal applicant", which is stricter than P-209 (Question on the PR).
+* #455 R2 fees (64fc85b8): `check_r2_fee_table.ts` 45/45, `check_vv_prepare.ts` 32/32.
+* #456 S1 (216d7f0d): `check_c76_readiness.ts` 64/64. #458 S9 (04c8ace4): `check_forms_f1p.ts` 18/18.
+* New heads on #435, #426 and #436: only main merges, records, or a check that needs the live switch, so the verdicts stand.
+
+**On main 21d988b7:**
+* K10 (C11.10): QA-120 and QA-121 closed (`check_x1_tabs_focus_browser.cjs` 48/48); QA-129 is the founder's question.
+* K1 (C2.12) and K4 (C4.1): already met (round 1 evidence), so both rows stay Works.
+* K3 (C3.12): the Published date shows at all three widths, with no sideways scroll and axe clean. C3.12 stays Partial on QA-148.

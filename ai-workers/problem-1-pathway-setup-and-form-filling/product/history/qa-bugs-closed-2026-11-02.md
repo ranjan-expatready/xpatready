@@ -35,3 +35,28 @@ Row as it stood in `qa/BUGS.md`:
 Row as it stood in `qa/reports/bugs-open-detail.md`:
 
 | QA-75 | UX · Major | C2.x AI field map job page · PRODUCT §4 | **f7cb40d9** | A field-map job page (`/c/:id/jobs/:id`, from AI work) shows status `NEEDS_PERSON`, heading "Form: AI-proposed field map" with no form named, chip "On this computer", "a prototype-only exception to the AI-processing rule; not the product's provider route", says "the comparison with the library below" with nothing below, and its trail starts "Sources and forms" (the tab is now Forms). Fix: "Needs you" with the step to take; name the form; plain basis line; show the comparison or link to it; trail "<combination> › Forms" | `ws/`ev-job.png | forms | Open |
+
+## QA-120 — closed 2 Nov 2026 (main 21d988b7)
+
+Closed by the qa lane on main **21d988b7** (K10, screens-1): `tests/check_x1_tabs_focus_browser.cjs` 48/48 on a fresh isolated copy. Review and release reads "Review and release 1 problem" (name and tip, never "Review and release1"), there is a space before the count in the visible text, both counts use one badge shape, and a tab with no count keeps its plain name. The same words were seen in qa's walk of Visitor visa's tabs ("Review and release 6 problems", "Forms 44 setup items open").
+
+Row as it stood in `qa/BUGS.md`:
+
+| QA-120 | UX · Minor | C4.x combination tabs · STANDARDS (accessibility, WCAG 1.3.1 / 2.5.3) | 832ee5bd (explore X1) | Combination tablist: the Review and release tab's error count sits against the label with no space and no accessible name, so it reads "Review and release1"; the step badges beside it read "Forms 4 setup items open". Expected: "Review and release, 1 problem" (label and tip) and one badge style for counts | screens | Open |
+
+Row as it stood in `qa/reports/bugs-open-detail.md`:
+
+| QA-120 | UX · Minor | C4.x combination tabs · STANDARDS (accessibility, WCAG 1.3.1 / 2.5.3) | 832ee5bd (explore X1) | Combination tablist: the Review and release tab's error count sits against the label with no space and no accessible name, so it reads "Review and release1"; the step badges beside it read "Forms 4 setup items open". Expected: "Review and release, 1 problem" (label and tip) and one badge style for counts | `/tmp/qa/ex.cjs` tab names at 1440, 1024, 400 (report §6); `web/src/pages/combination.tsx:106` | screens | Open |
+
+
+## QA-121 — closed 2 Nov 2026 (main 21d988b7)
+
+Closed by the qa lane on main **21d988b7** (K10, screens-1): `tests/check_x1_tabs_focus_browser.cjs` 48/48. A `?focus=` whose place is gone (Documents, Questionnaires, Forms held) lands on the tab, says "This was done since you opened it" and drops the key from the address. Places still open (forms:sources, lines, finder) say nothing false.
+
+Row as it stood in `qa/BUGS.md`:
+
+| QA-121 | UX · Minor | C11.10 X1 `?focus=` landing · W1 checklist concept v4 §7 ("done since you opened it") | 832ee5bd (explore X1) | A `?focus=` link whose place is no longer on the page (e.g. `documents:problems` after the problems are fixed, or a wrong key) lands nowhere, says nothing, and the key stays in the address. Expected: land on the tab and say "This was done since you opened it" (the words exist for items still drawn) | screens | Open (seen again 25cefb67 on #247's new landing: `?focus=forms:held` with no held edition leaves focus on the page body, keeps `?focus=` in the address, says nothing; fix in #256 not merged yet) |
+
+Row as it stood in `qa/reports/bugs-open-detail.md`:
+
+| QA-121 | UX · Minor | C11.10 X1 `?focus=` landing · W1 checklist concept v4 §7 ("done since you opened it") | 832ee5bd (explore X1) | A `?focus=` link whose place is no longer on the page (e.g. `documents:problems` after the problems are fixed, or a wrong key) lands nowhere, says nothing, and the key stays in the address. Expected: land on the tab and say "This was done since you opened it" (the words exist for items still drawn) | `?focus=nonsense:key`, `?focus=documents:problems` on a combination without problems: activeElement BODY, address keeps the key (report §6) | screens | Open |
