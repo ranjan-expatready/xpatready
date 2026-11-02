@@ -359,7 +359,7 @@ export class Demo {
       why: notApproved.length ? notApproved.slice(0, 3).join(" · ") : adds.length ? null : "No new library item: no draft was applied." });
     row({ row: "6", title: "Reset returns to a blank workspace", status: "done", shows: "Demo › Reset demo", why: null });
     row({ row: "7", title: "AI drafts sections and document requirements from the checklist", status: "not built yet", shows: "Not built yet: the forms and screens lanes add this step (C2.6, C3.4); the checkpoint calls it once it is on main.", why: null });
-    row({ row: "8", title: "Questionnaires per person, PQR picks, preview by person", status: applied ? "done" : "waiting", shows: "On each combination: the Questionnaires and Preview tabs, worked out from the forms applied above", why: applied ? null : "No form was applied." });
+    row({ row: "8", title: "Smart questionnaire (SQR) per person, PQR picks, preview by person", status: applied ? "done" : "waiting", shows: "On each combination: the Smart questionnaire (SQR) and Preview tabs, worked out from the forms applied above", why: applied ? null : "No form was applied." });
 
     // Rows 9–12: release 1 on each combination whose draft passes the validator, through submit, SME sign-off and a
     // different person's approval. A combination the validator refuses stays a draft, with the validator's words.

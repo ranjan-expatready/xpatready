@@ -61,7 +61,7 @@ export class WhoFills {
     const section = await this.db.logicalSection.findFirst({ where: { workspaceId, sectionKey: current.sectionKey }, orderBy: { version: "desc" } });
     if (section?.clientOnly) throw problem(409, "Always the client", `"${name}" is in ${section.title ?? "a background and declarations section"}: only the client answers it, so who fills it does not change.`);
     const from = fillsOf(current.collectedFrom);
-    if (!from) throw problem(409, "Not a question someone fills", `"${name}" is not filled by the client or the case officer in the library; where it comes from is chosen per combination on its Questionnaires tab.`);
+    if (!from) throw problem(409, "Not a question someone fills", `"${name}" is not filled by the client or the case officer in the library; where it comes from is chosen per combination on its Smart questionnaire (SQR) tab.`);
     if (from === to) throw problem(409, "Nothing changes", `"${name}" is already filled by ${FILLS_WORDS[to]} in the library.`);
     if (await openFillsChange(this.db, workspaceId, key)) throw problem(409, "Already waiting", `A change of who fills "${name}" already waits on To review or for the next release.`);
     const uses = await this.db.combination.count({ where: { workspaceId, retiredAt: null, forms: { some: { status: { not: "RETIRED" }, form: { editions: { some: { maps: { some: { canonicalFieldKey: key } } } } } } } } });

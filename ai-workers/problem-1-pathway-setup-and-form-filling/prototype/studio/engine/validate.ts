@@ -240,12 +240,12 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   {
     // Lead check W1: the fact's own words and the role's label, never system keys.
     const docName = (key: string) => [...(next.document_types as any[]), ...((prev?.document_types ?? []) as any[])].find((t) => t.key === key)?.name ?? key;
-    const words = (x: any) => [x.source ? `comes from ${x.source === "DOCUMENT" ? `the ${docName(x.document_type)}` : x.source === "CLIENT" ? "the client" : `the case officer${x.source_reason ? ` (why: ${x.source_reason})` : ""}`}` : "", x.prequalification ? "pre-qualification" : ""].filter(Boolean).join(", ") || "back to the rules' source";
+    const words = (x: any) => [x.source ? `comes from ${x.source === "DOCUMENT" ? `the ${docName(x.document_type)}` : x.source === "CLIENT" ? "the client" : `the case officer${x.source_reason ? ` (why: ${x.source_reason})` : ""}`}` : "", x.prequalification ? "Prospect questionnaire (PQR)" : ""].filter(Boolean).join(", ") || "back to the rules' source";
     const line = (s: Snapshot, x: any, rest: string) => `${factWords(s, x.fact)} (${who(s, x.role)}): ${rest}`;
     const a = new Map(((prev?.fact_sources ?? []) as any[]).map((x) => [sourceKey(x.role, x.fact), x])), b = new Map(((next.fact_sources ?? []) as any[]).map((x) => [sourceKey(x.role, x.fact), x]));
     for (const [key, x] of b) if (!a.has(key)) out.push({ kind: "Where an answer comes from", key, change: "added", origin: x.origin, needs_sme: true, label: line(next, x, words(x)) });
       else if (canonical(a.get(key)) !== canonical(x)) out.push({ kind: "Where an answer comes from", key, change: "changed", origin: x.origin, needs_sme: true, label: line(next, x, words(x)) });
-    for (const [key, x] of a) if (!b.has(key)) out.push({ kind: "Where an answer comes from", key, change: "removed", needs_sme: true, label: line(prev!, x, "back to the rules' source, no pre-qualification") });
+    for (const [key, x] of a) if (!b.has(key)) out.push({ kind: "Where an answer comes from", key, change: "removed", needs_sme: true, label: line(prev!, x, "back to the rules' source, not in the Prospect questionnaire (PQR)") });
   }
   out.push(...eligibilityChanges(prev?.eligibility, next.eligibility)); // C6.9 BR-4
   // Completeness guard: any other part of the released content that differs is listed rather than silently passed.

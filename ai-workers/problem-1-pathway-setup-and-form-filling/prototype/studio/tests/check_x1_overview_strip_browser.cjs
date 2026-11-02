@@ -19,7 +19,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 (async () => {
   // ---------------------------------------------------------------- pure rule: where an item's link goes
   const it = (kind, focus) => ({ kind, focus });
-  step("C11.10 X1 C3 (rule): a questions problem in step 4 lands on Questionnaires even when the step's tab is Documents", itemHref("c1", "questions_documents", "documents", it("fix_problems", "questionnaires:problems")) === "/c/c1/questionnaires?focus=questionnaires%3Aproblems");
+  step("C11.10 X1 C3 (rule): a questions problem in step 4 lands on Smart questionnaire (SQR) even when the step's tab is Documents", itemHref("c1", "questions_documents", "documents", it("fix_problems", "questionnaires:problems")) === "/c/c1/questionnaires?focus=questionnaires%3Aproblems");
   step("C11.10 X1 C3 (rule): a proposal opens the review queue filtered to the combination and step; AI progress opens the jobs page", itemHref("c1", "forms", "forms", it("review_proposals", "review:forms")) === "/review/proposals?c=c1&step=3" && itemHref("c1", "forms", "forms", it("view_ai", "ai:b1")) === "/c/c1/jobs");
   step("C11.10 X1 C3 fail (rule): a key no tab answers (release items) stays on the step's own tab, never a made-up one", itemHref("c1", "release", "review", it("submit", "review:submit")) === "/c/c1/review?focus=review%3Asubmit" && itemHref("c1", "release", "review", it("fix_problems", "release:problems")) === "/c/c1/review?focus=release%3Aproblems");
 
@@ -54,7 +54,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // The tab badges equal the strip (handover of #206): per tab, the strip's counts sum to the badge.
   const badges = await p.getByRole("tablist", { name: "Combination" }).getByRole("tab").evaluateAll((els) => Object.fromEntries(els.map((e) => [e.getAttribute("href").split("/").pop(), Number(e.querySelector("[data-step-badge]")?.getAttribute("data-step-badge") ?? 0)])));
   const fromStrip = { forms: 0, documents: 0, questionnaires: 0 }; for (const l of links) if (l.tab in fromStrip) fromStrip[l.tab] += l.count;
-  step("C11.10 X1 C3: the tab badges equal the strip (Forms, Documents, Questionnaires)", ["forms", "documents", "questionnaires"].every((t) => badges[t] === fromStrip[t]) && JSON.stringify(fromStrip) === JSON.stringify(tabCounts(vvSum.setup)), { badges, fromStrip });
+  step("C11.10 X1 C3: the tab badges equal the strip (Forms, Documents, Smart questionnaire (SQR))", ["forms", "documents", "questionnaires"].every((t) => badges[t] === fromStrip[t]) && JSON.stringify(fromStrip) === JSON.stringify(tabCounts(vvSum.setup)), { badges, fromStrip });
   step("C11.10 X1 C3 fail: a tab with nothing open in the strip has no badge", fromStrip.questionnaires === 0 && badges.questionnaires === 0);
   // Review minors 1, 2, 5 (c0ccd2f6).
   step("C11.10 X1 C3 (review m2): the marks' legend is a visible line, not a hover-only tooltip", /✓ done · ● next · ◐ AI at work · ⧗ waiting for someone else/.test(await p.locator("[data-strip-legend]").innerText()));

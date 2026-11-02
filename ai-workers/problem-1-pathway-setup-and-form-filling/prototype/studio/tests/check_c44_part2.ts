@@ -9,7 +9,7 @@
 //      library field or another group are refused in words (400); no source quote = labelled Sample, a quote = not.
 //   R4 tier 3: the independent review is the officer's (a client gets 403); with live AI off it is refused in words at
 //      US$0 and changes no answer (P-175).
-//   R5 PQR mode: only the questions the release ticks Pre-qualification, per person role, with one plain result line
+//   R5 PQR mode: only the questions the release ticks Prospect questionnaire (PQR), per person role, with one plain result line
 //      that never decides eligibility: what is left to answer, else "Looks eligible so far"; none ticked says so.
 // Adopts acceptance/C4.4.test.ts part 2 (pack 3). Rules only, no AI (US$0). Sample values.
 // The suite prepares its own copy (tests/runtime/prepare_c44.cjs: the Visitor visa release, then the C4.4 Sample types).
@@ -38,10 +38,10 @@ type Sec = { subjectId: string; section: string; questions: Q[]; problems: { kin
   // ── R5 on the engine: no ticks → no questions and a line that says so (fail side); ticks → only those (pass side).
   const people: Participant[] = [{ subjectId: "c", role: "case", label: "The application", applies: true }, { subjectId: "p1", role: "principal", label: "Sample Applicant A", applies: true }];
   const none = pqrView({ ...snap, fact_sources: [] }, people, caseView({ ...snap, fact_sources: [] }, people, [], [], "agent"));
-  ok("R5 fail: a release with no Pre-qualification ticks asks nothing in PQR mode and says so in words", none.questions.length === 0 && /No pre-qualification questions/.test(none.result), none.result);
+  ok("R5 fail: a release with no Prospect questionnaire (PQR) ticks asks nothing in PQR mode and says so in words", none.questions.length === 0 && /No Prospect questionnaire \(PQR\) questions/.test(none.result), none.result);
   const ticked = pqrView(snap, people, caseView(snap, people, [], [], "agent"));
   ok("R5 pass: PQR asks only the ticked facts for the ticked role, each flagged pre_qualification", ticked.questions.length === 2 && ticked.questions.every((q) => q.pre_qualification === true && q.subjectId === "p1" && ["person.refused_visa_or_entry", "person.criminal_history"].includes(q.fact)), ticked.questions.map((q) => q.fact));
-  ok("R5 fail: with the ticked questions unanswered the result says how many are left, never a verdict", /^2 of 2 pre-qualification questions still to answer/.test(ticked.result), ticked.result);
+  ok("R5 fail: with the ticked questions unanswered the result says how many are left, never a verdict", /^2 of 2 Prospect questionnaire \(PQR\) questions still to answer/.test(ticked.result), ticked.result);
   const ans = (field: string, value: unknown): Answer => ({ id: field, subjectId: "p1", field, rowKey: null, value, status: "DECLARED", channel: "agent_view", actor: OFFICER, at: "2026-11-01T12:00:00Z" });
   const done = pqrView(snap, people, caseView(snap, people, [ans("person.refused_visa_or_entry", false), ans("person.criminal_history", false)], [], "agent"));
   ok("R5 pass: with both answered the result is \"Looks eligible so far\" and says it is not a decision", /^Looks eligible so far/.test(done.result) && /not a decision/.test(done.result), done.result);

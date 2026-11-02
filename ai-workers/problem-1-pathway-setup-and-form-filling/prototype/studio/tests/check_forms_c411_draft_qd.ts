@@ -79,7 +79,7 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   ok("C4.11 C fail: with no saved AI answer for the conditions, step 5 says so, proposes nothing, US$0", c5none?.status === "FAILED" && /No saved AI answer/.test(c5none.message) && sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition'`) === "0", c5none);
   const s6none = step(r, "pqr_picks"), firstDocs = step(r, "qd_documents"), firstLines = Number(sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='requirement_line' and status='waiting'`));
   ok("C4.11 S6 fail: with no saved AI answer, step 6 says so and proposes nothing, US$0; step 7 still runs", r.status === 201 && waiting("ai") === 0 && r.body.usd === 0 && s6none?.status === "FAILED" && /No saved AI answer/.test(s6none.message) && step(r, "qd_check")?.status === "COMPLETED", s6none);
-  ok("C4.11 S6 fail (break m4): the reply says the run had a problem and names step 6, never only \"rules pass\"", r.body.status === "done_with_problems" && /Not done:.*Pre-qualification picks/.test(r.body.note), r.body.note);
+  ok("C4.11 S6 fail (break m4): the reply says the run had a problem and names step 6, never only \"rules pass\"", r.body.status === "done_with_problems" && /Not done:.*Prospect questionnaire \(PQR\) picks/.test(r.body.note), r.body.note);
   let card = await call("GET", `/runs/${r.body.runId}`);
   ok("C4.11 R pass: the run shows on the shared run card with its label, seven steps and Done with problems (step 6)", card.status === 200 && card.body.label === "Drafting questions and documents" && card.body.steps.length === 7 && card.body.status === "done_with_problems" && card.body.usd.spent === 0 && card.body.error?.next === null, { label: card.body.label, status: card.body.status, steps: card.body.steps?.length });
 
@@ -240,7 +240,7 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
     plant(clientFact, "source, document_type_key", "'DOCUMENT', 'no_such_document'");
     r = await run("rules");
     const pqr = (r.body.findings as { rule: string; message: string }[]).filter((f) => f.rule === "pqr_subset"), doc = (r.body.findings as { rule: string; message: string }[]).filter((f) => f.rule === "document_on_checklist");
-    ok("C4.11 K fail: a PQR tick on a fact the case officer gives is found by step 7, named under PQR ⊂ SQR", pqr.length >= 1 && /pre-qualification/.test(pqr[0].message) && r.body.rules?.pqr_subset?.includes("PQR"), pqr[0]);
+    ok("C4.11 K fail: a PQR tick on a fact the case officer gives is found by step 7, named under PQR ⊂ SQR", pqr.length >= 1 && /Prospect questionnaire \(PQR\)/.test(pqr[0].message) && r.body.rules?.pqr_subset?.includes("PQR"), pqr[0]);
     ok("C4.11 K fail: a document fact whose document is not on the checklist is found by step 7, under its rule", doc.length >= 1 && /not on this person's checklist/.test(doc[0].message), doc[0]);
     ok("C4.11 K pass: findings are for a person to fix; the run still ends Done and changes nothing in the draft", r.body.status === "done" && sql(`select count(*) from fact_source where combination_id='${wp}' and version=99`) === "2", r.body.note);
   } else ok("C4.11 K setup: the sample has a case officer fact and a client fact", false, { agentFact, clientFact });

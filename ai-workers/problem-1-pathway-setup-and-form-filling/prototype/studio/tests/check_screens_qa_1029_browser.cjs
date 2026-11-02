@@ -88,7 +88,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await go("/library/checks");
     step("P-165 fail case: a page with no stand-in shows no chip (Checks)", await p.locator("[data-stand-in]").count() === 0);
     const ck = await main();
-    step("QA-72: Checks says where they are listed, with no screen number or \"later screen\"", /Questionnaires tab/.test(ck) && !/Screen 0\d|later screen/.test(ck), ck.slice(0, 200));
+    step("QA-72: Checks says where they are listed, with no screen number or \"later screen\"", /Smart questionnaire \(SQR\) tab/.test(ck) && !/Screen 0\d|later screen/.test(ck), ck.slice(0, 200));
 
     // QA-39, QA-71: Fields, a field, Sections, Document types
     for (const [w, h] of [[1440, 900], [1024, 768]]) {
