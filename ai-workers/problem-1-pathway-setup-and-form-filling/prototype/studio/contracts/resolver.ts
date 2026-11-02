@@ -34,6 +34,9 @@
 //      the form's subject; any other fact is a person fact. No fact is a household fact yet.
 //  R6  Facts a subject sees: its own person facts plus the filing's facts; never another person's; a value stored per
 //      list row (`|<row>`) is not a single fact and is left out.
+//  R6b Whose value a person's fact is read from (one fact, as R6 reads it): the person's own answer; else the filing's
+//      (a fact asked once per case, such as relationship.start_date or representative.*, is answered on the filing);
+//      unanswered, by R5's id rule (a "case." fact → the filing, any other → the person). An empty string is no answer.
 //  R7  Signers (C3.11, SIGNED_BY): each row the form's "who" names (R2) is about a person (the filing → the principal);
 //      person or unset → that person; parent_for_minor → the principal for a child, else the person;
 //      principal_for_family → the principal; person_and_representative → the person and each representative; none →
@@ -56,8 +59,8 @@
 //      (:91), WHO_OF_ROLE (:230, the reverse of WHO_ROLES) and `h === "case"` literals.
 //  (c) render's deciders call isFilingFact without the placement (:138, :156): a fact placed once_per_case whose id does
 //      not start "case." is keyed on the person there (as before SH3).
-//  (d) Copies outside the four places: R5 in engine/runtime/eligibility.ts:45 (with its own aboutOf, :42),
-//      engine/runtime/case-checklist.ts:124, api/src/runtime.ts:269 and :310 (prefix only), engine/programs.ts:16; a roleOf
+//  (d) Copies outside the four places: R5 in api/src/runtime.ts:269 and :310 (prefix only; runtime lane L1's file
+//      until S4 merges; eligibility.ts, case-checklist.ts and programs.ts moved in the SH3 follow-up); a roleOf
 //      that says "the application" in engine/coverage.ts:32; the sourceKey template in engine/runtime/preview.ts:69,
 //      engine/runtime/case.ts:365, engine/validate.ts:244, engine/pqr-picks.ts:82, engine/coverage.ts:43; field scope by
 //      prefix in engine/import.ts:41, api/src/proposals.ts:214, engine/snapshot.ts:37 (subjectKindOf).
@@ -142,6 +145,7 @@ export interface Resolver {
   /** R4/R6: the role of the person an about-key is about (FILING for the filing). */ roleOf(people: PersonOnFiling[], about: string): string;
   /** R4: a principal's partner or a partner's principal. */ partnerOf(people: PersonOnFiling[], id: string): string | null;
   /** R6 */ factsFor(known: Known, about: string): Record<string, unknown>;
+  /** R6b: the about-key a person's value of one fact is read from. */ valueHolder(known: Known, fact: string, person: string): string;
   /** R7: signer id → the rows (person ids or FILING) they sign for. */ signers(people: PersonOnFiling[], who: string, signedBy: string | null | undefined): Map<string, string[]>;
   /** R9: the database (or any store) answers one hop; the resolver follows the chain. */ canonicalFact(key: string, mergedInto: (key: string) => Promise<string | null | undefined>): Promise<string>;
   /** R10 */ rolesNamedBy(who: string): Role[];
