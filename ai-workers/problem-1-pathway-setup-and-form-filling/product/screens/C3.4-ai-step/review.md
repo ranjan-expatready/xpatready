@@ -36,3 +36,38 @@ P-138 once per edition and click only: yes. P-149 one door, origin and second pe
 No real Saved result exists, so the quality of a real model answer is untested. No screen exists to walk. The journey score is in `journey-test-reviewer-2026-11-02.md`.
 
 **Verdict: Block** (M1, M2). Fix list: M1 catch records cost, run files, keeps COMPLETED, offers Saved; M2 identity guard by either round or category plus tests. Minors 1 and 4 would be good to take in the same pass.
+
+---
+
+## Re-review b6c11837 (diff `0700958f..b6c11837`, P-276)
+
+Reviewer: same fresh reviewer, diff only. Isolated copies on :4458 only, one after another; the Live suite on the stand-in launcher paired with `STUDIO_AI_LIVE` (P-192); no model call, no real live switch, the shared spend ledger file untouched (mtime unchanged). `p2/` restored, no run file left, databases dropped.
+
+### Runs (mine)
+c34_ai 50/50 (twice) · c34_ai_live 8/8 · C4.7 60/60 · C4.11 75/75 · c34_masters 29/29. `tsc --noEmit` shows no error in the touched files. The acceptance pack and PA I did not re-run (pack change is one regex; PA unchanged but `.gitignore`).
+
+Fail-then-pass proved by mutation: I put `api/src/form-masters.ts`, `api/src/rounds.ts`, `engine/masters-ai.ts` back to 0700958f and ran the new `check_forms_c34_ai.ts`: 41/50, nine failing exactly on the fixes (M2 x2, B5 x2, ort numb / of the, B1, B2 x2, plan role). Restored to b6c11837 after; 50/50. The M1 Live test I read, not mutation-run: on the old catch it would find `cost_usd` null.
+
+### Findings
+| Finding | Status | Evidence |
+|---|---|---|
+| M1 cost lost after a paid run | Fixed | `paid` kept outside the try (`form-masters.ts:285`); catch writes `costUsd`, `runFile`, `run_files`, a message "cost US$x (counted)" and offers Saved when two files exist; `completed` stops a finished job being demoted; the audit write is `.catch`ed. Live test: a trigger refuses the proposal write after two paid rounds: FAILED, cost 0.6, both run files, "counted", never "nothing was charged" |
+| M2 P-134 on one flag | Fixed | `identityGuard` over both readings: identity if either says so or the category says identity; reader forced off AI; `same` key and payload rewritten so the draft payload a person accepts holds it. Tests: both rounds false + identity category; only the checker says identity; a bank statement keeps its letter reader |
+| B1 draft and checker of different runs | Fixed | window = after the previous checker of the same stem, before this checker (stamp = run start, `launch.ts:92`; draft runs before checker, `form-masters.ts:292`). Test: two runs, newer checker wrong shape: plan files are the older run's two files |
+| B2 empty draft blocks redo | Fixed | `usable` in job detail; the once-lookup requires `usable: true`; words say it can be drafted again. Test: all-dropped draft then a good run drafts it with a new job |
+| B5 always/never-true checks Ready | Fixed | one passing and one failing example required in `runExamples` (shared by form and guide). Tests for both constant cases |
+| Minors taken | Fixed | silent drops now listed; whole-word quote of one box (two words, ten letters); plan needs `author`; `RUNNING_FOR_MS` 30 min; acceptance finds the edition group, not SCH1 |
+
+`rounds.ts` `replayWindow`: unset leaves the filter as before (`!ctx.replayWindow ||` is true); only `form-masters.ts` sets it. C4.7 60/60 and C4.11 75/75 unchanged on my run. A file with no stamp is excluded when a window is set (safe: refused, never mixed).
+
+### New or remaining, none blocking
+1. Minor: AI jobs COMPLETED before this commit have no `usable` key, so the once-lookup no longer finds them and a source already drafted would be drafted again (Saved US$0; Live only after a plan and the cost shown). No Live run has ever been approved, so nothing real is affected; say so in the PR.
+2. Minor: a Live run that yields nothing usable can now be repeated (B2's intent) with the same plan checksum and no per-edition paid-attempt cap (my earlier Minor 2, still open). Spend is bounded by the plan, the 409 while one runs and the ledger cap; the Live entry on the screen should show "last run cost US$x, nothing usable" before a second click.
+3. Minor: after a paid run then a throw, the HTTP answer is still a generic 500; the cost and "counted" live in the job message. The screen row must read the job, not the response.
+4. Minor: the identity guard trusts the flags or the category text. A Passport the model labels category "travel" with both flags false is still read by a letter reader. P-134 asks for code as the guard; a name list ("passport", "identity card", "driver's licence") would close it. Follow-up, not a regression.
+5. Known: the acceptance pack is 7/16 until a real saved result exists (16/16 with simulated runs, per the builder). Live and Saved still have no screen entry (follow-up row).
+
+### Journey (reviewer role, API only; no screen exists)
+Rescored from 7: Correct data 1 (was 0.5), Error recovery 1 (was 0.5). Task completed, Next step, Accessibility, Visual quality stay 0.5 (no UI). **8 / 10.** Raise: a Live or Saved entry on the screen (+1).
+
+**Verdict: Approve** (no open Blocker or Major; commit b6c11837).
