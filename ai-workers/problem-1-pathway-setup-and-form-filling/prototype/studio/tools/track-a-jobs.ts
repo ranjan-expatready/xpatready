@@ -27,22 +27,30 @@ export const COMBINATION = "vv.single";
  *  input tokens per request byte, and the larger round's output tokens. Used for "usual" only, never for a cap. */
 export const MEASURED = { tokensPerByte: 0, outputTokens: 1029 };
 
-export type TrackAJob = { row: string; label: string; step: AiStep; isCheck: boolean };
+/** C3.4: the form edition whose masters are drafted (Visitor visa's application form; acceptance C3.4.test.ts). */
+export const C34_FORM = "imm5257e.pdf";
+/** What a job reads: the combination's guide (C4.7, C4.11, C3.4 guide checks) or one form edition of it (C3.4 form). */
+export type TrackAJob = { row: string; label: string; step: AiStep; isCheck: boolean; reads: "guide" | "form" };
 
-/** The Track A runs that have a consumer in the app today (C4.7 PQR picks, C4.11 step 5 conditions), in run order: C4.7
- *  first, because C4.11 step 6 replays it (#417 blocker 5). Each step is a draft round then a blind checker round. */
+/** The Track A runs that have a consumer in the app today (C4.7 PQR picks, C4.11 step 5 conditions, C3.4 masters), in run
+ *  order: C4.7 first, because C4.11 step 6 replays it (#417 blocker 5). Each step is a draft round then a blind checker round. */
 export async function trackAJobs(): Promise<TrackAJob[]> {
   const { PQR_AI: pqr } = await import("../api/src/pqr-drafts.ts");
   const { CONDITIONS_AI: cond } = await import("../api/src/draft-qd.ts");
+  const { MASTERS_FORM_AI, MASTERS_GUIDE_AI } = await import("../api/src/form-masters.ts");
   // QA-162: these are the jobs of the runs recorded on 2 Nov (#530, #531): the v1 prompts, the guide only. The steps now
   // draft Live with v2 (the guide and the combination's question list); a v2 paid run gets its own jobs with its Go.
   const PQR_AI: AiStep = { ...pqr, template: "pqr-picks.v1.md", check: "pqr-picks-check.v1.md", schema: "pqr-picks-output.v1.schema.json", replays: undefined };
   const CONDITIONS_AI: AiStep = { ...cond, template: "conditions.v1.md", check: "conditions-check.v1.md", schema: "conditions-output.v1.schema.json", replays: undefined };
   return [
-    { row: "C4.7", label: "PQR picks, draft round", step: PQR_AI, isCheck: false },
-    { row: "C4.7", label: "PQR picks, checker round", step: PQR_AI, isCheck: true },
-    { row: "C4.11", label: "step 5 conditions, draft round", step: CONDITIONS_AI, isCheck: false },
-    { row: "C4.11", label: "step 5 conditions, checker round", step: CONDITIONS_AI, isCheck: true },
+    { row: "C4.7", label: "PQR picks, draft round", step: PQR_AI, isCheck: false, reads: "guide" },
+    { row: "C4.7", label: "PQR picks, checker round", step: PQR_AI, isCheck: true, reads: "guide" },
+    { row: "C4.11", label: "step 5 conditions, draft round", step: CONDITIONS_AI, isCheck: false, reads: "guide" },
+    { row: "C4.11", label: "step 5 conditions, checker round", step: CONDITIONS_AI, isCheck: true, reads: "guide" },
+    { row: "C3.4", label: "IMM 5257 checks and document types, draft round", step: MASTERS_FORM_AI, isCheck: false, reads: "form" },
+    { row: "C3.4", label: "IMM 5257 checks and document types, checker round", step: MASTERS_FORM_AI, isCheck: true, reads: "form" },
+    { row: "C3.4", label: "guide 5256 checks, draft round", step: MASTERS_GUIDE_AI, isCheck: false, reads: "guide" },
+    { row: "C3.4", label: "guide 5256 checks, checker round", step: MASTERS_GUIDE_AI, isCheck: true, reads: "guide" },
   ];
 }
 
@@ -50,6 +58,7 @@ export async function trackAJobs(): Promise<TrackAJob[]> {
 export async function deriveJobs(): Promise<{ row: string; label: string; job: Job }[]> {
   const { Db } = await import("../api/src/core.ts");
   const { PqrDrafts } = await import("../api/src/pqr-drafts.ts");
+  const { FormMasters } = await import("../api/src/form-masters.ts");
   const db = new Db();
   try {
     const c = await db.combination.findFirst({ where: { combinationKey: COMBINATION, retiredAt: null } });
@@ -58,7 +67,12 @@ export async function deriveJobs(): Promise<{ row: string; label: string; job: J
     const g = await new PqrDrafts(db, null as never, null as never).guide(c);
     if (!g.input) throw new Error(`${g.code} is not among the official files the AI may read`);
     const ctx = { trail: g.trail, contextKey: c.combinationKey, inputs: [g.input], batchId: BATCH };
-    return (await trackAJobs()).map((t) => ({ row: t.row, label: t.label, job: roundJob(t.step, t.isCheck, ctx) as Job }));
+    // C3.4's form edition: the same target the app's draft-masters reads (form-masters.ts target: its key, trail and input).
+    const a = await db.sourceAttachment.findFirst({ where: { combinationId: c.id, fileName: C34_FORM } });
+    if (!a) throw new Error(`${COMBINATION} has no ${C34_FORM} among its sources: run Demo › Reset to the six on the copy first`);
+    const f = await new FormMasters(db, null as never, null as never, null as never).target(a);
+    const form = { trail: f.trail, contextKey: f.contextKey, inputs: [f.input], batchId: BATCH };
+    return (await trackAJobs()).map((t) => ({ row: t.row, label: t.label, job: roundJob(t.step, t.isCheck, t.reads === "form" ? form : ctx) as Job }));
   } finally { await db.$disconnect(); }
 }
 
@@ -66,6 +80,10 @@ export const jobText = (job: Job) => JSON.stringify(job, null, 1) + "\n";
 
 /** One job's costs from the code's own estimators, with no model call: the request it would send is built by the
  *  launcher's own builder (p2/prompt.ts buildRequest over the guard's admitted inputs). */
+/** C3.4's usual output (an estimate, never a cap): each check carries a tree and two or three worked examples, so half the
+ *  step's output limit rather than twice the who-can-be answer. */
+const usualOutputOf = (job: Job) => (/^studio-masters-/.test(job.job_id) ? Math.round(Number(job.settings.max_output_tokens) / 2) : MEASURED.outputTokens * 2);
+
 export function costsOf(job: Job) {
   const admitted = admitRun({ inputs: { official_files: job.inputs }, settings: job.settings as never });
   const req = buildRequest(readFileSync(join(PROMPTS, job.template), "utf8"), JSON.parse(readFileSync(join(PROMPTS, job.output_schema), "utf8")), admitted, job.known);
@@ -73,7 +91,7 @@ export function costsOf(job: Job) {
   const model = String(job.settings.model), out = Number(job.settings.max_output_tokens), attempts = Number(job.settings.max_attempts);
   const perAttempt = costUsd(model, inputTokenBound(JSON.stringify(req)), out);
   // One attempt; output at twice the measured who-can-be answer (a margin: picks and conditions each carry a quote and a reason).
-  const usual = costUsd(model, Math.round(bytes * measuredTokensPerByte()), MEASURED.outputTokens * 2);
+  const usual = costUsd(model, Math.round(bytes * measuredTokensPerByte()), usualOutputOf(job));
   return { request_bytes: bytes, per_attempt_worst_usd: perAttempt, worst_usd: perAttempt * attempts, usual_usd: usual, budget_usd: Number(job.settings.budget_usd), fits_budget: perAttempt * attempts <= Number(job.settings.budget_usd) + 1e-9, under_run_cap: perAttempt * attempts <= RUN_CAP_USD + 1e-9 };
 }
 
@@ -106,11 +124,11 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const { jobIdFor } = await import("../engine/rounds.ts");
   const jobs = await trackAJobs();
   let worst = 0, usual = 0;
-  console.log(`\nTrack A jobs for ${COMBINATION}, in run order (no model call; worst = the runner's reservation, usual = estimate):`);
+  console.log(`\nTrack A jobs for ${COMBINATION} (C3.4's form: its ${C34_FORM}), in run order (no model call; worst = the runner's reservation, usual = estimate):`);
   for (const t of jobs) {
     const prefix = `${t.isCheck ? `${t.step.jobBase}-check` : t.step.jobBase}-`;
     const job = readdirSync(JOBS).filter((x) => x.startsWith(prefix) && x.endsWith(".json")).map((x) => JSON.parse(readFileSync(join(JOBS, x), "utf8")) as Job)
-      .find((j) => j.combination === COMBINATION && j.template === (t.isCheck ? t.step.check : t.step.template) && j.job_id === jobIdFor(t.step.jobBase, t.isCheck, String(j.known?.combination_trail ?? ""), BATCH));
+      .find((j) => (t.reads === "form" ? /^edition:IMM 5257:/.test(j.combination) : j.combination === COMBINATION) && j.template === (t.isCheck ? t.step.check : t.step.template) && j.job_id === jobIdFor(t.step.jobBase, t.isCheck, String(j.known?.combination_trail ?? j.known?.form_edition ?? ""), BATCH));
     if (!job) { console.log(`  ${t.row} ${t.label}: no job file yet (run with --write on a copy after Reset to the six)`); continue; }
     const c = costsOf(job);
     worst += c.worst_usd; usual += c.usual_usd;
