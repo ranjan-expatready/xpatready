@@ -44,7 +44,7 @@ L-SA3 · L-SA6–L-SA11 · G5 · the P-236 rename · C11 · E1–E6 · design-on
 
 ## To archive (P-283)
 * **Nested sessions move with their parent in the sidebar** (18:35 UTC: moving the previous Lead into "To archive" took its 11 lanes with it, several still working; moved back to Ungrouped at once). So: move a Lead chat only when none of its lanes is still working; until then archive finished lanes one by one. A nested session cannot be moved alone, so the tech lead archives finished ones directly: the Mac paid runner was archived 18:50 UTC (copy clean, PRs merged; a fresh runner per Go).
-* Cloud (founder archives on claude.ai/code): the old forms L5 Track B, forms L8 and qa lanes (replaced by the QA-162, QA-163, qa-batch sessions); forms L4 Track A (closed, no PR); each one-row session started today once its PR has merged (check its hand-over first). qa-batch ends after golden journey 2; qa-batch-2 scores tonight's batches until about 01:00 UTC.
+* Cloud: the founder archives a parent (the previous Lead) once all its lanes are done; the tech lead says so in chat in one line (P-283 as amended 3 Nov).
 
 ## Waiting for the founder
 1. **Open a new chat and type `/lead`** (this hand-over).
