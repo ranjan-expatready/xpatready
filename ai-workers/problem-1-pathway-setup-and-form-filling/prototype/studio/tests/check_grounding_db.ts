@@ -60,8 +60,13 @@ const sql = (q: string) => execFileSync(PSQL, [`postgresql://xr_studio@127.0.0.1
 
   // ------------------------------------------------------------ finding 2: review differences and authorship
   const id = row.id;
+  // C3.6 (P-158): a new type named here waits as a library proposal (202); a second person accepts it, then the line goes in.
   r = await call("POST", `/combinations/${id}/requirements`, { newTypeName: "Passport", attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant", providedBy: "client", sourceQuote: "test fixture" });
-  ok("a base document requirement is added to the draft", r.status === 201, r.body?.lineageKey);
+  if (r.status === 202) {
+    const passportKey = (await call("POST", "/review/proposals/decide", { ids: [r.body.proposalId], action: "accept" }, "user-B")).body?.items?.[0]?.landedAs;
+    r = await call("POST", `/combinations/${id}/requirements`, { documentTypeKey: passportKey, attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant", providedBy: "client", sourceQuote: "test fixture" });
+  }
+  ok("a base document requirement is added to the draft", r.status === 201, r.body?.lineageKey ?? r.body?.detail);
   r = await call("POST", `/combinations/${id}/requirements`, { newTypeName: "Bank statement", attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant" }, "user-C");
   ok("server permission: the content reviewer cannot edit the draft", r.status === 403, r.body.message);
   // Screen 02 FIX (Lead re-check item 2): the new document type is approved by a second person before any release.
