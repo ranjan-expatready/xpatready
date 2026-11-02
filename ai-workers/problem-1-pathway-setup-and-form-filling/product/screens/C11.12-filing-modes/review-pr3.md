@@ -64,3 +64,27 @@ A real screen reader (names checked through the DOM and axe only). Real browser 
 **Journey score: 8 / 10** (passes; see the journey report).
 
 **Verdict: Block.** Fix M1 (Fix item and missing list fed with the filing problems, with a test), M2 (co-filing only on the Sponsor line; the Representative fixed "Files nothing") and M3 (phone editing footer and Add-person row wrap, with the 375 check run in editing). Then re-review the new head. Minors m1–m7 can go in the PR body.
+
+## Round 2 (re-check on `806e7f11`; delta `636237ba..806e7f11`, PR 3's own files only)
+I left out the files that came from main through the merge of `2a8c1087`, such as the Fill-from-the-guide mode labels. I rebuilt the web app and used fresh copies on :4442, :4445 and :4446.
+
+| Round 1 | Round 2 | Evidence |
+|---|---|---|
+| M1 people step shows Done while its filing line blocks | **Closed** | `programs.ts:166` adds `filingProblems` to `draftProblems`; released snapshots are not re-judged, as BR-7 says pinned releases are kept. `check_c1112_prepare_api` passed 30/30, including "n3 pass/fail" through `GET …/summary`. Live on `wp.family` after I cleared the child's mode on the screen: "Step 2, To do · Fix 1 problem". The link lands on Forms with focus on `people:card`. |
+| M2 Representative could file the sponsorship | **Closed** | `FilingCell` offers co-filing only on the `sponsor` line; any other never-applicant role reads fixed "Files nothing" with no select. Live: an added Representative on Visitor visa has no Filing select. On `fs.outside` the Sponsor select is "Files nothing / Files the sponsorship…". `people.ts:44` refuses co-filing on any role other than the sponsor ("…only the sponsor files the sponsorship."). `check_c1112_modes` passed 42/42 with the new fail case. |
+| M3 Save off-screen when editing on a phone | **Closed** | The Add-person row and the Cancel/Save group wrap (`min-w-0`, `flex-wrap`, `max-w-full`), and long labels wrap (`overflow-wrap:anywhere`). Live on `fs.outside` editing at 375 px: overflow 0, axe clean. The browser check passed 17/17, including "375, editing: Save whole on screen" and the 1024 px 60-character label. |
+| m2 the Save footnote | Closed | Now reads "every applicant role needs a filing before release". |
+| m4 stale comment | Closed | `studio.ts:383` |
+| m7 preview split flag | Closed | `filing-modes.ts:126` uses the case's split rule (from `2a8c1087`). |
+| m1, m3, m5, m6 | Open, Minor | Accepted in the PR body. m5 is to be stated there as Sample. |
+
+**New, Minor:**
+- **r2-n1.** `checkPeople` now refuses `co_files` on a non-sponsor role for non-strict callers too, such as the sample loader and New combination. BR-3 says those callers drop a mode rather than refuse it. No stored line has one (the screen never merged with the old choice), so this is only a note for the PR body.
+- **r2-n2.** The role key `"sponsor"` is now named in code in two places: the screen and `people.ts`. That is acceptable while the shared library has no "may co-file" marker, and is worth a line in the PR body.
+- **r2-n3.** While editing, a newly added Representative reads "Answered by: Themselves" until it is saved, then "The firm". This predates PR 3.
+
+The screenshots and the `05-375-editing.png` file rewritten by my run of the browser check were restored, so the tree is clean.
+
+**Journey score round 2: 9.5 / 10.** Next step obvious rises to 1 (the Fix item lands on the card), correct data to 1 (only the sponsor co-files), and accessibility and screen sizes to 1 (phone editing fits). Plain words stays at ½ (m3). Visual quality is 1, unchanged.
+
+**Verdict: Approve** for `806e7f11`. No Blocker or Major is open. Minors m1, m3, m5, m6 and r2-n1 to r2-n3 go in the PR body.
