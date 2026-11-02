@@ -12,6 +12,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { useCostGate } from "@/components/cost-warning";
 import { COST_WORDS } from "../../../contracts/cost-check";
+/** C11.8 (review m3): the live-off notice under its title "Live AI is off on this copy": what cannot start and the free choice. */
+export const LIVE_OFF_NEXT = "No paid AI call can start here. Choose Saved (US$0) to use the result of earlier real runs.";
 
 export type AiScope = { kind: "catalogue" | "program" | "combination" | "source"; ids: string[]; label?: string };
 const MODES = [
@@ -54,11 +56,14 @@ export function AiLaunchDialog({ scope, onClose, initialMode = "LIVE" }: { scope
     } finally { setBusy(false); }
   };
   const runnable = p ? p.totals.steps : 0;
+  // C11.8 (P-175, J2 step 10): on a copy without the live switch a live start that would call the model is not offered;
+  // the panel says so and what to use instead, as the server refuses it at the door (the plan's one rule, live.blocked).
+  const liveOff = !!p && mode === "LIVE" && p.live?.blocked === true;
   const groups = p ? Object.values(p.targets.reduce((m: any, t: any) => { (m[t.combinationId] ??= { label: t.combination, program: t.program, items: [] }).items.push(t); return m; }, {})) as any[] : [];
   return (
     // Screen 02 board view 2 (Draft setup): the team's right panel (P-48), the plan and its cost before any paid run (BR-3).
     <Panel open onOpenChange={(o) => !o && onClose()} title={scope.kind === "combination" ? "Draft setup" : "AI configuration"} description={p ? `${p.operation_label} · ${p.scope.label}` : scope.label ?? "Preparing the plan"}
-      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={start} busy={busy} disabled={!p || !runnable || plan.isFetching || !(Number(limit) >= 0)}><Sparkles /> {p ? `Start ${runnable} step${runnable === 1 ? "" : "s"}${p.totals.worst_usd ? `, up to US$${p.totals.worst_usd.toFixed(2)}` : ", US$0"}` : "Start"}</Button></>}>
+      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={start} busy={busy} disabled={!p || !runnable || liveOff || plan.isFetching || !(Number(limit) >= 0)}><Sparkles /> {p ? `Start ${runnable} step${runnable === 1 ? "" : "s"}${p.totals.worst_usd ? `, up to US$${p.totals.worst_usd.toFixed(2)}` : ", US$0"}` : "Start"}</Button></>}>
       <div className="space-y-4">
         <fieldset className="grid gap-2 md:grid-cols-2" aria-label="How the AI runs">
           {MODES.map(([k, l, d]) => (
@@ -69,6 +74,7 @@ export function AiLaunchDialog({ scope, onClose, initialMode = "LIVE" }: { scope
           ))}
         </fieldset>
         {p ? <p className="rounded-lg border border-border bg-surface px-3 py-2 text-sm" data-cost-line>{mode === "LIVE" ? <>Expected {p.totals.expected_usd === null ? "unknown" : `US$${p.totals.expected_usd.toFixed(2)}`} · worst case US${p.totals.worst_usd.toFixed(2)} (each form capped at US${p.per_run_cap_usd}; at most {p.max_paid_attempts_per_form} paid attempts per form, a retry included) · Spent so far US${p.ledger.committed_usd.toFixed(2)} of US${p.ledger.cap_usd.toFixed(2)}.</> : mode === "REPLAY" ? "Saved: no model call, US$0." : "Stub pass: no network, no cost, no AI content."}</p> : null}
+        {liveOff ? <Notice tone="warn" title="Live AI is off on this copy">{LIVE_OFF_NEXT}</Notice> : null}
         {p ? <p className="text-xs text-text-muted">{p.capability_note}</p> : null}
         {plan.isLoading ? <Spinner label="Working out what would run" /> : plan.isError ? <Notice tone="danger" title="The plan could not be made">{(plan.error as Error).message}</Notice> : p ? (
           <>
