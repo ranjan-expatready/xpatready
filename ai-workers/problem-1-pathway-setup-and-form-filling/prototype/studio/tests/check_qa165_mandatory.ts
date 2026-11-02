@@ -8,6 +8,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import fc from "fast-check";
 import { mandatoryOpen } from "../engine/runtime/mandatory.ts";
+import { openLines } from "../engine/runtime/open-lines.ts";
 import { solutionFile } from "../api/src/fill.ts";
 import type { BoxResult, Inventory } from "../engine/form-values.ts";
 import { recorder } from "./runtime/api.ts";
@@ -59,6 +60,18 @@ ok("pass: the release's own field list resolves inside the solution folder", !!s
 const sigInv: Inventory = { fields: [{ data_path: "form1[0].P[0].Signature[0].Sign[0]", caption: "Signature of applicant", required: true, ui: "signature" }, { data_path: "form1[0].P[0].Add[0]", caption: "Add", required: true, ui: "button" }, { data_path: "form1[0].P[0].Name[0]", caption: "Family name", required: true, ui: "textEdit" }] };
 const os = mandatoryOpen(sigInv, [], [], {});
 ok("fail: a signature box and a button are never listed; the text field is", os.length === 1 && os[0].box === "form1[0].P[0].Name[0]", os.map((x) => x.box));
+
+// The lines a person reads (engine/runtime/open-lines.ts, used by the forms card).
+const L = (box: string, label = "Sex", reason = "no question asks it yet", why = "nothing in this release fills it") => ({ box, label, reason, why });
+const dob = openLines(["Year", "Month", "Day"].map((p) => L(`form1[0].Page1[0].PersonalDetails[0].DOB${p}[0]`, "Date of birth", "needs an answer", "not answered yet (Client A)")));
+ok("pass: a date's year, month and day are one line, counting 3 form fields", dob.length === 1 && dob[0].n === 3 && dob[0].label === "Date of birth", dob);
+const passport = openLines([L("form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].TaiwanPIN[0]", "Question 1d. Have you taken a test?", "fill it in Adobe"), L("form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IsraelPassportIndicator[0]", "Question 1d. Have you taken a test?", "fill it in Adobe")]);
+ok("fail (Devin on #592): two fields that share words are two lines, each named by its field", passport.length === 2 && passport[0].label.endsWith("(form field: Taiwan PIN)") && passport[1].label.endsWith("(form field: Israel Passport Indicator)"), passport.map((x) => x.label));
+// IMM 0008's own paths: the principal's, the spouse's and a dependant's Sex (prototype/p1/inventory/imm0008e.inventory.json).
+const sexes = openLines(["PersonalDetails[0]", "depPrime[0].personalDetails[0]", "dependants[0].personalDetails[0]"].map((b) => L(`form1[0].Page1[0].${b}.q3-4-5-6[0].Sex[0].Sex[0]`)));
+ok("fail (Devin on #592): one field per person (IMM 0008) gives lines that each name their part of the form, never the same words twice", sexes.length === 3 && new Set(sexes.map((x) => x.label)).size === 3 && sexes.every((x) => !/form1\[|\[0\]/.test(x.label)), sexes.map((x) => x.label));
+const deps = openLines([0, 1].map((i) => L(`form1[0].Page1[0].dependants[${i}].personalDetails[0].q3-4-5-6[0].Sex[0].Sex[0]`)));
+ok("pass: the same block repeated is numbered in words (Dependant 1, Dependant 2)", deps.length === 2 && /Dependant 1\)$/.test(deps[0].label) && /Dependant 2\)$/.test(deps[1].label), deps.map((x) => x.label));
 
 // Properties over generated field lists.
 const field = fc.record({ name: fc.stringMatching(/^[A-Z][a-z]{2,8}$/), required: fc.boolean(), written: fc.boolean(), mapped: fc.constantFrom("none", "mapped", "not_a_fact", "unresolved") });

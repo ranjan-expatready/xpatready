@@ -10,28 +10,12 @@ import { Button, Notice, Pill } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { inSentence, LOCK_KINDS, notReady, ONLINE_LATER_WAVE, type CaseForm, type CaseOnlineForm, type FormCopy } from "../../../contracts/runtime";
 import { noRetryOnRefusal } from "./questionnaire";
+import { openLines } from "../../../engine/runtime/open-lines";
 
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 const busy = (c: FormCopy) => c.status === "QUEUED" || c.status === "RUNNING";
 
 /** The forms of one case. Under the questionnaire view's query key, so any answer change refreshes it too. */
-/** QA-165 part 2: one line per field the person sees. Only the parts of one question are merged: boxes under the same
- *  parent whose names differ by a date part (a date's year, month and day are one "Date of birth"); Devin on #592:
- *  never two fields that merely share words (IMM 5257's Taiwan PIN and Israel passport boxes carry the same wrong
- *  caption). Lines that still share words are told apart by the field's own name, in words ("Taiwan PIN"). */
-const DATE_PART = /(Year|Month|Day|YYYY|MM|DD)(\[\d+\])?$/;
-const fieldName = (box: string) => (box.split(".").pop() ?? "").replace(/\[\d+\]$/, "").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2");
-const openLines = (open: { box: string; label: string; reason: string; why: string }[]) => {
-  const by = new Map<string, { key: string; box: string; label: string; reason: string; why: string; n: number }>();
-  for (const o of open) {
-    const parts = o.box.split("."), leaf = (parts.pop() ?? "").replace(/\[\d+\]$/, "").replace(DATE_PART, "");
-    const k = `${parts.join(".")}|${leaf}|${o.label}|${o.reason}|${o.why}`;
-    const x = by.get(k); if (x) x.n++; else by.set(k, { key: k, box: o.box, label: o.label, reason: o.reason, why: o.why, n: 1 });
-  }
-  const lines = [...by.values()], seen = new Map<string, number>();
-  for (const l of lines) seen.set(l.label, (seen.get(l.label) ?? 0) + 1);
-  return lines.map((l) => (seen.get(l.label)! > 1 ? { ...l, label: `${l.label} (form field: ${fieldName(l.box)})` } : l));
-};
 
 export function FormsPanel({ caseId }: { caseId: string }) {
   const actor = useActorId();
