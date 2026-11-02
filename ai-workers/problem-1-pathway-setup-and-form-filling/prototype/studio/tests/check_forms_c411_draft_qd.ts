@@ -186,7 +186,7 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
     ok("C4.11 C fail: the readings give different deciding answers: Check, never Ready", ag2 === "differ" && cf2 === "check", { ag2, cf2 });
     const details = sql(`select detail->>'details' from drafting_job where batch_id='${r.body.runId}' and kind='qd_conditions'`);
     ok("C4.11 C fail (review M1): a free-text deciding question cannot decide by one answer: left out with the reason, never Ready", /free-text|text form/.test(details) && item(ct3.fact, ctext.fact)[0] === "", details.split("\n").find((l) => /text form/.test(l)));
-    ok("C4.11 C fail: a question this combination does not ask, and a sentence not in the guide, are left out with the reason (never guessed)", /not exactly one question/.test(details) && /not in Guide 5487/.test(details) && sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition'`) === "2", c5?.message);
+    ok("C4.11 C fail: a question this combination does not ask, and a sentence not in the guide, are left out with the reason (never guessed)", /is not a question this combination asks|could be \d+ questions of this person/.test(details) && /not in Guide 5487/.test(details) && sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition'`) === "2", c5?.message);
     ok("C4.11 C pass: each condition names the question it hides, quotes the guide, and reads the deciding question", sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition' and origin='ai' and source->>'quote' is not null and payload->'condition'->'tree'->>'field' in ('${cd1.fact}','${cd2.fact}') and payload->'condition'->>'sentence' like '"%" is asked only when %'`) === "2");
     r = await run("replay");
     ok("C4.11 C fail: drafting again puts no condition on the queue twice", sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition'`) === "2" && /2 already waiting/.test(step(r, "qd_conditions")?.message ?? ""), step(r, "qd_conditions")?.message);
@@ -343,8 +343,10 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
     {
       const { roundBudgetUsd, sizedBudgetUsd, worstRoundUsd } = await import("../api/src/rounds.ts");
       const { PQR_AI } = await import("../api/src/pqr-drafts.ts"), { CONDITIONS_AI } = await import("../api/src/draft-qd.ts");
-      const g = (await call("POST", `/combinations/${wp}/pqr-picks/plan`, { mode: "replay" })).body.guide.file as string;
-      const len = String(JSON.parse(readFileSync(join(SOLUTION, g), "utf8")).text ?? "").length, ins = [{ file: g }];
+      const gp = (await call("POST", `/combinations/${wp}/pqr-picks/plan`, { mode: "replay" })).body.guide, g = gp.file as string, ql = gp.questions as string | null;
+      // QA-162: a Live round reads the guide and the combination's question list, so both count in its worst case.
+      ok("C4.11 m1 pass (QA-162): the plan names the question list a Live round reads beside the guide", typeof ql === "string" && /^prototype\/p2\/question-lists\/wp\.family-[0-9a-f]{12}\.questions\.json$/.test(ql), ql);
+      const len = String(JSON.parse(readFileSync(join(SOLUTION, g), "utf8")).text ?? "").length + (ql ? readFileSync(join(SOLUTION, ql), "utf8").length : 0), ins = [{ file: g }, ...(ql ? [{ file: ql }] : [])];
       const sum = [CONDITIONS_AI, PQR_AI].reduce((n, st) => n + roundBudgetUsd(st, false, ins, len) + roundBudgetUsd(st, true, ins, len), 0);
       const p5 = (await plan("live")).body.totals.worst_usd;
       ok("C4.11 m1 pass: Live's stated worst case is the sum of its four rounds' launcher budgets", Math.abs(p5 - Math.round(sum * 100) / 100) < 0.011, { p5, sum });

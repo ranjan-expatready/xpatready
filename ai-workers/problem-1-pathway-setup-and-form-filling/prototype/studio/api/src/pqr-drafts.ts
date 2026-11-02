@@ -153,7 +153,7 @@ export class PqrDrafts {
     const note = mode === "rules" ? "No AI: the rules propose the facts this combination's rules read. Each pick goes to To review for a person to accept or remove."
       : mode === "replay" ? "Saved: both AI rounds of one earlier Live run for this exact guide and prompt, replayed through the same steps (US$0)."
       : "Two AI rounds read the guide; a pick is Ready only when both make it, with its sentence in the guide.";
-    return { mode, combination: { id: c.id, label: c.label }, guide: g ? { code: g.code, title: g.title, file: g.input?.file ?? null } : null, steps: mode === "rules" ? STEPS.rules : STEPS.ai, candidates,
+    return { mode, combination: { id: c.id, label: c.label }, guide: g ? { code: g.code, title: g.title, file: g.input?.file ?? null, questions: g.questions?.file ?? null } : null, steps: mode === "rules" ? STEPS.rules : STEPS.ai, candidates,
       totals: { worst_usd: worst, remaining_usd: remaining }, note, live: { approved: aiLive(), why: aiLive() ? null : LIVE_WAITING }, saved,
       // Break B4: the Saved result looked at is part of the plan, so a run never replays another one than the person saw.
       plan_sha256: sha(JSON.stringify({ id: c.id, mode, guide: g?.input?.sha256 ?? null, worst, candidates, ...(mode === "replay" ? { saved: saved?.files ?? [] } : {}) })) };
