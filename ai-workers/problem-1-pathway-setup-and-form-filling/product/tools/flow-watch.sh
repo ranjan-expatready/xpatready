@@ -46,8 +46,8 @@ runs = json.loads(gh("run", "list", "--limit", "100", "--json", "databaseId,stat
 queued = [r for r in runs if r["status"] == "queued"]
 (alarm if len(queued) > 8 else ok)(f"{len(queued)} CI runs queued (GitHub free plan: 20 machines at once, 4 per run)")
 open_heads = {p["headRefName"] for p in prs}
-waste = [r for r in runs if r["status"] != "completed" and (r["headBranch"].startswith("lead/") or (r["headBranch"].startswith("mergify/") and r["headBranch"] not in open_heads))]
-(alarm if waste else ok)(f"{len(waste)} CI runs on records branches or closed queue drafts" + (": cancel " + " ".join(str(r["databaseId"]) for r in waste) if waste else ""))
+waste = [r for r in runs if r["status"] != "completed" and r["headBranch"] != "main" and (r["headBranch"].startswith("lead/") or r["headBranch"] not in open_heads)]
+(alarm if waste else ok)(f"{len(waste)} CI runs on records branches or branches with no open PR" + (": cancel " + " ".join(str(r["databaseId"]) for r in waste) if waste else ""))
 
 # 3. qa (P-250): approved PRs with no qa verdict comment.
 for p in approved:
