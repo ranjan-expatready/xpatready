@@ -1,53 +1,40 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-01 19:05 UTC (overnight Lead hand-over to a fresh Lead, founder's ask) · milestone: **M2 — Super Admin configuration**, plus the Visitor visa M3 path · how we work: **`WAY-OF-WORKING.md` (lean model, P-224)** · row owners: top of `BACKLOG.md`
+updated: 2026-11-02 02:55 UTC (Lead of the 1–2 Nov night, still running; this page is the safety net, not a hand-over) · milestone: **M2 — Super Admin configuration**, plus the Visitor visa M3 path · how we work: `WAY-OF-WORKING.md` (lean model, P-224) · row owners: top of `BACKLOG.md` · night report: `reports/night-2026-11-01-02.md`
 
-## Start here (fresh `/lead`)
-1. Founder's first message: "Resume from STATE. Run builders and qa in the cloud, one fresh session per row. Process frozen until 15 Nov."
-2. Read `WAY-OF-WORKING.md` (merged in #347), then this page. Run `/usage` in the first hour to see where the plan goes (token analysis: session notes, factory-recommendation-2026-11-01).
-3. Start builders **in the cloud**, one fresh session per row, under yourself; size by the measures (add while batch failures < 10% and approved→merged < 1 h). One qa in the cloud. The Mac runs only the Lead and the :4400 demo.
-4. Watch with event monitors and one 20-minute check; no minute-level sweeps. Hand over at about 250k tokens.
+## Goals
+* **Today (2 Nov):** qa scores the 11 built rows; #356, #398, #401 merge; full test run green again; paid replay trials decided (M2 critical path).
+* **This week:** Visitor visa configured end to end (target 3 Nov: **at risk**, 177 release problems need AI drafting); Visitor visa case to application ready (5 Nov); M2 for six combinations (6 Nov, **at risk**).
+* **M2 gate:** the content publisher walk on the six combinations (qa).
 
-## Progress (from `progress.sh` on main, 1 Nov 19:00 UTC; qa has not yet scored tonight's merges)
-M2 30/56 Works · R1 6/8 · M3 1/16. qa-2's #353 (queued) moves C1.5, C3.1, C3.13, C11.16 to Works. Merged tonight and awaiting qa: C3.12 (#313), C3.6 (#329), C6.11 (#330), C11.1 (#339), C3.1 (#316), C3.13 (#318), C11.16 (#326).
+## Progress (`tools/progress.sh` on main 59d2da74, 02:35 UTC)
+M2 **34/56 Works** · 8 built, awaiting qa · 14 partial. R1 6/8 (C4.4 built; C7.2 needs the Mac Adobe run). M3 1/16 · 2 built (C6.4, C6.12) · 3 partial · 10 not built. 24 PRs merged overnight; batch failures 9% (0 since #382); approved→merged median 51 min; AI spend US$0; weekly plan 72% (resets 5 Nov 23:00 UTC).
 
-## Open PRs and their next step (every branch pushed; Handover comments on each)
-| PR | Row | State | Next step |
-|---|---|---|---|
-| #353 | qa after-merge | queued | merges itself |
-| #340 | C11.10 | queued | merges itself |
-| #349 | C2.12 | approved | re-label once its GitHub check is green |
-| #319 | C4.11 part 1 | approved; main merged in | check green → re-label; then parts 2a/2b/3 (local commits listed in its Handover) as one PR; part 3 = option (a) on #319 |
-| #325 | C6.4 (+ holders fix) | needs reviewer on current head | reviewer → label. Carries old #283 (C6.12 filings and fees) |
-| #356 | C6.12 /prepare + C11.6 | draft, approved r2, **migration read: OK**, DIRTY | after #325 merges: merge main, run-suites --changed, ready, label |
-| #358 | C7.3 answer sheet | draft, approved r3, **migration read: OK** | merges **after #356** (one migration at a time) |
-| #357 | C7.7 part 1 | draft, 15/18 | build the two agreed fixes: IMM 5476 representative block from the firm record; `person.has_children` derived + `derive_inverse` in `p5/transforms.ts`; 18th check waits on C7.6 readiness |
-| #350 | C7.6 part 1 readiness engine | open | review → label; #357's last check needs it |
-| #336 | C4.4 parts 1+2 (carries #321) | approved, DIRTY | merge main (likely `api/src/main.ts` module list), checks, label; then C6.9 |
-| #331 | C11.9 | round-3 fixes, no Approve yet | reviewer → label |
-| #351 | C3.3 | open | review → label |
-| #344 | C11.13 | open | review → label |
-| #345 | C3.4 (part, draft) | draft | finish the row (one PR) |
-| #348 | C4.1 (replaces #195) | draft | reviewer → label (section order already on main via #284) |
-| #347 | lean rules (P-224) | **merged** | — |
+## Running sessions (cloud; they answer in PR comments, they cannot message the Lead: 401)
+| Session | Now | Next |
+|---|---|---|
+| vv-runtime ("runtime: Visitor visa path…") | #356 queued (migration slot) | #358 C7.3 (migration) → #357 C7.7 part 1, both rebased in that order |
+| runtime-2 ("runtime: #336…") | #391 C6.9 part 1 approved by the reviewer, waits for the slot | parts 2 and 3 per the 5 conditions on #391 (`FAIL_BEATS_MISSING = false` until the founder's Q3) |
+| forms-1 ("forms: #319…") | #401 C4.11 part 4c Minors, approved | next forms row; paid replay trials only with a Lead "Go" in the PR (P-223 (3), cap US$20) |
+| screens-1 ("screens: #331…") | #398 C11.16 red-main fix, approved, queued | next screens row (F1/F5 open items) |
+| qa-night ("qa: after-merge…") | requested 02:45 | scores every `qa/built` row plus C11.3, C11.7; QA-73, QA-145 retests |
 
-## Visitor visa path order
-C6.11 ✓ merged → C6.12 + C6.4 (#325) → /prepare + C11.6 (#356) → C7.3 (#358) · C7.6 (#350) → C7.7 (#357) → C8.1 signing → C8.2 filing record → C9.2 → C10.2 demo story. Parallel: C6.5 (reads documents; after #325), C6.9 (eligibility; B3c's next).
+## Migration order (one in flight)
+#356 (`20261102030000`, SQL read OK) → #358 → #357 → #391 (C6.9). The Lead reads each SQL before its label.
 
-## Known issues to fix first
-* **`api/src/main.ts` module list** conflicts whenever two PRs add a controller (4 conflicts on 1 Nov). Fix: each feature registers its module in its own file (or a generated list) so PRs stop touching one line.
-* **GitHub job slots:** every PR now runs 4 shards; a free account runs about 20 jobs at once, so batches can wait behind PR checks. With fewer builders it is fine; if not, run PR checks on 2 shards.
-* **Schema drift on main** (`DROP canonical_field_name`), raised in #356's Questions.
-* `check_forms_c31_formats.ts` is quarantined (#333): take it out of `QUARANTINE` now that #316 is merged.
-* **Batch b489cc2d79 (#353 + #340) failed** on `check_forms_c36_rule_facts_browser.cjs` "after Propose, focus lands on the row's To review link" (C3.6, merged in #329): either #340 (C11.10) changes that page's focus, or the check is timing-sensitive. Mergify is splitting the batch; if #340 alone fails it, #340's owner fixes it; if it fails on main too, quarantine with a fix row.
-* Measure batch failures for 24 h after #337 (was 37% of finished batches since 31 Oct).
+## Fix first
+* **Full run red** (run 41365074483 on b1a662cd): c44 (#395 merged) and c119 (#394 merged) are fixed; c1116 fix #398 is queued. After it merges, run `gh workflow run nightly.yml --ref main` and judge by its conclusion. GitHub skipped the 21:00 UTC schedule on 1 Nov.
+* Still quarantined: `check_forms_c36_rule_facts_browser.cjs` (C3.6 focus check; its fix row is open).
 
-## Decisions waiting for the founder
-* Sonnet 5.5 trial (two builders): both reached a PR; slower to a finished PR than Opus builders; small sample — decide after more rows.
-* Moving the nightly full run to GitHub (free now).
+## Decisions waiting for the founder (detail in the night report §7)
+1. Paid replay trials for the 8 M2 rows that need a recorded live answer (P-223 (3), cap US$20). Recommend yes.
+2. C6.9 concept (approved overnight under P-223 (4)): Q1 disclaimer on the release (amends P-77 (2)), Q2 any staff may override or review in M3, Q3 fail vs missing (recommend "Not eligible, also needs …").
+3. #357 m3: a derived Yes over a client's No shows as a check to the officer (recommend yes). m4 (step-children): the Lead cites canada.ca.
+4. Move the full test run off GitHub's unreliable schedule (to GitHub machines or a Lead dispatch).
+5. Permission to remove two stale 31 Oct copies (their PRs #151, #165 merged).
 
-## Resources (1 Nov 19:00 UTC)
-Disk 11 GB free (alarm under 10 GB; 1.9 GB of old snapshots moved to `~/Archive`); weekly plan about 64% (resets 5 Nov). Repository is public; Mergify Open Source plan; 3 batches at once (#341); every PR runs its suites on GitHub (#337).
+## Follow-up rows to shape (Lead)
+QA-145 part 2 → forms (checks that write under `p1/inventory`, `p2/jobs`) · C11.3 AI "did you mean" → forms after X6 · C11.12 filing modes (P-135) → runtime (M3-0, migration, board) · contract migration dropping `filing_item.form_key` (after #356) · the stray `qa/built/C4.11-part4a.md` goes with C4.11's re-score · re-check the VV-R01 quotes on canada.ca (C6.9 gate labels stay Sample).
 
-## Lessons of the night (detail: the session notes folder, files overnight-lead-log and factory-recommendation-2026-11-01)
-Verify numbers before advising (a fresh verifier found 5 wrong claims) · archive sessions by exact name, never by position · a long, often-woken Lead session is the biggest token sink · the queue, not building, was the bottleneck (81–85% of PR time) · builders run in the cloud, never on the Mac.
+## Lessons of the night (detail: night report §8)
+One owner per table · tooling bugs look like flaky tests (check `isolated.sh` first) · read the night's DECISIONS rows before the first brief · start qa before the founder leaves (no session starts over Remote Control) · builders answer in PR comments.
