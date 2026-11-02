@@ -135,7 +135,7 @@ const rowOf = (p: Page, form: RegExp, attempt?: number) => p.locator("main table
     await p.getByRole("menuitem", { name: /Re-read with AI/ }).click();
     const panel = p.getByRole("dialog");
     await panel.getByText(/Draft field maps/).first().waitFor({ timeout: 30_000 });
-    await panel.getByRole("radio", { name: /Live AI/ }).check();
+    await panel.getByRole("radio", { name: /^Live/ }).check();
     await panel.locator("tbody tr").filter({ hasText: "IMM 1344" }).first().waitFor({ timeout: 30_000 });
     const first = await panel.locator("tbody tr").filter({ hasText: "IMM 1344" }).first().innerText();
     ok("C3.3 plan: asked for live AI on IMM 1344, the plan first uses its saved AI answer (no model call, US$0)", /saved/i.test(first) && /no cost|US\$0/.test(first) && !/~US\$/.test(first), first);
