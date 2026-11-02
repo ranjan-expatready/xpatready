@@ -135,7 +135,7 @@ const releases = () => Number(sql("select count(*) from config_release r join co
   const d4Before = await d4("agent", OFFICER);
   await call("POST", `/runtime/cases/${caseId}/people`, { role: "child", displayName: "Sample Child P" }, OFFICER);
   const d4After = await d4("agent", OFFICER), d4Client = await d4("sqr", CLIENT);
-  ok("D4 (P-229 (3), pass and fail): a No that a child on the case overrides is a check on the principal in the officer's case view; none before the child, none in the client's view", said.status < 300 && d4Before.length === 0 && d4After.length === 1 && d4After[0].subjectId === principalId && /answered No to "has any children"/.test(d4After[0].message) && d4Client.length === 0, { said: said.status, before: d4Before.length, after: d4After.length, client: d4Client.length });
+  ok("D4 (P-229 (3), pass and fail): a No that a child on the case overrides is a check on the principal in the officer's case view; none before the child, none in the client's view", said.status < 300 && d4Before.length === 0 && d4After.length === 1 && d4After[0].subjectId === principalId && /answered No to "Whether the person has any children[^"]*", but a child is on this case/.test(d4After[0].message) && d4Client.length === 0, { said: said.status, before: d4Before.length, after: d4After.length, client: d4Client.length });
   const afterChild = await asksChildren();
   ok("C7.7 (review m1, pass and fail): \"has any children\" is asked with no child on the case, and not asked once the case holds a child", before === true && afterChild === false, { before, afterChild });
   const agentRep = (await qsOf("agent", OFFICER)).flatMap((x) => x.questions).filter((q) => q.subjectId === "representative");

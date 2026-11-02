@@ -254,10 +254,14 @@ ok("fail: an answer of a removed row is never read", ![...removed.keys()].some((
 { const fam: Participant[] = [{ subjectId: "c0", role: "case", label: "The application", applies: true }, { subjectId: "p", role: "principal", label: "Client P", applies: true }, { subjectId: "k", role: "child", label: "K", applies: true }];
   const d4 = (people: Participant[], answers: Answer[], mode: "agent" | "sqr" = "agent") => caseView(S, people, answers, [], mode, TODAY).checks.filter((c) => c.id === `derived.${HAS_CHILDREN}.overrides_no`);
   const hit = d4(fam, [ans("p", HAS_CHILDREN, false)]);
-  ok("D4 pass: the client answered No, a child is on the case → one officer check on that person, naming the clash in words", hit.length === 1 && hit[0].subjectId === "p" && hit[0].fact === HAS_CHILDREN && /answered No to "has any children", but a child is on this case, so the forms say Yes/.test(hit[0].message), hit);
+  ok("D4 pass: the client answered No, a child is on the case → one officer check on that person, naming the clash in words", hit.length === 1 && hit[0].subjectId === "p" && hit[0].fact === HAS_CHILDREN && /answered No to "Whether the person has any children[^"]*", but a child is on this case, so the forms say Yes\. Check with the client before filing\. This note stays while the child is on the case/.test(hit[0].message), hit);
   ok("D4 fail: an answer of Yes, or no answer, gives no check (nothing is overridden)", d4(fam, [ans("p", HAS_CHILDREN, true)]).length === 0 && d4(fam, []).length === 0);
   ok("D4 fail: with no child on the case the No stands and no check fires", d4(fam.filter((x) => x.role !== "child"), [ans("p", HAS_CHILDREN, false)]).length === 0);
-  ok("D4 fail: the client's own questionnaire never shows the check (staff only)", d4(fam, [ans("p", HAS_CHILDREN, false)], "sqr").length === 0); }
+  ok("D4 fail: the client's own questionnaire never shows the check (staff only)", d4(fam, [ans("p", HAS_CHILDREN, false)], "sqr").length === 0);
+  // Review minor 2 on 0d5589a4: the spouse or partner too, each on their own tab.
+  const both = d4([...fam, { subjectId: "s", role: "spouse_or_partner", label: "Spouse S", applies: true }], [ans("p", HAS_CHILDREN, false), ans("s", HAS_CHILDREN, false)]);
+  ok("D4 pass: a spouse who answered No gets their own check too; one per person", both.length === 2 && new Set(both.map((c) => c.subjectId)).size === 2 && both.some((c) => c.subjectId === "s" && c.message.startsWith("Spouse S answered No")), both.map((c) => c.subjectId));
+  ok("D4 pass: the check is a warning (\"warn\", as every other check), never one that blocks filing", hit[0]?.severity === "warn" && hit[0]?.group !== "section_check"); }
 
 // ── QA-76: plain words for the officer: no plan or team word, and a role's name, never its key
 const noList = { ...S, field_maps: S.field_maps.map((m) => ({ ...m, entries: m.entries.map((e) => (e.fact === "case.visa_type" ? { ...e, transform: "code_list:t.visa_type" } : e)) })) } as unknown as Snapshot;
