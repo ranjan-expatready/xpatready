@@ -14,7 +14,7 @@ import { EXPERIMENT_CAP_USD, LABEL, LEDGER_DIR, MAX_ATTEMPTS, PARTS_DIR, RUN_CAP
 import { canonical } from "../../../contracts/rules.ts";
 import { costUsd, SpendLedger } from "../../../p2/ledger.ts";
 import { effective, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
-import { assembleMerged, flagNearDuplicates, partOutputTokens, planDraft, type DraftPlan, type Prior } from "../../engine/parts.ts";
+import { assembleMerged, flagNearDuplicates, partOutputTokens, planDraft, wholeFormOutput, type DraftPlan, type Prior } from "../../engine/parts.ts";
 import { compareEditions } from "../../engine/programs.ts";
 import { pdfBoxFormats } from "../../engine/field-format.ts";
 import { checkedOutput, costBesideLimit, explainRun, failedOurCheck, isProviderLimit, sameDraftInputs, type DraftInputs, type FieldMapAnswer } from "../../engine/ai-run.ts";
@@ -73,11 +73,6 @@ export const launchArgs = (launcher: string, jobId: string, mode: "stub" | "live
   [launcher, "--job", jobId, `--${mode}`, ...approved, ...(mode === "live" && ov ? ["--override-id", ov.id, "--run-key", ov.run_key] : [])];
 const PROMPTS = join(PROTOTYPE, "p2", "prompts");
 const EDITION = /^IMM [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/;
-/** R-146 (2 Nov): a whole-form draft writes about 230 output tokens per form field (26 live runs), so a form of 240 fields
- *  or more needs about 55k+ of the 64k limit (IMM 1344's 233 fields used 58-64k; IMM 0008 and 5532 need about 72k). Those
- *  forms get 128k (Opus 5.5's limit; the runner streams) and a timeout for about 128k at ~140 tokens a second. */
-export const LARGE_FORM_FIELDS = 240;
-export const wholeFormOutput = (fields: number) => fields >= LARGE_FORM_FIELDS ? { max_output_tokens: 128000, timeout_ms: 1500000 } : { max_output_tokens: 64000, timeout_ms: 900000 };
 /** P-80: where the drafting guard can check an approval made in the product (p2/policy.ts approvedSourcesDirOk): this
  *  copy's own workspace folder, so a demo reset removes it with the database row and test copies never share one. */
 export const APPROVED_DIR = () => join(VAR("demo"), "approved-sources");
@@ -261,8 +256,8 @@ export class Sources {
     // v2 (23 Oct): the field naming rule in the prompt and the output schema (contracts/fact-key.ts), and the printed
     // edition read by the intake passed as a known fact (A6). v1 stays as the record of what earlier runs used.
     const invBytes = readFileSync(inv);
-    const fields = (JSON.parse(invBytes.toString("utf8")).fields ?? []).filter((f: { data_path?: string }) => f.data_path).length;
-    const out = wholeFormOutput(fields);
+    // Break m5: an inventory that is not JSON gets the 64k settings here; its read or draft fails later, as before.
+    const out = wholeFormOutput((() => { try { return JSON.parse(invBytes.toString("utf8")); } catch { return null; } })());
     const want = { job_id: jobId, kind: "field_map", combination: "studio", configuration_version: "studio-add-form", template: "field-map.v2.md", output_schema: "field-map-output.v2.schema.json",
       ...(printedEdition && EDITION.test(printedEdition) ? { known: { form_edition: printedEdition } } : {}),
       inputs: [{ file: a.inventoryFile, sha256: sha(invBytes) }],
