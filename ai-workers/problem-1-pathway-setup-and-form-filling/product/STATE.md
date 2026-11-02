@@ -4,7 +4,8 @@ updated: 2026-11-02 15:45 UTC by the tech lead, **handing over for tokens (P-276
 
 ## Start here (fresh `/lead` on the Mac)
 1. `bash product/tools/lane.sh whoami` → lead; read DECISIONS P-264…P-276 word for word, then this page and the lead skill.
-2. **Token plan (P-276):** at most 6 active builders; one check every 30 minutes (CronCreate); hand over again at about 250k tokens; spend at most about 12% of the weekly plan per day (`get_usage`), reported at each check; stop rules P-257 stand.
+2. **Token plan (P-276) and its research** (`design/token-efficiency-2026-11-02.md`, causes ranked with sources): first job, bring the founder the two decisions it names (qa per batch instead of every PR head; Sonnet for subagents and ordinary rows), one at a time with impact; apply the no-quality-loss items at once (events instead of a recurring prompt, one row per builder session, diff-only re-reviews, breaker only for money/schema/permissions/new screens).
+   **Token plan (P-276):** at most 6 active builders; one check every 30 minutes (CronCreate); hand over again at about 250k tokens; spend at most about 12% of the weekly plan per day (`get_usage`), reported at each check; stop rules P-257 stand.
 3. **Cloud lanes are not woken by the tech lead's messages** (2 Nov, the founder confirmed nothing was held): judge a lane by its pushes; when a lane sits idle with work left, give the founder a one-line paste per lane (works from the phone at claude.ai/code) or start a fresh session per row from a desktop-typed message.
 4. Each check: session list, `bash product/tools/flow-watch.sh` (exit code), merge batches, qa verdicts, rows reaching Works and the golden-journey score first (P-273/P-274 memory: outcome and UX are the tech lead's), merge counts second. Records merge directly only when no batch is checking; cancel CI only by explicit run id on a named branch (2 Nov incident).
 
