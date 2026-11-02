@@ -231,8 +231,9 @@ export function labelsOf(s: Snapshot, m: { entries: { data_path: string; caption
   const meaning = meaningsOf(s), at = new Map((inv?.fields ?? []).map((f, i) => [f.data_path ?? "", i] as const));
   const entries = [...m.entries].map((e, i) => ({ e, i })).sort((a, b) => (at.get(a.e.data_path) ?? 1e6 + a.i) - (at.get(b.e.data_path) ?? 1e6 + b.i)).map(({ e }) => e);
   const base = new Map(entries.map((e) => {
-    const c = (e.caption ?? "").trim().replace(/^\*\s*/, ""), w = e.fact ? (meaning.get(e.fact) ?? "").trim() : "";
-    const label = !c ? w || UNNAMED : !w || c.toLowerCase().includes(w.toLowerCase()) ? c : `${c} — ${w}`;
+    // Devin review of 53149ff8: the form's required marker ("* ") stays in front, so a required form field reads required.
+    const req = /^\s*\*/.test(e.caption ?? ""), c = (e.caption ?? "").trim().replace(/^\*\s*/, ""), w = e.fact ? (meaning.get(e.fact) ?? "").trim() : "";
+    const label = (req ? "* " : "") + (!c ? w || UNNAMED : !w || c.toLowerCase().includes(w.toLowerCase()) ? c : `${c} — ${w}`);
     return [e.data_path, typeof e.row === "number" ? `${label} (row ${e.row + 1})` : label];
   }));
   const alike = new Map<string, string[]>();

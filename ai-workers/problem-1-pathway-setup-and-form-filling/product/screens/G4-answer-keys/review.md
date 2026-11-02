@@ -348,3 +348,33 @@ This is a regression from eb0422a7.
 No Blocker. One Major.
 
 **Verdict: Block** (commit 917066dc). To fix: the Major above, with its fail line.
+
+## Head 53149ff8
+I read `git diff 917066dc 53149ff8`.
+- The heading guess (`sectionOf`) is gone.
+- `labelsOf` (`engine/answer-keys.ts`) gives every form field its printed caption plus the library field's meaning. Repeating rows add "(row n)", and look-alikes still left add "(n of m)" in the form's order.
+- The Expected editor and the run's lines use the same labels.
+- The lines' column reads "Rule" for a rule set.
+
+### What I ran
+In `/home/user/g4wt`, web rebuilt, on fresh copies (never :4400):
+- **`check_g4_answer_keys`:** **92/92** (:4451).
+- **`check_g4_tests_tab_browser`:** **54/54** (:4452).
+- Both now have no-duplicate-label lines.
+
+### Labels read myself (`GET …/boxes?form=IMM 5257`, 161 fields)
+- **Residential address:** reads "Street no. — Current residential (home) address" (and the same for Apt/Unit, City/Town, Country or Territory, Province/State, Postal code, District).
+- **Mailing address:** reads "Street no. — Current mailing address" (and the same for P.O. box, City/Town, …). The two sets are now distinct.
+- **Place of birth:** "City/Town — City or town of birth" and "Country or Territory — The country or territory where the person was born".
+- **Date of birth:** "YYYY / MM / DD — Date of birth".
+- **Phones:** "No. — Person's telephone number including country code (2 of 2)".
+- **No duplicates:** no two fields share a label and whose-fact. **My Major on 917066dc is fixed.**
+
+### Minor (Should), new
+- The spouse's fields on the principal's form read "Family name — Family name (surname) as shown on passport or travel document".
+- The editor shows whose fact each one reads ("the subject's spouse or partner"). A run line shows only the family person whose form it is, so a reader has only the printed caption ("Family name" vs "*Family name (as shown on your passport…)") to tell the spouse's name from the principal's.
+- Fix: add whose fact the field reads to a line's label when it is not the form's subject.
+
+No Blocker or Major is open.
+
+**Verdict: Approve** (commit 53149ff8)
