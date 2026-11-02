@@ -28,6 +28,17 @@ export const MAX_PART_FIELDS = 60;
 /** Output tokens a part may need: about 300 per form field (IMM 1295: 242 fields, 53–63 thousand), plus headroom. */
 export const partOutputTokens = (fields: number) => Math.min(64_000, 4_000 + 300 * fields);
 
+/** R-146 (2 Nov): a whole-form draft writes about 230 output tokens per form field (26 live runs), so a form of 240 fields
+ *  or more needs 55k+ of the 64k limit (IMM 1344's 233 fields used 58-64k; IMM 0008 and 5532 need about 72k). Those forms
+ *  get 128k (Opus 5.5's output limit; the runner streams) and a timeout for about 128k at ~140 tokens a second. Parts keep
+ *  partOutputTokens. Anything that is not an inventory with a list of fields counts 0 fields (break m5). */
+export const LARGE_FORM_FIELDS = 240;
+export function wholeFormOutput(inv: unknown): { fields: number; max_output_tokens: number; timeout_ms: number } {
+  const list = (inv as { fields?: unknown } | null)?.fields;
+  const fields = Array.isArray(list) ? list.filter((f) => typeof (f as InvField | null)?.data_path === "string" && (f as InvField).data_path).length : 0;
+  return fields >= LARGE_FORM_FIELDS ? { fields, max_output_tokens: 128_000, timeout_ms: 1_500_000 } : { fields, max_output_tokens: 64_000, timeout_ms: 900_000 };
+}
+
 /** The section group of a form field: the first two parts of its section ("Part1.CoSigner.CosignDetails" → "Part1.CoSigner"). */
 export const sectionOf = (f: InvField) => ((f.section ?? "").split(".").slice(0, 2).join(".") || String(f.data_path ?? "").split(".").slice(0, 2).join(".") || "form");
 
