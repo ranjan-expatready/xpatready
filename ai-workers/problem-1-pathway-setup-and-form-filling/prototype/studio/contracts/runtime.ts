@@ -201,6 +201,11 @@ export function newestReleases<T extends { combination_id: string; version: numb
  *  or confirmed with a problem (it would be written wrong); and a required repeating group with no entries unless
  *  "none apply" is confirmed for it (Lead, break M3), named by its section (fact "group:<section>"). */
 export type Readiness = { ready: boolean; missing: { fact: string; label: string; about: string; reason: "not answered" | "not confirmed" | "needs a fix" | "a check fired" }[] };
+/** QA-76: the role labels a part can carry when no person stands behind it ("The application", "The representative"),
+ *  written in the middle of a sentence ("About the representative", "for the representative"); a person's own name,
+ *  even one starting with "The", is kept as it is. */
+export const ROLE_PART_LABELS = new Set(["The application", "The representative"]);
+export const inSentence = (label: string) => (ROLE_PART_LABELS.has(label) ? label.replace(/^The /, "the ") : label);
 /** How a required repeating group with no entries is named where it blocks filing. */
 export const groupLabel = (title: string) => `Entries in "${title}": add them, or say none apply`;
 
