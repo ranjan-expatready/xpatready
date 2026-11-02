@@ -31,7 +31,8 @@ const Aliases = z.array(z.string().min(1).max(120)).max(20);
 
 /** The payload of each kind: only what a person accepts; ids the server owns are never typed by a producer. */
 export const ProposalPayload = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("field"), label: z.string().min(1).max(120), aliases: Aliases, meaning: z.string().min(3).max(500), valueType: z.string().max(40), subject: z.string().max(60).nullable(), formBox: z.object({ form: z.string(), edition: z.string(), box: z.string() }).nullable() }),
+  /** C3.6 (Lead, 2 Nov): a choice fact may carry its answer values; on accept they land as its answer list. */
+  z.object({ kind: z.literal("field"), label: z.string().min(1).max(120), aliases: Aliases, meaning: z.string().min(3).max(500), valueType: z.string().max(40), subject: z.string().max(60).nullable(), values: z.array(z.object({ code: z.string().regex(/^[a-z][a-z0-9_]{0,60}$/), label: z.string().min(1).max(200) }).strict()).min(2).max(400).optional(), formBox: z.object({ form: z.string(), edition: z.string(), box: z.string() }).nullable() }),
   /** Identity (Lead, 29 Oct): the set of value codes, order ignored. */
   z.object({ kind: z.literal("answer_list"), label: z.string().min(1).max(120), values: z.array(z.object({ code: z.string().regex(/^[a-z][a-z0-9_]{0,60}$/), label: z.string().min(1).max(200) }).strict()).min(1).max(400) }),
   /** Identity (Lead, 29 Oct): the name or a synonym. */

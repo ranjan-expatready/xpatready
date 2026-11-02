@@ -14,6 +14,7 @@ import { isItemLifecycle } from "./library-items.ts";
 import { ACTION_LABEL } from "../../contracts/lifecycle.ts";
 import { fillsView, releaseFills } from "./who-fills.ts";
 import { conditionView, COND_KIND, releaseCondition } from "./question-condition.ts";
+import { dropFieldList, releaseFieldList } from "./answer-values.ts";
 
 export const LIBRARY_KINDS = ["field", "section", "document_type", "check"] as const;
 export type LibraryKind = (typeof LIBRARY_KINDS)[number];
@@ -170,7 +171,9 @@ export async function withdrawChange(db: Db, actor: Actor, id: string, note?: st
     if (!done.count) throw problem(409, "Changed meanwhile", "Someone decided this at the same moment. Refresh to see it.");
     const maps = await tx.formFieldMap.updateMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: c.key, status: "DRAFT" }, data: { outcome: "unresolved", canonicalFieldKey: null, transform: null, person: null, reason: `The new field "${c.label ?? c.key}" was withdrawn: ${why}`.slice(0, 500), updatedBy: actor.id } });
     await tx.sectionQuestion.deleteMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: c.key, status: "DRAFT", version: 1 } });
+    const lists = await tx.canonicalField.findMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: c.key, status: "DRAFT" }, select: { answerListKey: true } });
     await tx.canonicalField.deleteMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: c.key, status: "DRAFT" } });
+    for (const x of lists) await dropFieldList(tx, c.workspaceId, x.answerListKey); // C3.6: its own draft list goes with it
     return { ...changeView((await tx.libraryChange.findUnique({ where: { id } }))!), form_fields_reopened: maps.count };
   });
 }
@@ -195,6 +198,8 @@ export async function publishLibraryChanges(tx: Prisma.TransactionClient, worksp
       continue;
     }
     if (c.action === "ADD") {
+      // C3.6 (break B1): a new field's draft answer list is released with the field it rides with.
+      if (c.kind === "field") for (const d of await tx.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: c.key, status: "DRAFT" }, select: { answerListKey: true } })) await releaseFieldList(tx, workspaceId, d.answerListKey);
       for (const d of rows.filter((r) => r.status === "DRAFT")) { if (d.supersedesId) await setStatus(tx, c.kind, d.supersedesId, "SUPERSEDED"); await setStatus(tx, c.kind, d.id, "PUBLISHED"); }
     } else {
       const from = c.action === "RETIRE" ? "PUBLISHED" : "RETIRED", to = c.action === "RETIRE" ? "RETIRED" : "PUBLISHED";

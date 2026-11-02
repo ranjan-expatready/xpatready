@@ -32,6 +32,36 @@ One owner per row and per shared file; never build another owner's rows. Under t
 | R4 | runtime | **An eligibility rule's own outcome** (P-230 (1)): a gate carries "when not met" (Not eligible or needs review) as data; the background gate is needs review | C6.9 tests cover both; copy says the representative reviews | P-230 |
 | L-doc | later | **Document rules fields** (P-230 (8)): copy kind, certified translation, validity window on document requirements (schema) | after the M2 gate | P-230 |
 
+## M3 wave after the weekly-plan reset (founder, 2 Nov: "After the reset"; start 5 Nov 23:00 UTC)
+C7.7 deliverables list (take over #357, part 1) · C8.1 signed scans and entered ticks · C8.2 filing record · C6.5 document reader (passport by rules first, then OCR through the STANDARDS §1 gate; P-256 brings "Fill this from my documents" with it) · C7.5 independent AI review (paid runs within P-225). Held rows (P-251) stay held. The tech lead shapes each row's "Done when" before the reset.
+
+## Finish the partials (P-231; shaped 2 Nov from qa's "Missing" notes on main; founder: "Yes, shape them")
+| # | Area | Item | Done when (beyond the standard) | Source |
+|---|---|---|---|---|
+| K10 | screens (screens-1) | **C11.10 open bugs** QA-120 ("Review and release1" seen again), QA-121, QA-129 | each bug's repro in qa/BUGS.md passes as a test; qa closes them | C11.10 |
+| K1 | screens (screens-1) | **C2.12: To review reads `?form=`** (today no form parameter is read in web/src to-review pages) | opening To review from a form's guided path shows only that form's items, with a clear "Show all"; reload keeps it | C2.12 |
+| K3 | screens (screens-1) | **C3.12: a "Published" date in the Forms list** | each form shows its published date (column at 1440, line under the title at 1024 and 400, no sideways scroll, axe clean) | C3.12 |
+| K4 | screens (screens-1) | **C4.1: section order per combination**: today "Move up or down" is disabled with "The order is set in the library section" (questionnaires.tsx:328, sources.tsx:30) | Move up and down work per combination, released with it, without changing the library order | C4.1, P-216 |
+| K11 | forms (forms-4, after S2) | **C11.15 Majors QA-101, QA-102, QA-103** (Start setup's form finder) | each Major's repro passes as a test at US$0 (fake launcher); qa closes them; Minors QA-78, 98, 105, 107, 110, 111 listed in the PR | C11.15 |
+| K2 | qa | **C3.3: a person's walk of a failed AI run that keeps its good entries**, and `check_ai_drafting.ts` run in an isolated copy (it rewrites saved runs under p2/runs) | walk recorded; the check's exit code 0; C3.3 re-scored | C3.3 |
+C4.5: "Fill this from my documents" moved to M3 with the reader C6.5 (P-256); qa re-scores C4.5 without it. Not ready now: C9.1 AI impact on a new edition (needs a paid run; after D3) · C10.1 rows 9–12 (wait for the Visitor visa release, D3) · C11.3 ("did you mean" after X6; sample names to re-check after D1 #407 merged; qa) · C11.9 retire and restore on Fields, Document types, Checks (goes through G-CORE, P-253).
+
+## Held by the product owner of SA-01B (P-251): nobody builds these until the ruling
+L-SA3 (C1 ready to file) · X3's guarded Add and L-SA11 (C2, P-252) · G5 (P-248 startable) · P-245 extension rows E1–E6 · L-SA6, L-SA7, L-SA8, L-SA9, L-SA10 (C2–C4, C7–C9) · the P-236 rename of C6.9 (C6) · C11 · no-row holds: SA1B-D100, SA1B-D72/D66, SA1B-D29, SA1B-D77, SA1B-D93, SA1B-D89/D107, SA1B-D75. Design-only (concept sent to the product owner before any build): pin per filing, a case with several combinations, an organisation subject for employer facts, household and filing scopes (L-SA4 waits for these), PartyRelationship "whose fact". Protect list B1–B19 of the product owner's report (section 5): keep as built.
+
+## Do now (P-251; no decision needed; checked on main 278eb3e9 by the SA-01B session)
+| # | Area | Item | Done when (beyond the standard) | Source |
+|---|---|---|---|---|
+| S1 | runtime | **Signature default**: `prisma/schema.prisma:532 signature @default(NONE)`; `engine/runtime/readiness.ts:118` treats NONE as no signature | new form lines default to needing a signature; a test proves an unset line is never filed unsigned | SA-1B-102 rule 3 |
+| S2 | forms | **Trial per edition**: `api/src/fill-case.ts:82-85` reads `evidence-lane/E1/<form>/STATUS.md` | the trial is recorded per edition and map version; a new edition shows "Checked copy, not for filing" until its own trial passes | SA-1B-174 |
+| S3 | runtime | **No hidden today**: `engine/render.ts:167 opts.today ?? new Date()`, `engine/runtime/filings.ts:26,134` | minimum age and the biometrics exemption use the case's application or target filing date, else today, stated on screen, as `case-checklist.ts:112-115` does | SA-1B-194 |
+| S4 | runtime | **Startable at case opening**: `api/src/runtime.ts:79-86` against `engine/programs.ts:48-77` | opening a case on a Not-ready row is refused with the missing items listed (separate from P-248, release) | SA-1B-90 |
+| S5 | Lead | **Withdrawn items out**: B12 starter to-dos (SA1B-D118); B4 and `domain/MASTERS.md` "warning lead times 90/30" (SA-1B-23) | each removed with a pointer to what withdrew it | SA1B-D118, SA-1B-23 |
+| S6 | evidence | **Scale numbers**: `evidence/scale-100/check_catalogue_scale.json` 111/393 against PRODUCT.md §7 105/371 | one set of numbers; note that 1,023 ms cached is over the spec's 300 ms read budget | SA-01B v2.1 |
+| S7 | screens | **Zod**: the `fail()` chains in `api/src/studio.ts`; `any` in `web/src/components/conditions.tsx:9` | validation by schema; no `any` there | STANDARDS |
+| S8 | evidence | **Re-trace SA-01B**: redo `product/history/TRACE-SA01B-2026-10-23.md` card by card against v2.1 (start from the product owner's report, Appendix A) | every v2.1 card traced to a C-row, a hold or "team only" | SA-01B v2.1 |
+| S9 | forms | **"For post"**: `contracts/forms.ts:91 { key: "for_post", label: "For the post applied for" }` | means the mailing address tagged "send post here" (spec fix 2 Nov) | SA-1B-11 |
+
 ## M2 additions from P-240 (2 Nov; founder "All 4 in M2"; after Demo first and the P-231 finishing order)
 | # | Area | Item | Done when (beyond the standard) | Source |
 |---|---|---|---|---|
@@ -39,6 +69,7 @@ One owner per row and per shared file; never build another owner's rows. Under t
 | G3 | screens | **Demo release path and mark** (C5.6) | Sample content releases only in the demo workspace, marked "Demo release" on every screen that shows the release, excluded from real-publish counts; refused elsewhere | P-240 |
 | G4 | forms | **Answer-key family editor and runner** (C5.7) | a made-up family with expected values (Sample until the expert signs) runs against a map, scoring table or rule set and shows pass or fail per value; the Visitor visa IMM 5257 map has one passing family | P-240; team C6 "not built" |
 | G2 | forms | **Release refused: no passing signed answer-key test** (C5.5), after G4 | maps, scoring tables and rule sets without a passing expert-signed test are refused; a combination without a test only warns (W7) | P-240; SA-1B-296, -181, -199 |
+| G-CORE | forms (concept by the tech lead first) | **One guarded change pipeline** (P-253): change sets, the fixed rules check (incl. rule conflict, redundancy, gap, loop), the where-used impact preview, review by risk, made-by marks; first used by the shared library's rename, merge and AI proposals. Hand-made create and co-pilot drafting stay held (P-251) | concept approved after an independent challenger; a person and the AI both go through the same API and rules; a test proves an AI change set with a duplicate or a rule conflict is refused; the preview lists every touched section, form, combination and open case; review tier follows the risk table | P-253 |
 | G5 | screens | **Release needs a form line** (C5.1, F8/X1a rework, P-248) | a combination with documents but no form line shows a warning while configured and Release is refused (API 409, plain words); a PDF, a portal-screen edition or an online-only form counts; existing tests expecting documents-only to release are updated | P-248; SA-1B-90 |
 
 ## Demo first (founder, 2 Nov): in order, ahead of Now
@@ -87,6 +118,7 @@ A feature is done when a person can do it on the demo (:4400) and qa has tested 
 ## Next (M2, P-173: no scope cut; in order per area)
 | # | Area | Item | Source |
 |---|---|---|---|
+| N-LIFT | evidence (Mac, cheap model, US$0) | **Count lift-readiness violations (P-249 (4))**: run the team's own gates from the newest `code/` capture of ERv2 (content neutrality, hard-coded region, vendor-SDK import ban, personal-data field classification) against our engine folders, read-only | a table of violations per gate and per engine folder, with file and line, committed under `reports/`; refactor rows sized from it | P-249 |
 | X1a | screens | **Bug: a combination with 0 forms and 0 documents can be submitted, signed off and approved** (the release rule in `studio.ts`; found by the runtime builder in #113 on three combinations) | c10.1-plan.md "Found while building" |
 | X9a | runtime | Sample: add one off-list file with a readable edition (IMM 5476, 2021 edition) so held-file approval can be shown; the validator's K1 message names a raw form-field path (`IMM_5707[0].page1[0]…`) instead of the field's label | c10.1-plan.md "Found while building" |
 | X8a | forms | `check_cost_warning_browser.cjs` waits 30 s for "Start live AI draft" to enable on the Forms tab (line 111) and timed out once on the Mac under load (#141, run 41185122197 attempt 1; passed on attempt 2): make the wait follow the page's own ready signal, not a fixed time | CI run 41185122197 |
@@ -96,7 +128,7 @@ A feature is done when a person can do it on the demo (:4400) and qa has tested 
 | X1c | runtime | **Sample rename:** "Applicant" → "Principal applicant" in `samples/programs.json`; "(travelling)" stays (P-209) | P-209, #171 |
 | X1d | tech lead | **`run-suites.sh` gives `check_w1_structure_browser.cjs` a fresh copy** locally, as CI does (qa #208: it fails "empty after Reset" on a used copy) | qa #208 |
 | X2 | screens | X2b: copying a form or document line from another combination, and adding or removing one across many (C1.5; concept `screens/X2-links-and-copy/`; founder 31 Oct, PR #167). Links between combinations are not configuration (P-106): C1.3 is M3's case link. Built after F8 (tech lead, 31 Oct) | screens queue (4) |
-| X3 | screens | S6 Shared library: one review queue, one Add in plain words (W1-09; P-120, P-121, P-149; recheck 2026-10-28 has 5 Majors to fold in; P-138 drafting on a click); code lists and shared condition (W1-16 part); QA-82 (question column shows the definition) | WAVE-1 S6, W1-09, W1-16 |
+| X3 | screens | S6 Shared library: one review queue, one Add in plain words (the guarded Add of P-252 steps 1–3, 5, 6 folds in here, **held** until the product owner rules on C2, P-251; W1-09; P-120, P-121, P-149; recheck 2026-10-28 has 5 Majors to fold in; P-138 drafting on a click); code lists and shared condition (W1-16 part); QA-82 (question column shows the definition) | WAVE-1 S6, W1-09, W1-16 |
 | X4 | screens | Open screens bugs QA-73, QA-74, QA-80, QA-113; stand-in chips (B49, P-165, R-134) | qa/BUGS.md |
 | X5 | forms | P-156: library first + each combination's IRCC checklist page read into document lines (C2.6, C2.12; plan-p156 in screens/W1-ai-drafting) | forms queue (3) |
 | X6 | forms | W1-07 AI run experience: steps shown live, progress bar, plain errors, Stop (R-116; cap US$60 for wave 1) | WAVE-1 W1-07 |
@@ -126,4 +158,8 @@ A feature is done when a person can do it on the demo (:4400) and qa has tested 
 | L-SA8 | M3, forms: must-verify-before-filing as a library field attribute set by the expert (P-242). Done when: the flag is set and shown in the library, and on a case it raises a CRITICAL warning on Ready to file, passable with a reason (P-237) | P-242 |
 | L-SA9 | M3, runtime: identity review collapse rule and correction count (P-243, with C6.5, C6.6). Done when: passport number, date of birth and expiry are collapsed only when the MRZ check digits passed; names and unchecked or handwritten values stay expanded; no one-click confirm for them; corrections on collapsed versus expanded fields are counted and reportable | P-243; SA-1B-263 |
 | L-SA10 | M3, runtime: officer entry for background questions and a re-confirm list at signing (P-244). Done when: staff record a background answer marked "Officer" with who and when; declarations refuse staff entry; no blank is defaulted; before signing the client sees and re-confirms every officer-recorded background answer | P-244 |
+| L-SA11 | M3: the AI co-pilot for Add across all reusable libraries (meaning-based matches with why and where used; drafts the whole item) plus the guarded Add on the other libraries (P-252). **Held** for the product owner (C2, P-251). Done when: on each library, Add searches first, explains matches, offers reuse, alias, extend or create, and a create carries a reason and a source and is marked made by person or AI | P-252 |
+| L-C1112 | M3-0, screens (session c1112): C11.12 filing modes per role in three PRs (P-233; board agreed): PR 1 #445 rules, PR 2 migration (widened check constraints, Lead reads SQL), PR 3 "What a case gets" preview | each role has a Filing mode; Declared only is the starting value; a sponsorship is its own filing in the principal's submission; a contradicting mode warns | P-233 |
+| L-SA12 | after M3, runtime: C6.8 PQR → SQR carries personal details only, marked "please confirm" (P-235). **Held** (PQR area, P-251) | the SQR asks everything else fresh; P-76 still holds | P-235 |
+| L-SA13 | design only (P-246 (2), P-251): the release pin moves from the case to the filing; concept sent to the product owner before any build | concept agreed by the product owner | P-246 |
 

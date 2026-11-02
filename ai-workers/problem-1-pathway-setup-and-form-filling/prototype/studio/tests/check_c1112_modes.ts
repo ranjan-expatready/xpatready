@@ -98,5 +98,10 @@ ok("C11.12 review m1 pass: filingMode and filing that agree are accepted", run([
 
 // Review M2 of PR 3: only the sponsor co-files
 ok("C11.12 BR-4 fail (PR 3): a Representative set to Files the sponsorship is refused in words", first([P, { role: "representative", min: 1, max: 1, applies: false, filingMode: "co_files" }]) === "Representative takes part in the case but files no application: only the sponsor files the sponsorship.");
+// Devin review on #478: the preview's split rule is the case's (a spouse's own filing may leave a sponsorship's group)
+const coSp = previewFilings([P, { role: "spouse_or_partner", min: 0, max: 1, applies: true, filingMode: "files_own" }, sponsor()] as never, "Spouse sponsorship", false);
+ok("C11.12 preview pass: principal + spouse's own filing + sponsorship → splittable (the spouse may leave), as the case says", coSp.filings.length === 3 && coSp.submissions[0].splittable === true);
+const caseCoSp = deriveFilings("fs.spouse", [{ subjectId: "a", role: "principal", label: "A", applies: true }, { subjectId: "s", role: "spouse_or_partner", label: "S", applies: true }, { subjectId: "p", role: "sponsor", label: "P", applies: false }], undefined, { modes: new Map([["spouse_or_partner", "files_own"], ["sponsor", "co_files"]]) as never });
+ok("C11.12 preview fail guard: the preview and the case agree on splittable for the same people", caseCoSp.derived && caseCoSp.groups[0].splittable === coSp.submissions[0].splittable && co.submissions[0].splittable === false);
 
 process.exit(summary() ? 1 : 0);
