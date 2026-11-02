@@ -212,7 +212,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await c.getByRole("region", { name: "About Sample Applicant C" }).getByRole("button", { name: /Residence and immigration status/ }).click(); await idle(c);
   step("residence (review M2): the country where the client lives now is asked once for the person, with the release's countries offered", await shows(c.getByLabel("Country or territory where you live now")) && await c.getByLabel("Country or territory where you live now").evaluate((e) => e.tagName === "SELECT" || !!e.getAttribute("list")) && await gone(c.getByRole("heading", { name: "Entries" })));
   step("countries (review M5): a country with no answer list yet offers the release's countries while typing", !!(await c.getByLabel("Country or territory you are applying from").getAttribute("list")));
-  step("copy (review M5): the client never sees the configuration note about answer lists", await gone(c.getByText(/No list of choices yet|forms slice 2/)));
+  step("copy (review M5): the client never sees the configuration note about answer lists", await gone(c.getByText(/No fixed list for this answer yet|forms slice 2/)));
   // Leave and resume
   await c.getByRole("button", { name: "Save and come back later" }).click();
   await shows(c.getByRole("heading", { level: 1, name: "Your questionnaire" })); // the save finished and the overview opened

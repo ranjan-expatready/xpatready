@@ -76,7 +76,7 @@ ok("C7.2 cause 3 fail: a confirmed fact or a box that is not a \"recorded\" swit
 type Opt = { key: string; label?: string };
 type Q = { subjectId: string; fact: string; options: Opt[] | null; answer: { id: string } | null; rows: { row: string; answer: { id: string } | null }[] };
 type Sec = { subjectId: string; section: string; group: { none_apply?: { id: string } | null } | null; questions: Q[] };
-type Box = { box: string; fact: string | null; result: string; why: string | null };
+type Box = { box: string; fact: string | null; result: string; why: string | null; nothing_recorded?: true };
 
 (async () => {
   if (!sql(`select count(*) from combination where combination_key = 'vv.single'`).startsWith("1"))
@@ -174,7 +174,7 @@ type Box = { box: string; fact: string | null; result: string; why: string | nul
     Object.fromEntries(Object.entries(after.values).filter(([k]) => /Phone\[0\]\.(NumberCountry|IntlNumber|Other)|Funds|AddressInCanada|SameAs/.test(k)).map(([k, v]) => [k.split(".").slice(-2).join("."), v])));
   const dates = Object.entries(after.values).filter(([k]) => /Occupation\[0\]\.OccupationRow\d\[0\]\.(From|To)(Year|Month)\[0\]$/.test(k));
   ok("C7.2 cause 2: the 12 year and month boxes of the three job rows are written from month-only dates", dates.length === 12 && dates.every(([k, v]) => (/Year/.test(k) ? /^\d{4}$/ : /^\d{2}$/).test(v)), Object.fromEntries(dates.map(([k, v]) => [k.split(".").slice(-2).join("."), v])));
-  ok("C7.2 cause 3: lived elsewhere and education are written \"N\" once \"none apply\" is confirmed, with that as the reason", DERIVED.every((b) => after.values[b] === "N" && /none apply/.test(after.byBox.get(b)?.why ?? "")), DERIVED.map((b) => [after.values[b], after.byBox.get(b)?.why]));
+  ok("C7.2 cause 3: lived elsewhere and education are written \"N\" once \"none apply\" is confirmed, with that as the reason and the copy's own flag", DERIVED.every((b) => after.values[b] === "N" && /none apply/.test(after.byBox.get(b)?.why ?? "") && after.byBox.get(b)?.nothing_recorded === true), DERIVED.map((b) => [after.values[b], after.byBox.get(b)?.why]));
   ok("C7.2 cause 3 fail (review r1 B1): other names, national identity document and US card are never \"N\" from an empty question in a confirmed section", NOT_ASKED.every((b) => after.byBox.get(b)?.result === "not written" && !after.values[b]), NOT_ASKED.map((b) => after.byBox.get(b)?.result));
   // Review r1 M2: a fact behind an "N" answered after the copy makes that copy out of date (here: an education entry).
   const copyId = sql(`select id from form_instance where case_id = '${caseId}' order by created_at desc limit 1`);

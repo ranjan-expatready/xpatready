@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { historyGaps, type Period } from "../../../../contracts/history";
 import type { EmployerLink } from "./employer";
-import { fillsText, groupLabel, type QuestionnaireView, type ViewAnswer, type ViewCheck, type ViewQuestion, type ViewSection } from "../../../contracts/runtime";
+import { fillsText, groupLabel, inSentence, type QuestionnaireView, type ViewAnswer, type ViewCheck, type ViewQuestion, type ViewSection } from "../../../contracts/runtime";
 
 export type CasePerson = { subject_id: string; role: "case" | "principal" | "spouse_or_partner" | "child"; label: string; applies: boolean };
 /** C6.11: the case team in the header (staff only; Sample firm, stand-in SI-9). */
@@ -401,7 +401,7 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
       </div>
       {people.map(([id, label]) => (
         <section key={id} aria-labelledby={`p-${id}`}>
-          <h2 id={`p-${id}`} className="mb-2 text-base font-semibold [overflow-wrap:anywhere]">{label === "The application" || label === "The representative" ? `About ${label.replace(/^The /, "the ")}` : `About ${label}`}</h2>
+          <h2 id={`p-${id}`} className="mb-2 text-base font-semibold [overflow-wrap:anywhere]">{`About ${inSentence(label)}`}</h2>
           <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface-raised">
             {parts.map((s, i) => [s, i] as const).filter(([s]) => s.subjectId === id).map(([s, i]) => {
               const st = partState(s, passed, view.checks);
@@ -527,7 +527,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
 
       <h1 ref={headingRef} tabIndex={-1} className="text-2xl font-semibold outline-none [overflow-wrap:anywhere]">{part.title}</h1>
       <p className="mt-1 text-sm [overflow-wrap:anywhere]">
-        {person?.role === "case" ? "Answered once for the whole application." : <>Answering for <b>{part.about_label}</b>{person && person.role !== "principal" ? ` (${ROLE_WORDS[person.role]})` : " (you)"}.</>}
+        {person?.role === "case" ? "Answered once for the whole application." : <>Answering for <b>{inSentence(part.about_label)}</b>{person && person.role !== "principal" ? ` (${ROLE_WORDS[person.role]})` : " (you)"}.</>}
       </p>
       {confirmWords.length === 1 ? <p className="mt-1 text-xs text-text-muted">{confirmWords[0]}.</p> : null}
 
@@ -571,13 +571,13 @@ function NoneApply({ caseId, s, compact, onAdd, adding }: { caseId: string; s: S
   const pressed = React.useRef(false), change = React.useRef<HTMLButtonElement>(null), add = React.useRef<HTMLButtonElement>(null);
   React.useEffect(() => { if (pressed.current) { pressed.current = false; (na?.value ? change : add).current?.focus(); } }, [na?.value, na?.id]);
   if (!g || g.rows > 0) return null;
-  const whose = `${s.title} for ${s.about_label}`;
+  const whose = `${s.title} for ${inSentence(s.about_label)}`;
   async function say(noneApply: boolean) {
     setBusy(true);
     try {
       await api(`/runtime/cases/${caseId}/groups/${s.subjectId}/${s.section}/none-apply`, { method: "PUT", json: { noneApply, expectedId: na?.id ?? null } });
       pressed.current = true;
-      toast.push({ tone: "ok", text: noneApply ? `Saved: none apply in ${s.title} for ${s.about_label}.` : `Saved: entries apply in ${s.title}; add them now.` });
+      toast.push({ tone: "ok", text: noneApply ? `Saved: none apply in ${s.title} for ${inSentence(s.about_label)}.` : `Saved: entries apply in ${s.title}; add them now.` });
     } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
     await qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] }); setBusy(false);
   }
@@ -680,7 +680,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
     setBusy(true);
     try {
       const r = await api<{ confirmed: number; missing: string[] }>(`/runtime/cases/${view.case.id}/sections/${s.section}/confirm`, { method: "POST", json: { subjectId: s.subjectId, seen } });
-      toast.push({ tone: checks.length ? "info" : "ok", text: `${s.title} for ${s.about_label}: ${r.confirmed} answer${r.confirmed === 1 ? "" : "s"} confirmed.${r.missing.length ? ` Still unanswered: ${r.missing.length}.` : ""}${checks.length ? ` ${checks.length} check${checks.length === 1 ? "" : "s"} still open: ${checks.map((c) => c.message).join(" ")}` : ""}` });
+      toast.push({ tone: checks.length ? "info" : "ok", text: `${s.title} for ${inSentence(s.about_label)}: ${r.confirmed} answer${r.confirmed === 1 ? "" : "s"} confirmed.${r.missing.length ? ` Still unanswered: ${r.missing.length}.` : ""}${checks.length ? ` ${checks.length} check${checks.length === 1 ? "" : "s"} still open: ${checks.map((c) => c.message).join(" ")}` : ""}` });
     } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
     await refresh();
     setBusy(false);
@@ -709,7 +709,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
           ) : <span className="text-text-muted">{q.required ? "Not answered" : "Not answered (optional)"}{q.collected_from !== "client_questionnaire" ? " · the officer enters this from a document or record" : ""}</span>}
           {q.note ? <p className="text-xs text-text-warn">{q.note}</p> : null}
         </div>
-        {kindOf(q) === "declaration" ? <p className="max-w-40 text-xs text-text-muted">Only the client makes this declaration</p> : <div><Button size="sm" variant="ghost" onClick={() => edit(q, row)} aria-label={`${a ? "Edit" : "Add"} ${q.label}${row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""} for ${s.about_label}`}><Pencil aria-hidden />{a ? "Edit" : "Add"}</Button></div>}
+        {kindOf(q) === "declaration" ? <p className="max-w-40 text-xs text-text-muted">Only the client makes this declaration</p> : <div><Button size="sm" variant="ghost" onClick={() => edit(q, row)} aria-label={`${a ? "Edit" : "Add"} ${q.label}${row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""} for ${inSentence(s.about_label)}`}><Pencil aria-hidden />{a ? "Edit" : "Add"}</Button></div>}
       </div>
     );
   };
@@ -717,7 +717,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
     <section id={`s-${s.subjectId}-${s.section}`} aria-labelledby={`h-${s.subjectId}-${s.section}`} className="scroll-mt-4 overflow-hidden rounded-xl border border-border bg-surface-raised">
       <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-3">
         <h2 id={`h-${s.subjectId}-${s.section}`} className="text-base font-semibold">{s.title}</h2>
-        <span className="text-[13px] text-text-muted">{s.about_label === "The application" ? "once for the application" : `for ${s.about_label}`}</span>
+        <span className="text-[13px] text-text-muted">{s.about_label === "The application" ? "once for the application" : `for ${inSentence(s.about_label)}`}</span>
         <span className="flex flex-wrap gap-1.5">
           <Pill title="Answers given, and how many of them the officer has confirmed">{s.answered} answered · {s.confirmed} confirmed</Pill>
           {s.missing.length ? <Pill tone="warn" title={`Required and not answered: ${s.missing.join("; ")}`}>{s.missing.length} missing</Pill> : null}
@@ -821,7 +821,7 @@ export function PreviewQuestions({ view, person }: { view: QuestionnaireView; pe
           <section key={keyOfPart(s)} aria-labelledby={`pv-${s.subjectId}-${s.section}`} className="overflow-hidden rounded-xl border border-border bg-surface-raised" data-preview-section={s.section}>
             <header className="border-b border-border px-4 py-2.5">
               <h3 id={`pv-${s.subjectId}-${s.section}`} className="text-sm font-semibold">{nameOf(s)}</h3>
-              <p className="text-xs text-text-muted">Section {at + 1} of {parts.length} · {s.about_label === "The application" ? "once for the application" : `for ${s.about_label}`} · {list.length} question{list.length === 1 ? "" : "s"}{s.questions.length > list.length ? ` · ${s.questions.length - list.length} hidden by a rule` : ""}</p>
+              <p className="text-xs text-text-muted">Section {at + 1} of {parts.length} · {s.about_label === "The application" ? "once for the application" : `for ${inSentence(s.about_label)}`} · {list.length} question{list.length === 1 ? "" : "s"}{s.questions.length > list.length ? ` · ${s.questions.length - list.length} hidden by a rule` : ""}</p>
             </header>
             <div className="space-y-3 px-4 py-3">
               {single.map((q) => <QuestionField key={q.fact} q={q} draft={drafts[keyOf(q)]} onChange={(d) => setDrafts((x) => ({ ...x, [keyOf(q)]: d }))} errors={[]} idBase={`pv-${s.subjectId}-${q.fact}`} compact />)}
