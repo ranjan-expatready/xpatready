@@ -18,6 +18,30 @@ const LISTED_AS_JOBS = new Set(["field_map"]);
 import { groupOf } from "./review-proposals.ts";
 import { isLifecycleKind } from "./lifecycle.ts";
 import { normaliseCode } from "../../contracts/form-library.ts";
+import { Programs } from "./programs.ts";
+import { needsYouItems } from "../../engine/setup-checklist.ts";
+import { nextStepHref, STEP_LABEL, type ItemKind } from "../../contracts/setup-checklist.ts";
+
+/** UX-A part 2: next steps that already have their own row here (AI proposals, AI work running, a new edition held,
+ *  a submission to sign or release), so a combination's setup row never repeats them. */
+const LISTED_ELSEWHERE: readonly ItemKind[] = ["review_proposals", "view_ai", "review_edition", "sign", "release"];
+/** Problems of the released version (the checklist's fix items marked fromRelease): firms cannot open cases until they
+ *  are fixed (Devin review on #616: a Not ready combination whose draft is clean read "." with no count). */
+export const releasedProblems = (setup: { steps: { open: { kind: string; count: number; fromRelease?: boolean }[] }[] }) =>
+  setup.steps.flatMap((x) => x.open).filter((i) => i.kind === "fix_problems" && i.fromRelease).reduce((t, i) => t + i.count, 0);
+/** A setup row's words: the draft's blockers, the released version's problems apart, and the next step a screen offers
+ *  (review n5); never empty (a bare "." before). */
+export function setupRowWords(s: { live: boolean; blockers: { n: number; first: string | null }; setup: Parameters<typeof releasedProblems>[0] }, nextWords: string | null) {
+  const n = s.blockers.n, rel = releasedProblems(s.setup);
+  const parts = [
+    rel ? `${plural(rel, "problem")} in the released version: firms cannot open cases until ${rel === 1 ? "it is" : "they are"} fixed` : "",
+    n ? `${plural(n, "problem")} to fix before release${s.live ? " of its next version" : ""}${s.blockers.first ? ` (first: ${s.blockers.first})` : ""}` : "",
+    nextWords ?? "",
+  ].filter(Boolean);
+  return parts.length ? `${parts.join(". ")}.` : "Open its setup to see what is left.";
+}
+/** Steps no screen offers yet (N8: the checklist page's confirmation, who can apply): never named as a row's next step. */
+const NO_SCREEN_YET: readonly ItemKind[] = ["confirm_pages", "choose_pages", "confirm_people"];
 
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
 const holds = (a: Actor, duty: string) => (a.duties as readonly string[]).includes(duty);
@@ -27,7 +51,7 @@ const ORDER: Record<QueueItem["state"], number> = { needs: 0, waiting: 1, runnin
 
 @Injectable()
 export class ReviewQueueService {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Studio) private readonly studio: Studio) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Studio) private readonly studio: Studio, @Inject(Programs) private readonly programs: Programs) {}
 
   async list(actor: Actor, query: unknown): Promise<ReviewQueue> {
     const p = ReviewQueueQuery.safeParse(query ?? {});
@@ -46,7 +70,11 @@ export class ReviewQueueService {
     for (const i of all) kinds[i.kind] = (kinds[i.kind] ?? 0) + 1;
     // Oldest first within each state (board view 1: "Rows are sorted oldest first within Needs you").
     const items = found.filter((i) => filter === "all" || i.state === filter).sort((a, b) => ORDER[a.state] - ORDER[b.state] || a.at.localeCompare(b.at));
-    return { items, counts, kinds };
+    // UX-A part 2: combinations whose release is blocked, whoever fixes it (none under ?form=: those rows belong to no form).
+    const blocked = code ? 0 : all.filter((i) => i.kind === "setup" && i.id.endsWith(":blocked")).length;
+    // Review M3: combinations whose only red "to fix" is "Nothing to release yet" are counted for the empty state.
+    const notSetUp = code ? 0 : (await this.programs.setupStates()).filter((s) => s.blockers.n === 1 && s.blockers.empty).length;
+    return { items, counts, kinds, blocked, notSetUp };
   }
 
   /** Every open item for this person (also read by the guided path, api/src/form-progress.ts: one source, plan D3). */
@@ -54,7 +82,7 @@ export class ReviewQueueService {
     const workspaceId = await this.ws.id();
     const [nodes, combos, jobs, pending, queued, batches, subs, merges, held, changes] = await Promise.all([
       this.db.programDef.findMany({ where: { workspaceId }, select: { id: true, programNodeKey: true, parentNodeKey: true, nodeKind: true, label: true } }),
-      this.db.combination.findMany({ where: { workspaceId }, select: { id: true, programDefId: true, label: true } }),
+      this.db.combination.findMany({ where: { workspaceId }, select: { id: true, programDefId: true, label: true, createdAt: true, retiredAt: true } }),
       this.db.draftingJob.findMany({ where: { workspaceId, kind: { in: ["field_map", "reuse_map"] } }, orderBy: { startedAt: "desc" }, select: { id: true, combinationId: true, attachmentId: true, kind: true, mode: true, status: true, costUsd: true, startedBy: true, startedAt: true, finishedAt: true, detail: true } }),
       this.db.proposalItem.groupBy({ by: ["runId"], where: { workspaceId, status: "waiting" }, _count: true }),
       this.db.proposalItem.findMany({ where: { workspaceId, status: "waiting", step: { notIn: [...ON_ITS_PAGE].filter((x) => LISTED_AS_JOBS.has(x)) } }, orderBy: { createdAt: "asc" }, select: { formEdition: true, combinationId: true, runId: true, confidence: true, createdAt: true } }),
@@ -143,7 +171,9 @@ export class ReviewQueueService {
     // as both release routes (QA-1), so this list and the Release page say the same thing.
     const latest = new Map<string, (typeof subs)[number]>();
     for (const s of subs) if (!latest.has(s.combinationId)) latest.set(s.combinationId, s);
-    const open = [...latest.values()].filter((s) => s.status === "SUBMITTED");
+    // Break round 2 m2: a retired combination's submission waits for nobody.
+    const retired = new Set(combos.filter((c) => c.retiredAt).map((c) => c.id));
+    const open = [...latest.values()].filter((s) => s.status === "SUBMITTED" && !retired.has(s.combinationId));
     if (open.length) {
       const snaps = await buildSnapshots(this.db, workspaceId, open.map((s) => s.combinationId), "draft");
       const gates = await this.studio.releaseGates(open.map((s) => ({ combinationId: s.combinationId, sha256: snaps.get(s.combinationId)!.sha256 })));
@@ -155,7 +185,7 @@ export class ReviewQueueService {
         const unapproved = gate.ok ? await unapprovedAdds(this.db, workspaceId, itemsOf((snaps.get(s.combinationId) as { snapshot: Snapshot }).snapshot)) : [];
         if (unapproved.length) out.push({ ...base, what: `Submitted with ${plural(changes, "change")}. Not ready to release: ${unapprovedWhy(unapproved)}.`, state: "waiting" as const, waiting_on: "Its new shared fields are decided on To review first.", next: null });
         else if (gate.ok) out.push({ ...base, what: `Submitted with ${plural(changes, "change")}; every change that needs a sign-off is signed. Ready to release.`, ...(holds(actor, "approve") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Release", href, note: null } } : { state: "waiting" as const, waiting_on: mine ? "An approver releases it: not the person who submitted it." : "An approver releases it.", next: null }) });
-        else if (/changed after it was submitted/.test(gate.why)) out.push({ ...base, what: `The draft changed after it was submitted. ${gate.why.split(": ")[1] ?? ""}`.trim(), ...(holds(actor, "review") ? { state: "needs" as const, waiting_on: null, next: { label: "Submit again", href, note: null } } : { state: "waiting" as const, waiting_on: "A content publisher submits it again.", next: null }) });
+        else if (/changed after it was submitted/.test(gate.why)) out.push({ ...base, what: `The draft changed after it was submitted. ${gate.why.split(": ")[1] ?? ""}`.trim(), ...(holds(actor, "author") ? { state: "needs" as const, waiting_on: null, next: { label: "Submit again", href, note: null } } : { state: "waiting" as const, waiting_on: "The configuration author submits it again.", next: null }) });
         else out.push({ ...base, what: `Submitted with ${plural(changes, "change")}. ${gate.why}`, ...(holds(actor, "sme") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Review and sign", href, note: null } } : { state: "waiting" as const, waiting_on: mine ? "The content reviewer signs it: not the person who submitted it." : "The content reviewer signs the changes that need the SME duty.", next: null }) });
       }
     }
@@ -246,6 +276,29 @@ export class ReviewQueueService {
       const batchForms = [...new Set(b.jobs.map((j) => formOfFile(j.attachmentId ? atts.get(j.attachmentId) : undefined)).filter((x): x is string => !!x))].sort();
       out.push({ id: `batch:${b.id}`, kind: "running", title: b.scopeLabel, by: nameOf(b.startedBy), at: b.startedAt.toISOString(), cost_usd: Math.round(spent * 100) / 100, forms: batchForms, combination: null,
         what: `${b.status === "QUEUED" ? "Queued" : "Running"}: ${done} of ${plural(b.jobs.length, "step")} finished · worst case US$${b.worstCaseUsd.toFixed(2)}.`, state: "running" as const, waiting_on: null, next: { label: "View progress", href: `/ai/${b.id}`, note: null } });
+    }
+
+    // UX-A part 2 (P-273; UX baseline finding 2): a combination is on Needs you exactly when the one rule says so
+    // (engine/setup-checklist.ts needsYouItems: a review, a confirmation a screen offers, or release-blocking problems
+    // this person fixes), the rule the Programs chip and card read too (review M2). Items with their own rows here (AI
+    // proposals, a held edition, sign, release) are not repeated. A release blocked for someone else's fix is listed
+    // under Waiting for others. Building steps (find, add, map, draft) and confirmations no screen offers yet stay on
+    // Programs and the page header (N8: a mark nobody can clear is noise; review M1). Not about one form (forms []).
+    const since = new Map(combos.map((c) => [c.id, c.createdAt]));
+    for (const s of await this.programs.setupStates()) {
+      const own = needsYouItems(s.setup, actor).filter((i) => !LISTED_ELSEWHERE.includes(i.kind));
+      const fixable = s.setup.steps.some((x) => x.open.some((i) => i.kind === "fix_problems" || i.kind === "unasked"));
+      if (!own.length && !fixable) continue;
+      const n = s.blockers.n, next = s.setup.next;
+      const what = setupRowWords(s, next && !NO_SCREEN_YET.includes(next.item.kind) ? `Next step · ${STEP_LABEL[next.step]}: ${next.item.text}` : null);
+      const base = { id: `setup:${s.combinationId}${fixable ? ":blocked" : ""}`, kind: "setup" as const, title: s.path, by: null, at: (since.get(s.combinationId) ?? new Date(0)).toISOString(), cost_usd: null, what, forms: [], combination: s.combinationId };
+      if (own.length) {
+        const go = own[0];
+        // Review n1: the link never names a second number beside the row's ("Fix them" when "Nothing to release yet" is in it).
+        const fixes = own.filter((i) => i.kind === "fix_problems").reduce((t, i) => t + i.count, 0);
+        const label = go.kind === "fix_problems" && fixes !== n + releasedProblems(s.setup) ? "Fix them" : go.text.split(":")[0];
+        out.push({ ...base, state: "needs" as const, waiting_on: null, next: { label, href: nextStepHref(s.combinationId, { item: go, step: go.step }, go.tab ?? "forms"), note: null } });
+      } else out.push({ ...base, state: "waiting" as const, waiting_on: "The configuration author fixes them.", next: null });
     }
     return out;
   }
