@@ -22,7 +22,7 @@ const AUTHOR = "user-A", REVIEWER = "user-C", APPROVER = "user-B", CLIENT = "use
 // S7's own body (acceptance/lib/setup_vv_m3.ts): no root subjectKind.
 const GATES = [
   { key: "vv.travel_document", label: "Passport number and expiry date answered (Sample)", condition: { op: "and", args: [{ op: "exists", field: "person.passport_number" }, { op: "exists", field: "person.passport_expiry_date" }] } },
-  { key: "vv.no_convictions", label: "Answered no to the criminal history question (Sample)", condition: { op: "eq", field: "person.criminal_history", value: false } },
+  { key: "vv.no_convictions", label: "Answered no to the criminal history question (Sample)", condition: { op: "eq", field: "person.criminal_history", value: false }, whenNotMet: "needs_review" },
 ];
 const JUDGEMENT = ["Has enough money for the stay", "Is in good health", "Ties that will take the person back home", "Will leave Canada at the end of the visit"];
 const fieldErrors = (b: { errors?: { field: string; message: string }[] }) => (b?.errors ?? []).map((e) => e.field);
