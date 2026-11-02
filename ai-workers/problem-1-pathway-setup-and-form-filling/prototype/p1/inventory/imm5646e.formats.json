@@ -1,0 +1,211 @@
+{
+ "file": "imm5646e.pdf",
+ "sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+ "read_by": "prototype/p1/xfa_formats.py (the form's own XFA template: maxChars, picture clauses, validate scripts; no AI)",
+ "boxes_with_format": 47,
+ "boxes_unmatched": 36,
+ "boxes": {
+  "IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[0]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[1]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[2]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[3]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[4]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[5]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[6]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[7]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page1[0].subCustodian[0].DOB[0].theDate[0]": {
+   "caption": "Enter as YYYY-MM-DD, or click the down arrow to open the calendar.",
+   "validate_picture": "date{YYYY-MM-DD}",
+   "ui_picture": "date{YYYY-MM-DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "IMM_5646[0].Page1[0].subCustodian[0].Telephone[0]": {
+   "caption": "Telephone no.",
+   "validate_picture": "text{9999999999}",
+   "format_picture": "text{'('999')' 999-9999}",
+   "max_chars": 10
+  },
+  "IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[0]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[1]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[2]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[3]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[4]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[5]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[6]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[7]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].theDate[0]": {
+   "caption": "Enter as YYYY-MM-DD, or click the down arrow to open the calendar.",
+   "validate_picture": "date{YYYY-MM-DD}",
+   "ui_picture": "date{YYYY-MM-DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[0]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[1]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[2]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[3]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[4]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[5]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[6]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[7]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subCustodian[0].DOB[0].theDate[0]": {
+   "caption": "Enter as YYYY-MM-DD, or click the down arrow to open the calendar.",
+   "validate_picture": "date{YYYY-MM-DD}",
+   "ui_picture": "date{YYYY-MM-DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "IMM_5646[0].Page2[0].subCustodian[0].Telephone[0]": {
+   "caption": "Telephone no.",
+   "validate_picture": "text{9999999999}",
+   "format_picture": "text{'('999')' 999-9999}",
+   "max_chars": 10
+  },
+  "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[0]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[1]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[2]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[3]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[4]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[5]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[6]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[7]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].theDate[0]": {
+   "caption": "Enter as YYYY-MM-DD, or click the down arrow to open the calendar.",
+   "validate_picture": "date{YYYY-MM-DD}",
+   "ui_picture": "date{YYYY-MM-DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[0]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[1]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[2]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[3]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[4]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[5]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[6]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[7]": {
+   "caption": "",
+   "max_chars": 1
+  },
+  "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].theDate[0]": {
+   "caption": "Enter as YYYY-MM-DD, or click the down arrow to open the calendar.",
+   "validate_picture": "date{YYYY-MM-DD}",
+   "ui_picture": "date{YYYY-MM-DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  }
+ }
+}

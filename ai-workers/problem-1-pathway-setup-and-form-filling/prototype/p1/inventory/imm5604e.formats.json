@@ -1,0 +1,33 @@
+{
+ "file": "imm5604e.pdf",
+ "sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+ "read_by": "prototype/p1/xfa_formats.py (the form's own XFA template: maxChars, picture clauses, validate scripts; no AI)",
+ "boxes_with_format": 4,
+ "boxes_unmatched": 0,
+ "boxes": {
+  "IMM_5604[0].Page1[0].forCICUseOnly[0].currentDate[0]": {
+   "caption": "Date (YYYY-MM-DD)",
+   "validate_picture": "date{YYYY-MM-DD}",
+   "ui_picture": "date{YYYY-MM-DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "IMM_5604[0].Page1[0].childBirthDate[0]": {
+   "caption": "Child's date of birth (YYYY-MM-DD) (as shown on passport/travel document)",
+   "validate_picture": "date{YYYY-MM-DD}",
+   "ui_picture": "date{YYYY-MM-DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "IMM_5604[0].Page1[0].signedDate[0]": {
+   "caption": "Date (YYYY-MM-DD)",
+   "validate_picture": "date{YYYY-MM-DD}",
+   "ui_picture": "date{YYYY-MM-DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "IMM_5604[0].Page1[0].notarySignedDate[0]": {
+   "caption": "Date (YYYY-MM-DD)",
+   "validate_picture": "date{YYYY-MM-DD}",
+   "ui_picture": "date{YYYY-MM-DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  }
+ }
+}

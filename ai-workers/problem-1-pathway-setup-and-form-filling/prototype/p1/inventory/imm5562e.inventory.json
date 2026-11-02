@@ -1,0 +1,1101 @@
+{
+ "summary": {
+  "file": "official-sources/ircc/forms/imm5562e.pdf",
+  "sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+  "reason_read": "added through Product Studio",
+  "pdf": {
+   "pages": 1,
+   "needs_rendering": true,
+   "perms": [
+    "/UR3"
+   ],
+   "acroform_fields": 0,
+   "encryption": {
+    "V": 4,
+    "R": 4,
+    "P": -20
+   }
+  },
+  "template_ns": "http://www.xfa.org/schema/xfa-template/3.3/",
+  "fields_total": 40,
+  "entry_fields_bound": 27,
+  "entry_fields_in_shipped_data": 27,
+  "ui_counts": {
+   "textEdit": 17,
+   "checkButton": 3,
+   "dateTimeEdit": 7,
+   "choiceList": 3,
+   "button": 10
+  },
+  "required_fields": 0,
+  "choice_fields_with_options": 6,
+  "repeat_groups_dynamic": 8,
+  "row_groups_fixed": 6,
+  "barcode_fields": [],
+  "buttons": [
+   {
+    "som": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].buttons[0].addRow[0]",
+    "caption": "+",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].buttons[0].removeRow[0]",
+    "caption": "-",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].buttons[0].addRow[0]",
+    "caption": "+",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].buttons[0].removeRow[0]",
+    "caption": "-",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].Header[0].#subform[0].link[0]",
+    "caption": "link",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].buttons[0].addRow[0]",
+    "caption": "+",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].buttons[0].removeRow[0]",
+    "caption": "-",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5562[0].Page1[0].Item2C-Z[0].buttons[0].addRow[0]",
+    "caption": "+",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5562[0].Page1[0].Item2C-Z[0].buttons[0].removeRow[0]",
+    "caption": "-",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5562[0].Page2[0].Privacy[0].link[0]",
+    "caption": "Link to the Office of the Privacy Commissioner of Canada",
+    "scripts": {
+     "click": 1
+    }
+   }
+  ],
+  "scripts_by_activity": {
+   "initialize": 1,
+   "ready": 4,
+   "click": 10,
+   "calculate": 1,
+   "script-object": 2
+  },
+  "presence_changing_scripts": 3,
+  "sections": {
+   "Page1.Name.Item1": 2,
+   "Page1.Item2A.Header": 1,
+   "Page1.Item2A.PaddedList2A": 6,
+   "Page1.Item2B.Header": 2,
+   "Page1.Item2B.PaddedList2B": 6,
+   "Page1.Item2C-Z.Item2X": 8,
+   "Page2.Item3.Signature": 1,
+   "Page2.Item3.SignedDate": 1
+  }
+ },
+ "groups": [
+  {
+   "som": "IMM_5562[0].Page1[0]",
+   "data_path": "IMM_5562[0].Page1[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Name[0].Item1[0]",
+   "data_path": "IMM_5562[0].Page1[0].Name[0].Item1[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2Info[0].List2[0]",
+   "data_path": "IMM_5562[0].Page1[0].Item2Info[0].List2[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2Info[0].List2[0].HeaderRow[0]",
+   "data_path": "IMM_5562[0].Page1[0].Item2Info[0].List2[0].HeaderRow[0]",
+   "occur": {
+    "max": "-1"
+   },
+   "fixed_row": false
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2Info[0].List2[0].s1[0]",
+   "data_path": "IMM_5562[0].Page1[0].Item2Info[0].List2[0].s1[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].HeaderRow[0]",
+   "data_path": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].HeaderRow[0]",
+   "occur": {
+    "max": "-1"
+   },
+   "fixed_row": false
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0]",
+   "data_path": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0]",
+   "occur": {
+    "max": "-1",
+    "initial": "3"
+   },
+   "fixed_row": false
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].HeaderRow[0]",
+   "data_path": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].HeaderRow[0]",
+   "occur": {
+    "max": "-1"
+   },
+   "fixed_row": false
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0]",
+   "data_path": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0]",
+   "occur": {
+    "max": "-1",
+    "initial": "3"
+   },
+   "fixed_row": false
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0]",
+   "data_path": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0]",
+   "occur": {
+    "max": "-1"
+   },
+   "fixed_row": false
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].HeaderRow[0]",
+   "data_path": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].HeaderRow[0]",
+   "occur": {
+    "max": "-1"
+   },
+   "fixed_row": false
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0]",
+   "data_path": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0]",
+   "occur": {
+    "max": "-1",
+    "initial": "3"
+   },
+   "fixed_row": false
+  },
+  {
+   "som": "IMM_5562[0].Page2[0]",
+   "data_path": "IMM_5562[0].Page2[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5562[0].Page2[0].Item3[0]",
+   "data_path": "IMM_5562[0].Page2[0].Item3[0]",
+   "occur": null,
+   "fixed_row": true
+  }
+ ],
+ "presence_scripts": [
+  {
+   "on": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0]",
+   "sets": [
+    "buttons->hidden",
+    "buttons->visible"
+   ]
+  },
+  {
+   "on": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0]",
+   "sets": [
+    "buttons->hidden",
+    "buttons->visible"
+   ]
+  },
+  {
+   "on": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0]",
+   "sets": [
+    "buttons->hidden",
+    "buttons->visible"
+   ]
+  }
+ ],
+ "fields": [
+  {
+   "som": "IMM_5562[0].FormNumber[0]",
+   "section": "FormNumber",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "hidden",
+   "heading": null,
+   "in_row": null,
+   "scripts": {
+    "initialize": 1
+   }
+  },
+  {
+   "som": "IMM_5562[0].totPage[0]",
+   "section": "totPage",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "hidden",
+   "heading": null,
+   "in_row": null,
+   "scripts": {
+    "ready": 1
+   }
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Name[0].Item1[0].#subform[0].FamilyName[0]",
+   "section": "Page1.Name.Item1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Family name (as shown on passport/travel document)",
+   "data_path": "IMM_5562[0].Page1[0].Name[0].Item1[0].FamilyName[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "1 - Your full name",
+   "in_row": "IMM_5562[0].Page1[0].Name[0].Item1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Name[0].Item1[0].#subform[0].GivenNames[0]",
+   "section": "Page1.Name.Item1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Given name(s) (as shown on passport/travel document)",
+   "data_path": "IMM_5562[0].Page1[0].Name[0].Item1[0].GivenNames[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "1 - Your full name",
+   "in_row": "IMM_5562[0].Page1[0].Name[0].Item1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2A[0].Header[0].CheckBox1[0]",
+   "section": "Page1.Item2A.Header",
+   "kind": "field",
+   "ui": "checkButton",
+   "caption": "did not travel",
+   "data_path": "IMM_5562[0].Page1[0].Item2A[0].Header[0].CheckBox1[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "1",
+     "0",
+     "2"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "a) You",
+   "in_row": "IMM_5562[0].Page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].fromDate[0]",
+   "section": "Page1.Item2A.PaddedList2A",
+   "kind": "field",
+   "ui": "dateTimeEdit",
+   "caption": "",
+   "data_path": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].fromDate[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].toDate[0]",
+   "section": "Page1.Item2A.PaddedList2A",
+   "kind": "field",
+   "ui": "dateTimeEdit",
+   "caption": "",
+   "data_path": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].toDate[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].Duration[0]",
+   "section": "Page1.Item2A.PaddedList2A",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].Duration[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].Destination[0]",
+   "section": "Page1.Item2A.PaddedList2A",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].Destination[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].PurposeofTravel[0]",
+   "section": "Page1.Item2A.PaddedList2A",
+   "kind": "field",
+   "ui": "choiceList",
+   "caption": "",
+   "data_path": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].PurposeofTravel[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "Business",
+     "Tourism",
+     "Training",
+     "Studies",
+     "Visiting family",
+     "Visiting friend(s)",
+     "Official/Diplomatic visit",
+     "Medical reasons",
+     "Transit",
+     "Cultural/Sports",
+     "Other"
+    ],
+    [
+     "11",
+     "2",
+     "3",
+     "4",
+     "5",
+     "6",
+     "7",
+     "8",
+     "12",
+     "9",
+     "10"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].Details[0]",
+   "section": "Page1.Item2A.PaddedList2A",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].Details[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].buttons[0].addRow[0]",
+   "section": "Page1.Item2A.PaddedList2A",
+   "kind": "field",
+   "ui": "button",
+   "caption": "+",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].buttons[0].removeRow[0]",
+   "section": "Page1.Item2A.PaddedList2A",
+   "kind": "field",
+   "ui": "button",
+   "caption": "-",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2B[0].Header[0].#subform[0].TextField2[0]",
+   "section": "Page1.Item2B.Header",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Family name and given names (as shown on passport/travel document)",
+   "data_path": "IMM_5562[0].Page1[0].Item2B[0].Header[0].TextField2[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "b) Your spouse or common-law partner (if not a Canadian citizen or permanent resident of Canada).",
+   "in_row": "IMM_5562[0].Page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2B[0].Header[0].CheckBox1[0]",
+   "section": "Page1.Item2B.Header",
+   "kind": "field",
+   "ui": "checkButton",
+   "caption": "did not travel",
+   "data_path": "IMM_5562[0].Page1[0].Item2B[0].Header[0].CheckBox1[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "1",
+     "0",
+     "2"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "b) Your spouse or common-law partner (if not a Canadian citizen or permanent resident of Canada).",
+   "in_row": "IMM_5562[0].Page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].fromDate[0]",
+   "section": "Page1.Item2B.PaddedList2B",
+   "kind": "field",
+   "ui": "dateTimeEdit",
+   "caption": "",
+   "data_path": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].fromDate[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].toDate[0]",
+   "section": "Page1.Item2B.PaddedList2B",
+   "kind": "field",
+   "ui": "dateTimeEdit",
+   "caption": "",
+   "data_path": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].toDate[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].Duration[0]",
+   "section": "Page1.Item2B.PaddedList2B",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].Duration[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].Destination[0]",
+   "section": "Page1.Item2B.PaddedList2B",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].Destination[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].PurposeofTravel[0]",
+   "section": "Page1.Item2B.PaddedList2B",
+   "kind": "field",
+   "ui": "choiceList",
+   "caption": "",
+   "data_path": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].PurposeofTravel[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "Business",
+     "Tourism",
+     "Training",
+     "Studies",
+     "Visiting family",
+     "Visiting friend(s)",
+     "Official/Diplomatic visit",
+     "Medical reasons",
+     "Transit",
+     "Cultural/Sports",
+     "Other"
+    ],
+    [
+     "11",
+     "2",
+     "3",
+     "4",
+     "5",
+     "6",
+     "7",
+     "8",
+     "12",
+     "9",
+     "10"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].Details[0]",
+   "section": "Page1.Item2B.PaddedList2B",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].Details[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].buttons[0].addRow[0]",
+   "section": "Page1.Item2B.PaddedList2B",
+   "kind": "field",
+   "ui": "button",
+   "caption": "+",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].buttons[0].removeRow[0]",
+   "section": "Page1.Item2B.PaddedList2B",
+   "kind": "field",
+   "ui": "button",
+   "caption": "-",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].Header[0].#subform[0].ItemCharacterId[0]",
+   "section": "Page1.Item2C-Z.Item2X",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "hidden",
+   "heading": ") Your dependent child 18 years old or older",
+   "in_row": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0]",
+   "scripts": {
+    "calculate": 1
+   }
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].Header[0].#subform[0].link[0]",
+   "section": "Page1.Item2C-Z.Item2X",
+   "kind": "field",
+   "ui": "button",
+   "caption": "link",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": ") Your dependent child 18 years old or older",
+   "in_row": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].Header[0].#subform[1].TextField2[0]",
+   "section": "Page1.Item2C-Z.Item2X",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Family name and given names (as shown on passport/travel document)",
+   "data_path": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].Header[0].TextField2[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].Header[0].CheckBox1[0]",
+   "section": "Page1.Item2C-Z.Item2X",
+   "kind": "field",
+   "ui": "checkButton",
+   "caption": "did not travel",
+   "data_path": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].Header[0].CheckBox1[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "1",
+     "0",
+     "2"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].fromDate[0]",
+   "section": "Page1.Item2C-Z.Item2X",
+   "kind": "field",
+   "ui": "dateTimeEdit",
+   "caption": "",
+   "data_path": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].fromDate[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].toDate[0]",
+   "section": "Page1.Item2C-Z.Item2X",
+   "kind": "field",
+   "ui": "dateTimeEdit",
+   "caption": "",
+   "data_path": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].toDate[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].Duration[0]",
+   "section": "Page1.Item2C-Z.Item2X",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].Duration[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].Destination[0]",
+   "section": "Page1.Item2C-Z.Item2X",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].Destination[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].PurposeofTravel[0]",
+   "section": "Page1.Item2C-Z.Item2X",
+   "kind": "field",
+   "ui": "choiceList",
+   "caption": "",
+   "data_path": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].PurposeofTravel[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "Business",
+     "Tourism",
+     "Training",
+     "Studies",
+     "Visiting family",
+     "Visiting friend(s)",
+     "Official/Diplomatic visit",
+     "Medical reasons",
+     "Transit",
+     "Cultural/Sports",
+     "Other"
+    ],
+    [
+     "11",
+     "2",
+     "3",
+     "4",
+     "5",
+     "6",
+     "7",
+     "8",
+     "12",
+     "9",
+     "10"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].Details[0]",
+   "section": "Page1.Item2C-Z.Item2X",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].Details[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].buttons[0].addRow[0]",
+   "section": "Page1.Item2C-Z.Item2X",
+   "kind": "field",
+   "ui": "button",
+   "caption": "+",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].buttons[0].removeRow[0]",
+   "section": "Page1.Item2C-Z.Item2X",
+   "kind": "field",
+   "ui": "button",
+   "caption": "-",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2C-Z[0].buttons[0].addRow[0]",
+   "section": "Page1.Item2C-Z.buttons",
+   "kind": "field",
+   "ui": "button",
+   "caption": "+",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5562[0].Page1[0].Item2C-Z[0].buttons[0].removeRow[0]",
+   "section": "Page1.Item2C-Z.buttons",
+   "kind": "field",
+   "ui": "button",
+   "caption": "-",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "The principal applicant must complete this form. If you need more space for any section, please add lines to the form by",
+   "in_row": "IMM_5562[0].Page1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5562[0].Page2[0].Item3[0].Signature[0]",
+   "section": "Page2.Item3.Signature",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Signature:",
+   "data_path": "IMM_5562[0].Page2[0].Item3[0].Signature[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "3 - Signature",
+   "in_row": "IMM_5562[0].Page2[0].Item3[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page2[0].Item3[0].SignedDate[0]",
+   "section": "Page2.Item3.SignedDate",
+   "kind": "field",
+   "ui": "dateTimeEdit",
+   "caption": "Date (YYYY-MM-DD)",
+   "data_path": "IMM_5562[0].Page2[0].Item3[0].SignedDate[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "3 - Signature",
+   "in_row": "IMM_5562[0].Page2[0].Item3[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5562[0].Page2[0].Privacy[0].link[0]",
+   "section": "Page2.Privacy.link",
+   "kind": "field",
+   "ui": "button",
+   "caption": "Link to the Office of the Privacy Commissioner of Canada",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "Personal information provided on this form is collected by Immigration, Refugees, and Citizenship Canada (IRCC) under th",
+   "in_row": "IMM_5562[0].Page2[0]",
+   "scripts": {
+    "click": 1
+   }
+  }
+ ]
+}
