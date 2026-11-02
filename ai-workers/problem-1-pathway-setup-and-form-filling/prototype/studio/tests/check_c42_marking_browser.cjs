@@ -1,5 +1,5 @@
-// F6 / C4.2 (runtime lane; P-76, P-130 M4, P-132): an author marks a combination's pre-qualification questions by hand on
-// the Questionnaires tab, walked in a real browser. Only a question the combination's questionnaire asks can be marked:
+// F6 / C4.2 (runtime lane; P-76, P-130 M4, P-132): an author marks a combination's Prospect questionnaire (PQR) questions by hand on
+// the Smart questionnaire (SQR) tab, walked in a real browser. Only a question the combination's questionnaire asks can be marked:
 // a case officer fact and a fact no question asks are refused in the drawer, by the API and in a bulk change. The PQR is
 // one record per combination: a tick here changes no other combination. check_w115_slice1's "no question asks it" fail
 // is skipped when every sample fact has a question (it always has), so this check makes one fact unasked on purpose:
@@ -70,7 +70,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 
   // ======================================================== mark one question by hand
   await go();
-  step("C4.2: the chips start at Pre-qualification 0", /Pre-qualification 0/.test(await chip().innerText()), await chip().innerText());
+  step("C4.2: the chips start at Prospect questionnaire (PQR) 0", /Prospect questionnaire \(PQR\) 0/.test(await chip().innerText()), await chip().innerText());
   await openDrawer(client.fact);
   const tick = p.locator("[data-pq-tick]");
   step("C4.2 pass: a question the questionnaire asks can be ticked in its details", await tick.isEnabled());
@@ -79,7 +79,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await state("drawer-ticked");
   await p.locator("[data-drawer-save]").click();
   await p.locator("[data-fact-drawer]").waitFor({ state: "detached" }); await settle();
-  await p.waitForFunction(() => /Pre-qualification 1/.test(document.querySelector('[data-source-chip="pqr"]')?.textContent ?? ""), null, { timeout: 15000 });
+  await p.waitForFunction(() => /Prospect questionnaire \(PQR\) 1/.test(document.querySelector('[data-source-chip="pqr"]')?.textContent ?? ""), null, { timeout: 15000 });
   step("C4.2 pass: after Save the row says Ask and the chip counts 1", /Ask/.test(await rowOf(client.fact).innerText()));
   const saved = sql(`select status || '|' || prequalification || '|' || origin || '|' || coalesce(reason,'') from fact_source where combination_id='${wp}' and lineage_key='principal|${client.fact}' order by version desc limit 1`);
   step("C4.2 pass: the tick is a draft row of this combination's one PQR record, by a person, with the reason", saved.startsWith("DRAFT|true|HUMAN|Sample:"), saved);
@@ -109,11 +109,11 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.locator("[data-bulk-refused]").waitFor();
   const refused = await p.locator("[data-bulk-refused] li").allInnerTexts();
   step("C4.2 fail (bulk): the case officer fact and the unasked fact are listed as not changed, in words", refused.length === 2 && refused.some((t) => /case officer/.test(t)) && refused.some((t) => /No question asks/.test(t)) && !refused.some((t) => KEYS.test(t)), refused.join(" | "));
-  await p.waitForFunction(() => /Pre-qualification 2/.test(document.querySelector('[data-source-chip="pqr"]')?.textContent ?? ""), null, { timeout: 15000 });
+  await p.waitForFunction(() => /Prospect questionnaire \(PQR\) 2/.test(document.querySelector('[data-source-chip="pqr"]')?.textContent ?? ""), null, { timeout: 15000 });
   step("C4.2 pass (bulk): the asked question is ticked; the PQR has 2 questions", pqRows() === 2 && /Ask/.test(await rowOf(client2.fact).innerText()), pqRows());
   await state("bulk-refused");
   await p.locator("[data-note-undo]").click(); await settle();
-  await p.waitForFunction(() => /Pre-qualification 1/.test(document.querySelector('[data-source-chip="pqr"]')?.textContent ?? ""), null, { timeout: 15000 });
+  await p.waitForFunction(() => /Prospect questionnaire \(PQR\) 1/.test(document.querySelector('[data-source-chip="pqr"]')?.textContent ?? ""), null, { timeout: 15000 });
   step("C4.2: one Undo takes the bulk tick back (1 question again)", pqRows() === 1, pqRows());
 
   // ======================================================== one record per combination (P-132)

@@ -11,7 +11,7 @@ import { Pill } from "@/components/ui/controls";
 import { Tip } from "@/components/status";
 import { cn } from "@/lib/utils";
 
-const TAB_NAME: Record<string, string> = { forms: "Forms", documents: "Documents", questionnaires: "Questionnaires", review: "Review and release" };
+const TAB_NAME: Record<string, string> = { forms: "Forms", documents: "Documents", questionnaires: "Smart questionnaire (SQR)", review: "Review and release" };
 /** The board's small line under a step's name. */
 const STEP_HINT: Partial<Record<Step["key"], string>> = { pages: "IRCC's apply page and document checklist; the forms, people and documents are read from them", questions_documents: "documents first, then questions" };
 /** Where "See on …" lands for a done step (the step's own place on its tab). */

@@ -40,9 +40,9 @@ const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
   const P0 = await pv();
   const firstOf = new Map<string, string>(); for (const x of P0.people) if (!firstOf.has(x.role)) firstOf.set(x.role, x.subjectId);
   const views = new Map<string, any>(); for (const id of P0.people.map((x: any) => x.subjectId)) views.set(id, await pv(`&person=${id}`));
-  ok("C4.3 pass: every person's preview has the three sets (pre-qualification, what the client is asked, the case officer's view)", [...views.values()].every((v) => Array.isArray(v.sets?.pqr) && typeof v.sets?.sqr?.asked === "number" && Array.isArray(v.sets?.agent?.sections)), [...views.keys()]);
+  ok("C4.3 pass: every person's preview has the three sets (Prospect questionnaire (PQR), what the client is asked, the case officer's view)", [...views.values()].every((v) => Array.isArray(v.sets?.pqr) && typeof v.sets?.sqr?.asked === "number" && Array.isArray(v.sets?.agent?.sections)), [...views.keys()]);
   const same = [...firstOf].map(([role, id]) => ({ role, chip: chipOf.get(role), agent: views.get(id).sets.agent.questions, person: P0.people.find((x: any) => x.subjectId === id).questions }));
-  ok("C4.3 one count (journey item 8) pass: each person's question count equals their chip on the Questionnaires tab, on the person chip and in the case officer's view", same.length >= 4 && same.every((x) => x.chip === x.agent && x.agent === x.person), same);
+  ok("C4.3 one count (journey item 8) pass: each person's question count equals their chip on the Smart questionnaire (SQR) tab, on the person chip and in the case officer's view", same.length >= 4 && same.every((x) => x.chip === x.agent && x.agent === x.person), same);
   ok("C4.3 one count fail-guard: the client is asked no more than that count, and the person chip's second number is what the client is asked", P0.people.every((x: any) => x.asked <= x.questions && views.get(x.subjectId).sets.sqr.asked === x.asked), P0.people.map((x: any) => `${x.subjectId}:${x.questions}/${x.asked}`));
   const agentRows = [...views.values()].flatMap((v) => v.sets.agent.sections.flatMap((s: any) => s.questions));
   ok("C4.3 pass: each answer in the case officer's view says where it comes from, in words (Client, Case officer, Document · its name)", agentRows.length > 0 && agentRows.every((q: any) => /^(Client|Case officer|Document · .+)$/.test(q.from)), [...new Set(agentRows.map((q: any) => q.from))]);
@@ -54,12 +54,12 @@ const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
   ok("C4.3 Q1 fail: a document asked only in some cases (Cannot tell yet) fills nothing yet (the child's birth certificate)", !childV.sets.sqr.fromDocuments.some((d: any) => /Birth certificate/.test(d.document)), childV.sets.sqr.fromDocuments);
 
   // ======================================================== C4.3 PQR
-  ok("C4.3 PQR fail: with nothing ticked (Load sample), no person's pre-qualification set lists a question", [...views.values()].every((v) => v.sets.pqr.length === 0), [...views.values()].map((v) => v.sets.pqr.length));
+  ok("C4.3 PQR fail: with nothing ticked (Load sample), no person's Prospect questionnaire (PQR) set lists a question", [...views.values()].every((v) => v.sets.pqr.length === 0), [...views.values()].map((v) => v.sets.pqr.length));
   const L = (await call("GET", `/combinations/${wp}/fact-sources`)).body;
   const spouseFact = (L.facts as any[]).find((f) => f.role === "spouse_or_partner" && f.source === "CLIENT" && f.placed && !f.prequalification);
   const t = await call("PUT", `/combinations/${wp}/fact-sources/spouse_or_partner/${encodeURIComponent(spouseFact.fact)}`, { prequalification: true, reason: "Sample: preview test", version: spouseFact.version });
   const afterTick = await pv(`&person=spouse`), prAfter = await pv(`&person=principal`);
-  ok("C4.3 PQR pass: a draft tick for the spouse shows in the spouse's pre-qualification set, with where it comes from", t.status === 200 && afterTick.sets.pqr.some((x: any) => x.fact === spouseFact.fact && x.from === "Client"), { status: t.status, pqr: afterTick.sets.pqr });
+  ok("C4.3 PQR pass: a draft tick for the spouse shows in the spouse's Prospect questionnaire (PQR) set, with where it comes from", t.status === 200 && afterTick.sets.pqr.some((x: any) => x.fact === spouseFact.fact && x.from === "Client"), { status: t.status, pqr: afterTick.sets.pqr });
   ok("C4.3 PQR fail: the spouse's tick is not in the principal's set", prAfter.sets.pqr.length === pr.sets.pqr.length && !prAfter.sets.pqr.some((x: any) => x.fact === spouseFact.fact), prAfter.sets.pqr.map((x: any) => x.fact));
   ok("C4.3 PQR fail: the prospect is shown no verdict (the set holds questions only: fact, label, where it comes from)", afterTick.sets.pqr.every((x: any) => Object.keys(x).sort().join() === "fact,from,label"));
 

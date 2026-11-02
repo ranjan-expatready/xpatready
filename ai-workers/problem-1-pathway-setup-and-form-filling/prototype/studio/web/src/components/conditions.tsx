@@ -87,7 +87,7 @@ export function ConditionBuilder({ value, onChange, fields, defaultSubject = "EA
               : t === "yes_no" && r.op !== "in" ? <Select value={r.value} onChange={(e) => set({ value: e.target.value })} aria-label="Value"><option value="">choose</option><option value="true">yes</option><option value="false">no</option></Select>
               : <Input type={t === "date" && r.op !== "in" ? "date" : "text"} value={r.value} placeholder={r.op === "in" ? "values, separated by commas" : t === "number" ? "number" : "value"} onChange={(e) => set({ value: e.target.value })} aria-label="Value" />}
             <Button size="icon" variant="ghost" aria-label="Remove this comparison" onClick={() => build(subject, combine, rows.filter((_, j) => j !== i))}><Trash2 /></Button>
-            {r.field && !fields.some((f) => f.key === r.field) ? <p className="col-span-4 -mt-1 text-xs text-text-warn">{r.field} is not a library field yet (derived values such as age are allowed). The draft saves; release waits until the fact is added from Questionnaires › Facts a rule needs.</p> : r.field ? <p className="col-span-4 -mt-1 text-xs text-text-muted">{fields.find((f) => f.key === r.field)?.meaning} · {t}</p> : null}
+            {r.field && !fields.some((f) => f.key === r.field) ? <p className="col-span-4 -mt-1 text-xs text-text-warn">{r.field} is not a library field yet (derived values such as age are allowed). The draft saves; release waits until the fact is added from Smart questionnaire (SQR) › Facts a rule needs.</p> : r.field ? <p className="col-span-4 -mt-1 text-xs text-text-muted">{fields.find((f) => f.key === r.field)?.meaning} · {t}</p> : null}
           </div>
         );
       })}

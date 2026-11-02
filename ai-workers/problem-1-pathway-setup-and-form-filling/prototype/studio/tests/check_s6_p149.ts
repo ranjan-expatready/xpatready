@@ -200,13 +200,15 @@ const item = (payload: any, over: any = {}) => ({ kind: payload.kind, runId: RUN
   ok("C11.14 undo fail (route): another person cannot undo the batch (403)", r.status === 403, r.body);
   r = await call("POST", `/review/proposals/undo/${bulk.batchId}`, undefined, "user-C");
   ok("C11.14 undo pass (route): the person who decided undoes the whole batch with one Undo; both wait again", r.status === 201 && r.body.undone === 2 && sql(`select count(*) from library_change where batch_id = '${bulk.batchId}'`) === "0", r.body);
-  const [q1b, q2b] = await P.insertProposals(db, ws, [inEd(field("Queue ready again one")), inEd(field("Queue ready again two"))]);
+  // QA-159 (G-CORE B1): two unrelated names, so neither is a near duplicate of "Queue ready one" / "Queue ready two" in
+  // the library (one name holding every word of another is now never Ready).
+  const [q1b, q2b] = await P.insertProposals(db, ws, [inEd(field("Second batch item alpha")), inEd(field("Second batch item beta"))]);
   r = await call("POST", "/review/proposals/decide", { ids: [q1b, q2b], action: "accept" }, "user-C");
   const batch = r.body.batchId;
   sql("insert into audit_event (id, workspace_id, actor, action, entity, entity_key, summary) select gen_random_uuid(), id, 'user-A', 'created', 'test', 'p149-1b', 'test setup' from workspace where key='demo'");
   let qB = await call("GET", "/review-queue?filter=all", undefined, "user-B"), qC = await call("GET", "/review-queue?filter=all", undefined, "user-C");
   const rowB = qB.body.items?.find((i: any) => i.id === `change-batch:${batch}`), rowC = qC.body.items?.find((i: any) => i.id === `change-batch:${batch}`);
-  ok("C11.14 To review pass: one row per decision batch for the second person, linking to its batch page; the decider sees it waiting on others", rowB?.state === "needs" && rowB.next.href === `/review/batch/${batch}` && rowC?.state === "waiting" && !qB.body.items.some((i: any) => i.kind === "library_change" && i.id.startsWith("change:") && /Queue ready again/.test(i.title)), [rowB, rowC]);
+  ok("C11.14 To review pass: one row per decision batch for the second person, linking to its batch page; the decider sees it waiting on others", rowB?.state === "needs" && rowB.next.href === `/review/batch/${batch}` && rowC?.state === "waiting" && !qB.body.items.some((i: any) => i.kind === "library_change" && i.id.startsWith("change:") && /Second batch item/.test(i.title)), [rowB, rowC]);
   const pRow = qB.body.items?.find((i: any) => i.id === `proposals:edition:${ED}`);
   ok("C11.13 To review pass: the queue's group is one Proposals row with its counts, linking to the queue", pRow?.kind === "proposals" && /5 proposals waiting: 3 ready to accept, 1 to check, 1 to decide/.test(pRow.what) && pRow.next.href === `/review/proposals?group=${encodeURIComponent(`edition:${ED}`)}`, pRow);
   r = await call("GET", "/review/changes");

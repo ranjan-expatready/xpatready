@@ -26,7 +26,7 @@ export const groupOf = (r: Pick<Row, "formEdition" | "combinationId" | "runId">)
 /** C4.7: "Ask in pre-qualification: Date of birth (Principal applicant)". */
 const pickTitle = (p: { factKey?: string; role?: string }, facts: Map<string, string>) => {
   const m = facts.get(p.factKey ?? "") ?? "an answer this combination's forms need", fact = m.length > 110 ? `${m.slice(0, 109).trimEnd()}…` : m;
-  return `Ask in pre-qualification: ${fact} (${p.role === "case" ? "The application" : STARTING_ROLES.find((x) => x.key === p.role)?.label ?? "a person in the application"})`;
+  return `Ask in the Prospect questionnaire (PQR): ${fact} (${p.role === "case" ? "The application" : STARTING_ROLES.find((x) => x.key === p.role)?.label ?? "a person in the application"})`;
 };
 const titleOf = (p: Record<string, any>) => String(p.label ?? p.name ?? p.condition?.sentence ?? p.sentence ?? p.target?.key ?? p.kind ?? "A proposal").slice(0, 160);
 const readingOf = (x: unknown): Reading => { const r = x as { reading?: string; from?: "live" | "replay"; payload?: unknown } | null; return r ? { text: r.reading ?? "", from: r.from ?? "replay", payload: r.payload ?? null } : null; };

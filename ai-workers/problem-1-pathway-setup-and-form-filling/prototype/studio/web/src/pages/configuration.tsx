@@ -140,7 +140,7 @@ function Questions({ id, s }: { id: string; s: any }) {
   const sections = useApi<any[]>(["sections"], "/library/sections");
   const [open, setOpen] = React.useState<string | null>(s.sections[0]?.id ?? null);
   const [add, setAdd] = React.useState("");
-  const sel = useAction((b: { key: string; on: boolean }) => api(`/combinations/${id}/sections/${b.key}`, { method: b.on ? "POST" : "DELETE" }), { success: "Questionnaire sections updated", invalidate: [["config", id], ["combination", id], ["preview"]] });
+  const sel = useAction((b: { key: string; on: boolean }) => api(`/combinations/${id}/sections/${b.key}`, { method: b.on ? "POST" : "DELETE" }), { success: "Smart questionnaire (SQR) sections updated", invalidate: [["config", id], ["combination", id], ["preview"]] });
   const by = (sec: string) => s.placements.filter((p: any) => p.section_id === sec);
   const unselected = (sections.data ?? []).filter((x) => !x.retired && !s.sections.some((y: any) => y.id === x.key)); // C11.9: retired sections are not offered
   return (

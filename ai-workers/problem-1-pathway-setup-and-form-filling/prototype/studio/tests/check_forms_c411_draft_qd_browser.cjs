@@ -1,5 +1,5 @@
 // C4.11 walked like a content publisher in a real browser (forms lane; live wiring 5a, P-227): on Work permit, family's
-// Questionnaires tab, "Draft questions and documents" offers exactly Live and Saved; Saved (a stand-in saved run of step 6,
+// Smart questionnaire (SQR) tab, "Draft questions and documents" offers exactly Live and Saved; Saved (a stand-in saved run of step 6,
 // written into p2/runs and removed after) shows the seven steps at US$0; Live shows its worst case first; a Live run shows
 // on the run card with Stop; a Live run whose AI steps fail offers "Use Saved (US$0)", which replays at US$0 into To review.
 // With no checklist and nothing saved, and the copy restarted without the live switch, "Nothing can start" is tied to
@@ -70,7 +70,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 
   await go();
   const btn = p.getByRole("button", { name: "Draft questions and documents" });
-  step("C4.11 pass: the Questionnaires tab offers Draft questions and documents to the author", await btn.isVisible());
+  step("C4.11 pass: the Smart questionnaire (SQR) tab offers Draft questions and documents to the author", await btn.isVisible());
   const dlg = p.getByRole("dialog", { name: "Draft questions and documents" });
   const start = () => dlg.locator("[data-qd-start]");
   const open = async () => { await btn.click(); await dlg.waitFor(); await dlg.locator("[data-qd-plan]").waitFor(); await p.waitForFunction(() => !!document.querySelector("[data-qd-cost], [data-qd-none]"), null, { timeout: 30000 }); await settle(); };
@@ -115,9 +115,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await dlg.getByRole("link", { name: "Open To review" }).click();
   await p.waitForURL(/\/review\/proposals/); await settle();
   // CI (#469): on a slow runner the list can render after settle(); wait for it (up to 15 s), then judge, with what showed.
-  await p.waitForFunction(() => /pre-qualification/i.test(document.querySelector("main")?.innerText ?? ""), null, { timeout: 15000 }).catch(() => {});
+  await p.waitForFunction(() => /Prospect questionnaire \(PQR\)/i.test(document.querySelector("main")?.innerText ?? ""), null, { timeout: 15000 }).catch(() => {});
   const landed = await p.locator("main").innerText();
-  step("C4.11 pass: Open To review lands on this combination's items", /pre-qualification/i.test(landed), `${p.url()} — ${landed.slice(0, 300)}`);
+  step("C4.11 pass: Open To review lands on this combination's items", /Prospect questionnaire \(PQR\)/i.test(landed), `${p.url()} — ${landed.slice(0, 300)}`);
 
   // The demo's own state: no live switch, no checklist to read and nothing saved: nothing can start, tied to Draft.
   for (const f of written.splice(0)) fs.rmSync(f, { force: true });
