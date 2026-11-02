@@ -70,3 +70,60 @@ r1a) and check_case_engine pass.
 (`concept.md:38`): `isDemoSnapshot` now reads Sample sources; BR-7 (`concept.md:33`): the catalogue gates only rows with
 changes or no release; BR-4 (`concept.md:29`): fee numbers report `where` "People" (decision 2); §4 Release page
 (`concept.md:44`): the held reason is "17 numbers have no source entry: fix on Review and release."
+
+## PR 2b: the screens (built 2 Nov, after #587)
+**Split (one small item = one PR).** PR 2b is the Review block and the Source panel, the two boards a release needs. The
+panel's other entry points (the RuleDialog section "Sources of its numbers", a check row's "Sources" action, the "Source"
+link under a form line's "From age") are **PR 2c**. Each reuses `SourcePanel` with the item it opens on; none needs a new
+API.
+* **Review and release** (`web/src/pages/review.tsx`, `web/src/components/unsourced-numbers.tsx`): "Numbers without a
+  source (n)", grouped by item, each line in the refusal's own words with **Add source** (or **Check source** when its
+  number changed). The first six items show, then "Show all n items". The context line counts the sample load's own
+  citations and the fee-table lines. The validation block no longer repeats these numbers: it counts "other" errors.
+  When every number has its answer, the block says so in one line. A Live combination with no draft change lists its
+  numbers in neutral colours, saying they block the next submission once the draft changes (BR-7 gates only a changed
+  draft).
+* **Source panel** (`web/src/components/source-panel.tsx`): one card per number of the item. States: missing (opens on
+  Official source, the item's own quote and today's date filled in), cited, None published, Sample, changed ("The source
+  was written for 18; the number is now 19", **Still correct for 19** / **Write a new source**), field errors in §5's
+  words on their fields, conflict (409: who and when, **Reload theirs** / **Keep mine and save again**), read only for a
+  non-author ("Only the configuration author adds sources."), empty, loading. Fee-table and validity-rule numbers show
+  read only (BR-4, no fee card). The "same source for the other 18 in this item" box writes the twin in one go.
+* **Where the build differs from board 2:**
+  1. **The address picker** offers the addresses this combination already cites (an HTML list), not the combination's
+     approved official pages: no endpoint lists those with their addresses today. A later row can feed the same list.
+  2. **"Still correct for 19"** re-saves the same answer, so a citation whose words state 18 is refused on the words, and
+     the editor opens with the error in place. That is the agreed rule (the words must state the number), not a bug.
+  3. **The None published guidance** stays in view above the reason, also while the reason shows an error.
+  4. Item words for a check show the first sentence (build note 2), the whole text on hover.
+* **API** (additive): each number carries `item_quote`, its item's own source quote (`itemQuoteOf()`), for the panel.
+* **Checks:** `tests/check_g1_source_register_browser.cjs` **41/41** (1440, 1024 and 400 px; axe on the block, the
+  panel with errors, the conflict and the all-sourced state; keyboard in and out). API suite 51/51 (`item_quote`).
+  `check_s5_slice2_browser` 63/63 (it reads the validation list). Web `tsc` 0; `count-any` 422 (unchanged).
+
+### PR 2b, after the reviewer (Block, 7.5/10) and the breaker (4 Majors), both on b9743d5a
+* **MJ-1 / break M2:** "From the sample load" now means *last saved* by the sample load (`updated_by`), so a person's
+  save is credited to them. API check plus browser check.
+* **MJ-2 / break M1 (WCAG 2.4.3):** closing the panel returns focus to the button that opened it, or to the next
+  button when that number left the list, or to the heading. `Panel` takes `returnFocus`. The panel now renders also
+  when the last number is answered, so saving the last one no longer makes it vanish. Browser checks after a save and
+  after Escape.
+* **Break M3:** a save conflict shows what the other save holds ("Saved now: …") before Keep mine; the same author in
+  another window is told "You saved this source in another window", never "someone else". API checks for both.
+* **Break M4:** a typed, unsaved source asks "Discard the source you typed? It is not saved." before Escape, the
+  overlay, the X or Close throws it away. `Panel` takes `confirmClose`. Browser check.
+* **Minors fixed:** View (read only) for a non-author, and "No source yet" on a missing card (review m1, break m4); a
+  moved number answers "The number changed" with Reload (review m2, break m3); a changed line names its number (review
+  m3); the fee count line's tooltip names each line's quote kind (review m4; API `quote_kind`); the all-set line says
+  "has its answer: an official source or 'None published …'", with how many came from the sample load (review m5,
+  break m8); a failed twin save is named (break m2); long words wrap (break m1); the date read defaults to the
+  person's own day and the server accepts up to UTC+14 (break m5); the page note stops at 200 (break m6); the link
+  reads its host (break m7); focus moves to the first field once the numbers load (break m9); same-named buttons are
+  told apart by their item (break m4). Tests added for the item quote, the twin save, the moved 409 and focus
+  (review m6).
+* **Noted for PR 2a's rules (not this PR):** French and Arabic-digit quotes are refused; a quote of zero-width
+  characters around a digit is accepted; number words show dates as 2019-06-07.
+* Browser 55/55, API 54/54.
+* **Reviewer round 2 (Approve, 9.5/10 on 3aba0266):** its flaky-check Minor is fixed (a card's state is read once the
+  refetch lands). **Follow-up, not built:** the browser's Back still discards a typed, unsaved source without asking,
+  as the app's existing Dialog guard does; a `beforeunload` plus route block belongs in a shared row for every panel.
