@@ -44,22 +44,6 @@ export function checkedFieldValues(valueType: string, values: readonly AnswerVal
   return undefined;
 }
 
-const sameList = (a: { valueKey: string; label: string; sortOrder: number }[], b: readonly AnswerValue[]) =>
-  a.length === b.length && [...a].sort((x, y) => x.sortOrder - y.sortOrder).every((v, i) => v.valueKey === b[i].code && v.label === b[i].label);
-
-/** The list a field's values land as: the released list with the same values (codes, words and order; break m3) is
- *  reused; else a new draft list that rides with the field (no ADD of its own: break B1). */
-export async function landAnswerList(tx: Tx, ws: string, actorId: string, label: string, values: readonly AnswerValue[], keyOf: (label: string, used: Set<string>) => string): Promise<string> {
-  const released = await tx.answerList.findMany({ where: { workspaceId: ws, status: "PUBLISHED" }, include: { values: { select: { valueKey: true, label: true, sortOrder: true } } } });
-  const same = released.find((x) => sameList(x.values, values));
-  if (same) return same.answerListKey;
-  const used = new Set((await tx.answerList.findMany({ where: { workspaceId: ws }, select: { answerListKey: true } })).map((x) => `x.${x.answerListKey}`));
-  const key = keyOf(`${label} answers`, used);
-  await tx.answerList.create({ data: { workspaceId: ws, answerListKey: key, version: 1, status: "DRAFT", label: `${label}: answers`, origin: "AI_PROPOSAL", updatedBy: actorId,
-    values: { create: values.map((v, i) => ({ valueKey: v.code, label: v.label, sortOrder: i + 1 })) } } });
-  return key;
-}
-
 /** A field's own draft list, removed with the field (undo, withdraw) unless another field uses it (break B2). Call it
  *  with the list key read before the field row is deleted. */
 export async function dropFieldList(tx: Tx, ws: string, listKey: string | null | undefined): Promise<void> {

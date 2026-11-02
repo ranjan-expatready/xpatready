@@ -13,7 +13,7 @@ import { normalizeLabel } from "../../contracts/programs.ts";
 import { subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
 import { fail, need, type Actor, type Audit, type Db } from "./core.ts";
 import { keyFor } from "./library-changes.ts";
-import { checkedFieldValues, dropFieldList, landAnswerList } from "./answer-values.ts";
+import { checkedFieldValues, dropFieldList, type AnswerValue } from "./answer-values.ts";
 import { acceptPqrPick } from "./fact-sources.ts";
 import { LibrarySources } from "./library-sources.ts";
 
@@ -180,6 +180,22 @@ const waitingAdd = (tx: Tx, l: Landing, kind: string, key: string, label: string
   sourceJobId: l.sourceJobId ?? null, combinationId: l.combinationId ?? null, proposalItemId: l.itemId, batchId: l.batchId } });
 
 /** A new shared field as a draft row plus its ADD waiting for a second person. Also the field-map apply's writer. */
+const sameList = (a: { valueKey: string; label: string; sortOrder: number }[], b: readonly AnswerValue[]) =>
+  a.length === b.length && [...a].sort((x, y) => x.sortOrder - y.sortOrder).every((v, i) => v.valueKey === b[i].code && v.label === b[i].label);
+
+/** The list a field's values land as: the released list with the same values (codes, words and order; break m3) is
+ *  reused; else a new draft list that rides with the field (no ADD of its own: break B1). */
+async function landAnswerList(tx: Tx, ws: string, actorId: string, label: string, values: readonly AnswerValue[], keyOf: (label: string, used: Set<string>) => string): Promise<string> {
+  const released = await tx.answerList.findMany({ where: { workspaceId: ws, status: "PUBLISHED" }, include: { values: { select: { valueKey: true, label: true, sortOrder: true } } } });
+  const same = released.find((x) => sameList(x.values, values));
+  if (same) return same.answerListKey;
+  const used = new Set((await tx.answerList.findMany({ where: { workspaceId: ws }, select: { answerListKey: true } })).map((x) => `x.${x.answerListKey}`));
+  const key = keyOf(`${label} answers`, used);
+  await tx.answerList.create({ data: { workspaceId: ws, answerListKey: key, version: 1, status: "DRAFT", label: `${label}: answers`, origin: "AI_PROPOSAL", updatedBy: actorId,
+    values: { create: values.map((v, i) => ({ valueKey: v.code, label: v.label, sortOrder: i + 1 })) } } });
+  return key;
+}
+
 export async function landField(tx: Tx, l: Landing, f: { key: string; meaning: string; valueType: string; label?: string | null; answerListKey?: string | null; sourceRef: string }) {
   const made = await tx.canonicalField.create({ data: { workspaceId: l.ws, canonicalFieldKey: f.key, version: 1, status: "DRAFT", meaning: f.meaning, valueType: f.valueType, dataType: (VALUE_TYPE_TO_DATA_TYPE as Record<string, string>)[f.valueType] ?? "STRING",
     scope: f.key.startsWith("case.") ? "CASE_LEVEL" : "CLIENT_LEVEL", subjectKind: subjectKindOf(f.key), origin: "AI_PROPOSAL", sourceRef: f.sourceRef, updatedBy: l.actor.id,
