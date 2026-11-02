@@ -301,12 +301,18 @@ export class CaseForms implements OnModuleInit {
     const path = join(dir, `${x.formNumber.replace(/\s+/g, "")}-${short(x.id)}-${sha.slice(0, 12)}.pdf`);
     writeFileSync(path, f!.buffer!);
     const request = join(ROOT, x.path!.replace(/\.pdf$/, ".request.json"));
-    let rb: { ok: boolean; why: string | null; written?: number; read_back_equal?: number; mismatches?: unknown[] };
+    let rb: { ok: boolean; why: string | null; written?: number; read_back_equal?: number; mismatches?: unknown[]; validation?: { kept_by_form: boolean; flag: string | null; date_last_validated: string | null; passed: boolean } };
     try { const { stdout } = await run(PY, ["-I", join(PROTOTYPE, "studio", "tools", "read_validated.py"), path, join(ROOT, x.path!), request], { cwd: ROOT, timeout: 120_000, maxBuffer: 10 * 1024 * 1024 }); rb = JSON.parse(stdout.trim().split("\n").pop()!); }
     catch { rb = { ok: false, why: "The file could not be read back." }; }
+    // QA-165 (P-144, P-237): "validated" only from the form's own Validate result kept in the file (its validated flag
+    // Yes and its date last validated set, tools/read_validated.py form_validation), never from an upload alone.
+    const passed = rb.ok && rb.validation?.passed === true;
     // Refused uploads are not left in the working files (break minor).
-    if (!rb.ok) rmSync(path, { force: true });
+    if (!passed) rmSync(path, { force: true });
     if (!rb.ok) fail(`Not read back: ${rb.why ?? "the file does not hold the values this copy wrote."}${differing((x.snapshot.factsJson as Stored).boxes, rb.mismatches, rb.written !== undefined && rb.read_back_equal !== undefined ? rb.written - rb.read_back_equal : undefined)} Nothing was recorded; validate this copy in Adobe, save it and send it again.`, HttpStatus.UNPROCESSABLE_ENTITY);
+    if (!rb.validation?.passed) fail(rb.validation?.kept_by_form === false
+      ? `${x.formNumber} keeps no record of its own Validate in the file, so this file cannot show that Validate passed. Nothing was recorded.`
+      : `Adobe's Validate has not passed on this file: the form's own mark says ${rb.validation?.flag ? `"${rb.validation.flag}"` : "nothing"}${rb.validation?.flag && !rb.validation?.date_last_validated ? " and no date last validated" : ""}. In Adobe, press Validate, fix what it marks red until it says the form is complete, save, and send that file. Nothing was recorded.`, HttpStatus.UNPROCESSABLE_ENTITY);
     // QA-128 (P-65: kept once): the same validated file sent twice at once (a double click) is kept once. The copy's row is
     // locked, so the second send waits for the first and then finds its line.
     const v = await this.db.$transaction(async (tx) => {

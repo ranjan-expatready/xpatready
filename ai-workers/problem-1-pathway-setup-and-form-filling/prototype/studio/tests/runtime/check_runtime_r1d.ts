@@ -4,6 +4,7 @@
 // a failing case, on an isolated copy where setup_visitor_visa.ts released the visitor visa. No model call (US$0).
 //   zsh studio/tools/isolated.sh runtime_r1 4430 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4430 xr_studio_runtime_r1
 //   tsx studio/tests/runtime/check_runtime_r1d.ts 4430 xr_studio_runtime_r1
+import { asValidated } from "./validated.ts"; // QA-165: the form's own Validate result, not bytes appended
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { appendFileSync, copyFileSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
@@ -196,11 +197,18 @@ async function main() {
     const res = await fetch(`http://127.0.0.1:${PORT}/api${path}`, { method: "POST", headers: { "x-actor": actor }, body: fd });
     return { status: res.status, body: await res.json().catch(() => null) };
   };
-  const asValidated = (b: Buffer) => Buffer.concat([b, Buffer.from("\n% Saved after Validate (simulated in this check)\n")]);
   const copyFile = readFileSync(join(ROOT, row1.path));
-  // Break M1: Adobe's Validate adds the barcode and saves, so the validated file never has the copy's bytes. Simulated
-  // here as an incremental save appended after the copy (the values stay as written); the unchanged copy is refused.
+  // Break M1: Adobe's Validate adds the barcode and saves, so the validated file never has the copy's bytes. QA-165:
+  // simulated by writing the form's own Validate result into the copy (the values stay as written); the unchanged copy is
+  // refused, and so is a changed file whose own result does not say Validate passed.
   const validatedFile = asValidated(copyFile);
+  const refusedAsUnvalidated = (x: { status: number; body: { detail?: string } | null }) => x.status === 422 && /Validate has not passed/.test(x.body?.detail ?? "") && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "0";
+  r = await sendValidated(locked1, Buffer.concat([copyFile, Buffer.from("\n% Saved after Validate (simulated in this check)\n")]), "imm5257-validated.pdf");
+  ok("QA-165 fail: a copy with bytes appended but no Validate result of the form's own (qa's golden journey 1) is not taken as validated (422), nothing recorded", refusedAsUnvalidated(r), r.body?.detail);
+  r = await sendValidated(locked1, asValidated(copyFile, "No"), "imm5257-validated.pdf");
+  ok("QA-165 fail: the form's own mark says No (Validate found it incomplete): refused in words naming the mark, nothing recorded", refusedAsUnvalidated(r) && /"No"/.test(r.body?.detail ?? ""), r.body?.detail);
+  r = await sendValidated(locked1, asValidated(copyFile, "Yes", false), "imm5257-validated.pdf");
+  ok("QA-165 fail: the mark says Yes but the form kept no date last validated (its script sets both): refused, nothing recorded", refusedAsUnvalidated(r) && /no date last validated/.test(r.body?.detail ?? ""), r.body?.detail);
   r = await call("POST", `/runtime/form-copies/${locked1}/validated`, {}, OFFICER);
   ok("C11.6 C-9 fail: sending no file is refused in words (400), nothing recorded", r.status === 400 && /validated PDF/.test(r.body?.detail ?? "") && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "0", r.body?.detail);
   r = await sendValidated(locked1, Buffer.from("not a pdf"), "notes.txt");

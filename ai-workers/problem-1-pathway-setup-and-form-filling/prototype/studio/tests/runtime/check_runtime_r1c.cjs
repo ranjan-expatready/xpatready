@@ -336,11 +336,18 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("P-71 pass / C-9 fail-guard (break M2): with every required fact confirmed, IMM 5257 says \"Validate before filing\" (not \"Ready to file\") and the earlier copy is out of date", await shows(imm.getByText("Validate before filing")) && await gone(imm.getByText("Ready to file")) && await shows(imm.getByText("Out of date")));
   await imm.getByRole("button", { name: "Generate a new copy" }).click();
   await shows(imm.getByText("Generated", { exact: true }));
-  // The officer validates the new copy in Adobe and reads it back (simulated: the copy plus an appended save; values unchanged).
+  // The officer validates the new copy in Adobe and reads it back (simulated: the form's own Validate result written in; values unchanged).
   const fl5257 = (await call("GET", `/runtime/cases/${caseId}/forms`, undefined, "user-O")).body.forms.find((f) => f.form === "IMM 5257" && f.person === "Sample Applicant C");
   const newCopy = fl5257.copies[0].id;
   const bytes = Buffer.from(await (await fetch(`${BASE}/api/runtime/form-copies/${newCopy}/file`, { headers: { "x-actor": "user-O" } })).arrayBuffer());
-  const fd = new FormData(); fd.append("file", new Blob([Buffer.concat([bytes, Buffer.from("\n% Saved after Validate (simulated in this check)\n")])]), "imm5257-validated.pdf");
+  // QA-165: the form's own Validate result written into the copy (tools/simulate_validate.py), never bytes appended.
+  const vdir = require("node:fs").mkdtempSync(require("node:path").join(require("node:os").tmpdir(), "xr-validate-"));
+  require("node:fs").writeFileSync(require("node:path").join(vdir, "copy.pdf"), bytes);
+  const py = require("node:path").join(__dirname, "..", "..", "..", "..", "..", "..", ".tools", "solution-1-prototype", ".venv", "bin", "python");
+  const sv = require("node:child_process").spawnSync(py, ["-I", require("node:path").join(__dirname, "..", "..", "tools", "simulate_validate.py"), require("node:path").join(vdir, "copy.pdf"), require("node:path").join(vdir, "validated.pdf"), "Yes"], { encoding: "utf8", timeout: 120000 });
+  if (sv.status !== 0) throw new Error(`simulate_validate.py failed: ${(sv.stderr || sv.stdout).slice(-300)}`);
+  const validatedBytes = require("node:fs").readFileSync(require("node:path").join(vdir, "validated.pdf")); require("node:fs").rmSync(vdir, { recursive: true, force: true });
+  const fd = new FormData(); fd.append("file", new Blob([validatedBytes]), "imm5257-validated.pdf");
   const vr = await fetch(`${BASE}/api/runtime/form-copies/${newCopy}/validated`, { method: "POST", headers: { "x-actor": "user-O" }, body: fd });
   await o.reload(); await idle(o);
   step("C-9 pass (break M2): once the validated copy is read back, IMM 5257 is \"Ready to file\"", vr.status === 201 && await shows(imm.getByText("Ready to file")) && await gone(imm.getByText("Validate before filing")), vr.status);
