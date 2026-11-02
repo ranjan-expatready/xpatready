@@ -11,6 +11,7 @@ updated: 2026-11-02 05:35 UTC (**new Lead "LeadX" took over at 05:20 UTC**; ever
 
 ## Progress (`progress.sh` on main, 04:59 UTC)
 M2 **34/56 Works** · 8 built, awaiting qa · 14 partial. R1 6/8 (C7.2 not tested: #414 raised the app's IMM 5257 fill to 40 of 46 mandatory; Adobe Validate runs on the Mac after the rest). M3 1/16 · 7 partial (qa-m3 found gaps in C6.4, C6.12, C11.6, C7.3) · 8 not built. **Half-done: 28 capabilities, 12–14 open PRs** (baseline 04:10 UTC). 39 PRs merged since 1 Nov 19:20 UTC. AI spend US$0 today (ledger since 26 Oct: US$3.13). **Weekly plan 79%** (resets 5 Nov 23:00 UTC; it rose about 4 points an hour with 12 sessions: at 92% builders finish and stop; consider fewer sessions).
+**Dates (*estimates*):** M2 now 60 rows plus G-CORE; gate about 11–12 Nov (P-255, founder kept the additions knowing the impact); builders stop at 95% and everything is closed by 98% of the weekly plan (P-257), so the founder can continue from a new account.
 
 ## Sessions (cloud ones answer in PR comments; they can't message the Lead, 401)
 | Session | Now → next |
@@ -49,9 +50,16 @@ IMM 5257 field map: **verified for Saved at US$0** (21 Oct run reused; after #42
 | A11 | Finish before starting (P-231) | in force; C8.1, C8.2 paused |
 | A12 | Fast-track (forms-3, forms-4, C11.12 board) | done |
 | A13 | Visual progress report for the founder's founder | dashboard published (private; share from its menu) |
-| A16 | Pull the latest SA-01B; review it end to end incl. the Chrome extension; every conflicting or overlapping decision; a high-level split of what the team builds vs the POC; grill one question at a time; decisions into BACKLOG at M2/M3/M4 | snapshot 2026-11-02-1054 synced to `domain/requirements-2026-11-02/`; **done**: P-235–P-245, P-247, P-248 decided by the founder, P-246 by the Lead (M2 now 60 rows; rows G1–G5, L-SA3–L-SA10, E1–E6); the SA-01B session's analysis file comes next by the session "SA01B scope and handover review"; Lead records |
+| A16 | Pull the latest SA-01B; review it end to end incl. the Chrome extension; every conflicting or overlapping decision; a high-level split of what the team builds vs the POC; grill one question at a time; decisions into BACKLOG at M2/M3/M4 | snapshot 2026-11-02-1054 synced to `domain/requirements-2026-11-02/`; **done**: P-235–P-245, P-247–P-249 decided by the founder, P-246 by the Lead (M2 now 60 rows; rows G1–G5, L-SA3–L-SA10, E1–E6); the SA-01B session's analysis file comes next by the session "SA01B scope and handover review"; Lead records |
+| A23 | Close at 97–98% so a new account can continue every piece of work | P-257: builders stop at 95%, closed by 98%; all work pushed, Handovers on PRs, STATE restart page | Lead |
+| A22 | When does M3 building start; what parallel work | M3's Visitor visa path already runs alongside M2; founder: "After the reset": the M3 wave (C7.7 with #357, C8.1, C8.2, the C6.5 reader, C7.5) starts right after the weekly plan resets on 5 Nov 23:00 UTC; until then, finish what is in flight | Lead |
+| A21 | Raise big-impact choices (time, cost, quality) before recording them | P-254; lead skill line added | Lead |
+| A20 | One uniform, guarded add/adjust flow everywhere, AI helping, industry practice; everything into BACKLOG | baselined P-253 (by risk; core built now, row G-CORE); every decision P-230–P-252 checked to have a row (gaps P-233, P-235, P-246 added) | Lead |
+| A19 | Rate progress; fast-track without losing quality, or keep as is | rated 5/10 (building good, landing poor); founder: "Yes, keep and fix": same model + flow-watch alarms every check, qa before merge (P-250), records hourly | Lead |
+| A18 | Product owner's SA-01B note: record holds, do-now rows, draft the reply ("Yes, do both") | holds and S1–S9 in BACKLOG (P-251); runtime-3 and runtime-5 told; reply drafted by the SA-01B session |
+| A17 | qa before merge (P-250): "Yes, qa before merge" | in force; qa and qa-m3 briefed |
 | A15 | Weekly plan: full speed until 93%, then keep 7% for the last hand-over and all updates (P-234) | in force; Lead sends "STOP: 93%" |
 | A14 | Close finished sessions, tidy the sidebar | local ones archived by the old Lead; cloud ones need the founder on claude.ai/code |
 
 ## Lessons of the day (lead skill "Not drifting")
-Read the night's decisions word for word before the first brief · every founder ask goes in the table above · one owner per table · tooling bugs look like flaky tests · builders' stashes must be pushed · records PRs written in parallel conflict on DECISIONS: batch them into one · start qa and fresh sessions while the founder is at the desktop · watch disk and the weekly plan every check.
+Read the night's decisions word for word before the first brief · every founder ask goes in the table above · one owner per table · tooling bugs look like flaky tests · builders' stashes must be pushed · records PRs written in parallel conflict on DECISIONS: batch them into one · start qa and fresh sessions while the founder is at the desktop · watch disk and the weekly plan every check. · **the Lead's records merges reset Mergify's batches (04:49–06:05 UTC: 0 product merges with 13 approved): keep founder answers on one open records branch, merge it about hourly when no queue draft is checking, and cancel CI runs on records branches**
