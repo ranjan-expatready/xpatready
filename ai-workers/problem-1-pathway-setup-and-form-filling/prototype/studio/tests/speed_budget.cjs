@@ -11,6 +11,8 @@ const os = require("node:os");
  *  judges the budgets (Lead, 1 Nov; the budgets stay, P-184). */
 function machine(env = process.env) {
   const load = os.loadavg()[0], cores = os.cpus().length;
+  // T1 (P-228 (6)): the nightly full run on GitHub sets SPEED_JUDGE=1 and is judged like the Mac was, when not busy.
+  if (env.RUNNER_ENVIRONMENT === "github-hosted" && env.SPEED_JUDGE === "1") return { load, cores, busy: load > cores };
   if (env.RUNNER_ENVIRONMENT === "github-hosted") return { load, cores, busy: true, reason: `CI machine (${cores} cores): judged by the nightly run on the Mac` };
   return { load, cores, busy: load > cores };
 }
