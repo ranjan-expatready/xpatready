@@ -149,7 +149,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
         ))}
         {pending.map((a) => (
           <tr key={a.id} data-pending={a.edition ?? a.fileName}>
-            <td><span className="mono font-medium">{(a.edition ?? a.fileName).split(" (")[0]}</span><br /><span className="text-xs text-text-muted">{a.edition} · {a.fileName}</span></td>
+            <td><span className="mono font-medium">{(a.edition ?? a.fileName).split(" (")[0]}</span><br />{/* QA-78: the edition a person reads, never the file name (imm5257e.pdf). */}<span className="text-xs text-text-muted">{a.edition ?? "Not read yet"}</span></td>
             <td colSpan={5} className="text-xs text-text-muted">Attached from the Form library: not set up as a line yet. It is read, then its form fields are matched to shared fields; it joins the lines when the matches are applied.</td>
             <td className="text-xs"><ReadingCell d={combo} a={a} inLibrary={inLibrary(a)} />{a.edition ? <span className="mt-1 block"><StepChip code={a.edition.split(" (")[0]} chip={progress[a.edition.split(" (")[0]]} onOpen={() => openSetup(a.edition!.split(" (")[0])} /></span> : null}</td>
             <td />

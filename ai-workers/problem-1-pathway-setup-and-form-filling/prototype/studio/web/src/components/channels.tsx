@@ -6,6 +6,7 @@ import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ACCOUNT_WORDS, CHANNEL_MEANS, CHANNEL_WORDS, CHANNELS, IRCC_ACCOUNTS, ONLINE_LATER, SIGNATURE_WORDS, throughAccount, type Channel, type Signature } from "../../../contracts/forms";
 import type { CombinationSummary } from "../../../contracts/programs";
+import { ONLINE_OPTION } from "../../../contracts/workspace";
 import { api, useToast } from "@/lib/api";
 import { Select } from "@/components/ui/controls";
 
@@ -66,7 +67,7 @@ export function ChannelCell({ id, line, canAuthor, options }: { id: string; line
       {canAuthor ? (
         <Select aria-label={`How ${line.code} is filed`} title="How this form reaches IRCC: online in the account's own screens, as a PDF upload, on paper, or not at all when the account asks it itself" className="h-8 w-auto" {...pick}>
           {CHANNELS.map((c) => { const o = options?.find((x) => x.channel === c); const off = !!o && !o.ok && c !== line.channel;
-            return <option key={c} value={c} disabled={off} title={o?.why ?? CHANNEL_MEANS[c]}>{CHANNEL_WORDS[c]}{c === "ONLINE" ? " (later wave)" : ""}{off ? " (IRCC does not accept it)" : ""}</option>; })}
+            return <option key={c} value={c} disabled={off} title={o?.why ?? CHANNEL_MEANS[c]}>{CHANNEL_WORDS[c]}{c === "ONLINE" ? ONLINE_OPTION : ""}{off ? " (IRCC does not accept it)" : ""}</option>; })}
         </Select>
       ) : <span>{line.channelWords}</span>}
       {line.channel === "ONLINE" ? <span className="text-xs text-text-muted" data-online-later>{ONLINE_LATER}</span> : line.channel === "NOT_NEEDED" ? <span className="text-xs text-text-muted" data-not-needed>{CHANNEL_MEANS.NOT_NEEDED}</span> : null}
