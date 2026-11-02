@@ -29,8 +29,10 @@ const isLive = (s: string) => s === "DRAFT" || s === "PUBLISHED";
 const byWords = (a: string, b: string) => a.localeCompare(b);
 /** BR-3 copy (concept §5): the preview is stale. */
 export const STALE = "What this change touches changed since you opened it. Look at it again, then confirm.";
-/** change_set.status: applied (direct, or approved by the second person) · waiting · returned · withdrawn · rolled_back. */
-export type ChangeSetStatus = "applied" | "waiting" | "returned" | "withdrawn" | "rolled_back";
+/** change_set.status (the table's check constraint): applied (direct, or approved by the second person) · waiting ·
+ *  rolled_back · undone (it ended without being applied: returned, withdrawn or a merge rejected; the linked
+ *  library_change / field_merge says which). Review B2 M1: every decision that ends a wait sets it, in the same write. */
+export type ChangeSetStatus = "applied" | "waiting" | "rolled_back" | "undone";
 
 /** The newest version of every library item, as the engine's check reads them. */
 export async function libraryOf(db: Client, workspaceId: string): Promise<Library> {

@@ -139,13 +139,15 @@ const count = (table: string) => Number(sql(`select count(*) from ${table}`));
   ok("C3.15 pass: the rename is on the activity log in words", /approved renaming field person\.family_name from "person\.family_name" to "Last name"/.test(sql("select summary from audit_event where action='renamed' and entity_key='person.family_name' order by at desc limit 1")));
   r = await call("PATCH", "/library/fields/person.given_names/name", { name: "last-name" });
   ok("C3.15 fail: a name another field in the group has (case, spaces and punctuation aside) is refused, nothing written", r.status === 409 && /already the name of Last name/.test(r.body.detail) && sql("select label_checked from canonical_field where canonical_field_key='person.given_names' order by version desc limit 1") === "f", r.body.detail);
+  const appReleased = sql("select count(*) from config_release r where r.snapshot->'canonical_fields' @> '[{\"id\": \"case.application_date\"}]'::jsonb") !== "0";
   r = await call("PATCH", "/library/fields/case.application_date/name", { name: "Last name" });
-  ok("C3.15 pass: the same name in another group (case, not person) is allowed (it applies, or waits for a second person when released)", r.status === 200 || r.status === 202, r.body?.detail);
+  ok("C3.15 pass: the same name in another group (case, not person) is allowed (202 waiting when a release carries it, else 200)", r.status === (appReleased ? 202 : 200), [appReleased, r.status, r.body?.detail]);
   const [bad, short, notAuthor] = await Promise.all([call("PATCH", "/library/fields/person.not_there/name", { name: "Anything" }), call("PATCH", "/library/fields/person.uci/name", { name: " " }), call("PATCH", "/library/fields/person.uci/name", { name: "Client number" }, "user-B")]);
   ok("C3.15 fail: an unknown field 404, an empty name 400, a person without the author duty 403", bad.status === 404 && short.status === 400 && notAuthor.status === 403, [bad.status, short.status, notAuthor.status]);
   const sec = sections.find((x) => x.title === "Languages") ?? sections[0];
   r = await call("PATCH", `/library/sections/${sec.key}`, { name: "Languages spoken" });
-  if (r.status === 202) r = await call("POST", `/library/changes/${r.body.change_id}/approve`, {}, "user-B"); // released: a second person approves
+  ok("C3.15 + P-253: the Languages section is in a release, so its rename waits for a second person (202)", r.status === 202 && r.body.status === "WAITING", [r.status, r.body]);
+  r = await call("POST", `/library/changes/${r.body?.change_id}/approve`, {}, "user-B");
   const secRow = ((await call("GET", "/library/sections")).body as { key: string; title: string; version: number }[]).find((x) => x.key === sec.key);
   ok("C3.15 pass: an author renames a section (a new draft version), the list shows it", r.status < 300 && secRow?.title === "Languages spoken" && sql(`select status from logical_section where section_key='${sec.key}' order by version desc limit 1`) === "DRAFT", [r.status, secRow]);
   r = await call("PATCH", `/library/sections/${sec.key}`, { name: sections.find((x) => x.key !== sec.key)!.title.toUpperCase() });

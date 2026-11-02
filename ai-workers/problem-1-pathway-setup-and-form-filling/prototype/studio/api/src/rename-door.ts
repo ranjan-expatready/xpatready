@@ -24,12 +24,15 @@ const problem = (status: number, title: string, detail: string) =>
   new HttpException({ type: `https://expatready.local/problems/${title.toLowerCase().replace(/[^a-z]+/g, "-")}`, title, status, detail }, status);
 const nameOf = (id: string | null | undefined) => ACTORS.find((a) => a.id === id)?.name ?? "another person";
 const NOUN: Record<Kind, string> = { field: "field", section: "section" };
+/** "person.date_of_birth" → "Date of birth" (as the web's fieldName). */
+const keyWords = (key: string) => { const w = (key.split(".").pop() ?? key).replace(/_/g, " "); return w.charAt(0).toUpperCase() + w.slice(1); };
 
 /** What a rename puts back on a roll-back: the item's own name columns, exactly as they were. */
 type Restore = { label: string | null; labelChecked: boolean } | { title: string };
 /** A rename's before-image (change_set.before, BR-6): the name before and the row the rename wrote. */
-export type RenameImage = { before: { shown: string; restore: Restore; version: number }; after: { id: string; version: number; name: string; at: string } };
-type Current = { rows: { id: string; version: number; status: string; updatedAt: Date }[]; newest: { id: string; version: number; status: string; updatedAt: Date; mergedIntoKey?: string | null }; group: string; shown: string; restore: Restore };
+export type RenameImage = { before: { shown: string; words?: string; restore: Restore; version: number }; after: { id: string; version: number; name: string; at: string } };
+type Current = { rows: { id: string; version: number; status: string; updatedAt: Date }[]; newest: { id: string; version: number; status: string; updatedAt: Date; mergedIntoKey?: string | null }; group: string; shown: string;
+  /** The name in words for a person (review B2 m1): an unconfirmed field's label, else its key's last part, never the key. */ words: string; restore: Restore };
 export type RenameResult = { key: string; kind: Kind; name: string; applied: boolean; status: string; version: number | null; tier: string; words: string; change_set: string; change_id: string | null };
 
 @Injectable()
@@ -44,11 +47,11 @@ export class Renames implements OnModuleInit {
     if (kind === "field") {
       const rows = await db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: key }, orderBy: { version: "desc" } });
       const n = rows[0]; if (!n) return null;
-      return { rows, newest: n, group: n.groupKey ?? key.split(".")[0], shown: (n.labelChecked && n.label) || key, restore: { label: n.label, labelChecked: n.labelChecked } };
+      return { rows, newest: n, group: n.groupKey ?? key.split(".")[0], shown: (n.labelChecked && n.label) || key, words: n.label || keyWords(key), restore: { label: n.label, labelChecked: n.labelChecked } };
     }
     const rows = await db.logicalSection.findMany({ where: { workspaceId, sectionKey: key }, orderBy: { version: "desc" } });
     const n = rows[0]; if (!n) return null;
-    return { rows, newest: n, group: "", shown: n.title, restore: { title: n.title } };
+    return { rows, newest: n, group: "", shown: n.title, words: n.title, restore: { title: n.title } };
   }
 
   /** C3.15 through the door (BR-1). The caller has checked the duty, the body, and that the item exists and is active. */
@@ -59,13 +62,16 @@ export class Renames implements OnModuleInit {
     // One rename of an item waits at a time: the second person decides it first (as one pending merge per field).
     const pending = await this.db.libraryChange.findFirst({ where: { workspaceId, kind, key, action: "RENAME", status: "WAITING" } });
     if (pending) throw problem(409, "Already waiting", `A rename of "${cur.shown}" to "${pending.label}" is already waiting for a second person on To review. It is decided or withdrawn first.`);
+    // Review B2 m2: a rename to the name it already has changes nothing, so it is refused (no "X to X" approval).
+    if (name === cur.shown) throw problem(409, "Same name", `"${name}" is already its name: nothing would change.`);
     const items: ChangeItem[] = [{ action: "rename", kind, key, name }];
     const r = await this.sets.guard(items, "person", expected, workspaceId);
     const restore = undo?.restore ?? (kind === "field" ? { label: name, labelChecked: true } : { title: name });
     if (r.tier.tier === "direct") {
       const { row, set } = await this.db.$transaction(async (tx) => {
+        await this.unchanged(tx, kind, workspaceId, key, cur);
         const row = await this.write(tx, kind, cur, restore, actor.id);
-        const image: RenameImage = { before: { shown: cur.shown, restore: cur.restore, version: cur.newest.version }, after: { id: row.id, version: row.version, name, at: row.updatedAt.toISOString() } };
+        const image: RenameImage = { before: { shown: cur.shown, words: cur.words, restore: cur.restore, version: cur.newest.version }, after: { id: row.id, version: row.version, name, at: row.updatedAt.toISOString() } };
         const set = await this.sets.record(tx, workspaceId, actor.id, items, "person", r, "applied", { before: image as unknown as Prisma.InputJsonValue });
         if (undo) await this.rolledBack(tx, undo.of, set.id);
         return { row, set };
@@ -81,12 +87,23 @@ export class Renames implements OnModuleInit {
     const { change, set } = await this.db.$transaction(async (tx) => {
       const change = await tx.libraryChange.create({ data: { workspaceId, kind, key, label: name, action: "RENAME", status: "WAITING", proposedBy: actor.id,
         reason: undo ? `Undo the rename to "${cur.shown}": back to "${name}".` : `Rename "${cur.shown}" to "${name}".`,
-        matches: { before: cur.shown, after: name, restore, undo_of: undo?.of ?? null } as Prisma.InputJsonValue } });
+        matches: { before: cur.shown, before_words: cur.words, after: name, restore, undo_of: undo?.of ?? null } as Prisma.InputJsonValue } });
       const set = await this.sets.record(tx, workspaceId, actor.id, items, "person", r, "waiting", { libraryChangeId: change.id });
       return { change, set };
     });
     await this.audit.log(workspaceId, actor.id, "proposed", kind, key, `${actor.name} proposed ${undo ? "undoing a rename: " : ""}renaming ${NOUN[kind]} "${cur.shown}" to "${name}": a released combination uses it, so it waits for a second person`, { change_set: set.id, change: change.id });
     return { key, kind, name: cur.shown, applied: false, status: "WAITING", version: null, tier: "second_person", words: r.tier.words, change_set: set.id, change_id: change.id };
+  }
+
+  /** Review B2 m4: the check ran before the transaction; inside it, the item must still be the version that was checked
+   *  (a rename at the same moment, a retire or a merge in between is refused in words, never overwritten). Postgres
+   *  takes the row lock with FOR UPDATE, so two renames at the same moment cannot both pass. */
+  private async unchanged(tx: Tx, kind: Kind, workspaceId: string, key: string, cur: Current) {
+    const table = kind === "field" ? "canonical_field" : "logical_section", col = kind === "field" ? "canonical_field_key" : "section_key";
+    await tx.$queryRawUnsafe(`select id from ${table} where workspace_id = $1::uuid and ${col} = $2 for update`, workspaceId, key);
+    const now = await this.current(tx, kind, workspaceId, key);
+    if (!now || now.newest.id !== cur.newest.id || now.shown !== cur.shown || now.newest.updatedAt.getTime() !== cur.newest.updatedAt.getTime() || now.newest.status === "RETIRED" || now.newest.mergedIntoKey)
+      throw problem(409, "Changed meanwhile", `"${cur.shown}" was changed at the same moment, so nothing was changed. Refresh to see it, then try again.`);
   }
 
   /** The rename's own write: a draft version (an existing draft row is updated in place, as every library edit). */
@@ -118,8 +135,9 @@ export class Renames implements OnModuleInit {
     const kind = c.kind as Kind, name = c.label ?? "";
     const restore = m.restore ?? (kind === "field" ? { label: name, labelChecked: true } : { title: name });
     const row = await this.db.$transaction(async (tx) => {
+      await this.unchanged(tx, kind, c.workspaceId, c.key, cur);
       const row = await this.write(tx, kind, cur, restore, actor.id);
-      const image: RenameImage = { before: { shown: cur.shown, restore: cur.restore, version: cur.newest.version }, after: { id: row.id, version: row.version, name, at: row.updatedAt.toISOString() } };
+      const image: RenameImage = { before: { shown: cur.shown, words: cur.words, restore: cur.restore, version: cur.newest.version }, after: { id: row.id, version: row.version, name, at: row.updatedAt.toISOString() } };
       if (set) await tx.changeSet.update({ where: { id: set.id }, data: { status: "applied", before: image as unknown as Prisma.InputJsonValue, fingerprint: r.fingerprint } });
       else await this.sets.record(tx, c.workspaceId, c.proposedBy, items, "person", r, "applied", { libraryChangeId: c.id, before: image as unknown as Prisma.InputJsonValue });
       if (m.undo_of && set) await this.rolledBack(tx, m.undo_of, set.id);
@@ -158,10 +176,13 @@ export class Renames implements OnModuleInit {
   async latest(kind: Kind, key: string) {
     const workspaceId = await this.ws.id();
     const sets = await this.db.changeSet.findMany({ where: { workspaceId, status: { in: ["applied", "waiting"] } }, orderBy: { createdAt: "desc" }, take: 500 });
+    // A waiting set counts only while its library change still waits (review M1: belt and braces for rows from before).
+    const open = new Set((await this.db.libraryChange.findMany({ where: { workspaceId, action: "RENAME", status: "WAITING" }, select: { id: true } })).map((c) => c.id));
+    for (let i = sets.length - 1; i >= 0; i--) if (sets[i].status === "waiting" && !(sets[i].libraryChangeId && open.has(sets[i].libraryChangeId!))) sets.splice(i, 1);
     const set = sets.find((s) => { const its = s.items as unknown as ChangeItem[]; return its.length === 1 && its[0].action === "rename" && its[0].kind === kind && its[0].key === key; });
     if (!set) return null;
     const img = set.before as unknown as RenameImage | null;
-    return { id: set.id, status: set.status, made_by: set.madeBy, by: nameOf(set.actor), at: set.createdAt, before: img?.before.shown ?? null, after: img?.after.name ?? (set.items as unknown as { name: string }[])[0].name, change_id: set.libraryChangeId };
+    return { id: set.id, status: set.status, made_by: set.madeBy, by: nameOf(set.actor), at: set.createdAt, before: img?.before.words ?? img?.before.shown ?? null, after: img?.after.name ?? (set.items as unknown as { name: string }[])[0].name, change_id: set.libraryChangeId };
   }
 }
 

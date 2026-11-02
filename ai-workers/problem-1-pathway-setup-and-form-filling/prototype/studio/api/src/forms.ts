@@ -388,7 +388,11 @@ export class Forms {
     const m = await this.db.fieldMerge.findUniqueOrThrow({ where: { id } });
     if (m.status !== "PROPOSED") conflict(`This merge is already ${m.status.toLowerCase()}.`);
     if (m.proposedBy === actor.id) fail("A different person decides a merge.", HttpStatus.FORBIDDEN);
-    const u = await this.db.fieldMerge.update({ where: { id }, data: { status: "REJECTED", decidedBy: actor.id, decidedAt: new Date(), decisionNote: b.note ?? null } });
+    const u = await this.db.$transaction(async (tx) => {
+      const u = await tx.fieldMerge.update({ where: { id }, data: { status: "REJECTED", decidedBy: actor.id, decidedAt: new Date(), decisionNote: b.note ?? null } });
+      await tx.changeSet.updateMany({ where: { fieldMergeId: id, status: "waiting" }, data: { status: "undone" } }); // G-CORE B2 review M1: ended, not applied
+      return u;
+    });
     await this.audit.log(m.workspaceId, actor.id, "rejected", "field merge", m.mergeKey, `${actor.name} rejected merging ${m.mergeKey} into ${m.keepKey}${b.note ? `: ${b.note}` : ""}`);
     return u;
   }

@@ -50,6 +50,7 @@ const uniq = Date.now().toString(36);
     sets() === n0 + 1 && sql(`select made_by || '|' || actor || '|' || status || '|' || tier || '|' || (library_change_id = '${changeId}') || '|' || length(fingerprint) from change_set where id = '${setId}'`) === "person|user-A|waiting|second_person|true|64");
   const queue = await call("GET", `/library/changes/${changeId}`);
   ok("G-CORE BR-4: the second person reads it in words (Rename shared field, before → after)", queue.body?.action_word === "Rename" && queue.body?.rename?.after === NEW && queue.body?.recheck?.ok === true, [queue.body?.action_word, queue.body?.rename, queue.body?.recheck]);
+  ok("Review B2 m1: the name before is in words, never the key", !!queue.body?.rename?.before && !queue.body.rename.before.includes("."), queue.body?.rename);
   r = await call("PATCH", `/library/fields/${FIELD}/name`, { name: `Other ${uniq} (Sample)` });
   ok("G-CORE fail: a second rename of the same field while one waits is refused in words, nothing written", r.status === 409 && /already waiting for a second person/.test(r.body?.detail) && sets() === n0 + 1, [r.status, r.body?.detail]);
   r = await call("POST", `/library/changes/${changeId}/approve`, {}, "user-A");
@@ -82,6 +83,13 @@ const uniq = Date.now().toString(36);
   r = await call("PATCH", `/library/fields/${draft}/name`, { name: `Draft again ${uniq}`, expected: fresh.body?.fingerprint });
   ok("G-CORE BR-3 pass: the current fingerprint confirms the rename", r.status === 200 && label(draft) === `Draft again ${uniq}|t`, [r.status, r.body?.detail]);
   const again = r.body?.change_set;
+  r = await call("PATCH", `/library/fields/${draft}/name`, { name: `Draft again ${uniq}` });
+  ok("Review B2 m2 fail: a rename to the name it already has is refused (409), nothing written", r.status === 409 && /already its name/.test(r.body?.detail) && sql(`select count(*) from change_set where items::text like '%Draft again ${uniq}%'`) === "1", [r.status, r.body?.detail]);
+  // Review B2 m4: three renames of one field at the same moment: one applies, the others are refused in words.
+  const race = seedField(sql, { key: `person.gcore_b2r_${uniq}`, meaning: "G-CORE B2 race field (Sample)", review: false });
+  const rs = await Promise.all([1, 2, 3].map((i) => call("PATCH", `/library/fields/${race}/name`, { name: `Race ${i} ${uniq}` })));
+  const won = rs.filter((x) => x.status === 200);
+  ok("Review B2 m4: renames at the same moment: exactly one applies, the others are refused in words, one change set", won.length === 1 && rs.filter((x) => x.status === 409 && /same moment/.test(x.body?.detail)).length === 2 && label(race) === `${won[0]?.body?.name}|t` && sql(`select count(*) from change_set where items::text like '%${race}%'`) === "1", rs.map((x) => [x.status, x.body?.detail ?? x.body?.name]));
 
   // ─────────── BR-6: roll-back through the same door
   r = await call("POST", `/change-sets/${direct}/undo-rename`, {});
@@ -116,7 +124,7 @@ const uniq = Date.now().toString(36);
   const FIELD2 = sql(`select canonical_field_key from canonical_field where group_key = 'person' and canonical_field_key not in ('${FIELD}') and status = 'PUBLISHED' and merged_into_key is null order by 1 limit 1`);
   const taken = `Taken later ${uniq}`;
   r = await call("PATCH", `/library/fields/${FIELD2}/name`, { name: taken });
-  const w2 = r.body?.change_id;
+  const w2 = r.body?.change_id, w2set = r.body?.change_set;
   ok("setup: a released field's rename waits", r.status === 202 && !!w2, [FIELD2, r.status, r.body?.detail]);
   await call("PATCH", `/library/fields/${draft}/name`, { name: taken });
   const view = await call("GET", `/library/changes/${w2}`);
@@ -125,10 +133,16 @@ const uniq = Date.now().toString(36);
   r = await call("POST", `/library/changes/${w2}/approve`, {}, "user-B");
   ok("G-CORE BR-2 fail: approving it is refused in words (409), nothing changed, it still waits", r.status === 409 && /already the name of/.test(r.body?.detail) && label(FIELD2) === lab2 && sql(`select status from library_change where id = '${w2}'`) === "WAITING", [r.status, r.body?.detail]);
   r = await call("POST", `/library/changes/${w2}/return`, { note: "the name is taken now" }, "user-B");
+  ok("Review B2 M1: a returned rename's change set ends (undone, no longer waiting), and the field page no longer says it waits", sql(`select status from change_set where id = '${w2set}'`) === "undone" && (await call("GET", `/change-sets/renames/field/${FIELD2}`)).body?.status !== "waiting", sql(`select status from change_set where id = '${w2set}'`));
   r = await call("POST", `/library/changes/${w2}/resubmit`, { label: "Something else", reason: "a different name now" });
   ok("G-CORE fail: a returned rename is not corrected and sent again around the door (409, in words)", r.status === 409 && /rename it again on its page/.test(r.body?.detail) && label(FIELD2) === lab2, [r.status, r.body?.detail]);
   r = await call("POST", `/library/changes/${w2}/withdraw`, { note: "not needed" });
-  ok("G-CORE pass: the author withdraws a returned rename; nothing changed", r.body?.status === "WITHDRAWN" && label(FIELD2) === lab2, [r.status, r.body]);
+  ok("G-CORE pass: the author withdraws a returned rename; nothing changed; its change set stays ended (undone, review M1)", r.body?.status === "WITHDRAWN" && label(FIELD2) === lab2 && sql(`select status from change_set where id = '${w2set}'`) === "undone", [r.status, r.body, sql(`select status from change_set where id = '${w2set}'`)]);
+  // Review M1: withdrawing a rename while it still waits.
+  r = await call("PATCH", `/library/fields/${FIELD2}/name`, { name: `Withdrawn later ${uniq}` });
+  const w3 = r.body?.change_id, w3set = r.body?.change_set;
+  r = await call("POST", `/library/changes/${w3}/withdraw`, { note: "changed my mind" });
+  ok("Review B2 M1: a waiting rename withdrawn: its change set ends (undone) and the page offers no 'waits' line", r.body?.status === "WITHDRAWN" && sql(`select status from change_set where id = '${w3set}'`) === "undone" && (await call("GET", `/change-sets/renames/field/${FIELD2}`)).body?.status !== "waiting", [r.status, sql(`select status from change_set where id = '${w3set}'`)]);
 
   // ─────────── Sections through the same door
   const sec = seedSection(sql, { title: `G-CORE section ${uniq}`, review: false });
@@ -169,6 +183,8 @@ const uniq = Date.now().toString(36);
   sql(`update canonical_field set answer_list_key = 'gcore_b2_list_${uniq}' where canonical_field_key = '${zA}'`);
   r = await call("POST", `/library/merges/${m2}/approve`, {}, "user-B");
   ok("C11.14 fail: the checks run again at approval: a merge wrong since it was proposed is refused in words, nothing moves", r.status === 409 && sql(`select status from field_merge where id = '${m2}'`) === "PROPOSED" && sql(`select merged_into_key is null from canonical_field where canonical_field_key = '${zB}' order by version desc limit 1`) === "t", [r.status, r.body?.detail]);
+  r = await call("POST", `/library/merges/${m2}/reject`, { note: "the kept field changed its list" }, "user-B");
+  ok("Review B2 M1: a rejected merge's change set ends (undone, no longer waiting)", r.status < 300 && sql(`select status from change_set where field_merge_id = '${m2}'`) === "undone", [r.status, sql(`select status from change_set where field_merge_id = '${m2}'`)]);
 
   // ─────────── BR-1: one door (a scan of the entry functions) and the hosts send `expected`
   const src = (f: string) => readFileSync(join(STUDIO, f), "utf8");
