@@ -105,3 +105,59 @@ Scores:
 * `run-suites.sh`: left to CI.
 
 **Verdict: Approve** on 2c877d10. No Blocker or Major is open. n4 goes in the PR body. n5 and the follow-ups are Minor. The uncommitted rework in the checkout needs its own review once it is committed.
+
+---
+
+## Round 3b: e964defb (code), committed as ffc2ef74 (records only)
+I reviewed `git diff 2c877d10 e964defb`. ffc2ef74 adds only this file, so its code is e964defb's.
+
+**How it was run.** I restarted `rev_uxa1b` on :4446 from the checkout. Its code equals e964defb: the only local change is `evidence/screen01/api-checks.json`. I then ran `POST /api/demo/load`.
+
+The served bundle `index-DQXOHcAi.js` was built at 16:03. `contracts/counts.ts` changed later, at 16:06, so I checked the bundle against e964defb:
+* It contains e964defb's `attachedNotSetUp` (newest wins, `createdAt`, ties to the later attachment).
+* It contains `data-count-retry`.
+* The later change touches only `removedInDraft`, which the web does not import.
+
+US$0 throughout.
+
+### The four changes
+1. **Newest attachment stands for its form (n5 above): fixed.** All three sides now read attachments the same way:
+   * `attachedNotSetUp` keeps the newest per form number (`contracts/counts.ts:47-60`).
+   * The catalogue reads attachments oldest first (`programs.ts:117`).
+   * `GET /combinations/:id` already lists them oldest first (`studio.ts:357`), and the tab's `attachmentFor` takes the last (`sources.tsx:30`).
+
+   The rules check has a pass case and a fail case for both orders (20/20). I did not reproduce two editions live, because the official manifest has one edition per form.
+2. **Finder Retry: works live.** I made `…/summary` answer 500 in the browser:
+   * The empty combination (0 forms, no filing line) reads "The forms count could not be loaded. Retry".
+   * Visitor visa shows that line and the filing line's "forms count not loaded Retry".
+   * Retry, pressed with the keyboard after the summary recovered, restored "Its forms and checklists come from canada.ca…" (empty) and "On this combination: 2 forms · 0 set up" (Visitor visa).
+3. **Removed in this draft means removed from the latest release (re-break N2): works live.** On released LMIA I removed IMM 5475, added it back from the library, then pressed Undo twice. At every step "Removed in this draft" agreed with the draft change count and with the forms count:
+
+   | State | Removed in this draft | Changes | Forms |
+   |---|---|---|---|
+   | After remove | IMM 5475 | 2 | 7 |
+   | After re-add | none | 0 | 8 |
+   | After the first Undo | IMM 5475 | 2 | 7 |
+   | After the second Undo | none | 0 | 8 |
+
+   * IMM 5802, removed before the release, stays in `removedEver` and never appears as "removed in this draft".
+   * The count (`removedLines`) does not change; the new rule only affects the tab's list (`workspace.ts:94-97`, the only caller).
+   * With nothing released, every removal still counts as in this draft (rules check).
+4. **S5 checks follow the new words:** `check_s5_slice1_browser.cjs` 52/52 and `check_s5_slice3_browser.cjs` 35/35. I ran copies that save their screenshots to scratch, so the W1 screenshots in the repo were not changed.
+
+### Checks on e964defb
+* `check_uxa1_counts_rules.ts` 20/20.
+* `check_uxa1_counts_browser.cjs` 47/47.
+* S5 slices 1 and 3, as above.
+* No console or page error on any walk.
+
+### Findings on e964defb
+* **Blockers:** none.
+* **Majors:** none.
+* **Minor (observation, no fix needed for this row):** when a combination has lines and the summary fails, the Forms tab shows two "Retry" buttons, one on the finder line and one on the filing line. They do the same thing; one would do.
+* **n5:** closed.
+* **Still open as Minors:** m8 and breaks 4–6 (follow-ups), and n4 (PR body).
+
+**Journey score unchanged: 9.5 / 10.** The re-add and Undo journey and the failed-count recovery both held.
+
+**Verdict: Approve** on ffc2ef74 (e964defb's code). No Blocker or Major is open. Put n4 in the PR body; m8 and breaks 4–6 stay as listed follow-ups.
