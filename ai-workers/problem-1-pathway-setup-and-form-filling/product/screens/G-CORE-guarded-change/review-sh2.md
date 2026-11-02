@@ -85,3 +85,23 @@ None.
 The callers' database suites on this commit (the builder's run is the evidence). `graph.mjs`/GRAPH.md. Coverage (c8). D17/D20: not applicable (no screen); they stay with the founder.
 
 **Verdict: Block.** Fix Major 1 (property-based tests for `engine/where-used.ts`, STANDARDS §7 [M]). The logic itself is equivalent, and neither impact.ts behaviour change is a regression. Fix m1–m6 or list them in the PR.
+
+## Re-review on 0e8c0958 (fixes on top of a82614c8; origin/main still 12647032)
+**What I ran:**
+* `check_sh2_where_used.ts`: **24/24**.
+* `tsc`: clean in `api/src`, `engine/` and the test.
+* My 15 mutants, plus 6 new ones (lines, docs, checks or questions switched to `newestBy` only; `>=` ties; a planted multi-line `@prisma/client` import): **20/21 killed**. The survivor (`>` changed to `>=` in `newestBy`) is equivalent, because (key, version) is unique in the database and in the fast-check data.
+
+**Results:**
+* **Major 1: fixed.** Four `fc.property` checks (300 runs each) compare against independent models: order independence, current = newest-and-live, filing combinations, byItem (tests/check_sh2_where_used.ts:89-112).
+* **m1: fixed.** There are retired-newest and older-version cases for form lines, docs, checks and questions, and a per-channel edition case (:67-87). All five mutants that survived before are now killed.
+* **m3: fixed.** The combinations are sorted by label (api/src/impact.ts:51).
+* **m4: fixed.** The scan now catches multi-line, dynamic `import()` and `require`, and is tested on planted bad sources (:15-22).
+* **m6: fixed.** The header names today's callers (api/src/where-used.ts:1-5).
+* **m2 and m5: left open, listed in the PR.** That is acceptable, because the row keeps the callers' suites unchanged and m5 was in the code before SH2. m2 should be a G-CORE B2 test, as proposed.
+* **New Minor: `fc.IProperty<any>`** (tests/check_sh2_where_used.ts:90) breaks §7's no-`any` rule. **Fix:** use `fc.IProperty<unknown[]>`, or add the `eslint-disable-line` comment the same way check_forms_x5_library.ts:81 does.
+* My two review files are in this commit unchanged.
+
+Journey score: unchanged at 8.5/10 (pass). Only the m3 ordering improved, and visual quality still has no UI walk.
+
+**Verdict: Approve** (0e8c0958; no open Blocker or Major; Minors m2, m5 and the `any` are listed for the PR)

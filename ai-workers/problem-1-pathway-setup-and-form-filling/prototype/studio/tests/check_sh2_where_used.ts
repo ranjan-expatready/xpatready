@@ -86,7 +86,7 @@ const online = byItem(fieldUses({ ...rows, boxes: [...rows.boxes, { canonicalFie
 ok("SH2 pass: editions are current per channel: a newer online edition leaves the PDF edition's fields in use", online.get("person.family_name")?.has("c1") && online.get("person.online_only")?.has("c1"));
 
 // STANDARDS §7: property-based checks on the pure engine (fast-check).
-const prop = (name: string, p: fc.IProperty<any>) => { let err = ""; try { fc.assert(p, { numRuns: 300 }); } catch (e) { err = String(e).slice(0, 300); } ok(name, !err, err); };
+const prop = (name: string, p: fc.IProperty<unknown[]>) => { let err = ""; try { fc.assert(p, { numRuns: 300 }); } catch (e) { err = String(e).slice(0, 300); } ok(name, !err, err); };
 const status = fc.constantFrom("DRAFT", "PUBLISHED", "RETIRED", "SUPERSEDED");
 const row = fc.record({ k: fc.constantFrom("a", "b", "c", "d"), version: fc.integer({ min: 1, max: 6 }), status });
 // Unique (key, version), as the database's own unique index keeps them.
