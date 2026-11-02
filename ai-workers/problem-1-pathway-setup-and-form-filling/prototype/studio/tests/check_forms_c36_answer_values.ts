@@ -169,6 +169,14 @@ const TRAVELS = ["Both parents", "One parent", "Another adult", "Alone"], CUSTOD
   const pp = r.body?.proposalId as string;
   r = await call("POST", "/review/proposals/decide", { ids: [pp], action: "edit", payload: { ...JSON.parse(sql(`select payload from proposal_item where id='${pp}'`)), valueType: "code" } }, "user-C");
   ok("C3.6 fail (review m-r2a): on the add-by-rule route an edit to a choice with no values is refused", r.status === 400 && /needs its answer values/.test(msg(r)), msg(r));
+
+  // ─────────────────── review m-r3a / m-r3b
+  rule("r_c36_m3", `{"field":"person.c36_with","op":"eq","value":"alone"}`, "ask for the consent letter");
+  r = await call("POST", `/combinations/${combo}/rule-facts`, { fact: "person.c36_with", rule: "r_c36_m3", label: "Who comes along", meaning: "Who comes along on the trip (Sample).", valueType: "code", values: ["Both parents", "Alone"] });
+  const mid = r.body?.proposalId as string;
+  r = await call("POST", "/review/proposals/decide", { ids: [mid], action: "edit", payload: { ...JSON.parse(sql(`select payload from proposal_item where id='${mid}'`)), values: [{ code: "both_parents", label: "Both parents" }, { code: "one_parent", label: "One parent" }] } }, "user-C");
+  ok("C3.6 fail (review m-r3a): an edit cannot drop the value the rule compares", r.status === 400 && /compares this fact with "alone"/.test(msg(r)) && sql("select count(*) from canonical_field where canonical_field_key='person.c36_with'") === "0", msg(r));
+  ok("C3.6 fail (review m-r3b): a soft hyphen does not make a second value", /listed twice/.test(String(refused(() => answerValues("code", ["Alone", "Al\u00adone"])))));
   console.log(`\n${pass} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.error("FAIL  unexpected", e); process.exit(1); });

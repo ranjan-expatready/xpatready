@@ -113,3 +113,33 @@ Fix: a draft list with no `answer_list` ADD is not reusable by another proposal.
 - Keys never typed: met on add and on the route-1 edit.
 
 ### Journey score (reviewer): 9 / 10, pass (see journey file, Round 2). The verdict is still Block because R2-M1 is open.
+
+## Round 3 (c0d427e6, then 7d5d3d54)
+
+Reviewed at the builder's head **7d5d3d54** (c0d427e6 plus one commit: a list is riding only when a DRAFT field names it and it has no ADD). Same copy `rev_c36` on :4466, web rebuilt, server restarted on 7d5d3d54, live AI off, US$0.
+Suites on :4466 (each after a demo reset): c36 answer values 44/44, its browser 8/8, p149 73/73, rule facts 42/42, c36 acceptance 17/17, c1113 21/21, c34 29/29, queue browser 28/28, screen02 slice2 62/62, proposal contract exit 0. I reverted the screenshots the suites rewrote (02-ai-work, W1-shared-library).
+
+**Verdict: Block** (1 Major open). In skill terms: *Ship after fixes*.
+
+### Round-2 findings
+- **R2-M1 fixed.** My reproduction (scratchpad `probe3.ts`) on 7d5d3d54: accept `person.zz_x` with English/French, run the IMM 5257 rules pass. "Preference language" is now proposed as `new`, not reused, and lands as `preference_language`. Undo of the field batch → `{"undone":1}`, the field's list is gone, and no accepted item names it. The seeded p149 draft list with no field is still reusable (p149 73/73). The new test fails if `ridingLists` is removed (it asserts 0 reuses of the riding key).
+- **R2-M2 fixed on both add routes.** Route 1: `["Both parents","One parent"]` against `eq "alone"` → 400 "Rule r_a compares person.p_a with "alone", which is not among the answer values (both_parents, one_parent)…". The typo `Alon` gets the same refusal. Values inside `and`/`not`/`in` are found. Route 2 is refused when the rule reads the built key. See m-r3a for the edit.
+- **m-r2a fixed.** A route-2 edit to `multi_choice` or `code` with no values → 400 "A choice needs its answer values…". With values, it lands `code` plus `pe_probe_answers`.
+- **m-r2b fixed.** The page reads "a released list".
+- **m-e fixed with one regression (R3-M1).** 400 values sit in a 212 px box. Approve is at y = 817 at 1024 px, 837 at 640 px (200 %) and 904 at 400 px. No sideways scroll, no page errors.
+- **m-d partly fixed.** ZWSP twins are refused ("A" is listed twice). See m-r3b.
+
+### Major
+**R3-M1. axe finds a serious issue on the change page when the list scrolls (the [M] "axe-core on every screen state" is not met).** `/review/change/<field ADD>` with 400 values gives `scrollable-region-focusable` (1 node) at 1024, 640 (200 %) and 400 px. A 2-value list is axe 0. Cause: the `<ul className="max-h-48 … overflow-auto">` in `web/src/pages/review-items.tsx:85` cannot take focus. Fix: give the list `tabIndex={0}` and an accessible name (for example `aria-label="Answer values"`). Add an axe run on a long-list state to `check_forms_c36_answer_values_browser.cjs`.
+
+### Minor
+- m-r3a. An edit on To review can still drop the value the rule compares, because the lander does not run `ruleValuesKnown`. Route 1 added with Both parents/Alone, then edited to Both parents/One parent → 201, and it lands `both_parents,one_parent` while the rule says `eq "alone"`. This is API only: the screen has no value editing. Fix: run the same check in `LANDERS.field` when `work.ruleFact` names the rule.
+- m-r3b. The soft hyphen U+00AD is not dropped (`answer-values.ts:25`). `Alone` and `Alone`+U+00AD land as `alone` and `alone_2`, which look the same. The breaker's m-d named this character.
+- m-r3c (nit). A rule that compares a choice with a number (`eq 3`) passes, because `valuesCompared` keeps strings only.
+- Not fixed and to be listed in the PR, as the builder says: m-a, m-b, m-c.
+
+### Dimensions (changed since round 2)
+- Data integrity: **met** for the screen paths. m-r3a is API only.
+- Accessibility: **not met** (R3-M1).
+
+### Journey score (reviewer): 9.5 / 10, pass (see journey file, Round 3). The verdict is still Block because R3-M1 is open.

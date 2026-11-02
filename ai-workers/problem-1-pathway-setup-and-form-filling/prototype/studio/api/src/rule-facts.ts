@@ -196,7 +196,7 @@ export class RuleFacts {
       rules: [{ rule: "named_rule_reads_fact", passed: true, why: null }, { rule: "not_in_library", passed: true, why: null }],
       agreement: "rules_only", confidence: "check", reason: "Added for a rule, with a meaning a person wrote: a second person checks the name and meaning.",
       origin: "rules", identity: { key: normalizeLabel(b.label), near: [], nearReason: null }, relatesTo: null, revision: null, basis: "SAMPLE",
-      work: { ruleFact: b.fact, ruleKind: rule!.kind },
+      work: { ruleFact: b.fact, ruleKind: rule!.kind, ruleValues: valuesCompared(rule!.tree, b.fact) }, // review m-r3a: re-checked at landing
     }]);
     return { proposalId };
     }, { timeout: 30_000, maxWait: 10_000 });
@@ -250,7 +250,7 @@ export class RuleFacts {
         rules: [{ rule: "named_rule_exists", passed: true, why: null }, { rule: "not_in_library", passed: true, why: null }, ...(near.length ? [{ rule: "near_duplicate_reason", passed: true, why: b.nearReason ?? null }] : [])],
         agreement: "rules_only", confidence: "check", reason: "Added for a rule, with a meaning a person wrote; not meaning-checked (P-95): a second person checks the name and meaning.",
         origin: "rules", identity: { key: normalizeLabel(b.label), near, nearReason: b.nearReason ?? null }, relatesTo: null, revision: null, basis: "SAMPLE",
-        work: { forRule: rule!.key, ruleKind: rule!.kind, keyPreview: key },
+        work: { forRule: rule!.key, ruleKind: rule!.kind, keyPreview: key, ruleValues: valuesCompared(rule!.tree, key) },
       }]);
       return { proposalId };
     }, { timeout: 30_000, maxWait: 10_000 });

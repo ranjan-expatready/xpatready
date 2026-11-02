@@ -65,3 +65,24 @@ Same copy on :4466, re-walked by script and headless Chromium. Data was checked 
 
 **Total: 9 / 10. Pass** (no 0). Most valuable fix: R2-M1 (raises data and recovery).
 Not tested: a real screen reader, an intended user's unaided walk (D17/D20).
+
+## Round 3 (c0d427e6, reviewed at 7d5d3d54)
+Same copy on :4466, scripts and headless Chromium. Data was checked in the database.
+- J7 recovery across batches: **held.** A form's list no longer reuses a riding draft list, and Undo leaves nothing dangling.
+- J8 edit by API: **held** for "a choice needs values" on both routes. An edit can still drop the value the rule compares (review m-r3a, API only).
+- J6 second person reads a long list: the values scroll in a 212 px box and Approve is in view. **axe flags the scroll box** (`scrollable-region-focusable`, review R3-M1).
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | Unchanged. |
+| Next step obvious | 1 | Unchanged. |
+| Plain words | 1 | The rule-value refusal names the rule, the value and the codes. |
+| Feedback and state | 1 | "400 values · a new list, approved with this field" / "a released list". |
+| Correct data | 1 | R2-M1 and R2-M2 closed on the screen paths. |
+| Error recovery | 1 | Undo across kinds is safe. |
+| Accessibility and screen sizes | ½ | axe serious issue on the long list (R3-M1); no sideways scroll at 400/1024 px or 200 %. |
+| Speed | 1 | Within the budgets. |
+| Visual quality | 1 | The list matches the panel's list style. |
+| Trust and sources | 1 | Unchanged. |
+
+**Total: 9.5 / 10. Pass.** Most valuable fix: make the scroll box focusable and give it a name (R3-M1).

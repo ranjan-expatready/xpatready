@@ -251,6 +251,10 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
     // C3.6 (Lead, 2 Nov): a choice fact's answer values land as its answer list, checked again here so an edit on To
     // review passes the add's rules (break M2); the list rides with the field (api/src/answer-values.ts).
     const values = checkedFieldValues(f.valueType, f.values, r.step === "rule_fact"); // both add routes (review m-r2a)
+    // Review m-r3a: an edit cannot drop a value the rule compares the fact with.
+    const ruleValues = (r.work as { ruleValues?: unknown } | null)?.ruleValues;
+    const lacking = values && Array.isArray(ruleValues) ? ruleValues.filter((v): v is string => typeof v === "string" && !values.some((x) => x.code === v)) : [];
+    if (lacking.length) fail(`${rule?.sentence.split(":")[0] ?? "The rule"} compares this fact with ${lacking.map((m) => `"${m}"`).join(", ")}, which is not among the answer values (${values!.map((v) => v.code).join(", ")}): add it as a value, or reject this one.`);
     const answerListKey = values ? await landAnswerList(tx, l.ws, l.actor.id, f.label, values, slugKey) : null;
     await landField(tx, l, { key, meaning: f.meaning, valueType: f.valueType, label: f.label, answerListKey, sourceRef: rule ? `Needed by ${rule.sentence}; ${sourceRef(r, l.actor)}` : sourceRef(r, l.actor) });
     return key;

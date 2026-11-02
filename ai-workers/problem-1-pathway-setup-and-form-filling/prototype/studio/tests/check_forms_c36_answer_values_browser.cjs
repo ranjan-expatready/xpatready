@@ -55,6 +55,21 @@ const step = (name, c, detail) => { c ? pass++ : failed++; console.log(`${c ? "P
   const vals = p.locator("[data-answer-values]").last(); await vals.waitFor({ timeout: 10000 });
   const t = await vals.innerText();
   step("C3.6 pass: To review shows the answer values to the second person", /Answer values · 4/i.test(t) && ["Both parents", "One parent", "Another adult", "Alone"].every((w) => t.includes(w)), t);
+  // Review R3-M1: a long list on the second person's change page scrolls, takes focus and passes axe.
+  sql(`insert into predicate (id, workspace_id, combination_id, predicate_key, predicate_json, when_plain, then_plain, for_whom, version, status, origin, updated_by) select gen_random_uuid(), workspace_id, id, 'r_c36_long', '{"field":"person.c36_country","op":"exists"}', 'a country is given', 'ask for proof', 'principal', 1, 'PUBLISHED', 'HUMAN', 'user-A' from combination where id='${combo}'`);
+  const many = Array.from({ length: 60 }, (_, i) => `Country number ${i + 1}`);
+  const add = await api(`/combinations/${combo}/rule-facts`, { method: "POST", json: { fact: "person.c36_country", rule: "r_c36_long", label: "Country of the trip", meaning: "The country the child travels from (Sample).", valueType: "code", values: many } });
+  const acc = await p.request.fetch(`${BASE}/api/review/proposals/decide`, { method: "POST", headers: { "x-actor": "user-C", "content-type": "application/json" }, data: { ids: [add.body?.proposalId], action: "accept" } });
+  const chg = sql("select id from library_change where kind='field' and key='person.c36_country'");
+  step("setup: the 60-value fact is proposed and accepted", add.status === 201 && acc.status() < 300 && !!chg, [add.status, acc.status()]);
+  await p.evaluate(() => { try { localStorage.setItem("xr-actor", "user-B"); } catch { /* ignore */ } });
+  await p.goto(`${BASE}/review/change/${chg}`);
+  const lv = p.getByRole("list", { name: "Answer values" }); await lv.waitFor({ timeout: 20000 });
+  step("C3.6 pass (review M2): the second person sees all 60 values on the field's change", (await lv.locator("li").count()) === 60);
+  const axe2 = await new AxeBuilder({ page: p }).withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze();
+  step("C3.6 fail (review R3-M1): the long scrolling list passes axe (it takes focus and has a name)", axe2.violations.length === 0, axe2.violations.map((v) => v.id));
+  const approve = await p.getByRole("button", { name: /^Approve/ }).first().boundingBox();
+  step("C3.6 pass (break m-e): Approve stays near the top, the list scrolls (not 60 lines tall)", !!approve && approve.y < 1400 && (await lv.evaluate((e) => e.scrollHeight > e.clientHeight)), approve);
   step("no page error", errors.length === 0, errors);
   await b.close();
   console.log(`\n${pass} passed, ${failed} failed`);
