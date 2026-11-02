@@ -188,7 +188,9 @@ export async function copyBytes(copyId: string, actor = OFFICER): Promise<Buffer
   return res?.ok ? Buffer.from(await res.arrayBuffer()) : Buffer.alloc(0);
 }
 // QA-165: the form's own Validate result written into the copy (tests/runtime/validated.ts), never bytes appended.
-export { asValidated } from "../../tests/runtime/validated.ts";
+// A re-export alone binds no local name, and validateRoundTrip below calls it (C7.6, C8.1, C9.2 crashed on #572's merge).
+import { asValidated } from "../../tests/runtime/validated.ts";
+export { asValidated };
 export async function sendFile(path: string, file: Buffer, name: string, actor = OFFICER) {
   const fd = new FormData(); fd.append("file", new Blob([new Uint8Array(file)]), name);
   const res = await fetch(`http://127.0.0.1:${PORT}/api${path}`, { method: "POST", headers: { "x-actor": actor }, body: fd }).catch(() => null);
