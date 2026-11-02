@@ -39,3 +39,46 @@ Notes, not findings:
 Findings: Blocker 0 · Major 0 · Minor 0.
 
 **Verdict: APPROVE** for fb3dacba34d055f5a6ddeea4717dfdae5ff3b6f0.
+
+## Round 3 (2 Nov): re-review of head 39e3d836
+
+**Why this round.** Round 2 approved fb3dacba with a Sponsor line that had no `filingMode`. The builder's suite run on fb3dacba then failed `tests/check_c1112_modes.ts` (main's C11.12 test) at 38/39, on the step "C11.12 BR-8 pass: every family line of the Demo sample (wave1.json) has a filing mode". Round 2's statement that "Sponsor without `filingMode`: acceptable" was wrong for main as it stands: BR-8 on main requires the mode, and round 2 did not run that suite. Round 2 also named a `co_filed` migration risk; this round tests it against the code.
+
+**Diff.** `git diff fb3dacba 39e3d836` touches 3 files:
+* `samples/wave1.json` `fs.spouse` Sponsor gets `"filingMode": "co_files"`;
+* `samples/programs.json` `fs.outside` Sponsor gets the same;
+* this review file is committed.
+
+Nothing else changed: no code and no check.
+
+**`co_files` on a loaded sample is safe end to end, and the round 2 migration risk is refuted.**
+* **Loader.** `api/src/demo.ts:131` and `:201` call `studio.createCombination`, which calls `checkParticipants(…, strict=false)`.
+  * `studio.ts:221` sets `applies` to false for `co_files` (BR-5).
+  * In `engine/people.ts:39–47`, BR-3 skips `co_files`. BR-4 accepts it because the `sponsor` role is seeded `may_be_applicant=false` (`migrations/20261027160000_s5_person_roles` line 28) and both lines are min 1, max 1, with one co-filer.
+  * The line is stored in the `combination.participants` JSON. That column is plain JSON, with no enum or column for a line mode.
+* **Read (`workspace.ts:137–141`).** `!!r.mayBeApplicant === (stored !== "co_files")` gives false === false, so the mode is kept and `applies` stays false. `filingWords` shows "Files the sponsorship (sent with the principal's application)", and the plan shows a `co_filed` entry: "Sponsor: the sponsorship (cannot be sent alone)". This is preview text only and is never stored.
+* **Case database.**
+  * `filing.mode` is a String column. Its CHECK `filing_mode_check` allows only `('files_own','on_principal')` (`migrations/20261102030000_c612_c116_prepare_items` line 46).
+  * The only writers are `case-prepare.ts:113–114`. They write `f.mode` from `deriveFilings(…, { modes })`, where `modes = releaseModes(participants)` (`case-prepare.ts:74`; also `case-filings.ts:30`).
+  * `releaseModes` (`engine/filing-modes.ts:130–133`) keeps only `RUNTIME_MODES = ["files_own","on_principal"]` with `applies !== false`, so it drops the Sponsor line twice: by its mode and by its `applies`.
+  * The modes map passed to the case engine is therefore exactly the same as at fb3dacba. `co_files` and `co_filed` cannot reach the `filing` table, and no migration is needed. The "review M1 fail" step of the C11.12 test asserts this.
+* **Release check (`studio.ts:386`, `filingNotSet`).** It only names roles where `mayBeApplicant` is true, so the Sponsor never raises "Filing not set", with or without the mode.
+* **Acceptance-pack note.** `acceptance/C11.12.test.ts:66–72` saves its own Sponsor line without a mode and expects one filing. It builds its own lines and does not read the sample, so this change does not affect it.
+
+**Runs (live AI off, never :4400).**
+* `tsx --tsconfig api/tsconfig.json tests/check_c1112_modes.ts` (pure): **39/39 passed**. These include "BR-8 pass: every family line of the Demo sample (wave1.json) has a filing mode" and "review M1 fail: Declared only, co_files and a Representative's stored Files own never reach the case's filing mode".
+* `tests/check_s7_load.ts 4448 xr_studio_rev436_s7` on a fresh isolated copy at 39e3d836 (new database, port 4448): **23 passed, 0 failed**.
+  * `tools/isolated.sh` again could not reach the cluster through the symlinked `.tools` in the scratch worktree (permission denied), so its steps were run by hand: createdb, `prisma migrate deploy`, then `api/src/main.ts` with `STUDIO_PORT=4448`.
+  * The Prisma schema is identical to the main checkout's and its generated client.
+  * After the load, a query on the database showed:
+    * the stored `fs.outside` Sponsor line `{"role":"sponsor","min":1,"max":1,"applies":false,"preview":1,"filingMode":"co_files"}`;
+    * zero `filing` rows (the load creates no case).
+  * The copy was then stopped and its database dropped.
+
+**Journey test: not re-run.** This round changes sample data only. The Sponsor's Filing column now reads "Files the sponsorship…" instead of "Files nothing", which is the concept's planned wording (C11.12 concept line 39). No flow changed, so the round 1 journey score stands.
+
+**Note, not a finding.** The round 2 advice that the C11.12 builder should set the Sponsor's mode in L-C1112 is now done in this PR. L-C1112 should not set it again.
+
+Findings: Blocker 0 · Major 0 · Minor 0.
+
+**Verdict: APPROVE** for 39e3d836c0c7636259e7e70a75cd006d926c7606.
