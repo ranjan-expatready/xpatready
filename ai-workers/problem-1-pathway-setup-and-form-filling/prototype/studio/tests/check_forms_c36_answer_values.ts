@@ -1,7 +1,8 @@
 // C3.6 (P-158 (5); Lead, 2 Nov, for runtime-3's R3): a fact a rule needs may carry its ANSWER VALUES. A choice fact
 // (code, multi_choice) is proposed with its list, written as words (the codes are built, never typed); the second person
-// reads the list on To review; accepting lands the field with its answer list, a new list waiting for a second person
-// beside the field, or the live list with the same codes reused (the identity rule). Undo takes the new list back too.
+// reads the list on To review and on the field's library change; accepting lands the field with its answer list: a new
+// draft list that rides with the field (approved, returned, released, withdrawn and undone with it; breaker B1, B2), or
+// the released list with the same values reused. An edit on To review passes the same rules (breaker M2).
 // An empty or repeated value, a choice with no values and a non-choice with values are refused in words.
 // Facts: person.travels_with (both parents, one parent, another adult, alone) and person.custody (shared, sole, adopted,
 // guardian): Sample until the immigration expert confirms (AGENTS rule 4). No browser, NO model call (US$0).
@@ -29,7 +30,10 @@ const TRAVELS = ["Both parents", "One parent", "Another adult", "Alone"], CUSTOD
   ok("C3.6 pass: a choice's answer values become a list with built codes, in the order written", JSON.stringify(v) === JSON.stringify([{ code: "both_parents", label: "Both parents" }, { code: "one_parent", label: "One parent" }, { code: "another_adult", label: "Another adult" }, { code: "alone", label: "Alone" }]), v);
   ok("C3.6 fail: an empty answer value is refused in words, by its place", /Answer value 2 is empty/.test(String(refused(() => answerValues("code", ["Shared", "  ", "Sole"])))), refused(() => answerValues("code", ["Shared", "  ", "Sole"])));
   ok("C3.6 fail: a value listed twice is refused in words (letter case ignored)", /"sole" is listed twice/.test(String(refused(() => answerValues("code", ["Sole", "Shared", "sole"])))), refused(() => answerValues("code", ["Sole", "Shared", "sole"])));
-  ok("C3.6 fail: two values that make the same code are refused as the same value", /are the same answer value/.test(String(refused(() => answerValues("multi_choice", ["Both parents", "Both-parents"])))));
+  const tw = answerValues("multi_choice", ["C++", "C#", "18", "18+"]);
+  ok("C3.6 pass (break m1): values that build one code are told apart by a number, never refused", JSON.stringify(tw?.map((x) => x.code)) === JSON.stringify(["c", "c_2", "v_18", "v_18_2"]), tw);
+  const sc = answerValues("code", ["Москва", "東京", "القاهرة"]);
+  ok("C3.6 pass (break M3): values in any script are accepted, codes from their place", JSON.stringify(sc) === JSON.stringify([{ code: "value_1", label: "Москва" }, { code: "value_2", label: "東京" }, { code: "value_3", label: "القاهرة" }]), sc);
   ok("C3.6 fail: a choice with no values is refused", /needs its answer values/.test(String(refused(() => answerValues("code", [])))));
   ok("C3.6 fail: a choice with one value is refused (a choice needs two or more)", /two or more/.test(String(refused(() => answerValues("code", ["Alone"])))));
   ok("C3.6 fail: a non-choice with values is refused", /Only a choice/.test(String(refused(() => answerValues("yes_no", ["Yes", "No"])))));
@@ -78,7 +82,10 @@ const TRAVELS = ["Both parents", "One parent", "Another adult", "Alone"], CUSTOD
   const list = sql("select answer_list_key from canonical_field where canonical_field_key='person.travels_with'");
   const vals = sql(`select string_agg(v.value_key||'='||v.label, ',' order by v.sort_order) from answer_list l join answer_list_value v on v.answer_list_id=l.id where l.answer_list_key='${list}'`);
   ok("C3.6 pass: the field arrives with its list on accept (codes, words and order)", !!list && vals === "both_parents=Both parents,one_parent=One parent,another_adult=Another adult,alone=Alone", { list, vals });
-  ok("C3.6 pass: the new list waits for a second person beside the field (two ADDs)", sql(`select string_agg(kind||':'||status, ',' order by kind) from library_change where batch_id=(select batch_id from proposal_item where id='${pid}')`) === "answer_list:WAITING,field:WAITING");
+  ok("C3.6 pass (break B1): the new list rides with the field: one ADD waits (the field's), the list is a draft", sql(`select string_agg(kind||':'||status, ',' order by kind) from library_change where batch_id=(select batch_id from proposal_item where id='${pid}')`) === "field:WAITING" && sql(`select status from answer_list where answer_list_key='${list}'`) === "DRAFT");
+  const ch = sql(`select id from library_change where kind='field' and key='person.travels_with'`);
+  r = await call("GET", `/library/changes/${ch}`, undefined, "user-B");
+  ok("C3.6 pass (review M2): the second person sees the answer values on the field's change", JSON.stringify(r.body?.field?.answer_list?.values?.map((x: { label: string }) => x.label)) === JSON.stringify(TRAVELS) && r.body?.field?.answer_list?.status === "DRAFT", r.body?.field);
 
   // ─────────────────── the add by a rule's key (route 2), with Undo
   const ROUTE = `/combinations/${combo}/rules/r_c36_custody/fact`;
@@ -95,12 +102,46 @@ const TRAVELS = ["Both parents", "One parent", "Another adult", "Alone"], CUSTOD
   r = await call("POST", `/review/proposals/undo/${r.body?.batchId}`, undefined, "user-C");
   ok("C3.6 pass: Undo takes the field and its new list back", (r.status === 201 || r.status === 200) && sql(`select count(*) from answer_list where answer_list_key='${clist}'`) === "0" && sql(`select count(*) from canonical_field where canonical_field_key='${ckey}'`) === "0", msg(r));
 
-  // ─────────────────── the identity rule: the same codes reuse the live list
+  // ─────────────────── breaker B2 / M1: a draft list is never reused, so Undo cannot take a list from under another field
   rule("r_c36_return", `{"field":"person.returns_with","op":"eq","value":"alone"}`, "ask for the return consent");
-  r = await call("POST", `/combinations/${combo}/rule-facts`, { fact: "person.returns_with", rule: "r_c36_return", label: "Who the child returns with", meaning: "Who the child travels home with (Sample).", valueType: "code", values: ["Alone", "Another adult", "One parent", "Both parents"] });
-  ok("setup: a third fact with the same four values is proposed", r.status === 201, msg(r));
+  const ret = { fact: "person.returns_with", rule: "r_c36_return", label: "Who the child returns with", meaning: "Who the child travels home with (Sample).", valueType: "code", values: TRAVELS };
+  r = await call("POST", `/combinations/${combo}/rule-facts`, ret);
+  ok("setup: a second fact with the same four values is proposed", r.status === 201, msg(r));
+  const rid = r.body?.proposalId as string;
+  await call("POST", "/review/proposals/decide", { ids: [rid], action: "accept" }, "user-C");
+  const rlist = sql("select answer_list_key from canonical_field where canonical_field_key='person.returns_with'");
+  ok("C3.6 fail (break M1): a draft list waiting with its field is not reused by another field", !!rlist && rlist !== list, { list, rlist });
+
+  // ─────────────────── breaker B1: the list is approved and released with its field, never apart
+  const rch = sql(`select id from library_change where kind='field' and key='person.returns_with'`);
+  r = await call("POST", `/library/changes/${rch}/return`, { note: "Check the meaning with the immigration expert." }, "user-B");
+  ok("setup: the second person returns the second field", r.status === 201 || r.status === 200, msg(r));
+  r = await call("POST", `/library/changes/${ch}/approve`, {}, "user-B");
+  ok("setup: the second person approves the first field", r.status === 201 || r.status === 200, msg(r));
+  const draft = (await call("GET", "/draft", undefined, "user-B")).body;
+  r = await call("POST", "/pack/release", { expectedChanges: draft?.changes }, "user-B");
+  ok("setup: the shared release runs", r.status === 201 || r.status === 200, msg(r));
+  ok("C3.6 pass (break B1): the approved field's list is released with it", sql(`select status from answer_list where answer_list_key='${list}'`) === "PUBLISHED" && sql("select status from canonical_field where canonical_field_key='person.travels_with' order by version desc limit 1") === "PUBLISHED");
+  ok("C3.6 fail (break B1): the returned field's list is not released", sql(`select status from answer_list where answer_list_key='${rlist}'`) === "DRAFT");
+
+  // ─────────────────── the identity rule: the same values reuse the released list
+  rule("r_c36_escort", `{"field":"person.escorted_by","op":"eq","value":"alone"}`, "ask for the escort letter");
+  r = await call("POST", `/combinations/${combo}/rule-facts`, { fact: "person.escorted_by", rule: "r_c36_escort", label: "Who escorts the child", meaning: "Who goes with the child at the border (Sample).", valueType: "code", values: TRAVELS });
   await call("POST", "/review/proposals/decide", { ids: [r.body?.proposalId], action: "accept" }, "user-C");
-  ok("C3.6 pass: the same set of codes reuses the live list (no second copy)", sql("select answer_list_key from canonical_field where canonical_field_key='person.returns_with'") === list && sql(`select count(*) from answer_list l where (select string_agg(value_key, ',' order by value_key) from answer_list_value where answer_list_id=l.id)='alone,another_adult,both_parents,one_parent'`) === "1");
+  ok("C3.6 pass: the same values reuse the released list (no second copy)", sql("select answer_list_key from canonical_field where canonical_field_key='person.escorted_by'") === list);
+
+  // ─────────────────── breaker M2: an edit on To review passes the add's rules
+  rule("r_c36_guard", `{"field":"person.has_guardian","op":"eq","value":true}`, "ask for the guardianship papers");
+  r = await call("POST", `/combinations/${combo}/rule-facts`, { fact: "person.has_guardian", rule: "r_c36_guard", label: "Has a guardian in Canada", meaning: "Whether a guardian in Canada looks after the child (Sample).", valueType: "yes_no" });
+  const gid = r.body?.proposalId as string;
+  const gp = JSON.parse(sql(`select payload from proposal_item where id='${gid}'`));
+  r = await call("POST", "/review/proposals/decide", { ids: [gid], action: "edit", payload: { ...gp, values: [{ code: "yes", label: "Yes" }, { code: "no", label: "No" }] } }, "user-C");
+  ok("C3.6 fail (break M2): an edit cannot put values on a yes-or-no fact", r.status === 400 && /Only a choice/.test(msg(r)) && sql("select count(*) from canonical_field where canonical_field_key='person.has_guardian'") === "0", msg(r));
+  r = await call("POST", "/review/proposals/decide", { ids: [gid], action: "edit", payload: { ...gp, valueType: "code" } }, "user-C");
+  ok("C3.6 fail (break M2): an edit cannot make it a choice with no values", r.status === 400 && /needs its answer values/.test(msg(r)), msg(r));
+  r = await call("POST", "/review/proposals/decide", { ids: [gid], action: "edit", payload: { ...gp, valueType: "code", values: [{ code: "sun", label: "A guardian" }, { code: "moon", label: "No guardian" }] } }, "user-C");
+  const gl = sql("select string_agg(v.value_key, ',' order by v.sort_order) from canonical_field f join answer_list l on l.answer_list_key=f.answer_list_key join answer_list_value v on v.answer_list_id=l.id where f.canonical_field_key='person.has_guardian'");
+  ok("C3.6 pass (break M2): an edit's codes are rebuilt from its words (a typed code never lands)", gl === "a_guardian,no_guardian", { status: r.status, gl, m: msg(r) });
   console.log(`\n${pass} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.error("FAIL  unexpected", e); process.exit(1); });

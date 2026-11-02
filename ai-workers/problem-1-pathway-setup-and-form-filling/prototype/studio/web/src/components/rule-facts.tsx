@@ -16,7 +16,7 @@ const CHOICE = new Set(["code", "multi_choice"]);
 const valuesOf = (t: string, text: string) => (CHOICE.has(t) ? { values: text.split("\n").map((v) => v.trim()).filter(Boolean) } : {});
 function ValuesField({ valueType, text, onChange }: { valueType: string; text: string; onChange: (t: string) => void }) {
   if (!CHOICE.has(valueType)) return null;
-  return <Field label="Answer values, one per line" className="sm:col-span-2"><Textarea data-answer-values rows={4} value={text} maxLength={8000} onChange={(e) => onChange(e.target.value)} placeholder={"Both parents\nOne parent\nAnother adult\nAlone"} /></Field>;
+  return <Field label="Answer values, one per line" className="sm:col-span-2"><Textarea data-answer-values rows={4} value={text} maxLength={90000} onChange={(e) => onChange(e.target.value)} placeholder={"Both parents\nOne parent\nAnother adult\nAlone"} /></Field>;
 }
 
 export function RuleFacts({ combinationId }: { combinationId: string }) {

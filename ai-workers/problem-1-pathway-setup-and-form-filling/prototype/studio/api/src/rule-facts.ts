@@ -13,6 +13,7 @@ type Json = Parameters<typeof canonical>[0];
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { actorOf, Audit, Db, fail, need, readerOf, type Actor } from "./core.ts";
 import { insertProposals } from "./proposals.ts";
+import { answerValues } from "./answer-values.ts";
 import { keyFor } from "./library-changes.ts";
 import { LibrarySources } from "./library-sources.ts";
 
@@ -65,29 +66,9 @@ export function missingRuleFacts(rules: RuleRef[], library: Set<string>, derived
   return [...by].sort(([a], [b]) => a.localeCompare(b)).map(([fact, rs]) => ({ fact, rules: rs }));
 }
 
-/** C3.6 (Lead, 2 Nov; runtime-3's R3): the answer types that take a list of answer values. */
-export const CHOICE_TYPES = ["code", "multi_choice"] as const;
-const ValueLabels = z.array(z.string({ error: "Write each answer value as words." }).max(200, "Keep each answer value under 200 characters.")).max(400, "At most 400 answer values.").optional();
-/** Pure: the answer values a person wrote, as the list the proposal carries; the codes are built, never typed.
- *  A choice needs two or more values; an empty or repeated value is refused in words; a non-choice takes none. */
-export function answerValues(valueType: string, labels: string[] | undefined): { code: string; label: string }[] | undefined {
-  const choice = (CHOICE_TYPES as readonly string[]).includes(valueType);
-  if (!choice) { if (labels?.length) fail(`Only a choice (${CHOICE_TYPES.join(" or ")}) takes answer values: remove them, or choose a choice as the answer type.`); return undefined; }
-  if (!labels?.length) fail("A choice needs its answer values: write two or more, one per line.");
-  const out: { code: string; label: string }[] = [];
-  labels!.forEach((raw, i) => {
-    const label = raw.trim().replace(/\s+/g, " ");
-    if (!label) fail(`Answer value ${i + 1} is empty: give it a name, or remove it.`);
-    const base = label.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 60);
-    const code = /^[a-z]/.test(base) ? base : `v_${base}`.slice(0, 61);
-    if (code === "v_") fail(`Answer value "${label}" has no letters or digits: give it a name a person reads.`);
-    const same = out.find((o) => o.code === code);
-    if (same) fail(same.label.toLowerCase() === label.toLowerCase() ? `"${label}" is listed twice: give each answer value once.` : `"${label}" and "${same.label}" are the same answer value: give each answer value once.`);
-    out.push({ code, label });
-  });
-  if (out.length < 2) fail("A choice needs two or more answer values.");
-  return out;
-}
+/** C3.6 (Lead, 2 Nov; runtime-3's R3): the answer values a choice fact carries (api/src/answer-values.ts). */
+export { answerValues, CHOICE_TYPES } from "./answer-values.ts";
+const ValueLabels = z.array(z.string({ error: "Write each answer value as words." }).max(200, "Keep each answer value under 200 characters."), { error: "Write the answer values as a list of words, one per value." }).max(400, "At most 400 answer values.").optional();
 
 export const AddRuleFact = z.object({
   fact: z.string({ error: "Name the fact the rule reads." }).trim().min(1, "Name the fact the rule reads.").max(120),
