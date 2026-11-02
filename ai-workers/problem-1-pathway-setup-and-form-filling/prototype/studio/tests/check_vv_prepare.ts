@@ -56,9 +56,12 @@ ok("C6.12 G15: no date of birth yet waits for it", "waits" in ageCheck(BIO, null
 }
 // M3-0: the release's filing mode per role; a role it leaves out uses the built-in default.
 {
+  // C11.12 (P-233, BR-6; rewritten from "the child gets its own on_principal filing", challenge M4): a child the release
+  // puts on the principal's application is an applicant on the principal's filing, with no filing of their own.
   const r = d(fam, { modes: new Map([["child", "on_principal"]]) });
-  ok("C6.12 M3-0: the release says a child is on the principal's filing: the child's filing says so", r.filings.find((f) => f.applicants[0].role === "child")!.mode === "on_principal");
-  ok("C6.12 M3-0 (fail): a role the release leaves out keeps the default, files_own", r.filings.find((f) => f.applicants[0].role === "principal")!.mode === "files_own");
+  const main = r.filings.find((f) => f.owner?.role === "principal")!;
+  ok("C6.12 M3-0 / C11.12 BR-6: the release says a child is on the principal's filing: both children are applicants on it, applying", main.applicants.filter((a) => a.role === "child" && a.mode === "applying").length === 2 && !r.filings.some((f) => f.owner?.role === "child"));
+  ok("C6.12 M3-0 (fail): a role the release leaves out keeps the default, files_own (the spouse's own filing)", main.mode === "files_own" && r.filings.find((f) => f.owner?.role === "spouse_or_partner")?.mode === "files_own" && r.filings.length === 2);
   ok("C6.12 P-209: a person not travelling has no filing, in words", d([person(0, "principal"), person(1, "child", false)]).not_filing[0]?.why.includes("Not travelling"));
 }
 

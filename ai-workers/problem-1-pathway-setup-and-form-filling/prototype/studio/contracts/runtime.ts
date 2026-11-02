@@ -229,16 +229,22 @@ export const notReady = (n: number) => `${n} fact${n === 1 ? "" : "s"} to answer
  *  on each read from the pinned release and the case's people (engine/runtime/filings.ts). Money in whole cents, CAD. */
 export type FeeSource = { page: string; url: string; quote: string; quote_kind: "IRCC's words" | "summary of the Lead-checked record"; read: string; checked: string };
 export type FilingApplicant = { subject: string; label: string; role: string; mode: "applying" | "declared_only" };
-export type CaseFiling = { id: string; combination: string; label: string; mode: "files_own" | "on_principal"; applicants: FilingApplicant[]; group: string;
+/** C11.12: `mode` co_filed is a sponsorship (always in the principal's submission, never split); on_principal is kept
+ *  for rows stored before C11.12 and written by no code. `owner`: whose filing it is (its subject). */
+export type CaseFiling = { id: string; combination: string; label: string; mode: "files_own" | "on_principal" | "co_filed"; owner?: { subject: string; label: string; role: string }; applicants: FilingApplicant[]; group: string;
   status: "NOT_STARTED"; number: string | null };
 export type SubmissionGroup = { id: string; kind: "family" | "separate"; label: string; filings: string[]; splittable: boolean; why: string;
   totals: { line: string; label: string; people: number; per_person_cents: number; list_cents: number; family_max_cents: number; family_from: number; total_cents: number; cap_applied: boolean; why: string; source: FeeSource }[];
-  total_cents: number };
+  /** C11.12 BR-10: null when the combination's fees are not worked out (never CAD 0). */
+  total_cents: number | null };
 /** `waiting`: the fact the line waits for (not counted until answered, G15); `source`: an exemption's own IRCC page. */
-export type FeeLine = { filing: string; payer: string; line: string; label: string; amount_cents: number; exempt: boolean; why: string; waiting?: string; source?: FeeSource };
+/** `person`: whose fee line it is (C11.12: several people share the principal's filing; `payer` is who pays it). */
+export type FeeLine = { filing: string; person: string; payer: string; line: string; label: string; amount_cents: number; exempt: boolean; why: string; waiting?: string; source?: FeeSource };
 export type NotFiling = { subject: string; label: string; role: string; why: string };
 export type CaseFilings =
-  | { derived: true; combination: string; label: string; filings: CaseFiling[]; groups: SubmissionGroup[]; fees: FeeLine[]; not_filing: NotFiling[]; currency: "CAD"; basis: string; why: string | null; version: string }
+  | { derived: true; combination: string; label: string; filings: CaseFiling[]; groups: SubmissionGroup[]; fees: FeeLine[]; not_filing: NotFiling[]; currency: "CAD";
+      /** C11.12 BR-10: false when the combination has no fee rule; then there are no fee lines and `fees_why` says so (never CAD 0). */
+      fees_worked_out: boolean; fees_why: string | null; basis: string; why: string | null; version: string }
   | { derived: false; combination: string; why: string };
 
 /** G13 (QA-140): a release in the same words in the studio and on a case: "Release N", N being the content pack release

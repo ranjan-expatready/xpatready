@@ -64,9 +64,12 @@ ok("C11.12 BR-7 pass: Visitor visa child On the principal's warns with the guide
 ok("C11.12 BR-7 pass (m5): Declared only on Visitor visa warns too; Express Entry does not", filingWarnings("vv.single", [{ role: "child", filingMode: "declared_only" }]).length === 1 && filingWarnings("pnp.express_entry", [{ role: "child", filingMode: "on_principal" }]).length === 0);
 ok("C11.12 BR-7 fail: an applicant role with no mode is missing before a new release", filingNotSet([P, { role: "child", label: "Child", min: 0, max: 4 }], roles).join() === "Child");
 ok("C11.12 BR-7 pass: the principal, a representative and a role at most 0 need no mode", filingNotSet([{ ...P, filingMode: undefined }, rep(), { role: "child", min: 0, max: 0 }], roles).length === 0);
-ok("C11.12 BR-7 pass: until the Filing column ships (PR 3) the line is a warning; switched on it blocks", !FILING_NOT_SET_BLOCKS && filingProblems([P, { role: "child", label: "Child", min: 0, max: 4 }], roles)[0]?.level === "warning" && filingProblems([P, { role: "child", label: "Child", min: 0, max: 4 }], roles, true)[0]?.level === "error" && filingProblems([P, { role: "child", label: "Child", min: 0, max: 4 }], roles)[0]?.item === "Filing for Child");
+ok("C11.12 BR-7 fail (PR 3): with the Filing column on the screen, a role with no mode blocks a new release (error); switched off it is a warning", FILING_NOT_SET_BLOCKS && filingProblems([P, { role: "child", label: "Child", min: 0, max: 4 }], roles)[0]?.level === "error" && filingProblems([P, { role: "child", label: "Child", min: 0, max: 4 }], roles, false)[0]?.level === "warning" &&  filingProblems([P, { role: "child", label: "Child", min: 0, max: 4 }], roles)[0]?.item === "Filing for Child");
 const missing = missingItems({ forms: [{ form_number: "IMM 5257", form_kind: "document" }], field_maps: [], sections: [], placements: [], canonical_fields: [], derived_fields: [], rules: [], checks: [], document_requirements: [] } as never, [], [{ level: "error", where: "People", item: "Filing for Child", message: "x" }]);
 ok("C11.12 BR-7 fail: the missing list names it: 'Filing for Child: not set'", missing.some((m) => m.code === "filing_not_set" && /Filing for Child: not set/.test(m.text)) && !missing.some((m) => m.code === "rule_problem"), missing);
+const waiting = missingItems({ forms: [], field_maps: [], sections: [], placements: [], canonical_fields: [], derived_fields: [], rules: [], checks: [], document_requirements: [] } as never, [], [{ level: "error", where: "People", item: "Filing for Child", message: "x" }], { exists: true, forms: 0, sources: 0, draftable: 0, fromLibrary: [], running: null, proposals: [] });
+ok("C11.12 (Lead check item 1, review on #500 m1) pass: while a setup step waits (Find forms), 'Filing not set' names that step, so the row has one next step", waiting.some((m) => m.code === "filing_not_set") && waiting.every((m) => m.step === "Find forms"), waiting.map((m) => [m.code, m.step]));
+ok("C11.12 (review on #500 m1) fail: with no step waiting, it names its own step", missing.find((m) => m.code === "filing_not_set")?.step === "Set the filing", missing.map((m) => [m.code, m.step]));
 
 // BR-8 nothing is lost on an edit (the editor's paths are browser-checked in PR 3); the save keeps the mode it read
 ok("C11.12 BR-8 pass: a save keeps each line's mode", run([P, { role: "child", min: 0, max: 4, applies: true, filingMode: "on_principal" }], false).lines.find((l) => l.role === "child")?.filingMode === "on_principal");
@@ -82,12 +85,12 @@ const co = previewFilings([P, sponsor()] as never, "Spouse sponsorship", false);
 ok("C11.12 preview pass: a co-filed sponsorship is a second filing that cannot be split", co.filings.length === 2 && co.submissions[0].splittable === false && /sent together/.test(co.gets), co.gets);
 ok("C11.12 preview fail: no principal → 'Add the principal applicant to see what a case gets.'", previewFilings([{ role: "child", min: 0, max: 1, applies: true, filingMode: "files_own" }], "x", true).gets === "Add the principal applicant to see what a case gets.");
 
-// Review M1 (PR 1): a released Declared only or co-filing line never reaches the case engine before PR 2 handles it
+// Review M1 of PR 1, PR 2 form: the case engine now handles every mode; only a mode that cannot hold is dropped
 const rm = releaseModes([{ role: "principal", filingMode: "files_own", applies: true }, { role: "spouse_or_partner", filingMode: "on_principal", applies: true }, { role: "child", filingMode: "declared_only", applies: false }, { role: "sponsor", filingMode: "co_files", applies: false }, { role: "representative", filingMode: "files_own", applies: false }]);
-ok("C11.12 review M1 pass: the case reads Files own and On the principal's from the release", rm.get("principal") === "files_own" && rm.get("spouse_or_partner") === "on_principal");
-ok("C11.12 review M1 fail: Declared only, co_files and a Representative's stored Files own never reach the case's filing mode", !rm.has("child") && !rm.has("sponsor") && !rm.has("representative"));
+ok("C11.12 PR 2 pass: the case reads all four modes from the release", rm.get("principal") === "files_own" && rm.get("spouse_or_partner") === "on_principal" && rm.get("child") === "declared_only" && rm.get("sponsor") === "co_files");
+ok("C11.12 PR 2 fail (B1): a Representative's stored Files own never reaches the case", !rm.has("representative"));
 const caseVv = deriveFilings("vv.single", [{ subjectId: "a", role: "principal", label: "A", applies: true }, { subjectId: "k", role: "child", label: "K", applies: true }], undefined, { modes: rm as never });
-ok("C11.12 review M1 pass: the Visitor visa case still derives (the child falls back to Files own), every filing mode one the database holds", caseVv.derived && caseVv.filings.every((f) => ["files_own", "on_principal"].includes(f.mode)));
+ok("C11.12 PR 2 pass: every filing mode the engine writes is one the widened database check holds", caseVv.derived && caseVv.filings.every((f) => ["files_own", "co_filed"].includes(f.mode)) && caseVv.filings.every((f) => f.applicants.every((a) => ["applying", "declared_only"].includes(a.mode))));
 // Review M2: the preview follows the case's built-in default for a line with no mode
 const noMode = previewFilings([{ ...P }, { role: "child", label: "Child", min: 0, max: 4, preview: 1, applies: true }] as never, "Visitor visa", true, (role) => defaultModeOf("vv.single", role));
 ok("C11.12 review M2 pass: Visitor visa child with no mode → the preview gives the child a filing, as the case does", noMode.filings.length === 2 && noMode.gets === "2 filings in one submission", noMode.gets);
@@ -95,5 +98,13 @@ ok("C11.12 review M2 fail: with no default (another combination) the line files 
 // Review m1: the alias and the field must agree
 ok("C11.12 review m1 fail: filingMode and filing that disagree are refused", first([P, { role: "child", min: 0, max: 1, applies: true, filingMode: "files_own", filing: "on_principal_applying" }]) === "Filing: send one choice (filingMode and filing disagree).");
 ok("C11.12 review m1 pass: filingMode and filing that agree are accepted", run([P, { role: "child", min: 0, max: 1, applies: true, filingMode: "on_principal", filing: "on_principal_applying" }]).errors.length === 0);
+
+// Review M2 of PR 3: only the sponsor co-files
+ok("C11.12 BR-4 fail (PR 3): a Representative set to Files the sponsorship is refused in words", first([P, { role: "representative", min: 1, max: 1, applies: false, filingMode: "co_files" }]) === "Representative takes part in the case but files no application: only the sponsor files the sponsorship.");
+// Devin review on #478: the preview's split rule is the case's (a spouse's own filing may leave a sponsorship's group)
+const coSp = previewFilings([P, { role: "spouse_or_partner", min: 0, max: 1, applies: true, filingMode: "files_own" }, sponsor()] as never, "Spouse sponsorship", false);
+ok("C11.12 preview pass: principal + spouse's own filing + sponsorship → splittable (the spouse may leave), as the case says", coSp.filings.length === 3 && coSp.submissions[0].splittable === true);
+const caseCoSp = deriveFilings("fs.spouse", [{ subjectId: "a", role: "principal", label: "A", applies: true }, { subjectId: "s", role: "spouse_or_partner", label: "S", applies: true }, { subjectId: "p", role: "sponsor", label: "P", applies: false }], undefined, { modes: new Map([["spouse_or_partner", "files_own"], ["sponsor", "co_files"]]) as never });
+ok("C11.12 preview fail guard: the preview and the case agree on splittable for the same people", caseCoSp.derived && caseCoSp.groups[0].splittable === coSp.submissions[0].splittable && co.submissions[0].splittable === false);
 
 process.exit(summary() ? 1 : 0);
