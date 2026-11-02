@@ -124,3 +124,9 @@ Fix delta read: `53604e3c` (engine, api, contracts, tests, migration header). Th
 - **Re-run:** `check_vv_filings` 55/55 (n1 pass and fail, the split words), `check_vv_prepare` 32/32, `check_c1112_modes` 39/39, and `check_c1112_prepare_api` 28/28 on a fresh copy on :4444. The group with the spouse is splittable; after the spouse is split out, the principal's filing and the sponsorship alone are not.
 - **Minor, wording only:** a splittable group with a sponsorship still has the `why` "…sent together and cannot be split". That is true of the pair, but could say the other filings may leave. Optional.
 - **Verdict: Approve** for `ebe609f9`. No open Blocker or Major. Minors m4, the breaker's 8 and 9, and this wording point stay open.
+
+## Round 4 (re-check on `2a8c1087`, PR #478, branch `claude/fervent-fermat-mvm1kg`)
+- **Merge `dc298158` is clean.** Its parents are origin/main `4a3b4fb3` and `fba00459`, which is `ebe609f9` plus this file's round-3 lines only. Every studio file that differs from `ebe609f9` equals either main's or `ebe609f9`'s version, so the merge adds nothing of its own.
+- **Fix `2a8c1087` is right.** `previewFilings` (`engine/filing-modes.ts:125–128`) now uses the case's split rule: beside a sponsorship, a submission is splittable only when an own filing other than the principal's is in it. Two tests check the preview against `deriveFilings` for the same people, and the existing principal-plus-sponsorship case stays not splittable.
+- **Re-run in the PR worktree:** `check_c1112_modes` 41/41, `check_vv_filings` 55/55, `check_vv_prepare` 32/32. I relied on the builder's API runs on `dc298158`; the fix touches only the pure preview.
+- **Verdict: Approve** for `2a8c1087`. No open Blocker or Major. The Minors stay as in round 3.

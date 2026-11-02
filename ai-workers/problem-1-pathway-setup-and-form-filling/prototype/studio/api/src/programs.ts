@@ -28,6 +28,7 @@ import { changeView, itemsOf, unapprovedAdds, unapprovedWhy } from "./library-ch
 import { openNodeKeys, startWhy } from "./lifecycle.ts";
 import { Sources } from "./sources.ts";
 import { Studio } from "./studio.ts";
+import { filingProblems } from "../../engine/filing-modes.ts";
 
 /** Parses a request body or query with its contract; a mismatch is a 400 Problem Details with field errors. */
 export function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
@@ -122,6 +123,8 @@ export class Programs {
     // Review step (addendum A3): the current draft passed review, read with the same gate the release uses.
     const gates = combos.length ? await this.studio.releaseGates(combos.map((c) => ({ combinationId: c.id, sha256: (snaps.get(c.id) as { sha256: string }).sha256 }))) : new Map();
     const library = lib.filter((f) => f.status !== "RETIRED").map((f) => ({ key: f.canonicalFieldKey, valueType: f.valueType }));
+    // C11.12 (review M1 of PR 3): the draft's "Filing for <role>" lines, as the release check reads them (studio problems()).
+    const personRoles = await this.studio.personRoles(workspaceId);
     const latest = new Map<string, (typeof releases)[number]>();
     for (const r of releases) if (!latest.has(r.combinationId)) latest.set(r.combinationId, r);
     const mapped = new Set(editions.filter((e) => e.maps.length).map((e) => e.sha256));
@@ -160,7 +163,8 @@ export class Programs {
       const rel = latest.get(c.id);
       const participants = c.participants as ParticipantLine[];
       const structure = await this.studio.structureProblems(c.id);
-      const draftProblems = [...structure, ...validate(snapshot, library, derivedOf(snapshot))];
+      // C11.12: a released snapshot is never re-judged for filing modes (pinned releases are kept, BR-7); the draft is.
+      const draftProblems = [...structure, ...filingProblems((snapshot.combination?.participants ?? []) as { role: string; label?: string; max: number; filingMode?: unknown }[], personRoles), ...validate(snapshot, library, derivedOf(snapshot))];
       // Status is about what firms can use: the released snapshot when there is one; the draft only explains In setup.
       const relSnap = rel?.snapshot as unknown as Snapshot | undefined;
       const relProblems = relSnap ? [...structure, ...validate(relSnap, library, derivedOf(relSnap))] : draftProblems;

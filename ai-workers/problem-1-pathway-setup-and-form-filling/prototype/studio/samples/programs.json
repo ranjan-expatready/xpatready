@@ -169,7 +169,8 @@
           "min": 0,
           "max": 4,
           "preview": 1,
-          "applies": false
+          "applies": false,
+          "filingMode": "files_own"
          },
          {
           "role": "representative",

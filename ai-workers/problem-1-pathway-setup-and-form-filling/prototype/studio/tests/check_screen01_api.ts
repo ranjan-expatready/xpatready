@@ -87,6 +87,9 @@ function pdf(title: string, text: string) {
   ok("one combination per last-level node, in the database (unique)", !!err && /duplicate key|unique/.test(err), err);
   const twice = await Promise.all([0, 1].map(() => call("POST", "/combinations", { nodeKey: "individual.work_permits.open.spouse_student" })));
   ok("idempotent create: two clicks at once give one combination", twice.every((x) => x.status === 200 || x.status === 201) && twice[0].body.combination.id === twice[1].body.combination.id && Number(sql(`select count(*) from combination c join program_def p on p.id=c.program_def_id where p.program_node_key='individual.work_permits.open.spouse_student'`)) === 1, twice.map((x) => x.status));
+  // C11.12 BR-7 (P-233): a new release needs a filing mode on every applicant role; the author sets them as on the screen
+  // (Sample: the spouse and child of a student file their own, as linked open work permit / visitor applications).
+  sql(`update combination set participants = (select jsonb_agg(case when x->>'role' in ('spouse_or_partner','child') then x || '{"filingMode":"files_own"}'::jsonb else x end) from jsonb_array_elements(participants) x) where id='${twice[0].body.combination.id}'`);
 
   // ---------------------------------------------------------------- BR-4 / BR-7 nothing above a combination
   r = await call("POST", "/program-nodes", { kind: "CATEGORY", parentKey: "individual.study_permits.study_permit", label: "From abroad" });

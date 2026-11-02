@@ -47,10 +47,10 @@ export function filingNotSet(lines: { role: string; label?: string; min?: number
   return lines.filter((l) => l.role !== "principal" && l.max > 0 && roles.find((r) => r.key === l.role)?.mayBeApplicant && !isLineMode(l.filingMode))
     .map((l) => l.label || roles.find((r) => r.key === l.role)?.label || l.role);
 }
-export const filingNotSetWords = "Filing not set: until the Filing column is on this screen, a case uses the combination's built-in default (Sample); a new release will ask for it then.";
-/** Switched off until the editor can set a mode (PR 3 of C11.12): until then a missing mode is a warning, so no draft
- *  saved before C11.12 becomes unreleasable with no way to fix it on the screen ("unfinished work merges switched off"). */
-export const FILING_NOT_SET_BLOCKS = false;
+export const filingNotSetWords = "Filing not set: choose how this person's application goes to IRCC (Forms › Who can be in this application). A new release needs it.";
+/** On since C11.12 PR 3 (the Filing column sets the mode): a new release needs a mode on every role that may be an
+ *  applicant; pinned releases are kept (BR-7). */
+export const FILING_NOT_SET_BLOCKS = true;
 /** The release check's lines (BR-7): one per role with no mode; an error once FILING_NOT_SET_BLOCKS is on. */
 export function filingProblems(lines: Parameters<typeof filingNotSet>[0], roles: RoleFacts[], blocks = FILING_NOT_SET_BLOCKS) {
   return filingNotSet(lines, roles).map((label) => ({ level: blocks ? "error" as const : "warning" as const, where: "People", item: `Filing for ${label}`, message: filingNotSetWords }));
@@ -106,7 +106,8 @@ const n = (k: number, one: string, many = `${one}s`) => `${k} ${k === 1 ? one : 
 export function previewFilings(lines: { role: string; label?: string; min: number; max: number; preview?: number; applies: boolean; filingMode?: LineMode | null }[], combination: string, feesKnown: boolean, fallback: (role: string) => LineMode | undefined = () => undefined) {
   const people: PlanPerson[] = [];
   for (const l of lines) {
-    const count = l.role === "principal" ? 1 : Math.max(l.min, Math.min(l.max, l.preview ?? (l.min || 1)));
+    // PR 3 (board r2): at least one of each person who may be on a case, more when the preview family says so.
+    const count = l.role === "principal" ? 1 : l.max <= 0 ? 0 : Math.min(l.max, Math.max(1, l.min, l.preview ?? 1));
     for (let k = 1; k <= count; k++) people.push({ subject: `${l.role}-${k}`, role: l.role, label: count > 1 ? `${l.label ?? l.role} ${k}` : l.label ?? l.role, travelling: l.filingMode !== "declared_only" });
   }
   // Review M2: a line with no mode (saved before C11.12, or its Applicant tick changed) follows the same built-in default
