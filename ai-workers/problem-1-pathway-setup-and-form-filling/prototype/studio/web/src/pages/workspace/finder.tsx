@@ -13,7 +13,7 @@ import { api, ApiError, useApi, useSessionView, useToast } from "@/lib/api";
 import { Button, Dialog, Notice, Pill } from "@/components/ui/controls";
 import { RunCard } from "@/components/run-card";
 import { fmtWhen } from "@/components/status";
-import { irccWords } from "../../../../contracts/workspace";
+import { endSentence, FIND_DESCRIPTION, irccWords } from "../../../../contracts/workspace";
 import { costWords, START } from "../../../../contracts/start-setup";
 import { FindFormsStart } from "@/components/start-setup";
 import { useCostGate } from "@/components/cost-warning";
@@ -40,6 +40,8 @@ const MODES: [Mode, string, string][] = [
   ["live", "Live", "Two AI rounds read the pages and must agree; only forms both pick are attached. The cost is shown below before it starts."],
 ];
 
+const SAMPLE_NOTE = "Which forms apply is Sample until the immigration expert confirms.";
+
 /** Find forms with AI: the plan and its cost first, then the run (Find again, and Redo for one form with `only`). With
  *  `page` (S3 item 5), the person first chooses the application page the last run could not pick: from the pages it saw,
  *  or another canada.ca address; the plan then reads only that page (the server refuses any other site). */
@@ -55,6 +57,15 @@ export function FindDialog({ id, only, page, onClose, onStarted }: { id: string;
   // Lead Critical 29 Oct: with AI now switched off on this copy the live choice is greyed with the reason (any plan says it).
   const liveOff = plan.data?.live && !plan.data.live.on ? plan.data.live.why : null;
   React.useEffect(() => { if (liveOff && mode === "live") setMode(page ? "rules" : "replay"); }, [liveOff, mode, page]);
+  // QA-110: the dialog has no Radix trigger, so on Escape or Cancel focus fell to the page body. Focus goes back to what
+  // opened it (Find again, or the line's menu button) when that is still on the page and nothing else took focus.
+  // Review m1: opened from a line's menu ("Redo with AI"), the menu item is gone by then: its menu's button takes focus.
+  const [opener] = React.useState(() => {
+    const a = typeof document !== "undefined" ? (document.activeElement as HTMLElement | null) : null;
+    const menu = a?.closest('[role="menu"]'), by = menu?.getAttribute("aria-labelledby");
+    return (by ? document.getElementById(by) : null) ?? a;
+  });
+  React.useEffect(() => () => { setTimeout(() => { const a = document.activeElement; if ((!a || a === document.body) && opener?.isConnected && !(opener as HTMLButtonElement).disabled) opener.focus(); }, 0); }, [opener]);
   const cost = useCostGate(); // P-179: over a limit, the cost warning first (Continue or Cancel)
   const start = async () => {
     if (!plan.data) return;
@@ -72,7 +83,7 @@ export function FindDialog({ id, only, page, onClose, onStarted }: { id: string;
   };
   const title = only?.length ? `Redo with AI: ${only.join(", ")}` : page ? START.pageButton : "Find this combination's forms";
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} title={title} description="AI reads the application's canada.ca pages and its guide, names each form with IRCC's words, and attaches the ones both rounds agree on. Which forms apply is Sample until the immigration expert confirms."
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} title={title} description={`${FIND_DESCRIPTION[mode]} ${SAMPLE_NOTE}`}
       footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void start()} busy={busy} disabled={!plan.data}><Sparkles /> Start</Button></>}>
       <div className="space-y-4" data-find-dialog>
         {page ? (
@@ -118,6 +129,15 @@ export function FinderPanel({ id, latest, onRedo, onChoosePage, removed = [], li
   // S3 item 5: the run waits for the application page: the one call to action is choosing it (never a dead end).
   const waitsForPage = !!run && !ACTIVE.has(run.status) && !!latest?.page_choice;
   const attached = forms.filter((f) => ON_LINE.has(f.state)).length, notFound = forms.filter((f) => f.state === "NOT_FOUND" || f.state === "UPLOAD_WAITING_SECOND_PERSON").length, decide = forms.filter((f) => f.state === "TO_DECIDE").length;
+  // QA-111: a run this strip did not start (Start setup's button before the tab re-rendered, another tab, a reload while
+  // it ran) is shown from the latest read, so its run card unmounts when it ends without calling onEnded. Whenever the
+  // latest run goes from running to ended, every read the Forms tab shows is refreshed (lines, counts, Next step).
+  const wasActive = React.useRef(!!run && ACTIVE.has(run.status));
+  const nowActive = !!run && ACTIVE.has(run.status);
+  React.useEffect(() => {
+    if (wasActive.current && !nowActive) for (const k of formsKeys(id)) void qc.invalidateQueries({ queryKey: k });
+    wasActive.current = nowActive;
+  }, [nowActive, run?.id, id, qc]);
   // A run started here (FindDialog) is shown at once; the strip keeps it until it ends, then refreshes the lines.
   React.useEffect(() => { const h = (e: Event) => setRunId((e as CustomEvent<string>).detail); window.addEventListener("s5-find-started", h); return () => window.removeEventListener("s5-find-started", h); }, []);
   return (
@@ -125,7 +145,7 @@ export function FinderPanel({ id, latest, onRedo, onChoosePage, removed = [], li
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="text-sm">
           <p className="font-medium">{waitsForPage ? START.pageTitle : run ? `AI found ${attached} form${attached === 1 ? "" : "s"} for this combination${notFound ? `, ${notFound} not found` : ""}${decide ? `, ${decide} to decide` : ""}` : lineCount ? `${lineCount} form${lineCount === 1 ? "" : "s"} on this combination` : "No form find yet"}</p>
-          <p className="text-xs text-text-muted" data-finder-status>{waitsForPage ? `${START.pageBody} ` : run ? `Last find ${run.finished_at ? fmtWhen(run.finished_at) : "running now"}${run.mode === "replay" ? " · Saved, US$0" : run.mode === "rules" ? " · rules only, US$0" : ""}. ` : lineCount ? "Added without an AI find. Nothing was spent on finding forms yet. " : `${START.body} `}Which forms apply is Sample until the immigration expert confirms.</p>
+          <p className="text-xs text-text-muted" data-finder-status>{waitsForPage ? `${START.pageBody} ` : run ? `${endSentence(`Last find ${run.finished_at ? fmtWhen(run.finished_at) : "running now"}${run.mode === "replay" ? " · Saved, US$0" : run.mode === "rules" ? " · rules only, US$0" : ""}`)} ` : lineCount ? "Added without an AI find. Nothing was spent on finding forms yet. " : `${START.body} `}Which forms apply is Sample until the immigration expert confirms.</p>
         </div>
         {/* Lead split (28 Oct): the first find is started from Start setup (screens lane, S3): its "Find forms with AI"
             button is this slot. Once a find exists, Find again (or choosing the page it waits for) is this list's one action. */}
