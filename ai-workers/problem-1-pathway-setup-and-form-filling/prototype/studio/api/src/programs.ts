@@ -11,6 +11,7 @@ import { AddLineBody, CatalogueQuery, cleanLabel, CreateCombinationBody, CreateN
 import { manifest } from "../../engine/import.ts";
 import { acceptsOf, channelProblems, channelsView, filingKind } from "../../engine/channels.ts";
 import { CHANNEL_WORDS, type Channel } from "../../contracts/forms.ts";
+import { questionCounts } from "../../engine/runtime/questionnaires.ts";
 import { checkedOf, comparePaths, isLive, missingItems, needsWork, newestEdition, waitsForPerson, nextActionOf, rowCounts, statusOf, STATUS_TEXT } from "../../engine/programs.ts";
 import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snapshot.ts";
 import { filedOf, progressFollows, setupProgress } from "../../engine/structure.ts";
@@ -29,6 +30,7 @@ import { openNodeKeys, startWhy } from "./lifecycle.ts";
 import { Sources } from "./sources.ts";
 import { Studio } from "./studio.ts";
 import { filingProblems } from "../../engine/filing-modes.ts";
+import { removedInDraft } from "../../contracts/counts.ts";
 
 /** Parses a request body or query with its contract; a mismatch is a 400 Problem Details with field errors. */
 export function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
@@ -101,7 +103,7 @@ export class Programs {
     const key = JSON.stringify([workspaceId, a._count, a._max.at, j._count, j._max.startedAt, j._max.finishedAt, p, h]);
     if (this.cache?.key === key) return this.cache;
     const t0 = performance.now();
-    const [nodes, combos, releases, jobs, items, lib, editions, heldItems, byKind, subs] = await Promise.all([
+    const [nodes, combos, releases, jobs, items, lib, editions, heldItems, byKind, subs, lineRows] = await Promise.all([
       this.db.programDef.findMany({ where: { workspaceId }, orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }] }),
       this.db.combination.findMany({ where: { workspaceId }, include: { attachments: { select: { id: true, kind: true, recognised: true, sha256: true, edition: true, createdAt: true, officialFile: true } } } }),
       this.db.configRelease.findMany({ where: { workspaceId }, orderBy: { version: "desc" }, select: { combinationId: true, snapshot: true, releasedAt: true, packVersion: { select: { version: true } } } }),
@@ -113,6 +115,8 @@ export class Programs {
       // Setup checklist (concept §8): waiting proposals, one groupBy combination × form edition × kind.
       this.db.proposalItem.groupBy({ by: ["combinationId", "formEdition", "kind"], where: { workspaceId, status: "waiting" }, _count: true }),
       this.db.reviewSubmission.findMany({ where: { workspaceId }, orderBy: { submittedAt: "desc" }, select: { combinationId: true, submittedBy: true } }),
+      // UX-A part 1: each combination's form line versions, newest first, for the forms removed in its draft.
+      this.db.combinationForm.findMany({ where: { workspaceId }, orderBy: { version: "desc" }, select: { combinationId: true, lineageKey: true, status: true, updatedAt: true } }),
     ]);
     const submittedBy = new Map<string, string>();
     for (const x of subs) if (!submittedBy.has(x.combinationId)) submittedBy.set(x.combinationId, x.submittedBy);
@@ -176,7 +180,8 @@ export class Programs {
       const proposals = [...latestPerSource.values()].filter((x) => x.kind === "field_map" && x.status === "COMPLETED" && x.mode !== "STUB").map((x) => ({ job: x.id, n: pending.get(x.id) ?? 0 }));
       const running = mine.find((x) => (x.status === "QUEUED" || x.status === "RUNNING") && x.batchId)?.batchId ?? null;
       const snapForms = snapshot.forms as SnapForm[];
-      const formCodes = new Set(snapForms.map((f) => f.form_number));
+      // UX-A part 1 (contracts/counts.ts): a form removed in this draft is not an attached form waiting to be set up.
+      const formCodes = new Set([...snapForms.map((f) => f.form_number), ...removedInDraft(lineRows.filter((x) => x.combinationId === c.id), rel?.releasedAt).map((x) => x.lineageKey)]);
       const sourceForms = c.attachments.filter((x) => x.recognised && x.kind === "Form" && !formCodes.has((x.edition ?? "").split(" (")[0]));
       const draftable = sourceForms.filter((x) => !mapped.has(x.sha256) && !["COMPLETED", "QUEUED", "RUNNING", "APPLIED"].includes(latestPerSource.get(x.id)?.status ?? "")).length;
       const fromLibrary = [...new Set(sourceForms.filter((x) => mapped.has(x.sha256)).map((x) => (x.edition ?? "").split(" (")[0]))];
@@ -199,6 +204,9 @@ export class Programs {
       // W1 setup checklist (slice A): the same data, read once into one input (concept §8).
       const proposalsOf: Partial<Record<ProposalKind, number>> = {};
       for (const g of byKind) if (g.combinationId === c.id || (!g.combinationId && g.formEdition && (codes.has(g.formEdition) || codes.has(g.formEdition.split(" (")[0])))) proposalsOf[g.kind as ProposalKind] = (proposalsOf[g.kind as ProposalKind] ?? 0) + g._count;
+      // UX-A part 1 (contracts/counts.ts): the one question count, the Questionnaires chips' per role and their sum.
+      const qc = hasContent ? questionCounts(snapshot) : null;
+      const counts = hasContent ? { ...rowCounts(snapshot, participants), questions: qc!.total, questionsByRole: qc!.roles } : null;
       const roles = participants.filter((p) => p.max > 0);
       const applicantRoles = roles.filter((p) => p.role !== "representative" && p.applies !== false);
       const docLines = snapshot.document_requirements as { who?: unknown }[];
@@ -215,7 +223,7 @@ export class Programs {
         forms: { lines: snapForms.length, fromLibrary: fromLibrary.length, draftable, unmapped, sources: setup.sources },
         proposals: proposalsOf, problems: draftProblems,
         documents: { lines: docLines.length, rolesWithout: docLines.length ? applicantRoles.filter((r) => !docLines.some((d) => covers(d, r.role))).length : 0 },
-        questions: hasContent ? rowCounts(snapshot, participants).questions : 0,
+        questions: qc?.total ?? 0,
         held: held.length,
         running: running ? { batchId: running, step: "forms" as StepKey } : null,
         changes,
@@ -224,7 +232,7 @@ export class Programs {
       rows.push({ pathway, changes, errors: errors.length, firstError: errors[0] ? `${errors[0].item}: ${errors[0].message}` : null, hasContent, docNames,
         setup: setupChecklistOf(input, `${c.id}|${key}`),
         searchText: [...path, ...forms.map((f) => f.code), ...docNames].join(" "),
-        leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, filed: filedOf(snapForms), progress, counts: hasContent ? rowCounts(snapshot, participants) : null, status, statusText: retired ? "Retired" : status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
+        leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, filed: filedOf(snapForms), progress, counts, status, statusText: retired ? "Retired" : status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
           missing, aiProposals, aiRunning: running, release: rel ? { pack: rel.packVersion?.version ?? 1, at: rel.releasedAt.toISOString() } : null, checked,
           nextAction, needs: !retired && needsWork({ status, nextAction }), needsYou: !retired && waitsForPerson({ status, nextAction, aiProposals, held: held.length }), live: !retired && isLive({ status }), held, note: noteOf(aiProposals, nextAction?.kind, held) } });
     }

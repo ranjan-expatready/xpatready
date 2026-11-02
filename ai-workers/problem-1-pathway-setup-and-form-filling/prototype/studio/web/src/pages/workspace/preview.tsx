@@ -12,6 +12,7 @@ import { ONLINE_LATER_WAVE } from "../../../../contracts/runtime";
 import { PreviewQuestions } from "@/runtime/questionnaire";
 import { Notice, Pill } from "@/components/ui/controls";
 import { cn } from "@/lib/utils";
+import { questionsWords } from "../../../../contracts/counts";
 
 /** C4.6: the preview's extra words per form (engine/runtime/preview.ts outputOf); optional, so an older response reads. */
 type FormOut = PreviewForm & { signature?: string; signatureWords?: string; toSign?: boolean; laterWave?: string | null; checklist?: boolean };
@@ -38,7 +39,7 @@ export function usePreviewParams() {
 /** C4.3 (board v2 frame 4): the three sets for one person, side by side from 1280 px, one at a time with a switch below. */
 const SETS = [
   { key: "pqr", title: (p: PreviewView) => `Pre-qualification (${p.sets.pqr.length})` },
-  { key: "sqr", title: (p: PreviewView) => `What the client is asked (${p.sets.sqr.asked})` },
+  { key: "sqr", title: (p: PreviewView) => `What the client is asked (${p.sets.sqr.asked} of ${p.sets.agent.questions})` },
   { key: "agent", title: (p: PreviewView) => `Case officer's view (${p.sets.agent.questions})` },
 ] as const;
 type SetKey = (typeof SETS)[number]["key"];
@@ -95,7 +96,9 @@ export function PreviewTab({ id, p, empty, fetching, hasRelease }: { id: string;
           )}
         </section>
         <section aria-labelledby="pv-q" className={cn("space-y-2", shown !== "sqr" && "hidden xl:block")} data-set="sqr">
-          <h2 id="pv-q" className="font-semibold">What {who.label} is asked ({p.sets.sqr.asked})</h2>
+          {/* UX-A part 1 (contracts/counts.ts): "asked" is part of the person's questions (the Questionnaires chip), said as such. */}
+          <h2 id="pv-q" className="font-semibold">What {who.label} is asked <span className="font-normal text-text-muted" data-asked-of={p.sets.agent.questions}>· {p.sets.sqr.asked} of {questionsWords(p.sets.agent.questions)}</span></h2>
+          <p className="text-xs text-text-muted">The others come from documents or the case officer, or a rule skips them for these Sample answers.</p>
           {p.sets.sqr.fromDocuments.length ? (
             <div className="rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm" data-from-documents>
               <p className="font-medium">From {who.label}'s documents</p>

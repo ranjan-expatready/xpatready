@@ -19,6 +19,7 @@ import { FormProgressService } from "./form-progress.ts";
 import { chipOf, type FormStepChip } from "../../contracts/form-progress.ts";
 import { Studio } from "./studio.ts";
 import { PeopleFromGuide } from "./people-ai.ts";
+import { removedInDraft } from "../../contracts/counts.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 type Q = { tab?: string; family?: string; person?: string; tweaks?: string; release?: string; role?: string };
@@ -91,9 +92,7 @@ export class WorkspaceViews {
     // P-116 (drift check 8): a form removed since the last release can be put back (Undo) while the draft is open; adding
     // it again from the library restores the same line (api/src/form-lines.ts addFormLine).
     const since = (await this.db.configRelease.findFirst({ where: { combinationId: id }, orderBy: { version: "desc" }, select: { releasedAt: true } }))?.releasedAt;
-    const newest = new Map<string, (typeof rows)[number]>();
-    for (const r of rows) if (!newest.has(r.lineageKey)) newest.set(r.lineageKey, r);
-    const gone = [...newest.values()].filter((r) => r.status === "RETIRED" && (!since || r.updatedAt > since));
+    const gone = removedInDraft(rows, since); // UX-A part 1: the same rule as the forms count (contracts/counts.ts)
     const titles = new Map((await this.db.govFormDef.findMany({ where: { id: { in: gone.map((r) => r.govFormDefId) } }, select: { id: true, displayName: true } })).map((f) => [f.id, f.displayName]));
     const removed = gone.map((r): RemovedForm => ({ code: r.lineageKey, title: titles.get(r.govFormDefId) ?? "", at: r.updatedAt.toISOString() }));
     // Drift check 5: an attached form whose file the library has already matched is added from the library, no AI; the

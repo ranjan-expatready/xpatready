@@ -58,8 +58,10 @@ export type Step = z.infer<typeof Step>;
 export const CHIP_STATUSES = ["NOT_STARTED", "IN_PROGRESS", "NOT_READY", "LIVE", "RETIRED"] as const;
 export type ChipStatus = (typeof CHIP_STATUSES)[number];
 
+/** UX-A part 1 (contracts/counts.ts): `forms` counts the forms on the combination (lines and attached forms not set up
+ *  yet, each once), `formsSetUp` its lines; `questions` the one question count (the Questionnaires chips' sum). */
 export const Counts = z.object({
-  forms: z.number().int().min(0), people: z.number().int().min(0), applicants: z.number().int().min(0), documents: z.number().int().min(0), questions: z.number().int().min(0),
+  forms: z.number().int().min(0), formsSetUp: z.number().int().min(0), people: z.number().int().min(0), applicants: z.number().int().min(0), documents: z.number().int().min(0), questions: z.number().int().min(0),
   proposals: z.record(z.enum(STEP_KEYS), z.number().int().min(0)), problems: z.record(z.enum(STEP_KEYS), z.number().int().min(0)), held: z.number().int().min(0),
 });
 export type Counts = z.infer<typeof Counts>;

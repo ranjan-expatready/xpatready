@@ -33,6 +33,7 @@ import type { FormStepChip } from "../../../../contracts/form-progress";
 import { normaliseCode } from "../../../../contracts/form-library";
 import { AccountPicker, ChannelCell, SignatureCell } from "@/components/channels";
 import type { CombinationSummary, CombinationView } from "../../../../contracts/programs";
+import { formsWords, type FormsCount } from "../../../../contracts/counts";
 /** The fields of a summary line that ChannelCell reads. */
 type ChannelLine = CombinationSummary["forms"][number];
 type Combo = Parameters<typeof SourcesLine>[0]["d"];
@@ -99,8 +100,12 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
   // before it is in (as Questionnaires). Review M1: forms:finder ("Find forms") has no single place drawn here; it is
   // never claimed, so an open Find forms item is never called done.
   const sumForFocus = useApi<CombinationSummary>(["combination-summary", id], `/combinations/${id}/summary`);
+  // UX-A part 1 (contracts/counts.ts): the forms count is the summary's, the one the Overview, the setup strip and the
+  // Programs card show; this tab never counts its own.
+  const sc = sumForFocus.data?.setup?.counts;
+  const formsCount: FormsCount | null = sc ? { total: sc.forms, setUp: sc.formsSetUp } : null;
   const doneSince = useFocusItem(known && combo && sumForFocus.data ? [] : undefined, (k) => k.startsWith("forms:") && k !== "forms:finder");
-  const finder = <><FinderPanel id={id} latest={latest.data} onRedo={redo} onChoosePage={choosePage} removed={removed.map((r) => r.code)} lineCount={lines.length + pending.length} />{finding ? <FindDialog id={id} only={finding.length ? finding : undefined} page={choosingPage ? latest.data?.page_choice ?? { candidates: [], why: "" } : null} onClose={() => { setFinding(null); setChoosingPage(false); }} onStarted={(runId) => window.dispatchEvent(new CustomEvent("s5-find-started", { detail: runId }))} /> : null}</>;
+  const finder = <><FinderPanel id={id} latest={latest.data} onRedo={redo} onChoosePage={choosePage} removed={removed.map((r) => r.code)} count={formsCount} />{finding ? <FindDialog id={id} only={finding.length ? finding : undefined} page={choosingPage ? latest.data?.page_choice ?? { candidates: [], why: "" } : null} onClose={() => { setFinding(null); setChoosingPage(false); }} onStarted={(runId) => window.dispatchEvent(new CustomEvent("s5-find-started", { detail: runId }))} /> : null}</>;
   // Break m4 (Screen 01): an author never sees the channels as read-only words while the session loads.
   if (!known || !combo) return <Spinner label="Loading forms" />;
   const undo = canAuthor ? <>{lastChange ? <UndoBar change={lastChange} onUndo={undoLast} /> : null}{removed.length ? <RemovedNotice id={id} removed={removed} /> : null}</> : null;
@@ -119,7 +124,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
   // 0 forms" above them; what each waits for is said in the same steps as the rows (and the page's next step).
   const inLibrary = (a: { id: string; status: string }) => a.status === "IN_LIBRARY" || fromLibrary.includes(a.id);
   const ready = pending.filter(inLibrary).length, toDraft = pending.length - ready;
-  const count = pending.length ? `${plural(lines.length + pending.length, "form")} attached, ${lines.length} set up` : plural(lines.length, "form");
+  const count = formsCount ? formsWords(formsCount) : "…";
   return (
     <div className="space-y-4">
       <DoneSinceNotice shown={doneSince} />
