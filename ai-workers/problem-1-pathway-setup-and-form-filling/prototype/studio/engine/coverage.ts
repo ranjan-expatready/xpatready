@@ -5,6 +5,8 @@
 import { peopleFor, render, type Person } from "./render.ts";
 import type { Snapshot } from "./snapshot.ts";
 import { documentFacts } from "./sources.ts";
+import { FILING, sourceKey } from "../contracts/resolver.ts";
+import { roleOf as resolvedRole } from "./resolver.ts";
 
 export type CoverageGap = { fact: string; role: string; forms: string[]; boxes: number; why: string };
 export const COVERAGE_FIXES = "ask it in a library section this combination uses, or have the case officer fill it";
@@ -29,7 +31,8 @@ export function coverageGaps(s: Snapshot): CoverageGap[] {
   // Nothing mapped, nothing needed: no render (the catalogue validates every combination, STANDARDS §9).
   if (!anyMapped(s)) return [];
   const { people, r } = previewRender(s);
-  const roleOf = (about: string) => (about === "case" ? "the application" : people.find((p) => p.id === about.split("/")[0])?.role ?? about);
+  // SH3 R4/R8: the resolver's roleOf; the gap names the filing "the application" in words.
+  const roleOf = (about: string) => (about === FILING ? "the application" : resolvedRole(people, about));
   const field = new Set((s.canonical_fields as { id: string }[]).map((f) => f.id));
   const placed = new Set((s.placements as { fact: string }[]).map((p) => p.fact));
   // W1-15 challenge M3: a document covers a fact only for the people its checklist line names (a passport asked of the
@@ -40,7 +43,7 @@ export function coverageGaps(s: Snapshot): CoverageGap[] {
     // Covered: placed in a selected section (asked of the client, or filled by the officer from a record or working
     // view), or supplied by a document type the combination asks for. A fact not in the library is already an error.
     if (!b.fact || !b.about || !field.has(b.fact) || placed.has(b.fact) || docFacts.get(b.about)?.has(b.fact)) continue;
-    const role = roleOf(b.about), k = `${role}|${b.fact}`;
+    const role = roleOf(b.about), k = sourceKey(role, b.fact);
     const g = gaps.get(k) ?? { fact: b.fact, role, forms: [], boxes: 0, why: "nobody is asked for it" };
     if (!g.forms.includes(c.form)) g.forms.push(c.form);
     g.boxes++; gaps.set(k, g);
