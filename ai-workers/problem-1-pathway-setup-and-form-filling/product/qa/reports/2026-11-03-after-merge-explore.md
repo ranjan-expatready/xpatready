@@ -3,22 +3,22 @@
 Independent cloud qa tester (skill `qa`, P-290/P-291 re-run): I built and scored none of tonight's changes. Fresh clone of `origin/main` 762dbae6 (no merge to main while I worked; checked at the end), isolated copies on :4470–4472 and :4477 (helpers :4473–4476), never :4400. Live AI off, no `STUDIO_*_LIVE`, no priced button: **US$0**. Helpers: two Sonnet sessions (launched before the Lead's P-303) collected browser and API evidence; every finding below was judged and, unless marked "seen by a helper", reproduced by me.
 
 ## Verdict
-**M2 is not ready.** Of the merged capabilities, 9 are confirmed Works (pack green twice on main, re-run by someone who did not score them); 3 rows that were Works drop to Partial on their own new packs (C3.10, C11.17, C4.2). **One Critical stays open: QA-180 (V3 B1)** — a combination can be released that no firm can open a case on. The configured checkpoint still releases 0 combinations (QA-144, now 386 problems on Visitor visa).
+**M2 is not ready.** *Amended after the tech lead's review of #720 (10:58 UTC) and the Opus re-review on main (#723):* of the merged capabilities only **4 are confirmed Works** (pack green twice on main, re-run by someone who did not score them, and no open Major naming them): C4.6, C1.5, C5.2, C11.1. Five more have green packs but an open Major or a ruling against them, so they are Partial: C3.2, C5.4, C11.13, C4.1, C4.8. Three drop to Partial on their own new packs (C4.2, C3.10, C11.17). Six rows scored Works earlier are moved to Partial because an open Major or Critical names them: C5.5, C5.6, C4.7, C11.10, C1.6, and C6.1 (thin slice). **M2 by status: 39 Works, 21 Partial of 60.** That counts status only; most of the 39 were not re-run tonight. **QA-180 (V3 B1) is confirmed Critical by the tech lead**, and F2 fixes it. The configured checkpoint still releases 0 combinations (QA-144, now 386 problems on Visitor visa).
 
 **Careful: a first pass was on a stale web build (QA-181).** The lane setup built the web from the qa lane's 30 Oct branch before I switched to main; packs with a browser part ran against old screens (C5.4 0/2, C11.1 15/16). I rebuilt `web/dist` from 762dbae6 and re-ran every pack from scratch; only the second set counts.
 
 ## Acceptance packs (fresh copy each run, two runs each, on the rebuilt web)
 | Capability | PR(s) | Pack | Run 1 · run 2 | Score |
 |---|---|---|---|---|
-| C3.2 bulk accept only High, one Undo | #661 | `acceptance/C3.2.test.ts` | 22/22 · 22/22 | **Works (confirmed)** |
+| C3.2 bulk accept only High, one Undo | #661 | `acceptance/C3.2.test.ts` | 22/22 · 22/22 | **Partial**: `bulkWhy` (`api/src/proposals.ts:492-509`) still lets two Ready AI-proposed new fields go together on To review (P-296 (1); fix #699, checked in the code); QA-193 |
 | C4.6 child and representative signing | #666 | `C4.6.test.ts` | 17/17 · 17/17 | **Works (confirmed)** |
 | C1.5 copy route | #683 | `C1.5.test.ts` after `setup_visitor_visa.ts` (13/13) | 18/18 · 18/18 | **Works (confirmed)** |
-| C5.4 release with sources from the Demo menu | #676 | `C5.4.test.ts` (drives Demo › Reset to the six, Demo › Start With an LMIA) | 22/22 · 22/22 | **Works (confirmed)** |
+| C5.4 release with sources from the Demo menu | #676 | `C5.4.test.ts` (drives Demo › Reset to the six, Demo › Start With an LMIA) | 22/22 · 22/22 | **Partial**: QA-197, where `POST /demo/load` releases in any workspace and skips the source gate |
 | C5.2 Release page cannot bypass | #675 pack | `C5.2.test.ts` after VV setup | 32/32 · 32/32 | **Works (confirmed)** |
 | C11.1 Wave 1, no extension paths | #675 pack | `C11.1.test.ts` after VV setup | 16/16 · 16/16 | **Works (confirmed)** |
-| C11.13 near-duplicate reason at release | (built file) | `C11.13.test.ts` | 15/15 · 15/15 | **Works (confirmed)** |
-| C4.1 SQR per role, section order | #674 | `C4.1.test.ts … wp.family` | 18/18 · 18/18 | **Works (confirmed, on the suites' fixture)**; on the six it stops (exit 2, "no questions yet": QA-144) |
-| C4.8 one review and release | #674 | `C4.8.test.ts … wp.family` | 12/12 · 12/12 | **Works (confirmed, on the fixture)**; same exit 2 on the six |
+| C11.13 near-duplicate reason at release | (built file) | `C11.13.test.ts` | 15/15 · 15/15 | **Partial**: QA-192, where a near duplicate is accepted with no person's reason |
+| C4.1 SQR per role, section order | #674 | `C4.1.test.ts … wp.family` | 18/18 · 18/18 | **Partial** (tech lead ruling): green only on the suites' fixture; on the six the pack stops ("no questions yet", QA-144) |
+| C4.8 one review and release | #674 | `C4.8.test.ts … wp.family` | 12/12 · 12/12 | **Partial** (same ruling): fixture only; on the six it stops (QA-144) |
 | C4.2 PQR marking | #688 | `C4.2.test.ts … wp.family` | 9/10 · 9/10 | **Partial**: QA-125 fixed (plain duplicate words); the unasked-fact tick waits for #688's Question 1 (as #688 said) |
 | C3.10 never "box" | #675 pack | `C3.10.test.ts` | 7/8 · 7/8 | **Partial**: 18 messages still say box (QA-182) |
 | C11.17 Add to structure | #675 pack | `C11.17.test.ts` | 23/24 · 23/24 | **Partial**: over-long name message not under its field (QA-183) |
@@ -53,7 +53,8 @@ New findings (most severe first): QA-180 Critical · QA-181 Major (qa tooling) �
 ## Not tested
 The shared demo :4400 (on the Mac, not reachable from a cloud copy) · headed browser (cloud: headless Chromium only) · c8 coverage · double click on Submit/Approve/Release on a person-reachable release (none can be submitted from the screens: QA-144) · two tabs on one combination's rules/requirements (stale revision exists, not triggered) · V2's independent M2 re-run report: not in `reports/verify-2026-11-03/` yet, so these scores rest on this run alone.
 
-## Questions for the Lead
+## Questions for the Lead (answered on #720, 10:48 UTC)
+Answers: (1) QA-188 is ruled as recommended (P-304). (2) QA-181 goes to I1. (3) C4.1 and C4.8 are Partial until QA-144 is fixed. The questions as asked:
 1. QA-188: should Client A read `/api/releases` (author and approver names), and should case staff read configuration events in `/api/activity`? The page refuses them; the API serves them.
 2. QA-181: who fixes the qa lane's bind/setup (it is a Lead/infra tool)? Until then a qa session must rebuild `web/dist` after checking out main.
 3. C4.1 and C4.8 are green only on the suites' fixture (`wp.family`); on the six their packs stop at "no questions yet" (QA-144). I scored them Works (confirmed, on the fixture). Say if the scorecard should count them only once the six reach them.
