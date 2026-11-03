@@ -120,14 +120,7 @@ const info = (s, d) => console.log(`INFO  ${s}${d === undefined ? "" : ` — ${t
 
   // ---------------------------------------------------------------- 4 (officer opens a family case)
   const openCase = async () => { await as("user-O"); await p.goto(`${B}/cases`); await p.waitForLoadState("networkidle"); await p.getByRole("button", { name: "Open a case" }).click(); await sleep(600);
-    await p.getByLabel("Case reference").fill(`V3R-${Date.now().toString(36).slice(-4)}`); await p.getByLabel(/Principal applicant/).fill("Sample Client A"); const n0 = posts.length;
-    // C6.1 / V3 B1 runtime side (P-297 (3)): the dialog no longer offers a release that is not ready for cases; with none
-    // ready, Open case is disabled and the dialog names each release and why. Record that as the refusal (status 409, the
-    // dialog's words) instead of clicking a disabled button; pick Visitor visa when other releases are offered.
-    const pick = p.getByLabel("Combination (released)");
-    if (await pick.count()) { const vv = (await pick.locator("option").allTextContents()).find((o) => o.startsWith("Visitor visa ·")); if (vv) await pick.selectOption({ label: vv }); else return { s: 409, b: `{"dialog":${JSON.stringify((await p.getByTestId("not-ready-for-cases").count()) ? await p.getByTestId("not-ready-for-cases").textContent() : "Visitor visa is not offered")}}` }; }
-    if (await p.getByRole("button", { name: "Open case" }).isDisabled()) return { s: 409, b: `{"dialog":${JSON.stringify(await p.getByTestId("not-ready-for-cases").textContent())}}` };
-    await p.getByRole("button", { name: "Open case" }).click(); await sleep(2500);
+    await p.getByLabel("Case reference").fill(`V3R-${Date.now().toString(36).slice(-4)}`); await p.getByLabel(/Principal applicant/).fill("Sample Client A"); const n0 = posts.length; await p.getByRole("button", { name: "Open case" }).click(); await sleep(2500);
     return posts.slice(n0).find((x) => x.u === "/runtime/cases"); };
   let oc = await openCase(); const firstTry = oc?.s; info("4a open a case on release 1", { http: oc?.s, missing: oc?.b.match(/"missing":\[(.*?)\]/)?.[1]?.slice(0, 300), words: await toasts() });
   if (oc?.s >= 300) { // recovery an author would choose: take the three unmapped forms off and release again
