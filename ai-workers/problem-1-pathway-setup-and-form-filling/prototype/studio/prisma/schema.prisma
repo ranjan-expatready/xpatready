@@ -2138,12 +2138,18 @@ model ReviewFinding {
   stateReason String?   @map("state_reason")
   stateBy     String?   @map("state_by")
   stateAt     DateTime? @map("state_at") @db.Timestamptz
+  resolvedBy  String?   @map("resolved_by")
+  resolvedAt  DateTime? @map("resolved_at") @db.Timestamptz
+  /// A finding added by hand is stored once per key (one key per "Add finding" dialog), with the request's sha256.
+  idempotencyKey         String? @map("idempotency_key")
+  idempotencyFingerprint String? @map("idempotency_fingerprint") @db.VarChar(64)
   createdBy   String    @map("created_by")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   case   Case    @relation(fields: [caseId], references: [id], onDelete: Cascade)
   filing Filing? @relation(fields: [filingId], references: [id], onDelete: SetNull)
 
+  @@unique([caseId, idempotencyKey])
   @@index([caseId])
   @@map("review_finding")
 }

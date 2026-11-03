@@ -42,6 +42,12 @@ ok("C7.5 national ID issued before birth, fail case: one MAJOR on the issue date
 h = run(set(id, "S-a", "person.national_id_expiry_date", "2010-05-01"));
 ok("C7.5 national ID expires before issue, fail case: expiring the day it was issued is named", h.length === 1 && h[0].rule === "national_id_expires_before_issue" && h[0].field === "person.national_id_expiry_date", h);
 
+// P-209 (breaker m4): a person on the case who is not travelling gets no visit rule, still the identity-date rules.
+const notTravelling = (who: string) => people.map((x) => x.subject === who ? { ...x, applies: false } : x);
+h = crossChecks(set(set(base, "S-b", "person.passport_expiry_date", "2030-04-01"), "S-b", "person.national_id_issue_date", "2000-01-01"), notTravelling("S-b"));
+ok("C7.5 P-209: a person not travelling gets no passport-before-visit finding, but the identity-date rule still runs", !h.some((x) => x.rule === "passport_expires_before_stay_ends") && h.some((x) => x.rule === "national_id_issued_before_birth" && x.subject === "S-b"), h.map((x) => x.rule));
+ok("C7.5 P-209 fail case: the same person travelling does get the passport finding", run(set(base, "S-b", "person.passport_expiry_date", "2030-04-01")).some((x) => x.rule === "passport_expires_before_stay_ends" && x.subject === "S-b"));
+
 // Silence on a missing or unreadable fact: the completeness check's job, never a guess.
 ok("C7.5 a missing fact makes its rule silent (no visit end date: no passport finding)", run(set(base, "S-a", "person.passport_expiry_date", "2030-03-20").filter((x) => x.field !== "case.intended_stay_to")).length === 0);
 ok("C7.5 a fact that is not a date makes its rule silent (null, a month, text, an impossible day)", ["2030-03", "soon", null, "2030-02-30", "2030-13-01", 20300320].every((v) => run(set(base, "S-a", "person.passport_expiry_date", v)).length === 0));

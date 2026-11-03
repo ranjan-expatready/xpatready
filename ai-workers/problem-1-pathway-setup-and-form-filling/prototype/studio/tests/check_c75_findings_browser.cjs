@@ -1,7 +1,7 @@
 // C7.5 part 1 (M3-E; r5c BR-19, board frame 13; stand-in SI-6): the Review panel on the case page walked in a real
 // browser, keyboard only, on a Visitor visa family case (four people): two rules findings (the spouse's and the older
 // child's passports expire before the visit ends), Acknowledge… (an empty reason refused on the field, then saved with
-// who and when), Dismiss…, Add finding (a CRITICAL by hand), Waive… refused for the case officer and done by the
+// who and when), Dismiss…, Add finding (a CRITICAL by hand: the case officer gets no button on it), Waive… by the
 // representative of record, the spouse's passport corrected → its finding Resolved by the rules, Show all. Screenshots at
 // 1440 and 1024 in product/screens/C7.5/screenshots/, axe (WCAG 2.2 AA) on each state, no sideways scroll. When the copy
 // has no Visitor visa release it sets one up (setup_visitor_visa.ts, then acceptance/lib/setup_vv_m3.ts). US$0.
@@ -52,8 +52,12 @@ const ago = (y) => { const d = new Date(); d.setUTCFullYear(d.getUTCFullYear() -
   /** Focus the Review panel's first control, so the Tab walk starts there rather than at the top of a long page. */
   const intoPanel = () => p.evaluate(() => { const s = document.querySelector("[data-findings]"); s.setAttribute("tabindex", "-1"); s.focus(); });
   const panel = () => p.locator("[data-findings]").innerText();
+  /** A row's own button, picked by the row's text (never "the first row"), pressed from the keyboard. */
+  const press = async (rowText, name) => { const b = p.locator("[data-finding]").filter({ hasText: rowText }).getByRole("button", { name, exact: true }); await b.focus(); await p.keyboard.press("Enter"); };
+  /** The open dialog's own button, pressed from the keyboard (a toast's "Dismiss" is never taken for it). */
+  const submit = async (name) => { await p.getByRole("dialog").getByRole("button", { name, exact: true }).focus(); await p.keyboard.press("Enter"); };
   const counts = () => p.locator("[data-findings-counts]").innerText();
-  const until = async (fn, what, ms = 15000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await fn()) return true; await p.waitForTimeout(250); } throw new Error(`timed out waiting for ${what}`); };
+  const until = async (fn, what, ms = 15000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await fn()) return true; await p.waitForTimeout(250); } throw new Error(`timed out waiting for ${what} (the panel's counts now: ${await p.locator("[data-findings-counts]").innerText({ timeout: 2000 }).catch(() => "not shown")})`); };
 
   try {
     // A Visitor visa family: Client A, a spouse, children of 10 and 15.
@@ -70,29 +74,36 @@ const ago = (y) => { const d = new Date(); d.setUTCFullYear(d.getUTCFullYear() -
     await as("user-O"); await p.goto(`${BASE}/cases/${c.id}`); await settle();
     await until(async () => (await p.locator("[data-finding]").count()) === 2, "two findings listed");
     let t = await panel();
-    step("C7.5 the Review panel lists the two passport findings in words, with person, form and fact", /Sample Spouse A's passport expires on Apr 1, 2030, before the visit ends on Apr 15, 2030\./.test(t) && /Sample Child A2's passport expires on Mar 20, 2030/.test(t) && /Sample Spouse A · IMM 5257 · Passport expiry date/.test(t), t.slice(0, 300));
+    step("C7.5 the Review panel lists the two passport findings in words, with person, form and fact", /Sample Spouse A's passport expires on Apr 1, 2030, before the visit ends on Apr 15, 2030\./.test(t) && /Sample Child A2's passport expires on Mar 20, 2030/.test(t) && /IMM 5257 · Expiry date of the passport/.test(t), t.slice(0, 300));
+    step("C7.5 reviewer M3: findings grouped per person, in the case's order, each group headed by the person", JSON.stringify(await p.locator("[data-findings-person]").evaluateAll((els) => els.map((e) => e.getAttribute("data-findings-person")))) === JSON.stringify(["Sample Spouse A", "Sample Child A2"]) && (await p.locator('[data-findings-person="Sample Spouse A"] h3').innerText()).startsWith("Sample Spouse A"));
     step("C7.5 the panel carries the SI-6 Stand-in chip and says findings never stop Ready to file", (await p.locator('[data-findings] [data-stand-in="SI-6"]').count()) === 1 && /never stop Ready to file/.test(t));
+    step("C7.5 rows in a stable order: same severity, the case's order of people (the spouse before the older child)", /Sample Spouse A/.test(await p.locator("[data-finding]").first().innerText()) && /Sample Child A2/.test(await p.locator("[data-finding]").nth(1).innerText()));
     step("C7.5 counts: 2 open", /^2 open · 0 acknowledged · 0 resolved/.test(await counts()), await counts());
     await state("two-open");
 
+    // Breaker m6: Escape closes the dialog and gives focus back to the button that opened it.
+    await intoPanel(); await tabTo(/^Acknowledge…$/); // the spouse's row comes first (checked above)
+    await p.keyboard.press("Enter");
+    await p.getByRole("dialog").waitFor(); await p.keyboard.press("Escape"); await p.getByRole("dialog").waitFor({ state: "detached" }); await p.waitForTimeout(200);
+    step("C7.5 Escape closes the reason dialog and focus is back on Acknowledge…", (await p.evaluate(() => document.activeElement?.textContent?.trim())) === "Acknowledge…", await p.evaluate(() => document.activeElement?.outerHTML.slice(0, 120)));
     // Acknowledge… by keyboard: an empty reason is refused on the field, then saved.
-    await intoPanel(); await tabTo(/^Acknowledge…$/); await p.keyboard.press("Enter");
+    await p.keyboard.press("Enter");
     await p.getByRole("dialog").waitFor();
     step("C7.5 the Acknowledge dialog opens with focus in the reason", await p.evaluate(() => document.activeElement?.tagName === "TEXTAREA"));
-    await tabTo(/^Acknowledge$/, 10); await p.keyboard.press("Enter");
+    await submit("Acknowledge");
     await until(async () => /at least 3 characters/.test(await p.getByRole("dialog").innerText()), "the reason refused on the field");
     step("C7.5 fail: an empty reason is refused on the field, the dialog stays open", true);
     await state("acknowledge-needs-reason");
     await p.getByRole("dialog").locator("textarea").focus(); await p.keyboard.type("Renewal booked before travel (Sample)");
-    await tabTo(/^Acknowledge$/, 10); await p.keyboard.press("Enter");
+    await submit("Acknowledge");
     await until(async () => /1 acknowledged/.test(await counts()), "1 acknowledged");
     t = await panel();
     step("C7.5 acknowledged with who, when and the reason on the row", /Acknowledged by Case officer on .*“Renewal booked before travel \(Sample\)”/.test(t), t.slice(0, 400));
 
     // Dismiss… the child's finding by keyboard.
-    await intoPanel(); await tabTo(/^Dismiss…$/); await p.keyboard.press("Enter");
+    await press("Sample Child A2", "Dismiss…");
     await p.getByRole("dialog").waitFor(); await p.keyboard.type("Travels later on a renewed passport (Sample)");
-    await tabTo(/^Dismiss$/, 10); await p.keyboard.press("Enter");
+    await submit("Dismiss");
     await until(async () => /1 dismissed/.test(await counts()), "1 dismissed");
     step("C7.5 the dismissed finding leaves the list (Open and Acknowledged shown) and the counts say so", (await p.locator("[data-finding]").count()) === 1 && /0 open · 1 acknowledged · 0 resolved · 1 dismissed/.test(await counts()), await counts());
 
@@ -104,31 +115,30 @@ const ago = (y) => { const d = new Date(); d.setUTCFullYear(d.getUTCFullYear() -
     await d.getByRole("button", { name: "Add finding" }).click();
     await until(async () => /1 open/.test(await counts()), "the hand-added finding open");
     t = await panel();
-    step("C7.5 the hand-added CRITICAL is listed first, Added by hand, with Waive… (never Dismiss…)", /^CRITICAL\s*\n?\s*Added by hand/m.test((await p.locator("[data-finding]").first().innerText())) && (await p.locator("[data-finding]").first().getByRole("button", { name: "Waive…" }).count()) === 1 && (await p.locator("[data-finding]").first().getByRole("button", { name: "Dismiss…" }).count()) === 0, (await p.locator("[data-finding]").first().innerText()).slice(0, 200));
+    const first = p.locator("[data-finding]").filter({ hasText: "Consent letter" });
+    step("C7.5 the hand-added CRITICAL is listed under Sample Child A1, Added by hand", /^CRITICAL\s*\n?\s*Added by hand/m.test(await first.innerText()) && (await p.locator('[data-findings-person="Sample Child A1"] [data-finding]').count()) === 1, (await first.innerText()).slice(0, 200));
+    // Breaker M3, m7: a CRITICAL finding is passed only by the representative's waive; the case officer has no button for it.
+    step("C7.5 fail: the case officer gets no Acknowledge, Dismiss or Waive on a CRITICAL finding, only who waives it", (await first.getByRole("button").count()) === 0 && /Only the representative of record waives it/.test(await first.innerText()), await first.innerText());
     await state("critical-added");
 
-    // Waive…: refused for the case officer, in words; done by the representative of record.
-    await p.locator("[data-finding]").first().getByRole("button", { name: "Waive…" }).click();
-    await p.getByRole("dialog").locator("textarea").fill("Letter arrives by courier (Sample)");
-    await p.getByRole("dialog").getByRole("button", { name: "Waive" }).click();
-    await until(async () => /Only the representative of record/.test(await p.getByRole("dialog").innerText()), "the waive refused for the officer");
-    step("C7.5 fail: the case officer's waive is refused in words", true);
-    await p.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
+    // Waive…: done by the representative of record.
     await as("user-R"); await p.reload(); await settle();
     await until(async () => (await p.locator("[data-finding]").count()) >= 1, "the findings listed for the representative");
-    await p.locator("[data-finding]").first().getByRole("button", { name: "Waive…" }).click();
+    await press("Consent letter", "Waive…");
     await p.getByRole("dialog").locator("textarea").fill("Letter arrives by courier (Sample)");
     await p.getByRole("dialog").getByRole("button", { name: "Waive" }).click();
     await until(async () => /1 waived/.test(await counts()), "1 waived");
     step("C7.5 the representative of record waives the CRITICAL finding", /0 open · 1 acknowledged · 0 resolved · 1 waived · 1 dismissed/.test(await counts()), await counts());
 
     // The spouse's passport corrected → the acknowledged finding is resolved by the rules on the next read.
-    await as("user-O"); await put(sub.S, "person.passport_expiry_date", "2034-04-01"); await p.reload(); await settle();
+    await as("user-O"); const fixed = await put(sub.S, "person.passport_expiry_date", "2034-04-01");
+    step("setup: the spouse's passport date corrected (200)", fixed.status === 200, `${fixed.status} ${JSON.stringify(fixed.body).slice(0, 160)}`);
+    await p.reload(); await settle();
     await until(async () => /1 resolved/.test(await counts()), "1 resolved");
     await intoPanel(); await tabTo(/^Show all 3$/); await p.keyboard.press("Enter");
     await until(async () => (await p.locator("[data-finding]").count()) === 3, "all three findings shown");
     t = await panel();
-    step("C7.5 the fixed fact resolved its finding by itself, the acknowledgement kept as history", /Resolved by the rules when the fact was fixed on .*\(acknowledged earlier: “Renewal booked before travel \(Sample\)”\)/.test(t), t.slice(0, 600));
+    step("C7.5 the fixed fact resolved its finding by itself; who acknowledged it, when and why stay on the row (breaker M1)", /Acknowledged by Case officer on [^\n]*“Renewal booked before travel \(Sample\)”\s*\n\s*Resolved by the rules on [^\n]*: the facts it quoted changed/.test(t), t.slice(0, 700));
     step("C7.5 Show all lists waived, resolved and dismissed with their reasons", /Waived by Representative/.test(t) && /Dismissed by Case officer/.test(t));
     await state("show-all");
 

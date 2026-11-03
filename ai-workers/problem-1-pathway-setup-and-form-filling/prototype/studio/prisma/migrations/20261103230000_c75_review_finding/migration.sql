@@ -5,7 +5,9 @@
 -- before this runs on this schema unchanged (it reads no such table).
 --   * One row per finding. A rules finding carries its rule and a fingerprint of the facts it compared; while it is not
 --     resolved there is at most one row per case and fingerprint (a partial unique index), so two reads at once never
---     make it twice. Part 2 (the replayed AI review) fills agreement, reasons, replayed and run_id.
+--     make it twice. state_by, state_at and state_reason keep the person's move (acknowledged, waived, dismissed);
+--     resolved_by and resolved_at say who resolved it ("rules" when a fixed fact did), so a resolve never hides who
+--     acknowledged it first. Part 2 (the replayed AI review) fills agreement, reasons, replayed and run_id.
 -- Rollback (STANDARDS §5): stop the app, then in one transaction:
 --   DROP TABLE "review_finding";
 --   DELETE FROM "_prisma_migrations" WHERE "migration_name" = '20261103230000_c75_review_finding';
@@ -33,11 +35,17 @@ CREATE TABLE "review_finding" (
     "state_reason" TEXT,
     "state_by" TEXT,
     "state_at" TIMESTAMPTZ,
+    "resolved_by" TEXT,
+    "resolved_at" TIMESTAMPTZ,
+    "idempotency_key" TEXT,
+    "idempotency_fingerprint" VARCHAR(64),
     "created_by" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "review_finding_pkey" PRIMARY KEY ("id")
 );
 CREATE INDEX "review_finding_case_id_idx" ON "review_finding"("case_id");
+-- A finding added by hand is stored once per key (one key per "Add finding" dialog): a double click is one row.
+CREATE UNIQUE INDEX "review_finding_case_id_idempotency_key_key" ON "review_finding"("case_id", "idempotency_key");
 CREATE UNIQUE INDEX "review_finding_one_live_rule" ON "review_finding"("case_id", "fingerprint") WHERE "source" = 'rules' AND "state" <> 'resolved';
 ALTER TABLE "review_finding" ADD CONSTRAINT "review_finding_case_id_fkey" FOREIGN KEY ("case_id") REFERENCES "runtime_case"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "review_finding" ADD CONSTRAINT "review_finding_filing_id_fkey" FOREIGN KEY ("filing_id") REFERENCES "filing"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -45,8 +53,11 @@ ALTER TABLE "review_finding" ADD CONSTRAINT "review_finding_severity_check" CHEC
 ALTER TABLE "review_finding" ADD CONSTRAINT "review_finding_source_check" CHECK ("source" IN ('rules', 'ai', 'manual'));
 ALTER TABLE "review_finding" ADD CONSTRAINT "review_finding_state_check" CHECK ("state" IN ('open', 'acknowledged', 'resolved', 'waived', 'dismissed'));
 ALTER TABLE "review_finding" ADD CONSTRAINT "review_finding_agreement_check" CHECK ("agreement" IS NULL OR "agreement" IN ('high', 'low'));
--- Only a CRITICAL finding is waived (BR-19); a rules finding always names its rule and facts.
+-- Only a CRITICAL finding is waived (BR-19), and a CRITICAL one is never dismissed; a rules finding always names its
+-- rule and facts.
 ALTER TABLE "review_finding" ADD CONSTRAINT "review_finding_waive_check" CHECK ("state" <> 'waived' OR "severity" = 'CRITICAL');
+ALTER TABLE "review_finding" ADD CONSTRAINT "review_finding_dismiss_check" CHECK ("state" <> 'dismissed' OR "severity" <> 'CRITICAL');
 ALTER TABLE "review_finding" ADD CONSTRAINT "review_finding_rule_check" CHECK ("source" <> 'rules' OR ("rule_key" IS NOT NULL AND "fingerprint" IS NOT NULL));
--- Acknowledged, waived and dismissed always carry who, when and why.
-ALTER TABLE "review_finding" ADD CONSTRAINT "review_finding_reason_check" CHECK ("state" NOT IN ('acknowledged', 'waived', 'dismissed') OR ("state_reason" IS NOT NULL AND "state_by" IS NOT NULL AND "state_at" IS NOT NULL));
+-- Acknowledged, waived and dismissed always carry who, when and a reason that is not blank; resolved carries who and when.
+ALTER TABLE "review_finding" ADD CONSTRAINT "review_finding_reason_check" CHECK ("state" NOT IN ('acknowledged', 'waived', 'dismissed') OR ("state_reason" IS NOT NULL AND length(btrim("state_reason")) > 0 AND "state_by" IS NOT NULL AND "state_at" IS NOT NULL));
+ALTER TABLE "review_finding" ADD CONSTRAINT "review_finding_resolved_check" CHECK ("state" <> 'resolved' OR ("resolved_by" IS NOT NULL AND "resolved_at" IS NOT NULL));

@@ -18,13 +18,13 @@ const STATE_TONE: Record<Finding["state"], string> = { open: "warn", acknowledge
 const SEV_ORDER = Object.fromEntries(SEVERITY.map((s, i) => [s, i])) as Record<FindingSeverity, number>;
 const LIVE = new Set<Finding["state"]>(["open", "acknowledged"]);
 const when = (at: string) => new Date(at).toLocaleString("en-CA", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-/** "person.passport_expiry_date" → "Passport expiry date": the fact in words, never its key alone. */
-const factWords = (key: string | null) => key ? (key.split(".").pop() ?? key).replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()) : null;
+/** The fact in the case's own question words; its key in words only when the case no longer asks it. */
+const factWords = (f: Finding) => f.fact_label ?? (f.field ? (f.field.split(".").pop() ?? f.field).replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()) : null);
 type Move = { f: Finding; to: "acknowledge" | "dismiss" | "waive" };
 const MOVE_WORDS: Record<Move["to"], { title: string; button: string; done: string; hint: string }> = {
   acknowledge: { title: "Acknowledge this finding", button: "Acknowledge", done: "Finding acknowledged", hint: "Say what you checked. It stays listed as Acknowledged and resolves itself when its facts are fixed." },
   dismiss: { title: "Dismiss this finding", button: "Dismiss", done: "Finding dismissed", hint: "Say why it does not apply. It does not come back for the same facts; a changed fact is a new finding." },
-  waive: { title: "Waive this CRITICAL finding", button: "Waive", done: "Finding waived", hint: "Only the representative of record waives a CRITICAL finding, with a written reason." },
+  waive: { title: "Waive this CRITICAL finding", button: "Waive", done: "Finding waived", hint: "As the representative of record, say why it may go ahead. It resolves itself when its facts are fixed." },
 };
 
 /** The case's findings. Under the questionnaire view's query key, so an answer change re-runs the rules. */
@@ -33,16 +33,23 @@ export function FindingsPanel({ caseId, people }: { caseId: string; people: Case
   const [all, setAll] = React.useState(false);
   const [move, setMove] = React.useState<Move | null>(null);
   const [adding, setAdding] = React.useState(false);
-  const fs = [...(q.data?.findings ?? [])].sort((a, b) => Number(LIVE.has(b.state)) - Number(LIVE.has(a.state)) || SEV_ORDER[a.severity] - SEV_ORDER[b.severity]);
+  // Breaker m6: a closed dialog gives focus back to the button that opened it (or the panel's heading when that row moved).
+  const back = React.useRef<HTMLElement | null>(null);
+  const done = () => { setMove(null); setAdding(false); requestAnimationFrame(() => { const el = back.current; (el?.isConnected ? el : document.getElementById("review-h"))?.focus(); }); };
+  // Reviewer M1, M3 (concept BR-19: findings per filing and person): one group per person in the case's order (the
+  // application's own facts first); in a group, open and acknowledged first, then by severity, then oldest: never random.
+  const fs = [...(q.data?.findings ?? [])].sort((a, b) => Number(LIVE.has(b.state)) - Number(LIVE.has(a.state)) || SEV_ORDER[a.severity] - SEV_ORDER[b.severity]
+    || a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
   const shown = all ? fs : fs.filter((f) => LIVE.has(f.state));
+  const groups = people.map((p) => ({ p, rows: shown.filter((f) => f.subject === p.subject_id) })).filter((g) => g.rows.length);
   const c = q.data?.counts;
   return (
     <section aria-labelledby="review-h" className="rounded-xl border border-border bg-surface-raised" data-findings>
       <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-3">
-        <h2 id="review-h" className="text-base font-semibold">Review</h2>
+        <h2 id="review-h" tabIndex={-1} className="text-base font-semibold outline-none">Review</h2>
         <StandIn id="SI-6" today="rules checks on every form (US$0); the AI review runs live on the Visitor visa forms only and is replayed elsewhere." later="other form families one at a time (team AG-11 AI Doers)." />
         <p className="min-w-0 flex-1 text-[13px] text-text-muted">Checks across the facts and forms. Findings warn: they never stop Ready to file.</p>
-        <Button size="sm" variant="secondary" onClick={() => setAdding(true)}><Plus aria-hidden />Add finding</Button>
+        <Button size="sm" variant="secondary" onClick={(e) => { back.current = e.currentTarget; setAdding(true); }}><Plus aria-hidden />Add finding</Button>
       </header>
       {q.isLoading ? <div className="p-4"><Skeleton className="h-16 w-full" /></div>
         : q.isError ? <div className="p-4"><Notice tone="danger" title="The findings could not be loaded">{(q.error as Error).message}</Notice></div>
@@ -54,35 +61,42 @@ export function FindingsPanel({ caseId, people }: { caseId: string; people: Case
             </div>
             <p className="px-4 pt-1 text-[12px] text-text-muted">{q.data!.ai.words}</p>
             {!shown.length ? <p className="px-4 py-3 text-sm text-text-muted">{fs.length ? "Nothing open: every finding is resolved, waived or dismissed." : "No findings: the facts and forms agree so far."}</p>
-              : <TipProvider><ul className="mt-2 divide-y divide-border border-t border-border">{shown.map((f) => <FindingRow key={f.id} f={f} onMove={(to) => setMove({ f, to })} />)}</ul></TipProvider>}
+              : <TipProvider><div className="mt-2 border-t border-border">{groups.map(({ p, rows }) => (
+                  <section key={p.subject_id} aria-labelledby={`review-${p.subject_id}`} data-findings-person={p.label}>
+                    <h3 id={`review-${p.subject_id}`} className="border-b border-border bg-surface px-4 py-2 text-[13px] font-semibold [overflow-wrap:anywhere]">{p.label}<span className="ml-2 font-normal text-text-muted">{p.role === "case" ? "the application's own facts, on the principal's filing" : `${rows.length} finding${rows.length === 1 ? "" : "s"}`}</span></h3>
+                    <ul>{rows.map((f) => <FindingRow key={f.id} f={f} mayWaive={q.data!.may_waive} onMove={(to, from) => { back.current = from; setMove({ f, to }); }} />)}</ul>
+                  </section>))}</div></TipProvider>}
           </>}
-      {move ? <MoveDialog caseId={caseId} move={move} close={() => setMove(null)} /> : null}
-      {adding ? <AddDialog caseId={caseId} people={people} close={() => setAdding(false)} /> : null}
+      {move ? <MoveDialog caseId={caseId} move={move} close={done} /> : null}
+      {adding ? <AddDialog caseId={caseId} people={people} close={done} /> : null}
     </section>
   );
 }
 
-function FindingRow({ f, onMove }: { f: Finding; onMove: (to: Move["to"]) => void }) {
-  const where = [f.person, f.form, factWords(f.field)].filter(Boolean).join(" · ");
+function FindingRow({ f, mayWaive, onMove }: { f: Finding; mayWaive: boolean; onMove: (to: Move["to"], from: HTMLElement) => void }) {
+  const where = [f.form, factWords(f)].filter(Boolean).join(" · ");
   return (
-    <li className="flex flex-wrap items-start gap-x-4 gap-y-2 px-4 py-3" data-finding={f.id} data-finding-state={f.state}>
+    <li className="flex flex-wrap items-start gap-x-4 gap-y-2 border-b border-border px-4 py-3 last:border-b-0" data-finding={f.id} data-finding-state={f.state}>
       <div className="flex w-40 shrink-0 flex-wrap items-center gap-1.5">
         <Pill tone={SEV_TONE[f.severity]}>{f.severity}</Pill>
-        {f.rule ? <Tip focusable tip={<>Rule: {f.rule}<br /><span className="text-text-muted">Severity Sample (the immigration expert confirms)</span></>}><span><Pill>{SOURCE_WORDS[f.source]}</Pill></span></Tip> : <Pill tone={f.source === "ai" ? "ai" : "neutral"}>{SOURCE_WORDS[f.source]}</Pill>}
+        {f.rule ? <Tip focusable tip={<>Rule (Sample): {f.rule}<br /><span className="text-text-muted">The rule and its severity are Sample until the immigration expert confirms them</span></>}><span><Pill>{SOURCE_WORDS[f.source]}</Pill></span></Tip> : <Pill tone={f.source === "ai" ? "ai" : "neutral"}>{SOURCE_WORDS[f.source]}</Pill>}
         {f.replayed ? <Pill tone="ai">Replayed</Pill> : null}
       </div>
       <div className="min-w-0 flex-1 basis-80">
         <p className="text-sm [overflow-wrap:anywhere]">{f.quote}</p>
-        <p className="mt-0.5 text-[12px] text-text-muted [overflow-wrap:anywhere]">{where}</p>
-        {f.state === "resolved" && f.state_at ? <p className="mt-1 text-[12px] text-text-muted [overflow-wrap:anywhere]">Resolved {f.state_by === "rules" ? "by the rules when the fact was fixed" : `by ${f.state_by_name}`} on {when(f.state_at)}{f.state_reason ? <> (acknowledged earlier: “{f.state_reason}”)</> : null}</p>
-          : f.state_reason && f.state_at ? <p className="mt-1 text-[12px] text-text-muted [overflow-wrap:anywhere]">{STATE_WORDS[f.state]} by {f.state_by_name} on {when(f.state_at)}: “{f.state_reason}”</p> : null}
+        <p className="mt-0.5 text-[12px] text-text-muted [overflow-wrap:anywhere]">{where || "\u00a0"}</p>
+        {f.state_reason && f.state_at ? <p className="mt-1 text-[12px] text-text-muted [overflow-wrap:anywhere]">{STATE_WORDS[f.state === "resolved" ? (f.severity === "CRITICAL" ? "waived" : "acknowledged") : f.state]} by {f.state_by_name} on {when(f.state_at)}: “{f.state_reason}”</p> : null}
+        {f.state === "resolved" && f.resolved_at ? <p className="mt-1 text-[12px] text-text-muted">Resolved by {f.resolved_by_name} on {when(f.resolved_at)}{f.resolved_by === "rules" ? ": the facts it quoted changed" : ""}</p> : null}
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-2">
         <Pill tone={STATE_TONE[f.state]}>{STATE_WORDS[f.state]}</Pill>
-        {f.state === "open" ? <>
-          <Button size="sm" variant="secondary" onClick={() => onMove("acknowledge")}>Acknowledge…</Button>
-          {f.severity === "CRITICAL" ? <Button size="sm" variant="ghost" onClick={() => onMove("waive")}>Waive…</Button> : <Button size="sm" variant="ghost" onClick={() => onMove("dismiss")}>Dismiss…</Button>}
-        </> : null}
+        {f.state !== "open" ? null
+          : f.severity !== "CRITICAL" ? <>
+            <Button size="sm" variant="secondary" onClick={(e) => onMove("acknowledge", e.currentTarget)}>Acknowledge…</Button>
+            <Button size="sm" variant="ghost" onClick={(e) => onMove("dismiss", e.currentTarget)}>Dismiss…</Button>
+          </>
+          : mayWaive ? <Button size="sm" variant="secondary" onClick={(e) => onMove("waive", e.currentTarget)}>Waive…</Button>
+          : <span className="text-[12px] text-text-muted">Only the representative of record waives it</span>}
       </div>
     </li>
   );
@@ -109,7 +123,8 @@ function AddDialog({ caseId, people, close }: { caseId: string; people: CasePers
   const persons = people.filter((p) => p.role !== "case");
   const [f, setF] = React.useState<{ subject: string; severity: FindingSeverity; note: string; form: string }>({ subject: persons[0]?.subject_id ?? "", severity: "MINOR", note: "", form: "" });
   const [errors, setErrors] = React.useState<Record<string, string>>({});
-  const add = useAction(() => api(`/runtime/cases/${caseId}/findings`, { method: "POST", json: { subject: f.subject, severity: f.severity, note: f.note, form: f.form.trim() || null } }), { success: "Finding added", invalidate: [["runtime", "view", caseId, "findings"]], onDone: close });
+  const key = React.useMemo(() => crypto.randomUUID(), []); // reviewer M2: one finding per dialog, however often Add is pressed
+  const add = useAction(() => api(`/runtime/cases/${caseId}/findings`, { method: "POST", json: { subject: f.subject, severity: f.severity, note: f.note, form: f.form.trim() || null, idempotencyKey: key } }), { success: "Finding added", invalidate: [["runtime", "view", caseId, "findings"]], onDone: close });
   const submit = () => add.mutate(undefined, { onError: (e) => { const p = e instanceof ApiError ? e.problem.errors ?? [] : []; setErrors(p.length ? Object.fromEntries(p.map((x) => [x.field.split(".")[0], x.message])) : { note: e.message }); } });
   return (
     <Dialog open onOpenChange={(o) => { if (!o) close(); }} title="Add a finding by hand" description="For something the checks cannot see, such as a photo to retake. It is listed as Added by hand."

@@ -11,8 +11,9 @@ export const SEVERITIES: readonly Severity[] = ["CRITICAL", "MAJOR", "MINOR", "I
 
 /** One current fact: the person (answer subject) it is about, its key and value (dates as YYYY-MM-DD text). */
 export type Fact = { subject: string; field: string; value: unknown };
-/** The people the checks run for: the case subject holds case facts (the visit's dates); persons hold their own. */
-export type Who = { subject: string; role: string; label: string };
+/** The people the checks run for: the case subject holds case facts (the visit's dates); persons hold their own.
+ *  `applies: false` is a person on the case who is not travelling (P-209): the visit rules are not run for them. */
+export type Who = { subject: string; role: string; label: string; applies?: boolean };
 
 export type Hit = {
   rule: string; subject: string; field: string; severity: Severity;
@@ -29,12 +30,12 @@ const date = (v: unknown): string | null => { if (typeof v !== "string" || !DATE
 /** "2030-03-20" → "Mar 20, 2030": the words a person reads (en-CA, as the case page; UTC so the day never shifts). */
 export const dayWords = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString("en-CA", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 
-type Rule = { key: string; severity: Severity; field: string; words: string;
+type Rule = { key: string; severity: Severity; field: string; words: string; /** compares a person's facts with the visit */ visit?: true;
   run: (f: (subject: string, field: string) => unknown, who: Who, caseSubject: string) => { quote: string; facts: Record<string, string> } | null };
 
 /** The rules, in the order the Review page lists them. `words` is the rule as a person reads it (the tooltip). */
 export const RULES: readonly Rule[] = [
-  { key: "passport_expires_before_stay_ends", severity: "MAJOR", field: "person.passport_expiry_date",
+  { key: "passport_expires_before_stay_ends", severity: "MAJOR", field: "person.passport_expiry_date", visit: true,
     words: "The passport must still be valid on the last day of the visit.",
     run: (f, who, cs) => {
       if (who.role === "case") return null;
@@ -83,6 +84,7 @@ export function crossChecks(facts: Fact[], people: Who[]): Hit[] {
   const caseSubject = people.find((p) => p.role === "case")?.subject ?? "";
   const hits: Hit[] = [];
   for (const rule of RULES) for (const who of people) {
+    if (rule.visit && who.applies === false) continue;
     const r = rule.run(f, who, caseSubject);
     if (r) hits.push({ rule: rule.key, subject: who.subject, field: rule.field, severity: rule.severity, quote: r.quote, facts: r.facts, fingerprint: fingerprintOf(rule.key, who.subject, r.facts) });
   }
