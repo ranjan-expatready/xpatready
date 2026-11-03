@@ -4,7 +4,7 @@ Verifier V2 (P-291 (1), the tech lead's request of 10:00 UTC). Every M2 row of `
 
 ## Summary
 
-* **43 of 52 rows scored Works are confirmed** by a green pack on main (the 3 Nov build review: 36 of 52).
+* **43 of 52 rows scored Works are confirmed** by a green pack on 3b0d4d64 (the 3 Nov build review: 36 of 52); **47 of 52 after the re-run on 40cebae7** (section at the end).
 * agrees: 6; confirmed Works: 43; not confirmed: 9; pack green, scored Partial: 2.
 
 ## Capability by capability
@@ -92,7 +92,19 @@ Partial rows (C3.4, C4.11, C9.1, C10.1, C11.7, C11.14): every pack is red, as th
 
 The full run on 3b0d4d64 (`run-suites.sh`, every suite): exit 1. 263 suites PASS, 1 FAIL, 1 skipped by design (`check_studio_browser.cjs` resets the :4400 demo). The failure is `check_forms_c34_ai.ts` (C3.4, scored Partial): "fetch failed: other side closed" right after "C3.4 S fail: Saved never uses a recorded run of another edition". It is the same on 877acf66 and when run alone on a fresh copy (port 4474, exit 1, 37 checks passed first). The server stays up and logs nothing, so the request is dropped, not the process. Not settled whether CI on the Mac sees it; a forms row should look at the Saved masters replay request.
 
-## Re-run after 3b0d4d64 (the tech lead's list)
+## Re-run after 3b0d4d64 (the tech lead's list), on main 40cebae7
 
-Pending: C11.11 (#689), C3.8 (#691), C2.4 (#698), C6.12 (#686), C11.14 (#693, #699, #700) and F2's B1 release gate, each on a fresh copy of main once merged.
+Each pack again on a fresh isolated copy (port 4470), same method. Merged since 3b0d4d64: #686, #689, #691, #693, #698, #699, #700, #712. Not merged yet: V3 B1 release gate (#733, open), so not re-run.
+
+| Capability | Scored | Fix | Pack on 40cebae7 | Reading |
+|---|---|---|---|---|
+| C2.4 | Works | #698 | exit 0 (22 PASS, 0 FAIL) | **now confirmed** (was 21/22) |
+| C3.8 | Works | #691 | exit 0 (11 PASS, 0 FAIL) | **now confirmed** (was 9/11) |
+| C11.11 | Works | #689 | exit 0 (26 PASS, 0 FAIL) | **now confirmed** (was 21/26) |
+| C3.15 | Works | #712 | exit 0 (11 PASS, 0 FAIL; setup_visitor_visa) | **now confirmed** (was 7/11; #712 brought the pack to P-266 and requires a reason) |
+| C3.2 | Works | #699 | exit 0 (22 PASS, 0 FAIL) | still confirmed after #699 |
+| C11.14 | Partial | #693, #699, #700 | exit 1 (11 PASS, 3 FAIL) | agrees with Partial: field-mapping proposals still have one round, not a draft and an independent checker round (AT-2), so none is High (AT-3) and the bands are not as the pack expects (AT-4) |
+| C6.12 (M3) | Partial | #686 | `C6.12.test.ts` exit 0 (24 PASS, 0 FAIL); `C6.12-breadth.test.ts` exit 1 (0 PASS, 4 FAIL) | the Visitor visa part is green; the breadth part it is Partial for is red, as scored. Its setup (`acceptance/lib/setup_vv_m3.ts`) passes 44 of 46: "S7a … fee table: Cannot PUT /api/library/fees" and "S2w … a form line with no signer set is named by the release check before release" |
+
+**After the re-run: 47 of 52 rows scored Works are confirmed on main** (36 in the build review, 43 on 3b0d4d64). Not confirmed: C3.10 (18 messages still say "box"), C4.2 (an unasked fact can be marked; waits for the tech lead), C4.7 (pack older than the client-only background rule; saved paid run), C11.3 (the held part) and C11.17 (a long name's message is not under its field). These five were not re-run: no fix for them merged after 3b0d4d64.
 
