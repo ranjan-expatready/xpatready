@@ -46,11 +46,29 @@ const isAsked = (f: FactSourceView) => f.placed && f.forms.length > 0;
 
 /** C1 (QA-162): the one question these words name for this person (engine/fact-words.ts), among every fact of the
  *  combination so that a near one is never taken in place of the one meant; it must be a question this combination asks. */
-function named(all: FactSourceView[], role: string, asks: string, names: Names, what: (x: string) => string): { f: FactSourceView; loose: string | null } | { why: string } {
+function named(all: FactSourceView[], role: string, asks: string, names: Names, what: (x: string) => string, asked: (f: FactSourceView) => boolean = isAsked): { f: FactSourceView; loose: string | null } | { why: string } {
   const found = findFact(all, role, asks, names);
   if (!found.fact) return { why: found.why === "several" ? `${what(`"${asks}"`)} could be ${found.several.length} questions of this person (${listed(found.several)}), so it is not guessed.` : `${what(`"${asks}"`)} is not a question this combination asks of this person, so it is not guessed.` };
-  if (!isAsked(found.fact)) return { why: `${what(`"${found.fact.label}"`)} is not asked by a question of this combination yet, so it is not guessed.` };
+  if (!asked(found.fact)) return { why: `${what(`"${found.fact.label}"`)} is not asked by a question of this combination yet, so it is not guessed.` };
   return { f: found.fact, loose: found.how === "words" ? takenAs(asks, found.fact) : null };
+}
+
+/** QA-162: the questions this combination asks that no form box reads (so `factSources` does not list them), as the
+ *  people they are asked of: once for the application ("case"), or of each person who applies. A deciding question only. */
+export function askedOnly(s: Snapshot, all: FactSourceView[]): FactSourceView[] {
+  const have = new Set(all.map((f) => `${f.role}|${f.fact}`));
+  const parts = ((s.combination as { participants?: { role: string; max?: number | null; applies?: boolean | null }[] }).participants ?? []).filter((p) => (p.max ?? 0) > 0 && p.applies !== false && p.role !== "representative").map((p) => p.role);
+  const meaning = new Map((s.canonical_fields as { id: string; meaning?: string }[]).map((f) => [f.id, f.meaning ?? f.id]));
+  const out: FactSourceView[] = [];
+  for (const p of s.placements as { fact: string; repeats?: string; rule_only?: boolean }[]) {
+    if (p.rule_only) continue;
+    for (const role of p.repeats === "once_per_case" || p.fact.startsWith("case.") ? ["case"] : parts) {
+      if (have.has(`${role}|${p.fact}`)) continue;
+      have.add(`${role}|${p.fact}`);
+      out.push({ role, fact: p.fact, label: (meaning.get(p.fact) ?? p.fact).trim().replace(/\.$/, ""), forms: [], placed: true } as unknown as FactSourceView);
+    }
+  }
+  return out;
 }
 
 /** C1–C5 on one round's condition; null when it passes, else the reason in words. */
@@ -58,7 +76,10 @@ export function conditionProblem(s: Snapshot, guideText: string, guideCode: stri
   const t = named(all, c.role, c.asks, names, (x) => x);
   if ("why" in t) return t;
   const target = t.f;
-  const d = named(all, c.role, c.depends_on, names, (x) => `${x} (what decides "${target.label}")`);
+  // QA-162: the deciding question need not fill a form box itself (IMM 5257's "Have you ever used any other name…?"
+  // decides whether the names are needed): any question this combination asks of the person may decide.
+  const pool = [...all, ...askedOnly(s, all)];
+  const d = named(pool, c.role, c.depends_on, names, (x) => `${x} (what decides "${target.label}")`, (f) => f.placed);
   if ("why" in d) return d;
   const decider = d.f, loose = t.loose ?? d.loose;
   if (target.fact === decider.fact) return { why: `"${target.label}" cannot decide itself.` };
