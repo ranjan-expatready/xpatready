@@ -76,6 +76,30 @@ export async function deriveJobs(): Promise<{ row: string; label: string; job: J
   } finally { await db.$disconnect(); }
 }
 
+/** C4.7 v2 (QA-162; Lead 3, 3 Nov): the batch word of the v2 PQR-picks pair, so its job ids never collide with the v1 jobs
+ *  above (jobIdFor hashes the batch word), while its draft and checker share one stem and so pair (rounds.ts pairOf). */
+export const BATCH_V2 = "track-a-v2";
+
+/** The C4.7 v2 pair exactly as the app's live rounds write it now: the current PQR_AI step (v2 prompts) over the guide and
+ *  the combination's question list (pqr-drafts.ts inputsOf). Needs a copy where Visitor visa asks its questions
+ *  (tests/runtime/setup_visitor_visa.ts); with no question asked it refuses, since the job would be v1's inputs. Also returns
+ *  the app's own plan worst case (PqrDrafts.worstUsd, what the Live plan states). */
+export async function deriveC47V2Jobs(): Promise<{ jobs: { row: string; label: string; job: Job }[]; planWorstUsd: number }> {
+  const { Db } = await import("../api/src/core.ts");
+  const { PqrDrafts, PQR_AI, inputsOf } = await import("../api/src/pqr-drafts.ts");
+  const db = new Db();
+  try {
+    const c = await db.combination.findFirst({ where: { combinationKey: COMBINATION, retiredAt: null } });
+    if (!c) throw new Error(`no ${COMBINATION} combination in this database: run Demo › Reset to the six on the copy first`);
+    const p = new PqrDrafts(db, null as never, null as never), g = await p.guide(c);
+    if (!g.input) throw new Error(`${g.code} is not among the official files the AI may read`);
+    if (!g.questions) throw new Error(`${COMBINATION} asks no question yet, so a v2 round would read the guide only: run tests/runtime/setup_visitor_visa.ts on the copy first`);
+    const ctx = { trail: g.trail, contextKey: c.combinationKey, inputs: inputsOf(g), batchId: BATCH_V2 };
+    const jobs = [false, true].map((isCheck) => ({ row: "C4.7", label: `PQR picks v2, ${isCheck ? "checker" : "draft"} round`, job: roundJob(PQR_AI, isCheck, ctx) as Job }));
+    return { jobs, planWorstUsd: p.worstUsd(g) };
+  } finally { await db.$disconnect(); }
+}
+
 export const jobText = (job: Job) => JSON.stringify(job, null, 1) + "\n";
 
 /** One job's costs from the code's own estimators, with no model call: the request it would send is built by the
@@ -111,6 +135,21 @@ export function measuredTokensPerByte(): number {
 }
 
 const usd = (n: number) => `US$${n.toFixed(2)}`;
+
+if (import.meta.url === pathToFileURL(process.argv[1]).href && process.argv.includes("--c47-v2")) {
+  // C4.7 v2:  tsx … track-a-jobs.ts --c47-v2 [--write]   (a copy after Reset to the six and setup_visitor_visa.ts)
+  const { jobs, planWorstUsd } = await deriveC47V2Jobs();
+  let worst = 0, usual = 0;
+  console.log(`\nC4.7 v2 jobs for ${COMBINATION} (guide + question list; no model call; worst = the runner's reservation, usual = estimate):`);
+  for (const { label, job } of jobs) {
+    if (process.argv.includes("--write")) writeFileSync(join(JOBS, `${job.job_id}.json`), jobText(job));
+    const c = costsOf(job);
+    worst += c.worst_usd; usual += c.usual_usd;
+    console.log(`  C4.7 ${label}: ${job.job_id}${process.argv.includes("--write") ? " (written)" : ""}  worst ${usd(c.worst_usd)} (${job.settings.max_attempts} × ${usd(c.per_attempt_worst_usd)}; request ${c.request_bytes} bytes, output ≤ ${job.settings.max_output_tokens})  usual ~${usd(c.usual_usd)}  budget ${usd(c.budget_usd)}${c.fits_budget ? "" : "  ← ABOVE ITS BUDGET"}`);
+  }
+  console.log(`  total: worst ${usd(worst)}, usual ~${usd(usual)}; the app's Live plan states worst ${usd(planWorstUsd)} (PqrDrafts.worstUsd)`);
+  process.exit(0);
+}
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   if (process.argv.includes("--write")) {
