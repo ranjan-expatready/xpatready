@@ -125,7 +125,7 @@ export function spendLeftWords(l: { committed_usd: number; cap_usd: number; rema
   const capRoom = l.cap_usd - l.committed_usd;
   return l.wave && l.wave.cap_usd - l.wave.spent_usd < capRoom - 0.005 ? `${left} left in this round's AI budget (US$${Math.max(0, capRoom).toFixed(2)} before the AI spending cap).` : `${left} left before the AI spending cap.`;
 }
-type DraftOptions = { model?: string; saved_runs: SavedRun[]; ledger?: { committed_usd: number; cap_usd: number; remaining_usd: number; wave?: { name: string; cap_usd: number; spent_usd: number } }; key_present: boolean; job_id: string };
+type DraftOptions = { model?: string; saved_runs: SavedRun[]; saved_parts?: { parts: number; saved: number } | null; ledger?: { committed_usd: number; cap_usd: number; remaining_usd: number; wave?: { name: string; cap_usd: number; spent_usd: number } }; key_present: boolean; job_id: string };
 
 // X8a: the Start button says when it is ready (data-options-loaded: the saved answers are in, so the mode will not switch
 // to "Use saved AI answer" by itself any more; data-start-ready: nothing it waits on is still loading), so a check follows
@@ -135,14 +135,18 @@ function DraftDialog({ a, onClose }: { a: Attachment; onClose: () => void }) {
   // The order the server uses: answers that pass today's check first, then ones it re-checks before use (Lead check A3).
   const runs: SavedRun[] = opts.data?.saved_runs ?? [];
   const saved = [...runs.filter((r) => r.valid), ...runs.filter((r) => r.recheckable)];
+  // A form drafted in parts is saved part by part: Saved uses them when every part has one (US$0); some missing, it waits.
+  const sp = opts.data?.saved_parts ?? null;
+  const partsAll = !saved.length && !!sp && sp.parts > 0 && sp.saved === sp.parts;
+  const replayOpen = saved.length > 0 || partsAll;
   // Review-3 Minor 4: a form approved in the product (not on the official manifest) is not open to a paid call yet (the
   // founder's or the Lead's decision): Live says why it is closed. P-227 (D2 part 2): only Live and Saved are shown; the
   // stub pass stays an API path for tests (POST /attachments/:id/draft {mode:"stub"}), never offered to a person.
   const liveClosed = !a.recognised;
-  const nothingToStart = (m: "live" | "replay") => (m === "live" && liveClosed) || (m === "replay" && !saved.length);
+  const nothingToStart = (m: "live" | "replay") => (m === "live" && liveClosed) || (m === "replay" && !replayOpen);
   const [mode, setMode] = React.useState<"live" | "replay">(liveClosed ? "replay" : "live");
   const [runFile, setRunFile] = React.useState("");
-  React.useEffect(() => { if (saved.length && !runFile) { setRunFile(saved[0].file); setMode("replay"); } }, [saved.length]);
+  React.useEffect(() => { if (saved.length && !runFile) { setRunFile(saved[0].file); setMode("replay"); } else if (partsAll) setMode("replay"); }, [saved.length, partsAll]);
   const qc = useQueryClient();
   const toast = useToast();
   // N6 (review N1): the live start is the same plan as Draft setup's with the scope narrowed to this form (D280), so it
@@ -157,7 +161,7 @@ function DraftDialog({ a, onClose }: { a: Attachment; onClose: () => void }) {
   const start = async () => {
     setBusy(true);
     try {
-      const launch = (overrideId?: string) => api(`/attachments/${a.id}/draft`, { method: "POST", json: { mode, runFile: mode === "replay" ? runFile : undefined, idempotencyKey: key, ...(overrideId ? { overrideId } : {}) } });
+      const launch = (overrideId?: string) => api(`/attachments/${a.id}/draft`, { method: "POST", json: { mode, runFile: mode === "replay" && runFile ? runFile : undefined, idempotencyKey: key, ...(overrideId ? { overrideId } : {}) } });
       // No plan (it could not be made: the server's launch says why in words) or not live (US$0): straight to the launch.
       // N6 follow-up: the plan is made again in the click (after the Escape guard is armed), so after a Cancel or a refused
       // Continue the warning shows today's spend, not the figures from when the dialog opened (and so does the Live line).
@@ -182,9 +186,10 @@ function DraftDialog({ a, onClose }: { a: Attachment; onClose: () => void }) {
       footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void start()} busy={busy} disabled={nothingToStart(mode) || liveOff || (mode === "live" && plan.isFetching)} aria-describedby={nothingToStart(mode) ? "draft-none" : undefined} data-draft-start data-mode={mode} data-options-loaded={opts.isSuccess || opts.isError ? "true" : "false"} data-start-ready={!busy && (opts.isSuccess || opts.isError) && !(mode === "live" && plan.isFetching) && !nothingToStart(mode) ? "true" : "false"}><Play /> {mode === "replay" ? "Use Saved (US$0)" : "Start Live"}</Button></>}>
       <div className="space-y-3 text-sm">
         <label className="flex items-start gap-2"><input type="radio" checked={mode === "live"} onChange={() => setMode("live")} className="mt-1" disabled={liveClosed} /><span>{liveClosed ? <><b>Live</b>: not open yet for a form approved in the product (only for files on the official list); use Saved when there is one.</> : <><b>Live</b> through the guarded route: a safety check first, then the AI model, up to US$5 for this run. {/* UX-A part 4: the model, the caps and the wave's budget lines are under Details; the main path keeps what is left. */}{l ? spendLeftWords(l) : ""} {opts.data && !opts.data.key_present ? <span className="text-text-danger">The API key file is missing: a live call will be refused.</span> : null}</>}</span></label>
-        <label className="flex items-start gap-2"><input type="radio" checked={mode === "replay"} onChange={() => setMode("replay")} className="mt-1" disabled={!saved.length} /><span className="min-w-0 flex-1"><b>Saved</b> (no model call, US$0): an earlier real answer for this same form, checked with today's rules before use and labelled wherever it is shown.{saved.length ? <Select className="mt-1 block" value={runFile} onChange={(e) => setRunFile(e.target.value)}>{saved.map((r) => <option key={r.file} value={r.file}>{savedName(formOf(a), r)}</option>)}</Select> : <span className="block text-xs text-text-muted">No saved AI answer for this form yet.</span>}</span></label>
-        {opts.isSuccess && nothingToStart(mode) ? <p id="draft-none" className="text-sm" role="status" data-draft-none>Nothing can start for this form yet: {liveClosed ? "Live is not open for it" : "it has no Saved result, so choose Live"}{liveClosed && !saved.length ? ", and it has no Saved result" : ""}.</p> : null}
-        {liveOff ? <Notice tone="warn" title="Live AI is off on this copy">{LIVE_OFF_NEXT}</Notice> : null}
+        <label className="flex items-start gap-2"><input type="radio" checked={mode === "replay"} onChange={() => setMode("replay")} className="mt-1" disabled={!replayOpen} /><span className="min-w-0 flex-1"><b>Saved</b> (no model call, US$0): an earlier real answer for this same form, checked with today's rules before use and labelled wherever it is shown.{saved.length ? <Select className="mt-1 block" value={runFile} onChange={(e) => setRunFile(e.target.value)}>{saved.map((r) => <option key={r.file} value={r.file}>{savedName(formOf(a), r)}</option>)}</Select> : <span className="block text-xs text-text-muted" data-saved-parts={sp ? `${sp.saved}/${sp.parts}` : undefined}>{partsAll ? `Saved answers for each of its ${sp!.parts} parts (it was drafted in parts): used together.` : sp?.saved ? `Saved answers for ${sp.saved} of its ${sp.parts} parts only: it waits for Live, so it is never half-filled.` : "No saved AI answer for this form yet."}</span>}</span></label>
+        {opts.isSuccess && nothingToStart(mode) ? <p id="draft-none" className="text-sm" role="status" data-draft-none>Nothing can start for this form yet: {liveClosed ? "Live is not open for it" : "it has no Saved result, so choose Live"}{liveClosed && !replayOpen ? ", and it has no Saved result" : ""}.</p> : null}
+        {/* Break m4: when Saved is closed too, the notice does not point to it. */}
+        {liveOff ? <Notice tone="warn" title="Live AI is off on this copy">{replayOpen ? LIVE_OFF_NEXT : "No paid AI call can start here, and this form has no complete Saved answer: it waits until live AI is on, or a person maps it."}</Notice> : null}
         {cost.dialog}
         <p className="text-xs text-text-muted">The AI reads this form's own field list only; expected answers and family values are kept out of what it reads.</p>
         <AdminDetails items={[["AI model (Live)", liveClosed ? null : opts.data?.model], ["Job", opts.data?.job_id], ["Saved run file", mode === "replay" ? runFile || null : null], ["Saved run", mode === "replay" ? saved.find((r) => r.file === runFile)?.run_id : null],
