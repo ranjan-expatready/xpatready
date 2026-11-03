@@ -104,9 +104,17 @@ export const jobText = (job: Job) => JSON.stringify(job, null, 1) + "\n";
 
 /** One job's costs from the code's own estimators, with no model call: the request it would send is built by the
  *  launcher's own builder (p2/prompt.ts buildRequest over the guard's admitted inputs). */
+/** P-296 (3): measured on the four C3.4 v1 rounds of 3 Nov (#669; their run files are kept in p2/runs/unused-2026-11-03/):
+ *  the form's inventory is denser than guide text (102,460 input tokens for 230,830 request bytes, 101,800 for 228,674),
+ *  and the form's draft stopped at its 8,000 output limit after 15 checks (about 530 tokens a check), while writing the
+ *  background page's question 4b. Used for "usual" only, never for a cap (the worst case is the runner's own bound). */
+export const MEASURED_C34 = { formTokensPerByte: 0.4446, formDraftOutputTokens: 12_000 };
+const isForm = (job: Job) => /^studio-masters-form-/.test(job.job_id);
 /** C3.4's usual output (an estimate, never a cap): each check carries a tree and two or three worked examples, so half the
- *  step's output limit rather than twice the who-can-be answer. */
-const usualOutputOf = (job: Job) => (/^studio-masters-/.test(job.job_id) ? Math.round(Number(job.settings.max_output_tokens) / 2) : MEASURED.outputTokens * 2);
+ *  step's output limit rather than twice the who-can-be answer; each of the form's rounds about 1.5 times the 8,000 the
+ *  draft wrote before it was cut (#669), the checker too, since v2 asks it to read every page as the draft does. */
+const usualOutputOf = (job: Job) => (isForm(job) ? MEASURED_C34.formDraftOutputTokens
+  : /^studio-masters-/.test(job.job_id) ? Math.round(Number(job.settings.max_output_tokens) / 2) : MEASURED.outputTokens * 2);
 
 export function costsOf(job: Job) {
   const admitted = admitRun({ inputs: { official_files: job.inputs }, settings: job.settings as never });
@@ -115,7 +123,7 @@ export function costsOf(job: Job) {
   const model = String(job.settings.model), out = Number(job.settings.max_output_tokens), attempts = Number(job.settings.max_attempts);
   const perAttempt = costUsd(model, inputTokenBound(JSON.stringify(req)), out);
   // One attempt; output at twice the measured who-can-be answer (a margin: picks and conditions each carry a quote and a reason).
-  const usual = costUsd(model, Math.round(bytes * measuredTokensPerByte()), usualOutputOf(job));
+  const usual = costUsd(model, Math.round(bytes * (isForm(job) ? MEASURED_C34.formTokensPerByte : measuredTokensPerByte())), Math.min(out, usualOutputOf(job)));
   return { request_bytes: bytes, per_attempt_worst_usd: perAttempt, worst_usd: perAttempt * attempts, usual_usd: usual, budget_usd: Number(job.settings.budget_usd), fits_budget: perAttempt * attempts <= Number(job.settings.budget_usd) + 1e-9, under_run_cap: perAttempt * attempts <= RUN_CAP_USD + 1e-9 };
 }
 
