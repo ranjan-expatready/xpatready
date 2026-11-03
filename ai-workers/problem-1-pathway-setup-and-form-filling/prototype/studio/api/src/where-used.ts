@@ -4,7 +4,7 @@
 // impact preview. Other screens still read some uses themselves (lists of rules and checks, the reuse marks); they move
 // here when they change. New features call it and never copy it (P-258).
 import type { Prisma } from "@prisma/client";
-import { byItem, current, fieldUses, filingCombinations, formLineByCombination, releaseUses } from "../../engine/where-used.ts";
+import { byItem, current, fieldComponents, fieldUses, filingCombinations, formLineByCombination, releaseUses } from "../../engine/where-used.ts";
 import type { Db } from "./core.ts";
 import { fullTrail, trailWords } from "../../engine/structure.ts";
 
@@ -90,6 +90,41 @@ export async function combinationTrails(db: Client, workspaceId: string): Promis
     out.set(c.id, chain.length ? trailWords(fullTrail(chain)) : c.label);
   }
   return out;
+}
+
+/** The rows a field's uses and readers are found in (SH2's own tables), with the facts read from document types. */
+export async function fieldUseRows(db: Client, workspaceId: string) {
+  const [boxes, lines, rules, docs, checks, questions, picks, facts] = await Promise.all([
+    mappedBoxes(db, workspaceId),
+    db.combinationForm.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }),
+    db.predicate.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }),
+    db.documentRequirement.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }),
+    db.check.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }),
+    db.sectionQuestion.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }),
+    db.sqrSectionSelection.findMany({ where: { workspaceId } }),
+    db.factSource.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }),
+  ]);
+  return { boxes, lines, rules, docs, checks, questions, picks, facts };
+}
+
+/** C9.1 (P-32): the sections, document types, rules and checks the given shared fields touch on these combinations, each
+ *  with its name in words (a section's title, a document type's name, a rule's "then", a check's message). */
+export async function fieldComponentsOf(db: Client, workspaceId: string, fields: string[], combinationIds: string[]) {
+  if (!fields.length || !combinationIds.length) return [];
+  const rows = await fieldUseRows(db, workspaceId);
+  const uses = fieldComponents(rows, fields, new Set(combinationIds));
+  const keys = (k: string) => [...new Set(uses.filter((u) => u.kind === k).map((u) => u.key))];
+  const [sections, types] = await Promise.all([
+    db.logicalSection.findMany({ where: { workspaceId, sectionKey: { in: keys("section") } }, orderBy: { version: "desc" }, distinct: ["sectionKey"], select: { sectionKey: true, title: true } }),
+    db.documentType.findMany({ where: { workspaceId, documentTypeKey: { in: keys("document_type") } }, orderBy: { version: "desc" }, distinct: ["documentTypeKey"], select: { documentTypeKey: true, name: true } }),
+  ]);
+  const names = new Map<string, string>([
+    ...sections.map((s) => [`section|${s.sectionKey}`, s.title] as [string, string]),
+    ...types.map((t) => [`document_type|${t.documentTypeKey}`, t.name] as [string, string]),
+    ...current(rows.rules, (x) => `${x.combinationId}|${x.predicateKey}`).map((x) => [`rule|${x.predicateKey}|${x.combinationId}`, x.thenPlain] as [string, string]),
+    ...current(rows.checks, (k) => `${k.combinationId}|${k.checkKey}`).map((k) => [`check|${k.checkKey}|${k.combinationId}`, k.message ?? k.checkKey] as [string, string]),
+  ]);
+  return uses.map((u) => ({ ...u, label: names.get(`${u.kind}|${u.key}`) ?? names.get(`${u.kind}|${u.key}|${u.combinationId}`) ?? u.key }));
 }
 
 /** A library form's line on each combination (the newest version, retired or not), with the combination's label. */

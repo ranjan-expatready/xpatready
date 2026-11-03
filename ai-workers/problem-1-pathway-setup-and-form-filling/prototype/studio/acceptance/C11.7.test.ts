@@ -67,8 +67,9 @@ const rootType = (combo: string) => sql(`with recursive up as (select p.program_
   // ── Part B: the rest of the capability row (not in #113) ──
   const pnp = combos.find((c) => /Express Entry stream$/.test(trail(c)));
   const pnpForms = pnp ? sql(`select string_agg(g.form_key, ',' order by g.form_key) from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id = '${pnp}'`) : "";
-  // P-109 (amended by P-112): the IRCC permanent-residence application, from its paper twins. P-171 (3): IMM 5669 and IMM 5406 are Online lines.
-  ok("C11.7 part B (P-109, P-112): the Provincial nominee combination is the IRCC PR application: IMM 0008, IMM 5669, IMM 5406, IMM 0008DEP and IMM 5476 come from their paper twins", ["IMM 0008", "IMM 5669", "IMM 5406", "IMM 0008DEP", "IMM 5476"].every((f) => pnpForms.split(",").some((x) => x.replace(/\s+/g, " ").toUpperCase() === f)), pnpForms);
+  // P-109 (amended by P-112): the IRCC permanent-residence application, from its paper twins. C11.7 intake: the
+  // library keys the DEP form "IMM 0008 DEP", as canada.ca numbers it (engine/canada.ts normaliseCode); compared without spaces. P-171 (3): IMM 5669 and IMM 5406 are Online lines.
+  ok("C11.7 part B (P-109, P-112): the Provincial nominee combination is the IRCC PR application: IMM 0008, IMM 5669, IMM 5406, IMM 0008DEP and IMM 5476 come from their paper twins", ["IMM 0008", "IMM 5669", "IMM 5406", "IMM 0008DEP", "IMM 5476"].every((f) => pnpForms.split(",").some((x) => x.replace(/\s+/g, "").toUpperCase() === f.replace(/\s+/g, ""))), pnpForms);
   ok("C11.7 part B (P-109): the provincial nomination certificate is a required document on the Provincial nominee combination", pnp !== undefined && n(`select count(*) from document_requirement d left join document_type t on t.document_type_key = d.document_type_key and t.workspace_id = d.workspace_id where d.combination_id = '${pnp}' and d.is_required and (coalesce(t.name, d.document_type_key) ilike '%nominat%')`) >= 1);
   ok("C11.7 part B (P-171 (3), Sample): on the Provincial nominee combination IMM 5669 and IMM 5406 are Online lines (answer sheet, no PDF)", pnp !== undefined && n(`select count(*) from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id = '${pnp}' and g.form_key in ('IMM 5669', 'IMM 5406') and f.channel = 'ONLINE'`) === 2);
 

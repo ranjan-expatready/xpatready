@@ -77,7 +77,7 @@ const sampleOk = (f: Parameters<typeof trailsOf>[0]) => { const t = trailsOf(f);
   ok("C11.7: replayed drafts are recorded as saved answers (mode replay, US$0)", n(`select count(*) from drafting_job where workspace_id='${ws}' and kind='field_map' and mode='REPLAY' and status='COMPLETED'`) === l.body.drafts.replayed, l.body.drafts.status);
   // R-146 and QA-163: fifteen forms of the six have a saved answer (check_queue_tx.ts); the list names exactly the one that
   // has none, IMM 5645 (QA-163's new job). A saved run lost or no longer matching its job adds its form and fails this.
-  ok("P-138: a form without a saved AI answer waits for Draft with AI, listed by name (exactly IMM 5645 since R-146 and QA-163)", JSON.stringify(l.body.drafts.waiting_for_draft_with_ai) === JSON.stringify(["IMM 5645 (01-2021)"]), l.body.drafts.waiting_for_draft_with_ai);
+  ok("P-138: a form without a saved AI answer waits for Draft with AI, listed by name (IMM 5645 since R-146 and QA-163; IMM 5669 and IMM 0008 DEP since the C11.7 intake reads their editions)", JSON.stringify(l.body.drafts.waiting_for_draft_with_ai) === JSON.stringify(["IMM 5645 (01-2021)", "IMM 5669 (05-2021)", "IMM 0008 DEP (10-2024)"]), l.body.drafts.waiting_for_draft_with_ai);
   // The form finder, replayed per combination from its recorded canada.ca page.
   const vv = l.body.finder.find((f: any) => /Visitor visa/.test(f.combination));
   ok("C11.7: the form finder is replayed on the Visitor visa (saved AI answers, US$0) and picks its forms", ["COMPLETED", "PARTIAL"].includes(vv?.status) && n(`select count(*) from ai_batch where workspace_id='${ws}' and operation='find_forms' and mode='REPLAY'`) === 5, l.body.finder);

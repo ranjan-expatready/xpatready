@@ -3,7 +3,7 @@
  "kind": "masters_guide",
  "combination": "vv.single",
  "configuration_version": "c34-masters-guide",
- "template": "masters-guide.v1.md",
+ "template": "masters-guide.v2.md",
  "output_schema": "masters-guide-output.v1.schema.json",
  "inputs": [
   {
