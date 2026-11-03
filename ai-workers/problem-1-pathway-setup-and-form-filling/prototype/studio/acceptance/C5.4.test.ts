@@ -8,7 +8,8 @@
 // a draft change Submit is held. Underneath: Submit is refused naming every item; a Sample answer is refused on this
 // source-backed combination; once every number has its official source or "None published" (test words, through the
 // API as the Source panel saves them), Submit, sign-off and Approve give Release 2 with its sources frozen in it.
-// A screenshot of the tab goes to product/screens/G1-source-register/screenshots/c54-six-review-1440.png.
+// A screenshot of the tab goes to studio/var/acceptance/C5.4-six-review-1440.png (the one committed for the PR is
+// product/screens/G1-source-register/screenshots/c54-six-review-1440.png).
 // No model call (US$0). Exit 0 = all pass, 1 = a failure, 2 = setup missing.
 //   zsh studio/tools/isolated.sh accept 4476 start && tsx studio/acceptance/C5.4.test.ts 4476 xr_studio_accept
 import { mkdirSync } from "node:fs";
@@ -19,7 +20,7 @@ import { walker } from "./lib/browser.ts";
 
 const T = pack2("C5.4");
 const { call, sql, ok, words } = T;
-const SHOT = join(import.meta.dirname, "..", "..", "..", "product", "screens", "G1-source-register", "screenshots");
+const SHOT = join(import.meta.dirname, "..", "var", "acceptance"); // a run never rewrites the committed screenshot (review m5)
 
 run(async () => {
   const served = (await call("GET", "/session")).body?.workspace?.id;
@@ -70,7 +71,7 @@ run(async () => {
   ok("C5.4 pass (P-279): a cut-off date is one of the numbers that need a source", dates.length > 0 && (await block.innerText()).includes(String(dates[0]?.words ?? "§")), dates.slice(0, 2).map((n) => n.words));
   mkdirSync(SHOT, { recursive: true });
   await block.scrollIntoViewIfNeeded();
-  await p.screenshot({ path: join(SHOT, "c54-six-review-1440.png") });
+  await p.screenshot({ path: join(SHOT, "C5.4-six-review-1440.png") });
 
   // ---------------------------------------------------------------- the gate: a draft change, then Submit
   // A draft change through the questionnaire's section order (C4.1's route): the second section moves up.
