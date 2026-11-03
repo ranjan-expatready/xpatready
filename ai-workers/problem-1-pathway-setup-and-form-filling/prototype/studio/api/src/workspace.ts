@@ -123,7 +123,9 @@ export class WorkspaceViews {
     const snaps = await buildSnapshots(this.db, workspaceId, comps.map((x) => x.id), "draft");
     const whereUsed = new Map<string, number>();
     for (const x of snaps.values()) for (const f of x.snapshot.canonical_fields as { id: string }[]) whereUsed.set(f.id, (whereUsed.get(f.id) ?? 0) + 1);
-    return { questionnaire: questionnairesView(snapshot, role, whereUsed), available };
+    // QA-172: the library's titles (newest version of each section), for a question placed in a section not chosen here.
+    const libraryTitles = new Map<string, string>(); for (const x of [...sections].sort((a, b) => b.version - a.version)) if (!libraryTitles.has(x.sectionKey)) libraryTitles.set(x.sectionKey, x.title);
+    return { questionnaire: questionnairesView(snapshot, role, whereUsed, new Date(), libraryTitles), available };
   }
 
   /** "Who can be in this application" with the roles to pick from and whether Undo is offered. */
