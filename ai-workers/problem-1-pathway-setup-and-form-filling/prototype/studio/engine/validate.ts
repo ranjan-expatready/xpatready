@@ -68,7 +68,7 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
     // V3 B1 (P-297 (3)): the same reading as the case gate (engine/programs.ts form_without_edition: a PDF form field map
     // with entries; an Online line is read from its PDF too, P-102), so a release is never one no firm can open a case on.
     if ((f.form_kind ?? "data_form") === "data_form" && !(s.field_maps as { form_number: string; channel?: string; entries: unknown[] }[]).some((m) => m.form_number === f.form_number && m.channel !== "ONLINE" && m.entries.length))
-      out.push({ level: "error", where: "Forms", item: f.form_number, code: NO_FIELD_MAP, message: `No form fields mapped yet for ${f.form_number}: a case could not fill it, so firms could not open cases on this release. Map its form fields (Draft setup), or remove the form.` });
+      out.push({ level: "error", where: "Forms", item: f.form_number, code: NO_FIELD_MAP, message: "No form fields mapped yet: a case could not fill this form, so firms could not open cases on a release with it. Map its form fields (Draft setup), or remove the form." });
   }
   const unplaced = new Map<string, number>();
   for (const m of s.field_maps) for (const e of m.entries) {

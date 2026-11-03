@@ -23,7 +23,7 @@ const unmappedOf = async (id: string) => {
   return s.forms.filter((f) => (f.form_kind ?? "data_form") === "data_form" && !s.field_maps.some((m) => m.form_number === f.form_number && m.channel !== "ONLINE" && m.entries.length)).map((f) => f.form_number).sort();
 };
 /** The refusals for a form with no field map (draft problems carry a level; a refused submit's errors[] are all blocking). */
-const unmappedErrors = (ps: Problem[]) => ps.filter((p) => (p.level ?? "error") === "error" && p.where === "Forms" && p.message.includes(`No form fields mapped yet for ${p.item}:`));
+const unmappedErrors = (ps: Problem[]) => ps.filter((p) => (p.level ?? "error") === "error" && p.where === "Forms" && p.message.includes("No form fields mapped yet:"));
 const releases = (id: string) => Number(sql(`select count(*) from config_release where combination_id='${id}'`));
 const openCase = (id: string, ref: string) => call("POST", "/runtime/cases", { combinationId: id, reference: `${ref}-${run}`, clientActor: CLIENT, principal: { displayName: "Sample Client B1" } }, OFFICER);
 
@@ -37,7 +37,7 @@ const openCase = (id: string, ref: string) => call("POST", "/runtime/cases", { c
   ok("B1 setup: after Reset to the six, the Visitor visa has data forms with no form field map", missing.length > 0, missing);
   const draft = (await call("GET", `/combinations/${six}`)).body?.draft?.problems as Problem[];
   const listed = unmappedErrors(draft ?? []);
-  ok("B1 fail: Review and release lists each form with no field map as an error that blocks (not a warning), naming the form", listed.map((p) => p.item).sort().join() === missing.join() && listed.every((p) => p.message.includes(p.item)) && !(draft ?? []).some((p) => p.level === "warning" && /field map/i.test(p.message)), { missing, listed: listed.map((p) => `${p.item}: ${p.message}`) });
+  ok("B1 fail: Review and release lists each form with no field map as an error that blocks (not a warning), one per form, named by the form", listed.map((p) => p.item).sort().join() === missing.join() && !(draft ?? []).some((p) => p.level === "warning" && /field map/i.test(p.message)), { missing, listed: listed.map((p) => `${p.item}: ${p.message}`) });
   const rel0 = releases(six);
   const sub = await call("POST", `/combinations/${six}/submit`, { note: "B1: release with forms that have no field map" }, AUTHOR);
   const subErrors = unmappedErrors((sub.body?.errors ?? []) as Problem[]);
@@ -72,6 +72,10 @@ const openCase = (id: string, ref: string) => call("POST", "/runtime/cases", { c
   const sub2 = await call("POST", `/combinations/${vv}/submit`, { note: "B1: one unmapped form" }, AUTHOR);
   const named2 = unmappedErrors((sub2.body?.errors ?? []) as Problem[]);
   ok(`B1 fail: the next release is refused naming only ${F}, in words; no release 2`, sub2.status === 400 && named2.map((p) => p.item).join() === F && words(sub2).includes(F) && releases(vv) === 1, { status: sub2.status, named: named2.map((p) => p.item), words: words(sub2).slice(0, 200) });
+  // Opus review M1: the Release page (GET /draft, the approver) holds the row and names the form, never only "not submitted".
+  const page = (await call("GET", "/draft", undefined, "user-B")).body as { rows?: { combinationId?: string; id?: string; label?: string; held?: boolean; why?: string | null }[] };
+  const row = (page.rows ?? []).find((r) => (r.combinationId ?? r.id) === vv) ?? (page.rows ?? []).find((r) => /Visitor visa/.test(r.label ?? ""));
+  ok(`B1 Opus M1 fail: the Release page holds the Visitor visa back naming ${F}, with the step to map or remove it`, !!row?.held && (row?.why ?? "").includes(F) && /Map its form fields|map its form fields/.test(row?.why ?? "") && !/Not submitted for review/.test(row?.why ?? ""), row);
   const still = await openCase(vv, "B1-VV2");
   ok("B1 pass: cases still open on release 1 while the draft waits for its map", still.status < 300 && !!still.body?.id, { status: still.status, words: words(still).slice(0, 200) });
   const del = await call("DELETE", `/combinations/${vv}/forms/${encodeURIComponent(F)}`, undefined, AUTHOR);
