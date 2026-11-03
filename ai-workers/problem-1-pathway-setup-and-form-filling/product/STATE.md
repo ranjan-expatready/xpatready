@@ -37,7 +37,7 @@ Not tonight: C4.7 (needs a saved paid run), C11.3 (its red AT-5 is the held part
 After the fix PRs merge, run the **independent re-test** again (same method as the report: every M2 acceptance pack on main, by a session that scored nothing) and report "scored vs confirmed".
 
 ## Running now (Lead 1, 3 Nov 07:10 UTC)
-**Leads, in order (highest number = current):** Lead 1 · 3 Nov 06:56 UTC (current, this chat; 30-minute check at minutes 13 and 43, Mac kept awake) · standbys **Lead 2 · 3 Nov · standby** (`local_ff0137ad-1907-4308-80a6-4e6f849f696a`) and **Lead 3 · 3 Nov · standby** (`local_651babba-ec86-4923-8b51-09c061d523d9`), idle until "take over now" (P-286). The old series (Leads 1–6 of 2 Nov) is retired; Lead 3 and Lead 5 of that series can be archived by the founder.
+**Leads, in order (highest number = current):** Lead 1 · 3 Nov 06:56 UTC (current, this chat; 30-minute check at minutes 13 and 43, Mac kept awake) · standbys **Lead 2 · 3 Nov · standby** (`local_ff0137ad-1907-4308-80a6-4e6f849f696a`) and **Lead 3 · 3 Nov · standby** (`local_651babba-ec86-4923-8b51-09c061d523d9`), idle until "take over now" (P-286). The old series (Leads 1–6 of 2 Nov) is retired; Lead 3 and Lead 5 of that series were archived by the founder ~07:15 UTC. **P-294:** while the founder is away the tech lead rules questions that decisions, IRCC or best practice settle, and may cancel wasted CI runs by exact id.
 
 **Sessions requested 07:00–07:08 UTC (cloud, one task each, sidebar "Pathway Configurator"; each brief names its next two capabilities):**
 | # | Task (app task id) | First | Next two |
@@ -91,7 +91,7 @@ Not tonight (P-290): C4.7, C11.3's held part, the 8 Partials waiting on paid run
 L-SA3 · L-SA6–L-SA11 · G5 (C5.1) · the P-236 rename · C11 · E1–E6 · design-only items · SH3/SH4 contracts go to the product owner with them · the AI "did you mean" in C11.3, C11.13, C3.6 (P-265, P-284).
 
 ## Waiting for the founder
-1. **Archive Lead 3 and Lead 5** once the new Lead has started its sessions and turned keep-awake on (Lead 3's chat keeps the Mac awake until about 07:00 UTC; archiving Lead 3 also archives Lead 5). Nothing is left unsaved.
+1. ✓ Done 3 Nov ~07:15 UTC (founder: "Done, archived"). **Archive Lead 3 and Lead 5** once the new Lead has started its sessions and turned keep-awake on (Lead 3's chat keeps the Mac awake until about 07:00 UTC; archiving Lead 3 also archives Lead 5). Nothing is left unsaved.
 2. On claude.ai/code, archive the cloud lanes left over from Leads 1–4 (all idle; no open PR except #417's old lane).
 3. **Send the SA-01B product owner** the reply drafted on the Mac (`archive/2026-11-02-founder-drafts/`), the SH3 contract (#509), the G-CORE concept (#504) and `design/note-to-sa01b-po-2026-11-02-sqr.md`: the only way G5 and the held parts unblock.
 4. Tell the team they drop their "Fill this screen" (P-245), pending the product owner's ruling.
