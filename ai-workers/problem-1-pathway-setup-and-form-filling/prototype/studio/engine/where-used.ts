@@ -85,3 +85,28 @@ export function fieldReaders(r: FieldUseRows, field: string): Reader[] {
   for (const q of current(r.questions, (q) => q.lineageKey)) if (reads(q.predicateJson)) for (const p of r.picks) if (p.sectionKey === q.sectionKey) out.push({ kind: "question", key: q.lineageKey, combinationId: p.combinationId, tree: q.predicateJson });
   return out;
 }
+
+/** C9.1 (P-32): what a changed form field's shared field touches beyond the form, on the given combinations: the sections
+ *  whose questions ask it or whose question conditions read it (where a combination selects the section), the document
+ *  types a checklist line lists under a condition that reads it or that a fact of it is read from, and the rules and
+ *  checks whose conditions read it. One entry per (kind, key, field, combination), with how it is used. */
+export type ComponentUse = { kind: "section" | "document_type" | "rule" | "check"; key: string; field: string; combinationId: string; how: "asks" | "condition" | "fact" };
+export type ComponentRows = Omit<FieldUseRows, "docs"> & {
+  docs: (Versioned & { combinationId: string; lineageKey: string; documentTypeKey: string; predicateJson: unknown })[];
+  facts: (Versioned & { combinationId: string; lineageKey: string; canonicalFieldKey: string; documentTypeKey: string | null })[];
+};
+export function fieldComponents(r: ComponentRows, fields: string[], combinations: Set<string>): ComponentUse[] {
+  const out = new Map<string, ComponentUse>();
+  const add = (u: ComponentUse) => { if (combinations.has(u.combinationId)) out.set(`${u.kind}|${u.key}|${u.field}|${u.combinationId}`, out.get(`${u.kind}|${u.key}|${u.field}|${u.combinationId}`) ?? u); };
+  const want = new Set(fields);
+  const picksOf = new Map<string, string[]>(); for (const p of r.picks) picksOf.set(p.sectionKey, [...(picksOf.get(p.sectionKey) ?? []), p.combinationId]);
+  for (const q of current(r.questions, (q) => q.lineageKey)) {
+    const read = new Set([...(want.has(q.canonicalFieldKey) ? [q.canonicalFieldKey] : []), ...fieldsOf(q.predicateJson).filter((f) => want.has(f))]);
+    for (const f of read) for (const c of picksOf.get(q.sectionKey) ?? []) add({ kind: "section", key: q.sectionKey, field: f, combinationId: c, how: f === q.canonicalFieldKey ? "asks" : "condition" });
+  }
+  for (const d of current(r.docs, (d) => `${d.combinationId}|${d.lineageKey}`)) for (const f of fieldsOf(d.predicateJson)) if (want.has(f)) add({ kind: "document_type", key: d.documentTypeKey, field: f, combinationId: d.combinationId, how: "condition" });
+  for (const x of current(r.facts, (x) => `${x.combinationId}|${x.lineageKey}`)) if (x.documentTypeKey && want.has(x.canonicalFieldKey)) add({ kind: "document_type", key: x.documentTypeKey, field: x.canonicalFieldKey, combinationId: x.combinationId, how: "fact" });
+  for (const x of current(r.rules, (x) => `${x.combinationId}|${x.predicateKey}`)) for (const f of fieldsOf(x.predicateJson)) if (want.has(f)) add({ kind: "rule", key: x.predicateKey, field: f, combinationId: x.combinationId, how: "condition" });
+  for (const k of current(r.checks, (k) => `${k.combinationId}|${k.checkKey}`)) for (const f of fieldsOf(k.predicateJson)) if (want.has(f)) add({ kind: "check", key: k.checkKey, field: f, combinationId: k.combinationId, how: "condition" });
+  return [...out.values()];
+}
