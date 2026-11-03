@@ -166,7 +166,7 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
       footer={<>
         <Button variant="secondary" busy={run.isPending} disabled={reason.trim().length < 3} onClick={() => run.mutate({ action: "reject" })}>Reject</Button>
         <span className="flex flex-wrap gap-2">
-          {differ ? <Button variant="secondary" busy={run.isPending} disabled={!!p.near_reason_needed && reason.trim().length < 8} onClick={() => run.mutate({ action: "edit", payload: checkPayload })}>Accept the checker's reading</Button> : null}
+          {differ ? <Button variant="secondary" busy={run.isPending} disabled={!!p.near_reason_needed_check && reason.trim().length < 8} aria-describedby={p.near_reason_needed_check && reason.trim().length < 8 ? "accept-needs-reason" : undefined} onClick={() => run.mutate({ action: "edit", payload: checkPayload })}>Accept the checker's reading</Button> : null}
           <Button busy={run.isPending} disabled={!!p.near_reason_needed && reason.trim().length < 8} aria-describedby={p.near_reason_needed && reason.trim().length < 8 ? "accept-needs-reason" : undefined} onClick={() => run.mutate({ action: "accept" })}>{differ ? "Accept the first reading" : "Accept"}</Button>
         </span>
       </>}>
@@ -198,9 +198,9 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
         {p.near.length ? <section><h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted">Close to</h3><p className="mt-1">{p.near.join(", ")}</p>{p.near_reason ? <p className="text-xs text-text-muted">{p.near_reason_needed ? `Why ${p.origin === "ai" ? "the AI" : "the rules"} found it close: ${p.near_reason}` : `Why it is not the same: ${p.near_reason}`}</p> : null}</section> : null}
         <div>
           {/* QA-192 (P-120): a near duplicate is accepted only with a person's one-line reason, shown at release. */}
-          <label className="block text-sm font-medium" htmlFor="proposal-reason">{p.near_reason_needed ? "Reason (needed to accept, 8 characters or more: why it is not the same as the item it is close to; the second person sees it at release. Also needed to reject)" : "Reason (needed to reject; the producer learns from it)"}</label>
-          {p.near_reason_needed && reason.trim().length < 8 ? <p id="accept-needs-reason" className="mt-1 text-xs text-text-muted">Accept stays off until you write why it is not the same (8 characters or more).</p> : null}
-          <Textarea id="proposal-reason" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} placeholder={p.near_reason_needed ? "Why it is not the same as the item it is close to" : "What is wrong with it"} />
+          <label className="block text-sm font-medium" htmlFor="proposal-reason">{p.near_reason_needed || p.near_reason_needed_check ? "Reason (needed to accept, 8 characters or more: why it is not the same as the item it is close to; the second person sees it at release. Also needed to reject)" : "Reason (needed to reject; the producer learns from it)"}</label>
+          {(p.near_reason_needed || p.near_reason_needed_check) && reason.trim().length < 8 ? <p id="accept-needs-reason" className="mt-1 text-xs text-text-muted">{p.near_reason_needed && p.near_reason_needed_check ? "Accept" : p.near_reason_needed ? "Accept (this reading)" : "Accepting the checker's reading"} stays off until you write why it is not the same (8 characters or more).</p> : null}
+          <Textarea id="proposal-reason" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} placeholder={p.near_reason_needed || p.near_reason_needed_check ? "Why it is not the same as the item it is close to" : "What is wrong with it"} />
         </div>
       </div>
     </Panel>

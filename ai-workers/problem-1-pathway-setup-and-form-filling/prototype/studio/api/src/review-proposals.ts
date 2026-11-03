@@ -9,7 +9,7 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { AGREEMENT_WORDS, BANDS, BatchDecisionBody, DecideBody, PROPOSAL_KIND_WORDS, ProposalsQuery, type Band, type ChangeBatch, type ProposalGroup, type ProposalsView, type QueueProposal, type Reading } from "../../contracts/review-proposals.ts";
 import { ACTORS, actorOf, Audit, Db, fail, need, STARTING_ROLES, Workspace, type Actor } from "./core.ts";
 import { changeView, decideChange, nearOf, type NearView } from "./library-changes.ts";
-import { BATCH_MAX, bulkWhy, decide, libraryNearPool, lineTitle, needsNearReason, ON_ITS_PAGE, undo, UNDO_SECONDS, type NearPool } from "./proposals.ts";
+import { BATCH_MAX, bulkWhy, decide, libraryNearPool, lineTitle, needsNearReason, needsNearReasonForEdit, ON_ITS_PAGE, pendingNewFields, undo, UNDO_SECONDS, type NearPool } from "./proposals.ts";
 import { Screen02 } from "./screen02.ts";
 import { STEP_KEYS } from "../../contracts/setup-checklist.ts";
 import { KIND_STEP } from "../../engine/setup-checklist.ts";
@@ -73,7 +73,8 @@ export class ReviewProposals {
       const picks = rows.filter((r) => r.kind === "pqr_pick" && groupOf(r) === chosen.id);
       const facts = picks.length ? new Map((await this.db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: picks.map((r) => String((r.payload as { factKey?: string }).factKey)) } }, orderBy: { version: "desc" }, select: { canonicalFieldKey: true, meaning: true } })).reverse().map((f) => [f.canonicalFieldKey, f.meaning.trim().replace(/\.$/, "")])) : new Map<string, string>();
       const pool = await libraryNearPool(this.db, workspaceId); // QA-192 review M3: once per request, as decide() reads it
-      for (const r of rows) if (groupOf(r) === chosen.id) bands[r.confidence as Band].push(this.view(r, facts, pool));
+      const pending = await pendingNewFields(this.db, workspaceId); // Devin r2: what an edit (the checker's reading) is compared with too
+      for (const r of rows) if (groupOf(r) === chosen.id) bands[r.confidence as Band].push(this.view(r, facts, pool, pending));
       group = { ...chosen, bands };
     }
     return { groups: [...groups.values()], group, batch_max: BATCH_MAX, undo_seconds: UNDO_SECONDS };
@@ -89,7 +90,7 @@ export class ReviewProposals {
     return r ? groups.get(groupOf(r)) : undefined;
   }
 
-  private view(r: Row, facts = new Map<string, string>(), pool: NearPool = []): QueueProposal {
+  private view(r: Row, facts = new Map<string, string>(), pool: NearPool = [], pending: (NearPool[number] & { id: string })[] = []): QueueProposal {
     const p = r.payload as Record<string, any>, src = r.source as Record<string, any> | null, rounds = r.rounds as { draft?: unknown; check?: unknown }, id = r.identity as { near?: string[]; nearReason?: string | null };
     const reuse = r.reuse as { match: "reuse" | "new"; existingKey: string | null };
     return { id: r.id, kind: r.kind, kind_word: PROPOSAL_KIND_WORDS[r.kind] ?? r.kind, title: r.kind === "pqr_pick" ? pickTitle(p, facts) : r.kind === "requirement_line" && !p.label ? lineTitle(p) : titleOf(p), meaning: p.meaning ?? p.proves ?? (r.kind === "pqr_pick" ? p.reason : null) ?? null, values: Array.isArray(p.values) ? p.values : null, band: r.confidence as Band, agreement: r.agreement, agreement_word: AGREEMENT_WORDS[r.agreement] ?? r.agreement,
@@ -97,7 +98,8 @@ export class ReviewProposals {
       readings: { draft: readingOf(rounds?.draft), check: readingOf(rounds?.check) },
       source: src ? { file: src.file, edition: src.edition ?? null, page: src.page ?? null, quote: src.quote, quote_found: !!src.quoteFound, rule: src.rule ?? null } : null,
       rules: (r.rules as QueueProposal["rules"]) ?? [], near: id.near ?? [], near_reason: id.nearReason ?? null, basis: r.basis as "SAMPLE" | "EXPERT",
-      bulk_why: bulkWhy(r), near_reason_needed: needsNearReason(r, pool), decide_on: ON_ITS_PAGE.has(r.step) && r.combinationId ? `/c/${r.combinationId}/jobs/${r.runId}` : null, created_at: r.createdAt.toISOString() };
+      bulk_why: bulkWhy(r), near_reason_needed: needsNearReason(r, pool),
+      near_reason_needed_check: (rounds?.check as { payload?: unknown } | undefined)?.payload ? needsNearReasonForEdit(r, (rounds!.check as { payload: unknown }).payload, pool, pending) : false, decide_on: ON_ITS_PAGE.has(r.step) && r.combinationId ? `/c/${r.combinationId}/jobs/${r.runId}` : null, created_at: r.createdAt.toISOString() };
   }
 
   async decide(actor: Actor, body: unknown) {

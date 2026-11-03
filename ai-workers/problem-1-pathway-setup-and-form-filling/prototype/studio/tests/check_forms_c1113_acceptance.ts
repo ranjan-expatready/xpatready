@@ -147,6 +147,12 @@ run(async () => {
   ok("QA-192 pass (review M3): the first of two close names (the later one carries the pair) shows no reason needed, and is accepted without one", firstView?.near_reason_needed === false && r.status === 201, [firstView?.near_reason_needed, r.status, words(r)]);
   r = await call("POST", "/review/proposals/decide", { ids: [mLater], action: "accept" }, AUTHOR);
   ok("QA-192 fail (review M3): the later one shows a reason is needed, and is refused without one (400)", laterView?.near_reason_needed === true && r.status === 400, [laterView?.near_reason_needed, r.status, words(r)]);
+  // Devin r2 on #726: the checker's reading has its own "reason needed", the one decide() applies to that edit.
+  const rd = (label: string) => ({ reading: `${label} (test)`, payload: payload(label), from: "replay", runFile: "runs/test.json", costUsd: 0 });
+  const dv = (await tryInsert(item("Ferry hull colour", { confidence: "decide", agreement: "differ", reason: "The two readings differ (test).", rounds: { draft: rd("Ferry hull colour"), check: rd(`${fam} at sea`) } }))).ids[0];
+  const dvView = [...(((await call("GET", `/review/proposals?group=${encodeURIComponent("edition:IMM 5257 (09-2023)")}`)).body?.group?.bands?.decide) ?? [])].find((x: { id: string }) => x.id === dv);
+  r = await call("POST", "/review/proposals/decide", { ids: [dv], action: "edit", payload: payload(`${fam} at sea`) }, AUTHOR);
+  ok("QA-192 pass (Devin r2 on #726): the queue says the checker's reading needs a reason when its name is close to a library field, and its own reading does not; the server agrees (400 without one)", !!dvView && dvView.near_reason_needed === false && dvView.near_reason_needed_check === true && r.status === 400 && words(r).includes(fam), [dvView && { own: dvView.near_reason_needed, check: dvView.near_reason_needed_check }, r.status, words(r)]);
   const c = (await tryInsert(item("Twin shade"))).ids[0], dd = (await tryInsert(ed2("Twin shade"))).ids[0];
   const rc = await call("POST", "/review/proposals/decide", { ids: [c], action: "accept" }, AUTHOR);
   r = await call("POST", "/review/proposals/decide", { ids: [dd], action: "accept" }, AUTHOR);

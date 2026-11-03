@@ -117,9 +117,9 @@ async function usableInLibrary(db: Client, workspaceId: string, kind: string, ke
 const plainIssues = (e: { issues: { path: PropertyKey[]; message: string }[] }) => e.issues.slice(0, 3).map((i) => `${i.path.join(".") || "item"}: ${i.message}`).join("; ");
 
 /** The new fields other proposals are waiting to add to the library (QA-159: a near duplicate of one is caught too). */
-export async function pendingNewFields(db: Client, workspaceId: string, except?: string[]): Promise<{ key: string | null; name: string; meaning: string | null }[]> {
-  const rows = await db.proposalItem.findMany({ where: { workspaceId, kind: "field", landsOn: "library", status: "waiting", reuse: { path: ["match"], equals: "new" }, ...(except?.length ? { id: { notIn: except } } : {}) }, select: { payload: true, work: true } });
-  return rows.map((r) => ({ key: ((r.work as { proposedKey?: string } | null)?.proposedKey) ?? null, name: String((r.payload as { label?: unknown }).label ?? ""), meaning: ((r.payload as { meaning?: string }).meaning) ?? null })).filter((x) => x.name);
+export async function pendingNewFields(db: Client, workspaceId: string, except?: string[]): Promise<{ id: string; key: string | null; name: string; meaning: string | null }[]> {
+  const rows = await db.proposalItem.findMany({ where: { workspaceId, kind: "field", landsOn: "library", status: "waiting", reuse: { path: ["match"], equals: "new" }, ...(except?.length ? { id: { notIn: except } } : {}) }, select: { id: true, payload: true, work: true } });
+  return rows.map((r) => ({ id: r.id, key: ((r.work as { proposedKey?: string } | null)?.proposedKey) ?? null, name: String((r.payload as { label?: unknown }).label ?? ""), meaning: ((r.payload as { meaning?: string }).meaning) ?? null })).filter((x) => x.name);
 }
 
 /** The one door: parses each item against contract v2, checks its identity, and writes them together (all or none).
@@ -302,6 +302,16 @@ export function needsNearReason(r: Pick<Row, "identity" | "origin" | "landsOn" |
   // A twin not yet resolved (reuse with no item) may add the item itself at accept (Devin on #726): counted as new.
   const adds = reuse.match === "new" || (reuse.match === "reuse" && !reuse.existingKey && !!(r.work as { twinOf?: string } | null)?.twinOf);
   return r.landsOn === "library" && !ON_ITS_PAGE.has(r.step) && adds && !!near?.length && !personNearReason(r);
+}
+
+/** QA-192 (Devin r2 on #726, m-check): whether accepting `payload` as an edit of this item (the checker's reading on the
+ *  queue) needs a person's reason: the same check decide() makes on an edit (the new name against the library and the
+ *  other new fields waiting, never resting on the proposer's reason for the old name). */
+export function needsNearReasonForEdit(r: Pick<Row, "id" | "landsOn" | "step" | "reuse" | "work" | "kind">, payload: unknown, libraryPool: NearPool, pending: (NearPool[number] & { id: string })[]): boolean {
+  const reuse = (r.reuse ?? {}) as { match?: string; existingKey?: string | null };
+  const adds = reuse.match === "new" || (reuse.match === "reuse" && !reuse.existingKey && !!(r.work as { twinOf?: string } | null)?.twinOf);
+  if (r.kind !== "field" || r.landsOn !== "library" || ON_ITS_PAGE.has(r.step) || !adds) return false;
+  return nearIn([...libraryPool, ...pending.filter((x) => x.id !== r.id)], { work: null }, payload).length > 0;
 }
 
 /** QA-192 (review M1–M3): what the one rule compares an item with at the decision, read once per request: the library's

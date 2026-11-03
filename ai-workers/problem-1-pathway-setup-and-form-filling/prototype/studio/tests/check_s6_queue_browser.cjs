@@ -89,7 +89,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     step("C11.14 (1440): with a toast showing, the panel's Accept and Reject stay visible and clickable", clear1440.toasts >= 1 && clear1440.ok, JSON.stringify(clear1440));
     await p.screenshot({ path: path.join(SHOTS, "panel-decide-1440.png") });
     await axe("the side panel");
-    await panel.getByRole("button", { name: "Accept the checker's reading" }).click(); await settle();
+    // QA-192 (P-120): when the checker's name is close to a library field (the one near rule), the panel asks for a
+    // person's one-line reason first, and the button stays off until it is written.
+    const checkerBtn = panel.getByRole("button", { name: "Accept the checker's reading" });
+    if (await checkerBtn.isDisabled()) {
+      step("QA-192: the checker's reading close to a library field waits for a person's reason (button off, the panel says why)", /needed to accept/.test(await panel.innerText()) && /stays off until you write why it is not the same/.test(await panel.innerText()));
+      await panel.getByLabel(/Reason/).fill("The name printed on the birth certificate, not the person's name today (test).");
+    }
+    await checkerBtn.click(); await settle();
     // #477 CI: the write can land after settle()'s fixed wait on a slow runner; poll for it, and still fail if it never lands.
     const landed = await (async () => { for (let i = 0; i < 40; i++) { const v = sql(`select status || '|' || (payload->>'label') from proposal_item where id = '${ids.decide}'`); if (v === "edited|Name on the birth certificate") return v; await p.waitForTimeout(200); } return sql(`select status || '|' || (payload->>'label') from proposal_item where id = '${ids.decide}'`); })();
     step("C11.14: accepting the checker's reading lands that reading", landed === "edited|Name on the birth certificate", landed);
