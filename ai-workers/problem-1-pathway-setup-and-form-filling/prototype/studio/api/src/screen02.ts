@@ -167,5 +167,7 @@ export class Screen02Controller {
   @Post("intake/held/:id/approve") approveHeld(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { const p = obj(b).irccPage; return this.intake.decideHeld(actorOf(a), id, "approve", { note: noteOf(b), irccPage: typeof p === "string" ? p : undefined }); }
   @Post("intake/held/:id/reject") rejectHeld(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.intake.decideHeld(actorOf(a), id, "reject", { note: noteOf(b) }); }
   @Get("intake/held/:id/impact") impactOf(@Param("id") id: string) { return this.impact.review(id); }
+  /** C9.1 (P-138, P-175): Draft with AI for the held edition's new and reworded boxes; { mode: "replay" | "live", expected_worst_usd }. */
+  @Post("intake/held/:id/impact/draft") draftImpact(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.impact.draftAi(actorOf(a), id, obj(b) as { mode?: unknown; expected_worst_usd?: unknown }); }
   @Post("intake/held/:id/impact/accept") acceptImpact(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { const e = obj(b).expected; if (typeof e !== "number") fail("Send the number of form fields you reviewed (expected), so a changed comparison is not accepted unseen."); return this.impact.accept(actorOf(a), id, { expected: e as number }); }
 }

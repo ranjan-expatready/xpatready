@@ -150,6 +150,9 @@ export class Intake {
       if (!done.count) fail("Someone decided this file at the same moment. Refresh to see it.", HttpStatus.CONFLICT);
       // #300 m4: an approved older or new edition is set aside, not rejected as a source (its approval stays on record).
       const setAside = h.outcome !== "held";
+      // C9.1 break M4: the waiting AI proposals drafted for this held edition go with it; none can be accepted later.
+      const jobs = (await this.db.draftingJob.findMany({ where: { workspaceId: h.workspaceId, kind: "field_map_impact", detail: { path: ["held"], equals: id } }, select: { id: true } })).map((j) => j.id);
+      if (jobs.length) await this.db.proposalItem.updateMany({ where: { runId: { in: jobs }, status: "waiting" }, data: { status: "rejected", decidedBy: actor.id, decidedAt: new Date(), decisionReason: `The edition was set aside by ${actor.name}: ${body.note!.trim()}`.slice(0, 500) } });
       await this.audit.log(h.workspaceId, actor.id, setAside ? "set aside" : "rejected", "held file", h.code ?? h.fileName, setAside ? `${actor.name} set aside ${h.editionLabel ?? h.fileName} (an edition not used): ${body.note!.trim()}` : `${actor.name} rejected ${h.editionLabel ?? h.fileName} as a source: ${body.note!.trim()}`, undefined, h.combinationId ?? undefined);
       return { outcome: setAside ? "set aside" : "rejected" };
     }
