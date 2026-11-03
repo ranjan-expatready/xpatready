@@ -61,7 +61,7 @@ Principles: don't follow blindly; evidence, not vanity numbers; simple, no quali
 * **Start sessions only in a founder-typed turn**, all of them at once, before the founder leaves; a timed check or a message cannot start sessions (it can only leave a card).
 * **Every 30-minute check:** run `tools/flow-watch.sh` and act on every RED; read every open PR's new comments and answer "Question for the tech lead" on the PR; a lane with no push in 90 minutes gets "continue" plus its next step, and if it still does not move by the next check, its capability goes to another idle lane with a stand-down message to the first; merge records PRs at least hourly; report the weekly plan %.
 * **Tokens:** hand over at about 250k tokens, no exception (the Lead's re-read context was 29% of local cost); read-only work on Sonnet subagents; stop the timed check when nothing is in flight.
-* **Tests:** each change runs the full suite once, in the merge queue; the PR itself runs only the suites its change can affect; the suite is split into 8 parallel parts (GitHub Pro's machines).
+* **Tests:** each change runs the full suite once, in the merge queue; the PR itself runs only the suites its change can affect. Change the number of parallel parts only on measured evidence (start-up per part, machine wait, flaky failures), with pros and cons stated; never add capacity because it is available.
 * **Leads:** a new series per restart ("Lead 1 · 3 Nov", …); two idle standbys started in the first founder-typed turn; the founder talks only to the current Lead, which relays every lane's questions.
 
 ## Product rules (still in force)
