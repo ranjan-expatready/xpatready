@@ -8,6 +8,7 @@ import { execFileSync } from "node:child_process";
 import { seedField } from "./seed_library.cjs";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { acceptCleanOneByOne } from "./lib/accept-draft.ts";
 
 const PORT = Number(process.argv[2] ?? 4403), NAME = process.argv[3] ?? "aiorch", DB = `xr_studio_${NAME}`; // a lane passes its own port and name
 const STUDIO = join(import.meta.dirname, "..");
@@ -102,7 +103,7 @@ const done = (b: any) => b && !["QUEUED", "RUNNING"].includes(b.status) && !b.jo
   await until(async () => (await call("GET", `/jobs/${jobId}`)).body?.status === "COMPLETED");
   let job = (await call("GET", `/jobs/${jobId}`)).body;
   ok("replay of the saved real IMM 5257 run (labelled, US$0) is compared with the library", job.mode === "REPLAY" && job.costUsd === 0 && job.items.length > 50, `${job.runId}: ${job.items.length} items`);
-  await call("POST", `/jobs/${jobId}/accept-clean`, { outcome: "REUSE" }); await call("POST", `/jobs/${jobId}/accept-clean`, { outcome: "NEW" });
+  await acceptCleanOneByOne(call, jobId, ["REUSE", "NEW"]);
   const changed = job.items.find((i: any) => i.proposedKey === "person.occupation_title");
   if (changed) await call("POST", `/jobs/${jobId}/items/${changed.id}`, { decision: "CHANGED", key: "person.employment_activity" });
   job = (await call("GET", `/jobs/${jobId}`)).body;

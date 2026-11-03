@@ -5,6 +5,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { acceptCleanOneByOne } from "./lib/accept-draft.ts";
 const OFFICIAL = join(import.meta.dirname, "..", "..", "..", "official-sources", "ircc");
 let PORT = 0, DB = "";
 const call = async (method: string, path: string, body?: unknown, actor = "user-A") => {
@@ -42,7 +43,7 @@ export async function fillAllKinds(port: number, db: string) {
   let r = await call("POST", `/attachments/${att.id}/draft`, { mode: "replay", runFile: run.file });
   const jobId = r.body?.id ?? sql(`select id from drafting_job where combination_id='${sv}' and kind='field_map' order by started_at desc limit 1`);
   await until(async () => (await call("GET", `/jobs/${jobId}`)).body?.status === "COMPLETED");
-  for (const o of ["REUSE", "NEW"]) await call("POST", `/jobs/${jobId}/accept-clean`, { outcome: o });
+  await acceptCleanOneByOne(call, jobId, ["REUSE", "NEW"]);
   let job = (await call("GET", `/jobs/${jobId}`)).body;
   for (const i of job.items.filter((x: any) => x.decision === "PENDING")) await call("POST", `/jobs/${jobId}/items/${i.id}`, { decision: "ACCEPTED", note: "Test: a different meaning from the library field that could fit." });
   r = await call("POST", `/jobs/${jobId}/apply`, { who: "each_applicant" }); log("apply", r.status, r.body?.new_fields);

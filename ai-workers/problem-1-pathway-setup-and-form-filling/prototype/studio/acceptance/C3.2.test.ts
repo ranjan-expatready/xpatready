@@ -1,21 +1,29 @@
-// C3.2 — The reviewer accepts, edits or rejects each field-mapping proposal; bulk accept only for clean reuse; Undo.
-// Status (qa/CAPABILITIES.md, 1 Nov): Not tested. AT-14 checks P-149's "an edit is a new version" at the library (after
-// apply a change is made there, AT-12). Missing (found writing this): the form-field page's bulk accept also
-// takes new definitions (accept-clean with outcome NEW), and a bulk accept there has no one Undo (no batch id, no route).
-// Decisions: P-121 (bulk for High only, one Undo for the batch, each item re-checked), P-149 (one door; an edit is a
-// new version), BR-7 (a new field next to a near library field needs a reason), P-63 (form field / shared field words).
-// US$0: the saved real IMM 5257 answer (21 Oct) is replayed; no model, no live switch, ledger checked unchanged.
+// C3.2 — The reviewer accepts, edits or rejects each field-mapping proposal; bulk accept only for High exact reuse; one
+// Undo for the batch.
+// Decisions: P-121 (bulk accept for High only: the rules pass and both AI rounds agree; one Undo for the batch; each item
+// re-checked by the rule engine), P-288 (2) (Ready field-map items go through To review's one door), P-149 (one door; an
+// edit is a new version), BR-7 (a new field next to a near library field needs a reason), P-63 (form field / shared field).
+// US$0: the saved real IMM 5257 answer (21 Oct) is replayed; no model, no live switch, ledger checked unchanged. No
+// checker round is recorded for IMM 5257 yet (the paid route-2 run waits for the founder's Go, P-287 (4)), so every item
+// would be one round and none High: this check records a Sample checker round as the paid runner would (the technique of
+// tests/check_gcore_b4_field_map_check.ts), agreeing on every field but one exact reuse match it reads as another kind of
+// answer, so the replay has High items and one Low reuse item. The planted run is removed at the end.
 // Screen parts (the form-field page's buttons) are the API contract they call: POST /jobs/:id/items/:item,
-// POST /jobs/:id/accept-clean, POST /jobs/:id/apply; Undo of a bulk accept is expected at
-// POST /review/proposals/undo/:batchId (the queue's one Undo), with the batch id returned by accept-clean.
+// POST /jobs/:id/accept-clean (returns batchId and what it left, with why), POST /jobs/:id/apply; the Undo of a bulk
+// accept is the queue's one Undo, POST /review/proposals/undo/:batchId.
 // Run (from prototype/studio):
-//   zsh tools/isolated.sh acc_c2 4570 start && ./node_modules/.bin/tsx acceptance/C3.2.test.ts 4570 xr_studio_acc_c2 ; zsh tools/isolated.sh acc_c2 4570 stop
-// Expected today (main 931cb99a, run 1 Nov 2026 on an isolated copy, US$0): 19 pass, 3 fail — failing: AT-7
-// (accept-clean with outcome NEW accepts 22 new definitions together; C3.2 allows bulk only for clean reuse) and AT-9
-// twice (accept-clean returns no batch id, so there is no one Undo for a bulk accept) because the form-field page
-// predates P-121's batch Undo. AT-14 (P-149: an edit of a shared field is a new version) passes.
+//   zsh tools/isolated.sh acc_c2 4570 start && ./node_modules/.bin/tsx --tsconfig api/tsconfig.json acceptance/C3.2.test.ts 4570 xr_studio_acc_c2 ; zsh tools/isolated.sh acc_c2 4570 stop
+// History: on main 931cb99a (1 Nov) and 1a79dbf9 (3 Nov re-test) 19 pass, 3 fail: AT-7 (accept-clean with outcome NEW
+// accepted 22 new definitions together) and AT-9 twice (no batch id, so no one Undo); bulk accept also took one-round
+// (not High) reuse matches. Expected from the C3.2 fix (forms, 3 Nov): 22 pass.
 // Exit: 0 all pass · 1 a check failed · 2 setup missing or refused (demo port or database, copy not reachable, sample).
+import { createHash } from "node:crypto";
+import { readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { checkCopy, guard, needCombo, sqlFor, stop } from "./lib/pack1.ts";
+import { checkerJob, FIELD_MAP_CHECK } from "../api/src/field-map-check.ts";
+import { roundJob, RUNS } from "../api/src/rounds.ts";
+import { PROTOTYPE } from "../api/src/core.ts"; // the run line passes api/tsconfig.json (core.ts has decorators), as C11.14
 const PORT = Number(process.argv[2] ?? 4570), DB = process.argv[3] ?? "xr_studio_acc_c2";
 guard(PORT, DB); // before anything reads the database or calls the copy (never the demo)
 let pass = 0, fail = 0;
@@ -42,6 +50,24 @@ const setupMissing = stop;
   const att = vv && sql(`select id from source_attachment where combination_id='${vv}' and file_name='imm5257e.pdf'`);
   if (loaded.status >= 300 || !vv || !att) setupMissing("the sample (Visitor visa with IMM 5257) did not load");
   const ledger0 = await ledger();
+  // The Sample checker round (see the header): the draft's own answer, with one field the library already has read as a
+  // date instead of text, so that exact reuse match is Low (the two readings differ) and the rest can be High.
+  const DRAFT_FILE = "studio-fieldmap-imm5257e-live-20261021t060247723z.json";
+  const draft = JSON.parse(readFileSync(join(RUNS, DRAFT_FILE), "utf8"));
+  const answer = JSON.parse(draft.raw_output) as { canonical_fields: { id: string; value_type: string }[]; entries: { outcome: string; fact: string | null }[] };
+  const inLibrary = new Set(sql("select distinct canonical_field_key from canonical_field").split("\n"));
+  const used = new Set(answer.entries.filter((e) => e.outcome === "mapped" && e.fact).map((e) => e.fact!));
+  const LOW = answer.canonical_fields.find((c) => c.value_type === "text" && used.has(c.id) && inLibrary.has(c.id))?.id;
+  const cj = checkerJob(draft, "IMM 5257 (09-2023)"), job = cj && roundJob(cj.step, true, cj.ctx);
+  if (!LOW || !job) setupMissing("no exact reuse match to read differently, or no checker job for IMM 5257");
+  // Review m1: a run of this check killed before its exit handler leaves its planted round; sweep any such leftover first.
+  for (const f of readdirSync(RUNS)) if (f.endsWith("-c32test.json")) rmSync(join(RUNS, f), { force: true });
+  const planted = join(RUNS, `${job!.job_id}-live-20261103t000000000z-c32test.json`);
+  writeFileSync(planted, JSON.stringify({ caller: "live", contract_valid: true, raw_output: JSON.stringify({ ...answer, canonical_fields: answer.canonical_fields.map((c) => (c.id === LOW ? { ...c, value_type: "date" } : c)) }),
+    drafting_run: { run_id: `${job!.job_id}-live-c32test`, status: "completed", kind: "field_map", inputs: { combination: job!.combination, official_files: job!.inputs, configuration_version: "studio-add-form" }, usage: { cost_usd: 0, input_tokens: 0, output_tokens: 0 }, attempts: [{ n: 1, outcome: "ok" }] },
+    launch_evidence: { template_sha256: createHash("sha256").update(readFileSync(join(PROTOTYPE, "p2", "prompts", FIELD_MAP_CHECK.check!))).digest("hex") } }));
+  const unplant = () => rmSync(planted, { force: true });
+  process.on("exit", unplant);
   const d = await call("POST", `/attachments/${att}/draft`, { mode: "replay" });
   const jobId: string = d.body?.id;
   if (!jobId || !(await until(async () => (await call("GET", `/jobs/${jobId}`)).body?.status === "COMPLETED"))) setupMissing("the saved IMM 5257 answer did not replay");
@@ -88,27 +114,34 @@ const setupMissing = stop;
   r = await decide(reuseA.id, { decision: "PENDING" });
   ok("C3.2 AT-6 Undo puts one decided proposal back to undecided, with no field chosen", r.status < 300 && r.body.decision === "PENDING" && !r.body.decidedKey, r.body);
 
-  // ── AT-7 bulk accept: only clean reuse
+  // ── AT-7 bulk accept: only High exact reuse (P-121)
   all = await items();
   const waitingNew = all.filter((i) => i.outcome === "NEW" && i.decision === "PENDING").length;
   r = await call("POST", `/jobs/${jobId}/accept-clean`, { outcome: "NEW" }, "user-C");
   const newAfter = (await items()).filter((i) => i.outcome === "NEW" && i.decision === "PENDING").length;
-  ok("C3.2 AT-7 refusal: bulk accept of new definitions is refused (bulk accept is only for clean reuse); every new proposal stays undecided", r.status >= 400 && newAfter === waitingNew, { status: r.status, body: r.body, waitingNew, newAfter });
+  ok("C3.2 AT-7 refusal: bulk accept of new definitions is refused in words (409: only High exact reuse is accepted together); every new proposal stays undecided", r.status === 409 && /Only High exact reuse/.test(words(r)) && waitingNew > 0 && newAfter === waitingNew, { status: r.status, body: r.body, waitingNew, newAfter });
   r = await call("POST", `/jobs/${jobId}/accept-clean`, {}, "user-P");
   ok("C3.2 AT-8 refusal: a client cannot bulk accept (403)", r.status === 403, r.status);
   const before = await items();
+  const high = before.filter((i) => i.outcome === "REUSE" && i.decision === "PENDING" && i.confidence === "ready" && i.bulkWhy === null);
+  const low = before.filter((i) => i.outcome === "REUSE" && i.decision === "PENDING" && i.bulkWhy);
   r = await call("POST", `/jobs/${jobId}/accept-clean`, {}, "user-C");
   const after = await items();
   const changed = after.filter((i) => before.find((b) => b.id === i.id)?.decision !== i.decision);
-  ok("C3.2 AT-8 bulk accept takes every undecided exact reuse match and nothing else (no new, ambiguous or conflicting proposal)", r.status < 300 && changed.length === before.filter((i) => i.outcome === "REUSE" && i.decision === "PENDING").length && changed.length > 0 && changed.every((i) => i.outcome === "REUSE" && i.decision === "ACCEPTED" && i.decidedKey === i.matchedKey), { accepted: r.body?.accepted, changed: changed.length });
+  const lowAfter = after.filter((i) => low.some((l) => l.id === i.id));
+  ok("C3.2 AT-8 [P-121] bulk accept takes every undecided High exact reuse match (both rounds agree, rules pass) and nothing else; a reuse match whose two readings differ stays undecided and is listed with why",
+    r.status < 300 && changed.length > 0 && changed.length === high.length && changed.every((i) => high.some((h) => h.id === i.id) && i.decision === "ACCEPTED" && i.decidedKey === i.matchedKey)
+    && low.length > 0 && low.some((l) => l.proposedKey === LOW) && lowAfter.every((i) => i.decision === "PENDING") && low.every((l) => (r.body?.left ?? []).some((x: { id: string; why: string }) => x.id === l.id && /differ|checker/i.test(x.why))),
+    { accepted: r.body?.accepted, changed: changed.length, high: high.length, low: low.map((l) => [l.proposedKey, l.bulkWhy]), left: (r.body?.left ?? []).length });
   const batchId = r.body?.batchId ?? r.body?.batch_id;
   const undo = batchId ? await call("POST", `/review/proposals/undo/${batchId}`, undefined, "user-C") : { status: 0, body: "accept-clean returned no batch id" };
   const undone = (await items()).filter((i) => changed.some((c) => c.id === i.id) && i.decision === "PENDING").length;
   ok("C3.2 AT-9 one Undo for the bulk accept: the batch id it returns undoes every proposal it accepted, together", !!batchId && undo.status < 300 && undone === changed.length, { batchId, undo: undo.status, body: undo.body, undone, of: changed.length });
   if (batchId) {
     const again = await call("POST", `/review/proposals/undo/${batchId}`, undefined, "user-C");
-    ok("C3.2 AT-9 refusal: the same Undo twice is refused (409) and changes nothing", again.status === 409, again.status);
-  } else ok("C3.2 AT-9 refusal: the same Undo twice is refused (409) and changes nothing", false, "no batch Undo to try (see AT-9)");
+    const still = (await items()).filter((i) => changed.some((c) => c.id === i.id) && i.decision === "PENDING").length;
+    ok("C3.2 AT-9 refusal: the same Undo twice is refused (409, in words) and changes nothing", again.status === 409 && /Already undone/.test(words(again)) && still === changed.length, { status: again.status, m: words(again), still });
+  } else ok("C3.2 AT-9 refusal: the same Undo twice is refused (409, in words) and changes nothing", false, "no batch Undo to try (see AT-9)");
 
   // ── AT-10 wrong item, stale after apply
   const otherJob = sql(`select id from drafting_job where id <> '${jobId}' limit 1`);
@@ -136,6 +169,7 @@ const setupMissing = stop;
     r.status < 300 && v1.startsWith(v0) && Number(sql(`select max(version) from canonical_field where canonical_field_key='${FK}'`)) === top0 + 1 && sql(`select status from canonical_field where canonical_field_key='${FK}' and version=${top0 + 1}`) !== "APPROVED", { status: r.status, before: v0, after: v1 });
   ok("C3.2 AT-13 the whole check spent nothing (ledger unchanged)", (await ledger()) === ledger0, { ledger0, now: await ledger() });
 
+  unplant();
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error("FAIL  C3.2 the check itself stopped:", e); process.exit(1); });
