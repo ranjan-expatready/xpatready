@@ -118,12 +118,13 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
   const appDate = known.get(`case|${APPLICATION_DATE}`)?.value;
   const agesOn = day(appDate) ? String(appDate) : today.toISOString().slice(0, 10);
   const agesOnWhy = day(appDate) ? "Ages are worked out on the application date." : "Until the application date is answered, ages for the 18-or-older lines are worked out on today's date (UTC); a line whose condition reads the release's age asks for the application date first.";
+  const placed = new Map(((s.placements ?? []) as { fact: string; repeats?: string | null }[]).map((p) => [p.fact, p] as const));
   /** The questions to answer first: a calculated field is replaced by the questions it is worked out from (B-M3). */
   const toAsk = (keys: string[], about: string): Missing[] => {
     const out = new Map<string, Missing>();
     for (const k of keys) {
       const d = derived.find((x) => x.id === k);
-      const has = (f: string) => known.has(`${isFilingFact(f) ? FILING : about}|${f}`); // SH3 R5 (id rule)
+      const has = (f: string) => known.has(`${isFilingFact(f, placed.get(f)) ? FILING : about}|${f}`); // SH3 R5, with the placement (C7.7, contract item (c))
       const all = d ? [...(d.inputs ?? []), ...(d.reference ? [d.reference] : [])] : [k];
       const open = all.filter((f) => !has(f));
       for (const f of open.length ? open : all) out.set(f, { key: f, question: words(f), answered: !open.length });
