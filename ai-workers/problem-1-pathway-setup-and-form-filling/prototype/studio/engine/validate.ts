@@ -13,6 +13,7 @@ import { factSourceProblems, factWords, who } from "./sources.ts";
 import { oathMappedProblems } from "./form-steps.ts";
 import { eligibilityChanges, gateProblems } from "./eligibility-gates.ts";
 import { sourceKey } from "../contracts/resolver.ts"; // SH3 R8
+import { NO_FIELD_MAP } from "./setup-checklist.ts";
 import { sourceChanges } from "./source-register.ts"; // G1 BR-9: the "Source" lines only; the gate stays out of validate()
 
 // C-11: a field map's form field list, read once per file (paths are relative to the Solution 1 folder, as in fill.ts).
@@ -29,7 +30,7 @@ const nodeValid = ajv.getSchema(`${schema.$id}#/definitions/node`)!;
 export const isNode = (n: unknown) => nodeValid(n) as boolean;
 
 /** `label` is the item in words (a question's meaning) where `item` is a field code; screens show it, never the code. */
-export type Problem = { level: "error" | "warning"; where: string; item: string; message: string; label?: string; /** The person role it is about (W1-15 slice 2: "Needs you" puts it on its row). */ role?: string };
+export type Problem = { level: "error" | "warning"; where: string; item: string; message: string; label?: string; /** The person role it is about (W1-15 slice 2: "Needs you" puts it on its row). */ role?: string; /** V3 B1: "no_field_map" (engine/setup-checklist.ts waitsForMap). */ code?: string };
 const ORDERED = new Set(["gt", "gte", "lt", "lte"]);
 const BIRTH = "person.date_of_birth";
 
@@ -67,7 +68,7 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
     // V3 B1 (P-297 (3)): the same reading as the case gate (engine/programs.ts form_without_edition: a PDF form field map
     // with entries; an Online line is read from its PDF too, P-102), so a release is never one no firm can open a case on.
     if ((f.form_kind ?? "data_form") === "data_form" && !(s.field_maps as { form_number: string; channel?: string; entries: unknown[] }[]).some((m) => m.form_number === f.form_number && m.channel !== "ONLINE" && m.entries.length))
-      out.push({ level: "error", where: "Forms", item: f.form_number, message: `No form fields mapped yet for ${f.form_number}: a case could not fill it, so firms could not open cases on this release. Map its form fields (Draft setup), or remove the form.` });
+      out.push({ level: "error", where: "Forms", item: f.form_number, code: NO_FIELD_MAP, message: `No form fields mapped yet for ${f.form_number}: a case could not fill it, so firms could not open cases on this release. Map its form fields (Draft setup), or remove the form.` });
   }
   const unplaced = new Map<string, number>();
   for (const m of s.field_maps) for (const e of m.entries) {

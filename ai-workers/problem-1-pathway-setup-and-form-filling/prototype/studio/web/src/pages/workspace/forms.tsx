@@ -27,6 +27,7 @@ import { useLibraryFields, WHO, whoLabel } from "@/pages/configuration";
 import { ItemSources, useItemNumbers } from "@/components/source-panel";
 import { attachmentFor, pendingForms, ReadingCell, ReadingSteps, SourcesLine, StepNotices } from "@/pages/sources";
 import { FormPicker } from "@/components/forms";
+import { waitsForMap } from "../../../../engine/setup-checklist";
 import { DoneSinceNotice, FOCUS_RING, useFocusItem } from "@/components/focus-item";
 import { cn } from "@/lib/utils";
 import { useApi } from "@/lib/api";
@@ -391,7 +392,8 @@ function FormsProblems({ id, filing }: { id: string; filing: { level: "error" | 
   const o = useApi<CombinationView>(["combination", id], `/combinations/${id}`);
   const sum = useApi<CombinationSummary>(["combination-summary", id], `/combinations/${id}/summary`);
   const shown = new Set(filing.map((x) => x.message));
-  const more = (o.data?.draft.problems ?? []).filter((p) => p.level === "error" && p.where === "Forms" && !shown.has(p.message));
+  // V3 B1 review (minor): a form with no field map is its row's "No field map yet", never a second line here.
+  const more = (o.data?.draft.problems ?? []).filter((p) => p.level === "error" && p.where === "Forms" && !shown.has(p.message) && !waitsForMap(p));
   const releasedAll = (sum.data?.setup?.steps ?? []).flatMap((st) => st.open).filter((i) => i.focus === "forms:problems" && i.fromRelease);
   // Devin on #622: a startable-check cause (e.g. a form with no fields mapped) says itself, never "this draft no longer has it".
   const startable = releasedAll.filter((i) => i.startable);

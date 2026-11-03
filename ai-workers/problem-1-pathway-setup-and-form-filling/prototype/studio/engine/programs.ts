@@ -7,6 +7,7 @@ import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
 import { isFilingFact } from "./resolver.ts";
 import { STATUS_WORDS } from "../contracts/status-words.ts";
+import { waitsForMap } from "./setup-checklist.ts";
 
 type Participant = { role: string; label: string; min: number; max: number; applies?: boolean };
 /** The parts of a snapshot these rules read (the snapshot's own lists are untyped until the team's contract lands). */
@@ -71,7 +72,8 @@ export function missingItems(s: Snapshot, participants: Participant[], problems:
   if (roles.length) out.push(line("role_without_questions", `No questions yet for ${roles.join(", ")}.`, "Add questions", " (Configuration › Questions and sections)"));
   // How a form is filed: its own line.
   const isFiling = (p: Problem) => p.where === "Forms";
-  const filing = problems.filter((p) => p.level === "error" && isFiling(p));
+  // V3 B1: a form with no field map is the form_without_edition line above, never a second "cannot be filed" line.
+  const filing = problems.filter((p) => p.level === "error" && isFiling(p) && !waitsForMap(p));
   if (filing.length) { const cause = `${plural(filing.length, "form")} cannot be filed as set (first: ${filing[0].message})`; out.push({ code: "filing_problem", step: "Change how it is filed", cause, text: `${cause} Next step: change how ${filing.length === 1 ? "it is" : "they are"} filed (Overview › Forms), or add what it needs.` }); }
   // C11.12 BR-7: a role that may be an applicant with no filing mode, named with its step.
   const people = problems.filter((p) => p.level === "error" && p.where === "People");

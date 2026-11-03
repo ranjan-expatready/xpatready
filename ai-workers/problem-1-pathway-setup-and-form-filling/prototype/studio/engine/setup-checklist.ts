@@ -71,7 +71,12 @@ export function needsYouItems(c: SetupChecklist, actor: { id: string; duties: re
 
 /** The official-pages record (forms lane, queue item 2). Until it lands every combination reads "no_record". */
 export type OfficialPages = { state: "no_record" } | { state: "proposed"; matches: number } | { state: "confirmed"; by: string | null; as: Tier };
-export type ProblemIn = { level: "error" | "warning"; where: string; item: string; message: string };
+export type ProblemIn = { level: "error" | "warning"; where: string; item: string; message: string; code?: string };
+/** V3 B1 (P-297 (3)): a form with no field map blocks release (engine/validate.ts), but it is already one step of its own
+ *  ("Map N forms", the missing line "No form fields mapped yet"), so the lists that count problems leave it out: one
+ *  cause, one line, one count. */
+export const NO_FIELD_MAP = "no_field_map";
+export const waitsForMap = (p: object) => (p as { code?: string }).code === NO_FIELD_MAP;
 
 /** Everything the checklist reads for one combination, already loaded by the API (rows()) or a check. */
 export type SetupInput = {
@@ -126,11 +131,11 @@ export function setupChecklistOf(s: SetupInput, key = ""): SetupChecklist {
     const n = s.proposals[kind] ?? 0; if (!n) continue;
     const t = KIND_STEP[kind]; proposalsBy[t.step] += n; if (t.part) partProposals[t.part] += n;
   }
-  const errors = s.problems.filter((p) => p.level === "error");
+  const errors = s.problems.filter((p) => p.level === "error" && !waitsForMap(p));
   const problemsBy = Object.fromEntries(STEP_KEYS.map((k) => [k, 0])) as Record<StepKey, number>;
   const partProblems = { documents: 0, questions: 0 };
   for (const p of errors) { const t = stepOfWhere(p.where); problemsBy[t.step]++; if (t.part) partProblems[t.part]++; }
-  const relErrors = (s.release?.problems ?? []).filter((p) => p.level === "error");
+  const relErrors = (s.release?.problems ?? []).filter((p) => p.level === "error" && !waitsForMap(p));
   const relBy = Object.fromEntries(STEP_KEYS.map((k) => [k, 0])) as Record<StepKey, number>;
   // X1 (review M1): step 4's release problems are split by part, so a Not ready item lands on the tab that holds it.
   const relPart = { documents: 0, questions: 0 };

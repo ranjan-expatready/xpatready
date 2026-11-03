@@ -8,6 +8,7 @@
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { client, recorder } from "./runtime/api.ts";
+import { NO_FIELD_MAP, setupChecklistOf, type SetupInput } from "../engine/setup-checklist.ts";
 
 const PORT = Number(process.argv[2] ?? 4442), DB = process.argv[3] ?? "xr_studio_screens_b1";
 const { call, sql } = client(PORT, DB);
@@ -41,6 +42,13 @@ const openCase = (id: string, ref: string) => call("POST", "/runtime/cases", { c
   const sub = await call("POST", `/combinations/${six}/submit`, { note: "B1: release with forms that have no field map" }, AUTHOR);
   const subErrors = unmappedErrors((sub.body?.errors ?? []) as Problem[]);
   ok("B1 fail: submitting for release is refused, and the refusal names exactly the forms with no field map", sub.status === 400 && subErrors.map((p) => p.item).sort().join() === missing.join() && releases(six) === rel0, { status: sub.status, named: subErrors.map((p) => p.item), words: words(sub).slice(0, 200) });
+  // Review of 3b17711d (Major 1): one cause, one missing line. The forms with no field map are the "No form fields mapped
+  // yet" line; the "cannot be filed as set" line counts only what else is wrong (the "condition in words" forms).
+  type Row = { combinationId?: string; missing?: { code: string; text: string }[] };
+  const rowsOf = (o: unknown): Row[] => Array.isArray(o) ? o.flatMap(rowsOf) : o && typeof o === "object" ? [...((o as Row).combinationId === six && (o as Row).missing ? [o as Row] : []), ...Object.values(o).flatMap(rowsOf)] : [];
+  const lines = rowsOf((await call("GET", "/catalogue", undefined, AUTHOR)).body)[0]?.missing ?? [];
+  const mapLines = lines.filter((m) => /No form fields mapped yet/.test(m.text));
+  ok("B1 Major 1: the forms with no field map are one missing line naming them all, never also a \"cannot be filed\" line", mapLines.length === 1 && mapLines[0].code === "form_without_edition" && missing.every((f) => mapLines[0].text.includes(f)), lines.map((m) => `${m.code}: ${m.text.slice(0, 120)}`));
   const none = await openCase(six, "B1-SIX");
   ok("B1 fail: opening a case on a combination that was never released is still refused", none.status >= 400, none.status);
 
@@ -69,6 +77,16 @@ const openCase = (id: string, ref: string) => call("POST", "/runtime/cases", { c
   const del = await call("DELETE", `/combinations/${vv}/forms/${encodeURIComponent(F)}`, undefined, AUTHOR);
   const draft3 = (await call("GET", `/combinations/${vv}`)).body?.draft?.problems as Problem[];
   ok("B1 pass: with that form taken out of the draft again, no form-map error is left", del.status < 300 && unmappedErrors(draft3 ?? []).length === 0, { status: del.status, words: words(del).slice(0, 200) });
+
+  // ── Review of 3b17711d (Major 2): the setup checklist counts a form with no field map once ("Map 1 form"), not again as a
+  // form problem. The same input without the tag counts it twice (the fail case: what the error alone would do).
+  const input = (code?: string): SetupInput => ({ combinationId: "b1", retired: false, release: null, pages: { state: "no_record" }, people: { roles: 1, applicants: 1, saved: true, tier: "expert" },
+    forms: { lines: 1, fromLibrary: 0, draftable: 0, unmapped: 1, sources: 0 }, proposals: {}, documents: { lines: 0, rolesWithout: 0 }, questions: 0, held: 0, running: null, changes: 1, review: { stage: "submit", submittedBy: null, authors: [] },
+    problems: [{ level: "error", where: "Forms", item: "IMM 5475", message: "No form fields mapped yet for IMM 5475: …", ...(code ? { code } : {}) }] } as SetupInput);
+  const formsOpen = (c: ReturnType<typeof setupChecklistOf>) => (c.steps.find((x) => x.key === "forms")?.open ?? []).map((i) => `${i.kind}:${i.count}`);
+  const tagged = formsOpen(setupChecklistOf(input(NO_FIELD_MAP))), untagged = formsOpen(setupChecklistOf(input()));
+  ok("B1 Major 2 pass: Forms says \"Map 1 form\" once and no form problem for the same form", tagged.includes("map_forms:1") && !tagged.some((k) => k.startsWith("fix_problems")), tagged);
+  ok("B1 Major 2 fail: without the tag the same form would be counted twice (Map 1 form and Fix 1 problem)", untagged.includes("map_forms:1") && untagged.includes("fix_problems:1"), untagged);
 
   process.exit(summary() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(2); });

@@ -15,7 +15,7 @@ import { questionCounts } from "../../engine/runtime/questionnaires.ts";
 import { checkedOf, comparePaths, isLive, missingItems, needsWork, newestEdition, waitsForPerson, nextActionOf, rowCounts, statusOf, STATUS_TEXT } from "../../engine/programs.ts";
 import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snapshot.ts";
 import { filedOf, progressFollows, setupProgress } from "../../engine/structure.ts";
-import { forViewer, setupChecklistOf, type OfficialPages, type SetupInput } from "../../engine/setup-checklist.ts";
+import { forViewer, setupChecklistOf, waitsForMap, type OfficialPages, type SetupInput } from "../../engine/setup-checklist.ts";
 import type { CardSetup, ChipStatus, SetupChecklist, StepKey, ViewerChecklist } from "../../contracts/setup-checklist.ts";
 import type { ProposalKind } from "../../contracts/proposal-item.ts";
 import { PATHWAY_TYPE_LABEL, type PathwayType } from "../../contracts/structure.ts";
@@ -226,7 +226,8 @@ export class Programs {
       const status: Status = statusOf(!!rel, missing);
       const checked = checkedOf(c.attachments.map((x) => { const d = new Date(official.get(x.sha256) || x.createdAt); return Number.isNaN(d.getTime()) ? x.createdAt : d; }), now);
       const docNames = (snapshot.document_requirements as { document_type: string }[]).map((d) => d.document_type);
-      const errors = draftProblems.filter((x) => x.level === "error");
+      // V3 B1: a form with no field map is counted once, as "Map N forms" (forms.unmapped), not again as an error here.
+      const errors = draftProblems.filter((x) => x.level === "error" && !waitsForMap(x));
       const aiProposals = proposals.reduce((s, x) => s + x.n, 0);
       // New editions held for impact review (P-32) of a form this row files or has as a source, or uploaded on this row.
       const codes = new Set(forms.map((f) => f.code));
