@@ -20,6 +20,7 @@ import { usedInLabels } from "./where-used.ts";
 import { lockItem, refuseRetired } from "./library-items.ts";
 import { checkCondition } from "../../engine/validate.ts";
 import { nearMatches } from "../../engine/near.ts";
+import { p121Rating, P121_WHY } from "../../engine/agreement.ts";
 
 type Tx = Prisma.TransactionClient;
 type Client = Db | Tx;
@@ -181,6 +182,9 @@ export async function insertProposals(db: Client, workspaceId: string, items: (N
       if (near.length) x.identity = { ...x.identity, near: [...new Set([...x.identity.near, ...near.map((n) => n.name)])].slice(0, 10), nearReason: x.identity.nearReason ?? near[0].why };
       batchNew.push(me);
     }
+    // QA-176 (P-121): Ready only with both AI rounds read and agreeing and every rule passed, whoever produced the item
+    // (the replayed field-map runs have one round): the one rating, at the one door (engine/agreement.ts p121Rating).
+    ({ confidence: x.confidence, reason: x.reason } = p121Rating(x));
     // C11.13 (BAND_TIPS): an item close to a library item is never Ready: a person reads the near match and its reason.
     if (x.identity.near.length && x.confidence === "ready") { x.confidence = "check"; x.reason = `Close to ${x.identity.near.slice(0, 3).join(", ")}: ${x.identity.nearReason}${x.reason ? ` ${x.reason}` : ""}`.slice(0, 500); }
     rows.push({ id: x.id, workspaceId, kind: x.kind, runId: x.runId, step: x.step, formEdition: x.scope.formEdition, combinationId: x.scope.combinationId, landsOn: x.landsOn,
@@ -470,6 +474,8 @@ export const PAGE_WORDS: Record<string, string> = { field_map: "form-field page,
  *  library. null when it can. */
 export function bulkWhy(r: Pick<Row, "confidence" | "origin" | "landsOn" | "step"> & { agreement?: string }): string | null {
   if (ON_ITS_PAGE.has(r.step)) return `It is decided on its ${(PAGE_WORDS[r.step] ?? "own page").split(",")[0]}.`;
+  // QA-176 (P-121): an AI item never goes with others without both rounds agreeing, even one stored Ready before the fix.
+  if (r.confidence === "ready" && r.origin === "ai" && r.agreement && r.agreement !== "agreed") return r.agreement === "one_round" ? P121_WHY.oneRound : P121_WHY.differ;
   // C2.6 (QA-157): a one-round Decide item is one its source leaves to a person (e.g. the visa office), not two readings.
   if (r.confidence !== "ready") return r.confidence === "check" ? "It needs a check first: open it and decide it on its own." : r.agreement === "one_round" ? "Its source leaves it to a person: open it and decide it on its own." : "Its two readings differ: open it and choose.";
   if (r.origin === "rules" && r.landsOn === "library") return "A rules item that adds to the shared library is accepted on its own.";
