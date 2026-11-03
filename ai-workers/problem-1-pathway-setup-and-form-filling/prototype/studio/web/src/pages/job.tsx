@@ -16,9 +16,10 @@ export const roleKeysInWords = (text: string) => text
   .replace(/\brole (form_subject|subject_[a-z0-9_]+)\b/g, (_, k: string) => `role of ${PERSON[k] ?? k.replace(/_/g, " ")}`)
   .replace(/\b(form_subject|subject_[a-z0-9_]+)\b/g, (k: string) => PERSON[k] ?? k.replace(/_/g, " "));
 const OUTCOME: Record<string, [string, string]> = { REUSE: ["ok", "Reuse existing"], NEW: ["info", "New definition"], AMBIGUOUS: ["warn", "Ambiguous"], CONFLICT: ["danger", "Conflict"] };
-/** What "accept the clean ones" leaves for a person: ambiguous and conflicting proposals, and new fields a library field
- *  could fit (BR-7: they need a reason). */
-const needsOwn = (i: { outcome: string; decision: string; candidates?: { score: number }[] | null }) => i.decision === "PENDING" && (["AMBIGUOUS", "CONFLICT"].includes(i.outcome) || (i.outcome === "NEW" && (i.candidates ?? []).some((c) => c.score >= 0.55)));
+/** What the bulk accept leaves for a person (C3.2, P-121): every waiting proposal but the High exact reuse matches. */
+const needsOwn = (i: { outcome: string; decision: string; bulkWhy?: string | null }) => i.decision === "PENDING" && !(i.outcome === "REUSE" && !i.bulkWhy);
+/** C3.2: what the form-field page's bulk accept answers (api/src/sources.ts acceptClean). */
+type CleanResult = { accepted: number; batchId: string | null; undoSeconds: number; left: { id: string; key: string; why: string }[] };
 const FILTERS = [["decide", "Needs a decision"], ["new", "New"], ["reuse", "Reuse"], ["decided", "Decided"], ["all", "All"]] as const;
 
 /** QA-75: what a step of AI work did, in words, by its kind (a rules step is never called an AI field map). */
@@ -57,7 +58,11 @@ export function JobPage() {
     };
     window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey);
   }, []);
-  const clean = useAction((outcome: "REUSE" | "NEW") => api(`/jobs/${jobId}/accept-clean`, { method: "POST", json: { outcome } }), { success: (r: any) => `${r.accepted} ${r.outcome === "REUSE" ? "exact reuse matches" : "new definitions"} accepted`, invalidate: [["job", jobId]] });
+  // C3.2 (P-121): only High exact reuse matches are accepted together, and one Undo takes the whole batch back.
+  const [batch, setBatch] = React.useState<{ id: string; n: number; seconds: number } | null>(null);
+  React.useEffect(() => { if (!batch) return; const t = window.setTimeout(() => setBatch(null), batch.seconds * 1000); return () => window.clearTimeout(t); }, [batch]);
+  const clean = useAction<void, CleanResult>(() => api(`/jobs/${jobId}/accept-clean`, { method: "POST", json: { outcome: "REUSE" } }), { success: (r) => `${r.accepted} High exact reuse match${r.accepted === 1 ? "" : "es"} accepted${r.left.length ? `; ${r.left.length} left to decide one by one` : ""}`, invalidate: [["job", jobId]], onDone: (r) => setBatch(r.batchId ? { id: r.batchId, n: r.accepted, seconds: r.undoSeconds } : null) });
+  const undoBatch = useAction<void, { undone: number }>(() => api(`/review/proposals/undo/${batch?.id}`, { method: "POST" }), { success: (r) => `Undone: ${r.undone} proposal${r.undone === 1 ? "" : "s"} undecided again`, invalidate: [["job", jobId]], onDone: () => setBatch(null) });
   if (j.isLoading) return <Spinner label="Loading the AI draft" />;
   if (j.isError) return <ErrorState title="This step could not be opened" description={(j.error as Error).message} />;
   const job = j.data;
@@ -67,6 +72,7 @@ export function JobPage() {
   const cid: string = job.combination?.id ?? id!; // QA-75 (break m1): links follow the job's combination
   const c = job.detail?.counts;
   const pending = items.filter((i) => i.decision === "PENDING");
+  const highReuse = pending.filter((i) => i.outcome === "REUSE" && !i.bulkWhy), lowReuse = pending.filter((i) => i.outcome === "REUSE" && i.bulkWhy);
   const shown = items.filter((i) => filter === "all" ? true : filter === "decided" ? i.decision !== "PENDING" : filter === "decide" ? needsOwn(i) : filter === "new" ? i.outcome === "NEW" : i.outcome === "REUSE");
   return (
     <div className="mx-auto max-w-7xl space-y-5 pb-24">
@@ -101,8 +107,8 @@ export function JobPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div role="tablist" className="flex gap-1">{FILTERS.map(([k, l]) => { const n = k === "all" ? items.length : k === "decided" ? items.length - pending.length : k === "decide" ? items.filter(needsOwn).length : items.filter((i) => i.outcome === (k === "new" ? "NEW" : "REUSE")).length; return <button key={k} role="tab" aria-selected={filter === k} onClick={() => setFilter(k)} className={cn("rounded-lg px-3 py-1.5 text-sm", filter === k ? "bg-primary/10 font-medium text-text-link" : "text-text-muted hover:bg-text/5")}>{l} <span className="text-xs">({n})</span></button>; })}</div>
             {job.status === "COMPLETED" ? <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={() => clean.mutate("REUSE")} busy={clean.isPending && clean.variables === "REUSE"} disabled={!items.some((i) => i.outcome === "REUSE" && i.decision === "PENDING")}><CheckCheck /> Accept exact reuse ({items.filter((i) => i.outcome === "REUSE" && i.decision === "PENDING").length})</Button>
-              <Button variant="secondary" onClick={() => clean.mutate("NEW")} busy={clean.isPending && clean.variables === "NEW"} disabled={!items.some((i) => i.outcome === "NEW" && i.decision === "PENDING" && !i.candidates.some((c: any) => c.score >= 0.55))} title="New definitions with no similar library field; anything close to an existing field needs its own decision"><CheckCheck /> Accept clean new definitions ({items.filter((i) => i.outcome === "NEW" && i.decision === "PENDING" && !i.candidates.some((c: any) => c.score >= 0.55)).length})</Button>
+              {batch ? <Button variant="secondary" onClick={() => undoBatch.mutate(undefined)} busy={undoBatch.isPending}><CornerUpLeft /> Undo the {batch.n} accepted together</Button> : null}
+              <Button variant="secondary" onClick={() => clean.mutate(undefined)} busy={clean.isPending} disabled={!highReuse.length} title={highReuse.length ? "Accepts every High exact reuse match (both AI rounds agree and the rules pass); each is checked again, and one Undo takes them all back." : lowReuse.length ? `None can be accepted together: ${lowReuse[0].bulkWhy}` : "No exact reuse match is waiting."}><CheckCheck /> Accept High exact reuse ({highReuse.length})</Button>
             </div> : null}
           </div>
           <p className="text-xs text-text-muted" data-keys>Keys: <kbd className="rounded border border-border px-1">J</kbd> / <kbd className="rounded border border-border px-1">K</kbd> next and previous proposal · <kbd className="rounded border border-border px-1">A</kbd> accept · <kbd className="rounded border border-border px-1">N</kbd> name it as a new shared field.</p>

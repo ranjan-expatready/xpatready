@@ -26,7 +26,7 @@ import { addFormLine, resolveKey } from "./form-lines.ts";
 import { lockItem, refuseRetired } from "./library-items.ts";
 import { ledgerRead } from "./cost-gate.ts";
 import { keyFor, sameName } from "./library-changes.ts";
-import { identityKeyOf, insertProposals, QUEUE_TX, landField, recordChoice, reviewRow, type NewProposal, type Work } from "./proposals.ts";
+import { BATCH_MAX, bulkWhy, decide, identityKeyOf, insertProposals, QUEUE_TX, landField, recordChoice, reviewRow, UNDO_SECONDS, type NewProposal, type Work } from "./proposals.ts";
 import { cleanLabel, labelProblem } from "../../contracts/programs.ts";
 import { START } from "../../contracts/start-setup.ts";
 import { ACTORS, Audit, Db, fail, need, NODE, OFFICIAL, PROTOTYPE, PY, ROOT, SOLUTION, STUDIO, VAR, VAR_ROOT, Workspace, type Actor } from "./core.ts";
@@ -786,18 +786,27 @@ export class Sources {
     return u;
   }
 
-  /** Accepts the clean proposals of one kind together: exact reuse matches, or new definitions with no similar library
-   *  field. Ambiguous and conflicting items always need their own decision. */
+  /** C3.2 (P-121, P-288 (2)): accepts the High exact reuse matches of one field-map draft together, through the queue's
+   *  one door (proposals.ts decide), so each item is checked again by the rule engine, the batch gets one id and one
+   *  Undo (POST /review/proposals/undo/:batchId) undoes it all. High = the rules pass and both AI rounds agree (bulkWhy);
+   *  an exact reuse match that is not High stays undecided and is listed with its reason. New definitions are never
+   *  accepted together: each makes a shared field, so each is decided on its own. */
   async acceptClean(actor: Actor, jobId: string, outcome: "REUSE" | "NEW" = "REUSE") {
     need(actor, "review");
+    const job = await this.db.draftingJob.findUnique({ where: { id: jobId }, select: { kind: true, status: true, workspaceId: true } });
+    if (!job) fail("This draft does not exist (the demo may have been reset).", HttpStatus.NOT_FOUND);
     // C2.6 (review Major 1 on #574, P-149 one door): a checklist's lines are never accepted together here.
-    const kind = (await this.db.draftingJob.findUnique({ where: { id: jobId }, select: { kind: true } }))?.kind;
-    if (kind === "checklist_draft") fail("A checklist's document lines are decided one by one on the review queue (To review), where accepting one writes it to the draft. Nothing was changed here.", HttpStatus.GONE);
-    const items = (await this.db.proposalItem.findMany({ where: { runId: jobId, status: "waiting" } })).map(reviewRow).filter((i) => i.outcome === outcome && (outcome === "REUSE" || !(i.candidates as any[]).some((c) => c.score >= 0.55)));
-    for (const i of items) await recordChoice(this.db, i.id, { choice: "ACCEPTED", decidedKey: outcome === "REUSE" ? i.matchedKey : i.proposedKey, by: actor.id, reason: outcome === "REUSE" ? "accepted with the other exact reuse matches" : "accepted with the other new definitions that have no similar library field" });
-    const job = await this.db.draftingJob.findUniqueOrThrow({ where: { id: jobId } });
-    await this.audit.log(job.workspaceId, actor.id, "decided", "AI proposal", null, `${actor.name} accepted ${items.length} ${outcome === "REUSE" ? "exact reuse matches" : "new definitions"} together`);
-    return { accepted: items.length, outcome };
+    if (job!.kind === "checklist_draft") fail("A checklist's document lines are decided one by one on the review queue (To review), where accepting one writes it to the draft. Nothing was changed here.", HttpStatus.GONE);
+    if (outcome !== "REUSE") fail("Only High exact reuse matches are accepted together (P-121): a new definition makes a shared field, so each is decided on its own. Nothing was accepted.", HttpStatus.CONFLICT);
+    if (job!.status === "APPLIED") fail("This draft is already applied to the configuration; change the definitions in the library instead.", HttpStatus.CONFLICT);
+    if (job!.status !== "COMPLETED") fail("The draft is not ready yet.", HttpStatus.CONFLICT);
+    const rows = await this.db.proposalItem.findMany({ where: { runId: jobId, workspaceId: job!.workspaceId, status: "waiting" }, orderBy: { createdAt: "asc" } });
+    const reuse = rows.filter((r) => reviewRow(r).outcome === "REUSE");
+    const high = reuse.filter((r) => !bulkWhy(r)).slice(0, BATCH_MAX);
+    const left = reuse.filter((r) => !high.includes(r)).map((r) => ({ id: r.id, key: reviewRow(r).proposedKey, why: bulkWhy(r) ?? `At most ${BATCH_MAX} are accepted at once: accept the rest together again.` }));
+    if (!high.length) return { accepted: 0, outcome, batchId: null, undoSeconds: UNDO_SECONDS, left };
+    const out = await decide(this.db, this.audit, actor, job!.workspaceId, high.map((r) => r.id), { action: "accept", reason: "Accepted with the other High exact reuse matches (P-121)." });
+    return { accepted: out.items.length, outcome, batchId: out.batchId, undoSeconds: UNDO_SECONDS, left };
   }
 
   /** Applies the decided proposals to the combination's draft: the form edition and its box map, new field

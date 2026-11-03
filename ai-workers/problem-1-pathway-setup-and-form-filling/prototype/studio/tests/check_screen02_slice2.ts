@@ -11,6 +11,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { acceptCleanOneByOne } from "./lib/accept-draft.ts";
 
 const PORT = Number(process.argv[2] ?? 4442), DB = process.argv[3] ?? "xr_studio_screens_s02b";
 const OFFICIAL = join(import.meta.dirname, "..", "..", "..", "official-sources", "ircc");
@@ -102,7 +103,7 @@ function pdf(title: string, text: string) {
   ok("C3.6 BR-7: the key is generated from the group and the name (never typed)", r.status === 201 && r.body.decidedKey === `${group}.previous_travel_purpose_test`, r.body?.decidedKey);
   const newKey = r.body.decidedKey;
   // Every other proposal decided as the AI recommends, so the draft can be applied.
-  for (const o of ["REUSE", "NEW"]) await call("POST", `/jobs/${jobId}/accept-clean`, { outcome: o });
+  await acceptCleanOneByOne(call, jobId, ["REUSE", "NEW"]);
   job = (await call("GET", `/jobs/${jobId}`)).body;
   for (const i of job.items.filter((x: any) => x.decision === "PENDING")) await call("POST", `/jobs/${jobId}/items/${i.id}`, { decision: "ACCEPTED", note: "Test: a different meaning from the library field that could fit." });
   r = await call("POST", `/jobs/${jobId}/apply`, { who: "each_applicant" });
