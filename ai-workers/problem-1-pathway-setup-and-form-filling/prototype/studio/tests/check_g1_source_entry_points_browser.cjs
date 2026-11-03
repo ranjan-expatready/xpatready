@@ -94,14 +94,36 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await p.waitForTimeout(300);
     step("C5.4 (PR 2c): back in the line drawer, the chip reads None published", /None published – set by ExpatReady/.test(await link.innerText()));
     step("C5.4 (Devin on #627): once answered, the From age hint no longer asks for a source", (await p.locator("[role=dialog]").innerText()).includes("Its source is recorded: see Source below.") && !(await p.locator("[role=dialog]").innerText()).includes("Needs a source before release."));
-    // Devin on #627: a failed sources list never reads as "answered"; it says so, with Try again.
+    // Review m1/m4 on #627: the drawer's own save of From age (18 → 19), then reopen at once: never the old answer as "recorded".
+    await p.locator("[role=dialog]").getByLabel("From age (optional)").fill("19");
+    await p.locator("[role=dialog]").getByRole("button", { name: "Save to draft" }).click();
+    await p.locator("[role=dialog]").waitFor({ state: "detached", timeout: 15000 });
+    await p.getByRole("button", { name: `Change ${code}` }).click(); await p.locator("[role=dialog]").waitFor();
+    const reopened = await p.locator("[role=dialog]").innerText();
+    step("C5.4 (review m1 on #627): saved through the drawer as 19 and reopened at once, From age reads \"Needs a source before release.\" (never the 18's answer as recorded)", reopened.includes("Needs a source before release.") && !reopened.includes("Its source is recorded"), reopened.slice(0, 300));
     await p.keyboard.press("Escape"); await settle();
+    // Devin on #627: a failed sources list never reads as "answered"; it says so, with Try again.
     await p.route("**/api/combinations/*/sources", (route) => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ title: "Unavailable", status: 503, detail: "down (test)" }) }));
     await p.reload(); await settle();
     await p.getByRole("button", { name: `Change ${code}` }).click(); await p.locator("[role=dialog] [data-item-sources-error]").waitFor({ timeout: 30000 });
     const fd = await p.locator("[role=dialog]").innerText();
     step("C5.4 (Devin on #627): with the sources list failing, From age says it needs a source (never \"recorded\") and the Source place says the list could not be loaded, with Try again", fd.includes("Needs a source before release.") && !fd.includes("Its source is recorded") && fd.includes("Sources could not be loaded.") && await p.locator("[role=dialog]").getByRole("button", { name: "Try again" }).count() === 1, fd.slice(0, 400));
+    await p.keyboard.press("Escape"); await settle();
+    await p.goto(`${BASE}/c/${wp}/questionnaires`); await settle(); await p.locator("[data-checks] summary").click();
+    await p.locator("[data-checks-sources-error]").waitFor({ timeout: 30000 });
+    step("C5.4 (review m2 on #627): with the list failing, the checks table says so once, with one Try again, and its rows stay quiet", await p.locator("[data-checks-sources-error]").count() === 1 && await p.locator("[data-checks] [data-item-sources-error]").count() === 0 && await p.locator("[data-checks]").getByRole("button", { name: "Try again" }).count() === 1);
     await p.unroute("**/api/combinations/*/sources");
+    // Review m4 on #627: a check row with no number shows nothing in Sources; a non-author's rule section offers View sources.
+    await p.reload(); await settle(); await p.locator("[data-checks] summary").click();
+    const cfg = (await api("GET", `/combinations/${wp}/config?mode=draft`)).body.snapshot;
+    const noNum = cfg.checks.find((c) => !s0.numbers.some((n) => n.kind === "check" && n.key.endsWith(`/${c.id}`)));
+    step("C5.4 (review m4 on #627): a check that holds no number shows nothing in its Sources cell", !!noNum && await p.locator(`[data-checks] [data-item-sources$="/${noNum.id}"]`).count() === 0 && await p.locator("[data-checks] [data-item-sources]").count() > 0);
+    await p.evaluate(() => { try { localStorage.setItem("xr-actor", "user-C"); } catch { /* ignore */ } });
+    await p.reload(); await settle(); await p.locator("[data-rules] summary").click();
+    await p.locator("[data-rules] tr", { hasText: "R-01" }).getByRole("button", { name: "Edit" }).click();
+    const ro = p.locator(`[role=dialog] [data-item-sources="wp.family/R-01"]`); await ro.waitFor({ timeout: 15000 });
+    step("C5.4 (review m4 on #627): for a non-author the rule's section offers View sources", await ro.getByRole("button", { name: "View sources" }).count() === 1);
+    await p.keyboard.press("Escape"); await p.evaluate(() => { try { localStorage.setItem("xr-actor", "user-A"); } catch { /* ignore */ } });
     step("no page errors", errs.length === 0, errs.join(" | "));
   } catch (e) { step("ran to the end", false, e.stack ?? e.message); }
   await b.close();

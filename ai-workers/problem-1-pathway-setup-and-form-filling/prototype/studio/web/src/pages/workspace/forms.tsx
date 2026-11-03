@@ -300,7 +300,8 @@ function LineDrawer({ id, l, d, onClose, onRemoved }: { id: string; l: Workspace
   const [signedBy, setSignedBy] = React.useState(l.signedBy ?? "");
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [busy, setBusy] = React.useState(false);
-  const refresh = () => { for (const k of [["combination", id], ["combination-summary", id], ["config", id], ["catalogue"], ["draft"]]) void qc.invalidateQueries({ queryKey: k }); };
+  // Review m1 on #627: a saved From age is a published number, so its source state is refreshed with the line.
+  const refresh = () => { for (const k of [["combination", id], ["combination-summary", id], ["config", id], ["sources", id], ["catalogue"], ["draft"]]) void qc.invalidateQueries({ queryKey: k }); };
   const save = async () => {
     setBusy(true); setErrors({});
     try {

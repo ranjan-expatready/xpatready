@@ -232,14 +232,17 @@ export function useItemNumbers(id: string, kind: string, suffix: string, address
   return { nums, loaded: !!q.data, failed: q.isError && !q.data, retry: () => void q.refetch(), retrying: q.isFetching };
 }
 
-export function ItemSources({ id, kind, suffix, address, variant, label, note }: {
+export function ItemSources({ id, kind, suffix, address, variant, label, note, quietOnError }: {
   id: string; kind: string; suffix: string; address?: string; variant: "section" | "button" | "link"; label?: string; note?: string;
+  /** In a table row: a failed list is said once by the table (review m2 on #627), so the row shows nothing. */
+  quietOnError?: boolean;
 }) {
   const { nums, failed, retry, retrying } = useItemNumbers(id, kind, suffix, address);
   const { canAuthor } = useSessionView();
   const [open, setOpen] = React.useState<SourceItem | null>(null);
   const opener = React.useRef<HTMLButtonElement | null>(null);
   // A failed list says so where the sources would show, with Try again (never a silent gap).
+  if (failed && quietOnError) return null;
   if (failed) return <span className="inline-flex flex-wrap items-center gap-1.5 text-xs text-text-danger" role="alert" data-item-sources-error>Sources could not be loaded. <Button size="sm" variant="ghost" onClick={retry} busy={retrying}>Try again</Button></span>;
   if (!nums.length) return null;
   const item: SourceItem = { kind: nums[0].kind, key: nums[0].key, item_words: nums[0].item_words, where: nums[0].where };

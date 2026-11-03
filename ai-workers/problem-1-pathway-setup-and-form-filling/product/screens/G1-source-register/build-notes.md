@@ -141,3 +141,14 @@ API.
     (was "Sample."), with its chip and a "Source" link. An empty "From age" reads "Leave empty for any age."
 * No API change. Browser `tests/check_g1_source_entry_points_browser.cjs` **20/20** (axe on each place, focus return, a
   None published answer saved from the form line).
+* **Where PR 2c differs from board 2 and concept m3 (review m3 on #627):**
+  1. **The panel stacks over the open rule dialog.** Board 2's note says no panel is stacked on the dialog. The build
+     keeps the dialog open underneath because closing it would lose the author's unsaved edit. One Escape closes only
+     the panel, focus returns to "Check sources", and the dialog's discard question is not raised.
+  2. **"From age" has three hints, not m3's one sentence:** empty "Leave empty for any age."; saved and missing or
+     changed "Needs a source before release."; saved and answered "Its source is recorded: see Source below." The
+     answered hint needs a successful source list (Devin on #627).
+* **After review (#627):** a form-line or rule save also refreshes the sources list, so a reopened drawer never shows
+  the old number's answer as recorded (review m1; the check fails without the fix). A failed list is said once above
+  the checks table, with one Try again, and the rows stay quiet (review m2). Added checks: the drawer's own save,
+  "View sources" for a non-author, and a check row with no number staying empty (review m4). Entry points 26/26.

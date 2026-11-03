@@ -133,7 +133,7 @@ function RuleDialog({ id, r, fields, onClose }: { id: string; r: any; fields: an
   const revs = React.useContext(RevCtx);
   const isNew = !r.id;
   const [cond, setCond] = React.useState<any>(r.when ?? null), [then, setThen] = React.useState(r.then ?? ""), [when, setWhen] = React.useState(r.when_plain ?? ""), [forWhom, setForWhom] = React.useState(r.for_whom ?? "each_applicant");
-  const save = useAction((b: any) => api(isNew ? `/combinations/${id}/rules` : `/combinations/${id}/rules/${r.id}`, { method: isNew ? "POST" : "PATCH", json: isNew ? b : { ...b, baseRevision: revs[`rule:${r.id}`] } }), { success: "Rule saved to the draft", invalidate: [["config", id], ["combination", id], ["preview"]], onDone: onClose });
+  const save = useAction((b: any) => api(isNew ? `/combinations/${id}/rules` : `/combinations/${id}/rules/${r.id}`, { method: isNew ? "POST" : "PATCH", json: isNew ? b : { ...b, baseRevision: revs[`rule:${r.id}`] } }), { success: "Rule saved to the draft", invalidate: [["config", id], ["sources", id], ["combination", id], ["preview"]], onDone: onClose });
   return (
     <Dialog guard wide open onOpenChange={(o) => !o && onClose()} title={isNew ? "Add a rule" : `Edit rule ${r.id}`} description="Rules are stored as data in the closed condition vocabulary and evaluated the same way everywhere; no code is generated or run."
       footer={<>{!isNew ? <Button variant="destructive" className="mr-auto" onClick={() => save.mutate({ retire: true })}><Trash2 /> Remove</Button> : null}<Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => save.mutate({ condition: cond, thenPlain: then, whenPlain: when, forWhom })} busy={save.isPending}>Save to draft</Button></>}>
@@ -182,12 +182,15 @@ function Questions({ id, s }: { id: string; s: any }) {
 }
 
 function Checks({ id, s, meaning }: { id: string; s: any; meaning: (k: string) => string }) {
+  // Review m2 on #627: a failed sources list is said once for the table, with one Try again; the rows stay quiet.
+  const src = useApi<unknown>(["sources", id], `/combinations/${id}/sources`);
   return (
     <>
+      {src.isError && !src.data ? <Notice tone="danger" title="The sources of the checks' numbers could not be loaded" action={<Button size="sm" variant="secondary" onClick={() => void src.refetch()} busy={src.isFetching}>Try again</Button>}><span data-checks-sources-error>{(src.error as Error).message}</span></Notice> : null}
       <Notice tone="info">Checks run on facts as they are confirmed. Warnings never become a blanket block; severity comes from the approved configuration. Form-field checks stay with each form's field map.</Notice>
       <Table head={["Check", "Group", "Severity", "When it fires", "Sources"]}>{s.checks.map((c: any) => <tr key={c.id}><td className="mono">{c.id}{c.illustrative ? <Pill tone="warn" className="ml-1">Illustrative</Pill> : null}</td><td className="text-xs">{c.group.replace(/_/g, " ")}</td><td><Pill tone={c.severity === "block" ? "danger" : c.severity === "warn" ? "warn" : "neutral"}>{c.severity}</Pill></td><td className="max-w-2xl text-xs">{c.message ?? plainCondition(c.condition, meaning)}</td>
         {/* G1 PR 2c: a check that holds a number opens the Source panel on it (m3: an illustrative check says it stays Sample). */}
-        <td><ItemSources id={id} kind="check" suffix={c.id} variant="button" label={`check ${c.id}`} note={c.illustrative ? SOURCE_SAY.sampleCheck : undefined} /></td></tr>)}</Table>
+        <td><ItemSources id={id} kind="check" suffix={c.id} variant="button" quietOnError label={`check ${c.id}`} note={c.illustrative ? SOURCE_SAY.sampleCheck : undefined} /></td></tr>)}</Table>
     </>
   );
 }
