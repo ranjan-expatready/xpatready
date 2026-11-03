@@ -35,3 +35,12 @@ Reviewed `git diff c207fd9fe HEAD` (resolver.ts comment, case-checklist.ts, chec
 - I did not mutate the code to prove each test fails; the judgement rests on reading the assertions.
 
 **Verdict: Approve**
+
+## Diff-only check of 25e227ded (fresh reviewer)
+
+- Fix: `has(f)` now accepts the placement's key or the id rule's key (`isFilingFact(f)` without the placement). One line, same rule as render's keepAnswered. Correct and minimal. Direction is safe: it only adds a key to look up, so it can turn "unanswered" into "answered" only when a value really exists on the other subject.
+- Unanswered stays unanswered: the "fail" check asks with nothing known and still gets `person.date_of_birth` with `answered: false` (and the filing input too).
+- Tests: the "pass" check saves the date of birth on the person while the placement says once per case; it expects both expanded inputs answered (it failed 61/62 without the fix, per the builder; I did not re-mutate). The "fail" check is the necessary counterpart. Meaningful.
+- Run: `check_vv_checklist.ts` gives 62/62 passed.
+
+**Verdict: Approve**
