@@ -1,6 +1,6 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-03 06:05 UTC by **Lead 5** (ended; tonight's plan P-290 added), closing every Lead and lane for a **blank-sheet restart** (founder, P-289) · milestone: **M2 — Super Admin configuration** · how we work: `WAY-OF-WORKING.md` (frozen to 15 Nov, P-224) · decisions to read word for word: DECISIONS **P-280 … P-293** · the evidence: **`reports/build-review-2026-11-03.html`** (published privately to the founder)
+updated: 2026-11-03 07:10 UTC by **Lead 1 · 3 Nov 06:56 UTC** (new series, P-291; started tonight's sessions) · milestone: **M2 — Super Admin configuration** · how we work: `WAY-OF-WORKING.md` (frozen to 15 Nov, P-224) · decisions to read word for word: DECISIONS **P-280 … P-293** · the evidence: **`reports/build-review-2026-11-03.html`** (published privately to the founder)
 
 ## Tonight, 3 Nov (founder, P-290): the fresh Lead's first turn
 The founder chose "Fresh Lead, one paste": the new tech lead, in its **first founder-typed turn**, starts everything below (a Lead woken later by a check or a message cannot start sessions), then runs the night without the founder. **Lead 5 has ended** (its commits on `lead/2026-11-03-*` are not another running Lead; do not ask the founder). Goal for the next 16 hours (founder at the computer about 8–10 hours, then the night): **finish M2** (confirmed Works 36 → 60 except what waits on paid runs or the SA-01B hold), **verify the whole build** (V1–V4), and **start M3 in parallel** on the shared services, finishing as much of M3 as the merge queue allows without slowing M2 (M2 goes first in the queue). Do not break main. **Talk to the founder in plain words (P-291):** capabilities by what they do, code after; never "row".
@@ -36,8 +36,29 @@ Not tonight: C4.7 (needs a saved paid run), C11.3 (its red AT-5 is the held part
 | V4 | verify: best in class | Is it best in class? Web research (primary sources) on immigration case-management products and their setup and form-filling features, plus a walk of the demo against them and the 2 Nov UX baseline method | a scored comparison, the top gaps, sources cited |
 After the fix PRs merge, run the **independent re-test** again (same method as the report: every M2 acceptance pack on main, by a session that scored nothing) and report "scored vs confirmed".
 
+## Running now (Lead 1, 3 Nov 07:10 UTC)
+**Leads, in order (highest number = current):** Lead 1 · 3 Nov 06:56 UTC (current, this chat; 30-minute check at minutes 13 and 43, Mac kept awake) · standbys **Lead 2 · 3 Nov · standby** (`local_ff0137ad-1907-4308-80a6-4e6f849f696a`) and **Lead 3 · 3 Nov · standby** (`local_651babba-ec86-4923-8b51-09c061d523d9`), idle until "take over now" (P-286). The old series (Leads 1–6 of 2 Nov) is retired; Lead 3 and Lead 5 of that series can be archived by the founder.
+
+**Sessions requested 07:00–07:08 UTC (cloud, one task each, sidebar "Pathway Configurator"; each brief names its next two capabilities):**
+| # | Task (app task id) | First | Next two |
+|---|---|---|---|
+| E0 | what is built, with evidence (task_9214a686) | page `reports/built-evidence-2026-11-03.html` | refresh after fixes merge · refresh build review §1 |
+| I1 | test each change once (task_f5120bc9) | test-once, notes-only PRs, comment guard, measure | type check in CI · quarantine list |
+| M1 | shared resolver SH3 (task_48335c28) | four callers on `contracts/resolver.ts` | C6.9 override + Mark reviewed 404 · QA-149 |
+| F1 | bulk accept C3.2 (task_565846a0) | C3.2 22/22 | QA-154 (C11.8 one door) · QA-159 (C11.14 identity) |
+| F2 | C1.5 + C2.4 (task_72acefb7) | 18/18, 22/22 | QA-179 Needs you counts · QA-144 Visitor visa release at US$0 |
+| F3 | C4.6 + C4.2 (task_33b89d99) | 17/17, 10/10 | QA-165 IMM 5257 Validate · QA-162 Saved paid result |
+| F4 | C11.11 (task_5c058435) | 26/26 | G-CORE B4 if not merged · QA-153 IMM 5707 parents |
+| F5 | C3.8 + C3.15 (task_c7d6b6fb) | 11/11, 11/11 | QA-172 raw keys · QA-152 |
+| F6 | packs + C5.4 (task_1248437b) | C4.1, C4.8 to P-279; packs C3.10, C5.2, C11.1, C11.17; C5.4 on Demo menu | C6.9 pack report · C6.12 re-run |
+| V1 | completeness (task_f28337ce) | V1 report (to come, under reports/verify-2026-11-03) | M2 gap texts · top-10 M3 gap texts |
+| V2 | rule engine (task_53b4e824) | V2 report (to come) | independent M2 re-test after fixes · M3 re-test |
+| V3 | one system (task_c77efaa8) | V3 report (to come), journey /8 | re-run after fixes · second combination |
+| V4 | best in class (task_344be92b) | V4 report (to come) | top-5 gap texts · UX re-score |
+Not tonight (P-290): C4.7, C11.3's held part, the 8 Partials waiting on paid runs or holds (flow-watch lists C11.14, C11.7, C11.8, C9.1: expected, no paid run tonight).
+
 ## Start here (the next tech lead, fresh chat)
-1. Open a new chat in the main copy and type `/lead`. Nothing is running: no Lead, no builder, no qa lane, no timed check. Leads 1–6 are retired (1, 2, 4, 6 archived 3 Nov 05:00–05:30 UTC; Lead 3 and Lead 5 archived last, see below). There is no standby; start one only if the founder wants the P-286 standby pattern again.
+1. Superseded 3 Nov 07:10 UTC: see "Running now" above (the next Lead takes over from a standby). Earlier text: nothing was running: no Lead, no builder, no qa lane, no timed check. Leads 1–6 are retired (1, 2, 4, 6 archived 3 Nov 05:00–05:30 UTC; Lead 3 and Lead 5 archived last, see below). There is no standby; start one only if the founder wants the P-286 standby pattern again.
 2. Read the build review first (`reports/build-review-2026-11-03.html`, sections 1, 7 and 8). Its lessons are marked by strength of evidence; change the way of working only with the founder's OK (P-224) and only on firm evidence (section 7's rule).
 3. **The real score is 36/60, not 52/60.** An independent re-test on main `1a79dbf9` (3 Nov, US$0) re-ran every M2 acceptance pack: 12 rows scored Works fail their own pack, 4 have no runnable pack. Until those are fixed or re-scored, report M2 as "52 scored, 36 confirmed".
 4. Agree the first rows with the founder before starting any builder (one fresh cloud builder per row, `/next <area> <row>`, as before). The proposal below is the tech lead's, not yet the founder's.
