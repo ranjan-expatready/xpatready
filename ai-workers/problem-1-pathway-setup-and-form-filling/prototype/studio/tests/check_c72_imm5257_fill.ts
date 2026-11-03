@@ -15,7 +15,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runTransform } from "../../p5/transforms.ts";
-import { markNothingRecorded } from "../engine/runtime/forms.ts";
+import { gateOf, markNothingRecorded, type GatePlacement } from "../engine/runtime/forms.ts";
 import type { BoxRow } from "../engine/render.ts";
 import type { QuestionnaireView } from "../contracts/runtime.ts";
 import { client, recorder } from "./runtime/api.ts";
@@ -71,6 +71,17 @@ ok("C7.2 cause 3: a group whose \"none apply\" is confirmed is nothing recorded"
 ok("C7.2 cause 3 fail: an entry answered (even unconfirmed), a hidden question, or a fact never asked is not nothing", !mark([sec([q("person.education_institution", { rows: [{ answer: { id: "x" } }] })], { group: { rows: 0, none_apply: { value: true, confirmed: true } } })], edu) && !mark([sec([q("person.education_institution", { hidden: true })], { group: { rows: 0, none_apply: { value: true, confirmed: true } } })], edu) && !mark([sec([q("person.education_city")], { group: { rows: 0, none_apply: { value: true, confirmed: true } } })], edu));
 ok("C7.2 cause 3 fail: \"none apply\" not confirmed, not answered, or with entries is not", !mark([group({ value: true, confirmed: false })], edu) && !mark([group(null)], edu) && !mark([group({ value: true, confirmed: true }, 1)], edu));
 ok("C7.2 cause 3 fail: a confirmed fact or a box that is not a \"recorded\" switch is never marked", !mark([group({ value: true, confirmed: true })], { ...edu, coverage: "confirmed fact", value: "X" }) && !mark([group({ value: true, confirmed: true })], { ...edu, transform: "as_is" }));
+
+// QA-165: a confirmed "No" to the facts' own Yes/No question (their gate) is nothing recorded, as a confirmed "none apply" is.
+const GATE = "person.used_other_name";
+const gated: GatePlacement[] = [{ fact: "person.other_family_name", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: GATE, value: true }, condition_effect: "REQUIRE" }, { fact: "person.other_given_names", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: GATE, value: true }, condition_effect: "REQUIRE" }];
+const ans = (value: unknown, confirmed: boolean) => ({ answer: { id: "g", value, confirmed } });
+const gq = (extra: object) => q(GATE, { label: "Have you ever used any other name?", ...extra });
+const markG = (sections: object[], pl: GatePlacement[] = gated) => markNothingRecorded([box("person.other_family_name", alias)], { sections } as unknown as QuestionnaireView, pl)[0];
+ok("QA-165 pass: other names asked under \"Have you ever used any other name?\", answered No and confirmed, is nothing recorded (the form's Yes/No is N)", markG([sec([gq(ans(false, true)), ...both])]).nothing_recorded === true && /answered No and confirmed/.test(markG([sec([gq(ans(false, true)), ...both])]).detail ?? ""));
+ok("QA-165 fail: the gate answered Yes, not confirmed, not answered, or hidden is not nothing recorded", [ans(true, true), ans(false, false)].every((a) => markG([sec([gq(a), ...both])]).nothing_recorded !== true) && markG([sec([gq({}), ...both])]).nothing_recorded !== true && markG([sec([gq({ ...ans(false, true), hidden: true }), ...both])]).nothing_recorded !== true);
+ok("QA-165 fail: a name answered after a No, or a fact with no gate, is never nothing recorded", markG([sec([gq(ans(false, true)), q("person.other_family_name", { answer: { id: "n" } }), q("person.other_given_names")])]).nothing_recorded !== true && markG([sec([gq(ans(false, true)), ...both])], [gated[0]]).nothing_recorded !== true);
+ok("QA-165: gateOf reads only \"<gate> is Yes\" conditions that require or show the fact", gateOf(gated, "person.other_family_name") === GATE && gateOf([{ fact: "x", condition: { op: "eq", field: GATE, value: false }, condition_effect: "REQUIRE" }], "x") === null && gateOf([{ fact: "x", condition: { op: "exists", field: GATE }, condition_effect: "REQUIRE" }], "x") === null && gateOf([{ fact: "x", condition: { op: "eq", field: GATE, value: true }, condition_effect: "OPTIONAL" }], "x") === null);
 
 // ---------------------------------------------------------------- Part B: the Sample family's case, end to end
 type Opt = { key: string; label?: string };
@@ -162,7 +173,7 @@ type Box = { box: string; fact: string | null; result: string; why: string | nul
   const mandatory = inv.fields.filter((x) => x.required && x.data_path).map((x) => x.data_path!);
   const empty = mandatory.filter((p) => !after.values[p]);
   const NOT_A_FACT = ["Page2[0].MaritalStatus[0].SectionA[0].Passport[0].TaiwanPIN[0]", "Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IsraelPassportIndicator[0]", "Page3[0].Signature[0].Consent0[0].Choice[0]"].map((p) => `form1[0].${p}`);
-  ok("C7.2: the app's copy fills 40 of IMM 5257's 46 mandatory form fields (was 32, #409); the 6 left are exactly the 3 boxes published as \"not a fact\" and the 3 Yes/No boxes no question asks yet (Questions in the PR)",
+  ok("C7.2: before the Yes/No questions are answered, the app's copy fills 40 of IMM 5257's 46 mandatory form fields (was 32, #409); the 6 left are exactly the 3 boxes published as \"not a fact\" and the 3 Yes/No boxes whose own question is not answered yet",
     mandatory.length === 46 && empty.length === 6 && empty.every((p) => NOT_A_FACT.includes(p) || NOT_ASKED.includes(p)), { mandatory: mandatory.length, filled: mandatory.length - empty.length, empty });
   // QA-165 part 2 (P-237, P-238): before the file is offered, the form lists exactly the mandatory fields a copy leaves empty, each with why.
   {
@@ -170,8 +181,10 @@ type Box = { box: string; fact: string | null; result: string; why: string | nul
     const open = f?.fields_open ?? [];
     ok("QA-165 part 2: IMM 5257 lists exactly the 6 mandatory form fields its copy leaves empty, before the file is offered", open.length === empty.length && open.every((o) => empty.includes(o.box)), { open: open.map((o) => o.box), empty });
     const reasonOf = new Map(open.map((o) => [o.box, o.reason]));
-    ok("QA-165 part 2: the 3 boxes published as \"not a fact\" say \"fill it in Adobe\"; the 3 Yes/No boxes no question asks say \"no question asks it yet\", never \"needs an answer\" (no answer can write their No)",
-      NOT_A_FACT.every((p) => reasonOf.get(p) === "fill it in Adobe") && NOT_ASKED.every((p) => reasonOf.get(p) === "no question asks it yet"), open.map((o) => [o.box.split(".").slice(-2).join("."), o.reason, o.label]));
+    // QA-165: each of the 3 Yes/No boxes now has its own question (IMM 5257's words), so it "needs an answer" and names it.
+    const whyOf = new Map(open.map((o) => [o.box, o.why]));
+    ok("QA-165 part 2: the 3 boxes published as \"not a fact\" say \"fill it in Adobe\"; the 3 Yes/No boxes say \"needs an answer\", naming their own question",
+      NOT_A_FACT.every((p) => reasonOf.get(p) === "fill it in Adobe") && NOT_ASKED.every((p) => reasonOf.get(p) === "needs an answer" && /^answer "/.test(whyOf.get(p) ?? "")), open.map((o) => [o.box.split(".").slice(-2).join("."), o.reason, o.why]));
     ok("QA-165 part 2: the words are the form's, never a field path", open.every((o) => o.label.length > 3 && !/form1\[|\[0\]\./.test(o.label)), open.map((o) => o.label));
   }
   ok("C7.2: no form field of the copy is left by hand (was 20, #409)", after.boxes.filter((b) => b.result === "by hand").length === 0, after.boxes.filter((b) => b.result === "by hand").map((b) => `${b.box.split(".").slice(-2).join(".")}: ${b.why}`));
@@ -187,6 +200,39 @@ type Box = { box: string; fact: string | null; result: string; why: string | nul
   ok("C7.2 cause 3: lived elsewhere and education are written \"N\" once \"none apply\" is confirmed, with that as the reason and the copy's own flag", DERIVED.every((b) => after.values[b] === "N" && /none apply/.test(after.byBox.get(b)?.why ?? "") && after.byBox.get(b)?.nothing_recorded === true), DERIVED.map((b) => [after.values[b], after.byBox.get(b)?.why]));
   ok("C7.2 cause 3 fail (review of #428 m3): no box written from a confirmed fact carries the nothing-recorded flag", after.boxes.filter((b) => b.nothing_recorded).every((b) => DERIVED.includes(b.box)), after.boxes.filter((b) => b.nothing_recorded).map((b) => b.box));
   ok("C7.2 cause 3 fail (review r1 B1): other names, national identity document and US card are never \"N\" from an empty question in a confirmed section", NOT_ASKED.every((b) => after.byBox.get(b)?.result === "not written" && !after.values[b]), NOT_ASKED.map((b) => after.byBox.get(b)?.result));
+  // QA-165 (C7.2, P-62): the Sample principal answers IMM 5257's own three Yes/No questions "No" and the officer confirms:
+  // the copy then writes those boxes "N" and fills 43 of 46; the 3 left are the boxes published as "not a fact".
+  const GATES = ["person.used_other_name", "person.has_national_id", "person.us_lawful_permanent_resident"];
+  { // P-62: every question asked fills a box or decides something: each gate fills its Yes/No box on IMM 5257.
+    const qs = (await view()).flatMap((s) => s.questions as unknown as { subjectId: string; fact: string; fills: { form: string; boxes: number }[] }[]).filter((x) => x.subjectId === P);
+    ok("QA-165 pass: each of the 3 Yes/No questions is asked and says it fills IMM 5257 (1 form field)", GATES.every((g) => qs.find((x) => x.fact === g)?.fills.some((f) => f.form === "IMM 5257" && f.boxes === 1)), GATES.map((g) => qs.find((x) => x.fact === g)?.fills));
+  }
+  for (const g of GATES) await put(P, g, false);
+  const unconfirmed = await generate(3);
+  ok("QA-165 fail: answered No but not confirmed yet, the 3 Yes/No boxes stay \"not written\"", NOT_ASKED.every((b) => !unconfirmed.values[b]), NOT_ASKED.map((b) => unconfirmed.byBox.get(b)?.result));
+  await confirmAll();
+  const gatedCopy = await generate(4);
+  ok("QA-165 pass: other names, national identity document and US card are written \"N\" from their own question answered No and confirmed, with that as the reason", NOT_ASKED.every((b) => gatedCopy.values[b] === "N" && /answered No and confirmed/.test(gatedCopy.byBox.get(b)?.why ?? "") && gatedCopy.byBox.get(b)?.nothing_recorded === true), NOT_ASKED.map((b) => [gatedCopy.values[b], gatedCopy.byBox.get(b)?.why]));
+  const empty2 = mandatory.filter((p) => !gatedCopy.values[p]);
+  ok("QA-165 pass: the app's copy now fills 43 of IMM 5257's 46 mandatory form fields; the 3 left are exactly the boxes published as \"not a fact\" (fill in Adobe)", empty2.length === 3 && empty2.every((p) => NOT_A_FACT.includes(p)), { filled: mandatory.length - empty2.length, empty: empty2 });
+  {
+    const f = ((await call("GET", `/runtime/cases/${caseId}/forms`, undefined, OFFICER)).body.forms as { form: string; subject_id: string; fields_open: { box: string; reason: string }[]; readiness: { ready: boolean } }[]).find((x) => x.form === "IMM 5257" && x.subject_id === P);
+    ok("QA-165 part 2: the list before the file is offered now names only those 3, and the form is still ready to file", (f?.fields_open ?? []).length === 3 && (f?.fields_open ?? []).every((o) => NOT_A_FACT.includes(o.box)) && f?.readiness?.ready === true, f?.fields_open);
+  }
+  // Devin on #715 (1): the gate's answer is kept with the copy: changing it after the copy makes that copy out of date.
+  const nCopy = sql(`select id from form_instance where case_id = '${caseId}' order by created_at desc limit 1`);
+  ok("QA-165 fail guard: the copy that wrote N is current while nothing changed", (await call("GET", `/runtime/form-copies/${nCopy}`, undefined, OFFICER)).body?.out_of_date === false);
+  await put(P, "person.used_other_name", true); await confirmAll();
+  const flipped = (await call("GET", `/runtime/form-copies/${nCopy}`, undefined, OFFICER)).body;
+  ok("QA-165 pass (Devin on #715): \"other names\" changed from No to Yes after the copy makes the copy that says N out of date, naming the question", flipped?.out_of_date === true && (flipped?.changed ?? []).some((c: string) => /used_other_name|other name/i.test(c)), { out_of_date: flipped?.out_of_date, changed: flipped?.changed });
+  const yes = await generate(5);
+  ok("QA-165 fail: after a Yes to \"other names\" with no name given, its box is never \"N\" (Yes needs the names)", !yes.values[NOT_ASKED[0]] && yes.values[NOT_ASKED[1]] === "N", [yes.values[NOT_ASKED[0]], yes.byBox.get(NOT_ASKED[0])?.result]);
+  // Devin on #715 (2): a confirmed No to "national identity document" while a number is still recorded contradicts
+  // itself: the Yes/No box is never written (neither Y from the number nor N from the No), and the open list says why.
+  await put(P, "person.national_id_number", "SAMPLEID1"); await confirmAll();
+  const clash = await generate(6);
+  const clashOpen = (((await call("GET", `/runtime/cases/${caseId}/forms`, undefined, OFFICER)).body.forms as { form: string; subject_id: string; fields_open: { box: string; reason: string; why: string }[] }[]).find((x) => x.form === "IMM 5257" && x.subject_id === P)?.fields_open ?? []).find((o) => o.box === NOT_ASKED[1]);
+  ok("QA-165 fail (Devin on #715): No to a national identity document with a number recorded writes neither Y nor N; the list before the file says to correct one", !clash.values[NOT_ASKED[1]] && clashOpen?.reason === "needs an answer" && /answered No, but .* is recorded: correct one/.test(clashOpen?.why ?? ""), { value: clash.values[NOT_ASKED[1]], open: clashOpen });
   // Review r1 M2: a fact behind an "N" answered after the copy makes that copy out of date (here: an education entry).
   const copyId = sql(`select id from form_instance where case_id = '${caseId}' order by created_at desc limit 1`);
   const fresh = (await call("GET", `/runtime/form-copies/${copyId}`, undefined, OFFICER)).body;
