@@ -127,7 +127,7 @@ done
 echo "== schema"
 (cd "$STUDIO" && DATABASE_URL="postgresql://xr_studio@127.0.0.1:$PGPORT/xr_studio_demo" ./node_modules/.bin/prisma migrate deploy >/dev/null && ./node_modules/.bin/prisma generate >/dev/null && echo "migrations applied, client generated")
 # Isolated copies (tools/isolated.sh) serve the same web build as :4400; start.sh is the only other builder.
-(cd "$STUDIO/web" && ../node_modules/.bin/vite build >/dev/null 2>&1 && echo "web app built")
+bash "$STUDIO/tools/web-fresh.sh" build || echo "WARNING: web build failed"   # stamped (QA-181), so isolated copies do not rebuild it
 
 echo "== official PDFs (committed, P-83; checked against the manifest checksums, P-31)"
 if out=$(python3 "$P/official-sources/fetch_official_sources.py" 2>&1); then echo "$out" | tail -1
