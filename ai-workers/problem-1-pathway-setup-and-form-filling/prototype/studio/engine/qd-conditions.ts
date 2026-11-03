@@ -79,7 +79,15 @@ export function conditionProblem(s: Snapshot, guideText: string, guideCode: stri
   // QA-162: the deciding question need not fill a form box itself (IMM 5257's "Have you ever used any other name…?"
   // decides whether the names are needed): any question this combination asks of the person may decide.
   const pool = [...all, ...askedOnly(s, all)];
-  const d = named(pool, c.role, c.depends_on, names, (x) => `${x} (what decides "${target.label}")`, (f) => f.placed);
+  // QA-162 after QA-194 (no tie-break between twins): the condition says its deciding question is answered "yes" (or one
+  // of a list's answers), so only a question that can take that answer can decide it ("Ever used other name" is the
+  // Yes/No question, never the name questions that share its words). Two such questions are still none, never guessed.
+  // When none can take it, the search runs as before, so its reason (or "cannot decide by one answer") is unchanged.
+  const fieldOf = new Map((s.canonical_fields as { id: string; value_type?: string; answer_list?: { values?: { key: string; label: string }[] } }[]).map((f) => [f.id, f]));
+  const canTake = (f: FactSourceView) => !("why" in answerOf(fieldOf.get(f.fact), c.when));
+  const what = (x: string) => `${x} (what decides "${target.label}")`;
+  const taking = named(pool.filter(canTake), c.role, c.depends_on, names, what, (f) => f.placed);
+  const d = "why" in taking ? named(pool, c.role, c.depends_on, names, what, (f) => f.placed) : taking;
   if ("why" in d) return d;
   const decider = d.f, loose = t.loose ?? d.loose;
   if (target.fact === decider.fact) return { why: `"${target.label}" cannot decide itself.` };
