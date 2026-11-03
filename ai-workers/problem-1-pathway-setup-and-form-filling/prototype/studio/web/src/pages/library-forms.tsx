@@ -28,7 +28,7 @@ type Row = { code: string; title: string; type: "form" | "guide" | "checklist"; 
   /** P-143 (C-3): one record per IRCC account (ANY: every account), each with its basis and IRCC's line. */
   accepts_accounts?: { account: string; account_words: string; channels: string[]; words: string; basis: string; quote: string | null; source_url: string | null }[];
   origin: string | null; downloaded_from: string | null; checked_at: string | null; form_page_url: string | null; fingerprint: string | null; attachment_id: string | null;
-  used_by: { id: string; label: string; picked_by_ai: boolean; as_source?: boolean }[]; status: "ready" | "needs_ok" | "newer_file" | "no_file" | "retired"; listed_by_ircc?: boolean; newer_on_index?: boolean; lifecycle_waiting: "DELETE" | "RETIRE" | "RESTORE" | null; lifecycle_approved?: boolean; lifecycle_returned?: boolean; older_editions: { label: string; published?: string | null; published_from?: "printed" | "canada_page" | null; published_state?: "date" | "none" | "not_a_month"; file_date?: string | null; file_date_state?: FileDateState; kept_by: string }[]; action: { kind: "DELETE" | "RETIRE" | "RESTORE" | "WITHDRAW"; why: string | null; change_id: string | null } };
+  used_by: { id: string; label: string; picked_by_ai: boolean; as_source?: boolean }[]; status: "ready" | "needs_ok" | "newer_file" | "no_file" | "online_only" | "retired"; listed_by_ircc?: boolean; newer_on_index?: boolean; lifecycle_waiting: "DELETE" | "RETIRE" | "RESTORE" | null; lifecycle_approved?: boolean; lifecycle_returned?: boolean; older_editions: { label: string; published?: string | null; published_from?: "printed" | "canada_page" | null; published_state?: "date" | "none" | "not_a_month"; file_date?: string | null; file_date_state?: FileDateState; kept_by: string }[]; action: { kind: "DELETE" | "RETIRE" | "RESTORE" | "WITHDRAW"; why: string | null; change_id: string | null } };
 type List = { rows: Row[]; counts: Record<string, number>; combinations: { id: string; label: string }[]; sample_note: string; remembered_deletions?: { code: string; deleted_by: string; deleted_at: string }[] };
 export type Uses = { label: string; released: boolean; retired: boolean; uses: { kind: string; label: string; href: string | null; blocks: boolean; why: string }[]; can: { delete: string | null; retire: string | null; restore: string | null }; pending: { id: string; action: string; by: string | null } | null; history: { at: string; by: string | null; what: string }[] };
 
@@ -62,6 +62,7 @@ const STATUS: Record<Row["status"], { word: string; tone: string; tip: string }>
   needs_ok: { word: "Needs your OK", tone: "warn", tip: "A file of this form waits for a second person on To review (a hand upload, or a newer edition to review)." },
   newer_file: { word: "Newer file on canada.ca", tone: "warn", tip: "canada.ca now serves another file of the same printed edition. Combinations keep using the library's file until a person replaces it." },
   no_file: { word: "No file yet", tone: "neutral", tip: "No edition of this form is in the library yet: upload its PDF, or let the form finder download it from canada.ca." },
+  online_only: { word: "Online only · no official PDF", tone: "neutral", tip: "IRCC publishes no PDF of this form: it is held as its online version, and its questions come from IRCC's help pages or saved portal screens (P-152). No PDF is asked for." },
   retired: { word: "Retired", tone: "neutral", tip: "Hidden from pickers and AI; released versions and open cases keep it. Restore it to use it again." },
 };
 /** X5 (P-156 (1)): the words of a row filled from IRCC's forms list, beside the usual ones. */
@@ -211,6 +212,8 @@ export function FormsPage() {
             {/* X5 break M5: after the fill most rows have no file yet; these two chips find the rest, or only those. */}
             {chip(status === "ready", "Ready", c.ready ?? 0, () => setStatus(status === "ready" ? "" : "ready"), STATUS.ready.tip)}
             {chip(status === "no_file", "No file yet", c.no_file ?? 0, () => setStatus(status === "no_file" ? "" : "no_file"), STATUS.no_file.tip)}
+            {/* C11.11 (P-152): shown only when the library holds an online-only form. */}
+            {c.online_only ? chip(status === "online_only", "Online only", c.online_only, () => setStatus(status === "online_only" ? "" : "online_only"), STATUS.online_only.tip) : null}
             {chip(status === "retired", "Retired", c.retired, () => setStatus(status === "retired" ? "" : "retired"), STATUS.retired.tip)}
           </div>
           <label className="relative ml-auto"><Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-text-muted" aria-hidden /><Input type="search" aria-label="Search number or title" placeholder="Search number or title" value={q} maxLength={80} onChange={(e) => { typedRef.current = true; setQ(e.target.value); }} className="w-64 pl-8" /></label>
