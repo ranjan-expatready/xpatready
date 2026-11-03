@@ -18,8 +18,12 @@ const item = (label: string, over: Record<string, unknown> = {}) => ({ kind: "fi
   reuse: { match: "new" as const, existingKey: null }, payload: payload(label), source: { file: "imm1111e.pdf", sha256: "b".repeat(64), edition: "02-2026", page: 2, quote: `${label} (as on the form)`, quoteFound: true, rule: null },
   rounds: { draft: reading(label, `${label} of the applicant`), check: reading(label, `${label} of the applicant`) }, rules: [{ rule: "quote_found", passed: true, why: null }], agreement: "agreed" as const, confidence: "ready" as const,
   reason: null, origin: "ai" as const, identity: { key: P.identityKeyOf(payload(label), ""), near: [], nearReason: null }, relatesTo: null, revision: null, basis: "SAMPLE" as const, ...over });
+// P-299: a new shared field is never accepted with others, so the two Ready items accepted together are new answer
+// lists (they still land on the library, waiting for a second person, so the batch and its approval stay proven).
+const list = (label: string, codes: string[]) => { const p = { kind: "answer_list" as const, label, values: codes.map((c) => ({ code: c, label: c.replace(/_/g, " ") })) };
+  return item(label, { kind: "answer_list", payload: p, rounds: { draft: { ...reading(label, `${label} (Sample)`), payload: p }, check: { ...reading(label, `${label} (Sample)`), payload: p } }, identity: { key: P.identityKeyOf(p as never, ""), near: [], nearReason: null } }); };
 const ids = await P.insertProposals(db, ws, [
-  item("Mother's maiden name"), item("Date of last entry to Canada"),
+  list("Hair colour", ["qz_auburn", "qz_grey"]), list("Way of arrival", ["qz_by_land", "qz_by_sea"]),
   item("Height in centimetres", { confidence: "check", reason: "A rule failed: the quote was not found in the file.", rules: [{ rule: "quote_found", passed: false, why: "The words are not in the file." }] }),
   item("Name at birth", { confidence: "decide", agreement: "differ", reason: "The two readings differ: the checker reads it as the name on the birth certificate.", rounds: { draft: reading("Name at birth", "Name given at birth"), check: reading("Name on the birth certificate", "Name as printed on the birth certificate") } }),
   item("Eye colour", { origin: "rules", rounds: { draft: null, check: null }, agreement: "rules_only" }),
