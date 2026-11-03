@@ -8,8 +8,9 @@ import { caseView, knownOf, type Answer, type Participant } from "./case.ts";
 import { CHANNEL_WORDS, SIGNATURE_WORDS, type Channel, type Signature } from "../../contracts/forms.ts";
 import { lineOf } from "../channels.ts";
 import { questionsFor } from "./question-count.ts";
-import { MINOR } from "../../contracts/runtime.ts";
-import { FAMILIES, type FamilyKey, type OutputGroup, type PreviewSets, type PreviewView } from "../../contracts/workspace.ts";
+import { MINOR, ONLINE_LATER_WAVE } from "../../contracts/runtime.ts";
+import { minorFromAnswers, signersOf } from "./signing.ts";
+import { FAMILIES, type FamilyKey, type OutputGroup, type PreviewForm, type PreviewSets, type PreviewSign, type PreviewView } from "../../contracts/workspace.ts";
 import { documentFacts, factSources, prequalification, SOURCE_WORDS, suppliesOf } from "../sources.ts";
 import { sourceKey } from "../../contracts/resolver.ts"; // SH3 R8
 
@@ -41,8 +42,8 @@ export function familyPeople(participants: Line[], family: FamilyKey): Participa
 /** Sample ages of a family's people, so a line's minimum age shows working: adults 38 and 36, children 8 then 16, any
  *  other person 45. Never a real person; the date is worked out from `today`, a month before the birthday. */
 export const SAMPLE_AGES: Record<string, number> = { principal: 38, spouse: 36, "child-1": 8, "child-2": 16 };
-export function sampleBirthDates(s: Snapshot, people: Participant[], today: Date): Answer[] {
-  if (!(s.canonical_fields as { id: string }[]).some((f) => f.id === MINOR.birthDateField)) return [];
+export function sampleBirthDates(s: Snapshot, people: Participant[], today: Date, always = false): Answer[] {
+  if (!always && !(s.canonical_fields as { id: string }[]).some((f) => f.id === MINOR.birthDateField)) return [];
   return people.filter((p) => p.role !== "case").map((p) => {
     const d = new Date(Date.UTC(today.getUTCFullYear() - (SAMPLE_AGES[p.subjectId] ?? 45), today.getUTCMonth(), today.getUTCDate()));
     d.setUTCMonth(d.getUTCMonth() - 1);
@@ -66,7 +67,11 @@ export function previewFamily(s: Snapshot, family: FamilyKey | "", person: strin
   const ids = new Set(people.map((p) => p.subjectId));
   const kept = Object.fromEntries(Object.entries(tweaks).filter(([k, v]) => ids.has(k.split("|")[0]) && typeof v === "boolean"));
   const sample = sampleBirthDates(s, people, today), answers = [...sample, ...tweakAnswers(kept, today)];
-  const r = render(s, renderPeople, knownOf(s, people, answers, [], today).known, { today });
+  // C4.6 (re-test 3 Nov): the Sample family's ages (child 8, child 16) decide its forms and who signs even before the
+  // combination asks a date of birth, so "from age 18" shows working; the questions stay as a case would get them, and
+  // release still refuses a minimum age nobody is asked a date of birth for (engine/validate.ts).
+  const ages = sample.length ? sample : sampleBirthDates(s, people, today, true);
+  const r = render(s, renderPeople, knownOf(s, people, [...ages, ...tweakAnswers(kept, today)], [], today).known, { today });
   // Where each fact's answer comes from, per person role (W1-15 slice 1, P-130): the rules' default or a person's choice.
   const sources = new Map(factSources(s).map((f) => [sourceKey(f.role, f.fact), f]));
   const roleOf = (subjectId: string) => people.find((p) => p.subjectId === subjectId)?.role ?? subjectId;
@@ -90,7 +95,7 @@ export function previewFamily(s: Snapshot, family: FamilyKey | "", person: strin
   const agentView = caseView(s, people, answers, [], "agent", today);
   // The answers that change what applies: yes/no questions from the family before any tweak (so a tweak never vanishes
   // once answered).
-  const base = render(s, renderPeople, knownOf(s, people, sample, [], today).known, { today });
+  const base = render(s, renderPeople, knownOf(s, people, ages, [], today).known, { today });
   const subjectOf = (about: string) => (about === "case" ? "case" : about.split("/")[0]);
   const tweakList = base.deciders.filter((d) => d.value_type === "yes_no" && !d.about.includes("/") && ids.has(subjectOf(d.about))).map((d) => {
     const key = `${subjectOf(d.about)}|${d.fact}`;
@@ -108,16 +113,39 @@ export function previewFamily(s: Snapshot, family: FamilyKey | "", person: strin
   // Questionnaires tab counts its chip; `asked` is what the client is asked of them.
   // UX-A part 1: counted by the one function the Questionnaires chips use (each fact once per section).
   const count = (v: typeof questionnaire, id: string, shown: boolean) => questionsFor(v, id, shown);
+  // C4.6: a form filed for the application (its rule is about the case) or once per couple is its own group, shown once
+  // with the person who files it; every other form by its filing channel.
+  const formDef = new Map((s.forms as { form_number: string; who: string; signed_by?: string; condition?: { subjectKind?: string } | null }[]).map((f) => [f.form_number, f]));
+  const groupOf = (form: string, ch: Channel): OutputGroup => { const d = formDef.get(form); return d?.who === "case" || d?.condition?.subjectKind === "CASE" ? "APPLICATION" : d?.who === "couple_once" ? "COUPLE" : ch; };
+  // C4.6 (IRCC-P2-06, P2-09): who signs each form and how, by the resolver's one rule (R7 via signersOf).
+  const minor = minorFromAnswers(ages, today);
+  const signOf = (form: string, subject: string): PreviewSign | null => {
+    const d = formDef.get(form), ch = channelOf.get(form) ?? "PDF_UPLOAD", sig: Signature = lineAt.get(form)?.signature ?? "NONE";
+    if (!d) return null;
+    return signWords(ch, sig, checklists.has(form), signersOf(renderPeople, subject, d.who, d.signed_by, minor), roleOf(subject), minor(subject), people.find((p) => p.subjectId === subject)?.label);
+  };
+  const entry = (f: (typeof r.forms)[number], subject: string): PreviewForm => {
+    const ch = channelOf.get(f.form) ?? "PDF_UPLOAD", sig: Signature = lineAt.get(f.form)?.signature ?? "NONE";
+    return { form: f.form, title: f.title, applies: f.applies, why: f.why, channel: ch, channelWords: ch === "ONLINE" ? ONLINE_LATER_WAVE : CHANNEL_WORDS[ch], noRule: !!(f as { no_rule?: boolean }).no_rule, group: groupOf(f.form, ch), ...outputOf(ch, sig, checklists.has(f.form)), sign: signOf(f.form, subject) };
+  };
+  // C4.6 (IRCC-P2-09): the representative files no form of their own but signs each applicant's form a line says "the
+  // person and the representative" sign: their preview lists each such form once, naming whose forms they sign.
+  const signedForOthers = (id: string): PreviewForm[] => {
+    if (roleOf(id) !== "representative") return [];
+    const byForm = new Map<string, (typeof r.forms)[number][]>();
+    for (const f of r.forms) if (f.applies !== false && f.person !== id && formDef.get(f.form)?.signed_by === "person_and_representative" && !checklists.has(f.form)) byForm.set(f.form, [...(byForm.get(f.form) ?? []), f]);
+    return [...byForm].map(([form, rows]) => {
+      const e = entry(rows[0], rows[0].person), whose = [...new Set(rows.map((x) => x.person_label))].join(", ");
+      const applies = rows.some((x) => x.applies === true) ? true : "cannot_tell" as const;
+      return { ...e, applies, noRule: rows.every((x) => !!(x as { no_rule?: boolean }).no_rule), why: `Signed by the representative on each applicant's own ${form}: ${whose}. ${rows[0].why}`, sign: e.sign ? { by: `The representative, with ${whose}`, how: e.sign.how } : null };
+    });
+  };
   const forPerson = (id: string) => ({
     documents: r.checklist.filter((d) => mine(id)(d.person) && d.status !== "Not needed"),
-    forms: r.forms.filter((f) => mine(id)(f.person) && f.applies !== false),
+    forms: [...r.forms.filter((f) => mine(id)(f.person) && f.applies !== false).map((f) => entry(f, f.person === "case" ? id : f.person)), ...signedForOthers(id)],
     questions: count(agentView, id, false),
     asked: count(questionnaire, id, true),
   });
-  // C4.6: a form filed for the application (its rule is about the case) or once per couple is its own group, shown once
-  // with the person who files it; every other form by its filing channel.
-  const formDef = new Map((s.forms as { form_number: string; who: string; condition?: { subjectKind?: string } | null }[]).map((f) => [f.form_number, f]));
-  const groupOf = (form: string, ch: Channel): OutputGroup => { const d = formDef.get(form); return d?.who === "case" || d?.condition?.subjectKind === "CASE" ? "APPLICATION" : d?.who === "couple_once" ? "COUPLE" : ch; };
   const fromWords = (subjectId: string, fact: string, collected: string) => {
     const f = sources.get(sourceKey(roleOf(subjectId), fact));
     if (!f) return collected === "client_questionnaire" || collected === "profile_record" ? SOURCE_WORDS.CLIENT : SOURCE_WORDS.AGENT;
@@ -148,7 +176,7 @@ export function previewFamily(s: Snapshot, family: FamilyKey | "", person: strin
     people: people.filter((p) => p.role !== "case").map((p) => { const x = forPerson(p.subjectId); return { subjectId: p.subjectId, role: p.role, label: p.label, questions: x.questions, asked: x.asked, documents: x.documents.length, forms: x.forms.length }; }),
     questionnaire,
     documents: forPerson(chosen).documents.map((d) => ({ requirement: d.requirement, status: d.status, why: d.why, provided_by: d.provided_by })),
-    forms: forPerson(chosen).forms.map((f) => { const ch = channelOf.get(f.form) ?? "PDF_UPLOAD"; const sig: Signature = lineAt.get(f.form)?.signature ?? "NONE"; return { form: f.form, title: f.title, applies: f.applies, why: f.why, channel: ch, channelWords: CHANNEL_WORDS[ch], noRule: !!(f as { no_rule?: boolean }).no_rule, group: groupOf(f.form, ch), ...outputOf(ch, sig, checklists.has(f.form)) }; }),
+    forms: forPerson(chosen).forms,
     tweaks: tweakList,
     sets,
   };
@@ -161,4 +189,28 @@ export const LATER_WAVE_ONLINE = "Typed into the IRCC account from the answer sh
 export function outputOf(ch: Channel, sig: Signature, checklist = false): { signature: Signature; signatureWords: string; toSign: boolean; laterWave: string | null; checklist: boolean } {
   if (checklist) return { signature: "NONE", signatureWords: SIGNATURE_WORDS.NONE, toSign: false, laterWave: null, checklist: true };
   return { signature: sig, signatureWords: SIGNATURE_WORDS[sig], toSign: sig === "HAND_SCANNED" || sig === "PEN", laterWave: ch === "ONLINE" ? LATER_WAVE_ONLINE : null, checklist: false };
+}
+
+/** C4.6: "how" a form is signed, in words, by its line's signature. */
+export const SIGN_HOW: Record<Signature, string> = {
+  HAND_SCANNED: "By hand on the printed PDF, then scanned and uploaded",
+  PEN: "In pen on the printed form, then mailed",
+  TYPED_NAME: "By typing their name on the form",
+  NONE: "On the form; how it is signed is not set on this line yet",
+};
+/** C4.6 (IRCC-P2-06, VV-R09): anyone under 18 has their form signed by a parent or legal guardian. Guide 5256, "To
+ *  complete your form": "If you are less than 18 years of age, your form must be signed by one of your parents or a legal
+ *  guardian." (page date 2026-03-31; read 2026-11-01; product/compliance-trace.md). */
+export const GUARDIAN_WORDS = "A parent or legal guardian, for them (under 18)";
+/** Who signs one form for one person and how, in words, from the signers R7 names ("person", "parent", "principal",
+ *  "representative"; engine/runtime/signing.ts). Null when nobody signs it: a checklist, Not needed, a line set to No
+ *  signature, or an Online line with no method (the portal's own declaration, not ours to record). A minor is never their
+ *  own signer: a parent or legal guardian signs for them (IRCC-P2-06); the line's Sample rule "a parent, for a minor"
+ *  names the principal as that parent. */
+export function signWords(ch: Channel, sig: Signature, checklist: boolean, signers: string[], role: string, isMinor: boolean | undefined, label?: string): PreviewSign | null {
+  if (checklist || ch === "NOT_NEEDED" || !signers.length || (ch === "ONLINE" && sig === "NONE")) return null;
+  const self = role === "principal" ? "The principal applicant themselves" : `${label ?? "The person"} themselves`;
+  const words = signers.map((w) => w === "person" ? (isMinor ? GUARDIAN_WORDS : self) : w === "parent" ? "The principal applicant, as their parent (under 18)" : w === "principal" ? "The principal applicant, for the family" : w === "representative" ? "the representative" : w);
+  const by = [...new Set(words)].join(" and ");
+  return { by: by.charAt(0).toUpperCase() + by.slice(1), how: SIGN_HOW[sig] };
 }
