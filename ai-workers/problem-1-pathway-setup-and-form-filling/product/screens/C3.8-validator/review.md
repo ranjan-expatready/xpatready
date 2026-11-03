@@ -25,3 +25,13 @@ Task completed 1 · next step obvious 1 (note says what to do) · plain words 1 
 
 ## Could not check
 Real keyboard-only and zoom walk of the Decide panel; GitHub CI and the builder's full local run (in progress).
+
+## Round 2 (diff 8719b1f6e..19112037d)
+
+**Verdict: Approve** (no open Blocker or Major)
+
+- Ran `tests/check_c38_completeness_api.ts` on port 4448 (copy rev2_c38): 9/9 passed, including the removed-form case and the "filled by hand clears it" case. Read the diff; did not re-run the other suites you listed.
+- Fix 1 (`api/src/studio.ts` completenessProblems): the draft's effective lines are computed first and both the Background query and the IMM 5707 check use them. A form removed in the draft (RETIRED over PUBLISHED) is no longer checked, so my Minor 1 scenario "removed form still errors" is closed. The empty-forms case skips the query.
+- Fix 2 (`web/src/pages/job.tsx:249-250,260`): a Background question already `not_a_fact`/`never_filled` is listed with the pill "Marked "not a fact": decide again", is removed from the "decided" list, and "Decide" opens with "Filled by hand" only. The error can now be cleared from the screen. Plain words.
+- Checking every PDF edition of each current form: I agree, since the snapshot and filler carry every edition. Remaining Minor (unchanged, not a blocker): a `not_a_fact` Background row on a non-current edition is flagged but the panel shows only the job's edition, so it can only be cleared by opening that edition's own job. Scenario: an older edition of a current form keeps such a row and its job is not in To review. Not a regression; the error text names the question.
+- Test-setup changes unchanged in Round 2; none weakens a check.
