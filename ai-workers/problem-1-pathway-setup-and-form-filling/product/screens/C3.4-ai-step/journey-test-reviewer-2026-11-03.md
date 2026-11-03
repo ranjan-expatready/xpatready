@@ -39,3 +39,18 @@ Isolated copy on :4441 (`xr_studio_rv_qa195`, since dropped). US$0. Committed co
 - A real screen reader, axe, 200 % zoom.
 - An intended user's unaided walk (D17, D20 stay with the founder).
 - A Saved or Live run carrying this case (none is recorded; Live is not allowed).
+
+## Round 2 (commit 9c79ef5e7)
+| # | Journey | Result |
+|---|---|---|
+| 1 | Main: the round-1 J3 case. A name such as "Proof of identity" is now caught | Engine: identity true, `person_only`, Check (suite 56/56; probe: 30 of 32 identity names caught) |
+| 2 | Break: API edit to an AI reader | 409, nothing lands (suite C3.4 S, `:190-199`) |
+| 3 | Recovery: a waiting item from before the change ("Birth certificate", AI reader, Ready) accepted in bulk, then alone | 409 toast, both items stay waiting, nothing lands. The toast asks for a reader choice the screen does not offer, so only Reject works (review round 2, Minor B) |
+| 4 | Accessibility | axe WCAG 2.0–2.2 A/AA on To review: 0 violations |
+
+**Round-2 scores:**
+- 1 each: task completed, next step obvious, feedback and state, correct data, accessibility and screen sizes, speed, visual quality, trust and sources.
+- ½ plain words: the toast names an action the screen does not offer.
+- ½ error recovery: a legacy item can only be rejected.
+
+**Score 9/10: pass.**

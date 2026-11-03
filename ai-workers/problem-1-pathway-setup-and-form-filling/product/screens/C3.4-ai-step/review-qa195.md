@@ -49,3 +49,52 @@ No new page or route. `engine/identity-documents.ts` is reached by `masters-ai.t
 - A Live run (not allowed). The Saved replay with this case: there is no recorded run, so the item was seeded through product code.
 
 **Verdict: Block.** Fix M1 and M2, each with its fail test. Fix Minor 1 together with M2.
+
+---
+
+# Round 2: diff `369e4cf06..9c79ef5e7` only
+
+Same isolated copy on :4441 (fresh database per suite, since dropped). HEAD 9c79ef5e7, clean worktree. US$0.
+
+## Suites (all re-run by me)
+| Suite | Result |
+|---|---|
+| `check_forms_c34_ai.ts` | 56/56 |
+| `check_forms_c26_checklist.ts` | 41/0 |
+| `check_forms_c26_queue_breaks.ts` | 20/0 |
+| `check_s6_p149.ts` | 78/0 |
+| `check_forms_c36_requirement_type.ts` | 34/0 |
+| `check_forms_c36_acceptance.ts wp.family` | 17/17 |
+| `check_forms_proposal_contract.ts` | 22/0 |
+| `acceptance/C2.6.test.ts` | 32/32 |
+
+- `acceptance/C3.6.test.ts` stops at its own setup ("Visitor visa needs C4.11 first"); that pack also waits on other work, so this is not a regression.
+- **Correction to round 1:** `@axe-core/playwright` 4.4.1 *is* installed. I misread a directory listing, so withdraw that install proposal. Axe run now: To review, IMM 5257 group, WCAG 2.0–2.2 A/AA, **0 violations**.
+
+## Round-1 findings
+- **M1, closed.** Every name I listed is now caught, as are "Identity and civil status documents", "Pièce d'identité", "Pasaporte", "Reisepass", "Military ID", "State ID", "COPR" and "Naturalisation certificate". Of the 32 identity names I probed, only "Laissez-passer" and "Seaman's book" are missed (see Minor A).
+  - Of the 42 non-identity names I probed, none is flagged except "Identity-theft police report", "Student ID card" and "Tax ID letter". These are false positives in the safe direction: a person reads them.
+  - Passport photos still come out as photos: "Passport-size photo" and "passport photos" are photos, not identity documents; "Passport photo page" is identity.
+  - The fail test is `named` at `check_forms_c34_ai.ts:85-88`.
+- **M2, closed.** The lander refuses with 409 (`proposals.ts:426`) and records `identityOf` (`:427,431`).
+  - Test `check_forms_c34_ai.ts:190-199`: an edit to `letter_or_record` gives 409 and nothing lands; `coded_lines` gives 201 and lands as identity true. Removing the guard would let the 409 case land, so the check fails then.
+  - The author's own add records `isIdentityName` (`studio.ts:817`).
+- **Minor 1, closed.** `docTypeOf` reads the shared list (`checklist.ts:147-151`): only a passport or travel document gets coded lines, any other identity document gets `person_only`. Tests at `check_forms_c26_checklist.ts:57-62`.
+- **Minor 2, closed.** A passport-size photo is no longer read by coded lines. That changes C2.6 as intended, and the C2.6 pack stays 32/32.
+- **Minor 3, closed.** The listed French names are covered; the limit is stated in the module comment.
+
+## New in round 2 (Minor, none blocking)
+- **A.** "Laissez-passer" and "Seaman's book" are missed (rare travel or identity papers). Add them if the list is touched again.
+- **B. A waiting item made before this change, with an identity name and an AI reader, is now a dead end on screen.** I seeded "Birth certificate" with `letter_or_record`, Ready, through `insertProposals`, then:
+  - "Accept 2 items" with "Bank statement": 409 toast "…Choose its coded lines, its printed layout or a person's reading." Both stay waiting: the batch is all or nothing, which is correct.
+  - The same 409 when accepting the item alone.
+  - But the screen offers no reader choice, so only Reject works. The toast also does not say that nothing in the batch was accepted.
+  - New drafts cannot reach this state (the masters guard, C2.6 and the author's add all give non-AI readers), so only queues from before this change are hit. The refusal is P-153-correct.
+  - *Fix (Should):* word the toast for the screen, e.g. "Reject it and draft again; nothing in this batch was accepted". Or have the masters/C2.6 replay re-guard waiting items.
+  - *Fail test:* seed such a waiting item and assert that the 409 text names a step the screen offers.
+- **C.** B6 (two items when the rounds disagree on a name) and B8 (names in non-Latin scripts dropped) are unchanged, as stated. Both fail safe.
+
+## D1–D20 changes from round 1
+D1 1 · D2 1 · D10 ½ (the toast in B names an action the screen does not offer; "P-134" shown to users) · D13 1 (axe 0 violations, keyboard, three widths) · D16 1 (the door, the names and C2.6 each have fail tests that fail without the rule) · D19 1. All others as in round 1. Journey score round 2: **9/10, pass** (`journey-test-reviewer-2026-11-03.md`).
+
+**Verdict: Approve** for 9c79ef5e7. There is no open Blocker or Major. Minors A and B are for the builder's judgement or a follow-up row.
