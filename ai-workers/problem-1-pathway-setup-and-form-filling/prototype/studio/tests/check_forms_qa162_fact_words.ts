@@ -6,7 +6,7 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { findFact, stem, wordsOf } from "../engine/fact-words.ts";
+import { findFact, listed, stem, wordsOf } from "../engine/fact-words.ts";
 import type { FactSourceView } from "../engine/sources.ts";
 import { admitInput, PolicyRefusal } from "../../p2/guard.ts";
 import { buildRequest } from "../../p2/prompt.ts";
@@ -44,8 +44,11 @@ ok("W2 fail (QA-194): \"Purpose of visit\" is the purpose or its 'other' details
 ok("W2 fail (QA-194): \"Intended stay dates\" is the first or the last day: none, both named", twins("Intended stay dates", ["case.intended_stay_from", "case.intended_stay_to"]));
 ok("W2 fail (QA-194): \"Intended stay\" is the first or the last day: none, both named", twins("Intended stay", ["case.intended_stay_from", "case.intended_stay_to"]));
 ok("W2 fail (QA-194): \"Previous residence\" is never the end date: none, the start and end dates named", twins("Previous residence", ["person.previous_residence_from", "person.previous_residence_to"]));
-ok("W2 pass (QA-194): \"to\" is a word: \"Intended stay to date\" is the last day only", at(findFact(FACTS, "principal", "Intended stay to date")) === "case|case.intended_stay_to|words");
-ok("W2 pass (QA-194): \"Intended stay from date\" is the first day only", at(findFact(FACTS, "principal", "Intended stay from date")) === "case|case.intended_stay_from|words");
+ok("W2 fail (QA-194): \"to\" never picks a twin: \"Intended stay to date\" and \"Intended stay to Canada\" name both days", twins("Intended stay to date", ["case.intended_stay_from", "case.intended_stay_to"]) && twins("Intended stay to Canada", ["case.intended_stay_from", "case.intended_stay_to"]));
+ok("W2 fail (QA-194): a lone question for the other end is refused: \"Intended stay to\" when only the first day is asked names none", at(findFact(FACTS.filter((x) => x.fact !== "case.intended_stay_to"), "principal", "Intended stay to")) === "none:none");
+ok("W2 pass (QA-194): \"from\" is a word: \"Intended stay from date\" is the first day only", at(findFact(FACTS, "principal", "Intended stay from date")) === "case|case.intended_stay_from|words");
+ok("W2 fail (QA-194 review M1): a filler \"to\" never decides: \"Relationship to applicant\" is answered as \"Relationship applicant\" (the label \"…to be visited to the traveller\" gains nothing from it)", (() => { const pool = [...FACTS, f("principal", "visit.host_relationship", "Relationship of the person or institution to be visited to the traveller"), f("case", "relationship.start_date", "Date of marriage or date the common-law relationship began")]; const a = findFact(pool, "principal", "Relationship to applicant"), b = findFact(pool, "principal", "Relationship applicant"); return !a.fact && a.why === "several" && at(a) === at(b) && a.several.length === b.several.length; })());
+ok("listed (QA-194 review M2): every candidate is named, never \"and n more\"", (() => { const r = findFact(FACTS, "principal", "Previous residence"); return !r.fact && r.several.length === 3 && listed(r.several).split("\", \"").length === 3 && !/more/.test(listed(r.several)); })());
 ok("W2 pass (QA-194): a unique full match still matches: \"Previous residence end date\" is the end date", at(findFact(FACTS, "principal", "Previous residence end date")) === "principal|person.previous_residence_to|words");
 ok("W2 pass: synonym list: \"Criminal record question\" is criminal history (record = history; only its question text says \"question\")", at(findFact(FACTS, "principal", "Criminal record question", new Map([["person.criminal_history", ["Criminal history question"]]]))) === "principal|person.criminal_history|words");
 ok("W2 fail (QA-194): \"Criminal record\" is criminal history or its details (both hold every word): none, both named", twins("Criminal record", ["person.criminal_history", "person.criminal_history_details"]));
