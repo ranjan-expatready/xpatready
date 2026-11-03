@@ -1,4 +1,4 @@
-// QA-193 (Major; P-121: "the second person at release sees what was bulk-accepted", P-288 (2)): field-map items ticked
+// C11.14, QA-193 (Major; P-121: "the second person at release sees what was bulk-accepted", P-288 (2)): field-map items ticked
 // together on To review reached the approver as separate changes with no mark: applying the form's draft wrote each new
 // field's library change with no batch. Since P-296 (1)/P-299 only High reuse matches are accepted together (they add
 // nothing to the library), and a new field is accepted on its own; the change applying writes now carries the decision
@@ -72,6 +72,15 @@ const planted = join(RUNS, `${job.job_id}-live-20261103t000000000z-q193test${POR
     const superseded = r.body?.batchId as string;
     const back = await call("POST", `/jobs/${run}/items/${fresh2[0]}`, { decision: "PENDING" });
     ok("QA-193 pass (Devin on #740): putting a queue-accepted item back on its form-field page clears the batch it was accepted in", r.status === 201 && !!superseded && back.status < 300 && sql(`select status || '|' || coalesce(batch_id::text, '-') from proposal_item where id = '${fresh2[0]}'`) === "waiting|-", [r.status, back.status, words(back)]);
+    // Review M1: Undo on To review still refuses a decision one of whose items was decided again on its page since.
+    const und1 = await call("POST", `/review/proposals/undo/${superseded}`);
+    ok("QA-193 fail (review M1): Undo of a one-item decision whose item was decided again on its page is refused (409, in words)", und1.status === 409 && /decided again on its form-field page/.test(words(und1)), [und1.status, words(und1)]);
+    const reuse2 = readyOf("REUSE");
+    r = await call("POST", "/review/proposals/decide", { ids: [reuse2[0], reuse2[1]], action: "accept" });
+    const pair = r.body?.batchId as string;
+    await call("POST", `/jobs/${run}/items/${reuse2[0]}`, { decision: "PENDING" });
+    const und2 = await call("POST", `/review/proposals/undo/${pair}`);
+    ok("QA-193 fail (review M1): Undo of a two-item decision, one item decided again on its page, is refused (409); the other stays accepted in its batch", r.status === 201 && und2.status === 409 && /decided again on its form-field page/.test(words(und2)) && sql(`select status || '|' || batch_id from proposal_item where id = '${reuse2[1]}'`) === `accepted|${pair}`, [r.status, und2.status, words(und2)]);
 
     // The rest of the draft decided one by one on its page, then applied by the author.
     await acceptCleanOneByOne(call, run, ["REUSE", "NEW"], "user-C");

@@ -607,13 +607,14 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
   // Review M2 (#282): a bulk accept of up to BATCH_MAX picks checks each against the combination inside this one
   // transaction; Prisma's 5 s default ended batches above about 45 picks with nothing accepted.
   }, { ...QUEUE_TX, timeout: 120_000 });
-  await audit.log(workspaceId, actor.id, "decided", "proposals", batchId, `${actor.name} ${d.action === "accept" ? "accepted" : d.action === "edit" ? "edited and accepted" : "rejected"} ${landed.length} proposal${landed.length === 1 ? "" : "s"}${reason ? `: ${reason}` : ""}`);
+  await audit.log(workspaceId, actor.id, "decided", "proposals", batchId, `${actor.name} ${d.action === "accept" ? "accepted" : d.action === "edit" ? "edited and accepted" : "rejected"} ${landed.length} proposal${landed.length === 1 ? "" : "s"}${reason ? `: ${reason}` : ""}`, { ids: landed.map((x) => x.id) }); // QA-193 review M1: the ids, so Undo knows an item that left the batch since
   return { batchId, items: landed };
 }
 
 /** Undo a decision batch within 10 s: its landed draft rows and waiting ADDs are removed and its items wait again on
  *  the queue as they were proposed (1b: "undone" left them nowhere; the activity log keeps the undo). Only the person
  *  who decided, only while every ADD is still waiting. */
+const PAGE_DECIDED_SINCE = "One of these items was decided again on its form-field page since, so Undo would erase that decision. Nothing was undone: change it on that page.";
 export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: string, batchId: string) {
   need(actor, "review");
   const res = await db.$transaction(async (tx) => {
@@ -621,6 +622,13 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     // C3.2 AT-9: an Undo clears the items' batch id, so the same Undo again finds none; the activity log still has the
     // undo, so it is refused as done (409), not as unknown.
     if (!rows.length && await tx.auditEvent.count({ where: { workspaceId, action: "undone", entity: "proposals", entityKey: batchId } })) fail("Already undone: these proposals wait on the queue again. Nothing was changed.", HttpStatus.CONFLICT);
+    // QA-193 review M1: a decision on the form-field page takes the item out of the batch (recordChoice), so the items
+    // this decision made are read from its log entry: one decided again on its page since is never undone from here.
+    if (!(await tx.auditEvent.count({ where: { workspaceId, action: "undone", entity: "proposals", entityKey: batchId } }))) {
+      const made = (await tx.auditEvent.findFirst({ where: { workspaceId, action: "decided", entity: "proposals", entityKey: batchId }, select: { detail: true } }))?.detail as { ids?: string[] } | null;
+      const left = made?.ids?.length ? await tx.proposalItem.findMany({ where: { workspaceId, id: { in: made.ids }, OR: [{ batchId: null }, { NOT: { batchId } }] }, select: { step: true } }) : [];
+      if (left.some((r) => ON_ITS_PAGE.has(r.step))) fail(PAGE_DECIDED_SINCE, HttpStatus.CONFLICT);
+    }
     if (!rows.length) fail("No decision with this id.", HttpStatus.NOT_FOUND);
     if (rows.some((r) => r.decidedBy !== actor.id)) fail("Only the person who decided can undo it.", HttpStatus.FORBIDDEN);
     if (rows.some((r) => r.status === "undone")) fail("Already undone.", HttpStatus.CONFLICT);
@@ -631,7 +639,7 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     // G-CORE B5: a field-map item accepted here goes back only while its draft is not applied and nobody decided it again
     // on its form-field page.
     const onPage = rows.filter((r) => ON_ITS_PAGE.has(r.step));
-    if (onPage.some((r) => r.choice !== "ACCEPTED")) fail("One of these items was decided again on its form-field page since, so Undo would erase that decision. Nothing was undone: change it on that page.", HttpStatus.CONFLICT);
+    if (onPage.some((r) => r.choice !== "ACCEPTED")) fail(PAGE_DECIDED_SINCE, HttpStatus.CONFLICT);
     if (onPage.length && await tx.draftingJob.count({ where: { id: { in: [...new Set(onPage.map((r) => r.runId).filter((x): x is string => !!x))] }, status: "APPLIED" } })) fail("The form's draft was applied to the configuration since, so Undo would leave its form fields mapped. Nothing was undone: change the mapping in the library instead.", HttpStatus.CONFLICT);
     // C11.13 (review M3): an item this batch added that another accepted item now reuses is not taken away under it.
     const added = rows.filter((r) => r.decidedKey && (r.reuse as { match?: string } | null)?.match !== "reuse");
