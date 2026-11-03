@@ -288,7 +288,9 @@ function LineDrawer({ id, l, d, onClose, onRemoved }: { id: string; l: Workspace
   const [minAge, setMinAge] = React.useState(l.minAge ? String(l.minAge) : "");
   // Devin on #627: the hint follows the saved age's own source state (missing or changed: it needs one; answered: it has one).
   const age = useItemNumbers(id, "threshold", `form:${l.code}`, "min_age");
-  const ageAnswered = age.loaded && age.nums.length > 0 && age.nums.every((n) => n.passes);
+  // CI on #627: while the list refreshes after a save, its old entry (the 18) is never read as the 19's answer: the hint
+  // claims "recorded" only from a settled list whose number is the age saved on this line.
+  const ageAnswered = age.settled && age.nums.length > 0 && age.nums.every((n) => n.passes && n.value === String(l.minAge));
   const [copies, setCopies] = React.useState(String(l.copies ?? 1));
   const [mode, setMode] = React.useState<"always" | "only_if">(l.onlyIf.kind === "always" ? "always" : "only_if");
   const [cond, setCond] = React.useState<any>(l.condition);

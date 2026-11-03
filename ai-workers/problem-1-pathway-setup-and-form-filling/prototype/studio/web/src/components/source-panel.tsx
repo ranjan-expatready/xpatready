@@ -229,7 +229,8 @@ function Answer({ n }: { n: SourceNumberView }) {
 export function useItemNumbers(id: string, kind: string, suffix: string, address?: string) {
   const q = useApi<SourcesView>(["sources", id], sourcesPath(id));
   const nums = (q.data?.numbers ?? []).filter((n) => n.kind === kind && n.key.endsWith(`/${suffix}`) && (!address || n.address === address));
-  return { nums, loaded: !!q.data, failed: q.isError && !q.data, retry: () => void q.refetch(), retrying: q.isFetching };
+  // `settled`: loaded and not refetching, so a list being refreshed after a save is never read as the current answer.
+  return { nums, loaded: !!q.data, settled: !!q.data && !q.isFetching, failed: q.isError && !q.data, retry: () => void q.refetch(), retrying: q.isFetching };
 }
 
 export function ItemSources({ id, kind, suffix, address, variant, label, note, quietOnError }: {
