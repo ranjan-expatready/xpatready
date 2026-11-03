@@ -6,7 +6,7 @@
 import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { forViewer, KIND_STEP, mayAct, setupChecklistOf, WHERE_STEP, type SetupInput } from "../engine/setup-checklist.ts";
+import { forViewer, KIND_STEP, mayAct, needsYouItems, setupChecklistOf, WHERE_STEP, type SetupInput } from "../engine/setup-checklist.ts";
 import { SetupChecklist, ViewerChecklist } from "../contracts/setup-checklist.ts";
 import { PROPOSAL_KINDS } from "../contracts/proposal-item.ts";
 
@@ -71,6 +71,12 @@ const err = (where: string) => ({ level: "error" as const, where, item: "x", mes
   const ns = setupChecklistOf(live({ notStartable: true }));
   step("UX-A3 (break B1): a released combination failing the startable check is Not ready, never Live", ns.chip.status === "NOT_READY" && ns.bar.text !== "✓ Live", ns.chip);
   step("UX-A3 (break B1) fail case: a released, startable combination stays Live", setupChecklistOf(live({ notStartable: false })).chip.status === "LIVE");
+  // Lead 5 on #616 Question 0: AI proposals wait for a holder of the review duty, so they are Needs you for the approver
+  // and the expert too (before: the author's only, so Programs said 0 for them against To review's rows).
+  const props = setupChecklistOf(live({ proposals: { field: 3 } as SetupInput["proposals"] }));
+  const forB = needsYouItems(props, { id: "user-B", duties: ["review", "approve"] }), forC = needsYouItems(props, { id: "user-C", duties: ["review", "sme"] });
+  step("Lead 5 fail case: AI proposals are Needs you for the approver and the expert (review duty)", forB.some((i) => i.kind === "review_proposals") && forC.some((i) => i.kind === "review_proposals"), { forB, forC });
+  step("Lead 5 pass: nobody without the review duty has them", !needsYouItems(props, { id: "x", duties: ["author"] }).some((i) => i.kind === "review_proposals"));
   // Devin review on #622: Not ready only by the startable check (no validator error on the release) still has a next step.
   const why = setupChecklistOf(live({ notStartable: true, notStartableWhy: [{ code: "role_without_questions", text: "No questions yet for Principal applicant. Next step: Add questions." }] }));
   step("UX-A3 (Devin) fail case: Not ready by the startable check alone has a next step, never \"nothing to do\"", why.chip.status === "NOT_READY" && !!why.next && why.next.item.fromRelease && why.next.item.kind === "fix_problems" && /^No questions yet for Principal applicant/.test(why.next.item.text) && why.next.item.text === "No questions yet for Principal applicant: firms cannot open cases until it is fixed", why.next);
@@ -134,7 +140,9 @@ const err = (where: string) => ({ level: "error" as const, where, item: "x", mes
   const blocked = setupChecklistOf(draft({ problems: [err("Forms")] }));
   step("UX-A2 (P-273): a draft's release-blocking problem is Needs you for the author, not for the expert", forViewer(blocked, AUTHOR).needsYou?.count === 1 && !forViewer(blocked, SME).needsYou, forViewer(blocked, AUTHOR).needsYou);
   const review = setupChecklistOf(draft({ proposals: { field: 2, requirement_line: 1 } }));
-  step("C11.10: waiting proposals are Needs you for the author (3), not for the expert", forViewer(review, AUTHOR).needsYou?.count === 3 && !forViewer(review, SME).needsYou, forViewer(review, AUTHOR).needsYou);
+  // Lead 5 on #616 Question 0 (2 Nov): proposals are decided by a holder of the review duty (To review), so they are
+  // Needs you for every content publisher (the author and the expert here), never for someone without the duty.
+  step("C11.10: waiting proposals are Needs you for every holder of the review duty (3), not for someone without it", forViewer(review, AUTHOR).needsYou?.count === 3 && forViewer(review, SME).needsYou?.count === 3 && !forViewer(review, { id: "x", duties: ["author"] }).needsYou, { author: forViewer(review, AUTHOR).needsYou, sme: forViewer(review, SME).needsYou });
   step("C11.10: an overlay keeps the contract (ViewerChecklist parses)", ViewerChecklist.safeParse({ ...review, viewer: forViewer(review, AUTHOR) }).success);
 }
 {

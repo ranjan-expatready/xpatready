@@ -37,7 +37,10 @@ export const KIND_STEP: Record<ProposalKind, { step: StepKey; part?: "documents"
 /** Who acts on each open item (§5). A "sure" confirmation is the author's (the expert may too); "not sure" is the
  *  expert's alone. Review and sign is the expert's, never the submitter's; Release is the approver's, never an author of
  *  the changes or the submitter. Nobody acts on View AI progress (anyone opens it). */
-export function actsOn(kind: ItemKind, tier?: Tier): { duties: ("author" | "sme" | "approve")[]; filledFor: "author" | "sme" | "approve" | null } {
+export function actsOn(kind: ItemKind, tier?: Tier): { duties: ("author" | "sme" | "approve" | "review")[]; filledFor: "author" | "sme" | "approve" | "review" | null } {
+  // Lead 5 on #616 Question 0 (2 Nov): AI and people proposals are decided by a holder of the review duty (To review, the
+  // P-121 review screen), so Programs' Needs you and To review's agree for every person (C11.10, qa 2 Nov).
+  if (kind === "review_proposals" || kind === "review_people") return { duties: ["review"], filledFor: "review" };
   if (kind === "confirm_pages" || kind === "choose_pages" || kind === "confirm_people") return tier === "author" ? { duties: ["author", "sme"], filledFor: "author" } : { duties: ["sme"], filledFor: "sme" };
   if (kind === "sign") return { duties: ["sme"], filledFor: "sme" };
   if (kind === "release") return { duties: ["approve"], filledFor: "approve" };
@@ -232,7 +235,7 @@ function summaryOf(k: StepKey, s: SetupInput, c: Counts, done: boolean): string 
   return done ? `Released as Release ${s.release!.number}` : s.release ? `${plural(s.changes, "change")} since Release ${s.release.number}` : "Not released yet";
 }
 
-const WAITING_FOR: Record<"author" | "sme" | "approve", string> = { author: "the configuration author", sme: "the immigration expert", approve: "a second person" };
+const WAITING_FOR: Record<"author" | "sme" | "approve" | "review", string> = { author: "the configuration author", sme: "the immigration expert", approve: "a second person", review: "a content publisher" };
 /** The duty overlay (§5, P-180 Q1): the card's one button for this person (Open for anyone without the author duty),
  *  Needs you when a review or confirmation on their duty and tier waits, and the Next line in their words. Runs after
  *  the cache. */

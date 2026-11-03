@@ -124,8 +124,7 @@ const PEOPLE = ["user-A", "user-B", "user-C"];
   await agree("put back");
 
   // Break round 2: on the six (AI proposals on several combinations) every combination Programs marks Needs you is on To
-  // review's Needs you, and no setup row is outside it. AI proposals themselves follow the forms lane's rule (a reviewer
-  // decides them, C2.6/C2.12) while the card follows P-180 (the author): that open question is in the PR, not settled here.
+  // review's Needs you, and no setup row is outside it. AI proposals are a reviewer's (C2.6/C2.12; Lead 5, 2 Nov).
   const six = await api("/demo/reset-to-six", { method: "POST", data: { confirm: "RESET" } });
   step("setup: the six load (saved AI answers replayed, US$0)", six.status < 300, six.status);
   for (const actor of PEOPLE) {
@@ -134,6 +133,33 @@ const PEOPLE = ["user-A", "user-B", "user-C"];
     const anyCombos = new Set(q.items.map((i) => i.combination).filter(Boolean));
     step(`the six (${actor}): setup rows are Programs Needs-you combinations; every Programs Needs-you combination is on To review's Needs you`, [...setupCombos].every((c) => prog.has(c)) && [...prog].every((c) => anyCombos.has(c)), { programs: [...prog].length, setup: [...setupCombos].length });
   }
+  // Lead 5's ruling on #616 Question 0 (2 Nov): AI proposals are decided by a holder of the review duty on To review, and
+  // Programs' Needs you reads the same rule, so for the approver and the expert the two screens name the same combinations
+  // (qa, 2 Nov: Programs "Needs you 0" against To review's 17).
+  step("setup: the six have AI proposal rows on To review", (await reviewNeeds("user-B")).items.some((i) => i.kind === "ai_proposals"));
+  for (const actor of ["user-B", "user-C"]) {
+    const prog = await programsNeeds(actor), q = await reviewNeeds(actor);
+    const rowCombos = new Set(q.items.map((i) => i.combination).filter(Boolean));
+    const propCombos = new Set(q.items.filter((i) => i.kind === "ai_proposals").map((i) => i.combination).filter(Boolean));
+    step(`fail case (Lead 5, ${actor}): every combination with AI proposals on To review's Needs you is Needs you on Programs (before: 0)`, propCombos.size > 0 && [...propCombos].every((c) => prog.has(c)), { programs: prog.size, proposals: propCombos.size });
+    step(`pass (Lead 5, ${actor}): Programs' Needs you and To review's Needs you name the same combinations`, [...rowCombos].every((c) => prog.has(c)) && [...prog].every((c) => rowCombos.has(c)), { programs: [...prog].length, toReview: [...rowCombos].length });
+  }
+  // The same on the Programs page itself, for the approver and the expert: the Needs you chip of each Pathway type is the
+  // number of that type's combinations on To review's Needs you.
+  for (const actor of ["user-B", "user-C"]) {
+    await p.evaluate((a) => { try { localStorage.setItem("xr-actor", a); } catch { /* ignore */ } }, actor);
+    const rowCombos = new Set((await reviewNeeds(actor)).items.map((i) => i.combination).filter(Boolean));
+    for (const pw of ["INDIVIDUAL", "CORPORATE"]) {
+      const ids = ((await api(`/catalogue?pathway=${pw}&filter=all`, {}, actor)).body?.rows ?? []).filter((r) => r.combinationId).map((r) => r.combinationId);
+      const want = ids.filter((id) => rowCombos.has(id)).length;
+      await p.goto(`${BASE}/${pw === "CORPORATE" ? "?pw=CORPORATE" : ""}`); await p.locator("[data-needs-you]").first().waitFor({ timeout: 20000 }); await p.waitForFunction(() => !document.querySelector('[aria-busy="true"]'), null, { timeout: 15000 });
+      const chip = p.locator("[data-needs-you]").first();
+      await chip.waitFor({ timeout: 15000 }).catch(() => undefined);
+      const shown = ((await chip.innerText().catch(() => "")) ?? "").match(/(\d+)\s*$/)?.[1];
+      step(`pass (Lead 5, ${actor}, ${pw === "CORPORATE" ? "Corporate" : "Retail"}): the Programs page's Needs you chip counts the combinations on To review's Needs you`, shown !== undefined && Number(shown) === want, { shown, want });
+    }
+  }
+  await p.evaluate(() => { try { localStorage.setItem("xr-actor", "user-A"); } catch { /* ignore */ } });
   for (const actor of ["user-B", "user-C"]) {
     const q = await reviewNeeds(actor);
     step(`fail case (break round 2 m2, ${actor}): "Submit again" is never Needs you for someone the server refuses`, q.items.every((i) => i.next?.label !== "Submit again"), q.items.map((i) => `${i.kind}:${i.next?.label}`));
