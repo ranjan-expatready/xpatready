@@ -1,0 +1,358 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-fieldmap-check-imm-5604-02-2023-ac8dda49-live-20261103t073951172z-a10a98",
+  "idempotency_key": "fe73197e80bbaf6bcc46dd9dff098a633f08e1be27eb1e5106671c766902f1d8",
+  "contract_version": "drafting-run/v0",
+  "kind": "field_map",
+  "output_sha256": "1daf0747000e543e4cf9373f6ef544ae07700fee48a16fa5f3d849c09c6d6a3e",
+  "inputs": {
+   "combination": "edition:IMM 5604:02-2023",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/imm5604e.inventory.json",
+     "sha256": "75cf1ad19e2f34253b31bb3b4ddb0ca415f3b0eca336969bd4f0aebc6e3d71d4"
+    }
+   ],
+   "configuration_version": "studio-add-form"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 900000,
+   "max_attempts": 2,
+   "budget_usd": 2.83,
+   "max_output_tokens": 64000,
+   "prompt_version": "field-map-check.v1.md",
+   "prompt_sha256": "51474a479d9e91c3dd36a9e120d137796a2040e1409b39d5ef3c665cb6ec901b"
+  },
+  "status": "completed_with_unresolved",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 7995,
+    "output_tokens": 4703,
+    "duration_ms": 39395
+   }
+  ],
+  "usage": {
+   "input_tokens": 7995,
+   "output_tokens": 4703,
+   "cost_usd": 0.12604,
+   "duration_ms": 39395
+  },
+  "started_at": "2026-11-03T07:39:51.175Z",
+  "ended_at": "2026-11-03T07:40:30.777Z",
+  "entries": [
+   {
+    "form_edition": "IMM 5604 (02-2023)",
+    "form_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+    "data_path": "IMM_5604[0].Page1[0].forCICUseOnly[0].fileNo[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "Office use only box, completed by IRCC.",
+    "evidence": {
+     "file_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+     "quote": "FOR OFFICE USE ONLY"
+    }
+   },
+   {
+    "form_edition": "IMM 5604 (02-2023)",
+    "form_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+    "data_path": "IMM_5604[0].Page1[0].forCICUseOnly[0].currentDate[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "Office use only box, completed by IRCC.",
+    "evidence": {
+     "file_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+     "quote": "FOR OFFICE USE ONLY"
+    }
+   },
+   {
+    "form_edition": "IMM 5604 (02-2023)",
+    "form_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+    "data_path": "IMM_5604[0].Page1[0].IName[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "The declarant is the non-accompanying parent/guardian of the child (form subject). The form does not say whether this is the child's parent 1, parent 2, or a guardian, so whose name goes here depends on the case and must be chosen by a person.",
+    "evidence": {
+     "file_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+     "quote": "I,"
+    }
+   },
+   {
+    "form_edition": "IMM 5604 (02-2023)",
+    "form_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+    "data_path": "IMM_5604[0].Page1[0].childName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.full_name",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+     "quote": "Child's full name (as shown on passport/travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 5604 (02-2023)",
+    "form_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+    "data_path": "IMM_5604[0].Page1[0].childBirthDate[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "evidence": {
+     "file_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+     "quote": "Child's date of birth (YYYY-MM-DD) (as shown on passport/travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 5604 (02-2023)",
+    "form_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+    "data_path": "IMM_5604[0].Page1[0].parentGuardian1[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "This names an accompanying parent/guardian of the child. It may be the child's other parent, a step-parent, or a guardian; which case person this is cannot be told from the form and depends on who is not accompanying.",
+    "evidence": {
+     "file_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+     "quote": "Parent/Guardian full name (as shown on passport/travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 5604 (02-2023)",
+    "form_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+    "data_path": "IMM_5604[0].Page1[0].relationship1[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Relationship to child of the first accompanying parent/guardian. That person cannot be identified from the form, so this relationship is unresolved too.",
+    "evidence": {
+     "file_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+     "quote": "Relationship to child"
+    }
+   },
+   {
+    "form_edition": "IMM 5604 (02-2023)",
+    "form_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+    "data_path": "IMM_5604[0].Page1[0].parentGuardian2[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "This names a second accompanying parent/guardian (for example a step-parent or guardian). Which case person this is cannot be told from the form.",
+    "evidence": {
+     "file_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+     "quote": "Parent/Guardian full name (as shown on passport/travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 5604 (02-2023)",
+    "form_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+    "data_path": "IMM_5604[0].Page1[0].relationiship2[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Relationship to child of the second accompanying parent/guardian. That person cannot be identified from the form.",
+    "evidence": {
+     "file_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+     "quote": "Relationship to child"
+    }
+   },
+   {
+    "form_edition": "IMM 5604 (02-2023)",
+    "form_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+    "data_path": "IMM_5604[0].Page1[0].otherName[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "This names another accompanying person who is not a parent/guardian. No family role in the person list fits this, and the case record may not hold it.",
+    "evidence": {
+     "file_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+     "quote": "Full name (as shown on passport/travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 5604 (02-2023)",
+    "form_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+    "data_path": "IMM_5604[0].Page1[0].otherRelationship[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Relationship to child of the other accompanying person. That person cannot be identified from the form.",
+    "evidence": {
+     "file_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+     "quote": "Relationship to child"
+    }
+   },
+   {
+    "form_edition": "IMM 5604 (02-2023)",
+    "form_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+    "data_path": "IMM_5604[0].Page1[0].signature[0].signature[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "The declarant signs this by hand before a notary public witness.",
+    "evidence": {
+     "file_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+     "quote": "Signature (before witness)"
+    }
+   },
+   {
+    "form_edition": "IMM 5604 (02-2023)",
+    "form_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+    "data_path": "IMM_5604[0].Page1[0].signedDate[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "This is the date the declarant signs before the notary. It is completed at signing.",
+    "evidence": {
+     "file_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+     "quote": "Date (YYYY-MM-DD)"
+    }
+   },
+   {
+    "form_edition": "IMM 5604 (02-2023)",
+    "form_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+    "data_path": "IMM_5604[0].Page1[0].telephoneNumber[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "The form does not say whose emergency contact number this is (it is likely the declaring non-accompanying parent/guardian's). That person cannot be identified as parent 1 or parent 2, and an emergency contact number may not be held in the case record.",
+    "evidence": {
+     "file_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+     "quote": "Emergency contact telephone number"
+    }
+   },
+   {
+    "form_edition": "IMM 5604 (02-2023)",
+    "form_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+    "data_path": "IMM_5604[0].Page1[0].place[0].place[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "This is the place where the declaration is signed before the notary. It is completed at signing and is not a case fact.",
+    "evidence": {
+     "file_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+     "quote": "Place"
+    }
+   },
+   {
+    "form_edition": "IMM 5604 (02-2023)",
+    "form_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+    "data_path": "IMM_5604[0].Page1[0].notaryName[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "The notary public witness completes this.",
+    "evidence": {
+     "file_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+     "quote": "Witness title and full name in block letters (must be a notary public)"
+    }
+   },
+   {
+    "form_edition": "IMM 5604 (02-2023)",
+    "form_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+    "data_path": "IMM_5604[0].Page1[0].notaryStamp[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "The witness applies a professional chop/stamp by hand.",
+    "evidence": {
+     "file_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+     "quote": "Witness professional chop/stamp"
+    }
+   },
+   {
+    "form_edition": "IMM 5604 (02-2023)",
+    "form_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+    "data_path": "IMM_5604[0].Page1[0].notarySignature[0].notarySignature[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "The witness signs this by hand.",
+    "evidence": {
+     "file_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+     "quote": "Signature of witness"
+    }
+   },
+   {
+    "form_edition": "IMM 5604 (02-2023)",
+    "form_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+    "data_path": "IMM_5604[0].Page1[0].notarySignedDate[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "The witness completes this date at signing.",
+    "evidence": {
+     "file_sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+     "quote": "Date (YYYY-MM-DD)"
+    }
+   }
+  ]
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": {
+  "weak_evidence": [],
+  "edition_note": null,
+  "needs_person": [],
+  "set_aside_fields": []
+ },
+ "launch_evidence": {
+  "path_code_sha256": "a0e864dc08df5beb6564ce2a54352bfa00113220d3a1906f29fe0c054fb77679",
+  "template_sha256": "707130b8cae250f820fe2ce5ef29c39bb6ddadaa6ade3b636e88c2ba8a472ffb",
+  "schema_file": "field-map-output.v2.schema.json",
+  "schema_sha256": "a9583204f0ff5325721c1240af88c2f86d9701dac3c1f466061c0073c4f2d68a",
+  "known": {
+   "form_edition": "IMM 5604 (02-2023)"
+  },
+  "screened": true,
+  "output_sha256": "1daf0747000e543e4cf9373f6ef544ae07700fee48a16fa5f3d849c09c6d6a3e",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "3d8edae636dc6a80db89a00772a57a48a8610993db6bb0e75f5be9fec21de3b7",
+  "request_bytes": 17946,
+  "stub_calls": null,
+  "ledger": {
+   "file": "<main copy>/.tools/p2-ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 52.382315999999996
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/imm5604e.inventory.json",
+    "sha256": "75cf1ad19e2f34253b31bb3b4ddb0ca415f3b0eca336969bd4f0aebc6e3d71d4",
+    "kind": "inventory"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "c62999abc985961fb44e1d7f6e2b1d84371f4446e6770e2281ce79e969f72b5a",
+   "digest_made_at": "2026-11-03T07:39:51.174Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "1f45247fdaa51a15602bee08854cc0df",
+   "ticket_expires_at": "2026-11-03T07:41:51.174Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"form_edition\":\"IMM 5604 (02-2023)\",\"canonical_fields\":[{\"id\":\"person.full_name\",\"meaning\":\"A person's full name as shown on their passport or travel document\",\"value_type\":\"text\"},{\"id\":\"person.date_of_birth\",\"meaning\":\"A person's date of birth as shown on their passport or travel document\",\"value_type\":\"date\"},{\"id\":\"relationship.relationship_to_child\",\"meaning\":\"How a person is related to a given child (for example mother, father, legal guardian, step-parent)\",\"value_type\":\"text\"},{\"id\":\"person.telephone_number\",\"meaning\":\"A telephone number at which a person can be reached\",\"value_type\":\"text\"}],\"entries\":[{\"data_path\":\"IMM_5604[0].Page1[0].forCICUseOnly[0].fileNo[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Office use only box, completed by IRCC.\",\"evidence_quote\":\"FOR OFFICE USE ONLY\"},{\"data_path\":\"IMM_5604[0].Page1[0].forCICUseOnly[0].currentDate[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Office use only box, completed by IRCC.\",\"evidence_quote\":\"FOR OFFICE USE ONLY\"},{\"data_path\":\"IMM_5604[0].Page1[0].IName[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"The declarant is the non-accompanying parent/guardian of the child (form subject). The form does not say whether this is the child's parent 1, parent 2, or a guardian, so whose name goes here depends on the case and must be chosen by a person.\",\"evidence_quote\":\"I,\"},{\"data_path\":\"IMM_5604[0].Page1[0].childName[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.full_name\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Child's full name (as shown on passport/travel document)\"},{\"data_path\":\"IMM_5604[0].Page1[0].childBirthDate[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Child's date of birth (YYYY-MM-DD) (as shown on passport/travel document)\"},{\"data_path\":\"IMM_5604[0].Page1[0].parentGuardian1[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"This names an accompanying parent/guardian of the child. It may be the child's other parent, a step-parent, or a guardian; which case person this is cannot be told from the form and depends on who is not accompanying.\",\"evidence_quote\":\"Parent/Guardian full name (as shown on passport/travel document)\"},{\"data_path\":\"IMM_5604[0].Page1[0].relationship1[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Relationship to child of the first accompanying parent/guardian. That person cannot be identified from the form, so this relationship is unresolved too.\",\"evidence_quote\":\"Relationship to child\"},{\"data_path\":\"IMM_5604[0].Page1[0].parentGuardian2[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"This names a second accompanying parent/guardian (for example a step-parent or guardian). Which case person this is cannot be told from the form.\",\"evidence_quote\":\"Parent/Guardian full name (as shown on passport/travel document)\"},{\"data_path\":\"IMM_5604[0].Page1[0].relationiship2[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Relationship to child of the second accompanying parent/guardian. That person cannot be identified from the form.\",\"evidence_quote\":\"Relationship to child\"},{\"data_path\":\"IMM_5604[0].Page1[0].otherName[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"This names another accompanying person who is not a parent/guardian. No family role in the person list fits this, and the case record may not hold it.\",\"evidence_quote\":\"Full name (as shown on passport/travel document)\"},{\"data_path\":\"IMM_5604[0].Page1[0].otherRelationship[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Relationship to child of the other accompanying person. That person cannot be identified from the form.\",\"evidence_quote\":\"Relationship to child\"},{\"data_path\":\"IMM_5604[0].Page1[0].signature[0].signature[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"The declarant signs this by hand before a notary public witness.\",\"evidence_quote\":\"Signature (before witness)\"},{\"data_path\":\"IMM_5604[0].Page1[0].signedDate[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"This is the date the declarant signs before the notary. It is completed at signing.\",\"evidence_quote\":\"Date (YYYY-MM-DD)\"},{\"data_path\":\"IMM_5604[0].Page1[0].telephoneNumber[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"The form does not say whose emergency contact number this is (it is likely the declaring non-accompanying parent/guardian's). That person cannot be identified as parent 1 or parent 2, and an emergency contact number may not be held in the case record.\",\"evidence_quote\":\"Emergency contact telephone number\"},{\"data_path\":\"IMM_5604[0].Page1[0].place[0].place[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"This is the place where the declaration is signed before the notary. It is completed at signing and is not a case fact.\",\"evidence_quote\":\"Place\"},{\"data_path\":\"IMM_5604[0].Page1[0].notaryName[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"The notary public witness completes this.\",\"evidence_quote\":\"Witness title and full name in block letters (must be a notary public)\"},{\"data_path\":\"IMM_5604[0].Page1[0].notaryStamp[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"The witness applies a professional chop/stamp by hand.\",\"evidence_quote\":\"Witness professional chop/stamp\"},{\"data_path\":\"IMM_5604[0].Page1[0].notarySignature[0].notarySignature[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"The witness signs this by hand.\",\"evidence_quote\":\"Signature of witness\"},{\"data_path\":\"IMM_5604[0].Page1[0].notarySignedDate[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"The witness completes this date at signing.\",\"evidence_quote\":\"Date (YYYY-MM-DD)\"}]}"
+}
