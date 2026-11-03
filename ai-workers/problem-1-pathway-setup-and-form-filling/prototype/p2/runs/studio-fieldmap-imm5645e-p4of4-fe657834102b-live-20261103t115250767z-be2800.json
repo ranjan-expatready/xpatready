@@ -1,0 +1,198 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-fieldmap-imm5645e-p4of4-fe657834102b-live-20261103t115250767z-be2800",
+  "idempotency_key": "05687cb38e690e5958974e2ecbf3ef282e250aa065e4c161590509ee709abffa",
+  "contract_version": "drafting-run/v0",
+  "kind": "field_map",
+  "output_sha256": "4af37a18f1c0e205a0b30a3c989b71fb472b9d08c8916f485b6431e4be976cd6",
+  "inputs": {
+   "combination": "studio",
+   "official_files": [
+    {
+     "file": "prototype/p2/parts/imm5645e.p4of4-fe657834102b.part.json",
+     "sha256": "745551284c9612b6a9999a8ece098ac410013cce20e17b5fd2b93fd857dbf54d"
+    }
+   ],
+   "configuration_version": "studio-add-form"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 600000,
+   "max_attempts": 2,
+   "budget_usd": 5,
+   "max_output_tokens": 5500,
+   "prompt_version": "field-map-part.v1.md",
+   "prompt_sha256": "a9136d0a9d77791de0bfe52dcf2c61c928f80c387223019bd68524eb343893aa"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 4449,
+    "output_tokens": 1821,
+    "duration_ms": 16923
+   }
+  ],
+  "usage": {
+   "input_tokens": 4449,
+   "output_tokens": 1821,
+   "cost_usd": 0.054216,
+   "duration_ms": 16923
+  },
+  "started_at": "2026-11-03T11:52:50.769Z",
+  "ended_at": "2026-11-03T11:53:07.877Z",
+  "entries": [
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[6].ChildOccupation[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.present_occupation",
+    "transform": "as_is",
+    "row": 6,
+    "condition": "Fixed seventh sibling slot (Child[6]); filled only when the subject has at least seven brothers or sisters (including half- and step-siblings).",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Present occupation:"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[6].ChildYes[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_sibling",
+    "fact": "relationship.accompanies_subject_to_canada",
+    "transform": "checkbox_on_if_yes:1/0",
+    "row": 6,
+    "condition": "Fixed seventh sibling slot (Child[6]); filled only when the subject has at least seven brothers or sisters. Mutually exclusive with ChildNo. The caption only says 'Yes'; the question is assumed to be whether the sibling accompanies the subject to Canada, which a reviewer should confirm against the printed form.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Yes"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[6].ChildNo[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_sibling",
+    "fact": "relationship.accompanies_subject_to_canada",
+    "transform": "checkbox_on_if_no:1/0",
+    "row": 6,
+    "condition": "Fixed seventh sibling slot (Child[6]); filled only when the subject has at least seven brothers or sisters. Mutually exclusive with ChildYes. The caption only says 'No'; the question is assumed to be whether the sibling accompanies the subject to Canada, which a reviewer should confirm against the printed form.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "No"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].SectionCsignature[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "Certification signature is signed by hand by the person; the system must never fill it.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Signature:"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].SectionCdate[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "Date of the certification signature. It is written by the person at the moment of signing and is not a stored case fact.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Date (YYYY-MM-DD)"
+    }
+   }
+  ]
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": {
+  "weak_evidence": [],
+  "edition_note": null,
+  "needs_person": [],
+  "set_aside_fields": []
+ },
+ "launch_evidence": {
+  "path_code_sha256": "5b7ba6446c4e2f308099ef2585cbb54987eba206836f9721d55952bfe2e92067",
+  "template_sha256": "966ad8b94385fa99450bef25c615d65fcff2c8230f02f0a356c6c3e0cad30c2c",
+  "schema_file": "field-map-output.v2.schema.json",
+  "schema_sha256": "a9583204f0ff5325721c1240af88c2f86d9701dac3c1f466061c0073c4f2d68a",
+  "known": {
+   "form_edition": "IMM 5645 (01-2021)"
+  },
+  "screened": true,
+  "output_sha256": "4af37a18f1c0e205a0b30a3c989b71fb472b9d08c8916f485b6431e4be976cd6",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "3d4b535bce88d878a81d42507df3ff6a8140b0ad66415bc54f098b7747bd1f37",
+  "request_bytes": 10295,
+  "stub_calls": null,
+  "ledger": {
+   "file": "<main copy>/.tools/p2-ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 63.90513199999999
+  },
+  "admitted": [
+   {
+    "file": "prototype/p2/parts/imm5645e.p4of4-fe657834102b.part.json",
+    "sha256": "745551284c9612b6a9999a8ece098ac410013cce20e17b5fd2b93fd857dbf54d",
+    "kind": "inventory_part"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "57cde46abaa5d02ed84ce6a05447a14e3aff67e24d610cbc6ab61362e5fac349",
+   "digest_made_at": "2026-11-03T11:52:50.768Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "f473a0bf8383c43b3cdcf139902df926",
+   "ticket_expires_at": "2026-11-03T11:54:50.768Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"form_edition\":\"IMM 5645 (01-2021)\",\"canonical_fields\":[{\"id\":\"person.present_occupation\",\"meaning\":\"The person's present occupation\",\"value_type\":\"text\"},{\"id\":\"relationship.accompanies_subject_to_canada\",\"meaning\":\"Whether this family member will accompany the form subject to Canada\",\"value_type\":\"yes_no\"}],\"entries\":[{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[6].ChildOccupation[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":6,\"fact\":\"person.present_occupation\",\"transform\":\"as_is\",\"condition\":\"Fixed seventh sibling slot (Child[6]); filled only when the subject has at least seven brothers or sisters (including half- and step-siblings).\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Present occupation:\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[6].ChildYes[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":6,\"fact\":\"relationship.accompanies_subject_to_canada\",\"transform\":\"checkbox_on_if_yes:1/0\",\"condition\":\"Fixed seventh sibling slot (Child[6]); filled only when the subject has at least seven brothers or sisters. Mutually exclusive with ChildNo. The caption only says 'Yes'; the question is assumed to be whether the sibling accompanies the subject to Canada, which a reviewer should confirm against the printed form.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Yes\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[6].ChildNo[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":6,\"fact\":\"relationship.accompanies_subject_to_canada\",\"transform\":\"checkbox_on_if_no:1/0\",\"condition\":\"Fixed seventh sibling slot (Child[6]); filled only when the subject has at least seven brothers or sisters. Mutually exclusive with ChildYes. The caption only says 'No'; the question is assumed to be whether the sibling accompanies the subject to Canada, which a reviewer should confirm against the printed form.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"No\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].SectionCsignature[0]\",\"outcome\":\"never_filled\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Certification signature is signed by hand by the person; the system must never fill it.\",\"evidence_quote\":\"Signature:\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].SectionCdate[0]\",\"outcome\":\"never_filled\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Date of the certification signature. It is written by the person at the moment of signing and is not a stored case fact.\",\"evidence_quote\":\"Date (YYYY-MM-DD)\"}]}"
+}
