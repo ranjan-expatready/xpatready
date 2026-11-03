@@ -67,3 +67,18 @@ Data underneath: read-only screen; the `logical_section` rows changed only by my
 
 Not checked: a real screen reader; an intended user's unaided walk (D17, D20 stay with the founder); the retire through the real two-person approval (I applied its effect to the row directly on my copy); Safari or Firefox.
 Screenshots (not committed): `/tmp/claude-0/-home-user-xpatready/9b94cd17-2d4a-57e5-947f-5401998bbe17/scratchpad/rev172/shots/`.
+
+## Re-review — diff b0544c4e7..0fab07310 (3 Nov)
+How I ran it: my own detached worktree of 0fab07310, `web/dist` built from it (`index-30DV8a2H.js`), copy `rev_qa172` on :4448, US$0. The changed files type-check cleanly.
+* **m1 fixed.** `api/src/workspace.ts:129` reads every `logical_section` version, newest first, any status (one extra query per view, not one per row). On :4448:
+  * retired v1 → "Intended work in Canada";
+  * renamed then retired (v1 SUPERSEDED, v2 RETIRED) → the newest title, "Work you will do in Canada" (no longer the superseded one);
+  * restored → the title.
+  Remove-the-rule check: with the old filtered list back, the new step fails (`{"title":"intended_work"}`, 9/10).
+* **m2 fixed.** `sources.tsx:162-163, :199`: when there is no question, the drawer title is `factName(f.fact)` and the meaning moves to "Meaning:". "Has children" now opens a drawer titled "Has children" with one "Meaning: Whether the person has any children…" line. The placed "Name" drawer still has exactly one Meaning line. axe on both drawers: no violations. The save message uses the same `title` (:185), so it now quotes the short name. `FactDrawer` has one caller (questionnaires.tsx:545), so no other page changes. Remove-the-rule check: with the old title and meaning back, the check stops at the `[data-fact-meaning]` wait (exit 1). It fails, but as a stopped check, not a FAIL line.
+* `check_qa172_plain_titles_browser.cjs`: **10/10 twice**, each on a fresh copy.
+* Nits, no action needed: `drawerText` just repeats `drawerTitle` (test :55). The m2 step could check for the Meaning line with `count()` so that removing the rule prints a FAIL line instead of a timeout.
+* New observation (already there before this PR, outside this diff, not in BUGS): on a renamed-then-retired section, "Add a library section…" offers it again under its old title. The cause is `api/src/workspace.ts:118-120`: the `available` list drops only RETIRED rows, so the SUPERSEDED v1 still qualifies. Seen on :4448 (`available` includes `intended_work`). This belongs to the C4.1 or library owner.
+* Journey score updated: correct data 1, error recovery 1, trust and sources 1 → **9 / 10, pass**. The remaining ½ points are the keys under "Only if" and QA-123's focus loss, both there before this PR.
+
+**Re-review verdict: Approve** at 0fab07310. No Blocker, Major or open Minor from this review.
