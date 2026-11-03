@@ -48,7 +48,7 @@ export type BoxRow = { box: string; caption: string; fact: string | null; meanin
  *  is known it cannot be told (and the date of birth is asked, as a deciding question). */
 const BIRTH = "person.date_of_birth";
 function ageGate(known: Known, about: string, minAge: number | null | undefined, today: Date): Cond {
-  if (!minAge || about === "case") return { applies: true, missing: [] };
+  if (!minAge || about === FILING) return { applies: true, missing: [] };
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(known.get(kkey(about, BIRTH))?.value ?? ""));
   if (!m) return { applies: "cannot_tell", missing: [BIRTH] };
   const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
@@ -77,7 +77,7 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   const sectionOrder = new Map(s.sections.map((x, i) => [x.id, i]));
   const label = (about: string | null) => {
     if (!about) return "nobody on this case";
-    if (about === "case") return "The application";
+    if (about === FILING) return "The application";
     // QA-76: a form that reads the representative when no representative is on the case names the role, never its key.
     if (about === "representative") return "The representative";
     const [id, rel] = about.split("/");
@@ -95,7 +95,7 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   const forms = s.forms.filter((f) => f.form_kind !== "document" || true).flatMap((f) => {
     const kind = f.condition?.subjectKind;
     return subjectsFor(people, f.who).map((person) => {
-      const rule: Cond = wordsOnly(f) ? { applies: "cannot_tell", missing: [NO_RULE] } : evalCondition(s, known, f.condition, kind === "CASE" ? "case" : person);
+      const rule: Cond = wordsOnly(f) ? { applies: "cannot_tell", missing: [NO_RULE] } : evalCondition(s, known, f.condition, kind === "CASE" ? FILING : person);
       const c = both(rule, ageGate(known, person, f.min_age, today));
       const why = wordsOnly(f) ? `Cannot tell yet: no rule ("${f.condition_plain ?? "only if"}" is in words only)` : f.condition_plain ?? (f.status === "always" ? "always required for this combination" : "conditional");
       return { form: f.form_number, title: f.title, form_kind: f.form_kind ?? "data_form", person, person_label: label(person), status: f.status, applies: c.applies, missing: c.missing, why: f.min_age ? `${why}; from age ${f.min_age}` : why, origin: f.origin, no_rule: wordsOnly(f) };
@@ -159,7 +159,7 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
     }
   };
   for (const f of forms) if (f.applies === "cannot_tell") addDecider(f.missing, f.person, `whether ${f.form} applies to ${f.person_label}`);
-  for (const f of s.forms) if (f.condition) for (const row of forms.filter((x) => x.form === f.form_number)) keepAnswered(f.condition, [f.condition.subjectKind === "CASE" ? "case" : row.person], `whether ${f.form_number} applies to ${row.person_label}`);
+  for (const f of s.forms) if (f.condition) for (const row of forms.filter((x) => x.form === f.form_number)) keepAnswered(f.condition, [f.condition.subjectKind === "CASE" ? FILING : row.person], `whether ${f.form_number} applies to ${row.person_label}`);
 
   // ------------------------------------------------------------ document checklist
   // Q2 (#325): whose list a line is on comes from its own "who" (lineHolders); its condition is decided on its subject.
@@ -196,7 +196,8 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   // ------------------------------------------------------------ rules (plain effects), evaluated per subject
   const rules = s.rules.map((r) => {
     const kind = r.when?.subjectKind;
-    const subjects = kind === "CASE" ? ["case"] : subjectsFor(people, r.for_whom, kind === "EACH_APPLICANT" || kind === "EACH_PERSON" ? undefined : kind);
+    // R2: a rule's condition subject kind (CASE → the filing, a role → its people) wins over its "for whom".
+    const subjects = subjectsFor(people, r.for_whom, kind === "EACH_APPLICANT" || kind === "EACH_PERSON" ? undefined : kind);
     const results = subjects.map((person) => { const c = evalCondition(s, known, r.when, person); if (c.applies === "cannot_tell") addDecider(c.missing, person, r.then); keepAnswered(r.when, [person], r.then); return { person, person_label: label(person), applies: c.applies, missing: c.missing }; });
     return { id: r.id, then: r.then, when_plain: r.when_plain, for_whom: r.for_whom, results, origin: r.origin, item_status: r.status };
   });
@@ -213,7 +214,7 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
     if (!p) return;
     let status: Q["status"] = maybe ? "may be needed" : "needs an answer", required = true;
     if (p.condition) {
-      const subject = about === "case" ? "case" : about.split("/")[0];
+      const subject = about === FILING ? FILING : about.split("/")[0];
       const c = evalCondition(s, known, p.condition, subject);
       const eff = p.condition_effect ?? "SHOW";
       if ((eff === "SHOW" && c.applies !== true) || (eff === "HIDE" && c.applies === true)) { status = "hidden by a condition"; why = `${p.condition_plain ?? "condition"} (${c.applies === "cannot_tell" ? `waiting for ${c.missing.join(", ")}` : String(c.applies)})`; }
@@ -231,7 +232,7 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   for (const n of needs.values()) pushQ(n.fact, n.about, `read by ${[...n.forms].join(", ")} (${n.boxes} form field${n.boxes > 1 ? "s" : ""})`, [...n.rows].sort(), [], n.maybe);
   // A section the row selects is a line on the row (SA-1B-58): its placed questions are asked even when no form reads
   // them yet, each with its reason (SA-1B-59). Once per case, or for each person who applies.
-  const applicants = people.filter((x) => x.applies && x.role !== "representative").map((x) => x.id);
+  const applicants = subjectsFor(people, "each_applicant"); // R2
   const selected = new Set(s.sections.map((x) => x.id));
   for (const p of s.placements) if (selected.has(p.section_id) && !p.rule_only) for (const about of isFilingFact(p.fact, p) ? [FILING] : applicants)
     pushQ(p.fact, about, `asked in "${sectionTitle.get(p.section_id) ?? p.section_id}", a section this row selects`, [], [], false);
@@ -251,7 +252,7 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   // A document_validity check is a rule about a document's dates (engine/runtime/case-checklist.ts), not a predicate.
   const checks = (s.checks ?? []).filter((c) => c.condition && c.group !== "form_native" && c.group !== "document_validity").flatMap((c) => {
     const kind = c.condition?.subjectKind;
-    const subjects = kind === "CASE" ? ["case"] : people.filter((p) => p.applies).map((p) => p.id);
+    const subjects = kind === "CASE" ? [FILING] : people.filter((p) => p.applies).map((p) => p.id);
     return subjects.map((person) => ({ c, person, r: evalCondition(s, known, c.condition, person) })).filter((x) => x.r.applies === true)
       .map(({ c, person }) => ({ id: c.id, severity: c.severity, group: c.group, person, person_label: label(person), applies_to: c.applies_to, message: c.message ?? c.applies_to, illustrative: !!c.illustrative }));
   });
@@ -259,7 +260,7 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   const unplaced = [...needs.values()].filter((n) => !place.has(n.fact)).map((n) => ({ fact: n.fact, about: n.about, about_label: label(n.about), forms: [...n.forms], in_library: field.has(n.fact) }));
   const total = coverage.reduce((a, c) => { for (const [k, v] of Object.entries(c.counts)) a[k] = (a[k] ?? 0) + v; return a; }, {} as Record<string, number>);
   return {
-    people: [{ id: "case", label: "The application" }, ...people.map((p) => ({ id: p.id, label: p.label, role: p.role, applies: p.applies }))],
+    people: [{ id: FILING, label: "The application" }, ...people.map((p) => ({ id: p.id, label: p.label, role: p.role, applies: p.applies }))],
     forms, coverage, checklist, rules, questions, checks, unplaced,
     deciders: [...deciders.values()].map((d) => ({ fact: d.fact, about: d.about, about_label: label(d.about), meaning: field.get(d.fact)?.meaning ?? d.fact, value_type: field.get(d.fact)?.value_type ?? "text", decides: [...d.decides] })),
     summary: {

@@ -158,6 +158,10 @@ ok("SH3 render (review r3-m1): an answered case.* deciding fact is kept on the f
 // ---- The four places call the resolver; the engine part is lift-ready
 const src = (f: string) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
 ok("SH3: render.ts re-exports the resolver's functions (no copy left)", render.aboutOf === R.aboutOf && render.subjectsFor === R.subjectsFor && render.peopleFor === R.peopleFor && render.formSigners === R.formSigners && render.conditionSubjects === R.conditionSubjects && render.lineHolders === R.lineHolders && !/function (aboutOf|subjectsFor|peopleFor|formSigners|factsOf)\b/.test(src("engine/render.ts")));
+// M1 (P-291 (6)): render.ts keeps no inline copy of R2's each_applicant and no "case" literal for the filing (FILING).
+const copyInRender = (t: string) => /\.applies && \w+\.role !== "representative"/.test(t) || /"case"/.test(t);
+ok("SH3 M1: render.ts takes each_applicant and the filing from the resolver (no inline copy, no \"case\" literal)", !copyInRender(src("engine/render.ts")));
+ok("SH3 M1 (failing case): the check catches the copy and the literal it guards against", copyInRender('const applicants = people.filter((x) => x.applies && x.role !== "representative")') && copyInRender('if (about === "case") return'));
 ok("SH3: people.ts, sources.ts, fact-sources.ts and form-lines.ts call the resolver and keep no copy", /from "\.\/resolver\.ts"/.test(src("engine/people.ts")) && !/const NAMES\b/.test(src("engine/people.ts"))
   && /from "\.\/resolver\.ts"/.test(src("engine/sources.ts")) && !/const (spouseOf|roleOf)\b/.test(src("engine/sources.ts"))
   && /sourceKey/.test(src("api/src/fact-sources.ts")) && !/`\$\{\w*\.?role\}\|\$\{\w*\.?fact\}`/.test(src("api/src/fact-sources.ts"))
