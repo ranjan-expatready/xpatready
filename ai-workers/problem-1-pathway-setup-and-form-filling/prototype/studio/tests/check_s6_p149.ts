@@ -251,11 +251,35 @@ const item = (payload: any, over: any = {}) => ({ kind: payload.kind, runId: RUN
   sql(`update proposal_item set confidence = 'ready', reason = null where id = '${twin}'`);
   const changesTwin0 = sql("select count(*) from library_change");
   r = await call("POST", "/review/proposals/decide", { ids: [twin, twReuse], action: "accept" }, "user-C");
-  ok("C11.14 bulk fail (P-305 twin): a twin whose first copy is not in the library is refused with others (409), nothing accepted, nothing reaches the library", r.status === 409 && /new shared field is decided on its own/.test(r.body.message) && /first copy added is not in the library/.test(r.body.message) && sql(`select string_agg(status, ',') from proposal_item where id in ('${twin}', '${twReuse}')`) === "waiting,waiting" && sql("select count(*) from library_change") === changesTwin0, r.body);
+  ok("C11.14 bulk fail (P-305 twin): a twin whose first copy is not in the library is refused with others (409), nothing accepted, nothing reaches the library", r.status === 409 && /cannot be accepted with others/.test(r.body.message) && /first copy \(drafted for another form\) is not accepted or not in the library yet/.test(r.body.message) && sql(`select string_agg(status, ',') from proposal_item where id in ('${twin}', '${twReuse}')`) === "waiting,waiting" && sql("select count(*) from library_change") === changesTwin0, r.body);
   r = await call("POST", "/review/proposals/decide", { ids: [twFirst], action: "accept" }, "user-C");
   const twKey = r.body.items?.[0]?.landedAs;
   r = await call("POST", "/review/proposals/decide", { ids: [twin, twReuse], action: "accept" }, "user-C");
   ok("C11.14 bulk pass (P-305 twin): once its first copy is accepted on its own, the twin is a clean reuse and goes with others, adding nothing", r.status === 201 && r.body.items?.find((x: any) => x.id === twin)?.landedAs === twKey && sql(`select count(*) from library_change where batch_id = '${r.body.batchId}'`) === "0", r.body);
+  // P-305 review M1: an AI condition lands on the combination but changes when a shared question is asked, for every
+  // combination that asks it (a library change for a second person): never accepted with others. Two Ready conditions are
+  // written through the one door as the qd_conditions step writes them (Sample).
+  const cws = ws, ccombo = (await db.combination.findFirstOrThrow({ where: { workspaceId: cws, retiredAt: null } })).id;
+  const cqs = await db.sectionQuestion.findMany({ where: { workspaceId: cws, status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: { lineageKey: "asc" }, take: 40 });
+  const yesno = await db.canonicalField.findFirst({ where: { workspaceId: cws, valueType: { in: ["yes_no", "boolean"] }, status: { in: ["DRAFT", "PUBLISHED"] } } });
+  const ctargets = [...new Map(cqs.filter((q: any) => q.predicateJson == null && q.lineageKey !== yesno?.canonicalFieldKey).map((q: any) => [q.lineageKey, q])).values()].slice(0, 2) as any[];
+  const crun = (await db.draftingJob.create({ data: { workspaceId: cws, combinationId: ccombo, kind: "qd_conditions", mode: "REPLAY", status: "COMPLETED", costUsd: 0, startedBy: "user-A", finishedAt: new Date(), message: "test (P-305 conditions)", detail: {} } })).id;
+  const condItem = (q: any) => {
+    const tree = { subjectKind: yesno!.canonicalFieldKey.split(".")[0].toUpperCase(), op: "eq", field: yesno!.canonicalFieldKey, value: true };
+    const payload = { kind: "condition", target: { kind: "question", key: q.lineageKey }, roles: ["principal"], condition: { sentence: `"${q.lineageKey}" is asked only when "${yesno!.canonicalFieldKey}" is yes.`, tree, sharedConditionKey: null, examples: [] } };
+    const rd = { reading: `${q.lineageKey}: when yes`, payload, from: "replay", runFile: "runs/test.json", costUsd: 0 };
+    return { kind: "condition", runId: crun, step: "qd_conditions", scope: { formEdition: null, combinationId: ccombo }, landsOn: "combination", reuse: { match: "new", existingKey: null }, payload,
+      source: { file: "guide.pdf", sha256: "c".repeat(64), edition: null, page: null, quote: "Answer only if yes", quoteFound: true, rule: null }, rounds: { draft: rd, check: rd },
+      rules: [{ rule: "quote_found", passed: true, why: null }], agreement: "agreed", confidence: "ready", reason: null, origin: "ai", identity: { key: `principal|${q.lineageKey}|${yesno!.canonicalFieldKey}`, near: [], nearReason: null }, relatesTo: null, revision: null, basis: "SAMPLE" };
+  };
+  const condIds = ctargets.length === 2 && yesno ? await P.insertProposals(db, ws, ctargets.map(condItem) as any) : [];
+  const changesCond0 = sql("select count(*) from library_change");
+  r = await call("POST", "/review/proposals/decide", { ids: condIds, action: "accept" }, "user-C");
+  ok("C11.14 bulk fail (P-305 review M1): two Ready AI conditions are refused together (409, says it changes a shared question for every combination), nothing accepted, no library change", condIds.length === 2 && r.status === 409 && /changes when a shared question is asked/.test(r.body.message) && sql(`select string_agg(status, ',') from proposal_item where id in ('${condIds.join("', '")}')`) === "waiting,waiting" && sql("select count(*) from library_change") === changesCond0, [condIds.length, r.status, r.body?.message]);
+  r = await call("POST", "/review/proposals/decide", { ids: [condIds[0]], action: "accept" }, "user-C");
+  ok("C11.14 pass (P-305 review M1): one Ready AI condition is accepted on its own and lands its one change for a second person", r.status === 201 && sql(`select count(*) from library_change where batch_id = '${r.body.batchId}' and status = 'WAITING'`) === "1", [r.status, r.body]);
+  ok("C11.14 bulk fail (P-305 review m1, pure): a checklist line that would land its new document type with it is never ticked with others", P.bulkWhy({ kind: "requirement_line", step: "requirement_line", confidence: "ready", origin: "ai", agreement: "agreed", landsOn: "combination", relatesTo: crypto.randomUUID(), reuse: { match: "new", existingKey: null } } as any) === P.LINE_WITH_NEW_TYPE_ALONE
+    && P.bulkWhy({ kind: "requirement_line", step: "requirement_line", confidence: "ready", origin: "ai", agreement: "agreed", landsOn: "combination", relatesTo: null, reuse: { match: "reuse", existingKey: "x" } } as any) === null);
   sql("insert into audit_event (id, workspace_id, actor, action, entity, entity_key, summary) select gen_random_uuid(), id, 'user-A', 'created', 'test', 'p149-1b', 'test setup' from workspace where key='demo'");
   let qB = await call("GET", "/review-queue?filter=all", undefined, "user-B"), qC = await call("GET", "/review-queue?filter=all", undefined, "user-C");
   // A decision of one (P-305: every new item is) is its change's own row; a decision of several is one batch row (below).
@@ -326,7 +350,7 @@ const item = (payload: any, over: any = {}) => ({ kind: payload.kind, runId: RUN
   const un2 = await P.undo(db, audit, A, ws, dun.batchId);
   ok("C11.14 undo pass (#96 1): an untouched accepted draft is still undone, and its stamp leaves the item's work", un2.undone === 1 && sql(`select status || '|' || coalesce(work ? 'landedStamp', false)::text from proposal_item where id = '${un1}'`) === "waiting|false");
 
-  // P-305: To review no longer makes a decision of several library changes (each new item is accepted on its own), but
+  // P-305: To review no longer makes a decision of several library changes (each new item, and each condition, is accepted on its own), but
   // the grouped approval still serves batches decided before it. Such a batch is made here from two single accepts.
   const [ba1, ba2] = await P.insertProposals(db, ws, [listQ("All or nothing one", ["qq_aon_one_a", "qq_aon_one_b"]), listQ("All or nothing two", ["qq_aon_two_a", "qq_aon_two_b"])]);
   r = await call("POST", "/review/proposals/decide", { ids: [ba1], action: "accept" }, "user-C");

@@ -107,7 +107,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     const one = await api("/review/proposals/decide", { method: "POST", actor: "user-C", data: { ids: [lists[0]], action: "accept" } });
     const two = await api("/review/proposals/decide", { method: "POST", actor: "user-C", data: { ids: [lists[1]], action: "accept" } });
     step("C11.14 pass (P-305): each list is accepted on its own, as its own decision", one.status === 201 && two.status === 201 && one.body.batchId !== two.body.batchId);
-    // Grouped second-person approval: To review no longer makes a decision of several library changes (P-305), but the
+    // Grouped second-person approval: To review no longer makes a decision of several library changes (P-305: new items and conditions are each accepted on their own), but the
     // batch page still serves those decided before it; one is made here from the two single accepts.
     const group = one.body.batchId;
     sql(`update library_change set batch_id = '${group}' where batch_id = '${two.body.batchId}'; update proposal_item set batch_id = '${group}' where id = '${lists[1]}'`);
