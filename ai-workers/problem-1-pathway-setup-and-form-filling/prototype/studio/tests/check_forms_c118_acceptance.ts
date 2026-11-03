@@ -61,9 +61,10 @@ const sql = sqlFor(DB);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const until = async (fn: () => Promise<boolean>, ms = 120_000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await fn()) return true; await sleep(500); } return false; };
 const words = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
-/** The servers' own settings come only from each restart's arguments: the caller's shell never leaks a switch, a held
- *  queue, a ledger folder or a launcher into them (review, Opus m2; as tests/check_cost_override.ts). */
-const BLANK = { STUDIO_AI_LIVE: "", STUDIO_HOLD_QUEUE: "", P2_LEDGER_DIR: "", STUDIO_FAKE_LAUNCHER: "" };
+/** The caller's shell never leaks a switch, a held queue or a launcher into a restart: those come only from the
+ *  restart's arguments (review, Opus m2). P2_LEDGER_DIR is kept: run-suites.sh points it at its per-run scratch ledger,
+ *  which this check's AT-13 reads too; Phase B–D pass their own (Opus round 2, m3). */
+const BLANK = { STUDIO_AI_LIVE: "", STUDIO_HOLD_QUEUE: "", STUDIO_FAKE_LAUNCHER: "" };
 /** True from Phase C's restart with the switch on until Phase D's restart switches it off. */
 let switchedOn = false;
 /** Whatever ends the check (a failed setup, a crash, Ctrl-C) leaves the copy as it was started: switch off, stand-in

@@ -71,3 +71,21 @@ Fresh context; the view below was formed from the code and a run before reading 
 - **Note.** AT-2d covers the split path (`runParts`). The single-file `launch()` path shares the same `launchOnce` door. The QA-154 row is still Open in BUGS.md; qa closes it on retest.
 
 **Verdict: Approve** (Blockers: none · Majors: none · Minors: 2)
+
+## Opus round 2, commit 1d8aa4a01 (diff 1c5331db3..1d8aa4a01)
+**Run.** The usage line on `forms_c118o` :4472 gave **22 passed, 0 failed**, exit 0. The fake-launch log has 0 live calls. The copy ended as `ai {live:false, launcher:"stand-in"}`, the shared ledger is unchanged, and the copy is stopped.
+
+**m1 is fixed.**
+- `restoreCopy()` runs on `setupMissing`, on the `.catch` and on SIGINT/SIGTERM.
+- While `switchedOn` (from just before the Phase C restart until after the Phase D one), it restarts the copy with the switch off and the stand-in launcher, then removes the scratch ledger.
+- If Phase D's restart does not come back, `restart` calls `setupMissing` while `switchedOn` is still true, so the copy is restored.
+- The P-192 guard now relies on `restoreCopy`, the same restart as before.
+
+**m2 is done as asked, but part of my m2 was wrong (Minor 3, my error).**
+- `BLANK` also blanks `P2_LEDGER_DIR`. `check_cost_override.ts:27` blanks only STUDIO_AI_LIVE and STUDIO_FAKE_LAUNCHER, so I cited it wrongly.
+- run-suites exports `P2_LEDGER_DIR` as a per-run scratch ledger (`run-suites.sh:69`, "test runs never write the real ledger"). Now, under run-suites, the final restart and the `restoreCopy` restart point the copy at the machine's ledger (an empty value is read as unset: `policy.ts` `ledgerDirFrom`).
+- Meanwhile AT-13 hashes the test process's `LEDGER_DIR`, which is the run-suites scratch.
+- No write path exists after those restarts, because the runner door refuses before any reserve. So this is US$0, but it removes one safety layer.
+- Fix: drop `P2_LEDGER_DIR` from `BLANK`. An inherited value can only point away from the real ledger.
+
+**Verdict: Approve** (Blockers: none · Majors: none · Minors: 1, Minor 3 above)
