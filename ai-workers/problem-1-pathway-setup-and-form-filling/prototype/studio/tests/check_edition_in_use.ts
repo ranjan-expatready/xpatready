@@ -78,6 +78,10 @@ try {
   ok("P-32 pass (the scenario): a release holding 11-2021 and 11-2025 fills IRCC's 11-2025 file (imm5476e.pdf)", req.form_file === NEW.official_file && both.report?.form_file === NEW.official_file, { request: req.form_file, report: both.report?.form_file });
   const old = await writeForm(snap([map(OLD, "old.box")]), { boxes: [] }, "IMM 5476", dir, "old");
   ok("P-32 fail: a case pinned to a release with only 11-2021 still fills 11-2021 (P-67: open cases stay on their release)", JSON.parse(readFileSync(join(dir, "old.request.json"), "utf8")).form_file === OLD.official_file && old.report?.form_file === OLD.official_file, old.report?.form_file);
+  // Breaker m2: a newer edition with no field list recorded is refused in words naming that edition, never filled from the older one.
+  const words = await writeForm(snap([map(OLD, "old.box"), map({ ...NEW, inventory_file: "" } as typeof NEW, "new.box")]), { boxes: [] }, "IMM 5476", dir, "nolist").then(() => "", (x: Error & { response?: { detail?: string } }) => String(x.response?.detail ?? x.message));
+  ok("P-32 fail (breaker m2): the edition in use with no form field list is refused, naming 11-2025, never filled from 11-2021", /11-2025/.test(words) && /not recorded/.test(words), words);
+  ok("P-32 pass: a newer edition with its files fills even when the older one has none recorded", (await writeForm(snap([map({ ...OLD, inventory_file: "" } as typeof OLD, "old.box"), map(NEW, "new.box")]), { boxes: [] }, "IMM 5476", dir, "nolist-old")).report?.form_file === NEW.official_file);
 } catch (e) {
   ok("P-32: the filler ran on IRCC's two IMM 5476 files", false, (e as Error).message);
 } finally { rmSync(dir, { recursive: true, force: true }); }

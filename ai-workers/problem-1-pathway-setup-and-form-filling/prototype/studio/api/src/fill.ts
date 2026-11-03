@@ -42,9 +42,11 @@ export async function writeForm(snapshot: Snapshot, cov: { boxes: BoxRow[] }, fo
   if (line?.channel === "ONLINE" && !opts.notForFiling) fail(`${form} is filed Online here: it needs the browser extension (later wave), so the product does not fill it. File it as a PDF upload to fill its PDF.`, HttpStatus.CONFLICT);
   // P-32: the edition in use (the newest mapped PDF edition), never the first the snapshot lists (its oldest).
   const map = pdfMapInUse(snapshot.field_maps, form);
-  if (!map?.official_file || !map.inventory_file) fail("This form's official file or form field list is not recorded; it cannot be filled.");
+  // Breaker m2 (edition in use): the words name the edition in use, so a newer edition missing its file is said so.
+  const ed = map?.form_edition ? ` (${map.form_edition}, the edition in use)` : "";
+  if (!map?.official_file || !map.inventory_file) fail(`This form's official file or form field list${ed} is not recorded; it cannot be filled.`);
   const invFile = solutionFile(map.inventory_file);
-  if (!invFile) fail("This form's form field list is not in the product's own files; it cannot be filled.");
+  if (!invFile) fail(`This form's form field list${ed} is not in the product's own files; it cannot be filled.`);
   const inv = JSON.parse(readFileSync(invFile!, "utf8"));
   const box = new Map<string, any>(inv.fields.filter((x: any) => x.data_path).map((x: any) => [x.data_path, x]));
   // G4 (C5.7): the value step is engine code (engine/form-values.ts), shared with the answer-key runner.
