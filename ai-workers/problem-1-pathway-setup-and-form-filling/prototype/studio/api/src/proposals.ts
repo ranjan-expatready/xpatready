@@ -20,7 +20,7 @@ import { usedInLabels } from "./where-used.ts";
 import { lockItem, refuseRetired } from "./library-items.ts";
 import { checkCondition } from "../../engine/validate.ts";
 import { nearMatches } from "../../engine/near.ts";
-import { p121Rating, P121_WHY } from "../../engine/agreement.ts";
+import { p121Rating, P121_WHY, type Rateable } from "../../engine/agreement.ts";
 
 type Tx = Prisma.TransactionClient;
 type Client = Db | Tx;
@@ -207,6 +207,21 @@ const STATUS_OF: Record<string, string> = { PENDING: "waiting", ACCEPTED: "accep
 export async function recordChoice(db: Client, id: string, c: { choice: string; decidedKey: string | null; by: string | null; reason: string | null; payload?: ProposalPayload; work?: unknown }) {
   return db.proposalItem.update({ where: { id }, data: { choice: c.choice === "PENDING" ? null : c.choice, status: STATUS_OF[c.choice] ?? fail("Unknown choice."), decidedKey: c.decidedKey, decidedBy: c.by,
     decidedAt: c.by ? new Date() : null, decisionReason: c.reason, ...(c.payload ? { payload: c.payload as Prisma.InputJsonValue, identityKey: identityKeyOf(c.payload, "") } : {}), ...(c.work !== undefined ? { work: c.work as Prisma.InputJsonValue } : {}) } });
+}
+
+/** G-CORE B5 (P-288 (2)): accepting a field-map item on To review is the form-field page's Accept (sources.ts
+ *  decideChecked): its recommended key is recorded, and the library changes only when the form's draft is applied.
+ *  Checked again here: the draft is not applied yet, and a new field the library might already have needs the reason
+ *  only its page asks for. */
+async function acceptOnItsPage(tx: Tx, r: Row): Promise<string> {
+  const job = r.runId ? await tx.draftingJob.findUnique({ where: { id: r.runId }, select: { status: true, workspaceId: true } }) : null;
+  if (!job || job.status === "APPLIED") fail(`"${nameOf(r.payload as ProposalPayload, r.identityKey)}" belongs to a draft already applied to the configuration: change the definitions in the library instead.`, HttpStatus.CONFLICT);
+  const w = (r.work ?? {}) as { evidence?: { recommendation?: { key?: string | null } }; matchedKey?: string | null; proposedKey?: string; candidates?: { key: string; score: number }[] };
+  const key = w.evidence?.recommendation?.key ?? w.matchedKey ?? w.proposedKey ?? r.identityKey;
+  const inLibrary = await tx.canonicalField.count({ where: { workspaceId: job!.workspaceId, canonicalFieldKey: key } });
+  const best = (w.candidates ?? []).filter((c) => c.score >= 0.55).sort((x, y) => y.score - x.score)[0];
+  if (!inLibrary && best) fail(`"${nameOf(r.payload as ProposalPayload, r.identityKey)}" makes a new shared field while the library has one that could fit (${best.key}): decide it on its form-field page, with a reason.`, HttpStatus.CONFLICT);
+  return key;
 }
 
 /** The old review row shape the field-map page reads (web/src/pages/job.tsx), from a ProposalItem: 1b replaces the page. */
@@ -472,8 +487,17 @@ export const ON_ITS_PAGE = new Set(["field_map"]);
 export const PAGE_WORDS: Record<string, string> = { field_map: "form-field page, where its form fields are mapped too" };
 /** Why an item cannot be accepted with others (P-121, P-158): only Ready items, never a rules item landing on the
  *  library. null when it can. */
-export function bulkWhy(r: Pick<Row, "confidence" | "origin" | "landsOn" | "step"> & { agreement?: string }): string | null {
-  if (ON_ITS_PAGE.has(r.step)) return `It is decided on its ${(PAGE_WORDS[r.step] ?? "own page").split(",")[0]}.`;
+export function bulkWhy(r: Pick<Row, "confidence" | "origin" | "landsOn" | "step"> & { agreement?: string; rounds?: unknown; rules?: unknown; reason?: string | null }): string | null {
+  // G-CORE B5 (P-288 (2)): a field-map item is ticked with others on To review like any item when it is Ready (High:
+  // both rounds agree and the rules pass, re-rated here from what is stored); otherwise the box says why, in P-121's
+  // words. It still opens on its form-field page.
+  if (ON_ITS_PAGE.has(r.step)) {
+    if (r.confidence === "ready" && r.rounds !== undefined && r.rules !== undefined) {
+      const again = p121Rating({ origin: r.origin as "ai" | "rules", agreement: r.agreement ?? "", rounds: r.rounds as Rateable["rounds"], rules: r.rules as Rateable["rules"], confidence: "ready", reason: null });
+      if (again.confidence !== "ready") return again.reason;
+    }
+    if (r.confidence !== "ready") return r.agreement === "one_round" ? P121_WHY.oneRound : r.agreement === "differ" ? "The two AI readings differ: open it on its form-field page and choose." : "It needs a check first: open it on its form-field page and decide it on its own.";
+  }
   // QA-176 (P-121): an AI item never goes with others without both rounds agreeing, even one stored Ready before the fix.
   if (r.confidence === "ready" && r.origin === "ai" && r.agreement && r.agreement !== "agreed") return r.agreement === "one_round" ? P121_WHY.oneRound : P121_WHY.differ;
   // C2.6 (QA-157): a one-round Decide item is one its source leaves to a person (e.g. the visa office), not two readings.
@@ -504,7 +528,8 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
     if (rows.length !== new Set(ids).size) fail("A proposal was not found (the demo may have been reset).", HttpStatus.NOT_FOUND);
     const done = rows.filter((r) => r.status !== "waiting");
     if (done.length) fail(`${done.length === 1 ? "A proposal is" : `${done.length} proposals are`} already decided (${done[0].status}); an approved item changes only as a revision.`, HttpStatus.CONFLICT);
-    const elsewhere = rows.find((r) => ON_ITS_PAGE.has(r.step));
+    // G-CORE B5 (P-288 (2)): a field-map item is accepted here as on its page (the same choice); edited or rejected there.
+    const elsewhere = d.action !== "accept" ? rows.find((r) => ON_ITS_PAGE.has(r.step)) : undefined;
     if (elsewhere) fail(`"${String((elsewhere.payload as { label?: unknown }).label ?? identityKeyOf(elsewhere.payload as ProposalPayload, elsewhere.identityKey))}" is decided on its ${PAGE_WORDS[elsewhere.step] ?? "own page"}.`, HttpStatus.CONFLICT);
     // P-121: several at once is for Ready items only, and never a rules item that adds to the library (1b).
     if (d.action === "accept" && rows.length > 1) {
@@ -540,6 +565,8 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         if (r.landsOn === "library" && reuse.match === "reuse" && d.action === "accept") {
           if (!(await usableInLibrary(tx, workspaceId, r.kind, reuse.existingKey))) fail(`"${nameOf(payload, r.identityKey)}" reuses ${reuse.existingKey ?? "no item"}, which is not in the library (retired, merged or never added): reject this proposal, or edit it into a new item.`, HttpStatus.CONFLICT);
           landedAs = reuse.existingKey; reused = true;
+        } else if (ON_ITS_PAGE.has(r.step)) {
+          landedAs = await acceptOnItsPage(tx, r); reused = true; // nothing lands in the library before its draft is applied
         } else if (r.kind === "pqr_pick") {
           const got = await landPqrPick(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: reason ?? r.reason });
           landedAs = got.key; pqr = { ...got.work, stamp: JSON.stringify(await pqrStamp(tx, r.combinationId, got.key)) };
@@ -555,7 +582,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
       // What a library lander wrote, as it stands now: Undo refuses once it has changed (PR #96 review (1)).
       const landedStamp = landedAs && !reused ? await stampOf(tx, workspaceId, r.kind, landedAs, r.combinationId) : null;
       const work = { ...((r.work ?? {}) as object), ...(d.action === "edit" ? { beforeEdit: r.payload } : {}), ...(landedStamp ? { landedStamp } : {}), ...(pqr ? { pqr } : {}) };
-      await tx.proposalItem.update({ where: { id: r.id }, data: { status: d.action === "accept" ? "accepted" : d.action === "edit" ? "edited" : "rejected", decidedBy: actor.id, decidedAt: new Date(),
+      await tx.proposalItem.update({ where: { id: r.id }, data: { status: d.action === "accept" ? "accepted" : d.action === "edit" ? "edited" : "rejected", decidedBy: actor.id, decidedAt: new Date(), ...(ON_ITS_PAGE.has(r.step) ? { choice: "ACCEPTED" } : {}),
         decisionReason: reason, batchId, decidedKey: landedAs, ...(resolved && d.action !== "reject" ? { reuse: resolved } : {}),
         ...(d.action === "edit" || landedStamp || pqr ? { work: work as Prisma.InputJsonValue } : {}),
         // An edit keeps the item's own reading beside it, so Undo puts the item back as it was proposed (1b).
@@ -584,6 +611,11 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     if (Date.now() - at > UNDO_SECONDS * 1000) fail(`Undo is offered for ${UNDO_SECONDS} seconds; after that, retire or delete the item in the library.`, HttpStatus.CONFLICT);
     const adds = await tx.libraryChange.findMany({ where: { workspaceId, batchId } });
     if (adds.some((c) => c.status !== "WAITING")) fail("A second person has already decided one of these items: it cannot be undone here.", HttpStatus.CONFLICT);
+    // G-CORE B5: a field-map item accepted here goes back only while its draft is not applied and nobody decided it again
+    // on its form-field page.
+    const onPage = rows.filter((r) => ON_ITS_PAGE.has(r.step));
+    if (onPage.some((r) => r.choice !== "ACCEPTED")) fail("One of these items was decided again on its form-field page since, so Undo would erase that decision. Nothing was undone: change it on that page.", HttpStatus.CONFLICT);
+    if (onPage.length && await tx.draftingJob.count({ where: { id: { in: [...new Set(onPage.map((r) => r.runId).filter((x): x is string => !!x))] }, status: "APPLIED" } })) fail("The form's draft was applied to the configuration since, so Undo would leave its form fields mapped. Nothing was undone: change the mapping in the library instead.", HttpStatus.CONFLICT);
     // C11.13 (review M3): an item this batch added that another accepted item now reuses is not taken away under it.
     const added = rows.filter((r) => r.decidedKey && (r.reuse as { match?: string } | null)?.match !== "reuse");
     const keys = added.map((r) => r.decidedKey!);
@@ -629,7 +661,7 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     await tx.libraryChange.deleteMany({ where: { workspaceId, batchId } });
     for (const r of rows) {
       const { beforeEdit, landedStamp, pqr, ...work } = (r.work ?? {}) as { beforeEdit?: ProposalPayload; landedStamp?: string; pqr?: unknown };
-      await tx.proposalItem.update({ where: { id: r.id }, data: { status: "waiting", decidedBy: null, decidedAt: null, decisionReason: null, batchId: null, decidedKey: null,
+      await tx.proposalItem.update({ where: { id: r.id }, data: { status: "waiting", decidedBy: null, decidedAt: null, decisionReason: null, batchId: null, decidedKey: null, ...(ON_ITS_PAGE.has(r.step) ? { choice: null } : {}),
         ...((r.work as { twinOf?: string } | null)?.twinOf ? { reuse: { match: "reuse", existingKey: null } } : {}),
         ...(beforeEdit || landedStamp || pqr ? { work: work as Prisma.InputJsonValue } : {}),
         ...(beforeEdit ? { payload: beforeEdit as Prisma.InputJsonValue, identityKey: identityKeyOf(beforeEdit, r.identityKey) } : {}) } });
