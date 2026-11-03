@@ -150,16 +150,13 @@ fi
 myturn() { [ "$SHARDS" -le 1 ] && return 0; case "$MINE" in *" $1 "*) return 0;; esac; return 1; }
 pg_ctl -D "$ROOT/.tools/solution-1-prototype/pg18-data" status >/dev/null 2>&1 || zsh "$S/start.sh" >/dev/null 2>&1 || { echo "the demo database is not running and start.sh failed"; exit 2; }
 # Fresh web bundle (runtime builder, 1 Nov): the isolated copies serve web/dist as built, so a browser suite run after an
-# edit tested the old screens. Outside CI (CI builds first), rebuild when any file under web/ or contracts/ is newer than
-# web/dist/index.html, or when no bundle exists. Only when a browser suite (*.cjs) is among the suites that will run.
+# edit tested the old screens. Outside CI (CI builds first), rebuild unless the bundle's stamp matches web/, contracts/
+# and engine/ (QA-181: a time check missed a bundle built today from an old branch; isolated.sh checks it too). Only when
+# a browser suite (*.cjs) is among the suites that will run.
 if [ -z "${CI:-}" ]; then
   needweb=0; for path in "$S"/tests/check_*.cjs "$S"/tests/runtime/check_*.cjs; do [ -f "$path" ] && picked "$(basename "$path")" && { needweb=1; break; }; done
   if [ "$needweb" = 1 ]; then
-    idx="$S/web/dist/index.html"
-    if [ ! -f "$idx" ] || [ -n "$(find "$S/web/src" "$S/web/index.html" "$S/contracts" -newer "$idx" -type f -print -quit 2>/dev/null)" ]; then
-      echo "Web bundle older than web/ or contracts/: rebuilding before the browser suites (vite build)."
-      (cd "$S/web" && ../node_modules/.bin/vite build >/dev/null 2>&1) || { echo "vite build failed; no suite was run"; exit 2; }
-    fi
+    bash "$S/tools/web-fresh.sh" ensure || { echo "vite build failed; no suite was run"; exit 2; }
   fi
 fi
 

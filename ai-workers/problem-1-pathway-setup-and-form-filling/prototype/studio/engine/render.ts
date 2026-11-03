@@ -7,6 +7,7 @@ import type { Snapshot } from "./snapshot.ts";
 import { documentFacts, SIGNED_SCAN } from "./sources.ts";
 import { lineOf } from "./channels.ts";
 import { pdfMapInUse } from "./programs.ts";
+import { factName } from "./fact-name.ts";
 
 // SH3 (P-258): who a line, a condition, a box and a signature are about comes from the one resolver (engine/resolver.ts,
 // contract contracts/resolver.ts); its functions are re-exported here for their callers.
@@ -64,9 +65,8 @@ const both = (a: Cond, b: Cond): Cond => a.applies === false || b.applies === fa
 export const NO_RULE = "(no rule yet)";
 /** QA-82: a field's name in words from its key ("person.official_language" → "Official language"), as Shared library
  *  names fields. A question with no written wording shows this, never the field's meaning (its definition). */
-const ABBREVIATIONS = new Set(["dli", "eta", "id", "ircc", "lmia", "noc", "pgwp", "pr", "sin", "tb", "trv", "uci", "us", "uscis"]);
-const PROPER: Record<string, string> = { canada: "Canada", canadian: "Canadian" };
-export const factName = (key: string) => { const w = (key.split(".").pop() ?? key).split("_").map((x) => ABBREVIATIONS.has(x) ? x.toUpperCase() : PROPER[x] ?? x).join(" "); return w.charAt(0).toUpperCase() + w.slice(1); };
+// QA-172: moved to its own pure module so the web can use it; kept exported here for every existing caller.
+export { factName };
 export const wordsOnly = (line: { status?: string; condition?: unknown; condition_plain?: string | null }) => line.status === "conditional" && !line.condition;
 
 /** `editions` (break B1 on the edition-in-use fix): the PDF edition to read per form, when a caller tests one edition on

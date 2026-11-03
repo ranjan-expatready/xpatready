@@ -12,7 +12,7 @@ import { pdfOptions } from "./options.ts";
 import type { BoxRow } from "./render.ts";
 import { content, snapshotHash, type Snapshot } from "./snapshot.ts";
 import { caseView, knownOf, type Answer, type GroupAnswer, type Participant, type Row } from "./runtime/case.ts";
-import { formCoverage, markNothingRecorded } from "./runtime/forms.ts";
+import { formCoverage, markNothingRecorded, type GatePlacement } from "./runtime/forms.ts";
 import { assess, type GateState, type Outcome } from "./runtime/eligibility.ts";
 
 export const ITEM_KINDS = ["field_map", "rule_set", "scoring"] as const;
@@ -328,7 +328,7 @@ export function runFieldMap(s: Snapshot, family: Family, form: string, inv: Inve
       if (want) lines.push({ person: p.id, person_label: p.label, target: form, label: `${form} for ${p.label}`, expected: "applies", got: "does not apply", pass: false, why: `${form} does not apply to ${p.label} in this combination.` });
       continue;
     }
-    const { values, boxes } = formValues(s, m, inv, markNothingRecorded(cov!.boxes as BoxRow[], view));
+    const { values, boxes } = formValues(s, m, inv, markNothingRecorded(cov!.boxes as BoxRow[], view, s.placements as GatePlacement[]));
     const why = new Map(boxes.map((x) => [x.box, x.why ? inWords(x.why) : x.why]));
     for (const [box, exp] of Object.entries(want ?? {})) {
       const got = values[box] ?? "";

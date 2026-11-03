@@ -3,14 +3,18 @@
 // writes the copy (api/src/fill-case.ts) through the shared filler. Only confirmed facts are ever written (P-72).
 import { answerSheetOnly } from "../../contracts/forms.ts";
 import { createHash } from "node:crypto";
-import { render, type BoxRow, type Person, type Role } from "../render.ts";
+import { kkey, render, type BoxRow, type Person, type Role } from "../render.ts";
 import type { Snapshot } from "../snapshot.ts";
 import { groupLabel, type QuestionnaireView, type Readiness } from "../../contracts/runtime.ts";
 import { checkValue, knownOf, type Answer, type Participant, type Row } from "./case.ts";
 import { recordedDerivation } from "../../../p5/transforms.ts";
+import { gateOf, type GatePlacement } from "./gates.ts";
+export { gateOf, type GatePlacement } from "./gates.ts";
 
 /** One confirmed fact a copy reads: which form field, which fact about whom, which row, which value. */
 export type FormFact = { box: string; fact: string; about: string; row: number | null; value: unknown };
+/** QA-165: a gate's confirmed answer kept with a copy (box "<box>#gate:<fact>"): it decides a box, it is not one. */
+export const isGateFact = (f: FormFact) => f.box.includes("#gate:");
 
 /** What one form would read today for one person on the case: every form field with its coverage (the shared
  *  renderer's, so a case fills exactly what the release preview shows), and the confirmed facts among them. */
@@ -22,34 +26,60 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
   if (!cov) return null;
   // QA-122 (P-71, P-72): a confirmed answer that fails its checks is never written; its form field is "not written"
   // with the problem as the reason, and readiness lists the fact as "needs a fix".
+  // QA-165 (Devin on #715): a "recorded" Yes/No box whose facts are asked under their own Yes/No question (gateOf).
+  const placements = s.placements as (GatePlacement & { question_text?: string | null })[];
+  const gatesOf = (b: BoxRow) => { const d = recordedDerivation(b.transform); return d && b.fact ? [...new Set([b.fact, ...d.facts].map((f) => gateOf(placements, f)).filter((x): x is string => !!x))] : []; };
+  const confirmedAt = (about: string, fact: string) => { const v = known.get(kkey(about.split("/")[0], fact)); return v?.status === "confirmed" ? v : undefined; };
+  const words = (fact: string) => placements.find((p) => p.fact === fact)?.question_text || (s.canonical_fields as { id: string; meaning?: string }[]).find((f) => f.id === fact)?.meaning || fact;
   const boxes = cov.boxes.map((b) => {
     if (b.coverage !== "confirmed fact" || !b.fact) return b;
     const problems = checkValue(s, b.fact, b.value, today);
-    return problems.length ? { ...b, coverage: "answered on screen" as const, fix: `confirmed with a problem, not written: ${problems.join(" ")}` } : b;
+    if (problems.length) return { ...b, coverage: "answered on screen" as const, fix: `confirmed with a problem, not written: ${problems.join(" ")}` };
+    // A confirmed No to the gate with a detail still recorded contradicts itself: never written as Yes (nor No).
+    const no = b.about ? gatesOf(b).find((g) => confirmedAt(b.about!, g)?.value === false) : undefined;
+    return no ? { ...b, coverage: "answered on screen" as const, fix: `"${words(no)}" is answered No, but "${words(b.fact)}" is recorded: correct one of them, then confirm, before this is written` } : b;
   });
-  return { ...cov, boxes, facts: factsOf(boxes) };
+  // The gates' confirmed answers decide these boxes, so a copy keeps them with its facts: a gate changed after the copy
+  // (No to Yes, or a No confirmed) makes the copy out of date, as a changed fact does.
+  const gateFacts: FormFact[] = cov.boxes.flatMap((b) => (b.about ? gatesOf(b) : []).flatMap((g) => { const v = confirmedAt(b.about!, g); return v ? [{ box: `${b.box}#gate:${g}`, fact: g, about: b.about!, row: null, value: v.value }] : []; }));
+  return { ...cov, boxes, facts: [...factsOf(boxes), ...gateFacts].sort((x, y) => x.box.localeCompare(y.box)) };
 }
 
 /** C7.2 cause 3 (P-72): a derived "is anything recorded?" Yes/No box is "N" only when a person answered "none apply"
  *  and it is confirmed: every fact it names was asked of that person (not hidden) in a repeating group that has no
  *  entries and whose "none apply" is confirmed (IMM 5257: post-secondary education, previous countries of residence).
  *  An empty question in a confirmed section is not an answer (Confirm section vouches only for the answers shown;
- *  review r1 B1), so "other names", the national identity document and the US card stay "not written" until a question
- *  asks them (forms question in the PR). Marked on a copy's boxes only; a later entry or a changed "none apply" makes
+ *  review r1 B1); "other names", the national identity document and the US card are "N" once their own Yes/No question
+ *  (the facts' gate, gateOf) is answered No and confirmed (QA-165). Marked on a copy's boxes only; a later entry or a changed "none apply" makes
  *  the copy out of date through its group facts (changedGroups). */
-export function markNothingRecorded(boxes: BoxRow[], view: QuestionnaireView): BoxRow[] {
+export function markNothingRecorded(boxes: BoxRow[], view: QuestionnaireView, placements: GatePlacement[] = []): BoxRow[] {
   return boxes.map((b) => {
     const d = b.coverage === "confirmed fact" || !b.fact || !b.about || b.about === "case" ? null : recordedDerivation(b.transform);
     if (!d) return b;
     const subject = b.about!.split("/")[0], facts = new Set([b.fact!, ...d.facts]);
     const asked = view.sections.flatMap((s) => s.questions.filter((q) => q.subjectId === subject && facts.has(q.fact)).map((q) => ({ s, q })));
-    if (!asked.length || asked.some(({ q }) => q.hidden) || new Set(asked.map(({ q }) => q.fact)).size !== facts.size) return b;
+    if (!asked.length || new Set(asked.map(({ q }) => q.fact)).size !== facts.size) return b;
     if (asked.some(({ q }) => q.answer || q.rows.some((r) => r.answer))) return b;
     const settled = (s: QuestionnaireView["sections"][number]) => !!s.group && s.group.rows === 0 && !!s.group.none_apply?.value && s.group.none_apply.confirmed;
-    if (!asked.every(({ s }) => settled(s))) return b;
-    const titles = [...new Set(asked.map(({ s }) => s.title))].join(", ");
-    return { ...b, nothing_recorded: true as const, detail: `nothing recorded: "none apply" confirmed in ${titles}` };
+    if (!asked.some(({ q }) => q.hidden) && asked.every(({ s }) => settled(s))) {
+      const titles = [...new Set(asked.map(({ s }) => s.title))].join(", ");
+      return { ...b, nothing_recorded: true as const, detail: `nothing recorded: "none apply" confirmed in ${titles}` };
+    }
+    // QA-165 (C7.2): a confirmed "No" to the Yes/No question that each of these facts is asked under (IMM 5257's own
+    // "Have you ever used any other name…?", "Do you have a national identity document?", "Are you a lawful permanent
+    // resident of the United States…?") vouches that nothing is recorded, as a confirmed "none apply" does.
+    const gates = asked.map(({ q }) => gateNo(view, placements, subject, q.fact));
+    if (gates.every((g): g is string => !!g)) return { ...b, nothing_recorded: true as const, detail: `nothing recorded: "${[...new Set(gates)].join('", "')}" answered No and confirmed` };
+    return b;
   });
+}
+
+/** QA-165: the gate's question label when this person answered it No and the answer is confirmed; else null. */
+export function gateNo(view: QuestionnaireView, placements: GatePlacement[], subject: string, fact: string): string | null {
+  const g = gateOf(placements, fact);
+  if (!g) return null;
+  const q = view.sections.flatMap((s) => s.questions).find((x) => x.subjectId === subject && x.fact === g && !x.hidden);
+  return q?.answer && q.answer.value === false && q.answer.confirmed ? q.label : null;
 }
 
 /** The forms a case fills as PDFs: the release files them as a PDF (its filing line is not Online) and has their

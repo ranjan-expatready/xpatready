@@ -12,6 +12,7 @@ export type GatedProblem = ProblemLine & { gate: string; [k: string]: unknown };
 /** Each gate's count sentence, word for word from its concept (G1 §5: "11 numbers have no source entry. …"). */
 export const GATE_WORDS: Record<string, (n: number) => string> = {
   "no-source": (n) => `${n} number${n === 1 ? " has" : "s have"} no source entry. Each is listed on Review and release.`,
+  "sample-content": (n) => `${n} item${n === 1 ? " is" : "s are"} Sample content, which releases only in the demo workspace. Each is listed on Review and release.`, // C5.5
 };
 const gated = (p: ProblemLine): p is GatedProblem => typeof (p as { gate?: unknown }).gate === "string";
 
