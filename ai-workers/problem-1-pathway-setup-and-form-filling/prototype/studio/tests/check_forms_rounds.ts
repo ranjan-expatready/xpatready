@@ -89,6 +89,30 @@ const JOBS = join(STUDIO, "..", "p2", "jobs");
   r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: okRec }) }), calls, seen));
   ok("C11.14 pass: a live round runs the free stub pass first, then the live call, and returns its answer and cost", r.ok && r.from === "live" && r.costUsd === 0.153 && calls.map((c) => c.mode).join(",") === "stub,live", { r, calls });
   ok("review M7 pass: the job file exists for the launcher and is removed after the round", seen.length === 2 && !existsSync(join(JOBS, `${calls[0].jobId}.json`)) && calls[0].jobId.startsWith("studio-finder-forms-"));
+  // C11.14 (Lead 2, 3 Nov; review Minor 1 on #673): a paid field-map or checker round is recorded "completed_with_unresolved"
+  // when it leaves any form field to a person (p2/convert.ts); the live path uses it like a "completed" one, never pays and
+  // then refuses it. Runs that gave no usable answer are still refused, with their cost kept counted.
+  const unresolvedRec = record({ drafting_run: { status: "completed_with_unresolved", usage: { cost_usd: 0.41 } }, contract_valid: true, raw_output: JSON.stringify({ forms: [] }) });
+  r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: unresolvedRec }) })));
+  ok("C11.14 pass: a live round recorded \"completed_with_unresolved\" (a paid field-map or checker run with a field left to a person) is used, with its cost", r.ok && r.from === "live" && r.costUsd === 0.41, r);
+  const notFinished = await Promise.all(["refused", "invalid_output", "timed_out"].map(async (status) => {
+    const rec = record({ drafting_run: { status, usage: { cost_usd: 0.12 } }, contract_valid: true, raw_output: JSON.stringify({ forms: [] }) });
+    const x = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: rec }) })));
+    return { status, ok: x.ok, costUsd: x.costUsd };
+  }));
+  ok("C11.14 fail: a live round recorded refused, invalid_output or timed_out is still not used, even with a well-formed answer; its cost stays counted", notFinished.every((x) => !x.ok && x.costUsd === 0.12), notFinished);
+  // Review m1–m2 and break m1 on #693: the guards after the status gate hold for the new status too, and its money branches.
+  const liveWith = async (rec: unknown) => live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: rec }) })));
+  const unres = (over: Record<string, unknown>, run: Record<string, unknown> = {}) => record({ drafting_run: { status: "completed_with_unresolved", usage: { cost_usd: 0.3 }, ...run }, contract_valid: true, raw_output: JSON.stringify({ forms: [] }), ...over });
+  const unusable = await Promise.all([["contract broken", unres({ contract_valid: false })], ["no answer text", unres({ raw_output: undefined })], ["unreadable answer", unres({ raw_output: "{not json" })], ["wrong shape", unres({ raw_output: JSON.stringify({ nope: 1 }) })]]
+    .map(async ([why, rec]) => { const x = await liveWith(rec); return { why, ok: x.ok, costUsd: x.costUsd }; }));
+  ok("C11.14 fail: a \"completed_with_unresolved\" live round that broke its contract, has no or unreadable answer text, or the wrong shape is not used; its cost stays counted", unusable.every((x) => !x.ok && x.costUsd === 0.3), unusable);
+  r = await liveWith(unres({}, { attempts: [{ n: 1, outcome: "busy", error: "529 overloaded" }, { n: 2, outcome: "ok" }] }));
+  ok("C11.14 pass: a \"completed_with_unresolved\" live round whose earlier attempt was busy and a retry answered is used, with its cost", r.ok && r.costUsd === 0.3, r);
+  r = await liveWith(unres({ raw_output: undefined }, { usage: { cost_usd: 0.22 }, attempts: [{ n: 1, outcome: "timed_out", error: "Request timed out." }, { n: 2, outcome: "error", error: "400 usage limit reached" }] }));
+  ok("C11.14 fail: a \"completed_with_unresolved\" record with no answer after a usage-limit refusal is blocked, the earlier attempt kept counted", !r.ok && r.blocked === true && /usage limit/.test(r.reason), r);
+  const arrays = await Promise.all([["completed"], ["completed_with_unresolved"]].map(async (status) => (await liveWith(record({ drafting_run: { status, usage: { cost_usd: 0.1 } }, contract_valid: true, raw_output: JSON.stringify({ forms: [] }) }))).ok));
+  ok("C11.14 fail (break m1 on #693): a status that is not plain text (an array [\"completed\"]) is never a finished run, live or replayed", arrays.every((x) => !x) && !isSameSavedRun({ ...good, drafting_run: { ...good.drafting_run, status: ["completed"] as unknown as string } }, want), arrays);
   r = await live(fake((c) => (c.mode === "stub" ? { code: 2, out: JSON.stringify({ refused: "the file is not approved" }) } : { code: 0, out: "" })));
   ok("C11.14 fail (S3 early look 1): a stub refusal stops before any call, in plain words, US$0; the launcher's own words stay in the server log", !r.ok && r.reason === "The AI step could not start on this computer, so nothing was sent and nothing was charged" && !/not approved/.test(r.reason) && r.costUsd === 0, r);
   r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 1, out: JSON.stringify({ error: "ECONNRESET at /Users/x/p2/launch.ts:120" }) })));
