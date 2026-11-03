@@ -127,7 +127,7 @@ const REASON = "Test: a different meaning from the library field that could fit.
   r = await call("POST", `/editions/${edId}/form-fields/decision`, { dataPath: (await call("GET", `/editions/${edId}/form-fields`)).body.fields.find((f: any) => f.outcome === "unresolved").dataPath, decision: "not_a_fact", reason: "​".repeat(8) }, "user-C");
   ok("C3.8 m3 fail: a reason of zero-width spaces is refused (400)", r.status === 400, r.body?.detail);
   for (const f of (await call("GET", `/editions/${edId}/form-fields`)).body.fields.filter((f: any) => f.outcome === "unresolved"))
-    await call("POST", `/editions/${edId}/form-fields/decision`, { dataPath: f.dataPath, decision: "not_a_fact", reason: "Office use or a document upload: no case fact fills it." }, "user-C");
+    await call("POST", `/editions/${edId}/form-fields/decision`, { dataPath: f.dataPath, decision: f.background ? "by_hand" : "not_a_fact", reason: f.background ? "A Background question, recorded by hand (C3.8, IRCC-F08)." : "Office use or a document upload: no case fact fills it." }, "user-C");
   ok("C3.8 K1 (Must 5): once decided, the form-fields row leaves To review", !(await queue("user-C", "form_fields")).some((i) => i.id === ffRow!.id));
   r = await call("POST", `/combinations/${sv}/submit`, {});
   ok("setup: the draft is submitted", r.status === 201, r.body?.detail);
@@ -157,7 +157,7 @@ const REASON = "Test: a different meaning from the library field that could fit.
   ok("C5.3 B1 fail: a withdrawn change cannot be withdrawn again (409)", r.status === 409, r.body?.detail);
   // Its reopened form fields are decided, the draft submitted again, every waiting field approved, then released.
   for (const f of (await call("GET", `/editions/${edId}/form-fields`)).body.fields.filter((f: any) => f.outcome === "unresolved"))
-    await call("POST", `/editions/${edId}/form-fields/decision`, { dataPath: f.dataPath, decision: "not_a_fact", reason: "Withdrawn field: no case fact fills it now." }, "user-C");
+    await call("POST", `/editions/${edId}/form-fields/decision`, { dataPath: f.dataPath, decision: f.background ? "by_hand" : "not_a_fact", reason: f.background ? "A Background question, recorded by hand (C3.8, IRCC-F08)." : "Withdrawn field: no case fact fills it now." }, "user-C");
   for (const ch of (await call("GET", "/library/changes?status=WAITING")).body) if ((await call("POST", `/library/changes/${ch.id}/approve`, {}, "user-C")).status === 403) await call("POST", `/library/changes/${ch.id}/approve`, {}, "user-B");
   r = await call("POST", `/combinations/${sv}/submit`, {});
   const sme2 = ((await call("GET", `/combinations/${sv}/review`)).body.submission?.changeSummary ?? []).filter((x: any) => x.needs_sme).map((x: any) => `${x.kind}|${x.key}`);

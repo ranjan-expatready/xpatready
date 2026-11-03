@@ -131,7 +131,7 @@ function pdf(title: string, text: string) {
   ok("C3.8 K1 fail: \"filled by hand\" needs a reason (400)", r.status === 400, r.body?.detail);
   r = await call("POST", `/editions/${ff.edition.id}/form-fields/decision`, { dataPath: open[0].dataPath, decision: "by_hand", reason: "Signed and dated by the applicant on paper." }, "user-O");
   ok("C3.8 K1 fail: a person without the review duty cannot decide a form field (403)", r.status === 403, r.body?.detail);
-  for (const [n, f] of open.entries()) await call("POST", `/editions/${ff.edition.id}/form-fields/decision`, { dataPath: f.dataPath, decision: n === 0 ? "by_hand" : "not_a_fact", reason: n === 0 ? "Signed and dated by the applicant on paper." : "Office use or a document upload: no case fact fills it." });
+  for (const [n, f] of open.entries()) await call("POST", `/editions/${ff.edition.id}/form-fields/decision`, { dataPath: f.dataPath, decision: n === 0 || f.background ? "by_hand" : "not_a_fact", reason: n === 0 || f.background ? "Signed and dated by the applicant on paper." : "Office use or a document upload: no case fact fills it." });
   const after = (await call("GET", `/jobs/${jobId}/form-fields`)).body.fields;
   ok("C3.8 K1: each decided form field reads its decision (filled by hand / not a fact) with the reason", after.filter((f: any) => f.outcome === "unresolved").length === 0 && after.some((f: any) => f.outcome_word === "Filled by hand" && /paper/.test(f.reason)), open.length);
   r = await call("POST", `/combinations/${sv}/submit`, {});
