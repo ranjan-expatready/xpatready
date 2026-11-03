@@ -112,7 +112,7 @@ const why = { reason: "Not needed by any setup any more." };
   field("person.c119_live", "PUBLISHED");
   r = await call("PATCH", "/library/fields/person.c119_live", { retire: true });
   ok("C11.9 break B1 fail: the old edit route never retires (410, use Retire), the field stays published", r.status === 410 && /\/retire/.test(r.body?.detail) && status("canonical_field", "canonical_field_key", "person.c119_live") === "PUBLISHED", [r.status, r.body?.detail]);
-  r = await call("PATCH", "/library/fields/person.c119_live", { meaning: "A changed meaning for the C11.9 check." });
+  r = await call("PATCH", "/library/fields/person.c119_live", { meaning: "A changed meaning for the C11.9 check.", reason: "The C11.9 check edits the meaning (C3.15: a change of meaning says why)." });
   ok("C11.9 Ma2 pass: a published field is still edited as before", r.status < 300, r.body);
   r = await call("PATCH", "/library/fields/person.c119_released", { meaning: "This would bring it back silently." });
   ok("C11.9 Ma2 fail: editing a retired field is refused in words (409) and it stays retired", r.status === 409 && /is retired: .*Restore it/.test(r.body?.detail) && status("canonical_field", "canonical_field_key", "person.c119_released") === "RETIRED", r.body?.detail);

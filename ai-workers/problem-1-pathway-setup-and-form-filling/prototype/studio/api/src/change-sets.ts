@@ -114,7 +114,9 @@ export class ChangeSets {
         order[i] = await orderOn([...(fieldUsers.get(it.key) ?? [])], (s) => swap(s));
       }
     }
-    const ctx: Context = { library, released, derived: new Set(derived.map((d) => d.derivedKey)), riding, existing, order, rewrites, pendingNew: await pendingNewFields(db, ws) };
+    const ctx: Context = { library, released, derived: new Set(derived.map((d) => d.derivedKey)), riding, existing, order, rewrites, pendingNew: await pendingNewFields(db, ws),
+      // C3.15 BR-6 (#295): names waiting in open library changes for fields (an Add, or a rename's new name).
+      waitingNames: (await db.libraryChange.findMany({ where: { workspaceId: ws, kind: "field", status: "WAITING", action: { in: ["ADD", "RENAME"] } }, select: { key: true, label: true } })).filter((c) => c.label).map((c) => ({ key: c.key, name: c.label! })) };
     const { problems, truncated } = capProblems(checkChangeSet(items, madeBy, ctx, VERIFIERS));
     const tier = riskOf(items, madeBy, released);
     const preview = await this.preview(db, ws, items, library, rows, trails, releasesOf);
