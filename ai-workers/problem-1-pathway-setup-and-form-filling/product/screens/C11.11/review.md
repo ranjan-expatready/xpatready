@@ -35,3 +35,15 @@ None.
 Browser suites (.cjs), keyboard-only and 200 % zoom pass, a byte comparison of Release 1 against main, canada.ca live pages.
 
 **Verdict: Approve** (for 577255c91; fix list: Minor 1, retake the two screenshots)
+
+## Round 2 (19d38b3)
+Diff-only review of `git diff 577255c91 19d38b32d`. I read the whole diff; I did not re-run the suites (relied on the builder's reported 26/26, 67/67, 87/87, 113/113).
+
+- **m1 fixed.** `api/src/lines-bulk.ts` `libraryBlock` now selects `formKind` and `displayName` and returns `notFiledWords(...)` before the retired check, so the preview refuses a legacy checklist line ("Cannot", in words) before apply would. The new test in `tests/check_x2b_bulk_preview.ts` plants IMM 5488 by SQL, asserts `CANNOT_RETIRED`, the "checklist: it is read by AI and never filed" words and `tickable` false, removes the line, then asserts IMM 1295 is still `WILL_ADD`. The builder reports it fails without the fix (66/67) and passes with it (67/67). The test would fail if the rule were removed, as it should. Nit only: the outcome code is the shared `CANNOT_RETIRED` for a not-filed reason; the words are right, so no change needed.
+- **m3 fixed.** The retaken 400 px screenshot reads "Form · online version only", matching the code; the status chip "Online only 1" shows. (I looked at the 400 px image; the 1440 px one I took on trust from the diff size change.)
+- **Wording fixed.** Both tooltips (`library-forms.tsx` STATUS.online_only, `form-library.ts` ONLINE_ONLY_FIELD_MAP) no longer show "P-152" and no longer claim "IRCC publishes no PDF"; they say what the library holds. No uncited IRCC claim remains in them.
+- No new `any` in the diff; no other code changed.
+
+No open Blocker, Major or Minor from round 1.
+
+**Verdict: Approve** (commit 19d38b32da39e24ea85ae723f4ce51a8a286e6a9)
