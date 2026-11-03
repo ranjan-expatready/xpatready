@@ -35,7 +35,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
       step(`C3.1 P-63 fail (${w}): the Fields page never says "box"`, !/\bbox(es)?\b/i.test(text), text.match(/.{0,40}\bbox(es)?\b.{0,40}/i)?.[0]);
       const f = await fits(); step(`C3.1 QA-39 (${w}): the Fields table fits without sideways scroll`, f.ok, JSON.stringify(f));
       await p.getByLabel("Search fields").fill("uci");
-      const uci = p.locator("main table tbody tr", { hasText: "person.uci" });
+      const uci = p.locator('main table tbody tr[data-item="person.uci"]');
       await uci.waitFor({ timeout: 30000 });
       step(`C3.1 P-162 pass (${w}): the UCI row reads "Format: At most 10 characters · Digits only"`, /Format: At most 10 characters · Digits only/.test(await uci.innerText()), await uci.innerText());
       if (w === 1440) { await p.screenshot({ path: path.join(SHOTS, "fields-list-1440.png") }); await axe("Fields with formats"); }

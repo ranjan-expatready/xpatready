@@ -96,7 +96,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
       await go("/library/fields");
       const fl = await main();
       const firstCell = (await p.locator("main table tbody tr td").first().innerText()).split("\n").filter((l) => l.trim());
-      step(`QA-39 (${w}): Fields is headed "Fields"; each row leads with words, the key small under it`, /^Fields$/m.test(fl) && !/Canonical fields/.test(fl) && !KEY.test(firstCell[0]) && KEY.test(firstCell[1] ?? ""), firstCell.join(" / "));
+      // UX-A part 4 (P-273, finding 4): the key is no longer under the name; it is on the field's page under Details.
+      step(`QA-39 (${w}): Fields is headed "Fields"; each row leads with words and shows no key (UX-A part 4)`, /^Fields$/m.test(fl) && !/Canonical fields/.test(fl) && !firstCell.some((l) => KEY.test(l)), firstCell.join(" / "));
       step(`QA-39 (${w}): types in words; "1 form field" in the singular; no "staff working view"`, !/\byes_no\b|\bcode\b/.test(await p.locator("main table tbody td:nth-child(3)").allInnerTexts().then((x) => x.join(" "))) && !/\b1 form fields\b/.test(fl) && !/staff working view/.test(fl));
       const fits = await p.evaluate(() => { const f = document.querySelector("main table").parentElement; return { ok: f.scrollWidth <= f.clientWidth + 1, scroll: f.scrollWidth, width: f.clientWidth }; });
       step(`QA-39 (${w}): every column fits on screen, Asked in and Status included (no sideways scroll)`, fits.ok, JSON.stringify(fits));

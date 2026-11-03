@@ -107,6 +107,10 @@ function endOrphanLaunches() {
   }
 }
 
+/** The model a Live field-map draft calls (UX-A part 4 n1: named under Details (for admins) in the Draft dialog, never
+ *  on its main path or in the job's progress words). */
+export const DRAFT_MODEL = "claude-opus-5-5";
+
 @Injectable()
 export class Sources {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit) {
@@ -234,7 +238,7 @@ export class Sources {
     const ledger = this.ledger();
     const inventory = this.inventoryOf(a);
     const invSha = inventory ? sha(readFileSync(join(SOLUTION, inventory))) : undefined;
-    return { job_id: jobId, saved_runs: jobId ? this.savedRuns(jobId, invSha).map(({ envelope: _e, ...r }) => r) : [], key_present: existsSync(join(ROOT, ".tools", "solution-1-prototype", "secrets", "anthropic.env")), ledger };
+    return { job_id: jobId, model: DRAFT_MODEL, saved_runs: jobId ? this.savedRuns(jobId, invSha).map(({ envelope: _e, ...r }) => r) : [], key_present: existsSync(join(ROOT, ".tools", "solution-1-prototype", "secrets", "anthropic.env")), ledger };
   }
 
   ledger() {
@@ -263,7 +267,7 @@ export class Sources {
     const want = { job_id: jobId, kind: "field_map", combination: "studio", configuration_version: "studio-add-form", template: "field-map.v2.md", output_schema: "field-map-output.v2.schema.json",
       ...(printedEdition && EDITION.test(printedEdition) ? { known: { form_edition: printedEdition } } : {}),
       inputs: [{ file: a.inventoryFile, sha256: sha(invBytes) }],
-      settings: { provider_route: "anthropic-api/aiw-d261-prototype-exception-aiw-d260", model: "claude-opus-5-5", effort: "high", timeout_ms: out.timeout_ms, max_attempts: MAX_ATTEMPTS, budget_usd: 5, max_output_tokens: out.max_output_tokens } }; // 64k: a full 242-box form needs 53-63k output (IMM 1295, 20 Oct); 32k truncated IMM 5257 (21 Oct 05:58Z); 128k from 240 fields (R-146)
+      settings: { provider_route: "anthropic-api/aiw-d261-prototype-exception-aiw-d260", model: DRAFT_MODEL, effort: "high", timeout_ms: out.timeout_ms, max_attempts: MAX_ATTEMPTS, budget_usd: 5, max_output_tokens: out.max_output_tokens } }; // 64k: a full 242-box form needs 53-63k output (IMM 1295, 20 Oct); 32k truncated IMM 5257 (21 Oct 05:58Z); 128k from 240 fields (R-146)
     const have = existsSync(jobFile) ? readFileSync(jobFile, "utf8") : null;
     if (have !== JSON.stringify(want, null, 1) + "\n") writeFileSync(jobFile, JSON.stringify(want, null, 1) + "\n");
     const draftInputs: DraftInputs = { inputSha: want.inputs[0].sha256, templateSha: sha(readFileSync(join(PROMPTS, want.template))), schemaSha: sha(readFileSync(join(PROMPTS, want.output_schema))), model: want.settings.model, effort: want.settings.effort, maxOutputTokens: want.settings.max_output_tokens, known: want.known ?? null };
@@ -523,7 +527,7 @@ export class Sources {
       if (stub.code !== 0) throw new Error(`stub pass failed: ${(sj?.refused ?? stub.err).toString().slice(-300)}`);
       if (mode === "stub") { await this.db.draftingJob.update({ where: { id }, data: { status: "COMPLETED", message: "Stub pass completed: the guarded path works. A stub has no AI content, so there is nothing to compare.", detail: { job_id: jobId, steps }, finishedAt: new Date(), costUsd: 0 } }); return; }
       const took = this.savedRuns(jobId).find((r) => r.duration_ms)?.duration_ms;
-      await this.db.draftingJob.update({ where: { id }, data: { message: `Calling the AI (guarded path; Claude Opus 5.5; up to US$5). ${took ? `The last real run of this form took about ${Math.max(1, Math.round(took / 60_000))} minutes.` : "A large form can take several minutes."} The whole form is drafted in one call, so there is no part-by-part progress yet.`, detail: { job_id: jobId, steps } } });
+      await this.db.draftingJob.update({ where: { id }, data: { message: `Calling the AI (guarded path; up to US$5). ${took ? `The last real run of this form took about ${Math.max(1, Math.round(took / 60_000))} minutes.` : "A large form can take several minutes."} The whole form is drafted in one call, so there is no part-by-part progress yet.`, detail: { job_id: jobId, steps } } });
       const live = await this.launchOnce(jobId, "live", () => this.stillWanted(id), ov);
       if (live.cancelled) { await this.db.draftingJob.updateMany({ where: { id, status: "RUNNING" }, data: { status: "CANCELLED", costUsd: 0, finishedAt: new Date(), message: "Cancelled before it started its AI call (after the stub pass): nothing was sent. US$0.", detail: { job_id: jobId, steps } } }); return; }
       if (live.stopped) { await this.db.draftingJob.updateMany({ where: { id, status: "RUNNING" }, data: { status: "CANCELLED", finishedAt: new Date(), message: "Stopped while the AI call ran: the call was ended (M7). It stays counted at its reserved worst case; nothing of it is applied.", detail: { job_id: jobId, steps } } }); return; }

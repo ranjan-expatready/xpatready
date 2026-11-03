@@ -38,7 +38,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
       step(`C3.6 P-158 (${w}): Fields offers no Add and says in one line where fields come from`, (await p.getByRole("button", { name: /Add a field/ }).count()) === 0 && (await p.locator("[data-origin]").count()) === 1 && /Where these come from: each field is read from a form field/.test(fl), fl.slice(0, 200));
       const rows = await p.locator("main table tbody tr").count(), noted = await p.locator("main table tbody tr [data-source]").count();
       step(`P-162 (${w}): every Fields row shows its source ("From: IMM …" or "From a reviewed release"); no page says "box" (P-63)`, rows > 100 && noted === rows && !/\bbox(es)?\b/i.test(fl) && /From: IMM 1295 \(09-2023\) form field/.test(fl) && /From a reviewed release/.test(fl), `${noted} of ${rows}`);
-      step(`P-162 fail (${w}): a field with no source is flagged "No source recorded", never blank`, /No source recorded/.test(await p.locator("main table tbody tr", { hasText: "person.old_hand_made" }).innerText()));
+      step(`P-162 fail (${w}): a field with no source is flagged "No source recorded", never blank`, /No source recorded/.test(await p.locator(`main table tbody tr[data-item="person.old_hand_made"]`).innerText()));
       step(`C3.13 (${w}): where used: a field's forms, form fields and combinations`, /IMM 1295[^\n]* · \d+ form fields? · 1 combination/.test(fl));
       const f = await fits(); step(`QA-39 (${w}): the Fields table still fits without sideways scroll`, f.ok, JSON.stringify(f));
       await p.screenshot({ path: path.join(SHOTS, `fields-${w}.png`) });
