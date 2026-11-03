@@ -64,7 +64,10 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
     // Lead check L5: a minimum age is decided by each person's date of birth (engine/render.ts ageGate asks it as a
     // deciding question); with nobody asked for it the form could never be decided, so release is refused.
     if (f.min_age && !placed.has(BIRTH) && !docFacts.has(BIRTH)) out.push({ level: "error", where: "Forms", item: f.form_number, message: `${f.form_number} applies from age ${f.min_age}, so each person's date of birth decides it, but nobody is asked for a date of birth in this combination. Add the date of birth question to this combination's questionnaire, or clear the minimum age.` });
-    if ((f.form_kind ?? "data_form") === "data_form" && !s.field_maps.some((m) => m.form_number === f.form_number)) out.push({ level: "warning", where: "Forms", item: f.form_number, message: "No field map yet: the form cannot be filled." });
+    // V3 B1 (P-297 (3)): the same reading as the case gate (engine/programs.ts form_without_edition: a PDF form field map
+    // with entries; an Online line is read from its PDF too, P-102), so a release is never one no firm can open a case on.
+    if ((f.form_kind ?? "data_form") === "data_form" && !(s.field_maps as { form_number: string; channel?: string; entries: unknown[] }[]).some((m) => m.form_number === f.form_number && m.channel !== "ONLINE" && m.entries.length))
+      out.push({ level: "error", where: "Forms", item: f.form_number, message: `No form fields mapped yet for ${f.form_number}: a case could not fill it, so firms could not open cases on this release. Map its form fields (Draft setup), or remove the form.` });
   }
   const unplaced = new Map<string, number>();
   for (const m of s.field_maps) for (const e of m.entries) {
