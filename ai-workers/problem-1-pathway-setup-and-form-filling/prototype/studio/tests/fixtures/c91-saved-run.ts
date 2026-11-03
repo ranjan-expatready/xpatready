@@ -2,9 +2,13 @@
 // 11-2025 over 2021 comparison, written into p2/runs as the guarded launcher would record it, and removed after. It is
 // made for tests only (never a real answer, never committed); its three proposals: two quote their box's own caption, the
 // third quotes words not on the form (P-170: Decide).
-//   tsx --tsconfig studio/api/tsconfig.json studio/tests/fixtures/c91-saved-run.ts write|remove [tag]
+// The C9.1 result PR (3 Nov) committed the Mac paid runner's real saved run of this comparison; the checks prove the
+// replay rules with their own runs (the saved result itself is acceptance/C9.1.test.ts), so they set the real ones aside
+// in the copy's var folder while they run (setAsideReal) and put them back after (putBackReal); a folder a killed check
+// of the same copy left is put back first. As tests/check_forms_c34_ai.ts.
+//   tsx --tsconfig studio/api/tsconfig.json studio/tests/fixtures/c91-saved-run.ts write|remove|aside|back [tag]
 import { createHash } from "node:crypto";
-import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { RUNS } from "../../api/src/rounds.ts";
@@ -27,7 +31,13 @@ const TAG = (process.env.C91_FIXTURE_TAG ?? process.argv[3] ?? "c91").replace(/[
 export const SAVED = [`${step.jobBase}-c91fixture-${TAG}-live-20261103t100100000z-c91fix.json`, `${step.jobBase}-check-c91fixture-${TAG}-live-20261103t100200000z-c91fix.json`];
 export const writeSaved = () => { writeFileSync(join(RUNS, SAVED[0]), JSON.stringify(runRecord(false, ctx.inputs, answer))); writeFileSync(join(RUNS, SAVED[1]), JSON.stringify(runRecord(true, ctx.inputs, answer))); };
 export const removeSaved = () => { for (const f of SAVED) rmSync(join(RUNS, f), { force: true }); };
+/** A real live run of a C9.1 comparison, not one a check wrote (theirs are named c91fixture, c91check or c91api). */
+const REAL = /^studio-fieldmap-impact-.+-live-\d{8}t\d{9}z-[a-z0-9]+\.json$/, MINE = /-c91(fixture|check|api)-|-c91(fix|chk|api)\.json$/;
+const ASIDE = join(STUDIO, "var", `c91-real-runs-${TAG}`);
+export const putBackReal = () => { if (!existsSync(ASIDE)) return; for (const f of readdirSync(ASIDE)) renameSync(join(ASIDE, f), join(RUNS, f)); rmSync(ASIDE, { recursive: true, force: true }); };
+export const setAsideReal = () => { putBackReal(); mkdirSync(ASIDE, { recursive: true }); for (const f of readdirSync(RUNS).filter((x) => REAL.test(x) && !MINE.test(x))) renameSync(join(RUNS, f), join(ASIDE, f)); };
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  if (process.argv[2] === "write") writeSaved(); else if (process.argv[2] === "remove") removeSaved(); else { console.error("write | remove"); process.exit(2); }
+  const how: Record<string, () => void> = { write: writeSaved, remove: removeSaved, aside: setAsideReal, back: putBackReal };
+  if (how[process.argv[2]]) how[process.argv[2]](); else { console.error("write | remove | aside | back"); process.exit(2); }
 }

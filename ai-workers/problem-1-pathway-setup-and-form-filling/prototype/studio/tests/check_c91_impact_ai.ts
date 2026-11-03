@@ -16,11 +16,15 @@ import { fieldComponents, type ComponentRows } from "../engine/where-used.ts";
 import { answersInside, changedBoxes, compareBoxes, componentsView, impactContext, impactCost, impactPart, impactStep, IMPACT_AI_WORDS, inventoryFields, previousAcceptedUntil, staleRun, writePart } from "../api/src/impact-ai.ts";
 import { RUNS, StepRunner } from "../api/src/rounds.ts";
 import { C91, c91Jobs } from "../tools/c91-impact-job.ts";
+import { putBackReal, setAsideReal } from "./fixtures/c91-saved-run.ts";
 
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
 const PROTOTYPE = join(import.meta.dirname, "..", "..");
 const v = (o: object) => ({ version: 1, status: "PUBLISHED", ...o });
+// The committed real saved run of this comparison is set aside while the rules are proved with this check's own runs.
+setAsideReal(); process.on("exit", putBackReal);
+for (const [sig, code] of [["SIGINT", 130], ["SIGTERM", 143]] as const) process.on(sig, () => process.exit(code));
 
 (async () => {
   // ── The comparison (BR-12, no AI): the boxes AI may read are exactly the new and reworded ones ──

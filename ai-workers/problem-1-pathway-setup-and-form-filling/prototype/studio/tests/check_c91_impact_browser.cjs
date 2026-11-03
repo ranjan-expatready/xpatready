@@ -2,7 +2,8 @@
 // cost, greyed with its reason while live AI is off (the priced button is never clicked), Saved when a saved run of this
 // comparison is here, the saved run used at US$0 with its proposals shown next to each changed box, the previous edition's
 // accepted-until date, and the components touched. axe (WCAG 2.2 AA) and no sideways scroll at 1440 and 1024 px; shots
-// into product/screens/02-ai-work/screenshots/c91/. The test saved run is written for this check and removed after. US$0.
+// into product/screens/02-ai-work/screenshots/c91/. The test saved run is written for this check and removed after; the
+// committed real one is set aside meanwhile (tests/fixtures/c91-saved-run.ts aside|back). US$0.
 //   zsh studio/tools/isolated.sh forms_c91b 4452 start && node studio/tests/check_c91_impact_browser.cjs 4452 xr_studio_forms_c91b
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
@@ -18,6 +19,7 @@ let fail = 0;
 const step = (name, ok, detail) => { if (!ok) fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${String(detail).slice(0, 240)}` : ""}`); };
 
 (async () => {
+  saved("aside"); // the committed real saved run of this comparison waits in var/ while this check uses its own
   const b = await chromium.launch({ channel: "chrome", headless: true }).catch(() => chromium.launch({ headless: true }));
   const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: "light", reducedMotion: "reduce" });
   const p = await ctx.newPage(); const errs = [];
@@ -73,7 +75,7 @@ const step = (name, ok, detail) => { if (!ok) fail++; console.log(`${ok ? "PASS"
     await check("the impact review after the saved AI run", "c91-drafted");
     step("QA-100: no priced request was sent from the page", priced.length === 0, priced.join(" "));
     step("no page error", errs.length === 0, errs.join(" | "));
-  } finally { saved("remove"); await b.close(); }
+  } finally { saved("remove"); saved("back"); await b.close(); }
   console.log(fail ? `\n${fail} failed` : "\nall passed");
   process.exit(fail ? 1 : 0);
-})().catch((e) => { console.error(e); try { saved("remove"); } catch { /* ignore */ } process.exit(2); });
+})().catch((e) => { console.error(e); try { saved("remove"); saved("back"); } catch { /* ignore */ } process.exit(2); });
