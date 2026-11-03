@@ -489,7 +489,13 @@ export const ON_ITS_PAGE = new Set(["field_map"]);
 export const PAGE_WORDS: Record<string, string> = { field_map: "form-field page, where its form fields are mapped too" };
 /** Why an item cannot be accepted with others (P-121, P-158): only Ready items, never a rules item landing on the
  *  library. null when it can. */
-export function bulkWhy(r: Pick<Row, "confidence" | "origin" | "landsOn" | "step"> & { agreement?: string; rounds?: unknown; rules?: unknown; reason?: string | null }): string | null {
+/** P-294 (tech lead, on #661): an AI-proposed new field definition is never accepted with others, on either door (the
+ *  form-field page, To review): it adds to the shared library, so each is decided on its own. */
+export const NEW_FIELD_ALONE = "A new shared field is decided on its own (only High reuse matches are accepted together): open it on its form-field page.";
+/** P-299 (tech lead, on #699): the same rule for every other step (edition field drafts included): a field that would
+ *  add to the library is accepted on its own. */
+export const NEW_FIELD_ALONE_QUEUE = "A new shared field is decided on its own (only High reuse matches are accepted together): open it and accept it alone.";
+export function bulkWhy(r: Pick<Row, "confidence" | "origin" | "landsOn" | "step"> & { kind?: string; reuse?: unknown; agreement?: string; rounds?: unknown; rules?: unknown; reason?: string | null; work?: unknown }): string | null {
   // G-CORE B5 (P-288 (2)): a field-map item is ticked with others on To review like any item when it is Ready (High:
   // both rounds agree and the rules pass, re-rated here from what is stored); otherwise the box says why, in P-121's
   // words. It still opens on its form-field page.
@@ -499,12 +505,16 @@ export function bulkWhy(r: Pick<Row, "confidence" | "origin" | "landsOn" | "step
       if (again.confidence !== "ready") return again.reason;
     }
     if (r.confidence !== "ready") return r.agreement === "one_round" ? P121_WHY.oneRound : r.agreement === "differ" ? "The two AI readings differ: open it on its form-field page and choose." : "It needs a check first: open it on its form-field page and decide it on its own.";
+    // P-294: only an exact reuse match goes with others; a new definition (or an unclear match) never does.
+    if ((r.work as { outcome?: string } | null | undefined)?.outcome !== "REUSE") return NEW_FIELD_ALONE;
   }
   // QA-176 (P-121): an AI item never goes with others without both rounds agreeing, even one stored Ready before the fix.
   if (r.confidence === "ready" && r.origin === "ai" && r.agreement && r.agreement !== "agreed") return r.agreement === "one_round" ? P121_WHY.oneRound : P121_WHY.differ;
   // C2.6 (QA-157): a one-round Decide item is one its source leaves to a person (e.g. the visa office), not two readings.
   if (r.confidence !== "ready") return r.confidence === "check" ? "It needs a check first: open it and decide it on its own." : r.agreement === "one_round" ? "Its source leaves it to a person: open it and decide it on its own." : "Its two readings differ: open it and choose.";
   if (r.origin === "rules" && r.landsOn === "library") return "A rules item that adds to the shared library is accepted on its own.";
+  // P-299: an AI-proposed field that would add to the library (not a reuse) is never accepted with others, whatever its step.
+  if (r.kind === "field" && r.landsOn === "library" && (r.reuse as { match?: string } | null | undefined)?.match === "new") return NEW_FIELD_ALONE_QUEUE;
   return null;
 }
 export type Decision = { action: "accept" | "edit" | "reject"; reason?: string | null; payload?: unknown };

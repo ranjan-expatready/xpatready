@@ -13,10 +13,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
 export type LibraryForm = { code: string; title: string; kind: string; usedBy: number; online_only?: true; editions: { label: string; mapped: boolean; boxes: number; approved: boolean }[] };
-export type IntakeResult = { file: string; outcome: "in_library" | "added" | "attached" | "new_edition_held" | "older_edition_held" | "held" | "refused" | "failed"; message: string; kind: string; code: string | null; title: string | null; edition: string | null; published: string | null };
+export type IntakeResult = { file: string; outcome: "in_library" | "older_in_library" | "added" | "attached" | "new_edition_held" | "older_edition_held" | "held" | "refused" | "failed"; message: string; kind: string; code: string | null; title: string | null; edition: string | null; published: string | null };
 
 export const OUTCOME: Record<IntakeResult["outcome"], [tone: string, label: string]> = {
-  in_library: ["ok", "Already in the library"], added: ["ok", "Added to the library"], attached: ["info", "Guide attached"],
+  in_library: ["ok", "Already in the library"], older_in_library: ["neutral", "Older edition: not used"], added: ["ok", "Added to the library"], attached: ["info", "Guide attached"],
   new_edition_held: ["warn", "New edition: impact review needed"], older_edition_held: ["neutral", "Older edition: not used"], held: ["warn", "Held for a person"], refused: ["danger", "Refused"], failed: ["danger", "Not added: try again"],
 };
 const KIND: Record<string, string> = { form: "Form", checklist: "Checklist", guide: "Guide", unknown: "File" };

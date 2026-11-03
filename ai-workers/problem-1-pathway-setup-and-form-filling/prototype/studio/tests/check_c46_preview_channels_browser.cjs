@@ -47,8 +47,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // ======================================================== before: PDFs only, nothing to sign, no Online group
   await go("principal");
   const line0 = await p.locator("[data-outputs-line]").innerText();
-  step("C4.6 pass: the principal's Forms panel counts what they get per channel", /Principal applicant gets: 5 filled PDFs to upload · 2 document checklists \(read, not filed\)/.test(line0), line0);
-  step("C4.6 Major 1 fail: a document checklist is not counted as a filled PDF, and says so on its line", !/7 filled PDFs/.test(line0) && /Checklist · read, not filed/.test(await p.locator('[data-preview-form="IMM 5488"]').innerText()), line0);
+  step("C4.6 pass: the principal's Forms panel counts what they get per channel", /Principal applicant gets: 5 filled PDFs to upload/.test(line0) && !/document checklist/.test(line0), line0);
+  // C11.11 (QA-101): the sample's checklists (IMM 5488, IMM 5905) are its sources, never form lines, so the panel neither
+  // lists nor counts them (before: "2 document checklists (read, not filed)").
+  step("C4.6 Major 1 fail (C11.11): a document checklist is never counted as a filled PDF, nor listed as a form line", !/7 filled PDFs/.test(line0) && (await p.locator('[data-preview-form="IMM 5488"], [data-preview-form="IMM 5905"]').count()) === 0, line0);
   step("C4.6 fail: with no signed or Online line, the count names nothing to sign and no portal", !/to sign|portal/.test(line0) && (await p.locator('[data-output-group="ONLINE"]').count()) === 0 && (await p.locator("[data-to-sign]").count()) === 0, line0);
 
   // ======================================================== the author sets Online, Paper and a hand-signed upload
@@ -57,7 +59,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("setup: three lines changed on the Forms tab's route", rs.every((r) => r.status < 300), rs.map((r) => r.status).join(","));
   await go("principal");
   const line1 = await p.locator("[data-outputs-line]").innerText();
-  step("C4.6 pass: the count names the portal (later wave), the PDFs to upload, to print and mail, and the PDFs to sign", /1 filled on the portal \(later wave\)/.test(line1) && /3 filled PDFs to upload/.test(line1) && /1 PDF to print, sign in pen and mail/.test(line1) && /1 PDF to sign by hand and scan/.test(line1) && /2 document checklists/.test(line1), line1);
+  step("C4.6 pass: the count names the portal (later wave), the PDFs to upload, to print and mail, and the PDFs to sign", /1 filled on the portal \(later wave\)/.test(line1) && /3 filled PDFs to upload/.test(line1) && /1 PDF to print, sign in pen and mail/.test(line1) && /1 PDF to sign by hand and scan/.test(line1) && !/document checklist/.test(line1), line1);
   const onlineGroup = p.locator('[data-output-group="ONLINE"]');
   const note = await onlineGroup.locator("[data-later-wave]").innerText();
   step("C4.6 pass: the Online group says the portal screens come in a later wave and that no PDF is made", /later wave/.test(note) && /no PDF/.test(note) && (await onlineGroup.locator('[data-preview-form="IMM 1295"]').count()) === 1, note);
@@ -66,7 +68,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C11.1 fail: a line filed another way (Paper, PDF upload) carries no later-wave mark", (await p.locator('[data-output-group="PAPER"] [data-later-wave-pill], [data-output-group="PDF_UPLOAD"] [data-later-wave-pill]').count()) === 0);
   step("C4.6 pass: the Paper line says it is signed in pen", /Signed in pen/.test(await p.locator('[data-output-group="PAPER"] [data-preview-form="IMM 5707"] [data-to-sign]').innerText()));
   step("C4.6 pass: the hand-signed upload says so", /Signed by hand and scanned/.test(await p.locator('[data-output-group="PDF_UPLOAD"] [data-preview-form="IMM 5257 SCH1"] [data-to-sign]').innerText()));
-  step("C4.6 fail: a PDF upload with no signature carries no signature pill", (await p.locator('[data-preview-form="IMM 5488"] [data-to-sign]').count()) === 0);
+  // C11.11: the unsigned PDF uploads are now IMM 5475 and IMM 5476 (filed once for the application), not the checklist.
+  const plainUploads = p.locator('[data-preview-form="IMM 5475"], [data-preview-form="IMM 5476"]');
+  step("C4.6 fail: a PDF upload with no signature carries no signature pill", (await plainUploads.count()) > 0 && (await plainUploads.locator("[data-to-sign]").count()) === 0, await plainUploads.count());
   const forms = await p.locator("section[aria-labelledby=pv-f]").innerText();
   step("C4.6 fail-guard: no system name in the Forms panel", !KEYS.test(forms), forms.match(KEYS)?.[0]);
   step("C4.6 m1 fail-guard: no decision number in the Forms panel", !/P-\d+/.test(forms), forms.match(/P-\d+/)?.[0]);

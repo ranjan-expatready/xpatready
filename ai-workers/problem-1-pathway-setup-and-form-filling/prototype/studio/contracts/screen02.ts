@@ -39,7 +39,9 @@ export type ImpactReview = {
 export type ImpactAccepted = { edition: string; carried: number; for_a_person: number; combinations: { id: string; label: string }[] };
 
 /** K1: a PDF edition's form fields with their decision. */
-export type FormFieldRow = { dataPath: string; caption: string | null; heading: string | null; outcome: string; outcome_word: string; field: string | null; reason: string | null; status: string; carried: boolean };
+export type FormFieldRow = { dataPath: string; caption: string | null; heading: string | null; outcome: string; outcome_word: string; field: string | null; reason: string | null; status: string; carried: boolean;
+  /** C3.8 [IRCC-F08]: a Background information question, which is never "not a fact". */
+  background?: boolean };
 export type FormFieldsView = { edition: { id: string; label: string; form: string } | null; fields: FormFieldRow[] };
 
 /** A4: one part of a step drafted in parts (read-only). */
