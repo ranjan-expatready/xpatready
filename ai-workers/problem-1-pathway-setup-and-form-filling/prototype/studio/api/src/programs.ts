@@ -25,7 +25,7 @@ import { join, resolve } from "node:path";
 import { ACTORS, Audit, Db, isDemoWorkspace, need, ROOT, Workspace, type Actor } from "./core.ts";
 import { addFormLine } from "./form-lines.ts";
 import { officialPagesOf as readOfficialPages } from "./official-pages.ts";
-import { changeView, itemsOf, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
+import { changeView, itemsOf, nearOf, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { openNodeKeys, startWhy } from "./lifecycle.ts";
 import { Sources } from "./sources.ts";
 import { emptyProblem, Studio } from "./studio.ts";
@@ -432,7 +432,13 @@ export class Programs {
       }
     } else for (const r of changed) why.set(r.leaf.combinationId!, { why: r.errors ? r.firstError : null });
     // Approved library changes travel with the shared draft and are released with it (Screen 02 slice 2, B1).
-    const library = (await this.db.libraryChange.findMany({ where: { workspaceId, status: "APPROVED", action: { in: ["ADD", "RETIRE", "RESTORE"] } }, orderBy: { proposedAt: "asc" } })).map(changeView);
+    // C11.13 (P-120): the Release page also lists the changes still waiting for a second person (never released, never
+    // counted), and each near duplicate says what it is close to and why it is not the same. The draft bar (summary)
+    // reads only the approved ones.
+    const lib = await this.db.libraryChange.findMany({ where: { workspaceId, status: { in: summary ? ["APPROVED"] : ["APPROVED", "WAITING"] }, action: { in: ["ADD", "RETIRE", "RESTORE"] } }, orderBy: { proposedAt: "asc" } });
+    const near = summary ? new Map() : await nearOf(this.db, workspaceId, lib);
+    const library = lib.map((c) => ({ ...changeView(c), will_release: c.status === "APPROVED", near: near.get(c.id) ?? null }));
+    const releasing = library.filter((l) => l.will_release);
     // C5.6 (P-240, G3): Sample content releases as a "Demo release".
     const changedIds = changed.map((r) => r.leaf.combinationId!).filter(Boolean);
     // Not released yet, so no snapshot: a Sample combination, or any current check marked Sample (illustrative).
@@ -441,8 +447,8 @@ export class Programs {
       // G1 (tech lead on #558): a number answered by a Sample source entry makes its release a Demo release.
       ...await this.sampleSourced(workspaceId, changedIds)]);
     return {
-      changes: changed.reduce((s, r) => s + r.changes, 0) + library.length,
-      library,
+      changes: changed.reduce((s, r) => s + r.changes, 0) + releasing.length,
+      library, waiting_library: library.length - releasing.length,
       rows: changed.map((r) => { const w = why.get(r.leaf.combinationId!)!; return { combinationId: r.leaf.combinationId, label: r.leaf.label, path: r.leaf.path, changes: r.changes, held: !!w.why, why: w.why, self: !!w.self, released: !!r.leaf.release, demo: demoIds.has(r.leaf.combinationId!) }; }),
       last: last ? { version: last.version, at: last.releasedAt, approver: last.approverId } : null,
       next: (last?.version ?? 0) + 1,
@@ -466,7 +472,8 @@ export class Programs {
     if (!d.changes) throw problem(409, "Nothing to release", "The shared draft has no changes since the last release.");
     if (b.expectedChanges !== d.changes) throw problem(409, "The draft changed", `The draft now has ${d.changes} changes, not ${b.expectedChanges}. Review the list again, then release.`);
     const include = d.rows.filter((r) => !r.held);
-    if (!include.length && !d.library.length) {
+    const releasing = d.library.filter((l) => l.will_release);
+    if (!include.length && !releasing.length) {
       const mine = d.rows.filter((r) => r.self).map((r) => r.label);
       if (mine.length) {
         await this.audit.log(await this.ws.id(), actor.id, "refused", "release", null, `Release refused: ${actor.name} changed or submitted ${mine.join(", ")}`);
@@ -487,7 +494,7 @@ export class Programs {
       }
       throw problem(409, "Every change is held back", `Nothing can be released yet. ${shown}${d.rows.length > 5 ? ` · and ${d.rows.length - 5} more (see Review and release)` : ""}`, { errors });
     }
-    const out = await this.studio.releaseRows(actor, include.map((r) => r.combinationId!), d.library.map((l) => l.id));
+    const out = await this.studio.releaseRows(actor, include.map((r) => r.combinationId!), releasing.map((l) => l.id));
     this.cache = null;
     return { ...out, held: d.rows.filter((r) => r.held).map((r) => ({ label: r.label, why: r.why })) };
   }
