@@ -9,7 +9,7 @@ import { HttpStatus } from "@nestjs/common";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { manifest } from "../../engine/import.ts";
-import { ACTORS, Db, fail, need, OFFICIAL, type Actor } from "./core.ts";
+import { ACTORS, Db, fail, isDemoWorkspace, need, OFFICIAL, type Actor } from "./core.ts";
 import type { Checklists } from "./checklist.ts";
 import type { Intake } from "./intake.ts";
 import type { Sources } from "./sources.ts";
@@ -32,6 +32,8 @@ const running = new Set<string>();
 /** Rows 1 and 7 for one combination. */
 export async function seedFormsStory(s: Services, actor: Actor, combinationId: string): Promise<FormsStory> {
   need(actor, "author");
+  // C5.5 (breaker F4): it records the content reviewer's decision for them, so never outside the demo workspace.
+  if (!isDemoWorkspace()) fail("This demo control works only in the demo workspace.", HttpStatus.CONFLICT);
   const combo = await s.db.combination.findUnique({ where: { id: combinationId } });
   if (!combo) fail("That combination does not exist (it may have been removed by a reset).", HttpStatus.NOT_FOUND);
   // Break 13: the story's files are the visitor visa's (combination A); never attached to another combination.

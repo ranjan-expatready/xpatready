@@ -19,6 +19,7 @@ import { groupOf } from "./review-proposals.ts";
 import { isLifecycleKind } from "./lifecycle.ts";
 import { normaliseCode } from "../../contracts/form-library.ts";
 import { Programs } from "./programs.ts";
+import { formCombinations } from "./where-used.ts";
 import { needsYouItems } from "../../engine/setup-checklist.ts";
 import { nextStepHref, STEP_LABEL, type ItemKind } from "../../contracts/setup-checklist.ts";
 
@@ -240,8 +241,10 @@ export class ReviewQueueService {
             : holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Check the source", href: `/review/held/${h.id}`, note: null } } : { state: "waiting" as const, waiting_on: mine ? "You uploaded it; a different person checks the source." : "A content publisher checks the source.", next: null }) });
       } else {
         const older = h.outcome === "older_edition_held";
-        out.push({ id: `held:${h.id}`, kind: "new_edition", title: label, by: nameOf(h.createdBy), at: h.createdAt.toISOString(), cost_usd: null, forms: h.code ? [normaliseCode(h.code)] : [], combination: null,
-          what: older ? "An older edition than the one in the library: it is not used unless a person decides otherwise." : "A newer edition of a form in the library: nothing changes until a person reviews its impact and releases it.",
+        // C9.1 BR-12: a newer edition names the combinations that file the form now (SH2), so To review says what it touches.
+        const touches = older || !h.code ? [] : (await formCombinations(this.db, h.workspaceId, normaliseCode(h.code))).map((c) => c.label).sort();
+        out.push({ id: `held:${h.id}`, kind: "new_edition", title: label, by: nameOf(h.createdBy), at: h.createdAt.toISOString(), cost_usd: null, forms: h.code ? [normaliseCode(h.code)] : [], combination: null, combinations: touches,
+          what: older ? "An older edition than the one in the library: it is not used unless a person decides otherwise." : `A newer edition of a form in the library: nothing changes until a person reviews its impact and releases it${touches.length ? `; it touches ${touches.join(", ")}` : ""}.`,
           ...(holds(actor, "author") ? { state: "needs" as const, waiting_on: null, next: { label: older ? "See the older edition" : "Review impact", href: older ? where : `/review/edition/${h.id}`, note: null } } : { state: "waiting" as const, waiting_on: "The configuration author reviews it.", next: null }) });
       }
     }
@@ -267,7 +270,7 @@ export class ReviewQueueService {
       const what = cnd ? `When it is asked, for every combination: ${cnd.before} → ${cnd.after} (asked in ${cnd.uses} combination${cnd.uses === 1 ? "" : "s"}; goes out with the next release). Reason: ${cnd.reason}` : fil ? `Who fills it, for every combination: ${fil.before} → ${fil.after} (used by ${fil.uses} combination${fil.uses === 1 ? "" : "s"}; goes out with the next release). Reason: ${fil.reason}` : acc ? `What IRCC accepts for ${acc.form}: ${acc.before} → ${acc.after}. ${acc.quote ? `canada.ca: "${acc.quote}"` : `Reason: ${acc.reason}`}` : `${c.action === "ADD" ? `New ${word}` : `${actionWord(c.action, c.kind)} the ${word}`}${c.reason ? `. Reason: ${c.reason}` : ""}${c.aiVerdict ? ` · Advisory check: ${c.aiVerdict}` : ""}`;
       const base = { id: `change:${c.id}`, kind: "library_change" as const, title: c.label ?? c.key, by: nameOf(c.proposedBy), at: c.proposedAt.toISOString(), cost_usd: null, forms: formsOfChange(c), combination: c.kind === "combination" ? c.combinationId ?? c.key : null };
       if (c.status === "RETURNED") out.push({ ...base, what: `${what} · Returned by ${nameOf(c.decidedBy)}: ${c.decisionNote}`, ...(mine ? { state: "needs" as const, waiting_on: null, next: { label: "Correct or withdraw", href: `/review/change/${c.id}`, note: null } } : { state: "waiting" as const, waiting_on: isLifecycleKind(c.kind) ? "The person who proposed it sends it again or withdraws it." : "The person who proposed it corrects it or withdraws it.", next: null }) });
-      else out.push({ ...base, what, ...(holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: c.action === "ADD" ? "Approve or return the new field" : "Approve or return", href: `/review/change/${c.id}`, note: null } } : { state: "waiting" as const, waiting_on: mine ? "You proposed it; a different person approves or returns it." : "A content publisher approves or returns it.", next: null }) });
+      else out.push({ ...base, what, ...(holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: c.action === "ADD" ? `Approve or return the new ${word}` : "Approve or return", href: `/review/change/${c.id}`, note: null } } : { state: "waiting" as const, waiting_on: mine ? "You proposed it; a different person approves or returns it." : "A content publisher approves or returns it.", next: null }) });
     }
 
     // AI work still running: shown so a person knows it is coming, never as something to decide.
