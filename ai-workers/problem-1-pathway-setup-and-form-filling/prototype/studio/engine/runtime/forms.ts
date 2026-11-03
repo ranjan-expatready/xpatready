@@ -18,10 +18,11 @@ export const isGateFact = (f: FormFact) => f.box.includes("#gate:");
 
 /** What one form would read today for one person on the case: every form field with its coverage (the shared
  *  renderer's, so a case fills exactly what the release preview shows), and the confirmed facts among them. */
-export function formCoverage(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], form: string, subjectId: string, today = new Date()) {
+/** `edition`: read that PDF edition of the form (an answer key's own, break B1); otherwise the edition in use (P-32). */
+export function formCoverage(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], form: string, subjectId: string, today = new Date(), edition?: string | null) {
   const renderPeople: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies }));
   const { known } = knownOf(s, people, answers, rows, today);
-  const cov = render(s, renderPeople, known, { today }).coverage.find((c) => c.form === form && c.person === subjectId);
+  const cov = render(s, renderPeople, known, { today, ...(edition ? { editions: new Map([[form, edition]]) } : {}) }).coverage.find((c) => c.form === form && c.person === subjectId);
   if (!cov) return null;
   // QA-122 (P-71, P-72): a confirmed answer that fails its checks is never written; its form field is "not written"
   // with the problem as the reason, and readiness lists the fact as "needs a fix".
