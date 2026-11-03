@@ -171,7 +171,7 @@ Asked by the tech lead (Lead 3): re-run on the new main, step 2 in C3.2's flow, 
 * **N4 is unchanged.** The same release gives Preview 100 / 87 / 87 questions and 3 / 3 / 2 forms (plus a representative), against the case's 87 / 77 / 77 and 2 / 2 / 1. IMM 5409 (common-law condition, B4) and IMM 5476 (representative) are counted in the Preview only.
 * **Unchanged by these merges:** N2, B2, B3, B4, B5 (134 approvals in 5 min 36 s and 108 placements in 3 min 45 s, scripted, under three-way load), B6. The IMM 5707 copy counts are identical (19 written, 1 by hand), so N1 is very likely unchanged, but I did not re-inspect the parents' boxes this time.
 * **Timings** are slower because three copies ran at once: Reset 55–81 s, slowest part save 6.2–6.7 s. Compare the single-run figures above (25 s, 3.2 s).
-* **Accessibility:** the Reset dialog's colour-contrast hit shows in run 1 and not in run 2. Across today's 6 full runs it showed in 4, so it is intermittent (likely caught mid-animation), not every time. 0 sideways scroll at 400 / 1024 / 1440 on all states.
+* **Accessibility:** the Reset dialog's colour-contrast hit shows in run 1 and not in run 2. Across today's 8 full replays it showed in 6, so it is frequent but intermittent (likely caught mid-animation). It is a real Minor either way. 0 sideways scroll at 400 / 1024 / 1440 on all states.
 
 ## Next (P-291)
 (1) When #714 merges, one confirming run of step 4 through the new dialog. (2) The same journey on a second combination of the six (the LMIA one, from its reviewed release).
