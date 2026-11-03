@@ -612,7 +612,7 @@ export class Sources {
     let cmp: ReturnType<typeof compareMaps> | null = null;
     if (chk.ok) {
       const cout = checkedOutput({ raw_output: JSON.stringify(chk.output) } as never);
-      cmp = compareMaps(items, normalize(cout.canonical_fields, cout.entries.map((e: any) => ({ ...e, caption: box.get(e.data_path)?.caption ?? null })), library, redirects));
+      cmp = compareMaps(items, normalize(cout.canonical_fields, cout.entries.map((e) => ({ ...e, caption: box.get(e.data_path)?.caption ?? null })), library, redirects));
     }
     const formPaths = new Set(box.keys());
     const readingOf = (f: MapField) => `${f.proposedKey} (${f.proposedType}): ${f.boxes.length} form field${f.boxes.length === 1 ? "" : "s"}`.slice(0, 300);
