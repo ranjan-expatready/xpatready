@@ -104,6 +104,9 @@ const REASON = "Test: a different meaning from the library field that could fit.
   ok("C2.2 m2 fail: a field-map draft is not applied as a checklist (4xx)", (await call("POST", `/jobs/${jobId}/apply-checklist`)).status === 404);
   r = await call("POST", `/jobs/${jobId}/apply`, { who: "each_applicant" }, "user-A");
   ok("setup: the decided draft is applied", r.status === 201, r.body?.detail ?? r.body);
+  // C3.8 [IRCC-F09]: the super visa's package lists IMM 5707, so it is added from the library before the draft is submitted.
+  const fam = ((await call("GET", `/combinations/${sv}/attachments`)).body as any[]).find((a) => /IMM 5707 \(/.test(a.edition ?? ""));
+  if (fam) ok("setup: IMM 5707 is added from the library (its package lists it)", (await call("POST", `/attachments/${fam.id}/reuse`, {})).status < 300);
   await coverAll(sv);
   ok("C3.6 M1: the library holds one field per new name", sql("select count(distinct canonical_field_key) from canonical_field where label='Brk race name'") === "1" && sql("select count(distinct canonical_field_key) from canonical_field where lower(label)='brk duplicate name'") === "1");
   const changes = (await call("GET", "/library/changes?status=WAITING")).body as any[];
