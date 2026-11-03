@@ -13,7 +13,7 @@ const STUDIO = path.resolve(__dirname, ".."), SOL = path.resolve(STUDIO, "..", "
 const OFFICIAL = path.join(SOL, "official-sources", "ircc");
 const SHOTS = path.join(SOL, "product", "screens", "02-ai-work", "screenshots", "c91"); fs.mkdirSync(SHOTS, { recursive: true });
 const sql = (q) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
-const saved = (what) => execFileSync(path.join(STUDIO, "node_modules", ".bin", "tsx"), ["--tsconfig", path.join(STUDIO, "api", "tsconfig.json"), path.join(STUDIO, "tests", "fixtures", "c91-saved-run.ts"), what], { encoding: "utf8" });
+const saved = (what) => execFileSync(path.join(STUDIO, "node_modules", ".bin", "tsx"), ["--tsconfig", path.join(STUDIO, "api", "tsconfig.json"), path.join(STUDIO, "tests", "fixtures", "c91-saved-run.ts"), what, DB], { encoding: "utf8" });
 let fail = 0;
 const step = (name, ok, detail) => { if (!ok) fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${String(detail).slice(0, 240)}` : ""}`); };
 
@@ -60,12 +60,16 @@ const step = (name, ok, detail) => { if (!ok) fail++; console.log(`${ok ? "PASS"
 
     saved("write");
     await open(id);
-    step("C9.1 P-138: a saved run of this comparison shows Saved and Use the saved AI run (US$0)", await p.getByText("Saved", { exact: true }).first().isVisible() && await p.locator("[data-use-saved]").isVisible());
+    step("C9.1 P-138: a saved run of this comparison shows Saved and Use the saved AI run (US$0), and no priced button next to it (break M2)", await p.getByText("Saved", { exact: true }).first().isVisible() && await p.locator("[data-use-saved]").isVisible() && (await p.locator("[data-priced]").count()) === 0);
     await p.locator("[data-use-saved]").click();
     await p.locator("[data-drafted]").waitFor({ timeout: 30000 });
     const drafted = await p.locator("[data-drafted]").innerText();
     step("C9.1 pass: the saved run is used at US$0: 3 proposals wait on To review for a person", /US\$0/.test(drafted) && /3 waiting on To review/.test(drafted) && sql(`select mode || '|' || cost_usd from drafting_job where kind = 'field_map_impact'`) === "REPLAY|0", drafted);
     step("C9.1: the proposals show next to the changed boxes they answer (3 boxes), the others say a person maps them", (await p.locator("[data-box-ai]", { hasText: "on To review" }).count()) === 3 && (await p.locator("[data-box-ai]", { hasText: "None proposed: a person maps it" }).count()) === 20);
+    step("C9.1: after the saved run, focus is on its result (not the page body), and the offer and \"No saved run\" words are gone", await p.evaluate(() => document.activeElement?.hasAttribute("data-drafted")) && (await p.locator("[data-offer], [data-saved-words]").count()) === 0);
+    await p.setViewportSize({ width: 400, height: 800 });
+    step("400 px: the review's four tabs wrap, no sideways scroll", !(await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)));
+    await p.setViewportSize({ width: 1440, height: 900 });
     await check("the impact review after the saved AI run", "c91-drafted");
     step("QA-100: no priced request was sent from the page", priced.length === 0, priced.join(" "));
     step("no page error", errs.length === 0, errs.join(" | "));

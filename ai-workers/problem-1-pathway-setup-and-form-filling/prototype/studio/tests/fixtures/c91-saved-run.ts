@@ -2,7 +2,7 @@
 // 11-2025 over 2021 comparison, written into p2/runs as the guarded launcher would record it, and removed after. It is
 // made for tests only (never a real answer, never committed); its three proposals: two quote their box's own caption, the
 // third quotes words not on the form (P-170: Decide).
-//   tsx --tsconfig studio/api/tsconfig.json studio/tests/fixtures/c91-saved-run.ts write|remove
+//   tsx --tsconfig studio/api/tsconfig.json studio/tests/fixtures/c91-saved-run.ts write|remove [tag]
 import { createHash } from "node:crypto";
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -22,7 +22,9 @@ export const answer = { form_edition: C91.printed, canonical_fields: [{ id: "rep
   entries: [[boxes[0], "representative.family_name", caption(boxes[0])], [boxes[1], "representative.email", caption(boxes[1])], [boxes[2], "representative.membership_id", "Words that are not on this form"]].map(([dp, fact, quote]) => ({ data_path: dp, outcome: "mapped", person: "representative", row: null, fact, transform: null, condition: null, confidence: "high", unresolved_reason: null, evidence_quote: quote })) };
 export const runRecord = (isCheck: boolean, inputs: { file: string; sha256: string }[], out: unknown, cost = 0.2) => ({ caller: "live", contract_valid: true, raw_output: JSON.stringify(out),
   drafting_run: { status: "completed", usage: { cost_usd: cost }, attempts: [{ outcome: "completed" }], inputs: { official_files: inputs, combination: ctx.contextKey } }, launch_evidence: { template_sha256: tSha(isCheck ? step.check : step.template) } });
-export const SAVED = [`${step.jobBase}-c91fixture-live-20261103t100100000z-c91fix.json`, `${step.jobBase}-check-c91fixture-live-20261103t100100000z-c91fix.json`];
+/** Named per check copy (its database name), so checks running side by side never remove each other's files. */
+const TAG = (process.env.C91_FIXTURE_TAG ?? process.argv[3] ?? "c91").replace(/[^a-z0-9]/g, "").slice(0, 20) || "c91";
+export const SAVED = [`${step.jobBase}-c91fixture-${TAG}-live-20261103t100100000z-c91fix.json`, `${step.jobBase}-check-c91fixture-${TAG}-live-20261103t100100000z-c91fix.json`];
 export const writeSaved = () => { writeFileSync(join(RUNS, SAVED[0]), JSON.stringify(runRecord(false, ctx.inputs, answer))); writeFileSync(join(RUNS, SAVED[1]), JSON.stringify(runRecord(true, ctx.inputs, answer))); };
 export const removeSaved = () => { for (const f of SAVED) rmSync(join(RUNS, f), { force: true }); };
 

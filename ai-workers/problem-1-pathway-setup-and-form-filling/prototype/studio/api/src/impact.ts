@@ -19,8 +19,9 @@ import { editionFieldItems, insertEditionFieldItems } from "./field-drafts-route
 import { QUEUE_TX } from "./proposals.ts";
 import { fieldComponentsOf, formCombinations, openCases } from "./where-used.ts";
 import { aiLive } from "./sources.ts";
+import { liveRunsOf } from "./impact-ai.ts";
 import { changedBoxes, compareBoxes, componentsView, impactContext, impactCost, impactPart, impactStep, inventoryFields, IMPACT_AI_WORDS, previousAcceptedUntil, staleRun, writePart, type BoxRow } from "./impact-ai.ts";
-import { StepRunner, type RoundOut } from "./rounds.ts";
+import { pairOf, StepRunner, type RoundOut } from "./rounds.ts";
 import type { FieldMapOutput } from "./field-drafts.ts";
 
 const run = promisify(execFile);
@@ -88,15 +89,27 @@ export class Impact {
     const draft = await replay.round<FieldMapOutput>(step, false, { ...ctx, mode: "replay", wanted: async () => false });
     const stale = draft.ok ? null : staleRun(ctx.contextKey, part.sha256);
     const job = await this.db.draftingJob.findFirst({ where: { workspaceId: h.workspaceId, kind: IMPACT_STEP, status: "COMPLETED", detail: { path: ["held"], equals: h.id } }, orderBy: { startedAt: "desc" } });
+    const paid = await this.paidBefore(h.workspaceId, part.sha256);
+    const liveWhy = !aiLive() ? IMPACT_AI_WORDS.liveOff(cost.words) : draft.ok ? IMPACT_AI_WORDS.savedFirst : paid !== null ? IMPACT_AI_WORDS.paidOnce(paid) : null;
     const proposals = job ? await this.db.proposalItem.findMany({ where: { runId: job.id }, select: { id: true, status: true, work: true } }) : [];
     const boxesOf = (w: unknown) => ((w as { boxes?: { data_path?: string }[] } | null)?.boxes ?? []).map((b) => b.data_path);
     return {
       offer: { boxes: changed.length, words: IMPACT_AI_WORDS.offer(changed.length, cost.words), about_usd: cost.about_usd, at_most_usd: cost.at_most_usd, key: `${part.editionSha256.slice(0, 12)}·${part.boxesSha.slice(0, 12)}` },
       saved: draft.ok, saved_words: draft.ok ? `A saved AI run of this comparison is here: Draft with AI uses it at US$0.` : stale ? IMPACT_AI_WORDS.stale : IMPACT_AI_WORDS.noSaved.replace("about US$x · at most US$y", cost.words),
-      live: { open: aiLive(), why: aiLive() ? null : IMPACT_AI_WORDS.liveOff(cost.words) },
+      live: { open: liveWhy === null, why: liveWhy },
       drafted: job ? { job_id: job.id, at: job.startedAt.toISOString(), message: job.message, proposals: proposals.length, waiting: proposals.filter((p) => p.status === "waiting").length,
         boxes: Object.fromEntries(changed.map((dp) => [dp, proposals.filter((p) => boxesOf(p.work).includes(dp)).map((p) => p.id)])) } : null,
     };
+  }
+
+  /** Break B1, M1: what an earlier paid attempt at this comparison cost (null: none). A live job with a cost, or with no
+   *  recorded cost (stopped by a restart: it may have been sent), or any live run record in p2/runs for this part (kept
+   *  across demo resets). A live job refused before any call records US$0 and does not count. */
+  private async paidBefore(workspaceId: string, partSha: string): Promise<number | null> {
+    const job = await this.db.draftingJob.findFirst({ where: { workspaceId, kind: IMPACT_STEP, mode: "LIVE", status: { not: "RUNNING" }, OR: [{ costUsd: { gt: 0 } }, { costUsd: null }], detail: { path: ["part"], equals: partSha } }, select: { costUsd: true } });
+    if (job) return job.costUsd ?? 0;
+    const runs = liveRunsOf(partSha);
+    return runs.length ? runs.reduce((t, r) => t + r.costUsd, 0) : null;
   }
 
   /** C9.1 the AI step (P-138: a click): drafts proposals for only the new and reworded boxes of the held edition.
@@ -106,12 +119,14 @@ export class Impact {
    *  Proposals go to To review for a person (P-121); nothing changes the library or a release here. */
   async draftAi(actor: Actor, id: string, body: { mode?: unknown; expected_worst_usd?: unknown }) {
     need(actor, "author");
-    const mode = body?.mode === undefined ? "live" : String(body.mode);
+    const mode = String(body?.mode ?? "");
     if (mode !== "replay" && mode !== "live") fail('Choose how to draft: "replay" (a saved AI run, US$0) or "live" (a paid AI call).');
     const r = await this.review(id);
     const offer = r.ai.offer;
     if (!offer.boxes) fail(IMPACT_AI_WORDS.none, HttpStatus.CONFLICT);
     if (mode === "live" && !aiLive()) fail(IMPACT_AI_WORDS.liveOff(costWordsOf(offer)), HttpStatus.CONFLICT);
+    // Break M2: a saved run of this comparison is used at US$0, never paid for again.
+    if (mode === "live" && r.ai.saved) fail(IMPACT_AI_WORDS.savedFirst, HttpStatus.CONFLICT);
     if (mode === "live") {
       // The worst case is said first: the click carries the worst case the person saw; a changed plan is looked at again.
       if (typeof body.expected_worst_usd !== "number" || Math.abs(body.expected_worst_usd - offer.at_most_usd) > 0.005) fail(`Look at the cost again: Draft with AI now costs ${costWordsOf(offer)}. Nothing was started.`, HttpStatus.CONFLICT);
@@ -135,8 +150,10 @@ export class Impact {
       // here (the launcher already retried a transient error inside it); a person maps the boxes, or the tech lead
       // decides on another paid run. A run that was refused before any cost (US$0) may be started again.
       if (mode === "live") {
-        const paid = await tx.draftingJob.findFirst({ where: { workspaceId: h.workspaceId, kind: IMPACT_STEP, mode: "LIVE", costUsd: { gt: 0 }, detail: { path: ["part"], equals: part.sha256 } }, select: { costUsd: true } });
+        const paid = await tx.draftingJob.findFirst({ where: { workspaceId: h.workspaceId, kind: IMPACT_STEP, mode: "LIVE", status: { not: "RUNNING" }, OR: [{ costUsd: { gt: 0 } }, { costUsd: null }], detail: { path: ["part"], equals: part.sha256 } }, select: { costUsd: true } });
         if (paid) fail(IMPACT_AI_WORDS.paidOnce(paid.costUsd ?? 0), HttpStatus.CONFLICT);
+        const runs = liveRunsOf(part.sha256);
+        if (runs.length) fail(IMPACT_AI_WORDS.paidOnce(runs.reduce((t, x) => t + x.costUsd, 0)), HttpStatus.CONFLICT);
       }
       return { job: await tx.draftingJob.create({ data: { workspaceId: h.workspaceId, combinationId: null, kind: IMPACT_STEP, mode: mode === "live" ? "LIVE" : "REPLAY", status: "RUNNING", startedBy: actor.id, message: `Drafting the ${changed.length} new and reworded boxes of ${printed}`,
         detail: { operation: "impact_ai", held: h.id, edition: printed, part: part.sha256, boxes: changed } } }) };
@@ -149,15 +166,22 @@ export class Impact {
     try {
       const runner = new StepRunner(mode === "live" ? this.sources : NO_LAUNCH);
       const ctx = { ...impactContext(printed, part, aiJob.id), mode: mode as "live" | "replay", wanted: async () => true };
-      const safe = async (isCheck: boolean): Promise<RoundOut<FieldMapOutput>> => { try { return await runner.round<FieldMapOutput>(step, isCheck, ctx); } catch (e) { console.warn(`impact ai ${aiJob.id}:`, String(e).slice(0, 400)); return { ok: false, costUsd: 0, reason: "The AI step stopped on this computer, so nothing of it is used." }; } };
+      // Review Major 1: a replayed checker round comes from the same saved run as the draft round (its job stem), never
+      // another run of the same comparison, so two rounds that agree were one run's two readings.
+      const safe = async (isCheck: boolean, pair?: string): Promise<RoundOut<FieldMapOutput>> => { try { return await runner.round<FieldMapOutput>(step, isCheck, { ...ctx, ...(pair !== undefined ? { replayPair: pair } : {}) }); } catch (e) {
+        // Review minor: a live round that throws may have been sent; it is counted at its share of the worst case (as
+        // the ledger reserves it), so the one-paid-run rule still holds. A replay that throws cost nothing.
+        console.warn(`impact ai ${aiJob.id}:`, String(e).slice(0, 400));
+        return { ok: false, costUsd: mode === "live" ? Math.round((offer.at_most_usd / 2) * 100) / 100 : 0, reason: "The AI step stopped on this computer, so nothing of it is used." }; } };
       const draft = await safe(false);
       // P-121: one attempt per round (the launcher retries only a transient error); no third round. The checker round runs
       // blind on the same part; it is skipped only when the draft round was blocked or stopped.
       // The blind checker round runs only on a usable draft: a failed draft round ends the run, so nothing more is spent.
-      const check: RoundOut<FieldMapOutput> = draft.ok ? await safe(true) : { ok: false, costUsd: 0, reason: "Not started: the draft round gave no usable answer." };
+      const check: RoundOut<FieldMapOutput> = draft.ok ? await safe(true, draft.from === "replay" ? pairOf(step, false, draft.runFile) : undefined) : { ok: false, costUsd: 0, reason: "Not started: the draft round gave no usable answer." };
       const spent = draft.costUsd + check.costUsd;
       if (!draft.ok) {
         await this.db.draftingJob.update({ where: { id: aiJob.id }, data: { status: "FAILED", costUsd: spent, finishedAt: new Date(), message: draft.reason.slice(0, 1000) } });
+        await this.audit.log(h.workspaceId, actor.id, "failed", "edition impact AI", def.formKey, `${actor.name} drafted ${printed}'s ${changed.length} new and reworded boxes with AI (${mode}, US$${spent.toFixed(2)}): nothing used. ${draft.reason}`.slice(0, 900));
         fail(draft.reason, HttpStatus.CONFLICT);
       }
       const d = draft as Extract<RoundOut<FieldMapOutput>, { ok: true }>;

@@ -68,10 +68,11 @@ export const IMPACT_AI_WORDS = {
   nothingUsed: "Nothing of it was used: a person maps each new and reworded box, or Draft with AI runs again.",
   offer: (n: number, cost: string) => `Draft with AI (${cost}): proposals for the ${n} new and reworded box${n === 1 ? "" : "es"} only; nothing runs until you click, and a person accepts each one.`,
   none: "No new or reworded boxes: nothing for AI to draft.",
-  liveOff: (cost: string) => `Draft with AI (${cost}) is not open on this copy: live AI is off (the founder's switch, P-175). Nothing was sent and nothing was charged. Use a saved AI run (US$0), or a person maps each new and reworded box.`,
+  liveOff: (cost: string) => `Draft with AI (${cost}) is not open on this copy: live AI is off (only the founder turns it on). Nothing was sent and nothing was charged. Use a saved AI run (US$0), or a person maps each new and reworded box.`,
   stale: "The saved AI run was made for another comparison of this edition (its new and reworded boxes differ), so it is out of date and not used. Draft with AI again, or a person maps the boxes.",
   overCap: (worst: number, left: number) => `Not started: the worst case (US$${worst.toFixed(2)}) is above what is left of the AI spending cap (US$${left.toFixed(2)}). Nothing was started.`,
-  paidOnce: (usd: number) => `This comparison already had a paid AI run (US$${usd.toFixed(2)}) whose answer could not be used, so another is not started from here. A person maps each new and reworded box; another paid run needs the tech lead's Go.`,
+  savedFirst: "A saved AI run of this comparison is here: use it at US$0. A paid run is not started while a saved one exists.",
+  paidOnce: (usd: number) => `This comparison already had a paid AI run (${usd > 0 ? `US$${usd.toFixed(2)}` : "its cost not recorded: it was stopped"}) whose answer could not be used, so another is not started from here. A person maps each new and reworded box; another paid run needs the tech lead's Go.`,
   outside: (path: string) => `The AI answer named a box that is not new or reworded (${path.slice(0, 120)}), so it was not used.`,
 };
 
@@ -122,6 +123,20 @@ export function impactCost(step: AiStep, part: ReturnType<typeof impactPart>) {
   const usual = costUsd(MODEL, inputTokenBound("x".repeat(chars(step.template))), Math.round(step.max_output_tokens / 2)) + costUsd(MODEL, inputTokenBound("x".repeat(chars(step.check))), Math.round(step.max_output_tokens / 2));
   const r = (n: number) => Math.round(n * 100) / 100;
   return { about_usd: r(usual), at_most_usd: r(worst), words: costWords(r(usual), r(worst)) };
+}
+
+/** Break B1, M1, M2: every live run the launcher made for this part (p2/runs keeps a record of each live call, whatever
+ *  its outcome, and survives a demo reset): a record means money may have been spent on this comparison. */
+export function liveRunsOf(partSha256: string): { file: string; costUsd: number; usable: boolean }[] {
+  if (!existsSync(RUNS)) return [];
+  const out: { file: string; costUsd: number; usable: boolean }[] = [];
+  for (const f of readdirSync(RUNS).filter((x) => x.startsWith(`${IMPACT_JOB_BASE}-`) && /-live-\d{8}t\d{9}z-[a-z0-9]+\.json$/.test(x))) {
+    let r: SavedRun; try { r = JSON.parse(readFileSync(join(RUNS, f), "utf8")); } catch { continue; }
+    const inputs = (r.drafting_run?.inputs?.official_files ?? []) as { sha256?: string }[];
+    if (r.caller !== "live" || !inputs.some((i) => i.sha256 === partSha256)) continue;
+    out.push({ file: f, costUsd: Number(r.drafting_run?.usage?.cost_usd ?? 0), usable: r.contract_valid === true && typeof r.raw_output === "string" });
+  }
+  return out;
 }
 
 /** A saved run of this step for this edition but another comparison: it exists, and is out of date (never replayed). */

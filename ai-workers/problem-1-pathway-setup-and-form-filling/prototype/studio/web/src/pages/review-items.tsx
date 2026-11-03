@@ -285,6 +285,10 @@ export function EditionImpactPage() {
   // C9.1 P-138: Saved replays at US$0; a live click carries the worst case the person saw (the server refuses another).
   const draftAi = useAction((mode: "replay" | "live") => api<ImpactDrafted>(`/intake/held/${id}/impact/draft`, { method: "POST", json: mode === "live" ? { mode, expected_worst_usd: r.data?.ai.offer.at_most_usd } : { mode } }),
     { success: (d) => d.message, invalidate: [...inv, ["impact", id]] });
+  // Review minor: after Use the saved AI run the button is gone; focus moves to the result, never to the page body.
+  const draftedRef = React.useRef<HTMLParagraphElement>(null);
+  const wasDrafted = React.useRef(false);
+  React.useEffect(() => { const now = !!r.data?.ai.drafted; if (now && !wasDrafted.current && draftAi.isSuccess) draftedRef.current?.focus(); wasDrafted.current = now; }, [r.data?.ai.drafted, draftAi.isSuccess]);
   const accept = useAction(() => api<ImpactAccepted>(`/intake/held/${id}/impact/accept`, { method: "POST", json: { expected: r.data?.counts.form_fields } }), { success: (x) => `${x.edition} accepted: ${x.carried} form fields carried, ${x.for_a_person} left for a person. The change is in the shared draft.`, invalidate: [...inv, ["impact", id]], onDone: () => nav("/review") });
   if (r.isLoading) return <Spinner label="Comparing the editions (no AI)" />;
   if (r.isError) return (
@@ -304,17 +308,17 @@ export function EditionImpactPage() {
         {x.previous_accepted_words}{x.previous_accepted_source ? <> IRCC: “{x.previous_accepted_source.quote}”{x.previous_accepted_source.url ? <> (<a className="text-text-link underline" href={x.previous_accepted_source.url} target="_blank" rel="noreferrer">form page</a>, saved {x.previous_accepted_source.saved})</> : null}</> : null}</Notice></div> : null}
       <section aria-labelledby="impact-ai" className="space-y-2 rounded-lg border border-border bg-surface-raised p-4" data-impact-ai>
         <div className="flex flex-wrap items-center gap-2"><h2 id="impact-ai" className="text-base font-semibold">AI for the new and reworded boxes</h2>{x.ai.saved ? <Pill tone="success">Saved</Pill> : null}{x.ai.drafted ? <Pill tone="info">Drafted</Pill> : null}</div>
-        <p className="text-sm" data-offer>{x.ai.offer.words}</p>
-        {x.ai.saved_words ? <p className="text-sm text-text-muted" data-saved-words>{x.ai.saved_words}</p> : null}
-        {x.ai.drafted ? <p className="text-sm" data-drafted>{x.ai.drafted.message} <Link className="text-text-link underline" to="/review">{x.ai.drafted.waiting} waiting on To review</Link></p>
+        {x.ai.drafted ? null : <p className="text-sm" data-offer>{x.ai.offer.words}</p>}
+        {x.ai.saved_words && !x.ai.drafted ? <p className="text-sm text-text-muted" data-saved-words>{x.ai.saved_words}</p> : null}
+        {x.ai.drafted ? <p className="text-sm" data-drafted tabIndex={-1} ref={draftedRef}>{x.ai.drafted.message} <Link className="text-text-link underline" to="/review">{x.ai.drafted.waiting} waiting on To review</Link></p>
           : x.ai.offer.boxes && me.has("author") ? <div className="flex flex-wrap items-center gap-2">
             {x.ai.saved ? <Button busy={draftAi.isPending} onClick={() => draftAi.mutate("replay")} data-use-saved>Use the saved AI run (US$0)</Button> : null}
-            <Button variant={x.ai.saved ? "secondary" : "default"} disabled={!x.ai.live.open || draftAi.isPending} title={x.ai.live.why ?? undefined} aria-describedby={x.ai.live.open ? undefined : "impact-ai-why"} onClick={() => draftAi.mutate("live")} data-priced>{`Draft with AI (about US$${x.ai.offer.about_usd.toFixed(2)} · at most US$${x.ai.offer.at_most_usd.toFixed(2)})`}</Button>
-            {x.ai.live.why ? <p id="impact-ai-why" className="w-full text-xs text-text-muted">{x.ai.live.why}</p> : null}
+            {x.ai.saved ? null : <Button variant="default" disabled={!x.ai.live.open || draftAi.isPending} title={x.ai.live.why ?? undefined} aria-describedby={x.ai.live.open ? undefined : "impact-ai-why"} onClick={() => draftAi.mutate("live")} data-priced>{`Draft with AI (about US$${x.ai.offer.about_usd.toFixed(2)} · at most US$${x.ai.offer.at_most_usd.toFixed(2)})`}</Button>}
+            {x.ai.live.why && !x.ai.saved ? <p id="impact-ai-why" className="w-full text-xs text-text-muted">{x.ai.live.why}</p> : null}
           </div> : null}
       </section>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" data-counts>{([["unchanged", "Unchanged"], ["reworded", "Reworded"], ["new", "New"], ["removed", "Removed"]] as const).map(([k, w]) => <div key={k} className="rounded-lg border border-border bg-surface-raised p-3"><p className="text-2xl font-bold tabular-nums">{x.counts[k]}</p><p className="text-sm text-text-muted">{w} form fields</p></div>)}</div>
-      <div role="tablist" aria-label="Impact" className="flex gap-1 border-b border-border">
+      <div role="tablist" aria-label="Impact" className="flex flex-wrap gap-1 border-b border-border">
         {([["comparison", "Comparison"], ["library", `Impact on library (${x.library.length})`], ["components", `Components touched (${COMPONENTS.reduce((t, [k]) => t + x.components[k].length, 0)})`], ["combinations", `Combinations (${x.combinations.length})`]] as const).map(([k, w]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={cn("border-b-2 px-3 py-2 text-sm", tab === k ? "border-primary font-medium" : "border-transparent text-text-muted")}>{w}</button>)}
       </div>
       <div role="tabpanel" className="overflow-x-auto rounded-lg border border-border bg-surface-raised">
