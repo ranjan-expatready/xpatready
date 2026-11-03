@@ -9,6 +9,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { client, recorder, type Res } from "../../tests/runtime/api.ts";
+import { sourceEveryNumber } from "../../tests/fixtures/source-every-number.cjs"; // G1 (C5.4, P-279): a release needs every number sourced
 
 export const AUTHOR = "user-A", APPROVER = "user-B", REVIEWER = "user-C";
 /** The official checklist and instructions the Visitor visa sample carries (official-sources/ircc, committed, P-83). */
@@ -74,6 +75,20 @@ export function pack2(id: string) {
    *  waits on, never counted as passed. With no failure, done() then exits 2 ("setup missing"), as needQuestions does. */
   const waits: { name: string; on: string }[] = [];
   const wait = (name: string, on: string) => { waits.push({ name, on }); console.log(`WAIT  ${name} — waits on ${on}`); };
+  /** P-279 (the G1 source gate, C5.4, P-240): Submit and release are refused while a number the draft publishes (a
+   *  cut-off or in-force date counts) has no source entry or "None published". Before a pack submits, it checks that
+   *  refusal in words when numbers are held back, then answers each one through the API as the author would on the
+   *  Source panel: "None published", test words, never a real source (tests/fixtures/source-every-number.cjs, as the
+   *  suites do). Outside the demo workspace a Sample entry does not pass (P-279), so none is written. */
+  async function sourceGate(comboId: string) {
+    const held = Number((await call("GET", `/combinations/${comboId}/sources`)).body?.counts?.held_back ?? 0);
+    if (held > 0) {
+      const r = await call("POST", `/combinations/${comboId}/submit`, { note: `${id}: before its sources (P-279)` }, AUTHOR);
+      ok(`${id} fail (P-279): Submit is refused while ${held} number${held === 1 ? " has" : "s have"} no source entry, in words`, r.status >= 400 && /no source entry/.test(words(r)), r.status < 300 ? r.status : words(r).slice(0, 160));
+    } else console.log(`NOTE  ${id}: the source gate holds back no number on this combination (the P-279 refusal is not exercised here)`);
+    const s = await sourceEveryNumber(PORT, comboId, { actor: AUTHOR });
+    ok("setup (P-279): every number the draft publishes has a source answer before Submit", s.held_back === 0, s);
+  }
   function done() {
     const out = join(import.meta.dirname, "..", "..", "var", "acceptance"); mkdirSync(out, { recursive: true });
     const fail = log.filter((x) => !x.ok).length;
@@ -82,7 +97,7 @@ export function pack2(id: string) {
     if (waits.length) console.log(`${waits.length} waiting (not passed): ${waits.map((w) => w.on).filter((x, i, a) => a.indexOf(x) === i).join("; ")}`);
     process.exit(fail ? 1 : waits.length ? 2 : 0);
   }
-  return { PORT, DB, call, sql, until, ok, wait, words, ready, needQuestions, key, combo, attachment, queued, people, spent, done };
+  return { PORT, DB, call, sql, until, ok, wait, words, ready, needQuestions, key, combo, attachment, queued, people, spent, sourceGate, done };
 }
 
 /** Runs a test body, turning an unexpected throw into a failure (exit 1) rather than a pass. */

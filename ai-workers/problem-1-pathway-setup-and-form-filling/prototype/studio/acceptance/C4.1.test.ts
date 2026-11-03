@@ -5,7 +5,8 @@
 // failed. ROUTE (built, #284): POST /combinations/:id/sections/:key/move {direction: "up"|"down", seen: [the order read]}; the move is
 // checked against the order the author was looking at (GET /combinations/:id/section-order), so a stale move is a 409.
 // IRCC: every family member completes their own forms (G5256, trace IRCC-P2-02) — so each applying role has its own
-// questions. Rules only (US$0).
+// questions. Rules only (US$0). P-279 (source gate): before the submit, Submit is checked refused while a published number
+// has no source entry, then every number is answered "None published" (test words) through the API, as the suites do.
 // Runs on Visitor visa of the six (qa-1 gaps G4, G5, G10 / QA-133 there). Needs first: Visitor visa has questions (J3 /
 // C4.11); until then it stops with exit 2, and runs meanwhile on the suites' fixture: add `wp.family` as 4th argument.
 //   zsh studio/tools/isolated.sh accept 4433 start && tsx studio/acceptance/C4.1.test.ts 4433 xr_studio_accept [wp.family]
@@ -63,6 +64,8 @@ run(async () => {
   const released = sql(`select (select string_agg(x->>'id', ',' order by n) from jsonb_array_elements(snapshot->'sections') with ordinality as t(x, n)) from config_release where combination_id='${wp}' order by version desc limit 1`).split(",");
   if (released[0]) ok("C4.1 data: the released snapshot still has the old order until the next release", released.indexOf(o0[0]) >= 0 && released.indexOf(o0[0]) < released.indexOf(second), released.slice(0, 3));
   // The move is one named change line of the next review (C4.8): submitted last, so nothing after it depends on it.
+  // P-279: the source gate refuses Submit while a published number (a date counts) has no source entry; answered first.
+  await T.sourceGate(wp);
   r = await call("POST", `/combinations/${wp}/submit`, { note: "section order (acceptance C4.1)" }, AUTHOR);
   const line = ((r.body?.changeSummary ?? []) as any[]).find((c) => /section/i.test(String(c.kind)));
   ok("C4.1 pass: the review names the move as one change line, in words (the section's title and its new place, now 1st)", !!line && String(line.label).includes(`"${lib}" now 1st`) && /reordered/i.test(String(line.label)), r.status >= 300 ? words(r) : line ?? (r.body?.changeSummary ?? []).map((c: any) => `${c.kind}|${c.key}`).slice(0, 5));
