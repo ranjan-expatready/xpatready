@@ -46,3 +46,10 @@ Pass is 8 or more; mine is 7.5 because the browser walk was not done, so the sco
 Browser look and keyboard path; the whole suite (not asked); the PR's screenshots beyond their names.
 
 **Verdict: Approve**
+
+## Round 2 (commit b7b7c5a76, diff-only against 60bd8998b)
+- The diff touches two files and only words: the 400 detail (`studio.ts:593`) and the field-page hint and comment (`library.tsx:148-149`) now say the reason "is kept with the change in the activity". That matches what the code does (`studio.ts:604` writes it to the activity line), so Minor 2 is closed.
+- The pack's `/Say why the meaning changes/` match still holds: the detail still starts with that phrase and the `errors[0].message` is unchanged. No rerun needed, since no logic changed.
+- Minor 1 (two group sources) is accepted as inherent: a waiting library change has no group column and #295 defines the group as the key's first part. Minor 3 (untested edges) stays listed in the PR. Neither blocks.
+
+**Verdict: Approve** (round 2, b7b7c5a76).
