@@ -1,0 +1,116 @@
+// C5.4 acceptance (qa/CAPABILITIES.md C5.4; P-240, P-279; G1 concept screens/G1-source-register/concept.md): "A release
+// is refused while any published number has neither a source-register entry nor 'None published – set by ExpatReady';
+// the refusal names each item; cut-off and in-force dates count as published numbers that need a source." Written 3 Nov
+// (F6, P-290) when the release with its sources became reachable from the Demo menu on the six (the re-test of 1a79dbf9
+// found it only on the suites' fixture, which the menu never loads).
+// As a person: Demo › Reset to the six, then Demo › Start With an LMIA from its reviewed release, lands on With an LMIA
+// – inside Canada's Review and release tab: "Numbers without a source (n)", grouped by item, each with Add source; after
+// a draft change Submit is held. Underneath: Submit is refused naming every item; a Sample answer is refused on this
+// source-backed combination; once every number has its official source or "None published" (test words, through the
+// API as the Source panel saves them), Submit, sign-off and Approve give Release 2 with its sources frozen in it.
+// A screenshot of the tab goes to studio/var/acceptance/C5.4-six-review-1440.png (the one committed for the PR is
+// product/screens/G1-source-register/screenshots/c54-six-review-1440.png).
+// No model call (US$0). Exit 0 = all pass, 1 = a failure, 2 = setup missing.
+//   zsh studio/tools/isolated.sh accept 4476 start && tsx studio/acceptance/C5.4.test.ts 4476 xr_studio_accept
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
+import { sourceEveryNumber } from "../tests/fixtures/source-every-number.cjs";
+import { APPROVER, AUTHOR, REVIEWER, pack2, run } from "./lib/pack2.ts";
+import { walker } from "./lib/browser.ts";
+
+const T = pack2("C5.4");
+const { call, sql, ok, words } = T;
+const SHOT = join(import.meta.dirname, "..", "var", "acceptance"); // a run never rewrites the committed screenshot (review m5)
+
+run(async () => {
+  const served = (await call("GET", "/session")).body?.workspace?.id;
+  if (!served) { console.error(`STOP  no studio answers on port ${T.PORT}`); process.exit(2); }
+  const W = await walker(`http://localhost:${T.PORT}`);
+  const p = await W.open(AUTHOR);
+  const demo = async (name: RegExp) => {
+    await p.getByRole("button", { name: /^Demo/ }).click();
+    const it = p.getByRole("menuitem", { name });
+    await it.waitFor({ timeout: 10_000 });
+    await it.click();
+  };
+
+  // ---------------------------------------------------------------- Demo › Reset to the six (through the menu)
+  await p.goto("/"); await W.settle(p, "home");
+  await demo(/Reset to the six/);
+  const six = p.getByRole("dialog", { name: /Reset to the six\?/ });
+  await six.waitFor({ timeout: 10_000 });
+  await six.getByLabel(/Type RESET/).fill("RESET");
+  const reset = p.waitForResponse((r) => r.url().endsWith("/api/demo/reset-to-six") && r.request().method() === "POST", { timeout: 180_000 });
+  await six.getByRole("button", { name: /Reset to the six/ }).click();
+  const rr = await reset;
+  ok("setup: Demo › Reset to the six runs from the menu (2xx)", rr.status() < 300, rr.status());
+  const done = p.getByRole("dialog", { name: /Reset to the six: done/ });
+  await done.waitFor({ timeout: 30_000 });
+  await done.getByRole("button", { name: /Continue/ }).click();
+  const lmia = sql("select id from combination where combination_key='wp.lmia_inside'");
+  ok("setup: the six are loaded, With an LMIA – inside Canada among them, with no release yet", !!lmia && sql(`select count(*) from config_release where combination_id='${lmia}'`) === "0", lmia);
+
+  // ---------------------------------------------------------------- Demo › Start With an LMIA from its reviewed release
+  await demo(/Start With an LMIA from its reviewed release/);
+  const start = p.getByRole("dialog", { name: /Start With an LMIA from its reviewed release\?/ });
+  await start.waitFor({ timeout: 10_000 });
+  const started = p.waitForResponse((r) => r.url().endsWith("/api/demo/release-with-sources"), { timeout: 120_000 });
+  await start.getByRole("button", { name: /Start from the reviewed release/ }).click();
+  const sr = await started;
+  ok("C5.4 pass: the Demo menu starts With an LMIA – inside Canada from its reviewed release (2xx)", sr.status() < 300, sr.status());
+  await p.waitForURL(new RegExp(`/c/${lmia}/review$`), { timeout: 15_000 });
+  const block = p.locator("[data-unsourced]");
+  await block.waitFor({ timeout: 30_000 });
+  await W.settle(p, "Review and release");
+  const src = (await call("GET", `/combinations/${lmia}/sources`)).body;
+  const heldN = Number(src?.counts?.held_back ?? 0);
+  ok("C5.4 pass: it lands on the Review and release tab, which shows \"Numbers without a source (n)\" with n the numbers held back", heldN > 0 && (await block.getByRole("heading", { name: `Numbers without a source (${heldN})` }).count()) === 1, { held: heldN, heading: await block.locator("h2").innerText() });
+  const items = await block.locator("[data-unsourced-item]").count(), adds = await block.getByRole("button", { name: /^Add source:/ }).count();
+  ok("C5.4 pass: the numbers are grouped by item, each with Add source", items > 1 && adds > 0, { items, addSource: adds });
+  const dates = ((src?.numbers ?? []) as any[]).filter((n) => !n.passes && /\d{4}-\d{2}-\d{2}/.test(String(n.value)));
+  ok("C5.4 pass (P-279): a cut-off date is one of the numbers that need a source", dates.length > 0 && (await block.innerText()).includes(String(dates[0]?.words ?? "§")), dates.slice(0, 2).map((n) => n.words));
+  mkdirSync(SHOT, { recursive: true });
+  await block.scrollIntoViewIfNeeded();
+  await p.screenshot({ path: join(SHOT, "C5.4-six-review-1440.png") });
+
+  // ---------------------------------------------------------------- the gate: a draft change, then Submit
+  // A draft change through the questionnaire's section order (C4.1's route): the second section moves up.
+  const seen = ((await call("GET", `/combinations/${lmia}/section-order`)).body?.order ?? []).map((x: any) => x.key);
+  let r = await call("POST", `/combinations/${lmia}/sections/${encodeURIComponent(seen[1] ?? "x")}/move`, { direction: "up", seen }, AUTHOR);
+  ok("setup: the author changes the draft (moves a questionnaire section up)", r.status < 300 && seen.length >= 2, words(r) || seen.slice(0, 3));
+  await p.reload(); await block.waitFor({ timeout: 30_000 }); await W.settle(p, "Review and release after a change");
+  ok("C5.4 pass: after the change the block says the numbers block submission and release", (await block.getAttribute("data-blocking")) === "true" && /block submission and release/i.test(await block.innerText()), await block.locator("p").first().innerText());
+  const submitBtn = p.getByRole("button", { name: /^Submit/ }).first();
+  ok("C5.4 pass: Submit is not offered while numbers have no source (disabled)", (await submitBtn.count()) === 0 || (await submitBtn.isDisabled()), (await submitBtn.count()) ? "shown" : "absent");
+  r = await call("POST", `/combinations/${lmia}/submit`, { note: "C5.4 acceptance" }, AUTHOR);
+  const errs = ((r.body?.errors ?? []) as any[]).filter((e) => /no source entry/i.test(String(e.message ?? "")));
+  ok("C5.4 fail: Submit is refused while numbers have no source, saying how many, in words", r.status === 400 && new RegExp(`${heldN} numbers? ha(s|ve) no source entry`).test(words(r)), words(r).slice(0, 200));
+  ok("C5.4 fail: the refusal names each held number with its item (one error line each)", errs.length === heldN && errs.every((e) => String(e.message).length > 20), { lines: errs.length, held: heldN, first: errs[0]?.message?.slice(0, 120) });
+  r = await call("POST", `/combinations/${lmia}/sources/sample`, {}, AUTHOR);
+  ok("C5.4 fail: a Sample answer is refused on this source-backed combination (409, in words)", r.status === 409 && /source-backed|official source/i.test(words(r)), words(r));
+  r = await call("POST", `/combinations/${lmia}/approve`, {}, APPROVER);
+  ok("C5.4 fail: the release is refused too (409)", r.status === 409, words(r).slice(0, 160));
+  r = await call("POST", "/demo/release-with-sources", {}, AUTHOR);
+  ok("C5.4 fail: the demo control runs once (409 once the combination has a release, in words)", r.status === 409 && /already has a release/.test(words(r)), words(r));
+  r = await call("POST", "/demo/release-with-sources", {}, APPROVER);
+  ok("C5.4 fail: only the author runs the demo control (403)", r.status === 403, r.status);
+
+  // ---------------------------------------------------------------- every number answered: it goes through
+  const all = await sourceEveryNumber(T.PORT, lmia, { actor: AUTHOR });
+  ok("setup: every number gets its answer through the API, as the Source panel saves it (\"None published\", test words)", all.held_back === 0 && all.written >= heldN, all);
+  await p.reload(); await p.locator("[data-sources-all-set]").waitFor({ timeout: 30_000 });
+  ok("C5.4 pass: the tab then says every published number has its answer", /Every published number has its answer/.test(await p.locator("[data-sources-all-set]").innerText()));
+  r = await call("POST", `/combinations/${lmia}/submit`, { note: "C5.4 acceptance: every number answered" }, AUTHOR);
+  ok("C5.4 pass: Submit goes through once every number is answered", r.status < 300, words(r).slice(0, 200));
+  const changes = ((await call("GET", `/combinations/${lmia}/review`, undefined, REVIEWER)).body?.submission?.changeSummary ?? []) as any[];
+  const signed: number[] = [];
+  for (const c of changes) signed.push((await call("POST", `/combinations/${lmia}/signoff`, { items: [`${c.kind}|${c.key}`], action: "signed" }, REVIEWER)).status);
+  ok("setup: the content reviewer signs every line", signed.length > 0 && signed.every((s) => s < 300), signed);
+  r = await call("POST", `/combinations/${lmia}/approve`, {}, APPROVER);
+  ok("C5.4 pass: the approver releases it: Release 2", r.status < 300 && r.body?.version === 2, words(r).slice(0, 200) || r.body?.version);
+  const frozen = Number(sql(`select jsonb_array_length(coalesce(snapshot->'sources','[]'::jsonb)) from config_release where combination_id='${lmia}' and version=2`) || 0);
+  ok("C5.4 data: Release 2 carries its numbers' sources frozen in it", frozen >= heldN, { frozen, held: heldN });
+  ok("C5.4 data: no page error", W.errors.length === 0, W.errors.slice(0, 3));
+  await W.close();
+  T.done();
+});

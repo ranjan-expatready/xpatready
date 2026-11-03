@@ -129,6 +129,7 @@ class DemoController {
   @Get("status") status() { return this.d.status(); }
   @Post("load") load(@Headers("x-actor") a: H, @Body() b: { sample?: string } | null) { return this.d.load(actorOf(a), b); }
   @Post("reset") reset(@Headers("x-actor") a: H, @Body() b: any) { return this.d.reset(actorOf(a), b?.confirm); }
+  @Post("release-with-sources") releaseWithSources(@Headers("x-actor") a: H) { return this.d.releaseWithSources(actorOf(a)); }
 }
 
 @Controller("api")
