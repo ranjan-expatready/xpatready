@@ -9,7 +9,7 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { AGREEMENT_WORDS, BANDS, BatchDecisionBody, DecideBody, PROPOSAL_KIND_WORDS, ProposalsQuery, type Band, type ChangeBatch, type ProposalGroup, type ProposalsView, type QueueProposal, type Reading } from "../../contracts/review-proposals.ts";
 import { ACTORS, actorOf, Audit, Db, fail, need, STARTING_ROLES, Workspace, type Actor } from "./core.ts";
 import { changeView, decideChange, nearOf, type NearView } from "./library-changes.ts";
-import { BATCH_MAX, bulkWhy, decide, lineTitle, ON_ITS_PAGE, undo, UNDO_SECONDS } from "./proposals.ts";
+import { BATCH_MAX, bulkWhy, decide, lineTitle, needsNearReason, ON_ITS_PAGE, undo, UNDO_SECONDS } from "./proposals.ts";
 import { Screen02 } from "./screen02.ts";
 import { STEP_KEYS } from "../../contracts/setup-checklist.ts";
 import { KIND_STEP } from "../../engine/setup-checklist.ts";
@@ -96,7 +96,7 @@ export class ReviewProposals {
       readings: { draft: readingOf(rounds?.draft), check: readingOf(rounds?.check) },
       source: src ? { file: src.file, edition: src.edition ?? null, page: src.page ?? null, quote: src.quote, quote_found: !!src.quoteFound, rule: src.rule ?? null } : null,
       rules: (r.rules as QueueProposal["rules"]) ?? [], near: id.near ?? [], near_reason: id.nearReason ?? null, basis: r.basis as "SAMPLE" | "EXPERT",
-      bulk_why: bulkWhy(r), decide_on: ON_ITS_PAGE.has(r.step) && r.combinationId ? `/c/${r.combinationId}/jobs/${r.runId}` : null, created_at: r.createdAt.toISOString() };
+      bulk_why: bulkWhy(r), near_reason_needed: needsNearReason(r), decide_on: ON_ITS_PAGE.has(r.step) && r.combinationId ? `/c/${r.combinationId}/jobs/${r.runId}` : null, created_at: r.createdAt.toISOString() };
   }
 
   async decide(actor: Actor, body: unknown) {

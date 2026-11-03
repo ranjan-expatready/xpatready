@@ -167,7 +167,7 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
         <Button variant="secondary" busy={run.isPending} disabled={reason.trim().length < 3} onClick={() => run.mutate({ action: "reject" })}>Reject</Button>
         <span className="flex flex-wrap gap-2">
           {differ ? <Button variant="secondary" busy={run.isPending} onClick={() => run.mutate({ action: "edit", payload: checkPayload })}>Accept the checker's reading</Button> : null}
-          <Button busy={run.isPending} onClick={() => run.mutate({ action: "accept" })}>{differ ? "Accept the first reading" : "Accept"}</Button>
+          <Button busy={run.isPending} disabled={!!p.near_reason_needed && reason.trim().length < 8} onClick={() => run.mutate({ action: "accept" })}>{differ ? "Accept the first reading" : "Accept"}</Button>
         </span>
       </>}>
       <div className="flex flex-col gap-4 text-sm">
@@ -197,8 +197,9 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
         </section>
         {p.near.length ? <section><h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted">Close to</h3><p className="mt-1">{p.near.join(", ")}</p>{p.near_reason ? <p className="text-xs text-text-muted">Why it is not the same: {p.near_reason}</p> : null}</section> : null}
         <div>
-          <label className="block text-sm font-medium" htmlFor="proposal-reason">Reason (needed to reject; the producer learns from it)</label>
-          <Textarea id="proposal-reason" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} placeholder="What is wrong with it" />
+          {/* QA-192 (P-120): a near duplicate is accepted only with a person's one-line reason, shown at release. */}
+          <label className="block text-sm font-medium" htmlFor="proposal-reason">{p.near_reason_needed ? "Reason (needed to accept: why it is not the same as the item it is close to; the second person sees it at release. Also needed to reject)" : "Reason (needed to reject; the producer learns from it)"}</label>
+          <Textarea id="proposal-reason" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} placeholder={p.near_reason_needed ? "Why it is not the same as the item it is close to" : "What is wrong with it"} />
         </div>
       </div>
     </Panel>

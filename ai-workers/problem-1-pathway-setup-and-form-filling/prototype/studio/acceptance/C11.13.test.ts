@@ -45,7 +45,8 @@ run(async () => {
   let fam = sql("select label from canonical_field where status in ('DRAFT','PUBLISHED') and label is not null order by canonical_field_key limit 1");
   if (!fam) {
     const seed = await tryInsert(item("Family name"));
-    const d = await call("POST", "/review/proposals/decide", { ids: seed.ids, action: "accept" }, AUTHOR);
+    // QA-192: if the one door finds it close to a waiting draft, the decider says why it is not the same.
+    const d = await call("POST", "/review/proposals/decide", { ids: seed.ids, action: "accept", reason: "Seeded as the library field this check collides with (Sample)." }, AUTHOR);
     fam = d.status < 300 ? sql("select label from canonical_field where status in ('DRAFT','PUBLISHED') and label is not null order by canonical_field_key limit 1") : "";
   }
   const famKey = sql(`select canonical_field_key from canonical_field where label='${fam.replace(/'/g, "''")}' limit 1`);
@@ -65,7 +66,10 @@ run(async () => {
   const q = (await call("GET", `/review/proposals?group=${encodeURIComponent("edition:IMM 5257 (09-2023)")}`)).body;
   const near = [...(q?.group?.bands?.ready ?? []), ...(q?.group?.bands?.check ?? []), ...(q?.group?.bands?.decide ?? [])].find((x: any) => x.title === "Family name at birth");
   ok("C11.13 pass: the queue shows the near match and its reason, and the one door puts a near item in Check whatever band the producer gave (BAND_TIPS: close to a library item)", !!near && near.near?.includes(famKey) && near.near_reason === REASON && near.band !== "ready", near && { band: near.band, near: near.near, reason: near.near_reason });
+  // QA-192 (P-120, P-149 (2)): the producer's reason is not a person's, so the decider gives the one line (refused without it).
   let r = await call("POST", "/review/proposals/decide", { ids: [near?.id ?? w.ids[0]], action: "accept" }, AUTHOR);
+  ok("QA-192 fail: accepting a near duplicate whose only reason is the producer's, with no person's reason, is refused (400, naming the close field)", r.status === 400 && words(r).includes(famKey) && /say in one line why it is not the same/.test(words(r)), [r.status, words(r)]);
+  r = await call("POST", "/review/proposals/decide", { ids: [near?.id ?? w.ids[0]], action: "accept", reason: REASON }, AUTHOR);
   ok("setup: the author accepts it (a DRAFT field and a waiting library change)", r.status < 300, r.status >= 300 ? words(r) : undefined);
   const batches = (await call("GET", "/review/changes?group=batch", undefined, APPROVER)).body?.batches ?? [];
   ok("C11.13 fail→pass: the second person's batch shows the near reason beside the new item", JSON.stringify(batches).includes(REASON), batches.length);

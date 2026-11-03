@@ -19,7 +19,7 @@ import { acceptPqrPick } from "./fact-sources.ts";
 import { usedInLabels } from "./where-used.ts";
 import { lockItem, refuseRetired } from "./library-items.ts";
 import { checkCondition } from "../../engine/validate.ts";
-import { nearMatches } from "../../engine/near.ts";
+import { isRuleWhy, nearMatches } from "../../engine/near.ts";
 import { p121Rating, P121_WHY, type Rateable } from "../../engine/agreement.ts";
 
 type Tx = Prisma.TransactionClient;
@@ -281,6 +281,22 @@ export function withNearReason(reason: string | null, identity: unknown): string
   const id = identity as { near?: string[]; nearReason?: string | null } | null;
   if (!id?.near?.length || !id.nearReason || reason?.includes(id.nearReason)) return reason;
   return `${reason ? `${reason} ` : ""}Close to ${id.near.slice(0, 3).join(", ")}: ${id.nearReason}`.slice(0, 1000);
+}
+
+/** QA-192 (P-120, P-149 (2)): a person's one-line reason why an item close to a library item is not the same: the one its
+ *  proposer gave (a person's words, never the rule's own or the AI's), or the decider's at accept. null when none. */
+export function personNearReason(r: Pick<Row, "identity" | "origin">): string | null {
+  const id = (r.identity ?? {}) as { near?: string[]; nearReason?: string | null; nearReasonBy?: string };
+  if (!id.near?.length || !id.nearReason?.trim()) return null;
+  if (id.nearReasonBy === "person") return id.nearReason;
+  return r.origin === "ai" || isRuleWhy(id.nearReason) ? null : id.nearReason;
+}
+
+/** QA-192: whether accepting this item needs the decider's one-line reason (it adds to the library, is close to a library
+ *  item, and no person has said why it is not the same). Field-map items are decided on their own page (BR-7). */
+export function needsNearReason(r: Pick<Row, "identity" | "origin" | "landsOn" | "step" | "reuse">): boolean {
+  const near = ((r.identity ?? {}) as { near?: string[] }).near;
+  return r.landsOn === "library" && !ON_ITS_PAGE.has(r.step) && (r.reuse as { match?: string } | null)?.match === "new" && !!near?.length && !personNearReason(r);
 }
 
 /** "document type key|person" of every requirement the combination has now (each lineage's newest version, unless
@@ -549,6 +565,15 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
       }
       let landedAs: string | null = null, reused = false, pqr: (PqrWork & { stamp: string }) | null = null;
       let resolved: { match: string; existingKey: string | null } | null = null;
+      // QA-192 (P-120: a near duplicate needs a one-line reason, shown to the second person at release): an item that adds
+      // to the library while close to a library item is accepted only with a person's reason why it is not the same, its
+      // proposer's or, when none, the decider's (8 characters or more); it is kept as the item's near reason.
+      const nearIds = (r.identity ?? {}) as { near?: string[]; nearReason?: string | null; nearReasonBy?: string };
+      let identity = r.identity as Prisma.InputJsonValue | null, nearGiven = false;
+      if (d.action !== "reject" && needsNearReason(r)) {
+        if (!reason || reason.length < 8) fail(`"${nameOf(payload, r.identityKey)}" is close to ${(nearIds.near ?? []).filter(Boolean).slice(0, 3).join(", ")}: say in one line why it is not the same (8 characters or more). The second person sees it at release.`);
+        identity = { ...nearIds, nearReason: reason, nearReasonBy: "person" } as Prisma.InputJsonValue; nearGiven = true;
+      }
       if (d.action !== "reject") {
         if (r.landsOn === "library" && (r.reuse as { match: string }).match === "new") {
           const twin = await sameInLibrary(tx, workspaceId, payload);
@@ -578,15 +603,15 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
           // C3.6 (#523 Question 1): a type a person named while adding a requirement keeps that person as its proposer (as
           // before it went through the queue), read from the server's own run, so their "Delete your own unapproved type" stays.
           const namer = r.step === "requirement_type" && r.runId ? (await tx.draftingJob.findFirst({ where: { id: r.runId, workspaceId, kind: "requirement_type" }, select: { startedBy: true } }))?.startedBy : null;
-          landedAs = await land!(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: withNearReason(reason ?? r.reason, r.identity), proposedBy: namer ?? actor.id, combinationId: r.combinationId, sourceJobId: r.runId });
+          landedAs = await land!(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: withNearReason(reason ?? r.reason, identity), proposedBy: namer ?? actor.id, combinationId: r.combinationId, sourceJobId: r.runId });
         }
       }
       // What a library lander wrote, as it stands now: Undo refuses once it has changed (PR #96 review (1)).
       const landedStamp = landedAs && !reused ? await stampOf(tx, workspaceId, r.kind, landedAs, r.combinationId) : null;
-      const work = { ...((r.work ?? {}) as object), ...(d.action === "edit" ? { beforeEdit: r.payload } : {}), ...(landedStamp ? { landedStamp } : {}), ...(pqr ? { pqr } : {}) };
+      const work = { ...((r.work ?? {}) as object), ...(d.action === "edit" ? { beforeEdit: r.payload } : {}), ...(landedStamp ? { landedStamp } : {}), ...(pqr ? { pqr } : {}), ...(nearGiven ? { nearBefore: r.identity } : {}) };
       await tx.proposalItem.update({ where: { id: r.id }, data: { status: d.action === "accept" ? "accepted" : d.action === "edit" ? "edited" : "rejected", decidedBy: actor.id, decidedAt: new Date(), ...(ON_ITS_PAGE.has(r.step) ? { choice: "ACCEPTED" } : {}),
         decisionReason: reason, batchId, decidedKey: landedAs, ...(resolved && d.action !== "reject" ? { reuse: resolved } : {}),
-        ...(d.action === "edit" || landedStamp || pqr ? { work: work as Prisma.InputJsonValue } : {}),
+        ...(d.action === "edit" || landedStamp || pqr || nearGiven ? { work: work as Prisma.InputJsonValue } : {}), ...(nearGiven ? { identity: identity as Prisma.InputJsonValue } : {}),
         // An edit keeps the item's own reading beside it, so Undo puts the item back as it was proposed (1b).
         ...(d.action === "edit" ? { payload: payload as Prisma.InputJsonValue, identityKey: identityKeyOf(payload, r.identityKey) } : {}) } });
       out.push({ id: r.id, landedAs });
@@ -665,10 +690,10 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     for (const x of lists) await dropFieldList(tx, workspaceId, x.answerListKey);
     await tx.libraryChange.deleteMany({ where: { workspaceId, batchId } });
     for (const r of rows) {
-      const { beforeEdit, landedStamp, pqr, ...work } = (r.work ?? {}) as { beforeEdit?: ProposalPayload; landedStamp?: string; pqr?: unknown };
+      const { beforeEdit, landedStamp, pqr, nearBefore, ...work } = (r.work ?? {}) as { beforeEdit?: ProposalPayload; landedStamp?: string; pqr?: unknown; nearBefore?: unknown };
       await tx.proposalItem.update({ where: { id: r.id }, data: { status: "waiting", decidedBy: null, decidedAt: null, decisionReason: null, batchId: null, decidedKey: null, ...(ON_ITS_PAGE.has(r.step) ? { choice: null } : {}),
         ...((r.work as { twinOf?: string } | null)?.twinOf ? { reuse: { match: "reuse", existingKey: null } } : {}),
-        ...(beforeEdit || landedStamp || pqr ? { work: work as Prisma.InputJsonValue } : {}),
+        ...(beforeEdit || landedStamp || pqr || nearBefore ? { work: work as Prisma.InputJsonValue } : {}), ...(nearBefore ? { identity: nearBefore as Prisma.InputJsonValue } : {}),
         ...(beforeEdit ? { payload: beforeEdit as Prisma.InputJsonValue, identityKey: identityKeyOf(beforeEdit, r.identityKey) } : {}) } });
     }
     return rows.length;
