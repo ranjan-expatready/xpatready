@@ -1,61 +1,49 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-03 03:30 UTC by **Lead 5** (took over from Lead 4 at 23:25 UTC 2 Nov; check at minutes 13 and 43, job 651c8f58) · milestone: **M2 — Super Admin configuration**, gate 59/60 with held parts named (P-265, P-284); estimate **about 4 Nov** · M3 per row (P-261) · how we work: `WAY-OF-WORKING.md` · decisions to read word for word: DECISIONS **P-276 … P-288**
+updated: 2026-11-03 05:40 UTC by **Lead 5**, closing every Lead and lane for a **blank-sheet restart** (founder, P-289) · milestone: **M2 — Super Admin configuration** · how we work: `WAY-OF-WORKING.md` (frozen to 15 Nov, P-224) · decisions to read word for word: DECISIONS **P-280 … P-289** · the evidence: **`reports/build-review-2026-11-03.html`** (published privately to the founder)
 
-## Leads, in order (founder, 2 Nov: "keep naming … so that I know who is the latest lead"; highest number = current)
-Lead 1 (`local_17ac4d7f…`, 2 Nov morning) → Lead 2 (`local_0bd306e3…`, ~15:40–18:35 UTC) → Lead 3 (`local_b0474939…`, 18:36–20:10 UTC) → Lead 4 (20:10–23:25 UTC, ended) → **Lead 5** (`local_c490b934-7479-4dd1-815a-af7e3fbfba23`, took over 23:25 UTC) → Lead 6 · standby (`local_235884ee-b9da-4ec3-a2b1-7ee8d8f98a2d`). **P-286:** at about 250k the current Lead rewrites STATE, CronDeletes its check, renames itself "… (ended)" and sends the next standby "take over now" (works from a cron turn). Each Lead renames itself "Lead N · <date> <UTC start>" and, when handing over, starts Lead N+1 itself in a founder-typed turn, then stops its own check (CronDelete). A cron turn cannot start a session: if the context passes about 250k overnight, keep going (1M window) and hand over in the founder's next typed turn.
+## Start here (the next tech lead, fresh chat)
+1. Open a new chat in the main copy and type `/lead`. Nothing is running: no Lead, no builder, no qa lane, no timed check. Leads 1–6 are retired (1, 2, 4, 6 archived 3 Nov 05:00–05:30 UTC; Lead 3 and Lead 5 archived last, see below). There is no standby; start one only if the founder wants the P-286 standby pattern again.
+2. Read the build review first (`reports/build-review-2026-11-03.html`, sections 1, 7 and 8). Its lessons are marked by strength of evidence; change the way of working only with the founder's OK (P-224) and only on firm evidence (section 7's rule).
+3. **The real score is 36/60, not 52/60.** An independent re-test on main `1a79dbf9` (3 Nov, US$0) re-ran every M2 acceptance pack: 12 rows scored Works fail their own pack, 4 have no runnable pack. Until those are fixed or re-scored, report M2 as "52 scored, 36 confirmed".
+4. Agree the first rows with the founder before starting any builder (one fresh cloud builder per row, `/next <area> <row>`, as before). The proposal below is the tech lead's, not yet the founder's.
 
-## Start here (Lead 5)
-1. `bash product/tools/lane.sh whoami` → lead. Lead 4 has handed over (P-286) and deleted its check; its commits are not another running Lead. Rename yourself "Lead 5 · 2 Nov 23:25 UTC", create your 30-minute check (minutes 13 and 43), and read DECISIONS P-276…P-286 word for word.
-2. **Overnight (P-285):** all approvals; tokens free below 80% of the weekly plan (50% at 22:52) with none wasted; paid AI up to US$50 total tonight (US$1.61 used: IMM 5532), cost in records first, Mac paid-runner sessions only; records PRs merge at least hourly; qa per batch (P-277); Sonnet subagents (P-278); merge main only on conflict (P-270).
-3. **Cron turns cannot start sessions.** Two cards wait for the founder: **C9.1-AI builder** and **C3.4 paid runner** (Go posted on #585). Start them in the founder's next typed turn if not started.
-4. Records: branch `lead/2026-11-02-d` (this hand-over), PR open; merge it when CI is green (check-docs and decision-impact pass).
-5. qa (cloud "qa: score tonight's merge batches (P-277)") wakes on messages but slowly; it was asked for the #617 head check (C8.1 migration; the tech lead read it: additive, OK) and to score #615/#616. Merge its records PRs directly.
-6. Your hand-over: at about 250k, rewrite STATE, CronDelete, rename yourself "(ended)", SendMessage Lead 6 (`local_235884ee-b9da-4ec3-a2b1-7ee8d8f98a2d`) "take over now".
+## Where we are (evidence, 3 Nov)
+* **M2:** 52/60 on qa's scorecard (#646, #651); **36/60 confirmed** independently; 8 Partial agree with their packs. M3: C6.9 scored Works but its pack is 2/15; C6.12 scored Partial but its pack is green.
+* **Flow:** product merges rose from 0.25 to about 4 an hour after 31 Oct (cloud builders + merge queue); approval-to-merge median about 1 hour and flat; about half of CI runs cancelled on 2 Nov; every product change runs the full ~27-minute suite twice (its PR and the queue batch).
+* **Quality:** 0 open Blocker or Critical; 9 open Major (QA-144, 149, 152, 153, 154, 159, 162, 165, 176), 52 Minor. UX baseline 5.5/10 (2 Nov), not re-scored since UX-A parts 1–4. Golden journey last run 5/8 steps, before QA-163's fix.
+* **Cost:** paid AI in the product US$48.83 all time (Mac ledger). Claude Code on this Mac at least US$3,002 at API list prices (accounts A, B, C; cloud builders not measured).
+* **Open PR:** #417 (D3 pack-2 replay plan, paid, nothing run; predates #530, needs a refresh and a founder Go). Nothing else open.
+* **Branches:** 39 branches differ from main; none holds substantial unmerged code (sorted in the report, section 9). Nothing pushed is lost: branches are never deleted.
+* **Local copies:** `/Users/ranjansingh/Desktop/xpatready-devin` and `.claude/worktrees/demo-main` hold uncommitted AI-run outputs from 29–30 Oct; do not delete them. Audit runner logs: `archive/2026-11-03-build-review-audit-logs/`. Disk 21 GB free.
 
-## Progress (05:10 UTC 3 Nov) — closing down (P-289)
-M2 on main's scorecard **52/60** (qa #646, #651). **Independent re-test (3 Nov, main 1a79dbf9, US$0): 36/60 confirmed Works**; 12 rows scored Works fail their own acceptance pack (C1.5, C2.4, C3.2, C3.8, C3.15, C4.1, C4.2, C4.6, C4.7, C4.8, C11.3 held part, C11.11), 4 have no runnable pack (C3.10, C5.2, C11.1, C11.17); C5.4's release screen is not reachable from the Demo menu; M3 C6.9 scored Works but 2/15. Report: `reports/build-review-2026-11-03.html` (published privately to the founder), walk screenshots in `reports/build-review-2026-11-03-audit/walks/`, runner logs on the Mac in `archive/2026-11-03-build-review-audit-logs/`. All in-flight PRs merged (#643, #647); every lane told to take nothing new; qa lane closed (#651). Open: #417 (D3 paid plan, needs refresh and a founder Go). Leads: Lead 1 archived 05:00 UTC; Lead 2, 4, 6, then Lead 3 (keep-awake to ~07:00 UTC), then Lead 5 after the blank-sheet hand-over.
+## Proposed first rows for the fresh start (tech lead's proposal; founder to agree)
+1. **Make the scorecard honest:** a row counts as Works only when its acceptance pack is green on main and someone who did not score it re-ran it. qa re-scores the 12 rows to Partial or updates their packs.
+2. **Fix the real defects the re-test found:** C3.2 bulk accept of non-High proposals and no batch Undo (P-121) · C1.5 copy route 404 · C4.6 child and representative signing, pen-signed PDF wording · C11.11 checklist forms counted as filed lines (known since 1 Nov) · C4.2 wording and unasked fact ticked · C3.8 non-fact Background question, missing-IMM 5707 error · C2.4 older edition shown as in the library · C3.15 rename accepted without a reason · M3 C6.9 override and Mark reviewed 404.
+3. **Update packs left behind by later decisions:** C3.15 (P-266), C4.1 and C4.8 (P-279 source gate); write packs for C3.10, C5.2, C11.1, C11.17.
+4. **C5.4 reachable from the Demo menu** (today only on an older sample loaded through the API).
+5. **Triage two outside audits never followed up:** the outsider audit of 29 Oct (branch `claude/audit-outsider-0a5e67`, about 55 findings; top: 29 unchecked `@Body() b: any` write routes, cascade deletes on released work, no type check in CI) and Devin D5 of 1 Nov (branch `devin/2026-10-31-explorer`, 17 findings).
+6. **Small leftovers:** QA-179 (each "Needs you" count names what it counts) · P-216 (3) "Ask it in…" on a questionnaire gap line (no row, no code) · attach the real-portal proof requirement (branch `goose/explore-2026-10-25`) to M4 L5 · decide the swallowed-waits rule for `/next` (branch `lead/2026-10-31-decisions`).
+7. **Paid runs, each on the founder's Go with usual and worst cost first (Mac paid-runner session):** C3.4 (worst US$5.78) · C11.14 checker runs (about US$13 usual, US$49 worst; IMM 5532, 5710, 1294, 0008 exceed the US$5 job cap) · C11.7 field maps of 7 forms · C11.8 one live run · C9.1 after its builder row (brief `design/c91-ai-row-2026-11-02.md`).
 
-## M2 rows not Works, and what each needs (00:30 UTC)
-| Row | Needs |
-|---|---|
-| C3.4 | four paid runs: Go on #585 (worst US$5.78, usual ~US$0.97); card "C3.4 paid runs on the Mac runner" |
-| C9.1 | builder: card "C9.1-AI" (brief `design/c91-ai-row-2026-11-02.md`), then one paid run |
-| C10.1 | waits on a released Visitor visa (QA-144) |
-| C11.7 | paid field maps of IMM 1294, 5646, 5710, 0008, 5406, 5562, 5604 (quote from `track-a-jobs.ts`, then Go); IMM 5532 done (#603) |
-| C11.8 | the live gate J2 L1/L2 (one real live run: progress, Stop, cost) |
-| C11.10 | Works on qa's next records PR (P-288 (1)); QA-179 label follow-up to screens L10 after #643 |
-| C11.13 | Works, held part excluded (qa #644, 15/15 after #640) |
-| C11.14 | 10/13 after #626, #636: AT-4 = row G-CORE B5 (P-288 (2), US$0); AT-2/AT-3 = the paid checker runs on the founder's Go (IMM 5532, 5710, 1294, 0008 above the US$5 job cap) |
-| C4.11 | 14/23 on Visitor visa (step 5, QA-162) |
-| C5.1 | held (P-251, P-265) |
-
-## Sessions
-**Keep-awake (Lead 3, 03:02 UTC):** the Mac's caffeinate runs from Lead 3's chat until about 07:00 UTC; do not ask the founder to archive Lead 3 before then (archiving lets the Mac sleep).
-Local: Lead 5 (current), Lead 6 · standby. Archived tonight: the IMM 5532 paid runner, the C3.4 builder. Cloud, running at 20:20 UTC: qa batches, screens L2 (G1), runtime M3-A, G-CORE B2, QA-163 fix; idle ones as listed by `ListAgents`. **Archive Lead 2 · 2 Nov 15:40 UTC (ended)** and **Lead 3 · 2 Nov 18:36 UTC (ended)** once their lanes are done (tell the founder in chat, P-283).
+## Proposed way-of-working changes (firm evidence in the report; need the founder's OK, P-224)
+* One full test per product change, in the merge queue only (today it runs twice); stop records PRs from triggering full CI.
+* Keep the tech lead's context small (it is 29% of local cost, 99% re-reads); hand over well before 250k.
+* Measure cloud builders too: Claude Code OpenTelemetry (cost, tokens, tool results, active time) for every account.
+* Cap open builder PRs to what review can merge within an hour; weekly 30-minute trend look, a 60-minute retrospective every two weeks; change the process only on the evidence rule in section 7 of the report.
 
 ## Holds (P-251, the product owner of SA-01B): nobody builds these
-L-SA3 · L-SA6–L-SA11 · G5 · the P-236 rename · C11 · E1–E6 · design-only items · SH3/SH4 contracts go to the product owner with them.
-
-## To archive (P-283)
-* **Nested sessions move with their parent in the sidebar** (18:35 UTC: moving the previous Lead into "To archive" took its 11 lanes with it, several still working; moved back to Ungrouped at once). So: move a Lead chat only when none of its lanes is still working; until then archive finished lanes one by one. A nested session cannot be moved alone, so the tech lead archives finished ones directly: the Mac paid runner was archived 18:50 UTC (copy clean, PRs merged; a fresh runner per Go).
-* Cloud: the founder archives a parent (the previous Lead) once all its lanes are done; the tech lead says so in chat in one line (P-283 as amended 3 Nov).
-
-## For the founder's morning
-* **C9.1-AI builder** (forms, one row): card left by Lead 4 at 20:45 UTC; start it, or Lead 4 starts it at your next typed message.
-* **C3.4 paid runner** (Mac, card left 22:30 UTC): the Go is posted on #585 (worst US$5.78, usual about US$0.97, four jobs); start the card and the runner records the saved runs; qa labels the result PR.
-* **C11.14 checker run (needs your Go, P-254):** the blind checker round on the 15 saved field-map runs, about US$13 usual and US$49 worst (per-form table in #636, smallest first, a stop at each job's quoted worst); a Mac paid-runner session runs it after #636 merges.
-* **Paid runs still needed for M2 (all need a Mac paid-runner session, which a check cannot start):** C11.7: field maps of IMM 1294, 5646, 5710, 0008, 5406, 5562, 5604 (jobs in `p2/jobs/`; quote usual and worst from `track-a-jobs.ts` before the Go; IMM 5532 done in #603) · C11.8: the live gate J2 L1/L2 (progress, Stop and cost on one real live run) · C9.1: after the C9.1-AI builder's PR 1 · C3.4: Go posted on #585.
-* **M2 50/60 on main at 22:53 UTC** (qa #619). Not Works: C3.4, C4.11, C5.1 (held), C5.4 (G1 PR 2b in batch #618), C9.1, C10.1, C11.7, C11.8, C11.13, C11.14.
+L-SA3 · L-SA6–L-SA11 · G5 (C5.1) · the P-236 rename · C11 · E1–E6 · design-only items · SH3/SH4 contracts go to the product owner with them · the AI "did you mean" in C11.3, C11.13, C3.6 (P-265, P-284).
 
 ## Waiting for the founder
-1. **Open a new chat and type `/lead`** (this hand-over).
-2. **Archive** the previous Lead chat on the Mac (Remote Control attached, so the tech lead could not) and the old forms L5, forms L8 and qa lanes on claude.ai/code.
+1. **Archive Lead 3 last**, after about 07:00 UTC (its chat keeps the Mac awake until then). Archiving it also archives this chat (Lead 5), which it started in the same folder; nothing is left unsaved.
+2. On claude.ai/code, archive the cloud lanes left over from Leads 1–4 (all idle; no open PR except #417's old lane).
 3. **Send the SA-01B product owner** the reply drafted on the Mac (`archive/2026-11-02-founder-drafts/`), the SH3 contract (#509), the G-CORE concept (#504) and `design/note-to-sa01b-po-2026-11-02-sqr.md`: the only way G5 and the held parts unblock.
 4. Tell the team they drop their "Fill this screen" (P-245), pending the product owner's ruling.
+5. Agree the first rows and the way-of-working proposals above with the next tech lead.
 
-## Founder asks of 2 Nov, this chat (P-228 (9))
-A46 token savers: qa per batch (P-277) ✓, Sonnet pilot (P-278) ✓ · A47 G1 dates count (P-279) ✓ · A48 55 in 2–3 hours, the whole build today, close idle lanes: answered with evidence (not reachable without a lower bar), six more one-row builders (P-280) ✓ · A49 no token stop, paid-run Go within US$25 a day (P-281) ✓ · A50 machines: GitHub Pro bought (P-282) ✓ · A51 Wave 1 (= M2) today? no, about 4 Nov (estimate); "11–12" is P-255's gate date; why bugs after merge and how to reduce (item 5 above); who leads (the tech lead alone, every session); when to switch (now) ✓ · A52 breakdown of built / half-built / not built and the M3 plan: this page ✓. · **A53 (new tech lead, ~18:55 UTC)** weekly plan 40%, rising about 4.5 points an hour (34% at 17:30, 40% at 18:50), so it runs out about 08:00 UTC 3 Nov at that pace, extra usage off: founder chose "Keep the pace" (P-281 stands; reported at each check) ✓. · **A55 (~19:50 UTC)** "17 Partial … why can't you just complete and merge": answered with the per-row table (6 rows approved and waiting on merge + qa, 3 on paid runs, 3 multi-PR, C10.1 waits on QA-163, held parts); C11.3 held part ruled (P-284) ✓ · **A56 (~20:00 UTC)** overnight mandate, tokens to 80% of the weekly plan, paid AI up to US$50 tonight (P-285) ✓ · **Paid runs tonight:** IMM 5532 re-run (C11.7) Go at 20:02 UTC on #576, usual US$1.55, worst US$3.22, local session paid-imm5532: **done, US$1.61 actual** (2 Nov day total US$10.72); branch `claude/forms-imm5532-saved` 8c39c2a0; 75 of 314 boxes mapped (the 12:40Z run mapped 131), cause asked for in the result PR before qa labels it · **A54** GitHub Pro: founder confirmed active (19:45); 20 jobs at once seen at 19:21, the tech lead counts at each check ✓. **A57 (3 Nov ~03:45 UTC, founder typed)** a complete evidence report of the work done (what, what it means, capability, outcome; how parallel work, machines, GitHub and the merge queue performed), lessons only where the evidence is firm, no force-fitting; then close every parallel lane, retire every Lead, start from a blank sheet with one hand-over; founder chose "Finish PRs, take nothing new" (P-289) · **A58 (~04:10 UTC)** include every dimension (cost, quality, tokens, tool calling, halting, blocking) across all the founder's accounts, and research online, fact-based, the best methodology for tracking and retrospectives of an agentic framework (who tracks, how to analyse). In progress (Lead 5). · **A59 (~04:20 UTC)** retire Leads 1–6 one by one without losing any work from their nested sessions, then a clean canvas · **A60 (~04:25 UTC)** every report of capability, quality or QA is evidence-based, nothing assumed: audit it or have it audited independently (an independent audit re-runs every M2 acceptance pack on main, started 04:25). Earlier asks of 2 Nov (A3–A45): git history of this file.
+## Founder asks of 3 Nov (P-228 (9))
+**A57** a complete evidence report, lessons only where firm, then close every lane and retire every Lead, blank sheet, one hand-over: report published, lanes closed after in-flight PRs (P-289), Leads retired ✓ · **A58** every dimension (cost, quality, tokens, tool calls, stalls, blocks) across all accounts, and researched methodology: report sections 5, 6, 8 ✓ · **A59** retire Leads 1–6 one by one without losing work: 39 branches sorted, local copies checked, Leads 1, 2, 4, 6 archived; Lead 3 and 5 last ✓ · **A60** evidence, not assumption, independently audited: independent re-test, 36/60 ✓. Earlier asks (A3–A56): git history of this file.
 
-## Lessons of 2 Nov evening
-A records commit pushed after its PR merged is stranded (P-281 was): check the PR is open before each push · Mergify's final `ci` job waits for a machine even after its shards pass: measure machine waits before blaming builders · sessions cannot be started from a cron turn.
+## Lessons of 3 Nov
+Our own scorecard overstated M2 by 16 rows: score on a green pack re-run by someone else · a capability pack must be updated with the decision that changes it · a chat's `cd` into a worktree moves its working folder: use absolute paths · `path` is a reserved variable in zsh (it is PATH): never use it in loops.
