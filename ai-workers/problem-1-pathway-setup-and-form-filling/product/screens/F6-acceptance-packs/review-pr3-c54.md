@@ -36,3 +36,9 @@ Plain words (met, minor 6), no sideways scroll at 400 (met), keyboard (met), err
 task completed 1 · next step obvious 1 · plain words 1/2 (0.5) · feedback and state 0.5 (double click toast clash; 409 leaves dialog open) · correct data 1 (17 numbers named, release 1 only) · error recovery 1 · accessibility and sizes 0.5 (axe not run on the dialog) · speed 1 (1.5 s) · visual quality 1 · trust and sources 1 (sources listed, "None published" wording intact). No criterion at 0. Not tested: a real screen reader; an intended user's unaided walk (D17/D20 stay with the founder).
 
 Verdict: Approve (commit 260f0429). No open Blocker or Major; the Minors above are optional.
+
+## Re-review 21b07aa3 (diff 260f0429..21b07aa3 only)
+* Diff: the review file, plus C5.4.test.ts only: the screenshot path moves to studio/var/acceptance/C5.4-six-review-1440.png (header comment updated). Nothing else in code changed. Minor 5 (committed PNG rewritten per run) is fixed. Minors 1 to 4 remain open as listed in the PR (optional). Pack not re-run: the change is one output path; the builder's 22/22 is consistent.
+* No new finding.
+
+Verdict: Approve (commit 21b07aa3).
