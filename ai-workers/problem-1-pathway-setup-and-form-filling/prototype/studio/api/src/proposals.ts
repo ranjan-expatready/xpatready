@@ -363,40 +363,22 @@ async function landRequirementLine(tx: Tx, r: Row, p: ProposalPayload, l: Landin
   return keys.join(",");
 }
 
-/** QA-196 (P-120, P-149 (1) one door): why an item cannot be accepted on the queue, in words, or null. A form edition's
- *  own checks read its boxes, not the library's questions, and the library has no place for an edition's checks yet
- *  (check_def belongs to a combination), so they wait in Decide with this reason and are never offered Accept. */
+/** QA-196 (P-120, P-149 (1) one door): why an item cannot be accepted on the queue, in words, or null. Checks drafted
+ *  by AI have no lander yet, so they wait in Decide with this reason, never Ready, never ticked with others, never offered
+ *  Accept (an Accept through the API is refused in the same words). A form edition's own checks read its boxes and the
+ *  library has no place for an edition's checks (check_def belongs to a combination). A guide's checks could land on
+ *  their combination, but only once the one door holds a check's own rules (review and break on #QA-196: a check fires
+ *  on failing answers, never twice, goes with Undo, keeps its group and Sample label, reads only questions the release
+ *  can see); that is its own capability. */
 export function acceptWhy(r: { kind?: string; landsOn: string }): string | null {
-  return r.kind === "form_check" && r.landsOn === "library" ? "Not accepted here yet: a form's own checks read its boxes, not the library's questions, and the library has no place for a form's checks yet. Keep it for when it has one, or reject it." : null;
-}
-
-/** QA-196: a guide's check lands on its combination's draft as a check, as the author's own "Add a section check"
- *  saves one (studio.saveCheck): its condition re-checked against the library (a retired or unknown question refuses it),
- *  warn only, its guide quote kept, so it is not Sample. One answer: a section check on that answer; two or more: a
- *  cross-answer check. It goes out with the combination's next release, after its review. */
-async function landCheck(tx: Tx, r: Row, p: ProposalPayload, l: Landing): Promise<string> {
-  if (p.kind !== "form_check" && p.kind !== "cross_check") fail("Wrong payload.");
-  const why = acceptWhy(r);
-  if (why) fail(why, HttpStatus.CONFLICT);
-  if (!r.combinationId) fail("This check has no combination to land on.", HttpStatus.CONFLICT);
-  const c = p as Extract<ProposalPayload, { kind: "form_check" | "cross_check" }>;
-  const fields = new Map((await tx.canonicalField.findMany({ where: { workspaceId: l.ws }, select: { canonicalFieldKey: true, valueType: true, status: true } })).filter((f) => f.status !== "RETIRED").map((f) => [f.canonicalFieldKey, f.valueType]));
-  const derived = new Set((await tx.derivedField.findMany({ where: { workspaceId: l.ws }, select: { derivedKey: true } })).map((d) => d.derivedKey));
-  const errs = checkCondition(c.tree, fields, derived);
-  if (errs.length) fail(`The check's condition does not fit the library: ${errs.slice(0, 3).join("; ")}. Add that question to the library and draft the guide again, or reject it.`, HttpStatus.CONFLICT);
-  const group = c.kind === "cross_check" ? "cross_check" : "section_check";
-  const quote = (r.source as { quote?: string } | null)?.quote?.trim() || null;
-  const n = await tx.check.count({ where: { combinationId: r.combinationId!, checkGroup: group } });
-  const key = `AI-${group === "cross_check" ? "XC" : "SC"}-${String(n + 1).padStart(2, "0")}-${Date.now().toString(36).slice(-3)}`;
-  await tx.check.create({ data: { workspaceId: l.ws, combinationId: r.combinationId!, checkKey: key, checkGroup: group, appliesTo: c.reads[0] ?? null, predicateJson: c.tree as Prisma.InputJsonValue, severity: "warn",
-    message: c.sentence.slice(0, 500), sourceQuote: quote, illustrative: !quote, version: 1, status: "DRAFT", origin: "AI_PROPOSAL", updatedBy: l.actor.id } });
-  return key;
+  if (r.kind !== "form_check" && r.kind !== "cross_check") return null;
+  return r.landsOn === "library"
+    ? "Not accepted here yet: a form's own checks read its boxes, not the library's questions, and the library has no place for a form's checks yet. Keep it for when it has one, or reject it."
+    : "Not accepted here yet: a check drafted from a guide is added to the combination only once this queue can add checks safely. Keep it for then, or reject it; the author can add a check by hand on the combination meanwhile.";
 }
 
 /** LANDERS[kind]: what accepting an item writes, inside decide's transaction. A kind with no lander yet is refused. */
 export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalPayload, l: Landing) => Promise<string>>> = {
-  form_check: landCheck, // QA-196: a guide's check on one answer; a form edition's own checks are refused (acceptWhy)
-  cross_check: landCheck, // QA-196: a guide's check over two or more answers
   /** C4.11 part 3 (forms lane): a waiting library change for a second person (question-condition.ts), never a direct edit. */
   async condition(tx, _r, p, l) {
     if (p.kind !== "condition") fail("Wrong payload.");
@@ -618,7 +600,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
           landedAs = got.key; pqr = { ...got.work, stamp: JSON.stringify(await pqrStamp(tx, r.combinationId, got.key)) };
         } else {
           const land = LANDERS[r.kind as ProposalKind];
-          if (!land) fail(`A ${r.kind.replace(/_/g, " ")} proposal is accepted with its own step, not yet on this queue.`, HttpStatus.CONFLICT);
+          if (!land) fail(acceptWhy(r) ?? `A ${r.kind.replace(/_/g, " ")} proposal is accepted with its own step, not yet on this queue.`, HttpStatus.CONFLICT); // QA-196: in the queue's own words
           // C3.6 (#523 Question 1): a type a person named while adding a requirement keeps that person as its proposer (as
           // before it went through the queue), read from the server's own run, so their "Delete your own unapproved type" stays.
           const namer = r.step === "requirement_type" && r.runId ? (await tx.draftingJob.findFirst({ where: { id: r.runId, workspaceId, kind: "requirement_type" }, select: { startedBy: true } }))?.startedBy : null;

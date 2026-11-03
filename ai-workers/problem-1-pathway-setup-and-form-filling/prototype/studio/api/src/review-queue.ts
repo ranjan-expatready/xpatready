@@ -11,7 +11,7 @@ import { Studio } from "./studio.ts";
 import { itemsOf, KIND_NOUN, actionWord, unapprovedAdds, unapprovedWhy, acceptsView } from "./library-changes.ts";
 import { fillsView } from "./who-fills.ts";
 import { conditionView, COND_KIND } from "./question-condition.ts";
-import { ON_ITS_PAGE } from "./proposals.ts";
+import { acceptWhy, ON_ITS_PAGE } from "./proposals.ts";
 /** The ON_ITS_PAGE steps whose drafts already have their own row in this list (the field-map jobs below). A checklist
  *  draft's lines (C2.6) are decided on the queue itself and counted in its proposals row (QA-157). */
 const LISTED_AS_JOBS = new Set(["field_map"]);
@@ -85,7 +85,7 @@ export class ReviewQueueService {
       this.db.combination.findMany({ where: { workspaceId }, select: { id: true, programDefId: true, label: true, createdAt: true, retiredAt: true } }),
       this.db.draftingJob.findMany({ where: { workspaceId, kind: { in: ["field_map", "reuse_map"] } }, orderBy: { startedAt: "desc" }, select: { id: true, combinationId: true, attachmentId: true, kind: true, mode: true, status: true, costUsd: true, startedBy: true, startedAt: true, finishedAt: true, detail: true } }),
       this.db.proposalItem.groupBy({ by: ["runId"], where: { workspaceId, status: "waiting" }, _count: true }),
-      this.db.proposalItem.findMany({ where: { workspaceId, status: "waiting", step: { notIn: [...ON_ITS_PAGE].filter((x) => LISTED_AS_JOBS.has(x)) } }, orderBy: { createdAt: "asc" }, select: { formEdition: true, combinationId: true, runId: true, confidence: true, createdAt: true } }),
+      this.db.proposalItem.findMany({ where: { workspaceId, status: "waiting", step: { notIn: [...ON_ITS_PAGE].filter((x) => LISTED_AS_JOBS.has(x)) } }, orderBy: { createdAt: "asc" }, select: { formEdition: true, combinationId: true, runId: true, confidence: true, createdAt: true, kind: true, landsOn: true } }),
       this.db.aiBatch.findMany({ where: { workspaceId, status: { in: ["QUEUED", "RUNNING"] } }, include: { jobs: { select: { status: true, costUsd: true, attachmentId: true } } } }),
       this.db.reviewSubmission.findMany({ where: { workspaceId }, orderBy: { submittedAt: "desc" } }),
       this.db.fieldMerge.findMany({ where: { workspaceId, status: "PROPOSED" } }),
@@ -158,7 +158,8 @@ export class ReviewQueueService {
     for (const r of queued) {
       const fe = codeOf(r.formEdition);
       const id = groupOf(r), g = qGroups.get(id) ?? { title: r.formEdition ?? (r.combinationId ? combo.get(r.combinationId)?.path : null) ?? "Proposals with no form or combination", at: r.createdAt, n: { ready: 0, check: 0, decide: 0 }, forms: fe ? [fe] : formsOfCombination(r.combinationId) };
-      g.n[r.confidence] = (g.n[r.confidence] ?? 0) + 1; qGroups.set(id, g);
+      const band = acceptWhy(r) ? "decide" : r.confidence; // QA-196 (break B9): as To review bands it (review-proposals.ts bandOf)
+      g.n[band] = (g.n[band] ?? 0) + 1; qGroups.set(id, g);
     }
     for (const [id, g] of qGroups) {
       const total = g.n.ready + g.n.check + g.n.decide, href = `/review/proposals?group=${encodeURIComponent(id)}`;

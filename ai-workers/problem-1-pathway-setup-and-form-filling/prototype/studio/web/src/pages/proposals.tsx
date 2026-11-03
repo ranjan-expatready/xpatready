@@ -119,8 +119,8 @@ function BandTable({ band, items, onOpen, picked, setPicked, bulk, max }: { band
                 : <input type="checkbox" className="size-4 accent-[var(--color-primary)]" aria-label={`Choose ${p.title}`} checked={picked.has(p.id)} onChange={() => toggle(p.id)} />) : null}</td>
               <td className="max-w-[22rem]"><span className="font-medium">{p.title}</span>{p.meaning ? <span className="block truncate text-xs text-text-muted">{p.meaning}</span> : null}</td>
               <td><Pill>{p.kind_word}</Pill>{p.origin === "rules" ? <Pill className="ml-1" tone="info">Rules</Pill> : <Pill className="ml-1" tone="ai">AI</Pill>}</td>
-              <td className="text-xs">{p.lands_on === "combination" ? "This combination" : p.reuse.match === "reuse" ? (p.reuse.existing_key ? `Reuses ${p.reuse.existing_key}` : "Same item as drafted for another form (the first accepted adds it)") : "New library item"}</td>
-              <td className="max-w-[20rem] text-xs text-text-muted">{band === "ready" ? p.agreement_word : p.reason ?? p.agreement_word}</td>
+              <td className="text-xs">{p.accept_why ? "No place yet" : p.lands_on === "combination" ? "This combination" : p.reuse.match === "reuse" ? (p.reuse.existing_key ? `Reuses ${p.reuse.existing_key}` : "Same item as drafted for another form (the first accepted adds it)") : "New library item"}</td>
+              <td className="max-w-[20rem] text-xs text-text-muted">{p.accept_why ?? (band === "ready" ? p.agreement_word : p.reason ?? p.agreement_word)}</td>
               <td className="text-right">{p.decide_on ? <Link className="whitespace-nowrap text-sm text-text-link underline" to={p.decide_on}>Decide on its {p.step === "checklist_draft" ? "checklist" : "form-field"} page</Link>
                 : <Button size="sm" variant="secondary" onClick={() => onOpen(p)} aria-label={`Open ${p.title}`}>Open<ChevronRight className="size-4" aria-hidden /></Button>}</td>
             </tr>

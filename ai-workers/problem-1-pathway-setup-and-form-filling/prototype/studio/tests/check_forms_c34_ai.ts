@@ -37,7 +37,6 @@ const cleanUp = () => { for (const f of written) rmSync(f, { force: true }); for
 for (const [sig, code] of [["SIGINT", 130], ["SIGTERM", 143]] as const) process.on(sig, () => { cleanUp(); process.exit(code); });
 
 import { CHOICE, DETAILS, FORM_ANSWER, formCheck, GUIDE_ANSWER, guideCheck, passport } from "./fixtures/c34-answers.ts";
-import { seedField } from "./seed_library.cjs"; // QA-196: one library question for the guide check to read
 
 (async () => {
   // ---------------------------------------------------------------- E: the rules over the rounds (pure, no server)
@@ -190,25 +189,21 @@ import { seedField } from "./seed_library.cjs"; // QA-196: one library question 
   const gi: any[] = [...(fromGuide.ready ?? []), ...(fromGuide.check ?? []), ...(fromGuide.decide ?? [])].filter((i) => ["form_check", "cross_check"].includes(i.kind) && /5256/.test(i.source?.file ?? ""));
   ok("C3.4 S pass: Saved on Visitor visa's guide 5256 proposes its checks on the combination, resting on the guide's sentence, US$0", x.status === 201 && x.body?.usd === 0 && gi.length === 1 && gi[0].source?.quote_found === true, { status: x.status, n: gi.length, note: x.body?.message });
   ok("C3.4 S pass: the guide's Saved draft spent US$0", spent() === spent0 && new SpendLedger(LEDGER_DIR).committed() === ledger0);
-  // QA-196: a guide's check is accepted through the one door like any proposal: an edit whose condition reads a question
-  // the library does not have is refused (409) and lands nothing; accepted as read, it lands on Visitor visa's draft as
-  // a check (warn) with the guide's words, not Sample, offered Accept (no accept_why).
-  const g0 = gi[0], gPayload = g0?.readings?.draft?.payload ?? {};
-  const badEdit = await call("POST", "/review/proposals/decide", { ids: [g0?.id], action: "edit", payload: { ...gPayload, tree: { subjectKind: "EACH_APPLICANT", op: "exists", field: "person.not_in_the_library" } } }, "user-C");
-  ok("QA-196 fail: a guide check edited to read a question the library does not have is refused at the one door (409), landing nothing", badEdit.status === 409 && /does not fit the library/.test(badEdit.body?.detail ?? "") && sql(`select count(*) from check_def where combination_id = '${vv}' and origin = 'AI_PROPOSAL'`) === "0", { status: badEdit.status, detail: badEdit.body?.detail });
-  // The replayed guide check reads "Passport number", not a library question yet (its Decide reason says so): accepted as
-  // read it is refused in the same words; a reviewer's edit to the library's own question lands.
-  const asRead = await call("POST", "/review/proposals/decide", { ids: [g0?.id], action: "accept" }, "user-C");
-  ok("QA-196 fail: a guide check reading an answer that is not a library question is refused (409), naming it and the step to take", asRead.status === 409 && /not in the library\. Add that question to the library/.test(asRead.body?.detail ?? ""), { status: asRead.status, detail: asRead.body?.detail });
-  // This copy's library is empty (the guide reads its answers in words): the question is written as a form box would
-  // propose it (tests/seed_library.cjs, scaffolding P-33; the library takes no free add).
-  const libKey = "person.passport_number";
-  seedField(sql, { key: libKey, meaning: "The number of the person's passport", source: "IMM 5257's passport box (test setup)" });
-  const gAccept = await call("POST", "/review/proposals/decide", { ids: [g0?.id], action: "edit", payload: { ...gPayload, tree: { subjectKind: gPayload.tree?.subjectKind ?? "EACH_APPLICANT", op: "exists", field: libKey }, reads: [libKey] } }, "user-C");
-  const landed = gAccept.body?.items?.[0]?.landedAs as string | undefined;
-  const row = landed ? sql(`select check_group || '|' || status || '|' || severity || '|' || illustrative || '|' || coalesce(source_quote, '') from check_def where combination_id = '${vv}' and check_key = '${landed}'`) : "";
-  ok(`QA-196 pass: the guide check is offered Accept and, edited to the library's question (${libKey}), lands on Visitor visa's draft as a warn check with the guide's words (not Sample)`,
-    g0?.accept_why === null && gAccept.status === 201 && new RegExp(`^${g0?.kind === "cross_check" ? "cross_check" : "section_check"}\\|DRAFT\\|warn\\|false\\|.+`).test(row) && row.endsWith(g0?.source?.quote ?? "\u0000"), { status: gAccept.status, landed, row, body: gAccept.body?.detail });
+  // QA-196: a guide's check has no lander yet either (review and break on its first build: the one door must hold a
+  // check's own rules first): it waits in Decide with the reason, never Ready or ticked with others, and Accept through
+  // the API is refused in those words, landing nothing; the Work queue counts it where To review shows it.
+  const g0 = gi[0];
+  const gAccept = await call("POST", "/review/proposals/decide", { ids: [g0?.id], action: "accept" }, "user-A");
+  // Break B9: the Work queue's line for the edition says what To review shows (the form check counted in Decide).
+  const work = (await call("GET", "/review-queue", undefined, "user-C")).body;
+  const edLine = ((work?.items ?? work?.rows ?? work ?? []) as { id: string; what: string }[]).find((x) => x.id === `proposals:edition:IMM 5257 (09-2023)`);
+  const shown = (b: string) => (bands[b] ?? []).length;
+  // (The Work queue leaves out the field-map step's items, so only its Ready count is To review's own: the form check,
+  // Ready by its readings before QA-196, is never counted ready to accept.)
+  ok("QA-196 (break B9): the Work queue's line for IMM 5257 counts ready to accept exactly what To review shows Ready (the form check is not among them)", !!edLine && edLine.what.includes(` ${shown("ready")} ready to accept,`) && !(bands.ready ?? []).some((i: any) => i.kind === "form_check"), { what: edLine?.what, shown: [shown("ready"), shown("check"), shown("decide")] });
+  ok("QA-196 fail: a guide check waits in Decide with the reason, and Accept is refused in those words (409), landing no check",
+    g0?.band === "decide" && /check drafted from a guide is added to the combination only once/.test(g0?.accept_why ?? "") && g0?.bulk_why === g0?.accept_why
+    && gAccept.status === 409 && /only once this queue can add checks safely/.test(gAccept.body?.detail ?? "") && sql(`select count(*) from check_def where combination_id = '${vv}' and origin = 'AI_PROPOSAL'`) === "0", { band: g0?.band, accept_why: g0?.accept_why, status: gAccept.status, detail: gAccept.body?.detail });
 
   // Break B1: two recorded runs of the same committed jobs; the newer one's checker is of the wrong shape. Saved must use
   // both rounds of the older run, never the older checker with the newer draft.
