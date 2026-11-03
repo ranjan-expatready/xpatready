@@ -67,7 +67,7 @@ const fingerprint = async (key: string, nm: string) => String((await call("POST"
   const fb = newest(free), freeChanges = changes(), freeName = `Direct name ${tag}`;
   const d = await call("PATCH", name(free), { name: freeName, expected: await fingerprint(free, freeName) });
   const fa = newest(free);
-  ok("C3.15 P-96 pass: a field no release uses is renamed directly: 200, a new draft version carries the name, no library change, in the activity", d.status === 200 && d.body?.applied === true && fa.label === freeName && fa.status === "DRAFT" && changes() === freeChanges && Number(sql(`select count(*) from audit_event where action = 'renamed' and summary like '%${freeName}%'`)) === 1, { status: d.status, tier: d.body?.tier, fa });
+  ok("C3.15 P-96 pass: a field no release uses is renamed directly and versioned: 200, a new draft version (one above the earlier one) carries the name, the earlier published version is kept, no library change, in the activity", d.status === 200 && d.body?.applied === true && fa.label === freeName && fa.status === "DRAFT" && fa.version === fb.version + 1 && Number(sql(`select count(*) from canonical_field where canonical_field_key = '${free}' and version = ${fb.version} and status = 'PUBLISHED'`)) === 1 && changes() === freeChanges && Number(sql(`select count(*) from audit_event where action = 'renamed' and summary like '%${freeName}%'`)) === 1, { status: d.status, tier: d.body?.tier, fb, fa });
 
   // ── Exact-duplicate check (BR-6) ──
   const dup = await call("PATCH", name(K), { name: `  ${otherName.toUpperCase()} ` });
@@ -75,7 +75,9 @@ const fingerprint = async (key: string, nm: string) => String((await call("POST"
   const waitingName = `Waiting name ${tag}`;
   sql(`insert into library_change (id, workspace_id, kind, key, label, action, reason, status, proposed_by) values ('${randomUUID()}', '${ws}', 'field', '${K.split(".")[0]}.acceptance_waiting_${tag}', '${waitingName}', 'ADD', 'acceptance C3.15', 'WAITING', '${AUTHOR}')`);
   const dupWaiting = await call("PATCH", name(K), { name: waitingName });
-  ok("C3.15 BR-6 fail: a name waiting for the second person in an open library change for the same group (its key's first part) is refused too (409)", dupWaiting.status === 409 && newest(K).label === nm, { status: dupWaiting.status, words: words(dupWaiting) });
+  // The same waiting name is free in another group: the free field is in the case group, the waiting Add in K's group.
+  const otherGroup = await call("PATCH", name(free), { name: waitingName, expected: await fingerprint(free, waitingName) });
+  ok("C3.15 BR-6 fail: a name waiting for the second person in an open library change for the same group (its key's first part) is refused too (409); the same name in another group is not (200)", dupWaiting.status === 409 && newest(K).label === nm && otherGroup.status === 200 && newest(free).label === waitingName, { status: dupWaiting.status, words: words(dupWaiting), otherGroup: otherGroup.status, otherWords: words(otherGroup) });
   sql(`delete from library_change where reason = 'acceptance C3.15'`);
   const stale = await call("PATCH", name(K), { name: `Stale ${tag}`, expected: staleFp });
   ok("C3.15 fail (concept §6 version; G-CORE fingerprint): a rename confirmed from a check made before someone changed the field is refused 409 \"Look again\", nothing changed", stale.status === 409 && stale.body?.title === "Look again" && newest(K).label === nm && changes() === freeChanges, { status: stale.status, title: stale.body?.title, words: words(stale) });
@@ -89,6 +91,6 @@ const fingerprint = async (key: string, nm: string) => String((await call("POST"
   const changesM = changes();
   const m = await call("PATCH", `/library/fields/${encodeURIComponent(K)}`, { meaning, reason: "acceptance: the meaning on IMM 5707 is narrower" });
   const mChange = sql(`select id from library_change where kind = 'field' and key = '${K}' and action <> 'RENAME' and status = 'WAITING' order by proposed_at desc limit 1`);
-  ok("C3.15 pass (P-96, P-116 amended): a meaning change with its reason is not live: the published meaning stays until a different person approves (a waiting library change, or a draft version that goes out with a release by another person), and the reason is kept", m.status >= 200 && m.status < 300 && published() !== meaning && (mChange !== "" || (newest(K).status === "DRAFT" && newest(K).meaning === meaning && changes() === changesM)) && Number(sql(`select count(*) from audit_event where summary like '%IMM 5707 is narrower%'`)) >= 1, { status: m.status, words: words(m), mChange, newest: newest(K).status });
+  ok("C3.15 pass (P-96, P-116 amended): a meaning change with its reason is not live: the published meaning stays (a waiting library change, or a new draft version, which goes out only with a release a different person approves: BR-14, check_screen01_release_race.ts and C10.1 row 10), and the reason is kept in the activity", m.status >= 200 && m.status < 300 && published() !== meaning && (mChange !== "" || (newest(K).status === "DRAFT" && newest(K).meaning === meaning && changes() === changesM)) && Number(sql(`select count(*) from audit_event where summary like '%IMM 5707 is narrower%'`)) >= 1, { status: m.status, words: words(m), mChange, newest: newest(K).status });
   process.exit(summary() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(2); });

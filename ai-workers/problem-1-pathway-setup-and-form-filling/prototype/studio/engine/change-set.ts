@@ -84,7 +84,10 @@ function duplicate(it: ChangeItem, ctx: Context): string | null {
     const want = normalizeLabel(it.action === "rename" ? it.name : it.alias);
     const twin = lib.fields.find((t) => t.key !== it.key && t.group === me.group && t.names.some((x) => normalizeLabel(x) === want));
     if (twin) return `"${it.action === "rename" ? it.name : it.alias}" is already the name of ${twin.label ?? twin.key} in this group. If they mean the same, merge them; otherwise choose another name.`;
-    const waiting = (ctx.waitingNames ?? []).find((w) => w.key !== it.key && w.key.split(".")[0] === (me.group ?? it.key.split(".")[0]) && normalizeLabel(w.name) === want);
+    // The waiting change's group: its field's group when the field exists (a rename), else its key's first part (an Add,
+    // #295), so both sides are compared by the same rule (Devin on #712).
+    const groupOf = (key: string) => lib.fields.find((f) => f.key === key)?.group ?? key.split(".")[0];
+    const waiting = (ctx.waitingNames ?? []).find((w) => w.key !== it.key && groupOf(w.key) === me.group && normalizeLabel(w.name) === want);
     return waiting ? `"${it.action === "rename" ? it.name : it.alias}" is waiting for a second person on To review as the name of another field in this group. Choose another name, or wait until that change is decided.` : null;
   }
   if (it.kind === "section" && it.action === "rename") {
