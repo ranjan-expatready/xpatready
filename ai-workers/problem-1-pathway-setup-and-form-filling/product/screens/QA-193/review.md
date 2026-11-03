@@ -90,3 +90,17 @@ Journey: **7/10**, below the bar of 8 (`journey-test-reviewer-2026-11-03.md`).
 * That copy's data may need a fresh start. I did not stop its server.
 
 **Verdict: Block** — fix M1. m1–m3 can go in the same push. Re-review: the diff since 538d666e3 only.
+
+## Round 2 (diff 538d666e3..6b6827f63; reviewer agent, 3 Nov 2026)
+The builder moved the head from 4c9f653fc to **6b6827f63** during this round, so I judged 538d666e3..6b6827f63. My first runs in the builder's worktree were spoiled by an edit made while they ran (12:03 UTC), so every count here comes from pinned `git archive` extracts in my scratch folder, on :4457, with a fresh database for each run, live AI off and US$0. **M1 is fixed in both cases.** `decide()` logs `{ n }` with the batch (`api/src/proposals.ts:610`), and `undo()` refuses 409 with the same words when fewer items still carry the batch (`proposals.ts:629-632`). `check_forms_qa193_batch_mark.ts` at 6b6827f63 gives **18/18**, with the one-item and two-item refusals and the other item still `accepted|<batch>`. `check_gcore_b5_field_map_bulk.ts` gives **22/22**, so line 100 is green again. `check_s6_p149.ts` gives **78/78**, which covers non-field-map Undo, 403, "Already undone", unknown 404 and the 10 s window. 4c9f653fc gave 17/17 on its own test. Its logged-ids version lost a page re-decision after a re-compare, because the re-compare writes the items again under new ids. Running 6b6827f63's test against 4c9f653fc's code fails exactly that case (**17 PASS / 1 FAIL**, Undo 201), and it passes at 6b6827f63. That is a real fail-then-pass. My probes at 6b6827f63:
+* An unknown batch gives 404 "No decision with this id.".
+* An Undo repeated after a successful one gives 409 "Already undone: …", because the check is skipped once an `undone` event exists.
+* An intact two-item batch gives 201 `{"undone":2}`.
+* A legacy decision whose log has no `n` (I nulled `detail`) behaves as before. With a page re-decision it gives 201 `{"undone":1}`, the 538 behaviour. This is harmless because every real legacy decision is older than the 10 s window.
+* Non-field-map items only leave a batch through Undo, and a demo reset clears items and audit events together, so the count cannot misfire on them.
+
+Two nits, neither blocking:
+* **n1.** The new check runs before the 403 and 10 s checks (`proposals.ts:631` comes before `:634` and `:637`). Another reviewer, or the decider after 10 s, gets the "decided again on its form-field page" 409 instead of "Only the person who decided…" or "Undo is offered for 10 seconds…". Both still refuse with nothing changed. Fix if wanted: when `rows.length` is not 0, run the count check after the window check.
+* **n2.** A re-compare that reopens one item of a kept decision also lowers the count. Undo then refuses with the page words, though no one decided on the page. The refusal is right but the reason is not. Fix if wanted: say "decided again or reopened by a re-compare".
+
+m1 and m2 (PR body) are still the builder's to update; m3 is fixed (C11.14 is in the test header). Journey re-score: **8½/10** (J6 and J7 now hold, so plain words, feedback and error recovery each score 1). See the round-2 note in `journey-test-reviewer-2026-11-03.md`. Verdict: Approve

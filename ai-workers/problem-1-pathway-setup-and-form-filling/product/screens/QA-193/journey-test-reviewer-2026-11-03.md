@@ -63,3 +63,11 @@
 **7/10, no criterion at 0 → below the pass bar of 8.**
 * **Fix first:** M1 in `review.md`, i.e. restore Undo's 409 after a page decision. That lifts plain words, feedback and error recovery to 1, giving 8½.
 * **Not tested:** a browser walk, a screen reader, an intended user's unaided walk.
+
+## Round 2 (6b6827f63), 3 Nov 2026
+* **J6, one item:** Undo now answers 409 "decided again on its form-field page"; the page's decision stays. **Held.**
+* **J7, two items:** Undo answers 409, nothing is undone, and the other item stays accepted in its batch. **Held.**
+* **The same after a re-compare:** **held.** At 4c9f653fc this case was broken (201).
+* **Counts:** QA-193 18/18, B5 22/22, S6/P-149 78/78, on pinned extracts at :4457, US$0.
+* **Re-score:** plain words, feedback and state, and error recovery each move to 1, giving **8½/10**, no criterion at 0. **Pass.**
+* **Still not walked:** a browser walk and a screen reader, since there is no UI change.
