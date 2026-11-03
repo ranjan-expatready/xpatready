@@ -32,3 +32,12 @@ I ran the check through its usage line on an isolated copy (port 4471, STUDIO_FA
 No Blocker. No Major.
 
 **Verdict: Approve** (Blockers: none · Majors: none · Minors: 3, above)
+
+## Round 2 (8cdfd2ee0, diff 38ec4c1f3..8cdfd2ee0)
+Re-ran the check on port 4471 through its usage line, then stopped the copy: 22 passed, 0 failed.
+- m1 fixed: the Phase C guard also requires the LIVE plan's cost_check ok===false and can_continue===true, so the scratch ledger seed must be read. If not, it restarts with the switch off and stops before any start.
+- m2 fixed: the header says 22.
+- m3 fixed: AT-2d counts paid attempts by SQL as `rounds.ts` `paidRunsOf` does (=== 0). It requires the plan target for this attachment to have action "draft" and no `over_attempts` key.
+No new issues.
+
+**Verdict: Approve**
