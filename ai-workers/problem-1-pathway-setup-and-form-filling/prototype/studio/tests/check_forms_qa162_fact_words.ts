@@ -123,7 +123,7 @@ try {
   const gate = f("principal", "person.used_other_name", "Whether the person has ever used any other name, such as a nickname, maiden name or alias");
   const names3 = [gate, f("principal", "person.other_family_name", "Family name of any other name ever used"), f("principal", "person.other_given_names", "Given name(s) of any other name ever used")];
   const yesNo = (x: FactSourceView) => x.fact === "person.used_other_name";
-  const pick = (pool: FactSourceView[], can: (x: FactSourceView) => boolean, asks: string) => pickDecider(pool, can, "principal", asks, new Map(), (x) => x);
+  const pick = (pool: FactSourceView[], can: (x: FactSourceView) => boolean, asks: string) => pickDecider(pool, can, "principal", asks, new Map(), (x) => x, "yes");
   const got = pick(names3, yesNo, "Ever used other name");
   ok("D pass: words that fit three questions, of which only the Yes/No can take \"yes\", decide by that Yes/No question", !("why" in got) && got.f.fact === "person.used_other_name");
   const both = pick(names3, () => true, "Ever used other name");
@@ -131,6 +131,12 @@ try {
   const marital = [f("principal", "person.marital_status", "Marital status"), f("principal", "person.marital_status_note", "Note on the marital status")];
   const exact = pick(marital, (x) => x.fact === "person.marital_status_note", "Marital status");
   ok("D fail (fresh review m1 on #744): an exact name is never overruled by the answer filter (\"Marital status\" stays the marital status)", !("why" in exact) && exact.f.fact === "person.marital_status");
+  ok("D pass (Opus review m1 on #744): a choice made by the answer is never Ready: it carries the words for a person to check", !("why" in got) && !!got.loose && /can be answered "yes"/.test(got.loose));
+  const twinsExact = [f("principal", "person.purpose_a", "Purpose"), f("principal", "person.purpose_b", "Purpose")];
+  const ex = pick(twinsExact, (x) => x.fact === "person.purpose_b", "Purpose");
+  ok("D pass (Opus review m1): an exact tie, one of which can take the answer, takes it only for a person to check (loose, never null)", !("why" in ex) && ex.f.fact === "person.purpose_b" && !!ex.loose);
+  const outside = pick([...twinsExact, f("case", "case.purpose", "Purpose")], (x) => x.fact === "case.purpose", "Purpose");
+  ok("D fail (Opus review m1): a question outside the tie is never chosen, even when it alone can take the answer", "why" in outside && /could be 2 questions/.test(outside.why));
   const none = pick(names3, () => false, "Ever used other name");
   ok("D fail: when none of them can take the answer, the usual reason stands (several, named)", "why" in none && /could be 3 questions/.test(none.why));
 }
