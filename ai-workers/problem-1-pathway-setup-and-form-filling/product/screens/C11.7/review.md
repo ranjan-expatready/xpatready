@@ -71,3 +71,43 @@ Not tested: a real screen reader; an intended user's unaided walk; `check_forms_
 **Must fix before Approve:** Blocker 1. Minors 1–2 are strongly advised in the same PR; Minor 5 needs a tech-lead ruling.
 
 Verdict: Block
+
+---
+
+## Round 2 (P-293, last round): diff-only, `git diff ea9e3a507..4cd02eece` (170b2061a + 4cd02eece)
+
+Note: 4cd02eece also commits this review file (round 1 text unchanged).
+
+**Checked**
+- **Blocker 1 is fixed.** `check_forms_pdf_hardening.ts:100-104`:
+  - now expects the official IMM 5669 to be `added` as `IMM 5669 (05-2021)`, with `editionFrom: "form_template"` and plain words;
+  - takes the row baseline again after that upload;
+  - still keeps a held case for a coded XFA form with no edition (IMM 9998).
+  - Run on a fresh copy: **49/49**.
+- **Minor 1 is fixed.** `upload-run.ts:119-122` applies `editionFromManifest` straight after the read, the same rule as the intake.
+  - A mismatch makes the read step FAILED with "not the official imm5669e.pdf … It will be refused" (`:130`), and the compare step now runs whenever a code was read (`:136`).
+  - A source-list or template edition says where it came from (`:129`). The card and the result now agree.
+  - New card check in `check_c117…`; it would fail on the old card, which said "waits for a person".
+- **Minor 2 is fixed.**
+  - Template Version: a new pass check (one Version) and a fail check (two different Versions give no edition).
+  - DEP guard: the `(?!\s?DEP)` guard is removed, and the reasoning holds. After the digits the edition pattern allows only `\s?-?[EF]?\s*\(`, so "IMM 0008DEP (10-2024)" can never give plain IMM 0008 an edition.
+  - I re-ran the round-1 reader against the round-2 reader on every official file (87 PDFs and HTML pages): **0 differences**.
+- **Minor 4 is fixed.** `intake.ts:312`: the refusal now adds "if this is a newer edition, it needs its own row on the source list first".
+- **Minor 3 is accepted as left.** The checksum path stays a pure-rule test; a test-only manifest override would weaken the trust anchor. It is named in the PR.
+- **Minor 5** is a tech-lead question in the PR; it is not a code defect.
+- **Suites on fresh copies (:4441–4448), on 4cd02eece:**
+  - `check_c117_intake_edition` 20/20
+  - `check_forms_pdf_hardening` 49/49
+  - `check_forms_c24_same_and_new` 15/15
+  - `check_forms_channels` 105/105
+  - `check_s7_load` 23/23
+  - `check_c10_1_configured` 27/27
+  - `acceptance/C11.15` 37/37
+  - `acceptance/C3.12` 17/17
+  - Not run by me: `check_forms_s4_runs`, which needs a *_LIVE switch. The builder reports 91/91.
+
+**New findings:** none. No Blocker or Major is open.
+
+**Journey score, revised:** the contradiction in the card is gone (next step, plain words and feedback each go from ½ to 1). Accessibility and speed are unchanged at ½. **9/10**, which passes, and no criterion is at 0.
+
+Verdict: Approve
