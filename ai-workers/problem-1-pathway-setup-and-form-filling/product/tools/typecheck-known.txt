@@ -1,0 +1,16 @@
+# Known type errors (typecheck.mjs): one per line, "project file: TScode: message". Only ever remove lines.
+api tests/check_c18_age_case.ts: TS2339: Property 'fields' does not exist on type 'never'.
+api tests/check_c69_runs.ts: TS2322: Type '{ key: string; label: string; condition: { subjectKind: string; op: string; field: string; }; }' is not assignable to type '{ key: string; label: string; condition: { subjectKind: string; op: string; args: { op: string; field: string; }[]; field?: undefined; value?: undefined; }; } | { key: string; label: string; condition: { subjectKind: string; op: string; field: string; value: boolean; args?: undefined; }; }'.
+api tests/check_c69_runs.ts: TS2322: Type '{ key: string; label: string; condition: { subjectKind: string; op: string; field: string; }; }' is not assignable to type '{ key: string; label: string; condition: { subjectKind: string; op: string; args: { op: string; field: string; }[]; field?: undefined; value?: undefined; }; } | { key: string; label: string; condition: { subjectKind: string; op: string; field: string; value: boolean; args?: undefined; }; }'.
+api tests/check_c69_runs.ts: TS2322: Type '{ key: string; label: string; condition: { subjectKind: string; op: string; field: string; }; }' is not assignable to type '{ key: string; label: string; condition: { subjectKind: string; op: string; args: { op: string; field: string; }[]; field?: undefined; value?: undefined; }; } | { key: string; label: string; condition: { subjectKind: string; op: string; field: string; value: boolean; args?: undefined; }; }'.
+api tests/check_cost_check.ts: TS18048: 'rfa.cost_usd' is possibly 'undefined'.
+api tests/check_cost_check.ts: TS2551: Property 'worst_usd' does not exist on type '{ cost_usd?: number | undefined; settle_error?: string | undefined; outcome?: string | undefined; }'. Did you mean 'cost_usd'?
+api tests/check_vv_checklist.ts: TS2783: 'document_requirements' is specified more than once, so this usage will be overwritten.
+api tests/check_vv_checklist.ts: TS2783: 'field_maps' is specified more than once, so this usage will be overwritten.
+api tests/check_vv_checklist.ts: TS2783: 'forms' is specified more than once, so this usage will be overwritten.
+api tests/check_vv_checklist.ts: TS2783: 'placements' is specified more than once, so this usage will be overwritten.
+api tests/check_vv_checklist.ts: TS2783: 'rules' is specified more than once, so this usage will be overwritten.
+api tests/check_vv_checklist.ts: TS2783: 'sections' is specified more than once, so this usage will be overwritten.
+api tests/check_x2b_bulk_apply.ts: TS2345: Argument of type '"%%%%%%%%"' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+api tests/check_x2b_bulk_apply.ts: TS2345: Argument of type '"pfxtest1#1"' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+api tests/check_x2b_bulk_apply.ts: TS2353: Object literal may only specify known properties, and 'version' does not exist in type '{ kind: string; key: string; }'.
