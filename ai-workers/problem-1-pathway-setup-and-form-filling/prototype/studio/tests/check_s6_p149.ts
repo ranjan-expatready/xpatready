@@ -145,7 +145,11 @@ const item = (payload: any, over: any = {}) => ({ kind: payload.kind, runId: RUN
   const un = await P.undo(db, audit, A, ws, du.batchId);
   ok("C11.14 undo pass: within 10 s the landed draft field and its waiting ADD are removed, the item waits again (1b)", un.undone === 1 && sql(`select count(*) from canonical_field where canonical_field_key = '${du.items[0].landedAs}'`) === "0" && sql(`select count(*) from library_change where batch_id = '${du.batchId}'`) === "0" && sql(`select status || '|' || coalesce(decided_by, '-') || '|' || coalesce(batch_id::text, '-') from proposal_item where id = '${u1}'`) === "waiting|-|-");
   e = await refused(() => P.undo(db, audit, A, ws, du.batchId));
-  ok("C11.14 undo fail: the same batch is not undone twice (404)", e.status === 404, e);
+  // C3.2 AT-9: the same Undo again is refused as already done (409, in words), not as unknown; an id no decision ever had
+  // stays 404.
+  ok("C11.14 undo fail: the same batch is not undone twice (409, \"Already undone\")", e.status === 409 && /Already undone/.test(e.message), e);
+  e = await refused(() => P.undo(db, audit, A, ws, crypto.randomUUID()));
+  ok("C11.14 undo fail: a batch id no decision ever had is unknown (404)", e.status === 404, e);
   const [u2] = await P.insertProposals(db, ws, [field("Too late to undo")]);
   const dl = await P.decide(db, audit, A, ws, [u2], { action: "accept" });
   sql(`update proposal_item set decided_at = now() - interval '20 seconds' where batch_id = '${dl.batchId}'`);

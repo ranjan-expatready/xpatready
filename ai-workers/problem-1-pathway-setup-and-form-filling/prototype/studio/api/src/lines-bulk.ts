@@ -5,12 +5,13 @@
 // Founder 31 Oct (#167): form and document lines first; links between combinations stay on the case (P-106).
 import { Body, Controller, Get, Headers, HttpCode, HttpException, Inject, Injectable, Param, Post, Query } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
+import { z } from "zod";
 import { createHash, randomUUID } from "node:crypto";
 import { acceptsOf, allowedChannels, notAcceptedWords, notNeededWords } from "../../engine/channels.ts";
 import { rolesNamedBy } from "../../engine/people.ts";
 import { CHANNEL_WORDS, type Channel } from "../../contracts/forms.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { appliedWords, BulkApply, BulkPreview, copiedFromWords, CopyFromApply, CopyFromPreview, OUTCOME_WORDS, TICKABLE, undoRefusedWords, UndoMany, WAITS_REMOVE_WORDS, WAITS_WORDS, WHO_WORDS, type ApplyResult, type BulkCombination, type CopyFromApplied, type CopyFromLine, type CopyFromResult, type Outcome, type PreviewResult, type PreviewTarget, type UndoResult } from "../../contracts/lines-bulk.ts";
+import { appliedWords, BulkApply, BulkPreview, copiedFromWords, CopyFromApply, CopyFromPreview, LineRef, OUTCOME_WORDS, TICKABLE, undoRefusedWords, UndoMany, WAITS_REMOVE_WORDS, WAITS_WORDS, WHO_WORDS, type ApplyResult, type BulkCombination, type CopyFromApplied, type CopyFromLine, type CopyFromResult, type Outcome, type PreviewResult, type PreviewTarget, type UndoResult } from "../../contracts/lines-bulk.ts";
 import { isBusy } from "./busy.ts";
 import { ACTORS, actorOf, Audit, Db, need, revise, strip, type Actor } from "./core.ts";
 import { addFormLine } from "./form-lines.ts";
@@ -48,6 +49,20 @@ const docSig = (r: DocRow) => JSON.stringify([r.documentTypeKey, r.attachMode, r
 /** Break m1: a short fingerprint of what a source line says, so an apply can tell it changed after the preview. */
 const versionOf = (l: SourceLine) => createHash("sha256").update(JSON.stringify([l.kind, l.typeKey, l.who, l.attachMode, l.predicateJson ?? null, l.conditionPlain, l.channel ?? null, l.copied])).digest("hex").slice(0, 16);
 const sigOf = (kind: "form" | "document", r: LineRow | DocRow) => (kind === "form" ? lineSig(r as LineRow) : docSig(r as DocRow));
+
+/** C1.5, concept v3 §2 (`POST /combinations/:id/lines/copy`): copy ONE line from another combination onto this one, for a
+ *  caller without the dialog (the web app's dialog keeps POST /lines/copy, so this request is the API's own, not a shared
+ *  contract). `idempotencyKey`: optional; a retry with the same key answers the first copy. `withdrawSubmission`: a copy
+ *  onto a combination waiting for review withdraws that submission, so it is refused unless asked for (the dialog's
+ *  "Waits" tick). */
+const CopyOneLine = z.object({
+  from: LineRef,
+  version: z.string().max(64).optional(),
+  idempotencyKey: z.string().trim().min(8, "Reload the page: the request key is missing.").max(90, "Reload the page: the request key is not valid.").regex(/^[^#]+$/, "Reload the page: the request key is not valid.").optional(),
+  withdrawSubmission: z.boolean().optional(),
+});
+/** The single copy's answer: its one batch (POST /lines/bulk/:batchId/undo takes it back). */
+type CopyOneApplied = CopyFromApplied & { batchId: string };
 
 @Injectable()
 export class LinesBulk {
@@ -543,6 +558,31 @@ export class LinesBulk {
     }
   }
 
+  /** POST /combinations/:id/lines/copy (C1.5, concept v3 §2): one line from another combination copied onto this one, as a
+   *  draft with the same settings (BR-C2), through copyFrom (the same rules, batch, audit and Undo). Without the dialog's
+   *  preview, a line that cannot be added here is refused 409 in the preview's words; nothing is written. */
+  async copyOne(actor: Actor, targetId: string, body: unknown): Promise<CopyOneApplied> {
+    need(actor, "author");
+    const parsed = CopyOneLine.safeParse(body);
+    if (!parsed.success) throw new HttpException(problemFromZod(parsed.error), 400);
+    const b = parsed.data;
+    const tgt = /^[0-9a-f-]{36}$/i.test(targetId) ? await this.db.combination.findUnique({ where: { id: targetId }, select: { id: true, label: true, workspaceId: true } }) : null;
+    if (!tgt) throw problem(404, "Not found", "This combination does not exist any more. Reload the page.");
+    if (b.from.combinationId === tgt.id) throw problem(409, "Already here", `This line comes from "${tgt.label}" itself: it is already on this combination. Choose another combination to copy it to. Nothing was changed.`);
+    const key = b.idempotencyKey ?? randomUUID();
+    // A retry with a key already used answers the first copy (copyFrom's replay), before any rule is re-read.
+    const prior = b.idempotencyKey ? await this.db.lineBatch.findUnique({ where: { workspaceId_idempotencyKey: { workspaceId: tgt.workspaceId, idempotencyKey: `${key}#1` } }, select: { id: true } }) : null;
+    if (!prior) {
+      const pv = await this.evaluate(this.db, { line: b.from, op: "add", combinationIds: [tgt.id] });
+      const t = pv.targets[0];
+      const why = `${pv.source.short} cannot be copied onto "${tgt.label}": ${OUTCOME_WORDS[t.outcome].toLowerCase()}${t.reason ? ` (${t.reason.replace(/\.$/, "")})` : ""}. Nothing was changed.`;
+      if (!t.tickable) throw problem(409, OUTCOME_WORDS[t.outcome], why, { outcome: t.outcome });
+      if (t.outcome === "WAITS" && !b.withdrawSubmission) throw problem(409, "Waits for review", `"${tgt.label}" is submitted for review: copying ${pv.source.short} withdraws that submission. Send withdrawSubmission: true to copy it anyway. Nothing was changed.`, { outcome: t.outcome });
+    }
+    const r = await this.copyFrom(actor, { sourceId: b.from.combinationId, targetId: tgt.id, lines: [{ kind: b.from.kind, key: b.from.key, version: b.version }], idempotencyKey: key });
+    return { ...r, batchId: r.batchIds[0] };
+  }
+
   /** Every combination's trail by names, pathway first, from one read of the structure. */
   private async trails(db: Tx, workspaceId: string) {
     const nodes = await db.programDef.findMany({ where: { workspaceId }, select: { id: true, programNodeKey: true, parentNodeKey: true, label: true } });
@@ -564,5 +604,6 @@ export class LinesBulkController {
   @Post("lines/bulk/undo") @HttpCode(200) undoMany(@Headers("x-actor") a: H, @Body() b: unknown) { return this.s.undoMany(actorOf(a), b); }
   @Post("lines/copy/preview") @HttpCode(200) copyFromPreview(@Headers("x-actor") a: H, @Body() b: unknown) { return this.s.copyFromPreview(actorOf(a), b); }
   @Post("lines/copy") @HttpCode(200) copyFrom(@Headers("x-actor") a: H, @Body() b: unknown) { return this.s.copyFrom(actorOf(a), b); }
+  @Post("combinations/:id/lines/copy") @HttpCode(200) copyOne(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.copyOne(actorOf(a), id, b); }
   @Post("lines/bulk/:batchId/undo") @HttpCode(200) undo(@Headers("x-actor") a: H, @Param("batchId") id: string) { return this.s.undo(actorOf(a), id); }
 }

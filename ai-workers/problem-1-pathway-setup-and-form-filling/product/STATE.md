@@ -1,6 +1,6 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-03 06:05 UTC by **Lead 5** (ended; tonight's plan P-290 added), closing every Lead and lane for a **blank-sheet restart** (founder, P-289) · milestone: **M2 — Super Admin configuration** · how we work: `WAY-OF-WORKING.md` (frozen to 15 Nov, P-224) · decisions to read word for word: DECISIONS **P-280 … P-293** · the evidence: **`reports/build-review-2026-11-03.html`** (published privately to the founder)
+updated: 2026-11-03 09:20 UTC by **Lead 2 · 3 Nov 07:51 UTC** (current; took over from Lead 1 at 07:51; 30-minute check at minutes 13 and 43) · milestone: **M2 — Super Admin configuration** · how we work: `WAY-OF-WORKING.md` (Night playbook) · decisions to read word for word: DECISIONS **P-285 … P-297** · evidence: `reports/build-review-2026-11-03.html`, `reports/built-evidence-2026-11-03.html` (E0; published https://claude.ai/artifact/EWfW8ZQBpajkmac9NvUjDP), `reports/verify-2026-11-03/` (V1–V4)
 
 ## Tonight, 3 Nov (founder, P-290): the fresh Lead's first turn
 The founder chose "Fresh Lead, one paste": the new tech lead, in its **first founder-typed turn**, starts everything below (a Lead woken later by a check or a message cannot start sessions), then runs the night without the founder. **Lead 5 has ended** (its commits on `lead/2026-11-03-*` are not another running Lead; do not ask the founder). Goal for the next 16 hours (founder at the computer about 8–10 hours, then the night): **finish M2** (confirmed Works 36 → 60 except what waits on paid runs or the SA-01B hold), **verify the whole build** (V1–V4), and **start M3 in parallel** on the shared services, finishing as much of M3 as the merge queue allows without slowing M2 (M2 goes first in the queue). Do not break main. **Talk to the founder in plain words (P-291):** capabilities by what they do, code after; never "row".
@@ -36,8 +36,48 @@ Not tonight: C4.7 (needs a saved paid run), C11.3 (its red AT-5 is the held part
 | V4 | verify: best in class | Is it best in class? Web research (primary sources) on immigration case-management products and their setup and form-filling features, plus a walk of the demo against them and the 2 Nov UX baseline method | a scored comparison, the top gaps, sources cited |
 After the fix PRs merge, run the **independent re-test** again (same method as the report: every M2 acceptance pack on main, by a session that scored nothing) and report "scored vs confirmed".
 
+## Running now (Lead 1, 3 Nov 07:10 UTC)
+**Leads, in order (highest number = current):** Lead 1 · 3 Nov 06:56 UTC (current, this chat; 30-minute check at minutes 13 and 43, Mac kept awake) · standbys **Lead 2 · 3 Nov · standby** (`local_ff0137ad-1907-4308-80a6-4e6f849f696a`) and **Lead 3 · 3 Nov · standby** (`local_651babba-ec86-4923-8b51-09c061d523d9`), idle until "take over now" (P-286). The old series (Leads 1–6 of 2 Nov) is retired; Lead 3 and Lead 5 of that series were archived by the founder ~07:15 UTC. **P-294:** while the founder is away the tech lead rules questions that decisions, IRCC or best practice settle, and may cancel wasted CI runs by exact id.
+
+**Sessions requested 07:00–07:08 UTC (cloud, one task each, sidebar "Pathway Configurator"; each brief names its next two capabilities):**
+| # | Task (app task id) | First | Next two |
+|---|---|---|---|
+| E0 | what is built, with evidence (task_9214a686) | page `reports/built-evidence-2026-11-03.html` | refresh after fixes merge · refresh build review §1 |
+| I1 | test each change once (task_f5120bc9) | test-once, notes-only PRs, comment guard, measure | type check in CI · quarantine list |
+| M1 | shared resolver SH3 (task_48335c28) | four callers on `contracts/resolver.ts` | C6.9 override + Mark reviewed 404 · QA-149 |
+| F1 | bulk accept C3.2 (task_565846a0) | C3.2 22/22 | QA-154 (C11.8 one door) · QA-159 (C11.14 identity) |
+| F2 | C1.5 + C2.4 (task_72acefb7) | 18/18, 22/22 | QA-179 Needs you counts · QA-144 Visitor visa release at US$0 |
+| F3 | C4.6 + C4.2 (task_33b89d99) | 17/17, 10/10 | QA-165 IMM 5257 Validate · QA-162 Saved paid result |
+| F4 | C11.11 (task_5c058435) | 26/26 | G-CORE B4 if not merged · QA-153 IMM 5707 parents |
+| F5 | C3.8 + C3.15 (task_c7d6b6fb) | 11/11, 11/11 | QA-172 raw keys · QA-152 |
+| F6 | packs + C5.4 (task_1248437b) | C4.1, C4.8 to P-279; packs C3.10, C5.2, C11.1, C11.17; C5.4 on Demo menu | C6.9 pack report · C6.12 re-run |
+| V1 | completeness (task_f28337ce) | V1 report (to come, under reports/verify-2026-11-03) | M2 gap texts · top-10 M3 gap texts |
+| V2 | rule engine (task_53b4e824) | V2 report (to come) | independent M2 re-test after fixes · M3 re-test |
+| V3 | one system (task_c77efaa8) | V3 report (to come), journey /8 | re-run after fixes · second combination |
+| V4 | best in class (task_344be92b) | V4 report (to come) | top-5 gap texts · UX re-score |
+Not tonight (P-290): C4.7, C11.3's held part, the 8 Partials waiting on paid runs or holds (flow-watch lists C11.14, C11.7, C11.8, C9.1: expected, no paid run tonight).
+
+## Lead 2 at 09:20 UTC (read first)
+* **Leads, in order:** Lead 1 · 3 Nov 06:56 UTC (ended 07:51) · **Lead 2 · 3 Nov 07:51 UTC (current)** · standby **Lead 3 · 3 Nov · standby** (`local_651babba-ec86-4923-8b51-09c061d523d9`), the only one: start "Lead 4 · 3 Nov · standby" at the founder's next typed turn.
+* **Merged since 07:51:** #659 SH3 (07:59), #677 C6.4 check (08:26), #673 C11.14 replay (08:50), #663 I1 test-once + notes-only path + builders may comment (08:57), #666 C4.6 (08:33), #683 C1.5 (09:03). #665 closed.
+* **Queue at 09:16:** batches checking #688 (C4.2) and #674 + #675 + #676 + #661 + #680; #693 (C11.14 live round) approved. **Red, sent back to their builders:** #691 F5 C3.8 (new IMM 5707 rule breaks check_screen02_slice2's setup), #689 F4 C11.11 (check_c18_copies uses the removed checklist line), #686 F6 C6.12 (pack 24/28 in CI).
+* **Paid (P-295):** US$13.52 of 50 (C3.4 1.24, C11.14 15 checker rounds 12.29; ledger). Next: C3.4 rerun after F4's fix; C11.7 after F4's intake fix and a quote.
+* **Lanes' next:** F1 StepRunner.launch fix (P-297 (7)) → bulk-door rule → QA-154 · F2 C2.4 → B1 release gate (P-297 (3)) → QA-144 · F4 #689 fix → C3.4 fix → C11.7 intake → QA-153 · F5 #691 fix → QA-172 → QA-152 · F6 #686 fix, then stops · M1 ends after #680; C7.7 part 2 (Paper lines with the barcode page) needs a fresh runtime session at the founder's next typed turn · E0, V1, V4 idle after their reports (the founder is asked whether testers stop, weekly plan 62% at 07:50).
+* **Waiting for the founder:** the weekly-plan answer (recommendation: no new builders; testers stop after their next two tasks); a typed turn so the Lead can start Lead 4 standby and the C7.7 part 2 session.
+
+## Hand-over from Lead 1 at 07:58 UTC (read first, Lead 2)
+* **Leads:** Lead 1 ended (context 231k). Lead 2 is current; Lead 3 · 3 Nov · standby (`local_651babba-ec86-4923-8b51-09c061d523d9`) is the only standby, so at the founder's next typed turn start a new standby "Lead 4 · 3 Nov · standby" (P-286). You cannot start sessions until the founder types to you.
+* **Weekly plan 62% at 07:50 UTC (56% at 06:00):** about 3 points an hour with 13 cloud sessions, the Mac paid runner and the Lead; resets 8 Nov 17:00 UTC. Raise it with the founder: at this rate the plan runs out in about 13 hours. Recommendation: no new builders; read-only testers stop after their next two tasks.
+* **Paid (P-295, US$50 total):** US$2.18 spent at ~07:50 (ledger). Mac paid runner **PR1** (`local_b2143a44-0ddc-49a2-be23-08d7775d1ee3`): C3.4 ran US$1.24, unusable (#669; F4 fixes, then a rerun); C11.14 checker rounds running one by one (#671; needs F1's #673 to pair); C11.8 live switch refused by the Mac's safety check: parked for the founder (type the approval in PR1's chat after F1's QA-154 fix merges); C11.7 needs IMM 5669 and IMM 0008DEP: **founder approved ~07:55 UTC downloading only those two from canada.ca** into official-sources (never committed), relayed to PR1.
+* **CI cancels (P-294):** done 07:20 by exact id (41592543662, 41594130805, 41595310891). Merged records branches still run full CI until I1 (#663) merges.
+* **I1 #663 changes `.claude/settings.json` and `merge-guard.sh` (permissions): read the diff yourself before merging it ahead of the queue (P-214).**
+* **Queue:** #659 (SH3) checking in batch #670 since 07:05; approved and waiting: #661 (C3.2), #666 (C4.6), #673 (C11.14 replay). No product merge since #651 (05:00). Do not merge notes while a batch checks; then merge the notes PRs together: #664 (V1), #667 + #668 (V4), #669 (C3.4 unused runs record), #672 (E0), this hand-over PR. #665 is I1's throwaway test: close it after I1 merges.
+* **Independent re-runs recorded on PRs (for qa's scorecard):** C6.9 15/15 and C6.4 30/30, QA-149 fixed in #408 (qa's check `check_qa_vv_1102_decider.ts` is stale; F6 updates it) (#659 comment). E0 (#672): M2 36/60 green today, not the same set as the re-test: C11.1 and C11.17 now green; C5.2 6/7; C4.10's walk script waits for words no longer on screen; C3.6 green only on the older sample.
+* **Parked for the founder (from V1 #664), one at a time with recommendations:** (1) change watch SA-1B-299/300 against P-65: recommend a listing alert that opens a To review item, never an automatic draft; (2) M4 placement of B11/B13/B14 has no decision: recommend confirming M4, and asking whether B11's biometrics deadline belongs in M3; (3) team placements without a decision (firm overlay, fair share/paging/load gate, past filed forms): recommend one decision line under P-271 and STANDARDS §9. Also V1 (4) for qa: fold P-04 and P-58 into the UX capability, Stand-in chips under C6.11; V1 (6): 29 decision numbers have no line (pointer lines from the older log).
+* **Lanes' current queues (all 13 pushed within 40 minutes of 07:49):** F1: #673 replay fix → bulk-door rule (P-296 (1)) → QA-154 → QA-159 · F4: C11.11 → C3.4 fix (P-296 (3)) → QA-153 · F6: packs #674, #675, C5.4 #676 → stale QA-149 check → C6.9/C6.12 re-runs · M1: after #659 → C7.7 → C8.1 · others as in the table above.
+
 ## Start here (the next tech lead, fresh chat)
-1. Open a new chat in the main copy and type `/lead`. Nothing is running: no Lead, no builder, no qa lane, no timed check. Leads 1–6 are retired (1, 2, 4, 6 archived 3 Nov 05:00–05:30 UTC; Lead 3 and Lead 5 archived last, see below). There is no standby; start one only if the founder wants the P-286 standby pattern again.
+1. Superseded 3 Nov 07:10 UTC: see "Running now" above (the next Lead takes over from a standby). Earlier text: nothing was running: no Lead, no builder, no qa lane, no timed check. Leads 1–6 are retired (1, 2, 4, 6 archived 3 Nov 05:00–05:30 UTC; Lead 3 and Lead 5 archived last, see below). There is no standby; start one only if the founder wants the P-286 standby pattern again.
 2. Read the build review first (`reports/build-review-2026-11-03.html`, sections 1, 7 and 8). Its lessons are marked by strength of evidence; change the way of working only with the founder's OK (P-224) and only on firm evidence (section 7's rule).
 3. **The real score is 36/60, not 52/60.** An independent re-test on main `1a79dbf9` (3 Nov, US$0) re-ran every M2 acceptance pack: 12 rows scored Works fail their own pack, 4 have no runnable pack. Until those are fixed or re-scored, report M2 as "52 scored, 36 confirmed".
 4. Agree the first rows with the founder before starting any builder (one fresh cloud builder per row, `/next <area> <row>`, as before). The proposal below is the tech lead's, not yet the founder's.
@@ -70,7 +110,7 @@ After the fix PRs merge, run the **independent re-test** again (same method as t
 L-SA3 · L-SA6–L-SA11 · G5 (C5.1) · the P-236 rename · C11 · E1–E6 · design-only items · SH3/SH4 contracts go to the product owner with them · the AI "did you mean" in C11.3, C11.13, C3.6 (P-265, P-284).
 
 ## Waiting for the founder
-1. **Archive Lead 3 and Lead 5** once the new Lead has started its sessions and turned keep-awake on (Lead 3's chat keeps the Mac awake until about 07:00 UTC; archiving Lead 3 also archives Lead 5). Nothing is left unsaved.
+1. ✓ Done 3 Nov ~07:15 UTC (founder: "Done, archived"). **Archive Lead 3 and Lead 5** once the new Lead has started its sessions and turned keep-awake on (Lead 3's chat keeps the Mac awake until about 07:00 UTC; archiving Lead 3 also archives Lead 5). Nothing is left unsaved.
 2. On claude.ai/code, archive the cloud lanes left over from Leads 1–4 (all idle; no open PR except #417's old lane).
 3. **Send the SA-01B product owner** the reply drafted on the Mac (`archive/2026-11-02-founder-drafts/`), the SH3 contract (#509), the G-CORE concept (#504) and `design/note-to-sa01b-po-2026-11-02-sqr.md`: the only way G5 and the held parts unblock.
 4. Tell the team they drop their "Fill this screen" (P-245), pending the product owner's ruling.

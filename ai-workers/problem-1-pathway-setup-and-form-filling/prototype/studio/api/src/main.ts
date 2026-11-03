@@ -129,6 +129,7 @@ class DemoController {
   @Get("status") status() { return this.d.status(); }
   @Post("load") load(@Headers("x-actor") a: H, @Body() b: { sample?: string } | null) { return this.d.load(actorOf(a), b); }
   @Post("reset") reset(@Headers("x-actor") a: H, @Body() b: any) { return this.d.reset(actorOf(a), b?.confirm); }
+  @Post("release-with-sources") releaseWithSources(@Headers("x-actor") a: H) { return this.d.releaseWithSources(actorOf(a)); }
 }
 
 @Controller("api")
@@ -194,7 +195,8 @@ class ProblemErrors implements ExceptionFilter {
     }
     // P-179 break m6: a JSON body over the 5 MB limit is refused by the body parser before any route: say so (it was a 500).
     if (e?.type === "entity.too.large" || e?.status === 413) return send(413, "Too large", "This request is larger than the 5 MB the server takes. Nothing was saved or started.");
-    if (e?.code === "P2002") return send(409, "Already exists", "Already in progress or already exists: the database refused a duplicate. Refresh to see the current state.");
+    // C4.2 (QA-125, QA-13): plain words, never "the database": a duplicate is someone else's save at the same moment, or the thing exists already.
+    if (e?.code === "P2002") return send(409, "Already exists", "This already exists, or someone else saved the same thing at the same moment. Reload to see the current state.");
     // A malformed id (not a UUID, or with a NUL byte) is simply not found (review #4, break m5); so is a stored file that
     // is gone or whose folder is not a folder (a download: QA-4, break m5).
     if (e?.code === "P2025" || (/^(ENOENT|ENOTDIR)$/.test(String(e?.code)) && e?.status === 404) || e?.code === "P2023" || e?.name === "NotFoundError" || /Error creating UUID|invalid input syntax for type uuid|invalid byte sequence for encoding/i.test(String(e?.message))) return send(404, "Not found", "Not found (it may have been removed by a reset).");

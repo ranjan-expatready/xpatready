@@ -127,13 +127,19 @@ ok("SH3 sources.ts: a document's holder.spouse facts are the partner's (R4 partn
   const d = documentFacts(S, fam);
   return !!d.get("B")?.get("person.name") && !!d.get("A")?.get("person.name") && !d.get("child-1")?.get("person.name") && !!d.get("A/parent_1")?.get("person.birth_place") && !!d.get("child-2/parent_2")?.get("person.birth_place");
 })());
-ok("SH3 render (c): a deciding fact is keyed by its id only: case.* on the filing; a once-per-case placement does not move it (as before SH3)", (() => {
+ok("C7.7 render (c) pass: an unanswered deciding fact is asked where R5 with its placement says: once per case → on the filing; case.* on the filing", (() => {
   const S = { combination: { key: "t", participants: [] }, canonical_fields: [{ id: "person.flag", value_type: "yes_no" }, { id: "case.mode", value_type: "code" }], derived_fields: [], field_maps: [], checks: [], rules: [], document_types: [], document_requirements: [],
     sections: [{ id: "s1", title: "S" }], placements: [{ fact: "person.flag", section_id: "s1", repeats: "once_per_case", collected_from: "client_questionnaire" }, { fact: "case.mode", section_id: "s1", repeats: "once", collected_from: "client_questionnaire" }],
     forms: [{ form_number: "F1", who: "principal_applicant", status: "conditional", condition: { op: "and", args: [{ op: "eq", field: "person.flag", value: true }, { op: "eq", field: "case.mode", value: "x" }] } }] } as unknown as Snapshot;
   const r = render.render(S, single, new Map());
   const about = (f: string) => r.deciders.filter((x) => x.fact === f).map((x) => x.about);
-  return same(about("person.flag"), ["A"]) && same(about("case.mode"), [FILING]);
+  return same(about("person.flag"), [FILING]) && same(about("case.mode"), [FILING]);
+})());
+ok("C7.7 render (c) fail: a person fact placed once (not once per case) is still asked of the person, never on the filing", (() => {
+  const S = { combination: { key: "t", participants: [] }, canonical_fields: [{ id: "person.flag", value_type: "yes_no" }], derived_fields: [], field_maps: [], checks: [], rules: [], document_types: [], document_requirements: [],
+    sections: [{ id: "s1", title: "S" }], placements: [{ fact: "person.flag", section_id: "s1", repeats: "once", collected_from: "client_questionnaire" }],
+    forms: [{ form_number: "F1", who: "principal_applicant", status: "conditional", condition: { op: "eq", field: "person.flag", value: true } }] } as unknown as Snapshot;
+  return same(render.render(S, single, new Map()).deciders.filter((x) => x.fact === "person.flag").map((x) => x.about), ["A"]);
 })());
 
 ok("SH3 render (review r2-m1): an answered deciding fact placed once per case stays on the person; the placement asks it once on the filing too", (() => {
@@ -155,9 +161,41 @@ ok("SH3 render (review r3-m1): an answered case.* deciding fact is kept on the f
   return same(r2, [FILING]);
 })());
 
+// ---- C7.7 (contract item (a)): form and check conditions are decided by R3, like a document line's
+{
+  const base = { combination: { key: "t", participants: [] }, canonical_fields: [{ id: "person.employed", value_type: "yes_no" }], derived_fields: [], field_maps: [], rules: [], document_types: [], document_requirements: [],
+    sections: [{ id: "s1", title: "S" }], placements: [{ fact: "person.employed", section_id: "s1", repeats: "once", collected_from: "client_questionnaire" }] };
+  const spouseForm = { ...base, checks: [], forms: [{ form_number: "F1", who: "principal_applicant", status: "conditional", condition: { subjectKind: "SPOUSE", op: "eq", field: "person.employed", value: true } }] } as unknown as Snapshot;
+  const k = (entries: [string, unknown][]): Known => new Map(entries.map(([key, value]) => [key, { value, status: "answered" as const, source: "t" }]));
+  const f1 = (people: PersonOnFiling[], known: Known) => render.render(spouseForm, people, known).forms.find((x) => x.form === "F1" && x.person === "A");
+  ok("C7.7 R3 form pass: a principal's form whose condition is about the spouse is decided on the spouse's answer (spouse employed → needed, though the principal is not)", f1(fam, k([["B|person.employed", true], ["A|person.employed", false]]))?.applies === true);
+  ok("C7.7 R3 form fail: the principal's own Yes does not decide a spouse condition (spouse not employed → not needed)", f1(fam, k([["B|person.employed", false], ["A|person.employed", true]]))?.applies === false);
+  ok("C7.7 R3 form fail: with no spouse on the case the form is not needed (R3: none → not needed), never decided on the principal", f1(single, k([["A|person.employed", true]]))?.applies === false);
+  ok("C7.7 R3 form: unanswered, the deciding question is asked of the spouse, not the principal", same(render.render(spouseForm, fam, new Map()).deciders.filter((x) => x.fact === "person.employed").map((x) => x.about), ["B"]));
+  const check = (kind: string | undefined) => ({ ...base, forms: [], checks: [{ id: "c1", group: "section", severity: "warning", applies_to: "x", message: "m", condition: { ...(kind ? { subjectKind: kind } : {}), op: "eq", field: "person.employed", value: true } }] }) as unknown as Snapshot;
+  const fired = (kind: string | undefined, people: PersonOnFiling[], known: Known) => render.render(check(kind), people, known).checks.filter((x) => x.id === "c1").map((x) => x.person).sort();
+  const allYes = k([["A|person.employed", true], ["B|person.employed", true], ["child-1|person.employed", true], ["R|person.employed", true]]);
+  const withRep = [P("A", "principal"), P("B", "spouse_or_partner"), P("child-1", "child"), P("R", "representative", true)];
+  ok("C7.7 R3 check pass: a principal check fires once, on the principal, though the spouse and the child answered the same", same(fired("PRINCIPAL", withRep, allYes), ["A"]));
+  ok("C7.7 R3 check fail: a spouse check never fires for the principal or a child (before: it read each person's own answer)", same(fired("SPOUSE", withRep, allYes), ["B"]));
+  ok("C7.7 R3 check fail: a check with no subject kind fires for each applicant, never for an applying representative (R2 each_applicant)", same(fired(undefined, withRep, allYes), ["A", "B", "child-1"]));
+  ok("C7.7 R3 check fail: a DOCUMENT check is decided on a document's contents, never on answers", same(fired("DOCUMENT", withRep, allYes), []));
+  const agedForm = { ...base, canonical_fields: [...base.canonical_fields, { id: "person.date_of_birth", value_type: "date" }], checks: [], forms: [{ form_number: "F2", who: "each_applicant", status: "conditional", min_age: 18, condition: { subjectKind: "PRINCIPAL", op: "eq", field: "person.employed", value: true } }] } as unknown as Snapshot;
+  const f2 = (known: Known) => render.render(agedForm, fam, known, { today: new Date("2026-11-03") });
+  const f2b = f2(k([["A|person.employed", true]]));
+  ok("C7.7 R3 form with a minimum age: the role condition is the principal's, the age the holder's: the spouse's row waits for the spouse's date of birth only", f2b.forms.find((x) => x.form === "F2" && x.person === "B")?.applies === "cannot_tell" && same(f2b.deciders.filter((d) => /F2 applies to B\b/.test([...d.decides].join())).map((d) => `${d.about}|${d.fact}`), ["B|person.date_of_birth"]));
+  ok("C7.7 R3 form with a minimum age (fail): the principal not employed → not needed for anyone, whatever their age", f2(k([["A|person.employed", false], ["B|person.date_of_birth", "1980-01-01"]])).forms.filter((x) => x.form === "F2").every((x) => x.applies === false));
+  ok("C7.7 R3 check with no applicant (only a representative, applying): a check with no kind is decided on the filing, never on the representative", same(fired(undefined, [P("R", "representative", true)], k([["R|person.employed", true]])), []) && same(render.render(check(undefined), [P("R", "representative", true)], k([["case|person.employed", true]])).checks.map((x) => x.person), [FILING]));
+  ok("C7.7 R3 check pass: a CASE check is decided once, on the filing", same(render.render(check("CASE"), withRep, k([["case|person.employed", true]])).checks.map((x) => x.person), [FILING]));
+}
+
 // ---- The four places call the resolver; the engine part is lift-ready
 const src = (f: string) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
 ok("SH3: render.ts re-exports the resolver's functions (no copy left)", render.aboutOf === R.aboutOf && render.subjectsFor === R.subjectsFor && render.peopleFor === R.peopleFor && render.formSigners === R.formSigners && render.conditionSubjects === R.conditionSubjects && render.lineHolders === R.lineHolders && !/function (aboutOf|subjectsFor|peopleFor|formSigners|factsOf)\b/.test(src("engine/render.ts")));
+// M1 (P-291 (6)): render.ts keeps no inline copy of R2's each_applicant and no "case" literal for the filing (FILING).
+const copyInRender = (t: string) => /\.applies && \w+\.role !== "representative"/.test(t) || /"case"/.test(t);
+ok("SH3 M1: render.ts takes each_applicant and the filing from the resolver (no inline copy, no \"case\" literal)", !copyInRender(src("engine/render.ts")));
+ok("SH3 M1 (failing case): the check catches the copy and the literal it guards against", copyInRender('const applicants = people.filter((x) => x.applies && x.role !== "representative")') && copyInRender('if (about === "case") return'));
 ok("SH3: people.ts, sources.ts, fact-sources.ts and form-lines.ts call the resolver and keep no copy", /from "\.\/resolver\.ts"/.test(src("engine/people.ts")) && !/const NAMES\b/.test(src("engine/people.ts"))
   && /from "\.\/resolver\.ts"/.test(src("engine/sources.ts")) && !/const (spouseOf|roleOf)\b/.test(src("engine/sources.ts"))
   && /sourceKey/.test(src("api/src/fact-sources.ts")) && !/`\$\{\w*\.?role\}\|\$\{\w*\.?fact\}`/.test(src("api/src/fact-sources.ts"))
