@@ -75,11 +75,19 @@ async function openDialog(p: Page) {
     const options = await d.getByLabel("Combination (released)").locator("option").allTextContents();
     ok("C6.1-B1-6 pass (browser): a Live release is offered by name and release, and Open case is enabled", options.some((o) => o.startsWith(`${row?.combination} · release ${newest}`)) && await d.getByRole("button", { name: "Open case" }).isEnabled() && !(await d.getByTestId("not-ready-for-cases").count()), options);
     await p.screenshot({ path: join(SHOTS, "01-live-offered-1440.png") });
-    await p.keyboard.press("Escape");
 
-    // Not ready: a library field the release reads is retired (as S4).
+    // Not ready: a library field the release reads is retired (as S4) while the dialog is open on it (break m1).
+    await d.getByLabel("Combination (released)").selectOption({ label: options.find((o) => o.startsWith(`${row?.combination} · release ${newest}`))! });
+    await d.getByLabel("Case reference").fill(`B1-${Date.now().toString(36)}-s`); await d.getByLabel(/Principal applicant/).fill("Sample Client B1");
     sql(`update canonical_field set status='RETIRED' where canonical_field_key='${FIELD}'`); audited("retired");
     try {
+      const refused = p.waitForResponse((q) => q.url().endsWith("/api/runtime/cases") && q.request().method() === "POST", { timeout: 30_000 });
+      await d.getByRole("button", { name: "Open case" }).click();
+      const st = (await refused).status();
+      await d.getByTestId("not-ready-for-cases").waitFor({ timeout: 30_000 });
+      const after = await d.getByLabel("Combination (released)").locator("option").allTextContents();
+      ok("C6.1-B1-16 fail (break m1): a release that stops being ready while the dialog is open is refused (409), and the dialog then stops offering it and names it", st === 409 && !after.some((o) => o.startsWith(`${row?.combination} · release`)) && ((await d.getByTestId("not-ready-for-cases").textContent()) ?? "").includes(`${row?.combination} · release ${newest}`), { st, after });
+      await p.keyboard.press("Escape");
       l = await list();
       row = l.rows.find((x) => x.combination_id === vv);
       const before = cases();
@@ -114,6 +122,14 @@ async function openDialog(p: Page) {
       await axe(p, "the dialog with no release ready for cases (400 px)");
       await p.screenshot({ path: join(SHOTS, "04-none-ready-400.png") });
       await p.keyboard.press("Escape"); await p.setViewportSize({ width: 1440, height: 900 }); await p.unroute("**/api/runtime/openable");
+      // Break m2: a 200 that is not a list (a proxy's HTML page) is "could not load", not a blank app.
+      await p.route("**/api/runtime/openable", (q) => q.fulfill({ status: 200, contentType: "text/html", body: "<html><body>proxy</body></html>" }));
+      const errsBefore = errs.length;
+      await p.goto(`${BASE}/cases`); await p.waitForLoadState("networkidle"); await p.getByRole("button", { name: "Open a case" }).click();
+      d = p.getByRole("dialog", { name: "Open a case" });
+      await d.getByText("Could not load the released combinations").waitFor({ timeout: 30_000 });
+      ok("C6.1-B1-17 fail (break m2): a 200 answer that is not a list shows \"Could not load\" with Open case disabled, and no page error", await d.getByRole("button", { name: "Open case" }).isDisabled() && errs.length === errsBefore, errs.slice(errsBefore));
+      await p.keyboard.press("Escape"); await p.unroute("**/api/runtime/openable");
     } finally {
       sql(`update canonical_field set status='${was}' where canonical_field_key='${FIELD}'`); audited("restored");
     }

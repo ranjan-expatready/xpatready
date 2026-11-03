@@ -138,6 +138,8 @@ export class Runtime {
    *  release that is not startable, and the dialog now says so before the officer tries. Staff only. */
   async openable(actor: Actor): Promise<OpenableRelease[]> {
     need(actor, "case");
+    // The same people as opening a case (review minor): firm staff only.
+    if (!firmOfActor(actor)) fail(`${actor.name} (simulated) is not staff of a firm, so cannot open a case.`, HttpStatus.FORBIDDEN);
     const workspaceId = await this.ws.id();
     const rows = await this.db.configRelease.findMany({ where: { workspaceId, combination: { retiredAt: null } }, orderBy: { version: "desc" }, distinct: ["combinationId"], include: { combination: { select: { label: true } } } });
     const out = await Promise.all(rows.map(async (r) => {

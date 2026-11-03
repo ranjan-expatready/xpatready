@@ -111,26 +111,30 @@ function NewCaseDialog({ close }: { close: () => void }) {
   const releases = useApi<OpenableRelease[]>(["runtime", "openable"], "/runtime/openable");
   const nav = useNavigate();
   const key = React.useMemo(() => crypto.randomUUID(), []);
-  const combos = (releases.data ?? []).filter((r) => r.startable);
-  const notReady = (releases.data ?? []).filter((r) => !r.startable);
+  // Break m2: a body that is not a list (a proxy's HTML page) reads as "could not load", never a blank app.
+  const rows = Array.isArray(releases.data) ? releases.data : [];
+  const loadFailed = releases.isError || (releases.isSuccess && !Array.isArray(releases.data));
+  const combos = rows.filter((r) => r.startable);
+  const notReady = rows.filter((r) => !r.startable);
   const [f, setF] = React.useState({ combinationId: "", reference: "", principal: "", clientActor: "user-P" });
   const firm = useFirm();
   const [team, setTeam] = React.useState<{ representative: string; officer: string }>({ representative: "", officer: "" });
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const create = useAction(() => api<CaseInfo>("/runtime/cases", { method: "POST", json: { combinationId: f.combinationId || combos[0]?.combination_id, reference: f.reference, clientActor: f.clientActor, principal: { displayName: f.principal }, ...(team.representative ? { representative: team.representative } : {}), ...(team.officer ? { caseOfficers: [team.officer] } : {}), idempotencyKey: key } }), { success: "Case opened", invalidate: [["runtime"]], onDone: (c) => nav(`/cases/${c.id}`) });
-  const submit = () => create.mutate(undefined, { onError: (e) => { const p = e instanceof ApiError ? e.problem.errors ?? [] : []; setErrors(Object.fromEntries(p.map((x) => [x.field.split(".")[0], x.message]))); } });
+  // Break m1: a 409 (the release stopped being ready while the dialog was open) reloads the list, so it is not offered again.
+  const submit = () => create.mutate(undefined, { onError: (e) => { if (e instanceof ApiError && e.status === 409) void releases.refetch(); const p = e instanceof ApiError ? e.problem.errors ?? [] : []; setErrors(Object.fromEntries(p.map((x) => [x.field.split(".")[0], x.message]))); } });
   return (
     <Dialog open onOpenChange={(o) => { if (!o) close(); }} title="Open a case" description="The case works from the combination's latest release, frozen now: a later release never changes it." guard
-      footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={create.isPending} disabled={!combos.length} title={!combos.length && !releases.isLoading ? (notReady.length ? "No released combination is ready for new cases yet" : "Nothing is released yet") : undefined} onClick={submit}>Open case</Button></>}>
+      footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={create.isPending} disabled={!combos.length} title={!combos.length && !releases.isLoading && !loadFailed ? (notReady.length ? "No released combination is ready for new cases yet" : "Nothing is released yet") : undefined} onClick={submit}>Open case</Button></>}>
       <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (combos.length) submit(); }}>
-        {releases.isLoading ? <Skeleton className="h-9 w-full" /> : releases.isError ? <Notice tone="warn" title="Could not load the released combinations">{releases.error instanceof Error ? releases.error.message : "Try again."}</Notice> : !combos.length ? (notReady.length ? null : <Notice tone="warn" title="Nothing is released yet">A case opens only on a released combination.</Notice>) : (
+        {releases.isLoading ? <Skeleton className="h-9 w-full" /> : loadFailed ? <Notice tone="warn" title="Could not load the released combinations">{releases.error instanceof Error ? releases.error.message : "Close this and try again."}</Notice> : !combos.length ? (notReady.length ? null : <Notice tone="warn" title="Nothing is released yet">A case opens only on a released combination.</Notice>) : (
           <Field label="Combination (released)" error={errors.combinationId}>
             <Select value={f.combinationId || combos[0].combination_id} onChange={(e) => setF({ ...f, combinationId: e.target.value })}>{combos.map((c) => <option key={c.combination_id} value={c.combination_id}>{c.combination} · release {c.version}</option>)}</Select>
           </Field>
         )}
         {notReady.length ? (
           <Notice tone="warn" title={combos.length ? "Released, not ready for new cases" : "No released combination is ready for new cases yet"}>
-            <ul className="space-y-1" data-testid="not-ready-for-cases">{notReady.map((r) => <li key={r.combination_id}><span className="font-medium">{r.combination} · release {r.version}</span>: {r.why}</li>)}</ul>
+            <ul className="space-y-1 [overflow-wrap:anywhere]" data-testid="not-ready-for-cases">{notReady.map((r) => <li key={r.combination_id}><span className="font-medium">{r.combination} · release {r.version}</span>: {r.why}</li>)}</ul>
           </Notice>
         ) : null}
         <Field label="Case reference" hint="Your firm's reference, at least 3 characters" error={errors.reference}><Input value={f.reference} onChange={(e) => setF({ ...f, reference: e.target.value })} /></Field>
