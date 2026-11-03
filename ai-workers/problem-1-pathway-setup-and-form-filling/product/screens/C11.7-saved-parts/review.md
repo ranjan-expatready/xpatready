@@ -70,3 +70,48 @@ No separate journey report file: the caller limited writes to this file.
 **Not checked:** a retry run, keyboard use, and 1024 px / 200 % zoom.
 
 **Verdict: Request changes.** Blockers: none. Majors: 1 (check_queue_tx), 2 (the form's own Saved dialog). Minors: 3, 4, 5, 6.
+
+## Opus round 2 (diff only: `eacb7da94..2c09cb6e2`, HEAD 2c09cb6e2)
+All runs were on my own copy `forms_rv` :4473 (stopped afterwards), with the stand-in launcher. The live switch was never set. US$0.
+
+| Check | Result |
+|---|---|
+| `check_forms_saved_parts.ts 4473 xr_studio_forms_rv` | 14/14 pass. `fake-launch.json` is now written, so any launch would be logged; no log line was written. |
+| `check_queue_tx.ts 4473 forms_rv` | 8/8 pass (sixteen forms; the IMM 5645 message parses as "9 fields") |
+| Browser, 1024 px, keyboard only: IMM 5645 (READ, 4/4 parts saved) → Draft with AI → Enter | Dialog opens on Saved, `data-saved-parts=4/4`, button "Use Saved (US$0)", no sideways scroll. Enter → REPLAY COMPLETED, US$0: "Saved AI answers of its 4 parts, 4 near-duplicate names flagged (no model call, US$0). 119 of 139 …". Launcher never asked. |
+| Builder screenshots 4/4 and 3/4 at 1440 px | 3/4 parts: Saved is disabled with "3 of its 4 parts only … never half-filled". The live-off notice no longer points to Saved. |
+
+How each finding was closed:
+- **Major 1: closed.** `SAVED` now lists `imm5645e.pdf` (b7b5ba43e).
+- **Major 2: closed.** `draftOptions` adds `saved_parts`, worked out only when there is no usable whole-form run. The dialog derives `replayOpen` and launches with no `runFile`; the server then takes the parts path. `runs.ts savedInstead` now also counts a complete set of saved parts.
+- **m3: closed.** The hook now requires an isolated folder, `usesFakeLauncher()` and `!aiLive()`.
+- **m4: closed.** The scenario file is written before the first count, so a launch would be logged.
+- **m5: closed.** The REPLAY step message names its parts and the near-duplicates.
+- **m6: closed.** The plan no longer skips the parts for an unread form. `runDraftStep` reads the form first, and `draftSplit` then works from the inventory it just read. I checked this in the code only.
+
+Still open (Minor, not blocking):
+- **Breaker m2: Retry is still offered for a Saved-parts step whose part file is gone.** It fails the same way up to the attempt limit, at US$0.
+- **Cost of opening the dialog.** `draftOptions` now runs `draftSplit` each time it opens (one query and up to N saved-run reads per part). This is fine at sample scale.
+
+New issues: none found in this diff.
+
+Journey score, round 2: **8.5 / 10, a pass.**
+
+| Criterion | Score |
+|---|---|
+| task completed | 1 |
+| next step obvious | 1 |
+| plain words | 1 |
+| feedback and state | 1 |
+| correct data | 1 |
+| error recovery | ½ (Retry repeats a certain failure) |
+| accessibility and sizes | ½ (keyboard and 1024 px checked; no axe run, no 200 % zoom) |
+| speed | 1 |
+| visual quality | 1 |
+| trust and sources | ½ |
+
+The trust point is a judgement call: the dialog says "an earlier real answer" (singular) above the parts line. That is fine as worded.
+
+**Verdict: Approve** (commit 2c09cb6e2). Blockers: none. Majors: none. Minors: breaker m2 (Retry on a part that cannot be recovered).
+
+Merge note: #746, which holds the four run files, must merge first. Without them this PR's checks stop with exit 2, which counts as FAIL.
