@@ -252,19 +252,24 @@ export function FormFieldDecisions({ jobId, editionId, readOnly = false, focusOn
   const heading = React.useRef<HTMLHeadingElement>(null);
   React.useEffect(() => { if (focusOnLoad && q.data?.edition) { heading.current?.focus(); heading.current?.scrollIntoView({ block: "start" }); } }, [focusOnLoad, q.data?.edition]);
   if (!q.data?.edition) return null;
-  const open_ = q.data.fields.filter((f) => f.outcome === "unresolved");
-  const decided = q.data.fields.filter((f) => f.outcome === "by_hand" || (f.outcome === "not_a_fact" && f.status === "DRAFT"));
+  // C3.8 [IRCC-F08] (Devin on #691): a Background question left as "not a fact" (decided before the rule, or so drafted)
+  // is listed again, so the error it raises on Review and release can be cleared here.
+  const unanswered = (f: { outcome: string; background?: boolean }) => !!f.background && (f.outcome === "not_a_fact" || f.outcome === "never_filled");
+  const open_ = q.data.fields.filter((f) => f.outcome === "unresolved" || unanswered(f));
+  const decided = q.data.fields.filter((f) => !unanswered(f) && (f.outcome === "by_hand" || (f.outcome === "not_a_fact" && f.status === "DRAFT")));
   return (
     <section aria-labelledby="ff-decide" className="space-y-3 rounded-xl border border-border bg-surface-raised p-4" data-form-field-decisions>
       <div><h2 id="ff-decide" ref={heading} tabIndex={-1} className="font-semibold outline-none">Form fields with no decision ({open_.length})</h2>
         <p className="text-sm text-text-muted">Each form field is mapped to a shared field, marked "not a fact" (nothing is filled from case facts), or "filled by hand" with a reason. {open_.some((f) => !f.carried) ? "Release waits until every new one is decided." : open_.length ? "These come from an earlier release: decide them when you can." : "Every form field has a decision."}</p></div>
       <ul className="divide-y divide-border text-sm">{open_.slice(0, 50).map((f) => (
         <li key={f.dataPath} className="py-2" data-form-field={f.dataPath}>
-          <div className="flex flex-wrap items-center justify-between gap-2"><span><b className="font-medium">{f.caption || f.dataPath}</b>{f.heading ? <span className="text-text-muted"> · {f.heading}</span> : null}{f.carried ? <Pill className="ml-2">Not decided yet (from an earlier release)</Pill> : null}{f.reason ? <span className="block text-xs text-text-muted">{f.reason}</span> : null}</span>
-            {readOnly ? null : <Button size="sm" variant="secondary" aria-expanded={open === f.dataPath} onClick={() => { setOpen(open === f.dataPath ? null : f.dataPath); setReason(""); }}>Decide</Button>}</div>
+          <div className="flex flex-wrap items-center justify-between gap-2"><span><b className="font-medium">{f.caption || f.dataPath}</b>{f.heading ? <span className="text-text-muted"> · {f.heading}</span> : null}{f.carried ? <Pill className="ml-2">Not decided yet (from an earlier release)</Pill> : null}{unanswered(f) ? <Pill className="ml-2">Marked "not a fact": decide again</Pill> : null}{f.reason ? <span className="block text-xs text-text-muted">{f.reason}</span> : null}</span>
+            {readOnly ? null : <Button size="sm" variant="secondary" aria-expanded={open === f.dataPath} onClick={() => { setOpen(open === f.dataPath ? null : f.dataPath); setReason(""); setKind(f.background ? "by_hand" : "not_a_fact"); }}>Decide</Button>}</div>
           {open === f.dataPath ? (
             <div className="mt-2 grid gap-2 md:grid-cols-[auto_1fr_auto] md:items-end">
-              <Field label="Decision"><Select value={kind} onChange={(e) => setKind(e.target.value === "by_hand" ? "by_hand" : "not_a_fact")}><option value="not_a_fact">Not a fact</option><option value="by_hand">Filled by hand</option></Select></Field>
+              {/* C3.8 [IRCC-F08]: a Background information question must be answered, so "Not a fact" is not offered. */}
+              {f.background ? <p className="text-xs text-text-muted md:col-span-3" data-background-note>A Background information question: IRCC returns an application with one unanswered, so it is never "not a fact". Map it to a shared field, or say who fills it by hand.</p> : null}
+              <Field label="Decision"><Select value={kind} onChange={(e) => setKind(e.target.value === "by_hand" || f.background ? "by_hand" : "not_a_fact")}>{f.background ? null : <option value="not_a_fact">Not a fact</option>}<option value="by_hand">Filled by hand</option></Select></Field>
               <Field label="Reason"><Input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} placeholder={kind === "by_hand" ? "Who fills it and why" : "Signature, office use, a document…"} /></Field>
               <Button size="sm" busy={decide.isPending} onClick={() => decide.mutate(f.dataPath)}>Save</Button>
             </div>

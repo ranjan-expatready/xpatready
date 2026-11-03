@@ -110,10 +110,12 @@ const item = (payload: any, over: any = {}) => ({ kind: payload.kind, runId: RUN
   // ─────────────────── decide: landers, identity at approval, no in-place edit
   e = await refused(() => P.decide(db, audit, A, ws, [okId], { action: "reject" }));
   ok("C11.14 decide fail: a reject without a reason is refused (400), the item stays waiting", e.status === 400 && sql(`select status from proposal_item where id = '${okId}'`) === "waiting", e);
-  const d1 = await P.decide(db, audit, A, ws, [okId, listId], { action: "accept" });
-  const landed = sql(`select string_agg(c.kind || ':' || c.status || ':' || (c.batch_id = '${d1.batchId}')::text || ':' || (c.proposal_item_id is not null)::text, ',' order by c.kind) from library_change c where c.batch_id = '${d1.batchId}'`);
+  // P-299: a new shared field is accepted on its own, so the field and the list are two decisions.
+  const dF = await P.decide(db, audit, A, ws, [okId], { action: "accept" });
+  const d1 = await P.decide(db, audit, A, ws, [listId], { action: "accept" });
+  const landed = sql(`select string_agg(c.kind || ':' || c.status || ':' || (c.batch_id in ('${d1.batchId}', '${dF.batchId}'))::text || ':' || (c.proposal_item_id is not null)::text, ',' order by c.kind) from library_change c where c.batch_id in ('${d1.batchId}', '${dF.batchId}')`);
   ok("C11.14 decide pass: accepting lands a draft field and a draft list, each with an ADD waiting for a second person carrying the batch and the item", landed === "answer_list:WAITING:true:true,field:WAITING:true:true"
-    && sql(`select status from canonical_field where canonical_field_key = '${d1.items.find((x) => x.id === okId)!.landedAs}'`) === "DRAFT" && sql(`select status from proposal_item where id = '${okId}'`) === "accepted", [landed, d1]);
+    && sql(`select status from canonical_field where canonical_field_key = '${dF.items.find((x) => x.id === okId)!.landedAs}'`) === "DRAFT" && sql(`select status from proposal_item where id = '${okId}'`) === "accepted", [landed, d1]);
   e = await refused(() => P.decide(db, audit, A, ws, [okId], { action: "reject", reason: "changed my mind" }));
   ok("C11.14 decide fail: an accepted item is not decided again in place (409)", e.status === 409 && /revision/.test(e.message), e);
   const sec = (label: string) => { const p = { kind: "section", label, aliases: [], fieldKeys: [] }; return item(p, { identity: { key: P.identityKeyOf(p as any, ""), near: [], nearReason: null } }); };
@@ -174,8 +176,11 @@ const item = (payload: any, over: any = {}) => ({ kind: payload.kind, runId: RUN
   const ED = "IMM 1111 (02-2026)", combo = sql("select id from combination limit 1");
   const inEd = (it: any) => ({ ...it, scope: { formEdition: ED, combinationId: null } });
   const reading = (label: string, words: string) => ({ reading: words, payload: { kind: "field", label, aliases: [], meaning: `What ${label} means on the form.`, valueType: "text", subject: "person", formBox: null }, from: "replay", runFile: "runs/test.json", costUsd: 0 });
+  // P-299: a new shared field is never accepted with others, so the Ready items accepted together below are new answer
+  // lists: they still land on the library with an ADD for a second person, so the batch, its Undo and its approval stay proven.
+  const listQ = (label: string, codes: string[]) => { const p = { kind: "answer_list", label, values: codes.map((c) => ({ code: c, label: c.toUpperCase() })) }; return inEd(item(p, { identity: { key: P.identityKeyOf(p as any, ""), near: [], nearReason: null } })); };
   const [q1, q2, qc, qd, qr] = await P.insertProposals(db, ws, [
-    inEd(field("Queue ready one")), inEd(field("Queue ready two")),
+    listQ("Queue ready one", ["qq_one_a", "qq_one_b"]), listQ("Queue ready two", ["qq_two_a", "qq_two_b"]),
     inEd(field("Queue check one", { confidence: "check", reason: "A rule failed: the quote was not found in the file.", rules: [{ rule: "quote_found", passed: false, why: "Not in the file." }] })),
     inEd(field("Queue decide one", { confidence: "decide", agreement: "differ", reason: "The two readings differ on the name.", rounds: { draft: reading("Queue decide one", "Family name of the applicant"), check: reading("Queue decided by checker", "Surname as on the passport") } })),
     inEd(field("Queue rules one", { origin: "rules" })),
@@ -208,7 +213,17 @@ const item = (payload: any, over: any = {}) => ({ kind: payload.kind, runId: RUN
   ok("C11.14 undo pass (route): the person who decided undoes the whole batch with one Undo; both wait again", r.status === 201 && r.body.undone === 2 && sql(`select count(*) from library_change where batch_id = '${bulk.batchId}'`) === "0", r.body);
   // QA-159 (G-CORE B1): two unrelated names, so neither is a near duplicate of "Queue ready one" / "Queue ready two" in
   // the library (one name holding every word of another is now never Ready).
-  const [q1b, q2b] = await P.insertProposals(db, ws, [inEd(field("Second batch item alpha")), inEd(field("Second batch item beta"))]);
+  const [q1b, q2b] = await P.insertProposals(db, ws, [listQ("Second batch item alpha", ["qq_alpha_a", "qq_alpha_b"]), listQ("Second batch item beta", ["qq_beta_a", "qq_beta_b"])]);
+  // P-299 fail: two Ready new shared fields of an edition draft are never accepted together (409); each alone is fine.
+  const ED2 = "IMM 2222 (02-2026)", inEd2 = (it: any) => ({ ...it, scope: { formEdition: ED2, combinationId: null } }); // its own group: the counts of ED's stay
+  const [nf1, nf2] = await P.insertProposals(db, ws, [inEd2(field("Queue new field one")), inEd2(field("Queue new field two"))]);
+  r = await call("POST", "/review/proposals/decide", { ids: [nf1, nf2], action: "accept" }, "user-C");
+  ok("C11.14 bulk fail (P-299): two Ready new shared fields from an edition draft are refused together (409, says a new shared field is decided on its own); both stay waiting", r.status === 409 && /decided on its own/.test(r.body.message) && sql(`select string_agg(status, ',') from proposal_item where id in ('${nf1}', '${nf2}')`) === "waiting,waiting", r.body);
+  r = await call("GET", `/review/proposals?group=${encodeURIComponent(`edition:${ED2}`)}`);
+  const nfView = [...(r.body.group?.bands.ready ?? [])].find((x: any) => x.id === nf1);
+  ok("C11.14 bulk fail (P-299): its box says why it cannot be ticked", /decided on its own/.test(nfView?.bulk_why ?? ""), nfView?.bulk_why);
+  r = await call("POST", "/review/proposals/decide", { ids: [nf1], action: "accept" }, "user-C");
+  ok("C11.14 pass (P-299): a Ready new shared field is accepted on its own and lands with its ADD for a second person", r.status === 201 && sql(`select count(*) from library_change where batch_id = '${r.body.batchId}' and status = 'WAITING'`) === "1", r.body);
   r = await call("POST", "/review/proposals/decide", { ids: [q1b, q2b], action: "accept" }, "user-C");
   const batch = r.body.batchId;
   sql("insert into audit_event (id, workspace_id, actor, action, entity, entity_key, summary) select gen_random_uuid(), id, 'user-A', 'created', 'test', 'p149-1b', 'test setup' from workspace where key='demo'");
@@ -249,7 +264,9 @@ const item = (payload: any, over: any = {}) => ({ kind: payload.kind, runId: RUN
   // before its draft is applied); it is rejected or edited on its page.
   r = await call("GET", `/review/proposals?group=${encodeURIComponent("edition:IMM 0000 (01-2026)")}`);
   const fmView = [...(r.body.group?.bands.ready ?? []), ...(r.body.group?.bands.check ?? []), ...(r.body.group?.bands.decide ?? [])].find((x: any) => x.id === fm2);
-  ok("C11.13 queue pass (P-288 (2)): a Ready field-map item is listed with the link to its form-field page and may be chosen in bulk", fmView?.decide_on === `/c/${fmCombo}/jobs/${jobId}` && fmView.bulk_why === null, fmView);
+  // P-294 (tech lead on #661): this item makes a new shared field (outcome NEW), so it is never chosen in bulk; it is still
+  // accepted on its own below. A Ready exact reuse match goes in bulk (check_gcore_b5_field_map_bulk.ts).
+  ok("C11.13 queue pass (P-288 (2), P-294): a Ready field-map item is listed with the link to its form-field page; one that makes a new shared field is not chosen in bulk and says it is decided on its own", fmView?.decide_on === `/c/${fmCombo}/jobs/${jobId}` && /decided on its own/.test(fmView.bulk_why ?? ""), fmView);
   r = await call("POST", "/review/proposals/decide", { ids: [fm2], action: "reject", reason: "not this one" }, "user-B");
   ok("C11.13 queue fail: a field-map item is rejected on its form-field page, not here (409)", r.status === 409 && /form-field page/.test(r.body.message), r.body);
   const fields1 = sql("select count(*) from canonical_field"), changes1 = sql("select count(*) from library_change");
@@ -277,7 +294,7 @@ const item = (payload: any, over: any = {}) => ({ kind: payload.kind, runId: RUN
   const un2 = await P.undo(db, audit, A, ws, dun.batchId);
   ok("C11.14 undo pass (#96 1): an untouched accepted draft is still undone, and its stamp leaves the item's work", un2.undone === 1 && sql(`select status || '|' || coalesce(work ? 'landedStamp', false)::text from proposal_item where id = '${un1}'`) === "waiting|false");
 
-  const [ba1, ba2] = await P.insertProposals(db, ws, [inEd(field("All or nothing one")), inEd(field("All or nothing two"))]);
+  const [ba1, ba2] = await P.insertProposals(db, ws, [listQ("All or nothing one", ["qq_aon_one_a", "qq_aon_one_b"]), listQ("All or nothing two", ["qq_aon_two_a", "qq_aon_two_b"])]); // P-299: lists, not new fields
   r = await call("POST", "/review/proposals/decide", { ids: [ba1, ba2], action: "accept" }, "user-C");
   const aon = r.body.batchId;
   const [c1, c2] = sql(`select id from library_change where batch_id = '${aon}' order by key`).split("\n");

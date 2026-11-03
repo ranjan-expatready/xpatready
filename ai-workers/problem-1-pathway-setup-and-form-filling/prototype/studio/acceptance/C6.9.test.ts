@@ -6,6 +6,10 @@
 // The judgement items on IRCC's list (ties, leaving at the end of the visit) are shown as the officer's judgement,
 // never as gates (FQ-5).
 // Breadth, after Visitor visa: score grids, cut-off bands and what-if advice (SI-2, the team's AG-03).
+// Needs first, on a fresh copy, in this order (else it stops with exit 2, "Setup missing"; tech lead on #677):
+//   zsh studio/tools/isolated.sh accept 4440 start
+//   tsx studio/tests/runtime/setup_visitor_visa.ts 4440 xr_studio_accept
+//   tsx studio/acceptance/lib/setup_vv_m3.ts 4440 xr_studio_accept      (exits 1 on its own known gaps; fine)
 //   tsx studio/acceptance/C6.9.test.ts 4440 xr_studio_accept
 import { CLIENT, OFFICER, answer, call, main, needVisitorVisa, ok, openCase, sql, yearsAgo, inDays } from "./lib/m3.ts";
 

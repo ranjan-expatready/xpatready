@@ -93,8 +93,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const wp = sql(`select id from combination where label='With an LMIA' limit 1`);
     const vvForms = sql(`select string_agg(lineage_key, ',') from (select distinct on (lineage_key) lineage_key, status from combination_form where combination_id='${wp}' order by lineage_key, version desc) x where status <> 'RETIRED'`).split(",").filter(Boolean);
     // Lead note 28 Oct: Load sample puts its guide in the library too (Guide 5487, which the combination reads as a source).
-    const wpFiles = [...vvForms, "Guide 5487"];
-    step("C11.11: Used by = With an LMIA lists exactly the forms it files and the guide it reads (and only those)", vvForms.length > 0 && JSON.stringify((await forms()).sort()) === JSON.stringify(wpFiles.sort()), `${(await forms()).join(",")} | ${wpFiles.join(",")}`);
+    // C11.11 (QA-101): its checklists IMM 5488 and IMM 5905 are sources it reads, never lines it files; Used by lists them.
+    const wpFiles = [...vvForms, "Guide 5487", "IMM 5488", "IMM 5905"];
+    step("C11.11: Used by = With an LMIA lists exactly the forms it files and the guide and checklists it reads (and only those)", !vvForms.includes("IMM 5488") && !vvForms.includes("IMM 5905") && vvForms.length > 0 && JSON.stringify((await forms()).sort()) === JSON.stringify(wpFiles.sort()), `${(await forms()).join(",")} | ${wpFiles.join(",")}`);
     await p.getByLabel("Used by", { exact: true }).selectOption(""); await sleep(300);
     sql(`update gov_form_def set retired_at = now(), retired_by = 'user-A' where form_key = 'IMM 5488'`);
     await open(); await p.getByRole("button", { name: /^Retired/ }).click(); await sleep(400);

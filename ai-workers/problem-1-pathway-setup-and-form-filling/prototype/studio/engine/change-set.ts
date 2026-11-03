@@ -29,6 +29,9 @@ export type Context = {
   riding?: Set<string>;
   /** New fields other proposals are waiting to add (QA-159: a near duplicate of one of them is caught too). */
   pendingNew?: { key: string | null; name: string; meaning?: string | null }[];
+  /** C3.15 BR-6 (tech lead on #295): field names waiting for a second person in open library changes (an Add or a
+   *  rename), by key; a waiting name of the same group (the key's first part) is taken too. */
+  waitingNames?: { key: string; name: string }[];
   /** Per set_condition item: the condition on its target now (R6), or null when the target does not exist. */
   existing?: (unknown[] | null | undefined)[];
   /** Per item: R8's question order on each affected combination's draft, before and after the change. */
@@ -80,7 +83,12 @@ function duplicate(it: ChangeItem, ctx: Context): string | null {
     const me = lib.fields.find((f) => f.key === it.key); if (!me) return null;
     const want = normalizeLabel(it.action === "rename" ? it.name : it.alias);
     const twin = lib.fields.find((t) => t.key !== it.key && t.group === me.group && t.names.some((x) => normalizeLabel(x) === want));
-    return twin ? `"${it.action === "rename" ? it.name : it.alias}" is already the name of ${twin.label ?? twin.key} in this group. If they mean the same, merge them; otherwise choose another name.` : null;
+    if (twin) return `"${it.action === "rename" ? it.name : it.alias}" is already the name of ${twin.label ?? twin.key} in this group. If they mean the same, merge them; otherwise choose another name.`;
+    // The waiting change's group: its field's group when the field exists (a rename), else its key's first part (an Add,
+    // #295), so both sides are compared by the same rule (Devin on #712).
+    const groupOf = (key: string) => lib.fields.find((f) => f.key === key)?.group ?? key.split(".")[0];
+    const waiting = (ctx.waitingNames ?? []).find((w) => w.key !== it.key && groupOf(w.key) === me.group && normalizeLabel(w.name) === want);
+    return waiting ? `"${it.action === "rename" ? it.name : it.alias}" is waiting for a second person on To review as the name of another field in this group. Choose another name, or wait until that change is decided.` : null;
   }
   if (it.kind === "section" && it.action === "rename") {
     const twin = lib.sections.find((s) => s.key !== it.key && normalizeLabel(s.title) === normalizeLabel(it.name));

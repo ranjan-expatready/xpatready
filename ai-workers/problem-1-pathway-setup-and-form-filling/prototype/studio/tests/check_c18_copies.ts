@@ -66,10 +66,15 @@ const field = (r: { body: any }, f: string) => (r.body?.errors ?? []).find((e: a
   const guard = (() => { try { sql(`update combination_form set copies = 12 where combination_id='${C}' and lineage_key='${F}'`); return false; } catch { return true; } })();
   ok("C1.8 fail (database): 12 copies are refused by the database check too", guard);
 
+  // C11.11 (QA-101): no route makes a checklist a form line any more (the sample's IMM 5488 is a source), so the check plants
+  // one kept from before (test input, SQL, Sample) and removes it after the two checks that use it.
+  sql(`insert into combination_form select (jsonb_populate_record(null::combination_form, to_jsonb(cf) || jsonb_build_object('id', gen_random_uuid(), 'lineage_key', 'IMM 5488', 'gov_form_def_id', (select id from gov_form_def d where d.form_key='IMM 5488' and d.workspace_id=cf.workspace_id), 'version', 1, 'status', 'DRAFT', 'supersedes_id', null, 'copies', 1))).* from combination_form cf where cf.combination_id='${C}' and cf.lineage_key='IMM 5707' order by cf.version desc limit 1`);
+  f0 = await forms();
   const D = f0.lines.find((l: any) => l.document)?.code as string;
   r = await call("PATCH", `/combinations/${C}/forms/${encodeURIComponent(D)}`, { copies: 2, baseRevision: line(D)?.revision });
   ok("C1.8 fail (review m2): a checklist line is never filed, so 2 copies on it are refused on the field", !!D && r.status === 400 && field(r, "copies") === "A checklist is not filed, so it has no copies.", { line: D, status: r.status, msg: field(r, "copies") });
   ok("C1.8 pass: the checklist line keeps 1 copy", (await forms()).lines.find((l: any) => l.code === D).copies === 1);
+  sql(`delete from combination_form where combination_id='${C}' and lineage_key='IMM 5488'`);
   ok("C1.8 pass (contract): 1 copy on a checklist line is accepted (it is the default), more is refused", DocumentLineEdit.safeParse({ copies: 1 }).success && !DocumentLineEdit.safeParse({ copies: 2 }).success);
   r = await call("POST", `/combinations/${C}/forms/undo`, {});
   f0 = await forms();

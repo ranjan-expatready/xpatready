@@ -13,7 +13,7 @@ import type { Response } from "express";
 import PDF_SECTIONS from "../../contracts/pdf-sections.json" with { type: "json" };
 import { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { CHANNEL_WORDS } from "../../contracts/forms.ts";
+import { CHANNEL_WORDS, isBarcodeForm } from "../../contracts/forms.ts";
 import { acceptsOf } from "../../engine/channels.ts";
 import { caseChecklist } from "../../engine/runtime/case-checklist.ts";
 import { caseView, checkValue, knownOf } from "../../engine/runtime/case.ts";
@@ -21,13 +21,13 @@ import { releaseModes } from "../../engine/filing-modes.ts";
 import { ageOn, cad, deriveFilings, FAMILY_GROUP, FEE_TABLE, feeRule, rulesFrom } from "../../engine/runtime/filings.ts";
 /** Review r1 M4: the biometrics ages come from the fee table, never from code. */
 const bioAges = feeRule("vv.single", "biometrics")?.exempt;
-import { formCoverage, readiness as formReadiness } from "../../engine/runtime/forms.ts";
+import { formCoverage, inputHash, readiness as formReadiness } from "../../engine/runtime/forms.ts";
 import { answerSheet, sectionHash, type Sheet } from "../../engine/runtime/answer-sheet.ts";
-import { BIOMETRICS_STEP, channelChange, channelOf, prepareVersion, wantedItems, type FormLine } from "../../engine/runtime/prepare.ts";
+import { BIOMETRICS_STEP, channelChange, channelOf, paperLine, prepareVersion, readBackOf, wantedItems, type FormLine, type PaperValidated } from "../../engine/runtime/prepare.ts";
 import { render, type Role } from "../../engine/render.ts";
 import { snapshotHash } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
-import { CaseForms } from "./fill-case.ts";
+import { CaseForms, formPassed } from "./fill-case.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 import { minorFromAnswers, signedState, signersOf } from "../../engine/runtime/signing.ts";
 import { signStepsOf } from "./sign-steps.ts";
@@ -187,6 +187,15 @@ export class CasePrepare {
     const signPeople = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role, label: p.label, applies: p.applies }));
     const stepsOf = await signStepsOf(this.db, c.id);
     const minor = minorFromAnswers(answers, today); // Devin on #617: an adult dependent child signs their own form
+    // C7.7 part 2: per form × person, the validated copy read back that counts (readBackOf: each copy judged on its newest
+    // read-back, as the copy view and `lock` do; QA-165), current while the form's facts are what they were when it was read back.
+    const reads = await this.db.validatedCopy.findMany({ where: { copy: { caseId: c.id } }, orderBy: [{ readAt: "desc" }, { id: "asc" }], select: { factsHash: true, readAt: true, readBack: true, copy: { select: { id: true, formNumber: true, subjectId: true } } } });
+    const readsOf = new Map<string, { copy: string; at: Date; factsHash: string; readBack: unknown }[]>();
+    for (const v of reads) { const k = `${v.copy.formNumber}|${v.copy.subjectId}`; readsOf.set(k, [...(readsOf.get(k) ?? []), { copy: v.copy.id, at: v.readAt, factsHash: v.factsHash, readBack: v.readBack }]); }
+    const paperValidated = (form: string, subject: string): PaperValidated => {
+      const v = readBackOf(readsOf.get(`${form}|${subject}`) ?? [], formPassed);
+      return v ? { copy: v.copy, at: v.at.toISOString(), current: v.factsHash === inputHash(formCoverage(s, people, answers, rows, form, subject)?.facts ?? []) } : null;
+    };
     const items = stored.items.map((i) => {
       const w = wantedOf(i), base = { id: i.id, kind: i.kind as "form" | "document" | "step", filing: i.filingId, subject: i.subjectId, person: label.get(i.subjectId) ?? "", version: i.version };
       if (i.kind === "form") {
@@ -206,6 +215,10 @@ export class CasePrepare {
         const signed = !waits && ch.signature === "HAND_SCANNED" ? signedState(stepsOf.get(i.id) ?? {}, i.itemKey) : null;
         if (signed) return { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null, signers,
           channel_changed: i.channel ? { by: i.channelBy, at: i.channelAt?.toISOString() ?? null, reason: i.channelReason } : null, ...signed };
+        // C7.7 part 2 (r5c BR-8, P-144): a Paper line with its barcode page and its steps, in order.
+        if (ch.channel === "PAPER" && !waits) return { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null, signers,
+          channel_changed: i.channel ? { by: i.channelBy, at: i.channelAt?.toISOString() ?? null, reason: i.channelReason } : null,
+          ...paperLine(i.itemKey, { barcode: isBarcodeForm(i.itemKey), missing: rd.missing.length, validated: paperValidated(i.itemKey, i.subjectId), signers, lineOnline: ch.line_channel === "ONLINE" }) };
         return { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null, signers,
           channel_changed: i.channel ? { by: i.channelBy, at: i.channelAt?.toISOString() ?? null, reason: i.channelReason } : null,
           state: waits ? "cannot_start" : allEntered ? "done" : "to_do", reason: allEntered && !waits ? "Every section is entered in the portal, with every answer confirmed and current." : waits ? `Cannot start yet: waits for ${(w?.missing ?? []).length || "an"} answer${(w?.missing ?? []).length === 1 ? "" : "s"} that decide${(w?.missing ?? []).length === 1 ? "s" : ""} whether it applies.` : rd.missing.length ? `Waiting for ${rd.missing.length} fact${rd.missing.length === 1 ? "" : "s"} to answer or confirm.` : "Every fact it reads is confirmed." };

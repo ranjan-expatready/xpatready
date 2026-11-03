@@ -10,6 +10,8 @@
 //   the same code with a newer edition (printed month and year) → "new_edition_held": never attached or used
 //     silently; it waits for the impact review (P-32, P-38; the review itself is Screen 02)
 //   the same code with an older edition → "older_edition_held": "Older edition: not used" (review #5)
+//   an identical file that is in the library only as an older edition (a newer one was accepted since, P-123) →
+//     "older_in_library": "Older edition: not used", naming the edition in use; never attached, never "Already in the library"
 //   a code and edition that cannot be read, or the same edition printed on a different file → "held" for a person
 //   a French version (same code and edition as the English one, "IMM 5257 (09-2023) F") → "held": never taken for the
 //     English edition, never approved into the library as one (PDF hardening, 26 Oct)
@@ -36,7 +38,7 @@ const run = promisify(execFile);
 const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
 export const MAX_FILES = 20, MAX_BYTES = 25 * 1024 * 1024;
 export type IntakeFile = { originalname: string; buffer: Buffer };
-export type IntakeOutcome = "in_library" | "added" | "attached" | "new_edition_held" | "older_edition_held" | "held" | "refused" | "failed";
+export type IntakeOutcome = "in_library" | "older_in_library" | "added" | "attached" | "new_edition_held" | "older_edition_held" | "held" | "refused" | "failed";
 export type IntakeResult = {
   file: string; outcome: IntakeOutcome; message: string; kind: string; code: string | null; title: string | null; edition: string | null; published: string | null; sha256: string | null;
   /** Set when the file was attached to the combination it was uploaded on. */
@@ -65,7 +67,7 @@ export class Intake {
       results.push(forForm ? await this.forForm(actor, workspaceId, forForm, r) : r);
     }
     const n = (o: IntakeOutcome) => results.filter((r) => r.outcome === o).length;
-    return { results, summary: { files: results.length, in_library: n("in_library"), added: n("added"), attached: n("attached"), held: n("new_edition_held") + n("older_edition_held") + n("held"), refused: n("refused"), failed: n("failed") } };
+    return { results, summary: { files: results.length, in_library: n("in_library"), older_in_library: n("older_in_library"), added: n("added"), attached: n("attached"), held: n("new_edition_held") + n("older_edition_held") + n("held"), refused: n("refused"), failed: n("failed") } };
   }
 
   /** One file, never the whole batch: two uploads of the same file at the same moment race to one database record
@@ -267,6 +269,14 @@ export class Intake {
         const r: IntakeResult = { file: name, outcome: "held", kind, code: same.form.formKey, title: same.form.displayName, edition: same.editionLabel, published: null, sha256: hash, message: `Held for source verification: ${same.editionLabel} is not on the approved source list. It was not attached or sent to AI.` };
         await this.record(actor, workspaceId, combination?.id ?? null, name, null, hash, file.buffer.length, r, "HELD", "checksum not on approved source manifest");
         return r;
+      }
+      // C2.4 AT-9: the library holds this file only as an older edition (a newer printed one was accepted since): it is said to
+      // be older and not used, naming the edition in use, and it is never attached as if it were the one in the library.
+      const inUse = same.channel === "ONLINE" ? undefined : newestEdition(await this.db.formEdition.findMany({ where: { workspaceId, govFormDefId: same.govFormDefId, channel: { not: "ONLINE" } }, select: { id: true, editionLabel: true, published: true } }));
+      if (inUse && inUse.id !== same.id && editionMonth(inUse.editionLabel) > editionMonth(same.editionLabel)) {
+        const older: IntakeResult = { file: name, outcome: "older_in_library", kind, code: same.form.formKey, title: same.form.displayName, edition: same.editionLabel, published: null, sha256: hash, message: `Older edition: not used. ${same.editionLabel} is kept in the library only as an older edition; the library uses ${inUse.editionLabel}. Nothing duplicated${combination ? `, and not attached to ${combination.label}` : ""}.` };
+        await this.record(actor, workspaceId, combination?.id ?? null, name, null, hash, file.buffer.length, older, "DONE");
+        return older;
       }
       let r: IntakeResult = { file: name, outcome: "in_library", kind, code: same.form.formKey, title: same.form.displayName, edition: same.editionLabel, published: null, sha256: hash, message: `Already in the library: ${same.editionLabel}. Nothing duplicated.` };
       r = await attach(r);

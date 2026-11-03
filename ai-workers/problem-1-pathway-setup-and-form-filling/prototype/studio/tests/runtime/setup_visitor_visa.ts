@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { normLabel } from "../../engine/twin.ts";
 import { client, recorder } from "./api.ts";
-import { seedAnswerList, seedSection } from "../seed_library.cjs";
+import { seedAnswerList, seedField, seedSection } from "../seed_library.cjs";
 
 const PORT = Number(process.argv[2] ?? 4430), DB = process.argv[3] ?? "xr_studio_runtime_r1";
 const { call, sql, until } = client(PORT, DB);
@@ -47,6 +47,18 @@ const plainLabel = (l: string) => (/^[A-Z]{3} \((.*)\)$/.exec(l.trim())?.[1] ?? 
 
 const NEW_SECTIONS = [{ title: "Your visit", meaning: "Why, when and with whom the visit to Canada takes place." }, { title: "Previous countries of residence", meaning: "Countries the person lived in during the past five years, other than the current one." }];
 const VISIT = "your_visit", PREVIOUS = "previous_countries_of_residence";
+/** QA-165 (C7.2): IMM 5257's own Yes/No questions for other names, a national identity document and a US permanent
+ *  resident card, in the form's words (IMM 5257 (09-2023): Q2 A "Have you ever used any other name such as a nickname,
+ *  maiden name or alias?", national identity document Q1 "Do you have a national identity document?", US PR card Q1 "Are
+ *  you a lawful Permanent Resident of the United States with a valid alien registration card (green card)?"). Their
+ *  details are required only after a Yes; a confirmed No writes the form's Yes/No as No (engine/runtime/forms.ts gateOf).
+ *  The two new library fields come from the form itself; the US one is the library's own. Sample until the expert checks. */
+const GATES = [
+  { key: "person.used_other_name", section: "personal_details", meaning: "Whether the person has ever used any other name, such as a nickname, maiden name or alias", q: "Have you ever used any other name such as a nickname, maiden name or alias?", details: ["person.other_family_name", "person.other_given_names"], seed: true },
+  { key: "person.has_national_id", section: "travel_document", meaning: "Whether the person has a national identity document", q: "Do you have a national identity document?", details: ["person.national_id_number"], seed: true },
+  { key: "person.us_lawful_permanent_resident", section: "travel_document", meaning: "", q: "Are you a lawful permanent resident of the United States with a valid alien registration card (green card)?", details: ["person.us_green_card_number"], seed: false },
+];
+const GATED = new Map(GATES.flatMap((g) => g.details.map((d) => [d, g.key] as const)));
 
 /** A follow-up ("describe that status") is always asked and becomes required by its condition: hiding it would hide a
  *  value IMM 5257 reads, which release refuses (STANDARDS §3.6). */
@@ -98,12 +110,16 @@ const PLACES: Place[] = [
 /** Rules as data on the placements (review Major 4): a detail is required only after "yes"; a fact only some people have
  *  (another name, a national ID, a US card, a second phone, a fax, a Canadian province) is optional, and its companions
  *  are required once it is answered. Sample until the immigration expert confirms each. */
+PLACES.push(...GATES.map((g): Place => ({ key: g.key, section: g.section, repeats: "per_person", q: g.q })));
 type Rule = { key: string; effect: "REQUIRE" | "OPTIONAL"; when: "always" | { yes: string[] } | { answered: string }; plain: string };
 const RULES: Rule[] = [
   { key: "person.criminal_history_details", effect: "REQUIRE", when: { yes: ["person.criminal_history"] }, plain: "required when the person answered yes to the criminal-history question" },
   { key: "person.military_service_details", effect: "REQUIRE", when: { yes: ["person.military_service"] }, plain: "required when the person served in the military or police" },
   { key: "person.immigration_history_details", effect: "REQUIRE", when: { yes: ["person.refused_visa_or_entry", "person.status_violation_canada", "person.previously_applied_to_canada"] }, plain: "required when the person was refused, overstayed or applied before" },
-  ...["person.other_family_name", "person.other_given_names", "person.uci", "person.national_id_number", "person.us_green_card_number", "person.alternate_telephone_number", "person.fax_number",
+  // QA-165: other names, the national ID number and the US card number are required after a Yes to their own question.
+  ...[...GATED].map(([key, gate]): Rule => ({ key, effect: "REQUIRE", when: { yes: [gate] }, plain: `required when the person answered yes to "${GATES.find((g) => g.key === gate)!.q}"` })),
+  ...GATES.map((g): Rule => ({ key: g.key, effect: "OPTIONAL", when: "always", plain: "optional for now: answering it lets the form's Yes/No be written (QA-165)" })),
+  ...["person.uci", "person.alternate_telephone_number", "person.fax_number",
     "person.applying_from_status", "person.applying_from_status_from", "person.applying_from_status_to", "person.current_residence_status_to",
     "person.education_province_state", "person.occupation_province_state", "person.previous_residence_status_other"].map((key): Rule => ({ key, effect: "OPTIONAL", when: "always", plain: "optional: only some people have it" })),
   ...["person.national_id_country_of_issue", "person.national_id_issue_date", "person.national_id_expiry_date"].map((key): Rule => ({ key, effect: "REQUIRE", when: { answered: "person.national_id_number" }, plain: "required when a national identity document number is given" })),
@@ -198,6 +214,8 @@ async function main() {
 
   // 4.5b sections and questions for every fact nobody is asked for; conditions as data
   for (const s of NEW_SECTIONS) seedSection(sql, { ...s, actor: AUTHOR }); // P-158: sections come from the forms' parts, not a free add
+  // QA-165: the two Yes/No facts IMM 5257 asks that the library lacks, from the form itself (a second person approves them below).
+  for (const g of GATES.filter((x) => x.seed && sql(`select count(*) from canonical_field where canonical_field_key='${x.key}'`) === "0")) seedField(sql, { key: g.key, meaning: g.meaning, valueType: "yes_no", source: `IMM 5257 (09-2023): "${g.q}"`, actor: AUTHOR });
   const valueKey = (field: string, label: string) => lists.get(LIST_NAMES[fieldList.get(field) ?? ""]?.key ?? "")?.find((v) => v.label.toLowerCase() === label)?.key;
   let placed = 0;
   for (const p of PLACES) {
@@ -234,7 +252,7 @@ async function main() {
   // Committed by the screens lane with the rules (Lead note 25 Oct 08:30, one-off; record: screens/02-ai-work/runtime-setup-patch.md).
   for (const j of ((await call("GET", `/combinations/${vv}`)).body.jobs ?? []).filter((x: { kind: string; status: string }) => x.kind === "field_map" && x.status === "APPLIED")) {
     const ff = (await call("GET", `/jobs/${j.id}/form-fields`)).body;
-    for (const f of ff.fields.filter((x: { outcome: string }) => x.outcome === "unresolved")) await call("POST", `/editions/${ff.edition.id}/form-fields/decision`, { dataPath: f.dataPath, decision: "not_a_fact", reason: "Not filled from case facts in the thin slice (Sample)." }, AUTHOR);
+    for (const f of ff.fields.filter((x: { outcome: string }) => x.outcome === "unresolved")) await call("POST", `/editions/${ff.edition.id}/form-fields/decision`, (f as { background?: boolean }).background ? { dataPath: f.dataPath, decision: "by_hand", reason: "A Background question: recorded by hand in the thin slice (Sample; C3.8, IRCC-F08)." } : { dataPath: f.dataPath, decision: "not_a_fact", reason: "Not filled from case facts in the thin slice (Sample)." }, AUTHOR);
   }
   for (const c of (await call("GET", "/library/changes?status=WAITING")).body) await call("POST", `/library/changes/${c.id}/approve`, {}, REVIEWER);
   const o = (await call("GET", `/combinations/${vv}`)).body;

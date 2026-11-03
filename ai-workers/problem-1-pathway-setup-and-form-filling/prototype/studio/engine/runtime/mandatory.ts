@@ -38,7 +38,9 @@ const UNASKABLE = /no question placement|not in the library|not part of this com
 /** What the case knows about its own questions (review M-1, M-2 on #592): the question's label for a fact (the officer's
  *  words, where the map's quote can be another question's), and the facts of a repeating group whose "none apply" is
  *  confirmed for a person (`${about}|${fact}` → the group's title). */
-export type CaseWords = { labelOf?: (fact: string) => string | undefined; noneApply?: Map<string, string> };
+export type CaseWords = { labelOf?: (fact: string) => string | undefined; noneApply?: Map<string, string>;
+  /** QA-165: the Yes/No question a fact is asked under (engine/runtime/forms.ts gateOf), in the case's words. */
+  gateOf?: (fact: string) => string | undefined };
 
 export function mandatoryOpen(inv: Inventory, entries: MapEntry[], boxes: BoxResult[], values: Record<string, string>, words: CaseWords = {}): OpenField[] {
   const entryOf = new Map(entries.map((e) => [e.data_path, e]));
@@ -59,6 +61,12 @@ export function mandatoryOpen(inv: Inventory, entries: MapEntry[], boxes: BoxRes
     else if (b?.result === "by hand") out.push({ box: path, label, reason: "filled by hand", why: b.why ?? "type it in Adobe" });
     // A derived "is anything recorded?" Yes/No (C7.2 cause 3): an answer can only make it Yes; its No needs a question
     // that records "none" (a confirmed "none apply" group does; other names, the national ID and the US card have none yet).
+    // Devin on #715: a box held back by a fix (a confirmed answer with a problem, or a gate answered No with a detail
+    // recorded) needs that fix, in its words, before anything else.
+    else if (b && (b as { fix?: string }).fix && e?.fact) out.push({ box: path, label, reason: "needs an answer", why: (b as { fix?: string }).fix! });
+    // QA-165: when its facts are asked under their own Yes/No question, that question's answer writes it: a "No",
+    // confirmed, writes "N"; so the box needs that answer.
+    else if (b && /^derived:.*\brecorded\b/.test(b.transform ?? "") && !b.nothing_recorded && !(b as { fix?: string }).fix && e?.fact && words.gateOf?.(e.fact)) out.push({ box: path, label, reason: "needs an answer", why: `answer "${words.gateOf(e.fact)}" and confirm it: No writes No, Yes needs the details` });
     else if (b && /^derived:.*\brecorded\b/.test(b.transform ?? "") && !b.nothing_recorded) out.push({ box: path, label, reason: "no question asks it yet", why: "the form's Yes/No: Yes is written when the answer is recorded, and no question records a No yet" });
     // Review M-2 on #592: a row field of a group whose "none apply" is confirmed has no answer to give: IRCC's form still
     // requires it, so the person completes it in Adobe, or the officer takes back "none apply" and adds the entry.

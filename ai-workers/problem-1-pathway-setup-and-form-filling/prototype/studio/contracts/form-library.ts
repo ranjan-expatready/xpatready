@@ -37,7 +37,8 @@ export const AttachBody = z.object({ formKey: code, who: z.string().optional() }
 
 /** GET /library/forms?type&usedBy&status&q — the one lean list (P-123): filters, never groups. */
 export const LIBRARY_TYPES = ["form", "guide", "checklist"] as const;
-export const LIBRARY_STATUSES = ["ready", "needs_ok", "newer_file", "no_file", "retired"] as const;
+/** "online_only" (C11.11, P-152 (2)): held only as its online version, no official PDF (never asked for one). */
+export const LIBRARY_STATUSES = ["ready", "needs_ok", "newer_file", "no_file", "online_only", "retired"] as const;
 export const LibraryQuery = z.object({
   type: z.enum(LIBRARY_TYPES).optional(),
   usedBy: z.string().uuid().optional(),

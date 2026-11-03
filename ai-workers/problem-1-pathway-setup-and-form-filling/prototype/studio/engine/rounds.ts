@@ -33,10 +33,13 @@ export function savedRunKey(r: SavedRun, legacy: Record<string, string>): string
 /** A finished run's statuses: a field-map run (its checker rounds too) is recorded "completed_with_unresolved" when any form
  *  field is left to a person (p2/convert.ts), which is still a finished answer to replay (C11.14, tech lead 3 Nov). */
 export const FINISHED_RUN = new Set(["completed", "completed_with_unresolved"]);
+/** Whether a recorded status is a finished run's: a plain string in FINISHED_RUN only (break m1 on #693: String(["completed"])
+ *  would read an array as "completed"). */
+export const isFinishedRun = (status: unknown): boolean => typeof status === "string" && FINISHED_RUN.has(status);
 /** A saved run may stand in for this round: a finished (FINISHED_RUN), valid live answer of the same prompt, the same
  *  input files (in order) and the same context (combination or form edition). */
 export function isSameSavedRun(r: SavedRun, want: { templateSha256: string; inputs: { file: string; sha256: string }[]; contextKey: string; legacy: Record<string, string> }): boolean {
-  return r?.caller === "live" && FINISHED_RUN.has(String(r?.drafting_run?.status)) && r.contract_valid === true && r.launch_evidence?.template_sha256 === want.templateSha256
+  return r?.caller === "live" && isFinishedRun(r?.drafting_run?.status) && r.contract_valid === true && r.launch_evidence?.template_sha256 === want.templateSha256
     && JSON.stringify(r.drafting_run?.inputs?.official_files) === JSON.stringify(want.inputs) && savedRunKey(r, want.legacy) === want.contextKey && typeof r.raw_output === "string";
 }
 
