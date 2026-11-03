@@ -494,10 +494,17 @@ function CardButton({ r, canAuthor, tabIndex, onOpen, onResume }: { r: Catalogue
 function Progress({ r, mini }: { r: CatalogueLeaf; mini?: boolean }) {
   const st = chipOf(r);
   const text = mini ? (st === "LIVE" ? "Live" : st === "RETIRED" ? "Retired" : `${doneOf(r)} of 5`) : progressText(r);
-  // QA-184: a Live combination says Live first, then what its next release still needs (the Overview's words).
+  // QA-184: a Live combination says Live first, then what its next release still needs (the Overview's words). The
+  // List's 120 px column (review m1) gives it its own short line, "5 of 5 steps to do", with the full words for screen
+  // readers and on hover.
   const next = st === "LIVE" ? r.setup?.bar.next : null;
-  const nextText = next && mini ? next.replace(/^Next release: (\d+) of 5 steps? to do$/, "next release $1 to do") : next;
-  return <span data-progress={st} className={cn(st === "LIVE" ? "font-semibold text-text-ok" : st === "RETIRED" ? "text-text-muted" : "text-text")}>{text}{nextText ? <span className="font-normal text-text-muted" data-next-release> · {nextText}</span> : null}</span>;
+  if (next && mini) return (
+    <span data-progress={st} title={next} className="flex flex-col leading-tight">
+      <span className="font-semibold text-text-ok">Live</span>
+      <span className="whitespace-nowrap text-xs text-text-muted" data-next-release><span className="sr-only"> · Next release: </span>{next.replace(/^Next release: /, "")}</span>
+    </span>
+  );
+  return <span data-progress={st} className={cn(st === "LIVE" ? "font-semibold text-text-ok" : st === "RETIRED" ? "text-text-muted" : "text-text")}>{text}{next ? <span className="font-normal text-text-muted" data-next-release> · {next}</span> : null}</span>;
 }
 
 /** A card (concept v4 §7): the name, the full trail, "n of 5 steps" or "✓ Live" with the edge bar, the filing tag (X1b, P-208), Needs you and one
