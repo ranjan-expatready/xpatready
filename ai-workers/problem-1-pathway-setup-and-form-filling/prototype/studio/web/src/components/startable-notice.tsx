@@ -10,7 +10,7 @@ type Item = NonNullable<CombinationSummary["setup"]>["steps"][number]["open"][nu
 export function StartableNotice({ id, items }: { id: string; items: Item[] }) {
   if (!items.length) return null;
   return (
-    <Notice tone="danger" title={`Firms cannot open cases on the released version: ${items.length === 1 ? "1 thing is" : `${items.length} things are`} missing`}>
+    <Notice tone="danger" title={`Firms cannot open cases on the released version: ${items.length === 1 ? "1 thing" : `${items.length} things`} to fix`}>
       <ul className="mt-1 space-y-0.5" data-startable-causes>{items.map((i, k) => <li key={k}>{i.text.split(": firms cannot open cases")[0]}</li>)}</ul>
       <p className="mt-1">Fix {items.length === 1 ? "it" : "them"} in this draft, then send the draft for review and release it. <Link className="font-medium text-text-link underline" to={`/c/${id}/review`}>Review and release</Link></p>
     </Notice>

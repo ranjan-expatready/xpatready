@@ -42,6 +42,8 @@ export function PartProblems({ id, part }: { id: string; part: "documents" | "qu
         {mine.length > 6 ? <p className="mt-1">and {mine.length - 6} more.</p> : null}
         <p className="mt-1"><Link className="font-medium text-text-link underline" to={`/c/${id}/review`}>See every problem on Review and release</Link></p>
       </Notice>
+      {/* Devin on #622: the released version's startable-check cause stays visible beside the draft's own errors. */}
+      {startable.length ? <div className="mt-2" data-startable><StartableNotice id={id} items={startable} /></div> : null}
     </div>
   );
 }
