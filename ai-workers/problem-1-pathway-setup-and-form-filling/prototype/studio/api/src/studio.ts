@@ -421,8 +421,8 @@ export class Studio {
     // changes lists none, as on the catalogue (tech lead on #568; EXPERIENCE §2.5, one status everywhere).
     const last = s.mode === "draft" && combinationId ? await this.db.configRelease.findFirst({ where: { combinationId }, orderBy: { version: "desc" }, select: { sha256: true } }) : null;
     const open = s.mode === "draft" && (!last || last.sha256 !== snapshotHash(s));
-    // C5.5 (G2 BR-3, P-240): outside the demo workspace the same draft's Sample content (a Sample combination, each Sample
-    // check) is listed beside its numbers; a Sample source is already the source gate's line there (demo false).
+    // C5.5 (G2 BR-3, P-240): outside the demo workspace the same draft's Sample checks are listed beside its numbers; a
+    // Sample source is already the source gate's line there (demo false).
     const sources = open ? [...draftSourceProblems(s, isDemoWorkspace()), ...(isDemoWorkspace() ? [] : sampleContentProblems(s))] : [];
     // G1: the numbers without a source come after the validator's own errors, so a list cut at its first lines still
     // shows those (the Review tab shows eight).

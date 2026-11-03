@@ -39,9 +39,9 @@ type ReviewedRelease = { configuration_sha256: string; drafting_run_ids: string[
 /** The six's "With an LMIA – inside Canada" (samples/wave1.json), the combination Demo › Start With an LMIA from its
  *  reviewed release starts (C5.4). */
 export const SIX_LMIA = "wp.lmia_inside";
-/** The demo controls that write sample content or a release (load, Reset to the six, Start With an LMIA) refuse (409)
- *  outside the demo workspace (P-240, G2 BR-3). */
-const DEMO_ONLY = "This demo control works only in the demo workspace.";
+/** The demo controls (load, Reset, Reset to the six, Start With an LMIA; forms-demo.ts's forms story) refuse (409)
+ *  outside the demo workspace (P-240, G2 BR-3): they write sample content or releases, or empty the workspace. */
+export const DEMO_ONLY = "This demo control works only in the demo workspace.";
 
 /** The sample programs (Screen 01): an import file, not constants in code (STANDARDS §3.1). Seven Individual and four
  *  Corporate programs covering the kinds of case in domain/TAXONOMY.md; names are illustrative and shown as Sample.
@@ -512,6 +512,7 @@ export class Demo {
 
   async reset(actor: Actor, confirm: string) {
     need(actor, "author");
+    if (!isDemoWorkspace()) fail(DEMO_ONLY, HttpStatus.CONFLICT); // C5.5 (breaker F3): it would empty a real workspace, releases included
     if (confirm !== "RESET") fail('Type RESET to confirm.');
     // D1 break M1 (the one change to the blank Reset, P-226): it takes the same one-at-a-time claim as Load sample and
     // Reset to the six, so it never empties a workspace that a load is still writing to (rows of a deleted workspace).

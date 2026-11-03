@@ -490,7 +490,7 @@ export class Programs {
       for (const r of d.rows) {
         const { snapshot } = await buildSnapshot(this.db, workspaceId, r.combinationId!, "draft");
         const own = (await this.studio.problems(workspaceId, snapshot, r.combinationId!)).filter((p) => p.level === "error");
-        for (const p of own) errors.push({ combination: r.label, where: p.where, item: p.item, label: (p as { label?: string }).label ?? null, forms: (p as { forms?: string[] }).forms ?? [], message: problemWords(p) });
+        for (const p of own) errors.push({ combination: r.label, where: p.where, item: p.item, label: (p as { label?: string }).label ?? null, forms: (p as { forms?: string[] }).forms ?? [], message: problemWords(p), ...((p as { gate?: string }).gate ? { gate: (p as { gate?: string }).gate } : {}) }); // C5.5 (breaker F6): the gate stays named
         if (!own.length || !r.why || !own.some((p) => r.why!.includes(p.message))) errors.push({ combination: r.label, where: "Review", item: r.label, label: r.label, forms: [], message: `${r.label}: ${r.why}` });
       }
       throw problem(409, "Every change is held back", `Nothing can be released yet. ${shown}${d.rows.length > 5 ? ` · and ${d.rows.length - 5} more (see Review and release)` : ""}`, { errors });
