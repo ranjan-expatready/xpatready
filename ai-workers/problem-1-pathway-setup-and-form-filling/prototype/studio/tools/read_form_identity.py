@@ -11,6 +11,10 @@ Language (PDF hardening, 26 Oct): IRCC prints the language after the edition ("I
 the title ("IMM 5257 F : Demande …"); a French version has the same code and edition as the English one, so it is reported
 as "fr" for the intake to hold rather than taken for the English edition. A password-protected file is said to be one.
   .tools/solution-1-prototype/.venv/bin/python -I studio/tools/read_form_identity.py <file>
+C11.7 (P-297 (2)): a form code may end in DEP ("IMM 0008DEP (10-2024) E" is IMM 0008 DEP, never IMM 0008). When no edition
+is printed next to the code, the edition IRCC's form template keeps in its own "Version" variable is read instead (XFA
+<variables><text name="Version">05-2021</text>; IMM 5669 prints none). "edition_from" says which: "printed" or
+"form_template". On 3 Nov the two agreed on every one of the 15 official files that carry both; the printed one wins.
 C3.12 (FormEdition.published): "--dates <file> ..." reads only the published date of each file (no text extraction) and
 prints one JSON object {path: "YYYY-MM-DD" | null | "?"}: null when the PDF names no date (a saved web page is not a
 PDF, so it has none here), "?" when the file could not be read (break M2/m2: never taken for "no date").
@@ -27,6 +31,15 @@ logging.disable(logging.CRITICAL)
 from pypdf import PdfReader  # noqa: E402
 
 CODE = r"(IMM|CIT|EMP|PRC|IRM)\s?(\d{4})"
+# C11.7: the same, with the DEP suffix some IRCC forms carry ("IMM 0008DEP-E", "IMM 0008 DEP"); three groups.
+CODE_DEP = CODE + r"(?:\s?(DEP)(?![A-Za-z]))?"
+# C11.7: the edition IRCC's form template keeps in its own variables (Designer forms): <text name="Version">05-2021</text>.
+TEMPLATE_VERSION = r"<text\s+name=\"Version\"\s*>\s*(\d{2}-\d{4})\s*</text"
+
+
+def code_of(groups):
+    """("IMM", "0008", "DEP") -> "IMM 0008 DEP"; ("IMM", "5669", "") -> "IMM 5669"."""
+    return " ".join(g for g in groups if g)
 
 
 def texts(reader):
@@ -72,7 +85,7 @@ def read_html(raw):
     title = html.unescape(re.sub(r"\s+", " ", m.group(1))).strip() if m else ""
     title = re.sub(r"\s*-\s*Canada\.ca\s*$", "", title)
     d = re.search(r"(?:dateModified|dcterms\.modified|Date modified:)[^0-9]{0,40}(\d{4}-\d{2}-\d{2})", text, re.I)
-    found = Counter(f"{a} {b}" for a, b in re.findall(CODE, title))  # a page names many forms: only its title says which it is
+    found = Counter(code_of(g) for g in re.findall(CODE_DEP, title))  # a page names many forms: only its title says which it is
     kind = "checklist" if "checklist" in title.lower() else "guide"
     # F1: two or more question inputs (outside scripts and search forms) make it a saved portal screen, not a guide;
     # none of IRCC's public pages in the official library has one (23 Oct).
@@ -108,25 +121,34 @@ def main(path):
     body, first = texts(reader)
     published = pdf_date(reader.metadata)
     kind = kind_of(title, first)
-    m = re.match(CODE, title)
+    m = re.match(CODE_DEP, title)
     if m:
-        code = f"{m.group(1)} {m.group(2)}"
+        code = code_of(m.groups())
     else:
-        found = Counter(f"{a} {b}" for a, b in re.findall(CODE, body))
+        found = Counter(code_of(g) for g in re.findall(CODE_DEP, body))
         if not found:
             return {"ok": False, "error": "no form code (for example IMM 1295) found in the file", "title": title, "kind": kind, "published": published}
         code = found.most_common(1)[0][0]
     if re.search(r"schedule\s*1\b", title, re.I):
         code += " SCH1"
-    digits = code.split()[1]
-    editions = Counter(re.findall(rf"{code.split()[0]}\s?{digits}\s?[EF]?\s*\((\d{{2}}-\d{{4}})\)", body))
-    clean = re.sub(r"^" + CODE + r"\s*[EF]?\s*:?\s*", "", title).strip() or code
-    marks = Counter(re.findall(rf"{code.split()[0]}\s?{digits}\s?(?:\(\d{{2}}-\d{{4}}\))?\s?([EF])\b", f"{title}\n{body}"))
-    language = "fr" if re.match(CODE + r"\s?F\b", title) or marks["F"] > marks["E"] else "en"
+    prefix, digits = code.split()[0], code.split()[1]
+    # C11.7: "IMM 0008 DEP" is printed "IMM 0008DEP". Plain "IMM 0008" cannot take a DEP edition: after its digits only a
+    # space, a hyphen and E or F may come before the "(", never "DEP".
+    dep = r"\s?DEP" if code.endswith(" DEP") else ""
+    editions = Counter(re.findall(rf"{prefix}\s?{digits}{dep}\s?-?[EF]?\s*\((\d{{2}}-\d{{4}})\)", body))
+    clean = re.sub(r"^" + CODE_DEP + r"\s*(?:-\s*)?[EF]?(?:\s+GENERIC)?\s*:?\s*", "", title).strip() or code
+    marks = Counter(re.findall(rf"{prefix}\s?{digits}{dep}\s?(?:\(\d{{2}}-\d{{4}}\))?\s?-?([EF])\b", f"{title}\n{body}"))
+    language = "fr" if re.match(CODE_DEP + r"\s?-?F\b", title) or marks["F"] > marks["E"] else "en"
+    edition_from = "printed"
+    if not editions:
+        # C11.7: nothing printed next to the code; the form template's own Version variable, when it has exactly one.
+        versions = set(re.findall(TEMPLATE_VERSION, body))
+        if len(versions) == 1:
+            editions, edition_from = Counter(versions), "form_template"
     if not editions:
         return {"ok": False, "error": f"found {code} but no edition date such as (09-2023) printed next to it", "code": code, "title": clean, "kind": kind, "published": published}
     edition = editions.most_common(1)[0][0]
-    return {"ok": True, "kind": kind, "code": code, "edition": edition, "edition_label": f"{code} ({edition})", "title": clean, "published": published, "language": language}
+    return {"ok": True, "kind": kind, "code": code, "edition": edition, "edition_label": f"{code} ({edition})", "edition_from": edition_from, "title": clean, "published": published, "language": language}
 
 
 def published_only(path):

@@ -52,6 +52,8 @@ export type QueueItem = {
    *  this item is about (an AI draft or proposals on it, its release); null for a library-wide item (a held file, a new
    *  edition, a shared field, a merge). */
   combination: string | null;
+  /** C9.1 BR-12: a new edition's item names the combinations that file its form now (by label); absent on other items. */
+  combinations?: string[];
 };
 /** UX-A part 2: `blocked`, the combinations whose draft has problems that block release (whoever fixes them), so the
  *  empty "Needs you" never says nothing waits while a release is blocked. */

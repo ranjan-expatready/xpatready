@@ -10,7 +10,7 @@ import { basename, join, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 import { manifest, slug } from "../../engine/import.ts";
 import { normalize, type LibraryField } from "../../engine/normalize.ts";
-import { compareMaps, mapRules, type MapField } from "../../engine/field-map-rounds.ts";
+import { claimedTwice, compareMaps, formWords, mapRules, quoteOnForm, type MapField } from "../../engine/field-map-rounds.ts";
 import { checkerRound } from "./field-map-check.ts";
 import { EXPERIMENT_CAP_USD, LABEL, LEDGER_DIR, MAX_ATTEMPTS, PARTS_DIR, RUN_CAP_USD, WAVE1_CAP_USD, WAVE1_START } from "../../../p2/policy.ts";
 import { canonical } from "../../../contracts/rules.ts";
@@ -611,7 +611,10 @@ export class Sources {
   /** Reads a run record (live or replayed) and compares its proposals with the library. */
   async ingest(jobId: string, attachmentId: string, opts: { recompare?: Actor } = {}) {
     const job = await this.db.draftingJob.findUniqueOrThrow({ where: { id: jobId } });
-    const previous = opts.recompare ? (await this.db.proposalItem.findMany({ where: { runId: jobId } })).map(reviewRow) : [];
+    const previousRows = opts.recompare ? await this.db.proposalItem.findMany({ where: { runId: jobId } }) : [];
+    const previous = previousRows.map(reviewRow);
+    // QA-193 (Devin on #740): a kept decision keeps the To review batch it was made in.
+    const previousBatch = new Map(previous.map((o, i) => [o.proposedKey, previousRows[i].batchId]));
     const revision = await libraryRevision(this.db, job.workspaceId);
     const a = await this.db.sourceAttachment.findUniqueOrThrow({ where: { id: attachmentId } });
     const rec = JSON.parse(readFileSync(join(SOLUTION, job.runFile!), "utf8"));
@@ -645,7 +648,13 @@ export class Sources {
     const formPaths = new Set(box.keys());
     const readingOf = (f: MapField) => `${f.proposedKey} (${f.proposedType}): ${f.boxes.length} form field${f.boxes.length === 1 ? "" : "s"}`.slice(0, 300);
     const draftRound = { from: (job.mode === "REPLAY" ? "replay" : "live") as "replay" | "live", runFile: job.runFile!.slice(0, 300), costUsd: Math.max(0, Number(job.costUsd ?? 0)) };
-    const quoteOf = (q?: string) => (q && /^[0-9a-f]{64}$/.test(a.sha256) ? { file: a.fileName.slice(0, 300), sha256: a.sha256, edition: a.edition?.slice(0, 60) ?? null, page: null, quote: q.slice(0, 1000), quoteFound: true, rule: null } : null);
+    // QA-191 (P-121): the rules run on both rounds: the quote is checked against the form's own words (never assumed found),
+    // the kind of answer is one the library knows, and no form field is filled by two fields of the same round.
+    const words = formWords(inv.fields ?? []);
+    const valueTypes = new Set(Object.keys(VALUE_TYPE_TO_DATA_TYPE));
+    const twiceDraft = claimedTwice(items), twiceCheck = claimedTwice(cmp ? [...[...cmp.byKey.values()].map((x) => x.check).filter((x): x is MapField => !!x), ...cmp.checkOnly] : []); // review m2: fields only the checker named count
+    const quoteOfItem = (f: MapField) => (f as MapField & { evidence?: { quotes?: string[] } }).evidence?.quotes?.[0] ?? null;
+    const quoteOf = (q?: string) => (q && /^[0-9a-f]{64}$/.test(a.sha256) ? { file: a.fileName.slice(0, 300), sha256: a.sha256, edition: a.edition?.slice(0, 60) ?? null, page: null, quote: q.slice(0, 1000), quoteFound: quoteOnForm(q, words), rule: null } : null);
     const proposals: (NewProposal & Work)[] = items.map((i) => {
       const near = i.candidates.filter((c) => c.score >= 0.55).map((c) => c.key).slice(0, 10);
       const reuses = !!i.recommendation.key && (i.recommendation.action === "reuse" || (i.recommendation.action === "decide" && libKeys.has(i.recommendation.key)));
@@ -654,7 +663,8 @@ export class Sources {
       // G-CORE B4: both readings kept; a disagreement is Decide with both reasons (P-121); no checker yet stays one round.
       const c = cmp?.byKey.get(i.proposedKey);
       const rounds = { draft: { ...draftRound, reading: readingOf(i), payload }, check: c?.check && chk.ok ? { reading: readingOf(c.check), payload: { ...payload, valueType: c.check.proposedType }, from: chk.from, runFile: chk.runFile.slice(0, 300), costUsd: chk.costUsd } : null };
-      const rules = [...mapRules(i, formPaths), ...(c?.check ? mapRules(c.check, formPaths).map((r) => ({ ...r, rule: `checker_${r.rule}` })) : [])];
+      const rules = [...mapRules(i, formPaths, { quote: i.evidence.quotes[0], words, claimedTwice: twiceDraft, valueTypes, round: "draft" }),
+        ...(c?.check ? mapRules(c.check, formPaths, { quote: quoteOfItem(c.check), words, claimedTwice: twiceCheck, valueTypes, round: "checker" }).map((r) => ({ ...r, rule: `checker_${r.rule}` })) : [])];
       const differ = c?.agreement === "differ";
       const confidence = differ ? "decide" as const : ready ? "ready" as const : i.outcome === "NEW" ? "check" as const : "decide" as const;
       const reason = differ ? `${c!.why}${i.reason ? ` Draft: ${i.reason}` : ""}`.slice(0, 500) : ready ? null : i.reason.slice(0, 500);
@@ -682,7 +692,7 @@ export class Sources {
         if (same) {
           kept++;
           const p = raw.payload as Record<string, unknown>, oldPayload = old.payload as { label?: string; advisory?: unknown } | null;
-          await recordChoice(this.db, it.id, { choice: old.decision, decidedKey: old.decidedKey, by: old.decidedBy, reason: old.decisionNote, payload: { ...p, meaning: old.proposedMeaning, valueType: old.proposedType, ...(old.decision === "NEW" && oldPayload?.label ? { label: oldPayload.label } : {}) } as any,
+          await recordChoice(this.db, it.id, { choice: old.decision, decidedKey: old.decidedKey, by: old.decidedBy, reason: old.decisionNote, batchId: previousBatch.get(it.proposedKey) ?? null, payload: { ...p, meaning: old.proposedMeaning, valueType: old.proposedType, ...(old.decision === "NEW" && oldPayload?.label ? { label: oldPayload.label } : {}) } as any,
             ...(old.decision === "NEW" ? { work: { ...(raw.work as object), advisory: oldPayload?.advisory ?? null } } : {}) });
           await this.db.proposalItem.update({ where: { id: it.id }, data: { decidedAt: old.decidedAt } });
         }
@@ -839,6 +849,7 @@ export class Sources {
     need(actor, "author");
     const { proposals, ...rest } = await this.db.draftingJob.findUniqueOrThrow({ where: { id: jobId }, include: { proposals: true } });
     const job = { ...rest, items: proposals.map(reviewRow) };
+    const batchOf = new Map(proposals.map((p) => [p.id, p.batchId]));
     if (job.kind !== "field_map") fail("This is not a field-map draft: a checklist draft is applied with its own step.");
     if (job.status !== "COMPLETED") fail(job.status === "APPLIED" ? "Already applied." : "The draft is not ready.", HttpStatus.CONFLICT);
     // Break M1 across drafts: a new field this draft names must not have been created meanwhile by another draft.
@@ -877,7 +888,10 @@ export class Sources {
         // Every new shared field waits for a second person on To review before any release carries it (BR-7, P-53): the
         // one lander writes the draft row and its ADD (S6 slice 1a).
         const top = ((i.candidates as { key: string; score: number }[]) ?? []).slice(0, 3);
-        await landField(tx, { ws, actor, batchId: null, itemId: i.id, reason: p.reason ?? i.decisionNote ?? null, matches: top, meaningChecked: i.decision === "NEW", proposedBy: i.decidedBy ?? actor.id, sourceJobId: job.id, combinationId: job.combinationId,
+        // QA-193 (P-121: the second person at release sees what was bulk-accepted; P-288 (2)): the library change carries the
+        // decision it came from (the proposal's batch on To review or the page's accept together), never null, so the
+        // approver sees the changes of one decision together and the release names it.
+        await landField(tx, { ws, actor, batchId: batchOf.get(i.id) ?? null, itemId: i.id, reason: p.reason ?? i.decisionNote ?? null, matches: top, meaningChecked: i.decision === "NEW", proposedBy: i.decidedBy ?? actor.id, sourceJobId: job.id, combinationId: job.combinationId,
           aiVerdict: i.outcome === "NEW" && !top.some((c) => c.score >= 0.55) ? "No library field means the same." : top[0] ? `Could be ${top[0].key} (match ${Math.round(top[0].score * 100)}%).` : null },
           { key: i.decidedKey!, meaning: i.proposedMeaning, valueType: i.proposedType, label: p.label ?? null, sourceRef: `${job.mode === "REPLAY" ? "replayed " : ""}AI run ${job.runId}; decided by ${i.decidedBy}` });
         created++;
