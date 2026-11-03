@@ -24,7 +24,7 @@ export const runRecord = (isCheck: boolean, inputs: { file: string; sha256: stri
   drafting_run: { status: "completed", usage: { cost_usd: cost }, attempts: [{ outcome: "completed" }], inputs: { official_files: inputs, combination: ctx.contextKey } }, launch_evidence: { template_sha256: tSha(isCheck ? step.check : step.template) } });
 /** Named per check copy (its database name), so checks running side by side never remove each other's files. */
 const TAG = (process.env.C91_FIXTURE_TAG ?? process.argv[3] ?? "c91").replace(/[^a-z0-9]/g, "").slice(0, 20) || "c91";
-export const SAVED = [`${step.jobBase}-c91fixture-${TAG}-live-20261103t100100000z-c91fix.json`, `${step.jobBase}-check-c91fixture-${TAG}-live-20261103t100100000z-c91fix.json`];
+export const SAVED = [`${step.jobBase}-c91fixture-${TAG}-live-20261103t100100000z-c91fix.json`, `${step.jobBase}-check-c91fixture-${TAG}-live-20261103t100200000z-c91fix.json`];
 export const writeSaved = () => { writeFileSync(join(RUNS, SAVED[0]), JSON.stringify(runRecord(false, ctx.inputs, answer))); writeFileSync(join(RUNS, SAVED[1]), JSON.stringify(runRecord(true, ctx.inputs, answer))); };
 export const removeSaved = () => { for (const f of SAVED) rmSync(join(RUNS, f), { force: true }); };
 

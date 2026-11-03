@@ -103,6 +103,17 @@ const saveRun = (name: string, rec: unknown) => { writeFileSync(join(RUNS, name)
     ok("C9.1 P-138: a saved run of this comparison shows as Saved (US$0) before anything runs", imp.ai.saved === true && /US\$0/.test(imp.ai.saved_words), imp.ai.saved_words);
     r = await call("POST", `/intake/held/${id}/impact/draft`, { mode: "replay" });
     ok("C9.1 fail (review Major 1): a checker round of another saved run is not paired with this draft round; the draft is used alone, every proposal Decide", r.status < 300 && /from the draft round only/.test(String(r.body?.message)) && sql(`select string_agg(distinct confidence, ',') from proposal_item p join drafting_job j on j.id = p.run_id where j.kind = 'field_map_impact'`) === "decide", r.body?.message);
+    // Round 2 Major A fail: two paid runs of the one committed job share a stem; the later run's draft (12:00, no checker)
+    // never pairs with the earlier run's checker (10:05).
+    sql(`delete from proposal_item where run_id in (select id from drafting_job where kind = 'field_map_impact'); delete from drafting_job where kind = 'field_map_impact'`);
+    for (const f of written.splice(0)) rmSync(join(RUNS, f), { force: true });
+    removeSaved();
+    saveRun(`${step.jobBase}-c91api-paid-live-20261103t100000000z-runone.json`, runRecord(false, ctx.inputs, answer));
+    saveRun(`${step.jobBase}-check-c91api-paid-live-20261103t100500000z-runone.json`, runRecord(true, ctx.inputs, answer));
+    saveRun(`${step.jobBase}-c91api-paid-live-20261103t120000000z-runtwo.json`, runRecord(false, ctx.inputs, answer));
+    r = await call("POST", `/intake/held/${id}/impact/draft`, { mode: "replay" });
+    ok("C9.1 fail (round 2 Major A): a later run's draft is never paired with an earlier run's checker of the same job: the draft is used alone, every proposal Decide", r.status < 300 && /from the draft round only/.test(String(r.body?.message)) && sql(`select string_agg(distinct confidence, ',') from proposal_item p join drafting_job j on j.id = p.run_id where j.kind = 'field_map_impact'`) === "decide", r.body?.message);
+    for (const f of written.splice(0)) rmSync(join(RUNS, f), { force: true });
     // Then the saved run with its own checker round, on a fresh comparison (the first result stays: one per comparison).
     sql(`delete from proposal_item where run_id in (select id from drafting_job where kind = 'field_map_impact'); delete from drafting_job where kind = 'field_map_impact'`);
     writeSaved();
@@ -149,7 +160,7 @@ const saveRun = (name: string, rec: unknown) => { writeFileSync(join(RUNS, name)
     ok("C9.1 P-121 fail: an answer for another edition is never used; the run ends after the draft round (no checker call), its cost recorded, nothing proposed", r.status === 409 && /another form edition|could not be used|expected shape/.test(words(r)) && log3.map((x) => x.mode).join(",") === "stub,live" && j3 === "LIVE|FAILED|0.13" && n(`select count(*) from proposal_item p join drafting_job j on j.id = p.run_id where j.kind = 'field_map_impact'`) === 0, { status: r.status, words: words(r), log3, j3 });
     writeFileSync(join(VARDIR, "fake-launch.log"), "");
     r = await call("POST", `/intake/held/${id3}/impact/draft`, { mode: "live", expected_worst_usd: imp?.ai?.offer?.at_most_usd });
-    ok("C9.1 P-121 fail: a second paid run of the same comparison is refused in words, nothing launched", r.status === 409 && /already had a paid AI run \(US\$0\.13\)/.test(words(r)) && readFileSync(join(VARDIR, "fake-launch.log"), "utf8") === "", words(r));
+    ok("C9.1 P-121 fail: a second paid run of the same comparison is refused in words, nothing launched", r.status === 409 && /already had a paid AI run \(counted at US\$0\.13\)/.test(words(r)) && readFileSync(join(VARDIR, "fake-launch.log"), "utf8") === "", words(r));
     // Break B1: a live run stopped by a restart is left FAILED with no cost recorded: it may have been sent, so it counts.
     const id4 = await setup();
     imp = (await call("GET", `/intake/held/${id4}/impact`)).body;
@@ -163,7 +174,7 @@ const saveRun = (name: string, rec: unknown) => { writeFileSync(join(RUNS, name)
     saveRun(`${step.jobBase}-c91api-failed-live-20261103t100300000z-c91api.json`, { ...runRecord(false, ctx.inputs, answer, 0.13), contract_valid: false, raw_output: null, drafting_run: { status: "failed", usage: { cost_usd: 0.13 }, inputs: { official_files: ctx.inputs, combination: ctx.contextKey } } });
     imp = (await call("GET", `/intake/held/${id5}/impact`)).body;
     r = await call("POST", `/intake/held/${id5}/impact/draft`, { mode: "live", expected_worst_usd: imp?.ai?.offer?.at_most_usd });
-    ok("C9.1 fail (break M1): after a demo reset, the paid run recorded in p2/runs still counts: the offer is closed with why, and a click is refused, nothing launched", imp?.ai?.live?.open === false && /already had a paid AI run \(US\$0\.13\)/.test(imp?.ai?.live?.why ?? "") && r.status === 409 && readFileSync(join(VARDIR, "fake-launch.log"), "utf8") === "", { live: imp?.ai?.live, words: words(r) });
+    ok("C9.1 fail (break M1): after a demo reset, the paid run recorded in p2/runs still counts: the offer is closed with why, and a click is refused, nothing launched", imp?.ai?.live?.open === false && /already had a paid AI run \(counted at US\$0\.13\)/.test(imp?.ai?.live?.why ?? "") && r.status === 409 && readFileSync(join(VARDIR, "fake-launch.log"), "utf8") === "", { live: imp?.ai?.live, words: words(r) });
     for (const f of written.splice(0)) rmSync(join(RUNS, f), { force: true });
     // Break M2: with a saved run of this comparison, a paid run is refused (use it at US$0), even with the live switch on.
     writeSaved();
@@ -171,6 +182,12 @@ const saveRun = (name: string, rec: unknown) => { writeFileSync(join(RUNS, name)
     r = await call("POST", `/intake/held/${id5}/impact/draft`, { mode: "live", expected_worst_usd: imp?.ai?.offer?.at_most_usd });
     ok("C9.1 fail (break M2): a saved run of this comparison closes the paid path: live refused, nothing launched; Saved is offered at US$0", imp?.ai?.saved === true && imp?.ai?.live?.open === false && r.status === 409 && /use it at US\$0/.test(words(r)) && readFileSync(join(VARDIR, "fake-launch.log"), "utf8") === "", { live: imp?.ai?.live, words: words(r) });
     removeSaved();
+    // Round 2 Major B pass: a launcher record of a call refused at US$0 (the provider's usage limit) does not close the
+    // paid path: the offer stays open.
+    saveRun(`${step.jobBase}-c91api-limit-live-20261103t100400000z-c91api.json`, { ...runRecord(false, ctx.inputs, answer, 0), contract_valid: false, raw_output: null, drafting_run: { status: "failed", usage: { cost_usd: 0 }, attempts: [{ outcome: "refused_by_provider", error: "400 usage limit reached" }], inputs: { official_files: ctx.inputs, combination: ctx.contextKey } } });
+    imp = (await call("GET", `/intake/held/${id5}/impact`)).body;
+    ok("C9.1 pass (round 2 Major B): a call refused at US$0 leaves the paid path open (a refusal may be started again)", imp?.ai?.live?.open === true && imp?.ai?.live?.why === null, imp?.ai?.live);
+    for (const f of written.splice(0)) rmSync(join(RUNS, f), { force: true });
     ok("C9.1 (R-143): the fake launcher reached no model; the shared spend ledger is unchanged", ledger() === ledgerBefore);
   } finally {
     for (const f of written) rmSync(join(RUNS, f), { force: true });

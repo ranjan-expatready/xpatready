@@ -42,3 +42,27 @@ Copy: isolated `rv_c91` on :4446 (live switch off). Setup by API: reset, intake 
 
 ## Not tested
 A real screen reader; an intended user's unaided walk (D17 and D20 stay with the founder); a live run (PR 2); part 2 on the configured checkpoint (it does not hold IMM 5476 11-2025 on this commit).
+
+## Round 2 (127f57500), diff only
+Copy `rv2c91api` :4442, restarted on the fake launcher with the live switch (no model, no priced click), after the API check's own run. Headless Chrome, scripts in the reviewer's scratchpad.
+
+**Journeys re-walked:**
+1. **Saved, by keyboard.** "Use the saved AI run (US$0)" is reached in 20 Tabs, with no priced button beside it. Enter gives the result in 1.8 s and focus lands on `[data-drafted]`. The offer and saved lines are gone. Data: 1 REPLAY/COMPLETED/US$0 job and 3 waiting proposals. axe is clean and there is 0 px sideways scroll at 400 px.
+2. **Paid-closed.** One failed live record of US$0.13 is in `p2/runs`, as after a demo reset. The priced button is greyed with "already had a paid AI run (US$0.13)…" and no request is sent. But the page still says "nothing runs until you click" and "Draft with AI runs it".
+3. **Recovery after a free refusal.** A US$0 usage-limit record closes Draft with AI for good, with the words "its cost not recorded: it was stopped" (review Round 2, Major B).
+4. **Trust.** Two Mac runs sharing one stem: run 2's draft is replayed with run 1's checker as "read by both rounds" (Major A).
+
+| Criterion | R1 | R2 | Evidence |
+|---|---|---|---|
+| Task completed | ½ | ½ | P-32 now proven with data (API); the samples still show 0, and an accepted proposal does not map its box (break M5) |
+| Next step obvious | 1 | 1 | One button per state: Saved, or the priced button with its reason |
+| Plain words | ½ | ½ | "P-175" gone; the Saved line names a missing "Draft with AI" button; the paid-closed state contradicts itself |
+| Feedback and state | ½ | 1 | Offer hidden once drafted; focus on the result; closed reason beside the greyed button |
+| Correct data | 1 | 1 | One job, 3 proposals, US$0, ledger unchanged; set-aside withdraws them |
+| Error recovery | 1 | ½ | A free refusal blocks every retry (Major B) |
+| Accessibility and screen sizes | ½ | 1 | axe clean; 400 px tabs wrap; focus kept |
+| Speed | 1 | 1 | Page ready 1.0 s, replay 1.8 s |
+| Visual quality | 1 | 1 | Unchanged team look |
+| Trust and sources | ½ | ½ | Pairing still mixes runs of one Mac stem (Major A); false "stopped" cost words |
+
+**Round 2 score: 8 / 10, a pass** (no criterion at 0). Even so, the review blocks on Majors A and B. Most valuable fixes: the replay window (trust), counting only charged records (recovery and trust), one consistent sentence per AI state (words).

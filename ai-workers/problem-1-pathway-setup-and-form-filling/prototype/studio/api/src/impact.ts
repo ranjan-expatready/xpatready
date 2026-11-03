@@ -6,7 +6,7 @@
 import { HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { execFile } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { manifest } from "../../engine/import.ts";
@@ -21,12 +21,21 @@ import { fieldComponentsOf, formCombinations, openCases } from "./where-used.ts"
 import { aiLive } from "./sources.ts";
 import { liveRunsOf } from "./impact-ai.ts";
 import { changedBoxes, compareBoxes, componentsView, impactContext, impactCost, impactPart, impactStep, inventoryFields, IMPACT_AI_WORDS, previousAcceptedUntil, staleRun, writePart, type BoxRow } from "./impact-ai.ts";
-import { pairOf, StepRunner, type RoundOut } from "./rounds.ts";
+import { pairOf, RUNS, runTime, StepRunner, type AiStep, type RoundOut } from "./rounds.ts";
+import { replayPattern } from "../../engine/rounds.ts";
 import type { FieldMapOutput } from "./field-drafts.ts";
 
 const run = promisify(execFile);
 /** C9.1: the AI step's drafting-job kind (one per held edition and comparison). */
 export const IMPACT_STEP = "field_map_impact";
+/** Round 2 Major A: every paid run of one committed job shares its stem, so the stem alone can pair a draft with an
+ *  earlier run's checker. The paid runner records a run's draft, then its checker: the checker of this draft is the one
+ *  recorded after it and before the next draft round of the same stem (as form-masters.ts savedRounds). */
+function checkerWindow(step: Pick<AiStep, "jobBase">, draftFile: string) {
+  const stem = pairOf(step, false, draftFile), after = runTime(draftFile);
+  const next = (existsSync(RUNS) ? readdirSync(RUNS) : []).filter((f) => replayPattern(step.jobBase, false).test(f) && pairOf(step, false, f) === stem && runTime(f) > after).map(runTime).sort()[0];
+  return { after, before: next ?? "99999999t999999999z" };
+}
 /** Replay only: a saved run is read, nothing is launched. */
 const NO_LAUNCH = { launchOnce: async (): Promise<never> => { throw new Error("A saved AI run is replayed here: no live call is sent."); } };
 /** The edition as printed on the form ("IMM 5476 (11-2025)"): the intake keeps it whole; a bare "11-2025" gets its code. */
@@ -95,7 +104,7 @@ export class Impact {
     const boxesOf = (w: unknown) => ((w as { boxes?: { data_path?: string }[] } | null)?.boxes ?? []).map((b) => b.data_path);
     return {
       offer: { boxes: changed.length, words: IMPACT_AI_WORDS.offer(changed.length, cost.words), about_usd: cost.about_usd, at_most_usd: cost.at_most_usd, key: `${part.editionSha256.slice(0, 12)}·${part.boxesSha.slice(0, 12)}` },
-      saved: draft.ok, saved_words: draft.ok ? `A saved AI run of this comparison is here: Draft with AI uses it at US$0.` : stale ? IMPACT_AI_WORDS.stale : IMPACT_AI_WORDS.noSaved.replace("about US$x · at most US$y", cost.words),
+      saved: draft.ok, saved_words: draft.ok ? `A saved AI run of this comparison is here: use it at US$0.` : stale ? IMPACT_AI_WORDS.stale : IMPACT_AI_WORDS.noSaved.replace("about US$x · at most US$y", cost.words),
       live: { open: liveWhy === null, why: liveWhy },
       drafted: job ? { job_id: job.id, at: job.startedAt.toISOString(), message: job.message, proposals: proposals.length, waiting: proposals.filter((p) => p.status === "waiting").length,
         boxes: Object.fromEntries(changed.map((dp) => [dp, proposals.filter((p) => boxesOf(p.work).includes(dp)).map((p) => p.id)])) } : null,
@@ -168,7 +177,7 @@ export class Impact {
       const ctx = { ...impactContext(printed, part, aiJob.id), mode: mode as "live" | "replay", wanted: async () => true };
       // Review Major 1: a replayed checker round comes from the same saved run as the draft round (its job stem), never
       // another run of the same comparison, so two rounds that agree were one run's two readings.
-      const safe = async (isCheck: boolean, pair?: string): Promise<RoundOut<FieldMapOutput>> => { try { return await runner.round<FieldMapOutput>(step, isCheck, { ...ctx, ...(pair !== undefined ? { replayPair: pair } : {}) }); } catch (e) {
+      const safe = async (isCheck: boolean, pair?: string, window?: { after: string; before: string }): Promise<RoundOut<FieldMapOutput>> => { try { return await runner.round<FieldMapOutput>(step, isCheck, { ...ctx, ...(pair !== undefined ? { replayPair: pair } : {}), ...(window ? { replayWindow: window } : {}) }); } catch (e) {
         // Review minor: a live round that throws may have been sent; it is counted at its share of the worst case (as
         // the ledger reserves it), so the one-paid-run rule still holds. A replay that throws cost nothing.
         console.warn(`impact ai ${aiJob.id}:`, String(e).slice(0, 400));
@@ -177,7 +186,7 @@ export class Impact {
       // P-121: one attempt per round (the launcher retries only a transient error); no third round. The checker round runs
       // blind on the same part; it is skipped only when the draft round was blocked or stopped.
       // The blind checker round runs only on a usable draft: a failed draft round ends the run, so nothing more is spent.
-      const check: RoundOut<FieldMapOutput> = draft.ok ? await safe(true, draft.from === "replay" ? pairOf(step, false, draft.runFile) : undefined) : { ok: false, costUsd: 0, reason: "Not started: the draft round gave no usable answer." };
+      const check: RoundOut<FieldMapOutput> = draft.ok ? await safe(true, draft.from === "replay" ? pairOf(step, false, draft.runFile) : undefined, draft.from === "replay" ? checkerWindow(step, draft.runFile) : undefined) : { ok: false, costUsd: 0, reason: "Not started: the draft round gave no usable answer." };
       const spent = draft.costUsd + check.costUsd;
       if (!draft.ok) {
         await this.db.draftingJob.update({ where: { id: aiJob.id }, data: { status: "FAILED", costUsd: spent, finishedAt: new Date(), message: draft.reason.slice(0, 1000) } });

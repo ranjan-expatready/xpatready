@@ -16,6 +16,7 @@ import { basename, join } from "node:path";
 import { PARTS_DIR } from "../../../p2/policy.ts";
 import { costUsd, inputTokenBound } from "../../../p2/ledger.ts";
 import { costWords } from "../../contracts/start-setup.ts";
+import { costBesideLimit, isProviderLimit } from "../../engine/ai-run.ts";
 import { partOutputTokens } from "../../engine/parts.ts";
 import { editionContextKey, replayPattern, savedRunKey, type SavedRun } from "../../engine/rounds.ts";
 import { SOLUTION } from "./core.ts";
@@ -65,14 +66,14 @@ export const IMPACT_JOB_BASE = "studio-fieldmap-impact";
 export const IMPACT_AI_WORDS = {
   noSaved: "No saved AI run for this comparison yet: Draft with AI runs it (about US$x · at most US$y), or a person maps each new and reworded box.",
   badSaved: "The saved AI run for this comparison could not be read, so it was not used.",
-  nothingUsed: "Nothing of it was used: a person maps each new and reworded box, or Draft with AI runs again.",
+  nothingUsed: "Nothing of it was used: a person maps each new and reworded box.",
   offer: (n: number, cost: string) => `Draft with AI (${cost}): proposals for the ${n} new and reworded box${n === 1 ? "" : "es"} only; nothing runs until you click, and a person accepts each one.`,
   none: "No new or reworded boxes: nothing for AI to draft.",
   liveOff: (cost: string) => `Draft with AI (${cost}) is not open on this copy: live AI is off (only the founder turns it on). Nothing was sent and nothing was charged. Use a saved AI run (US$0), or a person maps each new and reworded box.`,
   stale: "The saved AI run was made for another comparison of this edition (its new and reworded boxes differ), so it is out of date and not used. Draft with AI again, or a person maps the boxes.",
   overCap: (worst: number, left: number) => `Not started: the worst case (US$${worst.toFixed(2)}) is above what is left of the AI spending cap (US$${left.toFixed(2)}). Nothing was started.`,
   savedFirst: "A saved AI run of this comparison is here: use it at US$0. A paid run is not started while a saved one exists.",
-  paidOnce: (usd: number) => `This comparison already had a paid AI run (${usd > 0 ? `US$${usd.toFixed(2)}` : "its cost not recorded: it was stopped"}) whose answer could not be used, so another is not started from here. A person maps each new and reworded box; another paid run needs the tech lead's Go.`,
+  paidOnce: (usd: number) => `This comparison already had a paid AI run (${usd > 0 ? `counted at US$${usd.toFixed(2)}` : "stopped before its cost was recorded, so it may have been sent"}) whose answer could not be used, so another is not started from here. A person maps each new and reworded box; another paid run needs the tech lead's Go.`,
   outside: (path: string) => `The AI answer named a box that is not new or reworded (${path.slice(0, 120)}), so it was not used.`,
 };
 
@@ -134,7 +135,11 @@ export function liveRunsOf(partSha256: string): { file: string; costUsd: number;
     let r: SavedRun; try { r = JSON.parse(readFileSync(join(RUNS, f), "utf8")); } catch { continue; }
     const inputs = (r.drafting_run?.inputs?.official_files ?? []) as { sha256?: string }[];
     if (r.caller !== "live" || !inputs.some((i) => i.sha256 === partSha256)) continue;
-    out.push({ file: f, costUsd: Number(r.drafting_run?.usage?.cost_usd ?? 0), usable: r.contract_valid === true && typeof r.raw_output === "string" });
+    // Round 2 Major B: only a call that cost money counts (as rounds.ts charges it: a provider-limit refusal counts only
+    // an earlier attempt beside it); a refusal at US$0 may be started again.
+    const env = r as unknown as Parameters<typeof costBesideLimit>[0];
+    const cost = isProviderLimit(env) ? costBesideLimit(env) : Number(r.drafting_run?.usage?.cost_usd ?? 0);
+    if (cost > 0) out.push({ file: f, costUsd: cost, usable: r.contract_valid === true && typeof r.raw_output === "string" });
   }
   return out;
 }
