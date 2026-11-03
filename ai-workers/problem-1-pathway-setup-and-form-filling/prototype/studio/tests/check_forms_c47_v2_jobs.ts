@@ -119,9 +119,21 @@ for (const [sig, code] of [["SIGINT", 130], ["SIGTERM", 143]] as const) process.
   ok("C4.7v2 R fail: Saved never uses a v2 pair recorded under another combination's key (US$0)", !(p?.saved?.files ?? []).some((f: string) => wrong.includes(f)), p?.saved);
   for (const f of wrong) rmSync(join(PROTOTYPE, "..", f), { force: true });
   const good = [saveLive(draft.job_id), saveLive(check.job_id)];
+  // #764 review B1: once the Mac's real v2 pair is committed, Saved takes it (the check's pair is stamped 2000, so older);
+  // either way the pair used is these jobs' own, never #530's v1 pair. "Usable" exactly as the app's replay judges it
+  // (engine/rounds.ts isSameSavedRun and the step's shape check), so a failed real run is never expected.
+  const { isSameSavedRun, newestFirst } = await import("../engine/rounds.ts");
+  const expect = (job: typeof draft, mine: string) => {
+    const want = { templateSha256: createHash("sha256").update(readFileSync(join(P2, "prompts", job.template))).digest("hex"), inputs: job.inputs, contextKey: job.combination, legacy: {} };
+    const real = readdirSync(RUNS).filter((f) => f.startsWith(`${job.job_id}-live-`) && !f.includes(FAKE)).sort(newestFirst).find((f) => {
+      try { const r = { ...JSON.parse(readFileSync(join(RUNS, f), "utf8")), file: f }; return isSameSavedRun(r, want) && PQR_AI.shapeOk(JSON.parse(String(r.raw_output))); } catch { return false; }
+    });
+    return real ? `prototype/p2/runs/${real}` : mine;
+  };
+  const wanted = [expect(draft, good[0]), expect(check, good[1])];
   p = await savedPlan();
-  ok("C4.7v2 R pass: Saved on Visitor visa uses exactly the recorded v2 draft and checker, ahead of #530's v1 pair (US$0)",
-    p?.saved?.available === true && JSON.stringify(p.saved.files) === JSON.stringify(good), { saved: p?.saved, good });
+  ok(`C4.7v2 R pass: Saved on Visitor visa uses exactly the ${wanted[0] === good[0] ? "recorded" : "committed real"} v2 draft and checker, ahead of #530's v1 pair (US$0)`,
+    p?.saved?.available === true && JSON.stringify(p.saved.files) === JSON.stringify(wanted) && wanted[0].includes(`/${draft.job_id}-live-`) && wanted[1].includes(`/${check.job_id}-live-`), { saved: p?.saved, wanted });
 
   // ---------------------------------------------------------------- W: worst cases from the code's own estimators
   let total = 0;
