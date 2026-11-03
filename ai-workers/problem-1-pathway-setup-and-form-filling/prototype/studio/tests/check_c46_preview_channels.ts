@@ -5,7 +5,8 @@
 // before W1-10 ("Signed PDF upload") reads as a PDF to sign. A pass and a fail per rule; rules only, no AI (US$0).
 //   zsh studio/tools/isolated.sh runtime_c46 4435 start && tsx studio/tests/check_c46_preview_channels.ts 4435 xr_studio_runtime_c46
 import { execFileSync } from "node:child_process";
-import { previewFamily, outputOf, LATER_WAVE_ONLINE } from "../engine/runtime/preview.ts";
+import { previewFamily, outputOf, signWords, GUARDIAN_WORDS, LATER_WAVE_ONLINE } from "../engine/runtime/preview.ts";
+import { MINOR } from "../contracts/runtime.ts";
 
 const PORT = Number(process.argv[2] ?? 4435), DB = process.argv[3] ?? "xr_studio_runtime_c46";
 let pass = 0, fail = 0;
@@ -89,6 +90,30 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   const o = (vOld.forms as any[]).find((f) => f.form === old.form_number);
   ok("C4.6 R6 pass: a line released as \"Signed PDF upload\" is a PDF upload to sign by hand", !!o && o.channel === "PDF_UPLOAD" && o.toSign === true && o.signatureWords === "Signed by hand and scanned", o);
   ok("C4.6 R6 fail: outputOf keeps Not needed and Online lines off the to-sign list", outputOf("NOT_NEEDED", "NONE").toSign === false && outputOf("ONLINE", "TYPED_NAME").toSign === false && outputOf("ONLINE", "NONE").laterWave === LATER_WAVE_ONLINE);
+
+  // R7 who signs, in words (IRCC-P2-06: under 18, a parent or legal guardian signs; IRCC-P2-09: IMM 5476 by the person
+  // and the representative). signWords reads R7's signers (engine/runtime/signing.ts signersOf).
+  ok("C4.6 R7 pass: an adult signs their own form, named as themselves", signWords("PDF_UPLOAD", "HAND_SCANNED", false, ["person"], "principal", false)?.by === "The principal applicant themselves" && signWords("PDF_UPLOAD", "HAND_SCANNED", false, ["person"], "spouse_or_partner", false, "Spouse or partner")?.by === "Spouse or partner themselves");
+  ok("C4.6 R7 pass: a form signed by hand and scanned says so", /by hand/i.test(signWords("PDF_UPLOAD", "HAND_SCANNED", false, ["person"], "principal", false)?.how ?? "") && /pen/i.test(signWords("PAPER", "PEN", false, ["person"], "principal", false)?.how ?? ""));
+  ok("C4.6 R7 pass: a child under 18 never signs their own form: a parent or legal guardian does", signWords("PDF_UPLOAD", "HAND_SCANNED", false, ["person"], "child", true, "Child 1")?.by === GUARDIAN_WORDS);
+  ok("C4.6 R7 fail: a child of 18 or older signs their own form (not a guardian)", signWords("PDF_UPLOAD", "HAND_SCANNED", false, ["person"], "child", false, "Child 1")?.by === "Child 1 themselves");
+  ok("C4.6 R7 pass: the Sample rule \"a parent, for a minor\" names the principal as the parent; the representative is added", /principal applicant, as their parent/i.test(signWords("PDF_UPLOAD", "NONE", false, ["parent", "representative"], "child", true)?.by ?? "") && /and the representative$/.test(signWords("PDF_UPLOAD", "NONE", false, ["person", "representative"], "principal", false)?.by ?? ""));
+  ok("C4.6 R7 fail: nobody signs a checklist, a Not needed line, an Online line with no method, or a line set to No signature", [signWords("PDF_UPLOAD", "HAND_SCANNED", true, ["person"], "principal", false), signWords("NOT_NEEDED", "NONE", false, ["person"], "principal", false), signWords("ONLINE", "NONE", false, ["person"], "principal", false), signWords("PDF_UPLOAD", "NONE", false, [], "principal", false)].every((x) => x === null) && signWords("ONLINE", "TYPED_NAME", false, ["person"], "principal", false) !== null);
+
+  // R8 the Sample family's ages decide its forms even before the combination asks a date of birth; R9 the representative
+  // sees each applicant's form they sign, and no form of their own.
+  const s8 = structuredClone(snap);
+  s8.canonical_fields = s8.canonical_fields.filter((f: any) => f.id !== MINOR.birthDateField);
+  s8.combination.participants = [{ role: "principal", min: 1, max: 1, applies: true }, { role: "spouse_or_partner", min: 0, max: 1, applies: true }, { role: "child", min: 0, max: 2, applies: true }, { role: "representative", min: 0, max: 1, applies: false }];
+  s8.forms = [...s8.forms.filter((f: any) => !["IMM TEST AGE", "IMM TEST REP"].includes(f.form_number)),
+    { form_number: "IMM TEST AGE", title: "Adults only", form_kind: "data_form", who: "each_applicant", status: "always", min_age: 18, channel: "PDF_UPLOAD", signature: "HAND_SCANNED" },
+    { form_number: "IMM TEST REP", title: "Use of representative", form_kind: "data_form", who: "each_applicant", status: "always", min_age: 18, channel: "PDF_UPLOAD", signature: "HAND_SCANNED", signed_by: "person_and_representative" }];
+  const at = (who: string, f: string) => (previewFamily(s8, "", who, {}).forms as any[]).find((x) => x.form === f);
+  ok("C4.6 R8 pass: with no date of birth question, the Sample adult (38) still gets a form from age 18", at("principal", "IMM TEST AGE")?.applies === true, at("principal", "IMM TEST AGE"));
+  ok("C4.6 R8 fail: with no date of birth question, the Sample child (8) gets no form from age 18", !at("child-1", "IMM TEST AGE"), at("child-1", "IMM TEST AGE"));
+  const repForms = previewFamily(s8, "", "representative", {}).forms as any[];
+  ok("C4.6 R9 pass: the representative's preview lists the form they sign with each adult applicant, naming whose", repForms.length === 1 && repForms[0].form === "IMM TEST REP" && /^The representative, with /.test(repForms[0].sign?.by ?? "") && /Principal applicant/.test(repForms[0].sign.by) && !/Child/.test(repForms[0].sign.by), repForms);
+  ok("C4.6 R9 fail: the representative gets no form of their own (not an applicant) and no form signed only by the person", !repForms.some((f) => f.form === "IMM TEST AGE"));
 
   console.log(`\n${pass}/${pass + fail} passed`);
   process.exit(fail ? 1 : 0);
