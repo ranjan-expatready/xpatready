@@ -62,7 +62,7 @@ const STATUS: Record<Row["status"], { word: string; tone: string; tip: string }>
   needs_ok: { word: "Needs your OK", tone: "warn", tip: "A file of this form waits for a second person on To review (a hand upload, or a newer edition to review)." },
   newer_file: { word: "Newer file on canada.ca", tone: "warn", tip: "canada.ca now serves another file of the same printed edition. Combinations keep using the library's file until a person replaces it." },
   no_file: { word: "No file yet", tone: "neutral", tip: "No edition of this form is in the library yet: upload its PDF, or let the form finder download it from canada.ca." },
-  online_only: { word: "Online only · no official PDF", tone: "neutral", tip: "IRCC publishes no PDF of this form: it is held as its online version, and its questions come from IRCC's help pages or saved portal screens (P-152). No PDF is asked for." },
+  online_only: { word: "Online only · no official PDF", tone: "neutral", tip: "This form is held only as its online version, with no official PDF: its questions come from IRCC's help pages or saved portal screens. No PDF is asked for." },
   retired: { word: "Retired", tone: "neutral", tip: "Hidden from pickers and AI; released versions and open cases keep it. Restore it to use it again." },
 };
 /** X5 (P-156 (1)): the words of a row filled from IRCC's forms list, beside the usual ones. */

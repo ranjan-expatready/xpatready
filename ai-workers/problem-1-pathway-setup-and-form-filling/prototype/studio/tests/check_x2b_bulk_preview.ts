@@ -123,6 +123,14 @@ const PLAIN = (s: string) => !/\bP-\d+\b/.test(s) && !/\b[a-z]+_[a-z_]+\b/.test(
   x = await outcomeOf(add(form("IMM 1295")), SV);
   ok("C1.5 BR-C1 retirement open fail: nothing new may use a form whose retirement waits on To review", x.o === "CANNOT_RETIRED" && /open on To review/.test(x.why), x.why);
   sql(`delete from library_change where key='IMM 1295' and action='RETIRE'`);
+  // C11.11 review m1: a checklist line kept from before (test input, SQL, Sample) is never offered as "will add": apply would
+  // refuse it (addFormLine), so the preview says why first; a filed form from the same source still will be added.
+  sql(`insert into combination_form select (jsonb_populate_record(null::combination_form, to_jsonb(cf) || jsonb_build_object('id', gen_random_uuid(), 'lineage_key', 'IMM 5488', 'gov_form_def_id', (select id from gov_form_def d where d.form_key='IMM 5488' and d.workspace_id=cf.workspace_id), 'version', 1, 'status', 'DRAFT', 'supersedes_id', null))).* from combination_form cf where cf.combination_id='${WP}' and cf.lineage_key='IMM 5707' order by cf.version desc limit 1`);
+  x = await outcomeOf(add(form("IMM 5488")), SV);
+  ok("C11.11 review m1 fail: copying a checklist line kept from before is 'Cannot', in words (read by AI and never filed)", x.o === "CANNOT_RETIRED" && /checklist: it is read by AI and never filed/.test(x.why) && !x.t.tickable, x.t);
+  sql(`delete from combination_form where combination_id='${WP}' and lineage_key='IMM 5488'`);
+  x = await outcomeOf(add(form("IMM 1295")), SV);
+  ok("C11.11 review m1 pass: a filed form from the same combination will still be added", x.o === "WILL_ADD", x.o);
 
   // waits: submitted for review
   sql(`insert into review_submission (id, workspace_id, combination_id, draft_sha256, submitted_by, status, change_summary) values (gen_random_uuid(), '${ws}', '${SV}', 'x2b-test', 'user-A', 'SUBMITTED', '[]')`);

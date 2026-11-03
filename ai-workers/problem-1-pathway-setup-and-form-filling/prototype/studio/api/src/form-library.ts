@@ -41,7 +41,7 @@ const nameOf = (id: string) => ACTORS.find((a) => a.id === id)?.name ?? "another
 const TYPE_OF = libraryType;
 /** P-152 (2): the flag a form held only online carries in the library, in the founder's words. */
 const ONLINE_ONLY_WORDS = "Online only · no official PDF";
-const ONLINE_ONLY_FIELD_MAP = { kind: "no_edition" as const, decided: 0, total: 0, words: "No PDF: online only", tip: "This form is held only as its online version, with no official PDF: its questions come from IRCC's help pages or saved portal screens (P-152), not from a PDF." };
+const ONLINE_ONLY_FIELD_MAP = { kind: "no_edition" as const, decided: 0, total: 0, words: "No PDF: online only", tip: "This form is held only as its online version, with no official PDF: its field map is drafted from IRCC's help pages or saved portal screens, not from a PDF." };
 
 /** P-143 (C-3): a form's records of what IRCC accepts, per IRCC account, for the Form library row (ANY first). A guide
  *  or checklist is read by AI and never filed. */
