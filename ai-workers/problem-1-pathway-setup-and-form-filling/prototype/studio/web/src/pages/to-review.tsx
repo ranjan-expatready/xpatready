@@ -18,7 +18,8 @@ import { withReturn } from "@/pages/workspace/setup-rail";
 const VIEWS = [["needs", "Needs you"], ["waiting", "Waiting for others"], ["running", "Running"], ["all", "All"]] as const;
 const KIND_TONE: Record<QueueKind, string> = { setup: "warn", proposals: "ai", ai_proposals: "ai", release: "info", library_change: "info", form_fields: "warn", new_edition: "warn", held_file: "warn", merge: "neutral", running: "ai" };
 /** QA-179 (P-288 (1)): To review counts items, Immigration programs counts combinations. One line says how the two
- *  meet: the items on combinations, how many combinations they are (the number Programs shows), and the shared-library
+ *  meet: the items on combinations, how many combinations they are (Programs marks each, its chip counting one Pathway
+ *  type at a time, so the line names no Programs number; review-qa179 m1), and the shared-library
  *  items apart, held files named as held. */
 function NeedsBreakdown({ items }: { items: QueueItem[] }) {
   const onCombos = items.filter((i) => i.combination);
@@ -27,7 +28,7 @@ function NeedsBreakdown({ items }: { items: QueueItem[] }) {
   const library = items.length - onCombos.length - held;
   const n = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
   const parts = [
-    onCombos.length ? `${n(onCombos.length, "item", "items")} on ${n(combos, "combination", "combinations")} (Immigration programs counts ${combos === 1 ? "this combination" : `these ${combos} combinations`})` : null,
+    onCombos.length ? `${n(onCombos.length, "item", "items")} on ${n(combos, "combination", "combinations")} (each marked Needs you on Immigration programs, under its Pathway type)` : null,
     held ? `${n(held, "held file", "held files")} (held: not read into the library until a person checks ${held === 1 ? "it" : "them"})` : null,
     library ? `${n(library, "shared library item", "shared library items")}` : null,
   ].filter(Boolean);

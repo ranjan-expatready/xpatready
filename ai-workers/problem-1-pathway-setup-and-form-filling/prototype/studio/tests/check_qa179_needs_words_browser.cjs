@@ -38,10 +38,10 @@ const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
       await as(actor);
       const q = await reviewNeeds(actor);
       const combos = new Set(q.items.map((i) => i.combination).filter(Boolean));
-      let programsTotal = 0;
+      let programsTotal = 0; const programsIds = new Set();
       // ---------------------------------------------------------------- Immigration programs: combinations, said so
       for (const pw of ["INDIVIDUAL", "CORPORATE"]) {
-        const ids = await programsNeeds(actor, pw); programsTotal += ids.length;
+        const ids = await programsNeeds(actor, pw); programsTotal += ids.length; ids.forEach((id) => programsIds.add(id));
         await p.goto(`${BASE}/${pw === "CORPORATE" ? "?pw=CORPORATE" : ""}`); await p.locator("[data-needs-you]").first().waitFor({ timeout: 20000 }); await settled();
         const chip = p.locator("[data-needs-you]").first();
         await p.waitForFunction((n) => document.querySelector("[data-needs-you-count]")?.getAttribute("data-needs-you-count") === String(n), ids.length, { timeout: 15000 }).catch(() => undefined);
@@ -63,7 +63,10 @@ const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
       const library = q.items.filter((i) => !i.combination && i.kind !== "held_file").length;
       const onCombos = q.items.length - held - library;
       step(`${label} (${actor}): the line names the items (${q.items.length}) and the combinations they are on (${combos.size})`, said.startsWith(`${plural(q.items.length, "item needs", "items need")} you`) && (!onCombos || said.includes(`${plural(onCombos, "item", "items")} on ${plural(combos.size, "combination", "combinations")}`)), said);
-      step(`${label} (${actor}) fail case: the combinations To review's line names are Programs' Needs-you count (both Pathway types)`, Number(await line.getAttribute("data-combinations")) === programsTotal && combos.size === programsTotal, { line: await line.getAttribute("data-combinations"), programsTotal, combos: combos.size });
+      // Review-qa179 m1: Programs' chip counts one Pathway type at a time, so the line claims no Programs number; the same
+      // combinations are marked on Programs, each under its type (set equality, not only the sum).
+      step(`${label} (${actor}) fail case: the combinations on To review's line are exactly those Programs marks Needs you (both Pathway types)`, Number(await line.getAttribute("data-combinations")) === programsTotal && combos.size === programsIds.size && [...combos].every((c) => programsIds.has(c)), { line: await line.getAttribute("data-combinations"), programsTotal, combos: combos.size });
+      step(`${label} (${actor}): the line says where the combinations are marked, without a number Programs' one-type chip may not show`, !onCombos || /each marked Needs you on Immigration programs, under its Pathway type/.test(said), said);
       step(`${label} (${actor}) fail case: the line's parts add up to the items`, onCombos + held + library === q.counts.needs && Number(await line.getAttribute("data-held")) === held && Number(await line.getAttribute("data-library")) === library, { onCombos, held, library, needs: q.counts.needs });
       step(`${label} (${actor}): held files are named as held on the line`, !held || said.includes(`${plural(held, "held file", "held files")} (held:`), said);
       const badge = await p.getByRole("navigation", { name: "Studio" }).getByRole("link", { name: /To review/ }).locator("span[aria-label]").last().getAttribute("aria-label").catch(() => null);
