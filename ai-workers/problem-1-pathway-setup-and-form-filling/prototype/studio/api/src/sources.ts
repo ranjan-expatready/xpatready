@@ -10,6 +10,8 @@ import { basename, join, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 import { manifest, slug } from "../../engine/import.ts";
 import { normalize, type LibraryField } from "../../engine/normalize.ts";
+import { compareMaps, mapRules, type MapField } from "../../engine/field-map-rounds.ts";
+import { checkerRound } from "./field-map-check.ts";
 import { EXPERIMENT_CAP_USD, LABEL, LEDGER_DIR, MAX_ATTEMPTS, PARTS_DIR, RUN_CAP_USD, WAVE1_CAP_USD, WAVE1_START } from "../../../p2/policy.ts";
 import { canonical } from "../../../contracts/rules.ts";
 import { costUsd, SpendLedger } from "../../../p2/ledger.ts";
@@ -604,15 +606,33 @@ export class Sources {
     // D3: the edition is a fact of the file (p2/convert.ts), never the model's reading: a saved answer that misread it (the
     // 21 Oct IMM 5257 run says 06-2018 for the 09-2023 file) still lands on the file's edition; the reading stays on the job.
     const fileEdition = (await this.printedEdition(a)) ?? null; // printedEdition falls back to the attachment's own label
+    // G-CORE B4 (P-121): the blind checker round (api/src/field-map-check.ts), replayed when a checker run of exactly this
+    // form's inputs is recorded, compared with the draft field by field; the rules run on both rounds' items.
+    const chk = await checkerRound(this, rec, fileEdition);
+    let cmp: ReturnType<typeof compareMaps> | null = null;
+    if (chk.ok) {
+      const cout = checkedOutput({ raw_output: JSON.stringify(chk.output) } as never);
+      cmp = compareMaps(items, normalize(cout.canonical_fields, cout.entries.map((e) => ({ ...e, caption: box.get(e.data_path)?.caption ?? null })), library, redirects));
+    }
+    const formPaths = new Set(box.keys());
+    const readingOf = (f: MapField) => `${f.proposedKey} (${f.proposedType}): ${f.boxes.length} form field${f.boxes.length === 1 ? "" : "s"}`.slice(0, 300);
+    const draftRound = { from: (job.mode === "REPLAY" ? "replay" : "live") as "replay" | "live", runFile: job.runFile!.slice(0, 300), costUsd: Math.max(0, Number(job.costUsd ?? 0)) };
     const quoteOf = (q?: string) => (q && /^[0-9a-f]{64}$/.test(a.sha256) ? { file: a.fileName.slice(0, 300), sha256: a.sha256, edition: a.edition?.slice(0, 60) ?? null, page: null, quote: q.slice(0, 1000), quoteFound: true, rule: null } : null);
     const proposals: (NewProposal & Work)[] = items.map((i) => {
       const near = i.candidates.filter((c) => c.score >= 0.55).map((c) => c.key).slice(0, 10);
       const reuses = !!i.recommendation.key && (i.recommendation.action === "reuse" || (i.recommendation.action === "decide" && libKeys.has(i.recommendation.key)));
       const ready = i.outcome === "REUSE" || (i.outcome === "NEW" && !near.length);
       const payload = { kind: "field" as const, label: i.proposedKey.slice(0, 120), aliases: [], meaning: i.proposedMeaning, valueType: i.proposedType, subject: null, formBox: null };
+      // G-CORE B4: both readings kept; a disagreement is Decide with both reasons (P-121); no checker yet stays one round.
+      const c = cmp?.byKey.get(i.proposedKey);
+      const rounds = { draft: { ...draftRound, reading: readingOf(i), payload }, check: c?.check && chk.ok ? { reading: readingOf(c.check), payload: { ...payload, valueType: c.check.proposedType }, from: chk.from, runFile: chk.runFile.slice(0, 300), costUsd: chk.costUsd } : null };
+      const rules = [...mapRules(i, formPaths), ...(c?.check ? mapRules(c.check, formPaths).map((r) => ({ ...r, rule: `checker_${r.rule}` })) : [])];
+      const differ = c?.agreement === "differ";
+      const confidence = differ ? "decide" as const : ready ? "ready" as const : i.outcome === "NEW" ? "check" as const : "decide" as const;
+      const reason = differ ? `${c!.why}${i.reason ? ` Draft: ${i.reason}` : ""}`.slice(0, 500) : ready ? null : i.reason.slice(0, 500);
       return { kind: "field", runId: jobId, step: job.kind, scope: { formEdition: fileEdition?.slice(0, 60) ?? null, combinationId: job.combinationId }, landsOn: "library",
-        reuse: reuses ? { match: "reuse", existingKey: i.recommendation.key } : { match: "new", existingKey: null }, payload, source: quoteOf(i.evidence.quotes[0]), rounds: { draft: null, check: null }, rules: [],
-        agreement: "one_round", confidence: ready ? "ready" : i.outcome === "NEW" ? "check" : "decide", reason: ready ? null : i.reason.slice(0, 500), origin: "ai",
+        reuse: reuses ? { match: "reuse", existingKey: i.recommendation.key } : { match: "new", existingKey: null }, payload, source: quoteOf(i.evidence.quotes[0]), rounds, rules,
+        agreement: c ? c.agreement : "one_round", confidence, reason, origin: "ai",
         identity: { key: identityKeyOf(payload, ""), near, nearReason: near.length ? i.reason.slice(0, 300) : null }, relatesTo: null, revision: null, basis: "SAMPLE",
         work: { proposedKey: i.proposedKey, outcome: i.outcome, matchedKey: i.matchedKey, candidates: i.candidates, persons: i.persons, boxes: i.boxes, evidence: { ...i.evidence, recommendation: i.recommendation },
           affected: Object.fromEntries([i.matchedKey, ...i.candidates.map((c) => c.key)].filter(Boolean).map((k) => [k, affected.get(k!) ?? null])), reason: i.reason } };
