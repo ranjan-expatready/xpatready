@@ -116,7 +116,8 @@ const formsWords = (c) => c.setUp >= c.total ? `${c.total} form${c.total === 1 ?
   const app = fsv.facts.filter((f) => f.role === "case").length, mineP = fsv.facts.filter((f) => f.role === "principal").length + app;
   step("facts pass: the principal's line counts the application's facts with them and says so", cov.includes(`${mineP} form facts (${app} of them once for the application)`), { cov, mineP, app });
   const strip = await p.locator("[data-source-strip]").innerText();
-  step("facts pass: the strip names its total \"Form facts\" (one label; before: \"Full form facts\")", /\bForm facts\b/.test(strip) && !/Full form facts/.test(strip) && strip.includes(String(fsv.counts.facts)), strip);
+  // QA-174 (qa, 2 Nov): the strip's total is for all people, the line under the chips for one person: the strip says so.
+  step("facts fail case (QA-174): the strip names its total's scope \"Form facts, all people\" (before: \"Form facts\" beside one person's \"120 form facts\")", /\bForm facts, all people\b/.test(strip) && !/Full form facts/.test(strip) && strip.includes(String(fsv.counts.facts)), strip);
   await p.locator("[data-qd-draft]").click();
   const dlg = p.getByRole("dialog");
   await dlg.locator("[data-qd-facts]").waitFor({ timeout: 20000 }).catch(() => undefined);

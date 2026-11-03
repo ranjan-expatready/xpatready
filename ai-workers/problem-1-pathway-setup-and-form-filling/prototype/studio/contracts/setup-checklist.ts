@@ -15,7 +15,9 @@ export const STEP_TAB: Record<StepKey, "forms" | "documents" | "questionnaires" 
  *  "waiting" when the first open item is not this person's). */
 export const MARKS = ["done", "next", "todo", "ai", "waiting"] as const;
 /** The duty that acts on an open item (api/src/core.ts ACTORS duties); null = nobody (View AI progress). */
-export const ACTS = ["author", "sme", "approve"] as const;
+/** Who acts on an open item; "review" is a content publisher's duty (AI proposals, people proposals: Lead 5's ruling on
+ *  #616 Question 0, 2 Nov: P-121's review screen, To review, decides them). */
+export const ACTS = ["author", "sme", "approve", "review"] as const;
 /** P-176: who confirms an item: "author" when the rules or both AI readings are sure, "expert" for anything else. */
 export const TIERS = ["author", "expert"] as const;
 export type Tier = (typeof TIERS)[number];
