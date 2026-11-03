@@ -33,22 +33,47 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
  *  and it is confirmed: every fact it names was asked of that person (not hidden) in a repeating group that has no
  *  entries and whose "none apply" is confirmed (IMM 5257: post-secondary education, previous countries of residence).
  *  An empty question in a confirmed section is not an answer (Confirm section vouches only for the answers shown;
- *  review r1 B1), so "other names", the national identity document and the US card stay "not written" until a question
- *  asks them (forms question in the PR). Marked on a copy's boxes only; a later entry or a changed "none apply" makes
+ *  review r1 B1); "other names", the national identity document and the US card are "N" once their own Yes/No question
+ *  (the facts' gate, gateOf) is answered No and confirmed (QA-165). Marked on a copy's boxes only; a later entry or a changed "none apply" makes
  *  the copy out of date through its group facts (changedGroups). */
-export function markNothingRecorded(boxes: BoxRow[], view: QuestionnaireView): BoxRow[] {
+export function markNothingRecorded(boxes: BoxRow[], view: QuestionnaireView, placements: GatePlacement[] = []): BoxRow[] {
   return boxes.map((b) => {
     const d = b.coverage === "confirmed fact" || !b.fact || !b.about || b.about === "case" ? null : recordedDerivation(b.transform);
     if (!d) return b;
     const subject = b.about!.split("/")[0], facts = new Set([b.fact!, ...d.facts]);
     const asked = view.sections.flatMap((s) => s.questions.filter((q) => q.subjectId === subject && facts.has(q.fact)).map((q) => ({ s, q })));
-    if (!asked.length || asked.some(({ q }) => q.hidden) || new Set(asked.map(({ q }) => q.fact)).size !== facts.size) return b;
+    if (!asked.length || new Set(asked.map(({ q }) => q.fact)).size !== facts.size) return b;
     if (asked.some(({ q }) => q.answer || q.rows.some((r) => r.answer))) return b;
     const settled = (s: QuestionnaireView["sections"][number]) => !!s.group && s.group.rows === 0 && !!s.group.none_apply?.value && s.group.none_apply.confirmed;
-    if (!asked.every(({ s }) => settled(s))) return b;
-    const titles = [...new Set(asked.map(({ s }) => s.title))].join(", ");
-    return { ...b, nothing_recorded: true as const, detail: `nothing recorded: "none apply" confirmed in ${titles}` };
+    if (!asked.some(({ q }) => q.hidden) && asked.every(({ s }) => settled(s))) {
+      const titles = [...new Set(asked.map(({ s }) => s.title))].join(", ");
+      return { ...b, nothing_recorded: true as const, detail: `nothing recorded: "none apply" confirmed in ${titles}` };
+    }
+    // QA-165 (C7.2): a confirmed "No" to the Yes/No question that each of these facts is asked under (IMM 5257's own
+    // "Have you ever used any other name…?", "Do you have a national identity document?", "Are you a lawful permanent
+    // resident of the United States…?") vouches that nothing is recorded, as a confirmed "none apply" does.
+    const gates = asked.map(({ q }) => gateNo(view, placements, subject, q.fact));
+    if (gates.every((g): g is string => !!g)) return { ...b, nothing_recorded: true as const, detail: `nothing recorded: "${[...new Set(gates)].join('", "')}" answered No and confirmed` };
+    return b;
   });
+}
+
+/** A placement as the release carries it (engine/snapshot.ts): its fact, its condition and the condition's effect. */
+export type GatePlacement = { fact: string; condition?: unknown; condition_effect?: string | null };
+/** QA-165: the Yes/No question a fact is asked under: its placement's condition is "<gate> is Yes" (it becomes required,
+ *  or shown, only then). Null for a fact asked on its own. */
+export function gateOf(placements: GatePlacement[], fact: string): string | null {
+  const p = placements.find((x) => x.fact === fact);
+  const c = p?.condition as { op?: string; field?: unknown; value?: unknown } | null | undefined;
+  if (!c || c.op !== "eq" || c.value !== true || typeof c.field !== "string") return null;
+  return (p!.condition_effect ?? "SHOW") === "REQUIRE" || (p!.condition_effect ?? "SHOW") === "SHOW" ? c.field : null;
+}
+/** QA-165: the gate's question label when this person answered it No and the answer is confirmed; else null. */
+export function gateNo(view: QuestionnaireView, placements: GatePlacement[], subject: string, fact: string): string | null {
+  const g = gateOf(placements, fact);
+  if (!g) return null;
+  const q = view.sections.flatMap((s) => s.questions).find((x) => x.subjectId === subject && x.fact === g && !x.hidden);
+  return q?.answer && q.answer.value === false && q.answer.confirmed ? q.label : null;
 }
 
 /** The forms a case fills as PDFs: the release files them as a PDF (its filing line is not Online) and has their
