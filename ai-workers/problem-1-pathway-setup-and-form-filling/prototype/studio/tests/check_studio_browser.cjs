@@ -387,7 +387,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   let decidedFF = 0;
   for (const j of appliedJobs) {
     const ff = await api(`/jobs/${j.id}/form-fields`);
-    for (const x of ff.fields.filter((y) => y.outcome === "unresolved")) { await api(`/editions/${ff.edition.id}/form-fields/decision`, { method: "POST", data: { dataPath: x.dataPath, decision: "not_a_fact", reason: "Not filled from case facts in this journey (Sample)." } }); decidedFF++; }
+    for (const x of ff.fields.filter((y) => y.outcome === "unresolved")) { await api(`/editions/${ff.edition.id}/form-fields/decision`, { method: "POST", data: { dataPath: x.dataPath, decision: x.background ? "by_hand" : "not_a_fact", reason: x.background ? "A Background question, recorded by hand in this journey (Sample; C3.8)." : "Not filled from case facts in this journey (Sample)." } }); decidedFF++; }
   }
   const waitingAdds = await api("/library/changes?status=WAITING");
   for (const c of waitingAdds) await p.request.fetch(`${URL}/api/library/changes/${c.id}/approve`, { method: "POST", headers: { "x-actor": "user-C", "content-type": "application/json" }, data: {} });
