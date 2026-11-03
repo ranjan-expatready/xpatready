@@ -125,7 +125,9 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
     const out = new Map<string, Missing>();
     for (const k of keys) {
       const d = derived.find((x) => x.id === k);
-      const has = (f: string) => known.has(`${isFilingFact(f, placed.get(f)) ? FILING : about}|${f}`); // SH3 R5, with the placement (C7.7, contract item (c))
+      // SH3 R5 with the placement (C7.7, contract item (c)); an answer saved on the person before its placement became once
+      // per case still counts (Devin on #680, as render's keepAnswered, review r2-m1).
+      const has = (f: string) => known.has(`${isFilingFact(f, placed.get(f)) ? FILING : about}|${f}`) || known.has(`${isFilingFact(f) ? FILING : about}|${f}`);
       const all = d ? [...(d.inputs ?? []), ...(d.reference ? [d.reference] : [])] : [k];
       const open = all.filter((f) => !has(f));
       for (const f of open.length ? open : all) out.set(f, { key: f, question: words(f), answered: !open.length });
