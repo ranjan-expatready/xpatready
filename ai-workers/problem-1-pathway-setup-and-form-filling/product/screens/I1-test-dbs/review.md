@@ -50,3 +50,31 @@ I ran `bash studio/tools/prune-test-dbs.sh --yes extra` **without PRUNE_MATCH**,
 * **Builder's choices.** These are good: keeping `api.log`, `ISOLATED_KEEP=1`, a non-fatal stop, lane databases plus PRUNE_KEEP, re-checking before the drop, no `--force` in prune, and the PRUNE_MATCH guard. The re-check has the same blind spot as M1.
 
 **Verdict: Block** (request changes). Fix M1 and M2 and add their check lines. m1 to m3 are recommended in the same PR.
+
+## Round 2 (P-293, diff-only): `git diff 5d46040d0..8110974d6`
+**Ran:** a worktree at /home/user/rv745-r2 (postgres can read it; now removed). `check-test-dbs.sh` gave **exit 0, 25 passed, 0 failed**. Afterwards there was no `xr_studio_chk_*` database, no listener on 24987-24989, and `var/isolated-logs` was empty. I did not run `prune-test-dbs.sh --yes` myself; I used only a dry run with PRUNE_MATCH limited to my own `xr_studio_rv_pid`.
+**Closed:**
+* **M1:** the server pid is recorded as the database comment, and a live server is kept. Check line verified.
+* **M2:** exactly nothing or `--yes`, otherwise exit 2. Verified.
+* **m1:** unreadable files are kept.
+* **m2:** stop with the wrong port keeps the database. Verified.
+* **m3:** the check now asserts the second start worked.
+* **Nits:** all done.
+
+**New, Major: R2-M1. Stop SIGTERMs whatever process now has the recorded pid.**
+* **Where:** `isolated.sh` stop block (the new `kill "$opid"` line).
+* **What it does:** the stop path trusts the comment's pid with no identity check. Repro:
+  1. On my own `xr_studio_rv_pid`, I recorded `server pid <a sleep 300> port 24990 host vm`.
+  2. I ran `isolated.sh rv_pid 24990 stop`.
+  3. Result: **the unrelated `sleep` was killed**, and the database was dropped.
+* **When it bites:** a recorded server that died is common: a killed run, a Mac reboot, or a cloud container restart (pids start again from 1, and cloud runs as root). In that case, a later cleanup `stop` can end any process of that user, including the PostgreSQL postmaster or the agent itself.
+* **Prune has the same gap in the safe direction:** a reused pid keeps a dead copy forever. My dry run said "keep: its server is running (pid 8062)" for the `sleep`.
+* **Fix (one helper, used in both places):** trust the record only when `ps -p "$pid" -o command= | grep -q 'api/src/main.ts'`. Otherwise treat the server as gone. Add a check line: record a `sleep` pid, run stop, assert the `sleep` is still alive and the database is dropped.
+
+**Minor**
+* **R2-m1. The host check can fail on the Mac.** On macOS, `hostname -s` can change with the network (DHCP or Bonjour names). When it does, prune falls back to the connection and file-age rules, which is the M1 gap again, and stop does not end the recorded server. **Fix:** on Darwin, use `scutil --get LocalHostName`. Alternatively, drop the host test once R2-M1's command check is in, since the cluster only listens on 127.0.0.1.
+
+**Nit**
+* **R2-n1. The new folder removal does not check the name.** Prune's `rm -rf "$STUDIO/var/isolated-${name#xr_studio_}"` trusts a name read from `pg_database`, and such names may contain `/` or `..`. **Fix:** remove the folder only when the name matches `^xr_studio_[a-z0-9_]+$`.
+
+**Verdict: Block** (R2-M1). After the one-line command check and its check line, I see nothing else blocking.

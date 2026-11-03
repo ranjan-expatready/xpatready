@@ -18,7 +18,8 @@ q "select 1" >/dev/null 2>&1 || { echo "PostgreSQL is not answering on 54329 (st
 exists() { [ "$(q "select count(*) from pg_database where datname = '$1'")" = 1 ]; }
 cleanup() { for d in $(q "select datname from pg_database where datname like 'xr\_studio\_chk\_%'"); do dropdb "${PG[@]}" --if-exists --force "$d" >/dev/null 2>&1; done
   [ -n "${SLEEPER:-}" ] && kill "$SLEEPER" 2>/dev/null; zsh "$S/tools/isolated.sh" chk_iso 24987 stop >/dev/null 2>&1
-  zsh "$S/tools/isolated.sh" chk_live 24988 stop >/dev/null 2>&1; rm -f "$S/var/isolated-logs/chk_iso-api.log" "$S/var/isolated-logs/chk_live-api.log"; true; }
+  zsh "$S/tools/isolated.sh" chk_live 24988 stop >/dev/null 2>&1; zsh "$S/tools/isolated.sh" chk_decoy 24986 stop >/dev/null 2>&1
+  [ -n "${DECOY:-}" ] && kill "$DECOY" 2>/dev/null; rm -f "$S/var/isolated-logs/chk_decoy-api.log"; rm -f "$S/var/isolated-logs/chk_iso-api.log" "$S/var/isolated-logs/chk_live-api.log"; true; }
 trap cleanup EXIT; cleanup; rm -f "$S/var/isolated-logs/chk_iso-api.log"
 
 # ---- 1. start → stop
@@ -77,5 +78,15 @@ if exists xr_studio_screens; then l=$(PRUNE_MATCH=xr_studio_screens bash "$S/too
   ok "a lane database (xr_studio_screens) is kept, however idle" "$(printf '%s' "$l" | grep -q 'keep: lane database' && echo 1)" "$l"; fi
 out=$(zsh "$S/tools/isolated.sh" chk_live 24988 stop 2>&1)
 ok "stop on its own port ends the live copy and then drops its database" "$(! exists xr_studio_chk_live && ! curl -s -o /dev/null --max-time 2 localhost:24988/api/session && echo 1)" "$out"
+# R2-M1: a recorded pid that is not a studio server (reused after a reboot) is never signalled, and keeps nothing.
+sleep 120 & DECOY=$!
+zsh "$S/tools/isolated.sh" chk_decoy 24986 start >/dev/null 2>&1
+q "comment on database xr_studio_chk_decoy is 'isolated.sh server pid $DECOY port 24986 host $(hostname -s)'" >/dev/null
+out=$(zsh "$S/tools/isolated.sh" chk_decoy 24986 stop 2>&1)
+ok "stop never signals a recorded pid that is not a studio server (R2-M1)" "$(ps -p "$DECOY" >/dev/null 2>&1 && ! exists xr_studio_chk_decoy && echo 1)" "$out"
+kill "$DECOY" 2>/dev/null; sleep 120 & DECOY=$!   # a live process of its own for prune
+createdb "${PG[@]}" xr_studio_chk_reused; q "comment on database xr_studio_chk_reused is 'isolated.sh server pid $DECOY port 1 host $(hostname -s)'" >/dev/null; age xr_studio_chk_reused
+l=$(P | grep -E '^xr_studio_chk_reused '); kill "$DECOY" 2>/dev/null
+ok "prune does not keep a copy because its recorded pid now runs something else (R2-M1)" "$(printf '%s' "$l" | grep -q STALE && echo 1)" "$l"
 ok "PRUNE_MATCH outside xr_studio_ is refused" "$(PRUNE_MATCH=postgres bash "$S/tools/prune-test-dbs.sh" >/dev/null 2>&1; [ $? = 2 ] && echo 1)" "accepted"
 echo "$pass passed, $fail failed"; [ "$fail" = 0 ]

@@ -30,7 +30,9 @@ if [[ "$ACTION" == "stop" ]]; then
   # on this port it is this copy's, so it is ended too (the tsx parent of the listener stopped above).
   rec=$(psql -h 127.0.0.1 -p 54329 -U xr_studio -d postgres -XAtq -c "select shobj_description(oid, 'pg_database') from pg_database where datname = '$DB'" 2>/dev/null)
   opid=$(printf '%s' "$rec" | sed -nE 's/.*server pid ([0-9]+) port ([0-9]+) host ([^ ]+).*/\1/p'); oport=$(printf '%s' "$rec" | sed -nE 's/.*server pid ([0-9]+) port ([0-9]+).*/\2/p')
-  ohost=$(printf '%s' "$rec" | sed -nE 's/.*host ([^ ]+).*/\1/p'); [[ "$ohost" == "$(hostname -s)" ]] || opid=""
+  # The record is trusted only while that pid is a studio server (its command runs api/src/main.ts): after a reboot or a
+  # container restart the pid may belong to anything else, which must never be signalled (#745 review round 2, R2-M1).
+  [[ -n "$opid" ]] && { ps -p "$opid" -o command= 2>/dev/null | grep -q 'api/src/main\.ts' || opid=""; }
   if [[ -n "$opid" && "$oport" == "$PORT" ]]; then kill "$opid" 2>/dev/null || true; for i in {1..20}; do ps -p "$opid" >/dev/null 2>&1 || break; sleep 0.25; done; fi
   # Its database and files go only when nothing of it still runs (#745 review m2): no listener left on its port, and the
   # server it recorded (say, on another port than the one given) no longer alive. Otherwise both are kept.

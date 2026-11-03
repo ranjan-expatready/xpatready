@@ -28,10 +28,11 @@ protected() {  # $1 database name → why it is never dropped, or nothing
   for k in ${PRUNE_KEEP:-}; do [ "$1" = "$k" ] && { echo "in PRUNE_KEEP"; return; }; done
 }
 busy() {  # $1 name, $2 oid → why it is in use, or nothing
-  local n rec pid host
+  local n rec pid
   rec=$(q "select shobj_description($2, 'pg_database')")
-  pid=$(printf '%s' "$rec" | sed -nE 's/.*server pid ([0-9]+) .*/\1/p'); host=$(printf '%s' "$rec" | sed -nE 's/.*host ([^ ]+).*/\1/p')
-  if [ -n "$pid" ] && [ "$host" = "$(hostname -s)" ] && ps -p "$pid" >/dev/null 2>&1; then echo "its server is running (pid $pid)"; return; fi
+  pid=$(printf '%s' "$rec" | sed -nE 's/.*server pid ([0-9]+) .*/\1/p')
+  # Alive and still a studio server (api/src/main.ts): a reused pid of anything else does not keep a dead copy (R2-M1).
+  if [ -n "$pid" ] && ps -p "$pid" -o command= 2>/dev/null | grep -q 'api/src/main\.ts'; then echo "its server is running (pid $pid)"; return; fi
   n=$(q "select count(*) from pg_stat_activity where datname = '$1'")
   [ "$n" != 0 ] && { echo "$n connection(s)"; return; }
   # Files we cannot read give no age: kept (#745 review m1; another tablespace, or a data folder of another user).
@@ -49,7 +50,7 @@ while IFS='|' read -r name oid size; do
   why=$(busy "$name" "$oid")   # again, just before dropping
   if [ -n "$why" ]; then printf '%-44s %8s  skipped: %s since the first look\n' "$name" "$size" "$why"; continue; fi
   if dropdb "${PGARGS[@]}" --if-exists "$name" 2>/dev/null; then dropped=$((dropped + 1)); printf '%-44s %8s  dropped\n' "$name" "$size"
-    rm -rf "$STUDIO/var/isolated-${name#xr_studio_}"   # its files in this checkout, if it was started here
+    n="${name#xr_studio_}"; [[ "$n" =~ ^[a-z0-9_]+$ ]] && rm -rf "$STUDIO/var/isolated-$n"   # its files here, if started here
   else failed=$((failed + 1)); printf '%-44s %8s  could not drop (in use?)\n' "$name" "$size"; fi
 done <<EOF
 $(q "select datname || '|' || oid || '|' || pg_size_pretty(pg_database_size(oid)) from pg_database where datname like '$(printf '%s' "$MATCH" | sed 's/_/\\_/g')%' order by datname")
