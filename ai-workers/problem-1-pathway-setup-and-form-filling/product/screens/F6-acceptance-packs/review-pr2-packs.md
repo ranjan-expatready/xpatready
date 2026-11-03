@@ -39,3 +39,14 @@ The pack work is faithful to the rows and the diff touches no app code. The red 
 The packs use the real browser as the real roles, pick or type like a person, read the page, and cross-check the database. Points off for the racy chip check, the pause-based waits and the over-broad source scan.
 
 **Verdict: Block** for commit ccb07720. Fix items 1 and 2 (an exclusion list so the C3.10 red is a true defect list, and a loud wait on the chip filter), then re-review. The remaining reds (the "box" words in the messages, and the over-limit message not under its field) are findings to keep, not packs to hide.
+
+## Re-review 2554e99b (diff ccb07720..HEAD, packs and comments only; no app code)
+
+- **M2 chip race: fixed.** `C11.17.test.ts` now waits with `waitForFunction` (10 s, throws) until every trail line includes "Permanent residence", and the same for Find (fewer lines than before). The wait is on the List content, not the address. Accepted; the builder's three runs of 23/24 are consistent with my own two.
+- **m3: fixed.** The 120 limit is cited as `contracts/programs.ts` LABEL_MAX. The check stays red, a real finding (message in the footer, not under the field).
+- **m4: fixed.** The way back is now `main` then a link named /^Back to /.
+- **M1: withdrawn.** PRODUCT.md §4 defines a form field as a fillable spot on a PDF or an input on a portal screen, so "drop-down boxes" and "boxes are mandatory" about the IRCC PDF's fields are the form-field sense. The header of `C3.10.test.ts` now records this. I name no remaining false-positive line. The 18 hits stand as a defect list; the red C3.10 is a finding on main, not a pack fault.
+
+I did not re-run the packs; the diff is wait, regex and comment changes only.
+
+**Verdict: Approve** for 2554e99b.
