@@ -1,50 +1,85 @@
-# CI (P-81, P-82, P-85 as amended 28 Oct): one job per pull request, nothing on a plain push.
-# Cost rule (founder, 28 Oct): GitHub Actions minutes stay within the monthly allowance with no loss of quality.
-# Every lane and the Lead already run the same full suites on the Mac (tools/run-suites.sh) and the push guard runs
-# locally before every push (.githooks/pre-push), so GitHub gives the one independent check where it matters: the
-# pull request to main, tested on its merge result. Per pull request, in one job (each job bills at least a minute):
-#   * always: the push guard on the pull request's commits, the rules-file checks, the decision-impact check, the
-#     graph check (P-86) and the official IRCC PDF checksums (P-31);
-#   * when the pull request changes code (files under prototype/, except docs, images and PDFs, or the suites' own tools
-#     and this file): the explicit-any count and the studio suites its files can affect (run-suites.sh --changed, plus a
-#     smoke set; everything when a shared file changed; no model call, US$0) on the founder's Mac (self-hosted runner
-#     xr-mac, free; P-195, 31 Oct: GitHub's machines used the US$10 monthly budget in one morning). The full set runs
-#     every night on main on the same Mac (nightly.yml).
-# P-213 (founder 1 Nov, a two-day trial capped at US$30): a merge-queue batch (branch mergify/merge-queue/...) runs its
-# suites on four GitHub Linux machines at once (job "shard", run-suites.sh --shard i/4, each a fresh copy), with the fast
-# checks on the first; the job "ci" then only reports their result, so Mergify's "check-success = ci" is unchanged.
-# Builders' own PRs keep the fast checks on the Mac. Fallback, one switch: repository variable BATCH_RUNNER=mac puts
-# batches back on the Mac exactly as before (gh variable set BATCH_RUNNER --body mac).
-# A lane opens its pull request when its work is ready for the Lead's check, so a code change is tested about once;
-# a newer push to the pull request cancels the older run. Docs-only pull requests (most Lead PRs) take about a minute.
+# CI (P-81, P-82, P-85 as amended 28 Oct): one run per pull request, nothing on a plain push. Mergify's merge queue
+# needs the job "ci" green (check-success = ci), for a builder's PR and for each batch PR (branch mergify/merge-queue/...).
+# I1, 3 Nov (P-291 (3) and (8), P-292 (2)): what runs depends on what the change is (job "kind", tools/change-kind.sh):
+#   * notes   (only *.md records and files under product/reports/): check-docs.sh and decision-impact.sh, plus the push
+#             guard (excluded paths, secrets, personal names), on one GitHub machine; nothing else, about a minute. The
+#             tech lead merges these directly (P-292).
+#   * records (boards, guards, settings, other workflows): the fast checks on one machine (push guard, rules files,
+#             decision impact, graph P-86, official PDFs P-31, explicit-any count, the tools' own checks); no suites.
+#   * code    (the app, its suites or their tools; select-suites.mjs decides): the fast checks on the first part, and
+#             the studio suites on the parallel parts (job "shard", run-suites.sh --shard i/n, each a fresh copy):
+#               - a builder's PR: only the suites its change can affect (run-suites.sh --changed);
+#               - a merge-queue batch: every suite but the quarantined ones (--skip-quarantined), once per change.
+#             US$0 model spend: every suite replays saved runs.
+# Switches (repository variables, gh variable set NAME --body VALUE):
+#   SHARDS=<1..9>        the number of parallel parts (default 4; I1 measured before changing it: see its PR);
+#   PR_SUITES=direct     a builder's PR runs only the suites that import or name its files, never everything
+#                        (select-suites.mjs --direct); the queue still runs every suite;
+#   BATCH_RUNNER=mac / PR_RUNNER=mac   batches / builders' PRs back on the founder's Mac (P-195, P-213): the "ci" job
+#                        then runs the fast checks there and the suites only for batches, on the chosen set, as before.
+# Each newer push to a pull request cancels its older run (one run per PR at a time).
 name: ci
 on:
   pull_request:
 jobs:
+  kind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions: { contents: read }
+    concurrency: { group: "kind-${{ github.event.pull_request.number }}", cancel-in-progress: true }
+    outputs:
+      kind: ${{ steps.k.outputs.kind }}
+      shards: ${{ steps.k.outputs.shards }}
+      n: ${{ steps.k.outputs.n }}
+      queue: ${{ steps.k.outputs.queue }}
+    env:
+      P: ai-workers/problem-1-pathway-setup-and-form-filling/product
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0, filter: "blob:none" }
+      - id: k
+        name: what does this change? (notes, records or code; tools/change-kind.sh)
+        env: { HEAD_REF: "${{ github.event.pull_request.head.ref }}", SHARDS_VAR: "${{ vars.SHARDS }}" }
+        run: |
+          range="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+          kind=$(bash "$P/tools/change-kind.sh" "$range") || { echo "change-kind.sh failed"; exit 1; }
+          queue=false; [[ "$HEAD_REF" == mergify/* ]] && queue=true
+          n="${SHARDS_VAR:-4}"; [[ "$n" =~ ^[1-9]$ ]] || n=4
+          case "$kind" in code) shards="[$(seq -s, 1 "$n")]";; records) shards="[1]";; *) shards="[]";; esac
+          { echo "kind=$kind"; echo "shards=$shards"; echo "n=$n"; echo "queue=$queue"; } >> "$GITHUB_OUTPUT"
+          case "$kind" in
+            notes) why="Notes only: check-docs.sh and decision-impact.sh (and the push guard); no suites, no app build.";;
+            records) why="Records, no code: the fast checks on one machine; no suites.";;
+            *) [ "$queue" = true ] && why="Code, merge-queue batch: every suite but the quarantined ones, on $n parts." || why="Code, pull request: only the suites this change can affect, on $n parts (the full set runs in the merge queue).";;
+          esac
+          echo "**$kind** · $why" | tee -a "$GITHUB_STEP_SUMMARY"
   shard:
-    # P-213: only merge-queue batches, only while BATCH_RUNNER is not "mac". A fresh machine each, so the browser suite
-    # runs on its :4400 demo (--demo), as on 31 Oct. GitHub's 2-core Linux machine: US$0.006 a minute.
-    # P-223 (2), founder 1 Nov night: every pull request now runs its suites here too, not only batches (fallback: repository
-    # variable PR_RUNNER=mac puts builders' own PRs back on the Mac). A pull request from a fork never reaches the Mac.
-    if: ${{ (vars.BATCH_RUNNER != 'mac' && (startsWith(github.event.pull_request.head.ref, 'mergify/') || vars.PR_RUNNER != 'mac' || !(github.event.pull_request.head.repo.full_name == github.repository))) }}
+    # Records and code, on GitHub's machines unless BATCH_RUNNER / PR_RUNNER put them on the Mac (a fork never reaches it).
+    needs: kind
+    if: ${{ needs.kind.outputs.kind != 'notes' && (vars.BATCH_RUNNER != 'mac' && (startsWith(github.event.pull_request.head.ref, 'mergify/') || vars.PR_RUNNER != 'mac' || !(github.event.pull_request.head.repo.full_name == github.repository))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions: { contents: read }
     concurrency: { group: "shard-${{ github.event.pull_request.number }}-${{ matrix.shard }}", cancel-in-progress: true }
     strategy:
-      fail-fast: true   # one red shard fails the batch: stop the others and save their minutes
-      matrix: { shard: [1, 2, 3, 4] }
+      fail-fast: true   # one red part fails the run: stop the others and save their minutes
+      matrix:
+        shard: ${{ fromJSON(needs.kind.outputs.shards) }}
     env:
       P: ai-workers/problem-1-pathway-setup-and-form-filling/product
       S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+      KIND: ${{ needs.kind.outputs.kind }}
+      QUEUE: ${{ needs.kind.outputs.queue }}
+      N: ${{ needs.kind.outputs.n }}
+      RANGE: "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - name: push guard (shard 1 only; excluded paths, PDFs, secrets, personal names)
+      - name: push guard (part 1 only; excluded paths, PDFs, secrets, personal names)
         if: matrix.shard == 1
         run: |
           chmod +x "$P/tools/push-guard.sh"
-          "$P/tools/push-guard.sh" "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+          "$P/tools/push-guard.sh" "$RANGE"
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
@@ -52,119 +87,135 @@ jobs:
           cache-dependency-path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/package-lock.json
       - name: set up like a cloud session (cloud-setup.sh; it also builds the web app the browser suites need)
         run: bash "$P/tools/cloud-setup.sh"
-      - name: rules files, decision impact, graph, official PDFs, explicit-any count (shard 1 only)
+      - name: rules files, decision impact, graph, official PDFs, explicit-any count, the tools' own checks (part 1 only)
         if: matrix.shard == 1
         run: |
           bash "$P/tools/check-docs.sh" && bash "$P/tools/decision-impact.sh" && node "$P/tools/graph.mjs" --check
           python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py
           node "$S/tools/count-any.mjs" --against "${{ github.event.pull_request.base.sha }}"
+          bash "$P/tools/check-select-suites.sh" && bash "$P/tools/check-merge-guard.sh"
       - name: Playwright's own Chromium
+        if: env.KIND == 'code'
         run: cd "$S" && ./node_modules/.bin/playwright install chromium
-      - name: studio suites, shard ${{ matrix.shard }} of 4 (run-suites.sh --demo --changed --shard; US$0 model spend)
+      - name: studio suites, part ${{ matrix.shard }} of ${{ needs.kind.outputs.n }} (run-suites.sh --demo --shard; US$0 model spend)
+        if: env.KIND == 'code'
+        env: { PR_SUITES: "${{ vars.PR_SUITES }}" }
         run: |
-          bash "$P/tools/run-suites.sh" --demo --changed "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}" --shard ${{ matrix.shard }}/4 | tee suites.md
+          if [ "$QUEUE" = true ]; then sel=(--skip-quarantined); else sel=(--changed "$RANGE"); [ "$PR_SUITES" = direct ] && sel+=(--direct); fi
+          bash "$P/tools/run-suites.sh" --demo "${sel[@]}" --shard "${{ matrix.shard }}/$N" | tee suites.md
           exit ${PIPESTATUS[0]}
       - name: summary
-        if: always()
+        if: always() && env.KIND == 'code'
         run: '[ -f suites.md ] && cat suites.md >> "$GITHUB_STEP_SUMMARY" || true'
       - name: logs (only when something failed)
-        if: failure()
+        if: failure() && env.KIND == 'code'
         uses: actions/upload-artifact@v4
         with:
           name: suite-logs-shard-${{ matrix.shard }}
           path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/
           retention-days: 14
   ci:
-    # P-195 (founder, 31 Oct): back on the Mac. Builders now run in the cloud, so the Mac runs only checks, the demo and
-    # the Lead. The browser suite runs on its own isolated copy, never the :4400 demo (no --demo).
-    # P-213: for a batch checked by the shards, this job runs on a GitHub machine and only reports the shards' result.
-    needs: shard
+    # The one check Mergify reads. Notes: the two notes checks here, on a GitHub machine. Records and code on GitHub's
+    # machines: only reports the parts' result. On the Mac (BATCH_RUNNER / PR_RUNNER = mac): the checks run here.
+    needs: [kind, shard]
     if: ${{ !cancelled() }}
-    runs-on: ${{ fromJSON(((vars.BATCH_RUNNER != 'mac' && (startsWith(github.event.pull_request.head.ref, 'mergify/') || vars.PR_RUNNER != 'mac' || !(github.event.pull_request.head.repo.full_name == github.repository))) || !(github.event.pull_request.head.repo.full_name == github.repository)) && '["ubuntu-latest"]' || '["self-hosted","macOS","xr-mac"]') }}
+    runs-on: ${{ fromJSON((needs.kind.outputs.kind == 'notes' || (vars.BATCH_RUNNER != 'mac' && (startsWith(github.event.pull_request.head.ref, 'mergify/') || vars.PR_RUNNER != 'mac' || !(github.event.pull_request.head.repo.full_name == github.repository))) || !(github.event.pull_request.head.repo.full_name == github.repository)) && '["ubuntu-latest"]' || '["self-hosted","macOS","xr-mac"]') }}
     timeout-minutes: 90   # P-183: a busy Mac never stops a check halfway
     permissions: { contents: read }
     concurrency: { group: "ci-${{ github.event.pull_request.number }}", cancel-in-progress: true }
     env:
       P: ai-workers/problem-1-pathway-setup-and-form-filling/product
       S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+      KIND: ${{ needs.kind.outputs.kind }}
       SHARDED: ${{ (vars.BATCH_RUNNER != 'mac' && (startsWith(github.event.pull_request.head.ref, 'mergify/') || vars.PR_RUNNER != 'mac' || !(github.event.pull_request.head.repo.full_name == github.repository))) }}
     steps:
-      - name: the four shards' result (P-213)
-        if: env.SHARDED == 'true'
+      - name: the change's kind was found
         run: |
-          echo "shards: ${{ needs.shard.result }}"; [ "${{ needs.shard.result }}" = success ]
+          echo "kind: ${{ needs.kind.result }} (${KIND:-none})"; [ "${{ needs.kind.result }}" = success ] && [ -n "$KIND" ]
+      # ---- notes only (P-292 (2)): the two notes checks, and the push guard
       - uses: actions/checkout@v4
-        if: env.SHARDED != 'true'
+        if: env.KIND == 'notes'
+        with: { fetch-depth: 0, filter: "blob:none" }
+      - name: push guard (excluded paths, PDFs, secrets, personal names)
+        if: env.KIND == 'notes'
+        run: bash "$P/tools/push-guard.sh" "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+      - name: notes check 1 of 2, rules files (check-docs.sh)
+        if: env.KIND == 'notes'
+        run: bash "$P/tools/check-docs.sh"
+      - name: notes check 2 of 2, decision impact (decision-impact.sh)
+        if: env.KIND == 'notes'
+        run: bash "$P/tools/decision-impact.sh"
+      # ---- records and code on GitHub's machines: the parts' result
+      - name: the parts' result
+        if: env.KIND != 'notes' && env.SHARDED == 'true'
+        run: |
+          echo "parts: ${{ needs.shard.result }}"; [ "${{ needs.shard.result }}" = success ]
+      # ---- records and code on the founder's Mac (BATCH_RUNNER / PR_RUNNER = mac), as before I1
+      - uses: actions/checkout@v4
+        if: env.KIND != 'notes' && env.SHARDED != 'true'
         with: { fetch-depth: 0 }
       - name: push guard (excluded paths, PDFs, secrets, personal names)
-        if: env.SHARDED != 'true'
+        if: env.KIND != 'notes' && env.SHARDED != 'true'
         run: |
           chmod +x "$P/tools/push-guard.sh"
           "$P/tools/push-guard.sh" "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
       - id: code
-        if: env.SHARDED != 'true'
-        name: does this pull request change code?
+        if: env.KIND != 'notes' && env.SHARDED != 'true'
+        name: does this pull request run suites? (P-201 on the Mac, only merge-queue batches)
         env: { HEAD_REF: "${{ github.event.pull_request.head.ref }}" }
         run: |
-          # No early-exit grep in a pipe: under pipefail its SIGPIPE would read as "no code changed".
-          # Code = the app and its tools under prototype/, the build setup, and the suites' own tools and this file (they
-          # change how the suites run); the product records, their checkers and boards run only the fast checks above
-          # (founder, 29 Oct: no full suites for records PRs).
-          code=$(git -c core.quotePath=false diff --no-renames --name-only "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}" | grep -E '^(ai-workers/problem-1-pathway-setup-and-form-filling/prototype/|ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/(run-suites\.sh|select-suites\.mjs|cloud-setup\.sh)$|\.github/workflows/ci\.yml$|\.nvmrc$)' | grep -ivE '\.(md|txt|png|jpe?g|gif|webp|svg|pdf)$' || true)
-          # P-201: a builder's own PR gets the fast checks only; the suites run once per merge-queue batch (Mergify's
-          # batch PRs come from branches mergify/merge-queue/...), on the result that will land on main.
-          if [ -n "$code" ] && [[ "$HEAD_REF" != mergify/* ]]; then
+          if [ "$KIND" != code ]; then
+            echo "Records only: suites not needed." >> "$GITHUB_STEP_SUMMARY"
+            echo "changed=false" >> "$GITHUB_OUTPUT"; echo "suites=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if [[ "$HEAD_REF" != mergify/* ]]; then
             echo "Code changed: the suites run when this PR's merge-queue batch is checked (P-201)." >> "$GITHUB_STEP_SUMMARY"
             echo "changed=true" >> "$GITHUB_OUTPUT"; echo "suites=false" >> "$GITHUB_OUTPUT"; exit 0
           fi
-          if [ -z "$code" ]; then
-            echo "Docs and records only: suites not needed." >> "$GITHUB_STEP_SUMMARY"
-            echo "changed=false" >> "$GITHUB_OUTPUT"; echo "suites=false" >> "$GITHUB_OUTPUT"; exit 0
-          fi
           echo "changed=true" >> "$GITHUB_OUTPUT"; echo "suites=true" >> "$GITHUB_OUTPUT"
       - name: the Mac's tools (node 24, venv, official PDFs, database) linked like a lane copy (lane.sh setup)
-        if: env.SHARDED != 'true'
+        if: env.KIND != 'notes' && env.SHARDED != 'true'
         run: |
           [ -e .tools ] || ln -s "$HOME/Desktop/Xpatready/.tools" .tools
           # Each line added is put in front of the last one: node 24 last, so it wins over Homebrew's node 23.
           echo /opt/homebrew/bin >> "$GITHUB_PATH"; echo /opt/homebrew/opt/postgresql@18/bin >> "$GITHUB_PATH"; echo "$PWD/.tools/node-v24.21.0/bin" >> "$GITHUB_PATH"
       - name: node 24
-        if: env.SHARDED != 'true'
+        if: env.KIND != 'notes' && env.SHARDED != 'true'
         run: |
           node --version | grep -q '^v24\.' || { echo "node 24 not first on PATH - $(command -v node) $(node --version)"; exit 1; }
       - name: packages (npm ci; the graph and any-count checks read TypeScript from them)
-        if: env.SHARDED != 'true'
+        if: env.KIND != 'notes' && env.SHARDED != 'true'
         run: cd "$S" && npm ci --no-fund --no-audit
       - name: rules files, decision impact, graph (P-86)
-        if: env.SHARDED != 'true'
+        if: env.KIND != 'notes' && env.SHARDED != 'true'
         run: |
           bash "$P/tools/check-docs.sh" && bash "$P/tools/decision-impact.sh" && node "$P/tools/graph.mjs" --check
       - name: official IRCC PDFs (manifest checksums, P-31)
-        if: env.SHARDED != 'true'
+        if: env.KIND != 'notes' && env.SHARDED != 'true'
         run: python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py
       - name: web app build (the browser suites need it)
-        if: env.SHARDED != 'true' && (steps.code.outputs.changed == 'true')
+        if: env.KIND != 'notes' && env.SHARDED != 'true' && (steps.code.outputs.changed == 'true')
         run: cd "$S" && ./node_modules/.bin/prisma generate && cd web && ../node_modules/.bin/vite build
       - name: explicit-any count
-        if: env.SHARDED != 'true' && (steps.code.outputs.changed == 'true')
+        if: env.KIND != 'notes' && env.SHARDED != 'true' && (steps.code.outputs.changed == 'true')
         run: node "$S/tools/count-any.mjs" --against "${{ github.event.pull_request.base.sha }}"
       - name: Playwright's own Chromium
-        if: env.SHARDED != 'true' && (steps.code.outputs.suites == 'true')
+        if: env.KIND != 'notes' && env.SHARDED != 'true' && (steps.code.outputs.suites == 'true')
         run: cd "$S" && ./node_modules/.bin/playwright install chromium
       - name: studio suites this change can affect (run-suites.sh --changed, browser suite on its own copy; US$0)
-        if: env.SHARDED != 'true' && (steps.code.outputs.suites == 'true')
+        if: env.KIND != 'notes' && env.SHARDED != 'true' && (steps.code.outputs.suites == 'true')
         # Two test slots on the Mac (P-199): each runner gets its own copy names and ports, so two checks never meet.
         env: { COPY_PREFIX: "${{ runner.name == 'xr-mac-2' && 'ci2' || 'ci' }}", SUITES_BROWSER_ISOLATED: "1", SUITES_CI_FIRST: "1" }
-        # One at a time (a parallel trial, 30 Oct, failed 12 suites). Copies named ci_*, like the nightly run; the one
-        # runner runs one job at a time, so they never meet. The chosen suites and why print first, into the summary.
+        # One at a time on the Mac (a parallel trial, 30 Oct, failed 12 suites); the chosen set, not every suite: a full
+        # run there takes about 80 minutes of suites, near this job's 90-minute limit (I1 kept the Mac path as it was).
         run: |
           bash "$P/tools/run-suites.sh" --changed "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}" | tee suites.md
           exit ${PIPESTATUS[0]}
       - name: summary
-        if: env.SHARDED != 'true' && (always() && steps.code.outputs.suites == 'true')
+        if: env.KIND != 'notes' && env.SHARDED != 'true' && (always() && steps.code.outputs.suites == 'true')
         run: '[ -f suites.md ] && cat suites.md >> "$GITHUB_STEP_SUMMARY" || true'
       - name: logs (only when something failed)
-        if: env.SHARDED != 'true' && (failure() && steps.code.outputs.suites == 'true')
+        if: env.KIND != 'notes' && env.SHARDED != 'true' && (failure() && steps.code.outputs.suites == 'true')
         uses: actions/upload-artifact@v4
         with:
           name: suite-logs
