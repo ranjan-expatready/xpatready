@@ -3,7 +3,7 @@
  "kind": "masters_form",
  "combination": "edition:IMM 5257:09-2023",
  "configuration_version": "c34-masters-form",
- "template": "masters-form-check.v1.md",
+ "template": "masters-form-check.v2.md",
  "output_schema": "masters-form-output.v1.schema.json",
  "inputs": [
   {
@@ -17,8 +17,8 @@
   "effort": "low",
   "timeout_ms": 300000,
   "max_attempts": 2,
-  "budget_usd": 3.29,
-  "max_output_tokens": 8000
+  "budget_usd": 3.62,
+  "max_output_tokens": 16000
  },
  "known": {
   "form_edition": "IMM 5257 (09-2023)"
