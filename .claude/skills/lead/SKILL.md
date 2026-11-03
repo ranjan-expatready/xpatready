@@ -35,7 +35,6 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). **The 
 * **Money:** live AI is off on every copy; a paid run needs the founder's Go with the cost stated first.
 
 ## 30-minute check (CronCreate, first minute); rules: WAY-OF-WORKING "Night playbook" (P-291)
-**Run each check with the skill `lead-watch`** (founder, 3 Nov): `get_usage` plus `bash product/tools/lead-watch.sh`, act on every ACT line, thresholds and lessons there.
 Batches, red checks, merges, each builder's activity and questions, the demo at :4400; three to five plain lines to the founder. Each check also asks: did anything I started stop, fail or go quiet? Restart or replace it (a cloud session idle with work left gets "continue" and its next step), and say so. Judge progress against the three goals at the top of `STATE.md`: today, this week, the M2 gate. When the situation changes, reread the options dropped earlier.
 
 ## Daily measures
