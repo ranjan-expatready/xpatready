@@ -1,7 +1,8 @@
 #!/bin/bash
 # Lanes (P-64, product/LANES.md): which lane this copy is, binding it, making it runnable, syncing it, and the status of all.
 #   lane.sh whoami            -> lead | screens | forms | evidence | runtime | m3 | qa | scout | unbound
-#   lane.sh bind <lane>       bind this lane copy (git worktree, or a cloud clone: checks out the lane's newest branch) once
+#   lane.sh bind <lane>       bind this lane copy (git worktree, or a cloud clone: checks out the lane's newest branch, or
+#                             stays on origin/main when that branch is merged, unrelated or older than 24 h: QA-181) once
 #   lane.sh branch <lane>     the lane's newest branch on origin (<lane>/* or claude/<lane>-*)
 #   lane.sh setup             make this copy runnable: link .tools when present, npm ci when node_modules is missing
 #   lane.sh sync              merge main into this lane copy; stops on a conflict
@@ -50,6 +51,26 @@ lane_branch() {  # the lane's newest origin branch with work not yet in main (el
     echo "${rb#origin/}"; return; done
   [ -n "$first" ] && echo "${first#origin/}"
 }
+# Why bind should not continue the lane's branch origin/$1 (QA-181), or nothing: its last commit is older than
+# LANE_STALE_HOURS (24; an abandoned copy such as the qa lane's claude/qa-l10-e3c849 of 30 Oct, which a fresh cloud clone
+# checked out on 3 Nov and built 4-day-old screens from), it is already in main, or it shares no history with main.
+# Staleness comes first, from the tip's time alone, so an old branch never costs a fetch. A shallow clone (cloud sessions
+# fetch 50 commits) is then only ever deepened, 250 commits at a time up to 1000 (--deepen adds history; --shallow-since
+# could also cut it, #727 review M1), so an old fork point is not mistaken for no common history.
+stale_() {
+  local r="origin/$1" t h i; t=$(git -C "$HERE" log -1 --format=%ct "$r" 2>/dev/null) || { echo "not on origin"; return; }
+  h="${LANE_STALE_HOURS:-24}"; case "$h" in ''|*[!0-9]*) h=24;; esac
+  [ $(($(date +%s) - t)) -gt $((h * 3600)) ] && { echo "older than $h h (last commit $(git -C "$HERE" log -1 --format=%cd --date=format:'%d %b %H:%M' "$r"))"; return; }
+  if [ "$(git -C "$HERE" rev-parse --is-shallow-repository 2>/dev/null)" = true ]; then
+    for i in 1 2 3 4; do
+      git -C "$HERE" merge-base origin/main "$r" >/dev/null 2>&1 && break
+      git -C "$HERE" fetch -q --deepen=250 origin main "$1" 2>/dev/null || break
+    done
+  fi
+  git -C "$HERE" merge-base --is-ancestor "$r" origin/main 2>/dev/null && { echo "already in main"; return; }
+  git -C "$HERE" merge-base origin/main "$r" >/dev/null 2>&1 || { echo "unrelated to main (no common history$([ "$(git -C "$HERE" rev-parse --is-shallow-repository)" = true ] && echo " in main's last 1000+ commits"))"; return; }
+  return 0
+}
 field() { grep -m1 "^$1:" "$2" 2>/dev/null | cut -d' ' -f2-; }
 table_() {
   echo "| Lane | Item | Stage | Who acts | Next |"; echo "|---|---|---|---|---|"
@@ -95,7 +116,20 @@ case "$1" in
     # A cloud clone on a session branch (P-82): continue on the lane's own branch so its pushes reach the Lead.
     if [ "$HERE" = "$MAIN" ] && [ "$cur" = unbound ]; then
       git -C "$HERE" fetch -q origin 2>/dev/null; lb=$(lane_branch "$2")
-      if [ -n "$lb" ]; then
+      # QA-181: a merged, unrelated or stale lane branch is not continued: the lane starts from origin/main on this
+      # copy's own branch (its old branch stays on origin; continue it by hand if it holds work you need).
+      why=""; [ -n "$lb" ] && why=$(stale_ "$lb")
+      if [ -n "$why" ]; then
+        git -C "$HERE" diff --quiet && git -C "$HERE" diff --cached --quiet || { echo "Commit or discard local changes before binding."; exit 3; }
+        cb=$(git -C "$HERE" branch --show-current); [ -n "$cb" ] || cb="$2/from-main-$(date -u +%Y%m%d-%H%M)"
+        if git -C "$HERE" merge-base --is-ancestor HEAD origin/main 2>/dev/null; then
+          git -C "$HERE" checkout -q -B "$cb" origin/main && echo "the $2 lane's newest branch $lb is $why: this branch $cb starts from origin/main ($(git -C "$HERE" rev-parse --short origin/main)) and becomes the lane's branch"
+        else
+          # This copy has its own commits: never moved. A detached HEAD gets a name so the work is not anonymous (#727 m1).
+          [ -n "$(git -C "$HERE" branch --show-current)" ] || git -C "$HERE" checkout -q -b "$cb"
+          echo "the $2 lane's newest branch $lb is $why; this branch $cb has commits not in main, so it stays as it is (merge origin/main into it)"
+        fi
+      elif [ -n "$lb" ]; then
         git -C "$HERE" diff --quiet && git -C "$HERE" diff --cached --quiet || { echo "Commit or discard local changes before binding."; exit 3; }
         git -C "$HERE" checkout -q -B "$lb" "origin/$lb" && git -C "$HERE" branch -q -u "origin/$lb" && echo "on the $2 lane's branch $lb"
       else echo "no $2 branch on origin yet: this branch becomes the lane's branch ($(git -C "$HERE" branch --show-current))"; fi
