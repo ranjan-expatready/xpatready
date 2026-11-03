@@ -18,7 +18,8 @@
 //   zsh tools/isolated.sh acc_c1114 4574 start && ./node_modules/.bin/tsx --tsconfig api/tsconfig.json acceptance/C11.14.test.ts 4574 xr_studio_acc_c1114 ; zsh tools/isolated.sh acc_c1114 4574 stop
 // Sample combinations are found by their structure trail (acceptance/lib/pack1.ts), so the file runs on today's sample
 // and on P-112's six; the demo guard refuses port 4400 and any database but an isolated copy's.
-// Expected today (main 931cb99a, run 1 Nov 2026 on an isolated copy, US$0): 9 pass, 4 fail — failing: AT-1 (Load sample
+// AT-1 since QA-176 (G-CORE B3 part A, 2 Nov): the six load, and no AI proposal is Ready without both rounds agreeing.
+// Expected before that (main 931cb99a, run 1 Nov 2026 on an isolated copy, US$0): 9 pass, 4 fail — failing: AT-1 (Load sample
 // writes no proposals), AT-2 (the 84 IMM 5257 proposals have one round, agreement "one_round"), AT-3 (56 are Ready with
 // no checker round and no rules), AT-4 (on To review they cannot be ticked: "It is decided on its form-field page.")
 // because P-121's rounds are not built for field mapping. AT-5..AT-10 guard the queue's bulk rules that work.
@@ -47,16 +48,20 @@ const statusOf = (ids: string[]) => sql(`select string_agg(status, ',' order by 
 
 (async () => {
   await checkCopy(PORT, DB);
-  await call("POST", "/demo/reset", { confirm: "RESET" });
-  const loaded = await call("POST", "/demo/load");
+  // QA-176: the six (Demo › Reset to the six: Reset, then Load sample "six", saved AI answers replayed, US$0).
+  const loaded = await call("POST", "/demo/reset-to-six", { confirm: "RESET" });
+  await until(async () => sql("select count(*) from drafting_job where status in ('QUEUED','RUNNING')") === "0", 300_000);
   const vv = await needCombo(PORT, DB, "visitor_visa");
   const att = vv && sql(`select id from source_attachment where combination_id='${vv}' and file_name='imm5257e.pdf'`);
   if (loaded.status >= 300 || !att) setupMissing("the sample (Visitor visa with IMM 5257) did not load");
   const ledger0 = await ledger();
 
-  // ── AT-1 Load sample replays proposals through the same path (before anything else is drafted)
-  const replayedOnLoad = Number(sql("select count(*) from proposal_item where rounds->'draft'->>'from' = 'replay' and rounds->'check'->>'from' = 'replay'"));
-  ok("C11.14 AT-1 Load sample puts the saved proposals on To review through the same door: each with its replayed draft and checker rounds (US$0)", replayedOnLoad > 0, { replayedOnLoad, all: sql("select count(*) from proposal_item") });
+  // ── AT-1 Load sample (the six) replays proposals through the same door, and none is Ready without both AI rounds
+  // agreeing (QA-176, P-121: a one-round item is never Ready and never ticked with others; the box says why).
+  const onLoad = Number(sql("select count(*) from proposal_item where status = 'waiting'"));
+  const readyOneRound = Number(sql("select count(*) from proposal_item where status = 'waiting' and origin = 'ai' and confidence = 'ready' and (agreement <> 'agreed' or rounds->'draft' is null or rounds->'draft' = 'null'::jsonb or rounds->'check' is null or rounds->'check' = 'null'::jsonb)"));
+  const oneRoundSaid = Number(sql("select count(*) from proposal_item where status = 'waiting' and origin = 'ai' and agreement = 'one_round' and kind = 'field' and reason like 'Needs a checker round%'"));
+  ok("C11.14 AT-1 Load sample (the six) puts the saved proposals on To review through the same door, and no AI proposal is Ready without a checker round agreeing (QA-176, US$0)", onLoad > 0 && readyOneRound === 0 && oneRoundSaid > 0, { onLoad, readyWithoutBothRounds: readyOneRound, saidNeedsChecker: oneRoundSaid });
 
   // ── the field-map step (replay of the saved IMM 5257 answer)
   const d = await call("POST", `/attachments/${att}/draft`, { mode: "replay" });
@@ -81,10 +86,12 @@ const statusOf = (ids: string[]) => sql(`select string_agg(status, ',' order by 
   const db = new Db();
   const ws = sql("select id from workspace where key = 'demo'");
   const ED = "IMM 0000 (01-2026)", SHA = "a".repeat(64), tag = Date.now().toString(36);
+  // QA-176 (P-121): a Ready item carries both AI readings (it used to be written with none, which the door now lowers).
+  const both = (label: string) => { const r = { reading: `What ${label} means on the form`, payload: { kind: "field", label, aliases: [], meaning: `What ${label} means on the form (Sample).`, valueType: "text", subject: "person", formBox: null }, from: "replay", runFile: "runs/acceptance.json", costUsd: 0 }; return { draft: r, check: r }; };
   const field = (label: string, over: Record<string, unknown> = {}) => {
     const payload = { kind: "field", label, aliases: [], meaning: `What ${label} means on the form (Sample).`, valueType: "text", subject: "person", formBox: null };
     return { kind: "field", runId: jobId, step: "field_map_edition", scope: { formEdition: ED, combinationId: null }, landsOn: "library", reuse: { match: "new", existingKey: null }, payload,
-      source: { file: "imm0000e.pdf", sha256: SHA, edition: "01-2026", page: 1, quote: label, quoteFound: true, rule: null }, rounds: { draft: null, check: null }, rules: [{ rule: "quote found", passed: true, why: null }],
+      source: { file: "imm0000e.pdf", sha256: SHA, edition: "01-2026", page: 1, quote: label, quoteFound: true, rule: null }, rounds: both(label), rules: [{ rule: "quote found", passed: true, why: null }],
       agreement: "agreed", confidence: "ready", reason: null, origin: "ai", identity: { key: P.identityKeyOf(payload as never, ""), near: [], nearReason: null }, relatesTo: null, revision: null, basis: "SAMPLE", ...over } as never;
   };
   const reading = (label: string, text: string) => ({ reading: text, payload: { kind: "field", label, aliases: [], meaning: `What ${label} means (Sample).`, valueType: "text", subject: "person", formBox: null }, from: "replay", runFile: "runs/acceptance.json", costUsd: 0 });
