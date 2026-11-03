@@ -12,7 +12,7 @@ import { backgroundWords, familyFormWords, formNumberOf, isBackgroundQuestion, m
 import { slug } from "../../engine/import.ts";
 import { identityKeyOf, insertProposals } from "./proposals.ts";
 import { nameKey, namedDocumentType, waitingDocumentType } from "./document-type-names.ts";
-import { checkCondition, diff, ordinal, validate, isDemoSnapshot } from "../../engine/validate.ts";
+import { checkCondition, diff, ordinal, validate, isDemoSnapshot, sampleContentProblems } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, isDemoWorkspace, need, revise, RUNTIME_ACTORS, strip, Workspace, WORKSPACE_KEY, type Actor } from "./core.ts";
 import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { recordAction, snapshotLines } from "./form-uses.ts";
@@ -418,7 +418,7 @@ export class Studio {
       program: { key: (programNode ?? c.program).programNodeKey, label: (programNode ?? c.program).label, kind: (programNode ?? c.program).nodeKind, source_basis: (programNode ?? c.program).sourceBasis }, pathway: parent ? { key: parent.programNodeKey, label: parent.label, client_type: parent.clientType } : null,
       path: chain.map((n) => ({ key: n.programNodeKey, label: n.label, level: LEVEL[n.nodeKind].name })), allowed_locations: c.program.allowedLocations,
       attachments: c.attachments, jobs: c.jobs.map((j) => ({ ...j, detail: undefined })),
-      releases: c.releases.map((r) => ({ id: r.id, version: r.version, demo: isDemoSnapshot(r.snapshot), release: r.packVersion?.version ?? r.version, label: releaseLabel(r), sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: ACTORS.find((x) => x.id === r.approverId)?.name ?? "Approver", summary: r.summary, basis: r.basis })),
+      releases: c.releases.map((r) => ({ id: r.id, version: r.version, demo: isDemoWorkspace() && isDemoSnapshot(r.snapshot), release: r.packVersion?.version ?? r.version, label: releaseLabel(r), sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: ACTORS.find((x) => x.id === r.approverId)?.name ?? "Approver", summary: r.summary, basis: r.basis })),
       draft: { sha256, matches_release: !!last && last.sha256 === sha256, changes, problems, counts: this.counts(snapshot),
         // G2 BR-9: what a release would rest on (per item and key), and whether it would be a Demo release.
         answer_keys: { demo: gate.demo, judged: gate.judged, items: gate.items.map((i) => ({ ...i, keys: i.keys.map((k) => ({ ...k, changed_since_release: changedSince(last?.summary, k) })) })) } },
@@ -442,7 +442,10 @@ export class Studio {
     // Only a draft that will be submitted (it differs from its release, or there is none): a Live row with no draft
     // changes lists none, as on the catalogue (tech lead on #568; EXPERIENCE §2.5, one status everywhere).
     const last = s.mode === "draft" && combinationId ? await this.db.configRelease.findFirst({ where: { combinationId }, orderBy: { version: "desc" }, select: { sha256: true } }) : null;
-    const sources = s.mode === "draft" && (!last || last.sha256 !== snapshotHash(s)) ? draftSourceProblems(s, isDemoWorkspace()) : [];
+    const open = s.mode === "draft" && (!last || last.sha256 !== snapshotHash(s));
+    // C5.5 (G2 BR-3, P-240): outside the demo workspace the same draft's Sample checks are listed beside its numbers; a
+    // Sample source is already the source gate's line there (demo false).
+    const sources = open ? [...draftSourceProblems(s, isDemoWorkspace()), ...(isDemoWorkspace() ? [] : sampleContentProblems(s))] : [];
     // G1: the numbers without a source come after the validator's own errors, so a list cut at its first lines still
     // shows those (the Review tab shows eight).
     // G2 (C5.5): the answer-key gate's lines, in the same list as every other problem (one list on Review and release).
@@ -1194,7 +1197,7 @@ export class Studio {
     const rows = await this.db.configRelease.findMany({ where: { workspaceId, ...(combinationId ? { combinationId } : {}) }, orderBy: { releasedAt: "desc" }, include: { combination: true } });
     return rows.map((r) => ({ id: r.id, combination: r.combination.label, combination_id: r.combinationId, version: r.version, sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: r.approverId, names: { author: peopleNames(r.authorId), submitter: peopleNames(r.submitterId), approver: peopleNames(r.approverId) }, summary: r.summary, basis: r.basis,
       // C5.6 (P-240, G3): Sample content is a "Demo release", never counted as a real publish (derived on read).
-      demo: isDemoSnapshot(r.snapshot) }));
+      demo: isDemoWorkspace() && isDemoSnapshot(r.snapshot) })); // C5.5 BR-3: outside the demo workspace every release is real
   }
 
   /** C6.11 review Major 1: firm staff read the configuration lines and their own firm's case lines only; another firm's
