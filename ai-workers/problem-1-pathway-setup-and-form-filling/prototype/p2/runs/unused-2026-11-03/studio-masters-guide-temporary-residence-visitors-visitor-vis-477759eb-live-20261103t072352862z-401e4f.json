@@ -1,0 +1,119 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-masters-guide-temporary-residence-visitors-visitor-vis-477759eb-live-20261103t072352862z-401e4f",
+  "idempotency_key": "868d95469a5da4a255e7d6974eeda6cb68adf367b0f28257a7bfe99951ff09a6",
+  "contract_version": "drafting-run/v0",
+  "kind": "masters_guide",
+  "output_sha256": "c87fae8a6948b260b1fc0e6722d9924fc77bbfaea4303f664536cb030f8bf82a",
+  "inputs": {
+   "combination": "vv.single",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/guide-5256.text.inventory.json",
+     "sha256": "c6bc458e9381a53f71ae15015330eee769ce91a18cfc00a7daad1dad65ab16c2"
+    }
+   ],
+   "configuration_version": "c34-masters-guide"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "low",
+   "timeout_ms": 300000,
+   "max_attempts": 2,
+   "budget_usd": 1,
+   "max_output_tokens": 6000,
+   "prompt_version": "masters-guide.v1.md",
+   "prompt_sha256": "3ea5df979b7deaf2368c628d7a231e72c0897d2b15c102b18007396b588eb757"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 17786,
+    "output_tokens": 1918,
+    "duration_ms": 18619
+   }
+  ],
+  "usage": {
+   "input_tokens": 17786,
+   "output_tokens": 1918,
+   "cost_usd": 0.109504,
+   "duration_ms": 18619
+  },
+  "started_at": "2026-11-03T07:23:52.865Z",
+  "ended_at": "2026-11-03T07:24:11.740Z"
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": null,
+ "launch_evidence": {
+  "path_code_sha256": "7da9a65cc2265a40d80a7891a880a5aee15381d6f40e6ab10255a6a4a886fd20",
+  "template_sha256": "c6f8b07db71664dd015ccaa6bf882bce7f75d265a47d456606f6f6b5d75a7a7a",
+  "schema_file": "masters-guide-output.v1.schema.json",
+  "schema_sha256": "2edd9db7c16b75c081af4d95b4030f8dedbd3cdf7b894aa63af6e2ee00655414",
+  "known": {
+   "combination_trail": "Temporary residence › Visitors › Visitor visa"
+  },
+  "screened": true,
+  "output_sha256": "c87fae8a6948b260b1fc0e6722d9924fc77bbfaea4303f664536cb030f8bf82a",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "b1191946961b30505a3121a5008f7751e80ba76103046a2f324e769a4413d3f2",
+  "request_bytes": 58492,
+  "stub_calls": null,
+  "ledger": {
+   "file": "<main copy>/.tools/p2-ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 50.75783599999999
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/guide-5256.text.inventory.json",
+    "sha256": "c6bc458e9381a53f71ae15015330eee769ce91a18cfc00a7daad1dad65ab16c2",
+    "kind": "inventory"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "793ce463d346074ec77954e07f50da1a721a2b915d35f009311e98f16b4cca4d",
+   "digest_made_at": "2026-11-03T07:23:52.864Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "2a3e345d0e96712c02776a107cdf299f",
+   "ticket_expires_at": "2026-11-03T07:25:52.864Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"checks\":[{\"group\":\"official_rule\",\"sentence\":\"If the marital status is married or common-law, the date of marriage or start of the relationship and the spouse's or partner's name must be given.\",\"reads\":[\"Marital status\",\"Date of marriage or relationship\",\"Spouse family name\"],\"subject_kind\":\"EACH_APPLICANT\",\"tree_json\":\"{\\\"or\\\":[{\\\"not\\\":{\\\"arg\\\":{\\\"in\\\":[\\\"marital_status\\\",[\\\"Married\\\",\\\"Common-Law\\\"]]}}},{\\\"and\\\":[{\\\"exists\\\":\\\"date_of_marriage_or_relationship\\\"},{\\\"exists\\\":\\\"spouse_family_name\\\"}]}]}\",\"severity\":\"block\",\"needs_calculation\":null,\"quote\":\"Enter the date (year, month and day) you were married or you entered into your current common-law relationship.\",\"examples\":[{\"facts_json\":\"{\\\"marital_status\\\":\\\"Married\\\",\\\"date_of_marriage_or_relationship\\\":\\\"2015-06-01\\\",\\\"spouse_family_name\\\":\\\"Lee\\\"}\",\"expected\":true},{\"facts_json\":\"{\\\"marital_status\\\":\\\"Married\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"marital_status\\\":\\\"Single\\\"}\",\"expected\":true}]},{\"group\":\"official_rule\",\"sentence\":\"If immigration status in the country of residence is Other, the other status must be described.\",\"reads\":[\"Immigration status\",\"Other status details\"],\"subject_kind\":\"EACH_APPLICANT\",\"tree_json\":\"{\\\"or\\\":[{\\\"neq\\\":[\\\"immigration_status\\\",\\\"Other\\\"]},{\\\"exists\\\":\\\"other_status_details\\\"}]}\",\"severity\":\"block\",\"needs_calculation\":null,\"quote\":\"Other: You must fill out this section if you chose “Other” as a status.\",\"examples\":[{\"facts_json\":\"{\\\"immigration_status\\\":\\\"Other\\\",\\\"other_status_details\\\":\\\"Diplomat\\\"}\",\"expected\":true},{\"facts_json\":\"{\\\"immigration_status\\\":\\\"Other\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"immigration_status\\\":\\\"Citizen\\\"}\",\"expected\":true}]},{\"group\":\"official_rule\",\"sentence\":\"If the purpose of visit is Other, details must be provided.\",\"reads\":[\"Purpose of visit\",\"Purpose details\"],\"subject_kind\":\"EACH_APPLICANT\",\"tree_json\":\"{\\\"or\\\":[{\\\"neq\\\":[\\\"purpose_of_visit\\\",\\\"Other\\\"]},{\\\"exists\\\":\\\"purpose_details\\\"}]}\",\"severity\":\"block\",\"needs_calculation\":null,\"quote\":\"Note: If you selected “other” in question 1a), provide details in 1b)\",\"examples\":[{\"facts_json\":\"{\\\"purpose_of_visit\\\":\\\"Other\\\",\\\"purpose_details\\\":\\\"Medical\\\"}\",\"expected\":true},{\"facts_json\":\"{\\\"purpose_of_visit\\\":\\\"Other\\\"}\",\"expected\":false}]},{\"group\":\"official_rule\",\"sentence\":\"If military or security service is declared, the dates and countries of service must be given.\",\"reads\":[\"Military service\",\"Service dates and countries\"],\"subject_kind\":\"EACH_APPLICANT\",\"tree_json\":\"{\\\"or\\\":[{\\\"neq\\\":[\\\"military_service\\\",\\\"Yes\\\"]},{\\\"exists\\\":\\\"service_dates_and_countries\\\"}]}\",\"severity\":\"block\",\"needs_calculation\":null,\"quote\":\"If you answered “Yes” to question 4a), please provide your dates of service and the countries or territories where you served.\",\"examples\":[{\"facts_json\":\"{\\\"military_service\\\":\\\"Yes\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"military_service\\\":\\\"No\\\"}\",\"expected\":true}]},{\"group\":\"official_rule\",\"sentence\":\"An applicant under 18 must have the form signed by a parent or legal guardian.\",\"reads\":[\"Applicant age\",\"Signed by parent or guardian\"],\"subject_kind\":\"EACH_APPLICANT\",\"tree_json\":\"{\\\"or\\\":[{\\\"gte\\\":[\\\"applicant_age\\\",18]},{\\\"eq\\\":[\\\"signed_by_parent_or_guardian\\\",true]}]}\",\"severity\":\"block\",\"needs_calculation\":\"age in years from date of birth to the signing date\",\"quote\":\"If you are less than 18 years of age, your form must be signed by one of your parents or a legal guardian.\",\"examples\":[{\"facts_json\":\"{\\\"applicant_age\\\":16,\\\"signed_by_parent_or_guardian\\\":true}\",\"expected\":true},{\"facts_json\":\"{\\\"applicant_age\\\":16,\\\"signed_by_parent_or_guardian\\\":false}\",\"expected\":false},{\"facts_json\":\"{\\\"applicant_age\\\":30}\",\"expected\":true}]},{\"group\":\"cross_record\",\"sentence\":\"The family name must match the passport exactly.\",\"reads\":[\"Family name\",\"Passport family name\"],\"subject_kind\":\"EACH_APPLICANT\",\"tree_json\":\"{\\\"exists\\\":\\\"family_name\\\"}\",\"severity\":\"sme_pending\",\"needs_calculation\":\"compare family name with the name on the passport\",\"quote\":\"Type your family name (surname) exactly as shown on your passport or travel document (even if the name is misspelled).\",\"examples\":[{\"facts_json\":\"{\\\"family_name\\\":\\\"Garcia\\\"}\",\"expected\":true},{\"facts_json\":\"{}\",\"expected\":false}]}],\"unresolved\":[{\"passage\":\"Enter the date your passport or travel document will expire.\",\"reason\":\"Passport validity for the stay compares expiry date with the planned stay end date, two answers compared with each other.\"},{\"passage\":\"If you are a citizen of more than one country or territory, choose the country or territory that issued the passport you will be using for this trip.\",\"reason\":\"Requires comparing citizenship with passport issuing country, two answers compared.\"}]}"
+}
