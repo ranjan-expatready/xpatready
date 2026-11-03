@@ -118,7 +118,8 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
   const appDate = known.get(`case|${APPLICATION_DATE}`)?.value;
   const agesOn = day(appDate) ? String(appDate) : today.toISOString().slice(0, 10);
   const agesOnWhy = day(appDate) ? "Ages are worked out on the application date." : "Until the application date is answered, ages for the 18-or-older lines are worked out on today's date (UTC); a line whose condition reads the release's age asks for the application date first.";
-  const placed = new Map(((s.placements ?? []) as { fact: string; repeats?: string | null }[]).map((p) => [p.fact, p] as const));
+  const placed = new Map<string, { fact: string; repeats?: string | null }>(); // the first placement of a fact, as render.ts reads it
+  for (const p of (s.placements ?? []) as { fact: string; repeats?: string | null }[]) if (!placed.has(p.fact)) placed.set(p.fact, p);
   /** The questions to answer first: a calculated field is replaced by the questions it is worked out from (B-M3). */
   const toAsk = (keys: string[], about: string): Missing[] => {
     const out = new Map<string, Missing>();

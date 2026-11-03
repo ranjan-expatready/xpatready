@@ -31,7 +31,7 @@
 //      `${subject}/parent_1`, `/parent_2`, `/sibling` (relatives, not people on the case); representative → the case's
 //      representative, or the literal "representative" when none; none → the filing; anything else → nobody (null).
 //  R5  Scope of a fact: a fact whose id starts "case." or whose placement repeats once_per_case is a filing fact (stored
-//      once per case, R1; render's deciders pass no placement, see (c)); one that
+//      once per case, R1; render's deciders and the case checklist pass the placement since C7.7, see (c)); one that
 //      starts "organisation." is an organisation fact, held (P-251): until the organisation subject exists it is read on
 //      the form's subject; any other fact is a person fact. No fact is a household fact yet.
 //  R6  Facts a subject sees: its own person facts plus the filing's facts; never another person's; a value stored per

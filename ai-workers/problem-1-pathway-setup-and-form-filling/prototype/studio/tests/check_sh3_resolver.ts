@@ -180,6 +180,12 @@ ok("SH3 render (review r3-m1): an answered case.* deciding fact is kept on the f
   ok("C7.7 R3 check fail: a spouse check never fires for the principal or a child (before: it read each person's own answer)", same(fired("SPOUSE", withRep, allYes), ["B"]));
   ok("C7.7 R3 check fail: a check with no subject kind fires for each applicant, never for an applying representative (R2 each_applicant)", same(fired(undefined, withRep, allYes), ["A", "B", "child-1"]));
   ok("C7.7 R3 check fail: a DOCUMENT check is decided on a document's contents, never on answers", same(fired("DOCUMENT", withRep, allYes), []));
+  const agedForm = { ...base, canonical_fields: [...base.canonical_fields, { id: "person.date_of_birth", value_type: "date" }], checks: [], forms: [{ form_number: "F2", who: "each_applicant", status: "conditional", min_age: 18, condition: { subjectKind: "PRINCIPAL", op: "eq", field: "person.employed", value: true } }] } as unknown as Snapshot;
+  const f2 = (known: Known) => render.render(agedForm, fam, known, { today: new Date("2026-11-03") });
+  const f2b = f2(k([["A|person.employed", true]]));
+  ok("C7.7 R3 form with a minimum age: the role condition is the principal's, the age the holder's: the spouse's row waits for the spouse's date of birth only", f2b.forms.find((x) => x.form === "F2" && x.person === "B")?.applies === "cannot_tell" && same(f2b.deciders.filter((d) => /F2 applies to B\b/.test([...d.decides].join())).map((d) => `${d.about}|${d.fact}`), ["B|person.date_of_birth"]));
+  ok("C7.7 R3 form with a minimum age (fail): the principal not employed → not needed for anyone, whatever their age", f2(k([["A|person.employed", false], ["B|person.date_of_birth", "1980-01-01"]])).forms.filter((x) => x.form === "F2").every((x) => x.applies === false));
+  ok("C7.7 R3 check with no applicant (only a representative, applying): a check with no kind is decided on the filing, never on the representative", same(fired(undefined, [P("R", "representative", true)], k([["R|person.employed", true]])), []) && same(render.render(check(undefined), [P("R", "representative", true)], k([["case|person.employed", true]])).checks.map((x) => x.person), [FILING]));
   ok("C7.7 R3 check pass: a CASE check is decided once, on the filing", same(render.render(check("CASE"), withRep, k([["case|person.employed", true]])).checks.map((x) => x.person), [FILING]));
 }
 
