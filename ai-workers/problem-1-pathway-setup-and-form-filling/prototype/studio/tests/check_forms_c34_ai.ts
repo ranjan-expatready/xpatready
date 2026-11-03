@@ -37,6 +37,7 @@ const cleanUp = () => { for (const f of written) rmSync(f, { force: true }); for
 for (const [sig, code] of [["SIGINT", 130], ["SIGTERM", 143]] as const) process.on(sig, () => { cleanUp(); process.exit(code); });
 
 import { CHOICE, DETAILS, FORM_ANSWER, formCheck, GUIDE_ANSWER, guideCheck, passport } from "./fixtures/c34-answers.ts";
+import { CODED_IDENTITY, isIdentityName } from "../engine/identity-documents.ts"; // QA-195
 
 (async () => {
   // ---------------------------------------------------------------- E: the rules over the rounds (pure, no server)
@@ -77,6 +78,18 @@ import { CHOICE, DETAILS, FORM_ANSWER, formCheck, GUIDE_ANSWER, guideCheck, pass
   ok("C3.4 E fail (review M2): when only the checker says identity, the draft's payload a person accepts is not AI-read either (P-134)", (e.items[0]?.payload as any)?.readerKind === "person_only" && (e.items[0]?.payload as any)?.identityDocument === true && (e.items[0]?.rounds.draft?.payload as any)?.readerKind === "person_only" && e.items[0]?.confidence !== "ready", { payload: e.items[0]?.payload, confidence: e.items[0]?.confidence });
   e = both({ ...FORM_ANSWER, checks: [], document_types: [{ ...passport, category: "financial", name: "Bank statement", proves: "funds for the stay", reader: "letter_or_record", identity_document: false, quote: "Passport number" }] });
   ok("C3.4 E pass: a document that is not an identity document keeps its letter reader", (e.items[0]?.payload as any)?.readerKind === "letter_or_record" && (e.items[0]?.payload as any)?.identityDocument === false && e.items[0]?.confidence === "ready", e.items[0]?.payload);
+  // QA-195 (P-134, P-153 (1)): the name decides too (engine/identity-documents.ts), never only a flag or a category.
+  e = both({ ...FORM_ANSWER, checks: [], document_types: [{ ...passport, name: "Passport", category: "travel", reader: "letter_or_record", identity_document: false }] });
+  ok("QA-195 C3.4 E fail: \"Passport\" in category \"travel\", flagged not identity by both readings with an AI reader, is an identity document set to a person's reading and flagged Check",
+    (e.items[0]?.payload as any)?.identityDocument === true && (e.items[0]?.payload as any)?.readerKind === "person_only" && e.items[0]?.confidence === "check" && e.items[0]?.rules.some((x) => x.rule === "identity_not_read_by_ai" && !x.passed), e.items[0]?.payload);
+  const named = ["National identity card", "national_id_card", "Birth certificate", "Refugee travel document", "Permanent resident card", "Copy of passports", "Driver's licence", "Citizenship certificate", "Passport photo page"].map((name) => {
+    const x = both({ ...FORM_ANSWER, checks: [], document_types: [{ ...passport, name, category: "other", reader: "letter_or_record", identity_document: false }] }).items[0];
+    return { name, identity: (x?.payload as any)?.identityDocument, reader: (x?.payload as any)?.readerKind };
+  });
+  ok("QA-195 C3.4 E fail: other identity documents by name (identity card, birth certificate, travel document, PR card, driver's licence…) are never AI-read", named.every((x) => x.identity === true && x.reader === "person_only"), named);
+  const notId = ["Passport-size photo", "Two passport photos", "Proof of travel", "Bank statement", "Marriage certificate"].map((name) => ({ name, identity: isIdentityName(name) }));
+  ok("QA-195 pass: a passport-size photo, proof of travel, a bank statement or a marriage certificate is not an identity document by name", notId.every((x) => !x.identity), notId);
+  ok("QA-195 pass: the C2.6 checklist keeps its coded-lines list (a passport or travel document; never a photo)", CODED_IDENTITY.test("passport information page copy") && CODED_IDENTITY.test("travel document") && !CODED_IDENTITY.test("visa application photos"));
   e = bad({ tree_json: JSON.stringify({ op: "and", args: [{ op: "eq", field: CHOICE, value: "Yes" }, { op: "eq", field: CHOICE, value: "No" }] }), examples: [{ facts_json: JSON.stringify({ [CHOICE]: "Yes" }), expected: false }, { facts_json: JSON.stringify({ [CHOICE]: "No" }), expected: false }] });
   ok("C3.4 E fail (break B5): a check that can never pass, with only failing examples, is not proposed", !e.items.length && /both a passing and a failing/.test(e.dropped[0]?.why ?? ""), e.dropped[0]);
   e = bad({ tree_json: JSON.stringify({ op: "or", args: [{ op: "exists", field: CHOICE }, { op: "not", arg: { op: "exists", field: CHOICE } }] }), examples: [{ facts_json: JSON.stringify({ [CHOICE]: "Yes" }), expected: true }, { facts_json: "{}", expected: true }] });

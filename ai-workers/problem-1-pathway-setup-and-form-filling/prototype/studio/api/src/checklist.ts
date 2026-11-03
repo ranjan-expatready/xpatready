@@ -21,6 +21,7 @@ export { linesOnCombination } from "./proposals.ts";
 export const CHECKLIST_KINDS = ["document_requirement", "section", "rule", "check"] as const;
 export { inventoryOf, linesOf, savedReading, treeOf, wordsOf, type ReadLine, type RequirementProposal, type SavedReading } from "./saved-readings.ts";
 import { linesOf, partFits, savedReading, wordsOf, type ReadLine, type RequirementProposal } from "./saved-readings.ts";
+import { CODED_IDENTITY } from "../../engine/identity-documents.ts";
 
 
 @Injectable()
@@ -136,7 +137,7 @@ type DocTypePayload = Extract<ProposalPayload, { kind: "document_type" }>;
 export const typeName = (t: string) => { const w = t.replace(/[_\s]+/g, " ").trim(); return w ? (w[0].toUpperCase() + w.slice(1)).replace(/\bUs\b/, "US") : t; };
 const cut = (t: string, n: number) => (t.length <= n ? t : `${t.slice(0, n - 2).trimEnd()}…"`);
 /** P-134: a passport or travel document is an identity document read by its coded (machine-readable) lines. */
-const IDENTITY = /\bpassport\b|\btravel document\b/i;
+const IDENTITY = CODED_IDENTITY;
 /** The document type a checklist line names, as a library proposal (Sample): its name, what it proves (the checklist's
  *  own words), and how it is read (P-133, P-134: identity documents by coded lines; photos by a person; else a record). */
 export function docTypeOf(l: ReadLine, checklist: string): DocTypePayload {
