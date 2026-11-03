@@ -75,7 +75,7 @@ export function plainWhy(why: string | null | undefined): string {
 /** QA-165 (P-144, P-237): a validated copy counts only when the form's own Validate result had passed when it was read
  *  back (read_validated.py form_validation, kept in its read-back). A row recorded before QA-165 has no such result: it
  *  never counts as validated, and the person sends the validated file again (the copy view, `lock` and `file` alike). */
-const formPassed = (v: { readBack: unknown } | undefined) => (v?.readBack as { validation?: { passed?: boolean } } | null)?.validation?.passed === true;
+export const formPassed = (v: { readBack: unknown } | undefined) => (v?.readBack as { validation?: { passed?: boolean } } | null)?.validation?.passed === true;
 const NOT_FORM_CHECKED = "Read back before the form's own Validate result was checked: send the file you validated in Adobe again";
 /** QA-165 part 2: a form's field list, read once per file (the release's field map names it). */
 const inventories = new Map<string, { at: number; inv: Inventory }>();
