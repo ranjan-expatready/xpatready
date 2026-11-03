@@ -1,0 +1,542 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-fieldmap-check-imm-5562-07-2024-a4327a9f-live-20261103t074031444z-4e12db",
+  "idempotency_key": "1e128eec92fd6640fc51eaba3b79f1463b2ee1c8c79894f34c07622413578cb0",
+  "contract_version": "drafting-run/v0",
+  "kind": "field_map",
+  "output_sha256": "02a2359d0f2017269ab6a8dc7d84eeb300d24bb4af703d4dfe390b523abd0739",
+  "inputs": {
+   "combination": "edition:IMM 5562:07-2024",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/imm5562e.inventory.json",
+     "sha256": "2cc0f3d45b88985214809f8085c6dfd171b6be05161815381fa42fb9fb84097d"
+    }
+   ],
+   "configuration_version": "studio-add-form"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 900000,
+   "max_attempts": 2,
+   "budget_usd": 2.96,
+   "max_output_tokens": 64000,
+   "prompt_version": "field-map-check.v1.md",
+   "prompt_sha256": "51474a479d9e91c3dd36a9e120d137796a2040e1409b39d5ef3c665cb6ec901b"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 13506,
+    "output_tokens": 8122,
+    "duration_ms": 61302
+   }
+  ],
+  "usage": {
+   "input_tokens": 13506,
+   "output_tokens": 8122,
+   "cost_usd": 0.216464,
+   "duration_ms": 61302
+  },
+  "started_at": "2026-11-03T07:40:31.445Z",
+  "ended_at": "2026-11-03T07:41:32.963Z",
+  "entries": [
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Name[0].Item1[0].FamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.family_name",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": "Family name (as shown on passport/travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Name[0].Item1[0].GivenNames[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.given_names",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": "Given name(s) (as shown on passport/travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Item2A[0].Header[0].CheckBox1[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.did_not_travel_in_period",
+    "transform": "derived:no trips recorded for this person in the period -> 1 (ticked), otherwise 0; yes_no_code:1/0",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": "did not travel"
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].fromDate[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.trip_start_date",
+    "transform": "date:YYYY-MM-DD",
+    "row": 0,
+    "condition": "Each further trip of the subject adds a List2A row; left empty when 'did not travel' is ticked",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": "a) You"
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].toDate[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.trip_end_date",
+    "transform": "date:YYYY-MM-DD",
+    "row": 0,
+    "condition": "Each further trip of the subject adds a List2A row; left empty when 'did not travel' is ticked",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": "a) You"
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].Duration[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.trip_duration",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Each further trip of the subject adds a List2A row; left empty when 'did not travel' is ticked",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": "a) You"
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].Destination[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.trip_destination",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Each further trip of the subject adds a List2A row; left empty when 'did not travel' is ticked",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": "a) You"
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].PurposeofTravel[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.trip_purpose",
+    "transform": "code_list:imm5562.purpose_of_travel (Business=11, Tourism=2, Training=3, Studies=4, Visiting family=5, Visiting friend(s)=6, Official/Diplomatic visit=7, Medical reasons=8, Transit=12, Cultural/Sports=9, Other=10)",
+    "row": 0,
+    "condition": "Each further trip of the subject adds a List2A row; left empty when 'did not travel' is ticked",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": "a) You"
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].Details[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.trip_purpose_details",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Each further trip of the subject adds a List2A row; left empty when 'did not travel' is ticked",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": "a) You"
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Item2B[0].Header[0].TextField2[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.full_name_passport",
+    "transform": "as_is (family name then given names as on passport)",
+    "condition": "Only if the spouse or common-law partner is not a Canadian citizen or permanent resident of Canada",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": "b) Your spouse or common-law partner (if not a Canadian citizen or permanent resident of Canada)."
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Item2B[0].Header[0].CheckBox1[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.did_not_travel_in_period",
+    "transform": "derived:no trips recorded for this person in the period -> 1 (ticked), otherwise 0; yes_no_code:1/0",
+    "condition": "Only if the spouse or common-law partner is not a Canadian citizen or permanent resident of Canada",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": "b) Your spouse or common-law partner (if not a Canadian citizen or permanent resident of Canada)."
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].fromDate[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.trip_start_date",
+    "transform": "date:YYYY-MM-DD",
+    "row": 0,
+    "condition": "Only if the spouse or partner is not a Canadian citizen or permanent resident; each further trip adds a List2B row",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": "b) Your spouse or common-law partner (if not a Canadian citizen or permanent resident of Canada)."
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].toDate[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.trip_end_date",
+    "transform": "date:YYYY-MM-DD",
+    "row": 0,
+    "condition": "Only if the spouse or partner is not a Canadian citizen or permanent resident; each further trip adds a List2B row",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": "b) Your spouse or common-law partner (if not a Canadian citizen or permanent resident of Canada)."
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].Duration[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.trip_duration",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Only if the spouse or partner is not a Canadian citizen or permanent resident; each further trip adds a List2B row",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": "b) Your spouse or common-law partner (if not a Canadian citizen or permanent resident of Canada)."
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].Destination[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.trip_destination",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Only if the spouse or partner is not a Canadian citizen or permanent resident; each further trip adds a List2B row",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": "b) Your spouse or common-law partner (if not a Canadian citizen or permanent resident of Canada)."
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].PurposeofTravel[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.trip_purpose",
+    "transform": "code_list:imm5562.purpose_of_travel (Business=11, Tourism=2, Training=3, Studies=4, Visiting family=5, Visiting friend(s)=6, Official/Diplomatic visit=7, Medical reasons=8, Transit=12, Cultural/Sports=9, Other=10)",
+    "row": 0,
+    "condition": "Only if the spouse or partner is not a Canadian citizen or permanent resident; each further trip adds a List2B row",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": "b) Your spouse or common-law partner (if not a Canadian citizen or permanent resident of Canada)."
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].Details[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.trip_purpose_details",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Only if the spouse or partner is not a Canadian citizen or permanent resident; each further trip adds a List2B row",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": "b) Your spouse or common-law partner (if not a Canadian citizen or permanent resident of Canada)."
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].Header[0].TextField2[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_child",
+    "fact": "person.full_name_passport",
+    "transform": "as_is (family name then given names as on passport)",
+    "row": 0,
+    "condition": "Only for dependent children 18 years old or older; each further such child adds an Item2X block",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": ") Your dependent child 18 years old or older"
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].Header[0].CheckBox1[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_child",
+    "fact": "person.did_not_travel_in_period",
+    "transform": "derived:no trips recorded for this person in the period -> 1 (ticked), otherwise 0; yes_no_code:1/0",
+    "row": 0,
+    "condition": "Only for dependent children 18 years old or older; each further such child adds an Item2X block",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": ") Your dependent child 18 years old or older"
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].fromDate[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_child",
+    "fact": "person.trip_start_date",
+    "transform": "date:YYYY-MM-DD",
+    "row": 0,
+    "condition": "Only for dependent children 18 or older; row 0 = first child's first trip; each further trip adds a List2X row and each further child adds an Item2X block",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": ") Your dependent child 18 years old or older"
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].toDate[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_child",
+    "fact": "person.trip_end_date",
+    "transform": "date:YYYY-MM-DD",
+    "row": 0,
+    "condition": "Only for dependent children 18 or older; row 0 = first child's first trip; each further trip adds a List2X row and each further child adds an Item2X block",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": ") Your dependent child 18 years old or older"
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].Duration[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_child",
+    "fact": "person.trip_duration",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Only for dependent children 18 or older; row 0 = first child's first trip; each further trip adds a List2X row and each further child adds an Item2X block",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": ") Your dependent child 18 years old or older"
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].Destination[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_child",
+    "fact": "person.trip_destination",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Only for dependent children 18 or older; row 0 = first child's first trip; each further trip adds a List2X row and each further child adds an Item2X block",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": ") Your dependent child 18 years old or older"
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].PurposeofTravel[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_child",
+    "fact": "person.trip_purpose",
+    "transform": "code_list:imm5562.purpose_of_travel (Business=11, Tourism=2, Training=3, Studies=4, Visiting family=5, Visiting friend(s)=6, Official/Diplomatic visit=7, Medical reasons=8, Transit=12, Cultural/Sports=9, Other=10)",
+    "row": 0,
+    "condition": "Only for dependent children 18 or older; row 0 = first child's first trip; each further trip adds a List2X row and each further child adds an Item2X block",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": ") Your dependent child 18 years old or older"
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].Details[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_child",
+    "fact": "person.trip_purpose_details",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Only for dependent children 18 or older; row 0 = first child's first trip; each further trip adds a List2X row and each further child adds an Item2X block",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": ") Your dependent child 18 years old or older"
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page2[0].Item3[0].Signature[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "Signature is signed by hand by the principal applicant; the system must never fill it.",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": "Signature:"
+    }
+   },
+   {
+    "form_edition": "IMM 5562 (07-2024)",
+    "form_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+    "data_path": "IMM_5562[0].Page2[0].Item3[0].SignedDate[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "Date of signature is entered by the signer at the time of signing; not a stored case fact. A reviewer may decide to prefill it.",
+    "evidence": {
+     "file_sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+     "quote": "Date (YYYY-MM-DD)"
+    }
+   }
+  ]
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": {
+  "weak_evidence": [],
+  "edition_note": null,
+  "needs_person": [],
+  "set_aside_fields": []
+ },
+ "launch_evidence": {
+  "path_code_sha256": "8b559ef9cbf07fbf191746d2b3eb968d79143cc5f0aacf708481f84547f9d127",
+  "template_sha256": "707130b8cae250f820fe2ce5ef29c39bb6ddadaa6ade3b636e88c2ba8a472ffb",
+  "schema_file": "field-map-output.v2.schema.json",
+  "schema_sha256": "a9583204f0ff5325721c1240af88c2f86d9701dac3c1f466061c0073c4f2d68a",
+  "known": {
+   "form_edition": "IMM 5562 (07-2024)"
+  },
+  "screened": true,
+  "output_sha256": "02a2359d0f2017269ab6a8dc7d84eeb300d24bb4af703d4dfe390b523abd0739",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "39dc4d4e812448694d347ae4a4e99d59263cb86788ebad8046354e901f66a237",
+  "request_bytes": 29558,
+  "stub_calls": null,
+  "ledger": {
+   "file": "<main copy>/.tools/p2-ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 52.59878
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/imm5562e.inventory.json",
+    "sha256": "2cc0f3d45b88985214809f8085c6dfd171b6be05161815381fa42fb9fb84097d",
+    "kind": "inventory"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "281abfce0ee78b399a720cd3811b1631bf83f093b930ffdd67c45c5458630060",
+   "digest_made_at": "2026-11-03T07:40:31.445Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "f61b9f30fbb5d410b11bc2f44aed2565",
+   "ticket_expires_at": "2026-11-03T07:42:31.445Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"form_edition\":\"IMM 5562 (07-2024)\",\"canonical_fields\":[{\"id\":\"person.family_name\",\"meaning\":\"Person's family name as shown on passport or travel document\",\"value_type\":\"text\"},{\"id\":\"person.given_names\",\"meaning\":\"Person's given name(s) as shown on passport or travel document\",\"value_type\":\"text\"},{\"id\":\"person.full_name_passport\",\"meaning\":\"Person's family name and given names together, as shown on passport or travel document\",\"value_type\":\"text\"},{\"id\":\"person.did_not_travel_in_period\",\"meaning\":\"Whether the person made no trips in the travel-history period the form asks about, derived from the absence of recorded trips\",\"value_type\":\"yes_no\"},{\"id\":\"person.trip_start_date\",\"meaning\":\"Start (from) date of one trip in the person's travel history\",\"value_type\":\"date\"},{\"id\":\"person.trip_end_date\",\"meaning\":\"End (to) date of one trip in the person's travel history\",\"value_type\":\"date\"},{\"id\":\"person.trip_duration\",\"meaning\":\"Length of one trip in the person's travel history\",\"value_type\":\"text\"},{\"id\":\"person.trip_destination\",\"meaning\":\"Place (city and country) visited on one trip in the person's travel history\",\"value_type\":\"text\"},{\"id\":\"person.trip_purpose\",\"meaning\":\"Purpose category of one trip in the person's travel history\",\"value_type\":\"code\"},{\"id\":\"person.trip_purpose_details\",\"meaning\":\"Free-text details about the purpose of one trip in the person's travel history\",\"value_type\":\"text\"}],\"entries\":[{\"data_path\":\"IMM_5562[0].Page1[0].Name[0].Item1[0].FamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Family name (as shown on passport/travel document)\"},{\"data_path\":\"IMM_5562[0].Page1[0].Name[0].Item1[0].GivenNames[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.given_names\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Given name(s) (as shown on passport/travel document)\"},{\"data_path\":\"IMM_5562[0].Page1[0].Item2A[0].Header[0].CheckBox1[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.did_not_travel_in_period\",\"transform\":\"derived:no trips recorded for this person in the period -> 1 (ticked), otherwise 0; yes_no_code:1/0\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"did not travel\"},{\"data_path\":\"IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].fromDate[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.trip_start_date\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Each further trip of the subject adds a List2A row; left empty when 'did not travel' is ticked\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"a) You\"},{\"data_path\":\"IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].toDate[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.trip_end_date\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Each further trip of the subject adds a List2A row; left empty when 'did not travel' is ticked\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"a) You\"},{\"data_path\":\"IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].Duration[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.trip_duration\",\"transform\":\"as_is\",\"condition\":\"Each further trip of the subject adds a List2A row; left empty when 'did not travel' is ticked\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"a) You\"},{\"data_path\":\"IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].Destination[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.trip_destination\",\"transform\":\"as_is\",\"condition\":\"Each further trip of the subject adds a List2A row; left empty when 'did not travel' is ticked\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"a) You\"},{\"data_path\":\"IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].PurposeofTravel[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.trip_purpose\",\"transform\":\"code_list:imm5562.purpose_of_travel (Business=11, Tourism=2, Training=3, Studies=4, Visiting family=5, Visiting friend(s)=6, Official/Diplomatic visit=7, Medical reasons=8, Transit=12, Cultural/Sports=9, Other=10)\",\"condition\":\"Each further trip of the subject adds a List2A row; left empty when 'did not travel' is ticked\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"a) You\"},{\"data_path\":\"IMM_5562[0].Page1[0].Item2A[0].PaddedList2A[0].List2A[0].s1[0].Details[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.trip_purpose_details\",\"transform\":\"as_is\",\"condition\":\"Each further trip of the subject adds a List2A row; left empty when 'did not travel' is ticked\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"a) You\"},{\"data_path\":\"IMM_5562[0].Page1[0].Item2B[0].Header[0].TextField2[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.full_name_passport\",\"transform\":\"as_is (family name then given names as on passport)\",\"condition\":\"Only if the spouse or common-law partner is not a Canadian citizen or permanent resident of Canada\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"b) Your spouse or common-law partner (if not a Canadian citizen or permanent resident of Canada).\"},{\"data_path\":\"IMM_5562[0].Page1[0].Item2B[0].Header[0].CheckBox1[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.did_not_travel_in_period\",\"transform\":\"derived:no trips recorded for this person in the period -> 1 (ticked), otherwise 0; yes_no_code:1/0\",\"condition\":\"Only if the spouse or common-law partner is not a Canadian citizen or permanent resident of Canada\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"b) Your spouse or common-law partner (if not a Canadian citizen or permanent resident of Canada).\"},{\"data_path\":\"IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].fromDate[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":0,\"fact\":\"person.trip_start_date\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Only if the spouse or partner is not a Canadian citizen or permanent resident; each further trip adds a List2B row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"b) Your spouse or common-law partner (if not a Canadian citizen or permanent resident of Canada).\"},{\"data_path\":\"IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].toDate[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":0,\"fact\":\"person.trip_end_date\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Only if the spouse or partner is not a Canadian citizen or permanent resident; each further trip adds a List2B row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"b) Your spouse or common-law partner (if not a Canadian citizen or permanent resident of Canada).\"},{\"data_path\":\"IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].Duration[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":0,\"fact\":\"person.trip_duration\",\"transform\":\"as_is\",\"condition\":\"Only if the spouse or partner is not a Canadian citizen or permanent resident; each further trip adds a List2B row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"b) Your spouse or common-law partner (if not a Canadian citizen or permanent resident of Canada).\"},{\"data_path\":\"IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].Destination[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":0,\"fact\":\"person.trip_destination\",\"transform\":\"as_is\",\"condition\":\"Only if the spouse or partner is not a Canadian citizen or permanent resident; each further trip adds a List2B row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"b) Your spouse or common-law partner (if not a Canadian citizen or permanent resident of Canada).\"},{\"data_path\":\"IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].PurposeofTravel[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":0,\"fact\":\"person.trip_purpose\",\"transform\":\"code_list:imm5562.purpose_of_travel (Business=11, Tourism=2, Training=3, Studies=4, Visiting family=5, Visiting friend(s)=6, Official/Diplomatic visit=7, Medical reasons=8, Transit=12, Cultural/Sports=9, Other=10)\",\"condition\":\"Only if the spouse or partner is not a Canadian citizen or permanent resident; each further trip adds a List2B row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"b) Your spouse or common-law partner (if not a Canadian citizen or permanent resident of Canada).\"},{\"data_path\":\"IMM_5562[0].Page1[0].Item2B[0].PaddedList2B[0].List2B[0].s1[0].Details[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":0,\"fact\":\"person.trip_purpose_details\",\"transform\":\"as_is\",\"condition\":\"Only if the spouse or partner is not a Canadian citizen or permanent resident; each further trip adds a List2B row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"b) Your spouse or common-law partner (if not a Canadian citizen or permanent resident of Canada).\"},{\"data_path\":\"IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].Header[0].TextField2[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"person.full_name_passport\",\"transform\":\"as_is (family name then given names as on passport)\",\"condition\":\"Only for dependent children 18 years old or older; each further such child adds an Item2X block\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\") Your dependent child 18 years old or older\"},{\"data_path\":\"IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].Header[0].CheckBox1[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"person.did_not_travel_in_period\",\"transform\":\"derived:no trips recorded for this person in the period -> 1 (ticked), otherwise 0; yes_no_code:1/0\",\"condition\":\"Only for dependent children 18 years old or older; each further such child adds an Item2X block\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\") Your dependent child 18 years old or older\"},{\"data_path\":\"IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].fromDate[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"person.trip_start_date\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Only for dependent children 18 or older; row 0 = first child's first trip; each further trip adds a List2X row and each further child adds an Item2X block\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\") Your dependent child 18 years old or older\"},{\"data_path\":\"IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].toDate[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"person.trip_end_date\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Only for dependent children 18 or older; row 0 = first child's first trip; each further trip adds a List2X row and each further child adds an Item2X block\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\") Your dependent child 18 years old or older\"},{\"data_path\":\"IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].Duration[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"person.trip_duration\",\"transform\":\"as_is\",\"condition\":\"Only for dependent children 18 or older; row 0 = first child's first trip; each further trip adds a List2X row and each further child adds an Item2X block\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\") Your dependent child 18 years old or older\"},{\"data_path\":\"IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].Destination[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"person.trip_destination\",\"transform\":\"as_is\",\"condition\":\"Only for dependent children 18 or older; row 0 = first child's first trip; each further trip adds a List2X row and each further child adds an Item2X block\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\") Your dependent child 18 years old or older\"},{\"data_path\":\"IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].PurposeofTravel[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"person.trip_purpose\",\"transform\":\"code_list:imm5562.purpose_of_travel (Business=11, Tourism=2, Training=3, Studies=4, Visiting family=5, Visiting friend(s)=6, Official/Diplomatic visit=7, Medical reasons=8, Transit=12, Cultural/Sports=9, Other=10)\",\"condition\":\"Only for dependent children 18 or older; row 0 = first child's first trip; each further trip adds a List2X row and each further child adds an Item2X block\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\") Your dependent child 18 years old or older\"},{\"data_path\":\"IMM_5562[0].Page1[0].Item2C-Z[0].Item2X[0].PaddedList2X[0].List2X[0].s1[0].Details[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"person.trip_purpose_details\",\"transform\":\"as_is\",\"condition\":\"Only for dependent children 18 or older; row 0 = first child's first trip; each further trip adds a List2X row and each further child adds an Item2X block\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\") Your dependent child 18 years old or older\"},{\"data_path\":\"IMM_5562[0].Page2[0].Item3[0].Signature[0]\",\"outcome\":\"never_filled\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Signature is signed by hand by the principal applicant; the system must never fill it.\",\"evidence_quote\":\"Signature:\"},{\"data_path\":\"IMM_5562[0].Page2[0].Item3[0].SignedDate[0]\",\"outcome\":\"never_filled\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Date of signature is entered by the signer at the time of signing; not a stored case fact. A reviewer may decide to prefill it.\",\"evidence_quote\":\"Date (YYYY-MM-DD)\"}]}"
+}
