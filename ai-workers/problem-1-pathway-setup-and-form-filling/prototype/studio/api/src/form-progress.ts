@@ -7,6 +7,7 @@ import { normaliseCode } from "../../contracts/form-library.ts";
 import type { FormProgress } from "../../contracts/form-progress.ts";
 import { formProgress } from "../../engine/form-progress.ts";
 import { effective } from "../../engine/snapshot.ts";
+import { waitsForMap } from "../../engine/setup-checklist.ts";
 import { actorOf, Db, Workspace, type Actor } from "./core.ts";
 import { FormLibrary } from "./form-library.ts";
 import { ReviewQueueService } from "./review-queue.ts";
@@ -84,7 +85,8 @@ export class FormProgressService {
       const att = attOf.get(code);
       const job = att ? jobs.find((j) => j.attachmentId === att.id) : undefined;
       const draft = !job ? "none" as const : ["QUEUED", "RUNNING"].includes(job.status) ? "running" as const : job.status === "COMPLETED" ? "done" as const : "stopped" as const;
-      const problems = combo.draft.problems.filter((p) => p.where === "Forms" && p.item === code).map((p) => ({ level: p.level, message: p.message }));
+      // V3 B1 review (minor): "No field map yet" is this row's own state already, so the release error is not repeated here.
+      const problems = combo.draft.problems.filter((p) => p.where === "Forms" && p.item === code && !waitsForMap(p)).map((p) => ({ level: p.level, message: p.message }));
       // Review M1: form fields with no decision count only while they are in a draft (To review lists those, K1).
       out.set(code, formProgress({ form: code, combinationId, line, edition: cur?.edition ?? null, mapped: maps.filter((m) => m.outcome !== "unresolved").length,
         unresolved: maps.filter((m) => m.outcome === "unresolved" && m.status === "DRAFT").length, carried: maps.filter((m) => m.outcome === "unresolved" && m.status !== "DRAFT").length, draft, items: items.filter((i) => i.forms.includes(code)), problems, canAuthor,
