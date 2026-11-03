@@ -79,3 +79,14 @@ D1 Requirement fit 3: P-32 now holds for the fill, coverage and trial, but the r
 **Journey test:** `journey-test-reviewer-2026-11-03.md`, **5.5/10, fail** (error recovery 0, from B1).
 
 **Verdict: Block.** To fix: B1 (the runner reads the key's edition, with a pass and a fail), then M1 (`fieldsOpen` pass and fail). m1–m3 are cheap and should go in the same push.
+
+## Round 2 (1641a7137)
+**Scope:** only `git diff 1a7d63ad8..1641a7137`, re-run from a `git archive` of 1641a7137 in a scratch copy. US$0, no server.
+* **B1 fixed:** `runFieldMap` passes the key's own edition (`engine/answer-keys.ts:322`) through `formCoverage` (`engine/runtime/forms.ts:18-21`) to `render`'s `editions` (`engine/render.ts:118-119`). That is the only caller setting `editions`; all others keep `pdfMapInUse`. My round-1 probe now gives: a correct 11-2021 key PASSES with both editions held; a miswired 11-2021 map FAILS on its own box; a correct 11-2025 key PASSES.
+* **Also fixed:** M1 (`fieldsOpen` pass and fail, Sample lists in git-ignored `studio/var`, removed after), m1 (the Online check uses "(01-2027)"), m3 (`engine/channels.ts:161` uses `pdfMapInUse`), and breaker m2 (the refusal names the edition in use, `api/src/fill.ts:46-49`).
+* **Every rule removed fails a check:** the key's edition 2, `render` ignoring `editions` 2, `fieldsOpen` first map 1, the Online filter 1, `channelsView` first map 1, the refusal without the edition 1.
+* **Suites:** `check_edition_in_use` 20/20; `check_engine` 43, `check_gcore_engine` 130, `runtime/check_case_engine` 69, `check_vv_prepare` 32, `check_line_holders` 19 (all green); no type errors in the changed files. Database and server suites not re-run (the builder reports them green).
+* **Still open, accepted:** m2 (Forms tab untested: same as before on sorted snapshots, named in the PR); m4 and m5 are notes.
+* **Journey score, re-scored:** J3–J5 now hold. 9/10, pass: ½ each for accessibility and visual quality (no UI change, not walked), 1 for every other criterion.
+
+**Verdict: Approve** (1641a7137).
