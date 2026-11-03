@@ -19,7 +19,7 @@ import { canonical, evaluate, validatePredicate, type PredicateNode } from "../.
 import type { ProposalItem, ProposalPayload } from "../contracts/proposal-item.ts";
 import { isSentence, sameText } from "./pqr-picks.ts";
 import { isNode } from "./validate.ts";
-import { isIdentityName } from "./identity-documents.ts";
+import { identityOf, NOT_AI_READERS } from "./identity-documents.ts";
 
 export const MASTERS_FORM_STEP = "masters_form", MASTERS_GUIDE_STEP = "masters_guide";
 type Example = { facts_json: string; expected: boolean };
@@ -136,7 +136,7 @@ function merge<P extends ProposalPayload>(d: Map<string, Kept<P>>, k: Map<string
 
 const READERS = ["coded_lines", "printed_layout", "letter_or_record", "person_only"] as const;
 type Reader = (typeof READERS)[number];
-const NOT_AI: string[] = ["coded_lines", "printed_layout", "person_only"];
+const NOT_AI = NOT_AI_READERS; // engine/identity-documents.ts, shared with the one door (QA-195)
 
 export type FormSource = { file: string; sha256: string; edition: string; printed: string;
   /** Visible boxes of this edition (hidden, barcode and machine boxes left out by the caller) with their printed words. */
@@ -196,7 +196,7 @@ export function formMastersFromRounds(rounds: { draft: MRound<FormAnswer>; check
   const identityGuard = (a: ReturnType<typeof docs>, b: ReturnType<typeof docs>) => {
     for (const key of new Set([...a.keys(), ...b.keys()])) {
       const xs = [a.get(key), b.get(key)].filter((x): x is NonNullable<typeof x> => !!x);
-      const identity = xs.some((x) => x.payload.identityDocument || /identity/i.test(x.payload.category) || isIdentityName(x.payload.name));
+      const identity = xs.some((x) => identityOf(x.payload));
       for (const x of xs) {
         const known = (READERS as readonly string[]).includes(x.payload.readerKind);
         const aiRead = identity && !NOT_AI.includes(x.payload.readerKind);

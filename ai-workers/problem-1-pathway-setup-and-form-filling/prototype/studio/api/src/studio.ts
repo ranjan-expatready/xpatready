@@ -30,6 +30,7 @@ import { draftSourceProblems } from "./source-register.ts";
 import { refuseBlocking } from "./refusal.ts";
 import { gateOf as keyGateOf, keysUnchanged, runKeys, type Gate as KeyGate } from "./answer-key-gate.ts";
 import type { Problem } from "../../engine/validate.ts";
+import { isIdentityName } from "../../engine/identity-documents.ts";
 /** G2 (C5.5, BR-8; shared with G1 BR-8): a refusal carries every blocking problem in `errors[]`, each in words; `detail`
  *  (and `message`, read by older callers) keeps the sentence the screens and checks already show. */
 /** G2 BR-9: the keys a release rests on, frozen in its summary (only when the gate judged it). */
@@ -813,7 +814,7 @@ export class Studio {
         // Review M1: the identity is the name and what it proves (P-149 (2)); the default proves names no combination, so
         // the same name from two combinations is one item.
         const proves = (b.proves?.trim() || "Not stated yet: the person who named it did not say; the second person may state it before accepting.").slice(0, 200);
-        const payload = { kind: "document_type" as const, name: typeName, proves, category: (b.providedBy ?? "client").slice(0, 60), suppliesFacts: [], readerKind: "person_only" as const, identityDocument: false };
+        const payload = { kind: "document_type" as const, name: typeName, proves, category: (b.providedBy ?? "client").slice(0, 60), suppliesFacts: [], readerKind: "person_only" as const, identityDocument: isIdentityName(typeName) }; // QA-195 (break B9)
         const quote = b.sourceQuote?.trim() ? ` The author's source: "${b.sourceQuote.trim().slice(0, 300)}".` : "";
         const norm = nameKey(typeName);
         const proposalId = await this.db.$transaction(async (tx) => {

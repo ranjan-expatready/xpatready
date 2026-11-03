@@ -21,7 +21,7 @@ export { linesOnCombination } from "./proposals.ts";
 export const CHECKLIST_KINDS = ["document_requirement", "section", "rule", "check"] as const;
 export { inventoryOf, linesOf, savedReading, treeOf, wordsOf, type ReadLine, type RequirementProposal, type SavedReading } from "./saved-readings.ts";
 import { linesOf, partFits, savedReading, wordsOf, type ReadLine, type RequirementProposal } from "./saved-readings.ts";
-import { CODED_IDENTITY } from "../../engine/identity-documents.ts";
+import { CODED_IDENTITY, isIdentityName, isPassportPhoto } from "../../engine/identity-documents.ts";
 
 
 @Injectable()
@@ -142,10 +142,13 @@ const IDENTITY = CODED_IDENTITY;
  *  own words), and how it is read (P-133, P-134: identity documents by coded lines; photos by a person; else a record). */
 export function docTypeOf(l: ReadLine, checklist: string): DocTypePayload {
   // The document named, never its quote: "proof of legal status… listed on your passport" is not a passport (C2.6 shots).
-  const identity = IDENTITY.test(l.document_type.replace(/_/g, " "));
-  const photo = /\bphoto/i.test(l.document_type.replace(/_/g, " ")); // break m2: "visa_application_photos"
+  // QA-195 (break B2): every identity document by the shared list is never AI-read; only a passport or travel document
+  // (never a passport-size photo) is read by its coded lines, any other by a person.
+  const words = l.document_type.replace(/_/g, " ");
+  const coded = IDENTITY.test(words) && !isPassportPhoto(words), identity = coded || isIdentityName(words);
+  const photo = /\bphoto/i.test(words); // break m2: "visa_application_photos"
   return { kind: "document_type", name: typeName(l.document_type).slice(0, 120), proves: cut(`What ${checklist} asks for: "${l.quote}"`, 200),
-    category: l.provided_by === "other" ? "other" : "client", suppliesFacts: [], readerKind: identity ? "coded_lines" : photo ? "person_only" : "letter_or_record", identityDocument: identity };
+    category: l.provided_by === "other" ? "other" : "client", suppliesFacts: [], readerKind: coded ? "coded_lines" : identity || photo ? "person_only" : "letter_or_record", identityDocument: identity };
 }
 
 @Controller("api")

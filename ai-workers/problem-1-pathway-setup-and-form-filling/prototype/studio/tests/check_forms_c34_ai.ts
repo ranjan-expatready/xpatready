@@ -82,12 +82,14 @@ import { CODED_IDENTITY, isIdentityName } from "../engine/identity-documents.ts"
   e = both({ ...FORM_ANSWER, checks: [], document_types: [{ ...passport, name: "Passport", category: "travel", reader: "letter_or_record", identity_document: false }] });
   ok("QA-195 C3.4 E fail: \"Passport\" in category \"travel\", flagged not identity by both readings with an AI reader, is an identity document set to a person's reading and flagged Check",
     (e.items[0]?.payload as any)?.identityDocument === true && (e.items[0]?.payload as any)?.readerKind === "person_only" && e.items[0]?.confidence === "check" && e.items[0]?.rules.some((x) => x.rule === "identity_not_read_by_ai" && !x.passed), e.items[0]?.payload);
-  const named = ["National identity card", "national_id_card", "Birth certificate", "Refugee travel document", "Permanent resident card", "Copy of passports", "Driver's licence", "Citizenship certificate", "Passport photo page"].map((name) => {
+  const named = ["National identity card", "national_id_card", "Birth certificate", "Refugee travel document", "Permanent resident card", "Copy of passports", "Driver's licence", "Citizenship certificate", "Passport photo page",
+    // break B3–B5: short names, misspellings, look-alike and invisible characters, other languages
+    "Photo ID", "proof of identity", "Travel doc", "Confirmation of Permanent Residence", "Driving licence", "Passeport", "ePassport", "Passport photo and information page", "Driver\u2019s licence", "\uff30\uff41\uff53\uff53\uff50\uff4f\uff52\uff54", "travel\u00a0document", "Pass\u200bport", "P\u0430ssport", "Carte d'identit\u00e9", "Personalausweis", "Aadhaar card"].map((name) => {
     const x = both({ ...FORM_ANSWER, checks: [], document_types: [{ ...passport, name, category: "other", reader: "letter_or_record", identity_document: false }] }).items[0];
     return { name, identity: (x?.payload as any)?.identityDocument, reader: (x?.payload as any)?.readerKind };
   });
   ok("QA-195 C3.4 E fail: other identity documents by name (identity card, birth certificate, travel document, PR card, driver's licence…) are never AI-read", named.every((x) => x.identity === true && x.reader === "person_only"), named);
-  const notId = ["Passport-size photo", "Two passport photos", "Proof of travel", "Bank statement", "Marriage certificate"].map((name) => ({ name, identity: isIdentityName(name) }));
+  const notId = ["Passport-size photo", "Passport-sized photo", "Two passport photos", "Proof of travel", "Travel history", "Bank statement", "Marriage certificate", "Police certificate"].map((name) => ({ name, identity: isIdentityName(name) }));
   ok("QA-195 pass: a passport-size photo, proof of travel, a bank statement or a marriage certificate is not an identity document by name", notId.every((x) => !x.identity), notId);
   ok("QA-195 pass: the C2.6 checklist keeps its coded-lines list (a passport or travel document; never a photo)", CODED_IDENTITY.test("passport information page copy") && CODED_IDENTITY.test("travel document") && !CODED_IDENTITY.test("visa application photos"));
   e = bad({ tree_json: JSON.stringify({ op: "and", args: [{ op: "eq", field: CHOICE, value: "Yes" }, { op: "eq", field: CHOICE, value: "No" }] }), examples: [{ facts_json: JSON.stringify({ [CHOICE]: "Yes" }), expected: false }, { facts_json: JSON.stringify({ [CHOICE]: "No" }), expected: false }] });
@@ -183,6 +185,16 @@ import { CODED_IDENTITY, isIdentityName } from "../engine/identity-documents.ts"
   const bands = q.body?.group?.bands ?? {}, items: any[] = [...(bands.ready ?? []), ...(bands.check ?? []), ...(bands.decide ?? [])];
   const kinds = Object.fromEntries(["section", "answer_list", "form_check", "document_type"].map((k) => [k, items.filter((i) => i.kind === k).length]));
   ok("C3.4 S pass: the edition's group in the one queue holds sections, answer lists, form checks and a document type", Object.values(kinds).every((n) => n > 0), kinds);
+  // QA-195 (break B1; P-153 (1)): the one door holds the identity rule whoever edits the proposal. An edit that gives an
+  // identity document (by its name) an AI reader is refused (409) and lands nothing; with a reader that is not AI it
+  // lands, recorded as an identity document even when the edit says it is not.
+  const dtItem = items.find((i) => i.kind === "document_type");
+  const asEdited = (patch: object) => ({ ...(dtItem?.payload ?? dtItem?.readings?.draft?.payload ?? {}), kind: "document_type", ...patch });
+  const typesNamed = (n: string) => sql(`select coalesce(string_agg(reader_profile->>'readerKind' || '/' || (reader_profile->>'identityDocument'), ','), '') from document_type where name = '${n}'`);
+  const aiEdit = await call("POST", "/review/proposals/decide", { ids: [dtItem?.id], action: "edit", payload: asEdited({ name: "Passport", category: "travel", readerKind: "letter_or_record", identityDocument: false }) }, "user-C");
+  ok("QA-195 fail (break B1): an edit giving \"Passport\" an AI reader is refused at the one door (409), and no document type lands", aiEdit.status === 409 && /identity document: AI never reads it/.test(aiEdit.body?.detail ?? aiEdit.body?.message ?? "") && typesNamed("Passport") === "", { status: aiEdit.status, body: aiEdit.body, landed: typesNamed("Passport") });
+  const okEdit = await call("POST", "/review/proposals/decide", { ids: [dtItem?.id], action: "edit", payload: asEdited({ name: "Passport", category: "travel", readerKind: "coded_lines", identityDocument: false }) }, "user-C");
+  ok("QA-195 pass (break B1): the same edit with its coded lines lands, recorded as an identity document", okEdit.status === 201 && typesNamed("Passport") === "coded_lines/true", { status: okEdit.status, body: okEdit.body?.detail, landed: typesNamed("Passport") });
   const check = items.find((i) => i.kind === "form_check");
   ok("C3.4 S pass: the form check rests on IMM 5257 with its printed words found, Ready (both rounds agree), its examples unconfirmed, Sample", check?.band === "ready" && check?.source?.quote_found === true && /imm5257/i.test(check?.source?.file ?? "") && check?.basis === "SAMPLE" && (check?.readings?.draft?.payload?.examples ?? []).length === 3, check);
   ok("C3.4 S pass: the whole Saved draft spent US$0 (jobs and the shared ledger)", spent() === spent0 && new SpendLedger(LEDGER_DIR).committed() === ledger0, { spent: spent(), ledger: new SpendLedger(LEDGER_DIR).committed() });
