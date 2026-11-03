@@ -163,6 +163,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     const other = await api("PUT", `/combinations/${wp}/sources/${encodeURIComponent(nc.kind)}/${encodeURIComponent(nc.key)}`, { address: nc.address, value: nc.value, version: 0, none_published: { reason: "Test data: theirs, saved first." } });
     step("setup: another author saves the same number first (200)", other.status === 200);
     await cc.getByRole("button", { name: "Save source" }).click(); await settle();
+    // The 409 handler fetches the other save before it shows the notice: wait for the notice, not a fixed pause.
+    await cc.getByText("Saved while you had it open").waitFor({ timeout: 15000 });
     const ct = await cc.innerText();
     step("C5.4 §5 conflict (the same author in another window, break M3): the panel says so with when, and offers Reload the saved one and Keep mine", ct.includes("You saved this source in another window while this one was open (") && await cc.getByRole("button", { name: "Reload the saved one" }).count() === 1 && await cc.getByRole("button", { name: "Keep mine and save again" }).count() === 1, ct);
     step("C5.4 break M3: the conflict shows what the other save holds before Keep mine", (await cc.locator("[data-source-theirs]").innerText().catch(() => "")).includes("Test data: theirs, saved first."));

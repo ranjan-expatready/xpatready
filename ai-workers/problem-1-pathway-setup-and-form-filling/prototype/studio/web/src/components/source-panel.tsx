@@ -225,18 +225,22 @@ function Answer({ n }: { n: SourceNumberView }) {
  *  of its numbers", each number with its chip), "button" on a check row ("Sources (n)"), "link" under a form line's
  *  "From age" ("Source"). Nothing shows for an item with no published number. The numbers are the draft's as saved. */
 /** One item's published numbers from the combination's source list (the same cached query as the Review block). */
+/** `loaded` is true only after a successful answer (Devin on #627: a failed or pending list is never read as "answered"). */
 export function useItemNumbers(id: string, kind: string, suffix: string, address?: string) {
   const q = useApi<SourcesView>(["sources", id], sourcesPath(id));
-  return (q.data?.numbers ?? []).filter((n) => n.kind === kind && n.key.endsWith(`/${suffix}`) && (!address || n.address === address));
+  const nums = (q.data?.numbers ?? []).filter((n) => n.kind === kind && n.key.endsWith(`/${suffix}`) && (!address || n.address === address));
+  return { nums, loaded: !!q.data, failed: q.isError && !q.data, retry: () => void q.refetch(), retrying: q.isFetching };
 }
 
 export function ItemSources({ id, kind, suffix, address, variant, label, note }: {
   id: string; kind: string; suffix: string; address?: string; variant: "section" | "button" | "link"; label?: string; note?: string;
 }) {
-  const nums = useItemNumbers(id, kind, suffix, address);
+  const { nums, failed, retry, retrying } = useItemNumbers(id, kind, suffix, address);
   const { canAuthor } = useSessionView();
   const [open, setOpen] = React.useState<SourceItem | null>(null);
   const opener = React.useRef<HTMLButtonElement | null>(null);
+  // A failed list says so where the sources would show, with Try again (never a silent gap).
+  if (failed) return <span className="inline-flex flex-wrap items-center gap-1.5 text-xs text-text-danger" role="alert" data-item-sources-error>Sources could not be loaded. <Button size="sm" variant="ghost" onClick={retry} busy={retrying}>Try again</Button></span>;
   if (!nums.length) return null;
   const item: SourceItem = { kind: nums[0].kind, key: nums[0].key, item_words: nums[0].item_words, where: nums[0].where };
   const held = nums.filter((n) => !n.passes).length;

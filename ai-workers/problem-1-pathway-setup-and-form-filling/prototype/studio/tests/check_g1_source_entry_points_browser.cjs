@@ -94,6 +94,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await p.waitForTimeout(300);
     step("C5.4 (PR 2c): back in the line drawer, the chip reads None published", /None published – set by ExpatReady/.test(await link.innerText()));
     step("C5.4 (Devin on #627): once answered, the From age hint no longer asks for a source", (await p.locator("[role=dialog]").innerText()).includes("Its source is recorded: see Source below.") && !(await p.locator("[role=dialog]").innerText()).includes("Needs a source before release."));
+    // Devin on #627: a failed sources list never reads as "answered"; it says so, with Try again.
+    await p.keyboard.press("Escape"); await settle();
+    await p.route("**/api/combinations/*/sources", (route) => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ title: "Unavailable", status: 503, detail: "down (test)" }) }));
+    await p.reload(); await settle();
+    await p.getByRole("button", { name: `Change ${code}` }).click(); await p.locator("[role=dialog] [data-item-sources-error]").waitFor({ timeout: 30000 });
+    const fd = await p.locator("[role=dialog]").innerText();
+    step("C5.4 (Devin on #627): with the sources list failing, From age says it needs a source (never \"recorded\") and the Source place says the list could not be loaded, with Try again", fd.includes("Needs a source before release.") && !fd.includes("Its source is recorded") && fd.includes("Sources could not be loaded.") && await p.locator("[role=dialog]").getByRole("button", { name: "Try again" }).count() === 1, fd.slice(0, 400));
+    await p.unroute("**/api/combinations/*/sources");
     step("no page errors", errs.length === 0, errs.join(" | "));
   } catch (e) { step("ran to the end", false, e.stack ?? e.message); }
   await b.close();

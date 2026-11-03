@@ -287,7 +287,8 @@ function LineDrawer({ id, l, d, onClose, onRemoved }: { id: string; l: Workspace
   const [who, setWho] = React.useState(l.who);
   const [minAge, setMinAge] = React.useState(l.minAge ? String(l.minAge) : "");
   // Devin on #627: the hint follows the saved age's own source state (missing or changed: it needs one; answered: it has one).
-  const ageHeld = useItemNumbers(id, "threshold", `form:${l.code}`, "min_age").some((n) => !n.passes);
+  const age = useItemNumbers(id, "threshold", `form:${l.code}`, "min_age");
+  const ageAnswered = age.loaded && age.nums.length > 0 && age.nums.every((n) => n.passes);
   const [copies, setCopies] = React.useState(String(l.copies ?? 1));
   const [mode, setMode] = React.useState<"always" | "only_if">(l.onlyIf.kind === "always" ? "always" : "only_if");
   const [cond, setCond] = React.useState<any>(l.condition);
@@ -344,7 +345,7 @@ function LineDrawer({ id, l, d, onClose, onRemoved }: { id: string; l: Workspace
           <Field label="Who fills it" hint="Each person it names fills their own." error={errors.who}><Select value={who} onChange={(e) => setWho(e.target.value)}>{WHO.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</Select></Field>
           <div className="flex flex-col gap-1.5">
             {/* G1 PR 2c (concept §4, m3): a saved "From age" is a published number; it needs a source before release. */}
-            <Field label="From age (optional)" hint={!l.minAge ? "Leave empty for any age." : ageHeld ? "Needs a source before release." : "Its source is recorded: see Source below."} error={errors.minAge}><Input inputMode="numeric" value={minAge} onChange={(e) => setMinAge(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} placeholder="Any age" /></Field>
+            <Field label="From age (optional)" hint={!l.minAge ? "Leave empty for any age." : ageAnswered ? "Its source is recorded: see Source below." : "Needs a source before release."} error={errors.minAge}><Input inputMode="numeric" value={minAge} onChange={(e) => setMinAge(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} placeholder="Any age" /></Field>
             {l.minAge ? <ItemSources id={id} kind="threshold" suffix={`form:${l.code}`} address="min_age" variant="link" /> : null}
           </div>
           {!l.document ? <Field label="Copies" hint="Copies of this form for each person it names, 1 to 9. Sample." error={errors.copies}><Input inputMode="numeric" value={copies} onChange={(e) => { setCopies(e.target.value.slice(0, 3)); setErrors(({ copies: _c, ...rest }) => rest); }} placeholder="1" /></Field> : null}
