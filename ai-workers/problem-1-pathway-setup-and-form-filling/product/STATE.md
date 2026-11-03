@@ -1,6 +1,6 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-03 10:05 UTC by **Lead 2 · 3 Nov 07:51 UTC** (ended at ~225k tokens; **Lead 3 · 3 Nov takes over**) · milestone: **M2 — Super Admin configuration** · how we work: `WAY-OF-WORKING.md` (Night playbook) · decisions to read word for word: DECISIONS **P-285 … P-297** · evidence: `reports/build-review-2026-11-03.html`, `reports/built-evidence-2026-11-03.html` (E0; published https://claude.ai/artifact/EWfW8ZQBpajkmac9NvUjDP), `reports/verify-2026-11-03/` (V1–V4)
+updated: 2026-11-03 10:05 UTC by **Lead 3 · 3 Nov 10:00 UTC** (current; Lead 2 ended at ~225k tokens) · milestone: **M2 — Super Admin configuration** · how we work: `WAY-OF-WORKING.md` (Night playbook) · decisions to read word for word: DECISIONS **P-289 … P-299** · evidence: `reports/build-review-2026-11-03.html`, `reports/built-evidence-2026-11-03.html` (E0; published https://claude.ai/artifact/EWfW8ZQBpajkmac9NvUjDP), `reports/verify-2026-11-03/` (V1–V4)
 
 ## Tonight, 3 Nov (founder, P-290): the fresh Lead's first turn
 The founder chose "Fresh Lead, one paste": the new tech lead, in its **first founder-typed turn**, starts everything below (a Lead woken later by a check or a message cannot start sessions), then runs the night without the founder. **Lead 5 has ended** (its commits on `lead/2026-11-03-*` are not another running Lead; do not ask the founder). Goal for the next 16 hours (founder at the computer about 8–10 hours, then the night): **finish M2** (confirmed Works 36 → 60 except what waits on paid runs or the SA-01B hold), **verify the whole build** (V1–V4), and **start M3 in parallel** on the shared services, finishing as much of M3 as the merge queue allows without slowing M2 (M2 goes first in the queue). Do not break main. **Talk to the founder in plain words (P-291):** capabilities by what they do, code after; never "row".
@@ -56,6 +56,11 @@ After the fix PRs merge, run the **independent re-test** again (same method as t
 | V3 | one system (task_c77efaa8) | V3 report (to come), journey /8 | re-run after fixes · second combination |
 | V4 | best in class (task_344be92b) | V4 report (to come) | top-5 gap texts · UX re-score |
 Not tonight (P-290): C4.7, C11.3's held part, the 8 Partials waiting on paid runs or holds (flow-watch lists C11.14, C11.7, C11.8, C9.1: expected, no paid run tonight).
+
+## Lead 3 at 10:05 UTC (read first)
+* **Leads, in order:** Lead 1 · 3 Nov 06:56 UTC (ended) · Lead 2 · 3 Nov 07:51 UTC (ended) · **Lead 3 · 3 Nov 10:00 UTC (current; 30-minute check at minutes 13 and 43)** · standby **Lead 4 · 3 Nov · standby** (`local_8a45e199-45df-404c-b377-3b4b57d0c12e`), the only one: start "Lead 5 · 3 Nov · standby" at the founder's next typed turn.
+* **Done at take-over:** #704 (Lead 2 hand-over) merged. Ruled #699's question (P-299). Messaged F1 (#699 option 1 → #700 → QA-154 first), F2 (#698 to label → B1 release gate first), F4 (#689 red after label: shards 1–3, UX-A4 setup), F5 (QA-172 → QA-152), V1 (M2 then M3 gap texts), V2 (independent M2 re-test now on main 3b0d4d64, then only the capabilities fixed after it). Main green (demo updates to 3b0d4d64).
+* **Waiting:** F1's QA-154 fix and #693 on main → message PR1 for C11.8 (P-298). #701 (V4 UX re-score 7.0/10) merges at the next notes slot (P-293 (4)).
 
 ## Hand-over from Lead 2 at 10:05 UTC (read first, Lead 3)
 * **Leads:** Lead 2 ended (context ~225k). Lead 3 is current; **Lead 4 · 3 Nov · standby** (`local_8a45e199-45df-404c-b377-3b4b57d0c12e`) is the only standby: start "Lead 5 · 3 Nov · standby" at the founder's next typed turn. The founder leaves ~10:30 UTC for the night run.
