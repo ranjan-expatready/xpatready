@@ -32,9 +32,11 @@ const refused = async (f: () => Promise<unknown>) => { try { await f(); return {
 
 /** A valid AI item of a kind, as a producer would write it (contract v2 without the server's ids). */
 const SHA = "a".repeat(64), RUN = crypto.randomUUID();
+/** QA-176 (P-121): a Ready AI item carries both readings that agree and a passed rules check; the door lowers any other. */
+const both = (payload: any) => { const r = { reading: `${payload.label ?? payload.kind} as read`, payload, from: "replay", runFile: "runs/test.json", costUsd: 0 }; return { draft: r, check: r }; };
 const item = (payload: any, over: any = {}) => ({ kind: payload.kind, runId: RUN, step: "field_map_edition", scope: { formEdition: "IMM 0000 (01-2026)", combinationId: null }, landsOn: "library",
   reuse: { match: "new", existingKey: null }, payload, source: { file: "imm0000e.pdf", sha256: SHA, edition: "01-2026", page: 1, quote: "Your family name", quoteFound: true, rule: null },
-  rounds: { draft: null, check: null }, rules: [], agreement: "rules_only", confidence: "ready", reason: null, origin: "ai", identity: { key: "", near: [], nearReason: null },
+  rounds: both(payload), rules: [{ rule: "quote found", passed: true, why: null }], agreement: "agreed", confidence: "ready", reason: null, origin: "ai", identity: { key: "", near: [], nearReason: null },
   relatesTo: null, revision: null, basis: "SAMPLE", ...over });
 
 (async () => {
