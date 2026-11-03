@@ -339,7 +339,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const j1295 = await api(`/jobs/${p.url().split("/jobs/")[1]}`);
   step("B3: the IMM 1295 draft is a labelled replay of a saved real run; against an empty library every field is new", j1295.mode === "REPLAY" && /Replay of saved run|Saved AI answer.*no model call, US\$0/.test(j1295.message) && j1295.detail.counts.reuse === 0 && j1295.detail.counts.new === j1295.items.length, `${j1295.mode} · ${j1295.items.length} items · "${String(j1295.message).slice(0, 90)}" · ${j1295.runId}: ${JSON.stringify(j1295.detail.counts)}`);
   await shot("B3-imm1295-proposals.png");
-  await click(btn("Accept clean new definitions"));
+  // C3.2 (P-121, P-294): new definitions are never accepted together; each is decided on its own (decideRest).
   await decideRest();
   await click(btn("Apply to draft")); await click(p.getByRole("dialog").getByRole("button", { name: "Apply to draft" }));
   const applied1295 = await afterApply();
@@ -351,7 +351,10 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const counts = (await api(`/jobs/${p.url().split("/jobs/")[1]}`)).detail.counts;
   step("B4: adding IMM 5476 reuses library definitions, proposes new ones and flags ambiguous ones (address parts, near duplicates)", counts.reuse > 0 && counts.new > 0 && counts.ambiguous > 0 && /Looks like one part/.test(main), JSON.stringify(counts));
   await shot("B4-imm5476-normalisation.png");
-  await click(btn("Accept exact reuse")); await click(btn("Accept clean new definitions"));
+  // C3.2 (P-121): a saved one-round draft has no High reuse match, so the bulk button is off and says why; there is no
+  // bulk accept of new definitions any more. Every proposal is decided one by one below (decideRest).
+  const bulk = btn("Accept High exact reuse (0)");
+  step("C3.2: bulk accept takes only High reuse matches: on a one-round draft it is off and says it needs a checker round; no bulk accept of new definitions", await bulk.isDisabled() && /checker round/.test((await bulk.getAttribute("title")) ?? "") && (await btn("Accept clean new definitions").count()) === 0, await bulk.getAttribute("title"));
   const tel = p.locator("article", { hasText: "Ambiguous" }).filter({ has: p.getByRole("button", { name: "Return" }) }).last();
   if (await tel.count()) { await click(tel.getByRole("button", { name: "Return" })); await tel.getByLabel(/Why it goes back/).fill("Returned for the form owner: confirm the meaning on this form before it joins the library."); await click(tel.getByRole("button", { name: "Return", exact: true }).last()); }
   await decideRest();

@@ -14,6 +14,7 @@ import { mkdirSync, openSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { factKeyProblem } from "../../../contracts/fact-key.ts";
 import { screenMapProposals } from "../../engine/twin.ts";
+import { acceptCleanOneByOne } from "../lib/accept-draft.ts";
 
 const PORT = Number(process.argv[2] ?? 4472), NAME = "qa_s2", DB = `xr_studio_${NAME}`;
 const STUDIO = join(import.meta.dirname, "..", ".."), PROTOTYPE = join(STUDIO, ".."), SOLUTION = join(PROTOTYPE, "..");
@@ -106,7 +107,7 @@ const ledger = () => { const lines = readFileSync(join(PROTOTYPE, "p2", "ledger"
   for (let k = 0; k < 60; k++) { r = await call("POST", `/attachments/${vvAtt}/draft`, { mode: "replay" }); if (r.status !== 409) break; await new Promise((res) => setTimeout(res, 1000)); }
   ok("A4 after the retried step finishes, a replay of the same form starts", r.status === 201, said(r));
   const rep = await finished(r.body.id);
-  await call("POST", `/jobs/${rep.id}/accept-clean`, { outcome: "REUSE" }); await call("POST", `/jobs/${rep.id}/accept-clean`, { outcome: "NEW" });
+  await acceptCleanOneByOne(call, rep.id, ["REUSE", "NEW"]);
   for (const i of (await call("GET", `/jobs/${rep.id}`)).body.items.filter((x: { decision: string }) => x.decision === "PENDING")) await call("POST", `/jobs/${rep.id}/items/${i.id}`, { decision: "ACCEPTED" });
   r = await call("POST", `/jobs/${rep.id}/apply`, {}, "user-C");
   ok("roles: the reviewer cannot apply a drafted field map (author duty, 403)", problem(r, 403), said(r));
