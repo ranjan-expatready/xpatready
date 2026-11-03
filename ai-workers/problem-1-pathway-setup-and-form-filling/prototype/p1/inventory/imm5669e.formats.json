@@ -1,0 +1,8 @@
+{
+ "file": "imm5669e.pdf",
+ "sha256": "4bdc23bb6a9dfa3731927f9b93295fb14008ee504d02b3037e349c4cda421f7a",
+ "read_by": "prototype/p1/xfa_formats.py (the form's own XFA template: maxChars, picture clauses, validate scripts; no AI)",
+ "boxes_with_format": 0,
+ "boxes_unmatched": 91,
+ "boxes": {}
+}
