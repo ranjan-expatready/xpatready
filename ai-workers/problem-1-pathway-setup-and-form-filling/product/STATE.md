@@ -1,6 +1,6 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-03 23:45 IST by **Lead 1 · 3 Nov 22:50 IST** (new account; new name series, P-313) · milestone: **M2 — Super Admin configuration** · rules: **`RULES.md`** (as of P-314; read newer DECISIONS rows word for word) · earlier STATE: `history/STATE-2026-11-03.md` · evidence: `reports/built-evidence-2026-11-03.html` (published https://claude.ai/artifact/EWfW8ZQBpajkmac9NvUjDP), audit `reports/bottleneck-audit-2026-11-03.md`
+updated: 2026-11-03 23:45 IST by **Lead 1 · 3 Nov 22:50 IST** (new account; new name series, P-313) · milestone: **M2 — Super Admin configuration** · rules: **`RULES.md`** (as of P-315; read newer DECISIONS rows word for word) · earlier STATE: `history/STATE-2026-11-03.md` · evidence: `reports/built-evidence-2026-11-03.html` (published https://claude.ai/artifact/EWfW8ZQBpajkmac9NvUjDP), audit `reports/bottleneck-audit-2026-11-03.md`
 
 ## Where we are
 * **M2: 43/60 confirmed** (qa #776, merged; C3.2 Works). Built, to re-score: C11.7 (#762 merged), C3.4 (#771). Partial with reasons: C9.1, C11.8, C11.14, C4.11 (paid runs, QA-144, QA-162, QA-176). Held by one bug or step: C5.4 and C11.10 (QA-184), C11.13 (QA-192), C3.10, C4.2, C11.17, C10.1, C4.1, C4.8 (QA-144). Not built: C1.6, C5.1 (held, P-251).
@@ -33,12 +33,13 @@ Cloud lanes cannot reply: read their branches and PRs. A lane silent 90 minutes 
 5. Morning report for the founder at about 08:00 IST: what merged, screenshots on the demo, the compass numbers, the M3 answer.
 
 ## Holds (P-251, the product owner of SA-01B): nobody builds these
-L-SA3 · L-SA6–L-SA11 · G5 (C5.1) · the P-236 rename · C11 · E1–E6 · design-only items · SH3/SH4 contracts go to the product owner with them · the AI "did you mean" in C11.3, C11.13, C3.6 (P-265, P-284).
+L-SA6–L-SA11 (L-SA3 released by P-315) · G5 (C5.1) · the P-236 rename · C11 · E1–E6 · design-only items · SH3/SH4 contracts go to the product owner with them · the AI "did you mean" in C11.3, C11.13, C3.6 (P-265, P-284).
 
 ## Waiting for the founder
 1. On claude.ai/code and in the old account, archive the Lead 1–8 parents and cloud lanes of 3 Nov.
 2. Send the SA-01B product owner the reply drafted on the Mac (`archive/2026-11-02-founder-drafts/`), the SH3 contract (#509), the G-CORE concept (#504) and `design/note-to-sa01b-po-2026-11-02-sqr.md`: the only way G5 and the held parts unblock.
-3. Tell the team they drop their "Fill this screen" (P-245), pending the product owner's ruling.
+3. **Tell the SA-01B product owner** that L-SA3 is built now and P-172 stays the one Express Entry hard stop (P-315); the tech lead drafts the note.
+4. Tell the team they drop their "Fill this screen" (P-245), pending the product owner's ruling.
 
 ## Founder asks of 3–4 Nov (P-228 (9)); earlier asks: `history/STATE-2026-11-03.md`
 **A62** (22:50 IST) resume on the new account, watch #774/#778, then the independent bottleneck audit, then P-311: #774 merged ✓, #778 in the queue, audit done ✓ (`reports/bottleneck-audit-2026-11-03.md`), P-311 lanes started ✓ · **A63** (22:55 IST) what top teams do that we miss; overloading, over-testing, over-engineering; a compass to know right, lazy or overdoing: answered in chat ✓, compass in `RULES.md` ✓, page with numbers pending · **A64** (22:58 IST) "5, tests before label": P-312 ✓ · **A65** (~23:05 IST) all approvals; 8 hours autonomous; M2 and M3 90–95% with quality first; remove layers that delay without quality; research best practice (Claude, Cursor, open source); sequential naming from Lead 1 with standby Leads and builders; M3 design issues and shared services; M2 vs M3 complexity; clean bloated rules, skills, decisions; keep the Mac awake: research ✓, naming and standbys ✓, keep-awake ✓, cap US$150 ✓ (P-313), M3 review running, clean-up in progress · **A66** (~23:10 IST) API approved for AI work; finish AI first: paid runner on it ✓ · **A67** (~23:20 IST) token history and every rules/state/agent file: impact and priority first, review rounds for high risk, research for lead-and-subagent teams, help decide: file audit ✓, changes in progress · **A68** (~23:40 IST) be sure it works for an RCIC filing real applications, best in class; explain what was built since 21; how the Lead monitors without burning tokens or becoming the bottleneck; mistakes made and risks ahead: RCIC walk next, answered in chat.
