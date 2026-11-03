@@ -3,6 +3,8 @@
 // (22/22) covers a section choice on the suites' fixture; this pack adds the PQR tick with a section choice on Visitor visa
 // of the six, and the "no side door" check over the API's own routes. Independent of C4.1 (the section move's own review
 // line is checked in C4.1). C4.8 is Works: this should pass on any copy where the combination has questions.
+// P-279 (source gate): before the submit, Submit is checked refused while a published number has no source entry, then
+// every number is answered "None published" (test words) through the API, as the suites do.
 // Needs first: Visitor visa has questions (J3 / C4.11) — until then exit 2; meanwhile `wp.family` as 4th argument.
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C4.8.test.ts 4440 xr_studio_accept [wp.family]
 import { readdirSync, readFileSync } from "node:fs";
@@ -32,6 +34,8 @@ run(async () => {
   const side = routes.filter((x) => /(pqr|sqr|questionnaire|prequal|fact-sources|sections)[^"]*\/(approve|release|publish|signoff)/i.test(x));
   ok("C4.8 pass: no route approves, signs off or releases a PQR or questionnaire on its own", routes.length > 20 && side.length === 0, side);
   ok("C4.8 pass: nothing is released by the tick or the section change", releases() === r0);
+  // P-279: the source gate refuses Submit and release while a published number (a date counts) has no source entry.
+  await T.sourceGate(wp);
   r = await call("POST", `/combinations/${wp}/submit`, { note: "PQR tick and section order (acceptance)" }, AUTHOR);
   ok("C4.8 pass: the author submits the combination for its one review", r.status < 300, words(r));
   const changes = (r.body?.changeSummary ?? []) as any[];
