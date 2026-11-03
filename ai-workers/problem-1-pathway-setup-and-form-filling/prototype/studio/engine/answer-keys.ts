@@ -317,7 +317,9 @@ export function runFieldMap(s: Snapshot, family: Family, form: string, inv: Inve
   const view = caseView(s, c.people, c.answers, c.rows, "agent", c.today, c.groups);
   for (const p of family.people) {
     const want = own(expected.people, p.id);
-    const cov = formCoverage(s, c.people, c.answers, c.rows, form, p.id, c.today);
+    // Break B1 (edition in use, P-32): the coverage of the key's own edition (m), never the edition cases fill now: the
+    // boxes compared are the boxes of the map under test.
+    const cov = formCoverage(s, c.people, c.answers, c.rows, form, p.id, c.today, m.form_edition);
     // Devin review (PR #513): a form whose condition cannot be told for this family (a fact it reads is missing) is
     // never a pass: the family must settle whether the form applies.
     if (cov && cov.applies === "cannot_tell") { lines.push({ person: p.id, person_label: p.label, target: form, label: `${form} for ${p.label}`, expected: want ? "applies" : "does not apply", got: "cannot tell", pass: false, why: `Whether ${form} applies to ${p.label} cannot be told: the family has no answer for ${(cov as { missing?: string[] }).missing?.join(", ") || "a fact its condition reads"}.` }); continue; }

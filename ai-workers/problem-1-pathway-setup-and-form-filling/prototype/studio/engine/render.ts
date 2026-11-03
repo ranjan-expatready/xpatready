@@ -69,7 +69,10 @@ const PROPER: Record<string, string> = { canada: "Canada", canadian: "Canadian" 
 export const factName = (key: string) => { const w = (key.split(".").pop() ?? key).split("_").map((x) => ABBREVIATIONS.has(x) ? x.toUpperCase() : PROPER[x] ?? x).join(" "); return w.charAt(0).toUpperCase() + w.slice(1); };
 export const wordsOnly = (line: { status?: string; condition?: unknown; condition_plain?: string | null }) => line.status === "conditional" && !line.condition;
 
-export function render(s: Snapshot, people: Person[], known: Known, opts: { documentFacts?: Map<string, string[]>; today?: Date } = {}) {
+/** `editions` (break B1 on the edition-in-use fix): the PDF edition to read per form, when a caller tests one edition on
+ *  purpose (an answer key runs its own edition, engine/answer-keys.ts runFieldMap); every other reader takes the
+ *  edition in use (P-32, pdfMapInUse). An edition the snapshot lacks falls back to the edition in use. */
+export function render(s: Snapshot, people: Person[], known: Known, opts: { documentFacts?: Map<string, string[]>; today?: Date; editions?: ReadonlyMap<string, string> } = {}) {
   const today = opts.today ?? new Date();
   const field = new Map(s.canonical_fields.map((f) => [f.id, f]));
   const place = new Map<string, any>();
@@ -112,7 +115,8 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   const needs = new Map<string, { fact: string; about: string; rows: Set<number>; forms: Set<string>; boxes: number; maybe: boolean }>();
   const coverage = forms.filter((f) => f.applies !== false).map((f) => {
     // P-32: the PDF edition in use (the newest mapped), as the fill writes it; else the line's online map, as before.
-    const map = pdfMapInUse(s.field_maps, f.form) ?? s.field_maps.find((m) => m.form_number === f.form);
+    const asked = opts.editions?.get(f.form);
+    const map = (asked ? s.field_maps.find((m) => m.form_number === f.form && m.channel !== "ONLINE" && m.form_edition === asked) : undefined) ?? pdfMapInUse(s.field_maps, f.form) ?? s.field_maps.find((m) => m.form_number === f.form);
     if (!map) return { form: f.form, person: f.person, person_label: f.person_label, applies: f.applies, edition: null, boxes: [] as BoxRow[], counts: {} as Record<string, number>, mapped: 0, unresolved_boxes: 0 };
     const boxes: BoxRow[] = [];
     let unresolvedBoxes = 0;

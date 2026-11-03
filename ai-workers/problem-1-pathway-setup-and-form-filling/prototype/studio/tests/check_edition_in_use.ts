@@ -15,6 +15,7 @@ import { render, type Person } from "../engine/render.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 import { writeForm } from "../api/src/fill.ts";
 import { trialOf } from "../api/src/fill-case.ts";
+import { runFieldMap } from "../engine/answer-keys.ts";
 import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
@@ -44,6 +45,30 @@ ok("P-32 fail: on a release with only 11-2021 the coverage stays 11-2021", cov([
 const trial = (maps: unknown[]) => trialOf(snap(maps) as never, "IMM 5476");
 ok("P-32 pass: the fill trial asked for is the 11-2025 edition's (a trial of 11-2021 never makes an 11-2025 copy fileable)", /11-2025/.test(trial(sorted).why ?? "") && !/11-2021/.test(trial(sorted).why ?? ""), trial(sorted));
 ok("P-32 fail: on a release with only 11-2021 the trial asked for stays 11-2021's", /11-2021/.test(trial([map(OLD, "old.box")]).why ?? ""), trial([map(OLD, "old.box")]));
+
+// ── Break B1 (the breaker on 1a7d63ad8): an answer key runs on its own edition's boxes, never on the edition cases fill.
+// A key for 11-2021 on a release that also holds 11-2025 must judge the 11-2021 map; a box only 11-2025 has is never
+// written into its run, and a wrongly wired 11-2021 map is never passed because 11-2025 is right.
+{
+  const A = "IMM_5476[0].Page1[0].SectionA[0].", D = "IMM_5476[0].Page1[0].sectionD[0].familyName[0]";
+  const e = (path: string, fact: string) => ({ data_path: path, caption: path, outcome: "mapped", fact, person: "form_subject", row: null, transform: null });
+  const inv = (f: string) => JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "p1", "inventory", f), "utf8"));
+  const inv21 = inv("imm5476e-2021.inventory.json"), inv25 = inv("imm5476e.inventory.json");
+  const m21 = (entries: unknown[]) => ({ ...OLD, entries }), m25 = { ...NEW, entries: [e(`${A}familyName[0]`, "person.family_name"), e(`${A}givenName[0]`, "person.given_name"), e(D, "person.family_name")] };
+  const right21 = m21([e(`${A}familyName[0]`, "person.family_name"), e(`${A}givenName[0]`, "person.given_name")]);
+  const wrong21 = m21([e(`${A}familyName[0]`, "person.given_name"), e(`${A}givenName[0]`, "person.given_name")]);
+  const ks = (maps: unknown[]) => ({ ...snap(maps), combination: { key: "vv.single", label: "VV" }, canonical_fields: [{ id: "person.family_name", value_type: "text" }, { id: "person.given_name", value_type: "text" }] }) as unknown as Snapshot;
+  const family = { key: "f", label: "Client A family", reference_date: "2026-11-03", people: [{ id: "a", role: "principal", label: "Client A", applies: true }], facts: [{ about: "a", fact: "person.family_name", value: "Doe" }, { about: "a", fact: "person.given_name", value: "Ana" }], none_apply: [] };
+  const key21 = { edition: OLD.form_edition, people: { a: { [`${A}familyName[0]`]: "Doe", [`${A}givenName[0]`]: "Ana" } } };
+  const key25 = { edition: NEW.form_edition, people: { a: { [`${A}familyName[0]`]: "Doe", [`${A}givenName[0]`]: "Ana", [D]: "Doe" } } };
+  const run = (maps: unknown[], i: unknown, k: unknown) => runFieldMap(ks(maps), family as never, "IMM 5476", i as never, k as never) as { result?: string; lines: { pass: boolean; target: string }[] };
+  const r21 = run([right21, m25], inv21, key21), r25 = run([right21, m25], inv25, key25);
+  ok("B1 pass: on a release holding both editions, a correct 11-2021 key passes on the 11-2021 map (its own boxes only), and a correct 11-2025 key passes on 11-2025",
+    r21.lines.every((l) => l.pass) && !r21.lines.some((l) => l.target === D) && r25.lines.every((l) => l.pass) && r25.lines.some((l) => l.target === D), { r21: r21.lines.filter((l) => !l.pass), r25: r25.lines.filter((l) => !l.pass) });
+  const plain25 = { ...NEW, entries: [e(`${A}familyName[0]`, "person.family_name"), e(`${A}givenName[0]`, "person.given_name")] };
+  const bad = run([wrong21, plain25], inv21, key21);
+  ok("B1 fail: a wrongly wired 11-2021 map fails its key even when the 11-2025 map is right (never a false pass from the edition in use)", bad.lines.some((l) => !l.pass), bad.lines);
+}
 
 // ── The fill itself (api/src/fill.ts writeForm, the one filler for the preview and a case): IRCC's 11-2025 file.
 const dir = mkdtempSync(join(tmpdir(), "edition-in-use-"));
