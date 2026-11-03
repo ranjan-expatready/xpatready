@@ -498,10 +498,11 @@ function Progress({ r, mini }: { r: CatalogueLeaf; mini?: boolean }) {
   // List's 120 px column (review m1) gives it its own short line, "5 of 5 steps to do", with the full words for screen
   // readers and on hover.
   const next = st === "LIVE" ? r.setup?.bar.next : null;
+  // `contents`: its two lines join the cell's wrapping row, so the second sits under the bar at the column's full width.
   if (next && mini) return (
-    <span data-progress={st} title={next} className="flex flex-col leading-tight">
+    <span data-progress={st} className="contents">
       <span className="font-semibold text-text-ok">Live</span>
-      <span className="whitespace-nowrap text-xs text-text-muted" data-next-release><span className="sr-only"> · Next release: </span>{next.replace(/^Next release: /, "")}</span>
+      <span className="basis-full text-xs leading-tight text-text-muted" title={next} data-next-release><span className="sr-only"> · Next release: </span>{next.replace(/^Next release: /, "")}</span>
     </span>
   );
   return <span data-progress={st} className={cn(st === "LIVE" ? "font-semibold text-text-ok" : st === "RETIRED" ? "text-text-muted" : "text-text")}>{text}{next ? <span className="font-normal text-text-muted" data-next-release> · {next}</span> : null}</span>;
@@ -630,7 +631,7 @@ function List({ groups, closed, onToggle, highlight, q, sort, filtering, needsOn
                         <span className="block truncate text-xs text-text-muted" title={above} data-trail>{above}</span>
                         {q && r.matches.some((m) => m !== "name") ? <span className="block truncate text-xs text-text-muted">Matches: {r.matches.filter((m) => m !== "name").join(", ")}</span> : null}
                       </div>
-                      <div role="gridcell" className="col-start-1 row-start-3 flex items-center gap-2 text-sm sm:col-start-auto sm:row-start-auto"><StepBar r={r} mini /><Progress r={r} mini /></div>
+                      <div role="gridcell" className="col-start-1 row-start-3 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm sm:col-start-auto sm:row-start-auto"><StepBar r={r} mini /><Progress r={r} mini /></div>
                       <div role="gridcell" className="col-start-2 row-start-1 justify-self-end sm:col-start-auto sm:row-start-auto sm:justify-self-start"><NeedsYouMark r={r} tabIndex={ti} /></div>
                       <div role="gridcell" className="col-start-2 row-span-2 row-start-2 justify-self-end sm:col-start-auto sm:row-span-1 sm:row-start-auto sm:justify-self-start" data-step-cell><CardButton r={r} canAuthor={canAuthor} tabIndex={ti} onOpen={() => onOpen(r)} onResume={() => onResume(r)} /></div>
                     </div>
