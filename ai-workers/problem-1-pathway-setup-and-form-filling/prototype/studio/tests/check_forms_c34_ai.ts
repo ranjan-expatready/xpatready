@@ -37,6 +37,7 @@ const cleanUp = () => { for (const f of written) rmSync(f, { force: true }); for
 for (const [sig, code] of [["SIGINT", 130], ["SIGTERM", 143]] as const) process.on(sig, () => { cleanUp(); process.exit(code); });
 
 import { CHOICE, DETAILS, FORM_ANSWER, formCheck, GUIDE_ANSWER, guideCheck, passport } from "./fixtures/c34-answers.ts";
+import { seedField } from "./seed_library.cjs"; // QA-196: one library question for the guide check to read
 
 (async () => {
   // ---------------------------------------------------------------- E: the rules over the rounds (pure, no server)
@@ -171,16 +172,43 @@ import { CHOICE, DETAILS, FORM_ANSWER, formCheck, GUIDE_ANSWER, guideCheck, pass
   const kinds = Object.fromEntries(["section", "answer_list", "form_check", "document_type"].map((k) => [k, items.filter((i) => i.kind === k).length]));
   ok("C3.4 S pass: the edition's group in the one queue holds sections, answer lists, form checks and a document type", Object.values(kinds).every((n) => n > 0), kinds);
   const check = items.find((i) => i.kind === "form_check");
-  ok("C3.4 S pass: the form check rests on IMM 5257 with its printed words found, Ready (both rounds agree), its examples unconfirmed, Sample", check?.band === "ready" && check?.source?.quote_found === true && /imm5257/i.test(check?.source?.file ?? "") && check?.basis === "SAMPLE" && (check?.readings?.draft?.payload?.examples ?? []).length === 3, check);
+  // QA-196 (P-120, P-149 (1)): a form edition's own checks read its boxes and the library has no place for them yet, so
+  // they wait in Decide with that reason (both rounds may agree), never Ready, never ticked with others, never offered
+  // Accept; an Accept through the API is refused in the same words and lands nothing.
+  ok("C3.4 S pass: the form check rests on IMM 5257 with its printed words found, both rounds agreeing, its examples unconfirmed, Sample", check?.agreement === "agreed" && check?.source?.quote_found === true && /imm5257/i.test(check?.source?.file ?? "") && check?.basis === "SAMPLE" && (check?.readings?.draft?.payload?.examples ?? []).length === 3, check);
   ok("C3.4 S pass: the whole Saved draft spent US$0 (jobs and the shared ledger)", spent() === spent0 && new SpendLedger(LEDGER_DIR).committed() === ledger0, { spent: spent(), ledger: new SpendLedger(LEDGER_DIR).committed() });
   x = await call("POST", `/attachments/${form}/draft-masters`, { mode: "rules" });
   ok("C3.4 S pass: the rules pass after the AI draft returns the edition's one draft (no second set of sections)", x.status === 201 && x.body?.proposals === 0, x.body?.proposals);
 
   x = await call("POST", `/attachments/${guide}/draft-masters`, { mode: "replay" });
+  const checks0 = sql(`select count(*) from check_def`);
+  const formAccept = await call("POST", "/review/proposals/decide", { ids: [check?.id], action: "accept" }, "user-C");
+  ok("QA-196 fail: a form's own check waits in Decide with the reason (never Ready or ticked with others), and Accept is refused in those words (409), landing nothing",
+    check?.band === "decide" && /library has no place for a form's checks yet/.test(check?.accept_why ?? "") && check?.bulk_why === check?.accept_why && !(bands.ready ?? []).some((i: any) => i.kind === "form_check")
+    && formAccept.status === 409 && /library has no place for a form's checks yet/.test(formAccept.body?.detail ?? "") && sql(`select count(*) from check_def`) === checks0, { band: check?.band, accept_why: check?.accept_why, status: formAccept.status, detail: formAccept.body?.detail });
   const fromGuide = (await call("GET", `/review/proposals?group=${encodeURIComponent(`combination:${vv}`)}`)).body?.group?.bands ?? {};
   const gi: any[] = [...(fromGuide.ready ?? []), ...(fromGuide.check ?? []), ...(fromGuide.decide ?? [])].filter((i) => ["form_check", "cross_check"].includes(i.kind) && /5256/.test(i.source?.file ?? ""));
   ok("C3.4 S pass: Saved on Visitor visa's guide 5256 proposes its checks on the combination, resting on the guide's sentence, US$0", x.status === 201 && x.body?.usd === 0 && gi.length === 1 && gi[0].source?.quote_found === true, { status: x.status, n: gi.length, note: x.body?.message });
   ok("C3.4 S pass: the guide's Saved draft spent US$0", spent() === spent0 && new SpendLedger(LEDGER_DIR).committed() === ledger0);
+  // QA-196: a guide's check is accepted through the one door like any proposal: an edit whose condition reads a question
+  // the library does not have is refused (409) and lands nothing; accepted as read, it lands on Visitor visa's draft as
+  // a check (warn) with the guide's words, not Sample, offered Accept (no accept_why).
+  const g0 = gi[0], gPayload = g0?.readings?.draft?.payload ?? {};
+  const badEdit = await call("POST", "/review/proposals/decide", { ids: [g0?.id], action: "edit", payload: { ...gPayload, tree: { subjectKind: "EACH_APPLICANT", op: "exists", field: "person.not_in_the_library" } } }, "user-C");
+  ok("QA-196 fail: a guide check edited to read a question the library does not have is refused at the one door (409), landing nothing", badEdit.status === 409 && /does not fit the library/.test(badEdit.body?.detail ?? "") && sql(`select count(*) from check_def where combination_id = '${vv}' and origin = 'AI_PROPOSAL'`) === "0", { status: badEdit.status, detail: badEdit.body?.detail });
+  // The replayed guide check reads "Passport number", not a library question yet (its Decide reason says so): accepted as
+  // read it is refused in the same words; a reviewer's edit to the library's own question lands.
+  const asRead = await call("POST", "/review/proposals/decide", { ids: [g0?.id], action: "accept" }, "user-C");
+  ok("QA-196 fail: a guide check reading an answer that is not a library question is refused (409), naming it and the step to take", asRead.status === 409 && /not in the library\. Add that question to the library/.test(asRead.body?.detail ?? ""), { status: asRead.status, detail: asRead.body?.detail });
+  // This copy's library is empty (the guide reads its answers in words): the question is written as a form box would
+  // propose it (tests/seed_library.cjs, scaffolding P-33; the library takes no free add).
+  const libKey = "person.passport_number";
+  seedField(sql, { key: libKey, meaning: "The number of the person's passport", source: "IMM 5257's passport box (test setup)" });
+  const gAccept = await call("POST", "/review/proposals/decide", { ids: [g0?.id], action: "edit", payload: { ...gPayload, tree: { subjectKind: gPayload.tree?.subjectKind ?? "EACH_APPLICANT", op: "exists", field: libKey }, reads: [libKey] } }, "user-C");
+  const landed = gAccept.body?.items?.[0]?.landedAs as string | undefined;
+  const row = landed ? sql(`select check_group || '|' || status || '|' || severity || '|' || illustrative || '|' || coalesce(source_quote, '') from check_def where combination_id = '${vv}' and check_key = '${landed}'`) : "";
+  ok(`QA-196 pass: the guide check is offered Accept and, edited to the library's question (${libKey}), lands on Visitor visa's draft as a warn check with the guide's words (not Sample)`,
+    g0?.accept_why === null && gAccept.status === 201 && new RegExp(`^${g0?.kind === "cross_check" ? "cross_check" : "section_check"}\\|DRAFT\\|warn\\|false\\|.+`).test(row) && row.endsWith(g0?.source?.quote ?? "\u0000"), { status: gAccept.status, landed, row, body: gAccept.body?.detail });
 
   // Break B1: two recorded runs of the same committed jobs; the newer one's checker is of the wrong shape. Saved must use
   // both rounds of the older run, never the older checker with the newer draft.

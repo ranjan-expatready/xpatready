@@ -46,6 +46,8 @@ export type QueueProposal = {
   near: string[]; near_reason: string | null; basis: "SAMPLE" | "EXPERT";
   /** null when it can be accepted with others; else why not, in words. */
   bulk_why: string | null;
+  /** QA-196: null when it can be accepted here; else why not, in words (the side panel shows it instead of Accept). */
+  accept_why: string | null;
   /** Where it is decided instead (the field-map step's form-field page), or null when it is decided here. */
   decide_on: string | null;
   created_at: string;

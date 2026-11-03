@@ -165,12 +165,14 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
       badge={<Pill tone={BAND_TONE[p.band]}>{BAND_WORDS[p.band]}</Pill>}
       footer={<>
         <Button variant="secondary" busy={run.isPending} disabled={reason.trim().length < 3} onClick={() => run.mutate({ action: "reject" })}>Reject</Button>
-        <span className="flex flex-wrap gap-2">
+        {/* QA-196: an item the queue cannot accept is never offered Accept; its reason shows above. */}
+        {p.accept_why ? null : <span className="flex flex-wrap gap-2">
           {differ ? <Button variant="secondary" busy={run.isPending} onClick={() => run.mutate({ action: "edit", payload: checkPayload })}>Accept the checker's reading</Button> : null}
           <Button busy={run.isPending} onClick={() => run.mutate({ action: "accept" })}>{differ ? "Accept the first reading" : "Accept"}</Button>
-        </span>
+        </span>}
       </>}>
       <div className="flex flex-col gap-4 text-sm">
+        {p.accept_why ? <Notice tone="warn" title="Not accepted here yet"><span data-accept-why>{p.accept_why}</span></Notice> : null}
         {p.reason ? <Notice tone={p.band === "decide" ? "danger" : "warn"} title="Why a person looks">{p.reason}</Notice> : null}
         {p.meaning ? <section><h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted">What it means</h3><p className="mt-1">{p.meaning}</p></section> : null}
         {p.values?.length ? <section aria-label="Answer values" data-answer-values><h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted">Answer values · {p.values.length}</h3><ul className="mt-1 list-disc pl-5">{p.values.map((v) => <li key={v.code}>{v.label}</li>)}</ul></section> : null}

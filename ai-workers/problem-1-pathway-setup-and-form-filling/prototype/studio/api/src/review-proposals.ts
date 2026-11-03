@@ -9,7 +9,7 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { AGREEMENT_WORDS, BANDS, BatchDecisionBody, DecideBody, PROPOSAL_KIND_WORDS, ProposalsQuery, type Band, type ChangeBatch, type ProposalGroup, type ProposalsView, type QueueProposal, type Reading } from "../../contracts/review-proposals.ts";
 import { ACTORS, actorOf, Audit, Db, fail, need, STARTING_ROLES, Workspace, type Actor } from "./core.ts";
 import { changeView, decideChange, nearOf, type NearView } from "./library-changes.ts";
-import { BATCH_MAX, bulkWhy, decide, lineTitle, ON_ITS_PAGE, undo, UNDO_SECONDS } from "./proposals.ts";
+import { acceptWhy, BATCH_MAX, bulkWhy, decide, lineTitle, ON_ITS_PAGE, undo, UNDO_SECONDS } from "./proposals.ts";
 import { Screen02 } from "./screen02.ts";
 import { STEP_KEYS } from "../../contracts/setup-checklist.ts";
 import { KIND_STEP } from "../../engine/setup-checklist.ts";
@@ -21,6 +21,8 @@ function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
   if (!r.success) fail(problemFromZod(r.error).detail ?? "The request is not valid.");
   return r.data as z.infer<S>;
 }
+/** QA-196: an item that cannot be accepted on the queue (acceptWhy) waits in Decide, never Ready, whatever the readings say. */
+const bandOf = (r: Pick<Row, "kind" | "landsOn" | "confidence">): Band => (acceptWhy(r) ? "decide" : (r.confidence as Band));
 /** The group an item belongs to: its form edition (S6, one draft per edition), else its combination (W1-10), else its run. */
 export const groupOf = (r: Pick<Row, "formEdition" | "combinationId" | "runId">) => (r.formEdition ? `edition:${r.formEdition}` : r.combinationId ? `combination:${r.combinationId}` : `run:${r.runId}`);
 /** C4.7: "Ask in pre-qualification: Date of birth (Principal applicant)". */
@@ -62,7 +64,7 @@ export class ReviewProposals {
           : { id, kind: "run", title: `${r.step.replace(/_/g, " ")} run`, sub: "One run with no form or combination", counts: { ready: 0, check: 0, decide: 0 }, total: 0, oldest: r.createdAt.toISOString() };
         groups.set(id, g);
       }
-      g.counts[r.confidence as Band]++; g.total++;
+      g.counts[bandOf(r)]++; g.total++;
     }
     const chosen = q.group ? groups.get(q.group) : q.c ? await this.groupFor(workspaceId, rows, groups, q.c, q.step) : undefined;
     if (q.group && !chosen) fail("Nothing waits in this group any more: it may have been decided, or the demo was reset.", HttpStatus.NOT_FOUND);
@@ -72,7 +74,7 @@ export class ReviewProposals {
       // C4.7: a pre-qualification pick is read in words (the fact's meaning, the person), never its keys.
       const picks = rows.filter((r) => r.kind === "pqr_pick" && groupOf(r) === chosen.id);
       const facts = picks.length ? new Map((await this.db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: picks.map((r) => String((r.payload as { factKey?: string }).factKey)) } }, orderBy: { version: "desc" }, select: { canonicalFieldKey: true, meaning: true } })).reverse().map((f) => [f.canonicalFieldKey, f.meaning.trim().replace(/\.$/, "")])) : new Map<string, string>();
-      for (const r of rows) if (groupOf(r) === chosen.id) bands[r.confidence as Band].push(this.view(r, facts));
+      for (const r of rows) if (groupOf(r) === chosen.id) bands[bandOf(r)].push(this.view(r, facts));
       group = { ...chosen, bands };
     }
     return { groups: [...groups.values()], group, batch_max: BATCH_MAX, undo_seconds: UNDO_SECONDS };
@@ -91,12 +93,12 @@ export class ReviewProposals {
   private view(r: Row, facts = new Map<string, string>()): QueueProposal {
     const p = r.payload as Record<string, any>, src = r.source as Record<string, any> | null, rounds = r.rounds as { draft?: unknown; check?: unknown }, id = r.identity as { near?: string[]; nearReason?: string | null };
     const reuse = r.reuse as { match: "reuse" | "new"; existingKey: string | null };
-    return { id: r.id, kind: r.kind, kind_word: PROPOSAL_KIND_WORDS[r.kind] ?? r.kind, title: r.kind === "pqr_pick" ? pickTitle(p, facts) : r.kind === "requirement_line" && !p.label ? lineTitle(p) : titleOf(p), meaning: p.meaning ?? p.proves ?? (r.kind === "pqr_pick" ? p.reason : null) ?? null, values: Array.isArray(p.values) ? p.values : null, band: r.confidence as Band, agreement: r.agreement, agreement_word: AGREEMENT_WORDS[r.agreement] ?? r.agreement,
+    return { id: r.id, kind: r.kind, kind_word: PROPOSAL_KIND_WORDS[r.kind] ?? r.kind, title: r.kind === "pqr_pick" ? pickTitle(p, facts) : r.kind === "requirement_line" && !p.label ? lineTitle(p) : titleOf(p), meaning: p.meaning ?? p.proves ?? (r.kind === "pqr_pick" ? p.reason : null) ?? null, values: Array.isArray(p.values) ? p.values : null, band: bandOf(r), agreement: r.agreement, agreement_word: AGREEMENT_WORDS[r.agreement] ?? r.agreement,
       reason: r.reason, lands_on: r.landsOn as "library" | "combination", reuse: { match: reuse.match, existing_key: reuse.existingKey }, origin: r.origin as "ai" | "rules", step: r.step,
       readings: { draft: readingOf(rounds?.draft), check: readingOf(rounds?.check) },
       source: src ? { file: src.file, edition: src.edition ?? null, page: src.page ?? null, quote: src.quote, quote_found: !!src.quoteFound, rule: src.rule ?? null } : null,
       rules: (r.rules as QueueProposal["rules"]) ?? [], near: id.near ?? [], near_reason: id.nearReason ?? null, basis: r.basis as "SAMPLE" | "EXPERT",
-      bulk_why: bulkWhy(r), decide_on: ON_ITS_PAGE.has(r.step) && r.combinationId ? `/c/${r.combinationId}/jobs/${r.runId}` : null, created_at: r.createdAt.toISOString() };
+      bulk_why: bulkWhy(r), accept_why: acceptWhy(r), decide_on: ON_ITS_PAGE.has(r.step) && r.combinationId ? `/c/${r.combinationId}/jobs/${r.runId}` : null, created_at: r.createdAt.toISOString() };
   }
 
   async decide(actor: Actor, body: unknown) {
