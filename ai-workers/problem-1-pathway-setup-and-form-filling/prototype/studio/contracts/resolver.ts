@@ -17,11 +17,13 @@
 //      condition's subject (lineHolders passes no subject kind). Only a rule passes one: its condition's subject kind
 //      (CASE → the filing; PRINCIPAL, SPOUSE, DEPENDENT → that role's people) wins over its "for whom" (render.ts rules).
 //      WHO_HOLDERS says, in words, who each value names.
-//  R3  Condition subjects (document lines; other line types: see "Not yet through the resolver" (a)): a document
-//      line's condition is decided on DOCUMENT → a document's contents; CASE → the filing;
+//  R3  Condition subjects (document lines, forms and checks, C7.7; rules and questions: see "Not yet through the
+//      resolver" (a)): a line's condition is decided on DOCUMENT → a document's contents; CASE → the filing;
 //      PRINCIPAL / SPOUSE / DEPENDENT → the holder when the holder has that role, else every person with it (any one is
 //      enough; none → the line is not needed); EACH_APPLICANT, EACH_PERSON or none → the holder (the filing as holder →
-//      the principal).
+//      the principal). A form's holders are its "who" (R2); a check's are each applicant (R2), its subjects merged, and a
+//      DOCUMENT check never fires on answers. Before C7.7 a form's was decided on its own person (CASE → the filing) and
+//      a check's on everyone who applies, an applying representative included, each on their own answers.
 //  R4  Box owner: whose value a form box reads, relative to the form's subject (BOX_PERSON). A filing fact (R5) → the
 //      filing; form_subject → the subject; subject_spouse_or_partner → the partner of a principal or the principal of a
 //      partner, else nobody; subject_child → the case's child of the box's row (row 0 when unset; the subject's own children are not told apart),
@@ -29,7 +31,7 @@
 //      `${subject}/parent_1`, `/parent_2`, `/sibling` (relatives, not people on the case); representative → the case's
 //      representative, or the literal "representative" when none; none → the filing; anything else → nobody (null).
 //  R5  Scope of a fact: a fact whose id starts "case." or whose placement repeats once_per_case is a filing fact (stored
-//      once per case, R1; render's deciders pass no placement, see (c)); one that
+//      once per case, R1; render's deciders and the case checklist pass the placement since C7.7, see (c)); one that
 //      starts "organisation." is an organisation fact, held (P-251): until the organisation subject exists it is read on
 //      the form's subject; any other fact is a person fact. No fact is a household fact yet.
 //  R6  Facts a subject sees: its own person facts plus the filing's facts; never another person's; a value stored per
@@ -51,16 +53,15 @@
 //      X2b BR-C1). It agrees with R2 (checked).
 //
 // Not yet through the resolver (file:line on the SH3 tidy-up's base, main 4cc6d2be):
-//  (a) Conditions of other line types (engine/render.ts): a form's on the form's own person (:98, :162); a rule's holders
-//      from its condition's subject kind (:199); a question's on the person the answer is about (:216); a check's on
-//      everyone who applies, an applying representative or sponsor included, unlike R2's each_applicant (:254). C7.7
-//      mixes forms and documents: bring these into R3. (M1, 3 Nov: render's `applicants` copy of R2 and its "case"
-//      literals now come from the resolver; the rule's subjects at :199 were already R2's rule case.)
+//  (a) Conditions of other line types (engine/render.ts): a rule's holders from its condition's subject kind (R2's rule
+//      case); a question's on the person the answer is about. Forms and checks came into R3 with C7.7 (3 Nov); render's
+//      `applicants` copy of R2 and its "case" literals came from the resolver with M1 (#659).
 //  (b) Whom a document's facts are about (holder, holder.spouse, parent_1/parent_2): engine/sources.ts:47-52 and its
 //      role-level twin other() at :267; C6.5's document reader needs it as a resolver rule. Also local there: isAgentFact
 //      (:91), WHO_OF_ROLE (:230, the reverse of WHO_ROLES) and `h === "case"` literals.
-//  (c) Calls of isFilingFact without the placement: render's deciders (:138, :156) and engine/runtime/case-checklist.ts
-//      (:126): a fact placed once_per_case whose id does not start "case." is keyed on the person there (as before SH3).
+//  (c) Done with C7.7 (3 Nov): render's deciders and engine/runtime/case-checklist.ts pass the placement, so an unanswered
+//      fact placed once_per_case is asked once, on the filing; an answered one is kept where its answer is stored (on
+//      the person when it was saved before its placement became once per case, review r2-m1).
 //  (d) Copies still outside the resolver: R5 in api/src/runtime.ts:269 (with the placement) and :310 (prefix only), and
 //      the sourceKey template in engine/runtime/case.ts:378 (both files belong to runtime lane L1 until its S4 merges);
 //      R5 by prefix in engine/answer-keys.ts:105; field scope by prefix in engine/import.ts:41, api/src/proposals.ts:214
