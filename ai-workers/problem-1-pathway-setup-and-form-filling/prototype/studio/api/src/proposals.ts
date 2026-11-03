@@ -295,23 +295,38 @@ export function personNearReason(r: Pick<Row, "identity" | "origin">): string | 
 
 /** QA-192: whether accepting this item needs the decider's one-line reason (it adds to the library, is close to a library
  *  item, and no person has said why it is not the same). Field-map items are decided on their own page (BR-7). */
-export function needsNearReason(r: Pick<Row, "identity" | "origin" | "landsOn" | "step" | "reuse" | "work" | "kind" | "payload">, libraryPool?: NearPool): boolean {
+export function needsNearReason(r: Pick<Row, "id" | "identity" | "origin" | "landsOn" | "step" | "reuse" | "work" | "kind" | "payload">, libraryPool?: NearPool, twinReuses?: Set<string>): boolean {
   // Review M3: the same check decide() makes on a plain accept: the near list stored at proposal, and the library now.
   const near = [...(((r.identity ?? {}) as { near?: string[] }).near ?? []), ...(libraryPool && r.kind === "field" ? nearIn(libraryPool, r, r.payload) : [])];
   const reuse = (r.reuse ?? {}) as { match?: string; existingKey?: string | null };
   // A twin not yet resolved (reuse with no item) may add the item itself at accept (Devin on #726): counted as new.
-  const adds = reuse.match === "new" || (reuse.match === "reuse" && !reuse.existingKey && !!(r.work as { twinOf?: string } | null)?.twinOf);
+  // Devin r3 on #726: a twin whose first copy is in the library now reuses it (decide() resolves it so), and needs none.
+  const adds = reuse.match === "new" || (reuse.match === "reuse" && !reuse.existingKey && !!(r.work as { twinOf?: string } | null)?.twinOf && !twinReuses?.has(r.id));
   return r.landsOn === "library" && !ON_ITS_PAGE.has(r.step) && adds && !!near?.length && !personNearReason(r);
 }
 
 /** QA-192 (Devin r2 on #726, m-check): whether accepting `payload` as an edit of this item (the checker's reading on the
  *  queue) needs a person's reason: the same check decide() makes on an edit (the new name against the library and the
  *  other new fields waiting, never resting on the proposer's reason for the old name). */
-export function needsNearReasonForEdit(r: Pick<Row, "id" | "landsOn" | "step" | "reuse" | "work" | "kind">, payload: unknown, libraryPool: NearPool, pending: (NearPool[number] & { id: string })[]): boolean {
+export function needsNearReasonForEdit(r: Pick<Row, "id" | "landsOn" | "step" | "reuse" | "work" | "kind">, payload: unknown, libraryPool: NearPool, pending: (NearPool[number] & { id: string })[], twinReuses?: Set<string>): boolean {
   const reuse = (r.reuse ?? {}) as { match?: string; existingKey?: string | null };
-  const adds = reuse.match === "new" || (reuse.match === "reuse" && !reuse.existingKey && !!(r.work as { twinOf?: string } | null)?.twinOf);
+  const adds = reuse.match === "new" || (reuse.match === "reuse" && !reuse.existingKey && !!(r.work as { twinOf?: string } | null)?.twinOf && !twinReuses?.has(r.id));
   if (r.kind !== "field" || r.landsOn !== "library" || ON_ITS_PAGE.has(r.step) || !adds) return false;
   return nearIn([...libraryPool, ...pending.filter((x) => x.id !== r.id)], { work: null }, payload).length > 0;
+}
+
+/** Devin r3 on #726: the waiting twins that decide() would resolve to a reuse now (their first copy accepted and in the
+ *  library, or the library already has the item), read once per request for the queue's "reason needed". */
+export async function twinsThatReuse(db: Client, workspaceId: string, rows: Row[]): Promise<Set<string>> {
+  const twins = rows.filter((r) => r.landsOn === "library" && (r.reuse as { match?: string; existingKey?: string | null } | null)?.match === "reuse" && !(r.reuse as { existingKey?: string | null }).existingKey && r.relatesTo && (r.work as { twinOf?: string } | null)?.twinOf);
+  if (!twins.length) return new Set();
+  const firsts = new Map((await db.proposalItem.findMany({ where: { id: { in: twins.map((t) => t.relatesTo!) } }, select: { id: true, status: true, decidedKey: true } })).map((f) => [f.id, f]));
+  const out = new Set<string>();
+  for (const t of twins) {
+    const f = firsts.get(t.relatesTo!);
+    if ((f?.decidedKey && ["accepted", "edited"].includes(f.status) && (await usableInLibrary(db, workspaceId, t.kind, f.decidedKey))) || (await sameInLibrary(db, workspaceId, t.payload as ProposalPayload))) out.add(t.id);
+  }
+  return out;
 }
 
 /** QA-192 (review M1–M3): what the one rule compares an item with at the decision, read once per request: the library's

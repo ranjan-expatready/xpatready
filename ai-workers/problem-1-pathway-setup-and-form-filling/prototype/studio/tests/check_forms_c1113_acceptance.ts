@@ -147,6 +147,15 @@ run(async () => {
   ok("QA-192 pass (review M3): the first of two close names (the later one carries the pair) shows no reason needed, and is accepted without one", firstView?.near_reason_needed === false && r.status === 201, [firstView?.near_reason_needed, r.status, words(r)]);
   r = await call("POST", "/review/proposals/decide", { ids: [mLater], action: "accept" }, AUTHOR);
   ok("QA-192 fail (review M3): the later one shows a reason is needed, and is refused without one (400)", laterView?.near_reason_needed === true && r.status === 400, [laterView?.near_reason_needed, r.status, words(r)]);
+  // Devin r3 on #726: a twin whose first copy was accepted (with its reason) now reuses it: the queue asks no reason, as
+  // the server does not.
+  const arr = `${fam} on arrival`;
+  const rA = (await tryInsert(item(arr))).ids[0], rB = (await tryInsert(ed2(arr))).ids[0];
+  const accA = await call("POST", "/review/proposals/decide", { ids: [rA], action: "accept", reason: "The family name used on arrival, not today's (test)." }, AUTHOR);
+  const ed2Group = (await call("GET", `/review/proposals?group=${encodeURIComponent("edition:IMM 5257 Schedule 1 (test)")}`)).body?.group;
+  const rBView = [...(ed2Group?.bands?.ready ?? []), ...(ed2Group?.bands?.check ?? []), ...(ed2Group?.bands?.decide ?? [])].find((x: { id: string }) => x.id === rB);
+  r = await call("POST", "/review/proposals/decide", { ids: [rB], action: "accept" }, AUTHOR);
+  ok("QA-192 pass (Devin r3 on #726): a near twin whose first copy was accepted shows no reason needed, and is accepted without one as a reuse of that item", accA.status === 201 && rBView?.near_reason_needed === false && r.status === 201 && r.body?.items?.[0]?.landedAs === accA.body?.items?.[0]?.landedAs, [accA.status, rBView?.near_reason_needed, r.status, words(r)]);
   // Devin r2 on #726: the checker's reading has its own "reason needed", the one decide() applies to that edit.
   const rd = (label: string) => ({ reading: `${label} (test)`, payload: payload(label), from: "replay", runFile: "runs/test.json", costUsd: 0 });
   const dv = (await tryInsert(item("Ferry hull colour", { confidence: "decide", agreement: "differ", reason: "The two readings differ (test).", rounds: { draft: rd("Ferry hull colour"), check: rd(`${fam} at sea`) } }))).ids[0];
