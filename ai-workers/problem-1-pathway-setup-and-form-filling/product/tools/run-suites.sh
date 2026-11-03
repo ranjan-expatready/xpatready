@@ -7,6 +7,8 @@
 #        (select-suites.mjs; pull requests, founder 31 Oct); everything when a shared file changed. Combines with --demo.
 #   bash product/tools/run-suites.sh --shard <i>/<n>   only every n-th suite, starting at the i-th (P-213: merge-queue
 #        batches split across n GitHub machines, each its own fresh copy). Combines with --changed and --demo.
+#   --skip-quarantined   every suite except the QUARANTINE list below (I1: the merge queue's one full run; --changed
+#        always skips them). --direct (with --changed): select-suites.mjs --direct, never everything (CI's PR_SUITES=direct).
 # Each tests/check_*.ts|cjs names its run in a usage line: "isolated.sh <name> <port> start && tsx|node studio/tests/<file>
 # <args>" (an isolated copy: own database, own files, the demo is never touched) or "tsx studio/tests/<file>" (no server).
 # Never calls a model (every suite replays saved runs; US$0). Exit 1 when any suite fails; a summary table either way.
@@ -17,15 +19,17 @@ export PATH="$ROOT/.tools/node-v24.21.0/bin:/opt/homebrew/opt/postgresql@18/bin:
 # GNU timeout: `timeout` on Linux (CI), `gtimeout` from Homebrew coreutils on the Mac. Missing → stop loudly, never run unguarded.
 TIMEOUT="$(command -v timeout || command -v gtimeout || true)"
 [ -n "$TIMEOUT" ] || { echo "GNU timeout is missing (Mac: brew install coreutils, which provides gtimeout); no suite was run"; exit 2; }
-DEMO=0; NAMES=0; CHANGED=""; SHARD=1; SHARDS=1
+DEMO=0; NAMES=0; CHANGED=""; SHARD=1; SHARDS=1; SKIPQ=0; DIRECT=
 while [ $# -gt 0 ]; do case "$1" in
   --demo) DEMO=1;;
+  --skip-quarantined) SKIPQ=1;;
+  --direct) DIRECT=--direct;;
   --names) NAMES=1;;   # print the names and ports this copy would use, run nothing
   --changed) [ -n "${2:-}" ] || { echo "--changed wants <base>..<head>; no suite was run"; exit 2; }; CHANGED="$2"; shift;;
   --changed=*) CHANGED="${1#--changed=}";;
   --shard) [[ "${2:-}" =~ ^([1-9][0-9]*)/([1-9][0-9]*)$ ]] && [ "${BASH_REMATCH[1]}" -le "${BASH_REMATCH[2]}" ] || { echo "--shard wants <i>/<n>, 1 <= i <= n; no suite was run"; exit 2; }
     SHARD="${BASH_REMATCH[1]}"; SHARDS="${BASH_REMATCH[2]}"; shift;;
-  *) echo "run-suites.sh: unknown option $1 (--demo, --names, --changed <base>..<head>); no suite was run"; exit 2;;
+  *) echo "run-suites.sh: unknown option $1 (--demo, --names, --changed <base>..<head>, --shard <i>/<n>, --skip-quarantined, --direct); no suite was run"; exit 2;;
 esac; shift; done
 # Not regression suites: the 100-program exercise needs its own fixture copy (run by hand, see its usage line).
 SKIP="check_catalogue_scale.cjs"
@@ -111,7 +115,7 @@ if [ -n "$CHANGED" ]; then
   [[ "$CHANGED" == *..* ]] || { echo "--changed wants <base>..<head>; no suite was run"; exit 2; }
   base="${CHANGED%%..*}"; head="${CHANGED##*..}"
   files=$(git -c core.quotePath=false diff --no-renames --name-only "$base...$head") || { echo "git diff $base...$head failed; no suite was run"; exit 2; }
-  sel=$(printf '%s\n' "$files" | node "$P/product/tools/select-suites.mjs") || { echo "select-suites.mjs failed; no suite was run"; exit 2; }
+  sel=$(printf '%s\n' "$files" | node "$P/product/tools/select-suites.mjs" $DIRECT) || { echo "select-suites.mjs failed; no suite was run"; exit 2; }
   printf '%s\n' "$sel" > "$OUT/selection.tsv"
   TAB=$(printf '\t')
   if [ "${sel%%"$TAB"*}" = ALL ]; then
@@ -175,7 +179,7 @@ for path in "$S"/tests/check_*.ts "$S"/tests/check_*.cjs; do
   f=$(basename "$path"); case " $SKIP " in *" $f "*) continue;; esac
   picked "$f" || continue
   myturn "$f" || continue
-  case " $QUARANTINE " in *" $f "*) [ -n "$CHANGED" ] && { rows+=("| $f | quarantined | | fails at random: nightly only until its fix merges (P-205) |"); continue; };; esac
+  case " $QUARANTINE " in *" $f "*) { [ -n "$CHANGED" ] || [ "$SKIPQ" = 1 ]; } && { rows+=("| $f | quarantined | | fails at random: nightly only until its fix merges (P-205) |"); continue; };; esac
   usage=$(grep -m1 -E "studio/tests/$f" "$path")
   if [ "$f" = check_studio_browser.cjs ]; then
     if [ "$DEMO" = 0 ] && [ "${SUITES_BROWSER_ISOLATED:-}" = 1 ]; then
