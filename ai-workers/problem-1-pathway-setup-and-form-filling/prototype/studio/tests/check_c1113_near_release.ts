@@ -12,7 +12,7 @@ const { call, sql } = client(PORT, DB);
 const { ok, summary } = recorder();
 const AUTHOR = "user-A", ACCEPTER = "user-C", APPROVER = "user-B";
 const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? ""); // eslint-disable-line @typescript-eslint/no-explicit-any
-type Lib = { id: string; key: string; label: string; status: string; will_release: boolean; reason: string | null; near: { items: { key: string | null; name: string }[]; reason: string } | null };
+type Lib = { id: string; key: string; label: string; status: string; will_release: boolean; reason: string | null; near: { items: { key: string | null; name: string }[]; reason: string; given?: boolean; by?: string } | null };
 
 (async () => {
   const loaded = await call("POST", "/demo/load");
@@ -66,7 +66,12 @@ type Lib = { id: string; key: string; label: string; status: string; will_releas
   ok("C11.13 fail: a waiting change is never counted as a change to release, and is said apart", d.changes === before.changes && d.waiting_library >= 3, { before: before.changes, now: d.changes, waiting: d.waiting_library });
   const plainRow = (d?.library ?? []).find((x: Lib) => x.key === plainKey) as Lib | undefined;
   ok("C11.13 fail: an item close to nothing has no near line", !!plainRow && plainRow.near === null, plainRow?.near);
-  ok("C11.13 P-120 pass: a reason a person wrote is marked as given", row?.near?.given === true, row?.near);
+  ok("C11.13 P-120 pass: a reason a person wrote is marked as given, by a person", row?.near?.given === true && (row?.near as { by?: string })?.by === "person", row?.near);
+  // Review m1: an AI-drafted item's near reason is the AI's words: marked as the AI's, never as a person's.
+  const aiItem = sql(`select proposal_item_id from library_change where key = '${foundKey}' limit 1`);
+  sql(`update proposal_item set origin = 'ai', identity = jsonb_set(identity::jsonb, '{nearReason}', '"An AI sentence: these differ."')::json where id = '${aiItem}'`);
+  const aiRow = ((await call("GET", "/draft", undefined, APPROVER)).body?.library ?? []).find((x: Lib) => x.key === foundKey) as (Lib & { near: { given: boolean; by: string } | null }) | undefined;
+  ok("C11.13 P-120 fail (review m1): an AI-drafted near reason is marked as the AI's words, not a person's", aiRow?.near?.given === true && aiRow.near.by === "ai", aiRow?.near);
   const foundRow = (d?.library ?? []).find((x: Lib & { near: { given?: boolean } | null }) => x.key === foundKey) as (Lib & { near: { given: boolean } | null }) | undefined;
   ok("C11.13 P-120 fail: a match the rules found with no reason from a person is shown, and marked not given (never as a reason)", !!foundRow?.near && foundRow.near.given === false && foundRow.near.items.length > 0, foundRow?.near);
   const bar = (await call("GET", "/draft?summary=1", undefined, APPROVER)).body;

@@ -73,13 +73,15 @@ export function changeView(c: LibraryChange) {
  *  that came from a proposal close to an existing library item, the items it is close to (the library's name and key
  *  when the item is in the library, else the words the proposal gave) and the reason given. Read from the proposal's
  *  own identity, never parsed from the change's reason text. `given` is false when the reason is only the rule's own
- *  words for why it is near (the one door found the match itself and no person said why it is not the same). */
-export type NearView = { items: { key: string | null; name: string }[]; reason: string; given: boolean };
+ *  words for why it is near (the one door found the match itself and no person said why it is not the same); `by` says
+ *  whose words a given reason is: the AI's (an AI-drafted item, review c1113 m1) or a person's. */
+export type NearView = { items: { key: string | null; name: string }[]; reason: string; given: boolean; by: "person" | "ai" };
 export async function nearOf(db: Db, workspaceId: string, changes: Pick<LibraryChange, "id" | "proposalItemId">[]): Promise<Map<string, NearView>> {
   const ids = [...new Set(changes.map((c) => c.proposalItemId).filter((x): x is string => !!x))];
   const out = new Map<string, NearView>();
   if (!ids.length) return out;
-  const items = await db.proposalItem.findMany({ where: { workspaceId, id: { in: ids } }, select: { id: true, identity: true } });
+  const items = await db.proposalItem.findMany({ where: { workspaceId, id: { in: ids } }, select: { id: true, identity: true, origin: true } });
+  const originOf = new Map(items.map((i) => [i.id, i.origin]));
   const near = new Map(items.map((i) => [i.id, i.identity as { near?: string[]; nearReason?: string | null } | null]).filter(([, x]) => !!(x as { near?: string[] } | null)?.near?.length && !!(x as { nearReason?: string | null }).nearReason) as [string, { near: string[]; nearReason: string }][]);
   if (!near.size) return out;
   const words = [...new Set([...near.values()].flatMap((x) => x.near))];
@@ -87,7 +89,7 @@ export async function nearOf(db: Db, workspaceId: string, changes: Pick<LibraryC
   const byKey = new Map<string, string>(), byName = new Map<string, string>();
   for (const f of fields) { if (!byKey.has(f.canonicalFieldKey)) byKey.set(f.canonicalFieldKey, f.label ?? f.canonicalFieldKey); if (f.label && !byName.has(normalizeLabel(f.label))) byName.set(normalizeLabel(f.label), f.canonicalFieldKey); }
   const item = (w: string) => byKey.has(w) ? { key: w, name: byKey.get(w)! } : byName.has(normalizeLabel(w)) ? { key: byName.get(normalizeLabel(w))!, name: w } : { key: null, name: w };
-  for (const c of changes) { const x = c.proposalItemId ? near.get(c.proposalItemId) : undefined; if (x) out.set(c.id, { items: x.near.map(item), reason: x.nearReason, given: !isRuleWhy(x.nearReason) }); }
+  for (const c of changes) { const x = c.proposalItemId ? near.get(c.proposalItemId) : undefined; if (x) out.set(c.id, { items: x.near.map(item), reason: x.nearReason, given: !isRuleWhy(x.nearReason), by: originOf.get(c.proposalItemId!) === "ai" ? "ai" : "person" }); }
   return out;
 }
 
