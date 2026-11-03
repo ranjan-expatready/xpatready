@@ -596,7 +596,7 @@ export class Studio {
     };
   }
 
-  async updateField(actor: Actor, key: string, b: { meaning?: string; valueType?: string; note?: string; retire?: boolean }) {
+  async updateField(actor: Actor, key: string, b: { meaning?: string; valueType?: string; note?: string; retire?: boolean; reason?: unknown }) {
     need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
     // C11.9 (break B1, review Ma4): retiring goes through the one guard (where used first, a second person), never here.
     if (b.retire !== undefined) throw new HttpException({ type: "https://expatready.local/problems/use-retire", title: "Use Retire", status: 410, detail: `A shared field is retired with POST /api/library/fields/${key}/retire (where used first; a second person approves), not by editing it.` }, HttpStatus.GONE);
@@ -607,6 +607,13 @@ export class Studio {
     if (merged) fail(`${key} was merged into ${merged}: change that field instead.`, HttpStatus.CONFLICT);
     const changes: any = {};
     if (b.meaning !== undefined) { if (b.meaning.trim().length < 8) fail("Describe the meaning in a short sentence."); changes.meaning = b.meaning.trim(); }
+    // C3.15 (P-253 "a fixed rules check (type, source and reason …)"; tech lead on #295): a change of meaning says why, in
+    // a sentence. Invisible characters do not count (as K1's reason). An unchanged meaning sent again needs none.
+    const said = typeof b.reason === "string" ? b.reason.normalize("NFKC").replace(/[\p{Cf}\p{Default_Ignorable_Code_Point}]/gu, "").trim() : "";
+    const before = [...rows].sort((x, y) => y.version - x.version)[0];
+    const meaningChanges = changes.meaning !== undefined && changes.meaning !== before?.meaning;
+    if (meaningChanges && said.length < 8) throw new HttpException({ type: "https://expatready.local/problems/validation", title: "Some details need fixing", status: 400, detail: "Say why the meaning changes, in a sentence (at least 8 characters): it is kept with the change in the activity.", errors: [{ field: "reason", message: "Say why the meaning changes, in a sentence (at least 8 characters)." }] }, HttpStatus.BAD_REQUEST);
+    if (said.length > 300) fail("Keep the reason to 300 characters.");
     if (b.valueType !== undefined) { if (!VALUE_TYPES.includes(b.valueType)) fail("Unknown value type."); changes.valueType = b.valueType; changes.dataType = VALUE_TYPE_TO_DATA_TYPE[b.valueType]; }
     if (b.note !== undefined) changes.note = b.note;
     if (b.retire) changes.status = "RETIRED";
@@ -616,7 +623,7 @@ export class Studio {
       return revise(tx.canonicalField, await tx.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: key } }), changes, actor.id, (r: typeof rows[number]) => ({ ...strip(r), origin: "HUMAN" }));
     });
     if (b.retire && !created) await this.db.canonicalField.update({ where: { id: row.id }, data: { status: "RETIRED" } });
-    await this.audit.log(workspaceId, actor.id, "updated", "field", key, `${actor.name} ${b.retire ? "retired" : "changed"} field ${key} (draft v${row.version})`, changes);
+    await this.audit.log(workspaceId, actor.id, "updated", "field", key, `${actor.name} ${b.retire ? "retired" : "changed"} field ${key} (draft v${row.version})${meaningChanges ? `: the meaning, because ${said}` : ""}`, meaningChanges ? { ...changes, reason: said } : changes);
     return row;
   }
 

@@ -128,7 +128,11 @@ const uniq = Date.now().toString(36);
   r = await call("PATCH", `/library/fields/${FIELD2}/name`, { name: taken });
   const w2 = r.body?.change_id, w2set = r.body?.change_set;
   ok("setup: a released field's rename waits", r.status === 202 && !!w2, [FIELD2, r.status, r.body?.detail]);
-  await call("PATCH", `/library/fields/${draft}/name`, { name: taken });
+  // C3.15 BR-6 (#295): a name waiting for a second person is taken, so another field's direct rename to it is refused.
+  r = await call("PATCH", `/library/fields/${draft}/name`, { name: taken });
+  ok("C3.15 BR-6 fail (#295): a direct rename to a name waiting in an open rename of the same group is refused (409) in words; nothing changed", r.status === 409 && /waiting for a second person/.test(r.body?.detail ?? "") && label(draft) !== `${taken}|t`, [r.status, r.body?.detail]);
+  // The name is taken meanwhile by a route outside the door (written directly), so BR-2's check at approval is what refuses it.
+  sql(`update canonical_field set label = '${taken}', label_checked = true where canonical_field_key = '${draft}' and version = (select max(version) from canonical_field where canonical_field_key = '${draft}')`);
   const view = await call("GET", `/library/changes/${w2}`);
   ok("G-CORE BR-2: the approver sees before the click that the check refuses it now, in words", view.body?.recheck?.ok === false && /already the name of/.test(view.body?.recheck?.text), view.body?.recheck);
   const lab2 = label(FIELD2);
