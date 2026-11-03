@@ -34,8 +34,18 @@ export type ImpactReview = {
   id: string; form: string; title: string; edition: string | null; library_edition: string | null; uploaded_by: string; at: string;
   counts: { form_fields: number } & Record<ImpactChange, number>; rows: ImpactRow[];
   library: { key: string; label: string; meaning: string; form_fields: number }[]; combinations: { id: string; label: string }[]; open_cases: number;
-  ai: { used: boolean; cost_usd: number; note: string };
+  /** C9.1 P-32: what the removed and reworded boxes touch beyond fields, each with why in words and its combination. */
+  components: Record<ImpactComponentKind, ImpactComponent[]>;
+  /** C9.1 P-151: IRCC's accepted-until date for the previous edition, quoted from the form's IRCC page; null when none. */
+  previous_accepted_until: string | null; previous_accepted_words: string | null; previous_accepted_source: { quote: string; url: string | null; saved: string | null } | null;
+  ai: { used: boolean; cost_usd: number; note: string; offer: ImpactAiOffer; saved: boolean; saved_words?: string; live: { open: boolean; why: string | null };
+    drafted?: { job_id: string; at: string; message: string | null; proposals: number; waiting: number; boxes: Record<string, string[]> } | null };
 };
+export type ImpactComponentKind = "sections" | "document_types" | "rules" | "checks";
+export type ImpactComponent = { key: string; label: string; field: string; combination: string; combination_id: string; boxes: string[]; why: string };
+/** C9.1 P-138: Draft with AI for the new and reworded boxes only, with its cost said first. */
+export type ImpactAiOffer = { boxes: number; words: string; about_usd: number; at_most_usd: number; key?: string };
+export type ImpactDrafted = { job_id: string; again: boolean; proposals: number; cost_usd?: number; message: string };
 export type ImpactAccepted = { edition: string; carried: number; for_a_person: number; combinations: { id: string; label: string }[] };
 
 /** K1: a PDF edition's form fields with their decision. */
