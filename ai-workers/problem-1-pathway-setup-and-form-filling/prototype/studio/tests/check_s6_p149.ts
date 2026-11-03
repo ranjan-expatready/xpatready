@@ -249,7 +249,9 @@ const item = (payload: any, over: any = {}) => ({ kind: payload.kind, runId: RUN
   // before its draft is applied); it is rejected or edited on its page.
   r = await call("GET", `/review/proposals?group=${encodeURIComponent("edition:IMM 0000 (01-2026)")}`);
   const fmView = [...(r.body.group?.bands.ready ?? []), ...(r.body.group?.bands.check ?? []), ...(r.body.group?.bands.decide ?? [])].find((x: any) => x.id === fm2);
-  ok("C11.13 queue pass (P-288 (2)): a Ready field-map item is listed with the link to its form-field page and may be chosen in bulk", fmView?.decide_on === `/c/${fmCombo}/jobs/${jobId}` && fmView.bulk_why === null, fmView);
+  // P-294 (tech lead on #661): this item makes a new shared field (outcome NEW), so it is never chosen in bulk; it is still
+  // accepted on its own below. A Ready exact reuse match goes in bulk (check_gcore_b5_field_map_bulk.ts).
+  ok("C11.13 queue pass (P-288 (2), P-294): a Ready field-map item is listed with the link to its form-field page; one that makes a new shared field is not chosen in bulk and says it is decided on its own", fmView?.decide_on === `/c/${fmCombo}/jobs/${jobId}` && /decided on its own/.test(fmView.bulk_why ?? ""), fmView);
   r = await call("POST", "/review/proposals/decide", { ids: [fm2], action: "reject", reason: "not this one" }, "user-B");
   ok("C11.13 queue fail: a field-map item is rejected on its form-field page, not here (409)", r.status === 409 && /form-field page/.test(r.body.message), r.body);
   const fields1 = sql("select count(*) from canonical_field"), changes1 = sql("select count(*) from library_change");
