@@ -13,6 +13,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { validate } from "../engine/validate.ts";
+import { acceptCleanOneByOne } from "./lib/accept-draft.ts";
 
 const PORT = Number(process.argv[2] ?? 4450), DB = process.argv[3] ?? "xr_studio_forms_pdf";
 const NAME = DB.replace(/^xr_studio_/, "");
@@ -182,8 +183,7 @@ const PRINTED_NOT_MANIFEST: Record<string, string> = { "IMM 5475": "IMM 5475 (05
     const replay = batch.jobs?.find((j: { kind: string }) => j.kind === "field_map");
     ok("C3.1: the replay completes at US$0 (REPLAY mode) and the library form is added with no AI", batch.status === "COMPLETED" && replay?.mode === "REPLAY" && replay.status === "COMPLETED" && batch.spent_usd === 0, { status: batch.status, message: replay?.message });
     const job = (await call("GET", `/jobs/${replay.id}`)).body;
-    await call("POST", `/jobs/${replay.id}/accept-clean`, { outcome: "REUSE" }, "user-C");
-    await call("POST", `/jobs/${replay.id}/accept-clean`, { outcome: "NEW" }, "user-C");
+    await acceptCleanOneByOne(call, replay.id, ["REUSE", "NEW"], "user-C");
     for (const it of ((await call("GET", `/jobs/${replay.id}`)).body.items as { id: string; decision: string }[]).filter((i) => i.decision === "PENDING"))
       await call("POST", `/jobs/${replay.id}/items/${it.id}`, { decision: "RETURNED", note: "Hardening check: left for a person." }, "user-C");
     r = await call("POST", `/jobs/${replay.id}/apply`, {});

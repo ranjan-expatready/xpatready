@@ -13,6 +13,7 @@ import { inFormFormat, isSignatureBox, personSteps } from "../engine/form-steps.
 import { hasCodes, labelForText } from "../engine/options.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 import { assembleMerged, flagNearDuplicates, mergeParts, planDraft, type Prior } from "../engine/parts.ts";
+import { acceptCleanOneByOne } from "./lib/accept-draft.ts";
 
 const PORT = Number(process.argv[2] ?? 4451), DB = process.argv[3] ?? "xr_studio_forms_s2";
 const STUDIO = join(import.meta.dirname, "..");
@@ -149,7 +150,7 @@ const readJson = (rel: string) => JSON.parse(readFileSync(join(PROTOTYPE, "..", 
   const replayAtt = att(vv, "imm5257e.pdf");
   r = await call("POST", `/attachments/${replayAtt}/draft`, { mode: "replay" });
   const rep = await finished(r.body.id);
-  await call("POST", `/jobs/${rep.id}/accept-clean`, { outcome: "REUSE" }); await call("POST", `/jobs/${rep.id}/accept-clean`, { outcome: "NEW" });
+  await acceptCleanOneByOne(call, rep.id, ["REUSE", "NEW"]);
   for (const i of (await call("GET", `/jobs/${rep.id}`)).body.items.filter((x: { decision: string }) => x.decision === "PENDING")) await call("POST", `/jobs/${rep.id}/items/${i.id}`, { decision: "ACCEPTED", note: "Test: a different meaning from the library field that could fit (BR-7)." });
   r = await call("POST", `/jobs/${rep.id}/apply`, {});
   ok("setup: IMM 5257's field map is in the library from the saved real answer (replayed, US$0)", r.status === 201, r.body?.message);
@@ -180,7 +181,7 @@ const readJson = (rel: string) => JSON.parse(readFileSync(join(PROTOTYPE, "..", 
   const reusedJob = await finished(r.body.id);
   const env = readJson(reusedJob.runFile);
   ok("A4 reuse run: completed without any AI call or cost, the record labelled as reuse (not AI), compared with the library for a person", reusedJob.status === "COMPLETED" && reusedJob.costUsd === 0 && /without AI \(US\$0\)/.test(reusedJob.message) && env.caller === "reuse" && !/AI-drafted/.test(env.label) && reusedJob.items.length > 0, reusedJob.message);
-  await call("POST", `/jobs/${reusedJob.id}/accept-clean`, { outcome: "REUSE" }); await call("POST", `/jobs/${reusedJob.id}/accept-clean`, { outcome: "NEW" });
+  await acceptCleanOneByOne(call, reusedJob.id, ["REUSE", "NEW"]);
   for (const i of (await call("GET", `/jobs/${reusedJob.id}`)).body.items.filter((x: { decision: string }) => x.decision === "PENDING")) await call("POST", `/jobs/${reusedJob.id}/items/${i.id}`, { decision: "ACCEPTED", note: "Test: a different meaning from the library field that could fit (BR-7)." });
   r = await call("POST", `/jobs/${reusedJob.id}/apply`, {});
   const origins = sql("select string_agg(distinct m.origin::text, ',') from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label = 'IMM 5257 (09-2023)'");
