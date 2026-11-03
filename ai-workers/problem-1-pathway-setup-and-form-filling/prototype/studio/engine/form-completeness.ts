@@ -8,13 +8,25 @@
 /** The outcomes that leave a form field unanswered on purpose ("Not a fact" on the page; `never_filled` reads the same). */
 export const NOT_A_FACT = new Set(["not_a_fact", "never_filled"]);
 
-/** A Background information question of an IRCC form: a yes/no box (`Choice`, `VisaChoice1`…) inside a
- *  `BackgroundInfo…` section (IMM 5257, IMM 1295 and their schedules name them so). Its details box ("if yes, give
- *  details") and the form's own calculation box (`backgroundInfoCalc`) are not questions. */
-export function isBackgroundQuestion(dataPath: string): boolean {
-  const parts = dataPath.split(".");
-  const last = parts[parts.length - 1] ?? "";
-  return parts.some((p) => /^BackgroundInfo\d*\[\d+\]$/.test(p)) && /^(Visa)?Choice\d*\[\d+\]$/.test(last);
+/** One form field as the form's own reading lists it (tools/read_form.py, `<edition>.inventory.json` `fields`), in the
+ *  form's order. Only what the Background rule reads. */
+export type ReadField = { data_path?: string | null; section?: string | null; heading?: string | null; ui?: string | null };
+
+/** [IRCC-F08] The Background information questions of one PDF edition, by the form's own reading (QA-199): every yes/no
+ *  question (`exclGroup`) from the form's own "BACKGROUND INFORMATION" heading to its consent and signature block. Read
+ *  from the form, never from a word in a path: IMM 5257, 1295 and 1294 put Q4 military, Q5 political party and Q6
+ *  ill-treatment at `…Military[0]`, `…Occupation[0]` and `…GovPosition[0]`, and IMM 5710 names its boxes `qANY`, `qGovtNY`…
+ *  The details boxes ("if yes, give details") and the form's own calculation box are text, not questions. A form with
+ *  no Background information heading has none. Returns their data paths (the field map's `dataPath`). */
+export function backgroundQuestions(fields: readonly ReadField[]): Set<string> {
+  const out = new Set<string>();
+  const start = fields.findIndex((f) => (f.heading ?? "").trim().toUpperCase() === "BACKGROUND INFORMATION");
+  if (start < 0) return out;
+  for (const f of fields.slice(start)) {
+    if (/^(Consent|Signature|ButtonsFooter)/.test((f.section ?? "").split(".")[1] ?? "")) break; // the declaration starts
+    if (f.ui === "exclGroup" && f.data_path) out.add(f.data_path);
+  }
+  return out;
 }
 
 /** The words for a Background question someone tried to mark "not a fact" (refusal and validator error alike). */
