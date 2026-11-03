@@ -1,0 +1,299 @@
+<title>Pathway Build Review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column (~72ch) with full-width tables and charts that scroll inside their own boxes; status as chips. */
+:root{
+  --bg:#f6f8fb; --surface:#ffffff; --fg:#14202e; --muted:#536274; --rule:#d9e0e8;
+  --accent:#0862C5; --accent-soft:#e3eefb;
+  --good:#1d7a46; --good-soft:#e2f3e8; --warn:#9a5b00; --warn-soft:#fbf0dc; --bad:#b3261e; --bad-soft:#fbe5e3;
+  --bar2:#9db8d9;
+  --f-display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f151c; --surface:#161e28; --fg:#e4eaf1; --muted:#9aa8b8; --rule:#2a3542;
+  --accent:#5aa2f0; --accent-soft:#16304d; --good:#5cc489; --good-soft:#143524; --warn:#e2a64a; --warn-soft:#3a2a10; --bad:#f08079; --bad-soft:#3d1a18; --bar2:#3f6690; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f151c; --surface:#161e28; --fg:#e4eaf1; --muted:#9aa8b8; --rule:#2a3542;
+  --accent:#5aa2f0; --accent-soft:#16304d; --good:#5cc489; --good-soft:#143524; --warn:#e2a64a; --warn-soft:#3a2a10; --bad:#f08079; --bad-soft:#3d1a18; --bar2:#3f6690; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:15px/1.6 var(--f-body)}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 64px;display:grid;gap:40px}
+header{display:grid;gap:10px}
+.eyebrow{font:500 12px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font:600 clamp(28px,4vw,40px)/1.1 var(--f-display);margin:0;text-wrap:balance}
+h2{font:600 24px/1.2 var(--f-display);margin:0 0 6px;text-wrap:balance}
+h3{font:600 17px/1.3 var(--f-body);margin:18px 0 6px}
+p{margin:0 0 10px;max-width:72ch}
+.lede{font-size:17px;color:var(--muted);max-width:70ch}
+section{display:grid;gap:10px}
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:18px 20px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;display:grid;gap:4px}
+.kpi b{font:500 28px/1.1 var(--f-mono);font-variant-numeric:tabular-nums}
+.kpi span{font-size:13px;color:var(--muted)}
+.tbl{overflow-x:auto;border:1px solid var(--rule);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-weight:600;color:var(--muted);font-size:12px;letter-spacing:.03em;white-space:nowrap}
+td.n,th.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.chip{display:inline-block;font:500 11.5px/1 var(--f-mono);padding:4px 7px;border-radius:999px;white-space:nowrap}
+.firm{background:var(--good-soft);color:var(--good)}
+.sugg{background:var(--warn-soft);color:var(--warn)}
+.no{background:var(--bad-soft);color:var(--bad)}
+.info{background:var(--accent-soft);color:var(--accent)}
+ul{margin:0;padding-left:20px;max-width:74ch}
+li{margin:4px 0}
+.lessons{display:grid;gap:10px}
+.lesson{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;display:grid;gap:6px}
+.lesson .head{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.lesson .head strong{font-size:15.5px}
+.lesson p{margin:0;color:var(--fg)}
+.lesson .ev{font-size:13px;color:var(--muted)}
+.chart{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:12px;overflow-x:auto}
+.chart svg{display:block;min-width:560px;width:100%;height:auto}
+.chart text{fill:var(--muted);font:11px var(--f-mono)}
+.chart .lbl{fill:var(--fg);font-weight:500}
+.cap{font-size:12.5px;color:var(--muted);margin-top:4px}
+.pending{border-left:3px solid var(--warn);background:var(--warn-soft);padding:12px 14px;border-radius:6px;color:var(--fg)}
+.src{font-size:12.5px;color:var(--muted)}
+.src a{color:var(--accent)}
+a{color:var(--accent)}
+code{font:12.5px var(--f-mono);background:var(--accent-soft);padding:1px 4px;border-radius:4px}
+.toc{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13.5px}
+@media (max-width:600px){.kpi b{font-size:24px}}
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Pathway Configurator · evidence review · 24 Oct – 3 Nov 2026 · written 3 Nov ~05:00 UTC by Lead 5</div>
+  <h1>Pathway Build Review</h1>
+  <p class="lede">What was built, what it cost, how the parallel set-up of AI builders, GitHub and the merge queue actually performed, and what we should keep, change or stop. Every number comes from GitHub, the session transcripts on the Mac, the spend ledger or a test run, and each lesson is marked by how firm its evidence is.</p>
+  <nav class="toc"><a href="#outcome">Outcome</a><a href="#flow">Delivery flow</a><a href="#machines">Machines, GitHub, merge queue</a><a href="#quality">Quality</a><a href="#cost">Cost and tokens</a><a href="#halting">Tool calls, stalls, blocks</a><a href="#lessons">Lessons</a><a href="#method">How to measure from now</a><a href="#retire">Retiring the Leads</a><a href="#sources">Sources</a></nav>
+</header>
+
+<section>
+  <div class="kpis">
+    <div class="kpi"><b>52 / 60</b><span>M2 rows scored Works by qa on main (records; independent re-test below)</span></div>
+    <div class="kpi"><b>~15×</b><span>more product changes merged per hour after 31 Oct (0.25 → about 4)</span></div>
+    <div class="kpi"><b>~1 h</b><span>median wait from approval to merge, flat since 31 Oct</span></div>
+    <div class="kpi"><b>0</b><span>open Blocker or Critical bugs; 9 open Major, 52 Minor</span></div>
+    <div class="kpi"><b>US$48.83</b><span>paid AI for the product's own drafting runs, all time</span></div>
+    <div class="kpi"><b>≥ US$3,002</b><span>Claude Code use on this Mac at API list prices (cloud builders not included)</span></div>
+  </div>
+</section>
+
+<section id="outcome">
+  <h2>1. Outcome: what a person can do today</h2>
+  <p>The product's own scorecard (<code>qa/CAPABILITIES.md</code>, kept by the qa tester) has 98 capability rows. Milestone M2, the Super Admin configuration, has 60.</p>
+  <div class="tbl"><table>
+    <tr><th>Milestone</th><th class="n">Works</th><th class="n">Partial</th><th class="n">Not built</th><th class="n">Total</th></tr>
+    <tr><td><b>M2</b> setup and library</td><td class="n">52</td><td class="n">8</td><td class="n">0</td><td class="n">60</td></tr>
+    <tr><td>M3 cases, filling, filing</td><td class="n">2</td><td class="n">9</td><td class="n">6</td><td class="n">17</td></tr>
+    <tr><td>T thin case slice (earlier)</td><td class="n">7</td><td class="n">1</td><td class="n">0</td><td class="n">8</td></tr>
+    <tr><td>Parked (portal capture, browser extension, P-102)</td><td class="n">3</td><td class="n">2</td><td class="n">4</td><td class="n">9</td></tr>
+    <tr><td>M4, and the team-owned prospect runtime (P-271)</td><td class="n">0</td><td class="n">0</td><td class="n">4</td><td class="n">4</td></tr>
+  </table></div>
+  <p class="cap">Counts at main 3 Nov 03:45 UTC (qa records #646). Three M2 rows count as "Works, held part excluded" (C11.3, C11.13, C3.6): their AI "did you mean" step is held for the SA-01B product owner (P-251, P-265).</p>
+
+  <div class="pending" id="audit"><b>Independent re-test: running.</b> Because the scores above were written by our own qa agent, a separate agent that built and scored none of it is re-running every M2 acceptance pack on today's main (live AI off, US$0) and walking six "Works" screens in a browser. Its result replaces this box: rows where the claim and the evidence disagree will be listed here.</div>
+
+  <h3>M2 Works over time</h3>
+  <div class="chart">
+    <svg viewBox="0 0 640 240" role="img" aria-label="M2 rows scored Works, from 0 on 23 Oct to 52 on 3 Nov">
+      <g stroke="var(--rule)" stroke-width="1">
+        <line x1="50" y1="200" x2="620" y2="200"/><line x1="50" y1="140" x2="620" y2="140"/><line x1="50" y1="80" x2="620" y2="80"/><line x1="50" y1="20" x2="620" y2="20"/>
+      </g>
+      <text x="42" y="204" text-anchor="end">0</text><text x="42" y="144" text-anchor="end">20</text><text x="42" y="84" text-anchor="end">40</text><text x="42" y="24" text-anchor="end">60</text>
+      <text x="69" y="218" text-anchor="middle">23 Oct</text><text x="268" y="218" text-anchor="middle">27 Oct</text><text x="474" y="218" text-anchor="middle">31 Oct</text><text x="596" y="218" text-anchor="middle">3 Nov</text>
+      <line x1="474" y1="20" x2="474" y2="200" stroke="var(--accent)" stroke-dasharray="3 3"/>
+      <text x="478" y="32" class="lbl">cloud builders + auto-merge</text>
+      <polyline fill="none" stroke="var(--accent)" stroke-width="2.5" points="69,200 127,164 237,164 268,173 371,146 474,137 524,122 534,107 563,98 570,80 582,71 589,53 597,50 603,47 604,44"/>
+      <circle cx="604" cy="44" r="4" fill="var(--accent)"/>
+      <text x="598" y="36" text-anchor="end" class="lbl">52</text>
+      <text x="273" y="188" class="lbl">9–12 for a week</text>
+    </svg>
+    <div class="cap">M2 rows scored Works in each commit of the scorecard. The number of M2 rows itself grew from 24 to 60 as rows were written, so early points are out of a smaller total.</div>
+  </div>
+
+  <h3>By area, in plain words</h3>
+  <ul>
+    <li><b>Setup:</b> an author builds Program › Category › Sub-category in one pop-up (duplicates refused), sees all 41 combinations with their trail, status and one next step, copies or removes form and document lines across combinations, and sets copies, minimum age and signer.</li>
+    <li><b>Sources:</b> an author uploads an IRCC PDF; its code, edition and checksum are read without AI; a file not on the approved list is held until a second person approves it; a new edition is held for impact review; checklists become document proposals.</li>
+    <li><b>Library:</b> AI proposes how each form box maps to a shared field and a reviewer accepts, edits or rejects; merge with aliases, retire, delete (blocked while in use), rename (a second person when a released combination uses it) and a validator work; a near-duplicate's reason is shown at release.</li>
+    <li><b>Questionnaires:</b> per-person questionnaires, section order, Pre-qualification marking, who answers each question, and a Preview per person on a sample family.</li>
+    <li><b>Release:</b> author submits, the immigration expert ticks, a different person approves and releases; a release is refused for a published number without a source or a missing answer-key test; sample content releases only as a visible "Demo release".</li>
+    <li><b>Cases and forms (M3, thin):</b> an officer opens a family case, the client answers on a link, fees and filings are derived, and IMM 5257 fills 84 of 161 boxes, all matching the facts. The form's own Adobe validation has not been run (no Acrobat on this Mac). Signed PDFs 13/14.</li>
+    <li><b>Not built:</b> AI reading of uploaded documents, the independent AI review of a filled form, stale-marking when facts change, the browser extension (parked), the prospect runtime (team-owned).</li>
+  </ul>
+
+  <h3>The 8 M2 rows not yet Works, and what each needs</h3>
+  <div class="tbl"><table>
+    <tr><th>Row</th><th>Gap</th><th>Needs</th></tr>
+    <tr><td>C3.4</td><td>AI drafts sections, rules and answer lists; built, its test 7/16 until the paid runs are recorded</td><td><span class="chip sugg">paid run</span> 4 jobs, usual ~US$0.97, worst US$5.78</td></tr>
+    <tr><td>C9.1</td><td>new-edition comparison works by rules; the AI impact assessment is missing</td><td><span class="chip info">builder</span> then one paid run</td></tr>
+    <tr><td>C11.7</td><td>Load sample 18/21: field maps of 7 forms missing</td><td><span class="chip sugg">paid run</span> per form, quote first</td></tr>
+    <tr><td>C11.8</td><td>AI run progress, Stop and cost shown, but never on a real live run</td><td><span class="chip sugg">paid run</span> one live run</td></tr>
+    <tr><td>C11.14</td><td>draft plus independent checker round built and proven on a planted run; 0 of 560 proposals are Ready until checker runs are recorded</td><td><span class="chip sugg">paid run</span> ~US$13 usual, US$49 worst; 4 forms exceed the US$5 job cap</td></tr>
+    <tr><td>C4.11</td><td>"Draft questions and documents" 14/23: the conditions step lands none (QA-162, Major)</td><td><span class="chip info">fix row</span></td></tr>
+    <tr><td>C10.1</td><td>Visitor visa cannot reach a release from Demo at US$0 (QA-144)</td><td><span class="chip info">fix row</span></td></tr>
+    <tr><td>C5.1</td><td>release needs a form line and a document line per combination</td><td><span class="chip no">held</span> for the SA-01B product owner (P-251)</td></tr>
+  </table></div>
+  <p class="cap">Five of the eight wait on paid AI runs, which only a Mac session started by the founder can do (a timed check cannot start sessions).</p>
+</section>
+
+<section id="flow">
+  <h2>2. Delivery flow</h2>
+  <p>Baseline: every pull request since GitHub became the single source of truth (24 Oct 12:06 UTC) to 3 Nov 03:45 UTC: 647 pull requests, of which 206 are the merge queue's own test batches, and 1,957 CI runs. Nothing sampled except machine waits.</p>
+  <div class="chart">
+    <svg viewBox="0 0 640 240" role="img" aria-label="Pull requests merged per day, product and records">
+      <g stroke="var(--rule)" stroke-width="1"><line x1="50" y1="200" x2="620" y2="200"/><line x1="50" y1="142.8" x2="620" y2="142.8"/><line x1="50" y1="85.6" x2="620" y2="85.6"/><line x1="50" y1="28.4" x2="620" y2="28.4"/></g>
+      <text x="42" y="204" text-anchor="end">0</text><text x="42" y="147" text-anchor="end">50</text><text x="42" y="90" text-anchor="end">100</text><text x="42" y="32" text-anchor="end">150</text>
+      <g fill="var(--accent)">
+        <rect x="61" y="192" width="30" height="8"/><rect x="112.8" y="192" width="30" height="8"/><rect x="164.6" y="194.3" width="30" height="5.7"/><rect x="216.4" y="193.1" width="30" height="6.9"/><rect x="268.2" y="194.3" width="30" height="5.7"/><rect x="320" y="189.7" width="30" height="10.3"/><rect x="371.8" y="196.6" width="30" height="3.4"/><rect x="423.6" y="172.6" width="30" height="27.4"/><rect x="475.4" y="102.8" width="30" height="97.2"/><rect x="527.2" y="93.7" width="30" height="106.3"/><rect x="579" y="192" width="30" height="8"/>
+      </g>
+      <g fill="var(--bar2)">
+        <rect x="61" y="189.7" width="30" height="2.3"/><rect x="112.8" y="184" width="30" height="8"/><rect x="216.4" y="174.8" width="30" height="18.3"/><rect x="268.2" y="188.6" width="30" height="5.7"/><rect x="320" y="179.4" width="30" height="10.3"/><rect x="371.8" y="190.9" width="30" height="5.7"/><rect x="423.6" y="170.3" width="30" height="2.3"/><rect x="475.4" y="77.7" width="30" height="25.1"/><rect x="527.2" y="44.6" width="30" height="49.1"/><rect x="579" y="186.3" width="30" height="5.7"/>
+      </g>
+      <text x="76" y="216" text-anchor="middle">24</text><text x="128" y="216" text-anchor="middle">25</text><text x="180" y="216" text-anchor="middle">26</text><text x="231" y="216" text-anchor="middle">27</text><text x="283" y="216" text-anchor="middle">28</text><text x="335" y="216" text-anchor="middle">29</text><text x="387" y="216" text-anchor="middle">30</text><text x="439" y="216" text-anchor="middle">31</text><text x="490" y="216" text-anchor="middle">1 Nov</text><text x="542" y="216" text-anchor="middle">2 Nov</text><text x="594" y="216" text-anchor="middle">3*</text>
+      <text x="490" y="72" text-anchor="middle" class="lbl">85 + 22</text><text x="542" y="39" text-anchor="middle" class="lbl">93 + 43</text>
+      <rect x="60" y="230" width="10" height="8" fill="var(--accent)"/><text x="74" y="237">product</text><rect x="140" y="230" width="10" height="8" fill="var(--bar2)"/><text x="154" y="237">records</text><text x="230" y="237">* 3 Nov to 03:45 UTC only</text>
+    </svg>
+  </div>
+  <div class="tbl"><table>
+    <tr><th>Window (UTC)</th><th class="n">Hours</th><th class="n">Product merges / hour</th><th class="n">Records share</th><th class="n">Approved → merged, median / p90 (min)</th><th class="n">Queue batches that merged</th><th class="n">CI failed</th><th class="n">CI cancelled</th></tr>
+    <tr><td>24–30 Oct, before</td><td class="n">168</td><td class="n">0.25</td><td class="n">42%</td><td class="n">no label yet</td><td class="n">–</td><td class="n">23%</td><td class="n">18%</td></tr>
+    <tr><td>31 Oct, cloud builders + auto-merge</td><td class="n">24</td><td class="n">1.0</td><td class="n">5%</td><td class="n">41 / 558</td><td class="n">27%</td><td class="n">44%</td><td class="n">40%</td></tr>
+    <tr><td>1 Nov, merge queue trial</td><td class="n">24</td><td class="n">3.5</td><td class="n">18%</td><td class="n">54 / 447</td><td class="n">44%</td><td class="n">12%</td><td class="n">15%</td></tr>
+    <tr><td>2 Nov 00:00–16:30</td><td class="n">16.5</td><td class="n">4.0</td><td class="n">31%</td><td class="n">68 / 142</td><td class="n">62%</td><td class="n">14%</td><td class="n">50%</td></tr>
+    <tr><td>2 Nov 16:30–17:58, qa per batch + Sonnet reviewers</td><td class="n">1.5</td><td class="n">2.7</td><td class="n">20%</td><td class="n">56 / 64</td><td class="n">3 of 3</td><td class="n">16%</td><td class="n">51%</td></tr>
+    <tr><td>2 Nov 17:58 – 3 Nov 03:45, GitHub Pro (40 machines)</td><td class="n">9.8</td><td class="n">3.1</td><td class="n">35%</td><td class="n">76 / 126</td><td class="n">59%</td><td class="n">8%</td><td class="n">38%</td></tr>
+  </table></div>
+  <p class="cap">Records = pull requests that change only notes, scores and decisions. Queue batches = the merge queue's test drafts; a batch that does not merge is re-tested. Created → merged, product, median: 0.1–1.3 h before 30 Oct, 1.6–1.7 h on 1–2 Nov.</p>
+  <p>Parallel work grew from 10–25 active branches a day to 58, 111 and 97 on 31 Oct, 1 Nov and 2 Nov. Decisions grew with it: 182 rows in the decision log, 62 of them on 2 Nov alone, and 46% of all rows are about how we work rather than what the product does.</p>
+</section>
+
+<section id="machines">
+  <h2>3. Machines, GitHub and the merge queue: did they help?</h2>
+  <div class="tbl"><table>
+    <tr><th>Change</th><th>What the numbers show</th><th>Verdict</th></tr>
+    <tr><td>Cloud builders, one row each, auto-merge on green CI + reviewer label (31 Oct)</td><td>Product merges per hour 0.25 → 1.0 → 3.5–4.0. Fix-titled share stayed about 23% throughout.</td><td><span class="chip firm">helped, firm</span></td></tr>
+    <tr><td>Mergify merge queue with 4 GitHub shards (1 Nov)</td><td>Main stayed green; batches that merge rose 27% → 44% → ~60%; CI failures fell 44% → 12% → 8%. But about 40% of batches never merge (42 cancelled, 29 red), and every product change now runs the full ~27-minute suite twice: once on its own PR and again in the batch.</td><td><span class="chip firm">helped stability</span> <span class="chip sugg">costs a full re-test</span></td></tr>
+    <tr><td>GitHub Pro, 40 machines (2 Nov ~18:00)</td><td>Machine wait p90 fell from 8–17 min to 1 min or less. Test time unchanged (shards ~18–21 min). Approval-to-merge median did not improve (68 → 76 min) and merges per hour did not rise (4.0 → 3.1, overnight window).</td><td><span class="chip firm">removed machine wait</span> <span class="chip sugg">no throughput gain seen</span></td></tr>
+    <tr><td>Cancelled runs</td><td>About half of all CI runs on 31 Oct and 2 Nov were cancelled by a newer push (268 on 2 Nov; 104 of them on records PRs). On 31 Oct the cancelled runs used more machine time than the successful ones.</td><td><span class="chip no">waste, firm</span></td></tr>
+    <tr><td>CI on main itself</td><td>Pushes to main ran CI only 24–27 Oct; since then main has no CI of its own (the queue tests each batch instead). The nightly full run failed 5 of 8 times (31 Oct – 2 Nov); one passed 2 Nov 10:38.</td><td><span class="chip sugg">gap to check</span></td></tr>
+  </table></div>
+</section>
+
+<section id="quality">
+  <h2>4. Quality</h2>
+  <div class="tbl"><table>
+    <tr><th>Bugs (QA numbers)</th><th class="n">Blocker</th><th class="n">Critical</th><th class="n">Major</th><th class="n">Minor</th><th class="n">Total</th></tr>
+    <tr><td>Open</td><td class="n">0</td><td class="n">0</td><td class="n">9</td><td class="n">52</td><td class="n">61</td></tr>
+    <tr><td>Closed</td><td class="n">0</td><td class="n">5</td><td class="n">32</td><td class="n">60</td><td class="n">97</td></tr>
+    <tr><td>All time</td><td class="n">0</td><td class="n">5</td><td class="n">41</td><td class="n">112</td><td class="n">158</td></tr>
+  </table></div>
+  <ul>
+    <li><b>Open Majors (9):</b> QA-176 no checker runs recorded (paid) · QA-165 IMM 5257 writes 40 of 46 mandatory fields · QA-162 conditions step lands none · QA-159 near-match identity Ready on both sides after Reset · QA-154 a live field-map draft queues on a copy with live AI off · QA-153 IMM 5707 waits for 16 parent facts no question asks · QA-152 a child is asked for an employer and a raw key shows · QA-149 an answered document question drops out of the case · QA-144 Visitor visa cannot reach a release from Demo.</li>
+    <li><b>Rework did not rise with volume:</b> fix-titled merges were 24 of 104 before 31 Oct, 28 of 120 on 1 Nov, 34 of 140 on 2 Nov (about 23% each time). No change was reverted. <span class="chip firm">firm, as a proxy</span></li>
+    <li><b>Found after merge:</b> qa tests merged main, so most bugs are found after merge by design (P-277). The exact before/after split could not be measured. <span class="chip sugg">not measurable</span></li>
+    <li><b>User experience:</b> an independent walk on 2 Nov scored the Studio <b>5.5/10</b> (disagreeing counts, "Nothing waits for you" while blockers existed, contradictory statuses). UX-A parts 1–4 fixed those since, but <b>no later full score exists</b>. The end-to-end golden journey passed 5 of 8 steps (journey score 6–6.5/10) in its last run on 2 Nov 20:45, before its main blocker QA-163 was fixed; it has not been re-run.</li>
+    <li><b>Per-change review scores</b> on 2 Nov were 6.5–9.5/10 against a pass mark of 8; several merged below 8 (C11.15 6.5, C3.6 6.5–8, G3 7, C3.4 7).</li>
+  </ul>
+</section>
+
+<section id="cost">
+  <h2>5. Cost and tokens</h2>
+  <h3>Paid AI inside the product</h3>
+  <p>The product's own AI drafting runs (reading IRCC forms, mapping fields) are logged in the spend ledger on the Mac: <b>US$48.83</b> settled in total, most of it on 20 Oct (US$23.34) and 2 Nov (US$10.72). One run of US$0.27 was started by a check clicking a priced button without approval (QA-100, 29 Oct); since then live AI is off on every copy and each run needs a Go with its usual and worst cost first.</p>
+  <h3>Claude Code itself, every session on this Mac, all accounts</h3>
+  <p>509 transcripts from 13 Oct to 3 Nov, deduplicated, priced at Anthropic's published API list prices (Opus 5.5 $4 in / $20 out per million tokens, cache read $0.20; Sonnet 5.5 $2 / $10; Fable 5.1 $10 / $50). This is an API-price equivalent, not what the subscription bills. The app's own cost counters give US$2,913 for the same sessions, close to our US$3,002.</p>
+  <div class="tbl"><table>
+    <tr><th>Who</th><th class="n">API-equivalent US$</th><th class="n">Share</th><th>Note</th></tr>
+    <tr><td>Builder lanes (local, before cloud)</td><td class="n">1,451</td><td class="n">48%</td><td>largest: Forms S4 library 27 Oct US$165; Screens W1-03/04/05 US$109</td></tr>
+    <tr><td>Lead (tech lead) chats</td><td class="n">869</td><td class="n">29%</td><td>99% of its tokens are cache re-reads of a ~300k context, about US$0.10 per message</td></tr>
+    <tr><td>qa</td><td class="n">160</td><td class="n">5%</td><td></td></tr>
+    <tr><td>Paid runner sessions</td><td class="n">41</td><td class="n">1%</td><td>the sessions, not the AI runs they started</td></tr>
+  </table></div>
+  <p class="cap">Role is inferred from each session's title and first message, so the split is approximate. Subagents (reviewers, breakers, searches) are inside these totals and come to US$562, 19% of all cost.</p>
+  <ul>
+    <li><b>8.7 billion tokens, 98% of them cache re-reads.</b> By cost: cache reads 57%, cache writes 25%, output 18%. The size of what each session carries in its context, not the work it writes, drives cost. <span class="chip firm">firm</span></li>
+    <li><b>The Lead's timed checks are 13% of Lead cost</b> (236 check turns, about US$0.49 each); founder-typed turns are US$409. The re-read of a large context on every message is the cost, whatever starts it. <span class="chip firm">firm</span></li>
+    <li><b>Accounts:</b> A 65 sessions, US$1,503 (28 Oct – 2 Nov); B 28 sessions, US$753; C 32 sessions, US$747; D one session that only hit a weekly limit. The weekly plan limit was hit on 16 Oct (B), 24 Oct (C) and 28 Oct (D): the pattern fits switching account after each limit. The current account is at 55% of its weekly plan on 3 Nov, 5 days before reset.</li>
+    <li><b>Not measured:</b> the cloud builder sessions (claude.ai/code) leave no transcript on the Mac, so all builder work since 31 Oct is missing from these dollars; 19–22 and 25 Oct have no transcripts; 407 deleted-session markers exist. Treat US$3,002 as a floor. <span class="chip no">gap</span></li>
+  </ul>
+</section>
+
+<section id="halting">
+  <h2>6. Tool calls, stalls and blocks</h2>
+  <div class="tbl"><table>
+    <tr><th>Measure (local sessions)</th><th class="n">Count</th><th>What it means</th></tr>
+    <tr><td>Tool calls</td><td class="n">9,309</td><td></td></tr>
+    <tr><td>Tool errors</td><td class="n">1,388</td><td>15% of calls returned an error</td></tr>
+    <tr><td>Refused by the "only the Lead merges or comments" guard</td><td class="n">561</td><td>builders repeatedly tried actions the rules forbid them</td></tr>
+    <tr><td>Permission denials / user declines / blocked commands</td><td class="n">71 / 17 / 25</td><td></td></tr>
+    <tr><td>Refused session starts</td><td class="n">54</td><td>mostly a timed check trying to start a session, which the app never allows</td></tr>
+    <tr><td>Waits over 30 min inside a session</td><td class="n">172 (316 h)</td><td>builders 160 h, Lead 73 h, qa 39 h; 11 waits over 12 h (a session left dormant); worst 29–30 Oct</td></tr>
+    <tr><td>Outages</td><td class="n">≈ 30</td><td>weekly limit ×3–4, not logged in ×2 (27 Oct), disk full (2 Nov), 25 connection errors (31 Oct, 2 Nov), the Mac went to sleep (2 Nov)</td></tr>
+    <tr><td>Context compactions / sessions continued after running out</td><td class="n">32 / 24</td><td>median compaction at 295k tokens</td></tr>
+  </table></div>
+  <p class="cap">Cloud builders cannot message back (one-way), so their stalls show only on GitHub as "no push in 90 minutes"; on 2 Nov one lane sat about 3 hours with no builder.</p>
+</section>
+
+<section id="lessons">
+  <h2>7. Lessons, by strength of evidence</h2>
+  <p>Rule used here, taken from the research below: change how we work only when a measure moves outside its normal range, stays on one side of its middle for 8 or more points, or two or more independent incidents share a cause. Anything seen once is logged, not acted on.</p>
+  <div class="lessons">
+    <div class="lesson"><div class="head"><span class="chip firm">firm · keep</span><strong>One fresh cloud builder per row, merged by the queue, multiplied delivery about 15 times without more rework.</strong></div><p class="ev">0.25 → ~4 product merges an hour; fix-titled share flat at ~23%; no reverts; 0 open Blocker/Critical.</p></div>
+    <div class="lesson"><div class="head"><span class="chip firm">firm · change</span><strong>The limit now is review and merge, not builders or machines.</strong></div><p class="ev">Approval-to-merge median rose 41 → 54 → 71 → 76 min as volume rose, and 40 machines did not shorten it. DORA 2025 and a 10,000-developer telemetry study report the same pattern: more AI changes, longer review.</p></div>
+    <div class="lesson"><div class="head"><span class="chip firm">firm · change</span><strong>Each product change is fully tested twice, and half of all runs are thrown away.</strong></div><p class="ev">~27 min on the PR, ~27 min again in the queue batch since 1 Nov 23:16; 50% of runs cancelled on 2 Nov, 104 on records PRs. One full test per change, in the queue, would roughly halve machine time.</p></div>
+    <div class="lesson"><div class="head"><span class="chip firm">firm · change</span><strong>A large Lead context is the most expensive thing we run locally.</strong></div><p class="ev">US$869 (29%), 99% cache re-reads of ~300k tokens per message. A short Lead context, or handing over earlier, costs less with no loss of work.</p></div>
+    <div class="lesson"><div class="head"><span class="chip firm">firm · change</span><strong>Paid AI runs are the gate for M2, and only a founder-typed turn can start them.</strong></div><p class="ev">5 of the 8 M2 rows left wait on paid runs; every timed check overnight could only leave a card.</p></div>
+    <div class="lesson"><div class="head"><span class="chip firm">firm · watch</span><strong>How we work changed almost daily.</strong></div><p class="ev">46% of 182 decisions are about the way of working (33 on 2 Nov); records PRs are 31–42% of merges. That they slowed delivery is <i>not</i> proven: records cost queue slots and cancelled runs, but the effect was not isolated.</p></div>
+    <div class="lesson"><div class="head"><span class="chip sugg">not supported</span><strong>"Speed is faster when the founder is not talking to the Lead."</strong></div><p class="ev">Merges per hour were 4.0 in the founder's daytime on 2 Nov and 3.1 overnight without him; 1 Nov (135 founder turns) and 2 Nov (194) were the two fastest days. The data does not show that founder involvement slows delivery.</p></div>
+    <div class="lesson"><div class="head"><span class="chip sugg">too little data</span><strong>qa per batch and Sonnet reviewers (P-277, P-278).</strong></div><p class="ev">Only 1.5 hours and 5 merges fall in the window before the next change; the one-day pilot cannot be judged yet.</p></div>
+    <div class="lesson"><div class="head"><span class="chip no">gap · fix first</span><strong>We cannot see the cloud builders' tokens, stalls or tool errors.</strong></div><p class="ev">Since 31 Oct most work ran in the cloud, which leaves no local transcript. Claude Code's OpenTelemetry export (cost, tokens, tool results, active time) would close this.</p></div>
+  </div>
+</section>
+
+<section id="method">
+  <h2>8. How to measure and run retrospectives from now</h2>
+  <p>From primary sources (DORA 2024 and 2025, the SPACE framework, METR's 2025 and 2026 studies, Anthropic's own research and Claude Code docs, Google's SRE book, Atlassian's retrospective play, GitHub and Mergify docs). There is no published benchmark for 5–27 parallel coding agents, so our own numbers are the baseline.</p>
+  <div class="tbl"><table>
+    <tr><th>Set</th><th>Measures</th><th>Owner</th><th>Cadence</th></tr>
+    <tr><td>Flow</td><td>Row cycle time split into build, CI wait, review wait and merge wait; open agent PRs (WIP); rows merged per day</td><td>Lead agent, from GitHub</td><td>daily line, weekly trend</td></tr>
+    <tr><td>Stability</td><td>Rework (a fix within 7 days), reverts, CI failure per PR, queue batch failure, flaky tests</td><td>qa agent</td><td>per batch, weekly trend</td></tr>
+    <tr><td>Outcome</td><td>Rows Works on main, re-tested by an agent that did not score them; golden journey steps passed; UX score</td><td>qa agent + an independent auditor</td><td>weekly</td></tr>
+    <tr><td>Agents and cost</td><td>Cost and tokens per merged row, tool error rate, stall time, human interventions per row (Claude Code OpenTelemetry, all accounts, cloud included); paid AI per run</td><td>Lead agent; reconciled with the bill monthly</td><td>daily line, weekly trend</td></tr>
+    <tr><td>Founder capacity</td><td>Decisions waiting (count and age), review wait, a 1–5 weekly note on trust and overload</td><td>founder, tracked by the Lead</td><td>weekly</td></tr>
+  </table></div>
+  <ul>
+    <li><b>Do not set targets on these numbers</b> (DORA warns that a measure used as a goal gets gamed); use them to see change.</li>
+    <li><b>Weekly 30-minute look at trends; a 60-minute retrospective every two weeks</b> (Atlassian format: gather, find patterns, actions with an owner and a date). A blameless incident review only on agreed triggers: a revert, a wrong merge, a spend spike.</li>
+    <li><b>Evidence threshold before any process change</b> as stated in section 7; each change is a labelled experiment checked at the next retrospective.</li>
+    <li><b>Check what agents and people say against the logs:</b> in METR's study experienced developers believed AI made them 20% faster when it made them 19% slower.</li>
+    <li><b>Cap work in progress</b> so the review wait stops growing (Little's law: more open work means longer cycle time unless throughput rises).</li>
+  </ul>
+</section>
+
+<section id="retire">
+  <h2>9. Retiring Leads 1–6 without losing work</h2>
+  <p>Branches on GitHub are never deleted, so no pushed work can disappear. Before each Lead is archived, its nested sessions are checked for anything not pushed, and every branch whose content is not on main is sorted into: already on main another way, records not needed, records worth keeping, or real unmerged work for the fresh backlog.</p>
+  <div class="pending" id="branches"><b>Branch sort: running.</b> 39 branches hold files that differ from main. Most look like work main later redid or review notes kept off pull requests. The sorted list, with the main commit that covers each, replaces this box.</div>
+  <ul>
+    <li><b>Local copies:</b> no unpushed commits anywhere. The old outside-review copy (<code>xpatready-devin</code>) and the demo copy (<code>demo-main</code>) hold saved AI-run outputs from 29–30 Oct that were never committed; they stay on disk and must not be deleted.</li>
+    <li><b>Open now:</b> #643 (UX-A finding 4) and #647 (G-CORE B5) approved and merging; #417 (D3 paid replay plan, nothing run) open since 2 Nov.</li>
+    <li><b>Keep-awake:</b> Lead 3's chat keeps the Mac awake until about 07:00 UTC; archive it last.</li>
+  </ul>
+</section>
+
+<section id="sources" class="src">
+  <h2>Sources and how this was measured</h2>
+  <p>GitHub: <code>gh pr list --state all</code> (647 PRs), CI runs of <code>ci.yml</code> and <code>nightly.yml</code> (1,957 + 8), label events of 415 merged PRs, job start times of ~130 runs. Repository on main: <code>qa/CAPABILITIES.md</code>, <code>qa/BUGS.md</code>, <code>BUGS-CLOSED.md</code>, <code>DECISIONS.md</code>, <code>STATE.md</code>, qa reports. Mac: the spend ledger <code>.tools/p2-ledger/spend.jsonl</code>; 509 Claude Code transcripts under <code>~/.claude/projects</code>. Scripts are kept with the session's scratch files.</p>
+  <p>Research: <a href="https://cloud.google.com/blog/products/ai-machine-learning/announcing-the-2025-dora-report">DORA 2025</a> · <a href="https://cloud.google.com/blog/products/devops-sre/announcing-the-2024-dora-report">DORA 2024</a> · <a href="https://dora.dev/guides/dora-metrics/">DORA metrics guide</a> · <a href="https://www.microsoft.com/en-us/research/publication/the-space-of-developer-productivity-theres-more-to-it-than-you-think/">SPACE</a> · <a href="https://metr.org/blog/2025-07-10-early-2025-ai-experienced-os-dev-study/">METR 2025</a> · <a href="https://metr.org/blog/2026-02-24-uplift-update/">METR 2026 update</a> · <a href="https://www.anthropic.com/research/how-ai-is-transforming-work-at-anthropic">Anthropic: how AI is transforming work</a> · <a href="https://www.anthropic.com/research/measuring-agent-autonomy">Anthropic: measuring agent autonomy</a> · <a href="https://www.anthropic.com/engineering/building-effective-agents">Building effective agents</a> · <a href="https://code.claude.com/docs/en/monitoring-usage">Claude Code monitoring</a> · <a href="https://code.claude.com/docs/en/costs">Claude Code costs</a> · <a href="https://code.claude.com/docs/en/best-practices">Claude Code best practices</a> · <a href="https://arxiv.org/html/2601.15195">Why agent PRs are not merged</a> · <a href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue">GitHub merge queue</a> · <a href="https://docs.mergify.com/merge-queue/batches/">Mergify batches</a> · <a href="https://sre.google/sre-book/postmortem-culture/">Google SRE: postmortem culture</a> · <a href="https://www.atlassian.com/team-playbook/plays/retrospective">Atlassian retrospective</a>. Studies seen only as search snippets (Faros, Google's internal RCT, the Microsoft/Accenture field study, Little's law and XmR notes) are not relied on for any lesson above.</p>
+</section>
+
+</div>
