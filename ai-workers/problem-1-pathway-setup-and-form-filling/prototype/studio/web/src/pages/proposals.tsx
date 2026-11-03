@@ -6,6 +6,7 @@
 import * as React from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Check, ChevronRight, Undo2 } from "lucide-react";
+import { NearLine, ownReason, type NearView } from "@/components/near-line";
 import { BAND_TIPS, BAND_WORDS, BANDS, type Band, type ChangeBatch, type DecideResult, type ProposalsView, type QueueProposal } from "../../../contracts/review-proposals";
 import { api, useAction, useActorId, useApi } from "@/lib/api";
 import { Button, Notice, Panel, Pill, Table, Textarea } from "@/components/ui/controls";
@@ -222,8 +223,8 @@ export function ChangeBatchPage() {
         <p className="mt-1 text-sm text-text-muted">{x.by} accepted these on the review queue {fmtWhen(x.at)}. Approve them together, or return them with a reason. Nothing is released until a release includes them.</p>
       </div>
       <Table label="Items in this decision" head={["Item", "Kind", "Reason", "Status"]}>
-        {x.items.map((c) => (
-          <tr key={c.id}><td className="font-medium">{c.label}<span className="block text-xs text-text-muted">{c.key}</span></td><td>{c.kind_word}</td><td className="text-xs text-text-muted">{c.reason ?? "—"}</td><td><Pill tone={c.status === "WAITING" ? "warn" : "neutral"}>{c.status === "WAITING" ? "Waiting" : c.status.toLowerCase()}</Pill></td></tr>
+        {(x.items as (ChangeBatch["items"][number] & { near?: NearView | null })[]).map((c) => ( // C11.13: near, beside the contract's view
+          <tr key={c.id}><td className="font-medium">{c.label}<span className="block text-xs text-text-muted">{c.key}</span></td><td>{c.kind_word}</td><td className="text-xs text-text-muted">{ownReason(c) ?? (c.near ? null : "—")}<NearLine near={c.near} /></td><td><Pill tone={c.status === "WAITING" ? "warn" : "neutral"}>{c.status === "WAITING" ? "Waiting" : c.status.toLowerCase()}</Pill></td></tr>
         ))}
       </Table>
       {x.can_decide ? (

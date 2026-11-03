@@ -11,6 +11,12 @@ import { Button, Notice, Pill, Table } from "@/components/ui/controls";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
 import { fmtDate } from "@/components/status";
+import { NearLine, ownReason, type NearView } from "@/components/near-line";
+
+/** C11.13 (P-120): a library change on the Release page: approved ones are released; ones still waiting for a second
+ *  person are listed, never released; a near duplicate says what it is close to and why it is not the same. */
+type ReleaseLibraryRow = LibraryChangeView & { will_release: boolean; near: NearView | null };
+const changeCell = (l: ReleaseLibraryRow) => { const own = ownReason(l); return <td><b className="font-medium">{l.action_word} {l.kind_word} "{l.label}"</b>{own ? <p className="text-xs text-text-muted">{own}</p> : null}<NearLine near={l.near} /></td>; };
 
 export function ReleasePage() {
   const qc = useQueryClient(); const toast = useToast();
@@ -31,7 +37,8 @@ export function ReleasePage() {
   if (d.isError) return <Notice tone="danger" title="The draft could not be loaded">{(d.error as Error).message}</Notice>;
   const x = d.data;
   const ok = x.rows.filter((r: any) => !r.held), held = x.rows.filter((r: any) => r.held);
-  const lib: LibraryChangeView[] = x.library ?? [];
+  const all: ReleaseLibraryRow[] = x.library ?? [];
+  const lib = all.filter((l) => l.will_release !== false), waiting = all.filter((l) => l.will_release === false);
   const what = [ok.length ? `${ok.length} combination${ok.length === 1 ? "" : "s"}` : null, lib.length ? `${lib.length} library change${lib.length === 1 ? "" : "s"}` : null].filter(Boolean).join(" and ");
   return (
     <div className="mx-auto max-w-5xl space-y-5">
@@ -41,9 +48,9 @@ export function ReleasePage() {
         <p className="mt-1 text-sm text-text-muted">Everyone's changes are in one shared draft. Releasing publishes together every combination that has passed its review (submitted, and signed by the content reviewer where an expert must sign); firms keep what was approved until then. {x.last ? `Last release: Release ${x.last.version}, ${fmtDate(x.last.at)}.` : "Nothing released yet."}</p>
       </div>
       {done ? <Notice tone="ok" title={`Release ${done.pack} published`}>{[...done.rows.map((r: any) => r.label), ...((done.library ?? []) as { label: string; action: string }[]).map((l) => `${l.label} (${l.action.toLowerCase()})`)].join(", ")}.{done.held.length ? ` Held back: ${done.held.map((h: any) => h.label).join(", ")}.` : ""} <Link className="text-text-link underline" to="/">Back to Immigration programs</Link></Notice> : null}
-      {!x.rows.length && !lib.length ? <EmptyState title="Nothing to release" description="The shared draft has no changes since the last release. Changes appear here as soon as someone edits a combination." action={<Button asChild variant="secondary"><Link to="/">Back to Immigration programs</Link></Button>} /> : (
+      {!x.rows.length && !all.length ? <EmptyState title="Nothing to release" description="The shared draft has no changes since the last release. Changes appear here as soon as someone edits a combination." action={<Button asChild variant="secondary"><Link to="/">Back to Immigration programs</Link></Button>} /> : (
         <>
-          <p className="rounded-lg border border-border bg-surface-raised px-4 py-3 text-sm" aria-live="polite"><b>{x.changes} draft change{x.changes === 1 ? "" : "s"}</b> across <b>{x.rows.length} combination{x.rows.length === 1 ? "" : "s"}</b>{lib.length ? <> and <b>{lib.length} library change{lib.length === 1 ? "" : "s"}</b></> : null}. The list below shows each one and whether it can be released.</p>
+          <p className="rounded-lg border border-border bg-surface-raised px-4 py-3 text-sm" aria-live="polite"><b>{x.changes} draft change{x.changes === 1 ? "" : "s"}</b> across <b>{x.rows.length} combination{x.rows.length === 1 ? "" : "s"}</b>{lib.length ? <> and <b>{lib.length} library change{lib.length === 1 ? "" : "s"}</b></> : null}{waiting.length ? <>; {waiting.length} more library change{waiting.length === 1 ? "" : "s"} still wait{waiting.length === 1 ? "s" : ""} for a second person</> : null}. The list below shows each one and whether it can be released.</p>
           {x.rows.length ? <Table head={["Combination", "Changes", "In this release"]}>
             {x.rows.map((r: any) => (
               <tr key={r.combinationId}>
@@ -58,7 +65,16 @@ export function ReleasePage() {
               <h2 id="lib-changes" className="text-base font-semibold">Library changes</h2>
               <p className="text-sm text-text-muted">Approved by a second person on To review. They reach every combination that uses them in this release.</p>
               <Table head={["Change", "Approved by", "In this release"]}>
-                {lib.map((l) => <tr key={l.id} data-library-change={l.key}><td><b className="font-medium">{l.action_word} {l.kind_word} "{l.label}"</b>{l.reason ? <p className="text-xs text-text-muted">{l.reason}</p> : null}</td><td className="text-sm">{l.decided_by}</td><td><span className="text-text-ok">Will be released</span></td></tr>)}
+                {lib.map((l) => <tr key={l.id} data-library-change={l.key}>{changeCell(l)}<td className="text-sm">{l.decided_by}</td><td><span className="text-text-ok">Will be released</span></td></tr>)}
+              </Table>
+            </section>
+          ) : null}
+          {waiting.length ? (
+            <section aria-labelledby="lib-waiting" className="space-y-2" data-library-waiting>
+              <h2 id="lib-waiting" className="text-base font-semibold">Library changes waiting for a second person</h2>
+              <p className="text-sm text-text-muted">Not in this release: a different person from the one who asked approves or returns each on <Link className="text-text-link underline" to="/review">To review</Link>. A combination that uses one is held back until then.</p>
+              <Table head={["Change", "Asked by", "In this release"]}>
+                {waiting.map((l) => <tr key={l.id} data-library-change={l.key} data-waiting>{changeCell(l)}<td className="text-sm">{l.proposed_by}</td><td><span className="text-text-warn">Waiting for a second person</span></td></tr>)}
               </Table>
             </section>
           ) : null}
