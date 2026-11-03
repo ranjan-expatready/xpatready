@@ -118,6 +118,31 @@ const onReview = async () => ((await call("GET", "/review-queue?filter=all")).bo
   run = await uploadRun("previous-editions", "imm5476e-2021.pdf");
   ok("C2.4 BR-2 fail case: the Upload PDF card says an older edition is kept aside and links to To review, not to Review impact or source verification", /^Kept aside as an older edition: it is not used/.test(run.message ?? "") && run.error?.next?.label === "See it on To review" && run.error?.next?.href === "/review", { message: run.message, next: run.error?.next });
 
+  // ── Part 3 (C2.4 AT-9, re-test of 3 Nov): once a newer edition is accepted, the older file sent again is never shown as
+  // the one in the library: "Older edition: not used", naming the edition in use, not attached, nothing for a person.
+  if ((await call("POST", "/demo/reset", { confirm: "RESET" })).status >= 300) throw new Error("third reset failed");
+  r = await intake("previous-editions", "imm5476e-2021.pdf");
+  if (r.outcome !== "added") throw new Error(`setup: the 2021 IMM 5476 was not added: ${r.outcome} ${r.message}`);
+  const tr3 = await node("pathway", "Temporary residence C24", null);
+  const vis3 = await node("program", "Visitors C24", tr3);
+  const cat3 = await node("category", "Visitor visa C24", vis3, { allowedLocations: ["outside_canada"] });
+  const made3 = await call("POST", "/combinations", { nodeKey: cat3 });
+  const combo3: string = made3.body?.combination?.id ?? sql(`select id from combination where combination_key like '%${cat3.split(".").pop()}%' limit 1`);
+  if (!combo3) throw new Error(`setup: no combination for ${cat3}`);
+  r = await intake("forms", "imm5476e.pdf");
+  const held3 = sql("select id from intake_item where code='IMM 5476' and status='HELD' and outcome='new_edition_held' limit 1");
+  const imp = await call("GET", `/intake/held/${held3}/impact`);
+  const acc = await call("POST", `/intake/held/${held3}/impact/accept`, { expected: imp.body?.counts?.form_fields });
+  if (acc.status !== 201) throw new Error(`setup: the newer edition was not accepted: ${acc.status} ${JSON.stringify(acc.body).slice(0, 200)}`);
+  const jobs3 = jobs(), att3 = attached(combo3), items3 = Number(sql("select count(*) from intake_item where code='IMM 5476' and status='HELD'")), review3 = (await call("GET", "/review-queue?filter=all")).body.items.length;
+  r = await intake("previous-editions", "imm5476e-2021.pdf", combo3);
+  ok("C2.4 AT-9 fail case: the 11-2021 file after 11-2025 was accepted is 'Older edition: not used' naming the edition in use, never 'Already in the library'", r.outcome === "older_in_library" && /^Older edition: not used\. IMM 5476 \(11-2021\) is kept in the library only as an older edition; the library uses IMM 5476 \(11-2025\)\./.test(r.message) && !/Already in the library/.test(r.message), r);
+  ok("C2.4 AT-9 fail case: that older file is not attached to the combination, nothing is held or added to To review, no AI step", attached(combo3) === att3 && Number(sql("select count(*) from intake_item where code='IMM 5476' and status='HELD'")) === items3 && (await call("GET", "/review-queue?filter=all")).body.items.length === review3 && editions() === 2 && jobs() === jobs3, { attached: attached(combo3) - att3, review: review3 });
+  r = await intake("forms", "imm5476e.pdf", combo3);
+  ok("C2.4 AT-9 pass: the edition in use (11-2025) sent again is still 'Already in the library'", r.outcome === "in_library" && /^Already in the library: IMM 5476 \(11-2025\)/.test(r.message), r);
+  run = await uploadRun("previous-editions", "imm5476e-2021.pdf");
+  ok("C2.4 AT-9 fail case: the Upload PDF card says the older file is in the library only as an older edition, not used", run.status === "done" && /^In the library only as an older edition: it is not used\./.test(run.message ?? ""), { status: run.status, message: run.message });
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });
