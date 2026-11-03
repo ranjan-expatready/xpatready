@@ -63,7 +63,7 @@ run(async () => {
     await dlg.locator("[role=alert]").first().waitFor({ timeout: 5000 }); // the refusal's words must show
   }
   const longField = await fieldText("category"), longDlg = (await dlg.innerText()).replace(/\s+/g, " ");
-  ok("C11.17 fail: a name over the limit (120 characters) gets its message under its own field, in words; nothing saved", (await dlg.locator("[data-field=category] [role=alert]").count()) > 0 && /characters|too long|at most/i.test(longField) && names() === before, { sent: tried, underField: longField.slice(-140), elsewhere: longDlg.match(/.{0,60}120 characters.{0,20}/)?.[0] ?? null });
+  ok("C11.17 fail: a name over the limit (120 characters: contracts/programs.ts LABEL_MAX, the server's own rule) gets its message under its own field, in words; nothing saved", (await dlg.locator("[data-field=category] [role=alert]").count()) > 0 && /characters|too long|at most/i.test(longField) && names() === before, { sent: tried, underField: longField.slice(-140), elsewhere: longDlg.match(/.{0,60}120 characters.{0,20}/)?.[0] ?? null });
 
   // Add and add another: only new parts are saved; the levels above stay
   await field("category").fill("");
@@ -121,11 +121,14 @@ run(async () => {
   ok("C11.17 pass: a filter bar with Pathway chips and Find", (await p.locator("[data-filter-bar]").count()) === 1 && (await p.locator("[data-pathway-chip]").count()) >= 3 && (await p.getByPlaceholder(/Find a name/).count()) === 1, await p.locator("[data-pathway-chip]").allInnerTexts());
   await p.locator("[data-pathway-chip]").filter({ hasText: "Permanent residence" }).first().click();
   await p.waitForURL(/[?&]p=/, { timeout: 5000 });
+  // Review M2 on #675: the address changes before the List re-renders; wait for the List itself (throws on time-out).
+  await p.waitForFunction(() => { const t = [...document.querySelectorAll("[data-list] [data-trail-line]")].map((e) => (e as HTMLElement).innerText); return t.length > 0 && t.every((x) => x.includes("Permanent residence")); }, undefined, { timeout: 10_000 });
   const onlyPr = await p.locator("[data-list] [data-trail-line]").allInnerTexts();
   ok("C11.17 pass: a Pathway chip shows only that Pathway, and the filter is in the address", onlyPr.length > 0 && onlyPr.every((t) => t.includes("Permanent residence")), { url: p.url().replace(/^.*\/structure/, "/structure"), first: onlyPr.slice(0, 2) });
   await p.locator("[data-clear-all]").first().click();
   await p.getByPlaceholder(/Find a name/).fill("Visitor");
   await p.waitForURL(/[?&]q=Visitor/, { timeout: 5000 });
+  await p.waitForFunction((all) => { const n = document.querySelectorAll("[data-list] [data-row]").length; return n > 0 && n < all; }, lines, { timeout: 10_000 }); // the List itself, not only the address
   const found = await p.locator("[data-list] [data-row]").allInnerTexts();
   ok("C11.17 pass: Find keeps only the lines with a matching name, and is in the address", found.length > 0 && found.length < lines && found.every((t) => /visitor/i.test(t)), found.length);
 

@@ -50,7 +50,7 @@ run(async () => {
   const p = await W.open(AUTHOR);
   for (const u of ["/extension", "/review/capture/x", "/review/screen-map/x"]) {
     await p.goto(u); await W.settle(p, u);
-    const back = await p.getByRole("link").filter({ hasText: /back|home|programs|start/i }).count();
+    const back = await p.getByRole("main").getByRole("link", { name: /^Back to / }).count(); // the page's own way back, not the menu
     ok(`C11.1 fail: ${u} shows "Page not found" with a way back`, (await p.getByText("Page not found").count()) >= 1 && back > 0, { notFound: await p.getByText("Page not found").count(), links: back });
   }
 

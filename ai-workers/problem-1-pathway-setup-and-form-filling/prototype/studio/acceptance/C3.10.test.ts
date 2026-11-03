@@ -7,7 +7,9 @@
 // "Search box", "check box" and "tick the box" (a control, not a form field) are not this rule.
 // Part 2, messages: every message the API, the engine and the web app can show is read from the source (string literals
 // and on-screen text that read as words): none says box, boxes, box map or canonical in the form-field sense. A hit names
-// its file and line.
+// its file and line. A drop-down, a tick box or a number field on the official PDF is a form field too (PRODUCT §4: "a
+// fillable spot on a PDF"), so "its drop-down boxes" or "its boxes are mandatory" counts; a control of our own screens
+// ("search box", "tick the box" for a declaration) does not.
 // No model call (US$0). Exit 0 = all pass, 1 = a failure, 2 = setup missing.
 //   zsh studio/tools/isolated.sh accept 4475 start && tsx studio/acceptance/C3.10.test.ts 4475 xr_studio_accept
 import { readdirSync, readFileSync, statSync } from "node:fs";
