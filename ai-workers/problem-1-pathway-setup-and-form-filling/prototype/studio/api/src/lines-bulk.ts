@@ -15,6 +15,7 @@ import { appliedWords, BulkApply, BulkPreview, copiedFromWords, CopyFromApply, C
 import { isBusy } from "./busy.ts";
 import { ACTORS, actorOf, Audit, Db, need, revise, strip, type Actor } from "./core.ts";
 import { addFormLine } from "./form-lines.ts";
+import { notFiledWords } from "../../engine/form-type.ts";
 import { closingChange, hasApprovedFile, lineSig, recordAction, snapshotLines, type LineRow } from "./form-uses.ts";
 
 type H = string | undefined;
@@ -439,7 +440,11 @@ export class LinesBulk {
   /** BR-C1 "cannot: retired": nothing new may use a form or document type that is retired, or whose retirement is open (P-116). */
   private async libraryBlock(db: Tx, workspaceId: string, line: SourceLine): Promise<string | null> {
     if (line.kind === "form") {
-      const def = await db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: line.key } }, select: { retiredAt: true } });
+      const def = await db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: line.key } }, select: { retiredAt: true, formKind: true, displayName: true } });
+      // C11.11 review m1: a guide or checklist line kept from before is never copied as a filed line (addFormLine refuses
+      // it at apply), so the preview says so first.
+      const notFiled = def ? notFiledWords(line.key, def.formKind, def.displayName) : null;
+      if (notFiled) return notFiled;
       if (def?.retiredAt) return `${line.key} is retired in the library: restore it there first.`;
       const closing = await closingChange(db, workspaceId, line.key);
       return closing ? `A request to ${closing.action.toLowerCase()} ${line.key} is open on To review: nothing new may use it until it is decided.` : null;

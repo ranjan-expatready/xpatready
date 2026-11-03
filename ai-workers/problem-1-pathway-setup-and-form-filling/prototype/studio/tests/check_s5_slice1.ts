@@ -108,21 +108,22 @@ const P = (extra: any[] = [], child = false) => [{ role: "principal", min: 1, ma
   ok("C11.6 fail: a signer not on the list is refused on its field", r.status === 400 && !!field(r, "signedBy"), field(r, "signedBy"));
   r = await call("PATCH", `/combinations/${C}/forms/${encodeURIComponent("IMM 1295")}`, { minAge: 21, baseRevision: line("IMM 1295").revision });
   ok("C11.6 fail: a line saved from an old revision is a 409 naming who changed it", r.status === 409 && /Changed by/.test(r.body.detail ?? r.body.message), r.body.detail ?? r.body.message);
+  // C11.11: the M1 checks use IMM 1295 (an always-filed form); the checklist IMM 5488 is no longer a form line.
   f0 = await forms();
-  r = await call("PATCH", `/combinations/${C}/forms/${encodeURIComponent("IMM 5488")}`, { attachMode: "ANSWER_CONDITIONAL", conditionPlain: "Has a representative", baseRevision: line("IMM 5488").revision });
+  r = await call("PATCH", `/combinations/${C}/forms/${encodeURIComponent("IMM 1295")}`, { attachMode: "ANSWER_CONDITIONAL", conditionPlain: "Has a representative", baseRevision: line("IMM 1295").revision });
   f0 = await forms();
-  ok("M1 pass: 'Only if' in words with no rule is saved and shown as words only", r.status === 200 && line("IMM 5488").onlyIf.kind === "words_only" && line("IMM 5488").onlyIf.words === "Has a representative", line("IMM 5488").onlyIf);
+  ok("M1 pass: 'Only if' in words with no rule is saved and shown as words only", r.status === 200 && line("IMM 1295").onlyIf.kind === "words_only" && line("IMM 1295").onlyIf.words === "Has a representative", line("IMM 1295").onlyIf);
   const pvNoRule = await preview("&person=principal");
-  const nr = pvNoRule.forms.find((f: any) => f.form === "IMM 5488");
+  const nr = pvNoRule.forms.find((f: any) => f.form === "IMM 1295");
   ok("M1: Preview says 'Cannot tell yet: no rule' for it, never that it applies", nr && nr.applies === "cannot_tell" && nr.noRule === true && /no rule/.test(nr.why), nr);
   let probs = (await call("GET", `/combinations/${C}`)).body.draft.problems as any[];
-  ok("M1 fail: release is refused while the condition is words only (an error naming the fix)", probs.some((p) => p.level === "error" && p.item === "IMM 5488" && /Turn "Has a representative" into a rule/.test(p.message)), probs.filter((p) => p.item === "IMM 5488"));
+  ok("M1 fail: release is refused while the condition is words only (an error naming the fix)", probs.some((p) => p.level === "error" && p.item === "IMM 1295" && /Turn "Has a representative" into a rule/.test(p.message)), probs.filter((p) => p.item === "IMM 1295"));
   r = await call("POST", `/combinations/${C}/submit`, {});
-  ok("M1 fail: submitting for review is refused with that error", r.status === 400 && /IMM 5488/.test(r.body.detail ?? r.body.message), (r.body.detail ?? r.body.message ?? "").slice(0, 120));
-  r = await call("PATCH", `/combinations/${C}/forms/${encodeURIComponent("IMM 5488")}`, { attachMode: "ANSWER_CONDITIONAL", condition: { subjectKind: "PRINCIPAL", op: "eq", field: "person.marital_status", value: "married" }, conditionPlain: "Is married", baseRevision: line("IMM 5488").revision });
+  ok("M1 fail: submitting for review is refused with that error", r.status === 400 && /IMM 1295/.test(r.body.detail ?? r.body.message), (r.body.detail ?? r.body.message ?? "").slice(0, 120));
+  r = await call("PATCH", `/combinations/${C}/forms/${encodeURIComponent("IMM 1295")}`, { attachMode: "ANSWER_CONDITIONAL", condition: { subjectKind: "PRINCIPAL", op: "eq", field: "person.marital_status", value: "married" }, conditionPlain: "Is married", baseRevision: line("IMM 1295").revision });
   f0 = await forms(); probs = (await call("GET", `/combinations/${C}`)).body.draft.problems as any[];
-  ok("M1 pass: once a rule is built the line is a rule and the error is gone", r.status === 200 && line("IMM 5488").onlyIf.kind === "rule" && !probs.some((p) => p.item === "IMM 5488" && /Turn/.test(p.message)), line("IMM 5488").onlyIf);
-  r = await call("PATCH", `/combinations/${C}/forms/${encodeURIComponent("IMM 5488")}`, { attachMode: "COMBINATION_MANDATORY", baseRevision: line("IMM 5488").revision });
+  ok("M1 pass: once a rule is built the line is a rule and the error is gone", r.status === 200 && line("IMM 1295").onlyIf.kind === "rule" && !probs.some((p) => p.item === "IMM 1295" && /Turn/.test(p.message)), line("IMM 1295").onlyIf);
+  r = await call("PATCH", `/combinations/${C}/forms/${encodeURIComponent("IMM 1295")}`, { attachMode: "COMBINATION_MANDATORY", baseRevision: line("IMM 1295").revision });
   ok("M1: back to always", r.status === 200);
 
   // ---------------------------------------------------------------- D-2, D-1, QA-47, QA-40, runtime roles

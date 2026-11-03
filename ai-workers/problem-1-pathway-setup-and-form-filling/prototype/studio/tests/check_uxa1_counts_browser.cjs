@@ -66,7 +66,8 @@ const formsWords = (c) => c.setUp >= c.total ? `${c.total} form${c.total === 1 ?
   step("Visitor visa pass: two forms attached and none set up read \"2 forms · 0 set up\" everywhere (before: 4, 2 and 0)", v1.want === "2 forms · 0 set up", v1.want);
   await p.screenshot({ path: path.join(SHOTS, "uxa1-01-visitor-forms-1440.png"), fullPage: false });
   const l1 = await forms(lm, "LMIA");
-  step("LMIA pass: all forms set up read \"8 forms\" on the strip, the tile and the Forms tab (before: badge 4, Overview 8)", l1.want === "8 forms", l1.want);
+  // C11.11 (QA-101): six forms; the checklists IMM 5488 and IMM 5905 are its sources, not forms it files (before: 8).
+  step("LMIA pass: all forms set up read \"6 forms\" on the strip, the tile and the Forms tab (before: badge 4, Overview 8)", l1.want === "6 forms", l1.want);
 
   // ------------------------------------------------------------------ tab badges say what they count
   await open(vv, "overview"); await p.locator("[data-step-badge]").first().waitFor();
