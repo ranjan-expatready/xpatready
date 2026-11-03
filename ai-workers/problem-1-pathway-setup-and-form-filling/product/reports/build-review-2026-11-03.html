@@ -77,7 +77,7 @@ code{font:12.5px var(--f-mono);background:var(--accent-soft);padding:1px 4px;bor
 
 <section>
   <div class="kpis">
-    <div class="kpi"><b>36 / 60</b><span>M2 rows confirmed Works by an independent re-test (qa's own score: 52)</span></div>
+    <div class="kpi"><b>42 / 60</b><span>M2 capabilities with a green pack on the six, 11:50 UTC on main 3b0d4d64 and 487304ff (36 on 1a79dbf9, 39 at 10:20; qa's own score: 52)</span></div>
     <div class="kpi"><b>~15×</b><span>more product changes merged per hour after 31 Oct (0.25 → about 4)</span></div>
     <div class="kpi"><b>~1 h</b><span>median wait from approval to merge, flat since 31 Oct</span></div>
     <div class="kpi"><b>0</b><span>open Blocker or Critical bugs; 9 open Major, 52 Minor</span></div>
@@ -123,6 +123,18 @@ code{font:12.5px var(--f-mono);background:var(--accent-soft);padding:1px 4px;bor
     <tr><td>C11.11</td><td class="n">21/26</td><td>checklist IMM 5484 added as a filed line; LMIA sample lists IMM 5488/5905 as filed lines; an online-only form listed as no file. The same 5 failures were already written in the pack's header on 1 Nov</td><td><span class="chip no">defect, known since 1 Nov</span></td></tr>
   </table></div>
   <p class="cap">Not testable at US$0 or without a pack: C3.10 (names no check), C5.2, C11.1, C11.17 (only manual walk scripts). Three rows (C1.6, C2.12, C4.1's named check) failed once under load and passed alone: flaky under load. M3: C6.9 is scored Works but its pack passes 2 of 15 (override and Mark reviewed answer "not found"); C6.12 is scored Partial but its pack is fully green.</p>
+  <h3 id="rerun-1020">Re-runs on main 3b0d4d64 (10:20 UTC) and 487304ff (11:50 UTC)</h3>
+  <p>The E0 evidence session ran each capability's own pack again, on fresh copies, after the morning's fixes merged (#661 C3.2, #666 C4.6, #683 C1.5, #675 the four new packs, #676 C5.4 and others). Live AI off, US$0. Green or red is the pack's exit code. Capability by capability, with screenshots: <code>reports/built-evidence-2026-11-03.html</code>.</p>
+  <div class="tbl"><table>
+    <tr><th>M2, scored Works by qa (52)</th><th class="n">1a79dbf9, 3 Nov early</th><th class="n">e3d22e5d, 07:45</th><th class="n">3b0d4d64, 10:20</th><th class="n">487304ff, 11:50</th></tr>
+    <tr><td>Pack green on the six (confirmed)</td><td class="n">36</td><td class="n">36</td><td class="n">39</td><td class="n">42</td></tr>
+    <tr><td>Pack green only on the older test sample</td><td class="n">–</td><td class="n">1</td><td class="n">3</td><td class="n">3</td></tr>
+    <tr><td>Pack red</td><td class="n">12</td><td class="n">13</td><td class="n">9</td><td class="n">6</td></tr>
+    <tr><td>No pack, or could not finish</td><td class="n">4</td><td class="n">2</td><td class="n">1</td><td class="n">1</td></tr>
+  </table></div>
+  <p class="cap">11:50 UTC: the 10 capabilities a pull request touched between 09:52 and 11:30 were run again on main 487304ff; the others keep their 10:20 result. Green since 10:20: C2.4 22/22, C3.8 11/11, C11.11 26/26. Still red: C3.10 7/8, C3.15 7/11, C4.2 9/10, C4.7 13/15, C11.3 26/27, C11.17 23/24; C11.14 (Partial) 13/14.</p>
+  <p class="cap">10:20 UTC: Green since 07:45: C1.5 (18/18), C3.2 (22/22), C4.6 (17/17), C5.2 (32/32, its new pack). Red on their new packs: C3.10 (7/8) and C11.17 (23/24, a name over 120 characters gets no message under its own field). Still red: C2.4 21/22, C3.8 9/11, C3.15 7/11, C4.2 9/10, C4.7 13/15, C11.3 26/27, C11.11 21/26. Green only on the older sample, because on the six the combination has no questions or rules yet: C3.6, C4.1, C4.8. C4.10: qa's walk script stops after 17 checks. M3: 8 of 17 green. The Demo menu still cannot release any combination (Visitor visa: 386 problems), so no case can be opened from it.</p>
+
   <h3>Six screen walks</h3>
   <ul>
     <li><b>Setup (C11.10):</b> true. Cards, chips, Cards/List per person; the approver sees Open. The row says a 4-step bar, the screen shows "n of 5".</li>
