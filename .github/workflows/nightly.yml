@@ -31,7 +31,7 @@ jobs:
       - name: packages (npm ci)
         run: cd "$S" && npm ci --no-fund --no-audit
       - name: web app build (the browser suites need it)
-        run: cd "$S" && ./node_modules/.bin/prisma generate && cd web && ../node_modules/.bin/vite build
+        run: cd "$S" && ./node_modules/.bin/prisma generate && bash tools/web-fresh.sh build   # stamped (QA-181)
       - name: Playwright's own Chromium
         run: cd "$S" && ./node_modules/.bin/playwright install chromium
       - name: every studio suite (run-suites.sh, browser suite on its own copy; no model call, US$0)

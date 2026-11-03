@@ -195,7 +195,7 @@ jobs:
         run: python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py
       - name: web app build (the browser suites need it)
         if: env.KIND != 'notes' && env.SHARDED != 'true' && (steps.code.outputs.changed == 'true')
-        run: cd "$S" && ./node_modules/.bin/prisma generate && cd web && ../node_modules/.bin/vite build
+        run: cd "$S" && ./node_modules/.bin/prisma generate && bash tools/web-fresh.sh build   # stamped (QA-181)
       - name: explicit-any count
         if: env.KIND != 'notes' && env.SHARDED != 'true' && (steps.code.outputs.changed == 'true')
         run: node "$S/tools/count-any.mjs" --against "${{ github.event.pull_request.base.sha }}"

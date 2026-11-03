@@ -23,12 +23,22 @@ stamp() {
   printf '%s\n' "$list" | paste - <(printf '%s\n' "$hashes") | LC_ALL=C sort | $SHA | cut -c1-64
 }
 build() {  # $1: the fingerprint of the sources this build starts from
-  (cd web && ../node_modules/.bin/vite build >/dev/null 2>&1) || { echo "vite build failed (web/dist not rebuilt)" >&2; return 1; }
+  # vite's own output goes to var/web-build.log and its end is shown when it fails (#727 m4).
+  (cd web && ../node_modules/.bin/vite build > "$STUDIO/var/web-build.log" 2>&1) || { echo "vite build failed (web/dist not rebuilt); the end of var/web-build.log:" >&2; tail -20 "$STUDIO/var/web-build.log" >&2; return 1; }
   printf '%s\n' "$1" > "$STAMP"
 }
 # One build at a time per copy: a second caller waits, then finds the bundle current.
 LOCK="$STUDIO/var/web-build.lock"; mkdir -p "$STUDIO/var"
-lock() { local i=0; find "$LOCK" -maxdepth 0 -mmin +10 -exec rmdir {} \; 2>/dev/null; until mkdir "$LOCK" 2>/dev/null; do i=$((i + 1)); [ "$i" -gt 600 ] && { echo "web build lock held over 5 min: $LOCK" >&2; return 1; }; sleep 0.5; done; trap 'rmdir "$LOCK" 2>/dev/null' EXIT; }
+# A lock whose owner is gone (a killed build) is taken over at once, not after a 5-minute wait (#727 m3).
+lock() {
+  local i=0 pid
+  until mkdir "$LOCK" 2>/dev/null; do
+    pid=$(cat "$LOCK/pid" 2>/dev/null); if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then rm -rf "$LOCK"; continue; fi
+    [ -z "$pid" ] && find "$LOCK" -maxdepth 0 -mmin +1 -exec rm -rf {} \; 2>/dev/null   # made but never owned
+    i=$((i + 1)); [ "$i" -gt 600 ] && { echo "web build lock held over 5 min by pid ${pid:-?}: $LOCK" >&2; return 1; }; sleep 0.5
+  done
+  echo $$ > "$LOCK/pid"; trap 'rm -rf "$LOCK"' EXIT
+}
 case "${1:-}" in
   stamp) stamp ;;
   build) lock || exit 1; build "$(stamp)" && echo "web app built" ;;

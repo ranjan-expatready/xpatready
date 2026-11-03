@@ -95,7 +95,7 @@ prepare() {  # create or refresh the scout copy, build it and start its app on :
   pgd="$WT/.tools/solution-1-prototype/pg18-data"
   ( export PATH="$WT/.tools/node-v24.21.0/bin:/opt/homebrew/opt/postgresql@18/bin:$PATH"; cd "$PS" || exit 1
     pg_ctl -D "$pgd" status >/dev/null 2>&1 || LC_ALL=en_US.UTF-8 pg_ctl -D "$pgd" -l "$pgd/server.log" -w start >/dev/null || exit 1
-    ./node_modules/.bin/prisma generate >/dev/null && (cd web && ../node_modules/.bin/vite build >/dev/null)
+    ./node_modules/.bin/prisma generate >/dev/null && bash tools/web-fresh.sh build >/dev/null   # stamped (QA-181)
   ) || { echo "could not prepare the scout app (database, Prisma client or web build)"; exit 5; }
   zsh "$PS/tools/isolated.sh" scout_x1 4480 start >/dev/null || { echo "the scout app did not start (see $PS/var/isolated-scout_x1)"; exit 5; }
 }

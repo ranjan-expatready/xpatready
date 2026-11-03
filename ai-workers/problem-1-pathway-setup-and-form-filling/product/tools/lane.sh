@@ -51,18 +51,24 @@ lane_branch() {  # the lane's newest origin branch with work not yet in main (el
     echo "${rb#origin/}"; return; done
   [ -n "$first" ] && echo "${first#origin/}"
 }
-# Why bind should not continue the lane's branch origin/$1 (QA-181), or nothing: it is already in main, it shares no
-# history with main, or its last commit is older than LANE_STALE_HOURS (24): an abandoned copy such as the qa lane's
-# claude/qa-l10-e3c849 of 30 Oct, which a fresh cloud clone checked out on 3 Nov and built 4-day-old screens from.
-# A shallow clone (cloud sessions fetch 50 commits) is deepened to three days before the branch's last commit first, so
-# an old fork point is not mistaken for no common history (that is what "refusing to merge unrelated histories" was).
+# Why bind should not continue the lane's branch origin/$1 (QA-181), or nothing: its last commit is older than
+# LANE_STALE_HOURS (24; an abandoned copy such as the qa lane's claude/qa-l10-e3c849 of 30 Oct, which a fresh cloud clone
+# checked out on 3 Nov and built 4-day-old screens from), it is already in main, or it shares no history with main.
+# Staleness comes first, from the tip's time alone, so an old branch never costs a fetch. A shallow clone (cloud sessions
+# fetch 50 commits) is then only ever deepened, 250 commits at a time up to 1000 (--deepen adds history; --shallow-since
+# could also cut it, #727 review M1), so an old fork point is not mistaken for no common history.
 stale_() {
-  local r="origin/$1" t now; t=$(git -C "$HERE" log -1 --format=%ct "$r" 2>/dev/null) || { echo "not on origin"; return; }
+  local r="origin/$1" t h i; t=$(git -C "$HERE" log -1 --format=%ct "$r" 2>/dev/null) || { echo "not on origin"; return; }
+  h="${LANE_STALE_HOURS:-24}"; case "$h" in ''|*[!0-9]*) h=24;; esac
+  [ $(($(date +%s) - t)) -gt $((h * 3600)) ] && { echo "older than $h h (last commit $(git -C "$HERE" log -1 --format=%cd --date=format:'%d %b %H:%M' "$r"))"; return; }
   if [ "$(git -C "$HERE" rev-parse --is-shallow-repository 2>/dev/null)" = true ]; then
-    git -C "$HERE" fetch -q --shallow-since="@$((t - 3 * 86400))" origin main "$1" 2>/dev/null || true; fi
+    for i in 1 2 3 4; do
+      git -C "$HERE" merge-base origin/main "$r" >/dev/null 2>&1 && break
+      git -C "$HERE" fetch -q --deepen=250 origin main "$1" 2>/dev/null || break
+    done
+  fi
   git -C "$HERE" merge-base --is-ancestor "$r" origin/main 2>/dev/null && { echo "already in main"; return; }
-  git -C "$HERE" merge-base origin/main "$r" >/dev/null 2>&1 || { echo "unrelated to main (no common history)"; return; }
-  now=$(date +%s); [ $((now - t)) -gt $((${LANE_STALE_HOURS:-24} * 3600)) ] && echo "older than ${LANE_STALE_HOURS:-24} h (last commit $(git -C "$HERE" log -1 --format=%cd --date=format:'%d %b %H:%M' "$r"))"
+  git -C "$HERE" merge-base origin/main "$r" >/dev/null 2>&1 || { echo "unrelated to main (no common history$([ "$(git -C "$HERE" rev-parse --is-shallow-repository)" = true ] && echo " in main's last 1000+ commits"))"; return; }
   return 0
 }
 field() { grep -m1 "^$1:" "$2" 2>/dev/null | cut -d' ' -f2-; }
@@ -118,8 +124,11 @@ case "$1" in
         cb=$(git -C "$HERE" branch --show-current); [ -n "$cb" ] || cb="$2/from-main-$(date -u +%Y%m%d-%H%M)"
         if git -C "$HERE" merge-base --is-ancestor HEAD origin/main 2>/dev/null; then
           git -C "$HERE" checkout -q -B "$cb" origin/main && echo "the $2 lane's newest branch $lb is $why: this branch $cb starts from origin/main ($(git -C "$HERE" rev-parse --short origin/main)) and becomes the lane's branch"
-        else echo "the $2 lane's newest branch $lb is $why; this branch $cb has commits not in main, so it stays as it is (merge origin/main into it)"; fi
-        lb=""
+        else
+          # This copy has its own commits: never moved. A detached HEAD gets a name so the work is not anonymous (#727 m1).
+          [ -n "$(git -C "$HERE" branch --show-current)" ] || git -C "$HERE" checkout -q -b "$cb"
+          echo "the $2 lane's newest branch $lb is $why; this branch $cb has commits not in main, so it stays as it is (merge origin/main into it)"
+        fi
       elif [ -n "$lb" ]; then
         git -C "$HERE" diff --quiet && git -C "$HERE" diff --cached --quiet || { echo "Commit or discard local changes before binding."; exit 3; }
         git -C "$HERE" checkout -q -B "$lb" "origin/$lb" && git -C "$HERE" branch -q -u "origin/$lb" && echo "on the $2 lane's branch $lb"
