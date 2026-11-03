@@ -225,7 +225,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const listRow = p.locator(`[role="row"][data-node="${live.nodeKey}"]`);
   const programBands = new Set(cat.rows.map((r) => `${r.pathwayKey}|${r.trail[2]}`)).size;
   step("C11.10 P-180: List shows the same combinations as rows, grouped by Pathway then Program (group rows collapse)", groupRows === cat.sections.length + programBands && await p.locator('[role="row"][data-node]').count() === cat.rows.length, `${groupRows} group rows; ${cat.sections.length} Pathways + ${programBands} Programs`);
-  step("C11.10 BR-7 P-180: a row carries the name, the trail above it, the progress and the one button", (await listRow.locator("[data-name]").textContent()) === nameOf(live) && trailOf(live).join(" › ").startsWith(await listRow.locator("[data-trail]").textContent()) && (await listRow.locator("[data-progress]").textContent()) === "Live" && await listRow.locator("[data-step-cell] [data-card-button]").count() === 1, await listRow.innerText());
+  step("C11.10 BR-7 P-180: a row carries the name, the trail above it, the progress and the one button", (await listRow.locator("[data-name]").textContent()) === nameOf(live) && trailOf(live).join(" › ").startsWith(await listRow.locator("[data-trail]").textContent()) && /^Live( · next release \d to do)?$/.test(await listRow.locator("[data-progress]").textContent()) /* QA-184 */ && await listRow.locator("[data-step-cell] [data-card-button]").count() === 1, await listRow.innerText());
   await state("list-view");
   await p.reload(); await ready();
   step("C11.10: the List choice is remembered for this person after a reload", await p.locator('[role="grid"][aria-label="Combinations"]').count() === 1 && !/[?&]v=/.test(p.url()));

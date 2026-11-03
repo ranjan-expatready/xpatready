@@ -247,7 +247,11 @@ function summaryOf(k: StepKey, s: SetupInput, c: Counts, done: boolean): string 
   if (k === "people") return `${plural(c.people, "person role")}, ${plural(c.applicants, "applicant role")}`;
   if (k === "forms") return `${formsWords({ total: c.forms, setUp: c.formsSetUp })}${c.held ? ` · ${plural(c.held, "new edition")} held` : ""}`;
   if (k === "questions_documents") return `${plural(c.documents, "document")} · ${questionsWords(c.questions)}`;
-  return done ? `Released as Release ${s.release!.number}` : s.release ? `${plural(s.changes, "change")} since Release ${s.release.number}` : "Not released yet";
+  // QA-184: what blocks release, the same number as the Review and release tab's "to fix" and To review's row (each
+  // problem's own step still lists it to fix there).
+  const blocking = s.problems.filter((p) => p.level === "error" && !waitsForMap(p)).length;
+  const base = done ? `Released as Release ${s.release!.number}` : s.release ? `${plural(s.changes, "change")} since Release ${s.release.number}` : "Not released yet";
+  return blocking ? `${base} · ${plural(blocking, "problem")} block${blocking === 1 ? "s" : ""} release` : base;
 }
 
 const WAITING_FOR: Record<"author" | "sme" | "approve" | "review", string> = { author: "the configuration author", sme: "the immigration expert", approve: "a second person", review: "a content publisher" };

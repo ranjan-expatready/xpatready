@@ -4,7 +4,8 @@
 // evidence qa/reports/2026-11-03-explore/x-live-*), the header, the Overview strip, the Programs card and list, the tab
 // counts and GET /catalogue's progress must agree. Before: Overview "Live · setup steps for the next release: 0 of 5
 // done" beside a card that read "✓ Live" with nothing more, /catalogue "Step 2 of 4: Draft" (four steps beside five),
-// and the Review and release tab "17 to fix" while its own step on Overview listed no problem. A browser at 1440 px plus
+// and the Review and release tab "17 to fix" while its own step on Overview said nothing of them (now the row says
+// "17 problems block release", the number To review's row and the tab say, UX-A part 2). A browser at 1440 px plus
 // the API underneath; no model call (US$0).
 //   zsh studio/tools/isolated.sh screens_qa184 4621 start && node studio/tests/check_qa184_live_state_browser.cjs 4621 xr_studio_screens_qa184
 const { chromium } = require("../node_modules/playwright");
@@ -30,7 +31,8 @@ const KEYS = ["pages", "people", "forms", "questions_documents", "release"];
     step("setup: With an LMIA is Live at Release 1 with draft changes and open steps for the next release", del.status < 300 && setup?.chip?.status === "LIVE" && setup.chip.release === 1 && sum.changes > 0 && setup.bar.done < 5, { del: del.status, chip: setup?.chip, changes: sum?.changes, done: setup?.bar?.done });
     const open = 5 - setup.bar.done, words = `Next release: ${open} of 5 step${open === 1 ? "" : "s"} to do`;
     const items = setup.steps.flatMap((s) => s.open);
-    const fixOnRelease = (setup.steps.find((s) => s.key === "release")?.open ?? []).filter((i) => i.kind === "fix_problems").reduce((t, i) => t + i.count, 0);
+    const releaseStep = setup.steps.find((s) => s.key === "release");
+    const blocking = Number((releaseStep?.summary.match(/(\d+) problems? blocks? release/) ?? [0, 0])[1]);
 
     // ── the API: one count of the same five steps
     step("pass: the checklist says Live first, then the next release's one count (bar.next)", setup.bar.text === "✓ Live" && setup.bar.next === words, setup.bar);
@@ -50,10 +52,11 @@ const KEYS = ["pages", "people", "forms", "questions_documents", "release"];
     const tab = (k) => tabs.find((t) => t.startsWith(k)) ?? "";
     const n = (t, w) => Number((t.match(new RegExp(`(\\d+) ${w}`)) ?? [0, 0])[1]);
     const reviewTab = tab("Review and release");
-    step("pass: the Review and release tab counts only the problems its own step lists (the Overview's Review and release row)", n(reviewTab, "to fix") === fixOnRelease && (fixOnRelease ? true : reviewTab.trim() === "Review and release"), { reviewTab, fixOnRelease });
-    const tabSum = ["Forms", "Smart questionnaire", "Documents", "Review and release"].reduce((t, k) => t + n(tab(k), "to do") + n(tab(k), "to fix"), 0);
-    const itemSum = items.filter((i) => i.kind !== "view_ai" && !["submit", "sign", "release"].includes(i.kind)).reduce((t, i) => t + i.count, 0);
-    step("pass: the tab counts add up to the open items the Overview lists, each counted once", tabSum === itemSum, { tabs, tabSum, itemSum });
+    const rowText = (await p.locator("[data-setup-strip] li").last().innerText()).replace(/\s+/g, " ");
+    step("pass: the Review and release tab's \"to fix\" is the number its Overview row says blocks release", blocking > 0 && n(reviewTab, "to fix") === blocking && rowText.includes(`${blocking} problems block release`), { reviewTab, row: rowText.slice(0, 160) });
+    const setupTabs = ["Forms", "Smart questionnaire", "Documents"].reduce((t, k) => t + n(tab(k), "to do"), 0);
+    const itemSum = setup.steps.filter((s) => s.key !== "release").flatMap((s) => s.open).filter((i) => i.kind !== "view_ai").reduce((t, i) => t + i.count, 0);
+    step("pass: the setup tabs' \"to do\" add up to the open items the Overview's steps list, each counted once", setupTabs === itemSum, { tabs, setupTabs, itemSum });
     // The Overview's links say the same numbers (Review 95 proposals, Fix 3 problems, Fix 14 problems).
     const links = (await p.locator("[data-setup-strip] a").allTextContents()).join(" · ");
     step("pass: each problem count on the Overview is a step's own (Fix 3 problems · Fix 14 problems) and the tabs carry the same numbers", items.filter((i) => i.kind === "fix_problems").every((i) => links.includes(i.text)) && n(tab("Documents"), "to do") >= 3, links.slice(0, 200));

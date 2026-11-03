@@ -123,11 +123,6 @@ export function tabCounts(setup: { steps: { tab?: string; open: { focus: string;
   for (const s of setup?.steps ?? []) for (const i of s.open) { const t = tabOfFocus(i.focus, s.tab); if (t) out[t] += i.count; }
   return out;
 }
-/** QA-184: the Review and release tab's "to fix", the problems its own step lists (the Overview's "Fix N problems" on
- *  Review and release), so the tab and the step say one number; problems on other steps count on their own tabs. */
-export function reviewFixCount(setup: { steps: { key: StepKey; open: { kind: string; count: number }[] }[] } | null | undefined): number {
-  return (setup?.steps.find((s) => s.key === "release")?.open ?? []).filter((i) => i.kind === "fix_problems").reduce((t, i) => t + i.count, 0);
-}
 /** UX-A part 1 (review m1): the steps whose open items land on each tab, in step order, so a tab's badge can say whose
  *  items it counts ("Official pages, Who can be in this application"). */
 export function tabSteps(setup: { steps: { key: StepKey; tab?: string; open: { focus: string }[] }[] } | null | undefined): Record<BadgeTab, StepKey[]> {
