@@ -62,8 +62,9 @@ const LAUNCHER = launcherFor(process.env.STUDIO_FAKE_LAUNCHER, VAR_ROOT);
 export const usesFakeLauncher = () => LAUNCHER === FAKE_LAUNCHER;
 /** Induced missing saved answer (isolated test server only, like STUDIO_FAULT_SOURCE): STUDIO_HIDE_SAVED_RUNS="<text>"
  *  hides the saved runs whose file name contains it, so a form with a part missing can be tested without touching the
- *  committed runs. Ignored outside an isolated copy's own working folder. Hiding only makes a form wait; it never spends. */
-const hiddenRun = (f: string) => { const h = process.env.STUDIO_HIDE_SAVED_RUNS; return !!h && /[/\\]isolated-[a-z0-9_]+$/.test(VAR_ROOT) && f.includes(h); };
+ *  committed runs. Honoured only on an isolated copy with the stand-in launcher and live AI off (review, Opus m3), so
+ *  hiding a saved answer only makes a form wait; it never turns a free step into a paid one. */
+const hiddenRun = (f: string) => { const h = process.env.STUDIO_HIDE_SAVED_RUNS; return !!h && /[/\\]isolated-[a-z0-9_]+$/.test(VAR_ROOT) && usesFakeLauncher() && !aiLive() && f.includes(h); };
 /** Lead Critical 29 Oct (qa spent US$0.27 by one click on a test copy): every live AI call of this server (finder rounds,
  *  guide pick, field-map drafting, Who can be, anything through the launcher) needs the explicit switch
  *  STUDIO_AI_LIVE=approved at server start. isolated.sh and run-suites.sh never set it; a check that tests a live path
@@ -242,7 +243,12 @@ export class Sources {
     const ledger = this.ledger();
     const inventory = this.inventoryOf(a);
     const invSha = inventory ? sha(readFileSync(join(SOLUTION, inventory))) : undefined;
-    return { job_id: jobId, model: DRAFT_MODEL, saved_runs: jobId ? this.savedRuns(jobId, invSha).map(({ envelope: _e, ...r }) => r) : [], key_present: existsSync(join(ROOT, ".tools", "solution-1-prototype", "secrets", "anthropic.env")), ledger };
+    const saved_runs = jobId ? this.savedRuns(jobId, invSha).map(({ envelope: _e, ...r }) => r) : [];
+    // A form drafted in parts (A4) is saved part by part: Saved uses them when every part has a saved answer (as the plan
+    // does; Ai.plan REPLAY), so the dialog offers it at US$0 instead of only Live (review, Opus Major 2).
+    const split = jobId && inventory && !saved_runs.some((r) => r.valid || r.recheckable) ? await this.draftSplit(a, await this.printedEdition(a), false) : null;
+    const saved_parts = split?.parts.length ? { parts: split.parts.length, saved: split.parts.filter((p) => p.saved_run).length } : null;
+    return { job_id: jobId, model: DRAFT_MODEL, saved_runs, saved_parts, key_present: existsSync(join(ROOT, ".tools", "solution-1-prototype", "secrets", "anthropic.env")), ledger };
   }
 
   ledger() {
@@ -413,7 +419,7 @@ export class Sources {
       if (mode === "saved") {
         const sp = parts.find((x) => x.index === s.index)!;
         if (sp.saved_run) { s.status = "done"; s.saved = true; s.run_file = `prototype/p2/runs/${sp.saved_run}`; }
-        else { s.status = "failed"; s.error = "no saved AI answer for exactly this part now (the library changed since the plan); nothing was sent"; }
+        else { s.status = "failed"; s.error = "no saved AI answer for exactly this part now (its saved file is gone, or the library changed since the plan); nothing was sent"; }
         return;
       }
       const stub = await this.launchOnce(s.job_id, "stub"), sj = lastJson(stub.out);
@@ -440,7 +446,7 @@ export class Sources {
       if (!(await this.db.draftingJob.findUnique({ where: { id } }))) return; // removed by a reset while running
       const cost = Math.round(state.reduce((x, s) => x + s.cost_usd, 0) * 100) / 100;
       if (state.some((s) => s.status === "not started")) {
-        await this.db.draftingJob.update({ where: { id }, data: { status: "CANCELLED", costUsd: cost, finishedAt: new Date(), message: `Cancelled: ${state.filter((s) => s.status === "done").length} of ${parts.length} parts ran before the cancel; the rest were not sent. Nothing was applied. Cost US$${cost.toFixed(2)}.` } });
+        await this.db.draftingJob.update({ where: { id }, data: { status: "CANCELLED", costUsd: cost, finishedAt: new Date(), message: `Cancelled: ${state.filter((s) => s.status === "done").length} of ${parts.length} parts ran before the cancel; ${mode === "saved" ? "Saved never calls the AI" : "the rest were not sent"}. Nothing was applied. Cost US$${cost.toFixed(2)}.` } });
         return;
       }
       const failed = state.filter((s) => s.status !== "done");
@@ -686,7 +692,7 @@ export class Sources {
     const n = (o: string) => items.filter((i) => i.outcome === o).length;
     const needsPerson = (rec.conversion?.needs_person ?? []).length;
     const counts = { needs_person: needsPerson, boxes: out.entries.length, mapped: out.entries.filter((e: any) => e.outcome === "mapped").length, unresolved: out.entries.filter((e: any) => e.outcome === "unresolved").length, never_filled: out.entries.filter((e: any) => e.outcome === "never_filled").length, not_a_fact: out.entries.filter((e: any) => e.outcome === "not_a_fact").length, proposed_fields: items.length, reuse: n("REUSE"), new: n("NEW"), ambiguous: n("AMBIGUOUS"), conflict: n("CONFLICT") };
-    await this.db.draftingJob.update({ where: { id: jobId }, data: { status: "COMPLETED", finishedAt: opts.recompare ? job.finishedAt : new Date(), message: `${job.mode === "REPLAY" ? `Saved AI answer${rec.reconverted ? ", re-checked with today's rules" : ""} (no model call, US$0). ` : `${rec.merged && !rec.merged.parts.length ? `Every form field reused from ${rec.merged.reused_from.join(", ")} without AI (US$0)` : "Live AI draft"}${rec.merged?.parts.length ? ` in ${rec.merged.parts.length} parts${rec.merged.reused ? `, ${rec.merged.reused} form fields reused without AI` : ""}${rec.merged.near_duplicates.length ? `, ${rec.merged.near_duplicates.length} near-duplicate names flagged` : ""}` : ""}. `}${counts.mapped} of ${counts.boxes} form fields mapped${needsPerson ? ` (${needsPerson} sent to a person: field name or entry rules)` : ""}; ${counts.proposed_fields} fields: ${counts.reuse} reuse, ${counts.new} new, ${counts.ambiguous} ambiguous, ${counts.conflict} conflicting.`, detail: { ...(job.detail as any), counts, form_edition_drafted: out.form_edition, conversion: rec.conversion ?? null, label: rec.label, usage: rec.drafting_run?.usage ?? null, prompt: rec.drafting_run?.settings?.prompt_version, library_revision: revision, ...(opts.recompare ? { recompared: { at: new Date().toISOString(), by: opts.recompare.id, kept, reopened } } : {}) } } });
+    await this.db.draftingJob.update({ where: { id: jobId }, data: { status: "COMPLETED", finishedAt: opts.recompare ? job.finishedAt : new Date(), message: `${job.mode === "REPLAY" ? `Saved AI answer${rec.merged?.parts.length ? `s of its ${rec.merged.parts.length} parts${rec.merged.reused ? `, ${rec.merged.reused} form fields reused without AI` : ""}${rec.merged.near_duplicates.length ? `, ${rec.merged.near_duplicates.length} near-duplicate names flagged` : ""}` : ""}${rec.reconverted ? ", re-checked with today's rules" : ""} (no model call, US$0). ` : `${rec.merged && !rec.merged.parts.length ? `Every form field reused from ${rec.merged.reused_from.join(", ")} without AI (US$0)` : "Live AI draft"}${rec.merged?.parts.length ? ` in ${rec.merged.parts.length} parts${rec.merged.reused ? `, ${rec.merged.reused} form fields reused without AI` : ""}${rec.merged.near_duplicates.length ? `, ${rec.merged.near_duplicates.length} near-duplicate names flagged` : ""}` : ""}. `}${counts.mapped} of ${counts.boxes} form fields mapped${needsPerson ? ` (${needsPerson} sent to a person: field name or entry rules)` : ""}; ${counts.proposed_fields} fields: ${counts.reuse} reuse, ${counts.new} new, ${counts.ambiguous} ambiguous, ${counts.conflict} conflicting.`, detail: { ...(job.detail as any), counts, form_edition_drafted: out.form_edition, conversion: rec.conversion ?? null, label: rec.label, usage: rec.drafting_run?.usage ?? null, prompt: rec.drafting_run?.settings?.prompt_version, library_revision: revision, ...(opts.recompare ? { recompared: { at: new Date().toISOString(), by: opts.recompare.id, kept, reopened } } : {}) } } });
     if (opts.recompare) await this.audit.log(job.workspaceId, opts.recompare.id, "re-compared", "AI draft", job.runId, `${opts.recompare.name} compared ${a.edition}'s AI draft with the current library again (no AI call): ${kept} decisions kept, ${reopened} to decide again`);
     await this.db.sourceAttachment.update({ where: { id: a.id }, data: { status: "DRAFTED", statusDetail: `AI draft ready to review: ${counts.reuse} reuse, ${counts.new} new, ${counts.ambiguous} ambiguous, ${counts.conflict} conflicting.` } });
     return this.job(jobId);

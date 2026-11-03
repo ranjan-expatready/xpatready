@@ -154,7 +154,7 @@ export class Ai implements OnModuleInit {
             // A form drafted in parts (A4) is saved part by part: Saved uses those parts when every part has a valid saved
             // answer for exactly its inputs, and is assembled as a live draft in parts would be (no model call, US$0). A
             // form with a part missing keeps waiting: never half-filled.
-            const split = inventoryFile && !read_first ? await this.sources.draftSplit(a, await this.sources.printedEdition(a), false) : null;
+            const split = inventoryFile ? await this.sources.draftSplit(a, await this.sources.printedEdition(a), false) : null;
             const savedParts = split?.parts.filter((p) => p.saved_run).length ?? 0;
             if (split && split.parts.length && savedParts === split.parts.length) {
               const a4 = { total: split.plan.total, reused: split.plan.reused.length, reused_from: split.reusedFrom, to_ai: split.plan.leftover, parts: split.parts.map((p) => ({ index: p.index, sections: p.sections, fields: p.fields, worst_usd: 0, saved_answer: true, repeats_failed_run: null })) };

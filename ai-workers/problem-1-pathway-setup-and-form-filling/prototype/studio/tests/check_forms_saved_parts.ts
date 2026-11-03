@@ -10,7 +10,7 @@
 // Exit: 0 all pass · 1 a check failed · 2 setup missing (copy, sample, IMM 5645's saved parts).
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { LEDGER_DIR } from "../../p2/policy.ts";
 import { checkCopy, RUNS, sqlFor, stop } from "../acceptance/lib/pack1.ts";
@@ -18,7 +18,7 @@ import { checkCopy, RUNS, sqlFor, stop } from "../acceptance/lib/pack1.ts";
 const PORT = Number(process.argv[2] ?? 4462), DB = process.argv[3] ?? "xr_studio_forms_parts", NAME = DB.replace(/^xr_studio_/, "");
 const STUDIO = join(import.meta.dirname, "..");
 const FAKE = "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs";
-const FAKE_LOG = join(STUDIO, "var", `isolated-${NAME}`, "fake-launch.log");
+const VAR = join(STUDIO, "var", `isolated-${NAME}`), FAKE_LOG = join(VAR, "fake-launch.log");
 const FORM = "IMM 5645 (01-2021)", HIDE = "imm5645e-p3of4";
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${!c && detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 400)}` : ""}`); };
@@ -58,6 +58,9 @@ const proposals = () => n(`select count(*) from proposal_item where form_edition
   if (parts.length !== 4) stop(`IMM 5645's four saved parts are not in p2/runs (found ${parts.length}); they come from the C11.8 live run (#746)`);
   const ai = (await call("GET", "/session")).body?.ai;
   if (ai?.live !== false || ai?.launcher !== "stand-in") stop(`start this copy without the live switch and with the stand-in launcher (see the run line); GET /session → ai: ${JSON.stringify(ai)}`);
+  // The stand-in launcher answers and logs every call (review, Opus m4: without a scenario it stopped before logging, so
+  // "never asked" could not fail): any stub pass or live call made by Saved shows in its log.
+  writeFileSync(join(VAR, "fake-launch.json"), JSON.stringify({ stub: { exit: 0, out: { ok: true } }, live: { exit: 1, err: "the stand-in launcher was asked for a live call" } }));
   const shared0 = sharedLedger(), calls0 = launcherCalls();
 
   // ── Pass: every part saved
@@ -73,6 +76,8 @@ const proposals = () => n(`select count(*) from proposal_item where form_edition
   const t = plan?.targets?.[0];
   ok("P-227 pass: Saved on the form itself says it uses the saved answers of each of its 4 parts, US$0", t?.action === "reuse_saved_output" && /each of its 4 parts/.test(t.why) && t.a4?.parts?.length === 4 && plan?.totals?.worst_usd === 0, t && { action: t.action, why: t.why });
   ok("US$0: the launcher was never asked (no stub pass, no live call)", launcherCalls() === calls0, { calls: launcherCalls() - calls0 });
+  const o = (await call("GET", `/attachments/${A}/draft-options`)).body;
+  ok("P-227 pass (review, Opus Major 2): the form's own Draft with AI dialog is told all 4 parts are saved, so it offers Saved, not only Live", JSON.stringify(o?.saved_parts) === JSON.stringify({ parts: 4, saved: 4 }) && !(o?.saved_runs ?? []).some((r: { valid: boolean }) => r.valid), o?.saved_parts);
 
   // ── Fail (plan): a part missing when the plan is made
   induced = true;
@@ -83,6 +88,8 @@ const proposals = () => n(`select count(*) from proposal_item where form_edition
   ok("C11.7 fail: never half-filled: no Saved step and no AI proposal for IMM 5645", jobsOf(A).length === 0 && proposals() === 0, { jobs: jobsOf(A), proposals: proposals() });
   const why = (await call("POST", "/ai/plan", { scope: { kind: "source", ids: [A] }, mode: "REPLAY", draftAgain: true })).body?.targets?.[0];
   ok("P-227 fail: Saved says in words that only 3 of its 4 parts have a saved answer", why?.action === "not_eligible" && /3 of its 4 parts only/.test(why.why) && /never half-filled/.test(why.why), why);
+  const o3 = (await call("GET", `/attachments/${A}/draft-options`)).body;
+  ok("P-227 fail: the form's own dialog is told only 3 of its 4 parts are saved (Saved stays closed there)", JSON.stringify(o3?.saved_parts) === JSON.stringify({ parts: 4, saved: 3 }), o3?.saved_parts);
   const q0 = n(`select count(*) from drafting_job`);
   const r = await call("POST", `/attachments/${A}/draft`, { mode: "replay", idempotencyKey: `parts-fail-${Date.now()}` });
   ok("P-227 fail: a Saved start for it is refused in those words; nothing is queued", r.status === 400 && /3 of its 4 parts only/.test(words(r)) && n(`select count(*) from drafting_job`) === q0, { status: r.status, m: words(r).slice(0, 160) });
