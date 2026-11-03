@@ -53,8 +53,9 @@
 // Not yet through the resolver (file:line on the SH3 tidy-up's base, main 4cc6d2be):
 //  (a) Conditions of other line types (engine/render.ts): a form's on the form's own person (:98, :162); a rule's holders
 //      from its condition's subject kind (:199); a question's on the person the answer is about (:216); a check's on
-//      everyone who applies, an applying representative or sponsor included, unlike R2's each_applicant (:254); and
-//      `applicants` (:234) is a second copy of R2's each_applicant. C7.7 mixes forms and documents: bring these into R3.
+//      everyone who applies, an applying representative or sponsor included, unlike R2's each_applicant (:254). C7.7
+//      mixes forms and documents: bring these into R3. (M1, 3 Nov: render's `applicants` copy of R2 and its "case"
+//      literals now come from the resolver; the rule's subjects at :199 were already R2's rule case.)
 //  (b) Whom a document's facts are about (holder, holder.spouse, parent_1/parent_2): engine/sources.ts:47-52 and its
 //      role-level twin other() at :267; C6.5's document reader needs it as a resolver rule. Also local there: isAgentFact
 //      (:91), WHO_OF_ROLE (:230, the reverse of WHO_ROLES) and `h === "case"` literals.
