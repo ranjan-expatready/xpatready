@@ -69,7 +69,9 @@ const proposals = () => n(`select count(*) from proposal_item where form_edition
   const jobs = jobsOf(A);
   const job = sql(`select coalesce(cost_usd, -1) || '|' || (detail->'a4'->'parts')::text from drafting_job where attachment_id='${A}' and kind='field_map' and mode='REPLAY'`).split("|");
   const partState = JSON.parse(job.slice(1).join("|") || "[]") as { status: string; saved: boolean; cost_usd: number }[];
-  ok("C11.7 pass: Load sample uses IMM 5645's four saved parts: no form waits for Draft with AI", JSON.stringify(l.drafts?.waiting_for_draft_with_ai) === "[]", l.drafts);
+  // Only IMM 5645 is judged here: other forms of the six wait for their own paid runs (check_s7_load.ts names them).
+  const waits = (d: { waiting_for_draft_with_ai?: string[] } | undefined) => d?.waiting_for_draft_with_ai ?? null;
+  ok("C11.7 pass: Load sample uses IMM 5645's four saved parts: it is not among the forms waiting for Draft with AI", Array.isArray(waits(l.drafts)) && !waits(l.drafts)!.includes(FORM), l.drafts);
   ok("C11.7 pass: IMM 5645 is one Saved step, completed at US$0, its four parts each from a saved answer", JSON.stringify(jobs) === JSON.stringify(["REPLAY/COMPLETED"]) && Number(job[0]) === 0 && partState.length === 4 && partState.every((p) => p.status === "done" && p.saved && p.cost_usd === 0), { jobs, cost: job[0], parts: partState });
   ok("C11.7 pass: its answer reaches the review queue as AI proposals, like any saved answer", proposals() > 0, proposals());
   const plan = (await call("POST", "/ai/plan", { scope: { kind: "source", ids: [A] }, mode: "REPLAY", draftAgain: true })).body;
@@ -84,7 +86,7 @@ const proposals = () => n(`select count(*) from proposal_item where form_edition
   await restart(`STUDIO_HIDE_SAVED_RUNS=${HIDE}`);
   l = await load();
   A = att();
-  ok("C11.7 fail: with one of the four parts missing, IMM 5645 waits for Draft with AI, named", JSON.stringify(l.drafts?.waiting_for_draft_with_ai) === JSON.stringify([FORM]), l.drafts);
+  ok("C11.7 fail: with one of the four parts missing, IMM 5645 waits for Draft with AI, named", !!waits(l.drafts)?.includes(FORM), l.drafts);
   ok("C11.7 fail: never half-filled: no Saved step and no AI proposal for IMM 5645", jobsOf(A).length === 0 && proposals() === 0, { jobs: jobsOf(A), proposals: proposals() });
   const why = (await call("POST", "/ai/plan", { scope: { kind: "source", ids: [A] }, mode: "REPLAY", draftAgain: true })).body?.targets?.[0];
   ok("P-227 fail: Saved says in words that only 3 of its 4 parts have a saved answer", why?.action === "not_eligible" && /3 of its 4 parts only/.test(why.why) && /never half-filled/.test(why.why), why);
