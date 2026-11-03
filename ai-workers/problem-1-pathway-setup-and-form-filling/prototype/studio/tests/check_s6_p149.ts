@@ -240,11 +240,17 @@ const item = (payload: any, over: any = {}) => ({ kind: payload.kind, runId: RUN
   ok("C3.2 reuse pass: accepting a reuse adds nothing to the library; it records the item it reuses", r.status === 201 && r.body.items[0].landedAs === "person.family_name" && sql("select count(*) from canonical_field") === fields0 && sql("select count(*) from library_change") === changes0, r.body);
   const fmCombo = sql(`select combination_id from drafting_job where id = '${jobId}'`);
   const [fm2] = await P.insertProposals(db, ws, [field("Field map item two", { runId: jobId, step: "field_map", scope: { formEdition: "IMM 0000 (01-2026)", combinationId: fmCombo }, work: { proposedKey: "person.field_map_item_two", outcome: "NEW" } })]);
-  r = await call("POST", "/review/proposals/decide", { ids: [fm2], action: "accept" }, "user-B");
-  ok("C11.13 queue fail: a field-map item is decided on its form-field page, not here (409)", r.status === 409 && /form-field page/.test(r.body.message), r.body);
+  // G-CORE B5 (P-288 (2)): a field-map item is listed with the link to its form-field page; a Ready one (both rounds
+  // agree, rules pass) is chosen in bulk like any item, and accepting it here is its page's Accept (nothing in the library
+  // before its draft is applied); it is rejected or edited on its page.
   r = await call("GET", `/review/proposals?group=${encodeURIComponent("edition:IMM 0000 (01-2026)")}`);
   const fmView = [...(r.body.group?.bands.ready ?? []), ...(r.body.group?.bands.check ?? []), ...(r.body.group?.bands.decide ?? [])].find((x: any) => x.id === fm2);
-  ok("C11.13 queue pass: a field-map item is listed with the link to its form-field page and is never chosen in bulk", fmView?.decide_on === `/c/${fmCombo}/jobs/${jobId}` && !!fmView.bulk_why, fmView);
+  ok("C11.13 queue pass (P-288 (2)): a Ready field-map item is listed with the link to its form-field page and may be chosen in bulk", fmView?.decide_on === `/c/${fmCombo}/jobs/${jobId}` && fmView.bulk_why === null, fmView);
+  r = await call("POST", "/review/proposals/decide", { ids: [fm2], action: "reject", reason: "not this one" }, "user-B");
+  ok("C11.13 queue fail: a field-map item is rejected on its form-field page, not here (409)", r.status === 409 && /form-field page/.test(r.body.message), r.body);
+  const fields1 = sql("select count(*) from canonical_field"), changes1 = sql("select count(*) from library_change");
+  r = await call("POST", "/review/proposals/decide", { ids: [fm2], action: "accept" }, "user-B");
+  ok("C11.13 queue pass (P-288 (2)): accepting a field-map item here is its page's Accept: the choice is recorded, nothing added to the library before the draft is applied", r.status === 201 && sql(`select status || '|' || choice from proposal_item where id = '${fm2}'`) === "accepted|ACCEPTED" && sql("select count(*) from canonical_field") === fields1 && sql("select count(*) from library_change") === changes1, r.body);
   // Owed from 1a: an approved answer list ADD publishes with the release.
   const listChange = sql(`select id from library_change where kind = 'answer_list' and batch_id = '${d1.batchId}'`);
   r = await call("POST", `/library/changes/${listChange}/approve`, {}, "user-B");
