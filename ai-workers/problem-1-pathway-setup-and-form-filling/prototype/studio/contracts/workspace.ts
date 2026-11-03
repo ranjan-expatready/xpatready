@@ -215,7 +215,13 @@ export const OUTPUT_GROUPS = [
   { key: "APPLICATION", title: "Filed once for the application" },
 ] as const;
 export type OutputGroup = (typeof OUTPUT_GROUPS)[number]["key"];
-export type PreviewForm = { form: string; title: string; applies: boolean | "cannot_tell"; why: string; channel: string; channelWords: string; noRule: boolean; group: OutputGroup };
+/** C4.6 (IRCC-P2-06, P2-09): who signs a form for this person and how, in words ("A parent or legal guardian, for them
+ *  (under 18)" · "By hand on the printed PDF, then scanned and uploaded"); null when nobody signs it. */
+export type PreviewSign = { by: string; how: string };
+export type PreviewForm = { form: string; title: string; applies: boolean | "cannot_tell"; why: string; channel: string; channelWords: string; noRule: boolean; group: OutputGroup;
+  /** C4.6 extras (engine/runtime/preview.ts outputOf): the line's signature, whether it is a PDF to sign, the later-wave words of an Online line, a checklist. */
+  signature?: string; signatureWords?: string; toSign?: boolean; laterWave?: string | null; checklist?: boolean;
+  sign: PreviewSign | null };
 /** C4.3 (board v2 frame 4): the three sets for one person. PQR: the ticked pre-qualification questions (no verdict shown,
  *  P-77). SQR: the client's questionnaire (`questionnaire`), with what documents fill instead. Agent view: every question
  *  for the person with where its answer comes from. `from` is in words: "Client", "Case officer", "Document · Passport". */
