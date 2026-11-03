@@ -100,7 +100,7 @@ export class ReviewProposals {
       source: src ? { file: src.file, edition: src.edition ?? null, page: src.page ?? null, quote: src.quote, quote_found: !!src.quoteFound, rule: src.rule ?? null } : null,
       rules: (r.rules as QueueProposal["rules"]) ?? [], near: id.near ?? [], near_reason: id.nearReason ?? null, basis: r.basis as "SAMPLE" | "EXPERT",
       bulk_why: bulkWhy(r), near_reason_needed: needsNearReason(r, pool, reuses),
-      near_reason_needed_check: (rounds?.check as { payload?: unknown } | undefined)?.payload ? needsNearReasonForEdit(r, (rounds!.check as { payload: unknown }).payload, pool, pending, reuses) : false, decide_on: ON_ITS_PAGE.has(r.step) && r.combinationId ? `/c/${r.combinationId}/jobs/${r.runId}` : null, created_at: r.createdAt.toISOString() };
+      near_reason_needed_check: (rounds?.check as { payload?: unknown } | undefined)?.payload ? needsNearReasonForEdit(r, (rounds!.check as { payload: unknown }).payload, pool, pending) : false, decide_on: ON_ITS_PAGE.has(r.step) && r.combinationId ? `/c/${r.combinationId}/jobs/${r.runId}` : null, created_at: r.createdAt.toISOString() };
   }
 
   async decide(actor: Actor, body: unknown) {

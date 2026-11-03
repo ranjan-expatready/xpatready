@@ -308,10 +308,9 @@ export function needsNearReason(r: Pick<Row, "id" | "identity" | "origin" | "lan
 /** QA-192 (Devin r2 on #726, m-check): whether accepting `payload` as an edit of this item (the checker's reading on the
  *  queue) needs a person's reason: the same check decide() makes on an edit (the new name against the library and the
  *  other new fields waiting, never resting on the proposer's reason for the old name). */
-export function needsNearReasonForEdit(r: Pick<Row, "id" | "landsOn" | "step" | "reuse" | "work" | "kind">, payload: unknown, libraryPool: NearPool, pending: (NearPool[number] & { id: string })[], twinReuses?: Set<string>): boolean {
-  const reuse = (r.reuse ?? {}) as { match?: string; existingKey?: string | null };
-  const adds = reuse.match === "new" || (reuse.match === "reuse" && !reuse.existingKey && !!(r.work as { twinOf?: string } | null)?.twinOf && !twinReuses?.has(r.id));
-  if (r.kind !== "field" || r.landsOn !== "library" || ON_ITS_PAGE.has(r.step) || !adds) return false;
+export function needsNearReasonForEdit(r: Pick<Row, "id" | "landsOn" | "step" | "kind">, payload: unknown, libraryPool: NearPool, pending: (NearPool[number] & { id: string })[]): boolean {
+  // Devin r3 on #726: an edit always lands its reading as a new item (a twin or a reuse match included), as decide() checks it.
+  if (r.kind !== "field" || r.landsOn !== "library" || ON_ITS_PAGE.has(r.step)) return false;
   return nearIn([...libraryPool, ...pending.filter((x) => x.id !== r.id)], { work: null }, payload).length > 0;
 }
 
@@ -636,7 +635,9 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         // Review M3: a plain accept compares with the library only (a waiting item proposed later carries the pair itself);
         // an edit's new name is compared with the waiting new fields too. Review r2 m2: an edit never rests on the
         // proposer's reason for the old name.
-        if (r.landsOn === "library" && !ON_ITS_PAGE.has(r.step) && reuse.match === "new" && (d.action === "edit" || !personNearReason(r))) {
+        // Devin r3 on #726: an edit always lands its reading as a new item (only an accept reuses), so every edit that lands
+        // on the library is checked, a resolved twin or a reuse match included.
+        if (r.landsOn === "library" && !ON_ITS_PAGE.has(r.step) && (d.action === "edit" || (reuse.match === "new" && !personNearReason(r)))) {
           let found: string[] = [];
           if (r.kind === "field") {
             libPool ??= await libraryNearPool(tx, workspaceId);

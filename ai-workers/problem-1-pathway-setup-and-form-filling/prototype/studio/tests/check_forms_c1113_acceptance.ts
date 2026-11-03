@@ -156,6 +156,17 @@ run(async () => {
   const rBView = [...(ed2Group?.bands?.ready ?? []), ...(ed2Group?.bands?.check ?? []), ...(ed2Group?.bands?.decide ?? [])].find((x: { id: string }) => x.id === rB);
   r = await call("POST", "/review/proposals/decide", { ids: [rB], action: "accept" }, AUTHOR);
   ok("QA-192 pass (Devin r3 on #726): a near twin whose first copy was accepted shows no reason needed, and is accepted without one as a reuse of that item", accA.status === 201 && rBView?.near_reason_needed === false && r.status === 201 && r.body?.items?.[0]?.landedAs === accA.body?.items?.[0]?.landedAs, [accA.status, rBView?.near_reason_needed, r.status, words(r)]);
+  // Devin r3 (red) on #726: an edit lands its reading as a new item even for a twin whose first copy landed, so the
+  // checker's reading close to another library field still needs a person's reason, on the queue and on the server.
+  const dep = `${fam} on departure`, rd3 = (label: string) => ({ reading: `${label} (test)`, payload: payload(label), from: "replay", runFile: "runs/test.json", costUsd: 0 });
+  const eA = (await tryInsert(item("Hull paint shade"))).ids[0];
+  const eB = (await tryInsert(ed2("Hull paint shade"))).ids[0];
+  await call("POST", "/review/proposals/decide", { ids: [eA], action: "accept" }, AUTHOR);
+  sql(`update proposal_item set confidence = 'decide', agreement = 'differ', rounds = '${JSON.stringify({ draft: rd3("Hull paint shade"), check: rd3(dep) }).replace(/'/g, "''")}'::jsonb where id = '${eB}'`);
+  const g3 = (await call("GET", `/review/proposals?group=${encodeURIComponent("edition:IMM 5257 Schedule 1 (test)")}`)).body?.group;
+  const eBView = [...(g3?.bands?.ready ?? []), ...(g3?.bands?.check ?? []), ...(g3?.bands?.decide ?? [])].find((x: { id: string }) => x.id === eB);
+  r = await call("POST", "/review/proposals/decide", { ids: [eB], action: "edit", payload: payload(dep) }, AUTHOR);
+  ok("QA-192 fail (Devin r3 on #726): editing a twin whose first copy landed to a name close to a library field is refused without a reason (400); the queue says the checker's reading needs one", !!eB && eBView?.near_reason_needed_check === true && r.status === 400 && words(r).includes(fam), [eBView?.near_reason_needed_check, r.status, words(r)]);
   // Devin r2 on #726: the checker's reading has its own "reason needed", the one decide() applies to that edit.
   const rd = (label: string) => ({ reading: `${label} (test)`, payload: payload(label), from: "replay", runFile: "runs/test.json", costUsd: 0 });
   const dv = (await tryInsert(item("Ferry hull colour", { confidence: "decide", agreement: "differ", reason: "The two readings differ (test).", rounds: { draft: rd("Ferry hull colour"), check: rd(`${fam} at sea`) } }))).ids[0];
