@@ -5,12 +5,13 @@
 // Founder 31 Oct (#167): form and document lines first; links between combinations stay on the case (P-106).
 import { Body, Controller, Get, Headers, HttpCode, HttpException, Inject, Injectable, Param, Post, Query } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
+import { z } from "zod";
 import { createHash, randomUUID } from "node:crypto";
 import { acceptsOf, allowedChannels, notAcceptedWords, notNeededWords } from "../../engine/channels.ts";
 import { rolesNamedBy } from "../../engine/people.ts";
 import { CHANNEL_WORDS, type Channel } from "../../contracts/forms.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { appliedWords, BulkApply, BulkPreview, copiedFromWords, CopyFromApply, CopyFromPreview, CopyOneLine, OUTCOME_WORDS, TICKABLE, undoRefusedWords, UndoMany, WAITS_REMOVE_WORDS, WAITS_WORDS, WHO_WORDS, type ApplyResult, type BulkCombination, type CopyFromApplied, type CopyFromLine, type CopyOneApplied, type CopyFromResult, type Outcome, type PreviewResult, type PreviewTarget, type UndoResult } from "../../contracts/lines-bulk.ts";
+import { appliedWords, BulkApply, BulkPreview, copiedFromWords, CopyFromApply, CopyFromPreview, LineRef, OUTCOME_WORDS, TICKABLE, undoRefusedWords, UndoMany, WAITS_REMOVE_WORDS, WAITS_WORDS, WHO_WORDS, type ApplyResult, type BulkCombination, type CopyFromApplied, type CopyFromLine, type CopyFromResult, type Outcome, type PreviewResult, type PreviewTarget, type UndoResult } from "../../contracts/lines-bulk.ts";
 import { isBusy } from "./busy.ts";
 import { ACTORS, actorOf, Audit, Db, need, revise, strip, type Actor } from "./core.ts";
 import { addFormLine } from "./form-lines.ts";
@@ -48,6 +49,20 @@ const docSig = (r: DocRow) => JSON.stringify([r.documentTypeKey, r.attachMode, r
 /** Break m1: a short fingerprint of what a source line says, so an apply can tell it changed after the preview. */
 const versionOf = (l: SourceLine) => createHash("sha256").update(JSON.stringify([l.kind, l.typeKey, l.who, l.attachMode, l.predicateJson ?? null, l.conditionPlain, l.channel ?? null, l.copied])).digest("hex").slice(0, 16);
 const sigOf = (kind: "form" | "document", r: LineRow | DocRow) => (kind === "form" ? lineSig(r as LineRow) : docSig(r as DocRow));
+
+/** C1.5, concept v3 §2 (`POST /combinations/:id/lines/copy`): copy ONE line from another combination onto this one, for a
+ *  caller without the dialog (the web app's dialog keeps POST /lines/copy, so this request is the API's own, not a shared
+ *  contract). `idempotencyKey`: optional; a retry with the same key answers the first copy. `withdrawSubmission`: a copy
+ *  onto a combination waiting for review withdraws that submission, so it is refused unless asked for (the dialog's
+ *  "Waits" tick). */
+const CopyOneLine = z.object({
+  from: LineRef,
+  version: z.string().max(64).optional(),
+  idempotencyKey: z.string().trim().min(8, "Reload the page: the request key is missing.").max(90, "Reload the page: the request key is not valid.").regex(/^[^#]+$/, "Reload the page: the request key is not valid.").optional(),
+  withdrawSubmission: z.boolean().optional(),
+});
+/** The single copy's answer: its one batch (POST /lines/bulk/:batchId/undo takes it back). */
+type CopyOneApplied = CopyFromApplied & { batchId: string };
 
 @Injectable()
 export class LinesBulk {
