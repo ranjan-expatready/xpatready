@@ -33,6 +33,7 @@ import { draftSourceProblems } from "./source-register.ts";
 import { filingProblems } from "../../engine/filing-modes.ts";
 import { attachedNotSetUp, removedLines } from "../../contracts/counts.ts";
 import { gatesOf, realBaseline, type Gate } from "./answer-key-gate.ts";
+import { libraryType } from "../../engine/form-type.ts";
 
 /** Parses a request body or query with its contract; a mismatch is a 400 Problem Details with field errors. */
 export function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
@@ -555,7 +556,8 @@ export class Programs {
     if (form.retiredAt) throw problem(409, "Retired", `${form.formKey} is retired in the library: restore it there first.`, { errors: [{ field: "formKey", message: "Retired." }] });
     const closing = await closingChange(this.db, c.workspaceId, form.formKey);
     if (closing) throw problem(409, "Being retired", `A request to ${closing.action.toLowerCase()} ${form.formKey} is open on To review: nothing new may use it until it is decided.`, { errors: [{ field: "formKey", message: "Being retired." }] });
-    const current = newestEdition(form.editions.filter((e) => e._count.maps > 0 && e.channel !== "ONLINE"));
+    // C11.11 (QA-101): only a filed form becomes a form line; a guide or checklist is attached as a source below.
+    const current = libraryType(form.formKind, form.displayName) === "form" ? newestEdition(form.editions.filter((e) => e._count.maps > 0 && e.channel !== "ONLINE")) : undefined;
     if (current) {
       const before = await snapshotLines(this.db, combinationId, [form.formKey]);
       const r = await addFormLine(this.db, { workspaceId: c.workspaceId, combinationId, govFormDefId: form.id, formKey: form.formKey, origin: "HUMAN", by: actor.id, sourceQuote: `${current.editionLabel}: added from the library` });

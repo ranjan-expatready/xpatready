@@ -304,7 +304,8 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   const lmiaUrl = p.url(); await p.goto(lmiaUrl.replace(/\/c\/([^/?]+).*$/, "/c/$1/forms")); await p.locator("[data-line]").first().waitFor();
   const lmiaCodes = (await p.locator("[data-line] td:first-child .mono").allTextContents()).map((c) => c.trim());
   await p.goto(lmiaUrl); await p.getByText(/In Release \d/).first().waitFor(); await idle();
-  step("item 6: the With an LMIA sample note lists the six forms and two checklists the page shows", lmiaCodes.length === 8 && lmiaCodes.every((c) => lmiaMain.includes(`Sample: starts from`) && new RegExp(`\\(forms [^)]*${c.replace(/ /g, "\\s")}`).test(lmiaMain)), lmiaCodes.join(", "));
+  // C11.11 (QA-101): the page shows the six forms it files; the note still names its two checklists, as checklists (sources).
+  step("item 6: the With an LMIA sample note lists the six forms the page shows, and names its two checklists as checklists", lmiaCodes.length === 6 && /checklists IMM 5488 and [^)]*IMM 5905/.test(lmiaMain) && !lmiaCodes.includes("IMM 5488") && !lmiaCodes.includes("IMM 5905") && lmiaCodes.every((c) => lmiaMain.includes(`Sample: starts from`) && new RegExp(`\\(forms [^)]*${c.replace(/ /g, "\\s")}`).test(lmiaMain)), lmiaCodes.join(", "));
   // Lead check item 3: a Live row's warnings are its own and lead to where each one is listed.
   const warnLink = p.getByRole("link", { name: /\d+ warnings?: see them/ });
   const warnCount = await warnLink.count() ? Number((await warnLink.textContent()).match(/\d+/)[0]) : 0;
@@ -392,7 +393,7 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   step("C1.6: the combination page shows the filing method and each line's channel", /Filing: PDF only/.test(await forms.textContent()) && await forms.getByRole("combobox", { name: /^How IMM \d+.* is filed$/ }).count() >= 6);
   await forms.getByRole("combobox", { name: "How IMM 1295 is filed" }).selectOption("PAPER"); await idle(); // P-143: four channels; the signature is its own value
   await p.waitForFunction(() => /Signed in pen/.test(document.querySelector('[role="tabpanel"]')?.textContent ?? ""), null, { timeout: 5000 }).catch(() => {});
-  step("C1.6: the author sets a line's channel; the line's signature follows and the filing method stays in C1.6's short words", /Filing: Mixed: PDF and paper/.test(await p.locator("[data-filing]").textContent()) && /PDF uploads \+ paper forms/.test((await p.locator("[data-filing] b[title]").getAttribute("title")) ?? "") /* the line also holds the IRCC account picker's titled select (slice 1, review M2) */ && /Signed in pen/.test(await forms.textContent()));
+  step("C1.6: the author sets a line's channel; the line's signature follows and the filing method stays in C1.6's short words", /Filing: Mixed: PDF and paper/.test(await p.locator("[data-filing]").textContent()) && /^Paper only; plus PDF upload when needed/.test((await p.locator("[data-filing] b[title]").getAttribute("title")) ?? "") /* C11.11: the checklists are no longer always-filed PDFs */ /* the line also holds the IRCC account picker's titled select (slice 1, review M2) */ && /Signed in pen/.test(await forms.textContent()));
   await forms.getByRole("combobox", { name: "How IMM 1295 is filed" }).selectOption("PDF_UPLOAD"); await idle();
   // P-107, W1-02 (P-102): Online stays selectable and says it needs the browser extension (later wave); no portal choice,
   // no "Add an online form", no drafting-source choice (parked with the extension).
