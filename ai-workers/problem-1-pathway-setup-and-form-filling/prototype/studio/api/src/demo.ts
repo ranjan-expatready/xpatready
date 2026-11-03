@@ -14,7 +14,7 @@ import { importConfiguration, sampleFamilyFacts } from "../../engine/import.ts";
 import { buildSnapshot } from "../../engine/snapshot.ts";
 import { LEDGER_DIR } from "../../../p2/policy.ts";
 import { Ai } from "./ai.ts";
-import { ACTORS, Audit, Db, fail, need, OFFICIAL, PROTOTYPE, ROOT, SOLUTION, STUDIO, VAR, VAR_ROOT, Workspace, type Actor } from "./core.ts";
+import { ACTORS, Audit, Db, fail, isDemoWorkspace, need, OFFICIAL, PROTOTYPE, ROOT, SOLUTION, STUDIO, VAR, VAR_ROOT, Workspace, type Actor } from "./core.ts";
 import { Programs } from "./programs.ts";
 import { Intake } from "./intake.ts";
 import { Finder } from "./finder.ts";
@@ -34,6 +34,11 @@ export type CheckpointRow = { row: string; title: string; status: "done" | "part
 /** How many proposals a field-map step reported (its detail counts). */
 const counted = (detail: unknown) => (detail as { counts?: { proposed_fields?: number } } | null)?.counts?.proposed_fields ?? 0;
 const RELEASE = join(PROTOTYPE, "p3", "releases", "c1-v3");
+/** What the loaders read from the reviewed release's release.json (p3/releases/c1-v3). */
+type ReviewedRelease = { configuration_sha256: string; drafting_run_ids: string[]; author: { user_id: string }; submitter: { user_id: string }; approver: { user_id: string } };
+/** The six's "With an LMIA – inside Canada" (samples/wave1.json), the combination Demo › Start With an LMIA from its
+ *  reviewed release starts (C5.4). */
+export const SIX_LMIA = "wp.lmia_inside";
 
 /** The sample programs (Screen 01): an import file, not constants in code (STANDARDS §3.1). Seven Individual and four
  *  Corporate programs covering the kinds of case in domain/TAXONOMY.md; names are illustrative and shown as Sample.
@@ -115,6 +120,49 @@ export class Demo {
     } finally { this.loading = false; }
   }
 
+  /** The reviewed work-permit release (p3/releases/c1-v3) as a combination's Release 1: its configuration imported
+   *  (engine/import.ts, which writes the source entries the release's own quotes state, "From the sample load"), the
+   *  frozen snapshot recorded with the release's own author, submitter and approver, and the combination's read files
+   *  marked as in the library. Used by the suites' fixture (loadSteps) and by Demo › "Start With an LMIA from its
+   *  reviewed release" on the six (releaseWithSources). */
+  private async fromReviewedRelease(actor: Actor, workspaceId: string, combinationId: string, cfg: Record<string, unknown>, rel: ReviewedRelease) {
+    const counts = await importConfiguration(this.db, workspaceId, combinationId, cfg, { by: actor.id, releaseLabel: "the reviewed work-permit release", releaseSha: rel.configuration_sha256 });
+    const { snapshot, sha256 } = await buildSnapshot(this.db, workspaceId, combinationId, "published");
+    const authors = [rel.author.user_id];
+    const last = await this.db.packVersion.findFirst({ where: { workspaceId }, orderBy: { version: "desc" }, select: { version: true } });
+    const pack = await this.db.packVersion.create({ data: { workspaceId, version: (last?.version ?? 0) + 1, authorIds: authors, approverId: rel.approver.user_id, summary: { rows: 1, via: "imported reviewed release", imported_from: "p3/releases/c1-v3" } } });
+    await this.db.configRelease.create({ data: { workspaceId, combinationId, version: 1, status: "RELEASED", snapshot: snapshot as any, sha256, packVersionId: pack.id, summary: { imported_from: "p3/releases/c1-v3", c1_v3_sha256: rel.configuration_sha256, drafting_runs: rel.drafting_run_ids, counts }, authorId: rel.author.user_id, submitterId: rel.submitter.user_id, approverId: rel.approver.user_id, basis: "Imported reviewed release: AI-drafted under the guarded path, reviewed and approved by a second person. Prototype only; not specialist-confirmed." } });
+    for (const a of await this.db.sourceAttachment.findMany({ where: { combinationId, status: { in: ["READ", "RECOGNISED"] } } })) await this.db.sourceAttachment.update({ where: { id: a.id }, data: { status: "IN_LIBRARY", statusDetail: `${a.edition}: its field map from the reviewed release is in the library.` } });
+    return counts;
+  }
+
+  /** C5.4 on the six (F6, 3 Nov; re-test of 1a79dbf9: the release with its sources was reachable only on the suites'
+   *  fixture, which the Demo menu never loads). Demo › "Start With an LMIA from its reviewed release": after Reset to the
+   *  six, "With an LMIA – inside Canada" starts from the same reviewed work-permit release the fixture's With an LMIA starts
+   *  from (Release 1, source-backed), so its Review and release tab lists the published numbers that have no source
+   *  entry, each with Add source, and Submit waits for them (G1, P-240, P-279). Scaffolding (P-33, P-35): the author, in
+   *  the demo workspace, once, on the six only; no AI call (US$0), nothing approved past the rules. */
+  async releaseWithSources(actor: Actor) {
+    need(actor, "author");
+    if (!isDemoWorkspace()) fail("This demo control works only in the demo workspace.", HttpStatus.CONFLICT);
+    if (this.loading) fail("A sample load or a reset is running: wait for it to finish.", HttpStatus.CONFLICT);
+    this.loading = true;
+    try {
+      const workspaceId = await this.ws.id();
+      const c = await this.db.combination.findFirst({ where: { workspaceId, combinationKey: SIX_LMIA } });
+      if (!c) fail("The six are not loaded: choose Demo › Reset to the six first.", HttpStatus.CONFLICT);
+      if (c!.retiredAt) fail(`"${c!.label}" is retired: choose Demo › Reset to the six to start again.`, HttpStatus.CONFLICT);
+      if (await this.db.configRelease.count({ where: { combinationId: c!.id } })) fail(`"${c!.label}" already has a release: choose Demo › Reset to the six to start again.`, HttpStatus.CONFLICT);
+      const config = JSON.parse(readFileSync(join(RELEASE, "configuration.json"), "utf8")) as Record<string, unknown>;
+      const rel = JSON.parse(readFileSync(join(RELEASE, "release.json"), "utf8")) as ReviewedRelease;
+      await this.db.combination.update({ where: { id: c!.id }, data: { sourceBasis: "SOURCE_BACKED", basisNote: "Started from the reviewed work-permit release (p3/releases/c1-v3) by Demo › Start With an LMIA from its reviewed release." } });
+      const counts = await this.fromReviewedRelease(actor, workspaceId, c!.id, config, rel);
+      const said = Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(", ");
+      await this.audit.log(workspaceId, actor.id, "loaded", "reviewed release", c!.combinationKey, `${actor.name} started "${c!.label}" from the reviewed work-permit release (Release 1; ${said})`, { counts }, c!.id);
+      return { combinationId: c!.id, label: c!.label, release: 1, counts };
+    } finally { this.loading = false; }
+  }
+
   private async loadSteps(actor: Actor, workspaceId: string, t0: number, log: string[]) {
     // The reviewed release as engine/import.ts reads it; the sample loader itself reads only its document lines (QA-115).
     const config = JSON.parse(readFileSync(join(RELEASE, "configuration.json"), "utf8")) as Record<string, unknown> & { document_requirements: { document_type: string }[] };
@@ -140,13 +188,8 @@ export class Demo {
       const missed = drop.filter((x) => !config.document_requirements.some((d) => d.document_type === x.document_type));
       if (missed.length) throw new Error(`Sample ${c.key}: no release line named ${missed.map((x) => `"${x.document_type}"`).join(", ")}`);
       const cfg = drop.length ? { ...config, document_requirements: config.document_requirements.filter((d) => !drop.some((x) => x.document_type === d.document_type)) } : config;
-      const counts = await importConfiguration(this.db, workspaceId, comp.id, cfg, { by: actor.id, releaseLabel: "the reviewed work-permit release", releaseSha: rel.configuration_sha256 });
+      const counts = await this.fromReviewedRelease(actor, workspaceId, comp.id, cfg, rel);
       if (drop.length) log.push(`  ${path}: left out ${drop.length} document lines that cannot apply here (${drop.map((x) => x.why).join("; ")})`);
-      const { snapshot, sha256 } = await buildSnapshot(this.db, workspaceId, comp.id, "published");
-      const authors = [rel.author.user_id];
-      const pack = await this.db.packVersion.create({ data: { workspaceId, version: 1, authorIds: authors, approverId: rel.approver.user_id, summary: { rows: 1, via: "imported reviewed release", imported_from: "p3/releases/c1-v3" } } });
-      await this.db.configRelease.create({ data: { workspaceId, combinationId: comp.id, version: 1, status: "RELEASED", snapshot: snapshot as any, sha256, packVersionId: pack.id, summary: { imported_from: "p3/releases/c1-v3", c1_v3_sha256: rel.configuration_sha256, drafting_runs: rel.drafting_run_ids, counts }, authorId: rel.author.user_id, submitterId: rel.submitter.user_id, approverId: rel.approver.user_id, basis: "Imported reviewed release: AI-drafted under the guarded path, reviewed and approved by a second person. Prototype only; not specialist-confirmed." } });
-      for (const a of await this.db.sourceAttachment.findMany({ where: { combinationId: comp.id, status: { in: ["READ", "RECOGNISED"] } } })) await this.db.sourceAttachment.update({ where: { id: a.id }, data: { status: "IN_LIBRARY", statusDetail: `${a.edition}: its field map from the reviewed release is in the library.` } });
       log.push(`  ${path}: started from the reviewed work-permit release (${Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(", ")}); recorded as Release 1`);
     };
     for (const p of sample.programs) {

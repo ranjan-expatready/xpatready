@@ -202,6 +202,10 @@ function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExis
   const [confOpen, setConfOpen] = React.useState(false);
   const [configured, setConfigured] = React.useState<ConfiguredLoad | null>(null);
   const loadConf = useAction(() => api<ConfiguredLoad>("/demo/load", { method: "POST", json: { sample: "configured" } }), { success: (r) => `Configured checkpoint loaded in ${r.seconds.toFixed(1)} s`, invalidate: [[]], onDone: (r) => { setConfOpen(false); setConfigured(r); navTo("/"); } });
+  // C5.4 on the six (F6): With an LMIA – inside Canada from the reviewed work-permit release, so its Review and release
+  // tab shows the published numbers that need a source (G1, P-279). Opens that tab when done.
+  const [relOpen, setRelOpen] = React.useState(false);
+  const relSources = useAction(() => api<{ combinationId: string; label: string }>("/demo/release-with-sources", { method: "POST", json: {} }), { success: (r) => `"${r.label}" started from its reviewed release`, invalidate: [[]], onDone: (r) => { setRelOpen(false); navTo(`/c/${r.combinationId}/review`); } });
   // Demo-only controls in one menu (P-35): scaffolding, never part of the product.
   const item = "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 outline-none data-[highlighted]:bg-text/5 data-[disabled]:cursor-default data-[disabled]:opacity-50";
   return (
@@ -214,6 +218,7 @@ function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExis
             <DropdownMenu.Item className={item} disabled={loaded || programsExist} onSelect={() => setConfOpen(true)}><Upload className="size-4" />{loaded || programsExist ? "Load the configured checkpoint (reset first)" : "Load the configured checkpoint…"}</DropdownMenu.Item>
             <DropdownMenu.Item className={item} onSelect={() => setResetOpen(true)}><RotateCcw className="size-4" />Reset demo…</DropdownMenu.Item>
             <DropdownMenu.Item className={item} onSelect={() => setSixOpen(true)}><RotateCcw className="size-4" />Reset to the six…</DropdownMenu.Item>
+            <DropdownMenu.Item className={item} disabled={!loaded} onSelect={() => setRelOpen(true)} data-demo-release-sources><FileText className="size-4" />{loaded ? "Start With an LMIA from its reviewed release…" : "Start With an LMIA from its reviewed release (load the six first)"}</DropdownMenu.Item>
             <DropdownMenu.Item className={item} onSelect={() => navTo("/cases")}><FileText className="size-4" />Open the case area (runtime preview)</DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
@@ -229,6 +234,15 @@ function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExis
           <li>Saved AI answers for the forms' fields replayed into the review queue, waiting for people to accept; a form without one waits for Draft with AI</li>
         </ul>
         <p className="mt-3 text-sm text-text-muted">A file that is still missing shows as "Not found · Upload PDF" on that combination, never hidden. Nothing is released: a second person approves every library item.</p>
+      </Dialog>
+      <Dialog open={relOpen} onOpenChange={(o) => { if (!relSources.isPending) setRelOpen(o); }} title="Start With an LMIA from its reviewed release?" description="A release with its sources to check. US$0: no live AI call."
+        footer={<><Button variant="ghost" disabled={relSources.isPending} onClick={() => setRelOpen(false)}>Cancel</Button><Button busy={relSources.isPending} onClick={() => relSources.mutate(undefined)}><Upload /> Start from the reviewed release</Button></>}>
+        <ul className="list-disc space-y-1 pl-5 text-sm" data-release-sources-brings>
+          <li>"With an LMIA – inside Canada" starts from the reviewed work-permit release as its Release 1: its forms, documents, rules and checks</li>
+          <li>Its Review and release tab lists every published number (fees, ages, dates) and whether it has a source; each one without a source has Add source</li>
+          <li>Submit waits until every number has its official source or "None published – set by ExpatReady"</li>
+        </ul>
+        <p className="mt-3 text-sm text-text-muted">Once only after Reset to the six. Nothing is approved or released past the rules.</p>
       </Dialog>
       <Dialog open={confOpen} onOpenChange={(o) => { if (!loadConf.isPending) setConfOpen(o); }} title="Load the configured checkpoint?" description="The sample starting point, then each demo row done through the same screens' rules by the people who hold each duty. US$0: no live AI call."
         footer={<><Button variant="ghost" disabled={loadConf.isPending} onClick={() => setConfOpen(false)}>Cancel</Button><Button busy={loadConf.isPending} onClick={() => loadConf.mutate(undefined)}><Upload /> Load the configured checkpoint</Button></>}>
