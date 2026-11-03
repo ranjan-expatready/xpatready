@@ -1,0 +1,1062 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-fieldmap-imm5645e-p3of4-c8eb5d3c9437-live-20261103t115031426z-c8effb",
+  "idempotency_key": "a0efac7225acd63cc77203bd37cd1c6263bb23dd7af5861e70c92322cb27eb87",
+  "contract_version": "drafting-run/v0",
+  "kind": "field_map",
+  "output_sha256": "f102eb5bafd9dbae67bcfde0464c60244219972c0b3165f1ea4955c1ea348d01",
+  "inputs": {
+   "combination": "studio",
+   "official_files": [
+    {
+     "file": "prototype/p2/parts/imm5645e.p3of4-c8eb5d3c9437.part.json",
+     "sha256": "8964bf0f5065c108cf5a9e246b7bc1c162d70863ad4396336a2565e3ef0d1a2c"
+    }
+   ],
+   "configuration_version": "studio-add-form"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 600000,
+   "max_attempts": 2,
+   "budget_usd": 5,
+   "max_output_tokens": 22000,
+   "prompt_version": "field-map-part.v1.md",
+   "prompt_sha256": "a9136d0a9d77791de0bfe52dcf2c61c928f80c387223019bd68524eb343893aa"
+  },
+  "status": "completed_with_unresolved",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 16362,
+    "output_tokens": 13102,
+    "duration_ms": 138618
+   }
+  ],
+  "usage": {
+   "input_tokens": 16362,
+   "output_tokens": 13102,
+   "cost_usd": 0.327488,
+   "duration_ms": 138618
+  },
+  "started_at": "2026-11-03T11:50:31.428Z",
+  "ended_at": "2026-11-03T11:52:50.249Z",
+  "entries": [
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[0].ChildName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.full_name",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Only when the subject has at least 1 sibling (brother, sister, half- or step-sibling); fixed row 0 of 7 sibling rows. Element name 'Child' is a misnomer: the heading places this row under Section C (siblings).",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Name"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[0].ChildMStatus[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.marital_status",
+    "transform": "code_list:imm5645.marital_status (Annulled marriage=1, Common-law=2, Divorced=3, Legally separated=4, Married=5, Single=6, Widowed=7)",
+    "row": 0,
+    "condition": "Only when the subject has at least 1 sibling; fixed row 0 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Marital status:"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[0].ChildRelationship[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "relationship.relationship_to_subject",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Only when the subject has at least 1 sibling; fixed row 0 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Relationship"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[0].ChildDOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "row": 0,
+    "condition": "Only when the subject has at least 1 sibling; fixed row 0 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[0].ChildCOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.country_of_birth",
+    "transform": "country_name_text",
+    "row": 0,
+    "condition": "Only when the subject has at least 1 sibling; fixed row 0 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Country of birth:"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[0].ChildAddress[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.present_address",
+    "transform": "address_single_line",
+    "row": 0,
+    "condition": "Only when the subject has at least 1 sibling; fixed row 0 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Present address"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[0].ChildOccupation[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.present_occupation",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Only when the subject has at least 1 sibling; fixed row 0 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Present occupation:"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[0].ChildYes[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "row": 0,
+    "condition": "Only when the subject has at least 1 sibling; fixed row 0 of 7 sibling rows.",
+    "unresolved_reason": "The inventory gives only the caption 'Yes' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Yes"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[0].ChildNo[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "row": 0,
+    "condition": "Only when the subject has at least 1 sibling; fixed row 0 of 7 sibling rows.",
+    "unresolved_reason": "The inventory gives only the caption 'No' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "No"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[1].ChildMStatus[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.marital_status",
+    "transform": "code_list:imm5645.marital_status (Annulled marriage=1, Common-law=2, Divorced=3, Legally separated=4, Married=5, Single=6, Widowed=7)",
+    "row": 1,
+    "condition": "Only when the subject has at least 2 siblings; fixed row 1 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Marital status:"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[1].ChildRelationship[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "relationship.relationship_to_subject",
+    "transform": "as_is",
+    "row": 1,
+    "condition": "Only when the subject has at least 2 siblings; fixed row 1 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Relationship"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[1].ChildDOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "row": 1,
+    "condition": "Only when the subject has at least 2 siblings; fixed row 1 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[1].ChildCOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.country_of_birth",
+    "transform": "country_name_text",
+    "row": 1,
+    "condition": "Only when the subject has at least 2 siblings; fixed row 1 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Country of birth:"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[1].ChildAddress[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.present_address",
+    "transform": "address_single_line",
+    "row": 1,
+    "condition": "Only when the subject has at least 2 siblings; fixed row 1 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Present address"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[1].ChildOccupation[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.present_occupation",
+    "transform": "as_is",
+    "row": 1,
+    "condition": "Only when the subject has at least 2 siblings; fixed row 1 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Present occupation:"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[1].ChildYes[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "row": 1,
+    "condition": "Only when the subject has at least 2 siblings; fixed row 1 of 7 sibling rows.",
+    "unresolved_reason": "The inventory gives only the caption 'Yes' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Yes"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[1].ChildNo[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "row": 1,
+    "condition": "Only when the subject has at least 2 siblings; fixed row 1 of 7 sibling rows.",
+    "unresolved_reason": "The inventory gives only the caption 'No' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "No"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[1].ChildName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.full_name",
+    "transform": "as_is",
+    "row": 1,
+    "condition": "Only when the subject has at least 2 siblings; fixed row 1 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Name"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[2].ChildName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.full_name",
+    "transform": "as_is",
+    "row": 2,
+    "condition": "Only when the subject has at least 3 siblings; fixed row 2 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Name"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[2].ChildMStatus[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.marital_status",
+    "transform": "code_list:imm5645.marital_status (Annulled marriage=1, Common-law=2, Divorced=3, Legally separated=4, Married=5, Single=6, Widowed=7)",
+    "row": 2,
+    "condition": "Only when the subject has at least 3 siblings; fixed row 2 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Marital status:"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[2].ChildRelationship[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "relationship.relationship_to_subject",
+    "transform": "as_is",
+    "row": 2,
+    "condition": "Only when the subject has at least 3 siblings; fixed row 2 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Relationship"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[2].ChildDOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "row": 2,
+    "condition": "Only when the subject has at least 3 siblings; fixed row 2 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[2].ChildCOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.country_of_birth",
+    "transform": "country_name_text",
+    "row": 2,
+    "condition": "Only when the subject has at least 3 siblings; fixed row 2 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Country of birth:"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[2].ChildAddress[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.present_address",
+    "transform": "address_single_line",
+    "row": 2,
+    "condition": "Only when the subject has at least 3 siblings; fixed row 2 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Present address"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[2].ChildOccupation[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.present_occupation",
+    "transform": "as_is",
+    "row": 2,
+    "condition": "Only when the subject has at least 3 siblings; fixed row 2 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Present occupation:"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[2].ChildYes[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "row": 2,
+    "condition": "Only when the subject has at least 3 siblings; fixed row 2 of 7 sibling rows.",
+    "unresolved_reason": "The inventory gives only the caption 'Yes' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Yes"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[2].ChildNo[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "row": 2,
+    "condition": "Only when the subject has at least 3 siblings; fixed row 2 of 7 sibling rows.",
+    "unresolved_reason": "The inventory gives only the caption 'No' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "No"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[3].ChildName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.full_name",
+    "transform": "as_is",
+    "row": 3,
+    "condition": "Only when the subject has at least 4 siblings; fixed row 3 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Name"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[3].ChildMStatus[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.marital_status",
+    "transform": "code_list:imm5645.marital_status (Annulled marriage=1, Common-law=2, Divorced=3, Legally separated=4, Married=5, Single=6, Widowed=7)",
+    "row": 3,
+    "condition": "Only when the subject has at least 4 siblings; fixed row 3 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Marital status:"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[3].ChildRelationship[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "relationship.relationship_to_subject",
+    "transform": "as_is",
+    "row": 3,
+    "condition": "Only when the subject has at least 4 siblings; fixed row 3 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Relationship"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[3].ChildDOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "row": 3,
+    "condition": "Only when the subject has at least 4 siblings; fixed row 3 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[3].ChildCOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.country_of_birth",
+    "transform": "country_name_text",
+    "row": 3,
+    "condition": "Only when the subject has at least 4 siblings; fixed row 3 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Country of birth:"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[3].ChildAddress[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.present_address",
+    "transform": "address_single_line",
+    "row": 3,
+    "condition": "Only when the subject has at least 4 siblings; fixed row 3 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Present address"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[3].ChildOccupation[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.present_occupation",
+    "transform": "as_is",
+    "row": 3,
+    "condition": "Only when the subject has at least 4 siblings; fixed row 3 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Present occupation:"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[3].ChildYes[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "row": 3,
+    "condition": "Only when the subject has at least 4 siblings; fixed row 3 of 7 sibling rows.",
+    "unresolved_reason": "The inventory gives only the caption 'Yes' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Yes"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[3].ChildNo[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "row": 3,
+    "condition": "Only when the subject has at least 4 siblings; fixed row 3 of 7 sibling rows.",
+    "unresolved_reason": "The inventory gives only the caption 'No' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "No"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[4].ChildName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.full_name",
+    "transform": "as_is",
+    "row": 4,
+    "condition": "Only when the subject has at least 5 siblings; fixed row 4 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Name"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[4].ChildMStatus[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.marital_status",
+    "transform": "code_list:imm5645.marital_status (Annulled marriage=1, Common-law=2, Divorced=3, Legally separated=4, Married=5, Single=6, Widowed=7)",
+    "row": 4,
+    "condition": "Only when the subject has at least 5 siblings; fixed row 4 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Marital status:"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[4].ChildRelationship[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "relationship.relationship_to_subject",
+    "transform": "as_is",
+    "row": 4,
+    "condition": "Only when the subject has at least 5 siblings; fixed row 4 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Relationship"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[4].ChildDOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "row": 4,
+    "condition": "Only when the subject has at least 5 siblings; fixed row 4 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[4].ChildCOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.country_of_birth",
+    "transform": "country_name_text",
+    "row": 4,
+    "condition": "Only when the subject has at least 5 siblings; fixed row 4 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Country of birth:"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[4].ChildAddress[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.present_address",
+    "transform": "address_single_line",
+    "row": 4,
+    "condition": "Only when the subject has at least 5 siblings; fixed row 4 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Present address"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[4].ChildOccupation[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.present_occupation",
+    "transform": "as_is",
+    "row": 4,
+    "condition": "Only when the subject has at least 5 siblings; fixed row 4 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Present occupation:"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[4].ChildYes[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "row": 4,
+    "condition": "Only when the subject has at least 5 siblings; fixed row 4 of 7 sibling rows.",
+    "unresolved_reason": "The inventory gives only the caption 'Yes' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Yes"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[4].ChildNo[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "row": 4,
+    "condition": "Only when the subject has at least 5 siblings; fixed row 4 of 7 sibling rows.",
+    "unresolved_reason": "The inventory gives only the caption 'No' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "No"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[5].ChildName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.full_name",
+    "transform": "as_is",
+    "row": 5,
+    "condition": "Only when the subject has at least 6 siblings; fixed row 5 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Name"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[5].ChildMStatus[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.marital_status",
+    "transform": "code_list:imm5645.marital_status (Annulled marriage=1, Common-law=2, Divorced=3, Legally separated=4, Married=5, Single=6, Widowed=7)",
+    "row": 5,
+    "condition": "Only when the subject has at least 6 siblings; fixed row 5 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Marital status:"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[5].ChildRelationship[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "relationship.relationship_to_subject",
+    "transform": "as_is",
+    "row": 5,
+    "condition": "Only when the subject has at least 6 siblings; fixed row 5 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Relationship"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[5].ChildDOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "row": 5,
+    "condition": "Only when the subject has at least 6 siblings; fixed row 5 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[5].ChildCOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.country_of_birth",
+    "transform": "country_name_text",
+    "row": 5,
+    "condition": "Only when the subject has at least 6 siblings; fixed row 5 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Country of birth:"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[5].ChildAddress[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.present_address",
+    "transform": "address_single_line",
+    "row": 5,
+    "condition": "Only when the subject has at least 6 siblings; fixed row 5 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Present address"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[5].ChildOccupation[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.present_occupation",
+    "transform": "as_is",
+    "row": 5,
+    "condition": "Only when the subject has at least 6 siblings; fixed row 5 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Present occupation:"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[5].ChildYes[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "row": 5,
+    "condition": "Only when the subject has at least 6 siblings; fixed row 5 of 7 sibling rows.",
+    "unresolved_reason": "The inventory gives only the caption 'Yes' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Yes"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[5].ChildNo[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "row": 5,
+    "condition": "Only when the subject has at least 6 siblings; fixed row 5 of 7 sibling rows.",
+    "unresolved_reason": "The inventory gives only the caption 'No' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "No"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[6].ChildName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.full_name",
+    "transform": "as_is",
+    "row": 6,
+    "condition": "Only when the subject has at least 7 siblings; fixed row 6 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Name"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[6].ChildMStatus[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.marital_status",
+    "transform": "code_list:imm5645.marital_status (Annulled marriage=1, Common-law=2, Divorced=3, Legally separated=4, Married=5, Single=6, Widowed=7)",
+    "row": 6,
+    "condition": "Only when the subject has at least 7 siblings; fixed row 6 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Marital status:"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[6].ChildRelationship[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "relationship.relationship_to_subject",
+    "transform": "as_is",
+    "row": 6,
+    "condition": "Only when the subject has at least 7 siblings; fixed row 6 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Relationship"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[6].ChildDOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "row": 6,
+    "condition": "Only when the subject has at least 7 siblings; fixed row 6 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Date of birth (YYYY-MM-DD)"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[6].ChildCOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.country_of_birth",
+    "transform": "country_name_text",
+    "row": 6,
+    "condition": "Only when the subject has at least 7 siblings; fixed row 6 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Country of birth:"
+    }
+   },
+   {
+    "form_edition": "IMM 5645 (01-2021)",
+    "form_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+    "data_path": "IMM_5645[0].page1[0].SectionC[0].Child[6].ChildAddress[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.present_address",
+    "transform": "address_single_line",
+    "row": 6,
+    "condition": "Only when the subject has at least 7 siblings; fixed row 6 of 7 sibling rows.",
+    "evidence": {
+     "file_sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+     "quote": "Present address"
+    }
+   }
+  ]
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": {
+  "weak_evidence": [],
+  "edition_note": null,
+  "needs_person": [],
+  "set_aside_fields": []
+ },
+ "launch_evidence": {
+  "path_code_sha256": "f02991519ee61e9600e6c4a9d95cc89f6dde6817763d65f0509da6b2c1e56ea0",
+  "template_sha256": "966ad8b94385fa99450bef25c615d65fcff2c8230f02f0a356c6c3e0cad30c2c",
+  "schema_file": "field-map-output.v2.schema.json",
+  "schema_sha256": "a9583204f0ff5325721c1240af88c2f86d9701dac3c1f466061c0073c4f2d68a",
+  "known": {
+   "form_edition": "IMM 5645 (01-2021)"
+  },
+  "screened": true,
+  "output_sha256": "f102eb5bafd9dbae67bcfde0464c60244219972c0b3165f1ea4955c1ea348d01",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "158a47d27a070cc677542997bf6115642bfa75f6dbeb81a6043bc79371c270cc",
+  "request_bytes": 36697,
+  "stub_calls": null,
+  "ledger": {
+   "file": "<main copy>/.tools/p2-ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 63.85091599999999
+  },
+  "admitted": [
+   {
+    "file": "prototype/p2/parts/imm5645e.p3of4-c8eb5d3c9437.part.json",
+    "sha256": "8964bf0f5065c108cf5a9e246b7bc1c162d70863ad4396336a2565e3ef0d1a2c",
+    "kind": "inventory_part"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "20047e543f20f952a8e46446dcc94a22964013c3c0ee2ab37cb9932098a580b7",
+   "digest_made_at": "2026-11-03T11:50:31.427Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "9fc648a9cb651537ddb30fc38623a1a7",
+   "ticket_expires_at": "2026-11-03T11:52:31.427Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"form_edition\":\"IMM 5645 (01-2021)\",\"canonical_fields\":[{\"id\":\"person.full_name\",\"meaning\":\"The person's full name (family and given names).\",\"value_type\":\"text\"},{\"id\":\"person.marital_status\",\"meaning\":\"The person's current marital status.\",\"value_type\":\"code\"},{\"id\":\"relationship.relationship_to_subject\",\"meaning\":\"How the person is related to the form's subject, described in words (for example brother, half-sister, stepbrother).\",\"value_type\":\"text\"},{\"id\":\"person.date_of_birth\",\"meaning\":\"The person's date of birth.\",\"value_type\":\"date\"},{\"id\":\"person.country_of_birth\",\"meaning\":\"The country where the person was born.\",\"value_type\":\"country\"},{\"id\":\"person.present_address\",\"meaning\":\"The person's current residential address.\",\"value_type\":\"address\"},{\"id\":\"person.present_occupation\",\"meaning\":\"The person's current occupation.\",\"value_type\":\"text\"}],\"entries\":[{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[0].ChildName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":0,\"fact\":\"person.full_name\",\"transform\":\"as_is\",\"condition\":\"Only when the subject has at least 1 sibling (brother, sister, half- or step-sibling); fixed row 0 of 7 sibling rows. Element name 'Child' is a misnomer: the heading places this row under Section C (siblings).\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Name\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[0].ChildMStatus[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":0,\"fact\":\"person.marital_status\",\"transform\":\"code_list:imm5645.marital_status (Annulled marriage=1, Common-law=2, Divorced=3, Legally separated=4, Married=5, Single=6, Widowed=7)\",\"condition\":\"Only when the subject has at least 1 sibling; fixed row 0 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Marital status:\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[0].ChildRelationship[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":0,\"fact\":\"relationship.relationship_to_subject\",\"transform\":\"as_is\",\"condition\":\"Only when the subject has at least 1 sibling; fixed row 0 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Relationship\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[0].ChildDOB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":0,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Only when the subject has at least 1 sibling; fixed row 0 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[0].ChildCOB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":0,\"fact\":\"person.country_of_birth\",\"transform\":\"country_name_text\",\"condition\":\"Only when the subject has at least 1 sibling; fixed row 0 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Country of birth:\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[0].ChildAddress[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":0,\"fact\":\"person.present_address\",\"transform\":\"address_single_line\",\"condition\":\"Only when the subject has at least 1 sibling; fixed row 0 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Present address\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[0].ChildOccupation[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":0,\"fact\":\"person.present_occupation\",\"transform\":\"as_is\",\"condition\":\"Only when the subject has at least 1 sibling; fixed row 0 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Present occupation:\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[0].ChildYes[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_sibling\",\"row\":0,\"fact\":null,\"transform\":null,\"condition\":\"Only when the subject has at least 1 sibling; fixed row 0 of 7 sibling rows.\",\"confidence\":\"low\",\"unresolved_reason\":\"The inventory gives only the caption 'Yes' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.\",\"evidence_quote\":\"Yes\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[0].ChildNo[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_sibling\",\"row\":0,\"fact\":null,\"transform\":null,\"condition\":\"Only when the subject has at least 1 sibling; fixed row 0 of 7 sibling rows.\",\"confidence\":\"low\",\"unresolved_reason\":\"The inventory gives only the caption 'No' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.\",\"evidence_quote\":\"No\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[1].ChildMStatus[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":1,\"fact\":\"person.marital_status\",\"transform\":\"code_list:imm5645.marital_status (Annulled marriage=1, Common-law=2, Divorced=3, Legally separated=4, Married=5, Single=6, Widowed=7)\",\"condition\":\"Only when the subject has at least 2 siblings; fixed row 1 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Marital status:\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[1].ChildRelationship[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":1,\"fact\":\"relationship.relationship_to_subject\",\"transform\":\"as_is\",\"condition\":\"Only when the subject has at least 2 siblings; fixed row 1 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Relationship\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[1].ChildDOB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":1,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Only when the subject has at least 2 siblings; fixed row 1 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[1].ChildCOB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":1,\"fact\":\"person.country_of_birth\",\"transform\":\"country_name_text\",\"condition\":\"Only when the subject has at least 2 siblings; fixed row 1 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Country of birth:\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[1].ChildAddress[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":1,\"fact\":\"person.present_address\",\"transform\":\"address_single_line\",\"condition\":\"Only when the subject has at least 2 siblings; fixed row 1 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Present address\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[1].ChildOccupation[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":1,\"fact\":\"person.present_occupation\",\"transform\":\"as_is\",\"condition\":\"Only when the subject has at least 2 siblings; fixed row 1 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Present occupation:\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[1].ChildYes[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_sibling\",\"row\":1,\"fact\":null,\"transform\":null,\"condition\":\"Only when the subject has at least 2 siblings; fixed row 1 of 7 sibling rows.\",\"confidence\":\"low\",\"unresolved_reason\":\"The inventory gives only the caption 'Yes' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.\",\"evidence_quote\":\"Yes\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[1].ChildNo[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_sibling\",\"row\":1,\"fact\":null,\"transform\":null,\"condition\":\"Only when the subject has at least 2 siblings; fixed row 1 of 7 sibling rows.\",\"confidence\":\"low\",\"unresolved_reason\":\"The inventory gives only the caption 'No' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.\",\"evidence_quote\":\"No\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[1].ChildName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":1,\"fact\":\"person.full_name\",\"transform\":\"as_is\",\"condition\":\"Only when the subject has at least 2 siblings; fixed row 1 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Name\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[2].ChildName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":2,\"fact\":\"person.full_name\",\"transform\":\"as_is\",\"condition\":\"Only when the subject has at least 3 siblings; fixed row 2 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Name\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[2].ChildMStatus[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":2,\"fact\":\"person.marital_status\",\"transform\":\"code_list:imm5645.marital_status (Annulled marriage=1, Common-law=2, Divorced=3, Legally separated=4, Married=5, Single=6, Widowed=7)\",\"condition\":\"Only when the subject has at least 3 siblings; fixed row 2 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Marital status:\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[2].ChildRelationship[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":2,\"fact\":\"relationship.relationship_to_subject\",\"transform\":\"as_is\",\"condition\":\"Only when the subject has at least 3 siblings; fixed row 2 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Relationship\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[2].ChildDOB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":2,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Only when the subject has at least 3 siblings; fixed row 2 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[2].ChildCOB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":2,\"fact\":\"person.country_of_birth\",\"transform\":\"country_name_text\",\"condition\":\"Only when the subject has at least 3 siblings; fixed row 2 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Country of birth:\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[2].ChildAddress[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":2,\"fact\":\"person.present_address\",\"transform\":\"address_single_line\",\"condition\":\"Only when the subject has at least 3 siblings; fixed row 2 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Present address\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[2].ChildOccupation[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":2,\"fact\":\"person.present_occupation\",\"transform\":\"as_is\",\"condition\":\"Only when the subject has at least 3 siblings; fixed row 2 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Present occupation:\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[2].ChildYes[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_sibling\",\"row\":2,\"fact\":null,\"transform\":null,\"condition\":\"Only when the subject has at least 3 siblings; fixed row 2 of 7 sibling rows.\",\"confidence\":\"low\",\"unresolved_reason\":\"The inventory gives only the caption 'Yes' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.\",\"evidence_quote\":\"Yes\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[2].ChildNo[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_sibling\",\"row\":2,\"fact\":null,\"transform\":null,\"condition\":\"Only when the subject has at least 3 siblings; fixed row 2 of 7 sibling rows.\",\"confidence\":\"low\",\"unresolved_reason\":\"The inventory gives only the caption 'No' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.\",\"evidence_quote\":\"No\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[3].ChildName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":3,\"fact\":\"person.full_name\",\"transform\":\"as_is\",\"condition\":\"Only when the subject has at least 4 siblings; fixed row 3 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Name\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[3].ChildMStatus[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":3,\"fact\":\"person.marital_status\",\"transform\":\"code_list:imm5645.marital_status (Annulled marriage=1, Common-law=2, Divorced=3, Legally separated=4, Married=5, Single=6, Widowed=7)\",\"condition\":\"Only when the subject has at least 4 siblings; fixed row 3 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Marital status:\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[3].ChildRelationship[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":3,\"fact\":\"relationship.relationship_to_subject\",\"transform\":\"as_is\",\"condition\":\"Only when the subject has at least 4 siblings; fixed row 3 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Relationship\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[3].ChildDOB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":3,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Only when the subject has at least 4 siblings; fixed row 3 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[3].ChildCOB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":3,\"fact\":\"person.country_of_birth\",\"transform\":\"country_name_text\",\"condition\":\"Only when the subject has at least 4 siblings; fixed row 3 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Country of birth:\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[3].ChildAddress[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":3,\"fact\":\"person.present_address\",\"transform\":\"address_single_line\",\"condition\":\"Only when the subject has at least 4 siblings; fixed row 3 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Present address\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[3].ChildOccupation[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":3,\"fact\":\"person.present_occupation\",\"transform\":\"as_is\",\"condition\":\"Only when the subject has at least 4 siblings; fixed row 3 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Present occupation:\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[3].ChildYes[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_sibling\",\"row\":3,\"fact\":null,\"transform\":null,\"condition\":\"Only when the subject has at least 4 siblings; fixed row 3 of 7 sibling rows.\",\"confidence\":\"low\",\"unresolved_reason\":\"The inventory gives only the caption 'Yes' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.\",\"evidence_quote\":\"Yes\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[3].ChildNo[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_sibling\",\"row\":3,\"fact\":null,\"transform\":null,\"condition\":\"Only when the subject has at least 4 siblings; fixed row 3 of 7 sibling rows.\",\"confidence\":\"low\",\"unresolved_reason\":\"The inventory gives only the caption 'No' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.\",\"evidence_quote\":\"No\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[4].ChildName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":4,\"fact\":\"person.full_name\",\"transform\":\"as_is\",\"condition\":\"Only when the subject has at least 5 siblings; fixed row 4 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Name\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[4].ChildMStatus[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":4,\"fact\":\"person.marital_status\",\"transform\":\"code_list:imm5645.marital_status (Annulled marriage=1, Common-law=2, Divorced=3, Legally separated=4, Married=5, Single=6, Widowed=7)\",\"condition\":\"Only when the subject has at least 5 siblings; fixed row 4 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Marital status:\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[4].ChildRelationship[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":4,\"fact\":\"relationship.relationship_to_subject\",\"transform\":\"as_is\",\"condition\":\"Only when the subject has at least 5 siblings; fixed row 4 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Relationship\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[4].ChildDOB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":4,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Only when the subject has at least 5 siblings; fixed row 4 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[4].ChildCOB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":4,\"fact\":\"person.country_of_birth\",\"transform\":\"country_name_text\",\"condition\":\"Only when the subject has at least 5 siblings; fixed row 4 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Country of birth:\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[4].ChildAddress[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":4,\"fact\":\"person.present_address\",\"transform\":\"address_single_line\",\"condition\":\"Only when the subject has at least 5 siblings; fixed row 4 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Present address\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[4].ChildOccupation[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":4,\"fact\":\"person.present_occupation\",\"transform\":\"as_is\",\"condition\":\"Only when the subject has at least 5 siblings; fixed row 4 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Present occupation:\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[4].ChildYes[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_sibling\",\"row\":4,\"fact\":null,\"transform\":null,\"condition\":\"Only when the subject has at least 5 siblings; fixed row 4 of 7 sibling rows.\",\"confidence\":\"low\",\"unresolved_reason\":\"The inventory gives only the caption 'Yes' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.\",\"evidence_quote\":\"Yes\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[4].ChildNo[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_sibling\",\"row\":4,\"fact\":null,\"transform\":null,\"condition\":\"Only when the subject has at least 5 siblings; fixed row 4 of 7 sibling rows.\",\"confidence\":\"low\",\"unresolved_reason\":\"The inventory gives only the caption 'No' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.\",\"evidence_quote\":\"No\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[5].ChildName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":5,\"fact\":\"person.full_name\",\"transform\":\"as_is\",\"condition\":\"Only when the subject has at least 6 siblings; fixed row 5 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Name\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[5].ChildMStatus[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":5,\"fact\":\"person.marital_status\",\"transform\":\"code_list:imm5645.marital_status (Annulled marriage=1, Common-law=2, Divorced=3, Legally separated=4, Married=5, Single=6, Widowed=7)\",\"condition\":\"Only when the subject has at least 6 siblings; fixed row 5 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Marital status:\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[5].ChildRelationship[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":5,\"fact\":\"relationship.relationship_to_subject\",\"transform\":\"as_is\",\"condition\":\"Only when the subject has at least 6 siblings; fixed row 5 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Relationship\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[5].ChildDOB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":5,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Only when the subject has at least 6 siblings; fixed row 5 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[5].ChildCOB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":5,\"fact\":\"person.country_of_birth\",\"transform\":\"country_name_text\",\"condition\":\"Only when the subject has at least 6 siblings; fixed row 5 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Country of birth:\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[5].ChildAddress[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":5,\"fact\":\"person.present_address\",\"transform\":\"address_single_line\",\"condition\":\"Only when the subject has at least 6 siblings; fixed row 5 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Present address\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[5].ChildOccupation[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":5,\"fact\":\"person.present_occupation\",\"transform\":\"as_is\",\"condition\":\"Only when the subject has at least 6 siblings; fixed row 5 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Present occupation:\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[5].ChildYes[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_sibling\",\"row\":5,\"fact\":null,\"transform\":null,\"condition\":\"Only when the subject has at least 6 siblings; fixed row 5 of 7 sibling rows.\",\"confidence\":\"low\",\"unresolved_reason\":\"The inventory gives only the caption 'Yes' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.\",\"evidence_quote\":\"Yes\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[5].ChildNo[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_sibling\",\"row\":5,\"fact\":null,\"transform\":null,\"condition\":\"Only when the subject has at least 6 siblings; fixed row 5 of 7 sibling rows.\",\"confidence\":\"low\",\"unresolved_reason\":\"The inventory gives only the caption 'No' with no question text; it likely belongs to a 'Will accompany you to Canada?' Yes/No pair, but the question cannot be confirmed from the inventory. Reviewer should confirm the question before mapping it to a yes/no fact.\",\"evidence_quote\":\"No\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[6].ChildName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":6,\"fact\":\"person.full_name\",\"transform\":\"as_is\",\"condition\":\"Only when the subject has at least 7 siblings; fixed row 6 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Name\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[6].ChildMStatus[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":6,\"fact\":\"person.marital_status\",\"transform\":\"code_list:imm5645.marital_status (Annulled marriage=1, Common-law=2, Divorced=3, Legally separated=4, Married=5, Single=6, Widowed=7)\",\"condition\":\"Only when the subject has at least 7 siblings; fixed row 6 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Marital status:\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[6].ChildRelationship[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":6,\"fact\":\"relationship.relationship_to_subject\",\"transform\":\"as_is\",\"condition\":\"Only when the subject has at least 7 siblings; fixed row 6 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Relationship\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[6].ChildDOB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":6,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Only when the subject has at least 7 siblings; fixed row 6 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth (YYYY-MM-DD)\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[6].ChildCOB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":6,\"fact\":\"person.country_of_birth\",\"transform\":\"country_name_text\",\"condition\":\"Only when the subject has at least 7 siblings; fixed row 6 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Country of birth:\"},{\"data_path\":\"IMM_5645[0].page1[0].SectionC[0].Child[6].ChildAddress[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":6,\"fact\":\"person.present_address\",\"transform\":\"address_single_line\",\"condition\":\"Only when the subject has at least 7 siblings; fixed row 6 of 7 sibling rows.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Present address\"}]}"
+}
