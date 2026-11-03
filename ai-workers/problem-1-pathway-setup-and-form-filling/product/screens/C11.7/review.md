@@ -135,3 +135,26 @@ Verdict: Approve
 No new Blocker or Major.
 
 Verdict: Approve
+
+---
+
+## Round 4 (usage line): diff-only, `git diff 827b45489..ed30c8a6b`
+
+**Checked**
+- **Scope.** Only the comment header of `tests/check_c117_intake_edition.ts` changes. The usage line is now the standard `isolated.sh c117 4452 start && tsx studio/tests/…`, plus a "(by hand: tsx --tsconfig …)" note.
+- **The matcher.** I applied `run-suites.sh`'s own server-suite pattern (`:196`) in bash to the usage line it picks (`:183`, the first line naming the file).
+  - New line: **matches** (name c117, port 4452, tool tsx, arguments `4452 xr_studio_c117`).
+  - Old line (827b45489): **does not match**. That explains CI's ECONNREFUSED: the suite ran with no isolated copy.
+  - `run-suites.sh` runs tsx as `$TSX` (`:68`), which already carries `--tsconfig api/tsconfig.json`, so dropping the flag from the usage line loses nothing.
+- **The other suite files this PR touches** (`git diff origin/main...ed30c8a6b`). All server suites match the pattern:
+  - `check_c10_1_configured` (runtime_c101 4431)
+  - `check_forms_pdf_hardening` (forms_pdf 4450)
+  - `check_s7_load` (runtime_s7 4435)
+  - `check_r146_whole_form_output` does not match, which is correct: it is offline (no database, no server) and runs without a copy.
+  - `acceptance/C11.7.test.ts` changes only an assertion; its usage line is untouched.
+  - No other suite file has the problem.
+- **Run.** I started the copy the way `run-suites.sh` does (isolated copy on :4441, `tsx --tsconfig api/tsconfig.json <file> <port> <db>`): **20/20**.
+
+No new Blocker or Major.
+
+Verdict: Approve
