@@ -189,4 +189,18 @@ const adults = { "A|person.date_of_birth": "1980-05-01", "B|person.date_of_birth
   ok("C6.4: an empty release gives each person an empty list, not an error", run(known(adults)).people.length === 3 && (caseChecklist({ ...S, document_requirements: [] } as Snapshot, "vv.single", people, known(adults), TODAY) as D).people.every((p) => p.lines.length === 0));
 }
 
+// C7.7 (contract item (c), Devin on #680): the placement moves an unanswered once-per-case input to the filing, but an
+// answer saved on the person before its placement became once per case still counts as answered.
+{
+  const S8 = { ...S, placements: [{ fact: "person.date_of_birth", question_text: "Date of birth", repeats: "once_per_case" }, { fact: "case.application_date", question_text: "Date the application is submitted" }],
+    document_requirements: [req("senior:each", "senior_letter", "each_applicant", { base_or_conditional: "conditional", condition: { subjectKind: "EACH_APPLICANT", op: "gte", field: "person.age_years", value: 60 }, condition_plain: "the person is 60 or older" })] } as unknown as Snapshot;
+  const waitA = (k: Known) => of(caseChecklist(S8, "vv.single", people, k, TODAY) as D, "A").waiting.find((l) => l.document.key === "senior_letter");
+  // Both inputs answered but no age comes out (born after the application date): the calculated field is expanded into
+  // its inputs, which must read as answered (check them), not as questions still to answer.
+  const saved = waitA(known({ "A|person.date_of_birth": "2030-01-01", "case|case.application_date": "2026-12-01" }))?.missing ?? [];
+  ok("C7.7 (c) pass: an input answered on the person still counts after its placement became once per case (the checklist says check, never answer again)", saved.length === 2 && saved.every((m) => m.answered), saved);
+  const none = waitA(known({}))?.missing ?? [];
+  ok("C7.7 (c) fail: unanswered anywhere, the once-per-case input is still asked", none.some((m) => m.key === "person.date_of_birth" && !m.answered), none);
+}
+
 process.exitCode = summary() ? 1 : 0;
