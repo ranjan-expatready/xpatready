@@ -590,7 +590,7 @@ export class Studio {
     const said = typeof b.reason === "string" ? b.reason.normalize("NFKC").replace(/[\p{Cf}\p{Default_Ignorable_Code_Point}]/gu, "").trim() : "";
     const before = [...rows].sort((x, y) => y.version - x.version)[0];
     const meaningChanges = changes.meaning !== undefined && changes.meaning !== before?.meaning;
-    if (meaningChanges && said.length < 8) throw new HttpException({ type: "https://expatready.local/problems/validation", title: "Some details need fixing", status: 400, detail: "Say why the meaning changes, in a sentence (at least 8 characters): the second person reads it before the new meaning is released.", errors: [{ field: "reason", message: "Say why the meaning changes, in a sentence (at least 8 characters)." }] }, HttpStatus.BAD_REQUEST);
+    if (meaningChanges && said.length < 8) throw new HttpException({ type: "https://expatready.local/problems/validation", title: "Some details need fixing", status: 400, detail: "Say why the meaning changes, in a sentence (at least 8 characters): it is kept with the change in the activity.", errors: [{ field: "reason", message: "Say why the meaning changes, in a sentence (at least 8 characters)." }] }, HttpStatus.BAD_REQUEST);
     if (said.length > 300) fail("Keep the reason to 300 characters.");
     if (b.valueType !== undefined) { if (!VALUE_TYPES.includes(b.valueType)) fail("Unknown value type."); changes.valueType = b.valueType; changes.dataType = VALUE_TYPE_TO_DATA_TYPE[b.valueType]; }
     if (b.note !== undefined) changes.note = b.note;

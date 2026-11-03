@@ -145,8 +145,8 @@ export function FieldPage() {
           <LastRename kind="field" itemKey={key} invalidate={[...inv, ["field-sources", key]]} />
           {renaming ? <RenameDialog kind="field" itemKey={key} current={shown} initial={name.trim()} label="Name" invalidate={[...inv, ["field-sources", key]]} onClose={() => setRenaming(false)} /> : null}
           <Field label="Meaning" hint="What reviewers and the comparison rely on; one meaning per field."><Textarea value={meaning} onChange={(e) => setMeaning(e.target.value)} /></Field>
-          {/* C3.15 (P-253): a change of meaning says why; the second person reads it before the new meaning is released. */}
-          {meaning.trim() !== cur.meaning ? <Field label="Why the meaning changes" hint="One sentence; the second person reads it before the new meaning is released."><Input value={why} onChange={(e) => setWhy(e.target.value)} maxLength={300} placeholder="For example: IMM 5707 asks for the date of the last entry, not the first" /></Field> : null}
+          {/* C3.15 (P-253): a change of meaning says why; the reason is kept with the change in the activity. */}
+          {meaning.trim() !== cur.meaning ? <Field label="Why the meaning changes" hint="One sentence; it is kept with the change in the activity."><Input value={why} onChange={(e) => setWhy(e.target.value)} maxLength={300} placeholder="For example: IMM 5707 asks for the date of the last entry, not the first" /></Field> : null}
           <Field label="Value type"><Select value={type} onChange={(e) => setType(e.target.value)}>{TYPES.map((t) => <option key={t} value={t}>{TYPE_WORD[t]}</option>)}</Select></Field>
           <div className="flex justify-end"><Button onClick={() => saveDef.mutate(undefined)} busy={saveDef.isPending} disabled={retiredNow || meaning === cur.meaning && type === cur.valueType}><Save /> Save as draft</Button></div>
           <p className="text-xs text-text-muted">Versions: {v.versions.map((x: any) => `v${x.version} ${x.status.toLowerCase()}${x.updatedBy ? ` (${nameOf(session.data?.actors, x.updatedBy)})` : ""}`).join(" · ")}</p>
