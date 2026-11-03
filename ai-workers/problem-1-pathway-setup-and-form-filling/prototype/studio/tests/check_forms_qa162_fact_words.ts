@@ -7,6 +7,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { findFact, listed, stem, wordsOf } from "../engine/fact-words.ts";
+import { pickDecider } from "../engine/qd-conditions.ts";
 import type { FactSourceView } from "../engine/sources.ts";
 import { admitInput, PolicyRefusal } from "../../p2/guard.ts";
 import { buildRequest } from "../../p2/prompt.ts";
@@ -116,6 +117,22 @@ try {
   ok("R fail: a v2 answer for another question list is not used (the v1 answer is)", r.ok && r.output.picks[0].asks === "pqr-picks.v1.md");
 } finally {
   for (const p of written) rmSync(p, { force: true });
+}
+// ---- QA-162 after QA-194: a condition's deciding question (engine/qd-conditions.ts pickDecider)
+{
+  const gate = f("principal", "person.used_other_name", "Whether the person has ever used any other name, such as a nickname, maiden name or alias");
+  const names3 = [gate, f("principal", "person.other_family_name", "Family name of any other name ever used"), f("principal", "person.other_given_names", "Given name(s) of any other name ever used")];
+  const yesNo = (x: FactSourceView) => x.fact === "person.used_other_name";
+  const pick = (pool: FactSourceView[], can: (x: FactSourceView) => boolean, asks: string) => pickDecider(pool, can, "principal", asks, new Map(), (x) => x);
+  const got = pick(names3, yesNo, "Ever used other name");
+  ok("D pass: words that fit three questions, of which only the Yes/No can take \"yes\", decide by that Yes/No question", !("why" in got) && got.f.fact === "person.used_other_name");
+  const both = pick(names3, () => true, "Ever used other name");
+  ok("D fail: when every one of them could take the answer it is none, every one named, never guessed", "why" in both && /could be 3 questions/.test(both.why) && names3.every((x) => both.why.includes(x.label)));
+  const marital = [f("principal", "person.marital_status", "Marital status"), f("principal", "person.marital_status_note", "Note on the marital status")];
+  const exact = pick(marital, (x) => x.fact === "person.marital_status_note", "Marital status");
+  ok("D fail (fresh review m1 on #744): an exact name is never overruled by the answer filter (\"Marital status\" stays the marital status)", !("why" in exact) && exact.f.fact === "person.marital_status");
+  const none = pick(names3, () => false, "Ever used other name");
+  ok("D fail: when none of them can take the answer, the usual reason stands (several, named)", "why" in none && /could be 3 questions/.test(none.why));
 }
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);
