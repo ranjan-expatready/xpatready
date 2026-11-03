@@ -35,16 +35,19 @@ export function compareMaps(draft: MapField[], check: MapField[]): { byKey: Map<
 /** The library's key shape (the field-map prompts' own pattern). */
 export const FIELD_KEY = /^[a-z][a-z_]*\.[a-z][a-z0-9_]*$/;
 /** The rules a field-map item is checked by on both rounds (P-121): its key's shape, and its form fields on the form. */
-/** The words of a form a quote is checked against (its fields' captions, headings and tooltips), squashed. */
+/** The words of a form a quote is checked against (its fields' captions, headings and tooltips), squashed, one printed
+ *  text per line (Devin on #728: a quote never runs from one caption into the next). */
 export const squashWords = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 /** QA-191 review m1: a box's printed choices count too (the inventory's options: [label, value] pairs, or labels). */
 const optionLabels = (o: unknown): string[] => (Array.isArray(o) ? o.map((x) => (Array.isArray(x) ? String(x[0] ?? "") : typeof x === "string" ? x : String((x as { label?: unknown })?.label ?? ""))) : []);
-export function formWords(fields: { caption?: string | null; heading?: string | null; tooltip?: string | null; options?: unknown }[]): string {
-  return squashWords(fields.map((f) => `${f.caption ?? ""} ${f.heading ?? ""} ${f.tooltip ?? ""} ${optionLabels(f.options).join(" ")}`).join(" \n "));
+export function formWords(fields: { caption?: string | null; heading?: string | null; tooltip?: string | null; options?: unknown; options_resolved?: unknown }[]): string {
+  // Devin on #728: a choice list referenced by the box is printed too (options_resolved), even when options is empty.
+  const texts = fields.flatMap((f) => [f.caption, f.heading, f.tooltip, ...optionLabels(f.options), ...optionLabels(f.options_resolved)]);
+  return [...new Set(texts.map((t) => squashWords(t ?? "")).filter(Boolean))].join("\n");
 }
 /** Whether the words a reading quoted are printed on the form: whole words, squashed so case and punctuation do not
  *  matter (QA-191 review M1: a part of a word, "na" inside "name", is not a quote of the form). */
-export const quoteOnForm = (quote: string | null | undefined, words: string) => { const q = quote ? squashWords(quote) : ""; return q.length > 0 && ` ${words} `.includes(` ${q} `); };
+export const quoteOnForm = (quote: string | null | undefined, words: string) => { const q = quote ? squashWords(quote) : ""; return q.length > 0 && words.split("\n").some((t) => ` ${t} `.includes(` ${q} `)); };
 
 /** QA-191 (P-121: "the rules check (quote found in its source, coverage, references, duplicates, type and options) runs on
  *  both"): with `more`, three rules besides the two shape rules: the quote is printed on the form, the kind of answer is
