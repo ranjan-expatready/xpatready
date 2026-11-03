@@ -16,6 +16,7 @@ import { codeForValue, draftOptionMap, optionMapProblems, pdfOptions } from "../
 import type { Snapshot } from "../engine/snapshot.ts";
 import { normLabel } from "../engine/twin.ts";
 import { seedAnswerList, seedField } from "./seed_library.cjs";
+import { acceptCleanOneByOne } from "./lib/accept-draft.ts";
 
 const PORT = Number(process.argv[2] ?? 4450), DB = process.argv[3] ?? "xr_studio_forms_f1";
 const STUDIO = join(import.meta.dirname, "..");
@@ -137,7 +138,7 @@ const intake = async (file: string, combinationId: string) => {
   let r = await call("POST", `/attachments/${att}/draft`, { mode: "replay" });
   const jobId = r.body?.id;
   await until(async () => (await call("GET", `/jobs/${jobId}`)).body?.status === "COMPLETED");
-  await call("POST", `/jobs/${jobId}/accept-clean`, { outcome: "REUSE" }); await call("POST", `/jobs/${jobId}/accept-clean`, { outcome: "NEW" });
+  await acceptCleanOneByOne(call, jobId, ["REUSE", "NEW"]);
   for (const i of (await call("GET", `/jobs/${jobId}`)).body.items.filter((x: { decision: string }) => x.decision === "PENDING")) await call("POST", `/jobs/${jobId}/items/${i.id}`, { decision: "ACCEPTED", note: "Test: a different meaning from the library field that could fit (BR-7)." });
   r = await call("POST", `/jobs/${jobId}/apply`, {});
   const pdfMapped = Number(sql("select count(*) from form_field_map m join form_edition e on e.id=m.form_edition_id where e.edition_label like 'IMM 5257 (%' and m.outcome='mapped'"));

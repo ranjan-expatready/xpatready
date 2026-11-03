@@ -12,6 +12,7 @@
 //   zsh studio/tools/isolated.sh screens_fix 4444 start && tsx studio/tests/check_screen02_fix.ts 4444 xr_studio_screens_fix
 import { execFileSync } from "node:child_process";
 import { seedField, seedSection } from "./seed_library.cjs";
+import { acceptCleanOneByOne } from "./lib/accept-draft.ts";
 
 const PORT = Number(process.argv[2] ?? 4444), DB = process.argv[3] ?? "xr_studio_screens_fix";
 let pass = 0, fail = 0;
@@ -98,7 +99,7 @@ const REASON = "Test: a different meaning from the library field that could fit.
   } else ok("C3.6 BR-7 (Must 3): the replayed answer has a new proposal near a library field", false);
 
   // The rest as the AI recommends (with a reason where a field could fit), applied by user-C so M2 can be checked.
-  for (const o of ["REUSE", "NEW"]) await call("POST", `/jobs/${jobId}/accept-clean`, { outcome: o });
+  await acceptCleanOneByOne(call, jobId, ["REUSE", "NEW"]);
   job = (await call("GET", `/jobs/${jobId}`)).body;
   for (const i of job.items.filter((x: any) => x.decision === "PENDING")) await call("POST", `/jobs/${jobId}/items/${i.id}`, { decision: "ACCEPTED", note: REASON });
   ok("C2.2 m2 fail: a field-map draft is not applied as a checklist (4xx)", (await call("POST", `/jobs/${jobId}/apply-checklist`)).status === 404);

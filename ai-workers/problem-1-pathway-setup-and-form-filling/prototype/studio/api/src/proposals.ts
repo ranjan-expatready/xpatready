@@ -233,7 +233,9 @@ export function reviewRow(r: Row) {
     boxes: w.boxes ?? [], evidence: w.evidence ?? {}, affected: w.affected ?? {}, reason: w.reason ?? r.reason ?? "", decision: r.choice ?? (r.status === "waiting" ? "PENDING" : r.status.toUpperCase()),
     decidedKey: r.decidedKey, decidedBy: r.decidedBy, decisionNote: r.decisionReason, decidedAt: r.decidedAt,
     payload: r.choice === "NEW" ? { label: p.label, reason: r.decisionReason, advisory: w.advisory ?? null } : w.legacyPayload ?? (r.kind === "field" ? null : p), sourceQuote: src?.quote ?? w.sourceQuote ?? null,
-    status: r.status, confidence: r.confidence };
+    status: r.status, confidence: r.confidence,
+    // C3.2 (P-121): why this waiting item cannot be accepted with the other exact reuse matches (null when it is High).
+    bulkWhy: r.status === "waiting" ? bulkWhy(r) : null };
 }
 
 // ------------------------------------------------------------------ landers
@@ -604,6 +606,9 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
   need(actor, "review");
   const res = await db.$transaction(async (tx) => {
     const rows = await tx.proposalItem.findMany({ where: { workspaceId, batchId } });
+    // C3.2 AT-9: an Undo clears the items' batch id, so the same Undo again finds none; the activity log still has the
+    // undo, so it is refused as done (409), not as unknown.
+    if (!rows.length && await tx.auditEvent.count({ where: { workspaceId, action: "undone", entity: "proposals", entityKey: batchId } })) fail("Already undone: these proposals wait on the queue again. Nothing was changed.", HttpStatus.CONFLICT);
     if (!rows.length) fail("No decision with this id.", HttpStatus.NOT_FOUND);
     if (rows.some((r) => r.decidedBy !== actor.id)) fail("Only the person who decided can undo it.", HttpStatus.FORBIDDEN);
     if (rows.some((r) => r.status === "undone")) fail("Already undone.", HttpStatus.CONFLICT);
