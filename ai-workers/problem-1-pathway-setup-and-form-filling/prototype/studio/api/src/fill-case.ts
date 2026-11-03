@@ -17,7 +17,7 @@ import type { z } from "zod";
 import { GenerateCopy, LockCopy, LOCK_KINDS, notReady, type CaseForm, type CaseOnlineForm, type FormCopy } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { caseView } from "../../engine/runtime/case.ts";
-import { changedFacts, changedGroups, copyOnlyForms, formCoverage, groupFacts, gateOf, inputHash, markNothingRecorded, pdfForms, readiness, type FormFact, type GatePlacement, type GroupFact } from "../../engine/runtime/forms.ts";
+import { changedFacts, changedGroups, copyOnlyForms, formCoverage, groupFacts, gateOf, inputHash, isGateFact, markNothingRecorded, pdfForms, readiness, type FormFact, type GatePlacement, type GroupFact } from "../../engine/runtime/forms.ts";
 import { answerSheetOnly, CHANNEL_WORDS, isBarcodeForm, NOT_FOR_FILING, type Channel } from "../../contracts/forms.ts";
 import { lineOf } from "../../engine/channels.ts";
 import type { BoxRow } from "../../engine/render.ts";
@@ -149,7 +149,7 @@ export class CaseForms implements OnModuleInit {
         if (!applies && !mine.length) continue; // a form that stops applying keeps its copies in view (break M4)
         const channel = channelIn(s, form);
         forms.push({ form, title: titles.get(form) ?? form, subject_id: p.subjectId, person: p.label, applies, trial_passed: trialOf(s, form).passed, trial_why: trialOf(s, form).why, channel, for_filing: channel !== "ONLINE", needs_validate: needsValidate(s, form),
-          draft: { written_now: cov?.facts.length ?? 0, mapped: cov?.mapped ?? 0, unconfirmed: cov?.boxes.filter((b) => b.coverage === "answered on screen").length ?? 0 },
+          draft: { written_now: cov?.facts.filter((x) => !isGateFact(x)).length ?? 0, mapped: cov?.mapped ?? 0, unconfirmed: cov?.boxes.filter((b) => b.coverage === "answered on screen").length ?? 0 },
           readiness: readiness(view, form, p.subjectId), fields_open: cov ? fieldsOpen(s, form, markNothingRecorded(cov.boxes, view, s.placements as GatePlacement[]), caseWords) : [], copies: mine.map((x) => this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, form, p.subjectId), channel === "ONLINE")) });
       }
     }
@@ -211,7 +211,7 @@ export class CaseForms implements OnModuleInit {
       const again = await this.db.formInstance.findFirst({ where: { caseId, idempotencyKey: b.idempotencyKey } }); // a simultaneous press won
       return this.answerFor(again!, form, subjectId);
     }
-    await this.audit.log(c.workspaceId, actor.id, "queued", "form copy", form, `${actor.name} asked for a new copy of ${form} for the ${ROLE[who!.role] ?? who!.role} on case ${short(caseId)} (${cov!.facts.length} confirmed facts)`);
+    await this.audit.log(c.workspaceId, actor.id, "queued", "form copy", form, `${actor.name} asked for a new copy of ${form} for the ${ROLE[who!.role] ?? who!.role} on case ${short(caseId)} (${cov!.facts.filter((x) => !isGateFact(x)).length} confirmed facts)`);
     this.enqueue([copy.id]);
     return { id: copy.id, status: copy.status, created: true };
   }

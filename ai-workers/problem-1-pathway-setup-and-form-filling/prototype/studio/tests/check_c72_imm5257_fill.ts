@@ -219,9 +219,20 @@ type Box = { box: string; fact: string | null; result: string; why: string | nul
     const f = ((await call("GET", `/runtime/cases/${caseId}/forms`, undefined, OFFICER)).body.forms as { form: string; subject_id: string; fields_open: { box: string; reason: string }[]; readiness: { ready: boolean } }[]).find((x) => x.form === "IMM 5257" && x.subject_id === P);
     ok("QA-165 part 2: the list before the file is offered now names only those 3, and the form is still ready to file", (f?.fields_open ?? []).length === 3 && (f?.fields_open ?? []).every((o) => NOT_A_FACT.includes(o.box)) && f?.readiness?.ready === true, f?.fields_open);
   }
+  // Devin on #715 (1): the gate's answer is kept with the copy: changing it after the copy makes that copy out of date.
+  const nCopy = sql(`select id from form_instance where case_id = '${caseId}' order by created_at desc limit 1`);
+  ok("QA-165 fail guard: the copy that wrote N is current while nothing changed", (await call("GET", `/runtime/form-copies/${nCopy}`, undefined, OFFICER)).body?.out_of_date === false);
   await put(P, "person.used_other_name", true); await confirmAll();
+  const flipped = (await call("GET", `/runtime/form-copies/${nCopy}`, undefined, OFFICER)).body;
+  ok("QA-165 pass (Devin on #715): \"other names\" changed from No to Yes after the copy makes the copy that says N out of date, naming the question", flipped?.out_of_date === true && (flipped?.changed ?? []).some((c: string) => /used_other_name|other name/i.test(c)), { out_of_date: flipped?.out_of_date, changed: flipped?.changed });
   const yes = await generate(5);
   ok("QA-165 fail: after a Yes to \"other names\" with no name given, its box is never \"N\" (Yes needs the names)", !yes.values[NOT_ASKED[0]] && yes.values[NOT_ASKED[1]] === "N", [yes.values[NOT_ASKED[0]], yes.byBox.get(NOT_ASKED[0])?.result]);
+  // Devin on #715 (2): a confirmed No to "national identity document" while a number is still recorded contradicts
+  // itself: the Yes/No box is never written (neither Y from the number nor N from the No), and the open list says why.
+  await put(P, "person.national_id_number", "SAMPLE-ID-1"); await confirmAll();
+  const clash = await generate(6);
+  const clashOpen = (((await call("GET", `/runtime/cases/${caseId}/forms`, undefined, OFFICER)).body.forms as { form: string; subject_id: string; fields_open: { box: string; reason: string; why: string }[] }[]).find((x) => x.form === "IMM 5257" && x.subject_id === P)?.fields_open ?? []).find((o) => o.box === NOT_ASKED[1]);
+  ok("QA-165 fail (Devin on #715): No to a national identity document with a number recorded writes neither Y nor N; the list before the file says to correct one", !clash.values[NOT_ASKED[1]] && clashOpen?.reason === "needs an answer" && /answered No, but .* is recorded: correct one/.test(clashOpen?.why ?? ""), { value: clash.values[NOT_ASKED[1]], open: clashOpen });
   // Review r1 M2: a fact behind an "N" answered after the copy makes that copy out of date (here: an education entry).
   const copyId = sql(`select id from form_instance where case_id = '${caseId}' order by created_at desc limit 1`);
   const fresh = (await call("GET", `/runtime/form-copies/${copyId}`, undefined, OFFICER)).body;
