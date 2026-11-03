@@ -295,26 +295,27 @@ export function personNearReason(r: Pick<Row, "identity" | "origin">): string | 
 
 /** QA-192: whether accepting this item needs the decider's one-line reason (it adds to the library, is close to a library
  *  item, and no person has said why it is not the same). Field-map items are decided on their own page (BR-7). */
-export function needsNearReason(r: Pick<Row, "identity" | "origin" | "landsOn" | "step" | "reuse" | "work">): boolean {
-  const near = ((r.identity ?? {}) as { near?: string[] }).near;
+export function needsNearReason(r: Pick<Row, "identity" | "origin" | "landsOn" | "step" | "reuse" | "work" | "kind" | "payload">, libraryPool?: NearPool): boolean {
+  // Review M3: the same check decide() makes on a plain accept: the near list stored at proposal, and the library now.
+  const near = [...(((r.identity ?? {}) as { near?: string[] }).near ?? []), ...(libraryPool && r.kind === "field" ? nearIn(libraryPool, r, r.payload) : [])];
   const reuse = (r.reuse ?? {}) as { match?: string; existingKey?: string | null };
   // A twin not yet resolved (reuse with no item) may add the item itself at accept (Devin on #726): counted as new.
   const adds = reuse.match === "new" || (reuse.match === "reuse" && !reuse.existingKey && !!(r.work as { twinOf?: string } | null)?.twinOf);
   return r.landsOn === "library" && !ON_ITS_PAGE.has(r.step) && adds && !!near?.length && !personNearReason(r);
 }
 
-/** QA-192 review M1–M2: the library fields and waiting new fields the item, as it will land, is close to (names), found
- *  again with the one rule (engine/near.ts) at the decision; the item itself is left out. */
-async function nearAtDecision(tx: Tx, workspaceId: string, r: Row, payload: ProposalPayload): Promise<string[]> {
+/** QA-192 (review M1–M3): what the one rule compares an item with at the decision, read once per request: the library's
+ *  live fields, and (for an edit, whose new name no one has compared yet) the new fields waiting too. */
+export type NearPool = { key: string | null; name: string; meaning: string | null }[];
+export async function libraryNearPool(db: Client, workspaceId: string): Promise<NearPool> {
+  return (await db.canonicalField.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] }, mergedIntoKey: null }, select: { canonicalFieldKey: true, label: true, meaning: true } }))
+    .map((f) => ({ key: f.canonicalFieldKey, name: f.label || f.canonicalFieldKey, meaning: f.meaning }));
+}
+/** The names of the pool's items close to the item as it will land (its label and meaning), with the one rule. */
+export function nearIn(pool: NearPool, r: Pick<Row, "work">, payload: unknown): string[] {
   const p = payload as { label?: string; meaning?: string };
-  if (!p.label) return [];
-  const me = { key: ((r.work as { proposedKey?: string } | null)?.proposedKey) ?? null, name: p.label, meaning: p.meaning ?? null };
-  const pool = [
-    ...(await tx.canonicalField.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] }, mergedIntoKey: null }, select: { canonicalFieldKey: true, label: true, meaning: true } }))
-      .map((f) => ({ key: f.canonicalFieldKey, name: f.label || f.canonicalFieldKey, meaning: f.meaning })),
-    ...(await pendingNewFields(tx, workspaceId, [r.id])),
-  ];
-  return nearMatches(me, pool).map((n) => n.name);
+  if (!p?.label) return [];
+  return nearMatches({ key: ((r.work as { proposedKey?: string } | null)?.proposedKey) ?? null, name: p.label, meaning: p.meaning ?? null }, pool).map((n) => n.name);
 }
 
 /** "document type key|person" of every requirement the combination has now (each lineage's newest version, unless
@@ -573,6 +574,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
       if (no.length) fail(`Only Ready items are accepted together. ${no.length === 1 ? "One item" : `${no.length} items`} cannot be: "${nameOf(no[0][0].payload as ProposalPayload, no[0][0].identityKey)}" (${no[0][1]}). Nothing was accepted.`, HttpStatus.CONFLICT);
     }
     const out: { id: string; landedAs: string | null }[] = [];
+    let libPool: NearPool | null = null; // QA-192 review M3: read once per decision
     for (const r of rows) {
       let payload = r.payload as ProposalPayload;
       if (d.action === "edit") {
@@ -606,13 +608,25 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         // Devin on #726 and review M1–M2: checked after a twin's reuse choice is resolved, on the item as it will land: the
         // near list is found again with the one rule (an edit's new name, a twin the door did not check) and joined to
         // what the producer said.
-        if (r.landsOn === "library" && !ON_ITS_PAGE.has(r.step) && reuse.match === "new" && !personNearReason(r)) {
-          const found = r.kind === "field" ? await nearAtDecision(tx, workspaceId, r, payload) : [];
+        // Review M3: a plain accept compares with the library only (a waiting item proposed later carries the pair itself);
+        // an edit's new name is compared with the waiting new fields too. Review r2 m2: an edit never rests on the
+        // proposer's reason for the old name.
+        if (r.landsOn === "library" && !ON_ITS_PAGE.has(r.step) && reuse.match === "new" && (d.action === "edit" || !personNearReason(r))) {
+          let found: string[] = [];
+          if (r.kind === "field") {
+            libPool ??= await libraryNearPool(tx, workspaceId);
+            // Devin r2 on #726: an edit's new name lands under a key built from it, so the proposer's key never hides a match.
+            found = d.action === "edit" ? nearIn([...libPool, ...(await pendingNewFields(tx, workspaceId, [r.id]))], { work: null }, payload) : nearIn(libPool, r, payload);
+          }
           const near = [...new Set([...(d.action === "edit" ? [] : (nearIds.near ?? [])), ...found])].filter(Boolean).slice(0, 10);
           if (near.length) {
             if (!reason || reason.length < 8) fail(`"${nameOf(payload, r.identityKey)}" is close to ${near.slice(0, 3).join(", ")}: say in one line why it is not the same (8 characters or more). The second person sees it at release.`);
             if (isRuleWhy(reason!)) fail(`Say in your own words why "${nameOf(payload, r.identityKey)}" is not the same as ${near[0]}; the rule's own words are not a reason.`); // review m2
             identity = { ...nearIds, near, nearReason: reason, nearReasonBy: "person" } as Prisma.InputJsonValue; nearGiven = true;
+          } else if (d.action === "edit" && nearIds.near?.length) {
+            // Devin r2 on #726: an edit no longer close to anything drops the old name's near list, so the approver is not
+            // told it is close to a field it is not (Undo puts the old list back).
+            identity = { ...nearIds, near: [], nearReason: null, nearReasonBy: null } as Prisma.InputJsonValue; nearGiven = true;
           }
         }
         if (r.landsOn === "library" && reuse.match === "reuse" && d.action === "accept") {

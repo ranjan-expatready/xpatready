@@ -124,6 +124,29 @@ run(async () => {
   ok("QA-192 fail (review M2): an edit renaming an item to a name close to a library field is not accepted without a person's reason (400)", !!plainId && r.status === 400 && words(r).includes(fam), [plainId, r.status, words(r)]);
   r = await call("POST", "/review/proposals/decide", { ids: [plainId], action: "edit", payload: edited, reason: "The family name used at arrival, not today's (test)." }, AUTHOR);
   ok("QA-192 pass (review M2): with the person's reason the edit lands, its near list and reason kept", r.status === 201 && sql(`select coalesce(identity->>'nearReasonBy', '-') || '|' || (identity->'near')::text from proposal_item where id='${plainId}'`).startsWith("person|") && sql(`select identity->'near' from proposal_item where id='${plainId}'`).includes(fam), [r.status, words(r)]);
+  // Devin r2 on #726: an edit's new name is compared under the key it will land with, never the proposer's key, so a
+  // proposer's key equal to the library field's cannot hide the match.
+  const keyed = (await tryInsert(item("Quokka zebra wombat", { work: { proposedKey: famKey } }))).ids[0];
+  r = await call("POST", "/review/proposals/decide", { ids: [keyed], action: "edit", payload: payload(`${fam} at departure`) }, AUTHOR);
+  ok("QA-192 fail (Devin r2 on #726): an edit to a name close to a library field is refused without a reason (400) even when the proposer's key is that field's", !!keyed && r.status === 400 && words(r).includes(fam), [keyed, r.status, words(r)]);
+  // Devin r2 on #726: an edit no longer close to anything drops the old near list (the approver is not told it is close);
+  // Undo puts it back.
+  const wasNear = (await tryInsert(item(`${fam} before marriage`, { identity: { key: P.identityKeyOf(payload(`${fam} before marriage`), ""), near: [famKey], nearReason: REASON } }))).ids[0];
+  r = await call("POST", "/review/proposals/decide", { ids: [wasNear], action: "edit", payload: payload("Hull paint of the ferry") }, AUTHOR);
+  const dropped = sql(`select (identity->'near')::text || '|' || coalesce(identity->>'nearReason', '-') from proposal_item where id='${wasNear}'`);
+  ok("QA-192 pass (Devin r2 on #726): an edit to a name close to nothing lands without a reason and drops the old near list and reason", !!wasNear && r.status === 201 && dropped === "[]|-", [wasNear, r.status, dropped, words(r)]);
+  const undoNear = await call("POST", `/review/proposals/undo/${r.body?.batchId}`, undefined, AUTHOR);
+  ok("QA-192 pass (Devin r2 on #726): Undo puts the old near list and reason back", undoNear.status < 300 && sql(`select (identity->'near' ? '${famKey}')::text || '|' || coalesce(identity->>'nearReason', '-') from proposal_item where id='${wasNear}'`) === `true|${REASON}`, [undoNear.status, undoNear.body]);
+  // Review M3 (round 2): a Ready item whose close match was proposed after it needs no reason (the later item carries the
+  // pair); the queue says so and the server agrees; the later item needs one.
+  const [mFirst, mLater] = await P.insertProposals(db, ws, [item("Mother maiden surname"), item("Maiden surname of mother")] as never);
+  const grp = (await call("GET", `/review/proposals?group=${encodeURIComponent("edition:IMM 5257 (09-2023)")}`)).body?.group;
+  const inQueue = (id: string) => [...(grp?.bands?.ready ?? []), ...(grp?.bands?.check ?? []), ...(grp?.bands?.decide ?? [])].find((x: { id: string }) => x.id === id);
+  const firstView = inQueue(mFirst), laterView = inQueue(mLater);
+  r = await call("POST", "/review/proposals/decide", { ids: [mFirst], action: "accept" }, AUTHOR);
+  ok("QA-192 pass (review M3): the first of two close names (the later one carries the pair) shows no reason needed, and is accepted without one", firstView?.near_reason_needed === false && r.status === 201, [firstView?.near_reason_needed, r.status, words(r)]);
+  r = await call("POST", "/review/proposals/decide", { ids: [mLater], action: "accept" }, AUTHOR);
+  ok("QA-192 fail (review M3): the later one shows a reason is needed, and is refused without one (400)", laterView?.near_reason_needed === true && r.status === 400, [laterView?.near_reason_needed, r.status, words(r)]);
   const c = (await tryInsert(item("Twin shade"))).ids[0], dd = (await tryInsert(ed2("Twin shade"))).ids[0];
   const rc = await call("POST", "/review/proposals/decide", { ids: [c], action: "accept" }, AUTHOR);
   r = await call("POST", "/review/proposals/decide", { ids: [dd], action: "accept" }, AUTHOR);

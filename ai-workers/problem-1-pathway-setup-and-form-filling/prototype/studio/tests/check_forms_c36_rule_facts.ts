@@ -117,18 +117,21 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? r.body);
   // ─────────────────── review c36 r2 MA1: the Day-0 add builds its key at landing, from the item as decided
   const rk = sql(`select predicate_key from predicate where combination_id='${combo}' and status <> 'RETIRED' order by predicate_key limit 1`);
   const F = { meaning: "A fact a test needs, in a sentence (Sample).", valueType: "text", subject: "person" };
+  // QA-192 (P-120, P-149 (2)): two facts with one meaning are near duplicates and need a person's reason, so each fact
+  // below says what it means in its own words.
+  const own = (label: string) => ({ ...F, label, meaning: `Whether the applicant has a ${label.toLowerCase()} (Sample).` });
   const retired = sql(`select canonical_field_key || '|' || label from canonical_field where status in ('DRAFT','PUBLISHED') and label is not null and canonical_field_key like 'person.%' and canonical_field_key <> 'person.family_name' order by canonical_field_key limit 1`).split("|");
   sql(`update canonical_field set status='RETIRED' where canonical_field_key='${retired[0]}'`);
   r = await call("POST", `/combinations/${combo}/rules/${encodeURIComponent(rk)}/fact`, { ...F, label: retired[1] });
   ok("C3.6 fail (MA1): a retired field's name is refused now, in words, naming the field to restore (409)", r.status === 409 && msg(r).includes(retired[0]) && /restore/i.test(msg(r)), [r.status, msg(r)]);
-  const a1 = await call("POST", `/combinations/${combo}/rules/${encodeURIComponent(rk)}/fact`, { ...F, label: "Résumé gap" });
-  const a2 = await call("POST", `/combinations/${combo}/rules/${encodeURIComponent(rk)}/fact`, { ...F, label: "Resume gap" });
+  const a1 = await call("POST", `/combinations/${combo}/rules/${encodeURIComponent(rk)}/fact`, own("Résumé gap"));
+  const a2 = await call("POST", `/combinations/${combo}/rules/${encodeURIComponent(rk)}/fact`, own("Resume gap"));
   const d2 = [await call("POST", "/review/proposals/decide", { ids: [a1.body?.proposalId], action: "accept" }, "user-C"), await call("POST", "/review/proposals/decide", { ids: [a2.body?.proposalId], action: "accept" }, "user-C")];
   const keys = d2.map((d) => d.body?.items?.[0]?.landedAs);
   ok("C3.6 pass (MA1): two names that build one key both land, under two keys", d2.every((d) => d.status === 201) && keys[0] && keys[1] && keys[0] !== keys[1], [d2.map((d) => d.status), keys, d2.map(msg)]);
-  const e = await call("POST", `/combinations/${combo}/rules/${encodeURIComponent(rk)}/fact`, { ...F, label: "Visa refused before" });
+  const e = await call("POST", `/combinations/${combo}/rules/${encodeURIComponent(rk)}/fact`, own("Visa refused before"));
   const ep = sql(`select payload from proposal_item where id='${e.body?.proposalId}'`);
-  r = await call("POST", "/review/proposals/decide", { ids: [e.body?.proposalId], action: "edit", payload: { ...JSON.parse(ep), label: "Sponsor earlier refusal", subject: "sponsor" } }, "user-C");
+  r = await call("POST", "/review/proposals/decide", { ids: [e.body?.proposalId], action: "edit", payload: { ...JSON.parse(ep), label: "Sponsor earlier refusal", meaning: "Whether the sponsor was refused before (Sample).", subject: "sponsor" } }, "user-C");
   ok("C3.6 pass (MA1): an edit at accept lands under the edited name and subject", r.status === 201 && /^sponsor\.sponsor_earlier_refusal/.test(r.body?.items?.[0]?.landedAs ?? ""), [r.status, r.body?.items?.[0]?.landedAs ?? msg(r)]);
 
   // ─────────────────── review c36 r3 MA3: a rule reading a retired field is offered no add that can never land
