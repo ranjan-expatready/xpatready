@@ -44,3 +44,50 @@ P-149 (1) one door: edition checks yes, honestly kept in Decide. Guide checks: t
 A real saved AI answer (none exists). Retired combinations: `saveCheck` does not check that either, so parity holds. A real screen reader.
 
 **Verdict: Block.** Fix list: B1 (store the fire condition, the negated tree, and add a runtime preview test), M1 (Undo removes the landed check; same-check refusal), M2 (keep the AI's group, severity and Sample label; `cross_record`, not `cross_check`), M3 (`need(author)` in `landCheck`). Minors 1-2 can go in the same pass. Rebase on #718's test changes, whichever PR merges first.
+
+---
+
+## Round 2: re-review of 799c92d8a (diff `b8a00b8ef..799c92d8a` only)
+
+Same reviewer. Isolated copy `rvqa196` on :4441 with a fresh database. Web bundle rebuilt. Live AI off, US$0. The worktree and `p2/` were clean after every run, and the copy is stopped. I read the committed `break-report-qa196.md` beside the diff.
+
+**The change.** The guide-check lander is withdrawn, and `form_check` and `cross_check` have no lander. `acceptWhy` (`api/src/proposals.ts:373-378`) gives a reason in words for both. A form's own check: "the library has no place". A guide check: "added only once this queue can add checks safely … the author can add a check by hand meanwhile". The refusal in `decide` with no lander now uses those words (`:603`). The Work queue counts these items in Decide (`review-queue.ts:161`). The queue row shows "No place yet" and the reason (`proposals.tsx:122-123`).
+
+**Choice.** Keeping both kinds in Decide, never Ready, never accepted, is one of the two options the tech lead offered, and the safe one. Round 1 and the break report show that landing an AI check is its own capability. Today's lander would land inverted conditions, orphans and duplicates (B1/M1-M3; break B1-B8). Withdrawing it closes all of them at once: nothing writes `check_def` from the queue. The PR names the follow-up row ("AI checks land through the one door") with both reports as its spec. P-120 holds: AI still proposes the checks, a person sees them with the source and both readings, and can reject them. The pack line "it proposes sections, answer lists and form checks" still holds.
+
+**Evidence (mine)**
+- `check_forms_c34_ai.ts`: **53/53**. The 3 QA-196 lines pass. The form check and the guide check sit in Decide with `accept_why` equal to `bulk_why`. API Accept gives 409 in the same words, with 0 `check_def` rows from `AI_PROPOSAL`. The Work queue line reads "1 ready to accept, 26 to check, 1 to decide", and To review shows Ready 1.
+- The rule's test fails when the rule is removed. With `review-queue.ts:161` set back to `r.confidence`, the suite gives 52/53. Only the B9 line fails ("2 ready to accept … 0 to decide"). Restored afterwards.
+- Edit through the API also reaches the no-lander refusal (it takes the same branch as Accept), so no route lands a check. `sources.ts:808` bulk-accepts only a field-map job's High items, not checks.
+- Screen (headless Chrome, as user-C): IMM 5257 Decide row: "Form check · AI · No place yet · Not accepted here yet: a form's own checks …". Visitor visa Decide row: the guide check with its reason. Both side panels offer **Reject only**, with the notice. Axe WCAG 2.2 A/AA found nothing on the group and both panels. No sideways scroll at 1024 or 400 px. No console or page errors. The group loads in 263 ms.
+- I did not re-run the C3.4 pack (7/16) or the other suites on this commit. The builder reports exit 0, and nothing here changes their routes, apart from the refusal wording for kinds with no lander (`acceptWhy` returns null for every other kind, so their words are unchanged).
+
+**Round 1 findings**
+| Finding | Status |
+|---|---|
+| B1 inverted condition | Closed: nothing lands (no lander) |
+| M1 Undo orphan, duplicates | Closed: nothing lands |
+| M2 group, severity, Sample lost | Closed: nothing lands |
+| M3 author duty | Closed: nothing lands. The follow-up must call `need(author)` |
+| Minor 1 retired field | Closed with the lander |
+| Minor 2 row words | Fixed: "No place yet" and the reason in the row |
+| Minor 3 `appliesTo` | Closed with the lander |
+| Minor 4 no browser test for hidden Accept | Open (checked by hand above) |
+| Minor 5 never leaves Decide | Accepted. The reason now says so, and the follow-up row is named |
+
+**New or remaining (none blocking)**
+1. Minor: "No place yet" is exact for a form's own check. A guide check does have a place (its combination); what it lacks is a safe way in. Words like "Not yet" would fit both. `proposals.tsx:122`.
+2. Minor (break B14, still open): a bulk Accept through the API that includes one of these items names it by its identity key (`decide`'s multi-accept message uses `nameOf`, and a check payload has no label). The screen never offers a box for them, so only API callers see it.
+3. Minor: the side panel subtitle still says "shared library" for a form check with no place in the library (`proposals.tsx:164`), and the notice title repeats its first words.
+4. The follow-up row's spec should hold, as its done-when list: round 1 B1/M1-M3 and Minors 1 and 3, and break B1-B8 and B10-B15 (fires on failing answers, never twice, goes with Undo, keeps its group, severity and Sample label, reads only released questions, author duty, a retired or missing combination refused in words).
+5. #718: the content conflict in `tests/check_forms_c34_ai.ts` remains (both PRs edit the S block). The second to merge rebases. No source file collides.
+
+**Journey score, round 2:** 8.5/10, a pass.
+- Task completed 1: the reviewer learns what to do and nothing harmful can be accepted.
+- Next step ½: "Keep" has no action, though the reason says what to do.
+- Plain words ½: "No place yet" for a guide check, the subtitle.
+- Feedback 1, Correct data 1, Error recovery 1 (409 in words, nothing written).
+- Accessibility 1, Speed 1, Visual 1.
+- Trust ½: the reading still shows the AI's "(block)" with no word on what it would become. Moot until it lands.
+
+**Verdict: Approve** (commit 799c92d8a; no open Blocker or Major).
