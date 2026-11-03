@@ -7,14 +7,15 @@
 // The fill runs the real filler (p5/fill.py) on IRCC's own two IMM 5476 files (official-sources/ircc: forms/imm5476e.pdf
 // 11-2025, previous-editions/imm5476e-2021.pdf). No database, no server, no model call (US$0).
 //   tsx studio/tests/check_edition_in_use.ts
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pdfMapInUse } from "../engine/programs.ts";
 import { render, type Person } from "../engine/render.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 import { writeForm } from "../api/src/fill.ts";
-import { trialOf } from "../api/src/fill-case.ts";
+import { fieldsOpen, trialOf } from "../api/src/fill-case.ts";
+import { channelsView } from "../engine/channels.ts";
 import { runFieldMap } from "../engine/answer-keys.ts";
 import { recorder } from "./runtime/api.ts";
 
@@ -30,7 +31,7 @@ ok("P-32 pass: of two mapped PDF editions the edition in use is the newest print
 ok("P-32 pass: the order the snapshot lists them in does not matter (newest listed first still gives 11-2025)", pdfMapInUse([...sorted].reverse(), "IMM 5476")?.form_edition === NEW.form_edition);
 ok("P-32 pass: the printed date decides, not text order (\"12-2021\" sorts after \"11-2025\" as text, but is older)", pdfMapInUse([map({ ...NEW }, "n"), map({ ...OLD, form_edition: "IMM 5476 (12-2021)" }, "o")], "IMM 5476")?.form_edition === NEW.form_edition);
 ok("P-32 fail: a release holding only the older edition (a case pinned to it) keeps that edition: the rule never picks one the snapshot does not hold", pdfMapInUse([map(OLD, "old.box")], "IMM 5476")?.form_edition === OLD.form_edition);
-ok("P-32 fail: an online map is never the PDF edition in use, and another form's maps are never used", pdfMapInUse([map(OLD, "o"), map({ ...NEW, form_edition: "IMM 5476 online (2027)" } as typeof NEW, "x", { channel: "ONLINE" })], "IMM 5476")?.form_edition === OLD.form_edition && pdfMapInUse(sorted, "IMM 5707") === undefined);
+ok("P-32 fail: an online map is never the PDF edition in use, and another form's maps are never used", pdfMapInUse([map(OLD, "o"), map({ ...NEW, form_edition: "IMM 5476 online (01-2027)" } as typeof NEW, "x", { channel: "ONLINE" })], "IMM 5476")?.form_edition === OLD.form_edition && pdfMapInUse(sorted, "IMM 5707") === undefined);
 ok("P-32 fail: with the same printed date the later in the snapshot's order wins (it breaks that tie by the file's date)", pdfMapInUse([map(NEW, "a"), map({ ...NEW, official_file: "imm5476e-resaved.pdf" }, "b")], "IMM 5476")?.official_file === "imm5476e-resaved.pdf");
 
 // ── The case's coverage (engine/render.ts) reads the edition in use.
@@ -45,6 +46,24 @@ ok("P-32 fail: on a release with only 11-2021 the coverage stays 11-2021", cov([
 const trial = (maps: unknown[]) => trialOf(snap(maps) as never, "IMM 5476");
 ok("P-32 pass: the fill trial asked for is the 11-2025 edition's (a trial of 11-2021 never makes an 11-2025 copy fileable)", /11-2025/.test(trial(sorted).why ?? "") && !/11-2021/.test(trial(sorted).why ?? ""), trial(sorted));
 ok("P-32 fail: on a release with only 11-2021 the trial asked for stays 11-2021's", /11-2021/.test(trial([map(OLD, "old.box")]).why ?? ""), trial([map(OLD, "old.box")]));
+
+// ── Review M1: the mandatory fields a copy would leave empty (fill-case.ts fieldsOpen) are the edition in use's. The IMM 5476
+// field lists mark none required, so two small Sample lists (inside the solution folder, as the reader allows) stand in.
+{
+  const rel = "prototype/studio/var/test-edition-in-use", abs = join(import.meta.dirname, "..", "var", "test-edition-in-use");
+  mkdirSync(abs, { recursive: true });
+  const list = (path: string) => ({ fields: [{ data_path: path, caption: path, kind: "field", ui: "textEdit", required: true }] });
+  writeFileSync(join(abs, "old.inventory.json"), JSON.stringify(list("old.req"))); writeFileSync(join(abs, "new.inventory.json"), JSON.stringify(list("new.req")));
+  const o = map({ ...OLD, inventory_file: `${rel}/old.inventory.json` }, "old.req"), n = map({ ...NEW, inventory_file: `${rel}/new.inventory.json` }, "new.req");
+  const open = (maps: unknown[]) => fieldsOpen(snap(maps) as never, "IMM 5476", []).map((x) => JSON.stringify(x)).join(" ");
+  try {
+    ok("M1 pass: the mandatory fields a copy would leave empty are 11-2025's when the release holds both editions", /new\.req/.test(open([o, n])) && !/old\.req/.test(open([o, n])), open([o, n]));
+    ok("M1 fail: on a release with only 11-2021 they stay 11-2021's", /old\.req/.test(open([o])) && !/new\.req/.test(open([o])), open([o]));
+  } finally { rmSync(abs, { recursive: true, force: true }); }
+}
+// ── Review m3: the Channels view names the edition in use.
+ok("m3 pass: the Channels view names 11-2025 when the release holds both, whatever their order", channelsView(snap([...sorted].reverse())).lines[0]?.version === NEW.form_edition && channelsView(snap(sorted)).lines[0]?.version === NEW.form_edition);
+ok("m3 fail: with only 11-2021 the Channels view names 11-2021", channelsView(snap([map(OLD, "o")])).lines[0]?.version === OLD.form_edition);
 
 // ── Break B1 (the breaker on 1a7d63ad8): an answer key runs on its own edition's boxes, never on the edition cases fill.
 // A key for 11-2021 on a release that also holds 11-2025 must judge the 11-2021 map; a box only 11-2025 has is never

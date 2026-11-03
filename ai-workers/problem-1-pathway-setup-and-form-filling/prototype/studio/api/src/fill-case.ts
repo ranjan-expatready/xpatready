@@ -92,7 +92,7 @@ const inventoryOf = (file: string): Inventory | null => {
 };
 /** QA-165 part 2 (P-237, P-238): the mandatory form fields a copy made now would leave empty, with why (engine/runtime/
  *  mandatory.ts), from the same value step a copy runs. Empty when the form has no PDF map or field list. */
-function fieldsOpen(s: Snap, form: string, boxes: BoxRow[], words: CaseWords = {}): OpenField[] {
+export function fieldsOpen(s: Snap, form: string, boxes: BoxRow[], words: CaseWords = {}): OpenField[] {
   const map = pdfMapInUse(s.field_maps as { form_number: string; form_edition?: string; channel?: string; inventory_file?: string; entries: { data_path: string; fact?: string | null; outcome?: string | null }[] }[], form); // P-32: the edition in use
   const inv = map?.inventory_file ? inventoryOf(map.inventory_file) : null;
   if (!map || !inv) return [];
