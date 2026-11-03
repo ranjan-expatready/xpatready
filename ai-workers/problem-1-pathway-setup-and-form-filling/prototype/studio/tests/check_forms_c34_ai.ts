@@ -2,6 +2,8 @@
 // checks, drafted by two AI rounds, Live or Saved. Proves with NO model call (US$0):
 //   E  the rules over the rounds (engine/masters-ai.ts): the source's own words, the 11 operators over its own boxes or
 //      answers, two or three examples that hold, Ready only when both rounds agree, an identity document never read by AI;
+//   P  the prompts each step uses (v2, P-296 (3)) show a worked tree, and every worked tree and example in them passes
+//      the same rules (the three v1 prompts the #669 rounds read showed none); the form's output limit is 16,000;
 //   L  Live with the live switch off is refused at US$0 before anything runs, and no job is written (P-175);
 //   S  Saved with nothing recorded is refused in plain words at US$0; Saved with a recorded run (launcher-shaped, made
 //      from the real launcher's stub pass of the committed job) replays both rounds into To review at US$0, once per
@@ -37,6 +39,7 @@ const cleanUp = () => { for (const f of written) rmSync(f, { force: true }); for
 for (const [sig, code] of [["SIGINT", 130], ["SIGTERM", 143]] as const) process.on(sig, () => { cleanUp(); process.exit(code); });
 
 import { CHOICE, DETAILS, FORM_ANSWER, formCheck, GUIDE_ANSWER, guideCheck, passport } from "./fixtures/c34-answers.ts";
+import { evaluate } from "../../contracts/rules.ts";
 
 (async () => {
   // ---------------------------------------------------------------- E: the rules over the rounds (pure, no server)
@@ -101,6 +104,48 @@ import { CHOICE, DETAILS, FORM_ANSWER, formCheck, GUIDE_ANSWER, guideCheck, pass
   ge = g({ checks: [cross], unresolved: [] }, [{ key: "person.passport_number", names: ["Passport number"] }, { key: "person.family_name", names: ["Family name"] }]);
   ok("C3.4 E pass: a guide check over two answers is a cross-answer check that only warns (contract), even when the AI said block", ge.items[0]?.kind === "cross_check" && (ge.items[0]?.payload as any).severity === "warn" && (ge.items[0]?.payload as any).reads.length === 2, ge.items[0]?.payload);
 
+  // ---------------------------------------------------------------- P: the prompts (P-296 (3); #669 review minors 1, 3)
+  // #669: three v1 prompts showed no worked tree, so the AI wrote its own shapes and the rules dropped every item. Each
+  // prompt a step uses must show at least one worked tree, and every worked tree and example in it must pass the same
+  // rules the AI's answers meet (treeOf: the 11 operators over its own reads; runExamples: both outcomes, each holding).
+  const PROMPTS = join(P2, "prompts");
+  const worked = (file: string, text = readFileSync(join(PROMPTS, file), "utf8")) => {
+    // Each fenced block and each inline span, with where it starts (fenced blocks blanked out before inline spans are read).
+    const fenced = [...text.matchAll(/```\n([\s\S]*?)```/g)].map((x) => ({ at: x.index!, t: x[1] }));
+    const inline = [...text.replace(/```[\s\S]*?```/g, (b) => " ".repeat(b.length)).matchAll(/`([^`\n]+)`/g)].map((x) => ({ at: x.index!, t: x[1] }));
+    const parsed = [...fenced, ...inline].sort((a, b) => a.at - b.at).flatMap(({ at, t }) => { try { let v = JSON.parse(t); if (typeof v === "string") v = JSON.parse(v); return v && typeof v === "object" ? [{ at, v }] : []; } catch { return []; } });
+    const trees = parsed.filter((x) => typeof x.v.op === "string").map((x) => x.v), entries = parsed.filter((x) => typeof x.v.tree_json === "string").map((x) => x.v);
+    const bad: string[] = [];
+    for (const t of trees) { const r = m.treeOf(JSON.stringify(t), "PRINCIPAL", new Set(m.fieldsOf(t))); if ("why" in r) bad.push(`tree: ${r.why}`); }
+    for (const en of entries) {
+      const r = m.treeOf(en.tree_json, en.subject_kind, new Set(/guide/.test(file) ? en.reads.map(m.snake) : en.reads));
+      if ("why" in r) { bad.push(`entry: ${r.why}`); continue; }
+      const ex = m.runExamples(r, en.examples);
+      if ("why" in ex) bad.push(`entry: ${ex.why}`); else if (ex.wrong) bad.push(`entry: ${ex.wrong}`);
+    }
+    // An inline example ("`{facts}` → true") holds for the nearest worked tree before it in the text.
+    const claims = [...text.matchAll(/`(\{[^`\n]*\})` → (true|false)/g)];
+    for (const c of claims) {
+      const near = parsed.filter((x) => x.at < c.index! && (typeof x.v.op === "string" || typeof x.v.tree_json === "string")).pop();
+      if (!near) { bad.push(`example ${c[1]} follows no worked tree`); continue; }
+      const got = evaluate(typeof near.v.op === "string" ? near.v : JSON.parse(near.v.tree_json), JSON.parse(c[1])).result;
+      if (got !== (c[2] === "true")) bad.push(`example ${c[1]} gives ${got}, the prompt says ${c[2]}`);
+    }
+    return { shown: trees.length + entries.length, claims: claims.length, bad };
+  };
+  const { MASTERS_FORM_AI, MASTERS_GUIDE_AI } = await import("../api/src/form-masters.ts");
+  ok("C3.4 P pass: the steps use the v2 prompts; the form's output limit is 16,000 (its v1 draft stopped at 8,000, #669), the guide's stays 6,000",
+    MASTERS_FORM_AI.template === "masters-form.v2.md" && MASTERS_FORM_AI.check === "masters-form-check.v2.md" && MASTERS_GUIDE_AI.template === "masters-guide.v2.md" && MASTERS_GUIDE_AI.check === "masters-guide-check.v2.md"
+    && MASTERS_FORM_AI.max_output_tokens === 16000 && MASTERS_GUIDE_AI.max_output_tokens === 6000 && !MASTERS_FORM_AI.replays && !MASTERS_GUIDE_AI.replays, { form: MASTERS_FORM_AI.max_output_tokens, guide: MASTERS_GUIDE_AI.max_output_tokens });
+  for (const file of [MASTERS_FORM_AI.template, MASTERS_FORM_AI.check, MASTERS_GUIDE_AI.template, MASTERS_GUIDE_AI.check]) {
+    const w = worked(file);
+    ok(`C3.4 P pass: ${file} shows a worked tree, and its trees and examples pass the step's own rules`, w.shown >= 1 && !w.bad.length && /tree_json/.test(readFileSync(join(PROMPTS, file), "utf8")), w);
+  }
+  const broken = worked("masters-form-check.v2.md", 'Trees: `{"op": "or", "args": [{"op": "neq", "field": "a", "value": "Yes"}, {"op": "exists", "field": "b"}]}`, with `{"a": "No"}` → false; and ```\n{"op": "or", "args": []}\n```.');
+  ok("C3.4 P fail: a prompt whose worked tree has an empty list, or whose example says the wrong outcome, is caught", broken.bad.length === 2 && broken.bad.some((b) => /11 operators/.test(b)) && broken.bad.some((b) => /gives true, the prompt says false/.test(b)), broken.bad);
+  const v1 = ["masters-form-check.v1.md", "masters-guide.v1.md", "masters-guide-check.v1.md"].map((f) => ({ f, ...worked(f) }));
+  ok("C3.4 P fail: the three v1 prompts the #669 rounds read show no worked tree (the defect this check finds)", v1.every((x) => x.shown === 0), v1.map((x) => [x.f, x.shown]));
+
   // ---------------------------------------------------------------- server: Live off, Saved
   const served = (await call("GET", "/session")).body?.workspace?.id;
   const inDb = (() => { try { return sql(`select id from workspace where id='${served}'`); } catch { return ""; } })();
@@ -135,10 +180,10 @@ import { CHOICE, DETAILS, FORM_ANSWER, formCheck, GUIDE_ANSWER, guideCheck, pass
     && derived.filter((d) => d.job.combination === "edition:IMM 5257:09-2023" && d.job.known?.form_edition === "IMM 5257 (09-2023)").length === 2 && derived.filter((d) => d.job.combination === "vv.single").length === 2, derived.map((d) => d.job.job_id));
   let worst = 0;
   for (const d of derived) { const c = tool.costsOf(d.job); worst += c.worst_usd; ok(`C3.4 W pass: ${d.label}: worst US$${c.worst_usd.toFixed(2)} fits its budget US$${c.budget_usd.toFixed(2)} and the US$5 run cap; usual ~US$${c.usual_usd.toFixed(2)}`, c.fits_budget && c.under_run_cap && c.usual_usd > 0 && c.usual_usd < c.worst_usd, c); }
-  ok(`C3.4 W pass: the four C3.4 runs together: worst US$${worst.toFixed(2)}, within the US$5.80 the PR states`, worst > 0 && worst <= 5.80, worst);
+  ok(`C3.4 W pass: the four C3.4 runs together: worst US$${worst.toFixed(2)}, within the US$6.55 the PR states (P-296 (3): the form's 16,000 output limit)`, worst > 0 && worst <= 6.55, worst);
   const scratch = join(STUDIO, "var", `c34-check-ledger-${process.pid}`); mkdirSync(scratch, { recursive: true });
   keep(join(P2, "screening", "canary-digest.json"));
-  const record = (jobId: string, answer: unknown, edition?: string) => {
+  const record = (jobId: string, answer: unknown, edition?: string, template?: string) => {
     keep(join(RUNS, "stub-pass", `${jobId}.json`));
     const s = spawnSync(process.execPath, [join(P2, "launch.ts"), "--job", jobId, "--stub"], { cwd: ROOT, encoding: "utf8", timeout: 120_000, env: { ...process.env, P2_LEDGER_DIR: scratch } });
     const out = JSON.parse(s.stdout.trim().split("\n").pop() ?? "{}");
@@ -147,6 +192,7 @@ import { CHOICE, DETAILS, FORM_ANSWER, formCheck, GUIDE_ANSWER, guideCheck, pass
     rec.caller = "live"; rec.raw_output = JSON.stringify(answer);
     rec.drafting_run.output_sha256 = rec.launch_evidence.output_sha256 = createHash("sha256").update(rec.raw_output).digest("hex");
     if (edition) rec.drafting_run.inputs.combination = edition;
+    if (template) rec.launch_evidence.template_sha256 = createHash("sha256").update(readFileSync(join(P2, "prompts", template))).digest("hex");
     const f = join(RUNS, `${jobId}${stamp()}${Math.random().toString(36).slice(2, 8)}.json`);
     writeFileSync(f, JSON.stringify(rec, null, 1) + "\n"); written.push(f);
     return f;
@@ -157,6 +203,13 @@ import { CHOICE, DETAILS, FORM_ANSWER, formCheck, GUIDE_ANSWER, guideCheck, pass
   x = await call("POST", `/attachments/${form}/draft-masters`, { mode: "replay" });
   ok("C3.4 S fail: Saved never uses a recorded run of another edition (refused, US$0)", x.status === 409 && jobs() === jobs0, x.body?.detail);
   for (const f of wrong) rmSync(f, { force: true });
+  // P-296 (3), #669 review minor 4: a recorded run that answered a v1 prompt (as #669's four did) is never replayed by the
+  // v2 step, even with this edition's key, its own input file and a well-shaped answer.
+  const v1Runs = [record(fd, FORM_ANSWER, undefined, "masters-form.v1.md"), record(fk, FORM_ANSWER, undefined, "masters-form-check.v1.md")];
+  const v1Plan = await call("POST", `/attachments/${form}/draft-masters/plan`, { mode: "replay" });
+  x = await call("POST", `/attachments/${form}/draft-masters`, { mode: "replay" });
+  ok("C3.4 S fail: Saved never replays a run recorded with a v1 prompt (refused, US$0, no job)", v1Plan.body?.saved?.available === false && x.status === 409 && jobs() === jobs0, { plan: v1Plan.body?.saved, status: x.status });
+  for (const f of v1Runs) rmSync(f, { force: true });
   record(fd, FORM_ANSWER); record(fk, FORM_ANSWER); record(gd, GUIDE_ANSWER); record(gk, GUIDE_ANSWER);
   rmSync(scratch, { recursive: true, force: true });
 

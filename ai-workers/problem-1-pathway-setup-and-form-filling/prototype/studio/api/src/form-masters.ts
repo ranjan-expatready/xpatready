@@ -90,7 +90,9 @@ export function draftFromInventory(fields: InvField[]) {
  *  editionContextKey): every combination that uses the edition reuses its one Saved result. */
 export const MASTERS_FORM_AI: AiStep = {
   kind: MASTERS_FORM_STEP, jobBase: "studio-masters-form", configurationVersion: "c34-masters-form",
-  template: "masters-form.v1.md", check: "masters-form-check.v1.md", schema: "masters-form-output.v1.schema.json", effort: "low", max_output_tokens: 8000,
+  // P-296 (3): v2 prompts give the exact tree shape with a worked example (the v1 checker wrote its own shapes), and the
+  // output limit is 16,000: IMM 5257's v1 draft stopped at 8,000 after 15 of its checks (#669). v1 runs are never replayed.
+  template: "masters-form.v2.md", check: "masters-form-check.v2.md", schema: "masters-form-output.v1.schema.json", effort: "low", max_output_tokens: 16000,
   shapeOk: formShapeOk,
   words: {
     noSaved: "No saved AI answer drafts this form edition's checks and document types yet: it is recorded once in an approved Live run. The rules pass (US$0) drafts its sections and answer lists now.",
@@ -101,7 +103,9 @@ export const MASTERS_FORM_AI: AiStep = {
 /** C3.4 AI step over a combination's guide: the checks it states (a draft and a blind checker round over its text). */
 export const MASTERS_GUIDE_AI: AiStep = {
   kind: MASTERS_GUIDE_STEP, jobBase: "studio-masters-guide", configurationVersion: "c34-masters-guide",
-  template: "masters-guide.v1.md", check: "masters-guide-check.v1.md", schema: "masters-guide-output.v1.schema.json", effort: "low", max_output_tokens: 6000,
+  // P-296 (3): v2 prompts with the worked tree example (v1's trees were not in the 11-operator shape, #669). Its v1
+  // rounds used 1,918 and 1,291 output tokens, so 6,000 stays.
+  template: "masters-guide.v2.md", check: "masters-guide-check.v2.md", schema: "masters-guide-output.v1.schema.json", effort: "low", max_output_tokens: 6000,
   shapeOk: guideShapeOk,
   words: {
     noSaved: "No saved AI answer drafts this guide's checks for this combination yet: it is recorded once in an approved Live run.",

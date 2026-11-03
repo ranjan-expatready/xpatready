@@ -1,6 +1,6 @@
 // C3.4 AI step (P-149 (5), P-158, P-134, P-227; forms lane): the rules that hold over the two AI rounds that draft a form
-// edition's checks and document types (p2/prompts/masters-form.v1.md) and a combination guide's checks
-// (masters-guide.v1.md), whoever proposed them (P-153: code is the guard, the prompt is not). Pure: no database, no AI.
+// edition's checks and document types (p2/prompts/masters-form.v2.md) and a combination guide's checks
+// (masters-guide.v2.md), whoever proposed them (P-153: code is the guard, the prompt is not). Pure: no database, no AI.
 // The step runner (api/src/rounds.ts) gives the rounds' answers (a draft and a blind checker, live or a saved real run).
 //   M1 the quote is the source's own words: found in the form's printed captions and headings, or a sentence of the guide;
 //   M2 a check is a condition tree in the 11 operators (contracts/rules.ts) that reads only its own boxes or answers; a
