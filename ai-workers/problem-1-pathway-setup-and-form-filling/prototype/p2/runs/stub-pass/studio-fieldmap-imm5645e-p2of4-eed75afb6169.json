@@ -1,0 +1,26 @@
+{
+ "job_id": "studio-fieldmap-imm5645e-p2of4-eed75afb6169",
+ "path_code_sha256": "60d0cc39d4b52320c22b730a37d7e5e88eaafe2fb21e9f06366cefadf095984f",
+ "screening_sources": [
+  {
+   "file": "prototype/expected/slice-1-field-map.json",
+   "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+  },
+  {
+   "file": "prototype/expected/slice-1-field-map.v2.json",
+   "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+  },
+  {
+   "file": "prototype/p1/e5-family-values.json",
+   "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+  },
+  {
+   "file": "prototype/p1/adobe-complete-1295-values.json",
+   "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+  }
+ ],
+ "digest_sha256": "4a840ad7420c1ef9e78e86cbad04f8517fc7b552101191352e6297c63c3011fc",
+ "run_id": "studio-fieldmap-imm5645e-p2of4-eed75afb6169-stub-20261103t114906691z-e1a31a",
+ "at": "2026-11-03T11:49:07.001Z",
+ "stub_calls": 1
+}
