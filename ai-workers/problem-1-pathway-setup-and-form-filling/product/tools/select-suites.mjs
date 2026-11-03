@@ -16,7 +16,13 @@
 //   * a file under api/src or web/src: the suites that read every file of that folder (a readdirSync over it);
 //   * always a fixed smoke set of fast suites along the main journey (structure, programs, start setup, the
 //     combination workspace in a browser, engine, cases).
-// Docs and images (.md, .txt, .png, .jpg, .gif, .webp, .svg, .pdf) and records outside prototype/ choose nothing.
+// Docs and images (.md, .txt, .png, .jpg, .gif, .webp, .svg, .pdf) and records outside prototype/ choose nothing, except
+// (I1, 3 Nov) the .md files the app or a suite reads as data: the AI prompts (prototype/**/prompts/*.md), api/src/**/*.md
+// (the features guide) and test fixtures; and official-sources/ (the app reads its manifests and PDFs at start): all.
+// Of product/tools/ only the files that decide how the suites run choose everything (run-suites.sh, this file,
+// cloud-setup.sh, lane.sh, change-kind.sh); of .github/ only workflows/ci.yml. Others (guards, reports) choose nothing.
+// --direct (I1, a PR check that leaves the full set to the merge queue, P-291 (3)): never ALL and never "every browser
+// suite"; a file that would choose everything chooses the suites that import it (through test helpers) or name it.
 // Reads files only: no server, no database, no model call (US$0).
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, join, normalize, relative } from "node:path";
@@ -27,7 +33,11 @@ const P = "ai-workers/problem-1-pathway-setup-and-form-filling", PR = `${P}/prot
 const SKIP = new Set(["check_catalogue_scale.cjs"]);   // as in run-suites.sh: not a regression suite
 const SMOKE = ["check_engine.ts", "check_case_engine.ts", "check_w1_structure.ts", "check_screen01_api.ts", "check_w1_start_setup.ts", "check_dv_backbone_browser.cjs"];
 const RUNTIME_GROUP = ["check_runtime_r1c.cjs", "check_runtime_r1d.ts", "check_runtime_r1a.ts"];
-const DOCS = /\.(md|txt|png|jpe?g|gif|webp|svg|pdf)$/i;
+const DOCS0 = /\.(md|txt|png|jpe?g|gif|webp|svg|pdf)$/i;
+const DATA_MD = new RegExp(`^${P}/prototype/(.*/)?prompts/|^${P}/prototype/studio/(api/src|tests/fixtures)/`);
+const DOCS = { test: (f) => DOCS0.test(f) && !DATA_MD.test(f) && !f.startsWith(`${P}/official-sources/`) || /^ai-workers\/[^/]+\/official-sources\/.*\.md$/i.test(f) };
+const SUITE_TOOLS = /\/product\/tools\/(run-suites\.sh|select-suites\.mjs|cloud-setup\.sh|lane\.sh|change-kind\.sh)$/;
+const DIRECT = process.argv.includes("--direct");
 
 const read = (f) => { try { return readFileSync(join(ROOT, f), "utf8"); } catch { return ""; } };
 const ls = (d, re) => existsSync(join(ROOT, d)) ? readdirSync(join(ROOT, d)).filter((n) => re.test(n)).map((n) => `${d}/${n}`) : [];
@@ -185,8 +195,10 @@ function apiPick(f) {
 // ---- one changed file
 function pick(f) {
   if (DOCS.test(f)) return {};
-  if (/^\.github\//.test(f) || f === ".nvmrc" || /(^|\/)package(-lock)?\.json$/.test(f)) return { all: `${f}: shared` };
-  if (f.startsWith(`${P}/product/tools/`)) return { all: `${f.slice(P.length + 1)}: tools/ (shared)` };
+  if (f === ".github/workflows/ci.yml" || f === ".nvmrc" || /(^|\/)package(-lock)?\.json$/.test(f)) return { all: `${f}: shared` };
+  if (/^\.github\//.test(f)) return {};   // other workflows (nightly, demo) do not change a pull request's check
+  if (f.startsWith(`${P}/product/tools/`)) return SUITE_TOOLS.test(f) ? { all: `${f.slice(P.length + 1)}: decides how the suites run` } : {};
+  if (f.startsWith(`${P}/official-sources/`)) return { all: `${f.slice(P.length + 1)}: official sources (the app reads them)` };
   if (!f.startsWith(`${PR}/`)) return {};   // records, boards, official sources: the fast checks cover them
   const r = f.slice(PR.length + 1);
   if (/^(p1|p2|p5|contracts|env)\//.test(r)) return { all: `prototype/${r.split("/")[0]}/ (shared)` };
@@ -213,6 +225,14 @@ const why = new Map(), alls = [], browserWhy = [];
 const add = (n, r) => { if (!why.has(n)) why.set(n, []); if (!why.get(n).includes(r)) why.get(n).push(r); };
 for (const f of changed) {
   const p = pick(f);
+  if (DIRECT && (p.all || p.browser)) {
+    // --direct: what would run everything runs only the suites that import this file (through test helpers) or name it.
+    if (existsSync(join(ROOT, f))) for (const n of suitesImporting([f])) if (suites.get(n) !== f) add(n, `imports ${basename(f)} (direct)`);
+    for (const [n, r] of p.picks ?? []) add(n, r);
+    if (!DOCS.test(f)) { const name = basename(f), named = new RegExp(`(?<![A-Za-z0-9_.-])${esc(name)}(?![A-Za-z0-9_-])`);
+      for (const [n, t] of text) if (suites.get(n) !== f && named.test(t)) add(n, `names ${name}`); }
+    continue;
+  }
   if (p.all) alls.push(p.all);
   if (p.browser) browserWhy.push(p.browser);
   for (const [n, r] of p.picks ?? []) add(n, r);
