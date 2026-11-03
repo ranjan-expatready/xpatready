@@ -29,9 +29,10 @@ const isFamilyForm = (formNumber: string) => (FAMILY_INFORMATION_FORMS as readon
 export const formNumberOf = (editionLabel: string | null | undefined) => (editionLabel ?? "").replace(/\s*\([^)]*\)\s*$/, "").trim();
 
 /** [IRCC-F09] The family information form the combination's application package lists (a source form attached to it)
- *  when none of its forms is a family information form; null when nothing is missing. */
+ *  when none of its forms is a family information form; null when nothing is missing. A combination with no form yet
+ *  gets none: its "No forms yet" line and the release's "Nothing to release" already say every form is missing (F8 M1). */
 export function missingFamilyForm(attachedForms: string[], combinationForms: string[]): string | null {
-  if (combinationForms.some(isFamilyForm)) return null;
+  if (!combinationForms.length || combinationForms.some(isFamilyForm)) return null;
   return attachedForms.find(isFamilyForm) ?? null;
 }
 

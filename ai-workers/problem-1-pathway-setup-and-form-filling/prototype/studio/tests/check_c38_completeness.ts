@@ -23,6 +23,7 @@ ok("C3.8 [IRCC-F08] fail case: with no caption the words never show a PDF path",
 ok("C3.8 [IRCC-F09] IMM 5707 in the package but not in the forms is missing", missingFamilyForm(["IMM 5257", "IMM 5707"], ["IMM 5257"]) === "IMM 5707");
 ok("C3.8 [IRCC-F09] pass case: IMM 5707 in the forms is not missing", missingFamilyForm(["IMM 5257", "IMM 5707"], ["IMM 5257", "IMM 5707"]) === null);
 ok("C3.8 [IRCC-F09] pass case: IMM 5645 in the forms fills the family information line the package lists as IMM 5707 (P-230 (6))", missingFamilyForm(["IMM 5707"], ["IMM 5645"]) === null);
+ok("C3.8 [IRCC-F09] a combination with no form yet gets no family information line (its \"No forms yet\" says it once, F8 M1)", missingFamilyForm(["IMM 5257", "IMM 5707"], []) === null);
 ok("C3.8 [IRCC-F09] pass case: a package with no family information form asks for none", missingFamilyForm(["IMM 5257", "IMM 5476"], ["IMM 5257"]) === null && missingFamilyForm([], []) === null);
 ok("C3.8 [IRCC-F09] the form number is read from the edition label; an unrecognised file has none", formNumberOf("IMM 5707 (01-2023)") === "IMM 5707" && formNumberOf("IMM 5257 SCH1 (09-2023)") === "IMM 5257 SCH1" && formNumberOf(null) === "");
 const fw = familyFormWords("IMM 5707");
