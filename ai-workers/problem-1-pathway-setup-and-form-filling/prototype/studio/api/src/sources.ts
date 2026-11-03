@@ -60,6 +60,10 @@ export function launcherFor(requested: string | undefined, varRoot: string): str
 const LAUNCHER = launcherFor(process.env.STUDIO_FAKE_LAUNCHER, VAR_ROOT);
 /** True only on an isolated test copy whose launches go to the fake launcher: nothing it launches can reach a model. */
 export const usesFakeLauncher = () => LAUNCHER === FAKE_LAUNCHER;
+/** Induced missing saved answer (isolated test server only, like STUDIO_FAULT_SOURCE): STUDIO_HIDE_SAVED_RUNS="<text>"
+ *  hides the saved runs whose file name contains it, so a form with a part missing can be tested without touching the
+ *  committed runs. Ignored outside an isolated copy's own working folder. Hiding only makes a form wait; it never spends. */
+const hiddenRun = (f: string) => { const h = process.env.STUDIO_HIDE_SAVED_RUNS; return !!h && /[/\\]isolated-[a-z0-9_]+$/.test(VAR_ROOT) && f.includes(h); };
 /** Lead Critical 29 Oct (qa spent US$0.27 by one click on a test copy): every live AI call of this server (finder rounds,
  *  guide pick, field-map drafting, Who can be, anything through the launcher) needs the explicit switch
  *  STUDIO_AI_LIVE=approved at server start. isolated.sh and run-suites.sh never set it; a check that tests a live path
@@ -216,7 +220,7 @@ export class Sources {
     // Usable only when the run completed with a valid, untruncated output; a refused or truncated run never is. A run
     // re-checked with today's rules (p2/reconvert.ts, no model call) is read from its .reconverted record; a run whose
     // full answer failed only our own check is "recheckable": a re-check may recover it at no cost (Lead check A3).
-    return readdirSync(RUNS).filter((f) => prefixes.some((p) => f.startsWith(p)) && f.endsWith(".json") && !f.includes(".reconverted")).map((orig) => {
+    return readdirSync(RUNS).filter((f) => prefixes.some((p) => f.startsWith(p)) && f.endsWith(".json") && !f.includes(".reconverted") && !hiddenRun(f)).map((orig) => {
       const again = orig.replace(/\.json$/, ".reconverted.json");
       const f = existsSync(join(RUNS, again)) ? again : orig;
       const r = JSON.parse(readFileSync(join(RUNS, f), "utf8"));
@@ -367,8 +371,14 @@ export class Sources {
       a = await this.db.sourceAttachment.findUniqueOrThrow({ where: { id: a.id } });
     }
     if (a.status !== "READ" && a.status !== "DRAFTED") throw new Error(`The form is ${a.status.toLowerCase().replace(/_/g, " ")}; it cannot be drafted.`);
-    if (j.mode === "REPLAY") return this.useSaved(id, a.id);
     const printed = await this.printedEdition(a);
+    if (j.mode === "REPLAY" && j.runFile) return this.useSaved(id, a.id);
+    if (j.mode === "REPLAY") {
+      // Saved, drafted in parts: every part's saved answer, assembled; the launcher is never asked (US$0).
+      const parts = await this.draftSplit(a, printed, true);
+      if (!parts?.parts.length) throw new Error("No saved AI answer for this form: nothing was drafted or applied. Draft it with AI, or a person maps it.");
+      return this.runParts(id, a, parts, "saved");
+    }
     const split = await this.draftSplit(a, printed, true);
     if (split) return this.runParts(id, a, split, j.mode === "LIVE" ? "live" : "stub", ov);
     const { jobId } = this.ensureJobFile({ officialFile: this.draftName(a), inventoryFile: a.inventoryFile }, printed);
@@ -379,14 +389,14 @@ export class Sources {
   /** A4: the parts of one form's draft, one at a time (each: the guarded stub pass, then for live the paid call), with
    *  progress per part; then one merged answer (reused entries + the parts' answers, near-duplicate names flagged) that
    *  is compared with the library like any draft. A part that fails fails the step: nothing is applied. */
-  async runParts(id: string, a: { id: string; workspaceId: string }, split: NonNullable<Awaited<ReturnType<Sources["draftSplit"]>>>, mode: "stub" | "live", ov?: LaunchOverride) {
+  async runParts(id: string, a: { id: string; workspaceId: string }, split: NonNullable<Awaited<ReturnType<Sources["draftSplit"]>>>, mode: "stub" | "live" | "saved", ov?: LaunchOverride) {
     const { plan, parts } = split;
     const state = parts.map((p) => ({ index: p.index, sections: p.sections, fields: p.fields, job_id: p.jobId, status: "queued" as string, run_file: null as string | null, cost_usd: 0, error: null as string | null, saved: false, limit: false }));
     const reusedWords = plan.reused.length ? `${plan.reused.length} of ${plan.total} form fields reused from ${split.reusedFrom.join(", ")} without AI; ` : "";
     const progress = async () => {
       const done = state.filter((s) => s.status === "done").length, fieldsDone = state.filter((s) => s.status === "done").reduce((x, s) => x + s.fields, 0);
       const running = state.filter((s) => s.status === "running").map((s) => s.index);
-      await this.db.draftingJob.update({ where: { id }, data: { message: `${reusedWords}${mode === "live" ? "AI draft" : "stub pass"} in ${parts.length} part${parts.length === 1 ? "" : "s"}: part ${done} of ${parts.length} done · ${fieldsDone} of ${plan.leftover} form fields${running.length ? ` (running: part ${running.join(" and ")})` : ""}.`,
+      await this.db.draftingJob.update({ where: { id }, data: { message: `${reusedWords}${mode === "live" ? "AI draft" : mode === "saved" ? "saved AI answers" : "stub pass"} in ${parts.length} part${parts.length === 1 ? "" : "s"}: part ${done} of ${parts.length} done · ${fieldsDone} of ${plan.leftover} form fields${running.length ? ` (running: part ${running.join(" and ")})` : ""}.`,
         detail: { job_id: split.wholeJobId, a4: { total: plan.total, reused: plan.reused.length, reused_from: split.reusedFrom, leftover: plan.leftover, parts: state } } } });
     };
     const lastJson = (s: string) => { for (const l of s.trim().split("\n").reverse()) { try { return JSON.parse(l); } catch { /* not JSON */ } } return null; };
@@ -398,6 +408,14 @@ export class Sources {
       if (process.env.STUDIO_PART_PAUSE_MS) await new Promise((r) => setTimeout(r, Number(process.env.STUDIO_PART_PAUSE_MS)));
       if (!(await wanted())) { s.status = "not started"; s.error = "cancelled or reset before this part started; nothing was sent"; return; }
       s.status = "running"; await progress();
+      // Saved: each part's saved answer for exactly its inputs, or the part fails (the library changed since the plan);
+      // nothing is sent and the launcher is not asked.
+      if (mode === "saved") {
+        const sp = parts.find((x) => x.index === s.index)!;
+        if (sp.saved_run) { s.status = "done"; s.saved = true; s.run_file = `prototype/p2/runs/${sp.saved_run}`; }
+        else { s.status = "failed"; s.error = "no saved AI answer for exactly this part now (the library changed since the plan); nothing was sent"; }
+        return;
+      }
       const stub = await this.launchOnce(s.job_id, "stub"), sj = lastJson(stub.out);
       if (stub.stopped) { s.status = "not started"; s.error = "stopped during its stub pass (M7); nothing was sent"; return; }
       if (stub.code !== 0) { s.status = "failed"; s.error = `stub pass failed: ${this.plainRefusal(String(sj?.refused ?? stub.err).slice(-300))}`; return; }

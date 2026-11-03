@@ -150,7 +150,19 @@ export class Ai implements OnModuleInit {
         const usable = all.find((r) => r.valid) ?? all.find((r) => r.recheckable);
         const savedWhy = (r: NonNullable<typeof usable>) => `Saved AI answer for this same form${r.recheckable ? " (it failed an earlier check and is re-checked with today's rules first)" : r.rechecked ? " (re-checked with today's rules)" : ""}: no model call, US$0.`;
         if (mode === "REPLAY") {
-          if (!usable) { targets.push({ ...base, action: "not_eligible", read_first, why: read_first ? "No saved AI answer to use (the form has not been read yet)." : "No saved AI answer for this form; run it live." }); continue; }
+          if (!usable) {
+            // A form drafted in parts (A4) is saved part by part: Saved uses those parts when every part has a valid saved
+            // answer for exactly its inputs, and is assembled as a live draft in parts would be (no model call, US$0). A
+            // form with a part missing keeps waiting: never half-filled.
+            const split = inventoryFile && !read_first ? await this.sources.draftSplit(a, await this.sources.printedEdition(a), false) : null;
+            const savedParts = split?.parts.filter((p) => p.saved_run).length ?? 0;
+            if (split && split.parts.length && savedParts === split.parts.length) {
+              const a4 = { total: split.plan.total, reused: split.plan.reused.length, reused_from: split.reusedFrom, to_ai: split.plan.leftover, parts: split.parts.map((p) => ({ index: p.index, sections: p.sections, fields: p.fields, worst_usd: 0, saved_answer: true, repeats_failed_run: null })) };
+              targets.push({ ...base, action: "reuse_saved_output", read_first, fingerprint: sha(JSON.stringify({ fingerprint, parts: split.parts.map((p) => [p.file, p.saved_run]) })), a4, why: `Saved AI answers for each of its ${split.parts.length} parts (${split.plan.leftover} of ${split.plan.total} form fields${split.plan.reused.length ? `; ${split.plan.reused.length} reused from ${split.reusedFrom.join(", ")} without AI` : ""}): no model call, US$0.` }); continue;
+            }
+            if (split && savedParts) { targets.push({ ...base, action: "not_eligible", read_first, why: `Saved AI answers for ${savedParts} of its ${split.parts.length} parts only: it waits for Draft with AI, so it is never half-filled.` }); continue; }
+            targets.push({ ...base, action: "not_eligible", read_first, why: read_first ? "No saved AI answer to use (the form has not been read yet)." : "No saved AI answer for this form; run it live." }); continue;
+          }
           targets.push({ ...base, action: "reuse_saved_output", read_first, run_file: usable.file, fingerprint, why: savedWhy(usable) }); continue;
         }
         if (mode === "LIVE" && usable && !opts.draftAgain) { targets.push({ ...base, action: "reuse_saved_output", read_first, run_file: usable.file, fingerprint, why: savedWhy(usable) }); continue; }
