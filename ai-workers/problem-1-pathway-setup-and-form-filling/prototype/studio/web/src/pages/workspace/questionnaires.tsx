@@ -28,6 +28,8 @@ import { DraftQuestionsDocuments } from "@/components/qd-draft";
 import { appliesOf, FILING_TIP, filingWarnings, filingWords, previewFilings } from "../../../../engine/filing-modes";
 import type { LineMode } from "../../../../contracts/workspace";
 import { APPLICATION_ROLE, personFactRows, personFactsWords } from "../../../../contracts/counts";
+// QA-172: a fact answered without a question is named by its short name (as an unwritten question, QA-82), never its meaning.
+import { factName } from "../../../../engine/fact-name";
 
 const TIPS = {
   card: "Sets which people a case may include and how many; each person marked as applicant gets their own forms, questions and documents.",
@@ -533,7 +535,7 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
           <p className="px-4 pt-3 font-medium">Answered without a question <span className="text-xs font-normal text-text-muted">· {unasked.length} fact{unasked.length === 1 ? "" : "s"} for {role?.label}: read from a document or entered by the case officer</span></p>
           <div className="px-4 py-3">
             <Table dense head={head(unasked.filter((f) => keep(f.fact)).map((f) => f.fact))} label="Answered without a question">
-              {unasked.filter((f) => keep(f.fact)).map((f) => row(f.fact, f.label, null, null))}
+              {unasked.filter((f) => keep(f.fact)).map((f) => row(f.fact, factName(f.fact), null, null))}
             </Table>
           </div>
         </div>
