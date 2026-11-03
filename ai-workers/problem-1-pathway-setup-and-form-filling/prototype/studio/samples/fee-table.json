@@ -1,5 +1,5 @@
 {
- "about": "R2 (P-230 (7)): the dated fee table, data and never code. Each line cites IRCC's page, quote and date (P-170). Status: Researched (source, date): may change; Sample until the immigration expert confirms (P-171). Sources: research_notes/visitor-visa-and-six-combinations-research-2026-11-02.md rows 1a, 1b, 1c; product/screens/W1-baseline/immigration-facts-2026-10-29.md row 19. Each line carries its basis (P-247): per_application (once per application filed), per_person_by_role (each person of the named roles), per_position (not worked out yet), or family_maximum (each person, capped once enough people apply together). A fee change is an edit to this file with its test (tests/check_r2_fee_table.ts, run by CI). Part 2 of R2 moves it into a stored library table frozen with each release (setup S7a, PUT /library/fees).",
+ "about": "R2 (P-230 (7)): the dated fee table, data and never code. Each line cites IRCC's page, quote and date (P-170). Status: Researched (source, date): may change; Sample until the immigration expert confirms (P-171). Sources: the IRCC fee list itself for the study permit, work permit, open work permit holder and visitor extension lines (read 2026-11-03); research_notes/visitor-visa-and-six-combinations-research-2026-11-02.md rows 1a, 1b, 1c; product/screens/W1-baseline/immigration-facts-2026-10-29.md row 19. Each line carries its basis (P-247): per_application (once per application filed), per_person_by_role (each person of the named roles), per_position (not worked out yet), or family_maximum (each person, capped once enough people apply together). A fee change is an edit to this file with its test (tests/check_r2_fee_table.ts, run by CI). Part 2 of R2 moves it into a stored library table frozen with each release (setup S7a, PUT /library/fees).",
  "as_of": "2026-09-21",
  "read": "2026-11-02",
  "status": "Researched (source, date): may change",
@@ -125,6 +125,86 @@
     "quote_kind": "IRCC's words",
     "read": "2026-11-02",
     "checked": "IRCC fee list page date 2026-09-21; Lead research 2 Nov (research file row 1c); Sample until the immigration expert confirms (P-171)"
+   }
+  },
+  {
+   "key": "study_permit",
+   "label": "Study permit fee (including extensions)",
+   "status": "Researched (IRCC fee list, 2026-11-03): may change",
+   "basis": "per_person_by_role",
+   "per_person_cad": 150,
+   "roles": [
+    "principal",
+    "spouse_or_partner",
+    "child"
+   ],
+   "source": {
+    "page": "IRCC fee list",
+    "url": "https://ircc.canada.ca/english/information/fees/fees.asp",
+    "quote": "Study permit (including extensions) – per person 150.00",
+    "quote_kind": "IRCC's words",
+    "read": "2026-11-03",
+    "checked": "IRCC fee list page date 2026-09-21, read 3 Nov 2026 (C6.12 step 24); charged to each person applying, no family maximum on the page; amounts Sample until the immigration expert confirms (P-171)"
+   }
+  },
+  {
+   "key": "work_permit",
+   "label": "Work permit fee (including extensions)",
+   "status": "Researched (IRCC fee list, 2026-11-03): may change",
+   "basis": "per_person_by_role",
+   "per_person_cad": 155,
+   "roles": [
+    "principal",
+    "spouse_or_partner",
+    "child"
+   ],
+   "source": {
+    "page": "IRCC fee list",
+    "url": "https://ircc.canada.ca/english/information/fees/fees.asp",
+    "quote": "Work permit (including extensions) – per person 155.00",
+    "quote_kind": "IRCC's words",
+    "read": "2026-11-03",
+    "checked": "IRCC fee list page date 2026-09-21, read 3 Nov 2026 (C6.12 step 24); charged to each person applying, no family maximum on the page; amounts Sample until the immigration expert confirms (P-171); the page's group maximum (CAD 465) is for 3 or more performing artists only, not a family maximum, and is not modelled"
+   }
+  },
+  {
+   "key": "open_work_permit_holder",
+   "label": "Open work permit holder fee",
+   "status": "Researched (IRCC fee list, 2026-11-03): may change",
+   "basis": "per_person_by_role",
+   "per_person_cad": 100,
+   "roles": [
+    "principal",
+    "spouse_or_partner",
+    "child"
+   ],
+   "source": {
+    "page": "IRCC fee list",
+    "url": "https://ircc.canada.ca/english/information/fees/fees.asp",
+    "quote": "Open work permit holder 100.00",
+    "quote_kind": "IRCC's words",
+    "read": "2026-11-03",
+    "checked": "IRCC fee list page date 2026-09-21, read 3 Nov 2026 (C6.12 step 24); paid with the work permit fee for an open work permit; the row says no \"per person\": charged to each open work permit holder is our reading (Sample until the immigration expert confirms, P-171)"
+   }
+  },
+  {
+   "key": "visitor_extension",
+   "label": "Visitor extension fee (extend your stay)",
+   "status": "Researched (IRCC fee list, 2026-11-03): may change",
+   "basis": "per_person_by_role",
+   "per_person_cad": 100,
+   "roles": [
+    "principal",
+    "spouse_or_partner",
+    "child"
+   ],
+   "source": {
+    "page": "IRCC fee list",
+    "url": "https://ircc.canada.ca/english/information/fees/fees.asp",
+    "quote": "Extend your stay as a visitor – per person 100.00",
+    "quote_kind": "IRCC's words",
+    "read": "2026-11-03",
+    "checked": "IRCC fee list page date 2026-09-21, read 3 Nov 2026 (C6.12 step 24); charged to each person applying, no family maximum on the page; amounts Sample until the immigration expert confirms (P-171); the CAD 500 family maximum on the page is for visitor visas, not for extending a stay"
    }
   }
  ],
