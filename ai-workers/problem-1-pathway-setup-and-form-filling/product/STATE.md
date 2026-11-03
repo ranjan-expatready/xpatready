@@ -11,7 +11,7 @@ The founder chose at 22:15 IST to wrap up this account now (P-308, P-310) and to
 
 **Open PRs and next step:**
 * #762 C11.7 Load sample — labelled by the founder's instruction (22:01 IST), in the merge queue; merges by itself.
-* #771 C3.4 v2 saved masters (16/16, PR1) — Opus review, then qa's Saved check (P-275), then the label. "Stopped here" in its body.
+* #771 C3.4 v2 saved masters (16/16, PR1) — its Opus review stopped on an API error before any verdict (no files changed): **rerun the Opus review first**, then qa's Saved check (P-275), then the label. "Stopped here" in its body (PR1 clean at 04917c082, no live-switch server left).
 * qa re-test PR (session "qa re-test · C9.1 C11.8 …", branch `qa-retest-night`) — rows scored so far are pushed; "Stopped here" in its body names the rest. Restart it first.
 * #763 (Opus re-review notes), #765 (lead-watch skill) — green, wait for the founder's label (the classifier refuses the Lead's).
 * **QA-196 (C3.4 AI checks through one door), no PR yet:** branch `claude/forms-qa196-ai-checks-one-door` at 148ce0144 (spare B, Opus Approve round 2). Resume: merge main into it (it conflicts after #752), re-run `check_forms_c34_ai` and the queue suites, then open its PR. Spare B's "Stopped here" note and question are on #752.
