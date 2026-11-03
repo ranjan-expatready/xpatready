@@ -5,7 +5,7 @@
 //   tsx studio/tests/check_c38_completeness.ts
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { backgroundQuestions, backgroundWords, familyFormWords, formNumberOf, missingFamilyForm, NOT_A_FACT, type ReadField } from "../engine/form-completeness.ts";
+import { backgroundQuestions, backgroundWords, familyFormWords, formNumberOf, missingFamilyForm, NOT_A_FACT, readingMissingWords, type ReadField } from "../engine/form-completeness.ts";
 import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
@@ -26,15 +26,19 @@ const forms: [string, string, string[]][] = [
 ];
 for (const [form, file, expected] of forms) {
   const got = backgroundQuestions(reading(file));
-  ok(`C3.8 [IRCC-F08] ${form}: every Background question, Q1 to Q6 (military, political party, ill-treatment included), by the form's own reading`, expected.length === got.size && expected.every((p) => got.has(p)), { missing: expected.filter((p) => !got.has(p)), extra: [...got].filter((p) => !expected.includes(p)) });
+  ok(`C3.8 [IRCC-F08] ${form}: every Background question, Q1 to Q6 (military, political party, ill-treatment included), by the form's own reading`, expected.length === got.size && expected.every((p) => got.has(p)), { missing: expected.filter((p) => !got.has(p)), extra: [...got.keys()].filter((p) => !expected.includes(p)) });
   const fields = reading(file);
   const not = (f: ReadField) => !!f.data_path && !got.has(f.data_path);
   const consent = fields.filter((f) => not(f) && f.ui === "exclGroup" && /Consent|Signature/.test(f.section ?? "")), earlier = fields.filter((f) => not(f) && f.ui === "exclGroup" && /Education|natID|USCard/.test(f.section ?? ""));
   const details = fields.filter((f) => not(f) && f.ui !== "exclGroup" && /BackgroundInfo|Military|Occupation|GovPosition|Illtreatment/.test(f.section ?? ""));
   ok(`C3.8 [IRCC-F08] ${form} fail case: its details and calculation boxes, its consent box and the yes/no questions of other sections are not Background questions`, consent.length > 0 && earlier.length >= 2 && details.length >= 5, { consent: consent.length, earlier: earlier.length, details: details.length });
 }
-ok("C3.8 [IRCC-F08] fail case: a form with no Background information heading has none (a schedule, a guide)", backgroundQuestions([{ data_path: "form1[0].Page1[0].Q[0].Choice[0]", ui: "exclGroup", heading: "PERSONAL DETAILS", section: "Page1.Q.Choice" }]).size === 0 && backgroundQuestions([]).size === 0);
+ok("C3.8 [IRCC-F08] fail case: a reading with no \"BACKGROUND INFORMATION\" heading names none (whether a schedule's own background questions fall under IRCC-F08 is a question for the tech lead, QA-199 review Minor 2)", backgroundQuestions([{ data_path: "form1[0].Page1[0].Q[0].Choice[0]", ui: "exclGroup", heading: "PERSONAL DETAILS", section: "Page1.Q.Choice" }]).size === 0 && backgroundQuestions([]).size === 0);
 ok("C3.8 [IRCC-F08] fail case: the questions stop at the form's consent and signature block", !backgroundQuestions(reading("imm1295e.inventory.json")).has("form1[0].Page4[0].Consent0[0].Choice[0]"));
+const q5710 = backgroundQuestions(reading("imm5710e.inventory.json")).get(p4 + "Occupation[0].Choice[0]");
+ok("C3.8 [IRCC-F08] (review Minor 3) a question with a blank caption is named by the form's own words above it (IMM 5710's government security question)", !!q5710 && /^Have you ever been employed by a government/.test(q5710) && backgroundWords("", q5710).startsWith(`"Have you ever been employed by a government`), q5710);
+const rm = readingMissingWords("IMM 5257 (09-2023)");
+ok("C3.8 [IRCC-F08] (review Minor 1) a reading that cannot be read says so and what to do, in plain words", /^The reading of IMM 5257 \(09-2023\) is missing on this computer/.test(rm) && /read the form again/.test(rm) && !/\[0\]/.test(rm), rm);
 ok("C3.8 [IRCC-F08] both outcomes the page calls \"Not a fact\" count; mapped, filled by hand and undecided do not", NOT_A_FACT.has("not_a_fact") && NOT_A_FACT.has("never_filled") && !["mapped", "by_hand", "unresolved"].some((o) => NOT_A_FACT.has(o)));
 const w = backgroundWords("Within the past two years, have you had tuberculosis?");
 ok("C3.8 [IRCC-F08] the words name the question by its caption, say why (IRCC returns the application) and what to do", w.startsWith("\"Within the past two years") && /IRCC returns an application/.test(w) && /Map it to a shared field/.test(w) && /filled by hand/.test(w), w);

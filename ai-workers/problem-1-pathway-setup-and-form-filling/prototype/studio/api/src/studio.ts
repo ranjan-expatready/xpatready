@@ -9,7 +9,7 @@ import { canRelease } from "../../../contracts/rules.ts";
 import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
 import { buildSnapshot, effective, snapshotHash, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
 import { backgroundPathsOf } from "./background-questions.ts";
-import { backgroundWords, familyFormWords, formNumberOf, missingFamilyForm, NOT_A_FACT } from "../../engine/form-completeness.ts";
+import { backgroundWords, familyFormWords, formNumberOf, missingFamilyForm, NOT_A_FACT, readingMissingWords } from "../../engine/form-completeness.ts";
 import { slug } from "../../engine/import.ts";
 import { identityKeyOf, insertProposals } from "./proposals.ts";
 import { nameKey, namedDocumentType, waitingDocumentType } from "./document-type-names.ts";
@@ -223,12 +223,14 @@ export class Studio {
     ]);
     const forms = [...new Set(effective(lines, (l) => l.lineageKey, "draft").map((l) => l.form.formKey))];
     // [IRCC-F08] each PDF edition's Background questions by its own reading (QA-199), never a word in the path.
-    const editions = forms.length ? await this.db.formEdition.findMany({ where: { workspaceId, channel: "PDF", form: { workspaceId, formKey: { in: forms } } }, select: { id: true, inventoryFile: true } }) : [];
-    const asked = editions.map((e) => ({ formEditionId: e.id, dataPath: { in: [...backgroundPathsOf(e.inventoryFile)] } })).filter((w) => w.dataPath.in.length);
-    const maps = asked.length ? await this.db.formFieldMap.findMany({ where: { workspaceId, OR: asked, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { id: true, formEditionId: true, dataPath: true, caption: true, outcome: true, version: true, status: true, supersedesId: true, edition: { select: { form: { select: { formKey: true } } } } } }) : [];
+    const editions = forms.length ? await this.db.formEdition.findMany({ where: { workspaceId, channel: "PDF", form: { workspaceId, formKey: { in: forms } } }, select: { id: true, inventoryFile: true, editionLabel: true, form: { select: { formKey: true } } } }) : [];
+    const read = new Map(editions.map((e) => [e.id, backgroundPathsOf(e.inventoryFile)]));
     const out: { level: "error"; where: string; item: string; message: string }[] = [];
+    for (const e of editions) if (!read.get(e.id)) out.push({ level: "error", where: "Forms", item: e.form.formKey, message: readingMissingWords(e.editionLabel) });
+    const asked = editions.map((e) => ({ formEditionId: e.id, dataPath: { in: [...(read.get(e.id)?.keys() ?? [])] } })).filter((w) => w.dataPath.in.length);
+    const maps = asked.length ? await this.db.formFieldMap.findMany({ where: { workspaceId, OR: asked, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { id: true, formEditionId: true, dataPath: true, caption: true, outcome: true, version: true, status: true, supersedesId: true, edition: { select: { form: { select: { formKey: true } } } } } }) : [];
     for (const r of effective(maps, (m) => `${m.formEditionId}|${m.dataPath}`, "draft"))
-      if (NOT_A_FACT.has(r.outcome)) out.push({ level: "error", where: "Forms", item: r.edition.form.formKey, message: backgroundWords(r.caption) });
+      if (NOT_A_FACT.has(r.outcome)) out.push({ level: "error", where: "Forms", item: r.edition.form.formKey, message: backgroundWords(r.caption, read.get(r.formEditionId)?.get(r.dataPath)) });
     const missing = missingFamilyForm(attached.map((a) => formNumberOf(a.edition)), forms);
     if (missing) out.push({ level: "error", where: "Forms", item: missing, message: familyFormWords(missing) });
     return out;

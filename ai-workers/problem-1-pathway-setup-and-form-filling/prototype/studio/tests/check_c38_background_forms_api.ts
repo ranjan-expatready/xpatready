@@ -3,7 +3,8 @@
 // Q4 military, Q5 political party and Q6 ill-treatment, which sit outside any `BackgroundInfo` node, are refused as
 // "not a fact" (409, in words) and, left so by an earlier decision, block release by their caption. Per form: IMM 1295
 // on the Work permit (family) sample; IMM 5257 and IMM 1294 on Reset to the six, their saved field-map answers applied
-// (replays, no model call, US$0). Before QA-199 the three questions answered 200 and raised no error on every form.
+// (replays, no model call, US$0). An edition whose recorded reading is missing here fails closed (review Minor 1).
+// Before QA-199 the three questions answered 200 and raised no error on every form.
 //   zsh studio/tools/isolated.sh screens_c38bg 4447 start && tsx studio/tests/check_c38_background_forms_api.ts 4447 xr_studio_screens_c38bg
 import { client, recorder } from "./runtime/api.ts";
 
@@ -63,10 +64,28 @@ async function form(formKey: string, combinationKey: string, page: string) {
   }
 }
 
+/** Review Minor 1: an edition whose recorded reading is missing here fails closed, on the decision and on release. */
+async function readingMissing(formKey: string, combinationKey: string) {
+  const combo = sql(`select id from combination where combination_key = '${combinationKey}'`);
+  const ed = sql(`select e.id from form_edition e join gov_form_def g on g.id = e.gov_form_def_id where g.form_key = '${formKey}' and e.channel = 'PDF' order by e.edition_label limit 1`);
+  const file = sql(`select inventory_file from form_edition where id = '${ed}'`);
+  const plain = ((await call("GET", `/editions/${ed}/form-fields`)).body as { fields: { dataPath: string; outcome: string; background?: boolean }[] }).fields.find((f) => !f.background && f.outcome !== "mapped");
+  sql(`update form_edition set inventory_file = 'prototype/p1/inventory/missing-qa199-check.inventory.json' where id = '${ed}'`);
+  try {
+    const r = plain ? await call("POST", `/editions/${ed}/form-fields/decision`, { dataPath: plain.dataPath, decision: "not_a_fact", reason: "Not a fact this product fills (QA-199 check)" }, "user-C") : { status: 0, body: null };
+    ok(`C3.8 [IRCC-F08] QA-199 review Minor 1 ${formKey}: with its reading missing, "not a fact" is refused (409) in words saying to read the form again`, r.status === 409 && /reading of .* is missing on this computer/.test(words(r)) && /read the form again/.test(words(r)), { status: r.status, said: words(r).slice(0, 160) });
+    const ps = ((await call("GET", `/combinations/${combo}/review`)).body as { draft: { problems: P[] } }).draft.problems.filter((p) => p.level === "error" && p.item === formKey && /is missing on this computer/.test(p.message));
+    ok(`C3.8 [IRCC-F08] QA-199 review Minor 1 ${formKey}: with its reading missing, release is blocked by an error in words`, ps.length === 1, ps.map((p) => p.message.slice(0, 120)));
+  } finally { sql(`update form_edition set inventory_file = '${file}' where id = '${ed}'`); }
+  const back = ((await call("GET", `/combinations/${combo}/review`)).body as { draft: { problems: P[] } }).draft.problems.filter((p) => /is missing on this computer/.test(p.message));
+  ok(`C3.8 [IRCC-F08] QA-199 review Minor 1 ${formKey} pass: the reading back, the error is gone`, back.length === 0, back.length);
+}
+
 (async () => {
   await call("POST", "/demo/reset", { confirm: "RESET" });
   if ((await call("POST", "/demo/load")).status >= 300) stop("the sample did not load");
   await form("IMM 1295", "wp.family", "Page4");
+  await readingMissing("IMM 1295", "wp.family");
   if ((await call("POST", "/demo/reset-to-six", { confirm: "RESET" })).status >= 300) stop("Reset to the six did not load");
   await applySaved("vv.single", "imm5257e.pdf");
   await applySaved("sp.outside", "imm1294e.pdf");

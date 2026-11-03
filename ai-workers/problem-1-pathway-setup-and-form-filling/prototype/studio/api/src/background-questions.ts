@@ -7,15 +7,16 @@ import { backgroundQuestions, type ReadField } from "../../engine/form-completen
 import { SOLUTION } from "./core.ts";
 
 // A reading is never overwritten (tools/read_form.py re-derives and compares), so one read per file is kept.
-const read = new Map<string, Set<string>>();
+const read = new Map<string, Map<string, string | null>>();
 
-/** The data paths of the edition's Background information questions. An edition with no reading on this computer has
- *  none it can name: its form fields came from no reading either, so nothing is drafted to refuse. */
-export function backgroundPathsOf(inventoryFile: string | null | undefined): Set<string> {
-  if (!inventoryFile) return new Set();
+/** The data paths of the edition's Background information questions, each with the form's words above it. An edition
+ *  with no reading recorded has none it can name (its form fields came from no reading either). A reading recorded but
+ *  missing or unreadable here is null: the callers fail closed (review Minor 1), never "no Background questions". */
+export function backgroundPathsOf(inventoryFile: string | null | undefined): Map<string, string | null> | null {
+  if (!inventoryFile) return new Map();
   let got = read.get(inventoryFile);
   if (!got) {
-    try { got = backgroundQuestions((JSON.parse(readFileSync(join(SOLUTION, inventoryFile), "utf8")) as { fields?: ReadField[] }).fields ?? []); } catch { return new Set(); }
+    try { got = backgroundQuestions((JSON.parse(readFileSync(join(SOLUTION, inventoryFile), "utf8")) as { fields?: ReadField[] }).fields ?? []); } catch { return null; }
     read.set(inventoryFile, got);
   }
   return got;

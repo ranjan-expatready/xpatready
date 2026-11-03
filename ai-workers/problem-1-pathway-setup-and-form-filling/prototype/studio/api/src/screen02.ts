@@ -8,7 +8,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { effective } from "../../engine/snapshot.ts";
-import { backgroundWords } from "../../engine/form-completeness.ts";
+import { backgroundWords, readingMissingWords } from "../../engine/form-completeness.ts";
 import { backgroundPathsOf } from "./background-questions.ts";
 import { ACTORS, actorOf, Audit, Db, fail, need, OpenRead, revise, strip, Workspace, type Actor } from "./core.ts";
 import { actionVerb, changeView, decideChange, resubmitChange, withdrawChange } from "./library-changes.ts";
@@ -53,7 +53,11 @@ export class Screen02 {
     if (cur!.outcome === "mapped") fail(`${cur!.caption ?? b.dataPath} is mapped to a shared field; change the mapping on its field map instead.`, HttpStatus.CONFLICT);
     // C3.8 [IRCC-F08]: a Background information question must be answered, so it is never "not a fact" (409: the form's own
     // rule), named by the form's own reading (QA-199).
-    if (b.decision === "not_a_fact" && backgroundPathsOf(ed!.inventoryFile).has(b.dataPath)) fail(backgroundWords(cur!.caption), HttpStatus.CONFLICT);
+    if (b.decision === "not_a_fact") {
+      const bg = backgroundPathsOf(ed!.inventoryFile);
+      if (!bg) fail(readingMissingWords(ed!.editionLabel), HttpStatus.CONFLICT);
+      if (bg!.has(b.dataPath)) fail(backgroundWords(cur!.caption, bg!.get(b.dataPath)), HttpStatus.CONFLICT);
+    }
     const changes = { outcome: b.decision, canonicalFieldKey: null, person: null, transform: null, confidence: null, reason: `${b.reason} (${actor.name})`, origin: "HUMAN" as const, optionMap: Prisma.DbNull };
     await revise(this.db.formFieldMap, rows, changes, actor.id, strip);
     const said = b.decision === "by_hand" ? "filled by hand" : "not a fact";
@@ -66,7 +70,7 @@ export class Screen02 {
     const ed = await this.db.formEdition.findUnique({ where: { id: editionId }, include: { form: true } }).catch(() => null);
     if (!ed || ed.channel === "ONLINE") fail("This form edition does not exist.", HttpStatus.NOT_FOUND); // W1-02 (break m3): online versions are parked
     const rows = effective(await this.db.formFieldMap.findMany({ where: { formEditionId: ed!.id } }), (m) => m.dataPath, "draft");
-    const background = backgroundPathsOf(ed!.inventoryFile);
+    const background = backgroundPathsOf(ed!.inventoryFile) ?? new Map<string, string | null>(); // unreadable: the decision and release refuse in words
     const word: Record<string, string> = { mapped: "Mapped", not_a_fact: "Not a fact", never_filled: "Not a fact", by_hand: "Filled by hand", unresolved: "No decision" };
     return { edition: { id: ed!.id, label: ed!.editionLabel, form: ed!.form.formKey }, fields: rows.map((r) => ({ dataPath: r.dataPath, caption: r.caption, heading: r.heading, outcome: r.outcome, outcome_word: word[r.outcome] ?? r.outcome, field: r.canonicalFieldKey, reason: r.reason, status: r.status, carried: r.outcome === "unresolved" && r.status === "PUBLISHED", background: background.has(r.dataPath) })) };
   }
