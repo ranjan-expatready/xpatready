@@ -92,11 +92,16 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   const docsFor = (about: string, fact: string) => { const names = [...(perPerson.get(about)?.get(fact) ?? []).map((x) => x.name), ...(extra.get(fact) ?? [])]; return names.length ? [...new Set(names)] : undefined; };
 
   // ------------------------------------------------------------ forms for each person
+  // C7.7 (SH3 R3, contract item (a)): a form's condition is decided like a document line's (lineCondition): CASE on the
+  // filing; PRINCIPAL, SPOUSE or DEPENDENT on the holder when the holder has that role, else on every person with it
+  // (none → the form is not needed); otherwise on the holder. Whose answers each part waits for is kept for the deciders.
+  const formWaits = new Map<string, { rule: Cond & { about?: string }; age: Cond }>();
   const forms = s.forms.filter((f) => f.form_kind !== "document" || true).flatMap((f) => {
-    const kind = f.condition?.subjectKind;
     return subjectsFor(people, f.who).map((person) => {
-      const rule: Cond = wordsOnly(f) ? { applies: "cannot_tell", missing: [NO_RULE] } : evalCondition(s, known, f.condition, kind === "CASE" ? FILING : person);
-      const c = both(rule, ageGate(known, person, f.min_age, today));
+      const rule: Cond & { about?: string } = wordsOnly(f) ? { applies: "cannot_tell", missing: [NO_RULE] } : lineCondition(s, known, people, person, f.condition);
+      const age = ageGate(known, person, f.min_age, today);
+      const c = both(rule, age);
+      formWaits.set(`${f.form_number}|${person}`, { rule, age });
       const why = wordsOnly(f) ? `Cannot tell yet: no rule ("${f.condition_plain ?? "only if"}" is in words only)` : f.condition_plain ?? (f.status === "always" ? "always required for this combination" : "conditional");
       return { form: f.form_number, title: f.title, form_kind: f.form_kind ?? "data_form", person, person_label: label(person), status: f.status, applies: c.applies, missing: c.missing, why: f.min_age ? `${why}; from age ${f.min_age}` : why, origin: f.origin, no_rule: wordsOnly(f) };
     });
@@ -135,7 +140,7 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
 
   // ------------------------------------------------------------ conditions: facts that decide what applies
   const deciders = new Map<string, { fact: string; about: string; decides: Set<string> }>();
-  const addDecider = (missing: string[], about: string, what: string) => { for (const m of missing) { if (m.startsWith("(")) continue; const a = isFilingFact(m) ? FILING : about; const k = `${a}|${m}`; const d = deciders.get(k) ?? { fact: m, about: a, decides: new Set<string>() }; d.decides.add(what); deciders.set(k, d); } };
+  const addDecider = (missing: string[], about: string, what: string) => { for (const m of missing) { if (m.startsWith("(")) continue; const a = isFilingFact(m, place.get(m)) ? FILING : about; const k = `${a}|${m}`; const d = deciders.get(k) ?? { fact: m, about: a, decides: new Set<string>() }; d.decides.add(what); deciders.set(k, d); } };
   // QA-149: an answered fact that a condition reads still decides it, decided or not, so it stays on the case and can be
   // changed (a child's "travelling alone" answered yes added a line, then the question was gone and could not be undone).
   // A calculated field is kept by the answers it is worked out from. Unanswered facts a decided condition does not need
@@ -153,13 +158,20 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
     if (!tree || subjects === "document") return;
     const reads = readsOf(tree);
     for (const about of subjects) for (const f of reads) {
-      const a = isFilingFact(f) ? FILING : about, k = kkey(a, f);
-      if (!known.has(k)) continue;
+      // C7.7 (contract item (c)): an answer is kept where it is stored: the placement's subject (R5 with the placement),
+      // else by the id rule, so an answer saved on the person before its placement became once per case stays (r2-m1).
+      const a = [isFilingFact(f, place.get(f)) ? FILING : about, isFilingFact(f) ? FILING : about].find((x) => known.has(kkey(x, f)));
+      if (!a) continue;
+      const k = kkey(a, f);
       const d = answeredDeciders.get(k) ?? { fact: f, about: a, decides: new Set<string>() }; d.decides.add(what); answeredDeciders.set(k, d);
     }
   };
-  for (const f of forms) if (f.applies === "cannot_tell") addDecider(f.missing, f.person, `whether ${f.form} applies to ${f.person_label}`);
-  for (const f of s.forms) if (f.condition) for (const row of forms.filter((x) => x.form === f.form_number)) keepAnswered(f.condition, [f.condition.subjectKind === "CASE" ? FILING : row.person], `whether ${f.form_number} applies to ${row.person_label}`);
+  for (const f of forms) if (f.applies === "cannot_tell") {
+    const w = formWaits.get(`${f.form}|${f.person}`)!, what = `whether ${f.form} applies to ${f.person_label}`;
+    if (w.rule.applies === "cannot_tell") addDecider(w.rule.missing, w.rule.about ?? f.person, what);
+    if (w.age.applies === "cannot_tell") addDecider(w.age.missing, f.person, what);
+  }
+  for (const f of s.forms) if (f.condition) for (const row of forms.filter((x) => x.form === f.form_number)) keepAnswered(f.condition, conditionSubjects(people, row.person, f.condition.subjectKind), `whether ${f.form_number} applies to ${row.person_label}`);
 
   // ------------------------------------------------------------ document checklist
   // Q2 (#325): whose list a line is on comes from its own "who" (lineHolders); its condition is decided on its subject.
@@ -251,8 +263,13 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   // ------------------------------------------------------------ checks that the known facts trigger
   // A document_validity check is a rule about a document's dates (engine/runtime/case-checklist.ts), not a predicate.
   const checks = (s.checks ?? []).filter((c) => c.condition && c.group !== "form_native" && c.group !== "document_validity").flatMap((c) => {
-    const kind = c.condition?.subjectKind;
-    const subjects = kind === "CASE" ? [FILING] : people.filter((p) => p.applies).map((p) => p.id);
+    // C7.7 (SH3 R3, contract item (a)): a check is decided for each applicant (R2) on R3's subjects: CASE → the filing;
+    // a role → that role's people (none → it never fires); DOCUMENT → a document's contents, not answers (never fires
+    // here); otherwise the applicant. Before, every person who applies (an applying representative too) read their own
+    // answers, so a principal-only check could fire for a spouse or a child.
+    const holders = subjectsFor(people, "each_applicant");
+    const per = (holders.length ? holders : [FILING]).map((h) => conditionSubjects(people, h, c.condition?.subjectKind));
+    const subjects = [...new Set(per.flatMap((x) => (x === "document" ? [] : x)))];
     return subjects.map((person) => ({ c, person, r: evalCondition(s, known, c.condition, person) })).filter((x) => x.r.applies === true)
       .map(({ c, person }) => ({ id: c.id, severity: c.severity, group: c.group, person, person_label: label(person), applies_to: c.applies_to, message: c.message ?? c.applies_to, illustrative: !!c.illustrative }));
   });
