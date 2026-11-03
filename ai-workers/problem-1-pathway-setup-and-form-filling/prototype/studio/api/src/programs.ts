@@ -15,7 +15,7 @@ import { questionCounts } from "../../engine/runtime/questionnaires.ts";
 import { checkedOf, comparePaths, isLive, missingItems, needsWork, newestEdition, waitsForPerson, nextActionOf, rowCounts, statusOf, STATUS_TEXT } from "../../engine/programs.ts";
 import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snapshot.ts";
 import { filedOf, progressFollows, setupProgress } from "../../engine/structure.ts";
-import { forViewer, setupChecklistOf, type OfficialPages, type SetupInput } from "../../engine/setup-checklist.ts";
+import { forViewer, setupChecklistOf, waitsForMap, type OfficialPages, type SetupInput } from "../../engine/setup-checklist.ts";
 import type { CardSetup, ChipStatus, SetupChecklist, StepKey, ViewerChecklist } from "../../contracts/setup-checklist.ts";
 import type { ProposalKind } from "../../contracts/proposal-item.ts";
 import { PATHWAY_TYPE_LABEL, type PathwayType } from "../../contracts/structure.ts";
@@ -48,7 +48,7 @@ const derivedOf = (s: Snapshot) => (s.derived_fields as { id: string; calculatio
 type SnapForm = { form_number: string; form_kind?: string | null; channel?: Channel; status?: string; condition_plain?: string | null };
 
 type Row = {
-  leaf: CatalogueLeaf; pathway: string; changes: number; errors: number; firstError: string | null; hasContent: boolean;
+  leaf: CatalogueLeaf; pathway: string; changes: number; errors: number; firstError: string | null; /** Opus review M1 (V3 B1): every draft error, the tagged "no field map" ones included: what holds a row back on the Release page, and its reason. */ holds: number; firstHold: string | null; hasContent: boolean;
   /** UX-A part 2: the draft's release-blocking errors as its Review and release tab counts them (with "Nothing to release
    *  yet" when it has no forms and no documents), and the first of them in words. */
   blockers?: { n: number; first: string | null; empty: boolean };
@@ -184,7 +184,7 @@ export class Programs {
       const noteOf = (aiProposals: number, next: string | undefined, held: { edition: string }[] = []) => [n.linkLabel, aiProposals && next !== "review_proposals" ? `${aiProposals} AI proposal${aiProposals === 1 ? "" : "s"} to review` : null,
         held.length && next !== "see_new_edition" ? `New edition waiting: ${held.map((x) => x.edition).join(", ")}` : null, newToday ? "New today" : null].filter(Boolean).join(" · ");
       if (!c) {
-        rows.push({ pathway, changes: 0, errors: 0, firstError: null, hasContent: false, searchText: path.join(" "), docNames: [],
+        rows.push({ pathway, changes: 0, errors: 0, firstError: null, holds: 0, firstHold: null, hasContent: false, searchText: path.join(" "), docNames: [],
           leaf: { ...base, combinationId: null, startWhy: startWhy(chain, openNodes), forms: [], filing: null, filed: "No forms yet", progress: setupProgress({ forms: 0, allDrafted: false, reviewed: false, aiProposals: 0, live: false, changes: 0 }), counts: null, status: "IN_SETUP", statusText: retired ? "Retired" : "Not started", missing: [{ code: "not_started", step: "Start setup", text: "Not started: no setup yet. Next step: Start setup." }], aiProposals: 0, aiRunning: null, release: null, checked: null, nextAction: nextActionOf({ exists: false, status: "IN_SETUP", forms: 0, sources: 0, draftable: 0, fromLibrary: [], running: null, proposals: [], changes: 0, missing: [] }), needs: !retired, needsYou: false, live: false, held: [], note: noteOf(0, "start") },
           setup: setupChecklistOf(notStartedInput(retired), `${n.programNodeKey}|${key}`) });
         continue;
@@ -226,7 +226,8 @@ export class Programs {
       const status: Status = statusOf(!!rel, missing);
       const checked = checkedOf(c.attachments.map((x) => { const d = new Date(official.get(x.sha256) || x.createdAt); return Number.isNaN(d.getTime()) ? x.createdAt : d; }), now);
       const docNames = (snapshot.document_requirements as { document_type: string }[]).map((d) => d.document_type);
-      const errors = draftProblems.filter((x) => x.level === "error");
+      // V3 B1: a form with no field map is counted once, as "Map N forms" (forms.unmapped), not again as an error here.
+      const errors = draftProblems.filter((x) => x.level === "error" && !waitsForMap(x));
       const aiProposals = proposals.reduce((s, x) => s + x.n, 0);
       // New editions held for impact review (P-32) of a form this row files or has as a source, or uploaded on this row.
       const codes = new Set(forms.map((f) => f.code));
@@ -268,10 +269,15 @@ export class Programs {
       const unsourced = errors.filter((x) => (x as { gate?: string }).gate === "no-source").length;
       const first = errors.find((x) => !(x as { gate?: string }).gate) ?? errors[0];
       const firstError = unsourced && unsourced === errors.length ? `${unsourced} number${unsourced === 1 ? " has" : "s have"} no source entry: fix on Review and release.` : first ? `${first.where === "Tests" ? (first as { label?: string }).label || first.item : first.item}: ${first.message}` : null;
+      // Opus review M1 (V3 B1): the Release page holds a row on every draft error and names it. When only forms with no
+      // field map hold it, the reason names them all (they are left out of `errors`, which counts work for the checklist).
+      const holding = draftProblems.filter((x) => x.level === "error");
+      const unmappedHolds = holding.filter((x) => waitsForMap(x)).map((x) => x.item);
+      const firstHold = errors.length ? firstError : unmappedHolds.length ? `No form fields mapped yet for ${unmappedHolds.join(", ")}: map ${unmappedHolds.length === 1 ? "its" : "their"} form fields (Draft setup), or remove ${unmappedHolds.length === 1 ? "it" : "them"} from this combination.` : null;
       // UX-A part 2: what blocks the release, with "nothing to release yet" when the draft is empty (To review reads it).
       const blocking = [...errors, ...emptyProblem(snapshot)];
       const said = (p: { item: string; message: string }) => `${p.item ? `${p.item}: ` : ""}${p.message.split(":")[0]}`;
-      rows.push({ pathway, changes, errors: errors.length, firstError, hasContent, docNames, blockers: { n: blocking.length, first: blocking[0] ? said(blocking[0]) : null, empty: blocking.length > errors.length },
+      rows.push({ pathway, changes, errors: errors.length, firstError, holds: holding.length, firstHold, hasContent, docNames, blockers: { n: blocking.length, first: blocking[0] ? said(blocking[0]) : null, empty: blocking.length > errors.length },
         setup: setupChecklistOf(input, `${c.id}|${key}`),
         searchText: [...path, ...forms.map((f) => f.code), ...docNames].join(" "),
         leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, filed: filedOf(snapForms), progress, counts, status, statusText: retired ? "Retired" : status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
@@ -419,7 +425,7 @@ export class Programs {
       const gates = await this.studio.releaseGates(changed.map((r) => ({ combinationId: r.leaf.combinationId!, sha256: (snaps.get(r.leaf.combinationId!) as { sha256: string }).sha256 })));
       for (const r of changed) {
         const id = r.leaf.combinationId!;
-        if (r.errors) { why.set(id, { why: r.firstError }); continue; }
+        if (r.holds) { why.set(id, { why: r.firstHold }); continue; }
         const gate = gates.get(id)!;
         if (!gate.ok) { why.set(id, { why: gate.why }); continue; }
         const waiting = await unapprovedAdds(this.db, workspaceId, itemsOf((snaps.get(id) as { snapshot: Snapshot }).snapshot));
@@ -431,7 +437,7 @@ export class Programs {
         }
         why.set(id, { why: null });
       }
-    } else for (const r of changed) why.set(r.leaf.combinationId!, { why: r.errors ? r.firstError : null });
+    } else for (const r of changed) why.set(r.leaf.combinationId!, { why: r.holds ? r.firstHold : null });
     // Approved library changes travel with the shared draft and are released with it (Screen 02 slice 2, B1).
     // C11.13 (P-120): the Release page also lists the changes still waiting for a second person (never released, never
     // counted), and each near duplicate says what it is close to and why it is not the same. The draft bar (summary)
