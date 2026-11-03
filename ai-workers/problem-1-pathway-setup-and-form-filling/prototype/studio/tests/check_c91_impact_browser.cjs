@@ -20,6 +20,7 @@ const step = (name, ok, detail) => { if (!ok) fail++; console.log(`${ok ? "PASS"
 
 (async () => {
   saved("aside"); // the committed real saved run of this comparison waits in var/ while this check uses its own
+  for (const [sig, code] of [["SIGINT", 130], ["SIGTERM", 143]]) process.on(sig, () => { try { saved("remove"); saved("back"); } catch { /* ignore */ } process.exit(code); });
   const b = await chromium.launch({ channel: "chrome", headless: true }).catch(() => chromium.launch({ headless: true }));
   const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: "light", reducedMotion: "reduce" });
   const p = await ctx.newPage(); const errs = [];

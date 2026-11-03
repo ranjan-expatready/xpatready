@@ -5,7 +5,9 @@
 // The C9.1 result PR (3 Nov) committed the Mac paid runner's real saved run of this comparison; the checks prove the
 // replay rules with their own runs (the saved result itself is acceptance/C9.1.test.ts), so they set the real ones aside
 // in the copy's var folder while they run (setAsideReal) and put them back after (putBackReal); a folder a killed check
-// of the same copy left is put back first. As tests/check_forms_c34_ai.ts.
+// of the same copy left is put back first. As tests/check_forms_c34_ai.ts. A check stopped while it waits on a child
+// process (a stub pass, a copy restart) cannot run its exit handler, so the runs stay in var/c91-real-runs-<tag> until the
+// next check of that copy starts, or `c91-saved-run.ts back <tag>` puts them back.
 //   tsx --tsconfig studio/api/tsconfig.json studio/tests/fixtures/c91-saved-run.ts write|remove|aside|back [tag]
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";

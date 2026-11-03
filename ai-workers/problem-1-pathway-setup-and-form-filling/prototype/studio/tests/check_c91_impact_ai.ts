@@ -116,7 +116,8 @@ for (const [sig, code] of [["SIGINT", 130], ["SIGTERM", 143]] as const) process.
   // check_ai_launch_paths.ts does), so a run leaves the repository as it was. Its US$0 ledger lines stay (QA-90).
   const CANARY = join(PROTOTYPE, "p2", "screening", "canary-digest.json"), STUBS = join(RUNS, "stub-pass");
   const canary = existsSync(CANARY) ? readFileSync(CANARY, "utf8") : null;
-  const stubsBefore = new Set(existsSync(STUBS) ? readdirSync(STUBS) : []);
+  // The paid run's own stub-pass records are committed (C9.1 result PR): their bytes are put back too, never rewritten.
+  const stubsBefore = new Map((existsSync(STUBS) ? readdirSync(STUBS) : []).map((f) => [f, readFileSync(join(STUBS, f))]));
   const runsBefore = new Set(readdirSync(RUNS));
   try {
   for (const { label, job } of jobs) {
@@ -129,7 +130,7 @@ for (const [sig, code] of [["SIGINT", 130], ["SIGTERM", 143]] as const) process.
   }
   } finally {
     if (canary !== null) writeFileSync(CANARY, canary);
-    for (const f of existsSync(STUBS) ? readdirSync(STUBS) : []) if (!stubsBefore.has(f)) rmSync(join(STUBS, f), { force: true });
+    for (const f of existsSync(STUBS) ? readdirSync(STUBS) : []) { const was = stubsBefore.get(f); if (was === undefined) rmSync(join(STUBS, f), { force: true }); else writeFileSync(join(STUBS, f), was); }
   }
 
   console.log(`${pass}/${pass + fail} passed`);

@@ -48,9 +48,9 @@ const spent = () => n(`select count(*) from drafting_job where mode = 'LIVE'`) +
   ok("C9.1 P-32: the impact lists what the removed and reworded boxes touch beyond fields: sections, document types, rules and checks (each a list)", imp && ["sections", "document_types", "rules", "checks"].every((k) => Array.isArray(imp.components?.[k])), imp ? Object.keys(imp) : null);
   // P-138 and the tech lead on #295: the one saved AI run of this comparison (draft and blind checker rounds on the part of
   // its 23 new and reworded boxes; the Mac paid runner, 3 Nov, US$0.32) is committed under p2/runs, so this pack tests the
-  // saved result: opening the review starts no AI and offers Saved at US$0 with no paid run beside it; Saved puts its
-  // proposals on To review at US$0. The offer and live paths are tests/check_c91_impact_api.ts (with its own runs).
-  ok("C9.1 P-138: opening the review starts no AI; the saved AI run of this comparison is offered at US$0 (Saved), with no paid run beside it", imp && n(`select count(*) from drafting_job`) === 0 && imp.ai?.saved === true && imp.ai?.live?.open === false, imp?.ai ?? null);
+  // saved result: opening the review starts no AI and offers Saved at US$0; Saved puts its proposals on To review at US$0.
+  // The offer and live paths, and "a saved run closes the paid path" with live on, are tests/check_c91_impact_api.ts (own runs).
+  ok("C9.1 P-138: opening the review starts no AI; the saved AI run of this comparison is offered at US$0 (Saved), and the paid path is closed", imp && n(`select count(*) from drafting_job`) === 0 && imp.ai?.saved === true && /A saved AI run of this comparison is here/.test(String(imp.ai?.saved_words ?? "")) && imp.ai?.live?.open === false, imp?.ai ?? null);
   const run = id ? await call("POST", `/intake/held/${id}/impact/draft`, {}) : { status: 0, body: null };
   ok("C9.1 P-175 fail: without the live switch the paid AI run is refused in plain words, US$0, nothing proposed", run.status >= 400 && run.status !== 404 && /live|founder|switch|approved/i.test(words(run)) && spent() === 0 && ledger() === ledgerBefore && n(`select count(*) from proposal_item`) === 0, { status: run.status, words: words(run) });
   const used = id ? await call("POST", `/intake/held/${id}/impact/draft`, { mode: "replay" }) : { status: 0, body: null };
