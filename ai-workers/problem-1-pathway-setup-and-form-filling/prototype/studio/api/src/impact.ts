@@ -12,14 +12,26 @@ import { promisify } from "node:util";
 import { manifest } from "../../engine/import.ts";
 import { newestEdition } from "../../engine/programs.ts";
 import { effective } from "../../engine/snapshot.ts";
-import { ACTORS, Audit, Db, fail, need, PY, ROOT, SOLUTION, STUDIO, Workspace, type Actor } from "./core.ts";
+import { ACTORS, Audit, Db, fail, need, PY, ROOT, STUDIO, Workspace, type Actor } from "./core.ts";
 import { APPROVED_DIR, recordApproval, Sources } from "./sources.ts";
-import { formCombinations, openCases } from "./where-used.ts";
+import { costWords } from "../../contracts/start-setup.ts";
+import { editionFieldItems, insertEditionFieldItems } from "./field-drafts-routes.ts";
+import { QUEUE_TX } from "./proposals.ts";
+import { fieldComponentsOf, formCombinations, openCases } from "./where-used.ts";
+import { aiLive } from "./sources.ts";
+import { changedBoxes, compareBoxes, componentsView, impactContext, impactCost, impactPart, impactStep, inventoryFields, IMPACT_AI_WORDS, previousAcceptedUntil, staleRun, writePart, type BoxRow } from "./impact-ai.ts";
+import { StepRunner, type RoundOut } from "./rounds.ts";
+import type { FieldMapOutput } from "./field-drafts.ts";
 
 const run = promisify(execFile);
-type InvField = { data_path?: string; caption?: string; section?: string };
-type Row = { dataPath: string; caption: string; section: string | null; change: "unchanged" | "reworded" | "new" | "removed"; was?: string; field?: string | null; outcome?: string };
-const norm = (s: string | undefined) => (s ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+/** C9.1: the AI step's drafting-job kind (one per held edition and comparison). */
+export const IMPACT_STEP = "field_map_impact";
+/** Replay only: a saved run is read, nothing is launched. */
+const NO_LAUNCH = { launchOnce: async (): Promise<never> => { throw new Error("A saved AI run is replayed here: no live call is sent."); } };
+/** The edition as printed on the form ("IMM 5476 (11-2025)"): the intake keeps it whole; a bare "11-2025" gets its code. */
+export const printedOf = (code: string, label: string | null) => (/^[A-Z]+ [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/.test(label ?? "") ? label! : `${code} (${label ?? ""})`);
+const costWordsOf = (o: { about_usd: number; at_most_usd: number }) => costWords(o.about_usd, o.at_most_usd);
+type Row = BoxRow;
 
 @Injectable()
 export class Impact {
@@ -29,20 +41,13 @@ export class Impact {
   async review(id: string) {
     const { h, item, def, old } = await this.held(id);
     const inventory = await this.readInventory(item.file, h);
-    const fresh = (JSON.parse(readFileSync(join(SOLUTION, inventory), "utf8")).fields as InvField[]).filter((f) => f.data_path);
+    const fresh = inventoryFields(inventory);
     // The library edition's form fields: its stored inventory, or read from its official file (an edition added through
     // the intake has none stored yet).
     const oldInventory = old?.inventoryFile ?? (old?.officialFile ? await this.readInventory(old.officialFile).catch(() => null) : null);
-    const oldFields = oldInventory ? (JSON.parse(readFileSync(join(SOLUTION, oldInventory), "utf8")).fields as InvField[]).filter((f) => f.data_path) : [];
+    const oldFields = oldInventory ? inventoryFields(oldInventory) : [];
     const oldMaps = old ? new Map(effective(await this.db.formFieldMap.findMany({ where: { formEditionId: old.id } }), (m) => m.dataPath, "draft").map((m) => [m.dataPath, m])) : new Map();
-    const before = new Map(oldFields.map((f) => [f.data_path!, f]));
-    const rows: Row[] = fresh.map((f) => {
-      const o = before.get(f.data_path!), m = oldMaps.get(f.data_path!);
-      const change = !o ? "new" : norm(o.caption) === norm(f.caption) ? "unchanged" : "reworded";
-      return { dataPath: f.data_path!, caption: (f.caption || f.data_path!).slice(0, 300), section: f.section ?? null, change, ...(change === "reworded" ? { was: (o!.caption ?? "").slice(0, 300) } : {}), field: m?.canonicalFieldKey ?? null, outcome: m?.outcome };
-    });
-    const now = new Set(fresh.map((f) => f.data_path!));
-    for (const o of oldFields) if (!now.has(o.data_path!)) { const m = oldMaps.get(o.data_path!); rows.push({ dataPath: o.data_path!, caption: (o.caption || o.data_path!).slice(0, 300), section: o.section ?? null, change: "removed", field: m?.canonicalFieldKey ?? null, outcome: m?.outcome }); }
+    const rows: Row[] = compareBoxes(fresh, oldFields, oldMaps);
     const count = (c: Row["change"]) => rows.filter((r) => r.change === c).length;
     // Impact on the library: the shared fields read by form fields that were removed or reworded.
     const touchedKeys = [...new Set(rows.filter((r) => (r.change === "removed" || r.change === "reworded") && r.field).map((r) => r.field!))];
@@ -51,14 +56,120 @@ export class Impact {
     const combos = (await formCombinations(this.db, h.workspaceId, def.formKey)).sort((x, y) => x.label.localeCompare(y.label));
     // SH2b (qa minor 2 on #504): a database error fails the review loudly, never "0 open cases".
     const cases = await openCases(this.db, combos.map((c) => c.id));
+    // P-32: what the removed and reworded boxes touch beyond fields, on the combinations that file the form (SH2).
+    const label = new Map(fields.map((f) => [f.canonicalFieldKey, f.label ?? f.canonicalFieldKey]));
+    const comboLabel = new Map(combos.map((c) => [c.id, c.label]));
+    const uses = await fieldComponentsOf(this.db, h.workspaceId, touchedKeys, combos.map((c) => c.id));
+    const components = componentsView(uses, rows, label, comboLabel, h.editionLabel ?? "the new edition");
+    const accepted = previousAcceptedUntil(def.formKey);
+    const ai = await this.aiOffer(h, def.formKey, inventory, rows);
     return {
       id: h.id, form: def.formKey, title: def.displayName, edition: h.editionLabel, library_edition: old?.editionLabel ?? null, uploaded_by: ACTORS.find((a) => a.id === h.createdBy)?.name ?? "A person", at: h.createdAt,
       counts: { form_fields: fresh.length, unchanged: count("unchanged"), reworded: count("reworded"), new: count("new"), removed: count("removed") },
       rows: rows.filter((r) => r.change !== "unchanged").concat(rows.filter((r) => r.change === "unchanged")),
       library: fields.map((f) => ({ key: f.canonicalFieldKey, label: f.label ?? f.canonicalFieldKey, meaning: f.meaning, form_fields: rows.filter((r) => r.field === f.canonicalFieldKey && r.change !== "unchanged").length })),
+      components,
       combinations: combos.map((c) => ({ id: c.id, label: c.label })), open_cases: cases,
-      ai: { used: false, cost_usd: 0, note: "Compared form field by form field without AI. New and reworded form fields are left for a person: map each, or mark it not a fact or filled by hand." },
+      previous_accepted_until: accepted?.until ?? null, previous_accepted_words: accepted?.words ?? null, previous_accepted_source: accepted ? { quote: accepted.quote, url: accepted.url, saved: accepted.saved } : null,
+      ai: { used: false, cost_usd: 0, note: "Compared form field by form field without AI. New and reworded form fields are left for a person: map each, or mark it not a fact or filled by hand.", ...ai },
     };
+  }
+
+  /** P-138: the AI offer for the new and reworded boxes (never run on opening): its cost in words, whether a saved run of
+   *  exactly this comparison is here (Saved, US$0), whether live AI is open, and the proposals of an earlier draft. */
+  private async aiOffer(h: { id: string; workspaceId: string; editionLabel: string | null }, code: string, inventory: string, rows: Row[]) {
+    const changed = changedBoxes(rows);
+    if (!changed.length) return { offer: { boxes: 0, words: IMPACT_AI_WORDS.none, about_usd: 0, at_most_usd: 0 }, saved: false, live: { open: false, why: IMPACT_AI_WORDS.none } };
+    const printed = printedOf(code, h.editionLabel);
+    const part = impactPart(inventory, changed);
+    writePart(part);
+    const step = impactStep(printed, changed), cost = impactCost(step, part), ctx = impactContext(printed, part);
+    const replay = new StepRunner(NO_LAUNCH);
+    const draft = await replay.round<FieldMapOutput>(step, false, { ...ctx, mode: "replay", wanted: async () => false });
+    const stale = draft.ok ? null : staleRun(ctx.contextKey, part.sha256);
+    const job = await this.db.draftingJob.findFirst({ where: { workspaceId: h.workspaceId, kind: IMPACT_STEP, status: "COMPLETED", detail: { path: ["held"], equals: h.id } }, orderBy: { startedAt: "desc" } });
+    const proposals = job ? await this.db.proposalItem.findMany({ where: { runId: job.id }, select: { id: true, status: true, work: true } }) : [];
+    const boxesOf = (w: unknown) => ((w as { boxes?: { data_path?: string }[] } | null)?.boxes ?? []).map((b) => b.data_path);
+    return {
+      offer: { boxes: changed.length, words: IMPACT_AI_WORDS.offer(changed.length, cost.words), about_usd: cost.about_usd, at_most_usd: cost.at_most_usd, key: `${part.editionSha256.slice(0, 12)}·${part.boxesSha.slice(0, 12)}` },
+      saved: draft.ok, saved_words: draft.ok ? `A saved AI run of this comparison is here: Draft with AI uses it at US$0.` : stale ? IMPACT_AI_WORDS.stale : IMPACT_AI_WORDS.noSaved.replace("about US$x · at most US$y", cost.words),
+      live: { open: aiLive(), why: aiLive() ? null : IMPACT_AI_WORDS.liveOff(cost.words) },
+      drafted: job ? { job_id: job.id, at: job.startedAt.toISOString(), message: job.message, proposals: proposals.length, waiting: proposals.filter((p) => p.status === "waiting").length,
+        boxes: Object.fromEntries(changed.map((dp) => [dp, proposals.filter((p) => boxesOf(p.work).includes(dp)).map((p) => p.id)])) } : null,
+    };
+  }
+
+  /** C9.1 the AI step (P-138: a click): drafts proposals for only the new and reworded boxes of the held edition.
+   *  replay: the saved run of exactly this comparison, US$0; another comparison's run is out of date (409).
+   *  live: refused in plain words without the live switch (P-175, US$0); with it, the plan's worst case is checked against
+   *  what is left of the cap before anything runs, then a draft round and a blind checker round on the shared runner.
+   *  Proposals go to To review for a person (P-121); nothing changes the library or a release here. */
+  async draftAi(actor: Actor, id: string, body: { mode?: unknown; expected_worst_usd?: unknown }) {
+    need(actor, "author");
+    const mode = body?.mode === undefined ? "live" : String(body.mode);
+    if (mode !== "replay" && mode !== "live") fail('Choose how to draft: "replay" (a saved AI run, US$0) or "live" (a paid AI call).');
+    const r = await this.review(id);
+    const offer = r.ai.offer;
+    if (!offer.boxes) fail(IMPACT_AI_WORDS.none, HttpStatus.CONFLICT);
+    if (mode === "live" && !aiLive()) fail(IMPACT_AI_WORDS.liveOff(costWordsOf(offer)), HttpStatus.CONFLICT);
+    if (mode === "live") {
+      // The worst case is said first: the click carries the worst case the person saw; a changed plan is looked at again.
+      if (typeof body.expected_worst_usd !== "number" || Math.abs(body.expected_worst_usd - offer.at_most_usd) > 0.005) fail(`Look at the cost again: Draft with AI now costs ${costWordsOf(offer)}. Nothing was started.`, HttpStatus.CONFLICT);
+      const left = this.sources.ledger().remaining_usd;
+      if (offer.at_most_usd > left + 1e-9) fail(IMPACT_AI_WORDS.overCap(offer.at_most_usd, left), HttpStatus.CONFLICT);
+    }
+    if (mode === "replay" && !r.ai.saved) fail(r.ai.saved_words ?? IMPACT_AI_WORDS.noSaved, HttpStatus.CONFLICT);
+    const { h, def } = await this.held(id);
+    const inventory = await this.readInventory((await this.held(id)).item.file, h);
+    const changed = changedBoxes(r.rows);
+    const printed = printedOf(def.formKey, h.editionLabel);
+    const part = impactPart(inventory, changed);
+    writePart(part);
+    const step = impactStep(printed, changed);
+    // One AI step per held edition at a time, and one drafted result per comparison (a second click returns the first).
+    const job = await this.db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`impact-ai:${h.id}`}))`;
+      const done = await tx.draftingJob.findFirst({ where: { workspaceId: h.workspaceId, kind: IMPACT_STEP, status: { in: ["COMPLETED", "RUNNING"] }, detail: { path: ["held"], equals: h.id } }, orderBy: { startedAt: "desc" } });
+      if (done && (done.detail as { part?: string } | null)?.part === part.sha256) return { done };
+      return { job: await tx.draftingJob.create({ data: { workspaceId: h.workspaceId, combinationId: null, kind: IMPACT_STEP, mode: mode === "live" ? "LIVE" : "REPLAY", status: "RUNNING", startedBy: actor.id, message: `Drafting the ${changed.length} new and reworded boxes of ${printed}`,
+        detail: { operation: "impact_ai", held: h.id, edition: printed, part: part.sha256, boxes: changed } } }) };
+    });
+    if ("done" in job && job.done) {
+      if (job.done.status === "RUNNING") fail("Draft with AI is already running for this edition. Wait for it to end.", HttpStatus.CONFLICT);
+      return { job_id: job.done.id, again: true, proposals: await this.db.proposalItem.count({ where: { runId: job.done.id } }), message: `${printed}'s new and reworded boxes were already drafted: the proposals wait on To review.` };
+    }
+    const aiJob = job.job!;
+    try {
+      const runner = new StepRunner(mode === "live" ? this.sources : NO_LAUNCH);
+      const ctx = { ...impactContext(printed, part, aiJob.id), mode: mode as "live" | "replay", wanted: async () => true };
+      const safe = async (isCheck: boolean): Promise<RoundOut<FieldMapOutput>> => { try { return await runner.round<FieldMapOutput>(step, isCheck, ctx); } catch (e) { console.warn(`impact ai ${aiJob.id}:`, String(e).slice(0, 400)); return { ok: false, costUsd: 0, reason: "The AI step stopped on this computer, so nothing of it is used." }; } };
+      const draft = await safe(false);
+      // P-121: one attempt per round (the launcher retries only a transient error); no third round. The checker round runs
+      // blind on the same part; it is skipped only when the draft round was blocked or stopped.
+      const check: RoundOut<FieldMapOutput> = draft.ok === false && (draft.blocked || draft.cancelled) ? { ok: false, costUsd: 0, reason: "Not started: the draft round did not finish." } : await safe(true);
+      const spent = draft.costUsd + check.costUsd;
+      if (!draft.ok) {
+        await this.db.draftingJob.update({ where: { id: aiJob.id }, data: { status: "FAILED", costUsd: spent, finishedAt: new Date(), message: draft.reason.slice(0, 1000) } });
+        fail(draft.reason, HttpStatus.CONFLICT);
+      }
+      const d = draft as Extract<RoundOut<FieldMapOutput>, { ok: true }>;
+      const asReading = (x: RoundOut<FieldMapOutput>) => (x.ok ? { output: x.output, from: x.from, runFile: x.runFile, costUsd: x.costUsd } : null);
+      const formText = inventoryFields(inventory).filter((f) => changed.includes(f.data_path!)).map((f) => `${f.caption ?? ""} ${f.section ?? ""}`).join(" \n ");
+      const out = await this.db.$transaction(async (tx) => {
+        const { items, dropped, library } = await editionFieldItems(tx, h.workspaceId, asReading(d)!, asReading(check), { printed, file: (await this.held(id)).item.file ?? h.fileName ?? printed, sha256: h.sha256, formText });
+        const made = items.length ? await insertEditionFieldItems(tx, h.workspaceId, items, library, aiJob.id) : 0;
+        const message = `${d.from === "replay" ? "Saved AI run (US$0, no AI call)" : `AI run (US$${spent.toFixed(2)})`} for the ${changed.length} new and reworded boxes of ${printed}: ${made} proposal${made === 1 ? "" : "s"} on To review${check.ok ? ", read by both rounds" : ", from the draft round only (each waits as Decide)"}.${dropped.length ? ` Not proposed (failed the rules): ${dropped.length}.` : ""} A person accepts each one.`;
+        await tx.draftingJob.update({ where: { id: aiJob.id }, data: { status: made ? "COMPLETED" : "FAILED", costUsd: spent, finishedAt: new Date(), runFile: d.runFile, message: message.slice(0, 1000),
+          detail: { operation: "impact_ai", held: h.id, edition: printed, part: part.sha256, boxes: changed, draftRun: d.runFile, checkRun: check.ok ? check.runFile : null, proposals: made, dropped: dropped.slice(0, 50) } } });
+        return { made, message, dropped };
+      }, QUEUE_TX);
+      await this.audit.log(h.workspaceId, actor.id, "started", "edition impact AI", def.formKey, `${actor.name} drafted ${printed}'s ${changed.length} new and reworded boxes with AI (${mode}, US$${spent.toFixed(2)}): ${out.made} proposals for a person`);
+      if (!out.made) fail(`No proposal of the AI run passed the rules, so nothing was put on To review.${out.dropped.length ? ` For example: ${[...new Set(out.dropped.map((x) => x.why))].slice(0, 3).join(" ")}` : ""}`.slice(0, 900), HttpStatus.CONFLICT);
+      return { job_id: aiJob.id, again: false, proposals: out.made, cost_usd: spent, message: out.message };
+    } catch (e) {
+      await this.db.draftingJob.updateMany({ where: { id: aiJob.id, status: "RUNNING" }, data: { status: "FAILED", finishedAt: new Date(), message: String((e as Error).message ?? e).slice(0, 1000) } });
+      throw e;
+    }
   }
 
   /** Accept (an author): the new edition joins the library with its unchanged form fields' maps carried as draft rows and

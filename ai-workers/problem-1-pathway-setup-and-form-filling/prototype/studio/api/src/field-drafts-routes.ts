@@ -12,7 +12,7 @@ import { costWords } from "../../contracts/start-setup.ts";
 import { normaliseCode } from "../../contracts/form-library.ts";
 import { actorOf, Audit, Db, fail, need, readerOf, SOLUTION, Workspace, type Actor } from "./core.ts";
 import { draftEdition, editionKey, roundCost, sampleEditions, FIELD_DRAFT_WORDS, type EditionSource } from "./field-drafts.ts";
-import { DRAFT_FIELDS_STEP, fieldItems, uniqueLabel, type ReadingOf } from "./field-draft-items.ts";
+import { DRAFT_FIELDS_STEP, fieldItems, uniqueLabel, type EditionFacts, type ReadingOf } from "./field-draft-items.ts";
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { FormLibrary } from "./form-library.ts";
 import { insertProposals, QUEUE_TX, sameInLibrary, type NewProposal, type Work } from "./proposals.ts";
@@ -115,45 +115,59 @@ export class FieldDrafts {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`draft-fields:${r.workspaceId}:${printed}`}))`;
       const open = await tx.draftingJob.findFirst({ where: { workspaceId: r.workspaceId, kind: DRAFT_FIELDS_STEP, status: "COMPLETED", detail: { path: ["edition"], equals: printed } }, orderBy: { startedAt: "desc" } });
       if (open) return { job: open, made: 0, again: true };
-      const rows = await tx.canonicalField.findMany({ where: { workspaceId: r.workspaceId }, orderBy: { version: "desc" } });
-      const seen = new Set<string>(), library: LibraryField[] = [], redirects = new Map<string, string>();
-      for (const x of rows) if (!seen.has(x.canonicalFieldKey)) { seen.add(x.canonicalFieldKey); if (x.mergedIntoKey) redirects.set(x.canonicalFieldKey, x.mergedIntoKey); else if (x.status !== "RETIRED") library.push({ key: x.canonicalFieldKey, meaning: x.meaning, valueType: x.valueType, status: x.status, aliases: x.aliases }); }
-      const { items, dropped } = fieldItems(asReading(rounds.draft)!, asReading(rounds.check), { printed, file: r.file, sha256: r.sha256, formText }, library, redirects);
+      const { items, dropped, library } = await editionFieldItems(tx, r.workspaceId, asReading(rounds.draft)!, asReading(rounds.check), { printed, file: r.file, sha256: r.sha256, formText });
       // Break m1: a draft with no usable field does not use up the edition's one draft; the reasons are said.
       if (!items.length) fail(DRAFT_FIELDS_WORDS.nothingPassed(printed, [...new Set(dropped.map((x) => x.why))]), HttpStatus.CONFLICT);
       const job = await tx.draftingJob.create({ data: { workspaceId: r.workspaceId, combinationId: null, kind: DRAFT_FIELDS_STEP, mode: "REPLAY", status: "COMPLETED", costUsd: 0, startedBy: actor.id, finishedAt: new Date(),
         runFile: rounds.draft.ok ? rounds.draft.runFile : null,
         message: `Saved AI draft of ${printed} (US$0, no AI call): ${items.length} field${items.length === 1 ? "" : "s"} proposed on To review${rounds.check.ok ? ", read by both rounds" : ", from the draft round only (each waits as Decide)"}.${dropped.length ? ` Not proposed (failed the rules): ${dropped.length}.` : ""}`.slice(0, 1000),
         detail: { operation: "draft_fields", edition: printed, key: editionKey(r.edition), mode: "replay", draftRun: rounds.draft.ok ? rounds.draft.runFile : null, checkRun: rounds.check.ok ? rounds.check.runFile : null, proposals: items.length, dropped: dropped.slice(0, 50) } } });
-      // An exact name already in the library (insertProposals refuses a "new" twin, break M3): the same field only when
-      // its area and its value type are the same, proposed as its reuse; otherwise the new field is named apart (its area,
-      // then a number) so it stays new and never lands on another area's field.
-      const byKey = new Map(library.map((l) => [l.key, l]));
-      const taken = new Set(items.map((x) => x.identity.key));
-      const ready: (NewProposal & Work)[] = [];
-      for (const it of items) {
-        if (it.reuse.match !== "new" || it.payload.kind !== "field") { ready.push({ ...it, runId: job.id }); continue; }
-        const proposed = String((it.work as { proposedKey?: string }).proposedKey ?? "");
-        let payload = it.payload, twin = await sameInLibrary(tx, r.workspaceId, payload);
-        const same = (k: string) => k.split(".")[0] === proposed.split(".")[0] && byKey.get(k)?.valueType === payload.valueType;
-        while (twin && !same(twin)) {
-          taken.delete(normalizeLabel(payload.label));
-          const label = uniqueLabel(proposed, new Set([...taken, normalizeLabel(payload.label)]), payload.label);
-          payload = { ...payload, label }; taken.add(normalizeLabel(label));
-          twin = await sameInLibrary(tx, r.workspaceId, payload);
-        }
-        const parts = (it.work as { whyParts?: { round: string | null; quote: string | null } }).whyParts;
-        if (twin) ready.push({ ...it, runId: job.id, reuse: { match: "reuse", existingKey: twin }, identity: { ...it.identity, near: [], nearReason: null }, confidence: it.confidence === "ready" ? "check" : it.confidence,
-          reason: [`Same name, area and type as the library field ${twin}: reuse it.`, parts?.round, parts?.quote].filter(Boolean).join(" ").slice(0, 500) });
-        else ready.push({ ...it, runId: job.id, payload, identity: { ...it.identity, key: normalizeLabel(payload.label) }, rounds: { draft: it.rounds.draft && { ...it.rounds.draft, payload }, check: it.rounds.check && { ...it.rounds.check, payload } } });
-      }
-      await insertProposals(tx, r.workspaceId, ready);
-      return { job, made: ready.length, again: false };
+      const made = await insertEditionFieldItems(tx, r.workspaceId, items, library, job.id);
+      return { job, made, again: false };
     }, QUEUE_TX);
     if (!out.again) await this.audit.log(r.workspaceId, actor.id, "started", "field draft", printed, `${actor.name} drafted ${printed}'s fields from the saved AI draft (${out.made} proposals, US$0)`);
     return { job_id: out.job.id, edition: printed, proposals: out.again ? await this.db.proposalItem.count({ where: { runId: out.job.id } }) : out.made, again: out.again, group: `edition:${printed}`,
       message: out.again ? `${printed} was already drafted from its saved AI draft: its fields wait on To review.` : out.job.message };
   }
+}
+
+type Tx = Parameters<Parameters<Db["$transaction"]>[0]>[0];
+/** C11.13, shared with C9.1's impact AI step (impact.ts): the readings of one edition (or of its changed boxes) turned into
+ *  `field` items against the current library (merged fields redirect, retired ones are left out). */
+export async function editionFieldItems(tx: Tx, workspaceId: string, draft: ReadingOf, check: ReadingOf | null, facts: EditionFacts) {
+  const rows = await tx.canonicalField.findMany({ where: { workspaceId }, orderBy: { version: "desc" } });
+  const seen = new Set<string>(), library: LibraryField[] = [], redirects = new Map<string, string>();
+  for (const x of rows) if (!seen.has(x.canonicalFieldKey)) { seen.add(x.canonicalFieldKey); if (x.mergedIntoKey) redirects.set(x.canonicalFieldKey, x.mergedIntoKey); else if (x.status !== "RETIRED") library.push({ key: x.canonicalFieldKey, meaning: x.meaning, valueType: x.valueType, status: x.status, aliases: x.aliases }); }
+  const { items, dropped } = fieldItems(draft, check, facts, library, redirects);
+  return { items, dropped, library };
+}
+
+/** C11.13, shared with C9.1: puts the items on the one review queue under the run `runId`; returns how many were put. */
+export async function insertEditionFieldItems(tx: Tx, workspaceId: string, items: ReturnType<typeof fieldItems>["items"], library: LibraryField[], runId: string) {
+  // An exact name already in the library (insertProposals refuses a "new" twin, break M3): the same field only when
+  // its area and its value type are the same, proposed as its reuse; otherwise the new field is named apart (its area,
+  // then a number) so it stays new and never lands on another area's field.
+  const byKey = new Map(library.map((l) => [l.key, l]));
+  const taken = new Set(items.map((x) => x.identity.key));
+  const ready: (NewProposal & Work)[] = [];
+  for (const it of items) {
+    if (it.reuse.match !== "new" || it.payload.kind !== "field") { ready.push({ ...it, runId }); continue; }
+    const proposed = String((it.work as { proposedKey?: string }).proposedKey ?? "");
+    let payload = it.payload, twin = await sameInLibrary(tx, workspaceId, payload);
+    const same = (k: string) => k.split(".")[0] === proposed.split(".")[0] && byKey.get(k)?.valueType === payload.valueType;
+    while (twin && !same(twin)) {
+      taken.delete(normalizeLabel(payload.label));
+      const label = uniqueLabel(proposed, new Set([...taken, normalizeLabel(payload.label)]), payload.label);
+      payload = { ...payload, label }; taken.add(normalizeLabel(label));
+      twin = await sameInLibrary(tx, workspaceId, payload);
+    }
+    const parts = (it.work as { whyParts?: { round: string | null; quote: string | null } }).whyParts;
+    if (twin) ready.push({ ...it, runId, reuse: { match: "reuse", existingKey: twin }, identity: { ...it.identity, near: [], nearReason: null }, confidence: it.confidence === "ready" ? "check" : it.confidence,
+      reason: [`Same name, area and type as the library field ${twin}: reuse it.`, parts?.round, parts?.quote].filter(Boolean).join(" ").slice(0, 500) });
+    else ready.push({ ...it, runId, payload, identity: { ...it.identity, key: normalizeLabel(payload.label) }, rounds: { draft: it.rounds.draft && { ...it.rounds.draft, payload }, check: it.rounds.check && { ...it.rounds.check, payload } } });
+  }
+  await insertProposals(tx, workspaceId, ready);
+  return ready.length;
 }
 
 @Controller("api")
