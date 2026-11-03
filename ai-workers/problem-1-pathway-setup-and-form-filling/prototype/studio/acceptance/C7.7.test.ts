@@ -4,10 +4,12 @@
 // (VV-R07, VV-R09, VV-R10); biometrics is an IRCC step for each person 14–79 (VV-R15), after filing (VV-R17); an Online
 // line offers "Download PDF copy", IRCC's PDF filled from the same confirmed facts, marked "Copy, not for filing" and
 // never counted. The portal is read-only (C11.6-1).
-// Breadth, after Visitor visa: Paper lines with the barcode page, waiting filings ("Cannot start yet"), our-format copy
-// for an online-only form with no IRCC PDF.
+// Paper lines (part 2; r5c BR-8, P-143, P-144, P-171 (1); SA-1B-31): a Paper line lists its barcode page (a barcode form
+// only: Validate in Adobe adds it), then print with the barcode page on top, signed in pen, mailed once the filing is Ready
+// to file; To do until its validated copy is read back, In progress after, Out of date when a fact changes after it.
+// Breadth still to come: waiting filings ("Cannot start yet"), our-format copy for an online-only form with no IRCC PDF.
 //   tsx studio/acceptance/C7.7.test.ts 4440 xr_studio_accept
-import { FAMILY, OFFICER, call, filingOf, fillEverything, generateCopy, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readinessOf, sql, until } from "./lib/m3.ts";
+import { FAMILY, OFFICER, answer, call, copyBytes, filingOf, fillEverything, generateCopy, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readinessOf, sendFile, sql, until, validateRoundTrip } from "./lib/m3.ts";
 
 const STATES = ["cannot_start", "to_do", "in_progress", "ready", "out_of_date", "done", "not_needed"];
 
@@ -59,4 +61,33 @@ await main("C7.7", "Deliverables list per filing (Visitor visa)", async () => {
   ok("C7.7-17 pass (G24, QA-139): every \"To write by hand\" line is in plain words: no engine step names", Array.isArray(shown) && !shown.some((x) => /derived:|phone_part:|derive_inverse:|executable set|[a-z]+\.[a-z_]+\(/.test(`${x.label} ${x.why}`)), shown);
   const rd = readinessOf((await prepare(c.id)).p, filingOf((await prepare(c.id)).p, P)?.id);
   ok("C7.7-18 pass: any line still to write by hand shows on the filing as a warning naming the form and the line (BR-9: everything else warns)", !!rd && ((shown ?? []).length === 0 || (rd.warns ?? []).some((w) => w.code === "hand_write" && /IMM 5707/.test(w.words))), rd?.warns);
+
+  // Part 2 (r5c BR-8, P-144): a Paper line with its barcode page. The principal's IMM 5257 moves to Paper (an
+  // accommodation, VV-R02; C11.6's built route); the spouse's stays a PDF upload.
+  const toPaper = async (form: string) => { const q = (await prepare(c.id)).p; return call("PATCH", `/runtime/items/${itemsOf(q, P, form)[0]?.id}/channel`, { channel: "PAPER", reason: "Cannot apply online: accommodation (Sample)", version: q?.version }, OFFICER); };
+  const line = async (form: string, who = P) => itemsOf((await prepare(c.id)).p, who, form)[0];
+  r = await toPaper("IMM 5257");
+  let pl = await line("IMM 5257");
+  const keys = (x: typeof pl) => (x?.steps ?? []).map((s) => s.key).join(",");
+  ok("C7.7-19 pass: the principal's IMM 5257 on Paper lists its barcode page and its steps in order: Validate in Adobe (adds the barcode page), print with the barcode page on top, signed in pen, mailed after Ready to file",
+    r.status === 200 && pl?.channel === "PAPER" && pl?.signature === "PEN" && pl?.barcode_page === true && keys(pl) === "validate,print,sign_in_pen,mail" && /barcode page on top/.test(pl?.steps?.[1]?.words ?? "") && pl?.steps?.[3]?.neededBefore === "after_ready", { status: r.status, line: pl });
+  ok("C7.7-20 pass: before its validated copy is read back the Paper line is To do and says to Validate in Adobe and read it back", pl?.state === "to_do" && /Validate in Adobe/.test(pl?.reason ?? "") && pl?.validated === null, pl?.reason);
+  const sp = await line("IMM 5257", S);
+  ok("C7.7-21 fail: the spouse's IMM 5257, still a PDF upload, carries no Paper steps or barcode page line", sp?.channel === "PDF_UPLOAD" && sp?.steps === undefined && sp?.barcode_page === undefined, sp);
+  const raw = await generateCopy(c.id, "IMM 5257", P);
+  const back = await sendFile(`/runtime/form-copies/${raw}/validated`, await copyBytes(raw!), "IMM5257.pdf");
+  pl = await line("IMM 5257");
+  ok("C7.7-22 fail: the copy sent back unchanged (Validate never pressed, so no barcode page) is refused (422) and the line stays To do with no validated copy", back.status === 422 && pl?.state === "to_do" && pl?.validated === null, { status: back.status, state: pl?.state });
+  const vid = await validateRoundTrip(c.id, "IMM 5257", P);
+  pl = await line("IMM 5257");
+  ok("C7.7-23 pass: once its validated copy is read back for today's facts the line is In progress, its Validate step done, naming that copy", !!vid && pl?.state === "in_progress" && pl?.steps?.[0]?.done === true && pl?.validated?.copy === vid && pl?.validated?.current === true, pl);
+  ok("C7.7-24 fail: a Paper line is never Ready before it is printed and signed in pen (those steps are not recorded yet: C8.1)", pl?.state !== "ready" && (pl?.steps ?? []).slice(1).every((s) => s.done === null));
+  r = await toPaper("IMM 5476");
+  const p5476 = await line("IMM 5476");
+  // A form that makes no barcode page has no barcode page line (engine: tests/check_vv_prepare_store.ts "C7.7 Paper"); on the
+  // APR Portal no such Visitor visa form may go on Paper: IMM 5476 is accepted only as a PDF upload (its sourced record).
+  ok("C7.7-25 fail: IMM 5476 cannot go on Paper here (IRCC accepts it only as a PDF upload): refused (422) with IRCC's line, and its line carries no Paper steps", r.status === 422 && /PDF upload/.test(r.body?.detail ?? "") && p5476?.channel === "PDF_UPLOAD" && p5476?.steps === undefined && p5476?.barcode_page === undefined, { status: r.status, detail: r.body?.detail, channel: p5476?.channel });
+  const put = await answer(c.id, P, "person.family_name", "SAMPLE-CHANGED");
+  pl = await line("IMM 5257");
+  ok("C7.7-26 pass (P-171 (1)): a fact on IMM 5257 changed after the read-back makes the Paper line Out of date, asking for Validate again", put.status === 200 && pl?.state === "out_of_date" && /Validate again/.test(pl?.reason ?? "") && pl?.validated?.current === false, { put: put.status, line: pl?.state, reason: pl?.reason });
 });

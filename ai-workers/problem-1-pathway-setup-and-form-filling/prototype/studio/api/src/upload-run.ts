@@ -166,7 +166,7 @@ export class UploadRuns implements OnModuleInit {
         await this.db.govFormDef.updateMany({ where: { id: ed.govFormDefId, formPageUrl: null }, data: { formPageUrl: m.formPage } });
       }
     }
-    const done: Record<string, string> = { added: "Added to the library.", in_library: "Already in the library: nothing was added twice.", attached: "Added to the library." };
+    const done: Record<string, string> = { added: "Added to the library.", in_library: "Already in the library: nothing was added twice.", older_in_library: "In the library only as an older edition: it is not used.", attached: "Added to the library." };
     await this.finish(batchId, s4 === "COMPLETED" ? "COMPLETED" : s4 === "NEEDS_PERSON" ? "NEEDS_PERSON" : "FAILED", s4 === "COMPLETED" ? done[outcome] ?? "In the library." : s4 === "NEEDS_PERSON" ? (unread ? "Held: the rules could not read its form number, so it cannot be approved. Upload the official PDF from canada.ca instead." : HELD_WORDS[outcome] ?? "Held: record the IRCC page it came from on To review; then a second person compares and approves it.") : "Not added.");
   }
 

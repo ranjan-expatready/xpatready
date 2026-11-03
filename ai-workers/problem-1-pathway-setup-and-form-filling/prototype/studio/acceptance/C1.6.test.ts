@@ -70,7 +70,11 @@ const cardFiling = async (label: string) => { let f: string | null | undefined; 
   ok("C1.6 AT-4 fail case: the old 'Signed PDF upload' is refused with its new name (PDF upload, signed by hand and scanned)", oldName.status === 400 && /PDF upload, signed by hand and scanned/.test(words(oldName.body)), oldName);
   const stale = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent("IMM 5409")}/channel`, { channel: "ONLINE", from: "PDF_UPLOAD" });
   ok("C1.6 AT-5 fail case: a choice made on an older view (from PDF upload, now Paper) is 409 and not saved", stale.status === 409 && /while you were choosing/.test(words(stale.body)) && (await lineOf(wp, "IMM 5409"))?.channel === "PAPER", stale);
+  // C11.11 (QA-101): no route makes a checklist a form line any more (the sample's IMM 5488 is a source), so the check plants
+  // one kept from before (test input, SQL, Sample) and removes it after.
+  sql(`insert into combination_form select (jsonb_populate_record(null::combination_form, to_jsonb(cf) || jsonb_build_object('id', gen_random_uuid(), 'lineage_key', 'IMM 5488', 'gov_form_def_id', (select id from gov_form_def d where d.form_key='IMM 5488' and d.workspace_id=cf.workspace_id), 'version', 1, 'status', 'DRAFT', 'supersedes_id', null))).* from combination_form cf where cf.combination_id='${wp}' and cf.lineage_key='IMM 5707' order by cf.version desc limit 1`);
   const chk = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent("IMM 5488")}/channel`, { channel: "PAPER", signature: "PEN" });
+  sql(`delete from combination_form where combination_id='${wp}' and lineage_key='IMM 5488'`);
   ok("C1.6 AT-6 [IRCC-F06] fail case: a checklist line gets no channel (400 'it is not filed')", chk.status === 400 && /checklist: it is not filed/.test(words(chk.body)), chk);
   const asB = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent("IMM 5409")}/channel`, { channel: "PDF_UPLOAD", from: "PAPER" }, "user-B");
   const asP = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent("IMM 5409")}/channel`, { channel: "PDF_UPLOAD", from: "PAPER" }, "user-P");

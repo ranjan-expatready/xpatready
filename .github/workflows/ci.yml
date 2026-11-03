@@ -12,6 +12,9 @@
 #               - a merge-queue batch: every suite but the quarantined ones (--skip-quarantined), once per change.
 #             US$0 model spend: every suite replays saved runs.
 # Switches (repository variables, gh variable set NAME --body VALUE):
+# Type check (P-291, the outsider audit of 29 Oct): job "types", tsc --noEmit for api and web (tools/typecheck.mjs; fails
+#   only on an error not in typecheck-known.txt), on its own machine beside the parts for records and code, so it adds
+#   machine minutes (about 2 a run) but no wall time: the parts take 20+ minutes, the type check about 1.5.
 #   SHARDS=<1..9>        the number of parallel parts (default 4; I1 measured before changing it: see its PR);
 #   PR_SUITES=direct     a builder's PR runs only the suites that import or name its files, never everything
 #                        (select-suites.mjs --direct); the queue still runs every suite;
@@ -93,7 +96,7 @@ jobs:
           bash "$P/tools/check-docs.sh" && bash "$P/tools/decision-impact.sh" && node "$P/tools/graph.mjs" --check
           python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py
           node "$S/tools/count-any.mjs" --against "${{ github.event.pull_request.base.sha }}"
-          bash "$P/tools/check-select-suites.sh" && bash "$P/tools/check-merge-guard.sh"
+          bash "$P/tools/check-select-suites.sh" && bash "$P/tools/check-merge-guard.sh" && bash "$P/tools/check-lane-bind.sh"
       - name: Playwright's own Chromium
         if: env.KIND == 'code'
         run: cd "$S" && ./node_modules/.bin/playwright install chromium
@@ -114,10 +117,33 @@ jobs:
           name: suite-logs-shard-${{ matrix.shard }}
           path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/
           retention-days: 14
+  types:
+    # P-291: tsc --noEmit for api and web, beside the parts (no added wall time); records and code, never notes.
+    needs: kind
+    if: ${{ needs.kind.outputs.kind != 'notes' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions: { contents: read }
+    concurrency: { group: "types-${{ github.event.pull_request.number }}", cancel-in-progress: true }
+    env:
+      P: ai-workers/problem-1-pathway-setup-and-form-filling/product
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/package-lock.json
+      - name: packages and the Prisma client (cloud-setup.sh, as the parts)
+        run: bash "$P/tools/cloud-setup.sh"
+      - name: the type check's own check (check-typecheck.sh; a tsconfig that checks nothing never passes)
+        run: bash "$P/tools/check-typecheck.sh"
+      - name: type check, api and web (typecheck.mjs; only errors not in typecheck-known.txt fail)
+        run: node "$P/tools/typecheck.mjs" | tee -a "$GITHUB_STEP_SUMMARY"; exit ${PIPESTATUS[0]}
   ci:
     # The one check Mergify reads. Notes: the two notes checks here, on a GitHub machine. Records and code on GitHub's
     # machines: only reports the parts' result. On the Mac (BATCH_RUNNER / PR_RUNNER = mac): the checks run here.
-    needs: [kind, shard]
+    needs: [kind, shard, types]
     if: ${{ !cancelled() }}
     runs-on: ${{ fromJSON((needs.kind.outputs.kind == 'notes' || (vars.BATCH_RUNNER != 'mac' && (startsWith(github.event.pull_request.head.ref, 'mergify/') || vars.PR_RUNNER != 'mac' || !(github.event.pull_request.head.repo.full_name == github.repository))) || !(github.event.pull_request.head.repo.full_name == github.repository)) && '["ubuntu-latest"]' || '["self-hosted","macOS","xr-mac"]') }}
     timeout-minutes: 90   # P-183: a busy Mac never stops a check halfway
@@ -145,6 +171,11 @@ jobs:
       - name: notes check 2 of 2, decision impact (decision-impact.sh)
         if: env.KIND == 'notes'
         run: bash "$P/tools/decision-impact.sh"
+      # ---- records and code, wherever they run: the type check's result (P-291)
+      - name: the type check's result
+        if: env.KIND != 'notes'
+        run: |
+          echo "types: ${{ needs.types.result }}"; [ "${{ needs.types.result }}" = success ]
       # ---- records and code on GitHub's machines: the parts' result
       - name: the parts' result
         if: env.KIND != 'notes' && env.SHARDED == 'true'
@@ -195,7 +226,7 @@ jobs:
         run: python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py
       - name: web app build (the browser suites need it)
         if: env.KIND != 'notes' && env.SHARDED != 'true' && (steps.code.outputs.changed == 'true')
-        run: cd "$S" && ./node_modules/.bin/prisma generate && cd web && ../node_modules/.bin/vite build
+        run: cd "$S" && ./node_modules/.bin/prisma generate && bash tools/web-fresh.sh build   # stamped (QA-181)
       - name: explicit-any count
         if: env.KIND != 'notes' && env.SHARDED != 'true' && (steps.code.outputs.changed == 'true')
         run: node "$S/tools/count-any.mjs" --against "${{ github.event.pull_request.base.sha }}"

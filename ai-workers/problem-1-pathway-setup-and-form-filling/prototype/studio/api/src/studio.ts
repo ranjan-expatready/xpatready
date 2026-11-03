@@ -7,11 +7,12 @@ import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { Prisma, type ReviewSubmission } from "@prisma/client";
 import { canRelease } from "../../../contracts/rules.ts";
 import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
-import { buildSnapshot, snapshotHash, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
+import { buildSnapshot, effective, snapshotHash, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
+import { backgroundWords, familyFormWords, formNumberOf, isBackgroundQuestion, missingFamilyForm, NOT_A_FACT } from "../../engine/form-completeness.ts";
 import { slug } from "../../engine/import.ts";
 import { identityKeyOf, insertProposals } from "./proposals.ts";
 import { nameKey, namedDocumentType, waitingDocumentType } from "./document-type-names.ts";
-import { checkCondition, diff, ordinal, validate, isDemoSnapshot } from "../../engine/validate.ts";
+import { checkCondition, diff, ordinal, validate, isDemoSnapshot, sampleContentProblems } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, isDemoWorkspace, need, revise, RUNTIME_ACTORS, strip, Workspace, WORKSPACE_KEY, type Actor } from "./core.ts";
 import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { recordAction, snapshotLines } from "./form-uses.ts";
@@ -203,8 +204,29 @@ export class Studio {
     const kids = await this.db.programDef.count({ where: { workspaceId: c.workspaceId, parentNodeKey: c.program.programNodeKey } });
     if (c.program.nodeKind !== "STREAM" && c.program.nodeKind !== "CATEGORY") return [{ level: "error", where: "Row", item: c.combinationKey, message: `This configuration is attached to a ${LEVEL[c.program.nodeKind].name.toLowerCase()} ("${c.program.label}"), above a full combination. Publishing is blocked: attach configuration to a category, or to its sub-category (SA-1B-55/56).` }];
     if (kids) return [{ level: "error", where: "Row", item: c.combinationKey, message: `"${c.program.label}" now has sub-categories, so this row sits above a full combination. Publishing is blocked (SA-1B-56).` }];
-    return (await this.undecidedFormFields(combinationId, "DRAFT")).map((f) => ({ level: "error" as const, where: "Forms", item: f.form,
-      message: `${f.n} form field${f.n === 1 ? " has" : "s have"} no decision in this draft${forExample(f.example)}. Map each one, mark it "not a fact", or "filled by hand" with a reason on To review › Form fields (K1).` }));
+    return [...(await this.undecidedFormFields(combinationId, "DRAFT")).map((f) => ({ level: "error" as const, where: "Forms", item: f.form,
+      message: `${f.n} form field${f.n === 1 ? " has" : "s have"} no decision in this draft${forExample(f.example)}. Map each one, mark it "not a fact", or "filled by hand" with a reason on To review › Form fields (K1).` })),
+      ...await this.completenessProblems(combinationId, c.workspaceId)];
+  }
+
+  /** C3.8 (engine/form-completeness.ts): [IRCC-F08] a Background information question left as "not a fact" on one of the
+   *  combination's forms in this draft (decided before the refusal, or so drafted), and [IRCC-F09] the family information
+   *  form its application package lists (a source form attached to it) missing from its forms. Both block release. The
+   *  forms are the draft's own lines (Devin on #691: a form removed in the draft, its RETIRED line over a PUBLISHED one,
+   *  is no longer checked); every PDF edition of each is checked, as the snapshot and the filler carry them all. */
+  async completenessProblems(combinationId: string, workspaceId: string): Promise<{ level: "error"; where: string; item: string; message: string }[]> {
+    const [lines, attached] = await Promise.all([
+      this.db.combinationForm.findMany({ where: { combinationId }, select: { id: true, lineageKey: true, version: true, status: true, supersedesId: true, form: { select: { formKey: true } } } }),
+      this.db.sourceAttachment.findMany({ where: { combinationId, kind: "Form" }, select: { edition: true } }),
+    ]);
+    const forms = [...new Set(effective(lines, (l) => l.lineageKey, "draft").map((l) => l.form.formKey))];
+    const maps = forms.length ? await this.db.formFieldMap.findMany({ where: { workspaceId, dataPath: { contains: "BackgroundInfo" }, status: { in: ["DRAFT", "PUBLISHED"] }, edition: { form: { workspaceId, formKey: { in: forms } } } }, select: { id: true, formEditionId: true, dataPath: true, caption: true, outcome: true, version: true, status: true, supersedesId: true, edition: { select: { form: { select: { formKey: true } } } } } }) : [];
+    const out: { level: "error"; where: string; item: string; message: string }[] = [];
+    for (const r of effective(maps, (m) => `${m.formEditionId}|${m.dataPath}`, "draft"))
+      if (NOT_A_FACT.has(r.outcome) && isBackgroundQuestion(r.dataPath)) out.push({ level: "error", where: "Forms", item: r.edition.form.formKey, message: backgroundWords(r.caption) });
+    const missing = missingFamilyForm(attached.map((a) => formNumberOf(a.edition)), forms);
+    if (missing) out.push({ level: "error", where: "Forms", item: missing, message: familyFormWords(missing) });
+    return out;
   }
 
   /** K1 (Screen 02 challenge point 2): form fields of the combination's forms that have no decision, per form. DRAFT rows
@@ -396,7 +418,7 @@ export class Studio {
       program: { key: (programNode ?? c.program).programNodeKey, label: (programNode ?? c.program).label, kind: (programNode ?? c.program).nodeKind, source_basis: (programNode ?? c.program).sourceBasis }, pathway: parent ? { key: parent.programNodeKey, label: parent.label, client_type: parent.clientType } : null,
       path: chain.map((n) => ({ key: n.programNodeKey, label: n.label, level: LEVEL[n.nodeKind].name })), allowed_locations: c.program.allowedLocations,
       attachments: c.attachments, jobs: c.jobs.map((j) => ({ ...j, detail: undefined })),
-      releases: c.releases.map((r) => ({ id: r.id, version: r.version, demo: isDemoSnapshot(r.snapshot), release: r.packVersion?.version ?? r.version, label: releaseLabel(r), sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: ACTORS.find((x) => x.id === r.approverId)?.name ?? "Approver", summary: r.summary, basis: r.basis })),
+      releases: c.releases.map((r) => ({ id: r.id, version: r.version, demo: isDemoWorkspace() && isDemoSnapshot(r.snapshot), release: r.packVersion?.version ?? r.version, label: releaseLabel(r), sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: ACTORS.find((x) => x.id === r.approverId)?.name ?? "Approver", summary: r.summary, basis: r.basis })),
       draft: { sha256, matches_release: !!last && last.sha256 === sha256, changes, problems, counts: this.counts(snapshot),
         // G2 BR-9: what a release would rest on (per item and key), and whether it would be a Demo release.
         answer_keys: { demo: gate.demo, judged: gate.judged, items: gate.items.map((i) => ({ ...i, keys: i.keys.map((k) => ({ ...k, changed_since_release: changedSince(last?.summary, k) })) })) } },
@@ -420,7 +442,10 @@ export class Studio {
     // Only a draft that will be submitted (it differs from its release, or there is none): a Live row with no draft
     // changes lists none, as on the catalogue (tech lead on #568; EXPERIENCE §2.5, one status everywhere).
     const last = s.mode === "draft" && combinationId ? await this.db.configRelease.findFirst({ where: { combinationId }, orderBy: { version: "desc" }, select: { sha256: true } }) : null;
-    const sources = s.mode === "draft" && (!last || last.sha256 !== snapshotHash(s)) ? draftSourceProblems(s, isDemoWorkspace()) : [];
+    const open = s.mode === "draft" && (!last || last.sha256 !== snapshotHash(s));
+    // C5.5 (G2 BR-3, P-240): outside the demo workspace the same draft's Sample checks are listed beside its numbers; a
+    // Sample source is already the source gate's line there (demo false).
+    const sources = open ? [...draftSourceProblems(s, isDemoWorkspace()), ...(isDemoWorkspace() ? [] : sampleContentProblems(s))] : [];
     // G1: the numbers without a source come after the validator's own errors, so a list cut at its first lines still
     // shows those (the Review tab shows eight).
     // G2 (C5.5): the answer-key gate's lines, in the same list as every other problem (one list on Review and release).
@@ -574,7 +599,7 @@ export class Studio {
     };
   }
 
-  async updateField(actor: Actor, key: string, b: { meaning?: string; valueType?: string; note?: string; retire?: boolean }) {
+  async updateField(actor: Actor, key: string, b: { meaning?: string; valueType?: string; note?: string; retire?: boolean; reason?: unknown }) {
     need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
     // C11.9 (break B1, review Ma4): retiring goes through the one guard (where used first, a second person), never here.
     if (b.retire !== undefined) throw new HttpException({ type: "https://expatready.local/problems/use-retire", title: "Use Retire", status: 410, detail: `A shared field is retired with POST /api/library/fields/${key}/retire (where used first; a second person approves), not by editing it.` }, HttpStatus.GONE);
@@ -585,6 +610,13 @@ export class Studio {
     if (merged) fail(`${key} was merged into ${merged}: change that field instead.`, HttpStatus.CONFLICT);
     const changes: any = {};
     if (b.meaning !== undefined) { if (b.meaning.trim().length < 8) fail("Describe the meaning in a short sentence."); changes.meaning = b.meaning.trim(); }
+    // C3.15 (P-253 "a fixed rules check (type, source and reason …)"; tech lead on #295): a change of meaning says why, in
+    // a sentence. Invisible characters do not count (as K1's reason). An unchanged meaning sent again needs none.
+    const said = typeof b.reason === "string" ? b.reason.normalize("NFKC").replace(/[\p{Cf}\p{Default_Ignorable_Code_Point}]/gu, "").trim() : "";
+    const before = [...rows].sort((x, y) => y.version - x.version)[0];
+    const meaningChanges = changes.meaning !== undefined && changes.meaning !== before?.meaning;
+    if (meaningChanges && said.length < 8) throw new HttpException({ type: "https://expatready.local/problems/validation", title: "Some details need fixing", status: 400, detail: "Say why the meaning changes, in a sentence (at least 8 characters): it is kept with the change in the activity.", errors: [{ field: "reason", message: "Say why the meaning changes, in a sentence (at least 8 characters)." }] }, HttpStatus.BAD_REQUEST);
+    if (said.length > 300) fail("Keep the reason to 300 characters.");
     if (b.valueType !== undefined) { if (!VALUE_TYPES.includes(b.valueType)) fail("Unknown value type."); changes.valueType = b.valueType; changes.dataType = VALUE_TYPE_TO_DATA_TYPE[b.valueType]; }
     if (b.note !== undefined) changes.note = b.note;
     if (b.retire) changes.status = "RETIRED";
@@ -594,7 +626,7 @@ export class Studio {
       return revise(tx.canonicalField, await tx.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: key } }), changes, actor.id, (r: typeof rows[number]) => ({ ...strip(r), origin: "HUMAN" }));
     });
     if (b.retire && !created) await this.db.canonicalField.update({ where: { id: row.id }, data: { status: "RETIRED" } });
-    await this.audit.log(workspaceId, actor.id, "updated", "field", key, `${actor.name} ${b.retire ? "retired" : "changed"} field ${key} (draft v${row.version})`, changes);
+    await this.audit.log(workspaceId, actor.id, "updated", "field", key, `${actor.name} ${b.retire ? "retired" : "changed"} field ${key} (draft v${row.version})${meaningChanges ? `: the meaning, because ${said}` : ""}`, meaningChanges ? { ...changes, reason: said } : changes);
     return row;
   }
 
@@ -1165,7 +1197,7 @@ export class Studio {
     const rows = await this.db.configRelease.findMany({ where: { workspaceId, ...(combinationId ? { combinationId } : {}) }, orderBy: { releasedAt: "desc" }, include: { combination: true } });
     return rows.map((r) => ({ id: r.id, combination: r.combination.label, combination_id: r.combinationId, version: r.version, sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: r.approverId, names: { author: peopleNames(r.authorId), submitter: peopleNames(r.submitterId), approver: peopleNames(r.approverId) }, summary: r.summary, basis: r.basis,
       // C5.6 (P-240, G3): Sample content is a "Demo release", never counted as a real publish (derived on read).
-      demo: isDemoSnapshot(r.snapshot) }));
+      demo: isDemoWorkspace() && isDemoSnapshot(r.snapshot) })); // C5.5 BR-3: outside the demo workspace every release is real
   }
 
   /** C6.11 review Major 1: firm staff read the configuration lines and their own firm's case lines only; another firm's
