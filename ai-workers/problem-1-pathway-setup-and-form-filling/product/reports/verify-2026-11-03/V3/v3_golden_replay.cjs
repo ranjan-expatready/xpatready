@@ -1,7 +1,8 @@
 // V3 (verify 3 Nov 2026, read-only tester): the golden journey replayed through the screens on a fresh copy, US$0, Saved only,
 // no STUDIO_*_LIVE. Steps: 1 Reset to the six · 2 configure Visitor visa · 3 release · 4 open a family case · 5 the client answers ·
 // 6 IMM 5257 for each applicant · 7 the checks (Validate read-back, filing) · 8 what staff see matches the release.
-// It repeats the manual walk of V3-one-system.md exactly, including its recovery at step 4 (release 1 cannot open a case).
+// It repeats the manual walk of V3-one-system.md, except (QA-180) the three forms with no field map are named by the release
+// check at step 2 and taken off before the release, so step 4 opens on release 1; the step-4 recovery stays for a 409.
 // Per state: axe WCAG 2.2 A/AA (whole page), sideways scroll at 400, 1024 and 1440 px, page errors; timings printed.
 //   node v3_golden_replay.cjs <port 4470-4479> <name>     e.g. node v3_golden_replay.cjs 4475 v3r
 // Needs: the repo set up (product/tools/cloud-setup.sh), PostgreSQL on 54329, playwright with a browser (cloud image).
@@ -103,8 +104,18 @@ const info = (s, d) => console.log(`INFO  ${s}${d === undefined ? "" : ` — ${t
   await p.getByRole("button", { name: "Add source" }).first().click(); d = p.locator("[role=dialog]"); await d.getByLabel("Official source").check();
   await d.getByLabel("Official address (https)").fill("https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5484/01-05-2026/imm5484e.pdf"); await d.getByLabel(/Page or section/).fill("IMM 5484 Document Checklist, Family Information form line");
   await d.locator("textarea").fill("Family Information form. Must be completed by those aged 18 years or older."); await d.getByRole("button", { name: "Save source" }).click(); await sleep(1200); await d.getByRole("button", { name: "Close" }).last().click(); await sleep(800);
+  // QA-180 (P-297 (3)): release now refuses a form whose edition in use has no form fields mapped, and names it, so the
+  // author meets IMM 5409, 5476 and 5707 here, before releasing (V3 met them only as the officer's 409 at step 4). No
+  // Saved field map exists for them (a paid run), so the author takes them off, as V3's recovery did, then releases once.
+  await p.getByRole("button", { name: /^Show all \d+$/ }).first().click().catch(() => {}); await sleep(500);
+  const unmappedLines = (await p.locator("[data-problem]").allInnerTexts()).map(flat).filter((x) => /No form fields mapped yet/.test(x));
+  await check("2-review-names-unmapped"); info("2f release refuses the unmapped forms, by name", unmappedLines);
+  const unmappedNamed = ["IMM 5409", "IMM 5476", "IMM 5707"].every((c) => unmappedLines.some((x) => x.includes(`${c} (`)));
+  await p.goto(`${CB()}/forms`); await p.waitForLoadState("networkidle"); await sleep(800);
+  for (const c of ["IMM 5409", "IMM 5476", "IMM 5707"]) await remove(c);
+  await p.goto(`${CB()}/review`); await p.waitForLoadState("networkidle"); await sleep(1000);
   const errors = (await text()).match(/(\d+) (other )?errors? \(block submission\)/)?.[1];
-  verdict(2, "Configure Visitor visa on screen (Saved only)", applied?.s < 300 && qd?.s < 300 && errors === "0" && placed === keys.length, `blocking errors ${errors}; warnings: ${(await text()).match(/\d+ warnings/)?.[0]}`);
+  verdict(2, "Configure Visitor visa on screen (Saved only)", applied?.s < 300 && qd?.s < 300 && unmappedNamed && errors === "0" && placed === keys.length, `unmapped forms named before release ${unmappedNamed}; blocking errors ${errors}; warnings: ${(await text()).match(/\d+ warnings/)?.[0]}`);
 
   // ---------------------------------------------------------------- 3 (submit, sign, release)
   const release = async () => {

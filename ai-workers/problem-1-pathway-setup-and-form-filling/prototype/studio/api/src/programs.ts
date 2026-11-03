@@ -12,7 +12,7 @@ import { manifest } from "../../engine/import.ts";
 import { acceptsOf, channelProblems, channelsView, filingKind } from "../../engine/channels.ts";
 import { CHANNEL_WORDS, type Channel } from "../../contracts/forms.ts";
 import { questionCounts } from "../../engine/runtime/questionnaires.ts";
-import { checkedOf, comparePaths, isLive, missingItems, needsWork, newestEdition, waitsForPerson, nextActionOf, rowCounts, statusOf, STATUS_TEXT } from "../../engine/programs.ts";
+import { checkedOf, comparePaths, formsWithoutFieldMap, isLive, missingItems, needsWork, newestEdition, waitsForPerson, nextActionOf, rowCounts, statusOf, STATUS_TEXT } from "../../engine/programs.ts";
 import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snapshot.ts";
 import { filedOf, progressFollows, setupProgress } from "../../engine/structure.ts";
 import { forViewer, setupChecklistOf, waitsForMap, type OfficialPages, type SetupInput } from "../../engine/setup-checklist.ts";
@@ -245,7 +245,7 @@ export class Programs {
       const applicantRoles = roles.filter((p) => p.role !== "representative" && p.applies !== false);
       const docLines = snapshot.document_requirements as { who?: unknown }[];
       const covers = (d: { who?: unknown }, role: string) => !Array.isArray(d.who) || !d.who.length || d.who.includes(role);
-      const unmapped = snapForms.filter((f) => (f.form_kind ?? "data_form") === "data_form" && !(snapshot.field_maps as { form_number: string; channel?: string; entries: unknown[] }[]).some((m) => m.form_number === f.form_number && m.channel !== "ONLINE" && m.entries.length)).length;
+      const unmapped = formsWithoutFieldMap(snapshot).length; // QA-180: the rule release and Open a case read
       const by = c.participantsBy;
       const input: SetupInput = {
         combinationId: c.id, retired,

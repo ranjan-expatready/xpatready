@@ -63,7 +63,7 @@ export function missingItems(s: Snapshot, participants: Participant[], problems:
       : line("no_forms", "No forms yet.", "Find forms", " (find the forms this application files)"));
   }
   // W1-02 (P-102): every form is read from its PDF, so a line filed Online needs its PDF form fields mapped too.
-  const unmapped = forms.filter((f) => (f.form_kind ?? "data_form") === "data_form" && !(s.field_maps as (FieldMap & { channel?: string })[]).some((m) => m.form_number === f.form_number && m.channel !== "ONLINE" && m.entries.length)).map((f) => f.form_number);
+  const unmapped = formsWithoutFieldMap(s).map((f) => f.form_number); // QA-180: the rule release reads too
   if (unmapped.length) out.push(line("form_without_edition", `No form fields mapped yet for ${unmapped.join(", ")}.`, "Draft setup", " (AI maps the form fields from the form)"));
   // Founder finding F2: one cause, one line, with what to do next (not one line per person role).
   const roles = personQuestions(s).length ? [] : applicants(participants).map((p) => p.label);
@@ -155,6 +155,18 @@ export function pdfMapInUse<M extends { form_number: string; form_edition?: stri
   let best: M | undefined;
   for (const m of maps) if (m.form_number === form && m.channel !== "ONLINE" && (!best || editionMonth(m.form_edition) >= editionMonth(best.form_edition))) best = m;
   return best;
+}
+
+/** QA-180 (BR-8, P-297 (3)): the one rule Review and release (engine/validate.ts) and Open a case (missingItems, through
+ *  api/src/programs.ts startableMissing) both read. A data form can be filled on a case only when its edition in use
+ *  (pdfMapInUse, P-32: the newest PDF edition, the one a case fills) has form fields mapped; an Online line is read from
+ *  its PDF too (P-102), so an online map never counts. Each form without one, with the edition in use when there is one
+ *  (its map is empty), in the snapshot's filing order. */
+export function formsWithoutFieldMap(s: Pick<Snapshot, "forms" | "field_maps">): { form_number: string; title?: string; edition: string | null }[] {
+  const maps = s.field_maps as (FieldMap & { form_edition?: string | null; channel?: string | null })[];
+  return (s.forms as (FormLine & { title?: string })[]).filter((f) => (f.form_kind ?? "data_form") === "data_form")
+    .map((f) => ({ f, inUse: pdfMapInUse(maps, f.form_number) })).filter(({ inUse }) => !inUse?.entries.length)
+    .map(({ f, inUse }) => ({ form_number: f.form_number, title: f.title, edition: inUse?.form_edition ?? null }));
 }
 
 /** "Needs work" (P-49, the default view): every combination firms cannot use yet (In setup, Not ready) and every one

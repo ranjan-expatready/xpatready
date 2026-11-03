@@ -14,6 +14,7 @@ import { oathMappedProblems } from "./form-steps.ts";
 import { eligibilityChanges, gateProblems } from "./eligibility-gates.ts";
 import { sourceKey } from "../contracts/resolver.ts"; // SH3 R8
 import { NO_FIELD_MAP } from "./setup-checklist.ts";
+import { formsWithoutFieldMap } from "./programs.ts"; // QA-180: one rule for release and Open a case
 import { sourceChanges } from "./source-register.ts"; // G1 BR-9: the "Source" lines only; the gate stays out of validate()
 
 // C-11: a field map's form field list, read once per file (paths are relative to the Solution 1 folder, as in fill.ts).
@@ -58,6 +59,7 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   const docFacts = new Set((s.document_types ?? []).flatMap((t) => t.supplies_facts ?? []));
   const sectionIds = new Set(s.sections.map((x) => x.id));
   // No forms is not a warning here: the missing list (BR-8, engine/programs.ts) says it once, with its next step.
+  const unmapped = new Map(formsWithoutFieldMap(s).map((u) => [u.form_number, u]));
   for (const f of s.forms) {
     for (const e of checkCondition(f.condition, types, derived)) out.push({ level: "error", where: "Forms", item: f.form_number, message: `Condition ${e}.` });
     // S5 (challenge M1): "Only if" in words with no rule cannot be evaluated on a case, so it is never released as is.
@@ -65,10 +67,12 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
     // Lead check L5: a minimum age is decided by each person's date of birth (engine/render.ts ageGate asks it as a
     // deciding question); with nobody asked for it the form could never be decided, so release is refused.
     if (f.min_age && !placed.has(BIRTH) && !docFacts.has(BIRTH)) out.push({ level: "error", where: "Forms", item: f.form_number, message: `${f.form_number} applies from age ${f.min_age}, so each person's date of birth decides it, but nobody is asked for a date of birth in this combination. Add the date of birth question to this combination's questionnaire, or clear the minimum age.` });
-    // V3 B1 (P-297 (3)): the same reading as the case gate (engine/programs.ts form_without_edition: a PDF form field map
-    // with entries; an Online line is read from its PDF too, P-102), so a release is never one no firm can open a case on.
-    if ((f.form_kind ?? "data_form") === "data_form" && !(s.field_maps as { form_number: string; channel?: string; entries: unknown[] }[]).some((m) => m.form_number === f.form_number && m.channel !== "ONLINE" && m.entries.length))
-      out.push({ level: "error", where: "Forms", item: f.form_number, code: NO_FIELD_MAP, message: "No form fields mapped yet: a case could not fill this form, so firms could not open cases on a release with it. Map its form fields (Draft setup), or remove the form." });
+    // V3 B1, QA-180 (P-297 (3)): the case gate's own rule (engine/programs.ts formsWithoutFieldMap: the edition in use has
+    // form fields mapped), so a release is never one no firm can open a case on. The form is named by its number and title.
+    const u = unmapped.get(f.form_number);
+    if (u) out.push({ level: "error", where: "Forms", item: f.form_number, code: NO_FIELD_MAP, ...(f.title ? { label: `${f.form_number} (${f.title})` } : {}),
+      message: u.edition ? `No form fields mapped yet for ${u.edition}, the newest edition and the one a case fills: firms could not open cases on a release with it (an older edition's map is not used). Map its form fields (Draft setup), or remove the form.`
+        : "No form fields mapped yet: a case could not fill this form, so firms could not open cases on a release with it. Map its form fields (Draft setup), or remove the form." });
   }
   const unplaced = new Map<string, number>();
   for (const m of s.field_maps) for (const e of m.entries) {
