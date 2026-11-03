@@ -32,13 +32,12 @@ Cloud lanes cannot reply: read their branches and PRs. A lane silent 90 minutes 
 4. #669, #671 (superseded paid-run PRs): close after #771 and the C11.14 runs land. #417 D3: paid, nothing run. #749 V2, #737 V3: records, waiting for the label.
 5. Morning report for the founder at about 08:00 IST: what merged, screenshots on the demo, the compass numbers, the M3 answer.
 
-## Holds (P-251, the product owner of SA-01B): nobody builds these
-L-SA6–L-SA11 (L-SA3 released by P-315) · G5 (C5.1) · the P-236 rename · C11 · E1–E6 · design-only items · SH3/SH4 contracts go to the product owner with them · the AI "did you mean" in C11.3, C11.13, C3.6 (P-265, P-284).
+## Holds
+The founder acts as the SA-01B product owner (P-316). Released: L-SA3 (P-315), G5, L-SA4, L-SA6–L-SA11, C11, SH4 (P-316). **Still held until the founder rules on each:** SA1B-D100 (corrections reaching open filings), SA1B-D72/D66 (family on different programmes, location per person), SA1B-D29 (release disclaimer), SA1B-D77, SA1B-D93; the AI "did you mean" in C11.3, C11.13, C3.6 (P-265, P-284).
 
 ## Waiting for the founder
 1. On claude.ai/code and in the old account, archive the Lead 1–8 parents and cloud lanes of 3 Nov.
 2. Send the SA-01B product owner the reply drafted on the Mac (`archive/2026-11-02-founder-drafts/`), the SH3 contract (#509), the G-CORE concept (#504) and `design/note-to-sa01b-po-2026-11-02-sqr.md`: the only way G5 and the held parts unblock.
-3. **Tell the SA-01B product owner** that L-SA3 is built now and P-172 stays the one Express Entry hard stop (P-315); the tech lead drafts the note.
 4. Tell the team they drop their "Fill this screen" (P-245), pending the product owner's ruling.
 
 ## Founder asks of 3–4 Nov (P-228 (9)); earlier asks: `history/STATE-2026-11-03.md`

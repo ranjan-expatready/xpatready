@@ -1,4 +1,4 @@
-# Rules in force — one page (the tech lead keeps it; as of **P-315**, 3 Nov 23:55 IST)
+# Rules in force — one page (the tech lead keeps it; as of **P-316**, 4 Nov 00:05 IST)
 
 Each rule once, with the decision that set it. A decision newer than "as of" above wins over this page: read those rows in `DECISIONS.md` word for word. Older rows are history; read one only when a rule here cites it and you need its detail.
 
@@ -10,7 +10,7 @@ Each rule once, with the decision that set it. A decision newer than "as of" abo
 * Its acceptance pack is green on `main` **and** an independent re-run confirms it (P-290), on the demo data (Reset to the six), not only the test fixture (P-304 (2)).
 * An open Major or Critical in `qa/BUGS.md` on it keeps it Partial (P-305 (3)).
 * qa re-scores after every merged batch (P-277, P-311 (1)); qa's verdict decides.
-* Held parts (P-251, P-265, P-284) are listed in STATE; nobody builds them. L-SA3 is no longer held (P-315); Express Entry's police and medical block is the one hard stop besides Validate (P-172, P-315).
+* Held parts (P-251, P-265, P-284) are listed in STATE; nobody builds them. L-SA3 is no longer held (P-315); the founder acts as the SA-01B product owner and lifted every hold decided in P-235–P-248, including G5, L-SA6–L-SA11 and C11 (P-316); Express Entry's police and medical block is the one hard stop besides Validate (P-172, P-315).
 
 ## Builders
 * One row per session and per PR, on a fresh branch from `origin/main` (P-278, P-312, P-314). A standby Mac builder gets its next row by message.
