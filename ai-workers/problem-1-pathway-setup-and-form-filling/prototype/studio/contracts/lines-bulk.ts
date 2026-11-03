@@ -116,5 +116,18 @@ export type CopyFromLine = { kind: LineKind; key: string; version: string; short
 export type CopyFromResult = { source: { id: string; trail: string[] }; lines: CopyFromLine[]; hidden: number };
 /** Slice (d): the copy's answer: one batch per line, undone together. */
 export type CopyFromApplied = { batchIds: string[]; message: string; replayed: boolean };
+/** C1.5, concept v3 §2 (`POST /combinations/:id/lines/copy`): copy ONE line from another combination onto this one, for a
+ *  caller without the dialog (the dialog keeps POST /lines/copy). The same rules and writes as a ticked line of the dialog.
+ *  `idempotencyKey`: optional; a retry with the same key answers the first copy. `withdrawSubmission`: a copy onto a
+ *  combination waiting for review withdraws that submission, so it is refused unless asked for (the dialog's "Waits" tick). */
+export const CopyOneLine = z.object({
+  from: LineRef,
+  version: z.string().max(64).optional(),
+  idempotencyKey: z.string().trim().min(8, "Reload the page: the request key is missing.").max(90, "Reload the page: the request key is not valid.").regex(/^[^#]+$/, "Reload the page: the request key is not valid.").optional(),
+  withdrawSubmission: z.boolean().optional(),
+});
+export type CopyOneLine = z.infer<typeof CopyOneLine>;
+/** The single copy's answer: its one batch (POST /lines/bulk/:batchId/undo takes it back). */
+export type CopyOneApplied = CopyFromApplied & { batchId: string };
 export const UndoMany = z.object({ batchIds: z.array(z.string().uuid({ message: "That change is not known. Reload the page." })).min(1, "Say which change to undo.").max(100, "At most 100 changes in one Undo.") });
 export const copiedFromWords = (n: number, from: string) => `${n} line${n === 1 ? "" : "s"} copied here from ${from} (draft changes).`;

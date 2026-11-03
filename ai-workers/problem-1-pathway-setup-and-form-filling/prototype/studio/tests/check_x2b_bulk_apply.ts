@@ -358,6 +358,35 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   sql(`update combination set retired_at=null where id='${SP}'`);
   if (r.status === 200) await call("POST", "/lines/bulk/undo", { batchIds: r.body.batchIds });
 
+  // ------------------------------------------------------------ concept §2 route: POST /combinations/:id/lines/copy (one line)
+  const one = (target: string, body: Record<string, unknown>, actor = "user-A") => call("POST", `/combinations/${target}/lines/copy`, body, actor);
+  sql(`delete from combination_form where combination_id='${SV}' and lineage_key='IMM 5476'`);
+  r = await one(SV, { from: form("IMM 5476") }, "user-O");
+  ok("C1.5 copy one roles fail: a case officer cannot copy a line (403), nothing written", r.status === 403 && lines(SV, "IMM 5476") === "", r.status);
+  r = await one(SV, { from: { combinationId: WP, kind: "form" } });
+  ok("C1.5 copy one fail: a request that does not say which line is refused (400)", r.status === 400 && lines(SV, "IMM 5476") === "", r.status);
+  r = await one(randomUUID(), { from: form("IMM 5476") });
+  ok("C1.5 copy one fail: an unknown combination is 404 in words", r.status === 404 && /does not exist/.test(words(r)), words(r));
+  sql(`insert into review_submission (id, workspace_id, combination_id, draft_sha256, submitted_by, status, change_summary) values (gen_random_uuid(), '${ws}', '${SV}', 'x2b-one-test', 'user-A', 'SUBMITTED', '[]')`);
+  r = await one(SV, { from: form("IMM 5476") });
+  ok("C1.5 copy one waits fail: a combination submitted for review is not changed unless asked (409 in words), nothing written", r.status === 409 && /withdraws that submission/.test(words(r)) && lines(SV, "IMM 5476") === "", words(r));
+  r = await one(SV, { from: form("IMM 5476"), withdrawSubmission: true });
+  ok("C1.5 copy one waits pass: asked on purpose, the line is copied", r.status === 200 && lines(SV, "IMM 5476") === "1:DRAFT", words(r) || r.body?.message);
+  if (r.status === 200) await undo(r.body.batchId);
+  sql(`delete from review_submission where draft_sha256='x2b-one-test'`);
+  const oneKey = randomUUID();
+  r = await one(SV, { from: form("IMM 5476"), idempotencyKey: oneKey });
+  const oneBatch = r.body?.batchId as string;
+  ok("C1.5 copy one pass: the line is copied here as a draft in one batch, answered with its batch and the toast's words", r.status === 200 && !!oneBatch && r.body.batchIds?.join() === oneBatch && lines(SV, "IMM 5476") === "1:DRAFT" && /^1 line copied here from .+With an LMIA \(draft changes\)\.$/.test(r.body.message), r.body);
+  const oneAgain = await one(SV, { from: form("IMM 5476"), idempotencyKey: oneKey });
+  ok("C1.5 copy one retry pass: the same key answers the first copy (replayed), nothing written twice", oneAgain.status === 200 && oneAgain.body?.replayed === true && oneAgain.body?.batchId === oneBatch && lines(SV, "IMM 5476") === "1:DRAFT", oneAgain.body);
+  r = await one(SV, { from: form("IMM 5476") });
+  ok("C1.5 copy one fail: a combination that already has the line is refused 409 in words, nothing written twice", r.status === 409 && /already has it/i.test(words(r)) && lines(SV, "IMM 5476") === "1:DRAFT", words(r));
+  r = await one(WP, { from: form("IMM 5476") });
+  ok("C1.5 copy one fail: copying onto the combination the line comes from is refused 409 in words", r.status === 409 && /comes from .+ itself/.test(words(r)), words(r));
+  r = oneBatch ? await undo(oneBatch) : r;
+  ok("C1.5 copy one Undo pass: the batch's Undo takes the line back", r.status === 200 && lines(SV, "IMM 5476") === "", words(r) || r.body?.message);
+
   // ------------------------------------------------------------ review M2: a bulk add racing the Forms tab's own Add never answers 500
   let five = 0; const seen = new Set<string>();
   for (let i = 0; i < 4; i++) {
