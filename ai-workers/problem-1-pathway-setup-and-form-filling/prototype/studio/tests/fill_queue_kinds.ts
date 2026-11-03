@@ -46,6 +46,9 @@ export async function fillAllKinds(port: number, db: string) {
   let job = (await call("GET", `/jobs/${jobId}`)).body;
   for (const i of job.items.filter((x: any) => x.decision === "PENDING")) await call("POST", `/jobs/${jobId}/items/${i.id}`, { decision: "ACCEPTED", note: "Test: a different meaning from the library field that could fit." });
   r = await call("POST", `/jobs/${jobId}/apply`, { who: "each_applicant" }); log("apply", r.status, r.body?.new_fields);
+  // C3.8 [IRCC-F09]: the super visa's package lists IMM 5707, so it is added from the library before the release is submitted.
+  const fam = (await call("GET", `/combinations/${sv}/attachments`)).body.find((a: any) => /IMM 5707 \(/.test(a.edition ?? ""));
+  if (fam) log("family form", (await call("POST", `/attachments/${fam.id}/reuse`, {})).status);
   await coverAll(sv);
   const ff = (await call("GET", `/jobs/${jobId}/form-fields`)).body;
   const open = ff.fields.filter((f: any) => f.outcome === "unresolved");
