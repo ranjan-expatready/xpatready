@@ -31,7 +31,7 @@ Read the whole form, every page, before you write; then write the checks in page
 - `{"op": "and", "args": [node, node]}`, and the same with `or`: `args` is a list of one or more nodes;
 - `{"op": "not", "arg": node}`: `arg` is one node.
 
-F is always one of the check's `reads`, copied exactly. A choice value V is that box's own printed words for the choice: the first text of its pair in the box's `options_resolved`, or in its `options` when it has no `options_resolved`, copied exactly with any "*" and spaces. Boxes spell the same choice differently: a box listing `[["* No", "N"], ["* Yes", "Y"]]` gives `"* Yes"`, one listing `[["No", "N"], ["Yes", "Y"]]` gives `"Yes"`. Never write the code (`"Y"`).
+F is always one of the check's `reads`, copied exactly. A choice value V is that box's own printed words for the choice: the first text of its pair in the box's `options_resolved`, or in its `options` when it has no `options_resolved`, copied exactly with any "*" and spaces. Boxes spell the same choice differently: a box listing `[["* No", "N"], ["* Yes", "Y"]]` gives `"* Yes"`, one listing `[["No", "N"], ["Yes", "Y"]]` gives `"Yes"`. Never write the code (`"Y"`). A drop-down whose `options` are two lists, the words and then the codes, takes its words from the first list. A check box's `options` are its on and off states, not words: a check that depends on whether a check box is ticked goes to `unresolved`.
 
 Never write a node in another shape: not `{"neq": [F, V]}`, not `{"exists": F}`, not `{"or": {"args": [...]}}`, not an empty `args`, and never a `value_field` or any other way of comparing one box with another; such a check goes to `unresolved`.
 

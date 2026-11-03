@@ -141,7 +141,7 @@ const NOT_AI: string[] = ["coded_lines", "printed_layout", "person_only"];
 export type FormSource = { file: string; sha256: string; edition: string; printed: string;
   /** Visible boxes of this edition (hidden, barcode and machine boxes left out by the caller) with their printed words and,
    *  for a box with choices, each choice as printed: [words, export code]. */
-  boxes: { path: string; words: string; choices?: [string, string][] }[] };
+  boxes: { path: string; words: string; choices?: [string, string][] | "check_box" }[] };
 
 /** P-296 (3), review M1 and break M1 on the v2 prompts: the value a check compares a choice box with is one of that box's
  *  printed choices (P-153: code is the guard, not the prompt). A reading may write the printed words, a spacing variant of
@@ -153,7 +153,7 @@ export function choiceOf(choices: [string, string][], v: unknown): string | null
   if (typeof v !== "string") return null;
   return (choices.find(([w]) => w === v) ?? choices.find(([w]) => looseChoice(w) === looseChoice(v) && looseChoice(v) !== "") ?? choices.find(([, c]) => c !== "" && c === v))?.[0] ?? null;
 }
-export function withPrintedChoices(n: unknown, choicesOf: (field: string) => [string, string][] | undefined): { node: unknown } | { why: string } {
+export function withPrintedChoices(n: unknown, choicesOf: (field: string) => [string, string][] | "check_box" | undefined): { node: unknown } | { why: string } {
   const o = looseOf(n);
   if (!o) return { node: n };
   if (Array.isArray(o.args)) {
@@ -162,7 +162,12 @@ export function withPrintedChoices(n: unknown, choicesOf: (field: string) => [st
     return { node: { ...o, args } };
   }
   if (o.arg) { const r = withPrintedChoices(o.arg, choicesOf); return "why" in r ? r : { node: { ...o, arg: r.node } }; }
-  const choices = typeof o.field === "string" && ["eq", "neq", "in"].includes(String(o.op)) ? choicesOf(o.field) : undefined;
+  const kind = typeof o.field === "string" ? choicesOf(o.field) : undefined;
+  // Review round 2 M1: a check box's stored on/off states are not printed choices, and an unticked box may still hold
+  // "0" (so `exists` says nothing either); what "ticked" is in an answer is not settled, so a check that reads one is not
+  // proposed (the prompts send it to unresolved) rather than guessed.
+  if (kind === "check_box") return { why: `its condition reads the check box ${o.field}; whether a check box is ticked is not read by these rules yet` };
+  const choices = ["eq", "neq", "in"].includes(String(o.op)) ? kind : undefined;
   if (!choices?.length) return { node: n };
   const values = Array.isArray(o.value) ? o.value : [o.value];
   const printed = values.map((v) => choiceOf(choices, v));
@@ -174,7 +179,7 @@ export function withPrintedChoices(n: unknown, choicesOf: (field: string) => [st
 /** C3.4 form step: a form edition's checks and document types from its two rounds (M1–M5). */
 export function formMastersFromRounds(rounds: { draft: MRound<FormAnswer>; check: MRound<FormAnswer> }, f: FormSource, at: { runId: string }) {
   const boxes = new Set(f.boxes.map((b) => b.path));
-  const choicesOf = new Map(f.boxes.filter((b) => b.choices?.length).map((b) => [b.path, b.choices!]));
+  const choicesOf = new Map(f.boxes.filter((b) => b.choices === "check_box" || b.choices?.length).map((b) => [b.path, b.choices!]));
   // M1 (break minor): the quote is whole words of ONE box's printed caption or heading, at least two words and ten letters
   // ("Passport number"), never a fragment found across captions ("ort numb", "of the").
   const printed = f.boxes.map((b) => ` ${plain(b.words)} `);
@@ -196,7 +201,7 @@ export function formMastersFromRounds(rounds: { draft: MRound<FormAnswer>; check
       const t = { root: { subjectKind: t0.root.subjectKind, ...(pc.node as object) }, node: pc.node as PredicateNode };
       // An example's answer to a choice box is the same choice in its printed words (an unknown one is left as written).
       const examples = c.examples.map((e) => { try { const f = JSON.parse(e.facts_json); if (!f || typeof f !== "object" || Array.isArray(f)) return e;
-        return { ...e, facts_json: JSON.stringify(Object.fromEntries(Object.entries(f).map(([k, v]) => { const ch = choicesOf.get(k); return [k, ch ? (choiceOf(ch, v) ?? v) : v]; }))) }; } catch { return e; } });
+        return { ...e, facts_json: JSON.stringify(Object.fromEntries(Object.entries(f).map(([k, v]) => { const ch = choicesOf.get(k); return [k, Array.isArray(ch) ? (choiceOf(ch, v) ?? v) : v]; }))) }; } catch { return e; } });
       const ex = runExamples(t, examples);
       if ("why" in ex) { drop(`Not proposed: ${ex.why}`); continue; }
       const sorted = [...reads].sort();

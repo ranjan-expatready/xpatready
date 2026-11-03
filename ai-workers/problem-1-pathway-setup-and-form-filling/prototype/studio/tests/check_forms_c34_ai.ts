@@ -120,6 +120,18 @@ import { evaluate } from "../../contracts/rules.ts";
   ok("C3.4 E fail: a value that is not one of the box's printed choices is not proposed (its check could never fail), with the reason", !e.items.length && /not one of that box's printed choices/.test(e.dropped[0]?.why ?? ""), e.dropped[0]);
   e = both(pcr(true, "* No"));
   ok("C3.4 E fail: a true/false value on a choice box is not one of its printed choices either", !e.items.length && /printed choices/.test(e.dropped[0]?.why ?? ""), e.dropped[0]);
+  // Review round 2 M1: choices by the shape each box kind is stored in, never rows of a column list or a check box's states.
+  const inv5645 = JSON.parse(readFileSync(join(PROTOTYPE, "p1", "inventory", "imm5645e.inventory.json"), "utf8")) as { fields: any[] };
+  const mstat = printedChoices(inv5645.fields.find((f) => /ChildMStatus\[0\]$/.test(f.data_path ?? ""))) as [string, string][];
+  ok("C3.4 E pass (review round 2 M1): a drop-down stored as two columns gives each choice its own words and code (IMM 5645 marital status)", Array.isArray(mstat) && mstat.length === 8 && m.choiceOf(mstat, "Common-law") === "Common-law" && m.choiceOf(mstat, "Married-physically present") === "Married-physically present" && m.choiceOf(mstat, "2") === "Common-law", mstat);
+  const visa = boxes.find((b) => /VisaType\[0\]\.VisaType\[0\]$/.test(b.path))?.choices as [string, string][];
+  ok("C3.4 E pass (review round 2 M1): IMM 5257's column-stored drop-down (Visa requested) gives its printed words, its blank row left out", JSON.stringify(visa) === JSON.stringify([["Visitor Visa", "VisitorVisa"], ["Transit", "Transit"]]) && m.choiceOf(visa, "VisitorVisa") === "Visitor Visa", visa);
+  const BOX = "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].Other[0]", PHONE = "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].NumberCountry[0]";
+  const boxCheck = (leaf: any) => ({ checks: [{ sentence: "When the telephone is not a Canada/US number, it is given", reads: [BOX, PHONE], subject_kind: "PRINCIPAL", tree_json: JSON.stringify({ op: "or", args: [leaf, { op: "exists", field: PHONE }] }), quote: "Other \n Telephone no.",
+    examples: [{ facts_json: JSON.stringify({ [BOX]: "1" }), expected: false }, { facts_json: JSON.stringify({ [BOX]: "0" }), expected: true }] }], document_types: [], unresolved: [] });
+  const e2a = both(boxCheck({ op: "neq", field: BOX, value: "1" }));
+  const e2b = both(boxCheck({ op: "not", arg: { op: "exists", field: BOX } }));
+  ok("C3.4 E fail (review round 2 M1): a check that reads a check box (its value, or whether it exists) is not proposed, never turned into another state", boxes.find((b) => b.path === BOX)?.choices === "check_box" && !e2a.items.length && /check box/.test(e2a.dropped[0]?.why ?? "") && !e2b.items.length && /check box/.test(e2b.dropped[0]?.why ?? ""), [e2a.dropped[0], e2b.dropped[0]]);
 
   // ---------------------------------------------------------------- P: the prompts (P-296 (3); #669 review minors 1, 3)
   // #669: three v1 prompts showed no worked tree, so the AI wrote its own shapes and the rules dropped every item. Each
@@ -173,7 +185,7 @@ import { evaluate } from "../../contracts/rules.ts";
   // Break m6: the rules each prompt must state word for word (the node grammar, the choice and snake-case rules).
   const MUST: Record<string, (string | RegExp)[]> = {
     all: ['{"op": "in", "field": F, "value": [V1, V2]}', /"arg": node/, /"args": \[node/, /\{"op": "exists", "field": F\}/, "value_field"],
-    form: [/never (write )?(its|the) code \(`"Y"`\)/i, /`options` when it has no `options_resolved`/],
+    form: [/never (write )?(its|the) code \(`"Y"`\)/i, /`options` when it has no `options_resolved`/, /two lists.{0,80}first list/, /whether a check box is ticked goes to `unresolved`/],
     guide: [/every run of characters that are not letters or digits/, "spouse_s_date_of_birth"],
   };
   for (const file of [MASTERS_FORM_AI.template, MASTERS_FORM_AI.check, MASTERS_GUIDE_AI.template, MASTERS_GUIDE_AI.check]) {
