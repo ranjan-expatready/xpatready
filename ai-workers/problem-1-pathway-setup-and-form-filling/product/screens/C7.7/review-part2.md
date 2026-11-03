@@ -22,3 +22,11 @@ To do before read-back (-20 / -22), steps absent for PDF upload (-21), In progre
 Could not check: browser/UI (none built); live AI off, US$0.
 
 Verdict: Block. Fix: Major 1 and Major 2, each with a test; then re-review the new commit.
+
+## Round 2 (98d447dbe)
+Diff-only (8b5b8dce4..98d447dbe, prepare.ts and case-prepare.ts; readiness and fill-case.ts untouched).
+- **M1 closed.** `readBackOf` keeps each copy's newest read-back, then applies `formPassed`, then picks the newest passing copy: the same rule as `copyOf` and `lock`. A failed newer read-back is no longer passed over. Engine tests for several copies and for the failed-newer case (27/27) cover pass and fail.
+- **M2 accepted as stated.** Changing `channelIn` would alter `lock`, `file` and the not-for-filing rule: a forms-side decision outside this row, correctly raised to the tech lead. The line now says plainly that a barcode form released as Online cannot be validated and read back yet and to ask the Lead, instead of an endless To do. The message matches what the validate route does (refuses on an Online release line), has pass and fail engine tests, and sits after Out of date and before the missing-facts message. Open question stays in the PR, not a blocker here.
+- **Minor 1 closed** (wording now "Adobe's Validate passed on it, which adds the barcode page"; no decode claim). Not re-run by me; builder's results taken: 27/27 engine, C7.7 26/26.
+
+**Verdict: Approve** (no open Blocker or Major) for commit 98d447dbe.
