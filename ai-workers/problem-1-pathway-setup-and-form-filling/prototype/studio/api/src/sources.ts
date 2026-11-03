@@ -10,7 +10,7 @@ import { basename, join, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 import { manifest, slug } from "../../engine/import.ts";
 import { normalize, type LibraryField } from "../../engine/normalize.ts";
-import { compareMaps, mapRules, type MapField } from "../../engine/field-map-rounds.ts";
+import { claimedTwice, compareMaps, formWords, mapRules, quoteOnForm, type MapField } from "../../engine/field-map-rounds.ts";
 import { checkerRound } from "./field-map-check.ts";
 import { EXPERIMENT_CAP_USD, LABEL, LEDGER_DIR, MAX_ATTEMPTS, PARTS_DIR, RUN_CAP_USD, WAVE1_CAP_USD, WAVE1_START } from "../../../p2/policy.ts";
 import { canonical } from "../../../contracts/rules.ts";
@@ -621,7 +621,13 @@ export class Sources {
     const formPaths = new Set(box.keys());
     const readingOf = (f: MapField) => `${f.proposedKey} (${f.proposedType}): ${f.boxes.length} form field${f.boxes.length === 1 ? "" : "s"}`.slice(0, 300);
     const draftRound = { from: (job.mode === "REPLAY" ? "replay" : "live") as "replay" | "live", runFile: job.runFile!.slice(0, 300), costUsd: Math.max(0, Number(job.costUsd ?? 0)) };
-    const quoteOf = (q?: string) => (q && /^[0-9a-f]{64}$/.test(a.sha256) ? { file: a.fileName.slice(0, 300), sha256: a.sha256, edition: a.edition?.slice(0, 60) ?? null, page: null, quote: q.slice(0, 1000), quoteFound: true, rule: null } : null);
+    // QA-191 (P-121): the rules run on both rounds: the quote is checked against the form's own words (never assumed found),
+    // the kind of answer is one the library knows, and no form field is filled by two fields of the same round.
+    const words = formWords(inv.fields ?? []);
+    const valueTypes = new Set(Object.keys(VALUE_TYPE_TO_DATA_TYPE));
+    const twiceDraft = claimedTwice(items), twiceCheck = claimedTwice(cmp ? [...[...cmp.byKey.values()].map((x) => x.check).filter((x): x is MapField => !!x), ...cmp.checkOnly] : []); // review m2: fields only the checker named count
+    const quoteOfItem = (f: MapField) => (f as MapField & { evidence?: { quotes?: string[] } }).evidence?.quotes?.[0] ?? null;
+    const quoteOf = (q?: string) => (q && /^[0-9a-f]{64}$/.test(a.sha256) ? { file: a.fileName.slice(0, 300), sha256: a.sha256, edition: a.edition?.slice(0, 60) ?? null, page: null, quote: q.slice(0, 1000), quoteFound: quoteOnForm(q, words), rule: null } : null);
     const proposals: (NewProposal & Work)[] = items.map((i) => {
       const near = i.candidates.filter((c) => c.score >= 0.55).map((c) => c.key).slice(0, 10);
       const reuses = !!i.recommendation.key && (i.recommendation.action === "reuse" || (i.recommendation.action === "decide" && libKeys.has(i.recommendation.key)));
@@ -630,7 +636,8 @@ export class Sources {
       // G-CORE B4: both readings kept; a disagreement is Decide with both reasons (P-121); no checker yet stays one round.
       const c = cmp?.byKey.get(i.proposedKey);
       const rounds = { draft: { ...draftRound, reading: readingOf(i), payload }, check: c?.check && chk.ok ? { reading: readingOf(c.check), payload: { ...payload, valueType: c.check.proposedType }, from: chk.from, runFile: chk.runFile.slice(0, 300), costUsd: chk.costUsd } : null };
-      const rules = [...mapRules(i, formPaths), ...(c?.check ? mapRules(c.check, formPaths).map((r) => ({ ...r, rule: `checker_${r.rule}` })) : [])];
+      const rules = [...mapRules(i, formPaths, { quote: i.evidence.quotes[0], words, claimedTwice: twiceDraft, valueTypes, round: "draft" }),
+        ...(c?.check ? mapRules(c.check, formPaths, { quote: quoteOfItem(c.check), words, claimedTwice: twiceCheck, valueTypes, round: "checker" }).map((r) => ({ ...r, rule: `checker_${r.rule}` })) : [])];
       const differ = c?.agreement === "differ";
       const confidence = differ ? "decide" as const : ready ? "ready" as const : i.outcome === "NEW" ? "check" as const : "decide" as const;
       const reason = differ ? `${c!.why}${i.reason ? ` Draft: ${i.reason}` : ""}`.slice(0, 500) : ready ? null : i.reason.slice(0, 500);
