@@ -154,6 +154,8 @@ const leak = (t) => (t.match(KEY) ?? t.match(INTERNAL) ?? t.match(HASH))?.[0];
   const ddet = dlg.locator("[data-admin-details]");
   step("pass: the dialog's Details is closed and holds the model a Live run calls, the job and the spending lines (review n1)", await ddet.count() === 1 && !(await ddet.evaluate((d) => d.open)) && /AI model \(Live\)\s*claude-/.test(await ddet.textContent()) && /Job/.test(await ddet.textContent()) && /AI spending cap/.test(await ddet.textContent()), await ddet.textContent());
   const sel = dlg.locator("select").first();
+  const chosen = await sel.inputValue();
+  step("pass (Devin #643): Details names the chosen saved answer's file under \"Saved run file\", not its run id", !!chosen && (await ddet.textContent()).includes(`Saved run file${chosen}`), { chosen, details: await ddet.textContent() });
   step("pass (review n6): the saved answer's name is not cut off in its list", await sel.evaluate(fits), await sel.evaluate((e) => [e.selectedOptions[0]?.text, e.clientWidth]));
   await axe("the Draft with AI dialog", '[role="dialog"]');
   await p.screenshot({ path: path.join(SHOTS, "uxa4-03-draft-dialog-1440.png"), fullPage: false });

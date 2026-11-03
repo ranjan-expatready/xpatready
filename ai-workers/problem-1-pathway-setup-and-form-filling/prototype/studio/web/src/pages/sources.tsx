@@ -187,7 +187,7 @@ function DraftDialog({ a, onClose }: { a: Attachment; onClose: () => void }) {
         {liveOff ? <Notice tone="warn" title="Live AI is off on this copy">{LIVE_OFF_NEXT}</Notice> : null}
         {cost.dialog}
         <p className="text-xs text-text-muted">The AI reads this form's own field list only; expected answers and family values are kept out of what it reads.</p>
-        <AdminDetails items={[["AI model (Live)", liveClosed ? null : opts.data?.model], ["Job", opts.data?.job_id], ["Saved run file", mode === "replay" ? saved.find((r) => r.file === runFile)?.run_id : null],
+        <AdminDetails items={[["AI model (Live)", liveClosed ? null : opts.data?.model], ["Job", opts.data?.job_id], ["Saved run file", mode === "replay" ? runFile || null : null], ["Saved run", mode === "replay" ? saved.find((r) => r.file === runFile)?.run_id : null],
           ["Spending", l ? `US$${l.committed_usd.toFixed(2)} of the US$${l.cap_usd.toFixed(2)} AI spending cap (the experiment cap)${l.wave ? ` · this round's budget (${l.wave.name}): US$${l.wave.spent_usd.toFixed(2)} of US$${l.wave.cap_usd.toFixed(2)}` : ""}` : null]]} />
       </div>
     </Dialog>
