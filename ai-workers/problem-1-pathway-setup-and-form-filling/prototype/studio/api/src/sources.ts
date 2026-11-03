@@ -815,6 +815,7 @@ export class Sources {
     need(actor, "author");
     const { proposals, ...rest } = await this.db.draftingJob.findUniqueOrThrow({ where: { id: jobId }, include: { proposals: true } });
     const job = { ...rest, items: proposals.map(reviewRow) };
+    const batchOf = new Map(proposals.map((p) => [p.id, p.batchId]));
     if (job.kind !== "field_map") fail("This is not a field-map draft: a checklist draft is applied with its own step.");
     if (job.status !== "COMPLETED") fail(job.status === "APPLIED" ? "Already applied." : "The draft is not ready.", HttpStatus.CONFLICT);
     // Break M1 across drafts: a new field this draft names must not have been created meanwhile by another draft.
@@ -853,7 +854,10 @@ export class Sources {
         // Every new shared field waits for a second person on To review before any release carries it (BR-7, P-53): the
         // one lander writes the draft row and its ADD (S6 slice 1a).
         const top = ((i.candidates as { key: string; score: number }[]) ?? []).slice(0, 3);
-        await landField(tx, { ws, actor, batchId: null, itemId: i.id, reason: p.reason ?? i.decisionNote ?? null, matches: top, meaningChecked: i.decision === "NEW", proposedBy: i.decidedBy ?? actor.id, sourceJobId: job.id, combinationId: job.combinationId,
+        // QA-193 (P-121: the second person at release sees what was bulk-accepted; P-288 (2)): the library change carries the
+        // decision it came from (the proposal's batch on To review or the page's accept together), never null, so the
+        // approver sees the changes of one decision together and the release names it.
+        await landField(tx, { ws, actor, batchId: batchOf.get(i.id) ?? null, itemId: i.id, reason: p.reason ?? i.decisionNote ?? null, matches: top, meaningChecked: i.decision === "NEW", proposedBy: i.decidedBy ?? actor.id, sourceJobId: job.id, combinationId: job.combinationId,
           aiVerdict: i.outcome === "NEW" && !top.some((c) => c.score >= 0.55) ? "No library field means the same." : top[0] ? `Could be ${top[0].key} (match ${Math.round(top[0].score * 100)}%).` : null },
           { key: i.decidedKey!, meaning: i.proposedMeaning, valueType: i.proposedType, label: p.label ?? null, sourceRef: `${job.mode === "REPLAY" ? "replayed " : ""}AI run ${job.runId}; decided by ${i.decidedBy}` });
         created++;
