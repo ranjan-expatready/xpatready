@@ -84,3 +84,12 @@ D2, D3, D5, D6, D8, D9, D12, D14 and D19 are not affected by these diffs.
 * Blockers: none. B1 is closed.
 * Majors: none. M1 and M2 are closed.
 * Minors, which can follow and do not block: n1 (the listed test needs 4 or more holders), n2 (the veto does not cover `_to_date` and `_from_date` keys), and the nit on the C4.7 third-pick comment.
+
+## Final diff: 535c543b..681e076e (PR #735). Verdict is for 681e076e.
+The code changes are in three files, plus my two review files, which were added unchanged. I used no isolated copy for this round.
+* **n1 closed.** The `listed()` test now uses a pool of 5 "Previous residence" holders, checks that every label is named, and checks there is no "more". I put the old "first three" `listed()` back and this test **FAILS**.
+* **n2 closed.** `end()` now reads `/_(to|from)(?:_date)?$/` (`fact-words.ts:77`). The new test: "Employment period to" with only `person.employment_from_date` gives none, and "Employment period" alone names it. I put the old regex back and this test **FAILS**. In the studio's samples, engine, API and question lists, the only keys this pattern touches are `case.intended_stay_from`/`_to` and `person.employment_from_date`. Each is a true start or end date, so nothing is vetoed by mistake.
+* **Nit closed.** The comment at C4.7 pack `:62` now says what the loop does.
+* `check_forms_qa162_fact_words` passes 54/54 (my run). For the other direct suites I relied on the builder's report. Nothing else changed in the code.
+
+**Verdict: Approve** (for 681e076e). Blockers: none. Majors: none. Minors: none open.
