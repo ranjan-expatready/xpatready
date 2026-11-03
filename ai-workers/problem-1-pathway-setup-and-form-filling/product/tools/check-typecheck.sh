@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # typecheck.mjs on throwaway projects (the #703 Opus re-review, Lead 3): an error tsc reports without a file must never
 # pass. A missing tsconfig (TS5058), an include that finds nothing (TS18003) and a missing type library (TS2688) each
-# stop the check (exit 2); a bad tsconfig option is a new error (exit 1); known errors pass; --write only removes.
+# stop the check (exit 2), and so does a project whose own sources tsc never read (files: [], .d.ts only); noCheck in a
+# tsconfig cannot hide errors; a bad tsconfig option is a new error (exit 1); known errors pass; --write only removes.
 # Needs the studio's packages (tsc). Runs in seconds, US$0.
 #   bash product/tools/check-typecheck.sh
 set -u
@@ -38,4 +39,11 @@ grep -v 'b.ts' "$T/known.txt" > "$T/short.txt"
 c=$(run --project p="$T/bad/tsconfig.json" --known "$T/short.txt" --write); ok "--write that would add a line: refused (exit 1), the list unchanged" "$([ "$c" = 1 ] && [ "$(grep -c . "$T/short.txt")" = 1 ] && echo 1)" "exit $c: $(tail -2 "$T/out")"
 sed -i.bak 's/= "x"/= 1/' "$T/bad/a.ts"
 c=$(run --project p="$T/bad/tsconfig.json" --known "$T/known.txt" --write); ok "--write after a fix: only removes the fixed line" "$([ "$c" = 0 ] && [ "$(grep -vc '^#' "$T/known.txt")" = 1 ] && grep -q 'b.ts' "$T/known.txt" && echo 1)" "exit $c: $(cat "$T/known.txt")"
+# #734 review Minor 1: tsc exits 0 yet checks none of the project's sources.
+mk filesempty '' '[]' 'a.ts:export const a: number = "x";'; sed -i.bak 's/"include":\[\]/"files":[],"references":[]/' "$T/filesempty/tsconfig.json"
+c=$(run --project p="$T/filesempty/tsconfig.json" --known "$T/none.txt"); ok "files: [] (Vite's references layout): no source checked, exit 2" "$([ "$c" = 2 ] && echo 1)" "exit $c: $(tail -2 "$T/out")"
+mk dtsonly '' '["*.d.ts"]' 'a.d.ts:export declare const a: number;'
+c=$(run --project p="$T/dtsonly/tsconfig.json" --known "$T/none.txt"); ok "an include that finds only .d.ts files: exit 2" "$([ "$c" = 2 ] && echo 1)" "exit $c: $(tail -2 "$T/out")"
+mk nocheck ',"noCheck":true' '["*.ts"]' 'a.ts:export const a: number = "x";'
+c=$(run --project p="$T/nocheck/tsconfig.json" --known "$T/none.txt"); ok "noCheck: true in the tsconfig cannot hide an error: exit 1" "$([ "$c" = 1 ] && grep -q TS2322 "$T/out" && echo 1)" "exit $c: $(tail -2 "$T/out")"
 echo "$pass passed, $fail failed"; [ "$fail" = 0 ]

@@ -28,13 +28,18 @@ const errors = [], fileless = [];
 let couldNotCheck = false;
 for (const { name, path } of projects) {
   const t0 = Date.now();
-  const r = spawnSync(TSC, ["--noEmit", "--pretty", "false", "-p", path], { cwd: S, encoding: "utf8", maxBuffer: 64 << 20 });
+  // --noCheck false: a tsconfig's noCheck cannot switch checking off; --listFiles: what tsc actually read (#734 review).
+  const r = spawnSync(TSC, ["--noEmit", "--noCheck", "false", "--listFiles", "--pretty", "false", "-p", path], { cwd: S, encoding: "utf8", maxBuffer: 256 << 20 });
   const out = `${r.stdout ?? ""}${r.stderr ?? ""}`;
+  // The project's own sources among the files read: not declarations, not packages. None means nothing was checked
+  // (files: [] with references, an include that finds only .d.ts files), even when tsc exits 0.
+  const sources = out.split("\n").filter((l) => /^\/.*\.(ts|tsx|mts|cts)$/.test(l.trim()) && !/\.d\.[mc]?ts$/.test(l.trim()) && !/\/node_modules\//.test(l)).length;
   const located = [...out.matchAll(/^(.+?)\((\d+),\d+\): error (TS\d+): (.*)$/gm)].map((m) => ({ project: name, file: m[1].replace(/\\/g, "/"), line: m[2], code: m[3], msg: m[4].trim() }));
   const bare = [...out.matchAll(/^error (TS\d+): (.*)$/gm)].map((m) => ({ project: name, code: m[1], msg: m[2].trim() }));
-  console.log(`tsc ${name}: ${located.length} error(s) in files, ${bare.length} without a file, exit ${r.status ?? r.signal} in ${((Date.now() - t0) / 1000).toFixed(0)} s`);
-  // tsc failed but named no file: the project was not checked (missing or moved tsconfig, empty include, a crash).
-  if (r.status !== 0 && located.length === 0) {
+  console.log(`tsc ${name}: ${sources} source file(s), ${located.length} error(s) in files, ${bare.length} without a file, exit ${r.status ?? r.signal} in ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+  // Not checked: tsc failed naming no file (missing or moved tsconfig, empty include), read none of the project's own
+  // sources, or was killed or could not start (a signal or a spawn error: its output may be cut short).
+  if ((r.status !== 0 && located.length === 0) || sources === 0 || r.signal || r.error) {
     couldNotCheck = true;
     console.log(`STOP  tsc ${name} exited ${r.status ?? r.signal} without checking any file (${path}):\n${out.trim().split("\n").slice(0, 10).map((l) => `  ${l}`).join("\n")}`);
   }
