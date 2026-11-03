@@ -271,3 +271,15 @@ export function isDemoSnapshot(raw: unknown): boolean {
   const sources = Array.isArray((raw as { sources?: unknown }).sources) ? ((raw as { sources: ({ sample?: boolean } | null)[] }).sources) : [];
   return snap.combination?.source_basis === "ILLUSTRATIVE" || checks.some((c) => !!c?.illustrative) || sources.some((x) => !!x?.sample);
 }
+
+/** C5.5 (G2 BR-3, P-240; Opus re-review of #568, M2): outside the demo workspace every release is real, so the Sample
+ *  content isDemoSnapshot reads refuses it, each item named: a Sample combination and each check saved without an
+ *  official source (illustrative). A number with only a Sample source is the source gate's own line (G1,
+ *  draftSourceProblems), never listed twice. The caller asks only for a draft outside the demo workspace. */
+export function sampleContentProblems(s: Snapshot): (Problem & { gate: "sample-content" })[] {
+  const out: (Problem & { gate: "sample-content" })[] = [];
+  const tail = "Sample content releases only in the demo workspace, as a Demo release.";
+  if (s.combination?.source_basis === "ILLUSTRATIVE") out.push({ level: "error", where: "Release", item: "", gate: "sample-content", message: `"${s.combination.label}" is a Sample combination (not source-verified). ${tail} A real release needs a source-backed combination.` });
+  for (const c of s.checks.filter((x) => x.illustrative)) out.push({ level: "error", where: "Checks", item: c.id, label: `Check "${String(c.message ?? c.id).trim()}"`, gate: "sample-content", message: `Sample (saved without an official source quote). ${tail} A real release needs its official source.` });
+  return out;
+}

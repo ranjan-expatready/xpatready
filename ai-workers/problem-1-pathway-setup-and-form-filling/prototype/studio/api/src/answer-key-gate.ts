@@ -32,8 +32,9 @@ export type Gate = { demo: boolean; judged: boolean; items: ItemVerdict[]; probl
  *  real release, what "new or changed" is measured against (reviewer m1: a Demo release proves nothing for a real one,
  *  so maps first released in a demo stay new until a real release carries them). */
 type Input = { combinationId: string; snapshot: Snapshot; sha256: string; released: { snapshot: unknown; sha256: string } | null; baseline: unknown; submitted: boolean };
-/** The latest real release of a list ordered newest first (BR-3: a Demo release is never a real publish). */
-export const realBaseline = (releases: { snapshot: unknown }[]) => releases.find((r) => !isDemoSnapshot(r.snapshot))?.snapshot ?? null;
+/** The latest real release of a list ordered newest first (BR-3: a Demo release is never a real publish; outside the
+ *  demo workspace every release is real, C5.5). */
+export const realBaseline = (releases: { snapshot: unknown }[]) => releases.find((r) => !(isDemoWorkspace() && isDemoSnapshot(r.snapshot)))?.snapshot ?? null;
 
 /** The keys of each combination with their last run judged against this draft (runState: key version, item and inputs
  *  fingerprints), the failing ones with their first failing value. */
