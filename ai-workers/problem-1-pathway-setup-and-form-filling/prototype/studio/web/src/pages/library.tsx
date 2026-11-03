@@ -115,12 +115,14 @@ export function FieldPage() {
   const fields = useLibraryFields();
   const cur = f.data?.current;
   const place = f.data?.placements?.[0];
-  const [meaning, setMeaning] = React.useState(""), [type, setType] = React.useState("text");
+  const [meaning, setMeaning] = React.useState(""), [type, setType] = React.useState("text"), [why, setWhy] = React.useState("");
+  // C3.15: the reason is counted as the server counts it (NFKC, invisible characters removed; Devin on #712).
+  const whyLength = why.normalize("NFKC").replace(/[\p{Cf}\p{Default_Ignorable_Code_Point}]/gu, "").trim().length;
   const [p, setP] = React.useState<any>(null);
   React.useEffect(() => { if (cur) { setMeaning(cur.meaning); setType(cur.valueType); } }, [cur?.id]);
   React.useEffect(() => { if (f.data) setP(place ? { sectionKey: place.sectionKey, collectedFrom: place.collectedFrom, repeats: place.repeats, tier: place.tier, questionText: place.questionText ?? "", helpText: place.helpText ?? "", condition: place.predicateJson, conditionEffect: place.conditionEffect, conditionPlain: place.conditionPlain ?? "" } : { sectionKey: "", collectedFrom: "client_questionnaire", repeats: key.startsWith("case.") ? "once_per_case" : "per_person", tier: "case", questionText: "", helpText: "", condition: null, conditionEffect: null, conditionPlain: "" }); }, [f.data?.current?.id, place?.id]);
   const inv = [["field", key], ["fields"], ["preview"], ["config"], ["combination"]];
-  const saveDef = useAction(() => api(`/library/fields/${encodeURIComponent(key)}`, { method: "PATCH", json: { meaning, valueType: type } }), { success: "Definition saved as a draft version", invalidate: inv });
+  const saveDef = useAction(() => api(`/library/fields/${encodeURIComponent(key)}`, { method: "PATCH", json: { meaning, valueType: type, ...(meaning.trim() !== cur?.meaning ? { reason: why } : {}) } }), { success: "Definition saved as a draft version", invalidate: inv, onDone: () => setWhy("") });
   const [name, setName] = React.useState("");
   React.useEffect(() => { if (cur) setName((cur.labelChecked && cur.label) || fieldName(key)); }, [cur?.id, cur?.label]);
   const src = useApi<SourcesView>(["field-sources", key], `/library/fields/${encodeURIComponent(key)}/sources`);
@@ -145,8 +147,10 @@ export function FieldPage() {
           <LastRename kind="field" itemKey={key} invalidate={[...inv, ["field-sources", key]]} />
           {renaming ? <RenameDialog kind="field" itemKey={key} current={shown} initial={name.trim()} label="Name" invalidate={[...inv, ["field-sources", key]]} onClose={() => setRenaming(false)} /> : null}
           <Field label="Meaning" hint="What reviewers and the comparison rely on; one meaning per field."><Textarea value={meaning} onChange={(e) => setMeaning(e.target.value)} /></Field>
+          {/* C3.15 (P-253): a change of meaning says why; the reason is kept with the change in the activity. */}
+          {meaning.trim() !== cur.meaning ? <Field label="Why the meaning changes" hint="Say why in a sentence (at least 8 characters) to save; it is kept with the change in the activity." error={why.trim() && whyLength < 8 ? "At least 8 characters: say why in a sentence (invisible characters do not count)." : null}><Input value={why} onChange={(e) => setWhy(e.target.value)} maxLength={300} placeholder="For example: IMM 5707 asks for the date of the last entry, not the first" /></Field> : null}
           <Field label="Value type"><Select value={type} onChange={(e) => setType(e.target.value)}>{TYPES.map((t) => <option key={t} value={t}>{TYPE_WORD[t]}</option>)}</Select></Field>
-          <div className="flex justify-end"><Button onClick={() => saveDef.mutate(undefined)} busy={saveDef.isPending} disabled={retiredNow || meaning === cur.meaning && type === cur.valueType}><Save /> Save as draft</Button></div>
+          <div className="flex justify-end"><Button onClick={() => saveDef.mutate(undefined)} busy={saveDef.isPending} disabled={retiredNow || meaning === cur.meaning && type === cur.valueType || meaning.trim() !== cur.meaning && whyLength < 8}><Save /> Save as draft</Button></div>
           <p className="text-xs text-text-muted">Versions: {v.versions.map((x: any) => `v${x.version} ${x.status.toLowerCase()}${x.updatedBy ? ` (${nameOf(session.data?.actors, x.updatedBy)})` : ""}`).join(" · ")}</p>
         </section>
         <section className="space-y-3 rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
