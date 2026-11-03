@@ -90,6 +90,9 @@ jobs:
           cache-dependency-path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/package-lock.json
       - name: set up like a cloud session (cloud-setup.sh; it also builds the web app the browser suites need)
         run: bash "$P/tools/cloud-setup.sh"
+      - name: test databases are cleaned up (check-test-dbs.sh, part 1 only; needs the database cloud-setup.sh started)
+        if: matrix.shard == 1
+        run: bash "$P/tools/check-test-dbs.sh"
       - name: rules files, decision impact, graph, official PDFs, explicit-any count, the tools' own checks (part 1 only)
         if: matrix.shard == 1
         run: |

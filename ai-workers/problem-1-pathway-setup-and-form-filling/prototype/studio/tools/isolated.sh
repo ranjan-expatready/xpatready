@@ -4,7 +4,10 @@
 # database, its files and the preserved evidence are never touched. Usage:
 #   zsh studio/tools/isolated.sh <name> <port> start [KEY=VALUE ...]   (fresh database each start)
 #   zsh studio/tools/isolated.sh <name> <port> restart [KEY=VALUE ...] (same database and files, new server process)
-#   zsh studio/tools/isolated.sh <name> <port> stop
+#   zsh studio/tools/isolated.sh <name> <port> stop      (drops its database and files; ISOLATED_KEEP=1 keeps them)
+# A stopped copy leaves nothing behind (3 Nov: 977 left-over test databases, 13 GB, on the Mac): its database is dropped
+# and var/isolated-<name> removed; only its api.log is kept, as var/isolated-logs/<name>-api.log (the clue when a suite
+# fails). Copies that were never stopped (a killed run): tools/prune-test-dbs.sh.
 set -e
 STUDIO="${0:A:h:h}"; ROOT="${STUDIO:h:h:h:h}"
 NAME="$1"; PORT="$2"; ACTION="$3"; shift 3 || true
@@ -21,7 +24,15 @@ for i in {1..40}; do lsof -ti tcp:$PORT -sTCP:LISTEN >/dev/null 2>&1 || break; s
 for pid in $(lsof -ti tcp:$PORT -sTCP:LISTEN 2>/dev/null); do kill -9 $pid 2>/dev/null || true; done
 for i in {1..20}; do lsof -ti tcp:$PORT -sTCP:LISTEN >/dev/null 2>&1 || break; sleep 0.25; done
 if [[ "$ACTION" != "stop" ]] && curl -s -o /dev/null --max-time 2 "localhost:$PORT/"; then echo "port $PORT is still answering after its server was stopped: not starting $NAME on it"; exit 1; fi
-if [[ "$ACTION" == "stop" ]]; then echo "stopped $NAME"; exit 0; fi
+if [[ "$ACTION" == "stop" ]]; then
+  if [[ "${ISOLATED_KEEP:-}" == 1 ]]; then echo "stopped $NAME (database $DB and $VARDIR kept: ISOLATED_KEEP=1)"; exit 0; fi
+  # Its own database only (the name check above refuses "demo"); --force ends its leftover connections, since its server
+  # has just been stopped. A database server that is down, or a failure, never fails the stop: prune-test-dbs.sh cleans up.
+  dropdb -h 127.0.0.1 -p 54329 -U xr_studio --if-exists --force "$DB" >/dev/null 2>&1 || echo "note: could not drop $DB (tools/prune-test-dbs.sh will)"
+  if [[ -f "$VARDIR/api.log" ]]; then mkdir -p "$STUDIO/var/isolated-logs" && mv -f "$VARDIR/api.log" "$STUDIO/var/isolated-logs/$NAME-api.log"; fi
+  rm -rf "$VARDIR"
+  echo "stopped $NAME (database and files removed; log in var/isolated-logs/$NAME-api.log)"; exit 0
+fi
 pg_ctl -D "$ROOT/.tools/solution-1-prototype/pg18-data" status >/dev/null 2>&1 || { echo "start the demo database first (studio/start.sh)"; exit 1; }
 if [[ "$ACTION" == "start" ]]; then dropdb -h 127.0.0.1 -p 54329 -U xr_studio --if-exists "$DB"; createdb -h 127.0.0.1 -p 54329 -U xr_studio "$DB"; rm -rf "$VARDIR"; fi
 mkdir -p "$VARDIR"
