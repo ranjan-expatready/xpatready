@@ -58,7 +58,8 @@ After the fix PRs merge, run the **independent re-test** again (same method as t
 Not tonight (P-290): C4.7, C11.3's held part, the 8 Partials waiting on paid runs or holds (flow-watch lists C11.14, C11.7, C11.8, C9.1: expected, no paid run tonight).
 
 ## Lead 3 at 10:05 UTC (read first)
-* **Leads, in order:** Lead 1 · 3 Nov 06:56 UTC (ended) · Lead 2 · 3 Nov 07:51 UTC (ended) · **Lead 3 · 3 Nov 10:00 UTC (current; 30-minute check at minutes 13 and 43)** · standby **Lead 4 · 3 Nov · standby** (`local_8a45e199-45df-404c-b377-3b4b57d0c12e`), the only one: start "Lead 5 · 3 Nov · standby" at the founder's next typed turn.
+* **Leads, in order:** Lead 1 · 3 Nov 06:56 UTC (ended) · Lead 2 · 3 Nov 07:51 UTC (ended) · **Lead 3 · 3 Nov 10:00 UTC (current; 30-minute check at minutes 13 and 43)** · standby **Lead 4 · 3 Nov · standby** (`local_8a45e199-45df-404c-b377-3b4b57d0c12e`) first, then **Lead 5 · 3 Nov · standby** (`local_a1cb965c-34ee-4581-bc10-582a25db0c27`, started by Lead 2 ~10:10 UTC in the founder's typed turn).
+* **qa lane (founder ~10:10 UTC in Lead 2's chat: "Yes, start qa"):** cloud **QA · after-merge, then explore M2** (Sonnet, US$0): re-scores `qa/CAPABILITIES.md` under P-290/P-291, explores from V3's Critical break, asks the tech lead as PR comments.
 * **Done at take-over:** #704 (Lead 2 hand-over) merged. Ruled #699's question (P-299). Messaged F1 (#699 option 1 → #700 → QA-154 first), F2 (#698 to label → B1 release gate first), F4 (#689 red after label: shards 1–3, UX-A4 setup), F5 (QA-172 → QA-152), V1 (M2 then M3 gap texts), V2 (independent M2 re-test now on main 3b0d4d64, then only the capabilities fixed after it). Main green (demo updates to 3b0d4d64).
 * **Waiting:** F1's QA-154 fix and #693 on main → message PR1 for C11.8 (P-298). #701 (V4 UX re-score 7.0/10) merges at the next notes slot (P-293 (4)).
 
