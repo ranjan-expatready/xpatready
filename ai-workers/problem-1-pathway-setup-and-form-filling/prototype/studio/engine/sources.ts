@@ -3,8 +3,8 @@
 // a document on that role's checklist that supplies it › the client › the case officer. A person's choice over that default and
 // the Pre-qualification tick are the snapshot's `fact_sources` (only when set). Pure: no database, no AI (US$0).
 // SH3 (P-258): whose fact and who signs come from the one resolver (contracts/resolver.ts).
-import { formSigners, lineHolders, partnerOf, roleOf, signsForOthers, type Person } from "./resolver.ts";
-import { sourceKey } from "../contracts/resolver.ts";
+import { documentRole, documentSubjects, formSigners, lineHolders, roleOf, signsForOthers, type Person } from "./resolver.ts";
+import { DOCUMENT_ABOUTS, sourceKey, type DocumentAbout } from "../contracts/resolver.ts";
 import { anyMapped, previewRender } from "./coverage.ts";
 import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
@@ -13,9 +13,9 @@ import { ProposalItem } from "../contracts/proposal-item.ts";
 
 export const SOURCES = ["DOCUMENT", "CLIENT", "AGENT"] as const;
 export type Source = (typeof SOURCES)[number];
-/** Whom a supplied fact is about, from the holder of the document (the person the checklist line names). */
-export const ABOUTS = ["holder", "holder.spouse", "holder.parent"] as const;
-export type About = (typeof ABOUTS)[number];
+/** Whom a supplied fact is about, from the holder of the document (the person the checklist line names): resolver R11. */
+export const ABOUTS = DOCUMENT_ABOUTS;
+export type About = DocumentAbout;
 /** P-154: the words people read; AGENT stays the internal name (no data migration for a name). */
 export const SOURCE_WORDS: Record<Source, string> = { DOCUMENT: "Document", CLIENT: "Client", AGENT: "Case officer" };
 
@@ -45,11 +45,7 @@ export function documentFacts(s: Snapshot, people: Person[]): Map<string, Map<st
     // Q2 (#325): the holders are the line's own "who" (lineHolders), whatever its condition is about.
     const holders = lineHolders(people, r.who);
     const sup = { key: t.key, name: t.name, base: r.base_or_conditional === "base" };
-    for (const h of holders) for (const { fact, about } of suppliesOf(t)) {
-      if (about === "holder") add(h, fact, sup);
-      else if (about === "holder.spouse") add(h === "case" ? null : partnerOf(people, h), fact, sup);
-      else for (const n of ["parent_1", "parent_2"]) add(h === "case" ? null : `${h}/${n}`, fact, sup);
-    }
+    for (const h of holders) for (const { fact, about } of suppliesOf(t)) for (const a of documentSubjects(people, h, about)) add(a, fact, sup);
   }
   // m1: a base requirement before a conditional one, then a stable order.
   for (const m of out.values()) for (const [f, list] of m) m.set(f, [...list].sort((a, b) => Number(b.base) - Number(a.base) || a.key.localeCompare(b.key)));
@@ -264,9 +260,8 @@ export function checklist(s: Snapshot): { role: string; label: string; lines: Ch
     const roles = [...new Set(holders.map((h) => roleOf(people, h)))];
     for (const role of roles) {
       const holder = holders.find((h) => roleOf(people, h) === role)!;
-      const other = (about: About) => about === "holder" ? role : about === "holder.spouse" ? (holder === "case" ? null : roleOf(people, partnerOf(people, holder) ?? "")) : null;
       const supplies = (t ? suppliesOf(t) : []).map(({ fact, about }) => {
-        const aboutRole = other(about) || null;
+        const aboutRole = documentRole(people, holder, about) || null;
         const src = aboutRole ? sources.get(sourceKey(aboutRole, fact)) : undefined;
         return { fact, label: meaning.get(fact) ?? fact, about, aboutRole, takenOut: !!src && src.source === "DOCUMENT" && src.document?.key === t!.key };
       });
