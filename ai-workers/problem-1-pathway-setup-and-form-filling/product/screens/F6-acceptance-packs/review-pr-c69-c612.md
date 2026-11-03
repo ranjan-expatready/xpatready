@@ -14,3 +14,11 @@ None.
 Faithful: each fails today for its stated reason and should pass once built.
 
 **Verdict: Approve** for bea94778.
+
+## Re-review 4f390aeb (diff f9381e94..HEAD)
+- The four checks in `acceptance/C6.12-breadth.test.ts` are the same text as before (message, logic, evidence). Only the preamble is new: it opens its own family case with `openCase(vv, FAMILY)` for C6.12-25.
+- `C6.12.test.ts` equals main apart from header comments, and the unused imports are gone.
+- Run on 4477 after both setups: breadth exits 1 with 0/4, standalone, and C6.12-25 still fails for "no fee or CAD" after the page loaded. I did not re-run C6.12 or `check_vv_prepare_api.ts`; I took the coordinator's 24/24 and 40/40 as given.
+- No new findings. The earlier Minors stand.
+
+**Verdict: Approve** for 4f390aeb.
