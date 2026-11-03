@@ -1,4 +1,4 @@
-# Opus re-review of today's PRs reviewed on Sonnet before P-303 (3 Nov) — batch 1
+# Opus re-review of today's PRs reviewed on Sonnet before P-303 (3 Nov) — batches 1–3
 
 **Asked by:** the tech lead (Lead 3 · 3 Nov), after #723 (`opus-rereview-trial.md`, the trial window itself). This file covers PRs that merge today with reviews run on Sonnet before P-303 reached their lane. It is updated as more of them merge.
 
@@ -91,7 +91,37 @@ Paths are relative to `ai-workers/problem-1-pathway-setup-and-form-filling/` (`s
 * **Cause:** timing, not the tester's fault: #723 logged these after #720's run. But #720 must be rebased anyway (it conflicts with main), and as written the M2 count would include three Works rows that main's own BUGS.md disputes.
 * **Fix on rebase:** mark each row Partial with its QA id, or say why the Major falls outside the row.
 
-## Still to do
+## Batch 2 (tech lead's list, merged by 17:13 IST) and batch 3 (Lead 4, merged since 18:18 IST)
 
-* Pick up PRs that merge later today with a Sonnet review file, in the next ~2-hourly batch.
-* Compare each merged diff with the head reviewed here.
+### Each merged head matches the reviewed head
+#698, #699, #689, #691, #709, #703 and #715 all merged at the head reviewed above (`gh pr view N --json headRefOid`):
+
+| PR | Merged head | Merged at (UTC) |
+|---|---|---|
+| #698 | e822cc49aa | 11:17 |
+| #699 | 19e52a8451 | 11:17 |
+| #689 | fcd2aa4a30 | 11:17 |
+| #691 | 5f2e5b51ee | 11:17 |
+| #709 | b03423e222 | 11:17 |
+| #703 | bcfecf8915 | 11:17 |
+| #715 | b41fae1813 | 11:42 |
+
+So their verdicts stand, including QA-199 (#691) and QA-201 (#703), both still open. #716 and #710 had their reviews on Opus already and were not re-reviewed.
+
+### New PRs
+
+| PR | Reviewed head | State | Verdict | Defects |
+|---|---|---|---|---|
+| #712 screens: C3.15 rename needs a reason; pack to P-266 | 6dd49edd0c | open at 13:00 UTC | Sound | The server refuses a meaning change without a reason of 8 characters or more, counted after NFKC with invisible characters removed (400, `studio/api/src/studio.ts` `updateField`); the reason is kept in the audit line and its details. The waiting-name rule is in `studio/engine/change-set.ts` `duplicate()`, the shared check the rename route runs, so the server refuses it, not only the screen. Minor: the 300-character limit on the reason is checked even when the meaning is unchanged (harmless). On its question, renames rightly need no reason: no decision asks for one, and P-96 keeps renames direct |
+| #700 forms: C11.14 QA-159 near rule | 9e272bb7fd | open, unchanged since batch 1 | Sound | as in batch 1 |
+| #735 forms: C4.7, C4.11 QA-194, the matcher never guesses between twins | merged 09e56a8e56 (head 3b22486a56) | merged 13:38 UTC | **Sound: QA-194 fixed** | This session ran main's merged `studio/engine/fact-words.ts` on the from/to, purpose and criminal-history pairs (node, US$0). "Intended stay dates", "Intended stay", "Purpose of visit" and "Criminal record" all land on no question, naming both candidates. Unique picks still land ("Funds available for stay" → `case.funds_available_cad`). "Intended stay to" lands only on the last day, and "Intended stay from date" only on the first. The rule line's "no other question" is now true whenever shown. The direction word only refuses a match, never chooses one. #723's Minor stays: the one-word gate counts role words (`fact-words.ts:71`, "Spouse country"). QA-194's row closes after qa's retest |
+
+### #720 after its rebase (merged 12:57 UTC, head 1301b141c2)
+Both scorecard Majors are fixed. On main, C3.2, C5.4 and C11.13 read **Partial**, each naming its open finding, so R-1 and R-2 are closed.
+
+### Totals for the day (batches 1–3)
+* **Reviewed:** 13 PRs: the Lead's 11 (#693 among them, reviewed in `opus-rereview-trial.md`), plus #712 and #735. Seven merged heads were also matched against their reviews.
+* **Critical:** QA-199 and QA-200, still open.
+* **Major:** QA-201, still open, plus #720's R-1 and R-2, fixed in its rebase.
+* **Fixed today:** QA-194 (#723's batch), by #735.
+* **No other new defect.**
