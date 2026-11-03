@@ -5,7 +5,7 @@
 import type { Known } from "../engine/render.ts";
 import type { Participant } from "../engine/runtime/case.ts";
 import { render, type Person } from "../engine/render.ts";
-import { channelOf, prepareVersion, wantedItems, type FormLine } from "../engine/runtime/prepare.ts";
+import { channelOf, paperLine, prepareVersion, readBackOf, wantedItems, type FormLine } from "../engine/runtime/prepare.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 import { recorder } from "./runtime/api.ts";
 
@@ -60,6 +60,49 @@ const has = (n: ReturnType<typeof formItems>, form: string, who: string) => n.fi
   const v0 = prepareVersion(groups, its);
   ok("C6.12 view (fail): a changed item changes the version (409 for anyone holding the old one)", prepareVersion(groups, its.map((x) => x.id === "I0" ? { ...x, channel: "PAPER", version: 2 } : x)) !== v0 && prepareVersion(groups, its) === v0);
   ok("C6.12 view (fail): a filing leaving the group changes the version", prepareVersion([{ id: "G", filings: ["F0", "F1"] }, { id: "G2", filings: ["F2"] }], its) !== v0);
+}
+
+// C7.7 part 2 (r5c BR-8, P-144, P-171 (1), SA-1B-31): a Paper line in the deliverables list, with its barcode page.
+{
+  const V = (current: boolean) => ({ copy: "copy-1", at: "2026-11-03T10:00:00Z", current });
+  const bar = (o: Partial<Parameters<typeof paperLine>[1]> = {}) => paperLine("IMM 5257", { barcode: true, missing: 0, validated: null, signers: ["person"], ...o });
+  const plain = (o: Partial<Parameters<typeof paperLine>[1]> = {}) => paperLine("IMM 5476", { barcode: false, missing: 0, validated: null, signers: ["person", "representative"], ...o });
+  const keys = (l: ReturnType<typeof paperLine>) => l.steps.map((x) => x.key).join(",");
+  ok("C7.7 Paper (pass): a barcode form's Paper line lists its barcode page and its steps in order: Validate (adds the barcode page), print with the barcode page on top, signed in pen, mailed",
+    bar().barcode_page === true && keys(bar()) === "validate,print,sign_in_pen,mail" && /Validate in Adobe.*barcode page/.test(bar().steps[0].words) && /barcode page on top/.test(bar().steps[1].words), bar().steps);
+  ok("C7.7 Paper (fail): a form that makes no barcode page has no barcode page and no Validate step, and says so",
+    plain().barcode_page === false && keys(plain()) === "print,sign_in_pen,mail" && /makes no barcode page/.test(plain().steps[0].words) && /makes no barcode page/.test(plain().reason), plain());
+  ok("C7.7 Paper (pass): with every fact confirmed and no validated copy read back, a barcode form is To do and says to Validate in Adobe and read it back",
+    bar().state === "to_do" && /Validate in Adobe/.test(bar().reason) && /read the validated copy back/.test(bar().reason) && bar().steps[0].done === false, bar());
+  ok("C7.7 Paper (fail): once a validated copy is read back for today's facts it is no longer To do: In progress, its Validate step done, with the pen and the post still to come",
+    bar({ validated: V(true) }).state === "in_progress" && bar({ validated: V(true) }).steps[0].done === true && /barcode page on top/.test(bar({ validated: V(true) }).reason) && /pen/.test(bar({ validated: V(true) }).reason), bar({ validated: V(true) }));
+  ok("C7.7 Paper (pass, P-171 (1)): a fact changed after the validated copy was read back makes the line Out of date, naming a new Validate (even while that fact waits for confirming)",
+    bar({ validated: V(false) }).state === "out_of_date" && /Validate again/.test(bar({ validated: V(false) }).reason) && bar({ validated: V(false), missing: 2 }).state === "out_of_date" && bar({ validated: V(false) }).steps[0].done === false, bar({ validated: V(false) }));
+  ok("C7.7 Paper (fail): a current validated copy is never Out of date, and a form with no barcode page is never Out of date from a read-back",
+    bar({ validated: V(true) }).state !== "out_of_date" && plain({ validated: V(false) }).state === "to_do" && plain({ validated: V(false) }).validated === null);
+  ok("C7.7 Paper (pass): a fact still to answer or confirm keeps the line To do, waiting for it (only confirmed facts fill forms, P-72)",
+    bar({ missing: 3 }).state === "to_do" && /Waiting for 3 facts/.test(bar({ missing: 3 }).reason) && /Waiting for 1 fact to/.test(plain({ missing: 1 }).reason));
+  ok("C7.7 Paper (fail): with nothing missing the line does not say it waits for facts", !/Waiting for/.test(bar().reason) && !/Waiting for/.test(plain().reason));
+  const all = [bar(), bar({ validated: V(true) }), bar({ validated: V(false) }), bar({ missing: 1 }), plain(), plain({ validated: V(true) })];
+  ok("C7.7 Paper (pass): mailing comes after Ready to file; printing, the pen and the post are not recorded here yet (done: null, C8.1's Paper part)",
+    all.every((l) => l.steps.find((x) => x.key === "mail")?.neededBefore === "after_ready" && l.steps.filter((x) => x.key !== "validate").every((x) => x.done === null)));
+  ok("C7.7 Paper (fail): a Paper line is never Ready or Done in the list before it is signed in pen (readiness stays C7.6's)", all.every((l) => !["ready", "done"].includes(l.state)), all.map((l) => l.state));
+  ok("C7.7 Paper (pass): the pen step names who signs (a parent for a child under 18; the person and the representative)",
+    /a parent \(for a child under 18\)/.test(bar({ signers: ["parent"] }).steps[2].words) && /the person and the representative/.test(plain().steps[1].words));
+  ok("C7.7 Paper (fail): with no signer worked out the pen step never names a person it does not know", bar({ signers: [] }).steps[2].words === "Signed in pen by each person who signs it");
+  // Review M1 (part 2): the read-back that counts, by the copy view's rule (each copy on its newest read-back; QA-165).
+  const at = (h: number) => new Date(Date.UTC(2026, 10, 3, h));
+  const R = (copy: string, h: number, passed: boolean) => ({ copy, at: at(h), passed });
+  const pick = (rs: ReturnType<typeof R>[]) => readBackOf(rs, (r) => r.passed);
+  ok("C7.7 Paper (pass): of several copies, the newest copy whose own newest read-back passed counts (an older copy's or an older read-back does not)",
+    pick([R("A", 9, true), R("B", 11, true), R("A", 10, true)])?.copy === "B" && pick([R("A", 9, true), R("A", 12, true), R("B", 11, true)])?.at.getTime() === at(12).getTime());
+  ok("C7.7 Paper (fail): a copy whose newest read-back did not pass its form's own Validate never falls back to that copy's older passing one (the copy view and lock refuse it too)",
+    pick([R("A", 9, true), R("A", 10, false)]) === null && pick([R("A", 9, true), R("A", 10, false), R("B", 8, true)])?.copy === "B" && pick([]) === null);
+  // Review M2 (part 2): a barcode form released as an Online line has no read-back on the case (its copy is not for filing).
+  ok("C7.7 Paper (pass): a barcode form moved to Paper from a line released Online says it cannot be validated and read back yet, and asks the Lead (never an endless To do)",
+    bar({ lineOnline: true }).state === "to_do" && /released as an Online line/.test(bar({ lineOnline: true }).reason) && /Ask the Lead/.test(bar({ lineOnline: true }).reason));
+  ok("C7.7 Paper (fail): a barcode form released as a PDF upload or Paper line keeps the Validate words, and a form with no barcode page is not affected",
+    !/released as an Online line/.test(bar({ lineOnline: false }).reason) && /Validate in Adobe/.test(bar().reason) && !/released as an Online line/.test(plain({ lineOnline: true }).reason));
 }
 
 process.exitCode = summary() ? 1 : 0;
