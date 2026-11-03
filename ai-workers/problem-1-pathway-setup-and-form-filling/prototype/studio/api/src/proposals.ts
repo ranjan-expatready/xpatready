@@ -21,6 +21,7 @@ import { lockItem, refuseRetired } from "./library-items.ts";
 import { checkCondition } from "../../engine/validate.ts";
 import { nearMatches } from "../../engine/near.ts";
 import { p121Rating, P121_WHY, type Rateable } from "../../engine/agreement.ts";
+import { aiReadsIdentity, identityOf } from "../../engine/identity-documents.ts";
 
 type Tx = Prisma.TransactionClient;
 type Client = Db | Tx;
@@ -422,10 +423,14 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
   },
   async document_type(tx, r, p, l) {
     const d = p as Extract<ProposalPayload, { kind: "document_type" }>;
+    // QA-195 (break B1; P-134, P-153 (1)): the one door holds the identity rule whoever made or edited the proposal: an
+    // identity document by its flag, category or name is never given an AI reader, and is recorded as one.
+    if (aiReadsIdentity(d)) fail(`"${d.name}" is an identity document: AI never reads it (P-134). Choose its coded lines, its printed layout or a person's reading.`, HttpStatus.CONFLICT);
+    const identityDocument = identityOf(d);
     const used = new Set((await tx.documentType.findMany({ where: { workspaceId: l.ws }, select: { documentTypeKey: true } })).map((x) => `x.${x.documentTypeKey}`));
     const key = slugKey(d.name, used);
     await tx.documentType.create({ data: { workspaceId: l.ws, documentTypeKey: key, name: d.name, category: d.category || "client", suppliesFacts: d.suppliesFacts,
-      readerProfile: { readerKind: d.readerKind, identityDocument: d.identityDocument, proves: d.proves }, version: 1, status: "DRAFT",
+      readerProfile: { readerKind: d.readerKind, identityDocument, proves: d.proves }, version: 1, status: "DRAFT",
       // C3.6: a type a person named while adding a requirement is the person's (made by: person), as before it went through
       // the queue; its author is the namer (decide passes them as proposedBy), so their own-draft Delete stays (C11.9).
       ...(r.step === "requirement_type" ? { origin: "HUMAN" as const, updatedBy: l.proposedBy ?? l.actor.id } : { origin: "AI_PROPOSAL" as const, updatedBy: l.actor.id }) } });
