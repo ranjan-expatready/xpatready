@@ -87,7 +87,17 @@ async function openDialog(p: Page) {
       await d.getByTestId("not-ready-for-cases").waitFor({ timeout: 30_000 });
       const after = await d.getByLabel("Combination (released)").locator("option").allTextContents();
       ok("C6.1-B1-16 fail (break m1): a release that stops being ready while the dialog is open is refused (409), and the dialog then stops offering it and names it", st === 409 && !after.some((o) => o.startsWith(`${row?.combination} · release`)) && ((await d.getByTestId("not-ready-for-cases").textContent()) ?? "").includes(`${row?.combination} · release ${newest}`), { st, after });
-      await p.keyboard.press("Escape");
+      // Review M1 (d7b9b80f): what the select now shows is what a second Open case sends, and it opens (201).
+      const shownId = await d.getByLabel("Combination (released)").inputValue();
+      const shownLabel = (await d.getByLabel("Combination (released)").locator("option:checked").textContent()) ?? "";
+      const sent = p.waitForRequest((q) => q.url().endsWith("/api/runtime/cases") && q.method() === "POST", { timeout: 30_000 });
+      const second = p.waitForResponse((q) => q.url().endsWith("/api/runtime/cases") && q.request().method() === "POST", { timeout: 30_000 });
+      await d.getByRole("button", { name: "Open case" }).click();
+      const body = JSON.parse((await sent).postData() ?? "{}") as { combinationId?: string };
+      const st2 = (await second).status();
+      const other = l.rows.find((x) => x.combination_id === shownId);
+      ok("C6.1-B1-16a pass (review M1): after the reload, a second Open case sends the combination the select shows (never the dropped one) and opens it (201)", shownId !== vv && body.combinationId === shownId && !!other && shownLabel.startsWith(`${other.combination} · release`) && st2 === 201, { shownId, sent: body.combinationId, shownLabel, st2 });
+      await p.waitForURL(/\/cases\/[0-9a-f-]{36}/, { timeout: 30_000 });
       l = await list();
       row = l.rows.find((x) => x.combination_id === vv);
       const before = cases();
