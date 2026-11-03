@@ -22,7 +22,7 @@ import { pairOf, roundBudgetUsd, RUNS, runTime, StepRunner, type AiStep, type Ro
 import { aiLive, Sources } from "./sources.ts";
 
 export const MASTERS_STEP = "masters_edition";
-type InvField = { caption?: string | null; data_path?: string | null; section?: string | null; options_from?: string | null; options_resolved?: unknown; presence?: string | null; heading?: string | null; ui?: string | null };
+type InvField = { caption?: string | null; data_path?: string | null; section?: string | null; options_from?: string | null; options_resolved?: unknown; options?: unknown; presence?: string | null; heading?: string | null; ui?: string | null };
 /** Review c34 M1: hidden boxes, barcodes and the form's machine parts are not a person's section. A part named by a
  *  number word (IMM 5475's "Five", "Seven") is a real part a person fills: it stays, for a person to rename (re-review M2). */
 const hidden = (f: InvField) => /invisible|hidden/i.test(String(f.presence ?? "")) || /barcode/i.test(`${f.data_path ?? ""} ${f.caption ?? ""} ${f.ui ?? ""}`);
@@ -53,6 +53,18 @@ function choices(f: InvField): { label: string; code: string }[] {
     seen.add(code); out.push({ label: label.slice(0, 200), code });
   }
   return out;
+}
+
+/** P-296 (3): a box's choices as the AI reads them, [words, code] each: `options_resolved`, or `options` when it has none
+ *  (IMM 5257's 21 Yes/No boxes carry only `options`, spelled "* Yes", "*Yes" or "Yes"). Rows without words are left out. */
+export function printedChoices(f: InvField): [string, string][] {
+  for (let raw of [f.options_resolved, f.options]) {
+    if (typeof raw === "string") { try { raw = JSON.parse(raw.replace(/'/g, '"')); } catch { continue; } }
+    if (!Array.isArray(raw)) continue;
+    const out = raw.filter((r): r is unknown[] => Array.isArray(r) && typeof r[0] === "string" && r[0].trim() !== "").map((r) => [String(r[0]), String(r[1] ?? "")] as [string, string]);
+    if (out.length) return out;
+  }
+  return [];
 }
 
 /** Pure: the answer lists and sections a form's inventory gives, by the rules alone (one list per distinct choice set). */
@@ -312,7 +324,7 @@ export class FormMasters {
       }
       const rounds = { draft: this.mround(d), check: this.mround(k) };
       const res = t.kind === "form"
-        ? formMastersFromRounds(rounds as { draft: MRound<FormAnswer>; check: MRound<FormAnswer> }, { file: t.a.fileName, sha256: t.a.sha256, edition: t.edition, printed: t.edition, boxes: t.fields.filter((f) => f.data_path && !hidden(f)).map((f) => ({ path: f.data_path!, words: [f.caption, f.heading].filter(Boolean).join(" \n ") })) }, { runId: job.id })
+        ? formMastersFromRounds(rounds as { draft: MRound<FormAnswer>; check: MRound<FormAnswer> }, { file: t.a.fileName, sha256: t.a.sha256, edition: t.edition, printed: t.edition, boxes: t.fields.filter((f) => f.data_path && !hidden(f)).map((f) => ({ path: f.data_path!, words: [f.caption, f.heading].filter(Boolean).join(" \n "), choices: printedChoices(f) })) }, { runId: job.id })
         : guideMastersFromRounds(rounds as { draft: MRound<GuideAnswer>; check: MRound<GuideAnswer> }, { file: t.input.file, sha256: t.input.sha256, text: t.text, code: t.code }, await this.libraryFacts(ws), { runId: job.id, combinationId: t.combination.id });
       const from = d.from === "live" || k.from === "live" ? "live" : "replay";
       const out = await this.db.$transaction(async (tx) => {

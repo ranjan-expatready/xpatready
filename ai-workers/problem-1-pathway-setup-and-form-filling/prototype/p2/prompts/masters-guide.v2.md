@@ -11,7 +11,7 @@ Made elsewhere, not by you: each form box's own required mark, length, format an
 ## What to produce
 One entry in `checks` per check the guide states, in one of three groups:
 1. `official_rule`: what an answer or a document must show or outlive, stated in the guide (for example a passport valid for the stay);
-2. `cross_record`: answers checked against each other (the same name everywhere, a relationship stated the same way on every form);
+2. `cross_record`: answers checked against each other (the same name everywhere, a relationship stated the same way on every form); write its tree only over what the 11 operators can say about each answer, and put a comparison of two answers' values in `unresolved`;
 3. `readiness_warning`: a warning that helps staff, such as a document that expires soon or a history with a gap.
 
 Each check:
@@ -34,32 +34,42 @@ List in `unresolved` any passage that states a check you cannot express in the 1
 - `{"op": "and", "args": [node, node]}`, and the same with `or`: `args` is a list of one or more nodes;
 - `{"op": "not", "arg": node}`: `arg` is one node.
 
-F is one of `reads` written in lower snake case ("Passport expiry date" → `passport_expiry_date`); the keys of `facts_json` are the same snake case names.
+F is one of `reads` written in lower snake case: lower case, and every run of characters that are not letters or digits (spaces, apostrophes, hyphens, brackets) becomes one "_" ("Passport expiry date" → `passport_expiry_date`, "Spouse's date of birth" → `spouse_s_date_of_birth`); the keys of `facts_json` are the same snake case names.
 
 Never write a node in another shape: not `{"neq": [F, V]}`, not `{"exists": F}`, not `{"or": {"args": [...]}}`, not an empty `args`, and never a `value_field` or any other way of comparing one answer with another; such a check goes to `unresolved`.
 
-How the tool runs a tree: a leaf over an answer not given gives "cannot tell" (except `exists`, which is false); `or` passes when any of its nodes passes, `and` when all do. So "when the purpose is other, it is described" is "the purpose is not other, or a description exists".
+How the tool runs a tree: a leaf over an answer not given gives "cannot tell" (except `exists`, which is false); `or` passes when any of its nodes passes, `and` when all do. So "when a vehicle is declared, its plate number is given" is "no vehicle is declared, or a plate number exists".
 
-A worked entry of `checks` (made up to show the shape, not a check of this guide):
+Two worked entries of `checks`, made up to show the shape only: neither is a check of this guide, so never copy them.
 ```
 {"group": "official_rule",
- "sentence": "When the purpose of the visit is Other, the purpose is described",
- "reads": ["Purpose of visit", "Purpose details"],
+ "sentence": "When a vehicle is declared, its plate number is given",
+ "reads": ["Bringing a vehicle", "Vehicle plate number"],
  "subject_kind": "PRINCIPAL",
- "tree_json": "{\"op\": \"or\", \"args\": [{\"op\": \"neq\", \"field\": \"purpose_of_visit\", \"value\": \"Other\"}, {\"op\": \"exists\", \"field\": \"purpose_details\"}]}",
+ "tree_json": "{\"op\": \"or\", \"args\": [{\"op\": \"neq\", \"field\": \"bringing_a_vehicle\", \"value\": \"Yes\"}, {\"op\": \"exists\", \"field\": \"vehicle_plate_number\"}]}",
  "severity": "block",
  "needs_calculation": null,
  "quote": "<the guide's sentence, copied exactly>",
  "examples": [
-  {"facts_json": "{\"purpose_of_visit\": \"Other\"}", "expected": false},
-  {"facts_json": "{\"purpose_of_visit\": \"Other\", \"purpose_details\": \"A conference\"}", "expected": true},
-  {"facts_json": "{\"purpose_of_visit\": \"Tourism\"}", "expected": true}]}
+  {"facts_json": "{\"bringing_a_vehicle\": \"Yes\"}", "expected": false},
+  {"facts_json": "{\"bringing_a_vehicle\": \"Yes\", \"vehicle_plate_number\": \"ABC 123\"}", "expected": true},
+  {"facts_json": "{\"bringing_a_vehicle\": \"No\"}", "expected": true}]}
 ```
-A tree with `in`, `not` and `and` ("when married or common-law, the spouse's family name and the date of marriage are given"):
 ```
-{"op": "or", "args": [{"op": "not", "arg": {"op": "in", "field": "marital_status", "value": ["Married", "Common-Law"]}}, {"op": "and", "args": [{"op": "exists", "field": "spouse_family_name"}, {"op": "exists", "field": "date_of_marriage"}]}]}
+{"group": "official_rule",
+ "sentence": "When the goods are firearms or animals, the import document's number and date are given",
+ "reads": ["Kind of goods", "Import document's number", "Import document date"],
+ "subject_kind": "PRINCIPAL",
+ "tree_json": "{\"op\": \"or\", \"args\": [{\"op\": \"not\", \"arg\": {\"op\": \"in\", \"field\": \"kind_of_goods\", \"value\": [\"Firearms\", \"Animals\"]}}, {\"op\": \"and\", \"args\": [{\"op\": \"exists\", \"field\": \"import_document_s_number\"}, {\"op\": \"exists\", \"field\": \"import_document_date\"}]}]}",
+ "severity": "block",
+ "needs_calculation": null,
+ "quote": "<the guide's sentence, copied exactly>",
+ "examples": [
+  {"facts_json": "{\"kind_of_goods\": \"Animals\"}", "expected": false},
+  {"facts_json": "{\"kind_of_goods\": \"Animals\", \"import_document_s_number\": \"12345\", \"import_document_date\": \"2030-01-31\"}", "expected": true},
+  {"facts_json": "{\"kind_of_goods\": \"Books\"}", "expected": true}]}
 ```
-"The passport is valid for the whole stay" compares two answers (the passport expiry date and the stay's end date): it goes to `unresolved`, never into a tree.
+A check that compares two answers with each other (one date before another) goes to `unresolved`, never into a tree.
 
 ## Rules
 - Document expiry only warns, never blocks. A gap in a history is a warning, not a stop.

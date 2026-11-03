@@ -44,8 +44,9 @@ import { evaluate } from "../../contracts/rules.ts";
 (async () => {
   // ---------------------------------------------------------------- E: the rules over the rounds (pure, no server)
   const m = await import("../engine/masters-ai.ts");
-  const inv = JSON.parse(readFileSync(join(PROTOTYPE, "p1", "inventory", "imm5257e.inventory.json"), "utf8")) as { fields: { data_path?: string; caption?: string; heading?: string; presence?: string }[] };
-  const boxes = inv.fields.filter((f) => f.data_path && !/invisible|hidden/i.test(String(f.presence ?? ""))).map((f) => ({ path: f.data_path!, words: [f.caption, f.heading].filter(Boolean).join(" \n ") }));
+  const { printedChoices } = await import("../api/src/form-masters.ts");
+  const inv = JSON.parse(readFileSync(join(PROTOTYPE, "p1", "inventory", "imm5257e.inventory.json"), "utf8")) as { fields: { data_path?: string; caption?: string; heading?: string; presence?: string; options?: unknown; options_resolved?: unknown }[] };
+  const boxes = inv.fields.filter((f) => f.data_path && !/invisible|hidden/i.test(String(f.presence ?? ""))).map((f) => ({ path: f.data_path!, words: [f.caption, f.heading].filter(Boolean).join(" \n "), choices: printedChoices(f) }));
   const FS = { file: "imm5257e.pdf", sha256: "0".repeat(64), edition: "IMM 5257 (09-2023)", printed: "IMM 5257 (09-2023)", boxes };
   const r = (output: any, from: "replay" | "live" = "replay") => ({ output, from, runFile: "prototype/p2/runs/x.json", costUsd: 0 });
   const both = (a: any, b: any = a) => m.formMastersFromRounds({ draft: r(a), check: r(b) }, FS, { runId: "00000000-0000-4000-8000-000000000001" });
@@ -104,6 +105,22 @@ import { evaluate } from "../../contracts/rules.ts";
   ge = g({ checks: [cross], unresolved: [] }, [{ key: "person.passport_number", names: ["Passport number"] }, { key: "person.family_name", names: ["Family name"] }]);
   ok("C3.4 E pass: a guide check over two answers is a cross-answer check that only warns (contract), even when the AI said block", ge.items[0]?.kind === "cross_check" && (ge.items[0]?.payload as any).severity === "warn" && (ge.items[0]?.payload as any).reads.length === 2, ge.items[0]?.payload);
 
+  // Review M1 / break M1 on the v2 prompts (P-296 (3)): a choice value is one of the box's printed choices, in its words.
+  const PCR = "form1[0].Page1[0].PersonalDetails[0].PCRIndicator[0]", PREV = "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Country[0]";
+  const pcrCheck = (yes: unknown, no: unknown) => ({ sentence: "When residence in another country is declared, the country is given", reads: [PCR, PREV], subject_kind: "PRINCIPAL",
+    tree_json: JSON.stringify({ op: "or", args: [{ op: "neq", field: PCR, value: yes }, { op: "exists", field: PREV }] }), quote: "If you replied Yes to question 8 A, please give your previous country",
+    examples: [{ facts_json: JSON.stringify({ [PCR]: yes }), expected: false }, { facts_json: JSON.stringify({ [PCR]: no }), expected: true }] });
+  const pcr = (yes: unknown, no: unknown) => ({ checks: [pcrCheck(yes, no)], document_types: [], unresolved: [] });
+  ok("C3.4 E setup: IMM 5257's Yes/No box carries its choices only in options, and they reach the rules", JSON.stringify(boxes.find((b) => b.path === PCR)?.choices) === JSON.stringify([["* No", "N"], ["* Yes", "Y"]]), boxes.find((b) => b.path === PCR)?.choices);
+  e = both(pcr("* Yes", "* No"), pcr("Y", "N"));
+  ok("C3.4 E pass: one reading writes the printed words (\"* Yes\"), the other the export code (\"Y\"): the same check, Ready, written in the printed words", e.items.length === 1 && e.items[0].confidence === "ready" && e.items[0].agreement === "agreed" && JSON.stringify((e.items[0].payload as any).tree).includes('"value":"* Yes"') && !e.dropped.length, { c: e.items[0]?.confidence, tree: (e.items[0]?.payload as any)?.tree, dropped: e.dropped });
+  e = both(pcr("*Yes", "*No"), pcr("* Yes", "* No"));
+  ok("C3.4 E pass: a spacing variant of the printed words (\"*Yes\") is the same choice, and both readings agree", e.items[0]?.confidence === "ready" && JSON.stringify((e.items[0]?.payload as any).tree).includes('"value":"* Yes"'), e.items[0]?.confidence);
+  e = both(pcr("Maybe", "* No"));
+  ok("C3.4 E fail: a value that is not one of the box's printed choices is not proposed (its check could never fail), with the reason", !e.items.length && /not one of that box's printed choices/.test(e.dropped[0]?.why ?? ""), e.dropped[0]);
+  e = both(pcr(true, "* No"));
+  ok("C3.4 E fail: a true/false value on a choice box is not one of its printed choices either", !e.items.length && /printed choices/.test(e.dropped[0]?.why ?? ""), e.dropped[0]);
+
   // ---------------------------------------------------------------- P: the prompts (P-296 (3); #669 review minors 1, 3)
   // #669: three v1 prompts showed no worked tree, so the AI wrote its own shapes and the rules dropped every item. Each
   // prompt a step uses must show at least one worked tree, and every worked tree and example in it must pass the same
@@ -131,6 +148,18 @@ import { evaluate } from "../../contracts/rules.ts";
       const got = evaluate(typeof near.v.op === "string" ? near.v : JSON.parse(near.v.tree_json), JSON.parse(c[1])).result;
       if (got !== (c[2] === "true")) bad.push(`example ${c[1]} gives ${got}, the prompt says ${c[2]}`);
     }
+    // Break M2: a guide tree's fields are already in the tool's snake case; a form tree's choice values are the printed
+    // words of the listing the prompt names for its made-up choice box (break M1: never another spelling, never the code).
+    const allTrees = [...trees, ...entries.map((en) => JSON.parse(en.tree_json))];
+    if (/guide/.test(file)) for (const f of allTrees.flatMap((t) => m.fieldsOf(t))) if (f !== m.snake(f)) bad.push(`field ${f} is not the tool's snake case (${m.snake(f)})`);
+    if (!/guide/.test(file)) {
+      const listing = /choice box list(?:s|ing) `(\[\[[^`]*\]\])`/.exec(text)?.[1];
+      const choices = listing ? (JSON.parse(listing) as [string, string][]) : [];
+      const leaves: any[] = []; const walk = (n: any) => { if (!n || typeof n !== "object") return; if (n.field) leaves.push(n); (n.args ?? []).forEach(walk); if (n.arg) walk(n.arg); };
+      allTrees.forEach(walk);
+      for (const l of leaves.filter((x) => /Choice\[0\]$/.test(x.field) && x.op !== "exists")) for (const v of [l.value].flat()) if (!choices.some(([w]) => w === v)) bad.push(`choice value ${JSON.stringify(v)} is not the printed words of ${JSON.stringify(choices)}`);
+      if (!choices.length && leaves.some((x) => /Choice\[0\]$/.test(x.field))) bad.push("its choice box's listing is not stated");
+    }
     return { shown: trees.length + entries.length, claims: claims.length, bad };
   };
   const { MASTERS_FORM_AI, MASTERS_GUIDE_AI } = await import("../api/src/form-masters.ts");
@@ -141,7 +170,21 @@ import { evaluate } from "../../contracts/rules.ts";
     const w = worked(file);
     ok(`C3.4 P pass: ${file} shows a worked tree, and its trees and examples pass the step's own rules`, w.shown >= 1 && !w.bad.length && /tree_json/.test(readFileSync(join(PROMPTS, file), "utf8")), w);
   }
+  // Break m6: the rules each prompt must state word for word (the node grammar, the choice and snake-case rules).
+  const MUST: Record<string, (string | RegExp)[]> = {
+    all: ['{"op": "in", "field": F, "value": [V1, V2]}', /"arg": node/, /"args": \[node/, /\{"op": "exists", "field": F\}/, "value_field"],
+    form: [/never (write )?(its|the) code \(`"Y"`\)/i, /`options` when it has no `options_resolved`/],
+    guide: [/every run of characters that are not letters or digits/, "spouse_s_date_of_birth"],
+  };
+  for (const file of [MASTERS_FORM_AI.template, MASTERS_FORM_AI.check, MASTERS_GUIDE_AI.template, MASTERS_GUIDE_AI.check]) {
+    const text = readFileSync(join(PROMPTS, file), "utf8");
+    const missing = [...MUST.all, ...MUST[/guide/.test(file) ? "guide" : "form"]].filter((w) => !(typeof w === "string" ? text.includes(w) : w.test(text)));
+    ok(`C3.4 P pass: ${file} states the node grammar and its ${/guide/.test(file) ? "snake-case" : "choice-value"} rule word for word, and never "values"`, !missing.length && !/"values"/.test(text), missing.map(String));
+  }
   const broken = worked("masters-form-check.v2.md", 'Trees: `{"op": "or", "args": [{"op": "neq", "field": "a", "value": "Yes"}, {"op": "exists", "field": "b"}]}`, with `{"a": "No"}` → false; and ```\n{"op": "or", "args": []}\n```.');
+  const badGuide = worked("masters-guide.v2.md", 'A tree: ```\n{"op": "and", "args": [{"op": "exists", "field": "spouse_family_name"}, {"op": "exists", "field": "spouse\'s_date"}]}\n```');
+  const badForm = worked("masters-form.v2.md", 'Its made-up choice box lists `[["* No", "N"], ["* Yes", "Y"]]`: ```\n{"op": "or", "args": [{"op": "neq", "field": "form1[0].Page9[0].X[0].Choice[0]", "value": "Yes"}, {"op": "exists", "field": "form1[0].Page9[0].X[0].D[0]"}]}\n```');
+  ok("C3.4 P fail: a guide field not in the tool's snake case, and a form choice value spelled otherwise than its listing, are caught (break M1, M2)", badGuide.bad.some((b) => /snake case/.test(b)) && badForm.bad.some((b) => /choice value "Yes"/.test(b)), { guide: badGuide.bad, form: badForm.bad });
   ok("C3.4 P fail: a prompt whose worked tree has an empty list, or whose example says the wrong outcome, is caught", broken.bad.length === 2 && broken.bad.some((b) => /11 operators/.test(b)) && broken.bad.some((b) => /gives true, the prompt says false/.test(b)), broken.bad);
   const v1 = ["masters-form-check.v1.md", "masters-guide.v1.md", "masters-guide-check.v1.md"].map((f) => ({ f, ...worked(f) }));
   ok("C3.4 P fail: the three v1 prompts the #669 rounds read show no worked tree (the defect this check finds)", v1.every((x) => x.shown === 0), v1.map((x) => [x.f, x.shown]));
@@ -180,6 +223,8 @@ import { evaluate } from "../../contracts/rules.ts";
     && derived.filter((d) => d.job.combination === "edition:IMM 5257:09-2023" && d.job.known?.form_edition === "IMM 5257 (09-2023)").length === 2 && derived.filter((d) => d.job.combination === "vv.single").length === 2, derived.map((d) => d.job.job_id));
   let worst = 0;
   for (const d of derived) { const c = tool.costsOf(d.job); worst += c.worst_usd; ok(`C3.4 W pass: ${d.label}: worst US$${c.worst_usd.toFixed(2)} fits its budget US$${c.budget_usd.toFixed(2)} and the US$5 run cap; usual ~US$${c.usual_usd.toFixed(2)}`, c.fits_budget && c.under_run_cap && c.usual_usd > 0 && c.usual_usd < c.worst_usd, c); }
+  const formUsual = derived.filter((d) => /^studio-masters-form-/.test(d.job.job_id)).map((d) => tool.costsOf(d.job).usual_usd);
+  ok("C3.4 W pass: each IMM 5257 round's usual is priced at the token rate #669 measured (US$0.55–0.80 each, one attempt), not the guide's", formUsual.length === 2 && formUsual.every((u) => u >= 0.55 && u <= 0.8), formUsual);
   ok(`C3.4 W pass: the four C3.4 runs together: worst US$${worst.toFixed(2)}, within the US$6.55 the PR states (P-296 (3): the form's 16,000 output limit)`, worst > 0 && worst <= 6.55, worst);
   const scratch = join(STUDIO, "var", `c34-check-ledger-${process.pid}`); mkdirSync(scratch, { recursive: true });
   keep(join(P2, "screening", "canary-digest.json"));
@@ -210,6 +255,10 @@ import { evaluate } from "../../contracts/rules.ts";
   x = await call("POST", `/attachments/${form}/draft-masters`, { mode: "replay" });
   ok("C3.4 S fail: Saved never replays a run recorded with a v1 prompt (refused, US$0, no job)", v1Plan.body?.saved?.available === false && x.status === 409 && jobs() === jobs0, { plan: v1Plan.body?.saved, status: x.status });
   for (const f of v1Runs) rmSync(f, { force: true });
+  const mixed = [record(fd, FORM_ANSWER, undefined, "masters-form.v1.md"), record(fk, FORM_ANSWER)];
+  const mixedPlan = await call("POST", `/attachments/${form}/draft-masters/plan`, { mode: "replay" });
+  ok("C3.4 S fail: a v1 draft round with a v2 checker round is never replayed either (break m6)", mixedPlan.body?.saved?.available === false && jobs() === jobs0, mixedPlan.body?.saved);
+  for (const f of mixed) rmSync(f, { force: true });
   record(fd, FORM_ANSWER); record(fk, FORM_ANSWER); record(gd, GUIDE_ANSWER); record(gk, GUIDE_ANSWER);
   rmSync(scratch, { recursive: true, force: true });
 

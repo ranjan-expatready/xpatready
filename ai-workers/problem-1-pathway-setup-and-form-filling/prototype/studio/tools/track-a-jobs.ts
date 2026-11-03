@@ -87,9 +87,9 @@ export const jobText = (job: Job) => JSON.stringify(job, null, 1) + "\n";
 export const MEASURED_C34 = { formTokensPerByte: 0.4446, formDraftOutputTokens: 12_000 };
 const isForm = (job: Job) => /^studio-masters-form-/.test(job.job_id);
 /** C3.4's usual output (an estimate, never a cap): each check carries a tree and two or three worked examples, so half the
- *  step's output limit rather than twice the who-can-be answer; the form's draft round about 1.5 times the 8,000 it
- *  wrote before it was cut (#669). */
-const usualOutputOf = (job: Job) => (/^studio-masters-form-imm/.test(job.job_id) ? MEASURED_C34.formDraftOutputTokens
+ *  step's output limit rather than twice the who-can-be answer; each of the form's rounds about 1.5 times the 8,000 the
+ *  draft wrote before it was cut (#669), the checker too, since v2 asks it to read every page as the draft does. */
+const usualOutputOf = (job: Job) => (isForm(job) ? MEASURED_C34.formDraftOutputTokens
   : /^studio-masters-/.test(job.job_id) ? Math.round(Number(job.settings.max_output_tokens) / 2) : MEASURED.outputTokens * 2);
 
 export function costsOf(job: Job) {

@@ -31,27 +31,27 @@ Read the whole form, every page, before you write; then write the checks in page
 - `{"op": "and", "args": [node, node]}`, and the same with `or`: `args` is a list of one or more nodes;
 - `{"op": "not", "arg": node}`: `arg` is one node.
 
-F is always one of the check's `reads`, copied exactly. A choice value V is the choice's printed words: the first text of its pair in `options_resolved`, copied exactly with any leading "* " (for `[["* Yes", "Y"], ["* No", "N"]]` write `"* Yes"`), never its code (`"Y"`).
+F is always one of the check's `reads`, copied exactly. A choice value V is that box's own printed words for the choice: the first text of its pair in the box's `options_resolved`, or in its `options` when it has no `options_resolved`, copied exactly with any "*" and spaces. Boxes spell the same choice differently: a box listing `[["* No", "N"], ["* Yes", "Y"]]` gives `"* Yes"`, one listing `[["No", "N"], ["Yes", "Y"]]` gives `"Yes"`. Never write the code (`"Y"`).
 
 Never write a node in another shape: not `{"neq": [F, V]}`, not `{"exists": F}`, not `{"or": {"args": [...]}}`, not an empty `args`, and never a `value_field` or any other way of comparing one box with another; such a check goes to `unresolved`.
 
 How the tool runs a tree: a leaf over a box with no answer gives "cannot tell" (except `exists`, which is false); `or` passes when any of its nodes passes, `and` when all do. So "when the answer is yes, details are given" is "the answer is not yes, or details exist": a No passes, a Yes with details passes, a Yes without details fails.
 
-A worked entry of `checks` (the box paths and the quote here are made up to show the shape; use the inventory's own):
+A worked entry of `checks`, made up to show the shape only: no such box or check is on this form, so never copy it; use the inventory's own boxes and words. Its choice box lists `[["* No", "N"], ["* Yes", "Y"]]`:
 ```
-{"sentence": "When a refused visa is declared, its details are given",
- "reads": ["form1[0].Page9[0].Example[0].Choice[0]", "form1[0].Page9[0].Example[0].Details[0]"],
+{"sentence": "When a vehicle is declared, its plate number is given",
+ "reads": ["form1[0].Page9[0].Vehicle[0].Choice[0]", "form1[0].Page9[0].Vehicle[0].Plate[0]"],
  "subject_kind": "PRINCIPAL",
- "tree_json": "{\"op\": \"or\", \"args\": [{\"op\": \"neq\", \"field\": \"form1[0].Page9[0].Example[0].Choice[0]\", \"value\": \"Yes\"}, {\"op\": \"exists\", \"field\": \"form1[0].Page9[0].Example[0].Details[0]\"}]}",
- "quote": "If you answered yes, give details.",
+ "tree_json": "{\"op\": \"or\", \"args\": [{\"op\": \"neq\", \"field\": \"form1[0].Page9[0].Vehicle[0].Choice[0]\", \"value\": \"* Yes\"}, {\"op\": \"exists\", \"field\": \"form1[0].Page9[0].Vehicle[0].Plate[0]\"}]}",
+ "quote": "If you are bringing a vehicle, give its plate number.",
  "examples": [
-  {"facts_json": "{\"form1[0].Page9[0].Example[0].Choice[0]\": \"Yes\"}", "expected": false},
-  {"facts_json": "{\"form1[0].Page9[0].Example[0].Choice[0]\": \"Yes\", \"form1[0].Page9[0].Example[0].Details[0]\": \"Refused once\"}", "expected": true},
-  {"facts_json": "{\"form1[0].Page9[0].Example[0].Choice[0]\": \"No\"}", "expected": true}]}
+  {"facts_json": "{\"form1[0].Page9[0].Vehicle[0].Choice[0]\": \"* Yes\"}", "expected": false},
+  {"facts_json": "{\"form1[0].Page9[0].Vehicle[0].Choice[0]\": \"* Yes\", \"form1[0].Page9[0].Vehicle[0].Plate[0]\": \"ABC 123\"}", "expected": true},
+  {"facts_json": "{\"form1[0].Page9[0].Vehicle[0].Choice[0]\": \"* No\"}", "expected": true}]}
 ```
-A tree with `in`, `not` and `and` ("when married or common-law, the spouse's name and the date are given"; made-up paths):
+A tree with `in`, `not` and `and`, made up the same way ("when the goods are firearms or animals, an import document number and its date are given"):
 ```
-{"op": "or", "args": [{"op": "not", "arg": {"op": "in", "field": "form1[0].Page9[0].Status[0]", "value": ["Married", "Common-Law"]}}, {"op": "and", "args": [{"op": "exists", "field": "form1[0].Page9[0].SpouseName[0]"}, {"op": "exists", "field": "form1[0].Page9[0].Date[0]"}]}]}
+{"op": "or", "args": [{"op": "not", "arg": {"op": "in", "field": "form1[0].Page9[0].Goods[0].Kind[0]", "value": ["Firearms", "Animals"]}}, {"op": "and", "args": [{"op": "exists", "field": "form1[0].Page9[0].Goods[0].DocNumber[0]"}, {"op": "exists", "field": "form1[0].Page9[0].Goods[0].DocDate[0]"}]}]}
 ```
 
 ## Rules
