@@ -21,6 +21,7 @@ import { FindDialog, FinderPanel, formsKeys, useFinderLatest } from "./finder";
 import { Button, Dialog, Field, Input, Notice, Panel, Pill, Select, Table } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { ConditionBuilder } from "@/components/conditions";
+import { StartableNotice } from "@/components/startable-notice";
 import { fmtWhen, Tip } from "@/components/status";
 import { useLibraryFields, WHO, whoLabel } from "@/pages/configuration";
 import { attachmentFor, pendingForms, ReadingCell, ReadingSteps, SourcesLine, StepNotices } from "@/pages/sources";
@@ -119,6 +120,8 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
         <div className="flex flex-wrap items-start justify-between gap-3"><h2 className="font-semibold">No forms yet</h2>{add}</div>
         <p className="mt-1 text-sm text-text-muted">Find them with AI above, or add one from the <Link className="text-text-link underline" to="/library/forms">Form library</Link>.</p>
       </div>
+      {/* Devin on #622: a released combination with no forms lands its "No forms yet" cause here too. */}
+      <FormsProblems id={id} filing={problems} />
       <SourcesLine d={combo} lineCodes={codes} />{picker}{rail}{toast.node}{bulk.node}
     </div>
   );
@@ -378,10 +381,13 @@ function FormsProblems({ id, filing }: { id: string; filing: { level: "error" | 
   const sum = useApi<CombinationSummary>(["combination-summary", id], `/combinations/${id}/summary`);
   const shown = new Set(filing.map((x) => x.message));
   const more = (o.data?.draft.problems ?? []).filter((p) => p.level === "error" && p.where === "Forms" && !shown.has(p.message));
-  const released = (sum.data?.setup?.steps ?? []).flatMap((st) => st.open).find((i) => i.focus === "forms:problems" && i.fromRelease);
-  if (!filing.length && !more.length && !released) return null;
+  const releasedAll = (sum.data?.setup?.steps ?? []).flatMap((st) => st.open).filter((i) => i.focus === "forms:problems" && i.fromRelease);
+  // Devin on #622: a startable-check cause (e.g. a form with no fields mapped) says itself, never "this draft no longer has it".
+  const startable = releasedAll.filter((i) => i.startable);
+  const released = releasedAll.find((i) => !i.startable);
+  if (!filing.length && !more.length && !released && !startable.length) return null;
   // Warnings alone are not something to fix: the block is the landing only when it holds what the checklist counts.
-  const counted = filing.some((x) => x.level === "error") || more.length > 0 || !!released;
+  const counted = filing.some((x) => x.level === "error") || more.length > 0 || !!released || startable.length > 0;
   return (
     <div className={cn("space-y-2", FOCUS_RING)} data-focus={counted ? "forms:problems" : undefined} data-forms-problems>
       {filing.length ? <ul className="space-y-1 text-sm" aria-label="Filing problems">{filing.map((x, i) => <li key={i} className="flex gap-2"><Pill tone={x.level === "error" ? "danger" : "warn"}>{x.level === "error" ? "Blocks release" : "Warning"}</Pill>{x.message}</li>)}</ul> : null}
@@ -389,6 +395,7 @@ function FormsProblems({ id, filing }: { id: string; filing: { level: "error" | 
       {released && !filing.some((x) => x.level === "error") && !more.length ? <Notice tone="danger" title={`The released version has ${released.count} form problem${released.count === 1 ? "" : "s"}: firms cannot open cases`}>
         <p className="mt-1">This draft no longer has {released.count === 1 ? "it" : "them"}. Send the draft for review and release it to put it right. <Link className="font-medium text-text-link underline" to={`/c/${id}/review`}>Review and release</Link></p>
       </Notice> : null}
+      {startable.length ? <div data-startable><StartableNotice id={id} items={startable} /></div> : null}
     </div>
   );
 }

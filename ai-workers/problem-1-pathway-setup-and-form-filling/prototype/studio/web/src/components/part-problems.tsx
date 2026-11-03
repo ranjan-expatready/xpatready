@@ -9,6 +9,7 @@ import { FOCUS_RING } from "@/components/focus-item";
 import { Notice } from "@/components/ui/controls";
 import { useApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { StartableNotice } from "@/components/startable-notice";
 
 export function PartProblems({ id, part }: { id: string; part: "documents" | "questions" }) {
   const o = useApi<CombinationView>(["combination", id], `/combinations/${id}`);
@@ -17,8 +18,16 @@ export function PartProblems({ id, part }: { id: string; part: "documents" | "qu
   const key = part === "documents" ? "documents:problems" : "questionnaires:problems";
   // Review M1: a Not ready item (a problem of the released version) whose draft is already clean still lands here and
   // says what is left to do: release the corrected draft.
-  const released = (sum.data?.setup?.steps ?? []).flatMap((st) => st.open).find((i) => i.focus === key && i.fromRelease);
-  if (!mine.length && !released) return null;
+  const releasedAll = (sum.data?.setup?.steps ?? []).flatMap((st) => st.open).filter((i) => i.focus === key && i.fromRelease);
+  // Devin on #622: a startable-check cause says itself (the draft usually still has it).
+  const startable = releasedAll.filter((i) => i.startable);
+  const released = releasedAll.find((i) => !i.startable);
+  if (!mine.length && !released && !startable.length) return null;
+  if (!mine.length && !released) return (
+    <div className={cn(FOCUS_RING)} data-focus={key} data-focus-also="questions_documents:problems" data-part-problems={part} data-from-release data-startable>
+      <StartableNotice id={id} items={startable} />
+    </div>
+  );
   if (!mine.length && released) return (
     <div className={cn(FOCUS_RING)} data-focus={key} data-focus-also="questions_documents:problems" data-part-problems={part} data-from-release>
       <Notice tone="danger" title={`The released version has ${released.count} problem${released.count === 1 ? "" : "s"} in the ${part === "documents" ? "documents" : "questions"}: firms cannot open cases`}>

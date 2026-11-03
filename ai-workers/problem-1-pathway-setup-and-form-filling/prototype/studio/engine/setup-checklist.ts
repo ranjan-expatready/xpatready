@@ -145,7 +145,7 @@ export function setupChecklistOf(s: SetupInput, key = ""): SetupChecklist {
   // release fix item on the step that fixes it, so the header never says "Nothing to do right now" while Not ready.
   if (s.release && s.notStartable && !relErrors.length) for (const m of s.notStartableWhy ?? []) {
     const at = NOT_STARTABLE_AT[m.code] ?? { step: "forms" as StepKey, focus: "forms:problems" };
-    open[at.step].push(item("fix_problems", 1, `${m.text.replace(/\s*Next step:.*$/, "").replace(/\.$/, "")}: firms cannot open cases until it is fixed`, at.focus, { fromRelease: true }));
+    open[at.step].push(item("fix_problems", 1, `${m.text.replace(/\s*Next step:.*$/, "").replace(/\.$/, "")}: firms cannot open cases until it is fixed`, at.focus, { fromRelease: true, startable: true }));
   }
   if (s.combinationId) {
     // 1 Official pages: no record yet → open, with no item until the forms lane lands the record (plan.md slice A).

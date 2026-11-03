@@ -100,6 +100,17 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     const chipWord = (await p.locator("[data-status]").first().innerText()).trim(), stripHead = (await p.locator("[data-strip-head]").innerText()).trim();
     const cardLive = ssum.setup.chip.status === "LIVE", headerLive = ssum.row.status === "READY";
     step("break B1: the header chip, the setup strip and the card say one state (never Not ready beside Live)", cardLive === headerLive && (chipWord === "Live") === stripHead.startsWith("Live") && !(chipWord === "Not ready" && /^Live/.test(stripHead)), { chipWord, stripHead, chip: ssum.setup.chip.status, row: ssum.row.status });
+    // Devin on #622: when only the startable check fails (no validator error), the next step names the cause and its
+    // landing says it in its own words (never "This draft no longer has it", the draft usually still has the gap).
+    const startItems = (ssum.setup?.steps ?? []).flatMap((x) => x.open).filter((i) => i.startable);
+    if (ssum.setup?.chip?.status === "NOT_READY" && startItems.length) {
+      const first = startItems[0];
+      step("Devin fail case: Not ready by the startable check has a next step naming the cause", !!ssum.setup.next && /firms cannot open cases/.test(ssum.setup.next.item.text), ssum.setup.next?.item.text);
+      const tab = first.focus.startsWith("questionnaires") ? "questionnaires" : "forms";
+      await p.goto(`${BASE}/c/${sv}/${tab}?focus=${encodeURIComponent(first.focus)}`); await p.locator("[data-startable]").first().waitFor({ timeout: 15000 }).catch(() => undefined);
+      const land = (await p.locator("[data-startable]").first().innerText().catch(() => "")) ?? "";
+      step("Devin fail case: its landing says the cause and what to do, never \"This draft no longer has it\"", land.includes(first.text.split(": firms cannot open cases")[0]) && /Fix (it|them) in this draft/.test(land) && !/no longer has/.test(land), land.slice(0, 240));
+    } else step("note: Super visa's release is startable or blocked by a validator error here; the startable landing is covered by the rules check", true, ssum.setup?.chip?.status);
   } else step("setup (break B1): the sample has Super visa", false);
 
   // ------------------------------------------------------------------ widths
