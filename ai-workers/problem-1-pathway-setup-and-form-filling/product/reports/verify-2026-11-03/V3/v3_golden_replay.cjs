@@ -2,7 +2,8 @@
 // no STUDIO_*_LIVE. Steps: 1 Reset to the six · 2 configure Visitor visa · 3 release · 4 open a family case · 5 the client answers ·
 // 6 IMM 5257 for each applicant · 7 the checks (Validate read-back, filing) · 8 what staff see matches the release.
 // It repeats the manual walk of V3-one-system.md, except (QA-180) the three forms with no field map are named by the release
-// check at step 2 and taken off before the release, so step 4 opens on release 1; the step-4 recovery stays for a 409.
+// check at step 2 before the release: IMM 5707 (in the package) gets its Saved draft applied, IMM 5409 and IMM 5476 are taken
+// off, so step 4 opens on release 1; the step-4 recovery stays for a 409.
 // Per state: axe WCAG 2.2 A/AA (whole page), sideways scroll at 400, 1024 and 1440 px, page errors; timings printed.
 //   node v3_golden_replay.cjs <port 4470-4479> <name>     e.g. node v3_golden_replay.cjs 4475 v3r
 // Needs: the repo set up (product/tools/cloud-setup.sh), PostgreSQL on 54329, playwright with a browser (cloud image).
@@ -54,14 +55,45 @@ const info = (s, d) => console.log(`INFO  ${s}${d === undefined ? "" : ` — ${t
   // ---------------------------------------------------------------- 2 (author, on screen)
   await p.goto(`${CB()}/forms`); await p.waitForLoadState("networkidle"); await sleep(800);
   await p.getByText("Review AI proposals").first().click(); await p.waitForLoadState("networkidle"); await sleep(800);
-  await p.getByRole("button", { name: /Accept clean new definitions/ }).click(); await sleep(1200);
-  await p.getByRole("button", { name: "Apply to draft" }).click(); await sleep(800); await p.locator("[role=dialog]").getByRole("button", { name: "Apply to draft" }).click(); await sleep(3000);
-  const applied = posts.find((x) => /\/jobs\/.*\/apply$/.test(x.u)); info("2a IMM 5257 Saved draft applied", { http: applied?.s, body: applied?.b.slice(0, 160) });
-  const dec = p.locator("section[data-form-field-decisions]");
-  for (let i = 0; i < 20; i++) { if (!(await dec.locator("select").count())) { const d = dec.getByRole("button", { name: "Decide", exact: true }); if (!(await d.count())) break; await d.first().click(); await sleep(300); }
-    await dec.locator("select").first().selectOption({ label: "Filled by hand" }); await dec.getByLabel("Reason", { exact: true }).first().fill("Answered by the applicant on the form; no case fact holds it (Sample)."); await dec.getByRole("button", { name: "Save", exact: true }).first().click(); await sleep(700); }
+  // One form's Saved draft, on its own page: accept the new definitions, apply, then decide the undecided form fields.
+  const decideOn = async (btn) => { const r = p.waitForResponse((x) => x.request().method() === "POST" && /\/jobs\/[^/]+\/items\//.test(x.url()), { timeout: 30000 }); await btn.click(); await r; await sleep(250); };
+  const applySaved = async (label) => {
+    // C3.2 (fa5be3faa, P-121) took away the bulk accept of new definitions: they are accepted one at a time, on each card's
+    // own Accept ("Create … as a new definition"), skipping any with a near library field (that one asks why, as V3 left them).
+    let accepted = 0;
+    for (let i = 0; i < 400; i++) { const b = p.locator("[data-accept]:not([aria-expanded]):not([disabled])").filter({ hasText: /as a new definition/ }).first();
+      if (!(await b.count())) break; await decideOn(b); accepted++; }
+    // After "Compare again" some become reuse matches (accepted on their own button) or near a library field: for those
+    // the author picks the library field the card offers ("Use another library field"), as a person would for a near duplicate.
+    let reused = 0, picked = 0;
+    for (let i = 0; i < 100; i++) { const b = p.locator("[data-accept]:not([aria-expanded]):not([disabled])").first(); if (!(await b.count())) break; await decideOn(b); reused++; }
+    for (let i = 0; i < 50; i++) { const near = p.locator("[data-accept][aria-expanded]").first(); if (!(await near.count())) break;
+      const card = near.locator("xpath=ancestor::*[.//button[normalize-space()='Use another library field']][1]");
+      await card.getByRole("button", { name: "Use another library field" }).click(); await sleep(300);
+      await card.getByLabel("Library field key").fill(await card.locator("datalist option").first().getAttribute("value")); await decideOn(card.getByRole("button", { name: "Use this field" })); picked++; }
+    // Waits on the server's answers, not fixed sleeps (review M1: the walk was flaky under load); a wait that times out fails.
+    await p.getByRole("button", { name: "Apply to draft" }).click(); const dlg = p.locator("[role=dialog]"); await dlg.waitFor();
+    const resp = p.waitForResponse((r) => /\/jobs\/.*\/apply$/.test(r.url()) && r.request().method() === "POST", { timeout: 120000 });
+    await dlg.getByRole("button", { name: "Apply to draft" }).click(); const ar = await resp; await p.waitForLoadState("networkidle"); await sleep(800);
+    const applied = { s: ar.status(), b: (await ar.text()).slice(0, 4000) }; info(`2a ${label} Saved draft applied`, { accepted_one_by_one: accepted, reuse_accepted: reused, near_picked: picked, http: applied?.s, body: applied?.b.slice(0, 160) });
+    const dec = p.locator("section[data-form-field-decisions]");
+    let decided = 0;
+    for (let i = 0; i < 60; i++) { if (!(await dec.locator("select").count())) { const d = dec.getByRole("button", { name: "Decide", exact: true }); if (!(await d.count())) break; await d.first().click(); await dec.locator("select").first().waitFor(); }
+      await dec.locator("select").first().selectOption({ label: "Filled by hand" }); await dec.getByLabel("Reason", { exact: true }).first().fill("Answered by the applicant on the form; no case fact holds it (Sample).");
+      const sv = p.waitForResponse((r) => r.request().method() !== "GET" && r.url().includes("/api/"), { timeout: 30000 }); await dec.getByRole("button", { name: "Save", exact: true }).first().click(); await sv; decided++; await sleep(400); }
+    info(`2a ${label} form fields decided "filled by hand"`, decided);
+    return applied;
+  };
+  const applied = await applySaved("IMM 5257");
+  // QA-180: IMM 5707 is in the application package (engine/form-completeness.ts), so it cannot be taken off; its Saved
+  // draft (US$0) is applied the same way. IMM 5409 and IMM 5476 are taken off below, after the release check names them.
+  const job5707 = sql(`select j.id from drafting_job j join source_attachment a on a.id=j.attachment_id where a.combination_id='${VV()}' and a.file_name='imm5707e.pdf' and j.kind='field_map' and j.mode='REPLAY' order by j.started_at desc limit 1`);
+  await p.goto(`${CB()}/jobs/${job5707}`); await p.waitForLoadState("networkidle"); await sleep(800);
+  // IMM 5257's apply changed the shared library since this draft was compared, so applying it would be refused as stale.
+  await p.getByRole("button", { name: "Compare again (no AI call)" }).click(); await sleep(2500);
+  const applied5707 = await applySaved("IMM 5707");
   await p.goto(`${CB()}/forms`); await p.waitForLoadState("networkidle"); await sleep(800);
-  const change = async (code) => { await p.locator("tr").filter({ hasText: code }).first().getByRole("button", { name: "Change" }).click(); await sleep(700); return p.locator("[role=dialog]"); };
+  const change = async (code) => { await p.locator("[role=dialog]").first().waitFor({ state: "detached", timeout: 30000 }); await p.locator("tr").filter({ hasText: code }).first().getByRole("button", { name: "Change" }).click(); await sleep(700); return p.locator("[role=dialog]"); };
   const remove = async (code) => { const d = await change(code); await d.getByRole("button", { name: /Remove from this combination/ }).click(); await sleep(400); await p.getByRole("button", { name: `Remove ${code}` }).click(); await sleep(1200); };
   let d = await change("IMM 5409"); await d.getByLabel("Field", { exact: true }).fill("Marital status"); await d.getByLabel("Value", { exact: true }).fill("common_law"); await d.getByRole("button", { name: "Save to draft" }).click(); await sleep(1500);
   for (const c of ["IMM 5475", "IRM 0002", "IMM 5645"]) await remove(c);
@@ -88,7 +120,7 @@ const info = (s, d) => console.log(`INFO  ${s}${d === undefined ? "" : ` — ${t
   timings.approve_library_s = (Date.now() - t0) / 1000; info("2d library items approved one by one", { approved, seconds: timings.approve_library_s, waiting: sql("select count(*) from library_change where status='WAITING'") });
   // the author places each of IMM 5257's facts in a section (library > field > Where it is asked)
   await as("user-A");
-  const keys = sql(`select distinct canonical_field_key from form_field_map m join form_edition e on e.id=m.form_edition_id where e.edition_label='IMM 5257 (09-2023)' and canonical_field_key is not null order by 1`).split("\n");
+  const keys = sql(`select distinct canonical_field_key from form_field_map m join form_edition e on e.id=m.form_edition_id where e.edition_label in ('IMM 5257 (09-2023)', 'IMM 5707 (01-2023)') and canonical_field_key is not null order by 1`).split("\n");
   const sectionOf = (k) => k.startsWith("case.") ? "Details of visit" : /education_/.test(k) ? "Education" : /occupation_/.test(k) ? "Occupation" : /marital|previously_married|union_start/.test(k) ? "Marital status" : /national_id/.test(k) ? "Nat id" : /us_green/.test(k) ? "Us card"
     : /criminal|military|violent|health|refused|overstayed|previously_applied|immigration_history/.test(k) ? "Background info" : /telephone|email|fax|address/.test(k) ? "Contact information" : "Personal details";
   const repOf = (k) => k.startsWith("case.") && !/visit_contact/.test(k) ? "once_per_case" : /visit_contact|education_|occupation_|previous_residence_/.test(k) ? "per_row" : "per_person";
@@ -105,17 +137,17 @@ const info = (s, d) => console.log(`INFO  ${s}${d === undefined ? "" : ` — ${t
   await d.getByLabel("Official address (https)").fill("https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5484/01-05-2026/imm5484e.pdf"); await d.getByLabel(/Page or section/).fill("IMM 5484 Document Checklist, Family Information form line");
   await d.locator("textarea").fill("Family Information form. Must be completed by those aged 18 years or older."); await d.getByRole("button", { name: "Save source" }).click(); await sleep(1200); await d.getByRole("button", { name: "Close" }).last().click(); await sleep(800);
   // QA-180 (P-297 (3)): release now refuses a form whose edition in use has no form fields mapped, and names it, so the
-  // author meets IMM 5409, 5476 and 5707 here, before releasing (V3 met them only as the officer's 409 at step 4). No
-  // Saved field map exists for them (a paid run), so the author takes them off, as V3's recovery did, then releases once.
+  // author meets the forms still unmapped here, before releasing (V3 met them only as the officer's 409 at step 4).
+  // IMM 5707 is mapped above from its Saved draft; IMM 5409 and IMM 5476 are taken off (as V3's recovery did), then one release.
   await p.getByRole("button", { name: /^Show all \d+$/ }).first().click().catch(() => {}); await sleep(500);
   const unmappedLines = (await p.locator("[data-problem]").allInnerTexts()).map(flat).filter((x) => /No form fields mapped yet/.test(x));
   await check("2-review-names-unmapped"); info("2f release refuses the unmapped forms, by name", unmappedLines);
-  const unmappedNamed = ["IMM 5409", "IMM 5476", "IMM 5707"].every((c) => unmappedLines.some((x) => x.includes(`${c} (`)));
+  const unmappedNamed = ["IMM 5409", "IMM 5476"].every((c) => unmappedLines.some((x) => x.includes(`${c} (`)));
   await p.goto(`${CB()}/forms`); await p.waitForLoadState("networkidle"); await sleep(800);
-  for (const c of ["IMM 5409", "IMM 5476", "IMM 5707"]) await remove(c);
+  for (const c of ["IMM 5409", "IMM 5476"]) await remove(c);
   await p.goto(`${CB()}/review`); await p.waitForLoadState("networkidle"); await sleep(1000);
   const errors = (await text()).match(/(\d+) (other )?errors? \(block submission\)/)?.[1];
-  verdict(2, "Configure Visitor visa on screen (Saved only)", applied?.s < 300 && qd?.s < 300 && unmappedNamed && errors === "0" && placed === keys.length, `unmapped forms named before release ${unmappedNamed}; blocking errors ${errors}; warnings: ${(await text()).match(/\d+ warnings/)?.[0]}`);
+  verdict(2, "Configure Visitor visa on screen (Saved only)", applied?.s < 300 && applied5707?.s < 300 && qd?.s < 300 && unmappedNamed && errors === "0" && placed === keys.length, `unmapped forms named before release ${unmappedNamed}; blocking errors ${errors}; warnings: ${(await text()).match(/\d+ warnings/)?.[0]}`);
 
   // ---------------------------------------------------------------- 3 (submit, sign, release)
   const release = async () => {

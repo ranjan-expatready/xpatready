@@ -161,12 +161,14 @@ export function pdfMapInUse<M extends { form_number: string; form_edition?: stri
  *  api/src/programs.ts startableMissing) both read. A data form can be filled on a case only when its edition in use
  *  (pdfMapInUse, P-32: the newest PDF edition, the one a case fills) has form fields mapped; an Online line is read from
  *  its PDF too (P-102), so an online map never counts. Each form without one, with the edition in use when there is one
- *  (its map is empty), in the snapshot's filing order. */
-export function formsWithoutFieldMap(s: Pick<Snapshot, "forms" | "field_maps">): { form_number: string; title?: string; edition: string | null }[] {
+ *  (its map is empty; real snapshots drop empty maps, engine/snapshot.ts, so this guards hand-built or imported data), in
+ *  the snapshot's filing order. */
+export function formsWithoutFieldMap(s: Pick<Snapshot, "forms" | "field_maps">): { form_number: string; title?: string; edition: string | null; olderMapped: boolean }[] {
   const maps = s.field_maps as (FieldMap & { form_edition?: string | null; channel?: string | null })[];
   return (s.forms as (FormLine & { title?: string })[]).filter((f) => (f.form_kind ?? "data_form") === "data_form")
     .map((f) => ({ f, inUse: pdfMapInUse(maps, f.form_number) })).filter(({ inUse }) => !inUse?.entries.length)
-    .map(({ f, inUse }) => ({ form_number: f.form_number, title: f.title, edition: inUse?.form_edition ?? null }));
+    .map(({ f, inUse }) => ({ form_number: f.form_number, title: f.title, edition: inUse?.form_edition ?? null,
+      olderMapped: !!inUse && maps.some((m) => m !== inUse && m.form_number === f.form_number && m.channel !== "ONLINE" && m.entries.length) }));
 }
 
 /** "Needs work" (P-49, the default view): every combination firms cannot use yet (In setup, Not ready) and every one

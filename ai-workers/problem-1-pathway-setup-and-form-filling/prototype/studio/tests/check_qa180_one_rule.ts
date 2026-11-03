@@ -71,10 +71,20 @@ for (const [name, s] of Object.entries(variants)) {
 // A document form (a checklist, not filled) never needs a field map.
 ok("pass: document forms (IMM 5488, IMM 5905) are never refused for a field map", !formsWithoutFieldMap(withMaps([])).some((f) => ["IMM 5488", "IMM 5905"].includes(f.form_number)));
 
-// The release screen's line (web/src/pages/review.tsx problemLine → problemWords) names the form by number and title.
+// The release screen's line (web/src/pages/review.tsx problemLine → problemWords) names the form by number, once, and by
+// its title in the words (review m3: one way per list, no nested brackets).
 const said = problemWords(lineFor(noMap, FORM)!);
-ok("words: Review and release names the form in plain words", said.startsWith("IMM 1295 (Application for Work Permit made Outside of Canada): No form fields mapped yet") && /remove the form/.test(said), said);
+ok("words: Review and release names the form in plain words", said.startsWith(`${FORM}: No form fields mapped yet: a case could not fill the form "Application for Work Permit made Outside of Canada"`) && /or remove the form\.$/.test(said), said);
 ok("words: no field key or code in the line", !/no_field_map|form_without_edition|\b[a-z]+\.[a-z_]+\b/.test(said), said);
+// Review m1: the only family information form (C3.8 requires one when the package lists it) is never offered "remove".
+const no5707 = withMaps(maps.filter((m) => m.form_number !== "IMM 5707"));
+const w5707 = lineFor(no5707, "IMM 5707")?.message ?? "";
+ok("words (m1): IMM 5707, the family information form, is offered mapping, not removal", /Map its form fields/.test(w5707) && !/or remove the form/.test(w5707) && /family information form/.test(w5707), w5707);
+ok("words (m1, pass side): another form is still offered removal", /or remove the form\./.test(lineFor(noMap, FORM)?.message ?? ""));
+// Review m2: "an older edition's map is not used" only when an older edition is mapped.
+const onlyEmpty = withMaps(maps.map((m) => (m.form_number === FORM ? { ...m, form_edition: "IMM 1295 (06-2025)", entries: [] } : m)));
+ok("words (m2): the older-edition note shows when an older edition is mapped", /an older edition's map is not used/.test(w4?.message ?? ""));
+ok("words (m2): and not when the edition in use is the only one", !!lineFor(onlyEmpty, FORM) && !/older edition/.test(lineFor(onlyEmpty, FORM)!.message), lineFor(onlyEmpty, FORM)?.message);
 
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

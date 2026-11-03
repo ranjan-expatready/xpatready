@@ -15,6 +15,7 @@ import { eligibilityChanges, gateProblems } from "./eligibility-gates.ts";
 import { sourceKey } from "../contracts/resolver.ts"; // SH3 R8
 import { NO_FIELD_MAP } from "./setup-checklist.ts";
 import { formsWithoutFieldMap } from "./programs.ts"; // QA-180: one rule for release and Open a case
+import { FAMILY_INFORMATION_FORMS } from "./form-completeness.ts";
 import { sourceChanges } from "./source-register.ts"; // G1 BR-9: the "Source" lines only; the gate stays out of validate()
 
 // C-11: a field map's form field list, read once per file (paths are relative to the Solution 1 folder, as in fill.ts).
@@ -33,6 +34,7 @@ export const isNode = (n: unknown) => nodeValid(n) as boolean;
 /** `label` is the item in words (a question's meaning) where `item` is a field code; screens show it, never the code. */
 export type Problem = { level: "error" | "warning"; where: string; item: string; message: string; label?: string; /** The person role it is about (W1-15 slice 2: "Needs you" puts it on its row). */ role?: string; /** V3 B1: "no_field_map" (engine/setup-checklist.ts waitsForMap). */ code?: string };
 const ORDERED = new Set(["gt", "gte", "lt", "lte"]);
+const isFamilyForm = (n: string) => (FAMILY_INFORMATION_FORMS as readonly string[]).includes(n);
 const BIRTH = "person.date_of_birth";
 
 export function checkCondition(tree: any, fieldTypes: Map<string, string>, derived: Set<string>): string[] {
@@ -68,11 +70,16 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
     // deciding question); with nobody asked for it the form could never be decided, so release is refused.
     if (f.min_age && !placed.has(BIRTH) && !docFacts.has(BIRTH)) out.push({ level: "error", where: "Forms", item: f.form_number, message: `${f.form_number} applies from age ${f.min_age}, so each person's date of birth decides it, but nobody is asked for a date of birth in this combination. Add the date of birth question to this combination's questionnaire, or clear the minimum age.` });
     // V3 B1, QA-180 (P-297 (3)): the case gate's own rule (engine/programs.ts formsWithoutFieldMap: the edition in use has
-    // form fields mapped), so a release is never one no firm can open a case on. The form is named by its number and title.
+    // form fields mapped), so a release is never one no firm can open a case on.
+    // Review m3: the title goes in the words (the item stays the number), so a list names each form one way.
+    // Review m1: the only family information form of the package (C3.8) cannot be removed, so its fix is mapping only.
     const u = unmapped.get(f.form_number);
-    if (u) out.push({ level: "error", where: "Forms", item: f.form_number, code: NO_FIELD_MAP, ...(f.title ? { label: `${f.form_number} (${f.title})` } : {}),
-      message: u.edition ? `No form fields mapped yet for ${u.edition}, the newest edition and the one a case fills: firms could not open cases on a release with it (an older edition's map is not used). Map its form fields (Draft setup), or remove the form.`
-        : "No form fields mapped yet: a case could not fill this form, so firms could not open cases on a release with it. Map its form fields (Draft setup), or remove the form." });
+    const named = f.title ? `the form "${f.title}"` : "this form";
+    const fix = isFamilyForm(f.form_number) && !s.forms.some((o: { form_number: string }) => o !== f && isFamilyForm(o.form_number))
+      ? "Map its form fields (Draft setup). It is this combination's family information form, which IRCC requires when the application package lists one, so remove it only if the package does not." : "Map its form fields (Draft setup), or remove the form.";
+    if (u) out.push({ level: "error", where: "Forms", item: f.form_number, code: NO_FIELD_MAP,
+      message: u.edition ? `No form fields mapped yet: ${u.edition}, the newest edition and the one a case fills, has none${u.olderMapped ? " (an older edition's map is not used)" : ""}, so firms could not open cases on a release with ${named}. ${fix}`
+        : `No form fields mapped yet: a case could not fill ${named}, so firms could not open cases on a release with it. ${fix}` });
   }
   const unplaced = new Map<string, number>();
   for (const m of s.field_maps) for (const e of m.entries) {
