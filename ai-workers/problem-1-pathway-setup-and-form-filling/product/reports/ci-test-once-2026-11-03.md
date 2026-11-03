@@ -92,6 +92,23 @@ endpoint- and page-matched suites and the smoke set. The queue's one full run st
 * **Against:** a break outside the chosen set shows up in the batch, not the PR. Mergify then splits the batch, which
   costs about 25 min for the other PRs in it. P-293 says a rise in failed batches undoes the change (7% before I1).
 
-## After
+## After (this PR's own runs, new ci.yml)
 
-(Filled from this PR's own runs: see the PR body.)
+| Measure | Before (median) | After |
+|---|---|---|
+| Notes-only PR, push → green `ci` (#665, run 41595500608) | 3.1 min as a records PR (7 machine min on 4 machines), then about 27 min more in a queue batch | **62 s**, 2 short jobs (`kind` 27 s, `ci` 21 s); no part; only the push guard, `check-docs.sh`, `decision-impact.sh` |
+| Code PR choosing everything (#663, run 41595378414, 263 units on 4 parts) | 25.8 min wall, 99 machine min | 28.3 min wall, about 100 machine min: no gain, as expected for an "everything" PR (see "Open choice") |
+| Start-up per part | 1.5 min | 1.2–1.9 min, plus 24 s for the new `kind` job before the parts start |
+| Machine wait | 0.0–0.1 min (p90 1.3) | 0–12 s |
+| Slowest minus fastest part | 7.4 min (max 12.5) | 5.0 min (suites 25.8, 20.8, 21.8, 25.4 min) |
+| Flaky failures | 0 found (no reruns) | 0: every job green on the first attempt |
+
+* **The even split helped less than the simulation said.** This run's suites took 93.8 machine minutes, 14% more than
+  the medians (82). Suite times vary between machines and runs by more than the 2 min the even split saves, so its gain
+  is real but small, and one run cannot show it. Refresh `suite-times.tsv` from a week of batches before trusting it more.
+* **Where I1 saves time:** notes-only PRs (24 of 129 merges since 1 Nov, 19%) now take about a minute, never enter a
+  test batch, and use no test machines. Records PRs (21 of 129) run on one machine without suites, where before they
+  ran the smoke set on four. Batches no longer re-select: they always run the full set once, with the quarantine
+  applied. Product PRs that choose everything (83%) still test twice until `PR_SUITES=direct` is turned on.
+* Still to measure after merge: batch wall time and batch failures over the next dozen batches, and the share of PR
+  runs cancelled by later pushes (192 of 381 before).
