@@ -46,10 +46,25 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const label = (await unasked.locator("td button").first().innerText()).trim();
   step("QA-172 pass: a fact answered without a question shows its short name (as an unwritten question, QA-82)", label === "Has children", label);
   step("QA-172 fail case: it never shows the field's meaning as its label", !/derived from|Whether the person/i.test(label), label);
+  // Review m2: its Details drawer is titled the same way, with the meaning below as "Meaning:".
+  await unasked.locator("td button").first().click();
+  const meaningLine = p.locator("[data-fact-meaning]").first();
+  await meaningLine.waitFor({ timeout: 15000 });
+  const drawer = p.getByRole("dialog").last();
+  const drawerTitle = (await drawer.getByRole("heading").first().innerText()).trim();
+  const drawerText = drawerTitle;
+  step("QA-172 (review m2) pass: the Details drawer of an unasked fact is titled with its short name and shows its meaning as \"Meaning:\"", drawerText === "Has children" && /Meaning: Whether the person has any children/.test(await meaningLine.innerText()), JSON.stringify({ title: drawerTitle, meaning: (await meaningLine.innerText()).slice(0, 80) }));
+  await p.keyboard.press("Escape"); await p.waitForTimeout(300);
   const a = await new AxeBuilder({ page: p }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
   step("axe: the Smart questionnaire tab has no WCAG A/AA violation", a.violations.length === 0, a.violations.map((v) => `${v.id} (${v.nodes.length})`).join(" | "));
   await p.setViewportSize({ width: 1024, height: 768 }); await p.waitForTimeout(300);
   step("1024 px: the tab has no sideways page scroll, and the section still reads its title", !(await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)) && (await sec.locator(".font-medium").first().innerText()).trim() === title);
+  // Review m1 (Devin on #722): a retired section whose placed question is still asked keeps its library title. The
+  // approved retire's effect is written to the section's newest row (the two-person approval is C11.9's, tested there).
+  sql(`update logical_section set status = 'RETIRED' where section_key = 'intended_work' and version = (select max(version) from logical_section where section_key = 'intended_work')`);
+  const after = (await api(`/combinations/${vv}/workspace?tab=questionnaires`)).body?.questionnaire;
+  const iw = (after?.sections ?? []).find((s) => s.id === "intended_work");
+  step("QA-172 (review m1) fail case: a retired section that still asks a question keeps its title, never its key", !!iw && iw.title === title, JSON.stringify(iw ? { id: iw.id, title: iw.title } : null));
   step("no page error", errs.length === 0, errs.join(" | "));
   await b.close();
   console.log(`\n${pass} passed, ${fail} failed`);
