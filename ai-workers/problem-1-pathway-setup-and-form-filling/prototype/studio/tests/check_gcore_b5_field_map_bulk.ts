@@ -3,7 +3,7 @@
 // (both rounds agree, rules pass) are ticked in bulk: "Accept selected" is the form-field page's Accept (the same
 // choice, nothing in the library until the draft is applied), one Undo for the batch, each item re-checked on the server;
 // Low, conflict and one-round items cannot be ticked and the box says why; a Ready new shared field cannot be ticked
-// either (P-294: only High reuse matches go together); every item still opens on its form-field page.
+// either (P-296 (1): only High reuse matches go together); every item still opens on its form-field page.
 // A pass and a failing case per rule. No browser, NO model call (US$0).
 //   zsh studio/tools/isolated.sh forms_b5 4457 start && tsx studio/tests/check_gcore_b5_field_map_bulk.ts 4457 xr_studio_forms_b5
 import { execFileSync } from "node:child_process";
@@ -61,7 +61,7 @@ const planted = join(RUNS, `${job.job_id}-live-20261103t000000000z-b5test.json`)
     const readyAll = mine("ready"), low = [...mine("check"), ...mine("decide")];
     const ready = readyAll.filter((x) => outcome(x.id) === "REUSE"), readyNew = readyAll.filter((x) => outcome(x.id) !== "REUSE");
     ok("C11.14 AT-4 / P-288 (2) pass: the field-map Ready reuse matches are on To review and can be ticked in bulk (no \"decided on its page\" exception)", ready.length >= 2 && ready.every((x) => x.bulk_why === null), { ready: ready.length, why: ready.find((x) => x.bulk_why)?.bulk_why });
-    ok("P-294 fail: a Ready field-map item that makes a new shared field cannot be ticked with others; the box says it is decided on its own", readyNew.length > 0 && readyNew.every((x) => x.bulk_why === NEW_FIELD_ALONE), { readyNew: readyNew.length, why: readyNew.find((x) => x.bulk_why !== NEW_FIELD_ALONE)?.bulk_why });
+    ok("P-296 (1) fail: a Ready field-map item that makes a new shared field cannot be ticked with others; the box says it is decided on its own", readyNew.length > 0 && readyNew.every((x) => x.bulk_why === NEW_FIELD_ALONE), { readyNew: readyNew.length, why: readyNew.find((x) => x.bulk_why !== NEW_FIELD_ALONE)?.bulk_why });
     ok("P-288 (2): every field-map item still opens on its form-field page", [...ready, ...low].length > 0 && [...ready, ...low].every((x) => /\/jobs\//.test(x.decide_on ?? "")));
     const differ = low.find((x) => sql(`select payload->>'label' from proposal_item where id = '${x.id}'`) === RETYPED);
     ok("P-121 fail: a conflict (the rounds read it differently) cannot be ticked; the box says why", !!differ && /readings differ/.test(differ.bulk_why ?? ""), differ);
@@ -70,7 +70,7 @@ const planted = join(RUNS, `${job.job_id}-live-20261103t000000000z-b5test.json`)
     const [a1, a2] = ready.map((x) => x.id);
     const lib0 = sql("select (select count(*) from canonical_field) || '|' || (select count(*) from library_change)");
     let r = await call("POST", "/review/proposals/decide", { ids: [a1, readyNew[0]?.id], action: "accept" });
-    ok("P-294 fail: a batch with a Ready new shared field is refused in words (409) on To review, nothing is accepted, both stay queued", r.status === 409 && /decided on its own/.test(r.body?.detail ?? r.body?.message) && sql(`select string_agg(status, ',') from proposal_item where id in ('${a1}', '${readyNew[0]?.id}')`) === "waiting,waiting", [r.status, r.body?.detail]);
+    ok("P-296 (1) fail: a batch with a Ready new shared field is refused in words (409) on To review, nothing is accepted, both stay queued", r.status === 409 && /decided on its own/.test(r.body?.detail ?? r.body?.message) && sql(`select string_agg(status, ',') from proposal_item where id in ('${a1}', '${readyNew[0]?.id}')`) === "waiting,waiting", [r.status, r.body?.detail]);
     r = await call("POST", "/review/proposals/decide", { ids: [a1, differ!.id], action: "accept" });
     ok("P-121 fail: a batch with a conflict is refused in words (409), nothing is accepted, the items stay queued", r.status === 409 && /Only Ready items are accepted together/.test(r.body?.detail ?? r.body?.message) && sql(`select string_agg(status, ',') from proposal_item where id in ('${a1}', '${differ!.id}')`) === "waiting,waiting", [r.status, r.body?.detail]);
     sql(`update proposal_item set rules = jsonb_set(rules, '{0,passed}', 'false') where id = '${a2}'`);
@@ -104,7 +104,7 @@ const planted = join(RUNS, `${job.job_id}-live-20261103t000000000z-b5test.json`)
     ok("P-121 fail: a one-round field-map item cannot be ticked; the box says it needs a checker round", bulkWhy({ ...fm, agreement: "one_round" }) === P121_WHY.oneRound);
     ok("P-121 fail: a field-map item stored Ready with one round only is not ticked either (re-rated from what is stored)", bulkWhy({ ...fm, confidence: "ready", agreement: "one_round", rounds: { draft: {}, check: null }, rules: [{ rule: "key_shape", passed: true, why: null }] }) === P121_WHY.oneRound);
     ok("P-288 (2) pass: a Ready field-map item with both rounds agreeing and its rules passed can be ticked", bulkWhy({ ...fm, confidence: "ready", agreement: "agreed", rounds: { draft: {}, check: {} }, rules: [{ rule: "key_shape", passed: true, why: null }] }) === null);
-    ok("P-294 fail (pure): a High field-map item that is a new definition, or an unclear match, cannot be ticked", bulkWhy({ ...fm, confidence: "ready", agreement: "agreed", rounds: { draft: {}, check: {} }, rules: [{ rule: "key_shape", passed: true, why: null }], work: { outcome: "NEW" } }) === NEW_FIELD_ALONE && bulkWhy({ ...fm, confidence: "ready", agreement: "agreed", rounds: { draft: {}, check: {} }, rules: [{ rule: "key_shape", passed: true, why: null }], work: { outcome: "AMBIGUOUS" } }) === NEW_FIELD_ALONE);
+    ok("P-296 (1) fail (pure): a High field-map item that is a new definition, or an unclear match, cannot be ticked", bulkWhy({ ...fm, confidence: "ready", agreement: "agreed", rounds: { draft: {}, check: {} }, rules: [{ rule: "key_shape", passed: true, why: null }], work: { outcome: "NEW" } }) === NEW_FIELD_ALONE && bulkWhy({ ...fm, confidence: "ready", agreement: "agreed", rounds: { draft: {}, check: {} }, rules: [{ rule: "key_shape", passed: true, why: null }], work: { outcome: "AMBIGUOUS" } }) === NEW_FIELD_ALONE);
     ok("P-121: no live call, US$0", sql(`select coalesce(sum(cost_usd), 0)::numeric(10,2) from drafting_job where id = '${run}'`) === "0.00");
   } finally { rmSync(planted, { force: true }); }
   ok("cleanup: the planted checker run is removed", !existsSync(planted));

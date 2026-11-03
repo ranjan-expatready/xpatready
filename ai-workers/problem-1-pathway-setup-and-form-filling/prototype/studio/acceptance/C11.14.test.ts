@@ -1,6 +1,6 @@
 // C11.14 — Every AI proposal has a draft round, an independent checker round and the rules check; High only when all
 // agree; To review offers Select all / Deselect all within a filter, bulk accept for High only with one Undo, each item
-// re-checked by the rule engine; Load sample replays proposals through the same path. P-294 (3 Nov, tech lead on #661):
+// re-checked by the rule engine; Load sample replays proposals through the same path. P-296 (1) (3 Nov, tech lead on #661):
 // an AI-proposed new shared field is never accepted in bulk on either door; bulk is only for High reuse matches (AT-4).
 // Status (qa/CAPABILITIES.md, 1 Nov): Not built. What exists: the one queue (S6 slice 1b: Ready · Check · Decide, bulk
 // accept for Ready only, one Undo within 10 s, identity checked again at approval). Missing: the field-map step — the
@@ -80,11 +80,11 @@ const statusOf = (ids: string[]) => sql(`select string_agg(status, ',' order by 
   const g = q?.groups?.find((x: { id: string; title: string }) => /IMM 5257/.test(`${x.id} ${x.title}`));
   const gv = g ? (await call("GET", `/review/proposals?group=${encodeURIComponent(g.id)}`)).body?.group : null;
   const readyBand = gv?.bands?.ready ?? [];
-  // P-294 (tech lead on #661): only High reuse matches are ticked together; a Ready field-map item that makes a new shared
+  // P-296 (1) (tech lead on #661): only High reuse matches are ticked together; a Ready field-map item that makes a new shared
   // field (or is an unclear match) says it is decided on its own.
   const newField = (id: string) => sql(`select (step = 'field_map' and coalesce(work->>'outcome', '') <> 'REUSE')::text from proposal_item where id = '${id}'`) === "true";
   const tickable = readyBand.filter((x: { id: string }) => !newField(x.id));
-  ok("C11.14 AT-4 the field-mapping proposals are on To review in their bands; the Ready reuse matches can be ticked in bulk (no \"decided on its page\" exception) and a Ready new shared field says it is decided on its own (P-294)", !!g && tickable.length > 0 && readyBand.every((x: { id: string; bulk_why: string | null }) => (newField(x.id) ? /decided on its own/.test(x.bulk_why ?? "") : x.bulk_why === null)), { group: g?.id ?? null, groups: (q?.groups ?? []).map((x: { id: string }) => x.id), ready: readyBand.length, tickable: tickable.length, why: readyBand[0]?.bulk_why });
+  ok("C11.14 AT-4 the field-mapping proposals are on To review in their bands; the Ready reuse matches can be ticked in bulk (no \"decided on its page\" exception) and a Ready new shared field says it is decided on its own (P-296 (1))", !!g && tickable.length > 0 && readyBand.every((x: { id: string; bulk_why: string | null }) => (newField(x.id) ? /decided on its own/.test(x.bulk_why ?? "") : x.bulk_why === null)), { group: g?.id ?? null, groups: (q?.groups ?? []).map((x: { id: string }) => x.id), ready: readyBand.length, tickable: tickable.length, why: readyBand[0]?.bulk_why });
 
   // ── the queue's bulk rules, on items written through the door
   const { Db } = await import("../api/src/core.ts");
