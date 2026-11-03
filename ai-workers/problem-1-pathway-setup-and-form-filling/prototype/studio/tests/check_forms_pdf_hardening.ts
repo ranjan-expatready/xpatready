@@ -96,9 +96,12 @@ const PRINTED_NOT_MANIFEST: Record<string, string> = { "IMM 5475": "IMM 5475 (05
     // ─────────────────────────────── b) hostile and awkward files: refused or held with a plain reason, never used silently
     const beforeRows = () => sql("select count(*) from form_edition") + "/" + sql("select count(*) from gov_form_def");
     let rows = beforeRows();
-    // A real dynamic XFA form whose edition is printed nowhere the reader can find (IMM 5669, on the manifest).
+    // A real dynamic XFA form that prints its edition nowhere next to its code (IMM 5669, on the manifest): since C11.7
+    // (P-297 (2)) the edition is read from the form template's own Version variable, and the intake says so. A coded XFA
+    // form with no edition anywhere is still held (dynamic-coded.pdf below).
     let x = await intake("imm5669e.pdf", official("forms/imm5669e.pdf"));
-    ok("C2.2: a dynamic XFA form whose edition cannot be read (the official IMM 5669) is held for a person with a plain reason, not added and no crash", x?.outcome === "held" && x.code === "IMM 5669" && /could not read the edition of IMM 5669/.test(x.message) && plainWords(x.message) && beforeRows() === rows, x?.message);
+    ok("C2.1 (C11.7): the official IMM 5669, a dynamic XFA form with no printed edition, is added with the edition from its form template (05-2021), said in plain words, no crash", x?.outcome === "added" && x.edition === "IMM 5669 (05-2021)" && x.editionFrom === "form_template" && /template/.test(x.message) && plainWords(x.message), x?.message);
+    rows = beforeRows();
     x = await intake("dynamic.pdf", pdf("", "", '<template xmlns="http://www.xfa.org/schema/xfa-template/3.3/"><subform name="form1"><draw><value><text>Please wait...</text></value></draw></subform></template>'));
     ok("C2.2: an XFA-only form with no code anywhere is held (\"no form code\"), not added", x?.outcome === "held" && /no form code/.test(x.message) && beforeRows() === rows, x?.message);
     x = await intake("dynamic-coded.pdf", pdf("IMM 9998 E: Sample dynamic form", "", '<template xmlns="http://www.xfa.org/schema/xfa-template/3.3/"><subform name="form1"><draw><value><text>IMM 9998 Sample form</text></value></draw></subform></template>'));

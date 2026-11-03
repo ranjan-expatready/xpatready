@@ -132,8 +132,9 @@ def main(path):
     if re.search(r"schedule\s*1\b", title, re.I):
         code += " SCH1"
     prefix, digits = code.split()[0], code.split()[1]
-    # C11.7: "IMM 0008 DEP" is printed "IMM 0008DEP"; plain "IMM 0008" never takes a DEP edition (the suffix must be absent).
-    dep = r"\s?DEP" if code.endswith(" DEP") else r"(?!\s?DEP)"
+    # C11.7: "IMM 0008 DEP" is printed "IMM 0008DEP". Plain "IMM 0008" cannot take a DEP edition: after its digits only a
+    # space, a hyphen and E or F may come before the "(", never "DEP".
+    dep = r"\s?DEP" if code.endswith(" DEP") else ""
     editions = Counter(re.findall(rf"{prefix}\s?{digits}{dep}\s?-?[EF]?\s*\((\d{{2}}-\d{{4}})\)", body))
     clean = re.sub(r"^" + CODE_DEP + r"\s*(?:-\s*)?[EF]?(?:\s+GENERIC)?\s*:?\s*", "", title).strip() or code
     marks = Counter(re.findall(rf"{prefix}\s?{digits}{dep}\s?(?:\(\d{{2}}-\d{{4}}\))?\s?-?([EF])\b", f"{title}\n{body}"))

@@ -5,7 +5,7 @@
 //   zsh studio/tools/isolated.sh c117 4452 start && tsx --tsconfig studio/api/tsconfig.json studio/tests/check_c117_intake_edition.ts 4452 xr_studio_c117
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { editionFromManifest } from "../api/src/intake.ts";
@@ -28,6 +28,16 @@ const made = (name: string, title: string) => {
   execFileSync(PY, ["-I", "-c", "import sys\nfrom pypdf import PdfWriter\nw=PdfWriter(); w.add_blank_page(612,792); w.add_metadata({'/Title': sys.argv[2]}); w.write(sys.argv[1])", out, title]);
   return out;
 };
+/** A hand-built PDF with an XFA template (as tests/check_forms_pdf_hardening.ts builds them; Sample, never official). */
+const xfaPdf = (name: string, title: string, xfa: string) => {
+  const objs = ["<< /Type /Catalog /Pages 2 0 R /AcroForm 7 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>", "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>", "<< /Length 0 >>\nstream\n\nendstream", "<< >>", `<< /Title (${title}) >>`, "<< /Fields [] /XFA [(template) 8 0 R] >>", `<< /Length ${Buffer.byteLength(xfa, "latin1")} >>\nstream\n${xfa}\nendstream`];
+  let out = "%PDF-1.7\n"; const offs: number[] = [];
+  objs.forEach((o, i) => { offs.push(Buffer.byteLength(out, "latin1")); out += `${i + 1} 0 obj\n${o}\nendobj\n`; });
+  const x = Buffer.byteLength(out, "latin1");
+  out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n${offs.map((o) => `${String(o).padStart(10, "0")} 00000 n \n`).join("")}trailer\n<< /Size ${objs.length + 1} /Root 1 0 R /Info 6 0 R >>\nstartxref\n${x}\n%%EOF\n`;
+  const path = join(dir, name); writeFileSync(path, Buffer.from(out, "latin1")); return path;
+};
+const template = (versions: string[]) => `<template xmlns="http://www.xfa.org/schema/xfa-template/3.3/"><subform name="form1"><draw><value><text>IMM 9996 Sample form</text></value></draw></subform><variables>${versions.map((v) => `<text name="Version">${v}</text>`).join("")}</variables></template>`;
 const upload = async (path: string, name: string) => {
   const fd = new FormData(); fd.append("files", new Blob([new Uint8Array(readFileSync(path))]), name);
   const r = await fetch(`http://127.0.0.1:${PORT}/api/intake`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd });
@@ -49,6 +59,11 @@ const n = (q: string) => Number(sql(q) || 0);
   const bare = made("imm5669e.pdf", "IMM 5669 E : Schedule A - Background / Declaration");
   const rb = read(bare);
   ok("C11.7 fail: a file that prints no edition and has no template Version is not given one by the reader", !rb.ok && rb.code === "IMM 5669" && /no edition date/.test(rb.error), rb);
+
+  const one = read(xfaPdf("one.pdf", "IMM 9996 E: Sample form", template(["03-2024"])));
+  ok("C11.7 pass: a form template with one Version and nothing printed gives that edition, said as \"form_template\"", one.ok && one.edition_label === "IMM 9996 (03-2024)" && one.edition_from === "form_template", one);
+  const two = read(xfaPdf("two.pdf", "IMM 9996 E: Sample form", template(["03-2024", "11-2025"])));
+  ok("C11.7 fail: a form template with two different Versions gives no edition (never a guess between them)", !two.ok && two.code === "IMM 9996" && /no edition date/.test(two.error), two);
 
   // ── The rule (editionFromManifest): the checksum path, alone ──
   const unread = { ok: false, code: "IMM 5669", kind: "form", error: "found IMM 5669 but no edition date such as (09-2023) printed next to it" };
@@ -75,6 +90,15 @@ const n = (q: string) => Number(sql(q) || 0);
   ok("C11.7 fail (mismatch): a file coded IMM 5669 with no edition and another checksum is refused in words, nothing added or held", m.outcome === "refused" && /not the official imm5669e\.pdf/.test(m.message) && n(`select count(*) from form_edition`) === before && n(`select count(*) from intake_item where status = 'HELD' and code = 'IMM 5669'`) === 0, m);
   const unlisted = await upload(made("imm9999e.pdf", "IMM 9999 E : Sample form"), "imm9999e.pdf");
   ok("C11.7 fail: a code on no list entry is still held for a person (could not read the edition), not refused", unlisted.outcome === "held" && /could not read the edition of IMM 9999/.test(unlisted.message), unlisted);
+
+  // The Form library's Upload PDF card says what the intake does (review m1): the read step names the mismatch, the
+  // compare step knows the form number, the last step says refused.
+  const fd = new FormData(); fd.append("files", new Blob([new Uint8Array(readFileSync(bare))], { type: "application/pdf" }), "imm5669e.pdf");
+  const runId = ((await (await fetch(`http://127.0.0.1:${PORT}/api/library/forms/upload`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd })).json()) as { runId?: string }).runId;
+  let run: { status?: string; steps?: { kind: string; status: string; message: string | null }[] } = {};
+  for (let i = 0; runId && i < 240; i++) { run = (await call("GET", `/runs/${runId}`)).body; if (!["queued", "running", "stopping"].includes(run?.status ?? "")) break; await new Promise((res) => setTimeout(res, 250)); }
+  const step = (k: string) => run.steps?.find((x) => x.kind === k);
+  ok("C11.7 fail (mismatch, Upload PDF card): the read step says it is not the official file and will be refused; the compare step knows IMM 5669; the last step says refused", /not the official imm5669e\.pdf/.test(step("upload_identity")?.message ?? "") && !/waits for a person/.test(step("upload_identity")?.message ?? "") && !/form number is not known/.test(step("upload_compare")?.message ?? "") && /^Refused/.test(step("upload_add")?.message ?? ""), run.steps?.map((x) => `${x.kind}: ${x.status}: ${(x.message ?? "").slice(0, 120)}`));
 
   // ── Reset to the six accepts both (P-226) ──
   const six = await call("POST", "/demo/reset-to-six", { confirm: "RESET" });

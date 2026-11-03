@@ -309,7 +309,7 @@ export class Intake {
     const listed = editionFromManifest(id, hash, manifest() as ManifestItem[]);
     if (listed && "mismatch" in listed) {
       const r: IntakeResult = { file: name, outcome: "refused", kind: id.kind ?? "unknown", code: id.code ?? null, title: id.title ?? null, edition: null, published: id.published ?? null, sha256: hash,
-        message: `Refused: we could not read the edition of ${id.code} from this file, and it is not the official ${listed.mismatch.file} on the source list (${listed.mismatch.edition}): its checksum is different. Nothing was added or attached. Upload the official PDF from IRCC.` };
+        message: `Refused: we could not read the edition of ${id.code} from this file, and it is not the official ${listed.mismatch.file} on the source list (${listed.mismatch.edition}): its checksum is different. Nothing was added or attached. Upload the official PDF from IRCC; if this is a newer edition, it needs its own row on the source list first.` };
       await this.record(actor, workspaceId, combination?.id ?? null, name, "", hash, file.buffer.length, r, "DONE", "edition not readable and checksum not the source list's file");
       rmSync(stored, { force: true });
       return r;

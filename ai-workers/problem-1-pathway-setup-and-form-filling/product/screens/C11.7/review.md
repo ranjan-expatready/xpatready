@@ -1,0 +1,73 @@
+# C11.7 intake (P-297 (2)): review of commit ea9e3a507 (branch claude/funny-ride-h3nvar)
+
+Reviewer: a fresh session that did not build it. Brief: tech-lead ruling P-297 (2), read word for word. This is not a new screen, so the D1–D20 table does not apply. Scope: the code change against its brief, the project rules and the existing suites.
+Note: while this review ran, the builder pushed 170b2061a on top (two test files only, `check_s7_load.ts` and `check_c10_1_configured.ts`). The app code is identical, so every run below holds for ea9e3a507's code.
+
+## What I checked, and what held
+- **The reader, old against new, on every official file** (36 PDFs and 51 HTML pages in `official-sources/`, with the venv python `-I`). Exactly 3 outputs change. `imm5669e.pdf` goes from "no edition" to `IMM 5669 (05-2021)`, from `form_template`. `imm0008depe.pdf` goes from code `IMM 0008` with no edition to `IMM 0008 DEP (10-2024)`, `printed`. The canada.ca page `canada/pages/imm0008-dep.html` now reads code `IMM 0008 DEP` where it used to read `IMM 0008`. That third change is a correction, but the builder said every other file reads as before, and this one does not. Every other file is byte-identical apart from the new `edition_from` key.
+- **Template `Version` against the printed edition.** 18 official PDFs carry a Version variable. On all 17 that also print an edition, the two agree. The builder's note says 15 (`read_form_identity.py:22`). A stale Version is possible in principle, but the printed edition always wins and the source is recorded as `form_template`.
+- **DEP.** `(?![A-Za-z])` stops words like DEPENDANT and DEPARTMENT from matching. Plain IMM 0008 keeps `IMM 0008 (05-2026)`. `IMM 0008 DEP` is spelled the same way as `engine/canada.ts:51 normaliseCode` and `contracts/form-library.ts:13`, so the finder, the routes and the field-map job's `knownOk` all accept it.
+- **Manifest rule** (`intake.ts:57-66`). The manifest's edition is taken only when the file is that entry (same SHA-256) **and** the entry's plain edition names the same code. The value is fixed to "en", which is safe because the manifest has no French entry. A matching entry with any other edition gives nothing, and the person decides. A mismatch is refused before any library write. The refusal runs only when the reader found a code but no edition. A file approved in the product cannot reach this branch, because `cannotApprove` never approves a file with no edition.
+- **New suite** `check_c117_intake_edition.ts` on my own copy (:4441): **17/17**. Reset to the six adds both forms (origin SAMPLE, via the intake; nothing held). The audit lines record `edition_from` as printed and form_template.
+- **Job files.** `field-map-new-jobs.ts` on that copy selects imm5645e, imm0008depe and imm5669e. All 6 jobs it makes are **byte-identical** to the committed files, and both inventory SHA-256 values match. All 5 new jobs pass `p2/launch.ts --stub` (exit 0, US$0). I ran them in a scratch copy with a scratch ledger, because the shared working tree is being used by the builder's suites. Prices: IMM 5645 US$0.53 usual / US$3.14 worst for each round, IMM 0008 DEP 0.98 / 3.61, IMM 5669 1.28 / 6.49 (draft) and 1.28 / 6.50 (checker). The IMM 5669 worst case is above the US$5 job budget; the builder has raised this as a question.
+- **Other suites, on fresh copies (:4442–4449).**
+  - Green: `check_c1113_near_release` 20/20, `check_forms_channels` 105/105, `check_forms_demo` 23/23, `check_qa163_listed_form_saved` 12/12, `check_forms_c24_same_and_new` 15/15, `check_forms_c312_field_map` 61/61, `check_gcore_b5_field_map_bulk` 19/19.
+  - Green with 170b2061a's test text: `check_s7_load` 23/23 and `check_c10_1_configured` 27/27. At ea9e3a507 itself, those two assertions still expected only IMM 5645 to be waiting, so both suites were red.
+  - Red, unrelated to this change: `acceptance/C11.7` 18/21 (part B, the Provincial nominee lines, which the builder has deliberately left out) and `acceptance/C10.1` 13/23 (release and case rows not built yet).
+- `check_forms_s4_runs.ts:84` expects the founder's IMM 5669 record to keep waiting. I did not run that suite because it needs `STUDIO_AI_LIVE`. A plain `/demo/load` (the suite's own load) still logs "IMM 5669, IMM 5406 … wait for the form", because that load does not include imm5669e, so the check is unaffected.
+
+## Blocker
+1. **`tests/check_forms_pdf_hardening.ts` goes red: 41 passed, 8 failed, on ea9e3a507 and still on 170b2061a.**
+   - Line 101 still requires the official IMM 5669 to be *held* ("could not read the edition of IMM 5669"). The intake now *adds* it, which is the very change this PR is for.
+   - Because IMM 5669 now adds a row to the library, the `beforeRows() === rows` comparison fails in the next 7 checks (lines 103, 105, 108, 112, 123, 127, 134). The behaviour those 7 checks test is unchanged; they fail only because of the extra row.
+   - Done-when requires "existing suites stay green". The merge queue runs every suite, so this PR cannot merge green.
+   - Fix: change line 101 to the new rule (the official IMM 5669 is added with `editionFrom: "form_template"`, and the PDF-hardening "dynamic XFA" case moves to a file with neither a printed edition nor a Version). Take the row baseline after that upload. Rule from WAY-OF-WORKING: "when a decision changes behaviour, its pack changes in the same PR."
+
+## Majors
+None.
+
+## Minors
+1. **The run card contradicts the refusal** (`api/src/upload-run.ts:124`, `:129`). I walked it in Chromium on :4441: Form library › Upload PDF, then a mismatched `imm5669e.pdf`.
+   - Step "Read what this file is" says the file "waits for a person to check it".
+   - Step "Compare with canada.ca" says "the form number is not known", even though the reader found IMM 5669.
+   - Step "Add it to the library" then says "Refused … Nothing was added".
+   - The person is told two different outcomes, and is sent looking in To review for a file that is not there.
+   - The card's read step runs the reader without the P-297 (2) rule. So in the manifest case it would also say "waits for a person" for a file that is then added.
+   - Fix: give that step the outcome of `editionFromManifest`.
+2. **The plain-IMM-0008 guard is not pinned by a test.** I removed the `(?!\s?DEP)` lookahead (`read_form_identity.py:136`) and `check_c117…:44` still passes: the official imm0008e only prints "IMM 0008DEP" without an edition next to it. Add a made PDF titled IMM 0008 whose text prints `IMM 0008DEP (10-2024)` and no plain edition. Likewise, no test fails if the "exactly one Version" condition (`:145`) is removed.
+3. **The checksum path is tested only as a pure function.** No request goes through `one()` with `listed.use` (the audit `edition_from: "manifest"` and its message are untested), because no real file reaches it any more. This is acceptable given that the rule is pure, but say so in the PR.
+4. **The refusal wording is wrong for a newer official edition.** Take a newer official IMM 5669 that prints no edition and has no Version (for example one the finder downloaded from canada.ca). It is refused with "Upload the official PDF from IRCC", although it *is* official. Before this change it was held, and it could never be approved anyway, so the outcome is the same. Only the words mislead; something like "…or, if this is a newer edition, ask the tech lead" would fix it.
+5. **IMM 5669's two jobs are over the US$5 budget at worst** (US$6.49 / 6.50). `p2/runner.ts` reserves the worst case for each attempt, so the first attempt (about US$3.25) runs and the retry is refused before any call. The builder raised this; it needs a ruling (raise the budget, or split into parts as imm1344e-p1of5 does) before the Go.
+
+## Nits
+- In `check_c117…:82`, the `missing` test `/imm5669e|imm0008depe/` checks a form code, never a file name, so that part can never fail. The `intake_item` and `form_edition` counts are the real check, and they hold, because Reset rebuilds the library from SAMPLE.
+- The `waitingForms` query (`field-map-new-jobs.ts:33-35`) is not limited to one workspace. That is fine on a single-workspace copy, but worth saying in the tool's header.
+- The record facts in the builder's account and code comment: the HTML page's code changed, and there are 17 files with both editions, not 15.
+
+## Journey test (reviewer role; API and one browser walk; persona: the content author)
+Journeys walked:
+1. Reset to the six: both forms come in, with no held file.
+2. Upload the official IMM 0008 DEP and IMM 5669: both added, each saying where its edition came from.
+3. Upload a copy coded IMM 5669 that prints no edition: refused in words, nothing written.
+4. Upload an unlisted code with no edition: still held for a person.
+5. The library list shows `IMM 0008 DEP` and `IMM 5669` as "Not mapped yet".
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | journeys 1–5 hold (suite 17/17; library screenshot) |
+| Next step obvious | ½ | the refused card also says "waits for a person" (Minor 1) |
+| Plain words | ½ | the same contradiction; otherwise plain |
+| Feedback and state | ½ | the card's steps disagree with its final state |
+| Correct data | 1 | form_edition rows, audit `edition_from`, no row on refusal |
+| Error recovery | 1 | refused leaves nothing; upload the official file again → added |
+| Accessibility and screen sizes | ½ | axe WCAG 2.2 A/AA: 0 violations; 400 px: no sideways scroll; keyboard-only and 200 % zoom not walked |
+| Speed | ½ | answer within about 2–6 s (my wait included a fixed 4 s); not measured against §9 |
+| Visual quality | 1 | unchanged team look |
+| Trust and sources | 1 | edition source recorded and said; checksum rule shown in the words |
+
+**Score: 7.5/10**, below the pass mark of 8. The most valuable fix is Minor 1, which raises the next-step, words and feedback criteria together.
+Not tested: a real screen reader; an intended user's unaided walk; `check_forms_s4_runs` (needs a *_LIVE switch); the full suite set.
+
+**Must fix before Approve:** Blocker 1. Minors 1–2 are strongly advised in the same PR; Minor 5 needs a tech-lead ruling.
+
+Verdict: Block
