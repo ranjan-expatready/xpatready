@@ -178,7 +178,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await open();
   const trCard = (await card("Temporary residence").innerText()).replace(/\s+/g, " ");
   const allCard = (await card("All pathways").innerText()).replace(/\s+/g, " ");
-  step("C11.10 fix 6: one waiting combination (AI proposals) shows '1 needs you' on its Pathway card, All pathways and its section", /1 needs you/.test(trCard) && /1 needs you/.test(allCard) && /1 needs you/.test(await p.locator('[data-section="retail.temporary_residence"]').innerText()), `${trCard} / ${allCard}`);
+  step("C11.10 fix 6: one waiting combination (AI proposals) shows '1 combination needs you' (QA-179) on its Pathway card, All pathways and its section", /1 combination needs you/.test(trCard) && /1 combination needs you/.test(allCard) && /1 combination needs you/.test(await p.locator('[data-section="retail.temporary_residence"]').innerText()), `${trCard} / ${allCard}`);
   await statusBtn().click(); await p.getByRole("menuitemradio").filter({ hasText: /^Needs work/ }).click(); await ready();
   step("C11.10 BR-13: Needs work lists the waiting combination (Super visa)", await p.locator('article[data-label="Super visa"]').count() === 1);
   await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(300);

@@ -145,7 +145,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const toggleTips = await p.getByRole("tooltip").allTextContents();
   await toggle.click(); await p.waitForFunction(() => new URLSearchParams(location.search).get("n") === "1"); await ready(); await p.waitForTimeout(300);
   const chipText = (await p.locator(`[data-section="${tr}"] [data-need-you]`).textContent().catch(() => "")) ?? "";
-  step("S2 fix 6 (review M1) P-180: with Needs you on, the section shows its need-you count, and the toggle explains itself", chipText.startsWith(`${trS0.needs} need`) && toggleTips.some((t) => /Combinations where something waits for you: a review or a confirmation on your duty\./.test(t)), `${chipText} / ${toggleTips.join(" | ")}`);
+  step("S2 fix 6 (review M1) P-180: with Needs you on, the section shows its need-you count, and the toggle explains itself", chipText.startsWith(`${trS0.needs} combination${trS0.needs === 1 ? " needs" : "s need"} you`) && toggleTips.some((t) => /Combinations where something waits for you: a review, a confirmation or a next step on your duty\. This counts combinations/.test(t)), `${chipText} / ${toggleTips.join(" | ")}`);
   await toggle.click(); await p.waitForFunction(() => !new URLSearchParams(location.search).get("n")); await ready(); await p.waitForTimeout(300);
   step("C11.10 BR-13: every combination is shown by default (Status: All)", await p.locator("article[data-node]").count() === cat.rows.length, `${await p.locator("article[data-node]").count()} of ${cat.rows.length}`);
   await p.mouse.move(0, 0);

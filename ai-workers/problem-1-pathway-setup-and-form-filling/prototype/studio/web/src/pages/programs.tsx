@@ -52,7 +52,9 @@ const STATUSES = [
 ] as const;
 type StatusKey = (typeof STATUSES)[number][0];
 const statusWordOf = (k: StatusKey) => STATUSES.find(([x]) => x === k)![1];
-const NEED_YOU = "Combinations where something waits for you: a review or a confirmation on your duty.";
+const NEED_YOU = "Combinations where something waits for you: a review, a confirmation or a next step on your duty. This counts combinations; To review counts each item (a combination can have several), plus held files and other shared-library items.";
+/** QA-179 (P-288 (1)): every Needs you count on this page counts combinations and says so. */
+const needCombos = (n: number) => `${n} combination${n === 1 ? " needs" : "s need"} you`;
 const BAR_TIP = "Five steps, worked out from what is set up now: Official pages · Who can be in this application · Forms · Questions and documents · Review and release. The Overview shows each one.";
 const VIEW_TIP = "Cards show setup progress; the list fits more on screen. Remembered for you.";
 // Below 640 px the trail and progress move under the name, so the combination's name keeps its width (QA-9).
@@ -289,7 +291,7 @@ export function ProgramsPage() {
                     <button type="button" aria-pressed={answered === c.key} onClick={() => set({ p: c.key || null, prog: null, under: null }, true)} data-pathway-chip={c.key || "all"}
                       className={cn("inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", answered === c.key ? "border-primary/40 bg-primary/10 font-semibold text-text-link" : "border-border-strong bg-surface-raised text-text hover:bg-text/5")}>
                       {c.idx >= 0 ? <span className="h-3.5 w-1 rounded-sm" style={{ background: pathwayAccent(c.idx) }} aria-hidden /> : null}{c.label}<span className="text-xs font-medium tabular-nums text-text-muted" data-count>{c.count}</span>
-                      {c.needs ? <span className="rounded-full bg-warn/15 px-1.5 text-xs font-semibold text-text-warn" data-need>{c.needs}<span className="sr-only"> need you</span></span> : null}
+                      {c.needs ? <span className="rounded-full bg-warn/15 px-1.5 text-xs font-semibold text-text-warn" data-need>{c.needs}<span className="sr-only">{needCombos(c.needs).replace(/^\d+/, "")}</span></span> : null}
                     </button>
                   </Tip>
                 ))}
@@ -306,7 +308,7 @@ export function ProgramsPage() {
             <Tip tip={NEED_YOU}>
               <button type="button" aria-pressed={needsOnly} onClick={() => set({ n: needsOnly ? null : "1" }, true)} data-needs-you
                 className={cn("inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", needsOnly ? "border-warn bg-warn/10 font-semibold text-text-warn" : "border-border-strong bg-surface-raised text-text hover:bg-text/5")}>
-                <span className="size-1.5 rounded-full bg-warn" aria-hidden />Needs you<span className="tabular-nums text-xs font-semibold">{mineNeeds}</span>
+                <span className="size-1.5 rounded-full bg-warn" aria-hidden /><span className="tabular-nums font-semibold" data-needs-you-count={mineNeeds}>{mineNeeds}</span>{needCombos(mineNeeds).replace(/^\d+/, "")}
               </button>
             </Tip>
           </div>
@@ -429,7 +431,7 @@ function SectionHeader({ s, accent, shown, filtering, needsOnly, closed, onToggl
         <LevelMark level="pathway" tip={false} />
         <span className="font-semibold text-lv1">{s.label}</span>
         <span className="text-sm font-normal text-text-muted" data-live-count>{liveCount(s.live, s.combinations)}{filtering ? ` · ${shown} shown` : ""}</span>
-        {needsOnly && s.needs ? <span className="rounded-full bg-warn/15 px-1.5 text-xs font-semibold text-text-warn" data-need-you>{s.needs} need{s.needs === 1 ? "s" : ""} you</span> : null}
+        {needsOnly && s.needs ? <span className="rounded-full bg-warn/15 px-1.5 text-xs font-semibold text-text-warn" data-need-you>{needCombos(s.needs)}</span> : null}
       </button>
     </h2>
   );
@@ -600,7 +602,7 @@ function List({ groups, closed, onToggle, highlight, q, sort, filtering, needsOn
         return (
           <React.Fragment key={s.pathwayKey}>
             {band(s.pathwayKey, shut, <><LevelMark level="pathway" tip={false} /><b className="font-semibold text-lv1">{s.label}</b><span className="text-text-muted" data-live-count>· {liveCount(s.live, s.combinations)}{filtering ? ` · ${mine.length} shown` : ""}</span>
-              {needsOnly && s.needs ? <span className="rounded-full bg-warn/15 px-1.5 text-xs font-semibold text-text-warn" data-need-you>{s.needs} need{s.needs === 1 ? "s" : ""} you</span> : null}</>,
+              {needsOnly && s.needs ? <span className="rounded-full bg-warn/15 px-1.5 text-xs font-semibold text-text-warn" data-need-you>{needCombos(s.needs)}</span> : null}</>,
               "sticky top-14 z-10 border-b border-lv1-b bg-lv1-t px-2 py-1.5", { boxShadow: `inset 4px 0 0 ${pathwayAccent(gi)}` })}
             {shut ? null : !mine.length ? <div role="row" className="border-b border-border px-4 py-2.5 text-sm text-text-muted"><span role="gridcell"><SectionEmpty label={s.label} pathway={pathway} /></span></div> : programs.map((p) => (
               <React.Fragment key={p.key}>

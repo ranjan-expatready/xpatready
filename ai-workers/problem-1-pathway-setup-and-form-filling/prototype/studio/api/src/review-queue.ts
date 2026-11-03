@@ -234,7 +234,7 @@ export class ReviewQueueService {
           continue;
         }
         out.push({ id: `held:${h.id}`, kind: "held_file", title: label, by: nameOf(h.createdBy), at: h.createdAt.toISOString(), cost_usd: null, forms: h.code ? [normaliseCode(h.code)] : [], combination: null,
-          what: `Not on the approved source list: not read into the library, attached or sent to AI.${noPage ? " The person who uploaded it records the IRCC page it came from first." : ""}`,
+          what: `Held: not on the approved source list, so it is not read into the library, attached or sent to AI.${noPage ? " The person who uploaded it records the IRCC page it came from first." : ""}`,
           ...(mine && noPage ? { state: "needs" as const, waiting_on: null, next: { label: "Record the IRCC page", href: `/review/held/${h.id}`, note: null } }
             : noPage ? { state: "waiting" as const, waiting_on: `${nameOf(h.createdBy)} records the IRCC page it came from; then a different person checks it.`, next: null }
             : holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Check the source", href: `/review/held/${h.id}`, note: null } } : { state: "waiting" as const, waiting_on: mine ? "You uploaded it; a different person checks the source." : "A content publisher checks the source.", next: null }) });

@@ -155,7 +155,7 @@ function NavItem({ to, label, icon: Icon, active, badge }: { to: string; label: 
   return (
     <NavLink to={to} end={to === "/"} className={({ isActive }) => cn("flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm text-text-muted outline-none hover:bg-text/5 hover:text-text focus-visible:ring-[3px] focus-visible:ring-ring/50",(active ?? isActive) && "bg-primary/10 font-medium text-text-link")}>
       <Icon className="size-4" />{label}
-      {badge ? <span className="ml-auto rounded-md bg-[#7c3aed]/12 px-1.5 text-[11px] font-semibold tabular-nums text-[#6d28d9] dark:text-[#c4b5fd]" aria-label={`${badge} waiting for you`}>{badge}</span> : null}
+      {badge ? <span className="ml-auto rounded-md bg-[#7c3aed]/12 px-1.5 text-[11px] font-semibold tabular-nums text-[#6d28d9] dark:text-[#c4b5fd]" aria-label={`${badge} item${badge === 1 ? " needs" : "s need"} you`} title={`${badge} item${badge === 1 ? " needs" : "s need"} you on To review`}>{badge}</span> : null}
     </NavLink>
   );
 }

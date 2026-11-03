@@ -77,7 +77,7 @@ const PEOPLE = ["user-A", "user-B", "user-C"];
   step("pass: the row names the first problem", /first: Filing for Spouse or partner/.test(said), said);
   const found = (await api("/review-queue?filter=all&q=Temporary%20residence")).body.items.filter((i) => i.kind === "setup").map((i) => i.combination);
   step("pass (break m1): the row's title has the Pathway, so searching it finds the row", found.includes(vv), found);
-  const nav = await p.locator('a[href="/review"] [aria-label$="waiting for you"]').innerText().catch(() => "");
+  const nav = await p.locator('a[href="/review"] [aria-label$=" you"]').innerText().catch(() => "");
   step("pass: the menu's To review number is Needs you's", nav === String((await reviewNeeds("user-A")).counts.needs), nav);
   await axe("To review (author, blocked)");
   await p.screenshot({ path: path.join(SHOTS, "uxa2-01-needs-you-author-1440.png"), fullPage: true });
@@ -155,7 +155,7 @@ const PEOPLE = ["user-A", "user-B", "user-C"];
       await p.goto(`${BASE}/${pw === "CORPORATE" ? "?pw=CORPORATE" : ""}`); await p.locator("[data-needs-you]").first().waitFor({ timeout: 20000 }); await p.waitForFunction(() => !document.querySelector('[aria-busy="true"]'), null, { timeout: 15000 });
       const chip = p.locator("[data-needs-you]").first();
       await chip.waitFor({ timeout: 15000 }).catch(() => undefined);
-      const shown = ((await chip.innerText().catch(() => "")) ?? "").match(/(\d+)\s*$/)?.[1];
+      const shown = ((await chip.innerText().catch(() => "")) ?? "").replace(/\s+/g, " ").trim().match(/^(\d+) combinations? needs? you$/)?.[1]; // QA-179: the chip says it counts combinations
       step(`pass (Lead 5, ${actor}, ${pw === "CORPORATE" ? "Corporate" : "Retail"}): the Programs page's Needs you chip counts the combinations on To review's Needs you`, shown !== undefined && Number(shown) === want, { shown, want });
     }
   }

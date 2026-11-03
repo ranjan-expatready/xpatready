@@ -66,7 +66,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const chipCounts = await p.locator("[data-pathway-chip]").evaluateAll((a) => a.map((x) => `${x.getAttribute("data-pathway-chip")}:${x.querySelector("[data-count]")?.textContent}:${parseInt(x.querySelector("[data-need]")?.textContent ?? "0", 10)}`));
   const want = ["all:" + cat.rows.filter((r) => !r.retired).length + ":" + needsYou, ...cat.sections.map((s) => `${s.pathwayKey}:${s.combinations}:${s.needs}`)];
   step("C11.10 R3-6: the chips' counts and need-you counts are the catalogue's", JSON.stringify(chipCounts) === JSON.stringify(want), `${chipCounts.join(" ")} vs ${want.join(" ")}`);
-  step("C11.10 R3-6: Needs you shows how many wait on a person", (await p.locator("[data-needs-you]").innerText()).replace(/\s+/g, " ").trim() === `Needs you ${needsYou}`, await p.locator("[data-needs-you]").innerText());
+  step("C11.10 R3-6: Needs you shows how many wait on a person", (await p.locator("[data-needs-you]").innerText()).replace(/\s+/g, " ").trim() === `${needsYou} combination${needsYou === 1 ? " needs" : "s need"} you`  /* QA-179 */, await p.locator("[data-needs-you]").innerText());
   await state("filter-bar");
   await p.locator("[data-needs-you]").click();
   await p.waitForFunction((k) => document.querySelectorAll("article[data-node]").length === k, needsYou, { timeout: 8000 }).catch(() => undefined);

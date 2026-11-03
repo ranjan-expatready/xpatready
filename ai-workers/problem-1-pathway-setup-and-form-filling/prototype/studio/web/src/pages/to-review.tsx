@@ -17,6 +17,23 @@ import { withReturn } from "@/pages/workspace/setup-rail";
 
 const VIEWS = [["needs", "Needs you"], ["waiting", "Waiting for others"], ["running", "Running"], ["all", "All"]] as const;
 const KIND_TONE: Record<QueueKind, string> = { setup: "warn", proposals: "ai", ai_proposals: "ai", release: "info", library_change: "info", form_fields: "warn", new_edition: "warn", held_file: "warn", merge: "neutral", running: "ai" };
+/** QA-179 (P-288 (1)): To review counts items, Immigration programs counts combinations. One line says how the two
+ *  meet: the items on combinations, how many combinations they are (the number Programs shows), and the shared-library
+ *  items apart, held files named as held. */
+function NeedsBreakdown({ items }: { items: QueueItem[] }) {
+  const onCombos = items.filter((i) => i.combination);
+  const combos = new Set(onCombos.map((i) => i.combination)).size;
+  const held = items.filter((i) => !i.combination && i.kind === "held_file").length;
+  const library = items.length - onCombos.length - held;
+  const n = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
+  const parts = [
+    onCombos.length ? `${n(onCombos.length, "item", "items")} on ${n(combos, "combination", "combinations")} (Immigration programs counts ${combos === 1 ? "this combination" : `these ${combos} combinations`})` : null,
+    held ? `${n(held, "held file", "held files")} (held: not read into the library until a person checks ${held === 1 ? "it" : "them"})` : null,
+    library ? `${n(library, "shared library item", "shared library items")}` : null,
+  ].filter(Boolean);
+  return <p className="-mt-1 text-sm text-text-muted" data-needs-breakdown data-combinations={combos} data-held={held} data-library={library}><b className="font-semibold text-text">{n(items.length, "item needs", "items need")} you</b>: {parts.join(" · ")}.</p>;
+}
+
 const STATE: Record<QueueItem["state"], [string, string]> = { needs: ["warn", "Needs you"], waiting: ["neutral", "Waiting for others"], running: ["ai", "Running"] };
 
 export function ToReviewPage() {
@@ -73,7 +90,7 @@ export function ToReviewPage() {
               return (
                 <button key={k} type="button" aria-pressed={on} onClick={() => set({ f: k === "needs" ? null : k })}
                   className={cn("h-8 rounded-full border px-3 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", on ? "border-primary bg-primary font-semibold text-white" : "border-border bg-surface-raised text-text hover:bg-text/5")}>
-                  {word} · <span className="tabular-nums">{d?.counts[k] ?? "…"}</span>
+                  {word} · <span className="tabular-nums">{d?.counts[k] ?? "…"}</span>{d ? ` item${d.counts[k] === 1 ? "" : "s"}` : ""}
                 </button>
               );
             })}
@@ -86,6 +103,8 @@ export function ToReviewPage() {
             </select>
           </label>
         </div>
+
+        {d && filter === "needs" && !q && !kind && !form && d.items.length ? <NeedsBreakdown items={d.items} /> : null}
 
         {list.isError ? (form && list.error instanceof ApiError && list.error.status === 400
             // C2.12: a form number the studio refuses (too long, empty) is said in its words, with the way out, not "Try again".
