@@ -53,17 +53,6 @@ Read 1 Nov 2026 unless stated; "page date" is the page's own "Page details" date
 | VV-R20 | A fact corrected after filing: re-sign or tell IRCC | Founder P-142 D7 (29 Oct) | **Unconfirmed: no counsel** | C8.2-12 | C9.2, C8.2 |
 | VV-R21 | No one signs for the client; the officer never stores a client's sign-in | r5c BR-10 (founder P-143, P-155) | **Unconfirmed: no counsel** | C8.1-12 | C8.1 |
 
-### C6.12 — fees for other filings (breadth step 24)
-
-Read 3 Nov 2026 from IRCC's fee list (page date 2026-09-21). Lines in `prototype/studio/samples/fee-table.json`, tests in `prototype/studio/tests/check_r2_fee_table.ts` ("C6.12-24 …"). No shipped combination uses them yet; each comes in with its release.
-
-| ID | Rule (plain words) | Source (page, quote, date read) | Status | Test | Capability |
-|---|---|---|---|---|---|
-| FEE-R01 | Study permit fee CAD 150 for each person, extensions included; no family maximum | [IRCC fee list](https://ircc.canada.ca/english/information/fees/fees.asp): "Study permit (including extensions) – per person" 150.00 (page date 2026-09-21; read 3 Nov 2026) | Sourced; amount Sample until the immigration expert confirms (P-171) | C6.12-24 (breadth), check_r2_fee_table | C6.12 |
-| FEE-R02 | Work permit fee CAD 155 for each person, extensions included; no family maximum | IRCC fee list: "Work permit (including extensions) – per person" 155.00 (page date 2026-09-21; read 3 Nov 2026) | Sourced; the page's CAD 465 group maximum is for "3 or more performing artists" only (not a family maximum) and is **not modelled** | C6.12-24 (breadth), check_r2_fee_table | C6.12 |
-| FEE-R03 | Open work permit holder fee CAD 100, paid with the work permit fee for an open work permit | IRCC fee list: "Open work permit holder" 100.00 (page date 2026-09-21; read 3 Nov 2026) | Sourced amount; charging it to each open work permit holder is our reading (the row says no "per person"): **Sample** until the immigration expert confirms | C6.12-24 (breadth), check_r2_fee_table | C6.12 |
-| FEE-R04 | Extending a stay as a visitor costs CAD 100 for each person; the CAD 500 family maximum is for visitor visas only | IRCC fee list: "Extend your stay as a visitor – per person" 100.00 (page date 2026-09-21; read 3 Nov 2026) | Sourced; amount Sample until the immigration expert confirms (P-171) | C6.12-24 (breadth), check_r2_fee_table | C6.12 |
-
 ## Pack 3 — Library upkeep, demo and runtime proof
 
 Read 2026-11-01. Local pages were downloaded 19 Oct 2026 (forms and guides) and 27 Oct 2026 (Express Entry pages); the three Help Centre pages were fetched on 2026-11-01. Quotes were checked word for word against those files; the Help Centre pages are **web only, not saved** under `official-sources/` (fetched and checked 2026-11-01).
