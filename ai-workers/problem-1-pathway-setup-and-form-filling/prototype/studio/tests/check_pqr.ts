@@ -58,6 +58,15 @@ const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
   ok("C4.2 pass: the author ticks Date of birth for the Prospect questionnaire (PQR) (a draft row of the one per-combination record)", r.status === 200 && r.body?.prequalification === true && sql(`select count(*) from fact_source where combination_id='${wp}' and prequalification`) === "1", r.body?.prequalification ?? words(r));
   const L = (await call("GET", `/combinations/${wp}/fact-sources`)).body;
   ok("C4.2 pass: the combination's PQR set lists exactly the ticked questions, with how each is asked", L.counts.prequalification === 1 && L.prequalification.length === 1 && L.prequalification[0].fact === "person.date_of_birth" && L.prequalification[0].source === "DOCUMENT", L.prequalification);
+  // QA-125 (C4.2): two saves of the same answer at the same moment: one wins, the other is a 409 in words naming the
+  // question (never 404 "removed by a reset", never "the database"); exactly one new version is kept.
+  const dob = (L.facts as any[]).find((f) => f.role === "principal" && f.fact === "person.date_of_birth");
+  const versions = () => Number(sql(`select count(*) from fact_source where combination_id='${wp}' and canonical_field_key='person.date_of_birth' and role='principal'`));
+  const v0 = versions();
+  const both = await Promise.all([1, 2].map((n) => put("principal", "person.date_of_birth", { prequalification: true, reason: `Sample: save ${n} at once`, version: dob.version })));
+  const lost = both.find((x) => x.status !== 200), won = both.filter((x) => x.status === 200);
+  ok("C4.2 pass (QA-125): of two saves at once, exactly one is kept", won.length === 1 && versions() === v0, { statuses: both.map((x) => x.status), v0, now: versions() });
+  ok("C4.2 fail (QA-125): the other save is refused 409 in plain words naming the question (never 404, never 'the database')", lost?.status === 409 && String(lost.body?.detail).includes(dob.label) && !/database|removed|reset/i.test(String(lost.body?.detail)), lost && { status: lost.status, detail: lost.body?.detail });
   K = await country();
   ok("C4.2 P-132 fail: a draft tick is not in the country PQR until its combination releases; it is named as a draft change", K.lines.length === 0 && K.thisCombination.draftAdds.length === 1 && !KEYS.test(K.thisCombination.draftAdds[0].label), K.thisCombination);
   r = await call("GET", `/pqr/country`);
