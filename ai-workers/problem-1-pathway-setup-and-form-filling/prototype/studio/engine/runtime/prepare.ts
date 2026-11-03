@@ -43,6 +43,37 @@ export function wantedItems(filers: string[], forms: FormRow[], docs: Map<string
   return out;
 }
 
+/** C7.7 part 2 (r5c BR-8, P-143, P-144, P-171 (1); SA-1B-31 "the barcode page is created only when a person clicks
+ *  Validate"): a Paper line in the deliverables list. Its steps, in order: (a barcode form) Validate in Adobe, which adds
+ *  the barcode page, and read the validated copy back · print, the barcode page on top · signed in pen by its signers ·
+ *  mailed once the filing is Ready to file. A form that makes no barcode page has no Validate step and no barcode page.
+ *  The state: Out of date when a fact changed after the validated copy was read back (BR-12, P-171 (1)); else To do
+ *  while a fact is missing or (a barcode form) no validated copy is read back; In progress once it is read back for
+ *  today's facts (the pen and the post are still to come). Never Ready here: printing, signing in pen and mailing are
+ *  recorded by C8.1's Paper part, so those steps say `done: null` (not recorded yet). Readiness stays C7.6's. */
+export type PaperValidated = { copy: string; at: string; current: boolean } | null;
+export type PaperStep = { key: "validate" | "print" | "sign_in_pen" | "mail"; words: string; done: boolean | null; neededBefore?: "filing" | "after_ready" };
+export type PaperLine = { state: "to_do" | "in_progress" | "out_of_date"; reason: string; barcode_page: boolean; validated: PaperValidated; steps: PaperStep[] };
+const SIGNER_WORDS: Record<string, string> = { person: "the person", parent: "a parent (for a child under 18)", principal: "the principal applicant", representative: "the representative" };
+export function paperLine(form: string, opts: { barcode: boolean; missing: number; validated: PaperValidated; signers: string[] }): PaperLine {
+  const { barcode, missing, validated } = opts;
+  const who = opts.signers.map((x) => SIGNER_WORDS[x] ?? x);
+  const signedBy = who.length ? who.join(" and ") : "each person who signs it";
+  const steps: PaperStep[] = [
+    ...(barcode ? [{ key: "validate" as const, words: `Make the copy, press Validate in Adobe (this adds ${form}'s barcode page), save it and read the validated copy back here`, done: !!validated?.current, neededBefore: "filing" as const }] : []),
+    { key: "print", words: barcode ? `Print the validated copy with its barcode page, the barcode page on top` : `Make the copy and print it (${form} makes no barcode page)`, done: null, neededBefore: "filing" },
+    { key: "sign_in_pen", words: `Signed in pen by ${signedBy}`, done: null, neededBefore: "filing" },
+    { key: "mail", words: "Mailed to IRCC once the filing is Ready to file", done: null, neededBefore: "after_ready" },
+  ];
+  // A form with no barcode page needs no read-back, so none is shown for it.
+  const line = (state: PaperLine["state"], reason: string): PaperLine => ({ state, reason, barcode_page: barcode, validated: barcode ? validated : null, steps });
+  if (barcode && validated && !validated.current) return line("out_of_date", `Out of date: a fact on ${form} changed after its validated copy was read back. Make a new copy, press Validate again (a new barcode page) and read it back before you print.`);
+  if (missing > 0) return line("to_do", `Waiting for ${missing} fact${missing === 1 ? "" : "s"} to answer or confirm.`);
+  if (!barcode) return line("to_do", `Every fact it reads is confirmed. Make the copy, print it, have it signed in pen and mail it once the filing is Ready to file. ${form} makes no barcode page.`);
+  if (!validated) return line("to_do", `Every fact it reads is confirmed. Make the copy, press Validate in Adobe (this adds the barcode page), save it and read the validated copy back here: IRCC returns a barcode form unprocessed without it.`);
+  return line("in_progress", `Validated copy with its barcode page read back for today's facts. Print it with the barcode page on top, have it signed in pen, and mail it once the filing is Ready to file.`);
+}
+
 /** A form line as the release holds it (snapshot.forms). */
 export type FormLine = { form_number: string; channel?: string; signature?: string; signed_by?: string; who?: string };
 /** A form item's channel today (the officer's choice, else the line's), the channels IRCC accepts for it on the account,
