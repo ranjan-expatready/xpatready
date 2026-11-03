@@ -87,3 +87,19 @@ Journeys walked in headless Chrome as the author (user-A), the approver (user-B)
 Not tested: a real screen reader, an intended user's unaided walk (D17, D20 stay with the founder), the release step after the meaning draft. No separate journey-test file: the brief allowed only this file.
 
 **Verdict: Block**. Fix Major 1 (one assertion plus its fail-first proof). Fix Minors 2–5 or list them in the PR.
+
+## Opus re-review (P-303), diff only, 5447c3d1f..2a0a4249d
+Reviewer: not the builder, on Opus. I read the diff (`C3.15.test.ts`, `engine/change-set.ts`, `library.tsx` in 4c00e9204, then `library.tsx` again in 2a0a4249d). I ran it from the PR worktree at 2a0a4249d with the web rebuilt there, on :4449. US$0. Setup 13/13, pack **11/11**. The server code is the same in 4c00e9204 and 2a0a4249d.
+- **Major 1: closed.** `C3.15.test.ts:70` now requires `fa.version === fb.version + 1` and that the published v`fb.version` row is kept. My mutation (the direct branch at `rename-door.ts:74` overwrites the published row in place) now turns the pack to **10/11**, failing exactly that check. Restored: 11/11.
+- **Minor 2: closed.** Walked in Chrome:
+  - Empty reason: Save is disabled.
+  - "abc": Save is disabled, the box is `aria-invalid`, and "At least 8 characters: say why in a sentence (invisible characters do not count)." shows under it, announced by its alert role.
+  - "abc" plus six invisible characters: still disabled, since the screen now counts as the server does (NFKC, invisible characters removed).
+  - A sentence: enabled; saved as v2 draft with v1 published kept.
+  - Accessibility scan with the error shown: 0 violations.
+- **Minor 3: closed.** `change-set.ts:87-90` takes the waiting change's group from its field when the field exists, else the key's first part (#295), so it follows the same rule as the twin check. The pack now proves that a waiting name in another group is allowed (200). Removing the group comparison turns the pack to **10/11**, failing that check.
+- **Minor 5: closed.** The check name now cites BR-14, `check_screen01_release_race.ts` and C10.1 row 10 instead of claiming the pack checks the release.
+- **Minor 4:** listed in the PR, not fixed (both narrow and recoverable). Accepted.
+Journey score unchanged at 9/10, except feedback and state now earn the full point (error on the field): **9.5 / 10, pass**.
+
+**Verdict: Approve** on 2a0a4249d (no open Blocker or Major).
