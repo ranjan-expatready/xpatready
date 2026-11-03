@@ -43,9 +43,10 @@ const TRIGGER = "c34_live_check_refuse";
   let r = await call("POST", `/attachments/${form}/draft-masters`, { mode: "live" });
   ok("C3.4 V fail: Live without looking at the plan is refused (cost first), nothing sent", r.status === 409 && /plan/i.test(r.body?.detail ?? "") && !sql(`select count(*) from drafting_job where kind='masters_edition' and mode='LIVE'`).startsWith("1"), r.body?.detail);
   const plan = await call("POST", `/attachments/${form}/draft-masters/plan`, { mode: "live" });
-  // The plan bounds a round by the raw inventory (roundBudgetUsd, as C4.7 and C4.11 do): US$6.60 for IMM 5257's two
-  // rounds, above the US$4.35 the runner reserves for the slimmed request (tools/track-a-jobs.ts); never below it.
-  ok("C3.4 V pass: the Live plan states the worst case of both rounds before anything runs, never below the runner's reservation", plan.status === 200 && plan.body?.totals?.worst_usd >= 4.35 && plan.body?.totals?.worst_usd <= 6.6 && plan.body?.live?.approved === true, plan.body?.totals);
+  // The plan bounds a round by the raw inventory (roundBudgetUsd, as C4.7 and C4.11 do): US$7.27 for IMM 5257's two
+  // rounds at the 16,000 output limit (P-296 (3)), above the US$5.03 the runner reserves for the slimmed request
+  // (tools/track-a-jobs.ts); never below it.
+  ok("C3.4 V pass: the Live plan states the worst case of both rounds before anything runs, never below the runner's reservation", plan.status === 200 && plan.body?.totals?.worst_usd >= 5.03 && plan.body?.totals?.worst_usd <= 7.3 && plan.body?.live?.approved === true, plan.body?.totals);
   r = await call("POST", `/attachments/${form}/draft-masters`, { mode: "live", planSha256: "0".repeat(64) });
   ok("C3.4 V fail: Live with another plan's checksum is refused", r.status === 409 && /plan/i.test(r.body?.detail ?? ""), r.body?.detail);
   r = await call("POST", `/attachments/${form}/draft-masters`, { mode: "live", planSha256: plan.body?.plan_sha256 });
