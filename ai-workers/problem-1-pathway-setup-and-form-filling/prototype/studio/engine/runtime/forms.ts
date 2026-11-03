@@ -8,6 +8,8 @@ import type { Snapshot } from "../snapshot.ts";
 import { groupLabel, type QuestionnaireView, type Readiness } from "../../contracts/runtime.ts";
 import { checkValue, knownOf, type Answer, type Participant, type Row } from "./case.ts";
 import { recordedDerivation } from "../../../p5/transforms.ts";
+import { gateOf, type GatePlacement } from "./gates.ts";
+export { gateOf, type GatePlacement } from "./gates.ts";
 
 /** One confirmed fact a copy reads: which form field, which fact about whom, which row, which value. */
 export type FormFact = { box: string; fact: string; about: string; row: number | null; value: unknown };
@@ -58,16 +60,6 @@ export function markNothingRecorded(boxes: BoxRow[], view: QuestionnaireView, pl
   });
 }
 
-/** A placement as the release carries it (engine/snapshot.ts): its fact, its condition and the condition's effect. */
-export type GatePlacement = { fact: string; condition?: unknown; condition_effect?: string | null };
-/** QA-165: the Yes/No question a fact is asked under: its placement's condition is "<gate> is Yes" (it becomes required,
- *  or shown, only then). Null for a fact asked on its own. */
-export function gateOf(placements: GatePlacement[], fact: string): string | null {
-  const p = placements.find((x) => x.fact === fact);
-  const c = p?.condition as { op?: string; field?: unknown; value?: unknown } | null | undefined;
-  if (!c || c.op !== "eq" || c.value !== true || typeof c.field !== "string") return null;
-  return (p!.condition_effect ?? "SHOW") === "REQUIRE" || (p!.condition_effect ?? "SHOW") === "SHOW" ? c.field : null;
-}
 /** QA-165: the gate's question label when this person answered it No and the answer is confirmed; else null. */
 export function gateNo(view: QuestionnaireView, placements: GatePlacement[], subject: string, fact: string): string | null {
   const g = gateOf(placements, fact);

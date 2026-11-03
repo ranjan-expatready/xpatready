@@ -202,7 +202,12 @@ type Box = { box: string; fact: string | null; result: string; why: string | nul
   ok("C7.2 cause 3 fail (review r1 B1): other names, national identity document and US card are never \"N\" from an empty question in a confirmed section", NOT_ASKED.every((b) => after.byBox.get(b)?.result === "not written" && !after.values[b]), NOT_ASKED.map((b) => after.byBox.get(b)?.result));
   // QA-165 (C7.2, P-62): the Sample principal answers IMM 5257's own three Yes/No questions "No" and the officer confirms:
   // the copy then writes those boxes "N" and fills 43 of 46; the 3 left are the boxes published as "not a fact".
-  for (const g of ["person.used_other_name", "person.has_national_id", "person.us_lawful_permanent_resident"]) await put(P, g, false);
+  const GATES = ["person.used_other_name", "person.has_national_id", "person.us_lawful_permanent_resident"];
+  { // P-62: every question asked fills a box or decides something: each gate fills its Yes/No box on IMM 5257.
+    const qs = (await view()).flatMap((s) => s.questions as unknown as { subjectId: string; fact: string; fills: { form: string; boxes: number }[] }[]).filter((x) => x.subjectId === P);
+    ok("QA-165 pass: each of the 3 Yes/No questions is asked and says it fills IMM 5257 (1 form field)", GATES.every((g) => qs.find((x) => x.fact === g)?.fills.some((f) => f.form === "IMM 5257" && f.boxes === 1)), GATES.map((g) => qs.find((x) => x.fact === g)?.fills));
+  }
+  for (const g of GATES) await put(P, g, false);
   const unconfirmed = await generate(3);
   ok("QA-165 fail: answered No but not confirmed yet, the 3 Yes/No boxes stay \"not written\"", NOT_ASKED.every((b) => !unconfirmed.values[b]), NOT_ASKED.map((b) => unconfirmed.byBox.get(b)?.result));
   await confirmAll();
