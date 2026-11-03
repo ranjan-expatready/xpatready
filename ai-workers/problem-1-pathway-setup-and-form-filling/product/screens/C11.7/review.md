@@ -111,3 +111,27 @@ Note: 4cd02eece also commits this review file (round 1 text unchanged).
 **Journey score, revised:** the contradiction in the card is gone (next step, plain words and feedback each go from ½ to 1). Accessibility and speed are unchanged at ½. **9/10**, which passes, and no criterion is at 0.
 
 Verdict: Approve
+
+---
+
+## Round 3 (CI fix): diff-only, `git diff 41bc8c020..49b4c86e5`
+
+**Checked: the fix is real, not a test bent to pass**
+- **Formats files (P-162).** I copied `p1/` to a scratch folder, deleted every `.formats.json` and ran `p1/xfa_formats.py` (no AI).
+  - All 21 formats files came out **byte-identical** to the committed ones, including the two new ones: `imm0008depe` (39 boxes with a format, 0 unmatched) and `imm5669e` (0 with a format, 91 unmatched).
+  - Their `sha256` equals each inventory's `summary.sha256` and each official file's checksum.
+  - `check_forms_c31_formats` on a fresh copy (:4441): **107/107**.
+- **R-146 list.** `check_r146_whole_form_output.ts:28` rewrites the list only. The independent check above it (`:27`, every committed job equals what `wholeFormOutput` gives its inventory) is unchanged, and it passes.
+  - imm5669e has 295 fields with a data path, which is at least 240, so 128k / 1,500 s follows from the rule; it is not a choice.
+  - imm0008depe has 74 fields, so it stays at 64k.
+  - Run: **7/7**.
+
+**Finding (Minor, already logged by the builder as a follow-up): IMM 5669's formats file records 0 boxes with a format and 91 unmatched.**
+- The cause is that the reader's path matching fails on this form, so the file says "no format rules" when the truth is "not read".
+- Nothing uses IMM 5669's formats yet: it has no field map until its paid run.
+- It should be fixed, or the file marked as not read, before IMM 5669's field map is accepted.
+- Not a Blocker for this PR.
+
+No new Blocker or Major.
+
+Verdict: Approve
