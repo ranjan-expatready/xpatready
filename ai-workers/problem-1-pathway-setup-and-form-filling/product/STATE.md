@@ -1,6 +1,33 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-03 05:40 UTC by **Lead 5**, closing every Lead and lane for a **blank-sheet restart** (founder, P-289) · milestone: **M2 — Super Admin configuration** · how we work: `WAY-OF-WORKING.md` (frozen to 15 Nov, P-224) · decisions to read word for word: DECISIONS **P-280 … P-289** · the evidence: **`reports/build-review-2026-11-03.html`** (published privately to the founder)
+updated: 2026-11-03 06:05 UTC by **Lead 5** (ended; tonight's plan P-290 added), closing every Lead and lane for a **blank-sheet restart** (founder, P-289) · milestone: **M2 — Super Admin configuration** · how we work: `WAY-OF-WORKING.md` (frozen to 15 Nov, P-224) · decisions to read word for word: DECISIONS **P-280 … P-290** · the evidence: **`reports/build-review-2026-11-03.html`** (published privately to the founder)
+
+## Tonight, 3 Nov (founder, P-290): the fresh Lead's first turn
+The founder chose "Fresh Lead, one paste": the new tech lead, in its **first founder-typed turn**, starts everything below (a Lead woken later by a check or a message cannot start sessions), then runs the night without the founder. **Lead 5 has ended** (its commits on `lead/2026-11-03-*` are not another running Lead; do not ask the founder). Goal: **M2 confirmed Works 36 → 50+**, re-tested independently, plus four independent verification tests of the whole build.
+
+**Do first, in the same turn:** rename yourself "Lead 7 · 3 Nov <UTC>"; keep the Mac awake (`request_keep_awake`) until the founder's morning; create your 30-minute check (minutes 13 and 43); start the 10 sessions below as cloud sessions (`target: "cloud"`, one row each, each its own brief with the row's "Done when"), put them in the sidebar group "Pathway Configurator"; then tell the founder in one line that Lead 3 and Lead 5 can be archived.
+
+**Rules for every session tonight:** live AI off, US$0 (no paid run tonight; P-281's tech-lead Go applies only to runs already quoted, none needed for these rows) · one row per session, a fresh branch from `origin/main`, merge main only on conflict (P-270) · reviewer and helpers on Sonnet, diff-only re-review (P-278) · label after the reviewer's Approve; Mergify merges · questions as "Question for the tech lead" in a PR comment · a row counts as Works only when its acceptance pack is green on main **and** an independent re-run confirms it (P-290).
+
+**Six fix builders (move M2 confirmed rows; failures from the independent re-test on main 1a79dbf9, report section 1):**
+| # | Session | Rows | Done when |
+|---|---|---|---|
+| F1 | forms: C3.2 bulk accept | C3.2 | Bulk accept only for High (rules pass and both rounds agree), one Undo for the batch with a batch id (P-121); `acceptance/C3.2.test.ts` 22/22 |
+| F2 | screens: C1.5 + C2.4 | C1.5, C2.4 | Copy route works (no 404); an older edition is never shown as in the library; packs 18/18 and 22/22 |
+| F3 | forms: C4.6 + C4.2 | C4.6, C4.2 | Child and representative signing, pen-signed PDF wording; duplicate-refusal wording in plain words and an unasked fact cannot be ticked; packs 17/17 and 10/10 |
+| F4 | forms: C11.11 sources | C11.11 | Checklist forms (IMM 5484) and the LMIA sample's IMM 5488/5905 are not filed lines; an online-only form shown as such; pack 26/26 |
+| F5 | screens: C3.8 + C3.15 | C3.8, C3.15 | A Background question that is not a fact is refused; a missing IMM 5707 gives a clear error; rename needs a reason; C3.15's pack updated to P-266 (second person); packs 11/11 and 11/11 |
+| F6 | qa-tooling: packs + C5.4 demo | C4.1, C4.8, C3.10, C5.2, C11.1, C11.17, C5.4 | C4.1 and C4.8 packs updated to the P-279 source gate; runnable packs written for C3.10, C5.2, C11.1, C11.17 from their rows; C5.4's release-with-sources reachable from the Demo menu on the six; all green |
+Not tonight: C4.7 (needs a saved paid run), C11.3 (its red AT-5 is the held part: Works, held part excluded, P-284), the 8 Partial rows (paid runs or holds; STATE "Proposed first rows" 7).
+
+**Four verification testers (read-only, independent; they did not build any of this; Sonnet; US$0; each writes one report under `product/reports/verify-2026-11-03/` in a records PR):**
+| # | Session | Question | Done when |
+|---|---|---|---|
+| V1 | verify: completeness | Is any requirement missing? Map every requirement in the name-free copy (`ai-workers/problem-1-pathway-setup-and-form-filling/domain/requirements-*`) and every product decision in `DECISIONS.md` to a capability row and a test | a table requirement → row → test, with every gap listed |
+| V2 | verify: rule engine | Is every business rule built and tested, and do rules contradict each other? List the BR-n rules of each concept (`screens/*/`) and decisions; find the code and the test for each; run the engine suites on a fresh copy | a table rule → code → test → result, contradictions listed |
+| V3 | verify: one system | Does it work as one system? The golden journey end to end on a fresh copy (Reset to the six → configure and release Visitor visa → open a family case → client answers → fill IMM 5257 → checks) plus cross-module data consistency | journey steps passed / 8, a journey score, every break with its step |
+| V4 | verify: best in class | Is it best in class? Web research (primary sources) on immigration case-management products and their setup and form-filling features, plus a walk of the demo against them and the 2 Nov UX baseline method | a scored comparison, the top gaps, sources cited |
+After the fix PRs merge, run the **independent re-test** again (same method as the report: every M2 acceptance pack on main, by a session that scored nothing) and report "scored vs confirmed".
 
 ## Start here (the next tech lead, fresh chat)
 1. Open a new chat in the main copy and type `/lead`. Nothing is running: no Lead, no builder, no qa lane, no timed check. Leads 1–6 are retired (1, 2, 4, 6 archived 3 Nov 05:00–05:30 UTC; Lead 3 and Lead 5 archived last, see below). There is no standby; start one only if the founder wants the P-286 standby pattern again.
