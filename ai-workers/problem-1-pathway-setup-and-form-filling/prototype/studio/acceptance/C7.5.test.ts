@@ -5,6 +5,7 @@
 // findings in the team's words (CRITICAL · MAJOR · MINOR · INFO; Rules · AI · Added by hand; Open → Acknowledged →
 // Resolved, Waived for CRITICAL only); a finding warns, never blocks "Ready to file".
 // Breadth, after Visitor visa: other form families one at a time with their own prompt and tests (SI-6).
+// Part 1 (rules cross-checks and the finding's life): C7.5-10…13 run on rules findings until the saved AI review exists.
 //   tsx studio/acceptance/C7.5.test.ts 4440 xr_studio_accept
 import { CLIENT, FIXED, OFFICER, answer, call, confirmAll, fillEverything, filingOf, main, needVisitorVisa, ok, openCase, prepare, readinessOf, sql, yearsAgo, generateCopy } from "./lib/m3.ts";
 
@@ -47,18 +48,27 @@ await main("C7.5", "Independent review: rules cross-checks and the replayed AI r
   const rd = readinessOf((await prepare(c.id)).p, fid);
   ok("C7.5-9 pass (P-71, P-168): an open AI finding warns and never blocks Ready to file", (rd?.warns ?? []).some((w) => w.code === "finding") && !(rd?.blocks ?? []).some((b) => b.code === "finding"));
 
-  const f1 = fs[0];
+  // A finding's life (C7.5-10…13) is the same whatever its source. Until the saved AI review is recorded (C7.5-6b, part 2)
+  // it is proved on rules findings: the visit's dates and the passport made to disagree twice (two MAJOR Rules findings).
+  let pool = fs, poolSource = "ai";
+  if (!pool.length) {
+    await answer(c.id, c.caseSubject, "case.intended_stay_to", "2030-02-01"); await answer(c.id, P, "person.passport_expiry_date", "2030-01-15");
+    await confirmAll(c.id, P); await confirmAll(c.id, c.caseSubject);
+    pool = (await findings("?source=rules")).filter((x) => x.state === "open"); poolSource = "rules";
+  }
+  const f1 = pool[0];
   r = await call("POST", `/runtime/findings/${f1?.id}/acknowledge`, {}, OFFICER);
   ok("C7.5-10 fail: acknowledging without a reason is refused (400)", r.status === 400, r.status);
   r = await call("POST", `/runtime/findings/${f1?.id}/acknowledge`, { reason: "Checked against the passport (Sample)" }, OFFICER);
   ok("C7.5-11 pass: acknowledged with a reason, recorded with who and when", r.status === 200 && r.body?.state === "acknowledged");
-  const major = fs.find((x) => x.severity !== "CRITICAL");
+  const major = pool.find((x) => x.severity !== "CRITICAL");
   r = await call("POST", `/runtime/findings/${major?.id}/waive`, { reason: "x" }, OFFICER);
   ok("C7.5-12 fail: waiving anything below CRITICAL is refused (422); the saved run needs a non-CRITICAL finding", !!major && r.status === 422, r.status);
-  const other = fs.find((x) => x.id !== f1?.id);
+  const other = pool.find((x) => x.id !== f1?.id);
   if (other) await call("POST", `/runtime/findings/${other.id}/dismiss`, { reason: "Not relevant (Sample)" }, OFFICER);
-  await call("POST", `/runtime/cases/${c.id}/review-runs`, { forms: ["IMM 5257"], subject: P, mode: "replay" }, OFFICER);
-  const again = await findings("?source=ai");
+  // The next run: the replayed AI review again, or (rules) the next read, which runs the rules on the same facts.
+  if (poolSource === "ai") await call("POST", `/runtime/cases/${c.id}/review-runs`, { forms: ["IMM 5257"], subject: P, mode: "replay" }, OFFICER);
+  const again = await findings(`?source=${poolSource}`);
   ok("C7.5-13 pass: a dismissed finding does not return for the same source on the next run (the saved run needs two findings)", !!other && !again.some((x) => x.quote === other.quote && x.field === other.field && x.state === "open"));
   r = await call("POST", `/runtime/cases/${c.id}/findings`, { filing: fid, subject: P, severity: "MINOR", note: "Photo to retake (Sample)" }, OFFICER);
   ok("C7.5-14 pass: staff add a finding by hand (source Added by hand)", r.status === 201 && r.body?.source === "manual");
