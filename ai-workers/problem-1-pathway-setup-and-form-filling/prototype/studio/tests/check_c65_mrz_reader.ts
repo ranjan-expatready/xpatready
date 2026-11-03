@@ -4,7 +4,7 @@
 //   tsx studio/tests/check_c65_mrz_reader.ts
 import { readFileSync } from "node:fs";
 import { deflateSync } from "node:zlib";
-import { CHECKED_BY, MRZ_FACTS, compareWithAnswers, findZones, pdfTextPages, readPassport, type MrzRead } from "../engine/runtime/mrz.ts";
+import { CHECKED_BY, MRZ_FACTS, NAME_FULL, compareWithAnswers, findZones, pdfTextPages, readPassport, type MrzRead } from "../engine/runtime/mrz.ts";
 import { checkDigit } from "../../p5/reader/mrz.ts";
 import { letterPdf, mrz, passportPdf, textPdf, type Passport } from "../acceptance/lib/fixtures.ts";
 import { recorder } from "./runtime/api.ts";
@@ -26,7 +26,29 @@ ok("C6.5 M1: a Flate-compressed text layer is read as the plain one", (() => {
   const pdf = Buffer.concat([Buffer.from(`%PDF-1.4\n1 0 obj\n<< /Length ${content.length} /Filter /FlateDecode >>\nstream\n`, "latin1"), content, Buffer.from("\nendstream\nendobj\n%%EOF\n", "latin1")]);
   return same(readPassport("z", pdf).proposals.map((p) => [p.fact, p.value]), good.proposals.map((p) => [p.fact, p.value]));
 })());
-ok("C6.5 M1 (fail): a stream with another filter (an image) is not read as text", readPassport("x", Buffer.from("%PDF-1.4\n1 0 obj\n<< /Length 9 /Filter /DCTDecode >>\nstream\nBT (x) Tj\nendstream\nendobj\n", "latin1")).zones === 0);
+ok("C6.5 M1 (fail, review m6): a stream with another filter (an image) is not read as text: no text layer at all", (() => {
+  const pdf = (filter: string) => Buffer.from(`%PDF-1.4\n1 0 obj\n<< /Length 9${filter} >>\nstream\nBT (x) Tj\nendstream\nendobj\n`, "latin1");
+  return pdfTextPages(pdf(" /Filter /DCTDecode")).length === 0 && /No text layer/.test(readPassport("x", pdf(" /Filter /DCTDecode")).unreadable[0].reason) && same(pdfTextPages(pdf("")), [["x"]]);
+})());
+// Review m1, m2: an indirect length, a form stream, two content streams on one page and the page tree's order.
+const objPdf = (objs: string[]) => { let o = "%PDF-1.4\n"; objs.forEach((x, i) => { o += `${i + 1} 0 obj\n${x}\nendobj\n`; }); return Buffer.from(o, "latin1"); };
+const stream = (body: string, extra = "") => `<< /Length ${body.length}${extra} >>\nstream\n${body}\nendstream`;
+const zoneText = (z: [string, string]) => `BT\n40 760 Td\n12 TL\n(${z[0]}) '\n(${z[1]}) '\nET`;
+ok("C6.5 M1 (review m1): a stream whose length is an indirect object (/Length 6 0 R) is read up to endstream, not as length 6", (() => {
+  const body = zoneText(mrz(A));
+  return readPassport("x", objPdf(["<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>", "<< /Type /Page /Parent 2 0 R /Contents 4 0 R >>", `<< /Length 6 0 R >>\nstream\n${body}\nendstream`, "<< /Type /Font >>", String(body.length)])).proposals.length === 8;
+})());
+ok("C6.5 M1 (review m2): the page cited is the page tree's: a form stream is no page, a page's two content streams are one page, Kids order wins over file order", (() => {
+  const [l1, l2] = mrz(A);
+  const r = readPassport("x", objPdf(["<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [4 0 R 3 0 R] /Count 2 >>",
+    "<< /Type /Page /Parent 2 0 R /Contents [6 0 R 7 0 R] >>", "<< /Type /Page /Parent 2 0 R /Contents 5 0 R >>",
+    stream("BT (Sample cover page) Tj ET"), stream(`BT\n(${l1}) '\nET`), stream(`BT\n(${l2}) '\nET`), stream("BT (Sample form) Tj ET", " /Type /XObject /Subtype /Form")]));
+  return r.proposals.length === 8 && r.proposals.every((p) => p.source.page === 2);
+})());
+ok("C6.5 M1 (review m2, fail): a page whose contents are missing gives no lines, never another page's", (() => {
+  const r = readPassport("x", objPdf(["<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>", "<< /Type /Page /Parent 2 0 R /Contents 9 0 R >>", stream(zoneText(mrz(A)), " /Type /XObject /Subtype /Form")]));
+  return r.proposals.length === 0 && /No text layer/.test(r.unreadable[0].reason);
+})());
 
 // ---- Values, provenance, M3 collapse, M4 one review
 ok("C6.5 pass: the coded-line values are proposed about the holder: names, sex, date of birth, nationality, issuing state, number, expiry", same(good.proposals.map((p) => [p.fact, p.value]), [["person.family_name", "SAMPLED"], ["person.given_names", "CLIENT A"], ["person.sex", "F"], ["person.date_of_birth", "1986-04-13"], ["person.citizenship", "IND"], ["person.passport_country_of_issue", "IND"], ["person.passport_number", "SAMPLEP12"], ["person.passport_expiry_date", "2035-06-30"]]) && good.unreadable.length === 0);
@@ -62,9 +84,39 @@ ok("C6.5 M5 fail: two passports on two pages of one PDF are two people too", (()
   const r = readPassport("x", Buffer.from(pdf, "latin1")); return r.people === 2 && r.proposals.length === 0;
 })());
 ok("C6.5 M5 pass: the same person's zone printed twice is one person: proposed as usual", (() => { const r = readPassport("x", textPdf([...mrz(A), ...mrz(A)])); return r.zones === 2 && r.people === 1 && val(r, "person.passport_number")?.value === "SAMPLEP12"; })());
+// Review M1: a printed 44-letter line just above the zone is never taken for line 1.
+ok("C6.5 M5 fail (review M1): a 44-letter printed sentence above the coded lines is not line 1: the real zone is read, nothing is misread", (() => {
+  const r = readPassport("x", textPdf(["Please present this passport at the border gates now", ...mrz(A)]));
+  return r.zones === 1 && val(r, "person.family_name")?.value === "SAMPLED" && val(r, "person.passport_number")?.value === "SAMPLEP12" && r.unreadable.length === 0;
+})());
+ok("C6.5 M5 fail (review M1): two lines that parse but pass fewer than two check digits are no zone: nothing is proposed", (() => {
+  const r = readPassport("x", textPdf(["PLEASEPRESENTTHISPASSPORTATTHEBORDERGATESNOW", "ABCDEFGHIJKLMNOPQRSTUVWXYZ<<<<<<<<<<<<<<<<<<"]));
+  return r.proposals.length === 0 && same(unread(r), MRZ_FACTS);
+})());
+// Review M2: a second person's lines that cannot be read still stop the first person's values.
+ok("C6.5 M5 fail (review M2): a second person's coded line one character short: nothing is proposed for anyone", (() => {
+  const [b1, b2] = mrz(B); const r = readPassport("x", textPdf([...mrz(A), b1, b2.slice(0, 43)]));
+  return r.proposals.length === 0 && same(unread(r), MRZ_FACTS) && /cannot be read as a passport zone/.test(r.unreadable[0].reason);
+})());
+ok("C6.5 M5 fail (review M2): a second person's coded line with a character outside the MRZ alphabet: nothing is proposed", (() => {
+  const [b1, b2] = mrz(B); const r = readPassport("x", textPdf([...mrz(A), b1, b2.slice(0, 5) + "#" + b2.slice(6)]));
+  return r.proposals.length === 0 && r.review.collapsed.length === 0;
+})());
+ok("C6.5 M5 pass (review M2): printed lines that are not coded (labels, a SPECIMEN line) do not block the read", readPassport("x", passportPdf(A)).proposals.length === 8);
+// Review m4: one person's zone twice, once with a bad digit: read by hand, not "2 people".
+ok("C6.5 M5 fail (review m4): the same person's zone printed twice but differing is read by hand, with words that do not say two people", (() => {
+  const [g1, g2] = mrz(A), [, b2] = mrz(A, true); const r = readPassport("x", textPdf([g1, g2, g1, b2]));
+  return r.people === 1 && r.proposals.length === 0 && /appear more than once and differ/.test(r.unreadable[0].reason);
+})());
+// Review m3: a name field filled to its end may be cut short.
+ok("C6.5 m3 fail: a name filling the coded line's name field is proposed with a note to check the printed name", (() => {
+  const r = readPassport("x", passportPdf({ ...A, surname: "SAMPLEDLONGFAMILYNAMEXX", given: "CLIENT ABCDEFGHIJ" }));
+  return val(r, "person.family_name")?.note === NAME_FULL && val(r, "person.given_names")?.note === NAME_FULL && !val(r, "person.passport_number")?.note;
+})());
+ok("C6.5 m3 pass: a name that ends before the field's end has no note", !val(good, "person.family_name")?.note);
 ok("C6.5 findZones: spaces inside a coded line and the « look-alike are read as the filler; a 43-character line is no zone", (() => {
   const [l1, l2] = mrz(A);
-  return same(findZones([l1.replace("<<", "«<").replace("SAMPLED", "SAMP LED"), l2])[0]?.l1, l1) && findZones([l1.slice(0, 43), l2]).length === 0;
+  return same(findZones([l1.replace("<<", "«<").replace("SAMPLED", "SAMP LED"), l2]).zones[0]?.l1, l1) && findZones([l1.slice(0, 43), l2]).zones.length === 0;
 })());
 
 // ---- M4 against the client's own answers (Declared, fills at once): conflicts are never settled silently

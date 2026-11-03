@@ -10,8 +10,8 @@
 // (P-243); a client's own typed answer is Declared and fills at once (P-242). Before this, steps 9–11 expected
 // field-by-field acceptance (P-142 D5).
 // Engine steps (C6.5-E*, the reader engine/runtime/mrz.ts and resolver rule R11; no database, no server):
-//   tsx studio/acceptance/C6.5.test.ts --engine Letters (letter of invitation) are read by AI vision on synthetic documents, here only
-// replayed at US$0; a live read is refused without the founder's Go.
+//   tsx studio/acceptance/C6.5.test.ts --engine
+// Letters (letter of invitation) are read by AI vision on synthetic documents, here only replayed at US$0; a live read is refused without the founder's Go.
 // Breadth, after Visitor visa: printed-text and table reading (Textract, STANDARDS §1 gate), foreign civil records.
 //   tsx studio/acceptance/C6.5.test.ts 4440 xr_studio_accept
 import { CLIENT, FAMILY, FIXED, OFFICER, PORT, agent, answer, call, main, needVisitorVisa, ok, openCase, sql } from "./lib/m3.ts";
