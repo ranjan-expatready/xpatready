@@ -74,7 +74,10 @@ run(async () => {
   ok("C4.11 pass (BR-7): no item names a person role that Who can be does not list", items.length > 0 && items.every((x: any) => (x.readings?.draft?.payload?.roles ?? [x.readings?.draft?.payload?.role].filter(Boolean)).every((role: string) => ["principal", "spouse_or_partner", "child", "representative", "case"].includes(role))));
   // G5 (qa-1): after accepting every Ready item, no fact a form needs is asked of nobody.
   const ready = items.filter((x: any) => x.band === "ready").map((x: any) => x.id);
-  for (let i = 0; i < ready.length; i += 200) await call("POST", "/review/proposals/decide", { ids: ready.slice(i, i + 200), action: "accept" }, AUTHOR);
+  // P-305 (review M1): an item that changes the shared library (a condition, a new item) is accepted on its own.
+  const together = items.filter((x: any) => x.band === "ready" && !x.bulk_why).map((x: any) => x.id), alone = ready.filter((id: string) => !together.includes(id));
+  for (let i = 0; i < together.length; i += 200) await call("POST", "/review/proposals/decide", { ids: together.slice(i, i + 200), action: "accept" }, AUTHOR);
+  for (const id of alone) await call("POST", "/review/proposals/decide", { ids: [id], action: "accept" }, AUTHOR);
   const nobody = ((await call("GET", `/combinations/${vv}`)).body?.draft?.problems ?? []).filter((p: any) => /nobody is asked for it/.test(p.message));
   ok("C4.11 pass (G5): with the run's Ready items accepted, no fact a form needs is asked of nobody (any role)", ready.length > 0 && nobody.length === 0, { ready: ready.length, nobody: nobody.length });
   // BR-12: a live plan whose worst case is over what is left of the cap is refused before it starts (409, in words).

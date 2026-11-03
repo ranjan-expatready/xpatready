@@ -489,13 +489,21 @@ export const ON_ITS_PAGE = new Set(["field_map"]);
 export const PAGE_WORDS: Record<string, string> = { field_map: "form-field page, where its form fields are mapped too" };
 /** Why an item cannot be accepted with others (P-121, P-158): only Ready items, never a rules item landing on the
  *  library. null when it can. */
-/** P-294 (tech lead, on #661): an AI-proposed new field definition is never accepted with others, on either door (the
- *  form-field page, To review): it adds to the shared library, so each is decided on its own. */
+/** P-296 (1) (tech lead, on #661): an AI-proposed new field definition is never accepted with others, on either door
+ *  (the form-field page, To review): it adds to the shared library, so each is decided on its own. */
 export const NEW_FIELD_ALONE = "A new shared field is decided on its own (only High reuse matches are accepted together): open it on its form-field page.";
 /** P-299 (tech lead, on #699): the same rule for every other step (edition field drafts included): a field that would
  *  add to the library is accepted on its own. */
 export const NEW_FIELD_ALONE_QUEUE = "A new shared field is decided on its own (only High reuse matches are accepted together): open it and accept it alone.";
-export function bulkWhy(r: Pick<Row, "confidence" | "origin" | "landsOn" | "step"> & { kind?: string; reuse?: unknown; agreement?: string; rounds?: unknown; rules?: unknown; reason?: string | null; work?: unknown }): string | null {
+/** P-305 (tech lead, P-299 extended): nothing new to the shared library is accepted in bulk, answer lists included;
+ *  bulk is only for clean reuse. */
+export const NEW_ITEM_ALONE_QUEUE = "It adds a new item to the shared library, so it is decided on its own (only High reuse matches are accepted together): open it and accept it alone.";
+/** P-305 review M1: an AI condition changes when a shared question is asked, for every combination that asks it (a
+ *  library change for a second person), so it is never accepted with others either. */
+export const CONDITION_ALONE = "It changes when a shared question is asked, for every combination that asks it, so it is decided on its own: open it and accept it alone.";
+/** P-305 review m1: a checklist line that would land its new document type with it adds to the library too. */
+export const LINE_WITH_NEW_TYPE_ALONE = "It adds its new document type to the shared library with it, so it is decided on its own: open it and accept it alone.";
+export function bulkWhy(r: Pick<Row, "confidence" | "origin" | "landsOn" | "step"> & { kind?: string; relatesTo?: string | null; reuse?: unknown; agreement?: string; rounds?: unknown; rules?: unknown; reason?: string | null; work?: unknown }): string | null {
   // G-CORE B5 (P-288 (2)): a field-map item is ticked with others on To review like any item when it is Ready (High:
   // both rounds agree and the rules pass, re-rated here from what is stored); otherwise the box says why, in P-121's
   // words. It still opens on its form-field page.
@@ -505,7 +513,7 @@ export function bulkWhy(r: Pick<Row, "confidence" | "origin" | "landsOn" | "step
       if (again.confidence !== "ready") return again.reason;
     }
     if (r.confidence !== "ready") return r.agreement === "one_round" ? P121_WHY.oneRound : r.agreement === "differ" ? "The two AI readings differ: open it on its form-field page and choose." : "It needs a check first: open it on its form-field page and decide it on its own.";
-    // P-294: only an exact reuse match goes with others; a new definition (or an unclear match) never does.
+    // P-296 (1): only an exact reuse match goes with others; a new definition (or an unclear match) never does.
     if ((r.work as { outcome?: string } | null | undefined)?.outcome !== "REUSE") return NEW_FIELD_ALONE;
   }
   // QA-176 (P-121): an AI item never goes with others without both rounds agreeing, even one stored Ready before the fix.
@@ -513,8 +521,11 @@ export function bulkWhy(r: Pick<Row, "confidence" | "origin" | "landsOn" | "step
   // C2.6 (QA-157): a one-round Decide item is one its source leaves to a person (e.g. the visa office), not two readings.
   if (r.confidence !== "ready") return r.confidence === "check" ? "It needs a check first: open it and decide it on its own." : r.agreement === "one_round" ? "Its source leaves it to a person: open it and decide it on its own." : "Its two readings differ: open it and choose.";
   if (r.origin === "rules" && r.landsOn === "library") return "A rules item that adds to the shared library is accepted on its own.";
-  // P-299: an AI-proposed field that would add to the library (not a reuse) is never accepted with others, whatever its step.
-  if (r.kind === "field" && r.landsOn === "library" && (r.reuse as { match?: string } | null | undefined)?.match === "new") return NEW_FIELD_ALONE_QUEUE;
+  // P-299, P-305: nothing that would add to the library (not a reuse) is accepted with others, whatever its kind or step.
+  if (r.landsOn === "library" && (r.reuse as { match?: string } | null | undefined)?.match === "new") return r.kind === "field" ? NEW_FIELD_ALONE_QUEUE : NEW_ITEM_ALONE_QUEUE;
+  // P-305 review M1 and m1: an item that lands on the combination but writes a library change with it is alone too.
+  if (r.kind === "condition") return CONDITION_ALONE;
+  if (r.kind === "requirement_line" && r.relatesTo && (r.reuse as { match?: string } | null | undefined)?.match === "new") return LINE_WITH_NEW_TYPE_ALONE;
   return null;
 }
 export type Decision = { action: "accept" | "edit" | "reject"; reason?: string | null; payload?: unknown };
@@ -573,6 +584,8 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
           const key = first?.decidedKey && ["accepted", "edited"].includes(first.status) && (await usableInLibrary(tx, workspaceId, r.kind, first.decidedKey)) ? first.decidedKey : await sameInLibrary(tx, workspaceId, payload);
           resolved = key ? { match: "reuse", existingKey: key } : { match: "new", existingKey: null };
           reuse.match = resolved.match; reuse.existingKey = resolved.existingKey;
+          // P-305: a twin whose first copy is not in the library adds the item itself, so it is no longer a clean reuse.
+          if (resolved.match === "new" && d.action === "accept" && rows.length > 1) fail(`"${nameOf(payload, r.identityKey)}" cannot be accepted with others: its first copy (drafted for another form) is not accepted or not in the library yet, so accepting it would add the item to the shared library. Accept it on its own. Nothing was accepted.`, HttpStatus.CONFLICT);
         }
         if (r.landsOn === "library" && reuse.match === "reuse" && d.action === "accept") {
           if (!(await usableInLibrary(tx, workspaceId, r.kind, reuse.existingKey))) fail(`"${nameOf(payload, r.identityKey)}" reuses ${reuse.existingKey ?? "no item"}, which is not in the library (retired, merged or never added): reject this proposal, or edit it into a new item.`, HttpStatus.CONFLICT);
