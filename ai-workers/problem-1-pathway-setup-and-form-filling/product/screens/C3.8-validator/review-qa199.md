@@ -79,3 +79,60 @@ Report: `screens/C3.8-validator/journey-test-reviewer-2026-11-04-qa199.md`.
 - The API check run against main (see the mutation evidence instead).
 
 Verdict: Approve — commit 724b48fb5 (tip 834b4c444 adds only screenshots; the code is the same)
+
+## Re-review of 47f6e8577
+
+I reviewed only the diff `834b4c444..47f6e8577 -- prototype` (Minors 1 and 3, plus the reworded Minor 2 test line). The reviewer did not build it. US$0: no model call, no STUDIO_*_LIVE switch. I used isolated copies on 4633 and 4634, then stopped them and dropped their databases.
+
+### What I ran
+- `tests/check_c38_completeness.ts`: **22/22**.
+- `tests/check_c38_background_forms_api.ts` on 4633: **36/36**, including the three new Minor 1 lines: refused with 409, one release error, and the error gone once the file is back.
+- `acceptance/C3.8.test.ts` on a fresh copy on 4634: **12 pass, 0 fail, 1 NOTE** (the same AT-5 per-channel NOTE as before). Exit 0.
+- `tsc -p api/tsconfig.json --noEmit`: no error in any changed file. The errors it does report are older ones in other tests.
+- **Every reading the sample uses is on disk.** I loaded the sample, then Reset to the six, and listed every edition:
+  - 25 editions have a recorded reading. All of them are files tracked in `prototype/p1/inventory/` and present, so a working copy or CI is never blocked by this change.
+  - 14 have no reading recorded (the guides, IMM 5484 and others). They return an empty map and are never blocked.
+
+### Minor 1 (fail closed): closed
+- **Logic.** `backgroundPathsOf` now returns:
+  - an empty map only when no reading is recorded;
+  - `null` when the reading is recorded but the file is missing or unreadable. `null` is not cached, so restoring the file needs no restart, and I saw that happen.
+- **All three callers handle it:**
+  - Decision route (`screen02.ts:56-60`): any "not a fact" on that edition is refused with 409 in words. `fail` returns `never`, so the `bg!` after it is safe.
+  - Validator (`studio.ts:229`): one error per affected edition.
+  - Form fields: falls back to an empty map.
+- **Is it too wide? No.** I probed on 4634 by pointing IMM 1295's reading at a missing file:
+  - **Only combinations that use the form are blocked.** wp.family got exactly 1 error, item "IMM 1295". sp.student, vv.single, sv.super_visa, fs.outside and lm.high_wage got 0. `forms` comes from the combination's own draft lines, so a form the combination does not use is never read.
+  - **Editions without field maps.** One that has a recorded reading which has vanished would still block release. I accept that. The scope is the same as before: every PDF edition of each form the combination uses, which is what the snapshot and the filler carry. A reading that was recorded and then lost means the copy is broken, and `form-masters.ts:162` already refuses in the same words. Editions with no reading recorded (guides, unread forms) are not blocked.
+  - **Only "not a fact" is refused.** With the reading missing, "filled by hand" on a plain field still answered 201, and a mapped row still got its usual "change the mapping on its field map" answer.
+- **Words.** Example: "The reading of IMM 1295 (09-2023) is missing on this computer, so its Background information questions cannot be checked: read the form again (Forms tab) before marking any of its form fields "not a fact" or releasing."
+  - It names the form and edition, says why and says what to do.
+  - It shows no PDF path, and it matches the product's existing "missing on this computer: read the form again" wording.
+
+### Minor 3 (blank caption): closed
+- `backgroundQuestions` now returns each question's path with the heading above it, and `backgroundWords` uses that heading when the caption is blank. Both callers pass it in.
+- Across all four readings that have the section, only one question has a blank caption: IMM 5710's `Occupation[0].Choice[0]`. Its words now begin with the question itself: "Have you ever been employed by a government in a security-related capacity?" is a Background information question…
+- The unit test checks this, and it would fail if the fallback were removed.
+
+### Minor 2: accepted as an open question
+The test line no longer claims schedules have no Background questions. It now names the question for the tech lead. Nothing was widened silently.
+
+### New Nits (Could, none blocks)
+1. **Form fields gives no warning when the reading is missing.** In that state the page flags no row as a Background question (0 of 242 on IMM 1295) and shows no notice. "Not a fact" is offered, and the person finds out only at Save, through the 409 words. No harm gets through, because the decision and release both refuse. Could: show a notice on Form fields with the same words.
+2. **The heading fallback can name the wrong question.** The heading is the nearest one above the question, and for some sub-questions that is the text of the question before. Examples:
+   - IMM 1295 `BackgroundInfo[0].Choice[1]` (Q1b) has the heading "a) Within the past two years…".
+   - `VisaChoice2` and `VisaChoice3` carry the Q2a or Q2b text as their heading.
+   
+   All of these have captions today, so the fallback never fires for them. If a future reading had a blank-caption sub-question, the words would name the question before it. Could: say this in the code comment.
+3. **A reading with no `fields` key is not caught.** A file that parses but has no `fields` gives an empty map, so the rule is off without a word. `read_form.py` always writes `fields`, so this is Could only.
+
+### Journey score
+I did not run it again: the diff changes no page, only refusal and error words, which I checked through the API. The reviewer score of **8.0 / 10** from `journey-test-reviewer-2026-11-04-qa199.md` stands for this check.
+
+### Could not check
+- That "read the form again (Forms tab)" really restores a lost reading from start to finish. The wording is the same as `form-masters.ts`, but I did not walk that repair.
+- GitHub CI on 47f6e8577.
+
+Another session in this same working copy rewrote four tracked screenshots under `screens/02-ai-work/screenshots/finish/` during this review (00:45 IST), then restored them by 00:49 IST. My runs did not write them, and the tree was clean when I finished.
+
+Verdict: Approve 47f6e8577
