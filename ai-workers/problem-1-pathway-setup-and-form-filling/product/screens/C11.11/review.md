@@ -58,3 +58,15 @@ Diff-only review of `git diff df660b722 ae24dd2de`: two test files, no app code.
 No new Blocker, Major or Minor.
 
 **Verdict: Approve** (commit ae24dd2de5082d8e84603dc7272fbab69dfc08d4)
+
+## Round 4 (fc2472a, CI fix)
+Diff-only review of `git diff 559f7822e fc2472a3c`: one file, `tests/check_uxa4_details_browser.cjs`, three added lines (two comment, one wait). I ran the suite on an isolated copy (port 4455): 47 passed, 0 failed.
+
+- **Fixes the race.** The datalist joins the library fields and the calculated values, which come from two requests. The wait holds until at least one option does not end in "(calculated)", i.e. a library field has arrived, before the list is read. The library fields come in one request, so one such option means the whole set is in.
+- **Not weakened.** The wait is a precondition only. The assertions after it are unchanged: more than 10 options, no field key among them, and `offered[0]` is still used in the next step. The check still proves the names offered are names.
+- **Fails loudly.** `waitForFunction` has a 15 s timeout and no catch. A timeout throws into the file's outer `.catch`, which prints the error and exits 1. It does not skip silently or pass.
+- **Nothing else changed.** No app code and no other test lines.
+
+No new Blocker, Major or Minor.
+
+**Verdict: Approve** (commit fc2472a3c0bf3c6bb5764ff91863788cea298f8d)
