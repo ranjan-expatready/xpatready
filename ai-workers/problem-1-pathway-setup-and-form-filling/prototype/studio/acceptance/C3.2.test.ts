@@ -18,7 +18,7 @@
 // (not High) reuse matches. Expected from the C3.2 fix (forms, 3 Nov): 22 pass.
 // Exit: 0 all pass · 1 a check failed · 2 setup missing or refused (demo port or database, copy not reachable, sample).
 import { createHash } from "node:crypto";
-import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { checkCopy, guard, needCombo, sqlFor, stop } from "./lib/pack1.ts";
 import { checkerJob, FIELD_MAP_CHECK } from "../api/src/field-map-check.ts";
@@ -60,6 +60,8 @@ const setupMissing = stop;
   const LOW = answer.canonical_fields.find((c) => c.value_type === "text" && used.has(c.id) && inLibrary.has(c.id))?.id;
   const cj = checkerJob(draft, "IMM 5257 (09-2023)"), job = cj && roundJob(cj.step, true, cj.ctx);
   if (!LOW || !job) setupMissing("no exact reuse match to read differently, or no checker job for IMM 5257");
+  // Review m1: a run of this check killed before its exit handler leaves its planted round; sweep any such leftover first.
+  for (const f of readdirSync(RUNS)) if (f.endsWith("-c32test.json")) rmSync(join(RUNS, f), { force: true });
   const planted = join(RUNS, `${job!.job_id}-live-20261103t000000000z-c32test.json`);
   writeFileSync(planted, JSON.stringify({ caller: "live", contract_valid: true, raw_output: JSON.stringify({ ...answer, canonical_fields: answer.canonical_fields.map((c) => (c.id === LOW ? { ...c, value_type: "date" } : c)) }),
     drafting_run: { run_id: `${job!.job_id}-live-c32test`, status: "completed", kind: "field_map", inputs: { combination: job!.combination, official_files: job!.inputs, configuration_version: "studio-add-form" }, usage: { cost_usd: 0, input_tokens: 0, output_tokens: 0 }, attempts: [{ n: 1, outcome: "ok" }] },
