@@ -66,3 +66,29 @@ D1 4: BR-3 and P-240 are enforced on the server; MJ1 is the page flag. · D2 5: 
 - Other sessions' suites run in this worktree on :4446 and :4449: the tracked screenshots and stub-run files they rewrite are not mine and I left them as they were.
 
 **Verdict: Block** on 5bef555d. Fix to approve: MJ1 (`review.tsx:110` reads `v.draft.answer_keys.demo`, plus the firm fail step). The Minors m1–m5 can follow as rows.
+
+## Round 2: 9e76fc44, diff only (`git diff 5bef555d..9e76fc44`)
+
+**What I ran.** I rebuilt the web bundle and used fresh copies on :4441 only, with live AI off.
+- `check_g2_answer_key_gate_firm.ts`: **27/27**. This includes the browser step, which shows the Demo release mark in demo and no mark in firm.
+- `check_g2_answer_key_gate.ts` (demo): **74/74**.
+- I did not re-run G1 in this round. Its firm step filters by `gate` and is not affected by the removed line.
+
+**Closed:**
+- **MJ1 is closed.** `review.tsx:110` now reads `v.draft.answer_keys.demo`, the server's `demoRelease(draft)`, which is BR-3 m9's single derivation. In demo the pill now also shows for a Sample check or a Sample source, which fixes G3's live-row gap. There is a browser fail and pass test for it.
+- **m1 is closed.** Plain Reset (`demo.ts:515`) and the forms story (`forms-demo.ts:36`) answer 409 outside demo, and the guard comes after `need(author)`. The test proves that counts and audit rows are unchanged.
+- **m3 is closed.** Start With an LMIA in firm answers 409 and is tested. The Release page now holds the Visitor visa, `held:true` and `demo:false`, with the Sample-check reason, and releases nothing of it. With only that row left, `POST /pack/release` answers 409, and its errors[] keep `gate: "sample-content"` (`programs.ts:493`). If the `programs.ts` hold line is removed, the M2 Release page step fails.
+- **m5 is gone** with the combination line.
+
+**The combination basis is no longer gated (breaker F1, Question 1 to the tech lead). I accept this for this PR.**
+- In round 1, I judged gating it right on P-240's wording, and I flagged the cost as m2: every name the Structure screens save is ILLUSTRATIVE and nothing changes it, so every firm combination was blocked. The breaker's evidence shows that cost is total.
+- The brief's scope was "illustrative checks and Sample sources". The basis is a "not source-verified" default, not a published value, and each value it could carry is gated: numbers by G1, checks here.
+- BR-3 still holds: every firm release is real and labelled real.
+- The change is raised in the PR, not made silently. It stays an open product question for the tech lead (P-240's "Sample content" against Structure's default basis), not a defect here.
+- **Minor:** a released firm combination still says "Sample" in its subtitle and basis note (`combination.tsx:92`, `:108`). This existed before and goes with Question 1.
+
+**Still open, Minor only:**
+- m4: the header says "Prototype · demo workspace" and the Demo menu items are offered in firm (`App.tsx:71`, `:217-221`); each now answers 409 with plain words.
+- m2 reduced: a Sample check still has no screen to add its source quote (the check form exists only in the API). That needs a row, not a fix here.
+
+**Verdict: Approve** on 9e76fc44. No Blocker or Major is open. Journey score 8/10 on re-score: feedback and state, and trust and sources, now score 1 each (no contradicting pill in firm; every page uses the server's flag); the m2 and m4 criteria stay at ½.
