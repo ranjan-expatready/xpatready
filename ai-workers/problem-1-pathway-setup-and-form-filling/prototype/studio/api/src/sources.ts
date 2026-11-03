@@ -625,7 +625,7 @@ export class Sources {
     // the kind of answer is one the library knows, and no form field is filled by two fields of the same round.
     const words = formWords(inv.fields ?? []);
     const valueTypes = new Set(Object.keys(VALUE_TYPE_TO_DATA_TYPE));
-    const twiceDraft = claimedTwice(items), twiceCheck = claimedTwice(cmp ? [...cmp.byKey.values()].map((x) => x.check).filter((x): x is MapField => !!x) : []);
+    const twiceDraft = claimedTwice(items), twiceCheck = claimedTwice(cmp ? [...[...cmp.byKey.values()].map((x) => x.check).filter((x): x is MapField => !!x), ...cmp.checkOnly] : []); // review m2: fields only the checker named count
     const quoteOfItem = (f: MapField) => (f as MapField & { evidence?: { quotes?: string[] } }).evidence?.quotes?.[0] ?? null;
     const quoteOf = (q?: string) => (q && /^[0-9a-f]{64}$/.test(a.sha256) ? { file: a.fileName.slice(0, 300), sha256: a.sha256, edition: a.edition?.slice(0, 60) ?? null, page: null, quote: q.slice(0, 1000), quoteFound: quoteOnForm(q, words), rule: null } : null);
     const proposals: (NewProposal & Work)[] = items.map((i) => {
@@ -636,8 +636,8 @@ export class Sources {
       // G-CORE B4: both readings kept; a disagreement is Decide with both reasons (P-121); no checker yet stays one round.
       const c = cmp?.byKey.get(i.proposedKey);
       const rounds = { draft: { ...draftRound, reading: readingOf(i), payload }, check: c?.check && chk.ok ? { reading: readingOf(c.check), payload: { ...payload, valueType: c.check.proposedType }, from: chk.from, runFile: chk.runFile.slice(0, 300), costUsd: chk.costUsd } : null };
-      const rules = [...mapRules(i, formPaths, { quote: i.evidence.quotes[0], words, claimedTwice: twiceDraft, valueTypes }),
-        ...(c?.check ? mapRules(c.check, formPaths, { quote: quoteOfItem(c.check), words, claimedTwice: twiceCheck, valueTypes }).map((r) => ({ ...r, rule: `checker_${r.rule}` })) : [])];
+      const rules = [...mapRules(i, formPaths, { quote: i.evidence.quotes[0], words, claimedTwice: twiceDraft, valueTypes, round: "draft" }),
+        ...(c?.check ? mapRules(c.check, formPaths, { quote: quoteOfItem(c.check), words, claimedTwice: twiceCheck, valueTypes, round: "checker" }).map((r) => ({ ...r, rule: `checker_${r.rule}` })) : [])];
       const differ = c?.agreement === "differ";
       const confidence = differ ? "decide" as const : ready ? "ready" as const : i.outcome === "NEW" ? "check" as const : "decide" as const;
       const reason = differ ? `${c!.why}${i.reason ? ` Draft: ${i.reason}` : ""}`.slice(0, 500) : ready ? null : i.reason.slice(0, 500);
