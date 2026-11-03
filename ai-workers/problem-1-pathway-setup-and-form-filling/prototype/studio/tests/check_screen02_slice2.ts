@@ -107,8 +107,11 @@ function pdf(title: string, text: string) {
   for (const i of job.items.filter((x: any) => x.decision === "PENDING")) await call("POST", `/jobs/${jobId}/items/${i.id}`, { decision: "ACCEPTED", note: "Test: a different meaning from the library field that could fit." });
   r = await call("POST", `/jobs/${jobId}/apply`, { who: "each_applicant" });
   ok("setup: the decided draft is applied", r.status === 201, r.body?.detail ?? r.body);
-  await coverAll(sv);
   const applied = r.body;
+  // C3.8 [IRCC-F09]: the super visa's package lists IMM 5707, so it is added from the library before the draft is submitted.
+  const fam = ((await call("GET", `/combinations/${sv}/attachments`)).body as any[]).find((a) => /IMM 5707 \(/.test(a.edition ?? ""));
+  if (fam) ok("setup: IMM 5707 is added from the library (its package lists it)", (await call("POST", `/attachments/${fam.id}/reuse`, {})).status < 300);
+  await coverAll(sv);
   const changes = (await call("GET", "/library/changes?status=WAITING")).body as any[];
   const mineChange = changes.find((c) => c.key === newKey);
   r = await call("GET", `/library/changes/${mineChange.id}`);
