@@ -75,3 +75,12 @@ Fresh worktree at `126b8070`, port 4439, own database. Setup 13/13; `setup_vv_m3
 * Still open, all Minor: M1 (413 wording), M4, M5, M6, M7, N1 to N4 above. Nothing in the diff touches them or adds a Blocker or Major.
 
 **Round 3 verdict: Approve** for `126b8070`. Journey score unchanged: **8.5 / 10**.
+
+## Round 4 (diff-only, P-278): `126b8070` to `c4194cdc`
+The diff is `tests/check_c81_signing_api.ts` and records only; no product code. Fresh worktree at `c4194cdc`, port 4439, a new empty database, the check run alone (no setup by me), as the runner would: it ran the pack's two setups itself (release 2 found) and passed **11/11**. A second run on the same copy also passed 11/11 (setup skipped once release 2 exists). I did not run the CI runner itself or read its usage-line regex; the line is now one `//   zsh … isolated.sh … && tsx studio/tests/check_c81_signing_api.ts <port> <db>` line, the same shape as the other checks. I did not re-run the other suites (nothing else changed).
+
+* **N4 closed, and it bites.** The new line walks print's group path (IMM 5476's `intended_work` "none apply" taken back, then `print` from the older copy: 409 "out of date", no current step). With `changedGroups` removed from `sign-steps.ts` in my throwaway worktree the check fails that line (10/11, the print answered 200). Restored by removing the worktree.
+* **Setup inside the check.** It runs `setup_visitor_visa.ts` and `setup_vv_m3.ts` only when the copy lacks release 1 or 2, ignores their output and exit status, and then asserts release 2 exists, so a failed setup shows as a red line, not a crash. Minor **N5** (no action needed): a check that sets up its own copy hides the pack's S-line reds (S2w, S7a) from the run; acceptable because those belong to other rows and `setup_vv_m3.ts` is still run by the pack.
+* Still open, all Minor: M1, M4, M5, M6, M7, N1 to N3.
+
+**Round 4 verdict: Approve** for `c4194cdc`. Journey score unchanged: **8.5 / 10**. The builder may restore `review: approved` for this commit.
