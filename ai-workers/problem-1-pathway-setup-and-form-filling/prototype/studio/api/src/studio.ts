@@ -7,7 +7,8 @@ import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { Prisma, type ReviewSubmission } from "@prisma/client";
 import { canRelease } from "../../../contracts/rules.ts";
 import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
-import { buildSnapshot, snapshotHash, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
+import { buildSnapshot, effective, snapshotHash, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
+import { backgroundWords, familyFormWords, formNumberOf, isBackgroundQuestion, missingFamilyForm, NOT_A_FACT } from "../../engine/form-completeness.ts";
 import { slug } from "../../engine/import.ts";
 import { identityKeyOf, insertProposals } from "./proposals.ts";
 import { nameKey, namedDocumentType, waitingDocumentType } from "./document-type-names.ts";
@@ -203,8 +204,26 @@ export class Studio {
     const kids = await this.db.programDef.count({ where: { workspaceId: c.workspaceId, parentNodeKey: c.program.programNodeKey } });
     if (c.program.nodeKind !== "STREAM" && c.program.nodeKind !== "CATEGORY") return [{ level: "error", where: "Row", item: c.combinationKey, message: `This configuration is attached to a ${LEVEL[c.program.nodeKind].name.toLowerCase()} ("${c.program.label}"), above a full combination. Publishing is blocked: attach configuration to a category, or to its sub-category (SA-1B-55/56).` }];
     if (kids) return [{ level: "error", where: "Row", item: c.combinationKey, message: `"${c.program.label}" now has sub-categories, so this row sits above a full combination. Publishing is blocked (SA-1B-56).` }];
-    return (await this.undecidedFormFields(combinationId, "DRAFT")).map((f) => ({ level: "error" as const, where: "Forms", item: f.form,
-      message: `${f.n} form field${f.n === 1 ? " has" : "s have"} no decision in this draft${forExample(f.example)}. Map each one, mark it "not a fact", or "filled by hand" with a reason on To review › Form fields (K1).` }));
+    return [...(await this.undecidedFormFields(combinationId, "DRAFT")).map((f) => ({ level: "error" as const, where: "Forms", item: f.form,
+      message: `${f.n} form field${f.n === 1 ? " has" : "s have"} no decision in this draft${forExample(f.example)}. Map each one, mark it "not a fact", or "filled by hand" with a reason on To review › Form fields (K1).` })),
+      ...await this.completenessProblems(combinationId, c.workspaceId)];
+  }
+
+  /** C3.8 (engine/form-completeness.ts): [IRCC-F08] a Background information question left as "not a fact" on one of the
+   *  combination's forms (decided before the refusal, or so drafted), and [IRCC-F09] the family information form its
+   *  application package lists (a source form attached to it) missing from its forms. Both block release. */
+  async completenessProblems(combinationId: string, workspaceId: string): Promise<{ level: "error"; where: string; item: string; message: string }[]> {
+    const [maps, lines, attached] = await Promise.all([
+      this.db.formFieldMap.findMany({ where: { workspaceId, dataPath: { contains: "BackgroundInfo" }, status: { in: ["DRAFT", "PUBLISHED"] }, edition: { form: { usedBy: { some: { combinationId, status: { not: "RETIRED" } } } } } }, select: { id: true, formEditionId: true, dataPath: true, caption: true, outcome: true, version: true, status: true, supersedesId: true, edition: { select: { form: { select: { formKey: true } } } } } }),
+      this.db.combinationForm.findMany({ where: { combinationId }, select: { id: true, lineageKey: true, version: true, status: true, supersedesId: true, form: { select: { formKey: true } } } }),
+      this.db.sourceAttachment.findMany({ where: { combinationId, kind: "Form" }, select: { edition: true } }),
+    ]);
+    const out: { level: "error"; where: string; item: string; message: string }[] = [];
+    for (const r of effective(maps, (m) => `${m.formEditionId}|${m.dataPath}`, "draft"))
+      if (NOT_A_FACT.has(r.outcome) && isBackgroundQuestion(r.dataPath)) out.push({ level: "error", where: "Forms", item: r.edition.form.formKey, message: backgroundWords(r.caption) });
+    const missing = missingFamilyForm(attached.map((a) => formNumberOf(a.edition)), effective(lines, (l) => l.lineageKey, "draft").map((l) => l.form.formKey));
+    if (missing) out.push({ level: "error", where: "Forms", item: missing, message: familyFormWords(missing) });
+    return out;
   }
 
   /** K1 (Screen 02 challenge point 2): form fields of the combination's forms that have no decision, per form. DRAFT rows

@@ -255,10 +255,12 @@ export function FormFieldDecisions({ jobId, editionId, readOnly = false, focusOn
       <ul className="divide-y divide-border text-sm">{open_.slice(0, 50).map((f) => (
         <li key={f.dataPath} className="py-2" data-form-field={f.dataPath}>
           <div className="flex flex-wrap items-center justify-between gap-2"><span><b className="font-medium">{f.caption || f.dataPath}</b>{f.heading ? <span className="text-text-muted"> · {f.heading}</span> : null}{f.carried ? <Pill className="ml-2">Not decided yet (from an earlier release)</Pill> : null}{f.reason ? <span className="block text-xs text-text-muted">{f.reason}</span> : null}</span>
-            {readOnly ? null : <Button size="sm" variant="secondary" aria-expanded={open === f.dataPath} onClick={() => { setOpen(open === f.dataPath ? null : f.dataPath); setReason(""); }}>Decide</Button>}</div>
+            {readOnly ? null : <Button size="sm" variant="secondary" aria-expanded={open === f.dataPath} onClick={() => { setOpen(open === f.dataPath ? null : f.dataPath); setReason(""); setKind(f.background ? "by_hand" : "not_a_fact"); }}>Decide</Button>}</div>
           {open === f.dataPath ? (
             <div className="mt-2 grid gap-2 md:grid-cols-[auto_1fr_auto] md:items-end">
-              <Field label="Decision"><Select value={kind} onChange={(e) => setKind(e.target.value === "by_hand" ? "by_hand" : "not_a_fact")}><option value="not_a_fact">Not a fact</option><option value="by_hand">Filled by hand</option></Select></Field>
+              {/* C3.8 [IRCC-F08]: a Background information question must be answered, so "Not a fact" is not offered. */}
+              {f.background ? <p className="text-xs text-text-muted md:col-span-3" data-background-note>A Background information question: IRCC returns an application with one unanswered, so it is never "not a fact". Map it to a shared field, or say who fills it by hand.</p> : null}
+              <Field label="Decision"><Select value={kind} onChange={(e) => setKind(e.target.value === "by_hand" || f.background ? "by_hand" : "not_a_fact")}>{f.background ? null : <option value="not_a_fact">Not a fact</option>}<option value="by_hand">Filled by hand</option></Select></Field>
               <Field label="Reason"><Input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} placeholder={kind === "by_hand" ? "Who fills it and why" : "Signature, office use, a document…"} /></Field>
               <Button size="sm" busy={decide.isPending} onClick={() => decide.mutate(f.dataPath)}>Save</Button>
             </div>
