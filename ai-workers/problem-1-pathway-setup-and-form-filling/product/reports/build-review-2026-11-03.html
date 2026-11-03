@@ -69,7 +69,7 @@ code{font:12.5px var(--f-mono);background:var(--accent-soft);padding:1px 4px;bor
 <div class="wrap">
 
 <header>
-  <div class="eyebrow">Pathway Configurator · evidence review · 24 Oct – 3 Nov 2026 · written 3 Nov ~05:00 UTC by Lead 5</div>
+  <div class="eyebrow">Pathway Configurator · evidence review · 24 Oct – 3 Nov 2026 · written 3 Nov 04:10–05:10 UTC by Lead 5</div>
   <h1>Pathway Build Review</h1>
   <p class="lede">What was built, what it cost, how the parallel set-up of AI builders, GitHub and the merge queue actually performed, and what we should keep, change or stop. Every number comes from GitHub, the session transcripts on the Mac, the spend ledger or a test run, and each lesson is marked by how firm its evidence is.</p>
   <nav class="toc"><a href="#outcome">Outcome</a><a href="#flow">Delivery flow</a><a href="#machines">Machines, GitHub, merge queue</a><a href="#quality">Quality</a><a href="#cost">Cost and tokens</a><a href="#halting">Tool calls, stalls, blocks</a><a href="#lessons">Lessons</a><a href="#method">How to measure from now</a><a href="#retire">Retiring the Leads</a><a href="#sources">Sources</a></nav>
@@ -77,7 +77,7 @@ code{font:12.5px var(--f-mono);background:var(--accent-soft);padding:1px 4px;bor
 
 <section>
   <div class="kpis">
-    <div class="kpi"><b>52 / 60</b><span>M2 rows scored Works by qa on main (records; independent re-test below)</span></div>
+    <div class="kpi"><b>36 / 60</b><span>M2 rows confirmed Works by an independent re-test (qa's own score: 52)</span></div>
     <div class="kpi"><b>~15×</b><span>more product changes merged per hour after 31 Oct (0.25 → about 4)</span></div>
     <div class="kpi"><b>~1 h</b><span>median wait from approval to merge, flat since 31 Oct</span></div>
     <div class="kpi"><b>0</b><span>open Blocker or Critical bugs; 9 open Major, 52 Minor</span></div>
@@ -99,7 +99,40 @@ code{font:12.5px var(--f-mono);background:var(--accent-soft);padding:1px 4px;bor
   </table></div>
   <p class="cap">Counts at main 3 Nov 03:45 UTC (qa records #646). Three M2 rows count as "Works, held part excluded" (C11.3, C11.13, C3.6): their AI "did you mean" step is held for the SA-01B product owner (P-251, P-265).</p>
 
-  <div class="pending" id="audit"><b>Independent re-test: running.</b> Because the scores above were written by our own qa agent, a separate agent that built and scored none of it is re-running every M2 acceptance pack on today's main (live AI off, US$0) and walking six "Works" screens in a browser. Its result replaces this box: rows where the claim and the evidence disagree will be listed here.</div>
+  <h3 id="audit">Independent re-test of those scores</h3>
+  <p>The scores above were written by our own qa agent. A separate agent that built and scored none of it re-ran every M2 acceptance pack and the full test runner (261 suites) on main <code>1a79dbf9</code>, live AI off, US$0, and walked six "Works" screens in a headless browser (3 Nov, about 80 minutes).</p>
+  <div class="kpis">
+    <div class="kpi"><b>36 / 60</b><span>M2 rows confirmed Works by an independent re-run of their own acceptance pack</span></div>
+    <div class="kpi"><b>12</b><span>rows scored Works whose acceptance pack is red on main</span></div>
+    <div class="kpi"><b>4</b><span>rows scored Works with no runnable pack, so not confirmed either way</span></div>
+    <div class="kpi"><b>8 / 8</b><span>Partial rows agree: their packs are red, as claimed</span></div>
+  </div>
+  <div class="tbl"><table>
+    <tr><th>Row</th><th class="n">Pack</th><th>What failed</th><th>Reading</th></tr>
+    <tr><td>C1.5</td><td class="n">16/18</td><td>the copy route answers "not found"</td><td><span class="chip no">defect</span></td></tr>
+    <tr><td>C2.4</td><td class="n">21/22</td><td>an older edition is reported as "in_library"</td><td><span class="chip no">defect</span></td></tr>
+    <tr><td>C3.2</td><td class="n">19/22</td><td>bulk accept of 22 NEW proposals allowed; no Undo for the batch (P-121 says High only, one Undo)</td><td><span class="chip no">defect</span></td></tr>
+    <tr><td>C3.8</td><td class="n">9/11</td><td>a Background question that is not a fact is accepted; no error when IMM 5707 is missing</td><td><span class="chip no">defect</span></td></tr>
+    <tr><td>C3.15</td><td class="n">7/11</td><td>rename without a reason accepted; rename now waits for a second person (P-266)</td><td><span class="chip sugg">part defect, part pack older than P-266</span></td></tr>
+    <tr><td>C4.1</td><td class="n">15/16</td><td>a move is not named as one change line</td><td><span class="chip sugg">pack may predate the source gate</span></td></tr>
+    <tr><td>C4.2</td><td class="n">8/10</td><td>"database refused a duplicate" wording; an unasked fact can be ticked</td><td><span class="chip no">defect</span></td></tr>
+    <tr><td>C4.6</td><td class="n">11/17</td><td>no pen-signed-PDF wording; child and representative signing missing</td><td><span class="chip no">defect</span></td></tr>
+    <tr><td>C4.7</td><td class="n">6 / 1 fail / 2 wait</td><td>hung at 909 s; needs a saved paid run</td><td><span class="chip sugg">untestable at US$0</span></td></tr>
+    <tr><td>C4.8</td><td class="n">5/10</td><td>release refused: 17 numbers have no source entry</td><td><span class="chip sugg">pack older than the source gate (P-279)</span></td></tr>
+    <tr><td>C11.3</td><td class="n">26/27</td><td>the AI meaning-check wording</td><td><span class="chip info">the held part (P-284)</span></td></tr>
+    <tr><td>C11.11</td><td class="n">21/26</td><td>checklist IMM 5484 added as a filed line; LMIA sample lists IMM 5488/5905 as filed lines; an online-only form listed as no file. The same 5 failures were already written in the pack's header on 1 Nov</td><td><span class="chip no">defect, known since 1 Nov</span></td></tr>
+  </table></div>
+  <p class="cap">Not testable at US$0 or without a pack: C3.10 (names no check), C5.2, C11.1, C11.17 (only manual walk scripts). Three rows (C1.6, C2.12, C4.1's named check) failed once under load and passed alone: flaky under load. M3: C6.9 is scored Works but its pack passes 2 of 15 (override and Mark reviewed answer "not found"); C6.12 is scored Partial but its pack is fully green.</p>
+  <h3>Six screen walks</h3>
+  <ul>
+    <li><b>Setup (C11.10):</b> true. Cards, chips, Cards/List per person; the approver sees Open. The row says a 4-step bar, the screen shows "n of 5".</li>
+    <li><b>Sources (C11.11):</b> mostly true. Guides read "Read from canada.ca", not "Read by AI"; the Forms table is clipped at the right edge at 1440 px.</li>
+    <li><b>Library (C3.14):</b> true. Rules and Checks read-only; 66 checks on the released Visitor visa copy.</li>
+    <li><b>Questionnaires (C4.3):</b> true, but the words drifted (screen: "Prospect questionnaire (PQR)"; row: "Pre-qualification").</li>
+    <li><b>Release (C5.4):</b> <b>not reproducible from the Demo menu.</b> On the six samples, "With an LMIA" shows "Nothing to release yet"; the 17 numbers without a source, Add source and the disabled Submit appear only on an older sample loaded through the API, which has no menu item.</li>
+    <li><b>Runtime (C6.1):</b> true. An officer opens a case, sees "Release 1", adds a spouse.</li>
+  </ul>
+  <p class="cap">The test runner itself turns on the live-AI switch in 22 suites, always with the fake launcher that makes no network call; the real spend ledger was untouched. Full runner: about 56 minutes on 4 parallel workers (about 3 hours of suite time).</p>
 
   <h3>M2 Works over time</h3>
   <div class="chart">
@@ -248,6 +281,7 @@ code{font:12.5px var(--f-mono);background:var(--accent-soft);padding:1px 4px;bor
   <p>Rule used here, taken from the research below: change how we work only when a measure moves outside its normal range, stays on one side of its middle for 8 or more points, or two or more independent incidents share a cause. Anything seen once is logged, not acted on.</p>
   <div class="lessons">
     <div class="lesson"><div class="head"><span class="chip firm">firm · keep</span><strong>One fresh cloud builder per row, merged by the queue, multiplied delivery about 15 times without more rework.</strong></div><p class="ev">0.25 → ~4 product merges an hour; fix-titled share flat at ~23%; no reverts; 0 open Blocker/Critical.</p></div>
+    <div class="lesson"><div class="head"><span class="chip no">firm · fix first</span><strong>Our own scorecard overstated what works: 12 of 52 "Works" rows fail their own acceptance pack.</strong></div><p class="ev">An independent re-run on main confirms 36 of 60 M2 rows, not 52. At least 8 of the 12 are real defects; 3–4 are packs that were never updated after a later decision (P-266, P-279), which is itself a gap: a row should not count as Works while its pack is red or out of date. Score only on a green pack, re-tested by someone who did not score it.</p></div>
     <div class="lesson"><div class="head"><span class="chip firm">firm · change</span><strong>The limit now is review and merge, not builders or machines.</strong></div><p class="ev">Approval-to-merge median rose 41 → 54 → 71 → 76 min as volume rose, and 40 machines did not shorten it. DORA 2025 and a 10,000-developer telemetry study report the same pattern: more AI changes, longer review.</p></div>
     <div class="lesson"><div class="head"><span class="chip firm">firm · change</span><strong>Each product change is fully tested twice, and half of all runs are thrown away.</strong></div><p class="ev">~27 min on the PR, ~27 min again in the queue batch since 1 Nov 23:16; 50% of runs cancelled on 2 Nov, 104 on records PRs. One full test per change, in the queue, would roughly halve machine time.</p></div>
     <div class="lesson"><div class="head"><span class="chip firm">firm · change</span><strong>A large Lead context is the most expensive thing we run locally.</strong></div><p class="ev">US$869 (29%), 99% cache re-reads of ~300k tokens per message. A short Lead context, or handing over earlier, costs less with no loss of work.</p></div>
@@ -282,7 +316,24 @@ code{font:12.5px var(--f-mono);background:var(--accent-soft);padding:1px 4px;bor
 <section id="retire">
   <h2>9. Retiring Leads 1–6 without losing work</h2>
   <p>Branches on GitHub are never deleted, so no pushed work can disappear. Before each Lead is archived, its nested sessions are checked for anything not pushed, and every branch whose content is not on main is sorted into: already on main another way, records not needed, records worth keeping, or real unmerged work for the fresh backlog.</p>
-  <div class="pending" id="branches"><b>Branch sort: running.</b> 39 branches hold files that differ from main. Most look like work main later redid or review notes kept off pull requests. The sorted list, with the main commit that covers each, replaces this box.</div>
+  <h3>The 39 branches whose files differ from main, sorted</h3>
+  <p>Each branch's added lines were compared with main (<code>git cherry</code>, line-by-line, the pull request's state, and searches for distinctive strings). <b>None holds substantial unmerged code.</b></p>
+  <div class="tbl"><table>
+    <tr><th>Verdict</th><th class="n">Branches</th><th>What it means</th></tr>
+    <tr><td><span class="chip info">open now</span></td><td class="n">3</td><td>#643 and #647 approved and merging; #417 (D3 paid replay plan) needs a refresh and a founder Go</td></tr>
+    <tr><td><span class="chip firm">already on main</span></td><td class="n">22</td><td>the same change merged under another pull request or commit, or main deliberately went another way</td></tr>
+    <tr><td><span class="chip firm">history only</span></td><td class="n">9</td><td>review records and hand-overs whose substance is on main</td></tr>
+    <tr><td><span class="chip sugg">worth keeping</span></td><td class="n">4</td><td>documents the fresh backlog should triage (below)</td></tr>
+    <tr><td><span class="chip sugg">tiny code, unsure</span></td><td class="n">1</td><td>a three-line speed-up that would need rewriting for today's code</td></tr>
+  </table></div>
+  <ul>
+    <li><b>Outsider audit, 29 Oct</b> (<code>claude/audit-outsider-0a5e67</code>): about 55 findings with evidence; its top ten include write routes with unchecked input (29 <code>@Body() b: any</code> remain on main), cascade deletes on released work, and no type check in CI. Not referenced on main: triage it.</li>
+    <li><b>Outside walk D5, 1 Nov</b> (<code>devin/2026-10-31-explorer</code>): 17 findings (internal keys and engine words on screen, warnings on the loaded sample, a macOS locale check); some may be fixed since: triage against main.</li>
+    <li><b>Real-portal proof requirement, 25 Oct</b> (<code>goose/explore-2026-10-25</code>): the demo must cover the channel matrix and online capture must be proven on the real IRCC portal; attach to M4 row L5.</li>
+    <li><b>One rule line</b> (<code>lead/2026-10-31-decisions</code>): a builder fixes a test's swallowed waits when it touches that test; decide whether to keep it.</li>
+    <li><b>Tiny speed-up</b> (<code>claude/runtime-m2gate-7a844f</code>): only if the signed-PDF browser check or the speed budget misses again.</li>
+    <li><b>A gap found in passing:</b> the founder-decided "Ask it in…" action on a questionnaire gap line (P-216 (3)) has no backlog row and no code.</li>
+  </ul>
   <ul>
     <li><b>Local copies:</b> no unpushed commits anywhere. The old outside-review copy (<code>xpatready-devin</code>) and the demo copy (<code>demo-main</code>) hold saved AI-run outputs from 29–30 Oct that were never committed; they stay on disk and must not be deleted.</li>
     <li><b>Open now:</b> #643 (UX-A finding 4) and #647 (G-CORE B5) approved and merging; #417 (D3 paid replay plan, nothing run) open since 2 Nov.</li>
