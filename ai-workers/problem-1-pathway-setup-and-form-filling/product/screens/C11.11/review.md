@@ -47,3 +47,14 @@ Diff-only review of `git diff 577255c91 19d38b32d`. I read the whole diff; I did
 No open Blocker, Major or Minor from round 1.
 
 **Verdict: Approve** (commit 19d38b32da39e24ea85ae723f4ce51a8a286e6a9)
+
+## Round 3 (ae24dd2, CI fix)
+Diff-only review of `git diff df660b722 ae24dd2de`: two test files, no app code. I read both hunks and the surrounding test; I did not run them (relied on the builder's 28/28 and 116/116).
+
+- **tests/check_c18_copies.ts.** The old test took "the first checklist line" of With an LMIA, which no longer exists. It now plants one by SQL (copy of the IMM 5707 row with lineage IMM 5488, its own library def, `copies` 1, DRAFT), re-reads the lines (`f0 = await forms()`), and removes it after the two checks that use it. Both assertions are unchanged: 2 copies on a checklist line is 400 on the field with "A checklist is not filed, so it has no copies.", and the line keeps 1 copy. The removal comes before the contract check and the Undo, so the later "Undo puts the line back to 1 copy" and fingerprint checks run on the same state as before (the SQL insert is not an action, so Undo is unaffected). Same pattern as the plants already reviewed in C1.6 and check_screen01_channels. Proves what it claimed; not weakened.
+- **tests/check_screen01_browser.cjs, item 6.** Was: eight codes on the page, all named in the note. Now: six codes, none of them IMM 5488 or IMM 5905, the note still names both as checklists (`/checklists IMM 5488 and [^)]*IMM 5905/`), and every shown code is still checked against the note. A stricter check than before, and it tests the new rule from the page side. Not weakened.
+- **tests/check_screen01_browser.cjs, C1.6 channel step.** Only the filing-detail words change, from "PDF uploads + paper forms" to a match anchored at the start of "Paper only; plus PDF upload when needed", the same words round 1 already saw in check_screen01_channels.ts for the same state (IMM 1295 on paper, no checklist lines). The "Filing: Mixed: PDF and paper" and "Signed in pen" checks stay. Still proves the filing method follows the line's channel; not weakened.
+
+No new Blocker, Major or Minor.
+
+**Verdict: Approve** (commit ae24dd2de5082d8e84603dc7272fbab69dfc08d4)
