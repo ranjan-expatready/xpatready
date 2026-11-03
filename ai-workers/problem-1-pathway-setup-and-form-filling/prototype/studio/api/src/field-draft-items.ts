@@ -8,6 +8,7 @@
 //  - P-170: IRCC's words for the field are the box text the AI quoted; when that text is not on the form, it is Decide.
 // Which boxes a form has and what they mean are Sample until the immigration expert confirms (AGENTS rule 4).
 import { compareRounds, type RoundAnswer } from "../../engine/agreement.ts";
+import { quoteOnForm, squashWords } from "../../engine/field-map-rounds.ts";
 import { normalize, type Entry, type Item, type LibraryField, type ProposedField } from "../../engine/normalize.ts";
 import { normalizeLabel } from "../../contracts/programs.ts";
 import type { NewProposal, Work } from "./proposals.ts";
@@ -54,11 +55,12 @@ export function uniqueLabel(id: string, taken: Set<string>, base = labelOf(id)):
 }
 
 const answersOf = (o: FieldMapOutput | null): RoundAnswer<One>[] => (o?.canonical_fields ?? []).map((f) => ({ key: String(f.id), reading: String(f.value_type ?? "").trim().toLowerCase(), item: { field: f, entries: o!.entries.filter((e) => e.fact === f.id) } }));
-const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-/** The first words of the form a reading quoted for a field, and whether they are printed on the form. */
+const squash = squashWords;
+/** The first words of the form a reading quoted for a field, and whether they are printed on the form (the one matcher,
+ *  engine/field-map-rounds.ts quoteOnForm, shared with the field-map step: QA-191). */
 const quoteIn = (o: FieldMapOutput, id: string, formText: string) => {
   const q = o.entries.filter((e) => e.fact === id).map((e) => String(e.evidence_quote ?? "").trim()).find(Boolean) ?? null;
-  return { quote: q, found: !!q && squash(q).length > 0 && formText.includes(squash(q)) };
+  return { quote: q, found: quoteOnForm(q, formText) };
 };
 
 /** The two readings → field proposals (runId is the caller's), plus the readings dropped by the rules with their reason. */
