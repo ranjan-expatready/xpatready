@@ -81,6 +81,15 @@ const planted = join(RUNS, `${job.job_id}-live-20261103t000000000z-q193test${POR
     await call("POST", `/jobs/${run}/items/${reuse2[0]}`, { decision: "PENDING" });
     const und2 = await call("POST", `/review/proposals/undo/${pair}`);
     ok("QA-193 fail (review M1): Undo of a two-item decision, one item decided again on its page, is refused (409); the other stays accepted in its batch", r.status === 201 && und2.status === 409 && /decided again on its form-field page/.test(words(und2)) && sql(`select status || '|' || batch_id from proposal_item where id = '${reuse2[1]}'`) === `accepted|${pair}`, [r.status, und2.status, words(und2)]);
+    // Devin on #740: the same after a re-compare (the items are written anew under new ids, the decision kept).
+    const reuse3 = readyOf("REUSE");
+    r = await call("POST", "/review/proposals/decide", { ids: [reuse3[0], reuse3[1]], action: "accept" });
+    const pair2 = r.body?.batchId as string;
+    const rc = await call("POST", `/jobs/${run}/recompare`, {}, "user-A");
+    const [k1, k2] = sql(`select string_agg(id::text, ',' order by id) from proposal_item where batch_id = '${pair2}'`).split(",");
+    await call("POST", `/jobs/${run}/items/${k1}`, { decision: "PENDING" });
+    const und3 = await call("POST", `/review/proposals/undo/${pair2}`);
+    ok("QA-193 fail (Devin on #740): after a re-compare keeps a two-item decision and one item is decided again on its page, Undo is refused (409); the other stays accepted", r.status === 201 && rc.status < 300 && !!k1 && !!k2 && !reuse3.includes(k1) && und3.status === 409 && /decided again on its form-field page/.test(words(und3)) && sql(`select status || '|' || batch_id from proposal_item where id = '${k2}'`) === `accepted|${pair2}`, [r.status, rc.status, k1, k2, und3.status, words(und3)]);
 
     // The rest of the draft decided one by one on its page, then applied by the author.
     await acceptCleanOneByOne(call, run, ["REUSE", "NEW"], "user-C");

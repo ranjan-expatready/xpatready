@@ -607,7 +607,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
   // Review M2 (#282): a bulk accept of up to BATCH_MAX picks checks each against the combination inside this one
   // transaction; Prisma's 5 s default ended batches above about 45 picks with nothing accepted.
   }, { ...QUEUE_TX, timeout: 120_000 });
-  await audit.log(workspaceId, actor.id, "decided", "proposals", batchId, `${actor.name} ${d.action === "accept" ? "accepted" : d.action === "edit" ? "edited and accepted" : "rejected"} ${landed.length} proposal${landed.length === 1 ? "" : "s"}${reason ? `: ${reason}` : ""}`, { ids: landed.map((x) => x.id) }); // QA-193 review M1: the ids, so Undo knows an item that left the batch since
+  await audit.log(workspaceId, actor.id, "decided", "proposals", batchId, `${actor.name} ${d.action === "accept" ? "accepted" : d.action === "edit" ? "edited and accepted" : "rejected"} ${landed.length} proposal${landed.length === 1 ? "" : "s"}${reason ? `: ${reason}` : ""}`, { n: landed.length }); // QA-193 review M1: how many it made, so Undo knows when one left the batch since
   return { batchId, items: landed };
 }
 
@@ -622,12 +622,13 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     // C3.2 AT-9: an Undo clears the items' batch id, so the same Undo again finds none; the activity log still has the
     // undo, so it is refused as done (409), not as unknown.
     if (!rows.length && await tx.auditEvent.count({ where: { workspaceId, action: "undone", entity: "proposals", entityKey: batchId } })) fail("Already undone: these proposals wait on the queue again. Nothing was changed.", HttpStatus.CONFLICT);
-    // QA-193 review M1: a decision on the form-field page takes the item out of the batch (recordChoice), so the items
-    // this decision made are read from its log entry: one decided again on its page since is never undone from here.
+    // QA-193 review M1 and Devin on #740: a decision on the form-field page takes the item out of the batch (recordChoice),
+    // and a re-compare re-writes the items under new ids (keeping the batch of a kept decision, reopening the others). So
+    // the decision's log says how many items it made: when fewer carry the batch now, one was decided again since and the
+    // decision is never undone from here. (A decision logged before this has no count and is checked as before.)
     if (!(await tx.auditEvent.count({ where: { workspaceId, action: "undone", entity: "proposals", entityKey: batchId } }))) {
-      const made = (await tx.auditEvent.findFirst({ where: { workspaceId, action: "decided", entity: "proposals", entityKey: batchId }, select: { detail: true } }))?.detail as { ids?: string[] } | null;
-      const left = made?.ids?.length ? await tx.proposalItem.findMany({ where: { workspaceId, id: { in: made.ids }, OR: [{ batchId: null }, { NOT: { batchId } }] }, select: { step: true } }) : [];
-      if (left.some((r) => ON_ITS_PAGE.has(r.step))) fail(PAGE_DECIDED_SINCE, HttpStatus.CONFLICT);
+      const made = (await tx.auditEvent.findFirst({ where: { workspaceId, action: "decided", entity: "proposals", entityKey: batchId }, select: { detail: true } }))?.detail as { n?: number } | null;
+      if (typeof made?.n === "number" && rows.length < made.n) fail(PAGE_DECIDED_SINCE, HttpStatus.CONFLICT);
     }
     if (!rows.length) fail("No decision with this id.", HttpStatus.NOT_FOUND);
     if (rows.some((r) => r.decidedBy !== actor.id)) fail("Only the person who decided can undo it.", HttpStatus.FORBIDDEN);
