@@ -36,7 +36,7 @@ const j = checkerJob(draft, EDITION)!, job = roundJob(j.step, true, j.ctx);
 const record = { caller: "live", contract_valid: true, raw_output: draft.raw_output,
   drafting_run: { run_id: `${job.job_id}-live-q193test`, status: "completed_with_unresolved", kind: "field_map", inputs: { combination: job.combination, official_files: job.inputs, configuration_version: "studio-add-form" }, usage: { cost_usd: 0, input_tokens: 0, output_tokens: 0 }, attempts: [{ n: 1, outcome: "ok" }] },
   launch_evidence: { template_sha256: sha(readFileSync(join(PROTOTYPE, "p2", "prompts", FIELD_MAP_CHECK.check))) } };
-const planted = join(RUNS, `${job.job_id}-live-20261103t000000000z-q193test.json`);
+const planted = join(RUNS, `${job.job_id}-live-20261103t000000000z-q193test${PORT}.json`);
 
 (async () => {
   try {
@@ -61,6 +61,17 @@ const planted = join(RUNS, `${job.job_id}-live-20261103t000000000z-q193test.json
     const alone = r.body?.batchId as string;
     ok("setup: a Ready new field is accepted on its own (its own decision)", r.status === 201 && !!alone, [r.status, words(r)]);
     const newKey = sql(`select decided_key from proposal_item where id = '${fresh[0]}'`);
+
+    // Devin on #740 (2): comparing the draft again keeps a kept decision's batch (the items are written anew).
+    r = await call("POST", `/jobs/${run}/recompare`, {}, "user-A");
+    const kept = sql(`select coalesce(batch_id::text, '-') from proposal_item where run_id = '${run}' and decided_key = '${newKey}' and status <> 'waiting'`);
+    ok("QA-193 pass (Devin on #740): a re-compare keeps the decision's batch on the decision it keeps", r.status < 300 && kept === alone, [r.status, kept, alone, words(r)]);
+    // Devin on #740 (1): a decision on the form-field page supersedes the To review batch it was accepted in.
+    const fresh2 = readyOf("NEW");
+    r = await call("POST", "/review/proposals/decide", { ids: [fresh2[0]], action: "accept" });
+    const superseded = r.body?.batchId as string;
+    const back = await call("POST", `/jobs/${run}/items/${fresh2[0]}`, { decision: "PENDING" });
+    ok("QA-193 pass (Devin on #740): putting a queue-accepted item back on its form-field page clears the batch it was accepted in", r.status === 201 && !!superseded && back.status < 300 && sql(`select status || '|' || coalesce(batch_id::text, '-') from proposal_item where id = '${fresh2[0]}'`) === "waiting|-", [r.status, back.status, words(back)]);
 
     // The rest of the draft decided one by one on its page, then applied by the author.
     await acceptCleanOneByOne(call, run, ["REUSE", "NEW"], "user-C");

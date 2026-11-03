@@ -204,8 +204,10 @@ export async function insertProposals(db: Client, workspaceId: string, items: (N
 
 /** The field-map review's choice on one item (sources.ts decide): the contract status follows the choice. */
 const STATUS_OF: Record<string, string> = { PENDING: "waiting", ACCEPTED: "accepted", CHANGED: "edited", NEW: "edited", RETURNED: "rejected" };
-export async function recordChoice(db: Client, id: string, c: { choice: string; decidedKey: string | null; by: string | null; reason: string | null; payload?: ProposalPayload; work?: unknown }) {
-  return db.proposalItem.update({ where: { id }, data: { choice: c.choice === "PENDING" ? null : c.choice, status: STATUS_OF[c.choice] ?? fail("Unknown choice."), decidedKey: c.decidedKey, decidedBy: c.by,
+/** A decision on the form-field page (or kept by a re-compare). QA-193 (Devin on #740): it is its own decision, so a
+ *  To review batch it supersedes no longer names it; a re-compare passes the batch of the decision it keeps. */
+export async function recordChoice(db: Client, id: string, c: { choice: string; decidedKey: string | null; by: string | null; reason: string | null; payload?: ProposalPayload; work?: unknown; batchId?: string | null }) {
+  return db.proposalItem.update({ where: { id }, data: { choice: c.choice === "PENDING" ? null : c.choice, status: STATUS_OF[c.choice] ?? fail("Unknown choice."), decidedKey: c.decidedKey, decidedBy: c.by, batchId: c.batchId ?? null,
     decidedAt: c.by ? new Date() : null, decisionReason: c.reason, ...(c.payload ? { payload: c.payload as Prisma.InputJsonValue, identityKey: identityKeyOf(c.payload, "") } : {}), ...(c.work !== undefined ? { work: c.work as Prisma.InputJsonValue } : {}) } });
 }
 

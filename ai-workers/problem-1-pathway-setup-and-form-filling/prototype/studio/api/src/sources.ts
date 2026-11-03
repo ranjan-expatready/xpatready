@@ -587,7 +587,10 @@ export class Sources {
   /** Reads a run record (live or replayed) and compares its proposals with the library. */
   async ingest(jobId: string, attachmentId: string, opts: { recompare?: Actor } = {}) {
     const job = await this.db.draftingJob.findUniqueOrThrow({ where: { id: jobId } });
-    const previous = opts.recompare ? (await this.db.proposalItem.findMany({ where: { runId: jobId } })).map(reviewRow) : [];
+    const previousRows = opts.recompare ? await this.db.proposalItem.findMany({ where: { runId: jobId } }) : [];
+    const previous = previousRows.map(reviewRow);
+    // QA-193 (Devin on #740): a kept decision keeps the To review batch it was made in.
+    const previousBatch = new Map(previous.map((o, i) => [o.proposedKey, previousRows[i].batchId]));
     const revision = await libraryRevision(this.db, job.workspaceId);
     const a = await this.db.sourceAttachment.findUniqueOrThrow({ where: { id: attachmentId } });
     const rec = JSON.parse(readFileSync(join(SOLUTION, job.runFile!), "utf8"));
@@ -658,7 +661,7 @@ export class Sources {
         if (same) {
           kept++;
           const p = raw.payload as Record<string, unknown>, oldPayload = old.payload as { label?: string; advisory?: unknown } | null;
-          await recordChoice(this.db, it.id, { choice: old.decision, decidedKey: old.decidedKey, by: old.decidedBy, reason: old.decisionNote, payload: { ...p, meaning: old.proposedMeaning, valueType: old.proposedType, ...(old.decision === "NEW" && oldPayload?.label ? { label: oldPayload.label } : {}) } as any,
+          await recordChoice(this.db, it.id, { choice: old.decision, decidedKey: old.decidedKey, by: old.decidedBy, reason: old.decisionNote, batchId: previousBatch.get(it.proposedKey) ?? null, payload: { ...p, meaning: old.proposedMeaning, valueType: old.proposedType, ...(old.decision === "NEW" && oldPayload?.label ? { label: oldPayload.label } : {}) } as any,
             ...(old.decision === "NEW" ? { work: { ...(raw.work as object), advisory: oldPayload?.advisory ?? null } } : {}) });
           await this.db.proposalItem.update({ where: { id: it.id }, data: { decidedAt: old.decidedAt } });
         }
