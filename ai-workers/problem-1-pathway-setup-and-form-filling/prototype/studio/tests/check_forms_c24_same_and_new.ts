@@ -123,11 +123,12 @@ const onReview = async () => ((await call("GET", "/review-queue?filter=all")).bo
   if ((await call("POST", "/demo/reset", { confirm: "RESET" })).status >= 300) throw new Error("third reset failed");
   r = await intake("previous-editions", "imm5476e-2021.pdf");
   if (r.outcome !== "added") throw new Error(`setup: the 2021 IMM 5476 was not added: ${r.outcome} ${r.message}`);
-  const tr = await node("pathway", "Temporary residence C24", null);
-  const vis = await node("program", "Visitors C24", tr);
-  const cat = await node("category", "Visitor visa C24", vis, { allowedLocations: ["outside_canada"] });
-  const made = await call("POST", "/combinations", { nodeKey: cat });
-  const combo3: string = made.body?.combination?.id ?? sql(`select id from combination where combination_key like '%${cat.split(".").pop()}%' limit 1`);
+  const tr3 = await node("pathway", "Temporary residence C24", null);
+  const vis3 = await node("program", "Visitors C24", tr3);
+  const cat3 = await node("category", "Visitor visa C24", vis3, { allowedLocations: ["outside_canada"] });
+  const made3 = await call("POST", "/combinations", { nodeKey: cat3 });
+  const combo3: string = made3.body?.combination?.id ?? sql(`select id from combination where combination_key like '%${cat3.split(".").pop()}%' limit 1`);
+  if (!combo3) throw new Error(`setup: no combination for ${cat3}`);
   r = await intake("forms", "imm5476e.pdf");
   const held3 = sql("select id from intake_item where code='IMM 5476' and status='HELD' and outcome='new_edition_held' limit 1");
   const imp = await call("GET", `/intake/held/${held3}/impact`);
