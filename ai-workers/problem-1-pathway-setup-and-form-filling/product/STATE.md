@@ -22,7 +22,13 @@ updated: 2026-11-03 23:45 IST by **Lead 1 · 3 Nov 22:50 IST** (new account; new
 | qa-after-merge | re-score C11.7, C11.8, C3.4, then every batch within 1 h | compass numbers | cloud |
 | infra-ci | nightly cancelled at its 90-minute limit (3 Nov 08:13 IST) | 8 CI shards (P-311 (4)), QA-201, QA-202, #745 | cloud |
 | paid-runner | C9.1 (worst US$1.22) → C11.7 (US$26.49) → C11.14 checker rounds (~US$49) | — | Mac `local_0c6484d1-a702-4a40-9f67-b03763beb4de` |
-| Builders 1–3 · standby | idle; get M3 and AI rows by message | — | Mac `local_8b65d77f…`, `local_c3a6021a…`, `local_0dfebc7e…` |
+| Builder 1 · C7.5 cross-checks (M3) | C7.5 part 1, rules cross-checks and findings, US$0 (one migration, breaker) | — | Mac `local_8b65d77f-acac-445e-89d3-e359bae9c600` |
+| Builder 2 · C6.5 passport reader (M3) | C6.5 part 1, reader by rules + resolver rule (b), pack to P-242/P-243 | — | Mac `local_c3a6021a-9380-4dcb-b822-624488a35ef5` |
+| Builder 3 · RCIC acceptance walk | a Visitor visa family filing end to end as an RCIC, IRCC checklist, assumption check → reports/rcic-walk-2026-11-04 (report to come) | — | Mac `local_0dfebc7e-2716-4e53-bdeb-fe184309c085` |
+| Builder 4 · L-SA3 readiness (C7.6) | readiness to P-237/P-238 + the P-172 exception, wired into case-prepare | C8.1, C8.2 steps | cloud |
+| Builder 5 · case screens (M3) | Prepare application + checklist: concept, Opus challenge, tech lead approves on the PR (P-316 (3)), build | — | cloud |
+| Builder 6 · L-SA6 Declared fill (M3) | a client's own answer fills at once (P-242), C6.3/C6.6 packs | — | cloud |
+**Queued for the next free builder:** G5 (C5.1, release needs a form line; after the QA-180 PR merges, both edit `engine/validate.ts`) · L-SA4 scopes + SH4 (after Builder 1's migration merges) · L-SA7 Confirm & use and L-SA9 collapse (after Builder 2) · L-SA8 must-verify attribute · C6.12 step 24 fee lines (canada.ca cited).
 Cloud lanes cannot reply: read their branches and PRs. A lane silent 90 minutes with work left is a problem.
 
 ## Next (in order)
