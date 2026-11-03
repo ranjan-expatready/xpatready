@@ -92,7 +92,10 @@ const checkAnswer = { ...answer,
   // ───────────── 2. On an isolated copy: a recorded checker run replays with the draft
   const planted = join(RUNS, `${job.job_id}-live-20261103t000000000z-b4test.json`);
   try {
-    writeFileSync(planted, JSON.stringify(record(job as never)));
+    // Recorded as the paid runner records it: its answer leaves a form field to a person (DROPPED), so p2/convert.ts
+    // marks the run "completed_with_unresolved" (tech lead, 3 Nov: a run planted "completed" hid that such runs never paired).
+    const rec = record(job as never);
+    writeFileSync(planted, JSON.stringify({ ...rec, drafting_run: { ...rec.drafting_run, status: "completed_with_unresolved" } }));
     const loaded = await call("POST", "/demo/load");
     ok("setup: the sample inputs load", loaded.status === 201, loaded.body?.message);
     const att = sql("select a.id from source_attachment a join combination c on c.id = a.combination_id where a.file_name = 'imm5257e.pdf' order by c.label limit 1");
