@@ -108,8 +108,11 @@ function pdf(title: string, text: string) {
   for (const i of job.items.filter((x: any) => x.decision === "PENDING")) await call("POST", `/jobs/${jobId}/items/${i.id}`, { decision: "ACCEPTED", note: "Test: a different meaning from the library field that could fit." });
   r = await call("POST", `/jobs/${jobId}/apply`, { who: "each_applicant" });
   ok("setup: the decided draft is applied", r.status === 201, r.body?.detail ?? r.body);
-  await coverAll(sv);
   const applied = r.body;
+  // C3.8 [IRCC-F09]: the super visa's package lists IMM 5707, so it is added from the library before the draft is submitted.
+  const fam = ((await call("GET", `/combinations/${sv}/attachments`)).body as any[]).find((a) => /IMM 5707 \(/.test(a.edition ?? ""));
+  if (fam) ok("setup: IMM 5707 is added from the library (its package lists it)", (await call("POST", `/attachments/${fam.id}/reuse`, {})).status < 300);
+  await coverAll(sv);
   const changes = (await call("GET", "/library/changes?status=WAITING")).body as any[];
   const mineChange = changes.find((c) => c.key === newKey);
   r = await call("GET", `/library/changes/${mineChange.id}`);
@@ -132,7 +135,7 @@ function pdf(title: string, text: string) {
   ok("C3.8 K1 fail: \"filled by hand\" needs a reason (400)", r.status === 400, r.body?.detail);
   r = await call("POST", `/editions/${ff.edition.id}/form-fields/decision`, { dataPath: open[0].dataPath, decision: "by_hand", reason: "Signed and dated by the applicant on paper." }, "user-O");
   ok("C3.8 K1 fail: a person without the review duty cannot decide a form field (403)", r.status === 403, r.body?.detail);
-  for (const [n, f] of open.entries()) await call("POST", `/editions/${ff.edition.id}/form-fields/decision`, { dataPath: f.dataPath, decision: n === 0 ? "by_hand" : "not_a_fact", reason: n === 0 ? "Signed and dated by the applicant on paper." : "Office use or a document upload: no case fact fills it." });
+  for (const [n, f] of open.entries()) await call("POST", `/editions/${ff.edition.id}/form-fields/decision`, { dataPath: f.dataPath, decision: n === 0 || f.background ? "by_hand" : "not_a_fact", reason: n === 0 || f.background ? "Signed and dated by the applicant on paper." : "Office use or a document upload: no case fact fills it." });
   const after = (await call("GET", `/jobs/${jobId}/form-fields`)).body.fields;
   ok("C3.8 K1: each decided form field reads its decision (filled by hand / not a fact) with the reason", after.filter((f: any) => f.outcome === "unresolved").length === 0 && after.some((f: any) => f.outcome_word === "Filled by hand" && /paper/.test(f.reason)), open.length);
   r = await call("POST", `/combinations/${sv}/submit`, {});

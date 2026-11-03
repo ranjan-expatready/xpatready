@@ -47,10 +47,13 @@ export async function fillAllKinds(port: number, db: string) {
   let job = (await call("GET", `/jobs/${jobId}`)).body;
   for (const i of job.items.filter((x: any) => x.decision === "PENDING")) await call("POST", `/jobs/${jobId}/items/${i.id}`, { decision: "ACCEPTED", note: "Test: a different meaning from the library field that could fit." });
   r = await call("POST", `/jobs/${jobId}/apply`, { who: "each_applicant" }); log("apply", r.status, r.body?.new_fields);
+  // C3.8 [IRCC-F09]: the super visa's package lists IMM 5707, so it is added from the library before the release is submitted.
+  const fam = (await call("GET", `/combinations/${sv}/attachments`)).body.find((a: any) => /IMM 5707 \(/.test(a.edition ?? ""));
+  if (fam) log("family form", (await call("POST", `/attachments/${fam.id}/reuse`, {})).status);
   await coverAll(sv);
   const ff = (await call("GET", `/jobs/${jobId}/form-fields`)).body;
   const open = ff.fields.filter((f: any) => f.outcome === "unresolved");
-  for (const [n, f] of open.entries()) await call("POST", `/editions/${ff.edition.id}/form-fields/decision`, { dataPath: f.dataPath, decision: n === 0 ? "by_hand" : "not_a_fact", reason: n === 0 ? "Signed and dated by the applicant on paper." : "Office use or a document upload: no case fact fills it." });
+  for (const [n, f] of open.entries()) await call("POST", `/editions/${ff.edition.id}/form-fields/decision`, { dataPath: f.dataPath, decision: n === 0 || f.background ? "by_hand" : "not_a_fact", reason: n === 0 || f.background ? "Signed and dated by the applicant on paper." : "Office use or a document upload: no case fact fills it." });
   r = await call("POST", `/combinations/${sv}/submit`, {}); log("submit", r.status, r.body?.detail);
   // A second form line on the submitted combination (its release then belongs to two forms; plan §7's two-form case).
   const second = ((await call("GET", "/library/forms/list?for=picker")).body.rows as any[]).map((x) => x.code).find((c: string) => /^IMM /.test(c) && !lineCodes(sv).includes(c));

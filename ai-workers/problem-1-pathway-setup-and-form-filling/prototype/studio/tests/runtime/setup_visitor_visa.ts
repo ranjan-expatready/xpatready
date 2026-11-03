@@ -234,7 +234,7 @@ async function main() {
   // Committed by the screens lane with the rules (Lead note 25 Oct 08:30, one-off; record: screens/02-ai-work/runtime-setup-patch.md).
   for (const j of ((await call("GET", `/combinations/${vv}`)).body.jobs ?? []).filter((x: { kind: string; status: string }) => x.kind === "field_map" && x.status === "APPLIED")) {
     const ff = (await call("GET", `/jobs/${j.id}/form-fields`)).body;
-    for (const f of ff.fields.filter((x: { outcome: string }) => x.outcome === "unresolved")) await call("POST", `/editions/${ff.edition.id}/form-fields/decision`, { dataPath: f.dataPath, decision: "not_a_fact", reason: "Not filled from case facts in the thin slice (Sample)." }, AUTHOR);
+    for (const f of ff.fields.filter((x: { outcome: string }) => x.outcome === "unresolved")) await call("POST", `/editions/${ff.edition.id}/form-fields/decision`, (f as { background?: boolean }).background ? { dataPath: f.dataPath, decision: "by_hand", reason: "A Background question: recorded by hand in the thin slice (Sample; C3.8, IRCC-F08)." } : { dataPath: f.dataPath, decision: "not_a_fact", reason: "Not filled from case facts in the thin slice (Sample)." }, AUTHOR);
   }
   for (const c of (await call("GET", "/library/changes?status=WAITING")).body) await call("POST", `/library/changes/${c.id}/approve`, {}, REVIEWER);
   const o = (await call("GET", `/combinations/${vv}`)).body;
