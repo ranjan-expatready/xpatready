@@ -170,7 +170,8 @@ export async function insertProposals(db: Client, workspaceId: string, items: (N
     }
     // QA-159 (G-CORE B1 R3): a new field near a library field, or near another new field waiting (in this batch or an
     // earlier run), is found here on the server with the one rule (engine/near.ts), not only when the producer says so.
-    if (x.kind === "field" && x.landsOn === "library" && x.reuse.match === "new") {
+    // QA-192 review M1: a twin (reuse of its first copy, no item yet) may add the item itself, so it is checked too.
+    if (x.kind === "field" && x.landsOn === "library" && (x.reuse.match === "new" || (x.reuse.match === "reuse" && !x.reuse.existingKey))) {
       const p = x.payload as { label: string; meaning?: string };
       const me = { key: ((work as { proposedKey?: string } | null)?.proposedKey) ?? null, name: p.label, meaning: p.meaning ?? null };
       nearPool ??= [
@@ -294,9 +295,26 @@ export function personNearReason(r: Pick<Row, "identity" | "origin">): string | 
 
 /** QA-192: whether accepting this item needs the decider's one-line reason (it adds to the library, is close to a library
  *  item, and no person has said why it is not the same). Field-map items are decided on their own page (BR-7). */
-export function needsNearReason(r: Pick<Row, "identity" | "origin" | "landsOn" | "step" | "reuse">): boolean {
+export function needsNearReason(r: Pick<Row, "identity" | "origin" | "landsOn" | "step" | "reuse" | "work">): boolean {
   const near = ((r.identity ?? {}) as { near?: string[] }).near;
-  return r.landsOn === "library" && !ON_ITS_PAGE.has(r.step) && (r.reuse as { match?: string } | null)?.match === "new" && !!near?.length && !personNearReason(r);
+  const reuse = (r.reuse ?? {}) as { match?: string; existingKey?: string | null };
+  // A twin not yet resolved (reuse with no item) may add the item itself at accept (Devin on #726): counted as new.
+  const adds = reuse.match === "new" || (reuse.match === "reuse" && !reuse.existingKey && !!(r.work as { twinOf?: string } | null)?.twinOf);
+  return r.landsOn === "library" && !ON_ITS_PAGE.has(r.step) && adds && !!near?.length && !personNearReason(r);
+}
+
+/** QA-192 review M1–M2: the library fields and waiting new fields the item, as it will land, is close to (names), found
+ *  again with the one rule (engine/near.ts) at the decision; the item itself is left out. */
+async function nearAtDecision(tx: Tx, workspaceId: string, r: Row, payload: ProposalPayload): Promise<string[]> {
+  const p = payload as { label?: string; meaning?: string };
+  if (!p.label) return [];
+  const me = { key: ((r.work as { proposedKey?: string } | null)?.proposedKey) ?? null, name: p.label, meaning: p.meaning ?? null };
+  const pool = [
+    ...(await tx.canonicalField.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] }, mergedIntoKey: null }, select: { canonicalFieldKey: true, label: true, meaning: true } }))
+      .map((f) => ({ key: f.canonicalFieldKey, name: f.label || f.canonicalFieldKey, meaning: f.meaning })),
+    ...(await pendingNewFields(tx, workspaceId, [r.id])),
+  ];
+  return nearMatches(me, pool).map((n) => n.name);
 }
 
 /** "document type key|person" of every requirement the combination has now (each lineage's newest version, unless
@@ -570,10 +588,6 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
       // proposer's or, when none, the decider's (8 characters or more); it is kept as the item's near reason.
       const nearIds = (r.identity ?? {}) as { near?: string[]; nearReason?: string | null; nearReasonBy?: string };
       let identity = r.identity as Prisma.InputJsonValue | null, nearGiven = false;
-      if (d.action !== "reject" && needsNearReason(r)) {
-        if (!reason || reason.length < 8) fail(`"${nameOf(payload, r.identityKey)}" is close to ${(nearIds.near ?? []).filter(Boolean).slice(0, 3).join(", ")}: say in one line why it is not the same (8 characters or more). The second person sees it at release.`);
-        identity = { ...nearIds, nearReason: reason, nearReasonBy: "person" } as Prisma.InputJsonValue; nearGiven = true;
-      }
       if (d.action !== "reject") {
         if (r.landsOn === "library" && (r.reuse as { match: string }).match === "new") {
           const twin = await sameInLibrary(tx, workspaceId, payload);
@@ -588,6 +602,18 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
           const key = first?.decidedKey && ["accepted", "edited"].includes(first.status) && (await usableInLibrary(tx, workspaceId, r.kind, first.decidedKey)) ? first.decidedKey : await sameInLibrary(tx, workspaceId, payload);
           resolved = key ? { match: "reuse", existingKey: key } : { match: "new", existingKey: null };
           reuse.match = resolved.match; reuse.existingKey = resolved.existingKey;
+        }
+        // Devin on #726 and review M1–M2: checked after a twin's reuse choice is resolved, on the item as it will land: the
+        // near list is found again with the one rule (an edit's new name, a twin the door did not check) and joined to
+        // what the producer said.
+        if (r.landsOn === "library" && !ON_ITS_PAGE.has(r.step) && reuse.match === "new" && !personNearReason(r)) {
+          const found = r.kind === "field" ? await nearAtDecision(tx, workspaceId, r, payload) : [];
+          const near = [...new Set([...(d.action === "edit" ? [] : (nearIds.near ?? [])), ...found])].filter(Boolean).slice(0, 10);
+          if (near.length) {
+            if (!reason || reason.length < 8) fail(`"${nameOf(payload, r.identityKey)}" is close to ${near.slice(0, 3).join(", ")}: say in one line why it is not the same (8 characters or more). The second person sees it at release.`);
+            if (isRuleWhy(reason!)) fail(`Say in your own words why "${nameOf(payload, r.identityKey)}" is not the same as ${near[0]}; the rule's own words are not a reason.`); // review m2
+            identity = { ...nearIds, near, nearReason: reason, nearReasonBy: "person" } as Prisma.InputJsonValue; nearGiven = true;
+          }
         }
         if (r.landsOn === "library" && reuse.match === "reuse" && d.action === "accept") {
           if (!(await usableInLibrary(tx, workspaceId, r.kind, reuse.existingKey))) fail(`"${nameOf(payload, r.identityKey)}" reuses ${reuse.existingKey ?? "no item"}, which is not in the library (retired, merged or never added): reject this proposal, or edit it into a new item.`, HttpStatus.CONFLICT);
