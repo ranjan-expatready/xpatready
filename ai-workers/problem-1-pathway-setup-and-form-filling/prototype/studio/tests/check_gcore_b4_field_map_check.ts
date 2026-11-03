@@ -47,6 +47,9 @@ const checkAnswer = { ...answer,
   canonical_fields: answer.canonical_fields.filter((c) => c.id !== DROPPED).map((c) => (c.id === RETYPED ? { ...c, value_type: "date" } : c)),
   entries: answer.entries.map((e) => (e.fact === DROPPED ? { ...e, outcome: "unresolved", fact: null, transform: null, unresolved_reason: "The checker could not tell whose fact this is." } : e.fact === MISQUOTED ? { ...e, evidence_quote: "na" } : e)) };
 
+// Ctrl-C or a stop exits through the exit handlers below (the committed job file and the real run put back).
+for (const [sig, code] of [["SIGINT", 130], ["SIGTERM", 143]] as const) process.on(sig, () => process.exit(code));
+
 (async () => {
   // ───────────── 1. Blind: the checker job reads only the inventory, with the checker prompt, never the draft's answer
   const j = checkerJob(draft, EDITION)!;
@@ -74,11 +77,13 @@ const checkAnswer = { ...answer,
   // The C11.14 result (#671's jobs, 3 Nov) committed this job file; the runner removes the file after the round, so its bytes
   // are put back once that is checked.
   const jobFile = join(PROTOTYPE, "p2", "jobs", `${job.job_id}.json`), committedJob = existsSync(jobFile) ? readFileSync(jobFile) : null;
+  const restoreJob = () => { if (committedJob && !existsSync(jobFile)) writeFileSync(jobFile, committedJob); };
+  process.on("exit", restoreJob);
   const live = await new StepRunner(fake as never).round<typeof checkAnswer>(j.step, true, { ...j.ctx, mode: "live", wanted: async () => true });
   ok("G-CORE B4: the shared step runner runs the checker round (fake launcher: stub pass, then the call) and reads its answer", live.ok && live.output.canonical_fields.length === answer.canonical_fields.length - 1, live);
   ok("P-121 blind: the job file the launcher was given names the checker prompt and only the inventory", (seenJob as { template?: string } | null)?.template === "field-map-check.v1.md" && JSON.stringify((seenJob as { inputs?: unknown } | null)?.inputs) === JSON.stringify(draft.drafting_run.inputs.official_files));
   ok("G-CORE B4: the job file is removed after the round (the run record keeps it)", !existsSync(join(PROTOTYPE, "p2", "jobs", `${job.job_id}.json`)));
-  if (committedJob) writeFileSync(jobFile, committedJob);
+  restoreJob();
   rmSync(scratch, { recursive: true, force: true });
 
   // ───────────── the comparison and its rules (pure)
@@ -122,8 +127,7 @@ const checkAnswer = { ...answer,
   const putBack = () => { if (!existsSync(aside)) return; for (const f of readdirSync(aside)) renameSync(join(aside, f), join(RUNS, f)); rmSync(aside, { recursive: true, force: true }); };
   putBack(); mkdirSync(aside, { recursive: true });
   for (const f of readdirSync(RUNS).filter((x) => x.startsWith(`${job.job_id}-live-`) && !x.endsWith("-b4test.json"))) renameSync(join(RUNS, f), join(aside, f));
-  process.on("exit", putBack);
-  for (const [sig, code] of [["SIGINT", 130], ["SIGTERM", 143]] as const) process.on(sig, () => process.exit(code));
+  process.on("exit", () => { rmSync(planted, { force: true }); putBack(); });
   try {
     // Recorded as the paid runner records it: its answer leaves a form field to a person (DROPPED), so p2/convert.ts
     // marks the run "completed_with_unresolved" (tech lead, 3 Nov: a run planted "completed" hid that such runs never paired).
