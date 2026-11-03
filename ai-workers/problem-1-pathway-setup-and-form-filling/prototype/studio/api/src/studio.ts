@@ -210,18 +210,21 @@ export class Studio {
   }
 
   /** C3.8 (engine/form-completeness.ts): [IRCC-F08] a Background information question left as "not a fact" on one of the
-   *  combination's forms (decided before the refusal, or so drafted), and [IRCC-F09] the family information form its
-   *  application package lists (a source form attached to it) missing from its forms. Both block release. */
+   *  combination's forms in this draft (decided before the refusal, or so drafted), and [IRCC-F09] the family information
+   *  form its application package lists (a source form attached to it) missing from its forms. Both block release. The
+   *  forms are the draft's own lines (Devin on #691: a form removed in the draft, its RETIRED line over a PUBLISHED one,
+   *  is no longer checked); every PDF edition of each is checked, as the snapshot and the filler carry them all. */
   async completenessProblems(combinationId: string, workspaceId: string): Promise<{ level: "error"; where: string; item: string; message: string }[]> {
-    const [maps, lines, attached] = await Promise.all([
-      this.db.formFieldMap.findMany({ where: { workspaceId, dataPath: { contains: "BackgroundInfo" }, status: { in: ["DRAFT", "PUBLISHED"] }, edition: { form: { usedBy: { some: { combinationId, status: { not: "RETIRED" } } } } } }, select: { id: true, formEditionId: true, dataPath: true, caption: true, outcome: true, version: true, status: true, supersedesId: true, edition: { select: { form: { select: { formKey: true } } } } } }),
+    const [lines, attached] = await Promise.all([
       this.db.combinationForm.findMany({ where: { combinationId }, select: { id: true, lineageKey: true, version: true, status: true, supersedesId: true, form: { select: { formKey: true } } } }),
       this.db.sourceAttachment.findMany({ where: { combinationId, kind: "Form" }, select: { edition: true } }),
     ]);
+    const forms = [...new Set(effective(lines, (l) => l.lineageKey, "draft").map((l) => l.form.formKey))];
+    const maps = forms.length ? await this.db.formFieldMap.findMany({ where: { workspaceId, dataPath: { contains: "BackgroundInfo" }, status: { in: ["DRAFT", "PUBLISHED"] }, edition: { form: { workspaceId, formKey: { in: forms } } } }, select: { id: true, formEditionId: true, dataPath: true, caption: true, outcome: true, version: true, status: true, supersedesId: true, edition: { select: { form: { select: { formKey: true } } } } } }) : [];
     const out: { level: "error"; where: string; item: string; message: string }[] = [];
     for (const r of effective(maps, (m) => `${m.formEditionId}|${m.dataPath}`, "draft"))
       if (NOT_A_FACT.has(r.outcome) && isBackgroundQuestion(r.dataPath)) out.push({ level: "error", where: "Forms", item: r.edition.form.formKey, message: backgroundWords(r.caption) });
-    const missing = missingFamilyForm(attached.map((a) => formNumberOf(a.edition)), effective(lines, (l) => l.lineageKey, "draft").map((l) => l.form.formKey));
+    const missing = missingFamilyForm(attached.map((a) => formNumberOf(a.edition)), forms);
     if (missing) out.push({ level: "error", where: "Forms", item: missing, message: familyFormWords(missing) });
     return out;
   }
