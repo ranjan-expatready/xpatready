@@ -56,7 +56,9 @@ export function questionCounts(s: Snapshot, today = new Date()): { roles: RoleQu
   return { roles, total: roles.reduce((n, r) => n + r.questions, 0) };
 }
 
-export function questionnairesView(s: Snapshot, roleIn: string | undefined, whereUsed: Map<string, number>, today = new Date()): QuestionnairesView {
+/** `libraryTitles` (QA-172): every library section's title by key, for a question placed in a section the combination
+ *  has not chosen (its snapshot carries only the chosen ones); without it the section showed its raw key. */
+export function questionnairesView(s: Snapshot, roleIn: string | undefined, whereUsed: Map<string, number>, today = new Date(), libraryTitles: Map<string, string> = new Map()): QuestionnairesView {
   const read = agentRead(s, today);
   const { participants, people, firstOf, answers, view } = read;
   const renderPeople: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role, label: p.label, applies: p.applies }));
@@ -72,7 +74,7 @@ export function questionnairesView(s: Snapshot, roleIn: string | undefined, wher
   const titles = new Map((s.sections as { id: string; title: string }[]).map((x) => [x.id, x.title]));
   const byId = new Map<string, QuestionnaireSection>();
   for (const part of view.sections.filter((x) => mine(person)(x.subjectId))) {
-    const sec = byId.get(part.section) ?? { id: part.section, title: titles.get(part.section) ?? part.title, questions: [] };
+    const sec = byId.get(part.section) ?? { id: part.section, title: titles.get(part.section) ?? libraryTitles.get(part.section) ?? part.title, questions: [] };
     for (const q of part.questions) {
       if (sec.questions.some((x) => x.fact === q.fact)) continue;
       const p = place.get(q.fact), f = field.get(q.fact);
