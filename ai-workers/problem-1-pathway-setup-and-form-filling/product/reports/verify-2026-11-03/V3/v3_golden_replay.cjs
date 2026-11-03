@@ -1,4 +1,4 @@
-// V3 (verify 3 Nov 2026, read-only tester): the golden journey replayed through the screens on a fresh copy, US$0, Saved only,
+// V3 re-run on the new main (3 Nov 2026, after C3.2, C4.6, C4.2, C1.5, C5.4, C7.7 part 1): the golden journey replayed through the screens on a fresh copy, US$0, Saved only,
 // no STUDIO_*_LIVE. Steps: 1 Reset to the six · 2 configure Visitor visa · 3 release · 4 open a family case · 5 the client answers ·
 // 6 IMM 5257 for each applicant · 7 the checks (Validate read-back, filing) · 8 what staff see matches the release.
 // It repeats the manual walk of V3-one-system.md exactly, including its recovery at step 4 (release 1 cannot open a case).
@@ -53,14 +53,25 @@ const info = (s, d) => console.log(`INFO  ${s}${d === undefined ? "" : ` — ${t
   // ---------------------------------------------------------------- 2 (author, on screen)
   await p.goto(`${CB()}/forms`); await p.waitForLoadState("networkidle"); await sleep(800);
   await p.getByText("Review AI proposals").first().click(); await p.waitForLoadState("networkidle"); await sleep(800);
-  await p.getByRole("button", { name: /Accept clean new definitions/ }).click(); await sleep(1200);
+  t0 = Date.now(); let made = 0; for (let i = 0; i < 120; i++) { const b = p.getByRole("button", { name: /^Create .* as a new definition$/ }).first(); if (!(await b.count())) break; await b.click(); made++; await sleep(300); } timings.decide_5257_s = (Date.now() - t0) / 1000;
   await p.getByRole("button", { name: "Apply to draft" }).click(); await sleep(800); await p.locator("[role=dialog]").getByRole("button", { name: "Apply to draft" }).click(); await sleep(3000);
   const applied = posts.find((x) => /\/jobs\/.*\/apply$/.test(x.u)); info("2a IMM 5257 Saved draft applied", { http: applied?.s, body: applied?.b.slice(0, 160) });
-  const dec = p.locator("section[data-form-field-decisions]");
+  const decideBoxes = async () => { const dec = p.locator("section[data-form-field-decisions]");
   for (let i = 0; i < 20; i++) { if (!(await dec.locator("select").count())) { const d = dec.getByRole("button", { name: "Decide", exact: true }); if (!(await d.count())) break; await d.first().click(); await sleep(300); }
-    await dec.locator("select").first().selectOption({ label: "Filled by hand" }); await dec.getByLabel("Reason", { exact: true }).first().fill("Answered by the applicant on the form; no case fact holds it (Sample)."); await dec.getByRole("button", { name: "Save", exact: true }).first().click(); await sleep(700); }
+    await dec.locator("select").first().selectOption({ label: "Filled by hand" }); await dec.getByLabel("Reason", { exact: true }).first().fill("Answered by the applicant on the form; no case fact holds it (Sample)."); await dec.getByRole("button", { name: "Save", exact: true }).first().click(); await sleep(700); } };
+  await decideBoxes();
+  // IMM 5707 with its Saved draft (tech lead, #682): compare again against today's library, reuse what IMM 5257 made
   await p.goto(`${CB()}/forms`); await p.waitForLoadState("networkidle"); await sleep(800);
-  const change = async (code) => { await p.locator("tr").filter({ hasText: code }).first().getByRole("button", { name: "Change" }).click(); await sleep(700); return p.locator("[role=dialog]"); };
+  for (const r of await p.locator("main tr").all()) if (/^IMM 5707 Family/.test(flat(await r.innerText()))) { await r.getByText("Review AI proposals").click(); break; }
+  await p.waitForLoadState("networkidle"); await sleep(1000); const before5707 = flat(await p.locator("main").innerText()).match(/Reuse (\d+) same library definition New (\d+)/)?.slice(1);
+  await p.getByRole("button", { name: "Compare again (no AI call)" }).click(); await sleep(2500); const after5707 = flat(await p.locator("main").innerText()).match(/Reuse (\d+) same library definition New (\d+) proposed definitions Ambiguous (\d+)/)?.slice(1);
+  const useExisting = p.getByRole("button", { name: /^Use the existing / }); while (await useExisting.count()) { await useExisting.first().click(); await sleep(500); }
+  for (let i = 0; i < 20; i++) { const b = p.getByRole("button", { name: /^(Reuse (person|relationship|case)\.|Create .* as a new definition$)/ }).first(); if (!(await b.count())) break; await b.click(); await sleep(400); }
+  await p.getByRole("button", { name: "Apply to draft" }).click(); await sleep(800); await p.locator("[role=dialog]").getByRole("button", { name: "Apply to draft" }).click(); await sleep(3000);
+  const applied5707 = posts.filter((x) => /\/jobs\/.*\/apply$/.test(x.u)).pop(); info("2a' IMM 5707 Saved draft", { http: applied5707?.s, reuse_new_before_compare: before5707, reuse_new_ambiguous_after_compare: after5707, body: applied5707?.b.slice(0, 160) });
+  await decideBoxes();
+  await p.goto(`${CB()}/forms`); await p.waitForLoadState("networkidle"); await sleep(800);
+  const change = async (code) => { for (const r of await p.locator("main tr").all()) if (flat(await r.innerText()).startsWith(code + " ")) { await r.getByRole("button", { name: "Change" }).click(); break; } await sleep(700); return p.locator("[role=dialog]"); };
   const remove = async (code) => { const d = await change(code); await d.getByRole("button", { name: /Remove from this combination/ }).click(); await sleep(400); await p.getByRole("button", { name: `Remove ${code}` }).click(); await sleep(1200); };
   let d = await change("IMM 5409"); await d.getByLabel("Field", { exact: true }).fill("Marital status"); await d.getByLabel("Value", { exact: true }).fill("common_law"); await d.getByRole("button", { name: "Save to draft" }).click(); await sleep(1500);
   for (const c of ["IMM 5475", "IRM 0002", "IMM 5645"]) await remove(c);
@@ -87,10 +98,10 @@ const info = (s, d) => console.log(`INFO  ${s}${d === undefined ? "" : ` — ${t
   timings.approve_library_s = (Date.now() - t0) / 1000; info("2d library items approved one by one", { approved, seconds: timings.approve_library_s, waiting: sql("select count(*) from library_change where status='WAITING'") });
   // the author places each of IMM 5257's facts in a section (library > field > Where it is asked)
   await as("user-A");
-  const keys = sql(`select distinct canonical_field_key from form_field_map m join form_edition e on e.id=m.form_edition_id where e.edition_label='IMM 5257 (09-2023)' and canonical_field_key is not null order by 1`).split("\n");
+  const keys = sql(`select distinct canonical_field_key from form_field_map m join form_edition e on e.id=m.form_edition_id where e.edition_label in ('IMM 5257 (09-2023)','IMM 5707 (01-2023)') and canonical_field_key is not null order by 1`).split("\n");
   const sectionOf = (k) => k.startsWith("case.") ? "Details of visit" : /education_/.test(k) ? "Education" : /occupation_/.test(k) ? "Occupation" : /marital|previously_married|union_start/.test(k) ? "Marital status" : /national_id/.test(k) ? "Nat id" : /us_green/.test(k) ? "Us card"
     : /criminal|military|violent|health|refused|overstayed|previously_applied|immigration_history/.test(k) ? "Background info" : /telephone|email|fax|address/.test(k) ? "Contact information" : "Personal details";
-  const repOf = (k) => k.startsWith("case.") && !/visit_contact/.test(k) ? "once_per_case" : /visit_contact|education_|occupation_|previous_residence_/.test(k) ? "per_row" : "per_person";
+  const repOf = (k) => k.startsWith("case.") && !/visit_contact/.test(k) ? "once_per_case" : /visit_contact|education_|occupation_|previous_residence_|accompanies|child_relationship/.test(k) ? "per_row" : "per_person";
   let placed = 0; t0 = Date.now();
   for (const k of keys) { await p.goto(`${B}/library/fields/${k}`); await p.waitForLoadState("networkidle"); const sels = p.locator("main select");
     await sels.filter({ has: p.locator("option", { hasText: "Choose a section" }) }).first().selectOption({ label: sectionOf(k) }); await sels.filter({ has: p.locator("option", { hasText: "Client questionnaire" }) }).first().selectOption({ label: "Client questionnaire" });
@@ -125,8 +136,8 @@ const info = (s, d) => console.log(`INFO  ${s}${d === undefined ? "" : ` — ${t
   let oc = await openCase(); const firstTry = oc?.s; info("4a open a case on release 1", { http: oc?.s, missing: oc?.b.match(/"missing":\[(.*?)\]/)?.[1]?.slice(0, 300), words: await toasts() });
   if (oc?.s >= 300) { // recovery an author would choose: take the three unmapped forms off and release again
     await p.keyboard.press("Escape"); await as("user-A"); await p.goto(`${CB()}/forms`); await p.waitForLoadState("networkidle"); await sleep(800);
-    for (const c of ["IMM 5409", "IMM 5476", "IMM 5707"]) await remove(c);
-    const r2 = await release(); info("4b recovery: release 2 without the unmapped forms", { http: r2?.s }); oc = await openCase(); }
+    for (const c of ["IMM 5409", "IMM 5476"]) await remove(c);
+    const r2 = await release(); info("4b recovery (B1 not fixed yet): release 2 without IMM 5409 and IMM 5476", { http: r2?.s }); oc = await openCase(); }
   const CASE = oc?.b.match(/^\{"id":"([0-9a-f-]{36})"/)?.[1];
   for (const [btn, name] of [[/Add spouse or partner/, "Sample Spouse A"], [/Add child/, "Sample Child A1"]]) { await p.getByRole("button", { name: btn }).click(); await p.getByLabel("Name").fill(name); await p.getByRole("button", { name: "Add", exact: true }).click(); await sleep(1300); }
   await check("4-case-page");
@@ -175,10 +186,14 @@ const info = (s, d) => console.log(`INFO  ${s}${d === undefined ? "" : ` — ${t
   for (const who of people) { const row = p.locator("li", { has: p.getByRole("heading", { name: new RegExp(`IMM 5257 for ${who}`) }) }); const ts = Date.now();
     await row.getByRole("button", { name: /Generate a (new )?copy/ }).click(); while (Date.now() - ts < 90000 && !/Generated/.test(await row.innerText())) await sleep(300);
     gen[who] = { seconds: (Date.now() - ts) / 1000, line: flat(await row.innerText()).match(/\d+ form fields written, \d+ by hand[^D]*/)?.[0] }; }
+  for (const who of people) { const row = p.locator("li", { has: p.getByRole("heading", { name: new RegExp(`IMM 5707 for ${who}`) }) }); if (!(await row.count())) { gen[`5707 ${who}`] = "no IMM 5707 row"; continue; } const ts = Date.now();
+    await row.getByRole("button", { name: /Generate a (new )?copy/ }).click(); while (Date.now() - ts < 90000 && !/Generated/.test(await row.innerText())) await sleep(300);
+    gen[`5707 ${who}`] = { seconds: (Date.now() - ts) / 1000, line: flat(await row.innerText()).match(/\d+ form fields written, \d+ by hand[^D]*/)?.[0] }; }
   await check("6-copies");
-  const copies = sql(`select count(*) from form_instance where case_id='${CASE}' and status='GENERATED'`);
+  const copies = sql(`select count(*) from form_instance where case_id='${CASE}' and status='GENERATED' and form_number='IMM 5257'`), copies5707 = sql(`select count(*) from form_instance where case_id='${CASE}' and status='GENERATED' and form_number='IMM 5707'`);
+  info("6 IMM 5707 copies", copies5707);
   info("6 copies", gen);
-  verdict(6, "IMM 5257 filled for each applicant", copies === "3");
+  verdict(6, "IMM 5257 for each applicant and IMM 5707 for each adult", copies === "3" && copies5707 === "2", `IMM 5257 ${copies}, IMM 5707 ${copies5707}`);
 
   // ---------------------------------------------------------------- 7 (checks)
   const row = p.locator("li", { has: p.getByRole("heading", { name: /IMM 5257 for Sample Client A/ }) });
@@ -195,7 +210,10 @@ const info = (s, d) => console.log(`INFO  ${s}${d === undefined ? "" : ` — ${t
   const rel = JSON.parse(sql(`select json_build_object('forms', jsonb_array_length(snapshot->'forms'), 'sections', jsonb_array_length(snapshot->'sections'), 'placements', jsonb_array_length(snapshot->'placements'), 'edition', snapshot->'field_maps'->0->>'form_edition', 'boxes', jsonb_array_length(snapshot->'field_maps'->0->'entries')) from config_release where combination_id='${VV()}' order by version desc limit 1`));
   const staff = { questions: v.summary?.questions, sections: new Set(v.sections.map((s) => s.title)).size, forms: (forms.forms ?? forms).length, people: new Set((forms.forms ?? forms).map((x) => x.subject_id)).size, mapped_on_page: (await text()).match(/of (\d+) form fields/)?.[1] };
   info("8 release vs staff", { release: rel, staff, mapped_in_release: sql(`select count(*) from form_field_map m join form_edition e on e.id=m.form_edition_id where e.edition_label='${rel.edition}' and m.outcome='mapped'`) });
-  verdict(8, "What staff see matches the release", staff.sections === rel.sections && staff.forms === 3 && staff.people === 3 && staff.questions === 231);
+  await as("user-A"); await p.goto(`${CB()}/preview`); await p.waitForLoadState("networkidle"); await sleep(1200); const pv = await text();
+  const pq = (re) => Number(pv.match(re)?.[1] ?? NaN); const preview = pq(/Principal applicant · (\d+) questions/) + pq(/Spouse or partner \(travelling\) · (\d+) questions/) + pq(/Child \(travelling\) 1 · (\d+) questions/);
+  info("8 Studio Preview (couple, one child) vs case", { preview_questions: preview, case_questions: staff.questions }); await as("user-O");
+  verdict(8, "What staff see matches the release", staff.sections === rel.sections && staff.forms === 5 && staff.people === 3 && staff.questions === preview);
 
   // ---------------------------------------------------------------- end
   info("axe violations per state", axeOut); info("sideways scroll px per width", wide); info("timings", timings); if (errs.length) info("page errors", errs.slice(0, 5));

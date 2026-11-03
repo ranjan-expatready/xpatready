@@ -81,5 +81,43 @@ The step lists differ (V3 splits configure and release, and checks staff-vs-conf
 ## Not tested
 A real Adobe Validate (the accept path and the barcode); keyboard-only and a screen reader; two tabs saving one answer; IMM 5409/5476/5707 fills (removed in the recovery); a paid run (none needed). An intended user's unaided walk stays with the founder (D17/D20).
 
+## Delta: re-run on main 8eead4d3 (3 Nov, ~10:00–10:40 UTC; after C3.2, C4.6, C4.2, C1.5, C5.4, C7.7 part 1 and #673)
+Tech lead's ruling on this PR: B1 is fixed by option (a), release refuses. The fix (F2) is **not on main yet**. The replay now maps **IMM 5707 with its Saved draft** instead of removing it. Method as above: one walk by hand on :4474 for the changed screens, then `V3/v3_golden_replay.cjs` (updated) twice on fresh copies, :4475 and :4476. US$0, `drafting_job` LIVE 0. Run 1's step 8 failed only on my script's fixed count of 231. The script now compares with the Studio Preview, and run 2 passes it: 241 = 241.
+
+**Result: 7 of 8 steps pass, first failing step 4: unchanged.** Journey score **5.5 / 10: unchanged.** Feedback and state keeps ½ (one gain, one new contradiction, N1). No criterion moved.
+
+| # | Step | Before (877acf66) | Now (8eead4d3) |
+|---|---|---|---|
+| 1 | Reset to the six | pass, 25 s | pass, 25–27 s |
+| 2 | Configure | pass; "Accept clean new definitions (84)" in one click | pass; **C3.2 removed the shortcut for one-round items**: "Accept High exact reuse (0)", so 84 "Create … as a new definition" clicks (30 s scripted, `n2-imm5257-proposals.jpg`). **IMM 5707 mapped** with its Saved draft: 50 boxes, 4 new fields, 5 reused (`n2-imm5707-compared.jpg`). Placements 88. 6 warnings, 0 errors |
+| 3 | Release | pass | pass; release 1 has 88 fields, 88 placements, 2 field maps |
+| 4 | Open a family case | **fail B1** (5409, 5476, 5707 unmapped) | **fail B1**: 409, `form_without_edition` "No form fields mapped yet for IMM 5409, IMM 5476". Recovered by removing those two and releasing again |
+| 5 | Client answers | pass, 231 questions | pass, 241 questions, 187 answered = 187 confirmed, 50 of 50 confirms |
+| 6 | Fill | pass, 3 × IMM 5257 | pass, 3 × IMM 5257 (80 / 80 / 77 written, 14 by hand each) **and 2 × IMM 5707** (adults only; the child of 10 has no IMM 5707 row, so the age-18 condition works through C7.7). IMM 5707: 19 written, 1 by hand, 1.6 s |
+| 7 | Checks | pass | pass: 422 / 422, Filed disabled |
+| 8 | Staff see the configuration | pass | pass: 241 questions = Preview 87 + 77 + 77; 5 forms; 9 sections; ages 40 / 38 / 10 |
+
+**Changed since the first run**
+* **Better:** IMM 5707 now maps from its Saved draft. "Compare again (no AI call)" turns its 9 "new" items into 4 reuse, 4 new and 1 near match ("Use the existing person.birth_country"). The resolver (C7.7) gives IMM 5707 to the two adults only.
+* **N1 (Major, new, cross-module): IMM 5707 says "Ready to file" with both parents' details empty** (`n8-case-page.jpg`).
+  * Its field map reads 16 boxes for "the subject's first parent" and "second parent", plus "accompanies the subject" for the spouse and the child.
+  * Visitor visa has no parent role. So 19 boxes are `not written`, and the reason given is only a section name ("Personal details", "Contact information", "Marital status").
+  * The row still reads "Ready to file". Neither the release check nor readiness says the form asks about people the combination cannot hold.
+  * Fix: name the missing people at release (or add a parent role), and count those boxes in readiness with a plain reason.
+* **N2 (Minor, new):** after IMM 5257 is applied, IMM 5707's proposals still say "No library definition with this meaning" for `person.date_of_birth`, `family_name`, `given_names` and `marital_status` (0 reuse, 9 new). The page does not prompt "Compare again" when the library has changed. A person who decides first would create 4 duplicate definitions, or meet the stale refusal at Apply.
+* **N3 (Minor):** IMM 5707's undecided boxes are named by their raw data path (`IMM_5707[0].page1[0].SectionA[0]…MarriageInPerson…yesno[0]`).
+* **C3.2's one-by-one decisions** are correct under P-121: no item is High without a checker round. They become bulk-acceptable again once #671's saved checker rounds merge. On #671's head, 129 of 560 items are Ready (see the Saved check comment on #671).
+* **Unchanged:** B1 (F2 not merged), B2 (still no screen calls `POST /library/fields/:key/answer-list`; hand-fill lines "SAMPLE" and "01..09" on every IMM 5257), B3 (sections still only through library › Forms › ⋯ › Re-read with AI), B4 (`common_law` still "Condition is valid"), B5 (114 approvals one at a time, 4 min 31 s scripted; 88 placements one at a time, 2 min 34 s), B6 (0 document requirements, no warning).
+* **New on the Demo menu (C5.4):** "Start With an LMIA from its reviewed release…". It is the natural start for the second-combination run (P-291 (2)).
+
+| Replay on 8eead4d3 | run 1 (:4475) | run 2 (:4476) |
+|---|---|---|
+| steps | 6 of 8 (step 8: my fixed 231) | **7 of 8**, first fail 4 |
+| axe, 11 states | `color-contrast(1)` on the Reset dialog | same |
+| sideways scroll 400 / 1024 / 1440 | 0 | 0 |
+| reset · approvals · placements · slowest save | 25 s · 274 s · 161 s · 5.4 s | 27 s · 271 s · 154 s · 5.4 s |
+
+The contrast hit on the Reset to the six dialog now appears in both runs (it was 1 of 2 before). It is a real Minor, not flake.
+
 ## Next (P-291)
-(1) Re-run after the six fix PRs merge and append the delta here. (2) The same journey on a second combination of the six.
+(2) The same journey on a second combination of the six (the LMIA one, from its reviewed release).
