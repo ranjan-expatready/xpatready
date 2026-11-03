@@ -1,0 +1,119 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-masters-guide-check-temporary-residence-visitors-visitor-vis-477759eb-live-20261103t072412443z-2bc40b",
+  "idempotency_key": "cd8ac7cc8f4b12a8694ea52158a64c6e5741337c2bb9c76bf3e2623f35b4af75",
+  "contract_version": "drafting-run/v0",
+  "kind": "masters_guide",
+  "output_sha256": "2f52b220d8775a5aea529571425036825e3bdf71550240bc67dff17ab5f15881",
+  "inputs": {
+   "combination": "vv.single",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/guide-5256.text.inventory.json",
+     "sha256": "c6bc458e9381a53f71ae15015330eee769ce91a18cfc00a7daad1dad65ab16c2"
+    }
+   ],
+   "configuration_version": "c34-masters-guide"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "low",
+   "timeout_ms": 300000,
+   "max_attempts": 2,
+   "budget_usd": 1,
+   "max_output_tokens": 6000,
+   "prompt_version": "masters-guide-check.v1.md",
+   "prompt_sha256": "cf3625d72a53d57ee4749e87adc4423b70d830e87a32e2f03625dbdc34985dc3"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 17165,
+    "output_tokens": 1291,
+    "duration_ms": 12073
+   }
+  ],
+  "usage": {
+   "input_tokens": 17165,
+   "output_tokens": 1291,
+   "cost_usd": 0.09448,
+   "duration_ms": 12073
+  },
+  "started_at": "2026-11-03T07:24:12.444Z",
+  "ended_at": "2026-11-03T07:24:24.775Z"
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": null,
+ "launch_evidence": {
+  "path_code_sha256": "d73ec66afdb4888048af54ac89383898a26bdc5236a01ec753f81c936c03321e",
+  "template_sha256": "82de56329379f79c9a02b5d4244a0443893aa16d5b27512486ef92f0db02428b",
+  "schema_file": "masters-guide-output.v1.schema.json",
+  "schema_sha256": "2edd9db7c16b75c081af4d95b4030f8dedbd3cdf7b894aa63af6e2ee00655414",
+  "known": {
+   "combination_trail": "Temporary residence › Visitors › Visitor visa"
+  },
+  "screened": true,
+  "output_sha256": "2f52b220d8775a5aea529571425036825e3bdf71550240bc67dff17ab5f15881",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "70fef91dc0ec95c22988c7b92bdc6f24d3ced822696f8d54b2687c5a64f468ae",
+  "request_bytes": 56553,
+  "stub_calls": null,
+  "ledger": {
+   "file": "<main copy>/.tools/p2-ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 50.85231599999999
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/guide-5256.text.inventory.json",
+    "sha256": "c6bc458e9381a53f71ae15015330eee769ce91a18cfc00a7daad1dad65ab16c2",
+    "kind": "inventory"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "d64d22ecd29775d3831d2c03cb2862091aec06ff9d5f6c6ffe708d8a5d0a0c71",
+   "digest_made_at": "2026-11-03T07:24:12.444Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "fd19dc53088af1409728c1e23c49cc3b",
+   "ticket_expires_at": "2026-11-03T07:26:12.444Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"checks\":[{\"group\":\"official_rule\",\"sentence\":\"An applicant under 18 must have the form signed by a parent or legal guardian.\",\"reads\":[\"applicant age\",\"form signed by\"],\"subject_kind\":\"APPLICATION_SIGNATURE\",\"tree_json\":\"{\\\"or\\\":{\\\"args\\\":[]}}\",\"severity\":\"block\",\"needs_calculation\":\"Applicant age from date of birth at signing\",\"quote\":\"If you are less than 18 years of age, your form must be signed by one of your parents or a legal guardian.\",\"examples\":[{\"facts_json\":\"{\\\"applicant_age\\\":16,\\\"form_signed_by\\\":\\\"parent\\\"}\",\"expected\":true},{\"facts_json\":\"{\\\"applicant_age\\\":16,\\\"form_signed_by\\\":\\\"applicant\\\"}\",\"expected\":false}]},{\"group\":\"cross_record\",\"sentence\":\"The passport expiry date must be after the passport issue date.\",\"reads\":[\"passport issue date\",\"passport expiry date\"],\"subject_kind\":\"PASSPORT\",\"tree_json\":\"{\\\"gt\\\":{\\\"field\\\":\\\"passport_expiry_date\\\",\\\"value_field\\\":\\\"passport_issue_date\\\"}}\",\"severity\":\"block\",\"needs_calculation\":\"Compare expiry date with issue date\",\"quote\":\"Enter the date your passport or travel document will expire.\",\"examples\":[{\"facts_json\":\"{\\\"passport_issue_date\\\":\\\"2020-01-01\\\",\\\"passport_expiry_date\\\":\\\"2030-01-01\\\"}\",\"expected\":true},{\"facts_json\":\"{\\\"passport_issue_date\\\":\\\"2030-01-01\\\",\\\"passport_expiry_date\\\":\\\"2020-01-01\\\"}\",\"expected\":false}]},{\"group\":\"official_rule\",\"sentence\":\"When the visit purpose is Other, details must be provided.\",\"reads\":[\"purpose of visit\",\"purpose details\"],\"subject_kind\":\"VISIT_DETAILS\",\"tree_json\":\"{\\\"or\\\":{\\\"args\\\":[{\\\"neq\\\":{\\\"field\\\":\\\"purpose_of_visit\\\",\\\"value\\\":\\\"Other\\\"}},{\\\"exists\\\":{\\\"field\\\":\\\"purpose_details\\\"}}]}}\",\"severity\":\"block\",\"needs_calculation\":null,\"quote\":\"Note: If you selected “other” in question 1a), provide details in 1b)\",\"examples\":[{\"facts_json\":\"{\\\"purpose_of_visit\\\":\\\"Other\\\",\\\"purpose_details\\\":\\\"medical\\\"}\",\"expected\":true},{\"facts_json\":\"{\\\"purpose_of_visit\\\":\\\"Other\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"purpose_of_visit\\\":\\\"Tourism\\\"}\",\"expected\":true}]},{\"group\":\"readiness_warning\",\"sentence\":\"The planned stay end date should not be after the passport expiry date.\",\"reads\":[\"stay end date\",\"passport expiry date\"],\"subject_kind\":\"PASSPORT\",\"tree_json\":\"{\\\"lte\\\":{\\\"field\\\":\\\"stay_end_date\\\",\\\"value_field\\\":\\\"passport_expiry_date\\\"}}\",\"severity\":\"warn\",\"needs_calculation\":\"Compare stay end date with passport expiry\",\"quote\":\"Enter the dates (From – To) that you plan to stay in Canada.\",\"examples\":[{\"facts_json\":\"{\\\"stay_end_date\\\":\\\"2026-06-01\\\",\\\"passport_expiry_date\\\":\\\"2030-01-01\\\"}\",\"expected\":true},{\"facts_json\":\"{\\\"stay_end_date\\\":\\\"2031-06-01\\\",\\\"passport_expiry_date\\\":\\\"2030-01-01\\\"}\",\"expected\":false}]}],\"unresolved\":[{\"passage\":\"If you are less than 18 years of age, your form must be signed by one of your parents or a legal guardian.\",\"reason\":\"Signature check above has an incomplete tree; correct tree: or(gte applicant_age 18, in form_signed_by [parent, legal guardian]); age needs date calculation.\"}]}"
+}

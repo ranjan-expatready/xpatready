@@ -1,0 +1,119 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-masters-form-imm-5257-09-2023-4abab0ac-live-20261103t072234839z-cfd037",
+  "idempotency_key": "c14ccf762c79c63562b300e962b55a20c4ab96a063b0aea067450912e45b436d",
+  "contract_version": "drafting-run/v0",
+  "kind": "masters_form",
+  "output_sha256": "a6f8824cb70fb13574e1b04dda1ff5351dac15e8f5bce7aca67be7c7bafbc485",
+  "inputs": {
+   "combination": "edition:IMM 5257:09-2023",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/imm5257e.inventory.json",
+     "sha256": "004fc9fb8b3162a12ae626a3b666fb65a4ceb7dd537679ccc47114d3aa31208b"
+    }
+   ],
+   "configuration_version": "c34-masters-form"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "low",
+   "timeout_ms": 300000,
+   "max_attempts": 2,
+   "budget_usd": 3.31,
+   "max_output_tokens": 8000,
+   "prompt_version": "masters-form.v1.md",
+   "prompt_sha256": "d86c7e3f8d52f440f55cbd0b822967255a6ee08de01c633db886ea26de37e6d2"
+  },
+  "status": "invalid_output",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 102460,
+    "output_tokens": 8000,
+    "duration_ms": 55011
+   }
+  ],
+  "usage": {
+   "input_tokens": 102460,
+   "output_tokens": 8000,
+   "cost_usd": 0.56984,
+   "duration_ms": 55011
+  },
+  "started_at": "2026-11-03T07:22:34.841Z",
+  "ended_at": "2026-11-03T07:23:30.248Z"
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": "stopped at max_tokens",
+ "conversion": null,
+ "launch_evidence": {
+  "path_code_sha256": "ae8e07012a107491dee67ac6dc2cff6b984dfbc8693a5ae7baeda9b4121bb39e",
+  "template_sha256": "bd2ac18feafd91f53657f63dc6029fdc7b379818311c7d9e92ab2661c7300fae",
+  "schema_file": "masters-form-output.v1.schema.json",
+  "schema_sha256": "c9b745e2964bf57ee0885c866fa6909ef30429be688ad5515f737eb557451495",
+  "known": {
+   "form_edition": "IMM 5257 (09-2023)"
+  },
+  "screened": true,
+  "output_sha256": "a6f8824cb70fb13574e1b04dda1ff5351dac15e8f5bce7aca67be7c7bafbc485",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "f98fa21612fc33fd6d7a9e98bb66176a69ca6e0c75e610266195e58304f4ee82",
+  "request_bytes": 230830,
+  "stub_calls": null,
+  "ledger": {
+   "file": "<main copy>/.tools/p2-ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 50.186711999999986
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/imm5257e.inventory.json",
+    "sha256": "004fc9fb8b3162a12ae626a3b666fb65a4ceb7dd537679ccc47114d3aa31208b",
+    "kind": "inventory"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "d88d63eb47a34249631f108cc7c3daf3e4b8fef4fc758a90b10d164762e8d076",
+   "digest_made_at": "2026-11-03T07:22:34.840Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "d63227d2fd54837b4d29f68d32492dea",
+   "ticket_expires_at": "2026-11-03T07:24:34.840Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"checks\":[{\"sentence\":\"When the current immigration status is Other, its details are given\",\"reads\":[\"form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Status[0]\",\"form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Other[0]\"],\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\":\\\"or\\\",\\\"args\\\":[{\\\"op\\\":\\\"neq\\\",\\\"field\\\":\\\"form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Status[0]\\\",\\\"value\\\":\\\"Other\\\"},{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Other[0]\\\"}]}\",\"quote\":\"Question 7 C If your immigration status is other, please give details.\",\"examples\":[{\"facts_json\":\"{\\\"form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Status[0]\\\":\\\"Other\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Status[0]\\\":\\\"Other\\\",\\\"form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Other[0]\\\":\\\"Diplomat\\\"}\",\"expected\":true},{\"facts_json\":\"{\\\"form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Status[0]\\\":\\\"Citizen\\\"}\",\"expected\":true}]},{\"sentence\":\"When residence in another country in the past 5 years is declared, the previous country is given\",\"reads\":[\"form1[0].Page1[0].PersonalDetails[0].PCRIndicator[0]\",\"form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Country[0]\"],\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\":\\\"or\\\",\\\"args\\\":[{\\\"op\\\":\\\"neq\\\",\\\"field\\\":\\\"form1[0].Page1[0].PersonalDetails[0].PCRIndicator[0]\\\",\\\"value\\\":\\\"* Yes\\\"},{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Country[0]\\\"}]}\",\"quote\":\"Question 8 B Row 1 Country or Territory. If you replied Yes to question 8 A, please give your previous country or territory of residence.\",\"examples\":[{\"facts_json\":\"{\\\"form1[0].Page1[0].PersonalDetails[0].PCRIndicator[0]\\\":\\\"* Yes\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"form1[0].Page1[0].PersonalDetails[0].PCRIndicator[0]\\\":\\\"* Yes\\\",\\\"form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Country[0]\\\":\\\"France\\\"}\",\"expected\":true},{\"facts_json\":\"{\\\"form1[0].Page1[0].PersonalDetails[0].PCRIndicator[0]\\\":\\\"* No\\\"}\",\"expected\":true}]},{\"sentence\":\"When the first previous residence status is Other, its details are given\",\"reads\":[\"form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Status[0]\",\"form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Other[0]\"],\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\":\\\"or\\\",\\\"args\\\":[{\\\"op\\\":\\\"neq\\\",\\\"field\\\":\\\"form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Status[0]\\\",\\\"value\\\":\\\"Other\\\"},{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Other[0]\\\"}]}\",\"quote\":\"Question 8 B Row 1 Other Details. If your immigration status was other, please give details.\",\"examples\":[{\"facts_json\":\"{\\\"form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Status[0]\\\":\\\"Other\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Status[0]\\\":\\\"Worker\\\"}\",\"expected\":true}]},{\"sentence\":\"When the second previous residence status is Other, its details are given\",\"reads\":[\"form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].Status[0]\",\"form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].Other[0]\"],\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\":\\\"or\\\",\\\"args\\\":[{\\\"op\\\":\\\"neq\\\",\\\"field\\\":\\\"form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].Status[0]\\\",\\\"value\\\":\\\"Other\\\"},{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].Other[0]\\\"}]}\",\"quote\":\"Question 8 B Row 2 Other Details. If your immigration status was other, please give details.\",\"examples\":[{\"facts_json\":\"{\\\"form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].Status[0]\\\":\\\"Other\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].Status[0]\\\":\\\"Student\\\"}\",\"expected\":true}]},{\"sentence\":\"When the country of application differs from the country of residence, the country of application is given\",\"reads\":[\"form1[0].Page1[0].PersonalDetails[0].SameAsCORIndicator[0]\",\"form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Country[0]\"],\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\":\\\"or\\\",\\\"args\\\":[{\\\"op\\\":\\\"neq\\\",\\\"field\\\":\\\"form1[0].Page1[0].PersonalDetails[0].SameAsCORIndicator[0]\\\",\\\"value\\\":\\\"* No\\\"},{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Country[0]\\\"}]}\",\"quote\":\"Question 9 B Country. If you replied No to question 9 A, please give the country from where you are applying.\",\"examples\":[{\"facts_json\":\"{\\\"form1[0].Page1[0].PersonalDetails[0].SameAsCORIndicator[0]\\\":\\\"* No\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"form1[0].Page1[0].PersonalDetails[0].SameAsCORIndicator[0]\\\":\\\"* Yes\\\"}\",\"expected\":true}]},{\"sentence\":\"When the status in the country of application is Other, its details are given\",\"reads\":[\"form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Status[0]\",\"form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Other[0]\"],\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\":\\\"or\\\",\\\"args\\\":[{\\\"op\\\":\\\"neq\\\",\\\"field\\\":\\\"form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Status[0]\\\",\\\"value\\\":\\\"Other\\\"},{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Other[0]\\\"}]}\",\"quote\":\"Question 9 B Other Details. If your immigration status is other, please give details.\",\"examples\":[{\"facts_json\":\"{\\\"form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Status[0]\\\":\\\"Other\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Status[0]\\\":\\\"Visitor\\\"}\",\"expected\":true}]},{\"sentence\":\"When married or common-law, the date of marriage or relationship and the spouse's name are given\",\"reads\":[\"form1[0].Page1[0].MaritalStatus[0].SectionA[0].MaritalStatus[0]\",\"form1[0].Page1[0].MaritalStatus[0].SectionA[0].DateOfMarriage[0]\",\"form1[0].Page1[0].MaritalStatus[0].SectionA[0].FamilyName[0]\"],\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\":\\\"or\\\",\\\"args\\\":[{\\\"op\\\":\\\"not\\\",\\\"arg\\\":{\\\"op\\\":\\\"in\\\",\\\"field\\\":\\\"form1[0].Page1[0].MaritalStatus[0].SectionA[0].MaritalStatus[0]\\\",\\\"value\\\":[\\\"Married\\\",\\\"Common-Law\\\"]}},{\\\"op\\\":\\\"and\\\",\\\"args\\\":[{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"form1[0].Page1[0].MaritalStatus[0].SectionA[0].DateOfMarriage[0]\\\"},{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"form1[0].Page1[0].MaritalStatus[0].SectionA[0].FamilyName[0]\\\"}]}]}\",\"quote\":\"b) (If you are married or in a common-law relationship) Provide the date on which you were married or entered into the c\",\"examples\":[{\"facts_json\":\"{\\\"form1[0].Page1[0].MaritalStatus[0].SectionA[0].MaritalStatus[0]\\\":\\\"Married\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"form1[0].Page1[0].MaritalStatus[0].SectionA[0].MaritalStatus[0]\\\":\\\"Married\\\",\\\"form1[0].Page1[0].MaritalStatus[0].SectionA[0].DateOfMarriage[0]\\\":\\\"2015-06-01\\\",\\\"form1[0].Page1[0].MaritalStatus[0].SectionA[0].FamilyName[0]\\\":\\\"Lee\\\"}\",\"expected\":true},{\"facts_json\":\"{\\\"form1[0].Page1[0].MaritalStatus[0].SectionA[0].MaritalStatus[0]\\\":\\\"Single\\\"}\",\"expected\":true}]},{\"sentence\":\"When a previous marriage or common-law relationship is declared, its details are given\",\"reads\":[\"form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevMarriedIndicator[0]\",\"form1[0].Page2[0].MaritalStatus[0].SectionA[0].PMFamilyName[0]\",\"form1[0].Page2[0].MaritalStatus[0].SectionA[0].TypeOfRelationship[0]\",\"form1[0].Page2[0].MaritalStatus[0].SectionA[0].FromDate[0]\",\"form1[0].Page2[0].MaritalStatus[0].SectionA[0].ToDate[0].ToDate[0]\"],\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\":\\\"or\\\",\\\"args\\\":[{\\\"op\\\":\\\"neq\\\",\\\"field\\\":\\\"form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevMarriedIndicator[0]\\\",\\\"value\\\":\\\"* Yes\\\"},{\\\"op\\\":\\\"and\\\",\\\"args\\\":[{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"form1[0].Page2[0].MaritalStatus[0].SectionA[0].PMFamilyName[0]\\\"},{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"form1[0].Page2[0].MaritalStatus[0].SectionA[0].TypeOfRelationship[0]\\\"},{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"form1[0].Page2[0].MaritalStatus[0].SectionA[0].FromDate[0]\\\"},{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"form1[0].Page2[0].MaritalStatus[0].SectionA[0].ToDate[0].ToDate[0]\\\"}]}]}\",\"quote\":\"a) Have you previously been married or in a common-law relationship?\",\"examples\":[{\"facts_json\":\"{\\\"form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevMarriedIndicator[0]\\\":\\\"* Yes\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevMarriedIndicator[0]\\\":\\\"* No\\\"}\",\"expected\":true}]},{\"sentence\":\"When a national identity document is declared, its number is given\",\"reads\":[\"form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]\",\"form1[0].Page2[0].natID[0].natIDdocs[0].DocNum[0].DocNum[0]\"],\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\":\\\"or\\\",\\\"args\\\":[{\\\"op\\\":\\\"neq\\\",\\\"field\\\":\\\"form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]\\\",\\\"value\\\":\\\"* Yes\\\"},{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"form1[0].Page2[0].natID[0].natIDdocs[0].DocNum[0].DocNum[0]\\\"}]}\",\"quote\":\"Do you have a national identity document?\",\"examples\":[{\"facts_json\":\"{\\\"form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]\\\":\\\"* Yes\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]\\\":\\\"* No\\\"}\",\"expected\":true}]},{\"sentence\":\"When a US green card is declared, its number is given\",\"reads\":[\"form1[0].Page2[0].USCard[0].q1[0].usCardIndicator[0]\",\"form1[0].Page2[0].USCard[0].usCarddocs[0].DocNum[0].DocNum[0]\"],\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\":\\\"or\\\",\\\"args\\\":[{\\\"op\\\":\\\"neq\\\",\\\"field\\\":\\\"form1[0].Page2[0].USCard[0].q1[0].usCardIndicator[0]\\\",\\\"value\\\":\\\"* Yes\\\"},{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"form1[0].Page2[0].USCard[0].usCarddocs[0].DocNum[0].DocNum[0]\\\"}]}\",\"quote\":\"Are you a lawful Permanent Resident of the United States with a valid alien registration card (green card)?\",\"examples\":[{\"facts_json\":\"{\\\"form1[0].Page2[0].USCard[0].q1[0].usCardIndicator[0]\\\":\\\"* Yes\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"form1[0].Page2[0].USCard[0].q1[0].usCardIndicator[0]\\\":\\\"* No\\\"}\",\"expected\":true}]},{\"sentence\":\"When the purpose of visit is Other, it is described\",\"reads\":[\"form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].PurposeOfVisit[0].PurposeOfVisit[0]\",\"form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].Other[0].Other[0]\"],\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\":\\\"or\\\",\\\"args\\\":[{\\\"op\\\":\\\"neq\\\",\\\"field\\\":\\\"form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].PurposeOfVisit[0].PurposeOfVisit[0]\\\",\\\"value\\\":\\\"Other\\\"},{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].Other[0].Other[0]\\\"}]}\",\"quote\":\"b) Other\",\"examples\":[{\"facts_json\":\"{\\\"form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].PurposeOfVisit[0].PurposeOfVisit[0]\\\":\\\"Other\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].PurposeOfVisit[0].PurposeOfVisit[0]\\\":\\\"Tourism\\\"}\",\"expected\":true}]},{\"sentence\":\"When a medical question is answered yes, details are given\",\"reads\":[\"form1[0].Page3[0].BackgroundInfo[0].Choice[0]\",\"form1[0].Page3[0].BackgroundInfo[0].Choice[1]\",\"form1[0].Page3[0].BackgroundInfo[0].Details[0].MedicalDetails[0]\"],\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\":\\\"or\\\",\\\"args\\\":[{\\\"op\\\":\\\"and\\\",\\\"args\\\":[{\\\"op\\\":\\\"neq\\\",\\\"field\\\":\\\"form1[0].Page3[0].BackgroundInfo[0].Choice[0]\\\",\\\"value\\\":\\\"Yes\\\"},{\\\"op\\\":\\\"neq\\\",\\\"field\\\":\\\"form1[0].Page3[0].BackgroundInfo[0].Choice[1]\\\",\\\"value\\\":\\\"Yes\\\"}]},{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"form1[0].Page3[0].BackgroundInfo[0].Details[0].MedicalDetails[0]\\\"}]}\",\"quote\":\"c) If you answered \\\"yes\\\" to question 1a) or 1b), please provide details and the name of the family member (if applicable).\",\"examples\":[{\"facts_json\":\"{\\\"form1[0].Page3[0].BackgroundInfo[0].Choice[1]\\\":\\\"Yes\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"form1[0].Page3[0].BackgroundInfo[0].Choice[0]\\\":\\\"No\\\",\\\"form1[0].Page3[0].BackgroundInfo[0].Choice[1]\\\":\\\"No\\\"}\",\"expected\":true}]},{\"sentence\":\"When an immigration history question is answered yes, details are given\",\"reads\":[\"form1[0].Page3[0].BackgroundInfo2[0].VisaChoice1[0]\",\"form1[0].Page3[0].BackgroundInfo2[0].VisaChoice2[0]\",\"form1[0].Page3[0].BackgroundInfo2[0].Details[0].VisaChoice3[0]\",\"form1[0].Page3[0].BackgroundInfo2[0].Details[0].refusedDetails[0]\"],\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\":\\\"or\\\",\\\"args\\\":[{\\\"op\\\":\\\"and\\\",\\\"args\\\":[{\\\"op\\\":\\\"neq\\\",\\\"field\\\":\\\"form1[0].Page3[0].BackgroundInfo2[0].VisaChoice1[0]\\\",\\\"value\\\":\\\"Yes\\\"},{\\\"op\\\":\\\"neq\\\",\\\"field\\\":\\\"form1[0].Page3[0].BackgroundInfo2[0].VisaChoice2[0]\\\",\\\"value\\\":\\\"Yes\\\"},{\\\"op\\\":\\\"neq\\\",\\\"field\\\":\\\"form1[0].Page3[0].BackgroundInfo2[0].Details[0].VisaChoice3[0]\\\",\\\"value\\\":\\\"Yes\\\"}]},{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"form1[0].Page3[0].BackgroundInfo2[0].Details[0].refusedDetails[0]\\\"}]}\",\"quote\":\"d) If you answered “yes” to question 2a), 2b), or 2C please provide details.\",\"examples\":[{\"facts_json\":\"{\\\"form1[0].Page3[0].BackgroundInfo2[0].VisaChoice2[0]\\\":\\\"Yes\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"form1[0].Page3[0].BackgroundInfo2[0].VisaChoice1[0]\\\":\\\"No\\\",\\\"form1[0].Page3[0].BackgroundInfo2[0].VisaChoice2[0]\\\":\\\"No\\\",\\\"form1[0].Page3[0].BackgroundInfo2[0].Details[0].VisaChoice3[0]\\\":\\\"No\\\"}\",\"expected\":true}]},{\"sentence\":\"When a criminal offence is declared, details are given\",\"reads\":[\"form1[0].Page3[0].PageWrapper[0].BackgroundInfo3[0].Choice[0]\",\"form1[0].Page3[0].PageWrapper[0].BackgroundInfo3[0].details[0]\"],\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\":\\\"or\\\",\\\"args\\\":[{\\\"op\\\":\\\"neq\\\",\\\"field\\\":\\\"form1[0].Page3[0].PageWrapper[0].BackgroundInfo3[0].Choice[0]\\\",\\\"value\\\":\\\"Yes\\\"},{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"form1[0].Page3[0].PageWrapper[0].BackgroundInfo3[0].details[0]\\\"}]}\",\"quote\":\"b) If you answered “yes” to question 3a) above, please provide details.\",\"examples\":[{\"facts_json\":\"{\\\"form1[0].Page3[0].PageWrapper[0].BackgroundInfo3[0].Choice[0]\\\":\\\"Yes\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"form1[0].Page3[0].PageWrapper[0].BackgroundInfo3[0].Choice[0]\\\":\\\"No\\\"}\",\"expected\":true}]},{\"sentence\":\"When military or security service is declared, dates and countries of service are given\",\"reads\":[\"form1[0].Page3[0].PageWrapper[0].Military[0].Choice[0]\",\"form1[0].Page3[0].PageWrapper[0].Military[0].militaryServiceDetails[0]\"],\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\":\\\"or\\\",\\\"args\\\":[{\\\"op\\\":\\\"neq\\\",\\\"field\\\":\\\"form1[0].Page3[0].PageWrapper[0].Military[0].Choice[0]\\\",\\\"value\\\":\\\"Yes\\\"},{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"form1[0].Page3[0].PageWrapper[0].Military[0].militaryServiceDetails[0]\\\"}]}\",\"quote\":\"b) If you answered yes to question 4a), please provide dates of service and countries or territories where"
+}
