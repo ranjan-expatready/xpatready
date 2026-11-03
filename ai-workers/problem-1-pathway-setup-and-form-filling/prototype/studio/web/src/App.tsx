@@ -23,6 +23,7 @@ import { StructurePage } from "@/pages/structure";
 import { EditionImpactPage, HeldFilePage, LibraryChangePage, MergeReviewPage, FormFieldsPage } from "@/pages/review-items";
 import { ChangeBatchPage, ProposalsPage } from "@/pages/proposals";
 import { RuntimeApp } from "@/runtime/cases";
+import { draftBarWords } from "../../contracts/status-words";
 
 export default function App() {
   // The case area (runtime lane, R1c) has its own shell: firm and client pages, not the configuration studio.
@@ -142,7 +143,7 @@ function DraftBar() {
   // Short on purpose (early look item 6): what it is, how many, and the one way to release.
   return (
     <div className={cn("flex flex-wrap items-center gap-3 border-b px-4 py-1.5 text-[13px] md:px-6", x.changes ? "border-warn/30 bg-warn/10 text-text" : "border-border bg-surface text-text-muted")} role="status">
-      {x.changes ? <span title={`One shared workspace draft across ${rows} combination${rows === 1 ? "" : "s"}. The release review lists each combination and its change count. Released content stays as approved until a new release.`}><b className="font-semibold">Draft</b> · {x.changes} change{x.changes === 1 ? "" : "s"} across {rows} combination{rows === 1 ? "" : "s"}</span>
+      {x.changes ? <span title={`One shared workspace draft across ${rows} combination${rows === 1 ? "" : "s"}. The release review lists each combination and its change count. Released content stays as approved until a new release.`}><b className="font-semibold">Draft</b> · <span data-draft-bar-words>{draftBarWords(x.changes, rows, x.library?.length ?? 0)}</span></span>
         : <span>No unreleased changes.{x.last ? ` Firms use Release ${x.last.version}.` : ""}</span>}
       <span className="flex-1" />
       {x.changes ? <Link to="/release" className="font-semibold text-text-link underline-offset-2 hover:underline">Review and release ({x.changes})</Link> : null}

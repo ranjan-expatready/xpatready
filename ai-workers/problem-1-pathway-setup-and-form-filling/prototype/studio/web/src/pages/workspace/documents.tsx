@@ -58,7 +58,7 @@ export function DocumentsTab({ id }: { id: string }) {
   // Review M2 (C11.10): a released version's documents:problems is drawn from the summary; wait for it (as Questionnaires).
   const sumForFocus = useApi<CombinationSummary>(["combination-summary", id], `/combinations/${id}/summary`);
   const doneSince = useFocusItem(v.data && sumForFocus.data ? [] : undefined, (k) => k.startsWith("documents:") || k === "questions_documents:problems");
-  const refresh = () => { for (const k of [["checklist", id], ["config", id], ["combination", id], ["fact-sources", id], ["preview"], ["draft"]]) void qc.invalidateQueries({ queryKey: k }); };
+  const refresh = () => { for (const k of [["checklist", id], ["config", id], ["combination", id], ["combination-summary", id], ["fact-sources", id], ["preview"], ["draft"]]) void qc.invalidateQueries({ queryKey: k }); };
   if (v.isPending) return <div className="h-40 animate-pulse rounded-xl border border-border bg-surface" aria-busy="true"><span className="sr-only" role="status">Loading each person's checklist</span></div>;
   if (v.error) return <Notice tone="danger" title="The checklists could not be loaded">{v.error.message} <button type="button" className="font-medium text-text-link underline" onClick={() => void v.refetch()}>Retry</button></Notice>;
   const roles = v.data.roles;

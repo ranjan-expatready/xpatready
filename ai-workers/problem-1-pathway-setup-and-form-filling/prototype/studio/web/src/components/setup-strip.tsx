@@ -10,6 +10,7 @@ import { itemHref, STEP_KEYS, tabOfFocus, type SetupChecklist, type Step, type V
 import { Pill } from "@/components/ui/controls";
 import { Tip } from "@/components/status";
 import { cn } from "@/lib/utils";
+import { LIVE_NEXT } from "../../../contracts/status-words";
 
 const TAB_NAME: Record<string, string> = { forms: "Forms", documents: "Documents", questionnaires: "Smart questionnaire (SQR)", review: "Review and release" };
 /** The board's small line under a step's name. */
@@ -39,7 +40,8 @@ export function SetupStrip({ id, setup, landRef }: { id: string; setup: SetupChe
   return (
     <section ref={landRef} tabIndex={-1} aria-labelledby="ov-steps" className="overflow-hidden rounded-xl border border-border bg-surface-raised shadow-sm outline-none" data-setup-strip>
       <h2 id="ov-steps" className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border px-4 py-3 font-semibold">
-        <span>Setup steps · {setup.bar.done} of 5 done{setup.chip.status === "LIVE" ? " · Live" : ""}</span>
+        {/* UX-A part 3: Live first, and what the open steps are for (the next release), so "3 of 5 done" never reads as not live. */}
+        <span data-strip-head>{setup.chip.status === "LIVE" ? `Live · setup steps ${LIVE_NEXT}: ${setup.bar.done} of 5 done` : `Setup steps · ${setup.bar.done} of 5 done`}</span>
         <span className="text-xs font-normal text-text-muted" data-strip-legend>{STRIP_TIP}</span>
       </h2>
       <ol>
