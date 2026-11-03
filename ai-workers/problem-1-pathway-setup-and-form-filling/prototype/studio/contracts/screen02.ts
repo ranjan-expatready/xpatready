@@ -7,6 +7,8 @@ export type LibraryChangeView = {
   ai_verdict: string | null; matches: { key: string; score: number }[]; status: "WAITING" | "APPROVED" | "RETURNED" | "RELEASED" | "WITHDRAWN";
   proposed_by: string | null; proposed_by_id: string; proposed_at: string; decided_by: string | null; decided_at: string | null; decision_note: string | null;
   released_in: number | null; combination_id: string | null;
+  /** QA-193 (P-121): the decision (To review's batch) the change came from; null when it was not decided there. */
+  batch_id?: string | null;
   /** G-CORE B2: a rename waiting for a second person (action RENAME): the name now and the name proposed. */
   rename?: { before: string | null; after: string | null; undo: boolean };
 };
