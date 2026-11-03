@@ -163,7 +163,8 @@ const setupMissing = stop;
   if (!top0) setupMissing(`the library has no ${FK}`);
   r = await call("PATCH", `/library/fields/${FK}`, { meaning: "Acceptance check: an edited meaning of the family name (Sample)." }, "user-C");
   ok("C3.2 AT-14 refusal: a reviewer without the author duty cannot edit a shared field (403); no version is added", r.status === 403 && versions() === v0, { status: r.status, m: words(r).slice(0, 120) });
-  r = await call("PATCH", `/library/fields/${FK}`, { meaning: "Acceptance check: an edited meaning of the family name (Sample)." });
+  // C3.15 (P-253: a change of meaning says why; 3 Nov): the edit carries its reason.
+  r = await call("PATCH", `/library/fields/${FK}`, { meaning: "Acceptance check: an edited meaning of the family name (Sample).", reason: "Acceptance check: the meaning is worded more exactly." });
   const v1 = versions();
   ok("C3.2 AT-14 [P-149] an edit of a shared field the applied map uses is a new version: every earlier version is kept exactly as it was, and the new one is a draft above them",
     r.status < 300 && v1.startsWith(v0) && Number(sql(`select max(version) from canonical_field where canonical_field_key='${FK}'`)) === top0 + 1 && sql(`select status from canonical_field where canonical_field_key='${FK}' and version=${top0 + 1}`) !== "APPROVED", { status: r.status, before: v0, after: v1 });
