@@ -23,3 +23,15 @@ Tests run (tsx, api/tsconfig.json): check_sh3_resolver 75/75, check_engine 43/43
 - Minor: stale R5 clause (resolver.ts:34); checklist last-wins placement map; no tests for DOCUMENT form, min_age + role, no-applicant check, duplicate form row.
 
 **Verdict: Approve**
+
+## Round 2 (diff-only)
+
+Reviewed `git diff c207fd9fe HEAD` (resolver.ts comment, case-checklist.ts, check_sh3_resolver.ts). `check_sh3_resolver.ts` run: 78/78 pass. No servers started.
+
+- R5 text: now says render's deciders and the case checklist pass the placement since C7.7. Matches the code. Correct.
+- case-checklist.ts: `placed` keeps the first placement of each fact (`if (!placed.has(...))`), the same rule as render.ts. Correct, and the type is explicit.
+- New test 1 (minimum age plus PRINCIPAL condition): the spouse's row stays `cannot_tell` and its only decider is the spouse's own date of birth. It breaks if the role condition reads the holder instead of the principal, or if the age is read from the wrong person. A paired fail case (principal not employed means not needed for anyone) covers the other branch. Meaningful.
+- New test 2 (only an applying representative on the case): a no-kind check fires for nobody, and render puts it on the filing. It breaks if the check ever lands on the representative. Meaningful.
+- I did not mutate the code to prove each test fails; the judgement rests on reading the assertions.
+
+**Verdict: Approve**
