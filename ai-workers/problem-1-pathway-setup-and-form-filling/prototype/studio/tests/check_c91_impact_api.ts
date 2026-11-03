@@ -101,6 +101,19 @@ const saveRun = (name: string, rec: unknown) => { writeFileSync(join(RUNS, name)
     const log = readFileSync(join(VARDIR, "fake-launch.log"), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l) as { job: string; mode: string });
     const lj = sql(`select mode || '|' || status || '|' || cost_usd from drafting_job where kind = 'field_map_impact'`);
     ok("C9.1 pass (live, fake launcher): a stub pass before each live round, a draft round then a blind checker round, both on the part of the changed boxes; proposals for a person; the cost recorded", r.status < 300 && r.body.proposals === 3 && log.map((x) => x.mode).join(",") === "stub,live,stub,live" && log[1].job.startsWith(`${step.jobBase}-imm5476e`) && log[3].job.startsWith(`${step.jobBase}-check-imm5476e`) && lj === "LIVE|COMPLETED|0.22", { status: r.status, body: r.body, log, lj });
+    // P-121: a live answer that cannot be used ends the run after the draft round (no checker spend), and the comparison
+    // gets no second paid run from here.
+    const id3 = await setup();
+    writeFileSync(join(VARDIR, "fake-launch.json"), JSON.stringify({ stub: { exit: 0, out: { ok: true } }, live: { exit: 0, record: { ...runRecord(false, ctx.inputs, { ...answer, form_edition: "IMM 5476 (11-2021)" }, 0.13) } } }));
+    writeFileSync(join(VARDIR, "fake-launch.log"), "");
+    imp = (await call("GET", `/intake/held/${id3}/impact`)).body;
+    r = await call("POST", `/intake/held/${id3}/impact/draft`, { mode: "live", expected_worst_usd: imp?.ai?.offer?.at_most_usd });
+    const log3 = readFileSync(join(VARDIR, "fake-launch.log"), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l) as { mode: string });
+    const j3 = sql(`select mode || '|' || status || '|' || cost_usd from drafting_job where kind = 'field_map_impact'`);
+    ok("C9.1 P-121 fail: an answer for another edition is never used; the run ends after the draft round (no checker call), its cost recorded, nothing proposed", r.status === 409 && /another form edition|could not be used|expected shape/.test(words(r)) && log3.map((x) => x.mode).join(",") === "stub,live" && j3 === "LIVE|FAILED|0.13" && n(`select count(*) from proposal_item p join drafting_job j on j.id = p.run_id where j.kind = 'field_map_impact'`) === 0, { status: r.status, words: words(r), log3, j3 });
+    writeFileSync(join(VARDIR, "fake-launch.log"), "");
+    r = await call("POST", `/intake/held/${id3}/impact/draft`, { mode: "live", expected_worst_usd: imp?.ai?.offer?.at_most_usd });
+    ok("C9.1 P-121 fail: a second paid run of the same comparison is refused in words, nothing launched", r.status === 409 && /already had a paid AI run \(US\$0\.13\)/.test(words(r)) && readFileSync(join(VARDIR, "fake-launch.log"), "utf8") === "", words(r));
     ok("C9.1 (R-143): the fake launcher reached no model; the shared spend ledger is unchanged", ledger() === ledgerBefore);
   } finally {
     for (const f of written) rmSync(join(RUNS, f), { force: true });

@@ -71,6 +71,7 @@ export const IMPACT_AI_WORDS = {
   liveOff: (cost: string) => `Draft with AI (${cost}) is not open on this copy: live AI is off (the founder's switch, P-175). Nothing was sent and nothing was charged. Use a saved AI run (US$0), or a person maps each new and reworded box.`,
   stale: "The saved AI run was made for another comparison of this edition (its new and reworded boxes differ), so it is out of date and not used. Draft with AI again, or a person maps the boxes.",
   overCap: (worst: number, left: number) => `Not started: the worst case (US$${worst.toFixed(2)}) is above what is left of the AI spending cap (US$${left.toFixed(2)}). Nothing was started.`,
+  paidOnce: (usd: number) => `This comparison already had a paid AI run (US$${usd.toFixed(2)}) whose answer could not be used, so another is not started from here. A person maps each new and reworded box; another paid run needs the tech lead's Go.`,
   outside: (path: string) => `The AI answer named a box that is not new or reworded (${path.slice(0, 120)}), so it was not used.`,
 };
 

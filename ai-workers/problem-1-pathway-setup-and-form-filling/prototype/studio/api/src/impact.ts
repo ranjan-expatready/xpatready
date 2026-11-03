@@ -131,6 +131,13 @@ export class Impact {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`impact-ai:${h.id}`}))`;
       const done = await tx.draftingJob.findFirst({ where: { workspaceId: h.workspaceId, kind: IMPACT_STEP, status: { in: ["COMPLETED", "RUNNING"] }, detail: { path: ["held"], equals: h.id } }, orderBy: { startedAt: "desc" } });
       if (done && (done.detail as { part?: string } | null)?.part === part.sha256) return { done };
+      // P-121: one paid attempt per comparison. A live run that cost money and gave nothing usable is not run again from
+      // here (the launcher already retried a transient error inside it); a person maps the boxes, or the tech lead
+      // decides on another paid run. A run that was refused before any cost (US$0) may be started again.
+      if (mode === "live") {
+        const paid = await tx.draftingJob.findFirst({ where: { workspaceId: h.workspaceId, kind: IMPACT_STEP, mode: "LIVE", costUsd: { gt: 0 }, detail: { path: ["part"], equals: part.sha256 } }, select: { costUsd: true } });
+        if (paid) fail(IMPACT_AI_WORDS.paidOnce(paid.costUsd ?? 0), HttpStatus.CONFLICT);
+      }
       return { job: await tx.draftingJob.create({ data: { workspaceId: h.workspaceId, combinationId: null, kind: IMPACT_STEP, mode: mode === "live" ? "LIVE" : "REPLAY", status: "RUNNING", startedBy: actor.id, message: `Drafting the ${changed.length} new and reworded boxes of ${printed}`,
         detail: { operation: "impact_ai", held: h.id, edition: printed, part: part.sha256, boxes: changed } } }) };
     });
@@ -146,7 +153,8 @@ export class Impact {
       const draft = await safe(false);
       // P-121: one attempt per round (the launcher retries only a transient error); no third round. The checker round runs
       // blind on the same part; it is skipped only when the draft round was blocked or stopped.
-      const check: RoundOut<FieldMapOutput> = draft.ok === false && (draft.blocked || draft.cancelled) ? { ok: false, costUsd: 0, reason: "Not started: the draft round did not finish." } : await safe(true);
+      // The blind checker round runs only on a usable draft: a failed draft round ends the run, so nothing more is spent.
+      const check: RoundOut<FieldMapOutput> = draft.ok ? await safe(true) : { ok: false, costUsd: 0, reason: "Not started: the draft round gave no usable answer." };
       const spent = draft.costUsd + check.costUsd;
       if (!draft.ok) {
         await this.db.draftingJob.update({ where: { id: aiJob.id }, data: { status: "FAILED", costUsd: spent, finishedAt: new Date(), message: draft.reason.slice(0, 1000) } });
