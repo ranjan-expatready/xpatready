@@ -49,10 +49,13 @@ const leak = (t) => (t.match(KEY) ?? t.match(INTERNAL) ?? t.match(HASH))?.[0];
   const key = await p.locator("tr[data-item]").first().getAttribute("data-item");
   await p.locator("tr[data-item]").first().getByRole("link").click();
   await p.locator("h1").waitFor();
-  const page = await mainPath("main");
-  step("pass: the field's page is named by its name and meaning, its key not on the main path", !page.includes(key) && !KEY.test(page), { key, hit: page.match(KEY)?.[0] });
+  // CI on #643: the heading can come before the field's Details; read the page only once its Details is there (a loud
+  // wait: a missing Details fails the next step instead of letting the main-path step pass on a half-drawn page).
   const det = p.locator("main [data-admin-details]").first();
-  step("pass: Details (for admins) is there and closed", await det.count() === 1 && !(await det.evaluate((d) => d.open)));
+  const detSeen = await det.waitFor({ timeout: 20000 }).then(() => true, () => false);
+  const page = await mainPath("main");
+  step("pass: the field's page is named by its name and meaning, its key not on the main path", detSeen && !page.includes(key) && !KEY.test(page), { key, detSeen, hit: page.match(KEY)?.[0] });
+  step("pass: Details (for admins) is there and closed", detSeen && await det.count() === 1 && !(await det.evaluate((d) => d.open)));
   await det.locator("summary").focus(); await p.keyboard.press("Enter");
   step("pass: Details opens by keyboard and shows the field's key", await det.evaluate((d) => d.open) && (await det.innerText()).includes(key), await det.innerText());
   await axe("a field's page (Details open)");
