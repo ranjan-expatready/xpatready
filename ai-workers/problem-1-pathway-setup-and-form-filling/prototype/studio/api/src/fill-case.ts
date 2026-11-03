@@ -16,6 +16,7 @@ import { join } from "node:path";
 import type { z } from "zod";
 import { GenerateCopy, LockCopy, LOCK_KINDS, notReady, type CaseForm, type CaseOnlineForm, type FormCopy } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
+import { pdfMapInUse } from "../../engine/programs.ts";
 import { caseView } from "../../engine/runtime/case.ts";
 import { changedFacts, changedGroups, copyOnlyForms, formCoverage, groupFacts, gateOf, inputHash, isGateFact, markNothingRecorded, pdfForms, readiness, type FormFact, type GatePlacement, type GroupFact } from "../../engine/runtime/forms.ts";
 import { answerSheetOnly, CHANNEL_WORDS, isBarcodeForm, NOT_FOR_FILING, type Channel } from "../../contracts/forms.ts";
@@ -91,8 +92,8 @@ const inventoryOf = (file: string): Inventory | null => {
 };
 /** QA-165 part 2 (P-237, P-238): the mandatory form fields a copy made now would leave empty, with why (engine/runtime/
  *  mandatory.ts), from the same value step a copy runs. Empty when the form has no PDF map or field list. */
-function fieldsOpen(s: Snap, form: string, boxes: BoxRow[], words: CaseWords = {}): OpenField[] {
-  const map = (s.field_maps as { form_number: string; channel?: string; inventory_file?: string; entries: { data_path: string; fact?: string | null; outcome?: string | null }[] }[]).find((m) => m.form_number === form && m.channel !== "ONLINE");
+export function fieldsOpen(s: Snap, form: string, boxes: BoxRow[], words: CaseWords = {}): OpenField[] {
+  const map = pdfMapInUse(s.field_maps as { form_number: string; form_edition?: string; channel?: string; inventory_file?: string; entries: { data_path: string; fact?: string | null; outcome?: string | null }[] }[], form); // P-32: the edition in use
   const inv = map?.inventory_file ? inventoryOf(map.inventory_file) : null;
   if (!map || !inv) return [];
   const { boxes: results, values } = formValues(s as unknown as Parameters<typeof formValues>[0], map, inv, boxes);
@@ -107,7 +108,7 @@ const VALIDATED_FILE = { name: "This copy's validated file", made: "read back", 
 /** P-65 (a), review M1, S2 (SA-1B-174): a form's fill trial counts for one form edition and one field map version
  *  (api/src/fill-trials.ts, the register samples/fill-trials.json, the verdict in evidence-lane/E1/<form>/STATUS.md).
  *  Not proven for this edition and map: copies are "Checked copy, not for filing" and cannot be locked. */
-export const trialOf = (s: Snap, form: string) => trialFor((s.field_maps as EditionMap[]).find((m) => m.form_number === form));
+export const trialOf = (s: Snap, form: string) => trialFor(pdfMapInUse(s.field_maps as EditionMap[], form)); // P-32: the trial of the edition in use
 
 @Injectable()
 export class CaseForms implements OnModuleInit {

@@ -144,6 +144,19 @@ export function compareEditions(a: { editionLabel: string; published?: string | 
 /** The newest edition of a list (by compareEditions), or undefined. */
 export const newestEdition = <T extends { editionLabel: string; published?: string | null }>(list: T[]): T | undefined => [...list].sort((a, b) => compareEditions(b, a))[0];
 
+/** P-32 (the newest printed edition is the one in use): a form's PDF field map in use in a snapshot. A snapshot carries
+ *  every mapped PDF edition of a form (engine/snapshot.ts, oldest first; an answer key may test an older one), so a
+ *  reader that takes "the first" fills, counts or trials the oldest. The one rule for the fill (api/src/fill.ts
+ *  writeForm), the case's copies and trials (api/src/fill-case.ts), the case's coverage (engine/render.ts) and the Forms
+ *  tab (api/src/workspace.ts): the newest by its printed month and year (editionMonth); with the same printed date, the
+ *  later in the snapshot's order (it sorts by compareEditions, which breaks that tie by the file's date). Online maps are
+ *  never a PDF edition. Undefined when the form has no PDF map. */
+export function pdfMapInUse<M extends { form_number: string; form_edition?: string | null; channel?: string | null }>(maps: readonly M[], form: string): M | undefined {
+  let best: M | undefined;
+  for (const m of maps) if (m.form_number === form && m.channel !== "ONLINE" && (!best || editionMonth(m.form_edition) >= editionMonth(best.form_edition))) best = m;
+  return best;
+}
+
 /** "Needs work" (P-49, the default view): every combination firms cannot use yet (In setup, Not ready) and every one
  *  with a next step (AI proposals waiting, forms to add or draft, draft changes not yet released, a new form edition
  *  held for impact review). "Live" (founder finding F1) is every combination whose status is Live, i.e. firms can open
