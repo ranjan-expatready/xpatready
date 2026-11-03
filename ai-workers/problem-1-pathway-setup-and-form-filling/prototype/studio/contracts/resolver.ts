@@ -38,7 +38,8 @@
 //      (a fact asked once per case, such as relationship.start_date or representative.*, is answered on the filing);
 //      unanswered, by R5's id rule (a "case." fact → the filing, any other → the person). An empty string is no answer.
 //  R7  Signers (C3.11, SIGNED_BY): each row the form's "who" names (R2) is about a person (the filing → the principal);
-//      person or unset → that person; parent_for_minor → the principal for a child, else the person;
+//      person or unset → that person; parent_for_minor → the principal for a child under 18, else the person (C8.1,
+//      Devin on #617: the caller's minor(id) decides by the child's date of birth; unknown → a minor, as before);
 //      principal_for_family → the principal; person_and_representative → the person and each representative; none →
 //      nobody.
 //  R8  Keys: a known value is stored under factKey(about, fact, row?) = `${about}|${fact}` (+ `|${row}`); where a fact's
@@ -151,7 +152,7 @@ export interface Resolver {
   /** R4: a principal's partner or a partner's principal. */ partnerOf(people: PersonOnFiling[], id: string): string | null;
   /** R6 */ factsFor(known: Known, about: string): Record<string, unknown>;
   /** R6b: the about-key a person's value of one fact is read from. */ valueHolder(known: Known, fact: string, person: string): string;
-  /** R7: signer id → the rows (person ids or FILING) they sign for. */ signers(people: PersonOnFiling[], who: string, signedBy: string | null | undefined): Map<string, string[]>;
+  /** R7: signer id → the rows (person ids or FILING) they sign for. */ signers(people: PersonOnFiling[], who: string, signedBy: string | null | undefined, minor?: (id: string) => boolean | undefined): Map<string, string[]>;
   /** R9: the database (or any store) answers one hop; the resolver follows the chain. */ canonicalFact(key: string, mergedInto: (key: string) => Promise<string | null | undefined>): Promise<string>;
   /** R10 */ rolesNamedBy(who: string): Role[];
 }
