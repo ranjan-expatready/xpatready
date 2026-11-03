@@ -244,7 +244,7 @@ export class ReviewQueueService {
         // C9.1 BR-12: a newer edition names the combinations that file the form now (SH2), so To review says what it touches.
         const touches = older || !h.code ? [] : (await formCombinations(this.db, h.workspaceId, normaliseCode(h.code))).map((c) => c.label).sort();
         out.push({ id: `held:${h.id}`, kind: "new_edition", title: label, by: nameOf(h.createdBy), at: h.createdAt.toISOString(), cost_usd: null, forms: h.code ? [normaliseCode(h.code)] : [], combination: null, combinations: touches,
-          what: older ? "An older edition than the one in the library: it is not used unless a person decides otherwise." : `New edition: review impact. Nothing changes until a person reviews its impact and releases it${touches.length ? `; it touches ${touches.join(", ")}` : ""}.`,
+          what: older ? "An older edition than the one in the library: it is not used unless a person decides otherwise." : `A newer edition of a form in the library: nothing changes until a person reviews its impact and releases it${touches.length ? `; it touches ${touches.join(", ")}` : ""}.`,
           ...(holds(actor, "author") ? { state: "needs" as const, waiting_on: null, next: { label: older ? "See the older edition" : "Review impact", href: older ? where : `/review/edition/${h.id}`, note: null } } : { state: "waiting" as const, waiting_on: "The configuration author reviews it.", next: null }) });
       }
     }
