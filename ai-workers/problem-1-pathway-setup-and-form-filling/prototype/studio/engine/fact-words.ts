@@ -6,7 +6,7 @@
 //   W2 words (a pick of two meaningful words or more): every meaningful word of the pick (after plain-word normalising and the short synonym list below; the
 //      person's own role words like "spouse" dropped) is found in one question's label, key, question text or aliases;
 //      when several questions hold them all, none (QA-194: the shorter key never wins; the person picks from the named ones);
-//      a lone holder whose key ends in "_from" or "_to" is refused when the pick says only the other end ("Intended stay
+//      a lone holder whose key ends in "_from" or "_to" (or "_from_date", "_to_date") is refused when the pick says only the other end ("Intended stay
 //      to" never lands on the first day). "to" stays filler in prose ("Relationship to applicant"), so it never decides.
 //   A pick for the principal may name a question about the application itself (role "case": purpose of the visit, funds,
 //   dates), since the principal answers those; never another person's question.
@@ -74,7 +74,7 @@ export function findFact(facts: FactSourceView[], role: string, asks: string, na
   const all = (f: FactSourceView) => { const have = new Set([f.label, lastPart(f.fact), ...(names.get(f.fact) ?? [])].flatMap(wordsOf)); return pick.every((w) => have.has(w)); };
   const hits = near.filter(all);
   // QA-194: the end a key names ("_to"/"_from") against the ends the pick says; the pick's own "to" is only ever a veto.
-  const said2 = new Set(want.split(" ")), end = (f: FactSourceView) => /_(to|from)$/.exec(f.fact)?.[1];
+  const said2 = new Set(want.split(" ")), end = (f: FactSourceView) => /_(to|from)(?:_date)?$/.exec(f.fact)?.[1];
   const otherEnd = (f: FactSourceView) => { const e = end(f); return !!e && !said2.has(e) && said2.has(e === "to" ? "from" : "to"); };
   if (hits.length === 1) return otherEnd(hits[0]) ? { fact: null, why: "none", several: [] } : { fact: hits[0], how: "words" };
   // QA-194: several hold every word ("Purpose of visit": the purpose and its 'other' details) → none, every one named.

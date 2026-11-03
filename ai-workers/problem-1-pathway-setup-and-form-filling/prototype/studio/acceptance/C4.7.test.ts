@@ -59,7 +59,7 @@ run(async () => {
   ok("C4.7 pass: a pick waiting changes nothing (no tick yet)", picks.length > 0 && ticks() === t0, { t0, now: ticks() });
 
   // A third pick whose fact the case officer may give (review M1, QA-162: a client-only fact, e.g. criminal history, is
-  // refused that choice, so the pick is chosen by the fact's own offer, never by queue order).
+  // refused that choice): offered facts first, then the queue order, skipping any the hand change refuses.
   const facts0 = (await call("GET", `/combinations/${wp}/fact-sources`)).body?.facts ?? [];
   const offered = (x: any) => facts0.some((f: any) => f.role === key(x).role && f.fact === key(x).factKey && f.agentOffered);
   const [a, b] = picks;
