@@ -33,7 +33,7 @@
 // run on every check, with the door's pass case (AT-2c) and the runner's door (AT-2d).
 // Run (usage line for run-suites.sh):
 //   zsh studio/tools/isolated.sh forms_c118a 4458 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_forms_c118_acceptance.ts 4458 xr_studio_forms_c118a
-// Expected (3 Nov 2026, isolated copy started without the live switch, US$0): 24 pass, 0 fail.
+// Expected (3 Nov 2026, isolated copy started without the live switch, US$0): 22 pass, 0 fail.
 // Exit: 0 all pass · 1 a check failed · 2 setup missing or refused (demo port or database, copy, sample).
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
@@ -174,9 +174,11 @@ const seed = (usd: number) => appendFileSync(LEDGER, JSON.stringify({ type: "res
   // ── Phase C: the switch ON, only with the stand-in launcher, the queue held and the scratch ledger (P-192)
   await restart(`P2_LEDGER_DIR=${SCRATCH}`, "STUDIO_HOLD_QUEUE=1", "STUDIO_AI_LIVE=approved", `STUDIO_FAKE_LAUNCHER=${FAKE}`);
   const aiOn = (await call("GET", "/session")).body?.ai;
-  if (!(aiOn?.live === true && aiOn?.launcher === "stand-in")) {
+  // Review m1: the copy also reads the scratch ledger (its seed puts this run over the cap; the machine's ledger would not).
+  const seeded = (await call("POST", "/ai/plan", { scope, mode: "LIVE", draftAgain: true })).body?.cost_check;
+  if (!(aiOn?.live === true && aiOn?.launcher === "stand-in" && seeded?.ok === false && seeded?.can_continue === true)) {
     await restart(`STUDIO_FAKE_LAUNCHER=${FAKE}`);
-    setupMissing(`P-192 guard: after its Phase C restart the copy does not report live on with the stand-in launcher (GET /session → ai: ${JSON.stringify(aiOn)}); stopped before any start`);
+    setupMissing(`P-192 guard: after its Phase C restart the copy does not report live on with the stand-in launcher or does not read the scratch ledger (GET /session → ai: ${JSON.stringify(aiOn)}; plan cost check ok ${seeded?.ok}); stopped before any start`);
   }
   r = await call("POST", `/attachments/${att}/draft`, { mode: "live", idempotencyKey: `acc-c118-cont-on-${Date.now()}`, overrideId: ov });
   const B3 = r.body?.id ? sql(`select batch_id from drafting_job where id='${r.body.id}'`) : "";
@@ -208,10 +210,14 @@ const seed = (usd: number) => appendFileSync(LEDGER, JSON.stringify({ type: "res
   const ended = J4 ? await until(async () => ["FAILED", "BLOCKED", "COMPLETED", "CANCELLED"].includes(sql(`select status from drafting_job where id='${J4}'`)), 60_000) : false;
   const j4 = J4 ? sql(`select status || '|' || coalesce(cost_usd::text, 'null') || '|' || coalesce(message, '') from drafting_job where id='${J4}'`).split("|") : [];
   const after = (await call("POST", "/ai/plan", { scope, mode: "LIVE", draftAgain: true })).body;
+  // Review m3: the form's paid attempts counted as rounds.ts paidRunsOf counts them (a live field-map step with a cost, or
+  // still running with none), and the plan still offers it a draft without the over-attempts flag.
+  const paidAttempts = Number(sql(`select count(*) from drafting_job where attachment_id='${att}' and kind='field_map' and mode='LIVE' and (coalesce(cost_usd, 0) > 0 or (cost_usd is null and status='RUNNING'))`));
+  const t0 = after?.targets?.find((t: { attachmentId: string }) => t.attachmentId === att);
   ok("C11.8 AT-2d one door rule in the runner (QA-154): a live step queued while the switch was on, run after it is switched off, is refused before any live call; it fails in words, costs nothing and uses none of the form's paid attempts",
     aiOff?.live === false && ended && j4[0] === "FAILED" && /switched off/.test(j4[2] ?? "") && (j4[1] === "null" || Number(j4[1]) === 0) && liveCalls() === live0 && reservedNone()
-    && after?.targets?.[0]?.over_attempts !== true,
-    { ai: aiOff, ended, job: j4, live: liveCalls() - live0, reserved: !reservedNone(), over: after?.targets?.[0]?.over_attempts });
+    && paidAttempts === 0 && t0?.action === "draft" && !("over_attempts" in t0),
+    { ai: aiOff, ended, job: j4, live: liveCalls() - live0, reserved: !reservedNone(), paidAttempts, target: t0 && { action: t0.action, over: t0.over_attempts } });
 
   await restart(`STUDIO_FAKE_LAUNCHER=${FAKE}`);
   ok("C11.8 AT-13 the whole check left the machine's shared spend ledger byte for byte as it was and never asked the launcher for a live call", sharedLedger() === shared0 && liveCalls() === live0, { live: liveCalls() - live0 });
