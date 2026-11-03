@@ -5,13 +5,14 @@
 //   W1 exact: the words equal a question's label, the last part of its key, one of its other names, or the key itself;
 //   W2 words (a pick of two meaningful words or more): every meaningful word of the pick (after plain-word normalising and the short synonym list below; the
 //      person's own role words like "spouse" dropped) is found in one question's label, key, question text or aliases;
-//      when several questions hold them all, the one whose key says nothing more than the pick wins, else none.
+//      when several questions hold them all, none (QA-194: the shorter key never wins; the person picks from the named ones).
+//   "to" and "from" are words, not filler: they tell a stay's or a residence's end from its start (QA-194).
 //   A pick for the principal may name a question about the application itself (role "case": purpose of the visit, funds,
 //   dates), since the principal answers those; never another person's question.
 import type { FactSourceView } from "./sources.ts";
 
 /** Words that never decide which question is meant. */
-const STOP = new Set(["a", "an", "the", "of", "to", "in", "on", "at", "for", "or", "and", "any", "ever", "whether", "person", "persons", "this", "that", "these", "is", "are", "was", "were", "be", "been", "has", "have", "had", "with", "by", "as", "if", "your", "their", "his", "her", "its", "one", "s"]);
+const STOP = new Set(["a", "an", "the", "of", "in", "on", "at", "for", "or", "and", "any", "ever", "whether", "person", "persons", "this", "that", "these", "is", "are", "was", "were", "be", "been", "has", "have", "had", "with", "by", "as", "if", "your", "their", "his", "her", "its", "one", "s"]);
 /** The short synonym list (reviewed with the PR, extended only with a reason): IRCC's and the library's words for the
  *  same thing. Abbreviations are written out first. Each maps to the library's word. */
 const SAME: Record<string, string> = { record: "history", condition: "disorder", description: "detail", pr: "permanent resident", id: "identity", nationality: "citizenship", dob: "birth day", date: "day" };
@@ -72,11 +73,8 @@ export function findFact(facts: FactSourceView[], role: string, asks: string, na
   const all = (f: FactSourceView) => { const have = new Set([f.label, lastPart(f.fact), ...(names.get(f.fact) ?? [])].flatMap(wordsOf)); return pick.every((w) => have.has(w)); };
   const hits = near.filter(all);
   if (hits.length === 1) return { fact: hits[0], how: "words" };
-  if (!hits.length) return { fact: null, why: "none", several: [] };
-  // Several hold every word: the one whose key adds nothing to the pick ("visit purpose", not "visit purpose other").
-  const set = new Set(pick);
-  const tight = hits.filter((f) => wordsOf(lastPart(f.fact)).every((w) => set.has(w)));
-  return tight.length === 1 ? { fact: tight[0], how: "words" } : { fact: null, why: "several", several: hits };
+  // QA-194: several hold every word ("Purpose of visit": the purpose and its 'other' details) → none, every one named.
+  return hits.length ? { fact: null, why: "several", several: hits } : { fact: null, why: "none", several: [] };
 }
 
 /** The names a person sees for the questions a pick could be (at most three, then "and n more"). */

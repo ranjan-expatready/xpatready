@@ -47,7 +47,7 @@ export function matchFact(candidates: FactSourceView[], role: string, asks: stri
   return findFact(candidates, role, asks, names).fact;
 }
 /** Shown with a pick named in other words than the question's own: what the AI wrote and the question it was taken as. */
-export const takenAs = (asks: string, f: FactSourceView) => `The AI wrote "${asks.trim().slice(0, 80)}"; taken as "${f.label.slice(0, 120)}": every word of it is there and no other question has them all.`;
+export const takenAs = (asks: string, f: FactSourceView) => `The AI wrote "${asks.trim().slice(0, 80)}"; taken as "${f.label.slice(0, 120)}": every word of it is there and no other question of this person has them all.`;
 
 /** The two rounds into queue items (R1–R5). `guide` is the file the rounds read; its text is where quotes must be. */
 export function pqrPicksFromRounds(s: Snapshot, rounds: { draft: Round; check: Round }, guide: { file: string; sha256: string; text: string; code: string },
