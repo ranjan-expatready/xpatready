@@ -151,5 +151,27 @@ Tech lead (Lead 3): the replay crashed at step 2 on main, because main's copy st
 * Still true: N1 (IMM 5707 "Ready to file" with the parents' boxes empty), N2 ("Compare again" not prompted), B2, B3, B4, B5 (now 134 approvals and 108 placements for four forms), B6. The Reset dialog's contrast hit is in both runs again.
 * Journey score: **6 / 10** (was 5.5). "Task completed" goes to 1: the journey runs end to end on screen with no recovery release. Every other criterion holds; "next step obvious" stays 0 (B3, N2), so it is still a fail.
 
+## Delta 3: main 56943efc (3 Nov, ~12:50–13:40 UTC), after F2's B1 release gate (#733) and C5.5 (#730)
+Asked by the tech lead (Lead 3): re-run on the new main, step 2 in C3.2's flow, IMM 5707 from its Saved draft. #714 (C6.1, the Open a case dialog) is **not** merged yet; the replay copes with either dialog. Three fresh copies at once: two full runs (:4475, :4476) and one **B1 probe** (:4477, `QA_LEAVE_UNMAPPED="IMM 5409"`). US$0, `drafting_job` LIVE 0; judged in this session (P-303).
+
+**Result: 7 of 8 steps pass in both full runs, first failing step 8 (N4, unchanged). B1 is fixed: the probe's release is refused and names the form.** Score **6 / 10**, unchanged.
+
+| # | Step | Run 1 | Run 2 |
+|---|---|---|---|
+| 1 | Reset to the six | pass, 75 s | pass, 55 s |
+| 2 | Configure | pass: 4 forms mapped from Saved, 0 errors, 6 warnings | pass, the same |
+| 3 | Release | pass | pass |
+| 4 | Open a family case | pass, 201 on release 1 | pass |
+| 5 | Client answers | pass: 25 of 25 parts; 241 questions, 187 answered = 187 confirmed; 49 of 49 confirms | pass, the same |
+| 6 | Fill | pass: IMM 5257 × 3 (80 / 80 / 77 written), IMM 5707 × 2 (19 written, 1 by hand) | pass, the same |
+| 7 | Checks | pass: 422 / 422, Filed disabled | pass |
+| 8 | Staff see the configuration | **fail N4**: Preview 274 questions, 8 forms; case 241, 5 | **fail N4**, the same |
+
+* **B1: closed by #733 (verified).** The probe maps IMM 5257, 5707 and 5476 but leaves IMM 5409 unmapped. Review and release then shows **1 blocking error**: "Forms · IMM 5409: No form fields mapped yet: a case could not fill this form, so firms could not open cases on a release with it. Map its form fields (Draft setup), or remove the form." Submit for review is disabled ("Fix the problems first"), and `config_release` stays at 0. This is P-297 (3)'s option (a), with the form named and the next step stated.
+* **N4 is unchanged.** The same release gives Preview 100 / 87 / 87 questions and 3 / 3 / 2 forms (plus a representative), against the case's 87 / 77 / 77 and 2 / 2 / 1. IMM 5409 (common-law condition, B4) and IMM 5476 (representative) are counted in the Preview only.
+* **Unchanged by these merges:** N2, B2, B3, B4, B5 (134 approvals in 5 min 36 s and 108 placements in 3 min 45 s, scripted, under three-way load), B6. The IMM 5707 copy counts are identical (19 written, 1 by hand), so N1 is very likely unchanged, but I did not re-inspect the parents' boxes this time.
+* **Timings** are slower because three copies ran at once: Reset 55–81 s, slowest part save 6.2–6.7 s. Compare the single-run figures above (25 s, 3.2 s).
+* **Accessibility:** the Reset dialog's colour-contrast hit shows in run 1 and not in run 2. Across today's 6 full runs it showed in 4, so it is intermittent (likely caught mid-animation), not every time. 0 sideways scroll at 400 / 1024 / 1440 on all states.
+
 ## Next (P-291)
-(1) Re-run when F2 (B1's release gate) and #714 merge, and append the result. Expected: unchanged at 7 of 8 if every form is mapped. To show the gate itself, the replay will also try one release with IMM 5409 still unmapped and expect a refusal that names it. (2) The same journey on a second combination of the six (the LMIA one, from its reviewed release).
+(1) When #714 merges, one confirming run of step 4 through the new dialog. (2) The same journey on a second combination of the six (the LMIA one, from its reviewed release).

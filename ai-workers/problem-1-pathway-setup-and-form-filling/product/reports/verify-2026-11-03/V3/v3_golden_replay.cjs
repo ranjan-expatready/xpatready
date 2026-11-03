@@ -5,6 +5,8 @@
 // release needs from its Saved draft: IMM 5257, IMM 5707 (P-297 (3)), IMM 5409 and IMM 5476, each after "Compare again".
 // Step 4 follows C6.1 (#714): the dialog offers only releases a case can open on. The remove-and-release recovery runs only
 // if release 1 is still refused (it should not be once every form is mapped).
+// QA_LEAVE_UNMAPPED="IMM 5409" leaves that form unmapped to probe B1's release gate (F2, #733, P-297 (3)): the run then
+// records what Review and release says and how Submit answers, and stops after step 3.
 // Per state: axe WCAG 2.2 A/AA (whole page), sideways scroll at 400, 1024 and 1440 px, page errors; timings printed.
 //   node v3_golden_replay.cjs <port 4470-4479> <name>     e.g. node v3_golden_replay.cjs 4475 v3r
 // Needs: the repo set up (product/tools/cloud-setup.sh), PostgreSQL on 54329, playwright with a browser (cloud image).
@@ -78,7 +80,8 @@ const info = (s, d) => console.log(`INFO  ${s}${d === undefined ? "" : ` — ${t
     const ap = posts.filter((x) => /\/jobs\/.*\/apply$/.test(x.u)).pop(); mapped[code] = { reuse_new_before: before, reuse_new_ambiguous_conflict_after: after, left, http: ap?.s, body: ap?.b.slice(0, 120) };
     await decideBoxes();
   };
-  for (const c of ["IMM 5707", "IMM 5409", "IMM 5476"]) await mapForm(c);
+  const LEAVE = (process.env.QA_LEAVE_UNMAPPED ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  for (const c of ["IMM 5707", "IMM 5409", "IMM 5476"].filter((x) => !LEAVE.includes(x))) await mapForm(c);
   info("2a' the other forms from their Saved drafts", mapped);
   await p.goto(`${CB()}/forms`); await p.waitForLoadState("networkidle"); await sleep(800);
   const change = async (code) => { for (const r of await p.locator("main tr").all()) if (flat(await r.innerText()).startsWith(code + " ")) { await r.getByRole("button", { name: "Change" }).click(); break; } await sleep(700); return p.locator("[role=dialog]"); };
@@ -136,6 +139,17 @@ const info = (s, d) => console.log(`INFO  ${s}${d === undefined ? "" : ` — ${t
     await as("user-B"); await p.goto(`${CB()}/review`); await p.waitForLoadState("networkidle"); await sleep(1000); await check(`3-approver-release-v${Number(sql(`select count(*) from config_release where combination_id='${VV()}'`)) + 1}`);
     const n0 = posts.length; await p.getByRole("button", { name: "Approve and release" }).click(); await sleep(2500); return posts.slice(n0).find((x) => /\/approve$/.test(x.u));
   };
+  if (LEAVE.length) { // B1 probe: the gate must refuse and name the unmapped form
+    await as("user-A"); await p.goto(`${CB()}/review`); await p.waitForLoadState("networkidle"); await sleep(1200);
+    const sa = p.getByRole("button", { name: /Show all/ }); if (await sa.count()) { await sa.first().click(); await sleep(500); }
+    const page = await text(), sub = p.getByRole("button", { name: "Submit for review" }), disabled = await sub.isDisabled();
+    const named = page.match(new RegExp(`error[^.]{0,40}${LEAVE[0]}[^]{0,260}`))?.[0] ?? null;
+    let http = null; if (!disabled) { const n0 = posts.length; await sub.click(); await sleep(2000); http = posts.slice(n0).find((x) => /\/submit$/.test(x.u)); }
+    await check("3-probe-review");
+    info("3 probe: release with an unmapped form", { left_unmapped: LEAVE, submit_disabled: disabled, submit_title: await sub.getAttribute("title"), error_naming_it: named, submit_http: http?.s, submit_body: http?.b.slice(0, 300), released: sql(`select count(*) from config_release where combination_id='${VV()}'`) });
+    verdict(3, `B1 gate: release refused, naming ${LEAVE.join(", ")}`, (disabled || http?.s >= 400) && !!named && sql(`select count(*) from config_release where combination_id='${VV()}'`) === "0");
+    await browser.close(); execFileSync("zsh", [path.join(S, "tools/isolated.sh"), NAME, String(PORT), "stop"], { cwd: S, stdio: "pipe" }); console.log("probe done"); return;
+  }
   const r1 = await release(); info("3 release", { http: r1?.s, body: r1?.b.slice(0, 200), refusal: r1 ? undefined : (await toasts()).slice(0, 300) });
   verdict(3, "Release (author submits, expert signs, approver releases)", r1?.s < 300);
 
