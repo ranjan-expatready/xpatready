@@ -32,6 +32,9 @@ const JOBS = join(STUDIO, "..", "p2", "jobs");
   const good: SavedRun = { file: "f", caller: "live", contract_valid: true, raw_output: "{}", launch_evidence: { template_sha256: "t1" }, drafting_run: { status: "completed", inputs: { official_files: inputs, combination: "k1" } } };
   const want = { templateSha256: "t1", inputs, contextKey: "k1", legacy: {} };
   ok("C11.8 pass: the same prompt, the same files in order and the same combination may be replayed", isSameSavedRun(good, want));
+  ok("C11.14 pass: a finished field-map run that left form fields to a person (status \"completed_with_unresolved\", as p2/convert.ts records every field-map and checker run) may be replayed", isSameSavedRun({ ...good, drafting_run: { ...good.drafting_run, status: "completed_with_unresolved" } }, want));
+  // The statuses p2 records for a run that did not give a usable answer (p2/runner.ts, p2/launch.ts), plus none at all.
+  ok("C11.14 fail: a run that did not finish (timed out, refused, invalid output, provider error, over budget, or no status) is still never replayed", ["timed_out", "refused", "invalid_output", "provider_error", "budget_exceeded", ""].every((st) => !isSameSavedRun({ ...good, drafting_run: { ...good.drafting_run, status: st } }, want)));
   const variants: [string, SavedRun][] = [
     ["another prompt", { ...good, launch_evidence: { template_sha256: "t2" } }],
     ["the files in another order", { ...good, drafting_run: { ...good.drafting_run, inputs: { official_files: [...inputs].reverse(), combination: "k1" } } }],
