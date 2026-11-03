@@ -36,6 +36,9 @@ export const OpenItem = z.object({
   reason: z.string().optional(),
   /** A problem of the released snapshot (Not ready): shown first, before any draft item. */
   fromRelease: z.boolean(),
+  /** A cause of the startable check on the released version (no validator error: e.g. no questions yet), said in its own
+   *  words where it lands, never as "this draft no longer has it" (Devin on #622). */
+  startable: z.boolean().optional(),
   /** The second-person rule: people who may not act on it even with the duty (the submitter for Sign; the submitter and
    *  the draft's authors for Release). */
   notBy: z.array(z.string()).optional(),

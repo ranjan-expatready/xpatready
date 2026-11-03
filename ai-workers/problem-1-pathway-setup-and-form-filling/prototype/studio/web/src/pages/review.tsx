@@ -21,7 +21,9 @@ const KIND_WORD: Record<string, string> = { "Derived definition": "Calculated an
 const problemLine = (p: any) => p.where === "Derived fields" ? `${p.label ? roleKeysInWords(p.label) : "A calculation"}: this calculation is not checked by a test yet; it is shown, never used to decide.`
   : String(p.message ?? "").startsWith(`${p.label ?? p.item}:`) ? p.message : problemWords(p);
 
-export function ReviewTab({ d }: { d: any }) {
+/** changesCount: the combination's draft changes as the summary counts them (the shared draft bar's and the header's one
+ *  count, UX-A part 3); undefined while it loads. */
+export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: any; changesCount?: number; countFailed?: boolean; onRetryCount?: () => void }) {
   const id = d.combination.id;
   const actorId = useActorId();
   const r = useApi<any>(["review", id, actorId], `/combinations/${id}/review`);
@@ -30,7 +32,8 @@ export function ReviewTab({ d }: { d: any }) {
   const [picked, setPicked] = React.useState<Set<string>>(new Set());
   const [allProblems, setAllProblems] = React.useState(false);
   const [allChanges, setAllChanges] = React.useState(false);
-  const inv = [["review", id], ["combination", id], ["programs"], ["preview"], ["config", id], ["sources", id]];
+  // UX-A part 3 (break M2): a submit, sign or release refreshes the header, the draft bar and the cards too (G1: and the sources).
+  const inv = [["review", id], ["combination", id], ["combination-summary", id], ["draft"], ["catalogue"], ["programs"], ["preview"], ["config", id], ["sources", id]];
   const submit = useAction(() => api(`/combinations/${id}/submit`, { method: "POST", json: { note } }), { success: "Submitted for review", invalidate: inv, onDone: () => setNote("") });
   const sign = useAction((b: any) => api(`/combinations/${id}/signoff`, { method: "POST", json: b }), { success: (x: any) => "Recorded", invalidate: inv, onDone: () => { setPicked(new Set()); setNote(""); } });
   const approve = useAction(() => api(`/combinations/${id}/approve`, { method: "POST" }), { success: (x: any) => `Released version ${x.version}`, invalidate: inv });
@@ -41,7 +44,13 @@ export function ReviewTab({ d }: { d: any }) {
   const v = r.data;
   const me = session.data.actor;
   const sub = v.submission?.status === "SUBMITTED" ? v.submission : null;
-  const changes: any[] = sub ? sub.changeSummary : v.draft.changes;
+  // UX-A part 3 (finding 7): the draft's changes are the summary's count (the draft bar's "No unreleased changes" and the
+  // header): a combination with nothing configured has none, even though its draft carries shared library items.
+  // Review n1 / break m2: while the summary's count is unknown the list waits, so it never shows the library's items
+  // beside "No unreleased changes" for a moment.
+  const counting = changesCount === undefined;
+  const draftChanges = changesCount === 0 || counting ? [] : v.draft.changes;
+  const changes: any[] = sub ? sub.changeSummary : draftChanges;
   const signed = new Map<string, any>((v.signoffs ?? []).map((s: any) => [s.itemRef, s]));
   const errors = v.draft.problems.filter((p: any) => p.level === "error"), warnings = v.draft.problems.filter((p: any) => p.level === "warning");
   // G1 PR 2b: numbers without a source have their own block (each with Add source); the validation list shows the rest.
@@ -59,7 +68,7 @@ export function ReviewTab({ d }: { d: any }) {
         </Notice>
       ) : null}
       <div className="grid gap-3 md:grid-cols-3">
-        <StepCard n={1} title="Author submits" done={!!sub} who="Configuration author (only the author submits)" text={sub ? `Submitted by ${nameOf(session.data.actors, sub.submittedBy)}, ${fmtWhen(sub.submittedAt)}${sub.stale ? ": the draft changed afterwards, submit again" : ""}` : `${v.draft.changes.length} draft change${v.draft.changes.length === 1 ? "" : "s"}; ${errors.length} problem${errors.length === 1 ? "" : "s"} to fix`} />
+        <StepCard n={1} title="Author submits" done={!!sub} who="Configuration author (only the author submits)" text={sub ? `Submitted by ${nameOf(session.data.actors, sub.submittedBy)}, ${fmtWhen(sub.submittedAt)}${sub.stale ? ": the draft changed afterwards, submit again" : ""}` : `${counting ? "Counting draft changes" : `${draftChanges.length} draft change${draftChanges.length === 1 ? "" : "s"}`}; ${errors.length} problem${errors.length === 1 ? "" : "s"} to fix`} />
         <StepCard n={2} title="The immigration expert signs the content" done={!!sub && !unsignedSme.length} who="Content reviewer (the immigration expert's sign-off)" text={sub ? `${needSme.length - unsignedSme.length} of ${needSme.length} rule, document, check or AI-proposed changes signed` : "Rules, document requirements, checks and AI proposals need the immigration expert's sign-off"} />
         <StepCard n={3} title="A second person releases" done={false} who="Approver (never the author or submitter)" text={v.releases[0] ? `Last released: version ${v.releases[0].version}, in Release ${v.releases[0].release}, by ${v.releases[0].approver}` : "Nothing released yet"} />
       </div>
@@ -76,10 +85,10 @@ export function ReviewTab({ d }: { d: any }) {
       <AnswerKeyBlock combinationId={id} v={v.draft.answer_keys} />
       <div className="rounded-xl border border-border bg-surface-raised">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
-          <p className="font-medium">{sub ? "Submitted changes" : "Changes in the draft"} compared with {v.releases[0] ? `released version ${v.releases[0].version}` : "nothing released"} ({changes.length})</p>
+          <p className="font-medium">{sub ? "Submitted changes" : "Changes in the draft"} compared with {v.releases[0] ? `released version ${v.releases[0].version}` : "nothing released"} ({counting && !sub ? "…" : changes.length})</p>
           {sub && (can("sme") || can("review")) ? <div className="flex gap-2"><Button size="sm" variant="secondary" onClick={() => setPicked(new Set(changes.filter((c) => !signed.has(ref(c)) && (!c.needs_sme || can("sme"))).map(ref)))}>Select all I can sign</Button><Button size="sm" onClick={() => sign.mutate({ items: [...picked], action: "signed" })} disabled={!picked.size} busy={sign.isPending}><CheckCircle2 /> Sign {picked.size || ""}</Button></div> : null}
         </div>
-        {!changes.length ? <p className="px-4 py-6 text-sm text-text-muted">{v.releases[0] ? "The draft is identical to the released version." : "Nothing configured yet."}</p> : (
+        {!changes.length ? <p className="px-4 py-6 text-sm text-text-muted" role={counting && !sub ? "status" : undefined}>{counting && !sub ? (countFailed ? <>The draft changes could not be counted. {onRetryCount ? <button type="button" className="font-medium text-text-link underline" onClick={onRetryCount}>Try again</button> : null}</> : "Counting the draft changes…") : v.releases[0] ? "The draft is identical to the released version." : "Nothing configured yet."}</p> : (
           <Table className="rounded-none border-0" dense head={["", "Kind", "Item", "Change", "Origin", "Needs", "Signed"]}>
             {changes.slice(0, allChanges ? undefined : 25).map((c) => { const s = signed.get(ref(c)); return (
               <tr key={ref(c)}>
@@ -96,7 +105,7 @@ export function ReviewTab({ d }: { d: any }) {
       </div>
       <div className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-surface-raised p-4">
         <label className="min-w-80 flex-1 text-xs">Note (optional for submit and sign; required to return)<Textarea className="mt-1 min-h-14" value={note} onChange={(e) => setNote(e.target.value)} /></label>
-        <Button variant="secondary" onClick={() => submit.mutate(undefined)} busy={submit.isPending} disabled={!can("review") || !v.draft.changes.length || (!!sub && !sub.stale) || !!errors.length} title={!can("review") ? "Needs the review duty" : errors.length ? "Fix the problems first" : ""}><Send /> {sub?.stale ? "Submit again" : "Submit for review"}</Button>
+        <Button variant="secondary" onClick={() => submit.mutate(undefined)} busy={submit.isPending} disabled={!can("review") || !draftChanges.length || (!!sub && !sub.stale) || !!errors.length} title={!can("review") ? "Needs the review duty" : errors.length ? "Fix the problems first" : ""}><Send /> {sub?.stale ? "Submit again" : "Submit for review"}</Button>
         {sub ? <Button variant="ghost" onClick={() => sign.mutate({ items: picked.size ? [...picked] : changes.map(ref).slice(0, 1), action: "returned", note })} disabled={!can("review") || !note.trim()} busy={sign.isPending}><CornerUpLeft /> Return to author</Button> : null}
         {d.combination?.source_basis === "ILLUSTRATIVE" ? <span className="self-center"><span data-demo-release><Pill tone="warn" title="Sample content: a demo release, never counted as a real publish.">Demo release</Pill></span></span> : null}
         <Button onClick={() => approve.mutate(undefined)} busy={approve.isPending} disabled={!sub || !can("approve")} title={!can("approve") ? "Only the approver duty can release" : ""}><Rocket /> Approve and release</Button>
