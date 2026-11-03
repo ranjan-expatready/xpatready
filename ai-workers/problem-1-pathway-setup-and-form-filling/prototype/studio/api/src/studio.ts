@@ -729,6 +729,12 @@ export class Studio {
     return { fields, derived, retired };
   }
 
+  /** UX-A part 4 (break R2-M2): every calculated value a condition may read (the check accepts them), with its plain words. */
+  async derivedValues() {
+    const workspaceId = await this.ws.id();
+    return (await this.db.derivedField.findMany({ where: { workspaceId }, orderBy: { derivedKey: "asc" } })).map((d) => ({ key: d.derivedKey, plain: d.plain ?? d.calculation, executable: d.executable }));
+  }
+
   /** The engine's condition check, with a retired field named as retired, never "not in the library" (C11.9 review minor). */
   private conditionErrors(condition: unknown, t: { fields: Map<string, string>; derived: Set<string>; retired: Set<string> }) {
     return checkCondition(condition, t.fields, t.derived).map((e) => { const m = /^reads (\S+), which is not in the library$/.exec(e); return m && t.retired.has(m[1]) ? `reads "${m[1].split(".").pop()!.replace(/_/g, " ")}", a retired field: restore it in Shared library › Fields first, or choose another` : e; });

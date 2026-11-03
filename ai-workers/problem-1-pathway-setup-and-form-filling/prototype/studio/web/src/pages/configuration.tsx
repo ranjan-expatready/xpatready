@@ -18,7 +18,7 @@ export const RevCtx = React.createContext<Record<string, string>>({});
 export function useLibraryFields() {
   const q = useApi<any[]>(["fields", "all"], "/library/fields?retired=all"); // C11.9: the meaning of a retired field is still shown
   // C11.9 (BR-10): a retired field is not offered in pickers; its meaning is still shown where something reads it.
-  const all: FieldInfo[] = (q.data ?? []).map((f) => ({ key: f.key, meaning: f.meaning, value_type: f.value_type }));
+  const all: FieldInfo[] = (q.data ?? []).map((f) => ({ key: f.key, meaning: f.meaning, value_type: f.value_type, name: f.name ?? null }));
   const list = all.filter((_, i) => !(q.data ?? [])[i]?.retired);
   const meaning = React.useCallback((k: string) => all.find((f) => f.key === k)?.meaning ?? k, [all]);
   return { list, meaning, loading: q.isLoading };

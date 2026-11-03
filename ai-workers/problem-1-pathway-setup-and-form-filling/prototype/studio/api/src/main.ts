@@ -88,6 +88,9 @@ class StudioController {
   @Get("library/sections") sections() { return this.s.sections(); }
   @Post("library/sections") addSection(@Headers("x-actor") a: H) { actorOf(a); return noFreeAdd("section"); } // P-158: no free add (410)
   @Get("library/document-types") types() { return this.s.documentTypes(); }
+  // UX-A part 4 (break R2-M2): the calculated values a condition may read, with their words, so the condition editor
+  // offers them by name (age, days until expiry) instead of asking for a key.
+  @ConfigRead() @Get("library/derived") derived() { return this.s.derivedValues(); }
   @ConfigRead() @Post("conditions/check") check(@Body() b: any) { return this.s.checkCondition(b); }
   @CaseRead() @Get("releases") releases(@Query("combination") c?: string) { return this.s.releases(c); }
   // Runtime R1a FIX (review Must 1): the activity feed holds case events, so only configuration people and the case

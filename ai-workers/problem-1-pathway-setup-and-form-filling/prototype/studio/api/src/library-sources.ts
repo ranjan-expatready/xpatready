@@ -22,7 +22,9 @@ export { noFreeAdd } from "./no-free-add.ts";
 /** The URL word for each kind (`GET /library/:kind/:key/sources`). */
 const KINDS = { fields: "field", sections: "section", "document-types": "document_type", "answer-lists": "answer_list" } as const;
 type Kind = (typeof KINDS)[keyof typeof KINDS];
-export type SourceLine = { kind: "form_box" | "checklist" | "release" | "ai_run" | "forms" | "rule"; text: string; quote?: string | null; file?: string | null };
+/** `ref` (UX-A part 4, EXPERIENCE §5): the internal reference behind the words (a release hash, AI run files, a form
+ *  field's data path), shown only under Details (for admins). `text` and `quote` never carry one. */
+export type SourceLine = { kind: "form_box" | "checklist" | "release" | "ai_run" | "forms" | "rule"; text: string; quote?: string | null; file?: string | null; ref?: string | null };
 export type SourcesView = { kind: Kind; key: string; name: string; sources: SourceLine[]; unsourced: boolean; used_in: string[] };
 
 /** "prototype/p1/inventory/imm5488e.text.inventory.json" → "IMM 5488"; any other file keeps its own name. */
@@ -31,11 +33,23 @@ const checklistName = (file: string) => {
   if (m) return `${m[1].toLowerCase() === "imm" ? "IMM" : "Guide"} ${m[2]}`;
   return (file.split("/").pop() ?? file).replace(/(\.text)?\.inventory\.json$|\.[a-z]+$/i, "").replace(/[-_]+/g, " ");
 };
-/** "the reviewed … release 2c66…; proposed by c1-fieldmap-…" → the release in words, the AI runs as its small print. */
-const releaseLine = (ref: string | null | undefined): SourceLine => {
+/** "the reviewed work-permit release 2c66472f3758; proposed by c1-fieldmap-…" → "From the reviewed work-permit release"
+ *  and "proposed by AI"; the hash and the run files go to `ref` (UX-A part 4 review M1: no hash or run file on the main
+ *  path). */
+const HASH = /\s+[0-9a-f]{7,40}\b/gi;
+export const releaseLine = (ref: string | null | undefined): SourceLine => {
   if (!ref) return { kind: "release", text: "From the imported release" };
   const [what, runs] = ref.split("; proposed by ");
-  return { kind: "release", text: `From ${what}`, quote: runs ? `proposed by AI runs ${runs}` : null };
+  return { kind: "release", text: `From ${what.replace(HASH, "").trim()}`, quote: runs ? "proposed by AI" : null, ref };
+};
+/** "AI run <id>; accepted by user-A on the review queue (item …)" (or "replayed AI run …; decided by …", "rules run …")
+ *  → who proposed it, in words; the run, the person's id and the item go to `ref`. */
+export const proposalLine = (ref: string): SourceLine =>
+  ({ kind: "ai_run", text: /^rules run /.test(ref) ? "From a rules proposal, accepted on To review" : `From ${/^replayed /.test(ref) ? "a saved AI answer" : "an AI proposal"}, accepted on To review`, ref });
+/** A form field in words: its caption, or that it has none (UX-A part 4 n3: never `form field ""`); the data path to `ref`. */
+export const boxLine = (prefix: string, edition: string, b: { caption: string | null; dataPath: string }): SourceLine => {
+  const cap = (b.caption ?? "").replace(/^\*/, "").trim();
+  return { kind: "form_box", text: cap ? `${prefix} ${edition} form field "${cap}"` : `${prefix} ${edition} form field with no label on the form`, ref: cap ? null : b.dataPath };
 };
 const LIVE = ["PUBLISHED", "DRAFT", "RETIRED"] as const;
 /** PR #96 finding (a) (newest version only, while draft or published) and the fields a condition reads: one copy, in the
@@ -50,17 +64,18 @@ export class LibrarySources {
   async all(kind: Kind, workspaceId: string): Promise<Map<string, SourceLine[]>> {
     const out = new Map<string, SourceLine[]>();
     // PR #96 finding (c): two lines with the same words but different quotes (two lines of one checklist) both stay.
-    const add = (key: string, l: SourceLine) => { const a = out.get(key) ?? []; if (!a.some((x) => x.text === l.text && (x.quote ?? null) === (l.quote ?? null))) a.push(l); out.set(key, a); };
+    // UX-A part 4: lines with the same words are one line; their references (Details) are kept together.
+    const add = (key: string, l: SourceLine) => { const a = out.get(key) ?? []; const same = a.find((x) => x.text === l.text && (x.quote ?? null) === (l.quote ?? null)); if (!same) a.push(l); else if (l.ref && !(same.ref ?? "").split("\n").includes(l.ref)) same.ref = same.ref ? `${same.ref}\n${l.ref}` : l.ref; out.set(key, a); };
     if (kind === "field" || kind === "answer_list" || kind === "section") {
       const boxes = await mappedBoxes(this.db, workspaceId);
       const fields = await this.db.canonicalField.findMany({ where: { workspaceId }, orderBy: { version: "desc" } });
       const latest = new Map<string, (typeof fields)[number]>(); for (const f of fields) if (!latest.has(f.canonicalFieldKey)) latest.set(f.canonicalFieldKey, f);
       if (kind === "field") {
-        for (const b of boxes) add(b.canonicalFieldKey!, { kind: "form_box", text: `From: ${b.edition.editionLabel} form field "${(b.caption ?? b.dataPath).replace(/^\*/, "").trim()}"`, quote: b.evidenceQuote });
+        for (const b of boxes) add(b.canonicalFieldKey!, { ...boxLine("From:", b.edition.editionLabel, b), quote: b.evidenceQuote });
         // C3.6 (P-158 (5), plan §6): a fact added for a rule says "Needed by rule …", the rule's key and its sentence.
-        for (const f of latest.values()) if (f.sourceRef) add(f.canonicalFieldKey, /^Needed by (Rule|Check|Form condition|Question condition|Document condition) /.test(f.sourceRef) ? { kind: "rule", text: f.sourceRef.split(/; (?:rules|AI) run /)[0] } : f.origin === "AI_PROPOSAL" ? { kind: "ai_run", text: `From the ${f.sourceRef}` } : releaseLine(f.sourceRef));
+        for (const f of latest.values()) if (f.sourceRef) add(f.canonicalFieldKey, /^Needed by (Rule|Check|Form condition|Question condition|Document condition) /.test(f.sourceRef) ? { kind: "rule", text: f.sourceRef.split(/; (?:rules|AI) run /)[0] } : f.origin === "AI_PROPOSAL" ? proposalLine(f.sourceRef) : releaseLine(f.sourceRef));
       } else if (kind === "answer_list") {
-        for (const b of boxes) { const list = latest.get(b.canonicalFieldKey!)?.answerListKey; if (list) add(list, { kind: "form_box", text: `Choices of: ${b.edition.editionLabel} form field "${(b.caption ?? b.dataPath).replace(/^\*/, "").trim()}"` }); }
+        for (const b of boxes) { const list = latest.get(b.canonicalFieldKey!)?.answerListKey; if (list) add(list, boxLine("Choices of:", b.edition.editionLabel, b)); }
       } else {
         // A section's questions read form boxes: until sections are proposed from the forms' parts (S6 slice 2), those
         // forms are its evidence, beside the release it came with.
