@@ -21,12 +21,16 @@ export const CODED_IDENTITY = /\bpassport\b|\btravel document\b/i;
  *  Italian, German), a travel document or ID, an identity or identification card or document in any language
  *  ("identit…"), an ID or photo ID, a birth, citizenship or naturalization certificate, proof of citizenship, a
  *  certificate of identity, a citizenship or permanent resident card, a Confirmation of Permanent Residence, a driver's
- *  or driving licence, and national IDs by their own names (cédula, Personalausweis, Aadhaar, hukou, DNI). */
+ *  or driving licence or permit, a PR travel document (PRTD), the French names IRCC's French editions use, and national
+ *  IDs by their own names (cédula, Personalausweis, Aadhaar, hukou, DNI). */
 const IDENTITY_NAME = new RegExp([
   String.raw`pas+ ?[ea]?ports?\b`, String.raw`\bpasaportes?\b`, String.raw`\bpassaport[oie]\b`, String.raw`\breisepass`,
   String.raw`\btravel (documents?|docs?|id)\b`, String.raw`\bidentit\w*`, String.raw`\bidentification\b`, String.raw`\bids?\b`,
   String.raw`\b(birth|citizenship|naturali[sz]ation) certificates?\b`, String.raw`\bproof of citizenship\b`, String.raw`\b(citizenship|permanent resident|pr) cards?\b`,
-  String.raw`\bconfirmation of permanent residen`, String.raw`\bcopr\b`, String.raw`\bdriv(er'?s?|ing) licen[cs]es?\b`,
+  String.raw`\bcertificates? of (citizenship|birth|identity|naturali[sz]ation)\b`, String.raw`\bprtd\b`,
+  String.raw`\bconfirmation of permanent residen`, String.raw`\bcopr\b`, String.raw`\bdriv(er'?s?|ing) (licen[cs]es?|permits?)\b`,
+  // French (IRCC publishes French editions): birth record, travel document, driving licence, PR card, citizenship
+  String.raw`\bacte de naissance\b`, String.raw`\btitre de voyage\b`, String.raw`\bpermis de conduire\b`, String.raw`\bresident permanent\b`, String.raw`\bcitoyennete\b`,
   String.raw`\bcedula\b`, String.raw`ausweis\b`, String.raw`\baadhaa?r\b`, String.raw`\bhukou\b`, String.raw`\bdni\b`,
 ].join("|"));
 /** A photo the size of a passport photo is not the passport (C2.6 break m2: "visa_application_photos"); a name that

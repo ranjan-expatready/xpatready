@@ -84,7 +84,9 @@ import { CODED_IDENTITY, isIdentityName } from "../engine/identity-documents.ts"
     (e.items[0]?.payload as any)?.identityDocument === true && (e.items[0]?.payload as any)?.readerKind === "person_only" && e.items[0]?.confidence === "check" && e.items[0]?.rules.some((x) => x.rule === "identity_not_read_by_ai" && !x.passed), e.items[0]?.payload);
   const named = ["National identity card", "national_id_card", "Birth certificate", "Refugee travel document", "Permanent resident card", "Copy of passports", "Driver's licence", "Citizenship certificate", "Passport photo page",
     // break B3–B5: short names, misspellings, look-alike and invisible characters, other languages
-    "Photo ID", "proof of identity", "Travel doc", "Confirmation of Permanent Residence", "Driving licence", "Passeport", "ePassport", "Passport photo and information page", "Driver\u2019s licence", "\uff30\uff41\uff53\uff53\uff50\uff4f\uff52\uff54", "travel\u00a0document", "Pass\u200bport", "P\u0430ssport", "Carte d'identit\u00e9", "Personalausweis", "Aadhaar card"].map((name) => {
+    "Photo ID", "proof of identity", "Travel doc", "Confirmation of Permanent Residence", "Driving licence", "Passeport", "ePassport", "Passport photo and information page", "Driver\u2019s licence", "\uff30\uff41\uff53\uff53\uff50\uff4f\uff52\uff54", "travel\u00a0document", "Pass\u200bport", "P\u0430ssport", "Carte d'identit\u00e9", "Personalausweis", "Aadhaar card",
+    // review Major 1 on 369e4cf06: IRCC's own wording, and French editions
+    "Photo identification", "Identification document", "Certificate of identity", "Certificate of citizenship", "Certificate of birth", "PRTD", "Driving permit", "Acte de naissance", "Titre de voyage", "Permis de conduire", "Carte de r\u00e9sident permanent", "Certificat de citoyennet\u00e9"].map((name) => {
     const x = both({ ...FORM_ANSWER, checks: [], document_types: [{ ...passport, name, category: "other", reader: "letter_or_record", identity_document: false }] }).items[0];
     return { name, identity: (x?.payload as any)?.identityDocument, reader: (x?.payload as any)?.readerKind };
   });
