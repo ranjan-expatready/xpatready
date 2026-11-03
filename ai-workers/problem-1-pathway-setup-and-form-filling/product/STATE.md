@@ -13,8 +13,8 @@ Lead 1 (`local_17ac4d7f…`, 2 Nov morning) → Lead 2 (`local_0bd306e3…`, ~15
 5. qa (cloud "qa: score tonight's merge batches (P-277)") wakes on messages but slowly; it was asked for the #617 head check (C8.1 migration; the tech lead read it: additive, OK) and to score #615/#616. Merge its records PRs directly.
 6. Your hand-over: at about 250k, rewrite STATE, CronDelete, rename yourself "(ended)", SendMessage Lead 6 (`local_235884ee-b9da-4ec3-a2b1-7ee8d8f98a2d`) "take over now".
 
-## Progress (03:30 UTC 3 Nov)
-M2 on main's scorecard **50/60**; qa's #644 (open, merging when green) makes it **51** (C11.13 Works, held part excluded) and P-288 (1) makes C11.10 Works on qa's next records PR (**52**). Merged since 23:25: product #617, #626, #622, #627, #636, #637, #640; records #621, #624, #628, #629, #630, #638. Open: #643 (UX-A finding 4, approved). Rulings P-287, P-288. AI spend tonight US$1.61. Weekly plan 54%. Merge batches now take about 20–30 minutes (shards 20–30 min on product changes).
+## Progress (05:10 UTC 3 Nov) — closing down (P-289)
+M2 on main's scorecard **52/60** (qa #646, #651). **Independent re-test (3 Nov, main 1a79dbf9, US$0): 36/60 confirmed Works**; 12 rows scored Works fail their own acceptance pack (C1.5, C2.4, C3.2, C3.8, C3.15, C4.1, C4.2, C4.6, C4.7, C4.8, C11.3 held part, C11.11), 4 have no runnable pack (C3.10, C5.2, C11.1, C11.17); C5.4's release screen is not reachable from the Demo menu; M3 C6.9 scored Works but 2/15. Report: `reports/build-review-2026-11-03.html` (published privately to the founder), walk screenshots in `reports/build-review-2026-11-03-audit/walks/`, runner logs on the Mac in `archive/2026-11-03-build-review-audit-logs/`. All in-flight PRs merged (#643, #647); every lane told to take nothing new; qa lane closed (#651). Open: #417 (D3 paid plan, needs refresh and a founder Go). Leads: Lead 1 archived 05:00 UTC; Lead 2, 4, 6, then Lead 3 (keep-awake to ~07:00 UTC), then Lead 5 after the blank-sheet hand-over.
 
 ## M2 rows not Works, and what each needs (00:30 UTC)
 | Row | Needs |
