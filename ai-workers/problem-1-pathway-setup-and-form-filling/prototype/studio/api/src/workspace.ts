@@ -5,7 +5,7 @@
 // through the runtime's own caseView (engine/runtime/preview.ts).
 import { Body, Controller, Get, Headers, HttpStatus, Inject, Injectable, Param, Patch, Post, Query } from "@nestjs/common";
 import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snapshot.ts";
-import { newestEdition } from "../../engine/programs.ts";
+import { newestEdition, pdfMapInUse } from "../../engine/programs.ts";
 import { questionnairesView } from "../../engine/runtime/questionnaires.ts";
 import { previewFamily } from "../../engine/runtime/preview.ts";
 import { aliasOf, appliesOf, filingWarnings, filingWords, isLineMode, previewFilings } from "../../engine/filing-modes.ts";
@@ -68,7 +68,8 @@ export class WorkspaceViews {
     const defs = await this.db.govFormDef.findMany({ where: { workspaceId, formKey: { in: (snapshot.forms as SnapForm[]).map((f) => f.form_number) } }, select: { formKey: true, editions: { select: { editionLabel: true, channel: true, sha256: true } } } });
     const libraryEdition = new Map(defs.map((d) => [d.formKey, newestEdition(d.editions.filter((e) => e.channel !== "ONLINE" && e.sha256))?.editionLabel ?? null]));
     const lines = (snapshot.forms as SnapForm[]).map((f): WorkspaceFormLine => {
-      const map = maps.filter((m) => m.form_number === f.form_number).at(-1);
+      // P-32: a PDF line shows the edition in use, the one a case fills (pdfMapInUse); an Online line its newest online map, as before.
+      const map = (lineOf(f).channel === "ONLINE" ? undefined : pdfMapInUse(maps, f.form_number)) ?? maps.filter((m) => m.form_number === f.form_number).at(-1);
       const { channel, signature } = lineOf(f), account = snapshot.combination.portal ?? null;
       const { channels: accepted, record } = allowedChannels(accepts.get(f.form_number), account);
       const onlyIf: OnlyIf = f.status !== "conditional" ? { kind: "always" } : wordsOnly(f) ? { kind: "words_only", words: f.condition_plain ?? "" } : { kind: "rule", words: f.condition_plain ?? "" };

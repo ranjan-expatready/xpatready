@@ -6,6 +6,7 @@ import { CALCULATIONS, evaluate, type PredicateNode, type Truth } from "../../co
 import type { Snapshot } from "./snapshot.ts";
 import { documentFacts, SIGNED_SCAN } from "./sources.ts";
 import { lineOf } from "./channels.ts";
+import { pdfMapInUse } from "./programs.ts";
 
 // SH3 (P-258): who a line, a condition, a box and a signature are about comes from the one resolver (engine/resolver.ts,
 // contract contracts/resolver.ts); its functions are re-exported here for their callers.
@@ -110,7 +111,8 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   // ------------------------------------------------------------ coverage of each box, per applicable form
   const needs = new Map<string, { fact: string; about: string; rows: Set<number>; forms: Set<string>; boxes: number; maybe: boolean }>();
   const coverage = forms.filter((f) => f.applies !== false).map((f) => {
-    const map = s.field_maps.find((m) => m.form_number === f.form);
+    // P-32: the PDF edition in use (the newest mapped), as the fill writes it; else the line's online map, as before.
+    const map = pdfMapInUse(s.field_maps, f.form) ?? s.field_maps.find((m) => m.form_number === f.form);
     if (!map) return { form: f.form, person: f.person, person_label: f.person_label, applies: f.applies, edition: null, boxes: [] as BoxRow[], counts: {} as Record<string, number>, mapped: 0, unresolved_boxes: 0 };
     const boxes: BoxRow[] = [];
     let unresolvedBoxes = 0;
