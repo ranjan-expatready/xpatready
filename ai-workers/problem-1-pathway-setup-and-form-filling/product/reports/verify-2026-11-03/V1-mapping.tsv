@@ -1,0 +1,538 @@
+id	class	capabilities	backlog	fit	milestone	note	reader
+SA-1B-1	product	C3.15,C3.5,C3.6,C3.1	L-SA4,L-SA8,B13	part	M2	Shared fields have type, format, aliases, versioned rename and keys never typed; scope, fallback source, still-true rule, privacy mark; must-verify flag held (L-SA8, P-251).	R1
+SA-1B-10	product	-	-	-	M2	Lists asked once per person with dates, tags and live Same-as for the current address are not in any capability.	R1
+SA-1B-103	product	-	B14	-	M4	Country-specific requirement entries beside a document or form are not built; backlog B14 proposes M4, no decision cited.	R1
+SA-1B-105	product	C6.4	-	part	M3	C6.4 checks a police certificate is no older than 6 months on the case checklist; issued-within-N-months as a rule per document type and programme is not built (P-230 (8): after the M2 gate).	R1+V1
+SA-1B-106	product	-	-	-	M2	Upload size limit and file-name pattern per document type are in no capability or backlog item.	R1
+SA-1B-107	product	-	-	-	M2	No Copy on emails field group in the library; email behaviour is the team's (P-167); impact report says add as later, which is no decision.	R1
+SA-1B-108	product	-	-	-	M2	No Copy on emails section on individual combinations, asked of the adult case client; no capability or backlog item.	R1
+SA-1B-109	held	-	-	-	M3	P-251 holds the corporate area: the employer onboarding questionnaire and its organisation-scope copy question are not built.	R1
+SA-1B-11	product	-	B1	-	M2	Purposes (current, for post, latest, all, date range) for list facts are not built; scheduled as B1.	R1
+SA-1B-110	product	-	-	-	M2	No Copy on emails section or publish check exists; email sending itself is the team's (P-167); the employer-variant part sits in the held corporate area.	R1
+SA-1B-111	product	C3.8	-	part	M2	Loops and unreachable conditional questions block submission; the rule that a condition may read only earlier questions in order is not stated.	R1
+SA-1B-112	held	-	L-SA4	-	M3	P-251 design-only: household and filing scopes (L-SA4 waits); organisation target is the corporate area; no target-versus-scope check exists.	R1
+SA-1B-13	product	C4.1,C3.13,C3.4	B5	part	M2	Sections are library items with one title, order per combination, where-used and AI drafting; estimated minutes (B5) and the None-of-these-apply background block are missing.	R1
+SA-1B-130	held	C3.16	L-SA4	full	M3	C3.16 is written to deliver scope but is not built; P-251 design-only: household and filing scopes, L-SA4 waits. Fields are per person today.	R1
+SA-1B-131	product	C4.10,C4.9	-	part	M2	One source per fact (Document, Client or Case officer) exists per combination; the separate fallback source and the two publish warnings are missing.	R1
+SA-1B-132	product	-	B13	-	M4	No per-field Identity or Changeable rule; backlog proposes M4 for returning-client reuse, no decision cited.	R1
+SA-1B-133	product	C3.15,C3.5,C3.6,C3.7	-	part	M2	Keys never typed, rename versioned, aliases and merges, retire keep history; crosswalk entries between code systems and the Use the new code step are missing.	R1
+SA-1B-134	product	C3.16	L-SA4	full	M3	C3.16 states stable list entry ids but is not built; scheduled as L-SA4, which waits on the household and filing scopes.	R1
+SA-1B-14	product	C4.4,C3.14,C3.4	-	part	M2	Rules as data show and hide questions, are listed read-only and AI-drafted; require, make-optional and add-a-document-from-an-answer effects are not evidenced.	R1
+SA-1B-15	product	C4.4	-	part	M2	The renderer repeats groups; the coverage rule with period, gap and explanation question, and the unexplained-gap warning, are not built.	R1
+SA-1B-150	product	C3.13	-	part	M2	Document types carry a category and are listed; the fixed list of 11 categories, pick-a-category refusal and checklist grouping by category are not stated.	R1
+SA-1B-151	product	C6.4	-	part	M2	V1 tester: each document line stores who provides it and the case checklist uses it (C6.4); default provider roles, shared documents and the under-18 rule are not built or scheduled.	R1+V1
+SA-1B-152	product	-	-	-	M3	Client I-don't-have-this switch to an alternative and the Alternative used flag for the officer are in no capability or backlog item.	R1
+SA-1B-153	product	-	-	-	M2	Dates a document type captures (issue, expiry) and their confirmation at upload are in no capability; reading dates from documents is C6.5, not built.	R1
+SA-1B-154	product	C4.5,C4.10,C6.5	L-SA7	part	M2	A document that supplies facts takes them out of the SQR until missing, and facts have a Document source; reading and Confirm and use (C6.5, L-SA7 held) is not built.	R1
+SA-1B-155	product	C6.4	-	part	M3	C6.4 has one hard-coded recency check; the validity check against the case target filing date is not built (P-230 (8) puts the fields after the M2 gate).	R1+V1
+SA-1B-156	product	-	-	-	M3	The passport-must-outlast-the-permit check against the requested end of stay is in no capability or backlog item.	R1
+SA-1B-157	product	-	B24	-	M3	The status-document mark and its key-date feed are not built; reminder data is B24 and the reminder engine is the team's.	R1
+SA-1B-158	held	-	L-SA5	-	M4	P-251 holds the corporate area; P-239 and L-SA5 put the Sample employer combination and its shareable mark in M4.	R1
+SA-1B-159	product	C3.13,C3.4,C11.9	L-doc	part	M2	Document types list with where used, origin and AI drafting exists; grouping by 11 categories, search, version compare and bulk spreadsheet import are not evidenced.	R1
+SA-1B-17	product	C3.13,C11.9,C3.14	SH2	part	M2	Where used shows on fields, sections, document types and rules before removal; answer lists and field groups have no where-used; three computations to merge (SH2).	R1
+SA-1B-18	product	C3.13,C3.4	L-doc	part	M2	Document types have name, category, supplied facts, AI drafting and retire; formats, translation, notarised copy, handling class, per-language client wording, marks missing (L-doc, P-230 (8)).	R1
+SA-1B-19	product	C6.4	B3	part	M2	V1 tester: a document line already carries an unordered list of alternatives shown on the case checklist (C6.4); named sets, order, any-one or all-together modes and when-acceptable wording are not built (B3).	R1+V1
+SA-1B-20	product	-	B3	-	M2	A line picking a named set of a document type is not built; scheduled as B3.	R1
+SA-1B-21	product	-	-	-	M3	"P-230 (8) only defers validity fields to "a later piece of work after the M2 gate" (M3); no capability or backlog item states how a document end of validity is known."	R1+V1
+SA-1B-22	product	-	-	-	M3	"P-230 (8) defers validity windows to "a later piece of work after the M2 gate" (M3); nothing states what a document must outlive; no capability or backlog item."	R1+V1
+SA-1B-23	not a requirement	-	-	-	-	Withdrawn in v2.0 (SA1B-D91); replaced by the validity check; our S5 removes the 90 and 30 day lead times.	R1
+SA-1B-24	not a requirement	-	B24	-	-	Pointer card: the pack supplies only the validity rule and status mark; reminder timings are fixed and not per document type.	R1
+SA-1B-25	not a requirement	-	-	-	-	Pointer card: send-back reasons stay firm-owned in AG-09; nothing is added to the pack.	R1
+SA-1B-290	product	C5.4	G1	part	M2	Sources panel and the release gate on numbers exist; register fields (kind, authority, weekly check rhythm, retire, cited-entry delete refusal) are not stated by any capability.	R1
+SA-1B-291	product	C3.4,C11.14,C11.8,C4.11	PA,PB	part	M2	AI drafts sections, document types, rules and lists (Partial, awaiting saved runs), off by default; fees, steps, tables and a Not-found-in-source list are not drafted.	R1
+SA-1B-292	product	C3.13,C11.13	G-CORE	part	M2	Lists show origin (AI or person) and changes are versioned with made-by; no AI-draft-edited mark clearing Checked, and no Content made by report.	R1
+SA-1B-293	product	C3.2,C5.3,C11.14	G-CORE	part	M2	Reviewer accepts, edits or rejects each proposal on To review; submit gate on unchecked AI items missing; bulk accept held (P-121 against SA1B-D77, P-251).	R1
+SA-1B-294	product	C5.1,C5.4	L2	part	M2	Expert ticks at release and each number needs a source; no per-number Confirm click with name and date, no n-of-m confirmed count, no edit-clears-confirmation.	R1
+SA-1B-295	product	-	B17	-	M2	No capability for file-based reference tables or the confirm-once then changed-entries-only flow; reference tables sit unscheduled in B17.	R1
+SA-1B-296	product	C5.5,C5.7	-	full	M2	Form map, scoring table or rule set releases only with a passing expert-signed answer-key test; missing blocks like failed; made-up families run per value.	R1
+SA-1B-297	held	-	-	-	M2	P-251 holds: corrections reaching open filings (SA1B-D100). The correction versus rule-change mark and its publish check are also unbuilt; no capability.	R1
+SA-1B-298	product	C5.4	B9	part	M2	In-force dates need a source (P-279); inForceFrom and inForceTo on a rule change and the Use newer rules warning on open filings are not built.	R1
+SA-1B-299	product	-	-	-	M2	No feed read or weekly page-changed list; P-65 (7) allows only an optional listing alert, never fetching, so the card conflicts with it and goes to the founder.	R1
+SA-1B-300	product	-	-	-	M2	No change-watch entry to classify and draft from; depends on SA-1B-299; AI drafting exists only per combination, not from a changed source.	R1
+SA-1B-301	product	-	B9	-	M2	Our Withdraw only cancels a waiting delete or retire (PRODUCT.md); withdrawing a published version and warning open filings are not built.	R1
+SA-1B-38	product	C5.1,C5.3,C5.2,C5.5	G-CORE	part	M2	A different person approves and releases, gates cannot be bypassed; approver does not see per-item made-by, Checked and Confirmed marks or before/after on sample families.	R1
+SA-1B-39	product	C5.4	G1,B22	part	M2	Every published number needs a source or None published; date checked, next review, quoted line and source on non-number items are not covered.	R1
+SA-1B-4	product	C3.8,C3.4	-	part	M2	Options are checked as mapped per channel and AI drafts answer lists; retired values shown, per-language labels, table-filled and versioned lists not covered.	R1
+SA-1B-40	product	-	B22	-	M2	Next-review column, weekly content-team email and publish warning are unbuilt; scheduled only as B22 in the unscheduled requirements backlog.	R1
+SA-1B-6	product	-	-	-	M2	No field-group definition (members, shared scope, driven-by member) in any capability; the old composite type is not replaced.	R1
+SA-1B-63	product	C5.1,C5.4,C5.5,C3.8,C5.2	G1,G2,G5	part	M2	Blocks exist for no source, no answer key, empty combination, loops and unreachable questions; most of the 38 errors and 13 warnings (review date, copy section, document sets) have no capability.	R1
+SA-1B-7	product	C4.1,C4.3,C3.8	UX-E	part	M2	SQR placements with AI-drafted client wording and a check against hiding a value a form reads exist; help text, hide-optional-members and no-default-answer not evidenced.	R1
+SA-1B-91	product	C11.10,C1.4	-	part	M2	Each combination shows its setup steps, status and one next step; no single list of every combination not ready to start with all that is missing and an N-of-M startable count.	R1
+SA-1B-92	product	-	-	-	M2	No completeness view per country (startable, scorable, languages, forms without map, items past review, items without source) is in any capability.	R1
+SA-1-28	product	C2.1,C7.6,C9.1	B9	part	M2	Edition date and official file are read on upload; the warning that a case uses a non-current edition and the officer's re-bind exist only as ready-to-file warnings and B9.	R2
+SA-1-29	product	C3.1,C3.2,C3.12	-	part	M2	Field map is reviewable data per edition; versioning, edit-as-new-draft and published maps never changing are not stated in any capability.	R2
+SA-1-30	product	C3.8,C3.1,C5.5	-	part	M2	Validator checks every form field and option is mapped, type enforced in code, missing answer key blocks; checks on whose fact, which entry of a list and box kind are absent.	R2
+SA-1-31	product	-	B27	-	M2	No capability exports a field map to a spreadsheet and imports an edited one all or nothing; scheduled as B27.	R2
+SA-1-32	held	C6.1,C9.2	-	part	M3	Pinned release and stale marks exist; corrected map reaching open forms is held by P-251: 'corrections reaching open filings (SA1B-D100)'.	R2
+SA-1B-102	product	C1.8,C1.6	S1,X9b	part	M2	Form line sets copies, minimum age, who signs and channel; signature method (electronic or ink), country variant, who completes, and unset-means-signature-needed (S1) are not stated.	R2
+SA-1B-170	held	-	SH3	-	M3	Design-only in P-251: 'reading PartyRelationship for whose fact'; no capability lets a box read the spouse's or child's fact.	R2
+SA-1B-171	product	C2.1,C3.1	PD	part	M2	XFA boxes are listed for mapping; no capability states rejection naming the unsupported feature, or the per-edition form description (Validate button, barcode container) confirmed by a publisher.	R2
+SA-1B-172	product	C3.2,C3.1,C3.8	B27	part	M2	Reviewer accepts, edits or rejects each proposal beside the source; filters by changed or carried, next-unconfirmed, full-form preview with a made-up family, and import/export are missing.	R2
+SA-1B-173	product	C7.3,C7.7	-	part	M3	Portal sheet lists answers in portal order with copy buttons; section headings and order for PDF answer sheets and 'Empty, fill by hand' lines are not stated.	R2
+SA-1B-174	product	C7.2	S2	part	T	Fill-trial gate (Adobe Validate, barcodes) exists; per-edition trial record with map version, second-person confirmation and withdrawal is S2; P-246 (4): POC builds no in-app viewer.	R2
+SA-1B-175	later	C7.4	L5	full	M4	P-245: 'one extension, built by the POC in M4'; extension items E1-E6 are also held in P-251.	R2
+SA-1B-176	held	C6.3	-	part	M3	P-251 holds 'the application fix (SA1B-D93)'; an agent-view edit updates every draft output, but there is no per-filing fix with form-only tick or update-record button.	R2
+SA-1B-177	product	-	-	-	M3	No capability lets an officer add a library form to one filing (mapped fills, unmapped gives blank PDF); no backlog item found.	R2
+SA-1B-178	product	-	B28	-	M4	No capability counts officer hand-fixes, Validate failures or feedback across firms; closest input is B28 report-a-mapping-problem (M4, P-73).	R2
+SA-1B-179	held	-	B28	-	M4	P-251 holds 'hold against notices (P-73 against SA1B-D75)'; P-73 makes report-and-hold B28, M4.	R2
+SA-1B-180	product	-	-	-	M3	No capability shows a form's accuracy record (last answer-key test date, open notices, last corrected); the open-notices part depends on SA-1B-179 (held).	R2
+SA-1B-181	product	C5.7,C5.5	G4,G2	full	M2	Made-up families with expected values run against a map and show pass or fail per value; a missing or failed expert-signed test blocks release.	R2
+SA-1B-190	product	-	B17	-	M2	No capability lets a publisher define, change or retire reference tables with columns and key rules; scheduled as B17.	R2
+SA-1B-191	product	-	B17	-	M2	No capability uploads table entries, AI-drafts them with the cited page, or confirms a file once then only changes; scheduled under B17.	R2
+SA-1B-192	product	-	B17,R2	-	M2	No capability for table versions with in-force dates, lookup for a date or code-system mapping; fees as a dated table is R2.	R2
+SA-1B-193	product	C5.4,C3.14	-	part	M2	Release is refused for numbers without a source entry and the rules list shows source and where used; the staff marker beside each number (source, date checked, version) is not stated.	R2
+SA-1B-194	product	C3.14,C4.4,C6.9,C1.8	S3,G1-F,SH1	part	M2	Conditions and gates are data with a minimum age on a date; 'between', 'can't check' naming the missing input, and one condition language are not stated (SH1 merges helpers).	R2
+SA-1B-195	product	-	B16,B17,SH3	-	M2	No capability lets a condition read a reference table value or another person's fact (principal's occupation level); resolver contract is SH3.	R2
+SA-1B-196	product	C6.9,C3.14,C5.5	B16,R4	part	M3	Gates give Qualifies, Can't tell yet or Does not qualify with what is missing and rules-as-at; advisory severity, value needed, pass-mark join and gate authoring are not stated.	R2
+SA-1B-197	product	-	B16	-	M2	No capability authors points grids, conversions, pass marks or caps as definitions; scoring grids are B16 (size L).	R2
+SA-1B-198	product	C6.9	B16,B17	part	M3	Case check shows 'rules as at' the release date; rule changes entered with an in-force date and reproducible stored results are not stated.	R2
+SA-1B-199	product	C5.5,C5.7	G4,G2	full	M2	Scoring tables and eligibility rule sets release only after a passing expert-signed answer-key test, a missing test failing like a failed one; families run per value.	R2
+SA-1B-200	product	-	B16	-	M2	No capability authors the Canada scoring content (language conversions, CRS, federal skilled worker, provincial calculators) with answer keys; part of B16.	R2
+SA-1B-201	product	C4.2,C4.7,C4.8	B29	part	M2	PQR questions are marked from the SQR per combination, AI-drafted, released with it; country PQR as a view (P-132) and warning on unasked gate inputs are not stated; prospect delivery is the team's.	R2
+SA-1B-202	held	C6.8	L-SA12	-	team	P-251 holds L-SA12 (PQR to SQR personal details, P-235); P-271: 'the prospect runtime is the team's'.	R2
+SA-1B-203	later	C6.9	L4	part	team	P-271: 'the prospect runtime is the team's'; P-129: prospect PQR 'move after M3'. Case check gives three outcomes for a case, not ranked per-programme prospect results with levers.	R2
+SA-1B-204	product	-	B16	-	M3	No capability calculates a staff-only case score with breakdown, rules date and levers on an Express Entry or provincial filing; needs scoring definitions (B16).	R2
+SA-1B-205	not a requirement	-	-	-	-	Pointer card: the employer's quick LMIA Check is owned by chapter 11, SA-1B-285.	R2
+SA-1B-26	product	C2.1,C2.4,C3.12	-	part	M2	Library holds form code, edition, published date and new-edition holds; capabilities do not state accepted-until, edition kind, or the rule picking the current edition on a given day.	R2
+SA-1B-27	product	C3.1,C3.8	B1,SH3	part	M2	Field map links form field to shared field with option maps and list purpose; no whose-fact or combination per box, no declaration or signature box kind; overflow warning only in B1.	R2
+SA-1B-28	product	C6.3,C6.6	-	part	M3	Agent view shows each fact with source and status per person; the per-box trace on the form (which fact, whose, fix mark) is not stated.	R2
+SA-1B-29	product	C3.8,C7.6,C7.1	-	part	M3	Unmapped fields are caught at authoring and missing facts warn at ready-to-file; no per-box status or 'N required boxes are empty' count before fill.	R2
+SA-1B-30	product	C4.9,C1.8,C8.1	-	part	M3	Declarations stay with the client and form lines state who signs; not stated: declaration and signature boxes never ticked, nor the representative's one-click stored signature.	R2
+SA-1B-31	product	C7.2,C7.6,C7.1	B6	full	T	Adobe is our validation oracle and only a barcode form's own Validate blocks ready-to-file; P-246 (4): 'the team builds in-app Validate'. Batch Approve filing is B6.	R2
+SA-1B-32	later	C7.3,C2.7,C3.9	L5	part	later	P-102: portal capture and online screens 'return in the last wave'; portal sheet from the PDF twin exists, screen editions with their own maps do not.	R2
+SA-1B-33	product	C3.1,C9.1,C3.2,C3.3	C9.1-AI	part	M2	AI maps boxes and new-edition comparison exists; carrying confirmed entries forward by identical path and label is missing; bulk accept for clean reuse sits against SA1B-D77 (held).	R2
+SA-1B-35	product	C7.1	-	full	T	Fill is a deterministic append-only writer from case facts with read-back equal; AI only proposes maps and never writes a value at fill time.	R2
+SA-1B-50	product	C11.3,C11.17,C1.2,C11.9	-	part	M2	Structure page adds and renames levels with duplicate checks and retire, restore and reorder; the Express Entry-aligned label on provincial streams is not stated (we use five levels).	R2
+SA-1B-51	held	-	-	-	M3	P-251 holds 'family on different programmes and location per person (SA1B-D72, SA1B-D66)'; allowed locations per combination appear in studio code but in no capability.	R2
+SA-1B-104	product	-	B24	-	M3	No accepted status document filling a key date with officer confirmation; reading documents (C6.5) proposes facts but does not feed key dates.	R3
+SA-1B-210	product	-	-	-	M2	No named line sets that many combinations include, with list of affected combinations before approval and detach; only copying a line between combinations exists.	R3
+SA-1B-211	product	C1.6,C1.7	-	part	M2	Filing method and portal are set per combination; missing the authority (IRCC, ESDC) on every combination and the refusal when portal or authority is absent.	R3
+SA-1B-212	product	-	B10	-	M3	No way to open a case at a later stage and record earlier stages as done before we started with their key details.	R3
+SA-1B-213	held	C6.3	SH3	part	M3	Agent view shows each fact once per person; the case relationship record and whose-fact lookup is design-only under P-251: PartyRelationship whose fact, concept first.	R3
+SA-1B-214	product	-	-	-	M3	No document needed once with several default providers, one approval and already on file reuse; no backlog item schedules it.	R3
+SA-1B-215	product	C6.3,C6.4,C11.12	SH3	part	M3	Facts and checklist per person exist but spread across four files; missing one resolver per subject per filing with reasons and waiting-for; organisation subject is design-only.	R3
+SA-1B-216	product	C6.4	-	part	M3	A per-person dynamic checklist exists; missing the four layers each labelled, officer-added items on one filing, client extras, and no longer required with uploads kept.	R3
+SA-1B-217	product	-	SH3	-	M3	No stored resolved items with stable identity that keep approvals and not-applicable across re-runs; only stale marks on changed facts exist.	R3
+SA-1B-218	product	C7.6	L-SA3,SH3	part	M3	Missing or conflicting facts raise a CRITICAL warning; missing the visible Can't check state for every unevaluable condition, count per filing and rule that unknown is never a pass.	R3
+SA-1B-219	product	-	-	-	M3	No pack list of cross-person inputs (principal's occupation level) and no Advisory when a filing others depend on is withdrawn.	R3
+SA-1B-220	product	C6.3,C9.2	SH3,B9	part	M3	An edited fact updates draft outputs and marks items stale; missing the rule that only the changed filing recomputes, age checks at fixed moments and coalescing.	R3
+SA-1B-221	product	-	-	-	M3	No review items per programme added to the reviewer checklist, ticked before filing; no backlog item schedules it.	R3
+SA-1B-230	held	-	L-SA5	-	M4	P-251 holds the corporate area; P-239: The POC builds no Corporate configuration. LMIA combination steps and clocks not built.	R3
+SA-1B-231	not a requirement	-	-	-	-	Withdrawn by SA1B-D118: ExpatReady puts no automatic to-do list on cases.	R3
+SA-1B-232	not a requirement	-	-	-	-	Withdrawn with SA-1B-231 (SA1B-D118); no starter set exists to update.	R3
+SA-1B-233	product	-	B39,B24	-	M3	No key-date types (permit expiry, LMIA validity end) with reminder class and watch-after-close; P-151 (3) puts key dates in the library as data.	R3
+SA-1B-234	not a requirement	-	-	-	-	Pointer card only; owned by Chapter 3 (SA-1B-156) with passport expiry as a document key date.	R3
+SA-1B-235	held	C11.5	L-SA4,L-SA5	part	M3	Held: organisation subject for employer facts is design-only (P-251) and corporate area held; only the case link prefilling employer facts exists, not the offer step or fields.	R3
+SA-1B-45	product	-	B11	-	M4	No library of government steps with staff and client names, phase, never hidden; B11 is proposed for M4, no decision cited.	R3
+SA-1B-46	product	-	B26	-	M3	No platform-standard delivery steps with a client label per language; only a backlog item schedules it.	R3
+SA-1B-47	product	C6.11	B18	part	M3	A Sample firm shows representative licence body and number; missing the pack regulator setup of types, licensing bodies and licence-number formats checked against pass and fail samples.	R3
+SA-1B-52	product	C6.12	R2,B19,B40	part	M3	Fee lines with a basis per application, role or position are derived on a case; missing is the authored fee list on the combination, dated fee table, estimate counts and per-person display.	R3
+SA-1B-53	product	C1.3,C11.5	-	part	M3	Case-level link to an employer case is planned (P-106); missing: pack entries naming linked combinations listed first in an Open linked case picker, which P-106 keeps out of configuration.	R3
+SA-1B-55	product	C1.2,C1.4,C1.5	-	full	M2	Each combination holds its own list of lines with nothing inherited; shared groups of lines are a separate card (SA-1B-210).	R3
+SA-1B-57	product	C1.5,C1.8,C4.10,C3.11	B11	part	M2	Section, document and form lines exist with copies, age and signer; missing government step and review item kinds, for-whom providers, order, and generated reason on every resolved item.	R3
+SA-1B-61	product	C1.5,C4.3,C4.6,C1.1	-	part	M2	Copy a line, add or remove across many combinations, and preview a made-up family exist; missing the all-combinations by location view highlighting empty cells.	R3
+SA-1B-64	product	C6.12,C6.1	L-SA13,SH4	part	M3	Filings are derived per case with own fee and application number; missing a Filing record with own pin, decision and case owner transfer; pin per filing is design-only.	R3
+SA-1B-66	product	C1.2	B10	part	M3	P-24 makes Express Entry stages sub-categories in order; missing allowed next stages, repeat, key details, editable after submit and the event that offers the next stage.	R3
+SA-1B-67	product	-	B10	-	M3	No Start next stage button that opens the next filing with the same people, deadline and Needs-you entry; multi-stage runtime is only a backlog item.	R3
+SA-1B-68	product	-	B10	-	M3	No route position chips, decision per filing with history, refusal re-routing, extra decision outcomes or after-decision part on a filing.	R3
+SA-1B-69	not a requirement	-	-	-	-	Pointer card only; says steps live in Chapter 7 (SA-1B-45, SA-1B-96, SA-1B-97) and repeats no rule.	R3
+SA-1B-72	product	C11.12	SH3	part	M2	Person roles per combination with maximum counts exist; missing the pack list of relationship kinds with inverses and order, and dependsOnRole.	R3
+SA-1B-73	held	C11.12	B7	part	M3	P-251 holds: family on different programmes and location per person (SA1B-D72, D66). Roles and filing modes exist; per-person combination choice and fitsRoles picker do not.	R3
+SA-1B-75	product	C6.2,C6.10,C3.16	L-SA4,B8	part	M3	Each fact asked once and minor answers by the principal exist; missing household and filing scopes (L-SA4, design-only), live Same as address, age checks at fixed moments and turned-18 notice.	R3
+SA-1B-90	product	C5.1,C6.1	G5,S4	part	M2	Release needs a document and a form line, and a case opens only on a startable combination; missing the per-location check, current-edition check and role-section check.	R3
+SA-1B-96	product	-	B11	-	M4	No deadline rule (anchor, direction, length, unit) that pre-fills a due date the officer confirms; B11 proposes M4, no decision cited.	R3
+SA-1B-97	held	-	L-SA5,B12	-	M4	P-251 holds the corporate area; P-239: The POC builds no Corporate configuration. Employer-combination standard steps with done by are not built.	R3
+SA-1-42	product	-	B20	-	M2	Pack texts per language edited side by side are not built; the studio keeps no per-language labels. B20 is unscheduled. Translator tooling is Release 2 per the card itself.	R4
+SA-1B-100	held	-	-	-	M2	"Release disclaimer in the pack conflicts with this rule; P-251: ""the release disclaimer (P-229 (2) Q1 against SA-1B-100, SA1B-D29)"" held, no backlog item. No capability states the limit."	R4
+SA-1B-250	product	C6.1	L-SA13,SH4,B9	part	M3	Each case is pinned to the release it opened on. A pin per filing, with Start next stage and side-by-side rules, is design-only (P-246 (2), P-251).	R4
+SA-1B-251	product	-	R2,S3,B17	-	M3	No capability reads values by date. Fees as a dated table (R2), the target filing date (S3) and look-up by date (B17) are scheduled; fee date, validity and edition rules are not built.	R4
+SA-1B-252	product	-	B17,R2	-	M3	No resolver finds the value in force on a date with in-force-from dates and overlap checks. Reference tables with look-up by date (B17) and dated fees (R2) are unscheduled or ready.	R4
+SA-1B-253	held	-	L-SA3,B9	-	M3	"Rule-change warning is part of L-SA3 (P-237: ""A rule change warns and never blocks""), held by P-251. The one-click move to a newer version (B9) is also unbuilt."	R4
+SA-1B-254	product	-	B9,SH4	-	M3	What changes for this case before moving a case to a newer release is not built; B9 (adopt a published update, P-65) and the pin contract SH4 schedule it.	R4
+SA-1B-255	held	-	-	-	M3	"P-251: corrections reaching open filings ""(SA1B-D100)"" held with no backlog item until the product owner rules. No capability re-fills drafts or flags approved forms."	R4
+SA-1B-256	product	C7.2	S2,B28	part	M3	Trial status per edition is scheduled (S2, fill-trial gate). Box notices and the accuracy record are not built; hold against notices is held with no backlog item (P-73 vs SA1B-D75, P-251).	R4
+SA-1B-257	product	-	B9	-	M3	No warning or one-click move for a case on a withdrawn release. Not covered by L-SA3 as written; B9 adoption is the nearest row.	R4
+SA-1B-258	product	-	B23,B9	-	M3	"Firm hide records and ""Request a document"" surviving a move to a newer version are not built; firm overlay B23 and adoption B9 are unscheduled."	R4
+SA-1B-259	held	C8.2	L-SA3	part	M3	Filing record holds application number and UCI. Recording the submission with version, dates and values waits for Ready to file (L-SA3, held by P-251).	R4
+SA-1B-260	product	C6.3,C6.6,C3.16	L-SA4	part	M3	Facts per person show source, status, history and refuse a stale save. Spouse, household, filing and organisation subjects and source kind are missing (L-SA4 waits; design-only, P-251).	R4
+SA-1B-261	held	C6.6,C7.1	L-SA6,L-SA8,L-SA10	part	M3	Capability text says a typed answer fills at once; built behaviour still leaves unconfirmed officer answers blank. Rework L-SA6, must-verify L-SA8 and officer entry L-SA10 are held (P-251).	R4
+SA-1B-262	product	C4.5,C6.5	L3	part	M3	An upload is a checklist line and a document's facts leave the questionnaire. Hiding questions only when AI reads the document needs the reader C6.5 (P-256, M3).	R4
+SA-1B-263	held	C6.5,C6.6	L-SA7,L-SA9,L-SA8	full	M3	"Capabilities state one review per document with ""Confirm & use""; not built. L-SA7, L-SA9 and the must-verify clearing L-SA8 are held by P-251."	R4
+SA-1B-264	held	C6.6,C6.3	L-SA6	full	M3	Capability text says conflicts are never resolved silently; the side-by-side pick is part of L-SA6, held by P-251. Built evidence covers only a stale client save.	R4
+SA-1B-265	not a requirement	-	-	-	-	Pointer card; single home is SA-1B-176 (chapter 4). The application fix itself is held (SA1B-D93, P-251).	R4
+SA-1B-266	product	-	B13	-	M4	"Reuse of a returning client's earlier facts with ""Still true?"" is not built. Backlog B13 places it in M4; no decision cited."	R4
+SA-1B-267	product	-	-	-	team	Reading a firm's past filed forms on import is not built and has no backlog item; the card places the import screens with the team's AG-18.	R4
+SA-1B-268	product	C6.5	-	part	M3	Reader design names Canada for printed text and zero-retention vision (P-133), Sample documents only. No region log and no reader are built; storage in Canada is hosting, not configured here.	R4
+SA-1B-269	product	C3.16,C6.10	B8,L-SA4	part	M3	Field scope (L-SA4) and live-link marks are not built. Adult privacy and the code-verified link are B8; confirmation by who answered exists (C6.10).	R4
+SA-1B-270	product	-	B23	-	team	"The fixed list of firm changes (hide, rename, request a document) is not built. B23 sits under ""items the team also owns today""; STAND-INS SI-11 keeps firm adoption with the team."	R4
+SA-1B-271	product	-	B23	-	team	Hiding a standard item without a deadline from a firm's new filings is not built; firm overlay B23 is unscheduled.	R4
+SA-1B-272	product	-	B23,B26	-	team	Firm renaming of client names and step labels is not built; B23 and delivery-step labels B26 are unscheduled.	R4
+SA-1B-273	product	-	B23	-	team	"The ""ExpatReady updated an item you hid"" note is not built; it depends on the hide list (B23)."	R4
+SA-1B-274	product	C6.1	-	part	team	"Released versions are frozen and open cases keep their release (C6.1). The shared cache for every firm is not built; STANDARDS §9: ""Scale work ... caching is the team's""."	R4
+SA-1B-275	product	C6.1	-	part	M3	A publish leaves open cases untouched because each is pinned (C6.1). Triggers that recalculate only one filing on open or fact change are not built.	R4
+SA-1B-276	product	-	-	-	team	Background jobs with a fair share per firm are not built; no capability or backlog item. P-271 leaves multi-tenancy and tenant isolation with the team.	R4
+SA-1B-277	product	-	-	-	team	Firm-scoped, keyset-paged, indexed lists are not built; STANDARDS §9 gives scale work to the team and the studio is single-workspace. No row.	R4
+SA-1B-278	product	-	S6	-	team	Load-test release gate with 300 ms read and 600 ms write budgets is not built; S6 only aligns scale numbers (1,023 ms cached is over budget).	R4
+SA-1B-280	held	C3.16,C11.5	L-SA4,L-SA5	part	M4	"Corporate area held (P-251); P-239: ""The POC builds no Corporate configuration"". Scope fields come in L-SA4; one Sample employer combination in M4 (L-SA5). No several-position file."	R4
+SA-1B-281	held	C11.5	L-SA5	part	M4	Corporate area held (P-251, P-239). Case link pre-fills employer facts (C11.5, partial); offer number, fee exemption and proof lines are not built.	R4
+SA-1B-282	held	C1.8,C6.11	L-SA5	part	M4	Corporate area held (P-251). Form lines say who signs (C1.8) and a representative of record exists (C6.11); employer roles, signatory warning and portal seats are not built.	R4
+SA-1B-283	held	C1.3,C11.5	L-SA5	part	M4	"Corporate area held (P-251). Pre-fill of employer facts from an employer case is partial (C1.3, C11.5); marked ""Linked file"" copying of documents and facts is not built."	R4
+SA-1B-284	held	-	L-SA5	-	M4	Corporate area held (P-251). L-SA5 adds a shareable mark on the Sample employer combination (P-239); no capability covers marks or the privacy barrier.	R4
+SA-1B-285	held	-	-	-	team	Corporate area held (P-251); P-239 puts the employer workspace in the team's Release 1. No capability or backlog item for the employer quick check pre-fill.	R4
+SA-1B-286	held	-	-	-	team	Corporate area held (P-251); P-239: LMIA employer file and clocks are the team's Release 1. Advertising and validity clocks have no capability here.	R4
+SA-1B-287	held	C6.12	R2	part	team	"Corporate area held (P-251). Fee lines carry a ""per position"" basis (C6.12, R2); the count of positions less exempt and retainer pre-fill are not built."	R4
+SA-1B-288	held	C7.3	-	part	team	Corporate area held (P-251). The portal sheet lists answers in portal order with copy buttons (C7.3); the LMIA filing summary as a preparation view is not built.	R4
+SA-1B-289	held	-	-	-	team	"Corporate area held (P-251); P-239: ""The POC builds no Corporate configuration"". Slots and the publish check on unfilled slots are not built."	R4
+SA-1B-34	product	C6.5	L3,L-SA7	full	M3	"Document reading into proposals with confidence is C6.5, M3, not built. ""Confirm & use"" (L-SA7) and the identity collapse (L-SA9) inside it are held."	R4
+BR-1	product	C3.1,C3.5,C3.13,C4.10	L-SA4	part	M2	"One shared field per fact is built (aliases, merge, where used, one source per combination); scope, ""still true?"" rule and privacy mark on the field are missing."	R5
+BR-10	product	C11.14,C3.1,C3.2,C11.13	-	part	M2	Setup AI proposes, an independent checker and the rules check, and a person confirms; the firm's Reader on client documents (C6.5) is not built.	R5
+BR-11	product	C11.13,C11.8,C3.6	L-SA7	part	M2	Setup AI is off by default and everything works typed by hand; the Reader-off paths on a case (officer types beside the scan, one Confirm and use) are not built.	R5
+BR-12	product	C5.4,C5.5,C5.7,C5.1,C5.3	-	part	M2	"Every number needs a source, a passing signed answer-key test is needed, and a second person approves; bulk accept for clean reuse (C3.2) differs from ""no approve all"" and is held (P-121 vs SA1B-D77)."	R5
+BR-13	product	C11.13,C3.13	-	part	M2	Items are versioned with made-by and the library shows origin (AI or person); that a hand edit clears Checked marks and reports count AI against person items is not stated.	R5
+BR-14	held	-	B9	-	M3	"P-251 holds ""corrections reaching open filings (SA1B-D100)""; correction against rule change, the live overlay and ""Corrected: update this form"" are not built; B9 covers the rule-change move."	R5
+BR-15	held	C6.12	R2,B9,L-SA13	part	M3	"Fees are a dated table (R2) but target filing date and one time rule per case are not built; P-251 designs only ""pin per filing (P-246 (2), L-SA13)""."	R5
+BR-16	product	C6.1,C6.12	B9,L-SA13	part	M3	A case is pinned to the release it opened on; moving the pin forward with one reason, everyone together, is B9; the per-filing pin is design-only (L-SA13).	R5
+BR-17	product	C6.1,C6.12,C9.2	SH3,B9	part	M3	Open cases stay on their release so a publish recalculates nothing, and a changed fact marks items stale; resolving each filing on its own triggers is the resolver contract (SH3).	R5
+BR-18	product	-	SH3	-	M3	"No capability keeps resolved checklist items as instances with ""no longer required"", kept uploads and surviving approvals through a version move."	R5
+BR-19	not a requirement	-	-	-	-	Ownership split between epics, one pointer line per screen; P-166 settles what is ours chunk by chunk.	R5
+BR-2	held	C3.16	L-SA4	part	M3	"Scope per field is written but not built; P-251 holds household and filing scopes (""household and filing scopes (L-SA4 waits)"") and the organisation subject."	R5
+BR-20	product	C4.4,C6.9,C3.10	-	part	M2	"Questions and gates are data in one renderer and wording is not coded; the immigration-token gate in code and ""no message wording in the pack"" have no capability."	R5
+BR-21	product	C4.3	UX-E	part	M2	"Client wording is drafted from the official form text and reviewed (C4.3), but no capability checks that client text names no regulator or ""required by law""."	R5
+BR-22	product	C6.4	B24,B4	part	M3	Document checks warn at checklist level; key dates, status expiry reminders at 30/15/7/2 days and one-date-one-reminder are not built (B24, reminder engine stays the team's).	R5
+BR-23	product	-	B11,B12,B26	-	M4	Government steps with calendar-day deadlines, protected from hiding, and employer standard steps have no capability; B11 schedules them as M4.	R5
+BR-24	product	-	B23	-	M3	"No capability lets a firm hide items, rename steps or mark ""not applicable"" with a reason; the firm overlay is B23."	R5
+BR-25	product	-	B22,B24	-	M3	A constraint (warnings in the filing, no email or badge) rather than a feature; no capability states it; the weekly content-team email is B22.	R5
+BR-26	product	C6.10,C6.2	B8,B13	part	M3	"Principal answers for an adult wait for confirmation; ""Keep private from the principal"", Send to, minors and reuse only within a firm are B8 and B13."	R5
+BR-27	held	-	-	-	M3	"P-251 holds ""the application fix (SA1B-D93)""; no capability records a fix on the filing with ""Also update the client's record""."	R5
+BR-28	product	C6.3	B13	part	M4	"Facts are shown once per person with source and status, but carrying earlier-case facts with ""Still true?"" is B13 (M4); the unanswered warning is not built."	R5
+BR-29	out of scope	C6.9	B16,B29	part	team	"P-271: ""The prospect runtime is the team's: we don't build C6.7 or C6.8"". We build only the staff case check; sales assessment, Send questionnaire and locking are not built."	R5
+BR-3	product	C3.5,C3.7,C3.16	L-SA4	part	M2	Keys are generated and retired items stay in history; list entries get stable ids when C3.16 is built; code-system crosswalks (NOC 2021 to 2026) are not covered.	R5
+BR-30	product	C6.5,C11.8	-	part	M3	Canadian-region readers are fixed in C6.5 (not built) and live AI is off by default; per-request region logging and the firm AI switch are not covered.	R5
+BR-31	product	C7.1,C7.2,C7.3,C7.7	B6,X10	part	M3	"Fill, answer sheet and the Adobe Validate round trip exist for the mapped forms; the viewer only after an edition's trial, and ""Approve filing"" as a batch with one record per form, are not built."	R5
+BR-32	later	C7.4	-	part	M4	"P-245: ""one extension, built by the POC in M4"". C7.4 states the guardrails (never Next or Submit, never declarations, structure match); read-back, no stored data and no LMIA extension are not stated."	R5
+BR-33	product	C5.5,C5.7,C9.1	B28	part	M2	Prevent is built (signed answer-key test per map); detect, box notices and re-fill of draft forms are not; reporting a mapping problem is B28; D100 corrections are held.	R5
+BR-34	held	C1.3,C11.5	L-SA4,L-SA5	part	M4	"P-251 holds ""the corporate area"" and P-239 says the POC builds no Corporate configuration; only a case-level employer link that pre-fills employer facts exists on paper."	R5
+BR-35	product	C5.7,C4.3,C10.1	-	full	M2	Answer-key tests, preview and the demo use made-up families only (Sample); preview creates no case.	R5
+BR-36	product	C5.3,C3.3,C11.14	-	part	M2	"To review lists every waiting item and a failed AI run keeps good entries visible; ""Could not read"" sources and the ""3 of 3 AI items checked"" count are not stated."	R5
+BR-37	not a requirement	-	-	-	-	A scope statement listing ten Release 2 items of the team; each is judged on its own card.	R5
+BR-38	product	-	B24,B11	-	M3	A constraint on pushed messages; no capability builds reminders at all, so nothing is pushed; the few pushed reminders belong to B11 and B24.	R5
+BR-39	product	C6.6,C6.5,C6.3	L-SA7,L-SA8	part	M3	Source and status per fact and Confirm and use are written; must-verify before filing (L-SA8) and staff entries counting as verified (SA1B-D89, D107) are held by P-251.	R5
+BR-4	product	C7.6,C6.6,C6.4	L-SA3	part	M3	Only a barcode form's Validate blocks and other problems become CRITICAL warnings passed with a reason, but that is not built; ready-to-file warnings are held by P-251 (L-SA3).	R5
+BR-40	product	C5.4,C5.5,C5.1,C5.6,C5.2	G-CORE,G1-F	part	M2	Missing source and missing answer-key test refuse release; other publish errors (AI item not Checked, Unconfirmed number, box entry Proposed) are not shown in any capability.	R5
+BR-41	product	-	-	-	M3	No capability holds the copy-on-emails field groups or their section on the questionnaire; nothing schedules them.	R5
+BR-42	product	C6.12	R2,B19	part	M3	"Fee lines carry a basis (per application, per person by role, per position) and a total; our P-247 family maximum differs from ""pack holds no family-cap rule""; retainer estimates are not built."	R5
+BR-43	product	-	-	-	M3	C6.1 opens a case for a combination but nothing pre-selects the programme from a signed retainer, consultation or assessment.	R5
+BR-44	held	-	L-SA4,L-SA5	-	M4	"P-251 holds ""the corporate area""; P-239: ""The POC builds no Corporate configuration""; the employer's offer part inside the worker filing is not built."	R5
+BR-5	product	C7.1,C6.3,C6.9	-	part	T	"Filling uses only confirmed facts and gates show ""not answered"", but no capability states that a blank stays blank or that a check says ""Can't check: input missing""."	R5
+BR-6	product	C1.8,C4.9,C7.1,C7.3,C7.4	-	part	M3	Declarations stay with the client and signatures stay intact, and the extension never fills them; the signedBy and signature method values per line and the representative's own-box signing are not stated.	R5
+BR-7	product	C6.6,C6.5	L-SA6,L-SA7	part	T	Conflicts are never resolved silently; the side-by-side image comparison, recorded pick and out-of-date save case are not built; L-SA6 and L-SA7 are held by P-251.	R5
+BR-8	product	C6.9,C7.6,C6.4	L-SA3	part	M3	"Gates show not answered and missing facts warn, but ""Can't check"" as a third result with the missing input named, and the ""N things can't be checked"" count, are not built."	R5
+BR-9	product	C6.6,C6.5,C6.10,C4.10	L-SA6,L-SA7,L-SA8	part	M3	Three sources are tracked (Declared, document proposal, officer) but Confirm and use per document and the earlier-case carry are not built; L-SA6, L-SA7 and L-SA8 are held by P-251.	R5
+SA-01B J1	product	C6.1,C6.2,C6.4,C6.5,C6.6,C6.10,C6.12,C7.1,C7.3,C7.6,C7.7,C11.12	B8,B6,L-SA7,L-SA9,L-SA10	part	M3	"Case, three filings, client link, checklist, fill and sheet exist; missing: programme pre-selection, Send to adult, offer number step, passport review, officer fix, Approve filing batch, target date, ""no longer required""."	R5
+SA-01B J2	product	C6.12,C7.3,C7.4,C9.1,C9.2	B10,B9,B11,B16,R2	part	M4	Portal sheet and fees exist; missing: stages and Start next stage, extension fill (M4), Calculate score, government step deadline, Use newer rules, review item, frozen submission record.	R5
+SA-01B J3	product	C6.1,C6.12,C11.12,C7.1,C7.3,C6.2	B8,B3,B7	part	M3	Sponsor and spouse roles, two filings in one group and filling exist; missing: whose-fact boxes by relationship, document sets with alternatives, Send to the spouse, signing rule per line.	R5
+SA-01B J4	held	C11.5	L-SA4,L-SA5	part	M4	"P-251 holds ""the corporate area""; the LMIA check, advertising period, per-position fee, validity reminder, Create work permit case and linked copies are not built (P-239)."	R5
+SA-01B J5	product	C6.1,C6.3,C6.6,C6.5	B13,L-SA7,L-SA8	part	M4	"Pin to a new release works; missing: carrying facts and verified state, ""Still true?"", new passport entry, different-firm separation, PQR answers not carried, retired answer values, must-verify warning."	R5
+SA-01B J6	product	C5.4,C5.5,C5.3,C9.1,C9.2	B9,B22,B28	part	M3	Number sources and signed tests gate release; missing: change watch, rule change against correction, Use newer rules, correction reaching open filings (held, D100), withdraw and rollback with counts.	R5
+SA-01B J7	product	C5.5,C5.7,C9.1	B28	part	M4	Answer-key test blocks a bad map version; missing: hand-fix counts, signals list, box notices, draft re-fill, CRITICAL update notice, submitted-forms list (D100 corrections held); B28 covers reporting.	R5
+SA-01B J8	product	C6.5,C6.6,C11.8,C11.13	L-SA7	part	M3	Setup works with AI off; on a case the Reader (C6.5) is not built, so the officer-types-beside-scan review, expiry entry, reminders and AI switch steps are missing.	R5
+SA-1-1	out of scope	-	-	-	-	P-70: SA-01 slices stay outside. No capability creates a country with code, timezone and currency.	R5
+SA-1-2	out of scope	-	-	-	-	P-70: SA-01 slices stay outside. No capability holds a country code.	R5
+SA-1-3	out of scope	-	-	-	-	P-70: SA-01 slices stay outside. No country status Draft, Active or Suspended exists.	R5
+SA-1-4	out of scope	-	-	-	-	P-70: SA-01 slices stay outside. No country activation check exists.	R5
+SA-1-44	out of scope	-	-	-	-	P-70: SA-01 slices stay outside; also P-34 leaves translations unbuilt. No required-language check at publish.	R5
+SA-1-45	out of scope	C5.1,C5.3	-	part	M2	P-70: SA-01 slices stay outside. Same behaviour delivered anyway: submit, expert ticks, different person approves and releases; In review/Approved states and test-only/production labels are not shown.	R5
+SA-1-46	out of scope	-	-	-	-	P-70: SA-01 slices stay outside. No per-area version or effective date bundled into a pack version.	R5
+SA-1-47	out of scope	C5.1,C5.4,C5.5,C3.8	-	part	M2	"P-70: SA-01 slices stay outside. Same behaviour delivered anyway: release refused on validator, source and answer-key errors; ""published versions never change"" is not stated."	R5
+SA-1-48	out of scope	-	-	-	-	P-70: SA-01 slices stay outside. No scheduled publish in Eastern time.	R5
+SA-1-49	out of scope	-	-	-	-	P-70: SA-01 slices stay outside. No capability rolls back to an earlier published version.	R5
+SA-1-5	out of scope	-	-	-	-	P-70: SA-01 slices stay outside. No country suspension exists.	R5
+SA-1-50	out of scope	-	-	-	-	P-70: SA-01 slices stay outside. No capability states an audit of draft, approval, publish and rollback steps.	R5
+SA-1-51	out of scope	C3.8,C5.4,C5.1,C4.10	-	part	M2	P-70: SA-01 slices stay outside. Same behaviour delivered anyway: field-map validator, source check, release refusals; no single pass/warning/error report with language and regulator checks.	R5
+SA-1-52	out of scope	C4.3,C4.6,C5.7	-	part	M2	P-70: SA-01 slices stay outside. Same behaviour delivered anyway: preview by person with a sample family and answer-key runs on made-up families; not for a published version.	R5
+SA-1-53	out of scope	C9.1	-	part	M2	P-70: SA-01 slices stay outside. Same behaviour delivered anyway for new form editions only (field-by-field comparison); no comparison of two pack versions per area.	R5
+SA-1-54	out of scope	-	-	-	-	P-70: SA-01 slices stay outside. No clone-a-country.	R5
+SA-1-55	out of scope	-	-	-	-	P-70: SA-01 slices stay outside. No export of a pack version.	R5
+SA-1-56	out of scope	-	-	-	-	P-70: SA-01 slices stay outside. No all-or-nothing import with preview.	R5
+SA-1-57	out of scope	C6.1	-	part	T	P-70: SA-01 slices stay outside. Same behaviour delivered anyway: a case opens only on a released combination; per-country firm read is not built.	R5
+SA-1-58	out of scope	C6.1,C6.12	B9	part	T	P-70: SA-01 slices stay outside. Same behaviour delivered anyway: a case is pinned to its release; adopting a newer one with a reason is B9.	R5
+SA-1-59	out of scope	-	-	-	-	P-70: SA-01 slices stay outside. No published-content cache rule.	R5
+SA-1-6	out of scope	-	-	-	-	P-70: SA-01 slices stay outside. No country list or settings page exists.	R5
+SA-1-61	out of scope	C5.1,C5.3,C2.3	-	part	M2	P-70: SA-01 slices stay outside. Same behaviour delivered anyway: the maker cannot approve their own item; no rule against the submitter or an approver who edits.	R5
+SA-1-62	out of scope	-	-	-	-	P-70: SA-01 slices stay outside. No count of clients per firm pinned to a version.	R5
+SA-1-63	out of scope	C5.1	-	part	M2	P-70: SA-01 slices stay outside. Same behaviour delivered anyway in part: release refused without a document and a form line; no versioned completeness profile per country.	R5
+SA-1-66	out of scope	-	B23	-	-	P-70: SA-01 slices stay outside (BACKLOG-requirements lists SA-1-66). Firm overlay of requests, hides and name overrides has no capability; B23 schedules the same behaviour via SA-1B-95.	R5
+SA-1-67	out of scope	-	B23	-	-	P-70: SA-01 slices stay outside (BACKLOG-requirements lists SA-1-67). Hiding by Owner and Admin has no capability; B23 schedules the same behaviour via SA-1B-95.	R5
+SA-1-68	out of scope	-	-	-	-	P-70: SA-01 slices stay outside. No government domain list.	R5
+SA-1-69	out of scope	-	B11	-	-	P-70: SA-01 slices stay outside. No letter library; B11 schedules letters as steps with deadlines.	R5
+SA-1-7	out of scope	-	-	-	-	P-70: SA-01 slices stay outside. No country audit exists.	R5
+SA-1-70	out of scope	-	B11	-	-	P-70: SA-01 slices stay outside. No deadline rule from a letter; B11 schedules the officer-confirmed due date.	R5
+SA-1-71	out of scope	-	-	-	-	P-70: SA-01 slices stay outside. No three-field unknown-letter report.	R5
+SA-1-72	out of scope	-	-	-	-	P-70: SA-01 slices stay outside. No New letter patterns list.	R5
+SA-1-73	out of scope	-	-	-	-	P-70: SA-01 slices stay outside. No holiday reference list.	R5
+SA-1-74	out of scope	C3.14,C3.4	-	part	M2	P-70: SA-01 slices stay outside. Same behaviour delivered anyway in part: a read-only Checks list and AI-drafted checks; no per-country deficiency library with optional programme.	R5
+SA-1-75	out of scope	C3.1,C7.1,C7.3	X10	part	M2	P-70: SA-01 slices stay outside. Same behaviour delivered anyway: field maps, filler and answer sheet for the five combinations' forms; a launch list for every viewer-covered form is not stated.	R5
+P-01	process	-	-	-	-	Build locally, concept first, menu and words follow product pages: way of working only.	R6
+P-101	process	-	-	-	-	Wave 1 order of work by actor: planning.	R6
+P-102	product	C11.1	L5	full	M2	No extension, capture, pairing or online-fill anywhere in the app; PDFs only; extension returns later as M4 (P-245).	R6
+P-103	product	C11.2,C2.12	-	full	M2	Library is the one door: AI proposes forms, downloads only from canada.ca, a person approves, duplicates refused by number, edition and checksum.	R6
+P-104	product	C11.3,C11.17	-	full	M2	"Five levels with Pathway type tabs, full trail on every list, one Structure page with duplicate and ""did you mean"" checks."	R6
+P-106	product	C11.5,C1.3	M3-A	part	M3	"Retail and Corporate are set up apart and ""Linked to"" is gone; the case-level ""relies on employer case"" pre-fill (C1.3) is not built."	R6
+P-108	product	C11.7,C10.1	-	part	M2	Reset empties configuration and Load sample adds the structure and PDFs with replayed AI proposals; both capabilities are Partial (Provincial nominee map, demo steps 9-12 wait for a release).	R6
+P-109	product	C11.7	-	part	M2	Ontario PNP from the paper twins with the nomination certificate document: part B of C11.7 is still red.	R6
+P-110	product	C11.8,C2.12	-	part	M2	Live steps, progress bar, plain errors, Stop and cost logged are built; C11.8 is Partial (live proof of every AI step not complete).	R6
+P-111	process	-	-	-	-	Wave 1 lanes and pauses: staffing, replaced by P-188.	R6
+P-112	product	C11.3,C11.7	-	full	M2	The sample structure uses the six wave 1 names, Express Entry stream and Spouse or common-law partner with no sub-category.	R6
+P-113	product	C11.6,C7.3	M3-B,M3-E	part	M3	Channel per form within what IRCC accepts is built for Visitor visa; the checked answer sheet in portal order for PR portal-only forms is partial (C7.3).	R6
+P-115	product	C11.10,C1.1	-	full	M2	Immigration programs shows Pathway sections of setup cards with setup bar, Cards or List switch and all combinations by default.	R6
+P-116	product	C11.9	-	full	M2	Remove, retire, restore and reorder on every master by one lifecycle pattern with where-used first and Undo; no move.	R6
+P-117	process	-	-	-	-	One screen at a time with founder OK: way of working.	R6
+P-118	product	C11.11,C3.12,C11.3	-	full	M2	"Forms enter only through Shared library Forms; combinations pick from the library; guides stored as ""Read by AI""; Overview only reports."	R6
+P-119	product	C11.12	-	full	M2	Who can be in this application is a rule: roles and maximum enforced by the runtime, applicants get their own forms, questions and documents.	R6
+P-120	product	C11.13,C3.6,C11.14	-	full	M2	AI drafts masters when a form enters, one Add dialog in plain words, exact duplicates refused, near ones need a reason.	R6
+P-121	product	C11.14,C3.2	G-CORE	part	M2	Draft and checker rounds, High-only bulk accept with one Undo built; C11.14 Partial: field-map Ready items on To review (AT-4) wait for G-CORE B5.	R6
+P-122	product	C7.7,C11.6	M3-B,M3-E	part	M3	"Deliverables list with per-form channel and a ""PDF copy, not for filing"" line built for Visitor visa; both rows Partial."	R6
+P-123	product	C11.15,C3.12,C11.18,C11.12	-	full	M2	"Start setup runs the form finder, Upload PDF read by rules, Redo, Replace, Remove, Undo on every form; ""What IRCC accepts"" editable with second person."	R6
+P-124	process	-	-	-	-	Forms lane builds in parallel with screens: staffing.	R6
+P-125	product	C11.16	-	full	M2	Names enter only on Program structure; each combination is a card; Start setup opens it with place read-only; finder runs only on a click.	R6
+P-126	process	-	-	-	-	Build ahead while an early look waits: way of working.	R6
+P-128	product	C11.17	-	full	M2	Numbered Tree and List views, one Add pop-up, one lifecycle action written on every combination, filter bar on both pages.	R6
+P-129	later	C6.7,C6.8	L4	-	team	"P-129 ""client and prospect later""; P-271 moves the prospect and client runtime to the team; staff side stays M3."	R6
+P-130	product	C4.5,C4.10,C4.11	-	part	M2	Document-first source per fact, Pre-qualification tick, documents not asked in the SQR built; the seven-step draft run C4.11 is Partial (step 5 saves no conditions).	R6
+P-131	product	C4.11	-	part	M2	Live trial of all seven Draft questions and documents steps with saved results after; C4.11 Partial (14 of 23 checks on Visitor visa).	R6
+P-132	product	C4.2	-	full	M2	PQR stays per combination; the country PQR is a view of released combinations.	R6
+P-133	product	C6.5	L-SA7,L1	not built	M3	Document reader by kind (coded lines, Textract, AI vision on Sample documents) not built; C6.5 Not built, and its Confirm and use part is held (L-SA7, P-251).	R6
+P-134	product	C6.5,C4.5	L1	not built	M3	"Passports read by rules plus Textract and ""Fill this from my documents"" per section moved to M3 with the reader (P-256); reader not built."	R6
+P-135	product	C6.12,C11.12	M3-B	part	M3	Filing modes per role and derived filings, forms, fees and groups built for Visitor visa and widened in C11.12; other combinations and fee table are not complete (C6.12 Partial).	R6
+P-136	product	C7.6,C9.2	L-SA3	part	M3	Out-of-date and missing-signature checks exist at rules level; P-237 turns these blocks into warnings; stale marks (C9.2) not built; wiring is L-SA3, held.	R6
+P-137	product	C7.7	-	part	M3	Portal fixed by the combination and shown read-only, forms the portal does not take show Not needed; C7.7 is Partial.	R6
+P-138	product	C11.13	-	full	M2	Form masters are drafted by AI only on a click; a saved draft for that edition replays at US$0.	R6
+P-139	product	C11.8	-	part	M2	US$120 experiment cap with each new step run once live is in C11.8, which is Partial; P-179 adds Continue or Cancel at a limit.	R6
+P-140	product	C1.6	-	full	M2	Each form's channel proposed by the finder's two AI rounds with IRCC's quote and confirmed by a second person.	R6
+P-141	product	C6.9,C7.5	M3-D,M3-E	part	M3	Full eligibility page (C6.9) built; the AI form review page from the team's Checker requirements (C7.5) is not built.	R6
+P-142	product	C6.5	L-SA7,L-SA8,L1	not built	M3	"Staff-only checked-against-document marks, always-reviewed identity fields and client ""please check"" are in C6.5, Not built; must-verify and Confirm and use are held (P-251)."	R6
+P-143	product	C1.6,C8.1,C7.7	-	part	M2	Four channels with a separate signature value: C1.6 text says the contract still has three channels; per-form accepts by edition and account partly built.	R6
+P-144	product	C7.6	-	full	M3	A barcode form filed by upload or paper without a validated copy read back still blocks Ready to file.	R6
+P-145	product	C7.7	M3-E	part	M3	Download PDF copy on Online lines, never filed, is in C7.7 which is Partial.	R6
+P-146	process	-	-	-	-	Devin as outside reviewer, report only: staffing.	R6
+P-147	product	C4.10,C1.8	-	full	M2	Question lines with menu actions and reasons, bulk Accept High-only, set source and PQR tick with one Undo; document copies and validity read-only.	R6
+P-148	product	C11.7,C11.3	-	part	M2	Load sample shows only the agreed six combinations with the P-112 names; C11.7 is Partial (Provincial nominee map red).	R6
+P-149	product	C11.14,C11.13,C3.5	G-CORE	part	M2	One door for every proposal, identity rule, versioned items and example cases on rules; C11.14 is Partial and the guarded Add pattern is held (P-251, P-252).	R6
+P-150	product	C1.8,C1.6,C3.8	X7,B38,B39,B40,B41,B42,B43,B44,B45,B46	part	M2	Copies, age and signers per line, signature value and per-channel option maps exist; edition attributes, country variants, code lists and length rules are scheduled in W1-16.	R6
+P-151	product	C7.6,C6.12	R2,B39,B40	part	M3	"Past-accepted-until warning exists; ""Adopt update"", dated fee table and key-date rules are not built; P-237 turns the block into a warning."	R6
+P-152	product	C11.11,C7.3,C7.4	L5	part	M2	Online-only forms are flagged and brought in by AI or a screen copy, answer sheet follows the PDF twin; extension fill is M4 (P-245).	R6
+P-153	process	-	-	-	-	Rules in code first, prompts second, every rule traced: engineering method.	R6
+P-154	product	C6.11,C4.10	K13	part	M3	"Firm roles, representative of record and Case officer source exist; retiring the word ""agent"" on every screen has no backlog item beyond K13's questionnaire names."	R6
+P-155	product	C7.6,C6.11,C4.10,C6.5	B6,L-SA3	part	M3	"Case officer as source with reason built; representative review before recording, ""Prepared by, Reviewed by"" and checked-against-document lists are not built (now a warning, P-237)."	R6
+P-156	product	C11.11,C11.2,C2.6	-	part	M2	Library-first with a checklist page per combination read into document lines; the library filled once from IRCC's master forms list at US$0 has no backlog item text.	R6
+P-157	product	C11.10	-	full	M2	One derived setup checklist drives the card bar, one button, Next line and Overview.	R6
+P-158	product	C3.6,C11.14,C3.8,C4.10	X3,L-SA11	part	M2	"Items come from a source and completeness is checked per combination; P-252 supersedes ""no free Add"" and its guarded Add is held (P-251)."	R6
+P-159	product	-	B47	-	M2	"No capability: one ""Ask"" co-pilot panel on every page that explains and proposes via To review is only in the backlog."	R6
+P-160	product	-	B48	-	M2	No capability: named workspace snapshots, restore as a draft change, automatic before release and reset, are only in the backlog.	R6
+P-161	product	C11.10	-	full	M2	Five-step setup checklist with a Before-forms block; author confirms when both AI rounds agree, expert otherwise.	R6
+P-162	product	C3.1	-	full	M2	Field formats from the form's source enforced by fixed code checks and shown on the Fields page.	R6
+P-163	process	-	-	-	-	The Lead runs the PR process and restarts the app: GitHub workflow, amended by P-189.	R6
+P-164	product	C6.9,C7.5,C6.11	M3-D,M3-E	part	M3	Eligibility adapter, Sample firm and case team built; AI form review (C7.5) not built; P-236 amends the outcomes to three.	R6
+P-165	product	-	B49,X4	-	M2	Built, not on the capability list: Stand-in chips (web components/stand-in.tsx) checked against STAND-INS.md by tests/check_stand_ins.ts (backlog B49); no capability names it.	R6+V1
+P-166	process	-	-	-	-	Scope boundary decided chunk by chunk: scope rule.	R6
+P-167	process	-	-	-	-	Scope by ownership share: scope rule.	R6
+P-168	superseded	-	-	-	-	"P-237 ""The only hard stop is a barcode form failing its own Validate"" replaces the four hard blocks."	R6
+P-169	process	-	-	-	-	Scope boundary answered chunk by chunk: scope rule and stand-in register.	R6
+P-17	process	-	-	-	-	The founder acts as the representative (RCIC) reviewer until a formal review later: a role, not product behaviour (the other points on its shared line are now their own items).	R6+V1
+P-170	product	C5.4,C5.6	-	part	M2	"Release refused without a source entry and Sample content kept to the demo are built; a per-value ""Source: page, date"" label on screen has no capability or backlog item. Research method is process."	R6
+P-171	product	C6.12,C6.4,C7.2,C7.7,C11.6	R2,M3-B	part	M3	Sourced fees, filings, police-certificate rule and Validate-last built for Visitor visa; other combinations and IMM 5409 oath blanks are not complete.	R6
+P-172	product	C6.4,C7.6	L-SA3	part	M3	Express Entry police and medical lines required and non-waivable exist; the Ready-to-file block is a rules-level check awaiting wiring (L-SA3, held).	R6
+P-173	process	-	-	-	-	Parallel build to the M2 gate: way of working.	R6
+P-174	product	C4.10,C4.1	-	full	M2	A question is asked when a form or rule reads it; section choice sets only order of empty sections; titles struck by P-216.	R6
+P-175	product	C11.8	-	full	M2	Live AI paths refused at US$0 with plain words unless the server starts with the explicit live switch.	R6
+P-20	process	-	-	-	-	Builder challenges every concept before building: way of working.	R6
+P-22	process	-	-	-	-	Audit consolidation: one home per rule, doc length checks.	R6
+P-24	superseded	-	-	-	-	"P-112 ""Express Entry stream (no sub-category"" and P-122 ""there is no route choice"" replace Profile and PR route steps."	R6
+P-26	process	-	-	-	-	Proof-only scope rule, amended by P-70 and P-166; no product behaviour of its own.	R6
+P-27	process	-	-	-	-	Keep measured baselines, no new volume tests: testing method.	R6
+P-28	process	-	-	-	-	Prototype purpose, recorded AI answers and light testing: way of working and scaffolding.	R6
+P-32	product	C2.1,C2.4,C9.1,C3.12	-	part	M2	Sources enter by upload, code, edition and checksum read without AI, same file and new edition handled; AI impact assessment of a new edition is missing (C9.1). Reset and loaders are scaffolding.	R6
+P-33	process	-	-	-	-	Label every element Capability or Scaffolding: design method.	R6
+P-34	product	C3.6,C3.5,C3.7,C3.15,C11.13	-	full	M2	Describe-in-words add, duplicate guard, versioned edits and removal are built; the AI meaning-match part is held (P-265, P-284).	R6
+P-36	process	-	-	-	-	Interview and clickable mock-up before building: design method.	R6
+P-37	product	C11.10,C3.13,C3.14,C4.3,C5.3	-	full	M2	Programs landing, library lists with where used and origin, preview by sample family, read-only rules list built; P-125 replaces the AI-first New combination and P-115 sets the landing.	R6
+P-38	product	C2.4,C9.1,C3.1,C11.15	-	part	M2	Replace or remove forms, edition comparison without AI and AI mapping of changed fields exist; AI impact on components and combinations (C9.1) is missing.	R6
+P-39	product	C6.3,C7.1,C7.2,C7.6,C6.4,C7.5	M3-E,M3-F	part	M3	Agent view, filled forms and ready-to-file rules exist in part; independent AI review (C7.5) and the full Adobe round trip are not built; P-46, P-71, P-238 revise it.	R6
+P-40	product	C6.2,C6.10,C6.5,C5.1	M3-C	part	M3	Family link and release with expert tick exist; AI proposing facts from uploads (C6.5) is not built; mobile-first is left to later phone-width work (UX-C).	R6
+P-41	product	C3.12,C2.1	-	full	M2	Library shows the edition printed on the form beside the published date, identity by checksum; the rest of the line is an acceptance record.	R6
+P-42	process	-	-	-	-	Stages DESIGN to DONE and per-screen retro: way of working.	R6
+P-43	product	C3.2,C5.1,C5.2,C3.10,C6.2,C7.6	M3-E	part	M2	Bulk accept for high-confidence only with Undo, submit/approve/expert-tick release, one glossary and day-month-year dates exist; filled-form review page with Next issue (C7.5) is not built.	R6
+P-44	process	-	-	-	-	The board is intent, not pixels: design method.	R6
+P-46	product	C7.1,C7.2,C7.6,C7.5	M3-E	part	M3	Append-only writer and barcode-form hard stop built; Adobe Validate round trip is partial and independent AI review (C7.5) is not built.	R6
+P-47	product	C4.4,C4.3	-	full	T	One configuration-driven renderer serves PQR, SQR and agent view with question types, three-tier validation and rules as data.	R6
+P-48	process	-	-	-	-	Brand kit and style guide adoption: design method.	R6
+P-50	product	C1.4	-	full	M2	A Programs card opens the combination page showing path, status and next step, not a pop-up.	R6
+P-52	product	C3.7,C11.9	-	full	M2	Delete only never-released unused items, retire released ones, blocked while in use, restore, with where-used first.	R6
+P-53	product	C3.6	-	full	M2	Describe what you need with advice, exact duplicates blocked, second-person approval built; AI meaning part held (P-265).	R6
+P-54	process	-	-	-	-	Milestones prove complete slices; checks and founder walkthrough before next: way of working.	R6
+P-55	process	-	-	-	-	User outcome leads the quality bar, D17 and D20 gates: quality method.	R6
+P-56	process	-	-	-	-	Defines the M2/M3 boundary only; no behaviour of its own.	R6
+P-57	product	C2.2	-	full	M2	A form whose checksum is not on the approved list is held with a plain reason before library, attachment or AI.	R6
+P-58	product	-	-	-	M2	Built, not on the capability list: the shared-draft line on every page counts unreleased changes and combinations and links to Review and release (web App.tsx DraftBar); tests e.g. check_uxa3_words_rules.ts; no capability names it.	R6+V1
+P-60	process	-	-	-	-	No quality control is cut, speed from removing waste: way of working.	R6
+P-61	product	C1.6,C3.11,C8.2,C1.7	-	part	M2	Per-line channel, derived filing method, signed-scan lines and filing record exist; online versions with portal re-check are parked (P-102); filing record is partial (C8.2).	R6
+P-62	product	C3.1,C4.1,C4.6,C3.11,C7.7,C1.6,C3.5	-	part	M2	Shared fields as root, questionnaires from facts, per-channel outputs and Prepare application built; online screen maps and extension fill are parked (P-102, M4).	R6
+P-63	product	C3.10	-	full	M2	"Screens and messages say form field, shared field, field map; never ""box""."	R6
+P-65	product	C3.5,C7.1,C8.1,C9.2,C7.2	M3-F	part	M3	Aliases, merges, append-only fill and signed-PDF states built; changed fact marking signed items stale (C9.2) is not built; fill-trial gate is partial.	R6
+P-66	later	C2.9,C9.3	L5,B28	-	later	"P-102 ""returns in the last wave, for filling online portals only""; extension is M4 (P-245); capture and form health capabilities exist, not built."	R6
+P-67	product	C6.1,C6.2,C6.3,C4.4,C7.1,C7.2	-	part	T	Thin slice: case with people, answers asked once, renderer, agent view, one filled IMM 5257 exist; Adobe validation of it is partial (C7.2). Lane staffing is process.	R6
+P-68	process	-	-	-	-	Independent qa lane, backend path, generated status: way of working.	R6
+P-69	process	-	-	-	-	Code coverage tool and floor: testing method.	R6
+P-70	process	-	-	-	-	SA-01B is the POC scope: scope rule, no behaviour of its own.	R6
+P-71	product	C7.6	L-SA3	part	M3	"Form's own Validate and AI findings acknowledged with a reason built; P-238 ""Supersedes P-71's block"" for missing or conflicting facts; readiness not yet wired into the prepare view (L-SA3 held)."	R6
+P-72	product	C6.6,C6.10	L-SA6	part	T	Only confirmed facts fill and AI-read values stay proposed; P-242 amends it to Declared answers fill at once, rework item L-SA6 is held (P-251).	R6
+P-73	later	C9.3	B28	-	M4	"P-73 itself: ""Backlog B28, M4"". Report a mapping problem and hold it for everyone; not built."	R6
+P-74	process	-	-	-	-	Every decision reaches a screen the same day: way of working.	R6
+P-75	process	-	-	-	-	No dates, counted progress: reporting method.	R6
+P-76	product	C4.2,C4.7,C4.8,C6.7	B29,B30	part	M2	PQR picks per combination, AI-drafted with reasons, released with the combination built; country-level PQR and prospect use are the team's runtime (P-271).	R6
+P-77	product	C6.9,C6.8	L-SA12	part	M3	"Staff case check on rules as data built; PQR answers flowing into the SQR as ""please confirm"" (C6.8) is held (L-SA12, P-251) and is the team's runtime (P-271)."	R6
+P-78	product	C6.10,C6.2	-	full	T	Answers record who gave them; own and a minor's fill forms, an adult's principal-given answers wait for that adult or the officer.	R6
+P-79	product	C5.3	-	full	M2	One To review page first under Configure with filters, maker cannot approve own item.	R6
+P-80	product	C2.3	-	full	M2	A different person compares a held PDF with the recorded IRCC page and approves; checksum then joins the approved list.	R6
+P-82	process	-	-	-	-	GitHub is the single source of truth: repository rules.	R6
+P-83	process	-	-	-	-	Official blank PDFs committed to GitHub for CI: repository rule.	R6
+P-84	process	-	-	-	-	Scheduled cloud Lead every four hours: staffing, replaced by P-188 and P-189.	R6
+P-85	process	-	-	-	-	Full test suites on GitHub, later pull requests only: CI.	R6
+P-86	process	-	-	-	-	Generated traceability graph against drift: testing method.	R6
+P-87	process	-	-	-	-	Every change reaches main by pull request: GitHub workflow, amended by P-189.	R6
+P-88	process	-	-	-	-	Shared app stays on the founder's Mac: demo hosting.	R6
+P-92	process	-	-	-	-	Scout findings carry weight without a veto; scout retired by P-146: way of working.	R6
+P-94	process	-	-	-	-	Fourth build lane m3 in parallel: staffing, replaced by P-188.	R6
+P-95	held	C3.6,C11.13,C11.3	X3	part	M2	"AI meaning check ""did you mean"" not built: P-284 ""same held part""; held for the SA-01B product owner (P-251)."	R6
+P-96	product	C3.15	-	full	M2	Rename in the library drawer is direct and versioned with the duplicate check; a released-combination field needs a second person (P-266).	R6
+P-97	product	C4.9	-	full	M2	Who fills a question is changed once in the library, approved on To review, released with the next release; declarations stay with the client.	R6
+P-176	product	C11.10	-	full	M2	Author confirms sure items and hand-typed people lists, the immigration expert the rest; who and which tier is stored.	R7
+P-177	product	C11.10,C5.3	-	part	M2	Setup checklist v3: n proposals opens the form page or filtered queue; typed people lists confirmed by author. Board v3 changes the founder asked for are not stated yet.	R7
+P-178	later	-	-	-	later	"P-178: ""Corporate ... comes later as a separately sold module""; Release 1 builds no Corporate (P-239 adds only a Sample employer in M4)."	R7
+P-179	product	C11.8	-	full	M2	A run that would pass a cost limit stops, shows expected and worst cost, and offers Continue (recorded) or Cancel.	R7
+P-180	product	C11.10	-	full	M2	Simple Programs card: name, trail, step count or Live, Needs you, one button; one brand-blue primary colour; status chips.	R7
+P-181	superseded	-	-	-	-	"Superseded by P-224: ""supersedes the process decisions P-181, P-186, P-190, P-195, P-199""."	R7
+P-182	process	-	-	-	-	Devin as report-only junior checker on demand.	R7
+P-183	process	-	-	-	-	CI runs every suite on every code PR, no tiering.	R7
+P-184	process	-	-	-	-	Speed checks reported, not failed, when the build machine is busy.	R7
+P-185	superseded	-	-	-	-	"Superseded by P-188: ""supersedes P-185's seven-item platform build""."	R7
+P-186	superseded	-	-	-	-	"Superseded by P-224: ""supersedes the process decisions P-181, P-186, P-190, P-195, P-199""."	R7
+P-187	process	-	-	-	-	qa becomes capability owner; records status, experience score and top idea.	R7
+P-188	process	-	-	-	-	One-page way of working: roles, rules, merge on green checks plus reviewer approval.	R7
+P-189	process	-	-	-	-	Pull requests merge automatically; small founder screen change ships as one PR; demo updates itself.	R7
+P-190	superseded	-	-	-	-	"Superseded by P-224: ""supersedes the process decisions P-181, P-186, P-190, P-195, P-199""."	R7
+P-191	process	-	-	-	-	Build feature by feature, one builder per feature end to end.	R7
+P-192	process	-	-	-	-	Builders may run live-AI tests only with the fake launcher through the suite script.	R7
+P-193	product	C5.3	-	part	M2	Only the proposer corrects a field returned for changes; capability states the maker cannot approve their own item but not this return-and-correct rule.	R7
+P-194	product	C11.8	-	part	M2	One Continue covers retries of the same run within the accepted worst case; capability text names Continue but not retries.	R7
+P-195	superseded	-	-	-	-	"Superseded by P-224: ""supersedes the process decisions P-181, P-186, P-190, P-195, P-199""."	R7
+P-196	process	-	-	-	-	Sessions may start a GitHub workflow by hand.	R7
+P-197	process	-	-	-	-	Devin security and Linux testing wait; D5 explorer prompt runs alone.	R7
+P-198	superseded	-	-	-	-	"Superseded by P-224: ""P-198 and P-218 (handover at 50% and 60-80%)""."	R7
+P-199	superseded	-	-	-	-	"Superseded by P-200: ""Back to one test slot""; also P-224."	R7
+P-200	superseded	-	-	-	-	"Superseded by P-224: ""supersedes the process decisions ... P-199, P-200""."	R7
+P-201	process	-	-	-	-	Merge queue tests approved PRs in batches (Mergify); P-224 changes only where checks run.	R7
+P-202	process	-	-	-	-	Standing rules for every Lead chat: 20-minute check, parallel work, founder questions.	R7
+P-203	process	-	-	-	-	Skill and agent files may grow to 10 KB without cutting rules.	R7
+P-204	process	-	-	-	-	Workflow freeze until 7 Nov, fixes only.	R7
+P-205	process	-	-	-	-	A randomly failing suite is quarantined from PR checks until fixed.	R7
+P-206	process	-	-	-	-	One sidebar per Lead; old sessions adopted then archived.	R7
+P-207	superseded	-	-	-	-	"Superseded by P-248: ""Amends P-207 (documents only was enough)""; a form line is now required."	R7
+P-208	product	C1.6	X1b	full	M2	Programs list card shows each combination's filing method as a small tag: PDF only, Online only, Mixed.	R7
+P-209	product	C11.12	X1c	full	M2	"Sample renames Applicant to Principal applicant and keeps ""(travelling)"" as the typed-label example."	R7
+P-210	process	-	-	-	-	Merge queue checks one batch at a time (free fix); partly reversed by P-224.	R7
+P-211	process	-	-	-	-	"CI explicit-any check is ""this change adds none""."	R7
+P-212	process	-	-	-	-	qa runs continuously: after-merge scoring and rotating exploration.	R7
+P-213	process	-	-	-	-	Two-day trial: merge-queue batches on four GitHub machines, US$30 budget.	R7
+P-214	process	-	-	-	-	Tech lead unblocks the merge flow without asking where reasonable.	R7
+P-215	process	-	-	-	-	Speed budgets judged on the Mac nightly run, not GitHub machines.	R7
+P-216	product	C4.1	S6	part	M2	"Section order movable per combination and one library title everywhere are built; the ""Ask it in..."" action on a gap line is a later slice."	R7
+P-217	process	-	-	-	-	Builders run affected suites before the label; never build on an unmerged PR.	R7
+P-218	superseded	-	-	-	-	"Superseded by P-224: ""P-198 and P-218 (handover at 50% and 60-80%)""."	R7
+P-219	process	-	-	-	-	"PRs name capability IDs; ""Built, awaiting qa"" status; qa re-scores each PR."	R7
+P-220	process	-	-	-	-	Tests first, then a swarm of builders, Visitor visa first.	R7
+P-221	process	-	-	-	-	Built, awaiting qa is a file per capability, not an edit of the register.	R7
+P-222	product	C6.6	-	full	M3	Case officer confirms all of one person's sections in one step after seeing them; never a client's declaration; one audited confirmation per section.	R7
+P-223	process	-	-	-	-	Overnight run of 1-2 Nov: plan use, paid AI cap, tech lead approval of screens.	R7
+P-224	process	-	-	-	-	Lean operating model: one item per builder, qa before Works, process freeze to 15 Nov.	R7
+P-225	process	-	-	-	-	Standing AI budget US$20 a day for library drafting, paid runs on tech lead's Go.	R7
+P-226	product	C11.7	-	full	M2	One Demo menu button empties configuration and loads the six combinations; saved AI results are never removed by any reset.	R7
+P-227	product	C11.8	-	full	M2	Every AI step offers exactly Live or Saved; Saved replays the verified result through the same steps; failed Live offers Saved.	R7
+P-228	process	-	-	-	-	Way-of-working changes: daily paid runs, continuous qa, M2 scope frozen at 56 rows.	R7
+P-229	product	C6.9,C6.4	D4	part	M3	Pack 4 answers accepted as Sample; case check disclaimer, any staff override, one failed rule gives Not eligible. A derived Yes overriding a client's No is a follow-up (D4).	R7
+P-230	product	C6.4,C6.12,C6.9	-	part	M3	"Researched immigration answers as data: rule outcome ""needs representative review"", sponsor on same case, minor travels-with, fee table. Document-rule fields (copies, translations, validity) not yet in the model."	R7
+P-231	process	-	-	-	-	Finish before starting: work ordered by nearness to Works, WIP limits.	R7
+P-232	process	-	-	-	-	AI budget raised for 2 Nov: library drafting cap US$25, R-146 up to US$50.	R7
+P-233	product	C11.12	-	full	M2	"Each role has a Filing mode (own, on the principal's application, declared only) with a ""What a case gets"" preview; mismatches warn."	R7
+P-234	process	-	-	-	-	Weekly-plan pace: full speed until 93%, then hand-over.	R7
+P-235	held	C6.8	L-SA12	full	team	"P-251 holds L-SA12; P-271: prospect runtime is the team's. P-235: ""Only personal details carry from the prospect questionnaire""."	R7
+P-236	product	C6.9	-	full	M3	Case check from confirmed facts, staff only, three outcomes Qualifies, Can't tell yet, Does not qualify; rename built though P-251 holds further change.	R7
+P-237	held	C7.6	L-SA3	full	M3	"P-251 holds L-SA3: ""Don't wire readiness.ts into case-prepare.ts:179 yet"". Only a barcode form's own Validate blocks; other stops become passable warnings."	R7
+P-238	held	C7.6	L-SA3	full	M3	P-251 holds L-SA3 (ready-to-file warnings). Missing or conflicting facts become a CRITICAL warning passed with a recorded reason.	R7
+P-239	held	C3.16,C11.5	L-SA4,L-SA5	part	M3	"P-251: corporate area held, L-SA4 ""waits for the designs"". Organisation and filing scope in M3, Sample employer combination in M4; no Corporate configuration built."	R7
+P-240	product	C5.4,C5.5,C5.6,C5.7	-	full	M2	Source-register gate and answer-key gate block real releases; Sample content releases only as a marked Demo release in the demo workspace.	R7
+P-241	superseded	-	-	-	-	"Superseded by P-252: struck through, ""Superseded by P-252"" (guarded Add replaces no free Add)."	R7
+P-242	held	C6.6,C6.5	L-SA6,L-SA7,L-SA8	full	M3	"P-251 holds L-SA6-L-SA8. Declared answers fill at once; document-read values need ""Confirm & use""; must-verify flag on expert-named fields."	R7
+P-243	held	C6.5	L-SA9	full	M3	P-251 holds L-SA9 (identity collapse). Passport number, birth date, expiry collapse only when check digits pass.	R7
+P-244	held	C4.9	L-SA10	full	M3	P-251 holds L-SA10 (officer background entry). Staff record background answers marked Officer; client re-confirms before signing.	R7
+P-245	held	C7.4	E1,E2,E3,E4,E5,E6	full	M4	P-251 holds P-245 extension items E1-E6; M4, nothing built now. Our own AI-assisted Chrome extension fills portal screens with the representative's check.	R7
+P-246	product	C4.2,C7.2	L-SA13	part	M3	Per-combination PQR marks stay as input to the released view; Adobe stays the validation oracle. Pin per filing is design-only (P-251, L-SA13).	R7
+P-247	product	C6.12	R2	full	M3	"Every fee line carries a basis including ""family maximum""; the case total applies the cap (CAD 500 for 5 or more)."	R7
+P-248	held	C5.1	G5	full	M2	"P-251 holds G5: ""release needs a form line, P-248"". A combination releases only with a document line and a form line; warns earlier."	R7
+P-249	process	-	N-LIFT	-	-	"Defines ""production grade"": lift-ready engine and tested shell, hand-over package, no pushes to the team's repositories."	R7
+P-250	process	-	-	-	-	qa scores a PR before merge on its head commit.	R7
+P-251	process	-	-	-	-	Hold rule: SA-01B changes need the product owner; lists held areas and rows.	R7
+P-252	held	C11.13,C3.6	X3,L-SA11	full	M2	"P-251: ""Both held until the product owner rules on C2"". Guarded Add with search first, reason and source, plus AI co-pilot on every library."	R7
+P-253	product	C11.13	G-CORE	full	M2	One guarded change pattern for every library: search, rules check, AI change set, impact preview, confirm, review by risk, versioned. Hand-made Add and co-pilot drafting stay held.	R7
+P-254	process	-	-	-	-	Big-impact choices are discussed with time, cost and quality impact before recording.	R7
+P-255	process	-	-	-	-	M2 keeps gate rows G1-G4 and G-CORE; gate date moves to 11-12 Nov.	R7
+P-256	product	C6.5,C4.5	-	full	M3	Fill this from my documents per section moves to M3 with the document reader; proposals only, never automatic on upload.	R7
+P-257	process	-	-	-	-	Close for account switch: builders stop at 95%, closed by 98%.	R7
+P-258	process	-	SH1,SH2,SH3,SH4	-	-	Shared engineering services (resolver contract, where-used, pin contract); internal structure, no user-visible behaviour.	R7
+P-259	process	-	-	-	-	No builder sits idle with work left.	R7
+P-260	process	-	-	-	-	Finish program planned with the founder first, then run in parallel.	R7
+P-261	process	-	-	-	-	M3 rows start in parallel lanes only when prerequisites are ready.	R7
+P-262	process	-	-	-	-	Soft close now for the account switch.	R7
+P-263	process	-	-	-	-	Repository stays public for now with exposure known.	R7
+P-264	process	-	-	-	-	Finish program launches as planned in waves.	R7
+P-265	process	-	-	-	-	M2 gate counts held parts by name: 59/60.	R7
+P-266	product	C11.13	-	full	M2	Renaming a shared field used by a released combination needs a second person; other renames stay direct and logged.	R7
+P-267	process	-	-	-	-	Builders build ahead while their PR waits.	R7
+P-268	process	-	-	-	-	GitHub Pro for twice the test machines.	R7
+P-269	process	-	-	-	-	GitHub Pro on hold: machines not the bottleneck.	R7
+P-270	process	-	-	-	-	Merge main into a PR only when it conflicts.	R7
+P-271	product	C4.2,C6.1,C6.2,C6.3,C6.7,C6.8	K13	part	M3	"Screen names ""Smart questionnaire (SQR)"", PQR, Client questionnaire, Agent view (K13 relabels); prospect runtime is the team's; each case pinned to its release."	R7
+P-272	product	C7.7	K13	full	M3	"The case tab where staff prepare what gets filed is named ""Prepare application""."	R7
+P-273	product	C11.10,C5.3	UX-A	part	M2	Trust fixes: counts agree across screens, inbox shows blockers, one status, no internal identifiers; backlog item UX-A is the work fixing them.	R7
+P-274	product	C10.1,C4.3	UX-D,UX-E,UX-C,UX-F	part	M2	"Demo walkability and AI-drafted client wording join M2; phone width (UX-C) and review grouping (UX-F) wait ""After the M2 gate""."	R7
+P-275	process	-	-	-	-	qa labels paid-result PRs after reviewer Approve.	R7
+P-276	process	-	-	-	-	Token plan: hand over, six builders, checks every 30 minutes.	R7
+P-277	process	-	-	-	-	qa scores main per merge batch.	R7
+P-278	process	-	-	-	-	Model tiers one-day pilot for subagents.	R7
+P-279	product	C5.4	-	full	M2	"Cut-off and in-force dates count as published numbers needing a source entry or ""None published"" before release."	R7
+P-280	process	-	-	-	-	Six more one-row builders to finish half-built rows.	R7
+P-281	process	-	-	-	-	No token stop; tech lead Gos paid runs within the daily cap.	R7
+P-282	process	-	-	-	-	GitHub Pro bought after all.	R7
+P-283	process	-	-	-	-	To archive group for finished sessions.	R7
+P-284	process	-	-	-	-	"Scoring rule: C11.3 AI ""did you mean"" is the same held part as C11.13; Works, held part excluded."	R7
+P-285	process	-	-	-	-	Overnight run without the founder: 30-minute checks, token and paid-AI limits.	R7
+P-286	process	-	-	-	-	Lead hand-over via idle standby Lead woken by a message.	R7
+P-287	product	C11.10,C5.3,C11.14	UX-A	part	M2	"Programs ""Needs you"" counts the same items as To review; draft blockers count; no AI proposal Ready without both rounds and rules (C11.14 Partial)."	R7
+P-288	product	C11.10,C11.14,C3.2	UX-A	part	M2	Programs counts combinations, To review counts items, each count named; Ready field-map items tick in bulk on To review. C11.14 still needs paid checker runs.	R7
+P-289	process	-	-	-	-	Close every lane and Lead, then blank-sheet restart.	R7
+P-290	process	-	-	-	-	Fresh Lead, six fix builders and four verification testers tonight.	R7
+P-291	process	-	-	-	-	16-hour plan and way-of-working changes.	R7
+P-292	process	-	-	-	-	Standard Lead reporting and fast notes-only changes.	R7
+P-293	process	-	-	-	-	Four token savings: review rounds, builder questions as PR comments, notes in code change.	R7
+P-03	process	-	-	-	-	Concept first: every screen agreed before it is built (way of working; shares a line with P-01).	V1
+P-04	product	-	-	-	M2	Built, not on the capability list: the left menu shows only this prototype's screens (To review, Programs, Shared library, History; web App.tsx); browser suites open it, but no capability names the menu.	V1
+P-05	product	C3.10	K13	part	M2	UI words follow PRODUCT.md §4: C3.10 enforces form field, shared field and field map (never box); the rest of the word list (P-271 names, K13) is not one capability.	V1
+P-07	product	C1.4,C11.10	-	full	M2	One AI place per combination: the setup card and combination page name the one next step; no floating AI button.	V1
+P-08	product	C3.12,C3.14	-	full	M2	Forms sit in the Shared library menu (Forms list) and rules are viewed read-only in the library and inside the combination.	V1
+P-11	product	C3.13,C3.4,C3.1	-	full	M2	The library is filled by AI proposals people accept, and every list shows each item's origin (AI or person).	V1
+P-12	product	C3.14,C4.4,C1.8	-	part	M2	Rules are data on fields, sections and combination lines and listed read-only; a shared check with a different value per combination is not stated by any capability.	V1
+P-13	product	C11.5,C1.3	-	part	M3	Retail and Corporate stay isolated (C11.5); P-106 moved the links onto the case (C1.3, Not built); multi-step journeys as linked combinations are not built.	V1
+P-14	product	C4.4,C3.14,C7.5	-	part	M2	Field and consistency checks are data run by the engine (C4.4, C3.14); the staged AI review (C7.5) is not built; promoting recurring AI findings to checks is not stated.	V1
+P-15	held	C3.6,C11.13	X3,L-SA11	part	M2	"The AI meaning check on a hand-made addition is held: P-284 ""same held part"", P-252 guarded Add held by P-251; exact duplicates and second-person approval are built (C3.6)."	V1
+P-21	process	-	-	-	-	One written engineering bar (STANDARDS.md) applied by every role: way of working.	V1
+P-23	product	C5.1,C6.1	S4	part	M2	The whole workspace releases together and a case opens only on a released combination; the startable check at case opening is backlog item S4 (built, PR pending per BACKLOG).	V1
