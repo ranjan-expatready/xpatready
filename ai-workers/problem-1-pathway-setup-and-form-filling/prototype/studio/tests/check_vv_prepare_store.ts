@@ -5,7 +5,7 @@
 import type { Known } from "../engine/render.ts";
 import type { Participant } from "../engine/runtime/case.ts";
 import { render, type Person } from "../engine/render.ts";
-import { channelOf, paperLine, prepareVersion, wantedItems, type FormLine } from "../engine/runtime/prepare.ts";
+import { channelOf, paperLine, prepareVersion, readBackOf, wantedItems, type FormLine } from "../engine/runtime/prepare.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 import { recorder } from "./runtime/api.ts";
 
@@ -90,6 +90,19 @@ const has = (n: ReturnType<typeof formItems>, form: string, who: string) => n.fi
   ok("C7.7 Paper (pass): the pen step names who signs (a parent for a child under 18; the person and the representative)",
     /a parent \(for a child under 18\)/.test(bar({ signers: ["parent"] }).steps[2].words) && /the person and the representative/.test(plain().steps[1].words));
   ok("C7.7 Paper (fail): with no signer worked out the pen step never names a person it does not know", bar({ signers: [] }).steps[2].words === "Signed in pen by each person who signs it");
+  // Review M1 (part 2): the read-back that counts, by the copy view's rule (each copy on its newest read-back; QA-165).
+  const at = (h: number) => new Date(Date.UTC(2026, 10, 3, h));
+  const R = (copy: string, h: number, passed: boolean) => ({ copy, at: at(h), passed });
+  const pick = (rs: ReturnType<typeof R>[]) => readBackOf(rs, (r) => r.passed);
+  ok("C7.7 Paper (pass): of several copies, the newest copy whose own newest read-back passed counts (an older copy's or an older read-back does not)",
+    pick([R("A", 9, true), R("B", 11, true), R("A", 10, true)])?.copy === "B" && pick([R("A", 9, true), R("A", 12, true), R("B", 11, true)])?.at.getTime() === at(12).getTime());
+  ok("C7.7 Paper (fail): a copy whose newest read-back did not pass its form's own Validate never falls back to that copy's older passing one (the copy view and lock refuse it too)",
+    pick([R("A", 9, true), R("A", 10, false)]) === null && pick([R("A", 9, true), R("A", 10, false), R("B", 8, true)])?.copy === "B" && pick([]) === null);
+  // Review M2 (part 2): a barcode form released as an Online line has no read-back on the case (its copy is not for filing).
+  ok("C7.7 Paper (pass): a barcode form moved to Paper from a line released Online says it cannot be validated and read back yet, and asks the Lead (never an endless To do)",
+    bar({ lineOnline: true }).state === "to_do" && /released as an Online line/.test(bar({ lineOnline: true }).reason) && /Ask the Lead/.test(bar({ lineOnline: true }).reason));
+  ok("C7.7 Paper (fail): a barcode form released as a PDF upload or Paper line keeps the Validate words, and a form with no barcode page is not affected",
+    !/released as an Online line/.test(bar({ lineOnline: false }).reason) && /Validate in Adobe/.test(bar().reason) && !/released as an Online line/.test(plain({ lineOnline: true }).reason));
 }
 
 process.exitCode = summary() ? 1 : 0;
