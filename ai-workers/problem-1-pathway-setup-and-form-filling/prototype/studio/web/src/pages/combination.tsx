@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-r
 import { type CatalogueLeaf, type CombinationSummary, type CombinationView, type NextAction } from "../../../contracts/programs";
 import { tabOf, TABS, type WorkspaceView } from "../../../contracts/workspace";
 import { TestsTab } from "@/components/answer-keys";
-import { nextStepHref, STEP_LABEL, tabCounts, tabSteps, type BadgeTab, type ItemKind } from "../../../contracts/setup-checklist";
+import { nextStepHref, reviewFixCount, STEP_LABEL, tabCounts, tabSteps, type BadgeTab, type ItemKind } from "../../../contracts/setup-checklist";
 import { ArrowRight, ChevronRight, Sparkles } from "lucide-react";
 import { CATALOGUE_URL_KEY, STATUS_WORD } from "@/pages/programs";
 import { StepTip, useNextStep } from "@/components/next-step";
@@ -68,7 +68,8 @@ export function CombinationPage() {
   const last = d.releases[0];
   const row = sum.data?.row;
   const changes = sum.data?.changes ?? 0;
-  const errorCount = d.draft.problems.filter((p) => p.level === "error").length;
+  // QA-184: the Review and release tab counts the problems its own step lists on Overview (one number for one thing).
+  const errorCount = reviewFixCount(sum.data?.setup);
   // X1 (slice C2): each setup tab says how many open setup items land on it, from the summary's checklist.
   const retired = !!sum.data?.row?.retired;
   const badges = tabCounts(retired ? null : sum.data?.setup), steps = tabSteps(retired ? null : sum.data?.setup);

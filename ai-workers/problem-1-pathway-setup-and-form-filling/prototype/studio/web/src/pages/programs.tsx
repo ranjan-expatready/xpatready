@@ -114,6 +114,8 @@ const chipOf = (r: CatalogueLeaf): ChipStatus => r.setup?.chip.status ?? (r.reti
 const doneOf = (r: CatalogueLeaf) => r.setup?.bar.done ?? 0;
 /** "n of 5 steps", "✓ Live" or "Retired at Release n". */
 const progressText = (r: CatalogueLeaf) => r.setup?.bar.text ?? (chipOf(r) === "LIVE" ? "✓ Live" : chipOf(r) === "RETIRED" ? "Retired" : `${doneOf(r)} of 5 steps`);
+/** The card's whole progress in words (its name for screen readers): "✓ Live · Next release: 3 of 5 steps to do". */
+const progressWords = (r: CatalogueLeaf) => [progressText(r), chipOf(r) === "LIVE" ? r.setup?.bar.next : null].filter(Boolean).join(" · ");
 const needsYouOf = (r: CatalogueLeaf) => r.setup?.viewer.needsYou ?? null;
 
 export function ProgramsPage() {
@@ -492,7 +494,10 @@ function CardButton({ r, canAuthor, tabIndex, onOpen, onResume }: { r: Catalogue
 function Progress({ r, mini }: { r: CatalogueLeaf; mini?: boolean }) {
   const st = chipOf(r);
   const text = mini ? (st === "LIVE" ? "Live" : st === "RETIRED" ? "Retired" : `${doneOf(r)} of 5`) : progressText(r);
-  return <span data-progress={st} className={cn(st === "LIVE" ? "font-semibold text-text-ok" : st === "RETIRED" ? "text-text-muted" : "text-text")}>{text}</span>;
+  // QA-184: a Live combination says Live first, then what its next release still needs (the Overview's words).
+  const next = st === "LIVE" ? r.setup?.bar.next : null;
+  const nextText = next && mini ? next.replace(/^Next release: (\d+) of 5 steps? to do$/, "next release $1 to do") : next;
+  return <span data-progress={st} className={cn(st === "LIVE" ? "font-semibold text-text-ok" : st === "RETIRED" ? "text-text-muted" : "text-text")}>{text}{nextText ? <span className="font-normal text-text-muted" data-next-release> · {nextText}</span> : null}</span>;
 }
 
 /** A card (concept v4 §7): the name, the full trail, "n of 5 steps" or "✓ Live" with the edge bar, the filing tag (X1b, P-208), Needs you and one
@@ -501,7 +506,7 @@ function SetupCard({ r, lit, justAdded, q, canAuthor, onOpen, onResume }: { r: C
   const trail = trailOf(r).join(" › ");
   const needs = !!needsYouOf(r);
   return (
-    <article data-node={r.nodeKey} data-label={r.label} data-state={chipOf(r)} data-just-added={justAdded ? "" : undefined} aria-label={`${trail}, ${progressText(r)}${needs ? ", needs you" : ""}`} onClick={onOpen}
+    <article data-node={r.nodeKey} data-label={r.label} data-state={chipOf(r)} data-just-added={justAdded ? "" : undefined} aria-label={`${trail}, ${progressWords(r)}${needs ? ", needs you" : ""}`} onClick={onOpen}
       className={cn("relative flex min-h-[148px] w-full cursor-pointer flex-col gap-1 overflow-hidden rounded-xl border bg-surface-raised px-4 pb-4 pt-3.5 shadow-sm transition-colors", lit ? "border-primary ring-2 ring-primary/25" : "border-border hover:border-border-strong")}>
       {needs ? <NeedsYouMark r={r} className="absolute right-3 top-3" /> : null}
       <h3 className={cn("text-base font-semibold leading-snug text-lv3", needs && "pr-24")}>
@@ -609,7 +614,7 @@ function List({ groups, closed, onToggle, highlight, q, sort, filtering, needsOn
                   const active = current?.nodeKey === r.nodeKey, lit = highlight === r.nodeKey, ti = active ? 0 : -1;
                   const trail = trailOf(r), above = trail.slice(0, -1).join(" › ");
                   return (
-                    <div key={r.nodeKey} role="row" aria-selected={lit} tabIndex={ti} data-node={r.nodeKey} data-label={r.label} data-state={chipOf(r)} aria-label={`${trail.join(" › ")}, ${progressText(r)}${needsYouOf(r) ? ", needs you" : ""}`}
+                    <div key={r.nodeKey} role="row" aria-selected={lit} tabIndex={ti} data-node={r.nodeKey} data-label={r.label} data-state={chipOf(r)} aria-label={`${trail.join(" › ")}, ${progressWords(r)}${needsYouOf(r) ? ", needs you" : ""}`}
                       ref={(el) => { if (el) refs.current.set(r.nodeKey, el); else refs.current.delete(r.nodeKey); }}
                       onKeyDown={(e) => onKey(e, r)} onFocus={(e) => { if (e.target === e.currentTarget) setFocus(r.nodeKey); }} onClick={() => onOpen(r)}
                       className={cn(GRID, "min-h-11 cursor-pointer border-b border-border px-4 py-1.5 outline-none last:border-b-0 focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/60", lit ? "bg-primary/10 shadow-[inset_3px_0_0_var(--color-primary)]" : "hover:bg-text/[0.03]")}>

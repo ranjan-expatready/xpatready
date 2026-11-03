@@ -4,6 +4,7 @@
 import { itemHref, STEP_KEYS, STEP_LABEL, STEP_TAB, type ChipStatus, type Counts, type ItemKind, type OpenItem, type SetupChecklist, type Step, type StepKey, type Tier, type ViewerOverlay } from "../contracts/setup-checklist.ts";
 import { PROPOSAL_KINDS, type ProposalKind } from "../contracts/proposal-item.ts";
 import { formsWords, questionsWords } from "../contracts/counts.ts";
+import { nextReleaseWords } from "../contracts/status-words.ts";
 
 /** Validator `where` → the step whose open item it is (concept §6). Every `where` literal in engine/ has a row; any other
  *  value falls back to step 5 (a check fails when a new literal has no row). */
@@ -225,10 +226,19 @@ export function setupChecklistOf(s: SetupInput, key = ""): SetupChecklist {
     steps,
     current: firstOpen,
     next: !s.combinationId ? null : first && nextStep ? { item: first, step: nextStep, href: hrefOf(nextStep, first), line: `${STEP_LABEL[nextStep]}: ${first.text}` } : null,
-    bar: { done, of: 5, text: chipStatus === "RETIRED" ? `Retired at Release ${s.release?.number ?? 1}` : chipStatus === "LIVE" ? "✓ Live" : `${done} of 5 steps` },
+    bar: { done, of: 5, text: chipStatus === "RETIRED" ? `Retired at Release ${s.release?.number ?? 1}` : chipStatus === "LIVE" ? "✓ Live" : `${done} of 5 steps`, next: chipStatus === "LIVE" ? nextReleaseWords(5 - done) : null },
     counts,
     key,
   };
+}
+
+/** QA-184: GET /catalogue's progress, from the same checklist as the card and the Overview (before, an older four-step
+ *  count, "Step 2 of 4: Draft", beside the Overview's five). The step is the one its next item is on (the first open step
+ *  when nothing is open there); the words are the card's: "✓ Live" then the next release's line, or "n of 5 steps". */
+export function progressOf(c: SetupChecklist): { step: number; of: 5; label: string; done: boolean[]; live: boolean } {
+  const at = c.next?.step ?? c.current;
+  const live = c.chip.status === "LIVE";
+  return { step: at ? STEP_KEYS.indexOf(at) + 1 : 5, of: 5, done: c.steps.map((s) => s.state === "done"), live, label: live && c.bar.next ? `${c.bar.text} · ${c.bar.next}` : c.bar.text };
 }
 
 function summaryOf(k: StepKey, s: SetupInput, c: Counts, done: boolean): string {

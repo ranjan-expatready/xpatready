@@ -80,7 +80,8 @@ export const SetupChecklist = z.object({
   steps: z.array(Step).length(5),
   current: z.enum(STEP_KEYS).nullable(),
   next: NextItem.nullable(),
-  bar: z.object({ done: z.number().int().min(0).max(5), of: z.literal(5), text: z.string() }),
+  /** `next`: on a Live combination, what its next release still needs (status-words nextReleaseWords; QA-184). */
+  bar: z.object({ done: z.number().int().min(0).max(5), of: z.literal(5), text: z.string(), next: z.string().nullable().optional() }),
   counts: Counts,
   /** The cache key it was worked out for (concept §8). */
   key: z.string(),
@@ -121,6 +122,11 @@ export function tabCounts(setup: { steps: { tab?: string; open: { focus: string;
   const out: Record<BadgeTab, number> = { forms: 0, documents: 0, questionnaires: 0 };
   for (const s of setup?.steps ?? []) for (const i of s.open) { const t = tabOfFocus(i.focus, s.tab); if (t) out[t] += i.count; }
   return out;
+}
+/** QA-184: the Review and release tab's "to fix", the problems its own step lists (the Overview's "Fix N problems" on
+ *  Review and release), so the tab and the step say one number; problems on other steps count on their own tabs. */
+export function reviewFixCount(setup: { steps: { key: StepKey; open: { kind: string; count: number }[] }[] } | null | undefined): number {
+  return (setup?.steps.find((s) => s.key === "release")?.open ?? []).filter((i) => i.kind === "fix_problems").reduce((t, i) => t + i.count, 0);
 }
 /** UX-A part 1 (review m1): the steps whose open items land on each tab, in step order, so a tab's badge can say whose
  *  items it counts ("Official pages, Who can be in this application"). */
