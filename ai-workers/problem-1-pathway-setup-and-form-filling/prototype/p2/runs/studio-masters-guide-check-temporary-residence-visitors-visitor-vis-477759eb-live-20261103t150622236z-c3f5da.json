@@ -1,0 +1,119 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-masters-guide-check-temporary-residence-visitors-visitor-vis-477759eb-live-20261103t150622236z-c3f5da",
+  "idempotency_key": "e61249e322337c728fc3d25dc4cb31294622bf194f66b9f3a26b7101cc8fc73a",
+  "contract_version": "drafting-run/v0",
+  "kind": "masters_guide",
+  "output_sha256": "a7be880b7ee840aa3451ed6d0cde84f6a36897c096fb9f98b94a85cf6f6c60e5",
+  "inputs": {
+   "combination": "vv.single",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/guide-5256.text.inventory.json",
+     "sha256": "c6bc458e9381a53f71ae15015330eee769ce91a18cfc00a7daad1dad65ab16c2"
+    }
+   ],
+   "configuration_version": "c34-masters-guide"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "low",
+   "timeout_ms": 300000,
+   "max_attempts": 2,
+   "budget_usd": 1,
+   "max_output_tokens": 6000,
+   "prompt_version": "masters-guide-check.v2.md",
+   "prompt_sha256": "8ad0286dcf5454b2db6541315e06b0d41dce598eeb8d6b5df251ee565889537d"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 17797,
+    "output_tokens": 1851,
+    "duration_ms": 15375
+   }
+  ],
+  "usage": {
+   "input_tokens": 17797,
+   "output_tokens": 1851,
+   "cost_usd": 0.108208,
+   "duration_ms": 15375
+  },
+  "started_at": "2026-11-03T15:06:22.238Z",
+  "ended_at": "2026-11-03T15:06:37.832Z"
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": null,
+ "launch_evidence": {
+  "path_code_sha256": "859d1958c6dab704a638bd20ca557e20b95bd1d9dba5ada7a8494bc6d253d902",
+  "template_sha256": "5569308a0b7327b29e05d35a1aa3eabebd47676e3f5fe2a92b605e8c00d689e0",
+  "schema_file": "masters-guide-output.v1.schema.json",
+  "schema_sha256": "2edd9db7c16b75c081af4d95b4030f8dedbd3cdf7b894aa63af6e2ee00655414",
+  "known": {
+   "combination_trail": "Temporary residence › Visitors › Visitor visa"
+  },
+  "screened": true,
+  "output_sha256": "a7be880b7ee840aa3451ed6d0cde84f6a36897c096fb9f98b94a85cf6f6c60e5",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "6d931f1da6c8924891df7ac069ec5a2bf6817339e2db9ce57f10f6410e5e1e84",
+  "request_bytes": 58239,
+  "stub_calls": null,
+  "ledger": {
+   "file": "<main copy>/.tools/p2-ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 65.49354399999999
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/guide-5256.text.inventory.json",
+    "sha256": "c6bc458e9381a53f71ae15015330eee769ce91a18cfc00a7daad1dad65ab16c2",
+    "kind": "inventory"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "919b729e5c2410400604ae93e133c985ab25f673f07a06a89ecabf8d4a49ccd0",
+   "digest_made_at": "2026-11-03T15:06:22.237Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "ea853e0792fb7c5df533a202beb473d7",
+   "ticket_expires_at": "2026-11-03T15:08:22.237Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"checks\":[{\"group\":\"official_rule\",\"sentence\":\"When the visa type is a transit visa, the travel itinerary evidence is provided.\",\"reads\":[\"Type of visa\",\"Travel itinerary evidence provided\"],\"subject_kind\":\"TRANSIT_ITINERARY\",\"tree_json\":\"{\\\"op\\\": \\\"or\\\", \\\"args\\\": [{\\\"op\\\": \\\"neq\\\", \\\"field\\\": \\\"type_of_visa\\\", \\\"value\\\": \\\"Transit visa\\\"}, {\\\"op\\\": \\\"eq\\\", \\\"field\\\": \\\"travel_itinerary_evidence_provided\\\", \\\"value\\\": \\\"Yes\\\"}]}\",\"severity\":\"block\",\"needs_calculation\":null,\"quote\":\"Note: To obtain a transit visa you must provide specific evidence of your travel itinerary from your transportation company or travel agent.\",\"examples\":[{\"facts_json\":\"{\\\"type_of_visa\\\": \\\"Transit visa\\\", \\\"travel_itinerary_evidence_provided\\\": \\\"No\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"type_of_visa\\\": \\\"Visitor visa\\\"}\",\"expected\":true}]},{\"group\":\"official_rule\",\"sentence\":\"When the marital status is common-law, the statutory declaration of common-law union is included.\",\"reads\":[\"Current marital status\",\"Common-law declaration included\"],\"subject_kind\":\"COMMON_LAW_DECLARATION\",\"tree_json\":\"{\\\"op\\\": \\\"or\\\", \\\"args\\\": [{\\\"op\\\": \\\"neq\\\", \\\"field\\\": \\\"current_marital_status\\\", \\\"value\\\": \\\"Common-Law\\\"}, {\\\"op\\\": \\\"eq\\\", \\\"field\\\": \\\"common_law_declaration_included\\\", \\\"value\\\": \\\"Yes\\\"}]}\",\"severity\":\"block\",\"needs_calculation\":null,\"quote\":\"If you are in a common-law union, you must also request and fill out the Statutory Declaration of Common-law Union [IMM 5409] form and include it with your application.\",\"examples\":[{\"facts_json\":\"{\\\"current_marital_status\\\": \\\"Common-Law\\\", \\\"common_law_declaration_included\\\": \\\"No\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"current_marital_status\\\": \\\"Single\\\"}\",\"expected\":true}]},{\"group\":\"official_rule\",\"sentence\":\"When the marital status is married, a copy of the marriage certificate is included.\",\"reads\":[\"Current marital status\",\"Marriage certificate copy included\"],\"subject_kind\":\"MARRIAGE_CERTIFICATE\",\"tree_json\":\"{\\\"op\\\": \\\"or\\\", \\\"args\\\": [{\\\"op\\\": \\\"neq\\\", \\\"field\\\": \\\"current_marital_status\\\", \\\"value\\\": \\\"Married\\\"}, {\\\"op\\\": \\\"eq\\\", \\\"field\\\": \\\"marriage_certificate_copy_included\\\", \\\"value\\\": \\\"Yes\\\"}]}\",\"severity\":\"block\",\"needs_calculation\":null,\"quote\":\"If you are married, you must send a photocopy of your marriage licence or certificate with your application.\",\"examples\":[{\"facts_json\":\"{\\\"current_marital_status\\\": \\\"Married\\\", \\\"marriage_certificate_copy_included\\\": \\\"No\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"current_marital_status\\\": \\\"Married\\\", \\\"marriage_certificate_copy_included\\\": \\\"Yes\\\"}\",\"expected\":true}]},{\"group\":\"official_rule\",\"sentence\":\"When the immigration status is Other, the other status details are given.\",\"reads\":[\"Immigration status\",\"Other status details\"],\"subject_kind\":\"RESIDENCE_STATUS\",\"tree_json\":\"{\\\"op\\\": \\\"or\\\", \\\"args\\\": [{\\\"op\\\": \\\"neq\\\", \\\"field\\\": \\\"immigration_status\\\", \\\"value\\\": \\\"Other\\\"}, {\\\"op\\\": \\\"exists\\\", \\\"field\\\": \\\"other_status_details\\\"}]}\",\"severity\":\"block\",\"needs_calculation\":null,\"quote\":\"Other: You must fill out this section if you chose “Other” as a status.\",\"examples\":[{\"facts_json\":\"{\\\"immigration_status\\\": \\\"Other\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"immigration_status\\\": \\\"Citizen\\\"}\",\"expected\":true}]},{\"group\":\"official_rule\",\"sentence\":\"An applicant under 18 has the form signed by a parent or legal guardian.\",\"reads\":[\"Applicant age\",\"Signed by parent or guardian\"],\"subject_kind\":\"SIGNATURE\",\"tree_json\":\"{\\\"op\\\": \\\"or\\\", \\\"args\\\": [{\\\"op\\\": \\\"gte\\\", \\\"field\\\": \\\"applicant_age\\\", \\\"value\\\": 18}, {\\\"op\\\": \\\"eq\\\", \\\"field\\\": \\\"signed_by_parent_or_guardian\\\", \\\"value\\\": \\\"Yes\\\"}]}\",\"severity\":\"block\",\"needs_calculation\":\"Applicant age in years at signing from date of birth\",\"quote\":\"If you are less than 18 years of age, your form must be signed by one of your parents or a legal guardian.\",\"examples\":[{\"facts_json\":\"{\\\"applicant_age\\\": 15, \\\"signed_by_parent_or_guardian\\\": \\\"No\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"applicant_age\\\": 30}\",\"expected\":true}]}],\"unresolved\":[{\"passage\":\"If you are not a citizen of the country or territory where you are applying, you must send proof of your legal status in the country or territory you live in when you submit your application.\",\"reason\":\"Requires comparing citizenship country with the country of application, two answers' values.\"},{\"passage\":\"If your passport has been expired for 5 years or more\",\"reason\":\"Venezuelan passport validity requires comparing expiry and issue dates with the application date.\"}]}"
+}

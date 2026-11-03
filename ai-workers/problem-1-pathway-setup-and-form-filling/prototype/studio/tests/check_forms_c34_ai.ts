@@ -13,7 +13,7 @@
 //   zsh studio/tools/isolated.sh forms_c34ai 4454 start && tsx studio/tests/check_forms_c34_ai.ts 4454 xr_studio_forms_c34ai
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const PORT = Number(process.argv[2] ?? 4454), DB = process.argv[3] ?? "xr_studio_forms_c34ai";
@@ -35,13 +35,26 @@ let seq = 0;
 const stamp = () => `-live-20000101t${String(++seq).padStart(9, "0")}z-pacheck${process.pid}x`;
 const written: string[] = [], kept = new Map<string, Buffer | null>();
 const keep = (f: string) => { if (!kept.has(f)) kept.set(f, existsSync(f) ? readFileSync(f) : null); };
-const cleanUp = () => { for (const f of written) rmSync(f, { force: true }); for (const [f, b] of kept) { if (b === null) rmSync(f, { force: true }); else writeFileSync(f, b); } };
+// The C3.4 v2 rerun (3 Nov) committed the Mac paid runner's real C3.4 runs. This check proves the replay rules with its own
+// simulated runs (the saved result itself is acceptance/C3.4.test.ts), so the real ones are set aside in the copy's var
+// folder while it runs and put back after, also on Ctrl-C or a stop; a folder a killed check left is put back first.
+const MASTERS_LIVE = /^studio-masters-.+-live-\d{8}t\d{9}z-[a-z0-9]+\.json$/;
+const aside = join(STUDIO, "var", `c34-real-runs-${process.pid}`);
+const putBack = (dir = aside) => { if (!existsSync(dir)) return; for (const f of readdirSync(dir)) renameSync(join(dir, f), join(RUNS, f)); rmSync(dir, { recursive: true, force: true }); };
+const setAside = () => {
+  const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch { return false; } };
+  for (const d of existsSync(join(STUDIO, "var")) ? readdirSync(join(STUDIO, "var")).filter((x) => /^c34-real-runs-\d+$/.test(x)) : []) if (!alive(Number(d.slice(14)))) putBack(join(STUDIO, "var", d));
+  mkdirSync(aside, { recursive: true });
+  for (const f of readdirSync(RUNS).filter((x) => MASTERS_LIVE.test(x) && !x.includes("pacheck"))) renameSync(join(RUNS, f), join(aside, f));
+};
+const cleanUp = () => { for (const f of written) rmSync(f, { force: true }); for (const [f, b] of kept) { if (b === null) rmSync(f, { force: true }); else writeFileSync(f, b); } putBack(); };
 for (const [sig, code] of [["SIGINT", 130], ["SIGTERM", 143]] as const) process.on(sig, () => { cleanUp(); process.exit(code); });
 
 import { CHOICE, DETAILS, FORM_ANSWER, formCheck, GUIDE_ANSWER, guideCheck, passport } from "./fixtures/c34-answers.ts";
 import { evaluate } from "../../contracts/rules.ts";
 
 (async () => {
+  setAside();
   // ---------------------------------------------------------------- E: the rules over the rounds (pure, no server)
   const m = await import("../engine/masters-ai.ts");
   const { printedChoices } = await import("../api/src/form-masters.ts");

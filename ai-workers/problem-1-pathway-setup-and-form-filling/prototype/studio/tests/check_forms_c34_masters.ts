@@ -4,8 +4,25 @@
 // parts stay red there until the founder-approved live trial records the AI step's saved run (P-131). A passing and a
 // failing check per rule. On an isolated copy with the six loaded (Demo load). No browser, no model call.
 //   zsh studio/tools/isolated.sh forms_c34 4459 start && tsx studio/tests/check_forms_c34_masters.ts 4459 xr_studio_forms_c34
+import { existsSync, mkdirSync, readdirSync, renameSync, rmSync } from "node:fs";
+import { join } from "node:path";
 import { AUTHOR, APPROVER, pack2, run } from "../acceptance/lib/pack2.ts";
 import { codeOf, draftFromInventory, words as wordsOfName } from "../api/src/form-masters.ts";
+
+// The C3.4 v2 rerun (3 Nov) committed the Mac paid runner's real C3.4 runs. This check proves the rules pass and Saved's
+// refusal when nothing is recorded (the saved result itself is acceptance/C3.4.test.ts), so the real runs are set aside in
+// the copy's var folder while it runs and put back when it exits, also on Ctrl-C or a stop; a folder a killed check left
+// is put back first. As tests/check_forms_c34_ai.ts.
+const STUDIO = join(import.meta.dirname, ".."), RUNS = join(STUDIO, "..", "p2", "runs");
+const MASTERS_LIVE = /^studio-masters-.+-live-\d{8}t\d{9}z-[a-z0-9]+\.json$/;
+const aside = join(STUDIO, "var", `c34-real-runs-${process.pid}`);
+const putBack = (dir = aside) => { if (!existsSync(dir)) return; for (const f of readdirSync(dir)) renameSync(join(dir, f), join(RUNS, f)); rmSync(dir, { recursive: true, force: true }); };
+const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch { return false; } };
+for (const d of existsSync(join(STUDIO, "var")) ? readdirSync(join(STUDIO, "var")).filter((x) => /^c34-real-runs-\d+$/.test(x)) : []) if (!alive(Number(d.slice(14)))) putBack(join(STUDIO, "var", d));
+mkdirSync(aside, { recursive: true });
+for (const f of readdirSync(RUNS).filter((x) => MASTERS_LIVE.test(x) && !x.includes("pacheck"))) renameSync(join(RUNS, f), join(aside, f));
+process.on("exit", () => putBack());
+for (const [sig, code] of [["SIGINT", 130], ["SIGTERM", 143]] as const) process.on(sig, () => process.exit(code));
 
 const T = pack2("C3.4");
 const { call, sql, ok, words } = T;
