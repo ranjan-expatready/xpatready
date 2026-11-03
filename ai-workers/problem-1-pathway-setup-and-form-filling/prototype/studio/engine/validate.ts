@@ -271,3 +271,13 @@ export function isDemoSnapshot(raw: unknown): boolean {
   const sources = Array.isArray((raw as { sources?: unknown }).sources) ? ((raw as { sources: ({ sample?: boolean } | null)[] }).sources) : [];
   return snap.combination?.source_basis === "ILLUSTRATIVE" || checks.some((c) => !!c?.illustrative) || sources.some((x) => !!x?.sample);
 }
+
+/** C5.5 (G2 BR-3, P-240; Opus re-review of #568, M2): outside the demo workspace every release is real, so each check
+ *  saved without an official source (illustrative) refuses it, named. A number with only a Sample source is the source
+ *  gate's own line (G1, draftSourceProblems), never listed twice. The combination's own basis is not a line here: the
+ *  Structure screens save every name as Sample (structure.ts) and nothing changes it, so it would refuse every
+ *  combination set up on the screens (breaker F1 on this PR). The caller asks only for a draft outside the demo workspace. */
+export function sampleContentProblems(s: Snapshot): (Problem & { gate: "sample-content" })[] {
+  return s.checks.filter((x) => x.illustrative).map((c) => ({ level: "error" as const, where: "Checks", item: c.id, label: `Check "${String(c.message ?? c.id).trim()}"`, gate: "sample-content" as const,
+    message: "Sample (saved without an official source quote). Sample content releases only in the demo workspace, as a Demo release. A real release needs its official source." }));
+}
