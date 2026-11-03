@@ -339,7 +339,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const j1295 = await api(`/jobs/${p.url().split("/jobs/")[1]}`);
   step("B3: the IMM 1295 draft is a labelled replay of a saved real run; against an empty library every field is new", j1295.mode === "REPLAY" && /Replay of saved run|Saved AI answer.*no model call, US\$0/.test(j1295.message) && j1295.detail.counts.reuse === 0 && j1295.detail.counts.new === j1295.items.length, `${j1295.mode} · ${j1295.items.length} items · "${String(j1295.message).slice(0, 90)}" · ${j1295.runId}: ${JSON.stringify(j1295.detail.counts)}`);
   await shot("B3-imm1295-proposals.png");
-  // C3.2 (P-121, P-294): new definitions are never accepted together; each is decided on its own (decideRest).
+  // C3.2 (P-121, P-296 (1)): new definitions are never accepted together; each is decided on its own (decideRest).
   await decideRest();
   await click(btn("Apply to draft")); await click(p.getByRole("dialog").getByRole("button", { name: "Apply to draft" }));
   const applied1295 = await afterApply();
