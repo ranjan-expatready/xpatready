@@ -61,7 +61,18 @@ const sql = sqlFor(DB);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const until = async (fn: () => Promise<boolean>, ms = 120_000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await fn()) return true; await sleep(500); } return false; };
 const words = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
-const setupMissing = (why: string) => { rmSync(SCRATCH, { recursive: true, force: true }); stop(why); };
+/** The servers' own settings come only from each restart's arguments: the caller's shell never leaks a switch, a held
+ *  queue, a ledger folder or a launcher into them (review, Opus m2; as tests/check_cost_override.ts). */
+const BLANK = { STUDIO_AI_LIVE: "", STUDIO_HOLD_QUEUE: "", P2_LEDGER_DIR: "", STUDIO_FAKE_LAUNCHER: "" };
+/** True from Phase C's restart with the switch on until Phase D's restart switches it off. */
+let switchedOn = false;
+/** Whatever ends the check (a failed setup, a crash, Ctrl-C) leaves the copy as it was started: switch off, stand-in
+ *  launcher, the machine's ledger untouched (review, Opus m1; as tests/check_cost_override.ts). */
+const restoreCopy = () => {
+  if (switchedOn) { try { execFileSync("zsh", [join(STUDIO, "tools", "isolated.sh"), NAME, String(PORT), "restart", `STUDIO_FAKE_LAUNCHER=${FAKE}`], { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, ...BLANK } }); switchedOn = false; } catch { console.error(`STOP  the copy ${NAME} on ${PORT} could not be restarted with the switch off: stop it (isolated.sh ${NAME} ${PORT} stop)`); } }
+  rmSync(SCRATCH, { recursive: true, force: true });
+};
+const setupMissing = (why: string) => { restoreCopy(); stop(why); };
 const liveCalls = () => (existsSync(FAKE_LOG) ? readFileSync(FAKE_LOG, "utf8").split("\n").filter((l) => l.includes('"mode":"live"')).length : 0);
 /** The machine's shared spend ledger, as bytes: it must not move during this check. A folder created empty meanwhile (a
  *  fresh machine: the server makes it when it first reads the ledger) holds no spend, the same as no folder. */
@@ -70,7 +81,7 @@ const scratchLines = () => (existsSync(LEDGER) ? readFileSync(LEDGER, "utf8") : 
 /** Restarts this copy (same database). The live switch is blanked; only Phase C passes STUDIO_AI_LIVE=approved as a
  *  setting of its own restart, together with the stand-in launcher and the queue held (P-192). */
 const restart = async (...env: string[]) => {
-  try { execFileSync("zsh", [join(STUDIO, "tools", "isolated.sh"), NAME, String(PORT), "restart", ...env], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, STUDIO_AI_LIVE: "" } }); } catch { /* waited for below */ }
+  try { execFileSync("zsh", [join(STUDIO, "tools", "isolated.sh"), NAME, String(PORT), "restart", ...env], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, ...BLANK } }); } catch { /* waited for below */ }
   for (let i = 0; i < 240; i++) { if ((await fetch(`http://localhost:${PORT}/api/session`, { headers: { "x-actor": "user-A" } }).catch(() => null))?.status === 200) return; await sleep(500); }
   setupMissing("the copy did not come back after a restart");
 };
@@ -172,12 +183,12 @@ const seed = (usd: number) => appendFileSync(LEDGER, JSON.stringify({ type: "res
   if (B2) await call("POST", `/runs/${B2}/stop`);
 
   // ── Phase C: the switch ON, only with the stand-in launcher, the queue held and the scratch ledger (P-192)
+  switchedOn = true;
   await restart(`P2_LEDGER_DIR=${SCRATCH}`, "STUDIO_HOLD_QUEUE=1", "STUDIO_AI_LIVE=approved", `STUDIO_FAKE_LAUNCHER=${FAKE}`);
   const aiOn = (await call("GET", "/session")).body?.ai;
   // Review m1: the copy also reads the scratch ledger (its seed puts this run over the cap; the machine's ledger would not).
   const seeded = (await call("POST", "/ai/plan", { scope, mode: "LIVE", draftAgain: true })).body?.cost_check;
   if (!(aiOn?.live === true && aiOn?.launcher === "stand-in" && seeded?.ok === false && seeded?.can_continue === true)) {
-    await restart(`STUDIO_FAKE_LAUNCHER=${FAKE}`);
     setupMissing(`P-192 guard: after its Phase C restart the copy does not report live on with the stand-in launcher or does not read the scratch ledger (GET /session → ai: ${JSON.stringify(aiOn)}; plan cost check ok ${seeded?.ok}); stopped before any start`);
   }
   r = await call("POST", `/attachments/${att}/draft`, { mode: "live", idempotencyKey: `acc-c118-cont-on-${Date.now()}`, overrideId: ov });
@@ -206,6 +217,7 @@ const seed = (usd: number) => appendFileSync(LEDGER, JSON.stringify({ type: "res
   // ── Phase D: the switch OFF again and the queue running: the step queued above resumes and meets the runner's door
   writeFileSync(join(VAR, "fake-launch.json"), JSON.stringify({ stub: { exit: 0, out: { ok: true } }, live: { exit: 1, err: "the stand-in launcher was asked for a live call" } }));
   await restart(`P2_LEDGER_DIR=${SCRATCH}`, `STUDIO_FAKE_LAUNCHER=${FAKE}`);
+  switchedOn = false;
   const aiOff = (await call("GET", "/session")).body?.ai;
   const ended = J4 ? await until(async () => ["FAILED", "BLOCKED", "COMPLETED", "CANCELLED"].includes(sql(`select status from drafting_job where id='${J4}'`)), 60_000) : false;
   const j4 = J4 ? sql(`select status || '|' || coalesce(cost_usd::text, 'null') || '|' || coalesce(message, '') from drafting_job where id='${J4}'`).split("|") : [];
@@ -224,5 +236,5 @@ const seed = (usd: number) => appendFileSync(LEDGER, JSON.stringify({ type: "res
   rmSync(SCRATCH, { recursive: true, force: true });
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
-})().catch((e) => { console.error("FAIL  C11.8 the check itself stopped:", e); rmSync(SCRATCH, { recursive: true, force: true }); process.exit(1); });
-for (const sig of ["SIGINT", "SIGTERM"] as const) process.on(sig, () => { rmSync(SCRATCH, { recursive: true, force: true }); process.exit(130); });
+})().catch((e) => { console.error("FAIL  C11.8 the check itself stopped:", e); restoreCopy(); process.exit(1); });
+for (const sig of ["SIGINT", "SIGTERM"] as const) process.on(sig, () => { restoreCopy(); process.exit(130); });

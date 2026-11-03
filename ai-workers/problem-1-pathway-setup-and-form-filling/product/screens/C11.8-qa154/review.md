@@ -41,3 +41,33 @@ Re-ran the check on port 4471 through its usage line, then stopped the copy: 22 
 No new issues.
 
 **Verdict: Approve**
+
+## Opus review (P-303), commit 1c5331db3 (diff origin/main...1c5331db3; test-only)
+Fresh context; the view below was formed from the code and a run before reading the notes above.
+
+**Run.** The usage line, isolated copy `forms_c118o` on :4472 (STUDIO_FAKE_LAUNCHER only): **22 passed, 0 failed**, 26 s, exit 0. The copy is stopped. The fake-launch log has 15 stub calls and 0 live calls. `.tools/p2-ledger` has the same sha256 before and after. No QUEUED step is left, and the copy ended as `ai {live:false, launcher:"stand-in"}`.
+
+**QA-154 re-run by hand** (same copy, switch off, before the stop):
+- `POST /ai/plan` LIVE gives `live {on:false, why:"AI now is switched off…", blocked:true}`.
+- `POST /ai/batches` LIVE gives 409 with the same words. Counts stay 4/16 (ai_batch/drafting_job) and the launcher is not called.
+- The "not checked" half is AT-2d: J4 was queued with the switch on, then resumed on restart with the switch off. Its stub passes ran, then it ended FAILED at US$0 ("5 of 5 parts… AI now is switched off"), with no live call. **Fixed.**
+
+**Both directions.**
+- Fail case: AT-2, AT-3b, AT-9b.
+- Pass case: AT-2c (201 and QUEUED/LIVE, so the door opens with the switch) and AT-3b pass.
+- Runner door: `sources.ts:473` is the only `aiLive()` check on the runner path (none in `ai.ts` `step` or `runDraftStep`/`runParts`). Removing it sends the live call to the stand-in, which exits 1 with "asked for a live call". AT-2d's `/switched off/` and `liveCalls()` clauses then fail, and so does AT-13.
+- Phase D's stub scenario is set to succeed, so the step reaches the live door and is not stopped at the stub pass first (no vacuous pass).
+
+**Safety / P-192.**
+- The switch is set only in the Phase C restart, in the same line as the fake launcher, `STUDIO_HOLD_QUEUE=1` and the scratch ledger.
+- The guard checks `launcher:"stand-in"` and that the plan reads the seeded scratch ledger before any start.
+- The startup hooks (`ai`, `finder`, `people-ai`, `draft-qd`) only re-queue (held) or cancel.
+- No bypass: the only `spawn` is behind `launchOnce`.
+- In run-suites, exit 2 counts as FAIL and the copy is stopped afterwards.
+
+**Issues**
+- **Minor 1.** On a crash, or SIGINT after the Phase C restart, the `.catch` and signal handlers delete the scratch folder but leave the copy running: live on, stand-in, held, J4 QUEUED/LIVE, and `P2_LEDGER_DIR` pointing at the deleted folder. This is US$0, since the stand-in launcher is in use and the runner door still applies. Even so, restart the copy as it was started in those handlers, as `check_cost_override.ts:325` stops its copy.
+- **Minor 2.** `restart` blanks only STUDIO_AI_LIVE. A `STUDIO_HOLD_QUEUE` or `P2_LEDGER_DIR` exported in the caller's shell leaks into Phase A/D and the final restart. Blank them as `check_cost_override.ts:27` does.
+- **Note.** AT-2d covers the split path (`runParts`). The single-file `launch()` path shares the same `launchOnce` door. The QA-154 row is still Open in BUGS.md; qa closes it on retest.
+
+**Verdict: Approve** (Blockers: none · Majors: none · Minors: 2)
