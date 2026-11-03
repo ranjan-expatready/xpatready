@@ -2,7 +2,8 @@
 // template's own Version variable), or takes the official source list's recorded edition only when the file's SHA-256 is
 // that entry's, and records which way; a file whose code is on the list under a different checksum is refused. Through
 // the reader, the pure rule and the API on an isolated copy, a passing and a failing case each. NO model call (US$0).
-//   zsh studio/tools/isolated.sh c117 4452 start && tsx --tsconfig studio/api/tsconfig.json studio/tests/check_c117_intake_edition.ts 4452 xr_studio_c117
+//   zsh studio/tools/isolated.sh c117 4452 start && tsx studio/tests/check_c117_intake_edition.ts 4452 xr_studio_c117
+// (by hand: tsx --tsconfig studio/api/tsconfig.json …, as run-suites.sh does)
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
