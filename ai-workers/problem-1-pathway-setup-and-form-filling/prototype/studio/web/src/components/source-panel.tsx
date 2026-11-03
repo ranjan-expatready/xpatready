@@ -224,14 +224,19 @@ function Answer({ n }: { n: SourceNumberView }) {
  *  their state, and a control that opens the Source panel on that item. `variant`: "section" in the rule dialog ("Sources
  *  of its numbers", each number with its chip), "button" on a check row ("Sources (n)"), "link" under a form line's
  *  "From age" ("Source"). Nothing shows for an item with no published number. The numbers are the draft's as saved. */
+/** One item's published numbers from the combination's source list (the same cached query as the Review block). */
+export function useItemNumbers(id: string, kind: string, suffix: string, address?: string) {
+  const q = useApi<SourcesView>(["sources", id], sourcesPath(id));
+  return (q.data?.numbers ?? []).filter((n) => n.kind === kind && n.key.endsWith(`/${suffix}`) && (!address || n.address === address));
+}
+
 export function ItemSources({ id, kind, suffix, address, variant, label, note }: {
   id: string; kind: string; suffix: string; address?: string; variant: "section" | "button" | "link"; label?: string; note?: string;
 }) {
-  const q = useApi<SourcesView>(["sources", id], sourcesPath(id));
+  const nums = useItemNumbers(id, kind, suffix, address);
   const { canAuthor } = useSessionView();
   const [open, setOpen] = React.useState<SourceItem | null>(null);
   const opener = React.useRef<HTMLButtonElement | null>(null);
-  const nums = (q.data?.numbers ?? []).filter((n) => n.kind === kind && n.key.endsWith(`/${suffix}`) && (!address || n.address === address));
   if (!nums.length) return null;
   const item: SourceItem = { kind: nums[0].kind, key: nums[0].key, item_words: nums[0].item_words, where: nums[0].where };
   const held = nums.filter((n) => !n.passes).length;

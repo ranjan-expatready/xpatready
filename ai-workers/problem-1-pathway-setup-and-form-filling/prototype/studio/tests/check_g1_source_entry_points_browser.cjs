@@ -93,6 +93,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await closePanel();
     await p.waitForTimeout(300);
     step("C5.4 (PR 2c): back in the line drawer, the chip reads None published", /None published – set by ExpatReady/.test(await link.innerText()));
+    step("C5.4 (Devin on #627): once answered, the From age hint no longer asks for a source", (await p.locator("[role=dialog]").innerText()).includes("Its source is recorded: see Source below.") && !(await p.locator("[role=dialog]").innerText()).includes("Needs a source before release."));
     step("no page errors", errs.length === 0, errs.join(" | "));
   } catch (e) { step("ran to the end", false, e.stack ?? e.message); }
   await b.close();
