@@ -8,7 +8,7 @@
 //     reasons, and an agreed field whose rules pass is Ready (P-121). The planted run file is removed at the end.
 //   zsh studio/tools/isolated.sh forms_b4 4458 start && tsx studio/tests/check_gcore_b4_field_map_check.ts 4458 xr_studio_forms_b4
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -71,10 +71,14 @@ const checkAnswer = { ...answer,
     const file = join(scratch, `${jobId}.json`); writeFileSync(file, JSON.stringify(record(JSON.parse(text))));
     return { code: 0, out: `${JSON.stringify({ run_file: file })}\n`, err: "" };
   } };
+  // The C11.14 result (#671's jobs, 3 Nov) committed this job file; the runner removes the file after the round, so its bytes
+  // are put back once that is checked.
+  const jobFile = join(PROTOTYPE, "p2", "jobs", `${job.job_id}.json`), committedJob = existsSync(jobFile) ? readFileSync(jobFile) : null;
   const live = await new StepRunner(fake as never).round<typeof checkAnswer>(j.step, true, { ...j.ctx, mode: "live", wanted: async () => true });
   ok("G-CORE B4: the shared step runner runs the checker round (fake launcher: stub pass, then the call) and reads its answer", live.ok && live.output.canonical_fields.length === answer.canonical_fields.length - 1, live);
   ok("P-121 blind: the job file the launcher was given names the checker prompt and only the inventory", (seenJob as { template?: string } | null)?.template === "field-map-check.v1.md" && JSON.stringify((seenJob as { inputs?: unknown } | null)?.inputs) === JSON.stringify(draft.drafting_run.inputs.official_files));
   ok("G-CORE B4: the job file is removed after the round (the run record keeps it)", !existsSync(join(PROTOTYPE, "p2", "jobs", `${job.job_id}.json`)));
+  if (committedJob) writeFileSync(jobFile, committedJob);
   rmSync(scratch, { recursive: true, force: true });
 
   // ───────────── the comparison and its rules (pure)
@@ -111,6 +115,15 @@ const checkAnswer = { ...answer,
 
   // ───────────── 2. On an isolated copy: a recorded checker run replays with the draft
   const planted = join(RUNS, `${job.job_id}-live-20261103t000000000z-b4test.json`);
+  // The C11.14 result (#671's runs, 3 Nov) committed IMM 5257's real checker run, which would replay instead of the planted
+  // one: it waits in the copy's var folder while this part runs and is put back after, also on Ctrl-C or a stop; a folder a
+  // killed run of this check left is put back first. As tests/check_forms_c34_ai.ts.
+  const aside = join(import.meta.dirname, "..", "var", "b4-real-runs");
+  const putBack = () => { if (!existsSync(aside)) return; for (const f of readdirSync(aside)) renameSync(join(aside, f), join(RUNS, f)); rmSync(aside, { recursive: true, force: true }); };
+  putBack(); mkdirSync(aside, { recursive: true });
+  for (const f of readdirSync(RUNS).filter((x) => x.startsWith(`${job.job_id}-live-`) && !x.endsWith("-b4test.json"))) renameSync(join(RUNS, f), join(aside, f));
+  process.on("exit", putBack);
+  for (const [sig, code] of [["SIGINT", 130], ["SIGTERM", 143]] as const) process.on(sig, () => process.exit(code));
   try {
     // Recorded as the paid runner records it: its answer leaves a form field to a person (DROPPED), so p2/convert.ts
     // marks the run "completed_with_unresolved" (tech lead, 3 Nov: a run planted "completed" hid that such runs never paired).
@@ -134,7 +147,7 @@ const checkAnswer = { ...answer,
     const ready = all.filter((x) => x[1] === "ready");
     ok("C11.14 AT-3 pass: High (Ready) only when both rounds agree and the rules ran and passed, and some are", ready.length > 0 && ready.every((x) => x[0] === "agreed" && Number(x[2]) >= 2) && Number(sql(`select count(*) from proposal_item where run_id = '${d.body?.id}' and confidence = 'ready' and exists (select 1 from jsonb_array_elements(rules) r where (r->>'passed')::boolean = false)`)) === 0, { ready: ready.length });
     ok("P-121: no live call was made (the checker round was replayed)", sql(`select coalesce(sum(cost_usd), 0)::numeric(10,2) from drafting_job where id = '${d.body?.id}'`) === "0.00");
-  } finally { rmSync(planted, { force: true }); }
+  } finally { rmSync(planted, { force: true }); putBack(); }
   ok("cleanup: the planted checker run is removed (committed runs unchanged)", !existsSync(planted));
 
   console.log(`\n${pass} PASS ${fail} FAIL`);
