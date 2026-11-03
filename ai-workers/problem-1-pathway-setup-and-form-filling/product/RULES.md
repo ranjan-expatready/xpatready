@@ -1,4 +1,4 @@
-# Rules in force — one page (the tech lead keeps it; as of **P-316**, 4 Nov 00:05 IST)
+# Rules in force — one page (the tech lead keeps it; as of **P-316**, 3 Nov 23:21 IST)
 
 Each rule once, with the decision that set it. A decision newer than "as of" above wins over this page: read those rows in `DECISIONS.md` word for word. Older rows are history; read one only when a rule here cites it and you need its detail.
 
