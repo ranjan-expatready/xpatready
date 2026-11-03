@@ -20,6 +20,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** The rules findings resolve themselves; a person never sets them back: nothing is acknowledged, waived or dismissed
  *  once resolved, and a finding already in that state says so. */
 const OPEN_TO: Record<"acknowledge" | "waive" | "dismiss", FindingState> = { acknowledge: "acknowledged", waive: "waived", dismiss: "dismissed" };
+/** A stored actor id in words; "rules" when the rules resolved it. */
+const nameOf = (id: string | null) => { if (!id) return null; if (id === "rules") return "the rules"; try { return actorOf(id).name; } catch { return id; } };
 const unique = (e: unknown) => (e as { code?: string }).code === "P2002";
 
 function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
@@ -88,7 +90,7 @@ export class FindingsService {
     return { id: x.id, filing: x.filingId, subject: x.subjectId, person: label.get(x.subjectId) ?? "", form: x.form, field: x.field,
       severity: x.severity as Finding["severity"], source: x.source as Finding["source"], state: x.state as Finding["state"], quote: x.quote,
       rule: x.ruleKey ? ruleWords(x.ruleKey) : null, agreement: (x.agreement as Finding["agreement"]) ?? null, reasons: Array.isArray(x.reasons) ? x.reasons as string[] : [], replayed: x.replayed,
-      state_reason: x.stateReason, state_by: x.stateBy, state_at: x.stateAt?.toISOString() ?? null, created_by: x.createdBy, created_at: x.createdAt.toISOString() };
+      state_reason: x.stateReason, state_by: x.stateBy, state_by_name: nameOf(x.stateBy), state_at: x.stateAt?.toISOString() ?? null, created_by: x.createdBy, created_at: x.createdAt.toISOString() };
   }
 
   /** POST /runtime/findings/:id/{acknowledge · waive · dismiss} { reason }: an Open finding moves once, with who, when and

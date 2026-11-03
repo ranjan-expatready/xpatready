@@ -1,7 +1,7 @@
 // C7.5 part 1 (runtime lane, M3-E; r5c BR-19; AG-11-70, AG-11-71): the rules cross-checks of the Review page. US$0, no
 // model call: each rule reads a case's current facts and says, in the team's words, what disagrees, quoting both facts.
 // A rule only speaks when every fact it compares is answered; it never guesses a missing one. Severities are Sample (the
-// immigration expert confirms; ASSUMPTIONS row C7.5-S1). Pure (P-249): no database, no clock beyond the facts given.
+// immigration expert confirms; an ASSUMPTIONS row is proposed to the tech lead in the C7.5 part 1 PR). Pure (P-249): no database, no clock beyond the facts given.
 // The finding's life (Open → Acknowledged → Resolved, Waived, Dismissed) is api/src/findings.ts; here only "what the
 // rules see now", with a fingerprint that changes when a compared fact changes (a dismissed finding stays dismissed for
 // the same facts; a changed fact is a new finding).

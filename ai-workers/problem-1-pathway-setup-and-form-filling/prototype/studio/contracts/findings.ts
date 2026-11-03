@@ -22,6 +22,8 @@ export type Finding = {
   rule: string | null;
   agreement: "high" | "low" | null; reasons: string[]; replayed: boolean;
   state_reason: string | null; state_by: string | null; state_at: string | null;
+  /** Who moved it, in words ("Case officer"; "the rules" when a fixed fact resolved it). */
+  state_by_name: string | null;
   created_by: string; created_at: string;
 };
 export type Findings = { case_id: string; findings: Finding[]; counts: Record<FindingState, number>; ai: { available: false; words: string } };
