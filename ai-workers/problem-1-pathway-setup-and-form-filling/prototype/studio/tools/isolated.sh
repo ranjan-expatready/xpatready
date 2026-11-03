@@ -26,6 +26,9 @@ pg_ctl -D "$ROOT/.tools/solution-1-prototype/pg18-data" status >/dev/null 2>&1 |
 if [[ "$ACTION" == "start" ]]; then dropdb -h 127.0.0.1 -p 54329 -U xr_studio --if-exists "$DB"; createdb -h 127.0.0.1 -p 54329 -U xr_studio "$DB"; rm -rf "$VARDIR"; fi
 mkdir -p "$VARDIR"
 cd "$STUDIO"
+# QA-181: never serve a web bundle built from other code (an old branch's, or before an edit): rebuild it first, and
+# refuse to start when that fails. Seconds when the bundle's stamp already matches web/, contracts/ and engine/.
+bash "$STUDIO/tools/web-fresh.sh" ensure || { echo "refused: web/dist does not match this copy's code and could not be rebuilt (QA-181)"; exit 1; }
 DATABASE_URL="$URL" ./node_modules/.bin/prisma migrate deploy >/dev/null
 # As start.sh does: a database client older than the schema makes every query on a new column fail quietly (a load
 # answers 201 having read nothing; #378 review B1). Regenerated only when the schema is newer or the client is missing, so a start stays fast.

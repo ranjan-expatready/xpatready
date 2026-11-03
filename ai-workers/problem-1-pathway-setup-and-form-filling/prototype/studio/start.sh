@@ -11,6 +11,6 @@ if pg_ctl -D "$PGDATA" status >/dev/null 2>&1; then echo "database already runni
 cd "$STUDIO"
 [ -d node_modules ] || { echo "studio packages missing: npm ci"; npm ci; }
 ./node_modules/.bin/prisma migrate deploy >/dev/null && ./node_modules/.bin/prisma generate >/dev/null && echo "database schema up to date"
-(cd web && ../node_modules/.bin/vite build >/dev/null) && echo "web app built"
+bash tools/web-fresh.sh build || echo "web build failed: isolated copies will refuse to start until it builds"   # builds web/dist and stamps what it was built from (QA-181: isolated.sh checks the stamp)
 mkdir -p var
 zsh tools/restart-api.sh >/dev/null && echo "Product Studio: http://localhost:${STUDIO_PORT:-4400}"
