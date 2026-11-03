@@ -15,6 +15,7 @@ import { Button, Notice, Panel, Pill, Select, Textarea } from "@/components/ui/c
 import { Tip } from "@/components/status";
 import { useUndoToast } from "@/components/lifecycle";
 import { cn } from "@/lib/utils";
+import { factName } from "../../../../engine/fact-name";
 
 /** P-154: the words people read ("Agent" is retired as a role word); AGENT stays the internal name. */
 export const SOURCE_LABEL: Record<AnswerSource, string> = { DOCUMENT: "Document", CLIENT: "Client", AGENT: "Case officer" };
@@ -156,7 +157,10 @@ export function FactDrawer({ id, role, roleLabel, section, q, f, canAuthor, onCl
   const [error, setError] = React.useState<{ field: string; message: string } | null>(null);
   const [stale, setStale] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
-  const title = q?.wording ?? f?.label ?? "Question";
+  // QA-172 (review m2): a fact answered without a question is titled by its short name, as its row is (QA-82); its
+  // meaning shows below as "Meaning:", as a placed question's does.
+  const title = q?.wording ?? (f ? factName(f.fact) : "Question");
+  const meaning = q?.meaning ?? f?.label ?? null;
   const editable = canAuthor && !!f;
   // P-155(3): the case officer on a fact that is not theirs needs a written reason (required; reviewed at release).
   const needsWhy = !!f && choice === "AGENT" && !f.agentOffered;
@@ -192,7 +196,7 @@ export function FactDrawer({ id, role, roleLabel, section, q, f, canAuthor, onCl
       footer={editable ? <><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void save()} busy={busy} disabled={!changed} data-drawer-save>Save</Button></> : <><span className="text-xs text-text-muted">{canAuthor ? "" : SAY.readOnly}</span><Button variant="ghost" onClick={onClose}>Close</Button></>}>
       <div className="space-y-4 text-sm" data-fact-drawer>
         {/* QA-82: the field's meaning (its definition) lives here, not in the Question column. */}
-        {q?.meaning ? <p className="text-text-muted" data-fact-meaning><span className="font-medium text-text">Meaning: </span>{q.meaning}</p> : null}
+        {meaning ? <p className="text-text-muted" data-fact-meaning><span className="font-medium text-text">Meaning: </span>{meaning}</p> : null}
         {stale ? <Notice tone="warn" title="Changed by someone else" action={<Button size="sm" variant="secondary" onClick={() => { refresh(); onClose(); }}>Reload their version</Button>}>{stale}</Notice> : null}
         {f ? (
           <section aria-labelledby="d-source" className="space-y-2">
