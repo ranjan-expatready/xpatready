@@ -1,6 +1,6 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-03 07:58 UTC by **Lead 1 · 3 Nov 06:56 UTC** (ended at ~231k tokens, P-291 (3)); **Lead 2 · 3 Nov takes over** (`local_ff0137ad-1907-4308-80a6-4e6f849f696a`) · milestone: **M2 — Super Admin configuration** · how we work: `WAY-OF-WORKING.md` (Night playbook) · decisions to read word for word: DECISIONS **P-285 … P-296** · evidence: `reports/build-review-2026-11-03.html`, `reports/built-evidence-2026-11-03.html` (E0, PR #672; published https://claude.ai/artifact/EWfW8ZQBpajkmac9NvUjDP)
+updated: 2026-11-03 09:20 UTC by **Lead 2 · 3 Nov 07:51 UTC** (current; took over from Lead 1 at 07:51; 30-minute check at minutes 13 and 43) · milestone: **M2 — Super Admin configuration** · how we work: `WAY-OF-WORKING.md` (Night playbook) · decisions to read word for word: DECISIONS **P-285 … P-297** · evidence: `reports/build-review-2026-11-03.html`, `reports/built-evidence-2026-11-03.html` (E0; published https://claude.ai/artifact/EWfW8ZQBpajkmac9NvUjDP), `reports/verify-2026-11-03/` (V1–V4)
 
 ## Tonight, 3 Nov (founder, P-290): the fresh Lead's first turn
 The founder chose "Fresh Lead, one paste": the new tech lead, in its **first founder-typed turn**, starts everything below (a Lead woken later by a check or a message cannot start sessions), then runs the night without the founder. **Lead 5 has ended** (its commits on `lead/2026-11-03-*` are not another running Lead; do not ask the founder). Goal for the next 16 hours (founder at the computer about 8–10 hours, then the night): **finish M2** (confirmed Works 36 → 60 except what waits on paid runs or the SA-01B hold), **verify the whole build** (V1–V4), and **start M3 in parallel** on the shared services, finishing as much of M3 as the merge queue allows without slowing M2 (M2 goes first in the queue). Do not break main. **Talk to the founder in plain words (P-291):** capabilities by what they do, code after; never "row".
@@ -56,6 +56,14 @@ After the fix PRs merge, run the **independent re-test** again (same method as t
 | V3 | one system (task_c77efaa8) | V3 report (to come), journey /8 | re-run after fixes · second combination |
 | V4 | best in class (task_344be92b) | V4 report (to come) | top-5 gap texts · UX re-score |
 Not tonight (P-290): C4.7, C11.3's held part, the 8 Partials waiting on paid runs or holds (flow-watch lists C11.14, C11.7, C11.8, C9.1: expected, no paid run tonight).
+
+## Lead 2 at 09:20 UTC (read first)
+* **Leads, in order:** Lead 1 · 3 Nov 06:56 UTC (ended 07:51) · **Lead 2 · 3 Nov 07:51 UTC (current)** · standby **Lead 3 · 3 Nov · standby** (`local_651babba-ec86-4923-8b51-09c061d523d9`), the only one: start "Lead 4 · 3 Nov · standby" at the founder's next typed turn.
+* **Merged since 07:51:** #659 SH3 (07:59), #677 C6.4 check (08:26), #673 C11.14 replay (08:50), #663 I1 test-once + notes-only path + builders may comment (08:57), #666 C4.6 (08:33), #683 C1.5 (09:03). #665 closed.
+* **Queue at 09:16:** batches checking #688 (C4.2) and #674 + #675 + #676 + #661 + #680; #693 (C11.14 live round) approved. **Red, sent back to their builders:** #691 F5 C3.8 (new IMM 5707 rule breaks check_screen02_slice2's setup), #689 F4 C11.11 (check_c18_copies uses the removed checklist line), #686 F6 C6.12 (pack 24/28 in CI).
+* **Paid (P-295):** US$13.52 of 50 (C3.4 1.24, C11.14 15 checker rounds 12.29; ledger). Next: C3.4 rerun after F4's fix; C11.7 after F4's intake fix and a quote.
+* **Lanes' next:** F1 StepRunner.launch fix (P-297 (7)) → bulk-door rule → QA-154 · F2 C2.4 → B1 release gate (P-297 (3)) → QA-144 · F4 #689 fix → C3.4 fix → C11.7 intake → QA-153 · F5 #691 fix → QA-172 → QA-152 · F6 #686 fix, then stops · M1 ends after #680; C7.7 part 2 (Paper lines with the barcode page) needs a fresh runtime session at the founder's next typed turn · E0, V1, V4 idle after their reports (the founder is asked whether testers stop, weekly plan 62% at 07:50).
+* **Waiting for the founder:** the weekly-plan answer (recommendation: no new builders; testers stop after their next two tasks); a typed turn so the Lead can start Lead 4 standby and the C7.7 part 2 session.
 
 ## Hand-over from Lead 1 at 07:58 UTC (read first, Lead 2)
 * **Leads:** Lead 1 ended (context 231k). Lead 2 is current; Lead 3 · 3 Nov · standby (`local_651babba-ec86-4923-8b51-09c061d523d9`) is the only standby, so at the founder's next typed turn start a new standby "Lead 4 · 3 Nov · standby" (P-286). You cannot start sessions until the founder types to you.
