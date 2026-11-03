@@ -1,6 +1,28 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-03 10:05 UTC by **Lead 3 · 3 Nov 10:00 UTC** (ended 18:20 IST at 308k; **Lead 4 takes over**) · milestone: **M2 — Super Admin configuration** · how we work: `WAY-OF-WORKING.md` (Night playbook) · decisions to read word for word: DECISIONS **P-289 … P-306** · evidence: `reports/build-review-2026-11-03.html`, `reports/built-evidence-2026-11-03.html` (E0; published https://claude.ai/artifact/EWfW8ZQBpajkmac9NvUjDP), `reports/verify-2026-11-03/` (V1–V4)
+updated: 2026-11-03 22:25 IST by **Lead 5 · 3 Nov 20:29 IST** (wrap-up for the account switch, P-310; Leads 3 and 4 ended) · milestone: **M2 — Super Admin configuration** · how we work: `WAY-OF-WORKING.md` (Night playbook) · decisions to read word for word: DECISIONS **P-289 … P-310** · evidence: `reports/build-review-2026-11-03.html`, `reports/built-evidence-2026-11-03.html` (E0; published https://claude.ai/artifact/EWfW8ZQBpajkmac9NvUjDP), `reports/verify-2026-11-03/` (V1–V4)
+
+## Resume on the new account (Lead 5, 3 Nov 22:25 IST) — read first, next Lead
+The founder chose at 22:15 IST to wrap up this account now (P-308, P-310) and to type `/lead` on the new account in this same folder. **Rules to read word for word:** DECISIONS P-290 onward, above all P-301 (AI critical path), P-302 (IST), P-303 (Opus for quality), P-305 (3) (an open Major keeps a row Partial), P-306 (notes PRs through the queue), P-308, P-309 (target 58–59/60, AI first, paid budget granted, quality never cut), P-310.
+
+**Score:** M2 **42/60 confirmed** on main (83f846a52; was 40 at 18:18 IST). Built and merged, waiting for qa's re-test: **C3.2, C4.11, C9.1, C11.8, C11.14**, plus **C11.7** (#762, labelled, in the queue) and **C3.4** (#771) → about **49** if they pass. Built but held by one bug or gap (9): C5.4 and C11.10 (QA-184), C11.13 (QA-192, fix #726 open), C3.10, C4.2, C11.17, C10.1 (one red step each), C4.1 and C4.8 (green only on the fixture, QA-144). Not fully built (2): C1.6 (forms channel slice), C5.1 (P-248 rule).
+
+**Paid AI ledger:** US$15.88 of US$100 (3 Nov). C3.4 v2 rerun US$1.35 (worst US$6.50). Quotes for the new account: C11.7 worst US$26.49 (IMM 5669's two jobs at US$6.49 and US$6.50 are above the US$5 two-attempt cap; their first attempt at US$3.25 fits), C9.1 worst US$1.22.
+
+**Open PRs and next step:**
+* #762 C11.7 Load sample — labelled by the founder's instruction (22:01 IST), in the merge queue; merges by itself.
+* #771 C3.4 v2 saved masters (16/16, PR1) — Opus review, then qa's Saved check (P-275), then the label. "Stopped here" in its body.
+* qa re-test PR (session "qa re-test · C9.1 C11.8 …", branch `qa-retest-night`) — rows scored so far are pushed; "Stopped here" in its body names the rest. Restart it first.
+* #763 (Opus re-review notes), #765 (lead-watch skill) — green, wait for the founder's label (the classifier refuses the Lead's).
+* #745 I1 test-database leak fix — green, needs an Opus review. #726 C11.13 QA-192 fix, #714 C6.1, #749 V2, #737 V3 — open, unlabelled. #669, #671 — superseded paid-run PRs (DIRTY): close after #771 and the C11.14 runs land. #417 D3 — paid, nothing run.
+
+**Open Criticals and Majors in qa/BUGS.md** (qa closes those fixed tonight: QA-200 by #738, QA-195 by #752, QA-193 by #740, QA-191 by #728, QA-162's C4.11 part by #744): Critical QA-199 (C3.8 Background questions), QA-180 (release gate, C6.1/C5.1), QA-200; Major QA-184, QA-192, QA-201 (#703 type check prints PASS on file-less errors), QA-196, QA-176, QA-165, QA-159, QA-154, QA-153, QA-152, QA-181.
+
+**First on the new account, in order:** (1) a qa lane re-scores the seven rows above, then re-scores after every merged batch (lesson of 3 Nov: re-scores lagged merges all afternoon); (2) QA-184 fix (→ C5.4, C11.10); (3) C11.7 and C9.1 paid runs (PR1's quotes, P-309); (4) #771 to merge; (5) m4: pin C4.7 v2 numbers (9/7/2) in the pack; (6) `validate.ts` release gate checks any PDF map, not the edition in use; (7) QA-199, QA-201, QA-180; (8) the 9 held rows, then C1.6 and C5.1.
+
+**Sessions:** Mac sessions are stopped after pushing (PR1, spare builders A–C, qa re-test, standby Leads 6–8). Cloud lanes (P1–P4, F*, M, qa) were not reachable by message: read their branches and PRs. In the morning the founder archives the Lead 1–5 parents here and the cloud lanes on claude.ai/code. Lead-watch: `tools/lead-watch.sh 15` once #765 merges.
+
+**Disk:** 17 GB free. Lead-watch drops only test databases idle at two checks (39 now, 31 idle). After archiving, remove finished worktrees (`git worktree list`, scratchpad `wt-*` copies, after checking each head is on origin), never `demo-main` or a running copy; `git worktree prune`.
 
 ## Standing instruction (founder, P-301, 3 Nov ~10:30 UTC): read first, every Lead
 **M2 end to end first; its AI capabilities are the critical path** ("that part is the critical path which will set the entire product"). C3.4, C11.7, C11.8, C11.14, C9.1, C4.7 go ahead of M3 in the queue and in review; **if M3 slows M2, pause M3**. The Lead approves what lanes need within P-294/P-295/P-300, unblocks and reprioritises on its own ("not making excuses on me to type anything"). Disk: older parallel copies and archives may be removed under the disk rule. More test/review machines and local Mac sessions as needed. Sessions start only in a founder-typed turn: ask for one in one line. The founder is reachable until ~19:00 IST and expects updates. **Reviewer, breaker and every judgment on Opus; Sonnet only for mechanical work (P-303).** **All times to the founder in IST (P-302)**, labelled "IST"; weekly plan resets 8 Nov 22:30 IST.
