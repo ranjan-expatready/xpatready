@@ -39,6 +39,9 @@ type ReviewedRelease = { configuration_sha256: string; drafting_run_ids: string[
 /** The six's "With an LMIA – inside Canada" (samples/wave1.json), the combination Demo › Start With an LMIA from its
  *  reviewed release starts (C5.4). */
 export const SIX_LMIA = "wp.lmia_inside";
+/** The demo controls (load, Reset, Reset to the six, Start With an LMIA; forms-demo.ts's forms story) refuse (409)
+ *  outside the demo workspace (P-240, G2 BR-3): they write sample content or releases, or empty the workspace. */
+export const DEMO_ONLY = "This demo control works only in the demo workspace.";
 
 /** The sample programs (Screen 01): an import file, not constants in code (STANDARDS §3.1). Seven Individual and four
  *  Corporate programs covering the kinds of case in domain/TAXONOMY.md; names are illustrative and shown as Sample.
@@ -69,6 +72,9 @@ export class Demo {
    *  older sample kept as test data only so the other lanes' suites keep running until each moves to the six (plan step 6). */
   async load(actor: Actor, body?: { sample?: string } | null) {
     need(actor, "author");
+    // C5.5 (Opus re-review of #568, M1): the no-body fixture writes the reviewed release as Release 1 directly, past every
+    // gate; outside the demo workspace that would be a real release, so no sample load runs there (as releaseWithSources).
+    if (!isDemoWorkspace()) fail(DEMO_ONLY, HttpStatus.CONFLICT);
     const configured = body?.sample === "configured", six = body?.sample === "six" || configured;
     if (body?.sample !== undefined && !six) fail('Say which sample to load: "six" or "configured".');
     const workspaceId = await this.ws.id();
@@ -110,6 +116,7 @@ export class Demo {
    *  the configuration emptied with part of the six, and its message says so: choosing Reset to the six again starts clean. */
   async resetToSix(actor: Actor, confirm: unknown) {
     need(actor, "author");
+    if (!isDemoWorkspace()) fail(DEMO_ONLY, HttpStatus.CONFLICT); // C5.5 M1: it loads the six, as load does
     if (confirm !== "RESET") fail("Type RESET to confirm.");
     if (this.loading) fail("Reset to the six or a sample load is already running: wait for it to finish.", HttpStatus.CONFLICT);
     this.loading = true;
@@ -144,7 +151,7 @@ export class Demo {
    *  the demo workspace, once, on the six only; no AI call (US$0), nothing approved past the rules. */
   async releaseWithSources(actor: Actor) {
     need(actor, "author");
-    if (!isDemoWorkspace()) fail("This demo control works only in the demo workspace.", HttpStatus.CONFLICT);
+    if (!isDemoWorkspace()) fail(DEMO_ONLY, HttpStatus.CONFLICT);
     if (this.loading) fail("A sample load or a reset is running: wait for it to finish.", HttpStatus.CONFLICT);
     this.loading = true;
     try {
@@ -505,6 +512,7 @@ export class Demo {
 
   async reset(actor: Actor, confirm: string) {
     need(actor, "author");
+    if (!isDemoWorkspace()) fail(DEMO_ONLY, HttpStatus.CONFLICT); // C5.5 (breaker F3): it would empty a real workspace, releases included
     if (confirm !== "RESET") fail('Type RESET to confirm.');
     // D1 break M1 (the one change to the blank Reset, P-226): it takes the same one-at-a-time claim as Load sample and
     // Reset to the six, so it never empties a workspace that a load is still writing to (rows of a deleted workspace).

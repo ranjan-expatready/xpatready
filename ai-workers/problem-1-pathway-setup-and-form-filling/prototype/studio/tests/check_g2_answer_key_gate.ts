@@ -17,7 +17,7 @@ import { buildSnapshot, snapshotHash, type Snapshot } from "../engine/snapshot.t
 import { checkExpected, checkFamily, fingerprintOf, inventoryHash, keyBoxes, type MapExpected } from "../engine/answer-keys.ts";
 import type { Inventory } from "../engine/form-values.ts";
 import { answerKeyGate, evidenceOf, testableItems, type GateItem, type GateKey } from "../engine/answer-key-gate.ts";
-import { isDemoSnapshot } from "../engine/validate.ts";
+import { isDemoSnapshot, sampleContentProblems } from "../engine/validate.ts";
 import { client, recorder } from "./runtime/api.ts";
 import { sourceEveryNumber } from "./fixtures/source-every-number.cjs"; // G1 (#587): numbers without a source refuse first, so each submit answers them
 import { e1Keys, P, sample } from "./g4_e1_key.ts";
@@ -62,6 +62,13 @@ const { realBaseline } = await import("../api/src/answer-key-gate.ts");
 const wpRel = releasedOf(wp)!;
 ok("C5.5 BR-2 (reviewer m1): the baseline is the latest real release: a newer Demo release is passed over", realBaseline([{ snapshot: rel }, { snapshot: wpRel }]) === wpRel && isDemoSnapshot(rel) && !isDemoSnapshot(wpRel));
 ok("C5.5 BR-2 fail (reviewer m1): with only Demo releases there is no baseline (every item is new to a real release)", realBaseline([{ snapshot: rel }]) === null);
+// C5.5 M2 (Opus re-review of #568): outside the demo workspace the Sample content isDemoSnapshot reads holds a real
+// release, each item named (the API asks for it there only; check_g2_answer_key_gate_firm.ts proves the wiring).
+const sampleItems = sampleContentProblems(rel), relChecks = (rel.checks as { id: string; illustrative?: boolean }[]).filter((c) => c.illustrative);
+ok("C5.5 M2 fail: the Visitor visa's Sample checks are listed as blocking, each by its key (never its Sample basis: breaker F1)",
+  isDemoSnapshot(rel) && relChecks.length === 2 && sampleItems.length === relChecks.length && sampleItems.every((p) => p.level === "error" && p.gate === "sample-content" && p.where === "Checks") && relChecks.every((c) => sampleItems.some((p) => p.item === c.id)), sampleItems);
+const wpSampled = clone(wpRel); (wpSampled.checks as { illustrative?: boolean }[]).push({ ...clone((wpRel.checks as object[])[0] ?? {}), id: "SC-test", message: "Sample check (test)", illustrative: true } as { illustrative?: boolean });
+ok("C5.5 M2 pass: a source-backed draft with no Sample check lists nothing; one Sample check added lists exactly it", sampleContentProblems(wpRel).length === 0 && sampleContentProblems(wpSampled).length === 1 && sampleContentProblems(wpSampled)[0].item === "SC-test");
 const moved = clone(s); const e = (moved.field_maps as { form_number: string; entries: { caption?: string | null }[] }[]).find((m) => m.form_number === "IMM 5707")!.entries[0]; e.caption = `${e.caption ?? ""} (moved)`;
 const it2 = testableItems(moved, rel, all);
 ok("C5.5 BR-2 fail: a changed IMM 5707 map entry makes IMM 5707 changed, and only it", it2.find((i) => i.item_ref === "IMM 5707")?.changed === true && it2.find((i) => i.item_ref === "IMM 5257")?.changed === false);

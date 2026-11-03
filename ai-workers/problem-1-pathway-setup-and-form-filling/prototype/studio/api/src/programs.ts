@@ -19,7 +19,7 @@ import { forViewer, setupChecklistOf, type OfficialPages, type SetupInput } from
 import type { CardSetup, ChipStatus, SetupChecklist, StepKey, ViewerChecklist } from "../../contracts/setup-checklist.ts";
 import type { ProposalKind } from "../../contracts/proposal-item.ts";
 import { PATHWAY_TYPE_LABEL, type PathwayType } from "../../contracts/structure.ts";
-import { diff, validate } from "../../engine/validate.ts";
+import { diff, sampleContentProblems, validate } from "../../engine/validate.ts";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { ACTORS, Audit, Db, isDemoWorkspace, need, ROOT, Workspace, type Actor } from "./core.ts";
@@ -202,7 +202,7 @@ export class Programs {
       // G1 BR-7 (challenge M1): numbers without a source hold the draft back, never relProblems (a release keeps its
       // status); and only a draft that will be submitted (changes, or no release yet), so a Live row with no draft
       // changes never reads "Fix n problems" (tech lead on #568, G2 challenge; engine/setup-checklist.ts).
-      const draftProblems = [...baseProblems, ...(changes > 0 || !rel ? draftSourceProblems(snapshot, demo) : [])];
+      const draftProblems = [...baseProblems, ...(changes > 0 || !rel ? [...draftSourceProblems(snapshot, demo), ...(demo ? [] : sampleContentProblems(snapshot))] : [])]; // C5.5: Sample content holds a real release (studio.problems)
       const relProblems = relSnap ? [...structure, ...validate(relSnap, library, derivedOf(relSnap))] : draftProblems;
       // G2 (challenge M1): only a draft with something to release is judged, so a Live, unchanged row keeps step 5 done.
       // Added to the draft's problems (the Release page holds the row on them), never to the released snapshot's.
@@ -442,8 +442,9 @@ export class Programs {
     const releasing = library.filter((l) => l.will_release);
     // C5.6 (P-240, G3): Sample content releases as a "Demo release".
     const changedIds = changed.map((r) => r.leaf.combinationId!).filter(Boolean);
-    // Not released yet, so no snapshot: a Sample combination, or any current check marked Sample (illustrative).
-    const demoIds = new Set([...(await this.db.combination.findMany({ where: { id: { in: changedIds }, sourceBasis: "ILLUSTRATIVE" }, select: { id: true } })).map((c) => c.id),
+    // Not released yet, so no snapshot: a Sample combination, or any current check marked Sample (illustrative). C5.5
+    // BR-3: only in the demo workspace; anywhere else every release is real (and Sample content holds it).
+    const demoIds = new Set(!isDemoWorkspace() ? [] : [...(await this.db.combination.findMany({ where: { id: { in: changedIds }, sourceBasis: "ILLUSTRATIVE" }, select: { id: true } })).map((c) => c.id),
       ...(await this.db.check.findMany({ where: { combinationId: { in: changedIds }, illustrative: true, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { combinationId: true } })).map((c) => c.combinationId),
       // G1 (tech lead on #558): a number answered by a Sample source entry makes its release a Demo release.
       ...await this.sampleSourced(workspaceId, changedIds)]);
@@ -490,7 +491,7 @@ export class Programs {
       for (const r of d.rows) {
         const { snapshot } = await buildSnapshot(this.db, workspaceId, r.combinationId!, "draft");
         const own = (await this.studio.problems(workspaceId, snapshot, r.combinationId!)).filter((p) => p.level === "error");
-        for (const p of own) errors.push({ combination: r.label, where: p.where, item: p.item, label: (p as { label?: string }).label ?? null, forms: (p as { forms?: string[] }).forms ?? [], message: problemWords(p) });
+        for (const p of own) errors.push({ combination: r.label, where: p.where, item: p.item, label: (p as { label?: string }).label ?? null, forms: (p as { forms?: string[] }).forms ?? [], message: problemWords(p), ...((p as { gate?: string }).gate ? { gate: (p as { gate?: string }).gate } : {}) }); // C5.5 (breaker F6): the gate stays named
         if (!own.length || !r.why || !own.some((p) => r.why!.includes(p.message))) errors.push({ combination: r.label, where: "Review", item: r.label, label: r.label, forms: [], message: `${r.label}: ${r.why}` });
       }
       throw problem(409, "Every change is held back", `Nothing can be released yet. ${shown}${d.rows.length > 5 ? ` · and ${d.rows.length - 5} more (see Review and release)` : ""}`, { errors });
