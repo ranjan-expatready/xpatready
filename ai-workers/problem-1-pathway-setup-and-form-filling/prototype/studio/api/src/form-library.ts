@@ -14,6 +14,7 @@ import { effective } from "../../engine/snapshot.ts";
 import { compareEditions, newestEdition } from "../../engine/programs.ts";
 import { officialUrl, parseFormPage, parseFormsIndex } from "../../engine/canada.ts";
 import { INDEX_URL, libraryType } from "./finder.ts";
+import { notFiledWords } from "../../engine/form-type.ts";
 import { fileMonth, libraryRows, newerOnIndex, planIndexFill } from "../../engine/library-index.ts";
 import { ACCOUNT_WORDS, throughAccount } from "../../contracts/forms.ts";
 import { AcceptsBody, acceptsWords, AttachBody, fieldMapState, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
@@ -38,6 +39,9 @@ function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
 const nameOf = (id: string) => ACTORS.find((a) => a.id === id)?.name ?? "another person";
 /** Library type: one rule with the finder (finder.ts libraryType). */
 const TYPE_OF = libraryType;
+/** P-152 (2): the flag a form held only online carries in the library, in the founder's words. */
+const ONLINE_ONLY_WORDS = "Online only · no official PDF";
+const ONLINE_ONLY_FIELD_MAP = { kind: "no_edition" as const, decided: 0, total: 0, words: "No PDF: online only", tip: "This form is held only as its online version, with no official PDF: its field map is drafted from IRCC's help pages or saved portal screens, not from a PDF." };
 
 /** P-143 (C-3): a form's records of what IRCC accepts, per IRCC account, for the Form library row (ANY first). A guide
  *  or checklist is read by AI and never filed. */
@@ -129,11 +133,15 @@ export class FormLibrary {
       // Review / break (e466adb1) M10, M11, automated review (89cccd71): newerOnIndex, the dates plus the date last seen current.
       const month = current ? fileMonth(current) : null;
       const indexNewer = !!current && newerOnIndex(f.indexDateModified, month, current.indexDateSeenCurrent);
-      const status = f.retiredAt ? "retired" : needsOk ? "needs_ok" : current?.newerFileSha256 || indexNewer ? "newer_file" : current ? "ready" : "no_file";
+      // C11.11 (P-152 (2)): a form held only as its online version has no official PDF to ask for: "Online only · no
+      // official PDF", never "No file yet" (its questions come from IRCC's help pages or saved portal screens).
+      const onlineOnly = !current && f.editions.length > 0 && f.editions.every((e) => e.channel === "ONLINE");
+      const status = f.retiredAt ? "retired" : needsOk ? "needs_ok" : current?.newerFileSha256 || indexNewer ? "newer_file" : current ? "ready" : onlineOnly ? "online_only" : "no_file";
       return { code: f.formKey, title: f.displayName, type: TYPE_OF(f.formKind, f.displayName), edition: current?.editionLabel ?? null, ...(current ? { ...ircPublished(current, TYPE_OF(f.formKind, f.displayName)), ...fileDateOf(current.published) } : { published: null, published_from: null, published_state: "none" as const, file_date: null, file_date_state: "unread" as const }), canada_updated: current?.canadaUpdated ?? null,
         // P-143 (C-3): one record per IRCC account (ANY first); the column says them in words, one line per account.
         ...acceptsRow(current?.accepts ?? [], TYPE_OF(f.formKind, f.displayName) === "form"), accepts_waiting: waitingAccepts.has(f.formKey),
-        field_map: fieldMapState(TYPE_OF(f.formKind, f.displayName), !!current, current ? effective(mapsOf.get(current.id) ?? [], (m) => m.dataPath, "draft") : [], current ? proposedOf.get(current.editionLabel) ?? 0 : 0),
+        field_map: onlineOnly ? ONLINE_ONLY_FIELD_MAP : fieldMapState(TYPE_OF(f.formKind, f.displayName), !!current, current ? effective(mapsOf.get(current.id) ?? [], (m) => m.dataPath, "draft") : [], current ? proposedOf.get(current.editionLabel) ?? 0 : 0),
+        ...(onlineOnly ? { online_only: ONLINE_ONLY_WORDS } : {}),
         origin: current?.origin ?? (current?.officialFile ? "SAMPLE" : current ? "UPLOADED" : null), downloaded_from: current && approved.downloaded.has(current.sha256!) ? current.sourceUrl : null, checked_at: current?.checkedAt ?? null,
         form_page_url: f.formPageUrl ?? current?.formPageUrl ?? null, fingerprint: current?.sha256 ?? null, attachment_id: current ? atts.find((a) => a.sha256 === current.sha256 && a.kind === "Form")?.id ?? null : null,
         used_by: using, status, listed_by_ircc: !!f.listedOnIndexAt, newer_on_index: indexNewer && !current?.newerFileSha256, plain: !f.retiredAt && !f.editions.length && !lineCodes.has(f.formKey) && !releasedCodes.has(f.formKey) && !held.some((h) => h.code === f.formKey) && !pendingChange, lifecycle_waiting: lifecycle, lifecycle_approved: pendingChange?.status === "APPROVED", lifecycle_returned: pendingChange?.status === "RETURNED", older_editions: editions.filter((e) => e.id !== current?.id).sort((a, b) => compareEditions(b, a)).map((e) => ({ label: e.editionLabel, ...ircPublished(e, TYPE_OF(f.formKind, f.displayName)), ...fileDateOf(e.published) })), retired: !!f.retiredAt, pending: pendingChange ?? null };
@@ -150,7 +158,7 @@ export class FormLibrary {
     // S5's "Add a form from the library" (for=picker): forms a combination may use now, never retired or still waiting.
     const shown = shaped.filter((r) => (q.for !== "picker" || (r.status !== "retired" && !!r.edition)) && (!q.type || r.type === q.type) && (!q.usedBy || r.used_by.some((u) => u.id === q.usedBy)) && (!q.status || r.status === q.status) && (!term || r.code.toLowerCase().includes(term) || r.code.toLowerCase().includes(termCode!) || r.title.toLowerCase().includes(term)));
     const count = (pred: (r: (typeof shaped)[number]) => boolean) => shaped.filter(pred).length;
-    return { rows: shown, counts: { all: shaped.length, form: count((r) => r.type === "form"), guide: count((r) => r.type === "guide"), checklist: count((r) => r.type === "checklist"), needs_ok: count((r) => r.status === "needs_ok"), no_file: count((r) => r.status === "no_file"), ready: count((r) => r.status === "ready"), newer_file: count((r) => r.status === "newer_file"), retired: count((r) => r.status === "retired") },
+    return { rows: shown, counts: { all: shaped.length, form: count((r) => r.type === "form"), guide: count((r) => r.type === "guide"), checklist: count((r) => r.type === "checklist"), needs_ok: count((r) => r.status === "needs_ok"), no_file: count((r) => r.status === "no_file"), online_only: count((r) => r.status === "online_only"), ready: count((r) => r.status === "ready"), newer_file: count((r) => r.status === "newer_file"), retired: count((r) => r.status === "retired") },
       // X5 slice c review / break M1: the remembered deletions, each with "List again" (an upload cannot add back a number
       // the file reader does not produce, such as a schedule: this is the one way back that always works).
       remembered_deletions: (await this.db.libraryFormDeletion.findMany({ where: { workspaceId }, orderBy: { formKey: "asc" } })).map((d) => ({ code: d.formKey, deleted_by: nameOf(d.deletedBy), deleted_at: d.deletedAt.toISOString() })),
@@ -340,6 +348,9 @@ export class FormLibrary {
     if (!c) throw problem(404, "Not found", "That combination does not exist.");
     const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId: c.workspaceId, formKey: b.formKey } }, include: { editions: true } });
     if (!def) throw problem(404, "Not in the library", `${b.formKey} is not in the library. Find it with the form finder, or upload its PDF.`, { errors: [{ field: "formKey", message: "Choose a form from the library." }] });
+    // C11.11 (QA-101): a guide or checklist is never one of a combination's forms (said before any file check).
+    const notFiled = notFiledWords(def.formKey, def.formKind, def.displayName);
+    if (notFiled) throw problem(409, "Not filed", notFiled, { errors: [{ field: "formKey", message: `A ${TYPE_OF(def.formKind, def.displayName)} is not filed.` }] });
     if (def.retiredAt) throw problem(409, "Retired", `${b.formKey} is retired in the library: restore it there first.`, { errors: [{ field: "formKey", message: "Retired." }] });
     const closing = await closingChange(this.db, c.workspaceId, def.formKey);
     if (closing) throw problem(409, "Being retired", `A request to ${closing.action.toLowerCase()} ${b.formKey} is open on To review: nothing new may use it until it is decided.`, { errors: [{ field: "formKey", message: "Being retired." }] });
