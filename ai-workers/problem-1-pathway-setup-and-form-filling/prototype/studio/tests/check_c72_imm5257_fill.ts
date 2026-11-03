@@ -229,7 +229,7 @@ type Box = { box: string; fact: string | null; result: string; why: string | nul
   ok("QA-165 fail: after a Yes to \"other names\" with no name given, its box is never \"N\" (Yes needs the names)", !yes.values[NOT_ASKED[0]] && yes.values[NOT_ASKED[1]] === "N", [yes.values[NOT_ASKED[0]], yes.byBox.get(NOT_ASKED[0])?.result]);
   // Devin on #715 (2): a confirmed No to "national identity document" while a number is still recorded contradicts
   // itself: the Yes/No box is never written (neither Y from the number nor N from the No), and the open list says why.
-  await put(P, "person.national_id_number", "SAMPLE-ID-1"); await confirmAll();
+  await put(P, "person.national_id_number", "SAMPLEID1"); await confirmAll();
   const clash = await generate(6);
   const clashOpen = (((await call("GET", `/runtime/cases/${caseId}/forms`, undefined, OFFICER)).body.forms as { form: string; subject_id: string; fields_open: { box: string; reason: string; why: string }[] }[]).find((x) => x.form === "IMM 5257" && x.subject_id === P)?.fields_open ?? []).find((o) => o.box === NOT_ASKED[1]);
   ok("QA-165 fail (Devin on #715): No to a national identity document with a number recorded writes neither Y nor N; the list before the file says to correct one", !clash.values[NOT_ASKED[1]] && clashOpen?.reason === "needs an answer" && /answered No, but .* is recorded: correct one/.test(clashOpen?.why ?? ""), { value: clash.values[NOT_ASKED[1]], open: clashOpen });
