@@ -14,6 +14,7 @@ The founder chose at 22:15 IST to wrap up this account now (P-308, P-310) and to
 * #771 C3.4 v2 saved masters (16/16, PR1) — Opus review, then qa's Saved check (P-275), then the label. "Stopped here" in its body.
 * qa re-test PR (session "qa re-test · C9.1 C11.8 …", branch `qa-retest-night`) — rows scored so far are pushed; "Stopped here" in its body names the rest. Restart it first.
 * #763 (Opus re-review notes), #765 (lead-watch skill) — green, wait for the founder's label (the classifier refuses the Lead's).
+* **QA-196 (C3.4 AI checks through one door), no PR yet:** branch `claude/forms-qa196-ai-checks-one-door` at 148ce0144 (spare B, Opus Approve round 2). Resume: merge main into it (it conflicts after #752), re-run `check_forms_c34_ai` and the queue suites, then open its PR. Spare B's "Stopped here" note and question are on #752.
 * #745 I1 test-database leak fix — green, needs an Opus review. #726 C11.13 QA-192 fix, #714 C6.1, #749 V2, #737 V3 — open, unlabelled. #669, #671 — superseded paid-run PRs (DIRTY): close after #771 and the C11.14 runs land. #417 D3 — paid, nothing run.
 
 **Open Criticals and Majors in qa/BUGS.md** (qa closes those fixed tonight: QA-200 by #738, QA-195 by #752, QA-193 by #740, QA-191 by #728, QA-162's C4.11 part by #744): Critical QA-199 (C3.8 Background questions), QA-180 (release gate, C6.1/C5.1), QA-200; Major QA-184, QA-192, QA-201 (#703 type check prints PASS on file-less errors), QA-196, QA-176, QA-165, QA-159, QA-154, QA-153, QA-152, QA-181.
