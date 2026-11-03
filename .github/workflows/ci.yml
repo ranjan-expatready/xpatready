@@ -136,6 +136,8 @@ jobs:
           cache-dependency-path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/package-lock.json
       - name: packages and the Prisma client (cloud-setup.sh, as the parts)
         run: bash "$P/tools/cloud-setup.sh"
+      - name: the type check's own check (check-typecheck.sh; a tsconfig that checks nothing never passes)
+        run: bash "$P/tools/check-typecheck.sh"
       - name: type check, api and web (typecheck.mjs; only errors not in typecheck-known.txt fail)
         run: node "$P/tools/typecheck.mjs" | tee -a "$GITHUB_STEP_SUMMARY"; exit ${PIPESTATUS[0]}
   ci:
