@@ -104,7 +104,7 @@ const cleanup = cleanupRuns;
   ok("C11.16 AT-5 its workspace landing shows that run and no offer to pay for another", landVv?.run === v1?.id && landVv?.offer === null, landVv);
   const setUp = await card(vv);
   const ws = await call("GET", `/combinations/${vvId}/workspace?tab=forms`);
-  ok("C11.16 AT-6 the set-up card now names its setup (In setup) and its workspace opens (Forms tab answers with its lines)",
+  ok("C11.16 AT-6 the set-up card now names its setup (In progress) and its workspace opens (Forms tab answers with its lines)",
     setUp?.combinationId === vvId && setUp?.statusText !== "Not started" && ws.status === 200 && Array.isArray(ws.body?.lines) && ws.body.lines.length > 0, { card: setUp?.statusText, ws: ws.status, lines: ws.body?.lines?.length });
   r = await call("POST", "/combinations/start", { nodeKey: vv });
   ok("C11.16 AT-6 a second Start setup on the same card (double click) opens the same setup; nothing doubles, no second run",

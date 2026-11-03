@@ -27,13 +27,14 @@ import { LevelMark, pathwayAccent } from "@/components/levels";
 import { Tip, TipProvider } from "@/components/status";
 import { cn } from "@/lib/utils";
 import { StartSetupButton } from "@/components/start-setup";
+import { STATE_WORDS, STATUS_WORDS } from "../../../contracts/status-words";
 
 /** Where Back on a combination page returns to: this page's URL (with the opened combination) and its scroll position. */
 export const CATALOGUE_URL_KEY = "xr-catalogue-url";
 export const CATALOGUE_SCROLL_KEY = "xr-catalogue-scroll";
 /** The Pathway type's words (P-104): Retail · Corporate and employers. */
 export const PATHWAY_LABEL: Record<string, string> = PATHWAY_TYPE_LABEL;
-export const STATUS_WORD = { IN_SETUP: "In setup", NOT_READY: "Not ready", READY: "Live" } as const;
+export const STATUS_WORD = STATUS_WORDS; // UX-A part 3: the one word set
 const TYPE_TIP: Record<string, string> = {
   INDIVIDUAL: "Who applies: a person and their family. Applications a person makes for themselves and their family.",
   CORPORATE: "Who applies: an employer or organisation. Applications an employer makes, such as an LMIA.",
@@ -42,8 +43,8 @@ const TYPE_TIP: Record<string, string> = {
  *  and "Not ready" fold into In progress and Needs you. */
 const STATUSES = [
   ["all", "All", "Every combination of this tab."],
-  ["not_started", "Not started", "Added to the Program structure; no setup yet."],
-  ["in_progress", "In progress", "Setup has begun and firms cannot use it yet, or its release must be fixed first."],
+  ["not_started", STATE_WORDS.NOT_STARTED, "Added to the Program structure; no setup yet."],
+  ["in_progress", STATE_WORDS.IN_SETUP, "Setup has begun and firms cannot use it yet, or its release must be fixed first (Not ready)."],
   ["live", "Live", "Firms can open cases on it, with or without changes not released yet."],
   // QA-48: retired combinations are left out of every other view (P-116); here they can be found again. Offered only
   // while one is retired.

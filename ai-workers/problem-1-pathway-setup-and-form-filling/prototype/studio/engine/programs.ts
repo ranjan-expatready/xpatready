@@ -6,6 +6,7 @@ import { sharedStep, type MissingItem, type NextAction, type Status } from "../c
 import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
 import { isFilingFact } from "./resolver.ts";
+import { STATUS_WORDS } from "../contracts/status-words.ts";
 
 type Participant = { role: string; label: string; min: number; max: number; applies?: boolean };
 /** The parts of a snapshot these rules read (the snapshot's own lists are untyped until the team's contract lands). */
@@ -90,7 +91,8 @@ export function statusOf(released: boolean, missing: MissingItem[]): Status {
   return missing.length ? "NOT_READY" : "READY";
 }
 /** Words on screen (P-49): a released, startable combination is shown as "Live" (firms can open cases on it). */
-export const STATUS_TEXT: Record<Status, string> = { IN_SETUP: "In setup", NOT_READY: "Not ready", READY: "Live" };
+/** UX-A part 3: the one word set (contracts/status-words.ts). */
+export const STATUS_TEXT: Record<Status, string> = STATUS_WORDS;
 
 /** BR-10 counts. Questions: every question any person on the row could be asked, once per person role that files
  *  (Principal applicant, Spouse or partner, …), plus questions asked once for the whole application, conditional ones

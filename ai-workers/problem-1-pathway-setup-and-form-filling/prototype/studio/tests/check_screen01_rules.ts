@@ -152,7 +152,7 @@ ok("F1: Live with a next step (draft changes, held edition, AI proposals) → in
 ok("F1 fail: In setup or Not ready is never Live, always Needs work", !isLive({ status: "IN_SETUP" }) && !isLive({ status: "NOT_READY" }) && needsWork({ status: "IN_SETUP", nextAction: null }) && needsWork({ status: "NOT_READY", nextAction: null }));
 fc.assert(fc.property(fc.constantFrom("IN_SETUP", "NOT_READY", "READY"), fc.boolean(), (status, hasStep) => { const r = { status: status as any, nextAction: hasStep ? act : null }; return isLive(r) === (status === "READY") && (needsWork(r) || isLive(r)) && needsWork(r) === (status !== "READY" || hasStep); }), { numRuns: 300 });
 ok("F1: Live is exactly the rows showing Live; every row is Live or Needs work (property, 300 runs)", true);
-ok("P-49: \"Ready\" is shown as \"Live\"", STATUS_TEXT.READY === "Live" && STATUS_TEXT.IN_SETUP === "In setup" && STATUS_TEXT.NOT_READY === "Not ready");
+ok("P-49, P-180, UX-A part 3: \"Ready\" is shown as \"Live\", In setup as \"In progress\"", STATUS_TEXT.READY === "Live" && STATUS_TEXT.IN_SETUP === "In progress" && STATUS_TEXT.NOT_READY === "Not ready");
 const sorted = (["READY", "IN_SETUP", "NOT_READY", "READY"] as const).map((status) => ({ status })).sort(compareStatus).map((x) => x.status);
 ok("P-49 pass: status sort is Not ready, In setup, Live", sorted.join() === "NOT_READY,IN_SETUP,READY,READY", sorted);
 ok("P-49 fail: an unknown sort or filter is refused by the contract", !CatalogueQuery.safeParse({ sort: "name" }).success && !CatalogueQuery.safeParse({ filter: "ready_soon" }).success && CatalogueQuery.safeParse({ filter: "live", sort: "-status" }).success);

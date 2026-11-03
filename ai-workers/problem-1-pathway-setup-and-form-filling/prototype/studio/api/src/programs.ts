@@ -257,7 +257,7 @@ export class Programs {
         proposals: proposalsOf, problems: draftProblems,
         documents: { lines: docLines.length, rolesWithout: docLines.length ? applicantRoles.filter((r) => !docLines.some((d) => covers(d, r.role))).length : 0 },
         questions: qc?.total ?? 0,
-        held: held.length,
+        held: held.length, notStartable: status === "NOT_READY", notStartableWhy: status === "NOT_READY" ? missing.map((m) => ({ code: m.code, text: m.text })) : undefined,
         running: running ? { batchId: running, step: "forms" as StepKey } : null,
         changes,
         review: { stage: reviewStage(gates.get(c.id)), submittedBy: submittedBy.get(c.id) ?? null, authors: [] },
