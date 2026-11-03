@@ -28,6 +28,7 @@ import { basename, join } from "node:path";
 import { promisify } from "node:util";
 import { manifest, slug } from "../../engine/import.ts";
 import { editionMonth, newestEdition } from "../../engine/programs.ts";
+import { libraryType } from "../../engine/form-type.ts";
 import { compareRounds } from "../../engine/agreement.ts";
 import { mentionsOf, officialUrl, pageLinks, pageText, parseFormPage, parseFormsIndex, textFingerprint } from "../../engine/canada.ts";
 import { FinderBody, FinderLaunchBody, normaliseCode, type FinderMode } from "../../contracts/form-library.ts";
@@ -90,10 +91,8 @@ const AI_SETTINGS: Record<"find_guide" | "find_forms", AiStep> = {
 };
 type AiKind = keyof typeof AI_SETTINGS;
 const ATTACHABLE = new Set(["always", "condition", "alternative"]);
-/** Library type, one rule for the library and the finder (#274 review M2). Rows made before S4 say only "document": a filed
- *  form when its title says so (IMM 5802, an employer's offer of employment form; review major 9), otherwise a checklist
- *  or instructions, read by AI and never filed (IMM 5881, IMM 5905; round 2 major 4). */
-export const libraryType = (kind: string, title = "") => (kind === "guide" ? "guide" : kind === "checklist" || (kind === "document" && !(/\bform\b/i.test(title) && !/checklist/i.test(title))) ? "checklist" : "form");
+/** Library type: one rule (engine/form-type.ts), kept exported here for the library's import. */
+export { libraryType };
 const STOPWORDS = new Set(["and", "or", "the", "a", "an", "of", "for", "to", "in", "with", "your", "retail", "corporate", "employers", "temporary", "residence", "permanent", "canada", "application", "apply"]);
 const words = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter((w) => w.length > 1 && !STOPWORDS.has(w)).map((w) => w.replace(/s$/, ""));
 const sameText = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, "-").replace(/\s+/g, " ").trim();

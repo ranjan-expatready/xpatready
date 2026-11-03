@@ -5,6 +5,7 @@ import { HttpStatus } from "@nestjs/common";
 import { Db, fail } from "./core.ts";
 import { WHO } from "./studio.ts";
 import { canonicalFact } from "../../engine/resolver.ts";
+import { notFiledWords } from "../../engine/form-type.ts";
 
 /** A field id merged into another redirects to it (P-65); any other id is returned as it is. SH3: the chain rule is the
  *  resolver's (contracts/resolver.ts R9); this answers one hop from the newest version of the field. */
@@ -24,7 +25,10 @@ export async function addFormLine(db: Pick<Db, "combinationForm" | "govFormDef" 
   if (l.who !== undefined && !WHO.includes(l.who)) fail("Choose whose form it is from the list.");
   // S4 round 3 R3-1 (P-116): nothing new may use a retired form, or one whose retire or delete is open: every attach path
   // (by hand, upload for a row, "+ Add", the finder, an AI apply) comes through here.
-  const def = await db.govFormDef.findUnique({ where: { id: l.govFormDefId }, select: { retiredAt: true } });
+  const def = await db.govFormDef.findUnique({ where: { id: l.govFormDefId }, select: { retiredAt: true, formKind: true, displayName: true } });
+  // C11.11 (QA-101): a guide or checklist is never a filed form line, on every attach path (it stays a source).
+  const notFiled = def ? notFiledWords(l.formKey, def.formKind, def.displayName) : null;
+  if (notFiled) fail(notFiled, HttpStatus.CONFLICT);
   if (def?.retiredAt) fail(`${l.formKey} is retired in the library: restore it there first.`, HttpStatus.CONFLICT);
   const closing = await db.libraryChange.findFirst({ where: { workspaceId: l.workspaceId, kind: "library_form", key: l.formKey, action: { in: ["RETIRE", "DELETE"] }, status: { in: ["WAITING", "APPROVED"] } } });
   if (closing) fail(`A request to ${closing.action.toLowerCase()} ${l.formKey} is open on To review: nothing new may use it until it is decided.`, HttpStatus.CONFLICT);

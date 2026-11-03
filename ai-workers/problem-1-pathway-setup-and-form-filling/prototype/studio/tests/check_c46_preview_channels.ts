@@ -69,7 +69,9 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
 
   // R7 (review Major 1) a document checklist is read, never filed: not a PDF the person gets, never to sign.
   const lists = v1.forms.filter((f: any) => f.checklist);
-  ok("C4.6 R7 pass: the sample's document checklists (IMM 5488, IMM 5905) are marked as checklists", ["IMM 5488", "IMM 5905"].every((c) => lists.some((f: any) => f.form === c)), lists.map((f: any) => f.form));
+  // C11.11 (QA-101): the sample's document checklists (IMM 5488, IMM 5905) are its sources, never form lines, so the
+  // preview lists neither; a checklist line kept from before is still marked as one (outputOf below).
+  ok("C4.6 R7 pass (C11.11): the sample's document checklists (IMM 5488, IMM 5905) are not in the preview's filed lines", !v1.forms.some((f: any) => ["IMM 5488", "IMM 5905"].includes(f.form)) && lists.length === 0, v1.forms.map((f: any) => f.form));
   ok("C4.6 R7 fail: a checklist is never a PDF to sign and never carries the later-wave words", lists.every((f: any) => !f.toSign && !f.laterWave) && outputOf("PDF_UPLOAD", "HAND_SCANNED", true).toSign === false && outputOf("ONLINE", "NONE", true).laterWave === null);
   ok("C4.6 R7 fail: a filed form is never marked as a checklist", v1.forms.filter((f: any) => !["IMM 5488", "IMM 5905"].includes(f.form)).every((f: any) => f.checklist === false));
   // R8 (review Major 2) an Online line filed once for the couple carries the later-wave words too.
