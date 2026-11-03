@@ -14,6 +14,8 @@ import { ACTORS, actorOf, Audit, Db, need, readerOf, type Actor } from "./core.t
 import { fillsOf, KIND as FILLS_KIND } from "./who-fills.ts";
 // SH3 (P-258): a choice of where an answer comes from is kept per role and fact (contracts/resolver.ts R8).
 import { sourceKey } from "../../contracts/resolver.ts";
+/** C4.2 (QA-125): the refusal when someone else saved the same answer's source at the same moment. */
+export const SAVED_AT_ONCE = (label: string) => `Someone else saved where "${label}" comes from at the same moment. Reload to see their choice, then choose again.`;
 
 type H = string | undefined;
 const problem = (status: number, title: string, detail: string, extra: Record<string, unknown> = {}) =>
@@ -96,10 +98,18 @@ export class FactSources {
     const keep = source && !(source === f.ruleSource && (source !== "DOCUMENT" || documentTypeKey === f.ruleDocument?.key)) ? source : null;
     const data = { source: keep, documentTypeKey: keep === "DOCUMENT" ? documentTypeKey : null, prequalification: tick, reason: b.reason ?? newest?.reason ?? null, sourceReason: keep === "AGENT" ? sourceReason : null };
     const published = rows.find((r) => r.status === "PUBLISHED");
-    await this.db.$transaction(async (tx) => {
-      if (newest?.status === "DRAFT") await tx.factSource.delete({ where: { id: newest.id } });
-      await tx.factSource.create({ data: { workspaceId: c.workspaceId, combinationId: id, lineageKey, role, canonicalFieldKey: fact, ...data, version: (newest?.version ?? 0) + 1, status: "DRAFT", supersedesId: published?.id ?? null, origin: "HUMAN", updatedBy: actor.id } });
-    });
+    try {
+      await this.db.$transaction(async (tx) => {
+        if (newest?.status === "DRAFT") await tx.factSource.delete({ where: { id: newest.id } });
+        await tx.factSource.create({ data: { workspaceId: c.workspaceId, combinationId: id, lineageKey, role, canonicalFieldKey: fact, ...data, version: (newest?.version ?? 0) + 1, status: "DRAFT", supersedesId: published?.id ?? null, origin: "HUMAN", updatedBy: actor.id } });
+      });
+    } catch (e) {
+      // C4.2 / QA-125: two saves of the same answer at the same moment: the second finds the version already taken (P2002)
+      // or the draft already replaced (P2025). Say so in words naming the question, never "the database" or "removed".
+      const code = (e as { code?: string })?.code;
+      if (code === "P2002" || code === "P2025") throw problem(409, "Saved at the same moment", SAVED_AT_ONCE(f.label), { version: (await this.db.factSource.findFirst({ where: { combinationId: id, lineageKey }, orderBy: { version: "desc" } }))?.version ?? 0 });
+      throw e;
+    }
     await this.audit.log(c.workspaceId, actor.id, "changed", "fact source", lineageKey, `${actor.name} set where "${f.label}" (${role}) comes from in "${c.label}": ${keep ? `${keep === "DOCUMENT" ? `Document · ${documentTypeKey}` : keep === "CLIENT" ? "Client" : `Case officer (why: ${sourceReason})`}` : "as the rules say"}${tick ? ", Prospect questionnaire (PQR)" : ""}`, { before: newest ? { source: newest.source, document: newest.documentTypeKey, prequalification: newest.prequalification } : null }, id);
     return (await this.list(id)).facts.find((x) => x.role === role && x.fact === fact);
   }
