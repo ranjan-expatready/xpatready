@@ -54,6 +54,16 @@ Every turn re-reads a session's whole context, so long, often-woken sessions are
 
 Principles: don't follow blindly; evidence, not vanity numbers; simple, no quality cut; feature by feature, in users' order; small justified spend (about US$5–10 a month).
 
+## Night playbook and the 3 Nov rules (founder, P-291; evidence: `reports/build-review-2026-11-03.html`)
+* **Plain words:** name every capability by what it does, code after ("Bulk accept of AI suggestions (C3.2)"); say capability, never "row"; a technical word gets its functional meaning next to it.
+* **Works means confirmed:** a capability is Works only when its acceptance pack is green on main **and** a session that did not score it re-ran it. Report "scored n, confirmed m". When a decision changes behaviour, its pack changes in the same PR.
+* **Builders:** 6 at a time for the main goal; add one only while approval-to-merge stays under 1 hour and batch failures under 10%. Read-only testers do not count. Each brief names the builder's next two capabilities in its area, so a lane keeps going after its PR is labelled without a new session.
+* **Start sessions only in a founder-typed turn**, all of them at once, before the founder leaves; a timed check or a message cannot start sessions (it can only leave a card).
+* **Every 30-minute check:** run `tools/flow-watch.sh` and act on every RED; read every open PR's new comments and answer "Question for the tech lead" on the PR; a lane with no push in 90 minutes gets "continue" plus its next step, and if it still does not move by the next check, its capability goes to another idle lane with a stand-down message to the first; merge records PRs at least hourly; report the weekly plan %.
+* **Tokens:** hand over at about 250k tokens, no exception (the Lead's re-read context was 29% of local cost); read-only work on Sonnet subagents; stop the timed check when nothing is in flight.
+* **Tests:** each change runs the full suite once, in the merge queue; the PR itself runs only the suites its change can affect; the suite is split into 8 parallel parts (GitHub Pro's machines).
+* **Leads:** a new series per restart ("Lead 1 · 3 Nov", …); two idle standbys started in the first founder-typed turn; the founder talks only to the current Lead, which relays every lane's questions.
+
 ## Product rules (still in force)
 * `main` always works: a red check on `main`, a failed demo update or a qa Blocker is fixed before anything else.
 * **Reuse, never rebuild:** filling and barcodes (`prototype/p5/fill.py` via `studio/api/src/fill.ts`; `prototype/evidence-lane/E1/tools/`); research on filling, reading or AI drafting starts from `E1/*/STATUS.md`, `prototype/p1`–`p5`, `prototype/expected/source-text/`, `research_notes/`, `reports/`.
