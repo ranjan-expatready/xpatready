@@ -8,7 +8,7 @@ import { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { AGREEMENT_WORDS, BANDS, BatchDecisionBody, DecideBody, PROPOSAL_KIND_WORDS, ProposalsQuery, type Band, type ChangeBatch, type ProposalGroup, type ProposalsView, type QueueProposal, type Reading } from "../../contracts/review-proposals.ts";
 import { ACTORS, actorOf, Audit, Db, fail, need, STARTING_ROLES, Workspace, type Actor } from "./core.ts";
-import { changeView, decideChange } from "./library-changes.ts";
+import { changeView, decideChange, nearOf, type NearView } from "./library-changes.ts";
 import { BATCH_MAX, bulkWhy, decide, lineTitle, ON_ITS_PAGE, undo, UNDO_SECONDS } from "./proposals.ts";
 import { Screen02 } from "./screen02.ts";
 import { STEP_KEYS } from "../../contracts/setup-checklist.ts";
@@ -117,20 +117,22 @@ export class ReviewProposals {
     const rows = await this.db.libraryChange.findMany({ where: { workspaceId, status: "WAITING", batchId: { not: null } }, orderBy: { proposedAt: "asc" } });
     const by = new Map<string, typeof rows>();
     for (const c of rows) by.set(c.batchId!, [...(by.get(c.batchId!) ?? []), c]);
-    return { batches: [...by.entries()].map(([id, list]) => this.batchView(actor, id, list)) };
+    const near = await nearOf(this.db, workspaceId, rows);
+    return { batches: [...by.entries()].map(([id, list]) => this.batchView(actor, id, list, near)) };
   }
   async batch(actor: Actor, id: string): Promise<ChangeBatch> {
     if (!z.string().uuid().safeParse(id).success) fail("No decision with this id.", HttpStatus.NOT_FOUND);
-    const list = await this.db.libraryChange.findMany({ where: { workspaceId: await this.ws.id(), batchId: id }, orderBy: { proposedAt: "asc" } });
+    const workspaceId = await this.ws.id();
+    const list = await this.db.libraryChange.findMany({ where: { workspaceId, batchId: id }, orderBy: { proposedAt: "asc" } });
     if (!list.length) fail("No library changes from this decision (it may have been undone, or the demo was reset).", HttpStatus.NOT_FOUND);
-    return this.batchView(actor, id, list);
+    return this.batchView(actor, id, list, await nearOf(this.db, workspaceId, list));
   }
-  private batchView(actor: Actor, id: string, list: Awaited<ReturnType<Db["libraryChange"]["findMany"]>>): ChangeBatch {
+  private batchView(actor: Actor, id: string, list: Awaited<ReturnType<Db["libraryChange"]["findMany"]>>, near: Map<string, NearView>): ChangeBatch {
     const waiting = list.filter((c) => c.status === "WAITING");
     const mine = list.some((c) => c.proposedBy === actor.id || c.appliedBy === actor.id);
     const why = !(actor.duties as readonly string[]).includes("review") ? `${actor.name} (simulated) does not hold the review duty.`
       : mine ? "You accepted these proposals, so a different person approves or returns them." : !waiting.length ? "Every item of this decision is already decided." : null;
-    return { id, by: nameOf(list[0].proposedBy), by_id: list[0].proposedBy, at: list[0].proposedAt.toISOString(), count: waiting.length, items: list.map(changeView) as unknown as ChangeBatch["items"], can_decide: !why, why_not: why };
+    return { id, by: nameOf(list[0].proposedBy), by_id: list[0].proposedBy, at: list[0].proposedAt.toISOString(), count: waiting.length, items: list.map((c) => ({ ...changeView(c), near: near.get(c.id) ?? null })) as unknown as ChangeBatch["items"], can_decide: !why, why_not: why };
   }
 
   /** Approve or return every waiting item of one decision, all or nothing in one transaction (Lead review of PR #96

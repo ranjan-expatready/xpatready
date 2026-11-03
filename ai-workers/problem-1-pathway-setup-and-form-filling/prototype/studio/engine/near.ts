@@ -8,6 +8,9 @@ export function nearWords(s: string, isKey = /^[a-z0-9_]+(\.[a-z0-9_]+)+$/.test(
   const body = isKey ? s.split(".").slice(1).join("_") : s;
   return body.toLowerCase().normalize("NFKC").split(/[^\p{L}\p{N}]+/u).filter((w) => w && !STOP.has(w));
 }
+/** The rule's own words for why two items are near (C11.13: a reason a person gave is any other text). */
+export const NEAR_WHY = { meaning: "the same meaning under two names", order: "the same words in another order", contained: "one name holds the other" } as const;
+export const isRuleWhy = (s: string) => (Object.values(NEAR_WHY) as string[]).includes(s);
 const normMeaning = (m: string) => m.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
 /** Why two names are near duplicates, in words, or null. `meanings` compares what they mean when both are given. */
 export function nearWhy(a: string, b: string, meanings?: { a?: string | null; b?: string | null }): string | null {
@@ -17,7 +20,7 @@ export function nearWhy(a: string, b: string, meanings?: { a?: string | null; b?
   const sameWords = shared === wa.size && shared === wb.size;
   const contained = shared >= 2 && (shared === wa.size || shared === wb.size);
   const sameMeaning = !!meanings?.a && !!meanings?.b && normMeaning(meanings.a) === normMeaning(meanings.b);
-  return sameMeaning ? "the same meaning under two names" : sameWords ? "the same words in another order" : contained ? "one name holds the other" : null;
+  return sameMeaning ? NEAR_WHY.meaning : sameWords ? NEAR_WHY.order : contained ? NEAR_WHY.contained : null;
 }
 
 export type NearItem = { key?: string | null; name: string; meaning?: string | null };

@@ -8,6 +8,7 @@ import { HttpException } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import type { LibraryChange, Prisma } from "@prisma/client";
 import { normalizeLabel } from "../../contracts/programs.ts";
+import { isRuleWhy } from "../../engine/near.ts";
 import { ACTORS, type Actor, type Db } from "./core.ts";
 import { isLifecycleKind, publishLifecycle, withdrawLifecycle } from "./lifecycle.ts";
 import { isItemLifecycle } from "./library-items.ts";
@@ -68,6 +69,30 @@ export function changeView(c: LibraryChange) {
     ...(c.kind === "form_accepts" ? { accepts: acceptsView(c) } : {}), ...(c.kind === "placement_fills" ? { fills: fillsView(c) } : {}), ...(c.kind === COND_KIND ? { condition: conditionView(c) } : {}),
     ...(c.action === "RENAME" ? { rename: renameView(c) } : {}) }; // C4.9 (runtime lane); G-CORE B2 rename
 }
+/** C11.13 (P-120: "a near duplicate needs a one-line reason, shown to the second person at release"): for each change
+ *  that came from a proposal close to an existing library item, the items it is close to (the library's name and key
+ *  when the item is in the library, else the words the proposal gave) and the reason given. Read from the proposal's
+ *  own identity, never parsed from the change's reason text. `given` is false when the reason is only the rule's own
+ *  words for why it is near (the one door found the match itself and no person said why it is not the same); `by` says
+ *  whose words a given reason is: the AI's (an AI-drafted item, review c1113 m1) or a person's. */
+export type NearView = { items: { key: string | null; name: string }[]; reason: string; given: boolean; by: "person" | "ai" };
+export async function nearOf(db: Db, workspaceId: string, changes: Pick<LibraryChange, "id" | "proposalItemId">[]): Promise<Map<string, NearView>> {
+  const ids = [...new Set(changes.map((c) => c.proposalItemId).filter((x): x is string => !!x))];
+  const out = new Map<string, NearView>();
+  if (!ids.length) return out;
+  const items = await db.proposalItem.findMany({ where: { workspaceId, id: { in: ids } }, select: { id: true, identity: true, origin: true } });
+  const originOf = new Map(items.map((i) => [i.id, i.origin]));
+  const near = new Map(items.map((i) => [i.id, i.identity as { near?: string[]; nearReason?: string | null } | null]).filter(([, x]) => !!(x as { near?: string[] } | null)?.near?.length && !!(x as { nearReason?: string | null }).nearReason) as [string, { near: string[]; nearReason: string }][]);
+  if (!near.size) return out;
+  const words = [...new Set([...near.values()].flatMap((x) => x.near))];
+  const fields = await db.canonicalField.findMany({ where: { workspaceId, OR: [{ canonicalFieldKey: { in: words } }, { label: { in: words } }] }, orderBy: { version: "desc" }, select: { canonicalFieldKey: true, label: true } });
+  const byKey = new Map<string, string>(), byName = new Map<string, string>();
+  for (const f of fields) { if (!byKey.has(f.canonicalFieldKey)) byKey.set(f.canonicalFieldKey, f.label ?? f.canonicalFieldKey); if (f.label && !byName.has(normalizeLabel(f.label))) byName.set(normalizeLabel(f.label), f.canonicalFieldKey); }
+  const item = (w: string) => byKey.has(w) ? { key: w, name: byKey.get(w)! } : byName.has(normalizeLabel(w)) ? { key: byName.get(normalizeLabel(w))!, name: w } : { key: null, name: w };
+  for (const c of changes) { const x = c.proposalItemId ? near.get(c.proposalItemId) : undefined; if (x) out.set(c.id, { items: x.near.map(item), reason: x.nearReason, given: !isRuleWhy(x.nearReason), by: originOf.get(c.proposalItemId!) === "ai" ? "ai" : "person" }); }
+  return out;
+}
+
 /** G-CORE B2: what the second person compares on a rename: the name before and the name proposed. */
 export function renameView(c: Pick<LibraryChange, "label" | "matches">) {
   const m = (c.matches ?? {}) as { before?: string; before_words?: string; undo_of?: string | null };
