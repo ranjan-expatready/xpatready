@@ -53,6 +53,8 @@ for (const f of [...ls(`${S}/tests`, /^check_.*\.(ts|cjs)$/), ...ls(`${S}/tests/
   if (!SKIP.has(basename(f))) suites.set(basename(f), f);
 }
 const text = new Map([...suites].map(([n, f]) => [n, read(f)]));
+const codeTexts = new Map();   // a suite's text without its comments (a // after ":" or a quote is a URL or a string)
+const codeText = (n) => codeTexts.get(n) ?? codeTexts.set(n, text.get(n).replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/.*$/gm, "$1")).get(n);
 const browser = [...suites.keys()].filter((n) => /playwright|chromium/.test(text.get(n)));
 // Suites that read every file of a source folder (the deny-by-default route check, the stand-in and words scans).
 const scanners = (re) => [...suites.keys()].filter((n) => /readdirSync|globSync/.test(text.get(n)) && re.test(text.get(n)));
@@ -236,7 +238,14 @@ for (const f of changed) {
   if (p.all) alls.push(p.all);
   if (p.browser) browserWhy.push(p.browser);
   for (const [n, r] of p.picks ?? []) add(n, r);
-  if (DOCS.test(f)) continue;
+  if (DOCS.test(f)) {
+    // A record a suite reads as data (check_stand_ins.ts reads product/STAND-INS.md): named in the suite's code, not
+    // only in a comment, it chooses that suite (I1 review). Other docs choose nothing.
+    // The name must be a quoted string in the code and its folder's name must appear there too (README.md, notes.md).
+    if (/\.md$/i.test(f)) { const named = new RegExp(`["'\`/]${esc(basename(f))}["'\`]`), dir = new RegExp(`["'\`/]${esc(basename(dirname(f)))}["'\`/]`);
+      for (const [n] of text) { const c = codeText(n); if (named.test(c) && dir.test(c)) add(n, `reads ${basename(dirname(f))}/${basename(f)}`); } }
+    continue;
+  }
   // A suite that reads a source file as text names it; one that reads a whole folder reads every file in it.
   const name = basename(f), named = new RegExp(`(?<![A-Za-z0-9_.-])${esc(name)}(?![A-Za-z0-9_-])`);
   for (const [n, t] of text) if (suites.get(n) !== f && named.test(t)) add(n, `names ${name}`);

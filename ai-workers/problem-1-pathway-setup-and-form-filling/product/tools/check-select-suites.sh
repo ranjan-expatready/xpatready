@@ -42,5 +42,11 @@ k=$(kind "$Q/product/qa/board.csv" "$T/merge-guard.sh" .mergify.yml); ok "boards
 k=$(kind "$S/web/src/pages/history.tsx" "$Q/product/STATE.md"); ok "a page plus notes: code" "$([ "$k" = code ] && echo 1)" "$k"
 k=$(kind "$Q/official-sources/ircc/manifest.json"); ok "official sources: code" "$([ "$k" = code ] && echo 1)" "$k"
 k=$(kind "$T/change-kind.sh"); ok "this classifier itself: code" "$([ "$k" = code ] && echo 1)" "$k"
+k=$(kind "$Q/product/STAND-INS.md"); ok "a record a suite reads as data (STAND-INS.md): code (I1 review)" "$([ "$k" = code ] && echo 1)" "$k"
+o=$(sel "$Q/product/STAND-INS.md"); ok "STAND-INS.md chooses check_stand_ins.ts" "$(has "$o" check_stand_ins.ts && echo 1)" "$(grep -v '	smoke$' <<< "$o" | head -2 | tr '\n' ' ')"
+o=$(sel "$Q/product/qa/CAPABILITIES.md"); ok "CAPABILITIES.md named only in suites' comments: only the smoke set" "$(only_smoke "$o" && echo 1)" "$(grep -v '	smoke$' <<< "$o" | head -2 | tr '\n' ' ')"
+for f in "$Q/product/DECISIONS.md" "$Q/product/qa/CAPABILITIES.md"; do
+  k=$(kind "$f"); ok "$(basename "$f") feeds graph.mjs --check: records, not notes (I1 review)" "$([ "$k" = records ] && echo 1)" "$k"
+done
 k=$(printf '' | bash "$T/change-kind.sh" --files); ok "no files changed: notes" "$([ "$k" = notes ] && echo 1)" "$k"
 echo "$pass passed, $fail failed"; [ "$fail" = 0 ]
