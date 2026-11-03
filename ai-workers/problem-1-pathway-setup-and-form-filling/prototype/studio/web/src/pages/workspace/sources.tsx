@@ -55,7 +55,7 @@ export function SourceStrip({ v }: { v: FactSourcesView | undefined }) {
   );
   return (
     <section aria-label="Where every answer comes from" className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface-raised p-3" data-source-strip>
-      <Part n={v.counts.facts} label="Form facts" tip="Every answer the combination's forms need, one per person role the combination allows (the application's own facts once). The line under the person chips and the Draft questions and documents dialog count the same facts." />
+      <Part n={v.counts.facts} label="Form facts, all people" tip="Every answer the combination's forms need, one per person role the combination allows (the application's own facts once). The line under the person chips and the Draft questions and documents dialog count the same facts." />
       <span aria-hidden className="text-text-muted">=</span>
       <Part n={v.counts.document} label="From documents" tip="Read from a document on that person's checklist; the client is asked only if it cannot be read." />
       <span aria-hidden className="text-text-muted">+</span>
