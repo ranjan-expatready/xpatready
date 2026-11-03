@@ -142,7 +142,7 @@ const info = (s, d) => console.log(`INFO  ${s}${d === undefined ? "" : ` — ${t
   await p.getByRole("button", { name: /^Show all \d+$/ }).first().click().catch(() => {}); await sleep(500);
   const unmappedLines = (await p.locator("[data-problem]").allInnerTexts()).map(flat).filter((x) => /No form fields mapped yet/.test(x));
   await check("2-review-names-unmapped"); info("2f release refuses the unmapped forms, by name", unmappedLines);
-  const unmappedNamed = ["IMM 5409", "IMM 5476"].every((c) => unmappedLines.some((x) => x.includes(`${c} (`)));
+  const unmappedNamed = ["IMM 5409", "IMM 5476"].every((c) => unmappedLines.some((x) => x.includes(`${c}: No form fields mapped yet: a case could not fill the form "`)));
   await p.goto(`${CB()}/forms`); await p.waitForLoadState("networkidle"); await sleep(800);
   for (const c of ["IMM 5409", "IMM 5476"]) await remove(c);
   await p.goto(`${CB()}/review`); await p.waitForLoadState("networkidle"); await sleep(1000);
@@ -237,8 +237,10 @@ const info = (s, d) => console.log(`INFO  ${s}${d === undefined ? "" : ` — ${t
   const v = await get(`/runtime/cases/${CASE}/questionnaire?mode=agent`), forms = await get(`/runtime/cases/${CASE}/forms`);
   const rel = JSON.parse(sql(`select json_build_object('forms', jsonb_array_length(snapshot->'forms'), 'sections', jsonb_array_length(snapshot->'sections'), 'placements', jsonb_array_length(snapshot->'placements'), 'edition', snapshot->'field_maps'->0->>'form_edition', 'boxes', jsonb_array_length(snapshot->'field_maps'->0->'entries')) from config_release where combination_id='${VV()}' order by version desc limit 1`));
   const staff = { questions: v.summary?.questions, sections: new Set(v.sections.map((s) => s.title)).size, forms: (forms.forms ?? forms).length, people: new Set((forms.forms ?? forms).map((x) => x.subject_id)).size, mapped_on_page: (await text()).match(/of (\d+) form fields/)?.[1] };
-  info("8 release vs staff", { release: rel, staff, mapped_in_release: sql(`select count(*) from form_field_map m join form_edition e on e.id=m.form_edition_id where e.edition_label='${rel.edition}' and m.outcome='mapped'`) });
-  verdict(8, "What staff see matches the release", staff.sections === rel.sections && staff.forms === 3 && staff.people === 3 && staff.questions === 231);
+  info("8 release vs staff", { release: rel, staff, filings: (forms.forms ?? forms).map((x) => Object.entries(x).filter(([k, v]) => typeof v === "string" && /form|subject|person|name/i.test(k)).map(([, v]) => v).join(" · ").slice(0, 90)), mapped_in_release: sql(`select count(*) from form_field_map m join form_edition e on e.id=m.form_edition_id where e.edition_label='${rel.edition}' and m.outcome='mapped'`) });
+  // QA-180: IMM 5707 stays (its Saved draft applied), so 5 filings: IMM 5257 for each of the 3 people and IMM 5707 for the 2
+  // aged 18 or more (the child is 10); the questions are the household count step 5's header gave (V3's 231 had no IMM 5707).
+  verdict(8, "What staff see matches the release", staff.sections === rel.sections && rel.forms === 2 && staff.forms === 5 && staff.people === 3 && String(staff.questions) === head?.[1]);
 
   // ---------------------------------------------------------------- end
   info("axe violations per state", axeOut); info("sideways scroll px per width", wide); info("timings", timings); if (errs.length) info("page errors", errs.slice(0, 5));
