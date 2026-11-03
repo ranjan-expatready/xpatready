@@ -380,8 +380,9 @@ export class Sources {
     const printed = await this.printedEdition(a);
     if (j.mode === "REPLAY" && j.runFile) return this.useSaved(id, a.id);
     if (j.mode === "REPLAY") {
-      // Saved, drafted in parts: every part's saved answer, assembled; the launcher is never asked (US$0).
-      const parts = await this.draftSplit(a, printed, true);
+      // Saved, drafted in parts: every part's saved answer, assembled; the launcher is never asked (US$0), so no part or
+      // job file is written (write=false): Load sample leaves p2/jobs as committed (P-226, QA-145; check_d1_reset_to_six).
+      const parts = await this.draftSplit(a, printed, false);
       if (!parts?.parts.length) throw new Error("No saved AI answer for this form: nothing was drafted or applied. Draft it with AI, or a person maps it.");
       return this.runParts(id, a, parts, "saved");
     }
