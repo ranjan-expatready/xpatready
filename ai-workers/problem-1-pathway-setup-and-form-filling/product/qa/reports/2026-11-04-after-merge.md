@@ -278,3 +278,8 @@ Closed: **QA-212, QA-214**. The remaining import shortcut (shared library items 
 All three Partials have one root: on the six, no step places a form's facts into questions (QA-144, #798 slice 1). The suites are green on the fixture (GitHub nightly run 41793569357, all 6 parts), which P-322 does not count for setup rows.
 
 **M2: 40/60 confirmed** (was 43; −C4.9, −C4.5, −C4.3). The QA-144 rows waiting to come back with #798: C4.1, C4.8, C10.1, C4.7, C3.6, C11.12, C4.9, C4.5, C4.3.
+
+## Records update ~15:35 IST: qa tester 3's re-proofs #896–#902
+* **Works, confirmed** (main 4c3b16f0e): C5.3, C5.7, C11.9, C11.18. New **QA-220** (UX · Minor, C11.9).
+* **C5.6 stays Works.** qa tester 3 saw on 4c3b16f0e that the LMIA's imported Sample release counted as a real release (a real Conflict then). #837 fixed it before it was logged. qa re-tested on b8496bfe1: Reset to the six, then With an LMIA released through the steps, and Releases reads "0 real releases · 1 demo release (Sample content; not counted as published)", with "v1 Demo release". So no bug is logged, and the tester's question to the tech lead is answered by #837.
+* **M2: 40/60 confirmed** (unchanged).
