@@ -488,8 +488,10 @@ export class Demo {
         for (const a of forms) { try { await this.masters.draft(author, a.id, { mode: "rules" }); } catch (e) { sectionsRefused.push(`${a.fileName}: ${said(e)}`); } }
         const runs = (await this.db.draftingJob.findMany({ where: { combinationId: c.id, kind: "masters_edition" }, select: { id: true } })).map((j) => j.id);
         // The sections, and the marital status list IMM 5409's rule reads (ruling 3); the other answer lists stay on To review.
+        // One marital status list for the shared fact (slice 3): a later combination's own list (IMM 1294's "separated"
+        // beside IMM 5257's "legally separated") stays on To review, or it would replace the list the earlier forms' codes match.
         const take = (await this.db.proposalItem.findMany({ where: { runId: { in: runs }, status: "waiting", kind: { in: ["section", "answer_list"] } }, orderBy: [{ createdAt: "asc" }, { identityKey: "asc" }], select: { id: true, kind: true, payload: true } }))
-          .filter((p) => p.kind === "section" || (p.payload as { label?: string }).label === "Marital status");
+          .filter((p) => p.kind === "section" || (!maritalList && (p.payload as { label?: string }).label === "Marital status"));
         // One at a time, as on its own page: a rules item is not Ready, so it is never accepted in a batch.
         for (const p of take) {
           try {
@@ -572,7 +574,24 @@ export class Demo {
             try { await this.library.decideFormField(author, ed.id, { dataPath: f.dataPath, decision: "by_hand", reason: BY_HAND_REASON }); byHand++; } catch (e) { setUpRefused.push(`${f.dataPath}: ${said(e)}`); }
           }
           // A choice field's list values matched to the form's own codes (no AI), as the Form library's button does.
-          try { await this.forms.draftOptionMaps(author, ed.id); } catch (e) { setUpRefused.push(`option maps: ${said(e)}`); }
+          let drafted: Awaited<ReturnType<Forms["draftOptionMaps"]>>["option_maps"] = [];
+          try { drafted = (await this.forms.draftOptionMaps(author, ed.id)).option_maps; } catch (e) { setUpRefused.push(`option maps: ${said(e)}`); }
+          // QA-144 slice 3: a value the form's own labels left open takes the code another form already gives it for the
+          // same fact, when that form uses the same code list and this form has the code unused (IRCC's shared code lists:
+          // IMM 1294's "Separated" and IMM 5257's "Legally Separated" are both 05). Set as a person would on the Form library
+          // (Sample; no AI).
+          for (const m of drafted.filter((x) => x.unmatched.length && x.fact)) {
+            const sameList = (codes?: string[]) => !!codes && codes.length === m.optionMap.codes.length && codes.every((c) => m.optionMap.codes.includes(c));
+            const others = (await this.db.formFieldMap.findMany({ where: { workspaceId, canonicalFieldKey: m.fact, formEditionId: { not: ed.id }, status: { not: "RETIRED" } }, select: { optionMap: true } }))
+              .map((x) => x.optionMap as { map?: Record<string, string>; codes?: string[] } | null).filter((o) => sameList(o?.codes)).map((o) => o?.map ?? {});
+            const map = { ...m.optionMap.map }, unused = [...m.optionMap.unused];
+            for (const v of m.unmatched) {
+              const codes = [...new Set(others.map((o) => o[v]).filter(Boolean))];
+              if (codes.length === 1 && unused.includes(codes[0])) { map[v] = codes[0]; unused.splice(unused.indexOf(codes[0]), 1); }
+            }
+            if (Object.keys(map).length === Object.keys(m.optionMap.map).length) continue;
+            try { await this.forms.setOptionMap(author, ed.id, { dataPath: m.form_field, map, unused }); } catch (e) { setUpRefused.push(`${m.caption ?? m.form_field} option map: ${said(e)}`); }
+          }
         }
       }
     });
