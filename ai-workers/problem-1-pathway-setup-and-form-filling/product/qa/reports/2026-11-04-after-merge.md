@@ -393,3 +393,16 @@ C4.7 now passes 17/17 on the checkpoint but cannot be reached on the six. The #7
 **Method:** one Mac copy (qa_q144p1, stopped). The prerequisites (accepting and applying the saved field maps, drafting sections) ran through the screens' own routes in C4.7's pack setup, as a person would do them on the Forms tab, before the walks. The checklist documents came from the saved IMM 5484 reading (US$0; the ledger was 261,123 bytes before and after).
 
 **M2: 49/60 confirmed** (was 45; +C4.7, +C4.9, +C4.3, +C4.2). Thin slice 6/8. M3 1/17.
+
+## Batch 13 — #968 (C11.12 runtime pack), #886 (paid IMM 5476 11-2021 map), #969 (qa tester 2's C11.14 verdict) · main 0ced96dda · ~21:50–22:35 IST (P-337: only rows a merged PR names)
+| Row | Verdict | Evidence |
+|---|---|---|
+| C11.14 (M2) | **Works** (was Partial) | qa tester 2's verdict `qa/verdicts/2026-11-04-C11.14.md` on d71b31ea2: pack 14/14 on the six three times (runs 41857797559, 41857827910, one Mac copy); 0 Ready items without both rounds and the rules |
+| C11.12 (M2) | **Works** (was Partial) | Checkpoint run 41866440174: `C11.12-runtime.test.ts` 0 · 4/4 (Visitor visa release; a sponsor and a second spouse refused, 422), `C11.12.test.ts` 0 · 20/20; gate B passed |
+| C9.1 (M2) | Partial (14/17, was 8/17) | Checkpoint run 41866496356 (exit 1, 14/17) and one Mac copy (13/17): row 17 works; impact on components, K1 and P-67 red (new QA-231) |
+
+**Closed:** QA-176 (#785), QA-207 (#937, #885, #886). **New:** QA-230 (UX · Minor, the field-map page does not show the checker reading), QA-231 (Gap · Major, C9.1's last three steps). **Still seen:** QA-211.
+
+**Method:** packs on GitHub on the checkpoint; one Mac copy (qa_c91, port 4490) for C9.1's step-by-step lines, then stopped. No walk for C11.12: #968 changed only qa's pack.
+
+**M2: 51/60 confirmed** (was 49; +C11.14, +C11.12). Thin slice 6/8. M3 1/17.
