@@ -77,9 +77,14 @@ run(async () => {
   // On the six the line arrives with its field map as "each applicant" (the default); the author sets who fills it on the
   // Forms tab, as a person does from the form's own words. The checkpoint's loader sets it itself (demo.ts VV_FORM_RULES).
   const byAuthor = before !== `${WHO_SCH1}|18`;
+  const childAsked = async () => ((await call("GET", `/combinations/${wp}/workspace?tab=questionnaires`)).body?.questionnaire?.roles ?? []).find((x: any) => x.role === "child")?.questions ?? null;
+  const childBefore = byAuthor ? await childAsked() : null;
   if (byAuthor) r = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent(SCH1)}`, { attachMode: "COMBINATION_MANDATORY", who: WHO_SCH1, minAge: 18 }, AUTHOR);
   const sch1Line = lineNow();
   ok("C4.1 (QA-221): the SCH1 line names whom IMM 5257 SCH1's own words name (the principal, a spouse or partner, each child 18 or older, from 18)", sch1Line === `${WHO_SCH1}|18`, byAuthor ? { before, set_by_author: r.status, words: r.status >= 300 ? words(r) : undefined, line: sch1Line } : { set_by_loader: sch1Line });
+  // What the author sees (Smart questionnaire tab, the Child chip; its sample child is under 18): fewer questions once
+  // SCH1 is no longer the child's. On the checkpoint the line was right before the pack, so there is no before.
+  if (byAuthor) { const childAfter = await childAsked(); ok("C4.1 fail (QA-221): the Child's questionnaire loses SCH1's questions once SCH1 names its own people (the Smart questionnaire tab)", childBefore !== null && childAfter !== null && childAfter < childBefore, { before: childBefore, after: childAfter }); }
   const snap = (await call("GET", `/combinations/${wp}/config?mode=draft`)).body?.snapshot;
   const today = new Date("2026-11-04T00:00:00Z");
   const born = (age: number) => `${2026 - age}-01-15`;
