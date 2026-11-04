@@ -73,6 +73,6 @@ run(async () => {
   // with, so it lists each section as added, in the draft's order; the moved section is then the first one.
   const firstAdded = summary.find((c) => String(c.kind) === "Section");
   if (released[0]) ok("C4.1-B71a pass: Submit goes through and the review names the move as one change line, in words (the section's title and its new place, now 1st)", r.status < 300 && !!line && String(line.label).includes(`"${lib}" now 1st`), r.status >= 300 ? words(r) : line);
-  else ok("C4.1-B71a pass: Submit goes through, and on a combination never released the review lists its sections as added in the new order, the moved one first", r.status < 300 && firstAdded?.label === lib && firstAdded?.change === "added", r.status >= 300 ? words(r) : { first: firstAdded, moved: lib });
+  else ok("C4.1-B71a pass: Submit goes through, and on a combination never released the review lists its sections as added in the new order, the moved one first", r.status < 300 && firstAdded?.key === second && firstAdded?.change === "added", r.status >= 300 ? words(r) : { first: firstAdded, moved: second });
   T.done();
 });

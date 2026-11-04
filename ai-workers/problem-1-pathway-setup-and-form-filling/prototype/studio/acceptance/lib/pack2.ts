@@ -6,12 +6,11 @@
 // The sample is the six a person loads from the Demo menu; a 4th argument names another combination (a fixture key loads
 // the suites' older fixture instead).
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/<id>.test.ts 4440 xr_studio_accept [combination key]
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { client, recorder, type Res } from "../../tests/runtime/api.ts";
-import { sourceEveryNumber } from "../../tests/fixtures/source-every-number.cjs";
-import { readFileSync } from "node:fs";
-import { FAMILY_FORM_BY_CHANNEL, FORM_SETUP } from "../../api/src/demo.ts"; // B71: the one table of IRCC's words per combination (P-319) // G1 (C5.4, P-279): a release needs every number sourced
+import { sourceEveryNumber } from "../../tests/fixtures/source-every-number.cjs"; // G1 (C5.4, P-279): a release needs every number sourced
+import { FAMILY_FORM_BY_CHANNEL, FORM_SETUP } from "../../api/src/form-setup.ts"; // B71: the one table of IRCC's words per combination (P-319)
 
 export const AUTHOR = "user-A", APPROVER = "user-B", REVIEWER = "user-C";
 /** The official checklist and instructions the Visitor visa sample carries (official-sources/ircc, committed, P-83). */
@@ -73,11 +72,22 @@ export function pack2(id: string) {
     const say = (what: string, r: Res) => { if (r.status >= 300) out.refused.push(`${what}: ${r.status} ${words(r).slice(0, 160)}`); return r.status < 300; };
     // Review m6: only what the author's own steps put on To review, never another person's waiting change.
     const approveAll = async () => { for (const c of ids(`select id from library_change where status='WAITING' and proposed_by='${AUTHOR}' order by proposed_at`)) if (say("approve", await call("POST", `/library/changes/${c}/approve`, { note: "Approved by a test as the second person (QA-144 part 1 setup)." }, APPROVER))) out.approved++; };
+    // B71 (P-319, AGENTS rule 4), as the configured checkpoint does: a form IRCC's own words name for the combination with
+    // no line yet is added from the Form library first (the Forms tab's "Add a form from the Form library"), so the steps
+    // below give it its file and map; its rule is set once the maps have put its fields in the library. The words come
+    // from the one table of them per combination (api/src/form-setup.ts FORM_SETUP, the checkpoint's own).
+    const setup = FORM_SETUP[sql(`select combination_key from combination where id = '${comboId}'`)];
+    const newest = `f.version = (select max(v.version) from combination_form v where v.combination_id = f.combination_id and v.lineage_key = f.lineage_key)`;
+    const lineForms = () => new Set(ids(`select g.form_key from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id = '${comboId}' and ${newest} and f.status <> 'RETIRED'`));
+    const filed = setup ? sql(`select f.channel from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id = '${comboId}' and g.form_key = '${setup.application}' and ${newest} limit 1`) : "";
+    const family = FAMILY_FORM_BY_CHANNEL[filed === "ONLINE" ? "online" : "paper"];
+    if (setup) { const has = lineForms(); for (const form of [...setup.rules.filter((r) => !r.retire).map((r) => r.form), family.form].filter((f) => !has.has(f))) say(`add ${form}`, await call("POST", `/combinations/${comboId}/forms`, { formKey: form }, AUTHOR)); }
     // B71: a form line of this combination whose form has no field map and no file here (IRM 0002 on Visitor visa of the six)
-    // gets its official file attached as a person uploads it, and its saved field-map answer replayed (US$0), as the
-    // configured checkpoint does; never a live run: with no saved answer it is said and left.
+    // gets its official file through the form intake's sample door (the same intake an upload takes, as the configured
+    // checkpoint does; no screen calls this door) and its saved field-map answer replayed (US$0); never a live run: with
+    // no saved answer it is said and left.
     const manifest = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "..", "..", "official-sources", "ircc", "manifest.json"), "utf8")).items as { file: string; edition?: string; path?: string }[];
-    for (const ed of ids(`select e.edition_label from combination_form f join gov_form_def g on g.id = f.gov_form_def_id join form_edition e on e.gov_form_def_id = g.id and e.channel = 'PDF' where f.combination_id = '${comboId}' and f.status <> 'RETIRED' and g.form_kind = 'data_form' and not exists (select 1 from form_field_map m join form_edition x on x.id = m.form_edition_id where x.gov_form_def_id = g.id) and not exists (select 1 from source_attachment a where a.combination_id = '${comboId}' and (a.edition = e.edition_label or a.edition like g.form_key || ' (%')) order by 1`)) {
+    for (const ed of ids(`select distinct e.edition_label from combination_form f join gov_form_def g on g.id = f.gov_form_def_id join form_edition e on e.gov_form_def_id = g.id and e.channel = 'PDF' where f.combination_id = '${comboId}' and f.status <> 'RETIRED' and f.version = (select max(v.version) from combination_form v where v.combination_id = f.combination_id and v.lineage_key = f.lineage_key) and g.form_kind = 'data_form' and not exists (select 1 from form_field_map m join form_edition x on x.id = m.form_edition_id where x.gov_form_def_id = g.id) and not exists (select 1 from source_attachment a where a.combination_id = '${comboId}' and (a.edition = e.edition_label or a.edition like g.form_key || ' (%')) order by 1`)) {
       const item = manifest.find((i) => i.edition === ed && (i.path ?? "").startsWith("forms/"));
       if (!item) { out.refused.push(`attach ${ed}: no official file of that edition`); continue; }
       const up = await call("POST", `/combinations/${comboId}/attachments/sample`, { officialFile: item.file }, AUTHOR);
@@ -100,28 +110,16 @@ export function pack2(id: string) {
       if (applied.status >= 500) { out.retried.push(j); applied = await call("POST", `/jobs/${j}/apply`, {}, AUTHOR); }
       if (say("apply", applied)) out.applied++;
     }
-    // P-214 (tech lead on #883): a form field the saved AI answer left with no decision is filled by hand, decided by the
-    // author on the Form library's field map (its own route), as the configured checkpoint's loader does (demo.ts,
-    // BY_HAND_REASON); never "not a fact", so an applicant's answer is never dropped. Only PDF editions of this
-    // combination's own forms; without it the validator refuses Submit (IMM 5707, IMM 5409 on Visitor visa of the six).
-    for (const [ed, path] of ids(`select e.id || E'\\t' || m.data_path from form_field_map m join form_edition e on e.id = m.form_edition_id where m.outcome = 'unresolved' and m.status = 'DRAFT' and e.channel = 'PDF' and e.gov_form_def_id in (select gov_form_def_id from combination_form where combination_id = '${comboId}' and status <> 'RETIRED') order by e.id, m.data_path`).map((x) => x.split("\t")))
-      if (say("decide a form field by hand", await call("POST", `/editions/${ed}/form-fields/decision`, { dataPath: path, decision: "by_hand", reason: "Not proposed by the saved AI answer, so a test marks it filled by hand on the PDF until a person maps it (QA-144 part 1 setup; Sample)." }, AUTHOR))) out.byHand++;
-    await approveAll();
-    // B71 (P-319, AGENTS rule 4): the author sets each form line as IRCC's own words set it, from the one table of those
-    // words per combination (api/src/demo.ts FORM_SETUP, the configured checkpoint's), on the Forms tab's own routes: a
-    // rule in words becomes its rule; the family information form follows how the application form is filed and the
-    // other one is taken off; a fact only a rule reads is added for its rule (C3.6) and approved by a second person.
-    const setup = FORM_SETUP[sql(`select combination_key from combination where id = '${comboId}'`)];
+    // B71 (P-319, AGENTS rule 4): with the maps applied, the author sets each form line as IRCC's own words set it, on the
+    // Forms tab's own routes: a rule in words becomes its rule; the family information form follows how the application
+    // form is filed and the other one is taken off; a fact only a rule reads is added for its rule (C3.6) and approved by a
+    // second person. Sample, "Unconfirmed: expert".
     if (setup) {
-      const lines = new Set(ids(`select g.form_key from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id = '${comboId}' and f.status <> 'RETIRED'`));
-      const filed = sql(`select f.channel from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id = '${comboId}' and g.form_key = '${setup.application}' order by f.version desc limit 1`);
-      const family = FAMILY_FORM_BY_CHANNEL[filed === "ONLINE" ? "online" : "paper"];
-      for (const form of [...setup.rules.filter((r) => !r.retire).map((r) => r.form), family.form].filter((f) => !lines.has(f))) say(`add ${form}`, await call("POST", `/combinations/${comboId}/forms`, { formKey: form }, AUTHOR));
       const set = async (form: string, body: object) => say(`set ${form}`, await call("PATCH", `/combinations/${comboId}/forms/${encodeURIComponent(form)}`, body, AUTHOR));
-      for (const r of setup.rules as { form: string; condition?: object; minAge?: number; who?: string; retire?: true }[])
+      for (const r of setup.rules)
         await set(r.form, r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL", condition: r.condition } : { attachMode: "COMBINATION_MANDATORY", minAge: r.minAge, ...(r.who ? { who: r.who } : {}) });
       await set(family.form, { attachMode: "COMBINATION_MANDATORY", minAge: 18 });
-      if (lines.has(family.other)) await set(family.other, { retire: true });
+      if (lineForms().has(family.other)) await set(family.other, { retire: true });
       const rf = setup.ruleFact;
       if (rf) {
         const added = await call("POST", `/combinations/${comboId}/rule-facts`, { fact: rf.fact, rule: rf.rule, label: rf.label, meaning: rf.meaning, valueType: rf.valueType }, AUTHOR);
@@ -129,6 +127,14 @@ export function pack2(id: string) {
         await approveAll();
       }
     }
+    // P-214 (tech lead on #883): a form field the saved AI answer left with no decision is filled by hand, decided by the
+    // author on the Form library's field map (its own route), as the configured checkpoint's loader does (demo.ts,
+    // BY_HAND_REASON); never "not a fact", so an applicant's answer is never dropped. Only PDF editions of this
+    // combination's own forms; without it the validator refuses Submit (IMM 5707, IMM 5409 on Visitor visa of the six).
+    for (const [ed, path] of ids(`select e.id || E'\\t' || m.data_path from form_field_map m join form_edition e on e.id = m.form_edition_id where m.outcome = 'unresolved' and m.status = 'DRAFT' and e.channel = 'PDF' and e.gov_form_def_id in (select gov_form_def_id from combination_form where combination_id = '${comboId}' and status <> 'RETIRED') order by e.id, m.data_path`).map((x) => x.split("\t")))
+      if (say("decide a form field by hand", await call("POST", `/editions/${ed}/form-fields/decision`, { dataPath: path, decision: "by_hand", reason: "Not proposed by the saved AI answer, so a test marks it filled by hand on the PDF until a person maps it (QA-144 part 1 setup; Sample)." }, AUTHOR))) out.byHand++;
+    await approveAll();
+
     for (const a of ids(`select id from source_attachment where combination_id='${comboId}' and kind='Form' order by created_at`)) say("sections from the form's parts", await call("POST", `/attachments/${a}/draft-masters`, { mode: "rules" }, AUTHOR));
     for (const p of ids(`select p.id from proposal_item p join drafting_job j on j.id=p.run_id where j.combination_id='${comboId}' and j.kind='masters_edition' and p.kind='section' and p.status='waiting' order by p.created_at, p.identity_key`)) {
       // QA-206 (tech lead on #883), as the configured checkpoint's loader does: a section held for a name is named only by the
@@ -151,7 +157,7 @@ export function pack2(id: string) {
     // B71: a fact only a rule reads is asked beside the fact it is about (as the checkpoint asks IRM 0002's).
     const rf = FORM_SETUP[sql(`select combination_key from combination where id = '${comboId}'`)]?.ruleFact;
     if (rf) {
-      const at = (rf as { beside?: string[] }).beside ?? ["person.sex", "person.gender", "person.date_of_birth"];
+      const at = rf.beside ?? ["person.sex", "person.gender", "person.date_of_birth"]; // as the checkpoint (demo.ts) places it
       const sec = at.map((k) => sql(`select section_key from section_question where canonical_field_key = '${k}' order by version desc limit 1`)).find(Boolean);
       if (sec) say(`place ${rf.fact}`, await call("POST", `/library/fields/${encodeURIComponent(rf.fact)}/placement`, { sectionKey: sec, collectedFrom: "client_questionnaire", repeats: "per_person", tier: "case" }, AUTHOR));
       else out.refused.push(`${rf.fact}: none of ${at.join(", ")} is asked in a section`);
