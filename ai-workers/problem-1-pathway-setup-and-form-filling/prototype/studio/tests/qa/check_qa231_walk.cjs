@@ -1,6 +1,6 @@
 // QA-231 walk at 1440 px (C9.1 on the configured checkpoint): after Demo › Load the configured checkpoint on a blank copy,
 // the author opens To review › New edition: IMM 5476 (11-2025), its Components touched tab (the sections that ask the
-// changed fields and IMM 5476's own rule, on each of the three combinations that file it, in words), then the case officer
+// changed fields and IMM 5476's own rule, on each combination that files it, in words), then the case officer
 // opens the Sample family case on the Visitor visa's release 1 (row 11). Screenshots to
 // product/screens/QA-231-c91-checkpoint/screenshots; axe on each page; no sideways scroll; no priced click; US$0.
 //   zsh studio/tools/isolated.sh b8_qa231 4472 start && node studio/tests/qa/check_qa231_walk.cjs 4472 xr_studio_b8_qa231
@@ -42,8 +42,11 @@ const ok = (name, c, d) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "F
   await p.goto(`${BASE}/review/edition/${held}`); await settle();
   await p.getByRole("tab", { name: /Components touched/ }).click(); await settle();
   const comp = await p.locator("[data-components]").innerText();
-  ok("walk Components touched: sections are listed (Personal details, Appoint, App details) and Rules names IMM 5476's own rule", /Sections \(\d+\)/.test(comp) && !/Sections \(0\)/.test(comp) && ["Personal details", "Appoint", "App details"].every((x) => comp.includes(x)) && /Rules \(3\)/.test(comp) && /IMM 5476 is filed only when/.test(comp), comp.slice(0, 300));
-  ok("walk Components touched: each of the three combinations that file IMM 5476 is named", ["Visitor visa", "With an LMIA – inside Canada", "Outside Canada"].every((x) => comp.includes(x)));
+  // What the page must list is read from the review itself (section names follow the library's printed headings, QA-206).
+  const imp = (await api(`/intake/held/${held}/impact`)).body ?? {};
+  const secs = imp.components?.sections ?? [], rules = imp.components?.rules ?? [];
+  ok("walk Components touched: every section and form rule the review names is listed with its count, IMM 5476's rule in words", secs.length > 0 && [...new Set(secs.map((x) => x.label))].every((x) => comp.includes(x)) && comp.includes(`Sections (${secs.length})`) && rules.length >= 3 && comp.includes(`Rules (${rules.length})`) && /IMM 5476 is filed only when Representative Form Action is answered/.test(comp), { sections: secs.length, rules: rules.length });
+  ok("walk Components touched: each released combination that files IMM 5476 is named (Visitor visa, With an LMIA – inside Canada, Outside Canada)", ["Visitor visa", "With an LMIA – inside Canada", "Outside Canada"].every((x) => comp.includes(x)));
   ok("walk Components touched: each says why in words, never by a raw form-field path", /fills .+, and this section asks it/.test(comp) && /its condition reads it/.test(comp) && !/IMM_5476\[0\]/.test(comp));
   await p.screenshot({ path: path.join(SHOTS, "2-components-touched-1440.png"), fullPage: true }); await axe("New edition › Components touched"); await wide("New edition › Components touched");
 
