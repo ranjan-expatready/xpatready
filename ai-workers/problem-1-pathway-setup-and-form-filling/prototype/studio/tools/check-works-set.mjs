@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { join, dirname, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { rows, protectedSet } from "./works-set.mjs";
+import { rows, protectedSet, held } from "./works-set.mjs";
 import { packsOf } from "./gate-b.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url)), P = resolve(HERE, "../../../product");
@@ -38,6 +38,16 @@ let r = cli(["--json", "--file", f]);
 ok("--json lists the protected rows that have a pack, for the job matrix", r.code === 0 && JSON.stringify(JSON.parse(r.out)) === JSON.stringify(["C11.13", "C3.2"]), r);
 r = cli(["--list", "--file", f]);
 ok("--list names a Works row without a pack as not re-run", r.code === 0 && /C1\.1: no acceptance pack/.test(r.out) && /3 capabilities, 2 with an acceptance pack/.test(r.out), r);
+// Held rows (tech lead, 4 Nov): red on main when the set started; left out with their reason until green.
+const hf = join(T, "held.txt"); writeFileSync(hf, "# red on main\nC3.2  red on main (run 1), sent to qa\nC9.9 stale\n");
+r = cli(["--json", "--file", f, "--held", hf]);
+ok("a held capability leaves the matrix", r.code === 0 && JSON.stringify(JSON.parse(r.out)) === JSON.stringify(["C11.13"]), r);
+r = cli(["--list", "--file", f, "--held", hf]);
+ok("--list names it held with its reason, and a hold that is no longer a protected row as stale", /C3\.2: held, not re-run: red on main \(run 1\), sent to qa/.test(r.out) && /stale hold: C9\.9/.test(r.out) && /2 with an acceptance pack, 1 re-run \(2 held\)/.test(r.out), r);
+writeFileSync(hf, "C3.2\n");
+r = cli(["--json", "--file", f, "--held", hf]);
+ok("a hold without a reason is refused (exit 2)", r.code === 2 && /not "<C…> <reason>"/.test(r.out), r);
+ok("held() reads ids and reasons, comments skipped", [...held("# x\nC1.5 red on main # note\n\n").entries()].join() === "C1.5,red on main");
 // Read at the base: RANGE's base commit, not the working tree (a batch's PRs cannot change what is protected).
 const head = spawnSync("git", ["rev-parse", "HEAD"], { cwd: HERE, encoding: "utf8" }).stdout.trim();
 r = cli(["--json"], { RANGE: `${head}..${head}` });

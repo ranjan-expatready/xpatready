@@ -1,0 +1,3 @@
+# The protected regression set's held rows (works-set.mjs; tech lead, 4 Nov): an M2 Works capability whose pack was red
+# on main when the set started is left out, with its reason, and sent to qa (demote the row or log the bug). Remove its
+# line, in its own PR, when the pack is green again: then it joins the set. One per line: "<C…> <reason>".

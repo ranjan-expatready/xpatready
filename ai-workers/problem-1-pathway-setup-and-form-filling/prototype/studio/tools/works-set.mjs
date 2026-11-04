@@ -5,12 +5,15 @@
 //   --list   the capabilities with milestone M2 (or --milestone) and status Works in qa/CAPABILITIES.md as it is on the
 //            base branch (CI's RANGE "<base>..<head>"; --file reads a file instead) that have an acceptance pack;
 //            --json prints them as a JSON array for a job matrix. A Works row without a pack is listed as such.
+//            Held: a capability in works-set-held.txt (also read at the base) is left out with its reason: a pack red on
+//            main when the set started, sent to qa to demote or log (tech lead, 4 Nov); it joins the set when its line is
+//            removed. A held id that is no longer a protected row is reported as stale.
 //   --run <C…>  runs that capability's pack(s) once through gate-b.mjs (on the six where the pack's run allows, else on
 //            its fixture, labelled "fixture only"; US$0, live AI off) with no claim, so no bug check: only the pack. A
 //            red run is run once more (a flaky pack is retried once, the tech lead's brief); green on the retry passes and
 //            says "flaky", red twice fails. The gate's own CI values (QUEUE, PR_TITLE, PR_BODY, KIND) are cleared, so a
 //            batch's QUEUE=true never turns the run into gate B's batch check.
-// Usage: node studio/tools/works-set.mjs --list [--json] [--milestone M2] [--file <CAPABILITIES.md>]
+// Usage: node studio/tools/works-set.mjs --list [--json] [--milestone M2] [--file <CAPABILITIES.md>] [--held <file>]
 //        node studio/tools/works-set.mjs --run C11.13
 // Exit: 0 listed / green (on the first run or the retry) · 1 red twice · 2 could not run.
 import { readFileSync, appendFileSync } from "node:fs";
@@ -36,16 +39,20 @@ export function rows(md) {
 export const protectedSet = (md, milestone = "M2", packs = packsOf) =>
   rows(md).filter((r) => r.milestone === milestone && r.status === "Works").map((r) => ({ id: r.id, packs: packs(r.id) }));
 
-/** qa/CAPABILITIES.md as it is on the base branch, so the PRs in the batch cannot change what is protected. */
-function capsText(file) {
-  if (file) return readFileSync(file, "utf8");
+/** A file as it is on the base branch (CI's RANGE), so the PRs in the batch cannot change what is protected; the
+ *  working tree off CI. `missingOk`: a file not on the base yet reads as empty. */
+function atBase(path, missingOk = false) {
   const base = (process.env.RANGE ?? "").match(/^([0-9a-f]{7,40})\.\./)?.[1];
-  if (!base) return readFileSync(CAPS, "utf8");
+  if (!base) { try { return readFileSync(path, "utf8"); } catch (e) { if (missingOk) return ""; throw e; } }
   const top = spawnSync("git", ["rev-parse", "--show-toplevel"], { cwd: S, encoding: "utf8" }).stdout.trim();
-  const r = spawnSync("git", ["show", `${base}:${relative(top, CAPS)}`], { cwd: S, encoding: "utf8", maxBuffer: 64 << 20 });
-  if (r.status !== 0) throw new Error(`cannot read qa/CAPABILITIES.md at the base ${base}: ${r.stderr.trim()}`);
-  return r.stdout;
+  const r = spawnSync("git", ["show", `${base}:${relative(top, path)}`], { cwd: S, encoding: "utf8", maxBuffer: 64 << 20 });
+  if (r.status === 0) return r.stdout;
+  if (missingOk && /exists on disk, but not in|does not exist in/.test(r.stderr)) return "";
+  throw new Error(`cannot read ${relative(top, path)} at the base ${base}: ${r.stderr.trim()}`);
 }
+const HELD = join(HERE, "works-set-held.txt");
+/** works-set-held.txt: "<C…> <reason>" per line; # starts a comment. */
+export const held = (text) => new Map(text.split(/\r?\n/).map((l) => l.replace(/#.*$/, "").trim()).filter(Boolean).map((l) => { const m = l.match(/^(C\d{1,2}\.\d{1,2})\s+(.+)$/); if (!m) throw new Error(`works-set-held.txt: a line that is not "<C…> <reason>": "${l}"`); return [m[1], m[2]]; }));
 /** One run of the capability's packs through gate B with no claim (only its packs), CI's PR values cleared. */
 function once(id) {
   const gate = process.env.WORKS_SET_GATE ?? join(HERE, "gate-b.mjs");   // the self-check points this at a stand-in
@@ -56,11 +63,11 @@ function once(id) {
 
 function main(argv) {
   const say = (s) => { console.log(s); if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, s + "\n"); };
-  const opt = { list: false, json: false, run: null, milestone: "M2", file: null };
+  const opt = { list: false, json: false, run: null, milestone: "M2", file: null, held: null };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i], v = () => { if (argv[i + 1] === undefined) throw new Error(`${a} wants a value`); return argv[++i]; };
     if (a === "--list") opt.list = true; else if (a === "--json") opt.json = opt.list = true; else if (a === "--run") opt.run = v();
-    else if (a === "--milestone") opt.milestone = v(); else if (a === "--file") opt.file = v(); else throw new Error(`unknown option ${a}`);
+    else if (a === "--milestone") opt.milestone = v(); else if (a === "--file") opt.file = v(); else if (a === "--held") opt.held = v(); else throw new Error(`unknown option ${a}`);
   }
   if (opt.run) {
     if (!/^C\d{1,2}\.\d{1,2}$/.test(opt.run)) throw new Error(`not a capability id: "${opt.run}" (want e.g. C11.13)`);
@@ -75,10 +82,13 @@ function main(argv) {
     return again.status === 2 && first.status === 2 ? 2 : 1;
   }
   if (!opt.list) throw new Error("say --list, --json or --run <C…>");
-  const set = protectedSet(capsText(opt.file), opt.milestone), runs = set.filter((r) => r.packs.length);
+  const set = protectedSet(opt.file ? readFileSync(opt.file, "utf8") : atBase(CAPS), opt.milestone);
+  const hold = held(opt.held ? readFileSync(opt.held, "utf8") : atBase(HELD, true));
+  const runs = set.filter((r) => r.packs.length && !hold.has(r.id));
   if (opt.json) { console.log(JSON.stringify(runs.map((r) => r.id))); return 0; }
-  say(`Protected regression set (${opt.milestone} · Works): ${set.length} capabilities, ${runs.length} with an acceptance pack.`);
-  for (const r of set) say(`  ${r.id}: ${r.packs.length ? r.packs.join(", ") : "no acceptance pack (not re-run)"}`);
+  say(`Protected regression set (${opt.milestone} · Works): ${set.length} capabilities, ${set.filter((r) => r.packs.length).length} with an acceptance pack, ${runs.length} re-run (${hold.size} held).`);
+  for (const r of set) say(`  ${r.id}: ${!r.packs.length ? "no acceptance pack (not re-run)" : hold.has(r.id) ? `held, not re-run: ${hold.get(r.id)}` : r.packs.join(", ")}`);
+  for (const id of hold.keys()) if (!set.some((r) => r.id === id && r.packs.length)) say(`  stale hold: ${id} is no longer a protected row with a pack; remove its line from works-set-held.txt`);
   return 0;
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
