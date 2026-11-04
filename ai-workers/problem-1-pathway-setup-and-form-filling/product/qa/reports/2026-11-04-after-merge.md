@@ -246,3 +246,15 @@ Closed: **QA-196**. New: **QA-216** (Minor, from qa tester 2: the finder line sa
 * **New QA-218 (Gap · Major):** no screen offers Saved (US$0 replay) for the AI masters run that #771 committed. On the six, the only masters control runs the rules pass. **qa correction:** qa's batch 6 walk started that Saved draft through the API, not a screen. It proved the To review queue and the refusal words, not the step a person meets. The C3.4 row now says so.
 * qa tester 2's Minor is folded into QA-217: the "Ready to accept" badge, plus a form check whose first field shows only "*".
 * M2: 43/60 (unchanged).
+
+## Batch 7 — #837 (QA-212, QA-214; C5.4, C6.1) · main aa017f3a1 · ~14:40–15:05 IST
+| Row | Verdict | Exit codes |
+|---|---|---|
+| C5.4 (M2) | **Works** (was Partial, held by QA-212 under P-322) | `C5.4.test.ts` on GitHub: exit 0 · 27/27 on the configured checkpoint (run 41805556293), 27/27 on the six (run 41805568135); 27/27 on qa's Mac copy of the checkpoint |
+| C6.1 (thin slice) | **Works** (was Partial, same hold) | No pack. On the checkpoint the release was made through the product's own steps, then the case opened at 1440 px on Release 1 at the first try |
+
+Walk on the six at 1440 px: Demo › Start With an LMIA › "Load as a draft". The database then holds 0 releases and 0 pack versions; With an LMIA is ILLUSTRATIVE (Sample), with the basis note naming the outside-Canada c1-v3; Review and release shows "Numbers without a source (17)", and Submit is disabled.
+
+Closed: **QA-212, QA-214**. The remaining import shortcut (shared library items published at load) is disclosed in the dialog and ruled as its own BACKLOG row (Lead 4).
+
+**M2: 44/60 confirmed** (+C5.4). Thin slice 7/8 (+C6.1).
