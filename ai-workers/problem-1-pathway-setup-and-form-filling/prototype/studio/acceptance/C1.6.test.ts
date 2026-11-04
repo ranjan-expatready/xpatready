@@ -14,7 +14,7 @@
 // API and data level only (the screen parts are journeys J1/J2). US$0: the finder runs on saved answers (replay).
 //   zsh tools/isolated.sh acc_b4 4567 start && ./node_modules/.bin/tsx acceptance/C1.6.test.ts 4567 xr_studio_acc_b4
 // AT-12 (forms channel slice, 4 Nov) runs on the demo data after Reset to the six: the Programs row's channels, an Online
-// line with its portal. Expected on this branch: 26 pass, 0 fail (main: AT-12 fails, the row has no IRCC account).
+// line with its portal; AT-13 a released row whose draft files differently. Expected on this branch: 31 pass, 0 fail (main: AT-12 fails, the row has no IRCC account).
 // Before (main 931cb99a, run 1 Nov 2026 on an isolated copy, US$0): 23 pass, 0 fail — AT-10 passes on the
 // planted Sample two-round answer: the finder's channel proposal is built. What is missing is a real saved two-round
 // answer with channels (a founder-approved live run); until then the capability rests on Sample input.
@@ -117,6 +117,16 @@ const cardFiling = async (label: string) => { let f: string | null | undefined; 
   const notAccepted = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent("IMM 5409")}/channel`, { channel: "PAPER", signature: "PEN", from: "PDF_UPLOAD" });
   ok("C1.6 AT-9 [IRCC-F04] fail case: through the IRCC secure account, a channel IRCC does not accept for IMM 5409 (Paper) is refused in words", setAcc.status < 300 && notAccepted.status === 400 && (await lineOf(wp, "IMM 5409"))?.channel === "PDF_UPLOAD", { setAcc: setAcc.status, notAccepted });
 
+  // ── AT-13 (break M2): a released combination whose draft files differently says its row's channels are the next
+  // release's; back to the released account, it does not.
+  const leafOf = async (label: string) => ((await call("GET", "/catalogue?pathway=INDIVIDUAL&filter=all")).body.rows as { label: string; channelsChanged?: boolean; account?: string | null }[]).find((r) => r.label === label);
+  const released = sql(`select count(*) from config_release where combination_id='${wp}'`) !== "0";
+  const moved = await leafOf("With an LMIA");
+  ok("C1.6 AT-13 pass: With an LMIA is released and its draft now files through the IRCC secure account: its Programs row says the channels are the next release's", released && moved?.account === "IRCC_SECURE_ACCOUNT" && moved?.channelsChanged === true, { released, moved });
+  const back = await call("PATCH", `/combinations/${wp}/account`, { account: acc0, from: "IRCC_SECURE_ACCOUNT" });
+  const same = await leafOf("With an LMIA");
+  ok("C1.6 AT-13 fail case: back to the released account (lines as released), the row does not say 'next release'", back.status < 300 && same?.channelsChanged === false, { back: back.status, same });
+
   // ── The finder proposes each form's channel from its two AI rounds (P-140), replayed at US$0.
   // Test input (Sample, see the header): a two-round finder answer for Visitor visa with today's prompts and a channel per form.
   const vvKey = sql(`select combination_key from combination where id='${vv}'`); // the key a saved finder answer is replayed for
@@ -159,6 +169,11 @@ const cardFiling = async (label: string) => { let f: string | null | undefined; 
   await call("PATCH", `/combinations/${sixId}/account`, { account: null, from: "IRCC_SECURE_ACCOUNT" });
   const r2 = await vvRow(), g2 = channelGroups(r2!.forms, r2!.account);
   ok("C1.6 AT-12 fail case: with no IRCC account the Online line names no portal ('Online · IRCC account not set')", r2!.account === null && g2.some((g) => g.words === "Online · IRCC account not set") && !g2.some((g) => /secure account/.test(g.words)), g2);
+  ok("C1.6 AT-12 fail case: on the six nothing is released, so the row never says its channels are the next release's", (r2 as { channelsChanged?: boolean }).channelsChanged === false, r2);
+  // Review m1: an Online line on paper filing names no portal (the words, no server: contracts/forms.ts).
+  const pg = channelGroups([{ code: "X 1", channel: "ONLINE" }, { code: "X 2", channel: "PAPER" }], "PAPER");
+  ok("C1.6 AT-12 pass: on paper filing an Online line says 'Online · no IRCC account (paper filing)'; a Paper line is 'Paper'", pg.map((g) => `${g.words}=${g.forms}`).join() === "Online · no IRCC account (paper filing)=X 1,Paper=X 2", pg);
+  ok("C1.6 AT-12 fail case: paper filing is never named as a portal ('Online · No account (paper filing)')", !pg.some((g) => /Online · No account/.test(g.words)), pg);
   ok("C1.6 AT-11 US$0: nothing in this file spent money", Number(spend()) === Number(spend0), [spend0, spend()]);
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

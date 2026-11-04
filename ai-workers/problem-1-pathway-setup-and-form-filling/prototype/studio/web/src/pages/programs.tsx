@@ -543,16 +543,21 @@ function FilingTag({ filing }: { filing: string }) {
 }
 
 /** C1.6 (P-61, P-143): each form's channel on the Programs row, grouped by channel, an Online group with its portal (the
- *  combination's IRCC account): "PDF upload: IMM 5257, IMM 5409". A long group is cut on screen and said in full on hover
- *  and to screen readers. Nothing while the combination has no filed form lines. */
+ *  combination's IRCC account): "PDF upload: IMM 5257, IMM 5409". Never cut: the label stays whole and the forms wrap
+ *  (break M1, m3; review m5). Nothing on a retired row, nor while there are no filed lines; on a released row whose draft
+ *  files differently, the lines are said to be the next release's (break M2). */
+const rowChannels = (r: CatalogueLeaf) => (r.retired ? [] : channelGroups(r.forms, r.account));
+export const channelsWords = (r: CatalogueLeaf) => { const g = rowChannels(r); return g.length ? `${r.channelsChanged ? "next release: " : ""}${g.map((x) => `${x.words}: ${x.forms.join(", ")}`).join("; ")}` : ""; };
 function FormChannels({ r, className }: { r: CatalogueLeaf; className?: string }) {
-  const groups = channelGroups(r.forms, r.account);
+  const groups = rowChannels(r);
   if (!groups.length) return null;
   return (
-    <ul className={cn("min-w-0 space-y-px text-xs text-text-muted", className)} aria-label="Each form's channel" data-form-channels>
-      {groups.map((g) => { const all = `${g.words}: ${g.forms.join(", ")}`;
-        return <li key={g.channel} className="truncate" title={all} data-channel={g.channel}><span className="font-medium text-text">{g.words}</span>: {g.forms.join(", ")}</li>; })}
-    </ul>
+    <div className={cn("min-w-0 text-xs text-text-muted", className)} data-form-channels-box>
+      {r.channelsChanged ? <p className="font-medium text-text-warn" data-channels-next>In the draft for the next release:</p> : null}
+      <ul className="space-y-px" aria-label={r.channelsChanged ? "Each form's channel in the draft for the next release" : "Each form's channel"} data-form-channels>
+        {groups.map((g) => <li key={g.channel} className="[overflow-wrap:anywhere]" data-channel={g.channel}><span className="whitespace-nowrap font-medium text-text">{g.words}</span>: {g.forms.join(", ")}</li>)}
+      </ul>
+    </div>
   );
 }
 
@@ -638,19 +643,19 @@ function List({ groups, closed, onToggle, highlight, q, sort, filtering, needsOn
                   const active = current?.nodeKey === r.nodeKey, lit = highlight === r.nodeKey, ti = active ? 0 : -1;
                   const trail = trailOf(r), above = trail.slice(0, -1).join(" › ");
                   return (
-                    <div key={r.nodeKey} role="row" aria-selected={lit} tabIndex={ti} data-node={r.nodeKey} data-label={r.label} data-state={chipOf(r)} aria-label={`${trail.join(" › ")}, ${progressWords(r)}${needsYouOf(r) ? ", needs you" : ""}`}
+                    <div key={r.nodeKey} role="row" aria-selected={lit} tabIndex={ti} data-node={r.nodeKey} data-label={r.label} data-state={chipOf(r)} aria-label={`${trail.join(" › ")}, ${progressWords(r)}${needsYouOf(r) ? ", needs you" : ""}${r.filing && !r.retired && FILING_KINDS.some((k) => r.filing!.startsWith(k)) ? `, filing: ${r.filing}` : ""}${channelsWords(r) ? `, ${channelsWords(r)}` : ""}`}
                       ref={(el) => { if (el) refs.current.set(r.nodeKey, el); else refs.current.delete(r.nodeKey); }}
                       onKeyDown={(e) => onKey(e, r)} onFocus={(e) => { if (e.target === e.currentTarget) setFocus(r.nodeKey); }} onClick={() => onOpen(r)}
                       className={cn(GRID, "min-h-11 cursor-pointer border-b border-border px-4 py-1.5 outline-none last:border-b-0 focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/60", lit ? "bg-primary/10 shadow-[inset_3px_0_0_var(--color-primary)]" : "hover:bg-text/[0.03]")}>
                       <div role="gridcell" className="min-w-0 truncate text-sm font-semibold text-lv3" data-name>{nameOf(r)}</div>
                       <div role="gridcell" className="col-start-1 row-start-2 min-w-0 sm:col-start-auto sm:row-start-auto">
                         <span className="block truncate text-xs text-text-muted" title={above} data-trail>{above}</span>
-                        {r.filing && FILING_KINDS.some((k) => r.filing!.startsWith(k)) ? <div className="mt-0.5 flex min-w-0 items-start gap-2" data-list-filing><FilingTag filing={r.filing} /><FormChannels r={r} className="flex-1" /></div> : <FormChannels r={r} className="mt-0.5" />}
                         {q && r.matches.some((m) => m !== "name") ? <span className="block truncate text-xs text-text-muted">Matches: {r.matches.filter((m) => m !== "name").join(", ")}</span> : null}
                       </div>
                       <div role="gridcell" className="col-start-1 row-start-3 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm sm:col-start-auto sm:row-start-auto"><StepBar r={r} mini /><Progress r={r} mini /></div>
                       <div role="gridcell" className="col-start-2 row-start-1 justify-self-end sm:col-start-auto sm:row-start-auto sm:justify-self-start"><NeedsYouMark r={r} tabIndex={ti} /></div>
                       <div role="gridcell" className="col-start-2 row-span-2 row-start-2 justify-self-end sm:col-start-auto sm:row-span-1 sm:row-start-auto sm:justify-self-start" data-step-cell><CardButton r={r} canAuthor={canAuthor} tabIndex={ti} onOpen={() => onOpen(r)} onResume={() => onResume(r)} /></div>
+                      {rowChannels(r).length ? <div role="gridcell" className="col-span-2 row-start-4 flex min-w-0 items-start gap-2 pb-1 sm:col-span-5 sm:row-start-2" data-list-filing>{r.filing && FILING_KINDS.some((k) => r.filing!.startsWith(k)) ? <FilingTag filing={r.filing} /> : null}<FormChannels r={r} className="flex-1" /></div> : null}
                     </div>
                   );
                 })}

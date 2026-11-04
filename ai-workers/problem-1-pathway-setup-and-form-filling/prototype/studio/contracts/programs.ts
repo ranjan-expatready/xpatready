@@ -129,6 +129,9 @@ export type CatalogueLeaf = {
   /** C1.6 (P-143): the IRCC account the combination files through (contracts/forms.ts IRCC_ACCOUNTS), null when not set:
    *  the portal an Online line is typed into. */
   account?: string | null;
+  /** C1.6 (break M2): a released combination whose draft files differently (another account or another line channel):
+   *  the row's channels and filing are the next release's, not what a case opened today files. */
+  channelsChanged?: boolean;
   /** questions: the one question count (contracts/counts.ts), the sum of questionsByRole (the Questionnaires chips). */
   counts: { documents: number; documentsAlways: number; documentsIf: number; questions: number; questionsByRole?: { role: string; label: string; questions: number }[]; sections: number; rules: number } | null;
   status: Status;

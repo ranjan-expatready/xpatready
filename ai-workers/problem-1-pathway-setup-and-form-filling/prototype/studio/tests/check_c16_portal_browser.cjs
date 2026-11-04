@@ -4,12 +4,15 @@
 // (QA-134). Walked in a real browser on the demo data (Reset to the six), 1440 px and 400 px, axe (WCAG 2.2 AA). The
 // channel values set here are Sample (test input, the author's own choices through the API), never IRCC's word.
 // No model call (US$0).
-//   zsh studio/tools/isolated.sh forms_c16p 4452 start && node studio/tests/check_c16_portal_browser.cjs 4452
-// A screenshot folder may follow the port (the 1440 px walk in product/screens/C1.6-channel-slice/screenshots).
+//   zsh studio/tools/isolated.sh forms_c16p 4452 start && node studio/tests/check_c16_portal_browser.cjs 4452 xr_studio_forms_c16p
+// A screenshot folder may follow the database name (the 1440 px walk in product/screens/C1.6-channel-slice/screenshots).
 const fs = require("node:fs");
+const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
-const PORT = Number(process.argv[2] ?? 4452), BASE = `http://localhost:${PORT}`, OUT = process.argv[3] ?? null;
+const PORT = Number(process.argv[2] ?? 4452), DB = process.argv[3] ?? "xr_studio_forms_c16p", BASE = `http://localhost:${PORT}`, OUT = process.argv[4] ?? null;
+if (DB === "xr_studio" || !/^xr_studio_[a-z0-9_]+$/.test(DB)) { console.log("refused: an isolated copy's database only (xr_studio_<name>)"); process.exit(2); }
+const sql = (q) => execFileSync("psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 if (PORT === 4400) { console.log("refused: :4400 is the demo, never used for tests"); process.exit(2); }
 if (OUT) fs.mkdirSync(OUT, { recursive: true });
 let pass = 0, fail = 0;
@@ -24,7 +27,7 @@ const LEAKS = /\(P-\d{2,3}[^)]*\)|\bP-\d{2,3}\b|IRCC_SECURE_ACCOUNT|PDF_UPLOAD|N
   p.on("pageerror", (e) => errs.push(e.message));
   const api = async (pth, init = {}) => { const r = await p.request.fetch(`${BASE}/api${pth}`, { method: init.method ?? "GET", headers: { "x-actor": init.actor ?? "user-A", "content-type": "application/json" }, data: init.data }); return { status: r.status(), body: await r.json().catch(() => null) }; };
   const shot = async (name) => { if (OUT) await p.screenshot({ path: `${OUT}/${name}.png`, fullPage: true }); };
-  const groupsOf = async (scope) => scope.locator("[data-form-channels] li").evaluateAll((ls) => ls.map((l) => ({ channel: l.dataset.channel, text: l.textContent.trim(), title: l.title })));
+  const groupsOf = async (scope) => scope.locator("[data-form-channels] li").evaluateAll((ls) => ls.map((l) => ({ channel: l.dataset.channel, title: l.textContent.trim().replace(/\s+/g, " "), cut: l.scrollWidth > l.clientWidth + 1 })));
   try {
     await p.goto(BASE); await p.evaluate(() => { try { localStorage.setItem("xr-actor", "user-A"); } catch { /* ignore */ } });
     const six = await api("/demo/reset-to-six", { method: "POST", data: { confirm: "RESET" } });
@@ -66,6 +69,18 @@ const LEAKS = /\(P-\d{2,3}[^)]*\)|\bP-\d{2,3}\b|IRCC_SECURE_ACCOUNT|PDF_UPLOAD|N
     const ax = await new AxeBuilder({ page: p }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
     step("C1.6: axe on the Programs List is clean", ax.violations.length === 0, ax.violations.map((v) => `${v.id}: ${v.nodes.length}`).join("; "));
     await shot("c16-programs-list-mixed-1440");
+    const rowName = await lr.getAttribute("aria-label");
+    step("C1.6 (review m6): the List row's screen-reader name carries the filing method and each form's channel", /filing: Mixed: online and PDF/.test(rowName ?? "") && rowName.includes(`Online · IRCC secure account: ${fam.code}`), rowName);
+    for (const [w, label] of [[1024, "1024 px"], [640, "200 % zoom of a 1280 px screen"]]) {
+      await p.setViewportSize({ width: w, height: 900 }); await sleep(400);
+      const lw = await groupsOf(lr), all = lw.map((x) => x.title).join(" ");
+      step(`C1.6 (break M1, review m5): ${label}: the List row's channels are whole: the portal and every filed form are on screen, nothing cut`, lw.every((x) => !x.cut) && all.includes("Online · IRCC secure account") && filed.every((f) => all.includes(f.code)), lw);
+      const cw = await groupsOf(card());
+      if (w === 1024) { await p.goto(`${BASE}/?f=all&v=cards`); await card().waitFor({ timeout: 20000 }); const cg = await groupsOf(card()), ca = cg.map((x) => x.title).join(" ");
+        step("C1.6 (break m3): 1024 px: the card's channels are whole too (no text only on hover)", cg.every((x) => !x.cut) && filed.every((f) => ca.includes(f.code)), cg);
+        await p.goto(`${BASE}/?f=all&v=list`); await lr.waitFor({ timeout: 20000 }); } else void cw;
+    }
+    await p.setViewportSize({ width: 1440, height: 900 });
 
     // ── Combination page, Forms tab: the Online line says which portal it is typed into.
     await p.goto(`${BASE}/c/${id}/forms`); const line = p.locator(`tr[data-line="${fam.code}"]`); await line.waitFor({ timeout: 30000 });
@@ -85,6 +100,22 @@ const LEAKS = /\(P-\d{2,3}[^)]*\)|\bP-\d{2,3}\b|IRCC_SECURE_ACCOUNT|PDF_UPLOAD|N
     await p.goto(`${BASE}/?f=all&v=cards`); await card().waitFor({ timeout: 20000 }); await sleep(300);
     const g2 = await groupsOf(card());
     step("C1.6 fail case: the card's Online group says 'Online · IRCC account not set'", g2.some((x) => x.title === `Online · IRCC account not set: ${fam.code}`), g2);
+    const pb = await (await b.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" })).newPage(); pb.on("pageerror", (e) => errs.push(e.message));
+    await pb.goto(BASE); await pb.evaluate(() => { try { localStorage.setItem("xr-actor", "user-B"); } catch { /* ignore */ } });
+    await pb.goto(`${BASE}/c/${id}/forms`); const lineB = pb.locator(`tr[data-line="${fam.code}"]`); await lineB.waitFor({ timeout: 30000 });
+    const wordsB = (await lineB.locator("[data-online-words]").innerText()).trim();
+    step("C1.6 (review m3): an approver (no account picker) reads the fact, not 'choose above'", /^IRCC account not set/.test(wordsB) && !/choose|above/.test(wordsB), wordsB);
+    await pb.context().close();
+    const toPaper = await api(`/combinations/${id}/account`, { method: "PATCH", data: { account: "PAPER", from: null } });
+    await p.goto(`${BASE}/?f=all&v=cards`); await card().waitFor({ timeout: 20000 }); await sleep(300);
+    const gp = await groupsOf(card());
+    step("C1.6 (review m1) pass: on paper filing the card's Online group says it has no IRCC account", toPaper.status < 300 && gp.some((x) => x.title === `Online · no IRCC account (paper filing): ${fam.code}`), gp);
+    step("C1.6 (review m1) fail case: on paper filing no account words leak ('No account (paper filing)' as a portal, or 'IRCC account not set')", !gp.some((x) => /Online · No account|Online · IRCC account not set/.test(x.title)), gp);
+    await p.goto(`${BASE}/c/${id}/forms`); await line.waitFor({ timeout: 30000 }); await sleep(300);
+    const paperNotes = (await line.innerText()).replace(/\s+/g, " ");
+    step("C1.6 (review m2): on paper filing the Online line says why once (its red note), no second grey line", (await line.locator("[data-online-words]").count()) === 0 && /paper/i.test(paperNotes), paperNotes.slice(0, 240));
+    await api(`/combinations/${id}/account`, { method: "PATCH", data: { account: null, from: "PAPER" } });
+    await p.goto(`${BASE}/?f=all&v=cards`); await card().waitFor({ timeout: 20000 });
     await p.setViewportSize({ width: 400, height: 900 }); await sleep(300);
     const sw = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     step("C1.6: 400 px: the Programs cards with channels have no sideways page scroll", sw <= 1, `${sw} px`);
@@ -108,6 +139,27 @@ const LEAKS = /\(P-\d{2,3}[^)]*\)|\bP-\d{2,3}\b|IRCC_SECURE_ACCOUNT|PDF_UPLOAD|N
     await drawer.getByRole("combobox", { name: "For which IRCC account" }).waitFor({ timeout: 10000 });
     const dt = (await drawer.innerText()).replace(/\s+/g, " ");
     step("C1.6 QA-134: the accepts panel's hint names no decision id", /the one account this applies to\./.test(dt) && !/\(P-\d+\)/.test(dt), dt.match(/.{0,60}\(P-\d+\).{0,10}/)?.[0] ?? dt.slice(0, 200));
+    await p.goto(`${BASE}/c/${id}/forms`); await line.waitFor({ timeout: 30000 });
+    await p.locator("main th", { hasText: /^Signature$/ }).locator("[tabindex], span").first().hover(); await sleep(600);
+    const tips = (await p.locator("[role=tooltip]").allInnerTexts()).join(" ");
+    step("C1.6 (review m4): the Signature column's tooltip names no decision id", /How the form is signed/.test(tips) && !/\(P-\d+/.test(tips), tips.slice(0, 200));
+    // Break M2: a retired combination files nothing: its row shows no channels. On the suites' fixture (With an LMIA is
+    // released there), retired by SQL as an approved retire would leave it (test input).
+    const fx = (await api("/demo/reset", { method: "POST", data: { confirm: "RESET" } })).status < 300 && (await api("/demo/load", { method: "POST" })).status === 201;
+    const lmia = sql("select id from combination where label='With an LMIA' limit 1");
+    const before = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).body.rows.find((r) => r.combinationId === lmia);
+    step("setup: the fixture's With an LMIA is released and has filed lines", fx && !!before && before.forms.some((f) => f.channel), before?.statusText);
+    sql(`update combination set retired_at=now() where id='${lmia}'`);
+    // The catalogue's rows are rebuilt on the next audited change (api/src/programs.ts cache key): one ordinary author
+    // action on another combination, set and put back.
+    const other = sql(`select id from combination where retired_at is null and portal_key is null limit 1`);
+    const o1 = await api(`/combinations/${other}/account`, { method: "PATCH", data: { account: "IRCC_PORTAL", from: null } });
+    const o2 = await api(`/combinations/${other}/account`, { method: "PATCH", data: { account: null, from: "IRCC_PORTAL" } });
+    if (o1.status >= 300 || o2.status >= 300) step("setup: an audited change rebuilds the Programs rows", false, [o1.status, o2.status]);
+    await p.goto(`${BASE}/?f=retired&v=cards`); const rc = p.locator(`article[data-label="With an LMIA"]`); await rc.waitFor({ timeout: 20000 });
+    step("C1.6 (break M2) fail case: a retired combination's card shows no form channels", (await rc.locator("[data-form-channels]").count()) === 0, await rc.innerText());
+    await p.goto(`${BASE}/?f=retired&v=list`); const rl = p.locator(`[role=row][data-label="With an LMIA"]`); await rl.waitFor({ timeout: 20000 });
+    step("C1.6 (break M2) fail case: nor does its List row (and its screen-reader name names none)", (await rl.locator("[data-form-channels]").count()) === 0 && !/PDF upload:|Online ·/.test((await rl.getAttribute("aria-label")) ?? ""), await rl.getAttribute("aria-label"));
     step("C1.6: no script error on any page", errs.length === 0, errs.join(" | "));
   } catch (e) { step("the walk finished", false, e.stack ?? String(e)); }
   finally { await b.close(); console.log(`\n${pass} passed, ${fail} failed`); process.exit(fail ? 1 : 0); }
