@@ -134,7 +134,7 @@ import { evaluate } from "../../contracts/rules.ts";
   e = both(pcr("*Yes", "*No"), pcr("* Yes", "* No"));
   ok("C3.4 E pass: a spacing variant of the printed words (\"*Yes\") is the same choice, and both readings agree", e.items[0]?.confidence === "ready" && JSON.stringify((e.items[0]?.payload as any).tree).includes('"value":"* Yes"'), e.items[0]?.confidence);
   e = both(pcr("Maybe", "* No"));
-  ok("C3.4 E fail: a value that is not one of the box's printed choices is not proposed (its check could never fail), with the reason", !e.items.length && /not one of that box's printed choices/.test(e.dropped[0]?.why ?? ""), e.dropped[0]);
+  ok("C3.4 E fail: a value that is not one of the box's printed choices is not proposed (its check could never fail), with the reason", !e.items.length && /not one of that form field's printed choices/.test(e.dropped[0]?.why ?? ""), e.dropped[0]);
   e = both(pcr(true, "* No"));
   ok("C3.4 E fail: a true/false value on a choice box is not one of its printed choices either", !e.items.length && /printed choices/.test(e.dropped[0]?.why ?? ""), e.dropped[0]);
   // Review round 2 M1: choices by the shape each box kind is stored in, never rows of a column list or a check box's states.

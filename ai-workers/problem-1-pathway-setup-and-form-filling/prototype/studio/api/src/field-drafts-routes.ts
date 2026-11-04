@@ -28,10 +28,10 @@ export const DRAFT_FIELDS_WORDS = {
   liveOff: (cost: string) => `A live Draft fields run (${cost}) is not open on this copy: live AI is off. Use a saved AI draft (US$0), or a person maps the form fields.`,
   noEdition: (code: string) => `${code} has no approved edition in the library yet: add its PDF first.`,
   notRead: (edition: string) => `${edition} has no form-field reading of exactly this file on this computer, so there is nothing to draft: read the form first.`,
-  notForm: (code: string) => `${code} is not a form with form fields: only forms are drafted into fields (a checklist is drafted into document lines).`,
+  notForm: (code: string) => `${code} has no form fields: only forms are drafted into fields (a checklist is drafted into document lines).`,
   noSaved: (cost: string) => FIELD_DRAFT_WORDS.noSaved.replace("about US$x · at most US$y", cost),
   nothingPassed: (edition: string, why: string[]) => `No field of the saved AI draft of ${edition} passed the rules, so nothing was put on To review and the edition is not marked drafted.${why.length ? ` For example: ${why.slice(0, 3).join(" ")}` : ""}`.slice(0, 900),
-  tooMany: (edition: string, n: number, max: number) => `The saved AI draft of ${edition} names ${n} fields for a form of far fewer form fields (at most ${max} are read), so it was not used: a person maps the form fields.`,
+  tooMany: (edition: string, n: number, max: number) => `The saved AI draft of ${edition} maps ${n} form fields, far more than the form has (at most ${max} are read), so it was not used: a person maps the form fields.`,
 };
 /** At most this many fields are read from one draft of a form (break m4: one draft never holds the queue's lock for long). */
 export const maxFields = (boxes: number) => Math.max(50, boxes * 2);

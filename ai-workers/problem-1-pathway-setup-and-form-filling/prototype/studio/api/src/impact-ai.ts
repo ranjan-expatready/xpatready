@@ -57,7 +57,7 @@ export function componentsView(uses: Use[], rows: BoxRow[], fieldLabel: Map<stri
     const boxes = changedBy(u.field);
     const box = boxes.map((b) => b.change === "removed" ? `"${b.caption.slice(0, 80)}" (removed in ${edition})` : `"${(b.was ?? "").slice(0, 80)}" (reworded in ${edition} as "${b.caption.slice(0, 80)}")`).join(", ");
     return { key: u.key, label: u.label, field: u.field, combination: comboLabel.get(u.combinationId) ?? "A combination", combination_id: u.combinationId, boxes: boxes.map((b) => b.dataPath),
-      why: `The box ${box || "(none)"} fills ${fieldLabel.get(u.field) ?? u.field}, and ${HOW[u.how]}.`.slice(0, 600) };
+      why: `The form field ${box || "(none)"} fills ${fieldLabel.get(u.field) ?? u.field}, and ${HOW[u.how]}.`.slice(0, 600) };
   }).filter((x) => x.boxes.length).sort((a, b) => `${a.combination}|${a.label}`.localeCompare(`${b.combination}|${b.label}`));
   return { sections: of("section"), document_types: of("document_type"), rules: of("rule"), checks: of("check") };
 }

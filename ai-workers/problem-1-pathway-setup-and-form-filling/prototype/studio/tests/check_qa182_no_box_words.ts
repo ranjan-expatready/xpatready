@@ -25,7 +25,7 @@ export function jsxTextOn(line: string): string[] {
 export function wordsOn(line: string): string[] {
   if (/^\s*(\*|\/\*|\/\/)/.test(line)) return [];
   const code = line.replace(/\s\/\/ .*$/, "");
-  return [...code.matchAll(/"([^"\n]*)"|'([^'\n]*)'|`([^`\n]*)`|>([^<>{}\n]+)</g)].map((m) => (m[1] ?? m[2] ?? m[3] ?? m[4]).replace(/\$\{[^}]*\}/g, "X"))
+  return [...code.matchAll(/"([^"\n]*)"|'([^'\n]*)'|`([^`\n]*)`|>([^<>{}\n]+)</g)].map((m) => (m[1] ?? m[2] ?? m[3] ?? m[4]).replace(/\$\{[^}]*\}/g, "value"))
     .filter((s) => /[A-Za-z]{2,} [A-Za-z]{2,} [A-Za-z]{2,}/.test(s) && !/[;=]>|\)\)|\bconst\b|\breturn\b/.test(s));
 }
 
@@ -34,6 +34,7 @@ ok("QA-182 fail: a message saying boxes is caught", wordsOn(`fail(\`\${k} is not
 ok("QA-182 fail: on-screen text saying box is caught", wordsOn(`<p>Write it by hand in this box on the form.</p>`).some((s) => BAD.test(s)));
 ok("QA-182 pass: a control of our own screens is not this rule", !wordsOn(`<Tip tip="Type in the search box to find a form field">`).some((s) => BAD.test(s)) && !wordsOn(`"Tick the check box to confirm the declaration"`).some((s) => BAD.test(s)));
 ok("QA-182 fail: a plural or possessive built around a value is caught", BAD_RAW.test(`\`for the \${n} reworded box\${n === 1 ? "" : "es"} only\``) && BAD_RAW.test(`\`not one of that box's printed choices\``));
+ok("QA-182 fail (review): a short message built around values is caught (a value reads as a word, never as one letter)", wordsOn(`why: \`The box \${box || "(none)"} fills \${label}, and \${how}.\`.slice(0, 600) };`).some((s) => BAD.test(s)));
 ok("QA-182 fail: on-screen text between values is caught", jsxTextOn(`<p className="x">{p.boxes} boxes on {p.edition} · drafted once</p>`).some((t) => BAD.test(t)) && !jsxTextOn(`if (box) { a(); } else { b(); }`).some((t) => BAD.test(t)));
 ok("QA-182 pass: comments and code identifiers are not read", !wordsOn(`// the boxes of the form are mapped here`).length && !wordsOn(`const boxes = fieldMap.boxes.filter((b) => b.on);`).some((s) => BAD.test(s)));
 
