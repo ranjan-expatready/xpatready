@@ -1,0 +1,6 @@
+packs (C4.2)	C4.2 acceptance pack, on the six where its run allows (gate-b.mjs; live AI off, US$0)	2026-11-04T12:40:54.5526083Z Gate B: the PR names C4.2; claims Works for none (no bug check).
+packs (C4.2)	C4.2 acceptance pack, on the six where its run allows (gate-b.mjs; live AI off, US$0)	2026-11-04T12:40:54.5531835Z   packs: C4.2.test.ts
+packs (C4.2)	C4.2 acceptance pack, on the six where its run allows (gate-b.mjs; live AI off, US$0)	2026-11-04T12:41:12.9915625Z     setup studio/tests/runtime/setup_visitor_visa.ts: exit 0
+packs (C4.2)	C4.2 acceptance pack, on the six where its run allows (gate-b.mjs; live AI off, US$0)	2026-11-04T12:41:12.9916802Z     C4.2.test.ts fixture only (its run line has setup steps; Works needs qa's demo-data PASS, gate A): exit 0, 10/10 passed (18 s: copy 5, run 13)
+packs (C4.2)	C4.2 acceptance pack, on the six where its run allows (gate-b.mjs; live AI off, US$0)	2026-11-04T12:41:12.9917564Z   packs took 18 s in all
+packs (C4.2)	C4.2 acceptance pack, on the six where its run allows (gate-b.mjs; live AI off, US$0)	2026-11-04T12:41:12.9918242Z Gate B: passed.

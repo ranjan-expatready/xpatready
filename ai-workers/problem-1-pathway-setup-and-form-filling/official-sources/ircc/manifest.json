@@ -540,7 +540,9 @@
    "sha256": "0c11cdf3a55be2e4a7e8471074a47873f775ed5c9c9e3c759eb07018b3f75534",
    "server_last_modified": "PDF ModDate Fri Nov 19 22:02:00 2021 UTC",
    "is_pdf": true,
-   "path": "previous-editions/imm5476e-2021.pdf"
+   "path": "previous-editions/imm5476e-2021.pdf",
+   "printed": "IMM 5476 (11-2021)",
+   "printed_from": "Read from the file's own print by tools/read_form_identity.py (no AI), 4 Nov 2026 (QA-207)"
   },
   {
    "file": "imm5257e-pre-2023.pdf",
@@ -555,7 +557,9 @@
    "sha256": "d512ef649902eadc400c667cf6ad41bba0d905e2a54245a339be6c25a2d80f11",
    "server_last_modified": "PDF ModDate Thu Apr 18 18:01:54 2019 UTC",
    "is_pdf": true,
-   "path": "previous-editions/imm5257e-pre-2023.pdf"
+   "path": "previous-editions/imm5257e-pre-2023.pdf",
+   "printed": "IMM 5257 (06-2019)",
+   "printed_from": "Read from the file's own print by tools/read_form_identity.py (no AI), 4 Nov 2026 (QA-207)"
   },
   {
    "file": "imm5645e.pdf",
