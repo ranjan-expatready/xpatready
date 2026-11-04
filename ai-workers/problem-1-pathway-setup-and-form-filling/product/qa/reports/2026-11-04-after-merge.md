@@ -350,3 +350,27 @@ C4.7 now passes 17/17 on the checkpoint but cannot be reached on the six. The #7
 **M2: 42/60 confirmed** (was 40; +C11.17, +C1.6).
 
 **Note on qa PR #939 (gate B):** its first title named the capabilities it re-scored. Gate B then ran the C11.14 and C11.7 packs, which are red on main by design until #785 and #881 merge, and refused (CI run 41826732671). A qa records PR claims no capability, so the title no longer names one. Gate B's checks of the product PRs themselves are unaffected.
+
+## Batch 11 — #891 (QA-144 part 2), #935 (QA-219), #933 (QA-215), qa tester 2's #944 and #947, QA-225 · main e840d2d88 · ~18:45–19:15 IST
+| Row | Verdict | Evidence |
+|---|---|---|
+| C4.8 (M2) | **Works** (was Partial) | `C4.8.test.ts` on the configured checkpoint: 0 · 11/11 (run 41836344209, after #891). Walk: the Visitor visa's "v1 Demo release" was submitted by the author and approved by the Approver, and its snapshot carries 13 sections and 152 placements |
+| C3.5 (M2) | **Works** (was Partial) | `C3.5.test.ts` on the six: 0 · 42/42 on main (run 41838951364). QA-219 closed |
+| C11.8 (M2) | **Works** (was Partial) | qa tester 2, #947: 34/34 twice on the six, plus a walk |
+| C4.2 (M2) | Partial (unchanged) | qa tester 2, #944: 0 questions on the six (QA-144 part 1, #936). C4.2 is added to QA-144's capability list |
+| C6.1 (thin slice) | **Partial** (was Works) | QA-225 (Major): sign-step and signed-scan lines reach another firm's activity feed |
+
+**The configured checkpoint now releases two combinations** (#891): the Visitor visa and With an LMIA, as Demo releases, through submit, sign-off and a second person's approval. Its checkpoint packs: C10.1 0 · 16/23 (release 2 is next), C4.1 1 · 16/18 (QA-206), C4.7 17/17 (a setup row, so it still counts on the six), C11.12 20/20 (runtime exit 2), C3.6 exit 2, C4.11 14/23.
+
+**Also:** C9.1 on the checkpoint after #937: still 8/17, because row 17 holds no new edition yet (QA-207 is only partly fixed). QA-215 is closed: C11.3 is 26/26 on main with AT-5 held, and the runtime pack exits 2 cleanly.
+
+**`REGRESSION-HELD.md`:** all four holds are lifted. C11.3 is green on main. C4.7, C3.6 and C11.12 are Partial, so they are not in the Works set.
+
+**Built markers removed** (re-scored today): C1.6, C11.17, C3.5, C4.2, C6.1.
+
+**M2: 45/60 confirmed** (was 42; +C4.8, +C3.5, +C11.8). Thin slice 6/8. M3: 2/17.
+
+## Records update ~19:35 IST: the cloud M3 qa after #861 and #891 (#952)
+* Every M3 row stays Partial. C6.12's Visitor visa part counts on the checkpoint (24/24). C7.6's API reaches Ready to file there, but no screen shows it.
+* New: **QA-226** (Gap · Major, C6.4 and C7.7): the configured Visitor visa release has no document lines. **QA-227** (Bug · Major, C7.7, C6.11 and C7.6): IMM 5476 never applies to a represented case. **QA-228** (Gap · Minor): no signer rule on the checkpoint's lines. **QA-229** (UX · Major, C7.6 and C7.7): the screen says "Ready to file" while the server holds a CRITICAL warning.
+* **C6.11 goes to Partial** (was Works), held by QA-227. **M3: 1/17 Works.**
