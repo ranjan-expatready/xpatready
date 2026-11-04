@@ -104,7 +104,7 @@ export function workedOut(s: Snapshot, words: string): { form: string; caption: 
   // The same form field read twice (two map rows of one box) is one field.
   const one = [...new Map(top.map((x) => [`${x.form}|${x.e.caption}`, x])).values()];
   if (one.length !== 1) return null;
-  return { form: one[0].form, caption: (one[0].e.caption ?? "").replace(/^(?:[a-z ]{0,40}\s)?question\s+\d+\s*[a-z]?\.?\s*/i, "").trim().slice(0, 140), from: label.get(one[0].e.fact!) ?? one[0].e.fact! };
+  return { form: one[0].form, caption: (one[0].e.caption ?? "").replace(/^(?:[a-z ]{0,40}\s)?question\s+\d+\s*(?:[a-z]\.\s*)?/i, "").trim().slice(0, 140), from: label.get(one[0].e.fact!) ?? one[0].e.fact! };
 }
 
 /** The deciding question can take the condition's answer (a yes-no question "yes", a list one of its answers). */
