@@ -8,8 +8,9 @@
 //            and struck-out text ignored, so "Works (retest)" counts) that have an acceptance pack on the base;
 //            --json prints them as a JSON array for a job matrix. A Works row without a pack is listed as such.
 //   Held:    product/qa/REGRESSION-HELD.md (qa's records; tech lead, 4 Nov) names, on a list or table line, a capability
-//            ("- C4.7 <reason>") or one pack file ("- C11.12-runtime.test.ts <reason>") left out with its reason: red on
-//            main when it was held, sent to qa. A
+//            ("- C4.7 <reason>") or one pack file ("- C11.12-runtime.test.ts <reason>") left out with its reason, which names
+//            its run or bug: red on main when it was held, sent to qa. The file must exist on the base (it may hold nothing):
+//            until it does, the set cannot start (exit 2). A
 //            capability with every pack held leaves the matrix; a held pack file is skipped by name in --run (gate-b
 //            GATE_B_SKIP_PACKS), so the capability's other packs stay protected. A line that cannot be read is reported
 //            and ignored (never a jam of every batch); a hold that matches no protected pack is reported as stale.
@@ -38,9 +39,10 @@ const top = () => spawnSync("git", ["rev-parse", "--show-toplevel"], { cwd: S, e
 const baseOf = () => (process.env.RANGE ?? "").match(/^([0-9a-f]{7,40})\.\./)?.[1] ?? null;
 
 /** The rows of qa/CAPABILITIES.md: id, milestone, status ("| # | Step | Capability | M | Status | …"). A pipe inside a
- *  `code span` is not a column; a linked or bold id is read; struck-out text (~~…~~) is not. */
+ *  `code span` is not a column; a linked or bold id is read; struck-out text (~~…~~) is not. Every copy of a duplicate id
+ *  is returned (protectedSet protects the id if any copy is a Works row). */
 export function rows(md) {
-  const out = [], seen = new Set();
+  const out = [];
   for (const raw of md.split(/\r?\n/)) {
     let line = raw.trim().replace(/`[^`]*`/g, (c) => c.replace(/\|/g, "¦"));
     if (!line.includes("|")) continue;
@@ -49,8 +51,6 @@ export function rows(md) {
     const m = (col[1] ?? "").match(ID);
     if (col[0] !== "" || !m || !/^\[?[Cc]\d/.test(col[1])) continue;
     const id = `C${m[1]}.${m[2]}`;
-    if (seen.has(id)) continue;
-    seen.add(id);
     out.push({ id, milestone: col[4] ?? "", status: col[5] ?? "" });
   }
   return out;
@@ -59,20 +59,26 @@ const isWorks = (status) => /^works\b/i.test(status.trim());
 const inMilestone = (m, want) => m.split(/[\s,;/]+/).some((t) => t.toUpperCase() === want.toUpperCase());
 /** The protected set: rows of the milestone whose status is Works, with the packs each has (packs: id → files). */
 export const protectedSet = (md, milestone = "M2", packs = packsOf) =>
-  rows(md).filter((r) => inMilestone(r.milestone, milestone) && isWorks(r.status)).map((r) => ({ id: r.id, packs: packs(r.id) }));
+  [...new Set(rows(md).filter((r) => inMilestone(r.milestone, milestone) && isWorks(r.status)).map((r) => r.id))].map((id) => ({ id, packs: packs(id) }));
 
 /** The hold file (markdown): a list line "- <C…> <reason>" (a capability) or "- <C…-name.test.ts> <reason>" (one pack),
- *  or a table row "| <C…> | <reason> |", or the same with no bullet. Headings, prose and table headers are not holds; a
- *  line that starts with a capability id but cannot be read is returned in `bad` and holds nothing. */
+ *  or a table row "| <C…> | <reason> |", or the same with no bullet; the reason names its evidence, a run id ("run
+ *  41788362078") or a bug (QA-nnn). Fenced code, HTML comments and struck-out text are not read. A line that starts with
+ *  a capability id but has no such evidence, or cannot be read, is returned in `bad` and holds nothing (#857 round 2: a
+ *  history line "- C3.2 lifted 5 Nov" or an example is never a hold). */
 export function held(text) {
   const caps = new Map(), packs = new Map(), bad = [];
-  for (const raw of text.split(/\r?\n/)) {
-    let l = raw.trim().replace(/[*_`]/g, "");
+  let fence = false;
+  const body = text.replace(/<!--[\s\S]*?-->/g, " ");
+  for (const raw of body.split(/\r?\n/)) {
+    if (/^\s*(```|~~~)/.test(raw)) { fence = !fence; continue; }
+    if (fence || /^( {4}|\t)/.test(raw)) continue;
+    let l = raw.trim().replace(/~~[^~]*~~/g, " ").replace(/[*`]/g, "");
     if (/^\|/.test(l)) l = l.split("|").map((c) => c.trim()).filter(Boolean).join(" ");
     l = l.replace(/^([-+]|\d+[.)])\s+/, "").trim();
     if (!/^[Cc]\d/.test(l)) continue;
     const m = l.match(/^([Cc]\d{1,2}\.\d{1,2})(\S*?\.test\.ts)?\s+(\S.*)$/);
-    if (!m || (m[2] && !/^(-[\w.-]+)?\.test\.ts$/.test(m[2]))) { bad.push(l.slice(0, 120)); continue; }
+    if (!m || (m[2] && !/^(-[\w.-]+)?\.test\.ts$/.test(m[2])) || !/\brun\s+\d{6,}\b|\bQA-\d+\b/i.test(m[3]) || /^-\S*\.test\.ts\b/.test(m[3])) { bad.push(l.slice(0, 120)); continue; }   // "C11.12 -runtime.test.ts": a stray space, not the whole capability
     const id = `C${m[1].slice(1)}`;
     if (m[2]) packs.set(`${id}${m[2]}`, m[3]); else caps.set(id, m[3]);
   }
@@ -94,6 +100,8 @@ function basePacks() {
   const r = spawnSync("git", ["ls-tree", "--name-only", base, `${relative(top(), ACC)}/`], { cwd: top(), encoding: "utf8", maxBuffer: 16 << 20 });
   if (r.status !== 0) throw new Error(`cannot list the acceptance packs at the base ${base}: ${r.stderr.trim()}`);
   const files = r.stdout.split("\n").map((p) => p.split("/").pop()).filter(Boolean);
+  // No pack at all on the base means the folder moved or the base predates it: could not run, never an empty set (N1).
+  if (!files.some((f) => f.endsWith(".test.ts"))) throw new Error(`no acceptance pack under ${relative(top(), ACC)}/ at the base ${base} (the folder moved?)`);
   return (id) => files.filter((f) => f === `${id}.test.ts` || (f.startsWith(`${id}-`) && f.endsWith(".test.ts"))).sort();
 }
 /** One run of the capability's packs through gate B with no claim, held packs skipped, CI's PR values cleared. */
@@ -116,7 +124,11 @@ function main(argv) {
     if (a === "--list") opt.list = true; else if (a === "--json") opt.json = opt.list = true; else if (a === "--run") opt.run = v();
     else if (a === "--milestone") opt.milestone = v(); else if (a === "--file") opt.file = v(); else if (a === "--held") opt.held = v(); else throw new Error(`unknown option ${a}`);
   }
-  const hold = held(opt.held ? readFileSync(opt.held, "utf8") : atBase(HELD, true)), packs = basePacks();
+  // The hold file must exist (it may hold nothing): until qa's notes PR has put it on the base, the set cannot start (B1).
+  let holdText;
+  try { holdText = opt.held ? readFileSync(opt.held, "utf8") : atBase(HELD); }
+  catch (e) { throw new Error(`${relative(top(), HELD)} is not readable${baseOf() ? ` at the base ${baseOf()}` : ""}: qa's notes PR with it must land first (${e.message.split("\n")[0]})`); }
+  const hold = held(holdText), packs = basePacks();
   for (const l of hold.bad) say(`  hold line not read (it holds nothing): "${l}" — write "<C…> <reason>" or "<C…-name.test.ts> <reason>"`);
   if (opt.run) {
     if (!/^C\d{1,2}\.\d{1,2}$/.test(opt.run)) throw new Error(`not a capability id: "${opt.run}" (want e.g. C11.13)`);
@@ -135,6 +147,7 @@ function main(argv) {
   const md = opt.file ? readFileSync(opt.file, "utf8") : atBase(CAPS);
   if (!rows(md).length) throw new Error("qa/CAPABILITIES.md has no capability row the tool can read (never an empty set)");
   const set = protectedSet(md, opt.milestone, packs);
+  if (set.length && !set.some((r) => r.packs.length)) throw new Error("no protected row has an acceptance pack (the pack folder moved?): could not run, never an empty set");
   const live = (r) => r.packs.filter((f) => !hold.caps.has(r.id) && !hold.packs.has(f));
   const runs = set.filter((r) => live(r).length);
   if (opt.json) { console.log(JSON.stringify(runs.map((r) => r.id))); return 0; }
