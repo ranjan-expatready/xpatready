@@ -412,8 +412,7 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
     <section className={cn("rounded-xl border border-border bg-surface-raised p-5", FOCUS_RING)} data-questions-empty data-focus="questionnaires:gaps">
       <DoneSinceNotice shown={doneSince} />
       <h2 className="font-semibold">No questions yet</h2>
-      <p className="mt-1 text-sm text-text-muted">The questions each person needs come from the facts their forms read. Add forms on the Forms tab, ask them in their form's sections, or add a library section here.</p>
-      <PlaceFromFormParts id={id} />
+      <p className="mt-1 text-sm text-text-muted">The questions each person needs come from the facts their forms read. Add forms on the Forms tab, or a library section here.</p>
       <div className="mt-3">{addSection}</div>
     </section>
   );

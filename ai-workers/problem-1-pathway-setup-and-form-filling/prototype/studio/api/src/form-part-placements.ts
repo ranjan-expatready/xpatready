@@ -129,7 +129,8 @@ export class FormPartPlacementsController {
     try {
       const out = await placeFromFormParts(this.db, this.studio, author, id);
       const sections = new Set(out.placed.map((x) => x.section)).size;
-      await this.audit.log(workspaceId, author.id, "ran", "placement step", c!.combinationKey, `${author.name} asked ${out.placed.length} answer${out.placed.length === 1 ? "" : "s"} of "${c!.label}" in the sections of their form fields (${sections} section${sections === 1 ? "" : "s"}; rules, US$0)${out.noSection.length ? `; ${out.noSection.length} with no section that groups their form field` : ""}${out.refused.length ? `; ${out.refused.length} refused by a rule` : ""}`, { placed: out.placed.length, noSection: out.noSection, refused: out.refused, selected: out.selected }, id);
+      // Review m3: a press that changes nothing writes no history line (as studio.ts does for a no-op).
+      if (out.placed.length || out.selected.length || out.refused.length || out.noSection.length) await this.audit.log(workspaceId, author.id, "ran", "placement step", c!.combinationKey, `${author.name} asked ${out.placed.length} answer${out.placed.length === 1 ? "" : "s"} of "${c!.label}" in the sections of their form fields (${sections} section${sections === 1 ? "" : "s"}; rules, US$0)${out.noSection.length ? `; ${out.noSection.length} with no section that groups their form field` : ""}${out.refused.length ? `; ${out.refused.length} refused by a rule` : ""}`, { placed: out.placed.length, noSection: out.noSection, refused: out.refused, selected: out.selected }, id);
       return { ...out, sections };
     } finally { running.delete(id); }
   }
