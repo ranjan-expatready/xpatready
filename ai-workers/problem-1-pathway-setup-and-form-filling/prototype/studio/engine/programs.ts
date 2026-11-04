@@ -183,7 +183,7 @@ export function formLineProblem(s: Pick<Snapshot, "forms" | "document_requiremen
  *  is refused in the same places and the same way as a missing form line, with its own words and code. One with no line
  *  at all is F8's own line (never this one too). */
 export const NO_DOCUMENT_LINE = "no_document_line";
-export const DOCUMENT_LINE_WORDS = "No document line yet: a case on this combination would collect no document (it has forms but no document requirement). Add at least one document the applicant provides before sending it for review (Documents tab, from the program's document checklist).";
+export const DOCUMENT_LINE_WORDS = "No document line yet: a case on this combination would collect no document (it has forms but no documents). Add at least one document the applicant provides before sending it for review (Documents tab, from the program's document checklist).";
 export function documentLineProblem(s: Pick<Snapshot, "forms" | "document_requirements">): Problem[] {
   if (!s.forms.length || (s.document_requirements ?? []).length) return [];
   return [{ level: "error", where: "Release", item: "", message: DOCUMENT_LINE_WORDS, code: NO_DOCUMENT_LINE }];
