@@ -122,6 +122,10 @@ export type Known = Map<string, { value: unknown; status: "confirmed" | "answere
 /** R2: the "who" vocabulary of a form, document or question line, and who it names. */
 export const WHO_HOLDERS = {
   each_applicant: "every applicant (applies) except the representative",
+  // QA-221 (tech lead's ruling C, 4 Nov): a form whose own words name the principal applicant and a spouse or partner at
+  // any age, and dependent children from an age (IMM 5257 SCH1 (09-2023) p. 1). Named here like each_applicant; the
+  // line's minimum age then gates dependent children only (engine/render.ts ageGate).
+  principal_partner_adult_children: "as each_applicant; the line's minimum age applies to dependent children only (the principal applicant and a spouse or partner always fill it)",
   each_adult_18_plus: "as each_applicant (the age is applied by the line's minimum age, not here); read from release data and the runtime (case-checklist.ts), not offered in the studio's list (api/src/studio.ts WHO)",
   principal_applicant: "the principal",
   spouse_or_partner: "the spouse or partner",

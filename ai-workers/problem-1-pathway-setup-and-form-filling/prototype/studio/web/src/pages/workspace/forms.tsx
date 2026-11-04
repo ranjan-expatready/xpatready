@@ -23,7 +23,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { ConditionBuilder } from "@/components/conditions";
 import { StartableNotice } from "@/components/startable-notice";
 import { fmtWhen, Tip } from "@/components/status";
-import { useLibraryFields, WHO, whoLabel } from "@/pages/configuration";
+import { FORM_WHO, useLibraryFields, whoLabel } from "@/pages/configuration";
 import { ItemSources, useItemNumbers } from "@/components/source-panel";
 import { attachmentFor, pendingForms, ReadingCell, ReadingSteps, SourcesLine, StepNotices } from "@/pages/sources";
 import { FormMasters } from "@/components/ai-launch";
@@ -152,7 +152,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
           <tr key={l.line} data-line={l.code} data-line-not-needed={l.channel === "NOT_NEEDED" || undefined} className={l.channel === "NOT_NEEDED" ? "bg-surface text-text-muted" : undefined}>{/* C-4: kept visible, greyed, never filled */}
             <td><span className="mono font-medium">{l.code}</span><br /><span className="text-xs text-text-muted">{l.title}</span>{l.origin === "AI_FOUND" || l.origin === "AI_PROPOSAL" ? <><br /><Pill tone="ai">Picked by AI · Sample</Pill></> : null}</td>
             <td className="max-w-56 text-xs text-text-muted">{l.quote ? `"${l.quote.slice(0, 120)}${l.quote.length > 120 ? "…" : ""}"` : l.added ?? "Added by a person"}</td>
-            <td className="text-sm">{l.document ? <span className="text-text-muted">Checklist · not filed</span> : <>{whoLabel(l.who)}{l.minAge ? <span className="text-text-muted"> · {l.minAge}+</span> : null}{l.copies > 1 ? <span className="text-text-muted" data-copies> · {copiesWords(l.copies)}</span> : null}</>}</td>
+            <td className="text-sm">{l.document ? <span className="text-text-muted">Checklist · not filed</span> : <>{whoLabel(l.who)}{l.minAge ? <span className="text-text-muted"> · {l.who === "principal_partner_adult_children" ? `children ${l.minAge}+` : `${l.minAge}+`}</span> : null}{l.copies > 1 ? <span className="text-text-muted" data-copies> · {copiesWords(l.copies)}</span> : null}</>}</td>
             <td className="max-w-56 text-xs"><OnlyIfCell l={l} /></td>
             <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <><ChannelCell id={id} line={{ code: l.code, channel: l.channel as Channel, channelWords: l.channelWords, signature: l.signature, document: l.document } as ChannelLine} canAuthor={canAuthor} options={l.channelOptions} />{l.channel === "ONLINE" && accountKey !== "PAPER" ? <p className="text-xs text-text-muted" data-online-words>{accountKey ? `Typed into the ${ACCOUNT_WORDS[accountKey as IrccAccount] ?? accountKey} from the answer sheet, in portal order` : canAuthor ? "IRCC account not set: choose above the account it is typed into" : "IRCC account not set: no portal to type it into yet"}</p> : null}</>}</td>
             <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <SignatureCell id={id} code={l.code} channel={l.channel as Channel} signature={l.signatureKind as Signature} signatures={l.signatures} canAuthor={canAuthor} />}</td>
@@ -352,7 +352,7 @@ function LineDrawer({ id, l, d, onClose, onRemoved }: { id: string; l: Workspace
       <div className="space-y-5">
         {l.quote ? <p className="rounded-lg bg-surface px-3 py-2 text-xs text-text-muted">IRCC's words: "{l.quote}"</p> : null}
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Who fills it" hint="Each person it names fills their own." error={errors.who}><Select value={who} onChange={(e) => setWho(e.target.value)}>{WHO.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</Select></Field>
+          <Field label="Who fills it" hint="Each person it names fills their own." error={errors.who}><Select value={who} onChange={(e) => setWho(e.target.value)}>{FORM_WHO.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</Select></Field>
           <div className="flex flex-col gap-1.5">
             {/* G1 PR 2c (concept §4, m3): a saved "From age" is a published number; it needs a source before release. */}
             <Field label="From age (optional)" hint={!l.minAge ? "Leave empty for any age." : ageAnswered ? "Its source is recorded: see Source below." : "Needs a source before release."} error={errors.minAge}><Input inputMode="numeric" value={minAge} onChange={(e) => setMinAge(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} placeholder="Any age" /></Field>
