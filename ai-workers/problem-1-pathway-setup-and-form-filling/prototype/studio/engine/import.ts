@@ -16,6 +16,12 @@ export const OFFICIAL = join(SOLUTION, "official-sources", "ircc");
 export const manifest = () => JSON.parse(readFileSync(join(OFFICIAL, "manifest.json"), "utf8")).items as any[];
 /** W1-15 slice 1 (P-130, P-97; challenge M6, m2): Sample library data applied with the sample library (samples/). */
 const QD = () => JSON.parse(readFileSync(join(import.meta.dirname, "..", "samples", "questions-and-documents.json"), "utf8")) as { clientOnlySections: string[]; documentSupplies: Record<string, { facts: string[]; about: Record<string, string> }> };
+/** P-319: the demo's form roles (samples/form-roles.json), set on the library forms that exist; a form added later gets
+ *  its role when the next sample load or import runs. In the product an author sets a role per form (FormLibrary.setRole). */
+export async function applySampleFormRoles(db: Pick<PrismaClient, "govFormDef">, workspaceId: string) {
+  const { roles } = JSON.parse(readFileSync(join(import.meta.dirname, "..", "samples", "form-roles.json"), "utf8")) as { roles: Record<string, string> };
+  for (const [formKey, formRole] of Object.entries(roles)) await db.govFormDef.updateMany({ where: { workspaceId, formKey, formRole: null }, data: { formRole } });
+}
 export const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 60);
 
 /** Which facts each supported document type can supply: the P5 reader profiles (a maker Proposal, D36). */
@@ -109,6 +115,7 @@ export async function importConfiguration(db: PrismaClient, workspaceId: string,
     inc("field map entries (form fields)", map.entries.length);
   }
 
+  await applySampleFormRoles(db, workspaceId); // P-319: before any snapshot of this combination is built
   const rules = config.rules.filter((r: any) => keepWho(r.for_whom) && (!/form (IMM [\d ]+[A-Z0-9 ]*)/.test(r.then) || keepForm((/form (IMM [0-9]+(?: SCH1)?)/.exec(r.then) ?? [])[1] ?? "")));
   await db.predicate.createMany({ data: rules.map((r: any, i: number) => ({ ...ws, combinationId, predicateKey: `R-${String(i + 1).padStart(2, "0")}`, predicateJson: r.when, whenPlain: r.when_plain ?? null, thenPlain: r.then, forWhom: r.for_whom, sourceQuote: r.source_quote, version: 1, status: cs, origin: "IMPORTED_RELEASE", updatedBy: o.by })) });
   inc("rules", rules.length);

@@ -36,6 +36,12 @@ export const FinderLaunchBody = FinderBody.extend({
 export const AttachBody = z.object({ formKey: code, who: z.string().optional() });
 
 /** GET /library/forms?type&usedBy&status&q — the one lean list (P-123): filters, never groups. */
+/** P-319: what a form is to IRCC's rules, set per form in the library (gov_form_def.form_role; the database refuses any
+ *  other value). family_information: [IRCC-F09] Guide 5256, "the Family Information form (IMM 5707 or IMM 5645)". */
+export const FORM_ROLES = ["family_information"] as const;
+export type FormRole = (typeof FORM_ROLES)[number];
+export const FORM_ROLE_WORDS: Record<FormRole, string> = { family_information: "Family information form" };
+export const FormRoleBody = z.object({ role: z.enum(FORM_ROLES).nullable(), reason: z.string().trim().min(3, "Say why, in a few words.").max(300) }).strict();
 export const LIBRARY_TYPES = ["form", "guide", "checklist"] as const;
 /** "online_only" (C11.11, P-152 (2)): held only as its online version, no official PDF (never asked for one). */
 export const LIBRARY_STATUSES = ["ready", "needs_ok", "newer_file", "no_file", "online_only", "retired"] as const;

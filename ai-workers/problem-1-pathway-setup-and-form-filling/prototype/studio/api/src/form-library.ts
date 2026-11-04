@@ -17,7 +17,7 @@ import { INDEX_URL, libraryType } from "./finder.ts";
 import { notFiledWords } from "../../engine/form-type.ts";
 import { fileMonth, libraryRows, newerOnIndex, planIndexFill } from "../../engine/library-index.ts";
 import { ACCOUNT_WORDS, throughAccount } from "../../contracts/forms.ts";
-import { AcceptsBody, acceptsWords, AttachBody, fieldMapState, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
+import { AcceptsBody, acceptsWords, AttachBody, fieldMapState, FORM_ROLE_WORDS, FormRoleBody, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
 import { CanadaError, canadaSource, type CanadaSource } from "./canada.ts";
 import { ACTORS, actorOf, Audit, ConfigRead, Db, need, readerOf, Workspace, type Actor } from "./core.ts";
 import { rowActionOf } from "./form-row-action.ts";
@@ -254,6 +254,23 @@ export class FormLibrary {
 
   /** X5 slice c (break / review of 02ca83a5 M1): a person brings a remembered deletion back. The memory is forgotten and the
    *  form is listed again from IRCC's forms list at once (the ordinary fill, US$0: no AI, no download). */
+  /** P-319 (founder, 4 Nov: "no combination is hard-coded"): an author sets what a form is to IRCC's rules ([IRCC-F09]
+   *  reads the family information role), with a reason, in Activity. It goes out with each combination's next release (its
+   *  snapshot carries the role); a release made before keeps its own. */
+  async setRole(actor: Actor, code: string, body: unknown) {
+    need(actor, "author");
+    const b = parse(FormRoleBody, body);
+    const workspaceId = await this.ws.id();
+    const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: code } } });
+    if (!def) throw problem(404, "Not in the library", `${code} is not in the library: add it first (Find forms, or Upload PDF).`);
+    if (def.retiredAt) throw problem(409, "Retired", `${code} is retired: restore it in the library before you change its role.`);
+    const word = (r: string | null) => (r ? FORM_ROLE_WORDS[r as keyof typeof FORM_ROLE_WORDS] ?? r : "no role");
+    if ((def.formRole ?? null) === b.role) return { code, role: def.formRole, changed: false };
+    await this.db.govFormDef.update({ where: { id: def.id }, data: { formRole: b.role } });
+    await this.audit.log(workspaceId, actor.id, "updated", "form", code, `${actor.name} set ${code} to ${word(b.role)} (was ${word(def.formRole)}): ${b.reason}`, { from: def.formRole, to: b.role, reason: b.reason });
+    return { code, role: b.role, changed: true };
+  }
+
   async listAgain(actor: Actor, code: string) {
     need(actor, "author");
     const workspaceId = await this.ws.id();
@@ -498,6 +515,7 @@ export class FormLibraryController {
   @Post("combinations/:id/forms") attach(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.lib.attach(actorOf(a), id, b); }
   @Delete("combinations/:id/forms/:code") remove(@Headers("x-actor") a: H, @Param("id") id: string, @Param("code", { transform: normaliseCode }) code: string, @Body() b: unknown) { return this.lib.remove(actorOf(a), id, code, b); }
   @Post("library/forms/fill-from-index") fill(@Headers("x-actor") a: H) { return this.lib.fillFromIndex(actorOf(a)); }
+  @Post("library/forms/:code/role") role(@Headers("x-actor") a: H, @Param("code", { transform: normaliseCode }) code: string, @Body() b: unknown) { return this.lib.setRole(actorOf(a), code, b); }
   @Post("library/forms/:code/list-again") listAgain(@Headers("x-actor") a: H, @Param("code", { transform: normaliseCode }) code: string) { return this.lib.listAgain(actorOf(a), code); }
   @Get("library/forms/list") list(@Headers("x-actor") a: H, @Query() q: unknown) { return this.lib.list(q, readerOf(a).id); }
   @Get("library/forms/:code/uses") uses(@Param("code", { transform: normaliseCode }) code: string) { return this.lib.uses(code); }
