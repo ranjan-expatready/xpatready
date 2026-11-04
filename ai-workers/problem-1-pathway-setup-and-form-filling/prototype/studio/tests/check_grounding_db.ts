@@ -70,6 +70,17 @@ const sql = (q: string) => execFileSync(PSQL, [`postgresql://xr_studio@127.0.0.1
   ok("a base document requirement is added to the draft", r.status === 201, r.body?.lineageKey ?? r.body?.detail);
   r = await call("POST", `/combinations/${id}/requirements`, { newTypeName: "Bank statement", attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant" }, "user-C");
   ok("server permission: the content reviewer cannot edit the draft", r.status === 403, r.body.message);
+  // G5 (C5.1, P-248, amends P-207): documents alone no longer release, so the combination files one form too. The
+  // library is empty here, so the suite gives it one test form (Sample, not an IRCC form): a PDF edition whose one box is
+  // decided "not a fact" (nothing to ask), its file approved by a second person, and the author adds it through the
+  // Forms route as a person would.
+  const testSha = "9".repeat(64);
+  sql(`insert into gov_form_def (id, workspace_id, form_key, display_name, form_kind) select gen_random_uuid(), workspace_id, 'IMM 9999', 'Test form (Sample, not an IRCC form)', 'data_form' from combination where id='${id}'`);
+  sql(`insert into form_edition (id, workspace_id, gov_form_def_id, edition_label, channel, sha256) select gen_random_uuid(), workspace_id, id, 'IMM 9999 (01-2026)', 'PDF', '${testSha}' from gov_form_def where form_key='IMM 9999'`);
+  sql(`insert into approved_source (id, workspace_id, sha256, kind, code, edition, file_name, ircc_page, uploaded_by, approved_by) select gen_random_uuid(), workspace_id, '${testSha}', 'form', 'IMM 9999', 'IMM 9999 (01-2026)', 'imm9999-test.pdf', 'Test fixture (no IRCC page)', 'user-A', 'user-B' from combination where id='${id}'`);
+  sql(`insert into form_field_map (id, workspace_id, form_edition_id, data_path, outcome, reason, version, status, origin, updated_by) select gen_random_uuid(), workspace_id, id, 'g5.test.box', 'not_a_fact', 'Test fixture: a box that holds no fact.', 1, 'PUBLISHED', 'HUMAN', 'user-A' from form_edition where edition_label='IMM 9999 (01-2026)'`);
+  r = await call("POST", `/combinations/${id}/forms`, { formKey: "IMM 9999" });
+  ok("G5 (P-248): the author adds a form line (a release needs one beside its documents)", r.status < 300, r.body?.detail ?? r.status);
   // Screen 02 FIX (Lead re-check item 2): the new document type is approved by a second person before any release.
   for (const ch of (await call("GET", "/library/changes?status=WAITING")).body) await call("POST", `/library/changes/${ch.id}/approve`, {}, "user-C");
   ok("the new document type is approved by a second person (no release carries an unreviewed library item)", (await call("GET", "/library/changes?status=WAITING")).body.length === 0);
