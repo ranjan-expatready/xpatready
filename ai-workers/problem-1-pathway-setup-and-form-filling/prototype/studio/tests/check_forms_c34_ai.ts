@@ -15,6 +15,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { client } from "./runtime/api.ts";
 
 const PORT = Number(process.argv[2] ?? 4454), DB = process.argv[3] ?? "xr_studio_forms_c34ai";
 process.env.DATABASE_URL = `postgresql://xr_studio@127.0.0.1:54329/${DB}`; // before the app's modules are loaded (core.ts reads it once)
@@ -22,11 +23,10 @@ const STUDIO = join(import.meta.dirname, ".."), PROTOTYPE = join(STUDIO, ".."), 
 const P2 = join(PROTOTYPE, "p2"), RUNS = join(P2, "runs");
 const log: unknown[] = []; let pass = 0, fail = 0;
 const ok = (name: string, c: boolean, detail?: unknown) => { c ? pass++ : fail++; log.push({ name, ok: !!c, detail }); console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 260)}` : ""}`); };
-const call = async (method: string, path: string, body?: unknown, actor = "user-A") => {
-  const r = await fetch(`http://localhost:${PORT}/api${path}`, { method, headers: { "x-actor": actor, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
-  const t = await r.text(); let j: any = null; try { j = JSON.parse(t); } catch { j = t; }
-  return { status: r.status, body: j };
-};
+// QA-208: node:http without keep-alive (tests/runtime/api.ts). fetch kept an idle socket across the four stub launches
+// (spawnSync blocks this process for seconds each); the server closes a socket idle for 5 s (Node's keep-alive default),
+// so on a loaded Mac the next call met a closed socket: "connection reset" at 64/65.
+const { call } = client(PORT, DB);
 const sql = (q: string) => execFileSync("psql", [process.env.DATABASE_URL!, "-Atc", q], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 // As the PA check (break M2): simulated live runs are stamped 1 Jan 2000 (never outrank a real run) and tagged (gitignored).
 // Each simulated run has its own time on 1 Jan 2000, in the order recorded: Saved pairs a checker with the draft recorded
