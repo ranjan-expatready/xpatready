@@ -9,7 +9,7 @@ import { Check, ChevronRight, Undo2 } from "lucide-react";
 import { NearLine, ownReason, type NearView } from "@/components/near-line";
 import { BAND_TIPS, BAND_WORDS, BANDS, type Band, type ChangeBatch, type DecideResult, type ProposalsView, type QueueProposal } from "../../../contracts/review-proposals";
 import { api, useAction, useActorId, useApi } from "@/lib/api";
-import { Button, Notice, Panel, Pill, Select, Table, Textarea } from "@/components/ui/controls";
+import { Button, Input, Notice, Panel, Pill, Select, Table, Textarea } from "@/components/ui/controls";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -166,7 +166,20 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
   const asRead = ((p.readings.draft?.payload ?? null) as { severity?: string } | null)?.severity ?? "warn";
   const [severity, setSeverity] = React.useState(asRead);
   const withSeverity = (payload: unknown) => (p.kind === "form_check" && payload && typeof payload === "object" ? { ...payload, severity } : payload);
-  const acceptFirst = () => (p.kind === "form_check" && severity !== asRead ? run.mutate({ action: "edit", payload: withSeverity(p.readings.draft?.payload) }) : run.mutate({ action: "accept" }));
+  // QA-206 (P-158, PRODUCT §4): a section with no printed heading on the form is accepted only under a name a person types
+  // here (an edit of its name); its placeholder name is never accepted (the API refuses it too).
+  // Devin review on #883: a rules-pass section drafted before printed headings were read has no "printed_heading" result
+  // and may carry the PDF's part name: it is named here too, and may keep its name once a person has typed it.
+  const legacy = p.kind === "section" && p.origin === "rules" && p.step === "masters_edition" && !(p.reuse.match === "reuse" && !!p.reuse.existing_key) && !p.rules.some((r) => r.rule === "printed_heading");
+  const unnamed = (p.kind === "section" && p.rules.some((r) => r.rule === "printed_heading" && !r.passed)) || legacy;
+  const [name, setName] = React.useState("");
+  const flat = (x: string) => x.normalize("NFKC").toLocaleLowerCase("en-CA").replace(/[^\p{L}\p{N}\p{M}]+/gu, "");
+  const named = flat(name).length >= 2 && !flat(name).startsWith("unnamedsection") && (legacy || flat(name) !== flat(p.title));
+  // A twin waiting on another form's copy (a reuse with no key yet): only the studio knows whether it lands on that copy's
+  // item, so Accept stays on with no name typed and the studio answers (it refuses in words when it would add the name).
+  const twinOpen = legacy && p.reuse.match === "reuse";
+  const acceptFirst = () => (unnamed && !(twinOpen && !name.trim()) ? run.mutate({ action: "edit", payload: { ...(p.readings.draft?.payload as object), label: name.trim() } })
+    : p.kind === "form_check" && severity !== asRead ? run.mutate({ action: "edit", payload: withSeverity(p.readings.draft?.payload) }) : run.mutate({ action: "accept" }));
   return (
     <Panel open onOpenChange={(o) => !o && onClose()} title={p.title} description={`${p.kind_word} · ${p.reads && p.lands_on === "library" ? "every combination that files this form" : p.lands_on === "library" ? "shared library" : "this combination"}${p.basis === "SAMPLE" ? " · Sample until the immigration expert confirms" : ""}`}
       badge={<Pill tone={BAND_TONE[p.band]}>{BAND_WORDS[p.band]}</Pill>}
@@ -174,11 +187,18 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
         <Button variant="secondary" busy={run.isPending} disabled={reason.trim().length < 3} onClick={() => run.mutate({ action: "reject" })}>Reject</Button>
         <span className="flex flex-wrap gap-2">
           {differ ? <Button variant="secondary" busy={run.isPending} disabled={!!p.near_reason_needed_check && reason.trim().length < 8} aria-describedby={p.near_reason_needed_check && reason.trim().length < 8 ? "accept-needs-reason" : undefined} onClick={() => run.mutate({ action: "edit", payload: withSeverity(checkPayload) })}>Accept the checker's reading</Button> : null}
-          <Button busy={run.isPending} disabled={!!p.near_reason_needed && reason.trim().length < 8} aria-describedby={p.near_reason_needed && reason.trim().length < 8 ? "accept-needs-reason" : undefined} onClick={acceptFirst}>{differ ? "Accept the first reading" : "Accept"}</Button>
+          <Button busy={run.isPending} disabled={(!!p.near_reason_needed && reason.trim().length < 8) || (unnamed && !named && !(twinOpen && !name.trim()))} aria-describedby={unnamed && !named ? "accept-needs-name" : p.near_reason_needed && reason.trim().length < 8 ? "accept-needs-reason" : undefined} onClick={acceptFirst}>{differ ? "Accept the first reading" : unnamed ? "Accept with this name" : "Accept"}</Button>
         </span>
       </>}>
       <div className="flex flex-col gap-4 text-sm">
         {p.reason ? <Notice tone={p.band === "decide" ? "danger" : "warn"} title="Why a person looks">{p.reason}</Notice> : null}
+        {unnamed ? (
+          <div>
+            <label className="block text-sm font-medium" htmlFor="section-name">Section name (as a client will read it)</label>
+            <Input id="section-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} className="mt-1" placeholder="For example: Your visit" aria-describedby="accept-needs-name" />
+            <p id="accept-needs-name" className="mt-1 text-xs text-text-muted">{named ? "It is accepted under this name." : legacy ? "Accept stays off until you type the section's name: it was drafted before the form's printed headings were read, so its name may be the PDF's own part name (type it again if it is right)." : "Accept stays off until you give the section a name (the reason above says why the form gives none)."}</p>
+          </div>
+        ) : null}
         {p.meaning ? <section><h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted">What it means</h3><p className="mt-1">{p.meaning}</p></section> : null}
         {p.values?.length ? <section aria-label="Answer values" data-answer-values><h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted">Answer values · {p.values.length}</h3><ul className="mt-1 list-disc pl-5">{p.values.map((v) => <li key={v.code}>{v.label}</li>)}</ul></section> : null}
         {p.reads ? (

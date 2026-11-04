@@ -1,0 +1,37 @@
+{
+ "file": "official-sources/ircc/forms/irm0002e.pdf",
+ "sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+ "read_by": "prototype/p1/xfa_headings.py (the form's own XFA template: the text printed in each part; no AI)",
+ "parts": {
+  "Page1.statement": {
+   "heading": "Request for a change of sex or gender identifier",
+   "printed": "REQUEST FOR A CHANGE OF SEX OR GENDER IDENTIFIER",
+   "how": "form_title",
+   "from": "#form.title"
+  },
+  "Page1.existingDocument": {
+   "heading": "Request for a change of sex or gender identifier",
+   "printed": "REQUEST FOR A CHANGE OF SEX OR GENDER IDENTIFIER",
+   "how": "form_title",
+   "from": "#form.title"
+  },
+  "Page1.requestorSignature": {
+   "heading": "Request for a change of sex or gender identifier",
+   "printed": "REQUEST FOR A CHANGE OF SEX OR GENDER IDENTIFIER",
+   "how": "form_title",
+   "from": "#form.title"
+  },
+  "Page1.guardian": {
+   "heading": "Request for a change of sex or gender identifier",
+   "printed": "REQUEST FOR A CHANGE OF SEX OR GENDER IDENTIFIER",
+   "how": "form_title",
+   "from": "#form.title"
+  },
+  "Page1.signedAT": {
+   "heading": "Request for a change of sex or gender identifier",
+   "printed": "REQUEST FOR A CHANGE OF SEX OR GENDER IDENTIFIER",
+   "how": "form_title",
+   "from": "#form.title"
+  }
+ }
+}

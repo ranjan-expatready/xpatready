@@ -1,0 +1,75 @@
+{
+ "file": "official-sources/ircc/forms/imm1294e.pdf",
+ "sha256": "394c745501ef87e46a0b15618ca342387ca06c5b2f226face2956b0372047d09",
+ "read_by": "prototype/p1/xfa_headings.py (the form's own XFA template: the text printed in each part; no AI)",
+ "parts": {
+  "Page1.Header": {
+   "heading": "Application for study permit made outside of Canada",
+   "printed": "APPLICATION FOR STUDY PERMIT MADE OUTSIDE OF CANADA",
+   "how": "banner"
+  },
+  "Page1.PersonalDetails": {
+   "heading": "Personal details",
+   "printed": "PERSONAL DETAILS",
+   "how": "banner"
+  },
+  "Page2.MaritalStatus": {
+   "heading": "Personal details",
+   "printed": "PERSONAL DETAILS",
+   "how": "banner",
+   "continues": true
+  },
+  "Page2.natID": {
+   "heading": "National identity document",
+   "printed": "NATIONAL IDENTITY DOCUMENT",
+   "how": "banner"
+  },
+  "Page2.USCard": {
+   "heading": "US PR card",
+   "printed": "US PR CARD",
+   "how": "banner"
+  },
+  "Page2.contact": {
+   "heading": "Contact information",
+   "printed": "CONTACT INFORMATION",
+   "how": "banner"
+  },
+  "Page3.DetailsOfStudy": {
+   "heading": "Details of intended study in Canada",
+   "printed": "DETAILS OF INTENDED STUDY IN CANADA",
+   "how": "banner"
+  },
+  "Page3.Education": {
+   "heading": "Education",
+   "printed": "EDUCATION",
+   "how": "banner"
+  },
+  "Page3.Occupation": {
+   "heading": "Employment",
+   "printed": "EMPLOYMENT",
+   "how": "banner"
+  },
+  "Page4.titlewrap": {
+   "heading": "Background information",
+   "printed": "BACKGROUND INFORMATION",
+   "how": "banner"
+  },
+  "Page4.BackgroundInfo": {
+   "heading": "Background information",
+   "printed": "BACKGROUND INFORMATION",
+   "how": "carried",
+   "from": "Page4.titlewrap"
+  },
+  "Page4.PageWrapper": {
+   "heading": "Background information",
+   "printed": "BACKGROUND INFORMATION",
+   "how": "carried",
+   "from": "Page4.titlewrap"
+  },
+  "Page4.disclosureText": {
+   "heading": "Privacy notice",
+   "printed": "PRIVACY NOTICE",
+   "how": "banner"
+  }
+ }
+}
