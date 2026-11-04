@@ -291,7 +291,10 @@ export class CasePrepare {
         // C7.7 part 2 (r5c BR-8, P-144): a Paper line with its barcode page and its steps, in order.
         // C9.2: a validated copy read back that no longer matches the case is Out of date, naming what changed.
         const validated = !waits && ch.channel !== "ONLINE" ? paperValidated(i.itemKey, i.subjectId) : null;
-        const staleCopy = validated && !validated.current ? changesSince(validated.copy, i.itemKey, i.subjectId) : null;
+        const since = validated && !validated.current ? changesSince(validated.copy, i.itemKey, i.subjectId) : null;
+        // Only a change it can name marks it (C8.2 break M4: the same value typed again is no change); a Paper line keeps
+        // its own Validate-again rule (C7.7, paperLine).
+        const staleCopy = since && (since.changes.length || since.groups.length || ch.channel === "PAPER") ? since : null;
         const staleWords = (next?: string) => staleCopy ? { reason: outOfDateReason("validated_copy", i.itemKey, validated!.at, staleCopy.changes, staleCopy.groups.map((g) => `${g} changed`), next), changes: changeList(staleCopy.changes) } : {};
         if (ch.channel === "PAPER" && !waits) {
           const line = paperLine(i.itemKey, { barcode: isBarcodeForm(i.itemKey), missing: rd.missing.length, validated, signers, lineOnline: ch.line_channel === "ONLINE" });

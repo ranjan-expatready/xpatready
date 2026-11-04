@@ -32,6 +32,8 @@ export function factChanges(then: Pick<FormFact, "fact" | "about" | "row" | "val
     const about = subjectOf(f.about), relation = f.about.includes("/") ? f.about.split("/").slice(1).join("/") : null, id = `${f.about}|${f.fact}`;
     if (out.has(id)) continue;
     const pending = !y && !relation ? words.saved?.(about, f.fact) ?? null : null;
+    // C8.2 break M4: the same value typed again (left unconfirmed) is no change.
+    if (x && !y && pending !== null && same(pending, x.value)) continue;
     const person = relation ? `${words.person(about)}'s ${relation.replace(/_/g, " ")}` : words.person(about);
     out.set(id, { fact: f.fact, about, relation, label: words.label(f.fact), person, was: x?.value ?? null, now: y ? y.value : pending, confirmed: !!y || pending === null, at: relation ? null : words.at(about, f.fact) });
   }

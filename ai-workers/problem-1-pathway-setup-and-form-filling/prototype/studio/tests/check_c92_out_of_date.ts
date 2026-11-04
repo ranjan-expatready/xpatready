@@ -35,6 +35,9 @@ const c7 = factChanges(twoParents("ALPHA", "BETA"), twoParents("GAMMA", "BETA"),
 ok("C9.2 changes (Devin on #926): one parent's changed name is seen though the other parent's is the same", c7.length === 1 && c7[0].relation === "parent_1" && c7[0].was === "ALPHA" && c7[0].now === "GAMMA" && c7[0].person === "Sample Client A's parent 1", c7);
 ok("C9.2 changes (fail): two parents unchanged → no change", factChanges(twoParents("ALPHA", "BETA"), twoParents("ALPHA", "BETA"), W).length === 0);
 
+const c8 = factChanges([F("person.family_name", "A", "SAMPLE")], [], { ...W, saved: () => "SAMPLE" });
+ok("C9.2 changes (C8.2 break M4): the same value typed again, left unconfirmed, is no change", c8.length === 0, c8);
+
 // Words.
 ok("C9.2 words: a date reads \"4 Nov 2026\"", dayWords("2026-11-04T15:00:00Z") === "4 Nov 2026", dayWords("2026-11-04T15:00:00Z"));
 ok("C9.2 words (fail): no date or a date that is not one gives no date words", dayWords(null) === null && dayWords("not a date") === null);
