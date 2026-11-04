@@ -73,3 +73,26 @@ D1 3: the Saved rules are met for IMM 5645; Major 1 and Major 2 leave P-227 unpr
 * Ten files were already modified in the working tree before my runs (W1 screenshots, `p2/runs/stub-pass/*imm5257e*`, `canary-digest.json`, `check_ai_orchestration.json`, all timed 07:41). They are not in this PR, and my runs did not touch them.
 
 Verdict: Changes requested (Block: Majors 1 and 2 open) — reviewed commit 5afd90be4d6e2a4b6f871a629bc26fb82bec8233
+
+## Round 2 (6fc24d1b)
+Diff only: `git diff 5afd90be..6fc24d1b`. Changed: `DraftDialog` in `web/src/pages/sources.tsx`, the pack, `challenge.md` and `walk.md`. How I checked it: a fresh isolated copy on :4455, live off, stand-in launcher. The pack ran once: **34/34, exit 0**. Web typecheck: 0 errors. p2 is unchanged (`find -newer` empty). I walked the new state in Chromium and stopped the copy.
+* **Major 1: fixed.**
+  * The dialog now also asks for the US$0 REPLAY plan. When the plan says the form is being mapped in another combination, it closes Start and both choices, and shows "Being mapped in Express Entry stream … Nothing starts here, Live or Saved" with "Open that draft". The "options loaded" and "ready to start" markers now also wait for that plan.
+  * Walked as a person (Spouse or common-law partner › IMM 5406):
+    * Start is disabled. axe finds no violations at 400 and 1440 px, with no sideways scroll.
+    * 2 Tabs reach "Open that draft". Enter (or a click) opens Express Entry's IMM 5406 AI-proposed field map, and the dialog closes.
+    * In its own combination (Express Entry) the same form shows no notice and Saved can start.
+    * At the door, Live is also refused (409, plan's words, nothing queued).
+  * The pack now handles the 17 shared rows as their own named outcome: each is refused 409 in the plan's words with nothing queued, and the browser walk at 1440 px is checked. The IMM 5645 dialog is the pass case.
+* **Major 2: resolved for this PR.** The header no longer claims that a Live start of IMM 5645 is refused. P-194 is no longer cited for it. `challenge.md` puts the labelling question to the tech lead with three options. That is the "not silent" route I accepted. The product defect stays open, so C11.8 cannot be Works until the tech lead decides and the label is fixed.
+* **Minors fixed:**
+  * 3: rows and unique forms are counted separately ("18 rows, 18 forms"; on the fixture "5 rows, 3 forms").
+  * 4: proposals are counted for this run's id.
+  * 6: the fixed sleep is now a loud wait.
+  * 9: the `walk.md` claim is narrowed. Also changed: the sweep reads `c1-fieldmap-*` whole answers too, and `reuse_library` at US$0 counts as a pass.
+* **Still open (Minor, Should, not blocking):**
+  * 5: the "Use Saved (US$0)" check is still an API call, not a click. 7: the sweep's fail case is never run. 8: restore on Ctrl-C.
+  * New: the notice title repeats the first words of its body ("Being mapped in Express Entry stream" twice), and the saved-run picker stays enabled although nothing can start (`sources.tsx`, the Saved `<Select>`).
+* Journey score unchanged at 8.5/10. "Next step obvious" would now be 1, but "trust" stays ½ until the challenge is decided.
+
+Verdict: Approve — reviewed commit 6fc24d1beb0e47240073758e96e81d2a4663c18c
