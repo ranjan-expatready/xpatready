@@ -1,6 +1,6 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-04 23:00 IST by **Lead 8 · 4 Nov 20:16 IST** (current) · milestone: **M2 — Super Admin configuration** · rules: **`RULES.md`** (as of P-340) · earlier STATE: git history of this file (Lead 7 at 20:20 IST), `history/STATE-2026-11-04-0925.md` · Lead 8's running log: lead8-2026-11-04.md in Lead 5's side-session notes folder (`local_a8344098-…`), which also holds lead7-handover-2026-11-04.md and the Fable report
+updated: 2026-11-04 23:18 IST by **Lead 8 · 4 Nov 20:16 IST (ended at ~400k tokens)**; **Lead 9 takes over** (hand-over note lead8-handover-2026-11-04.md) · milestone: **M2 — Super Admin configuration** · rules: **`RULES.md`** (as of P-340) · earlier STATE: git history of this file (Lead 7 at 20:20 IST), `history/STATE-2026-11-04-0925.md` · Lead 8's running log: lead8-2026-11-04.md in Lead 5's side-session notes folder (`local_a8344098-…`), which also holds lead7-handover-2026-11-04.md and the Fable report
 
 ## Where we are
 * **M2: 51/60 confirmed by qa** (qa batch 13, notes PR #974): since 20:16 IST C4.7, C4.9, C4.3, C4.2 (after #936, QA-144 closed), C11.14 (#785, #969) and C11.12 (#968). **C4.8 is red on main** in the protected set (6/11, run 41867612816) and fails every batch: qa holds it and re-scores it (P-214, P-340 (7)), so expect 50 until B70 lands. C9.1 14/17 (QA-231, #978). **M3: 1/17**, no new M3 work (P-332).
@@ -27,7 +27,7 @@ updated: 2026-11-04 23:00 IST by **Lead 8 · 4 Nov 20:16 IST** (current) · mile
 Ports: B1 4430–4434, yesno builder 4440–4444, S2 4445–4449, B8 4470–4479, qa 4490–4499; demo 4400.
 
 ## Leads, in order (highest = current)
-**Lead 8** `local_96177831-842a-4d2c-9c07-eafb51e452fe` (current from 20:16 IST; check cron at minutes 13 and 43, lead-watch with the app view, P-326, P-339) · standbys: **Lead 9** `local_fa5c998c-d3e5-464b-8aa6-951d79ea78c0`, **Lead 10** `local_e336999f-beb6-41ae-a978-a5bdc886991c` · Leads 1, 2, 3, 5, 7 ended (not archivable while lanes they started are working) · Lead 4 archived. Hand over at about 400k tokens (P-314) with a note in the notes folder.
+**Lead 9** `local_fa5c998c-d3e5-464b-8aa6-951d79ea78c0` (current from ~23:20 IST; creates its check at minutes 13 and 43) · standby: **Lead 10** `local_e336999f-beb6-41ae-a978-a5bdc886991c`; start Lead 11 at the founder's next typed turn · Lead 8 `local_96177831-842a-4d2c-9c07-eafb51e452fe` ended 23:18 IST · Leads 1, 2, 3, 5, 7 ended · Lead 4 archived. Hand over at about 400k tokens (P-314).
 
 ## Next (in order)
 1. C4.8 hold merges (P-214) → batches flow; #883 requeued.
