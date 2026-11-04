@@ -7,4 +7,9 @@
 
 **Closed:** QA-225 (#948). **Method:** one Mac copy (qa_c61, port 4494) for the route check, then stopped. Live AI off, US$0.
 
-**M2: 49/60 on main** (51 once #974 merges). **Thin slice 7/8.** M3 1/17.
+## Batch 14b — #881 (C11.7 part B) · main 9b76016c4 · ~00:35–00:50 IST
+| Row | Verdict | Evidence |
+|---|---|---|
+| C11.7 (M2) | **Works** (was Partial, 18/21) | `C11.7.test.ts` on the six 0 · 22/22 (run 41893519083), on the checkpoint 0 · 22/22 (run 41893542963) |
+
+**M2: 52/60 confirmed** (51 after #974; +C11.7). **Thin slice 7/8.** M3 1/17.
