@@ -101,6 +101,12 @@ const TV = (n: number) => `Sample transit visa ${RUN} ${n}`;
   await field("subCategory").fill(LONG); await field("subCategory").press("Tab");
   ok("C11.17 fail: a Sub-category name over 120 characters shows its message under Sub-category", /under 120 characters/.test(await underText("subCategory")) && (await addOff()), await underText("subCategory"));
   await shot("4-subcategory-too-long.png");
+  // Devin review on #867: a Sub-category left under None is not sent, so its rule neither shows nor keeps Add off.
+  await field("program").fill("Visitors"); await field("program").press("Tab"); await pickOrType("category", TV(4));
+  await dlg.locator("[data-none]").uncheck(); await field("subCategory").fill(LONG); await field("subCategory").press("Tab");
+  ok("C11.17 fail: under a new category with None unticked, an over-long Sub-category shows its rule and Add is off", /under 120 characters/.test(await underText("subCategory")) && (await addOff()), await underText("subCategory"));
+  await dlg.locator("[data-none]").check();
+  ok("C11.17 pass: ticking None again (the Sub-category is not sent) clears its rule and Add is on", (await under("subCategory").count()) === 0 && (await field("subCategory").getAttribute("aria-invalid")) === null && !(await dlg.locator("[data-add-submit]").isDisabled()), await underText("subCategory"));
   ok("C11.17 data: no name refused as you type was sent or saved", posts === p0 && names() === n0, { posts: posts - p0, before: n0, after: names() });
 
   // ------------------------------------------------- (2) the server's own refusal, under the part it names

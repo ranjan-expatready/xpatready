@@ -140,7 +140,8 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
   const subOff = !isSet("category") ? "Choose the category first." : catSetUp ? `${catNode!.label} already has its own setup, so it is the combination. A sub-category would leave that setup above a combination.` : null;
   const useNone = !subOff && none && !catHasSubs;
   const enabled = (lv: Level) => { const p = parentOf(lv); return !p || isSet(p); };
-  // The name rules the server applies (contracts/programs.ts labelProblem), checked under each new name as you type.
+  // The name rules the server applies (contracts/programs.ts labelProblem), checked under each new name as you type; shown
+  // only for a level that would be sent (a Sub-category left under None is not sent, so it neither shows nor blocks).
   const nameProblem = (lv: Level) => (isNew(lv) ? labelProblem(text[lv]) : null);
 
   // What one Add writes: every level set, down to the first empty one (AD-3).
@@ -252,7 +253,7 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
         {FIELDS.map((lv) => (
           <NameField key={lv} level={lv} label={WORD[lv]} value={text[lv]} options={optionsFor(lv)} isNew={isNew(lv)} underNew={underNew(lv)}
             enabled={enabled(lv) && !(lv === "subCategory" && (useNone || !!subOff))} inputRef={(el) => { refs.current[lv] = el; }}
-            onType={(v) => typeIn(lv, v)} onPick={(n) => pick(lv, n)} onNext={() => next(lv)} error={nameProblem(lv) ?? errors[lv]} close={close[lv] ?? []} keep={!!keep[lv]}
+            onType={(v) => typeIn(lv, v)} onPick={(n) => pick(lv, n)} onNext={() => next(lv)} error={(path.includes(lv) ? nameProblem(lv) : null) ?? errors[lv]} close={close[lv] ?? []} keep={!!keep[lv]}
             onKeep={() => setKeep((k) => ({ ...k, [lv]: true }))} onUse={(c) => { const n = optionsFor(lv).find((x) => x.key === c.key); if (n) pick(lv, n); }}
             extra={lv === "subCategory" ? (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
