@@ -1,3 +1,4 @@
+// (P-214 debug note: this file is scaffolding only; see the qa193 order row.)
 // Test scaffolding (P-33), never product code: decides a field-map draft's clean proposals one by one, as a person would
 // on the form-field page. Suites used the page's bulk accept as a shortcut for this; since C3.2 (P-121, P-296 (1)) the bulk
 // accept takes only High exact reuse matches, and a saved one-round draft has none. Each decision here is the single

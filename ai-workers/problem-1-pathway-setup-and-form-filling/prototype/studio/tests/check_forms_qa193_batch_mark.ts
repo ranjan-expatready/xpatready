@@ -95,6 +95,11 @@ const planted = join(RUNS, `${job.job_id}-live-20261103t000000000z-q193test${POR
     await acceptCleanOneByOne(call, run, ["REUSE", "NEW"], "user-C");
     for (const i of ((await call("GET", `/jobs/${run}`)).body?.items ?? []).filter((x: { decision: string }) => x.decision === "PENDING"))
       await call("POST", `/jobs/${run}/items/${i.id}`, { decision: "RETURNED", note: "Left for a person (QA-193 check)." });
+    // DIAGNOSTIC (P-214 row, order-dependent failure in PR CI shard 4): who made newKey's field before apply, and the
+    // items that name it. Printed as NOTE lines; removed once the cause is found.
+    console.log(`NOTE  diag newKey=${newKey} field-before-apply=[${sql(`select origin || '|' || coalesce(source_ref, '') || '|' || coalesce(updated_by, '') || '|' || status from canonical_field where canonical_field_key = '${newKey}'`)}]`);
+    console.log(`NOTE  diag items=[${sql(`select string_agg(id::text || ':' || status || ':' || coalesce(work->>'outcome', '') || ':' || coalesce(batch_id::text, '-'), ' ; ') from proposal_item where run_id = '${run}' and decided_key = '${newKey}'`)}]`);
+    console.log(`NOTE  diag job run_file=[${sql(`select coalesce(run_file, '') || '|' || mode from drafting_job where id = '${run}'`)}] library_changes=[${sql(`select string_agg(key || ':' || action || ':' || status, ' ; ') from library_change where key = '${newKey}'`)}]`);
     r = await call("POST", `/jobs/${run}/apply`, {}, "user-A");
     ok("setup: the decided draft is applied by the author", r.status === 201 && r.body?.new_fields > 0, [r.status, words(r)]);
 
