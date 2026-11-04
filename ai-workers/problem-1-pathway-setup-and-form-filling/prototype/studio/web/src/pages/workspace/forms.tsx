@@ -11,7 +11,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ArrowDown, ArrowUp, Copy, MoreHorizontal, Pencil, Plus, RefreshCw, Trash2, Undo2 } from "lucide-react";
-import { CHANNEL_WORDS, CHANNELS, SIGNATURE_FITS, SIGNATURE_WORDS, throughAccount, type Channel, type Signature } from "../../../../contracts/forms";
+import { ACCOUNT_WORDS, CHANNEL_WORDS, CHANNELS, SIGNATURE_FITS, SIGNATURE_WORDS, throughAccount, type Channel, type IrccAccount, type Signature } from "../../../../contracts/forms";
 import { changeWords, COPIES_WORDS, copiesWords, SIGNED_BY, type LastFormChange, type RemovedForm, type WorkspaceFormLine } from "../../../../contracts/workspace";
 import { api, ApiError, useAction, useSessionView, useToast } from "@/lib/api";
 import { useUndoToast } from "@/components/lifecycle";
@@ -42,7 +42,7 @@ type ChannelLine = CombinationSummary["forms"][number];
 type Combo = Parameters<typeof SourcesLine>[0]["d"];
 
 /** m3 (P-113): Online is a real way for portal-only forms; the product fills it in a later wave. */
-const ONLINE_WORDS = "Online: the case officer types it into the portal from the answer sheet (P-113); the browser extension fills it in a later wave.";
+const ONLINE_WORDS = "Online: the case officer types it into the portal from the answer sheet; the browser extension fills it in a later wave.";
 const TIPS = {
   who: "Whose form it is: one copy for each person it names. A minimum age leaves out anyone younger.",
   onlyIf: "When the form is needed. A rule is checked on every case; words alone cannot be checked, so a case cannot tell until a rule is built.",
@@ -153,7 +153,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
             <td className="max-w-56 text-xs text-text-muted">{l.quote ? `"${l.quote.slice(0, 120)}${l.quote.length > 120 ? "…" : ""}"` : l.added ?? "Added by a person"}</td>
             <td className="text-sm">{l.document ? <span className="text-text-muted">Checklist · not filed</span> : <>{whoLabel(l.who)}{l.minAge ? <span className="text-text-muted"> · {l.minAge}+</span> : null}{l.copies > 1 ? <span className="text-text-muted" data-copies> · {copiesWords(l.copies)}</span> : null}</>}</td>
             <td className="max-w-56 text-xs"><OnlyIfCell l={l} /></td>
-            <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <><ChannelCell id={id} line={{ code: l.code, channel: l.channel as Channel, channelWords: l.channelWords, signature: l.signature, document: l.document } as ChannelLine} canAuthor={canAuthor} options={l.channelOptions} />{l.channel === "ONLINE" ? <p className="text-xs text-text-muted" data-online-words>Answer sheet in portal order (P-113)</p> : null}</>}</td>
+            <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <><ChannelCell id={id} line={{ code: l.code, channel: l.channel as Channel, channelWords: l.channelWords, signature: l.signature, document: l.document } as ChannelLine} canAuthor={canAuthor} options={l.channelOptions} />{l.channel === "ONLINE" ? <p className="text-xs text-text-muted" data-online-words>{accountKey && accountKey !== "PAPER" ? `Typed into the ${ACCOUNT_WORDS[accountKey as IrccAccount] ?? accountKey} from the answer sheet, in portal order` : accountKey === "PAPER" ? "Paper filing has no IRCC account to type it into: choose Paper, or set the account above" : "IRCC account not set: choose above the account it is typed into"}</p> : null}</>}</td>
             <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <SignatureCell id={id} code={l.code} channel={l.channel as Channel} signature={l.signatureKind as Signature} signatures={l.signatures} canAuthor={canAuthor} />}</td>
             <td className="text-xs">{l.document ? "—" : l.signedBy ? l.signedByLabel : <span className="text-text-muted">Not set</span>}</td>
             <td className="text-xs"><span className="block">{l.edition ?? l.libraryEdition ?? <span className="text-text-muted">No edition read yet</span>}{l.document ? null : <span className="text-text-muted"> · {l.boxes} form fields matched</span>}</span>{l.document ? null : <LineReading combo={combo} l={l} fromLibrary={fromLibrary} />}{l.document ? null : <span className="mt-1 block"><StepChip code={l.code} chip={progress[l.code]} onOpen={() => openSetup(l.code)} /></span>}</td>

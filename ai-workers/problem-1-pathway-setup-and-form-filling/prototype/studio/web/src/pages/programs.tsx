@@ -28,6 +28,7 @@ import { Tip, TipProvider } from "@/components/status";
 import { cn } from "@/lib/utils";
 import { StartSetupButton } from "@/components/start-setup";
 import { STATE_WORDS, STATUS_WORDS } from "../../../contracts/status-words";
+import { channelGroups } from "../../../contracts/forms";
 
 /** Where Back on a combination page returns to: this page's URL (with the opened combination) and its scroll position. */
 export const CATALOGUE_URL_KEY = "xr-catalogue-url";
@@ -523,6 +524,7 @@ function SetupCard({ r, lit, justAdded, q, canAuthor, onOpen, onResume }: { r: C
       <p className="truncate text-xs text-text-muted" title={trail} data-trail>{trail}</p>
       <Tip tip={BAR_TIP}><p className="mt-1.5 w-fit text-[13px]">{<Progress r={r} />}</p></Tip>
       {r.filing && FILING_KINDS.some((k) => r.filing!.startsWith(k)) ? <FilingTag filing={r.filing} /> : null}
+      <FormChannels r={r} />
       {q && r.matches.some((m) => m !== "name") ? <p className="text-xs text-text-muted">Matches: {r.matches.filter((m) => m !== "name").join(", ")}</p> : null}
       <div className="mt-auto pt-2.5" data-card-act><CardButton r={r} canAuthor={canAuthor} onOpen={onOpen} onResume={onResume} /></div>
       <StepBar r={r} />
@@ -538,6 +540,20 @@ export const FILING_KINDS = ["PDF only", "Online only", "Paper only", "Mixed"];
 export const FILING_TAG = (filing: string) => (filing.startsWith("Mixed") ? "Mixed" : filing);
 function FilingTag({ filing }: { filing: string }) {
   return <p className="w-fit"><span className="rounded border border-border px-1.5 py-px text-xs text-text-muted" title={`Filing: ${filing}`} data-filing-tag={FILING_TAG(filing)}><span className="sr-only">Filing: {filing}</span><span aria-hidden>{FILING_TAG(filing)}</span></span></p>;
+}
+
+/** C1.6 (P-61, P-143): each form's channel on the Programs row, grouped by channel, an Online group with its portal (the
+ *  combination's IRCC account): "PDF upload: IMM 5257, IMM 5409". A long group is cut on screen and said in full on hover
+ *  and to screen readers. Nothing while the combination has no filed form lines. */
+function FormChannels({ r, className }: { r: CatalogueLeaf; className?: string }) {
+  const groups = channelGroups(r.forms, r.account);
+  if (!groups.length) return null;
+  return (
+    <ul className={cn("min-w-0 space-y-px text-xs text-text-muted", className)} aria-label="Each form's channel" data-form-channels>
+      {groups.map((g) => { const all = `${g.words}: ${g.forms.join(", ")}`;
+        return <li key={g.channel} className="truncate" title={all} data-channel={g.channel}><span className="font-medium text-text">{g.words}</span>: {g.forms.join(", ")}</li>; })}
+    </ul>
+  );
 }
 
 function CorporateCallout() {
@@ -629,6 +645,7 @@ function List({ groups, closed, onToggle, highlight, q, sort, filtering, needsOn
                       <div role="gridcell" className="min-w-0 truncate text-sm font-semibold text-lv3" data-name>{nameOf(r)}</div>
                       <div role="gridcell" className="col-start-1 row-start-2 min-w-0 sm:col-start-auto sm:row-start-auto">
                         <span className="block truncate text-xs text-text-muted" title={above} data-trail>{above}</span>
+                        {r.filing && FILING_KINDS.some((k) => r.filing!.startsWith(k)) ? <div className="mt-0.5 flex min-w-0 items-start gap-2" data-list-filing><FilingTag filing={r.filing} /><FormChannels r={r} className="flex-1" /></div> : <FormChannels r={r} className="mt-0.5" />}
                         {q && r.matches.some((m) => m !== "name") ? <span className="block truncate text-xs text-text-muted">Matches: {r.matches.filter((m) => m !== "name").join(", ")}</span> : null}
                       </div>
                       <div role="gridcell" className="col-start-1 row-start-3 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm sm:col-start-auto sm:row-start-auto"><StepBar r={r} mini /><Progress r={r} mini /></div>

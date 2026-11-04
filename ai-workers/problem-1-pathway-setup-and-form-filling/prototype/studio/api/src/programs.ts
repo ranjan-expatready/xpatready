@@ -186,7 +186,7 @@ export class Programs {
       if (!c) {
         const nsSetup = setupChecklistOf(notStartedInput(retired), `${n.programNodeKey}|${key}`);
         rows.push({ pathway, changes: 0, errors: 0, firstError: null, holds: 0, firstHold: null, hasContent: false, searchText: path.join(" "), docNames: [],
-          leaf: { ...base, combinationId: null, startWhy: startWhy(chain, openNodes), forms: [], filing: null, filed: "No forms yet", progress: progressOf(nsSetup), counts: null, status: "IN_SETUP", statusText: retired ? "Retired" : "Not started", missing: [{ code: "not_started", step: "Start setup", text: "Not started: no setup yet. Next step: Start setup." }], aiProposals: 0, aiRunning: null, release: null, checked: null, nextAction: nextActionOf({ exists: false, status: "IN_SETUP", forms: 0, sources: 0, draftable: 0, fromLibrary: [], running: null, proposals: [], changes: 0, missing: [] }), needs: !retired, needsYou: false, live: false, held: [], note: noteOf(0, "start") },
+          leaf: { ...base, combinationId: null, startWhy: startWhy(chain, openNodes), forms: [], filing: null, account: null, filed: "No forms yet", progress: progressOf(nsSetup), counts: null, status: "IN_SETUP", statusText: retired ? "Retired" : "Not started", missing: [{ code: "not_started", step: "Start setup", text: "Not started: no setup yet. Next step: Start setup." }], aiProposals: 0, aiRunning: null, release: null, checked: null, nextAction: nextActionOf({ exists: false, status: "IN_SETUP", forms: 0, sources: 0, draftable: 0, fromLibrary: [], running: null, proposals: [], changes: 0, missing: [] }), needs: !retired, needsYou: false, live: false, held: [], note: noteOf(0, "start") },
           setup: nsSetup });
         continue;
       }
@@ -281,7 +281,7 @@ export class Programs {
       rows.push({ pathway, changes, errors: errors.length, firstError, holds: holding.length, firstHold, hasContent, docNames, blockers: { n: blocking.length, first: blocking[0] ? said(blocking[0]) : null, empty: blocking.length > errors.length },
         setup: checklist,
         searchText: [...path, ...forms.map((f) => f.code), ...docNames].join(" "),
-        leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, filed: filedOf(snapForms), progress: progressOf(checklist), counts, status, statusText: retired ? "Retired" : status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
+        leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, account: c.portalKey ?? null, filed: filedOf(snapForms), progress: progressOf(checklist), counts, status, statusText: retired ? "Retired" : status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
           missing, aiProposals, aiRunning: running, release: rel ? { pack: rel.packVersion?.version ?? 1, at: rel.releasedAt.toISOString() } : null, checked,
           nextAction, needs: !retired && needsWork({ status, nextAction }), needsYou: !retired && waitsForPerson({ status, nextAction, aiProposals, held: held.length }), live: !retired && isLive({ status }), held, note: noteOf(aiProposals, nextAction?.kind, held) } });
     }

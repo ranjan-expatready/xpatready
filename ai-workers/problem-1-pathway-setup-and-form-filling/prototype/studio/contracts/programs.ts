@@ -126,6 +126,9 @@ export type CatalogueLeaf = {
   forms: { code: string; drafted: boolean; document: boolean; inLibrary?: boolean; channel?: "PDF_UPLOAD" | "ONLINE" | "PAPER" | "NOT_NEEDED" }[];
   /** How the application is filed, worked out from its lines (C1.6, engine/channels.ts filingKind): "PDF only", "Online only" or "Mixed: online and PDF"; null with no lines. */
   filing: string | null;
+  /** C1.6 (P-143): the IRCC account the combination files through (contracts/forms.ts IRCC_ACCOUNTS), null when not set:
+   *  the portal an Online line is typed into. */
+  account?: string | null;
   /** questions: the one question count (contracts/counts.ts), the sum of questionsByRole (the Questionnaires chips). */
   counts: { documents: number; documentsAlways: number; documentsIf: number; questions: number; questionsByRole?: { role: string; label: string; questions: number }[]; sections: number; rules: number } | null;
   status: Status;
