@@ -40,19 +40,19 @@ export const backgroundWords = (caption: string | null | undefined, heading?: st
 export const readingMissingWords = (form: string) =>
   `The reading of ${form} is missing on this computer, so its Background information questions cannot be checked: read the form again (Forms tab) before marking any of its form fields "not a fact" or releasing.`;
 
-/** The family information forms; either one fills the line (P-230 (6)). */
-export const FAMILY_INFORMATION_FORMS = ["IMM 5707", "IMM 5645"] as const;
-const isFamilyForm = (formNumber: string) => (FAMILY_INFORMATION_FORMS as readonly string[]).includes(formNumber);
+/** P-319: a form is a family information form when the library says so (its role, set per form by an author; the demo's
+ *  are in samples/form-roles.json), never by a number in the code. Any one of them fills the line (P-230 (6)). */
+export const FAMILY_INFORMATION = "family_information";
 
-/** The form number of an edition label ("IMM 5707 (01-2023)" → "IMM 5707"). */
+/** The form number of an edition label ("IMM 5257 (09-2023)" → "IMM 5257"). */
 export const formNumberOf = (editionLabel: string | null | undefined) => (editionLabel ?? "").replace(/\s*\([^)]*\)\s*$/, "").trim();
 
 /** [IRCC-F09] The family information form the combination's application package lists (a source form attached to it)
  *  when none of its forms is a family information form; null when nothing is missing. A combination with no form yet
  *  gets none: its "No forms yet" line and the release's "Nothing to release" already say every form is missing (F8 M1). */
-export function missingFamilyForm(attachedForms: string[], combinationForms: string[]): string | null {
-  if (!combinationForms.length || combinationForms.some(isFamilyForm)) return null;
-  return attachedForms.find(isFamilyForm) ?? null;
+export function missingFamilyForm(attachedForms: string[], combinationForms: string[], familyForms: ReadonlySet<string>): string | null {
+  if (!combinationForms.length || combinationForms.some((f) => familyForms.has(f))) return null;
+  return attachedForms.find((f) => familyForms.has(f)) ?? null;
 }
 
 /** The validator's words for a missing family information form. */

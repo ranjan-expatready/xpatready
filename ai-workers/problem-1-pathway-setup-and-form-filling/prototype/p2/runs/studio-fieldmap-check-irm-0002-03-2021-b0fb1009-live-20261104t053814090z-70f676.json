@@ -1,0 +1,337 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-fieldmap-check-irm-0002-03-2021-b0fb1009-live-20261104t053814090z-70f676",
+  "idempotency_key": "18a3132051ce7b4d94351d441586f2b50e2eb1cca93ab6bcd1db4fba6c32434b",
+  "contract_version": "drafting-run/v0",
+  "kind": "field_map",
+  "output_sha256": "b6f28e8824234a6406972142c5d373706ddae0f72eef06bb07dfbf6915a9523d",
+  "inputs": {
+   "combination": "edition:IRM 0002:03-2021",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/irm0002e.inventory.json",
+     "sha256": "41d54324d89716a0042e58365fa015987fea65b68399991be1433d838a604399"
+    }
+   ],
+   "configuration_version": "studio-add-form"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 900000,
+   "max_attempts": 2,
+   "budget_usd": 2.79,
+   "max_output_tokens": 64000,
+   "prompt_version": "field-map-check.v1.md",
+   "prompt_sha256": "51474a479d9e91c3dd36a9e120d137796a2040e1409b39d5ef3c665cb6ec901b"
+  },
+  "status": "completed_with_unresolved",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 6290,
+    "output_tokens": 4242,
+    "duration_ms": 34869
+   }
+  ],
+  "usage": {
+   "input_tokens": 6290,
+   "output_tokens": 4242,
+   "cost_usd": 0.11,
+   "duration_ms": 34869
+  },
+  "started_at": "2026-11-04T05:38:14.092Z",
+  "ended_at": "2026-11-04T05:38:49.191Z",
+  "entries": [
+   {
+    "form_edition": "IRM 0002 (03-2021)",
+    "form_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+    "data_path": "IRM_0002[0].Page1[0].statement[0].name[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.full_legal_name",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+     "quote": "(current legal name of applicant in full)"
+    }
+   },
+   {
+    "form_edition": "IRM 0002 (03-2021)",
+    "form_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+    "data_path": "IRM_0002[0].Page1[0].statement[0].DOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "evidence": {
+     "file_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+     "quote": "(YYYY-MM-DD)"
+    }
+   },
+   {
+    "form_edition": "IRM 0002 (03-2021)",
+    "form_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+    "data_path": "IRM_0002[0].Page1[0].statement[0].birthLocation[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.place_of_birth",
+    "transform": "join:city, state/province, country",
+    "evidence": {
+     "file_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+     "quote": "(city, state/province, country)"
+    }
+   },
+   {
+    "form_edition": "IRM 0002 (03-2021)",
+    "form_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+    "data_path": "IRM_0002[0].Page1[0].existingDocument[0].existing[0]",
+    "outcome": "mapped",
+    "confidence": "low",
+    "person": "form_subject",
+    "fact": "case.gender_identifier_change_requested",
+    "transform": "yes_no_code:1/0",
+    "evidence": {
+     "file_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+     "quote": "request a change in sex or gender identifier"
+    }
+   },
+   {
+    "form_edition": "IRM 0002 (03-2021)",
+    "form_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+    "data_path": "IRM_0002[0].Page1[0].existingDocument[0].fromGender[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.document_gender_identifier",
+    "transform": "code_list:irm0002.gender_identifier (F Female|M Male|X Another gender)",
+    "evidence": {
+     "file_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+     "quote": "from"
+    }
+   },
+   {
+    "form_edition": "IRM 0002 (03-2021)",
+    "form_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+    "data_path": "IRM_0002[0].Page1[0].existingDocument[0].toGender[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "case.requested_gender_identifier",
+    "transform": "code_list:irm0002.gender_identifier (F Female|M Male|X Another gender)",
+    "evidence": {
+     "file_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+     "quote": "to"
+    }
+   },
+   {
+    "form_edition": "IRM 0002 (03-2021)",
+    "form_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+    "data_path": "IRM_0002[0].Page1[0].existingDocument[0].document[0].documentSelection[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "case.document_to_change",
+    "transform": "code_list:irm0002.document (1=my Certificate of Canadian Citizenship|2=my Permanent Resident Card|5=my Temporary Resident Document|3=my document issued to a Protected Person|4=my Refugee Protection Claimant Document)",
+    "evidence": {
+     "file_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+     "quote": "my Permanent Resident Card"
+    }
+   },
+   {
+    "form_edition": "IRM 0002 (03-2021)",
+    "form_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+    "data_path": "IRM_0002[0].Page1[0].requestorSignature[0].name[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.full_legal_name",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+     "quote": "Name of applicant (current legal name in full)"
+    }
+   },
+   {
+    "form_edition": "IRM 0002 (03-2021)",
+    "form_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+    "data_path": "IRM_0002[0].Page1[0].requestorSignature[0].signature[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "The applicant signs this box by hand; the system must never fill a signature.",
+    "evidence": {
+     "file_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+     "quote": "Signature of applicant"
+    }
+   },
+   {
+    "form_edition": "IRM 0002 (03-2021)",
+    "form_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+    "data_path": "IRM_0002[0].Page1[0].requestorSignature[0].date[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Date the applicant signs by hand; the signing date is not a fact the case record holds in advance.",
+    "evidence": {
+     "file_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+     "quote": "Date (YYYY-MM-DD)"
+    }
+   },
+   {
+    "form_edition": "IRM 0002 (03-2021)",
+    "form_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+    "data_path": "IRM_0002[0].Page1[0].guardian[0].name[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "condition": "Only when the applicant is a minor or otherwise needs a parent/legal guardian to sign",
+    "unresolved_reason": "The signer may be either parent or a legal guardian who is not a parent; the form does not say which person, so the box cannot be tied to subject_parent_1 or subject_parent_2 safely.",
+    "evidence": {
+     "file_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+     "quote": "Name of parent/legal guardian (current legal name in full)"
+    }
+   },
+   {
+    "form_edition": "IRM 0002 (03-2021)",
+    "form_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+    "data_path": "IRM_0002[0].Page1[0].guardian[0].signature[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "condition": "Only when a parent/legal guardian signs for the applicant",
+    "unresolved_reason": "Signed by hand by the parent/legal guardian; the system must never fill a signature.",
+    "evidence": {
+     "file_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+     "quote": "Signature of parent/legal guardian"
+    }
+   },
+   {
+    "form_edition": "IRM 0002 (03-2021)",
+    "form_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+    "data_path": "IRM_0002[0].Page1[0].guardian[0].date[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "condition": "Only when a parent/legal guardian signs for the applicant",
+    "unresolved_reason": "Date the parent/legal guardian signs by hand; not a fact held in the case record, and the signer is not identified.",
+    "evidence": {
+     "file_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+     "quote": "Date (YYYY-MM-DD)"
+    }
+   },
+   {
+    "form_edition": "IRM 0002 (03-2021)",
+    "form_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+    "data_path": "IRM_0002[0].Page1[0].signedAT[0].city[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Place where the form is physically signed; not an ordinary case fact and not necessarily the applicant's residence.",
+    "evidence": {
+     "file_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+     "quote": "city/town/village"
+    }
+   },
+   {
+    "form_edition": "IRM 0002 (03-2021)",
+    "form_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+    "data_path": "IRM_0002[0].Page1[0].signedAT[0].province[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Place where the form is physically signed; not an ordinary case fact and not necessarily the applicant's residence.",
+    "evidence": {
+     "file_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+     "quote": "state/province"
+    }
+   },
+   {
+    "form_edition": "IRM 0002 (03-2021)",
+    "form_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+    "data_path": "IRM_0002[0].Page1[0].signedAT[0].country[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Place where the form is physically signed; not an ordinary case fact and not necessarily the applicant's residence.",
+    "evidence": {
+     "file_sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+     "quote": "country"
+    }
+   }
+  ]
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": {
+  "weak_evidence": [],
+  "edition_note": null,
+  "needs_person": [],
+  "set_aside_fields": []
+ },
+ "launch_evidence": {
+  "path_code_sha256": "0272900d24c31793a06aa1a6b9429802269d0ec0c00aa5ec1580a7d003577bad",
+  "template_sha256": "707130b8cae250f820fe2ce5ef29c39bb6ddadaa6ade3b636e88c2ba8a472ffb",
+  "schema_file": "field-map-output.v2.schema.json",
+  "schema_sha256": "a9583204f0ff5325721c1240af88c2f86d9701dac3c1f466061c0073c4f2d68a",
+  "known": {
+   "form_edition": "IRM 0002 (03-2021)"
+  },
+  "screened": true,
+  "output_sha256": "b6f28e8824234a6406972142c5d373706ddae0f72eef06bb07dfbf6915a9523d",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "ff8bbb560609bd4abef40e16e9db50ce66d2802d192cd54ab29fc4c5cd910e22",
+  "request_bytes": 15100,
+  "stub_calls": null,
+  "ledger": {
+   "file": "<main copy>/.tools/p2-ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 70.71708399999999
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/irm0002e.inventory.json",
+    "sha256": "41d54324d89716a0042e58365fa015987fea65b68399991be1433d838a604399",
+    "kind": "inventory"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "d7fd27747da38619de16d9c25a3569e0a53d724f9d3b197d0137284eed5f08dc",
+   "digest_made_at": "2026-11-04T05:38:14.091Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "be88e9bb85ac94cd533d75e30c589b44",
+   "ticket_expires_at": "2026-11-04T05:40:14.091Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"form_edition\":\"IRM 0002 (03-2021)\",\"canonical_fields\":[{\"id\":\"person.full_legal_name\",\"meaning\":\"The person's current legal name in full (all given names and family name)\",\"value_type\":\"text\"},{\"id\":\"person.date_of_birth\",\"meaning\":\"The person's date of birth\",\"value_type\":\"date\"},{\"id\":\"person.place_of_birth\",\"meaning\":\"The person's place of birth (city, state/province, country)\",\"value_type\":\"text\"},{\"id\":\"case.gender_identifier_change_requested\",\"meaning\":\"Whether this case requests a change in the sex or gender identifier shown on an IRCC document\",\"value_type\":\"yes_no\"},{\"id\":\"person.document_gender_identifier\",\"meaning\":\"The sex or gender identifier currently shown on the person's IRCC document, before the requested change\",\"value_type\":\"code\"},{\"id\":\"case.requested_gender_identifier\",\"meaning\":\"The sex or gender identifier the person asks to have shown on the IRCC document after the change\",\"value_type\":\"code\"},{\"id\":\"case.document_to_change\",\"meaning\":\"The type of IRCC document on which the sex or gender identifier change is requested\",\"value_type\":\"code\"}],\"entries\":[{\"data_path\":\"IRM_0002[0].Page1[0].statement[0].name[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.full_legal_name\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"(current legal name of applicant in full)\"},{\"data_path\":\"IRM_0002[0].Page1[0].statement[0].DOB[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"(YYYY-MM-DD)\"},{\"data_path\":\"IRM_0002[0].Page1[0].statement[0].birthLocation[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.place_of_birth\",\"transform\":\"join:city, state/province, country\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"(city, state/province, country)\"},{\"data_path\":\"IRM_0002[0].Page1[0].existingDocument[0].existing[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.gender_identifier_change_requested\",\"transform\":\"yes_no_code:1/0\",\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":null,\"evidence_quote\":\"request a change in sex or gender identifier\"},{\"data_path\":\"IRM_0002[0].Page1[0].existingDocument[0].fromGender[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.document_gender_identifier\",\"transform\":\"code_list:irm0002.gender_identifier (F Female|M Male|X Another gender)\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"from\"},{\"data_path\":\"IRM_0002[0].Page1[0].existingDocument[0].toGender[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.requested_gender_identifier\",\"transform\":\"code_list:irm0002.gender_identifier (F Female|M Male|X Another gender)\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"to\"},{\"data_path\":\"IRM_0002[0].Page1[0].existingDocument[0].document[0].documentSelection[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.document_to_change\",\"transform\":\"code_list:irm0002.document (1=my Certificate of Canadian Citizenship|2=my Permanent Resident Card|5=my Temporary Resident Document|3=my document issued to a Protected Person|4=my Refugee Protection Claimant Document)\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"my Permanent Resident Card\"},{\"data_path\":\"IRM_0002[0].Page1[0].requestorSignature[0].name[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.full_legal_name\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Name of applicant (current legal name in full)\"},{\"data_path\":\"IRM_0002[0].Page1[0].requestorSignature[0].signature[0]\",\"outcome\":\"never_filled\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"The applicant signs this box by hand; the system must never fill a signature.\",\"evidence_quote\":\"Signature of applicant\"},{\"data_path\":\"IRM_0002[0].Page1[0].requestorSignature[0].date[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Date the applicant signs by hand; the signing date is not a fact the case record holds in advance.\",\"evidence_quote\":\"Date (YYYY-MM-DD)\"},{\"data_path\":\"IRM_0002[0].Page1[0].guardian[0].name[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Only when the applicant is a minor or otherwise needs a parent/legal guardian to sign\",\"confidence\":\"medium\",\"unresolved_reason\":\"The signer may be either parent or a legal guardian who is not a parent; the form does not say which person, so the box cannot be tied to subject_parent_1 or subject_parent_2 safely.\",\"evidence_quote\":\"Name of parent/legal guardian (current legal name in full)\"},{\"data_path\":\"IRM_0002[0].Page1[0].guardian[0].signature[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Only when a parent/legal guardian signs for the applicant\",\"confidence\":\"high\",\"unresolved_reason\":\"Signed by hand by the parent/legal guardian; the system must never fill a signature.\",\"evidence_quote\":\"Signature of parent/legal guardian\"},{\"data_path\":\"IRM_0002[0].Page1[0].guardian[0].date[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Only when a parent/legal guardian signs for the applicant\",\"confidence\":\"medium\",\"unresolved_reason\":\"Date the parent/legal guardian signs by hand; not a fact held in the case record, and the signer is not identified.\",\"evidence_quote\":\"Date (YYYY-MM-DD)\"},{\"data_path\":\"IRM_0002[0].Page1[0].signedAT[0].city[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Place where the form is physically signed; not an ordinary case fact and not necessarily the applicant's residence.\",\"evidence_quote\":\"city/town/village\"},{\"data_path\":\"IRM_0002[0].Page1[0].signedAT[0].province[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Place where the form is physically signed; not an ordinary case fact and not necessarily the applicant's residence.\",\"evidence_quote\":\"state/province\"},{\"data_path\":\"IRM_0002[0].Page1[0].signedAT[0].country[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Place where the form is physically signed; not an ordinary case fact and not necessarily the applicant's residence.\",\"evidence_quote\":\"country\"}]}"
+}

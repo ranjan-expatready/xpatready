@@ -1,0 +1,16 @@
+PASS  C3.3 AT-1 the plan says before anything starts what each form will do and that it costs US$0
+PASS  C3.3 AT-2 refusal: the approver (no author duty) cannot start AI work (403); nothing is queued
+PASS  C3.3 AT-3 one form's failure keeps the good work: the batch is Done with problems, IMM 5257's draft is complete with all its proposals, at US$0
+PASS  C3.3 AT-4 the run says the failure in plain words with one next step (no codes, paths or stack); spent US$0 is on the card
+PASS  C3.3 AT-5 refusal: a reviewer cannot retry (403)
+PASS  C3.3 AT-5 Retry re-runs only the failed step (attempts 2 and 3); the finished IMM 5257 draft is never run again
+PASS  C3.3 AT-6 refusal: a fourth attempt is refused in plain words (it needs a person, not another retry); no step is added
+PASS  C3.3 AT-7 a saved failed answer is explained in plain words: how many form fields the AI answered, which entry broke which rule, nothing applied, its cost
+PASS  C3.3 AT-8 one bad entry in an AI answer goes to a person with the reason; every other entry is kept as answered (the studio reads the checked answer)
+PASS  C3.3 AT-9 a paid repeat is recognised: the same form, prompt, schema and settings as an answer that failed only our check is a repeat (refused); a changed prompt is not
+PASS  C3.3 AT-10 asked for a live draft of IMM 1344, the plan uses the saved answer first (no model call, US$0) instead of paying again
+PASS  C3.3 AT-12 pass: a failed answer made with another prompt is not a repeat: drafting again live is offered and priced (not refused)
+PASS  C3.3 AT-12 refusal through the API: drafting IMM 1344 live again with the same form, prompt, schema and settings as an answer that failed our own check is refused in words before anything starts (US$0, nothing queued)
+PASS  C3.3 AT-11 the whole check spent nothing: no live call reached the launcher, the ledger is unchanged
+
+14 passed, 0 failed
