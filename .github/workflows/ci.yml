@@ -84,6 +84,12 @@ jobs:
         run: |
           chmod +x "$P/tools/push-guard.sh"
           "$P/tools/push-guard.sh" "$RANGE"
+      - name: M3 guard (part 1 only; an M3-only PR changes no file M2 is still changing, tools/m2-hot-files.txt)
+        # Founder 4 Nov ~11:30 IST: M3 runs in parallel only on M3 files, so no work is thrown away. Title and body come in
+        # as environment values, never pasted into the script.
+        if: matrix.shard == 1
+        env: { PR_TITLE: "${{ github.event.pull_request.title }}", PR_BODY: "${{ github.event.pull_request.body }}" }
+        run: bash "$P/tools/m3-guard.sh" "$RANGE"
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
