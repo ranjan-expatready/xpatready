@@ -1,8 +1,8 @@
 // S6 slice 1b in the browser (screens lane; P-149 one door, P-121, P-123; C11.13, C11.14): To review's Proposals row
 // opens the review queue; a group shows Ready to accept · Check · Decide; Ready AI items are accepted together with one
-// Undo, a rules item landing on the library never; the side panel shows both readings, IRCC's quote and the rules, and
-// takes a reject (reason needed) or the checker's reading; the second person approves the batch together, never its
-// decider. Items enter through the door (tests/seed_proposals.ts); no AI call (US$0). Screenshots into
+// Undo, a rules item landing on the library never, and (P-305) only clean reuse: a new answer list is accepted on its
+// own; the side panel shows both readings, IRCC's quote and the rules, and takes a reject (reason needed) or the
+// checker's reading; the second person approves a decision of several together, never its decider. Items enter through the door (tests/seed_proposals.ts); no AI call (US$0). Screenshots into
 // product/screens/W1-shared-library/screenshots/slice1b/, axe (WCAG 2.2 AA) on the queue, the panel and the batch page.
 //   zsh studio/tools/isolated.sh screens_queue 4445 start && node studio/tests/check_s6_queue_browser.cjs 4445 xr_studio_screens_queue
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
@@ -76,7 +76,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await band("ready").getByRole("button", { name: "Choose all 2" }).click();
     await band("ready").getByRole("button", { name: "Accept 2 items" }).click(); await settle();
     const batch = sql(`select batch_id from proposal_item where id = '${ids.ready1}'`);
-    step("C11.14: accepted again; both landed as new library items waiting for a second person", sql(`select count(*) from library_change where batch_id = '${batch}' and status = 'WAITING'`) === "2");
+    step("C11.14 (P-305): accepted again; both record the library item they reuse, and nothing new waits for a second person", sql(`select string_agg(decided_key, ',' order by decided_key) from proposal_item where batch_id = '${batch}' and status = 'accepted'`) === [...ids.reused].sort().join(",") && sql(`select count(*) from library_change where batch_id = '${batch}'`) === "0");
 
     // The side panel: both readings, the quote, the rules; reject needs a reason; the checker's reading
     await band("decide").getByRole("button", { name: "Open Name at birth" }).click();
@@ -105,8 +105,20 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await p.getByRole("dialog").getByRole("button", { name: "Reject" }).click(); await settle();
     step("C11.14: a Check item is rejected with its reason; the producer can learn from it", sql(`select status || '|' || decision_reason from proposal_item where id = '${ids.check}'`) === "rejected|Height is not asked on this form");
 
-    // Grouped second-person approval
-    await p.goto(`${BASE}/review/batch/${batch}`); await settle();
+    // P-305: two Ready new answer lists (another edition) have no checkbox: each is accepted on its own.
+    const ED3 = "IMM 3333 (02-2026)";
+    const lists = JSON.parse(execFileSync(path.join(STUDIO, "node_modules", ".bin", "tsx"), ["--tsconfig", path.join(STUDIO, "api", "tsconfig.json"), path.join(STUDIO, "tests", "seed_proposals.ts"), DB, ED3, "lists"], { encoding: "utf8" }).trim().split("\n").pop()).lists;
+    await p.goto(`${BASE}/review/proposals?group=${encodeURIComponent(`edition:${ED3}`)}`); await settle();
+    const why = ((await api(`/review/proposals?group=${encodeURIComponent(`edition:${ED3}`)}`, { actor: "user-C" })).body?.group?.bands.ready ?? []).map((x) => x.bulk_why);
+    step("C11.14 fail (P-305): two Ready new answer lists have no checkbox; each says it is decided on its own", (await band("ready").locator("tbody tr").count()) === 2 && (await band("ready").getByRole("checkbox").count()) === 0 && why.length === 2 && why.every((w) => /new item to the shared library/.test(w ?? "")), JSON.stringify(why));
+    const one = await api("/review/proposals/decide", { method: "POST", actor: "user-C", data: { ids: [lists[0]], action: "accept" } });
+    const two = await api("/review/proposals/decide", { method: "POST", actor: "user-C", data: { ids: [lists[1]], action: "accept" } });
+    step("C11.14 pass (P-305): each list is accepted on its own, as its own decision", one.status === 201 && two.status === 201 && one.body.batchId !== two.body.batchId);
+    // Grouped second-person approval: To review no longer makes a decision of several library changes (P-305: new items and conditions are each accepted on their own), but the
+    // batch page still serves those decided before it; one is made here from the two single accepts.
+    const group = one.body.batchId;
+    sql(`update library_change set batch_id = '${group}' where batch_id = '${two.body.batchId}'; update proposal_item set batch_id = '${group}' where id = '${lists[1]}'`);
+    await p.goto(`${BASE}/review/batch/${group}`); await settle();
     step("C11.14 fail: the person who accepted them sees why they cannot approve, and no Approve button", /You accepted these proposals/.test(await p.locator("main").innerText()) && (await p.getByRole("button", { name: /^Approve/ }).count()) === 0);
     await as("user-B");
     await go("/review?kind=library_change");
@@ -119,7 +131,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await axe("the batch page");
     await p.getByRole("button", { name: "Approve 2 items" }).click();
     await p.waitForURL(/\/review(\?|$)/); await settle();
-    step("C11.14: the second person approves both together, each through the same guard", sql(`select string_agg(status, ',') from library_change where batch_id = '${batch}'`) === "APPROVED,APPROVED");
+    step("C11.14: the second person approves both together, each through the same guard", sql(`select string_agg(status, ',') from library_change where batch_id = '${group}'`) === "APPROVED,APPROVED");
 
     // Narrower screen
     await as("user-C"); await p.setViewportSize({ width: 1024, height: 768 });

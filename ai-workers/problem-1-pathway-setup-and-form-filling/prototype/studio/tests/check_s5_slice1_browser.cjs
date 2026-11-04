@@ -72,7 +72,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // ======================================================== Forms: the line drawer (C11.6, M1)
   await go("forms");
   const rows = await p.locator("[data-line]").count();
-  step("C1.6: the Forms tab lists each line with who, only if, filed as and the library edition", rows === 8 && /PDF only/.test(await p.locator("[data-filing]").innerText()), rows);
+  // C11.11 (QA-101): six lines; the checklists IMM 5488 and IMM 5905 are sources (the Sources line below), never lines.
+  step("C1.6: the Forms tab lists each line with who, only if, filed as and the library edition", rows === 6 && /PDF only/.test(await p.locator("[data-filing]").innerText()), rows);
   // Early-look fix 1: each form listed once: its reading status and last step are in its row; no second list of forms.
   const row1295 = await p.locator('[data-line="IMM 1295"]').innerText();
   step("fix 1: each form's reading status and last step are in its own row; no second list repeats the forms", /In the library/.test(row1295) && /Read today/.test(row1295) && await p.locator("[data-reading]").count() === 0 && (await panel().innerText()).split("IMM 1295 (09-2023)").length <= 3, row1295.replace(/\s+/g, " ").slice(0, 160));
@@ -100,18 +101,18 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await drawer.getByPlaceholder("Any age").type("150");
   step("C11.6 fail: the age field takes two digits at most (150 cannot be typed)", (await drawer.getByPlaceholder("Any age").inputValue()) === "15");
   await drawer.getByRole("button", { name: "Cancel" }).click();
-  await p.getByRole("button", { name: "Change IMM 5488" }).click();
+  await p.getByRole("button", { name: "Change IMM 1295" }).click();
   await drawer.getByRole("radio", { name: "Only if" }).check();
   await drawer.getByLabel("In plain words").fill("Has a representative");
   await drawer.getByRole("button", { name: "Save to draft" }).click();
   await drawer.waitFor({ state: "hidden" }); await settle();
-  await p.locator('[data-line="IMM 5488"] [data-no-rule]').waitFor({ timeout: 15000 }).catch(() => {});
-  step("M1: 'Only if' in words with no rule shows 'No rule yet' on the row and a notice that release waits", await p.locator('[data-line="IMM 5488"] [data-no-rule]').count() === 1 && /in words only/.test(await panel().innerText()));
+  await p.locator('[data-line="IMM 1295"] [data-no-rule]').waitFor({ timeout: 15000 }).catch(() => {});
+  step("M1: 'Only if' in words with no rule shows 'No rule yet' on the row and a notice that release waits", await p.locator('[data-line="IMM 1295"] [data-no-rule]').count() === 1 && /in words only/.test(await panel().innerText()));
   await state("forms-no-rule");
 
   // ======================================================== Preview by person (C4.3)
   await go("preview", "?family=family2&person=principal");
-  const nr = p.locator('[data-preview-form="IMM 5488"]');
+  const nr = p.locator('[data-preview-form="IMM 1295"]');
   step("M1: Preview says 'Cannot tell yet: no rule' for the words-only form", /Cannot tell yet: no rule/.test(await nr.innerText().catch(() => "")));
   step("C4.3: Preview shows the person chips, what the person is asked, documents and forms", await p.locator("[data-person-chip]").count() >= 4 && await p.locator("[data-preview-questions]").count() === 1 && /Documents \(\d+\)/.test(await panel().innerText()));
   await state("preview");

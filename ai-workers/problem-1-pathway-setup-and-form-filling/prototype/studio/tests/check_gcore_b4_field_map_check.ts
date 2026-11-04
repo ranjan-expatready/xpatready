@@ -12,7 +12,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { compareMaps, mapRules, type MapField } from "../engine/field-map-rounds.ts";
+import { claimedTwice, compareMaps, formWords, mapRules, type MapField } from "../engine/field-map-rounds.ts";
 import { checkerJob, editionParts, FIELD_MAP_CHECK } from "../api/src/field-map-check.ts";
 import { roundJob, RUNS, StepRunner } from "../api/src/rounds.ts";
 import { PROTOTYPE, SOLUTION } from "../api/src/core.ts";
@@ -40,9 +40,12 @@ const answer = JSON.parse(draft.raw_output) as { form_edition: string; canonical
 const used = [...new Set(answer.entries.filter((e) => e.outcome === "mapped" && e.fact).map((e) => e.fact!))];
 const RETYPED = used.find((k) => answer.canonical_fields.find((c) => c.id === k)?.value_type === "text")!;
 const DROPPED = used.find((k) => k !== RETYPED && /^person\./.test(k))!;
+// QA-191: one more field the checker agrees on in every way but quotes words not printed on the form: "na", a part of the
+// printed word "name" (review M1: any letters inside a printed word were enough with a plain substring match).
+const MISQUOTED = used.find((k) => k !== RETYPED && k !== DROPPED && answer.canonical_fields.find((c) => c.id === k)?.value_type === "text")!;
 const checkAnswer = { ...answer,
   canonical_fields: answer.canonical_fields.filter((c) => c.id !== DROPPED).map((c) => (c.id === RETYPED ? { ...c, value_type: "date" } : c)),
-  entries: answer.entries.map((e) => (e.fact === DROPPED ? { ...e, outcome: "unresolved", fact: null, transform: null, unresolved_reason: "The checker could not tell whose fact this is." } : e)) };
+  entries: answer.entries.map((e) => (e.fact === DROPPED ? { ...e, outcome: "unresolved", fact: null, transform: null, unresolved_reason: "The checker could not tell whose fact this is." } : e.fact === MISQUOTED ? { ...e, evidence_quote: "na" } : e)) };
 
 (async () => {
   // ───────────── 1. Blind: the checker job reads only the inventory, with the checker prompt, never the draft's answer
@@ -87,6 +90,23 @@ const checkAnswer = { ...answer,
   const paths = new Set(["x"]);
   ok("P-121 rules pass: a library-shaped key whose form fields are on the form", mapRules(f("person.a", "text", ["x"]), paths).every((r) => r.passed));
   ok("P-121 rules fail: a key of another shape, or a form field not on the form, fails with its reason", !mapRules(f("Person A", "text", ["x"]), paths)[0].passed && /not on the form/.test(mapRules(f("person.a", "text", ["z"]), paths)[1].why ?? ""));
+  // QA-191 (P-121: the rules run on both rounds: quote found in its source, duplicates, type): pure, a pass and a fail each.
+  const words = formWords([{ caption: "Family name (surname)", heading: "Personal details", tooltip: null }]);
+  const more = (quote: string | null, twice = new Set<string>()) => ({ quote, words, claimedTwice: twice, valueTypes: new Set(["text", "date"]) });
+  const byRule = (rs: { rule: string; passed: boolean }[], name: string) => rs.find((r) => r.rule === name)?.passed;
+  ok("QA-191 pass: a quote printed on the form, a known kind of answer and form fields no other field fills pass the extra rules", mapRules(f("person.a", "text", ["x"]), paths, more("family name, Surname")).every((r) => r.passed));
+  ok("QA-191 fail: a quote that is not printed on the form fails, and so does no quote", byRule(mapRules(f("person.a", "text", ["x"]), paths, more("zq")), "quote_on_the_form") === false && byRule(mapRules(f("person.a", "text", ["x"]), paths, more(null)), "quote_on_the_form") === false);
+  ok("QA-191 fail (review M1): a part of a printed word is not a quote of the form (\"na\", \"e\", \"ily nam\" inside \"Family name\")", ["na", "e", "ily nam"].every((q) => byRule(mapRules(f("person.a", "text", ["x"]), paths, more(q)), "quote_on_the_form") === false));
+  ok("QA-191 pass (review m1): a box's printed choice is a quote of the form", byRule(mapRules(f("person.a", "text", ["x"]), paths, { ...more("the province of Quebec"), words: formWords([{ caption: "Province", options: [["The province of Quebec", "QC"], ["Ontario", "ON"]] }]) }), "quote_on_the_form") === true);
+  // Devin on #728: a quote runs within one printed text, never from one caption into the next; a choice list the box
+  // references (options_resolved, options empty) is printed too.
+  const two = formWords([{ caption: "Family name", heading: null, tooltip: null }, { caption: "Date of birth", heading: null, tooltip: null }]);
+  ok("QA-191 fail (Devin on #728): words that run from one caption into the next are not a quote of the form", byRule(mapRules(f("person.a", "text", ["x"]), paths, { ...more("Family name Date of birth"), words: two }), "quote_on_the_form") === false && byRule(mapRules(f("person.a", "text", ["x"]), paths, { ...more("Date of birth"), words: two }), "quote_on_the_form") === true);
+  ok("QA-191 pass (Devin on #728): a choice from the box's resolved list is a quote of the form", byRule(mapRules(f("person.a", "text", ["x"]), paths, { ...more("Annulled marriage"), words: formWords([{ caption: "Marital status", options: null, options_resolved: [["Annulled Marriage", "09"], ["Single", "02"]] }]) }), "quote_on_the_form") === true);
+  ok("QA-191 fail: a kind of answer the library does not know fails", byRule(mapRules(f("person.a", "colour", ["x"]), paths, more("Family name")), "kind_of_answer_known") === false);
+  const twice = claimedTwice([f("person.a", "text", ["x"]), f("person.b", "text", ["x"])]);
+  ok("QA-191 fail: a form field filled by two fields of the same round fails for both (duplicates)", byRule(mapRules(f("person.a", "text", ["x"]), paths, more("Family name", twice)), "no_form_field_twice") === false && twice.size === 1);
+  ok("QA-191: without the form's words the two shape rules are unchanged (callers that pass none)", mapRules(f("person.a", "text", ["x"]), paths).length === 2);
   ok("G-CORE B4: an edition label is read into its code and edition, anything else is refused", editionParts(EDITION)?.code === "IMM 5257" && editionParts("IMM 5257 SCH1 (09-2023)")?.code === "IMM 5257 SCH1" && editionParts("no edition") === null);
 
   // ───────────── 2. On an isolated copy: a recorded checker run replays with the draft
@@ -108,6 +128,9 @@ const checkAnswer = { ...answer,
     const r1 = row(RETYPED), r2 = row(DROPPED);
     ok("P-121 fail: a field the checker reads as another kind of answer is Decide (Low) with both readings and both reasons", r1[0] === "differ" && r1[1] === "decide" && r1[2] === "true" && r1[3] === "true" && /draft reads it as text and the checker as date/.test(r1[4]), [RETYPED, r1]);
     ok("P-121 fail: a field the checker did not name is Decide with the reason, never Ready", r2[0] === "differ" && r2[1] === "decide" && /Only the draft round named/.test(r2[4]), [DROPPED, r2]);
+    const r3 = row(MISQUOTED);
+    ok("QA-191 fail: a field both rounds agree on, whose checker quote (\"na\", part of a printed word) is not a quote of the form, is never Ready; the reason says the checker round's quote is not on the form", r3[0] === "agreed" && r3[1] !== "ready" && /the checker round quoted \("na"\) are not printed on this form/.test(r3[4]), [MISQUOTED, r3]);
+    ok("QA-191 pass: the draft's quotes are checked against the form, not assumed (IMM 5257's are printed on it: quote_found true)", sql(`select count(*) from proposal_item where run_id = '${d.body?.id}' and (source->>'quoteFound')::boolean`) === sql(`select count(*) from proposal_item where run_id = '${d.body?.id}' and source is not null`) && Number(sql(`select count(*) from proposal_item where run_id = '${d.body?.id}' and exists (select 1 from jsonb_array_elements(rules) r where r->>'rule' = 'quote_on_the_form')`)) > 0);
     const ready = all.filter((x) => x[1] === "ready");
     ok("C11.14 AT-3 pass: High (Ready) only when both rounds agree and the rules ran and passed, and some are", ready.length > 0 && ready.every((x) => x[0] === "agreed" && Number(x[2]) >= 2) && Number(sql(`select count(*) from proposal_item where run_id = '${d.body?.id}' and confidence = 'ready' and exists (select 1 from jsonb_array_elements(rules) r where (r->>'passed')::boolean = false)`)) === 0, { ready: ready.length });
     ok("P-121: no live call was made (the checker round was replayed)", sql(`select coalesce(sum(cost_usd), 0)::numeric(10,2) from drafting_job where id = '${d.body?.id}'`) === "0.00");

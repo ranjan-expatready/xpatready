@@ -1,6 +1,7 @@
 // C11.14 — Every AI proposal has a draft round, an independent checker round and the rules check; High only when all
 // agree; To review offers Select all / Deselect all within a filter, bulk accept for High only with one Undo, each item
-// re-checked by the rule engine; Load sample replays proposals through the same path.
+// re-checked by the rule engine; Load sample replays proposals through the same path. P-296 (1) (3 Nov, tech lead on #661):
+// an AI-proposed new shared field is never accepted in bulk on either door; bulk is only for High reuse matches (AT-4).
 // Status (qa/CAPABILITIES.md, 1 Nov): Not built. What exists: the one queue (S6 slice 1b: Ready · Check · Decide, bulk
 // accept for Ready only, one Undo within 10 s, identity checked again at approval). Missing: the field-map step — the
 // only AI step that reaches the queue from the API today — runs one round with no checker and no rules ("one_round"), is
@@ -26,6 +27,7 @@
 // Exit: 0 all pass · 1 a check failed · 2 setup missing or refused (demo port or database, copy not reachable, sample).
 
 import { checkCopy, guard, needCombo, sqlFor, stop } from "./lib/pack1.ts";
+import { seedField } from "../tests/seed_library.cjs";
 const PORT = Number(process.argv[2] ?? 4574), DB = process.argv[3] ?? "xr_studio_acc_c1114";
 guard(PORT, DB); // before anything reads the database or calls the copy (never the demo)
 process.env.DATABASE_URL = `postgresql://xr_studio@127.0.0.1:54329/${DB}`;
@@ -78,7 +80,11 @@ const statusOf = (ids: string[]) => sql(`select string_agg(status, ',' order by 
   const g = q?.groups?.find((x: { id: string; title: string }) => /IMM 5257/.test(`${x.id} ${x.title}`));
   const gv = g ? (await call("GET", `/review/proposals?group=${encodeURIComponent(g.id)}`)).body?.group : null;
   const readyBand = gv?.bands?.ready ?? [];
-  ok("C11.14 AT-4 the field-mapping proposals are on To review in their bands, and the Ready ones can be ticked in bulk (no \"decided on its page\" exception)", !!g && readyBand.length > 0 && readyBand.every((x: { bulk_why: string | null }) => x.bulk_why === null), { group: g?.id ?? null, groups: (q?.groups ?? []).map((x: { id: string }) => x.id), ready: readyBand.length, why: readyBand[0]?.bulk_why });
+  // P-296 (1) (tech lead on #661): only High reuse matches are ticked together; a Ready field-map item that makes a new shared
+  // field (or is an unclear match) says it is decided on its own.
+  const newField = (id: string) => sql(`select (step = 'field_map' and coalesce(work->>'outcome', '') <> 'REUSE')::text from proposal_item where id = '${id}'`) === "true";
+  const tickable = readyBand.filter((x: { id: string }) => !newField(x.id));
+  ok("C11.14 AT-4 the field-mapping proposals are on To review in their bands; the Ready reuse matches can be ticked in bulk (no \"decided on its page\" exception) and a Ready new shared field says it is decided on its own (P-296 (1))", !!g && tickable.length > 0 && readyBand.every((x: { id: string; bulk_why: string | null }) => (newField(x.id) ? /decided on its own/.test(x.bulk_why ?? "") : x.bulk_why === null)), { group: g?.id ?? null, groups: (q?.groups ?? []).map((x: { id: string }) => x.id), ready: readyBand.length, tickable: tickable.length, why: readyBand[0]?.bulk_why });
 
   // ── the queue's bulk rules, on items written through the door
   const { Db } = await import("../api/src/core.ts");
@@ -95,33 +101,48 @@ const statusOf = (ids: string[]) => sql(`select string_agg(status, ',' order by 
       agreement: "agreed", confidence: "ready", reason: null, origin: "ai", identity: { key: P.identityKeyOf(payload as never, ""), near: [], nearReason: null }, relatesTo: null, revision: null, basis: "SAMPLE", ...over } as never;
   };
   const reading = (label: string, text: string) => ({ reading: text, payload: { kind: "field", label, aliases: [], meaning: `What ${label} means (Sample).`, valueType: "text", subject: "person", formBox: null }, from: "replay", runFile: "runs/acceptance.json", costUsd: 0 });
-  const [r1, r2, r3, rc, rd] = await P.insertProposals(db, ws, [field(`Acc ready one ${tag}`), field(`Acc ready two ${tag}`), field(`Acc ready three ${tag}`),
+  // P-299 (tech lead on #699): a new shared field is never accepted with others, so the High items accepted together are
+  // reuse matches of fields already in the library; the library-landing rules (an ADD waits for a second person; Undo
+  // removes it) stay proven by single accepts and tests/check_s6_p149.ts.
+  // The six load no library fields yet (field maps wait to be applied), so three are written as a source would write them
+  // (tests/seed_library.cjs: draft rows, Sample; no free add exists).
+  const slug = tag.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+  const libKeys = [1, 2, 3].map((n) => seedField(sql, { key: `person.acc_reuse_${slug}_${n}`, meaning: `A field this check reuses, number ${n} (Sample).`, review: false }) as string);
+  const reuseOf = (key: string) => ({ reuse: { match: "reuse", existingKey: key } });
+  const [r1, r2, r3, rc, rd] = await P.insertProposals(db, ws, [field(`Acc ready one ${tag}`, reuseOf(libKeys[0])), field(`Acc ready two ${tag}`, reuseOf(libKeys[1])), field(`Acc ready three ${tag}`, reuseOf(libKeys[2])),
     field(`Acc check one ${tag}`, { confidence: "check", reason: "A rule failed: the quote was not found in the file.", rules: [{ rule: "quote found", passed: false, why: "Not in the file." }] }),
     field(`Acc decide one ${tag}`, { confidence: "decide", agreement: "differ", reason: "The two readings differ.", rounds: { draft: reading(`Acc decide one ${tag}`, "Family name of the applicant"), check: reading(`Acc decided ${tag}`, "Surname as on the passport") } })]);
-  const [twin] = await P.insertProposals(db, ws, [field(`Acc ready one ${tag}`)]); // same identity as r1, written before r1 lands
+  // AT-10: a reuse of a field that is not (or no longer) in the library, Ready when proposed.
+  const [gone] = await P.insertProposals(db, ws, [field(`Acc gone one ${tag}`, reuseOf(`person.acc_gone_${tag.toLowerCase().replace(/[^a-z0-9]/g, "")}`))]);
+  // P-299: a High new shared field of an edition draft.
+  const [newOne] = await P.insertProposals(db, ws, [field(`Acc new one ${tag}`)]);
   const view = (await call("GET", `/review/proposals?group=${encodeURIComponent(`edition:${ED}`)}`)).body?.group;
   const band = (b: string) => (view?.bands?.[b] ?? []) as { id: string; bulk_why: string | null; readings?: any }[]; // eslint-disable-line @typescript-eslint/no-explicit-any
-  ok("C11.14 AT-5 Select all within a filter: the group answers every item of each band (Ready, Check, Decide) with whether it may be ticked in bulk and why not", band("ready").length === 4 && band("check").length === 1 && band("decide").length === 1 && band("ready").every((x) => x.bulk_why === null) && !!band("check")[0]?.bulk_why && !!band("decide")[0]?.bulk_why, { ready: band("ready").length, check: band("check")[0]?.bulk_why, decide: band("decide")[0]?.bulk_why });
+  const readyReuse = band("ready").filter((x) => [r1, r2, r3, gone].includes(x.id)), readyNew = band("ready").find((x) => x.id === newOne);
+  ok("C11.14 AT-5 Select all within a filter: the group answers every item of each band (Ready, Check, Decide) with whether it may be ticked in bulk and why not (a Ready reuse match may; a Ready new shared field may not, P-299)", band("ready").length === 5 && band("check").length === 1 && band("decide").length === 1 && readyReuse.length === 4 && readyReuse.every((x) => x.bulk_why === null) && /decided on its own/.test(readyNew?.bulk_why ?? "") && !!band("check")[0]?.bulk_why && !!band("decide")[0]?.bulk_why, { ready: band("ready").length, check: band("check")[0]?.bulk_why, decide: band("decide")[0]?.bulk_why });
   ok("C11.14 AT-6 a disagreement between the rounds is Decide (Low) and shows both readings", band("decide")[0]?.readings?.draft?.text === "Family name of the applicant" && band("decide")[0]?.readings?.check?.text === "Surname as on the passport", band("decide")[0]?.readings);
   let r = await call("POST", "/review/proposals/decide", { ids: [r2, rc], action: "accept" }, "user-C");
   const r0 = await call("POST", "/review/proposals/decide", { ids: [r2, rd], action: "accept" }, "user-C");
   ok("C11.14 AT-7 refusal: a bulk accept with a Check or a Decide item is refused (409, says why) and nothing is accepted", r.status === 409 && /Only Ready items/.test(words(r)) && r0.status === 409 && statusOf([r2, rc, rd]) === "waiting,waiting,waiting", [words(r), r0.status]);
+  r = await call("POST", "/review/proposals/decide", { ids: [r2, newOne], action: "accept" }, "user-C");
+  ok("C11.14 AT-7 refusal (P-299): a bulk accept with a High new shared field of an edition draft is refused (409, says it is decided on its own) and nothing is accepted", r.status === 409 && /decided on its own/.test(words(r)) && statusOf([r2, newOne]) === "waiting,waiting", [r.status, words(r)]);
   r = await call("POST", "/review/proposals/decide", { ids: [r2, r3], action: "accept" }, "user-P");
   const rn = await call("POST", "/review/proposals/decide", { ids: [r2, r3], action: "accept" }, null);
   ok("C11.14 AT-7 refusal: a client (403) or nobody (401) cannot accept; nothing changes", r.status === 403 && rn.status === 401 && statusOf([r2, r3]) === "waiting,waiting", [r.status, rn.status]);
   r = await call("POST", "/review/proposals/decide", { ids: [r2, r3], action: "accept" }, "user-C");
   const batch = r.body?.batchId;
-  ok("C11.14 AT-8 two High items are accepted together as one batch; each lands on the library waiting for a second person", r.status === 201 && r.body.items?.length === 2 && sql(`select count(*) from library_change where batch_id='${batch}' and status='WAITING'`) === "2", r.body);
+  const libRows = () => sql("select (select count(*) from canonical_field) || '|' || (select count(*) from library_change)");
+  ok("C11.14 AT-8 two High reuse matches are accepted together as one batch; each records the library field it reuses and adds nothing to the library (P-120)", r.status === 201 && r.body.items?.length === 2 && !!batch && r.body.items.map((x: { landedAs: string | null }) => x.landedAs).sort().join() === [libKeys[1], libKeys[2]].sort().join() && sql(`select count(*) from library_change where batch_id='${batch}'`) === "0", r.body);
+  const lib0 = libRows();
   // Another person who holds the review duty (the configuration author also reviews), so the refusal is about who decided,
   // not about the role.
   r = await call("POST", `/review/proposals/undo/${batch}`, undefined, "user-A");
   ok("C11.14 AT-9 refusal: only the person who decided can Undo the batch: another reviewer (the configuration author, who holds the review duty) is refused (403); it stays accepted", r.status === 403 && statusOf([r2, r3]) === "accepted,accepted", { status: r.status, m: words(r).slice(0, 160) });
   r = await call("POST", `/review/proposals/undo/${batch}`, undefined, "user-C");
   const again = await call("POST", `/review/proposals/undo/${batch}`, undefined, "user-C");
-  ok("C11.14 AT-9 one Undo puts the whole batch back on the queue as proposed, and its library rows are removed; the same Undo again is refused (404 or 409, in words)", r.status < 300 && statusOf([r2, r3]) === "waiting,waiting" && sql(`select count(*) from library_change where batch_id='${batch}' and status='WAITING'`) === "0" && [404, 409].includes(again.status) && words(again).length > 5, [r.status, again.status, words(again)]);
-  r = await call("POST", "/review/proposals/decide", { ids: [r1], action: "accept" }, "user-C");
-  r = await call("POST", "/review/proposals/decide", { ids: [twin, r2], action: "accept" }, "user-C");
-  ok("C11.14 AT-10 each item in a bulk accept is checked again by the rules at approval: one now in the library (added since it was proposed) refuses the batch in words, nothing of it is accepted", r.status === 409 && /already in the library/.test(words(r)) && statusOf([twin, r2]) === "waiting,waiting", { status: r.status, m: words(r) });
+  ok("C11.14 AT-9 one Undo puts the whole batch back on the queue as proposed, and the library is as it was; the same Undo again is refused (404 or 409, in words)", r.status < 300 && statusOf([r2, r3]) === "waiting,waiting" && libRows() === lib0 && [404, 409].includes(again.status) && words(again).length > 5, [r.status, again.status, words(again)]);
+  r = await call("POST", "/review/proposals/decide", { ids: [gone, r2], action: "accept" }, "user-C");
+  ok("C11.14 AT-10 each item in a bulk accept is checked again by the rules at approval: one that reuses a field not in the library refuses the batch in words, nothing of it is accepted", r.status === 409 && /not in the library/.test(words(r)) && statusOf([gone, r2]) === "waiting,waiting", { status: r.status, m: words(r) });
   ok("C11.14 AT-11 the whole check spent nothing (ledger unchanged)", (await ledger()) === ledger0, { ledger0, now: await ledger() });
   await db.$disconnect?.();
   console.log(`\n${pass} passed, ${fail} failed`);

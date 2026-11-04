@@ -2,7 +2,7 @@
 // six, then each DEMO.md row through the screens' services by the people who hold each duty. One check per row, and the
 // rules it must not get round: the author never approves their own library items or release, an off-list copy is
 // approved by a second person (X9a) and an older edition is never used, a held file whose edition cannot be read is never approved, an empty combination is never released, rows 7 and 17 say "not built yet"
-// in plain words, IMM 5257 waits for the paid run, no live AI call, Reset returns to blank. US$0.
+// in plain words, no form waits for a paid run (IMM 5645 replays from its saved parts), no live AI call, Reset returns to blank. US$0.
 //   zsh studio/tools/isolated.sh runtime_c101 4431 start && tsx studio/tests/check_c10_1_configured.ts 4431 xr_studio_runtime_c101
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -53,10 +53,11 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   ok("C10.1 row 1 fail: a held file whose edition cannot be read stays held and is not approved (Break M4); the only approved file is the copy", n(`select count(*) from intake_item where status = 'HELD' and outcome = 'held'`) === Number(/(\d+) official files? stays?/.exec(r("1").why ?? "")?.[1] ?? 0) && n(`select count(*) from approved_source`) === 1, r("1").why);
   // Rows 3–4: saved answers replayed (US$0), decided by the author with a reason, one edit and one return kept visible.
   const jobs = n(`select count(*) from drafting_job where kind = 'field_map' and mode = 'REPLAY'`);
-  // R-146 and QA-163: fifteen saved answers replay (IMM 5532's re-run, the Visitor visa's IMM 5257; check_queue_tx.ts) and
-  // exactly one form of the six, IMM 5645 (QA-163's new job, no saved run yet), waits for the paid run. A lost or
-  // mismatched replay lowers jobs and adds its form to the list, so both sides fail.
-  ok("C10.1 row 3: every saved AI field-map answer is replayed (US$0, the fifteen forms); IMM 5645 alone is listed as waiting for the paid run", jobs === 15 && r("3").status === "partial" && r("3").shows.startsWith(`${jobs} saved`) && /^1 forms have no saved AI answer and wait for Draft with AI, a paid run the founder approves: IMM 5645 \(01-2021\)\.$/.test(r("3").why ?? ""), r("3"));
+  // R-146, QA-163 and the C11.8 live run (#746): sixteen saved answers replay (IMM 5532's re-run, the Visitor visa's IMM
+  // 5257; check_queue_tx.ts), IMM 5645's from its four saved parts (check_forms_saved_parts.ts). IMM 5669 and IMM 0008 DEP
+  // (read since the C11.7 intake) wait for the paid run. A lost or mismatched replay lowers jobs and adds its form to the
+  // list, so both sides fail.
+  ok("C10.1 row 3: every saved AI field-map answer is replayed (US$0, the sixteen forms, IMM 5645 by its four saved parts); IMM 5669 and IMM 0008 DEP are listed as waiting for the paid run", jobs === 16 && r("3").status === "partial" && r("3").shows.startsWith(`${jobs} saved`) && /^2 forms have no saved AI answer and wait for Draft with AI, a paid run the founder approves: IMM 5669 \(05-2021\), IMM 0008 DEP \(10-2024\)\.$/.test(r("3").why ?? ""), r("3"));
   ok("C10.1 row 4: the author decides every replayed proposal with a reason, one edited and one returned, and the drafts are applied", n(`select count(*) from proposal_item where run_id is not null and status = 'waiting'`) === 0 && n(`select count(*) from proposal_item where choice = 'RETURNED' and decision_reason like 'Returned by the sample loader%'`) === 1 && n(`select count(*) from proposal_item where decision_reason like 'Edited by the sample loader%'`) === 1 && n(`select count(*) from drafting_job where kind = 'field_map' and status = 'APPLIED'`) === jobs, r("4").shows);
   ok("C10.1 row 4 fail: no proposal is decided without a person's name and reason", n(`select count(*) from proposal_item where choice is not null and (decided_by is null or coalesce(decision_reason, '') = '')`) === 0);
   // Row 5: every new library item approved by a second person, never by the author who accepted it.

@@ -16,8 +16,9 @@ import { join } from "node:path";
 import type { z } from "zod";
 import { GenerateCopy, LockCopy, LOCK_KINDS, notReady, type CaseForm, type CaseOnlineForm, type FormCopy } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
+import { pdfMapInUse } from "../../engine/programs.ts";
 import { caseView } from "../../engine/runtime/case.ts";
-import { changedFacts, changedGroups, copyOnlyForms, formCoverage, groupFacts, inputHash, markNothingRecorded, pdfForms, readiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
+import { changedFacts, changedGroups, copyOnlyForms, formCoverage, groupFacts, gateOf, inputHash, isGateFact, markNothingRecorded, pdfForms, readiness, type FormFact, type GatePlacement, type GroupFact } from "../../engine/runtime/forms.ts";
 import { answerSheetOnly, CHANNEL_WORDS, isBarcodeForm, NOT_FOR_FILING, type Channel } from "../../contracts/forms.ts";
 import { lineOf } from "../../engine/channels.ts";
 import type { BoxRow } from "../../engine/render.ts";
@@ -75,7 +76,7 @@ export function plainWhy(why: string | null | undefined): string {
 /** QA-165 (P-144, P-237): a validated copy counts only when the form's own Validate result had passed when it was read
  *  back (read_validated.py form_validation, kept in its read-back). A row recorded before QA-165 has no such result: it
  *  never counts as validated, and the person sends the validated file again (the copy view, `lock` and `file` alike). */
-const formPassed = (v: { readBack: unknown } | undefined) => (v?.readBack as { validation?: { passed?: boolean } } | null)?.validation?.passed === true;
+export const formPassed = (v: { readBack: unknown } | undefined) => (v?.readBack as { validation?: { passed?: boolean } } | null)?.validation?.passed === true;
 const NOT_FORM_CHECKED = "Read back before the form's own Validate result was checked: send the file you validated in Adobe again";
 /** QA-165 part 2: a form's field list, read once per file (the release's field map names it). */
 const inventories = new Map<string, { at: number; inv: Inventory }>();
@@ -91,8 +92,8 @@ const inventoryOf = (file: string): Inventory | null => {
 };
 /** QA-165 part 2 (P-237, P-238): the mandatory form fields a copy made now would leave empty, with why (engine/runtime/
  *  mandatory.ts), from the same value step a copy runs. Empty when the form has no PDF map or field list. */
-function fieldsOpen(s: Snap, form: string, boxes: BoxRow[], words: CaseWords = {}): OpenField[] {
-  const map = (s.field_maps as { form_number: string; channel?: string; inventory_file?: string; entries: { data_path: string; fact?: string | null; outcome?: string | null }[] }[]).find((m) => m.form_number === form && m.channel !== "ONLINE");
+export function fieldsOpen(s: Snap, form: string, boxes: BoxRow[], words: CaseWords = {}): OpenField[] {
+  const map = pdfMapInUse(s.field_maps as { form_number: string; form_edition?: string; channel?: string; inventory_file?: string; entries: { data_path: string; fact?: string | null; outcome?: string | null }[] }[], form); // P-32: the edition in use
   const inv = map?.inventory_file ? inventoryOf(map.inventory_file) : null;
   if (!map || !inv) return [];
   const { boxes: results, values } = formValues(s as unknown as Parameters<typeof formValues>[0], map, inv, boxes);
@@ -107,7 +108,7 @@ const VALIDATED_FILE = { name: "This copy's validated file", made: "read back", 
 /** P-65 (a), review M1, S2 (SA-1B-174): a form's fill trial counts for one form edition and one field map version
  *  (api/src/fill-trials.ts, the register samples/fill-trials.json, the verdict in evidence-lane/E1/<form>/STATUS.md).
  *  Not proven for this edition and map: copies are "Checked copy, not for filing" and cannot be locked. */
-export const trialOf = (s: Snap, form: string) => trialFor((s.field_maps as EditionMap[]).find((m) => m.form_number === form));
+export const trialOf = (s: Snap, form: string) => trialFor(pdfMapInUse(s.field_maps as EditionMap[], form)); // P-32: the trial of the edition in use
 
 @Injectable()
 export class CaseForms implements OnModuleInit {
@@ -139,7 +140,7 @@ export class CaseForms implements OnModuleInit {
     // QA-165 part 2 (review M-1, M-2 on #592): the case's own question words, and the groups settled as "none apply".
     const noneApply = new Map(view.sections.filter((x) => !!x.group && x.group.rows === 0 && !!x.group.none_apply?.value && x.group.none_apply.confirmed)
       .flatMap((x) => x.questions.map((q) => [`${x.subjectId}|${q.fact}`, `"${x.title}"`] as [string, string])));
-    const caseWords: CaseWords = { labelOf: (fact) => labels.get(fact), noneApply };
+    const caseWords: CaseWords = { labelOf: (fact) => labels.get(fact), noneApply, gateOf: (fact) => { const g = gateOf(s.placements as GatePlacement[], fact); return g ? labels.get(g) ?? g : undefined; } };
     const forms: CaseForm[] = [];
     for (const p of people.filter((x) => x.role !== "case")) {
       for (const form of [...pdf].sort()) {
@@ -149,8 +150,8 @@ export class CaseForms implements OnModuleInit {
         if (!applies && !mine.length) continue; // a form that stops applying keeps its copies in view (break M4)
         const channel = channelIn(s, form);
         forms.push({ form, title: titles.get(form) ?? form, subject_id: p.subjectId, person: p.label, applies, trial_passed: trialOf(s, form).passed, trial_why: trialOf(s, form).why, channel, for_filing: channel !== "ONLINE", needs_validate: needsValidate(s, form),
-          draft: { written_now: cov?.facts.length ?? 0, mapped: cov?.mapped ?? 0, unconfirmed: cov?.boxes.filter((b) => b.coverage === "answered on screen").length ?? 0 },
-          readiness: readiness(view, form, p.subjectId), fields_open: cov ? fieldsOpen(s, form, markNothingRecorded(cov.boxes, view), caseWords) : [], copies: mine.map((x) => this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, form, p.subjectId), channel === "ONLINE")) });
+          draft: { written_now: cov?.facts.filter((x) => !isGateFact(x)).length ?? 0, mapped: cov?.mapped ?? 0, unconfirmed: cov?.boxes.filter((b) => b.coverage === "answered on screen").length ?? 0 },
+          readiness: readiness(view, form, p.subjectId), fields_open: cov ? fieldsOpen(s, form, markNothingRecorded(cov.boxes, view, s.placements as GatePlacement[]), caseWords) : [], copies: mine.map((x) => this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, form, p.subjectId), channel === "ONLINE")) });
       }
     }
     // QA-40: a form filed Online is listed too (no PDF copy is made), with the people it applies to (P-113: the case
@@ -195,7 +196,7 @@ export class CaseForms implements OnModuleInit {
     const cov = formCoverage(s, people, answers, rows, form, subjectId);
     if (!cov || cov.applies === false) fail(`${form} does not apply to that person on this case.`, HttpStatus.UNPROCESSABLE_ENTITY);
     const view = caseView(s, people, answers, rows, "agent", new Date(), groups);
-    const stored: Stored = { facts: cov!.facts, boxes: markNothingRecorded(cov!.boxes, view), groups: groupFacts(view, form, subjectId) };
+    const stored: Stored = { facts: cov!.facts, boxes: markNothingRecorded(cov!.boxes, view, s.placements as GatePlacement[]), groups: groupFacts(view, form, subjectId) };
     let copy;
     try {
       copy = await this.db.$transaction(async (tx) => {
@@ -211,7 +212,7 @@ export class CaseForms implements OnModuleInit {
       const again = await this.db.formInstance.findFirst({ where: { caseId, idempotencyKey: b.idempotencyKey } }); // a simultaneous press won
       return this.answerFor(again!, form, subjectId);
     }
-    await this.audit.log(c.workspaceId, actor.id, "queued", "form copy", form, `${actor.name} asked for a new copy of ${form} for the ${ROLE[who!.role] ?? who!.role} on case ${short(caseId)} (${cov!.facts.length} confirmed facts)`);
+    await this.audit.log(c.workspaceId, actor.id, "queued", "form copy", form, `${actor.name} asked for a new copy of ${form} for the ${ROLE[who!.role] ?? who!.role} on case ${short(caseId)} (${cov!.facts.filter((x) => !isGateFact(x)).length} confirmed facts)`);
     this.enqueue([copy.id]);
     return { id: copy.id, status: copy.status, created: true };
   }

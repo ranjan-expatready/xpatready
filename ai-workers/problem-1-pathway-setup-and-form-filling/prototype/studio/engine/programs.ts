@@ -7,6 +7,7 @@ import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
 import { isFilingFact } from "./resolver.ts";
 import { STATUS_WORDS } from "../contracts/status-words.ts";
+import { waitsForMap } from "./setup-checklist.ts";
 
 type Participant = { role: string; label: string; min: number; max: number; applies?: boolean };
 /** The parts of a snapshot these rules read (the snapshot's own lists are untyped until the team's contract lands). */
@@ -71,7 +72,8 @@ export function missingItems(s: Snapshot, participants: Participant[], problems:
   if (roles.length) out.push(line("role_without_questions", `No questions yet for ${roles.join(", ")}.`, "Add questions", " (Configuration › Questions and sections)"));
   // How a form is filed: its own line.
   const isFiling = (p: Problem) => p.where === "Forms";
-  const filing = problems.filter((p) => p.level === "error" && isFiling(p));
+  // V3 B1: a form with no field map is the form_without_edition line above, never a second "cannot be filed" line.
+  const filing = problems.filter((p) => p.level === "error" && isFiling(p) && !waitsForMap(p));
   if (filing.length) { const cause = `${plural(filing.length, "form")} cannot be filed as set (first: ${filing[0].message})`; out.push({ code: "filing_problem", step: "Change how it is filed", cause, text: `${cause} Next step: change how ${filing.length === 1 ? "it is" : "they are"} filed (Overview › Forms), or add what it needs.` }); }
   // C11.12 BR-7: a role that may be an applicant with no filing mode, named with its step.
   const people = problems.filter((p) => p.level === "error" && p.where === "People");
@@ -141,6 +143,19 @@ export function compareEditions(a: { editionLabel: string; published?: string | 
 }
 /** The newest edition of a list (by compareEditions), or undefined. */
 export const newestEdition = <T extends { editionLabel: string; published?: string | null }>(list: T[]): T | undefined => [...list].sort((a, b) => compareEditions(b, a))[0];
+
+/** P-32 (the newest printed edition is the one in use): a form's PDF field map in use in a snapshot. A snapshot carries
+ *  every mapped PDF edition of a form (engine/snapshot.ts, oldest first; an answer key may test an older one), so a
+ *  reader that takes "the first" fills, counts or trials the oldest. The one rule for the fill (api/src/fill.ts
+ *  writeForm), the case's copies and trials (api/src/fill-case.ts), the case's coverage (engine/render.ts) and the Forms
+ *  tab (api/src/workspace.ts): the newest by its printed month and year (editionMonth); with the same printed date, the
+ *  later in the snapshot's order (it sorts by compareEditions, which breaks that tie by the file's date). Online maps are
+ *  never a PDF edition. Undefined when the form has no PDF map. */
+export function pdfMapInUse<M extends { form_number: string; form_edition?: string | null; channel?: string | null }>(maps: readonly M[], form: string): M | undefined {
+  let best: M | undefined;
+  for (const m of maps) if (m.form_number === form && m.channel !== "ONLINE" && (!best || editionMonth(m.form_edition) >= editionMonth(best.form_edition))) best = m;
+  return best;
+}
 
 /** "Needs work" (P-49, the default view): every combination firms cannot use yet (In setup, Not ready) and every one
  *  with a next step (AI proposals waiting, forms to add or draft, draft changes not yet released, a new form edition

@@ -10,6 +10,8 @@
 //   the same code with a newer edition (printed month and year) → "new_edition_held": never attached or used
 //     silently; it waits for the impact review (P-32, P-38; the review itself is Screen 02)
 //   the same code with an older edition → "older_edition_held": "Older edition: not used" (review #5)
+//   an identical file that is in the library only as an older edition (a newer one was accepted since, P-123) →
+//     "older_in_library": "Older edition: not used", naming the edition in use; never attached, never "Already in the library"
 //   a code and edition that cannot be read, or the same edition printed on a different file → "held" for a person
 //   a French version (same code and edition as the English one, "IMM 5257 (09-2023) F") → "held": never taken for the
 //     English edition, never approved into the library as one (PDF hardening, 26 Oct)
@@ -36,13 +38,37 @@ const run = promisify(execFile);
 const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
 export const MAX_FILES = 20, MAX_BYTES = 25 * 1024 * 1024;
 export type IntakeFile = { originalname: string; buffer: Buffer };
-export type IntakeOutcome = "in_library" | "added" | "attached" | "new_edition_held" | "older_edition_held" | "held" | "refused" | "failed";
+export type IntakeOutcome = "in_library" | "older_in_library" | "added" | "attached" | "new_edition_held" | "older_edition_held" | "held" | "refused" | "failed";
 export type IntakeResult = {
   file: string; outcome: IntakeOutcome; message: string; kind: string; code: string | null; title: string | null; edition: string | null; published: string | null; sha256: string | null;
   /** Set when the file was attached to the combination it was uploaded on. */
   attachmentId?: string; attachmentStatus?: string;
+  /** C11.7 (P-297 (2)): where the edition came from: printed next to the code, the form template's Version variable, or
+   *  the official source list (only when the file's SHA-256 is that entry's). */
+  editionFrom?: EditionFrom;
 };
+export type EditionFrom = "printed" | "form_template" | "manifest";
+type ManifestItem = { file: string; edition?: string; sha256: string };
+/** What the reader said about one file (tools/read_form_identity.py's JSON line). */
+type ReadId = { ok: boolean; kind?: string; code?: string | null; edition?: string; edition_label?: string; edition_from?: EditionFrom; error?: string; title?: string | null; published?: string | null; language?: string };
+
+/** C11.7 (P-297 (2)): a form whose code the reader found but whose edition it could not read. The official source list's
+ *  recorded edition is taken only when this exact file is that entry (same SHA-256) and the entry names the same code
+ *  with a plain "CODE (MM-YYYY)" edition; otherwise nothing is taken. A file whose code IS on the list under a different
+ *  checksum is "mismatched": refused, never held as if a person could approve it. Pure, so every path is tested alone. */
+export function editionFromManifest(id: ReadId, hash: string, items: ManifestItem[]): { use: ReadId } | { mismatch: ManifestItem } | null {
+  if (id.ok || !id.code || !/no edition date/.test(id.error ?? "")) return null;
+  const parse = (e?: string) => /^([A-Z]{2,4} \d{4}(?: [A-Z0-9]+)?) \((\d{2}-\d{4})\)$/.exec((e ?? "").trim());
+  const entry = items.find((i) => i.sha256 === hash);
+  const p = entry ? parse(entry.edition) : null;
+  if (entry && p && p[1] === id.code) return { use: { ...id, ok: true, edition: p[2], edition_label: `${p[1]} (${p[2]})`, edition_from: "manifest", language: "en" } };
+  if (entry) return null; // on the list, but its recorded edition is not a plain one for this code: a person decides
+  const listed = items.find((i) => parse(i.edition)?.[1] === id.code);
+  return listed ? { mismatch: listed } : null;
+}
 const FRENCH = "French-language version of an English edition";
+/** C11.7: the audit line says which way the edition was found (P-297 (2): "record which way was used"). */
+const EDITION_WORDS: Record<EditionFrom, string> = { printed: "code, title, edition and kind read from the file", form_template: "code, title and kind read from the file; the edition from the form template's own Version variable (none printed next to the code)", manifest: "code, title and kind read from the file; the edition from the official source list, because the file does not carry it and its SHA-256 is that entry's" };
 const KIND_WORD: Record<string, string> = { form: "form", checklist: "document checklist", guide: "guide", portal_screen: "saved portal screen", unknown: "file" };
 
 @Injectable()
@@ -65,7 +91,7 @@ export class Intake {
       results.push(forForm ? await this.forForm(actor, workspaceId, forForm, r) : r);
     }
     const n = (o: IntakeOutcome) => results.filter((r) => r.outcome === o).length;
-    return { results, summary: { files: results.length, in_library: n("in_library"), added: n("added"), attached: n("attached"), held: n("new_edition_held") + n("older_edition_held") + n("held"), refused: n("refused"), failed: n("failed") } };
+    return { results, summary: { files: results.length, in_library: n("in_library"), older_in_library: n("older_in_library"), added: n("added"), attached: n("attached"), held: n("new_edition_held") + n("older_edition_held") + n("held"), refused: n("refused"), failed: n("failed") } };
   }
 
   /** One file, never the whole batch: two uploads of the same file at the same moment race to one database record
@@ -148,6 +174,9 @@ export class Intake {
       if (!done.count) fail("Someone decided this file at the same moment. Refresh to see it.", HttpStatus.CONFLICT);
       // #300 m4: an approved older or new edition is set aside, not rejected as a source (its approval stays on record).
       const setAside = h.outcome !== "held";
+      // C9.1 break M4: the waiting AI proposals drafted for this held edition go with it; none can be accepted later.
+      const jobs = (await this.db.draftingJob.findMany({ where: { workspaceId: h.workspaceId, kind: "field_map_impact", detail: { path: ["held"], equals: id } }, select: { id: true } })).map((j) => j.id);
+      if (jobs.length) await this.db.proposalItem.updateMany({ where: { runId: { in: jobs }, status: "waiting" }, data: { status: "rejected", decidedBy: actor.id, decidedAt: new Date(), decisionReason: `The edition was set aside by ${actor.name}: ${body.note!.trim()}`.slice(0, 500) } });
       await this.audit.log(h.workspaceId, actor.id, setAside ? "set aside" : "rejected", "held file", h.code ?? h.fileName, setAside ? `${actor.name} set aside ${h.editionLabel ?? h.fileName} (an edition not used): ${body.note!.trim()}` : `${actor.name} rejected ${h.editionLabel ?? h.fileName} as a source: ${body.note!.trim()}`, undefined, h.combinationId ?? undefined);
       return { outcome: setAside ? "set aside" : "rejected" };
     }
@@ -265,6 +294,14 @@ export class Intake {
         await this.record(actor, workspaceId, combination?.id ?? null, name, null, hash, file.buffer.length, r, "HELD", "checksum not on approved source manifest");
         return r;
       }
+      // C2.4 AT-9: the library holds this file only as an older edition (a newer printed one was accepted since): it is said to
+      // be older and not used, naming the edition in use, and it is never attached as if it were the one in the library.
+      const inUse = same.channel === "ONLINE" ? undefined : newestEdition(await this.db.formEdition.findMany({ where: { workspaceId, govFormDefId: same.govFormDefId, channel: { not: "ONLINE" } }, select: { id: true, editionLabel: true, published: true } }));
+      if (inUse && inUse.id !== same.id && editionMonth(inUse.editionLabel) > editionMonth(same.editionLabel)) {
+        const older: IntakeResult = { file: name, outcome: "older_in_library", kind, code: same.form.formKey, title: same.form.displayName, edition: same.editionLabel, published: null, sha256: hash, message: `Older edition: not used. ${same.editionLabel} is kept in the library only as an older edition; the library uses ${inUse.editionLabel}. Nothing duplicated${combination ? `, and not attached to ${combination.label}` : ""}.` };
+        await this.record(actor, workspaceId, combination?.id ?? null, name, null, hash, file.buffer.length, older, "DONE");
+        return older;
+      }
       let r: IntakeResult = { file: name, outcome: "in_library", kind, code: same.form.formKey, title: same.form.displayName, edition: same.editionLabel, published: null, sha256: hash, message: `Already in the library: ${same.editionLabel}. Nothing duplicated.` };
       r = await attach(r);
       // Boxes already mapped: no AI needed. The person adds it with one click (the row's next step, "Add N forms from the
@@ -280,7 +317,18 @@ export class Intake {
     const stored = join(dir, `${hash.slice(0, 12)}-${name}`);
     writeFileSync(stored, file.buffer);
     const { stdout } = await run(PY, ["-I", join(STUDIO, "tools", "read_form_identity.py"), stored], { cwd: ROOT, timeout: 60_000 });
-    const id = JSON.parse(stdout.trim().split("\n").pop()!);
+    let id = JSON.parse(stdout.trim().split("\n").pop()!) as ReadId;
+    // C11.7 (P-297 (2)): no edition in the file → the official list's, only for exactly its file; a mismatched file is refused.
+    const listed = editionFromManifest(id, hash, manifest() as ManifestItem[]);
+    if (listed && "mismatch" in listed) {
+      const r: IntakeResult = { file: name, outcome: "refused", kind: id.kind ?? "unknown", code: id.code ?? null, title: id.title ?? null, edition: null, published: id.published ?? null, sha256: hash,
+        message: `Refused: we could not read the edition of ${id.code} from this file, and it is not the official ${listed.mismatch.file} on the source list (${listed.mismatch.edition}): its checksum is different. Nothing was added or attached. Upload the official PDF from IRCC; if this is a newer edition, it needs its own row on the source list first.` };
+      await this.record(actor, workspaceId, combination?.id ?? null, name, "", hash, file.buffer.length, r, "DONE", "edition not readable and checksum not the source list's file");
+      rmSync(stored, { force: true });
+      return r;
+    }
+    if (listed) id = listed.use;
+    const editionFrom: EditionFrom | undefined = id.ok && id.edition_label ? id.edition_from ?? "printed" : undefined;
     const read = { kind: id.kind ?? "unknown", code: id.code ?? null, title: id.title ?? null, edition: id.edition_label ?? null, published: id.published ?? null, sha256: hash };
 
     if (!id.ok) {
@@ -328,11 +376,13 @@ export class Intake {
     }
 
     // A form or checklist with a code and an edition read from the file.
-    const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: id.code } }, include: { editions: true } });
-    const sameLabel = await this.db.formEdition.findUnique({ where: { workspaceId_editionLabel: { workspaceId, editionLabel: id.edition_label } } });
+    // ok, with a code and an edition (the reader's or the source list's, above): said once for the type checker.
+    const known = id as ReadId & { code: string; edition_label: string };
+    const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: known.code } }, include: { editions: true } });
+    const sameLabel = await this.db.formEdition.findUnique({ where: { workspaceId_editionLabel: { workspaceId, editionLabel: known.edition_label } } });
     if (sameLabel?.sha256 === hash) throw Object.assign(new Error("same file added at the same moment"), { code: "P2002" }); // look again: in_library
     if (sameLabel) {
-      const r: IntakeResult = { file: name, outcome: "held", ...read, message: `Held for a person: ${id.edition_label} is already in the library from a different file. Check this is the official PDF; a changed form has a new edition date.` };
+      const r: IntakeResult = { file: name, outcome: "held", ...read, message: `Held for a person: ${known.edition_label} is already in the library from a different file. Check this is the official PDF; a changed form has a new edition date.` };
       await this.record(actor, workspaceId, combination?.id ?? null, name, stored, hash, file.buffer.length, r, "HELD", "same edition, different file");
       return r;
     }
@@ -340,25 +390,25 @@ export class Intake {
     const pdfEditions = (def?.editions ?? []).filter((e) => e.channel !== "ONLINE");
     if (pdfEditions.length) {
       const current = newestEdition(pdfEditions)!;
-      const newer = editionMonth(id.edition_label) > editionMonth(current.editionLabel);
+      const newer = editionMonth(known.edition_label) > editionMonth(current.editionLabel);
       const r: IntakeResult = newer
-        ? { file: name, outcome: "new_edition_held", ...read, message: `New edition: impact review needed. ${id.edition_label} is newer than the library's ${current.editionLabel}. It is held: not added to the library, not attached and not used until a person reviews what changed.` }
-        : { file: name, outcome: "older_edition_held", ...read, message: `Older edition: not used. ${id.edition_label} is not newer than the library's ${current.editionLabel}, so it is kept aside: not added to the library, not attached and not used.` };
+        ? { file: name, outcome: "new_edition_held", ...read, message: `New edition: impact review needed. ${known.edition_label} is newer than the library's ${current.editionLabel}. It is held: not added to the library, not attached and not used until a person reviews what changed.` }
+        : { file: name, outcome: "older_edition_held", ...read, message: `Older edition: not used. ${known.edition_label} is not newer than the library's ${current.editionLabel}, so it is kept aside: not added to the library, not attached and not used.` };
       await this.record(actor, workspaceId, combination?.id ?? null, name, stored, hash, file.buffer.length, r, "HELD", newer ? `Newer than the library's ${current.editionLabel}` : `Not newer than the library's ${current.editionLabel}`);
-      await this.audit.log(workspaceId, actor.id, "held", "form", id.code, `${actor.name} uploaded ${id.edition_label}: ${newer ? "held as a new edition for impact review" : "kept aside as an older edition, not used"} (the library has ${current.editionLabel})`, { sha256: hash }, combination?.id);
+      await this.audit.log(workspaceId, actor.id, "held", "form", known.code, `${actor.name} uploaded ${known.edition_label}: ${newer ? "held as a new edition for impact review" : "kept aside as an older edition, not used"} (the library has ${current.editionLabel})`, { sha256: hash }, combination?.id);
       return r;
     }
     const item = approved;
     const page = await this.db.officialDownload.findFirst({ where: { workspaceId, sha256: hash }, select: { formPageUrl: true, sourceUrl: true } });
     await this.db.$transaction(async (tx) => {
-      const d = def ?? (await tx.govFormDef.create({ data: { workspaceId, formKey: id.code, displayName: id.title || id.code, formKind: read.kind === "form" ? "data_form" : "document" } }));
-      await forgetDeletion(tx, workspaceId, id.code); // X5 slice c: a person added it back
+      const d = def ?? (await tx.govFormDef.create({ data: { workspaceId, formKey: known.code, displayName: known.title || known.code, formKind: read.kind === "form" ? "data_form" : "document" } }));
+      await forgetDeletion(tx, workspaceId, known.code); // X5 slice c: a person added it back
       // S4 round 6 (D18): where it came from (a person's upload, or the sample load) and the canada.ca page it matched.
-      await tx.formEdition.create({ data: { workspaceId, govFormDefId: d.id, editionLabel: id.edition_label, published: file.buffer.subarray(0, 5).toString("latin1") === "%PDF-" ? id.published ?? "" : "", officialFile: item?.file ?? null, sha256: hash, storedPath: stored.replace(`${ROOT}/`, ""), origin: via === "SAMPLE" ? "SAMPLE" : "UPLOADED", formPageUrl: page?.formPageUrl ?? null, sourceUrl: page?.sourceUrl ?? null, checkedAt: page ? new Date() : null } });
+      await tx.formEdition.create({ data: { workspaceId, govFormDefId: d.id, editionLabel: known.edition_label, published: file.buffer.subarray(0, 5).toString("latin1") === "%PDF-" ? known.published ?? "" : "", officialFile: item?.file ?? null, sha256: hash, storedPath: stored.replace(`${ROOT}/`, ""), origin: via === "SAMPLE" ? "SAMPLE" : "UPLOADED", formPageUrl: page?.formPageUrl ?? null, sourceUrl: page?.sourceUrl ?? null, checkedAt: page ? new Date() : null } });
       if (page?.formPageUrl && !d.formPageUrl) await tx.govFormDef.update({ where: { id: d.id }, data: { formPageUrl: page.formPageUrl } });
     });
-    await this.audit.log(workspaceId, actor.id, "created", "form", id.code, `${actor.name} added ${id.edition_label} (${KIND_WORD[read.kind]}) to the library; code, title, edition and kind read from the file`, { sha256: hash, approved_source: item?.approval ?? null, via }, combination?.id);
-    let r: IntakeResult = { file: name, outcome: "added", ...read, message: `${id.edition_label} added to the library as a new ${KIND_WORD[read.kind]} (read from the file).` };
+    await this.audit.log(workspaceId, actor.id, "created", "form", known.code, `${actor.name} added ${known.edition_label} (${KIND_WORD[read.kind]}) to the library; ${EDITION_WORDS[editionFrom ?? "printed"]}`, { sha256: hash, approved_source: item?.approval ?? null, via, edition_from: editionFrom ?? "printed" }, combination?.id);
+    let r: IntakeResult = { file: name, outcome: "added", ...read, editionFrom, message: `${known.edition_label} added to the library as a new ${KIND_WORD[read.kind]} (${editionFrom === "manifest" ? "edition from the official source list: the file does not print it, and its checksum is that entry's" : editionFrom === "form_template" ? "read from the file; the edition from the form's own template" : "read from the file"}).` };
     r = await attach(r);
     await this.record(actor, workspaceId, combination?.id ?? null, name, stored, hash, file.buffer.length, r, "DONE");
     return r;

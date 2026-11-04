@@ -1,0 +1,182 @@
+{
+ "file": "imm0008depe.pdf",
+ "sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+ "read_by": "prototype/p1/xfa_formats.py (the form's own XFA template: maxChars, picture clauses, validate scripts; no AI)",
+ "boxes_with_format": 39,
+ "boxes_unmatched": 0,
+ "boxes": {
+  "form1[0].Page1[0].AddDependant[0].q1[0].FamilyName[0]": {
+   "caption": "Family name(s) (exactly as shown on your passport or travel document)",
+   "max_chars": 100
+  },
+  "form1[0].Page1[0].AddDependant[0].q1[0].GivenName[0]": {
+   "caption": "Given name(s) (exactly as shown on your passport or travel document)",
+   "max_chars": 100
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q2[0].AliasName[0].AliasFamilyName[0]": {
+   "caption": "Family name(s)",
+   "max_chars": 100
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q2[0].AliasName[0].AliasGivenName[0]": {
+   "caption": "Given name(s)",
+   "max_chars": 100
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q3-4-5-6[0].UCI[0]": {
+   "caption": "UCI",
+   "max_chars": 10
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q7-8[0].DOB[0].DOBMM[0]": {
+   "caption": "MM",
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}"
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q7-8[0].DOB[0].DOBDD[0]": {
+   "caption": "DD",
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}"
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q7-8[0].PlaceBirthCity[0]": {
+   "caption": "City/Town",
+   "max_chars": 30
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q10[0].Other[0].Other[0]": {
+   "caption": "b) Other",
+   "max_chars": 30
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q11and12[0].q12[0].reason[0]": {
+   "caption": "b) Reason why dependant is non-accompanying",
+   "max_chars": 50
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q13[0].CurrentCOR[0].Row2[0].Other[0]": {
+   "caption": "",
+   "max_chars": 30
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q13[0].CurrentCOR[0].Row2[0].FromDate[0]": {
+   "caption": "",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q13[0].CurrentCOR[0].Row2[0].ToDate[0]": {
+   "caption": "",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q12[0].lastEntryDate[0]": {
+   "caption": "Date",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q12[0].PlaceOfEntry[0]": {
+   "caption": "Place",
+   "max_chars": 30
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row2[0].Other[0]": {
+   "caption": "",
+   "max_chars": 30
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row2[0].FromDate[0]": {
+   "caption": "",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row2[0].ToDate[0]": {
+   "caption": "",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row3[0].Other[0]": {
+   "caption": "",
+   "max_chars": 30
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row3[0].FromDate[0]": {
+   "caption": "",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row3[0].ToDate[0]": {
+   "caption": "",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q16[0].MaritalStatus[0].DateOfMarriage[0]": {
+   "caption": "Date",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q16[0].MaritalStatus[0].FamilyName[0]": {
+   "caption": "Family name(s)",
+   "max_chars": 100
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q16[0].MaritalStatus[0].GivenName[0]": {
+   "caption": "Given name(s)",
+   "max_chars": 100
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q17[0].PMFamilyName[0]": {
+   "caption": "Family name(s)",
+   "max_chars": 100
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q17[0].GivenName[0].PMGivenName[0]": {
+   "caption": "Given name(s)",
+   "max_chars": 100
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q17[0].FromDate[0]": {
+   "caption": "From",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].AddDependant[0].personalDetails[0].q17[0].ToDate[0].ToDate[0]": {
+   "caption": "To",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].AddDependant[0].Passport[0].PassportNum[0].PassportNum[0]": {
+   "caption": "Passport/Travel document number (exactly as shown on your passport or travel document)",
+   "max_chars": 20
+  },
+  "form1[0].Page1[0].AddDependant[0].Passport[0].IssueDate[0].IssueDate[0]": {
+   "caption": "Issue date",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].AddDependant[0].Passport[0].ExpiryDate[0]": {
+   "caption": "Expiry date",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].AddDependant[0].natID[0].natIDdocs[0].DocNum[0].DocNum[0]": {
+   "caption": "Document number",
+   "max_chars": 20
+  },
+  "form1[0].Page1[0].AddDependant[0].natID[0].natIDdocs[0].IssueDate[0].IssueDate[0]": {
+   "caption": "Issue date",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].AddDependant[0].natID[0].natIDdocs[0].ExpiryDate[0]": {
+   "caption": "Expiry date",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].AddDependant[0].educationOccupation[0].EducationOccupation[0].YearsOfedu[0]": {
+   "caption": "Number of years of education in total",
+   "max_chars": 2
+  },
+  "form1[0].Page1[0].AddDependant[0].educationOccupation[0].EducationOccupation[0].currentOccupation[0]": {
+   "caption": "Current occupation",
+   "max_chars": 50
+  },
+  "form1[0].Page1[0].AddDependant[0].educationOccupation[0].EducationOccupation[0].intendedOccupation[0]": {
+   "caption": "Intended occupation",
+   "max_chars": 50
+  },
+  "form1[0].Page1[0].declaration[0].Consent1[0].dateSigned[0]": {
+   "caption": "Date: YYYY-MM-DD",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Page1[0].declaration[0].ReaderInfo[0]": {
+   "caption": "readerInfo",
+   "max_chars": 20
+  }
+ }
+}

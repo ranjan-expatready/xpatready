@@ -115,7 +115,7 @@ function BandTable({ band, items, onOpen, picked, setPicked, bulk, max }: { band
         <Table dense label={`${BAND_WORDS[band]}: ${items.length}`} head={[band === "ready" ? <span className="sr-only">Choose</span> : "", "Proposal", "Kind", "Adds or reuses", band === "ready" ? "Reading" : "Why a person looks", ""]}>
           {items.map((p) => (
             <tr key={p.id} data-id={p.id}>
-              <td className="w-8">{band === "ready" ? (p.bulk_why ? <Tip tip={p.bulk_why}><span className="text-xs text-text-muted">—</span></Tip>
+              <td className="w-8">{band === "ready" ? (p.bulk_why ? <Tip tip={p.bulk_why} focusable><span className="text-xs text-text-muted" role="img" aria-label="Cannot be ticked with others">—</span></Tip>
                 : <input type="checkbox" className="size-4 accent-[var(--color-primary)]" aria-label={`Choose ${p.title}`} checked={picked.has(p.id)} onChange={() => toggle(p.id)} />) : null}</td>
               <td className="max-w-[22rem]"><span className="font-medium">{p.title}</span>{p.meaning ? <span className="block truncate text-xs text-text-muted">{p.meaning}</span> : null}</td>
               <td><Pill>{p.kind_word}</Pill>{p.origin === "rules" ? <Pill className="ml-1" tone="info">Rules</Pill> : <Pill className="ml-1" tone="ai">AI</Pill>}</td>

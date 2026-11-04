@@ -75,7 +75,7 @@ const rowOf = (p: Page, form: RegExp, attempt?: number) => p.locator("main table
       const said = (await rowOf(p, /IMM 5707/).first().locator("td").nth(4).innerText()).trim();
       ok(`C3.3 step 29 (${w}): IMM 5707's step says what went wrong in plain words (no code, path or stack)`, said.length > 10 && !TECH.test(said), said);
       ok(`C3.3 step 29 (${w}): IMM 5257's draft is kept and offered for review`, await rowOf(p, /IMM 5257/).first().getByRole("link", { name: "Review proposals" }).isVisible());
-      ok(`C3.3 step 29 (${w}): the next step is offered: Retry the 1 failed step only`, await p.getByRole("button", { name: /Retry 1 failed step$/ }).isVisible());
+      ok(`C3.3 step 29 (${w}): the next step is offered: Retry the 1 failed step only`, await p.getByRole("button", { name: /Retry 1 failed step$/ }).waitFor({ state: "visible", timeout: 5000 }).then(() => true, () => false)); // CI on #741: isVisible() did not wait for the button
       ok(`C3.3 (${w}): the page fits without sideways scroll`, await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), await p.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]));
       await p.screenshot({ path: join(SHOTS, `29-done-with-problems-${w}.png`), fullPage: true });
       if (w === 1440) await axe(p, "the failed run");

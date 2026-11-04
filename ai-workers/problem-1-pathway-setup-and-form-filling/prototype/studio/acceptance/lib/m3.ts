@@ -154,7 +154,9 @@ export type Prepare = {
   portal: string | null; version: string | number;
   filings: { id: string; combination: string; applicants: { subject: string; role: string; mode: string }[]; group: string; status: string; number?: string | null; waitsFor?: string | null }[];
   groups: { id: string; kind: string; filings: string[]; splittable: boolean }[];
-  items: { id: string; kind: "form" | "document" | "step"; form?: string; document_type?: string; step?: string; filing: string; subject: string; channel?: string; accepts?: string[]; signature?: string; signers?: string[]; state: string; neededBefore?: string; waitsFor?: string | null; copy_not_for_filing?: boolean; reason?: string }[];
+  items: { id: string; kind: "form" | "document" | "step"; form?: string; document_type?: string; step?: string; filing: string; subject: string; channel?: string; accepts?: string[]; signature?: string; signers?: string[]; state: string; neededBefore?: string; waitsFor?: string | null; copy_not_for_filing?: boolean; reason?: string;
+    /** C7.7 part 2: a Paper line's barcode page, its validated copy read back and its steps in order. */
+    barcode_page?: boolean; validated?: { copy: string; at: string; current: boolean } | null; steps?: { key: string; words: string; done: boolean | null; neededBefore?: string }[] }[];
   fees: { filing: string; subject?: string; payer?: string; line: string; amount: number; exempt?: boolean; reason?: string; source?: string }[];
   readiness: { filing: string; ready: boolean; blocks: { code: string; item?: string; words: string }[]; warns: { code: string; item?: string; words: string }[]; owes?: Record<string, unknown> }[];
 };

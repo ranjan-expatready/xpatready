@@ -76,13 +76,45 @@ export async function deriveJobs(): Promise<{ row: string; label: string; job: J
   } finally { await db.$disconnect(); }
 }
 
+/** C4.7 v2 (QA-162; Lead 3, 3 Nov): the batch word of the v2 PQR-picks pair, so its job ids never collide with the v1 jobs
+ *  above (jobIdFor hashes the batch word), while its draft and checker share one stem and so pair (rounds.ts pairOf). */
+export const BATCH_V2 = "track-a-v2";
+
+/** The C4.7 v2 pair exactly as the app's live rounds write it now: the current PQR_AI step (v2 prompts) over the guide and
+ *  the combination's question list (pqr-drafts.ts inputsOf). Needs a copy where Visitor visa asks its questions
+ *  (tests/runtime/setup_visitor_visa.ts); with no question asked it refuses, since the job would be v1's inputs. Also returns
+ *  the app's own plan worst case (PqrDrafts.worstUsd, what the Live plan states). */
+export async function deriveC47V2Jobs(): Promise<{ jobs: { row: string; label: string; job: Job }[]; planWorstUsd: number }> {
+  const { Db } = await import("../api/src/core.ts");
+  const { PqrDrafts, PQR_AI, inputsOf } = await import("../api/src/pqr-drafts.ts");
+  const db = new Db();
+  try {
+    const c = await db.combination.findFirst({ where: { combinationKey: COMBINATION, retiredAt: null } });
+    if (!c) throw new Error(`no ${COMBINATION} combination in this database: run Demo › Reset to the six on the copy first`);
+    const p = new PqrDrafts(db, null as never, null as never), g = await p.guide(c);
+    if (!g.input) throw new Error(`${g.code} is not among the official files the AI may read`);
+    if (!g.questions) throw new Error(`${COMBINATION} asks no question yet, so a v2 round would read the guide only: run tests/runtime/setup_visitor_visa.ts on the copy first`);
+    const ctx = { trail: g.trail, contextKey: c.combinationKey, inputs: inputsOf(g), batchId: BATCH_V2 };
+    const jobs = [false, true].map((isCheck) => ({ row: "C4.7", label: `PQR picks v2, ${isCheck ? "checker" : "draft"} round`, job: roundJob(PQR_AI, isCheck, ctx) as Job }));
+    return { jobs, planWorstUsd: p.worstUsd(g) };
+  } finally { await db.$disconnect(); }
+}
+
 export const jobText = (job: Job) => JSON.stringify(job, null, 1) + "\n";
 
 /** One job's costs from the code's own estimators, with no model call: the request it would send is built by the
  *  launcher's own builder (p2/prompt.ts buildRequest over the guard's admitted inputs). */
+/** P-296 (3): measured on the four C3.4 v1 rounds of 3 Nov (#669; their run files are kept in p2/runs/unused-2026-11-03/):
+ *  the form's inventory is denser than guide text (102,460 input tokens for 230,830 request bytes, 101,800 for 228,674),
+ *  and the form's draft stopped at its 8,000 output limit after 15 checks (about 530 tokens a check), while writing the
+ *  background page's question 4b. Used for "usual" only, never for a cap (the worst case is the runner's own bound). */
+export const MEASURED_C34 = { formTokensPerByte: 0.4446, formDraftOutputTokens: 12_000 };
+const isForm = (job: Job) => /^studio-masters-form-/.test(job.job_id);
 /** C3.4's usual output (an estimate, never a cap): each check carries a tree and two or three worked examples, so half the
- *  step's output limit rather than twice the who-can-be answer. */
-const usualOutputOf = (job: Job) => (/^studio-masters-/.test(job.job_id) ? Math.round(Number(job.settings.max_output_tokens) / 2) : MEASURED.outputTokens * 2);
+ *  step's output limit rather than twice the who-can-be answer; each of the form's rounds about 1.5 times the 8,000 the
+ *  draft wrote before it was cut (#669), the checker too, since v2 asks it to read every page as the draft does. */
+const usualOutputOf = (job: Job) => (isForm(job) ? MEASURED_C34.formDraftOutputTokens
+  : /^studio-masters-/.test(job.job_id) ? Math.round(Number(job.settings.max_output_tokens) / 2) : MEASURED.outputTokens * 2);
 
 export function costsOf(job: Job) {
   const admitted = admitRun({ inputs: { official_files: job.inputs }, settings: job.settings as never });
@@ -91,7 +123,7 @@ export function costsOf(job: Job) {
   const model = String(job.settings.model), out = Number(job.settings.max_output_tokens), attempts = Number(job.settings.max_attempts);
   const perAttempt = costUsd(model, inputTokenBound(JSON.stringify(req)), out);
   // One attempt; output at twice the measured who-can-be answer (a margin: picks and conditions each carry a quote and a reason).
-  const usual = costUsd(model, Math.round(bytes * measuredTokensPerByte()), usualOutputOf(job));
+  const usual = costUsd(model, Math.round(bytes * (isForm(job) ? MEASURED_C34.formTokensPerByte : measuredTokensPerByte())), Math.min(out, usualOutputOf(job)));
   return { request_bytes: bytes, per_attempt_worst_usd: perAttempt, worst_usd: perAttempt * attempts, usual_usd: usual, budget_usd: Number(job.settings.budget_usd), fits_budget: perAttempt * attempts <= Number(job.settings.budget_usd) + 1e-9, under_run_cap: perAttempt * attempts <= RUN_CAP_USD + 1e-9 };
 }
 
@@ -111,6 +143,21 @@ export function measuredTokensPerByte(): number {
 }
 
 const usd = (n: number) => `US$${n.toFixed(2)}`;
+
+if (import.meta.url === pathToFileURL(process.argv[1]).href && process.argv.includes("--c47-v2")) {
+  // C4.7 v2:  tsx … track-a-jobs.ts --c47-v2 [--write]   (a copy after Reset to the six and setup_visitor_visa.ts)
+  const { jobs, planWorstUsd } = await deriveC47V2Jobs();
+  let worst = 0, usual = 0;
+  console.log(`\nC4.7 v2 jobs for ${COMBINATION} (guide + question list; no model call; worst = the runner's reservation, usual = estimate):`);
+  for (const { label, job } of jobs) {
+    if (process.argv.includes("--write")) writeFileSync(join(JOBS, `${job.job_id}.json`), jobText(job));
+    const c = costsOf(job);
+    worst += c.worst_usd; usual += c.usual_usd;
+    console.log(`  C4.7 ${label}: ${job.job_id}${process.argv.includes("--write") ? " (written)" : ""}  worst ${usd(c.worst_usd)} (${job.settings.max_attempts} × ${usd(c.per_attempt_worst_usd)}; request ${c.request_bytes} bytes, output ≤ ${job.settings.max_output_tokens})  usual ~${usd(c.usual_usd)}  budget ${usd(c.budget_usd)}${c.fits_budget ? "" : "  ← ABOVE ITS BUDGET"}`);
+  }
+  console.log(`  total: worst ${usd(worst)}, usual ~${usd(usual)}; the app's Live plan states worst ${usd(planWorstUsd)} (PqrDrafts.worstUsd)`);
+  process.exit(0);
+}
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   if (process.argv.includes("--write")) {

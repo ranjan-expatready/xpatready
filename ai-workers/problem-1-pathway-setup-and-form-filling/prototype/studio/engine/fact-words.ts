@@ -1,11 +1,13 @@
 // QA-162 (C4.7, C4.11 step 5; P-227, P-76): which ONE question of a combination an AI round's short words name. An AI
 // round writes a fact in its own few words ("Purpose of visit", "Criminal record"); the combination asks it in the
 // library's words ("Purpose of the visit to Canada", key case.visit_purpose). Pure: no database, no AI.
-// The rule, in order (never guessed: two or more equally good questions → none, and the reason names them):
+// The rule, in order (never guessed: two or more equally good questions → none, and the reason names every one):
 //   W1 exact: the words equal a question's label, the last part of its key, one of its other names, or the key itself;
 //   W2 words (a pick of two meaningful words or more): every meaningful word of the pick (after plain-word normalising and the short synonym list below; the
 //      person's own role words like "spouse" dropped) is found in one question's label, key, question text or aliases;
-//      when several questions hold them all, the one whose key says nothing more than the pick wins, else none.
+//      when several questions hold them all, none (QA-194: the shorter key never wins; the person picks from the named ones);
+//      a lone holder whose key ends in "_from" or "_to" (or "_from_date", "_to_date") is refused when the pick says only the other end ("Intended stay
+//      to" never lands on the first day). "to" stays filler in prose ("Relationship to applicant"), so it never decides.
 //   A pick for the principal may name a question about the application itself (role "case": purpose of the visit, funds,
 //   dates), since the principal answers those; never another person's question.
 import type { FactSourceView } from "./sources.ts";
@@ -71,16 +73,16 @@ export function findFact(facts: FactSourceView[], role: string, asks: string, na
   if (!pick.length || said.length < 2) return { fact: null, why: "none", several: [] };
   const all = (f: FactSourceView) => { const have = new Set([f.label, lastPart(f.fact), ...(names.get(f.fact) ?? [])].flatMap(wordsOf)); return pick.every((w) => have.has(w)); };
   const hits = near.filter(all);
-  if (hits.length === 1) return { fact: hits[0], how: "words" };
-  if (!hits.length) return { fact: null, why: "none", several: [] };
-  // Several hold every word: the one whose key adds nothing to the pick ("visit purpose", not "visit purpose other").
-  const set = new Set(pick);
-  const tight = hits.filter((f) => wordsOf(lastPart(f.fact)).every((w) => set.has(w)));
-  return tight.length === 1 ? { fact: tight[0], how: "words" } : { fact: null, why: "several", several: hits };
+  // QA-194: the end a key names ("_to"/"_from") against the ends the pick says; the pick's own "to" is only ever a veto.
+  const said2 = new Set(want.split(" ")), end = (f: FactSourceView) => /_(to|from)(?:_date)?$/.exec(f.fact)?.[1];
+  const otherEnd = (f: FactSourceView) => { const e = end(f); return !!e && !said2.has(e) && said2.has(e === "to" ? "from" : "to"); };
+  if (hits.length === 1) return otherEnd(hits[0]) ? { fact: null, why: "none", several: [] } : { fact: hits[0], how: "words" };
+  // QA-194: several hold every word ("Purpose of visit": the purpose and its 'other' details) → none, every one named.
+  return hits.length ? { fact: null, why: "several", several: hits } : { fact: null, why: "none", several: [] };
 }
 
-/** The names a person sees for the questions a pick could be (at most three, then "and n more"). */
-export const listed = (fs: FactSourceView[]) => `${fs.slice(0, 3).map((f) => `"${f.label}"`).join(", ")}${fs.length > 3 ? ` and ${fs.length - 3} more` : ""}`;
+/** The names a person sees for the questions a pick could be: every one (QA-194: the person picks among them). */
+export const listed = (fs: FactSourceView[]) => fs.map((f) => `"${f.label}"`).join(", ");
 
 /** The other names of each fact on this combination: its question text where placed, and the library's aliases (P-65:
  *  the labels a field carries on forms and screens) when the caller has them. */

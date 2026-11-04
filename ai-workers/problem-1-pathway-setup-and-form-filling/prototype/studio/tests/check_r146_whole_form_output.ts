@@ -22,12 +22,15 @@ ok("R-146 fail (break m5): anything that is not an inventory with a list of fiel
 ok("R-146: parts keep their own limit (at most 64k), whatever the whole form gets", partOutputTokens(240) === 64_000 && partOutputTokens(60) === 22_000);
 
 // Every committed whole-form job written by ensureJobFile (template field-map.v2.md) carries what the rule gives its inventory.
+// Committed only (P-214 fix, 4 Nov): p2/jobs/.gitignore keeps part jobs and "studio-fieldmap-approved-*" jobs (written per
+// copy by a suite such as check_forms_demo.ts, pointing into its isolated copy) out of git, so they are not read here.
 const JOBS = join(PROTOTYPE, "p2", "jobs");
-const jobs = readdirSync(JOBS).filter((f) => /^studio-fieldmap-[a-z0-9-]+\.json$/.test(f) && !/-p\d+of\d+-/.test(f)).map((f) => ({ f, j: JSON.parse(readFileSync(join(JOBS, f), "utf8")) })).filter(({ j }) => j.template === "field-map.v2.md");
+const jobs = readdirSync(JOBS).filter((f) => /^studio-fieldmap-[a-z0-9-]+\.json$/.test(f) && !/-p\d+of\d+-/.test(f) && !f.startsWith("studio-fieldmap-approved-")).map((f) => ({ f, j: JSON.parse(readFileSync(join(JOBS, f), "utf8")) })).filter(({ j }) => j.template === "field-map.v2.md");
 const wrong = jobs.filter(({ j }) => { const r = wholeFormOutput(JSON.parse(readFileSync(join(PROTOTYPE, "..", j.inputs[0].file), "utf8"))); return j.settings.max_output_tokens !== r.max_output_tokens || j.settings.timeout_ms !== r.timeout_ms; }).map(({ f }) => f);
 ok("R-146: every committed v2 whole-form job file carries the rule's output limit and timeout for its inventory", jobs.length >= 10 && wrong.length === 0, { jobs: jobs.length, wrong });
 const big = jobs.filter(({ j }) => j.settings.max_output_tokens === 128_000).map(({ f }) => f.replace(/^studio-fieldmap-|\.json$/g, "")).sort();
-ok("R-146: the 128k jobs are exactly IMM 0008, 1294, 5257, 5532 and 5710", big.join() === "imm0008e,imm1294e,imm5257e,imm5532e,imm5710e", big);
+// C11.7: IMM 5669's job (its edition now read, so the six's load writes it) is a 128k job by the same rule.
+ok("R-146: the 128k jobs are exactly IMM 0008, 1294, 5257, 5532, 5669 and 5710", big.join() === "imm0008e,imm1294e,imm5257e,imm5532e,imm5669e,imm5710e", big);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -93,7 +93,9 @@ export class Runs {
     const many = b.jobs.filter((x) => x.kind === "field_map").length > 1;
     for (const j of failed) {
       const o = await this.sources.draftOptions(j.attachmentId!).catch(() => null);
-      if (!o?.saved_runs.some((r: { valid?: boolean }) => r.valid)) continue;
+      // A form drafted in parts counts when every part has a saved answer (Saved uses them; Ai.plan REPLAY).
+      const allParts = !!o?.saved_parts && o.saved_parts.parts > 0 && o.saved_parts.saved === o.saved_parts.parts;
+      if (!o?.saved_runs.some((r: { valid?: boolean }) => r.valid) && !allParts) continue;
       const form = many ? (await this.db.sourceAttachment.findUnique({ where: { id: j.attachmentId! }, select: { edition: true, fileName: true } }).catch(() => null)) : null;
       return { label: form ? `Use Saved for ${(form.edition ?? form.fileName).replace(/\s*\(.*$/, "")} (US$0)` : "Use Saved (US$0)", href: `/c/${j.combinationId}/forms?draft=${j.attachmentId}` };
     }
