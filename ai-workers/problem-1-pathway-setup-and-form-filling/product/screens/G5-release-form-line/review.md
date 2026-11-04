@@ -208,3 +208,15 @@ Scope: `git show e708c818`, three lines in `tests/fill_queue_kinds.ts`. This is 
 - No Blocker or Major.
 
 **Verdict (round 10): Approve** for e708c818.
+
+## Round 11 (diff-only, merge 048ad588), 4 Nov 2026
+Scope: `git show --remerge-diff 048ad588` and the merged `api/src/demo.ts`. I did not re-run anything; the builder's trial merge runs and the same tsc count (15) are the evidence.
+- **The conflict resolution is correct.** The Demo constructor keeps #881's `@Inject(ReviewProposals) proposals` and G5's `@Inject(Checklists) checklists`, both imported. There is no other text conflict.
+- **#881 and G5's approver loop do not interfere: the order rules it out.**
+  - #881's step accepts the "Provincial nomination certificate" type on To review as the author (about line 707). Row 5 then approves every WAITING library change as the Approver (lines 771–776). That approval includes #881's type, so it is approved in row 5, as #881 expects.
+  - G5's per-combination loop (line 850, `kind: "document_type"`, WAITING only) runs after row 5. It only sees types the Study permit and Visitor visa setups add later, so it cannot approve #881's type early, or twice.
+  - #881's `linesByHand` only touches `provincial_nominees.express_entry` (row 10). That combination is not in `FORM_SETUP`, so it does not overlap with `documentsCited` or `documentsFromChecklist`.
+- BR-7 and BR-9 still hold: the proposer, the accepter and the approver are different people on both paths.
+- No Blocker or Major.
+
+**Verdict (round 11): Approve** for 048ad588.
