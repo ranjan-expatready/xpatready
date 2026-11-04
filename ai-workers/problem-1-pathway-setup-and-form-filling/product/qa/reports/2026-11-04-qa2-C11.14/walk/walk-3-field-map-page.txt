@@ -1,0 +1,42 @@
+lines 1690; about the rounds (173, first 40):
+Accept High exact reuse (0)
+* Funds available for my stay (CAD) · the application · high
+WHAT ALREADY DEPENDS ON THE CLOSEST FIELD
+* From · the application · high
+* To · the application · high
+* I want service in · the application · high
+* Visa requested · the application · high
+* Address in Canada · the application · row 1 · high
+* Name · the application · row 1 · high
+Relationship to me · the application · row 1 · high
+* a) Purpose of my visit · the application · high
+b) Other · the application · high
+Canada/US · the form's subject · high
+Other · the form's subject · high
+Ext. · the form's subject · high
+Type · the form's subject · high
+Question 9 A. Is the country from where you are applying the same as your current country of residence? · the form's subject · high
+Question 9 B. Status From Date. The start date of your immigration status in the country from where you are applying in YYYY-MM-DD format · the form's subject · high
+Question 9 B Other Details. If your immigration status is other, please give details. · the form's subject · high
+Question 9 B Status To Date. The end date of your immigration status in the country from where you are applying in YYYY-MM-DD format · the form's subject · high
+* City/Town · the form's subject · high
+* Country or Territory · the form's subject · high
+Question 7 D The start date of your immigration status in your current country of residence in YYYY-MM-DD format · the form's subject · high
+Question 7 C If your immigration status is other, please give details. · the form's subject · high
+Question 7 E The end date of your immigration status in your current country of residence in YYYY-MM-DD format · the form's subject · high
+YYYY · the form's subject · high
+MM · the form's subject · high
+DD · the form's subject · high
+E-mail address · the form's subject · high
+*Family name (as shown on your passport or travel document) · the form's subject · high
+Family name · the subject's spouse or partner · high
+Given name(s) (as shown on your passport or travel document) · the form's subject · high
+Given name(s) · the subject's spouse or partner · high
+1d. Have you taken a test form a designated testing agency to assess your proficiency in English or French? · the form's subject · high
+P.O. box · the form's subject · high
+Apt/Unit · the form's subject · high
+Street no. · the form's subject · high
+* Street name · the form's subject · high
+* a) Your current marital status · the form's subject · high
+Country or territory of issue · the form's subject · high
+
