@@ -82,3 +82,8 @@ After Reset to the six, IMM 5476 is held at 11-2025 (`form_edition` SAMPLE) and 
 
 ### Question for the tech lead
 QA-200 (Critical, open) names C2.4, yet C2.4 is Works (25cefb67, 1 Nov). Under P-305 (3) that is inconsistent. qa's reading: C2.4's own behaviour (same file "already in the library"; a newer edition is held for impact review) is met, and QA-200's fault is in the snapshot and the fill (C7.2, C6.x). Recommendation: re-tag QA-200 to C7.2 and C6.1 and keep C2.4 Works. The other choice is C2.4 Partial, which makes M2 42/60. qa changes nothing until you rule.
+
+## Records update ~09:15 IST
+* **QA-205 corrected to Minor** (the tech lead, from Builder 8). The library's "IMM 5475 (05-2021)" and Visitor visa's "IMM 5475 (12-2022)" are the same file (sha256 938af318…4b83), so there is no return risk. What is left: one file, two edition labels, because the manifest takes 12-2022 from the canada.ca URL folder (IRM 0002 is the same: 16-12-2022 against 03-2021 printed). Expected: one edition label per file, the printed one (P-32). It holds no capability.
+* **qa tester 2's C9.1 verdict** (`qa/verdicts/2026-11-04-C9.1.md`, PR #811) agrees: Partial on 0932558ff. Its new row is **QA-207** (Gap · Major, C9.1 and C10.1): the configured checkpoint lists DEMO row 17 as "not built yet", so the journey cannot be reached on the demo data.
+* M2: 43/60 (unchanged; C9.1 and C10.1 were already Partial).
