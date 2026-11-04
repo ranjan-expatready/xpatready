@@ -164,12 +164,12 @@ export class Impact {
         const runs = liveRunsOf(part.sha256);
         if (runs.length) fail(IMPACT_AI_WORDS.paidOnce(runs.reduce((t, x) => t + x.costUsd, 0)), HttpStatus.CONFLICT);
       }
-      return { job: await tx.draftingJob.create({ data: { workspaceId: h.workspaceId, combinationId: null, kind: IMPACT_STEP, mode: mode === "live" ? "LIVE" : "REPLAY", status: "RUNNING", startedBy: actor.id, message: `Drafting the ${changed.length} new and reworded boxes of ${printed}`,
+      return { job: await tx.draftingJob.create({ data: { workspaceId: h.workspaceId, combinationId: null, kind: IMPACT_STEP, mode: mode === "live" ? "LIVE" : "REPLAY", status: "RUNNING", startedBy: actor.id, message: `Drafting the ${changed.length} new and reworded form fields of ${printed}`,
         detail: { operation: "impact_ai", held: h.id, edition: printed, part: part.sha256, boxes: changed } } }) };
     });
     if ("done" in job && job.done) {
       if (job.done.status === "RUNNING") fail("Draft with AI is already running for this edition. Wait for it to end.", HttpStatus.CONFLICT);
-      return { job_id: job.done.id, again: true, proposals: await this.db.proposalItem.count({ where: { runId: job.done.id } }), message: `${printed}'s new and reworded boxes were already drafted: the proposals wait on To review.` };
+      return { job_id: job.done.id, again: true, proposals: await this.db.proposalItem.count({ where: { runId: job.done.id } }), message: `${printed}'s new and reworded form fields were already drafted: the proposals wait on To review.` };
     }
     const aiJob = job.job!;
     try {
@@ -190,7 +190,7 @@ export class Impact {
       const spent = draft.costUsd + check.costUsd;
       if (!draft.ok) {
         await this.db.draftingJob.update({ where: { id: aiJob.id }, data: { status: "FAILED", costUsd: spent, finishedAt: new Date(), message: draft.reason.slice(0, 1000) } });
-        await this.audit.log(h.workspaceId, actor.id, "failed", "edition impact AI", def.formKey, `${actor.name} drafted ${printed}'s ${changed.length} new and reworded boxes with AI (${mode}, US$${spent.toFixed(2)}): nothing used. ${draft.reason}`.slice(0, 900));
+        await this.audit.log(h.workspaceId, actor.id, "failed", "edition impact AI", def.formKey, `${actor.name} drafted ${printed}'s ${changed.length} new and reworded form fields with AI (${mode}, US$${spent.toFixed(2)}): nothing used. ${draft.reason}`.slice(0, 900));
         fail(draft.reason, HttpStatus.CONFLICT);
       }
       const d = draft as Extract<RoundOut<FieldMapOutput>, { ok: true }>;
@@ -199,12 +199,12 @@ export class Impact {
       const out = await this.db.$transaction(async (tx) => {
         const { items, dropped, library } = await editionFieldItems(tx, h.workspaceId, asReading(d)!, asReading(check), { printed, file: (await this.held(id)).item.file ?? h.fileName ?? printed, sha256: h.sha256, formText });
         const made = items.length ? await insertEditionFieldItems(tx, h.workspaceId, items, library, aiJob.id) : 0;
-        const message = `${d.from === "replay" ? "Saved AI run (US$0, no AI call)" : `AI run (US$${spent.toFixed(2)})`} for the ${changed.length} new and reworded boxes of ${printed}: ${made} proposal${made === 1 ? "" : "s"} on To review${check.ok ? ", read by both rounds" : ", from the draft round only (each waits as Decide)"}.${dropped.length ? ` Not proposed (failed the rules): ${dropped.length}.` : ""} A person accepts each one.`;
+        const message = `${d.from === "replay" ? "Saved AI run (US$0, no AI call)" : `AI run (US$${spent.toFixed(2)})`} for the ${changed.length} new and reworded form fields of ${printed}: ${made} proposal${made === 1 ? "" : "s"} on To review${check.ok ? ", read by both rounds" : ", from the draft round only (each waits as Decide)"}.${dropped.length ? ` Not proposed (failed the rules): ${dropped.length}.` : ""} A person accepts each one.`;
         await tx.draftingJob.update({ where: { id: aiJob.id }, data: { status: made ? "COMPLETED" : "FAILED", costUsd: spent, finishedAt: new Date(), runFile: d.runFile, message: message.slice(0, 1000),
           detail: { operation: "impact_ai", held: h.id, edition: printed, part: part.sha256, boxes: changed, draftRun: d.runFile, checkRun: check.ok ? check.runFile : null, proposals: made, dropped: dropped.slice(0, 50) } } });
         return { made, message, dropped };
       }, QUEUE_TX);
-      await this.audit.log(h.workspaceId, actor.id, "started", "edition impact AI", def.formKey, `${actor.name} drafted ${printed}'s ${changed.length} new and reworded boxes with AI (${mode}, US$${spent.toFixed(2)}): ${out.made} proposals for a person`);
+      await this.audit.log(h.workspaceId, actor.id, "started", "edition impact AI", def.formKey, `${actor.name} drafted ${printed}'s ${changed.length} new and reworded form fields with AI (${mode}, US$${spent.toFixed(2)}): ${out.made} proposals for a person`);
       if (!out.made) fail(`No proposal of the AI run passed the rules, so nothing was put on To review.${out.dropped.length ? ` For example: ${[...new Set(out.dropped.map((x) => x.why))].slice(0, 3).join(" ")}` : ""}`.slice(0, 900), HttpStatus.CONFLICT);
       return { job_id: aiJob.id, again: false, proposals: out.made, cost_usd: spent, message: out.message };
     } catch (e) {
