@@ -1,12 +1,13 @@
 // F8 (X1a, found by the runtime builder in #113): a combination with no form and no document line is never submitted,
 // signed off or released. A release problem (not a validator one, review f8 M1) blocks submit and approve, in words that name the fix; adding a form or a
 // document line takes it away; a combination with lines never shows it. On an isolated copy with the sample loaded. No
-// browser, no model call (US$0).
+// browser, no model call (US$0). G5 (C5.1, P-248, 4 Nov; amends P-207): one document line and no form is no longer
+// enough; a release needs a form line too (FORM_LINE_WORDS). The whole rule is in acceptance/C5.1.test.ts.
 //   zsh studio/tools/isolated.sh screens_f8 4448 start && tsx studio/tests/check_f8_empty_release.ts 4448 xr_studio_screens_f8
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { emptyProblem, EMPTY_WORDS } from "../api/src/studio.ts";
+import { contentProblems, emptyProblem, EMPTY_WORDS, FORM_LINE_WORDS } from "../api/src/studio.ts";
 import { problemWords } from "../contracts/programs.ts";
 
 const PORT = Number(process.argv[2] ?? 4448), DB = process.argv[3] ?? "xr_studio_screens_f8";
@@ -32,6 +33,11 @@ const EMPTY = /Nothing to release yet: no form is set up on this combination and
   ok("F8 fail (rule): no form and no document line is one release-blocking error", errs(0, 0).length === 1 && errs(0, 0)[0].level === "error" && errs(0, 0)[0].message === EMPTY_WORDS);
   ok("F8 pass (rule): one document line and no form is not 'nothing to release'", errs(0, 1).length === 0);
   ok("F8 pass (rule): one form and no document line is not 'nothing to release'", errs(1, 0).length === 0);
+  // G5 (P-248): P-207's "documents only is enough" is gone. The same draft now gets the form-line line, never F8's too.
+  const all = (forms: object[], docs: number) => contentProblems({ forms, document_requirements: Array(docs).fill({}) } as any);
+  ok("G5 fail (rule, P-248): one document line and no form now holds the release, in the form-line words only", all([], 1).length === 1 && all([], 1)[0].level === "error" && all([], 1)[0].message === FORM_LINE_WORDS);
+  ok("G5 pass (rule): nothing at all is F8's one line, never the form-line line as well", all([], 0).length === 1 && all([], 0)[0].message === EMPTY_WORDS);
+  ok("G5 pass (rule): one form line and one document line hold nothing", all([{ form_kind: "data_form" }], 1).length === 0);
   ok("F8 (words): the error is said without an item prefix", problemWords({ level: "error", where: "Forms", item: "", message: "Nothing to release yet: x" }) === "Nothing to release yet: x" && problemWords({ level: "error", where: "Forms", item: "IMM 1", message: "y" }) === "IMM 1: y");
 
   // ---------------------------------------------------------------- through the API

@@ -106,6 +106,20 @@ function retiredPeople(c: { label: string; retiredAt: Date | null }) {
 export const EMPTY_WORDS = "Nothing to release yet: no form is set up on this combination and it has no documents. Set up the forms it files (Find forms, add one from the Form library, or finish one attached) before sending it for review.";
 export const emptyProblem = (s: Pick<Snapshot, "forms" | "document_requirements">) =>
   s.forms.length || (s.document_requirements ?? []).length ? [] : [{ level: "error" as const, where: "Release", item: "", message: EMPTY_WORDS }];
+/** G5 (C5.1, P-248, amends P-207; SA-1B-90): a form line is a form a case files: a PDF form (filed as a PDF upload or on
+ *  paper), a portal-screen edition (filed Online, P-245) or an online-only form drafted from help pages or saved screens
+ *  (P-152 (2)). A checklist or a document form is not one, and nor is a line marked "Not needed" (the IRCC account asks
+ *  it itself, so nothing is filed on it; question Q2 to the tech lead on the PR). */
+export const isFormLine = (f: { form_kind?: string | null; channel?: string | null }) => (f.form_kind ?? "data_form") === "data_form" && f.channel !== "NOT_NEEDED";
+export const FORM_LINE_WORDS = "No form line yet: a case on this combination would file no form (it has only documents, checklists or forms marked Not needed). Add at least one form it files before sending it for review: a PDF form, a portal-screen edition filed Online, or an online-only form (Find forms, or add one from the Form library).";
+/** G5: a combination with something on it but no form line is never submitted or released (submit 400, approve and the
+ *  Release page 409), and its draft says so while it is configured (the Review and release tab lists it, the Release
+ *  page holds the row with these words). An empty one is F8's line above, never both. Releases made before keep
+ *  their status (a release is never undone; Q3). */
+export const formLineProblem = (s: Pick<Snapshot, "forms" | "document_requirements">) =>
+  emptyProblem(s).length || (s.forms as { form_kind?: string | null; channel?: string | null }[]).some(isFormLine) ? [] : [{ level: "error" as const, where: "Release", item: "", message: FORM_LINE_WORDS }];
+/** What a release needs on it before anything else is judged: F8 (something) and G5 (a form line). */
+export const contentProblems = (s: Pick<Snapshot, "forms" | "document_requirements">) => [...emptyProblem(s), ...formLineProblem(s)];
 
 @Injectable()
 export class Studio {
@@ -457,7 +471,7 @@ export class Studio {
     // shows those (the Review tab shows eight).
     // G2 (C5.5): the answer-key gate's lines, in the same list as every other problem (one list on Review and release).
     const tests = combinationId ? (gate ?? (await keyGateOf(this.db, combinationId, s, (await buildSnapshot(this.db, workspaceId, combinationId, "draft")).sha256))).problems : [];
-    const all = [...structure, ...filing, ...emptyProblem(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...sources, ...carried, ...tests]; // L4: what IRCC accepts
+    const all = [...structure, ...filing, ...contentProblems(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...sources, ...carried, ...tests]; // L4: what IRCC accepts
     // C2.12 (plan F3a-1, BR-10): each problem names the forms it touches, so a form's path shows its own: a Forms problem its form,
     // any other the forms whose field map reads that item as a fact; none otherwise.
     const formsOf = new Map<string, Set<string>>();

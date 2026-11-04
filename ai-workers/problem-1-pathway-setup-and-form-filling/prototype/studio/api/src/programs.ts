@@ -28,7 +28,7 @@ import { officialPagesOf as readOfficialPages } from "./official-pages.ts";
 import { changeView, itemsOf, nearOf, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { openNodeKeys, startWhy } from "./lifecycle.ts";
 import { Sources } from "./sources.ts";
-import { emptyProblem, Studio } from "./studio.ts";
+import { emptyProblem, formLineProblem, Studio } from "./studio.ts";
 import { draftSourceProblems } from "./source-register.ts";
 import { filingProblems } from "../../engine/filing-modes.ts";
 import { attachedNotSetUp, removedLines } from "../../contracts/counts.ts";
@@ -272,13 +272,16 @@ export class Programs {
       const firstError = unsourced && unsourced === errors.length ? `${unsourced} number${unsourced === 1 ? " has" : "s have"} no source entry: fix on Review and release.` : first ? `${first.where === "Tests" ? (first as { label?: string }).label || first.item : first.item}: ${first.message}` : null;
       // Opus review M1 (V3 B1): the Release page holds a row on every draft error and names it. When only forms with no
       // field map hold it, the reason names them all (they are left out of `errors`, which counts work for the checklist).
-      const holding = draftProblems.filter((x) => x.level === "error");
+      // G5 (C5.1, P-248): a draft with no form line is held on the Release page in its own words, first (its next step is
+      // to add a form, before any other fix); Submit and Approve refuse it through studio.problems.
+      const noFormLine = formLineProblem(snapshot);
+      const holding = [...noFormLine, ...draftProblems.filter((x) => x.level === "error")];
       const unmappedHolds = holding.filter((x) => waitsForMap(x)).map((x) => x.item);
-      const firstHold = errors.length ? firstError : unmappedHolds.length ? `No form fields mapped yet for ${unmappedHolds.join(", ")}: map ${unmappedHolds.length === 1 ? "its" : "their"} form fields (Draft setup), or remove ${unmappedHolds.length === 1 ? "it" : "them"} from this combination.` : null;
+      const firstHold = noFormLine.length ? noFormLine[0].message : errors.length ? firstError : unmappedHolds.length ? `No form fields mapped yet for ${unmappedHolds.join(", ")}: map ${unmappedHolds.length === 1 ? "its" : "their"} form fields (Draft setup), or remove ${unmappedHolds.length === 1 ? "it" : "them"} from this combination.` : null;
       // UX-A part 2: what blocks the release, with "nothing to release yet" when the draft is empty (To review reads it).
-      const blocking = [...errors, ...emptyProblem(snapshot)];
+      const empty = emptyProblem(snapshot), blocking = [...errors, ...empty, ...noFormLine];
       const said = (p: { item: string; message: string }) => `${p.item ? `${p.item}: ` : ""}${p.message.split(":")[0]}`;
-      rows.push({ pathway, changes, errors: errors.length, firstError, holds: holding.length, firstHold, hasContent, docNames, blockers: { n: blocking.length, first: blocking[0] ? said(blocking[0]) : null, empty: blocking.length > errors.length },
+      rows.push({ pathway, changes, errors: errors.length, firstError, holds: holding.length, firstHold, hasContent, docNames, blockers: { n: blocking.length, first: blocking[0] ? said(blocking[0]) : null, empty: empty.length > 0 },
         setup: checklist,
         searchText: [...path, ...forms.map((f) => f.code), ...docNames].join(" "),
         leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, filed: filedOf(snapForms), progress: progressOf(checklist), counts, status, statusText: retired ? "Retired" : status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
