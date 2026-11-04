@@ -751,7 +751,7 @@ export const NEAR_BULK_WHY = "It is close to a library item: open it and say why
 export type Decision = { action: "accept" | "edit" | "reject"; reason?: string | null; payload?: unknown };
 /** QA-206 (P-158, PRODUCT §4): the words a section with no printed heading carries (form-masters.ts rules pass) until a
  *  person names it; it is never accepted under its placeholder, so a client never sees one as a questionnaire section. */
-export const UNNAMED_WHY = "No printed heading was found above these boxes on the form: give the section a name (Edit) before it is accepted.";
+export const UNNAMED_WHY = "No printed heading was found above these boxes on the form: give the section a name before it is accepted.";
 const UNNAMED_LABEL = /^\s*unnamed section\b/i;
 
 /** Accept, edit or reject waiting items together (one batch, one Undo). Every item is checked before anything is

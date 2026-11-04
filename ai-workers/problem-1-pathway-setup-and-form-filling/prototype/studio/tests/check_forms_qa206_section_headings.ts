@@ -46,16 +46,16 @@ run(async () => {
   await T.ready();
   const combo = T.combo("vv.single");
   const before = T.spent();
+  // The queue group each draft names (IMM 5475 has two edition labels, QA-205: the draft's own group is the one meant).
+  const groups: Record<string, string> = {};
   for (const [file, form] of [["imm5257e.pdf", "IMM 5257"], ["imm5475e.pdf", "IMM 5475"]] as const) {
     const att = T.attachment(combo, file);
     const r = await call("POST", `/attachments/${att}/draft-masters`, { mode: "rules" }, AUTHOR);
-    ok(`setup: ${form}'s rules pass drafts its sections (201)`, !!att && r.status === 201, r.status >= 300 ? words(r) : r.body?.proposals);
+    groups[form] = String(r.body?.group ?? "");
+    ok(`setup: ${form}'s rules pass drafts its sections (201)`, !!att && r.status === 201 && groups[form].startsWith(`edition:${form} (`), r.status >= 300 ? words(r) : r.body);
   }
-  const q = await call("GET", "/review/proposals");
-  const groupOf = (form: string) => (q.body?.groups ?? []).find((g: any) => g.kind === "edition" && new RegExp(`^edition:${form} \\(`).test(g.id));
   const sectionsOf = async (form: string) => {
-    const g = groupOf(form);
-    const b = g ? (await call("GET", `/review/proposals?group=${encodeURIComponent(g.id)}`)).body?.group?.bands ?? {} : {};
+    const b = groups[form] ? (await call("GET", `/review/proposals?group=${encodeURIComponent(groups[form])}`)).body?.group?.bands ?? {} : {};
     return [...(b.ready ?? []), ...(b.check ?? []), ...(b.decide ?? [])].filter((x: any) => x.step === "masters_edition" && x.kind === "section");
   };
   const s5257 = await sectionsOf("IMM 5257"), s5475 = await sectionsOf("IMM 5475");
