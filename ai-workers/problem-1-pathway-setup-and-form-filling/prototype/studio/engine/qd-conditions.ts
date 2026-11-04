@@ -53,6 +53,8 @@ function named(all: FactSourceView[], role: string, asks: string, names: Names, 
   // QA-162 (C4.11): when the words tie several questions, the guide's own sentence may name exactly one of them (quoteNames).
   const tied = !found.fact && found.why === "several" ? found.several : [];
   const byQuote = tied.length && quote ? quoteNames(tied, quote) : null;
+  // Review m7: the sentence names one, but it is not asked yet: said as that (placement), never as a tie.
+  if (byQuote && !asked(byQuote)) return { why: `${what(`"${byQuote.label}"`)} (the guide's sentence names it among the ${tied.length} questions "${asks.trim().slice(0, 80)}" fits) is not asked by a question of this combination yet, so it is not guessed. Once it is placed for this combination (Library › Fields › its placement), draft again with Saved (US$0).`, miss: "unplaced" };
   if (byQuote && asked(byQuote)) return { f: byQuote, loose: `The AI wrote "${asks.trim().slice(0, 80)}", which fits ${tied.length} questions of this person; the guide's sentence it quotes names only "${byQuote.label.slice(0, 120)}", so it is taken, for a person to check.` };
   // Opus review m1/m2 on #744: the tied questions are returned as data, so a caller chooses only among them (never by the reason's words).
   if (!found.fact) return found.why === "several" ? { why: `${what(`"${asks}"`)} could be ${found.several.length} questions of this person (${listed(found.several)}), so it is not guessed.`, several: found.several, miss: "several" } : { why: `${what(`"${asks}"`)} is not a question this combination asks of this person, so it is not guessed.`, miss: "none" };
@@ -104,7 +106,19 @@ export function workedOut(s: Snapshot, words: string): { form: string; caption: 
   // The same form field read twice (two map rows of one box) is one field.
   const one = [...new Map(top.map((x) => [`${x.form}|${x.e.caption}`, x])).values()];
   if (one.length !== 1) return null;
-  return { form: one[0].form, caption: (one[0].e.caption ?? "").replace(/^(?:[a-z ]{0,40}\s)?question\s+\d+\s*(?:[a-z]\.\s*)?/i, "").trim().slice(0, 140), from: label.get(one[0].e.fact!) ?? one[0].e.fact! };
+  return { form: one[0].form, caption: cut((one[0].e.caption ?? "").replace(/^(?:[a-z ]{0,40}\s)?question\s+\d+\s*(?:[a-z]\b)?\.?\s*/i, "").trim(), 140), from: label.get(one[0].e.fact!) ?? one[0].e.fact! };
+}
+
+/** Review M1: the questions this combination asks of this person (the principal also the application's) that hold the
+ *  most of the words, at least 3 in 5 of them (2 of 3); none when no asked question is that near. At most 4, named. */
+function closest(all: FactSourceView[], role: string, asks: string): FactSourceView[] & { weak?: boolean } {
+  const pool = all.filter((f) => isAsked(f) && (f.role === role || (role === "principal" && f.role === "case")));
+  const scored = pool.map((f) => ({ f, n: near(f.label, asks) })).filter((x) => x.n.want >= 3 && x.n.held >= Math.ceil(x.n.want * 0.6));
+  const best = Math.max(0, ...scored.map((x) => x.n.held));
+  const out: FactSourceView[] & { weak?: boolean } = scored.filter((x) => x.n.held === best).map((x) => x.f).slice(0, 4);
+  // Two shared words only (of three): a weak match, so the way for a question no form field is mapped to stays open.
+  out.weak = best < 3;
+  return out;
 }
 
 /** The deciding question can take the condition's answer (a yes-no question "yes", a list one of its answers). */
@@ -116,14 +130,27 @@ function deciderOf(s: Snapshot, all: FactSourceView[], c: CondAnswer["conditions
 
 /** QA-162 (C4.11 step 5): why a condition's question is not one this combination asks, with what a person can do. Never
  *  silent and never a guess: each reason rests on the combination's forms, the forms library and the field maps. */
-export function targetNotAsked(s: Snapshot, c: CondAnswer["conditions"][number], decider: { f: FactSourceView } | Miss, library: FormLine[] = []): string {
+export function targetNotAsked(s: Snapshot, c: CondAnswer["conditions"][number], decider: { f: FactSourceView } | Miss, library: FormLine[] = [], all: FactSourceView[] = []): string {
   const a = q(c.asks, 80);
   // The words name a form: when a form is needed is set on the form, not as a question's condition.
   const mine = (s.forms as FormLine[]).find((f) => holds(`${f.form_number} ${f.title ?? ""}`, c.asks));
-  if (mine) return `${a} names a form, not a question: ${mine.form_number}${mine.title ? ` (${mine.title})` : ""} is one of this combination's forms${mine.status === "conditional" ? `, needed only ${mine.condition_plain ? `when ${mine.condition_plain}` : "in some cases"}` : ""}. When a form is needed is set on the Forms tab, so nothing is proposed here.`;
+  // Review m2: a plain condition that already starts with "if" or "when" is not given a second one ("when if …").
+  const when = (t: string) => /^(if|when|only)\b/i.test(t.trim()) ? t.trim() : `when ${t.trim()}`;
+  if (mine) return `${a} names a form, not a question: ${mine.form_number}${mine.title ? ` (${mine.title})` : ""} is one of this combination's forms${mine.status === "conditional" ? `, needed only ${mine.condition_plain ? when(mine.condition_plain) : "in some cases"}` : ""}. When a form is needed is set on the Forms tab, so nothing is proposed here.`;
   const lib = library.find((f) => holds(`${f.form_number} ${f.title ?? ""}`, c.asks));
   if (lib) return `${a} names a form, not a question: ${lib.form_number}${lib.title ? ` (${lib.title})` : ""} is in the forms library but not one of this combination's forms. Whether this combination needs it, and when (here: ${q(c.depends_on, 60)} is ${q(c.when, 40)}), is set on the Forms tab, so nothing is proposed here.`;
-  const why = [`No question of this combination asks ${a} of this person, so it is not guessed.`];
+  // Review M1: questions this combination already asks may share most of the words without holding them all ("Other
+  // immigration status description" and the three 'other' status descriptions): then the words name no single question,
+  // the nearest are named and a person sets it by hand. Mapping and placing is said only when no asked question is near.
+  const nearest = closest(all, c.role, c.asks);
+  const why = [nearest.length ? `${a} names no single question of this person, so it is not guessed; the nearest it asks are ${listed(nearest)}. If one of them is meant, ${HAND()}.${nearest.weak ? " If none is, and a form asks it, map that form field to a question (Forms › the form › Field map) and place it, then draft again with Saved (US$0)." : ""}`
+    : `No question of this combination asks ${a} of this person, so it is not guessed.`];
+  if (nearest.length) {
+    const w = !("f" in decider) && (decider.miss === "none" || (decider.miss === "several" && !decider.several?.some((f) => canAnswer(s, f, c.when)))) ? workedOut(s, c.depends_on) : null;
+    if (w) why.push(`Its deciding answer ${q(c.depends_on, 80)} is not a question either: ${w.form} works "${w.caption}" out from "${w.from}" (its field map), so a Yes/No question for it is needed before it can decide.`);
+    else if (!("f" in decider) && decider.miss === "several") why.push(`Its deciding words ${q(c.depends_on, 80)} ${decider.why.replace(/^"[^"]*"\s*/, "")}`);
+    return why.join(" ");
+  }
   if ("f" in decider) {
     const on = decider.f.forms?.length ? decider.f.forms.join(" or ") : null;
     why.push(on ? `Its deciding question "${decider.f.label.slice(0, 120)}" is on ${on}: if ${a} is asked there too, map those form fields to questions (Forms › ${decider.f.forms[0]} › Field map) and place them, then draft again with Saved (US$0).`
@@ -138,8 +165,10 @@ export function targetNotAsked(s: Snapshot, c: CondAnswer["conditions"][number],
 }
 
 /** QA-162 (C4.11 step 5): why a condition's deciding question is not one this combination asks, with what a person can do. */
-export function deciderNotAsked(s: Snapshot, dependsOn: string, target: FactSourceView, tie = false): string {
-  const d = q(dependsOn, 80), t = q(target.label);
+export function deciderNotAsked(s: Snapshot, dependsOn: string, target: FactSourceView, tie = false, asks = ""): string {
+  const d = q(dependsOn, 80);
+  // Review m8: when the AI's words for the question are not its own, the reason says what they were taken as.
+  const t = asks && wordsOf(asks).join(" ") !== wordsOf(target.label).join(" ") ? `${q(target.label)} (the AI wrote ${q(asks, 80)})` : q(target.label);
   const w = workedOut(s, dependsOn);
   if (!w && tie) return `${d} (what decides ${t}) fits several questions of this person, none of which can take that answer, so it is not guessed. ${HAND(target.label)[0].toUpperCase()}${HAND(target.label).slice(1)}.`;
   if (w) return `${w.form} asks ${d} ("${w.caption}") but works its answer out from "${w.from}" (its field map), so no question asks it and it cannot decide ${t}. To ask ${t} only after that answer: add a Yes/No question for it to the library, map that form field to it and place it, then draft again with Saved (US$0); or ${HAND(target.label)}. Until then ${t} is asked whenever its form applies.`;
@@ -183,7 +212,7 @@ export function askedOnly(s: Snapshot, all: FactSourceView[]): FactSourceView[] 
 export function conditionProblem(s: Snapshot, guideText: string, guideCode: string, c: CondAnswer["conditions"][number], names: Names = new Map(), all: FactSourceView[] = factSources(s), library: FormLine[] = []): { why: string } | { target: FactSourceView; decider: FactSourceView; tree: Record<string, unknown>; warn: string | null; loose: string | null } {
   // QA-162: the guide's sentence may break a tie of words for the question (quoteNames); never for the deciding question.
   const t = named(all, c.role, c.asks, names, (x) => x, isAsked, c.quote);
-  if ("why" in t) return { why: t.miss === "none" ? targetNotAsked(s, c, deciderOf(s, all, c, names), library) : t.miss === "several" ? `${t.why} If one of them is meant, ${HAND()}.` : t.why };
+  if ("why" in t) return { why: t.miss === "none" ? targetNotAsked(s, c, deciderOf(s, all, c, names), library, all) : t.miss === "several" ? `${t.why} If one of them is meant, ${HAND()}.` : t.why };
   const target = t.f;
   // QA-162: the deciding question need not fill a form box itself (IMM 5257's "Have you ever used any other name…?"
   // decides whether the names are needed): any question this combination asks of the person may decide.
@@ -195,7 +224,7 @@ export function conditionProblem(s: Snapshot, guideText: string, guideCode: stri
   const d = pickDecider(pool, canTake, c.role, c.depends_on, names, what, c.when);
   // A tie of detail questions none of which can take the answer, when the form works that Yes/No out itself: said so.
   const worked = d && "why" in d && (d.miss === "none" || (d.miss === "several" && !d.several?.some(canTake)));
-  if ("why" in d) return { why: worked ? deciderNotAsked(s, c.depends_on, target, d.miss === "several") : d.miss === "several" ? `${d.why} If one of them decides it, ${HAND(target.label)}.` : d.why };
+  if ("why" in d) return { why: worked ? deciderNotAsked(s, c.depends_on, target, d.miss === "several", c.asks) : d.miss === "several" ? `${d.why} If one of them decides it, ${HAND(target.label)}.` : d.why };
   const decider = d.f, loose = t.loose ?? d.loose;
   if (target.fact === decider.fact) return { why: `"${target.label}" cannot decide itself.` };
   if (!isSentence(c.quote) || !sameText(guideText).includes(sameText(c.quote))) return { why: `Its sentence is not in ${guideCode}'s text, so it is not proposed.` };

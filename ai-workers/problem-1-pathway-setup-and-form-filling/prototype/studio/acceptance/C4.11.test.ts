@@ -14,6 +14,8 @@
 // Needs first: the saved runs of the AI steps on Visitor visa, recorded once in the founder-approved live trial (P-131;
 // its cost stated before it is spent) and committed with the build.
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C4.11.test.ts 4440 xr_studio_accept
+// Run it on a fresh copy each time (review m6, 4 Nov): G5 accepts the run's Ready items, so a second run on the same copy
+// finds none left to accept.
 import { randomUUID } from "node:crypto";
 import { AUTHOR, pack2, run, VV_PEOPLE } from "./lib/pack2.ts";
 import { WHO_HOLDERS, WHO_ROLES, type Who } from "../contracts/resolver.ts";
@@ -86,7 +88,9 @@ run(async () => {
   const pick = (x: any) => x.readings?.draft?.payload ?? x.readings?.check?.payload;
   ok(`C4.11 pass (checker): every PQR pick is a fact a client or document question asks (PQR ⊂ SQR)${blocked}`, items.some((x: any) => x.kind === "pqr_pick") && items.filter((x: any) => x.kind === "pqr_pick").every((x: any) => asked.has(`${pick(x)?.role}|${pick(x)?.factKey}`)), items.filter((x: any) => x.kind === "pqr_pick").map((x: any) => `${pick(x)?.role}|${pick(x)?.factKey}`));
   const docs = new Set(items.filter((x: any) => x.kind === "requirement_line").map((x: any) => x.readings?.draft?.payload?.documentType));
-  ok("C4.11 pass (checker): every fact from a document names a document on the checklist", items.length > 0 && items.filter((x: any) => x.kind === "comes_from" && x.readings?.draft?.payload?.from === "document").every((x: any) => docs.has(x.readings.draft.payload.documentType) || x.band !== "ready"));
+  // Review m5: read from the fact sources (step 4 puts nothing on To review); a document must be one the checklist lines name.
+  const fromDoc = (fs?.facts ?? []).filter((f: any) => f.source === "DOCUMENT");
+  ok("C4.11 pass (checker): every fact from a document names a document on the checklist", (fs?.facts ?? []).length > 0 && fromDoc.every((f: any) => !!f.document && docs.has(f.document)), { from_documents: fromDoc.length, missing: fromDoc.filter((f: any) => !docs.has(f.document)).map((f: any) => `${f.role}|${f.fact}|${f.document}`).slice(0, 5) });
   ok("C4.11 data: every item is Sample; nothing is in the combination's draft until accepted", items.length > 0 && items.every((x: any) => x.basis === "SAMPLE") && sql(`select count(*) from document_requirement where combination_id='${vv}'`) === "0");
   // BR-7: a role not in "Who can be in this application" never reaches the queue (Visitor visa lists no sponsor).
   // A line's "who" may be a group (each_applicant, couple_once): it names the roles WHO_ROLES gives (none for every applicant).

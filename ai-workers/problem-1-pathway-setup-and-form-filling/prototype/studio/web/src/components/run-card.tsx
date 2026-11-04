@@ -70,8 +70,9 @@ export function RunCard({ runId, className, onEnded, onDismiss }: { runId: strin
                 {s.counts ? <span className="ml-2 tabular-nums text-text-muted">{s.counts.done} of {s.counts.total} {s.counts.unit}</span> : null}
                 {s.usd > 0 ? <span className="ml-2 tabular-nums text-text-muted">US${s.usd.toFixed(2)}</span> : null}</p>
               {s.message && s.status !== "WAITING" ? <p className="text-text-muted">{s.message}</p> : null}
-              {/* QA-162 (C4.11): what a step left out, each with its reason and what to do, is shown, never only counted. */}
-              {s.details && s.status !== "WAITING" ? <StepDetails text={s.details} /> : null}
+              {/* QA-162 (C4.11): what a finished step left out, each with its reason and what to do, is shown, never only
+                  counted. Review m3: a failed step's message says why; its details (a request id) are not shown. */}
+              {s.details && s.status === "COMPLETED" ? <StepDetails text={s.details} /> : null}
             </div>
           </li>
         ))}
