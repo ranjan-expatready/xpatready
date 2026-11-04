@@ -97,3 +97,51 @@ M1). D17 and D20: simulated only. D18 4/5: Sample is shown. D19 4/5: Forms › T
 A real screen reader. True 200 % browser zoom (CSS zoom only: the app shell header clips at 512 px, which is existing). The
 CI run on this head (still queued when I checked). The C10.1 pack on main side by side (inferred from the identical old query
 that row 4's suite passed on main, and the one certificate row). Graph: `graph.mjs --check` G1 0, G2 0, G4 0, G5 0.
+
+## Round 2: diff-only, ea30e005 against 54410819 (4 Nov, ~09:00–09:15 UTC)
+I reviewed only `git diff 54410819..ea30e005`. Before starting each copy I checked that HEAD was ea30e005 and that
+`demo.ts` had `ReviewProposals`. Copies `rev2a`–`rev2d` (ports 4720–4724) are stopped and their databases dropped. US$0.
+
+| Run on ea30e005 | Result |
+|---|---|
+| `check_queue_tx.ts` | **8/8** (was 7/8) |
+| `check_d1_reset_to_six_browser.cjs` | **25/25** (was 24/25) |
+| `acceptance/C10.1.test.ts` | **13/23**. The "rows 3–4" case passes again. The 10 that fail are the same row 10 and part B cases as in round 1 (recorded Partial) |
+| `check_c10_1_configured.ts` | 28/28 |
+| `check_forms_c117_part_b.ts` | 20/20 |
+| `check_c91_impact_api.ts`, run alone | 33/33. BR-12 lists ["Express Entry stream", "Visitor visa"] |
+
+* **M1: closed.** Both checks now count `origin='ai'`, as `check_s7_load` and `check_d1_reset_to_six` already do.
+* **M2: closed.** In `loadConfigured`, before row 5 (demo.ts:455–472), the author accepts the waiting type through
+  `ReviewProposals.decide` and adds the line through `Studio.saveRequirement`. Row 5's approver then approves the library
+  change. On the configured checkpoint (SQL on the copy):
+  * proposal `accepted|user-A`;
+  * library change `APPROVED`, proposed by user-A and decided by user-B, so the two-person rule P-80 holds;
+  * one line `provincial_nomination_certificate:principal_applicant|COMBINATION_MANDATORY|DRAFT|HUMAN|user-A`, quoting P-109;
+  * 0 run-linked proposals waiting; row 4 "done", row 5 "354 of 354".
+
+  It uses only the product's services, no form number is in the code, and no LMIA line is touched (the hunk sits after
+  row 4). A step that fails is logged and the load goes on.
+* **m1: closed.** P-109's five are pinned in the suite (`check_forms_c117_part_b.ts:36`). m3 is relabelled only, so it
+  stays as written. m2, m4 and m5 are unchanged.
+* **C9.1 knock-on: fine.** BR-12 still requires Visitor visa, and requires every combination that has an IMM 5476 line to
+  be named in the words and in the list. The regex is looser, but the list check still catches a missing combination.
+* **New minors (should):**
+  * **r2-m1:** the loader's accept passes no reason (`this.proposals.decide(author, { ids, action: "accept" })`, demo.ts:466).
+    It is the only accepted proposal with an empty `decision_reason` (1 of 670). Row 4 promises "accept with a reason",
+    and every other accept carries "Accepted by the sample loader…". `decide` takes `reason`, so pass one.
+  * **r2-m2:** if `saveRequirement` fails after the accept, the log says `"…" stays waiting`, but the type was accepted.
+    The rows say nothing about it (log only).
+  * **r2-m3:** `sixLines()` reads `wave1.json` a second time and matches labels by path text. If a label changes, the step
+    logs "is not waiting on To review" (wrong words), and only the C10.1 pack would notice.
+* **M3: still open.** The PR body still has "Claims Works: C11.7", and `C11.7.test.ts` is still 20/21 (case 2 waits for
+  the tech lead's ruling). Gate B runs the whole pack for a Works claim, so CI cannot pass this head as written.
+* **Side effects:** after my runs, `git status` shows 5 changed `p2/runs/stub-pass/studio-fieldmap-imm5257e-p*of5-*.json`
+  files and `p2/screening/canary-digest.json` (made_at 09:13:25, during my C9.1 run, though other sessions were running
+  too). I left them, as for the D1 screenshots.
+
+**Round 2 verdict: Block.** M1 and M2 are fixed and checked. **One open Major remains, M3.** Either change will clear it:
+* the tech lead rules on pack case 2 and the pack change lands in this PR, or
+* the body's "Claims Works: C11.7" becomes `Capabilities: C11.7 (part B cases 1, 3)` until the ruling.
+
+Either one turns this into **Approve for ea30e005** with no further code review needed. r2-m1 to r2-m3 do not hold the PR.
