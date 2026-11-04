@@ -22,7 +22,8 @@ import { pairOf, roundBudgetUsd, RUNS, runTime, StepRunner, type AiStep, type Ro
 import { aiLive, Sources } from "./sources.ts";
 
 export const MASTERS_STEP = "masters_edition";
-type InvField = { caption?: string | null; data_path?: string | null; section?: string | null; options_from?: string | null; options_resolved?: unknown; options?: unknown; presence?: string | null; heading?: string | null; ui?: string | null };
+import { printedChoices, type InvField } from "../../engine/printed-choices.ts";
+export { printedChoices }; // QA-196: moved to the engine (proposals.ts reads it too, without importing this module)
 /** Review c34 M1: hidden boxes, barcodes and the form's machine parts are not a person's section. A part named by a
  *  number word (IMM 5475's "Five", "Seven") is a real part a person fills: it stays, for a person to rename (re-review M2). */
 const hidden = (f: InvField) => /invisible|hidden/i.test(String(f.presence ?? "")) || /barcode/i.test(`${f.data_path ?? ""} ${f.caption ?? ""} ${f.ui ?? ""}`);
@@ -55,25 +56,6 @@ function choices(f: InvField): { label: string; code: string }[] {
   return out;
 }
 
-/** P-296 (3): a box's choices as the AI reads them, [words, code] each, by the shape its box kind is stored in (every
- *  committed inventory, review round 2 M1): `options_resolved` is always [words, code] rows; a Yes/No group's `options`
- *  too (IMM 5257's 21 carry only these, spelled "* Yes", "*Yes" or "Yes"); a drop-down's `options` is two columns, the
- *  words then the codes. A check box's `options` are its on/off states, never words: "check_box". Rows without words
- *  are left out; any other shape gives no choices (the box is not guarded). */
-export function printedChoices(f: InvField): [string, string][] | "check_box" {
-  const parse = (raw: unknown): unknown => { if (typeof raw !== "string") return raw; try { return JSON.parse(raw.replace(/'/g, '"')); } catch { return null; } };
-  const strs = (r: unknown): r is string[] => Array.isArray(r) && r.every((x) => typeof x === "string");
-  const rows = (raw: unknown) => (Array.isArray(raw) && raw.length && raw.every((r) => strs(r) && r.length === 2) ? (raw as [string, string][]).filter(([w]) => w.trim() !== "") : null);
-  const resolved = rows(parse(f.options_resolved));
-  if (resolved?.length) return resolved;
-  if (f.ui === "checkButton") return "check_box";
-  const o = parse(f.options);
-  if (f.ui === "exclGroup") return rows(o) ?? [];
-  if (f.ui === "choiceList" && Array.isArray(o) && o.length === 2 && strs(o[0]) && strs(o[1]) && o[0].length === o[1].length)
-    return o[0].map((w, i) => [w, o[1][i]] as [string, string]).filter(([w]) => w.trim() !== "");
-  return [];
-}
-
 /** Pure: the answer lists and sections a form's inventory gives, by the rules alone (one list per distinct choice set). */
 export function draftFromInventory(fields: InvField[]) {
   const lists = new Map<string, { label: string; values: { code: string; label: string }[]; quote: string; boxes: string[] }>();
@@ -104,7 +86,7 @@ export function draftFromInventory(fields: InvField[]) {
   return { lists: [...lists.values()], sections: [...byName.values()].filter((s) => s.fieldKeys.length && s.quote) };
 }
 
-/** C3.4 AI step over one form edition: its checks and the document types its boxes are copied from (a draft and a blind
+/** C3.4 AI step over one form edition: its checks and the document types its form fields are copied from (a draft and a blind
  *  checker round over the form's box inventory, read from the official PDF). Keyed by the edition (engine/rounds.ts
  *  editionContextKey): every combination that uses the edition reuses its one Saved result. */
 export const MASTERS_FORM_AI: AiStep = {
@@ -207,7 +189,7 @@ export class FormMasters {
     const t = await this.target(await this.attachment(attachmentId));
     const saved = await this.saved(t);
     const worst = mode === "live" ? this.worstUsd(t) : 0;
-    const what = t.kind === "form" ? `${t.edition}'s checks and the document types its boxes are copied from` : `the checks ${t.code} states for "${t.combination.label}"`;
+    const what = t.kind === "form" ? `${t.edition}'s checks and the document types its form fields are copied from` : `the checks ${t.code} states for "${t.combination.label}"`;
     return { mode, source: { id: t.a.id, kind: t.kind, title: t.kind === "form" ? t.edition : t.code, file: t.input.file }, what,
       steps: [{ n: 1, label: "Read the source (rules)", uses_ai: false }, { n: 2, label: "AI drafts each item with the source's own words", uses_ai: true }, { n: 3, label: "A second AI round drafts them without seeing the first answer", uses_ai: true },
         { n: 4, label: "Rules keep items whose words are in the source, whose condition is in the 11 operators and whose examples hold; Ready when both rounds agree", uses_ai: false }],
@@ -232,7 +214,7 @@ export class FormMasters {
       if (open) return { job: open, made: 0 };
       const drafted = this.rulesDraft(inv.fields ?? []);
       const job = await tx.draftingJob.create({ data: { workspaceId: a.workspaceId, combinationId: a.combinationId, attachmentId: a.id, kind: MASTERS_STEP, mode: "LOCAL", status: "COMPLETED", costUsd: 0, startedBy: actor.id, finishedAt: new Date(),
-        message: `Rules pass on ${edition} (no AI, US$0): ${drafted.sections.length} sections from the form's parts and ${drafted.lists.length} answer lists from its drop-down boxes, proposed on To review.${drafted.tooLong.length ? ` Not proposed, too long for one list (a person adds it): ${drafted.tooLong.join(", ")}.` : ""} Form checks and document types need the AI step (Live or Saved).`.slice(0, 1000),
+        message: `Rules pass on ${edition} (no AI, US$0): ${drafted.sections.length} sections from the form's parts and ${drafted.lists.length} answer lists from its drop-down form fields, proposed on To review.${drafted.tooLong.length ? ` Not proposed, too long for one list (a person adds it): ${drafted.tooLong.join(", ")}.` : ""} Form checks and document types need the AI step (Live or Saved).`.slice(0, 1000),
         detail: { operation: "draft_masters", edition, mode: "rules", sections: drafted.sections.length, answerLists: drafted.lists.length, tooLong: drafted.tooLong } } });
       const items = await this.rulesItems(tx, a, edition, drafted, job.id);
       await insertProposals(tx, a.workspaceId, items);
@@ -262,7 +244,7 @@ export class FormMasters {
       const payload = { kind: "answer_list" as const, label: l.label, values: l.values };
       const twin = await sameInLibrary(tx, a.workspaceId, payload);
       items.push({ ...base, kind: "answer_list", payload, rounds: rulesRead(`Rules read the choices of "${l.quote}": ${l.values.map((v) => v.label).join(", ")}`, payload), source: source(l.quote), reuse: twin ? { match: "reuse", existingKey: twin } : { match: "new", existingKey: null },
-        rules: [{ rule: "from_pdf_box_choices", passed: true, why: null }], reason: `The choices of ${l.boxes.length} box${l.boxes.length === 1 ? "" : "es"} on ${edition}, as printed: check the list's name.`.slice(0, 500),
+        rules: [{ rule: "from_pdf_box_choices", passed: true, why: null }], reason: `The choices of ${l.boxes.length} form field${l.boxes.length === 1 ? "" : "s"} on ${edition}, as printed: check the list's name.`.slice(0, 500),
         identity: { key: identityKeyOf(payload, ""), near: [], nearReason: null }, work: { boxes: l.boxes.slice(0, 50) } });
     }
     for (const s of sections) {

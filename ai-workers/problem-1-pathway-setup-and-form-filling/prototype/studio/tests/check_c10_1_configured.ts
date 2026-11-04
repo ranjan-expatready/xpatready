@@ -53,11 +53,11 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   ok("C10.1 row 1 fail: a held file whose edition cannot be read stays held and is not approved (Break M4); the only approved file is the copy", n(`select count(*) from intake_item where status = 'HELD' and outcome = 'held'`) === Number(/(\d+) official files? stays?/.exec(r("1").why ?? "")?.[1] ?? 0) && n(`select count(*) from approved_source`) === 1, r("1").why);
   // Rows 3–4: saved answers replayed (US$0), decided by the author with a reason, one edit and one return kept visible.
   const jobs = n(`select count(*) from drafting_job where kind = 'field_map' and mode = 'REPLAY'`);
-  // R-146, QA-163 and the C11.8 live run (#746): sixteen saved answers replay (IMM 5532's re-run, the Visitor visa's IMM
-  // 5257; check_queue_tx.ts), IMM 5645's from its four saved parts (check_forms_saved_parts.ts). IMM 5669 and IMM 0008 DEP
-  // (read since the C11.7 intake) wait for the paid run. A lost or mismatched replay lowers jobs and adds its form to the
-  // list, so both sides fail.
-  ok("C10.1 row 3: every saved AI field-map answer is replayed (US$0, the sixteen forms, IMM 5645 by its four saved parts); IMM 5669 and IMM 0008 DEP are listed as waiting for the paid run", jobs === 16 && r("3").status === "partial" && r("3").shows.startsWith(`${jobs} saved`) && /^2 forms have no saved AI answer and wait for Draft with AI, a paid run the founder approves: IMM 5669 \(05-2021\), IMM 0008 DEP \(10-2024\)\.$/.test(r("3").why ?? ""), r("3"));
+  // R-146, QA-163, the C11.8 live run (#746) and the C11.7 result (3 Nov): eighteen saved answers replay (IMM 5532's re-run,
+  // the Visitor visa's IMM 5257, IMM 5669 and IMM 0008 DEP since the C11.7 paid runs; check_queue_tx.ts), IMM 5645's from its
+  // four saved parts (check_forms_saved_parts.ts), so no form waits and row 3 is done. A lost or mismatched replay lowers
+  // jobs and makes the row partial with the form named, so both sides fail.
+  ok("C10.1 row 3: every saved AI field-map answer is replayed (US$0, the eighteen forms, IMM 5645 by its four saved parts); no form waits for the paid run", jobs === 18 && r("3").status === "done" && r("3").shows.startsWith(`${jobs} saved`) && r("3").why == null, r("3"));
   ok("C10.1 row 4: the author decides every replayed proposal with a reason, one edited and one returned, and the drafts are applied", n(`select count(*) from proposal_item where run_id is not null and status = 'waiting'`) === 0 && n(`select count(*) from proposal_item where choice = 'RETURNED' and decision_reason like 'Returned by the sample loader%'`) === 1 && n(`select count(*) from proposal_item where decision_reason like 'Edited by the sample loader%'`) === 1 && n(`select count(*) from drafting_job where kind = 'field_map' and status = 'APPLIED'`) === jobs, r("4").shows);
   ok("C10.1 row 4 fail: no proposal is decided without a person's name and reason", n(`select count(*) from proposal_item where choice is not null and (decided_by is null or coalesce(decision_reason, '') = '')`) === 0);
   // Row 5: every new library item approved by a second person, never by the author who accepted it.
@@ -68,6 +68,12 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   // Row 10: release through submit, SME sign-off and a different person; the validator's refusals said, empty never released.
   const released = sql(`select c.label || '§' || r.version || '§' || p.approver_id from config_release r join combination c on c.id = r.combination_id join pack_version p on p.id = r.pack_version_id`).split("\n").filter(Boolean);
   ok("C10.1 row 10: any release goes through submit by the author, SME sign-off by user-C and approval by user-B", released.every((x) => x.endsWith("§user-B")) && n(`select count(*) from review_submission where status = 'APPROVED' and submitted_by = 'user-A'`) === released.length && (released.length === 0 || n(`select count(*) from review_signoff where actor_id = 'user-C' and action = 'signed'`) > 0), released);
+  // P-319 (review of #833, M2): the demo's form roles are set before the checkpoint releases, so each release's draft is
+  // its release right after the load: no "Form changed" line nobody made.
+  const releasedIds = sql("select distinct combination_id from config_release").split("\n").filter(Boolean);
+  const drifted: string[] = [];
+  for (const id of releasedIds) if ((await call("GET", `/combinations/${id}/review`)).body?.draft?.matches_release !== true) drifted.push(id);
+  ok("C10.1 row 10 (P-319): every configured release's draft matches its release right after the load", drifted.length === 0, { released: releasedIds.length, drifted }); // none released (a blocked checkpoint) has nothing to drift
   ok("C10.1 row 10 fail: a combination with no form is never released as configured", n(`select count(*) from config_release r where not exists (select 1 from combination_form f where f.combination_id = r.combination_id)`) === 0 && /no form is on it yet/.test(r("10").why ?? ""), r("10").why?.slice(0, 200));
   ok("C10.1 row 10 / X9a: the validator's K1 words name a form field by its own caption, never its PDF path (IMM_5707[0].page1[0]…)", /\(K1\)/.test(r("10").why ?? "") && !/[A-Za-z0-9_]+\[\d+\]\./.test(r("10").why ?? "") && /for example "/.test(r("10").why ?? ""), r("10").why?.slice(0, 200));
   ok("C10.1 row 10 / X9a fail-guard: some undecided form fields here do have a raw path and no caption, so the words above are chosen, not lucky", n(`select count(*) from form_field_map where outcome = 'unresolved' and data_path ~ '\\[0\\]\\.' and coalesce(btrim(caption), '') = ''`) > 0);
