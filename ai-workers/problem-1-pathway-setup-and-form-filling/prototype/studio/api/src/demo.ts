@@ -50,7 +50,7 @@ export const VV_FORM_RULES: { form: string; condition?: object; minAge?: number;
  *  combination files (Sample, Unconfirmed: expert). Filed on paper or as a PDF upload: IMM 5707; filed online: IMM 5645.
  *  The other one is taken off this combination's draft, with the reason. Each person 18 or older fills it (both lines). */
 export const FAMILY_FORM_BY_CHANNEL = {
-  paper: { form: "IMM 5707", other: "IMM 5645", cite: "IMM 5484 (05-2026) p. 1, the paper checklist: \"Family Information form. Must be completed by those aged 18 years or older.\" and \"You must complete the Family Information form (IMM 5707) listed in the application package for your region.\"" },
+  paper: { form: "IMM 5707", other: "IMM 5645", cite: "IMM 5484 (05-2026) p. 1, the paper checklist: \"Family Information form. Must be completed by those aged 18 years or older.\" and \"You must complete the Family Information form (IMM 5707) listed in the application package for your region.\"; Guide 5256: \"You must complete the Family Information form (IMM 5707 or IMM 5645) listed in the application package for your country.\"" },
   online: { form: "IMM 5645", other: "IMM 5707", cite: "canada.ca \"Apply for a visitor visa\" (official-sources/ircc/canada/pages/visit-canada-apply-visitor-visa.html, modified 2026-08-28, saved 27 Oct 2026): \"Your document checklist may include supporting documents such as the following: Family Information (IMM 5645) form\"; Guide 5256: \"This form must be completed by each person, 18 years of age or older\"" },
 } as const;
 /** QA-144 slice 1 (tech lead, 4 Nov): IRM 0002's rule reads a fact no form asks, added through C3.6's door for its rule
@@ -443,11 +443,15 @@ export class Demo {
     let maritalList: string | null = null;
     await timed("sections from the forms' parts (rules)", async () => {
       for (const c of fromForms) {
-        const forms = await this.db.sourceAttachment.findMany({ where: { combinationId: c.id, kind: "Form" }, orderBy: { createdAt: "asc" }, select: { id: true, fileName: true } });
+        // The family information form the channel takes off (FAMILY_FORM_BY_CHANNEL) gives no sections (review m2).
+        const filedAs = (await this.db.combinationForm.findFirst({ where: { combinationId: c.id, lineageKey: "IMM 5257" }, orderBy: { version: "desc" }, select: { channel: true } }))?.channel;
+        const notFiled = keyOf.get(c.id) === "vv.single" ? FAMILY_FORM_BY_CHANNEL[filedAs === "ONLINE" ? "online" : "paper"].other : null;
+        const forms = (await this.db.sourceAttachment.findMany({ where: { combinationId: c.id, kind: "Form" }, orderBy: { createdAt: "asc" }, select: { id: true, fileName: true, edition: true } }))
+          .filter((a) => !notFiled || !(a.edition ?? "").startsWith(`${notFiled} (`));
         for (const a of forms) { try { await this.masters.draft(author, a.id, { mode: "rules" }); } catch (e) { sectionsRefused.push(`${a.fileName}: ${said(e)}`); } }
         const runs = (await this.db.draftingJob.findMany({ where: { combinationId: c.id, kind: "masters_edition" }, select: { id: true } })).map((j) => j.id);
         // The sections, and the marital status list IMM 5409's rule reads (ruling 3); the other answer lists stay on To review.
-        const take = (await this.db.proposalItem.findMany({ where: { runId: { in: runs }, status: "waiting", kind: { in: ["section", "answer_list"] } }, select: { id: true, kind: true, payload: true } }))
+        const take = (await this.db.proposalItem.findMany({ where: { runId: { in: runs }, status: "waiting", kind: { in: ["section", "answer_list"] } }, orderBy: [{ createdAt: "asc" }, { identityKey: "asc" }], select: { id: true, kind: true, payload: true } }))
           .filter((p) => p.kind === "section" || (p.payload as { label?: string }).label === "Marital status");
         // One at a time, as on its own page: a rules item is not Ready, so it is never accepted in a batch.
         for (const p of take) {

@@ -55,9 +55,19 @@ type Row = { row: string; status: string; shows: string; why: string | null };
   // The shared placement step: each placement is the author's, asked of the client, in a section the combination uses.
   const placed = n(`select count(*) from section_question where origin = 'HUMAN' and updated_by = 'user-A' and collected_from = 'client_questionnaire'`);
   ok("QA-144 placement pass: the facts the forms need are asked in the sections of their form boxes, by the author", placed > 100 && n(`select count(*) from section_question where section_key not in (select section_key from logical_section)`) === 0, { placed });
-  ok("QA-144 placement pass: every section holding a placed fact is used by the Visitor visa", n(`select count(distinct q.section_key) from section_question q where q.updated_by = 'user-A' and q.section_key not in (select section_key from sqr_section_selection where combination_id = '${vv}')`) === 0);
-  ok("QA-144 placement pass: a case fact is asked once per case, a list row's per row", n(`select count(*) from section_question where canonical_field_key like 'case.%' and repeats <> 'once_per_case'`) === 0
-    && n(`select count(*) from section_question where repeats = 'per_row'`) > 0);
+  // Review M2: no section is selected; a placement goes out because a form or a rule reads its fact, and only to whom it
+  // applies. A child aged 1 is asked nothing because of a selected section, and no representative's licence facts.
+  ok("QA-144 placement M2: the loader selects no section on the Visitor visa (a selected section asks its questions of everyone)", n(`select count(*) from sqr_section_selection where combination_id = '${vv}'`) === 0);
+  const pv = (await call("GET", `/combinations/${vv}/preview?people=${encodeURIComponent(JSON.stringify({ child: 1 }))}&answers=${encodeURIComponent(JSON.stringify({ "child-1|person.date_of_birth": "2025-03-01" }))}`)).body;
+  const toddler = ((pv?.questions ?? []) as { fact: string; about: string; why?: string; required?: boolean }[]).filter((q) => q.about === "child-1");
+  ok("QA-144 placement M2 pass: a child aged 1 is asked no question only because a section is selected", toddler.length > 0 && !toddler.some((q) => /a section this row selects/.test(q.why ?? "")), toddler.filter((q) => /selects/.test(q.why ?? "")).map((q) => q.fact).slice(0, 5));
+  ok("QA-144 placement M2 fail: a child aged 1 is never asked a representative's facts", !toddler.some((q) => q.fact.startsWith("representative.") && q.required), toddler.filter((q) => q.fact.startsWith("representative.")).map((q) => q.fact).slice(0, 5));
+  // Review M3: one choice per fact from all its boxes: one list keeps one way of repeating; a list of people is per person;
+  // the applicant's own name sits in their personal details, not in the spouse's part of "Marital status".
+  const rep = (like: string) => sql(`select string_agg(distinct repeats, ',') from section_question where canonical_field_key like '${like}' and updated_by = 'user-A'`);
+  ok("QA-144 placement M3: the previous-residence list repeats one way (every fact of it per row)", ["", "per_row"].includes(rep("person.previous_residence_%")), rep("person.previous_residence_%"));
+  ok("QA-144 placement M3: IMM 5707's children are people, so their facts are asked per person, not per row", ["", "per_person"].includes(rep("relationship.child_relationship_type")), rep("relationship.child_relationship_type"));
+  ok("QA-144 placement M3: the applicant's family name is asked in the section of their own box, not \"Marital status\"", !["", "marital_status"].includes(sql(`select section_key from section_question where canonical_field_key = 'person.family_name' order by version desc limit 1`)), sql(`select section_key from section_question where canonical_field_key = 'person.family_name' order by version desc limit 1`));
   ok("QA-144 placement fail-guard: nobody is asked for nothing (no placement of a fact outside the library)", n(`select count(*) from section_question q where not exists (select 1 from canonical_field f where f.canonical_field_key = q.canonical_field_key)`) === 0);
 
   // Ruling 2: a form field no saved answer proposed is filled by hand, never "not a fact".
