@@ -1,0 +1,7 @@
+PASS  C1.4 Visitor visa shows its trail, status and exactly one Next step — "Next step · Official pages\n"
+PASS  C1.8 the IMM 5257 line has a Change button for the author
+PASS  C1.8 the line drawer offers Copies, a minimum age and who signs (Sample) — "IMM 5257 · Application for visitor visa (temporary resident visa) |  | No edition read yet |  | IRCC's words: \"This form must be completed by each person applying for a Temporary Resident Visa to visit Canada.\" |  | Who "
+PASS  C1.8 0 copies is refused on the field in words, nothing saved — "Copies is a whole number from 1 to 9."
+PASS  C2.3 setup: the altered IMM 5782 is held for source verification — "Held for source verification: IMM 5782 (07-2021) is not on the approved source list. It was not added to the library, attached, or sent to AI."
+FAIL  C2.3 To review lists the held IMM 5782
+5 passed, 1 failed · page errors 0
