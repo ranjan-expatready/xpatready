@@ -216,7 +216,7 @@ export function stepsVerdict(id, steps, out) {
   const missing = [];
   for (const s of steps) {
     const re = (w) => new RegExp(`^${w}\\s+${esc(id)}[- ]${esc(s)}(?![0-9A-Za-z])`, "m");
-    if (!re("PASS").test(out) || re("FAIL").test(out)) missing.push(s);
+    if (!re("PASS").test(out) || re("FAIL").test(out) || re("HELD").test(out)) missing.push(s);   // a held step is not green (QA-215 break 1)
   }
   return missing;
 }
@@ -321,6 +321,8 @@ async function runPack(id, file, wanted, slot) {
     const sec = (a, b) => Math.round((b - a) / 1000);
     if (setupBad) return { log, why: `${file}: ${setupBad}; the pack did not run` };
     log.push(`    ${file} ${where}: exit ${last}, ${summary(out)} (${sec(t0, Date.now())} s: copy ${sec(t0, tUp)}${onSix ? `, ${demo} ${sec(tUp, tSix)}` : ""}, run ${sec(tSix, Date.now())})`);
+    // A held part's steps (P-284) print HELD and fail nothing; the report names them, so a held step is never unseen.
+    for (const l of out.split("\n").filter((x) => /^HELD\s/.test(x)).slice(0, 5)) log.push(`      ${l.slice(0, 500)}`);
     const why = packVerdict(id, wanted, last, out);
     return { log, why: why ? `${file} ${where}: ${why}${fails(out)}` : null };
   } finally {

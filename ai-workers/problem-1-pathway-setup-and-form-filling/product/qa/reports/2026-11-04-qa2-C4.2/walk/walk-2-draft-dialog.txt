@@ -1,0 +1,16 @@
+Draft questions and documents
+
+One run of seven steps. What needs a person goes to To review, where you accept or remove each; nothing changes the draft until then. Sample until the immigration expert confirms.
+
+How to draft
+Live
+Steps 5 and 6 each run a first AI round and a blind checker round now. Cost shown first.
+Saved
+Each AI step replays both rounds of one earlier Live run for this combination; a step with none saved says so. US$0.
+
+It cannot be drafted yet
+
+"Visitor visa" has no form fields mapped to facts yet, so there is nothing to draft. Find its forms (Start setup) first.
+Cancel
+Draft
+--- dialog buttons: Close | Cancel | Draft [disabled]
