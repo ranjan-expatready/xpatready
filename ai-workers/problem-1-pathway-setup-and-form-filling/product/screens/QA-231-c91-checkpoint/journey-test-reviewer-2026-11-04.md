@@ -67,3 +67,9 @@ Fixes that would raise it, most valuable first:
 3. Group Components touched by section within each combination (a question for the tech lead).
 
 Not tested: a real screen reader, 200 % zoom, an intended user walking it unaided (D17 and D20 stay with the founder). Break-it was limited to reload, double load, wrong role and reset. Two tabs and hostile files are not on this row's paths.
+
+## Round 2 (head 98bbf8a2c)
+* Row 11 now shows 12 copies made (4 forms × 3 Sample people, all GENERATED). Its why lists only the 3 true "IMM 5257 SCH1: No such form." refusals (O1, a follow-up).
+* The form rule reads "IMM 5476 is filed only when Representative Form Action is answered". The sections still match the snapshots 21/21.
+* Re-score: correct data ½→1. Plain words stays ½ (SCH1 words, "Section b"). The others are unchanged.
+* **8.0 / 10: pass** (no criterion at 0).

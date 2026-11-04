@@ -79,3 +79,18 @@ Not checked: 200 % zoom, a real screen reader, an intended user walking it unaid
 Journey score (reviewer, the one score for this check): **7.5 / 10, below the pass mark of 8.** Details in `journey-test-reviewer-2026-11-04.md`.
 
 **Verdict: Block.** Fix M1, then re-request review. The m1–m4 fixes are small and should come in the same PR.
+
+## Round 2: head 98bbf8a2c9d6306acfab2c8e64050fcd90b947b4 (diff `f758c056c..98bbf8a2c` only)
+Re-run on a fresh isolated copy (`b8_rev`, :4473, stopped after; US$0, no live AI). `check_c10_1_configured` **36/36**. `check_c91_impact_ai` **29/29** (run with `--tsconfig api/tsconfig.json`; the worktree was clean afterwards). Load again by hand: row 11 = **12 copies made, all GENERATED, none QUEUED, RUNNING or FAILED; all 3 people covered**; row 11 took 5.7 s, the whole load 58 s. Components touched still matches the snapshots: 21 sections, 0 listed but not asked, 0 asked but not listed. No raw PDF path in any label or why.
+* **M1 closed.** `sample-case.ts:35-39` waits for each copy to leave QUEUED/RUNNING, up to 60 s, and counts only GENERATED copies. A copy that fails or runs out of time is named in words. The tests pin the copy count (`check_c10_1_configured.ts:120`) and fail on any "being generated", "did not finish" or "failed" refusal (`:121`). Row 11 now lists only the 3 "IMM 5257 SCH1: No such form." refusals, which are true. That is O1, a follow-up row, agreed.
+* **m1 closed.** The asked set drops checks (`engine/where-used.ts:110`). The new fail case (`check_c91_impact_ai.ts:69`) would fail with the old rule.
+  * Left (Minor, not blocking): every ONLINE-edition box is now dropped, including on an ONLINE line with a matching portal, which the snapshot does count (`snapshot.ts` fieldMaps). Only a question whose own fact appears only on a portal edition and whose condition reads the changed field could be missed. That cannot happen on the checkpoint.
+* **m2 closed.** The label reads "IMM 5476 is filed only when Representative Form Action is answered" (`api/src/where-used.ts:130`).
+  * Left (Minor): swapping keys for labels with `split/join` can break a key that starts with another key (`person.x` inside `person.x_date`). Swapping longest first prevents that. Answer values still show as keys (`"common_law"`).
+  * One extra read per review, not one per row.
+* **m3 closed.** `impact-ai.ts:59`, with a pass test (`check_c91_impact_ai.ts:78`).
+* **m4 closed.** SP files IMM 1294, whose condition reads another field. The test fails if the form-rule loop stops filtering by field.
+
+Journey re-score: correct data ½→1 and next step unchanged. Plain words stays ½ (the SCH1 refusal text, "Section b"). **8.0 / 10, passes, no criterion at 0.**
+
+**Verdict: Approve** for head 98bbf8a2c. No open Blocker or Major. The two remaining Minors and O1/O2 are follow-ups.
