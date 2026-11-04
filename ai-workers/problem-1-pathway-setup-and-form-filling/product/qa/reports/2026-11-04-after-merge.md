@@ -93,3 +93,48 @@ QA-200 (Critical, open) names C2.4, yet C2.4 is Works (25cefb67, 1 Nov). Under P
 * **QA-209** (Major, merge flow, C3.4 check): `check_forms_c34_masters_browser` times out on its 30 s demo-load request.
 * Both were seen on the merge base on Builder 7's Mac. Neither appears in the last 15 failed CI runs, so there is no run id; CI passed both on #802. qa's C9.1 browser check hit the same 30 s limit twice on this Mac.
 * C3.4 is re-scored only after both #802 (QA-196) and #771 have merged.
+
+## Batch 3 — #793 (QA-184; C11.10, C5.4, QA-129), #790 (QA-199; C3.8), #784 (C6.5, by qa tester 3), #788 (C7.5, qa tester 3), #745 (infra) · main a56536026 · tested 09:10–10:15 IST
+
+| Row | Verdict | Why |
+|---|---|---|
+| C11.10 Immigration programs setup cards (M2) | **Works** (was Partial) | QA-184 fixed: one Live state, then one five-step count for the next release, the same on card, strip, List and `/api/catalogue` |
+| C5.4 Release refused while a number has no source (M2) | **Works** (was Partial) | Its only hold was QA-184; the Review and release tab now matches its Overview row |
+| C3.8 Validator (M2) | **Works** (re-confirmed) | QA-199 (Critical) fixed: the Background questions come from each form's own heading |
+| C6.5 Passport reader (M3) | **Partial** (was Not built) | qa tester 3, `qa/verdicts/2026-11-04-C6.5.md` (#816): the engine works; routes and screen held by P-251 |
+| C7.5 (M3) | *pending* | qa tester 3 |
+| #745 (infra) | Seen working | `isolated.sh … stop` now says "database and files removed" |
+
+**M2: 45/60 confirmed** (was 43; +C11.10, +C5.4). M3: 2/17 Works, 10 Partial.
+
+### Runs (exit code · tests passed)
+| Check | Round 1 | Round 2 |
+|---|---|---|
+| `acceptance/C11.10.test.ts` | 0 · 15/15 | 0 · 15/15 |
+| `acceptance/C5.4.test.ts` | 1 (timeout, 180 s reset wait, load ~22) ×2; then 0 · 22/22 with the wait raised (139 s in all) | — |
+| `tests/check_qa184_live_state_browser.cjs` | local: 1 (timeout, 120 s reset wait) ×4 | CI run 41764923600 on main's tree: PASS 16/16 |
+| `tests/check_c38_background_forms_api.ts` | 2 (500 under load, QA-210), then 0 · 36/36 | 0 · 36/36 |
+| `acceptance/C3.8.test.ts` | 0 · 12/12 | 0 · 12/12 |
+| `tests/check_c38_completeness.ts` (no server) | 0 · 22/22 | 0 · 22/22 |
+| `tests/check_c38_completeness_api.ts` | 0 · 9/9 | 0 · 9/9 |
+| `tests/qa/check_qa_am_fix_1027.cjs` (updated, below) | 13/14 (old setup line) | 14/14 after the fix |
+
+### Demo data at 1440 px (P-304 (2); qa_walk3 on main eb834a660)
+Demo › Reset to the six (206.5 s; QA-204 seen again) › Start With an LMIA from its reviewed release:
+* With an LMIA's Overview: "Live · Release 1 · Next release: 3 of 5 steps to do", with steps 1–3 open and labelled for the next release (`c1110-lmia-overview-1440.png`).
+* The Programs card: "✓ Live · Next release: 3 of 5 steps to do" with Open; the other four cards read "0 of 5 steps" with Resume setup (`c1110-programs-live-card-1440.png`). `/api/catalogue` gives the same, out of 5. No sideways scroll.
+* Review and release: "0 draft changes; 0 problems to fix"; "Numbers without a source (17) … they will block the next submission once the draft changes".
+
+### Test updated: `tests/qa/check_qa_am_fix_1027.cjs` (from 4 steps to 5, #793 review Minor 3)
+Its "review m1" part read the four-step stage map and card selectors that #793 removed. It now checks four things: every started combination's `/catalogue` progress is out of 5, at the step of the checklist's next item, in the card's words; no card names a four-step count; Live shows only on Live cards; and a Live card shows its next release's count. Its setup line also changed: since the release gate, Spouse of a student stays In setup with something missing, not released and Not ready. Result: 14/14 on a fresh copy.
+
+### Closed
+QA-184, QA-199 and QA-129 (with QA-184, by the tech lead's ruling on #793) are moved to `history/qa-bugs-closed-2026-11-04.md`.
+
+### New
+* **QA-210** (Bug · Minor): applying a reviewed field map runs in one 5 s database transaction. On a busy server, applying IMM 5257's 242 form fields took 5.58 s and gave a generic 500.
+* QA-200 is re-tagged to C7.2 and C6.1 (tech lead's ruling on #801); C2.4 stays Works.
+
+### Disclosures
+1. To keep the run valid under the Mac's load (average 20–34), the C5.4 pack ran once from a throwaway copy of its file, with only the reset wait raised from 180 s to 900 s. The run took 139 s in all. The copy was deleted.
+2. Four local runs of the QA-184 check timed out on Reset to the six. The verdict uses its CI run on main's exact tree. By the tech lead's rule (09:45 IST), a timeout under load is a re-run, not a capability failure.
