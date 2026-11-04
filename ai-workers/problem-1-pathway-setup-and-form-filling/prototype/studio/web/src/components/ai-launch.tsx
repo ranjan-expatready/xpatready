@@ -4,7 +4,7 @@
 // twice (double click, retry after a network error) returns the same work instead of starting it again.
 import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { api, ApiError, useToast } from "@/lib/api";
 import { Button, Field, Input, Notice, Panel, Pill } from "@/components/ui/controls";
@@ -144,25 +144,51 @@ function Checklists({ combinationId, onOpen }: { combinationId: string; onOpen: 
   );
 }
 
-/** C3.4 (P-158): a form's sections and answer lists drafted by the rules from the official file (no AI, US$0). */
+/** C3.4 (P-158, P-138; QA-218): a form's sections and answer lists drafted by the rules from the official file (no AI,
+ *  US$0), and, beside each form and guide that has one, the Saved AI draft of its checks and document types (US$0, no model
+ *  call): the server's plan says whether a saved run exists (POST /attachments/:id/draft-masters/plan {mode:"replay"}),
+ *  and Saved posts {mode:"replay"} through the same door as the API (P-149 (1), P-120). Live is never started here. */
 type Att = { id: string; recognised: boolean; kind: string; edition: string | null; fileName: string };
-function FormMasters({ combinationId, source }: { combinationId?: string; source?: Att }) {
+type MastersPlan = { source: { kind: "form" | "guide"; title: string }; saved: { available: boolean; why: string | null } };
+type MastersDone = { status?: string; message?: string; proposals: number; group: string; already?: boolean };
+export function FormMasters({ combinationId, source }: { combinationId?: string; source?: Att }) {
+  const qc = useQueryClient();
   const list = useQuery<Att[]>({ queryKey: ["attachments", combinationId], queryFn: () => api(`/combinations/${combinationId}/attachments`), enabled: !!combinationId, initialData: source ? [source] : undefined });
   const [busy, setBusy] = React.useState<string | null>(null), [err, setErr] = React.useState<string | null>(null), [done, setDone] = React.useState<Record<string, { text: string; group: string }>>({});
-  const forms = (list.data ?? []).filter((a) => a.recognised && a.kind !== "Document checklist" && /\.pdf$/i.test(a.fileName));
-  if (!forms.length) return null;
-  const run = async (a: { id: string; edition: string | null; fileName: string }) => {
-    setBusy(a.id); setErr(null);
-    try { const j = await api<{ proposals: number; message: string; group: string }>(`/attachments/${a.id}/draft-masters`, { method: "POST", json: { mode: "rules" } }); setDone((d) => ({ ...d, [a.id]: { text: j.proposals ? `${j.proposals} proposals wait on To review.` : `Already drafted for this edition: ${j.message}`, group: j.group } })); }
+  // A form is a recognised PDF that is not a checklist; anything else recognised (the combination's guide page) is asked
+  // too, and shown only when the server's plan names it a guide.
+  const asked = (list.data ?? []).filter((a) => a.recognised && a.kind !== "Document checklist");
+  const plans = useQueries({ queries: asked.map((a) => ({ queryKey: ["masters-saved", a.id], retry: false, staleTime: 0,
+    queryFn: () => api<MastersPlan>(`/attachments/${a.id}/draft-masters/plan`, { method: "POST", json: { mode: "replay" } }) })) });
+  const planOf = (id: string) => plans[asked.findIndex((a) => a.id === id)];
+  const isForm = (a: Att) => /\.pdf$/i.test(a.fileName);
+  const rows = asked.filter((a) => isForm(a) || planOf(a.id)?.data?.source.kind === "guide");
+  if (!rows.length) return null;
+  const say = (a: Att, text: string, group: string) => setDone((d) => ({ ...d, [a.id]: { text, group } }));
+  const run = async (a: Att) => {
+    setBusy(`${a.id}:rules`); setErr(null);
+    try { const j = await api<{ proposals: number; message: string; group: string }>(`/attachments/${a.id}/draft-masters`, { method: "POST", json: { mode: "rules" } }); say(a, j.proposals ? `${j.proposals} proposals wait on To review.` : `Already drafted for this edition: ${j.message}`, j.group); }
     catch (e) { setErr((e as Error).message); } finally { setBusy(null); }
+  };
+  const replay = async (a: Att) => {
+    setBusy(`${a.id}:replay`); setErr(null);
+    try {
+      const j = await api<MastersDone>(`/attachments/${a.id}/draft-masters`, { method: "POST", json: { mode: "replay" } });
+      if (j.status === "FAILED" || j.status === "CANCELLED") setErr(j.message ?? "The Saved AI draft did not finish; nothing of it is proposed.");
+      else say(a, j.already ? `Already drafted with AI: ${j.message ?? "its proposals are on To review."}` : `Saved AI draft (US$0): ${j.proposals} proposal${j.proposals === 1 ? "" : "s"} wait on To review.`, j.group);
+      void qc.invalidateQueries({ queryKey: ["masters-saved"] });
+    } catch (e) { setErr((e as Error).message); } finally { setBusy(null); }
   };
   return (
     <section aria-labelledby="fm-h" className="space-y-2 rounded-lg border border-border p-3" data-form-masters>
-      <h3 id="fm-h" className="text-sm font-semibold">Forms: sections and answer lists</h3>
-      <p className="text-xs text-text-muted">The rules read each form's own parts and drop-down lists into library proposals, once per edition (no AI, US$0). A person checks each name on To review and a second person approves it. Form checks and rules from the guide need the AI step, which waits for the founder's OK on its cost.</p>
-      <ul className="space-y-1 text-sm">{forms.map((a) => (
-        <li key={a.id} className="flex flex-wrap items-center justify-between gap-2" data-form-masters-row={a.edition ?? a.fileName}><span className="min-w-0 break-words">{a.edition ?? a.fileName}{done[a.id] ? <span className="block text-xs" role="status">{done[a.id].text} <Link className="text-text-link underline" to={`/review/proposals?group=${encodeURIComponent(done[a.id].group)}`}>Open Proposals</Link></span> : null}</span>
-          <Button size="sm" variant="secondary" busy={busy === a.id} onClick={() => void run(a)}>Draft sections and lists · US$0</Button></li>))}</ul>
+      <h3 id="fm-h" className="text-sm font-semibold">Forms and guide: sections, answer lists and checks</h3>
+      <p className="text-xs text-text-muted">The rules read each form's own parts and drop-down lists into library proposals, once per edition (no AI, US$0). Where AI has drafted a form's checks and document types, or a guide's checks, before, its Saved draft is used at US$0 with no model call. A person checks each item on To review and a second person approves it. A Live AI draft waits for the founder's OK on its cost.</p>
+      <ul className="space-y-1 text-sm">{rows.map((a) => { const pl = planOf(a.id), saved = pl?.data?.saved.available === true; return (
+        <li key={a.id} className="flex flex-wrap items-center justify-between gap-2" data-form-masters-row={a.edition ?? a.fileName} data-masters-saved={saved ? "yes" : pl?.isFetching ? "asking" : "no"}><span className="min-w-0 break-words">{a.edition ?? a.fileName}{isForm(a) ? null : <span className="ml-2 text-xs text-text-muted">Guide</span>}
+          {done[a.id] ? <span className="block text-xs" role="status">{done[a.id].text} <Link className="text-text-link underline" to={`/review/proposals?group=${encodeURIComponent(done[a.id].group)}`}>Open Proposals</Link></span>
+            : pl && !pl.isFetching && !saved ? <span className="block text-xs text-text-muted" data-no-saved-masters>No Saved AI draft of its checks yet; Live waits for the founder's OK on its cost.</span> : null}</span>
+          <span className="flex flex-wrap gap-2">{saved ? <Button size="sm" busy={busy === `${a.id}:replay`} disabled={!!busy && busy !== `${a.id}:replay`} onClick={() => void replay(a)}>Saved · US$0</Button> : null}
+            {isForm(a) ? <Button size="sm" variant="secondary" busy={busy === `${a.id}:rules`} disabled={!!busy && busy !== `${a.id}:rules`} onClick={() => void run(a)}>Draft sections and lists · US$0</Button> : null}</span></li>); })}</ul>
       {err ? <p role="alert" className="text-sm text-text-danger">{err}</p> : null}
     </section>
   );

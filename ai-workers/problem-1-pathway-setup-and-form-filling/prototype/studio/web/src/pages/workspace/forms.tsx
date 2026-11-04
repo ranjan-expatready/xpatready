@@ -26,6 +26,7 @@ import { fmtWhen, Tip } from "@/components/status";
 import { useLibraryFields, WHO, whoLabel } from "@/pages/configuration";
 import { ItemSources, useItemNumbers } from "@/components/source-panel";
 import { attachmentFor, pendingForms, ReadingCell, ReadingSteps, SourcesLine, StepNotices } from "@/pages/sources";
+import { FormMasters } from "@/components/ai-launch";
 import { FormPicker } from "@/components/forms";
 import { waitsForMap } from "../../../../engine/setup-checklist";
 import { DoneSinceNotice, FOCUS_RING, useFocusItem } from "@/components/focus-item";
@@ -172,6 +173,8 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
       {!canAuthor ? <p className="text-xs text-text-muted" data-approver-copies>{APPROVER_WORDS}</p> : null}
       <FormsProblems id={id} filing={problems} />
       <SourcesLine d={combo} lineCodes={codes} />
+      {/* QA-218 (C3.4, P-138): each form's and the guide's library drafting, with Saved (US$0) where a saved AI run exists. */}
+      {canAuthor ? <FormMasters combinationId={id} /> : null}
       {open ? <LineDrawer id={id} l={open} d={combo} onClose={() => setOpen(null)} onRemoved={onRemoved} /> : null}
       {removing ? <RemoveDialog id={id} l={removing} onClose={() => setRemoving(null)} onRemoved={onRemoved} /> : null}
       {picker}{rail}{toast.node}{bulk.node}
