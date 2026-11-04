@@ -91,3 +91,19 @@ unaided walk (D17, D20 stay with the founder); the builder's 9/24 on main (not r
 outside the repo (`/tmp/claude-0/-home-user-xpatready/7c1e1616-e8b3-5ce2-bb1b-dc7ecbd9fe0d/scratchpad/out/`, `journeys.ts`).
 
 **Verdict: Approve** — commit 8494b7a87d6bf802ea4207ac88f73178b89e7067 (no open Blocker or Major; Minors 1–4 to fix or list in the PR).
+
+## Round 2 (diff-only, P-277): `git diff 8494b7a8..2cd9dd74 -- prototype/studio`
+Own fresh copy on :4477 at 2cd9dd74, stopped afterwards. `acceptance/C11.17.test.ts` 24/24; builder check 30/30 (its
+screenshot folder copied back as it was); my journeys 29/31 (J4 now passes; the two left are the pre-existing 400 px page
+scroll and my own deliberate 400); `tsc -p web` clean; axe still clean at 1024, 200 % and 1440 with the list open.
+1. **Closed.** With a refused name the open list shows the rule where "Add “…”" was (`data-add-refused`,
+   `aria-disabled`, mouse-down does nothing), so the note is never hidden while typing (seen at 1440 px). Arrow and Enter
+   on it just move on, as Enter did before.
+2. **Closed.** `typeIn` clears the messages of exactly the levels it empties (same `reset` condition as the text); the
+   Pathway type switch clears every message. Reproduced J4: the emptied Category has no note and no `aria-invalid`.
+3. **Closed.** Pathway type and "Cases may be opened from" radiogroups get `aria-invalid` + `aria-describedby` to
+   `add-note-<slot>` only while their note shows; ids are unique (one pop-up, one note per slot).
+4. **Closed.** "Add and add another" names the field when blocked, same words as Add.
+No new finding in the diff. The shared Tip staying open over a disabled button is pre-existing and outside this PR.
+
+**Verdict: Approve** — commit 2cd9dd741644c48d2a119dfa309e6e13751f509d
