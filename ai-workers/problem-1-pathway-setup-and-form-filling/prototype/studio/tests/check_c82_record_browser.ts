@@ -12,7 +12,7 @@ import { createRequire } from "node:module";
 import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { chromium, type Page } from "playwright";
-import { DB, PORT, answer, fillEverything, firms, inDays, needVisitorVisa, openCase, prepare, sql, yearsAgo } from "../acceptance/lib/m3.ts";
+import { DB, PORT, answer, fillEverything, firms, inDays, needVisitorVisa, openCase, prepare, readyToFile, sql, yearsAgo } from "../acceptance/lib/m3.ts";
 
 const BASE = `http://localhost:${PORT}`, STUDIO = join(import.meta.dirname, "..");
 const SHOTS = join(STUDIO, "..", "..", "product", "screens", "C8.2", "screenshots"); mkdirSync(SHOTS, { recursive: true });
@@ -72,7 +72,8 @@ try {
   await state("not-ready");
 
   // 2. Ready to file (fixture), the dialog for the whole group.
-  sql(`update filing set status='READY_TO_FILE' where case_id='${c.id}' and active`);
+  // C7.6's own way once its routes are on main (#861); until then the fixture writes the stored status "Mark ready" writes.
+  if (!(await readyToFile(c.id, rep)).length) sql(`update filing set status='READY_TO_FILE' where case_id='${c.id}' and active`);
   await open();
   ok("pass: both filings read Ready to file and the button opens", (await panel().locator('[data-status="ready_to_file"]').count()) === 2 && await recordBtn.isEnabled());
   await state("ready");

@@ -35,13 +35,12 @@ type ViewItem = { id: string; kind: string; filing: string; subject: string; for
 export async function recordedOverlay(db: Db, a: { workspaceId: string; caseId: string; actor: string; filings: ViewFiling[]; items: ViewItem[]; label: Map<string, string>;
   factsOf: (form: string, subject: string) => FormFact[] }): Promise<CaseTaskView[]> {
   const ids = a.filings.map((f) => f.id);
-  const [stored, records, ucis, corrections] = ids.length ? await db.$transaction([
-    db.filing.findMany({ where: { id: { in: ids } }, select: { id: true, status: true } }),
-    db.filingRecord.findMany({ where: { filingId: { in: ids } } }),
-    db.filingPersonRecord.findMany({ where: { filingId: { in: ids } }, orderBy: [{ recordedAt: "asc" }, { id: "asc" }] }),
-    db.filingRecordCorrection.findMany({ where: { filingId: { in: ids } }, orderBy: [{ correctedAt: "asc" }, { id: "asc" }] }),
-  ]) : [[], [], [], []];
+  // One read, no transaction (C6.12 break B1: 120 reads of one case at once must all answer; a second transaction per
+  // read ran the pool out): each filing with its status, record, UCIs and corrections.
+  const stored = ids.length ? await db.filing.findMany({ where: { id: { in: ids } }, select: { id: true, status: true, record: true,
+    personRecords: { orderBy: [{ recordedAt: "asc" }, { id: "asc" }] }, corrections: { orderBy: [{ correctedAt: "asc" }, { id: "asc" }] } } }) : [];
   const statusOf = new Map(stored.map((f) => [f.id, f.status]));
+  const records = stored.flatMap((f) => (f.record ? [f.record] : [])), ucis = stored.flatMap((f) => f.personRecords), corrections = stored.flatMap((f) => f.corrections);
   const changed: { filing: string; item: string; words: string }[] = [];
   for (const f of a.filings) {
     const rec = records.find((r) => r.filingId === f.id);

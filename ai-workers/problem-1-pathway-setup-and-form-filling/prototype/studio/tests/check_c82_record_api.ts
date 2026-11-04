@@ -6,7 +6,7 @@
 //   zsh studio/tools/isolated.sh rt_c82 4431 start && tsx studio/tests/check_c82_record_api.ts 4431 xr_studio_rt_c82
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
-import { CLIENT, DB, PORT, answer, call, fillEverything, firms, inDays, itemsOf, needVisitorVisa, openCase, prepare, sql, yearsAgo, type Prepare } from "../acceptance/lib/m3.ts";
+import { CLIENT, DB, PORT, answer, call, fillEverything, firms, inDays, itemsOf, needVisitorVisa, openCase, prepare, readyToFile, sql, yearsAgo, type Prepare } from "../acceptance/lib/m3.ts";
 import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
@@ -22,8 +22,15 @@ const officer = f.officer!, rep = f.rep!;
 type Rec = { portal: string | null; our_reference: string; submitted_on: string; application_number: string; fee_receipt: string | null; prepared_by: { id: string; name: string }; reviewed_by: { id: string; name: string } | null; ucis: { subject: string; uci: string }[]; corrections: { before: string; after: string; reason: string; by: string }[] };
 type Filing = Prepare["filings"][number] & { record?: Rec; read_only?: boolean };
 const filingsOf = (p: Prepare | null) => (p?.filings ?? []) as Filing[];
-/** The fixture: every filing of the case stored as Ready to file (what C7.6's "Mark ready" writes). */
-const fixtureReady = (caseId: string) => sql(`update filing set status='READY_TO_FILE' where case_id='${caseId}' and active`);
+/** Every filing of the case to Ready to file: C7.6's own way (readyToFile: review, warnings passed, Mark ready) once its
+ *  routes are on main; until then (#861 not merged) the fixture writes the stored status "Mark ready" writes. Once C7.6
+ *  is on main its view takes a stored Ready to file that is not ready back to Not started, so the fixture alone would not do. */
+async function fixtureReady(caseId: string): Promise<string> {
+  const real = await readyToFile(caseId, rep);
+  if (real.length) return "C7.6";
+  sql(`update filing set status='READY_TO_FILE' where case_id='${caseId}' and active`);
+  return "fixture";
+}
 
 // A case with two adults, every fact answered and confirmed (so the forms have facts to file), both filings ready.
 const c = await openCase(vv, [{ role: "principal", name: "Sample Client C", dob: yearsAgo(41) }, { role: "spouse_or_partner", name: "Sample Spouse C", dob: yearsAgo(39) }], { representative: rep, caseOfficers: [officer] });
@@ -43,9 +50,9 @@ let r = await record(body());
 ok("C8.2-1 fail (BR-11, P-168): recording is refused while the filings are not Ready to file (409, names the filings)", r.status === 409 && /ready to file/i.test(JSON.stringify(r.body)) && /Sample Client C/.test(JSON.stringify(r.body)), r.body);
 ok("C8.2-1 data: nothing was recorded", sql(`select count(*) from filing_record where case_id='${c.id}'`) === "0" && sql(`select count(*) from filing where case_id='${c.id}' and status='SUBMITTED'`) === "0");
 
-fixtureReady(c.id);
+const how = await fixtureReady(c.id);
 p = (await prepare(c.id, officer)).p;
-ok("C8.2-2 pass (fixture): both filings read Ready to file", filingsOf(p).every((x) => x.status === "ready_to_file"), filingsOf(p).map((x) => x.status));
+ok(`C8.2-2 pass (${how}): both filings read Ready to file`, filingsOf(p).every((x) => x.status === "ready_to_file"), filingsOf(p).map((x) => x.status));
 
 // Field checks (Problem Details naming the field).
 r = await record(body({ filings: [{ ...line(fP, "", "SAMPLE-REF-1") }, line(fS, "V300000102", "SAMPLE-REF-2")] }));
