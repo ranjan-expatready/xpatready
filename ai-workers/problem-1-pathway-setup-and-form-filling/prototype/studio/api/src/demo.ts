@@ -40,7 +40,7 @@ type ReviewedRelease = { configuration_sha256: string; drafting_run_ids: string[
  *  reviewed release starts (C5.4). */
 export const SIX_LMIA = "wp.lmia_inside";
 /** The combination's basis note once Demo › Start With an LMIA has loaded the reviewed setup as its draft (runs once). */
-export const STARTED_FROM_RELEASE = "Started from the reviewed work-permit release (p3/releases/c1-v3) by Demo › Start With an LMIA from its reviewed release: a draft until its sources are answered, submitted, signed and approved.";
+export const STARTED_FROM_RELEASE = "Sample: from the outside-Canada release c1-v3 (p3/releases/c1-v3: a work permit applied for from outside Canada), loaded by Demo › Start With an LMIA into this inside-Canada combination. It is not this combination's source-backed setup. A draft until its sources are answered, submitted, signed and approved.";
 /** The demo controls (load, Reset, Reset to the six, Start With an LMIA; forms-demo.ts's forms story) refuse (409)
  *  outside the demo workspace (P-240, G2 BR-3): they write sample content or releases, or empty the workspace. */
 export const DEMO_ONLY = "This demo control works only in the demo workspace.";
@@ -148,8 +148,10 @@ export class Demo {
   /** C5.4 on the six (F6, 3 Nov; re-test of 1a79dbf9: the release with its sources was reachable only on the suites'
    *  fixture, which the Demo menu never loads). Demo › "Start With an LMIA from its reviewed release": after Reset to the
    *  six, "With an LMIA – inside Canada" gets the reviewed work-permit release's configuration (p3/releases/c1-v3) as its
-   *  draft (source-backed), so its Review and release tab lists the published numbers that have no source entry, each
-   *  with Add source, and Submit waits for them (G1, P-240, P-279). P-322 (tech lead ruling, 4 Nov): nothing is released
+   *  draft, so its Review and release tab lists the published numbers that have no source entry, each with Add source,
+   *  and Submit waits for them (G1, P-240, P-279). QA-214 (tech lead ruling, P-294): c1-v3 is a work permit applied for
+   *  from outside Canada and the six have no outside-Canada With an LMIA, so the combination stays Sample (illustrative),
+   *  never labelled source-backed, and says where its setup came from. P-322 (tech lead ruling, 4 Nov): nothing is released
    *  here. Release 1 comes only through the product's own steps: a person answers the sources, the author submits, the
    *  SME signs and a different person approves. Scaffolding (P-33, P-35): the author, in the demo workspace, once, on
    *  the six only; no AI call (US$0), nothing approved past the rules. */
@@ -169,7 +171,7 @@ export class Demo {
       const rel = JSON.parse(readFileSync(join(RELEASE, "release.json"), "utf8")) as ReviewedRelease;
       // The run-once mark first, so a load that stops part way is never loaded over (review m1): the guard above then
       // sends the person to Reset to the six.
-      await this.db.combination.update({ where: { id: c!.id }, data: { sourceBasis: "SOURCE_BACKED", basisNote: STARTED_FROM_RELEASE } });
+      await this.db.combination.update({ where: { id: c!.id }, data: { sourceBasis: "ILLUSTRATIVE", basisNote: STARTED_FROM_RELEASE } });
       // Its forms, documents, rules and checks as draft rows by the author, who submits them. The one shortcut (review
       // M1, said in the dialog and the audit line): the shared library rows (fields, sections, placements, document
       // types, the field maps) and the numbers its own quotes state come in as the reviewed release's, already in the
@@ -181,7 +183,7 @@ export class Demo {
       const { snapshot } = await buildSnapshot(this.db, workspaceId, c!.id, "draft");
       const held = draftSourceProblems(snapshot, isDemoWorkspace()).length;
       const said = Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(", ");
-      await this.audit.log(workspaceId, actor.id, "loaded", "reviewed release", c!.combinationKey, `${actor.name} loaded the reviewed work-permit release into "${c!.label}" as a draft (${said}); its shared library items came in as the reviewed release's, already in the library; ${held} number${held === 1 ? "" : "s"} wait for a source and each new field map for a signed answer-key test before it can be submitted`, { counts, held }, c!.id);
+      await this.audit.log(workspaceId, actor.id, "loaded", "reviewed release", c!.combinationKey, `${actor.name} loaded the outside-Canada release c1-v3 (a work permit applied for from outside Canada) into "${c!.label}" as a Sample draft, not its source-backed setup (${said}); its shared library items came in as the reviewed release's, already in the library; ${held} number${held === 1 ? "" : "s"} wait for a source before it can be submitted; its field maps have no signed answer-key test, so its release is a Demo release`, { counts, held }, c!.id);
       return { combinationId: c!.id, label: c!.label, release: null, held, counts };
     } finally { this.loading = false; }
   }

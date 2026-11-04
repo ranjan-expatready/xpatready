@@ -204,9 +204,10 @@ function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExis
   const loadConf = useAction(() => api<ConfiguredLoad>("/demo/load", { method: "POST", json: { sample: "configured" } }), { success: (r) => `Configured checkpoint loaded in ${r.seconds.toFixed(1)} s`, invalidate: [[]], onDone: (r) => { setConfOpen(false); setConfigured(r); navTo("/"); } });
   // C5.4 on the six (F6): With an LMIA – inside Canada gets the reviewed work-permit release's setup as its draft, so its
   // Review and release tab shows the published numbers that need a source (G1, P-279). Opens that tab when done. Nothing
-  // is released (P-322): Release 1 comes from its sources and answer-key tests, then submit, sign-off and approve.
+  // is released (P-322): Release 1 comes from its sources, then submit, sign-off and approve. Sample (QA-214): c1-v3 is
+  // an outside-Canada release.
   const [relOpen, setRelOpen] = React.useState(false);
-  const relSources = useAction(() => api<{ combinationId: string; label: string; held: number }>("/demo/release-with-sources", { method: "POST", json: {} }), { success: (r) => `"${r.label}" has the reviewed setup as its draft: answer its ${r.held} number${r.held === 1 ? "" : "s"} without a source and its answer-key tests to release it`, invalidate: [[]], onDone: (r) => { setRelOpen(false); navTo(`/c/${r.combinationId}/review`); } });
+  const relSources = useAction(() => api<{ combinationId: string; label: string; held: number }>("/demo/release-with-sources", { method: "POST", json: {} }), { success: (r) => `"${r.label}" has the reviewed setup as its draft: answer its ${r.held} number${r.held === 1 ? "" : "s"} without a source to release it (Sample, from the outside-Canada release c1-v3)`, invalidate: [[]], onDone: (r) => { setRelOpen(false); navTo(`/c/${r.combinationId}/review`); } });
   // Demo-only controls in one menu (P-35): scaffolding, never part of the product.
   const item = "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 outline-none data-[highlighted]:bg-text/5 data-[disabled]:cursor-default data-[disabled]:opacity-50";
   return (
@@ -236,12 +237,12 @@ function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExis
         </ul>
         <p className="mt-3 text-sm text-text-muted">A file that is still missing shows as "Not found · Upload PDF" on that combination, never hidden. Nothing is released: a second person approves every library item.</p>
       </Dialog>
-      <Dialog open={relOpen} onOpenChange={(o) => { if (!relSources.isPending) setRelOpen(o); }} title="Start With an LMIA from its reviewed release?" description="Loads the reviewed setup as a draft; answer its sources and its answer-key tests to release it. US$0: no live AI call."
+      <Dialog open={relOpen} onOpenChange={(o) => { if (!relSources.isPending) setRelOpen(o); }} title="Start With an LMIA from its reviewed release?" description="Loads the outside-Canada release c1-v3 as a Sample draft; answer its sources to release it. US$0: no live AI call."
         footer={<><Button variant="ghost" disabled={relSources.isPending} onClick={() => setRelOpen(false)}>Cancel</Button><Button busy={relSources.isPending} onClick={() => relSources.mutate(undefined)}><Upload /> Load as a draft</Button></>}>
         <ul className="list-disc space-y-1 pl-5 text-sm" data-release-sources-brings>
-          <li>"With an LMIA – inside Canada" gets the reviewed work-permit release's forms, documents, rules and checks as its draft, not as a release</li>
+          <li>"With an LMIA – inside Canada" gets the forms, documents, rules and checks of c1-v3, a reviewed release for a work permit applied for from <strong>outside</strong> Canada, as its draft, not as a release. It stays <Pill tone="warn">Sample</Pill>: this is not the inside-Canada combination's own source-backed setup</li>
           <li>Its Review and release tab lists every published number (fees, ages, dates) and whether it has a source; each one without a source has Add source</li>
-          <li>Submit waits until every number has its official source or "None published – set by ExpatReady", and each new field map has an answer-key test the immigration expert signs (Tests); then the SME signs and a different person approves Release 1</li>
+          <li>Submit waits until every number has its official source or "None published – set by ExpatReady"; then the SME signs and a different person approves Release 1, a Demo release (its field maps have no answer-key test the immigration expert signed)</li>
         </ul>
         <p className="mt-3 text-sm text-text-muted">Once only after Reset to the six. One shortcut: its shared library items (fields, sections, document types, field maps) come in as the reviewed release's, already in the library, so no paid AI drafting runs again. The combination itself is approved and released only through those steps.</p>
       </Dialog>
