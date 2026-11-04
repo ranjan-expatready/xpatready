@@ -6,13 +6,7 @@
   "page1.SectionA": {
    "heading": "Section A",
    "printed": "SECTION A",
-   "how": "banner",
-   "sub": {
-    "SectionAinfo": {
-     "heading": "Applicant",
-     "printed": "APPLICANT"
-    }
-   }
+   "how": "banner"
   },
   "page1.SectionB": {
    "heading": "Section B",

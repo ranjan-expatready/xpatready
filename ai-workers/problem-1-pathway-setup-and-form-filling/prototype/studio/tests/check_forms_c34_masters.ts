@@ -107,7 +107,9 @@ run(async () => {
   // ─────────────────── accepting: a DRAFT library row and a waiting change for a second person
   const waiting = (k: string) => Number(sql(`select count(*) from library_change where status='WAITING' and kind='${k}'`));
   const s0 = waiting("section"), l0 = waiting("answer_list");
-  const sec = of("section").find((x) => x.reuse?.match === "new"), lst = of("answer_list").find((x) => x.reuse?.match === "new");
+  // QA-206: a section with no printed heading is refused until it is named (check_forms_qa206_section_headings.ts), so
+  // this accepts one named from the form.
+  const sec = of("section").find((x) => x.reuse?.match === "new" && !/^Unnamed section /.test(String(x.title))), lst = of("answer_list").find((x) => x.reuse?.match === "new");
   r = await call("POST", "/review/proposals/decide", { ids: [sec?.id ?? "00000000-0000-4000-8000-000000000000"], action: "accept" }, AUTHOR);
   ok("C3.4 pass: an accepted section lands as a DRAFT section waiting for a second person", !!sec && r.status < 300 && waiting("section") === s0 + 1, r.status >= 300 ? words(r) : undefined);
   r = await call("POST", "/review/proposals/decide", { ids: [lst?.id ?? "00000000-0000-4000-8000-000000000000"], action: "accept" }, AUTHOR);

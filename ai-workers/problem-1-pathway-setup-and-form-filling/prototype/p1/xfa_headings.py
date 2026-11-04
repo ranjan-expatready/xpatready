@@ -20,7 +20,8 @@ out by position top to bottom, a flowing part in its own order):
    which is its title.
 A banner printed "(CONTINUED)" is marked "continues": its boxes are one section with the part of that heading before it.
 A child part whose first text is its own bold banner is listed under "sub" with that heading: its boxes are a section
-of their own (IMM 1295 prints "EMPLOYMENT" inside the wrapper that starts with "EDUCATION").
+of their own (IMM 1295 prints "EMPLOYMENT" inside the wrapper that starts with "EDUCATION"), unless it splits into
+two or more parts that each print their own banner (rows of people: the first row's label does not name the others).
 Anything else has no printed heading: the rules pass then says the name must be changed before Accept.
 
 A banner is put in sentence case by the form's own spelling of each word: a word the form prints in small letters
@@ -204,13 +205,19 @@ def read(fname):
             # A child part that prints its own bold banner first (IMM 1295's "EMPLOYMENT" inside the wrapper that starts
             # with "EDUCATION"; IMM 5257's "PASSPORT" inside page 2's personal details) is a section of its own: its
             # boxes sit under that banner, not under the part's first one.
+            def first_banner(el):
+                w = [x for x in texts(el, ns) if lettered(x[0]) and not OFFICE.search(x[0]) and (x[1] or len(x[0].split()) > 4)]
+                return banner_of(w[0][0]) if w and w[0][1] else None
+
             sub = {}
             for c in part:
                 if c.tag.replace(ns, "") not in PARTS:
                     continue
-                cw = [x for x in texts(c, ns) if lettered(x[0]) and not OFFICE.search(x[0]) and (x[1] or len(x[0].split()) > 4)]
-                cb = banner_of(cw[0][0]) if cw and cw[0][1] else None
-                if cb and cb != b and (c.get("name") or "") and c.get("name") not in sub:
+                cb = first_banner(c)
+                # A child that itself splits into parts each printing their own banner (IMM 5406's SectionAinfo: one row
+                # each for the applicant, spouse and parents) is not named by its first row's label (review r3 M5).
+                rows = sum(1 for g in c if g.tag.replace(ns, "") in PARTS and first_banner(g))
+                if cb and cb != b and rows < 2 and (c.get("name") or "") and c.get("name") not in sub:
                     sub[c.get("name")] = {"heading": sentence_case(cb, seen), "printed": cb}
             if sub:
                 entry = {**(entry or {"heading": None, "how": "none"}), "sub": sub}
