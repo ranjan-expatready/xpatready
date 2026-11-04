@@ -97,9 +97,22 @@ jobs:
           python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py
           node "$S/tools/count-any.mjs" --against "${{ github.event.pull_request.base.sha }}"
           bash "$P/tools/check-select-suites.sh" && bash "$P/tools/check-merge-guard.sh" && bash "$P/tools/check-lane-bind.sh"
+          node "$S/tools/check-gate-b.mjs"
       - name: Playwright's own Chromium
         if: env.KIND == 'code'
         run: cd "$S" && ./node_modules/.bin/playwright install chromium
+      - name: gate B, the claimed capabilities' open bugs and acceptance packs (part 1 only; studio/tools/gate-b.mjs)
+        # P-214, founder 4 Nov: a code PR's "Claims Works: C<n.n>" capabilities have no open Major or worse in qa/BUGS.md
+        # unless it names the bug it fixes; the named capabilities' acceptance packs pass (on the six where the pack's
+        # run allows, else "fixture only"). Title and body come in as environment values, never pasted into the script.
+        if: matrix.shard == 1 && env.KIND == 'code'
+        env: { PR_TITLE: "${{ github.event.pull_request.title }}", PR_BODY: "${{ github.event.pull_request.body }}" }
+        run: node "$S/tools/gate-b.mjs"
+      - name: gate B timing on GitHub's machines (TEMPORARY, #804 only)
+        if: matrix.shard == 1 && env.KIND == 'code'
+        run: |
+          time node "$S/tools/gate-b.mjs" --title "measure: C11.13 (QA-192)" || true
+          time node "$S/tools/gate-b.mjs" --title "measure: C11.13, C11.10" || true
       - name: studio suites, part ${{ matrix.shard }} of ${{ needs.kind.outputs.n }} (run-suites.sh --demo --shard; US$0 model spend)
         if: env.KIND == 'code'
         env: { PR_SUITES: "${{ vars.PR_SUITES }}" }
