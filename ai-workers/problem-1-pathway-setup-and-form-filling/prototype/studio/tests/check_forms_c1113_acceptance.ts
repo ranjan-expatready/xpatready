@@ -147,19 +147,17 @@ run(async () => {
   ok("QA-192 pass (review M3): the first of two close names (the later one carries the pair) shows no reason needed, and is accepted without one", firstView?.near_reason_needed === false && r.status === 201, [firstView?.near_reason_needed, r.status, words(r)]);
   r = await call("POST", "/review/proposals/decide", { ids: [mLater], action: "accept" }, AUTHOR);
   ok("QA-192 fail (review M3): the later one shows a reason is needed, and is refused without one (400)", laterView?.near_reason_needed === true && r.status === 400, [laterView?.near_reason_needed, r.status, words(r)]);
-  // Review r3 M4 (P-121): a Ready item that comes to need a near reason (its close name, proposed later, was accepted)
-  // cannot be ticked with others; the queue says why, and decide() refuses the batch naming it (409), nothing accepted.
-  // Since P-294/P-299 (main) no new library item goes in bulk at all, so the box gives that reason first; the near check
-  // in bulkWhy and decide's bulk check stays as the second guard.
+  // P-294/P-299 with QA-192: a Ready new item that comes to need a near reason (its close name, proposed later, was
+  // accepted) is never accepted in bulk: no new library item is (main's rule, the box gives that reason first).
   const [kFirst, kLater, osprey, heron] = await P.insertProposals(db, ws, [item("Kestrel plume tint"), item("Tint of kestrel plume"), item("Osprey wing span"), item("Heron beak length")] as never);
   const kAcc = await call("POST", "/review/proposals/decide", { ids: [kLater], action: "accept", reason: "The tint of the plume, read the other way round (test)." }, AUTHOR);
   const g4 = (await call("GET", `/review/proposals?group=${encodeURIComponent("edition:IMM 5257 (09-2023)")}`)).body?.group;
   const kView = (g4?.bands?.ready ?? []).find((x: { id: string }) => x.id === kFirst);
   r = await call("POST", "/review/proposals/decide", { ids: [kFirst, osprey], action: "accept" }, AUTHOR);
-  ok("QA-192 fail (review r3 M4): a Ready item that now needs a near reason cannot be ticked in bulk (the box says why), and a bulk accept with it is refused naming it (409); nothing is accepted", kAcc.status === 201 && kView?.near_reason_needed === true && !!kView?.bulk_why && r.status === 409 && words(r).includes("Kestrel plume tint") && sql(`select string_agg(status, ',' order by status) from proposal_item where id in ('${kFirst}', '${osprey}')`) === "waiting,waiting", [kAcc.status, kView && { needed: kView.near_reason_needed, bulk: kView.bulk_why }, r.status, words(r)]);
+  ok("QA-192 fail (P-294/P-299): a Ready new item that now needs a near reason cannot be ticked in bulk (the box says why), and a bulk accept with it is refused (409); nothing is accepted", kAcc.status === 201 && kView?.near_reason_needed === true && !!kView?.bulk_why && r.status === 409 && sql(`select string_agg(status, ',' order by status) from proposal_item where id in ('${kFirst}', '${osprey}')`) === "waiting,waiting", [kAcc.status, kView && { needed: kView.near_reason_needed, bulk: kView.bulk_why }, r.status, words(r)]);
   r = await call("POST", "/review/proposals/decide", { ids: [osprey], action: "accept" }, AUTHOR);
   const kOwn = await call("POST", "/review/proposals/decide", { ids: [kFirst], action: "accept", reason: "The plume's tint, named the other way (test)." }, AUTHOR);
-  ok("QA-192 pass (review r3 M4): each is accepted on its own, the near one with its reason and the other without one", r.status === 201 && kOwn.status === 201 && sql(`select count(*) from proposal_item where id = '${heron}' and status = 'waiting'`) === "1", [r.status, words(r), kOwn.status, words(kOwn)]);
+  ok("QA-192 pass (P-294/P-299): each is accepted on its own, the near one with its reason and the other without one", r.status === 201 && kOwn.status === 201 && sql(`select count(*) from proposal_item where id = '${heron}' and status = 'waiting'`) === "1", [r.status, words(r), kOwn.status, words(kOwn)]);
   // Review r3 M5: the checker's reading is offered only when the readings differ, so an agreed item never says a reason
   // is needed for it; the server accepts it without one.
   const kKey = kAcc.body?.items?.[0]?.landedAs;
@@ -168,6 +166,23 @@ run(async () => {
   const kReuseView = [...(g5?.bands?.ready ?? []), ...(g5?.bands?.check ?? []), ...(g5?.bands?.decide ?? [])].find((x: { id: string }) => x.id === kReuse);
   r = await call("POST", "/review/proposals/decide", { ids: [kReuse], action: "accept" }, AUTHOR);
   ok("QA-192 pass (review r3 M5): an agreed item whose reading is close to a library item but reuses one says no reason is needed, for either reading, and is accepted without one", !!kKey && kReuseView?.agreement === "agreed" && kReuseView.near_reason_needed === false && kReuseView.near_reason_needed_check === false && r.status === 201 && r.body?.items?.[0]?.landedAs === kKey, [kKey, kReuseView && { agreement: kReuseView.agreement, own: kReuseView.near_reason_needed, check: kReuseView.near_reason_needed_check }, r.status, words(r)]);
+  // Review r3 M4 (P-121), the case main's new-item rule does not cover: a Ready twin whose first copy has not landed adds
+  // the item itself, so when it is close to a library field it needs a person's reason and cannot be ticked with others
+  // (the box says why); decide() refuses the batch naming it (409), nothing accepted. Once its first copy is in the
+  // library it reuses that item, needs no reason and can be ticked again.
+  const tw = "Kestrel plume tint shade";
+  const twA = (await tryInsert(item(tw))).ids[0], twB = (await tryInsert(ed2(tw))).ids[0];
+  sql(`update proposal_item set confidence = 'ready', agreement = 'agreed', reason = null where id = '${twB}'`);
+  const ospreyKey = sql(`select decided_key from proposal_item where id = '${osprey}'`);
+  const cleanReuse = (await tryInsert(item("Osprey wing span", { reuse: { match: "reuse", existingKey: ospreyKey } }))).ids[0];
+  const twinOf = (gid: string) => call("GET", `/review/proposals?group=${encodeURIComponent(gid)}`).then((x) => (x.body?.group?.bands?.ready ?? []).find((y: { id: string }) => y.id === twB));
+  const twView = await twinOf("edition:IMM 5257 Schedule 1 (test)");
+  r = await call("POST", "/review/proposals/decide", { ids: [twB, cleanReuse], action: "accept" }, AUTHOR);
+  ok("QA-192 fail (review r3 M4): a Ready twin whose first copy has not landed, close to a library field, cannot be ticked in bulk (the box says why) and a bulk accept with it is refused naming it (409); nothing is accepted", !!twA && !!twB && !!cleanReuse && twView?.near_reason_needed === true && twView?.bulk_why === P.NEAR_BULK_WHY && r.status === 409 && words(r).includes(tw) && /close to a library item/.test(words(r)) && sql(`select string_agg(status, ',') from proposal_item where id in ('${twB}', '${cleanReuse}')`) === "waiting,waiting", [twView && { needed: twView.near_reason_needed, bulk: twView.bulk_why }, r.status, words(r)]);
+  const twAcc = await call("POST", "/review/proposals/decide", { ids: [twA], action: "accept", reason: "A shade of the tint, not the tint itself (test)." }, AUTHOR);
+  const twAfter = await twinOf("edition:IMM 5257 Schedule 1 (test)");
+  r = await call("POST", "/review/proposals/decide", { ids: [twB, cleanReuse], action: "accept" }, AUTHOR);
+  ok("QA-192 pass (review r3 M4): once its first copy is in the library the twin needs no reason, can be ticked, and is accepted with others as a reuse of that item", twAcc.status === 201 && twAfter?.near_reason_needed === false && twAfter?.bulk_why === null && r.status === 201 && r.body?.items?.find((x: { id: string }) => x.id === twB)?.landedAs === twAcc.body?.items?.[0]?.landedAs, [twAcc.status, twAfter && { needed: twAfter.near_reason_needed, bulk: twAfter.bulk_why }, r.status, words(r)]);
   // Devin r3 on #726: a twin whose first copy was accepted (with its reason) now reuses it: the queue asks no reason, as
   // the server does not.
   const arr = `${fam} on arrival`;
