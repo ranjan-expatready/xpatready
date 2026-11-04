@@ -20,7 +20,7 @@ Before each submit, `seedSampleSources(db, combinationId)` (`api/src/source-regi
 ## Not the checkpoint, and not valid evidence under P-322
 **Demo › "Start With an LMIA from its reviewed release"** (`releaseWithSources` → `fromReviewedRelease`, `demo.ts` ~127–170) imports the reviewed work-permit release (p3/releases/c1-v3) with `importConfiguration`. It then writes the release straight into the database (`packVersion.create`, `configRelease.create`) and marks its files as in the library (`sourceAttachment.update`). No submit, sign-off or approval runs. So a capability after setup proven only on this With an LMIA release does not count under P-322.
 
-Two of qa's verdicts today used that path for their demo-data walk: **C6.1** (the case opened on With an LMIA's release 1, batch 4) and **C5.4** (With an LMIA's Review and release tab, batch 3). Their packs and CI runs stand. The question of what P-322 does to them went to the tech lead on 4 Nov ~12:20 IST, and qa will not change them before the ruling.
+Two of qa's verdicts today used that path for their demo-data walk: **C6.1** (the case opened on With an LMIA's release 1, batch 4) and **C5.4** (With an LMIA's Review and release tab, batch 3). Their packs and CI runs stand. The tech lead ruled (4 Nov ~12:30 IST, P-294 under P-322): both go back to Partial, held by QA-144, and the shortcut is QA-212 (Gap · Major).
 
 ## What this means today
 On main, the configured checkpoint releases nothing (QA-144, `released: []`). So no capability after setup can count on it yet, until QA-144's slices land. Re-score then: C4.1, C4.8, C10.1 (the tech lead), and every release and case row that P-322 names.

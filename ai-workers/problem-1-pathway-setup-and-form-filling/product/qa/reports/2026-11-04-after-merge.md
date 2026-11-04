@@ -184,3 +184,10 @@ QA-180 and QA-200 (Critical), and QA-192 (with C11.13) are in `history/qa-bugs-c
 
 ### Questions for the tech lead
 * The GitHub re-test needs `studio/tools/gate-b.mjs` (#804) on main. Until it merges, packs run on one Mac copy at a time. There is also no `acceptance/C6.1.test.ts` or `C5.1.test.ts`: which packs should gate B run for these two?
+
+## Records update ~12:35 IST: P-322 (founder, ~12:00 IST) and the tech lead's ruling
+* **The one-time P-322 check is done** (`qa/verdicts/2026-11-04-checkpoint-built-by-product-steps.md`). The configured checkpoint is built by the product's own services, as the people who hold each duty. Its one shortcut is Sample source entries, the same function as a Demo route, and that is allowed.
+* **Demo › "Start With an LMIA from its reviewed release" writes its release straight into the database.** This is **QA-212** (Gap · Major, C6.1 and C5.4), to go to a builder.
+* **C6.1 and C5.4 go back to Partial** by the tech lead's ruling (P-294 under P-322): their demo walks used that release, and the checkpoint releases nothing until QA-144 lands. Their packs and CI stand as evidence.
+* **M2: 45/60 confirmed** (was 46 before the ruling). Thin runtime slice: 6/8.
+* C6.1 and C5.1 have no acceptance pack. Until G5 (now started, which also writes C5.1's pack) and a C6.1 pack row land, qa's machine run for them is their named suites in CI on main's tree.
