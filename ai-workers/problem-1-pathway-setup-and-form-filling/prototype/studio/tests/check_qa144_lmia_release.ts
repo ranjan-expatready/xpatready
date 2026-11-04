@@ -82,6 +82,13 @@ const bySection = (pv: Awaited<ReturnType<typeof preview>>, who: string) => (pv?
   ok("QA-144 R2-m1 pass: sections the Visitor visa chose that With an LMIA's placements made not-everyone's are unchosen there, by the author, and row 7 says so", unchosen !== "" && /chosen sections? unchosen again where a shared placement made .* not everyone's \(.*Visitor visa.*\)/.test(r("7").shows) && unchosen.split(",").every((k) => n(`select count(*) from sqr_section_selection where combination_id = '${vv}' and section_key = '${k}'`) === 0), unchosen);
   const tod = await preview(vv, { child: 1 }, { "child-1|person.date_of_birth": "2025-03-01", "child-1|person.marital_status": never, "principal|person.marital_status": never });
   ok("QA-144 R2-m1 fail: after With an LMIA's load, the Visitor visa's toddler and a never-married principal are asked nothing only because a section is chosen", bySection(tod, "child-1").length === 0 && bySection(tod, "principal").length === 0, [...bySection(tod, "child-1"), ...bySection(tod, "principal")].slice(0, 6));
+  // Round 2's R2-m1 (review R1-m4): the section the fact only IRM 0002's rule reads is placed in, when the Visitor visa's
+  // own step chose it, is unchosen by that same step, before With an LMIA's step selects anything; not left to it.
+  const rfSec = sql(`select section_key from section_question where canonical_field_key = 'person.gender_identifier_differs_from_documents' order by version desc limit 1`);
+  const at = (q: string) => sql(`select coalesce(min(at)::text, '') from audit_event where entity = 'section selection' and ${q}`);
+  const vvAdded = at(`combination_id = '${vv}' and entity_key = '${rfSec}' and summary like '%added the section%'`), vvRemoved = at(`combination_id = '${vv}' and entity_key = '${rfSec}' and summary like '%removed the section%'`), lmFirst = at(`combination_id = '${lm}' and summary like '%added the section%'`);
+  ok("QA-144 R1-m4 pass: the IRM 0002 fact's section, once chosen on the Visitor visa, is unchosen by the Visitor visa's own step, before With an LMIA's first selection", rfSec !== "" && vvAdded !== "" && vvRemoved !== "" && lmFirst !== "" && vvRemoved < lmFirst
+    && n(`select count(*) from sqr_section_selection where combination_id = '${vv}' and section_key = '${rfSec}'`) === 0, { rfSec, vvAdded, vvRemoved, lmFirst });
   ok("QA-144 R2-m1 fail-guard: the Visitor visa keeps chosen sections (C4.1 can still order them)", n(`select count(*) from sqr_section_selection where combination_id = '${vv}'`) >= 3);
 
   // K1 and its list values: a form field no saved answer proposed is filled by hand; IMM 5710's own marital codes.

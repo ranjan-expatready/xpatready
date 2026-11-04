@@ -582,7 +582,7 @@ export class Demo {
           else setUpRefused.push(`${rf.fact}: neither the person's sex, gender nor date of birth is asked in a section`);
         }
         setUpRefused.push(...p.refused, ...p.noSection.map((f) => `${f}: no section groups a form field that reads it`));
-        unchosen.push(...p.unselected.map((x) => x.includes(" (on ") ? x : `${x} (on ${c.label})`));
+        unchosen.push(...p.unselected);
         const editions = ((await buildSnapshot(this.db, workspaceId, c.id, "draft")).snapshot.field_maps as { form_edition: string; channel?: string }[]).filter((m) => m.channel !== "ONLINE").map((m) => m.form_edition);
         for (const ed of await this.db.formEdition.findMany({ where: { workspaceId, editionLabel: { in: editions } }, select: { id: true } })) {
           for (const f of (await this.library.formFields(ed.id)).fields.filter((x: { outcome: string }) => x.outcome === "unresolved")) {
