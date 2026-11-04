@@ -82,9 +82,18 @@ export const FORM_SETUP: Record<string, { application: string; rules: FormRule[]
 };
 /** QA-144 slice 1 (ruling 2): a form field no saved answer proposed is filled by hand, never "not a fact". */
 export const BY_HAND_REASON = "Not proposed by the saved AI answer, so it is filled by hand on the PDF until a person maps it on this form's field map (sample loader rule, QA-144; Sample)";
-/** C10.1 row 1 (X9a): the off-list file the configured checkpoint uploads (Sample): IMM 5476's 2021 edition, the file row 17
- *  also uses (official-sources/ircc manifest, P-32), saved again so its checksum is on no list; its IRCC page on canada.ca. */
-export const OFF_LIST_COPY = { official: "previous-editions/imm5476e-2021.pdf", name: "imm5476e-2021-from-email.pdf", page: "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5476.html" };
+/** C10.1 row 1 (X9a): the off-list file the configured checkpoint uploads (Sample): IMM 5257's previous edition (the
+ *  official-sources/ircc manifest's previous-editions/imm5257e-pre-2023.pdf, P-32), saved again so its checksum is on no
+ *  list; its IRCC page on canada.ca. Not IMM 5476 2021 since QA-207: row 17 makes that the library's edition. */
+export const OFF_LIST_COPY = { official: "previous-editions/imm5257e-pre-2023.pdf", name: "imm5257e-pre-2023-from-email.pdf", page: "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5257.html", library: "IMM 5257 (09-2023)" };
+/** C10.1 row 17 (QA-207, tech lead's ruling (a), 4 Nov): the library uses IMM 5476's 2021 edition on every combination
+ *  that files it, and the current edition arrives as a new edition, held, so C9.1's comparison and impact can be reached
+ *  on the demo data. Only once a saved field map of the 2021 edition is recorded (the paid runner's): without it the
+ *  2021 edition would leave IMM 5476 unmapped and QA-180's rule refuses the releases. The current edition, cited (P-170):
+ *  canada.ca "Use of a Representative Form (IMM 5476)" (official-sources/ircc/web-pages/page-imm5476.html, modified
+ *  2025-12-12, saved 19 Oct 2026): "A new version of this form is available (11-2025). Make sure you are using the most
+ *  recent version." The 2021 file is IRCC's own, from the web archive (manifest: imm5476e-2021.pdf). */
+export const ROW17 = { previous: "imm5476e-2021.pdf", previousInventory: "prototype/p1/inventory/imm5476e-2021.inventory.json", current: "imm5476e.pdf", previousLabel: "IMM 5476 (11-2021)", currentLabel: "IMM 5476 (11-2025)" };
 
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
 /** C10.1: one DEMO.md row of the configured checkpoint, as the Demo menu shows it. */
@@ -321,7 +330,7 @@ export class Demo {
    *  answers, US$0; a combination with none stops with the reason, for a person); each read form's saved AI field-map
    *  answer replayed through the one door (insertProposals) as waiting proposals. No live AI call, no release, no
    *  library row written directly: the library fills only when people accept and a second person approves. */
-  private async loadSix(actor: Actor, workspaceId: string, t0: number, log: string[]) {
+  private async loadSix(actor: Actor, workspaceId: string, t0: number, log: string[], opts: { swap?: Record<string, string> } = {}) {
     const sample = JSON.parse(readFileSync(SAMPLES_SIX, "utf8")) as SampleFile;
     // C10.1: where the load's time goes, step by step (seconds per kind of step, summed), returned with the result.
     const timings: Record<string, number> = {};
@@ -336,17 +345,19 @@ export class Demo {
     const official = new Set(officialFiles());
     const setUp = async (node: { programNodeKey: string; label: string }, path: string, c: SixSetup) => {
       const comp = await this.studio.createCombination(actor, { programKey: node.programNodeKey, label: node.label, key: c.key, participants: c.participants, description: c.note, sourceBasis: "ILLUSTRATIVE", basisNote: c.note });
-      const absent = c.sources.filter((f) => !official.has(f));
+      // QA-207: the configured checkpoint may file another edition of a form (ROW17), by its own official file.
+      const sources = c.sources.map((f) => opts.swap?.[f] ?? f);
+      const absent = sources.filter((f) => !official.has(f));
       const refused: { code: string; why: string }[] = [];
-      for (const f of c.sources.filter((x) => official.has(x))) {
+      for (const f of sources.filter((x) => official.has(x))) {
         const r = await timed("form intake (read code, edition, checksum)", () => this.intake.sample(actor, comp.id, f));
         if (!r.attachmentId) refused.push({ code: f, why: r.message }); // the intake's own words: shown, never hidden
         else if (r.attachmentStatus === "RECOGNISED") await timed("form read (form fields)", () => this.sources.read(actor, r.attachmentId!));
       }
       const missing = [...(c.missing ?? []).map((m) => ({ code: m.code, why: m.why })), ...refused];
-      made.push({ id: comp.id, label: path, page: c.page ?? null, missing, files: c.sources.length - absent.length - refused.length, absent });
+      made.push({ id: comp.id, label: path, page: c.page ?? null, missing, files: sources.length - absent.length - refused.length, absent });
       const out = [...absent, ...missing.map((m) => m.code)];
-      log.push(`  ${path}: ${c.sources.length - absent.length - refused.length} official files through the form intake${out.length ? `; Not found · Upload PDF: ${out.join(", ")}` : ""}`);
+      log.push(`  ${path}: ${sources.length - absent.length - refused.length} official files through the form intake${out.length ? `; Not found · Upload PDF: ${out.join(", ")}` : ""}`);
     };
     for (const p of sample.programs) {
       const prog = await this.studio.createNode(actor, { kind: "PROGRAM", label: p.label, parentKey: p.pathway, key: p.key, description: p.description, sourceBasis: "ILLUSTRATIVE" });
@@ -405,11 +416,11 @@ export class Demo {
    *  submits, the SME (user-C) signs and user-B releases. Nothing is faked: a step a rule refuses stays undone and its row
    *  says the rule's own words; a row whose function another lane has not merged says "not built yet". New saved AI
    *  answers drop in with no code change (the six load replays whatever saved answer matches). US$0, no live AI call. */
-  /** C10.1 row 1 (X9a): an off-list copy of IMM 5476's 2021 edition, as a person would have saved it from an email (its
+  /** C10.1 row 1 (X9a): an off-list copy of IMM 5257's previous edition, as a person would have saved it from an email (its
    *  bytes differ from the official file, so its checksum is on no approved list; Sample). The author uploads it on the
    *  Visitor visa (held for source verification), records the IRCC page it came from, and the approver, a second person,
-   *  compares and approves it on the intake's own route (P-80). The library holds IMM 5476 (11-2025), not 11-2021, so the
-   *  copy is not a duplicate (review-3 Major 1). Once approved it goes through the intake again: an edition older than the
+   *  compares and approves it on the intake's own route (P-80). The library holds IMM 5257 (09-2023), not the older
+   *  edition, so the copy is not a duplicate (review-3 Major 1). Once approved it goes through the intake again: an edition older than the
    *  library's is set aside by the Approver, never used, which the row says. */
   private async heldFileApproved(author: Actor, approver: Actor, workspaceId: string): Promise<{ ok: true; shows: string } | { ok: false; why: string }> {
     const vv = await this.db.combination.findFirst({ where: { workspaceId, combinationKey: "vv.single" }, select: { id: true } });
@@ -417,7 +428,7 @@ export class Demo {
     const copy = Buffer.concat([readFileSync(join(OFFICIAL, OFF_LIST_COPY.official)), Buffer.from("\n% Sample: a copy saved from an email (C10.1 row 1, X9a)\n")]);
     const up = (await this.intake.intake(author, [{ originalname: OFF_LIST_COPY.name, buffer: copy }], vv.id)).results[0];
     const item = await this.db.intakeItem.findFirst({ where: { workspaceId, sha256: up.sha256 ?? "", status: "HELD", outcome: "held" } });
-    if (!item) return { ok: false, why: `The off-list copy of IMM 5476 (11-2021) was not held for a source check: ${up.message}` };
+    if (!item) return { ok: false, why: `The off-list copy of IMM 5257's previous edition was not held for a source check: ${up.message}` };
     await this.intake.recordPage(author, item.id, { irccPage: OFF_LIST_COPY.page });
     const done = await this.intake.decideHeld(approver, item.id, "approve", { note: "Sample: compared with the IRCC page", irccPage: OFF_LIST_COPY.page });
     // Review m2 (f7): the re-intake holds it as an older edition; the Approver sets it aside with that reason, so nothing is
@@ -426,14 +437,19 @@ export class Demo {
     if (done.result?.outcome === "older_edition_held") {
       const older = await this.db.intakeItem.findFirst({ where: { workspaceId, sha256: item.sha256, status: "HELD", outcome: "older_edition_held" }, select: { id: true } });
       // #300 n2: say "set it aside" only when there was a held row to set aside.
-      if (older) await this.intake.decideHeld(approver, older.id, "reject", { note: "Sample: older than the library's IMM 5476 (11-2025), so it is not used." });
-      after = older ? ` Then the intake found it older than the library's IMM 5476 (11-2025), and ${approver.name} set it aside: not used.` : ` Then the intake found it older than the library's IMM 5476 (11-2025): not used.`;
+      if (older) await this.intake.decideHeld(approver, older.id, "reject", { note: `Sample: older than the library's ${OFF_LIST_COPY.library}, so it is not used.` });
+      after = older ? ` Then the intake found it older than the library's ${OFF_LIST_COPY.library}, and ${approver.name} set it aside: not used.` : ` Then the intake found it older than the library's ${OFF_LIST_COPY.library}: not used.`;
     }
-    return { ok: true, shows: `an off-list copy of ${item.editionLabel ?? "IMM 5476 (11-2021)"} (${OFF_LIST_COPY.name}) held for a source check, its IRCC page recorded by ${author.name}, approved by ${approver.name}.${after}` };
+    return { ok: true, shows: `an off-list copy of ${item.editionLabel ?? "IMM 5257's previous edition"} (${OFF_LIST_COPY.name}) held for a source check, its IRCC page recorded by ${author.name}, approved by ${approver.name}.${after}` };
   }
 
   private async loadConfigured(actor: Actor, workspaceId: string, t0: number, log: string[]) {
-    const six = await this.loadSix(actor, workspaceId, t0, log);
+    // Row 17 (QA-207): IMM 5476 2021 in the library only when its saved field map is recorded (see ROW17).
+    // The same reading as the six's replay (ai.ts plan: the job id and the inventory's checksum), so a map recorded for
+    // an older reading of the 2021 file never swaps the edition in (review m1).
+    const inv2021 = join(SOLUTION, ROW17.previousInventory);
+    const row17 = existsSync(inv2021) && this.sources.savedRuns(this.sources.jobIdFor(ROW17.previous), createHash("sha256").update(readFileSync(inv2021)).digest("hex")).some((r) => r.valid);
+    const six = await this.loadSix(actor, workspaceId, t0, log, row17 ? { swap: { [ROW17.current]: ROW17.previous } } : {});
     const person = (id: string) => ACTORS.find((a) => a.id === id)!;
     const author = person("user-A"), sme = person("user-C"), approver = person("user-B");
     const timings: Record<string, number> = { ...six.timings };
@@ -447,7 +463,9 @@ export class Demo {
     // Row 1: every official file through the intake (the six load), then one off-list file with a readable edition, held
     // and approved by a second person through the intake's own steps (X9a; the forms lane's demo story does the same).
     const files = six.combinations.reduce((t, c) => t + c.files, 0);
-    const unread = await this.db.intakeItem.findMany({ where: { workspaceId, status: "HELD" }, select: { fileName: true } });
+    // Only a file held because its edition could not be read (outcome "held"); a new edition held for row 17 is another
+    // kind of held file, said on row 17 (QA-207 review m5).
+    const unread = await this.db.intakeItem.findMany({ where: { workspaceId, status: "HELD", outcome: "held" }, select: { fileName: true } });
     const offList = await timed("held file approved by a second person", () => this.heldFileApproved(author, approver, workspaceId).catch((e) => ({ ok: false as const, why: said(e) })));
     const unreadWords = unread.length ? ` ${unread.length} official file${unread.length === 1 ? " stays" : "s stay"} held because the form's edition could not be read from the file (${unread.map((h) => h.fileName).join(", ")}): such a file cannot become a source.` : "";
     row({ row: "1", title: "Ingest PDF forms; a held file approved by a second person", status: offList.ok ? "done" : "partial",
@@ -644,7 +662,21 @@ export class Demo {
       why: visitor ? "Set on the Visitor visa's Forms tab for release 2." : "Waits for the Visitor visa's release 1: its channels change for release 2." });
     row({ row: "11", title: "A family case on release 1", status: "waiting", shows: "The case area is built (Demo › Open the case area)", why: visitor ? "Open a case on the Visitor visa's release 1." : "Waits for the Visitor visa's release 1 (a case runs on a release)." });
     row({ row: "12", title: "IMM 5257 filled as a PDF and read back equal", status: "waiting", shows: "The fill is built (C7.1)", why: "IMM 5257 has no saved field-map answer under today's 5-part drafting: it waits for the founder's paid run (Lead, 30 Oct)." });
-    row({ row: "17", title: "New edition: IMM 5476 2021 → 11-2025 comparison and impact", status: "not built yet", shows: "Not built yet: the screens lane adds the comparison (C9.1); the checkpoint calls it once it is on main.", why: null });
+    // Row 17 (QA-207): the current IMM 5476 arrives through the intake on no combination, as a person sends a new edition:
+    // the intake holds it (C2.4), and its comparison and impact wait on To review (C9.1; saved AI comparison, #781). The
+    // Visitor visa's form finder may already have held it (its replay attaches the page's forms): then this send answers
+    // "already waiting", and the row reads the one held item either way (review m4).
+    let held17: string | null = null, why17: string | null = null;
+    if (row17) {
+      const item = (JSON.parse(readFileSync(join(SOLUTION, "official-sources", "ircc", "manifest.json"), "utf8")).items as { file: string; path: string }[]).find((i) => i.file === ROW17.current);
+      const r = item ? (await timed("new edition held (row 17)", () => this.intake.intake(author, [{ originalname: item.file, buffer: readFileSync(join(OFFICIAL, item.path)) }], undefined, "SAMPLE"))).results[0] : null;
+      const heldNow = await this.db.intakeItem.findFirst({ where: { workspaceId, outcome: "new_edition_held", status: "HELD", code: "IMM 5476" }, select: { editionLabel: true } });
+      if (heldNow) held17 = heldNow.editionLabel ?? ROW17.currentLabel; else why17 = `${ROW17.currentLabel} was not held as a new edition: ${r?.message ?? "its official file is not in the manifest"}`;
+    }
+    const users = row17 ? (await this.db.combinationForm.findMany({ where: { workspaceId, lineageKey: "IMM 5476", status: { not: "RETIRED" } }, select: { combinationId: true }, distinct: ["combinationId"] })).length : 0;
+    row({ row: "17", title: "New edition: IMM 5476 2021 → 11-2025 comparison and impact", status: !row17 ? "waiting" : held17 ? "done" : "partial",
+      shows: held17 ? `${held17} held as a new edition over the library's ${ROW17.previousLabel}, which ${users} combination${users === 1 ? " files" : "s file"}: its comparison and impact are on To review (saved AI comparison, US$0); canada.ca names 11-2025 the current edition` : "The comparison and impact are built (C9.1, its saved AI comparison #781)",
+      why: !row17 ? `Waits for a saved field map of ${ROW17.previousLabel} (the paid runner's; tech lead, 4 Nov): the library then files the 2021 edition and holds 11-2025 as the new one.` : why17 });
     rows.sort((a, b) => Number(a.row) - Number(b.row));
     const count = (s: CheckpointRow["status"]) => rows.filter((r) => r.status === s).length;
     await this.audit.log(workspaceId, actor.id, "loaded", "configured checkpoint", null, `${actor.name} loaded the configured checkpoint in ${((Date.now() - t0) / 1000).toFixed(1)} s: ${count("done")} rows done, ${count("partial")} partly, ${count("waiting")} waiting, ${count("not built yet")} not built yet`);
