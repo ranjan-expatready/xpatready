@@ -221,7 +221,7 @@ export async function withdrawChange(db: Db, actor: Actor, id: string, note?: st
   }
   // P-319 (review of #833, M2): a waiting or returned role change is withdrawn like a rename: nothing was applied.
   const renaming = (c.action === "RENAME" || c.kind === "form_role" || c.kind === SUPPLIES_KIND) && ["WAITING", "RETURNED"].includes(c.status); // C4.5: nothing applied before approval
-  if (!renaming && (c.kind !== "field" || c.action !== "ADD" || !["WAITING", "RETURNED"].includes(c.status))) throw problem(409, "Cannot withdraw", "Only a new shared field, a rename, a form's role change or a change of the facts a document supplies that is waiting or returned is withdrawn.");
+  if (!renaming && (c.kind !== "field" || c.action !== "ADD" || !["WAITING", "RETURNED"].includes(c.status))) throw problem(409, "Cannot withdraw", "Only a new shared field, a rename or a form's role change that is waiting or returned, or a change of the facts a document supplies that is not released yet, is withdrawn.");
   const why = (note ?? "").trim();
   if (why.length < 3 || why.length > 300) throw problem(400, "Say why", "Say why it is withdrawn (3 to 300 characters).");
   // G-CORE B2: a withdrawn rename changes nothing (the name was never changed).

@@ -71,11 +71,19 @@ const KEYS = /\b(person|case|representative)\.[a-z_]+\b/;
   // Break M1: a field merged into another through the merge route (its newest version alone carries the mark) is refused.
   const keep = "person.citizenship", gone = sql(`select canonical_field_key from canonical_field where canonical_field_key in ('person.country_of_birth','person.birth_country') and status <> 'RETIRED' order by 1 limit 1`);
   let merged: { status: number; body: any } = { status: 0, body: null };
+  // Break R2-M1: an approved change whose fact is merged afterwards can still be withdrawn (read through the merge).
+  const was = sql(`select array_to_string(supplies_facts, ',') from document_type where document_type_key='${PASSPORT}' order by version desc limit 1`).split(",").filter(Boolean);
+  r = gone ? await call("POST", route, { facts: (was.includes(gone) ? was.filter((f) => f === gone || f !== was.find((x) => x !== gone)) : [...was, gone]).map((f) => cite(f)), reason: "Test: a fact merged after approval (C4.5)." }) : { status: 0, body: null };
+  const late = r.body?.id, lateWords = `${r.status} ${words(r).slice(0, 120)}`;
+  const okA = late ? (await call("POST", `/library/changes/${late}/approve`, { note: "Second person (C4.5 check)." }, "user-B")).status : 0;
   if (gone) {
     const m = await call("POST", "/library/merges", { keep, merge: gone, reason: "Test: these two mean the same for this check only (C4.5)." });
     if (m.status < 300) merged = await call("POST", `/library/merges/${m.body?.id ?? m.body?.merge?.id}/approve`, { note: "Second person (C4.5 check)." }, "user-B");
     else merged = m;
   }
+  const wd = late ? await call("POST", `/library/changes/${late}/withdraw`, { note: "Withdrawn after the merge (C4.5 check)." }) : { status: 0, body: null };
+  const nowOther = sql(`select array_to_string(supplies_facts, ',') from document_type where document_type_key='${PASSPORT}' order by version desc limit 1`).split(",").filter(Boolean);
+  ok("C4.5 pass (break R2-M1): an approved change whose fact was merged afterwards is withdrawn, its facts go back, and History says so", okA < 300 && okA > 0 && merged.status < 300 && wd.status < 300 && JSON.stringify([...nowOther].sort()) === JSON.stringify([...was].sort()) && Number(sql(`select count(*) from audit_event where entity='document type' and entity_key='${PASSPORT}' and action='withdrawn'`)) === 1 && /Approved: /.test(sql(`select coalesce(decision_note,'') || '|' || coalesce(decided_by,'') from library_change where id='${late}'`)), { propose: lateWords, approve: okA, merge: merged.status, withdraw: `${wd.status} ${words(wd).slice(0, 100)}`, was: was.length, now: nowOther.length });
   r = await call("POST", route, { facts: [cite(gone || "person.country_of_birth")], reason: "Test: a merged field (C4.5)." });
   ok("C4.5 BR-4 fail (break M1): a field merged into another through the merge route is refused (409, in words)", merged.status < 300 && r.status === 409 && /merged into another/.test(words(r)), { merge: merged.status, mergeWords: words(merged).slice(0, 120), status: r.status, words: words(r).slice(0, 120) });
   console.log(`\n${pass}/${pass + fail} passed`);

@@ -11,7 +11,7 @@ export const SUPPLIES_KIND = "document_supplies", SUPPLIES_ACTION = "SET_SUPPLIE
 export const ABOUT_WORDS: Record<(typeof DOCUMENT_ABOUTS)[number], string> = { holder: "the holder", "holder.spouse": "the holder's spouse or partner", "holder.parent": "the holder's parent" };
 
 /** Break m2: format characters (zero-width, right-to-left overrides) are removed, and words need letters or digits. */
-const clean = (s: string) => s.normalize("NFKC").replace(/\p{Cf}/gu, "").replace(/\s+/g, " ").trim();
+const clean = (s: string) => s.normalize("NFC").replace(/[\p{Cf}\u115F\u1160\u3164\uFFA0]/gu, "").replace(/\s+/g, " ").trim(); // the words as written (NFC, never NFKC: "m²" stays)
 const words = (min: number, max: number, need: string, long: string) => z.string({ error: need }).transform(clean)
   .refine((s) => s.replace(/[^\p{L}\p{N}]/gu, "").length >= min, need).refine((s) => s.length <= max, long);
 /** A real calendar day from 2000 to today (a day's room: IST is ahead of the server's UTC clock, P-302). */
@@ -19,7 +19,8 @@ const realDay = (d: string) => { const t = Date.parse(`${d}T00:00:00Z`); return 
 const Supply = z.object({
   fact: z.string({ error: "Choose a shared field." }).trim().min(1, "Choose a shared field.").max(120),
   about: z.enum(DOCUMENT_ABOUTS, { message: "Say whom it is about: the holder, the holder's spouse or partner, or parent." }).default("holder"),
-  source: words(3, 120, "Name the official words' source (form, edition and page).", "Keep the source under 120 characters."),
+  source: words(3, 120, "Name the official words' source (form, edition and page).", "Keep the source under 120 characters.")
+    .refine((s) => /\b(page|p\.)\s*\d/i.test(s), "Name the page of the official words (for example \"IMM 5484 (05-2026), page 1\")."),
   quote: words(3, 400, "Quote the official words that say the document shows it.", "Keep the quote under 400 characters."),
   // P-170: page, quote and the date the words were read (never later than today).
   readOn: z.string({ error: "Say when the official words were read (YYYY-MM-DD)." }).regex(/^\d{4}-\d{2}-\d{2}$/, "Say when the official words were read (YYYY-MM-DD).")

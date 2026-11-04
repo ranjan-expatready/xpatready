@@ -131,6 +131,15 @@ const LINES = [...SAMPLE.facts.reduce((m, f) => { const k = `${f.source}|${f.quo
   // The approver reads, never edits.
   await p.keyboard.press("Escape"); await as("user-B"); await p.goto(`${BASE}/library/documents`); await p.getByText("Passport information page copy").first().waitFor({ timeout: 60000 });
   ok("the approver sees no Change the facts button (author only)", (await p.locator("[data-type-supplies]").count()) === 0);
+  // Review and break R2-M1: withdrawing an approved change shows the reloaded facts (none), never the withdrawn ones.
+  await as("user-A"); await openFromDrawer();
+  await p.locator("[data-supplies-why]").fill("Withdrawn after approval to check the panel (C4.5 browser check).");
+  const [ww] = await Promise.all([p.waitForResponse((r) => /\/withdraw$/.test(r.url()), { timeout: 60000 }), p.locator("[data-supplies-withdraw]").click()]);
+  await p.locator("[data-supplies-card='1']").waitFor({ timeout: 60000 });
+  ok("withdrawn after approval: the panel shows what the document supplies now (no fact), with nothing to send", ww.status() < 300 && (await p.locator("[data-supplies-chip]").count()) === 0 && (await p.locator("[data-supplies-send]").isDisabled()), { status: ww.status(), chips: await p.locator("[data-supplies-chip]").count() });
+  await shot("20-withdrawn-after-approval"); await p.keyboard.press("Escape");
+  await p.goto(`${BASE}/c/${VV}/questionnaires`);
+  ok("withdrawn after approval: the SQR tab reads 0 from documents again", /\b0 from documents/.test(await coverage()));
   // A returned change (review M1): the author is told to propose it again and withdraws it; no dead "Send again".
   const api = async (method, pth, data, actor) => { const r = await p.request.fetch(`${BASE}/api${pth}`, { method, headers: { "x-actor": actor, "content-type": "application/json" }, data }); return { status: r.status(), body: await r.json().catch(() => null) }; };
   const prop = await api("POST", "/library/document-types/visa_application_photos/supplies", { facts: [{ fact: "person.date_of_birth", source: "IMM 5484 (05-2026), page 1", quote: "On the back of two photos, write your name and date of birth.", readOn: SAMPLE.facts[0].readOn }], reason: "Test: a change to return (C4.5 browser check)." }, "user-A");

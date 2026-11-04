@@ -12,7 +12,7 @@ Journey score **8/10** (pass), report: `journey-test-reviewer-2026-11-05.md`.
 | Pack C4.5 26/26, exit 0 | 26/26, exit 0, **twice** on fresh copies (30 s) |
 | Release check 7/7 | 7/7, exit 0 |
 | Walk 10/10 | 10/10, exit 0, **twice** |
-| C4.x / C10.1 fail the same on main and branch | REGRESSION_ROW |
+| C4.x / C10.1 fail the same on main and branch | Branch and merge base give identical results: C4.1 14/3 fail (exit 1) · C4.2 10/0 · C4.4 17/0 (exit 2, a WAIT) · C4.6 17/0 · C4.7 17/0 · C4.8 6/5 fail · C4.11 0/1 (QA-144). **C10.1 is not confirmed**: on the base it stopped twice with a client "socket hang up" at the checkpoint load (1 pass, exit 2); the branch ran 18/6 fail (part B rows 9, 11, 12: release 2, family case, IMM 5257). These are not files this PR touches, apart from the release line |
 | Rule tests fail when the rule is removed | Mutations in the scratch copy: removing the Preview `missing` filter fails C4.5-16; removing "Nothing changes" fails C4.5-23 (24/26, exit 1) |
 | Types | `tsc --noEmit` web clean; api errors only in older `tests/` files, none in this PR's files |
 
@@ -95,3 +95,77 @@ What is built matches the concept's API, Preview key, change-page block and copy
 * GitHub CI on this commit (local runs only).
 
 **Verdict: Block**: fix M1 and M2 (minors at the builder's judgment), then a diff-only re-review.
+
+## Round 2 (462fda78e, diff-only)
+Reviewer agent, Opus, did not build it; 5 Nov 2026, 02:25 IST. Scope: `git diff ec43f2a89..462fda78e` only: the panel (concept §4, now approved), the GET view, Preview's toggle, the round-1 fixes and the breaker's M1–M3 and minors. One isolated copy on port 4453 (fresh each run), live AI off, US$0. Stopped at the end. My round-1 copy, still running on 4453, was stopped first. The browser check writes into the committed `screenshots/`; I restored them both times.
+
+### Re-run on 462fda78e
+| What | Result |
+|---|---|
+| `acceptance/C4.5.test.ts` | 26/26, exit 0 (fresh copy) |
+| `tests/check_c45_supplies_release.ts` | 9/9, exit 0 (fresh copy) |
+| `tests/check_c45_supplies_browser.cjs` after `setup_c45_walk.ts` | 27/27, exit 0, **twice** (fresh copies, 34 s) |
+| Mutations (scratch `git archive` copy) | Removing `refuseUnusable` from propose fails "BR-4 fail (break M1)" (201 instead of 409). Removing `m.names` from `suppliesView` fails "break M3". 7/9, exit 1 |
+| Types, graph | `tsc --noEmit` web exit 0; no api error in this diff's files. `graph.mjs --check` exit 0; no C4.5 gap (m1 closed) |
+| Runbook note | Running `setup_c45_walk.ts` straight after `isolated.sh … start` failed twice with "socket hang up". Waiting until `/api/session` answers fixed it. This is not a product finding |
+
+### Round-1 and breaker findings: verified
+* **M1 (returned path), closed.** Returned change page: "Propose it again" plus "Withdraw it" (`review-items.tsx:116`), no Send again. The toast reads "Withdrawn: nothing in the library changed". Browser step and my walk. The panel's Returned state shows the second person's note plus Withdraw (`j2-panel-returned-1440`, axe 0).
+* **M2 (pointer to a missing control), closed.** The Documents sentence names "Try it missing", and Preview now has it: 120 → 129 asked, and back again.
+* **m1, m2, m6, m7: closed.** The literal route is at `C4.5.test.ts:36`. The warnings step passes. The key note shows for fields only. `factName` is typed. Round-1 m3, m4, m5 and m8 stay open, as the PR says (Minor).
+* **Breaker M1, closed at proposal.** A field merged through the real merge route is refused (409, and the mutation is caught). The approval re-check (`applySupplies` → `refuseUnusable`) is in the code but no test reaches it (m-f).
+* **Breaker M2, closed at the API.**
+  * Pack step 26 passes, and the approver's withdraw is refused (403).
+  * In the panel (my walk): the change is WITHDRAWN, the draft goes back to 0 facts, and GET says 0.
+  * The panel itself then shows the wrong facts: see R2-M1 below.
+* **Breaker M3, closed.** `before` and `removed` are named (release check; the mutation is caught).
+* **Breaker minors, closed.**
+  * 2026-02-30, 0001-01-01, zero-width-only words and an RLO-only source are each refused (pack step 22).
+  * A quote with a 340-character unbroken run wraps: the change page measures 1024/1024 px, and the panel 511/511 px at 1440, 1024 and 720 px (200 %).
+
+### Own walk (1440, 1024, 720 px; keyboard; author, approver, reviewer)
+* **Held:**
+  * Keyboard: the panel opens from the drawer by Enter.
+  * Every control is reachable by Tab, with a visible 2 px ring on buttons, the chip's whom-select and Remove.
+  * axe finds 0 violations: filled, error, returned.
+* **Refused in words, nothing sent:** an empty or 3-letter reason ("Write at least 5 letters or digits…", with `aria-invalid`), and a future date.
+* **Two tabs:** the second Send gets "…already waits on To review…", and there is exactly 1 WAITING row.
+* **Roles:** no actor gets 401 (GET too). The reviewer and the approver get 403 on POST, and the approver has no "Change the facts" button.
+* **Speed:** the GET answers in 7–23 ms, one request.
+* **Data:** the stored cite equals what was typed (source, date read, quote length 386).
+
+### Issues
+**Major (must fix before Approve)**
+* **R2-M1 · After the author withdraws an approved change in the panel, the panel shows the withdrawn facts as what the document supplies.**
+  * Steps: the passport has 9 facts, approved and not released. Open the panel, fill "Why withdraw it", press Withdraw. The answer is 201; the database and GET hold 0 facts.
+  * Result: under the title "Facts Passport information page copy supplies", the panel shows 6 official lines and 9 chips, with **Send for approval** enabled. Close then asks "Discard the facts and words you changed?", though the author changed nothing. This was still true 3 s later; reopening shows 0. Scratch shot: `r2walk/shots/j3-after-withdraw-approved-1440.png`.
+  * Cause (`web/src/pages/supplies-panel.tsx:41`, `:57–60`): `withdraw()` calls `setCards(null)` and a refetch it does not await. The effect then rebuilds the cards from the stale `v.data`. With waiting and returned changes the stale and fresh facts are the same, so only this new path (breaker M2) shows it, and no browser step covers it.
+  * Fix: rebuild the cards from the refetched data (await the refetch, or key the effect on fresh data), and say what happened ("Withdrawn: the facts are back to …"). Add a browser step: approved → Withdraw in the panel → 0 chips, the prefilled first line, Close does not ask.
+
+**Minor (should)**
+* **m-a** · **Cancel** with edits closes the panel without asking and drops them (`supplies-panel.tsx:70` calls `onClose` directly), while Escape and × ask first. Route Cancel through `confirmClose`.
+* **m-b** · Picking a field or removing a chip unmounts the focused button, so keyboard focus falls back to the dialog. The next Tab starts again at Close (`:118`, `:124`). Put focus back on the card's search box.
+* **m-c** · "Suggested first" does not follow concept §4. The concept says: facts this combination's forms ask that no document supplies yet, whose form caption names the document. The build suggests any field whose meaning holds a 5-letter-or-longer word of the type's name (`api/src/document-supplies.ts:106–109`). It works for the passport. For "Proof of legal status in country of residence" it suggests "Alternate telephone number including country code" and other "country" fields. Follow the concept's rule, or record the change in the concept or build note.
+* **m-d** · The prefilled source "IMM 5484, page " has no edition and no page number (`document-supplies.ts:111–115`). The server accepts it as is (POST → 201), against BR-3 "form, edition, page". Prefill the edition where it is known, and refuse a source with no page number.
+* **m-e** · Untested: the approval-time merged re-check, and `withdrawApprovedSupplies`' "Changed since" and same-moment guards.
+* **m-f** · The Returned note doubles the full stop ("…IMM 5484.. Withdraw it", `:77`).
+
+### Scores that change (others as in round 1)
+| # | R1 → R2 | Evidence |
+|---|---|---|
+| D1 | 4 → 4 | Panel per §4, all states built; R2-M1, m-c |
+| D5 | 3 → 3 | Returned path fixed; the approved withdraw leaves a stale editor (R2-M1) |
+| D9 | 3 → 4 | Every state names its next action |
+| D10 | 3 → 4 | "Withdraw the new field" and "undefined" gone; m-f |
+| D11 | 4 → 3 | R2-M1; Cancel drops edits silently (m-a) |
+| D13 | 4 → 4 | axe 0 on 12 states; no sideways scroll at 1440, 1024 and 720 px; focus loss (m-b) |
+| D16 | 4 → 4 | Mutations caught; the panel's approved-withdraw path untested (R2-M1, m-e) |
+| D19 | 3 → 4 | The six end to end through the product's own panel, to the SQR tab and Preview; release on the fixture only (B70) |
+
+**Journey score (reviewer, round 2): 8.5/10, pass, no 0.**
+* 1 each: task completed, next step obvious, plain words, correct data, speed, visual, trust and sources.
+* ½ each: feedback and state (R2-M1), error recovery (R2-M1, m-a), accessibility (m-b).
+* Fixing R2-M1 and m-a raises it most.
+* Not tested: a real screen reader; an intended user's unaided walk (D17 and D20 simulated only); GitHub CI on this commit.
+
+**Verdict: Block**: fix R2-M1, then a diff-only re-check of that fix and its browser step. The minors are at the builder's judgment.

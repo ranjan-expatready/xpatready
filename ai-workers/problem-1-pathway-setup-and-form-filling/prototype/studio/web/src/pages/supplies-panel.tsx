@@ -41,22 +41,25 @@ export function SuppliesPanel({ typeKey, combinationId, open, onClose, onSaved }
   React.useEffect(() => { if (v.data && !cards) setCards(cardsOf(v.data)); }, [v.data, cards]);
   React.useEffect(() => { if (!open) { setCards(null); setReason(""); setWhy(""); setError(null); setWarnings([]); } }, [open]);
   const label = React.useMemo(() => new Map((v.data?.fields ?? []).map((f) => [f.key, f.label])), [v.data]);
-  const refresh = () => { void v.refetch(); for (const k of [["supplies"], ["doc-types"], ["checklist"], ["fact-sources"], ["preview"], ["review-queue"]]) void qc.invalidateQueries({ queryKey: k }); onSaved?.(); };
+  // Review and break R2-M1: the cards are rebuilt only from the reloaded answer, never from the one before it.
+  const refresh = async () => { await v.refetch(); setCards(null); for (const k of [["supplies"], ["doc-types"], ["checklist"], ["fact-sources"], ["preview"], ["review-queue"]]) void qc.invalidateQueries({ queryKey: k }); onSaved?.(); };
   const dirty = !!cards && !!v.data && JSON.stringify(cards.map((c) => [c.source, c.quote, c.facts])) !== JSON.stringify(cardsOf(v.data).map((c) => [c.source, c.quote, c.facts]));
   const send = async () => {
     setError(null);
     const used = cards!.filter((c) => c.facts.length);
     const missing = used.find((c) => c.source.trim().length < 3 || c.quote.trim().length < 3);
     if (missing) { setError("Each official line with facts needs its source (form, edition, page) and its quote."); return; }
+    // Break R2 m: a line with words but no fact is never dropped silently.
+    if (cards!.some((c) => !c.facts.length && (c.quote.trim() || c.source.trim()) && cards!.length > 1)) { setError("An official line has words but no fact: add the facts they support, or remove the line."); return; }
     setBusy(true);
     try {
       const r = await api<{ warnings: SuppliesWarning[] }>(`/library/document-types/${encodeURIComponent(typeKey)}/supplies`, { method: "POST", json: { reason: reason.trim(), facts: used.flatMap((c) => c.facts.map((f) => ({ fact: f.fact, about: f.about, source: c.source.trim(), quote: c.quote.trim(), readOn: c.readOn }))) } });
-      setWarnings(r.warnings ?? []); setReason(""); setCards(null); refresh();
+      setWarnings(r.warnings ?? []); setReason(""); await refresh();
     } catch (e) { setError((e as ApiError).message); } finally { setBusy(false); }
   };
   const withdraw = async (id: string) => {
     setError(null); setBusy(true);
-    try { await api(`/library/changes/${id}/withdraw`, { method: "POST", json: { note: why.trim() } }); setWhy(""); setCards(null); refresh(); }
+    try { await api(`/library/changes/${id}/withdraw`, { method: "POST", json: { note: why.trim() } }); setWhy(""); await refresh(); }
     catch (e) { setError((e as ApiError).message); } finally { setBusy(false); }
   };
   const x = v.data, o = x?.open ?? null, editing = !!x && !o && !!cards;
@@ -67,14 +70,14 @@ export function SuppliesPanel({ typeKey, combinationId, open, onClose, onSaved }
       description={x ? `Used by ${x.uses} combination${x.uses === 1 ? "" : "s"} · a second person approves it on To review` : undefined}
       confirmClose={() => !dirty || window.confirm("Discard the facts and words you changed?")}
       badge={o ? <Pill tone={o.status === "RETURNED" ? "danger" : "warn"}>{o.status === "WAITING" ? "Waiting for a second person" : o.status === "RETURNED" ? "Returned" : "Approved · next release"}</Pill> : null}
-      footer={editing ? <><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void send()} busy={busy} disabled={!dirty} data-supplies-send>Send for approval</Button></> : <span className="ml-auto"><Button variant="ghost" onClick={onClose}>Close</Button></span>}>
+      footer={editing ? <><Button variant="ghost" onClick={() => { if (!dirty || window.confirm("Discard the facts and words you changed?")) onClose(); }}>Cancel</Button><Button onClick={() => void send()} busy={busy} disabled={!dirty} data-supplies-send>Send for approval</Button></> : <span className="ml-auto"><Button variant="ghost" onClick={onClose}>Close</Button></span>}>
       {v.isLoading || (!cards && !v.isError) ? <Spinner label="Loading" /> : v.isError ? <Notice tone="danger" title="This document type could not be opened">{(v.error as Error).message}</Notice> : (
         <div className="space-y-4 text-sm" data-supplies-panel>
           <p className="text-xs text-text-muted">List the facts this document shows, with the official words that say so. A second person approves; it changes every combination whose checklist names it. Sample until the immigration expert confirms.</p>
           {warnings.length ? <Notice tone="warn" title="Sent, with a note">{warnings.map((w) => <p key={w.fact} data-supplies-warning>{w.why}</p>)}</Notice> : null}
           {o ? (
             <div className="space-y-2" data-supplies-open={o.status}>
-              <p>{o.status === "WAITING" ? <>Waiting for a second person on <Link className="text-text-link underline" to="/review">To review</Link>.</> : o.status === "RETURNED" ? <>Returned by the second person: <span className="font-medium">{o.note}</span>. Withdraw it, then propose the facts again.</> : <>Approved: in every combination's draft and Preview now; it goes out with each one's next release. To change it again first, withdraw it (the facts go back to what they were).</>} Proposed by {o.by}. Why: {o.reason}</p>
+              <p>{o.status === "WAITING" ? <>Waiting for a second person on <Link className="text-text-link underline" to="/review">To review</Link>.</> : o.status === "RETURNED" ? <>Returned by the second person: <span className="font-medium">{(o.note ?? "").replace(/\.$/, "")}</span>. Withdraw it, then propose the facts again.</> : <>Approved: in every combination's draft and Preview now; it goes out with each one's next release. To change it again first, withdraw it (the facts go back to what they were).</>} Proposed by {o.by}. Why: {o.reason}</p>
               <ul className="space-y-1.5 rounded-lg border border-border p-3 [overflow-wrap:anywhere]" aria-label="The facts proposed">{o.supplies.cites.map((c) => <li key={c.fact}><span className="font-medium">{c.label}</span>{c.about !== "holder" ? <span className="text-text-muted"> · about {ABOUT_WORDS[c.about]}</span> : null}<br /><span className="text-xs text-text-muted">{c.source} · read {c.readOn}: “{c.quote}”</span></li>)}{!o.supplies.cites.length ? <li className="text-text-muted">No fact: filed as is.</li> : null}</ul>
               {o.byId === me ? <div className="space-y-1.5"><label className="block text-xs font-medium">Why withdraw it <span className="font-normal text-text-muted">(required)</span><Textarea className="mt-1 min-h-12" value={why} onChange={(e) => setWhy(e.target.value)} data-supplies-why /></label><Button size="sm" variant="secondary" busy={busy} disabled={why.trim().length < 3} onClick={() => void withdraw(o.id)} data-supplies-withdraw>Withdraw</Button></div> : null}
             </div>

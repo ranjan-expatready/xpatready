@@ -58,8 +58,11 @@ export class DocumentSupplies {
     const workspaceId = await this.ws.id();
     const { current } = await typeOf(this.db, workspaceId, key);
     if (!current) throw problem(404, "Not in the library", "That document type is not in the shared library.");
-    const rows = await this.db.canonicalField.findMany({ where: { workspaceId, status: { not: "RETIRED" }, mergedIntoKey: null }, orderBy: { version: "desc" }, select: { canonicalFieldKey: true, meaning: true, label: true } });
-    const named = new Map<string, string>(); for (const f of rows) if (!named.has(f.canonicalFieldKey)) named.set(f.canonicalFieldKey, nameOfField(f));
+    const rows = await this.db.canonicalField.findMany({ where: { workspaceId }, orderBy: { version: "desc" }, select: { canonicalFieldKey: true, meaning: true, label: true, status: true, mergedIntoKey: true } });
+    // The newest version decides (a merge or a retire marks only it): merged or retired fields are not offered.
+    const seen = new Set<string>(), named = new Map<string, string>();
+    for (const f of rows) { if (seen.has(f.canonicalFieldKey)) continue; seen.add(f.canonicalFieldKey); if (f.status !== "RETIRED" && !f.mergedIntoKey) named.set(f.canonicalFieldKey, nameOfField(f)); }
+    for (const f of current.suppliesFacts) if (!named.has(f)) { const r = rows.find((x) => x.canonicalFieldKey === f); named.set(f, r ? nameOfField(r) : f); }
     // The official words recorded with what it supplies now: the newest approved or released change of its facts.
     const last = await this.db.libraryChange.findFirst({ where: { workspaceId, kind: SUPPLIES_KIND, key, status: { in: ["APPROVED", "RELEASED"] } }, orderBy: { proposedAt: "desc" } });
     const cites = ((last?.matches ?? {}) as { cites?: SupplyCite[] }).cites ?? [];
@@ -151,15 +154,32 @@ export async function applySupplies(db: Db, audit: Audit, actor: Actor, c: Libra
  *  it for good) is withdrawn by its proposer: the document type's draft goes back to the facts it had before, checked
  *  first (changed since: refused). Called by withdrawChange (library-changes.ts) in its transaction. */
 export async function withdrawApprovedSupplies(tx: Prisma.TransactionClient, actor: Actor, c: LibraryChange, why: string) {
+  // One withdraw at a time (break R2 m: the losers of a race are told it is done, not "changed since").
+  await tx.$executeRawUnsafe(`select pg_advisory_xact_lock(hashtext($1))`, `${SUPPLIES_KIND}:${c.workspaceId}:${c.key}`);
+  const now = await tx.libraryChange.findUnique({ where: { id: c.id } });
+  if (now?.status !== "APPROVED") throw problem(409, "Already decided", `This change is already ${String(now?.status ?? "gone").toLowerCase()}. Refresh to see it.`);
   const m = c.matches as { before?: string[]; beforeAbout?: Record<string, string>; after?: string[]; afterAbout?: Record<string, string> };
   const rows = await tx.documentType.findMany({ where: { workspaceId: c.workspaceId, documentTypeKey: c.key }, orderBy: { version: "desc" } });
   const draft = rows.find((r) => r.status === "DRAFT");
-  if (!draft || !same({ facts: draft.suppliesFacts, about: (draft.suppliesAbout ?? {}) as Record<string, string> }, { facts: m.after ?? [], about: m.afterAbout ?? {} }))
-    throw problem(409, "Changed since", "The document type's facts changed after this was approved, so nothing was withdrawn. Refresh to see them.");
-  await tx.documentType.update({ where: { id: draft.id }, data: { suppliesFacts: m.before ?? [], suppliesAbout: m.beforeAbout && Object.keys(m.beforeAbout).length ? (m.beforeAbout as Prisma.InputJsonValue) : Prisma.DbNull, updatedBy: actor.id } });
-  const done = await tx.libraryChange.updateMany({ where: { id: c.id, status: "APPROVED" }, data: { status: "WITHDRAWN", decidedBy: actor.id, decidedAt: new Date(), decisionNote: why } });
-  if (!done.count) throw problem(409, "Changed meanwhile", "Someone released or withdrew this at the same moment. Refresh to see it.");
+  // Break R2-M1: a merge since approval rewrites the draft's keys (forms.ts), so both sides are read through merges.
+  const after = await throughMerges(tx, c.workspaceId, m.after ?? [], m.afterAbout ?? {}), before = await throughMerges(tx, c.workspaceId, m.before ?? [], m.beforeAbout ?? {});
+  if (!draft || !sameFacts(draft.suppliesFacts, after.facts)) throw problem(409, "Changed since", "The document type's facts changed after this was approved, so nothing was withdrawn. Refresh to see them.");
+  await tx.documentType.update({ where: { id: draft.id }, data: { suppliesFacts: before.facts, suppliesAbout: Object.keys(before.about).length ? (before.about as Prisma.InputJsonValue) : Prisma.DbNull, updatedBy: actor.id } });
+  // Break R2-M3: the approver's decision stays on the change; the withdraw is added to its note and to History.
+  const note = `${c.decisionNote ? `Approved: ${c.decisionNote.replace(/\.$/, "")}. ` : ""}Withdrawn by ${actor.name}: ${why}`.slice(0, 300);
+  const done = await tx.libraryChange.updateMany({ where: { id: c.id, status: "APPROVED" }, data: { status: "WITHDRAWN", decisionNote: note } });
+  if (!done.count) throw problem(409, "Already decided", "Someone released or withdrew this at the same moment. Refresh to see it.");
+  await tx.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: actor.id, action: "withdrawn", entity: "document type", entityKey: c.key, summary: `${actor.name} withdrew the approved change "${c.label ?? c.key}"; its facts went back to what they were. Why: ${why}`.slice(0, 600), detail: { change: c.id } } });
 }
+
+/** Facts and whom they are about read through merges (a merged field stands for the field it was merged into). */
+async function throughMerges(db: Pick<Prisma.TransactionClient, "canonicalField">, workspaceId: string, facts: string[], about: Record<string, string>) {
+  const rows = await db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: facts } }, orderBy: { version: "desc" }, select: { canonicalFieldKey: true, mergedIntoKey: true } });
+  const to = new Map<string, string>(); for (const r of rows) if (!to.has(r.canonicalFieldKey)) to.set(r.canonicalFieldKey, r.mergedIntoKey ?? r.canonicalFieldKey);
+  const map = (f: string) => to.get(f) ?? f;
+  return { facts: [...new Set(facts.map(map))], about: Object.fromEntries(Object.entries(about).map(([k, v]) => [map(k), v])), merged: facts.some((f) => map(f) !== f) };
+}
+const sameFacts = (a: string[], b: string[]) => JSON.stringify([...new Set(a)].sort()) === JSON.stringify([...new Set(b)].sort());
 
 /** At a release (publishLibraryChanges): an approved change whose document type draft this release published is released. */
 export async function releaseSupplies(tx: Prisma.TransactionClient, workspaceId: string, pack: number) {
@@ -170,7 +190,9 @@ export async function releaseSupplies(tx: Prisma.TransactionClient, workspaceId:
     // its draft, or a type never published, leaves the change approved, never "released" with nothing applied).
     const m = c.matches as { after?: string[]; afterAbout?: Record<string, string> };
     const pub = (await tx.documentType.findMany({ where: { workspaceId, documentTypeKey: c.key, status: "PUBLISHED" }, orderBy: { version: "desc" }, take: 1 }))[0];
-    if (!pub || !same({ facts: pub.suppliesFacts, about: (pub.suppliesAbout ?? {}) as Record<string, string> }, { facts: m.after ?? [], about: m.afterAbout ?? {} })) continue;
+    // Break R2-M1: read through merges (a merge since approval moved the keys); whom-about is compared when nothing merged.
+    const after = await throughMerges(tx, workspaceId, m.after ?? [], m.afterAbout ?? {});
+    if (!pub || !(after.merged ? sameFacts(pub.suppliesFacts, after.facts) : same({ facts: pub.suppliesFacts, about: (pub.suppliesAbout ?? {}) as Record<string, string> }, after))) continue;
     await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RELEASED", releasedIn: pack } });
     out.push({ kind: c.kind, key: c.key, label: c.label ?? c.key, action: c.action });
   }

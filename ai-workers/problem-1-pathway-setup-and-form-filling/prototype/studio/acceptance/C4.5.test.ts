@@ -44,7 +44,7 @@ run(async () => {
   r = await call("POST", route, { facts: [sample.facts[0], sample.facts[0]], reason: sample.reason }, AUTHOR);
   ok("C4.5-21 fail: a fact listed twice is refused (400, in words)", r.status === 400 && /listed once/.test(words(r)), words(r));
   r = await call("POST", route, { facts: [{ ...sample.facts[0], readOn: "2999-01-01" }], reason: sample.reason }, AUTHOR);
-  const bad = await Promise.all([{ readOn: undefined }, { readOn: "2026-02-30" }, { readOn: "0001-01-01" }, { quote: "\u200b\u200b\u200b\u200b" }, { source: "\u202e\u200b" }].map((x) => call("POST", route, { facts: [{ ...sample.facts[0], ...x }], reason: sample.reason }, AUTHOR)));
+  const bad = await Promise.all([{ readOn: undefined }, { readOn: "2026-02-30" }, { readOn: "0001-01-01" }, { quote: "\u200b\u200b\u200b\u200b" }, { quote: "\u3164\u3164\u3164\u3164" }, { source: "\u202e\u200b" }, { source: "IMM 5484 (05-2026)" }].map((x) => call("POST", route, { facts: [{ ...sample.facts[0], ...x }], reason: sample.reason }, AUTHOR)));
   ok("C4.5-22 fail (P-170, break m1, m2): a date read in the future, none, not a real day or before 2000, and words of only invisible characters are refused (400)", r.status === 400 && bad.every((x) => x.status === 400), [r.status, ...bad.map((x) => `${x.status} ${words(x).slice(0, 40)}`)]);
 
   // ---------------------------------------------------------------- proposed: nothing changes yet
