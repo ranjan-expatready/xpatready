@@ -40,8 +40,8 @@ ok("a duplicate row id is listed once", rows("| C9.1 | x | y | M2 | Works | a | 
 ok("a line that is not a capability row is skipped", rows(MD).every((r) => /^C\d/.test(r.id)) && rows("| QA-12 | Bug · Major | C9.1 | x |").length === 0);
 
 // Holds: a capability or one pack file; a line that cannot be read holds nothing and jams nothing (break M3).
-const h = held("# a comment\nC3.2  red on main (run 1), sent to qa\nC11.12-runtime.test.ts red on main, needs the suites' fixture\nc11.13 lower case is fine\nC3.6 #857 tracking\nC11.1\nC11.13x reason\nC11.12-bad.test.tsx why\n");
-ok("held() reads capabilities and pack files, any case; # starts a comment only at the line's start", [...h.caps.keys()].join() === "C3.2,C11.13,C3.6" && [...h.packs.keys()].join() === "C11.12-runtime.test.ts" && h.caps.get("C3.6") === "#857 tracking", h);
+const h = held("# Regression set: held rows\n\nqa holds a pack here when it is red on main.\n\n- C3.2  red on main (run 1), sent to qa\n- **C11.12-runtime.test.ts** red on main, needs the suites' fixture\nc11.13 lower case is fine\n| C3.6 | #857 tracking |\n| Capability | Reason |\n|---|---|\n- C11.1\n- C11.13x reason\n- C11.12-bad.test.tsx why\n");
+ok("held() reads list lines, table rows and bare lines, capabilities and pack files, any case; headings and prose are not holds", [...h.caps.keys()].join() === "C3.2,C11.13,C3.6" && [...h.packs.keys()].join() === "C11.12-runtime.test.ts" && h.caps.get("C3.6") === "#857 tracking", h);
 ok("a hold line without a reason or with a bad id is reported, not thrown", h.bad.length === 3 && h.bad.includes("C11.1") && h.bad.includes("C11.13x reason"), h.bad);
 
 const T = mkdtempSync(join(tmpdir(), "works-set-")), f = join(T, "CAPABILITIES.md"); writeFileSync(f, MD);
@@ -52,7 +52,7 @@ let r = cli(["--json", "--file", f, "--held", none]);
 ok("--json lists the protected rows that have a pack, for the job matrix", r.code === 0 && JSON.stringify(JSON.parse(r.out)) === JSON.stringify(["C11.13", "C3.2", "C11.12"]), r);
 r = cli(["--list", "--file", f, "--held", none]);
 ok("--list names a Works row without a pack as not re-run", r.code === 0 && /C1\.1: no acceptance pack/.test(r.out) && /4 capabilities, 3 with an acceptance pack, 3 re-run/.test(r.out), r);
-const hf = join(T, "held.txt"); writeFileSync(hf, "C3.2 red on main (run 1), sent to qa\nC11.12-runtime.test.ts red on main (run 1)\nC9.9 stale\nC11.13-gone.test.ts stale\nC11.1\n");
+const hf = join(T, "held.txt"); writeFileSync(hf, "# held\n- C3.2 red on main (run 1), sent to qa\n- C11.12-runtime.test.ts red on main (run 1)\n- C9.9 stale\n- C11.13-gone.test.ts stale\n- C11.1\n");
 r = cli(["--json", "--file", f, "--held", hf]);
 ok("a held capability leaves the matrix; a capability with one pack held stays (break M4)", r.code === 0 && JSON.stringify(JSON.parse(r.out.split("\n").filter((l) => l.startsWith("[")).join(""))) === JSON.stringify(["C11.13", "C11.12"]), r);
 r = cli(["--list", "--file", f, "--held", hf]);
@@ -62,7 +62,7 @@ ok("a CAPABILITIES file with no row the tool can read is \"could not run\" (exit
 // Read at the base: RANGE's base commit, not the working tree (a batch's PRs cannot change what is protected).
 const head = spawnSync("git", ["rev-parse", "HEAD"], { cwd: HERE, encoding: "utf8" }).stdout.trim();
 const show = (p) => spawnSync("git", ["show", `${head}:ai-workers/problem-1-pathway-setup-and-form-filling/${p}`], { cwd: HERE, encoding: "utf8", maxBuffer: 64 << 20 });
-const hAtHead = held(show("prototype/studio/tools/works-set-held.txt").status === 0 ? show("prototype/studio/tools/works-set-held.txt").stdout : "");
+const hAtHead = held(show("product/qa/REGRESSION-HELD.md").status === 0 ? show("product/qa/REGRESSION-HELD.md").stdout : "");
 const expectAtHead = protectedSet(show("product/qa/CAPABILITIES.md").stdout).filter((x) => x.packs.some((p) => !hAtHead.caps.has(x.id) && !hAtHead.packs.has(p))).map((x) => x.id);
 r = cli(["--json"], { RANGE: `${head}..${head}` });
 ok("with RANGE, the list, the holds and the packs are read from the base commit (held rows left out; review B1)", r.code === 0 && JSON.stringify(JSON.parse(r.out.split("\n").filter((l) => l.startsWith("[")).join(""))) === JSON.stringify(expectAtHead), { got: r.out.slice(0, 200), expectAtHead });
@@ -112,7 +112,7 @@ rmSync(T, { recursive: true, force: true });
 // The real files today.
 const real = protectedSet(readFileSync(join(P, "qa/CAPABILITIES.md"), "utf8"));
 ok(`the real qa/CAPABILITIES.md: ${real.length} M2 Works rows, ${real.filter((x) => x.packs.length).length} with a pack`, real.length > 0 && real.every((x) => Array.isArray(x.packs)), real.length);
-const realHeld = held(existsSync(join(HERE, "works-set-held.txt")) ? readFileSync(join(HERE, "works-set-held.txt"), "utf8") : "");
+const realHeld = held(existsSync(join(P, "qa/REGRESSION-HELD.md")) ? readFileSync(join(P, "qa/REGRESSION-HELD.md"), "utf8") : "");
 ok("the real hold file reads without a bad line", realHeld.bad.length === 0, realHeld.bad);
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

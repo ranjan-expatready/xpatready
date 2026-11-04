@@ -7,8 +7,9 @@
 //   --list   the capabilities with milestone M2 (or --milestone) and a status that starts with "Works" (any case, marks
 //            and struck-out text ignored, so "Works (retest)" counts) that have an acceptance pack on the base;
 //            --json prints them as a JSON array for a job matrix. A Works row without a pack is listed as such.
-//   Held:    the hold file (HELD below; tech lead, 4 Nov) names a capability ("C4.7 <reason>") or one pack file
-//            ("C11.12-runtime.test.ts <reason>") left out with its reason: red on main when it was held, sent to qa. A
+//   Held:    product/qa/REGRESSION-HELD.md (qa's records; tech lead, 4 Nov) names, on a list or table line, a capability
+//            ("- C4.7 <reason>") or one pack file ("- C11.12-runtime.test.ts <reason>") left out with its reason: red on
+//            main when it was held, sent to qa. A
 //            capability with every pack held leaves the matrix; a held pack file is skipped by name in --run (gate-b
 //            GATE_B_SKIP_PACKS), so the capability's other packs stay protected. A line that cannot be read is reported
 //            and ignored (never a jam of every batch); a hold that matches no protected pack is reported as stale.
@@ -18,7 +19,7 @@
 //            the head, or a run of no pack, is red (a batch cannot drop a protected pack by renaming or deleting it). A
 //            red run is run once more (a flaky pack is retried once); green on the retry passes and says "flaky", red
 //            twice fails.
-// Usage: node studio/tools/works-set.mjs --list [--json] [--milestone M2] [--file <CAPABILITIES.md>] [--held <file>]
+// Usage: node studio/tools/works-set.mjs --list [--json] [--milestone M2] [--file <CAPABILITIES.md>] [--held <REGRESSION-HELD.md>]
 //        node studio/tools/works-set.mjs --run C11.13 [--held <file>]
 // Exit: 0 listed / green (on the first run or the retry) · 1 red twice · 2 could not run.
 import { readFileSync, appendFileSync } from "node:fs";
@@ -29,7 +30,9 @@ import { packsOf } from "./gate-b.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const S = resolve(HERE, ".."), P = resolve(S, "../../product"), CAPS = join(P, "qa/CAPABILITIES.md"), ACC = join(S, "acceptance");
-const HELD = join(HERE, "works-set-held.txt");
+// The holds are qa's call (tech lead, 4 Nov): qa's records, a notes file, so a PR that adds or removes a hold never
+// waits on the regression jobs it changes.
+const HELD = join(P, "qa/REGRESSION-HELD.md");
 const ID = /\b[Cc](\d{1,2})\.(\d{1,2})\b/;
 const top = () => spawnSync("git", ["rev-parse", "--show-toplevel"], { cwd: S, encoding: "utf8" }).stdout.trim();
 const baseOf = () => (process.env.RANGE ?? "").match(/^([0-9a-f]{7,40})\.\./)?.[1] ?? null;
@@ -58,13 +61,16 @@ const inMilestone = (m, want) => m.split(/[\s,;/]+/).some((t) => t.toUpperCase()
 export const protectedSet = (md, milestone = "M2", packs = packsOf) =>
   rows(md).filter((r) => inMilestone(r.milestone, milestone) && isWorks(r.status)).map((r) => ({ id: r.id, packs: packs(r.id) }));
 
-/** The hold file: "<C…> <reason>" (a capability) or "<C…-name.test.ts> <reason>" (one pack). A # at the start of a line
- *  is a comment; a line that cannot be read is returned in `bad` and holds nothing. */
+/** The hold file (markdown): a list line "- <C…> <reason>" (a capability) or "- <C…-name.test.ts> <reason>" (one pack),
+ *  or a table row "| <C…> | <reason> |", or the same with no bullet. Headings, prose and table headers are not holds; a
+ *  line that starts with a capability id but cannot be read is returned in `bad` and holds nothing. */
 export function held(text) {
   const caps = new Map(), packs = new Map(), bad = [];
   for (const raw of text.split(/\r?\n/)) {
-    const l = raw.trim();
-    if (!l || l.startsWith("#")) continue;
+    let l = raw.trim().replace(/[*_`]/g, "");
+    if (/^\|/.test(l)) l = l.split("|").map((c) => c.trim()).filter(Boolean).join(" ");
+    l = l.replace(/^([-+]|\d+[.)])\s+/, "").trim();
+    if (!/^[Cc]\d/.test(l)) continue;
     const m = l.match(/^([Cc]\d{1,2}\.\d{1,2})(\S*?\.test\.ts)?\s+(\S.*)$/);
     if (!m || (m[2] && !/^(-[\w.-]+)?\.test\.ts$/.test(m[2]))) { bad.push(l.slice(0, 120)); continue; }
     const id = `C${m[1].slice(1)}`;

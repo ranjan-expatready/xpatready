@@ -1,8 +1,0 @@
-# The protected regression set's held rows (works-set.mjs; tech lead, 4 Nov): an M2 Works capability whose pack was red
-# on main when the set started is left out, with its reason, and sent to qa (demote the row or log the bug). Remove its
-# line, in its own PR, when the pack is green again: then it joins the set. One per line: "<C…> <reason>" holds every
-# pack of a capability, "<C…-name.test.ts> <reason>" holds one pack file.
-C11.3 red on main, re-test run 41788362078 (4 Nov 12:38 IST): C11.3.test.ts on the six 26/27, AT-5 (the AI "did you mean" says AI is switched off on this copy); sent to qa
-C11.12-runtime.test.ts red on main, re-test run 41788362078 (4 Nov 12:38 IST): it calls the Mac's psql path and needs the suites' fixture (C11.12.test.ts is 20/20 on the six); sent to qa
-C4.7 red on main, re-test run 41788362078 (4 Nov 12:38 IST): C4.7.test.ts on the six exits 2 (setup missing or refused) with no output; sent to qa
-C3.6 red on main, re-test run 41788362078 (4 Nov 12:38 IST): C3.6.test.ts on the six exits 2 (setup missing or refused) with no output; sent to qa
