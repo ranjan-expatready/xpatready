@@ -69,7 +69,7 @@ D1 ½ (done-when cases met; M1 and M2 break the bug rule) · D2 ½ (M1, m7) · D
 **Block.** To fix before the label: M1, M2.
 
 ## Round 2 (diff only, 844094baa..d61a7fb2b): summary from the reviewer's hand-back
-The reviewer (Opus, fresh context, 4 Nov, about 09:50–10:00 IST) appended its round 2 section to this file in a temporary checkout, which the builder then removed by mistake before committing it. What follows is the reviewer's own hand-back report, condensed by the builder; its test inputs were left in the builder's scratchpad.
+The reviewer (Opus, fresh context, 4 Nov, about 08:55–09:05 IST; corrected from the commit times in round 3) appended its round 2 section to this file in a temporary checkout, which the builder then removed by mistake before committing it. What follows is the reviewer's own hand-back report, condensed by the builder; its test inputs were left in the builder's scratchpad.
 
 **Verdict: Block for d61a7fb2b.** Journey re-walk 7.5/10, not a pass.
 * **R2-M1** (review M1 / break B1 not closed): `fixedIn()` still waived open bugs on honest wording: "This closes QA-169 and QA-192 stays open.", "This fixes QA-169, QA-192 stays open.", "Fixes: none (QA-192 stays open)", "Fixes: QA-169 (QA-192 is the next PR)", "**Fix:** … the same rule QA-192 settled" (the shape of a real PR body), and a title "fix: … (QA-192 still open)". Remedy: only a strict Fixes line with ids.
@@ -85,3 +85,46 @@ The reviewer (Opus, fresh context, 4 Nov, about 09:50–10:00 IST) appended its 
 * R2-M2: a code span is an example only when it holds a capability, a placeholder or a bug id. A code span with only words in it ("`Claims Works:`") is unwrapped and read.
 * R2-M3: a key alone on its line (heading, bold label, bare, or with a colon) takes the list under it.
 * Self-check 90/90. Part 1 on the 23 open non-batch PRs refuses none; #804's own description was reworded so its examples carry placeholders.
+
+## Round 3 (diff only, d61a7fb2b..7a08bbe10)
+Reviewer: Opus, fresh context, 4 Nov, about 09:10–09:20 IST. Scope: `git diff d61a7fb2b 7a08bbe10` (gate-b.mjs, check-gate-b.mjs, review.md). ci.yml is unchanged in this range; 4bbcf0a79 was found correct in round 2. US$0, no ports, no *_LIVE, nothing committed. Probes are in `scratchpad/r3/` (adv.mjs, sim.mjs, t3.sh). The d61a7fb2b gate-b.mjs is kept outside the checkout for comparison.
+
+### (a) Are round 2's Majors closed?
+* **R2-M1 closed.** `fixedIn()` now counts only a body line that is `Fixes:` followed by nothing but QA ids, and the title no longer counts (`claims()` returns `fixedIn(body)`). All of round 2's lines now refuse, run through `claims()` and `part1()`: "closes QA-169 and QA-192 stays open", "Fixes: none (QA-192 …)", "Fixes: QA-169 (QA-192 is the next PR)", "**Fix:** … QA-192 settled", the "fix: … (QA-192 still open)" title, "Fixes: QA-169; QA-192 later" and "Fixed: QA-169. Open: QA-192." The control line "Fixes: QA-192" passes, and so do "Fixes: QA-169 and QA-192", "fixes: qa-192", "Fixes: QA-192." and a table row "| Fixes | QA-192 |". A Fixes line inside a fence, or in the title only, refuses.
+* **R2-M2 closed.** "`Claims Works:` C11.13", "`Claims` Works: C11.13", "`Claims Works`: C11.13" and "``Claims Works:`` C11.13" all read C11.13 and refuse on QA-192. Where an id or placeholder sits in code next to the key ("Claims Works: `C11.13`, see notes" or "Claims Works: `C11.13 (was C<n.n>)`"), the line counts as unread and refuses. A span that mixes a placeholder or id into the key ("`Claims Works: C<n.n>` C11.13", "`Claims Works (QA-192):` C11.13") is skipped as an example. That is contrived and consistent with the documented rule.
+* **R2-M3 closed for the three shapes named, but the class stays open (see R3-M1).** "## Claims Works", "**Claims Works**", a bare "Claims Works", "Claims Works:" with "1." under it, a nested list, "## 2. Claims Works", "- Claims Works" with an indented list, and the singular "Claim Works" / "Claims Work" all read C11.13 and refuse. An empty list, a list that holds only code ids, a list after a blank line, or a table or plain line under the heading all count as unread and refuse. That is fail-safe.
+
+### Major
+* **R3-M1: a "Claims Works" heading or line with any extra word, and a list under it, still passes silently.** The new key-alone test is an exact match: `/^(capabilit(?:y|ies)|claims?\s+works?)\s*:?$/i` (gate-b.mjs:82). The fallback at :97 needs an id on the line itself. So these all SKIP or pass with no bug check, while C11.13 has QA-192 (Major) open: "## Claims Works (as built)\n- C11.13", "## Claims Works (after this PR)", "## ✅ Claims Works", "## Claims Works for", "## Claims Works.", "Claims Works —", "This PR claims Works\n- C11.13" and "Claims Works on\n- C11.13". The batch path does the same (t3.sh Q9, exit 0). This is house style, not a contrived shape: of 693 headings in the 128 real PR bodies, **147 end in a "(…)" suffix, in 75 PRs** ("## Plan (as built)" 15 times, "## Checks (US$0, …)" 7 times). It also breaks the gate's own stated rule, "A line that says 'Claims Works' but names nothing the gate can read refuses (never a silent pass)", in gate-b.mjs's header. **Remedy (small):** when a plain line mentions "claims works" outside code and has no colon key, read the list under it as for a key alone. If that list or the line has ids, treat them as Works, or refuse as unread. Add these 8 shapes as fail cases in check-gate-b.
+
+### (b) Does anything that passed before now refuse wrongly?
+* `check-gate-b.mjs`: 90 passed, 0 failed (77 open rows in the real BUGS.md).
+* The 128 real non-batch PR bodies, under d61a7fb2b and 7a08bbe10 (`r3/sim.mjs`): 5 differ.
+  * Four lose a prose fix: #776 QA-193 "Closed: …", #741 "This also fixes QA-142", #722 "**Fix:** … QA-82 settled" and #630 "fixes QA-176". None claims Works, so none changes verdict. This is the intended strictness, and the new "For builders" section states it.
+  * The fifth is #804's own earlier body. Its words-only "`Claims Works:`" spans are now unwrapped, so it refuses twice as "unread". The reworded current body is skipped (exit 0).
+  * No other body refuses, then or now.
+* Batch re-check (t3.sh Q1–Q8) behaves as in round 2. Q10 ("Fixes: QA-192" inside a batched PR) passes.
+
+### (c) PR body
+* #804's body (fetched 09:1x IST, head 7a08bbe10) now has **"## For builders: how to write a PR body the gate reads"**. It shows the three lines in a fence and states the strict Fixes rule ("nothing else on the line, no notes and no 'none'"), that the title is never a fix, and that examples in code or fences are ignored.
+* #804's own body passes its own gate: "skipped (the PR names no capability)", exit 0, against main's BUGS.md.
+
+### Minor (no fix needed for the label; record them)
+* r3-m1: a struck-out "~~Fixes: QA-192~~" still counts as a fix, because `plain()` strips `~`. None of the 128 bodies uses strikethrough.
+* r3-m2: a note in a code span that holds an id or "<" vanishes, so the line becomes strict. "Fixes: QA-192 `QA-192 is the next PR`" and "Fixes: QA-192 `<- next PR`" are waived. Contrived.
+* r3-m3: a strict Fixes line counts anywhere: under "## Not in this PR", in "> quote", inside a multi-line `<!-- -->` comment or in `<details>`. It also counts when the next line retracts it ("Fixes: QA-192\n(… QA-192 stays open)"). The builder wrote the strict form each time, so these are low risk.
+* r3-m4: the most natural markdown, "## Claims Works", a blank line, then "- C11.13", is refused as unread. The message says to write "Claims Works: C<n.n>", which is actionable but reads oddly to a builder who did name it. Taking the list after one blank line would fix it.
+* r3-m5: prose that quotes the key as words only, such as "Add a `Claims Works:` line", now refuses as unread (#804's earlier body did). The message could add: "an example in code needs a placeholder, `Claims Works: C<n.n>`".
+* r3-m6: the record in review.md says round 2 ran "about 09:50–10:00 IST". Commits put it between 08:53 (d61a7fb2b) and 09:05 IST (7a08bbe10). Correct it to about 08:55–09:05 IST.
+* Carried from round 2: the "gate B timing (TEMPORARY, #804 only)" step is still in ci.yml (:112–116) and must come out before the label.
+
+### Journey score (reviewer role; the builder's journey: write a PR body, read the gate's answer)
+task completed ½ (the documented format works; a suffixed heading is silently skipped, R3-M1) · next step obvious 1 (each refusal names the exact "Fixes: QA-nnn" line) · plain words 1 · feedback and state ½ (silent skip, R3-M1; r3-m4, r3-m5 messages) · correct data ½ (R3-M1; r3-m1) · error recovery 1 · accessibility and screen sizes 1 (text output only; not applicable beyond that) · speed 1 (part 1 instant; the packs were measured in round 1) · visual quality 1 (not applicable: CLI) · trust and sources 1 (cites the BUGS.md row, read on the base branch). **8.5/10.** It passes the journey bar, but the verdict follows the open Major.
+
+**Block.** To fix before the label: R3-M1 (a "Claims Works" line or heading with an extra word and a list under it is a silent skip; 147 of 693 real headings carry such a suffix). The timing step must also come out of ci.yml.
+
+## Builder's response to round 3 (the commit after 4b44fb1bc)
+* R3-M1: a line that says "Claims Works" with no colon key ("## Claims Works (as built)", "## ✅ Claims Works", "This PR claims Works on", "Claims Works —" …) now IS a Works claim for the ids on the line and in the list under it, so the bug check runs. A heading or short label with none refuses as unread; a prose sentence that names nothing claims nothing. All 8 of round 3's shapes are fail cases in check-gate-b.
+* Minor: struck-out text (~~…~~) is no longer read (a struck "Fixes:" line is no fix).
+* Not changed (Minors, listed for the tech lead): a strict Fixes line counts anywhere in the body (under "Not in this PR", in a quote or a details block); a note hidden in a code span after the ids; the refusal message for a quoted "`Claims Works:`" could suggest a placeholder.
+* Self-check 102/102. Of the 75 most recent non-batch PRs (open and closed), none refuses; #804's own body is skipped.

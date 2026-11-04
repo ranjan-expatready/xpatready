@@ -63,6 +63,13 @@ for (const [label, body] of [["a list under the key", "Claims Works:\n- C11.13\n
   ["a note before the colon", "Claims Works (after this PR): C11.13"], ["a table row", "| Claims Works | C11.13 |"], ["lower case", "claims works: c11.13"],
   ["a heading", "## Claims Works: C11.13"], ["bold and a bullet", "- **Claims Works:** C11.13"], ["a trailing dot and CRLF", "Claims Works: C11.13.\r\nmore"]])
   ok(`a Claims Works line is read as ${label}`, claims("forms: x", body).works.has("C11.13"), [...claims("forms: x", body).works]);
+// Round 3's silent skips at 7a08bbe10 (review R3-M1): a "Claims Works" heading or phrase without a colon key.
+for (const head of ["## Claims Works (as built)", "## Claims Works (after this PR)", "## ✅ Claims Works", "## Claims Works for", "## Claims Works.", "Claims Works —", "This PR claims Works", "Claims Works on"])
+  ok(`"${head}" with a list under it is a Works claim (the bug check runs)`, gate("forms: x", `${head}\n- C11.13`).join() === "QA-192", gate("forms: x", `${head}\n- C11.13`));
+ok("\"This PR claims Works on C11.13\" is a Works claim", gate("forms: x", "This PR claims Works on C11.13 once qa agrees.").join() === "QA-192");
+ok("a heading \"## Claims Works (as built)\" with nothing under it refuses as unread", part1(claims("forms: x", "## Claims Works (as built)\n\nText."), bugs).length === 1);
+ok("a prose sentence about the line that names nothing claims nothing", part1(claims("forms: x", "A line that says it claims Works but names nothing readable refuses."), bugs).length === 0);
+ok("a struck-out fix is no fix (~~Fixes: QA-192~~)", w("forms: C11.13 reason", "~~Fixes: QA-192~~").join() === "QA-192");
 ok("\"Capability:\" (one) names a capability", claims("forms: x", "Capability: C11.13").caps.has("C11.13"));
 ok("prose that claims Works without a readable line refuses (never a silent skip)", part1(claims("forms: x", "This PR claims Works for C11.13 once qa agrees."), bugs).length === 1);
 ok("\"Claims Works:\" with nothing readable refuses; \"Claims Works: none\" does not", part1(claims("forms: x", "Claims Works: the reason dialog"), bugs).length === 1 && part1(claims("forms: x", "Claims Works: none"), bugs).length === 0);

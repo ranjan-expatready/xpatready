@@ -48,7 +48,7 @@ export const prose = (text) => {
   let fence = false;
   return text.split(/\r?\n/).map((l) => {
     if (/^\s*(```|~~~)/.test(l)) { fence = !fence; return ""; }
-    return fence ? "" : l.replace(/`([^`]*)`/g, (_, c) => (/[Cc]\d|<|QA-\d/i.test(c) ? " " : c));
+    return fence ? "" : l.replace(/`([^`]*)`/g, (_, c) => (/[Cc]\d|<|QA-\d/i.test(c) ? " " : c)).replace(/~~[^~]*~~/g, " ");
   }).join("\n");
 };
 /** A body line in plain words: markdown marks, quotes, list bullets and headings gone; a table row "| key | value |"
@@ -76,7 +76,7 @@ export function claims(title = "", body = "") {
   title = prose(title); body = prose(body);
   const add = (id, steps) => caps.set(id, steps ? [...new Set([...(caps.get(id) ?? []), ...steps])] : caps.has(id) ? caps.get(id) : null);
   for (const id of ids(title)) add(id, null);
-  const lines = body.split(/\r?\n/).map(plain);
+  const raw = body.split(/\r?\n/), lines = raw.map(plain);
   for (let i = 0; i < lines.length; i++) {
     // A key alone on its line ("## Claims Works", "**Claims Works**", "Capabilities") takes the list under it (R2-M3).
     const line = /^(capabilit(?:y|ies)|claims?\s+works?)\s*:?$/i.test(lines[i]) ? `${lines[i].replace(/:$/, "")}:` : lines[i], keys = [...line.matchAll(KEY)];
@@ -84,7 +84,7 @@ export function claims(title = "", body = "") {
       let value = line.slice(m.index + m[0].length, keys[k + 1]?.index ?? line.length).split(/\s·\s/)[0];
       const isWorks = /works?/i.test(m[1]);
       // A list under the key: the next lines that are list items (the raw line starts with a bullet or a number).
-      if (!ids(value).length) for (let j = i + 1; j < lines.length && /^\s*([-*+]|\d+[.)])\s/.test(body.split(/\r?\n/)[j]); j++) value += " " + lines[j];
+      if (!ids(value).length) for (let j = i + 1; j < lines.length && /^\s*([-*+]|\d+[.)])\s/.test(raw[j]); j++) value += " " + lines[j];
       const named = ids(value);
       if (isWorks && !named.length && !/^\s*(none|nothing|no capability)\b/i.test(value)) unread.push(line.slice(0, 120));
       for (const id of named) if (isWorks) works.add(id);
@@ -93,8 +93,15 @@ export function claims(title = "", body = "") {
         add(`C${c[1]}.${c[2]}`, steps);
       }
     }
-    // "Claims Works" said without a colon the gate can read: refuse rather than skip the bug check.
-    if (!keys.some((m) => /works?/i.test(m[1])) && /\bclaims?\s+works?\b/i.test(line) && ids(line).length) unread.push(line.slice(0, 120));
+    // "Claims Works" said without a colon the gate can read ("## Claims Works (as built)", "This PR claims Works on",
+    // "Claims Works —"): the ids on the line and in the list under it ARE a Works claim (the bug check runs); a heading
+    // or a short label with none refuses as unread; a prose sentence that names nothing claims nothing (R3-M1).
+    if (!keys.some((m) => /works?/i.test(m[1])) && /\bclaims?\s+works?\b/i.test(line)) {
+      let named = ids(line);
+      if (!named.length) for (let j = i + 1; j < lines.length && /^\s*([-*+]|\d+[.)])\s/.test(raw[j]); j++) named = [...named, ...ids(lines[j])];
+      for (const id of named) { works.add(id); add(id, null); }
+      if (!named.length && (/^\s*#/.test(raw[i]) || line.split(/\s+/).length <= 6)) unread.push(line.slice(0, 120));
+    }
   }
   for (const id of works) caps.set(id, null);   // a Works claim is the whole pack: steps never narrow it
   return { caps, works, fixes: fixedIn(body), unread };
