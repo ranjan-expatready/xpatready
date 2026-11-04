@@ -1,0 +1,1936 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-fieldmap-check-imm-5646-01-2023-595a6c78-live-20261103t074310021z-5c546f",
+  "idempotency_key": "dde315f518fb7a469e516acf244ee1df176a0d83e8fc61f0f3d8fafe4996b600",
+  "contract_version": "drafting-run/v0",
+  "kind": "field_map",
+  "output_sha256": "3c55b0e203016d39a999525b296903f295e44c6ba336ad7c4f4f91052c42bdfa",
+  "inputs": {
+   "combination": "edition:IMM 5646:01-2023",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/imm5646e.inventory.json",
+     "sha256": "57dde341bd54ef252cfe11c49a94cded8a74df2b5af99553e4c939db8c660803"
+    }
+   ],
+   "configuration_version": "studio-add-form"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 900000,
+   "max_attempts": 2,
+   "budget_usd": 3.38,
+   "max_output_tokens": 64000,
+   "prompt_version": "field-map-check.v1.md",
+   "prompt_sha256": "51474a479d9e91c3dd36a9e120d137796a2040e1409b39d5ef3c665cb6ec901b"
+  },
+  "status": "completed_with_unresolved",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 30235,
+    "output_tokens": 25777,
+    "duration_ms": 176705
+   }
+  ],
+  "usage": {
+   "input_tokens": 30235,
+   "output_tokens": 25777,
+   "cost_usd": 0.63648,
+   "duration_ms": 176705
+  },
+  "started_at": "2026-11-03T07:43:10.023Z",
+  "ended_at": "2026-11-03T07:46:06.972Z",
+  "entries": [
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subStudentInfo[0].FamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.family_name",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Family name (Surname) (as shown on passport/travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subStudentInfo[0].GivenNames[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.given_names",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Given name(s) (as shown on passport/travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subStudentInfo[0].Citizenship[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.citizenship",
+    "transform": "country_name_text",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Citizenship"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subStudentInfo[0].DOB[0].iDate[0].d[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[0]",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subStudentInfo[0].DOB[0].iDate[0].d[1]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[1]",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subStudentInfo[0].DOB[0].iDate[0].d[2]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[2]",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subStudentInfo[0].DOB[0].iDate[0].d[3]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[3]",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subStudentInfo[0].DOB[0].iDate[0].d[4]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[4]",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subStudentInfo[0].DOB[0].iDate[0].d[5]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[5]",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subStudentInfo[0].DOB[0].iDate[0].d[6]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[6]",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subStudentInfo[0].DOB[0].iDate[0].d[7]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[7]",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subStudentInfo[0].DOB[0].theDate[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Enter as YYYY-MM-DD, or click the down arrow to open the calendar."
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subStudentInfo[0].schoolAddress[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "organisation.school_name_and_address",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Full name and complete address of the school in Canada"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subStudentInfo[0].sex[0].mfGroup[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.gender",
+    "transform": "code_list:imm5646.gender{F Female=1,M Male=2,X Another gender=3}",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Gender"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subStudentInfo[0].studentAddress[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.address_in_canada",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Address where student will reside while in Canada"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentFamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.family_name",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Parent/Guardian"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentGivenNames[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.given_names",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Parent/Guardian"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[0]",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Parent/Guardian"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[1]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[1]",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Parent/Guardian"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[2]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[2]",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Parent/Guardian"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[3]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[3]",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Parent/Guardian"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[4]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[4]",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Parent/Guardian"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[5]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[5]",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Parent/Guardian"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[6]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[6]",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Parent/Guardian"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[7]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[7]",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Parent/Guardian"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentDOB[0].theDate[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Enter as YYYY-MM-DD, or click the down arrow to open the calendar."
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentAddress[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.home_address",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Home address"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentTelephone[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.telephone_number",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Telephone number"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subCustodian[0].FamilyName[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Box is about the custodian in Canada, who is not the student nor any available family role; no person role exists for the custodian.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "CUSTODIAN INFORMATION"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subCustodian[0].GivenNames[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Box is about the custodian in Canada, who is not the student nor any available family role; no person role exists for the custodian.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "CUSTODIAN INFORMATION"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subCustodian[0].subStatus[0].statusGroup[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's status in Canada (codes 1 Canadian citizen, 2 Permanent resident); custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Status in Canada"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's date of birth; custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[1]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's date of birth; custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[2]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's date of birth; custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[3]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's date of birth; custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[4]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's date of birth; custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[5]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's date of birth; custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[6]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's date of birth; custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[7]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's date of birth; custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subCustodian[0].DOB[0].theDate[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's date of birth; custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subCustodian[0].Address[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's home address; custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Home address"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subCustodian[0].Telephone[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's telephone number (max 10 characters); custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Telephone no."
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subDeclaration[0].nameCustodian[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Full name of the custodian; custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "(full name of custodian)"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subDeclaration[0].nameStudent[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.full_name",
+    "transform": "compose_full_name:given_names+' '+family_name",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "(full name of student)"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subDeclaration[0].swornCity[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "Place of swearing in the notarial declaration, completed at the time of notarization.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "(city)"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subDeclaration[0].swornProv[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "Place of swearing in the notarial declaration, completed at the time of notarization.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "(province/territory)"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subDeclaration[0].swornCountry[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "Place of swearing in the notarial declaration, completed at the time of notarization.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "country (if applicable)"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subDeclaration[0].swornDay[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "Date of swearing in the notarial declaration, completed at the time of notarization.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "day"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subDeclaration[0].swornMonth[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "Date of swearing in the notarial declaration, completed at the time of notarization.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "(month)"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subDeclaration[0].swornYear[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "Date of swearing in the notarial declaration, completed at the time of notarization.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "(year)"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subDeclaration[0].parentSig1[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "Handwritten signature of the custodian before a notary.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Signature of custodian"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date the custodian signs before the notary; set at signing, not held in the case record, and custodian has no person role.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[1]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date the custodian signs before the notary; set at signing, not held in the case record, and custodian has no person role.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[2]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date the custodian signs before the notary; set at signing, not held in the case record, and custodian has no person role.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[3]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date the custodian signs before the notary; set at signing, not held in the case record, and custodian has no person role.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[4]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date the custodian signs before the notary; set at signing, not held in the case record, and custodian has no person role.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[5]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date the custodian signs before the notary; set at signing, not held in the case record, and custodian has no person role.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[6]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date the custodian signs before the notary; set at signing, not held in the case record, and custodian has no person role.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[7]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date the custodian signs before the notary; set at signing, not held in the case record, and custodian has no person role.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].theDate[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date the custodian signs before the notary; set at signing, not held in the case record, and custodian has no person role.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page1[0].subDeclaration[0].notarySig[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "Handwritten signature of the notary public.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Signature of notary"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subStudentInfo[0].FamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.family_name",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Family name (Surname) (as shown on passport/travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subStudentInfo[0].GivenNames[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.given_names",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Given name(s) (as shown on passport/travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subStudentInfo[0].Citizenship[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.citizenship",
+    "transform": "country_name_text",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Citizenship"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subStudentInfo[0].DOB[0].iDate[0].d[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[0]",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subStudentInfo[0].DOB[0].iDate[0].d[1]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[1]",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subStudentInfo[0].DOB[0].iDate[0].d[2]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[2]",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subStudentInfo[0].DOB[0].iDate[0].d[3]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[3]",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subStudentInfo[0].DOB[0].iDate[0].d[4]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[4]",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subStudentInfo[0].DOB[0].iDate[0].d[5]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[5]",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subStudentInfo[0].DOB[0].iDate[0].d[6]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[6]",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subStudentInfo[0].DOB[0].iDate[0].d[7]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[7]",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subStudentInfo[0].DOB[0].theDate[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Enter as YYYY-MM-DD, or click the down arrow to open the calendar."
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subStudentInfo[0].schoolAddress[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "organisation.school_name_and_address",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Full name and complete address of the school in Canada"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subStudentInfo[0].sex[0].mfGroup[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.gender",
+    "transform": "code_list:imm5646.gender{F Female=1,M Male=2,X Another gender=3}",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Gender"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subStudentInfo[0].studentAddress[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.address_in_canada",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Address where student will reside while in Canada"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentFamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.family_name",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Parent/Guardian"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentGivenNames[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.given_names",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Parent/Guardian"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[0]",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Parent/Guardian"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[1]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[1]",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Parent/Guardian"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[2]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[2]",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Parent/Guardian"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[3]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[3]",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Parent/Guardian"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[4]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[4]",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Parent/Guardian"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[5]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[5]",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Parent/Guardian"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[6]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[6]",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Parent/Guardian"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[7]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.date_of_birth",
+    "transform": "date_digit:YYYYMMDD[7]",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Parent/Guardian"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentDOB[0].theDate[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Enter as YYYY-MM-DD, or click the down arrow to open the calendar."
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentAddress[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.home_address",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Home address"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentTelephone[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.telephone_number",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Telephone number"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subCustodian[0].FamilyName[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Box is about the custodian in Canada, who is not the student nor any available family role; no person role exists for the custodian.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "CUSTODIAN INFORMATION"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subCustodian[0].GivenNames[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Box is about the custodian in Canada, who is not the student nor any available family role; no person role exists for the custodian.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "CUSTODIAN INFORMATION"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subCustodian[0].subStatus[0].statusGroup[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's status in Canada (codes 1 Canadian citizen, 2 Permanent resident); custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Status in Canada"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's date of birth; custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[1]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's date of birth; custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[2]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's date of birth; custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[3]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's date of birth; custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[4]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's date of birth; custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[5]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's date of birth; custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[6]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's date of birth; custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[7]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's date of birth; custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subCustodian[0].DOB[0].theDate[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's date of birth; custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subCustodian[0].Address[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's current residential address; custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Current residential address"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subCustodian[0].Telephone[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Custodian's telephone number (max 10 characters); custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Telephone no."
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].childResideGroup[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "case.student_residence_arrangement",
+    "transform": "code_list:imm5646.child_reside{with the appointed custodian=1,in the school dormitory=2,with another person=3}",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "I/We, and , the parents/guardians of the said student, , hereby grant full custodianship to , during the student's stay"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].nameOther[0]",
+    "outcome": "mapped",
+    "confidence": "low",
+    "person": "form_subject",
+    "fact": "case.student_residence_other_person",
+    "transform": "as_is",
+    "condition": "Only when childResideGroup is 3 (with another person:)",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "(please provide name and indicate relationship)"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].nameParent1[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_1",
+    "fact": "person.full_name",
+    "transform": "compose_full_name:given_names+' '+family_name",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "I/We, and , the parents/guardians of the said student, , hereby grant full custodianship to , during the student's stay"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].nameParent2[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_parent_2",
+    "fact": "person.full_name",
+    "transform": "compose_full_name:given_names+' '+family_name",
+    "condition": "Only when a second parent/guardian signs the declaration",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "(full names of parents/guardians)"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].nameStudent[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.full_name",
+    "transform": "compose_full_name:given_names+' '+family_name",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "(full name of student)"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].nameCust[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Full name of the custodian; custodian has no person role in this map.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "(full name of custodian)"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].parentSig1[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "Handwritten signature of parent/guardian (1) before a notary.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Signature of parent/guardian (1)"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date parent/guardian (1) signs before the notary; set at signing and not held in the case record.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[1]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date parent/guardian (1) signs before the notary; set at signing and not held in the case record.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[2]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date parent/guardian (1) signs before the notary; set at signing and not held in the case record.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[3]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date parent/guardian (1) signs before the notary; set at signing and not held in the case record.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[4]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date parent/guardian (1) signs before the notary; set at signing and not held in the case record.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[5]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date parent/guardian (1) signs before the notary; set at signing and not held in the case record.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[6]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date parent/guardian (1) signs before the notary; set at signing and not held in the case record.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[7]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date parent/guardian (1) signs before the notary; set at signing and not held in the case record.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].theDate[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date parent/guardian (1) signs before the notary; set at signing and not held in the case record.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].parentSig2[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "Handwritten signature of parent/guardian (2) before a notary.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Signature of parent/guardian (2)"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date parent/guardian (2) signs before the notary; set at signing and not held in the case record.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[1]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date parent/guardian (2) signs before the notary; set at signing and not held in the case record.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[2]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date parent/guardian (2) signs before the notary; set at signing and not held in the case record.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[3]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date parent/guardian (2) signs before the notary; set at signing and not held in the case record.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[4]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date parent/guardian (2) signs before the notary; set at signing and not held in the case record.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[5]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date parent/guardian (2) signs before the notary; set at signing and not held in the case record.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[6]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date parent/guardian (2) signs before the notary; set at signing and not held in the case record.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[7]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date parent/guardian (2) signs before the notary; set at signing and not held in the case record.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].theDate[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Date parent/guardian (2) signs before the notary; set at signing and not held in the case record.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Year"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].swornCity[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "Place of swearing in the notarial declaration, completed at the time of notarization.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "(city)"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].swornProv[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "Place of swearing in the notarial declaration, completed at the time of notarization.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "(province/territory)"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].swornCountry[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "Place of swearing in the notarial declaration, completed at the time of notarization.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "country (if applicable)"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].swornDay[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "Date of swearing in the notarial declaration, completed at the time of notarization.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "day"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].swornMonth[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "Date of swearing in the notarial declaration, completed at the time of notarization.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "(month)"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].swornYear[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "Date of swearing in the notarial declaration, completed at the time of notarization.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "(year)"
+    }
+   },
+   {
+    "form_edition": "IMM 5646 (01-2023)",
+    "form_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+    "data_path": "IMM_5646[0].Page2[0].subDeclaration[0].notarySig[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "Handwritten signature of the notary public.",
+    "evidence": {
+     "file_sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+     "quote": "Signature of notary"
+    }
+   }
+  ]
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": {
+  "weak_evidence": [],
+  "edition_note": null,
+  "needs_person": [],
+  "set_aside_fields": []
+ },
+ "launch_evidence": {
+  "path_code_sha256": "10dbba1a2d6cbcb44316fa3d8835b4a8cb9313cf996f8d149fe48f82be608bfb",
+  "template_sha256": "707130b8cae250f820fe2ce5ef29c39bb6ddadaa6ade3b636e88c2ba8a472ffb",
+  "schema_file": "field-map-output.v2.schema.json",
+  "schema_sha256": "a9583204f0ff5325721c1240af88c2f86d9701dac3c1f466061c0073c4f2d68a",
+  "known": {
+   "form_edition": "IMM 5646 (01-2023)"
+  },
+  "screened": true,
+  "output_sha256": "3c55b0e203016d39a999525b296903f295e44c6ba336ad7c4f4f91052c42bdfa",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "ee11d528c13b990a8f135bf8c81f5e7756d835c6075fd86f47579c390afb9124",
+  "request_bytes": 65637,
+  "stub_calls": null,
+  "ledger": {
+   "file": "<main copy>/.tools/p2-ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 53.575627999999995
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/imm5646e.inventory.json",
+    "sha256": "57dde341bd54ef252cfe11c49a94cded8a74df2b5af99553e4c939db8c660803",
+    "kind": "inventory"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "40376974ca1568b2356196bd23b4e3181877404dace417973bdf6c3575288c36",
+   "digest_made_at": "2026-11-03T07:43:10.022Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "ab54ebd60c0b7313b4ee57c1d098f00c",
+   "ticket_expires_at": "2026-11-03T07:45:10.022Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"form_edition\":\"IMM 5646 (01-2023)\",\"canonical_fields\":[{\"id\":\"person.family_name\",\"meaning\":\"Family name (surname) as shown on the person's passport or travel document\",\"value_type\":\"text\"},{\"id\":\"person.given_names\",\"meaning\":\"Given name(s) as shown on the person's passport or travel document\",\"value_type\":\"text\"},{\"id\":\"person.full_name\",\"meaning\":\"Person's full name written in running text (given names followed by family name)\",\"value_type\":\"text\"},{\"id\":\"person.citizenship\",\"meaning\":\"Country of citizenship of the person\",\"value_type\":\"country\"},{\"id\":\"person.date_of_birth\",\"meaning\":\"Date of birth of the person\",\"value_type\":\"date\"},{\"id\":\"person.gender\",\"meaning\":\"Gender of the person\",\"value_type\":\"code\"},{\"id\":\"person.address_in_canada\",\"meaning\":\"Address where the person will reside while in Canada\",\"value_type\":\"address\"},{\"id\":\"person.home_address\",\"meaning\":\"Home (current residential) address of the person\",\"value_type\":\"address\"},{\"id\":\"person.telephone_number\",\"meaning\":\"Telephone number of the person\",\"value_type\":\"text\"},{\"id\":\"organisation.school_name_and_address\",\"meaning\":\"Full name and complete address of the school in Canada the student will attend\",\"value_type\":\"address\"},{\"id\":\"case.student_residence_arrangement\",\"meaning\":\"Where the minor student will live during the stay in Canada (with custodian, school dormitory, or another person)\",\"value_type\":\"code\"},{\"id\":\"case.student_residence_other_person\",\"meaning\":\"Name of the other person the minor student will live with in Canada and that person's relationship to the student\",\"value_type\":\"text\"}],\"entries\":[{\"data_path\":\"IMM_5646[0].Page1[0].subStudentInfo[0].FamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Family name (Surname) (as shown on passport/travel document)\"},{\"data_path\":\"IMM_5646[0].Page1[0].subStudentInfo[0].GivenNames[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.given_names\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Given name(s) (as shown on passport/travel document)\"},{\"data_path\":\"IMM_5646[0].Page1[0].subStudentInfo[0].Citizenship[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.citizenship\",\"transform\":\"country_name_text\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Citizenship\"},{\"data_path\":\"IMM_5646[0].Page1[0].subStudentInfo[0].DOB[0].iDate[0].d[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[0]\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page1[0].subStudentInfo[0].DOB[0].iDate[0].d[1]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[1]\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page1[0].subStudentInfo[0].DOB[0].iDate[0].d[2]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[2]\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page1[0].subStudentInfo[0].DOB[0].iDate[0].d[3]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[3]\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page1[0].subStudentInfo[0].DOB[0].iDate[0].d[4]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[4]\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page1[0].subStudentInfo[0].DOB[0].iDate[0].d[5]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[5]\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page1[0].subStudentInfo[0].DOB[0].iDate[0].d[6]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[6]\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page1[0].subStudentInfo[0].DOB[0].iDate[0].d[7]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[7]\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page1[0].subStudentInfo[0].DOB[0].theDate[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Enter as YYYY-MM-DD, or click the down arrow to open the calendar.\"},{\"data_path\":\"IMM_5646[0].Page1[0].subStudentInfo[0].schoolAddress[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"organisation.school_name_and_address\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Full name and complete address of the school in Canada\"},{\"data_path\":\"IMM_5646[0].Page1[0].subStudentInfo[0].sex[0].mfGroup[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.gender\",\"transform\":\"code_list:imm5646.gender{F Female=1,M Male=2,X Another gender=3}\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Gender\"},{\"data_path\":\"IMM_5646[0].Page1[0].subStudentInfo[0].studentAddress[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.address_in_canada\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Address where student will reside while in Canada\"},{\"data_path\":\"IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentFamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.family_name\",\"transform\":\"as_is\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Parent/Guardian\"},{\"data_path\":\"IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentGivenNames[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.given_names\",\"transform\":\"as_is\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Parent/Guardian\"},{\"data_path\":\"IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[0]\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Parent/Guardian\"},{\"data_path\":\"IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[1]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[1]\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Parent/Guardian\"},{\"data_path\":\"IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[2]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[2]\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Parent/Guardian\"},{\"data_path\":\"IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[3]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[3]\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Parent/Guardian\"},{\"data_path\":\"IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[4]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[4]\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Parent/Guardian\"},{\"data_path\":\"IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[5]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[5]\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Parent/Guardian\"},{\"data_path\":\"IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[6]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[6]\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Parent/Guardian\"},{\"data_path\":\"IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[7]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[7]\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Parent/Guardian\"},{\"data_path\":\"IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentDOB[0].theDate[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Enter as YYYY-MM-DD, or click the down arrow to open the calendar.\"},{\"data_path\":\"IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentAddress[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.home_address\",\"transform\":\"as_is\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Home address\"},{\"data_path\":\"IMM_5646[0].Page1[0].subParent[0].Parents[0].Parent[0].parentTelephone[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.telephone_number\",\"transform\":\"as_is\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Telephone number\"},{\"data_path\":\"IMM_5646[0].Page1[0].subCustodian[0].FamilyName[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Box is about the custodian in Canada, who is not the student nor any available family role; no person role exists for the custodian.\",\"evidence_quote\":\"CUSTODIAN INFORMATION\"},{\"data_path\":\"IMM_5646[0].Page1[0].subCustodian[0].GivenNames[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Box is about the custodian in Canada, who is not the student nor any available family role; no person role exists for the custodian.\",\"evidence_quote\":\"CUSTODIAN INFORMATION\"},{\"data_path\":\"IMM_5646[0].Page1[0].subCustodian[0].subStatus[0].statusGroup[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's status in Canada (codes 1 Canadian citizen, 2 Permanent resident); custodian has no person role in this map.\",\"evidence_quote\":\"Status in Canada\"},{\"data_path\":\"IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's date of birth; custodian has no person role in this map.\",\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[1]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's date of birth; custodian has no person role in this map.\",\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[2]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's date of birth; custodian has no person role in this map.\",\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[3]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's date of birth; custodian has no person role in this map.\",\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[4]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's date of birth; custodian has no person role in this map.\",\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[5]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's date of birth; custodian has no person role in this map.\",\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[6]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's date of birth; custodian has no person role in this map.\",\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page1[0].subCustodian[0].DOB[0].iDate[0].d[7]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's date of birth; custodian has no person role in this map.\",\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page1[0].subCustodian[0].DOB[0].theDate[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's date of birth; custodian has no person role in this map.\",\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page1[0].subCustodian[0].Address[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's home address; custodian has no person role in this map.\",\"evidence_quote\":\"Home address\"},{\"data_path\":\"IMM_5646[0].Page1[0].subCustodian[0].Telephone[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's telephone number (max 10 characters); custodian has no person role in this map.\",\"evidence_quote\":\"Telephone no.\"},{\"data_path\":\"IMM_5646[0].Page1[0].subDeclaration[0].nameCustodian[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Full name of the custodian; custodian has no person role in this map.\",\"evidence_quote\":\"(full name of custodian)\"},{\"data_path\":\"IMM_5646[0].Page1[0].subDeclaration[0].nameStudent[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.full_name\",\"transform\":\"compose_full_name:given_names+' '+family_name\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"(full name of student)\"},{\"data_path\":\"IMM_5646[0].Page1[0].subDeclaration[0].swornCity[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Place of swearing in the notarial declaration, completed at the time of notarization.\",\"evidence_quote\":\"(city)\"},{\"data_path\":\"IMM_5646[0].Page1[0].subDeclaration[0].swornProv[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Place of swearing in the notarial declaration, completed at the time of notarization.\",\"evidence_quote\":\"(province/territory)\"},{\"data_path\":\"IMM_5646[0].Page1[0].subDeclaration[0].swornCountry[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Place of swearing in the notarial declaration, completed at the time of notarization.\",\"evidence_quote\":\"country (if applicable)\"},{\"data_path\":\"IMM_5646[0].Page1[0].subDeclaration[0].swornDay[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Date of swearing in the notarial declaration, completed at the time of notarization.\",\"evidence_quote\":\"day\"},{\"data_path\":\"IMM_5646[0].Page1[0].subDeclaration[0].swornMonth[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Date of swearing in the notarial declaration, completed at the time of notarization.\",\"evidence_quote\":\"(month)\"},{\"data_path\":\"IMM_5646[0].Page1[0].subDeclaration[0].swornYear[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Date of swearing in the notarial declaration, completed at the time of notarization.\",\"evidence_quote\":\"(year)\"},{\"data_path\":\"IMM_5646[0].Page1[0].subDeclaration[0].parentSig1[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Handwritten signature of the custodian before a notary.\",\"evidence_quote\":\"Signature of custodian\"},{\"data_path\":\"IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date the custodian signs before the notary; set at signing, not held in the case record, and custodian has no person role.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[1]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date the custodian signs before the notary; set at signing, not held in the case record, and custodian has no person role.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[2]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date the custodian signs before the notary; set at signing, not held in the case record, and custodian has no person role.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[3]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date the custodian signs before the notary; set at signing, not held in the case record, and custodian has no person role.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[4]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date the custodian signs before the notary; set at signing, not held in the case record, and custodian has no person role.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[5]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date the custodian signs before the notary; set at signing, not held in the case record, and custodian has no person role.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[6]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date the custodian signs before the notary; set at signing, not held in the case record, and custodian has no person role.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[7]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date the custodian signs before the notary; set at signing, not held in the case record, and custodian has no person role.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page1[0].subDeclaration[0].subParentSig1date[0].theDate[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date the custodian signs before the notary; set at signing, not held in the case record, and custodian has no person role.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page1[0].subDeclaration[0].notarySig[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Handwritten signature of the notary public.\",\"evidence_quote\":\"Signature of notary\"},{\"data_path\":\"IMM_5646[0].Page2[0].subStudentInfo[0].FamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Family name (Surname) (as shown on passport/travel document)\"},{\"data_path\":\"IMM_5646[0].Page2[0].subStudentInfo[0].GivenNames[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.given_names\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Given name(s) (as shown on passport/travel document)\"},{\"data_path\":\"IMM_5646[0].Page2[0].subStudentInfo[0].Citizenship[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.citizenship\",\"transform\":\"country_name_text\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Citizenship\"},{\"data_path\":\"IMM_5646[0].Page2[0].subStudentInfo[0].DOB[0].iDate[0].d[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[0]\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page2[0].subStudentInfo[0].DOB[0].iDate[0].d[1]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[1]\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page2[0].subStudentInfo[0].DOB[0].iDate[0].d[2]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[2]\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page2[0].subStudentInfo[0].DOB[0].iDate[0].d[3]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[3]\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page2[0].subStudentInfo[0].DOB[0].iDate[0].d[4]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[4]\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page2[0].subStudentInfo[0].DOB[0].iDate[0].d[5]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[5]\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page2[0].subStudentInfo[0].DOB[0].iDate[0].d[6]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[6]\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page2[0].subStudentInfo[0].DOB[0].iDate[0].d[7]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[7]\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page2[0].subStudentInfo[0].DOB[0].theDate[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Enter as YYYY-MM-DD, or click the down arrow to open the calendar.\"},{\"data_path\":\"IMM_5646[0].Page2[0].subStudentInfo[0].schoolAddress[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"organisation.school_name_and_address\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Full name and complete address of the school in Canada\"},{\"data_path\":\"IMM_5646[0].Page2[0].subStudentInfo[0].sex[0].mfGroup[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.gender\",\"transform\":\"code_list:imm5646.gender{F Female=1,M Male=2,X Another gender=3}\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Gender\"},{\"data_path\":\"IMM_5646[0].Page2[0].subStudentInfo[0].studentAddress[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.address_in_canada\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Address where student will reside while in Canada\"},{\"data_path\":\"IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentFamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.family_name\",\"transform\":\"as_is\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Parent/Guardian\"},{\"data_path\":\"IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentGivenNames[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.given_names\",\"transform\":\"as_is\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Parent/Guardian\"},{\"data_path\":\"IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[0]\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Parent/Guardian\"},{\"data_path\":\"IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[1]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[1]\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Parent/Guardian\"},{\"data_path\":\"IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[2]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[2]\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Parent/Guardian\"},{\"data_path\":\"IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[3]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[3]\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Parent/Guardian\"},{\"data_path\":\"IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[4]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[4]\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Parent/Guardian\"},{\"data_path\":\"IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[5]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[5]\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Parent/Guardian\"},{\"data_path\":\"IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[6]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[6]\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Parent/Guardian\"},{\"data_path\":\"IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentDOB[0].iDate[0].d[7]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.date_of_birth\",\"transform\":\"date_digit:YYYYMMDD[7]\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Parent/Guardian\"},{\"data_path\":\"IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentDOB[0].theDate[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Enter as YYYY-MM-DD, or click the down arrow to open the calendar.\"},{\"data_path\":\"IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentAddress[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.home_address\",\"transform\":\"as_is\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Home address\"},{\"data_path\":\"IMM_5646[0].Page2[0].subParent[0].Parents[0].Parent[0].parentTelephone[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":0,\"fact\":\"person.telephone_number\",\"transform\":\"as_is\",\"condition\":\"Parent/Guardian row group (min 2 rows): row 0 is subject_parent_1, row 1 holds subject_parent_2; each further parent/guardian adds a row\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Telephone number\"},{\"data_path\":\"IMM_5646[0].Page2[0].subCustodian[0].FamilyName[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Box is about the custodian in Canada, who is not the student nor any available family role; no person role exists for the custodian.\",\"evidence_quote\":\"CUSTODIAN INFORMATION\"},{\"data_path\":\"IMM_5646[0].Page2[0].subCustodian[0].GivenNames[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Box is about the custodian in Canada, who is not the student nor any available family role; no person role exists for the custodian.\",\"evidence_quote\":\"CUSTODIAN INFORMATION\"},{\"data_path\":\"IMM_5646[0].Page2[0].subCustodian[0].subStatus[0].statusGroup[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's status in Canada (codes 1 Canadian citizen, 2 Permanent resident); custodian has no person role in this map.\",\"evidence_quote\":\"Status in Canada\"},{\"data_path\":\"IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's date of birth; custodian has no person role in this map.\",\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[1]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's date of birth; custodian has no person role in this map.\",\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[2]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's date of birth; custodian has no person role in this map.\",\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[3]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's date of birth; custodian has no person role in this map.\",\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[4]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's date of birth; custodian has no person role in this map.\",\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[5]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's date of birth; custodian has no person role in this map.\",\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[6]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's date of birth; custodian has no person role in this map.\",\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page2[0].subCustodian[0].DOB[0].iDate[0].d[7]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's date of birth; custodian has no person role in this map.\",\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page2[0].subCustodian[0].DOB[0].theDate[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's date of birth; custodian has no person role in this map.\",\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5646[0].Page2[0].subCustodian[0].Address[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's current residential address; custodian has no person role in this map.\",\"evidence_quote\":\"Current residential address\"},{\"data_path\":\"IMM_5646[0].Page2[0].subCustodian[0].Telephone[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Custodian's telephone number (max 10 characters); custodian has no person role in this map.\",\"evidence_quote\":\"Telephone no.\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].childResideGroup[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.student_residence_arrangement\",\"transform\":\"code_list:imm5646.child_reside{with the appointed custodian=1,in the school dormitory=2,with another person=3}\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"I/We, and , the parents/guardians of the said student, , hereby grant full custodianship to , during the student's stay \"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].nameOther[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.student_residence_other_person\",\"transform\":\"as_is\",\"condition\":\"Only when childResideGroup is 3 (with another person:)\",\"confidence\":\"low\",\"unresolved_reason\":null,\"evidence_quote\":\"(please provide name and indicate relationship)\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].nameParent1[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":\"person.full_name\",\"transform\":\"compose_full_name:given_names+' '+family_name\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"I/We, and , the parents/guardians of the said student, , hereby grant full custodianship to , during the student's stay \"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].nameParent2[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":\"person.full_name\",\"transform\":\"compose_full_name:given_names+' '+family_name\",\"condition\":\"Only when a second parent/guardian signs the declaration\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"(full names of parents/guardians)\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].nameStudent[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.full_name\",\"transform\":\"compose_full_name:given_names+' '+family_name\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"(full name of student)\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].nameCust[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Full name of the custodian; custodian has no person role in this map.\",\"evidence_quote\":\"(full name of custodian)\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].parentSig1[0]\",\"outcome\":\"never_filled\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Handwritten signature of parent/guardian (1) before a notary.\",\"evidence_quote\":\"Signature of parent/guardian (1)\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date parent/guardian (1) signs before the notary; set at signing and not held in the case record.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[1]\",\"outcome\":\"unresolved\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date parent/guardian (1) signs before the notary; set at signing and not held in the case record.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[2]\",\"outcome\":\"unresolved\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date parent/guardian (1) signs before the notary; set at signing and not held in the case record.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[3]\",\"outcome\":\"unresolved\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date parent/guardian (1) signs before the notary; set at signing and not held in the case record.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[4]\",\"outcome\":\"unresolved\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date parent/guardian (1) signs before the notary; set at signing and not held in the case record.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[5]\",\"outcome\":\"unresolved\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date parent/guardian (1) signs before the notary; set at signing and not held in the case record.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[6]\",\"outcome\":\"unresolved\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date parent/guardian (1) signs before the notary; set at signing and not held in the case record.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].iDate[0].d[7]\",\"outcome\":\"unresolved\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date parent/guardian (1) signs before the notary; set at signing and not held in the case record.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].subParentSig1date[0].theDate[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date parent/guardian (1) signs before the notary; set at signing and not held in the case record.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].parentSig2[0]\",\"outcome\":\"never_filled\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Handwritten signature of parent/guardian (2) before a notary.\",\"evidence_quote\":\"Signature of parent/guardian (2)\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date parent/guardian (2) signs before the notary; set at signing and not held in the case record.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[1]\",\"outcome\":\"unresolved\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date parent/guardian (2) signs before the notary; set at signing and not held in the case record.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[2]\",\"outcome\":\"unresolved\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date parent/guardian (2) signs before the notary; set at signing and not held in the case record.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[3]\",\"outcome\":\"unresolved\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date parent/guardian (2) signs before the notary; set at signing and not held in the case record.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[4]\",\"outcome\":\"unresolved\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date parent/guardian (2) signs before the notary; set at signing and not held in the case record.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[5]\",\"outcome\":\"unresolved\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date parent/guardian (2) signs before the notary; set at signing and not held in the case record.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[6]\",\"outcome\":\"unresolved\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date parent/guardian (2) signs before the notary; set at signing and not held in the case record.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].iDate[0].d[7]\",\"outcome\":\"unresolved\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date parent/guardian (2) signs before the notary; set at signing and not held in the case record.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].subParentSig2date[0].theDate[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Date parent/guardian (2) signs before the notary; set at signing and not held in the case record.\",\"evidence_quote\":\"Year\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].swornCity[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Place of swearing in the notarial declaration, completed at the time of notarization.\",\"evidence_quote\":\"(city)\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].swornProv[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Place of swearing in the notarial declaration, completed at the time of notarization.\",\"evidence_quote\":\"(province/territory)\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].swornCountry[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Place of swearing in the notarial declaration, completed at the time of notarization.\",\"evidence_quote\":\"country (if applicable)\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].swornDay[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Date of swearing in the notarial declaration, completed at the time of notarization.\",\"evidence_quote\":\"day\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].swornMonth[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Date of swearing in the notarial declaration, completed at the time of notarization.\",\"evidence_quote\":\"(month)\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].swornYear[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Date of swearing in the notarial declaration, completed at the time of notarization.\",\"evidence_quote\":\"(year)\"},{\"data_path\":\"IMM_5646[0].Page2[0].subDeclaration[0].notarySig[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Handwritten signature of the notary public.\",\"evidence_quote\":\"Signature of notary\"}]}"
+}
