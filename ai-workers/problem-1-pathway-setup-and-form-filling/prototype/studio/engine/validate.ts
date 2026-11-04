@@ -15,7 +15,7 @@ import { eligibilityChanges, gateProblems } from "./eligibility-gates.ts";
 import { sourceKey } from "../contracts/resolver.ts"; // SH3 R8
 import { NO_FIELD_MAP } from "./setup-checklist.ts";
 import { formsWithoutFieldMap } from "./programs.ts"; // QA-180: one rule for release and Open a case
-import { FAMILY_INFORMATION_FORMS } from "./form-completeness.ts";
+import { FAMILY_INFORMATION } from "./form-completeness.ts";
 import { sourceChanges } from "./source-register.ts"; // G1 BR-9: the "Source" lines only; the gate stays out of validate()
 
 // C-11: a field map's form field list, read once per file (paths are relative to the Solution 1 folder, as in fill.ts).
@@ -34,7 +34,7 @@ export const isNode = (n: unknown) => nodeValid(n) as boolean;
 /** `label` is the item in words (a question's meaning) where `item` is a field code; screens show it, never the code. */
 export type Problem = { level: "error" | "warning"; where: string; item: string; message: string; label?: string; /** The person role it is about (W1-15 slice 2: "Needs you" puts it on its row). */ role?: string; /** V3 B1: "no_field_map" (engine/setup-checklist.ts waitsForMap). */ code?: string };
 const ORDERED = new Set(["gt", "gte", "lt", "lte"]);
-const isFamilyForm = (n: string) => (FAMILY_INFORMATION_FORMS as readonly string[]).includes(n);
+const isFamilyForm = (f: { form_role?: string | null }) => f.form_role === FAMILY_INFORMATION; // P-319: the released role
 const BIRTH = "person.date_of_birth";
 
 export function checkCondition(tree: any, fieldTypes: Map<string, string>, derived: Set<string>): string[] {
@@ -75,7 +75,7 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
     // Review m1: the only family information form of the package (C3.8) cannot be removed, so its fix is mapping only.
     const u = unmapped.get(f.form_number);
     const named = f.title ? `the form "${f.title}"` : "this form";
-    const fix = isFamilyForm(f.form_number) && !s.forms.some((o: { form_number: string }) => o !== f && isFamilyForm(o.form_number))
+    const fix = isFamilyForm(f) && !s.forms.some((o: { form_number: string; form_role?: string | null }) => o !== f && isFamilyForm(o))
       ? "Map its form fields (Draft setup). It is this combination's family information form, which IRCC requires when the application package lists one, so remove it only if the package does not." : "Map its form fields (Draft setup), or remove the form.";
     if (u) out.push({ level: "error", where: "Forms", item: f.form_number, code: NO_FIELD_MAP,
       message: u.edition ? `No form fields mapped yet: ${u.edition}, the newest edition and the one a case fills, has none${u.olderMapped ? " (an older edition's map is not used)" : ""}, so firms could not open cases on a release with ${named}. ${fix}`
@@ -213,6 +213,12 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
           const fills = (v: string) => (v === "staff_working_view" ? "the case officer" : v === "client_questionnaire" ? "the client" : v.replace(/_/g, " "));
           out.push({ kind: "Who fills a question", key, change: "changed", origin: x.origin, needs_sme: true, label: `${factWords(next, x.fact)}: filled by ${fills(x.collected_from)}, was ${fills(was.collected_from)} (shared library, every combination)` });
           if (bare({ ...was, collected_from: null }) === bare({ ...x, collected_from: null })) continue;
+        }
+        // P-319 (Lead 4 on #833): a form's role to IRCC's rules is named in words and needs the immigration expert's sign-off.
+        if (k === "forms" && (was.form_role ?? null) !== (x.form_role ?? null)) {
+          const fam = (r: unknown) => r === FAMILY_INFORMATION;
+          out.push({ kind: "Family information form rule", key, change: "changed", origin: x.origin, needs_sme: true, label: fam(x.form_role) ? `${key} is now this combination's family information form ([IRCC-F09]: it fills the family information line)` : fam(was.form_role) ? `${key} is no longer a family information form ([IRCC-F09]: it no longer fills the family information line)` : `${key}'s role changed` });
+          if (bare({ ...was, form_role: null }) === bare({ ...x, form_role: null })) continue;
         }
         out.push({ kind: label, key, change: "changed", origin: x.origin, needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? x.fact ?? key });
       }

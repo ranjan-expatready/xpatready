@@ -1,0 +1,143 @@
+// P-319 (founder, 4 Nov: "no combination is hard-coded"): which forms are family information forms ([IRCC-F09] Guide 5256)
+// is each library form's role, never a list of form numbers in the code. Lead 4's ruling on #833 (P-149): an author
+// proposes a role change (POST /library/forms/:code/role, with a reason); it waits on To review and a second person
+// approves it (POST /library/changes/:id/approve); each combination's next release names it in words for the immigration
+// expert (SME sign-off). On the suites' fixture (Work permit (family), released, IMM 1295 and IMM 5707 among its forms):
+//   the contract; the demo's roles; one author alone never changes a role (the proposal changes nothing, the same author
+//   cannot approve it); a second person's approval applies it, and Review names it ("IMM 5707 is no longer a family
+//   information form", SME sign-off); IMM 5707 removed is an error, as on main; a library form the code never listed,
+//   marked through the same two people, fills the line and the validator says so; refusals (unknown role, no reason, a
+//   reason that cannot be stored or reorders text, a guide, a person without the author duty, a form not in the library,
+//   the same role again, a second proposal while one waits, an unknown role past the API); the migration's data step.
+// No model call (US$0).
+//   zsh studio/tools/isolated.sh forms_p319 4612 start && tsx studio/tests/check_p319_family_role.ts 4612 xr_studio_forms_p319
+import { Ajv } from "ajv";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { client, recorder } from "./runtime/api.ts";
+
+const PORT = Number(process.argv[2] ?? 4612), DB = process.argv[3] ?? "xr_studio_forms_p319";
+const { call, sql } = client(PORT, DB);
+const { ok, summary } = recorder();
+type P = { level: string; where: string; item: string; message: string };
+type C = { kind: string; key: string; change: string; needs_sme: boolean; label: string };
+const said = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? ""); // eslint-disable-line @typescript-eslint/no-explicit-any
+
+(async () => {
+  // ── the released configuration contract: a form's role is released with it, and only a role the library knows
+  const schema = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "contracts", "released-configuration.v0.schema.json"), "utf8"));
+  const formRole = new Ajv({ strict: false }).compile(schema.properties.forms.items.allOf[2]);
+  ok("P-319 contract: a released form may carry form_role family_information, or none; any other role is refused", formRole({ item_version: 1, form_role: "family_information" }) && formRole({ item_version: 1 }) && !formRole({ item_version: 1, form_role: "other" }));
+
+  await call("POST", "/demo/reset", { confirm: "RESET" });
+  if ((await call("POST", "/demo/load")).status >= 300) { console.error("STOP  the sample did not load"); process.exit(2); }
+  const wp = sql("select id from combination where combination_key = 'wp.family'");
+  if (!wp) { console.error("STOP  no Work permit (family) on the fixture"); process.exit(2); }
+  const review = async () => (await call("GET", `/combinations/${wp}/review`)).body as { draft: { problems: P[]; changes: C[] } };
+  const fam = (ps: P[]) => ps.filter((p) => p.level === "error" && /Family Information\) is in this combination's application package/.test(p.message));
+  const role = (code: string) => sql(`select coalesce(form_role, '-') from gov_form_def where form_key = '${code}'`) || "(not in the library)";
+  const propose = (code: string, body: unknown, actor = "user-A") => call("POST", `/library/forms/${encodeURIComponent(code)}/role`, body, actor);
+  const approve = (id: string, actor = "user-B") => call("POST", `/library/changes/${id}/approve`, {}, actor);
+  const activity = (code: string) => sql(`select coalesce(string_agg(action || ': ' || summary, ' | ' order by at), '') from audit_event where entity = 'form' and entity_key = '${code}' and action in ('proposed', 'approved')`);
+
+  // ── the demo data, and the released sample as on main
+  const demoRoles = (JSON.parse(readFileSync(join(import.meta.dirname, "..", "samples", "form-roles.json"), "utf8")) as { roles: Record<string, string> }).roles;
+  const inLibrary = Object.keys(demoRoles).filter((c) => role(c) !== "(not in the library)");
+  ok("P-319 data: every form samples/form-roles.json names that is in the library carries its role (IMM 5707 here); a form it does not name has none", inLibrary.includes("IMM 5707") && inLibrary.every((c) => role(c) === demoRoles[c]) && role("IMM 1295") === "-", Object.fromEntries(Object.keys(demoRoles).map((c) => [c, role(c)])));
+  let v = await review();
+  ok("C3.8 [IRCC-F09] pass (as main): IMM 5707 in the package and in the forms raises no family information error", fam(v.draft.problems).length === 0, fam(v.draft.problems).map((p) => p.message));
+
+  // ── one author alone never changes a role (Lead 4: a second person, P-149)
+  let r = await propose("IMM 5707", { role: null, reason: "Test: is IMM 5707 still the family information form here?" });
+  const change1 = r.body?.id as string | undefined;
+  ok("P-319 pass (Lead 4): an author's role change is a proposal waiting for a second person; the form's role is unchanged", r.status < 300 && r.body?.status === "WAITING" && !!change1 && role("IMM 5707") === "family_information", { status: r.status, body: r.body });
+  v = await review();
+  ok("P-319 pass (Lead 4): while it waits, nothing changes on the combination (no draft change, no family information error)", !v.draft.changes.some((c) => c.key === "IMM 5707") && fam(v.draft.problems).length === 0, v.draft.changes.filter((c) => c.key === "IMM 5707"));
+  r = change1 ? await approve(change1, "user-A") : { status: 0, body: null };
+  ok("P-319 fail (Lead 4): the author who proposed it cannot approve it (403), and the role stays", r.status === 403 && /different person/.test(said(r)) && role("IMM 5707") === "family_information", { status: r.status, said: said(r) });
+  r = await propose("IMM 5707", { role: null, reason: "A second proposal while one waits" });
+  ok("P-319 fail: a second proposal for the same form while one waits is refused (409)", r.status === 409 && /already waits/.test(said(r)), { status: r.status, said: said(r) });
+  r = change1 ? await approve(change1, "user-B") : { status: 0, body: null };
+  v = await review();
+  const named = v.draft.changes.find((c) => c.key === "IMM 5707");
+  ok("P-319 pass (Lead 4): a second person's approval applies it, and Review names it in words for the immigration expert (SME sign-off)", r.status < 300 && role("IMM 5707") === "-" && named?.kind === "Family information form rule" && /IMM 5707 is no longer a family information form/.test(named.label) && named.needs_sme === true, { status: r.status, said: said(r), named });
+  ok("P-319 pass: Activity keeps who proposed it, why, and who approved it", /proposed: .*proposed IMM 5707: no role \(was a family information form\): Test: is IMM 5707/.test(activity("IMM 5707")) && /approved: .*approved IMM 5707: no role/.test(activity("IMM 5707")), activity("IMM 5707"));
+  // and back, through the same two people
+  r = await propose("IMM 5707", { role: "family_information", reason: "Back: IMM 5707 is this package's family information form" });
+  const back = r.body?.id as string | undefined;
+  r = back ? await approve(back) : { status: 0, body: null };
+  v = await review();
+  ok("P-319 pass: given back its role through the same two people, the combination's draft matches its release again", r.status < 300 && role("IMM 5707") === "family_information" && !v.draft.changes.some((c) => c.key === "IMM 5707"), { status: r.status, changes: v.draft.changes.filter((c) => c.key === "IMM 5707") });
+
+  // ── review of #833 M1, M2: To review's words come from what approval applies; a returned change is withdrawn, never sent
+  // again with other words, and a new proposal can follow; approval refuses a change whose role moved meanwhile
+  r = await propose("IMM 5707", { role: null, reason: "Round two: test the return path" });
+  const two = r.body?.id as string | undefined;
+  const queue = ((await call("GET", "/review-queue?filter=all", undefined, "user-B")).body?.items ?? []) as { id: string; what: string; title: string }[];
+  const line = queue.find((i) => i.id === `change:${two}`);
+  ok("P-319 pass (review M1): To review says the role change in words built from what approval applies (before → after, the reason)", !!line && /IMM 5707's role, for every combination that files it: a family information form → no role/.test(line.what) && /Reason: Round two/.test(line.what), line);
+  r = two ? await call("POST", `/library/changes/${two}/return`, { note: "Not this one: keep IMM 5707 as the family form" }, "user-B") : { status: 0, body: null };
+  const resent = two ? await call("POST", `/library/changes/${two}/resubmit`, { label: "IMM 5707: a family information form (was no role)", reason: "Relabelled after the return" }) : { status: 0, body: null };
+  ok("P-319 fail (review M1): a returned role change is never sent again with other words (409); the role stays", r.status < 300 && resent.status === 409 && /withdraw it/.test(said(resent)) && role("IMM 5707") === "family_information", { returned: r.status, resent: resent.status, said: said(resent) });
+  r = await propose("IMM 5707", { role: null, reason: "A new proposal after a return" });
+  const three = r.body?.id as string | undefined;
+  ok("P-319 pass (review M2): a returned change does not block a new proposal for the same form", r.status < 300 && r.body?.status === "WAITING", { status: r.status, said: said(r) });
+  const wd = two ? await call("POST", `/library/changes/${two}/withdraw`, { note: "Withdrawn after the return" }) : { status: 0, body: null };
+  const wd3 = three ? await call("POST", `/library/changes/${three}/withdraw`, { note: "Withdrawn while it waits" }) : { status: 0, body: null };
+  ok("P-319 pass (review M2): its proposer withdraws a returned or a waiting role change; nothing was applied", wd.status < 300 && wd3.status < 300 && sql(`select string_agg(status, ',' order by proposed_at) from library_change where id in ('${two}', '${three}')`) === "WITHDRAWN,WITHDRAWN" && role("IMM 5707") === "family_information", { wd: wd.status, wd3: wd3.status, said: said(wd) });
+  r = await propose("IMM 5707", { role: null, reason: "Moved meanwhile: approval must refuse" });
+  const four = r.body?.id as string | undefined;
+  sql("update gov_form_def set form_role = null where form_key = 'IMM 5707'");
+  r = four ? await approve(four) : { status: 0, body: null };
+  ok("P-319 fail (review m3): approval refuses a change whose form's role moved meanwhile (409, in words), and the change waits again", r.status === 409 && /no longer what this change was proposed against/.test(said(r)) && sql(`select status from library_change where id = '${four}'`) === "WAITING", { status: r.status, said: said(r) });
+  sql("update gov_form_def set form_role = 'family_information' where form_key = 'IMM 5707'");
+  if (four) await call("POST", `/library/changes/${four}/withdraw`, { note: "End of the test" });
+
+  // ── as main: IMM 5707 removed while the package lists it
+  r = await call("DELETE", `/combinations/${wp}/forms/${encodeURIComponent("IMM 5707")}`, {});
+  v = await review();
+  ok("C3.8 [IRCC-F09] fail (as main): IMM 5707 removed while the package lists it is an error naming IMM 5707", r.status < 300 && fam(v.draft.problems).length === 1 && fam(v.draft.problems)[0].item === "IMM 5707", { status: r.status, fam: fam(v.draft.problems).map((p) => p.item) });
+
+  // ── a new family form the code never listed (any data form of the library with an edition and no field map, not on
+  // this combination and with no role): marked through the same two people, it fills the line
+  const NEW = sql(`select g.form_key from gov_form_def g where g.form_kind = 'data_form' and g.form_role is null and g.retired_at is null and exists (select 1 from form_edition e where e.gov_form_def_id = g.id) and not exists (select 1 from form_field_map m join form_edition e2 on e2.id = m.form_edition_id where e2.gov_form_def_id = g.id) and g.form_key not in (select g2.form_key from combination_form cf join gov_form_def g2 on g2.id = cf.gov_form_def_id where cf.combination_id = '${wp}') order by g.form_key limit 1`);
+  if (!NEW) { console.error("STOP  no library form to mark on the fixture"); process.exit(2); }
+  r = await call("POST", `/combinations/${wp}/forms`, { formKey: NEW });
+  v = await review();
+  ok(`P-319 fail first: ${NEW} on the forms, with no role, does not fill the family information line`, r.status < 300 && fam(v.draft.problems).length === 1, { status: r.status, said: said(r), fam: fam(v.draft.problems).length });
+  r = await propose(NEW, { role: "family_information", reason: "Additional family information: IRCC's family form for this package (test)" });
+  const mark = r.body?.id as string | undefined;
+  r = mark ? await approve(mark) : { status: 0, body: null };
+  v = await review();
+  ok(`P-319 pass: once a second person approves, ${NEW} is a family information form and fills the line (no form number in the rule)`, r.status < 300 && role(NEW) === "family_information" && fam(v.draft.problems).length === 0, { status: r.status, said: said(r), fam: fam(v.draft.problems).map((p) => p.message) });
+  const unmapped = v.draft.problems.find((p) => p.item === NEW && /No form fields mapped yet/.test(p.message));
+  ok(`P-319 pass: the validator reads the role from the combination's snapshot: ${NEW}'s "no field map" words say it is the family information form`, !!unmapped && /It is this combination's family information form/.test(unmapped.message), unmapped?.message);
+
+  // ── refusals
+  const nothing = () => role(NEW) === "family_information";
+  r = await propose(NEW, { role: "family_information", reason: "the same again" });
+  ok("P-319 fail: proposing the role a form already has is refused (409, nothing changes)", r.status === 409 && /already a family information form/.test(said(r)), { status: r.status, said: said(r) });
+  r = await propose(NEW, { role: "something_else", reason: "a role the library does not know" });
+  ok("P-319 fail: a role the library does not know is refused (400)", r.status === 400 && nothing(), { status: r.status, said: said(r) });
+  r = await propose(NEW, { role: null });
+  ok("P-319 fail: a role change without a reason is refused (400)", r.status === 400 && nothing(), { status: r.status, said: said(r) });
+  const nul = await propose(NEW, { role: null, reason: "ok\u0000 a NUL" }), rtl = await propose(NEW, { role: null, reason: "ok ‮ reversed words" }), half = await propose(NEW, { role: null, reason: "half \ud83d of an emoji" });
+  ok("P-319 fail (breaker M3, review r2 M1): a reason with a NUL, a direction mark or half a character is refused (400), nothing waits", nul.status === 400 && rtl.status === 400 && half.status === 400 && sql(`select count(*) from library_change where kind = 'form_role' and key = '${NEW}' and status = 'WAITING'`) === "0", { nul: nul.status, rtl: rtl.status, half: half.status });
+  r = await propose(NEW, { role: null, reason: "the content reviewer tries" }, "user-C");
+  ok("P-319 fail: a person without the author duty (the content reviewer, SME duty) cannot propose a form's role (403)", r.status === 403 && nothing(), r.status);
+  r = await propose("IMM 9999", { role: "family_information", reason: "not in the library" });
+  ok("P-319 fail: a form that is not in the library is refused (404), in words", r.status === 404 && /not in the library/.test(said(r)), { status: r.status, said: said(r) });
+  const guide = sql("select form_key from gov_form_def where form_kind in ('guide', 'checklist', 'document') and retired_at is null order by form_key limit 1");
+  r = guide ? await propose(guide, { role: "family_information", reason: "a guide is never filed" }) : { status: 0, body: null };
+  ok("P-319 fail (breaker m3): a guide or a checklist takes no form role (409, in words)", !guide || (r.status === 409 && /not a form a person files/.test(said(r))), { guide, status: r.status, said: said(r) });
+  let refusedDb = false;
+  try { sql(`update gov_form_def set form_role = 'other' where form_key = '${NEW}'`); } catch { refusedDb = true; }
+  ok("P-319 fail: the database refuses an unknown role written past the API (gov_form_def_form_role_known)", refusedDb && nothing());
+
+  // ── breaker M1: a workspace upgraded in place keeps IMM 5707's and IMM 5645's role: the migration's own data step
+  sql("update gov_form_def set form_role = null where form_key = 'IMM 5707'");
+  const step = readFileSync(join(import.meta.dirname, "..", "prisma", "migrations", "20261104100000_p319_form_role", "migration.sql"), "utf8").split("\n").filter((l) => /^UPDATE /.test(l)).join("\n");
+  sql(step);
+  ok("P-319 pass (breaker M1): the migration's data step gives IMM 5707 its family information role on a workspace that had none", /^UPDATE "gov_form_def" SET "form_role" = 'family_information'/.test(step) && role("IMM 5707") === "family_information", step.slice(0, 160));
+  process.exit(summary() ? 1 : 0);
+})().catch((e) => { console.error("FAIL  unexpected", e); process.exit(1); });
