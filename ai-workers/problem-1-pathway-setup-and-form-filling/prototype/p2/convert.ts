@@ -2,9 +2,8 @@
 // Two rules found on the first live run (20 Oct 2026):
 //  * The form edition is a fact of the official file, taken from the official manifest, never from the
 //    model. The inventories carry no edition, and every live draft said so rather than invent one; the
-//    model's own reading is kept beside the record (edition_note) when it differs. A previous edition's manifest
-//    label describes the file ("IMM 5476 previous edition (file dated 19 Nov 2021, 3 pages)") rather than print it,
-//    so the printed edition the caller knows (the job's own, read from the file without AI) is used then (QA-207).
+//    model's own reading is kept beside the record (edition_note) when it differs. A previous edition's label describes
+//    the file, so its manifest row records the printed edition read from it (`printed`, QA-207), which is used then.
 //  * A mapped entry whose only evidence is shorter than two characters (for example the caption "*")
 //    does not identify its box: it becomes `unresolved`, keeping the proposal in the reason, so a person
 //    reviews it. Nothing is dropped and nothing is invented.
@@ -40,21 +39,16 @@ export function checkFieldMapOutput(parsed: any): { output: any; needs_person: N
   return { output: { ...parsed, canonical_fields: (parsed.canonical_fields ?? []).filter((c: any) => !bad.has(String(c.id))), entries }, needs_person: needs, set_aside_fields: setAside };
 }
 
-const editionOf = (officialFile: string): string | undefined =>
-  (JSON.parse(readFileSync(join(OFFICIAL, "manifest.json"), "utf8")).items as { path: string; edition?: string }[])
-    .find((i) => `official-sources/ircc/${i.path}` === officialFile)?.edition;
+const editionOf = (officialFile: string): string | undefined => {
+  const i = (JSON.parse(readFileSync(join(OFFICIAL, "manifest.json"), "utf8")).items as { path: string; edition?: string; printed?: string }[])
+    .find((x) => `official-sources/ircc/${x.path}` === officialFile);
+  return i?.printed ?? i?.edition;
+};
 
-/** A printed form edition, the contract's own pattern (field-map-entry.v0 form_edition). */
-export const PRINTED_EDITION = /^(IMM|IRM) [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/;
-
-/** knownEdition: the printed edition the caller knows: for a form approved in the product (P-80), the edition its
- *  checked approval names; else the job's known printed edition (launch.ts). The manifest's label wins when it is a
- *  printed edition; a descriptive one (a previous edition's) gives way to the known one. */
-export function convertFieldMap(parsed: any, inventoryFile: string, knownEdition?: string) {
+/** approvedEdition (P-80): for a form approved in the product, the edition its checked approval names (launch.ts). */
+export function convertFieldMap(parsed: any, inventoryFile: string, approvedEdition?: string) {
   const inv = JSON.parse(readFileSync(join(SOLUTION, inventoryFile), "utf8")).summary as { file: string; sha256: string };
-  const label = editionOf(inv.file);
-  const known = knownEdition && PRINTED_EDITION.test(knownEdition) ? knownEdition : undefined;
-  const edition = (label && PRINTED_EDITION.test(label) ? label : undefined) ?? known ?? label;
+  const edition = editionOf(inv.file) ?? approvedEdition;
   if (!edition) throw new Error(`no edition for ${inv.file} in the official manifest`);
   const weak: string[] = [];
   const checked = checkFieldMapOutput(parsed);
