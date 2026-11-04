@@ -25,12 +25,12 @@
 | Team names | SA-1B-130 rule 6: `PERSON · HOUSEHOLD · FILING · ORGANISATION` | retrofit mapping in the reader: PERSON = CLIENT_LEVEL, FILING = CASE_LEVEL (founder Q1) |
 
 ## 3. Business rules
-* **BR-1** **Four scopes** (SA-1B-130):
+* **BR-1** **Four scopes** (SA-1B-130). "Asked about" is our label for the team's "Scope".
   * **Person:** one answer per person.
   * **Filing:** one per filing (per case until SH4, BR-5).
-  * **Household:** one per case household (e.g. the date of marriage, Sample).
+  * **Household:** one per case household (e.g. the date of marriage, Sample). "Household" means everyone on the case, one household per case: a named stand-in for PartyRelationship membership (P-251's design list). A member who does not apply still reads the value (SA-1B-130 edge 12).
   * **Organisation:** one per organisation, from the organisation subject (C11.5).
-* **BR-2** **A published field's scope never changes.** A change needs a new field (SA-1B-130; the guarded change, P-253). That is part b.
+* **BR-2** **A published field's scope never changes.** A key with any PUBLISHED or RETIRED version counts as published, so a new draft version of it (`supersedesId`) is refused too. A change needs a new field (SA-1B-130; the guarded change, P-253). That is part b.
 * **BR-3** **Household questions are asked once** (SA1B-D65, team spec: "asked once on the family link … read-only for the other adult").
   * They sit in one **For the household** block on the case.
   * Each member's tab shows them read-only: "Answered for the household by {who} on {date} · Change it in For the household".
@@ -67,7 +67,7 @@ On a published field the group is read-only: "To change who this is about, creat
 
 **Tests** in a new `acceptance/C3.16.test.ts`:
 * **-1 (b):** four scopes set and shown.
-* **-2 (b):** published refusal, 409 with its words.
+* **-2 (b):** published refusal, 409 with its words, also on a new draft version of a published key.
 * **-3 (a):**
   * a Household field (Sample, set by SQL in the test's own release: named scaffolding) is asked once in For the household, and both adults' IMM boxes fill;
   * a save on Spouse A's subject answers 422;
@@ -75,7 +75,7 @@ On a published field the group is read-only: "To change who this is about, creat
 * **-4 (a):**
   * a Filing field placed per person is asked once on the case and stored on the case subject;
   * a Person field is still asked per person.
-* **-6 (a):** an entry id is kept across a correction and a tombstone.
+* **-6 (a):** cites RT-9 (`tests/runtime/check_runtime_r1a.ts`: stable row, tombstone, answer kept) and adds only "a correction keeps `rowKey`". An id across cases is Not built.
 * **The resolver's R5 lines** in `tests/check_sh3_resolver.ts` pass unchanged.
 * **-5 (organisation)** is owned by C11.5's `acceptance/C11.5.test.ts`, which names C3.16.
 

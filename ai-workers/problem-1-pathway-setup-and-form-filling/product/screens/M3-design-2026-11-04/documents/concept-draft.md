@@ -137,7 +137,7 @@ All documents, names and values are **Sample**; identity documents are synthetic
 * Tests: `C6.4-screen.test.ts`, `C6.5-screen.test.ts`.
 * Rows: C6.4 (a), C6.5 2b.
 * Decisions: P-169, P-133, P-134, P-171 (6), P-172, P-238, P-242, P-243, P-316.
-* **qa retests and closes QA-149** (CAPABILITIES says fixed) before the C6.4 (a) PR, which gate B otherwise refuses; or the PR names QA-149 as the bug it fixes.
+* **Gate B** (`tools/gate-b.mjs`) applies only to the PR with a "Claims Works: C6.4" line. Before it, qa retests and closes QA-149 (CAPABILITIES says fixed by `tests/qa/check_qa_vv_1102_decider.ts`), or that PR carries `Fixes: QA-149`.
 * Approval by the tech lead after `challenge.md`.
 
 ## Drafter's response to the challenge (4 Nov)

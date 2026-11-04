@@ -20,7 +20,7 @@ The decisions since are P-122, P-143, P-145, P-171, P-237/P-238, P-272 and P-316
 | Engine, data | filings, groups, items, fees, signing and Paper states (`engine/runtime/prepare.ts`, `filings.ts`, `signing.ts`) | none |
 | API | `GET /runtime/cases/:id/prepare` (`M3-CONTRACT.md`) · `PATCH /runtime/items/:id/channel` · answer sheet + `…/screens/:k/entered` · Paper steps · `POST items/:id/pdf-copy` · the copy routes `/forms`, `…/generate`, `form-copies/:id/validated`, `…/lock` | **two small M3-only changes in `api/src/case-prepare.ts`:** (a) a PDF-upload barcode line gets `validated{}` and In progress or Out of date from `readBackOf`, by `paperLine`'s rule; (b) a document item takes its state from its `checklist_line` |
 | UI | stacked panels; the "Prepare application" heading on `FormsPanel` (`web/src/runtime/forms.tsx`) | **the tab**, its list, the row detail (with the existing copy block moved in), the channel select, the fee block, the sheet panel |
-| Types | — | in `prepare.tsx` or a **new** contracts file; never in `studio/contracts/runtime.ts` (M2-hot) |
+| Types | — | in `prepare.tsx` only: never in `studio/contracts/runtime.ts` (M2-hot) nor a new `studio/contracts/` file, where every later edit would be hot |
 
 ## 3. Business rules (each from its source; nothing new decided here)
 * **BR-1** **One tab, Prepare application** (P-272), at `/cases/:id/prepare`. The `/cases/*` routes live in `cases.tsx`, so `App.tsx` needs no line.
@@ -128,7 +128,7 @@ The decisions since are P-122, P-143, P-145, P-171, P-237/P-238, P-272 and P-316
 3. **(Founder, via the tech lead) Waits and online-only copies** (permanent-residence combinations only). *Recommend:* named as breadth, outside C7.7's Works.
 
 ## Definition of ready
-* **Gate B:** QA-152 (C7.7) fixed or named by the PR; QA-153 (C7.3) for the sheet's Done.
+* **Gate B** (`tools/gate-b.mjs`): it applies only to the PR with a "Claims Works: C7.7" line. That PR needs QA-152 and QA-153 closed, or a `Fixes:` line naming them. Slice PRs are not stopped.
 * **qa:** re-scores C7.7 after #709.
 * **Tests:** `acceptance/C7.7-screen.test.ts`; the three browser suites changed in the PR.
 * **Rows:** C7.7, C11.6 (a), C6.12-25, C7.3.

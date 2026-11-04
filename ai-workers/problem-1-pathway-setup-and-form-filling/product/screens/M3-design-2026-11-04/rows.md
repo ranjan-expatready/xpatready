@@ -25,6 +25,8 @@ Nothing was run. Every finding comes from reading files.
    * `contracts/` and `studio/contracts/`.
 2. **Who approves the case screens.** The concepts that already exist are M3 case view r5c (`screens/M3-agent-view/`) and Prepare application (`screens/M3-prepare-application/`). Each has a fresh challenge with the verdict "Build after these changes". P-316 (3): "the M3 case screens (Prepare application, the checklist) are approved by the tech lead after an independent design challenge (P-223 (4))". A row whose screen those boards already draw needs **no new concept**. Where a row needs one, it says so.
 
+**Every new table cascades** (records review m11): `read_value`, `document_review`, `answer_check`, `review_run`, `case_employer_link`, `case_household` and `fee_table` each take `ON DELETE CASCADE` to `runtime_case`, `party` or `library_change`, as `review_finding` and `sign_step` do. Reset's deletes live in `demo.ts` (hot), so without the cascade Reset fails and only a hot edit fixes it.
+
 **Decisions every row assumes:**
 * **P-315**: L-SA3 is built now. Express Entry keeps one hard stop (P-172).
 * **P-316**:
@@ -51,16 +53,21 @@ C7.6 · C8.1 · C8.2 · C9.2
 
 ## Before any builder starts: gate B and stale records
 
-**Gate B** (P-317 (1), `RULES.md`): CI fails a product PR that names a capability with an open Major or Critical in `qa/BUGS.md`, unless the PR names that bug as the one it fixes. Open Majors on these rows, on 9caa043b:
+**Gate B** (P-317 (1); `prototype/studio/tools/gate-b.mjs`, read 4 Nov) checks `qa/BUGS.md` only for a capability on a **"Claims Works: C<n.n>"** line ("incremental work is not stopped by the row's bugs", the tech lead, 4 Nov).
+* Such a PR fails while that capability has an open Blocker, Critical or Major, unless its body has a strict `Fixes: QA-nnn` line.
+* Every named capability's pack also runs.
+* So an ordinary slice PR is not stopped by these bugs; **the PR that claims Works is.**
+
+Open Majors on these rows, on 9caa043b:
 
 | Bug | Rows | What | Owner per BUGS.md |
 |---|---|---|---|
 | QA-153 Gap · Major | C7.3, C7.7, C10.2 | IMM 5707's answer sheet waits for 16 parent facts that no question asks | "no backlog row owns it". P-300 (2) gave it to the forms builder after C11.11 |
 | QA-152 Bug · Major | C6.11, C7.7 | IMM 5476's "Name of firm or organization" is asked per applicant under employer words | runtime |
-| QA-149 Bug · Major | C6.4 (and the C4.4 renderer) | A question that decides a document line drops out once answered, so nobody can correct it | runtime. CAPABILITIES says fixed (`check_qa_r3_minor_principal.ts`), BUGS still Open: qa retests and closes |
+| QA-149 Bug · Major | C6.4 (and the C4.4 renderer) | A question that decides a document line drops out once answered, so nobody can correct it | runtime. CAPABILITIES says fixed (`tests/qa/check_qa_vv_1102_decider.ts` 5/5), BUGS still Open: qa retests and closes |
 | QA-165 Gap · Major | C7.2, C7.3 | IMM 5257: 6 of 46 mandatory fields empty, 3 Yes/No boxes never written | forms (M2) |
 
-So a C7.3 or C7.7 PR either fixes QA-153 or QA-152 itself and names it, or waits for that fix. The order at the end puts the fixes first.
+So slice PRs on C6.4, C7.3 and C7.7 can merge now. **The PR that claims Works** on C6.4 needs QA-149 closed; on C7.7 it needs QA-152 and QA-153; on C7.3, QA-153 and QA-165. Otherwise it fixes the bug itself on a `Fixes:` line. The order table has a "Before Claims Works" column.
 
 **Out-of-date records** that the tech lead or qa correct (this PR does not touch them):
 * `qa/verdicts/2026-11-04-C6.5.md`, the CAPABILITIES C6.5 note and `BACKLOG.md` line 76 still say C6.5, L-SA7, L-SA9 and L-SA4 are "held by P-251". P-316 (1) and (2) lifted those holds.
@@ -129,7 +136,7 @@ So a C7.3 or C7.7 PR either fixes QA-153 or QA-152 itself and names it, or waits
 **5. Size and order**
 * **Size:** (a) S; (b) M.
 * **(a) depends on:**
-  * qa closing QA-149 (or the PR names it);
+  * for the PR that claims Works: qa closing QA-149, or a `Fixes: QA-149` line (gate B);
   * the concept addendum and its challenge.
 * **(b) depends on:** C7.6 merged and a Sample Express Entry release.
 * **Unblocks:** DEMO row 15, C6.5's upload entry point and C7.7's document items.
@@ -168,7 +175,7 @@ So a C7.3 or C7.7 PR either fixes QA-153 or QA-152 itself and names it, or waits
 
 Tests:
 * `acceptance/C6.5.test.ts` steps 1 to 18b;
-* **new** C6.5-21 to -23 (corrections counted per mode; the count readable; a client refused);
+* **new** C6.5-21 to -23 in `acceptance/C6.5-screen.test.ts` (corrections counted per mode; the count readable through the new `GET /runtime/cases/:id/document-reviews/counts`; a client refused);
 * the drawer in a new `acceptance/C6.5-screen.test.ts` using `lib/browser.ts`;
 * steps 19a to 20 (the letter read by AI vision) in a separate part 3.
 
@@ -179,7 +186,7 @@ Tests:
   * a migration adding `read_value`, `document_review` and `answer_check`;
   * `web/src/runtime/documents-drawer.tsx`;
   * `acceptance/C6.5-screen.test.ts`.
-* **New (documents challenge M7):** a staff-only `GET /runtime/documents/:id/file`, so the officer can see the passport while checking names.
+* **New (documents challenge M7):** a staff-only `GET /runtime/documents/:id/file`, so the officer can see the passport while checking names, and a staff-only `GET /runtime/cases/:id/document-reviews/counts` (P-243's rate).
 * **Modified:**
   * `prisma/schema.prisma`;
   * `api/src/runtime.ts` (answer source `document_read`; Confirm section 409 on an open check);
@@ -238,7 +245,7 @@ Tests:
 * **Live portal order (W6) is not M3.** P-245 moves the extension to M4. P-152 and BR-8: "until the W6 extension the answer sheet follows the sections of the PDF twin".
 
 **2. Done when**
-* On the case page, an Online IMM 5707 opens its answer sheet, sections in PDF-twin order, labelled "PDF twin order (live portal order later)".
+* On the case page, an Online IMM 5707 (in the pack's own Sample fixture: P-318 (6) makes IMM 5645 the family form on an online release, see C10.2 Q1) opens its answer sheet, sections in PDF-twin order, labelled "PDF twin order (live portal order later)".
 * Each answer has a Copy button (copies `copy_text`) and its source.
 * "Entered in the portal" ticks with who and when; a later change shows Out of date and only warns (FQ-6).
 * After every question on a family case is answered, the parents included, the sheet waits for nothing and IMM 5707 can read Done.
@@ -273,7 +280,7 @@ Tests:
 **5. Size and order**
 * **Size:** M overall (screen S–M; QA-153 S on each side).
 * **Depends on:**
-  * QA-153 (gate B);
+  * QA-153 and QA-165, for the PR that claims Works (gate B);
   * QA-165 (also names C7.3, M2 forms; the PR names it if it is still open);
   * C10.2's Q1 (whether release 2 has IMM 5707 at all).
 * **Unblocks:** C7.7 and C10.2 reaching Done on IMM 5707, and C9.2's entered-section steps.
@@ -358,7 +365,7 @@ Tests:
   * "Cannot start yet" filings (waits);
   * an our-format PDF copy for an online-only form (P-145);
   * biometrics' exemption is read from the hard-coded `vv.single` (`api/src/case-prepare.ts`), a no-hard-coding item.
-* **Open Major:** QA-152 (C6.11, C7.7: IMM 5476's firm name asked per applicant under employer words). Gate B applies.
+* **Open Majors:** QA-152 (C6.11, C7.7: IMM 5476's firm name asked per applicant under employer words) and QA-153 (C7.7). Gate B applies to the PR that claims Works.
 * **Concept:**
   * `M3-prepare-application/concept-draft.md` (23 Oct, predates P-122) and its challenge M1–M7. M7: the tab absorbs the forms panel.
   * Board `design/draft-prepare-application-v3.html`: two stages, rows, channel select, "not for filing". It has no fees.
@@ -408,7 +415,7 @@ Tests:
 **5. Size and order**
 * **Size:** L for the tab. It is the screen C6.12-25, C11.6, C7.3, C7.6, C8.1 and C8.2 all show on.
 * **Depends on:**
-  * QA-152 (gate B);
+  * QA-152 and QA-153, for the PR that claims Works (gate B);
   * a qa re-score of #709;
   * the concept addendum's challenge.
 * **Place:** the first screen built. It unblocks the most rows.
@@ -491,7 +498,7 @@ Tests:
     * `fee-table.json`'s biometrics quote is labelled "summary of the Lead-checked record", not IRCC's words. Replace it with the fees.asp quote above.
   * **Spouse sponsorship** CAD 1,260 (sponsorship, processing and right of permanent residence fee).
     * Same page. Quote: "Sponsor your spouse or partner $1,260.00" (research row 1c).
-    * **To confirm:** the dependent child of a sponsored spouse is CAD 180 in `fee-table.json` (`spouse_dependent_child`), but the quote it carries, "Include a dependent child $270.00", is the economic class's line. The immigration expert confirms; until then it is Sample.
+    * **To confirm:** the dependent child of a sponsored spouse is CAD 180 in `fee-table.json` (`spouse_dependent_child`). Its quote is a summary ("dependent child CAD 180", `quote_kind` "summary of the research file"). Its `checked` note and research row 1c cite "Include a dependent child $270.00", which is the economic class's line. The immigration expert confirms; until then it is **Sample**.
   * **Study permit** CAD 150, **work permit** CAD 155, **open work permit holder** CAD 100, **visitor extension** CAD 100: qa re-read the fee list (page date 2026-09-21) and all four match word for word (CAPABILITIES C6.12).
 
 **2. Done when**
@@ -516,13 +523,19 @@ Tests:
 **3. Files**
 * **M3-only:**
   * modified:
-    * `engine/runtime/filings.ts`, `api/src/case-prepare.ts`, `api/src/case-filings.ts`, `api/src/case-checklist.ts`, `api/src/workspace.ts`, `api/src/source-register.ts`: every reader of `samples/fee-table.json` uses one loader (fee-table challenge B1). Synchronous readers read a cache, so `studio.ts` (hot) is never touched;
+    * every reader of `samples/fee-table.json` uses one loader (fee-table challenge B1). The builder lists them with `grep -l "FEE_TABLE\|fee-table.json"`; on 9caa043b they include `engine/runtime/filings.ts`, `engine/runtime/case-checklist.ts`, `engine/source-register.ts`, `api/src/source-register.ts`, `api/src/case-prepare.ts`, `api/src/case-filings.ts`, `api/src/workspace.ts` and `acceptance/C6.12-breadth.test.ts`. Synchronous readers read a cache, so `studio.ts` (hot) is never touched;
     * `samples/fee-table.json` (version 0);
     * `samples/wave1.json` (a child role on a student or worker Sample);
     * `prisma/schema.prisma` and a migration: `fee_table` (id, `as_of` = in force from, lines, status, created_by, reason), and **`fee_table_id` on `submission_group`**, not on `filing` (the family maximum is per group, challenge M1);
     * `tests/check_r2_fee_table.ts`, `tests/runtime/check_vv_filings.ts`;
     * `acceptance/lib/setup_vv_m3.ts` (S7a gets a reason and full IRCC sources);
-  * new: `api/src/fee-table.ts` and `features/fee-table.ts` (`GET /library/fees`; `PUT` answers 202 and waits as a `library_change` for a **second person**, approved through the existing route, P-253 step 6, challenge B2). **Not** named `library-fees.ts`: a new file passes the guard, but every later edit would match the hot `library-` prefix. If approval needs a new handler in `library-changes.ts` (hot), the builder asks the tech lead first;
+  * new: `api/src/fee-table.ts` and `features/fee-table.ts` (`GET /library/fees`; `PUT` answers 202 and waits as a `library_change` for a **second person**, approved through the existing route, P-253 step 6, challenge B2). **Not** named `library-fees.ts`: a new file passes the guard, but every later edit would match the hot `library-` prefix.
+  * **Kept off hot files** (records review M3):
+    * `decideChange` (`library-changes.ts`, hot) only changes the change's status, so nothing may run "on approve". "In force" is worked out **when the table is read**: the newest version whose change is APPROVED, as `form-library.ts` already does for its items.
+    * The synchronous readers refresh their cache from that read, with a version check, not from an approval hook.
+    * `fee_table` has a foreign key to its `library_change` with `ON DELETE CASCADE`, so Reset (`demo.ts`, hot, which deletes `libraryChange` per workspace) also removes stored versions, and version 0 is back (P-108).
+    * To review shows the change as a generic "change" until the hot file is free. That is a Minor, named in the PR.
+    * If the builder still finds a hot edit unavoidable, they ask the tech lead for the line first;
   * new: `acceptance/lib/setup_fs_m3.ts`, `setup_sp_m3.ts`, `tests/check_fee_table.ts`;
   * PR 2: new `web/src/pages/fees.tsx`, a minimal read-only list (challenge M6).
 * **M2-hot, avoid:**
@@ -538,8 +551,8 @@ Tests:
   * P-246 (2) (pin per filing when ADOPT is built; SI-11);
   * P-253 (one guarded change for every reusable item);
   * P-319 (no hard-coding).
-* **Q1 (tech lead). -22 checks a fee line starting `pr_`.** The cited CAD 1,260 already bundles processing and the right of permanent residence fee, and `pr_adult` (CAD 1,590) is the economic class, so charging it would overcharge. *Recommend:* amend -22 to check two filings, each fee on a named filing, the bundle once. Its first PR line says so.
-* **Q2 (founder). Which version prices a filing?** *Recommend:* keep P-151 (1). The version is stamped on the submission group when its filings are first worked out, and a newer version never reprices them. The team is told this differs from SA-1B-52 rule 2 ("the version in force on the date the authority receives the application"). Freezing into the release (M2-hot) is not needed.
+* **Q1 (tech lead). -22 checks a fee line starting `pr_`.** The cited CAD 1,260 already bundles processing and the right of permanent residence fee, and `pr_adult` (CAD 1,590, **Sample**: its quote in `fee-table.json` is a summary) is the economic class, so charging it would overcharge. *Recommend:* amend -22 to check two filings, each fee on a named filing, the bundle once. Its first PR line says so.
+* **Q2 (founder). Which version prices a filing?** *Recommend:* follow P-151 (1)'s warn-not-reprice, as amended by P-237 (3). The stamp time is new and is the founder's to confirm. The version is stamped on the submission group when its filings are first worked out, and a newer version never reprices them. The team is told this differs from SA-1B-52 rule 2 ("the version in force on the date the authority receives the application"). Freezing into the release (M2-hot) is not needed.
 * **Q3 (founder). A second person on the fee route?** *Recommend:* yes, as P-253 step 6 asks. The `PUT` waits as a library change and a different person approves it through the existing route. It is M3-only, and S8's loop in setup already approves waiting changes. The conditional study-permit rule lives in the same dated data, and the question is released configuration.
 
 **5. Size and order**
@@ -589,11 +602,15 @@ On the released work-permit fixture, the case officer links the case to a Sample
 * a Visitor visa or Corporate case is never offered the link, and the client gets 403;
 * the SI-10 Stand-in chip is shown.
 
-Test: a new `acceptance/C11.5.test.ts` (the merged id), steps C11.5-1 to -9, one per clause above. Also a new fail case in `tests/runtime/check_c115_employer.ts` from c1-v3's IMM 5476 entry.
+Test: a new `acceptance/C11.5.test.ts` (the merged id), steps C11.5-1 to -7, one per clause above, plus:
+* **C11.5-8**: an organisation fact resolves from the organisation subject, never from a person (taken over from C3.16-5, which names C11.5);
+* **C11.5-9**: the representative's boxes stay the firm's.
+
+The Sample employer record is created by `POST /runtime/employers` (staff, Sample, demo workspace only) in the new file. It is named as scaffolding until L-SA5 (M4). Also a new fail case in `tests/runtime/check_c115_employer.ts` from c1-v3's IMM 5476 entry.
 
 **3. Files: all M3-only**
 * **New:**
-  * `api/src/case-employer.ts`, with routes `GET /runtime/employers`, `PUT /runtime/cases/:id/employer-link {employer, version}` and `DELETE …/employer-link {reason, version}`;
+  * `api/src/case-employer.ts`, with routes `GET`/`POST /runtime/employers` (the Sample record), `PUT /runtime/cases/:id/employer-link {employer, version}` and `DELETE …/employer-link {reason, version}`;
   * `api/src/features/case-employer.ts`;
   * `acceptance/C11.5.test.ts`.
 * **Modified:**
@@ -759,11 +776,14 @@ Test: `C10.2.test.ts` -1 to -11, changed as follows:
   * P-318 (6): "the family form follows the channel (online IMM 5645, paper IMM 5707)";
   * P-102 (row 13 parked);
   * P-93, the "one story, loadable finished" rule, is cited only in DEMO.md, not in DECISIONS.md.
-* **Q1 (conflict, founder). Release 2's channels.**
-  * The pack (-6) and FQ-2 say: IMM 5257 PDF upload, validated; IMM 5707 Online; IMM 5476 signed scan.
-  * DEMO.md row 9 and #798's C10.1 part B say: IMM 5257 Online, so IMM 5645 is the family form and there is no IMM 5707.
-  * *Recommend:* one release 2 for both rows, with the pack's channels. They show the barcode round trip that every M3 pack uses. DEMO.md row 9 and C10.1 part B change to match.
-  * Either way QA-153 must close first (see C7.3), or the Online item never becomes ready.
+* **Q1 (conflict, tech lead first, founder if it changes P-318). Release 2's family form and channels.**
+  * The pack (-6) and FQ-2 say: IMM 5257 PDF upload, validated; **IMM 5707 Online**; IMM 5476 signed scan.
+  * **P-318 (6)** (tech lead's ruling, 4 Nov) says: "the family form follows the channel (online IMM 5645, paper IMM 5707 per IMM 5484), never by removing one". DEMO.md row 9 and #798's C10.1 part B follow it: IMM 5257 Online, IMM 5645 the family form, no IMM 5707.
+  * So the pack's "IMM 5707 Online" goes against P-318 (6).
+  * *Recommend:* follow P-318 (6) in the demo story. Release 2 files online, so the family form is IMM 5645, and IMM 5257 keeps the PDF upload with its barcode round trip. C10.2-6 changes to IMM 5645 in the same PR (its first line says so).
+  * C7.3's answer sheet keeps its IMM 5707 Online case **only in its own test fixture, labelled Sample**, until a released form is Online on a portal (P-113's permanent-residence forms, C11.6 (b)). Otherwise the answer sheet would have no Online form to prove itself on.
+  * Reversing P-318 (6) instead is the founder's choice and is not recommended.
+  * QA-153's parent facts are needed either way, because IMM 5645 also lists the parents.
 * **Q2. Validated copies without Acrobat.**
   * Today only the test-only `tests/runtime/validated.ts` (`tools/simulate_validate.py`) makes them.
   * *Recommend:* a demo step labelled Sample, refused outside the demo workspace, that uploads through the product's own read-back route. This is the one shortcut the P-322 verdict allows.
@@ -819,30 +839,30 @@ Under P-316 (3) and P-223 (4), the tech lead approves each concept after reading
 
 **0. Fixes and records that gate the rows** (not M3 rows; each is small):
 * **qa:**
-  * retest QA-149 (CAPABILITIES says fixed; BUGS says Open), which gates C6.4;
+  * retest QA-149 (CAPABILITIES says fixed; BUGS says Open), which gates C6.4's Works claim;
   * re-score C7.7 after #709;
   * merge C1.3 into C11.5 (P-316 (2)).
-* **QA-152** (runtime, M3-only files): one runtime PR that names it. It gates C7.7.
-* **QA-153** (M2 forms: the parent questions on the Visitor visa release, P-300 (2)). It gates C7.3, C7.7 at Works and C10.2. Its M3 half (relative answers resolved to `parent_N`) goes in C7.3.
+* **QA-152** (runtime, M3-only files): one runtime PR that names it. It gates C7.7's Works claim.
+* **QA-153** (M2 forms: the parent questions on the Visitor visa release, P-300 (2)). It gates the Works claims of C7.3, C7.7 and C10.2. Its M3 half (relative answers resolved to `parent_N`) goes in C7.3.
 
 **Then:**
 
-| # | Row (slice) | Lane | Size | Files | Waits for | Unblocks |
-|---|---|---|---|---|---|---|
-| 1 | **C6.4 (a)** Documents panel | screens | S | M3-only (UI only; API built) | QA-149 closed; the `documents/` concept approved | C6.5 2b, DEMO row 15, C7.7's document items |
-| 2 | **C7.7** Prepare application tab | screens | L | M3-only (`cases.tsx`, `forms.tsx`, `App.tsx` one line: merge main first) | QA-152; #709 re-score; the `prepare-tab/` concept approved | C11.6 (a), C6.12-25, C7.3 screen, the C7.6/C8.1/C8.2 screens, C10.2 |
-| 3 | **C6.12 S7a** one fee loader (version 0), the route with a second person, the stamp per submission group (read-only list in PR 2) | runtime | M | M3-only (new `fee-table.ts`, migration) | the `fee-table/` concept approved; Q1 to Q3 | `setup_vv_m3` S7a green, C6.12-22 |
-| 4 | **C6.5 2a** document reads, Confirm & use, checks, correction count (API) | runtime | M | M3-only (new `case-documents.ts`, migration) | — (parallel with 1 to 3) | C6.5 2b |
-| 5 | **C7.5 part 2, PR 1** review runs, prompt, job, stub pass, Review page (US$0) | runtime | M | M3-only (new `review-runs.ts`; never edit `studio/contracts/findings.ts`) | — | PR 2 |
-| 6 | **C11.6 (a)** channel select on the row | screens | S | M3-only (`prepare.tsx`) | 2 | C10.2 |
-| 7 | **C7.3** answer-sheet panel + relative answers + Minors n2, n3, m6, n7 | screens + runtime | M | M3-only (Q2 avoids `snapshot.ts`) | 2; QA-153's M2 half | C7.7 and C10.2 at Done on IMM 5707 |
-| 8 | **C6.12-25** fees in the tab | screens | S | M3-only | 2, 3 | C10.2 |
-| 9 | **C6.5 2b** the drawer | screens | S–M | M3-only | 1, 4 | C4.5 (P-256), J7 3.3 to 3.8 |
-| 10 | **C11.5 (+C1.3)** employer pre-fill on a Sample employer record | runtime | M | M3-only (new `case-employer.ts`, migration) | Q1 (M3 or M4) | C9.2's employer step, SI-10 |
-| 11 | **C3.16a** the stored scope read in one place, Household asked once (no Works until b) | runtime | M | M3-only (two `ADD VALUE` lines, `case_household`; `render.ts` untouched) | founder C3.16 Q1 and Q2 | C3.16b after M2 at 55 |
-| 12 | **C6.12-22, -23** sponsorship and the child's study filing (Sample releases through setup files) | runtime | M–L, M | M3-only | 3; C6.12 Q1 | C11.6 (b), C8.2 numbers |
-| 13 | **C7.5 part 2, PR 2** the recorded result (one paid run, about US$1.11 measured, tech lead's approval, P-309) | paid runner | S | — | 5 | C7.5 Works (with C7.6 for -9) |
-| 14 | **C10.2** the finished story | runtime | L | M3-only if the status stays out of `demo.ts` (Q3) | C7.6, C10.1 part B (M2), #798, QA-153; rows 2, 6, 7, 8, 1 | the M3 gate (DEMO checkpoint 3) |
+| # | Row (slice) | Lane | Size | Files | Waits for | Unblocks | Before Claims Works (gate B) |
+|---|---|---|---|---|---|---|---|
+| 1 | **C6.4 (a)** Documents panel | screens | S | M3-only (UI only; API built) | the `documents/` concept approved | C6.5 2b, DEMO row 15, C7.7's document items | QA-149 closed (C6.4 Works also needs (b) named as breadth) |
+| 2 | **C7.7** Prepare application tab | screens | L | M3-only (`cases.tsx`, `forms.tsx`, two small `case-prepare.ts` changes; merge main first) | #709 re-score; the `prepare-tab/` concept approved | C11.6 (a), C6.12-25, C7.3 screen, the C7.6/C8.1/C8.2 screens, C10.2 | QA-152, QA-153 closed |
+| 3 | **C6.12 S7a** one fee loader (version 0), the route with a second person, the stamp per submission group (read-only list in PR 2) | runtime | M | M3-only (new `fee-table.ts`, migration) | the `fee-table/` concept approved; Q1 to Q3 | `setup_vv_m3` S7a green, C6.12-22 | — (C6.12 Works needs -22, -23, -25) |
+| 4 | **C6.5 2a** document reads, Confirm & use, checks, correction count (API) | runtime | M | M3-only (new `case-documents.ts`, migration) | — (parallel with 1 to 3) | C6.5 2b | — (C6.5 Works needs 2b) |
+| 5 | **C7.5 part 2, PR 1** review runs, prompt, job, stub pass, Review page (US$0) | runtime | M | M3-only (new `review-runs.ts`; never edit `studio/contracts/findings.ts`) | — | PR 2 | — (C7.5 Works needs PR 2 and C7.6) |
+| 6 | **C11.6 (a)** channel select on the row | screens | S | M3-only (`prepare.tsx`) | 2 | C10.2 | — (C11.6 Works needs (b) or (b) named as breadth) |
+| 7 | **C7.3** answer-sheet panel + relative answers + Minors n2, n3, m6, n7 | screens + runtime | M | M3-only (Q2 avoids `snapshot.ts`) | 2; QA-153's M2 half | C7.7 and C10.2 at Done on IMM 5707 | QA-153, QA-165 closed |
+| 8 | **C6.12-25** fees in the tab | screens | S | M3-only | 2, 3 | C10.2 | see 3 |
+| 9 | **C6.5 2b** the drawer | screens | S–M | M3-only | 1, 4 | C4.5 (P-256), J7 3.3 to 3.8 | — (C6.5 Works: 2a + 2b; part 3 named) |
+| 10 | **C11.5 (+C1.3)** employer pre-fill on a Sample employer record | runtime | M | M3-only (new `case-employer.ts`, migration) | Q1 (M3 or M4) | C9.2's employer step, SI-10 | — |
+| 11 | **C3.16a** the stored scope read in one place, Household asked once (no Works until b) | runtime | M | M3-only (two `ADD VALUE` lines, `case_household`; `render.ts` untouched) | founder C3.16 Q1 and Q2 | C3.16b after M2 at 55 | — (no Works until C3.16b) |
+| 12 | **C6.12-22, -23** sponsorship and the child's study filing (Sample releases through setup files) | runtime | M–L, M | M3-only | 3; C6.12 Q1; for -23, the tech lead's no-hard-coding order (STATE "Next" 4, P-319) puts "Study permit filings/checklist (M3, after M2 55)", so -23 waits for M2 at 55 unless the tech lead rules otherwise | C11.6 (b), C8.2 numbers | see 3 |
+| 13 | **C7.5 part 2, PR 2** the recorded result (one paid run, about US$1.11 measured, tech lead's approval, P-309) | paid runner | S | — | 5 | C7.5 Works (with C7.6 for -9) | — |
+| 14 | **C10.2** the finished story | runtime | L | M3-only if the status stays out of `demo.ts` (Q3) | C7.6, C10.1 part B (M2), #798, QA-153; rows 2, 6, 7, 8, 1 | the M3 gate (DEMO checkpoint 3) | QA-153 closed; C7.6 Works |
 
 **Wait for M2 at 55** (they need M2-hot files):
 * C3.16b (library choice and refusal);
@@ -867,9 +887,11 @@ Rows 1, 3, 4 and 5 can start the same day. None touches an M2-hot file.
 
 ## Questions for the founder (one at a time, through the tech lead; each recommended answer first)
 1. **C11.5 Q1. Employer pre-fill: M3 or M4?** P-239 puts the link in M4 (L-SA5). *Recommend:* M3 links to a Sample employer record; M4 adds the Corporate case.
-2. **C10.2 Q1. Release 2's channels** (pack and FQ-2, against DEMO row 9 and #798). *Recommend:* the pack's: IMM 5257 PDF upload validated, IMM 5707 Online, IMM 5476 signed scan.
+2. **C10.2 Q1. The family form on release 2** (only if the tech lead's P-318 (6) is to be reversed). *Recommend:* keep P-318 (6): IMM 5645 on the online release, with the pack changed to match. IMM 5707 Online stays only in C7.3's Sample fixture.
 3. **C6.12 Q2 and Q3. Fees.**
-   * A fee version is stamped on the submission group when its filings are first worked out, and never reprices them. This keeps P-151 (1) and differs from the team's SA-1B-52 rule 2.
+   * A fee version is stamped on the submission group when its filings are first worked out, and never reprices them.
+   * This follows P-151 (1)'s warn-not-reprice, as amended by P-237 (3). The stamp time is new.
+   * It differs from the team's SA-1B-52 rule 2.
    * A new version waits for a second person (P-253 step 6).
    * *Recommend:* yes to both.
 4. **C6.4 Q1 and C7.7 Q1.** Permanent-residence parts are scored as named breadth, outside the Visitor visa Works. *Recommend:* yes.
@@ -886,4 +908,32 @@ Rows 1, 3, 4 and 5 can start the same day. None touches an M2-hot file.
 9. **C7.5 Q3. One recorded AI review run, IMM 5257 only, now.** *Recommend:* yes.
 
 All the other questions in the rows are the tech lead's own rulings.
+
+---
+
+## Response to the Opus review of the records (`review.md`, 4 Nov)
+**Verdict:** Changes needed (no Blockers, 3 Majors, 13 Minors). All are taken.
+
+* **M1, P-318 (6):** C10.2 Q1 now follows the tech lead's P-318 (6): IMM 5645 on the online release, with the pack changed to match. C7.3 keeps IMM 5707 Online only in its own Sample fixture. Founder question 2 now asks only whether to reverse P-318 (6), and recommends no.
+* **M2, gate B:** described as `tools/gate-b.mjs` checks it (only on "Claims Works:" lines, `Fixes: QA-nnn`). The order table has a "Before Claims Works" column, and the concepts' Definitions of ready match.
+* **M3, the fee table off hot files:**
+  * "in force" is worked out when the table is read;
+  * nothing runs on approve;
+  * the cache refreshes from the read;
+  * `fee_table` cascades from `library_change`, so Reset works;
+  * To review shows a generic change (named);
+  * the tech lead is asked only if a hot edit is still unavoidable.
+* **m1–m13:**
+  * QA-149's check is cited;
+  * the readers are listed by grep;
+  * the child-fee and `pr_adult` lines are Sample;
+  * "follows P-151 (1) as amended by P-237 (3)";
+  * no `App.tsx` line;
+  * types in `prepare.tsx` only;
+  * the field-scope body is updated;
+  * C11.5 takes the organisation test and names its create route;
+  * C6.5's counts route and test file are named;
+  * every new table cascades;
+  * -23 waits for M2 at 55 under the P-319 order unless ruled otherwise;
+  * the board slip is fixed.
 
