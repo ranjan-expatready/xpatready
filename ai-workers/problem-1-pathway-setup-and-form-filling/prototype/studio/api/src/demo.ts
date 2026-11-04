@@ -18,6 +18,8 @@ import { ACTORS, Audit, Db, fail, isDemoWorkspace, need, OFFICIAL, PROTOTYPE, RO
 import { Programs } from "./programs.ts";
 import { Intake } from "./intake.ts";
 import { Finder } from "./finder.ts";
+import { FormLibrary } from "./form-library.ts";
+import { Forms } from "./forms.ts";
 import { SAMPLE_CREATOR } from "./lifecycle.ts";
 import { linkSampleGuides } from "./guide-sources.ts";
 import { libraryRevision, Sources } from "./sources.ts";
@@ -52,13 +54,17 @@ type SampleSetup = { key: string; participants: any[]; sources: string[]; import
 type SampleNode = { key: string; label: string; locations: string[]; link?: string; setup?: SampleSetup; subcategories?: SampleNode[] };
 /** S7 (P-148): the six agreed combinations the Demo menu loads (samples/wave1.json). */
 export const SAMPLES_SIX = join(STUDIO, "samples", "wave1.json");
-type SixSetup = SampleSetup & { page: string | null; missing: { code: string; title: string; why: string }[] };
+type SixSetup = SampleSetup & { page: string | null; missing: { code: string; title: string; why: string }[]; lines?: SixLines };
+/** C11.7 part B (P-109, P-171 (3)): what a person does on a combination's Forms and Documents tabs when no saved finder
+ *  answer sets them up. Library forms by their code and whose form each is (the channel when not a PDF upload); each
+ *  document line by its type's name (a new name waits as a library proposal, C3.6). Data in the sample file (P-319). */
+type SixLines = { basis: string; forms: { code: string; who?: string; channel?: "ONLINE" | "PAPER" }[]; documents?: { name: string; who: string; always: true; proves: string; quote: string }[] };
 const officialFiles = (): string[] => JSON.parse(readFileSync(join(SOLUTION, "official-sources", "ircc", "manifest.json"), "utf8")).items.map((i: { file: string }) => i.file);
 type SampleFile = { pathways: { key: string; label: string; type: "INDIVIDUAL" | "CORPORATE"; description: string }[]; programs: { pathway: string; key: string; label: string; description: string; categories: SampleNode[] }[] };
 
 @Injectable()
 export class Demo {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Programs) private readonly programs: Programs, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder, @Inject(Screen02) private readonly library: Screen02) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Programs) private readonly programs: Programs, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder, @Inject(Screen02) private readonly library: Screen02, @Inject(FormLibrary) private readonly formLibrary: FormLibrary, @Inject(Forms) private readonly forms: Forms) {}
 
   async status() {
     const workspaceId = await this.ws.id();
@@ -243,7 +249,7 @@ export class Demo {
     const timings: Record<string, number> = {};
     const timed = async <T>(step: string, f: () => Promise<T>): Promise<T> => { const t = Date.now(); try { return await f(); } finally { timings[step] = Math.round(((timings[step] ?? 0) + (Date.now() - t) / 1000) * 10) / 10; } };
     let nodes = 0;
-    const made: { id: string; label: string; page: string | null; missing: { code: string; why: string }[]; files: number; absent: string[] }[] = [];
+    const made: { id: string; label: string; page: string | null; missing: { code: string; why: string }[]; files: number; absent: string[]; lines?: SixLines }[] = [];
     for (const p of sample.pathways) {
       await this.studio.createNode(actor, { kind: "PATHWAY", label: p.label, key: p.key, clientType: p.type, description: p.description, sourceBasis: "ILLUSTRATIVE" });
       nodes++;
@@ -260,7 +266,7 @@ export class Demo {
         else if (r.attachmentStatus === "RECOGNISED") await timed("form read (form fields)", () => this.sources.read(actor, r.attachmentId!));
       }
       const missing = [...(c.missing ?? []).map((m) => ({ code: m.code, why: m.why })), ...refused];
-      made.push({ id: comp.id, label: path, page: c.page ?? null, missing, files: c.sources.length - absent.length - refused.length, absent });
+      made.push({ id: comp.id, label: path, page: c.page ?? null, missing, files: c.sources.length - absent.length - refused.length, absent, lines: c.lines });
       const out = [...absent, ...missing.map((m) => m.code)];
       log.push(`  ${path}: ${c.sources.length - absent.length - refused.length} official files through the form intake${out.length ? `; Not found · Upload PDF: ${out.join(", ")}` : ""}`);
     };
@@ -308,11 +314,43 @@ export class Demo {
       const b = await this.ai.launch(actor, { scope: { kind: "catalogue", ids: made.map((m) => m.id) }, mode: "REPLAY", idempotencyKey: `sample-six-drafts-${workspaceId}`, planSha256: plan.plan_sha256 });
       drafts = await timed("field-map replay (review queue)", () => this.settled(b.id!));
     }
+    // C11.7 part B: the lines a person adds by hand where the finder's replay set none up (after the drafts, as a person
+    // would: the field-map replay above reads the library's forms, not these lines).
+    const byHand: { combination: string; forms_added: string[]; online: string[]; documents: { name: string; status: string }[] }[] = [];
+    for (const c of made) if (c.lines) byHand.push(await timed("form and document lines (as a person adds them)", () => this.linesByHand(actor, c as { id: string; label: string; lines: SixLines }, log)));
     const proposals = await this.db.proposalItem.count({ where: { workspaceId, status: "waiting" } });
     log.push(`library drafts: ${replay.length} saved AI field-map answers replayed through the review queue (US$0): ${proposals} proposals waiting for review; ${[...new Set(waiting)].length} forms wait for "Draft with AI"${waiting.length ? ` (${[...new Set(waiting)].join(", ")})` : ""}`);
     const missing = made.flatMap((c) => [...c.absent.map((f) => ({ combination: c.label, code: f, why: "No saved copy." })), ...c.missing.map((m) => ({ combination: c.label, code: m.code, why: m.why }))]);
     await this.audit.log(workspaceId, actor.id, "loaded", "sample inputs", null, `${actor.name} loaded the sample starting point in ${((Date.now() - t0) / 1000).toFixed(1)} s: ${made.length} combinations (5 Retail, 1 Corporate Sample), ${nodes} names in the Structure, official files through the form intake, the form finder replayed (US$0), ${proposals} AI proposals waiting for review; nothing released`, { log });
-    return { ok: true, sample: "six", seconds: (Date.now() - t0) / 1000, combinations: made.map((m) => ({ id: m.id, label: m.label, files: m.files })), finder, drafts: { replayed: replay.length, proposals_waiting: proposals, waiting_for_draft_with_ai: [...new Set(waiting)], status: drafts.status }, missing, cost_usd: 0, timings, log };
+    return { ok: true, sample: "six", seconds: (Date.now() - t0) / 1000, combinations: made.map((m) => ({ id: m.id, label: m.label, files: m.files })), finder, drafts: { replayed: replay.length, proposals_waiting: proposals, waiting_for_draft_with_ai: [...new Set(waiting)], status: drafts.status }, lines_by_hand: byHand, missing, cost_usd: 0, timings, log };
+  }
+
+  /** C11.7 part B (P-109, P-171 (3)): a combination's sample lines, through the screens' own services as the loading
+   *  person (the author): each library form added from the library (FormLibrary.attach: refused in its own words when the
+   *  library does not hold it or no approved edition is there, which stops the load), its channel set on the Forms tab
+   *  (Forms.setChannel: refused where the library records that IRCC does not accept it), and each document line added on
+   *  the Documents tab (Studio.saveRequirement: a type the library does not hold waits as one library proposal for a
+   *  second person, so the load writes no document type itself, P-108). A form a replayed finder answer already put on
+   *  the combination is left as it is. No AI, US$0. */
+  private async linesByHand(actor: Actor, c: { id: string; label: string; lines: SixLines }, log: string[]) {
+    const rows = await this.db.combinationForm.findMany({ where: { combinationId: c.id }, orderBy: { version: "desc" }, select: { lineageKey: true, status: true, channel: true } });
+    const newest = new Map<string, (typeof rows)[number]>();
+    for (const r of rows) if (!newest.has(r.lineageKey)) newest.set(r.lineageKey, r);
+    const added: string[] = [], online: string[] = [], documents: { name: string; status: string }[] = [];
+    for (const f of c.lines.forms) {
+      const had = newest.get(f.code);
+      if (!had || had.status === "RETIRED") { await this.formLibrary.attach(actor, c.id, { formKey: f.code, who: f.who }); added.push(f.code); }
+      if (f.channel && (had?.status === "RETIRED" || had?.channel !== f.channel)) {
+        await this.forms.setChannel(actor, c.id, f.code, { channel: f.channel });
+        if (f.channel === "ONLINE") online.push(f.code);
+      }
+    }
+    for (const d of c.lines.documents ?? []) {
+      const r = await this.studio.saveRequirement(actor, c.id, null, { newTypeName: d.name, proves: d.proves, attachMode: "COMBINATION_MANDATORY", appliesToRoles: d.who, providedBy: "client", sourceQuote: d.quote });
+      documents.push({ name: d.name, status: "status" in r && r.status === "waiting" ? "waiting for a second person" : "line added" });
+    }
+    log.push(`  ${c.label}: by hand (Sample, ${c.lines.basis.split(":")[0]}): ${added.length} library forms added (${added.join(", ") || "none"})${online.length ? `, Online: ${online.join(", ")}` : ""}${documents.length ? `; document lines: ${documents.map((d) => `${d.name} (${d.status})`).join(", ")}` : ""}`);
+    return { combination: c.label, forms_added: added, online, documents };
   }
 
   /** C10.1 the configured checkpoint (the M2 gate, DEMO.md "Checkpoints" 2): Load sample six, then each DEMO.md row
