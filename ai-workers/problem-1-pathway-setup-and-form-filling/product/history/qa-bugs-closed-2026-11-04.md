@@ -62,3 +62,38 @@ From `qa/BUGS.md`:
 
 | QA-200 | Bug · Critical | C7.2, C6.1 (case fill; re-tagged from C2.4 by the tech lead on #801, 4 Nov 09:00 IST: C2.4's own behaviour is met) · P-32 (the newest printed edition is the one in use) | main 4d1973b8 (Opus re-review of #698; not caused by #698) | After a newer edition of a form is released next to its older map, a case fills the OLDEST edition. `engine/snapshot.ts:157` puts every mapped PDF edition into the snapshot, oldest first; `api/src/fill.ts:42` `writeForm` takes the first match, and `fill-case.ts:95`, `:110` and `engine/render.ts:108` read it the same way. The combination's Forms tab (`api/src/workspace.ts:71`) and the library show the newest. Scenario: IMM 5476 11-2025 accepted through impact review (its map copied as a draft, the 11-2021 map stays published) → release (`studio.ts:1149` retires no older map) → Forms tab says 11-2025, the case's PDF is 11-2021. Unconfirmed: whether a release gate refuses two mapped editions. Expected: fill, render and the Forms tab pick the same, newest edition, or the release retires the older map | runtime / forms | Open |
 
+
+## QA-182 — closed 4 Nov 2026 (after-merge, #829)
+
+Closed by the qa lane on main **9caa043be** (fixed by #829). `acceptance/C3.10.test.ts` exit 0, 8/8 on the six on GitHub (run 41787750850), and a 1440 px walk of 15 pages on the six finds no "box" or "boxes".
+
+From `qa/BUGS.md`:
+
+| QA-182 | Gap · Minor | C3.10 · P-63 (never "box") | 762dbae6 (after-merge) | `acceptance/C3.10.test.ts` 7/8 twice: 18 messages the API, engine or web can show still say box/boxes, e.g. "X is not a form with boxes" (`api/src/field-drafts-routes.ts:31`), "a person maps the boxes" (`api/src/field-drafts.ts:36–39`), "write it by hand… this box" (`api/src/fill-case.ts:70`), "Re-read with AI (fields and boxes)" (`web/src/pages/library-forms.tsx:339`). The 28-page walk of 1 Nov never reached these states. Expected: form field(s) everywhere | forms / screens | Open |
+
+From `qa/reports/bugs-open-detail.md`:
+
+| QA-182 | Gap · Minor | C3.10 · P-63 (never "box") | 762dbae6 (after-merge) | `acceptance/C3.10.test.ts` 7/8 twice: 18 messages the API, engine or web can show still say box/boxes, e.g. "X is not a form with boxes" (`api/src/field-drafts-routes.ts:31`), "a person maps the boxes" (`api/src/field-drafts.ts:36–39`), "write it by hand… this box" (`api/src/fill-case.ts:70`), "Re-read with AI (fields and boxes)" (`web/src/pages/library-forms.tsx:339`). The 28-page walk of 1 Nov never reached these states. Expected: form field(s) everywhere | Steps, expected and actual: this row and `qa/reports/2026-11-03-after-merge-explore.md`. Pack output is quoted there; the run logs are not committed (AGENTS.md rule 1) | forms / screens | Open |
+
+
+## QA-196 — closed 4 Nov 2026 (after-merge, #802 with #771)
+
+Closed by the qa lane on main **4c3b16f0e** (fixed by #802; #771's saved runs on main). `acceptance/C3.4.test.ts` on the six on GitHub (run 41791603864): exit 0, 20/20, accepting IMM 5257's form check and a guide 5256 check through the one door. Walk on the six at 1440 px: the Saved C3.4 draft of IMM 5257 (US$0, ledger unchanged) puts 47 proposals on To review, 17 of them form checks. Accept on a form check whose form fields are not mapped yet answers, as the tech lead ruled (P-149 (1)): "This check reads 2 form fields of IMM 5257 (09-2023) that are not mapped to a shared field yet (…). Map them on the form's field page first, then accept it again; or reject it." Its "Ready to accept" badge at that point is QA-217 (Minor).
+
+From `qa/BUGS.md`:
+
+| QA-196 | Gap · Major | C3.4 · P-120 (AI drafts a form's checks as proposals), P-149 (1) (one door) | 762dbae6 (Opus re-review of #585) | AI form checks and guide checks from the C3.4 masters step reach To review at Ready, but Accept answers 409, "A form check proposal is accepted with its own step, not yet on this queue" (`api/src/proposals.ts:576-577`; `LANDERS` at `:367` has no `form_check` or `cross_check`). C3.4's acceptance accepts only a section. Noted before only as review Minor 3 in `screens/C3.4-ai-step/review.md`. Expected: a lander for both kinds, or the items held off the queue with a reason | forms (C3.4) | Open |
+
+
+## QA-149 — closed 4 Nov 2026 (independent cloud qa for M3, round 0, PR #864)
+
+Retested on main **9caa043be** on the suites' fixture: `tests/qa/check_qa_vv_1102_decider.ts` 0 · 6/6. The answered "Is this person travelling to Canada alone?" stays in the officer's case view and the client's questionnaire, and can be changed to "both parents". C6.4 stays Partial (fixture only; on the checkpoint it waits for QA-144).
+
+From `qa/BUGS.md`:
+
+| QA-149 | Bug · Major | C6.4 (also C4.4 renderer) · VV-R08, P-62 | 59d2da74 (after-merge 2 Nov) | A question asked only because it decides a document line drops out of the case once answered: the child's "Is this person travelling to Canada alone?" answered yes adds the letter of authorization line, then vanishes from the officer's case view and the client's questionnaire, so nobody can correct it to no; a PUT with the officer view's (missing) answer id is refused 409 "Changed by someone else" and the line stays … | runtime | Open |
+
+From `qa/reports/bugs-open-detail.md`:
+
+| QA-149 | Bug · Major | C6.4 | **59d2da74** | Steps: an isolated copy; `tests/runtime/setup_visitor_visa.ts`, `acceptance/lib/setup_vv_m3.ts`; open the family case (4 people); as the client answer the child A1's `person.travelling_alone_to_canada` = yes → the checklist gets "Letter of authorization for a minor" (right). Then read `GET /runtime/cases/:id/questionnaire?mode=agent` (officer) and `?mode=client`. Expected: the question is still asked (it decides a line, P-62), so it can be changed to no and the line goes (pack C6.4-9). Actual: after yes the question is gone from both views (`engine/runtime/case.ts` caseView keeps a question only when it fills a box or `q.decides` is non-empty, and once answered it decides nothing open); a change to no sent with the view's answer id (none) is refused 409 "Someone changed this answer after you opened it", and the line stays. Sent with the real id it saves, so the API can still change it, but no screen can. | `tests/qa/check_qa_am_1102_c64_answer_no.ts` (1/4 today; passes when fixed) · acceptance C6.4-9 | runtime | Open |
+
