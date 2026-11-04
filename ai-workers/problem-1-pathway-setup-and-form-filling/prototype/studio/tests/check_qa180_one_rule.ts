@@ -15,7 +15,11 @@ import type { Snapshot } from "../engine/snapshot.ts";
 let pass = 0, fail = 0;
 const ok = (name: string, c: boolean, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 260)}` : ""}`); };
 
-const full = JSON.parse(readFileSync(join(import.meta.dirname, "fixtures", "screen01-work-permit-release.json"), "utf8")) as Snapshot;
+const saved = JSON.parse(readFileSync(join(import.meta.dirname, "fixtures", "screen01-work-permit-release.json"), "utf8")) as Snapshot;
+// P-319: a release carries each form's role from the library (engine/snapshot.ts form_role); this release was saved before
+// roles, so IMM 5707 is given the role the library holds for it now (the migration and the demo set it).
+const withRole = (s: Snapshot, role: string | null) => ({ ...s, forms: (s.forms as { form_number: string }[]).map((f) => (f.form_number === "IMM 5707" ? { ...f, ...(role ? { form_role: role } : {}) } : f)) }) as Snapshot;
+const full = withRole(saved, "family_information");
 const people = [{ role: "principal", label: "Principal applicant", min: 1, max: 1 }, { role: "spouse_or_partner", label: "Spouse or partner", min: 0, max: 1 }];
 type Map = { form_number: string; form_edition: string; channel?: string; entries: unknown[] };
 const maps = full.field_maps as Map[];
@@ -80,6 +84,9 @@ ok("words: no field key or code in the line", !/no_field_map|form_without_editio
 const no5707 = withMaps(maps.filter((m) => m.form_number !== "IMM 5707"));
 const w5707 = lineFor(no5707, "IMM 5707")?.message ?? "";
 ok("words (m1): IMM 5707, the family information form, is offered mapping, not removal", /Map its form fields/.test(w5707) && !/or remove the form/.test(w5707) && /family information form/.test(w5707), w5707);
+// P-319: the words follow the form's released role, never its number: with no role, IMM 5707 is an ordinary form.
+const plain5707 = lineFor({ ...withRole(saved, null), field_maps: no5707.field_maps } as Snapshot, "IMM 5707")?.message ?? "";
+ok("P-319 words: with no family information role released, IMM 5707 is offered mapping or removal like any form", /or remove the form/.test(plain5707) && !/family information form/.test(plain5707), plain5707);
 ok("words (m1, pass side): another form is still offered removal", /or remove the form\./.test(lineFor(noMap, FORM)?.message ?? ""));
 // Review m2: "an older edition's map is not used" only when an older edition is mapped.
 const onlyEmpty = withMaps(maps.map((m) => (m.form_number === FORM ? { ...m, form_edition: "IMM 1295 (06-2025)", entries: [] } : m)));

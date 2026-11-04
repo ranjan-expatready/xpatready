@@ -8,7 +8,7 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { buildSnapshots, effective, type Snapshot } from "../../engine/snapshot.ts";
 import { ACTORS, actorOf, Db, Workspace, type Actor } from "./core.ts";
 import { Studio } from "./studio.ts";
-import { itemsOf, KIND_NOUN, actionWord, unapprovedAdds, unapprovedWhy, acceptsView } from "./library-changes.ts";
+import { itemsOf, KIND_NOUN, actionWord, unapprovedAdds, unapprovedWhy, acceptsView, roleView } from "./library-changes.ts";
 import { fillsView } from "./who-fills.ts";
 import { conditionView, COND_KIND } from "./question-condition.ts";
 import { ON_ITS_PAGE } from "./proposals.ts";
@@ -134,7 +134,7 @@ export class ReviewQueueService {
       }
     }
     const formsOfFields = (keys: string[]) => [...new Set(keys.flatMap((k) => [...(fieldUse.get(k) ?? [])]))].sort();
-    const formsOfChange = (c: (typeof changes)[number]) => (c.kind === "library_form" || c.kind === "form_accepts" ? [normaliseCode(c.key)] : FIELD_KINDS.has(c.kind) ? formsOfFields([c.key]) : c.kind === "combination" ? formsOfCombination(c.combinationId ?? c.key) : []);
+    const formsOfChange = (c: (typeof changes)[number]) => (c.kind === "library_form" || c.kind === "form_accepts" || c.kind === "form_role" ? [normaliseCode(c.key)] : FIELD_KINDS.has(c.kind) ? formsOfFields([c.key]) : c.kind === "combination" ? formsOfCombination(c.combinationId ?? c.key) : []);
 
     // AI proposals: the newest drafting step per source, as the Programs row counts them (programs.ts catalogue).
     const waitingCount = new Map(pending.map((p) => [p.runId, p._count]));
@@ -267,7 +267,8 @@ export class ReviewQueueService {
       const acc = c.kind === "form_accepts" ? acceptsView(c) : null; // C11.18: plain words, before → after
       const fil = c.kind === "placement_fills" ? fillsView(c) : null; // C4.9 (runtime lane, P-97)
       const cnd = c.kind === COND_KIND ? conditionView(c) : null; // C4.11 part 3 (forms lane)
-      const what = cnd ? `When it is asked, for every combination: ${cnd.before} → ${cnd.after} (asked in ${cnd.uses} combination${cnd.uses === 1 ? "" : "s"}; goes out with the next release). Reason: ${cnd.reason}` : fil ? `Who fills it, for every combination: ${fil.before} → ${fil.after} (used by ${fil.uses} combination${fil.uses === 1 ? "" : "s"}; goes out with the next release). Reason: ${fil.reason}` : acc ? `What IRCC accepts for ${acc.form}: ${acc.before} → ${acc.after}. ${acc.quote ? `canada.ca: "${acc.quote}"` : `Reason: ${acc.reason}`}` : `${c.action === "ADD" ? `New ${word}` : `${actionWord(c.action, c.kind)} the ${word}`}${c.reason ? `. Reason: ${c.reason}` : ""}${c.aiVerdict ? ` · Advisory check: ${c.aiVerdict}` : ""}`;
+      const rol = c.kind === "form_role" ? roleView(c) : null; // P-319 (review of #833, M1): words from what approval applies
+      const what = rol ? `${rol.form}'s role, for every combination that files it: ${rol.before} → ${rol.after} (each combination's next release names it for the immigration expert). Reason: ${rol.reason}` : cnd ? `When it is asked, for every combination: ${cnd.before} → ${cnd.after} (asked in ${cnd.uses} combination${cnd.uses === 1 ? "" : "s"}; goes out with the next release). Reason: ${cnd.reason}` : fil ? `Who fills it, for every combination: ${fil.before} → ${fil.after} (used by ${fil.uses} combination${fil.uses === 1 ? "" : "s"}; goes out with the next release). Reason: ${fil.reason}` : acc ? `What IRCC accepts for ${acc.form}: ${acc.before} → ${acc.after}. ${acc.quote ? `canada.ca: "${acc.quote}"` : `Reason: ${acc.reason}`}` : `${c.action === "ADD" ? `New ${word}` : `${actionWord(c.action, c.kind)} the ${word}`}${c.reason ? `. Reason: ${c.reason}` : ""}${c.aiVerdict ? ` · Advisory check: ${c.aiVerdict}` : ""}`;
       const base = { id: `change:${c.id}`, kind: "library_change" as const, title: c.label ?? c.key, by: nameOf(c.proposedBy), at: c.proposedAt.toISOString(), cost_usd: null, forms: formsOfChange(c), combination: c.kind === "combination" ? c.combinationId ?? c.key : null };
       if (c.status === "RETURNED") out.push({ ...base, what: `${what} · Returned by ${nameOf(c.decidedBy)}: ${c.decisionNote}`, ...(mine ? { state: "needs" as const, waiting_on: null, next: { label: "Correct or withdraw", href: `/review/change/${c.id}`, note: null } } : { state: "waiting" as const, waiting_on: isLifecycleKind(c.kind) ? "The person who proposed it sends it again or withdraws it." : "The person who proposed it corrects it or withdraws it.", next: null }) });
       else out.push({ ...base, what, ...(holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: c.action === "ADD" ? `Approve or return the new ${word}` : "Approve or return", href: `/review/change/${c.id}`, note: null } } : { state: "waiting" as const, waiting_on: mine ? "You proposed it; a different person approves or returns it." : "A content publisher approves or returns it.", next: null }) });

@@ -44,11 +44,15 @@ const w = backgroundWords("Within the past two years, have you had tuberculosis?
 ok("C3.8 [IRCC-F08] the words name the question by its caption, say why (IRCC returns the application) and what to do", w.startsWith("\"Within the past two years") && /IRCC returns an application/.test(w) && /Map it to a shared field/.test(w) && /filled by hand/.test(w), w);
 ok("C3.8 [IRCC-F08] fail case: with no caption the words never show a PDF path", backgroundWords(null).startsWith("This question") && !/\[0\]/.test(backgroundWords(null)), backgroundWords(null));
 
-ok("C3.8 [IRCC-F09] IMM 5707 in the package but not in the forms is missing", missingFamilyForm(["IMM 5257", "IMM 5707"], ["IMM 5257"]) === "IMM 5707");
-ok("C3.8 [IRCC-F09] pass case: IMM 5707 in the forms is not missing", missingFamilyForm(["IMM 5257", "IMM 5707"], ["IMM 5257", "IMM 5707"]) === null);
-ok("C3.8 [IRCC-F09] pass case: IMM 5645 in the forms fills the family information line the package lists as IMM 5707 (P-230 (6))", missingFamilyForm(["IMM 5707"], ["IMM 5645"]) === null);
-ok("C3.8 [IRCC-F09] a combination with no form yet gets no family information line (its \"No forms yet\" says it once, F8 M1)", missingFamilyForm(["IMM 5257", "IMM 5707"], []) === null);
-ok("C3.8 [IRCC-F09] pass case: a package with no family information form asks for none", missingFamilyForm(["IMM 5257", "IMM 5476"], ["IMM 5257"]) === null && missingFamilyForm([], []) === null);
+// P-319: the family information forms are the library's (each form's role); here the demo's two, as the library holds them.
+const FAMILY = new Set(["IMM 5707", "IMM 5645"]);
+ok("C3.8 [IRCC-F09] IMM 5707 in the package but not in the forms is missing", missingFamilyForm(["IMM 5257", "IMM 5707"], ["IMM 5257"], FAMILY) === "IMM 5707");
+ok("C3.8 [IRCC-F09] pass case: IMM 5707 in the forms is not missing", missingFamilyForm(["IMM 5257", "IMM 5707"], ["IMM 5257", "IMM 5707"], FAMILY) === null);
+ok("C3.8 [IRCC-F09] pass case: IMM 5645 in the forms fills the family information line the package lists as IMM 5707 (P-230 (6))", missingFamilyForm(["IMM 5707"], ["IMM 5645"], FAMILY) === null);
+ok("C3.8 [IRCC-F09] a combination with no form yet gets no family information line (its \"No forms yet\" says it once, F8 M1)", missingFamilyForm(["IMM 5257", "IMM 5707"], [], FAMILY) === null);
+ok("C3.8 [IRCC-F09] pass case: a package with no family information form asks for none", missingFamilyForm(["IMM 5257", "IMM 5476"], ["IMM 5257"], FAMILY) === null && missingFamilyForm([], [], FAMILY) === null);
+ok("P-319 pass: a form the library marks as family information (here IMM 5406) fills the line; no form number is in the rule", missingFamilyForm(["IMM 5707"], ["IMM 5406"], new Set(["IMM 5707", "IMM 5406"])) === null && missingFamilyForm(["IMM 5406"], ["IMM 5257"], new Set(["IMM 5406"])) === "IMM 5406");
+ok("P-319 fail: with no form marked family information, the package asks for none (it is the library's, not a list in the code)", missingFamilyForm(["IMM 5257", "IMM 5707"], ["IMM 5257"], new Set()) === null);
 ok("C3.8 [IRCC-F09] the form number is read from the edition label; an unrecognised file has none", formNumberOf("IMM 5707 (01-2023)") === "IMM 5707" && formNumberOf("IMM 5257 SCH1 (09-2023)") === "IMM 5257 SCH1" && formNumberOf(null) === "");
 const fw = familyFormWords("IMM 5707");
 ok("C3.8 [IRCC-F09] the words say what is missing, why, and where to add it, in plain words", /^IMM 5707 \(Family Information\) is in this combination's application package but not in its forms/.test(fw) && /IRCC returns an application without it/.test(fw) && /Forms tab/.test(fw), fw);
