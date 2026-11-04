@@ -24,6 +24,9 @@ for (const entity of ["case document", "checklist line", "assessment", "assessme
   ok(`fail (sweep): another firm's "${entity}" line is never read`, !firmMayRead(line(entity, `x on case ${THEIRS}`), own));
   ok(`pass (sweep): "${entity}" is a case entity`, CASE_ENTITIES.has(entity) && !isConfigEntity(entity));
 }
+// #861 (C7.6) on main since: the filing's readiness and review lines, entity "filing".
+ok("fail (#861, C7.6): another firm's \"filing\" line (reviewed, Ready to file reopened) is never read by user-S's firm", !firmMayRead(line("filing", `Representative A reviewed a filing on case ${THEIRS} (licence R000000)`), own) && !firmMayRead(line("filing", "A filing is no longer Ready to file"), own));
+ok("pass (#861): the firm's own \"filing\" line is read, and \"filing\" is a case entity", firmMayRead(line("filing", `A filing on case ${OURS} is no longer Ready to file`), own) && CASE_ENTITIES.has("filing") && !isConfigEntity("filing"));
 // Break M1 on #948: fail closed. An entity on neither list is read by no firm's staff, whatever its words.
 ok("fail (break M1): a line of an entity no list knows is not read, even when its words name no case", !firmMayRead(line("new case thing", "Case officer uploaded a passport for the principal"), own) && !firmMayRead(line("sign step ", "x"), own));
 ok("fail: a line of an entity no list knows that names another firm's case is not read", !firmMayRead(line("some new thing", `x did y on case ${THEIRS}`), own));
