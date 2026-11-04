@@ -198,3 +198,56 @@ screens' code.
 
 **Verdict: Approve** for 7e7ca86fc. No Blocker and no Major is open: M1 and M2 were closed in round 2, M3 is cleared by the
 body, and the merge resolution is clean.
+
+## Merge check 2 (28bbb74de, origin/main e840d2d88 into claude/lucid-volta-ily0ht)
+
+Read-only, diff-only. Nothing was run. Parents: ^1 = 761502940 (this branch), ^2 = e840d2d88 (main, with qa's #939). Merge base: a155fe772.
+Method: `git show --cc 28bbb74de`, `git diff 28bbb74de^2 28bbb74de` and `git diff 28bbb74de^1 28bbb74de` on `demo.ts`. Each
+parent's own change since the merge base was compared line by line with what the merge keeps of it.
+
+1. **Constructor, `familyForm` and imports: correct.**
+   * The resolved constructor (demo.ts:126) has main's 14 parameters in main's order, including main's own
+     `@Inject(FormLibrary) private readonly formLibrary`. `@Inject(ReviewProposals) private readonly proposals` is added
+     last. That makes 15 `@Inject`s, and no type or property name appears twice. `Forms` appears once.
+   * Main's `familyForm` (demo.ts:128-134) is byte for byte as on main.
+   * Imports: `FormLibrary` is imported once, at main's place (line 33). This branch's second import at line 21 is gone, and
+     `ReviewProposals` takes its place. No module is imported twice.
+2. **Nothing lost: confirmed.**
+   * This branch's side, merge base to ^1, matches the merge minus main (^2 to merge) except for two lines. The dropped
+     duplicate `FormLibrary` import, and the constructor's minus line, because main's base constructor already had
+     `FormLibrary`.
+   * Main's side, merge base to ^2, matches the merge minus this branch (^1 to merge) except for the same two lines.
+   * Kept from this branch: the `SixSetup.lines` and `SixLines` types, `made[].lines`, the `byHand` loop, `lines_by_hand` in
+     loadSix's return, `linesByHand`, and the certificate step in `loadConfigured`.
+   * Kept from main: `familyForm`, `FAMILY_FORM_BY_CHANNEL`, `keyOf0`, `irmWhy`, row 3 and row 4 (`differ`), and row 7's
+     form setup.
+   * No other file had a conflict. Outside `demo.ts`, merge minus main is only this PR's own files (wave1.json, the check
+     scripts, the screen folder).
+3. **No clash with main's code.**
+   * **One `formLibrary` method:** both sides call `this.formLibrary.attach(actor, combinationId, { formKey, … })`. That is
+     `FormLibrary.attach` (form-library.ts:373, serialised by `oneAtATime`). This branch passes `who` as well. Same instance,
+     same method, same body shape.
+   * **No double attach:** main's row 7 call (demo.ts:626) runs only for `SET_UP_FROM_FORMS` = `vv.single` and
+     `wp.lmia_inside`. Before it attaches, it rebuilds `has` from `combination_form`. This branch's `linesByHand` runs only
+     where wave1.json has `lines`, which is only `provincial_nominees.express_entry`. So no combination is touched by both.
+     If one ever were, main's `has` check would skip a form that is already there.
+   * **Certificate step (demo.ts:545-563):** it uses `author`, `approver`, `six`, `workspaceId` and `log`. All of them are
+     defined at the top of `loadConfigured` (lines 474-476). The names `keyOf0`, `irmWhy`, `differ`, `byHand` and `lines`
+     do not collide with it. Main's `let byHand` (row 7) is in `loadConfigured`, and this branch's `const byHand` is in
+     `loadSix`, so their scopes are separate.
+   * **Order:** the step still runs between row 4 and row 7. Row 5's "every WAITING library change" still collects the
+     certificate's ADD for user-B, as in Merge check 1.
+   * **qa's #939 case 2** (acceptance/C11.7.test.ts): after `/demo/load {"sample":"six"}`, it wants exactly one waiting
+     `document_type` proposal for the certificate, with basis SAMPLE, and no `document_type` of that name. Then user-B
+     accepts it and the author adds the line. That is what loadSix's `linesByHand` leaves: `saveRequirement`'s
+     new-type path writes `basis: "SAMPLE"` (studio.ts:844), and the certificate step runs only in `loadConfigured`. So the
+     rewrite and this branch agree. *Not run.*
+4. **LMIA: unchanged.** `git diff 28bbb74de^2 28bbb74de -- demo.ts` has no LMIA line. The merge's LMIA lines (15) are the same
+   as main's, compared with `diff`. All of them come from main (QA-144 slice 2). This branch adds none.
+
+**Not checked:** typecheck, Nest DI start-up and the suites at 28bbb74de. CI on this head is the check for those. The journey
+score stays **8.5/10** from round 1. No journey was re-run, because none was allowed here, and this merge changes no screen
+code.
+
+**Verdict: Approve** for 28bbb74de. No Blocker and no Major is open. The resolution follows the tech lead's rule exactly.
+Round 1's Minors m2, m4 and m5, and r2-m2's residual, stay open as Minors.
