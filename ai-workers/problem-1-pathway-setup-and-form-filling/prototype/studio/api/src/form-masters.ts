@@ -17,15 +17,16 @@ import { formMastersFromRounds, formShapeOk, guideMastersFromRounds, guideShapeO
 import { editionContextKey, PRINTED_EDITION, replayPattern } from "../../engine/rounds.ts";
 import { actorOf, Audit, Db, fail, need, SOLUTION, type Actor } from "./core.ts";
 import { LIVE_WAITING, PqrDrafts } from "./pqr-drafts.ts";
-import { identityKeyOf, insertProposals, QUEUE_TX, sameInLibrary, type NewProposal, type Work } from "./proposals.ts";
+import { identityKeyOf, insertProposals, QUEUE_TX, sameInLibrary, UNNAMED_WHY, type NewProposal, type Work } from "./proposals.ts";
 import { pairOf, roundBudgetUsd, RUNS, runTime, StepRunner, type AiStep, type RoundContext, type RoundOut } from "./rounds.ts";
 import { aiLive, Sources } from "./sources.ts";
 
 export const MASTERS_STEP = "masters_edition";
 import { printedChoices, type InvField } from "../../engine/printed-choices.ts";
 export { printedChoices }; // QA-196: moved to the engine (proposals.ts reads it too, without importing this module)
-/** Review c34 M1: hidden boxes, barcodes and the form's machine parts are not a person's section. A part named by a
- *  number word (IMM 5475's "Five", "Seven") is a real part a person fills: it stays, for a person to rename (re-review M2). */
+/** Review c34 M1: hidden boxes, barcodes and the form's machine parts are not a person's section. A part with an internal
+ *  name only ("Five", "Seven") is a real part a person fills: it stays, named from its printed heading or, with none,
+ *  held for a person to name (re-review M2, QA-206). */
 const hidden = (f: InvField) => /invisible|hidden/i.test(String(f.presence ?? "")) || /barcode/i.test(`${f.data_path ?? ""} ${f.caption ?? ""} ${f.ui ?? ""}`);
 const MACHINE_PART = /^(#?subform\d*|text ?field\d*|header|buttons?( ?header)?|page\d*|fragment\d*|row\d*)$/i;
 
@@ -56,8 +57,9 @@ function choices(f: InvField): { label: string; code: string }[] {
   return out;
 }
 
-/** Pure: the answer lists and sections a form's inventory gives, by the rules alone (one list per distinct choice set). */
-export function draftFromInventory(fields: InvField[]) {
+/** Pure: the answer lists and sections a form's inventory gives, by the rules alone (one list per distinct choice set),
+ *  each section named by its part's printed heading (QA-206). */
+export function draftFromInventory(fields: InvField[], headings: PartHeadings = {}) {
   const lists = new Map<string, { label: string; values: { code: string; label: string }[]; quote: string; boxes: string[] }>();
   for (const f of fields) {
     const values = choices(f);
@@ -68,22 +70,47 @@ export function draftFromInventory(fields: InvField[]) {
     if (prev) { prev.boxes.push(f.data_path); continue; }
     lists.set(id, { label: (from ? words(from) : caption(f) || "Choices").slice(0, 120), values, quote: caption(f) || values.map((v) => v.label).join(", "), boxes: [f.data_path] });
   }
-  const sections = new Map<string, { label: string; fieldKeys: string[]; quote: string }>();
+  // QA-206 (P-158, P-319, PRODUCT §4): a section is named by the heading printed on the form above its boxes (the
+  // headings file beside the inventory, read from the form's own text, no AI), never by the PDF's internal part name
+  // ("PageWrapper", "Five"). Parts under one printed heading are one section. A part with no printed heading is still
+  // proposed, under the part's own internal name only as a pointer, and marked unnamed: it is accepted only once a
+  // person gives it a name (proposals.ts decide).
+  const sections = new Map<string, { label: string | null; part: string; printed: string | null; fieldKeys: string[]; quote: string }>();
   for (const f of fields) {
     if (!f.data_path || !f.section || hidden(f)) continue;
     const part = f.section.split(".").slice(0, 2);
     if (part.length < 2 || MACHINE_PART.test(part[1].replace(/\[\d+\]$/, ""))) continue;
-    const key = part.join(".");
-    const s = sections.get(key) ?? { label: words(part[1]).slice(0, 120), fieldKeys: [], quote: caption(f) };
+    // A part with no heading of its own takes the one printed over the part of the same name on another page (IMM 5257's
+    // marital status continues under "PERSONAL DETAILS (CONTINUED)" on page 2): two pages' parts of one name are one part.
+    const key = part.join("."), h = headings[key] ?? Object.entries(headings).find(([k]) => k.split(".")[1] === part[1])?.[1];
+    const s = sections.get(key) ?? { label: h?.heading?.trim().slice(0, 120) || null, part: part[1], printed: h ? (h.printed ?? h.heading).slice(0, 300) : null, fieldKeys: [], quote: caption(f) };
     if (s.fieldKeys.length < 400) s.fieldKeys.push(f.data_path.slice(0, 120));
     if (!s.quote) s.quote = caption(f);
     sections.set(key, s);
   }
-  // One section per name (two pages with a part of the same name are one section of the form).
-  const byName = new Map<string, { label: string; fieldKeys: string[]; quote: string }>();
-  for (const s of sections.values()) { const n = byName.get(s.label); if (n) n.fieldKeys.push(...s.fieldKeys.slice(0, 400 - n.fieldKeys.length)); else byName.set(s.label, s); }
-  // The quote is the form's printed words (a box caption in the part); a part with none is not proposed (P-170).
-  return { lists: [...lists.values()], sections: [...byName.values()].filter((s) => s.fieldKeys.length && s.quote) };
+  // One section per printed heading; parts with none, one per internal part name (two pages with a part of the same name
+  // are one part of the form).
+  const byName = new Map<string, { label: string | null; part: string; printed: string | null; fieldKeys: string[]; quote: string }>();
+  for (const s of sections.values()) {
+    const k = s.label ? `h:${s.label.toLowerCase()}` : `p:${s.part}`, n = byName.get(k);
+    if (n) { n.fieldKeys.push(...s.fieldKeys.slice(0, 400 - n.fieldKeys.length)); n.quote ||= s.quote; } else byName.set(k, { ...s, fieldKeys: [...s.fieldKeys] });
+  }
+  // A part with no printed words in it (no box caption) is not proposed (P-170). The source quote is the printed heading
+  // when there is one, else a box caption of the part. Named sections first.
+  const kept = [...byName.values()].filter((s) => s.fieldKeys.length && s.quote);
+  return { lists: [...lists.values()], sections: [...kept.filter((s) => s.label), ...kept.filter((s) => !s.label)].map((s) => ({ label: s.label, part: s.part, fieldKeys: s.fieldKeys, quote: s.printed ?? s.quote, unnamed: !s.label })) };
+}
+
+/** QA-206: the printed heading of each part of a form (prototype/p1/xfa_headings.py, the form's own text, no AI), from
+ *  the headings file beside its inventory ("…/imm5257e.inventory.json" → "…/imm5257e.headings.json"), only when it was
+ *  read from exactly the same file (its checksum). None: every section of that form is proposed unnamed. */
+export type PartHeadings = Record<string, { heading: string; printed?: string; how?: string }>;
+export function headingsFor(inventoryFile: string | null | undefined, sha256: string | null | undefined): PartHeadings {
+  if (!inventoryFile || !sha256 || !/\.inventory\.json$/.test(inventoryFile)) return {};
+  try {
+    const h = JSON.parse(readFileSync(join(SOLUTION, inventoryFile.replace(/\.inventory\.json$/, ".headings.json")), "utf8")) as { sha256?: string; parts?: PartHeadings };
+    return h.sha256 === sha256 && h.parts && typeof h.parts === "object" ? h.parts : {};
+  } catch { return {}; }
 }
 
 /** C3.4 AI step over one form edition: its checks and the document types its form fields are copied from (a draft and a blind
@@ -126,7 +153,7 @@ const RUNNING_FOR_MS = 30 * 60_000;
 
 type Attachment = { id: string; workspaceId: string; combinationId: string; kind: string; fileName: string; sha256: string; recognised: boolean; edition: string | null; inventoryFile: string | null };
 /** What one AI draft reads: a form edition (its inventory) or a combination's guide (its text). */
-type Target = { kind: "form"; step: AiStep; a: Attachment; edition: string; contextKey: string; trail: string; input: { file: string; sha256: string }; chars: number; fields: InvField[]; group: string }
+type Target = { kind: "form"; step: AiStep; a: Attachment; edition: string; contextKey: string; trail: string; input: { file: string; sha256: string }; chars: number; fields: InvField[]; inventorySha: string | null; group: string }
   | { kind: "guide"; step: AiStep; a: Attachment; combination: { id: string; workspaceId: string; label: string; combinationKey: string }; code: string; text: string; contextKey: string; trail: string; input: { file: string; sha256: string }; chars: number; group: string };
 type SavedState = { available: boolean; why: string | null; files: string[] };
 
@@ -140,7 +167,7 @@ export class FormMasters {
     if (!a) fail("This source does not exist.", HttpStatus.NOT_FOUND);
     return a!;
   }
-  private readInventory(a: Attachment, edition: string): { fields?: InvField[] } {
+  private readInventory(a: Attachment, edition: string): { fields?: InvField[]; summary?: { sha256?: string } } {
     try { return JSON.parse(readFileSync(join(SOLUTION, a.inventoryFile!), "utf8")); } catch { return fail(`The reading of ${edition} is missing on this computer: read the form again.`, HttpStatus.CONFLICT); }
   }
 
@@ -158,8 +185,8 @@ export class FormMasters {
     const printed = (a.edition ?? a.fileName).slice(0, 60), m = PRINTED.exec(printed);
     if (!m) fail(`${printed} has no printed form number and edition, so its AI draft cannot be kept for every combination that uses it.`, HttpStatus.CONFLICT);
     let bytes: Buffer; try { bytes = readFileSync(join(SOLUTION, a.inventoryFile!)); } catch { return fail(`The reading of ${printed} is missing on this computer: read the form again.`, HttpStatus.CONFLICT); }
-    const fields = (JSON.parse(bytes.toString("utf8")) as { fields?: InvField[] }).fields ?? [];
-    return { kind: "form", step: MASTERS_FORM_AI, a, edition: printed, contextKey: editionContextKey(m![1], m![2]), trail: printed, input: { file: a.inventoryFile!, sha256: sha(bytes) }, chars: bytes.length, fields, group: `edition:${printed}` };
+    const inv = JSON.parse(bytes.toString("utf8")) as { fields?: InvField[]; summary?: { sha256?: string } };
+    return { kind: "form", step: MASTERS_FORM_AI, a, edition: printed, contextKey: editionContextKey(m![1], m![2]), trail: printed, input: { file: a.inventoryFile!, sha256: sha(bytes) }, chars: bytes.length, fields: inv.fields ?? [], inventorySha: inv.summary?.sha256 ?? null, group: `edition:${printed}` };
   }
 
   /** Both saved rounds of ONE recorded run (C4.7 break B1): the newest usable checker round, then the draft of the same run. */
@@ -212,7 +239,7 @@ export class FormMasters {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`masters:${a.workspaceId}:${edition}`}))`;
       const open = await tx.draftingJob.findFirst({ where: { workspaceId: a.workspaceId, kind: MASTERS_STEP, status: "COMPLETED", detail: { path: ["edition"], equals: edition } }, orderBy: { startedAt: "desc" } });
       if (open) return { job: open, made: 0 };
-      const drafted = this.rulesDraft(inv.fields ?? []);
+      const drafted = this.rulesDraft(inv.fields ?? [], a.inventoryFile, inv.summary?.sha256);
       const job = await tx.draftingJob.create({ data: { workspaceId: a.workspaceId, combinationId: a.combinationId, attachmentId: a.id, kind: MASTERS_STEP, mode: "LOCAL", status: "COMPLETED", costUsd: 0, startedBy: actor.id, finishedAt: new Date(),
         message: `Rules pass on ${edition} (no AI, US$0): ${drafted.sections.length} sections from the form's parts and ${drafted.lists.length} answer lists from its drop-down form fields, proposed on To review.${drafted.tooLong.length ? ` Not proposed, too long for one list (a person adds it): ${drafted.tooLong.join(", ")}.` : ""} Form checks and document types need the AI step (Live or Saved).`.slice(0, 1000),
         detail: { operation: "draft_masters", edition, mode: "rules", sections: drafted.sections.length, answerLists: drafted.lists.length, tooLong: drafted.tooLong } } });
@@ -226,8 +253,8 @@ export class FormMasters {
   }
 
   /** The rules' sections and answer lists of an edition. A list longer than the queue's 400 values (a city list) is not cut short: it is named for a person instead. */
-  private rulesDraft(fields: InvField[]) {
-    const drafted = draftFromInventory(fields);
+  private rulesDraft(fields: InvField[], inventoryFile: string | null, inventorySha: string | null | undefined) {
+    const drafted = draftFromInventory(fields, headingsFor(inventoryFile, inventorySha));
     return { lists: drafted.lists.filter((l) => l.values.length <= 400), sections: drafted.sections, tooLong: drafted.lists.filter((l) => l.values.length > 400).map((l) => `${l.label} (${l.values.length} choices)`) };
   }
   /** The rules pass's proposals (sections and answer lists), for the rules pass or the first AI draft of an edition. */
@@ -247,12 +274,17 @@ export class FormMasters {
         rules: [{ rule: "from_pdf_box_choices", passed: true, why: null }], reason: `The choices of ${l.boxes.length} form field${l.boxes.length === 1 ? "" : "s"} on ${edition}, as printed: check the list's name.`.slice(0, 500),
         identity: { key: identityKeyOf(payload, ""), near: [], nearReason: null }, work: { boxes: l.boxes.slice(0, 50) } });
     }
+    let unnamed = 0;
+    const formName = edition.split(" (")[0];
     for (const s of sections) {
-      const payload = { kind: "section" as const, label: s.label, aliases: [], fieldKeys: s.fieldKeys };
-      const twin = await sameInLibrary(tx, a.workspaceId, payload);
-      items.push({ ...base, kind: "section", payload, rounds: rulesRead(`Rules read the form part "${s.label}": ${s.fieldKeys.length} form fields`, payload), source: source(s.quote), reuse: twin ? { match: "reuse", existingKey: twin } : { match: "new", existingKey: null },
-        rules: [{ rule: "from_form_part", passed: true, why: null }], reason: `A part of ${edition} grouping ${s.fieldKeys.length} form fields: check its name.`.slice(0, 500),
-        identity: { key: identityKeyOf(payload, ""), near: [], nearReason: null }, work: {} });
+      // QA-206: a part with no printed heading carries a placeholder name that says so, and never reuses a library item.
+      const label = s.label ?? `Unnamed section ${++unnamed} of ${formName}`.slice(0, 120);
+      const payload = { kind: "section" as const, label, aliases: [], fieldKeys: s.fieldKeys };
+      const twin = s.unnamed ? null : await sameInLibrary(tx, a.workspaceId, payload);
+      items.push({ ...base, kind: "section", payload, rounds: rulesRead(s.unnamed ? `Rules read a part of the form with no printed heading: ${s.fieldKeys.length} form fields` : `Rules read the printed heading "${s.quote}": ${s.fieldKeys.length} form fields under it`, payload), source: source(s.quote), reuse: twin ? { match: "reuse", existingKey: twin } : { match: "new", existingKey: null },
+        rules: [{ rule: "from_form_part", passed: true, why: null }, { rule: "printed_heading", passed: !s.unnamed, why: s.unnamed ? UNNAMED_WHY : null }],
+        reason: (s.unnamed ? `${UNNAMED_WHY} A part of ${edition} grouping ${s.fieldKeys.length} form fields.` : `The boxes of ${edition} under the printed heading "${s.quote}" (${s.fieldKeys.length} form fields).`).slice(0, 500),
+        identity: { key: identityKeyOf(payload, ""), near: [], nearReason: null }, work: s.unnamed ? { unnamed: true, placeholder: label } : {} });
     }
     return items;
   }
@@ -320,7 +352,7 @@ export class FormMasters {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`masters:${ws}:${t.kind === "form" ? t.edition : once.context}`}))`;
         // The first AI draft of an edition also carries the rules' sections and answer lists, unless the rules pass ran before (P-138: one draft).
         const rulesDone = t.kind === "form" ? !!(await tx.draftingJob.findFirst({ where: { workspaceId: ws, kind: MASTERS_STEP, status: "COMPLETED", detail: { path: ["edition"], equals: t.edition } }, select: { id: true } })) : true;
-        const rules = t.kind === "form" && !rulesDone ? this.rulesDraft(t.fields) : null;
+        const rules = t.kind === "form" && !rulesDone ? this.rulesDraft(t.fields, t.a.inventoryFile, t.inventorySha) : null;
         const items: (NewProposal & Work)[] = rules && t.kind === "form" ? await this.rulesItems(tx, t.a, t.edition, rules, job.id) : [];
         for (const x of res.items) {
           // A library kind's identity is its kind's rule (proposals.ts identityKeyOf); a document type a live library type

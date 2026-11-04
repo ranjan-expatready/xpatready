@@ -47,13 +47,14 @@ run(async () => {
     { data_path: "x4", section: "Page1.Details.B", caption: "* Family name" },
     { data_path: "x5", section: "Page1.Quiet.A", caption: "" },
   ]);
-  ok("C3.4 fail (review M1): hidden boxes, barcodes and machine parts make no section; a part with no printed words makes none", h.sections.length === 1 && h.sections[0].label === "Details" && h.sections[0].fieldKeys.join() === "x4" && h.sections[0].quote === "Family name", h.sections);
+  ok("C3.4 fail (review M1): hidden boxes, barcodes and machine parts make no section; a part with no printed words makes none", h.sections.length === 1 && h.sections[0].part === "Details" && h.sections[0].fieldKeys.join() === "x4" && h.sections[0].quote === "Family name", h.sections);
 
   const five = draftFromInventory([
     { data_path: "y1", section: "Page1.Five.A", caption: "Family name (Surname)" },
     { data_path: "y2", section: "Page1.Seven.A", caption: "Signature of applicant" },
   ]);
-  ok("C3.4 fail→pass (re-review M2): a part named by a number word (IMM 5475's Five, Seven) is a real section, kept for a person to rename", five.sections.length === 2 && five.sections.some((x) => x.label === "Five" && x.quote === "Family name (Surname)"), five.sections);
+  // QA-206: such a part is kept, but never under its internal name: with no printed heading it is held for a person to name.
+  ok("C3.4 fail→pass (re-review M2, QA-206): a part with an internal name only (IMM 5475's Five, Seven) is a real section, held unnamed for a person to name", five.sections.length === 2 && five.sections.every((x) => x.unnamed && x.label === null) && five.sections.some((x) => x.part === "Five" && x.quote === "Family name (Surname)"), five.sections);
 
   await T.ready();
   const vv = T.combo("vv.single");
