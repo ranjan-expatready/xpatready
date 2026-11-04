@@ -769,6 +769,8 @@ export type Decision = { action: "accept" | "edit" | "reject"; reason?: string |
 export const UNNAMED_WHY = "Give the section a name before it is accepted.";
 /** A placeholder name, however it is spaced or cased ("Unnamed  section 2 of IMM 5475"). */
 const isPlaceholder = (label: string) => normalizeLabel(label).startsWith("unnamedsection");
+/** The C3.4 rules pass's step (form-masters.ts MASTERS_STEP; named here so this module does not import that one). */
+const MASTERS_SECTIONS_STEP = "masters_edition";
 
 /** Accept, edit or reject waiting items together (one batch, one Undo). Every item is checked before anything is
  *  written; an accepted or edited library item runs its lander and is checked against the library again (identity at
@@ -813,9 +815,15 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         payload = p.data!;
       }
       // QA-206: a section the rules pass found no printed heading for is accepted only under a name a person gives it.
-      if (d.action !== "reject" && r.kind === "section" && (r.work as { unnamed?: unknown } | null)?.unnamed === true) {
+      // A rules-pass section drafted before printed headings were read (no "printed_heading" rule result; Devin review on
+      // #883) may carry the PDF's internal part name ("Page wrapper"), and its edition's one draft (P-138) is never redone:
+      // it too is accepted only as an edit with a name a person typed (keeping its name is then the person's choice).
+      const legacy = r.kind === "section" && r.step === MASTERS_SECTIONS_STEP && r.origin === "rules" && !((r.rules ?? []) as { rule?: unknown }[]).some((x) => x?.rule === "printed_heading");
+      if (d.action !== "reject" && r.kind === "section" && ((r.work as { unnamed?: unknown } | null)?.unnamed === true || legacy)) {
         const was = String((r.payload as { label?: unknown }).label ?? ""), now = String((payload as { label?: unknown }).label ?? "");
-        if (d.action === "accept" || normalizeLabel(now) === normalizeLabel(was) || isPlaceholder(now)) fail(`"${was}" has no name from the form yet. ${UNNAMED_WHY}${rows.length > 1 ? " Nothing was accepted." : ""}`, HttpStatus.CONFLICT);
+        if (d.action === "accept" || isPlaceholder(now) || (!legacy && normalizeLabel(now) === normalizeLabel(was)))
+          fail(legacy ? `"${was}" was drafted before the form's printed headings were read, so its name may be the PDF's own part name. ${UNNAMED_WHY} Keeping this name is fine once you have checked it.${rows.length > 1 ? " Nothing was accepted." : ""}`
+            : `"${was}" has no name from the form yet. ${UNNAMED_WHY}${rows.length > 1 ? " Nothing was accepted." : ""}`, HttpStatus.CONFLICT);
       }
       let landedAs: string | null = null, reused = false, pqr: (PqrWork & { stamp: string }) | null = null;
       let resolved: { match: string; existingKey: string | null } | null = null;

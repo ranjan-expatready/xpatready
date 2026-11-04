@@ -117,6 +117,19 @@ run(async () => {
   const rej = unnamed[1];
   r = await call("POST", "/review/proposals/decide", { ids: [rej?.id ?? NONE], action: "reject", reason: "Not a section of its own" }, AUTHOR);
   ok("QA-206 pass: an unnamed section can still be rejected", !!rej && r.status < 300, r.status >= 300 ? words(r) : undefined);
+  // Devin review on #883: a rules-pass section drafted before printed headings were read (no "printed_heading" result;
+  // its edition's one draft is never redone, P-138) may carry the PDF's part name: Accept refuses it, an edit with a name a
+  // person typed lands it, the same name included once typed.
+  const old = s5257.find((x: any) => x.title === "Education");
+  sql(`update proposal_item set payload = jsonb_set(payload, '{label}', '"Page wrapper"'), rules = '[{"rule":"from_form_part","passed":true,"why":null}]'::jsonb, work = '{}'::jsonb where id = '${old?.id ?? NONE}'`);
+  const w2 = waiting();
+  r = await call("POST", "/review/proposals/decide", { ids: [old?.id ?? NONE], action: "accept" }, AUTHOR);
+  ok("QA-206 fail (Devin review): a section drafted before printed headings were read (\"Page wrapper\") is not accepted as it is (409), in words", !!old && r.status === 409 && /drafted before the form's printed headings were read/.test(words(r)) && waiting() === w2, words(r));
+  const oldPayload = (await call("GET", `/review/proposals?group=${encodeURIComponent(groups["IMM 5257"])}`)).body?.group?.bands?.check?.find((x: any) => x.id === old?.id)?.readings?.draft?.payload;
+  r = await call("POST", "/review/proposals/decide", { ids: [old?.id ?? NONE], action: "edit", payload: { ...(oldPayload ?? {}), label: "Unnamed  section" } }, AUTHOR);
+  ok("QA-206 fail (Devin review): such a section is not landed under a placeholder name either (409)", r.status === 409 && waiting() === w2, words(r));
+  r = await call("POST", "/review/proposals/decide", { ids: [old?.id ?? NONE], action: "edit", payload: { ...(oldPayload ?? {}), label: "Education and training" } }, AUTHOR);
+  ok("QA-206 pass (Devin review): named by a person, it lands under that name", r.status < 300 && waiting() === w2 + 1 && sql("select count(*) from logical_section where title = 'Education and training'") === "1", r.status >= 300 ? words(r) : undefined);
   ok("QA-206 pass: the whole check spent US$0", T.spent() === before);
   T.done();
 });

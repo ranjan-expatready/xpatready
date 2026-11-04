@@ -168,10 +168,13 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
   const withSeverity = (payload: unknown) => (p.kind === "form_check" && payload && typeof payload === "object" ? { ...payload, severity } : payload);
   // QA-206 (P-158, PRODUCT §4): a section with no printed heading on the form is accepted only under a name a person types
   // here (an edit of its name); its placeholder name is never accepted (the API refuses it too).
-  const unnamed = p.kind === "section" && p.rules.some((r) => r.rule === "printed_heading" && !r.passed);
+  // Devin review on #883: a rules-pass section drafted before printed headings were read has no "printed_heading" result
+  // and may carry the PDF's part name: it is named here too, and may keep its name once a person has typed it.
+  const legacy = p.kind === "section" && p.origin === "rules" && p.step === "masters_edition" && !p.rules.some((r) => r.rule === "printed_heading");
+  const unnamed = (p.kind === "section" && p.rules.some((r) => r.rule === "printed_heading" && !r.passed)) || legacy;
   const [name, setName] = React.useState("");
   const flat = (x: string) => x.normalize("NFKC").toLocaleLowerCase("en-CA").replace(/[^\p{L}\p{N}\p{M}]+/gu, "");
-  const named = flat(name).length >= 2 && !flat(name).startsWith("unnamedsection") && flat(name) !== flat(p.title);
+  const named = flat(name).length >= 2 && !flat(name).startsWith("unnamedsection") && (legacy || flat(name) !== flat(p.title));
   const acceptFirst = () => (unnamed ? run.mutate({ action: "edit", payload: { ...(p.readings.draft?.payload as object), label: name.trim() } })
     : p.kind === "form_check" && severity !== asRead ? run.mutate({ action: "edit", payload: withSeverity(p.readings.draft?.payload) }) : run.mutate({ action: "accept" }));
   return (
@@ -190,7 +193,7 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
           <div>
             <label className="block text-sm font-medium" htmlFor="section-name">Section name (as a client will read it)</label>
             <Input id="section-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} className="mt-1" placeholder="For example: Your visit" aria-describedby="accept-needs-name" />
-            <p id="accept-needs-name" className="mt-1 text-xs text-text-muted">{named ? "It is accepted under this name." : "Accept stays off until you give the section a name (the reason above says why the form gives none)."}</p>
+            <p id="accept-needs-name" className="mt-1 text-xs text-text-muted">{named ? "It is accepted under this name." : legacy ? "Accept stays off until you type the section's name: it was drafted before the form's printed headings were read, so its name may be the PDF's own part name (type it again if it is right)." : "Accept stays off until you give the section a name (the reason above says why the form gives none)."}</p>
           </div>
         ) : null}
         {p.meaning ? <section><h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted">What it means</h3><p className="mt-1">{p.meaning}</p></section> : null}
