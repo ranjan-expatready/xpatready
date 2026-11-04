@@ -1,0 +1,12 @@
+{
+ "file": "official-sources/ircc/forms/imm5645e.pdf",
+ "sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+ "read_by": "prototype/p1/xfa_headings.py (the form's own XFA template: the text printed in each part; no AI)",
+ "parts": {
+  "page1.SectionC": {
+   "heading": "Section D - certification",
+   "printed": "SECTION D - CERTIFICATION",
+   "how": "banner"
+  }
+ }
+}

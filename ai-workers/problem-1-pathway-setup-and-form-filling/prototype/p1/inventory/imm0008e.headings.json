@@ -1,0 +1,93 @@
+{
+ "file": "official-sources/ircc/forms/imm0008e.pdf",
+ "sha256": "2560489b57160f59c54a58d2f837d220a0426285ec17465c487b6fe2a5f63285",
+ "read_by": "prototype/p1/xfa_headings.py (the form's own XFA template: the text printed in each part; no AI)",
+ "parts": {
+  "Page1.Header": {
+   "heading": "Generic application form for Canada",
+   "printed": "GENERIC APPLICATION FORM FOR CANADA",
+   "how": "banner"
+  },
+  "Page1.genDetails": {
+   "heading": "Application details",
+   "printed": "APPLICATION DETAILS",
+   "how": "banner"
+  },
+  "Page1.PersonalDetails": {
+   "heading": "Personal details",
+   "printed": "PERSONAL DETAILS",
+   "how": "banner"
+  },
+  "Page1.contactInformation": {
+   "heading": "Contact information",
+   "printed": "CONTACT INFORMATION",
+   "how": "banner"
+  },
+  "Page1.passport": {
+   "heading": "Passport",
+   "printed": "PASSPORT",
+   "how": "banner"
+  },
+  "Page1.natID": {
+   "heading": "National identity document",
+   "printed": "NATIONAL IDENTITY DOCUMENT",
+   "how": "banner"
+  },
+  "Page1.uslpr": {
+   "heading": "US PR card",
+   "printed": "US PR CARD",
+   "how": "banner"
+  },
+  "Page1.educationOccupation": {
+   "heading": "Education/occupation detail",
+   "printed": "EDUCATION/OCCUPATION DETAIL",
+   "how": "banner"
+  },
+  "Page1.languageDetails": {
+   "heading": "Language detail",
+   "printed": "LANGUAGE DETAIL",
+   "how": "banner"
+  },
+  "Page1.depInfoHeader": {
+   "heading": "Dependant(S)",
+   "printed": "DEPENDANT(S)",
+   "how": "banner"
+  },
+  "Page1.depPrime": {
+   "heading": "Personal details",
+   "printed": "PERSONAL DETAILS",
+   "how": "banner"
+  },
+  "Page1.dependants": {
+   "heading": "Personal details",
+   "printed": "PERSONAL DETAILS",
+   "how": "banner"
+  },
+  "Page1.depHeader": {
+   "heading": "Add dependant(S)",
+   "printed": "ADD DEPENDANT(S)",
+   "how": "banner"
+  },
+  "Page1.ButtonsFooter": {
+   "heading": "Add dependant(S)",
+   "printed": "ADD DEPENDANT(S)",
+   "how": "carried",
+   "from": "Page1.depHeader"
+  },
+  "Page1.BC1": {
+   "heading": "Generic application form for Canada",
+   "printed": "GENERIC APPLICATION FORM FOR CANADA",
+   "how": "banner"
+  },
+  "Page1.BC2": {
+   "heading": "Generic application form for Canada",
+   "printed": "GENERIC APPLICATION FORM FOR CANADA",
+   "how": "banner"
+  },
+  "Page1.declaration": {
+   "heading": "Consent and declaration of applicant",
+   "printed": "CONSENT AND DECLARATION OF APPLICANT",
+   "how": "banner"
+  }
+ }
+}

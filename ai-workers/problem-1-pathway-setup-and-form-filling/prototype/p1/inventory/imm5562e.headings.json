@@ -1,0 +1,6 @@
+{
+ "file": "official-sources/ircc/forms/imm5562e.pdf",
+ "sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+ "read_by": "prototype/p1/xfa_headings.py (the form's own XFA template: the text printed in each part; no AI)",
+ "parts": {}
+}

@@ -1,0 +1,12 @@
+{
+ "file": "official-sources/ircc/forms/imm5409e.pdf",
+ "sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+ "read_by": "prototype/p1/xfa_headings.py (the form's own XFA template: the text printed in each part; no AI)",
+ "parts": {
+  "Page1.Section5": {
+   "heading": "Solemn declaration",
+   "printed": "SOLEMN DECLARATION",
+   "how": "banner"
+  }
+ }
+}

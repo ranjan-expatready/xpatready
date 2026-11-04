@@ -1,0 +1,42 @@
+{
+ "file": "official-sources/ircc/forms/imm5710e.pdf",
+ "sha256": "22073379f73a0bd31b1b37cda266e797be0e67b4e8693efcf6cf92325f985672",
+ "read_by": "prototype/p1/xfa_headings.py (the form's own XFA template: the text printed in each part; no AI)",
+ "parts": {
+  "Page1.PersonalDetails": {
+   "heading": "Personal details",
+   "printed": "PERSONAL DETAILS",
+   "how": "banner"
+  },
+  "Page2.MaritalStatus": {
+   "heading": "Personal details",
+   "printed": "PERSONAL DETAILS",
+   "how": "banner"
+  },
+  "Page2.natID": {
+   "heading": "National identity document",
+   "printed": "NATIONAL IDENTITY DOCUMENT",
+   "how": "banner"
+  },
+  "Page2.USCard": {
+   "heading": "US PR card",
+   "printed": "US PR CARD",
+   "how": "banner"
+  },
+  "Page3.DetailsOfWork": {
+   "heading": "Details of intended work in Canada",
+   "printed": "DETAILS OF INTENDED WORK IN CANADA",
+   "how": "banner"
+  },
+  "Page4.BackgroundInfo": {
+   "heading": "Background information",
+   "printed": "BACKGROUND INFORMATION",
+   "how": "banner"
+  },
+  "Page4.Consent1": {
+   "heading": "Signature",
+   "printed": "SIGNATURE",
+   "how": "banner"
+  }
+ }
+}

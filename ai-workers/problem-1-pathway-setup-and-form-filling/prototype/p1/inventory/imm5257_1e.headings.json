@@ -1,0 +1,23 @@
+{
+ "file": "official-sources/ircc/forms/imm5257_1e.pdf",
+ "sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+ "read_by": "prototype/p1/xfa_headings.py (the form's own XFA template: the text printed in each part; no AI)",
+ "parts": {
+  "page1.header": {
+   "heading": "Schedule 1application for temporary residence",
+   "printed": "SCHEDULE 1APPLICATION FOR TEMPORARY RESIDENCE",
+   "how": "banner"
+  },
+  "page1.disclaimer": {
+   "heading": "Privacy notice",
+   "printed": "PRIVACY NOTICE",
+   "how": "banner"
+  },
+  "page1.ButtonsFooter": {
+   "heading": "Privacy notice",
+   "printed": "PRIVACY NOTICE",
+   "how": "carried",
+   "from": "page1.disclaimer"
+  }
+ }
+}
