@@ -79,6 +79,21 @@ export function LibraryChangePage() {
         </dl>
       ) : null}
       {x.rename ? <RenameChange change={x} /> : null}
+      {x.supplies ? (
+        // C4.5: what the second person compares before approving: the facts before → after, each with its official words.
+        <div className="space-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-supplies>
+          <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2">
+            <dt className="text-text-muted">Document type</dt><dd className="font-semibold">{x.supplies.document}</dd>
+            <dt className="text-text-muted">Supplies now</dt><dd>{x.supplies.before.length ? x.supplies.before.join(" · ") : "No fact: filed as is"}</dd>
+            <dt className="text-text-muted">Proposed</dt><dd className="font-semibold">{x.supplies.after.length ? `${x.supplies.after.length} fact${x.supplies.after.length === 1 ? "" : "s"}` : "No fact"}{x.supplies.removed.length ? ` · removes ${x.supplies.removed.join(", ")}` : ""}</dd>
+            <dt className="text-text-muted">Used by</dt><dd>{x.supplies.uses} combination{x.supplies.uses === 1 ? "" : "s"}: their drafts and Preview change at approval</dd>
+          </dl>
+          {x.supplies.cites.length ? <ul className="space-y-1.5 border-t border-border pt-2" aria-label="Each fact and the official words">{x.supplies.cites.map((c) => (
+            <li key={c.fact} data-supply-cite={c.fact}><span className="font-medium">{c.label}</span>{c.about !== "holder" ? <span className="text-text-muted"> · about {c.about === "holder.spouse" ? "the holder's spouse or partner" : "the holder's parent"}</span> : null}<br /><span className="text-xs text-text-muted">{c.source} · read {c.readOn}: </span><span className="text-xs">“{c.quote}”</span></li>
+          ))}</ul> : null}
+          <p className="text-xs text-text-muted">Sample until the immigration expert confirms. Approving makes a draft of the document type; it goes out with each combination's next release.</p>
+        </div>
+      ) : null}
       {x.field ? (
         <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-field>
           <dt className="text-text-muted">Name</dt><dd className="font-semibold">{x.field.label}</dd>
