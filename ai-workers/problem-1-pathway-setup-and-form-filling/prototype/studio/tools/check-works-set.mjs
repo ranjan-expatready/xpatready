@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { join, dirname, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { rows, protectedSet, held, notRun } from "./works-set.mjs";
+import { rows, protectedSet, held, notRun, dataRows } from "./works-set.mjs";
 import { packsOf } from "./gate-b.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url)), P = resolve(HERE, "../../../product");
@@ -60,9 +60,14 @@ ok("_emphasis_, a quote, a check box and \"•\" are read, an underscore inside 
 ok("an added column before Status still reads M and Status by the header", protectedSet("| # | Step | Capability | Owner | M | Status | x |\n|---|---|---|---|---|---|---|\n| C9.1 | x | y | qa | M2 | Works | a |").map((r) => r.id).join() === "C9.1");
 ok("\"✅ Works\" counts as Works", protectedSet("| C9.1 | x | y | M2 | ✅ Works | a | b |").map((r) => r.id).join() === "C9.1");
 
+// B77 (P-322): the data each row's verdict counts on. A checkpoint line names its evidence; anything else runs on the six.
+const d = dataRows("# data\n- C4.8 checkpoint: release and case steps count on the configured checkpoint (P-322), qa run 41860000000\n| C5.6 | checkpoint | QA-212 |\n- C3.2 six, a setup row (P-322)\n- C9.9 checkpoint because\n```\n- C1.1 checkpoint P-322\n```\n- C7.1 checkpoint P-322\n- C7.1 six P-322\n");
+ok("dataRows() reads list and table lines with evidence; a line with no run, bug or decision, a fenced example, and two answers for one row change nothing (B77)", d.data.get("C4.8")?.data === "checkpoint" && d.data.get("C5.6")?.data === "checkpoint" && d.data.get("C3.2")?.data === "six" && !d.data.has("C9.9") && !d.data.has("C1.1") && !d.data.has("C7.1") && d.bad.length === 2, { data: [...d.data], bad: d.bad });
+ok("notRun() takes a pack run on the checkpoint as run (B77)", notRun(["C4.8.test.ts"], "    C4.8.test.ts on the checkpoint: exit 0, 11/11 passed").length === 0);
+
 const T = mkdtempSync(join(tmpdir(), "works-set-")), f = join(T, "CAPABILITIES.md"); writeFileSync(f, MD);
 const none = join(T, "none.txt"); writeFileSync(none, "");
-const CLEAN = { GITHUB_STEP_SUMMARY: "", RANGE: "", QUEUE: "", PR_TITLE: "", PR_BODY: "", WORKS_SET_GATE: "", GATE_B_SKIP_PACKS: "" };
+const CLEAN = { GITHUB_STEP_SUMMARY: "", RANGE: "", QUEUE: "", PR_TITLE: "", PR_BODY: "", WORKS_SET_GATE: "", GATE_B_SKIP_PACKS: "", GATE_B_DATA: "" };
 const cli = (args, env = {}) => { const r = spawnSync(process.execPath, [join(HERE, "works-set.mjs"), ...args], { encoding: "utf8", env: { ...process.env, ...CLEAN, ...env } }); return { code: r.status, out: r.stdout + r.stderr }; };
 let r = cli(["--json", "--file", f, "--held", none]);
 ok("--json lists the protected rows that have a pack, for the job matrix", r.code === 0 && JSON.stringify(JSON.parse(r.out)) === JSON.stringify(["C11.13", "C3.2", "C11.12"]), r);
@@ -110,8 +115,9 @@ writeFileSync(fake, `import { readFileSync, writeFileSync, existsSync } from "no
 const plan = (process.env.FAKE_EXITS ?? "0").split(","), n = existsSync(${JSON.stringify(state)}) ? Number(readFileSync(${JSON.stringify(state)}, "utf8")) : 0;
 writeFileSync(${JSON.stringify(state)}, String(n + 1));
 const code = Number(plan[Math.min(n, plan.length - 1)]), skip = (process.env.GATE_B_SKIP_PACKS ?? "").split(",").filter(Boolean);
-console.log("fake gate", process.argv.slice(2).join(" "), "QUEUE=[" + (process.env.QUEUE ?? "") + "] PR_TITLE=[" + (process.env.PR_TITLE ?? "") + "] SKIP=[" + skip.join(",") + "]");
-for (const p of (process.env.FAKE_PACKS ?? "").split(",").filter(Boolean)) if (!skip.includes(p)) console.log("    " + p + " on the six: exit " + code + ", 1/1 passed");
+console.log("fake gate", process.argv.slice(2).join(" "), "QUEUE=[" + (process.env.QUEUE ?? "") + "] PR_TITLE=[" + (process.env.PR_TITLE ?? "") + "] SKIP=[" + skip.join(",") + "] DATA=[" + (process.env.GATE_B_DATA ?? "") + "]");
+const where = process.env.GATE_B_DATA === "checkpoint" ? "on the checkpoint" : "on the six";
+for (const p of (process.env.FAKE_PACKS ?? "").split(",").filter(Boolean)) if (!skip.includes(p)) console.log("    " + p + " " + where + ": exit " + code + ", 1/1 passed");
 process.exit(code);`);
 const run = (exits, env = {}, id = "C11.13", heldFile = none) => { rmSync(state, { force: true }); const x = cli(["--run", id, "--held", heldFile], { WORKS_SET_GATE: fake, FAKE_EXITS: exits, FAKE_PACKS: packsOf(id).join(","), ...env }); return { ...x, calls: existsSync(state) ? Number(readFileSync(state, "utf8")) : 0 }; };
 r = run("0");
@@ -133,6 +139,21 @@ ok("a held pack is skipped by name (GATE_B_SKIP_PACKS) and the capability's othe
 writeFileSync(hf, "C11.13 red on main (run 1000001)\n");
 r = run("1", {}, "C11.13", hf);
 ok("a fully held capability runs nothing and passes, saying so", r.code === 0 && r.calls === 0 && /every pack is held/.test(r.out), r);
+// B77: a row the data file puts on the checkpoint runs there (GATE_B_DATA=checkpoint); every other row on the six.
+const df = join(T, "data.md"); writeFileSync(df, "- C11.13 checkpoint: counts on the configured checkpoint (P-322)\n");
+rmSync(state, { force: true });
+let rd = cli(["--run", "C11.13", "--held", none, "--data", df], { WORKS_SET_GATE: fake, FAKE_EXITS: "0", FAKE_PACKS: packsOf("C11.13").join(",") });
+ok("a row the data file names runs on the configured checkpoint (GATE_B_DATA=checkpoint) and passes (B77)", rd.code === 0 && /DATA=\[checkpoint\]/.test(rd.out) && /green on the checkpoint/.test(rd.out), rd.out.slice(0, 400));
+rmSync(state, { force: true });
+rd = cli(["--run", "C11.12", "--held", none, "--data", df], { WORKS_SET_GATE: fake, FAKE_EXITS: "0", FAKE_PACKS: packsOf("C11.12").join(",") });
+ok("a row the data file does not name (a setup row) still runs on the six (B77)", rd.code === 0 && /DATA=\[six\]/.test(rd.out) && /green on the six/.test(rd.out), rd.out.slice(0, 400));
+rd = cli(["--list", "--file", f, "--held", none, "--data", df]);
+ok("--list marks a row on the checkpoint", rd.code === 0 && /C11\.13 \(on the checkpoint\): C11\.13\.test\.ts/.test(rd.out), rd.out);
+writeFileSync(df, "- C9.9 checkpoint P-322\n- C11.13 checkpoint\n");
+rd = cli(["--list", "--file", f, "--held", none, "--data", df]);
+ok("a stale data line and an unreadable one are reported, and the row stays on the six", rd.code === 0 && /stale data line: C9\.9/.test(rd.out) && /data line not read .*C11\.13 checkpoint/.test(rd.out) && !/C11\.13 \(on the checkpoint\)/.test(rd.out), rd.out);
+rd = cli(["--json", "--file", f, "--held", none, "--data", df]);
+ok("--json still prints only the array on stdout with a bad data line (warnings on stderr)", rd.code === 0 && /^\[/.test(spawnSync(process.execPath, [join(HERE, "works-set.mjs"), "--json", "--file", f, "--held", none, "--data", df], { encoding: "utf8", env: { ...process.env, ...CLEAN } }).stdout), rd.out);
 r = run("0", {}, "C1.1");
 ok("a capability with no pack on the base cannot run (exit 2)", r.code === 2 && /no acceptance pack on the base/.test(r.out), r);
 r = run("0", { QUEUE: "true", PR_TITLE: "merge queue: checking #1", PR_BODY: "Claims Works: C11.13" });
@@ -150,5 +171,7 @@ ok(`the real qa/CAPABILITIES.md: ${real.length} M2 Works rows, ${real.filter((x)
 // (break N3); the plan prints the same line in each batch.
 if (!existsSync(join(P, "qa/REGRESSION-HELD.md"))) console.log("WARN  product/qa/REGRESSION-HELD.md is not on this branch yet (qa's notes PR); the set cannot start without it");
 else { const realHeld = held(readFileSync(join(P, "qa/REGRESSION-HELD.md"), "utf8")); if (realHeld.bad.length) console.log(`WARN  hold lines not read (they hold nothing): ${realHeld.bad.join(" | ")}`); }
+// The real data file (B77), when qa has written it: an unreadable line is a WARN, never a FAIL (as the hold file).
+if (existsSync(join(P, "qa/REGRESSION-DATA.md"))) { const realData = dataRows(readFileSync(join(P, "qa/REGRESSION-DATA.md"), "utf8")); if (realData.bad.length) console.log(`WARN  data lines not read (those rows run on the six): ${realData.bad.join(" | ")}`); }
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
