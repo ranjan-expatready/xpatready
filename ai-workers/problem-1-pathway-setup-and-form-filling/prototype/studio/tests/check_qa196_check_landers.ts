@@ -14,7 +14,7 @@
 //   zsh studio/tools/isolated.sh forms_qa196 4612 start && tsx studio/tests/check_qa196_check_landers.ts 4612 xr_studio_forms_qa196
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const PORT = Number(process.argv[2] ?? 4612), DB = process.argv[3] ?? "xr_studio_forms_qa196";
@@ -35,7 +35,19 @@ let seq = 0;
 const stamp = () => `-live-20000101t${String(++seq).padStart(9, "0")}z-pacheck${process.pid}y`;
 const written: string[] = [], kept = new Map<string, Buffer | null>();
 const keep = (f: string) => { if (!kept.has(f)) kept.set(f, existsSync(f) ? readFileSync(f) : null); };
-const cleanUp = () => { for (const f of written) rmSync(f, { force: true }); for (const [f, b] of kept) { if (b === null) rmSync(f, { force: true }); else writeFileSync(f, b); } };
+// #771 committed the real C3.4 runs, which Saved prefers to this check's simulated ones (stamped 1 Jan 2000), so they are
+// set aside in the copy's var folder while it runs and put back after, also on Ctrl-C or a stop; a folder a killed check
+// left is put back first (as check_forms_c34_ai.ts).
+const MASTERS_LIVE = /^studio-masters-.+-live-\d{8}t\d{9}z-[a-z0-9]+\.json$/;
+const aside = join(STUDIO, "var", `qa196-real-runs-${process.pid}`);
+const putBack = (dir = aside) => { if (!existsSync(dir)) return; for (const f of readdirSync(dir)) renameSync(join(dir, f), join(RUNS, f)); rmSync(dir, { recursive: true, force: true }); };
+const setAside = () => {
+  const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch { return false; } };
+  for (const d of existsSync(join(STUDIO, "var")) ? readdirSync(join(STUDIO, "var")).filter((x) => /^qa196-real-runs-\d+$/.test(x)) : []) if (!alive(Number(d.slice(16)))) putBack(join(STUDIO, "var", d));
+  mkdirSync(aside, { recursive: true });
+  for (const f of readdirSync(RUNS).filter((x) => MASTERS_LIVE.test(x) && !x.includes("pacheck"))) renameSync(join(RUNS, f), join(aside, f));
+};
+const cleanUp = () => { for (const f of written) rmSync(f, { force: true }); for (const [f, b] of kept) { if (b === null) rmSync(f, { force: true }); else writeFileSync(f, b); } putBack(); };
 for (const [sig, code] of [["SIGINT", 130], ["SIGTERM", 143]] as const) process.on(sig, () => { cleanUp(); process.exit(code); });
 
 import { CHOICE, DETAILS, FORM_ANSWER, guideCheck } from "./fixtures/c34-answers.ts";
@@ -71,6 +83,7 @@ const GUIDE_ANSWER = { checks: [guideCheck, crossCheck], unresolved: [] };
     const f = join(RUNS, `${jobId}${stamp()}${Math.random().toString(36).slice(2, 8)}.json`);
     writeFileSync(f, JSON.stringify(rec, null, 1) + "\n"); written.push(f);
   };
+  setAside();
   record(fd, FORM_ANSWER); record(fk, FORM_ANSWER); record(gd, GUIDE_ANSWER); record(gk, GUIDE_ANSWER);
   rmSync(scratch, { recursive: true, force: true });
   const fx = await call("POST", `/attachments/${form}/draft-masters`, { mode: "replay" });
