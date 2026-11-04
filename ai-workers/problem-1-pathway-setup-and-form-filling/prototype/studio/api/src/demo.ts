@@ -32,6 +32,9 @@ import { keepChosenEveryones, placeFromFormParts } from "./form-part-placements.
 import { decide } from "./proposals.ts";
 import { RuleFacts } from "./rule-facts.ts";
 import { FormLibrary } from "./form-library.ts";
+import { CaseForms } from "./fill-case.ts";
+import { Runtime } from "./runtime.ts";
+import { openSampleFamilyCase, SAMPLE_CASE } from "./sample-case.ts";
 /** QA-144 slices 1–3 (tech lead on #798): the combinations the configured checkpoint sets up from their forms' own parts.
  *  The others follow, one slice each. */
 const SET_UP_FROM_FORMS = new Set(["vv.single", "wp.lmia_inside", "sp.outside"]);
@@ -88,7 +91,7 @@ type SampleFile = { pathways: { key: string; label: string; type: "INDIVIDUAL" |
 
 @Injectable()
 export class Demo {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Programs) private readonly programs: Programs, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder, @Inject(Screen02) private readonly library: Screen02, @Inject(FormMasters) private readonly masters: FormMasters, @Inject(Forms) private readonly forms: Forms, @Inject(RuleFacts) private readonly ruleFacts: RuleFacts, @Inject(FormLibrary) private readonly formLibrary: FormLibrary, @Inject(ReviewProposals) private readonly proposals: ReviewProposals, @Inject(Checklists) private readonly checklists: Checklists) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Programs) private readonly programs: Programs, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder, @Inject(Screen02) private readonly library: Screen02, @Inject(FormMasters) private readonly masters: FormMasters, @Inject(Forms) private readonly forms: Forms, @Inject(RuleFacts) private readonly ruleFacts: RuleFacts, @Inject(FormLibrary) private readonly formLibrary: FormLibrary, @Inject(ReviewProposals) private readonly proposals: ReviewProposals, @Inject(Runtime) private readonly runtime: Runtime, @Inject(CaseForms) private readonly caseForms: CaseForms, @Inject(Checklists) private readonly checklists: Checklists) {}
 
   /** QA-144: the family information form a combination of FORM_SETUP files, by its application form's channel. */
   private async familyForm(combinationId: string, key: string | undefined) {
@@ -807,7 +810,13 @@ export class Demo {
     const visitor = released.some((l) => /Visitor visa/.test(l));
     row({ row: "9", title: "Channels for release 2 (Mixed: IMM 5257 Online, so IMM 5645 as the family information form; IMM 5476 PDF upload, signed by hand and scanned)", status: "waiting", shows: "The channel route and the signed-scan lines are built (Forms tab)",
       why: visitor ? "Set on the Visitor visa's Forms tab for release 2." : "Waits for the Visitor visa's release 1: its channels change for release 2." });
-    row({ row: "11", title: "A family case on release 1", status: "waiting", shows: "The case area is built (Demo › Open the case area)", why: visitor ? "Open a case on the Visitor visa's release 1." : "Waits for the Visitor visa's release 1 (a case runs on a release)." });
+    // Row 11 (QA-231, P-67): a Sample family case opens on the Visitor visa's release 1 through the case officer's own
+    // steps, before row 17 holds the new edition, so the case is seen staying on its release (api/src/sample-case.ts).
+    const fam = visitor && vvId ? await timed("sample family case (row 11)", () => openSampleFamilyCase(this.db, this.runtime, this.caseForms, vvId)) : null;
+    // Partial, never done: DEMO.md row 11 also wants each person answering once (the family of four, C10.1 part B).
+    row({ row: "11", title: "A family case on release 1", status: !fam ? "waiting" : "partial",
+      shows: fam?.caseId ? `Case ${SAMPLE_CASE.reference} (Sample, ${fam.people} people) on release ${fam.release}: ${fam.copies.length} form cop${fam.copies.length === 1 ? "y" : "ies"} made (${fam.copies.join(", ")})` : "The case area is built (Demo › Open the case area)",
+      why: !fam ? "Waits for the Visitor visa's release 1 (a case runs on a release)." : [...fam.refused, "Nobody has answered yet: each person answers once on the case (C10.1 part B, a family of four)."].join(" · ") });
     row({ row: "12", title: "IMM 5257 filled as a PDF and read back equal", status: "waiting", shows: "The fill is built (C7.1)", why: "IMM 5257 has no saved field-map answer under today's 5-part drafting: it waits for the founder's paid run (Lead, 30 Oct)." });
     // Row 17 (QA-207): the current IMM 5476 arrives through the intake on no combination, as a person sends a new edition:
     // the intake holds it (C2.4), and its comparison and impact wait on To review (C9.1; saved AI comparison, #781). The

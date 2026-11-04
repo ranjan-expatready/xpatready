@@ -165,6 +165,21 @@ export function pack2(id: string) {
     await approveAll();
     return out;
   }
+  /** B72 (P-340, P-318 (6), C3.6): on the six a combination has no rule until a person adds one. The author adds each
+   *  Sample rule of studio/samples/sample-rules.json for this combination through the author's own route, once (not when
+   *  the draft has a rule already). Test setup only, labelled as the sample loader's words. Returns how many it added. */
+  async function ruleBySteps(comboId: string) {
+    const key = sql(`select combination_key from combination where id='${comboId}'`);
+    if (sql(`select count(*) from predicate where combination_id='${comboId}' and status <> 'RETIRED'`) !== "0") return 0;
+    const rules = (JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "samples", "sample-rules.json"), "utf8")) as { rules: { combination: string; condition: unknown; whenPlain: string; thenPlain: string; forWhom: string; sourceQuote: string }[] }).rules.filter((r) => r.combination === key);
+    let added = 0;
+    for (const r of rules) {
+      const x = await call("POST", `/combinations/${comboId}/rules`, { condition: r.condition, whenPlain: r.whenPlain, thenPlain: r.thenPlain, forWhom: r.forWhom, sourceQuote: r.sourceQuote }, AUTHOR);
+      if (x.status < 300) added++; else console.log(`SETUP the Sample rule "${r.thenPlain.slice(0, 60)}" was refused: ${x.status} ${words(x).slice(0, 200)}`);
+    }
+    console.log(`SETUP ${added} Sample rule(s) added by the author's route (samples/sample-rules.json)`);
+    return added;
+  }
   const combo = (key: string) => sql(`select id from combination where combination_key='${key}'`);
   const attachment = (comboId: string, file: string) => sql(`select id from source_attachment where combination_id='${comboId}' and lower(file_name) like lower('%${file}') order by created_at limit 1`);
   /** Every waiting proposal of a combination's own group in the one review queue (all three bands). */
@@ -208,7 +223,7 @@ export function pack2(id: string) {
     if (waits.length) console.log(`${waits.length} waiting (not passed): ${waits.map((w) => w.on).filter((x, i, a) => a.indexOf(x) === i).join("; ")}`);
     process.exit(fail ? 1 : waits.length ? 2 : 0);
   }
-  return { PORT, DB, call, sql, until, ok, wait, words, ready, needQuestions, questionsBySteps, key, combo, attachment, queued, people, spent, sourceGate, done };
+  return { PORT, DB, call, sql, until, ok, wait, words, ready, needQuestions, questionsBySteps, ruleBySteps, key, combo, attachment, queued, people, spent, sourceGate, done };
 }
 
 /** Runs a test body, turning an unexpected throw into a failure (exit 1) rather than a pass. */
