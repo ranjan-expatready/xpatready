@@ -1,0 +1,9 @@
+[1] When military service is declared
+  
+  Accept enabled: true
+  after Accept: Draft · 7 changes across 1 combination Review and release (7)
+[2] When current status is Other
+  
+  Accept enabled: true
+  after Accept: Draft · 7 changes across 1 combination Review and release (7)
+page errors: 0
