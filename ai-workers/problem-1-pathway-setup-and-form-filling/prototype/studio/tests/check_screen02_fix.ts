@@ -109,6 +109,9 @@ const REASON = "Test: a different meaning from the library field that could fit.
   const fam = ((await call("GET", `/combinations/${sv}/attachments`)).body as any[]).find((a) => /IMM 5707 \(/.test(a.edition ?? ""));
   if (fam) ok("setup: IMM 5707 is added from the library (its package lists it)", (await call("POST", `/attachments/${fam.id}/reuse`, {})).status < 300);
   await coverAll(sv);
+  // G5 (C5.1, P-248, #868): a release needs a document line beside its forms; one with a type the library has released.
+  const docKey = sql("select document_type_key from document_type where status = 'PUBLISHED' order by document_type_key limit 1");
+  ok("setup (P-248): a document line is added (a release needs one)", !!docKey && (await call("POST", `/combinations/${sv}/requirements`, { documentTypeKey: docKey, attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant", providedBy: "client" })).status === 201, docKey);
   ok("C3.6 M1: the library holds one field per new name", sql("select count(distinct canonical_field_key) from canonical_field where label='Brk race name'") === "1" && sql("select count(distinct canonical_field_key) from canonical_field where lower(label)='brk duplicate name'") === "1");
   const changes = (await call("GET", "/library/changes?status=WAITING")).body as any[];
 

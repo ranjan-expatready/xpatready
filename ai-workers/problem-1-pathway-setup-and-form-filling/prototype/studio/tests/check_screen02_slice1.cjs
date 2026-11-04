@@ -76,6 +76,8 @@ function pdf(title, text) {
   // A combination submitted by the author (waiting for the reviewer or the approver).
   const ss = (await api("/combinations", { method: "POST", data: { nodeKey: "individual.work_permits.open.spouse_student" } })).body.combination;
   await api(`/combinations/${ss.id}/lines`, { method: "POST", data: { kind: "FORM", formKey: "IMM 1295" } });
+  // G5 (C5.1, P-248, #868): a release needs a document line beside its form; one with a type the library has released.
+  await api(`/combinations/${ss.id}/requirements`, { method: "POST", data: { documentTypeKey: sql("select document_type_key from document_type where status = 'PUBLISHED' order by document_type_key limit 1"), attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant", providedBy: "client" } });
   await setFilingModes(api, ss.id); // C11.12 BR-7: a new release needs each applicant role's filing, as the author sets it
   r = await api(`/combinations/${ss.id}/submit`, { method: "POST", data: {} });
   const smeItems = ((await api(`/combinations/${ss.id}/review`)).body.submission?.changeSummary ?? []).filter((x) => x.needs_sme).length;
