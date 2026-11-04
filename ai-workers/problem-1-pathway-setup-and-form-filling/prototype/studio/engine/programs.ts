@@ -8,6 +8,7 @@ import type { Snapshot } from "./snapshot.ts";
 import { isFilingFact } from "./resolver.ts";
 import { STATUS_WORDS } from "../contracts/status-words.ts";
 import { waitsForMap } from "./setup-checklist.ts";
+import { libraryType } from "./form-type.ts";
 
 type Participant = { role: string; label: string; min: number; max: number; applies?: boolean };
 /** The parts of a snapshot these rules read (the snapshot's own lists are untyped until the team's contract lands). */
@@ -157,6 +158,38 @@ export function pdfMapInUse<M extends { form_number: string; form_edition?: stri
   return best;
 }
 
+/** G5 (C5.1, P-248, amends P-207; SA-1B-90): a form line is a form a case files: a PDF form (filed as a PDF upload or on
+ *  paper), a portal-screen edition (a line filed Online, P-245) or an online-only form drafted from help pages or saved
+ *  screens (P-152 (2)). A checklist or a guide is not one (an old "document" row is one only when its title says it is a
+ *  form), and nor is a line marked "Not needed" (the IRCC
+ *  account asks it itself, so nothing is filed on it; Q2 to the tech lead on the PR). */
+// The library's own rule says what is filed (engine/form-type.ts libraryType; review m2: an old "document" row titled as
+// a form, IMM 5802, is filed too).
+export const isFormLine = (f: { form_kind?: string | null; title?: string | null; channel?: string | null }) => libraryType(f.form_kind ?? "data_form", f.title ?? "") === "form" && f.channel !== "NOT_NEEDED";
+/** The code the Review and release tab finds this line by (its own warning box, web/src/pages/review.tsx). */
+export const NO_FORM_LINE = "no_form_line";
+export const FORM_LINE_WORDS = "No form line yet: a case on this combination would file no form (it has only documents, checklists or forms marked Not needed). Add at least one form it files before sending it for review: a PDF form, a portal-screen edition filed Online, or an online-only form (Find forms, or add one from the Form library).";
+/** G5: a combination with lines on it but no form line is never submitted or released (Submit 400; Approve and the
+ *  Release page 409), and its draft says so while it is configured: the Review and release tab lists it, the Release
+ *  page holds its row in these words (and counts it among the row's release blockers). One with no line at all is F8's own line (api/src/studio.ts
+ *  emptyProblem), never both. Releases made before keep their status: a release is never undone (Q3). */
+export function formLineProblem(s: Pick<Snapshot, "forms" | "document_requirements">): Problem[] {
+  const forms = s.forms as { form_kind?: string | null; title?: string | null; channel?: string | null }[];
+  if (!forms.length && !(s.document_requirements ?? []).length) return [];
+  return forms.some(isFormLine) ? [] : [{ level: "error", where: "Release", item: "", message: FORM_LINE_WORDS, code: NO_FORM_LINE }];
+}
+/** G5, P-248's other half (tech lead's ruling on #868, 4 Nov 17:12 IST, after qa's gate A): a release needs at least one
+ *  document line too. A combination with forms and no document requirement collects nothing from the applicant, so it
+ *  is refused in the same places and the same way as a missing form line, with its own words and code. One with no line
+ *  at all is F8's own line (never this one too). */
+export const NO_DOCUMENT_LINE = "no_document_line";
+export const DOCUMENT_LINE_WORDS = "No document line yet: a case on this combination would collect no document (it has forms but no documents). Add at least one document the applicant provides before sending it for review (Documents tab, from the program's document checklist).";
+export function documentLineProblem(s: Pick<Snapshot, "forms" | "document_requirements">): Problem[] {
+  if (!s.forms.length || (s.document_requirements ?? []).length) return [];
+  return [{ level: "error", where: "Release", item: "", message: DOCUMENT_LINE_WORDS, code: NO_DOCUMENT_LINE }];
+}
+/** G5 (P-248, the whole rule): what a release needs on it, a form line and a document line, each said in its own words. */
+export const releaseLineProblems = (s: Pick<Snapshot, "forms" | "document_requirements">): Problem[] => [...formLineProblem(s), ...documentLineProblem(s)];
 /** QA-180 (BR-8, P-297 (3)): the one rule Review and release (engine/validate.ts) and Open a case (missingItems, through
  *  api/src/programs.ts startableMissing) both read. A data form can be filled on a case only when its edition in use
  *  (pdfMapInUse, P-32: the newest PDF edition, the one a case fills) has form fields mapped; an Online line is read from

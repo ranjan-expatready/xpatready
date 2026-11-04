@@ -88,6 +88,8 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   // C11.12 BR-7 (P-233): a new release needs a filing mode on every applicant role; set as the author would (Sample).
   require("node:child_process").execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${process.argv[3] ?? "xr_studio_s01ui"}`, "-Atc", `update combination set participants = (select jsonb_agg(case when x->>'role' in ('spouse_or_partner','child') then x || '{"filingMode":"files_own"}'::jsonb else x end) from jsonb_array_elements(participants) x) where id='${ss.id}'`]);
   await api(`/combinations/${ss.id}/lines`, { method: "POST", data: { kind: "FORM", formKey: "IMM 1295" } });
+  // G5 (C5.1, P-248, #868): a release needs a document line beside its form; one with a type the library has released.
+  await api(`/combinations/${ss.id}/requirements`, { method: "POST", data: { documentTypeKey: require("node:child_process").execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${process.argv[3] ?? "xr_studio_s01ui"}`, "-Atc", "select document_type_key from document_type where status = 'PUBLISHED' order by document_type_key limit 1"], { encoding: "utf8" }).trim(), attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant", providedBy: "client" } });
   // A release needs its review first (QA-1): the author submits, the content reviewer signs any expert change.
   await sourceEveryNumber(BASE, ss.id); // G1 (C5.4): the release's numbers need a source first
   await api(`/combinations/${ss.id}/submit`, { method: "POST", data: {} });
@@ -345,6 +347,8 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   // Draft bar (item 6) after a change.
   const st = (await cat("pathway=INDIVIDUAL&filter=all")).rows.find((x) => x.nodeKey === "individual.study_permits.study_permit");
   for (const code of st.nextAction?.forms ?? []) await api(`/combinations/${st.combinationId}/lines`, { method: "POST", data: { kind: "FORM", formKey: code } });
+  // G5 (C5.1, P-248, #868): a release needs a document line beside its forms; one with a type the library has released.
+  await api(`/combinations/${st.combinationId}/requirements`, { method: "POST", data: { documentTypeKey: require("node:child_process").execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${process.argv[3] ?? "xr_studio_s01ui"}`, "-Atc", "select document_type_key from document_type where status = 'PUBLISHED' order by document_type_key limit 1"], { encoding: "utf8" }).trim(), attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant", providedBy: "client" } });
   await p.goto(BASE); await idle();
   const bar = await p.getByRole("status").filter({ hasText: /changes across/ }).first().textContent();
   step("item 6: the global draft bar shows total changes and affected combination count, with one release-review link", /^Draft · \d+ changes? across \d+ combinations?/.test(bar) && /Review and release \(\d+\)/.test(bar), bar);

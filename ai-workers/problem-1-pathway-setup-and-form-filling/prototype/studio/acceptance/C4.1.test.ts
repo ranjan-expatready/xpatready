@@ -10,7 +10,7 @@
 // Runs on Visitor visa of the six (qa-1 gaps G4, G5, G10 / QA-133 there). Needs first: Visitor visa has questions (J3 /
 // C4.11); until then it stops with exit 2, and runs meanwhile on the suites' fixture: add `wp.family` as 4th argument.
 //   zsh studio/tools/isolated.sh accept 4433 start && tsx studio/acceptance/C4.1.test.ts 4433 xr_studio_accept [wp.family]
-import { AUTHOR, pack2, run } from "./lib/pack2.ts";
+import { APPROVER, AUTHOR, pack2, run } from "./lib/pack2.ts";
 import { kkey, render, type Known, type Person } from "../engine/render.ts";
 
 const T = pack2("C4.1");
@@ -120,6 +120,22 @@ run(async () => {
   // The move is one named change line of the next review (C4.8): submitted last, so nothing after it depends on it.
   // P-279: the source gate refuses Submit while a published number (a date counts) has no source entry; answered first.
   await T.sourceGate(wp);
+  // G5 (C5.1, P-248, #868): a release needs a document line beside its forms. Visitor visa of the six has forms only, so
+  // the author adds one on the Documents tab's route. The six's library holds no document type yet, so the line names a
+  // new one (a proposal on To review), the author accepts it there, adds the line by its key, and the Approver approves
+  // the type's library change as the second person (BR-7). Test input, Sample.
+  if (sql(`select count(*) from document_requirement where combination_id='${wp}'`) === "0") {
+    const line = { attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant", providedBy: "client", sourceQuote: "Test input for C4.1's Submit (P-248 needs a document line; Sample, not an IRCC requirement)." };
+    let docKey = sql("select document_type_key from document_type where status = 'PUBLISHED' order by document_type_key limit 1");
+    if (!docKey) {
+      const named = await call("POST", `/combinations/${wp}/requirements`, { ...line, documentTypeName: "Passport information page copy (C4.1 test)" }, AUTHOR);
+      const accepted = named.body?.proposalId ? await call("POST", "/review/proposals/decide", { ids: [named.body.proposalId], action: "accept", reason: "Accepted by a test: a document line Submit needs (P-248; Sample)." }, AUTHOR) : null;
+      docKey = accepted?.body?.items?.[0]?.landedAs ?? "";
+    }
+    if (docKey) await call("POST", `/combinations/${wp}/requirements`, { ...line, documentTypeKey: docKey }, AUTHOR);
+    for (const c of sql(`select id from library_change where status='WAITING' and kind='document_type' and proposed_by='${AUTHOR}'`).split("\n").filter(Boolean))
+      await call("POST", `/library/changes/${c}/approve`, { note: "Approved by a test as the second person (C4.1's document line, P-248)." }, APPROVER);
+  }
   r = await call("POST", `/combinations/${wp}/submit`, { note: "section order (acceptance C4.1)" }, AUTHOR);
   const summary = (r.body?.changeSummary ?? []) as any[];
   const line = summary.find((c) => /section/i.test(String(c.kind)) && /reordered/i.test(String(c.label)));

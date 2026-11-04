@@ -138,6 +138,10 @@ function pdf(title: string, text: string) {
   for (const [n, f] of open.entries()) await call("POST", `/editions/${ff.edition.id}/form-fields/decision`, { dataPath: f.dataPath, decision: n === 0 || f.background ? "by_hand" : "not_a_fact", reason: n === 0 || f.background ? "Signed and dated by the applicant on paper." : "Office use or a document upload: no case fact fills it." });
   const after = (await call("GET", `/jobs/${jobId}/form-fields`)).body.fields;
   ok("C3.8 K1: each decided form field reads its decision (filled by hand / not a fact) with the reason", after.filter((f: any) => f.outcome === "unresolved").length === 0 && after.some((f: any) => f.outcome_word === "Filled by hand" && /paper/.test(f.reason)), open.length);
+  // G5 (C5.1, P-248, #868): a release needs a document line beside its forms; one with a type the library has released.
+  // (the line is not one the checklist draft below proposes, so its accept steps keep their own lines)
+  const docKey = sql("select document_type_key from document_type where status = 'PUBLISHED' and document_type_key not like 'birth_certificate%' order by document_type_key desc limit 1");
+  ok("setup (P-248): a document line is added (a release needs one)", !!docKey && (await call("POST", `/combinations/${sv}/requirements`, { documentTypeKey: docKey, attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant", providedBy: "client" })).status === 201, docKey);
   r = await call("POST", `/combinations/${sv}/submit`, {});
   ok("C3.8 K1: once every form field has a decision, the draft is submitted", r.status === 201, r.body?.detail);
   const sme = ((await call("GET", `/combinations/${sv}/review`)).body.submission?.changeSummary ?? []).filter((x: any) => x.needs_sme).map((x: any) => `${x.kind}|${x.key}`);

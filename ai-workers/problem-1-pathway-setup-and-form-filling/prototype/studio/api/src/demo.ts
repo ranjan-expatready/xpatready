@@ -24,6 +24,7 @@ import { linkSampleGuides } from "./guide-sources.ts";
 import { libraryRevision, Sources } from "./sources.ts";
 import { Screen02 } from "./screen02.ts";
 import { Studio } from "./studio.ts";
+import { Checklists } from "./checklist.ts";
 import { draftSourceProblems, seedSampleSources } from "./source-register.ts";
 import { FormMasters } from "./form-masters.ts";
 import { Forms } from "./forms.ts";
@@ -31,10 +32,13 @@ import { keepChosenEveryones, placeFromFormParts } from "./form-part-placements.
 import { decide } from "./proposals.ts";
 import { RuleFacts } from "./rule-facts.ts";
 import { FormLibrary } from "./form-library.ts";
+import { CaseForms } from "./fill-case.ts";
+import { Runtime } from "./runtime.ts";
+import { openSampleFamilyCase, SAMPLE_CASE } from "./sample-case.ts";
 /** QA-144 slices 1–3 (tech lead on #798): the combinations the configured checkpoint sets up from their forms' own parts.
  *  The others follow, one slice each. */
 const SET_UP_FROM_FORMS = new Set(["vv.single", "wp.lmia_inside", "sp.outside"]);
-import { FAMILY_FORM_BY_CHANNEL, FORM_SETUP, GENDER_FACT, LMIA_FORM_RULES, MINOR_FACT, SP_FORM_RULES, VV_FORM_RULES } from "./form-setup.ts";
+import { type CitedDocumentLine, FAMILY_FORM_BY_CHANNEL, FORM_SETUP, GENDER_FACT, LMIA_FORM_RULES, MINOR_FACT, SP_FORM_RULES, VV_FORM_RULES } from "./form-setup.ts";
 export { FAMILY_FORM_BY_CHANNEL, FORM_SETUP, GENDER_FACT, LMIA_FORM_RULES, MINOR_FACT, SP_FORM_RULES, VV_FORM_RULES }; // B71: kept for the callers that read them from here
 /** QA-144 slice 1 (ruling 2): a form field no saved answer proposed is filled by hand, never "not a fact". */
 export const BY_HAND_REASON = "Not proposed by the saved AI answer, so it is filled by hand on the PDF until a person maps it on this form's field map (sample loader rule, QA-144; Sample)";
@@ -87,7 +91,7 @@ type SampleFile = { pathways: { key: string; label: string; type: "INDIVIDUAL" |
 
 @Injectable()
 export class Demo {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Programs) private readonly programs: Programs, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder, @Inject(Screen02) private readonly library: Screen02, @Inject(FormMasters) private readonly masters: FormMasters, @Inject(Forms) private readonly forms: Forms, @Inject(RuleFacts) private readonly ruleFacts: RuleFacts, @Inject(FormLibrary) private readonly formLibrary: FormLibrary, @Inject(ReviewProposals) private readonly proposals: ReviewProposals) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Programs) private readonly programs: Programs, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder, @Inject(Screen02) private readonly library: Screen02, @Inject(FormMasters) private readonly masters: FormMasters, @Inject(Forms) private readonly forms: Forms, @Inject(RuleFacts) private readonly ruleFacts: RuleFacts, @Inject(FormLibrary) private readonly formLibrary: FormLibrary, @Inject(ReviewProposals) private readonly proposals: ReviewProposals, @Inject(Runtime) private readonly runtime: Runtime, @Inject(CaseForms) private readonly caseForms: CaseForms, @Inject(Checklists) private readonly checklists: Checklists) {}
 
   /** QA-144: the family information form a combination of FORM_SETUP files, by its application form's channel. */
   private async familyForm(combinationId: string, key: string | undefined) {
@@ -180,6 +184,107 @@ export class Demo {
     await this.db.configRelease.create({ data: { workspaceId, combinationId, version: 1, status: "RELEASED", snapshot: snapshot as any, sha256, packVersionId: pack.id, summary: { imported_from: "p3/releases/c1-v3", c1_v3_sha256: rel.configuration_sha256, drafting_runs: rel.drafting_run_ids, counts }, authorId: rel.author.user_id, submitterId: rel.submitter.user_id, approverId: rel.approver.user_id, basis: "Imported reviewed release: AI-drafted under the guarded path, reviewed and approved by a second person. Prototype only; not specialist-confirmed." } });
     for (const a of await this.db.sourceAttachment.findMany({ where: { combinationId, status: { in: ["READ", "RECOGNISED"] } } })) await this.db.sourceAttachment.update({ where: { id: a.id }, data: { status: "IN_LIBRARY", statusDetail: `${a.edition}: its field map from the reviewed release is in the library.` } });
     return counts;
+  }
+
+  /** G5 (#868, Lead 8's option 1 for the Study permit): document lines from an official checklist's own words, each cited
+   *  with its page and quote (P-170), through the Documents route as the author. A `reuse` line takes the library's
+   *  type of that name (a draft one too: the Visitor visa's types publish with its release) (refused in words if there is none); a new one waits as a proposal the content reviewer accepts, and the Approver approves its ADD (BR-7). */
+  private async citedDocumentLines(author: Actor, reviewer: Actor, workspaceId: string, combinationId: string, lines: CitedDocumentLine[], refused: string[], say: (e: unknown) => string) {
+    let n = 0;
+    for (const l of lines) {
+      const line = { attachMode: "COMBINATION_MANDATORY" as const, appliesToRoles: l.who, providedBy: "client", sourceQuote: l.quote };
+      try {
+        if (l.reuse) {
+          const t = await this.db.documentType.findFirst({ where: { workspaceId, name: l.type, status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: { version: "desc" }, select: { documentTypeKey: true } });
+          if (!t) { refused.push(`${l.type}: the library has no type of that name to reuse`); continue; }
+          await this.studio.saveRequirement(author, combinationId, null, { ...line, documentTypeKey: t.documentTypeKey } as Parameters<Studio["saveRequirement"]>[3]);
+          n++; continue;
+        }
+        const r = (await this.studio.saveRequirement(author, combinationId, null, { ...line, documentTypeName: l.type } as Parameters<Studio["saveRequirement"]>[3])) as { proposalId?: string } | null;
+        if (r && r.proposalId) {
+          const key = ((await decide(this.db, this.audit, reviewer, workspaceId, [r.proposalId], { action: "accept", reason: "Accepted by the sample loader: a document the official checklist asks for, cited (Sample, Unconfirmed: expert)." })).items[0] as { landedAs?: string } | undefined)?.landedAs;
+          if (!key) { refused.push(`${l.type}: its document type was not accepted`); continue; }
+          await this.studio.saveRequirement(author, combinationId, null, { ...line, documentTypeKey: key } as Parameters<Studio["saveRequirement"]>[3]);
+        }
+        n++;
+      } catch (e) { refused.push(`${l.type}: ${say(e)}`); }
+    }
+    return n;
+  }
+
+  /** G5 (C5.1, P-248; tech lead's ruling on #868, option 1 for the Visitor visa): a combination's document lines from its
+   *  official document checklist (`checklist`, a source the six load), through C2.6: the saved AI reading of that
+   *  edition is replayed (US$0) into proposals on To review, and the author decides each one there. A line IRCC always
+   *  asks for, or whose condition reads only facts this library holds and asks, is accepted (its new type lands with it
+   *  and waits for the Approver, BR-7); any other is rejected with its reason, so the release never carries a line that
+   *  cannot work yet, and a type left without a line is rejected too. Sample, from the official checklist, with quotes. */
+  private async checklistDocumentLines(author: Actor, workspaceId: string, combinationId: string, checklist: string, refused: string[], say: (e: unknown) => string) {
+    const rejected: string[] = [];
+    const att = await this.db.sourceAttachment.findFirst({ where: { combinationId, kind: "Document checklist", recognised: true, edition: { startsWith: `${checklist} (` } }, select: { id: true } });
+    if (!att) { refused.push(`${checklist}: not among this combination's sources, so no document line was drafted from it`); return { n: 0, rejected }; }
+    let job: { id: string };
+    try { job = await this.checklists.draft(author, att.id, { mode: "replay" }); } catch (e) { refused.push(`${checklist}: ${say(e)}`); return { n: 0, rejected }; }
+    const factsOf = (x: unknown, out = new Set<string>()): Set<string> => { if (Array.isArray(x)) x.forEach((v) => factsOf(v, out)); else if (x && typeof x === "object") for (const [k, v] of Object.entries(x)) { if (k === "field" && typeof v === "string") out.add(v); else factsOf(v, out); } return out; };
+    const asked = new Set((await this.db.sectionQuestion.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { canonicalFieldKey: true } })).map((q) => q.canonicalFieldKey));
+    const inLibrary = new Set((await this.db.canonicalField.findMany({ where: { workspaceId, status: { not: "RETIRED" } }, select: { canonicalFieldKey: true } })).map((f) => f.canonicalFieldKey));
+    const reject = async (id: string, label: string, why: string) => {
+      try { await decide(this.db, this.audit, author, workspaceId, [id], { action: "reject", reason: why.slice(0, 480) }); rejected.push(`${label} (${why})`); } catch (e) { refused.push(`${label}: ${say(e)}`); }
+    };
+    let n = 0;
+    const lines = await this.db.proposalItem.findMany({ where: { runId: job.id, kind: "requirement_line", status: "waiting" }, orderBy: [{ createdAt: "asc" }, { identityKey: "asc" }], select: { id: true, payload: true, work: true } });
+    for (const l of lines) {
+      const p = l.payload as { always?: boolean; condition?: { tree?: unknown } | null }, label = String((l.work as { label?: unknown } | null)?.label ?? "a document line");
+      const missing = p.always ? [] : [...factsOf(p.condition?.tree)].filter((f) => !inLibrary.has(f) || !asked.has(f));
+      if (!p.always && !p.condition?.tree) { await reject(l.id, label, `${checklist} leaves it to the visa office and gives no condition: a person adds it by hand on Documents if needed`); continue; }
+      if (missing.length) { await reject(l.id, label, `its condition reads ${missing.join(", ")}, which this library does not hold and ask yet`); continue; }
+      try { await decide(this.db, this.audit, author, workspaceId, [l.id], { action: "accept", reason: `Accepted by the sample loader: a document line ${checklist} asks for, in its own words (Sample; P-248).` }); n++; } catch (e) { await reject(l.id, label, `not accepted: ${say(e)}`); }
+    }
+    for (const t of await this.db.proposalItem.findMany({ where: { runId: job.id, kind: "document_type", status: "waiting" }, select: { id: true, payload: true } }))
+      await reject(t.id, String((t.payload as { name?: unknown }).name ?? "a document type"), "no accepted line uses it");
+    return { n, rejected };
+  }
+
+  /** G5 (C5.1, P-248; tech lead's ruling on #868, option 1): the configured checkpoint's With an LMIA gets its document
+   *  lines from the reviewed work-permit release (p3/releases/c1-v3), the lines Demo › "Start With an LMIA from its
+   *  reviewed release" loads: every line the release did not dismiss, less the QA-115 lines an LMIA job cannot have
+   *  (samples/programs.json, wp.family's drop_documents, each with its why). Each goes in through the Documents route as
+   *  the author, with the release's own condition and source quote; a type the library lacks waits as a proposal that
+   *  the content reviewer accepts (C3.6), and the Approver approves its library ADD with the others (BR-7). Sample, as
+   *  the release is. Returns how many lines went in and the conditional ones left waiting for their facts (named in the
+   *  load's log); a refused line is named in `refused`, never dropped silently. */
+  private async reviewedDocumentLines(author: Actor, reviewer: Actor, workspaceId: string, combinationId: string, refused: string[], say: (e: unknown) => string) {
+    type Line = { document_type: string; status: string; who: string; provided_by?: string | null; condition?: unknown; condition_plain?: string | null; source_quote?: string | null };
+    const config = JSON.parse(readFileSync(join(RELEASE, "configuration.json"), "utf8")) as { document_requirements: Line[] };
+    const dropOf = (x: unknown): { document_type: string }[] | null => {
+      if (Array.isArray(x)) { for (const v of x) { const r = dropOf(v); if (r) return r; } return null; }
+      if (x && typeof x === "object") { const o = x as Record<string, unknown>; if (o.key === "wp.family" && Array.isArray(o.drop_documents)) return o.drop_documents as { document_type: string }[]; for (const v of Object.values(o)) { const r = dropOf(v); if (r) return r; } }
+      return null;
+    };
+    const drop = new Set((dropOf(JSON.parse(readFileSync(SAMPLES, "utf8"))) ?? []).map((d) => d.document_type));
+    // A condition reads facts; a line comes over only when each fact it reads is in this library and asked in a section
+    // (else the release would hold on "not in the library" or "asked of nobody"). The others are left out and named:
+    // they wait for their facts (checkpoint row 7 and the questionnaire work), never written half-working.
+    const factsOf = (x: unknown, out = new Set<string>()): Set<string> => { if (Array.isArray(x)) x.forEach((v) => factsOf(v, out)); else if (x && typeof x === "object") for (const [k, v] of Object.entries(x)) { if (k === "field" && typeof v === "string") out.add(v); else factsOf(v, out); } return out; };
+    const asked = new Set((await this.db.sectionQuestion.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { canonicalFieldKey: true } })).map((q) => q.canonicalFieldKey));
+    const inLibrary = new Set((await this.db.canonicalField.findMany({ where: { workspaceId, status: { not: "RETIRED" } }, select: { canonicalFieldKey: true } })).map((f) => f.canonicalFieldKey));
+    let n = 0;
+    const waiting: string[] = [];
+    for (const d of config.document_requirements.filter((x) => x.status !== "dismissed" && !drop.has(x.document_type))) {
+      const missing = [...factsOf(d.condition)].filter((f) => !inLibrary.has(f) || !asked.has(f));
+      if (missing.length) { waiting.push(`${d.document_type} (its condition reads ${missing.join(", ")})`); continue; }
+      const line = { attachMode: (d.condition ? "ANSWER_CONDITIONAL" : "COMBINATION_MANDATORY") as "ANSWER_CONDITIONAL" | "COMBINATION_MANDATORY", appliesToRoles: d.who, providedBy: d.provided_by ?? "client",
+        ...(d.source_quote ? { sourceQuote: d.source_quote } : {}), ...(d.condition ? { condition: d.condition, conditionPlain: d.condition_plain ?? undefined } : {}) };
+      try {
+        const r = (await this.studio.saveRequirement(author, combinationId, null, { ...line, documentTypeName: d.document_type } as Parameters<Studio["saveRequirement"]>[3])) as { proposalId?: string } | null;
+        if (r && r.proposalId) {
+          const key = ((await decide(this.db, this.audit, reviewer, workspaceId, [r.proposalId], { action: "accept", reason: "Accepted by the sample loader: a document line of the reviewed work-permit release c1-v3 (Sample)." })).items[0] as { landedAs?: string } | undefined)?.landedAs;
+          if (!key) { refused.push(`${d.document_type}: its document type was not accepted`); continue; }
+          await this.studio.saveRequirement(author, combinationId, null, { ...line, documentTypeKey: key } as Parameters<Studio["saveRequirement"]>[3]);
+        }
+        n++;
+      } catch (e) { refused.push(`${d.document_type}: ${say(e)}`); }
+    }
+    return { n, waiting };
   }
 
   /** C5.4 on the six (F6, 3 Nov; re-test of 1a79dbf9: the release with its sources was reachable only on the suites'
@@ -592,7 +697,7 @@ export class Demo {
     // shared rules step), each form field no saved answer proposed filled by hand (ruling 2), each form line set by IRCC's
     // words (ruling 3). All as the author, through the screens' own services.
     const placedFacts: string[] = [], setUpRefused: string[] = [], unchosen: string[] = [];
-    let byHand = 0, lines = 0;
+    let byHand = 0, lines = 0, documentLines = 0;
     await timed("questions, form fields and form rules (rules)", async () => {
       for (const c of fromForms) {
         // The form lines first: a form whose rule is in words only is not read by the coverage check, so its facts would
@@ -642,6 +747,26 @@ export class Demo {
         }
         setUpRefused.push(...p.refused, ...p.noSection.map((f) => `${f}: no section groups a form field that reads it`));
         unchosen.push(...p.unselected);
+        // G5 (P-248, #868): the document lines after the questions are placed, so a conditional line whose facts the
+        // forms' questions now ask can be kept; the Approver approves each new document type as the second person (BR-7).
+        if (setup) {
+          // G5 (C5.1, P-248; tech lead's ruling on #868, option 1): a release needs a document line, so With an LMIA's
+          // document lines come from the reviewed work-permit release p3/releases/c1-v3, the same lines Demo › "Start With
+          // an LMIA from its reviewed release" loads, less the ones it dismissed and the QA-115 lines an LMIA job cannot
+          // have (samples/programs.json, wp.family's drop_documents). Through the Documents route as the author; a type
+          // the library lacks waits as a proposal that the content reviewer accepts, and the Approver approves its ADD
+          // just below. Sample, as the release is (its source quotes kept).
+          if (setup.documentsFromReviewedRelease) { const d = await this.reviewedDocumentLines(author, sme, workspaceId, c.id, setUpRefused, said); documentLines += d.n; log.push(`  ${keyOf.get(c.id)}: ${d.n} document lines from the reviewed work-permit release c1-v3 (Sample; P-248); ${d.waiting.length} conditional lines wait for the facts their condition reads: ${d.waiting.join("; ")}`); }
+          // G5 (P-248; tech lead's ruling on #868, option 1 for the Visitor visa): its document lines from its official
+          // document checklist (IMM 5484), by the product's own steps: C2.6 replays the saved AI reading of that edition
+          // (US$0), the author decides each proposed line on To review, and the Approver approves a new type below.
+          if (setup.documentsFromChecklist) { const d = await this.checklistDocumentLines(author, workspaceId, c.id, setup.documentsFromChecklist, setUpRefused, said); documentLines += d.n; log.push(`  ${keyOf.get(c.id)}: ${d.n} document lines from ${setup.documentsFromChecklist}'s saved reading (Sample; P-248); ${d.rejected.length} rejected with their reason: ${d.rejected.join("; ")}`); }
+          // G5 (#868, Lead 8's option 1 for the Study permit): its always-needed lines from its checklist's own words, cited.
+          if (setup.documentsCited) { const d = await this.citedDocumentLines(author, sme, workspaceId, c.id, setup.documentsCited, setUpRefused, said); documentLines += d; log.push(`  ${keyOf.get(c.id)}: ${d} document lines from its document checklist, cited with page and quote (Sample, Unconfirmed: expert; P-248)`); }
+          for (const ch of await this.db.libraryChange.findMany({ where: { workspaceId, status: "WAITING", kind: "document_type" }, select: { id: true, label: true, key: true } })) {
+            try { await this.library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (G5, a document line's type)."); } catch (e) { setUpRefused.push(`${ch.label ?? ch.key}: ${said(e)}`); }
+          }
+        }
         const editions = ((await buildSnapshot(this.db, workspaceId, c.id, "draft")).snapshot.field_maps as { form_edition: string; channel?: string }[]).filter((m) => m.channel !== "ONLINE").map((m) => m.form_edition);
         for (const ed of await this.db.formEdition.findMany({ where: { workspaceId, editionLabel: { in: editions } }, select: { id: true } })) {
           for (const f of (await this.library.formFields(ed.id)).fields.filter((x: { outcome: string }) => x.outcome === "unresolved")) {
@@ -685,7 +810,13 @@ export class Demo {
     const visitor = released.some((l) => /Visitor visa/.test(l));
     row({ row: "9", title: "Channels for release 2 (Mixed: IMM 5257 Online, so IMM 5645 as the family information form; IMM 5476 PDF upload, signed by hand and scanned)", status: "waiting", shows: "The channel route and the signed-scan lines are built (Forms tab)",
       why: visitor ? "Set on the Visitor visa's Forms tab for release 2." : "Waits for the Visitor visa's release 1: its channels change for release 2." });
-    row({ row: "11", title: "A family case on release 1", status: "waiting", shows: "The case area is built (Demo › Open the case area)", why: visitor ? "Open a case on the Visitor visa's release 1." : "Waits for the Visitor visa's release 1 (a case runs on a release)." });
+    // Row 11 (QA-231, P-67): a Sample family case opens on the Visitor visa's release 1 through the case officer's own
+    // steps, before row 17 holds the new edition, so the case is seen staying on its release (api/src/sample-case.ts).
+    const fam = visitor && vvId ? await timed("sample family case (row 11)", () => openSampleFamilyCase(this.db, this.runtime, this.caseForms, vvId)) : null;
+    // Partial, never done: DEMO.md row 11 also wants each person answering once (the family of four, C10.1 part B).
+    row({ row: "11", title: "A family case on release 1", status: !fam ? "waiting" : "partial",
+      shows: fam?.caseId ? `Case ${SAMPLE_CASE.reference} (Sample, ${fam.people} people) on release ${fam.release}: ${fam.copies.length} form cop${fam.copies.length === 1 ? "y" : "ies"} made (${fam.copies.join(", ")})` : "The case area is built (Demo › Open the case area)",
+      why: !fam ? "Waits for the Visitor visa's release 1 (a case runs on a release)." : [...fam.refused, "Nobody has answered yet: each person answers once on the case (C10.1 part B, a family of four)."].join(" · ") });
     row({ row: "12", title: "IMM 5257 filled as a PDF and read back equal", status: "waiting", shows: "The fill is built (C7.1)", why: "IMM 5257 has no saved field-map answer under today's 5-part drafting: it waits for the founder's paid run (Lead, 30 Oct)." });
     // Row 17 (QA-207): the current IMM 5476 arrives through the intake on no combination, as a person sends a new edition:
     // the intake holds it (C2.4), and its comparison and impact wait on To review (C9.1; saved AI comparison, #781). The

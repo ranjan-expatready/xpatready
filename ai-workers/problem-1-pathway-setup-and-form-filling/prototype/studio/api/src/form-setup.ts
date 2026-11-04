@@ -70,14 +70,30 @@ export const SP_FORM_RULES: FormRule[] = [
 export const MINOR_FACT = { fact: "person.minor_studying_without_parent", rule: "IMM 5646", cite: "Guide 5269, Custodians", label: "Minor studying without a parent or guardian", valueType: "yes_no",
   meaning: "Whether the person is 17 years of age or less and comes to Canada to study without an accompanying parent or legal guardian, so a custodian in Canada must care for them (Guide 5269, Custodians; IMM 5646).",
   beside: ["person.date_of_birth"] };
+/** G5 (C5.1, P-248; tech lead's ruling on #868, Lead 8, 20:5x IST): a document line the checkpoint sets from an official
+ *  checklist's own words, cited (P-170): the document type (an existing library name is reused), whose it is, and the
+ *  page and quote. Sample, Unconfirmed: expert (AGENTS rule 4). `reuse`: the type must already be in the library (the
+ *  Visitor visa, set up first, adds it), and the line uses it rather than proposing a new one. */
+export type CitedDocumentLine = { type: string; who: "principal_applicant" | "each_applicant"; quote: string; reuse?: true };
+/** The Study permit (outside Canada)'s always-needed documents, from IMM 5483 (08-2025), the document checklist for a
+ *  study permit: official-sources/ircc/checklists/imm5483e.pdf (the PDF modified 2025-08-11, sha256 6f885da2…). */
+const IMM5483 = "IMM 5483 (08-2025), canada.ca PDF modified 2025-08-11";
+export const SP_DOCUMENT_LINES: CitedDocumentLine[] = [
+  { type: "Fee payment receipt", who: "principal_applicant", reuse: true,
+    quote: `${IMM5483}, p. 1, documents list item 1: "Proof of payment showing the amount paid. You must pay your processing fees and any other applicable fees and include a copy of the payment receipt with your application." (Sample, Unconfirmed: expert)` },
+  { type: "Passport information page copy", who: "each_applicant", reuse: true,
+    quote: `${IMM5483}, p. 1, documents list item 2: "A Photocopy of the information page of your valid passport or travel document which includes: The passport number, The issuance and expiry dates, Your photo, name, date and place of birth." (Sample, Unconfirmed: expert)` },
+  { type: "Letter of acceptance", who: "principal_applicant",
+    quote: `${IMM5483}, p. 2, documents list item 4: "Letter of acceptance from where you intend to study (including, but not limited to, Designated Learning Institutions)." (Sample, Unconfirmed: expert)` },
+];
 /** QA-144 (P-319): the one per-combination table of what the checkpoint sets from IRCC's words: the application form
  *  whose channel picks the family information form (FAMILY_FORM_BY_CHANNEL), the form rules, why each person 18 or older
  *  fills the family information form there, and a fact only a rule reads (C3.6). No other form number is in the steps. */
-export const FORM_SETUP: Record<string, { application: string; rules: FormRule[]; family: string; ruleFact?: typeof GENDER_FACT & { beside?: string[] } }> = {
-  "vv.single": { application: "IMM 5257", rules: VV_FORM_RULES, ruleFact: GENDER_FACT, family: "IMM 5484 (05-2026) p. 1: \"Family Information form. Must be completed by those aged 18 years or older.\"" },
-  "wp.lmia_inside": { application: "IMM 5710", rules: LMIA_FORM_RULES,
+export const FORM_SETUP: Record<string, { application: string; rules: FormRule[]; family: string; ruleFact?: typeof GENDER_FACT & { beside?: string[] }; documentsFromReviewedRelease?: boolean; documentsFromChecklist?: string; documentsCited?: CitedDocumentLine[] }> = {
+  "vv.single": { application: "IMM 5257", rules: VV_FORM_RULES, ruleFact: GENDER_FACT, documentsFromChecklist: "IMM 5484", family: "IMM 5484 (05-2026) p. 1: \"Family Information form. Must be completed by those aged 18 years or older.\"" },
+  "wp.lmia_inside": { application: "IMM 5710", rules: LMIA_FORM_RULES, documentsFromReviewedRelease: true,
     family: "canada.ca \"Work permit from inside Canada: Forms and documents\" (modified 2026-05-15): \"Your document checklist may include supporting documents such as: … Family Information Form - Visitors, Students and Workers (IMM 5707)\"; IMM 5707 (01-2023) p. 1, Instructions: \"This form must be completed by: each person, 18 years of age or older, or a minor (less than 18 years of age) travelling alone.\"" },
   // IMM 5483 (08-2025) p. 1 adds "or a minor travelling alone": a line has only a minimum age, so that is not in the rule (Unconfirmed: expert, #879).
-  "sp.outside": { application: "IMM 1294", rules: SP_FORM_RULES, ruleFact: MINOR_FACT,
+  "sp.outside": { application: "IMM 1294", rules: SP_FORM_RULES, ruleFact: MINOR_FACT, documentsCited: SP_DOCUMENT_LINES,
     family: "IMM 5483 (08-2025) p. 1: \"Family Information (IMM 5707) Note: Must be completed by those 18 years of age or older or a minor travelling alone to Canada.\"; Guide 5269, Step 2: \"Family Information (IMM 5707)\"" },
 };

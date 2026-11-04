@@ -93,7 +93,7 @@ export function PreviewTab({ id, p, empty, fetching, hasRelease }: { id: string;
           <h2 id="pv-pqr" className="font-semibold">{SETS[0].title(p)}</h2>
           <p className="mt-1 text-xs text-text-muted">What a prospect is asked first, before an application starts. They confirm these answers later in the Client questionnaire; no result is shown to them.</p>
           {!p.sets.pqr.length ? <p className="mt-2 text-sm text-text-muted" data-pqr-empty>No Prospect questionnaire (PQR) question is ticked for {who.label}. Tick them on the Smart questionnaire (SQR) tab.</p> : (
-            <ul className="mt-2 space-y-1.5 text-sm">{p.sets.pqr.map((q) => <li key={q.fact} className="flex flex-wrap items-center gap-1.5" data-pqr-fact={q.fact}><span>{q.label}</span><Pill tone={q.from === "Client" ? "neutral" : "info"}>{q.from}</Pill></li>)}</ul>
+            <ul className="mt-2 space-y-1.5 text-sm">{p.sets.pqr.map((q) => <li key={q.fact} className="flex flex-wrap items-center gap-1.5" data-pqr-fact={q.fact}><span>{q.label}</span><Pill tone={q.from === "Client" ? "neutral" : "info"} className="max-w-full shrink whitespace-normal [overflow-wrap:anywhere]">{q.from}</Pill></li>)}</ul>
           )}
         </section>
         <section aria-labelledby="pv-q" className={cn("space-y-2", shown !== "sqr" && "hidden xl:block")} data-set="sqr">
@@ -122,7 +122,9 @@ export function PreviewTab({ id, p, empty, fetching, hasRelease }: { id: string;
                 <ul className="mt-1 space-y-1 text-sm">{x.questions.map((q) => (
                   <li key={q.fact} className="flex flex-wrap items-center gap-1.5" data-agent-fact={q.fact}>
                     <span className={q.hidden ? "text-text-muted" : undefined}>{q.label}</span>
-                    <Pill tone={q.from.startsWith("Document") ? "info" : q.from === "Case officer" ? "warn" : "neutral"}>{q.from}</Pill>
+                    {/* G5 (#868): a document's name can be long ("Passport or travel document information page photocopy"); the
+                        tag wraps inside the row rather than widen the page at 400 px. */}
+                    <Pill tone={q.from.startsWith("Document") ? "info" : q.from === "Case officer" ? "warn" : "neutral"} className="max-w-full shrink whitespace-normal [overflow-wrap:anywhere]">{q.from}</Pill>
                     {q.hidden ? <span className="text-xs text-text-muted">hidden by a rule for this family</span> : null}
                   </li>
                 ))}</ul>
