@@ -55,7 +55,11 @@ export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: a
   const errors = v.draft.problems.filter((p: any) => p.level === "error"), warnings = v.draft.problems.filter((p: any) => p.level === "warning");
   // G1 PR 2b: numbers without a source have their own block (each with Add source); the validation list shows the rest.
   const gateOf = (p: { gate?: string }) => p.gate;
-  const unsourced = errors.filter((p: { gate?: string }) => gateOf(p) === "no-source").length, others = errors.filter((p: { gate?: string }) => gateOf(p) !== "no-source");
+  // G5 (C5.1, P-248): no form line is its own warning box above the list (said once, with where to add one).
+  const noFormLine = errors.find((p: { code?: string }) => p.code === "no_form_line"); // engine/programs.ts NO_FORM_LINE
+  const noDocLine = errors.find((p: { code?: string }) => p.code === "no_document_line"); // engine/programs.ts NO_DOCUMENT_LINE
+  const lineBox = noFormLine || noDocLine;
+  const unsourced = errors.filter((p: { gate?: string }) => gateOf(p) === "no-source").length, others = errors.filter((p: { gate?: string }) => gateOf(p) !== "no-source" && p !== noFormLine && p !== noDocLine);
   const ref = (c: any) => `${c.kind}|${c.key}`;
   const needSme = changes.filter((c) => c.needs_sme), unsignedSme = needSme.filter((c) => !signed.has(ref(c)));
   const can = (duty: string) => me.duties.includes(duty);
@@ -73,15 +77,17 @@ export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: a
         <StepCard n={3} title="A second person releases" done={false} who="Approver (never the author or submitter)" text={v.releases[0] ? `Last released: version ${v.releases[0].version}, in Release ${v.releases[0].release}, by ${v.releases[0].approver}` : "Nothing released yet"} />
       </div>
       <Notice tone="info" title={`You are acting as ${me.name} (simulated): ${me.role}`}>Duties: {me.duties.join(", ")}. The server enforces them: an author or submitter can never approve, and a draft changed after submission cannot be released.</Notice>
+      {noFormLine ? <div data-no-form-line><Notice tone="warn" title="No form line yet: this combination cannot be released" action={<Button asChild size="sm" variant="secondary"><Link to={`/c/${id}/forms`}>Add a form</Link></Button>}>{noFormLine.message.replace(/^No form line yet: /, "").replace(/^./, (c: string) => c.toUpperCase())} Submit and release are refused until then.</Notice></div> : null}
+      {noDocLine ? <div data-no-document-line><Notice tone="warn" title="No document line yet: this combination cannot be released" action={<Button asChild size="sm" variant="secondary"><Link to={`/c/${id}/documents`}>Add a document</Link></Button>}>{noDocLine.message.replace(/^No document line yet: /, "").replace(/^./, (c: string) => c.toUpperCase())} Submit and release are refused until then.</Notice></div> : null}
       <UnsourcedNumbers id={id} blocking={unsourced > 0} />
       {others.length || warnings.length ? (
         <div className="rounded-xl border border-border bg-surface-raised p-4">
           <p className="font-medium">Validation of the draft</p>
-          <p className="mt-1 text-xs text-text-muted">{others.length}{unsourced ? " other" : ""} error{others.length === 1 ? "" : "s"} (block submission) · {warnings.length} warning{warnings.length === 1 ? "" : "s"} (shown and recorded)</p>
+          <p className="mt-1 text-xs text-text-muted">{others.length}{unsourced || lineBox ? " other" : ""} error{others.length === 1 ? "" : "s"} (block submission) · {warnings.length} warning{warnings.length === 1 ? "" : "s"} (shown and recorded)</p>
           <ul className="mt-2 space-y-1 text-sm">{[...others, ...warnings].slice(0, allProblems ? undefined : 8).map((p: any, i: number) => <li key={i} className="flex gap-2"><Pill tone={p.level === "error" ? "danger" : "warn"}>{p.level}</Pill><span data-problem className="min-w-0 [overflow-wrap:anywhere]"><b>{KIND_WORD[p.where] ?? p.where}</b> · {problemLine(p)}</span>{p.where === "Tests" && p.item ? <> <Link className="text-text-link hover:underline" to={fixOnTests(id, p.item === "eligibility" ? "rule_set" : "field_map", p.item)} aria-label={`Fix on Tests: ${p.label ?? p.item}`} data-fix-tests>Fix on Tests</Link></> : null}</li>)}</ul>
           {others.length + warnings.length > 8 ? <Button size="sm" variant="ghost" className="mt-1" onClick={() => setAllProblems(!allProblems)}>{allProblems ? "Show fewer" : `Show all ${others.length + warnings.length}`}</Button> : null}
         </div>
-      ) : unsourced ? null : <Notice tone="ok" title="The draft passes validation" />}
+      ) : unsourced || lineBox ? null : <Notice tone="ok" title="The draft passes validation" />}
       <AnswerKeyBlock combinationId={id} v={v.draft.answer_keys} />
       <div className="rounded-xl border border-border bg-surface-raised">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">

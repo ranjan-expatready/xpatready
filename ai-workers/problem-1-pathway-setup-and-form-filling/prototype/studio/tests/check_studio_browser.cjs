@@ -408,6 +408,16 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   // check_c1112_filing_browser.cjs walks the Filing column on its screen).
   await setFilingModes(async (pth, init = {}) => { const r = await p.request.fetch(`${URL}/api${pth}`, { headers: { "x-actor": "user-A", "content-type": "application/json" }, ...init }); return { status: r.status(), body: await r.json() }; }, scratch);
   await sourceEveryNumber(URL, scratch); // G1 (C5.4)
+  // G5 (C5.1, P-248, #868): a release needs a document line beside its forms; one with a type the library has released
+  // (through the API: scaffolding here; acceptance/C5.1.test.ts walks the refusal and the Documents tab).
+  // The library here is built from scratch, so the type is named on the line: it waits as a proposal (C3.6), a second
+  // person accepts it, and a third approves its library ADD before any release carries it (BR-9).
+  const post = (pth, data, actor = "user-A") => p.request.fetch(`${URL}/api${pth}`, { method: "POST", headers: { "x-actor": actor, "content-type": "application/json" }, data }).then(async (r) => ({ status: r.status(), body: await r.json().catch(() => null) }));
+  const docLine = { attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant", providedBy: "client" };
+  const namedDoc = await post(`/combinations/${scratch}/requirements`, { ...docLine, documentTypeName: "Passport copy (Sample)" });
+  const docKey = namedDoc.status === 202 ? (await post("/review/proposals/decide", { ids: [namedDoc.body.proposalId], action: "accept" }, "user-B")).body?.items?.[0]?.landedAs : null;
+  if (docKey) await post(`/combinations/${scratch}/requirements`, { ...docLine, documentTypeKey: docKey });
+  for (const ch of await api("/library/changes?status=WAITING")) await post(`/library/changes/${ch.id}/approve`, {}, "user-C");
   await go(`/c/${scratch}/review`);
   await click(btn("Submit for review"));
   await as("user-C"); await click(btn("Select all I can sign")); await click(btn(/^Sign/));

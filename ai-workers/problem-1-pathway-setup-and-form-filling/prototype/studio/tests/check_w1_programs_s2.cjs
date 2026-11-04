@@ -75,6 +75,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // C11.12 BR-7 (P-233): a new release needs a filing mode on every applicant role; set as the author would (Sample).
   sql(`update combination set participants = (select jsonb_agg(case when x->>'role' in ('spouse_or_partner','child') then x || '{"filingMode":"files_own"}'::jsonb else x end) from jsonb_array_elements(participants) x) where id='${ss.id}'`);
   await api(`/combinations/${ss.id}/lines`, { method: "POST", data: { kind: "FORM", formKey: "IMM 1295" } });
+  // G5 (C5.1, P-248, #868): a release needs a document line beside its form; one with a type the library has released.
+  await api(`/combinations/${ss.id}/requirements`, { method: "POST", data: { documentTypeKey: sql("select document_type_key from document_type where status = 'PUBLISHED' order by document_type_key limit 1"), attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant", providedBy: "client" } });
   await api(`/combinations/${ss.id}/submit`, { method: "POST", data: {} });
   const ssSme = ((await api(`/combinations/${ss.id}/review`)).body.submission?.changeSummary ?? []).filter((x) => x.needs_sme).map((x) => `${x.kind}|${x.key}`);
   if (ssSme.length) await api(`/combinations/${ss.id}/signoff`, { method: "POST", actor: "user-C", data: { items: ssSme, action: "signed" } });
