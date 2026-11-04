@@ -149,15 +149,17 @@ run(async () => {
   ok("QA-192 fail (review M3): the later one shows a reason is needed, and is refused without one (400)", laterView?.near_reason_needed === true && r.status === 400, [laterView?.near_reason_needed, r.status, words(r)]);
   // Review r3 M4 (P-121): a Ready item that comes to need a near reason (its close name, proposed later, was accepted)
   // cannot be ticked with others; the queue says why, and decide() refuses the batch naming it (409), nothing accepted.
+  // Since P-294/P-299 (main) no new library item goes in bulk at all, so the box gives that reason first; the near check
+  // in bulkWhy and decide's bulk check stays as the second guard.
   const [kFirst, kLater, osprey, heron] = await P.insertProposals(db, ws, [item("Kestrel plume tint"), item("Tint of kestrel plume"), item("Osprey wing span"), item("Heron beak length")] as never);
   const kAcc = await call("POST", "/review/proposals/decide", { ids: [kLater], action: "accept", reason: "The tint of the plume, read the other way round (test)." }, AUTHOR);
   const g4 = (await call("GET", `/review/proposals?group=${encodeURIComponent("edition:IMM 5257 (09-2023)")}`)).body?.group;
   const kView = (g4?.bands?.ready ?? []).find((x: { id: string }) => x.id === kFirst);
   r = await call("POST", "/review/proposals/decide", { ids: [kFirst, osprey], action: "accept" }, AUTHOR);
-  ok("QA-192 fail (review r3 M4): a Ready item that now needs a near reason cannot be ticked in bulk (the box says why), and a bulk accept with it is refused naming it (409); nothing is accepted", kAcc.status === 201 && kView?.near_reason_needed === true && /close to a library item/.test(kView?.bulk_why ?? "") && r.status === 409 && words(r).includes("Kestrel plume tint") && sql(`select string_agg(status, ',' order by status) from proposal_item where id in ('${kFirst}', '${osprey}')`) === "waiting,waiting", [kAcc.status, kView && { needed: kView.near_reason_needed, bulk: kView.bulk_why }, r.status, words(r)]);
-  r = await call("POST", "/review/proposals/decide", { ids: [osprey, heron], action: "accept" }, AUTHOR);
+  ok("QA-192 fail (review r3 M4): a Ready item that now needs a near reason cannot be ticked in bulk (the box says why), and a bulk accept with it is refused naming it (409); nothing is accepted", kAcc.status === 201 && kView?.near_reason_needed === true && !!kView?.bulk_why && r.status === 409 && words(r).includes("Kestrel plume tint") && sql(`select string_agg(status, ',' order by status) from proposal_item where id in ('${kFirst}', '${osprey}')`) === "waiting,waiting", [kAcc.status, kView && { needed: kView.near_reason_needed, bulk: kView.bulk_why }, r.status, words(r)]);
+  r = await call("POST", "/review/proposals/decide", { ids: [osprey], action: "accept" }, AUTHOR);
   const kOwn = await call("POST", "/review/proposals/decide", { ids: [kFirst], action: "accept", reason: "The plume's tint, named the other way (test)." }, AUTHOR);
-  ok("QA-192 pass (review r3 M4): Ready items with no near reason needed are still accepted together, and the near one on its own with its reason", r.status === 201 && r.body?.items?.length === 2 && kOwn.status === 201, [r.status, words(r), kOwn.status, words(kOwn)]);
+  ok("QA-192 pass (review r3 M4): each is accepted on its own, the near one with its reason and the other without one", r.status === 201 && kOwn.status === 201 && sql(`select count(*) from proposal_item where id = '${heron}' and status = 'waiting'`) === "1", [r.status, words(r), kOwn.status, words(kOwn)]);
   // Review r3 M5: the checker's reading is offered only when the readings differ, so an agreed item never says a reason
   // is needed for it; the server accepts it without one.
   const kKey = kAcc.body?.items?.[0]?.landedAs;
