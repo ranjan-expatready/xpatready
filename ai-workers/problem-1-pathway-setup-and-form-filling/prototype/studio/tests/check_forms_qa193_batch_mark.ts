@@ -48,6 +48,8 @@ const planted = join(RUNS, `${job.job_id}-live-20261103t000000000z-q193test${POR
     let st = ""; for (let i = 0; i < 240 && st !== "COMPLETED" && st !== "FAILED"; i++) { await sleep(500); st = (await call("GET", `/jobs/${run}`)).body?.status ?? ""; }
     const readyOf = (outcome: string) => sql(`select string_agg(id::text, ',' order by id) from proposal_item where run_id = '${run}' and confidence = 'ready' and status = 'waiting' and ${outcome === "REUSE" ? "work->>'outcome' = 'REUSE'" : "work->>'outcome' = 'NEW' and coalesce(jsonb_array_length(identity->'near'), 0) = 0"}`).split(",").filter(Boolean);
     const reuse = readyOf("REUSE"), fresh = readyOf("NEW");
+    console.log(`NOTE  diag dup-proposed-keys=[${sql(`select string_agg(k || ' x' || n, ', ') from (select coalesce(work->>'proposedKey', identity_key) k, count(*) n from proposal_item where run_id = '${run}' group by 1 having count(*) > 1) d`)}]`);
+    console.log(`NOTE  diag dup-new-keys=[${sql(`select string_agg(decided_key || ' x' || n, ', ') from (select decided_key, count(*) n from proposal_item where run_id = '${run}' and work->>'outcome' = 'NEW' group by decided_key having count(*) > 1) d`)}] new-ready=${fresh.length} keys=[${sql(`select string_agg(p.decided_key || '=' || (select count(*) from canonical_field f where f.canonical_field_key = p.decided_key), ', ' order by p.id) from proposal_item p where p.id in ('${fresh.join("','")}')`)}]`);
     ok("setup: with both rounds agreeing, IMM 5257's draft has Ready reuse matches and Ready new fields (US$0)", st === "COMPLETED" && reuse.length >= 2 && fresh.length >= 2, { st, reuse: reuse.length, fresh: fresh.length });
 
     // ── the QA-193 scenario: new fields ticked together reach the approver as separate, unmarked changes
@@ -104,6 +106,7 @@ const planted = join(RUNS, `${job.job_id}-live-20261103t000000000z-q193test${POR
     ok("setup: the decided draft is applied by the author", r.status === 201 && r.body?.new_fields > 0, [r.status, words(r)]);
 
     // ── the pass: the change applying writes carries the decision it came from, and the approver and release see it
+    console.log(`NOTE  diag after-apply adds=[${sql(`select string_agg(coalesce(batch_id::text, 'NULL') || '|' || status || '|' || coalesce(proposal_item_id::text, '-'), ' ; ') from library_change where key = '${newKey}' and action = 'ADD'`)}] item=[${sql(`select string_agg(id::text || ':' || status || ':' || coalesce(batch_id::text, '-'), ' ; ') from proposal_item where run_id = '${run}' and decided_key = '${newKey}'`)}] alone=${alone}`);
     const change = sql(`select batch_id || '|' || status from library_change where key = '${newKey}' and action = 'ADD' limit 1`);
     ok("QA-193 pass: the new field's library change carries the decision it came from (never null)", change === `${alone}|WAITING`, { change, alone });
     ok("QA-193 pass: the reuse matches accepted together add nothing to the library (nothing unmarked reaches the approver)", sql(`select count(*) from library_change where batch_id = '${together}'`) === "0");
