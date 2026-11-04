@@ -157,6 +157,24 @@ export function pdfMapInUse<M extends { form_number: string; form_edition?: stri
   return best;
 }
 
+
+/** G5 (C5.1, P-248, amends P-207; SA-1B-90): a form line is a form a case files: a PDF form (filed as a PDF upload or on
+ *  paper), a portal-screen edition (a line filed Online, P-245) or an online-only form drafted from help pages or saved
+ *  screens (P-152 (2)). A checklist or a document form is not one, and nor is a line marked "Not needed" (the IRCC
+ *  account asks it itself, so nothing is filed on it; Q2 to the tech lead on the PR). */
+export const isFormLine = (f: { form_kind?: string | null; channel?: string | null }) => (f.form_kind ?? "data_form") === "data_form" && f.channel !== "NOT_NEEDED";
+/** The code the Review and release tab finds this line by (its own warning box, web/src/pages/review.tsx). */
+export const NO_FORM_LINE = "no_form_line";
+export const FORM_LINE_WORDS = "No form line yet: a case on this combination would file no form (it has only documents, checklists or forms marked Not needed). Add at least one form it files before sending it for review: a PDF form, a portal-screen edition filed Online, or an online-only form (Find forms, or add one from the Form library).";
+/** G5: a combination with lines on it but no form line is never submitted or released (Submit 400; Approve and the
+ *  Release page 409), and its draft says so while it is configured: the Review and release tab lists it, the Release
+ *  page holds its row in these words (and counts it among the row's release blockers). One with no line at all is F8's own line (api/src/studio.ts
+ *  emptyProblem), never both. Releases made before keep their status: a release is never undone (Q3). */
+export function formLineProblem(s: Pick<Snapshot, "forms" | "document_requirements">): Problem[] {
+  const forms = s.forms as { form_kind?: string | null; channel?: string | null }[];
+  if (!forms.length && !(s.document_requirements ?? []).length) return [];
+  return forms.some(isFormLine) ? [] : [{ level: "error", where: "Release", item: "", message: FORM_LINE_WORDS, code: NO_FORM_LINE }];
+}
 /** QA-180 (BR-8, P-297 (3)): the one rule Review and release (engine/validate.ts) and Open a case (missingItems, through
  *  api/src/programs.ts startableMissing) both read. A data form can be filled on a case only when its edition in use
  *  (pdfMapInUse, P-32: the newest PDF edition, the one a case fills) has form fields mapped; an Online line is read from
