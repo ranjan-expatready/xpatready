@@ -112,7 +112,7 @@ const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "fo
   }
   const lmia = sql("select id from combination where combination_key = 'wp.lmia_inside'");
   const lp = (await call("GET", `/combinations/${lmia}/preview`)).body;
-  ok("QA-227 pass: With an LMIA's IMM 5476 and IMM 5475 wait for the same two questions", formsOf(lp, "IMM 5476")?.missing.includes("case.uses_representative") && formsOf(lp, "IMM 5475")?.missing.includes("case.authorizes_release_to_designated_individual"), [formsOf(lp, "IMM 5476"), formsOf(lp, "IMM 5475")]);
+  ok("QA-227 pass: With an LMIA's IMM 5476 and IMM 5475 wait for the same two questions", !!formsOf(lp, "IMM 5476")?.missing.includes("case.uses_representative") && !!formsOf(lp, "IMM 5475")?.missing.includes("case.authorizes_release_to_designated_individual"), [formsOf(lp, "IMM 5476"), formsOf(lp, "IMM 5475")]);
   ok("QA-227 pass: both facts came through C3.6's door for their rule (a rules proposal, approved), never SQL", sql("select count(*) from canonical_field where canonical_field_key in ('case.uses_representative', 'case.authorizes_release_to_designated_individual') and status = 'PUBLISHED' and source_ref like 'Needed by Form condition IMM 547%'") === "2");
 
   const caseFor = async (ref: string, answer: boolean | null) => {
