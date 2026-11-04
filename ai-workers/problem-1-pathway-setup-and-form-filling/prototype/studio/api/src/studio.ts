@@ -32,6 +32,7 @@ import { refuseBlocking } from "./refusal.ts";
 import { gateOf as keyGateOf, keysUnchanged, runKeys, type Gate as KeyGate } from "./answer-key-gate.ts";
 import type { Problem } from "../../engine/validate.ts";
 import { isIdentityName } from "../../engine/identity-documents.ts";
+import { firmMayRead } from "./case-feed.ts";
 /** G2 (C5.5, BR-8; shared with G1 BR-8): a refusal carries every blocking problem in `errors[]`, each in words; `detail`
  *  (and `message`, read by older callers) keeps the sentence the screens and checks already show. */
 /** G2 BR-9: the keys a release rests on, frozen in its summary (only when the gate judged it). */
@@ -1219,19 +1220,12 @@ export class Studio {
     let kept = rows;
     if (firmKey) {
       const own = new Set((await this.db.case.findMany({ where: { workspaceId, firmKey }, select: { id: true } })).map((c) => c.id.slice(0, 8)));
-      kept = rows.filter((e) => {
-        if (!CASE_ENTITIES.has(e.entity)) return true;
-        const id = e.entity === "case" && e.entityKey ? e.entityKey.slice(0, 8) : /\bcase ([0-9a-f]{8})\b/.exec(e.summary)?.[1];
-        return !!id && own.has(id);
-      }).slice(0, limit);
+      kept = rows.filter((e) => firmMayRead(e, own)).slice(0, limit);   // case-feed.ts: any line naming a case is a case line
     }
     // C8.2 (breaker M1 on #553): government identifiers never travel in the feed; the audit row keeps them (AG-7-95).
     return kept.map((e) => ({ ...e, ...(e.entity === "application number" ? { detail: null } : {}), who: peopleNames(e.actor) }));
   }
 }
-
-/** The audit entities written by case work (runtime.ts, fill-case.ts, team.ts). */
-const CASE_ENTITIES = new Set(["case", "person", "case fact", "row", "group", "section", "form copy", "item", "submission group", "application number" /* C8.2 */]);
 
 /** QA-74: the simulated people's names for stored ids (one id, or several joined by commas), never "user-A" on screen. */
 const PEOPLE: readonly { id: string; name: string }[] = [...ACTORS, ...RUNTIME_ACTORS];
