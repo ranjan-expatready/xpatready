@@ -55,7 +55,7 @@ hit=[r for r in rows if r[0]==name]
 if not hit: sys.exit(name+' is not on the roster')
 for r in hit:
     r[cols.index(field)]=val
-    if field in ('row','branch'): r[7]=now
+    if field=='row': r[7]=now   # a new row is a new start; recording a branch is not
 open(path+'.tmp','w').write(''.join('\t'.join(r)+'\n' for r in rows)); import os; os.replace(path+'.tmp',path)
 PY
            ;;
@@ -130,14 +130,19 @@ query($o:String!,$n:String!){ repository(owner:$o,name:$n){ pullRequests(states:
   ... on IssueComment{createdAt body}}}
 }}}}
 EOF
-gh api graphql -F o="${REPO%%/*}" -F n="${REPO##*/}" -F query=@"$T/q.graphql" > "$T/prs.json" 2>/dev/null || fact ERR_PRS 1
+# The independent GitHub reads run side by side (one check took 165 s one after another on a busy 4 Nov).
 day0=$(TZ=Asia/Kolkata date -j -f '%Y-%m-%d %H:%M:%S' "$(TZ=Asia/Kolkata date +%Y-%m-%d) 00:00:00" +%s); fact DAY0 "$day0"
-gh pr list --state merged --search "merged:>=$(date -u -r "$day0" +%Y-%m-%dT%H:%M:%SZ)" -L 150 \
-  --json number,title,mergedAt,mergedBy,headRefName > "$T/merged.json" 2>/dev/null || { echo '[]' > "$T/merged.json"; fact ERR_MERGED 1; }
+{ gh api graphql -F o="${REPO%%/*}" -F n="${REPO##*/}" -F query=@"$T/q.graphql" > "$T/prs.json" 2>/dev/null || fact ERR_PRS 1; } &
+{ gh pr list --state merged --search "merged:>=$(date -u -r "$day0" +%Y-%m-%dT%H:%M:%SZ)" -L 150 \
+  --json number,title,mergedAt,mergedBy,headRefName > "$T/merged.json" 2>/dev/null || { echo '[]' > "$T/merged.json"; fact ERR_MERGED 1; }; } &
 # Runs of the last 6 hours: machines in use and waiting, batch results, flaky suites, main's health.
-gh api "repos/$REPO/actions/runs?per_page=100&created=>=$(date -u -v-6H +%Y-%m-%dT%H:%M:%SZ)" --paginate \
-  --jq '.workflow_runs[]|{id,name,event,status,conclusion,run_attempt,created_at,updated_at,run_started_at,head_branch,display_title}' > "$T/runs.ndjson" 2>/dev/null || fact ERR_RUNS 1
-gh api "repos/$REPO/actions/workflows/nightly.yml/runs?event=schedule&per_page=2" --jq '.workflow_runs[]|{id,status,conclusion,created_at,event}' > "$T/nightly.ndjson" 2>/dev/null || fact ERR_NIGHTLY 1
+{ gh api "repos/$REPO/actions/runs?per_page=100&created=>=$(date -u -v-6H +%Y-%m-%dT%H:%M:%SZ)" --paginate \
+  --jq '.workflow_runs[]|{id,name,event,status,conclusion,run_attempt,created_at,updated_at,run_started_at,head_branch,display_title}' > "$T/runs.ndjson" 2>/dev/null || fact ERR_RUNS 1; } &
+{ gh api "repos/$REPO/actions/workflows/nightly.yml/runs?event=schedule&per_page=2" --jq '.workflow_runs[]|{id,status,conclusion,created_at,event}' > "$T/nightly.ndjson" 2>/dev/null || fact ERR_NIGHTLY 1; } &
+# Connections (Lead 4, 4 Nov: 20 cloud lanes were dead up to ~13 h while claude.ai's GitHub link was off, and GitHub-only
+# checks could not see it): gh's own login here; Mergify and the nightly are judged from the data above.
+{ gh auth status >/dev/null 2>&1 && fact GH_AUTH ok || fact GH_AUTH "$(gh auth status 2>&1 | grep -m1 -iE 'not logged|error|token' | tr -d '\t' | cut -c1-80)"; } &
+wait
 # Jobs of runs not finished (the 40-machine limit counts jobs), and the jobs of runs that failed recently (for suite names).
 python3 -I -c '
 import json,sys,time
@@ -146,16 +151,17 @@ win=time.time()-(int(sys.argv[2])+15)*60
 for l in open(sys.argv[1]):
     r=json.loads(l)
     if r["status"]!="completed": print(r["id"])
-    elif r["conclusion"]=="failure" and datetime.fromisoformat(r["updated_at"].replace("Z","+00:00")).timestamp()>=win: print(r["id"])
+    elif r["conclusion"]=="failure" and r["name"]=="ci" and datetime.fromisoformat(r["updated_at"].replace("Z","+00:00")).timestamp()>=win: print(r["id"])
 ' "$T/runs.ndjson" "$SINCE" 2>/dev/null | sort -u | head -30 \
   | xargs -P 8 -I{} sh -c 'gh api "repos/$1/actions/runs/$2/jobs?per_page=100" --jq ".jobs[]|{id,run_id,name,status,conclusion}" > "$3/jobs.$2" 2>/dev/null' _ "$REPO" {} "$T"
 # Each parallel call writes its own file: one shared output interleaved lines (4 Nov review run).
 cat "$T"/jobs.[0-9]* > "$T/jobs.ndjson" 2>/dev/null || : > "$T/jobs.ndjson"
-# Suite names come from the failed job's log ("::group::<suite> failed (exit n)", run-suites.sh); each log is read once.
+# Suite names come from the failed job's log ("::group::<suite> failed (exit n)", run-suites.sh), PR and batch runs only (the
+# capability re-tests are many and their failures are their own result); each log is read once, at most 4 a check.
 mkdir -p "$ST/suites"
 # A job whose log names no suite (a failed step outside the suites) is cached empty, so no log is downloaded twice.
 jq -r 'select(.conclusion=="failure" and (.name|startswith("shard"))) | "\(.id) \(.run_id)"' "$T/jobs.ndjson" 2>/dev/null \
-  | while read -r j r; do [ -f "$ST/suites/$j" ] || echo "$j $r"; done | head -6 | while read -r j r; do
+  | while read -r j r; do [ -f "$ST/suites/$j" ] || echo "$j $r"; done | head -4 | while read -r j r; do
   # Cached only when the log was read (a failed or expired download is tried again at the next check).
   gh api "repos/$REPO/actions/jobs/$j/logs" > "$ST/suites/$j.log" 2>/dev/null || { rm -f "$ST/suites/$j.log"; continue; }
   { grep -oE '[^ ]+\.(c?js|ts|mjs) failed \(exit [0-9]+\)' "$ST/suites/$j.log" \
@@ -163,10 +169,6 @@ jq -r 'select(.conclusion=="failure" and (.name|startswith("shard"))) | "\(.id) 
   rm -f "$ST/suites/$j.log"; mv "$ST/suites/$j.tmp" "$ST/suites/$j"
 done
 find "$ST/suites" -type f -mtime +2 -delete 2>/dev/null
-
-# Connections (Lead 4, 4 Nov: 20 cloud lanes were dead up to ~13 h while claude.ai's GitHub link was off, and GitHub-only
-# checks could not see it): gh's own login here; Mergify and the nightly are judged from the data above.
-gh auth status >/dev/null 2>&1 && fact GH_AUTH ok || fact GH_AUTH "$(gh auth status 2>&1 | grep -m1 -iE 'not logged|error|token' | tr -d '\t' | cut -c1-80)"
 
 # ---- 2. The records the check reads, from origin/main (never a copy's own edits) ----
 git show "origin/main:$P/qa/CAPABILITIES.md" > "$T/caps-now.md" 2>/dev/null || fact ERR_CAPS 1
@@ -223,7 +225,7 @@ def _crash(t,e,tb):
     import traceback
     fr=[f for f in traceback.extract_tb(tb) if f.filename=='<stdin>'] if tb else []
     off=int(sys.argv[2]) if len(sys.argv)>2 and sys.argv[2].isdigit() else 0
-    line=(fr[-1].lineno+off) if fr else '?'
+    line=('%d (called from %d)'%(fr[-1].lineno+off,fr[0].lineno+off) if len(fr)>1 else str(fr[0].lineno+off)) if fr else '?'
     print('\n'.join(out))
     # ACTs found before the crash and not yet printed are printed (and counted) as found.
     late=[] if any(l.startswith('ACT') for l in out) else ['ACT  [found before the crash] %s {%s}'%(x[1],x[0]) for x in globals().get('acts',[])]
@@ -299,7 +301,7 @@ try: nodes=json.load(open(T+'/prs.json'))['data']['repository']['pullRequests'][
 except Exception: nodes=[]
 # A ruling answers a question only when the comment opens with it ("Tech lead ruling (Lead 4 …)", "The tech lead's rulings",
 # "Lead 3's Go"): reviewers quote rulings mid-line ("scoped check per the tech lead's ruling"), and a quote is no answer.
-RULING=re.compile(r"^\W*(the\s+)?(tech lead'?s?|lead \d+'?s?)\s*(\([^)]*\)\s*)?:?\s*(rulings?|ruled|answers?|go)\b\s*(\([^)]*\))?\s*\**:?(?!\s*[^\n]{0,20}\b(needed|pending|waiting|asked)\b)|^\W*ruled\b",re.I)
+RULING=re.compile(r"^\W*(the\s+)?(tech lead'?s?|lead \d+'?s?)\s*(\([^)]*\)\s*)?:?\s*(rulings?|ruled|answers?|go)\b(?>\s*(\([^)]*\))?\s*\**:?)(?!\s*[^\n]{0,20}\b(needed|pending|waiting|asked)\b)|^\W*ruled\b",re.I)
 QUESTION=re.compile(r'question for the tech lead',re.I)
 # A reviewer's verdict in the team's own wordings, near the top: "Reviewer (Opus …): Approve for a7335f0f9", "Head
 # da77b7ab2 has the Opus diff-only Approve", "**Approve**, no Blocker (Opus review)", "Review round 1 (Opus): Changes
@@ -317,11 +319,11 @@ def verdict_of(b):
     top=re.sub(r'review: approved','',b[:300],flags=re.I)
     if QUESTION.search(top) or not REVIEWISH.search(top): return None
     for rx in VERDICT:
-        m=rx.search(top)
-        if not m: continue
-        lead_in=re.sub(r'\([^)]*\)','',top[m.start():m.start(1)])
-        if NEG.search(lead_in) or AFTER.search(top[m.end(1):m.end(1)+30]): continue
-        return 'approve' if m.group(1).lower().startswith('approve') else 'block'
+        # Tried from each reviewer word, so an earlier "Opus review: not yet" does not hide a later "Reviewer: Approve".
+        for m in filter(None,(rx.search(top,i) for i in sorted({0}|{x.start() for x in REVIEWISH.finditer(top)}))):
+            lead_in=re.sub(r'\([^)]*\)','',top[m.start():m.start(1)])
+            if NEG.search(lead_in) or AFTER.search(top[m.end(1):m.end(1)+30]): continue
+            return 'approve' if m.group(1).lower().startswith('approve') else 'block'
     return None
 # A sha has a letter a–f (run ids are all digits); the base of a range ("from ec50644a5", "ec50644a5..") is not the head.
 SHA=re.compile(r'\b(?=[0-9]*[a-f])[0-9a-f]{7,40}\b')
@@ -453,7 +455,7 @@ for r in roster:
     fresh=any((p['pushed'] or 0)>t0 or (p['created'] or 0)>t0 for p in mine) or (last_push(r['branch']) or 0)>t0
     if not fresh and r['row'] not in ('-',''):
         if a0>lim: ACT('nobranch-'+nm,'%s (%s) started or given its row %s ago, no push or draft PR since then: not running (4 Nov: 20 cloud lanes dead up to ~13 h, claude.ai GitHub not connected); check the claude.ai Code list, else replace'%(nm,k,dur(a0)),a0-lim)
-    elif not waiting:
+    elif not waiting and r['row'] not in ('-',''):
         a=age(max(lp or 0,int(r['since']) if r['since'].isdigit() else 0))
         if a>90: ACT('idle-'+nm,'%s (%s, %s) no push %s: message "continue" plus its next step; a cloud session silent after that → replace'%(nm,k,r['row'],dur(a)),a-90)
     if r['row'] in ('-','') and k in ('cloud','mac'): ACT('norow-'+nm,'%s has no row: give it the next capability without an owner, or end it'%nm)
