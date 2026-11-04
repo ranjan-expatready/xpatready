@@ -142,3 +142,4 @@ Round 2 verdict on 75c0a1a2, withdrawn: Approve. R2-B1 was open, so it should ha
 **Journey score (round 3): 9/10** (speed ½, not timed against §9). **Could not check:** the merged #861 tree running myself; a screen reader; an intended user's walk (D17, D20).
 
 **Verdict: Approve** (d40fdab6).
+**The Approve stands for head ae84c347.** `git diff --stat d40fdab6..ae84c347` changes only this review.md (records only, no code), so the verdict for d40fdab6 carries over.
