@@ -818,7 +818,9 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
       // A rules-pass section drafted before printed headings were read (no "printed_heading" rule result; Devin review on
       // #883) may carry the PDF's internal part name ("Page wrapper"), and its edition's one draft (P-138) is never redone:
       // it too is accepted only as an edit with a name a person typed (keeping its name is then the person's choice).
-      const legacy = r.kind === "section" && r.step === MASTERS_SECTIONS_STEP && r.origin === "rules" && !((r.rules ?? []) as { rule?: unknown }[]).some((x) => x?.rule === "printed_heading");
+      // A reuse adds no name to the library (it lands on the existing item), so it is left as it was (review r5 M6: an
+      // edit always lands a new item, so refusing its plain accept would make a duplicate).
+      const legacy = r.kind === "section" && r.step === MASTERS_SECTIONS_STEP && r.origin === "rules" && (r.reuse as { match?: string } | null)?.match !== "reuse" && !((r.rules ?? []) as { rule?: unknown }[]).some((x) => x?.rule === "printed_heading");
       if (d.action !== "reject" && r.kind === "section" && ((r.work as { unnamed?: unknown } | null)?.unnamed === true || legacy)) {
         const was = String((r.payload as { label?: unknown }).label ?? ""), now = String((payload as { label?: unknown }).label ?? "");
         if (d.action === "accept" || isPlaceholder(now) || (!legacy && normalizeLabel(now) === normalizeLabel(was)))

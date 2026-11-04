@@ -130,6 +130,14 @@ run(async () => {
   ok("QA-206 fail (Devin review): such a section is not landed under a placeholder name either (409)", r.status === 409 && waiting() === w2, words(r));
   r = await call("POST", "/review/proposals/decide", { ids: [old?.id ?? NONE], action: "edit", payload: { ...(oldPayload ?? {}), label: "Education and training" } }, AUTHOR);
   ok("QA-206 pass (Devin review): named by a person, it lands under that name", r.status < 300 && waiting() === w2 + 1 && sql("select count(*) from logical_section where title = 'Education and training'") === "1", r.status >= 300 ? words(r) : undefined);
+  // Review r5 M6: an old-shape section that reuses a library section adds no name, so it accepts as a reuse, as before:
+  // no new library row, no duplicate of the section it reuses.
+  const reuser = s5257.find((x: any) => x.title === "Employment");
+  const reusedKey = sql("select section_key from logical_section where title = 'Education and training' limit 1");
+  sql(`update proposal_item set rules = '[{"rule":"from_form_part","passed":true,"why":null}]'::jsonb, work = '{}'::jsonb, reuse = '{"match":"reuse","existingKey":"${reusedKey}"}'::jsonb, payload = jsonb_set(payload, '{label}', '"Education and training"') where id = '${reuser?.id ?? NONE}'`);
+  const sec0 = Number(sql("select count(*) from logical_section")), w3 = waiting();
+  r = await call("POST", "/review/proposals/decide", { ids: [reuser?.id ?? NONE], action: "accept" }, AUTHOR);
+  ok("QA-206 pass (review r5 M6): an old-shape section that reuses a library section is accepted as a reuse, adding no library row", !!reuser && r.status < 300 && Number(sql("select count(*) from logical_section")) === sec0 && waiting() === w3 && sql("select count(*) from logical_section where title = 'Education and training'") === "1", r.status >= 300 ? words(r) : r.body?.items);
   ok("QA-206 pass: the whole check spent US$0", T.spent() === before);
   T.done();
 });

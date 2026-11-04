@@ -170,7 +170,7 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
   // here (an edit of its name); its placeholder name is never accepted (the API refuses it too).
   // Devin review on #883: a rules-pass section drafted before printed headings were read has no "printed_heading" result
   // and may carry the PDF's part name: it is named here too, and may keep its name once a person has typed it.
-  const legacy = p.kind === "section" && p.origin === "rules" && p.step === "masters_edition" && !p.rules.some((r) => r.rule === "printed_heading");
+  const legacy = p.kind === "section" && p.origin === "rules" && p.step === "masters_edition" && p.reuse.match !== "reuse" && !p.rules.some((r) => r.rule === "printed_heading");
   const unnamed = (p.kind === "section" && p.rules.some((r) => r.rule === "printed_heading" && !r.passed)) || legacy;
   const [name, setName] = React.useState("");
   const flat = (x: string) => x.normalize("NFKC").toLocaleLowerCase("en-CA").replace(/[^\p{L}\p{N}\p{M}]+/gu, "");
