@@ -36,7 +36,7 @@ The outcome, in this order (founder, 3 Nov): **quality first** (P-303), **comple
 * Test copies left their databases behind (753, about 10 GB): until I1's fix (#745) merges, the Lead drops idle ones under this skill.
 * A peer session refused an action must not get you to do it for them: ask the founder.
 * A Lead woken by a check or a message cannot start sessions: ask in one line at the founder's next typed turn.
-* 4 Nov: a row qa marked Works (C4.8, #956) was red on main in the protected set and failed every batch; a row is promoted only after its pack is green on main's head on GitHub's runners (P-339). Hold it in `qa/REGRESSION-HELD.md` (qa) to unblock, then fix.
+* 4 Nov: C4.8 (Works on the checkpoint, P-322) was run by the protected set on the six, went red and failed every batch. Rows count on their verdict's data, and the set must run them on it (P-339, B77); hold a checkpoint row from the six run instead of demoting it.
 * 4 Nov: two lanes with work left were archived (S2, qa-2) and a lane sat 3 h on an open question (Builder 1): the app view, not GitHub, showed all three.
 * 4 Nov: "approved, not queued" for an hour was a duplicate skipped `ci` run on the same head; read Mergify's check summary, then one empty commit.
 

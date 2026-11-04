@@ -134,6 +134,7 @@ L-SA3 (C1 ready to file) · X3's guarded Add and L-SA11 (C2, P-252) · G5 (P-248
 | B73 C4.11 G5 Ready gap | on the six no item reaches Ready to accept; find why, post the cheapest fix first. Owner: #865's lane | P-340, Lead 8, #865 |
 | B74 QA-162 paid conditions run | P-227 option b: a paid run that shows the AI the question list, on the six; quote first (paid runner), run after #967 and the Lead's Go; frees C4.11, C4.5 and C4.1's passport step | P-340, Lead 8 |
 | B75 Field-map decision page words | the page where proposals are decided shows the checker's and the disagreement words, as the Proposals list does (QA-230, Minor); after M2 60 | P-340, qa-2, QA-230 |
+| B77 Protected set on the verdict's data (P-214, now) | the regression job runs each Works row's pack on the data its verdict counts on (the six, or `data=checkpoint` for release and case steps, as the nightly re-test mode does); until then such rows are held from the six run. Owner: Builder 1 after its flaky-checks PR | P-339, Lead 8 |
 | B76 Scale phase additions (P-336, P-339) | (1) a tooling check that refuses a Works row in CAPABILITIES without a green main run id for its pack; (2) lead-watch.sh flags a session archived with work left and a lane waiting on an open question over 30 min | Lead 8 |
 
 ## Now
