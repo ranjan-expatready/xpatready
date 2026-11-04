@@ -8,6 +8,7 @@ import type { Snapshot } from "./snapshot.ts";
 import { isFilingFact } from "./resolver.ts";
 import { STATUS_WORDS } from "../contracts/status-words.ts";
 import { waitsForMap } from "./setup-checklist.ts";
+import { libraryType } from "./form-type.ts";
 
 type Participant = { role: string; label: string; min: number; max: number; applies?: boolean };
 /** The parts of a snapshot these rules read (the snapshot's own lists are untyped until the team's contract lands). */
@@ -162,7 +163,9 @@ export function pdfMapInUse<M extends { form_number: string; form_edition?: stri
  *  paper), a portal-screen edition (a line filed Online, P-245) or an online-only form drafted from help pages or saved
  *  screens (P-152 (2)). A checklist or a document form is not one, and nor is a line marked "Not needed" (the IRCC
  *  account asks it itself, so nothing is filed on it; Q2 to the tech lead on the PR). */
-export const isFormLine = (f: { form_kind?: string | null; channel?: string | null }) => (f.form_kind ?? "data_form") === "data_form" && f.channel !== "NOT_NEEDED";
+// The library's own rule says what is filed (engine/form-type.ts libraryType; review m2: an old "document" row titled as
+// a form, IMM 5802, is filed too).
+export const isFormLine = (f: { form_kind?: string | null; title?: string | null; channel?: string | null }) => libraryType(f.form_kind ?? "data_form", f.title ?? "") === "form" && f.channel !== "NOT_NEEDED";
 /** The code the Review and release tab finds this line by (its own warning box, web/src/pages/review.tsx). */
 export const NO_FORM_LINE = "no_form_line";
 export const FORM_LINE_WORDS = "No form line yet: a case on this combination would file no form (it has only documents, checklists or forms marked Not needed). Add at least one form it files before sending it for review: a PDF form, a portal-screen edition filed Online, or an online-only form (Find forms, or add one from the Form library).";
@@ -171,7 +174,7 @@ export const FORM_LINE_WORDS = "No form line yet: a case on this combination wou
  *  page holds its row in these words (and counts it among the row's release blockers). One with no line at all is F8's own line (api/src/studio.ts
  *  emptyProblem), never both. Releases made before keep their status: a release is never undone (Q3). */
 export function formLineProblem(s: Pick<Snapshot, "forms" | "document_requirements">): Problem[] {
-  const forms = s.forms as { form_kind?: string | null; channel?: string | null }[];
+  const forms = s.forms as { form_kind?: string | null; title?: string | null; channel?: string | null }[];
   if (!forms.length && !(s.document_requirements ?? []).length) return [];
   return forms.some(isFormLine) ? [] : [{ level: "error", where: "Release", item: "", message: FORM_LINE_WORDS, code: NO_FORM_LINE }];
 }

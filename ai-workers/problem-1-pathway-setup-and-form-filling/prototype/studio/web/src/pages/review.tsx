@@ -80,7 +80,7 @@ export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: a
       {others.length || warnings.length ? (
         <div className="rounded-xl border border-border bg-surface-raised p-4">
           <p className="font-medium">Validation of the draft</p>
-          <p className="mt-1 text-xs text-text-muted">{others.length}{unsourced ? " other" : ""} error{others.length === 1 ? "" : "s"} (block submission) · {warnings.length} warning{warnings.length === 1 ? "" : "s"} (shown and recorded)</p>
+          <p className="mt-1 text-xs text-text-muted">{others.length}{unsourced || noFormLine ? " other" : ""} error{others.length === 1 ? "" : "s"} (block submission) · {warnings.length} warning{warnings.length === 1 ? "" : "s"} (shown and recorded)</p>
           <ul className="mt-2 space-y-1 text-sm">{[...others, ...warnings].slice(0, allProblems ? undefined : 8).map((p: any, i: number) => <li key={i} className="flex gap-2"><Pill tone={p.level === "error" ? "danger" : "warn"}>{p.level}</Pill><span data-problem className="min-w-0 [overflow-wrap:anywhere]"><b>{KIND_WORD[p.where] ?? p.where}</b> · {problemLine(p)}</span>{p.where === "Tests" && p.item ? <> <Link className="text-text-link hover:underline" to={fixOnTests(id, p.item === "eligibility" ? "rule_set" : "field_map", p.item)} aria-label={`Fix on Tests: ${p.label ?? p.item}`} data-fix-tests>Fix on Tests</Link></> : null}</li>)}</ul>
           {others.length + warnings.length > 8 ? <Button size="sm" variant="ghost" className="mt-1" onClick={() => setAllProblems(!allProblems)}>{allProblems ? "Show fewer" : `Show all ${others.length + warnings.length}`}</Button> : null}
         </div>

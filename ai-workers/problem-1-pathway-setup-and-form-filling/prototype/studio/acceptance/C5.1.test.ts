@@ -9,16 +9,19 @@
 // row "Held back: No form line yet: …". Underneath: Submit is refused (400) and Approve (409), and so is the Release
 // page's Release (409), each in the words that say what to add; nothing is released. A PDF line, a line filed Online
 // (a portal-screen edition, P-245) or on paper each clear it; an online-only form (P-152 (2)) clears it in the rule
-// itself (no screen makes one today: online capture is parked); a checklist or a line marked Not needed does not.
+// itself (no screen makes one today: online capture is parked); a checklist or a line marked Not needed does not (Not
+// needed is the rule's and the property's: neither data set has an account record that allows it, so its live step
+// prints NOTE). An approver who changed the draft is refused release (BR-14) in tests/check_s5_slice1.ts.
 // Data (P-322, release is a later step): by default Demo › Load the configured checkpoint (loaded here when the copy
 // holds anything else), part A on With a high wage LMIA, which the checkpoint leaves empty. Its part B needs a
 // combination whose draft has no problem, which the checkpoint has none of until QA-144: then it prints WAIT (exit 2)
 // and releases the first clean one as soon as one exists. A fixture key as 4th argument (wp.family) loads the suites'
 // fixture instead: part A on Visitor visa, part B releases the work permit's next version.
-// Screenshots go to studio/var/acceptance/C5.1-*-1440.png (the PR's are under product/screens/G5-release-form-line/).
+// Screenshots go to studio/var/acceptance/C5.1-*-1440.png (the PR's: product/screens/G5-release-form-line/screenshots/).
 // No model call (US$0). Exit 0 = all pass, 1 = a failure, 2 = setup missing or waiting.
 //   zsh studio/tools/isolated.sh accept 4446 start && tsx studio/acceptance/C5.1.test.ts 4446 xr_studio_accept
 import { mkdirSync } from "node:fs";
+import fc from "fast-check";
 import { join } from "node:path";
 import { FORM_LINE_WORDS, formLineProblem, isFormLine } from "../engine/programs.ts";
 import { sourceEveryNumber } from "../tests/fixtures/source-every-number.cjs";
@@ -59,6 +62,12 @@ run(async () => {
   const rule = (forms: object[], docs: number) => formLineProblem({ forms, document_requirements: Array(docs).fill({}) } as any);
   ok("C5.1 P-248 fail (rule): documents only, or a checklist only, holds the release with one error in the form-line words", rule([], 2).length === 1 && rule([], 2)[0].level === "error" && rule([], 2)[0].message === FORM_LINE_WORDS && rule([{ form_kind: "checklist" }], 0).length === 1);
   ok("C5.1 P-248 pass (rule): an online-only form beside the documents clears it; nothing at all is F8's line, not this one", rule([{ form_kind: "data_form", channel: "ONLINE", online_only: true }], 2).length === 0 && rule([], 0).length === 0);
+  ok("C5.1 P-248 pass (rule, review m2): an old library row kept as a document but titled as a form (IMM 5802 style) is filed, so it counts", isFormLine({ form_kind: "document", title: "Offer of employment form" }) && !isFormLine({ form_kind: "document", title: "Document checklist" }));
+  // STANDARDS §7 (review m5): the rule as a property: held exactly when the draft has lines and none of them is filed.
+  const kinds = fc.record({ form_kind: fc.constantFrom("data_form", "checklist", "guide", "document", null), title: fc.constantFrom("", "Offer of employment form", "Document checklist"), channel: fc.constantFrom("PDF_UPLOAD", "ONLINE", "PAPER", "NOT_NEEDED", null), online_only: fc.boolean() });
+  let prop = "";
+  try { fc.assert(fc.property(fc.array(kinds, { maxLength: 5 }), fc.nat(3), (forms, docs) => (rule(forms, docs).length === 1) === ((forms.length + docs > 0) && !forms.some((f) => (f.form_kind ?? "data_form") === "data_form" || (f.form_kind === "document" && f.title === "Offer of employment form") ? f.channel !== "NOT_NEEDED" : false))), { numRuns: 500 }); } catch (e) { prop = (e as Error).message.split("\n").slice(0, 3).join(" "); }
+  ok("C5.1 P-248 property (500 drafts): held exactly when it has lines and none is a filed form line (Not needed never counts)", !prop, prop || undefined);
   ok("C5.1 P-248 (words): the form-line words say what to add: a PDF form, a portal-screen edition filed Online or an online-only form", /PDF form/.test(FORM_LINE_WORDS) && /portal-screen edition filed Online/.test(FORM_LINE_WORDS) && /online-only form/.test(FORM_LINE_WORDS) && /Find forms|Form library/.test(FORM_LINE_WORDS));
 
   // A document line through the screens' route: a new document type waits for a second person, who accepts it on To
