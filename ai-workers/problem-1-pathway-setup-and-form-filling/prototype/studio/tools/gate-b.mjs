@@ -7,9 +7,8 @@
 //      "Claims Works: C<n.n>" line (the PR says it now Works; the same line triggers gate A) is checked against qa/BUGS.md
 //      (tech lead, 4 Nov: incremental work is not stopped by the row's bugs), and its whole pack must pass (steps never
 //      narrow a Works claim). The check fails while it has an open Blocker, Critical or Major there, or a row whose
-//      severity cannot be read, unless the PR names that bug as fixed: on a "Fixes:" line, or as "fixes / closes QA-nnn"
-//      with the verb right before the id and no "not" before it. A mention ("QA-192 is not fixed", "see QA-169 fixed")
-//      is never a fix. BUGS.md is read as it is on the base branch (CI's RANGE), so a PR's own edit to it counts for
+//      severity cannot be read, unless the PR's body names that bug on a strict "Fixes: QA-nnn[, QA-nnn]" line (nothing
+//      else on the line); prose, the title and "Fix:" never count. BUGS.md is read as it is on the base branch (CI's RANGE), so a PR's own edit to it counts for
 //      nothing. A line that says "Claims Works" but names nothing the gate can read refuses (never a silent pass).
 //   2. Each named capability with an acceptance pack (prototype/studio/acceptance/<id>.test.ts and <id>-*.test.ts) runs
 //      on a fresh isolated copy, US$0, live AI off, by its own documented run: on the demo data (Demo › Reset to the
@@ -40,14 +39,16 @@ const ID = /\b[Cc](\d{1,2})\.(\d{1,2})(?![\d.]*\d)\b/g, BUG = /\bQA-\d+\b/gi, GA
 const ids = (s) => [...s.matchAll(ID)].map((m) => `C${m[1]}.${m[2]}`);
 const KEY = /\b(capabilit(?:y|ies)|claims?\s+works?)\b[^:|\n]{0,40}:/gi;
 
-/** The text a person writes as prose: a fenced block (``` or ~~~) and an inline `code span` are examples, not claims
- *  (#804's own description quoted the syntax and was read as a claim); the line count stays the same. A "Claims Works"
- *  line whose ids sit only in code names nothing readable, so it still refuses. */
+/** The text a person writes as prose: a fenced block (``` or ~~~) and an inline `code span` that holds a capability or
+ *  a placeholder ("C7.5 (steps 1-4)", "C<n.n>") are examples, not claims (#804's own description quoted the syntax and
+ *  was read as a claim); a code span with only words in it ("`Claims Works:` C11.13") is unwrapped and read (review
+ *  R2-M2). The line count stays the same. A "Claims Works" line whose ids sit only in code names nothing readable, so it
+ *  refuses. */
 export const prose = (text) => {
   let fence = false;
   return text.split(/\r?\n/).map((l) => {
     if (/^\s*(```|~~~)/.test(l)) { fence = !fence; return ""; }
-    return fence ? "" : l.replace(/`[^`]*`/g, " ");
+    return fence ? "" : l.replace(/`([^`]*)`/g, (_, c) => (/[Cc]\d|<|QA-\d/i.test(c) ? " " : c));
   }).join("\n");
 };
 /** A body line in plain words: markdown marks, quotes, list bullets and headings gone; a table row "| key | value |"
@@ -57,21 +58,14 @@ const plain = (line) => {
   if (/^\|/.test(t)) { const c = t.split("|").map((x) => x.trim()).filter(Boolean); if (c.length >= 2) t = `${c[0]}: ${c.slice(1).join(" ")}`; }
   return t.replace(/^(>\s*)+/, "").replace(/^#+\s*/, "").replace(/^([-+]|\d+[.)])\s+/, "").trim();
 };
-/** The bugs a text says it fixes: every id on a "Fixes:" line (up to a "not"), or an id right after fixes / fixed /
- *  closes / closed / resolves with no negation earlier in the sentence. */
+/** The bugs the PR body says it fixes: only a line that is "Fixes:" followed by nothing but bug ids ("Fixes: QA-192,
+ *  QA-169"). Prose, a title, "Fix:" with words, or a note after the ids is never a fix (review R2-M1: "closes QA-169 and
+ *  QA-192 stays open", "Fixes: none (QA-192 …)", "**Fix:** … QA-192 settled" were all read as fixes). */
 export function fixedIn(text) {
   const out = new Set();
   for (const raw of prose(text).split(/\r?\n/)) {
-    const line = plain(raw);
-    const f = line.match(/^fix(?:es|ed)?\s*:\s*(.*)$/i);
-    if (f) { for (const b of f[1].split(/\b(?:not|n't)\b/i)[0].match(BUG) ?? []) out.add(b.toUpperCase()); continue; }
-    for (const sentence of line.split(/[.;!?]\s/)) {
-      for (const m of sentence.matchAll(/\b(fixes|fixed|closes|closed|resolves|resolved)\s+((?:QA-\d+(?:\s*(?:,|and|&)\s*)?)+)/gi)) {
-        const before = sentence.slice(0, m.index);
-        if (/\b(not|no|never|nothing|without)\b|n't\b/i.test(before)) continue;
-        for (const b of m[2].match(BUG) ?? []) out.add(b.toUpperCase());
-      }
-    }
+    const m = plain(raw).match(/^fixes\s*:\s*(QA-\d+(?:\s*(?:,|and|&)\s*QA-\d+)*)\s*\.?$/i);
+    if (m) for (const b of m[1].match(BUG) ?? []) out.add(b.toUpperCase());
   }
   return out;
 }
@@ -84,7 +78,8 @@ export function claims(title = "", body = "") {
   for (const id of ids(title)) add(id, null);
   const lines = body.split(/\r?\n/).map(plain);
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i], keys = [...line.matchAll(KEY)];
+    // A key alone on its line ("## Claims Works", "**Claims Works**", "Capabilities") takes the list under it (R2-M3).
+    const line = /^(capabilit(?:y|ies)|claims?\s+works?)\s*:?$/i.test(lines[i]) ? `${lines[i].replace(/:$/, "")}:` : lines[i], keys = [...line.matchAll(KEY)];
     for (const [k, m] of keys.entries()) {
       let value = line.slice(m.index + m[0].length, keys[k + 1]?.index ?? line.length).split(/\s·\s/)[0];
       const isWorks = /works?/i.test(m[1]);
@@ -102,7 +97,7 @@ export function claims(title = "", body = "") {
     if (!keys.some((m) => /works?/i.test(m[1])) && /\bclaims?\s+works?\b/i.test(line) && ids(line).length) unread.push(line.slice(0, 120));
   }
   for (const id of works) caps.set(id, null);   // a Works claim is the whole pack: steps never narrow it
-  return { caps, works, fixes: new Set([...fixedIn(title), ...fixedIn(body)]), unread };
+  return { caps, works, fixes: fixedIn(body), unread };
 }
 /** "1-4, 10, 6b, AT-3" → 1 2 3 4 10 6b AT-3 (a range only between two numbers; - – — … and .. all work). */
 export function expand(list) {

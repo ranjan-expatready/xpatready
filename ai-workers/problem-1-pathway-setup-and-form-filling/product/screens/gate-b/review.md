@@ -67,3 +67,21 @@ D1 ½ (done-when cases met; M1 and M2 break the bug rule) · D2 ½ (M1, m7) · D
 * Repository variables (`gh variable list` returned nothing).
 
 **Block.** To fix before the label: M1, M2.
+
+## Round 2 (diff only, 844094baa..d61a7fb2b): summary from the reviewer's hand-back
+The reviewer (Opus, fresh context, 4 Nov, about 09:50–10:00 IST) appended its round 2 section to this file in a temporary checkout, which the builder then removed by mistake before committing it. What follows is the reviewer's own hand-back report, condensed by the builder; its test inputs were left in the builder's scratchpad.
+
+**Verdict: Block for d61a7fb2b.** Journey re-walk 7.5/10, not a pass.
+* **R2-M1** (review M1 / break B1 not closed): `fixedIn()` still waived open bugs on honest wording: "This closes QA-169 and QA-192 stays open.", "This fixes QA-169, QA-192 stays open.", "Fixes: none (QA-192 stays open)", "Fixes: QA-169 (QA-192 is the next PR)", "**Fix:** … the same rule QA-192 settled" (the shape of a real PR body), and a title "fix: … (QA-192 still open)". Remedy: only a strict Fixes line with ids.
+* **R2-M2** (new in d61a7fb2b): "`Claims Works:` C11.13" (the key in code, the ids in text) was a silent skip.
+* **R2-M3** (break M6 / review m1, partly open): "## Claims Works", "**Claims Works**" or a bare "Claims Works" with a list under it was a silent skip.
+* **Closed:** review M2 (the batch re-runs part 1 per PR, as it reads now); break M1, M2, M4, M5; M6 for lists, tables, case and notes; round 1 m2–m7, m9.
+* **ci.yml (4bbcf0a79) correct:** the event's REST user object shows `mergify[bot]` (type Bot) on batches #795–#810; "app/mergify" is only how gh prints the GraphQL login. `pull-requests: read` is enough.
+* **Nothing red that was green:** self-check 78/0; none of 128 real non-batch PRs refused; main's 77 open rows parse the same under the old and new code; every real batch title names its PRs.
+* Minors r2-m1…m7, among them: odd fence shapes could hide later lines (none of 82 real fenced bodies has them); a capability first named after the PR's own run never gets its pack run (gate A still covers a Works claim); a qa or records PR in a mixed batch; the temporary timing step must come out before the label.
+
+## Builder's response to round 2 (in the commit after d61a7fb2b)
+* R2-M1: a fix is only a body line that is "Fixes:" followed by nothing but bug ids ("Fixes: QA-192, QA-169"). The title, prose, "Fix:" and a note after the ids never count. All of round 2's lines are fail cases in check-gate-b.
+* R2-M2: a code span is an example only when it holds a capability, a placeholder or a bug id. A code span with only words in it ("`Claims Works:`") is unwrapped and read.
+* R2-M3: a key alone on its line (heading, bold label, bare, or with a colon) takes the list under it.
+* Self-check 90/90. Part 1 on the 23 open non-batch PRs refuses none; #804's own description was reworded so its examples carry placeholders.

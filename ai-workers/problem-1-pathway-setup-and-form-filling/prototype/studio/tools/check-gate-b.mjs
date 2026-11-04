@@ -37,15 +37,22 @@ const w = (title, more = "") => gate(title, `Claims Works: ${title.match(/C\d+\.
 
 // Part 1: the done-when cases (tech lead, 4 Nov) and the shapes of BUGS.md.
 ok("a PR claiming Works for C11.13 while QA-192 (Major) is open is refused", w("forms: C11.13 near-duplicate reason").join() === "QA-192", w("forms: C11.13 near-duplicate reason"));
-ok("a title that fixes QA-192 passes (\"fixes QA-192\")", w("forms: C11.13 near-duplicate reason, fixes QA-192").length === 0);
+ok("a title is never a fix, even \"fixes QA-192\" (review R2-M1)", w("forms: C11.13 near-duplicate reason, fixes QA-192").join() === "QA-192");
 ok("a title that only names QA-192 is not a fix (\"QA-192: reason\")", w("forms: C11.13 — QA-192: near-duplicate reason").join() === "QA-192");
 ok("…or with a \"Fixes: QA-192\" line", w("forms: C11.13 reason", "Plan…\nFixes: QA-192\n").length === 0);
-ok("…or a line that says it fixes QA-192", w("forms: C11.13 reason", "This fixes QA-192 by asking for the reason.").length === 0);
+ok("prose is never a fix, even \"This fixes QA-192\"; only a strict Fixes: line is", w("forms: C11.13 reason", "This fixes QA-192 by asking for the reason.").join() === "QA-192" && w("forms: C11.13 reason", "**Fixes:** QA-192, QA-169").length === 0);
 // The reviewer's and the breaker's false passes at 844094baa (4 Nov): a mention near "fixed" or "closed" is no fix.
 for (const line of ["This does not fix QA-192 yet.", "QA-192 is not fixed by this PR", "(QA-192 still open, closes nothing)", "QA-192 to follow (see QA-169 fixed)",
   "QA-169 closed. **QA-192** (Gap · Major, open) still names C11.13", "QA-192 is still Open: Major (C4.11; C4.7 part fixed, 2 Nov)", "This PR has not fixed QA-192", "Fixes: QA-169, not QA-192"])
   ok(`a mention is not a fix: "${line}"`, w("forms: C11.13 reason", line).join() === "QA-192", w("forms: C11.13 reason", line));
-ok("\"closes QA-192 and QA-169\" fixes both", [...claims("x", "This closes QA-192 and QA-169.").fixes].sort().join() === "QA-169,QA-192");
+// Round 2's false passes at d61a7fb2b (review R2-M1, R2-M2, R2-M3).
+for (const line of ["This closes QA-169 and QA-192 stays open.", "This fixes QA-169, QA-192 stays open.", "Fixes: none (QA-192 stays open)", "Fixes: QA-169 (QA-192 is the next PR)",
+  "**Fix:** the same rule QA-192 settled", "Fix: QA-192", "Fixes QA-192"])
+  ok(`not a fix: "${line}"`, w("forms: C11.13 reason", line).join() === "QA-192", w("forms: C11.13 reason", line));
+ok("a title \"fix: … (QA-192 still open)\" is not a fix", w("fix: C11.13 reason (QA-192 still open)").join() === "QA-192");
+for (const [label, body] of [["the key in code, the ids in text", "`Claims Works:` C11.13"], ["a heading with a list", "## Claims Works\n- C11.13"],
+  ["a bold label with a list", "**Claims Works**\n- C11.13"], ["a bare label with a list", "Claims Works\n- C11.13"], ["a key alone with a colon and a list", "Claims Works:\n1. C11.13"]])
+  ok(`a Claims Works line is read as ${label}`, claims("forms: x", body).works.has("C11.13"), [...claims("forms: x", body).works]);
 ok("a PR that names C11.13 without claiming Works is not checked against BUGS.md", gate("forms: C11.13 near-duplicate reason", "Capabilities: C11.13").length === 0);
 // The two refused before the tech lead's correction: #785's and #771's own titles (4 Nov), no "Claims Works:" line.
 ok("#785 (C11.14 saved checker rounds, no Claims Works) no longer refuses; with Claims Works: C11.14 it refuses on QA-176",
