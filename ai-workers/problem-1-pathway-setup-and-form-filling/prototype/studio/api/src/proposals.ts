@@ -7,12 +7,14 @@
 import { HttpStatus } from "@nestjs/common";
 import { proposeConditionChange } from "./question-condition.ts";
 import { createHash, randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { Prisma, type ProposalItem as Row } from "@prisma/client";
 import { ProposalItem, ProposalPayload, type ProposalKind } from "../../contracts/proposal-item.ts";
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { DRAFT_FIELDS_STEP, FIELD_ID, FIELD_ID_MAX } from "./field-draft-items.ts";
 import { subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
-import { fail, need, type Actor, type Audit, type Db } from "./core.ts";
+import { fail, need, SOLUTION, type Actor, type Audit, type Db } from "./core.ts";
 import { keyFor } from "./library-changes.ts";
 import { checkedFieldValues, dropFieldList, type AnswerValue } from "./answer-values.ts";
 import { acceptPqrPick } from "./fact-sources.ts";
@@ -22,6 +24,9 @@ import { checkCondition } from "../../engine/validate.ts";
 import { nearMatches } from "../../engine/near.ts";
 import { p121Rating, P121_WHY, type Rateable } from "../../engine/agreement.ts";
 import { aiReadsIdentity, identityOf } from "../../engine/identity-documents.ts";
+import { canonical } from "../../../contracts/rules.ts";
+import { effective } from "../../engine/snapshot.ts";
+import { fieldsOf, renamed } from "../../engine/masters-ai.ts";
 
 type Tx = Prisma.TransactionClient;
 type Client = Db | Tx;
@@ -366,6 +371,68 @@ async function landRequirementLine(tx: Tx, r: Row, p: ProposalPayload, l: Landin
   return keys.join(",");
 }
 
+/** QA-196 (P-149 (1) one door, P-120): an accepted AI check becomes a DRAFT check where checks live, on a combination
+ *  (Library › Checks lists it, used in each), under the section-check writer's rules (studio.ts saveCheck): a condition in
+ *  the condition language, never the same check twice in a draft. A guide's check lands on its own combination (a check
+ *  over two answers or more is a cross-answer check: it only warns). A form edition's check reads the form's own fields:
+ *  each is read as the shared field the edition's field map maps it to, and the check lands on every combination whose
+ *  draft files that form, under one key. Its examples stay unconfirmed until the expert confirms (P-149 (5)). */
+async function landCheck(tx: Tx, r: Row, p: ProposalPayload, l: Landing): Promise<string> {
+  need(l.actor, "author"); // draft edits of a combination are the author duty (studio.ts saveCheck)
+  const parsed = ProposalPayload.safeParse(p);
+  if (!parsed.success || (parsed.data.kind !== "form_check" && parsed.data.kind !== "cross_check")) fail(`This check is incomplete (${parsed.success ? "not a check" : plainIssues(parsed.error)}): reject it.`);
+  const c = parsed.data as Extract<ProposalPayload, { kind: "form_check" | "cross_check" }>;
+  const work = (r.work ?? {}) as { group?: unknown; severity?: unknown };
+  let tree = c.tree;
+  let combos: { id: string; label: string }[];
+  if (r.combinationId) {
+    const one = await tx.combination.findUnique({ where: { id: r.combinationId }, select: { id: true, label: true } });
+    if (!one) fail("The combination this check was drafted for is no longer there: reject it.", HttpStatus.NOT_FOUND);
+    combos = [one!];
+  } else {
+    const ed = r.formEdition ? await tx.formEdition.findFirst({ where: { workspaceId: l.ws, editionLabel: r.formEdition }, include: { form: { select: { id: true, formKey: true } } } }) : null;
+    if (!ed) fail(`The form edition this check was drafted from (${r.formEdition ?? "none named"}) is no longer in the library: reject it.`, HttpStatus.CONFLICT);
+    const maps = effective(await tx.formFieldMap.findMany({ where: { formEditionId: ed!.id, dataPath: { in: fieldsOf(c.tree) } } }), (m) => m.dataPath, "draft").filter((m) => m.status !== "RETIRED");
+    const to = new Map(maps.filter((m) => m.outcome === "mapped" && m.canonicalFieldKey).map((m) => [m.dataPath, m.canonicalFieldKey!]));
+    const unmapped = fieldsOf(c.tree).filter((f) => !to.has(f));
+    if (unmapped.length) {
+      // Each form field by its printed caption (the edition's reading), never its internal path where the reading has it.
+      const printed = (() => { try { return new Map((JSON.parse(readFileSync(join(SOLUTION, ed!.inventoryFile ?? ""), "utf8")) as { fields?: { data_path?: string; caption?: string }[] }).fields?.map((x) => [x.data_path ?? "", x.caption?.trim() ?? ""]) ?? []); } catch { return new Map<string, string>(); } })();
+      const short = (w: string) => (w.length > 70 ? `${w.slice(0, 68).trimEnd()}…` : w);
+      const words = unmapped.map((f) => short(maps.find((m) => m.dataPath === f)?.caption?.trim() || printed.get(f) || f.split(".").slice(-2).join(".").replace(/\[0\]/g, "")));
+      fail(`This check reads ${unmapped.length === 1 ? "a form field" : `${unmapped.length} form fields`} of ${ed!.editionLabel} that ${unmapped.length === 1 ? "is" : "are"} not mapped to a shared field yet (${words.slice(0, 3).map((w) => `"${w}"`).join(", ")}${words.length > 3 ? ", …" : ""}). Map ${unmapped.length === 1 ? "it" : "them"} on the form's field page first, then accept it again; or reject it.`, HttpStatus.CONFLICT);
+    }
+    tree = renamed(c.tree, (f) => to.get(f) ?? f);
+    const lines = effective(await tx.combinationForm.findMany({ where: { workspaceId: l.ws, govFormDefId: ed!.form.id }, include: { combination: { select: { id: true, label: true } } } }), (x) => `${x.combinationId}|${x.lineageKey}`, "draft").filter((x) => x.status !== "RETIRED");
+    combos = [...new Map(lines.map((x) => [x.combination.id, x.combination])).values()].sort((a, b) => a.label.localeCompare(b.label));
+    if (!combos.length) fail(`No combination files ${ed!.form.formKey} yet, so this check has nowhere to apply: add the form to a combination's Forms first, then accept it; or reject it.`, HttpStatus.CONFLICT);
+  }
+  // As the section-check writer: a condition in the condition language; a field not in the library yet is allowed in a
+  // draft (release warns), a retired one is refused (as the requirement lander, C11.9 break M1).
+  const all = await tx.canonicalField.findMany({ where: { workspaceId: l.ws }, orderBy: { version: "asc" }, select: { canonicalFieldKey: true, valueType: true, status: true } });
+  const newest = new Map(all.map((f) => [f.canonicalFieldKey, f]));
+  const retired = new Set([...newest.values()].filter((f) => f.status === "RETIRED").map((f) => f.canonicalFieldKey));
+  const fields = new Map([...newest.values()].filter((f) => !retired.has(f.canonicalFieldKey)).map((f) => [f.canonicalFieldKey, f.valueType]));
+  const derived = new Set((await tx.derivedField.findMany({ where: { workspaceId: l.ws }, select: { derivedKey: true } })).map((d) => d.derivedKey));
+  const gone = fieldsOf(tree).find((f) => retired.has(f));
+  if (gone) fail(`It reads "${gone.split(".").pop()!.replace(/_/g, " ")}", a retired field: restore it in Shared library › Fields first, or reject it.`, HttpStatus.CONFLICT);
+  const errs = checkCondition(tree, fields, derived).filter((e) => !/, which is not in the library$/.test(e));
+  if (errs.length) fail(`Its condition does not fit the condition language (${errs[0]}): reject it, or edit its condition.`);
+  const cross = c.kind === "cross_check";
+  const group = cross ? "cross_record" : typeof work.group === "string" && /^[a-z_]{3,40}$/.test(work.group) ? work.group : "official_rule";
+  const severity = cross ? "warn" : r.combinationId && ["block", "warn", "advise"].includes(String(work.severity)) ? String(work.severity) : "warn";
+  const appliesTo = fieldsOf(tree)[0] ?? null;
+  const message = c.sentence.trim().slice(0, 500);
+  const quote = ((r.source as { quote?: string } | null)?.quote ?? "").trim();
+  const key = `AC-${createHash("sha256").update(r.id).digest("hex").slice(0, 10)}`;
+  for (const k of combos) {
+    const same = (await tx.check.findMany({ where: { combinationId: k.id, status: "DRAFT", checkGroup: group, appliesTo, message }, select: { predicateJson: true } })).some((x) => canonical(x.predicateJson as never) === canonical(tree as never));
+    if (same) fail(`"${message}" is already in ${k.label}'s draft: reject this one.`, HttpStatus.CONFLICT);
+    await tx.check.create({ data: { workspaceId: l.ws, combinationId: k.id, checkKey: key, checkGroup: group, appliesTo, predicateJson: tree as Prisma.InputJsonValue, severity, message, sourceQuote: quote.slice(0, 1000) || null, illustrative: !quote, version: 1, status: "DRAFT", origin: "AI_PROPOSAL", updatedBy: l.actor.id } });
+  }
+  return key;
+}
+
 /** LANDERS[kind]: what accepting an item writes, inside decide's transaction. A kind with no lander yet is refused. */
 export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalPayload, l: Landing) => Promise<string>>> = {
   /** C4.11 part 3 (forms lane): a waiting library change for a second person (question-condition.ts), never a direct edit. */
@@ -438,6 +505,8 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
     return key;
   },
   requirement_line: landRequirementLine,
+  form_check: landCheck,
+  cross_check: landCheck,
 };
 
 /** C4.7 (P-76, P-149 one door): a pre-qualification pick lands on this combination, not the library. Accept writes the
@@ -475,7 +544,11 @@ const STAMP: Record<string, (tx: Tx, ws: string, key: string) => Promise<unknown
   section: (tx, ws, key) => tx.logicalSection.findMany({ where: { workspaceId: ws, sectionKey: key }, orderBy: { version: "asc" }, select: { version: true, status: true, updatedAt: true } }),
   answer_list: (tx, ws, key) => tx.answerList.findMany({ where: { workspaceId: ws, answerListKey: key }, orderBy: { version: "asc" }, select: { version: true, status: true, updatedAt: true, values: { orderBy: { valueKey: "asc" }, select: { valueKey: true, label: true, sortOrder: true } } } }),
   document_type: (tx, ws, key) => tx.documentType.findMany({ where: { workspaceId: ws, documentTypeKey: key }, orderBy: { version: "asc" }, select: { version: true, status: true, updatedAt: true } }),
+  // QA-196: an accepted check's rows on every combination it landed on.
+  form_check: (tx, ws, key) => checkStamp(tx, ws, key),
+  cross_check: (tx, ws, key) => checkStamp(tx, ws, key),
 };
+const checkStamp = (tx: Tx, ws: string, key: string) => tx.check.findMany({ where: { workspaceId: ws, checkKey: key }, orderBy: [{ combinationId: "asc" }, { version: "asc" }], select: { combinationId: true, version: true, status: true, updatedAt: true } });
 /** C2.6: a document line a checklist item landed, as it stands (its lineages on its combination). */
 const lineStamp = (tx: Tx, combinationId: string, key: string) => tx.documentRequirement.findMany({ where: { combinationId, lineageKey: { in: key.split(",") } }, orderBy: [{ lineageKey: "asc" }, { version: "asc" }], select: { lineageKey: true, version: true, status: true, updatedAt: true } });
 const stampOf = async (tx: Tx, ws: string, kind: string, key: string, combinationId?: string | null) =>
@@ -700,6 +773,8 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     const lists = await tx.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: adds.filter((c) => c.kind === "field").map((c) => c.key) }, status: "DRAFT", version: 1 }, select: { answerListKey: true } });
     for (const c of adds) await LANDED[c.kind]?.(tx, workspaceId, c.key);
     // C2.6: the draft document lines a checklist item wrote (unchanged since, checked above) go with it.
+    // QA-196: the draft checks an accepted check wrote (unchanged since, checked above) go with it.
+    for (const r of rows) if ((r.kind === "form_check" || r.kind === "cross_check") && r.decidedKey) await tx.check.deleteMany({ where: { workspaceId, checkKey: r.decidedKey, version: 1, status: "DRAFT" } });
     for (const r of rows) if (r.kind === "requirement_line" && r.decidedKey && r.combinationId) await tx.documentRequirement.deleteMany({ where: { combinationId: r.combinationId, lineageKey: { in: r.decidedKey.split(",") }, version: 1, status: "DRAFT" } });
     for (const x of lists) await dropFieldList(tx, workspaceId, x.answerListKey);
     await tx.libraryChange.deleteMany({ where: { workspaceId, batchId } });
