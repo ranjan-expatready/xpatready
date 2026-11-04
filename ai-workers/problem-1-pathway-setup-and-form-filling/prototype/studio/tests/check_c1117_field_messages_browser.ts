@@ -77,6 +77,7 @@ const TV = (n: number) => `Sample transit visa ${RUN} ${n}`;
   ok("C11.17 fail (QA-183): Add is off and its tip names the field to fix", (await addOff()) && /Fix the category first/.test(tip), tip);
   await field("category").hover();
   await shot("3-category-too-long-QA-183.png");
+  await p.screenshot({ path: join(SHOTS, "3b-category-too-long-1440-page.png") }); // the whole 1440 px page, pop-up open
   const v = (await new AxeBuilder({ page: p }).include("[role=dialog]").withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze()).violations;
   ok("C11.17 axe: the pop-up with a message under Category has no WCAG 2.2 A/AA violation", v.length === 0, v.map((x) => `${x.id}: ${x.nodes[0]?.target}`));
   await field("category").fill(TV(1)); await field("category").press("Tab");
