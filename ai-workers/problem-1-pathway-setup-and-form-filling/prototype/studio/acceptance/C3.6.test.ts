@@ -22,6 +22,10 @@ run(async () => {
   // ---------------------------------------------------------------- the rule-fact add
   // A rule to name: on Visitor visa of the six that needs C4.11's conditions first; meanwhile `wp.family` (fixture).
   const wp = T.combo(T.key("vv.single"));
+  // B72 (P-318 (6), P-322): on the six the questions, the library's fields and the rule come from people's own steps
+  // (acceptance/lib/pack2.ts needQuestions, ruleBySteps); on the fixture they are there already.
+  await T.needQuestions(wp);
+  await T.ruleBySteps(wp);
   const rule = (await call("GET", `/combinations/${wp}/config?mode=draft`)).body?.snapshot?.rules?.[0];
   const key = rule?.key ?? rule?.id;
   if (!key) { console.error(`STOP  setup missing: the combination has no rule yet (Visitor visa needs C4.11 first). Meanwhile: tsx <test> ${T.PORT} ${T.DB} wp.family on a fresh copy.`); process.exit(2); }
