@@ -30,6 +30,7 @@ export const CONFIG_ENTITIES: ReadonlySet<string> = new Set([
   "proposals", "questions and documents", "release", "reviewed release", "rule fact", "rule", "sample inputs", "section selection",
   "source entry", "source", "structure", "upload",
   "form edition" /* C7.6 accepted-until date of an edition, readiness.ts (#861) */,
+  "placement step" /* placing a form's parts into sections, form-part-placements.ts (#936) */,
   "pathway", "program", "category", "sub-category" /* structure levels, structure.ts and studio.ts */,
 ]);
 /** A configuration entity: listed, or a library change's ("library field", "library document_type", "library section" …;
