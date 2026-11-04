@@ -521,7 +521,7 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
                 : <Button size="sm" variant="ghost" onClick={() => setRemoving({ key: s.id, title: s.title })} aria-label={`Remove from questionnaire: ${s.title}`}>Remove from questionnaire</Button>) : null}
             </div>
             {/* C4.2 (P-294 (B)): a section taken out (or never chosen) whose questions forms still need says so. */}
-            {s.stillAsked ? <p className="border-t border-border px-4 py-2 text-sm text-text-muted" data-still-asked><span className="font-medium text-text">{stillAskedWords(s.stillAsked)}</span> The section is not chosen for this combination, so its questions follow the chosen sections.</p> : null}
+            {s.stillAsked ? <p className="border-t border-border px-4 py-2 text-sm text-text-muted" data-still-asked><span className="font-medium text-text">{stillAskedWords(s.stillAsked)}</span> The section is not chosen for this combination: add it from the library above to give its questions their own place.</p> : null}
             {isOpen ? (lines.length ? (
               <div className="border-t border-border px-4 py-3">
                 <Table dense head={head(lines.map((x) => x.fact))} label={`${s.title}: questions`}>

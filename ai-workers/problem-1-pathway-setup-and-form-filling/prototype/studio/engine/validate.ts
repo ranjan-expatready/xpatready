@@ -96,8 +96,13 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   for (const g of gaps) out.push({ level: "error", where: "Questionnaires", item: g.fact, message: `${g.role === "the application" ? "The application" : roleWord.get(g.role) ?? g.role}: "${meaningOf.get(g.fact) ?? g.fact}" is needed by ${g.forms.join(", ")}, but nobody is asked for it. Fix: ${COVERAGE_FIXES}.` });
   for (const g of gaps) unplaced.delete(g.fact);
   for (const [fact, n] of unplaced) out.push({ level: "warning", where: "Library", item: fact, message: `${n} form field${n > 1 ? "s read" : " reads"} this field, but nobody is asked for it and no supported document supplies it: in a case it stays unresolved until a placement is added.` });
+  // C4.2 (P-294 (B), P-91): forms pull their questions, so a question placed in a section this combination did not choose
+  // is still asked. Said once per section, by its title, never its key.
+  const pulled = new Map<string, number>();
+  for (const p of s.placements) if (!sectionIds.has(p.section_id)) pulled.set(p.section_id, (pulled.get(p.section_id) ?? 0) + 1);
+  const pulledTitle = new Map((s.section_titles ?? []).map((x) => [x.id, x.title]));
+  for (const [id, n] of pulled) out.push({ level: "warning", where: "Questions", item: id, message: `"${pulledTitle.get(id) ?? "A library section"}" is not chosen for this combination, but forms or rules still need ${n} of its question${n === 1 ? "" : "s"}, so ${n === 1 ? "it is" : "they are"} asked after the chosen sections. Add the section on the Smart questionnaire (SQR) tab to give ${n === 1 ? "it" : "them"} a place.` });
   for (const p of s.placements) {
-    if (!sectionIds.has(p.section_id)) out.push({ level: "warning", where: "Questions", item: p.fact, message: `Placed in section ${p.section_id}, which this combination's questionnaire does not use.` });
     for (const e of checkCondition(p.condition, types, derived)) out.push({ level: "error", where: "Questions", item: p.fact, message: `Condition ${e}.` });
     if (p.condition && !p.condition_effect) out.push({ level: "error", where: "Questions", item: p.fact, message: "A condition needs an effect (show, hide, require or optional)." });
   }
@@ -229,6 +234,12 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
       const title = (k: string) => (next.sections as { id: string; title?: string }[]).find((y) => y.id === k)?.title ?? k;
       out.push({ kind: "Section order", key: next.combination?.key ?? "sections", change: "changed", needs_sme: false, label: `Sections reordered: ${moved.map(({ k, i }) => `"${title(k)}" now ${ordinal(i + 1)}`).join(", ")}` });
     }
+  }
+  // C4.2 (M2 of #866's review): the title of a section a pulled question sits in is released with the combination, so a
+  // new or renamed one is a change in words (a section taken out keeps the title it had, so it is not listed twice).
+  if (next.section_titles?.length) {
+    const had = new Map([...((prev?.sections ?? []) as { id: string; title: string }[]), ...(prev?.section_titles ?? [])].map((x) => [x.id, x.title]));
+    for (const x of next.section_titles) if (had.get(x.id) !== x.title) out.push({ kind: "Section name", key: x.id, change: had.has(x.id) ? "changed" : "added", needs_sme: false, label: had.has(x.id) ? `"${had.get(x.id)}" is now named "${x.title}" (a section not chosen here whose questions forms still need)` : `"${x.title}" named for the questions forms still need from it (the section is not chosen here)` });
   }
   const boxes = (s: Snapshot | null) => new Map<string, any>((s?.field_maps ?? []).flatMap((m: any) => m.entries.map((e: any) => [`${m.form_edition}|${e.data_path}`, e] as [string, any])));
   const a = boxes(prev), b = boxes(next);

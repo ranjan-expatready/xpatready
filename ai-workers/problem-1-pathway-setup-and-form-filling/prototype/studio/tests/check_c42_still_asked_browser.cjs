@@ -50,7 +50,7 @@ const SEC = "personal_details";
   await line.waitFor({ timeout: 15000 });
   const said = (await line.innerText()).trim();
   const forms = v?.stillAsked?.forms ?? [];
-  step("C4.2 pass: the tab says in words that the section is still asked and which forms need it", /^Still asked: .+ needs? these answers\./.test(said) && forms.every((f) => said.includes(f)), said);
+  step("C4.2 pass: the tab says in words that the section is still asked and which forms need it", /^Still asked: .+ needs? these answers\. The section is not chosen for this combination: add it from the library/.test(said) && forms.every((f) => said.includes(f)), said);
   const head = (await sec.locator(".font-medium").first().innerText()).trim();
   step("P-91 pass: the section taken out keeps its plain name on the tab, never its key", head === title && !(await sec.innerText()).includes(SEC), JSON.stringify({ head, title }));
   await sec.scrollIntoViewIfNeeded(); await shot("2-taken-out-still-asked-1440.png");

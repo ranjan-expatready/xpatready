@@ -3,9 +3,10 @@
 // of released combinations. The API is built (tests/check_pqr.ts); this pack adds the seams qa found: QA-125 (two saves
 // at once: the loser must get 409, not 404) and a stale second tab. QA-125 fixed in #688; the unasked fact follows the
 // tech lead's ruling P-294 (B) (forms pull their questions). Rules only (US$0).
-// Runs on Visitor visa of the six; needs first: Visitor visa has questions (J3 / C4.11) — until then exit 2, and meanwhile
-// on the suites' fixture with `wp.family` as 4th argument.
-//   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C4.2.test.ts 4440 xr_studio_accept [wp.family]
+// Runs on Visitor visa. On the bare six it has no questions yet (QA-144: exit 2), so the run sets it up from its forms
+// first, as C4.7's confirmation did; the gate reads this as "fixture only". Also on the suites' older fixture: a fresh
+// copy and `wp.family` as 4th argument, without the setup step.
+//   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4440 xr_studio_accept && tsx studio/acceptance/C4.2.test.ts 4440 xr_studio_accept
 import { AUTHOR, pack2, run } from "./lib/pack2.ts";
 
 const T = pack2("C4.2");
@@ -29,8 +30,8 @@ run(async () => {
   const from = facts.find((f: any) => f.source === "CLIENT" && f.role === "principal" && f.placed && f.fact !== client?.fact && f.fact.startsWith("person."));
   const probe = "person.c42_no_question_probe", probeMeaning = "Test fact for C4.2: a form field reads it, but no library question asks it (Sample)";
   if (from) {
-    sql(`insert into canonical_field (id, workspace_id, canonical_field_key, version, status, meaning, value_type, data_type, scope, subject_kind, origin, updated_by, label, label_checked) select gen_random_uuid(), workspace_id, '${probe}', 1, 'PUBLISHED', '${probeMeaning}', value_type, data_type, scope, subject_kind, 'HUMAN', 'user-A', 'C4.2 probe', true from canonical_field where canonical_field_key='${from.fact}' order by version desc limit 1`);
-    sql(`update form_field_map set canonical_field_key='${probe}' where canonical_field_key='${from.fact}' and outcome='mapped'`);
+    sql(`insert into canonical_field (id, workspace_id, canonical_field_key, version, status, meaning, value_type, data_type, scope, subject_kind, origin, updated_by, label, label_checked) select gen_random_uuid(), workspace_id, '${probe}', 1, 'PUBLISHED', '${probeMeaning}', value_type, data_type, scope, subject_kind, 'HUMAN', 'user-A', 'C4.2 probe', true from canonical_field where canonical_field_key='${from.fact}' and workspace_id=(select workspace_id from combination where id='${wp}') order by version desc limit 1`);
+    sql(`update form_field_map set canonical_field_key='${probe}' where canonical_field_key='${from.fact}' and outcome='mapped' and workspace_id=(select workspace_id from combination where id='${wp}')`);
   }
   const unasked = ((await call("GET", `/combinations/${wp}/fact-sources`)).body?.facts ?? []).find((f: any) => f.fact === probe && f.role === "principal");
   ok("setup: a form field reads a fact no library question asks (the principal's, from the client)", !!unasked && !unasked.placed && unasked.source === "CLIENT", unasked ? { fact: unasked.fact, placed: unasked.placed, source: unasked.source, forms: unasked.forms } : from?.fact ?? "no client fact to copy");
